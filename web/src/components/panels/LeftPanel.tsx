@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useHpStore } from '@/stores/hp';
+import { useBuffsStore } from '@/stores/buffs';
+import { X, Zap } from 'lucide-react';
 
 function HpBar({ current, max }: { current: number; max: number }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
@@ -25,6 +28,7 @@ function HpBar({ current, max }: { current: number; max: number }) {
 
 export function LeftPanel() {
   const { currentHp, maxHp, events, fetchHp, appendEvent, undoLastEvent } = useHpStore();
+  const { buffs, fetchBuffs, activateBuff, dismissBuff, triggerBuff } = useBuffsStore();
 
   const [damageInput, setDamageInput] = useState('');
   const [damageSource, setDamageSource] = useState('');
@@ -32,9 +36,28 @@ export function LeftPanel() {
   const [healSource, setHealSource] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [newBuffName, setNewBuffName] = useState('');
+  const [newBuffType, setNewBuffType] = useState<'charge' | 'duration'>('duration');
+  const [newBuffValue, setNewBuffValue] = useState(1);
+  const [newBuffEffectKey, setNewBuffEffectKey] = useState('weapon_buff');
+  const [newBuffEffectValue, setNewBuffEffectValue] = useState(1);
+
   useEffect(() => {
     fetchHp();
-  }, [fetchHp]);
+    fetchBuffs();
+  }, [fetchHp, fetchBuffs]);
+
+  async function handleAddBuff() {
+    if (!newBuffName.trim()) return;
+    await activateBuff({
+      name: newBuffName.trim(),
+      type: newBuffType,
+      charges: newBuffType === 'charge' ? newBuffValue : 0,
+      duration: newBuffType === 'duration' ? newBuffValue : 0,
+      effects: { [newBuffEffectKey]: newBuffEffectValue }
+    });
+    setNewBuffName('');
+  }
 
   async function handleDamage() {
     const delta = parseInt(damageInput, 10);
@@ -138,6 +161,102 @@ export function LeftPanel() {
               onClick={handleHeal}
             >
               Apply Heal
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Buffs */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Active Buffs</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-2">
+            {buffs.map((buff) => (
+              <li key={buff.id} className="flex items-center justify-between group">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{buff.name}</span>
+                  <Badge variant="outline" className="text-[10px] h-5 px-1 font-mono">
+                    {buff.type === 'charge' ? `${buff.charges}ch` : `${buff.duration}rd`}
+                  </Badge>
+                </div>
+                <div className="flex gap-1">
+                  {buff.type === 'charge' && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => triggerBuff(buff.id)}
+                      title="Use Charge"
+                    >
+                      <Zap className="h-3 w-3 text-yellow-500" />
+                    </Button>
+                  )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => dismissBuff(buff.id)}
+                    title="Dismiss"
+                  >
+                    <X className="h-3 w-3 text-destructive" />
+                  </Button>
+                </div>
+              </li>
+            ))}
+            {buffs.length === 0 && (
+              <li className="text-xs text-muted-foreground italic text-center py-2">No active buffs</li>
+            )}
+          </ul>
+
+          <div className="flex flex-col gap-2 mt-2 border-t pt-3">
+            <div className="flex gap-1">
+              <input
+                type="text"
+                placeholder="Buff Name"
+                value={newBuffName}
+                onChange={(e) => setNewBuffName(e.target.value)}
+                className="flex-1 px-2 py-1 text-sm border rounded bg-background"
+              />
+              <input
+                type="number"
+                min="1"
+                value={newBuffValue}
+                onChange={(e) => setNewBuffValue(parseInt(e.target.value) || 1)}
+                className="w-12 px-1 py-1 text-sm border rounded bg-background"
+              />
+            </div>
+            
+            <div className="flex gap-1">
+              <select
+                value={newBuffType}
+                onChange={(e) => setNewBuffType(e.target.value as 'charge' | 'duration')}
+                className="flex-1 px-1 py-1 text-sm border rounded bg-background"
+              >
+                <option value="duration">Rounds</option>
+                <option value="charge">Charges</option>
+              </select>
+              <select
+                value={newBuffEffectKey}
+                onChange={(e) => setNewBuffEffectKey(e.target.value)}
+                className="flex-1 px-1 py-1 text-sm border rounded bg-background"
+              >
+                <option value="weapon_buff">Wpn +N</option>
+                <option value="spells_buff">Spells xN</option>
+                <option value="multiplier">Dmg xN</option>
+              </select>
+              <input
+                type="number"
+                step="0.1"
+                value={newBuffEffectValue}
+                onChange={(e) => setNewBuffEffectValue(parseFloat(e.target.value) || 0)}
+                className="w-12 px-1 py-1 text-sm border rounded bg-background"
+              />
+            </div>
+
+            <Button size="sm" onClick={handleAddBuff} disabled={!newBuffName}>
+              Activate
             </Button>
           </div>
         </CardContent>

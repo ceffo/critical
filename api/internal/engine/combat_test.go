@@ -118,4 +118,21 @@ func TestResolveAttack(t *testing.T) {
 		assert.Equal(t, 16, res.TotalDamage)
 		assert.Contains(t, res.DamageBreakdown, "((6 × 1.5) + 5) × 1.0 + 2 = 16")
 	})
+
+	t.Run("Buff Requirement (Min STR)", func(t *testing.T) {
+		buffs := []domain.BuffEffect{
+			{
+				Name: "Heavy Buff",
+				Effects: map[string]interface{}{
+					"weapon_buff": 10.0,
+					"min_str": 19.0,
+				},
+			},
+		}
+		// Char has STR 18, so buff should NOT apply
+		dr := &mockDiceRoller{nextRolls: []int{12, 50, 6}}
+		res := ResolveAttack(dr, weapon, targetAC, char, buffs)
+		// Damage = ((6 * 1.0) + 0) * 1 + 2 = 8
+		assert.Equal(t, 8, res.TotalDamage)
+	})
 }

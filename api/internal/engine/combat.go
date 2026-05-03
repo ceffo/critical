@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -10,40 +9,28 @@ import (
 )
 
 func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, char domain.Character, activeBuffs []domain.BuffEffect) domain.RollResult {
-	res := domain.RollResult{
-		BaseThac0: char.Thac0Base,
-		Modifiers: []domain.Modifier{},
-	}
+	trace := NewRollTrace(dr, char.Thac0Base)
+	res := trace.Result()
 
 	// 1. Roll D20 and D100 simultaneously
-	res.D20Roll = dr.RollD20()
-	res.D100CritRoll = dr.RollD100()
+	res.D20Roll = trace.RollD20()
+	res.D100CritRoll = trace.RollD100()
 
 	// 2. Calculate Effective THAC0
-	// For now, let's assume no THAC0 modifiers from buffs unless specified
-	// But let's check STR bonus to hit (STR 18 -> +1 to hit)
 	if char.Str >= 18 {
-		res.Modifiers = append(res.Modifiers, domain.Modifier{Source: "Strength", Value: 1})
+		trace.AddModifier("Strength", 1)
 	}
 
-	sumModifiers := 0
-	for _, m := range res.Modifiers {
-		sumModifiers += m.Value
-	}
-
-	res.EffectiveThac0 = res.BaseThac0 - sumModifiers
+	res.EffectiveThac0 = res.BaseThac0 - trace.SumModifiers()
 	res.TargetACNeeded = res.EffectiveThac0 - res.D20Roll
 	res.Hit = res.D20Roll >= (res.EffectiveThac0 - targetAC)
 	res.HitMargin = res.D20Roll - (res.EffectiveThac0 - targetAC)
 
 	// 3. Check Crit: (D20 - D100) >= required_to_hit
-	// required_to_hit = EffectiveThac0 - targetAC
 	requiredToHit := res.EffectiveThac0 - targetAC
 	if (res.D20Roll - res.D100CritRoll) >= requiredToHit {
 		res.IsCrit = true
-		// Roll second D100 and lookup crit_table.json (stubbed for now)
-		_ = dr.RollD100() // second D100
-		// TODO: Implement crit_table.json lookup
+		_ = trace.RollD100() // second D100
 		res.CritMultiplier = 2
 	} else {
 		res.CritMultiplier = 1
@@ -66,11 +53,10 @@ func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, char domai
 		total := (float64(res.BaseDamage)*res.SpellsBuff + float64(res.WeaponBuff)) * res.Multipliers + float64(res.StrengthBonus)
 		res.TotalDamage = int(math.Floor(total))
 
-		res.DamageBreakdown = fmt.Sprintf("((%d × %.1f) + %d) × %.1f + %d = %d",
-			res.BaseDamage, res.SpellsBuff, res.WeaponBuff, res.Multipliers, res.StrengthBonus, res.TotalDamage)
+		res.DamageBreakdown = trace.ExplainDamage()
 	}
 
-	return res
+	return *res
 }
 
 func rollDamage(dr DiceRoller, diceStr string) int {

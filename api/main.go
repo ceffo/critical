@@ -35,6 +35,8 @@ func main() {
 	buffs := &handlers.BuffsHandler{DB: db, CharacterID: charID}
 	spells := &handlers.SpellsHandler{DB: db, CharacterID: charID}
 	round := &handlers.RoundHandler{DB: db, CharacterID: charID}
+	charH := &handlers.CharacterHandler{DB: db, CharacterID: charID}
+	rolls := &handlers.RollsHandler{DB: db, CharacterID: charID}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -45,11 +47,14 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
+	r.Get("/api/character", charH.GetCharacter)
+
 	r.Get("/api/hp", hp.GetHP)
 	r.Post("/api/hp/event", hp.AppendEvent)
 	r.Post("/api/hp/undo", hp.UndoLastEvent)
 
 	r.Post("/api/roll/attack", combat.ResolveAttack)
+	r.Post("/api/roll/save", rolls.RollSave)
 
 	r.Get("/api/buffs", buffs.ListActive)
 	r.Post("/api/buffs", buffs.Activate)

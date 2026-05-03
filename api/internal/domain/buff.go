@@ -11,6 +11,7 @@ type BuffEffects struct {
 	SpellsBuff *float64 `json:"spells_buff,omitempty"`
 	WeaponBuff *int     `json:"weapon_buff,omitempty"`
 	Multiplier *float64 `json:"multiplier,omitempty"`
+	SaveBonus  *int     `json:"save_bonus,omitempty"`
 }
 
 type BuffEffect struct {

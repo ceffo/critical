@@ -6,13 +6,20 @@ import (
 	"fmt"
 )
 
+type BuffEffects struct {
+	MinStr     *int     `json:"min_str,omitempty"`
+	SpellsBuff *float64 `json:"spells_buff,omitempty"`
+	WeaponBuff *int     `json:"weapon_buff,omitempty"`
+	Multiplier *float64 `json:"multiplier,omitempty"`
+}
+
 type BuffEffect struct {
-	ID       string                 `json:"id"`
-	Name     string                 `json:"name"`
-	Type     string                 `json:"type"` // "charge" or "duration"
-	Charges  int                    `json:"charges"`
-	Duration int                    `json:"duration"`
-	Effects  map[string]interface{} `json:"effects"` // {"spells_buff": 1.5, "weapon_buff": 5, "multiplier": 2.0}
+	ID       string      `json:"id"`
+	Name     string      `json:"name"`
+	Type     string      `json:"type"` // "charge" or "duration"
+	Charges  int         `json:"charges"`
+	Duration int         `json:"duration"`
+	Effects  BuffEffects `json:"effects"`
 }
 
 func GetActiveBuffs(db *sql.DB, characterID int64) ([]BuffEffect, error) {

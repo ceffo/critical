@@ -32,8 +32,9 @@ func TestBuffPersistence(t *testing.T) {
 	defer db.Close()
 
 	charID := int64(1)
+	wb := 1
 	buffs := []BuffEffect{
-		{ID: "1", Name: "Bless", Type: "duration", Duration: 10, Effects: map[string]interface{}{"weapon_buff": 1}},
+		{ID: "1", Name: "Bless", Type: "duration", Duration: 10, Effects: BuffEffects{WeaponBuff: &wb}},
 	}
 
 	err := SaveActiveBuffs(db, charID, buffs)

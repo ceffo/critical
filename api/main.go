@@ -1,3 +1,4 @@
+// Package main is the entry point for the critical API.
 package main
 
 import (
@@ -23,7 +24,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("db: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error closing db: %v", err)
+		}
+	}()
 
 	charID, err := getCharacterID(db)
 	if err != nil {
@@ -44,7 +49,9 @@ func main() {
 
 	r.Get("/api/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+			log.Printf("health check encode error: %v", err)
+		}
 	})
 
 	r.Get("/api/character", charH.GetCharacter)
@@ -70,8 +77,9 @@ func main() {
 	r.Post("/api/round/advance", round.Advance)
 
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: r,
+		Addr:              ":8080",
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	go func() {

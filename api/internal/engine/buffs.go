@@ -16,6 +16,7 @@ type EffectEngine struct {
 	actor *domain.Actor
 }
 
+// NewEffectEngine initializes a new engine instance for the given actor.
 func NewEffectEngine(actor *domain.Actor) *EffectEngine {
 	return &EffectEngine{actor: actor}
 }

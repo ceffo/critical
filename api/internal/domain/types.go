@@ -1,5 +1,6 @@
 package domain
 
+// Character represents a character's core attributes, base combat stats, and saving throws.
 type Character struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
@@ -22,6 +23,7 @@ type Character struct {
 	SaveSpell        int `json:"saveSpell"`
 }
 
+// Weapon represents a weapon's metadata and base damage dice.
 type Weapon struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`

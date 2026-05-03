@@ -16,7 +16,7 @@ func openTestDB(t *testing.T) (*sql.DB, int64) {
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
-	t.Cleanup(func() { database.Close() })
+	t.Cleanup(func() { _ = database.Close() })
 
 	var charID int64
 	if err := database.QueryRow("SELECT id FROM characters LIMIT 1").Scan(&charID); err != nil {
@@ -29,7 +29,9 @@ func TestAppendAndGetCurrentHP(t *testing.T) {
 	db, charID := openTestDB(t)
 
 	var maxHP int
-	db.QueryRow("SELECT hp_max FROM characters WHERE id=?", charID).Scan(&maxHP)
+	if err := db.QueryRow("SELECT hp_max FROM characters WHERE id=?", charID).Scan(&maxHP); err != nil {
+		t.Fatalf("scan maxHP: %v", err)
+	}
 
 	// Current HP starts at max (no events yet → SUM = 0 but GetCurrentHP returns max + SUM)
 	state, err := domain.GetHPState(db, charID)
@@ -106,7 +108,9 @@ func TestUndoLastEvent(t *testing.T) {
 	db, charID := openTestDB(t)
 
 	var maxHP int
-	db.QueryRow("SELECT hp_max FROM characters WHERE id=?", charID).Scan(&maxHP)
+	if err := db.QueryRow("SELECT hp_max FROM characters WHERE id=?", charID).Scan(&maxHP); err != nil {
+		t.Fatalf("scan maxHP: %v", err)
+	}
 
 	if err := domain.AppendEvent(db, charID, -20, "giant"); err != nil {
 		t.Fatalf("AppendEvent: %v", err)
@@ -142,7 +146,9 @@ func TestUndoIsAppendNotDelete(t *testing.T) {
 
 	// Should have 2 rows: the original -20 and the correction +20
 	var count int
-	db.QueryRow("SELECT COUNT(*) FROM hp_events WHERE character_id=?", charID).Scan(&count)
+	if err := db.QueryRow("SELECT COUNT(*) FROM hp_events WHERE character_id=?", charID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
 	if count != 2 {
 		t.Errorf("expected 2 rows after undo (append-only), got %d", count)
 	}

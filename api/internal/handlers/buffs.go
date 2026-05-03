@@ -10,12 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// BuffsHandler provides HTTP handlers for managing character buffs.
 type BuffsHandler struct {
 	DB          *sql.DB
 	CharacterID int64
 }
 
-func (h *BuffsHandler) ListActive(w http.ResponseWriter, r *http.Request) {
+// ListActive returns the list of currently active buffs for the character.
+// ListActive returns the list of currently active buffs for the character.
+func (h *BuffsHandler) ListActive(w http.ResponseWriter, _ *http.Request) {
 	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
@@ -24,6 +27,7 @@ func (h *BuffsHandler) ListActive(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, actor.ActiveBuffs)
 }
 
+// Activate adds a new buff to the character's active list.
 func (h *BuffsHandler) Activate(w http.ResponseWriter, r *http.Request) {
 	var buff domain.BuffEffect
 	if err := json.NewDecoder(r.Body).Decode(&buff); err != nil {
@@ -52,6 +56,7 @@ func (h *BuffsHandler) Activate(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, actor.ActiveBuffs)
 }
 
+// Dismiss removes an active buff from the character by its ID.
 func (h *BuffsHandler) Dismiss(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
@@ -81,6 +86,7 @@ func (h *BuffsHandler) Dismiss(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, actor.ActiveBuffs)
 }
 
+// Trigger decrements the charges of a charge-based buff.
 func (h *BuffsHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {

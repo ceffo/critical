@@ -1,10 +1,12 @@
 package domain
 
+// Modifier represents a single bonus or penalty to a roll from a specific source.
 type Modifier struct {
 	Source string `json:"source"`
 	Value  int    `json:"value"`
 }
 
+// RollResult encapsulates the full outcome of a combat roll, including hit/miss status and damage calculations.
 type RollResult struct {
 	D20Roll        int        `json:"d20Roll"`
 	D100CritRoll   int        `json:"d100CritRoll"`

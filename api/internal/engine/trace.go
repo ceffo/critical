@@ -13,6 +13,7 @@ type RollTrace struct {
 	dr     DiceRoller
 }
 
+// NewRollTrace creates a new trace starting with the provided base THAC0.
 func NewRollTrace(dr DiceRoller, baseThac0 int) *RollTrace {
 	return &RollTrace{
 		dr: dr,
@@ -28,18 +29,22 @@ func (t *RollTrace) Roll(sides int) int {
 	return t.dr.RollDie(sides)
 }
 
+// RollD20 rolls a 20-sided die.
 func (t *RollTrace) RollD20() int {
 	return t.dr.RollD20()
 }
 
+// RollD100 rolls a 100-sided die.
 func (t *RollTrace) RollD100() int {
 	return t.dr.RollD100()
 }
 
+// AddModifier records a new modifier from a specific source.
 func (t *RollTrace) AddModifier(source string, value int) {
 	t.result.Modifiers = append(t.result.Modifiers, domain.Modifier{Source: source, Value: value})
 }
 
+// SumModifiers calculates the total value of all recorded modifiers.
 func (t *RollTrace) SumModifiers() int {
 	sum := 0
 	for _, m := range t.result.Modifiers {
@@ -48,6 +53,7 @@ func (t *RollTrace) SumModifiers() int {
 	return sum
 }
 
+// Result returns a pointer to the accumulated RollResult.
 func (t *RollTrace) Result() *domain.RollResult {
 	return &t.result
 }

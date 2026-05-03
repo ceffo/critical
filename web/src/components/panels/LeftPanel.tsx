@@ -6,7 +6,7 @@ import { useHpStore } from '@/stores/hp';
 function HpBar({ current, max }: { current: number; max: number }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
   const color =
-    pct > 50 ? 'bg-green-500' : pct > 25 ? 'bg-yellow-400' : 'bg-red-500';
+    pct > 50 ? 'bg-green-500' : pct >= 25 ? 'bg-yellow-400' : 'bg-red-500';
   return (
     <div>
       <div className="flex justify-between text-sm font-mono mb-1">
@@ -24,7 +24,7 @@ function HpBar({ current, max }: { current: number; max: number }) {
 }
 
 export function LeftPanel() {
-  const { currentHp, maxHp, events, fetchHp, appendEvent } = useHpStore();
+  const { currentHp, maxHp, events, fetchHp, appendEvent, undoLastEvent } = useHpStore();
 
   const [damageInput, setDamageInput] = useState('');
   const [damageSource, setDamageSource] = useState('');
@@ -57,6 +57,15 @@ export function LeftPanel() {
       await appendEvent(delta, healSource.trim());
       setHealInput('');
       setHealSource('');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleUndo() {
+    setLoading(true);
+    try {
+      await undoLastEvent();
     } finally {
       setLoading(false);
     }
@@ -137,8 +146,11 @@ export function LeftPanel() {
       {/* Recent events */}
       {events.length > 0 && (
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Recent Events</CardTitle>
+            <Button variant="ghost" size="xs" onClick={handleUndo} disabled={loading} className="h-7 px-2 text-xs">
+              Undo
+            </Button>
           </CardHeader>
           <CardContent>
             <ul className="flex flex-col gap-1">

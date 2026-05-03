@@ -31,6 +31,7 @@ func main() {
 	}
 
 	hp := &handlers.HPHandler{DB: db, CharacterID: charID}
+	combat := &handlers.CombatHandler{DB: db, CharacterID: charID}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -44,6 +45,8 @@ func main() {
 	r.Get("/api/hp", hp.GetHP)
 	r.Post("/api/hp/event", hp.AppendEvent)
 	r.Post("/api/hp/undo", hp.UndoLastEvent)
+
+	r.Post("/api/roll/attack", combat.ResolveAttack)
 
 	srv := &http.Server{
 		Addr:    ":8080",

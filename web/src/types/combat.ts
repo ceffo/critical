@@ -1,10 +1,15 @@
+export interface Modifier {
+  source: string;
+  value: number;
+}
+
 export interface RollResult {
   d20Roll: number;
   d100CritRoll: number;
   isCrit: boolean;
   critMultiplier: number;
   baseThac0: number;
-  modifiers: Array<{ source: string; value: number }>;
+  modifiers: Modifier[];
   effectiveThac0: number;
   targetACNeeded: number;
   hit: boolean;

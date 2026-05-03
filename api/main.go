@@ -55,6 +55,10 @@ func main() {
 	r.Delete("/api/buffs/{id}", buffs.Dismiss)
 	r.Post("/api/buffs/{id}/trigger", buffs.Trigger)
 
+	r.Get("/api/spells/slots", spells.GetSlots)
+	r.Post("/api/spells/{id}/cast", spells.Cast)
+	r.Post("/api/spells/reset", spells.Reset)
+
 	r.Get("/api/round", round.GetRound)
 	r.Post("/api/round/advance", round.Advance)
 

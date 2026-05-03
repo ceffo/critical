@@ -1,6 +1,5 @@
 export interface SpellSlot {
-  id: number;
-  spellName: string;
   level: number;
+  prepared_spell_name: string;
   used: boolean;
 }

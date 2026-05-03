@@ -29,6 +29,9 @@ func (m *mockDiceRoller) RollD100() int {
 	return m.RollDie(100)
 }
 
+func intPtr(v int) *int { return &v }
+func floatPtr(v float64) *float64 { return &v }
+
 func TestResolveAttack(t *testing.T) {
 	weapon := domain.Weapon{Name: "Longsword", BaseDamage: "1d8"}
 	char := domain.Character{Str: 18, Thac0Base: 16}
@@ -80,8 +83,8 @@ func TestResolveAttack(t *testing.T) {
 		buffs := []domain.BuffEffect{
 			{
 				Name: "Power Gem",
-				Effects: map[string]interface{}{
-					"multiplier": 2.0,
+				Effects: domain.BuffEffects{
+					Multiplier: floatPtr(2.0),
 				},
 			},
 		}
@@ -100,14 +103,14 @@ func TestResolveAttack(t *testing.T) {
 		buffs := []domain.BuffEffect{
 			{
 				Name: "Enlarge",
-				Effects: map[string]interface{}{
-					"spells_buff": 1.5,
+				Effects: domain.BuffEffects{
+					SpellsBuff: floatPtr(1.5),
 				},
 			},
 			{
 				Name: "Power Gem (Weapon Buff)",
-				Effects: map[string]interface{}{
-					"weapon_buff": 5.0,
+				Effects: domain.BuffEffects{
+					WeaponBuff: intPtr(5),
 				},
 			},
 		}
@@ -123,9 +126,9 @@ func TestResolveAttack(t *testing.T) {
 		buffs := []domain.BuffEffect{
 			{
 				Name: "Heavy Buff",
-				Effects: map[string]interface{}{
-					"weapon_buff": 10.0,
-					"min_str": 19.0,
+				Effects: domain.BuffEffects{
+					WeaponBuff: intPtr(10),
+					MinStr:     intPtr(19),
 				},
 			},
 		}

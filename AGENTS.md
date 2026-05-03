@@ -70,21 +70,21 @@ br sync --flush-only  # Export DB to JSONL
 1. **Triage**: Run `bv --robot-triage` to find the highest-impact actionable work
 2. **Claim**: Use `br update <id> --status=in_progress`
 3. **Work**: Implement the task
-4. **Validate**: Run `./scripts/validate.sh` and ensure it passes. **NO TASK IS COMPLETE WITHOUT VALIDATION.**
+4. **Validate**: Run `just validate` and ensure it passes. **NO TASK IS COMPLETE WITHOUT VALIDATION.**
 5. **Complete**: Use `br close <id>`
 6. **Sync**: Always run `br sync --flush-only` at session end
 
 ### Mandatory Validation (Pre-flight)
 
-Before closing any task, you **MUST** run the validation script from the project root:
+Before closing any task, you **MUST** run the validation command from the project root:
 
 ```bash
-./scripts/validate.sh
+just validate
 ```
 
-This script ensures:
+This command ensures:
 
-- **Backend:** Code compiles and all tests pass.
+- **Backend:** Code compiles, lints, and all tests pass.
 - **Frontend:** TypeScript types are valid, linting passes, and the production build succeeds.
 
 Failure to run validation leads to broken builds and "un-runnable" states. If validation fails, fix the issues before proceeding.

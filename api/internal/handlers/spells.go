@@ -24,6 +24,18 @@ func (h *SpellsHandler) GetSlots(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, slots)
 }
 
+func (h *SpellsHandler) Search(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	class := r.URL.Query().Get("class")
+
+	spells, err := domain.SearchSpells(h.DB, query, class)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	jsonOK(w, spells)
+}
+
 func (h *SpellsHandler) Cast(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	index, err := strconv.Atoi(idStr)

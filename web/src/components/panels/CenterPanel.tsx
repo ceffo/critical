@@ -4,9 +4,10 @@ import { CombatPanel } from './CombatPanel';
 import { SpellPanel } from './SpellPanel';
 
 import { CharacterPanel } from './CharacterPanel';
+import { SpellLookupPanel } from './SpellLookupPanel';
 
-type Tab = 'Combat' | 'Spells' | 'Character';
-const TABS: Tab[] = ['Combat', 'Spells', 'Character'];
+type Tab = 'Combat' | 'Spells' | 'Character' | 'Lookup';
+const TABS: Tab[] = ['Combat', 'Spells', 'Character', 'Lookup'];
 
 export function CenterPanel() {
   const [activeTab, setActiveTab] = useState<Tab>('Combat');
@@ -22,7 +23,7 @@ export function CenterPanel() {
             size="sm"
             onClick={() => setActiveTab(tab)}
           >
-            {tab}
+            {tab === 'Lookup' ? 'Spell Lookup' : tab}
           </Button>
         ))}
       </div>
@@ -31,8 +32,10 @@ export function CenterPanel() {
           <CombatPanel />
         ) : activeTab === 'Spells' ? (
           <SpellPanel />
-        ) : (
+        ) : activeTab === 'Character' ? (
           <CharacterPanel />
+        ) : (
+          <SpellLookupPanel />
         )}
       </div>
     </div>

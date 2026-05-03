@@ -9,5 +9,18 @@
   "hp_max": 52,
   "thac0_base": 16,
   "level": 9,
-  "xp_total": 200000
+  "xp_total": 200000,
+  "slots": [
+    {"level": 1, "prepared_spell_name": "Armor", "used": false},
+    {"level": 1, "prepared_spell_name": "Audible Glamer", "used": false},
+    {"level": 1, "prepared_spell_name": "Affect Normal Fires", "used": false},
+    {"level": 2, "prepared_spell_name": "Strength", "used": false},
+    {"level": 2, "prepared_spell_name": "Web", "used": false},
+    {"level": 2, "prepared_spell_name": "Stinking Cloud", "used": false},
+    {"level": 3, "prepared_spell_name": "Fireball", "used": false},
+    {"level": 3, "prepared_spell_name": "Haste", "used": false},
+    {"level": 3, "prepared_spell_name": "Dispel Magic", "used": false},
+    {"level": 4, "prepared_spell_name": "Dimension Door", "used": false},
+    {"level": 4, "prepared_spell_name": "Improved Invisibility", "used": false}
+  ]
 }

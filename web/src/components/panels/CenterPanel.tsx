@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CombatPanel } from './CombatPanel';
+import { SpellPanel } from './SpellPanel';
 
 type Tab = 'Combat' | 'Spells';
 const TABS: Tab[] = ['Combat', 'Spells'];
@@ -26,7 +27,7 @@ export function CenterPanel() {
         {activeTab === 'Combat' ? (
           <CombatPanel />
         ) : (
-          <p className="text-sm text-muted-foreground">{activeTab} panel coming soon.</p>
+          <SpellPanel />
         )}
       </div>
     </div>

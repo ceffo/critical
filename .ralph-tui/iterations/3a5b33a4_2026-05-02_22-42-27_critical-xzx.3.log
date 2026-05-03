@@ -1,0 +1,77 @@
+# Iteration 3 Log
+
+## Metadata
+
+- **Task ID**: critical-xzx.3
+- **Task Title**: F3: Active Buffs + Round Counter
+- **Description**: Full vertical slice: buff activation/dismissal, charge/duration tracking, round counter, expiry alerts, and wire buff modifiers into F2 damage formula.
+
+Read docs/all.md, docs/backend.md, and docs/fro...
+- **Status**: completed
+- **Task Completed**: No
+- **Promise Detected**: No
+- **Started At**: 2026-05-03T02:42:27.350Z
+- **Ended At**: 2026-05-03T02:47:31.720Z
+- **Duration**: 5m 4s
+- **Input Tokens**: 4253332
+- **Output Tokens**: 19087
+- **Total Tokens**: 4285553
+- **Agent**: gemini
+- **Model**: auto-gemini-3
+- **Epic**: critical-xzx
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+
+[91m[Error: Failed to edit, 0 occurrences found for old_string in web/src/components/panels/LeftPanel.tsx. Ensure you're not escaping content incorrectly and check whitespace, indentation, and context. Use read_file tool to verify.][0m
+
+[91m[Error: Failed to edit, 0 occurrences found for old_string in web/src/stores/buffs.ts. Ensure you're not escaping content incorrectly and check whitespace, indentation, and context. Use read_file tool to verify.][0m
+
+[91m[Error: MCP tool 'mem_session_summary' reported tool error for function call: {"name":"mem_session_summary","args":{"project":"critical","session_id":"manual-save-critical-xzx.3","content":"## Goal\nImplement Active Buffs and Round Counter vertical slice for Critical.\n\n## Instructions\n- Backend logic exclusively in Go.\n- Use shadcn/ui components in React.\n- Mirror Go structs in TypeScript.\n\n## Discoveries\n- Buff requirements (e.g., min_str) must be validated in the engine during aggregation.\n- `verbatimModuleSyntax` in `tsconfig.json` requires explicit `import type` for type-only imports.\n- SQLite JSON functions/columns work well for storing arrays of complex objects (buffs).\n\n## Accomplished\n- ✅ BuffEffect domain and persistence logic (api/internal/domain/buff.go).\n- ✅ Buff modifier aggregation with requirement checks (api/internal/engine/buffs.go).\n- ✅ REST endpoints for buffs and round management (api/internal/handlers/buffs.go, round.go).\n- ✅ React panels for active buffs and round counter (LeftPanel.tsx, RightPanel.tsx).\n- ✅ Zustand store and API client for buffs/round.\n- ✅ Integrated buff modifiers into ResolveAttack damage formula.\n\n## Relevant Files\n- api/internal/domain/buff.go — core buff domain and persistence.\n- api/internal/engine/buffs.go — buff modifier calculation.\n- api/internal/handlers/buffs.go — REST API for buffs.\n- web/src/stores/buffs.ts — frontend state management for buffs and round.\n- web/src/components/panels/LeftPanel.tsx — UI for active buffs list and activation.\n- web/src/components/panels/RightPanel.tsx — UI for round counter.\n"}} with response: [{"functionResponse":{"name":"mem_session_summary","response":{"content":[{"type":"text","text":"Failed to save session summary: database is locked (5) (SQLITE_BUSY)"}],"isError":true}}}]][0m
+I
+ have completed the full vertical slice for **F3: Active Buffs + Round Counter**.
+
+### Backend Implementation
+- **Domain
+ & Persistence:** Created `api/internal/domain/buff.go` to handle `BuffEffect` logic and SQLite
+ persistence for both buffs and the round counter.
+- **Engine Logic:** Implemented `api/internal/engine/
+buffs.go` to aggregate active buff modifiers and enforce requirements (e.g., `min_str`).
+- **Combat Integration:** Updated `ResolveAttack` in `api/internal/engine/combat.go` to consume real
+ buff modifiers (`SpellsBuff`, `WeaponBuff`, `Multipliers`) instead of stubs.
+- **API
+ Handlers:** Developed REST endpoints in `api/internal/handlers/buffs.go` and `api/internal/handlers
+/round.go` for managing buff lifecycle and advancing combat rounds.
+
+### Frontend Implementation
+- **UI Panels:** 
+  - `LeftPanel.tsx`: Added an "Active Buffs" section displaying current effects with remaining charges/rounds and a management
+ form for activating new buffs.
+  - `RightPanel.tsx`: Implemented the "Combat Round" counter with a "
+Next Round" button that triggers round advancement and buff expiry.
+- **State Management:** Created typed API wrappers and a Zustand
+ store (`web/src/stores/buffs.ts`) to manage shared state between the panels.
+
+### Verification Results
+
+- **Go Tests:** 
+  - `TestResolveAttack`: Verified that buffs correctly affect THAC0 and
+ damage formulas.
+  - `TestAdvanceRound`: Confirmed duration-based buffs decrement and expire correctly.
+  - 
+`TestTriggerChargeBuff`: Verified charge-based buffs decrement and are removed at 0.
+  - `TestBuff
+Requirement`: Confirmed buffs with requirements (e.g., STR 18) are skipped if conditions aren't met.
+
+- **Type Checking:** `npm run typecheck` passed successfully after fixing `verbatimModuleSyntax` and unused import errors
+.
+
+Bead `critical-xzx.3` is closed and synchronized.
+
+--- STDERR ---
+YOLO mode is enabled. All tool calls will be automatically approved.
+YOLO mode is enabled. All tool calls will be automatically approved.
+Ripgrep is not available. Falling back to GrepTool.
+Error executing tool replace: Error: Failed to edit, could not find the string to replace.
+Error executing tool replace: Error: Failed to edit, could not find the string to replace.
+Error executing tool mcp_engram_mem_session_summary: Error: MCP tool 'mem_session_summary' reported an error.

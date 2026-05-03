@@ -92,8 +92,9 @@ type characterSeed struct {
 	Cha       int    `json:"cha"`
 	HPMax     int    `json:"hp_max"`
 	Thac0Base int    `json:"thac0_base"`
-	Level     int    `json:"level"`
-	XPTotal   int    `json:"xp_total"`
+	Level     int           `json:"level"`
+	XPTotal   int           `json:"xp_total"`
+	Slots     []interface{} `json:"slots"`
 }
 
 // SeedCharacter inserts the character from seedPath if the characters table is
@@ -122,7 +123,7 @@ func SeedCharacter(db *sql.DB, seedPath string) error {
 		return nil
 	}
 
-	_, err = db.Exec(
+	res, err := db.Exec(
 		`INSERT INTO characters (name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.Name, c.Str, c.Dex, c.Con, c.Int, c.Wis, c.Cha,
@@ -131,5 +132,17 @@ func SeedCharacter(db *sql.DB, seedPath string) error {
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)
 	}
+
+	charID, _ := res.LastInsertId()
+
+	// Initialize state tables
+	slotsJSON, _ := json.Marshal(c.Slots)
+	if len(c.Slots) == 0 {
+		slotsJSON = []byte("[]")
+	}
+	db.Exec("INSERT INTO spell_slots (character_id, slots) VALUES (?, ?)", charID, string(slotsJSON))
+	db.Exec("INSERT INTO active_buffs (character_id, buffs) VALUES (?, '[]')", charID)
+	db.Exec("INSERT INTO round_state (character_id, round_number) VALUES (?, 0)", charID)
+
 	return nil
 }

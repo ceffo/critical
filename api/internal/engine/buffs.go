@@ -7,6 +7,7 @@ type BuffModifiers struct {
 	SpellsBuff  float64
 	WeaponBuff  int
 	Multipliers float64
+	SaveBonus   int
 }
 
 // EffectEngine encapsulates the logic for evaluating and stacking buff effects
@@ -26,6 +27,7 @@ func (e *EffectEngine) Aggregate() BuffModifiers {
 		SpellsBuff:  1.0,
 		WeaponBuff:  0,
 		Multipliers: 1.0,
+		SaveBonus:   0,
 	}
 
 	for _, buff := range e.actor.ActiveBuffs {
@@ -54,6 +56,9 @@ func (e *EffectEngine) applyEffects(mods *BuffModifiers, effects domain.BuffEffe
 	}
 	if effects.Multiplier != nil {
 		mods.Multipliers *= *effects.Multiplier
+	}
+	if effects.SaveBonus != nil {
+		mods.SaveBonus += *effects.SaveBonus
 	}
 }
 

@@ -10,6 +10,11 @@
   "thac0_base": 16,
   "level": 9,
   "xp_total": 200000,
+  "save_para_poison": 12,
+  "save_rod_staff_wand": 12,
+  "save_petri_poly": 11,
+  "save_breath": 15,
+  "save_spell": 13,
   "slots": [
     {"level": 1, "prepared_spell_name": "Armor", "used": false},
     {"level": 1, "prepared_spell_name": "Audible Glamer", "used": false},

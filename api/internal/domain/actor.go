@@ -16,9 +16,15 @@ type Actor struct {
 func LoadActor(db *sql.DB, id int64) (*Actor, error) {
 	var char Character
 	err := db.QueryRow(
-		"SELECT id, name, str, thac0_base FROM characters WHERE id = ?",
+		`SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+		        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell
+		 FROM characters WHERE id = ?`,
 		id,
-	).Scan(&char.ID, &char.Name, &char.Str, &char.Thac0Base)
+	).Scan(
+		&char.ID, &char.Name, &char.Str, &char.Dex, &char.Con, &char.Int, &char.Wis, &char.Cha,
+		&char.HPMax, &char.Thac0Base, &char.Level, &char.XPTotal,
+		&char.SaveParaPoison, &char.SaveRodStaffWand, &char.SavePetriPoly, &char.SaveBreath, &char.SaveSpell,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("load character: %w", err)
 	}

@@ -38,24 +38,26 @@ Before writing any code, read these files:
 
 ## How To Work
 
-Use the `/tdd` skill to implement this bead:
+**Step 1 — Claim this bead immediately:**
+```bash
+br update {{taskId}} --status=in_progress
+```
+
+**Step 2 — Implement using /tdd:**
 1. Write failing tests first (for Go domain/engine layer — not HTTP handlers)
 2. Implement the minimum code to make tests pass
 3. Refactor if needed, keeping tests green
 4. For frontend work: implement the React panel/component, verify it renders correctly against the running API
 
-## Definition of Done
-
-Execute these steps IN ORDER when all acceptance criteria are met:
-
+**Step 3 — Complete in this exact order:**
 ```bash
-br close {{taskId}} --reason "Brief description of what was built"
-br sync --flush-only
 git add -A
 git commit -m "feat: <short description of what was built>"
+br close {{taskId}} --reason "Brief description of what was built"
+br sync --flush-only
 ```
 
-You are done (yield) after the commit succeeds. Do not proceed to the next bead.
+You are done (yield) after `br sync` completes. Do not proceed to the next bead.
 
 ## If You Are Blocked
 

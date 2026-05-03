@@ -66,7 +66,7 @@ func TestAdvanceRound(t *testing.T) {
 		{ID: "chg-1", Name: "Power", Type: "charge", Charges: 5},
 	}
 
-	active, expired := AdvanceRound(buffs)
+	active, expired := advanceRoundBuffs(buffs)
 	assert.Len(t, active, 2)
 	assert.Len(t, expired, 1)
 	assert.Equal(t, "dur-1", active[0].ID)

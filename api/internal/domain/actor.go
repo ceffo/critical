@@ -4,6 +4,8 @@ package domain
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 // Actor is a deep module encapsulating a character's stats, HP state, and active buffs.
@@ -42,8 +44,11 @@ func LoadActor(db *sql.DB, id int64) (*Actor, error) {
 	}, nil
 }
 
-// ApplyBuff adds a new buff to the actor and saves to DB
+// ApplyBuff adds a new buff to the actor and saves to DB. Assigns a UUID if ID is empty.
 func (a *Actor) ApplyBuff(buff BuffEffect) error {
+	if buff.ID == "" {
+		buff.ID = uuid.New().String()
+	}
 	a.ActiveBuffs = append(a.ActiveBuffs, buff)
 	return SaveActiveBuffs(a.db, a.Stats.ID, a.ActiveBuffs)
 }
@@ -61,6 +66,24 @@ func (a *Actor) UndoLastEvent() error {
 // GetHPState returns the current HP state
 func (a *Actor) GetHPState() (*HPState, error) {
 	return GetHPState(a.db, a.Stats.ID)
+}
+
+// TriggerBuff decrements charges on a charge-based buff and saves. Removes the buff when charges reach zero.
+func (a *Actor) TriggerBuff(id string) error {
+	a.ActiveBuffs = TriggerChargeBuff(a.ActiveBuffs, id)
+	return SaveActiveBuffs(a.db, a.Stats.ID, a.ActiveBuffs)
+}
+
+// DismissBuff removes the buff with the given ID and saves. No-op if ID not found.
+func (a *Actor) DismissBuff(id string) error {
+	filtered := a.ActiveBuffs[:0]
+	for _, b := range a.ActiveBuffs {
+		if b.ID != id {
+			filtered = append(filtered, b)
+		}
+	}
+	a.ActiveBuffs = filtered
+	return SaveActiveBuffs(a.db, a.Stats.ID, a.ActiveBuffs)
 }
 
 // SaveActiveBuffs persists the actor's buffs

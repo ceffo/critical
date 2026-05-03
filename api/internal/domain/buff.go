@@ -3,6 +3,7 @@ package domain
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -78,8 +79,8 @@ func SaveActiveBuffs(db *sql.DB, characterID int64, buffs []BuffEffect) error {
 	return nil
 }
 
-// AdvanceRound decrements duration-based buffs and returns the new active list and expired buffs.
-func AdvanceRound(activeBuffs []BuffEffect) (newActive []BuffEffect, expired []BuffEffect) {
+// advanceRoundBuffs decrements duration-based buffs and returns the new active list and expired buffs.
+func advanceRoundBuffs(activeBuffs []BuffEffect) (newActive []BuffEffect, expired []BuffEffect) {
 	for _, b := range activeBuffs {
 		if b.Type == "duration" {
 			b.Duration--
@@ -93,6 +94,70 @@ func AdvanceRound(activeBuffs []BuffEffect) (newActive []BuffEffect, expired []B
 		}
 	}
 	return
+}
+
+// AdvanceRound atomically increments the round counter and decrements duration buffs in a single transaction.
+func AdvanceRound(db *sql.DB, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, err error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if err = tx.QueryRow(
+		"SELECT round_number FROM round_state WHERE character_id = ?", characterID,
+	).Scan(&round); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, 0, fmt.Errorf("get round: %w", err)
+	}
+	round++
+
+	res, err := tx.Exec("UPDATE round_state SET round_number = ? WHERE character_id = ?", round, characterID)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("update round_state: %w", err)
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		if _, err = tx.Exec("INSERT INTO round_state (character_id, round_number) VALUES (?, ?)", characterID, round); err != nil {
+			return nil, nil, 0, fmt.Errorf("insert round_state: %w", err)
+		}
+	}
+
+	var buffsJSON string
+	if err = tx.QueryRow("SELECT buffs FROM active_buffs WHERE character_id = ?", characterID).Scan(&buffsJSON); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, 0, fmt.Errorf("get active_buffs: %w", err)
+	}
+
+	var currentBuffs []BuffEffect
+	if buffsJSON != "" {
+		if jsonErr := json.Unmarshal([]byte(buffsJSON), &currentBuffs); jsonErr != nil {
+			return nil, nil, 0, fmt.Errorf("unmarshal active_buffs: %w", jsonErr)
+		}
+	}
+
+	active, expired = advanceRoundBuffs(currentBuffs)
+
+	newJSON, jsonErr := json.Marshal(active)
+	if jsonErr != nil {
+		return nil, nil, 0, fmt.Errorf("marshal active_buffs: %w", jsonErr)
+	}
+
+	res, err = tx.Exec("UPDATE active_buffs SET buffs = ? WHERE character_id = ?", string(newJSON), characterID)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("update active_buffs: %w", err)
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		if _, err = tx.Exec("INSERT INTO active_buffs (character_id, buffs) VALUES (?, ?)", characterID, string(newJSON)); err != nil {
+			return nil, nil, 0, fmt.Errorf("insert active_buffs: %w", err)
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, nil, 0, fmt.Errorf("commit: %w", err)
+	}
+	return active, expired, round, nil
 }
 
 // TriggerChargeBuff decrements a charge-based buff and returns the new active list.

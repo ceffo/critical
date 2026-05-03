@@ -56,6 +56,11 @@ func Open(dsn, seedsDir string) (*sql.DB, error) {
 		return nil, fmt.Errorf("seed character: %w", err)
 	}
 
+	if err := SeedSpells(db, seedsDir+"/spells.json"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("seed spells: %w", err)
+	}
+
 	return db, nil
 }
 
@@ -154,3 +159,68 @@ func SeedCharacter(db *sql.DB, seedPath string) error {
 
 	return nil
 }
+
+type spellData struct {
+	Name         string `json:"name"`
+	Class        string `json:"class"`
+	Level        int    `json:"level"`
+	School       string `json:"school"`
+	Sphere       string `json:"sphere"`
+	CastingTime  string `json:"casting_time"`
+	Range        string `json:"range"`
+	Duration     string `json:"duration"`
+	AreaOfEffect string `json:"area_of_effect"`
+	Components   string `json:"components"`
+	SavingThrow  string `json:"saving_throw"`
+	Description  string `json:"description"`
+}
+
+func SeedSpells(db *sql.DB, seedPath string) error {
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM spells").Scan(&count); err != nil {
+		return fmt.Errorf("count spells: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
+
+	data, err := os.ReadFile(seedPath)
+	if err != nil {
+		return nil
+	}
+
+	var spells []spellData
+	if err := json.Unmarshal(data, &spells); err != nil {
+		return fmt.Errorf("parse spells.json: %w", err)
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`
+		INSERT INTO spells (
+			name, class, level, school, sphere, casting_time, range, 
+			duration, area_of_effect, components, saving_throw, description
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, s := range spells {
+		_, err := stmt.Exec(
+			s.Name, s.Class, s.Level, s.School, s.Sphere, s.CastingTime, s.Range,
+			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow, s.Description,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+

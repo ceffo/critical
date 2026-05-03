@@ -99,3 +99,40 @@ func ResetSpellSlots(slots []SpellSlot) []SpellSlot {
 	}
 	return newSlots
 }
+
+// SearchSpells searches for spells by name and class
+func SearchSpells(db *sql.DB, query, class string) ([]Spell, error) {
+	sqlQuery := "SELECT name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description FROM spells WHERE 1=1"
+	args := []interface{}{}
+
+	if query != "" {
+		sqlQuery += " AND name LIKE ?"
+		args = append(args, "%"+query+"%")
+	}
+	if class != "" {
+		sqlQuery += " AND class = ?"
+		args = append(args, class)
+	}
+
+	sqlQuery += " ORDER BY level, name LIMIT 50"
+
+	rows, err := db.Query(sqlQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query spells: %w", err)
+	}
+	defer rows.Close()
+
+	var spells []Spell
+	for rows.Next() {
+		var s Spell
+		err := rows.Scan(
+			&s.Name, &s.Class, &s.Level, &s.School, &s.Sphere, &s.CastingTime, &s.Range,
+			&s.Duration, &s.AreaOfEffect, &s.Components, &s.SavingThrow, &s.Description,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan spell: %w", err)
+		}
+		spells = append(spells, s)
+	}
+	return spells, nil
+}

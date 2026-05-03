@@ -62,6 +62,7 @@ func main() {
 	r.Post("/api/buffs/{id}/trigger", buffs.Trigger)
 
 	r.Get("/api/spells/slots", spells.GetSlots)
+	r.Get("/api/spells", spells.Search)
 	r.Post("/api/spells/{id}/cast", spells.Cast)
 	r.Post("/api/spells/reset", spells.Reset)
 

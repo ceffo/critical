@@ -46,12 +46,16 @@ Use the `/tdd` skill to implement this bead:
 
 ## Definition of Done
 
-You are done when ALL of the following are true:
-- All acceptance criteria above are met
-- Tests pass (`go test ./...` for backend, `npm run typecheck` for frontend)
-- `br close {{taskId}} --reason "Brief description of what was built"`
-- `br sync --flush-only`
-- Changes are staged and ready to commit (autoCommit will handle the actual commit)
+Execute these steps IN ORDER when all acceptance criteria are met:
+
+```bash
+br close {{taskId}} --reason "Brief description of what was built"
+br sync --flush-only
+git add -A
+git commit -m "feat: <short description of what was built>"
+```
+
+You are done (yield) after the commit succeeds. Do not proceed to the next bead.
 
 ## If You Are Blocked
 

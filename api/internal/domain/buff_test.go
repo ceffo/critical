@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"testing"
 
-	_ "modernc.org/sqlite"
 	"github.com/stretchr/testify/assert"
+	_ "modernc.org/sqlite"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -96,4 +96,3 @@ func TestTriggerChargeBuff(t *testing.T) {
 	buffs = TriggerChargeBuff(buffs, "chg-1")
 	assert.Len(t, buffs, 0)
 }
-

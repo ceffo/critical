@@ -3,7 +3,7 @@ package engine
 import (
 	"testing"
 
-	"github.com/moncef-naji/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +29,7 @@ func (m *mockDiceRoller) RollD100() int {
 	return m.RollDie(100)
 }
 
-func intPtr(v int) *int { return &v }
+func intPtr(v int) *int           { return &v }
 func floatPtr(v float64) *float64 { return &v }
 
 func TestResolveAttack(t *testing.T) {

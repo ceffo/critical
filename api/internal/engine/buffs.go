@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/moncef-naji/critical/api/internal/domain"
+import "github.com/ceffo/critical/api/internal/domain"
 
 // BuffModifiers holds the aggregated values from all active buffs
 type BuffModifiers struct {
@@ -20,7 +20,7 @@ func NewEffectEngine(actor *domain.Actor) *EffectEngine {
 	return &EffectEngine{actor: actor}
 }
 
-// Aggregate evaluates all active buffs against the character's stats 
+// Aggregate evaluates all active buffs against the character's stats
 // and returns the final stacked modifiers.
 func (e *EffectEngine) Aggregate() BuffModifiers {
 	mods := BuffModifiers{

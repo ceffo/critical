@@ -3,7 +3,7 @@ package engine
 import (
 	"fmt"
 
-	"github.com/moncef-naji/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain"
 )
 
 type SaveCategory string
@@ -51,14 +51,14 @@ func ResolveSavingThrow(dr DiceRoller, category SaveCategory, actor *domain.Acto
 
 	// In AD&D, modifiers can be added to the roll or subtracted from the target.
 	// We'll add them to the roll (higher is better).
-	res.EffectiveThac0 = target 
-	
+	res.EffectiveThac0 = target
+
 	totalRoll := res.D20Roll + buffMods.SaveBonus
 	res.Hit = totalRoll >= target
 	res.HitMargin = totalRoll - target
 
 	// Repurpose fields for Saving Throw transparency
-	res.DamageBreakdown = fmt.Sprintf("Roll: %d + Mod: %d = %d vs Target: %d (%s)", 
+	res.DamageBreakdown = fmt.Sprintf("Roll: %d + Mod: %d = %d vs Target: %d (%s)",
 		res.D20Roll, buffMods.SaveBonus, totalRoll, target, label)
 
 	return *res

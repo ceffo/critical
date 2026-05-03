@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"testing"
 
-	critdb "github.com/moncef-naji/critical/api/internal/db"
-	"github.com/moncef-naji/critical/api/internal/domain"
+	critdb "github.com/ceffo/critical/api/internal/db"
+	"github.com/ceffo/critical/api/internal/domain"
 )
 
 const testSeedsDir = "../../../seeds"

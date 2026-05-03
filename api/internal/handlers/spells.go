@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/go-chi/chi/v5"
-	"github.com/moncef-naji/critical/api/internal/domain"
 )
 
 type SpellsHandler struct {

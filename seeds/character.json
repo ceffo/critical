@@ -1,0 +1,13 @@
+{
+  "name": "Bard",
+  "str": 18,
+  "dex": 14,
+  "con": 13,
+  "int": 15,
+  "wis": 12,
+  "cha": 17,
+  "hp_max": 52,
+  "thac0_base": 16,
+  "level": 9,
+  "xp_total": 200000
+}

@@ -1,2 +1,17 @@
 # bv (beads viewer) local config and caches
 .bv/
+
+# Go binaries
+api/critical-api
+api/*.exe
+
+# Node / web
+web/node_modules/
+web/dist/
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store

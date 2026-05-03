@@ -39,35 +39,14 @@ func (h *CombatHandler) ResolveAttack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Fetch character stats
-	var char domain.Character
-	err := h.DB.QueryRow(
-		"SELECT id, name, str, thac0_base FROM characters WHERE id = ?",
-		h.CharacterID,
-	).Scan(&char.ID, &char.Name, &char.Str, &char.Thac0Base)
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
-		http.Error(w, "failed to fetch character", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// 2. Fetch active buffs
-	var buffsJSON string
-	err = h.DB.QueryRow(
-		"SELECT buffs FROM active_buffs WHERE character_id = ?",
-		h.CharacterID,
-	).Scan(&buffsJSON)
-	
-	var activeBuffs []domain.BuffEffect
-	if err == nil && buffsJSON != "" {
-		json.Unmarshal([]byte(buffsJSON), &activeBuffs)
-	} else if err != nil && err != sql.ErrNoRows {
-		http.Error(w, "failed to fetch buffs", http.StatusInternalServerError)
-		return
-	}
-
-	// 3. Resolve attack
 	dr := engine.NewDiceRoller(rand.NewSource(time.Now().UnixNano()))
-	res := engine.ResolveAttack(dr, weapon, req.TargetAC, char, activeBuffs)
+	res := engine.ResolveAttack(dr, weapon, req.TargetAC, actor)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(res)

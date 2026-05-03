@@ -16,12 +16,12 @@ type BuffsHandler struct {
 }
 
 func (h *BuffsHandler) ListActive(w http.ResponseWriter, r *http.Request) {
-	buffs, err := domain.GetActiveBuffs(h.DB, h.CharacterID)
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	jsonOK(w, buffs)
+	jsonOK(w, actor.ActiveBuffs)
 }
 
 func (h *BuffsHandler) Activate(w http.ResponseWriter, r *http.Request) {
@@ -38,19 +38,18 @@ func (h *BuffsHandler) Activate(w http.ResponseWriter, r *http.Request) {
 
 	buff.ID = uuid.New().String()
 	
-	buffs, err := domain.GetActiveBuffs(h.DB, h.CharacterID)
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	buffs = append(buffs, buff)
-	if err := domain.SaveActiveBuffs(h.DB, h.CharacterID, buffs); err != nil {
+	if err := actor.ApplyBuff(buff); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	jsonOK(w, buffs)
+	jsonOK(w, actor.ActiveBuffs)
 }
 
 func (h *BuffsHandler) Dismiss(w http.ResponseWriter, r *http.Request) {
@@ -60,25 +59,26 @@ func (h *BuffsHandler) Dismiss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buffs, err := domain.GetActiveBuffs(h.DB, h.CharacterID)
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	newBuffs := []domain.BuffEffect{}
-	for _, b := range buffs {
+	for _, b := range actor.ActiveBuffs {
 		if b.ID != id {
 			newBuffs = append(newBuffs, b)
 		}
 	}
 
-	if err := domain.SaveActiveBuffs(h.DB, h.CharacterID, newBuffs); err != nil {
+	actor.ActiveBuffs = newBuffs
+	if err := actor.SaveActiveBuffs(); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	jsonOK(w, newBuffs)
+	jsonOK(w, actor.ActiveBuffs)
 }
 
 func (h *BuffsHandler) Trigger(w http.ResponseWriter, r *http.Request) {
@@ -88,18 +88,18 @@ func (h *BuffsHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buffs, err := domain.GetActiveBuffs(h.DB, h.CharacterID)
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	newBuffs := domain.TriggerChargeBuff(buffs, id)
+	actor.ActiveBuffs = domain.TriggerChargeBuff(actor.ActiveBuffs, id)
 
-	if err := domain.SaveActiveBuffs(h.DB, h.CharacterID, newBuffs); err != nil {
+	if err := actor.SaveActiveBuffs(); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	jsonOK(w, newBuffs)
+	jsonOK(w, actor.ActiveBuffs)
 }

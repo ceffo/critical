@@ -8,8 +8,8 @@ import (
 	"github.com/moncef-naji/critical/api/internal/domain"
 )
 
-func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, char domain.Character, activeBuffs []domain.BuffEffect) domain.RollResult {
-	trace := NewRollTrace(dr, char.Thac0Base)
+func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, actor *domain.Actor) domain.RollResult {
+	trace := NewRollTrace(dr, actor.Stats.Thac0Base)
 	res := trace.Result()
 
 	// 1. Roll D20 and D100 simultaneously
@@ -17,7 +17,7 @@ func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, char domai
 	res.D100CritRoll = trace.RollD100()
 
 	// 2. Calculate Effective THAC0
-	if char.Str >= 18 {
+	if actor.Stats.Str >= 18 {
 		trace.AddModifier("Strength", 1)
 	}
 
@@ -40,12 +40,12 @@ func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, char domai
 		// 4. Resolve Damage: ((BaseDamage × SpellsBuff) + WeaponBuff) × Multipliers + StrengthBonus
 		res.BaseDamage = rollDamage(dr, weapon.BaseDamage)
 
-		buffMods := ApplyBuffModifiers(char, activeBuffs)
+		buffMods := ApplyBuffModifiers(actor)
 		res.SpellsBuff = buffMods.SpellsBuff
 		res.WeaponBuff = buffMods.WeaponBuff
 		res.Multipliers = float64(res.CritMultiplier) * buffMods.Multipliers
 
-		if char.Str >= 18 {
+		if actor.Stats.Str >= 18 {
 			res.StrengthBonus = 2
 		}
 

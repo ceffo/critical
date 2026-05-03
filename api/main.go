@@ -32,6 +32,8 @@ func main() {
 
 	hp := &handlers.HPHandler{DB: db, CharacterID: charID}
 	combat := &handlers.CombatHandler{DB: db, CharacterID: charID}
+	buffs := &handlers.BuffsHandler{DB: db, CharacterID: charID}
+	round := &handlers.RoundHandler{DB: db, CharacterID: charID}
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -47,6 +49,14 @@ func main() {
 	r.Post("/api/hp/undo", hp.UndoLastEvent)
 
 	r.Post("/api/roll/attack", combat.ResolveAttack)
+
+	r.Get("/api/buffs", buffs.ListActive)
+	r.Post("/api/buffs", buffs.Activate)
+	r.Delete("/api/buffs/{id}", buffs.Dismiss)
+	r.Post("/api/buffs/{id}/trigger", buffs.Trigger)
+
+	r.Get("/api/round", round.GetRound)
+	r.Post("/api/round/advance", round.Advance)
 
 	srv := &http.Server{
 		Addr:    ":8080",

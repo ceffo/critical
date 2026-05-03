@@ -53,30 +53,10 @@ func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, char domai
 		// 4. Resolve Damage: ((BaseDamage × SpellsBuff) + WeaponBuff) × Multipliers + StrengthBonus
 		res.BaseDamage = rollDamage(dr, weapon.BaseDamage)
 
-		// Buff modifiers (stubbed as identity values for now as per instructions)
-		res.SpellsBuff = 1.0
-		res.WeaponBuff = 0
-		
-		// Check for specific buffs in activeBuffs (stubbed for now)
-		for _, buff := range activeBuffs {
-			if sb, ok := buff.Effects["spells_buff"].(float64); ok {
-				res.SpellsBuff *= sb
-			}
-			if wb, ok := buff.Effects["weapon_buff"].(float64); ok {
-				res.WeaponBuff += int(wb)
-			}
-			if wb, ok := buff.Effects["weapon_buff"].(int); ok {
-				res.WeaponBuff += wb
-			}
-		}
-
-		res.Multipliers = float64(res.CritMultiplier)
-		// Check for other multipliers from buffs
-		for _, buff := range activeBuffs {
-			if m, ok := buff.Effects["multiplier"].(float64); ok {
-				res.Multipliers *= m
-			}
-		}
+		buffMods := ApplyBuffModifiers(char, activeBuffs)
+		res.SpellsBuff = buffMods.SpellsBuff
+		res.WeaponBuff = buffMods.WeaponBuff
+		res.Multipliers = float64(res.CritMultiplier) * buffMods.Multipliers
 
 		if char.Str >= 18 {
 			res.StrengthBonus = 2

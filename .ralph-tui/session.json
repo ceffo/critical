@@ -3,8 +3,8 @@
   "sessionId": "3a5b33a4-eaf6-4c31-8300-687d10332d94",
   "status": "running",
   "startedAt": "2026-05-03T02:37:15.264Z",
-  "updatedAt": "2026-05-03T02:38:59.940Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-05-03T02:42:27.426Z",
+  "currentIteration": 2,
   "maxIterations": 10,
   "tasksCompleted": 0,
   "isPaused": false,
@@ -50,13 +50,24 @@
       "durationMs": 98233,
       "startedAt": "2026-05-03T02:37:20.396Z",
       "endedAt": "2026-05-03T02:38:58.629Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "critical-xzx.2",
+      "taskTitle": "F2: Combat Roll Resolution",
+      "taskCompleted": false,
+      "durationMs": 206258,
+      "startedAt": "2026-05-03T02:38:59.863Z",
+      "endedAt": "2026-05-03T02:42:26.121Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "/home/moncef/code/critical",
   "activeTaskIds": [
     "critical-xzx.1",
-    "critical-xzx.2"
+    "critical-xzx.2",
+    "critical-xzx.3"
   ],
   "subagentPanelVisible": false
 }

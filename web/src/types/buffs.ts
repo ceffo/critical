@@ -1,6 +1,14 @@
-export interface Buff {
-  id: number;
+export interface BuffEffect {
+  id: string;
   name: string;
-  durationType: 'rounds' | 'charges';
-  remaining: number;
+  type: 'charge' | 'duration';
+  charges: number;
+  duration: number;
+  effects: Record<string, number>;
+}
+
+export interface RoundAdvanceResponse {
+  roundNumber: number;
+  activeBuffs: BuffEffect[];
+  expiredBuffs: BuffEffect[];
 }

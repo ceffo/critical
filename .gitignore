@@ -5,6 +5,8 @@
 api/critical-api
 api/*.exe
 
+bin/
+
 # Node / web
 web/node_modules/
 web/dist/

@@ -1,0 +1,59 @@
+# Critical Project Justfile
+
+_default:
+    @just --list
+
+# --- Global Commands ---
+
+# Run full project validation (backend + frontend)
+validate: check-api check-web
+    @echo "--- Project Validation Successful ---"
+
+# Install all dependencies
+install:
+    cd api && go mod tidy
+    cd web && npm install
+
+# Format all code
+fmt: fmt-api
+    cd web && npx prettier --write .
+
+# --- Backend (API) Commands ---
+
+# Build the backend
+build-api:
+    cd api && go build -o ../bin/critical-srv .
+
+# Lint the backend
+lint-api:
+    cd api && golangci-lint run ./...
+
+# Format the backend
+fmt-api:
+    cd api && golangci-lint fmt ./...
+
+# Test the backend
+test-api:
+    cd api && go test -v ./...
+
+# Run all backend checks
+check-api: lint-api test-api build-api
+    @echo "--- Backend Validation Successful ---"
+
+# --- Frontend (Web) Commands ---
+
+# Build the frontend
+build-web:
+    cd web && npm run build
+
+# Lint the frontend
+lint-web:
+    cd web && npm run lint
+
+# Typecheck the frontend
+typecheck-web:
+    cd web && npm run typecheck
+
+# Run all frontend checks
+check-web: lint-web typecheck-web build-web
+    @echo "--- Frontend Validation Successful ---"

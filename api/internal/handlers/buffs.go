@@ -7,7 +7,6 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
 
 // BuffsHandler provides HTTP handlers for managing character buffs.
@@ -40,8 +39,6 @@ func (h *BuffsHandler) Activate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buff.ID = uuid.New().String()
-
 	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
@@ -70,15 +67,7 @@ func (h *BuffsHandler) Dismiss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newBuffs := []domain.BuffEffect{}
-	for _, b := range actor.ActiveBuffs {
-		if b.ID != id {
-			newBuffs = append(newBuffs, b)
-		}
-	}
-
-	actor.ActiveBuffs = newBuffs
-	if err := actor.SaveActiveBuffs(); err != nil {
+	if err := actor.DismissBuff(id); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -100,9 +89,7 @@ func (h *BuffsHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actor.ActiveBuffs = domain.TriggerChargeBuff(actor.ActiveBuffs, id)
-
-	if err := actor.SaveActiveBuffs(); err != nil {
+	if err := actor.TriggerBuff(id); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

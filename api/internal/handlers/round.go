@@ -30,37 +30,17 @@ func (h *RoundHandler) GetRound(w http.ResponseWriter, _ *http.Request) {
 	jsonOK(w, map[string]int{"round": round})
 }
 
-// Advance increments the round number and processes buff expirations.
+// Advance increments the round number and processes buff expirations atomically.
 func (h *RoundHandler) Advance(w http.ResponseWriter, _ *http.Request) {
-	// 1. Increment round counter
-	round, err := domain.GetRoundNumber(h.DB, h.CharacterID)
+	active, expired, round, err := domain.AdvanceRound(h.DB, h.CharacterID)
 	if err != nil {
-		jsonError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	round++
-	if err := domain.SaveRoundNumber(h.DB, h.CharacterID, round); err != nil {
-		jsonError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// 2. Decrement duration buffs
-	buffs, err := domain.GetActiveBuffs(h.DB, h.CharacterID)
-	if err != nil {
-		jsonError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	activeBuffs, expiredBuffs := domain.AdvanceRound(buffs)
-
-	if err := domain.SaveActiveBuffs(h.DB, h.CharacterID, activeBuffs); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	jsonOK(w, RoundAdvanceResponse{
 		RoundNumber:  round,
-		ActiveBuffs:  activeBuffs,
-		ExpiredBuffs: expiredBuffs,
+		ActiveBuffs:  active,
+		ExpiredBuffs: expired,
 	})
 }

@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { Character } from '@/types/character';
-import { fetchCharacter } from '@/api/character';
+import { create } from "zustand";
+import type { Character } from "@/types/character";
+import { fetchCharacter } from "@/api/character";
 
 interface CharacterStore {
   character: Character | null;

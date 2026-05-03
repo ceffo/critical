@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { useSpellsDbStore } from '@/stores/spells_db';
-import { Search, Loader2 } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { useSpellsDbStore } from "@/stores/spells_db";
+import { Search, Loader2 } from "lucide-react";
 
 export function SpellLookupPanel() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const { results, search, loading } = useSpellsDbStore();
 
   useEffect(() => {
@@ -39,25 +39,41 @@ export function SpellLookupPanel() {
             <Card key={spell.name} className="overflow-hidden">
               <CardHeader className="py-2 px-3 bg-muted/30">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-black uppercase tracking-tight">{spell.name}</CardTitle>
+                  <CardTitle className="text-sm font-black uppercase tracking-tight">
+                    {spell.name}
+                  </CardTitle>
                   <div className="flex gap-1">
-                    <Badge variant="secondary" className="text-[10px] py-0">{spell.class}</Badge>
-                    <Badge className="text-[10px] py-0">Lvl {spell.level}</Badge>
+                    <Badge variant="secondary" className="text-[10px] py-0">
+                      {spell.class}
+                    </Badge>
+                    <Badge className="text-[10px] py-0">
+                      Lvl {spell.level}
+                    </Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-3 text-[11px] space-y-2">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
                   <div className="flex gap-1">
-                    <span className="font-bold uppercase text-[9px]">School:</span>
-                    <span className="text-foreground truncate">{spell.school}</span>
+                    <span className="font-bold uppercase text-[9px]">
+                      School:
+                    </span>
+                    <span className="text-foreground truncate">
+                      {spell.school}
+                    </span>
                   </div>
                   <div className="flex gap-1">
-                    <span className="font-bold uppercase text-[9px]">Time:</span>
-                    <span className="text-foreground">{spell.casting_time}</span>
+                    <span className="font-bold uppercase text-[9px]">
+                      Time:
+                    </span>
+                    <span className="text-foreground">
+                      {spell.casting_time}
+                    </span>
                   </div>
                   <div className="flex gap-1">
-                    <span className="font-bold uppercase text-[9px]">Range:</span>
+                    <span className="font-bold uppercase text-[9px]">
+                      Range:
+                    </span>
                     <span className="text-foreground">{spell.range}</span>
                   </div>
                   <div className="flex gap-1">
@@ -65,10 +81,10 @@ export function SpellLookupPanel() {
                     <span className="text-foreground">{spell.duration}</span>
                   </div>
                 </div>
-                
+
                 <div className="pt-2 border-t text-muted-foreground leading-relaxed italic">
-                  {spell.description.length > 200 
-                    ? spell.description.substring(0, 200) + '...' 
+                  {spell.description.length > 200
+                    ? spell.description.substring(0, 200) + "..."
                     : spell.description}
                 </div>
               </CardContent>

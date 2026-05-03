@@ -1,19 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useHpStore } from '@/stores/hp';
-import { useBuffsStore } from '@/stores/buffs';
-import { X, Zap } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useHpStore } from "@/stores/hp";
+import { useBuffsStore } from "@/stores/buffs";
+import { X, Zap } from "lucide-react";
 
 function HpBar({ current, max }: { current: number; max: number }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
   const color =
-    pct > 50 ? 'bg-green-500' : pct >= 25 ? 'bg-yellow-400' : 'bg-red-500';
+    pct > 50 ? "bg-green-500" : pct >= 25 ? "bg-yellow-400" : "bg-red-500";
   return (
     <div>
       <div className="flex justify-between text-sm font-mono mb-1">
-        <span>{current} / {max}</span>
+        <span>
+          {current} / {max}
+        </span>
         <span>{Math.round(pct)}%</span>
       </div>
       <div className="w-full h-4 bg-muted rounded overflow-hidden">
@@ -27,19 +29,23 @@ function HpBar({ current, max }: { current: number; max: number }) {
 }
 
 export function LeftPanel() {
-  const { currentHp, maxHp, events, fetchHp, appendEvent, undoLastEvent } = useHpStore();
-  const { buffs, fetchBuffs, activateBuff, dismissBuff, triggerBuff } = useBuffsStore();
+  const { currentHp, maxHp, events, fetchHp, appendEvent, undoLastEvent } =
+    useHpStore();
+  const { buffs, fetchBuffs, activateBuff, dismissBuff, triggerBuff } =
+    useBuffsStore();
 
-  const [damageInput, setDamageInput] = useState('');
-  const [damageSource, setDamageSource] = useState('');
-  const [healInput, setHealInput] = useState('');
-  const [healSource, setHealSource] = useState('');
+  const [damageInput, setDamageInput] = useState("");
+  const [damageSource, setDamageSource] = useState("");
+  const [healInput, setHealInput] = useState("");
+  const [healSource, setHealSource] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [newBuffName, setNewBuffName] = useState('');
-  const [newBuffType, setNewBuffType] = useState<'charge' | 'duration'>('duration');
+  const [newBuffName, setNewBuffName] = useState("");
+  const [newBuffType, setNewBuffType] = useState<"charge" | "duration">(
+    "duration",
+  );
   const [newBuffValue, setNewBuffValue] = useState(1);
-  const [newBuffEffectKey, setNewBuffEffectKey] = useState('weapon_buff');
+  const [newBuffEffectKey, setNewBuffEffectKey] = useState("weapon_buff");
   const [newBuffEffectValue, setNewBuffEffectValue] = useState(1);
 
   useEffect(() => {
@@ -52,11 +58,11 @@ export function LeftPanel() {
     await activateBuff({
       name: newBuffName.trim(),
       type: newBuffType,
-      charges: newBuffType === 'charge' ? newBuffValue : 0,
-      duration: newBuffType === 'duration' ? newBuffValue : 0,
-      effects: { [newBuffEffectKey]: newBuffEffectValue }
+      charges: newBuffType === "charge" ? newBuffValue : 0,
+      duration: newBuffType === "duration" ? newBuffValue : 0,
+      effects: { [newBuffEffectKey]: newBuffEffectValue },
     });
-    setNewBuffName('');
+    setNewBuffName("");
   }
 
   async function handleDamage() {
@@ -65,8 +71,8 @@ export function LeftPanel() {
     setLoading(true);
     try {
       await appendEvent(-delta, damageSource.trim());
-      setDamageInput('');
-      setDamageSource('');
+      setDamageInput("");
+      setDamageSource("");
     } finally {
       setLoading(false);
     }
@@ -78,8 +84,8 @@ export function LeftPanel() {
     setLoading(true);
     try {
       await appendEvent(delta, healSource.trim());
-      setHealInput('');
-      setHealSource('');
+      setHealInput("");
+      setHealSource("");
     } finally {
       setLoading(false);
     }
@@ -105,7 +111,9 @@ export function LeftPanel() {
 
           {/* Damage entry */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground uppercase tracking-wide">Damage</label>
+            <label className="text-xs text-muted-foreground uppercase tracking-wide">
+              Damage
+            </label>
             <div className="flex gap-1">
               <input
                 type="number"
@@ -120,7 +128,7 @@ export function LeftPanel() {
                 placeholder="Source"
                 value={damageSource}
                 onChange={(e) => setDamageSource(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleDamage()}
+                onKeyDown={(e) => e.key === "Enter" && handleDamage()}
                 className="flex-1 px-2 py-1 text-sm border rounded bg-background"
               />
             </div>
@@ -136,7 +144,9 @@ export function LeftPanel() {
 
           {/* Heal entry */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground uppercase tracking-wide">Heal</label>
+            <label className="text-xs text-muted-foreground uppercase tracking-wide">
+              Heal
+            </label>
             <div className="flex gap-1">
               <input
                 type="number"
@@ -151,7 +161,7 @@ export function LeftPanel() {
                 placeholder="Source"
                 value={healSource}
                 onChange={(e) => setHealSource(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleHeal()}
+                onKeyDown={(e) => e.key === "Enter" && handleHeal()}
                 className="flex-1 px-2 py-1 text-sm border rounded bg-background"
               />
             </div>
@@ -174,15 +184,23 @@ export function LeftPanel() {
         <CardContent className="flex flex-col gap-2">
           <ul className="flex flex-col gap-2">
             {buffs.map((buff) => (
-              <li key={buff.id} className="flex items-center justify-between group">
+              <li
+                key={buff.id}
+                className="flex items-center justify-between group"
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{buff.name}</span>
-                  <Badge variant="outline" className="text-[10px] h-5 px-1 font-mono">
-                    {buff.type === 'charge' ? `${buff.charges}ch` : `${buff.duration}rd`}
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] h-5 px-1 font-mono"
+                  >
+                    {buff.type === "charge"
+                      ? `${buff.charges}ch`
+                      : `${buff.duration}rd`}
                   </Badge>
                 </div>
                 <div className="flex gap-1">
-                  {buff.type === 'charge' && (
+                  {buff.type === "charge" && (
                     <Button
                       size="icon"
                       variant="ghost"
@@ -206,7 +224,9 @@ export function LeftPanel() {
               </li>
             ))}
             {buffs.length === 0 && (
-              <li className="text-xs text-muted-foreground italic text-center py-2">No active buffs</li>
+              <li className="text-xs text-muted-foreground italic text-center py-2">
+                No active buffs
+              </li>
             )}
           </ul>
 
@@ -227,11 +247,13 @@ export function LeftPanel() {
                 className="w-12 px-1 py-1 text-sm border rounded bg-background"
               />
             </div>
-            
+
             <div className="flex gap-1">
               <select
                 value={newBuffType}
-                onChange={(e) => setNewBuffType(e.target.value as 'charge' | 'duration')}
+                onChange={(e) =>
+                  setNewBuffType(e.target.value as "charge" | "duration")
+                }
                 className="flex-1 px-1 py-1 text-sm border rounded bg-background"
               >
                 <option value="duration">Rounds</option>
@@ -250,7 +272,9 @@ export function LeftPanel() {
                 type="number"
                 step="0.1"
                 value={newBuffEffectValue}
-                onChange={(e) => setNewBuffEffectValue(parseFloat(e.target.value) || 0)}
+                onChange={(e) =>
+                  setNewBuffEffectValue(parseFloat(e.target.value) || 0)
+                }
                 className="w-12 px-1 py-1 text-sm border rounded bg-background"
               />
             </div>
@@ -267,7 +291,13 @@ export function LeftPanel() {
         <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Recent Events</CardTitle>
-            <Button variant="ghost" size="xs" onClick={handleUndo} disabled={loading} className="h-7 px-2 text-xs">
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={handleUndo}
+              disabled={loading}
+              className="h-7 px-2 text-xs"
+            >
               Undo
             </Button>
           </CardHeader>
@@ -275,9 +305,14 @@ export function LeftPanel() {
             <ul className="flex flex-col gap-1">
               {events.map((e) => (
                 <li key={e.id} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground truncate max-w-[140px]">{e.source}</span>
-                  <span className={e.delta < 0 ? 'text-red-500' : 'text-green-500'}>
-                    {e.delta > 0 ? '+' : ''}{e.delta}
+                  <span className="text-muted-foreground truncate max-w-[140px]">
+                    {e.source}
+                  </span>
+                  <span
+                    className={e.delta < 0 ? "text-red-500" : "text-green-500"}
+                  >
+                    {e.delta > 0 ? "+" : ""}
+                    {e.delta}
                   </span>
                 </li>
               ))}

@@ -15,8 +15,7 @@ install:
     cd web && npm install
 
 # Format all code
-fmt: fmt-api
-    cd web && npx prettier --write .
+fmt: fmt-api fmt-web
 
 # --- Backend (API) Commands ---
 
@@ -57,3 +56,7 @@ typecheck-web:
 # Run all frontend checks
 check-web: lint-web typecheck-web build-web
     @echo "--- Frontend Validation Successful ---"
+
+# Format the frontend
+fmt-web:
+    cd web && npx prettier --write .

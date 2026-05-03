@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8888:8080"
+    volumes:
+      - ./seeds:/app/seeds:ro
     restart: unless-stopped
 
   web:

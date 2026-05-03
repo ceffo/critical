@@ -25,50 +25,53 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
     set({ loading: true });
     try {
       const buffs = await api.fetchActiveBuffs();
-      set({ buffs, loading: false });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+      set({ buffs: buffs || [], loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
     }
   },
   fetchRound: async () => {
     try {
       const { roundNumber } = await roundApi.fetchRound();
       set({ round: roundNumber });
-    } catch (e: any) {
-      set({ error: e.message });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message });
     }
   },
   activateBuff: async (buff) => {
     try {
       const buffs = await api.activateBuff(buff);
-      set({ buffs });
-    } catch (e: any) {
-      set({ error: e.message });
+      set({ buffs: buffs || [] });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message });
     }
   },
   dismissBuff: async (id) => {
     try {
       const buffs = await api.dismissBuff(id);
-      set({ buffs });
-    } catch (e: any) {
-      set({ error: e.message });
+      set({ buffs: buffs || [] });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message });
     }
   },
   triggerBuff: async (id) => {
     try {
       const buffs = await api.triggerBuff(id);
-      set({ buffs });
-    } catch (e: any) {
-      set({ error: e.message });
+      set({ buffs: buffs || [] });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message });
     }
   },
   advanceRound: async () => {
     try {
       const res = await roundApi.advanceRound();
-      set({ round: res.roundNumber, buffs: res.activeBuffs });
-      return res.expiredBuffs;
-    } catch (e: any) {
-      set({ error: e.message });
+      set({ 
+        round: res.roundNumber, 
+        buffs: res.activeBuffs || [] 
+      });
+      return res.expiredBuffs || [];
+    } catch (e: unknown) {
+      set({ error: (e as Error).message });
       return [];
     }
   },

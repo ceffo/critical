@@ -14,15 +14,24 @@ export const useHpStore = create<HpStore>((set) => ({
   events: [] as HpEvent[],
   fetchHp: async () => {
     const state = await getHpState();
-    set(state);
+    set({
+      ...state,
+      events: state.events || []
+    });
   },
   appendEvent: async (delta: number, source: string) => {
     await appendHpEvent(delta, source);
     const state = await getHpState();
-    set(state);
+    set({
+      ...state,
+      events: state.events || []
+    });
   },
   undoLastEvent: async () => {
     const state = await undoLastEvent();
-    set(state);
+    set({
+      ...state,
+      events: state.events || []
+    });
   },
 }));

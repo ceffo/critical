@@ -10,12 +10,14 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// SpellsHandler provides HTTP handlers for spell database lookups and slot management.
 type SpellsHandler struct {
 	DB          *sql.DB
 	CharacterID int64
 }
 
-func (h *SpellsHandler) GetSlots(w http.ResponseWriter, r *http.Request) {
+// GetSlots returns the character's current spell slots.
+func (h *SpellsHandler) GetSlots(w http.ResponseWriter, _ *http.Request) {
 	slots, err := domain.GetSpellSlots(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
@@ -24,6 +26,7 @@ func (h *SpellsHandler) GetSlots(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, slots)
 }
 
+// Search queries the spell database by name and character class.
 func (h *SpellsHandler) Search(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	class := r.URL.Query().Get("class")
@@ -36,6 +39,7 @@ func (h *SpellsHandler) Search(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, spells)
 }
 
+// Cast marks a specific spell slot as used for the character.
 func (h *SpellsHandler) Cast(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	index, err := strconv.Atoi(idStr)
@@ -68,7 +72,8 @@ func (h *SpellsHandler) Cast(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, newSlots)
 }
 
-func (h *SpellsHandler) Reset(w http.ResponseWriter, r *http.Request) {
+// Reset restores all spell slots to their maximum capacity.
+func (h *SpellsHandler) Reset(w http.ResponseWriter, _ *http.Request) {
 	slots, err := domain.GetSpellSlots(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)

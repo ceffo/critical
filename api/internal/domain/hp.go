@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// HpEvent represents a single change to a character's hit points in the append-only ledger.
 type HpEvent struct {
 	ID          int64
 	CharacterID int64
@@ -14,6 +15,7 @@ type HpEvent struct {
 	CreatedAt   time.Time
 }
 
+// HPState represents the current calculated HP state and recent events for a character.
 type HPState struct {
 	CurrentHp int       `json:"currentHp"`
 	MaxHp     int       `json:"maxHp"`
@@ -57,7 +59,7 @@ func GetHistory(db *sql.DB, characterID int64, limit int) ([]HpEvent, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query hp_events: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var events []HpEvent
 	for rows.Next() {

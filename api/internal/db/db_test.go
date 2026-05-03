@@ -15,7 +15,11 @@ func TestOpenAndMigrate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer database.Close()
+	defer func() {
+		if err := database.Close(); err != nil {
+			t.Errorf("error closing database: %v", err)
+		}
+	}()
 
 	tables := []string{
 		"characters",
@@ -43,7 +47,11 @@ func TestSeedCharacter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer database.Close()
+	defer func() {
+		if err := database.Close(); err != nil {
+			t.Errorf("error closing database: %v", err)
+		}
+	}()
 
 	var count int
 	if err := database.QueryRow("SELECT COUNT(*) FROM characters").Scan(&count); err != nil {
@@ -59,7 +67,11 @@ func TestSeedIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer database.Close()
+	defer func() {
+		if err := database.Close(); err != nil {
+			t.Errorf("error closing database: %v", err)
+		}
+	}()
 
 	// Second open on same DB won't run seed again because table is not empty.
 	// Simulate by calling seed again and confirming count stays 1.

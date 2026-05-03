@@ -120,7 +120,7 @@ func SearchSpells(db *sql.DB, query, class string) ([]Spell, error) {
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var spells []Spell
 	for rows.Next() {

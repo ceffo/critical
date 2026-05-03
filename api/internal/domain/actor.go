@@ -1,3 +1,4 @@
+// Package domain contains the core business logic and state for characters, combat, and buffs.
 package domain
 
 import (

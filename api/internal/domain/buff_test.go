@@ -29,7 +29,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 func TestBuffPersistence(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	charID := int64(1)
 	wb := 1
@@ -48,7 +48,7 @@ func TestBuffPersistence(t *testing.T) {
 
 func TestRoundPersistence(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	charID := int64(1)
 	err := SaveRoundNumber(db, charID, 5)

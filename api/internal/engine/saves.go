@@ -6,16 +6,23 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 )
 
+// SaveCategory defines the distinct categories of saving throws in AD&D.
 type SaveCategory string
 
 const (
-	SaveParaPoison   SaveCategory = "para_poison"
+	// SaveParaPoison is the category for Paralysis, Poison, and Death Magic.
+	SaveParaPoison SaveCategory = "para_poison"
+	// SaveRodStaffWand is the category for Rods, Staves, and Wands.
 	SaveRodStaffWand SaveCategory = "rod_staff_wand"
-	SavePetriPoly    SaveCategory = "petri_poly"
-	SaveBreath       SaveCategory = "breath"
-	SaveSpell        SaveCategory = "spell"
+	// SavePetriPoly is the category for Petrification and Polymorph.
+	SavePetriPoly SaveCategory = "petri_poly"
+	// SaveBreath is the category for Breath Weapons.
+	SaveBreath SaveCategory = "breath"
+	// SaveSpell is the category for Spells.
+	SaveSpell SaveCategory = "spell"
 )
 
+// ResolveSavingThrow executes a single saving throw against a target value for the actor.
 func ResolveSavingThrow(dr DiceRoller, category SaveCategory, actor *domain.Actor) domain.RollResult {
 	target := 20
 	label := ""

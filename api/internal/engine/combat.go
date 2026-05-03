@@ -8,6 +8,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 )
 
+// ResolveAttack executes a complete attack resolution, including hit calculation and damage.
 func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, actor *domain.Actor) domain.RollResult {
 	trace := NewRollTrace(dr, actor.Stats.Thac0Base)
 	res := trace.Result()

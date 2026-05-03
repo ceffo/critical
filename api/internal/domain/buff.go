@@ -6,6 +6,7 @@ import (
 	"fmt"
 )
 
+// BuffEffects represents the modifiers granted by a buff.
 type BuffEffects struct {
 	MinStr     *int     `json:"min_str,omitempty"`
 	SpellsBuff *float64 `json:"spells_buff,omitempty"`
@@ -14,6 +15,7 @@ type BuffEffects struct {
 	SaveBonus  *int     `json:"save_bonus,omitempty"`
 }
 
+// BuffEffect represents a single active buff or debuff on a character.
 type BuffEffect struct {
 	ID       string      `json:"id"`
 	Name     string      `json:"name"`
@@ -23,6 +25,7 @@ type BuffEffect struct {
 	Effects  BuffEffects `json:"effects"`
 }
 
+// GetActiveBuffs retrieves all currently active buffs for a character.
 func GetActiveBuffs(db *sql.DB, characterID int64) ([]BuffEffect, error) {
 	var buffsJSON string
 	err := db.QueryRow(
@@ -45,6 +48,7 @@ func GetActiveBuffs(db *sql.DB, characterID int64) ([]BuffEffect, error) {
 	return buffs, nil
 }
 
+// SaveActiveBuffs persists the list of active buffs for a character.
 func SaveActiveBuffs(db *sql.DB, characterID int64, buffs []BuffEffect) error {
 	buffsJSON, err := json.Marshal(buffs)
 	if err != nil {
@@ -106,6 +110,7 @@ func TriggerChargeBuff(activeBuffs []BuffEffect, id string) (newActive []BuffEff
 	return
 }
 
+// GetRoundNumber retrieves the current round number for a character from the database.
 func GetRoundNumber(db *sql.DB, characterID int64) (int, error) {
 	var round int
 	err := db.QueryRow(
@@ -121,6 +126,7 @@ func GetRoundNumber(db *sql.DB, characterID int64) (int, error) {
 	return round, nil
 }
 
+// SaveRoundNumber persists the current round number for a character to the database.
 func SaveRoundNumber(db *sql.DB, characterID int64, round int) error {
 	res, err := db.Exec(
 		"UPDATE round_state SET round_number = ? WHERE character_id = ?",

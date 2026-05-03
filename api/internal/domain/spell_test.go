@@ -28,7 +28,7 @@ func setupSpellTestDB(t *testing.T) *sql.DB {
 
 func TestSpellSlotPersistence(t *testing.T) {
 	db := setupSpellTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	charID := int64(1)
 	slots := []SpellSlot{

@@ -1,36 +1,45 @@
+// Package engine contains the core game logic for combat, dice rolls, and effects.
 package engine
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 )
 
+// DiceRoller defines the interface for rolling dice.
 type DiceRoller interface {
 	RollDie(sides int) int
 	RollD20() int
 	RollD100() int
 }
 
-type realDiceRoller struct {
-	rnd *rand.Rand
+type cryptoDiceRoller struct{}
+
+// NewDiceRoller returns a new DiceRoller that uses cryptographically secure
+// random numbers.
+func NewDiceRoller() DiceRoller {
+	return &cryptoDiceRoller{}
 }
 
-func NewDiceRoller(src rand.Source) DiceRoller {
-	return &realDiceRoller{
-		rnd: rand.New(src),
-	}
-}
-
-func (dr *realDiceRoller) RollDie(sides int) int {
+// RollDie rolls a die with the given number of sides.
+func (dr *cryptoDiceRoller) RollDie(sides int) int {
 	if sides <= 0 {
 		return 0
 	}
-	return dr.rnd.Intn(sides) + 1
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(sides)))
+	if err != nil {
+		// This should practically never happen with crypto/rand
+		return 1
+	}
+	return int(n.Int64()) + 1
 }
 
-func (dr *realDiceRoller) RollD20() int {
+// RollD20 rolls a 20-sided die.
+func (dr *cryptoDiceRoller) RollD20() int {
 	return dr.RollDie(20)
 }
 
-func (dr *realDiceRoller) RollD100() int {
+// RollD100 rolls a 100-sided die.
+func (dr *cryptoDiceRoller) RollD100() int {
 	return dr.RollDie(100)
 }

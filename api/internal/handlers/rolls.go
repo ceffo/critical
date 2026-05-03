@@ -3,19 +3,19 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"math/rand"
 	"net/http"
-	"time"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/engine"
 )
 
+// RollsHandler handles generic dice rolling requests.
 type RollsHandler struct {
 	DB          *sql.DB
 	CharacterID int64
 }
 
+// RollSave handles POST /api/roll/save requests.
 func (h *RollsHandler) RollSave(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Category engine.SaveCategory `json:"category"`
@@ -31,7 +31,7 @@ func (h *RollsHandler) RollSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dr := engine.NewDiceRoller(rand.NewSource(time.Now().UnixNano()))
+	dr := engine.NewDiceRoller()
 	res := engine.ResolveSavingThrow(dr, req.Category, actor)
 
 	jsonOK(w, res)

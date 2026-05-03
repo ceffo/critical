@@ -12,7 +12,7 @@ type mockDiceRoller struct {
 	rollIdx   int
 }
 
-func (m *mockDiceRoller) RollDie(sides int) int {
+func (m *mockDiceRoller) RollDie(_ int) int {
 	if m.rollIdx >= len(m.nextRolls) {
 		return 1
 	}

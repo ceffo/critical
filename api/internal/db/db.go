@@ -21,12 +21,15 @@ import (
 	"database/sql"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // SQLite driver
 )
 
 //go:embed migrations/*.sql
@@ -42,22 +45,30 @@ func Open(dsn, seedsDir string) (*sql.DB, error) {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
 	if err := db.Ping(); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			log.Printf("error closing db after failed ping: %v", closeErr)
+		}
 		return nil, fmt.Errorf("ping sqlite: %w", err)
 	}
 
 	if err := runMigrations(db); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			log.Printf("error closing db after failed migrations: %v", closeErr)
+		}
 		return nil, fmt.Errorf("migrations: %w", err)
 	}
 
-	if err := SeedCharacter(db, seedsDir+"/character.json"); err != nil {
-		db.Close()
+	if err := SeedCharacter(db, filepath.Join(filepath.Clean(seedsDir), "character.json")); err != nil {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Printf("error closing db after failed character seed: %v", closeErr)
+		}
 		return nil, fmt.Errorf("seed character: %w", err)
 	}
 
-	if err := SeedSpells(db, seedsDir+"/spells.json"); err != nil {
-		db.Close()
+	if err := SeedSpells(db, filepath.Join(filepath.Clean(seedsDir), "spells.json")); err != nil {
+		if closeErr := db.Close(); closeErr != nil {
+			log.Printf("error closing db after failed spells seed: %v", closeErr)
+		}
 		return nil, fmt.Errorf("seed spells: %w", err)
 	}
 
@@ -118,7 +129,7 @@ func SeedCharacter(db *sql.DB, seedPath string) error {
 		return nil
 	}
 
-	data, err := os.ReadFile(seedPath)
+	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
 		// Missing seed file is not fatal — skip seeding silently.
 		return nil
@@ -149,13 +160,23 @@ func SeedCharacter(db *sql.DB, seedPath string) error {
 	charID, _ := res.LastInsertId()
 
 	// Initialize state tables
-	slotsJSON, _ := json.Marshal(c.Slots)
+	slotsJSON, err := json.Marshal(c.Slots)
+	if err != nil {
+		return fmt.Errorf("marshal slots: %w", err)
+	}
 	if len(c.Slots) == 0 {
 		slotsJSON = []byte("[]")
 	}
-	db.Exec("INSERT INTO spell_slots (character_id, slots) VALUES (?, ?)", charID, string(slotsJSON))
-	db.Exec("INSERT INTO active_buffs (character_id, buffs) VALUES (?, '[]')", charID)
-	db.Exec("INSERT INTO round_state (character_id, round_number) VALUES (?, 0)", charID)
+
+	if _, err := db.Exec("INSERT INTO spell_slots (character_id, slots) VALUES (?, ?)", charID, string(slotsJSON)); err != nil {
+		return fmt.Errorf("insert spell_slots: %w", err)
+	}
+	if _, err := db.Exec("INSERT INTO active_buffs (character_id, buffs) VALUES (?, '[]')", charID); err != nil {
+		return fmt.Errorf("insert active_buffs: %w", err)
+	}
+	if _, err := db.Exec("INSERT INTO round_state (character_id, round_number) VALUES (?, 0)", charID); err != nil {
+		return fmt.Errorf("insert round_state: %w", err)
+	}
 
 	return nil
 }
@@ -175,6 +196,7 @@ type spellData struct {
 	Description  string `json:"description"`
 }
 
+// SeedSpells inserts spells from seedPath if the spells table is empty.
 func SeedSpells(db *sql.DB, seedPath string) error {
 	var count int
 	if err := db.QueryRow("SELECT COUNT(*) FROM spells").Scan(&count); err != nil {
@@ -184,7 +206,7 @@ func SeedSpells(db *sql.DB, seedPath string) error {
 		return nil
 	}
 
-	data, err := os.ReadFile(seedPath)
+	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
 		return nil
 	}
@@ -198,7 +220,11 @@ func SeedSpells(db *sql.DB, seedPath string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.Printf("rollback error: %v", err)
+		}
+	}()
 
 	stmt, err := tx.Prepare(`
 		INSERT INTO spells (
@@ -209,7 +235,11 @@ func SeedSpells(db *sql.DB, seedPath string) error {
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	defer func() {
+		if err := stmt.Close(); err != nil {
+			log.Printf("stmt close error: %v", err)
+		}
+	}()
 
 	for _, s := range spells {
 		_, err := stmt.Exec(

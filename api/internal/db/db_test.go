@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	critdb "github.com/moncef-naji/critical/api/internal/db"
+	critdb "github.com/ceffo/critical/api/internal/db"
 	_ "modernc.org/sqlite"
 )
 

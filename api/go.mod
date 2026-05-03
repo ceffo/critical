@@ -1,4 +1,4 @@
-module github.com/moncef-naji/critical/api
+module github.com/ceffo/critical/api
 
 go 1.26.2
 

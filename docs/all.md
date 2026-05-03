@@ -50,6 +50,7 @@ critical/
 ## Phase 1 Scope (Combat Loop)
 
 Only these features are in scope right now:
+
 1. HP Ledger
 2. Combat Roll Resolution (attack + crit + damage)
 3. Active Buffs + Round Counter

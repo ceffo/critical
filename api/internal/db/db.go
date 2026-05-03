@@ -88,22 +88,22 @@ func runMigrations(db *sql.DB) error {
 }
 
 type characterSeed struct {
-	Name             string `json:"name"`
-	Str              int    `json:"str"`
-	Dex              int    `json:"dex"`
-	Con              int    `json:"con"`
-	Int              int    `json:"int"`
-	Wis              int    `json:"wis"`
-	Cha              int    `json:"cha"`
-	HPMax            int    `json:"hp_max"`
-	Thac0Base        int    `json:"thac0_base"`
-	Level            int    `json:"level"`
-	XPTotal          int    `json:"xp_total"`
-	SaveParaPoison   int    `json:"save_para_poison"`
-	SaveRodStaffWand int    `json:"save_rod_staff_wand"`
-	SavePetriPoly    int    `json:"save_petri_poly"`
-	SaveBreath       int    `json:"save_breath"`
-	SaveSpell        int    `json:"save_spell"`
+	Name             string        `json:"name"`
+	Str              int           `json:"str"`
+	Dex              int           `json:"dex"`
+	Con              int           `json:"con"`
+	Int              int           `json:"int"`
+	Wis              int           `json:"wis"`
+	Cha              int           `json:"cha"`
+	HPMax            int           `json:"hp_max"`
+	Thac0Base        int           `json:"thac0_base"`
+	Level            int           `json:"level"`
+	XPTotal          int           `json:"xp_total"`
+	SaveParaPoison   int           `json:"save_para_poison"`
+	SaveRodStaffWand int           `json:"save_rod_staff_wand"`
+	SavePetriPoly    int           `json:"save_petri_poly"`
+	SaveBreath       int           `json:"save_breath"`
+	SaveSpell        int           `json:"save_spell"`
 	Slots            []interface{} `json:"slots"`
 }
 
@@ -223,4 +223,3 @@ func SeedSpells(db *sql.DB, seedPath string) error {
 
 	return tx.Commit()
 }
-

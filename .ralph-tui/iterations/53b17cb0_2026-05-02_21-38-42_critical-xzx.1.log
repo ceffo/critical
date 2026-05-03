@@ -49,8 +49,8 @@ Now I'll write the failing tests first, then implement the domain.
 import (
 	"testing"
 
-	critdb "github.com/moncef-naji/critical/api/internal/db"
-	"github.com/moncef-naji/critical/api/internal/domain"
+	critdb "github.com/ceffo/critical/api/internal/db"
+	"github.com/ceffo/critical/api/internal/domain"
 )
 
 const testSeedsDir = "../../../seeds"
@@ -95,7 +95,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/moncef-naji/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain"
 )
 
 type HPHandler struct {

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/moncef-naji/critical/api/internal/domain"
 )
 
 type BuffsHandler struct {
@@ -37,7 +37,7 @@ func (h *BuffsHandler) Activate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	buff.ID = uuid.New().String()
-	
+
 	actor, err := domain.LoadActor(h.DB, h.CharacterID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)

@@ -65,7 +65,7 @@ import (
 	"database/sql"
 	"testing"
 
-	critdb "github.com/moncef-naji/critical/api/internal/db"
+	critdb "github.com/ceffo/critical/api/internal/db"
 	_ "modernc.org/sqlite"
 )
 
@@ -89,7 +89,7 @@ Good — test fails because `db.go` doesn't exist yet. Now implementing (TDD gre
 --- FAIL: TestSeedIdempotent (0.00s)
     db_test.go:73: expected 1 character after idempotent seed, got 0
 FAIL
-FAIL	github.com/moncef-naji/critical/api/internal/db	0.004s
+FAIL	github.com/ceffo/critical/api/internal/db	0.004s
 FAIL][0m
 The migration test passed. The seed tests fail because `seeds/character.json` is empty and the path is wrong. Let me fix both.
 [94m[TodoWrite][0m
@@ -141,7 +141,7 @@ import (
 	"database/sql"
 	"testing"
 
-	critdb "github.com/moncef-naji/critical/api/internal/db"
+	critdb "github.com/ceffo/critical/api/internal/db"
 	_ "modernc.org/sqlite"
 )
 

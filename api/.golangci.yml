@@ -1,0 +1,42 @@
+version: 2
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - revive
+    - gosec
+    - errorlint
+    - bodyclose
+    - unconvert
+    - misspell
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+    - gci
+
+linters-settings:
+  govet:
+    enable-all: true
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+  gofumpt:
+    extra-rules: true
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/ceffo/critical/api)
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec

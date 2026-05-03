@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"testing"
 
-	_ "modernc.org/sqlite"
 	"github.com/stretchr/testify/assert"
+	_ "modernc.org/sqlite"
 )
 
 func setupSpellTestDB(t *testing.T) *sql.DB {

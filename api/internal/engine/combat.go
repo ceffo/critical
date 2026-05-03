@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/moncef-naji/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain"
 )
 
 func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, actor *domain.Actor) domain.RollResult {
@@ -50,7 +50,7 @@ func ResolveAttack(dr DiceRoller, weapon domain.Weapon, targetAC int, actor *dom
 		}
 
 		// Damage = ((BaseDamage × SpellsBuff) + WeaponBuff) × Multipliers + StrengthBonus
-		total := (float64(res.BaseDamage)*res.SpellsBuff + float64(res.WeaponBuff)) * res.Multipliers + float64(res.StrengthBonus)
+		total := (float64(res.BaseDamage)*res.SpellsBuff+float64(res.WeaponBuff))*res.Multipliers + float64(res.StrengthBonus)
 		res.TotalDamage = int(math.Floor(total))
 
 		res.DamageBreakdown = trace.ExplainDamage()
@@ -67,7 +67,7 @@ func rollDamage(dr DiceRoller, diceStr string) int {
 	}
 	num, _ := strconv.Atoi(parts[0])
 	sides, _ := strconv.Atoi(parts[1])
-	
+
 	total := 0
 	for i := 0; i < num; i++ {
 		total += dr.RollDie(sides)

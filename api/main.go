@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	critdb "github.com/ceffo/critical/api/internal/db"
+	"github.com/ceffo/critical/api/internal/handlers"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	critdb "github.com/moncef-naji/critical/api/internal/db"
-	"github.com/moncef-naji/critical/api/internal/handlers"
 )
 
 func main() {

@@ -29,9 +29,6 @@ bv is a graph-aware triage engine for Beads projects (.beads/beads.jsonl). Inste
 ```bash
 bv --robot-triage        # THE MEGA-COMMAND: start here
 bv --robot-next          # Minimal: just the single top pick + claim command
-
-# Token-optimized output (TOON) for lower LLM context usage:
-bv --robot-triage --format toon
 ```
 
 #### Other bv Commands
@@ -86,6 +83,7 @@ Before closing any task, you **MUST** run the validation script from the project
 ```
 
 This script ensures:
+
 - **Backend:** Code compiles and all tests pass.
 - **Frontend:** TypeScript types are valid, linting passes, and the production build succeeds.
 

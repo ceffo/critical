@@ -1,14 +1,15 @@
 {
   "id": "3a5b33a4-eaf6-4c31-8300-687d10332d94",
-  "status": "running",
+  "status": "interrupted",
   "startedAt": "2026-05-03T02:37:14.097Z",
-  "updatedAt": "2026-05-03T02:47:31.731Z",
+  "updatedAt": "2026-05-03T02:51:55.217Z",
   "agentPlugin": "gemini",
   "trackerPlugin": "beads-rust",
   "epicId": "critical-xzx",
-  "currentIteration": 3,
+  "currentIteration": 4,
   "maxIterations": 10,
   "totalTasks": 0,
   "tasksCompleted": 0,
-  "cwd": "/home/moncef/code/critical"
+  "cwd": "/home/moncef/code/critical",
+  "endedAt": "2026-05-03T02:51:55.217Z"
 }

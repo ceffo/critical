@@ -3,8 +3,8 @@
   "sessionId": "3a5b33a4-eaf6-4c31-8300-687d10332d94",
   "status": "running",
   "startedAt": "2026-05-03T02:37:15.264Z",
-  "updatedAt": "2026-05-03T02:47:33.029Z",
-  "currentIteration": 3,
+  "updatedAt": "2026-05-03T02:51:55.202Z",
+  "currentIteration": 4,
   "maxIterations": 10,
   "tasksCompleted": 0,
   "isPaused": false,
@@ -70,15 +70,20 @@
       "durationMs": 304370,
       "startedAt": "2026-05-03T02:42:27.350Z",
       "endedAt": "2026-05-03T02:47:31.720Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "critical-xzx.4",
+      "taskTitle": "F4: Spell Slots",
+      "taskCompleted": false,
+      "durationMs": 224031,
+      "startedAt": "2026-05-03T02:47:32.953Z",
+      "endedAt": "2026-05-03T02:51:16.984Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "/home/moncef/code/critical",
-  "activeTaskIds": [
-    "critical-xzx.1",
-    "critical-xzx.2",
-    "critical-xzx.3",
-    "critical-xzx.4"
-  ],
+  "activeTaskIds": [],
   "subagentPanelVisible": false
 }

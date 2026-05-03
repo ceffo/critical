@@ -33,6 +33,7 @@ func main() {
 	hp := &handlers.HPHandler{DB: db, CharacterID: charID}
 	combat := &handlers.CombatHandler{DB: db, CharacterID: charID}
 	buffs := &handlers.BuffsHandler{DB: db, CharacterID: charID}
+	spells := &handlers.SpellsHandler{DB: db, CharacterID: charID}
 	round := &handlers.RoundHandler{DB: db, CharacterID: charID}
 
 	r := chi.NewRouter()

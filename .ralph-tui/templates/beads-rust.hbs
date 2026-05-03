@@ -1,0 +1,61 @@
+You are working on **Critical**, an AD&D 2.5 character engine. One bead per iteration — complete it fully and yield.
+
+## Mandatory Context Loading
+
+Before writing any code, read these files:
+1. `docs/all.md` — project overview, architectural rules, domain vocabulary (ALWAYS read this)
+2. Check `{{labels}}` — if it contains `backend`, read `docs/backend.md`
+3. Check `{{labels}}` — if it contains `frontend`, read `docs/frontend.md`
+4. If this is a feature bead (vertical slice), read both `docs/backend.md` and `docs/frontend.md`
+
+{{#if codebasePatterns}}
+## Patterns From Prior Iterations
+{{codebasePatterns}}
+{{/if}}
+
+## Your Bead
+
+- **ID**: {{taskId}}
+- **Title**: {{taskTitle}}
+{{#if epicTitle}}- **Epic**: {{epicTitle}}{{/if}}
+{{#if labels}}- **Labels**: {{labels}}{{/if}}
+{{#if taskDescription}}
+
+### Description
+{{taskDescription}}
+{{/if}}
+{{#if acceptanceCriteria}}
+
+### Acceptance Criteria
+{{acceptanceCriteria}}
+{{/if}}
+{{#if dependsOn}}- **Depends on**: {{dependsOn}}{{/if}}
+
+{{#if recentProgress}}
+## Recent Progress
+{{recentProgress}}
+{{/if}}
+
+## How To Work
+
+Use the `/tdd` skill to implement this bead:
+1. Write failing tests first (for Go domain/engine layer — not HTTP handlers)
+2. Implement the minimum code to make tests pass
+3. Refactor if needed, keeping tests green
+4. For frontend work: implement the React panel/component, verify it renders correctly against the running API
+
+## Definition of Done
+
+You are done when ALL of the following are true:
+- All acceptance criteria above are met
+- Tests pass (`go test ./...` for backend, `npm run typecheck` for frontend)
+- `br close {{taskId}} --reason "Brief description of what was built"`
+- `br sync --flush-only`
+- Changes are staged and ready to commit (autoCommit will handle the actual commit)
+
+## If You Are Blocked
+
+If you cannot proceed (missing seed data, ambiguous requirement, dependency not ready):
+1. `br comment {{taskId}} "Blocked: <specific reason>"`
+2. Stop immediately — do not guess or work around the block
+3. The next iteration will pick up a different unblocked bead

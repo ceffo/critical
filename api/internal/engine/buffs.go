@@ -12,23 +12,23 @@ type BuffModifiers struct {
 // EffectEngine encapsulates the logic for evaluating and stacking buff effects
 // against a character's specific attributes and state.
 type EffectEngine struct {
-	char domain.Character
+	actor *domain.Actor
 }
 
-func NewEffectEngine(char domain.Character) *EffectEngine {
-	return &EffectEngine{char: char}
+func NewEffectEngine(actor *domain.Actor) *EffectEngine {
+	return &EffectEngine{actor: actor}
 }
 
 // Aggregate evaluates all active buffs against the character's stats 
 // and returns the final stacked modifiers.
-func (e *EffectEngine) Aggregate(buffs []domain.BuffEffect) BuffModifiers {
+func (e *EffectEngine) Aggregate() BuffModifiers {
 	mods := BuffModifiers{
 		SpellsBuff:  1.0,
 		WeaponBuff:  0,
 		Multipliers: 1.0,
 	}
 
-	for _, buff := range buffs {
+	for _, buff := range e.actor.ActiveBuffs {
 		if !e.meetsRequirements(buff.Effects) {
 			continue
 		}
@@ -39,7 +39,7 @@ func (e *EffectEngine) Aggregate(buffs []domain.BuffEffect) BuffModifiers {
 }
 
 func (e *EffectEngine) meetsRequirements(effects domain.BuffEffects) bool {
-	if effects.MinStr != nil && e.char.Str < *effects.MinStr {
+	if effects.MinStr != nil && e.actor.Stats.Str < *effects.MinStr {
 		return false
 	}
 	return true
@@ -58,7 +58,6 @@ func (e *EffectEngine) applyEffects(mods *BuffModifiers, effects domain.BuffEffe
 }
 
 // ApplyBuffModifiers is a convenience wrapper for backward compatibility.
-// It uses the EffectEngine internally to ensure consistency.
-func ApplyBuffModifiers(char domain.Character, activeBuffs []domain.BuffEffect) BuffModifiers {
-	return NewEffectEngine(char).Aggregate(activeBuffs)
+func ApplyBuffModifiers(actor *domain.Actor) BuffModifiers {
+	return NewEffectEngine(actor).Aggregate()
 }

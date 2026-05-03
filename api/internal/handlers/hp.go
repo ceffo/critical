@@ -14,7 +14,12 @@ type HPHandler struct {
 }
 
 func (h *HPHandler) GetHP(w http.ResponseWriter, r *http.Request) {
-	state, err := domain.GetHPState(h.DB, h.CharacterID)
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	state, err := actor.GetHPState()
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -36,12 +41,18 @@ func (h *HPHandler) AppendEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := domain.AppendEvent(h.DB, h.CharacterID, body.Delta, body.Source); err != nil {
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
+	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	state, err := domain.GetHPState(h.DB, h.CharacterID)
+	if err := actor.TakeDamage(body.Delta, body.Source); err != nil {
+		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	state, err := actor.GetHPState()
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -50,12 +61,18 @@ func (h *HPHandler) AppendEvent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HPHandler) UndoLastEvent(w http.ResponseWriter, r *http.Request) {
-	if err := domain.UndoLastEvent(h.DB, h.CharacterID); err != nil {
+	actor, err := domain.LoadActor(h.DB, h.CharacterID)
+	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	state, err := domain.GetHPState(h.DB, h.CharacterID)
+	if err := actor.UndoLastEvent(); err != nil {
+		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	state, err := actor.GetHPState()
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return

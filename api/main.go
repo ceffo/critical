@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	critdb "github.com/moncef-naji/critical/api/internal/db"
+	"github.com/moncef-naji/critical/api/internal/handlers"
 )
 
 func main() {
@@ -22,6 +25,13 @@ func main() {
 	}
 	defer db.Close()
 
+	charID, err := getCharacterID(db)
+	if err != nil {
+		log.Fatalf("get character id: %v", err)
+	}
+
+	hp := &handlers.HPHandler{DB: db, CharacterID: charID}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -30,6 +40,10 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
+
+	r.Get("/api/hp", hp.GetHP)
+	r.Post("/api/hp/event", hp.AppendEvent)
+	r.Post("/api/hp/undo", hp.UndoLastEvent)
 
 	srv := &http.Server{
 		Addr:    ":8080",
@@ -53,4 +67,12 @@ func main() {
 		log.Fatalf("shutdown: %v", err)
 	}
 	log.Println("server stopped")
+}
+
+func getCharacterID(db *sql.DB) (int64, error) {
+	var id int64
+	if err := db.QueryRow("SELECT id FROM characters LIMIT 1").Scan(&id); err != nil {
+		return 0, fmt.Errorf("no character seeded: %w", err)
+	}
+	return id, nil
 }

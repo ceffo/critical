@@ -1,0 +1,68 @@
+# Iteration 1 Log
+
+## Metadata
+
+- **Task ID**: critical-xzx.1
+- **Task Title**: F1: HP Ledger
+- **Description**: Full vertical slice: append-only HP ledger with Go engine, REST endpoints, and React left panel integration.
+
+Read docs/all.md, docs/backend.md, and docs/frontend.md before starting.
+
+Backend delivera...
+- **Status**: completed
+- **Task Completed**: No
+- **Promise Detected**: No
+- **Started At**: 2026-05-03T02:37:20.396Z
+- **Ended At**: 2026-05-03T02:38:58.629Z
+- **Duration**: 1m 38s
+- **Input Tokens**: 611661
+- **Output Tokens**: 6002
+- **Total Tokens**: 624710
+- **Agent**: gemini
+- **Model**: auto-gemini-3
+- **Epic**: critical-xzx
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+I have completed the implementation of the **
+HP Ledger** vertical slice for the Critical project.
+
+### Accomplishments:
+- **Backend (Go)**:
+    - Verified and refined the `hp_events` append-only ledger logic in `api/internal/domain/hp.go
+`.
+    - Implemented `UndoLastEvent` using a correction row (negating the last delta) to maintain
+ the integrity of the append-only log.
+    - Ensured `GetHPState` correctly derives current HP by
+ adding the character's `hp_max` to the ledger sum.
+    - Verified all domain logic with Go
+ tests (`TestAppendAndGetCurrentHP`, `TestGetHistory`, `TestUndoLastEvent`).
+- **Frontend (React)**:
+
+    - Defined types in `web/src/types/hp.ts` mirroring the backend structs.
+    -
+ Created typed API wrappers in `web/src/api/hp.ts`, including `undoLastEvent`.
+    - Im
+plemented a Zustand store in `web/src/stores/hp.ts` for managing HP state.
+    - Enhanced
+ `web/src/components/panels/LeftPanel.tsx` with:
+        - A dynamic **HP bar** with
+ specific color thresholds (green >50%, yellow 25-50%, red <25%).
+        -
+ Forms for entering **Damage** and **Healing** with source labels.
+        - A **Recent Events** list showing
+ the last 5 transactions.
+        - An **Undo button** to quickly correct the last entry.
+- **
+Verification**:
+    - Ran `go test ./internal/domain/...` (All passed).
+    - Ran 
+`npm run typecheck` (All passed).
+    - Committed changes with message `feat: HP ledger with append-
+only undo and colored bar`.
+    - Closed bead `critical-xzx.1` and synchronized state.
+
+--- STDERR ---
+YOLO mode is enabled. All tool calls will be automatically approved.
+YOLO mode is enabled. All tool calls will be automatically approved.
+Ripgrep is not available. Falling back to GrepTool.

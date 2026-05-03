@@ -1,15 +1,14 @@
 {
-  "id": "e7157b46-0a63-45da-985c-573b7f0bfccb",
-  "status": "interrupted",
-  "startedAt": "2026-05-03T00:44:15.750Z",
-  "updatedAt": "2026-05-03T01:02:21.897Z",
-  "agentPlugin": "claude",
+  "id": "3a5b33a4-eaf6-4c31-8300-687d10332d94",
+  "status": "running",
+  "startedAt": "2026-05-03T02:37:14.097Z",
+  "updatedAt": "2026-05-03T02:37:14.097Z",
+  "agentPlugin": "gemini",
   "trackerPlugin": "beads-rust",
-  "epicId": "critical-2r6",
-  "currentIteration": 4,
+  "epicId": "critical-xzx",
+  "currentIteration": 0,
   "maxIterations": 10,
   "totalTasks": 0,
   "tasksCompleted": 0,
-  "cwd": "/home/moncef/code/critical",
-  "endedAt": "2026-05-03T01:02:21.897Z"
+  "cwd": "/home/moncef/code/critical"
 }

@@ -1,0 +1,155 @@
+# Iteration 1 Log
+
+## Metadata
+
+- **Task ID**: critical-xzx.1
+- **Task Title**: F1: HP Ledger
+- **Description**: Full vertical slice: append-only HP ledger with Go engine, REST endpoints, and React left panel integration.
+
+Read docs/all.md, docs/backend.md, and docs/frontend.md before starting.
+
+Backend delivera...
+- **Status**: completed
+- **Task Completed**: No
+- **Promise Detected**: No
+- **Started At**: 2026-05-03T01:38:42.070Z
+- **Ended At**: 2026-05-03T01:40:57.378Z
+- **Duration**: 2m 15s
+- **Input Tokens**: 94
+- **Output Tokens**: 11896
+- **Total Tokens**: 11990
+- **Agent**: claude
+- **Model**: claude-sonnet-4-6
+- **Epic**: critical-xzx
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+Starting by claiming the bead and loading context in parallel.
+[94m[Bash][0m Claim bead critical-xzx.1 $ br update critical-xzx.1 --status=in_progress
+[94m[Read][0m [95m/home/moncef/code/critical/docs/all.md[0m
+[94m[Read][0m [95m/home/moncef/code/critical/docs/backend.md[0m
+[94m[Read][0m [95m/home/moncef/code/critical/docs/frontend.md[0m
+Now let me explore the existing codebase structure.
+[94m[Bash][0m Survey existing Go files and web src structure $ find /home/moncef/code/critical/api -type f -name "*.go" | sort && echo "---" && ls /home/moncef/cod...
+[94m[Read][0m [95m/home/moncef/code/critical/api/main.go[0m
+[94m[Read][0m [95m/home/moncef/code/critical/api/internal/db/db.go[0m
+[94m[Bash][0m Check web component and store structure $ ls /home/moncef/code/critical/web/src/components/ && ls /home/moncef/code/critical/web/src/stores/ 2...
+[94m[Bash][0m Show existing migrations $ ls /home/moncef/code/critical/api/internal/db/migrations/ && cat /home/moncef/code/critical/api/inte...
+[94m[Read][0m [95m/home/moncef/code/critical/web/src/App.tsx[0m
+[94m[Read][0m [95m/home/moncef/code/critical/web/src/components/panels/LeftPanel.tsx[0m
+[94m[Read][0m [95m/home/moncef/code/critical/web/src/stores/hp.ts[0m
+[94m[Read][0m [95m/home/moncef/code/critical/web/src/types/hp.ts[0m
+[94m[Read][0m [95m/home/moncef/code/critical/web/src/api/hp.ts[0m
+[94m[Bash][0m Check Go module dependencies $ cat /home/moncef/code/critical/api/go.mod
+Good, I have a clear picture. The scaffolding is mostly in place — I need to implement the Go domain + handlers, then complete the LeftPanel. Let me start with TDD.
+[94m[Read][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m
+Now I'll write the failing tests first, then implement the domain.
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/domain/hp_test.go[0m "package domain_test
+
+import (
+	"testing"
+
+	critdb "github.com/moncef-naji/critical/api/internal/db"
+	"github.com/moncef-naji/critical/api/internal/domain"
+)
+
+const testSeedsDir = "../../../seeds"
+
+fun... (3873 chars)"
+I need to fix the test — `critdb.Open` returns `*sql.DB`, not `*critdb.DB`. Let me correct the test.
+[94m[Edit][0m [95m/home/moncef/code/critical/api/internal/domain/hp_test.go[0m edit: "import (
+	"testing"
+
+	critdb "github.com/moncef-na..." → "import (
+	"database/sql"
+	"testing"
+
+	critdb "gith..."
+Now run the tests to confirm they fail (red phase):
+[94m[Bash][0m Run domain tests expecting compile failure (red phase) $ cd /home/moncef/code/critical/api && go test ./internal/domain/... 2>&1 | head -30
+Tests fail as expected. Now implement the domain:
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/domain/hp.go[0m "package domain
+
+import (
+	"database/sql"
+	"fmt"
+	"time"
+)
+
+type HpEvent struct {
+	ID          int64
+	CharacterID int64
+	Delta       int
+	Source      string
+	CreatedAt   time.Time
+}
+
+type HPState struc... (3024 chars)"
+[94m[Bash][0m Run domain tests (green phase) $ go test ./internal/domain/... -v 2>&1 | tail -30
+All 4 tests pass. Now implement the HTTP handler:
+[94m[Bash][0m Create handlers directory $ mkdir -p /home/moncef/code/critical/api/internal/handlers
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/handlers/hp.go[0m "package handlers
+
+import (
+	"database/sql"
+	"encoding/json"
+	"net/http"
+
+	"github.com/moncef-naji/critical/api/internal/domain"
+)
+
+type HPHandler struct {
+	DB          *sql.DB
+	CharacterID int64
+}
+
+fu... (1856 chars)"
+Now wire up the routes in main.go:
+[94m[Edit][0m [95m/home/moncef/code/critical/api/main.go[0m edit: "import (
+	"context"
+	"encoding/json"
+	"log"
+	"net/..." → "import (
+	"context"
+	"database/sql"
+	"encoding/jso..."
+[94m[Edit][0m [95m/home/moncef/code/critical/api/main.go[0m edit: "	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r..." → "	charID, err := getCharacterID(db)
+	if err != nil ..."
+Now add the `getCharacterID` helper at the bottom of main.go:
+[94m[Edit][0m [95m/home/moncef/code/critical/api/main.go[0m edit: "	log.Println("server stopped")
+}" → "	log.Println("server stopped")
+}
+
+func getCharacte..."
+[94m[Bash][0m Build the Go API to check for errors $ go build ./... 2>&1
+Clean build. Run all tests:
+[94m[Bash][0m Run all Go tests $ go test ./... 2>&1
+All tests pass. Now implement the React LeftPanel:
+[94m[Read][0m [95m/home/moncef/code/critical/web/src/components/panels/LeftPanel.tsx[0m
+[94m[Bash][0m List available shadcn/ui components $ ls /home/moncef/code/critical/web/src/components/ui/
+[94m[Write][0m [95m/home/moncef/code/critical/web/src/components/panels/LeftPanel.tsx[0m "import { useEffect, useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useHpStore } fro... (5381 chars)"
+Now check if `Button` has a `destructive` variant and check the button component:
+[94m[Read][0m [95m/home/moncef/code/critical/web/src/components/ui/button.tsx[0m
+Good, `destructive` variant exists. Now run the typecheck:
+[94m[Bash][0m Run TypeScript typecheck $ cd /home/moncef/code/critical/web && npm run typecheck 2>&1
+Typecheck passes. Now commit and close the bead:
+[94m[Bash][0m Stage changed files $ cd /home/moncef/code/critical && git add api/internal/domain/hp.go api/internal/domain/hp_test.go ap...
+[94m[Bash][0m Commit HP Ledger implementation $ npm typecheck passes  Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com> EOF )"
+[94m[Bash][0m Close bead and sync $ br close critical-xzx.1 --reason "Implemented append-only HP ledger: Go domain with 4 passing tests,...
+Bead `critical-xzx.1` is complete. Here's what was built:
+
+**Backend (Go):**
+- `internal/domain/hp.go`: `HpEvent` struct, `AppendEvent()`, `GetCurrentHP()` (SUM query), `GetHistory()`, `UndoLastEvent()` (inserts correction row — never deletes), `GetHPState()` (current + max + recent events)
+- `internal/handlers/hp.go`: `GET /api/hp`, `POST /api/hp/event`, `POST /api/hp/undo`
+- Routes registered in `main.go` with seeded character ID
+
+**Frontend (React):**
+- `LeftPanel.tsx`: colored HP bar (green >50%, yellow 25-50%, red <25%), damage entry, heal entry, last-5 events list
+- `stores/hp.ts` and `api/hp.ts` were already scaffolded correctly and work as-is
+
+**Tests:** 4 domain tests pass (append + sum, history limit, undo produces correct sum, undo is append-not-delete). TypeScript typecheck passes.

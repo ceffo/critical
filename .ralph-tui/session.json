@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "sessionId": "e7157b46-0a63-45da-985c-573b7f0bfccb",
+  "status": "running",
+  "startedAt": "2026-05-03T00:44:16.082Z",
+  "updatedAt": "2026-05-03T01:02:21.882Z",
+  "currentIteration": 4,
+  "maxIterations": 10,
+  "tasksCompleted": 0,
+  "isPaused": false,
+  "agentPlugin": "claude",
+  "trackerState": {
+    "plugin": "beads-rust",
+    "epicId": "critical-2r6",
+    "totalTasks": 4,
+    "tasks": [
+      {
+        "id": "critical-2r6.1",
+        "title": "I1: Monorepo scaffold",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "critical-2r6.2",
+        "title": "I2: Go API foundation",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "critical-2r6.3",
+        "title": "I3: React web foundation",
+        "status": "open",
+        "completedInSession": false
+      },
+      {
+        "id": "critical-2r6.4",
+        "title": "I4: Spell data scrape — seeds/spells.json",
+        "status": "open",
+        "completedInSession": false
+      }
+    ]
+  },
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "critical-2r6.1",
+      "taskTitle": "I1: Monorepo scaffold",
+      "taskCompleted": false,
+      "durationMs": 227450,
+      "startedAt": "2026-05-03T00:44:21.896Z",
+      "endedAt": "2026-05-03T00:48:09.346Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "critical-2r6.2",
+      "taskTitle": "I2: Go API foundation",
+      "taskCompleted": false,
+      "durationMs": 203788,
+      "startedAt": "2026-05-03T00:48:10.561Z",
+      "endedAt": "2026-05-03T00:51:34.349Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "critical-2r6.3",
+      "taskTitle": "I3: React web foundation",
+      "taskCompleted": false,
+      "durationMs": 185194,
+      "startedAt": "2026-05-03T00:51:35.551Z",
+      "endedAt": "2026-05-03T00:54:40.745Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "critical-2r6.4",
+      "taskTitle": "I4: Spell data scrape — seeds/spells.json",
+      "taskCompleted": false,
+      "durationMs": 160596,
+      "startedAt": "2026-05-03T00:54:41.948Z",
+      "endedAt": "2026-05-03T00:57:22.544Z"
+    }
+  ],
+  "skippedTaskIds": [],
+  "cwd": "/home/moncef/code/critical",
+  "activeTaskIds": [],
+  "subagentPanelVisible": false
+}

@@ -1,0 +1,15 @@
+{
+  "id": "e7157b46-0a63-45da-985c-573b7f0bfccb",
+  "status": "interrupted",
+  "startedAt": "2026-05-03T00:44:15.750Z",
+  "updatedAt": "2026-05-03T01:02:21.897Z",
+  "agentPlugin": "claude",
+  "trackerPlugin": "beads-rust",
+  "epicId": "critical-2r6",
+  "currentIteration": 4,
+  "maxIterations": 10,
+  "totalTasks": 0,
+  "tasksCompleted": 0,
+  "cwd": "/home/moncef/code/critical",
+  "endedAt": "2026-05-03T01:02:21.897Z"
+}

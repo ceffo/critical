@@ -1,0 +1,185 @@
+# Iteration 2 Log
+
+## Metadata
+
+- **Task ID**: critical-2r6.2
+- **Task Title**: I2: Go API foundation
+- **Description**: Build the Go backend foundation: HTTP server, SQLite connection, migration runner, and seed loader.
+
+Read docs/all.md and docs/backend.md before starting.
+
+Deliverables:
+- main.go: HTTP server on :808...
+- **Status**: completed
+- **Task Completed**: No
+- **Promise Detected**: No
+- **Started At**: 2026-05-03T00:48:10.561Z
+- **Ended At**: 2026-05-03T00:51:34.349Z
+- **Duration**: 3m 23s
+- **Input Tokens**: 114
+- **Output Tokens**: 14792
+- **Total Tokens**: 14906
+- **Agent**: claude
+- **Model**: claude-sonnet-4-6
+- **Epic**: critical-2r6
+- **Sandbox Mode**: auto
+- **Sandbox Network**: Enabled
+--- RAW OUTPUT ---
+[94m[Skill][0m
+Reading the mandatory context files first.
+[94m[Read][0m [95m/home/moncef/code/critical/docs/all.md[0m
+[94m[Read][0m [95m/home/moncef/code/critical/docs/backend.md[0m
+Now let me look at what's already in the `api/` directory.
+[94m[Read][0m [95m/home/moncef/code/critical/api/main.go[0m
+[94m[Read][0m [95m/home/moncef/code/critical/api/go.mod[0m
+[94m[Read][0m [95m/home/moncef/code/critical/seeds/character.json[0m
+Let me check what Go version is available and look at the existing structure.
+[94m[Bash][0m Check Go version and api directory contents $ cd /home/moncef/code/critical/api && go version && ls -la
+[94m[Read][0m [95m/home/moncef/code/critical/seeds/crit_table.json[0m
+[94m[ToolSearch][0m query: [93mselect:TodoWrite[0m
+[94m[TodoWrite][0m
+[94m[Bash][0m Add SQLite and chi router dependencies $ go get modernc.org/sqlite@latest github.com/go-chi/chi/v5@latest 2>&1
+Dependencies added. Now creating the directory structure and migration files.
+[94m[TodoWrite][0m
+[94m[Bash][0m Create internal/db/migrations directory $ mkdir -p /home/moncef/code/critical/api/internal/db/migrations
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/db/migrations/001_init.sql[0m "CREATE TABLE IF NOT EXISTS characters (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT    NOT NULL,
+    str         INTEGER NOT NULL,
+    dex         INTEGER NOT NULL,
+    con... (487 chars)"
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/db/migrations/002_ledgers.sql[0m "CREATE TABLE IF NOT EXISTS hp_events (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER NOT NULL REFERENCES characters(id),
+    delta        INTEGER NOT NULL,
+    source   ... (568 chars)"
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/db/migrations/003_state.sql[0m "CREATE TABLE IF NOT EXISTS active_buffs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER NOT NULL REFERENCES characters(id),
+    buffs        TEXT    NOT NULL DEFAULT '[]... (612 chars)"
+[94m[TodoWrite][0m
+Now writing the failing test first (TDD red phase).
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m "package db_test
+
+import (
+	"database/sql"
+	"testing"
+
+	critdb "github.com/moncef-naji/critical/api/internal/db"
+	_ "modernc.org/sqlite"
+)
+
+func TestOpenAndMigrate(t *testing.T) {
+	database, err := cri... (1803 chars)"
+[94m[Bash][0m Run test to confirm red phase (expected to fail) $ go test ./internal/db/... 2>&1 | head -30
+Good — test fails because `db.go` doesn't exist yet. Now implementing (TDD green phase).
+[94m[TodoWrite][0m
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/db/db.go[0m "// Package db handles SQLite connection, sequential migrations, and seed loading.
+//
+// seeds/character.json schema:
+//
+//	{
+//	  "name":       string,   // character name
+//	  "str":        int,     ... (3725 chars)"
+[94m[Bash][0m Run DB tests to check green phase $ go test ./internal/db/... 2>&1
+
+[91m[Error: Exit code 1
+--- FAIL: TestSeedCharacter (0.00s)
+    db_test.go:51: expected 1 seeded character, got 0
+--- FAIL: TestSeedIdempotent (0.00s)
+    db_test.go:73: expected 1 character after idempotent seed, got 0
+FAIL
+FAIL	github.com/moncef-naji/critical/api/internal/db	0.004s
+FAIL][0m
+The migration test passed. The seed tests fail because `seeds/character.json` is empty and the path is wrong. Let me fix both.
+[94m[TodoWrite][0m
+[94m[Write][0m [95m/home/moncef/code/critical/seeds/character.json[0m "{
+  "name": "Bard",
+  "str": 18,
+  "dex": 14,
+  "con": 13,
+  "int": 15,
+  "wis": 12,
+  "cha": 17,
+  "hp_max": 52,
+  "thac0_base": 16,
+  "level": 9,
+  "xp_total": 200000
+}
+"
+Now fix the seed path in the test — from `internal/db/` we need `../../../seeds/character.json` to reach the repo root's `seeds/` dir.
+[94m[Edit][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m edit: "	if err := critdb.SeedCharacter(database, "../../s..." → "	if err := critdb.SeedCharacter(database, "../../...."
+The `Open` call in the test also uses `"seeds/character.json"` hardcoded inside `db.go`. For tests (in-memory), the working directory is `api/internal/db/`, so I need the seed path passed into `Open` instead of hardcoded. Let me refactor `Open` to accept a `seedsDir` parameter so tests and production can both work.
+[94m[Edit][0m [95m/home/moncef/code/critical/api/internal/db/db.go[0m edit: "// Open opens (or creates) the SQLite database at ..." → "// Open opens (or creates) the SQLite database at ..."
+Now update the test to pass the correct seeds dir path:
+[94m[Edit][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m edit: "func TestOpenAndMigrate(t *testing.T) {
+	database,..." → "const testSeedsDir = "../../../seeds"
+
+func TestOp..."
+[94m[Edit][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m edit: "func TestSeedCharacter(t *testing.T) {
+	database, ..." → "func TestSeedCharacter(t *testing.T) {
+	database, ..."
+[94m[Edit][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m edit: "func TestSeedIdempotent(t *testing.T) {
+	database,..." → "func TestSeedIdempotent(t *testing.T) {
+	database,..."
+
+[91m[Error: <tool_use_error>String to replace not found in file.
+String: func TestSeedIdempotent(t *testing.T) {
+	database, err := critdb.Open(":memory:")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer database.Close()
+
+	// Second open on same DB won't run seed again because table is not empty.
+	// Simulate by calling seed again and confirming count stays 1.
+	if err := critdb.SeedCharacter(database, "../../seeds/character.json"); err != nil {</tool_use_error>][0m
+[94m[Read][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m
+[94m[Write][0m [95m/home/moncef/code/critical/api/internal/db/db_test.go[0m "package db_test
+
+import (
+	"database/sql"
+	"testing"
+
+	critdb "github.com/moncef-naji/critical/api/internal/db"
+	_ "modernc.org/sqlite"
+)
+
+const testSeedsDir = "../../../seeds"
+
+func TestOpenAndMigrat... (1886 chars)"
+[94m[Bash][0m Run DB tests — expecting green $ go test ./internal/db/... 2>&1
+All three DB tests pass. Now updating `main.go` with graceful shutdown and a wired chi router.
+[94m[TodoWrite][0m
+[94m[Write][0m [95m/home/moncef/code/critical/api/main.go[0m "package main
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	critdb "github.com/monc... (1167 chars)"
+[94m[Bash][0m Verify build and all tests pass $ go build ./... 2>&1 && echo "BUILD OK" && go test ./... 2>&1
+Build and tests are green. Let me quickly verify the health endpoint works.
+[94m[Bash][0m Smoke test health endpoint $ rm -f critical.db
+[94m[Bash][0m Build binary, start server, test health endpoint, clean up $ go build -o /tmp/critical-api . && /tmp/critical-api & sleep 1 curl -s http://localhost:8080/api/hea...
+Health endpoint returns `{"status":"ok"}` with 200. Closing the bead.
+[94m[TodoWrite][0m
+[94m[Bash][0m Close bead and sync to JSONL $ br close critical-2r6.2 --reason "Go API foundation: chi router, SQLite via modernc, sequential migr...
+[94m[TodoWrite][0m
+Bead `critical-2r6.2` is done. Here's what was built:
+
+- **`internal/db/migrations/001_init.sql`** — `characters` table with all scalar columns
+- **`internal/db/migrations/002_ledgers.sql`** — `hp_events` and `xp_events` append-only tables
+- **`internal/db/migrations/003_state.sql`** — `active_buffs`, `spell_slots`, `round_state` tables
+- **`internal/db/db.go`** — `Open(dsn, seedsDir)` runs embedded migrations in order, then seeds the Bard character if the table is empty; `SeedCharacter` is idempotent
+- **`main.go`** — chi router, graceful SIGINT/SIGTERM shutdown, `GET /api/health → 200 {"status":"ok"}`
+- **`seeds/character.json`** — Bard L9 stats (STR 18, DEX 14, THAC0 16, HP 52, etc.)
+- **`internal/db/db_test.go`** — 3 passing tests: migrations create all 6 tables, seed inserts 1 row, second seed is a no-op

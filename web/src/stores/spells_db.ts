@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { Spell } from '@/types/spells';
-import { searchSpells } from '@/api/spells_db';
+import { create } from "zustand";
+import type { Spell } from "@/types/spells";
+import { searchSpells } from "@/api/spells_db";
 
 interface SpellsDbStore {
   results: Spell[];

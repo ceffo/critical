@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { RollResult } from '../types/combat';
-import { resolveAttack } from '../api/combat';
+import { create } from "zustand";
+import type { RollResult } from "../types/combat";
+import { resolveAttack } from "../api/combat";
 
 interface CombatStore {
   lastResult: RollResult | null;

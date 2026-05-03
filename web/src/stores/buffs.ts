@@ -1,7 +1,7 @@
-import { create } from 'zustand';
-import type { BuffEffect } from '../types/buffs';
-import * as api from '../api/buffs';
-import * as roundApi from '../api/round';
+import { create } from "zustand";
+import type { BuffEffect } from "../types/buffs";
+import * as api from "../api/buffs";
+import * as roundApi from "../api/round";
 
 interface BuffsStore {
   buffs: BuffEffect[];
@@ -65,9 +65,9 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
   advanceRound: async () => {
     try {
       const res = await roundApi.advanceRound();
-      set({ 
-        round: res.roundNumber, 
-        buffs: res.activeBuffs || [] 
+      set({
+        round: res.roundNumber,
+        buffs: res.activeBuffs || [],
       });
       return res.expiredBuffs || [];
     } catch (e: unknown) {

@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { HpEvent, HpState } from '@/types/hp';
-import { getHpState, appendHpEvent, undoLastEvent } from '@/api/hp';
+import { create } from "zustand";
+import type { HpEvent, HpState } from "@/types/hp";
+import { getHpState, appendHpEvent, undoLastEvent } from "@/api/hp";
 
 interface HpStore extends HpState {
   fetchHp: () => Promise<void>;
@@ -16,7 +16,7 @@ export const useHpStore = create<HpStore>((set) => ({
     const state = await getHpState();
     set({
       ...state,
-      events: state.events || []
+      events: state.events || [],
     });
   },
   appendEvent: async (delta: number, source: string) => {
@@ -24,14 +24,14 @@ export const useHpStore = create<HpStore>((set) => ({
     const state = await getHpState();
     set({
       ...state,
-      events: state.events || []
+      events: state.events || [],
     });
   },
   undoLastEvent: async () => {
     const state = await undoLastEvent();
     set({
       ...state,
-      events: state.events || []
+      events: state.events || [],
     });
   },
 }));

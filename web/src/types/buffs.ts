@@ -1,7 +1,7 @@
 export interface BuffEffect {
   id: string;
   name: string;
-  type: 'charge' | 'duration';
+  type: "charge" | "duration";
   charges: number;
   duration: number;
   effects: Record<string, number>;

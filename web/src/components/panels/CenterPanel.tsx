@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { CombatPanel } from './CombatPanel';
-import { SpellPanel } from './SpellPanel';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { CombatPanel } from "./CombatPanel";
+import { SpellPanel } from "./SpellPanel";
 
-import { CharacterPanel } from './CharacterPanel';
-import { SpellLookupPanel } from './SpellLookupPanel';
+import { CharacterPanel } from "./CharacterPanel";
+import { SpellLookupPanel } from "./SpellLookupPanel";
 
-type Tab = 'Combat' | 'Spells' | 'Character' | 'Lookup';
-const TABS: Tab[] = ['Combat', 'Spells', 'Character', 'Lookup'];
+type Tab = "Combat" | "Spells" | "Character" | "Lookup";
+const TABS: Tab[] = ["Combat", "Spells", "Character", "Lookup"];
 
 export function CenterPanel() {
-  const [activeTab, setActiveTab] = useState<Tab>('Combat');
+  const [activeTab, setActiveTab] = useState<Tab>("Combat");
 
   return (
     <div className="flex flex-col h-full">
@@ -18,21 +18,25 @@ export function CenterPanel() {
         {TABS.map((tab) => (
           <Button
             key={tab}
-            variant={activeTab === tab ? 'default' : 'ghost'}
-            className={activeTab === tab ? 'bg-primary text-primary-foreground rounded-t-lg rounded-b-none' : 'rounded-t-lg rounded-b-none'}
+            variant={activeTab === tab ? "default" : "ghost"}
+            className={
+              activeTab === tab
+                ? "bg-primary text-primary-foreground rounded-t-lg rounded-b-none"
+                : "rounded-t-lg rounded-b-none"
+            }
             size="sm"
             onClick={() => setActiveTab(tab)}
           >
-            {tab === 'Lookup' ? 'Spell Lookup' : tab}
+            {tab === "Lookup" ? "Spell Lookup" : tab}
           </Button>
         ))}
       </div>
       <div className="flex-1 p-3 overflow-y-auto">
-        {activeTab === 'Combat' ? (
+        {activeTab === "Combat" ? (
           <CombatPanel />
-        ) : activeTab === 'Spells' ? (
+        ) : activeTab === "Spells" ? (
           <SpellPanel />
-        ) : activeTab === 'Character' ? (
+        ) : activeTab === "Character" ? (
           <CharacterPanel />
         ) : (
           <SpellLookupPanel />

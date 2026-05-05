@@ -21,7 +21,7 @@ fmt: fmt-api fmt-web
 
 # Build the backend
 build-api:
-    cd api && go build -o ../bin/critical-srv .
+    cd api && go build -o ../bin/critical-srv ./cmd/api
 
 # Lint the backend
 lint-api:
@@ -34,6 +34,10 @@ fmt-api:
 # Test the backend
 test-api:
     cd api && go test -v ./...
+
+# Fast vet (compile + static analysis) on the backend
+vet-api:
+    cd api && go vet ./...
 
 # Run all backend checks
 check-api: lint-api test-api build-api

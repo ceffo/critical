@@ -3,7 +3,7 @@ WORKDIR /app
 COPY go.mod ./
 RUN go mod download
 COPY . .
-RUN go build -o critical-api .
+RUN go build -o critical-api ./cmd/api
 
 FROM alpine:latest
 WORKDIR /app

@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 )
@@ -44,12 +45,40 @@ func (d *DB) Migrate(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("read %s: %w", name, err)
 		}
-		if _, err := d.ExecContext(ctx, string(content)); err != nil {
-			return fmt.Errorf("exec %s: %w", name, err)
+		if err := d.execStatements(ctx, name, string(content)); err != nil {
+			return err
 		}
 		if _, err := d.ExecContext(ctx, "INSERT INTO schema_migrations (name) VALUES (?)", name); err != nil {
 			return fmt.Errorf("record %s: %w", name, err)
 		}
 	}
 	return nil
+}
+
+// execStatements splits sql on semicolons and executes each statement
+// individually. Statements that fail with "duplicate column name" are logged
+// and skipped — this makes ALTER TABLE ADD COLUMN idempotent when a migration
+// was partially applied by an older runner that lacked tracking.
+func (d *DB) execStatements(ctx context.Context, migration, sql string) error {
+	for _, stmt := range strings.Split(sql, ";") {
+		stmt = strings.TrimSpace(stmt)
+		if stmt == "" {
+			continue
+		}
+		if _, err := d.ExecContext(ctx, stmt); err != nil {
+			if strings.Contains(err.Error(), "duplicate column name") {
+				slog.Default().Warn("migration: column already exists, skipping", "migration", migration, "stmt", stmt[:min(len(stmt), 60)])
+				continue
+			}
+			return fmt.Errorf("exec %s: %w", migration, err)
+		}
+	}
+	return nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

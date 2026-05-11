@@ -1,6 +1,6 @@
 // Package hpdal is the storage adapter for hpsvc. It satisfies hpsvc.DAL by
-// translating SQL rows into hpsvc domain types and storage errors into domain
-// sentinels.
+// delegating to bob-generated typed queries in the queries/ subpackage and
+// translating storage errors into domain sentinels.
 package hpdal
 
 import (
@@ -8,8 +8,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
+	"strconv"
 
+	"github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -23,18 +24,21 @@ type DAL struct {
 // New constructs a DAL bound to the given Querier (pool or transaction).
 func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
 
+func (d *DAL) exec() sqlite.BobExec { return sqlite.BobExec{Querier: d.q} }
+
 // AppendEvent inserts a row into hp_events.
 func (d *DAL) AppendEvent(ctx context.Context, characterID int64, delta int, source string) error {
-	if _, err := d.q.ExecContext(ctx,
-		`INSERT INTO hp_events (character_id, delta, source) VALUES (?, ?, ?)`,
-		characterID, delta, source,
-	); err != nil {
+	_, err := queries.AppendHpEvent([]queries.AppendHpEvent_HPEvents{
+		{CharacterID: characterID, Delta: int64(delta), Source: source},
+	}).Exec(ctx, d.exec())
+	if err != nil {
 		return fmt.Errorf("insert hp_event: %w", err)
 	}
 	return nil
 }
 
 // GetCurrentHPSum returns SUM(delta) over the ledger; 0 when empty.
+// Uses raw SQL because bob's static parser does not support aggregate functions.
 func (d *DAL) GetCurrentHPSum(ctx context.Context, characterID int64) (int, error) {
 	var sum sql.NullInt64
 	if err := d.q.QueryRowContext(ctx,
@@ -47,60 +51,42 @@ func (d *DAL) GetCurrentHPSum(ctx context.Context, characterID int64) (int, erro
 
 // GetHistory returns the most recent limit rows in DESC id order.
 func (d *DAL) GetHistory(ctx context.Context, characterID int64, limit int) ([]hpsvc.HpEvent, error) {
-	rows, err := d.q.QueryContext(ctx,
-		`SELECT id, character_id, delta, source, created_at
-		   FROM hp_events
-		  WHERE character_id = ?
-		  ORDER BY id DESC
-		  LIMIT ?`,
-		characterID, limit,
-	)
+	rows, err := queries.GetHpHistory(characterID, strconv.Itoa(limit)).All(ctx, d.exec())
 	if err != nil {
 		return nil, fmt.Errorf("query hp_events: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	var events []hpsvc.HpEvent
-	for rows.Next() {
-		var e hpsvc.HpEvent
-		var createdAt string
-		if err := rows.Scan(&e.ID, &e.CharacterID, &e.Delta, &e.Source, &createdAt); err != nil {
-			return nil, fmt.Errorf("scan hp_event: %w", err)
+	events := make([]hpsvc.HpEvent, len(rows))
+	for i, r := range rows {
+		events[i] = hpsvc.HpEvent{
+			ID: r.ID, CharacterID: r.CharacterID,
+			Delta: int(r.Delta), Source: r.Source, CreatedAt: r.CreatedAt,
 		}
-		e.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
-		events = append(events, e)
 	}
-	return events, rows.Err()
+	return events, nil
 }
 
 // GetMaxHP fetches hp_max from the character row. Maps sql.ErrNoRows to
 // domain.ErrCharacterNotFound.
 func (d *DAL) GetMaxHP(ctx context.Context, characterID int64) (int, error) {
-	var maxHP int
-	err := d.q.QueryRowContext(ctx, `SELECT hp_max FROM characters WHERE id = ?`, characterID).Scan(&maxHP)
+	maxHP, err := queries.GetCharacterMaxHp(characterID).One(ctx, d.exec())
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, domain.ErrCharacterNotFound
 	}
 	if err != nil {
 		return 0, fmt.Errorf("get hp_max: %w", err)
 	}
-	return maxHP, nil
+	return int(maxHP), nil
 }
 
 // LastEvent returns (delta, source, ok=true) when an event exists and
 // (0, "", false) when the ledger is empty. ok=false is not an error.
 func (d *DAL) LastEvent(ctx context.Context, characterID int64) (int, string, bool, error) {
-	var delta int
-	var source string
-	err := d.q.QueryRowContext(ctx,
-		`SELECT delta, source FROM hp_events WHERE character_id = ? ORDER BY id DESC LIMIT 1`,
-		characterID,
-	).Scan(&delta, &source)
+	row, err := queries.GetLastHpEvent(characterID).One(ctx, d.exec())
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, "", false, nil
 	}
 	if err != nil {
 		return 0, "", false, fmt.Errorf("query last hp_event: %w", err)
 	}
-	return delta, source, true, nil
+	return int(row.Delta), row.Source, true, nil
 }

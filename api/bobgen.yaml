@@ -1,0 +1,21 @@
+sqlite:
+  dsn: .tmp_schema.db
+  queries:
+    - internal/adapters/hpdal/queries
+    - internal/adapters/characterdal/queries
+    - internal/adapters/buffdal/queries
+    - internal/adapters/spelldal/queries
+
+plugins:
+  models:
+    destination: internal/storage/sqlite/bob/models
+    pkgname: models
+  factory:
+    destination: internal/storage/sqlite/bob/factory
+    pkgname: factory
+  dbinfo:
+    destination: internal/storage/sqlite/bob/dbinfo
+    pkgname: dbinfo
+  dberrors:
+    destination: internal/storage/sqlite/bob/dberrors
+    pkgname: dberrors

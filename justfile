@@ -17,6 +17,24 @@ install:
 # Format all code
 fmt: fmt-api fmt-web
 
+# --- Code Generation ---
+
+# Regenerate bob DAL code from SQL schema + query files
+generate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd api
+    # Build a temp DB by applying all migrations via sqlite3
+    rm -f .tmp_schema.db
+    for f in internal/storage/sqlite/migrations/*.sql; do
+        sqlite3 .tmp_schema.db < "$f"
+    done
+    # Run the bob code generator
+    go run github.com/stephenafamo/bob/gen/bobgen-sqlite@v0.43.0 -c bobgen.yaml
+    # Clean up the temp DB
+    rm -f .tmp_schema.db
+    go mod tidy
+
 # --- Backend (API) Commands ---
 
 # Build the backend

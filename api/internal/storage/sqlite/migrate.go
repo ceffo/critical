@@ -75,10 +75,3 @@ func (d *DB) execStatements(ctx context.Context, migration, sql string) error {
 	}
 	return nil
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

@@ -1,6 +1,6 @@
 // Package buffdal is the storage adapter for buffsvc. The active buff list is
 // persisted as JSON in active_buffs.buffs for simplicity; the round counter
-// lives in round_state.round_number.
+// lives in round_state.round_number. Delegates to bob-generated typed queries.
 package buffdal
 
 import (
@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
@@ -20,10 +21,7 @@ type TxRunner interface {
 	WrapTx(ctx context.Context, body func(sqlite.Querier) error) error
 }
 
-// DAL is the SQLite-backed implementation of buffsvc.DAL. It holds both a
-// Querier (for reads/writes outside a tx) and a TxRunner (for WrapTx). When
-// constructed inside a tx via WrapTx, the TxRunner is nil — calling WrapTx on
-// a tx-bound DAL is a programmer error.
+// DAL is the SQLite-backed implementation of buffsvc.DAL.
 type DAL struct {
 	q  sqlite.Querier
 	tx TxRunner
@@ -35,8 +33,10 @@ func New(q sqlite.Querier, tx TxRunner) *DAL { return &DAL{q: q, tx: tx} }
 // newTxBound is used internally by WrapTx.
 func newTxBound(q sqlite.Querier) *DAL { return &DAL{q: q} }
 
+func (d *DAL) exec() sqlite.BobExec { return sqlite.BobExec{Querier: d.q} }
+
 // jsonBuff mirrors buffsvc.BuffEffect with JSON tags so we can preserve the
-// existing on-disk format used by the previous implementation.
+// existing on-disk format.
 type jsonBuff struct {
 	ID       string      `json:"id"`
 	Name     string      `json:"name"`
@@ -78,8 +78,7 @@ func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 
 // GetActiveBuffs returns the persisted list (empty when none).
 func (d *DAL) GetActiveBuffs(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error) {
-	var blob string
-	err := d.q.QueryRowContext(ctx, "SELECT buffs FROM active_buffs WHERE character_id = ?", characterID).Scan(&blob)
+	blob, err := queries.GetActiveBuffs(characterID).One(ctx, d.exec())
 	if errors.Is(err, sql.ErrNoRows) {
 		return []buffsvc.BuffEffect{}, nil
 	}
@@ -110,41 +109,34 @@ func (d *DAL) SaveActiveBuffs(ctx context.Context, characterID int64, buffs []bu
 	if err != nil {
 		return fmt.Errorf("marshal active_buffs: %w", err)
 	}
-	res, err := d.q.ExecContext(ctx, "UPDATE active_buffs SET buffs = ? WHERE character_id = ?", string(blob), characterID)
+	_, err = queries.UpsertActiveBuffs([]queries.UpsertActiveBuffs_ActiveBuffs{
+		{CharacterID: characterID, Buffs: string(blob)},
+	}).Exec(ctx, d.exec())
 	if err != nil {
-		return fmt.Errorf("update active_buffs: %w", err)
-	}
-	if rows, _ := res.RowsAffected(); rows == 0 {
-		if _, err := d.q.ExecContext(ctx, "INSERT INTO active_buffs (character_id, buffs) VALUES (?, ?)", characterID, string(blob)); err != nil {
-			return fmt.Errorf("insert active_buffs: %w", err)
-		}
+		return fmt.Errorf("upsert active_buffs: %w", err)
 	}
 	return nil
 }
 
 // GetRoundNumber returns the persisted round; 0 when no row exists.
 func (d *DAL) GetRoundNumber(ctx context.Context, characterID int64) (int, error) {
-	var round int
-	err := d.q.QueryRowContext(ctx, "SELECT round_number FROM round_state WHERE character_id = ?", characterID).Scan(&round)
+	round, err := queries.GetRoundNumber(characterID).One(ctx, d.exec())
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
 	if err != nil {
 		return 0, fmt.Errorf("query round_state: %w", err)
 	}
-	return round, nil
+	return int(round), nil
 }
 
 // SaveRoundNumber upserts the counter.
 func (d *DAL) SaveRoundNumber(ctx context.Context, characterID int64, round int) error {
-	res, err := d.q.ExecContext(ctx, "UPDATE round_state SET round_number = ? WHERE character_id = ?", round, characterID)
+	_, err := queries.UpsertRoundNumber([]queries.UpsertRoundNumber_RoundState{
+		{CharacterID: characterID, RoundNumber: int64(round)},
+	}).Exec(ctx, d.exec())
 	if err != nil {
-		return fmt.Errorf("update round_state: %w", err)
-	}
-	if rows, _ := res.RowsAffected(); rows == 0 {
-		if _, err := d.q.ExecContext(ctx, "INSERT INTO round_state (character_id, round_number) VALUES (?, ?)", characterID, round); err != nil {
-			return fmt.Errorf("insert round_state: %w", err)
-		}
+		return fmt.Errorf("upsert round_state: %w", err)
 	}
 	return nil
 }

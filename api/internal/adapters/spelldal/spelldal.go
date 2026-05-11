@@ -1,5 +1,6 @@
-// Package spelldal is the storage adapter for spellsvc. It satisfies both the
-// write-side DAL and the read-side Reader on the same SQLite handle.
+// Package spelldal is the storage adapter for spellsvc. It delegates to
+// bob-generated typed queries for slot operations and uses the bob query
+// builder for the dynamic spell catalog search.
 package spelldal
 
 import (
@@ -9,8 +10,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
+	bobmodels "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
+	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
+	"github.com/stephenafamo/bob/dialect/sqlite/sm"
 )
 
 // DAL is the SQLite-backed implementation.
@@ -21,6 +27,8 @@ type DAL struct {
 // New returns a DAL bound to q.
 func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
 
+func (d *DAL) exec() sqlite.BobExec { return sqlite.BobExec{Querier: d.q} }
+
 type jsonSlot struct {
 	Level             int    `json:"level"`
 	PreparedSpellName string `json:"prepared_spell_name"`
@@ -29,8 +37,7 @@ type jsonSlot struct {
 
 // GetSlots returns the slot list. An absent row is treated as an empty list.
 func (d *DAL) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error) {
-	var blob string
-	err := d.q.QueryRowContext(ctx, "SELECT slots FROM spell_slots WHERE character_id = ?", characterID).Scan(&blob)
+	blob, err := queries.GetSpellSlots(characterID).One(ctx, d.exec())
 	if errors.Is(err, sql.ErrNoRows) {
 		return []spellsvc.SpellSlot{}, nil
 	}
@@ -63,48 +70,50 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 	if err != nil {
 		return fmt.Errorf("marshal spell_slots: %w", err)
 	}
-	res, err := d.q.ExecContext(ctx, "UPDATE spell_slots SET slots = ? WHERE character_id = ?", string(blob), characterID)
+	_, err = queries.UpsertSpellSlots([]queries.UpsertSpellSlots_SpellSlots{
+		{CharacterID: characterID, Slots: string(blob)},
+	}).Exec(ctx, d.exec())
 	if err != nil {
-		return fmt.Errorf("update spell_slots: %w", err)
-	}
-	if rows, _ := res.RowsAffected(); rows == 0 {
-		if _, err := d.q.ExecContext(ctx, "INSERT INTO spell_slots (character_id, slots) VALUES (?, ?)", characterID, string(blob)); err != nil {
-			return fmt.Errorf("insert spell_slots: %w", err)
-		}
+		return fmt.Errorf("upsert spell_slots: %w", err)
 	}
 	return nil
 }
 
 // Search runs the catalog query. Optional name fuzzy match and class filter.
+// Uses bob's model query builder because the WHERE conditions are dynamic.
 func (d *DAL) Search(ctx context.Context, query, class string) ([]spellsvc.Spell, error) {
-	q := "SELECT name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description FROM spells WHERE 1=1"
-	args := []any{}
+	where := bobmodels.SelectWhere.Spells
+	mods := make([]bob.Mod[*dialect.SelectQuery], 0, 4)
 	if query != "" {
-		q += " AND name LIKE ?"
-		args = append(args, "%"+query+"%")
+		mods = append(mods, where.Name.Like("%"+query+"%"))
 	}
 	if class != "" {
-		q += " AND class = ?"
-		args = append(args, class)
+		mods = append(mods, where.Class.EQ(class))
 	}
-	q += " ORDER BY level, name LIMIT 50"
+	mods = append(mods,
+		sm.OrderBy(bobmodels.Spells.Columns.Level),
+		sm.OrderBy(bobmodels.Spells.Columns.Name),
+		sm.Limit(50),
+	)
 
-	rows, err := d.q.QueryContext(ctx, q, args...)
+	rows, err := bobmodels.Spells.Query(mods...).All(ctx, d.exec())
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
-
-	var spells []spellsvc.Spell
-	for rows.Next() {
-		var s spellsvc.Spell
-		if err := rows.Scan(
-			&s.Name, &s.Class, &s.Level, &s.School, &s.Sphere, &s.CastingTime, &s.Range,
-			&s.Duration, &s.AreaOfEffect, &s.Components, &s.SavingThrow, &s.Description,
-		); err != nil {
-			return nil, fmt.Errorf("scan spell: %w", err)
-		}
-		spells = append(spells, s)
+	spells := make([]spellsvc.Spell, 0, len(rows))
+	for _, r := range rows {
+		spells = append(spells, spellsvc.Spell{
+			Name: r.Name, Class: r.Class, Level: int(r.Level),
+			School:       r.School.GetOrZero(),
+			Sphere:       r.Sphere.GetOrZero(),
+			CastingTime:  r.CastingTime.GetOrZero(),
+			Range:        r.Range.GetOrZero(),
+			Duration:     r.Duration.GetOrZero(),
+			AreaOfEffect: r.AreaOfEffect.GetOrZero(),
+			Components:   r.Components.GetOrZero(),
+			SavingThrow:  r.SavingThrow.GetOrZero(),
+			Description:  r.Description.GetOrZero(),
+		})
 	}
-	return spells, rows.Err()
+	return spells, nil
 }

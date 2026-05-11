@@ -19,6 +19,10 @@ fmt: fmt-api fmt-web
 
 # --- Code Generation ---
 
+# Regenerate mockery mocks for all service ports (run from api/ so Go module resolves)
+mocks:
+    cd api && /home/moncef/go/bin/mockery --config ../.mockery.yaml
+
 # Regenerate bob DAL code from SQL schema + query files
 generate:
     #!/usr/bin/env bash

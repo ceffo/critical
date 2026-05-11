@@ -7,47 +7,11 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-// fakeDAL is a hand-written test double of hpsvc.DAL. Tests configure
-// canned return values and assert on call effects.
-type fakeDAL struct {
-	maxHP      int
-	maxHPErr   error
-	sum        int
-	sumErr     error
-	history    []hpsvc.HpEvent
-	historyErr error
-	last       struct {
-		delta  int
-		source string
-		ok     bool
-		err    error
-	}
-	appended  []appendCall
-	appendErr error
-}
-
-type appendCall struct {
-	charID int64
-	delta  int
-	source string
-}
-
-func (f *fakeDAL) AppendEvent(_ context.Context, charID int64, delta int, source string) error {
-	f.appended = append(f.appended, appendCall{charID, delta, source})
-	return f.appendErr
-}
-func (f *fakeDAL) GetCurrentHPSum(_ context.Context, _ int64) (int, error) { return f.sum, f.sumErr }
-func (f *fakeDAL) GetHistory(_ context.Context, _ int64, _ int) ([]hpsvc.HpEvent, error) {
-	return f.history, f.historyErr
-}
-func (f *fakeDAL) GetMaxHP(_ context.Context, _ int64) (int, error) { return f.maxHP, f.maxHPErr }
-func (f *fakeDAL) LastEvent(_ context.Context, _ int64) (int, string, bool, error) {
-	return f.last.delta, f.last.source, f.last.ok, f.last.err
-}
 
 func newSvc(t *testing.T, dal hpsvc.DAL) hpsvc.SVC {
 	t.Helper()
@@ -56,8 +20,17 @@ func newSvc(t *testing.T, dal hpsvc.DAL) hpsvc.SVC {
 	return svc
 }
 
+// stubState stubs the three GetState DAL calls on a mock with fixed maxHP and
+// sumHP values and empty history. Call after wiring any other expectations.
+func stubState(dal *mocks.MockDAL, maxHP, sumHP int) {
+	dal.On("GetMaxHP", mock.Anything, mock.Anything).Return(maxHP, nil)
+	dal.On("GetCurrentHPSum", mock.Anything, mock.Anything).Return(sumHP, nil)
+	dal.On("GetHistory", mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
+}
+
 func TestGetState(t *testing.T) {
-	dal := &fakeDAL{maxHP: 20, sum: -5}
+	dal := mocks.NewMockDAL(t)
+	stubState(dal, 20, -5)
 	svc := newSvc(t, dal)
 
 	state, err := svc.GetState(context.Background(), 1)
@@ -67,40 +40,45 @@ func TestGetState(t *testing.T) {
 }
 
 func TestAppendEvent_RequiresSource(t *testing.T) {
-	svc := newSvc(t, &fakeDAL{maxHP: 20})
+	dal := mocks.NewMockDAL(t)
+	svc := newSvc(t, dal)
+
 	_, err := svc.AppendEvent(context.Background(), 1, -5, "")
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, domain.ErrInvalidInput))
 }
 
 func TestAppendEvent_PersistsAndReturnsState(t *testing.T) {
-	dal := &fakeDAL{maxHP: 20, sum: -5}
+	dal := mocks.NewMockDAL(t)
+	dal.On("AppendEvent", mock.Anything, int64(7), -5, "sword").Return(nil)
+	stubState(dal, 20, -5)
 	svc := newSvc(t, dal)
 
 	state, err := svc.AppendEvent(context.Background(), 7, -5, "sword")
 	require.NoError(t, err)
-	require.Len(t, dal.appended, 1)
-	assert.Equal(t, appendCall{7, -5, "sword"}, dal.appended[0])
 	assert.Equal(t, 15, state.CurrentHp)
+	dal.AssertCalled(t, "AppendEvent", mock.Anything, int64(7), -5, "sword")
 }
 
 func TestUndoLast_NoEventsIsNoop(t *testing.T) {
-	dal := &fakeDAL{maxHP: 20}
+	dal := mocks.NewMockDAL(t)
+	dal.On("LastEvent", mock.Anything, mock.Anything).Return(0, "", false, nil)
+	stubState(dal, 20, 0)
 	svc := newSvc(t, dal)
+
 	_, err := svc.UndoLast(context.Background(), 1)
 	require.NoError(t, err)
-	assert.Empty(t, dal.appended, "no event existed, no append should occur")
+	dal.AssertNotCalled(t, "AppendEvent", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestUndoLast_AppendsNegation(t *testing.T) {
-	dal := &fakeDAL{maxHP: 20}
-	dal.last.delta = -10
-	dal.last.source = "giant"
-	dal.last.ok = true
+	dal := mocks.NewMockDAL(t)
+	dal.On("LastEvent", mock.Anything, int64(3)).Return(-10, "giant", true, nil)
+	dal.On("AppendEvent", mock.Anything, int64(3), 10, "undo:giant").Return(nil)
+	stubState(dal, 20, 0)
 	svc := newSvc(t, dal)
 
 	_, err := svc.UndoLast(context.Background(), 3)
 	require.NoError(t, err)
-	require.Len(t, dal.appended, 1)
-	assert.Equal(t, appendCall{3, 10, "undo:giant"}, dal.appended[0])
+	dal.AssertCalled(t, "AppendEvent", mock.Anything, int64(3), 10, "undo:giant")
 }

@@ -1,0 +1,44 @@
+with-expecter: true
+resolve-type-alias: false
+disable-version-string: true
+issue-845-fix: true
+packages:
+  github.com/ceffo/critical/api/internal/domain/service/hpsvc:
+    config:
+      dir: "internal/domain/service/hpsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+  github.com/ceffo/critical/api/internal/domain/service/buffsvc:
+    config:
+      dir: "internal/domain/service/buffsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+  github.com/ceffo/critical/api/internal/domain/service/spellsvc:
+    config:
+      dir: "internal/domain/service/spellsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Reader:
+  github.com/ceffo/critical/api/internal/domain/service/charactersvc:
+    config:
+      dir: "internal/domain/service/charactersvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Reader:
+  github.com/ceffo/critical/api/internal/domain/service/combatsvc:
+    config:
+      dir: "internal/domain/service/combatsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Characters:
+      Buffs:
+      Dice:
+      Weapons:

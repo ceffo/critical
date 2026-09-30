@@ -1,5 +1,20 @@
 # AI Agent Instructions
 
+## Mandatory Validation (Pre-flight)
+
+Before closing any task, you **MUST** run the validation command from the project root:
+
+```bash
+just validate
+```
+
+This command ensures:
+
+- **Backend:** Code compiles, lints, and all tests pass.
+- **Frontend:** TypeScript types are valid, linting passes, and the production build succeeds.
+
+**NO TASK IS COMPLETE WITHOUT VALIDATION.** Failure to run validation leads to broken builds and "un-runnable" states. If validation fails, fix the issues before proceeding.
+
 ## DAL Code Generation (bob)
 
 The DAL adapters in `api/internal/adapters/*/` use [bob](https://github.com/stephenafamo/bob) for typed SQL queries. Generated files are committed and should not be edited by hand.

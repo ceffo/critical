@@ -60,17 +60,6 @@ func Error(ctx context.Context, w http.ResponseWriter, err error) {
 	JSON(ctx, w, status, map[string]string{"error": msg})
 }
 
-// BadRequest is a shortcut for callers that already know the input is bad
-// without an underlying error to wrap.
-func BadRequest(ctx context.Context, w http.ResponseWriter, msg string) {
-	JSON(ctx, w, http.StatusBadRequest, map[string]string{"error": msg})
-}
-
-// NotFound renders 404 with msg.
-func NotFound(ctx context.Context, w http.ResponseWriter, msg string) {
-	JSON(ctx, w, http.StatusNotFound, map[string]string{"error": msg})
-}
-
 // StatusError is an error that carries its own HTTP status and client-facing
 // message. Handlers return it for request-parsing failures (bad JSON, bad path
 // params), where there is no domain sentinel to map.

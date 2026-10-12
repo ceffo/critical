@@ -32,24 +32,30 @@ export function AttackPanel() {
   }, [fetchWeapons]);
 
   const weapon = weapons.find((w) => w.id === weaponId) ?? weapons[0];
-  // Ammo the weapon can fire; the chosen one falls back to the first with anything left.
+  // Ammo the weapon can fire. Before the player picks, the first with anything left is
+  // preselected; once picked (or fired), the choice is never switched behind their back: when it
+  // runs out the panel says so and waits for an explicit pick.
   const ammoChoices = weapon?.ammo_kind
     ? items.filter((i) => i.kind === "ammo" && i.ammo_kind === weapon.ammo_kind)
     : [];
   const ammo =
-    ammoChoices.find((i) => i.id === ammoId && i.count > 0) ??
-    ammoChoices.find((i) => i.count > 0);
+    ammoChoices.find((i) => i.id === ammoId) ??
+    (ammoId === "" ? ammoChoices.find((i) => i.count > 0) : undefined);
+  const ammoSpent = ammo !== undefined && ammo.count === 0;
   const needsAmmo = Boolean(weapon?.ammo_kind);
 
   const ac = Number.parseInt(targetAc, 10);
   const sit = sitValue.trim() === "" ? 0 : Number.parseInt(sitValue, 10);
   const valid =
-    weapon !== undefined && !Number.isNaN(ac) && !Number.isNaN(sit) && (!needsAmmo || ammo);
+    weapon !== undefined && !Number.isNaN(ac) && !Number.isNaN(sit) && (!needsAmmo || (ammo && !ammoSpent));
 
   function submit() {
     if (!valid || !weapon) return;
     const req: AttackRequest = { weapon_id: weapon.id, target_ac: ac, target_size: size };
-    if (needsAmmo && ammo) req.ammo_item_id = ammo.id;
+    if (needsAmmo && ammo) {
+      req.ammo_item_id = ammo.id;
+      setAmmoId(ammo.id); // a fired default becomes the player's choice
+    }
     if (sit !== 0) req.situational = { value: sit, label: sitLabel.trim() };
     void rollAttack(req);
   }
@@ -85,20 +91,31 @@ export function AttackPanel() {
       {needsAmmo && (
         <label className="col-span-2 flex min-w-0 flex-col gap-1">
           <span className={captionClass}>{t("attack.ammo")}</span>
-          {ammoChoices.length === 0 || !ammo ? (
+          {ammoChoices.length === 0 ? (
             <span className="text-sm text-destructive">{t("attack.noAmmo")}</span>
           ) : (
             <select
               className={fieldClass}
-              value={ammo.id}
+              value={ammo?.id ?? ""}
+              aria-invalid={ammoSpent || ammo === undefined}
               onChange={(e) => setAmmoId(e.target.value)}
             >
+              {ammo === undefined && (
+                <option value="" disabled>
+                  {t("attack.pickAmmo")}
+                </option>
+              )}
               {ammoChoices.map((i) => (
-                <option key={i.id} value={i.id} disabled={i.count === 0}>
+                <option key={i.id} value={i.id} disabled={i.count === 0 && i.id !== ammo?.id}>
                   {t("attack.ammoOption", { name: i.name, count: i.count })}
                 </option>
               ))}
             </select>
+          )}
+          {ammoSpent && (
+            <span className="text-sm text-destructive" data-testid="ammo-spent">
+              {t("attack.ammoSpent", { name: ammo.name })}
+            </span>
           )}
         </label>
       )}

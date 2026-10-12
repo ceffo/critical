@@ -95,6 +95,8 @@
     "ammo": "Ammunition",
     "ammoOption": "{{name}} ({{count}} left)",
     "noAmmo": "No ammunition for this weapon",
+    "ammoSpent": "No {{name}} left: pick other ammunition",
+    "pickAmmo": "Pick ammunition",
     "targetAc": "Target AC",
     "targetSize": "Target size",
     "sizes": {

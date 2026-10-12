@@ -236,7 +236,12 @@ func TestVoid(t *testing.T) {
 			name: "blocked by later entry", entry: withSnaps("round"), laterID: 9, restorers: []string{"round"},
 			wantErr: actionlogsvc.ErrVoidBlocked, wantErrText: "entry #9",
 		},
+		{
+			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},
+			wantRestore: []string{`"before-items:arrows_plus3"`},
+		},
 		{name: "no restorer registered", entry: withSnaps("buffs"), wantErrText: `no restorer registered for state "buffs"`},
+		{name: "no restorer for a scoped key's family", entry: withSnaps("items:x"), restorers: []string{"item"}, wantErrText: `no restorer registered for state "items:x"`},
 		{name: "restorer fails", entry: withSnaps("round"), restorers: []string{"round"}, restoreErr: errBoom, wantErr: errBoom},
 		{name: "insert fails", entry: hpEntry(5), insertErr: errBoom, wantErr: errBoom},
 	}
@@ -256,7 +261,7 @@ func TestVoid(t *testing.T) {
 				dal.EXPECT().LaterEntryTouchingState(mock.Anything, int64(1), int64(5)).Return(c.laterID, c.laterID != 0, nil)
 			}
 			reachesInsert := c.laterID == 0 && c.restoreErr == nil && c.entry.Status() != actionlog.StatusVoided &&
-				(len(c.entry.Snapshots) == 0 || len(c.restorers) > 0)
+				(len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""
 			if reachesInsert {
 				dal.EXPECT().InsertCorrection(mock.Anything, voidRow).Return(c.insertErr)
 			}
@@ -341,4 +346,9 @@ func TestEntryStatusAndEffectiveValues(t *testing.T) {
 			assert.Equal(t, c.summary, e.EffectiveSummary())
 		})
 	}
+}
+
+func TestFamily(t *testing.T) {
+	assert.Equal(t, "items", actionlog.Family("items:arrows_plus3"))
+	assert.Equal(t, "buffs", actionlog.Family("buffs"))
 }

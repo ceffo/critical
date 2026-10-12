@@ -109,10 +109,15 @@ func (s *service) RegisterRestorer(stateKey string, r actionlog.Restorer) {
 	s.restorers[stateKey] = r
 }
 
+// restorer is the Restorer registered for stateKey, else the one registered
+// for its family ("items" restores "items:arrows_plus3").
 func (s *service) restorer(stateKey string) actionlog.Restorer {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.restorers[stateKey]
+	if r, ok := s.restorers[stateKey]; ok {
+		return r
+	}
+	return s.restorers[actionlog.Family(stateKey)]
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

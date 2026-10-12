@@ -95,6 +95,8 @@
     "ammo": "Munitions",
     "ammoOption": "{{name}} ({{count}} restantes)",
     "noAmmo": "Aucune munition pour cette arme",
+    "ammoSpent": "Plus de {{name}} : choisissez d'autres munitions",
+    "pickAmmo": "Choisir des munitions",
     "targetAc": "CA de la cible",
     "targetSize": "Taille de la cible",
     "sizes": {

@@ -442,7 +442,7 @@ func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 	assert.Zero(t, e.HPDelta)
 	assert.Equal(t, "Short Bow +2 (Arrows +3) vs AC 2: hit, 9 damage", e.Summary)
 	require.Len(t, e.Snapshots, 1)
-	assert.Equal(t, itemsvc.StateKeyItems, e.Snapshots[0].Key)
+	assert.Equal(t, "items:arrows_plus3", e.Snapshots[0].Key)
 	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2}]`, string(e.Snapshots[0].Before))
 	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(e.Snapshots[0].After))
 

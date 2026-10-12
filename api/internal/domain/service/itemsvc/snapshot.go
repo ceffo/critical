@@ -8,10 +8,15 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// StateKeyItems is the action-log state key for item counts. Services that
-// spend items (an attack firing an arrow) record a snapshot under it with
-// UseSnapshot; voiding the entry writes the "before" counts back.
+// StateKeyItems is the action-log state-key family for item counts. Each
+// item has its own key, StateKey(id) = "items:<id>", so voiding a use is
+// only blocked by later uses of the same item. Services that spend items (an
+// attack firing an arrow) record a snapshot with UseSnapshot; the Restorer
+// registered for the family writes the "before" counts back on void.
 const StateKeyItems = "items"
+
+// StateKey is the action-log state key of one item's count.
+func StateKey(itemID string) string { return StateKeyItems + actionlog.KeySeparator + itemID }
 
 // snapCount is itemsvc's JSON encoding of one item count inside a snapshot.
 // Entries already in the log must stay decodable: add fields, never rename.
@@ -31,7 +36,7 @@ func UseSnapshot(after Item) (actionlog.Snapshot, error) {
 	if err != nil {
 		return actionlog.Snapshot{}, fmt.Errorf("encode items snapshot: %w", err)
 	}
-	return actionlog.Snapshot{Key: StateKeyItems, Before: before, After: now}, nil
+	return actionlog.Snapshot{Key: StateKey(after.ID), Before: before, After: now}, nil
 }
 
 // restoreFunc adapts a function to actionlog.Restorer.
@@ -41,7 +46,8 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 	return f(ctx, characterID, state)
 }
 
-// Restorers writes the counts of an items snapshot back. It runs inside the
+// Restorers writes the counts of an items snapshot back (registered for the
+// StateKeyItems family, so it serves every "items:<id>" key). It runs inside the
 // void's transaction (ctx carries it). Items are not per character, so the
 // character id is unused.
 func (s *service) Restorers() map[string]actionlog.Restorer {

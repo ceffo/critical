@@ -62,7 +62,7 @@ func TestResetDaily_ResetErrorSkipsList(t *testing.T) {
 func TestUseSnapshot_BeforeIsOneMore(t *testing.T) {
 	snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Count: 1})
 	require.NoError(t, err)
-	assert.Equal(t, itemsvc.StateKeyItems, snap.Key)
+	assert.Equal(t, "items:arrows_plus3", snap.Key)
 	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2}]`, string(snap.Before))
 	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(snap.After))
 }

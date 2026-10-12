@@ -83,8 +83,10 @@ buff change (activate, edit, absorb, dismiss) under the `buffs` key and Next Rou
 + `round`, stamped with the round it ends; `buffSvc.Restorers()` is registered in composition.
 combatsvc records every attack (kind `attack`, payload = the full roll breakdown, camelCase like the
 `/api/roll/attack` response); a missile attack spends one ammo item through `itemsvc.Use` in the same
-transaction and snapshots it under `items` (`itemsvc.UseSnapshot`), whose Restorer
-(`itemSvc.Restorers()`) writes the count back on void.
+transaction and snapshots it under the per-item key `items:<id>` (`itemsvc.UseSnapshot`); the
+Restorer registered for the `items` family (`itemSvc.Restorers()`) writes the count back on void.
+A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
+later entries with the same full key (a +1 arrow does not block voiding a +3 shot).
 
 ## Key Go Structs
 

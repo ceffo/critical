@@ -87,3 +87,52 @@ test("voiding a missile attack gives the arrow back", async ({ page }) => {
   await expect.poll(() => selectedAmmoCount(page)).toBe(before);
   await snap(page, "missile-void");
 });
+
+test("spent ammunition stays selected and must be replaced by an explicit pick", async ({ page }) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  const roll = form.getByRole("button", { name: "Roll Attack" });
+  await form.getByLabel("Weapon").selectOption("shortbow");
+  const ammo = form.getByLabel("Ammunition");
+  await ammo.selectOption("arrows_plus3");
+  const left = await selectedAmmoCount(page);
+  for (let i = left; i > 0; i--) {
+    await roll.click();
+    await expect.poll(() => selectedAmmoCount(page)).toBe(i - 1);
+  }
+
+  // The +3 arrows are spent: still the selection, no silent switch to other arrows.
+  await expect(ammo).toHaveValue("arrows_plus3");
+  await expect(form.getByTestId("ammo-spent")).toHaveText("No Arrows +3 left: pick other ammunition");
+  await expect(roll).toBeDisabled();
+  await snap(page, "ammo-spent");
+
+  await ammo.selectOption("arrows_plus1");
+  await expect(form.getByTestId("ammo-spent")).toHaveCount(0);
+  await expect(roll).toBeEnabled();
+});
+
+test("a later shot with other arrows does not block voiding an earlier shot", async ({ page }) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  const ammo = form.getByLabel("Ammunition");
+  await form.getByLabel("Weapon").selectOption("shortbow");
+  await form.getByLabel("Target AC").fill("7");
+
+  await ammo.selectOption("arrows_plus3");
+  const plus3 = await selectedAmmoCount(page);
+  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await expect.poll(() => selectedAmmoCount(page)).toBe(plus3 - 1);
+
+  await ammo.selectOption("arrows_plus1");
+  const plus1 = await selectedAmmoCount(page);
+  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
+
+  await voidEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
+  await ammo.selectOption("arrows_plus3");
+  await expect.poll(() => selectedAmmoCount(page)).toBe(plus3);
+  await snap(page, "void-earlier-shot");
+});

@@ -9,8 +9,8 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/jaswdr/faker/v2 v2.9.1
-	github.com/stephenafamo/bob v0.43.0
-	github.com/stephenafamo/scan v0.7.0
+	github.com/stephenafamo/bob v0.50.0
+	github.com/stephenafamo/scan v0.9.0
 	github.com/stephenafamo/sqlparser v0.0.0-20260122161205-e324475bd1fc
 	github.com/stretchr/testify v1.12.1
 	modernc.org/sqlite v1.50.0

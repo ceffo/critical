@@ -78,7 +78,9 @@ effective `hp_delta` over `action_log` (latest amend wins, voided entries count 
 action log's `Record` inside the same `domain.TxRunner.InTx` as its state write, with
 `Snapshots` of the state it changed. It registers an `actionlog.Restorer` for its state key on the
 action log in the composition root, so voiding the entry restores the "before" state. A void is
-refused (409) while a later non-voided entry changed the same state key.
+refused (409) while a later non-voided entry changed the same state key. buffsvc records every
+buff change (activate, edit, absorb, dismiss) under the `buffs` key and Next Round under `buffs`
++ `round`, stamped with the round it ends; `buffSvc.Restorers()` is registered in composition.
 
 ## Key Go Structs
 
@@ -94,11 +96,14 @@ type HpEvent struct {
 type BuffEffect struct {
     ID       string // uuid
     Name     string
-    Type     string // "charge" or "duration"
-    Charges  int    // for charge-based buffs (0 = inactive)
-    Duration int    // rounds remaining for duration-based buffs
-    Effects  map[string]interface{} // modifier map: {"spells_buff": 1.5, "weapon_buff": 5}
+    Charges  int    // left to absorb (Stoneskin layers, Mirror Images); 0 = none; ends at 0
+    Duration int    // rounds left, counted down by Next Round; 0 = not timed; expires at 0
+    Effects  BuffEffects // min_str, spells_buff, weapon_buff, multiplier, save_bonus,
+                         // str_set, str_bonus + str_max, ac (pointers: nil = no contribution)
 }
+// A buff may have both counters (Mirror Image) or neither (until dismissed).
+// Effective STR = best single STR effect (set, or base + bonus capped at str_max; never
+// lower than base; Strength magic is not cumulative). min_str gates against effective STR.
 
 type RollResult struct {
     D20Roll       int

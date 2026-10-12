@@ -3,9 +3,10 @@
 package mocks
 
 import (
-	context "context"
-
+	actionlog "github.com/ceffo/critical/api/internal/domain/actionlog"
 	buffsvc "github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+
+	context "context"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -322,6 +323,124 @@ func (_c *MockSVC_Dismiss_Call) RunAndReturn(run func(context.Context, int64, st
 	return _c
 }
 
+// Edit provides a mock function with given fields: ctx, characterID, buffID, e
+func (_m *MockSVC) Edit(ctx context.Context, characterID int64, buffID string, e buffsvc.BuffEdit) ([]buffsvc.BuffEffect, error) {
+	ret := _m.Called(ctx, characterID, buffID, e)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Edit")
+	}
+
+	var r0 []buffsvc.BuffEffect
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, buffsvc.BuffEdit) ([]buffsvc.BuffEffect, error)); ok {
+		return rf(ctx, characterID, buffID, e)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, buffsvc.BuffEdit) []buffsvc.BuffEffect); ok {
+		r0 = rf(ctx, characterID, buffID, e)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, buffsvc.BuffEdit) error); ok {
+		r1 = rf(ctx, characterID, buffID, e)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Edit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Edit'
+type MockSVC_Edit_Call struct {
+	*mock.Call
+}
+
+// Edit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - buffID string
+//   - e buffsvc.BuffEdit
+func (_e *MockSVC_Expecter) Edit(ctx interface{}, characterID interface{}, buffID interface{}, e interface{}) *MockSVC_Edit_Call {
+	return &MockSVC_Edit_Call{Call: _e.mock.On("Edit", ctx, characterID, buffID, e)}
+}
+
+func (_c *MockSVC_Edit_Call) Run(run func(ctx context.Context, characterID int64, buffID string, e buffsvc.BuffEdit)) *MockSVC_Edit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(buffsvc.BuffEdit))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Edit_Call) Return(_a0 []buffsvc.BuffEffect, _a1 error) *MockSVC_Edit_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Edit_Call) RunAndReturn(run func(context.Context, int64, string, buffsvc.BuffEdit) ([]buffsvc.BuffEffect, error)) *MockSVC_Edit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetEffectiveStr provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEffectiveStr")
+	}
+
+	var r0 buffsvc.Strength
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (buffsvc.Strength, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) buffsvc.Strength); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Get(0).(buffsvc.Strength)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_GetEffectiveStr_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetEffectiveStr'
+type MockSVC_GetEffectiveStr_Call struct {
+	*mock.Call
+}
+
+// GetEffectiveStr is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) GetEffectiveStr(ctx interface{}, characterID interface{}) *MockSVC_GetEffectiveStr_Call {
+	return &MockSVC_GetEffectiveStr_Call{Call: _e.mock.On("GetEffectiveStr", ctx, characterID)}
+}
+
+func (_c *MockSVC_GetEffectiveStr_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_GetEffectiveStr_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_GetEffectiveStr_Call) Return(_a0 buffsvc.Strength, _a1 error) *MockSVC_GetEffectiveStr_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_GetEffectiveStr_Call) RunAndReturn(run func(context.Context, int64) (buffsvc.Strength, error)) *MockSVC_GetEffectiveStr_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRound provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) GetRound(ctx context.Context, characterID int64) (int, error) {
 	ret := _m.Called(ctx, characterID)
@@ -480,6 +599,112 @@ func (_c *MockSVC_ListActive_Call) Return(_a0 []buffsvc.BuffEffect, _a1 error) *
 }
 
 func (_c *MockSVC_ListActive_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, error)) *MockSVC_ListActive_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListStatus provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) ListStatus(ctx context.Context, characterID int64) ([]buffsvc.BuffStatus, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListStatus")
+	}
+
+	var r0 []buffsvc.BuffStatus
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.BuffStatus, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.BuffStatus); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.BuffStatus)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ListStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListStatus'
+type MockSVC_ListStatus_Call struct {
+	*mock.Call
+}
+
+// ListStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) ListStatus(ctx interface{}, characterID interface{}) *MockSVC_ListStatus_Call {
+	return &MockSVC_ListStatus_Call{Call: _e.mock.On("ListStatus", ctx, characterID)}
+}
+
+func (_c *MockSVC_ListStatus_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_ListStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ListStatus_Call) Return(_a0 []buffsvc.BuffStatus, _a1 error) *MockSVC_ListStatus_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ListStatus_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffStatus, error)) *MockSVC_ListStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Restorers provides a mock function with no fields
+func (_m *MockSVC) Restorers() map[string]actionlog.Restorer {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Restorers")
+	}
+
+	var r0 map[string]actionlog.Restorer
+	if rf, ok := ret.Get(0).(func() map[string]actionlog.Restorer); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]actionlog.Restorer)
+		}
+	}
+
+	return r0
+}
+
+// MockSVC_Restorers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Restorers'
+type MockSVC_Restorers_Call struct {
+	*mock.Call
+}
+
+// Restorers is a helper method to define mock.On call
+func (_e *MockSVC_Expecter) Restorers() *MockSVC_Restorers_Call {
+	return &MockSVC_Restorers_Call{Call: _e.mock.On("Restorers")}
+}
+
+func (_c *MockSVC_Restorers_Call) Run(run func()) *MockSVC_Restorers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSVC_Restorers_Call) Return(_a0 map[string]actionlog.Restorer) *MockSVC_Restorers_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_Restorers_Call) RunAndReturn(run func() map[string]actionlog.Restorer) *MockSVC_Restorers_Call {
 	_c.Call.Return(run)
 	return _c
 }

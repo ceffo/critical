@@ -243,7 +243,7 @@ func TestResolveAttack_MinStrBuffGated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dal := buffmocks.NewMockDAL(t)
 			dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil)
-			realBuffs, err := buffsvc.New(dal)
+			realBuffs, err := buffsvc.New(dal, noTx{}, buffmocks.NewMockLog(t), buffmocks.NewMockCharacters(t))
 			require.NoError(t, err)
 
 			chars := mocks.NewMockCharacters(t)
@@ -397,3 +397,8 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		assert.True(t, errors.Is(err, boom))
 	})
 }
+
+// noTx runs the unit of work directly (Aggregate never opens a transaction).
+type noTx struct{}
+
+func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }

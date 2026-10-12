@@ -235,53 +235,6 @@ func (_c *MockDAL_SaveRoundNumber_Call) RunAndReturn(run func(context.Context, i
 	return _c
 }
 
-// WrapTx provides a mock function with given fields: ctx, body
-func (_m *MockDAL) WrapTx(ctx context.Context, body func(buffsvc.DAL) error) error {
-	ret := _m.Called(ctx, body)
-
-	if len(ret) == 0 {
-		panic("no return value specified for WrapTx")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, func(buffsvc.DAL) error) error); ok {
-		r0 = rf(ctx, body)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockDAL_WrapTx_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WrapTx'
-type MockDAL_WrapTx_Call struct {
-	*mock.Call
-}
-
-// WrapTx is a helper method to define mock.On call
-//   - ctx context.Context
-//   - body func(buffsvc.DAL) error
-func (_e *MockDAL_Expecter) WrapTx(ctx interface{}, body interface{}) *MockDAL_WrapTx_Call {
-	return &MockDAL_WrapTx_Call{Call: _e.mock.On("WrapTx", ctx, body)}
-}
-
-func (_c *MockDAL_WrapTx_Call) Run(run func(ctx context.Context, body func(buffsvc.DAL) error)) *MockDAL_WrapTx_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(func(buffsvc.DAL) error))
-	})
-	return _c
-}
-
-func (_c *MockDAL_WrapTx_Call) Return(_a0 error) *MockDAL_WrapTx_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockDAL_WrapTx_Call) RunAndReturn(run func(context.Context, func(buffsvc.DAL) error) error) *MockDAL_WrapTx_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // NewMockDAL creates a new instance of MockDAL. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockDAL(t interface {

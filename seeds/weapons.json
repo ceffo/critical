@@ -1,0 +1,4 @@
+[
+  { "id": "longsword", "name": "Longsword", "base_damage": "1d8" },
+  { "id": "shortbow", "name": "Shortbow", "base_damage": "1d6" }
+]

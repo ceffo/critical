@@ -3,8 +3,11 @@ import { LeftPanel } from "@/components/panels/LeftPanel";
 import { CenterPanel } from "@/components/panels/CenterPanel";
 import { RightPanel } from "@/components/panels/RightPanel";
 import { useCharacterStore } from "@/stores/character";
+import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 function App() {
+  const { t } = useTranslation();
   const { character, loadCharacter } = useCharacterStore();
 
   useEffect(() => {
@@ -17,11 +20,11 @@ function App() {
       <header className="border-b bg-card px-4 py-2 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-black tracking-tighter uppercase">
-            {character?.name || "Loading..."}
+            {character?.name || t("app.loading")}
           </h1>
           <div className="flex items-center gap-1">
             <span className="text-[10px] font-bold text-muted-foreground uppercase">
-              Level
+              {t("app.level")}
             </span>
             <span className="text-sm font-black">{character?.level}</span>
           </div>
@@ -30,15 +33,15 @@ function App() {
         <div className="flex gap-4">
           {character &&
             [
-              { l: "STR", v: character.str },
-              { l: "DEX", v: character.dex },
-              { l: "CON", v: character.con },
-              { l: "INT", v: character.int },
-              { l: "WIS", v: character.wis },
-              { l: "CHA", v: character.cha },
+              { k: "str", l: t("attr.str"), v: character.str },
+              { k: "dex", l: t("attr.dex"), v: character.dex },
+              { k: "con", l: t("attr.con"), v: character.con },
+              { k: "int", l: t("attr.int"), v: character.int },
+              { k: "wis", l: t("attr.wis"), v: character.wis },
+              { k: "cha", l: t("attr.cha"), v: character.cha },
             ].map((a) => (
               <div
-                key={a.l}
+                key={a.k}
                 className="flex flex-col items-center leading-none"
               >
                 <span className="text-[8px] font-bold text-muted-foreground">
@@ -51,9 +54,10 @@ function App() {
 
         <div className="flex items-center gap-2">
           <div className="text-[10px] font-bold text-muted-foreground uppercase">
-            THAC0
+            {t("app.thac0")}
           </div>
           <div className="text-sm font-black">{character?.thac0Base}</div>
+          <LanguageToggle />
         </div>
       </header>
 

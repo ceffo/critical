@@ -1,0 +1,116 @@
+{
+  "app": {
+    "loading": "Loading...",
+    "level": "Level",
+    "thac0": "THAC0"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "fr": "Français"
+  },
+  "attr": {
+    "str": "STR",
+    "dex": "DEX",
+    "con": "CON",
+    "int": "INT",
+    "wis": "WIS",
+    "cha": "CHA"
+  },
+  "tabs": {
+    "combat": "Combat",
+    "spells": "Spells",
+    "character": "Character",
+    "lookup": "Spell Lookup"
+  },
+  "hp": {
+    "title": "Hit Points",
+    "damage": "Damage",
+    "heal": "Heal",
+    "amount": "Amount",
+    "source": "Source",
+    "applyDamage": "Apply Damage",
+    "applyHeal": "Apply Heal"
+  },
+  "buffs": {
+    "title": "Active Buffs",
+    "none": "No active buffs",
+    "charges": "{{count}}ch",
+    "rounds": "{{count}}rd",
+    "useCharge": "Use Charge",
+    "dismiss": "Dismiss",
+    "namePlaceholder": "Buff Name",
+    "typeRounds": "Rounds",
+    "typeCharges": "Charges",
+    "effectWeapon": "Wpn +N",
+    "effectSpells": "Spells xN",
+    "effectMultiplier": "Dmg xN",
+    "activate": "Activate",
+    "expired": "Expired buffs: {{names}}"
+  },
+  "events": {
+    "title": "Recent Events",
+    "undo": "Undo"
+  },
+  "round": {
+    "title": "Combat Round",
+    "next": "Next Round"
+  },
+  "combat": {
+    "weapon": "Weapon",
+    "selectWeapon": "Select weapon",
+    "weapons": {
+      "longsword": "Longsword (1d8)",
+      "shortbow": "Shortbow (1d6)"
+    },
+    "targetAc": "Target AC",
+    "rollAttack": "Roll Attack",
+    "rolling": "Rolling...",
+    "hit": "HIT",
+    "miss": "MISS",
+    "crit": "CRIT!",
+    "totalDamage": "Total Damage",
+    "d20Roll": "D20 Roll",
+    "critRoll": "Crit Roll",
+    "attackBreakdown": "Attack Breakdown",
+    "thac0": "THAC0",
+    "targetNeed": "Target AC {{ac}} → Need {{need}}+",
+    "damageBreakdown": "Damage Breakdown",
+    "damageDetail": "Base: {{base}} | Spells: x{{spells}} | Weapon: +{{weapon}} | Multipliers: x{{mult}} | STR: +{{str}}"
+  },
+  "character": {
+    "loading": "Loading character...",
+    "savingThrows": "Saving Throws",
+    "target": "Target: {{value}} or better",
+    "roll": "Roll",
+    "result": "Result",
+    "passed": "Passed",
+    "failed": "Failed",
+    "margin": "Margin: {{margin}}",
+    "saves": {
+      "para_poison": "Paralyze/Poison",
+      "rod_staff_wand": "Rod/Staff/Wand",
+      "petri_poly": "Petrify/Polymorph",
+      "breath": "Breath Weapon",
+      "spell": "Spells"
+    }
+  },
+  "spellSlots": {
+    "title": "Spell Slots",
+    "longRest": "Long Rest (Reset)",
+    "none": "No spell slots available.",
+    "level": "Level {{level}}",
+    "used": "Used",
+    "cast": "Cast"
+  },
+  "lookup": {
+    "search": "Search spells...",
+    "levelShort": "Lvl {{level}}",
+    "school": "School:",
+    "time": "Time:",
+    "range": "Range:",
+    "duration": "Dur:",
+    "noResults": "No spells found matching \"{{query}}\"",
+    "prompt": "Type to search the spell database..."
+  }
+}

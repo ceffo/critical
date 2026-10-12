@@ -14,7 +14,7 @@ function HpBar({ current, max }: { current: number; max: number }) {
   return (
     <div>
       <div className="flex justify-between text-sm font-mono mb-1">
-        <span>
+        <span data-testid="hp-value">
           {current} / {max}
         </span>
         <span>{Math.round(pct)}%</span>
@@ -112,7 +112,11 @@ export function LeftPanel() {
           <HpBar current={currentHp} max={maxHp} />
 
           {/* Damage entry */}
-          <div className="flex flex-col gap-1">
+          <div
+            className="flex flex-col gap-1"
+            role="group"
+            aria-label={t("hp.damage")}
+          >
             <label className="text-xs text-muted-foreground uppercase tracking-wide">
               {t("hp.damage")}
             </label>
@@ -145,7 +149,11 @@ export function LeftPanel() {
           </div>
 
           {/* Heal entry */}
-          <div className="flex flex-col gap-1">
+          <div
+            className="flex flex-col gap-1"
+            role="group"
+            aria-label={t("hp.heal")}
+          >
             <label className="text-xs text-muted-foreground uppercase tracking-wide">
               {t("hp.heal")}
             </label>

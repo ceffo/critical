@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
@@ -10,6 +10,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Playwright specs live in e2e/ and run via `just e2e`, not vitest.
+  test: { include: ["src/**/*.test.{ts,tsx}"] },
   server: {
     // `just dev` runs the API on :8080; forward /api like nginx does in compose.
     proxy: { "/api": process.env.CRITICAL_API_URL ?? "http://localhost:8080" },

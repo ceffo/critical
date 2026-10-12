@@ -150,3 +150,26 @@ outside `ui/`).
 - Language toggle (`components/LanguageToggle.tsx`) switches live and persists to `localStorage`
   (`critical.language`); presentation only, never sent to the API.
 - Not translated: server error messages and user-entered text (buff names, HP sources).
+
+## Testing
+
+- **Layers:** `vitest` for units (`just test-web`, part of `just validate`); Playwright e2e against the
+  real Go API + Vite (`just e2e`, local only, not part of `just validate`). No pixel-diff snapshots, no
+  component-test layer. Screenshots are artifacts for visual review, not assertions.
+- **First run:** `just e2e-install` once (downloads Playwright Chromium); `just e2e` says so if it's missing.
+  `just e2e smoke.spec.ts` passes args through to `playwright test`.
+- **Stack per test:** the `test` fixture from `web/e2e/fixtures.ts` starts the API binary (`just build-api`
+  output) on a free port with a fresh temp SQLite DB and the repo's real `seeds/`, plus a Vite server on a
+  free port proxying `/api` to it; both and the DB are removed afterwards. No fixed ports, `.dev/` is never
+  touched, so parallel runs/worktrees don't collide. `page.goto("/")` opens that test's dashboard.
+- **Selectors:** `getByRole` / `getByLabel` with the English accessible name first (give panels
+  `role="group"` + `aria-label` from an i18n key if needed); `data-testid` only for non-semantic regions
+  (e.g. `hp-value`).
+- **Relative assertions:** never hard-code seeded character values (reseeds change them). Read the value
+  before, act, assert the delta (HP drops by exactly the damage entered).
+- **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
+  are visible. Don't add per-flow fr specs.
+- **Add a spec:** create `web/e2e/<name>.spec.ts`, `import { test, expect, snap } from "./fixtures"`, one
+  test per UI acceptance flow, and call `snap(page, "<name>")` at the end of each flow.
+- **Artifacts** (gitignored, `web/e2e-results/`): `screens/<spec>/<name>.png` (1440x900),
+  `artifacts/<test>/trace.zip` on failure (`npx playwright show-trace <zip>`), `report/` (HTML).

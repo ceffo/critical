@@ -10,4 +10,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    // `just dev` runs the API on :8080; forward /api like nginx does in compose.
+    proxy: { "/api": process.env.CRITICAL_API_URL ?? "http://localhost:8080" },
+  },
 });

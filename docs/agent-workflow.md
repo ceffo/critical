@@ -33,11 +33,13 @@ Domain vocabulary and phase scope live in `docs/all.md`.
 
 ## Running the app for acceptance checks
 
-- Backend: `just build-api`, then run `bin/critical-srv` with a **temporary** SQLite file in the
-  scratchpad (never the user's data); read the binary's config for DB path and port variables and
-  pick a free port. Exercise endpoints with `curl`.
-- Frontend: `cd web && npm run dev` on a free port; stop it when done. Type check and build are
-  covered by `just validate` and don't prove a panel looks right.
+- Full stack with live reload: `just dev` (API via air on :8080, Vite on :5173 proxying `/api`).
+  State is in the gitignored `.dev/`; `just dev-reset` deletes the dev database. Use it only
+  from the main checkout or a worktree you own; it binds fixed ports, so run one at a time.
+- Backend alone, throwaway data: `just build-api`, then run `bin/critical-srv` with
+  `CRITICAL_DSN`, `CRITICAL_SEEDS_DIR` and `CRITICAL_ADDR` pointing at the scratchpad and a free
+  port (never the user's data). Exercise endpoints with `curl`.
+- Type check and build are covered by `just validate` and don't prove a panel looks right.
 
 ## Generated code
 

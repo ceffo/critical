@@ -17,6 +17,31 @@ install:
 # Format all code
 fmt: fmt-api fmt-web
 
+# --- Local Development ---
+
+# Run the whole stack locally with live reload: API (air) on :8080 and the Vite dev server
+# on :5173 (proxies /api). Local state lives in .dev/ (gitignored). Ctrl-C stops both.
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    trap 'kill 0' EXIT
+    just dev-api &
+    just dev-web &
+    wait
+
+# API with live reload (rebuilds on .go changes), SQLite at .dev/critical.db
+dev-api:
+    mkdir -p .dev
+    cd api && CRITICAL_DSN=../.dev/critical.db CRITICAL_SEEDS_DIR=../seeds go tool air -c .air.toml
+
+# Frontend dev server with HMR (needs the API from dev-api)
+dev-web:
+    cd web && npm run dev
+
+# Delete the local dev database; the next dev-api start re-seeds from seeds/
+dev-reset:
+    rm -f .dev/critical.db
+
 # --- Code Generation ---
 
 # Regenerate mockery mocks for all service ports (run from api/ so Go module resolves)

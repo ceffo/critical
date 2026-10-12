@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
 import { useRollStore, type LastRoll } from "@/stores/roll";
-import { formatSigned } from "@/lib/format";
+import { formatFactor, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { captionClass } from "./fieldStyles";
 
@@ -56,29 +57,40 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
   );
 }
 
+/** A modifier's label in the player's language (detail = score, weapon, ammo or buff name). */
+function modLabel(t: TFunction, m: { kind: string; detail?: string; value: number }): string {
+  return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
+}
+
 function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> }) {
   const { t } = useTranslation();
   const r = roll.result;
+  const heading = r.ammo
+    ? t("result.attackHeadingAmmo", { weapon: r.weaponName, ammo: r.ammo.name, ac: r.targetAc })
+    : t("result.attackHeading", { weapon: r.weaponName, ac: r.targetAc });
   return (
     <div className="flex flex-col gap-3" data-testid="attack-result">
       <div className="text-sm text-muted-foreground">
-        {t("result.attackHeading", {
-          weapon: t(`attack.weapons.${roll.weaponId}`),
-          ac: roll.targetAc,
-        })}
+        {heading}
+        {r.targetSize && <> · {t(`result.sizes.${r.targetSize}`)}</>}
       </div>
       <div className="flex items-end justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Verdict ok={r.hit} yes={t("result.hit")} no={t("result.miss")} />
           {r.isCrit && (
             <Badge variant="destructive">
-              {t("result.crit", { mult: r.critMultiplier })}
+              {t(r.critPlaceholder ? "result.critPlaceholder" : "result.crit", {
+                mult: r.critMultiplier,
+              })}
             </Badge>
           )}
         </div>
         <div className="text-right">
           <div className={captionClass}>{t("result.totalDamage")}</div>
-          <div className="font-mono text-4xl font-black tabular-nums leading-none">
+          <div
+            className="font-mono text-4xl font-black tabular-nums leading-none"
+            data-testid="total-damage"
+          >
             {r.hit ? r.totalDamage : "–"}
           </div>
         </div>
@@ -98,10 +110,10 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
         {r.modifiers.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("result.noModifiers")}</p>
         ) : (
-          <ul className="mt-1 flex flex-col gap-0.5 text-sm">
+          <ul className="mt-1 flex flex-col gap-0.5 text-sm" data-testid="to-hit-modifiers">
             {r.modifiers.map((m, i) => (
               <li key={i} className="flex justify-between gap-2">
-                <span className="min-w-0 truncate">{m.source}</span>
+                <span className="min-w-0 truncate">{modLabel(t, m)}</span>
                 <span className="font-mono">{formatSigned(m.value)}</span>
               </li>
             ))}
@@ -112,19 +124,42 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
       {r.hit && (
         <div>
           <div className={captionClass}>{t("result.damage")}</div>
-          <dl className="mt-1 grid grid-cols-5 gap-1.5 text-center">
-            <Fact label={t("result.damageBase")}>{r.baseDamage}</Fact>
+          <dl className="mt-1 grid grid-cols-3 gap-1.5 text-center">
+            <Fact label={t("result.damageDice")}>
+              {r.damageDice} → {r.baseDamage}
+            </Fact>
             <Fact label={t("result.damageSpells")}>{r.spellsBuff}</Fact>
             <Fact label={t("result.damageWeapon")}>{r.weaponBuff}</Fact>
             <Fact label={t("result.damageMultiplier")}>{r.multipliers}</Fact>
             <Fact label={t("result.damageStrength")}>{r.strengthBonus}</Fact>
+            <Fact label={t("result.damageBonus")}>{r.bonusDamage}</Fact>
           </dl>
+          {r.damageTerms.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-0.5 text-sm" data-testid="damage-terms">
+              {r.damageTerms.map((d, i) => (
+                <li key={i} className="flex justify-between gap-2">
+                  <span className="min-w-0 truncate">{modLabel(t, d)}</span>
+                  <span className="font-mono">
+                    {d.term === "spells" || d.term === "multiplier"
+                      ? formatFactor(d.value)
+                      : formatSigned(d.value)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           {r.damageBreakdown && (
             <div className="mt-2 rounded-lg border bg-background px-2.5 py-1.5 font-mono text-sm">
               {r.damageBreakdown}
             </div>
           )}
         </div>
+      )}
+
+      {r.ammo && (
+        <p className="text-sm text-muted-foreground" data-testid="ammo-left">
+          {t("result.ammoLeft", { name: r.ammo.name, count: r.ammo.remaining })}
+        </p>
       )}
     </div>
   );

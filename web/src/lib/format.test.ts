@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSigned, hpPercent, hpTone } from "./format";
+import { formatFactor, formatSigned, hpPercent, hpTone } from "./format";
 
 describe("formatSigned", () => {
   it.each([
@@ -21,4 +21,11 @@ describe("hpPercent / hpTone", () => {
     [25, "warn"],
     [24.9, "bad"],
   ] as const)("%d%% → %s", (pct, want) => expect(hpTone(pct)).toBe(want));
+});
+
+describe("formatFactor", () => {
+  it.each([
+    [2, "×2"],
+    [1.5, "×1.5"],
+  ])("%d → %s", (n, want) => expect(formatFactor(n)).toBe(want));
 });

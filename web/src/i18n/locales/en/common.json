@@ -61,7 +61,7 @@
     "addEffect": "Effect",
     "removeEffect": "Remove effect",
     "effects": {
-      "weapon_buff": "Weapon +N",
+      "weapon_buff": "Weapon becomes +N",
       "spells_buff": "Spells ×N",
       "multiplier": "Damage ×N",
       "save_bonus": "Saves +N",
@@ -69,7 +69,9 @@
       "str_max": "STR max",
       "str_set": "STR set to",
       "min_str": "Needs STR",
-      "ac": "AC ±N"
+      "ac": "AC ±N",
+      "to_hit": "To hit +N",
+      "damage": "Damage +N"
     },
     "activate": "Activate",
     "save": "Save",
@@ -89,11 +91,20 @@
   "attack": {
     "weapon": "Weapon",
     "selectWeapon": "Select weapon",
-    "weapons": {
-      "longsword": "Longsword (1d8)",
-      "shortbow": "Shortbow (1d6)"
-    },
+    "weaponOption": "{{name}} ({{sm}}, large {{l}})",
+    "ammo": "Ammunition",
+    "ammoOption": "{{name}} ({{count}} left)",
+    "noAmmo": "No ammunition for this weapon",
     "targetAc": "Target AC",
+    "targetSize": "Target size",
+    "sizes": {
+      "sm": "Small / Medium",
+      "l": "Large"
+    },
+    "situational": "Situational",
+    "situationalLabel": "Reason",
+    "situationalPlaceholder": "e.g. rear attack",
+    "loading": "Loading weapons…",
     "roll": "Roll Attack",
     "rolling": "Rolling..."
   },
@@ -161,7 +172,27 @@
     "damageWeapon": "Weapon +",
     "damageMultiplier": "Multiplier ×",
     "damageStrength": "Strength +",
-    "breakdown": "Breakdown"
+    "breakdown": "Breakdown",
+    "attackHeadingAmmo": "{{weapon}} with {{ammo}} vs AC {{ac}}",
+    "sizes": {
+      "sm": "S/M target",
+      "l": "large target"
+    },
+    "critPlaceholder": "Critical ×{{mult}} (placeholder)",
+    "ammoLeft": "{{name}}: {{count}} left",
+    "damageDice": "Dice",
+    "damageBonus": "Bonus +",
+    "damageTerms": "Damage modifiers",
+    "mods": {
+      "strength": "Strength {{detail}}",
+      "dexterity": "Dexterity {{detail}} (missile)",
+      "weapon_magic": "{{detail}}",
+      "weapon_buff": "{{detail}}: weapon +{{value}}",
+      "ammo_magic": "{{detail}}",
+      "buff": "{{detail}}",
+      "situational": "{{detail}}",
+      "crit": "Critical hit (placeholder)"
+    }
   },
   "log": {
     "title": "Combat Log",
@@ -201,6 +232,12 @@
       "dismiss": "Dismissed {{buff}}",
       "nextRound": "Round {{from}} → {{to}}",
       "expired": "— expired: {{names}}"
+    },
+    "attack": {
+      "miss": "{{weapon}} vs AC {{ac}}: miss",
+      "hit": "{{weapon}} vs AC {{ac}}: hit, {{damage}} damage",
+      "crit": "{{weapon}} vs AC {{ac}}: critical ×{{mult}}, {{damage}} damage",
+      "withAmmo": "{{weapon}} ({{ammo}})"
     }
   }
 }

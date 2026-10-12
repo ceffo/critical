@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
+import type { RollResult } from "@/types/combat";
 
 /** Payload of buff_change / round_advance entries (buffsvc logPayload). */
 export interface BuffLogPayload {
@@ -30,11 +31,31 @@ function counters(t: TFunction, rounds = 0, charges = 0): string {
   return parts.length > 0 ? parts.join(", ") : t("buffs.untilDismissed");
 }
 
+/** Payload of attack entries: the roll breakdown (combatsvc attackRecord, same shape as RollResult). */
+function attackPayload(e: LogEntry): RollResult | null {
+  if (e.kind !== "attack") return null;
+  const p = e.payload as Partial<RollResult> | null;
+  return p && typeof p.hit === "boolean" && typeof p.weaponName === "string"
+    ? (p as RollResult)
+    : null;
+}
+
+function attackText(p: RollResult, t: TFunction): string {
+  const weapon = p.ammo
+    ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
+    : (p.weaponName ?? "");
+  const args = { weapon, ac: p.targetAc, damage: p.totalDamage, mult: p.critMultiplier };
+  if (!p.hit) return t("log.attack.miss", args);
+  return t(p.isCrit ? "log.attack.crit" : "log.attack.hit", args);
+}
+
 /**
- * The entry's text in the player's language: buff and round entries are rendered from their
- * structured payload; everything else (and unknown payloads) uses the server's summary.
+ * The entry's text in the player's language: buff, round and attack entries are rendered from
+ * their structured payload; everything else (and unknown payloads) uses the server's summary.
  */
 export function entryText(e: LogEntry, t: TFunction): string {
+  const attack = attackPayload(e);
+  if (attack) return attackText(attack, t);
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
   const buff = p.buff ?? "";

@@ -58,6 +58,11 @@ flowchart TD
   payload in the player's language (`lib/logSummary.ts`). The header's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N".
+- Attack tab (`components/actions/AttackPanel.tsx`): weapon (`GET /api/weapons`), ammunition for
+  weapons with an `ammo_kind` (`GET /api/items`, count shown, `stores/items.ts`), target AC and size,
+  situational modifier. The result card labels each modifier and damage term by its `kind`
+  (`result.mods.*`); attack log entries are rendered from their payload (`lib/logSummary.ts`).
+  An attack refreshes the table state (log, item counts), so voiding it shows the arrow back.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).
@@ -95,7 +100,7 @@ export interface RollResult {
   isCrit: boolean;
   critMultiplier: number;
   baseThac0: number;
-  modifiers: Array<{ source: string; value: number }>;
+  modifiers: Modifier[]; // { kind, source, detail?, value }
   effectiveThac0: number;
   targetACNeeded: number;
   hit: boolean;
@@ -107,6 +112,7 @@ export interface RollResult {
   strengthBonus: number;
   totalDamage: number;
   damageBreakdown: string;
+  // … see web/src/types/combat.ts for the full shape (damageTerms, ammo, critPlaceholder…)
 }
 ```
 

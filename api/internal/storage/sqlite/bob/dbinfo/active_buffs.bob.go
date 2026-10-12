@@ -58,6 +58,20 @@ var ActiveBuffs = Table[
 			Comment: "",
 			Partial: false,
 		},
+		IdxActiveBuffsCharacterID: index{
+			Type: "c",
+			Name: "idx_active_buffs_character_id",
+			Columns: []indexColumn{
+				{
+					Name:         "character_id",
+					Desc:         null.FromCond(false, true),
+					IsExpression: false,
+				},
+			},
+			Unique:  true,
+			Comment: "",
+			Partial: false,
+		},
 	},
 	PrimaryKey: &constraint{
 		Name:    "pk_main_active_buffs",
@@ -92,12 +106,13 @@ func (c activeBuffColumns) AsSlice() []column {
 }
 
 type activeBuffIndexes struct {
-	PKMainActiveBuffs index
+	PKMainActiveBuffs         index
+	IdxActiveBuffsCharacterID index
 }
 
 func (i activeBuffIndexes) AsSlice() []index {
 	return []index{
-		i.PKMainActiveBuffs,
+		i.PKMainActiveBuffs, i.IdxActiveBuffsCharacterID,
 	}
 }
 

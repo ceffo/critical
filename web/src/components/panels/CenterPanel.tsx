@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { CombatPanel } from "./CombatPanel";
 import { SpellPanel } from "./SpellPanel";
@@ -6,11 +7,12 @@ import { SpellPanel } from "./SpellPanel";
 import { CharacterPanel } from "./CharacterPanel";
 import { SpellLookupPanel } from "./SpellLookupPanel";
 
-type Tab = "Combat" | "Spells" | "Character" | "Lookup";
-const TABS: Tab[] = ["Combat", "Spells", "Character", "Lookup"];
+type Tab = "combat" | "spells" | "character" | "lookup";
+const TABS: Tab[] = ["combat", "spells", "character", "lookup"];
 
 export function CenterPanel() {
-  const [activeTab, setActiveTab] = useState<Tab>("Combat");
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<Tab>("combat");
 
   return (
     <div className="flex flex-col h-full">
@@ -27,16 +29,16 @@ export function CenterPanel() {
             size="sm"
             onClick={() => setActiveTab(tab)}
           >
-            {tab === "Lookup" ? "Spell Lookup" : tab}
+            {t(`tabs.${tab}`)}
           </Button>
         ))}
       </div>
       <div className="flex-1 p-3 overflow-y-auto">
-        {activeTab === "Combat" ? (
+        {activeTab === "combat" ? (
           <CombatPanel />
-        ) : activeTab === "Spells" ? (
+        ) : activeTab === "spells" ? (
           <SpellPanel />
-        ) : activeTab === "Character" ? (
+        ) : activeTab === "character" ? (
           <CharacterPanel />
         ) : (
           <SpellLookupPanel />

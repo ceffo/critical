@@ -100,12 +100,16 @@ build-web:
 lint-web:
     cd web && npm run lint
 
+# Run frontend unit tests (vitest)
+test-web:
+    cd web && npm test
+
 # Typecheck the frontend
 typecheck-web:
     cd web && npm run typecheck
 
 # Run all frontend checks
-check-web: lint-web typecheck-web build-web
+check-web: lint-web typecheck-web test-web build-web
     @echo "--- Frontend Validation Successful ---"
 
 # Format the frontend

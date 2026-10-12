@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { rollSavingThrow } from "@/api/roll";
 import type { RollResult } from "@/types/combat";
 
 export function CharacterPanel() {
+  const { t } = useTranslation();
   const { character, loadCharacter, loading } = useCharacterStore();
   const [lastResult, setLastResult] = useState<RollResult | null>(null);
 
@@ -15,7 +17,7 @@ export function CharacterPanel() {
   }, [loadCharacter]);
 
   if (loading || !character)
-    return <div className="p-4">Loading character...</div>;
+    return <div className="p-4">{t("character.loading")}</div>;
 
   const handleRollSave = async (category: string) => {
     try {
@@ -27,32 +29,40 @@ export function CharacterPanel() {
   };
 
   const attributes = [
-    { label: "STR", value: character.str },
-    { label: "DEX", value: character.dex },
-    { label: "CON", value: character.con },
-    { label: "INT", value: character.int },
-    { label: "WIS", value: character.wis },
-    { label: "CHA", value: character.cha },
+    { key: "str", label: t("attr.str"), value: character.str },
+    { key: "dex", label: t("attr.dex"), value: character.dex },
+    { key: "con", label: t("attr.con"), value: character.con },
+    { key: "int", label: t("attr.int"), value: character.int },
+    { key: "wis", label: t("attr.wis"), value: character.wis },
+    { key: "cha", label: t("attr.cha"), value: character.cha },
   ];
 
   const savingThrows = [
     {
       id: "para_poison",
-      label: "Paralyze/Poison",
+      label: t("character.saves.para_poison"),
       value: character.saveParaPoison,
     },
     {
       id: "rod_staff_wand",
-      label: "Rod/Staff/Wand",
+      label: t("character.saves.rod_staff_wand"),
       value: character.saveRodStaffWand,
     },
     {
       id: "petri_poly",
-      label: "Petrify/Polymorph",
+      label: t("character.saves.petri_poly"),
       value: character.savePetriPoly,
     },
-    { id: "breath", label: "Breath Weapon", value: character.saveBreath },
-    { id: "spell", label: "Spells", value: character.saveSpell },
+    {
+      id: "breath",
+      label: t("character.saves.breath"),
+      value: character.saveBreath,
+    },
+    {
+      id: "spell",
+      label: t("character.saves.spell"),
+      value: character.saveSpell,
+    },
   ];
 
   return (
@@ -60,7 +70,7 @@ export function CharacterPanel() {
       {/* Attributes Grid */}
       <div className="grid grid-cols-3 gap-2">
         {attributes.map((attr) => (
-          <Card key={attr.label} className="bg-muted/50">
+          <Card key={attr.key} className="bg-muted/50">
             <CardContent className="p-2 flex flex-col items-center">
               <span className="text-xs font-bold text-muted-foreground uppercase">
                 {attr.label}
@@ -74,7 +84,9 @@ export function CharacterPanel() {
       {/* Saving Throws List */}
       <Card>
         <CardHeader className="py-3">
-          <CardTitle className="text-sm">Saving Throws</CardTitle>
+          <CardTitle className="text-sm">
+            {t("character.savingThrows")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0 border-t">
           <ul className="divide-y">
@@ -86,7 +98,7 @@ export function CharacterPanel() {
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{save.label}</span>
                   <span className="text-xs text-muted-foreground italic">
-                    Target: {save.value} or better
+                    {t("character.target", { value: save.value })}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -99,7 +111,7 @@ export function CharacterPanel() {
                     onClick={() => handleRollSave(save.id)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    Roll
+                    {t("character.roll")}
                   </Button>
                 </div>
               </li>
@@ -116,13 +128,13 @@ export function CharacterPanel() {
           <CardContent className="p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold uppercase text-muted-foreground">
-                Result
+                {t("character.result")}
               </span>
               <Badge
                 variant={lastResult.hit ? "default" : "destructive"}
                 className="uppercase"
               >
-                {lastResult.hit ? "Passed" : "Failed"}
+                {lastResult.hit ? t("character.passed") : t("character.failed")}
               </Badge>
             </div>
             <div className="text-center mb-2">
@@ -130,8 +142,9 @@ export function CharacterPanel() {
                 {lastResult.d20Roll}
               </div>
               <div className="text-xs font-medium text-muted-foreground mt-1">
-                Margin: {lastResult.hitMargin > 0 ? "+" : ""}
-                {lastResult.hitMargin}
+                {t("character.margin", {
+                  margin: `${lastResult.hitMargin > 0 ? "+" : ""}${lastResult.hitMargin}`,
+                })}
               </div>
             </div>
             <div className="bg-muted p-2 rounded text-[10px] font-mono break-all leading-tight">

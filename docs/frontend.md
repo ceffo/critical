@@ -5,6 +5,7 @@
 - **Framework**: React 18 + Vite + TypeScript (strict mode)
 - **Styling**: Tailwind CSS v3
 - **Components**: shadcn/ui (components live in `web/src/components/ui/`)
+- **i18n**: i18next + react-i18next (see "Internationalisation")
 - **State**: Zustand (one store per domain: hp, combat, buffs, spells)
 - **API client**: native `fetch` with typed wrappers in `web/src/api/`
 - **No game logic**: if you are computing anything beyond display formatting, stop and move it to Go
@@ -129,3 +130,23 @@ export const useHpStore = create<HpStore>((set) => ({
 - Buff list: each buff shows name + remaining charges/rounds as a Badge
 - Roll results: show the full breakdown in a readable format — never just the final number
 - Expiry alerts: use a toast notification (shadcn Toast) when a buff expires
+
+## Internationalisation (en / fr)
+
+Every user-visible string goes through a key; never write a literal in JSX (`web/src/i18n/catalogues.test.ts`
+fails on JSX text and on `placeholder`/`title`/`aria-label`/`alt` literals in `App.tsx` and `components/`
+outside `ui/`).
+
+- Catalogues: `web/src/i18n/locales/<lng>/<namespace>.json`, languages `en` (fallback) and `fr`.
+- Namespaces: `common` (all UI strings, default namespace) and `spells` (spell names only).
+- `common` keys: `area.thing`, camelCase leaves, grouped by panel/feature (`hp.applyDamage`,
+  `buffs.none`, `combat.weapons.longsword`). Interpolation uses `{{name}}`: `t("spellSlots.level", { level })`.
+  Add the key to **both** `en` and `fr`; a test requires identical key sets.
+- `spells` keys: the spell's stable id (snake_case of the English name, e.g. `magic_missile`), value is the
+  name. Render with `spellName(t, id, englishName)` from `@/i18n/spellName`; a missing `fr` key falls back
+  to `en`, then to the supplied English name. `spellId(name)` derives the id until the spell database
+  carries an explicit one. Spell descriptions stay English.
+- Use `const { t } = useTranslation()` in components. Dynamic keys are fine, e.g. a template literal per tab id.
+- Language toggle (`components/LanguageToggle.tsx`) switches live and persists to `localStorage`
+  (`critical.language`); presentation only, never sent to the API.
+- Not translated: server error messages and user-entered text (buff names, HP sources).

@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { ChevronRight } from "lucide-react";
 
 export function RightPanel() {
+  const { t } = useTranslation();
   const { round, fetchRound, advanceRound } = useBuffsStore();
 
   useEffect(() => {
@@ -15,7 +17,9 @@ export function RightPanel() {
     const expired = await advanceRound();
     if (expired.length > 0) {
       // Simple alert for now as shadcn Toast is missing in ui/
-      alert(`Expired buffs: ${expired.map((b) => b.name).join(", ")}`);
+      alert(
+        t("buffs.expired", { names: expired.map((b) => b.name).join(", ") }),
+      );
     }
   };
 
@@ -24,13 +28,13 @@ export function RightPanel() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base text-muted-foreground uppercase tracking-widest">
-            Combat Round
+            {t("round.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4 py-6">
           <div className="text-6xl font-black font-mono">{round}</div>
           <Button size="lg" className="w-full gap-2" onClick={handleNextRound}>
-            Next Round <ChevronRight className="h-4 w-4" />
+            {t("round.next")} <ChevronRight className="h-4 w-4" />
           </Button>
         </CardContent>
       </Card>

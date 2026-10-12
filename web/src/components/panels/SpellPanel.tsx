@@ -1,11 +1,14 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSpellStore } from "@/stores/spells";
+import { spellId, spellName } from "@/i18n/spellName";
 import type { SpellSlot } from "@/types/spells";
 
 export function SpellPanel() {
+  const { t } = useTranslation();
   const { slots, fetchSlots, castSpell, resetSlots, loading } = useSpellStore();
 
   useEffect(() => {
@@ -27,21 +30,19 @@ export function SpellPanel() {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center px-1">
-        <h2 className="text-xl font-bold">Spell Slots</h2>
+        <h2 className="text-xl font-bold">{t("spellSlots.title")}</h2>
         <Button
           variant="outline"
           size="sm"
           onClick={resetSlots}
           disabled={loading}
         >
-          Long Rest (Reset)
+          {t("spellSlots.longRest")}
         </Button>
       </div>
 
       {levels.length === 0 && !loading && (
-        <p className="text-sm text-muted-foreground">
-          No spell slots available.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("spellSlots.none")}</p>
       )}
 
       {levels.map((level) => {
@@ -54,7 +55,7 @@ export function SpellPanel() {
             <CardHeader className="py-2 px-4 border-b">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-sm font-semibold">
-                  Level {level}
+                  {t("spellSlots.level", { level })}
                 </CardTitle>
                 <Badge
                   variant={
@@ -78,7 +79,11 @@ export function SpellPanel() {
                   <span
                     className={`text-sm ${slot.used ? "line-through text-muted-foreground" : "font-medium"}`}
                   >
-                    {slot.prepared_spell_name}
+                    {spellName(
+                      t,
+                      spellId(slot.prepared_spell_name),
+                      slot.prepared_spell_name,
+                    )}
                   </span>
                   <Button
                     size="sm"
@@ -87,7 +92,7 @@ export function SpellPanel() {
                     disabled={slot.used || loading}
                     onClick={() => castSpell(slot.index)}
                   >
-                    {slot.used ? "Used" : "Cast"}
+                    {slot.used ? t("spellSlots.used") : t("spellSlots.cast")}
                   </Button>
                 </div>
               ))}

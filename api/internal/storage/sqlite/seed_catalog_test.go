@@ -57,6 +57,9 @@ func TestSeed_InvalidCatalogsFailWithoutPartialRows(t *testing.T) {
 		"weapon bad kind":       {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"magic"}]`, "weapons"},
 		"item bad kind":         {"items.json", `[{"id":"a","name":"A","kind":"relic","count":1}]`, "items"},
 		"item negative count":   {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":-1}]`, "items"},
+		"weapon duplicate id":   {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"},{"id":"a","name":"B","damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`, "weapons"},
+		"item duplicate id":     {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":1},{"id":"a","name":"B","kind":"ammo","count":1}]`, "items"},
+		"item count over max":   {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":5,"max_count":3}]`, "items"},
 		"invalid json":          {"items.json", `{nope`, "items"},
 	}
 	for name, tt := range tests {
@@ -68,4 +71,26 @@ func TestSeed_InvalidCatalogsFailWithoutPartialRows(t *testing.T) {
 			assert.Zero(t, scalar(t, db, "SELECT COUNT(*) FROM "+tt.table))
 		})
 	}
+}
+
+func TestSeed_MissingCatalogFileIsAStartupError(t *testing.T) {
+	for _, missing := range []string{"weapons.json", "items.json"} {
+		t.Run(missing, func(t *testing.T) {
+			dir := t.TempDir()
+			present, content := "items.json", `[{"id":"a","name":"A","kind":"ammo","count":1}]`
+			if missing == "items.json" {
+				present, content = "weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(dir, present), []byte(content), 0o600))
+			err := openMigrated(t).Seed(context.Background(), dir)
+			require.ErrorContains(t, err, missing[:len(missing)-5])
+			require.ErrorContains(t, err, "seed file is unreadable")
+		})
+	}
+}
+
+func TestSeed_MissingCatalogFileIsFineOnceTableIsFilled(t *testing.T) {
+	db := openMigrated(t)
+	require.NoError(t, db.Seed(context.Background(), repoSeeds()))
+	require.NoError(t, db.Seed(context.Background(), t.TempDir()))
 }

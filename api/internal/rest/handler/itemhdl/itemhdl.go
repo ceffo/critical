@@ -12,18 +12,15 @@ import (
 // Router is the chi subset we need.
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
-	Post(pattern string, h http.HandlerFunc)
 }
 
 type itemSvc interface {
 	List(ctx context.Context) ([]itemsvc.Item, error)
-	ResetDaily(ctx context.Context) ([]itemsvc.Item, error)
 }
 
 // RegisterRoutes wires item endpoints onto r.
 func RegisterRoutes(r Router, svc itemsvc.SVC) {
 	r.Get("/api/items", render.Handle(List(svc)))
-	r.Post("/api/items/reset", render.Handle(Reset(svc)))
 }
 
 // List returns every item with its current count.
@@ -33,19 +30,7 @@ func List(svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTOs(items))
-		return nil
-	}
-}
-
-// Reset refills the per-day items (long rest).
-func Reset(svc itemSvc) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		items, err := svc.ResetDaily(r.Context())
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, toDTOs(items))
+		render.OK(r.Context(), w, ToDTOs(items))
 		return nil
 	}
 }
@@ -65,7 +50,8 @@ type ItemDTO struct {
 	Notes      string `json:"notes"`
 }
 
-func toDTOs(items []itemsvc.Item) []ItemDTO {
+// ToDTOs maps items to their wire shape.
+func ToDTOs(items []itemsvc.Item) []ItemDTO {
 	out := make([]ItemDTO, 0, len(items))
 	for _, i := range items {
 		out = append(out, ItemDTO{

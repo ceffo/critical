@@ -73,8 +73,9 @@ type itemSeed struct {
 }
 
 // Seed loads character.json, spells.json, weapons.json and items.json from
-// seedsDir into their tables if those are empty. Missing seed files are
-// silently ignored.
+// seedsDir into their tables if those are empty. Missing character and spell
+// files are ignored. A missing weapons or items file while its table is empty
+// is an error: attacks would 404 on an empty catalog.
 func (d *DB) Seed(ctx context.Context, seedsDir string) error {
 	if err := d.seedCharacter(ctx, filepath.Join(filepath.Clean(seedsDir), "character.json")); err != nil {
 		return fmt.Errorf("seed character: %w", err)
@@ -204,13 +205,18 @@ func (d *DB) seedWeapons(ctx context.Context, seedPath string) error {
 	}
 	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
-		return nil
+		return fmt.Errorf("weapons table is empty and its seed file is unreadable (the catalog would be empty): %w", err)
 	}
 	var weapons []weaponSeed
 	if err := json.Unmarshal(data, &weapons); err != nil {
 		return fmt.Errorf("parse weapons.json: %w", err)
 	}
+	seen := make(map[string]bool, len(weapons))
 	for i, w := range weapons {
+		if seen[w.ID] {
+			return fmt.Errorf("weapons.json entry %d: duplicate id %q", i, w.ID)
+		}
+		seen[w.ID] = true
 		if w.ID == "" || w.Name == "" || w.DamageSM == "" || w.DamageL == "" {
 			return fmt.Errorf("weapons.json entry %d: id, name, damage_sm and damage_l are required", i)
 		}
@@ -239,15 +245,23 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 	}
 	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
-		return nil
+		return fmt.Errorf("items table is empty and its seed file is unreadable (the catalog would be empty): %w", err)
 	}
 	var items []itemSeed
 	if err := json.Unmarshal(data, &items); err != nil {
 		return fmt.Errorf("parse items.json: %w", err)
 	}
+	seen := make(map[string]bool, len(items))
 	for i, it := range items {
 		if it.ID == "" || it.Name == "" {
 			return fmt.Errorf("items.json entry %d: id and name are required", i)
+		}
+		if seen[it.ID] {
+			return fmt.Errorf("items.json entry %d: duplicate id %q", i, it.ID)
+		}
+		seen[it.ID] = true
+		if it.MaxCount != nil && it.Count > *it.MaxCount {
+			return fmt.Errorf("items.json entry %d (%q): count %d exceeds max_count %d", i, it.ID, it.Count, *it.MaxCount)
 		}
 	}
 	return d.WrapTx(ctx, func(q Querier) error {

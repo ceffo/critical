@@ -23,6 +23,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
@@ -41,6 +42,7 @@ type BackingServices struct {
 	Spells    spellsvc.SVC
 	Combat    combatsvc.SVC
 	Items     itemsvc.SVC
+	Rest      restsvc.SVC
 
 	services []domain.Service
 }
@@ -127,6 +129,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	restSvc, err := restsvc.New(spellSvc, itemSvc, db)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	return &BackingServices{
 		DB:          db,
@@ -138,7 +145,8 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Spells:      spellSvc,
 		Combat:      combatSvc,
 		Items:       itemSvc,
-		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, combatSvc, itemSvc},
+		Rest:        restSvc,
+		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, combatSvc, itemSvc, restSvc},
 	}, nil
 }
 

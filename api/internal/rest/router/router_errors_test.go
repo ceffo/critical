@@ -21,6 +21,8 @@ import (
 	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
+	restmocks "github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	spellmocks "github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
 	"github.com/ceffo/critical/api/internal/rest/router"
@@ -36,6 +38,7 @@ type mocksSet struct {
 	cmb   *combatmocks.MockSVC
 	log   *logmocks.MockSVC
 	items *itemmocks.MockSVC
+	rest  *restmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -48,10 +51,11 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		cmb:   combatmocks.NewMockSVC(t),
 		log:   logmocks.NewMockSVC(t),
 		items: itemmocks.NewMockSVC(t),
+		rest:  restmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
-		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Combat: m.cmb, Log: m.log, Items: m.items,
+		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m
@@ -124,16 +128,16 @@ var endpoints = []endpoint{
 		m.spell.On("Cast", anyArgs(3)...).Return(nil, err)
 	}},
 	{"POST spells/reset", "POST", "/api/spells/reset", "", func(m *mocksSet, err error) {
-		m.spell.On("ResetSlots", anyArgs(2)...).Return(nil, err)
+		m.rest.On("LongRest", anyArgs(2)...).Return(restsvc.Result{}, err)
+	}},
+	{"POST rest/long", "POST", "/api/rest/long", "", func(m *mocksSet, err error) {
+		m.rest.On("LongRest", anyArgs(2)...).Return(restsvc.Result{}, err)
 	}},
 	{"GET weapons", "GET", "/api/weapons", "", func(m *mocksSet, err error) {
 		m.cmb.On("ListWeapons", anyArgs(1)...).Return(nil, err)
 	}},
 	{"GET items", "GET", "/api/items", "", func(m *mocksSet, err error) {
 		m.items.On("List", anyArgs(1)...).Return(nil, err)
-	}},
-	{"POST items/reset", "POST", "/api/items/reset", "", func(m *mocksSet, err error) {
-		m.items.On("ResetDaily", anyArgs(1)...).Return(nil, err)
 	}},
 	{"POST roll/attack", "POST", "/api/roll/attack", `{"weapon_id":"w","target_ac":3}`, func(m *mocksSet, err error) {
 		m.cmb.On("ResolveAttack", anyArgs(4)...).Return(nil, err)

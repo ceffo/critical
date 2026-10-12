@@ -64,3 +64,11 @@ packages:
     interfaces:
       SVC:
       DAL:
+  github.com/ceffo/critical/api/internal/domain/service/restsvc:
+    config:
+      dir: "internal/domain/service/restsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Spells:
+      Items:

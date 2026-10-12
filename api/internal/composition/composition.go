@@ -88,10 +88,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 
-	// The PHB rule tables are not consumed yet (qki.7 attacks, qki.9 spell
-	// preparation will take them); loading them now makes a gap in a table a
+	// The PHB rule tables: attacks look STR/DEX adjustments up in them (qki.9
+	// spell preparation will take the Bard table). A gap in a table is a
 	// startup error.
-	if _, err := ruletablesadpt.New(cfg.SeedsDir); err != nil {
+	rules, err := ruletablesadpt.New(cfg.SeedsDir)
+	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -132,12 +133,16 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	combatSvc, err := combatsvc.New(charSvc, buffSvc, dice, weaponDAL)
+	itemSvc, err := itemsvc.New(itemDAL)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	itemSvc, err := itemsvc.New(itemDAL)
+	registerRestorers(logSvc, itemSvc.Restorers())
+	combatSvc, err := combatsvc.New(combatsvc.Deps{
+		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL,
+		Items: itemSvc, Rules: rules, Log: logSvc, Tx: db,
+	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err

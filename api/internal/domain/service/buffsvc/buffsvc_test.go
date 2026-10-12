@@ -191,6 +191,7 @@ func TestActivate(t *testing.T) {
 		{"STR set above 25", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{StrSet: intPtr(26)}}},
 		{"STR cap below 1", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{StrMax: intPtr(0)}}},
 		{"min STR above 25", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{MinStr: intPtr(30)}}},
+		{"weapon +0", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{WeaponBuff: intPtr(0)}}},
 	}
 	for _, tt := range invalid {
 		t.Run("rejects "+tt.name, func(t *testing.T) {
@@ -577,13 +578,28 @@ func TestAggregate(t *testing.T) {
 			want: buffsvc.BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: 10},
 		},
 		{
-			name: "multipliers stack multiplicatively, flat bonuses additively",
+			name: "multipliers stack multiplicatively, flat bonuses additively, weapon +N: best wins",
 			buffs: []buffsvc.BuffEffect{
-				{Effects: buffsvc.BuffEffects{Multiplier: floatPtr(2.0), SpellsBuff: floatPtr(1.5), WeaponBuff: intPtr(5), SaveBonus: intPtr(1), AC: intPtr(-1)}},
-				{Effects: buffsvc.BuffEffects{Multiplier: floatPtr(1.5), SpellsBuff: floatPtr(2.0), WeaponBuff: intPtr(2), SaveBonus: intPtr(2), AC: intPtr(-4)}},
+				{Name: "A", Effects: buffsvc.BuffEffects{Multiplier: floatPtr(2.0), SpellsBuff: floatPtr(1.5), WeaponBuff: intPtr(5), SaveBonus: intPtr(1), AC: intPtr(-1), ToHit: intPtr(1), Damage: intPtr(2)}},
+				{Name: "B", Effects: buffsvc.BuffEffects{Multiplier: floatPtr(1.5), SpellsBuff: floatPtr(2.0), WeaponBuff: intPtr(2), SaveBonus: intPtr(2), AC: intPtr(-4), ToHit: intPtr(-3), Damage: intPtr(1)}},
 			},
-			str:  12,
-			want: buffsvc.BuffModifiers{SpellsBuff: 3.0, WeaponBuff: 7, Multipliers: 3.0, SaveBonus: 3, AC: -5, EffectiveStr: 12},
+			str: 12,
+			want: buffsvc.BuffModifiers{
+				SpellsBuff: 3.0, WeaponBuff: 5, WeaponBuffFrom: "A", Multipliers: 3.0, SaveBonus: 3, AC: -5,
+				ToHit: -2, Damage: 3, EffectiveStr: 12,
+				SpellsBuffFrom:  []buffsvc.Factor{{Buff: "A", Value: 1.5}, {Buff: "B", Value: 2.0}},
+				MultipliersFrom: []buffsvc.Factor{{Buff: "A", Value: 2.0}, {Buff: "B", Value: 1.5}},
+				ToHitFrom:       []buffsvc.Contribution{{Buff: "A", Value: 1}, {Buff: "B", Value: -3}},
+				DamageFrom:      []buffsvc.Contribution{{Buff: "A", Value: 2}, {Buff: "B", Value: 1}},
+			},
+		},
+		{
+			name: "to-hit and damage are gated by MinStr like every other effect",
+			buffs: []buffsvc.BuffEffect{
+				{Name: "Heavy", Effects: buffsvc.BuffEffects{ToHit: intPtr(2), Damage: intPtr(4), MinStr: intPtr(19)}},
+			},
+			str:  18,
+			want: buffsvc.BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: 18},
 		},
 		{
 			name:  "MinStr gates the buff when STR is too low",
@@ -607,7 +623,7 @@ func TestAggregate(t *testing.T) {
 			name:  "Strength to 18 turns the Power Gem on",
 			buffs: []buffsvc.BuffEffect{strength(6), powerGem},
 			str:   12,
-			want:  buffsvc.BuffModifiers{SpellsBuff: 1.0, WeaponBuff: 5, Multipliers: 2.0, EffectiveStr: 18},
+			want:  buffsvc.BuffModifiers{SpellsBuff: 1.0, WeaponBuff: 5, WeaponBuffFrom: "Power Gem", Multipliers: 2.0, EffectiveStr: 18},
 		},
 		{
 			name:  "Strength to 16 leaves it off",
@@ -626,6 +642,17 @@ func TestAggregate(t *testing.T) {
 			assert.InDelta(t, tt.want.SpellsBuff, got.SpellsBuff, 1e-9)
 			assert.InDelta(t, tt.want.Multipliers, got.Multipliers, 1e-9)
 			assert.Equal(t, tt.want.WeaponBuff, got.WeaponBuff)
+			if tt.want.WeaponBuff != 0 && tt.want.WeaponBuffFrom != "" {
+				assert.Equal(t, tt.want.WeaponBuffFrom, got.WeaponBuffFrom)
+			}
+			assert.Equal(t, tt.want.ToHit, got.ToHit)
+			assert.Equal(t, tt.want.Damage, got.Damage)
+			assert.Equal(t, tt.want.ToHitFrom, got.ToHitFrom)
+			assert.Equal(t, tt.want.DamageFrom, got.DamageFrom)
+			if tt.want.SpellsBuffFrom != nil {
+				assert.Equal(t, tt.want.SpellsBuffFrom, got.SpellsBuffFrom)
+				assert.Equal(t, tt.want.MultipliersFrom, got.MultipliersFrom)
+			}
 			assert.Equal(t, tt.want.SaveBonus, got.SaveBonus)
 			assert.Equal(t, tt.want.AC, got.AC)
 			assert.Equal(t, tt.want.EffectiveStr, got.EffectiveStr)
@@ -687,10 +714,11 @@ func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
 			strength(6),
 			{ID: "m", Name: "Mirror Image", Duration: 4, Charges: 2},
 			powerGem,
+			{ID: "b", Name: "Bless", Duration: 6, Effects: buffsvc.BuffEffects{ToHit: intPtr(1), Damage: intPtr(2)}},
 		}
 		f.state(before, 3)
 		f.records()
-		f.saves([]buffsvc.BuffEffect{strength(6), powerGem})
+		f.saves([]buffsvc.BuffEffect{strength(6), powerGem, before[3]})
 		_, err := f.svc.Dismiss(context.Background(), charID, "m")
 		require.NoError(t, err)
 

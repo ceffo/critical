@@ -131,3 +131,17 @@ func TestResetPerDay_OnlyRefillsPerDayItems(t *testing.T) {
 	assert.Equal(t, 1, got[0].Count, "per-day gem refilled")
 	assert.Equal(t, 1, got[1].Count, "wand untouched")
 }
+
+func TestSetCount(t *testing.T) {
+	db := openDB(t)
+	insert(t, db, "arrows", 0, 2, 0, false)
+	dal := itemdal.New(db)
+	ctx := context.Background()
+
+	require.NoError(t, dal.SetCount(ctx, "arrows", 3))
+	got, err := dal.List(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 3, got[0].Count)
+
+	assert.ErrorIs(t, dal.SetCount(ctx, "nope", 1), itemsvc.ErrItemNotFound)
+}

@@ -16,3 +16,8 @@ RETURNING id, name, kind, magic_bonus, ammo_kind, count, max_count, per_day, eff
 -- ResetPerDayItems
 UPDATE items SET count = max_count WHERE per_day = 1
 ;
+
+-- SetItemCount
+UPDATE items SET count = ? WHERE id = ?
+RETURNING id
+;

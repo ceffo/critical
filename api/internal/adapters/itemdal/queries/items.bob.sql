@@ -15,3 +15,7 @@ RETURNING "id", "name", "kind", "magic_bonus", "ammo_kind", "count", "max_count"
 
 -- ResetPerDayItems
 UPDATE "items" SET "count" = "max_count" WHERE "per_day" = 1;
+
+-- SetItemCount
+UPDATE "items" SET "count" = ?1 WHERE "id" = ?2
+RETURNING "id";

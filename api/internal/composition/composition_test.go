@@ -6,8 +6,11 @@ import (
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -145,4 +148,93 @@ func TestVoidingAnOlderBuffChangeIsBlocked(t *testing.T) {
 	require.Len(t, entries, 2)
 	_, err = bs.Log.Void(ctx, id, entries[1].ID)
 	assert.Error(t, err)
+}
+
+func arrowCount(t *testing.T, bs *composition.BackingServices, id string) int {
+	t.Helper()
+	items, err := bs.Items.List(context.Background())
+	require.NoError(t, err)
+	for _, it := range items {
+		if it.ID == id {
+			return it.Count
+		}
+	}
+	t.Fatalf("no item %s", id)
+	return 0
+}
+
+// A bow attack spends the arrow and logs the attack with an items snapshot
+// in one transaction on the real stack; voiding the entry gives the arrow
+// back (the items Restorer is registered), and a later arrow blocks voiding
+// an older one.
+func TestMissileAttackSpendsAmmoAndVoidRestoresIt(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	before := arrowCount(t, bs, "arrows_plus3")
+	require.GreaterOrEqual(t, before, 2, "seeds/items.json has at least two +3 arrows")
+
+	shot := combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 5}
+	first, err := bs.Combat.ResolveAttack(ctx, id, shot)
+	require.NoError(t, err)
+	require.NotNil(t, first.Ammo)
+	assert.Equal(t, before-1, first.Ammo.Remaining)
+	assert.Equal(t, before-1, arrowCount(t, bs, "arrows_plus3"))
+	second, err := bs.Combat.ResolveAttack(ctx, id, shot)
+	require.NoError(t, err)
+	assert.Equal(t, before-2, arrowCount(t, bs, "arrows_plus3"))
+
+	entries, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, actionlog.KindAttack, entries[0].Kind)
+	assert.Equal(t, second.LogEntryID, entries[0].ID)
+
+	_, err = bs.Log.Void(ctx, id, first.LogEntryID)
+	assert.ErrorIs(t, err, actionlogsvc.ErrVoidBlocked, "the later arrow changed the count since")
+
+	_, err = bs.Log.Void(ctx, id, second.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, before-1, arrowCount(t, bs, "arrows_plus3"))
+	_, err = bs.Log.Void(ctx, id, first.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, before, arrowCount(t, bs, "arrows_plus3"))
+}
+
+// The ammo count does not change when the attack fails (no arrows of that
+// kind: the Use is rolled back with the transaction).
+func TestFailedMissileAttackLeavesAmmo(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	before := arrowCount(t, bs, "fire_flask")
+
+	_, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{
+		WeaponID: "shortbow", AmmoItemID: "fire_flask", TargetAC: 5,
+	})
+	assert.ErrorIs(t, err, domain.ErrInvalidInput)
+	assert.Equal(t, before, arrowCount(t, bs, "fire_flask"))
+	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)
+	require.NoError(t, err)
+	assert.Empty(t, entries)
+}
+
+// Effective STR from buffs drives the attack on the real stack: the sheet's
+// STR 12 gives +0, a Strength buff to 18 gives PHB Table 1's +1 to hit.
+func TestAttackUsesEffectiveStr(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	sword := combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}
+
+	res, err := bs.Combat.ResolveAttack(ctx, id, sword)
+	require.NoError(t, err)
+	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Source: "Strength 12", Detail: "12", Value: 0}, res.Modifiers[0])
+
+	_, err = bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{
+		Name: "Strength", Duration: 2, Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(18)},
+	})
+	require.NoError(t, err)
+	res, err = bs.Combat.ResolveAttack(ctx, id, sword)
+	require.NoError(t, err)
+	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 1}, res.Modifiers[0])
 }

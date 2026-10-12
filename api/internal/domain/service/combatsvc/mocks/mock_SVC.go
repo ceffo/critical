@@ -173,9 +173,9 @@ func (_c *MockSVC_ListWeapons_Call) RunAndReturn(run func(context.Context) ([]co
 	return _c
 }
 
-// ResolveAttack provides a mock function with given fields: ctx, characterID, weaponID, targetAC
-func (_m *MockSVC) ResolveAttack(ctx context.Context, characterID int64, weaponID string, targetAC int) (*combatsvc.RollResult, error) {
-	ret := _m.Called(ctx, characterID, weaponID, targetAC)
+// ResolveAttack provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) ResolveAttack(ctx context.Context, characterID int64, req combatsvc.AttackRequest) (*combatsvc.RollResult, error) {
+	ret := _m.Called(ctx, characterID, req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveAttack")
@@ -183,19 +183,19 @@ func (_m *MockSVC) ResolveAttack(ctx context.Context, characterID int64, weaponI
 
 	var r0 *combatsvc.RollResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) (*combatsvc.RollResult, error)); ok {
-		return rf(ctx, characterID, weaponID, targetAC)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.AttackRequest) (*combatsvc.RollResult, error)); ok {
+		return rf(ctx, characterID, req)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) *combatsvc.RollResult); ok {
-		r0 = rf(ctx, characterID, weaponID, targetAC)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.AttackRequest) *combatsvc.RollResult); ok {
+		r0 = rf(ctx, characterID, req)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*combatsvc.RollResult)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, string, int) error); ok {
-		r1 = rf(ctx, characterID, weaponID, targetAC)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, combatsvc.AttackRequest) error); ok {
+		r1 = rf(ctx, characterID, req)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -211,15 +211,14 @@ type MockSVC_ResolveAttack_Call struct {
 // ResolveAttack is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-//   - weaponID string
-//   - targetAC int
-func (_e *MockSVC_Expecter) ResolveAttack(ctx interface{}, characterID interface{}, weaponID interface{}, targetAC interface{}) *MockSVC_ResolveAttack_Call {
-	return &MockSVC_ResolveAttack_Call{Call: _e.mock.On("ResolveAttack", ctx, characterID, weaponID, targetAC)}
+//   - req combatsvc.AttackRequest
+func (_e *MockSVC_Expecter) ResolveAttack(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_ResolveAttack_Call {
+	return &MockSVC_ResolveAttack_Call{Call: _e.mock.On("ResolveAttack", ctx, characterID, req)}
 }
 
-func (_c *MockSVC_ResolveAttack_Call) Run(run func(ctx context.Context, characterID int64, weaponID string, targetAC int)) *MockSVC_ResolveAttack_Call {
+func (_c *MockSVC_ResolveAttack_Call) Run(run func(ctx context.Context, characterID int64, req combatsvc.AttackRequest)) *MockSVC_ResolveAttack_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int))
+		run(args[0].(context.Context), args[1].(int64), args[2].(combatsvc.AttackRequest))
 	})
 	return _c
 }
@@ -229,7 +228,7 @@ func (_c *MockSVC_ResolveAttack_Call) Return(_a0 *combatsvc.RollResult, _a1 erro
 	return _c
 }
 
-func (_c *MockSVC_ResolveAttack_Call) RunAndReturn(run func(context.Context, int64, string, int) (*combatsvc.RollResult, error)) *MockSVC_ResolveAttack_Call {
+func (_c *MockSVC_ResolveAttack_Call) RunAndReturn(run func(context.Context, int64, combatsvc.AttackRequest) (*combatsvc.RollResult, error)) *MockSVC_ResolveAttack_Call {
 	_c.Call.Return(run)
 	return _c
 }

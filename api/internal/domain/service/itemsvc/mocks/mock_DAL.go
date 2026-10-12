@@ -183,6 +183,54 @@ func (_c *MockDAL_ResetPerDay_Call) RunAndReturn(run func(context.Context) error
 	return _c
 }
 
+// SetCount provides a mock function with given fields: ctx, itemID, count
+func (_m *MockDAL) SetCount(ctx context.Context, itemID string, count int) error {
+	ret := _m.Called(ctx, itemID, count)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetCount")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) error); ok {
+		r0 = rf(ctx, itemID, count)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_SetCount_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetCount'
+type MockDAL_SetCount_Call struct {
+	*mock.Call
+}
+
+// SetCount is a helper method to define mock.On call
+//   - ctx context.Context
+//   - itemID string
+//   - count int
+func (_e *MockDAL_Expecter) SetCount(ctx interface{}, itemID interface{}, count interface{}) *MockDAL_SetCount_Call {
+	return &MockDAL_SetCount_Call{Call: _e.mock.On("SetCount", ctx, itemID, count)}
+}
+
+func (_c *MockDAL_SetCount_Call) Run(run func(ctx context.Context, itemID string, count int)) *MockDAL_SetCount_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockDAL_SetCount_Call) Return(_a0 error) *MockDAL_SetCount_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_SetCount_Call) RunAndReturn(run func(context.Context, string, int) error) *MockDAL_SetCount_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockDAL creates a new instance of MockDAL. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockDAL(t interface {

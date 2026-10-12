@@ -21,6 +21,10 @@ func boot(t *testing.T) *composition.BackingServices {
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = bs.Close(context.Background()) })
+	// The seeded Bard prepares no spells yet, so give the test two slots.
+	_, err = bs.DB.Exec(`UPDATE spell_slots SET slots = ? WHERE character_id = ?`,
+		`[{"level":1,"prepared_spell_name":"Armor","used":false},{"level":2,"prepared_spell_name":"Web","used":false}]`, bs.CharacterID)
+	require.NoError(t, err)
 	return bs
 }
 

@@ -458,6 +458,30 @@ func TestCreateHPEvent(t *testing.T) {
 	}
 }
 
+func TestCreateItem(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewItemWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating Item: %v", err)
+	}
+}
+
 func TestCreateRoundState(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")
@@ -527,6 +551,30 @@ func TestCreateSpell(t *testing.T) {
 
 	if _, err := New().NewSpellWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating Spell: %v", err)
+	}
+}
+
+func TestCreateWeapon(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewWeaponWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating Weapon: %v", err)
 	}
 }
 

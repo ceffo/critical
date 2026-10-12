@@ -115,6 +115,64 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
+// ListWeapons provides a mock function with given fields: ctx
+func (_m *MockSVC) ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListWeapons")
+	}
+
+	var r0 []combatsvc.Weapon
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]combatsvc.Weapon, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []combatsvc.Weapon); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]combatsvc.Weapon)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ListWeapons_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListWeapons'
+type MockSVC_ListWeapons_Call struct {
+	*mock.Call
+}
+
+// ListWeapons is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) ListWeapons(ctx interface{}) *MockSVC_ListWeapons_Call {
+	return &MockSVC_ListWeapons_Call{Call: _e.mock.On("ListWeapons", ctx)}
+}
+
+func (_c *MockSVC_ListWeapons_Call) Run(run func(ctx context.Context)) *MockSVC_ListWeapons_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ListWeapons_Call) Return(_a0 []combatsvc.Weapon, _a1 error) *MockSVC_ListWeapons_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ListWeapons_Call) RunAndReturn(run func(context.Context) ([]combatsvc.Weapon, error)) *MockSVC_ListWeapons_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResolveAttack provides a mock function with given fields: ctx, characterID, weaponID, targetAC
 func (_m *MockSVC) ResolveAttack(ctx context.Context, characterID int64, weaponID string, targetAC int) (*combatsvc.RollResult, error) {
 	ret := _m.Called(ctx, characterID, weaponID, targetAC)

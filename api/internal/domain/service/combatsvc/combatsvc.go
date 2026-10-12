@@ -17,6 +17,7 @@ type SVC interface {
 	domain.Service
 	ResolveAttack(ctx context.Context, characterID int64, weaponID string, targetAC int) (*RollResult, error)
 	ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*RollResult, error)
+	ListWeapons(ctx context.Context) ([]Weapon, error)
 }
 
 // Characters is the narrow inter-service port (just the read we need).
@@ -38,7 +39,9 @@ type Dice interface {
 
 // Weapons is the weapons-catalog port.
 type Weapons interface {
-	Get(id string) (Weapon, bool)
+	// Get returns the weapon, or an error wrapping ErrWeaponNotFound.
+	Get(ctx context.Context, id string) (Weapon, error)
+	List(ctx context.Context) ([]Weapon, error)
 }
 
 type service struct {

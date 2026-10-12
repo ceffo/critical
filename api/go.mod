@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65
 	github.com/antlr4-go/antlr/v4 v4.13.1
+	github.com/caarlos0/env/v11 v11.4.1
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0

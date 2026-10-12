@@ -3,6 +3,7 @@ package hpsvc_test
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -81,4 +82,43 @@ func TestUndoLast_AppendsNegation(t *testing.T) {
 	_, err := svc.UndoLast(context.Background(), 3)
 	require.NoError(t, err)
 	dal.AssertCalled(t, "AppendEvent", mock.Anything, int64(3), 10, "undo:giant")
+}
+
+// historyLimitSeen builds the service via New (env-driven) and returns the
+// limit it passes to the DAL's GetHistory.
+func historyLimitSeen(t *testing.T) int {
+	t.Helper()
+	dal := mocks.NewMockDAL(t)
+	dal.On("GetMaxHP", mock.Anything, mock.Anything).Return(10, nil)
+	dal.On("GetCurrentHPSum", mock.Anything, mock.Anything).Return(0, nil)
+	var got int
+	dal.On("GetHistory", mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) { got = args.Int(2) }).Return(nil, nil)
+	svc, err := hpsvc.New(dal)
+	require.NoError(t, err)
+	_, err = svc.GetState(context.Background(), 1)
+	require.NoError(t, err)
+	return got
+}
+
+func TestNew_EnvConfig(t *testing.T) {
+	t.Run("unset uses default", func(t *testing.T) {
+		t.Setenv("HP_HISTORY_LIMIT", "")
+		require.NoError(t, os.Unsetenv("HP_HISTORY_LIMIT"))
+		assert.Equal(t, 5, historyLimitSeen(t))
+	})
+	t.Run("override", func(t *testing.T) {
+		t.Setenv("HP_HISTORY_LIMIT", "12")
+		assert.Equal(t, 12, historyLimitSeen(t))
+	})
+	t.Run("zero rejected", func(t *testing.T) {
+		t.Setenv("HP_HISTORY_LIMIT", "0")
+		_, err := hpsvc.New(mocks.NewMockDAL(t))
+		require.ErrorContains(t, err, "HistoryLimit")
+	})
+	t.Run("not a number", func(t *testing.T) {
+		t.Setenv("HP_HISTORY_LIMIT", "abc")
+		_, err := hpsvc.New(mocks.NewMockDAL(t))
+		require.ErrorContains(t, err, "parse env")
+	})
 }

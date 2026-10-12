@@ -30,37 +30,6 @@ func seedCharacter(t *testing.T, db *sqlite.DB) int64 {
 	return id
 }
 
-func TestAppendAndSumEvents(t *testing.T) {
-	db := openDB(t)
-	charID := seedCharacter(t, db)
-	dal := hpdal.New(db)
-	ctx := context.Background()
-
-	require.NoError(t, dal.AppendEvent(ctx, charID, -5, "sword"))
-	require.NoError(t, dal.AppendEvent(ctx, charID, 3, "potion"))
-
-	sum, err := dal.GetCurrentHPSum(ctx, charID)
-	require.NoError(t, err)
-	assert.Equal(t, -2, sum)
-}
-
-func TestGetHistory(t *testing.T) {
-	db := openDB(t)
-	charID := seedCharacter(t, db)
-	dal := hpdal.New(db)
-	ctx := context.Background()
-
-	require.NoError(t, dal.AppendEvent(ctx, charID, -5, "sword"))
-	require.NoError(t, dal.AppendEvent(ctx, charID, 3, "potion"))
-
-	events, err := dal.GetHistory(ctx, charID, 10)
-	require.NoError(t, err)
-	require.Len(t, events, 2)
-	// DESC order: newest first
-	assert.Equal(t, 3, events[0].Delta)
-	assert.Equal(t, "potion", events[0].Source)
-}
-
 func TestGetMaxHP(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
@@ -77,29 +46,4 @@ func TestGetMaxHP_NotFound(t *testing.T) {
 
 	_, err := dal.GetMaxHP(context.Background(), 999)
 	assert.ErrorIs(t, err, domain.ErrCharacterNotFound)
-}
-
-func TestLastEvent_Empty(t *testing.T) {
-	db := openDB(t)
-	charID := seedCharacter(t, db)
-	dal := hpdal.New(db)
-
-	_, _, ok, err := dal.LastEvent(context.Background(), charID)
-	require.NoError(t, err)
-	assert.False(t, ok)
-}
-
-func TestLastEvent_Returns(t *testing.T) {
-	db := openDB(t)
-	charID := seedCharacter(t, db)
-	dal := hpdal.New(db)
-	ctx := context.Background()
-
-	require.NoError(t, dal.AppendEvent(ctx, charID, -7, "fireball"))
-
-	delta, source, ok, err := dal.LastEvent(ctx, charID)
-	require.NoError(t, err)
-	assert.True(t, ok)
-	assert.Equal(t, -7, delta)
-	assert.Equal(t, "fireball", source)
 }

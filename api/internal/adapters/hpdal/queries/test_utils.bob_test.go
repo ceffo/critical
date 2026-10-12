@@ -5,9 +5,6 @@ package queries
 
 import (
 	"errors"
-	"strconv"
-	"strings"
-	"time"
 
 	"github.com/antlr4-go/antlr/v4"
 	"github.com/jaswdr/faker/v2"
@@ -53,31 +50,4 @@ func random_int64(f *faker.Faker, limits ...string) int64 {
 	}
 
 	return f.Int64()
-}
-
-func random_string(f *faker.Faker, limits ...string) string {
-	if f == nil {
-		f = &defaultFaker
-	}
-
-	val := strings.Join(f.Lorem().Words(f.IntBetween(1, 5)), " ")
-	if len(limits) == 0 {
-		return val
-	}
-	limitInt, _ := strconv.Atoi(limits[0])
-	if limitInt > 0 && limitInt < len(val) {
-		val = val[:limitInt]
-	}
-	return val
-}
-
-func random_time_Time(f *faker.Faker, limits ...string) time.Time {
-	if f == nil {
-		f = &defaultFaker
-	}
-
-	year := time.Hour * 24 * 365
-	min := time.Now().Add(-year)
-	max := time.Now().Add(year)
-	return f.Time().TimeBetween(min, max)
 }

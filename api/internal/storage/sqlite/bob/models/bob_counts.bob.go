@@ -21,21 +21,25 @@ var (
 )
 
 type preloadCounts struct {
+	ActionLog actionLogCountPreloader
 	Character characterCountPreloader
 }
 
 func getPreloadCount() preloadCounts {
 	return preloadCounts{
+		ActionLog: buildActionLogCountPreloader(),
 		Character: buildCharacterCountPreloader(),
 	}
 }
 
 type thenLoadCounts[Q orm.Loadable] struct {
+	ActionLog actionLogCountThenLoader[Q]
 	Character characterCountThenLoader[Q]
 }
 
 func getThenLoadCount[Q orm.Loadable]() thenLoadCounts[Q] {
 	return thenLoadCounts[Q]{
+		ActionLog: buildActionLogCountThenLoader[Q](),
 		Character: buildCharacterCountThenLoader[Q](),
 	}
 }

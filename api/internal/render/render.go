@@ -12,6 +12,7 @@ import (
 	"net/http"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
@@ -89,7 +90,7 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 // responses, checked in order with errors.Is. Adding a new sentinel means
 // adding a row here; handlers stay untouched (clean_architecture.md §7.5).
 //
-// Service-local sentinels (combatsvc, spellsvc) are registered directly: render
+// Service-local sentinels (combatsvc, spellsvc, actionlogsvc) are registered directly: render
 // is transport-layer code and may depend inward on the service packages, while
 // services never import render, so layering holds without widening domain.
 var mappings = []mapping{
@@ -100,6 +101,9 @@ var mappings = []mapping{
 	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, message: fixed("weapon not found")},
 	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict},
 	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest},
+	{target: actionlogsvc.ErrAlreadyVoided, status: http.StatusConflict},
+	{target: actionlogsvc.ErrVoidBlocked, status: http.StatusConflict},
+	{target: actionlogsvc.ErrNotAmendable, status: http.StatusBadRequest},
 }
 
 func mapError(err error) (int, string) {

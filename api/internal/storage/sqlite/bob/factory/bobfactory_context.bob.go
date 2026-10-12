@@ -10,12 +10,27 @@ type contextKey string
 var (
 	factoryVisitedCtx = newContextual[map[uintptr]struct{}]("factoryVisited")
 
+	// Relationship Contexts for action_corrections
+	actionCorrectionWithParentsCascadingCtx = newContextual[bool]("actionCorrectionWithParentsCascading")
+	actionCorrectionRelActionActionLogCtx   = newContextual[bool]("action_corrections.action_log.fk_action_corrections_0")
+
+	// Relationship Contexts for action_log
+	actionLogWithParentsCascadingCtx       = newContextual[bool]("actionLogWithParentsCascading")
+	actionLogRelActionActionCorrectionsCtx = newContextual[bool]("action_corrections.action_log.fk_action_corrections_0")
+	actionLogRelCharacterCtx               = newContextual[bool]("action_log.characters.fk_action_log_0")
+	actionLogRelActionActionSnapshotsCtx   = newContextual[bool]("action_log.action_snapshots.fk_action_snapshots_0")
+
+	// Relationship Contexts for action_snapshots
+	actionSnapshotWithParentsCascadingCtx = newContextual[bool]("actionSnapshotWithParentsCascading")
+	actionSnapshotRelActionActionLogCtx   = newContextual[bool]("action_log.action_snapshots.fk_action_snapshots_0")
+
 	// Relationship Contexts for active_buffs
 	activeBuffWithParentsCascadingCtx = newContextual[bool]("activeBuffWithParentsCascading")
 	activeBuffRelCharacterCtx         = newContextual[bool]("active_buffs.characters.fk_active_buffs_0")
 
 	// Relationship Contexts for characters
 	characterWithParentsCascadingCtx = newContextual[bool]("characterWithParentsCascading")
+	characterRelActionLogsCtx        = newContextual[bool]("action_log.characters.fk_action_log_0")
 	characterRelActiveBuffsCtx       = newContextual[bool]("active_buffs.characters.fk_active_buffs_0")
 	characterRelHPEventsCtx          = newContextual[bool]("characters.hp_events.fk_hp_events_0")
 	characterRelRoundStatesCtx       = newContextual[bool]("characters.round_state.fk_round_state_0")

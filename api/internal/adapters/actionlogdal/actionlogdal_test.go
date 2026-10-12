@@ -1,0 +1,224 @@
+package actionlogdal_test
+
+import (
+	"context"
+	"encoding/json"
+	"path/filepath"
+	"testing"
+
+	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/storage/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func openDB(t *testing.T) *sqlite.DB {
+	t.Helper()
+	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	require.NoError(t, db.Migrate(context.Background()))
+	return db
+}
+
+func seedCharacter(t *testing.T, db *sqlite.DB) int64 {
+	t.Helper()
+	res, err := db.ExecContext(context.Background(),
+		`INSERT INTO characters (name, str, dex, con, int, wis, cha, hp_max, thac0_base) VALUES ('Test', 10, 10, 10, 10, 10, 10, 30, 19)`)
+	require.NoError(t, err)
+	id, err := res.LastInsertId()
+	require.NoError(t, err)
+	return id
+}
+
+func intp(v int) *int { return &v }
+
+func hp(charID int64, delta int, source string) actionlog.NewEntry {
+	return actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindHPChange, Summary: source, HPDelta: delta}
+}
+
+func insert(t *testing.T, dal *actionlogdal.DAL, e actionlog.NewEntry) int64 {
+	t.Helper()
+	id, err := dal.InsertEntry(context.Background(), e)
+	require.NoError(t, err)
+	return id
+}
+
+func correct(t *testing.T, dal *actionlogdal.DAL, c actionlog.Correction) {
+	t.Helper()
+	require.NoError(t, dal.InsertCorrection(context.Background(), c))
+}
+
+func TestHPTotal(t *testing.T) {
+	amend := func(id int64, d int) actionlog.Correction {
+		return actionlog.Correction{ActionID: id, Kind: actionlog.CorrectionAmend, HPDelta: intp(d)}
+	}
+	void := func(id int64) actionlog.Correction {
+		return actionlog.Correction{ActionID: id, Kind: actionlog.CorrectionVoid}
+	}
+	cases := []struct {
+		name        string
+		deltas      []int
+		corrections func(ids []int64) []actionlog.Correction
+		want        int
+	}{
+		{"empty", nil, nil, 0},
+		{"plain sum", []int{-8, 3, -2}, nil, -7},
+		{"amend replaces delta", []int{-8, 3}, func(ids []int64) []actionlog.Correction {
+			return []actionlog.Correction{amend(ids[0], -12)}
+		}, -9},
+		{"latest amend wins", []int{-8}, func(ids []int64) []actionlog.Correction {
+			return []actionlog.Correction{amend(ids[0], -12), amend(ids[0], -1)}
+		}, -1},
+		{"amend to zero", []int{-8, -2}, func(ids []int64) []actionlog.Correction {
+			return []actionlog.Correction{amend(ids[0], 0)}
+		}, -2},
+		{"void counts zero", []int{-8, 3}, func(ids []int64) []actionlog.Correction {
+			return []actionlog.Correction{void(ids[0])}
+		}, 3},
+		{"void after amend counts zero", []int{-8, 3}, func(ids []int64) []actionlog.Correction {
+			return []actionlog.Correction{amend(ids[0], -20), void(ids[0])}
+		}, 3},
+		{"summary-only amend keeps delta", []int{-8}, func(ids []int64) []actionlog.Correction {
+			return []actionlog.Correction{{ActionID: ids[0], Kind: actionlog.CorrectionAmend, Summary: "orc"}}
+		}, -8},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			db := openDB(t)
+			charID := seedCharacter(t, db)
+			other := seedCharacter(t, db)
+			dal := actionlogdal.New(db)
+			insert(t, dal, hp(other, -100, "other character"))
+			var ids []int64
+			for _, d := range c.deltas {
+				ids = append(ids, insert(t, dal, hp(charID, d, "x")))
+			}
+			insert(t, dal, actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindAttack, Summary: "swing"})
+			if c.corrections != nil {
+				for _, corr := range c.corrections(ids) {
+					correct(t, dal, corr)
+				}
+			}
+			total, err := dal.HPTotal(context.Background(), charID)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, total)
+		})
+	}
+}
+
+func TestGetEntry_WithSnapshotsAndCorrections(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+
+	id := insert(t, dal, actionlog.NewEntry{
+		CharacterID: charID, Round: 3, Kind: actionlog.KindBuffChange, Summary: "bless",
+		Payload: json.RawMessage(`{"buff":"bless"}`),
+		Snapshots: []actionlog.Snapshot{
+			{Key: "buffs", Before: json.RawMessage(`[]`), After: json.RawMessage(`[{"id":"b"}]`)},
+			{Key: "round", Before: json.RawMessage(`2`), After: json.RawMessage(`3`)},
+		},
+	})
+	correct(t, dal, actionlog.Correction{ActionID: id, Kind: actionlog.CorrectionVoid})
+
+	e, err := dal.GetEntry(ctx, charID, id)
+	require.NoError(t, err)
+	assert.Equal(t, 3, e.Round)
+	assert.Equal(t, actionlog.KindBuffChange, e.Kind)
+	assert.JSONEq(t, `{"buff":"bless"}`, string(e.Payload))
+	require.Len(t, e.Snapshots, 2)
+	assert.Equal(t, "buffs", e.Snapshots[0].Key)
+	assert.JSONEq(t, `[{"id":"b"}]`, string(e.Snapshots[0].After))
+	require.Len(t, e.Corrections, 1)
+	assert.Equal(t, actionlog.StatusVoided, e.Status())
+
+	_, err = dal.GetEntry(ctx, charID+1, id)
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+	_, err = dal.GetEntry(ctx, charID, 999)
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+}
+
+func TestListEntries(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+
+	a := insert(t, dal, hp(charID, -8, "orc"))
+	b := insert(t, dal, hp(charID, 3, "potion"))
+	c := insert(t, dal, hp(charID, -5, "goblin"))
+	correct(t, dal, actionlog.Correction{ActionID: a, Kind: actionlog.CorrectionAmend, HPDelta: intp(-6), Summary: "orc (fixed)"})
+	correct(t, dal, actionlog.Correction{ActionID: c, Kind: actionlog.CorrectionVoid})
+
+	all, err := dal.ListEntries(ctx, charID, 10)
+	require.NoError(t, err)
+	require.Len(t, all, 3)
+	assert.Equal(t, []int64{c, b, a}, []int64{all[0].ID, all[1].ID, all[2].ID})
+	assert.Equal(t, actionlog.StatusVoided, all[0].Status())
+	assert.Equal(t, actionlog.StatusActive, all[1].Status())
+	assert.Equal(t, actionlog.StatusAmended, all[2].Status())
+	assert.Equal(t, -8, all[2].HPDelta, "original stays visible")
+	assert.Equal(t, -6, all[2].EffectiveHPDelta())
+	assert.Equal(t, "orc (fixed)", all[2].EffectiveSummary())
+
+	limited, err := dal.ListEntries(ctx, charID, 2)
+	require.NoError(t, err)
+	assert.Len(t, limited, 2)
+
+	active, err := dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 10)
+	require.NoError(t, err)
+	require.Len(t, active, 2)
+	assert.Equal(t, []int64{b, a}, []int64{active[0].ID, active[1].ID})
+	assert.Equal(t, -6, active[1].EffectiveHPDelta())
+
+	id, ok, err := dal.LatestActiveID(ctx, charID, actionlog.KindHPChange)
+	require.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, b, id)
+	_, ok, err = dal.LatestActiveID(ctx, charID, actionlog.KindCast)
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+func TestLaterEntryTouchingState(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+	snap := func(key string) []actionlog.Snapshot {
+		return []actionlog.Snapshot{{Key: key, Before: json.RawMessage(`0`), After: json.RawMessage(`1`)}}
+	}
+	entry := func(keys ...string) int64 {
+		e := actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindBuffChange, Summary: "x"}
+		for _, k := range keys {
+			e.Snapshots = append(e.Snapshots, snap(k)...)
+		}
+		return insert(t, dal, e)
+	}
+
+	first := entry("buffs", "round")
+	insert(t, dal, hp(charID, -3, "no snapshot"))
+	slots := entry("spell_slots")
+	_, ok, err := dal.LaterEntryTouchingState(ctx, charID, first)
+	require.NoError(t, err)
+	assert.False(t, ok, "later entries touch other state only")
+
+	later := entry("round")
+	got, ok, err := dal.LaterEntryTouchingState(ctx, charID, first)
+	require.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, later, got)
+
+	correct(t, dal, actionlog.Correction{ActionID: later, Kind: actionlog.CorrectionVoid})
+	_, ok, err = dal.LaterEntryTouchingState(ctx, charID, first)
+	require.NoError(t, err)
+	assert.False(t, ok, "voided later entries do not block")
+
+	_, ok, err = dal.LaterEntryTouchingState(ctx, charID, slots)
+	require.NoError(t, err)
+	assert.False(t, ok)
+}

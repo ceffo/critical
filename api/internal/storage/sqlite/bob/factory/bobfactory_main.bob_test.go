@@ -10,6 +10,154 @@ import (
 	models "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
 )
 
+func TestCreateActionCorrection(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewActionCorrectionWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating ActionCorrection: %v", err)
+	}
+}
+
+func TestCreateActionLog(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewActionLogWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating ActionLog: %v", err)
+	}
+}
+
+func TestCreateActionLogWithActionActionCorrectionsDoesNotDuplicateParent(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	before, err := models.ActionLogs.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting ActionLogs: %v", err)
+	}
+
+	if _, err := New().NewActionLogWithContext(ctx, ActionLogMods.WithNewActionActionCorrections(2)).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating ActionLog with ActionActionCorrections: %v", err)
+	}
+
+	after, err := models.ActionLogs.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting ActionLogs: %v", err)
+	}
+
+	if got := after - before; got != 1 {
+		t.Fatalf("Expected ActionLogs to increase by 1, got %d", got)
+	}
+}
+
+func TestCreateActionLogWithActionActionSnapshotsDoesNotDuplicateParent(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	before, err := models.ActionLogs.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting ActionLogs: %v", err)
+	}
+
+	if _, err := New().NewActionLogWithContext(ctx, ActionLogMods.WithNewActionActionSnapshots(2)).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating ActionLog with ActionActionSnapshots: %v", err)
+	}
+
+	after, err := models.ActionLogs.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting ActionLogs: %v", err)
+	}
+
+	if got := after - before; got != 1 {
+		t.Fatalf("Expected ActionLogs to increase by 1, got %d", got)
+	}
+}
+
+func TestCreateActionSnapshot(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewActionSnapshotWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating ActionSnapshot: %v", err)
+	}
+}
+
 func TestCreateActiveBuff(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")
@@ -55,6 +203,44 @@ func TestCreateCharacter(t *testing.T) {
 
 	if _, err := New().NewCharacterWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating Character: %v", err)
+	}
+}
+
+func TestCreateCharacterWithActionLogsDoesNotDuplicateParent(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	before, err := models.Characters.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting Characters: %v", err)
+	}
+
+	if _, err := New().NewCharacterWithContext(ctx, CharacterMods.WithNewActionLogs(2)).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating Character with ActionLogs: %v", err)
+	}
+
+	after, err := models.Characters.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting Characters: %v", err)
+	}
+
+	if got := after - before; got != 1 {
+		t.Fatalf("Expected Characters to increase by 1, got %d", got)
 	}
 }
 

@@ -10,6 +10,15 @@ packages:
     interfaces:
       SVC:
       DAL:
+      Log:
+  github.com/ceffo/critical/api/internal/domain/service/actionlogsvc:
+    config:
+      dir: "internal/domain/service/actionlogsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Rounds:
   github.com/ceffo/critical/api/internal/domain/service/buffsvc:
     config:
       dir: "internal/domain/service/buffsvc/mocks"

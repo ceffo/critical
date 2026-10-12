@@ -3,20 +3,16 @@ package hpsvc
 import (
 	"context"
 	"fmt"
+
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// UndoLast appends a correction row that negates the most recent event,
-// preserving the append-only ledger invariant. Returns the new state. No-op
-// when there are no events.
+// UndoLast voids the newest non-voided HP change in the action log (an
+// audited correction, never a delete) and returns the new state. No-op when
+// there is none.
 func (s *service) UndoLast(ctx context.Context, characterID int64) (*HPState, error) {
-	delta, source, ok, err := s.dal.LastEvent(ctx, characterID)
-	if err != nil {
-		return nil, fmt.Errorf("last event: %w", err)
-	}
-	if ok {
-		if err := s.dal.AppendEvent(ctx, characterID, -delta, "undo:"+source); err != nil {
-			return nil, fmt.Errorf("append undo: %w", err)
-		}
+	if _, err := s.log.VoidLatest(ctx, characterID, actionlog.KindHPChange); err != nil {
+		return nil, fmt.Errorf("void last hp change: %w", err)
 	}
 	return s.GetState(ctx, characterID)
 }

@@ -78,7 +78,7 @@ func AppendEvent(charID CharacterIDFunc, svc eventAppender) render.HandlerFunc {
 	}
 }
 
-// UndoLast appends a correction row that negates the last event.
+// UndoLast voids the newest non-voided HP change in the action log.
 func UndoLast(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		state, err := svc.UndoLast(r.Context(), charID(r))
@@ -90,22 +90,22 @@ func UndoLast(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
 	}
 }
 
-// HPStateDTO is the wire shape — preserves the existing API contract used by
-// the React frontend (currentHp, maxHp, events with PascalCase HpEvent).
+// HPStateDTO is the wire shape used by the React frontend (web/src/types/hp.ts).
 type HPStateDTO struct {
 	CurrentHp int          `json:"currentHp"`
 	MaxHp     int          `json:"maxHp"`
 	Events    []HpEventDTO `json:"events"`
 }
 
-// HpEventDTO mirrors the fields of the previous unexported HpEvent JSON
-// encoding (no struct tags meant Go used the field names verbatim).
+// HpEventDTO matches HpEvent in web/src/types/hp.ts. (It used to be sent
+// untagged, as PascalCase keys the panel could not read.) Delta and Source are
+// the effective values after amends.
 type HpEventDTO struct {
-	ID          int64
-	CharacterID int64
-	Delta       int
-	Source      string
-	CreatedAt   time.Time
+	ID          int64     `json:"id"`
+	CharacterID int64     `json:"characterId"`
+	Delta       int       `json:"delta"`
+	Source      string    `json:"source"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 func toDTO(s *hpsvc.HPState) HPStateDTO {

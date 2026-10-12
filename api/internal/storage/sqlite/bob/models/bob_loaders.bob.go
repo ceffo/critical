@@ -17,22 +17,28 @@ import (
 var Preload = getPreloaders()
 
 type preloaders struct {
-	ActiveBuff activeBuffPreloader
-	Character  characterPreloader
-	HPEvent    hpEventPreloader
-	RoundState roundStatePreloader
-	SpellSlot  spellSlotPreloader
-	XPEvent    xpEventPreloader
+	ActionCorrection actionCorrectionPreloader
+	ActionLog        actionLogPreloader
+	ActionSnapshot   actionSnapshotPreloader
+	ActiveBuff       activeBuffPreloader
+	Character        characterPreloader
+	HPEvent          hpEventPreloader
+	RoundState       roundStatePreloader
+	SpellSlot        spellSlotPreloader
+	XPEvent          xpEventPreloader
 }
 
 func getPreloaders() preloaders {
 	return preloaders{
-		ActiveBuff: buildActiveBuffPreloader(),
-		Character:  buildCharacterPreloader(),
-		HPEvent:    buildHPEventPreloader(),
-		RoundState: buildRoundStatePreloader(),
-		SpellSlot:  buildSpellSlotPreloader(),
-		XPEvent:    buildXPEventPreloader(),
+		ActionCorrection: buildActionCorrectionPreloader(),
+		ActionLog:        buildActionLogPreloader(),
+		ActionSnapshot:   buildActionSnapshotPreloader(),
+		ActiveBuff:       buildActiveBuffPreloader(),
+		Character:        buildCharacterPreloader(),
+		HPEvent:          buildHPEventPreloader(),
+		RoundState:       buildRoundStatePreloader(),
+		SpellSlot:        buildSpellSlotPreloader(),
+		XPEvent:          buildXPEventPreloader(),
 	}
 }
 
@@ -43,22 +49,28 @@ var (
 )
 
 type thenLoaders[Q orm.Loadable] struct {
-	ActiveBuff activeBuffThenLoader[Q]
-	Character  characterThenLoader[Q]
-	HPEvent    hpEventThenLoader[Q]
-	RoundState roundStateThenLoader[Q]
-	SpellSlot  spellSlotThenLoader[Q]
-	XPEvent    xpEventThenLoader[Q]
+	ActionCorrection actionCorrectionThenLoader[Q]
+	ActionLog        actionLogThenLoader[Q]
+	ActionSnapshot   actionSnapshotThenLoader[Q]
+	ActiveBuff       activeBuffThenLoader[Q]
+	Character        characterThenLoader[Q]
+	HPEvent          hpEventThenLoader[Q]
+	RoundState       roundStateThenLoader[Q]
+	SpellSlot        spellSlotThenLoader[Q]
+	XPEvent          xpEventThenLoader[Q]
 }
 
 func getThenLoaders[Q orm.Loadable]() thenLoaders[Q] {
 	return thenLoaders[Q]{
-		ActiveBuff: buildActiveBuffThenLoader[Q](),
-		Character:  buildCharacterThenLoader[Q](),
-		HPEvent:    buildHPEventThenLoader[Q](),
-		RoundState: buildRoundStateThenLoader[Q](),
-		SpellSlot:  buildSpellSlotThenLoader[Q](),
-		XPEvent:    buildXPEventThenLoader[Q](),
+		ActionCorrection: buildActionCorrectionThenLoader[Q](),
+		ActionLog:        buildActionLogThenLoader[Q](),
+		ActionSnapshot:   buildActionSnapshotThenLoader[Q](),
+		ActiveBuff:       buildActiveBuffThenLoader[Q](),
+		Character:        buildCharacterThenLoader[Q](),
+		HPEvent:          buildHPEventThenLoader[Q](),
+		RoundState:       buildRoundStateThenLoader[Q](),
+		SpellSlot:        buildSpellSlotThenLoader[Q](),
+		XPEvent:          buildXPEventThenLoader[Q](),
 	}
 }
 

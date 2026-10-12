@@ -45,8 +45,14 @@ api/
 id, name, str, dex, con, int, wis, cha,
 hp_max, thac0_base, level, xp_total
 
--- hp_events: append-only ledger
-id, character_id, delta INTEGER, source TEXT, created_at
+-- action_log: THE append-only log of table actions (HP ledger + combat log)
+id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON, created_at
+-- action_snapshots: before/after state an entry changed, one row per state key
+id, action_id, state_key, before_state JSON, after_state JSON
+-- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
+id, action_id, kind ('amend'|'void'), hp_delta, summary, created_at
+
+-- hp_events: legacy HP ledger, carried into action_log by migration 007; no longer written
 
 -- xp_events: append-only ledger (same pattern as hp_events)
 id, character_id, delta INTEGER, source TEXT, session_date
@@ -64,7 +70,15 @@ id, character_id, slots JSON
 id, character_id, round_number INTEGER
 ```
 
-**Never derive current HP in the application layer.** Always use `SELECT SUM(delta) FROM hp_events WHERE character_id = ?`.
+**Never derive current HP in the application layer.** Current HP = `hp_max` + the SQL SUM of
+effective `hp_delta` over `action_log` (latest amend wins, voided entries count 0), see
+`actionlogdal.HPTotal`.
+
+**Recording actions.** A service that changes state records an `actionlog.NewEntry` through the
+action log's `Record` inside the same `domain.TxRunner.InTx` as its state write, with
+`Snapshots` of the state it changed. It registers an `actionlog.Restorer` for its state key on the
+action log in the composition root, so voiding the entry restores the "before" state. A void is
+refused (409) while a later non-voided entry changed the same state key.
 
 ## Key Go Structs
 

@@ -8,6 +8,15 @@ import "github.com/stephenafamo/bob"
 // Set the testDB to enable tests that use the database
 var testDB bob.Transactor[bob.Tx]
 
+// Make sure the type ActionCorrection runs hooks after queries
+var _ bob.HookableType = &ActionCorrection{}
+
+// Make sure the type ActionLog runs hooks after queries
+var _ bob.HookableType = &ActionLog{}
+
+// Make sure the type ActionSnapshot runs hooks after queries
+var _ bob.HookableType = &ActionSnapshot{}
+
 // Make sure the type ActiveBuff runs hooks after queries
 var _ bob.HookableType = &ActiveBuff{}
 

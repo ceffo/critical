@@ -59,6 +59,7 @@ type CharacterTemplate struct {
 }
 
 type characterR struct {
+	ActionLogs  []*characterRActionLogsR
 	ActiveBuffs []*characterRActiveBuffsR
 	HPEvents    []*characterRHPEventsR
 	RoundStates []*characterRRoundStatesR
@@ -66,6 +67,10 @@ type characterR struct {
 	XPEvents    []*characterRXPEventsR
 }
 
+type characterRActionLogsR struct {
+	number int
+	o      *ActionLogTemplate
+}
 type characterRActiveBuffsR struct {
 	number int
 	o      *ActiveBuffTemplate
@@ -97,6 +102,21 @@ func (o *CharacterTemplate) Apply(ctx context.Context, mods ...CharacterMod) {
 // setModelRels creates and sets the relationships on *models.Character
 // according to the relationships in the template. Nothing is inserted into the db
 func (t CharacterTemplate) setModelRels(o *models.Character) {
+	if t.r.ActionLogs != nil {
+		rel := models.ActionLogSlice{}
+		for _, r := range t.r.ActionLogs {
+			related := r.o.BuildMany(r.number)
+			for _, rel := range related {
+				rel.CharacterID = o.ID // h2
+				rel.R.Character = o
+				rel.R.Loaded.Character = true
+			}
+			rel = append(rel, related...)
+		}
+		o.R.ActionLogs = rel
+		o.R.Loaded.ActionLogs = true
+	}
+
 	if t.r.ActiveBuffs != nil {
 		rel := models.ActiveBuffSlice{}
 		for _, r := range t.r.ActiveBuffs {
@@ -383,6 +403,26 @@ func ensureCreatableCharacter(m *models.CharacterSetter) {
 func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.Character) error {
 	var err error
 
+	isActionLogsDone, _ := characterRelActionLogsCtx.Value(ctx)
+	if !isActionLogsDone && o.r.ActionLogs != nil {
+		ctx = characterRelActionLogsCtx.WithValue(ctx, true)
+		for _, r := range o.r.ActionLogs {
+			if r.o.alreadyPersisted {
+				m.R.ActionLogs = append(m.R.ActionLogs, r.o.Build())
+			} else {
+				rel0, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
+
+				err = m.AttachActionLogs(ctx, exec, rel0...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	isActiveBuffsDone, _ := characterRelActiveBuffsCtx.Value(ctx)
 	if !isActiveBuffsDone && o.r.ActiveBuffs != nil {
 		ctx = characterRelActiveBuffsCtx.WithValue(ctx, true)
@@ -390,12 +430,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.ActiveBuffs = append(m.R.ActiveBuffs, r.o.Build())
 			} else {
-				rel0, err := r.o.CreateMany(ctx, exec, r.number)
+				rel1, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachActiveBuffs(ctx, exec, rel0...)
+				err = m.AttachActiveBuffs(ctx, exec, rel1...)
 				if err != nil {
 					return err
 				}
@@ -410,12 +450,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.HPEvents = append(m.R.HPEvents, r.o.Build())
 			} else {
-				rel1, err := r.o.CreateMany(ctx, exec, r.number)
+				rel2, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachHPEvents(ctx, exec, rel1...)
+				err = m.AttachHPEvents(ctx, exec, rel2...)
 				if err != nil {
 					return err
 				}
@@ -430,12 +470,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.RoundStates = append(m.R.RoundStates, r.o.Build())
 			} else {
-				rel2, err := r.o.CreateMany(ctx, exec, r.number)
+				rel3, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachRoundStates(ctx, exec, rel2...)
+				err = m.AttachRoundStates(ctx, exec, rel3...)
 				if err != nil {
 					return err
 				}
@@ -450,12 +490,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.SpellSlots = append(m.R.SpellSlots, r.o.Build())
 			} else {
-				rel3, err := r.o.CreateMany(ctx, exec, r.number)
+				rel4, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachSpellSlots(ctx, exec, rel3...)
+				err = m.AttachSpellSlots(ctx, exec, rel4...)
 				if err != nil {
 					return err
 				}
@@ -470,12 +510,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.XPEvents = append(m.R.XPEvents, r.o.Build())
 			} else {
-				rel4, err := r.o.CreateMany(ctx, exec, r.number)
+				rel5, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachXPEvents(ctx, exec, rel4...)
+				err = m.AttachXPEvents(ctx, exec, rel5...)
 				if err != nil {
 					return err
 				}
@@ -511,6 +551,7 @@ func (o *CharacterTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	for k, v := range mInCreation {
 		newMInCreation[k] = v
 	}
+	newMInCreation["characters:action_log:fk_action_log_0"] = m
 	newMInCreation["characters:active_buffs:fk_active_buffs_0"] = m
 	newMInCreation["characters:hp_events:fk_hp_events_0"] = m
 	newMInCreation["characters:round_state:fk_round_state_0"] = m
@@ -1149,6 +1190,54 @@ func (m characterMods) WithParentsCascading() CharacterMod {
 			return
 		}
 		ctx = characterWithParentsCascadingCtx.WithValue(ctx, true)
+	})
+}
+
+func (m characterMods) WithActionLogs(number int, related *ActionLogTemplate) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.ActionLogs = []*characterRActionLogsR{{
+			number: number,
+			o:      related,
+		}}
+	})
+}
+
+func (m characterMods) WithNewActionLogs(number int, mods ...ActionLogMod) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		related := o.f.NewActionLogWithContext(ctx, mods...)
+		m.WithActionLogs(number, related).Apply(ctx, o)
+	})
+}
+
+func (m characterMods) AddActionLogs(number int, related *ActionLogTemplate) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.ActionLogs = append(o.r.ActionLogs, &characterRActionLogsR{
+			number: number,
+			o:      related,
+		})
+	})
+}
+
+func (m characterMods) AddNewActionLogs(number int, mods ...ActionLogMod) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		related := o.f.NewActionLogWithContext(ctx, mods...)
+		m.AddActionLogs(number, related).Apply(ctx, o)
+	})
+}
+
+func (m characterMods) AddExistingActionLogs(existingModels ...*models.ActionLog) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		for _, em := range existingModels {
+			o.r.ActionLogs = append(o.r.ActionLogs, &characterRActionLogsR{
+				o: o.f.fromExistingActionLog(ctx, em),
+			})
+		}
+	})
+}
+
+func (m characterMods) WithoutActionLogs() CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.ActionLogs = nil
 	})
 }
 

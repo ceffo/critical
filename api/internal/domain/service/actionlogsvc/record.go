@@ -1,0 +1,55 @@
+package actionlogsvc
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+)
+
+// Record validates and stores an entry with its snapshots in one transaction,
+// joining the caller's transaction when ctx carries one. Round 0 is stamped
+// with the current round.
+func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, error) {
+	if e.Kind == "" {
+		return 0, fmt.Errorf("%w: kind is required", domain.ErrInvalidInput)
+	}
+	e.Summary = strings.TrimSpace(e.Summary)
+	if e.Summary == "" {
+		return 0, fmt.Errorf("%w: summary is required", domain.ErrInvalidInput)
+	}
+	if len(e.Payload) == 0 {
+		e.Payload = json.RawMessage(`{}`)
+	}
+	seen := map[string]bool{}
+	for _, snap := range e.Snapshots {
+		if snap.Key == "" || seen[snap.Key] {
+			return 0, fmt.Errorf("%w: snapshot keys must be non-empty and unique", domain.ErrInvalidInput)
+		}
+		seen[snap.Key] = true
+	}
+
+	var id int64
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		if e.Round == 0 {
+			round, err := s.rounds.GetRound(ctx, e.CharacterID)
+			if err != nil {
+				return fmt.Errorf("current round: %w", err)
+			}
+			e.Round = round
+		}
+		var err error
+		id, err = s.dal.InsertEntry(ctx, e)
+		if err != nil {
+			return fmt.Errorf("insert entry: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}

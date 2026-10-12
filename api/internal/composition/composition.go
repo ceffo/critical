@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
@@ -15,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/adapters/weaponsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -32,6 +34,7 @@ type BackingServices struct {
 
 	Character charactersvc.SVC
 	HP        hpsvc.SVC
+	Log       actionlogsvc.SVC
 	Buffs     buffsvc.SVC
 	Spells    spellsvc.SVC
 	Combat    combatsvc.SVC
@@ -64,6 +67,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 
 	characterDAL := characterdal.New(db)
 	hpDAL := hpdal.New(db)
+	logDAL := actionlogdal.New(db)
 	buffDAL := buffdal.New(db, db)
 	spellDAL := spelldal.New(db)
 	dice := diceadpt.New()
@@ -91,12 +95,19 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	hpSvc, err := hpsvc.New(hpDAL)
+	buffSvc, err := buffsvc.New(buffDAL)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	buffSvc, err := buffsvc.New(buffDAL)
+	// The action log stamps entries with buffSvc's round; services that
+	// record snapshots register their Restorer on logSvc here.
+	logSvc, err := actionlogsvc.New(logDAL, db, buffSvc)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	hpSvc, err := hpsvc.New(hpDAL, logSvc)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -117,10 +128,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		CharacterID: charID,
 		Character:   charSvc,
 		HP:          hpSvc,
+		Log:         logSvc,
 		Buffs:       buffSvc,
 		Spells:      spellSvc,
 		Combat:      combatSvc,
-		services:    []domain.Service{charSvc, hpSvc, buffSvc, spellSvc, combatSvc},
+		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, combatSvc},
 	}, nil
 }
 

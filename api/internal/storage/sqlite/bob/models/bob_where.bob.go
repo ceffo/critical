@@ -17,29 +17,38 @@ var (
 )
 
 func Where[Q sqlite.Filterable]() struct {
-	ActiveBuffs activeBuffWhere[Q]
-	Characters  characterWhere[Q]
-	HPEvents    hpEventWhere[Q]
-	RoundStates roundStateWhere[Q]
-	SpellSlots  spellSlotWhere[Q]
-	Spells      spellWhere[Q]
-	XPEvents    xpEventWhere[Q]
+	ActionCorrections actionCorrectionWhere[Q]
+	ActionLogs        actionLogWhere[Q]
+	ActionSnapshots   actionSnapshotWhere[Q]
+	ActiveBuffs       activeBuffWhere[Q]
+	Characters        characterWhere[Q]
+	HPEvents          hpEventWhere[Q]
+	RoundStates       roundStateWhere[Q]
+	SpellSlots        spellSlotWhere[Q]
+	Spells            spellWhere[Q]
+	XPEvents          xpEventWhere[Q]
 } {
 	return struct {
-		ActiveBuffs activeBuffWhere[Q]
-		Characters  characterWhere[Q]
-		HPEvents    hpEventWhere[Q]
-		RoundStates roundStateWhere[Q]
-		SpellSlots  spellSlotWhere[Q]
-		Spells      spellWhere[Q]
-		XPEvents    xpEventWhere[Q]
+		ActionCorrections actionCorrectionWhere[Q]
+		ActionLogs        actionLogWhere[Q]
+		ActionSnapshots   actionSnapshotWhere[Q]
+		ActiveBuffs       activeBuffWhere[Q]
+		Characters        characterWhere[Q]
+		HPEvents          hpEventWhere[Q]
+		RoundStates       roundStateWhere[Q]
+		SpellSlots        spellSlotWhere[Q]
+		Spells            spellWhere[Q]
+		XPEvents          xpEventWhere[Q]
 	}{
-		ActiveBuffs: buildActiveBuffWhere[Q](ActiveBuffs.Columns),
-		Characters:  buildCharacterWhere[Q](Characters.Columns),
-		HPEvents:    buildHPEventWhere[Q](HPEvents.Columns),
-		RoundStates: buildRoundStateWhere[Q](RoundStates.Columns),
-		SpellSlots:  buildSpellSlotWhere[Q](SpellSlots.Columns),
-		Spells:      buildSpellWhere[Q](Spells.Columns),
-		XPEvents:    buildXPEventWhere[Q](XPEvents.Columns),
+		ActionCorrections: buildActionCorrectionWhere[Q](ActionCorrections.Columns),
+		ActionLogs:        buildActionLogWhere[Q](ActionLogs.Columns),
+		ActionSnapshots:   buildActionSnapshotWhere[Q](ActionSnapshots.Columns),
+		ActiveBuffs:       buildActiveBuffWhere[Q](ActiveBuffs.Columns),
+		Characters:        buildCharacterWhere[Q](Characters.Columns),
+		HPEvents:          buildHPEventWhere[Q](HPEvents.Columns),
+		RoundStates:       buildRoundStateWhere[Q](RoundStates.Columns),
+		SpellSlots:        buildSpellSlotWhere[Q](SpellSlots.Columns),
+		Spells:            buildSpellWhere[Q](Spells.Columns),
+		XPEvents:          buildXPEventWhere[Q](XPEvents.Columns),
 	}
 }

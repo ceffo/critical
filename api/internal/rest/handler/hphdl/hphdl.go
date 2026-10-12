@@ -40,20 +40,20 @@ type CharacterIDFunc func(r *http.Request) int64
 
 // RegisterRoutes wires HP endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc hpsvc.SVC) {
-	r.Get("/api/hp", GetHP(charID, svc))
-	r.Post("/api/hp/event", AppendEvent(charID, svc))
-	r.Post("/api/hp/undo", UndoLast(charID, svc))
+	r.Get("/api/hp", render.Handle(GetHP(charID, svc)))
+	r.Post("/api/hp/event", render.Handle(AppendEvent(charID, svc)))
+	r.Post("/api/hp/undo", render.Handle(UndoLast(charID, svc)))
 }
 
 // GetHP returns the current HP state.
-func GetHP(charID CharacterIDFunc, svc stateGetter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func GetHP(charID CharacterIDFunc, svc stateGetter) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		state, err := svc.GetState(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTO(state))
+		return nil
 	}
 }
 
@@ -63,31 +63,30 @@ type appendBody struct {
 }
 
 // AppendEvent records a delta against the ledger.
-func AppendEvent(charID CharacterIDFunc, svc eventAppender) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func AppendEvent(charID CharacterIDFunc, svc eventAppender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		var body appendBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			render.BadRequest(r.Context(), w, "invalid request body")
-			return
+			return render.BadRequestError("invalid request body")
 		}
 		state, err := svc.AppendEvent(r.Context(), charID(r), body.Delta, body.Source)
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTO(state))
+		return nil
 	}
 }
 
 // UndoLast appends a correction row that negates the last event.
-func UndoLast(charID CharacterIDFunc, svc undoer) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func UndoLast(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		state, err := svc.UndoLast(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTO(state))
+		return nil
 	}
 }
 

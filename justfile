@@ -45,13 +45,17 @@ generate:
 build-api:
     cd api && go build -o ../bin/critical-srv ./cmd/api
 
+# golangci-lint, pinned so lint matches the repo's Go toolchain. System packages lag
+# behind new Go releases and fail with "export data version N is greater than maximum".
+golangci := "go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0"
+
 # Lint the backend
 lint-api:
-    cd api && golangci-lint run ./...
+    cd api && {{golangci}} run ./...
 
 # Format the backend
 fmt-api:
-    cd api && golangci-lint fmt ./...
+    cd api && {{golangci}} fmt ./...
 
 # Test the backend
 test-api:

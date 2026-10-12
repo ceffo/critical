@@ -155,15 +155,15 @@ func (o HPEventTemplate) BuildMany(number int) models.HPEventSlice {
 }
 
 func ensureCreatableHPEvent(m *models.HPEventSetter) {
-	if !(m.CharacterID.IsValue()) {
+	if !m.CharacterID.IsValue() {
 		val := random_int64(nil)
 		m.CharacterID = omit.From(val)
 	}
-	if !(m.Delta.IsValue()) {
+	if !m.Delta.IsValue() {
 		val := random_int64(nil)
 		m.Delta = omit.From(val)
 	}
-	if !(m.Source.IsValue()) {
+	if !m.Source.IsValue() {
 		val := random_string(nil)
 		m.Source = omit.From(val)
 	}

@@ -204,15 +204,15 @@ func (o SpellTemplate) BuildMany(number int) models.SpellSlice {
 }
 
 func ensureCreatableSpell(m *models.SpellSetter) {
-	if !(m.Name.IsValue()) {
+	if !m.Name.IsValue() {
 		val := random_string(nil)
 		m.Name = omit.From(val)
 	}
-	if !(m.Class.IsValue()) {
+	if !m.Class.IsValue() {
 		val := random_string(nil)
 		m.Class = omit.From(val)
 	}
-	if !(m.Level.IsValue()) {
+	if !m.Level.IsValue() {
 		val := random_int64(nil)
 		m.Level = omit.From(val)
 	}

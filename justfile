@@ -21,7 +21,7 @@ fmt: fmt-api fmt-web
 
 # Regenerate mockery mocks for all service ports (run from api/ so Go module resolves)
 mocks:
-    cd api && /home/moncef/go/bin/mockery --config ../.mockery.yaml
+    cd api && go tool mockery --config ../.mockery.yaml
 
 # Regenerate bob DAL code from SQL schema + query files
 generate:
@@ -34,7 +34,7 @@ generate:
         sqlite3 .tmp_schema.db < "$f"
     done
     # Run the bob code generator
-    go run github.com/stephenafamo/bob/gen/bobgen-sqlite@v0.43.0 -c bobgen.yaml
+    go tool bobgen-sqlite -c bobgen.yaml
     # Clean up the temp DB
     rm -f .tmp_schema.db
     go mod tidy

@@ -145,7 +145,7 @@ func GetHpHistory(CharacterID int64, Arg string) *GetHpHistoryQuery {
 						row.ScheduleScanByIndex(4, &t.CreatedAt)
 						return &t, nil
 					}, func(v any) (GetHpHistoryRow, error) {
-						return *(v.(*GetHpHistoryRow)), nil
+						return *v.(*GetHpHistoryRow), nil
 					}
 			},
 		},
@@ -296,7 +296,7 @@ func GetLastHpEvent(CharacterID int64) *GetLastHpEventQuery {
 						row.ScheduleScanByIndex(1, &t.Source)
 						return &t, nil
 					}, func(v any) (GetLastHpEventRow, error) {
-						return *(v.(*GetLastHpEventRow)), nil
+						return *v.(*GetLastHpEventRow), nil
 					}
 			},
 		},

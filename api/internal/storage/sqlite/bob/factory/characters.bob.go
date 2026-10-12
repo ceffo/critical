@@ -329,39 +329,39 @@ func (o CharacterTemplate) BuildMany(number int) models.CharacterSlice {
 }
 
 func ensureCreatableCharacter(m *models.CharacterSetter) {
-	if !(m.Name.IsValue()) {
+	if !m.Name.IsValue() {
 		val := random_string(nil)
 		m.Name = omit.From(val)
 	}
-	if !(m.STR.IsValue()) {
+	if !m.STR.IsValue() {
 		val := random_int64(nil)
 		m.STR = omit.From(val)
 	}
-	if !(m.Dex.IsValue()) {
+	if !m.Dex.IsValue() {
 		val := random_int64(nil)
 		m.Dex = omit.From(val)
 	}
-	if !(m.Con.IsValue()) {
+	if !m.Con.IsValue() {
 		val := random_int64(nil)
 		m.Con = omit.From(val)
 	}
-	if !(m.Int.IsValue()) {
+	if !m.Int.IsValue() {
 		val := random_int64(nil)
 		m.Int = omit.From(val)
 	}
-	if !(m.Wis.IsValue()) {
+	if !m.Wis.IsValue() {
 		val := random_int64(nil)
 		m.Wis = omit.From(val)
 	}
-	if !(m.Cha.IsValue()) {
+	if !m.Cha.IsValue() {
 		val := random_int64(nil)
 		m.Cha = omit.From(val)
 	}
-	if !(m.HPMax.IsValue()) {
+	if !m.HPMax.IsValue() {
 		val := random_int64(nil)
 		m.HPMax = omit.From(val)
 	}
-	if !(m.Thac0Base.IsValue()) {
+	if !m.Thac0Base.IsValue() {
 		val := random_int64(nil)
 		m.Thac0Base = omit.From(val)
 	}

@@ -155,15 +155,15 @@ func (o XPEventTemplate) BuildMany(number int) models.XPEventSlice {
 }
 
 func ensureCreatableXPEvent(m *models.XPEventSetter) {
-	if !(m.CharacterID.IsValue()) {
+	if !m.CharacterID.IsValue() {
 		val := random_int64(nil)
 		m.CharacterID = omit.From(val)
 	}
-	if !(m.Delta.IsValue()) {
+	if !m.Delta.IsValue() {
 		val := random_int64(nil)
 		m.Delta = omit.From(val)
 	}
-	if !(m.Source.IsValue()) {
+	if !m.Source.IsValue() {
 		val := random_string(nil)
 		m.Source = omit.From(val)
 	}

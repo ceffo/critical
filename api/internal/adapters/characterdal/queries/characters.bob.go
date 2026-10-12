@@ -59,7 +59,7 @@ func GetCharacter(ID int64) *GetCharacterQuery {
 						row.ScheduleScanByIndex(16, &t.SaveSpell)
 						return &t, nil
 					}, func(v any) (GetCharacterRow, error) {
-						return *(v.(*GetCharacterRow)), nil
+						return *v.(*GetCharacterRow), nil
 					}
 			},
 		},

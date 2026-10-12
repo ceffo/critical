@@ -138,7 +138,7 @@ func (o ActiveBuffTemplate) BuildMany(number int) models.ActiveBuffSlice {
 }
 
 func ensureCreatableActiveBuff(m *models.ActiveBuffSetter) {
-	if !(m.CharacterID.IsValue()) {
+	if !m.CharacterID.IsValue() {
 		val := random_int64(nil)
 		m.CharacterID = omit.From(val)
 	}

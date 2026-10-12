@@ -138,7 +138,7 @@ func (o SpellSlotTemplate) BuildMany(number int) models.SpellSlotSlice {
 }
 
 func ensureCreatableSpellSlot(m *models.SpellSlotSetter) {
-	if !(m.CharacterID.IsValue()) {
+	if !m.CharacterID.IsValue() {
 		val := random_int64(nil)
 		m.CharacterID = omit.From(val)
 	}

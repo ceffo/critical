@@ -138,7 +138,7 @@ func (o RoundStateTemplate) BuildMany(number int) models.RoundStateSlice {
 }
 
 func ensureCreatableRoundState(m *models.RoundStateSetter) {
-	if !(m.CharacterID.IsValue()) {
+	if !m.CharacterID.IsValue() {
 		val := random_int64(nil)
 		m.CharacterID = omit.From(val)
 	}

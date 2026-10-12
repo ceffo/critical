@@ -8,10 +8,75 @@ import (
 	"testing"
 )
 
+// Test that ActionLog has a C field with count pointers for to-many relationships
+func TestActionLogCountStruct(t *testing.T) {
+	var m ActionLog
+	_ = m.C // Verify C field exists
+
+	// Verify ActionActionCorrections count field exists and is *int64
+	var _ *int64 = m.C.ActionActionCorrections
+
+	// Verify ActionActionSnapshots count field exists and is *int64
+	var _ *int64 = m.C.ActionActionSnapshots
+}
+
+// Test that ActionLog has LoadCount methods for to-many relationships
+func TestActionLogLoadCountMethods(t *testing.T) {
+	var m *ActionLog
+	var ms ActionLogSlice
+	ctx := context.Background()
+
+	// Verify LoadCountActionActionCorrections method exists on single model
+	_ = m.LoadCountActionActionCorrections(ctx, nil)
+
+	// Verify LoadCountActionActionCorrections method exists on slice
+	_ = ms.LoadCountActionActionCorrections(ctx, nil)
+
+	// Verify LoadCountActionActionSnapshots method exists on single model
+	_ = m.LoadCountActionActionSnapshots(ctx, nil)
+
+	// Verify LoadCountActionActionSnapshots method exists on slice
+	_ = ms.LoadCountActionActionSnapshots(ctx, nil)
+}
+
+// Test that SelectThenLoadCount has ActionLog with methods for to-many relationships
+func TestSelectThenLoadCountActionLog(t *testing.T) {
+	_ = SelectThenLoadCount.ActionLog
+
+	// Verify ActionActionCorrections loader exists
+	_ = SelectThenLoadCount.ActionLog.ActionActionCorrections
+
+	// Verify ActionActionSnapshots loader exists
+	_ = SelectThenLoadCount.ActionLog.ActionActionSnapshots
+}
+
+// Test that PreloadCount has ActionLog with methods for to-many relationships
+func TestPreloadCountActionLog(t *testing.T) {
+	_ = PreloadCount.ActionLog
+
+	// Verify ActionActionCorrections preloader exists and returns a Preloader
+	_ = PreloadCount.ActionLog.ActionActionCorrections()
+
+	// Verify ActionActionSnapshots preloader exists and returns a Preloader
+	_ = PreloadCount.ActionLog.ActionActionSnapshots()
+}
+
+// Test that ActionLog has PreloadCount method
+func TestActionLogPreloadCountMethod(t *testing.T) {
+	var m *ActionLog
+
+	_ = m.PreloadCount("ActionActionCorrections", 0)
+
+	_ = m.PreloadCount("ActionActionSnapshots", 0)
+}
+
 // Test that Character has a C field with count pointers for to-many relationships
 func TestCharacterCountStruct(t *testing.T) {
 	var m Character
 	_ = m.C // Verify C field exists
+
+	// Verify ActionLogs count field exists and is *int64
+	var _ *int64 = m.C.ActionLogs
 
 	// Verify ActiveBuffs count field exists and is *int64
 	var _ *int64 = m.C.ActiveBuffs
@@ -34,6 +99,12 @@ func TestCharacterLoadCountMethods(t *testing.T) {
 	var m *Character
 	var ms CharacterSlice
 	ctx := context.Background()
+
+	// Verify LoadCountActionLogs method exists on single model
+	_ = m.LoadCountActionLogs(ctx, nil)
+
+	// Verify LoadCountActionLogs method exists on slice
+	_ = ms.LoadCountActionLogs(ctx, nil)
 
 	// Verify LoadCountActiveBuffs method exists on single model
 	_ = m.LoadCountActiveBuffs(ctx, nil)
@@ -70,6 +141,9 @@ func TestCharacterLoadCountMethods(t *testing.T) {
 func TestSelectThenLoadCountCharacter(t *testing.T) {
 	_ = SelectThenLoadCount.Character
 
+	// Verify ActionLogs loader exists
+	_ = SelectThenLoadCount.Character.ActionLogs
+
 	// Verify ActiveBuffs loader exists
 	_ = SelectThenLoadCount.Character.ActiveBuffs
 
@@ -90,6 +164,9 @@ func TestSelectThenLoadCountCharacter(t *testing.T) {
 func TestPreloadCountCharacter(t *testing.T) {
 	_ = PreloadCount.Character
 
+	// Verify ActionLogs preloader exists and returns a Preloader
+	_ = PreloadCount.Character.ActionLogs()
+
 	// Verify ActiveBuffs preloader exists and returns a Preloader
 	_ = PreloadCount.Character.ActiveBuffs()
 
@@ -109,6 +186,8 @@ func TestPreloadCountCharacter(t *testing.T) {
 // Test that Character has PreloadCount method
 func TestCharacterPreloadCountMethod(t *testing.T) {
 	var m *Character
+
+	_ = m.PreloadCount("ActionLogs", 0)
 
 	_ = m.PreloadCount("ActiveBuffs", 0)
 

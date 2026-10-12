@@ -13,17 +13,165 @@ import (
 )
 
 type Factory struct {
-	baseActiveBuffMods ActiveBuffModSlice
-	baseCharacterMods  CharacterModSlice
-	baseHPEventMods    HPEventModSlice
-	baseRoundStateMods RoundStateModSlice
-	baseSpellSlotMods  SpellSlotModSlice
-	baseSpellMods      SpellModSlice
-	baseXPEventMods    XPEventModSlice
+	baseActionCorrectionMods ActionCorrectionModSlice
+	baseActionLogMods        ActionLogModSlice
+	baseActionSnapshotMods   ActionSnapshotModSlice
+	baseActiveBuffMods       ActiveBuffModSlice
+	baseCharacterMods        CharacterModSlice
+	baseHPEventMods          HPEventModSlice
+	baseRoundStateMods       RoundStateModSlice
+	baseSpellSlotMods        SpellSlotModSlice
+	baseSpellMods            SpellModSlice
+	baseXPEventMods          XPEventModSlice
 }
 
 func New() *Factory {
 	return &Factory{}
+}
+
+func (f *Factory) NewActionCorrection(mods ...ActionCorrectionMod) *ActionCorrectionTemplate {
+	return f.NewActionCorrectionWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewActionCorrectionWithContext(ctx context.Context, mods ...ActionCorrectionMod) *ActionCorrectionTemplate {
+	o := &ActionCorrectionTemplate{f: f}
+
+	if f != nil {
+		f.baseActionCorrectionMods.Apply(ctx, o)
+	}
+
+	ActionCorrectionModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingActionCorrection(ctx context.Context, m *models.ActionCorrection) *ActionCorrectionTemplate {
+	visited := make(map[uintptr]struct{})
+	ctx = factoryVisitedCtx.WithValue(ctx, visited)
+	return f.fromExistingActionCorrection(ctx, m)
+}
+
+func (f *Factory) fromExistingActionCorrection(ctx context.Context, m *models.ActionCorrection) *ActionCorrectionTemplate {
+	o := &ActionCorrectionTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int64 { return m.ID }
+	o.ActionID = func() int64 { return m.ActionID }
+	o.Kind = func() string { return m.Kind }
+	o.HPDelta = func() null.Val[int64] { return m.HPDelta }
+	o.Summary = func() null.Val[string] { return m.Summary }
+	o.CreatedAt = func() time.Time { return m.CreatedAt }
+
+	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
+		ptr := uintptr(unsafe.Pointer(m))
+		if _, seen := visited[ptr]; seen {
+			return o
+		}
+		visited[ptr] = struct{}{}
+	}
+	if m.R.ActionActionLog != nil {
+		ActionCorrectionMods.WithExistingActionActionLog(m.R.ActionActionLog).Apply(ctx, o)
+	}
+
+	return o
+}
+
+func (f *Factory) NewActionLog(mods ...ActionLogMod) *ActionLogTemplate {
+	return f.NewActionLogWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewActionLogWithContext(ctx context.Context, mods ...ActionLogMod) *ActionLogTemplate {
+	o := &ActionLogTemplate{f: f}
+
+	if f != nil {
+		f.baseActionLogMods.Apply(ctx, o)
+	}
+
+	ActionLogModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingActionLog(ctx context.Context, m *models.ActionLog) *ActionLogTemplate {
+	visited := make(map[uintptr]struct{})
+	ctx = factoryVisitedCtx.WithValue(ctx, visited)
+	return f.fromExistingActionLog(ctx, m)
+}
+
+func (f *Factory) fromExistingActionLog(ctx context.Context, m *models.ActionLog) *ActionLogTemplate {
+	o := &ActionLogTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int64 { return m.ID }
+	o.CharacterID = func() int64 { return m.CharacterID }
+	o.Round = func() int64 { return m.Round }
+	o.Kind = func() string { return m.Kind }
+	o.Summary = func() string { return m.Summary }
+	o.HPDelta = func() int64 { return m.HPDelta }
+	o.Payload = func() string { return m.Payload }
+	o.CreatedAt = func() time.Time { return m.CreatedAt }
+
+	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
+		ptr := uintptr(unsafe.Pointer(m))
+		if _, seen := visited[ptr]; seen {
+			return o
+		}
+		visited[ptr] = struct{}{}
+	}
+	if len(m.R.ActionActionCorrections) > 0 {
+		ActionLogMods.AddExistingActionActionCorrections(m.R.ActionActionCorrections...).Apply(ctx, o)
+	}
+	if m.R.Character != nil {
+		ActionLogMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)
+	}
+	if len(m.R.ActionActionSnapshots) > 0 {
+		ActionLogMods.AddExistingActionActionSnapshots(m.R.ActionActionSnapshots...).Apply(ctx, o)
+	}
+
+	return o
+}
+
+func (f *Factory) NewActionSnapshot(mods ...ActionSnapshotMod) *ActionSnapshotTemplate {
+	return f.NewActionSnapshotWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewActionSnapshotWithContext(ctx context.Context, mods ...ActionSnapshotMod) *ActionSnapshotTemplate {
+	o := &ActionSnapshotTemplate{f: f}
+
+	if f != nil {
+		f.baseActionSnapshotMods.Apply(ctx, o)
+	}
+
+	ActionSnapshotModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingActionSnapshot(ctx context.Context, m *models.ActionSnapshot) *ActionSnapshotTemplate {
+	visited := make(map[uintptr]struct{})
+	ctx = factoryVisitedCtx.WithValue(ctx, visited)
+	return f.fromExistingActionSnapshot(ctx, m)
+}
+
+func (f *Factory) fromExistingActionSnapshot(ctx context.Context, m *models.ActionSnapshot) *ActionSnapshotTemplate {
+	o := &ActionSnapshotTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int64 { return m.ID }
+	o.ActionID = func() int64 { return m.ActionID }
+	o.StateKey = func() string { return m.StateKey }
+	o.BeforeState = func() string { return m.BeforeState }
+	o.AfterState = func() string { return m.AfterState }
+
+	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
+		ptr := uintptr(unsafe.Pointer(m))
+		if _, seen := visited[ptr]; seen {
+			return o
+		}
+		visited[ptr] = struct{}{}
+	}
+	if m.R.ActionActionLog != nil {
+		ActionSnapshotMods.WithExistingActionActionLog(m.R.ActionActionLog).Apply(ctx, o)
+	}
+
+	return o
 }
 
 func (f *Factory) NewActiveBuff(mods ...ActiveBuffMod) *ActiveBuffTemplate {
@@ -118,6 +266,9 @@ func (f *Factory) fromExistingCharacter(ctx context.Context, m *models.Character
 			return o
 		}
 		visited[ptr] = struct{}{}
+	}
+	if len(m.R.ActionLogs) > 0 {
+		CharacterMods.AddExistingActionLogs(m.R.ActionLogs...).Apply(ctx, o)
 	}
 	if len(m.R.ActiveBuffs) > 0 {
 		CharacterMods.AddExistingActiveBuffs(m.R.ActiveBuffs...).Apply(ctx, o)
@@ -352,6 +503,30 @@ func (f *Factory) fromExistingXPEvent(ctx context.Context, m *models.XPEvent) *X
 	}
 
 	return o
+}
+
+func (f *Factory) ClearBaseActionCorrectionMods() {
+	f.baseActionCorrectionMods = nil
+}
+
+func (f *Factory) AddBaseActionCorrectionMod(mods ...ActionCorrectionMod) {
+	f.baseActionCorrectionMods = append(f.baseActionCorrectionMods, mods...)
+}
+
+func (f *Factory) ClearBaseActionLogMods() {
+	f.baseActionLogMods = nil
+}
+
+func (f *Factory) AddBaseActionLogMod(mods ...ActionLogMod) {
+	f.baseActionLogMods = append(f.baseActionLogMods, mods...)
+}
+
+func (f *Factory) ClearBaseActionSnapshotMods() {
+	f.baseActionSnapshotMods = nil
+}
+
+func (f *Factory) AddBaseActionSnapshotMod(mods ...ActionSnapshotMod) {
+	f.baseActionSnapshotMods = append(f.baseActionSnapshotMods, mods...)
 }
 
 func (f *Factory) ClearBaseActiveBuffMods() {

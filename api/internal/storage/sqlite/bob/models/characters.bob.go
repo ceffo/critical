@@ -60,6 +60,7 @@ type CharactersQuery = *sqlite.ViewQuery[*Character, CharacterSlice]
 
 // characterR is where relationships are stored.
 type characterR struct {
+	ActionLogs  ActionLogSlice  // fk_action_log_0
 	ActiveBuffs ActiveBuffSlice // fk_active_buffs_0
 	HPEvents    HPEventSlice    // fk_hp_events_0
 	RoundStates RoundStateSlice // fk_round_state_0
@@ -73,6 +74,7 @@ type characterR struct {
 
 // characterRLoaded tracks which relationships on Character have been loaded.
 type characterRLoaded struct {
+	ActionLogs  bool // fk_action_log_0
 	ActiveBuffs bool // fk_active_buffs_0
 	HPEvents    bool // fk_hp_events_0
 	RoundStates bool // fk_round_state_0
@@ -865,6 +867,25 @@ func (o CharacterSlice) ReloadAll(ctx context.Context, exec bob.Executor) error 
 	return nil
 }
 
+// ActionLogs starts a query for related objects on action_log
+func (o *Character) ActionLogs(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	return ActionLogs.Query(append(mods,
+		sm.Where(ActionLogs.Columns.CharacterID.EQ(sqlite.Arg(o.ID))),
+	)...)
+}
+
+func (os CharacterSlice) ActionLogs(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	PKArgSlice := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgSlice[i] = sqlite.ArgGroup(o.ID)
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	return ActionLogs.Query(append(mods,
+		sm.Where(sqlite.Group(ActionLogs.Columns.CharacterID).OP("IN", PKArgExpr)),
+	)...)
+}
+
 // ActiveBuffs starts a query for related objects on active_buffs
 func (o *Character) ActiveBuffs(mods ...bob.Mod[*dialect.SelectQuery]) ActiveBuffsQuery {
 	return ActiveBuffs.Query(append(mods,
@@ -958,6 +979,76 @@ func (os CharacterSlice) XPEvents(mods ...bob.Mod[*dialect.SelectQuery]) XPEvent
 	return XPEvents.Query(append(mods,
 		sm.Where(sqlite.Group(XPEvents.Columns.CharacterID).OP("IN", PKArgExpr)),
 	)...)
+}
+
+func insertCharacterActionLogs0(ctx context.Context, exec bob.Executor, actionLogs1 []*ActionLogSetter, character0 *Character) (ActionLogSlice, error) {
+	for i := range actionLogs1 {
+		actionLogs1[i].CharacterID = omit.From(character0.ID)
+	}
+
+	ret, err := ActionLogs.Insert(bob.ToMods(actionLogs1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertCharacterActionLogs0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachCharacterActionLogs0(ctx context.Context, exec bob.Executor, count int, actionLogs1 ActionLogSlice, character0 *Character) (ActionLogSlice, error) {
+	setter := &ActionLogSetter{
+		CharacterID: omit.From(character0.ID),
+	}
+
+	err := actionLogs1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachCharacterActionLogs0: %w", err)
+	}
+
+	return actionLogs1, nil
+}
+
+func (character0 *Character) InsertActionLogs(ctx context.Context, exec bob.Executor, related ...*ActionLogSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	actionLogs1, err := insertCharacterActionLogs0(ctx, exec, related, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.ActionLogs = append(character0.R.ActionLogs, actionLogs1...)
+
+	for _, rel := range actionLogs1 {
+		rel.R.Character = character0
+		rel.R.Loaded.Character = true
+	}
+	return nil
+}
+
+func (character0 *Character) AttachActionLogs(ctx context.Context, exec bob.Executor, related ...*ActionLog) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	actionLogs1 := ActionLogSlice(related)
+
+	_, err = attachCharacterActionLogs0(ctx, exec, len(related), actionLogs1, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.ActionLogs = append(character0.R.ActionLogs, actionLogs1...)
+
+	for _, rel := range related {
+		rel.R.Character = character0
+		rel.R.Loaded.Character = true
+	}
+
+	return nil
 }
 
 func insertCharacterActiveBuffs0(ctx context.Context, exec bob.Executor, activeBuffs1 []*ActiveBuffSetter, character0 *Character) (ActiveBuffSlice, error) {
@@ -1367,6 +1458,20 @@ type characterWhereR[Q sqlite.Filterable] struct {
 	cols characterColumns
 }
 
+// HasActionLogs filters parents that have a matching ActionLogs using a
+// correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
+// multiply parent rows, so no DISTINCT is needed. The optional filters are
+// applied to the subquery (i.e. to ActionLogs).
+func (w characterWhereR[Q]) HasActionLogs(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+	q := sqlite.Select(
+		sm.Columns(sqlite.Raw("1")),
+		sm.From(ActionLogs.NameExpr()),
+		sm.Where(ActionLogs.Columns.CharacterID.EQ(w.cols.ID)),
+	)
+	q.Apply(filters...)
+	return mods.Where[Q]{E: sqlite.Exists(q)}
+}
+
 // HasActiveBuffs filters parents that have a matching ActiveBuffs using a
 // correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
 // multiply parent rows, so no DISTINCT is needed. The optional filters are
@@ -1618,6 +1723,22 @@ func (o *Character) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "ActionLogs":
+		rels, ok := retrieved.(ActionLogSlice)
+		if !ok {
+			return fmt.Errorf("character cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.ActionLogs = rels
+		o.R.Loaded.ActionLogs = true
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.Character = o
+				rel.R.Loaded.Character = true
+			}
+		}
+		return nil
 	case "ActiveBuffs":
 		rels, ok := retrieved.(ActiveBuffSlice)
 		if !ok {
@@ -1710,6 +1831,7 @@ func buildCharacterPreloader() characterPreloader {
 }
 
 type characterThenLoader[Q orm.Loadable] struct {
+	ActionLogs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
@@ -1718,6 +1840,9 @@ type characterThenLoader[Q orm.Loadable] struct {
 }
 
 func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
+	type ActionLogsLoadInterface interface {
+		LoadActionLogs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
 	type ActiveBuffsLoadInterface interface {
 		LoadActiveBuffs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
@@ -1735,6 +1860,12 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 	}
 
 	return characterThenLoader[Q]{
+		ActionLogs: thenLoadBuilder[Q](
+			"ActionLogs",
+			func(ctx context.Context, exec bob.Executor, retrieved ActionLogsLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadActionLogs(ctx, exec, mods...)
+			},
+		),
 		ActiveBuffs: thenLoadBuilder[Q](
 			"ActiveBuffs",
 			func(ctx context.Context, exec bob.Executor, retrieved ActiveBuffsLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
@@ -1766,6 +1897,80 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 			},
 		),
 	}
+}
+
+// LoadActionLogs loads the character's ActionLogs into the .R struct
+func (o *Character) LoadActionLogs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.ActionLogs = nil
+	o.R.Loaded.ActionLogs = false
+
+	related, err := o.ActionLogs(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.Character = o
+		rel.R.Loaded.Character = true
+	}
+
+	o.R.ActionLogs = related
+	o.R.Loaded.ActionLogs = true
+	return nil
+}
+
+// LoadActionLogs loads the character's ActionLogs into the .R struct
+func (os CharacterSlice) LoadActionLogs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	actionLogs, err := os.ActionLogs(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		o.R.ActionLogs = nil
+		o.R.Loaded.ActionLogs = true
+	}
+	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
+	characterByKey := make(map[int64][]*Character, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		characterByKey[o.ID] = append(characterByKey[o.ID], o)
+	}
+
+	for _, rel := range actionLogs {
+
+		owners, ok := characterByKey[rel.CharacterID]
+		if !ok {
+			continue
+		}
+
+		for _, o := range owners {
+
+			rel.R.Character = o
+			rel.R.Loaded.Character = true
+
+			o.R.ActionLogs = append(o.R.ActionLogs, rel)
+
+		}
+	}
+
+	return nil
 }
 
 // LoadActiveBuffs loads the character's ActiveBuffs into the .R struct
@@ -2140,6 +2345,7 @@ func (os CharacterSlice) LoadXPEvents(ctx context.Context, exec bob.Executor, mo
 
 // characterC is where relationship counts are stored.
 type characterC struct {
+	ActionLogs  *int64
 	ActiveBuffs *int64
 	HPEvents    *int64
 	RoundStates *int64
@@ -2154,6 +2360,8 @@ func (o *Character) PreloadCount(name string, count int64) error {
 	}
 
 	switch name {
+	case "ActionLogs":
+		o.C.ActionLogs = &count
 	case "ActiveBuffs":
 		o.C.ActiveBuffs = &count
 	case "HPEvents":
@@ -2169,6 +2377,7 @@ func (o *Character) PreloadCount(name string, count int64) error {
 }
 
 type characterCountPreloader struct {
+	ActionLogs  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
@@ -2178,6 +2387,23 @@ type characterCountPreloader struct {
 
 func buildCharacterCountPreloader() characterCountPreloader {
 	return characterCountPreloader{
+		ActionLogs: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
+			return countPreloader[*Character]("ActionLogs", func(parent string) bob.Expression {
+				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
+				if parent == "" {
+					parent = Characters.Alias()
+				}
+
+				subqueryMods := []bob.Mod[*dialect.SelectQuery]{
+					sm.Columns(sqlite.Raw("count(*)")),
+
+					sm.From(ActionLogs.NameAsExpr()),
+					sm.Where(sqlite.Quote(ActionLogs.Alias(), "character_id").EQ(sqlite.Quote(parent, "id"))),
+				}
+				subqueryMods = append(subqueryMods, mods...)
+				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
+			})
+		},
 		ActiveBuffs: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
 			return countPreloader[*Character]("ActiveBuffs", func(parent string) bob.Expression {
 				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
@@ -2267,6 +2493,7 @@ func buildCharacterCountPreloader() characterCountPreloader {
 }
 
 type characterCountThenLoader[Q orm.Loadable] struct {
+	ActionLogs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
@@ -2275,6 +2502,9 @@ type characterCountThenLoader[Q orm.Loadable] struct {
 }
 
 func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q] {
+	type ActionLogsCountInterface interface {
+		LoadCountActionLogs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
 	type ActiveBuffsCountInterface interface {
 		LoadCountActiveBuffs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
@@ -2292,6 +2522,12 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 	}
 
 	return characterCountThenLoader[Q]{
+		ActionLogs: countThenLoadBuilder[Q](
+			"ActionLogs",
+			func(ctx context.Context, exec bob.Executor, retrieved ActionLogsCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadCountActionLogs(ctx, exec, mods...)
+			},
+		),
 		ActiveBuffs: countThenLoadBuilder[Q](
 			"ActiveBuffs",
 			func(ctx context.Context, exec bob.Executor, retrieved ActiveBuffsCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
@@ -2323,6 +2559,84 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 			},
 		),
 	}
+}
+
+// LoadCountActionLogs loads the count of ActionLogs into the C struct
+func (o *Character) LoadCountActionLogs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	count, err := o.ActionLogs(mods...).Count(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.C.ActionLogs = &count
+	return nil
+}
+
+// LoadCountActionLogs loads the count of ActionLogs for a slice in a single batch query
+func (os CharacterSlice) LoadCountActionLogs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	// Build the IN arg expression from parent PKs
+	PKArgSlice := make([]bob.Expression, 0, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		PKArgSlice = append(PKArgSlice, sqlite.Arg(o.ID))
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	// countResult holds one scanned row from the batch count query.
+	// FK columns are aliased to the parent PK column names for direct map lookup.
+	type countResult struct {
+		ID    int64
+		Count int64
+	}
+
+	batchMods := []bob.Mod[*dialect.SelectQuery]{
+		// SELECT fk AS parent_pk, count(*)
+		sm.Columns(
+			ActionLogs.Columns.CharacterID.As("id"),
+			sqlite.Raw("count(*) as count"),
+		),
+		// Single-hop: FROM related table directly
+		sm.From(ActionLogs.NameAsExpr()),
+
+		// WHERE fk IN (parent PKs) — psql single-column FK uses `= ANY(array)` (see PKArgExpr above)
+		sm.Where(ActionLogs.Columns.CharacterID.OP("IN", PKArgExpr)),
+		// GROUP BY fk columns
+		sm.GroupBy(ActionLogs.Columns.CharacterID),
+	}
+	batchMods = append(batchMods, mods...)
+
+	results, err := bob.All(ctx, exec,
+		sqlite.Select(batchMods...),
+		scan.StructMapper[countResult](),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Single-column FK: direct map lookup
+	countMap := make(map[int64]int64, len(results))
+	for _, r := range results {
+		countMap[r.ID] = r.Count
+	}
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		count := countMap[o.ID]
+		o.C.ActionLogs = &count
+	}
+
+	return nil
 }
 
 // LoadCountActiveBuffs loads the count of ActiveBuffs into the C struct
@@ -2717,6 +3031,7 @@ func (os CharacterSlice) LoadCountXPEvents(ctx context.Context, exec bob.Executo
 
 type characterJoins[Q dialect.Joinable] struct {
 	typ         string
+	ActionLogs  modAs[Q, actionLogColumns]
 	ActiveBuffs modAs[Q, activeBuffColumns]
 	HPEvents    modAs[Q, hpEventColumns]
 	RoundStates modAs[Q, roundStateColumns]
@@ -2731,6 +3046,20 @@ func (j characterJoins[Q]) aliasedAs(alias string) characterJoins[Q] {
 func buildCharacterJoins[Q dialect.Joinable](cols characterColumns, typ string) characterJoins[Q] {
 	return characterJoins[Q]{
 		typ: typ,
+		ActionLogs: modAs[Q, actionLogColumns]{
+			c: ActionLogs.Columns,
+			f: func(to actionLogColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, ActionLogs.NameExpr().As(to.Alias())).On(
+						to.CharacterID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
 		ActiveBuffs: modAs[Q, activeBuffColumns]{
 			c: ActiveBuffs.Columns,
 			f: func(to activeBuffColumns) bob.Mod[Q] {

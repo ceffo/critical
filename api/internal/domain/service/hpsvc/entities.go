@@ -2,7 +2,8 @@ package hpsvc
 
 import "time"
 
-// HpEvent is a single change in the append-only HP ledger. Pure domain — no
+// HpEvent is one HP change as shown by the HP panel: an hp_change entry of the
+// action log with its effective (amended) delta and source. Pure domain — no
 // transport tags. Handlers map to a DTO before serializing.
 type HpEvent struct {
 	ID          int64

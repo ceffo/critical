@@ -13,6 +13,97 @@ import (
 	"github.com/stephenafamo/bob/dialect/sqlite/sm"
 )
 
+// TestActionCorrectionHasRelationsEmitExists verifies that every generated
+// Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
+// an INNER JOIN, so the parent rows are never multiplied.
+func TestActionCorrectionHasRelationsEmitExists(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("ActionActionLog", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionCorrections.NameExpr()),
+			SelectWhere.ActionCorrections.R.HasActionActionLog(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasActionActionLog: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasActionActionLog: expected EXISTS in query, got: %s", sql)
+		}
+	})
+}
+
+// TestActionLogHasRelationsEmitExists verifies that every generated
+// Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
+// an INNER JOIN, so the parent rows are never multiplied.
+func TestActionLogHasRelationsEmitExists(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("ActionActionCorrections", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionLogs.NameExpr()),
+			SelectWhere.ActionLogs.R.HasActionActionCorrections(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasActionActionCorrections: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasActionActionCorrections: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
+	t.Run("Character", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionLogs.NameExpr()),
+			SelectWhere.ActionLogs.R.HasCharacter(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasCharacter: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasCharacter: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
+	t.Run("ActionActionSnapshots", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionLogs.NameExpr()),
+			SelectWhere.ActionLogs.R.HasActionActionSnapshots(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasActionActionSnapshots: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasActionActionSnapshots: expected EXISTS in query, got: %s", sql)
+		}
+	})
+}
+
+// TestActionSnapshotHasRelationsEmitExists verifies that every generated
+// Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
+// an INNER JOIN, so the parent rows are never multiplied.
+func TestActionSnapshotHasRelationsEmitExists(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("ActionActionLog", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionSnapshots.NameExpr()),
+			SelectWhere.ActionSnapshots.R.HasActionActionLog(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasActionActionLog: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasActionActionLog: expected EXISTS in query, got: %s", sql)
+		}
+	})
+}
+
 // TestActiveBuffHasRelationsEmitExists verifies that every generated
 // Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
 // an INNER JOIN, so the parent rows are never multiplied.
@@ -39,6 +130,20 @@ func TestActiveBuffHasRelationsEmitExists(t *testing.T) {
 // an INNER JOIN, so the parent rows are never multiplied.
 func TestCharacterHasRelationsEmitExists(t *testing.T) {
 	ctx := context.Background()
+
+	t.Run("ActionLogs", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(Characters.NameExpr()),
+			SelectWhere.Characters.R.HasActionLogs(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasActionLogs: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasActionLogs: expected EXISTS in query, got: %s", sql)
+		}
+	})
 
 	t.Run("ActiveBuffs", func(t *testing.T) {
 		q := sqlite.Select(

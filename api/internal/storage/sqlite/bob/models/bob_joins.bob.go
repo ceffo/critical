@@ -29,12 +29,15 @@ func (j joinSet[Q]) AliasedAs(alias string) joinSet[Q] {
 }
 
 type joins[Q dialect.Joinable] struct {
-	ActiveBuffs joinSet[activeBuffJoins[Q]]
-	Characters  joinSet[characterJoins[Q]]
-	HPEvents    joinSet[hpEventJoins[Q]]
-	RoundStates joinSet[roundStateJoins[Q]]
-	SpellSlots  joinSet[spellSlotJoins[Q]]
-	XPEvents    joinSet[xpEventJoins[Q]]
+	ActionCorrections joinSet[actionCorrectionJoins[Q]]
+	ActionLogs        joinSet[actionLogJoins[Q]]
+	ActionSnapshots   joinSet[actionSnapshotJoins[Q]]
+	ActiveBuffs       joinSet[activeBuffJoins[Q]]
+	Characters        joinSet[characterJoins[Q]]
+	HPEvents          joinSet[hpEventJoins[Q]]
+	RoundStates       joinSet[roundStateJoins[Q]]
+	SpellSlots        joinSet[spellSlotJoins[Q]]
+	XPEvents          joinSet[xpEventJoins[Q]]
 }
 
 func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q](c C, f F) joinSet[Q] {
@@ -47,12 +50,15 @@ func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q
 
 func getJoins[Q dialect.Joinable]() joins[Q] {
 	return joins[Q]{
-		ActiveBuffs: buildJoinSet[activeBuffJoins[Q]](ActiveBuffs.Columns, buildActiveBuffJoins),
-		Characters:  buildJoinSet[characterJoins[Q]](Characters.Columns, buildCharacterJoins),
-		HPEvents:    buildJoinSet[hpEventJoins[Q]](HPEvents.Columns, buildHPEventJoins),
-		RoundStates: buildJoinSet[roundStateJoins[Q]](RoundStates.Columns, buildRoundStateJoins),
-		SpellSlots:  buildJoinSet[spellSlotJoins[Q]](SpellSlots.Columns, buildSpellSlotJoins),
-		XPEvents:    buildJoinSet[xpEventJoins[Q]](XPEvents.Columns, buildXPEventJoins),
+		ActionCorrections: buildJoinSet[actionCorrectionJoins[Q]](ActionCorrections.Columns, buildActionCorrectionJoins),
+		ActionLogs:        buildJoinSet[actionLogJoins[Q]](ActionLogs.Columns, buildActionLogJoins),
+		ActionSnapshots:   buildJoinSet[actionSnapshotJoins[Q]](ActionSnapshots.Columns, buildActionSnapshotJoins),
+		ActiveBuffs:       buildJoinSet[activeBuffJoins[Q]](ActiveBuffs.Columns, buildActiveBuffJoins),
+		Characters:        buildJoinSet[characterJoins[Q]](Characters.Columns, buildCharacterJoins),
+		HPEvents:          buildJoinSet[hpEventJoins[Q]](HPEvents.Columns, buildHPEventJoins),
+		RoundStates:       buildJoinSet[roundStateJoins[Q]](RoundStates.Columns, buildRoundStateJoins),
+		SpellSlots:        buildJoinSet[spellSlotJoins[Q]](SpellSlots.Columns, buildSpellSlotJoins),
+		XPEvents:          buildJoinSet[xpEventJoins[Q]](XPEvents.Columns, buildXPEventJoins),
 	}
 }
 

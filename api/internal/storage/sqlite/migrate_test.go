@@ -67,5 +67,7 @@ func TestMigrate006_DedupesStateTables(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.execStatements(ctx, "006_state_unique.sql", string(content)))
 	assert.Equal(t, 8, count(t, db, `SELECT round_number FROM round_state WHERE character_id = 1`))
-	assert.Equal(t, 6, count(t, db, `SELECT COUNT(*) FROM schema_migrations`))
+	all, err := migrationFiles.ReadDir("migrations")
+	require.NoError(t, err)
+	assert.Equal(t, len(all), count(t, db, `SELECT COUNT(*) FROM schema_migrations`))
 }

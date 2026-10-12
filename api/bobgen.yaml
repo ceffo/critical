@@ -5,6 +5,7 @@ sqlite:
     - internal/adapters/characterdal/queries
     - internal/adapters/buffdal/queries
     - internal/adapters/spelldal/queries
+    - internal/adapters/actionlogdal/queries
 
 plugins:
   models:

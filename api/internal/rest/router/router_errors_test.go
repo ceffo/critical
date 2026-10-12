@@ -12,6 +12,8 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	logmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	charmocks "github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -30,6 +32,7 @@ type mocksSet struct {
 	buffs *buffmocks.MockSVC
 	spell *spellmocks.MockSVC
 	cmb   *combatmocks.MockSVC
+	log   *logmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -40,10 +43,11 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		buffs: buffmocks.NewMockSVC(t),
 		spell: spellmocks.NewMockSVC(t),
 		cmb:   combatmocks.NewMockSVC(t),
+		log:   logmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
-		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Combat: m.cmb,
+		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Combat: m.cmb, Log: m.log,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m
@@ -78,6 +82,15 @@ var endpoints = []endpoint{
 	}},
 	{"POST hp/undo", "POST", "/api/hp/undo", "", func(m *mocksSet, err error) {
 		m.hp.On("UndoLast", anyArgs(2)...).Return(nil, err)
+	}},
+	{"GET log", "GET", "/api/log?limit=10", "", func(m *mocksSet, err error) {
+		m.log.On("List", anyArgs(3)...).Return(nil, err)
+	}},
+	{"POST log/{id}/amend", "POST", "/api/log/4/amend", `{"delta":-3,"source":"x"}`, func(m *mocksSet, err error) {
+		m.log.On("Amend", anyArgs(4)...).Return(nil, err)
+	}},
+	{"POST log/{id}/void", "POST", "/api/log/4/void", "", func(m *mocksSet, err error) {
+		m.log.On("Void", anyArgs(3)...).Return(nil, err)
 	}},
 	{"GET buffs", "GET", "/api/buffs", "", func(m *mocksSet, err error) {
 		m.buffs.On("ListActive", anyArgs(2)...).Return(nil, err)
@@ -166,6 +179,10 @@ func TestSpecialSentinels(t *testing.T) {
 		{"weapon not found", "POST roll/attack", fmt.Errorf("%w: sword", combatsvc.ErrWeaponNotFound), 404, `{"error":"weapon not found"}`},
 		{"slot already used", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed), 409, `{"error":"slot already used: 2"}`},
 		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"error":"invalid slot index: 2"}`},
+		{"void blocked", "POST log/{id}/void", fmt.Errorf("%w: entry #9 changed the same state later, void it first", actionlogsvc.ErrVoidBlocked), 409, `{"error":"void blocked: entry #9 changed the same state later, void it first"}`},
+		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
+		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
+		{"amend not hp", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #4"}`},
 		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"error":"ctx: slot already used: 2"}`},
 	}
 	for _, c := range cases {
@@ -196,6 +213,12 @@ func TestRequestParsingErrors(t *testing.T) {
 		{"buffs missing name", "POST", "/api/buffs", `{}`, "name is required"},
 		{"attack bad json", "POST", "/api/roll/attack", "nope", "invalid request body"},
 		{"save bad json", "POST", "/api/roll/save", "nope", "invalid request body"},
+		{"log bad limit", "GET", "/api/log?limit=abc", "", "limit must be a positive integer"},
+		{"log zero limit", "GET", "/api/log?limit=0", "", "limit must be a positive integer"},
+		{"amend bad id", "POST", "/api/log/abc/amend", `{"delta":1}`, "invalid log entry id"},
+		{"amend bad json", "POST", "/api/log/4/amend", "{", "invalid request body"},
+		{"amend missing delta", "POST", "/api/log/4/amend", `{"source":"x"}`, "delta is required"},
+		{"void bad id", "POST", "/api/log/0/void", "", "invalid log entry id"},
 		{"cast non-numeric", "POST", "/api/spells/abc/cast", "", "invalid slot index"},
 	}
 	for _, c := range cases {

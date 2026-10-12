@@ -66,7 +66,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	buffDAL := buffdal.New(db, db)
 	spellDAL := spelldal.New(db)
 	dice := diceadpt.New()
-	weapons := weaponsadpt.New()
+	weapons, err := weaponsadpt.New(cfg.SeedsDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	charID, err := characterDAL.FirstID(ctx)
 	if err != nil {

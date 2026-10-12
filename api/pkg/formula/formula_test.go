@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ceffo/critical/api/pkg/formula"
+	"github.com/ceffo/critical/api/pkg/must"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,7 +57,7 @@ func TestEval(t *testing.T) {
 }
 
 func TestMinMaxHelpers(t *testing.T) {
-	f := formula.MustParse("(min(level,10))d6")
+	f := must.Do(formula.Parse("(min(level,10))d6"))
 	lo, err := f.Min(20)
 	require.NoError(t, err)
 	hi, err := f.Max(20)

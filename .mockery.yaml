@@ -25,6 +25,12 @@ packages:
       SVC:
       DAL:
       Reader:
+  github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc:
+    config:
+      dir: "internal/domain/service/spelleffectsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Catalog:
   github.com/ceffo/critical/api/internal/domain/service/charactersvc:
     config:
       dir: "internal/domain/service/charactersvc/mocks"

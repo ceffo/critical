@@ -69,15 +69,6 @@ func Parse(src string) (*Formula, error) {
 	return f, nil
 }
 
-// MustParse is Parse for formulas known to be valid (tests, constants).
-func MustParse(src string) *Formula {
-	f, err := Parse(src)
-	if err != nil {
-		panic(err)
-	}
-	return f
-}
-
 // Eval evaluates the formula for a caster level, rolling dice with roll.
 func (f *Formula) Eval(level int, roll Roller) (int, error) {
 	return f.root.eval(level, roll)

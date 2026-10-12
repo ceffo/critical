@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
+	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/adapters/weaponsadpt"
@@ -80,6 +81,14 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// The spell-effects seed is not consumed yet (qki.8 buffs, qki.10 casting
 	// will take it); loading it now makes a malformed formula a startup error.
 	if _, err := spelleffectsadpt.New(cfg.SeedsDir); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	// The PHB rule tables are not consumed yet (qki.7 attacks, qki.9 spell
+	// preparation will take them); loading them now makes a gap in a table a
+	// startup error.
+	if _, err := ruletablesadpt.New(cfg.SeedsDir); err != nil {
 		_ = db.Close()
 		return nil, err
 	}

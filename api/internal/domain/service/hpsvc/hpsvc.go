@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/ceffo/critical/api/internal/domain"
 )
 
@@ -37,7 +38,10 @@ type service struct {
 
 // New constructs the service from environment-driven config.
 func New(dal DAL) (SVC, error) {
-	cfg := DefaultConfig()
+	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, fmt.Errorf("hpsvc: parse env: %w", err)
+	}
 	return NewWithConfig(cfg, dal)
 }
 

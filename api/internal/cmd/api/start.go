@@ -6,12 +6,14 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/rest/router"
 	"github.com/ceffo/critical/api/internal/rest/server"
@@ -20,31 +22,41 @@ import (
 // Config is the binary-level config — derived from environment variables in
 // Start. Each value has a sensible default so the app boots out of the box.
 type Config struct {
-	DSN      string
-	SeedsDir string
-	Addr     string
+	DSN      string `env:"CRITICAL_DSN" envDefault:"critical.db"`
+	SeedsDir string `env:"CRITICAL_SEEDS_DIR" envDefault:"seeds"`
+	Addr     string `env:"CRITICAL_ADDR" envDefault:":8080"`
 }
 
-// loadConfig reads env with defaults.
-func loadConfig() Config {
-	cfg := Config{DSN: "critical.db", SeedsDir: "seeds", Addr: ":8080"}
-	if v := os.Getenv("CRITICAL_DSN"); v != "" {
-		cfg.DSN = v
+// Validate rejects empty required fields (e.g. CRITICAL_DSN set to "").
+func (c Config) Validate() error {
+	switch {
+	case c.DSN == "":
+		return errors.New("CRITICAL_DSN must not be empty")
+	case c.SeedsDir == "":
+		return errors.New("CRITICAL_SEEDS_DIR must not be empty")
+	case c.Addr == "":
+		return errors.New("CRITICAL_ADDR must not be empty")
 	}
-	if v := os.Getenv("CRITICAL_SEEDS_DIR"); v != "" {
-		cfg.SeedsDir = v
+	return nil
+}
+
+// loadConfig parses env (defaults come from envDefault tags) and validates.
+func loadConfig() (Config, error) {
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		return Config{}, fmt.Errorf("parse env: %w", err)
 	}
-	if v := os.Getenv("CRITICAL_ADDR"); v != "" {
-		cfg.Addr = v
-	}
-	return cfg
+	return cfg, cfg.Validate()
 }
 
 // Start boots the api: load env, build composition root, build router, run
 // HTTP server, and shut everything down on SIGINT/SIGTERM. Returns the first
 // non-shutdown error.
 func Start() error {
-	cfg := loadConfig()
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
 

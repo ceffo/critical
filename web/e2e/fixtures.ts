@@ -1,6 +1,6 @@
 import { test as base, expect, type Page } from "@playwright/test";
 import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -52,13 +52,39 @@ export interface Stack {
 }
 
 /**
+ * Copy seeds/ into dir with fields of character.json replaced, for tests that need a specific
+ * sheet (e.g. STR 12 so a Strength buff is what reaches 18). Returns the seeds dir to use.
+ */
+async function seedsWith(
+  dir: string,
+  character: Record<string, unknown>,
+): Promise<string> {
+  if (Object.keys(character).length === 0) return seedsDir;
+  const out = path.join(dir, "seeds");
+  await cp(seedsDir, out, { recursive: true });
+  const file = path.join(out, "character.json");
+  const sheet = JSON.parse(await readFile(file, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  await writeFile(file, JSON.stringify({ ...sheet, ...character }));
+  return out;
+}
+
+export interface StackOptions {
+  /** Fields overriding seeds/character.json for this test, e.g. `test.use({ character: { str: 12 } })`. */
+  character: Record<string, unknown>;
+}
+
+/**
  * A throwaway stack: Go API on a free port with a fresh temp SQLite DB seeded
  * from the repo's real seeds/, plus a Vite dev server on a free port proxying
  * /api to that API. Never touches .dev/ or fixed ports.
  */
-export const test = base.extend<{ stack: Stack }>({
-  // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructuring pattern
-  stack: async ({}, provide) => {
+export const test = base.extend<{ stack: Stack } & StackOptions>({
+  character: [{}, { option: true }],
+
+  stack: async ({ character }, provide) => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "critical-e2e-"));
     const apiPort = await freePort();
     const apiUrl = `http://127.0.0.1:${apiPort}`;
@@ -67,7 +93,7 @@ export const test = base.extend<{ stack: Stack }>({
       env: {
         ...process.env,
         CRITICAL_DSN: path.join(tmp, "critical.db"),
-        CRITICAL_SEEDS_DIR: seedsDir,
+        CRITICAL_SEEDS_DIR: await seedsWith(tmp, character),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,
       },
       stdio: ["ignore", "pipe", "pipe"],

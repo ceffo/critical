@@ -1,0 +1,80 @@
+package composition_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func slotIDs(t *testing.T, bs *composition.BackingServices) []string {
+	t.Helper()
+	slots, err := bs.Spells.GetSlots(context.Background(), bs.CharacterID)
+	require.NoError(t, err)
+	ids := []string{}
+	for _, s := range slots {
+		ids = append(ids, s.SpellID)
+	}
+	return ids
+}
+
+func TestPrepare_RealStack_LimitsAreEnforcedAtLevel15(t *testing.T) {
+	bs := boot(t)
+	ctx := context.Background()
+
+	_, err := bs.Prep.Prepare(ctx, bs.CharacterID, []string{"alarm", "burning_hands", "enlarge", "identify"})
+	require.ErrorIs(t, err, prepsvc.ErrOverLimit, "4 level-1 spells at level 15")
+
+	_, err = bs.Prep.Prepare(ctx, bs.CharacterID, []string{"alarm", "burning_hands", "enlarge"})
+	require.NoError(t, err, "3 level-1 spells")
+
+	_, err = bs.Prep.Prepare(ctx, bs.CharacterID, []string{"magic_jar"})
+	require.ErrorIs(t, err, prepsvc.ErrNotInSpellbook)
+	assert.Equal(t, []string{"alarm", "burning_hands", "enlarge"}, slotIDs(t, bs), "a refused call changes nothing")
+}
+
+func TestPrepare_RealStack_LongRestKeepsPreparationAndResetsUsed(t *testing.T) {
+	bs := boot(t)
+	ctx := context.Background()
+	_, err := bs.Prep.Prepare(ctx, bs.CharacterID, []string{"mirror_image", "mirror_image", "fireball"})
+	require.NoError(t, err)
+	_, err = bs.Spells.Cast(ctx, bs.CharacterID, 0)
+	require.NoError(t, err)
+	require.Equal(t, 1, usedSlots(t, bs))
+
+	res, err := bs.Rest.LongRest(ctx, bs.CharacterID)
+	require.NoError(t, err)
+
+	assert.Equal(t, 0, usedSlots(t, bs))
+	assert.Equal(t, []string{"mirror_image", "mirror_image", "fireball"}, slotIDs(t, bs))
+	assert.Len(t, res.Slots, 3)
+}
+
+// The snapshot key must have a Restorer registered in the composition root,
+// otherwise voiding a preparation fails with "no restorer registered".
+func TestPrepare_RealStack_VoidRestoresThePreviousPreparation(t *testing.T) {
+	bs := boot(t)
+	ctx := context.Background()
+	_, err := bs.Prep.Prepare(ctx, bs.CharacterID, []string{"alarm"})
+	require.NoError(t, err)
+	_, err = bs.Prep.Prepare(ctx, bs.CharacterID, []string{"fireball", "haste"})
+	require.NoError(t, err)
+
+	entries, err := bs.Log.ActiveEntries(ctx, bs.CharacterID, actionlog.KindSpellPrep, 10)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, "Prepared: Fireball, Haste", entries[0].Summary) // newest first
+
+	_, err = bs.Log.Void(ctx, bs.CharacterID, entries[0].ID)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"alarm"}, slotIDs(t, bs))
+
+	// The older entry changed the same state before: now it can be voided too.
+	_, err = bs.Log.Void(ctx, bs.CharacterID, entries[1].ID)
+	require.NoError(t, err)
+	assert.Len(t, slotIDs(t, bs), 2, "back to the two slots the test booted with")
+}

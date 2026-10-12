@@ -78,6 +78,7 @@ func Search(svc spellSvc) render.HandlerFunc {
 // SpellSlotDTO matches the previous wire shape.
 type SpellSlotDTO struct {
 	Level             int    `json:"level"`
+	PreparedSpellID   string `json:"prepared_spell_id"`
 	PreparedSpellName string `json:"prepared_spell_name"`
 	Used              bool   `json:"used"`
 }
@@ -102,7 +103,7 @@ type SpellDTO struct {
 func SlotsToDTO(in []spellsvc.SpellSlot) []SpellSlotDTO {
 	out := make([]SpellSlotDTO, 0, len(in))
 	for _, s := range in {
-		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellName: s.PreparedSpellName, Used: s.Used})
+		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used})
 	}
 	return out
 }

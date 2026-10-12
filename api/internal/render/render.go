@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
@@ -104,6 +105,8 @@ var mappings = []mapping{
 	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict},
 	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict},
 	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest},
+	{target: prepsvc.ErrNotInSpellbook, status: http.StatusBadRequest},
+	{target: prepsvc.ErrOverLimit, status: http.StatusConflict},
 	{target: actionlogsvc.ErrAlreadyVoided, status: http.StatusConflict},
 	{target: actionlogsvc.ErrVoidBlocked, status: http.StatusConflict},
 	{target: actionlogsvc.ErrNotAmendable, status: http.StatusBadRequest},

@@ -82,8 +82,11 @@ func seedSpells(t *testing.T, db *sqlite.DB) {
 		name, class string
 		level       int
 	}{
-		{"Sleep", "bard", 1}, {"Charm Person", "bard", 1}, {"Invisibility", "bard", 2},
-		{"Sleep", "wizard", 1}, {"Fireball", "wizard", 3},
+		{"Sleep", "bard", 1},
+		{"Charm Person", "bard", 1},
+		{"Invisibility", "bard", 2},
+		{"Sleep", "wizard", 1},
+		{"Fireball", "wizard", 3},
 	}
 	for _, r := range rows {
 		_, err := db.ExecContext(context.Background(),

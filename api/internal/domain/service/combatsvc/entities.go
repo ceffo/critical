@@ -28,11 +28,28 @@ type RollResult struct {
 	DamageBreakdown string
 }
 
-// Weapon is the catalog entry consumed by ResolveAttack.
+// WeaponKind separates melee weapons from missile weapons.
+type WeaponKind string
+
+// Weapon kinds as stored and sent on the wire.
+const (
+	WeaponMelee   WeaponKind = "melee"
+	WeaponMissile WeaponKind = "missile"
+)
+
+// Weapon is the catalog entry consumed by ResolveAttack. ResolveAttack only
+// reads BaseDamage today; the magic and size fields are carried for the
+// real-weapon attack resolution that follows.
 type Weapon struct {
-	ID         string
-	Name       string
-	BaseDamage string // e.g. "1d8"
+	ID          string
+	Name        string
+	BaseDamage  string // damage dice vs small/medium targets, e.g. "1d8"
+	DamageLarge string // damage dice vs large targets, e.g. "1d12"
+	MagicToHit  int
+	MagicDamage int
+	Kind        WeaponKind
+	TwoHanded   bool
+	AmmoKind    string // ammo item kind a missile weapon fires, e.g. "arrow"
 }
 
 // SaveCategory enumerates AD&D saving-throw categories.

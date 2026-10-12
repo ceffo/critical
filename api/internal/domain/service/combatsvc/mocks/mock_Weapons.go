@@ -3,7 +3,10 @@
 package mocks
 
 import (
+	context "context"
+
 	combatsvc "github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -20,29 +23,29 @@ func (_m *MockWeapons) EXPECT() *MockWeapons_Expecter {
 	return &MockWeapons_Expecter{mock: &_m.Mock}
 }
 
-// Get provides a mock function with given fields: id
-func (_m *MockWeapons) Get(id string) (combatsvc.Weapon, bool) {
-	ret := _m.Called(id)
+// Get provides a mock function with given fields: ctx, id
+func (_m *MockWeapons) Get(ctx context.Context, id string) (combatsvc.Weapon, error) {
+	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
 	}
 
 	var r0 combatsvc.Weapon
-	var r1 bool
-	if rf, ok := ret.Get(0).(func(string) (combatsvc.Weapon, bool)); ok {
-		return rf(id)
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (combatsvc.Weapon, error)); ok {
+		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(string) combatsvc.Weapon); ok {
-		r0 = rf(id)
+	if rf, ok := ret.Get(0).(func(context.Context, string) combatsvc.Weapon); ok {
+		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Get(0).(combatsvc.Weapon)
 	}
 
-	if rf, ok := ret.Get(1).(func(string) bool); ok {
-		r1 = rf(id)
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, id)
 	} else {
-		r1 = ret.Get(1).(bool)
+		r1 = ret.Error(1)
 	}
 
 	return r0, r1
@@ -54,24 +57,83 @@ type MockWeapons_Get_Call struct {
 }
 
 // Get is a helper method to define mock.On call
+//   - ctx context.Context
 //   - id string
-func (_e *MockWeapons_Expecter) Get(id interface{}) *MockWeapons_Get_Call {
-	return &MockWeapons_Get_Call{Call: _e.mock.On("Get", id)}
+func (_e *MockWeapons_Expecter) Get(ctx interface{}, id interface{}) *MockWeapons_Get_Call {
+	return &MockWeapons_Get_Call{Call: _e.mock.On("Get", ctx, id)}
 }
 
-func (_c *MockWeapons_Get_Call) Run(run func(id string)) *MockWeapons_Get_Call {
+func (_c *MockWeapons_Get_Call) Run(run func(ctx context.Context, id string)) *MockWeapons_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *MockWeapons_Get_Call) Return(_a0 combatsvc.Weapon, _a1 bool) *MockWeapons_Get_Call {
+func (_c *MockWeapons_Get_Call) Return(_a0 combatsvc.Weapon, _a1 error) *MockWeapons_Get_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockWeapons_Get_Call) RunAndReturn(run func(string) (combatsvc.Weapon, bool)) *MockWeapons_Get_Call {
+func (_c *MockWeapons_Get_Call) RunAndReturn(run func(context.Context, string) (combatsvc.Weapon, error)) *MockWeapons_Get_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// List provides a mock function with given fields: ctx
+func (_m *MockWeapons) List(ctx context.Context) ([]combatsvc.Weapon, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 []combatsvc.Weapon
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]combatsvc.Weapon, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []combatsvc.Weapon); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]combatsvc.Weapon)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockWeapons_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type MockWeapons_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockWeapons_Expecter) List(ctx interface{}) *MockWeapons_List_Call {
+	return &MockWeapons_List_Call{Call: _e.mock.On("List", ctx)}
+}
+
+func (_c *MockWeapons_List_Call) Run(run func(ctx context.Context)) *MockWeapons_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockWeapons_List_Call) Return(_a0 []combatsvc.Weapon, _a1 error) *MockWeapons_List_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockWeapons_List_Call) RunAndReturn(run func(context.Context) ([]combatsvc.Weapon, error)) *MockWeapons_List_Call {
 	_c.Call.Return(run)
 	return _c
 }

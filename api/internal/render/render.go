@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
@@ -99,6 +100,8 @@ var mappings = []mapping{
 	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound},
 	{target: domain.ErrNotFound, status: http.StatusNotFound},
 	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, message: fixed("weapon not found")},
+	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound},
+	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict},
 	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict},
 	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest},
 	{target: actionlogsvc.ErrAlreadyVoided, status: http.StatusConflict},

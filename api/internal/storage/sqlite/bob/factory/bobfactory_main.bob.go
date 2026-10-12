@@ -19,9 +19,11 @@ type Factory struct {
 	baseActiveBuffMods       ActiveBuffModSlice
 	baseCharacterMods        CharacterModSlice
 	baseHPEventMods          HPEventModSlice
+	baseItemMods             ItemModSlice
 	baseRoundStateMods       RoundStateModSlice
 	baseSpellSlotMods        SpellSlotModSlice
 	baseSpellMods            SpellModSlice
+	baseWeaponMods           WeaponModSlice
 	baseXPEventMods          XPEventModSlice
 }
 
@@ -334,6 +336,45 @@ func (f *Factory) fromExistingHPEvent(ctx context.Context, m *models.HPEvent) *H
 	return o
 }
 
+func (f *Factory) NewItem(mods ...ItemMod) *ItemTemplate {
+	return f.NewItemWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewItemWithContext(ctx context.Context, mods ...ItemMod) *ItemTemplate {
+	o := &ItemTemplate{f: f}
+
+	if f != nil {
+		f.baseItemMods.Apply(ctx, o)
+	}
+
+	ItemModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingItem(ctx context.Context, m *models.Item) *ItemTemplate {
+	return f.fromExistingItem(ctx, m)
+}
+
+func (f *Factory) fromExistingItem(ctx context.Context, m *models.Item) *ItemTemplate {
+	o := &ItemTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() string { return m.ID }
+	o.Position = func() int64 { return m.Position }
+	o.Name = func() string { return m.Name }
+	o.Kind = func() string { return m.Kind }
+	o.MagicBonus = func() int64 { return m.MagicBonus }
+	o.AmmoKind = func() string { return m.AmmoKind }
+	o.Count = func() int64 { return m.Count }
+	o.MaxCount = func() int64 { return m.MaxCount }
+	o.PerDay = func() int64 { return m.PerDay }
+	o.EffectDice = func() string { return m.EffectDice }
+	o.EffectSave = func() string { return m.EffectSave }
+	o.Notes = func() string { return m.Notes }
+
+	return o
+}
+
 func (f *Factory) NewRoundState(mods ...RoundStateMod) *RoundStateTemplate {
 	return f.NewRoundStateWithContext(context.Background(), mods...)
 }
@@ -460,6 +501,43 @@ func (f *Factory) fromExistingSpell(ctx context.Context, m *models.Spell) *Spell
 	return o
 }
 
+func (f *Factory) NewWeapon(mods ...WeaponMod) *WeaponTemplate {
+	return f.NewWeaponWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewWeaponWithContext(ctx context.Context, mods ...WeaponMod) *WeaponTemplate {
+	o := &WeaponTemplate{f: f}
+
+	if f != nil {
+		f.baseWeaponMods.Apply(ctx, o)
+	}
+
+	WeaponModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingWeapon(ctx context.Context, m *models.Weapon) *WeaponTemplate {
+	return f.fromExistingWeapon(ctx, m)
+}
+
+func (f *Factory) fromExistingWeapon(ctx context.Context, m *models.Weapon) *WeaponTemplate {
+	o := &WeaponTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() string { return m.ID }
+	o.Position = func() int64 { return m.Position }
+	o.Name = func() string { return m.Name }
+	o.DamageSM = func() string { return m.DamageSM }
+	o.DamageL = func() string { return m.DamageL }
+	o.MagicToHit = func() int64 { return m.MagicToHit }
+	o.MagicDamage = func() int64 { return m.MagicDamage }
+	o.Kind = func() string { return m.Kind }
+	o.TwoHanded = func() int64 { return m.TwoHanded }
+	o.AmmoKind = func() string { return m.AmmoKind }
+
+	return o
+}
+
 func (f *Factory) NewXPEvent(mods ...XPEventMod) *XPEventTemplate {
 	return f.NewXPEventWithContext(context.Background(), mods...)
 }
@@ -553,6 +631,14 @@ func (f *Factory) AddBaseHPEventMod(mods ...HPEventMod) {
 	f.baseHPEventMods = append(f.baseHPEventMods, mods...)
 }
 
+func (f *Factory) ClearBaseItemMods() {
+	f.baseItemMods = nil
+}
+
+func (f *Factory) AddBaseItemMod(mods ...ItemMod) {
+	f.baseItemMods = append(f.baseItemMods, mods...)
+}
+
 func (f *Factory) ClearBaseRoundStateMods() {
 	f.baseRoundStateMods = nil
 }
@@ -575,6 +661,14 @@ func (f *Factory) ClearBaseSpellMods() {
 
 func (f *Factory) AddBaseSpellMod(mods ...SpellMod) {
 	f.baseSpellMods = append(f.baseSpellMods, mods...)
+}
+
+func (f *Factory) ClearBaseWeaponMods() {
+	f.baseWeaponMods = nil
+}
+
+func (f *Factory) AddBaseWeaponMod(mods ...WeaponMod) {
+	f.baseWeaponMods = append(f.baseWeaponMods, mods...)
 }
 
 func (f *Factory) ClearBaseXPEventMods() {

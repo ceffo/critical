@@ -46,14 +46,47 @@ type spellSeed struct {
 	Description  string `json:"description"`
 }
 
-// Seed loads character.json and spells.json from seedsDir if their tables are
-// empty. Missing seed files are silently ignored.
+type weaponSeed struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DamageSM    string `json:"damage_sm"`
+	DamageL     string `json:"damage_l"`
+	MagicToHit  int    `json:"magic_to_hit"`
+	MagicDamage int    `json:"magic_damage"`
+	Kind        string `json:"kind"`
+	TwoHanded   bool   `json:"two_handed"`
+	AmmoKind    string `json:"ammo_kind"`
+}
+
+type itemSeed struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Kind       string `json:"kind"`
+	MagicBonus int    `json:"magic_bonus"`
+	AmmoKind   string `json:"ammo_kind"`
+	Count      int    `json:"count"`
+	MaxCount   *int   `json:"max_count"`
+	PerDay     bool   `json:"per_day"`
+	EffectDice string `json:"effect_dice"`
+	EffectSave string `json:"effect_save"`
+	Notes      string `json:"notes"`
+}
+
+// Seed loads character.json, spells.json, weapons.json and items.json from
+// seedsDir into their tables if those are empty. Missing seed files are
+// silently ignored.
 func (d *DB) Seed(ctx context.Context, seedsDir string) error {
 	if err := d.seedCharacter(ctx, filepath.Join(filepath.Clean(seedsDir), "character.json")); err != nil {
 		return fmt.Errorf("seed character: %w", err)
 	}
 	if err := d.seedSpells(ctx, filepath.Join(filepath.Clean(seedsDir), "spells.json")); err != nil {
 		return fmt.Errorf("seed spells: %w", err)
+	}
+	if err := d.seedWeapons(ctx, filepath.Join(filepath.Clean(seedsDir), "weapons.json")); err != nil {
+		return fmt.Errorf("seed weapons: %w", err)
+	}
+	if err := d.seedItems(ctx, filepath.Join(filepath.Clean(seedsDir), "items.json")); err != nil {
+		return fmt.Errorf("seed items: %w", err)
 	}
 	return nil
 }
@@ -159,4 +192,78 @@ func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
 		}
 	}
 	return tx.Commit()
+}
+
+func (d *DB) seedWeapons(ctx context.Context, seedPath string) error {
+	var count int
+	if err := d.QueryRowContext(ctx, "SELECT COUNT(*) FROM weapons").Scan(&count); err != nil {
+		return fmt.Errorf("count weapons: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
+	data, err := os.ReadFile(filepath.Clean(seedPath))
+	if err != nil {
+		return nil
+	}
+	var weapons []weaponSeed
+	if err := json.Unmarshal(data, &weapons); err != nil {
+		return fmt.Errorf("parse weapons.json: %w", err)
+	}
+	for i, w := range weapons {
+		if w.ID == "" || w.Name == "" || w.DamageSM == "" || w.DamageL == "" {
+			return fmt.Errorf("weapons.json entry %d: id, name, damage_sm and damage_l are required", i)
+		}
+	}
+	return d.WrapTx(ctx, func(q Querier) error {
+		for i, w := range weapons {
+			if _, err := q.ExecContext(ctx, `
+				INSERT INTO weapons (id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				w.ID, i, w.Name, w.DamageSM, w.DamageL, w.MagicToHit, w.MagicDamage, w.Kind, w.TwoHanded, w.AmmoKind,
+			); err != nil {
+				return fmt.Errorf("insert weapon %q: %w", w.ID, err)
+			}
+		}
+		return nil
+	})
+}
+
+func (d *DB) seedItems(ctx context.Context, seedPath string) error {
+	var count int
+	if err := d.QueryRowContext(ctx, "SELECT COUNT(*) FROM items").Scan(&count); err != nil {
+		return fmt.Errorf("count items: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
+	data, err := os.ReadFile(filepath.Clean(seedPath))
+	if err != nil {
+		return nil
+	}
+	var items []itemSeed
+	if err := json.Unmarshal(data, &items); err != nil {
+		return fmt.Errorf("parse items.json: %w", err)
+	}
+	for i, it := range items {
+		if it.ID == "" || it.Name == "" {
+			return fmt.Errorf("items.json entry %d: id and name are required", i)
+		}
+	}
+	return d.WrapTx(ctx, func(q Querier) error {
+		for i, it := range items {
+			maxCount := it.Count
+			if it.MaxCount != nil {
+				maxCount = *it.MaxCount
+			}
+			if _, err := q.ExecContext(ctx, `
+				INSERT INTO items (id, position, name, kind, magic_bonus, ammo_kind, count, max_count, per_day, effect_dice, effect_save, notes)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				it.ID, i, it.Name, it.Kind, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.PerDay, it.EffectDice, it.EffectSave, it.Notes,
+			); err != nil {
+				return fmt.Errorf("insert item %q: %w", it.ID, err)
+			}
+		}
+		return nil
+	})
 }

@@ -12,9 +12,9 @@ import (
 // with buff stacking. Outputs the same RollResult shape the previous engine
 // produced (handlers map this to JSON for the frontend).
 func (s *service) ResolveAttack(ctx context.Context, characterID int64, weaponID string, targetAC int) (*RollResult, error) {
-	weapon, ok := s.weapons.Get(weaponID)
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrWeaponNotFound, weaponID)
+	weapon, err := s.weapons.Get(ctx, weaponID)
+	if err != nil {
+		return nil, fmt.Errorf("get weapon %s: %w", weaponID, err)
 	}
 	char, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
@@ -80,4 +80,9 @@ func rollDamage(d Dice, diceStr string) int {
 		total += d.RollDie(sides)
 	}
 	return total
+}
+
+// ListWeapons returns the weapons catalog in sheet order.
+func (s *service) ListWeapons(ctx context.Context) ([]Weapon, error) {
+	return s.weapons.List(ctx)
 }

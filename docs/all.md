@@ -47,13 +47,31 @@ critical/
 - **Spell Slot**: a prepared spell instance consumable once per day; reset on long rest
 - **Vertical Slice**: one bead covers schema + Go engine + REST endpoint + React panel for one feature
 
-## Phase 1 Scope (Combat Loop)
+## Phase 1 Scope (MVP for the 2026-10-17 game)
 
-Only these features are in scope right now:
+The goal is a tool the player can use at the table on Saturday 2026-10-17, run locally on a laptop
+(`just dev`, desktop layout, no hosting). Hard cut at Saturday. The epic is `critical-qki`; items
+labelled `mvp-saturday` are the must-haves.
 
-1. HP Ledger
-2. Combat Roll Resolution (attack + crit + damage)
-3. Active Buffs + Round Counter
-4. Spell Slots
+**In for Saturday:**
 
-Do not implement Phase 2+ features (character stats display, saving throws, spell database lookup, skill checks, XP ledger, inventory) even if they seem related.
+1. Real character data: the campaign Google Sheet is the source of truth (level 15 Bard, HP 85,
+   THAC0 13, STR 12), plus the PHB Strength / Dexterity / Bard spell tables as seed data
+2. HP Ledger and Combat Roll Resolution (attack + crit + damage) with real weapons, ammo by arrow
+   type, and the full AD&D 2.5 modifiers (STR, DEX, buffs); no special natural 1 / natural 20
+3. Active Buffs + Round Counter, including charge buffs and effective STR (Power Gem effects apply
+   only at effective STR 18, usually via Strength spells cast by others)
+4. Spells with effects (Wizard-list effects extracted into a seed) and spells received from the party
+5. Daily spell preparation from the spellbook within the PHB Bard limits
+6. One append-only action log (also the combat log) with before/after snapshots; any action can be
+   amended or voided, audited
+7. Weapons and items in DB tables seeded from JSON; charged items and consumables
+8. i18n: en/fr string keys for the UI and spell names (spell descriptions stay English)
+9. A round-centric dashboard; Playwright e2e harness behind `just e2e`
+
+**After Saturday (not to be built now):** the real crit multiplier table (house crit stays x2 as a
+placeholder), editing weapons/items in the app, Gaia fire/lightning protections, Power Gem weapon
+forms, hosting/deployment (`critical-8g1`), other devices/layouts, multiple characters, XP ledger,
+skill checks.
+
+Do not implement anything from the "after" list even if it seems related.

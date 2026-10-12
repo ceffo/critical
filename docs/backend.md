@@ -153,6 +153,24 @@ if count == 0 {
 }
 ```
 
+## Rule-table seeds
+
+`seeds/rule_tables.json` holds the AD&D 2e Player's Handbook lookup tables: Table 1 (Strength: hit and
+damage adjustments, including 18/01-18/00), Table 2 (Dexterity: reaction, missile attack and defensive
+adjustments) and Table 32 (Bard spells per day by level 1-20). It is not loaded into SQLite: the
+`ruletablesadpt` adapter parses it at startup (a gap or overlap in a table is a startup error) into
+`ruletablesvc.Tables`, which implements `ruletablesvc.Lookup`:
+`StrengthMods(str, exceptional) (hit, dmg)`, `DexMods(dex) (missile, ac)` and
+`BardSpellsPerDay(level) map[spellLevel]count`. `exceptional` is the 18/xx percentile (1-99, 100 for
+18/00). The defensive adjustment is added to AC as printed (-3 improves AC by 3). The tests check
+values against the PHB pages, not against the seed.
+
+## Seeding the character
+
+`seeds/character.json` (the campaign Bard) only loads into an empty `characters` table. To pick up
+an edited seed in the dev database: stop `just dev`, run `just dev-reset` (deletes `.dev/critical.db`),
+and start `just dev` again. This discards all dev state (HP ledger, buffs, action log).
+
 ## Testing Conventions
 
 - Use table-driven tests

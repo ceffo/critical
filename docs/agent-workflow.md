@@ -21,6 +21,10 @@ Domain vocabulary and phase scope live in `docs/all.md`.
 - Narrow checks while iterating: `just vet-api`, `just lint-api`, `just test-api`, `just lint-web`,
   `just typecheck-web`, `just build-api`, `just build-web`; `go test -run X ./path` from `api/` for
   a single test.
+- UI items: add or extend Playwright specs (`web/e2e/`) for each UI acceptance flow and run
+  `just e2e` green (separate from `just validate`, which only lints/typechecks the e2e TS files).
+  List the screenshot paths (`web/e2e-results/screens/<spec>/<name>.png`) in the report. First run
+  on a machine: `just e2e-install` (Playwright Chromium).
 - Use `just` recipes rather than bare `go` / `golangci-lint` / `npm` (except the single-test case).
 
 ## Worktree setup
@@ -39,6 +43,11 @@ Domain vocabulary and phase scope live in `docs/all.md`.
 - Backend alone, throwaway data: `just build-api`, then run `bin/critical-srv` with
   `CRITICAL_DSN`, `CRITICAL_SEEDS_DIR` and `CRITICAL_ADDR` pointing at the scratchpad and a free
   port (never the user's data). Exercise endpoints with `curl`.
+- UI: `just e2e [spec args]` builds the API and runs the Playwright suite headlessly (Chromium,
+  1440x900). Every test gets its own API + Vite on free ports with a fresh temp DB and the real
+  `seeds/`, so parallel worktrees don't collide. Artifacts, gitignored, in `web/e2e-results/`:
+  `screens/<spec>/<name>.png` (screenshots), `artifacts/` (trace.zip on failure), `report/` (HTML;
+  `cd web && npx playwright show-report e2e-results/report`).
 - Type check and build are covered by `just validate` and don't prove a panel looks right.
 
 ## Generated code
@@ -116,7 +125,8 @@ Severity examples: critical = wrong game math in a main flow, ledger/state corru
 migration on existing data; high = game logic in the frontend; medium = architecture-layer
 violation.
 
-Visual review reference: `docs/frontend.md` (dashboard layout, display conventions, shadcn/ui).
+Visual review uses the e2e screenshots (`web/e2e-results/screens/`, produced by `just e2e`) instead
+of running the app by hand. Reference: `docs/frontend.md` (dashboard layout, display conventions, shadcn/ui).
 
 ## Model selection
 

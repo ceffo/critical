@@ -26,3 +26,9 @@ web/dist/
 
 # Local dev state (just dev)
 .dev/
+
+# Playwright (just e2e)
+web/e2e-results/
+web/playwright-report/
+web/test-results/
+web/blob-report/

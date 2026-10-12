@@ -5,9 +5,8 @@ import * as api from "../api/spells";
 interface SpellStore {
   slots: SpellSlot[];
   loading: boolean;
-  error: string | null;
-
   fetchSlots: () => Promise<void>;
+  /** Mutations throw on failure; call them through useTableStore.run to surface errors. */
   castSpell: (index: number) => Promise<void>;
   resetSlots: () => Promise<void>;
 }
@@ -15,35 +14,18 @@ interface SpellStore {
 export const useSpellStore = create<SpellStore>((set) => ({
   slots: [],
   loading: false,
-  error: null,
-
   fetchSlots: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true });
     try {
-      const slots = await api.fetchSpellSlots();
-      set({ slots, loading: false });
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false });
+      set({ slots: (await api.fetchSpellSlots()) ?? [] });
+    } finally {
+      set({ loading: false });
     }
   },
-
-  castSpell: async (index: number) => {
-    set({ loading: true, error: null });
-    try {
-      const slots = await api.castSpell(index);
-      set({ slots, loading: false });
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false });
-    }
+  castSpell: async (index) => {
+    set({ slots: (await api.castSpell(index)) ?? [] });
   },
-
   resetSlots: async () => {
-    set({ loading: true, error: null });
-    try {
-      const slots = await api.resetSpellSlots();
-      set({ slots, loading: false });
-    } catch (err) {
-      set({ error: (err as Error).message, loading: false });
-    }
+    set({ slots: (await api.resetSpellSlots()) ?? [] });
   },
 }));

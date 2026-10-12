@@ -22,3 +22,13 @@ export interface RollResult {
   totalDamage: number;
   damageBreakdown: string;
 }
+
+/** Saving throw categories accepted by POST /api/roll/save. */
+export const SAVE_CATEGORIES = [
+  "para_poison",
+  "rod_staff_wand",
+  "petri_poly",
+  "breath",
+  "spell",
+] as const;
+export type SaveCategory = (typeof SAVE_CATEGORIES)[number];

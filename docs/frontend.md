@@ -18,37 +18,48 @@ web/
     api/              ← typed fetch wrappers (hp.ts, combat.ts, buffs.ts, spells.ts)
     components/
       ui/             ← shadcn/ui primitives (Button, Card, Badge, etc.)
-      panels/
-        LeftPanel.tsx     ← HP bar + active buffs (always visible)
-        CenterPanel.tsx   ← switchable work area (spells / combat / lookup)
-        RightPanel.tsx    ← round counter + recent events
+      dashboard/      ← Header, HpBar, RoundControl, BuffStrip, ResultCard, QuickHp, CombatLog, Notices
+      actions/        ← ActionArea tabs and one panel per tab
     stores/           ← Zustand stores (hp.ts, combat.ts, buffs.ts, spells.ts)
     types/            ← TypeScript types mirroring Go response structs
-    App.tsx           ← root layout, three-panel grid
+    App.tsx           ← root layout (header + round screen grid)
 ```
 
 ## Dashboard Layout
 
-The app is a **persistent three-panel dashboard**. Nothing is hidden behind tabs.
+One screen organised around a combat round (laptop, 1440x900): see state, act, see the result,
+fix mistakes, advance the round. `App.tsx` composes it; nothing is behind a modal.
 
-```
-┌─────────────┬──────────────────────┬─────────────┐
-│  LEFT       │  CENTER              │  RIGHT      │
-│  (fixed)    │  (switchable)        │  (fixed)    │
-│             │                      │             │
-│  HP bar     │  Active work area:   │  Round      │
-│  Current/   │  - Spell slots       │  counter    │
-│  Max        │  - Combat rolls      │             │
-│             │  - Spell lookup      │  Recent     │
-│  Active     │  - Character stats   │  events     │
-│  buffs      │                      │  log        │
-│  list       │                      │             │
-└─────────────┴──────────────────────┴─────────────┘
+```mermaid
+flowchart TD
+  subgraph H["Header (components/dashboard/Header.tsx, always visible)"]
+    ID["Name, level, abilities, THAC0"] --- HP["HpBar: current / max"] --- RC["RoundControl: round + Next Round"]
+    BS["BuffStrip: active buffs + Add buff"]
+  end
+  subgraph M["Main grid: 1fr | 380px | 420px"]
+    AA["ActionArea tabs (components/actions/): Attack, Spells, Items, Saves, Spell Lookup"]
+    RCARD["ResultCard: full breakdown of the last roll"]
+    subgraph R["Right column"]
+      QH["QuickHp: amount + source, Apply Damage / Apply Heal, Undo last"]
+      CL["CombatLog: GET /api/log grouped by round, inline Amend (HP) / Void"]
+    end
+  end
+  AA -->|roll| RCARD
+  QH -->|POST /api/hp/event| CL
+  CL -->|amend / void| HP
+  RC -->|POST /api/round/advance| CL
 ```
 
-- Left and Right panels are **always mounted** — never conditionally render them
-- Center panel switches via a tab bar at the top of the center column
-- The dashboard grid uses Tailwind: `grid grid-cols-[280px_1fr_240px] h-screen`
+- Plug-in slots: each action tab is one panel component in `components/actions/ActionArea.tsx`
+  (`TABS`). Attack → critical-qki.7, Spells → qki.9/qki.10, Items → qki.11 (placeholder today),
+  buff editing → qki.8 (`BuffStrip`).
+- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
+  `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
+  (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).
+- The log groups entries by the round the server stamped (`lib/groupByRound.ts`); the current round
+  always has a group. Display helpers live in `lib/format.ts` (no game rules).
+- Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`) and sit in
+  `min-w-0` grid cells so they never overflow their card.
 
 ## API Consumption Pattern
 

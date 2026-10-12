@@ -7,7 +7,7 @@ import { useSpellsDbStore } from "@/stores/spells_db";
 import { spellId, spellName } from "@/i18n/spellName";
 import { Search, Loader2 } from "lucide-react";
 
-export function SpellLookupPanel() {
+export function LookupPanel() {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const { results, search, loading } = useSpellsDbStore();

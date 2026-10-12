@@ -2,7 +2,11 @@
   "app": {
     "loading": "Loading...",
     "level": "Level",
-    "thac0": "THAC0"
+    "levelValue": "Level {{level}}",
+    "thac0": "THAC0",
+    "abilities": "Ability scores",
+    "error": "Error",
+    "dismiss": "Dismiss"
   },
   "language": {
     "label": "Language",
@@ -17,46 +21,53 @@
     "wis": "WIS",
     "cha": "CHA"
   },
-  "tabs": {
-    "combat": "Combat",
-    "spells": "Spells",
-    "character": "Character",
-    "lookup": "Spell Lookup"
-  },
   "hp": {
     "title": "Hit Points",
-    "damage": "Damage",
-    "heal": "Heal",
+    "change": "HP change",
     "amount": "Amount",
     "source": "Source",
+    "sourcePlaceholder": "Orc axe, potion...",
     "applyDamage": "Apply Damage",
-    "applyHeal": "Apply Heal"
-  },
-  "buffs": {
-    "title": "Active Buffs",
-    "none": "No active buffs",
-    "charges": "{{count}}ch",
-    "rounds": "{{count}}rd",
-    "useCharge": "Use Charge",
-    "dismiss": "Dismiss",
-    "namePlaceholder": "Buff Name",
-    "typeRounds": "Rounds",
-    "typeCharges": "Charges",
-    "effectWeapon": "Wpn +N",
-    "effectSpells": "Spells xN",
-    "effectMultiplier": "Dmg xN",
-    "activate": "Activate",
-    "expired": "Expired buffs: {{names}}"
-  },
-  "events": {
-    "title": "Recent Events",
-    "undo": "Undo"
+    "applyHeal": "Apply Heal",
+    "undoLast": "Undo last HP change"
   },
   "round": {
-    "title": "Combat Round",
+    "title": "Round",
     "next": "Next Round"
   },
-  "combat": {
+  "buffs": {
+    "title": "Buffs",
+    "none": "No active buffs",
+    "charges": "{{count}} ch",
+    "rounds": "{{count}} rd",
+    "useCharge": "Use a charge of {{name}}",
+    "dismiss": "Dismiss {{name}}",
+    "add": "Add buff",
+    "name": "Buff name",
+    "kind": "Counts down by",
+    "typeRounds": "Rounds",
+    "typeCharges": "Charges",
+    "count": "Rounds or charges",
+    "effect": "Effect",
+    "effectValue": "Effect value",
+    "effectWeapon": "Weapon +N",
+    "effectSpells": "Spells ×N",
+    "effectMultiplier": "Damage ×N",
+    "activate": "Activate",
+    "cancel": "Cancel",
+    "expired": "Expired buffs: {{names}}"
+  },
+  "actions": {
+    "label": "Actions",
+    "tabs": {
+      "attack": "Attack",
+      "spells": "Spells",
+      "items": "Items",
+      "saves": "Saves",
+      "lookup": "Spell Lookup"
+    }
+  },
+  "attack": {
     "weapon": "Weapon",
     "selectWeapon": "Select weapon",
     "weapons": {
@@ -64,30 +75,15 @@
       "shortbow": "Shortbow (1d6)"
     },
     "targetAc": "Target AC",
-    "rollAttack": "Roll Attack",
-    "rolling": "Rolling...",
-    "hit": "HIT",
-    "miss": "MISS",
-    "crit": "CRIT!",
-    "totalDamage": "Total Damage",
-    "d20Roll": "D20 Roll",
-    "critRoll": "Crit Roll",
-    "attackBreakdown": "Attack Breakdown",
-    "thac0": "THAC0",
-    "targetNeed": "Target AC {{ac}} → Need {{need}}+",
-    "damageBreakdown": "Damage Breakdown",
-    "damageDetail": "Base: {{base}} | Spells: x{{spells}} | Weapon: +{{weapon}} | Multipliers: x{{mult}} | STR: +{{str}}"
+    "roll": "Roll Attack",
+    "rolling": "Rolling..."
   },
-  "character": {
-    "loading": "Loading character...",
-    "savingThrows": "Saving Throws",
-    "target": "Target: {{value}} or better",
+  "saves": {
+    "title": "Saving Throws",
+    "need": "Need {{value}}+",
     "roll": "Roll",
-    "result": "Result",
-    "passed": "Passed",
-    "failed": "Failed",
-    "margin": "Margin: {{margin}}",
-    "saves": {
+    "rollLabel": "Roll save vs {{name}}",
+    "categories": {
       "para_poison": "Paralyze/Poison",
       "rod_staff_wand": "Rod/Staff/Wand",
       "petri_poly": "Petrify/Polymorph",
@@ -95,13 +91,19 @@
       "spell": "Spells"
     }
   },
+  "items": {
+    "title": "Items",
+    "placeholder": "Charged items and consumables will be used from here."
+  },
   "spellSlots": {
     "title": "Spell Slots",
     "longRest": "Long Rest (Reset)",
     "none": "No spell slots available.",
     "level": "Level {{level}}",
+    "remaining": "{{left}} / {{total}}",
     "used": "Used",
-    "cast": "Cast"
+    "cast": "Cast",
+    "castLabel": "Cast {{name}}"
   },
   "lookup": {
     "search": "Search spells...",
@@ -112,5 +114,64 @@
     "duration": "Dur:",
     "noResults": "No spells found matching \"{{query}}\"",
     "prompt": "Type to search the spell database..."
+  },
+  "result": {
+    "title": "Last Result",
+    "empty": "Roll an attack or a save: the full breakdown shows here.",
+    "attackHeading": "{{weapon}} vs AC {{ac}}",
+    "saveHeading": "Save vs {{name}}",
+    "hit": "Hit",
+    "miss": "Miss",
+    "crit": "Critical ×{{mult}}",
+    "passed": "Passed",
+    "failed": "Failed",
+    "totalDamage": "Total damage",
+    "noDamage": "No damage",
+    "d20": "d20",
+    "critRoll": "Crit d100",
+    "baseThac0": "Base THAC0",
+    "effectiveThac0": "Effective THAC0",
+    "hitsAc": "Hits AC",
+    "margin": "Margin",
+    "target": "Target",
+    "modifiers": "Modifiers",
+    "noModifiers": "No modifiers",
+    "damage": "Damage",
+    "damageBase": "Weapon dice",
+    "damageSpells": "Spells ×",
+    "damageWeapon": "Weapon +",
+    "damageMultiplier": "Multiplier ×",
+    "damageStrength": "Strength +",
+    "breakdown": "Breakdown"
+  },
+  "log": {
+    "title": "Combat Log",
+    "empty": "Nothing recorded yet.",
+    "round": "Round {{round}}",
+    "current": "current",
+    "nothingThisRound": "Nothing recorded this round yet.",
+    "kinds": {
+      "hp_change": "HP",
+      "cast": "Cast",
+      "buff_change": "Buff",
+      "round_advance": "Round",
+      "attack": "Attack",
+      "item_use": "Item"
+    },
+    "status": {
+      "active": "Active",
+      "amended": "Amended",
+      "voided": "Voided"
+    },
+    "was": "was {{delta}}",
+    "amend": "Amend",
+    "void": "Void",
+    "confirmVoid": "Void this entry?",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "amendLabel": "Amend entry",
+    "newDelta": "HP change (− damage, + heal)",
+    "source": "Source"
   }
 }

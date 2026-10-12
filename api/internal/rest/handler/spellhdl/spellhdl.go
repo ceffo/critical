@@ -32,7 +32,6 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC) {
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
 	r.Get("/api/spells", render.Handle(Search(svc)))
 	r.Post("/api/spells/{id}/cast", render.Handle(Cast(charID, svc)))
-	r.Post("/api/spells/reset", render.Handle(Reset(charID, svc)))
 }
 
 // GetSlots returns the slot list.
@@ -42,7 +41,7 @@ func GetSlots(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, slotsToDTO(slots))
+		render.OK(r.Context(), w, SlotsToDTO(slots))
 		return nil
 	}
 }
@@ -59,19 +58,7 @@ func Cast(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, slotsToDTO(slots))
-		return nil
-	}
-}
-
-// Reset marks every slot unused (long rest).
-func Reset(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		slots, err := svc.ResetSlots(r.Context(), charID(r))
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, slotsToDTO(slots))
+		render.OK(r.Context(), w, SlotsToDTO(slots))
 		return nil
 	}
 }
@@ -111,7 +98,8 @@ type SpellDTO struct {
 	Description  string `json:"description"`
 }
 
-func slotsToDTO(in []spellsvc.SpellSlot) []SpellSlotDTO {
+// SlotsToDTO maps slots to their wire shape.
+func SlotsToDTO(in []spellsvc.SpellSlot) []SpellSlotDTO {
 	out := make([]SpellSlotDTO, 0, len(in))
 	for _, s := range in {
 		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellName: s.PreparedSpellName, Used: s.Used})

@@ -6,6 +6,8 @@ sqlite:
     - internal/adapters/buffdal/queries
     - internal/adapters/spelldal/queries
     - internal/adapters/actionlogdal/queries
+    - internal/adapters/weapondal/queries
+    - internal/adapters/itemdal/queries
 
 plugins:
   models:

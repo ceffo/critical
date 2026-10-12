@@ -12,16 +12,19 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
+	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
-	"github.com/ceffo/critical/api/internal/adapters/weaponsadpt"
+	"github.com/ceffo/critical/api/internal/adapters/weapondal"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
@@ -39,6 +42,8 @@ type BackingServices struct {
 	Buffs     buffsvc.SVC
 	Spells    spellsvc.SVC
 	Combat    combatsvc.SVC
+	Items     itemsvc.SVC
+	Rest      restsvc.SVC
 
 	services []domain.Service
 }
@@ -72,11 +77,8 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	buffDAL := buffdal.New(db, db)
 	spellDAL := spelldal.New(db)
 	dice := diceadpt.New()
-	weapons, err := weaponsadpt.New(cfg.SeedsDir)
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
+	weaponDAL := weapondal.New(db)
+	itemDAL := itemdal.New(db)
 
 	// The spell-effects seed is not consumed yet (qki.8 buffs, qki.10 casting
 	// will take it); loading it now makes a malformed formula a startup error.
@@ -126,7 +128,17 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	combatSvc, err := combatsvc.New(charSvc, buffSvc, dice, weapons)
+	combatSvc, err := combatsvc.New(charSvc, buffSvc, dice, weaponDAL)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	itemSvc, err := itemsvc.New(itemDAL)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	restSvc, err := restsvc.New(spellSvc, itemSvc, db)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -141,7 +153,9 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Buffs:       buffSvc,
 		Spells:      spellSvc,
 		Combat:      combatSvc,
-		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, combatSvc},
+		Items:       itemSvc,
+		Rest:        restSvc,
+		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, combatSvc, itemSvc, restSvc},
 	}, nil
 }
 

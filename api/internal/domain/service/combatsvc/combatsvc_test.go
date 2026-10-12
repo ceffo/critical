@@ -56,7 +56,10 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
-func (f *fixture) withWeapon() { f.weapons.EXPECT().Get("longsword").Return(longsword, true) }
+func (f *fixture) withWeapon() {
+	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+}
+
 func (f *fixture) withChar(c *charactersvc.Character) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil)
 }
@@ -209,7 +212,7 @@ func TestResolveAttack_ModifiersListed(t *testing.T) {
 
 func TestResolveAttack_MultiDiceWeapon(t *testing.T) {
 	f := newFixture(t)
-	f.weapons.EXPECT().Get("greatsword").Return(combatsvc.Weapon{ID: "greatsword", BaseDamage: "2D6"}, true)
+	f.weapons.EXPECT().Get(mock.Anything, "greatsword").Return(combatsvc.Weapon{ID: "greatsword", BaseDamage: "2D6"}, nil)
 	f.withChar(bard(10))
 	f.dice.EXPECT().RollD20().Return(20)
 	f.dice.EXPECT().RollD100().Return(99)
@@ -249,7 +252,7 @@ func TestResolveAttack_MinStrBuffGated(t *testing.T) {
 			chars := mocks.NewMockCharacters(t)
 			chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(tt.str), nil)
 			weapons := mocks.NewMockWeapons(t)
-			weapons.EXPECT().Get("longsword").Return(longsword, true)
+			weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
 			dice := mocks.NewMockDice(t)
 			dice.EXPECT().RollD20().Return(14)
 			dice.EXPECT().RollD100().Return(80)
@@ -270,7 +273,7 @@ func TestResolveAttack_Errors(t *testing.T) {
 
 	t.Run("unknown weapon", func(t *testing.T) {
 		f := newFixture(t)
-		f.weapons.EXPECT().Get("longsword").Return(combatsvc.Weapon{}, false)
+		f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(combatsvc.Weapon{}, combatsvc.ErrWeaponNotFound)
 
 		res, err := f.svc.ResolveAttack(context.Background(), charID, "longsword", 5)
 		assert.Nil(t, res)

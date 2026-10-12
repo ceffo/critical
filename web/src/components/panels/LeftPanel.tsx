@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ function HpBar({ current, max }: { current: number; max: number }) {
 }
 
 export function LeftPanel() {
+  const { t } = useTranslation();
   const { currentHp, maxHp, events, fetchHp, appendEvent, undoLastEvent } =
     useHpStore();
   const { buffs, fetchBuffs, activateBuff, dismissBuff, triggerBuff } =
@@ -104,7 +106,7 @@ export function LeftPanel() {
     <div className="flex flex-col gap-3 p-3 overflow-y-auto h-full">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Hit Points</CardTitle>
+          <CardTitle className="text-base">{t("hp.title")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <HpBar current={currentHp} max={maxHp} />
@@ -112,20 +114,20 @@ export function LeftPanel() {
           {/* Damage entry */}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-muted-foreground uppercase tracking-wide">
-              Damage
+              {t("hp.damage")}
             </label>
             <div className="flex gap-1">
               <input
                 type="number"
                 min="1"
-                placeholder="Amount"
+                placeholder={t("hp.amount")}
                 value={damageInput}
                 onChange={(e) => setDamageInput(e.target.value)}
                 className="w-16 px-2 py-1 text-sm border rounded bg-background"
               />
               <input
                 type="text"
-                placeholder="Source"
+                placeholder={t("hp.source")}
                 value={damageSource}
                 onChange={(e) => setDamageSource(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleDamage()}
@@ -138,27 +140,27 @@ export function LeftPanel() {
               disabled={loading || !damageInput || !damageSource}
               onClick={handleDamage}
             >
-              Apply Damage
+              {t("hp.applyDamage")}
             </Button>
           </div>
 
           {/* Heal entry */}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-muted-foreground uppercase tracking-wide">
-              Heal
+              {t("hp.heal")}
             </label>
             <div className="flex gap-1">
               <input
                 type="number"
                 min="1"
-                placeholder="Amount"
+                placeholder={t("hp.amount")}
                 value={healInput}
                 onChange={(e) => setHealInput(e.target.value)}
                 className="w-16 px-2 py-1 text-sm border rounded bg-background"
               />
               <input
                 type="text"
-                placeholder="Source"
+                placeholder={t("hp.source")}
                 value={healSource}
                 onChange={(e) => setHealSource(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleHeal()}
@@ -170,7 +172,7 @@ export function LeftPanel() {
               disabled={loading || !healInput || !healSource}
               onClick={handleHeal}
             >
-              Apply Heal
+              {t("hp.applyHeal")}
             </Button>
           </div>
         </CardContent>
@@ -179,7 +181,7 @@ export function LeftPanel() {
       {/* Active Buffs */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Active Buffs</CardTitle>
+          <CardTitle className="text-base">{t("buffs.title")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           <ul className="flex flex-col gap-2">
@@ -195,8 +197,8 @@ export function LeftPanel() {
                     className="text-[10px] h-5 px-1 font-mono"
                   >
                     {buff.type === "charge"
-                      ? `${buff.charges}ch`
-                      : `${buff.duration}rd`}
+                      ? t("buffs.charges", { count: buff.charges })
+                      : t("buffs.rounds", { count: buff.duration })}
                   </Badge>
                 </div>
                 <div className="flex gap-1">
@@ -206,7 +208,7 @@ export function LeftPanel() {
                       variant="ghost"
                       className="h-6 w-6"
                       onClick={() => triggerBuff(buff.id)}
-                      title="Use Charge"
+                      title={t("buffs.useCharge")}
                     >
                       <Zap className="h-3 w-3 text-yellow-500" />
                     </Button>
@@ -216,7 +218,7 @@ export function LeftPanel() {
                     variant="ghost"
                     className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => dismissBuff(buff.id)}
-                    title="Dismiss"
+                    title={t("buffs.dismiss")}
                   >
                     <X className="h-3 w-3 text-destructive" />
                   </Button>
@@ -225,7 +227,7 @@ export function LeftPanel() {
             ))}
             {buffs.length === 0 && (
               <li className="text-xs text-muted-foreground italic text-center py-2">
-                No active buffs
+                {t("buffs.none")}
               </li>
             )}
           </ul>
@@ -234,7 +236,7 @@ export function LeftPanel() {
             <div className="flex gap-1">
               <input
                 type="text"
-                placeholder="Buff Name"
+                placeholder={t("buffs.namePlaceholder")}
                 value={newBuffName}
                 onChange={(e) => setNewBuffName(e.target.value)}
                 className="flex-1 px-2 py-1 text-sm border rounded bg-background"
@@ -256,17 +258,19 @@ export function LeftPanel() {
                 }
                 className="flex-1 px-1 py-1 text-sm border rounded bg-background"
               >
-                <option value="duration">Rounds</option>
-                <option value="charge">Charges</option>
+                <option value="duration">{t("buffs.typeRounds")}</option>
+                <option value="charge">{t("buffs.typeCharges")}</option>
               </select>
               <select
                 value={newBuffEffectKey}
                 onChange={(e) => setNewBuffEffectKey(e.target.value)}
                 className="flex-1 px-1 py-1 text-sm border rounded bg-background"
               >
-                <option value="weapon_buff">Wpn +N</option>
-                <option value="spells_buff">Spells xN</option>
-                <option value="multiplier">Dmg xN</option>
+                <option value="weapon_buff">{t("buffs.effectWeapon")}</option>
+                <option value="spells_buff">{t("buffs.effectSpells")}</option>
+                <option value="multiplier">
+                  {t("buffs.effectMultiplier")}
+                </option>
               </select>
               <input
                 type="number"
@@ -280,7 +284,7 @@ export function LeftPanel() {
             </div>
 
             <Button size="sm" onClick={handleAddBuff} disabled={!newBuffName}>
-              Activate
+              {t("buffs.activate")}
             </Button>
           </div>
         </CardContent>
@@ -290,7 +294,7 @@ export function LeftPanel() {
       {events.length > 0 && (
         <Card>
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Recent Events</CardTitle>
+            <CardTitle className="text-base">{t("events.title")}</CardTitle>
             <Button
               variant="ghost"
               size="xs"
@@ -298,7 +302,7 @@ export function LeftPanel() {
               disabled={loading}
               className="h-7 px-2 text-xs"
             >
-              Undo
+              {t("events.undo")}
             </Button>
           </CardHeader>
           <CardContent>

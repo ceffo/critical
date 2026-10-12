@@ -1,0 +1,116 @@
+{
+  "app": {
+    "loading": "Chargement...",
+    "level": "Niveau",
+    "thac0": "TAC0"
+  },
+  "language": {
+    "label": "Langue",
+    "en": "English",
+    "fr": "Français"
+  },
+  "attr": {
+    "str": "FOR",
+    "dex": "DEX",
+    "con": "CON",
+    "int": "INT",
+    "wis": "SAG",
+    "cha": "CHA"
+  },
+  "tabs": {
+    "combat": "Combat",
+    "spells": "Sorts",
+    "character": "Personnage",
+    "lookup": "Recherche de sorts"
+  },
+  "hp": {
+    "title": "Points de vie",
+    "damage": "Dégâts",
+    "heal": "Soins",
+    "amount": "Montant",
+    "source": "Source",
+    "applyDamage": "Infliger les dégâts",
+    "applyHeal": "Appliquer les soins"
+  },
+  "buffs": {
+    "title": "Bonus actifs",
+    "none": "Aucun bonus actif",
+    "charges": "{{count}} ch.",
+    "rounds": "{{count}} rd.",
+    "useCharge": "Utiliser une charge",
+    "dismiss": "Retirer",
+    "namePlaceholder": "Nom du bonus",
+    "typeRounds": "Rounds",
+    "typeCharges": "Charges",
+    "effectWeapon": "Arme +N",
+    "effectSpells": "Sorts xN",
+    "effectMultiplier": "Dégâts xN",
+    "activate": "Activer",
+    "expired": "Bonus expirés : {{names}}"
+  },
+  "events": {
+    "title": "Événements récents",
+    "undo": "Annuler"
+  },
+  "round": {
+    "title": "Round de combat",
+    "next": "Round suivant"
+  },
+  "combat": {
+    "weapon": "Arme",
+    "selectWeapon": "Choisir une arme",
+    "weapons": {
+      "longsword": "Épée longue (1d8)",
+      "shortbow": "Arc court (1d6)"
+    },
+    "targetAc": "CA de la cible",
+    "rollAttack": "Jet d'attaque",
+    "rolling": "Lancer en cours...",
+    "hit": "TOUCHÉ",
+    "miss": "RATÉ",
+    "crit": "CRITIQUE !",
+    "totalDamage": "Dégâts totaux",
+    "d20Roll": "Jet de d20",
+    "critRoll": "Jet de critique",
+    "attackBreakdown": "Détail de l'attaque",
+    "thac0": "TAC0",
+    "targetNeed": "CA cible {{ac}} → Il faut {{need}}+",
+    "damageBreakdown": "Détail des dégâts",
+    "damageDetail": "Base : {{base}} | Sorts : x{{spells}} | Arme : +{{weapon}} | Multiplicateurs : x{{mult}} | FOR : +{{str}}"
+  },
+  "character": {
+    "loading": "Chargement du personnage...",
+    "savingThrows": "Jets de sauvegarde",
+    "target": "Cible : {{value}} ou mieux",
+    "roll": "Lancer",
+    "result": "Résultat",
+    "passed": "Réussi",
+    "failed": "Échoué",
+    "margin": "Marge : {{margin}}",
+    "saves": {
+      "para_poison": "Paralysie/Poison",
+      "rod_staff_wand": "Bâton/Sceptre/Baguette",
+      "petri_poly": "Pétrification/Métamorphose",
+      "breath": "Souffle",
+      "spell": "Sorts"
+    }
+  },
+  "spellSlots": {
+    "title": "Emplacements de sorts",
+    "longRest": "Repos long (réinitialiser)",
+    "none": "Aucun emplacement de sort disponible.",
+    "level": "Niveau {{level}}",
+    "used": "Utilisé",
+    "cast": "Lancer"
+  },
+  "lookup": {
+    "search": "Rechercher des sorts...",
+    "levelShort": "Niv. {{level}}",
+    "school": "École :",
+    "time": "Temps :",
+    "range": "Portée :",
+    "duration": "Durée :",
+    "noResults": "Aucun sort ne correspond à « {{query}} »",
+    "prompt": "Tapez pour chercher dans la base de sorts..."
+  }
+}

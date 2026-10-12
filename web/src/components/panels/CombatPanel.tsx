@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useCombatStore } from "@/stores/combat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,12 +14,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-const WEAPONS = [
-  { id: "longsword", name: "Longsword (1d8)" },
-  { id: "shortbow", name: "Shortbow (1d6)" },
-];
+const WEAPON_IDS = ["longsword", "shortbow"];
 
 export function CombatPanel() {
+  const { t } = useTranslation();
   const { lastResult, isRolling, rollAttack, error } = useCombatStore();
   const [weaponId, setWeaponId] = useState("longsword");
   const [targetAc, setTargetAc] = useState(5);
@@ -31,25 +30,25 @@ export function CombatPanel() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="weapon">Weapon</Label>
+          <Label htmlFor="weapon">{t("combat.weapon")}</Label>
           <Select
             value={weaponId}
             onValueChange={(val) => setWeaponId(val || "")}
           >
             <SelectTrigger id="weapon">
-              <SelectValue placeholder="Select weapon" />
+              <SelectValue placeholder={t("combat.selectWeapon")} />
             </SelectTrigger>
             <SelectContent>
-              {WEAPONS.map((w) => (
-                <SelectItem key={w.id} value={w.id}>
-                  {w.name}
+              {WEAPON_IDS.map((id) => (
+                <SelectItem key={id} value={id}>
+                  {t(`combat.weapons.${id}`)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="targetAc">Target AC</Label>
+          <Label htmlFor="targetAc">{t("combat.targetAc")}</Label>
           <Input
             id="targetAc"
             type="number"
@@ -60,7 +59,7 @@ export function CombatPanel() {
       </div>
 
       <Button className="w-full" onClick={handleRoll} disabled={isRolling}>
-        {isRolling ? "Rolling..." : "Roll Attack"}
+        {isRolling ? t("combat.rolling") : t("combat.rollAttack")}
       </Button>
 
       {error && (
@@ -82,20 +81,22 @@ export function CombatPanel() {
               <CardTitle className="text-2xl font-bold">
                 {lastResult.hit ? (
                   <span className="text-green-600 dark:text-green-400">
-                    HIT
+                    {t("combat.hit")}
                   </span>
                 ) : (
-                  <span className="text-red-600 dark:text-red-400">MISS</span>
+                  <span className="text-red-600 dark:text-red-400">
+                    {t("combat.miss")}
+                  </span>
                 )}
                 {lastResult.isCrit && (
                   <Badge variant="destructive" className="ml-2 animate-bounce">
-                    CRIT!
+                    {t("combat.crit")}
                   </Badge>
                 )}
               </CardTitle>
               <div className="text-right">
                 <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                  Total Damage
+                  {t("combat.totalDamage")}
                 </div>
                 <div className="text-3xl font-black">
                   {lastResult.hit ? lastResult.totalDamage : 0}
@@ -106,11 +107,15 @@ export function CombatPanel() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-muted/50 p-2 rounded">
-                <div className="text-xs text-muted-foreground">D20 Roll</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("combat.d20Roll")}
+                </div>
                 <div className="font-mono text-lg">{lastResult.d20Roll}</div>
               </div>
               <div className="bg-muted/50 p-2 rounded">
-                <div className="text-xs text-muted-foreground">Crit Roll</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("combat.critRoll")}
+                </div>
                 <div className="font-mono text-lg">
                   {lastResult.d100CritRoll}
                 </div>
@@ -119,10 +124,10 @@ export function CombatPanel() {
 
             <div className="space-y-1">
               <div className="text-xs font-semibold uppercase text-muted-foreground">
-                Attack Breakdown
+                {t("combat.attackBreakdown")}
               </div>
               <div className="text-sm font-mono bg-background/50 p-2 rounded border">
-                THAC0 {lastResult.baseThac0}
+                {t("combat.thac0")} {lastResult.baseThac0}
                 {lastResult.modifiers.map((m, i) => (
                   <span key={i} className="text-blue-500">
                     {" "}
@@ -132,23 +137,28 @@ export function CombatPanel() {
                 {" = "}
                 <span className="font-bold">{lastResult.effectiveThac0}</span>
                 <br />
-                Target AC {targetAc} → Need{" "}
-                {lastResult.effectiveThac0 - targetAc}+
+                {t("combat.targetNeed", {
+                  ac: targetAc,
+                  need: lastResult.effectiveThac0 - targetAc,
+                })}
               </div>
             </div>
 
             {lastResult.hit && (
               <div className="space-y-1">
                 <div className="text-xs font-semibold uppercase text-muted-foreground">
-                  Damage Breakdown
+                  {t("combat.damageBreakdown")}
                 </div>
                 <div className="text-sm font-mono bg-background/50 p-2 rounded border">
                   {lastResult.damageBreakdown}
                   <div className="mt-1 text-[10px] text-muted-foreground">
-                    Base: {lastResult.baseDamage} | Spells: x
-                    {lastResult.spellsBuff} | Weapon: +{lastResult.weaponBuff} |
-                    Multipliers: x{lastResult.multipliers} | STR: +
-                    {lastResult.strengthBonus}
+                    {t("combat.damageDetail", {
+                      base: lastResult.baseDamage,
+                      spells: lastResult.spellsBuff,
+                      weapon: lastResult.weaponBuff,
+                      mult: lastResult.multipliers,
+                      str: lastResult.strengthBonus,
+                    })}
                   </div>
                 </div>
               </div>

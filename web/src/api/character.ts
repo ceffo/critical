@@ -1,7 +1,6 @@
 import type { Character } from "@/types/character";
+import { request } from "./http";
 
-export async function fetchCharacter(): Promise<Character> {
-  const res = await fetch("/api/character");
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<Character>;
+export function fetchCharacter(): Promise<Character> {
+  return request<Character>("/api/character");
 }

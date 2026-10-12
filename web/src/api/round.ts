@@ -1,15 +1,10 @@
-import type { RoundAdvanceResponse } from "../types/buffs";
+import type { RoundAdvanceResponse, RoundResponse } from "../types/buffs";
+import { post, request } from "./http";
 
-export async function fetchRound(): Promise<{ roundNumber: number }> {
-  const res = await fetch("/api/round");
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+export function fetchRound(): Promise<RoundResponse> {
+  return request<RoundResponse>("/api/round");
 }
 
-export async function advanceRound(): Promise<RoundAdvanceResponse> {
-  const res = await fetch("/api/round/advance", {
-    method: "POST",
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+export function advanceRound(): Promise<RoundAdvanceResponse> {
+  return post<RoundAdvanceResponse>("/api/round/advance");
 }

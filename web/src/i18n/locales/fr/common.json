@@ -2,7 +2,11 @@
   "app": {
     "loading": "Chargement...",
     "level": "Niveau",
-    "thac0": "TAC0"
+    "levelValue": "Niveau {{level}}",
+    "thac0": "TAC0",
+    "abilities": "Caractéristiques",
+    "error": "Erreur",
+    "dismiss": "Fermer"
   },
   "language": {
     "label": "Langue",
@@ -17,46 +21,53 @@
     "wis": "SAG",
     "cha": "CHA"
   },
-  "tabs": {
-    "combat": "Combat",
-    "spells": "Sorts",
-    "character": "Personnage",
-    "lookup": "Recherche de sorts"
-  },
   "hp": {
     "title": "Points de vie",
-    "damage": "Dégâts",
-    "heal": "Soins",
+    "change": "Modifier les PV",
     "amount": "Montant",
     "source": "Source",
+    "sourcePlaceholder": "Hache d'orque, potion...",
     "applyDamage": "Infliger les dégâts",
-    "applyHeal": "Appliquer les soins"
+    "applyHeal": "Appliquer les soins",
+    "undoLast": "Annuler la dernière modification de PV"
+  },
+  "round": {
+    "title": "Round",
+    "next": "Round suivant"
   },
   "buffs": {
-    "title": "Bonus actifs",
+    "title": "Bonus",
     "none": "Aucun bonus actif",
     "charges": "{{count}} ch.",
     "rounds": "{{count}} rd.",
-    "useCharge": "Utiliser une charge",
-    "dismiss": "Retirer",
-    "namePlaceholder": "Nom du bonus",
+    "useCharge": "Utiliser une charge de {{name}}",
+    "dismiss": "Retirer {{name}}",
+    "add": "Ajouter un bonus",
+    "name": "Nom du bonus",
+    "kind": "Décompte par",
     "typeRounds": "Rounds",
     "typeCharges": "Charges",
+    "count": "Rounds ou charges",
+    "effect": "Effet",
+    "effectValue": "Valeur de l'effet",
     "effectWeapon": "Arme +N",
-    "effectSpells": "Sorts xN",
-    "effectMultiplier": "Dégâts xN",
+    "effectSpells": "Sorts ×N",
+    "effectMultiplier": "Dégâts ×N",
     "activate": "Activer",
+    "cancel": "Annuler",
     "expired": "Bonus expirés : {{names}}"
   },
-  "events": {
-    "title": "Événements récents",
-    "undo": "Annuler"
+  "actions": {
+    "label": "Actions",
+    "tabs": {
+      "attack": "Attaque",
+      "spells": "Sorts",
+      "items": "Objets",
+      "saves": "Sauvegardes",
+      "lookup": "Recherche de sorts"
+    }
   },
-  "round": {
-    "title": "Round de combat",
-    "next": "Round suivant"
-  },
-  "combat": {
+  "attack": {
     "weapon": "Arme",
     "selectWeapon": "Choisir une arme",
     "weapons": {
@@ -64,30 +75,15 @@
       "shortbow": "Arc court (1d6)"
     },
     "targetAc": "CA de la cible",
-    "rollAttack": "Jet d'attaque",
-    "rolling": "Lancer en cours...",
-    "hit": "TOUCHÉ",
-    "miss": "RATÉ",
-    "crit": "CRITIQUE !",
-    "totalDamage": "Dégâts totaux",
-    "d20Roll": "Jet de d20",
-    "critRoll": "Jet de critique",
-    "attackBreakdown": "Détail de l'attaque",
-    "thac0": "TAC0",
-    "targetNeed": "CA cible {{ac}} → Il faut {{need}}+",
-    "damageBreakdown": "Détail des dégâts",
-    "damageDetail": "Base : {{base}} | Sorts : x{{spells}} | Arme : +{{weapon}} | Multiplicateurs : x{{mult}} | FOR : +{{str}}"
+    "roll": "Jet d'attaque",
+    "rolling": "Lancer en cours..."
   },
-  "character": {
-    "loading": "Chargement du personnage...",
-    "savingThrows": "Jets de sauvegarde",
-    "target": "Cible : {{value}} ou mieux",
+  "saves": {
+    "title": "Jets de sauvegarde",
+    "need": "Il faut {{value}}+",
     "roll": "Lancer",
-    "result": "Résultat",
-    "passed": "Réussi",
-    "failed": "Échoué",
-    "margin": "Marge : {{margin}}",
-    "saves": {
+    "rollLabel": "Jet de sauvegarde contre {{name}}",
+    "categories": {
       "para_poison": "Paralysie/Poison",
       "rod_staff_wand": "Bâton/Sceptre/Baguette",
       "petri_poly": "Pétrification/Métamorphose",
@@ -95,13 +91,19 @@
       "spell": "Sorts"
     }
   },
+  "items": {
+    "title": "Objets",
+    "placeholder": "Les objets à charges et consommables s'utiliseront d'ici."
+  },
   "spellSlots": {
     "title": "Emplacements de sorts",
     "longRest": "Repos long (réinitialiser)",
     "none": "Aucun emplacement de sort disponible.",
     "level": "Niveau {{level}}",
+    "remaining": "{{left}} / {{total}}",
     "used": "Utilisé",
-    "cast": "Lancer"
+    "cast": "Lancer",
+    "castLabel": "Lancer {{name}}"
   },
   "lookup": {
     "search": "Rechercher des sorts...",
@@ -112,5 +114,64 @@
     "duration": "Durée :",
     "noResults": "Aucun sort ne correspond à « {{query}} »",
     "prompt": "Tapez pour chercher dans la base de sorts..."
+  },
+  "result": {
+    "title": "Dernier résultat",
+    "empty": "Lancez une attaque ou une sauvegarde : le détail complet s'affiche ici.",
+    "attackHeading": "{{weapon}} contre CA {{ac}}",
+    "saveHeading": "Sauvegarde contre {{name}}",
+    "hit": "Touché",
+    "miss": "Raté",
+    "crit": "Critique ×{{mult}}",
+    "passed": "Réussie",
+    "failed": "Échouée",
+    "totalDamage": "Dégâts totaux",
+    "noDamage": "Aucun dégât",
+    "d20": "d20",
+    "critRoll": "d100 critique",
+    "baseThac0": "TAC0 de base",
+    "effectiveThac0": "TAC0 effectif",
+    "hitsAc": "Touche la CA",
+    "margin": "Marge",
+    "target": "Cible",
+    "modifiers": "Modificateurs",
+    "noModifiers": "Aucun modificateur",
+    "damage": "Dégâts",
+    "damageBase": "Dés de l'arme",
+    "damageSpells": "Sorts ×",
+    "damageWeapon": "Arme +",
+    "damageMultiplier": "Multiplicateur ×",
+    "damageStrength": "Force +",
+    "breakdown": "Détail"
+  },
+  "log": {
+    "title": "Journal de combat",
+    "empty": "Rien d'enregistré pour l'instant.",
+    "round": "Round {{round}}",
+    "current": "en cours",
+    "nothingThisRound": "Rien d'enregistré ce round.",
+    "kinds": {
+      "hp_change": "PV",
+      "cast": "Sort",
+      "buff_change": "Bonus",
+      "round_advance": "Round",
+      "attack": "Attaque",
+      "item_use": "Objet"
+    },
+    "status": {
+      "active": "Actif",
+      "amended": "Corrigé",
+      "voided": "Annulé"
+    },
+    "was": "était {{delta}}",
+    "amend": "Corriger",
+    "void": "Annuler",
+    "confirmVoid": "Annuler cette entrée ?",
+    "confirm": "Confirmer",
+    "cancel": "Retour",
+    "save": "Enregistrer",
+    "amendLabel": "Corriger l'entrée",
+    "newDelta": "Modification de PV (− dégâts, + soins)",
+    "source": "Source"
   }
 }

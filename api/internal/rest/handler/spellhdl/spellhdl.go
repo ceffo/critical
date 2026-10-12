@@ -3,7 +3,6 @@ package spellhdl
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -30,70 +29,62 @@ type spellSvc interface {
 
 // RegisterRoutes wires spell endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC) {
-	r.Get("/api/spells/slots", GetSlots(charID, svc))
-	r.Get("/api/spells", Search(svc))
-	r.Post("/api/spells/{id}/cast", Cast(charID, svc))
-	r.Post("/api/spells/reset", Reset(charID, svc))
+	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
+	r.Get("/api/spells", render.Handle(Search(svc)))
+	r.Post("/api/spells/{id}/cast", render.Handle(Cast(charID, svc)))
+	r.Post("/api/spells/reset", render.Handle(Reset(charID, svc)))
 }
 
 // GetSlots returns the slot list.
-func GetSlots(charID CharacterIDFunc, svc spellSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func GetSlots(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		slots, err := svc.GetSlots(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, slotsToDTO(slots))
+		return nil
 	}
 }
 
 // Cast marks slot {id} used.
-func Cast(charID CharacterIDFunc, svc spellSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Cast(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		idStr := chi.URLParam(r, "id")
 		idx, err := strconv.Atoi(idStr)
 		if err != nil {
-			render.BadRequest(r.Context(), w, "invalid slot index")
-			return
+			return render.BadRequestError("invalid slot index")
 		}
 		slots, err := svc.Cast(r.Context(), charID(r), idx)
 		if err != nil {
-			switch {
-			case errors.Is(err, spellsvc.ErrSlotAlreadyUsed):
-				render.JSON(r.Context(), w, http.StatusConflict, map[string]string{"error": err.Error()})
-			case errors.Is(err, spellsvc.ErrInvalidSlotIndex):
-				render.BadRequest(r.Context(), w, err.Error())
-			default:
-				render.Error(r.Context(), w, err)
-			}
-			return
+			return err
 		}
 		render.OK(r.Context(), w, slotsToDTO(slots))
+		return nil
 	}
 }
 
 // Reset marks every slot unused (long rest).
-func Reset(charID CharacterIDFunc, svc spellSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Reset(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		slots, err := svc.ResetSlots(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, slotsToDTO(slots))
+		return nil
 	}
 }
 
 // Search runs the catalog query.
-func Search(svc spellSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Search(svc spellSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		spells, err := svc.Search(r.Context(), r.URL.Query().Get("q"), r.URL.Query().Get("class"))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, spellsToDTO(spells))
+		return nil
 	}
 }
 

@@ -4,7 +4,6 @@ package combathdl
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -26,8 +25,8 @@ type combatSvc interface {
 
 // RegisterRoutes wires combat endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
-	r.Post("/api/roll/attack", ResolveAttack(charID, svc))
-	r.Post("/api/roll/save", RollSave(charID, svc))
+	r.Post("/api/roll/attack", render.Handle(ResolveAttack(charID, svc)))
+	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
 }
 
 // AttackRequestDTO matches the previous request shape.
@@ -42,40 +41,34 @@ type SaveRequestDTO struct {
 }
 
 // ResolveAttack runs an attack and returns the RollResult JSON.
-func ResolveAttack(charID CharacterIDFunc, svc combatSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		var req AttackRequestDTO
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			render.BadRequest(r.Context(), w, "invalid request body")
-			return
+			return render.BadRequestError("invalid request body")
 		}
 		res, err := svc.ResolveAttack(r.Context(), charID(r), req.WeaponID, req.TargetAC)
 		if err != nil {
-			if errors.Is(err, combatsvc.ErrWeaponNotFound) {
-				render.NotFound(r.Context(), w, "weapon not found")
-				return
-			}
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTO(res))
+		return nil
 	}
 }
 
 // RollSave runs a saving throw and returns the RollResult JSON.
-func RollSave(charID CharacterIDFunc, svc combatSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		var req SaveRequestDTO
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			render.BadRequest(r.Context(), w, "invalid request body")
-			return
+			return render.BadRequestError("invalid request body")
 		}
 		res, err := svc.ResolveSavingThrow(r.Context(), charID(r), req.Category)
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTO(res))
+		return nil
 	}
 }
 

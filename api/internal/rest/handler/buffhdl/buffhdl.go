@@ -32,106 +32,102 @@ type buffSvc interface {
 
 // RegisterRoutes wires buff and round endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
-	r.Get("/api/buffs", ListActive(charID, svc))
-	r.Post("/api/buffs", Activate(charID, svc))
-	r.Delete("/api/buffs/{id}", Dismiss(charID, svc))
-	r.Post("/api/buffs/{id}/trigger", Trigger(charID, svc))
-	r.Get("/api/round", GetRound(charID, svc))
-	r.Post("/api/round/advance", AdvanceRound(charID, svc))
+	r.Get("/api/buffs", render.Handle(ListActive(charID, svc)))
+	r.Post("/api/buffs", render.Handle(Activate(charID, svc)))
+	r.Delete("/api/buffs/{id}", render.Handle(Dismiss(charID, svc)))
+	r.Post("/api/buffs/{id}/trigger", render.Handle(Trigger(charID, svc)))
+	r.Get("/api/round", render.Handle(GetRound(charID, svc)))
+	r.Post("/api/round/advance", render.Handle(AdvanceRound(charID, svc)))
 }
 
 // ListActive returns the current buff list.
-func ListActive(charID CharacterIDFunc, svc buffSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func ListActive(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		buffs, err := svc.ListActive(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTOs(buffs))
+		return nil
 	}
 }
 
 // Activate adds a buff to the active list.
-func Activate(charID CharacterIDFunc, svc buffSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Activate(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		var dto BuffEffectDTO
 		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-			render.BadRequest(r.Context(), w, "invalid request body")
-			return
+			return render.BadRequestError("invalid request body")
 		}
 		if dto.Name == "" {
-			render.BadRequest(r.Context(), w, "name is required")
-			return
+			return render.BadRequestError("name is required")
 		}
 		buffs, err := svc.Activate(r.Context(), charID(r), dto.toDomain())
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTOs(buffs))
+		return nil
 	}
 }
 
 // Dismiss removes the buff with the given id.
-func Dismiss(charID CharacterIDFunc, svc buffSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Dismiss(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		id := chi.URLParam(r, "id")
 		if id == "" {
-			render.BadRequest(r.Context(), w, "id is required")
-			return
+			return render.BadRequestError("id is required")
 		}
 		buffs, err := svc.Dismiss(r.Context(), charID(r), id)
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTOs(buffs))
+		return nil
 	}
 }
 
 // Trigger decrements charges on a charge buff.
-func Trigger(charID CharacterIDFunc, svc buffSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Trigger(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		id := chi.URLParam(r, "id")
 		if id == "" {
-			render.BadRequest(r.Context(), w, "id is required")
-			return
+			return render.BadRequestError("id is required")
 		}
 		buffs, err := svc.Trigger(r.Context(), charID(r), id)
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTOs(buffs))
+		return nil
 	}
 }
 
 // GetRound returns the current round number.
-func GetRound(charID CharacterIDFunc, svc buffSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func GetRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		round, err := svc.GetRound(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, map[string]int{"round": round})
+		return nil
 	}
 }
 
 // AdvanceRound increments the counter and ages duration buffs.
-func AdvanceRound(charID CharacterIDFunc, svc buffSvc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		active, expired, round, err := svc.AdvanceRound(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, RoundAdvanceDTO{
 			RoundNumber:  round,
 			ActiveBuffs:  toDTOs(active),
 			ExpiredBuffs: toDTOs(expired),
 		})
+		return nil
 	}
 }
 

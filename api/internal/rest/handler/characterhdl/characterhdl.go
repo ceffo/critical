@@ -23,18 +23,18 @@ type characterGetter interface {
 
 // RegisterRoutes wires character endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc charactersvc.SVC) {
-	r.Get("/api/character", GetCharacter(charID, svc))
+	r.Get("/api/character", render.Handle(GetCharacter(charID, svc)))
 }
 
 // GetCharacter renders the character stats DTO.
-func GetCharacter(charID CharacterIDFunc, svc characterGetter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func GetCharacter(charID CharacterIDFunc, svc characterGetter) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		c, err := svc.GetCharacter(r.Context(), charID(r))
 		if err != nil {
-			render.Error(r.Context(), w, err)
-			return
+			return err
 		}
 		render.OK(r.Context(), w, toDTO(c))
+		return nil
 	}
 }
 

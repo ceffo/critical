@@ -5,8 +5,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8888:8080"
+    environment:
+      CRITICAL_DSN: /data/critical.db
     volumes:
       - ./seeds:/app/seeds:ro
+      - critical-data:/data
     restart: unless-stopped
 
   web:
@@ -19,3 +22,6 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+
+volumes:
+  critical-data:

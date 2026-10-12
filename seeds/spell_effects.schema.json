@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Wizard spell effects",
+  "description": "Schema for seeds/spell_effects.json: one structured entry per Wizard spell in seeds/spells.json, extracted once by an agent from the spell text. The Go loader (api/internal/adapters/spelleffectsadpt) is the authority and additionally parses every formula; formulas use the grammar documented in api/pkg/formula. Spell ids are the snake_case slug of the English name (lowercase, apostrophes dropped, other non-alphanumerics become '_').",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "name", "level", "kind", "confidence", "target", "duration"],
+    "properties": {
+      "id": { "type": "string", "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$", "description": "Slug of name, e.g. melfs_acid_arrow" },
+      "name": { "type": "string", "description": "Spell name exactly as in spells.json" },
+      "level": { "type": "integer", "minimum": 1, "maximum": 9 },
+      "kind": { "enum": ["buff", "damage", "utility"], "description": "buff = modifies a creature for a while (debuffs included); damage = deals hit-point damage; utility = nothing the engine tracks numerically" },
+      "confidence": { "enum": ["high", "low"], "description": "low = extraction partial or unsure; a note is then required" },
+      "note": { "type": "string", "description": "Caveats, what is not modelled, source ambiguities. Required when confidence is low." },
+      "target": { "enum": ["self", "other", "self_or_other", "area", "none"] },
+      "duration": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind"],
+        "properties": {
+          "kind": { "enum": ["rounds", "instant", "permanent", "until_discharged", "special"] },
+          "rounds": { "$ref": "#/definitions/formula", "description": "Only with kind rounds. 1 turn = 10 rounds, 1 hour = 60 rounds, 1 day = 1440 rounds." }
+        }
+      },
+      "charges": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["count", "unit"],
+        "description": "A pool consumed instead of (or besides) time, e.g. Stoneskin attacks, Mirror Image images.",
+        "properties": {
+          "count": { "$ref": "#/definitions/formula" },
+          "unit": { "type": "string", "description": "What one charge is: attacks, images, hp_damage_taken..." }
+        }
+      },
+      "save": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "effect"],
+        "properties": {
+          "type": { "enum": ["none", "spell", "poison", "paralyzation", "death", "petrification", "breath", "rod_staff_wand", "polymorph"] },
+          "effect": { "enum": ["half", "negates", "none", "special"] }
+        }
+      },
+      "damage": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Exactly one of dice and by_level.",
+        "properties": {
+          "dice": { "$ref": "#/definitions/formula", "description": "Damage of one instance, e.g. (min(level,10))d6 for Fireball" },
+          "by_level": {
+            "type": "array",
+            "description": "Table keyed by caster level; first row min_level 1, ascending; the last row with min_level <= level applies.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["min_level", "dice"],
+              "properties": { "min_level": { "type": "integer", "minimum": 1 }, "dice": { "$ref": "#/definitions/formula" } }
+            }
+          },
+          "instances": { "$ref": "#/definitions/formula", "description": "Separate damage rolls per casting (missiles, bolts). Default 1." },
+          "rounds": { "$ref": "#/definitions/formula", "description": "Rounds over which the damage repeats (Melf's Acid Arrow). Default 1." },
+          "type": { "type": "string", "description": "Damage type: fire, cold, acid, force..." }
+        }
+      },
+      "modifiers": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Scalar buff modifiers, each a formula (a bare number is fine). Signs: to_hit, damage, save, weapon_buff positive = better for the bearer; ac is a change to the AC number, so negative improves AC (descending AC); ac_set* make the AC at best that value and never worsen it; attackers_to_hit is applied to attack rolls made against the bearer; *_pct are percentages (100 = unchanged).",
+        "properties": {
+          "to_hit": { "$ref": "#/definitions/formula" },
+          "damage": { "$ref": "#/definitions/formula" },
+          "ac": { "$ref": "#/definitions/formula" },
+          "ac_set": { "$ref": "#/definitions/formula" },
+          "ac_set_thrown": { "$ref": "#/definitions/formula" },
+          "ac_set_missile": { "$ref": "#/definitions/formula" },
+          "ac_set_other": { "$ref": "#/definitions/formula" },
+          "save": { "$ref": "#/definitions/formula" },
+          "attackers_to_hit": { "$ref": "#/definitions/formula" },
+          "attackers_to_hit_first": { "$ref": "#/definitions/formula", "description": "Replaces attackers_to_hit for the first attack against the bearer" },
+          "initiative": { "$ref": "#/definitions/formula" },
+          "move_pct": { "$ref": "#/definitions/formula" },
+          "attacks_pct": { "$ref": "#/definitions/formula" },
+          "damage_multiplier_pct": { "$ref": "#/definitions/formula", "description": "Multiplies each damage roll, rounded up (Enlarge: 100+10*level)" },
+          "weapon_buff": { "$ref": "#/definitions/formula", "description": "Magical plus on to-hit and damage" },
+          "regen_hp_per_round": { "$ref": "#/definitions/formula" }
+        }
+      },
+      "ability_gain": {
+        "type": "object",
+        "description": "Ability score increases keyed by str, dex, con, int, wis or cha. Set exactly one of gain and by_group. Groups: warrior, priest, rogue, wizard (a bard is a rogue).",
+        "propertyNames": { "enum": ["str", "dex", "con", "int", "wis", "cha"] },
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "gain": { "$ref": "#/definitions/formula" },
+            "by_group": { "type": "object", "propertyNames": { "enum": ["warrior", "priest", "rogue", "wizard"] }, "additionalProperties": { "$ref": "#/definitions/formula" } },
+            "max": { "type": "integer", "minimum": 0, "maximum": 30, "description": "Score cannot exceed this" },
+            "max_by_group": { "type": "object", "propertyNames": { "enum": ["warrior", "priest", "rogue", "wizard"] }, "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 30 } }
+          }
+        }
+      },
+      "ability_set": {
+        "type": "object",
+        "description": "Ability score forced to a value, e.g. Fist of Stone sets str to 18/00.",
+        "propertyNames": { "enum": ["str", "dex", "con", "int", "wis", "cha"] },
+        "additionalProperties": { "type": ["string", "number"] }
+      },
+      "condition": { "type": "string", "description": "When the buff's modifiers apply, if not always." }
+    }
+  },
+  "definitions": {
+    "formula": {
+      "description": "Integer expression over INT, dice NdM, 'level', + - * /, parentheses, min(a,b), max(a,b). 'leveld6' rolls level d6; '(min(level,10))d6' caps the dice. Division truncates. See api/pkg/formula.",
+      "type": ["string", "number"]
+    }
+  }
+}

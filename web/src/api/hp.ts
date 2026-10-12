@@ -1,28 +1,16 @@
 import type { HpState } from "@/types/hp";
+import { post, request } from "./http";
 
-export async function getHpState(): Promise<HpState> {
-  const res = await fetch("/api/hp");
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<HpState>;
+export function getHpState(): Promise<HpState> {
+  return request<HpState>("/api/hp");
 }
 
-export async function appendHpEvent(
-  delta: number,
-  source: string,
-): Promise<HpState> {
-  const res = await fetch("/api/hp/event", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ delta, source }),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<HpState>;
+/** Append an HP change (negative = damage) to the action log. */
+export function appendHpEvent(delta: number, source: string): Promise<HpState> {
+  return post<HpState>("/api/hp/event", { delta, source });
 }
 
-export async function undoLastEvent(): Promise<HpState> {
-  const res = await fetch("/api/hp/undo", {
-    method: "POST",
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json() as Promise<HpState>;
+/** Void the newest non-voided HP change. */
+export function undoLastEvent(): Promise<HpState> {
+  return post<HpState>("/api/hp/undo");
 }

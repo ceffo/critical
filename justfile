@@ -34,9 +34,18 @@ dev-api:
     mkdir -p .dev
     cd api && CRITICAL_DSN=../.dev/critical.db CRITICAL_SEEDS_DIR=../seeds go tool air -c .air.toml
 
-# Frontend dev server with HMR (needs the API from dev-api)
+# Frontend dev server with HMR (needs the API from dev-api). Reinstalls web deps first when
+# web/package-lock.json is newer than the last install (e.g. after pulling a new dependency).
 dev-web:
-    cd web && npm run dev
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd web
+    if [ ! -f node_modules/.package-lock.json ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
+        echo "web/package-lock.json changed since the last install: running npm install"
+        npm install
+        touch node_modules/.package-lock.json
+    fi
+    npm run dev
 
 # Delete the local dev database; the next dev-api start re-seeds from seeds/
 dev-reset:

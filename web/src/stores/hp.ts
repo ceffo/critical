@@ -1,36 +1,22 @@
 import { create } from "zustand";
-import type { HpEvent, HpState } from "@/types/hp";
-import { getHpState, appendHpEvent, undoLastEvent } from "@/api/hp";
+import type { HpState } from "@/types/hp";
+import { getHpState } from "@/api/hp";
 
 interface HpStore extends HpState {
+  loaded: boolean;
   fetchHp: () => Promise<void>;
-  appendEvent: (delta: number, source: string) => Promise<void>;
-  undoLastEvent: () => Promise<void>;
+  setHp: (state: HpState) => void;
 }
 
+/** Current/max HP as computed by the server. Mutations go through stores/table.ts. */
 export const useHpStore = create<HpStore>((set) => ({
   currentHp: 0,
   maxHp: 0,
-  events: [] as HpEvent[],
+  events: [],
+  loaded: false,
   fetchHp: async () => {
     const state = await getHpState();
-    set({
-      ...state,
-      events: state.events || [],
-    });
+    set({ ...state, events: state.events ?? [], loaded: true });
   },
-  appendEvent: async (delta: number, source: string) => {
-    const state = await appendHpEvent(delta, source);
-    set({
-      ...state,
-      events: state.events || [],
-    });
-  },
-  undoLastEvent: async () => {
-    const state = await undoLastEvent();
-    set({
-      ...state,
-      events: state.events || [],
-    });
-  },
+  setHp: (state) => set({ ...state, events: state.events ?? [], loaded: true }),
 }));

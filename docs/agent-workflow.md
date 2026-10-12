@@ -33,6 +33,8 @@ Domain vocabulary and phase scope live in `docs/all.md`.
   supervisor ledger in `supervisor/ledger.md`).
 - Main checkout: `~/code/critical`; default branch `main`; remote `origin`.
 - After creating a worktree: `cd web && npm ci` (`web/node_modules` is gitignored). Go needs nothing.
+- After pulling `main` in the main checkout: `just dev` reinstalls web deps (`npm install`) when
+  `web/package-lock.json` changed since the last install. Restart `just dev` after a dependency change.
 - Shared resources: none locked. Tests use temporary SQLite databases.
 
 ## Running the app for acceptance checks

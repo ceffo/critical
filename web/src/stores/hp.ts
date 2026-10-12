@@ -20,8 +20,7 @@ export const useHpStore = create<HpStore>((set) => ({
     });
   },
   appendEvent: async (delta: number, source: string) => {
-    await appendHpEvent(delta, source);
-    const state = await getHpState();
+    const state = await appendHpEvent(delta, source);
     set({
       ...state,
       events: state.events || [],

@@ -204,26 +204,34 @@ being asked.
 
 ## Stacked branches (an item blocked by an open PR)
 
-Don't idle waiting for a merge. Create the child worktree from the **parent's branch tip** (`git
-worktree add <path> -b <branch> <parent-branch>`) and write that tip's sha into the brief as `BASE:
-<sha>` (keep it in your ledger). The developer works as usual, merging nothing from `<db>` until the
-parent is merged. Open the child's PR with `--base <parent-branch>` and say "stacked on #<parent>" in
-the body. Anything ordered (migrations, generated output) must stay after the parent's.
+Don't idle waiting for a merge. Dependent PRs are a **GitHub native stack**, managed with `gh stack`
+(see `gh stack --help`). It works with one worktree per branch: its cascading rebase updates
+branches checked out in other worktrees in place.
 
-When the parent is squash-merged (`git fetch origin`; the PR shows MERGED), **you** restack,
-deterministically:
+- Create the child worktree from the **parent's branch tip** (`git worktree add <path> -b <branch>
+  <parent-branch>`), then record the stack from `<main>`: `gh stack init <parent-branch>
+  <child-branch>` (adopts existing branches, bottom to top), or `gh stack add` to grow it. Write the
+  parent tip's sha into the brief as `BASE: <sha>` and keep it in your ledger (manual fallback). The
+  developer works as usual, merging nothing from `<db>` until the parent is merged. Anything ordered
+  (migrations, generated output) must stay after the parent's.
+- Publish: open the child's PR with `gh pr create --base <parent-branch> --body-file …` (keeps your
+  own body; say "stacked on #<parent>"), then `gh stack link <parent-pr> <child-pr>` to make it a
+  stack on GitHub.
+- When `<db>` moves or the parent is squash-merged, **you** restack, but only while every developer
+  in the stack is idle with a clean tree (a rebase under a working agent loses its edits):
 
-```sh
-git -C <child-worktree> fetch origin
-git -C <child-worktree> rebase --onto origin/<db> <BASE> <child-branch>
-git -C <child-worktree> push --force-with-lease origin <child-branch>   # only if already pushed
-gh pr edit <child-pr> --base <db>
-```
+  ```sh
+  gh stack sync      # fetch, cascade-rebase onto <db> (merged PRs dropped), atomic --force-with-lease push, retarget PRs
+  ```
 
-Clean rebase → the developer reruns the gate. A conflict → `git rebase --abort`, then prompt the
-developer to resolve it. If the parent needed rework after the child branched, prompt the child's
-developer to merge the updated parent branch first (restack later with the new `BASE`). Two levels
-deep at most.
+  If `gh stack` can't do it (or shows anything unexpected), fall back to the deterministic manual
+  restack: `git -C <child-worktree> rebase --onto origin/<db> <BASE> <child-branch>`, `git push
+  --force-with-lease`, `gh pr edit <child-pr> --base <db>`.
+
+Clean rebase → the developer reruns the gate. A conflict → stop (`git rebase --abort` if one is left
+in progress), then prompt the developer to resolve it. If the parent needed rework after the child
+branched, prompt the child's developer to merge the updated parent branch first. Two levels deep at
+most.
 
 ## PR watch (never rely on remembering to check)
 

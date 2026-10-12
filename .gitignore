@@ -23,3 +23,6 @@ web/dist/
 
 # ralph-tui local run state (logs, reports, session)
 .ralph-tui/
+
+# Local dev state (just dev)
+.dev/

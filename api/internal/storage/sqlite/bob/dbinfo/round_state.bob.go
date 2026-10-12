@@ -58,6 +58,20 @@ var RoundStates = Table[
 			Comment: "",
 			Partial: false,
 		},
+		IdxRoundStateCharacterID: index{
+			Type: "c",
+			Name: "idx_round_state_character_id",
+			Columns: []indexColumn{
+				{
+					Name:         "character_id",
+					Desc:         null.FromCond(false, true),
+					IsExpression: false,
+				},
+			},
+			Unique:  true,
+			Comment: "",
+			Partial: false,
+		},
 	},
 	PrimaryKey: &constraint{
 		Name:    "pk_main_round_state",
@@ -92,12 +106,13 @@ func (c roundStateColumns) AsSlice() []column {
 }
 
 type roundStateIndexes struct {
-	PKMainRoundState index
+	PKMainRoundState         index
+	IdxRoundStateCharacterID index
 }
 
 func (i roundStateIndexes) AsSlice() []index {
 	return []index{
-		i.PKMainRoundState,
+		i.PKMainRoundState, i.IdxRoundStateCharacterID,
 	}
 }
 

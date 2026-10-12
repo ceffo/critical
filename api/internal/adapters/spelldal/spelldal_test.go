@@ -41,7 +41,6 @@ func TestSlots_MissingRowIsEmpty(t *testing.T) {
 }
 
 func TestSlots_RoundTripAndOverwrite(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on spell_slots, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := spelldal.New(db)
@@ -64,7 +63,6 @@ func TestSlots_RoundTripAndOverwrite(t *testing.T) {
 }
 
 func TestSlots_PerCharacter(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on spell_slots, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	c1, c2 := seedCharacter(t, db), seedCharacter(t, db)
 	dal := spelldal.New(db)

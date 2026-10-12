@@ -58,6 +58,20 @@ var SpellSlots = Table[
 			Comment: "",
 			Partial: false,
 		},
+		IdxSpellSlotsCharacterID: index{
+			Type: "c",
+			Name: "idx_spell_slots_character_id",
+			Columns: []indexColumn{
+				{
+					Name:         "character_id",
+					Desc:         null.FromCond(false, true),
+					IsExpression: false,
+				},
+			},
+			Unique:  true,
+			Comment: "",
+			Partial: false,
+		},
 	},
 	PrimaryKey: &constraint{
 		Name:    "pk_main_spell_slots",
@@ -92,12 +106,13 @@ func (c spellSlotColumns) AsSlice() []column {
 }
 
 type spellSlotIndexes struct {
-	PKMainSpellSlots index
+	PKMainSpellSlots         index
+	IdxSpellSlotsCharacterID index
 }
 
 func (i spellSlotIndexes) AsSlice() []index {
 	return []index{
-		i.PKMainSpellSlots,
+		i.PKMainSpellSlots, i.IdxSpellSlotsCharacterID,
 	}
 }
 

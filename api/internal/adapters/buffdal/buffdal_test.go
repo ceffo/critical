@@ -45,7 +45,6 @@ func TestActiveBuffs_MissingRowIsEmpty(t *testing.T) {
 }
 
 func TestActiveBuffs_RoundTrip(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on active_buffs, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := buffdal.New(db, db)
@@ -65,7 +64,6 @@ func TestActiveBuffs_RoundTrip(t *testing.T) {
 }
 
 func TestActiveBuffs_SaveOverwrites(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on active_buffs, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := buffdal.New(db, db)
@@ -81,7 +79,6 @@ func TestActiveBuffs_SaveOverwrites(t *testing.T) {
 }
 
 func TestActiveBuffs_SaveEmpty(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on active_buffs, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := buffdal.New(db, db)
@@ -96,7 +93,6 @@ func TestActiveBuffs_SaveEmpty(t *testing.T) {
 }
 
 func TestActiveBuffs_PerCharacter(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on active_buffs, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	c1, c2 := seedCharacter(t, db), seedCharacter(t, db)
 	dal := buffdal.New(db, db)
@@ -110,7 +106,6 @@ func TestActiveBuffs_PerCharacter(t *testing.T) {
 }
 
 func TestRoundNumber(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on round_state, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := buffdal.New(db, db)
@@ -129,7 +124,6 @@ func TestRoundNumber(t *testing.T) {
 }
 
 func TestWrapTx_CommitsOnSuccess(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on active_buffs, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := buffdal.New(db, db)
@@ -152,7 +146,6 @@ func TestWrapTx_CommitsOnSuccess(t *testing.T) {
 }
 
 func TestWrapTx_RollsBackOnError(t *testing.T) {
-	t.Skip("bug: upserts use ON CONFLICT(character_id) but migration 003 has no UNIQUE(character_id) on active_buffs, so every save fails with \"ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint\"")
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := buffdal.New(db, db)

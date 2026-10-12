@@ -15,7 +15,7 @@ interface TableStore {
   busy: boolean;
   clearError: () => void;
   clearNotice: () => void;
-  /** Reload everything an action can change: HP, action log, buffs, round. */
+  /** Reload everything an action can change: HP, action log, buffs, round, effective STR. */
   refresh: () => Promise<void>;
   /**
    * Run a mutation, then refresh the table state. Errors are caught into `error`.
@@ -47,6 +47,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
         useLogStore.getState().fetchLog(),
         useBuffsStore.getState().fetchBuffs(),
         useBuffsStore.getState().fetchRound(),
+        useBuffsStore.getState().fetchStrength(),
       ]);
     } catch (e) {
       set({ error: message(e) });
@@ -71,7 +72,12 @@ export const useTableStore = create<TableStore>((set, get) => ({
     get().run(async () => useHpStore.getState().setHp(await appendHpEvent(delta, source))),
   undoHp: () => get().run(async () => useHpStore.getState().setHp(await undoLastEvent())),
   amendEntry: (id, delta, source) => get().run(() => amendLogEntry(id, delta, source)),
-  voidEntry: (id) => get().run(() => voidLogEntry(id)),
+  // A void can bring expired buffs back: an "expired" notice would now be stale.
+  voidEntry: (id) =>
+    get().run(async () => {
+      await voidLogEntry(id);
+      set({ notice: null });
+    }),
   nextRound: () =>
     get().run(async () => {
       const res = await useBuffsStore.getState().advanceRound();

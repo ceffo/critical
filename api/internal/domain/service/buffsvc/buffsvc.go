@@ -1,6 +1,11 @@
 // Package buffsvc owns active buffs, the round counter, and effect aggregation.
 // Round advancement is here because it expires duration-based buffs — the
 // round counter and buff list are one bounded concern.
+//
+// Every change (activate, edit, absorb, dismiss, Next Round) is recorded in
+// the action log with before/after snapshots of the buff list (and the round
+// for Next Round) in the same transaction as the state write, so voiding the
+// entry restores the state through Restorers.
 package buffsvc
 
 import (
@@ -8,54 +13,89 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // SVC is the driver port.
 type SVC interface {
 	domain.Service
 	ListActive(ctx context.Context, characterID int64) ([]BuffEffect, error)
+	// ListStatus is the active list with whether each buff's effects apply
+	// at the current effective STR.
+	ListStatus(ctx context.Context, characterID int64) ([]BuffStatus, error)
 	Activate(ctx context.Context, characterID int64, buff BuffEffect) ([]BuffEffect, error)
+	Edit(ctx context.Context, characterID int64, buffID string, e BuffEdit) ([]BuffEffect, error)
 	Dismiss(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
+	// Trigger uses one charge of a charged buff (a Stoneskin layer absorbed a
+	// hit); the buff ends at 0.
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, err error)
 
 	// Aggregate is consumed by combatsvc (see clean_architecture.md §4.5).
-	// Computed from the active buff set; pure given the actor's stats.
+	// str is the base STR from the sheet; STR buffs raise it before MinStr
+	// gating, and the result carries the effective STR used.
 	Aggregate(ctx context.Context, characterID int64, str int) (BuffModifiers, error)
+	// GetEffectiveStr is the character's base STR and its STR with buffs.
+	GetEffectiveStr(ctx context.Context, characterID int64) (Strength, error)
+
+	// Restorers maps each state key buffsvc snapshots to the Restorer that
+	// writes a "before" state back on void. The composition root registers
+	// every one on the action log.
+	Restorers() map[string]actionlog.Restorer
 }
 
-// DAL is the storage-driven port.
+// DAL is the storage-driven port. Every method must use the transaction
+// carried by ctx when there is one (see domain.TxRunner).
 type DAL interface {
 	GetActiveBuffs(ctx context.Context, characterID int64) ([]BuffEffect, error)
 	SaveActiveBuffs(ctx context.Context, characterID int64, buffs []BuffEffect) error
 	GetRoundNumber(ctx context.Context, characterID int64) (int, error)
 	SaveRoundNumber(ctx context.Context, characterID int64, round int) error
-
-	// WrapTx scopes a body to a transaction. The body receives a DAL bound to
-	// the tx and uses it just like the pool-bound DAL.
-	WrapTx(ctx context.Context, body func(DAL) error) error
 }
 
-// Compile-time guard: Querier returned by storage WrapTx is unused here, but
-// keep the import live for documentation about where the tx Querier comes from.
-var _ = sqlite.Querier(nil)
+// Log is the slice of the action log buffsvc records into (actionlogsvc).
+type Log interface {
+	actionlog.Recorder
+}
+
+// Characters supplies the base STR from the sheet (charactersvc).
+type Characters interface {
+	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+}
 
 type service struct {
-	dal DAL
+	dal   DAL
+	tx    domain.TxRunner
+	log   Log
+	chars Characters
 }
 
 // New constructs the service.
-func New(dal DAL) (SVC, error) {
-	if dal == nil {
-		return nil, fmt.Errorf("buffsvc: nil dal")
-	}
-	return &service{dal: dal}, nil
+func New(dal DAL, tx domain.TxRunner, log Log, chars Characters) (SVC, error) {
+	return NewWithConfig(DefaultConfig(), dal, tx, log, chars)
 }
 
-// NewWithConfig is here for shape consistency.
-func NewWithConfig(_ *Config, dal DAL) (SVC, error) { return New(dal) }
+// NewWithConfig is the test-friendly constructor.
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters) (SVC, error) {
+	switch {
+	case cfg == nil:
+		return nil, fmt.Errorf("buffsvc: nil config")
+	case dal == nil:
+		return nil, fmt.Errorf("buffsvc: nil dal")
+	case tx == nil:
+		return nil, fmt.Errorf("buffsvc: nil tx runner")
+	case log == nil:
+		return nil, fmt.Errorf("buffsvc: nil log")
+	case chars == nil:
+		return nil, fmt.Errorf("buffsvc: nil characters")
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("buffsvc: invalid config: %w", err)
+	}
+	return &service{dal: dal, tx: tx, log: log, chars: chars}, nil
+}
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }

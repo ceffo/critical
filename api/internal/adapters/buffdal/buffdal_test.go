@@ -38,7 +38,7 @@ func TestActiveBuffs_MissingRowIsEmpty(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 
-	got, err := buffdal.New(db, db).GetActiveBuffs(context.Background(), charID)
+	got, err := buffdal.New(db).GetActiveBuffs(context.Background(), charID)
 	require.NoError(t, err)
 	assert.NotNil(t, got)
 	assert.Empty(t, got)
@@ -47,14 +47,17 @@ func TestActiveBuffs_MissingRowIsEmpty(t *testing.T) {
 func TestActiveBuffs_RoundTrip(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
-	dal := buffdal.New(db, db)
+	dal := buffdal.New(db)
 	ctx := context.Background()
 
 	buffs := []buffsvc.BuffEffect{
-		{ID: "a", Name: "Power Gem", Type: "duration", Duration: 5, Effects: buffsvc.BuffEffects{
+		{ID: "a", Name: "Power Gem", Duration: 5, Effects: buffsvc.BuffEffects{
 			WeaponBuff: intPtr(5), Multiplier: floatPtr(2.0), SpellsBuff: floatPtr(1.5), MinStr: intPtr(18), SaveBonus: intPtr(1),
 		}},
-		{ID: "b", Name: "Shield", Type: "charge", Charges: 3},
+		{ID: "b", Name: "Mirror Image", Duration: 27, Charges: 3},
+		{ID: "c", Name: "Strength", Duration: 540, Effects: buffsvc.BuffEffects{
+			StrBonus: intPtr(4), StrMax: intPtr(18), StrSet: intPtr(17), AC: intPtr(-2),
+		}},
 	}
 	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, buffs))
 
@@ -66,7 +69,7 @@ func TestActiveBuffs_RoundTrip(t *testing.T) {
 func TestActiveBuffs_SaveOverwrites(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
-	dal := buffdal.New(db, db)
+	dal := buffdal.New(db)
 	ctx := context.Background()
 
 	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, []buffsvc.BuffEffect{{ID: "a"}, {ID: "b"}}))
@@ -81,7 +84,7 @@ func TestActiveBuffs_SaveOverwrites(t *testing.T) {
 func TestActiveBuffs_SaveEmpty(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
-	dal := buffdal.New(db, db)
+	dal := buffdal.New(db)
 	ctx := context.Background()
 
 	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, []buffsvc.BuffEffect{{ID: "a"}}))
@@ -95,7 +98,7 @@ func TestActiveBuffs_SaveEmpty(t *testing.T) {
 func TestActiveBuffs_PerCharacter(t *testing.T) {
 	db := openDB(t)
 	c1, c2 := seedCharacter(t, db), seedCharacter(t, db)
-	dal := buffdal.New(db, db)
+	dal := buffdal.New(db)
 	ctx := context.Background()
 
 	require.NoError(t, dal.SaveActiveBuffs(ctx, c1, []buffsvc.BuffEffect{{ID: "a"}}))
@@ -108,7 +111,7 @@ func TestActiveBuffs_PerCharacter(t *testing.T) {
 func TestRoundNumber(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
-	dal := buffdal.New(db, db)
+	dal := buffdal.New(db)
 	ctx := context.Background()
 
 	r, err := dal.GetRoundNumber(ctx, charID)
@@ -123,17 +126,17 @@ func TestRoundNumber(t *testing.T) {
 	assert.Equal(t, 4, r)
 }
 
-func TestWrapTx_CommitsOnSuccess(t *testing.T) {
+func TestInTx_CommitsOnSuccess(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
-	dal := buffdal.New(db, db)
+	dal := buffdal.New(db)
 	ctx := context.Background()
 
-	err := dal.WrapTx(ctx, func(tx buffsvc.DAL) error {
-		if err := tx.SaveRoundNumber(ctx, charID, 7); err != nil {
+	err := db.InTx(ctx, func(ctx context.Context) error {
+		if err := dal.SaveRoundNumber(ctx, charID, 7); err != nil {
 			return err
 		}
-		return tx.SaveActiveBuffs(ctx, charID, []buffsvc.BuffEffect{{ID: "a"}})
+		return dal.SaveActiveBuffs(ctx, charID, []buffsvc.BuffEffect{{ID: "a"}})
 	})
 	require.NoError(t, err)
 
@@ -145,17 +148,22 @@ func TestWrapTx_CommitsOnSuccess(t *testing.T) {
 	assert.Len(t, got, 1)
 }
 
-func TestWrapTx_RollsBackOnError(t *testing.T) {
+// Writes made with the ctx of an InTx join that transaction and roll back
+// with it (a pool write would also deadlock SQLite while the tx is open).
+func TestInTx_RollsBackOnError(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
-	dal := buffdal.New(db, db)
+	dal := buffdal.New(db)
 	ctx := context.Background()
 	require.NoError(t, dal.SaveRoundNumber(ctx, charID, 2))
 
 	boom := errors.New("boom")
-	err := dal.WrapTx(ctx, func(tx buffsvc.DAL) error {
-		require.NoError(t, tx.SaveRoundNumber(ctx, charID, 3))
-		require.NoError(t, tx.SaveActiveBuffs(ctx, charID, []buffsvc.BuffEffect{{ID: "a"}}))
+	err := db.InTx(ctx, func(ctx context.Context) error {
+		require.NoError(t, dal.SaveRoundNumber(ctx, charID, 3))
+		require.NoError(t, dal.SaveActiveBuffs(ctx, charID, []buffsvc.BuffEffect{{ID: "a"}}))
+		r, err := dal.GetRoundNumber(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, 3, r, "reads inside the tx see its writes")
 		return boom
 	})
 	assert.ErrorIs(t, err, boom)
@@ -168,17 +176,6 @@ func TestWrapTx_RollsBackOnError(t *testing.T) {
 	assert.Empty(t, got, "buffs must be rolled back")
 }
 
-func TestWrapTx_NestedIsRejected(t *testing.T) {
-	db := openDB(t)
-	dal := buffdal.New(db, db)
-	ctx := context.Background()
-
-	err := dal.WrapTx(ctx, func(tx buffsvc.DAL) error {
-		return tx.WrapTx(ctx, func(buffsvc.DAL) error { return nil })
-	})
-	assert.Error(t, err)
-}
-
 // Reads work independently of the upsert bug skipped above: seed the rows by
 // hand using the on-disk JSON format.
 func TestActiveBuffs_ReadsStoredJSON(t *testing.T) {
@@ -189,10 +186,10 @@ func TestActiveBuffs_ReadsStoredJSON(t *testing.T) {
 		`[{"id":"a","name":"Power Gem","type":"duration","charges":0,"duration":5,"effects":{"weapon_buff":5,"multiplier":2,"min_str":18}}]`)
 	require.NoError(t, err)
 
-	got, err := buffdal.New(db, db).GetActiveBuffs(context.Background(), charID)
+	got, err := buffdal.New(db).GetActiveBuffs(context.Background(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, []buffsvc.BuffEffect{{
-		ID: "a", Name: "Power Gem", Type: "duration", Duration: 5,
+		ID: "a", Name: "Power Gem", Duration: 5,
 		Effects: buffsvc.BuffEffects{WeaponBuff: intPtr(5), Multiplier: floatPtr(2.0), MinStr: intPtr(18)},
 	}}, got)
 }
@@ -204,7 +201,7 @@ func TestActiveBuffs_CorruptJSON(t *testing.T) {
 		`INSERT INTO active_buffs (character_id, buffs) VALUES (?, 'not json')`, charID)
 	require.NoError(t, err)
 
-	_, err = buffdal.New(db, db).GetActiveBuffs(context.Background(), charID)
+	_, err = buffdal.New(db).GetActiveBuffs(context.Background(), charID)
 	assert.Error(t, err)
 }
 
@@ -215,7 +212,7 @@ func TestRoundNumber_ReadsStoredValue(t *testing.T) {
 		`INSERT INTO round_state (character_id, round_number) VALUES (?, 9)`, charID)
 	require.NoError(t, err)
 
-	r, err := buffdal.New(db, db).GetRoundNumber(context.Background(), charID)
+	r, err := buffdal.New(db).GetRoundNumber(context.Background(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, 9, r)
 }

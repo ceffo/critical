@@ -48,7 +48,9 @@ export async function recordHp(
   await box.getByLabel("Amount").fill(String(amount));
   await box.getByLabel("Source").fill(source);
   await box
-    .getByRole("button", { name: kind === "damage" ? "Apply Damage" : "Apply Heal" })
+    .getByRole("button", {
+      name: kind === "damage" ? "Apply Damage" : "Apply Heal",
+    })
     .click();
 }
 
@@ -59,4 +61,48 @@ export function combatLog(page: Page): Locator {
 /** The log entry whose summary contains `source` (use unique sources per test). */
 export function logEntry(page: Page, source: string): Locator {
   return combatLog(page).getByRole("listitem").filter({ hasText: source });
+}
+
+/** The badge of the active buff called `name` in the header's buff strip. */
+export function buffBadge(page: Page, name: string): Locator {
+  return page.locator(`[data-testid="buff"][data-buff="${name}"]`);
+}
+
+export interface NewBuff {
+  name: string;
+  rounds?: number;
+  charges?: number;
+  /** [effect key as on the wire, value], e.g. ["str_bonus", 6]. */
+  effects?: [string, number][];
+}
+
+/** Add a buff through the buff strip's form and wait for its badge. */
+export async function addBuff(page: Page, buff: NewBuff) {
+  const strip = page.getByRole("group", { name: "Buffs" });
+  await strip.getByRole("button", { name: "Add buff" }).click();
+  const form = strip.getByRole("form", { name: "Add buff" });
+  await form.getByLabel("Buff name").fill(buff.name);
+  await form.getByLabel("Rounds").fill(String(buff.rounds ?? 0));
+  await form.getByLabel("Charges").fill(String(buff.charges ?? 0));
+  for (const [i, [key, value]] of (buff.effects ?? []).entries()) {
+    await form.getByRole("button", { name: "Effect", exact: true }).click();
+    const row = form.getByTestId("effect-row").nth(i);
+    await row.getByLabel("Effect", { exact: true }).selectOption(key);
+    await row.getByLabel("Effect value").fill(String(value));
+  }
+  await form.getByRole("button", { name: "Activate" }).click();
+  await expect(buffBadge(page, buff.name)).toBeVisible();
+}
+
+/** Void the log entry whose text contains `text` (two clicks: Void, Confirm). */
+export async function voidEntry(page: Page, text: string) {
+  const entry = logEntry(page, text);
+  await entry.getByRole("button", { name: "Void" }).click();
+  await entry.getByRole("button", { name: "Confirm" }).click();
+  await expect(entry).toHaveAttribute("data-status", "voided");
+}
+
+/** Effective STR as shown in the header. */
+export async function effectiveStr(page: Page): Promise<number> {
+  return Number((await page.getByTestId("str-value").textContent()) ?? "NaN");
 }

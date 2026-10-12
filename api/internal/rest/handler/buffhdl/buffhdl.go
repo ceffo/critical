@@ -1,4 +1,4 @@
-// Package buffhdl exposes /api/buffs and /api/round.
+// Package buffhdl exposes /api/buffs, /api/round and /api/stats/str.
 package buffhdl
 
 import (
@@ -15,6 +15,7 @@ import (
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
+	Patch(pattern string, h http.HandlerFunc)
 	Delete(pattern string, h http.HandlerFunc)
 }
 
@@ -22,33 +23,42 @@ type Router interface {
 type CharacterIDFunc func(r *http.Request) int64
 
 type buffSvc interface {
-	ListActive(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error)
+	ListStatus(ctx context.Context, characterID int64) ([]buffsvc.BuffStatus, error)
 	Activate(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) ([]buffsvc.BuffEffect, error)
+	Edit(ctx context.Context, characterID int64, buffID string, e buffsvc.BuffEdit) ([]buffsvc.BuffEffect, error)
 	Dismiss(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, err error)
+	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 }
 
-// RegisterRoutes wires buff and round endpoints onto r.
+// RegisterRoutes wires buff, round and effective-STR endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Get("/api/buffs", render.Handle(ListActive(charID, svc)))
 	r.Post("/api/buffs", render.Handle(Activate(charID, svc)))
+	r.Patch("/api/buffs/{id}", render.Handle(Edit(charID, svc)))
 	r.Delete("/api/buffs/{id}", render.Handle(Dismiss(charID, svc)))
 	r.Post("/api/buffs/{id}/trigger", render.Handle(Trigger(charID, svc)))
 	r.Get("/api/round", render.Handle(GetRound(charID, svc)))
 	r.Post("/api/round/advance", render.Handle(AdvanceRound(charID, svc)))
+	r.Get("/api/stats/str", render.Handle(GetEffectiveStr(charID, svc)))
+}
+
+// renderList writes the active list with each buff's applies flag.
+func renderList(w http.ResponseWriter, r *http.Request, charID CharacterIDFunc, svc buffSvc) error {
+	buffs, err := svc.ListStatus(r.Context(), charID(r))
+	if err != nil {
+		return err
+	}
+	render.OK(r.Context(), w, toStatusDTOs(buffs))
+	return nil
 }
 
 // ListActive returns the current buff list.
 func ListActive(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		buffs, err := svc.ListActive(r.Context(), charID(r))
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, toDTOs(buffs))
-		return nil
+		return renderList(w, r, charID, svc)
 	}
 }
 
@@ -59,47 +69,51 @@ func Activate(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		if dto.Name == "" {
-			return render.BadRequestError("name is required")
-		}
-		buffs, err := svc.Activate(r.Context(), charID(r), dto.toDomain())
-		if err != nil {
+		if _, err := svc.Activate(r.Context(), charID(r), dto.toDomain()); err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTOs(buffs))
-		return nil
+		return renderList(w, r, charID, svc)
+	}
+}
+
+// BuffEditDTO is the PATCH /api/buffs/{id} body; omitted fields are unchanged.
+type BuffEditDTO struct {
+	Duration *int `json:"duration"`
+	Charges  *int `json:"charges"`
+}
+
+// Edit corrects a buff's remaining rounds and/or charges.
+func Edit(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var dto BuffEditDTO
+		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		edit := buffsvc.BuffEdit{Duration: dto.Duration, Charges: dto.Charges}
+		if _, err := svc.Edit(r.Context(), charID(r), chi.URLParam(r, "id"), edit); err != nil {
+			return err
+		}
+		return renderList(w, r, charID, svc)
 	}
 }
 
 // Dismiss removes the buff with the given id.
 func Dismiss(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		id := chi.URLParam(r, "id")
-		if id == "" {
-			return render.BadRequestError("id is required")
-		}
-		buffs, err := svc.Dismiss(r.Context(), charID(r), id)
-		if err != nil {
+		if _, err := svc.Dismiss(r.Context(), charID(r), chi.URLParam(r, "id")); err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTOs(buffs))
-		return nil
+		return renderList(w, r, charID, svc)
 	}
 }
 
-// Trigger decrements charges on a charge buff.
+// Trigger uses one charge of a charged buff (absorbed a hit).
 func Trigger(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		id := chi.URLParam(r, "id")
-		if id == "" {
-			return render.BadRequestError("id is required")
-		}
-		buffs, err := svc.Trigger(r.Context(), charID(r), id)
-		if err != nil {
+		if _, err := svc.Trigger(r.Context(), charID(r), chi.URLParam(r, "id")); err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTOs(buffs))
-		return nil
+		return renderList(w, r, charID, svc)
 	}
 }
 
@@ -131,15 +145,35 @@ func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	}
 }
 
-// BuffEffectDTO is the wire shape for a single buff. Mirrors the previous
-// domain.BuffEffect JSON layout (snake_case effect fields).
+// StrengthDTO is GET /api/stats/str.
+type StrengthDTO struct {
+	Base      int `json:"base"`
+	Effective int `json:"effective"`
+}
+
+// GetEffectiveStr returns the sheet STR and the STR with buffs.
+func GetEffectiveStr(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		s, err := svc.GetEffectiveStr(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, StrengthDTO{Base: s.Base, Effective: s.Effective})
+		return nil
+	}
+}
+
+// BuffEffectDTO is the wire shape for a single buff (snake_case effect
+// fields). duration is rounds left (0: not timed), charges what is left to
+// absorb (0: none). applies is set on list responses: false while the buff's
+// min_str is not met by the effective STR.
 type BuffEffectDTO struct {
 	ID       string         `json:"id"`
 	Name     string         `json:"name"`
-	Type     string         `json:"type"`
 	Charges  int            `json:"charges"`
 	Duration int            `json:"duration"`
 	Effects  BuffEffectsDTO `json:"effects"`
+	Applies  *bool          `json:"applies,omitempty"`
 }
 
 // BuffEffectsDTO is the modifier payload.
@@ -149,6 +183,10 @@ type BuffEffectsDTO struct {
 	WeaponBuff *int     `json:"weapon_buff,omitempty"`
 	Multiplier *float64 `json:"multiplier,omitempty"`
 	SaveBonus  *int     `json:"save_bonus,omitempty"`
+	StrSet     *int     `json:"str_set,omitempty"`
+	StrBonus   *int     `json:"str_bonus,omitempty"`
+	StrMax     *int     `json:"str_max,omitempty"`
+	AC         *int     `json:"ac,omitempty"`
 }
 
 // RoundAdvanceDTO mirrors the previous response shape from RoundHandler.Advance.
@@ -160,23 +198,15 @@ type RoundAdvanceDTO struct {
 
 func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
-		ID: d.ID, Name: d.Name, Type: d.Type, Charges: d.Charges, Duration: d.Duration,
-		Effects: buffsvc.BuffEffects{
-			MinStr: d.Effects.MinStr, SpellsBuff: d.Effects.SpellsBuff,
-			WeaponBuff: d.Effects.WeaponBuff, Multiplier: d.Effects.Multiplier,
-			SaveBonus: d.Effects.SaveBonus,
-		},
+		ID: d.ID, Name: d.Name, Charges: d.Charges, Duration: d.Duration,
+		Effects: buffsvc.BuffEffects(d.Effects),
 	}
 }
 
 func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
-		ID: b.ID, Name: b.Name, Type: b.Type, Charges: b.Charges, Duration: b.Duration,
-		Effects: BuffEffectsDTO{
-			MinStr: b.Effects.MinStr, SpellsBuff: b.Effects.SpellsBuff,
-			WeaponBuff: b.Effects.WeaponBuff, Multiplier: b.Effects.Multiplier,
-			SaveBonus: b.Effects.SaveBonus,
-		},
+		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
+		Effects: BuffEffectsDTO(b.Effects),
 	}
 }
 
@@ -184,6 +214,17 @@ func toDTOs(bs []buffsvc.BuffEffect) []BuffEffectDTO {
 	out := make([]BuffEffectDTO, 0, len(bs))
 	for _, b := range bs {
 		out = append(out, toDTO(b))
+	}
+	return out
+}
+
+func toStatusDTOs(bs []buffsvc.BuffStatus) []BuffEffectDTO {
+	out := make([]BuffEffectDTO, 0, len(bs))
+	for _, b := range bs {
+		d := toDTO(b.BuffEffect)
+		applies := b.Applies
+		d.Applies = &applies
+		out = append(out, d)
 	}
 	return out
 }

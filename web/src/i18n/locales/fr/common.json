@@ -6,7 +6,9 @@
     "thac0": "TAC0",
     "abilities": "Caractéristiques",
     "error": "Erreur",
-    "dismiss": "Fermer"
+    "dismiss": "Fermer",
+    "strTitle": "FOR {{effective}} (fiche {{base}})",
+    "strBase": "({{base}})"
   },
   "language": {
     "label": "Langue",
@@ -40,20 +42,37 @@
     "none": "Aucun bonus actif",
     "charges": "{{count}} ch.",
     "rounds": "{{count}} rd.",
-    "useCharge": "Utiliser une charge de {{name}}",
+    "untilDismissed": "jusqu'à retrait",
+    "absorb": "{{name}} a absorbé un coup",
+    "absorbShort": "Absorbé",
+    "edit": "Modifier {{name}}",
+    "editLabel": "Modifier {{name}}",
     "dismiss": "Retirer {{name}}",
+    "inactive": "FOR {{min}} requise",
+    "inactiveHint": "Sans effet tant que la FOR n'atteint pas {{min}}",
     "add": "Ajouter un bonus",
     "name": "Nom du bonus",
-    "kind": "Décompte par",
-    "typeRounds": "Rounds",
-    "typeCharges": "Charges",
-    "count": "Rounds ou charges",
+    "roundsLeft": "Rounds",
+    "chargesLeft": "Charges",
+    "roundsHint": "Rounds restants, décomptés à chaque round suivant (0 : sans durée)",
+    "chargesHint": "Coups qu'il peut absorber, p. ex. couches de Peau de pierre (0 : aucun)",
     "effect": "Effet",
     "effectValue": "Valeur de l'effet",
-    "effectWeapon": "Arme +N",
-    "effectSpells": "Sorts ×N",
-    "effectMultiplier": "Dégâts ×N",
+    "addEffect": "Effet",
+    "removeEffect": "Retirer l'effet",
+    "effects": {
+      "weapon_buff": "Arme +N",
+      "spells_buff": "Sorts ×N",
+      "multiplier": "Dégâts ×N",
+      "save_bonus": "JS +N",
+      "str_bonus": "FOR +N",
+      "str_max": "FOR max",
+      "str_set": "FOR fixée à",
+      "min_str": "FOR requise",
+      "ac": "CA ±N"
+    },
     "activate": "Activer",
+    "save": "Enregistrer",
     "cancel": "Annuler",
     "expired": "Bonus expirés : {{names}}"
   },
@@ -172,6 +191,16 @@
     "save": "Enregistrer",
     "amendLabel": "Corriger l'entrée",
     "newDelta": "Modification de PV (− dégâts, + soins)",
-    "source": "Source"
+    "source": "Source",
+    "buff": {
+      "activate": "{{buff}} activé ({{counters}})",
+      "edit": "{{buff}} : {{from}} → {{to}}",
+      "editEnded": "{{buff}} : {{from}} → terminé",
+      "absorb": "{{buff}} a absorbé un coup (reste {{count}})",
+      "absorbEnded": "{{buff}} a absorbé un coup, terminé",
+      "dismiss": "{{buff}} retiré",
+      "nextRound": "Round {{from}} → {{to}}",
+      "expired": "— expirés : {{names}}"
+    }
   }
 }

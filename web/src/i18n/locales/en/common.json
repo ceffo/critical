@@ -6,7 +6,9 @@
     "thac0": "THAC0",
     "abilities": "Ability scores",
     "error": "Error",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "strTitle": "STR {{effective}} (sheet {{base}})",
+    "strBase": "({{base}})"
   },
   "language": {
     "label": "Language",
@@ -40,20 +42,37 @@
     "none": "No active buffs",
     "charges": "{{count}} ch",
     "rounds": "{{count}} rd",
-    "useCharge": "Use a charge of {{name}}",
+    "untilDismissed": "until dismissed",
+    "absorb": "{{name}} absorbed a hit",
+    "absorbShort": "Absorbed",
+    "edit": "Edit {{name}}",
+    "editLabel": "Edit {{name}}",
     "dismiss": "Dismiss {{name}}",
+    "inactive": "needs STR {{min}}",
+    "inactiveHint": "No effect until STR reaches {{min}}",
     "add": "Add buff",
     "name": "Buff name",
-    "kind": "Counts down by",
-    "typeRounds": "Rounds",
-    "typeCharges": "Charges",
-    "count": "Rounds or charges",
+    "roundsLeft": "Rounds",
+    "chargesLeft": "Charges",
+    "roundsHint": "Rounds left, counted down by Next Round (0: not timed)",
+    "chargesHint": "Hits it can absorb, e.g. Stoneskin layers (0: none)",
     "effect": "Effect",
     "effectValue": "Effect value",
-    "effectWeapon": "Weapon +N",
-    "effectSpells": "Spells ×N",
-    "effectMultiplier": "Damage ×N",
+    "addEffect": "Effect",
+    "removeEffect": "Remove effect",
+    "effects": {
+      "weapon_buff": "Weapon +N",
+      "spells_buff": "Spells ×N",
+      "multiplier": "Damage ×N",
+      "save_bonus": "Saves +N",
+      "str_bonus": "STR +N",
+      "str_max": "STR max",
+      "str_set": "STR set to",
+      "min_str": "Needs STR",
+      "ac": "AC ±N"
+    },
     "activate": "Activate",
+    "save": "Save",
     "cancel": "Cancel",
     "expired": "Expired buffs: {{names}}"
   },
@@ -172,6 +191,16 @@
     "save": "Save",
     "amendLabel": "Amend entry",
     "newDelta": "HP change (− damage, + heal)",
-    "source": "Source"
+    "source": "Source",
+    "buff": {
+      "activate": "Activated {{buff}} ({{counters}})",
+      "edit": "{{buff}}: {{from}} → {{to}}",
+      "editEnded": "{{buff}}: {{from}} → ended",
+      "absorb": "{{buff}} absorbed a hit ({{count}} left)",
+      "absorbEnded": "{{buff}} absorbed a hit, ended",
+      "dismiss": "Dismissed {{buff}}",
+      "nextRound": "Round {{from}} → {{to}}",
+      "expired": "— expired: {{names}}"
+    }
   }
 }

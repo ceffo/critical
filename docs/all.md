@@ -41,7 +41,7 @@ critical/
 
 - **Bard**: the single character this app manages in Phase 1
 - **HP Ledger**: append-only event log of all damage/healing. Current HP = SUM(delta).
-- **Buff**: an active effect with either a charge count (decremented on trigger) or a duration in rounds (decremented on Next Round)
+- **Buff**: an active effect with a charge count (decremented when it absorbs a hit, ends at 0), a duration in rounds (decremented on Next Round, expires at 0), both (Mirror Image) or neither (until dismissed). Every buff change is in the action log and voidable
 - **Round Counter**: manually advanced by the player; one tap = Next Round = decrement all duration buffs
 - **THAC0**: "To Hit Armor Class 0" — lower is better. Attack hits if `roll + modifiers ≥ THAC0 - target_AC`
 - **Spell Slot**: a prepared spell instance consumable once per day; reset on long rest

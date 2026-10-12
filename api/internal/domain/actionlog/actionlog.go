@@ -17,8 +17,9 @@ import (
 // Kind classifies an entry.
 type Kind string
 
-// Entry kinds. Only KindHPChange is recorded today; the others are reserved
-// for the services that plug into the log.
+// Entry kinds. hp_change (hpsvc), buff_change and round_advance (buffsvc)
+// are recorded today; the others are reserved for the services that plug
+// into the log.
 const (
 	KindHPChange     Kind = "hp_change"
 	KindCast         Kind = "cast"

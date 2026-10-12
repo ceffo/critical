@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -74,7 +75,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	characterDAL := characterdal.New(db)
 	hpDAL := hpdal.New(db)
 	logDAL := actionlogdal.New(db)
-	buffDAL := buffdal.New(db, db)
+	buffDAL := buffdal.New(db)
 	spellDAL := spelldal.New(db)
 	dice := diceadpt.New()
 	weaponDAL := weapondal.New(db)
@@ -106,18 +107,21 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	buffSvc, err := buffsvc.New(buffDAL)
+	// The action log stamps entries with the round read straight from
+	// buffdal (buffsvc itself records into the log, so it cannot be the
+	// log's dependency). Services that record snapshots register their
+	// Restorers on logSvc here.
+	logSvc, err := actionlogsvc.New(logDAL, db, roundReader{buffDAL})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	// The action log stamps entries with buffSvc's round; services that
-	// record snapshots register their Restorer on logSvc here.
-	logSvc, err := actionlogsvc.New(logDAL, db, buffSvc)
+	buffSvc, err := buffsvc.New(buffDAL, db, logSvc, charSvc)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
+	registerRestorers(logSvc, buffSvc.Restorers())
 	hpSvc, err := hpsvc.New(hpDAL, logSvc)
 	if err != nil {
 		_ = db.Close()
@@ -173,4 +177,20 @@ func (b *BackingServices) Close(ctx context.Context) error {
 		}
 	}
 	return firstErr
+}
+
+// roundReader satisfies actionlogsvc.Rounds from buffdal. It runs inside the
+// recording transaction (buffdal follows the ctx transaction).
+type roundReader struct{ dal *buffdal.DAL }
+
+func (r roundReader) GetRound(ctx context.Context, characterID int64) (int, error) {
+	return r.dal.GetRoundNumber(ctx, characterID)
+}
+
+// registerRestorers binds every state key a service snapshots to its
+// Restorer, so voiding one of its entries can write the "before" state back.
+func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Restorer) {
+	for key, r := range restorers {
+		log.RegisterRestorer(key, r)
+	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	logmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	charmocks "github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -101,7 +102,13 @@ var endpoints = []endpoint{
 		m.log.On("Void", anyArgs(3)...).Return(nil, err)
 	}},
 	{"GET buffs", "GET", "/api/buffs", "", func(m *mocksSet, err error) {
-		m.buffs.On("ListActive", anyArgs(2)...).Return(nil, err)
+		m.buffs.On("ListStatus", anyArgs(2)...).Return(nil, err)
+	}},
+	{"PATCH buffs/{id}", "PATCH", "/api/buffs/b1", `{"duration":3}`, func(m *mocksSet, err error) {
+		m.buffs.On("Edit", anyArgs(4)...).Return(nil, err)
+	}},
+	{"GET stats/str", "GET", "/api/stats/str", "", func(m *mocksSet, err error) {
+		m.buffs.On("GetEffectiveStr", anyArgs(2)...).Return(buffsvc.Strength{}, err)
 	}},
 	{"POST buffs", "POST", "/api/buffs", `{"name":"bless"}`, func(m *mocksSet, err error) {
 		m.buffs.On("Activate", anyArgs(3)...).Return(nil, err)
@@ -229,7 +236,7 @@ func TestRequestParsingErrors(t *testing.T) {
 	}{
 		{"hp/event bad json", "POST", "/api/hp/event", "{", "invalid request body"},
 		{"buffs bad json", "POST", "/api/buffs", "{", "invalid request body"},
-		{"buffs missing name", "POST", "/api/buffs", `{}`, "name is required"},
+		{"buff edit bad json", "PATCH", "/api/buffs/b1", "{", "invalid request body"},
 		{"attack bad json", "POST", "/api/roll/attack", "nope", "invalid request body"},
 		{"save bad json", "POST", "/api/roll/save", "nope", "invalid request body"},
 		{"log bad limit", "GET", "/api/log?limit=abc", "", "limit must be a positive integer"},

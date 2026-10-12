@@ -1,0 +1,71 @@
+import type { TFunction } from "i18next";
+import type { LogEntry } from "@/types/log";
+
+/** Payload of buff_change / round_advance entries (buffsvc logPayload). */
+export interface BuffLogPayload {
+  action: "activate" | "edit" | "absorb" | "dismiss" | "next_round";
+  buff?: string;
+  rounds?: number;
+  charges?: number;
+  fromRounds?: number;
+  fromCharges?: number;
+  ended?: boolean;
+  fromRound?: number;
+  toRound?: number;
+  expired?: string[];
+}
+
+function buffPayload(e: LogEntry): BuffLogPayload | null {
+  if (e.kind !== "buff_change" && e.kind !== "round_advance") return null;
+  const p = e.payload as Partial<BuffLogPayload> | null;
+  return p && typeof p.action === "string" ? (p as BuffLogPayload) : null;
+}
+
+/** "5 rd, 3 ch", or "until dismissed" when the buff has neither counter. */
+function counters(t: TFunction, rounds = 0, charges = 0): string {
+  const parts = [
+    rounds > 0 ? t("buffs.rounds", { count: rounds }) : null,
+    charges > 0 ? t("buffs.charges", { count: charges }) : null,
+  ].filter((p): p is string => p !== null);
+  return parts.length > 0 ? parts.join(", ") : t("buffs.untilDismissed");
+}
+
+/**
+ * The entry's text in the player's language: buff and round entries are rendered from their
+ * structured payload; everything else (and unknown payloads) uses the server's summary.
+ */
+export function entryText(e: LogEntry, t: TFunction): string {
+  const p = buffPayload(e);
+  if (!p) return e.effectiveSummary;
+  const buff = p.buff ?? "";
+  switch (p.action) {
+    case "activate":
+      return t("log.buff.activate", {
+        buff,
+        counters: counters(t, p.rounds, p.charges),
+      });
+    case "edit":
+      return t(p.ended ? "log.buff.editEnded" : "log.buff.edit", {
+        buff,
+        from: counters(t, p.fromRounds, p.fromCharges),
+        to: counters(t, p.rounds, p.charges),
+      });
+    case "absorb":
+      return p.ended
+        ? t("log.buff.absorbEnded", { buff })
+        : t("log.buff.absorb", { buff, count: p.charges ?? 0 });
+    case "dismiss":
+      return t("log.buff.dismiss", { buff });
+    case "next_round": {
+      const text = t("log.buff.nextRound", {
+        from: p.fromRound ?? 0,
+        to: p.toRound ?? 0,
+      });
+      return p.expired && p.expired.length > 0
+        ? `${text} ${t("log.buff.expired", { names: p.expired.join(", ") })}`
+        : text;
+    }
+    default:
+      return e.effectiveSummary;
+  }
+}

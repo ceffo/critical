@@ -7,6 +7,7 @@ import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
 import { groupByRound } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
+import { entryText } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
 import type { LogEntry } from "@/types/log";
 import { captionClass, fieldClass } from "./fieldStyles";
@@ -64,6 +65,7 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
   const voided = e.status === "voided";
   const amended = e.status === "amended";
   const isHp = e.kind === "hp_change";
+  const text = entryText(e, t);
 
   return (
     <li
@@ -82,9 +84,9 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
             "min-w-0 flex-1 truncate text-sm",
             voided && "text-muted-foreground line-through",
           )}
-          title={e.effectiveSummary}
+          title={text}
         >
-          {e.effectiveSummary}
+          {text}
         </span>
         {isHp && (
           <span

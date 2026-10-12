@@ -15,32 +15,26 @@ import (
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// TxRunner is the storage-level transaction primitive. The composition root
-// passes a *sqlite.DB that satisfies it.
-type TxRunner interface {
-	WrapTx(ctx context.Context, body func(sqlite.Querier) error) error
-}
-
-// DAL is the SQLite-backed implementation of buffsvc.DAL.
+// DAL is the SQLite-backed implementation of buffsvc.DAL. Every call runs on
+// the transaction carried by ctx when there is one (sqlite.Conn), so buff
+// writes commit together with their action-log entry.
 type DAL struct {
-	q  sqlite.Querier
-	tx TxRunner
+	q sqlite.Querier
 }
 
-// New returns a DAL bound to the pool plus a tx runner.
-func New(q sqlite.Querier, tx TxRunner) *DAL { return &DAL{q: q, tx: tx} }
+// New returns a DAL on the pool; calls join the ctx transaction if any.
+func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
 
-// newTxBound is used internally by WrapTx.
-func newTxBound(q sqlite.Querier) *DAL { return &DAL{q: q} }
-
-func (d *DAL) exec() sqlite.BobExec { return sqlite.BobExec{Querier: d.q} }
+func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
+	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
+}
 
 // jsonBuff mirrors buffsvc.BuffEffect with JSON tags so we can preserve the
-// existing on-disk format.
+// existing on-disk format. Rows written before qki.8 also carry a "type"
+// (charge|duration) key; it is ignored: the counters say how a buff ends.
 type jsonBuff struct {
 	ID       string      `json:"id"`
 	Name     string      `json:"name"`
-	Type     string      `json:"type"`
 	Charges  int         `json:"charges"`
 	Duration int         `json:"duration"`
 	Effects  jsonEffects `json:"effects"`
@@ -52,33 +46,29 @@ type jsonEffects struct {
 	WeaponBuff *int     `json:"weapon_buff,omitempty"`
 	Multiplier *float64 `json:"multiplier,omitempty"`
 	SaveBonus  *int     `json:"save_bonus,omitempty"`
+	StrSet     *int     `json:"str_set,omitempty"`
+	StrBonus   *int     `json:"str_bonus,omitempty"`
+	StrMax     *int     `json:"str_max,omitempty"`
+	AC         *int     `json:"ac,omitempty"`
 }
 
 func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
-		ID: j.ID, Name: j.Name, Type: j.Type, Charges: j.Charges, Duration: j.Duration,
-		Effects: buffsvc.BuffEffects{
-			MinStr: j.Effects.MinStr, SpellsBuff: j.Effects.SpellsBuff,
-			WeaponBuff: j.Effects.WeaponBuff, Multiplier: j.Effects.Multiplier,
-			SaveBonus: j.Effects.SaveBonus,
-		},
+		ID: j.ID, Name: j.Name, Charges: j.Charges, Duration: j.Duration,
+		Effects: buffsvc.BuffEffects(j.Effects),
 	}
 }
 
 func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 	return jsonBuff{
-		ID: b.ID, Name: b.Name, Type: b.Type, Charges: b.Charges, Duration: b.Duration,
-		Effects: jsonEffects{
-			MinStr: b.Effects.MinStr, SpellsBuff: b.Effects.SpellsBuff,
-			WeaponBuff: b.Effects.WeaponBuff, Multiplier: b.Effects.Multiplier,
-			SaveBonus: b.Effects.SaveBonus,
-		},
+		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
+		Effects: jsonEffects(b.Effects),
 	}
 }
 
 // GetActiveBuffs returns the persisted list (empty when none).
 func (d *DAL) GetActiveBuffs(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error) {
-	blob, err := queries.GetActiveBuffs(characterID).One(ctx, d.exec())
+	blob, err := queries.GetActiveBuffs(characterID).One(ctx, d.exec(ctx))
 	if errors.Is(err, sql.ErrNoRows) {
 		return []buffsvc.BuffEffect{}, nil
 	}
@@ -111,7 +101,7 @@ func (d *DAL) SaveActiveBuffs(ctx context.Context, characterID int64, buffs []bu
 	}
 	_, err = queries.UpsertActiveBuffs([]queries.UpsertActiveBuffs_ActiveBuffs{
 		{CharacterID: characterID, Buffs: string(blob)},
-	}).Exec(ctx, d.exec())
+	}).Exec(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("upsert active_buffs: %w", err)
 	}
@@ -120,7 +110,7 @@ func (d *DAL) SaveActiveBuffs(ctx context.Context, characterID int64, buffs []bu
 
 // GetRoundNumber returns the persisted round; 0 when no row exists.
 func (d *DAL) GetRoundNumber(ctx context.Context, characterID int64) (int, error) {
-	round, err := queries.GetRoundNumber(characterID).One(ctx, d.exec())
+	round, err := queries.GetRoundNumber(characterID).One(ctx, d.exec(ctx))
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
@@ -134,20 +124,9 @@ func (d *DAL) GetRoundNumber(ctx context.Context, characterID int64) (int, error
 func (d *DAL) SaveRoundNumber(ctx context.Context, characterID int64, round int) error {
 	_, err := queries.UpsertRoundNumber([]queries.UpsertRoundNumber_RoundState{
 		{CharacterID: characterID, RoundNumber: int64(round)},
-	}).Exec(ctx, d.exec())
+	}).Exec(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("upsert round_state: %w", err)
 	}
 	return nil
-}
-
-// WrapTx runs body with a tx-bound DAL. If d is already tx-bound, this panics
-// — nested transactions are not supported on SQLite.
-func (d *DAL) WrapTx(ctx context.Context, body func(buffsvc.DAL) error) error {
-	if d.tx == nil {
-		return fmt.Errorf("buffdal: WrapTx called on tx-bound DAL")
-	}
-	return d.tx.WrapTx(ctx, func(q sqlite.Querier) error {
-		return body(newTxBound(q))
-	})
 }

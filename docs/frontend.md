@@ -34,7 +34,7 @@ fix mistakes, advance the round. `App.tsx` composes it; nothing is behind a moda
 flowchart TD
   subgraph H["Header (components/dashboard/Header.tsx, always visible)"]
     ID["Name, level, abilities, THAC0"] --- HP["HpBar: current / max"] --- RC["RoundControl: round + Next Round"]
-    BS["BuffStrip: active buffs + Add buff"]
+    BS["BuffStrip: active buffs (rounds / charges, Absorbed, edit, dismiss) + Add buff"]
   end
   subgraph M["Main grid: 1fr | 380px | 420px"]
     AA["ActionArea tabs (components/actions/): Attack, Spells, Items, Saves, Spell Lookup"]
@@ -53,6 +53,11 @@ flowchart TD
 - Plug-in slots: each action tab is one panel component in `components/actions/ActionArea.tsx`
   (`TABS`). Attack → critical-qki.7, Spells → qki.9/qki.10, Items → qki.11 (placeholder today),
   buff editing → qki.8 (`BuffStrip`).
+- Buffs: every change (add, edit rounds/charges, "Absorbed" for charge buffs, dismiss, Next
+  Round) is a log entry, voidable from the CombatLog. Buff/round entries are rendered from their
+  payload in the player's language (`lib/logSummary.ts`). The header's STR is the effective STR
+  (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
+  (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N".
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).

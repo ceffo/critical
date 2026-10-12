@@ -4,7 +4,7 @@
 
 - **Language**: Go (latest stable)
 - **HTTP**: standard `net/http` or `chi` router
-- **Database**: SQLite via `modernc.org/sqlite` (pure Go, no CGO)
+- **Database**: SQLite via `modernc.org/sqlite` (pure Go, no CGO). `sqlite.Open` sets `busy_timeout=5000` on every pooled connection and `journal_mode=WAL` for file-backed DBs (WAL adds `-wal`/`-shm` files beside the DB).
 - **Migrations**: simple sequential SQL files, applied at startup
 - **Seed loader**: reads `seeds/*.json` at startup if corresponding table is empty
 

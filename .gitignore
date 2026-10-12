@@ -32,3 +32,8 @@ web/e2e-results/
 web/playwright-report/
 web/test-results/
 web/blob-report/
+
+# SQLite DB files (default CRITICAL_DSN=critical.db) and WAL sidecars
+*.db
+*.db-wal
+*.db-shm

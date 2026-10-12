@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	_ "modernc.org/sqlite" // SQLite driver
 )
@@ -34,8 +35,14 @@ type DB struct {
 // Open opens (or creates) the SQLite database at dsn and returns a *DB. It does
 // NOT run migrations or seed data — those are separate steps the composition
 // root drives.
+//
+// Every pooled connection gets busy_timeout=5000 (so a writer blocked by
+// another connection waits instead of failing with SQLITE_BUSY) and, for
+// file-backed databases, journal_mode=WAL. Both are applied as DSN _pragma
+// parameters, which the driver runs on each new connection. A pragma the
+// caller's DSN already sets is left alone.
 func Open(dsn string) (*DB, error) {
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sql.Open("sqlite", withPragmas(dsn))
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
@@ -44,6 +51,40 @@ func Open(dsn string) (*DB, error) {
 		return nil, fmt.Errorf("ping sqlite: %w", err)
 	}
 	return &DB{DB: db}, nil
+}
+
+// withPragmas appends the opener's per-connection pragmas to dsn, which may be
+// a bare path or a file: URI with or without query parameters.
+func withPragmas(dsn string) string {
+	base, query, _ := strings.Cut(dsn, "?")
+	lower := strings.ToLower(query)
+	inMemory := base == ":memory:" || strings.Contains(base, ":memory:") ||
+		strings.Contains(lower, "mode=memory")
+
+	var extra []string
+	if !hasPragma(lower, "busy_timeout") {
+		extra = append(extra, "_pragma=busy_timeout(5000)")
+	}
+	if !inMemory && !hasPragma(lower, "journal_mode") {
+		extra = append(extra, "_pragma=journal_mode(wal)")
+	}
+	if len(extra) == 0 {
+		return dsn
+	}
+	if query != "" {
+		extra = append([]string{query}, extra...)
+	}
+	return base + "?" + strings.Join(extra, "&")
+}
+
+func hasPragma(lowerQuery, name string) bool {
+	for _, kv := range strings.Split(lowerQuery, "&") {
+		k, v, _ := strings.Cut(kv, "=")
+		if k == "_pragma" && strings.HasPrefix(v, name) {
+			return true
+		}
+	}
+	return false
 }
 
 // WrapTx executes body inside a transaction. body receives a Querier bound to

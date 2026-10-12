@@ -146,3 +146,10 @@ if count == 0 {
 - Test the domain/engine layer directly — do not test HTTP handlers for game logic
 - Test breakdown struct accuracy: every modifier must appear in the result
 - Use `testify/assert` for assertions
+
+## Panicking Helpers
+
+Use `pkg/must` (`must.Do(formula.Parse("3+level"))`) instead of per-package
+`MustX` functions. Panicking is allowed only in tests and in package-level
+initialisation from literals; anything fed by users, files or the network returns
+its error.

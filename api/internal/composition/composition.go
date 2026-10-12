@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
+	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/adapters/weaponsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -68,6 +69,13 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	dice := diceadpt.New()
 	weapons, err := weaponsadpt.New(cfg.SeedsDir)
 	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	// The spell-effects seed is not consumed yet (qki.8 buffs, qki.10 casting
+	// will take it); loading it now makes a malformed formula a startup error.
+	if _, err := spelleffectsadpt.New(cfg.SeedsDir); err != nil {
 		_ = db.Close()
 		return nil, err
 	}

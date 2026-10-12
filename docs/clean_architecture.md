@@ -384,6 +384,16 @@ event sourcing, no separate database, just a different port.
 Don't reach for this on day one. Reach for it when a profiler points at the
 mapping code.
 
+### 5.5 Adapters adapt, never define
+
+An adapter does not define entities. Entities and value types (and the rules they
+must satisfy, such as `Validate()`) live in the domain, or in the DAL's generated
+models, or in the external package being adapted. An adapter holds only private
+DTOs (JSON shapes, rows), the mapping DTO -> domain type, and its I/O errors, and
+it implements a port declared in the service package. Example: `spelleffectsadpt`
+reads `seeds/spell_effects.json` into private DTOs and returns
+`spelleffectsvc.Entry` values through the `spelleffectsvc.Catalog` port.
+
 ## 6. Cross-cutting domain primitives
 
 `internal/domain/` contains things shared by *every* service:

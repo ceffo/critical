@@ -6,7 +6,8 @@ export type LogKind =
   | "buff_change"
   | "round_advance"
   | "attack"
-  | "item_use";
+  | "item_use"
+  | "spell_prep";
 
 export type LogStatus = "active" | "amended" | "voided";
 

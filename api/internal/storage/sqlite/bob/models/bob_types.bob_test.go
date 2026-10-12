@@ -26,6 +26,9 @@ var _ bob.HookableType = &Character{}
 // Make sure the type HPEvent runs hooks after queries
 var _ bob.HookableType = &HPEvent{}
 
+// Make sure the type Item runs hooks after queries
+var _ bob.HookableType = &Item{}
+
 // Make sure the type RoundState runs hooks after queries
 var _ bob.HookableType = &RoundState{}
 
@@ -34,6 +37,9 @@ var _ bob.HookableType = &SpellSlot{}
 
 // Make sure the type Spell runs hooks after queries
 var _ bob.HookableType = &Spell{}
+
+// Make sure the type Weapon runs hooks after queries
+var _ bob.HookableType = &Weapon{}
 
 // Make sure the type XPEvent runs hooks after queries
 var _ bob.HookableType = &XPEvent{}

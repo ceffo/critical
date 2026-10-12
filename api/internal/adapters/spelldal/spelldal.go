@@ -27,7 +27,10 @@ type DAL struct {
 // New returns a DAL bound to q.
 func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
 
-func (d *DAL) exec() sqlite.BobExec { return sqlite.BobExec{Querier: d.q} }
+// exec joins the transaction carried by ctx (sqlite.InTx), if any.
+func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
+	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
+}
 
 type jsonSlot struct {
 	Level             int    `json:"level"`
@@ -37,7 +40,7 @@ type jsonSlot struct {
 
 // GetSlots returns the slot list. An absent row is treated as an empty list.
 func (d *DAL) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error) {
-	blob, err := queries.GetSpellSlots(characterID).One(ctx, d.exec())
+	blob, err := queries.GetSpellSlots(characterID).One(ctx, d.exec(ctx))
 	if errors.Is(err, sql.ErrNoRows) {
 		return []spellsvc.SpellSlot{}, nil
 	}
@@ -72,7 +75,7 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 	}
 	_, err = queries.UpsertSpellSlots([]queries.UpsertSpellSlots_SpellSlots{
 		{CharacterID: characterID, Slots: string(blob)},
-	}).Exec(ctx, d.exec())
+	}).Exec(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("upsert spell_slots: %w", err)
 	}
@@ -96,7 +99,7 @@ func (d *DAL) Search(ctx context.Context, query, class string) ([]spellsvc.Spell
 		sm.Limit(50),
 	)
 
-	rows, err := bobmodels.Spells.Query(mods...).All(ctx, d.exec())
+	rows, err := bobmodels.Spells.Query(mods...).All(ctx, d.exec(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}

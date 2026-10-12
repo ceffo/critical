@@ -41,6 +41,9 @@ var (
 	hpEventWithParentsCascadingCtx = newContextual[bool]("hpEventWithParentsCascading")
 	hpEventRelCharacterCtx         = newContextual[bool]("characters.hp_events.fk_hp_events_0")
 
+	// Relationship Contexts for items
+	itemWithParentsCascadingCtx = newContextual[bool]("itemWithParentsCascading")
+
 	// Relationship Contexts for round_state
 	roundStateWithParentsCascadingCtx = newContextual[bool]("roundStateWithParentsCascading")
 	roundStateRelCharacterCtx         = newContextual[bool]("characters.round_state.fk_round_state_0")
@@ -51,6 +54,9 @@ var (
 
 	// Relationship Contexts for spells
 	spellWithParentsCascadingCtx = newContextual[bool]("spellWithParentsCascading")
+
+	// Relationship Contexts for weapons
+	weaponWithParentsCascadingCtx = newContextual[bool]("weaponWithParentsCascading")
 
 	// Relationship Contexts for xp_events
 	xpEventWithParentsCascadingCtx = newContextual[bool]("xpEventWithParentsCascading")

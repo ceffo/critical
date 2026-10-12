@@ -12,6 +12,7 @@ import (
 
 // Router is the chi subset we need.
 type Router interface {
+	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
 }
 
@@ -21,12 +22,47 @@ type CharacterIDFunc func(r *http.Request) int64
 type combatSvc interface {
 	ResolveAttack(ctx context.Context, characterID int64, weaponID string, targetAC int) (*combatsvc.RollResult, error)
 	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error)
+	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
 }
 
 // RegisterRoutes wires combat endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/attack", render.Handle(ResolveAttack(charID, svc)))
 	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
+	r.Get("/api/weapons", render.Handle(ListWeapons(svc)))
+}
+
+// WeaponDTO is the wire shape of a weapon catalog entry.
+type WeaponDTO struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DamageSM    string `json:"damage_sm"`
+	DamageL     string `json:"damage_l"`
+	MagicToHit  int    `json:"magic_to_hit"`
+	MagicDamage int    `json:"magic_damage"`
+	Kind        string `json:"kind"`
+	TwoHanded   bool   `json:"two_handed"`
+	AmmoKind    string `json:"ammo_kind"`
+}
+
+// ListWeapons returns the weapons catalog.
+func ListWeapons(svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		weapons, err := svc.ListWeapons(r.Context())
+		if err != nil {
+			return err
+		}
+		out := make([]WeaponDTO, 0, len(weapons))
+		for _, wp := range weapons {
+			out = append(out, WeaponDTO{
+				ID: wp.ID, Name: wp.Name, DamageSM: wp.BaseDamage, DamageL: wp.DamageLarge,
+				MagicToHit: wp.MagicToHit, MagicDamage: wp.MagicDamage, Kind: string(wp.Kind),
+				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind,
+			})
+		}
+		render.OK(r.Context(), w, out)
+		return nil
+	}
 }
 
 // AttackRequestDTO matches the previous request shape.

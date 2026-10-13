@@ -382,7 +382,10 @@ test.describe("keyboard past a page", () => {
     // The French exact match ranks first.
     await expect(selected(page)).toHaveAttribute("data-id", "strength");
     await expect(rows(page)).toHaveCount(200);
-    for (let i = 0; i < 205; i++) await search(page).press("ArrowDown");
+    // Near the end of the first page, then down across the boundary from the search box.
+    await rows(page).nth(195).scrollIntoViewIfNeeded();
+    await rows(page).nth(195).click();
+    for (let i = 0; i < 10; i++) await search(page).press("ArrowDown");
     await expect(rows(page)).toHaveCount(forceRows.length + 1);
     const ids = await attr(rows(page), "data-id");
     await expect(selected(page)).toHaveAttribute("data-id", ids[205]);

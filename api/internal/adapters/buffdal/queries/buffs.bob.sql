@@ -14,3 +14,16 @@ SELECT "round_number" FROM "round_state" WHERE "character_id" = ?1;
 -- UpsertRoundNumber
 INSERT INTO "round_state" ("character_id", "round_number") VALUES (?1, ?2)
 ON CONFLICT("character_id") DO UPDATE SET "round_number" = "excluded"."round_number";
+
+-- ListSavedBuffs
+SELECT "id", "name", "duration", "charges", "effects", "note" FROM "saved_buffs" WHERE "character_id" = ?1 ORDER BY "id";
+
+-- InsertSavedBuff
+INSERT INTO "saved_buffs" ("character_id", "name", "duration", "charges", "effects", "note") VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+RETURNING "id";
+
+-- InsertSavedBuffWithID
+INSERT INTO "saved_buffs" ("id", "character_id", "name", "duration", "charges", "effects", "note") VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);
+
+-- DeleteSavedBuffs
+DELETE FROM "saved_buffs" WHERE "character_id" = ?1;

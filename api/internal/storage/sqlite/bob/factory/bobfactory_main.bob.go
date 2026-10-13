@@ -22,6 +22,7 @@ type Factory struct {
 	baseHPEventMods          HPEventModSlice
 	baseItemMods             ItemModSlice
 	baseRoundStateMods       RoundStateModSlice
+	baseSavedBuffMods        SavedBuffModSlice
 	baseSpellSlotMods        SpellSlotModSlice
 	baseSpellMods            SpellModSlice
 	baseWeaponMods           WeaponModSlice
@@ -282,6 +283,9 @@ func (f *Factory) fromExistingCharacter(ctx context.Context, m *models.Character
 	if len(m.R.RoundStates) > 0 {
 		CharacterMods.AddExistingRoundStates(m.R.RoundStates...).Apply(ctx, o)
 	}
+	if len(m.R.SavedBuffs) > 0 {
+		CharacterMods.AddExistingSavedBuffs(m.R.SavedBuffs...).Apply(ctx, o)
+	}
 	if len(m.R.SpellSlots) > 0 {
 		CharacterMods.AddExistingSpellSlots(m.R.SpellSlots...).Apply(ctx, o)
 	}
@@ -444,6 +448,54 @@ func (f *Factory) fromExistingRoundState(ctx context.Context, m *models.RoundSta
 	}
 	if m.R.Character != nil {
 		RoundStateMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)
+	}
+
+	return o
+}
+
+func (f *Factory) NewSavedBuff(mods ...SavedBuffMod) *SavedBuffTemplate {
+	return f.NewSavedBuffWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewSavedBuffWithContext(ctx context.Context, mods ...SavedBuffMod) *SavedBuffTemplate {
+	o := &SavedBuffTemplate{f: f}
+
+	if f != nil {
+		f.baseSavedBuffMods.Apply(ctx, o)
+	}
+
+	SavedBuffModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingSavedBuff(ctx context.Context, m *models.SavedBuff) *SavedBuffTemplate {
+	visited := make(map[uintptr]struct{})
+	ctx = factoryVisitedCtx.WithValue(ctx, visited)
+	return f.fromExistingSavedBuff(ctx, m)
+}
+
+func (f *Factory) fromExistingSavedBuff(ctx context.Context, m *models.SavedBuff) *SavedBuffTemplate {
+	o := &SavedBuffTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int64 { return m.ID }
+	o.CharacterID = func() int64 { return m.CharacterID }
+	o.Name = func() string { return m.Name }
+	o.Duration = func() int64 { return m.Duration }
+	o.Charges = func() int64 { return m.Charges }
+	o.Effects = func() string { return m.Effects }
+	o.Note = func() string { return m.Note }
+	o.CreatedAt = func() time.Time { return m.CreatedAt }
+
+	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
+		ptr := uintptr(unsafe.Pointer(m))
+		if _, seen := visited[ptr]; seen {
+			return o
+		}
+		visited[ptr] = struct{}{}
+	}
+	if m.R.Character != nil {
+		SavedBuffMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)
 	}
 
 	return o
@@ -685,6 +737,14 @@ func (f *Factory) ClearBaseRoundStateMods() {
 
 func (f *Factory) AddBaseRoundStateMod(mods ...RoundStateMod) {
 	f.baseRoundStateMods = append(f.baseRoundStateMods, mods...)
+}
+
+func (f *Factory) ClearBaseSavedBuffMods() {
+	f.baseSavedBuffMods = nil
+}
+
+func (f *Factory) AddBaseSavedBuffMod(mods ...SavedBuffMod) {
+	f.baseSavedBuffMods = append(f.baseSavedBuffMods, mods...)
 }
 
 func (f *Factory) ClearBaseSpellSlotMods() {

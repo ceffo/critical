@@ -35,6 +35,9 @@ var _ bob.HookableType = &Item{}
 // Make sure the type RoundState runs hooks after queries
 var _ bob.HookableType = &RoundState{}
 
+// Make sure the type SavedBuff runs hooks after queries
+var _ bob.HookableType = &SavedBuff{}
+
 // Make sure the type SpellSlot runs hooks after queries
 var _ bob.HookableType = &SpellSlot{}
 

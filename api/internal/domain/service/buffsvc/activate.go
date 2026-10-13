@@ -13,6 +13,7 @@ import (
 // ID is empty.
 func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffect) ([]BuffEffect, error) {
 	buff.Name = strings.TrimSpace(buff.Name)
+	buff.Note = strings.TrimSpace(buff.Note)
 	if err := validateBuff(buff); err != nil {
 		return nil, err
 	}
@@ -23,7 +24,7 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 		return change{
 			kind:    actionlog.KindBuffChange,
 			summary: fmt.Sprintf("Activated %s (%s)", buff.Name, counters(buff.Duration, buff.Charges)),
-			payload: logPayload{Action: "activate", Buff: buff.Name, Rounds: buff.Duration, Charges: buff.Charges},
+			payload: logPayload{Action: "activate", Buff: buff.Name, Rounds: buff.Duration, Charges: buff.Charges, Note: buff.Note},
 			buffs:   append(buffs, buff),
 		}, nil
 	})

@@ -64,6 +64,7 @@ type characterR struct {
 	ActiveBuffs ActiveBuffSlice // fk_active_buffs_0
 	HPEvents    HPEventSlice    // fk_hp_events_0
 	RoundStates RoundStateSlice // fk_round_state_0
+	SavedBuffs  SavedBuffSlice  // fk_saved_buffs_0
 	SpellSlots  SpellSlotSlice  // fk_spell_slots_0
 	XPEvents    XPEventSlice    // fk_xp_events_0
 	// Loaded reports whether each relationship has been loaded.
@@ -78,6 +79,7 @@ type characterRLoaded struct {
 	ActiveBuffs bool // fk_active_buffs_0
 	HPEvents    bool // fk_hp_events_0
 	RoundStates bool // fk_round_state_0
+	SavedBuffs  bool // fk_saved_buffs_0
 	SpellSlots  bool // fk_spell_slots_0
 	XPEvents    bool // fk_xp_events_0
 }
@@ -943,6 +945,25 @@ func (os CharacterSlice) RoundStates(mods ...bob.Mod[*dialect.SelectQuery]) Roun
 	)...)
 }
 
+// SavedBuffs starts a query for related objects on saved_buffs
+func (o *Character) SavedBuffs(mods ...bob.Mod[*dialect.SelectQuery]) SavedBuffsQuery {
+	return SavedBuffs.Query(append(mods,
+		sm.Where(SavedBuffs.Columns.CharacterID.EQ(sqlite.Arg(o.ID))),
+	)...)
+}
+
+func (os CharacterSlice) SavedBuffs(mods ...bob.Mod[*dialect.SelectQuery]) SavedBuffsQuery {
+	PKArgSlice := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgSlice[i] = sqlite.ArgGroup(o.ID)
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	return SavedBuffs.Query(append(mods,
+		sm.Where(sqlite.Group(SavedBuffs.Columns.CharacterID).OP("IN", PKArgExpr)),
+	)...)
+}
+
 // SpellSlots starts a query for related objects on spell_slots
 func (o *Character) SpellSlots(mods ...bob.Mod[*dialect.SelectQuery]) SpellSlotsQuery {
 	return SpellSlots.Query(append(mods,
@@ -1261,6 +1282,76 @@ func (character0 *Character) AttachRoundStates(ctx context.Context, exec bob.Exe
 	return nil
 }
 
+func insertCharacterSavedBuffs0(ctx context.Context, exec bob.Executor, savedBuffs1 []*SavedBuffSetter, character0 *Character) (SavedBuffSlice, error) {
+	for i := range savedBuffs1 {
+		savedBuffs1[i].CharacterID = omit.From(character0.ID)
+	}
+
+	ret, err := SavedBuffs.Insert(bob.ToMods(savedBuffs1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertCharacterSavedBuffs0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachCharacterSavedBuffs0(ctx context.Context, exec bob.Executor, count int, savedBuffs1 SavedBuffSlice, character0 *Character) (SavedBuffSlice, error) {
+	setter := &SavedBuffSetter{
+		CharacterID: omit.From(character0.ID),
+	}
+
+	err := savedBuffs1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachCharacterSavedBuffs0: %w", err)
+	}
+
+	return savedBuffs1, nil
+}
+
+func (character0 *Character) InsertSavedBuffs(ctx context.Context, exec bob.Executor, related ...*SavedBuffSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	savedBuffs1, err := insertCharacterSavedBuffs0(ctx, exec, related, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.SavedBuffs = append(character0.R.SavedBuffs, savedBuffs1...)
+
+	for _, rel := range savedBuffs1 {
+		rel.R.Character = character0
+		rel.R.Loaded.Character = true
+	}
+	return nil
+}
+
+func (character0 *Character) AttachSavedBuffs(ctx context.Context, exec bob.Executor, related ...*SavedBuff) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	savedBuffs1 := SavedBuffSlice(related)
+
+	_, err = attachCharacterSavedBuffs0(ctx, exec, len(related), savedBuffs1, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.SavedBuffs = append(character0.R.SavedBuffs, savedBuffs1...)
+
+	for _, rel := range related {
+		rel.R.Character = character0
+		rel.R.Loaded.Character = true
+	}
+
+	return nil
+}
+
 func insertCharacterSpellSlots0(ctx context.Context, exec bob.Executor, spellSlots1 []*SpellSlotSetter, character0 *Character) (SpellSlotSlice, error) {
 	for i := range spellSlots1 {
 		spellSlots1[i].CharacterID = omit.From(character0.ID)
@@ -1509,6 +1600,20 @@ func (w characterWhereR[Q]) HasRoundStates(filters ...bob.Mod[*dialect.SelectQue
 		sm.Columns(sqlite.Raw("1")),
 		sm.From(RoundStates.NameExpr()),
 		sm.Where(RoundStates.Columns.CharacterID.EQ(w.cols.ID)),
+	)
+	q.Apply(filters...)
+	return mods.Where[Q]{E: sqlite.Exists(q)}
+}
+
+// HasSavedBuffs filters parents that have a matching SavedBuffs using a
+// correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
+// multiply parent rows, so no DISTINCT is needed. The optional filters are
+// applied to the subquery (i.e. to SavedBuffs).
+func (w characterWhereR[Q]) HasSavedBuffs(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+	q := sqlite.Select(
+		sm.Columns(sqlite.Raw("1")),
+		sm.From(SavedBuffs.NameExpr()),
+		sm.Where(SavedBuffs.Columns.CharacterID.EQ(w.cols.ID)),
 	)
 	q.Apply(filters...)
 	return mods.Where[Q]{E: sqlite.Exists(q)}
@@ -1787,6 +1892,22 @@ func (o *Character) Preload(name string, retrieved any) error {
 			}
 		}
 		return nil
+	case "SavedBuffs":
+		rels, ok := retrieved.(SavedBuffSlice)
+		if !ok {
+			return fmt.Errorf("character cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.SavedBuffs = rels
+		o.R.Loaded.SavedBuffs = true
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.Character = o
+				rel.R.Loaded.Character = true
+			}
+		}
+		return nil
 	case "SpellSlots":
 		rels, ok := retrieved.(SpellSlotSlice)
 		if !ok {
@@ -1835,6 +1956,7 @@ type characterThenLoader[Q orm.Loadable] struct {
 	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	XPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
@@ -1851,6 +1973,9 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 	}
 	type RoundStatesLoadInterface interface {
 		LoadRoundStates(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type SavedBuffsLoadInterface interface {
+		LoadSavedBuffs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 	type SpellSlotsLoadInterface interface {
 		LoadSpellSlots(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
@@ -1882,6 +2007,12 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 			"RoundStates",
 			func(ctx context.Context, exec bob.Executor, retrieved RoundStatesLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
 				return retrieved.LoadRoundStates(ctx, exec, mods...)
+			},
+		),
+		SavedBuffs: thenLoadBuilder[Q](
+			"SavedBuffs",
+			func(ctx context.Context, exec bob.Executor, retrieved SavedBuffsLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadSavedBuffs(ctx, exec, mods...)
 			},
 		),
 		SpellSlots: thenLoadBuilder[Q](
@@ -2195,6 +2326,80 @@ func (os CharacterSlice) LoadRoundStates(ctx context.Context, exec bob.Executor,
 	return nil
 }
 
+// LoadSavedBuffs loads the character's SavedBuffs into the .R struct
+func (o *Character) LoadSavedBuffs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.SavedBuffs = nil
+	o.R.Loaded.SavedBuffs = false
+
+	related, err := o.SavedBuffs(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.Character = o
+		rel.R.Loaded.Character = true
+	}
+
+	o.R.SavedBuffs = related
+	o.R.Loaded.SavedBuffs = true
+	return nil
+}
+
+// LoadSavedBuffs loads the character's SavedBuffs into the .R struct
+func (os CharacterSlice) LoadSavedBuffs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	savedBuffs, err := os.SavedBuffs(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		o.R.SavedBuffs = nil
+		o.R.Loaded.SavedBuffs = true
+	}
+	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
+	characterByKey := make(map[int64][]*Character, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		characterByKey[o.ID] = append(characterByKey[o.ID], o)
+	}
+
+	for _, rel := range savedBuffs {
+
+		owners, ok := characterByKey[rel.CharacterID]
+		if !ok {
+			continue
+		}
+
+		for _, o := range owners {
+
+			rel.R.Character = o
+			rel.R.Loaded.Character = true
+
+			o.R.SavedBuffs = append(o.R.SavedBuffs, rel)
+
+		}
+	}
+
+	return nil
+}
+
 // LoadSpellSlots loads the character's SpellSlots into the .R struct
 func (o *Character) LoadSpellSlots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if o == nil {
@@ -2349,6 +2554,7 @@ type characterC struct {
 	ActiveBuffs *int64
 	HPEvents    *int64
 	RoundStates *int64
+	SavedBuffs  *int64
 	SpellSlots  *int64
 	XPEvents    *int64
 }
@@ -2368,6 +2574,8 @@ func (o *Character) PreloadCount(name string, count int64) error {
 		o.C.HPEvents = &count
 	case "RoundStates":
 		o.C.RoundStates = &count
+	case "SavedBuffs":
+		o.C.SavedBuffs = &count
 	case "SpellSlots":
 		o.C.SpellSlots = &count
 	case "XPEvents":
@@ -2381,6 +2589,7 @@ type characterCountPreloader struct {
 	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	XPEvents    func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 }
@@ -2455,6 +2664,23 @@ func buildCharacterCountPreloader() characterCountPreloader {
 				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
 			})
 		},
+		SavedBuffs: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
+			return countPreloader[*Character]("SavedBuffs", func(parent string) bob.Expression {
+				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
+				if parent == "" {
+					parent = Characters.Alias()
+				}
+
+				subqueryMods := []bob.Mod[*dialect.SelectQuery]{
+					sm.Columns(sqlite.Raw("count(*)")),
+
+					sm.From(SavedBuffs.NameAsExpr()),
+					sm.Where(sqlite.Quote(SavedBuffs.Alias(), "character_id").EQ(sqlite.Quote(parent, "id"))),
+				}
+				subqueryMods = append(subqueryMods, mods...)
+				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
+			})
+		},
 		SpellSlots: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
 			return countPreloader[*Character]("SpellSlots", func(parent string) bob.Expression {
 				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
@@ -2497,6 +2723,7 @@ type characterCountThenLoader[Q orm.Loadable] struct {
 	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	XPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
@@ -2513,6 +2740,9 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 	}
 	type RoundStatesCountInterface interface {
 		LoadCountRoundStates(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type SavedBuffsCountInterface interface {
+		LoadCountSavedBuffs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 	type SpellSlotsCountInterface interface {
 		LoadCountSpellSlots(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
@@ -2544,6 +2774,12 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 			"RoundStates",
 			func(ctx context.Context, exec bob.Executor, retrieved RoundStatesCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
 				return retrieved.LoadCountRoundStates(ctx, exec, mods...)
+			},
+		),
+		SavedBuffs: countThenLoadBuilder[Q](
+			"SavedBuffs",
+			func(ctx context.Context, exec bob.Executor, retrieved SavedBuffsCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadCountSavedBuffs(ctx, exec, mods...)
 			},
 		),
 		SpellSlots: countThenLoadBuilder[Q](
@@ -2873,6 +3109,84 @@ func (os CharacterSlice) LoadCountRoundStates(ctx context.Context, exec bob.Exec
 	return nil
 }
 
+// LoadCountSavedBuffs loads the count of SavedBuffs into the C struct
+func (o *Character) LoadCountSavedBuffs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	count, err := o.SavedBuffs(mods...).Count(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.C.SavedBuffs = &count
+	return nil
+}
+
+// LoadCountSavedBuffs loads the count of SavedBuffs for a slice in a single batch query
+func (os CharacterSlice) LoadCountSavedBuffs(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	// Build the IN arg expression from parent PKs
+	PKArgSlice := make([]bob.Expression, 0, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		PKArgSlice = append(PKArgSlice, sqlite.Arg(o.ID))
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	// countResult holds one scanned row from the batch count query.
+	// FK columns are aliased to the parent PK column names for direct map lookup.
+	type countResult struct {
+		ID    int64
+		Count int64
+	}
+
+	batchMods := []bob.Mod[*dialect.SelectQuery]{
+		// SELECT fk AS parent_pk, count(*)
+		sm.Columns(
+			SavedBuffs.Columns.CharacterID.As("id"),
+			sqlite.Raw("count(*) as count"),
+		),
+		// Single-hop: FROM related table directly
+		sm.From(SavedBuffs.NameAsExpr()),
+
+		// WHERE fk IN (parent PKs) — psql single-column FK uses `= ANY(array)` (see PKArgExpr above)
+		sm.Where(SavedBuffs.Columns.CharacterID.OP("IN", PKArgExpr)),
+		// GROUP BY fk columns
+		sm.GroupBy(SavedBuffs.Columns.CharacterID),
+	}
+	batchMods = append(batchMods, mods...)
+
+	results, err := bob.All(ctx, exec,
+		sqlite.Select(batchMods...),
+		scan.StructMapper[countResult](),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Single-column FK: direct map lookup
+	countMap := make(map[int64]int64, len(results))
+	for _, r := range results {
+		countMap[r.ID] = r.Count
+	}
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		count := countMap[o.ID]
+		o.C.SavedBuffs = &count
+	}
+
+	return nil
+}
+
 // LoadCountSpellSlots loads the count of SpellSlots into the C struct
 func (o *Character) LoadCountSpellSlots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if o == nil {
@@ -3035,6 +3349,7 @@ type characterJoins[Q dialect.Joinable] struct {
 	ActiveBuffs modAs[Q, activeBuffColumns]
 	HPEvents    modAs[Q, hpEventColumns]
 	RoundStates modAs[Q, roundStateColumns]
+	SavedBuffs  modAs[Q, savedBuffColumns]
 	SpellSlots  modAs[Q, spellSlotColumns]
 	XPEvents    modAs[Q, xpEventColumns]
 }
@@ -3095,6 +3410,20 @@ func buildCharacterJoins[Q dialect.Joinable](cols characterColumns, typ string) 
 
 				{
 					mods = append(mods, dialect.Join[Q](typ, RoundStates.NameExpr().As(to.Alias())).On(
+						to.CharacterID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
+		SavedBuffs: modAs[Q, savedBuffColumns]{
+			c: SavedBuffs.Columns,
+			f: func(to savedBuffColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, SavedBuffs.NameExpr().As(to.Alias())).On(
 						to.CharacterID.EQ(cols.ID),
 					))
 				}

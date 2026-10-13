@@ -328,6 +328,66 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// DeleteSaved provides a mock function with given fields: ctx, characterID, id
+func (_m *MockSVC) DeleteSaved(ctx context.Context, characterID int64, id int64) ([]buffsvc.SavedBuff, error) {
+	ret := _m.Called(ctx, characterID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSaved")
+	}
+
+	var r0 []buffsvc.SavedBuff
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) ([]buffsvc.SavedBuff, error)); ok {
+		return rf(ctx, characterID, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) []buffsvc.SavedBuff); ok {
+		r0 = rf(ctx, characterID, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.SavedBuff)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64) error); ok {
+		r1 = rf(ctx, characterID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_DeleteSaved_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSaved'
+type MockSVC_DeleteSaved_Call struct {
+	*mock.Call
+}
+
+// DeleteSaved is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - id int64
+func (_e *MockSVC_Expecter) DeleteSaved(ctx interface{}, characterID interface{}, id interface{}) *MockSVC_DeleteSaved_Call {
+	return &MockSVC_DeleteSaved_Call{Call: _e.mock.On("DeleteSaved", ctx, characterID, id)}
+}
+
+func (_c *MockSVC_DeleteSaved_Call) Run(run func(ctx context.Context, characterID int64, id int64)) *MockSVC_DeleteSaved_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_DeleteSaved_Call) Return(_a0 []buffsvc.SavedBuff, _a1 error) *MockSVC_DeleteSaved_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_DeleteSaved_Call) RunAndReturn(run func(context.Context, int64, int64) ([]buffsvc.SavedBuff, error)) *MockSVC_DeleteSaved_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Dismiss provides a mock function with given fields: ctx, characterID, buffID
 func (_m *MockSVC) Dismiss(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error) {
 	ret := _m.Called(ctx, characterID, buffID)
@@ -668,6 +728,65 @@ func (_c *MockSVC_ListActive_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
+// ListSaved provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSaved")
+	}
+
+	var r0 []buffsvc.SavedBuff
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.SavedBuff, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.SavedBuff); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.SavedBuff)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ListSaved_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSaved'
+type MockSVC_ListSaved_Call struct {
+	*mock.Call
+}
+
+// ListSaved is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) ListSaved(ctx interface{}, characterID interface{}) *MockSVC_ListSaved_Call {
+	return &MockSVC_ListSaved_Call{Call: _e.mock.On("ListSaved", ctx, characterID)}
+}
+
+func (_c *MockSVC_ListSaved_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_ListSaved_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ListSaved_Call) Return(_a0 []buffsvc.SavedBuff, _a1 error) *MockSVC_ListSaved_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ListSaved_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.SavedBuff, error)) *MockSVC_ListSaved_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListStatus provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) ListStatus(ctx context.Context, characterID int64) ([]buffsvc.BuffStatus, error) {
 	ret := _m.Called(ctx, characterID)
@@ -836,6 +955,66 @@ func (_c *MockSVC_Restorers_Call) Return(_a0 map[string]actionlog.Restorer) *Moc
 }
 
 func (_c *MockSVC_Restorers_Call) RunAndReturn(run func() map[string]actionlog.Restorer) *MockSVC_Restorers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveBuff provides a mock function with given fields: ctx, characterID, saved
+func (_m *MockSVC) SaveBuff(ctx context.Context, characterID int64, saved buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error) {
+	ret := _m.Called(ctx, characterID, saved)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBuff")
+	}
+
+	var r0 []buffsvc.SavedBuff
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)); ok {
+		return rf(ctx, characterID, saved)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.SavedBuff) []buffsvc.SavedBuff); ok {
+		r0 = rf(ctx, characterID, saved)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.SavedBuff)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, buffsvc.SavedBuff) error); ok {
+		r1 = rf(ctx, characterID, saved)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_SaveBuff_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveBuff'
+type MockSVC_SaveBuff_Call struct {
+	*mock.Call
+}
+
+// SaveBuff is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - saved buffsvc.SavedBuff
+func (_e *MockSVC_Expecter) SaveBuff(ctx interface{}, characterID interface{}, saved interface{}) *MockSVC_SaveBuff_Call {
+	return &MockSVC_SaveBuff_Call{Call: _e.mock.On("SaveBuff", ctx, characterID, saved)}
+}
+
+func (_c *MockSVC_SaveBuff_Call) Run(run func(ctx context.Context, characterID int64, saved buffsvc.SavedBuff)) *MockSVC_SaveBuff_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(buffsvc.SavedBuff))
+	})
+	return _c
+}
+
+func (_c *MockSVC_SaveBuff_Call) Return(_a0 []buffsvc.SavedBuff, _a1 error) *MockSVC_SaveBuff_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_SaveBuff_Call) RunAndReturn(run func(context.Context, int64, buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)) *MockSVC_SaveBuff_Call {
 	_c.Call.Return(run)
 	return _c
 }

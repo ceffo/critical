@@ -144,8 +144,8 @@ contract or domain struct.
 
 ## CI and PRs
 
-CI workflows: none known; `just validate` is the gate. PR body ends with
-`🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Never merge unless the user says so.
+CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. PR body ends with
+`🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Only the user merges PRs. Agents and the supervisor never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more.
 
 ## Commits
 

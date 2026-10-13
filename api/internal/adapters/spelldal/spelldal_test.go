@@ -122,7 +122,7 @@ func TestSearch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := dal.Search(context.Background(), tt.query, tt.class)
+			got, err := dal.Search(context.Background(), spellsvc.Filter{Query: tt.query, Class: tt.class})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, names(got))
 		})
@@ -133,7 +133,7 @@ func TestSearch_MapsFields(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
 
-	got, err := spelldal.New(db).Search(context.Background(), "Fireball", "")
+	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Query: "Fireball"})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	want := spellsvc.Spell{Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
@@ -148,7 +148,7 @@ func TestSearch_RowWithoutStatsIsParsedFromRawText(t *testing.T) {
 		VALUES ('A', 'wizard', 1, '10 yds./level', '1/2', NULL), ('B', 'wizard', 2, '20 yds.', 'Neg.', '{not json')`)
 	require.NoError(t, err)
 
-	got, err := spelldal.New(db).Search(context.Background(), "", "")
+	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{})
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	assert.Equal(t, 150.0, got[0].Stats.At(15).Range.Amount)
@@ -162,7 +162,7 @@ func TestSearch_SeededSpellsCarryTypedStats(t *testing.T) {
 	db := openDB(t)
 	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
 
-	got, err := spelldal.New(db).Search(ctx, "Magic Missile", "")
+	got, err := spelldal.New(db).Search(ctx, spellsvc.Filter{Query: "Magic Missile"})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	mm := got[0]
@@ -222,4 +222,74 @@ func TestDescribe(t *testing.T) {
 			assert.Equal(t, tt.wantClass, got.Class)
 		})
 	}
+}
+
+func intp(n int) *int { return &n }
+
+func TestSearch_ColumnFilters(t *testing.T) {
+	db := openDB(t)
+	seedSpells(t, db)
+	_, err := db.ExecContext(context.Background(), `UPDATE spells SET school = 'Evocation' WHERE name = 'Fireball'`)
+	require.NoError(t, err)
+	dal := spelldal.New(db)
+
+	tests := []struct {
+		name string
+		f    spellsvc.Filter
+		want []string
+	}{
+		{"level", spellsvc.Filter{Level: intp(2)}, []string{"bard:Invisibility"}},
+		{"level 0 is a level, not 'any'", spellsvc.Filter{Level: intp(0)}, []string{}},
+		{"school substring", spellsvc.Filter{School: "evoc"}, []string{"wizard:Fireball"}},
+		{"class is case-insensitive", spellsvc.Filter{Class: "WIZARD"}, []string{"wizard:Sleep", "wizard:Fireball"}},
+		{"all combined", spellsvc.Filter{Query: "sleep", Class: "wizard", Level: intp(1), School: "Enchant"}, []string{"wizard:Sleep"}},
+		{"combined, nothing left", spellsvc.Filter{Class: "wizard", Level: intp(2)}, []string{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := dal.Search(context.Background(), tt.f)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, names(got))
+		})
+	}
+}
+
+func TestSearch_SameNameInBothClassesComesBackAsTwoRows(t *testing.T) {
+	db := openDB(t)
+	seedSpells(t, db)
+	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (name, class, level) VALUES ('Sleep', 'priest', 1)`)
+	require.NoError(t, err)
+
+	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Query: "Sleep", Level: intp(1)})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"bard:Sleep", "priest:Sleep", "wizard:Sleep"}, names(got))
+}
+
+// The real service over the real DAL and the fixture catalogue.
+func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
+	ctx := context.Background()
+	db := openDB(t)
+	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
+	dal := spelldal.New(db)
+	svc, err := spellsvc.New(dal, dal)
+	require.NoError(t, err)
+
+	both, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic"})
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"Wizard", "Priest"}, []string{both[0].Class, both[1].Class})
+
+	wiz, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic", Class: "wizard"})
+	require.NoError(t, err)
+	require.Len(t, wiz, 1)
+	assert.Equal(t, "Wizard", wiz[0].Class)
+
+	half, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Level: intp(3), Save: spellstats.SaveHalf})
+	require.NoError(t, err)
+	got := []string{}
+	for _, s := range half {
+		got = append(got, s.Name)
+	}
+	assert.Contains(t, got, "Fireball")
+	assert.Contains(t, got, "Lightning Bolt")
+	assert.NotContains(t, got, "Haste", "Haste has no save")
 }

@@ -85,21 +85,28 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 	return nil
 }
 
-// Search runs the catalog query. Optional name fuzzy match and class filter.
+// Search runs the catalog query on the stored columns of f (name, class,
+// level, school); the service applies the typed-stat filters.
 // Uses bob's model query builder because the WHERE conditions are dynamic.
-func (d *DAL) Search(ctx context.Context, query, class string) ([]spellsvc.Spell, error) {
+func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
 	where := bobmodels.SelectWhere.Spells
 	mods := make([]bob.Mod[*dialect.SelectQuery], 0, 4)
-	if query != "" {
-		mods = append(mods, where.Name.Like("%"+query+"%"))
+	if f.Query != "" {
+		mods = append(mods, where.Name.Like("%"+f.Query+"%"))
 	}
-	if class != "" {
-		mods = append(mods, where.Class.EQ(class))
+	if f.Class != "" {
+		mods = append(mods, where.Class.Like(f.Class)) // LIKE without wildcards: case-insensitive equality
+	}
+	if f.Level != nil {
+		mods = append(mods, where.Level.EQ(int64(*f.Level)))
+	}
+	if f.School != "" {
+		mods = append(mods, where.School.Like("%"+f.School+"%"))
 	}
 	mods = append(mods,
 		sm.OrderBy(bobmodels.Spells.Columns.Level),
 		sm.OrderBy(bobmodels.Spells.Columns.Name),
-		sm.Limit(50),
+		sm.OrderBy(bobmodels.Spells.Columns.Class),
 	)
 
 	rows, err := bobmodels.Spells.Query(mods...).All(ctx, d.exec(ctx))

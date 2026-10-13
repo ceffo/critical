@@ -4,7 +4,10 @@ package spellhdl
 import (
 	"context"
 	"net/http"
+	"net/url"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -24,7 +27,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type spellSvc interface {
 	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
-	Search(ctx context.Context, query, class string) ([]spellsvc.Spell, error)
+	Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error)
 }
 
 type characterGetter interface {
@@ -53,7 +56,11 @@ func GetSlots(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
 // sets the level the computed values are for; it defaults to the character's.
 func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		spells, err := svc.Search(r.Context(), r.URL.Query().Get("q"), r.URL.Query().Get("class"))
+		f, err := parseFilter(r.URL.Query())
+		if err != nil {
+			return err
+		}
+		spells, err := svc.Search(r.Context(), f)
 		if err != nil {
 			return err
 		}
@@ -65,6 +72,54 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.
 		return nil
 	}
 }
+
+// parseFilter reads q, class, level, school, components, save and
+// casting_time. A malformed value is a 400, never silently ignored.
+func parseFilter(q url.Values) (spellsvc.Filter, error) {
+	f := spellsvc.Filter{Query: q.Get("q"), School: q.Get("school")}
+	switch c := strings.ToLower(q.Get("class")); c {
+	case "", "both", "all":
+	case "wizard", "priest":
+		f.Class = c
+	default:
+		return f, render.BadRequestError("class must be wizard, priest or both")
+	}
+	if raw := q.Get("level"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			return f, render.BadRequestError("level must be a non-negative integer")
+		}
+		f.Level = &n
+	}
+	for _, c := range strings.FieldsFunc(q.Get("components"), func(r rune) bool { return r == ',' || r == ' ' }) {
+		c = strings.ToUpper(c)
+		if c != "V" && c != "S" && c != "M" {
+			return f, render.BadRequestError("components must be a list of V, S, M")
+		}
+		f.Components = append(f.Components, c)
+	}
+	if raw := q.Get("save"); raw != "" {
+		kind, ok := saveKinds[strings.ToLower(strings.TrimRight(raw, "."))]
+		if !ok {
+			return f, render.BadRequestError("save must be none, neg, 1/2 or special")
+		}
+		f.Save = kind
+	}
+	if raw := strings.ToLower(q.Get("casting_time")); raw != "" {
+		if !slices.Contains(castingTimes, raw) {
+			return f, render.BadRequestError("casting_time must be one of " + strings.Join(castingTimes, ", "))
+		}
+		f.CastingTime = raw
+	}
+	return f, nil
+}
+
+var saveKinds = map[string]string{
+	"none": spellstats.SaveNone, "neg": spellstats.SaveNegates, "negates": spellstats.SaveNegates,
+	"1/2": spellstats.SaveHalf, "half": spellstats.SaveHalf, "special": spellstats.SaveSpecial,
+}
+
+var castingTimes = []string{"segment", "round", "turn", "hour", "day", "week", "special"}
 
 func casterLevel(r *http.Request, charID CharacterIDFunc, chars characterGetter) (int, error) {
 	if raw := r.URL.Query().Get("caster_level"); raw != "" {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { searchSpells } from "@/api/spells_db";
+import { NO_FILTERS, searchSpells } from "@/api/spells_db";
 import { resources } from "@/i18n";
 import { spellId, spellName } from "@/i18n/spellName";
 import { useSpellStore } from "@/stores/spells";
@@ -45,7 +45,7 @@ export function ReceivePanel() {
     if (q.length < 2) return;
     let live = true;
     const timer = setTimeout(() => {
-      searchSpells(q)
+      searchSpells({ ...NO_FILTERS, q })
         .catch(() => [])
         .then((rows) => {
           if (!live) return;

@@ -108,3 +108,34 @@ test("the spell names follow the language", async ({ page, stack }) => {
   await expect(page.getByText("Boule de feu")).toBeVisible();
   await snap(page, "french");
 });
+
+test("a prepared spell outside the spellbook is listed as removed and not sent", async ({ page, stack }) => {
+  expect((await put(stack.apiUrl, ["alarm"])).ok).toBe(true);
+  // The stored preparation also holds a slot the spellbook no longer has (seed changed since).
+  await page.route("**/api/spells/slots", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const slots = (await (await route.fetch()).json()) as object[];
+    await route.fulfill({
+      json: [...slots, { level: 3, prepared_spell_id: "shield", prepared_spell_name: "Shield", used: false }],
+    });
+  });
+  let sent: string[] | undefined;
+  page.on("request", (r) => {
+    if (r.method() === "PUT" && r.url().endsWith("/api/spells/prepared")) {
+      sent = (JSON.parse(r.postData() ?? "{}") as { spells: string[] }).spells;
+    }
+  });
+  await openSpells(page);
+  await page.getByRole("button", { name: "Prepare spells" }).click();
+  const editor = page.getByRole("form", { name: "Prepare today's spells" });
+  await expect(editor.getByTestId("stale-prepared")).toContainText("will be removed");
+  await expect(editor.getByTestId("stale-prepared").getByRole("listitem")).toHaveCount(1);
+  await expect(editor.getByTestId("draft-level-1")).toContainText("Alarm");
+  await snap(page, "stale-listed");
+
+  await editor.getByRole("button", { name: "Save preparation" }).click();
+  await expect(editor).toHaveCount(0);
+  expect(sent).toEqual(["alarm"]);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await snap(page, "stale-saved");
+});

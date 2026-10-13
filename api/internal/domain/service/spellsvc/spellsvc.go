@@ -15,7 +15,7 @@ type SVC interface {
 	domain.Service
 	GetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
-	Search(ctx context.Context, query, class string) ([]Spell, error)
+	Search(ctx context.Context, f Filter) ([]Spell, error)
 }
 
 // DAL is the write-side driven port (slot ledger).
@@ -26,7 +26,7 @@ type DAL interface {
 
 // Reader is the read-side driven port (catalog search).
 type Reader interface {
-	Search(ctx context.Context, query, class string) ([]Spell, error)
+	Search(ctx context.Context, f Filter) ([]Spell, error)
 }
 
 type service struct {

@@ -232,9 +232,9 @@ func (_c *MockSVC_ResetSlots_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
-// Search provides a mock function with given fields: ctx, query, class
-func (_m *MockSVC) Search(ctx context.Context, query string, class string) ([]spellsvc.Spell, error) {
-	ret := _m.Called(ctx, query, class)
+// Search provides a mock function with given fields: ctx, f
+func (_m *MockSVC) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
+	ret := _m.Called(ctx, f)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Search")
@@ -242,19 +242,19 @@ func (_m *MockSVC) Search(ctx context.Context, query string, class string) ([]sp
 
 	var r0 []spellsvc.Spell
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) ([]spellsvc.Spell, error)); ok {
-		return rf(ctx, query, class)
+	if rf, ok := ret.Get(0).(func(context.Context, spellsvc.Filter) ([]spellsvc.Spell, error)); ok {
+		return rf(ctx, f)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) []spellsvc.Spell); ok {
-		r0 = rf(ctx, query, class)
+	if rf, ok := ret.Get(0).(func(context.Context, spellsvc.Filter) []spellsvc.Spell); ok {
+		r0 = rf(ctx, f)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]spellsvc.Spell)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, query, class)
+	if rf, ok := ret.Get(1).(func(context.Context, spellsvc.Filter) error); ok {
+		r1 = rf(ctx, f)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -269,15 +269,14 @@ type MockSVC_Search_Call struct {
 
 // Search is a helper method to define mock.On call
 //   - ctx context.Context
-//   - query string
-//   - class string
-func (_e *MockSVC_Expecter) Search(ctx interface{}, query interface{}, class interface{}) *MockSVC_Search_Call {
-	return &MockSVC_Search_Call{Call: _e.mock.On("Search", ctx, query, class)}
+//   - f spellsvc.Filter
+func (_e *MockSVC_Expecter) Search(ctx interface{}, f interface{}) *MockSVC_Search_Call {
+	return &MockSVC_Search_Call{Call: _e.mock.On("Search", ctx, f)}
 }
 
-func (_c *MockSVC_Search_Call) Run(run func(ctx context.Context, query string, class string)) *MockSVC_Search_Call {
+func (_c *MockSVC_Search_Call) Run(run func(ctx context.Context, f spellsvc.Filter)) *MockSVC_Search_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
+		run(args[0].(context.Context), args[1].(spellsvc.Filter))
 	})
 	return _c
 }
@@ -287,7 +286,7 @@ func (_c *MockSVC_Search_Call) Return(_a0 []spellsvc.Spell, _a1 error) *MockSVC_
 	return _c
 }
 
-func (_c *MockSVC_Search_Call) RunAndReturn(run func(context.Context, string, string) ([]spellsvc.Spell, error)) *MockSVC_Search_Call {
+func (_c *MockSVC_Search_Call) RunAndReturn(run func(context.Context, spellsvc.Filter) ([]spellsvc.Spell, error)) *MockSVC_Search_Call {
 	_c.Call.Return(run)
 	return _c
 }

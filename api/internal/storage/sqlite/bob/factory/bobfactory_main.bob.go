@@ -18,6 +18,7 @@ type Factory struct {
 	baseActionSnapshotMods   ActionSnapshotModSlice
 	baseActiveBuffMods       ActiveBuffModSlice
 	baseCharacterMods        CharacterModSlice
+	baseCritTableRowMods     CritTableRowModSlice
 	baseHPEventMods          HPEventModSlice
 	baseItemMods             ItemModSlice
 	baseRoundStateMods       RoundStateModSlice
@@ -287,6 +288,36 @@ func (f *Factory) fromExistingCharacter(ctx context.Context, m *models.Character
 	if len(m.R.XPEvents) > 0 {
 		CharacterMods.AddExistingXPEvents(m.R.XPEvents...).Apply(ctx, o)
 	}
+
+	return o
+}
+
+func (f *Factory) NewCritTableRow(mods ...CritTableRowMod) *CritTableRowTemplate {
+	return f.NewCritTableRowWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewCritTableRowWithContext(ctx context.Context, mods ...CritTableRowMod) *CritTableRowTemplate {
+	o := &CritTableRowTemplate{f: f}
+
+	if f != nil {
+		f.baseCritTableRowMods.Apply(ctx, o)
+	}
+
+	CritTableRowModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingCritTableRow(ctx context.Context, m *models.CritTableRow) *CritTableRowTemplate {
+	return f.fromExistingCritTableRow(ctx, m)
+}
+
+func (f *Factory) fromExistingCritTableRow(ctx context.Context, m *models.CritTableRow) *CritTableRowTemplate {
+	o := &CritTableRowTemplate{f: f, alreadyPersisted: true}
+
+	o.RollFrom = func() int64 { return m.RollFrom }
+	o.RollTo = func() int64 { return m.RollTo }
+	o.Multiplier = func() int64 { return m.Multiplier }
 
 	return o
 }
@@ -622,6 +653,14 @@ func (f *Factory) ClearBaseCharacterMods() {
 
 func (f *Factory) AddBaseCharacterMod(mods ...CharacterMod) {
 	f.baseCharacterMods = append(f.baseCharacterMods, mods...)
+}
+
+func (f *Factory) ClearBaseCritTableRowMods() {
+	f.baseCritTableRowMods = nil
+}
+
+func (f *Factory) AddBaseCritTableRowMod(mods ...CritTableRowMod) {
+	f.baseCritTableRowMods = append(f.baseCritTableRowMods, mods...)
 }
 
 func (f *Factory) ClearBaseHPEventMods() {

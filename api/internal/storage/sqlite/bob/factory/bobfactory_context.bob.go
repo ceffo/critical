@@ -37,6 +37,9 @@ var (
 	characterRelSpellSlotsCtx        = newContextual[bool]("characters.spell_slots.fk_spell_slots_0")
 	characterRelXPEventsCtx          = newContextual[bool]("characters.xp_events.fk_xp_events_0")
 
+	// Relationship Contexts for crit_table_rows
+	critTableRowWithParentsCascadingCtx = newContextual[bool]("critTableRowWithParentsCascading")
+
 	// Relationship Contexts for hp_events
 	hpEventWithParentsCascadingCtx = newContextual[bool]("hpEventWithParentsCascading")
 	hpEventRelCharacterCtx         = newContextual[bool]("characters.hp_events.fk_hp_events_0")

@@ -69,6 +69,62 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// GetCritTable provides a mock function with given fields: ctx
+func (_m *MockSVC) GetCritTable(ctx context.Context) (combatsvc.CritTable, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCritTable")
+	}
+
+	var r0 combatsvc.CritTable
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (combatsvc.CritTable, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) combatsvc.CritTable); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(combatsvc.CritTable)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_GetCritTable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCritTable'
+type MockSVC_GetCritTable_Call struct {
+	*mock.Call
+}
+
+// GetCritTable is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) GetCritTable(ctx interface{}) *MockSVC_GetCritTable_Call {
+	return &MockSVC_GetCritTable_Call{Call: _e.mock.On("GetCritTable", ctx)}
+}
+
+func (_c *MockSVC_GetCritTable_Call) Run(run func(ctx context.Context)) *MockSVC_GetCritTable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_GetCritTable_Call) Return(_a0 combatsvc.CritTable, _a1 error) *MockSVC_GetCritTable_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_GetCritTable_Call) RunAndReturn(run func(context.Context) (combatsvc.CritTable, error)) *MockSVC_GetCritTable_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Health provides a mock function with given fields: ctx
 func (_m *MockSVC) Health(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -289,6 +345,63 @@ func (_c *MockSVC_ResolveSavingThrow_Call) Return(_a0 *combatsvc.RollResult, _a1
 }
 
 func (_c *MockSVC_ResolveSavingThrow_Call) RunAndReturn(run func(context.Context, int64, combatsvc.SaveCategory) (*combatsvc.RollResult, error)) *MockSVC_ResolveSavingThrow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetCritTable provides a mock function with given fields: ctx, rows
+func (_m *MockSVC) SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error) {
+	ret := _m.Called(ctx, rows)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetCritTable")
+	}
+
+	var r0 combatsvc.CritTable
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []combatsvc.CritRow) (combatsvc.CritTable, error)); ok {
+		return rf(ctx, rows)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []combatsvc.CritRow) combatsvc.CritTable); ok {
+		r0 = rf(ctx, rows)
+	} else {
+		r0 = ret.Get(0).(combatsvc.CritTable)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []combatsvc.CritRow) error); ok {
+		r1 = rf(ctx, rows)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_SetCritTable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetCritTable'
+type MockSVC_SetCritTable_Call struct {
+	*mock.Call
+}
+
+// SetCritTable is a helper method to define mock.On call
+//   - ctx context.Context
+//   - rows []combatsvc.CritRow
+func (_e *MockSVC_Expecter) SetCritTable(ctx interface{}, rows interface{}) *MockSVC_SetCritTable_Call {
+	return &MockSVC_SetCritTable_Call{Call: _e.mock.On("SetCritTable", ctx, rows)}
+}
+
+func (_c *MockSVC_SetCritTable_Call) Run(run func(ctx context.Context, rows []combatsvc.CritRow)) *MockSVC_SetCritTable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]combatsvc.CritRow))
+	})
+	return _c
+}
+
+func (_c *MockSVC_SetCritTable_Call) Return(_a0 combatsvc.CritTable, _a1 error) *MockSVC_SetCritTable_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_SetCritTable_Call) RunAndReturn(run func(context.Context, []combatsvc.CritRow) (combatsvc.CritTable, error)) *MockSVC_SetCritTable_Call {
 	_c.Call.Return(run)
 	return _c
 }

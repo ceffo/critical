@@ -15,15 +15,13 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
-// critPlaceholderMultiplier is the house crit multiplier until the crit
-// table lands (critical-qki.12).
-const critPlaceholderMultiplier = 2
-
 // ResolveAttack resolves one attack (AD&D 2.5, docs/backend.md):
 //
 //   - hit when d20 + modifiers >= THAC0 - target AC; a natural 1 or 20 is
 //     plain arithmetic, nothing special;
-//   - house crit: (d20 - d100) >= the roll needed -> crit, x2 placeholder;
+//   - house crit: (d20 - d100) >= the roll needed -> crit, and a second
+//     D100 looked up in the stored crit table gives the multiplier (x2 until
+//     the table is edited);
 //   - damage = ((dice × SpellsBuff) + WeaponBuff) × Multipliers +
 //     StrengthBonus + buff damage, floored, never below 0.
 //
@@ -64,12 +62,16 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}
+		crit, err := s.loadCritTable(ctx)
+		if err != nil {
+			return err
+		}
 		ammo, err := s.spendAmmo(ctx, weapon, req.AmmoItemID)
 		if err != nil {
 			return err
 		}
 
-		r, err := s.resolve(char, weapon, ammo, mods, req)
+		r, err := s.resolve(char, weapon, ammo, mods, crit, req)
 		if err != nil {
 			return err
 		}
@@ -130,8 +132,9 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 }
 
 // resolve rolls and computes the attack. Dice are rolled in this order:
-// d20, crit d100, then the damage dice on a hit.
-func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, req AttackRequest) (*RollResult, error) {
+// d20, crit d100, then the damage dice on a hit. The crit multiplier is the
+// one of the crit-table range holding the crit d100.
+func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, crit CritTable, req AttackRequest) (*RollResult, error) {
 	res := &RollResult{
 		BaseThac0:      char.Thac0Base,
 		Modifiers:      []Modifier{},
@@ -216,8 +219,13 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	res.HitMargin = res.D20Roll - needed
 	if res.D20Roll-res.D100CritRoll >= needed {
 		res.IsCrit = true
-		res.CritMultiplier = critPlaceholderMultiplier
-		res.CritPlaceholder = true
+		row, err := lookupCrit(crit.Rows, res.D100CritRoll)
+		if err != nil {
+			return nil, err
+		}
+		res.CritMultiplier = row.Multiplier
+		res.CritFrom, res.CritTo = row.From, row.To
+		res.CritPlaceholder = crit.Placeholder
 	}
 	if !res.Hit {
 		return res, nil
@@ -239,7 +247,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	}
 	res.DamageTerms = append(res.DamageTerms, weaponTerms...)
 	if res.IsCrit {
-		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModCrit, Source: "Critical hit (placeholder)", Value: critPlaceholderMultiplier})
+		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModCrit, Source: critSource(res), Detail: critDetail(res), Value: float64(res.CritMultiplier)})
 	}
 	for _, f := range mods.MultipliersFrom {
 		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
@@ -260,6 +268,22 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	res.TotalDamage = max(int(total), 0)
 	res.DamageBreakdown = explainDamage(res)
 	return res, nil
+}
+
+// critSource is the English label of the crit damage term.
+func critSource(r *RollResult) string {
+	if r.CritPlaceholder {
+		return fmt.Sprintf("Critical hit (placeholder, d100 %d)", r.D100CritRoll)
+	}
+	return fmt.Sprintf("Critical hit (d100 %d in %d-%d)", r.D100CritRoll, r.CritFrom, r.CritTo)
+}
+
+// critDetail is the matched range, "51-90", or "placeholder" for the default.
+func critDetail(r *RollResult) string {
+	if r.CritPlaceholder {
+		return "placeholder"
+	}
+	return fmt.Sprintf("%d-%d", r.CritFrom, r.CritTo)
 }
 
 // weaponMagic is the better of the weapon's own bonus and a buff's "weapon

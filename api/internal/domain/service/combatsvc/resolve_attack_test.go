@@ -335,7 +335,7 @@ func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (placeholder)", Value: 2},
+		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (placeholder, d100 5)", Detail: "placeholder", Value: 2},
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
 		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
@@ -395,7 +395,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 
 			f := newFixture(t)
 			svc, err := combatsvc.New(combatsvc.Deps{
-				Chars: f.chars, Buffs: realBuffs, Dice: f.dice, Weapons: f.weapons,
+				Chars: f.chars, Buffs: realBuffs, Dice: f.dice, Weapons: f.weapons, Crit: f.crit,
 				Items: f.items, Rules: phb(t), Log: f.log, Tx: noTx{},
 			})
 			require.NoError(t, err)

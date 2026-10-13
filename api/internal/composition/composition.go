@@ -154,7 +154,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	spellSvc, err := spellsvc.New(spellDAL, spellDAL)
+	spellSvc, err := spellsvc.New(spellDAL, spellDAL, spellbook)
 	if err != nil {
 		_ = db.Close()
 		return nil, err

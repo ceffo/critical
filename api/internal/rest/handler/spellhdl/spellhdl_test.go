@@ -118,15 +118,44 @@ func filterFor(t *testing.T, url string) (int, spellsvc.Filter) {
 }
 
 func TestSearch_ReadsEveryFilterFromTheQuery(t *testing.T) {
-	code, f := filterFor(t, "/api/spells?q=fire&class=Wizard&level=3&school=Evocation&components=V,s&save=1/2&casting_time=Round")
+	code, f := filterFor(t, "/api/spells?q=+fire+&class=Wizard&level=3,1,3&school=Evocation&components=V,s&save=1/2&casting_time=Round")
 	require.Equal(t, http.StatusOK, code)
-	require.NotNil(t, f.Level)
-	assert.Equal(t, 3, *f.Level)
-	f.Level = nil
 	assert.Equal(t, spellsvc.Filter{
-		Query: "fire", Class: "wizard", School: "Evocation",
+		Query: "fire", Class: "wizard", Levels: []int{3, 1}, School: spellsvc.SchoolEvocation,
 		Components: []string{"V", "S"}, Save: spellstats.SaveHalf, CastingTime: "round",
 	}, f)
+}
+
+func TestSearch_ClientNameMatchesCarryTheirTier(t *testing.T) {
+	code, f := filterFor(t, "/api/spells?q=mains&match_exact=fireball&match_prefix=burning_hands,+detect_magic&match_contains=fortify,")
+	require.Equal(t, http.StatusOK, code)
+	assert.Equal(t, "mains", f.Query)
+	assert.Equal(t, []spellsvc.NameMatch{
+		{Key: "fireball", Tier: spellsvc.TierExact},
+		{Key: "burning_hands", Tier: spellsvc.TierPrefix},
+		{Key: "detect_magic", Tier: spellsvc.TierPrefix},
+		{Key: "fortify", Tier: spellsvc.TierContains},
+	}, f.Names)
+}
+
+func TestSearch_ClassValues(t *testing.T) {
+	for in, want := range map[string]spellsvc.Filter{
+		"mine":   {Class: "wizard", Mine: true},
+		"Wizard": {Class: "wizard"},
+		"priest": {Class: "priest"},
+		"all":    {},
+		"both":   {},
+	} {
+		code, f := filterFor(t, "/api/spells?class="+in)
+		require.Equal(t, http.StatusOK, code, in)
+		assert.Equal(t, want, f, in)
+	}
+}
+
+func TestSearch_SphereIsCanonicalised(t *testing.T) {
+	code, f := filterFor(t, "/api/spells?class=priest&sphere=elemental+fire")
+	require.Equal(t, http.StatusOK, code)
+	assert.Equal(t, spellsvc.Filter{Class: "priest", Sphere: "Elemental Fire"}, f)
 }
 
 func TestSearch_NoFilterParamsMeansNoFilter(t *testing.T) {
@@ -147,7 +176,10 @@ func TestSearch_SaveSpellings(t *testing.T) {
 }
 
 func TestSearch_MalformedFilterIs400(t *testing.T) {
-	for _, q := range []string{"class=bard", "level=x", "level=-1", "components=V,Z", "save=maybe", "casting_time=soon"} {
+	for _, q := range []string{
+		"class=bard", "level=x", "level=-1", "level=10", "level=1,x", "school=Evoc", "school=Dimension",
+		"sphere=Fire", "components=V,Z", "save=maybe", "casting_time=soon",
+	} {
 		code, _ := filterFor(t, "/api/spells?"+q)
 		assert.Equal(t, http.StatusBadRequest, code, q)
 	}
@@ -185,4 +217,18 @@ func TestSearch_BadPagingIs400(t *testing.T) {
 		code, _, _ := pageFor(t, "/api/spells?"+q)
 		assert.Equal(t, http.StatusBadRequest, code, q)
 	}
+}
+
+func TestFilterOptions_ListsSchoolGroupsAndSpheres(t *testing.T) {
+	rec := httptest.NewRecorder()
+	render.Handle(spellhdl.FilterOptions())(rec, httptest.NewRequest(http.MethodGet, "/api/spells/filters", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var out spellhdl.FilterOptionsDTO
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
+	assert.Equal(t, []string{
+		"abjuration", "alteration", "conjuration", "divination", "enchantment",
+		"illusion", "evocation", "necromancy", "other",
+	}, out.Schools)
+	assert.Contains(t, out.Spheres, "Elemental Fire")
+	assert.Contains(t, out.Spheres, "Charm")
 }

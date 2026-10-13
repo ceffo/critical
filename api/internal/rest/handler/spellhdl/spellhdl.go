@@ -38,6 +38,23 @@ type characterGetter interface {
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars characterGetter) {
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
 	r.Get("/api/spells", render.Handle(Search(charID, svc, chars)))
+	r.Get("/api/spells/filters", render.Handle(FilterOptions()))
+}
+
+// FilterOptionsDTO lists the choices of the lookup's school / sphere
+// dropdown: the school group keys (the client labels them) and the Priest
+// sphere names.
+type FilterOptionsDTO struct {
+	Schools []string `json:"schools"`
+	Spheres []string `json:"spheres"`
+}
+
+// FilterOptions returns the school groups and spheres GET /api/spells takes.
+func FilterOptions() render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		render.OK(r.Context(), w, FilterOptionsDTO{Schools: spellsvc.SchoolGroups(), Spheres: spellsvc.Spheres()})
+		return nil
+	}
 }
 
 // GetSlots returns the slot list.
@@ -100,23 +117,54 @@ func parsePage(q url.Values) (spellsvc.PageRequest, error) {
 	return pr, nil
 }
 
-// parseFilter reads q, class, level, school, components, save and
-// casting_time. A malformed value is a 400, never silently ignored.
+// parseFilter reads the filter parameters. A malformed value is a 400,
+// never silently ignored.
+//
+//   - q: text matched against the English name (exact, prefix, substring).
+//   - match_exact, match_prefix, match_contains: comma-separated catalogue
+//     keys the client matched by another name (French), with that tier; a
+//     spell matching q or any of them is kept, ranked by its best tier.
+//   - class: mine (the Bard's spellbook), wizard, priest, or all/both/empty.
+//   - level: comma-separated levels, e.g. "1,3"; empty means any.
+//   - school: a school group key (GET /api/spells/filters); sphere: a sphere.
+//   - components, save, casting_time: typed-stat filters.
 func parseFilter(q url.Values) (spellsvc.Filter, error) {
-	f := spellsvc.Filter{Query: q.Get("q"), School: q.Get("school")}
+	f := spellsvc.Filter{Query: strings.TrimSpace(q.Get("q"))}
+	for _, tier := range matchTiers {
+		for _, key := range splitCSV(q.Get(tier.param)) {
+			f.Names = append(f.Names, spellsvc.NameMatch{Key: key, Tier: tier.tier})
+		}
+	}
 	switch c := strings.ToLower(q.Get("class")); c {
 	case "", "both", "all":
 	case "wizard", "priest":
 		f.Class = c
+	case "mine":
+		f.Class, f.Mine = "wizard", true
 	default:
-		return f, render.BadRequestError("class must be wizard, priest or both")
+		return f, render.BadRequestError("class must be mine, wizard, priest or all")
 	}
-	if raw := q.Get("level"); raw != "" {
+	for _, raw := range splitCSV(q.Get("level")) {
 		n, err := strconv.Atoi(raw)
-		if err != nil || n < 0 {
-			return f, render.BadRequestError("level must be a non-negative integer")
+		if err != nil || n < 0 || n > 9 {
+			return f, render.BadRequestError("level must be a list of levels from 0 to 9")
 		}
-		f.Level = &n
+		if !slices.Contains(f.Levels, n) {
+			f.Levels = append(f.Levels, n)
+		}
+	}
+	if raw := strings.ToLower(q.Get("school")); raw != "" {
+		if !slices.Contains(spellsvc.SchoolGroups(), raw) {
+			return f, render.BadRequestError("school must be one of " + strings.Join(spellsvc.SchoolGroups(), ", "))
+		}
+		f.School = raw
+	}
+	if raw := q.Get("sphere"); raw != "" {
+		s, ok := spellsvc.IsSphere(raw)
+		if !ok {
+			return f, render.BadRequestError("sphere must be one of " + strings.Join(spellsvc.Spheres(), ", "))
+		}
+		f.Sphere = s
 	}
 	for _, c := range strings.FieldsFunc(q.Get("components"), func(r rune) bool { return r == ',' || r == ' ' }) {
 		c = strings.ToUpper(c)
@@ -139,6 +187,26 @@ func parseFilter(q url.Values) (spellsvc.Filter, error) {
 		f.CastingTime = raw
 	}
 	return f, nil
+}
+
+var matchTiers = []struct {
+	param string
+	tier  spellsvc.Tier
+}{
+	{"match_exact", spellsvc.TierExact},
+	{"match_prefix", spellsvc.TierPrefix},
+	{"match_contains", spellsvc.TierContains},
+}
+
+// splitCSV splits "a, b,,c" into a, b, c.
+func splitCSV(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 var saveKinds = map[string]string{

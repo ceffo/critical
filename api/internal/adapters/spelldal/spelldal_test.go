@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
@@ -110,19 +111,17 @@ func TestSearch(t *testing.T) {
 	dal := spelldal.New(db)
 
 	tests := []struct {
-		name         string
-		query, class string
-		want         []string
+		name  string
+		class string
+		want  []string
 	}{
-		{"no filter, ordered by level then name", "", "", []string{"bard:Charm Person", "bard:Sleep", "wizard:Sleep", "bard:Invisibility", "wizard:Fireball"}},
-		{"name substring", "sle", "", []string{"bard:Sleep", "wizard:Sleep"}},
-		{"class filter", "", "wizard", []string{"wizard:Sleep", "wizard:Fireball"}},
-		{"name and class", "sleep", "bard", []string{"bard:Sleep"}},
-		{"no match", "zzz", "", []string{}},
+		{"no filter, ordered by level then name", "", []string{"bard:Charm Person", "bard:Sleep", "wizard:Sleep", "bard:Invisibility", "wizard:Fireball"}},
+		{"class filter", "wizard", []string{"wizard:Sleep", "wizard:Fireball"}},
+		{"no match", "priest", []string{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := dal.Search(context.Background(), spellsvc.Filter{Query: tt.query, Class: tt.class})
+			got, err := dal.Search(context.Background(), spellsvc.Filter{Class: tt.class})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, names(got))
 		})
@@ -133,7 +132,7 @@ func TestSearch_MapsFields(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
 
-	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Query: "Fireball"})
+	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Levels: []int{3}})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	want := spellsvc.Spell{ID: "fireball", Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
@@ -162,10 +161,15 @@ func TestSearch_SeededSpellsCarryTypedStats(t *testing.T) {
 	db := openDB(t)
 	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
 
-	got, err := spelldal.New(db).Search(ctx, spellsvc.Filter{Query: "Magic Missile"})
+	got, err := spelldal.New(db).Search(ctx, spellsvc.Filter{Class: "wizard", Levels: []int{1}})
 	require.NoError(t, err)
-	require.Len(t, got, 1)
-	mm := got[0]
+	var mm spellsvc.Spell
+	for _, s := range got {
+		if s.Name == "Magic Missile" {
+			mm = s
+		}
+	}
+	require.Equal(t, "magic_missile", mm.ID)
 	assert.Equal(t, "60 yds. + 10 yds./level", mm.Range)
 	assert.Equal(t, "60 yds. + 10 yds./level", mm.Stats.Range.Raw)
 	assert.Equal(t, spellstats.RangeDistance, mm.Stats.Range.Kind)
@@ -237,8 +241,6 @@ func TestDescribe(t *testing.T) {
 	}
 }
 
-func intp(n int) *int { return &n }
-
 func TestSearch_ColumnFilters(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
@@ -251,12 +253,13 @@ func TestSearch_ColumnFilters(t *testing.T) {
 		f    spellsvc.Filter
 		want []string
 	}{
-		{"level", spellsvc.Filter{Level: intp(2)}, []string{"bard:Invisibility"}},
-		{"level 0 is a level, not 'any'", spellsvc.Filter{Level: intp(0)}, []string{}},
-		{"school substring", spellsvc.Filter{School: "evoc"}, []string{"wizard:Fireball"}},
+		{"level", spellsvc.Filter{Levels: []int{2}}, []string{"bard:Invisibility"}},
+		{"several levels", spellsvc.Filter{Levels: []int{3, 1}}, []string{"bard:Charm Person", "bard:Sleep", "wizard:Sleep", "wizard:Fireball"}},
+		{"level 0 is a level, not 'any'", spellsvc.Filter{Levels: []int{0}}, []string{}},
 		{"class is case-insensitive", spellsvc.Filter{Class: "WIZARD"}, []string{"wizard:Sleep", "wizard:Fireball"}},
-		{"all combined", spellsvc.Filter{Query: "sleep", Class: "wizard", Level: intp(1), School: "Enchant"}, []string{"wizard:Sleep"}},
-		{"combined, nothing left", spellsvc.Filter{Class: "wizard", Level: intp(2)}, []string{}},
+		{"class and levels combined", spellsvc.Filter{Class: "wizard", Levels: []int{1, 2}}, []string{"wizard:Sleep"}},
+		{"combined, nothing left", spellsvc.Filter{Class: "wizard", Levels: []int{2}}, []string{}},
+		{"name and school are not the DAL's", spellsvc.Filter{Query: "zzz", School: spellsvc.SchoolOther}, []string{"bard:Charm Person", "bard:Sleep", "wizard:Sleep", "bard:Invisibility", "wizard:Fireball"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -273,18 +276,21 @@ func TestSearch_SameNameInBothClassesComesBackAsTwoRows(t *testing.T) {
 	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (name, class, level) VALUES ('Sleep', 'priest', 1)`)
 	require.NoError(t, err)
 
-	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Query: "Sleep", Level: intp(1)})
+	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Levels: []int{1}})
 	require.NoError(t, err)
-	assert.Equal(t, []string{"bard:Sleep", "priest:Sleep", "wizard:Sleep"}, names(got))
+	assert.Equal(t, []string{"bard:Charm Person", "bard:Sleep", "priest:Sleep", "wizard:Sleep"}, names(got))
 }
 
 // The real service over the real DAL and the fixture catalogue.
 func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
 	ctx := context.Background()
 	db := openDB(t)
-	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
+	seeds := filepath.Join("..", "..", "..", "testdata", "seeds")
+	require.NoError(t, db.Seed(ctx, seeds))
 	dal := spelldal.New(db)
-	svc, err := spellsvc.New(dal, dal)
+	book, err := spellbookadpt.New(seeds)
+	require.NoError(t, err)
+	svc, err := spellsvc.New(dal, dal, book)
 	require.NoError(t, err)
 
 	all := spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize}
@@ -298,7 +304,7 @@ func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
 	require.Len(t, wiz.Items, 1)
 	assert.Equal(t, "Wizard", wiz.Items[0].Class)
 
-	half, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Level: intp(3), Save: spellstats.SaveHalf}, all)
+	half, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Levels: []int{3}, Save: spellstats.SaveHalf}, all)
 	require.NoError(t, err)
 	got := []string{}
 	for _, s := range half.Items {
@@ -307,4 +313,18 @@ func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
 	assert.Contains(t, got, "Fireball")
 	assert.Contains(t, got, "Lightning Bolt")
 	assert.NotContains(t, got, "Haste", "Haste has no save")
+
+	// Mine is exactly the fixture spellbook (all Wizard), in level-then-name order.
+	mine, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Mine: true}, all)
+	require.NoError(t, err)
+	gotIDs := []string{}
+	for _, s := range mine.Items {
+		gotIDs = append(gotIDs, s.ID)
+	}
+	wantIDs := []string{}
+	for _, e := range book.All() {
+		wantIDs = append(wantIDs, e.ID)
+	}
+	assert.ElementsMatch(t, wantIDs, gotIDs)
+	assert.Equal(t, len(wantIDs), mine.Total)
 }

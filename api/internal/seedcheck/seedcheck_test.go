@@ -134,6 +134,32 @@ type catalogSpell struct {
 	Description  string `json:"description"`
 }
 
+// TestRepoSeeds_SpellSlugsAreUniquePerClass applies the catalog id rule
+// (spelleffectsvc.LevelSlug): a spell sharing name and class with a
+// lower-level one gets a level suffix, every other spell keeps Slug(name).
+// Within a class no two spells may end up with the same id.
+func TestRepoSeeds_SpellSlugsAreUniquePerClass(t *testing.T) {
+	var spells []catalogSpell
+	readJSON(t, "spells.json", &spells)
+	lowest := map[string]int{}
+	for _, s := range spells {
+		k := s.Class + "|" + spelleffectsvc.Slug(s.Name)
+		if l, ok := lowest[k]; !ok || s.Level < l {
+			lowest[k] = s.Level
+		}
+	}
+	seen := map[string]string{}
+	for _, s := range spells {
+		id := spelleffectsvc.Slug(s.Name)
+		if s.Level != lowest[s.Class+"|"+id] {
+			id = spelleffectsvc.LevelSlug(s.Name, s.Level)
+		}
+		k := s.Class + "|" + id
+		assert.NotContains(t, seen, k, "%s %s (level %d) collides with %s", s.Class, s.Name, s.Level, seen[k])
+		seen[k] = s.Name
+	}
+}
+
 func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 	var spells []catalogSpell
 	readJSON(t, "spells.json", &spells)
@@ -144,12 +170,15 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 	// glued two fields together.
 	leak := regexp.MustCompile(`(?i)_|\b(range|duration|casting time|saving throw|area of effect|components?|reversible|sphere)\s*:|Reversible`)
 
-	type key struct{ name, class string }
+	type key struct {
+		name, class string
+		level       int
+	}
 	seen := map[key]bool{}
 	for _, s := range spells {
 		id := s.Class + " " + s.Name
-		k := key{strings.ToLower(s.Name), s.Class}
-		assert.False(t, seen[k], "duplicate spell %s", id)
+		k := key{strings.ToLower(s.Name), s.Class, s.Level}
+		assert.False(t, seen[k], "duplicate spell %s (same name, class and level)", id)
 		seen[k] = true
 
 		assert.Contains(t, []string{"Wizard", "Priest"}, s.Class, id)

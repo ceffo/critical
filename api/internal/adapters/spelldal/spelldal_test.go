@@ -196,22 +196,33 @@ func TestSlots_ReadsStoredJSON(t *testing.T) {
 func TestDescribe(t *testing.T) {
 	db := openDB(t)
 	ctx := context.Background()
-	for _, r := range []struct{ name, class string }{
-		{"Light", "Priest"}, {"Light", "Wizard"}, {"Melf's Acid Arrow", "Wizard"}, {"Bless", "Priest"},
+	for _, r := range []struct {
+		name, class string
+		level       int
+	}{
+		{"Light", "Priest", 1},
+		{"Light", "Wizard", 1},
+		{"Melf's Acid Arrow", "Wizard", 1},
+		{"Bless", "Priest", 1},
+		{"Twin", "Priest", 4},
+		{"Twin", "Priest", 3},
 	} {
-		_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES (?, ?, 1, ?)`,
-			r.name, r.class, r.class+" text")
+		_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES (?, ?, ?, ?)`,
+			r.name, r.class, r.level, r.class+" text")
 		require.NoError(t, err)
 	}
 	d := spelldal.New(db)
 	tests := []struct {
 		id, wantName, wantClass string
+		wantLevel               int
 		found                   bool
 	}{
-		{"light", "Light", "Wizard", true},
-		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", true},
-		{"bless", "Bless", "Priest", true},
-		{"no_such_spell", "", "", false},
+		{"light", "Light", "Wizard", 1, true},
+		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", 1, true},
+		{"bless", "Bless", "Priest", 1, true},
+		{"twin", "Twin", "Priest", 3, true},    // the lowest level owns the plain slug
+		{"twin_l4", "Twin", "Priest", 4, true}, // the other one gets the level suffix
+		{"no_such_spell", "", "", 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.id, func(t *testing.T) {
@@ -220,6 +231,7 @@ func TestDescribe(t *testing.T) {
 			assert.Equal(t, tt.found, ok)
 			assert.Equal(t, tt.wantName, got.Name)
 			assert.Equal(t, tt.wantClass, got.Class)
+			assert.Equal(t, tt.wantLevel, got.Level)
 		})
 	}
 }

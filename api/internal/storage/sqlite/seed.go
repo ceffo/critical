@@ -151,7 +151,7 @@ func (d *DB) seedCharacter(ctx context.Context, seedPath string) error {
 }
 
 // seedSpells reconciles the spells table with spells.json: rows are keyed by
-// (name, class); missing ones are inserted, existing ones get the seed's
+// (name, class, level) (two Priest "Fortify" spells differ by level); missing ones are inserted, existing ones get the seed's
 // values and typed stats, nothing is ever deleted and ids never change. It
 // runs in one transaction and a second run changes nothing. A missing seed
 // file leaves the table alone (only untyped rows get their stats).
@@ -175,12 +175,12 @@ func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
 		}
 	}()
 
-	// A database may hold a name twice (an older, uncleaned catalog): only
+	// A database may hold a (name, class, level) twice (an older, uncleaned catalog): only
 	// the oldest row is kept in step with the seed, the others are left alone.
 	update, err := tx.PrepareContext(ctx, `
-		UPDATE spells SET level = ?, school = ?, sphere = ?, casting_time = ?, range = ?,
+		UPDATE spells SET school = ?, sphere = ?, casting_time = ?, range = ?,
 			duration = ?, area_of_effect = ?, components = ?, saving_throw = ?, description = ?, stats = ?
-		WHERE id = (SELECT MIN(id) FROM spells WHERE name = ? AND class = ?)`)
+		WHERE id = (SELECT MIN(id) FROM spells WHERE name = ? AND class = ? AND level = ?)`)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
 			name, class, level, school, sphere, casting_time, range,
 			duration, area_of_effect, components, saving_throw, description, stats
 		) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-		WHERE NOT EXISTS (SELECT 1 FROM spells WHERE name = ? AND class = ?)`)
+		WHERE NOT EXISTS (SELECT 1 FROM spells WHERE name = ? AND class = ? AND level = ?)`)
 	if err != nil {
 		return err
 	}
@@ -202,15 +202,15 @@ func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
 			return fmt.Errorf("spell %q: %w", s.Name, err)
 		}
 		if _, err := update.ExecContext(ctx,
-			s.Level, s.School, s.Sphere, s.CastingTime, s.Range, s.Duration, s.AreaOfEffect,
-			s.Components, s.SavingThrow, s.Description, stats, s.Name, s.Class,
+			s.School, s.Sphere, s.CastingTime, s.Range, s.Duration, s.AreaOfEffect,
+			s.Components, s.SavingThrow, s.Description, stats, s.Name, s.Class, s.Level,
 		); err != nil {
 			return fmt.Errorf("update spell %q: %w", s.Name, err)
 		}
 		if _, err := insert.ExecContext(ctx,
 			s.Name, s.Class, s.Level, s.School, s.Sphere, s.CastingTime, s.Range,
 			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow, s.Description, stats,
-			s.Name, s.Class,
+			s.Name, s.Class, s.Level,
 		); err != nil {
 			return fmt.Errorf("insert spell %q: %w", s.Name, err)
 		}

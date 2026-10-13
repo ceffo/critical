@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -180,4 +181,39 @@ func TestSeed_SpellsFreshDatabaseLoadsTheWholeCatalog(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &fixture))
 	assert.Equal(t, len(fixture), scalar(t, db, "SELECT COUNT(*) FROM spells"))
 	assert.Zero(t, scalar(t, db, "SELECT COUNT(*) FROM spells WHERE stats IS NULL"))
+}
+
+// Two spells may share name and class when their levels differ; the old row
+// of one of them reconciles to its own level instead of being orphaned.
+func TestSeed_SpellsKeyedByNameClassAndLevel(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	row := func(level int, sphere, desc string) string {
+		return fmt.Sprintf(`{"name":"Twin","class":"Priest","level":%d,"school":"Alteration","sphere":%q,`+
+			`"casting_time":"6","range":"0","duration":"Special","area_of_effect":"Creature touched",`+
+			`"components":"V, S, M","saving_throw":"None","description":%q}`, level, sphere, desc)
+	}
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "spells.json"),
+		[]byte("["+row(3, "War", "level three")+","+row(4, "Healing", "level four")+"]"), 0o600))
+
+	for _, f := range []string{"weapons.json", "items.json"} {
+		b, err := os.ReadFile(filepath.Clean(filepath.Join(repoSeeds(), f)))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, f), b, 0o600)) //nolint:gosec // test temp dir, fixed file names
+	}
+
+	db := openMigrated(t)
+	_, err := db.Exec(`INSERT INTO spells (id, name, class, level, sphere, description) VALUES (40, 'Twin', 'Priest', 4, 'Old', 'stale four')`)
+	require.NoError(t, err)
+
+	require.NoError(t, db.Seed(ctx, dir))
+	got := spellRows(t, db)
+	require.Len(t, got, 2, "the level-4 row is reconciled, not duplicated; level 3 is inserted")
+	var l4 string
+	require.NoError(t, db.QueryRow(`SELECT description FROM spells WHERE id = 40`).Scan(&l4))
+	assert.Equal(t, "level four", l4)
+	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) FROM spells WHERE level = 3 AND description = 'level three'"))
+
+	require.NoError(t, db.Seed(ctx, dir))
+	assert.Equal(t, got, spellRows(t, db), "a restart changes nothing")
 }

@@ -48,6 +48,16 @@ func Slug(name string) string {
 	return b.String()
 }
 
+// LevelSlug is the id of a catalog spell that shares its English name with a
+// lower-level spell of the same class ("Fortify" level 4 -> "fortify_l4").
+// The rule for catalog ids: every spell is Slug(name), except a spell with a
+// same-named, lower-level spell in its class, which is LevelSlug(name, level).
+// Existing ids never change; same-named Wizard and Priest spells share a slug
+// (lookups prefer the Wizard one).
+func LevelSlug(name string, level int) string {
+	return fmt.Sprintf("%s_l%d", Slug(name), level)
+}
+
 func oneOf[T comparable](v T, set []T, what string) error {
 	if !slices.Contains(set, v) {
 		return fmt.Errorf("%s %v is not one of %v", what, v, set)

@@ -126,12 +126,13 @@ func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, 
 func (d *DAL) Describe(ctx context.Context, spellID string) (spellsvc.Spell, bool, error) {
 	rows, err := bobmodels.Spells.Query(
 		sm.OrderBy(bobmodels.Spells.Columns.Class).Desc(), // Wizard before Priest
+		sm.OrderBy(bobmodels.Spells.Columns.Level),        // the lowest level owns the plain slug
 	).All(ctx, d.exec(ctx))
 	if err != nil {
 		return spellsvc.Spell{}, false, fmt.Errorf("query spells: %w", err)
 	}
 	for _, r := range rows {
-		if spelleffectsvc.Slug(r.Name) == spellID {
+		if spelleffectsvc.Slug(r.Name) == spellID || spelleffectsvc.LevelSlug(r.Name, int(r.Level)) == spellID {
 			return toSpell(r), true, nil
 		}
 	}

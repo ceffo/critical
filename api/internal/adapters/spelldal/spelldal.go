@@ -34,6 +34,7 @@ func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
 
 type jsonSlot struct {
 	Level             int    `json:"level"`
+	PreparedSpellID   string `json:"prepared_spell_id,omitempty"`
 	PreparedSpellName string `json:"prepared_spell_name"`
 	Used              bool   `json:"used"`
 }
@@ -57,7 +58,7 @@ func (d *DAL) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.Spell
 	out := make([]spellsvc.SpellSlot, 0, len(raw))
 	for _, j := range raw {
 		out = append(out, spellsvc.SpellSlot{
-			Level: j.Level, PreparedSpellName: j.PreparedSpellName, Used: j.Used,
+			Level: j.Level, SpellID: j.PreparedSpellID, PreparedSpellName: j.PreparedSpellName, Used: j.Used,
 		})
 	}
 	return out, nil
@@ -67,7 +68,7 @@ func (d *DAL) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.Spell
 func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc.SpellSlot) error {
 	raw := make([]jsonSlot, 0, len(slots))
 	for _, s := range slots {
-		raw = append(raw, jsonSlot{Level: s.Level, PreparedSpellName: s.PreparedSpellName, Used: s.Used})
+		raw = append(raw, jsonSlot{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used})
 	}
 	blob, err := json.Marshal(raw)
 	if err != nil {

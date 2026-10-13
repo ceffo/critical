@@ -28,6 +28,7 @@ const (
 	KindRoundAdvance Kind = "round_advance"
 	KindAttack       Kind = "attack"
 	KindItemUse      Kind = "item_use"
+	KindSpellPrep    Kind = "spell_prep"
 )
 
 // Snapshot is the state an entry changed, under a state key owned by one

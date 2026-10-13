@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
@@ -25,6 +26,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -42,6 +44,7 @@ type BackingServices struct {
 	Log       actionlogsvc.SVC
 	Buffs     buffsvc.SVC
 	Spells    spellsvc.SVC
+	Prep      prepsvc.SVC
 	Combat    combatsvc.SVC
 	Items     itemsvc.SVC
 	Rest      restsvc.SVC
@@ -88,10 +91,15 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 
-	// The PHB rule tables: attacks look STR/DEX adjustments up in them (qki.9
-	// spell preparation will take the Bard table). A gap in a table is a
-	// startup error.
-	rules, err := ruletablesadpt.New(cfg.SeedsDir)
+	// The PHB rule tables: spell preparation takes Table 32, attacks look
+	// STR/DEX adjustments up in Tables 1-2. A gap in a table is a startup
+	// error.
+	ruleTables, err := ruletablesadpt.New(cfg.SeedsDir)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	spellbook, err := spellbookadpt.New(cfg.SeedsDir)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -133,6 +141,15 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	prepSvc, err := prepsvc.New(prepsvc.Deps{
+		Slots: spellDAL, Spellbook: spellbook, Limits: ruleTables,
+		Characters: charSvc, Log: logSvc, Tx: db,
+	})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
 	itemSvc, err := itemsvc.New(itemDAL)
 	if err != nil {
 		_ = db.Close()
@@ -141,7 +158,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	registerRestorers(logSvc, itemSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL,
-		Items: itemSvc, Rules: rules, Log: logSvc, Tx: db,
+		Items: itemSvc, Rules: ruleTables, Log: logSvc, Tx: db,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -161,10 +178,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Log:         logSvc,
 		Buffs:       buffSvc,
 		Spells:      spellSvc,
+		Prep:        prepSvc,
 		Combat:      combatSvc,
 		Items:       itemSvc,
 		Rest:        restSvc,
-		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, combatSvc, itemSvc, restSvc},
+		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, combatSvc, itemSvc, restSvc},
 	}, nil
 }
 

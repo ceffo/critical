@@ -135,7 +135,21 @@
     "remaining": "{{left}} / {{total}}",
     "used": "Utilisé",
     "cast": "Lancer",
-    "castLabel": "Lancer {{name}}"
+    "castLabel": "Lancer {{name}}",
+    "prepare": "Préparer les sorts",
+    "prepareTitle": "Préparer les sorts du jour",
+    "preparedCount": "{{count}} / {{max}} préparés",
+    "save": "Enregistrer la préparation",
+    "cancel": "Annuler",
+    "search": "Chercher dans le grimoire...",
+    "searchLabel": "Chercher dans le grimoire",
+    "spellbook": "Grimoire",
+    "draft": "Préparation du jour",
+    "draftEmpty": "Rien de préparé. Ajoutez des sorts depuis le grimoire.",
+    "add": "Ajouter {{name}}",
+    "addShort": "Ajouter",
+    "remove": "Retirer {{name}}",
+    "noMatch": "Aucun sort ne correspond."
   },
   "lookup": {
     "search": "Rechercher des sorts...",
@@ -208,7 +222,8 @@
       "buff_change": "Bonus",
       "round_advance": "Round",
       "attack": "Attaque",
-      "item_use": "Objet"
+      "item_use": "Objet",
+      "spell_prep": "Préparation"
     },
     "status": {
       "active": "Actif",

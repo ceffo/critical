@@ -1,0 +1,230 @@
+[
+  {
+    "id": "alarm",
+    "name": "Alarm",
+    "level": 1,
+    "sheet": "Alarme"
+  },
+  {
+    "id": "burning_hands",
+    "name": "Burning Hands",
+    "level": 1,
+    "sheet": "Mains brûlantes"
+  },
+  {
+    "id": "chromatic_orb",
+    "name": "Chromatic Orb",
+    "level": 1,
+    "sheet": "Orbe chromatique"
+  },
+  {
+    "id": "detect_magic",
+    "name": "Detect Magic",
+    "level": 1,
+    "sheet": "Détection de la magie"
+  },
+  {
+    "id": "enlarge",
+    "name": "Enlarge",
+    "level": 1,
+    "sheet": "Agrandissement"
+  },
+  {
+    "id": "identify",
+    "name": "Identify",
+    "level": 1,
+    "sheet": "Identification de la magie"
+  },
+  {
+    "id": "magic_missile",
+    "name": "Magic Missile",
+    "level": 1,
+    "sheet": "Missiles magiques"
+  },
+  {
+    "id": "read_magic",
+    "name": "Read Magic",
+    "level": 1,
+    "sheet": "Lecture de la magie"
+  },
+  {
+    "id": "alter_self",
+    "name": "Alter Self",
+    "level": 2,
+    "sheet": "Apparence altérée"
+  },
+  {
+    "id": "deafness",
+    "name": "Deafness",
+    "level": 2,
+    "sheet": "Surdité"
+  },
+  {
+    "id": "esp",
+    "name": "ESP",
+    "level": 2,
+    "sheet": "ESP"
+  },
+  {
+    "id": "improved_phantasmal_force",
+    "name": "Improved Phantasmal Force",
+    "level": 2,
+    "sheet": "Force phantasmatique majeure"
+  },
+  {
+    "id": "locate_object",
+    "name": "Locate Object",
+    "level": 2,
+    "sheet": "Localisation d'Objet"
+  },
+  {
+    "id": "melfs_acid_arrow",
+    "name": "Melf's Acid Arrow",
+    "level": 2,
+    "sheet": "Flèche acide de Melfe"
+  },
+  {
+    "id": "mirror_image",
+    "name": "Mirror Image",
+    "level": 2,
+    "sheet": "Images miroir"
+  },
+  {
+    "id": "strength",
+    "name": "Strength",
+    "level": 2,
+    "sheet": "Force"
+  },
+  {
+    "id": "tashas_uncontrollable_hideous_laughter",
+    "name": "Tasha's Uncontrollable Hideous Laughter",
+    "level": 2,
+    "sheet": "Irrésistible rire de Tasha"
+  },
+  {
+    "id": "dispel_magic",
+    "name": "Dispel Magic",
+    "level": 3,
+    "sheet": "Dissipation Magie"
+  },
+  {
+    "id": "fireball",
+    "name": "Fireball",
+    "level": 3,
+    "sheet": "Boule de feu / Fireball"
+  },
+  {
+    "id": "flame_arrow",
+    "name": "Flame Arrow",
+    "level": 3,
+    "sheet": "Flèche enflamée"
+  },
+  {
+    "id": "haste",
+    "name": "Haste",
+    "level": 3,
+    "sheet": "Hâte"
+  },
+  {
+    "id": "lightning_bolt",
+    "name": "Lightning Bolt",
+    "level": 3,
+    "sheet": "Éclair / Lightning"
+  },
+  {
+    "id": "protection_from_evil_10_radius",
+    "name": "Protection From Evil, 10' Radius",
+    "level": 3,
+    "sheet": "Protection contre le mal"
+  },
+  {
+    "id": "slow",
+    "name": "Slow",
+    "level": 3,
+    "sheet": "Ralentissement"
+  },
+  {
+    "id": "wraithform",
+    "name": "Wraithform",
+    "level": 3,
+    "sheet": "Forme ectoplasmique"
+  },
+  {
+    "id": "dimension_door",
+    "name": "Dimension Door",
+    "level": 4,
+    "sheet": "Porte dimensionnelle"
+  },
+  {
+    "id": "improved_invisibility",
+    "name": "Improved Invisibility",
+    "level": 4,
+    "sheet": "Invisibilité majeure"
+  },
+  {
+    "id": "improved_strength",
+    "name": "Improved Strength",
+    "level": 4,
+    "sheet": "Improved Strength"
+  },
+  {
+    "id": "leomunds_secure_shelter",
+    "name": "Leomund's Secure Shelter",
+    "level": 4,
+    "sheet": "Cabane de Léomund"
+  },
+  {
+    "id": "minor_globe_of_invulnerability",
+    "name": "Minor Globe of Invulnerability",
+    "level": 4,
+    "sheet": "Globe mineur d'invulnérabilité"
+  },
+  {
+    "id": "polymorph_self",
+    "name": "Polymorph Self",
+    "level": 4,
+    "sheet": "Métamorphose / Polymorph Self"
+  },
+  {
+    "id": "rarys_mnemonic_enhancer",
+    "name": "Rary's Mnemonic Enhancer",
+    "level": 4,
+    "sheet": "Moyen mnémonique de Rary"
+  },
+  {
+    "id": "stoneskin",
+    "name": "Stoneskin",
+    "level": 4,
+    "sheet": "Peau de pierre"
+  },
+  {
+    "id": "wall_of_ice",
+    "name": "Wall of Ice",
+    "level": 4,
+    "sheet": "Mur de glace"
+  },
+  {
+    "id": "cloudkill",
+    "name": "Cloudkill",
+    "level": 5,
+    "sheet": "Nuage tueur"
+  },
+  {
+    "id": "cone_of_cold",
+    "name": "Cone of Cold",
+    "level": 5,
+    "sheet": "Cône de froid"
+  },
+  {
+    "id": "teleport",
+    "name": "Teleport",
+    "level": 5,
+    "sheet": "Téléportation"
+  },
+  {
+    "id": "wall_of_force",
+    "name": "Wall of Force",
+    "level": 5,
+    "sheet": "Mur de force"
+  }
+]

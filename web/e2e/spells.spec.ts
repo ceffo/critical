@@ -1,0 +1,110 @@
+import { test, expect, snap } from "./fixtures";
+import { logEntry, openDashboard } from "./helpers";
+import type { Page } from "@playwright/test";
+
+async function openSpells(page: Page) {
+  await openDashboard(page);
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await expect(page.getByRole("button", { name: "Prepare spells" })).toBeVisible();
+}
+
+async function add(page: Page, ...names: string[]) {
+  for (const name of names) {
+    await page.getByRole("button", { name: `Add ${name}`, exact: true }).click();
+  }
+}
+
+async function put(apiUrl: string, spells: string[]) {
+  return fetch(`${apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells }),
+  });
+}
+
+test("4 level-1 spells are refused with the server's message, 3 are accepted", async ({ page, stack }) => {
+  await openSpells(page);
+  await page.getByRole("button", { name: "Prepare spells" }).click();
+  const editor = page.getByRole("form", { name: "Prepare today's spells" });
+
+  await page.getByLabel("Search the spellbook").fill("a");
+  await add(page, "Alarm", "Burning Hands", "Chromatic Orb", "Detect Magic");
+  await expect(editor.getByTestId("draft-level-1")).toContainText("4 / 3 prepared");
+  await snap(page, "four-level-1-draft");
+
+  await editor.getByRole("button", { name: "Save preparation" }).click();
+  await expect(page.getByRole("alert")).toContainText("too many spells for this level");
+  await expect(page.getByRole("alert")).toContainText("limit is 3");
+  await snap(page, "four-level-1-refused");
+  await expect(editor).toBeVisible(); // the editor stays open for a fix
+  const none = await (await fetch(`${stack.apiUrl}/api/spells/slots`)).json();
+  expect(none).toEqual([]); // nothing was saved
+
+  await editor.getByRole("button", { name: "Remove Detect Magic" }).click();
+  await editor.getByRole("button", { name: "Save preparation" }).click();
+  await expect(editor).toHaveCount(0);
+  const level1 = page.getByRole("region", { name: "Level 1" });
+  await expect(level1.getByTestId("remaining-1")).toHaveText("3 / 3");
+  await expect(level1).toContainText("3 / 3 prepared");
+  await expect(level1).toContainText("Chromatic Orb");
+  await snap(page, "three-level-1-accepted");
+});
+
+test("a spell outside the spellbook is refused by the API", async ({ stack }) => {
+  const res = await put(stack.apiUrl, ["shield"]);
+  expect(res.status).toBe(400);
+  expect(await res.json()).toEqual({ error: 'spell is not in the spellbook: "shield"' });
+});
+
+test("duplicates are prepared and a long rest keeps the preparation but resets used", async ({ page, stack }) => {
+  expect((await put(stack.apiUrl, ["mirror_image", "mirror_image", "haste", "fireball"])).ok).toBe(true);
+  await openSpells(page);
+
+  const level2 = page.getByRole("region", { name: "Level 2" });
+  await expect(level2.getByTestId("remaining-2")).toHaveText("2 / 2");
+  await level2.getByRole("button", { name: "Cast Mirror Image" }).first().click();
+  await expect(level2.getByTestId("remaining-2")).toHaveText("1 / 2");
+  await snap(page, "after-cast");
+
+  await page.getByRole("button", { name: "Long Rest (Reset)" }).click();
+  await expect(level2.getByTestId("remaining-2")).toHaveText("2 / 2");
+  await expect(level2.getByRole("listitem")).toHaveCount(2);
+  await expect(level2).toContainText("Mirror Image");
+  await expect(page.getByRole("region", { name: "Level 3" })).toContainText("Haste");
+  await snap(page, "after-long-rest");
+});
+
+test("preparing is logged and voiding it restores the previous preparation", async ({ page, stack }) => {
+  expect((await put(stack.apiUrl, ["alarm"])).ok).toBe(true);
+  await openSpells(page);
+  const level1 = page.getByRole("region", { name: "Level 1" });
+  await expect(level1).toContainText("Alarm");
+
+  await page.getByRole("button", { name: "Prepare spells" }).click();
+  await page.getByRole("form", { name: "Prepare today's spells" }).getByRole("button", { name: "Remove Alarm" }).click();
+  await add(page, "Magic Missile", "Identify");
+  await page.getByRole("button", { name: "Save preparation" }).click();
+  await expect(level1).toContainText("Magic Missile");
+  await expect(level1).not.toContainText("Alarm");
+
+  const entry = logEntry(page, "Prepared: Magic Missile, Identify");
+  await expect(entry).toBeVisible();
+  await snap(page, "prepared-logged");
+  await entry.getByRole("button", { name: "Void" }).click();
+  await entry.getByRole("button", { name: "Confirm" }).click();
+
+  await expect(entry).toHaveAttribute("data-status", "voided");
+  await expect(level1).toContainText("Alarm");
+  await expect(level1).not.toContainText("Magic Missile");
+  await snap(page, "prepare-voided");
+});
+
+test("the spell names follow the language", async ({ page, stack }) => {
+  expect((await put(stack.apiUrl, ["mirror_image", "fireball"])).ok).toBe(true);
+  await page.addInitScript(() => localStorage.setItem("critical.language", "fr"));
+  await openDashboard(page);
+  await page.getByRole("tab", { name: "Sorts", exact: true }).click();
+  await expect(page.getByText("Images miroir")).toBeVisible();
+  await expect(page.getByText("Boule de feu")).toBeVisible();
+  await snap(page, "french");
+});

@@ -1,0 +1,131 @@
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { spellName } from "@/i18n/spellName";
+import type { LevelLimit, SpellbookEntry } from "@/types/spells";
+
+interface Props {
+  spellbook: SpellbookEntry[];
+  limits: LevelLimit[];
+  /** Spell ids prepared today (duplicates allowed). */
+  initial: string[];
+  busy: boolean;
+  /** Save the draft; the server enforces the limits and its error is shown by the table. */
+  onSave: (ids: string[]) => void;
+  onCancel: () => void;
+}
+
+/**
+ * Pick today's spells from the spellbook. The counts next to each level come
+ * from the API's limits; whether a draft is allowed is decided by the server on save.
+ */
+export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCancel }: Props) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState<string[]>(initial);
+  const [query, setQuery] = useState("");
+
+  const byId = useMemo(() => new Map(spellbook.map((s) => [s.id, s])), [spellbook]);
+  const label = (s: SpellbookEntry) => spellName(t, s.id, s.name);
+
+  const needle = query.trim().toLowerCase();
+  const matches = spellbook.filter(
+    (s) =>
+      needle === "" ||
+      s.name.toLowerCase().includes(needle) ||
+      label(s).toLowerCase().includes(needle),
+  );
+
+  const levels = [...new Set([...limits.map((l) => l.level), ...spellbook.map((s) => s.level)])].sort(
+    (a, b) => a - b,
+  );
+  const maxOf = (level: number) => limits.find((l) => l.level === level)?.max ?? 0;
+  const draftEntries = draft.flatMap((id, index) => {
+    const entry = byId.get(id);
+    return entry ? [{ entry, index }] : [];
+  });
+
+  return (
+    <div className="grid grid-cols-2 gap-3" role="form" aria-label={t("spellSlots.prepareTitle")}>
+      <section className="flex min-w-0 flex-col gap-2 rounded-lg border p-2" aria-label={t("spellSlots.spellbook")}>
+        <h3 className="text-sm font-semibold">{t("spellSlots.spellbook")}</h3>
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("spellSlots.search")}
+          aria-label={t("spellSlots.searchLabel")}
+        />
+        <ul className="flex max-h-72 flex-col gap-0.5 overflow-y-auto">
+          {matches.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60">
+              <span className="min-w-0 truncate text-sm">
+                <span className="mr-2 text-xs text-muted-foreground">
+                  {t("spellSlots.level", { level: s.level })}
+                </span>
+                {label(s)}
+              </span>
+              <Button
+                size="xs"
+                variant="secondary"
+                aria-label={t("spellSlots.add", { name: label(s) })}
+                onClick={() => setDraft((d) => [...d, s.id])}
+              >
+                {t("spellSlots.addShort")}
+              </Button>
+            </li>
+          ))}
+          {matches.length === 0 && (
+            <li className="px-2 py-1 text-sm text-muted-foreground">{t("spellSlots.noMatch")}</li>
+          )}
+        </ul>
+      </section>
+
+      <section className="flex min-w-0 flex-col gap-2 rounded-lg border p-2" aria-label={t("spellSlots.draft")}>
+        <h3 className="text-sm font-semibold">{t("spellSlots.draft")}</h3>
+        {draftEntries.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t("spellSlots.draftEmpty")}</p>
+        )}
+        {levels.map((level) => {
+          const items = draftEntries.filter((d) => d.entry.level === level);
+          if (items.length === 0 && maxOf(level) === 0) return null;
+          return (
+            <div key={level} data-testid={`draft-level-${level}`}>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-muted-foreground">
+                  {t("spellSlots.level", { level })}
+                </h4>
+                <Badge variant={items.length > maxOf(level) ? "destructive" : "secondary"}>
+                  {t("spellSlots.preparedCount", { count: items.length, max: maxOf(level) })}
+                </Badge>
+              </div>
+              <ul className="flex flex-col gap-0.5">
+                {items.map(({ entry, index }) => (
+                  <li key={index} className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-muted/60">
+                    <span className="min-w-0 truncate text-sm">{label(entry)}</span>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      aria-label={t("spellSlots.remove", { name: label(entry) })}
+                      onClick={() => setDraft((d) => d.filter((_, i) => i !== index))}
+                    >
+                      ×
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+        <div className="mt-auto flex justify-end gap-2 pt-2">
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
+            {t("spellSlots.cancel")}
+          </Button>
+          <Button size="sm" onClick={() => onSave(draft)} disabled={busy}>
+            {t("spellSlots.save")}
+          </Button>
+        </div>
+      </section>
+    </div>
+  );
+}

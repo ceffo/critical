@@ -77,3 +77,14 @@ packages:
       SVC:
       Spells:
       Items:
+  github.com/ceffo/critical/api/internal/domain/service/prepsvc:
+    config:
+      dir: "internal/domain/service/prepsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Spellbook:
+      Limits:
+      Characters:
+      Slots:
+      Log:

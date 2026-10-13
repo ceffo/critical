@@ -45,4 +45,21 @@ func TestCritTable_Put(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Contains(t, rec.Body.String(), `"error"`)
 	})
+	// The service is never called for these: the handler refuses them first.
+	for name, tc := range map[string]struct{ body, want string }{
+		"rows null":         {`{"rows":null}`, "at least one range"},
+		"rows missing":      {`{}`, "at least one range"},
+		"rows empty":        {`{"rows":[]}`, "at least one range"},
+		"float multiplier":  {`{"rows":[{"from":1,"to":50,"multiplier":2},{"from":51,"to":90,"multiplier":2.5}]}`, "row 2 (51-90): multiplier must be a whole number"},
+		"float from":        {`{"rows":[{"from":1.5,"to":100,"multiplier":2}]}`, "from and to must be whole numbers"},
+		"string multiplier": {`{"rows":[{"from":1,"to":100,"multiplier":"x"}]}`, "invalid request body"},
+	} {
+		t.Run("400 on "+name, func(t *testing.T) {
+			h, _ := newRouter(t)
+			rec := do(h, "PUT", "/api/crit-table", tc.body)
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Contains(t, rec.Body.String(), `"error"`)
+			assert.Contains(t, rec.Body.String(), tc.want)
+		})
+	}
 }

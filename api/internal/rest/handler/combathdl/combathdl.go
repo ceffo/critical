@@ -5,7 +5,9 @@ package combathdl
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/render"
@@ -263,15 +265,34 @@ func GetCritTable(svc combatSvc) render.HandlerFunc {
 // {"error"} naming the bad row and the stored table is left alone.
 func PutCritTable(svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
+		// Numbers are decoded as text so a 2.5 gets a message about the row,
+		// not "invalid request body".
 		var req struct {
-			Rows []CritRowDTO `json:"rows"`
+			Rows []struct {
+				From       json.Number `json:"from"`
+				To         json.Number `json:"to"`
+				Multiplier json.Number `json:"multiplier"`
+			} `json:"rows"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
+		if len(req.Rows) == 0 {
+			return render.BadRequestError("rows must list at least one range covering 1-100")
+		}
 		rows := make([]combatsvc.CritRow, 0, len(req.Rows))
-		for _, r := range req.Rows {
-			rows = append(rows, combatsvc.CritRow{From: r.From, To: r.To, Multiplier: r.Multiplier})
+		for i, in := range req.Rows {
+			from, errFrom := strconv.Atoi(in.From.String())
+			to, errTo := strconv.Atoi(in.To.String())
+			mult, errMult := strconv.Atoi(in.Multiplier.String())
+			label := fmt.Sprintf("row %d (%s-%s)", i+1, in.From, in.To)
+			switch {
+			case errFrom != nil || errTo != nil:
+				return render.BadRequestError(label + ": from and to must be whole numbers")
+			case errMult != nil:
+				return render.BadRequestError(fmt.Sprintf("%s: multiplier must be a whole number, got %q", label, in.Multiplier.String()))
+			}
+			rows = append(rows, combatsvc.CritRow{From: from, To: to, Multiplier: mult})
 		}
 		t, err := svc.SetCritTable(r.Context(), rows)
 		if err != nil {

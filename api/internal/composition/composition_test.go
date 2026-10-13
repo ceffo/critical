@@ -395,3 +395,23 @@ func TestCritTable_EditedTableIsUsedAndPastEntriesKeepTheirMultiplier(t *testing
 	assert.Contains(t, byID[before.LogEntryID], `"critPlaceholder":true`)
 	assert.Contains(t, byID[after.LogEntryID], `"critMultiplier":5`)
 }
+
+// Saving the default table explicitly (1-100 x2) is an edit: it is no longer
+// reported as the placeholder, on the real stack and after the attack too.
+func TestCritTable_SavingTheDefaultExplicitlyClearsPlaceholder(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+
+	saved, err := bs.Combat.SetCritTable(ctx, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 2}})
+	require.NoError(t, err)
+	assert.False(t, saved.Placeholder)
+	got, err := bs.Combat.GetCritTable(ctx)
+	require.NoError(t, err)
+	assert.False(t, got.Placeholder)
+
+	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000})
+	require.NoError(t, err)
+	require.True(t, res.IsCrit)
+	assert.Equal(t, 2, res.CritMultiplier)
+	assert.False(t, res.CritPlaceholder)
+}

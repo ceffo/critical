@@ -67,11 +67,15 @@ test("a server error is shown to the user", async ({ page, stack }) => {
   await expect(entry).toBeVisible();
 
   // Void it behind the UI's back, then try again from the (stale) UI.
-  const { entries } = (await (await fetch(`${stack.apiUrl}/api/log`)).json()) as {
+  const { entries } = (await (
+    await fetch(`${stack.apiUrl}/api/log`)
+  ).json()) as {
     entries: { id: number; summary: string }[];
   };
   const id = entries.find((e) => e.summary === "e2e stale entry")!.id;
-  expect((await fetch(`${stack.apiUrl}/api/log/${id}/void`, { method: "POST" })).ok).toBe(true);
+  expect(
+    (await fetch(`${stack.apiUrl}/api/log/${id}/void`, { method: "POST" })).ok,
+  ).toBe(true);
 
   await entry.getByRole("button", { name: "Void" }).click();
   await entry.getByRole("button", { name: "Confirm" }).click();

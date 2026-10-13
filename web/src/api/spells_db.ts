@@ -1,4 +1,4 @@
-import type { Spell } from "@/types/spells";
+import type { SpellPage } from "@/types/spells";
 import { request } from "./http";
 
 /** Filters of GET /api/spells; empty/undefined ones are not sent. */
@@ -29,7 +29,15 @@ export const NO_FILTERS: SpellFilters = {
   casterLevel: "",
 };
 
-export function searchSpells(f: SpellFilters): Promise<Spell[]> {
+/** Rows per lookup page (the server's default). */
+export const LOOKUP_PAGE_SIZE = 50;
+
+/** One page (1-based) of GET /api/spells; `total` counts every match. */
+export function searchSpells(
+  f: SpellFilters,
+  page = 1,
+  pageSize = LOOKUP_PAGE_SIZE,
+): Promise<SpellPage> {
   const url = new URL("/api/spells", window.location.origin);
   const set = (k: string, v: string) => v && url.searchParams.set(k, v);
   set("q", f.q);
@@ -40,5 +48,7 @@ export function searchSpells(f: SpellFilters): Promise<Spell[]> {
   set("save", f.save);
   set("casting_time", f.castingTime);
   set("caster_level", f.casterLevel);
-  return request<Spell[]>(url.toString());
+  set("page", String(page));
+  set("page_size", String(pageSize));
+  return request<SpellPage>(url.toString());
 }

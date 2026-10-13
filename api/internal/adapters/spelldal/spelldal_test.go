@@ -274,19 +274,21 @@ func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
 	svc, err := spellsvc.New(dal, dal)
 	require.NoError(t, err)
 
-	both, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic"})
+	all := spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize}
+	both, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic"}, all)
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"Wizard", "Priest"}, []string{both[0].Class, both[1].Class})
+	require.Len(t, both.Items, 2)
+	assert.ElementsMatch(t, []string{"Wizard", "Priest"}, []string{both.Items[0].Class, both.Items[1].Class})
 
-	wiz, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic", Class: "wizard"})
+	wiz, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic", Class: "wizard"}, all)
 	require.NoError(t, err)
-	require.Len(t, wiz, 1)
-	assert.Equal(t, "Wizard", wiz[0].Class)
+	require.Len(t, wiz.Items, 1)
+	assert.Equal(t, "Wizard", wiz.Items[0].Class)
 
-	half, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Level: intp(3), Save: spellstats.SaveHalf})
+	half, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Level: intp(3), Save: spellstats.SaveHalf}, all)
 	require.NoError(t, err)
 	got := []string{}
-	for _, s := range half {
+	for _, s := range half.Items {
 		got = append(got, s.Name)
 	}
 	assert.Contains(t, got, "Fireball")

@@ -29,14 +29,20 @@ test("Next Round advances the counter and starts a new log group", async ({
   await expect(newGroup).toContainText("current");
   await expect(newGroup).toContainText("Nothing recorded this round yet.");
   const oldGroup = page.getByRole("region", { name: `Round ${r0}` });
-  await expect(oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" })).toBeVisible();
+  await expect(
+    oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" }),
+  ).toBeVisible();
   // Next Round itself is logged in the round it ends (voidable, see buffs.spec.ts).
   await expect(
-    oldGroup.getByRole("listitem").filter({ hasText: `Round ${r0} → ${r0 + 1}` }),
+    oldGroup
+      .getByRole("listitem")
+      .filter({ hasText: `Round ${r0} → ${r0 + 1}` }),
   ).toBeVisible();
 
   await recordHp(page, "damage", 1, "e2e second round hit");
-  await expect(newGroup.getByRole("listitem")).toContainText("e2e second round hit");
+  await expect(newGroup.getByRole("listitem")).toContainText(
+    "e2e second round hit",
+  );
 
   await expectNoReload(page);
   await snap(page, "next-round");
@@ -72,7 +78,10 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   expect(await currentRound(page)).toBe(7);
 
   await page.getByRole("button", { name: "End combat" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Confirm" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Confirm" })
+    .click();
   await expect.poll(() => currentRound(page)).toBe(0);
   await expect(logEntry(page, "Combat ended: round 7 → 0")).toBeVisible();
   await expect(buffBadge(page, "e2e Haste")).toBeVisible();

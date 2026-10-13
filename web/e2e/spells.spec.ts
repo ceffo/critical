@@ -5,12 +5,16 @@ import type { Page } from "@playwright/test";
 async function openSpells(page: Page) {
   await openDashboard(page);
   await page.getByRole("tab", { name: "Spells" }).click();
-  await expect(page.getByRole("button", { name: "Prepare spells" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Prepare spells" }),
+  ).toBeVisible();
 }
 
 async function add(page: Page, ...names: string[]) {
   for (const name of names) {
-    await page.getByRole("button", { name: `Add ${name}`, exact: true }).click();
+    await page
+      .getByRole("button", { name: `Add ${name}`, exact: true })
+      .click();
   }
 }
 
@@ -22,18 +26,25 @@ async function put(apiUrl: string, spells: string[]) {
   });
 }
 
-test("4 level-1 spells are refused with the server's message, 3 are accepted", async ({ page, stack }) => {
+test("4 level-1 spells are refused with the server's message, 3 are accepted", async ({
+  page,
+  stack,
+}) => {
   await openSpells(page);
   await page.getByRole("button", { name: "Prepare spells" }).click();
   const editor = page.getByRole("form", { name: "Prepare today's spells" });
 
   await page.getByLabel("Search the spellbook").fill("a");
   await add(page, "Alarm", "Burning Hands", "Chromatic Orb", "Detect Magic");
-  await expect(editor.getByTestId("draft-level-1")).toContainText("4 / 3 prepared");
+  await expect(editor.getByTestId("draft-level-1")).toContainText(
+    "4 / 3 prepared",
+  );
   await snap(page, "four-level-1-draft");
 
   await editor.getByRole("button", { name: "Save preparation" }).click();
-  await expect(page.getByRole("alert")).toContainText("too many spells for this level");
+  await expect(page.getByRole("alert")).toContainText(
+    "too many spells for this level",
+  );
   await expect(page.getByRole("alert")).toContainText("limit is 3");
   await snap(page, "four-level-1-refused");
   await expect(editor).toBeVisible(); // the editor stays open for a fix
@@ -50,19 +61,38 @@ test("4 level-1 spells are refused with the server's message, 3 are accepted", a
   await snap(page, "three-level-1-accepted");
 });
 
-test("a spell outside the spellbook is refused by the API", async ({ stack }) => {
+test("a spell outside the spellbook is refused by the API", async ({
+  stack,
+}) => {
   const res = await put(stack.apiUrl, ["shield"]);
   expect(res.status).toBe(400);
-  expect(await res.json()).toEqual({ error: 'spell is not in the spellbook: "shield"' });
+  expect(await res.json()).toEqual({
+    error: 'spell is not in the spellbook: "shield"',
+  });
 });
 
-test("duplicates are prepared and a long rest keeps the preparation but resets used", async ({ page, stack }) => {
-  expect((await put(stack.apiUrl, ["mirror_image", "mirror_image", "haste", "fireball"])).ok).toBe(true);
+test("duplicates are prepared and a long rest keeps the preparation but resets used", async ({
+  page,
+  stack,
+}) => {
+  expect(
+    (
+      await put(stack.apiUrl, [
+        "mirror_image",
+        "mirror_image",
+        "haste",
+        "fireball",
+      ])
+    ).ok,
+  ).toBe(true);
   await openSpells(page);
 
   const level2 = page.getByRole("region", { name: "Level 2" });
   await expect(level2.getByTestId("remaining-2")).toHaveText("2 / 2");
-  await level2.getByRole("button", { name: "Cast Mirror Image" }).first().click();
+  await level2
+    .getByRole("button", { name: "Cast Mirror Image" })
+    .first()
+    .click();
   await expect(level2.getByTestId("remaining-2")).toHaveText("1 / 2");
   await snap(page, "after-cast");
 
@@ -70,18 +100,26 @@ test("duplicates are prepared and a long rest keeps the preparation but resets u
   await expect(level2.getByTestId("remaining-2")).toHaveText("2 / 2");
   await expect(level2.getByRole("listitem")).toHaveCount(2);
   await expect(level2).toContainText("Mirror Image");
-  await expect(page.getByRole("region", { name: "Level 3" })).toContainText("Haste");
+  await expect(page.getByRole("region", { name: "Level 3" })).toContainText(
+    "Haste",
+  );
   await snap(page, "after-long-rest");
 });
 
-test("preparing is logged and voiding it restores the previous preparation", async ({ page, stack }) => {
+test("preparing is logged and voiding it restores the previous preparation", async ({
+  page,
+  stack,
+}) => {
   expect((await put(stack.apiUrl, ["alarm"])).ok).toBe(true);
   await openSpells(page);
   const level1 = page.getByRole("region", { name: "Level 1" });
   await expect(level1).toContainText("Alarm");
 
   await page.getByRole("button", { name: "Prepare spells" }).click();
-  await page.getByRole("form", { name: "Prepare today's spells" }).getByRole("button", { name: "Remove Alarm" }).click();
+  await page
+    .getByRole("form", { name: "Prepare today's spells" })
+    .getByRole("button", { name: "Remove Alarm" })
+    .click();
   await add(page, "Magic Missile", "Identify");
   await page.getByRole("button", { name: "Save preparation" }).click();
   await expect(level1).toContainText("Magic Missile");
@@ -101,7 +139,9 @@ test("preparing is logged and voiding it restores the previous preparation", asy
 
 test("the spell names follow the language", async ({ page, stack }) => {
   expect((await put(stack.apiUrl, ["mirror_image", "fireball"])).ok).toBe(true);
-  await page.addInitScript(() => localStorage.setItem("critical.language", "fr"));
+  await page.addInitScript(() =>
+    localStorage.setItem("critical.language", "fr"),
+  );
   await openDashboard(page);
   await page.getByRole("tab", { name: "Sorts", exact: true }).click();
   await expect(page.getByText("Images miroir")).toBeVisible();
@@ -109,14 +149,25 @@ test("the spell names follow the language", async ({ page, stack }) => {
   await snap(page, "french");
 });
 
-test("a prepared spell outside the spellbook is listed as removed and not sent", async ({ page, stack }) => {
+test("a prepared spell outside the spellbook is listed as removed and not sent", async ({
+  page,
+  stack,
+}) => {
   expect((await put(stack.apiUrl, ["alarm"])).ok).toBe(true);
   // The stored preparation also holds a slot the spellbook no longer has (seed changed since).
   await page.route("**/api/spells/slots", async (route) => {
     if (route.request().method() !== "GET") return route.fallback();
     const slots = (await (await route.fetch()).json()) as object[];
     await route.fulfill({
-      json: [...slots, { level: 3, prepared_spell_id: "shield", prepared_spell_name: "Shield", used: false }],
+      json: [
+        ...slots,
+        {
+          level: 3,
+          prepared_spell_id: "shield",
+          prepared_spell_name: "Shield",
+          used: false,
+        },
+      ],
     });
   });
   let sent: string[] | undefined;
@@ -128,8 +179,12 @@ test("a prepared spell outside the spellbook is listed as removed and not sent",
   await openSpells(page);
   await page.getByRole("button", { name: "Prepare spells" }).click();
   const editor = page.getByRole("form", { name: "Prepare today's spells" });
-  await expect(editor.getByTestId("stale-prepared")).toContainText("will be removed");
-  await expect(editor.getByTestId("stale-prepared").getByRole("listitem")).toHaveCount(1);
+  await expect(editor.getByTestId("stale-prepared")).toContainText(
+    "will be removed",
+  );
+  await expect(
+    editor.getByTestId("stale-prepared").getByRole("listitem"),
+  ).toHaveCount(1);
   await expect(editor.getByTestId("draft-level-1")).toContainText("Alarm");
   await snap(page, "stale-listed");
 

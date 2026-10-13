@@ -224,6 +224,9 @@
     "saveRaw": "Save",
     "componentsRaw": "Components",
     "filtersEmptyPrompt": "No spells match these filters",
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
     "count_one": "{{count}} spell",
     "count_other": "{{count}} spells"
   },

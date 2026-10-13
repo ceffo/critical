@@ -58,8 +58,15 @@ function formatArea(spell: Spell): string {
 export function LookupPanel() {
   const { t } = useTranslation();
   const [f, setF] = useState<SpellFilters>(NO_FILTERS);
-  const { results, search, loading } = useSpellsDbStore();
-  const patch = (p: Partial<SpellFilters>) => setF((cur) => ({ ...cur, ...p }));
+  const [page, setPage] = useState(1);
+  const { results, total, pageSize, search, loading } = useSpellsDbStore();
+  // Any filter change goes back to the first page.
+  const patch = (p: Partial<SpellFilters>) => {
+    setF((cur) => ({ ...cur, ...p }));
+    setPage(1);
+  };
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
   const filtered =
     JSON.stringify({ ...f, q: "" }) !==
     JSON.stringify({ ...NO_FILTERS, q: "" });
@@ -67,10 +74,10 @@ export function LookupPanel() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      search(f);
+      search(f, page);
     }, 300);
     return () => clearTimeout(timer);
-  }, [f, search]);
+  }, [f, page, search]);
 
   return (
     <div className="flex flex-col h-full space-y-3">
@@ -200,12 +207,45 @@ export function LookupPanel() {
             variant="ghost"
             size="sm"
             className="h-6 text-[11px]"
-            onClick={() => setF(NO_FILTERS)}
+            onClick={() => {
+              setF(NO_FILTERS);
+              setPage(1);
+            }}
           >
             {t("lookup.reset")}
           </Button>
         )}
       </div>
+
+      {total > 0 && (
+        <div className="shrink-0 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span data-testid="lookup-range">
+            {t("lookup.showing", { from, to, total })}
+          </span>
+          <div className="ml-auto flex gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[11px]"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              {t("lookup.prevPage")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[11px]"
+              disabled={to >= total}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              {t("lookup.nextPage")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-3 scrollbar-thin">
         {loading && results.length === 0 ? (

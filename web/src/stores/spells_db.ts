@@ -4,20 +4,33 @@ import { searchSpells, type SpellFilters } from "@/api/spells_db";
 
 interface SpellsDbStore {
   results: Spell[];
+  total: number;
+  page: number;
+  pageSize: number;
   loading: boolean;
   error: string | null;
-  search: (f: SpellFilters) => Promise<void>;
+  search: (f: SpellFilters, page?: number) => Promise<void>;
 }
 
 export const useSpellsDbStore = create<SpellsDbStore>((set) => ({
   results: [],
+  total: 0,
+  page: 1,
+  pageSize: 50,
   loading: false,
   error: null,
-  search: async (f) => {
+  search: async (f, page = 1) => {
     set({ loading: true });
     try {
-      const results = await searchSpells(f);
-      set({ results, loading: false, error: null });
+      const r = await searchSpells(f, page);
+      set({
+        results: r.items,
+        total: r.total,
+        page: r.page,
+        pageSize: r.page_size,
+        loading: false,
+        error: null,
+      });
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false });
     }

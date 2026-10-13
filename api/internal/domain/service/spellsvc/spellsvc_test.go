@@ -2,6 +2,8 @@ package spellsvc_test
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -68,9 +70,10 @@ func TestSearch_PassesTheFilterToTheReader(t *testing.T) {
 	spells := []spellsvc.Spell{{Name: "Fireball", Class: "wizard", Level: 3}}
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
 
-	got, err := svc.Search(context.Background(), f)
+	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, spells, got)
+	assert.Equal(t, spells, got.Items)
+	assert.Equal(t, 1, got.Total)
 }
 
 func spell(name string, r spellstats.Raw) spellsvc.Spell {
@@ -81,10 +84,10 @@ func searchNames(t *testing.T, f spellsvc.Filter, spells ...spellsvc.Spell) []st
 	t.Helper()
 	svc, _, reader := newSvc(t)
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
-	got, err := svc.Search(context.Background(), f)
+	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize})
 	require.NoError(t, err)
 	out := []string{}
-	for _, s := range got {
+	for _, s := range got.Items {
 		out = append(out, s.Name)
 	}
 	return out
@@ -121,7 +124,93 @@ func TestSearch_StatFilters(t *testing.T) {
 	}
 }
 
-func TestSearch_ReturnsEveryMatchWithoutACap(t *testing.T) {
-	many := make([]spellsvc.Spell, 900)
-	assert.Len(t, searchNames(t, spellsvc.Filter{}, many...), len(many))
+func numbered(n int, mk func(i int) spellsvc.Spell) []spellsvc.Spell {
+	out := make([]spellsvc.Spell, n)
+	for i := range out {
+		out[i] = mk(i)
+	}
+	return out
+}
+
+func page(t *testing.T, f spellsvc.Filter, p spellsvc.PageRequest, spells []spellsvc.Spell) spellsvc.Page {
+	t.Helper()
+	svc, _, reader := newSvc(t)
+	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
+	got, err := svc.Search(context.Background(), f, p)
+	require.NoError(t, err)
+	return got
+}
+
+func pageNames(p spellsvc.Page) []string {
+	out := []string{}
+	for _, s := range p.Items {
+		out = append(out, s.Name)
+	}
+	return out
+}
+
+func TestSearch_Paging(t *testing.T) {
+	all := numbered(25, func(i int) spellsvc.Spell { return spellsvc.Spell{Name: fmt.Sprintf("S%02d", i)} })
+	tests := []struct {
+		name      string
+		req       spellsvc.PageRequest
+		first     string
+		last      string
+		count     int
+		page, siz int
+	}{
+		{"first page", spellsvc.PageRequest{Page: 1, PageSize: 10}, "S00", "S09", 10, 1, 10},
+		{"middle page", spellsvc.PageRequest{Page: 2, PageSize: 10}, "S10", "S19", 10, 2, 10},
+		{"last partial page", spellsvc.PageRequest{Page: 3, PageSize: 10}, "S20", "S24", 5, 3, 10},
+		{"past the end", spellsvc.PageRequest{Page: 4, PageSize: 10}, "", "", 0, 4, 10},
+		{"defaults", spellsvc.PageRequest{}, "S00", "S24", 25, 1, spellsvc.DefaultPageSize},
+		{"size clamped", spellsvc.PageRequest{Page: 1, PageSize: 9999}, "S00", "S24", 25, 1, spellsvc.MaxPageSize},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := page(t, spellsvc.Filter{}, tt.req, all)
+			assert.Equal(t, 25, got.Total, "total counts every match")
+			assert.Equal(t, tt.page, got.Page)
+			assert.Equal(t, tt.siz, got.PageSize)
+			require.Len(t, got.Items, tt.count)
+			if tt.count > 0 {
+				assert.Equal(t, tt.first, got.Items[0].Name)
+				assert.Equal(t, tt.last, got.Items[tt.count-1].Name)
+			}
+		})
+	}
+}
+
+func TestSearch_PagesCoverEveryMatchOnceInReaderOrder(t *testing.T) {
+	all := numbered(900, func(i int) spellsvc.Spell { return spellsvc.Spell{Name: fmt.Sprintf("S%03d", i)} })
+	var seen []string
+	for p := 1; ; p++ {
+		got := page(t, spellsvc.Filter{}, spellsvc.PageRequest{Page: p, PageSize: spellsvc.MaxPageSize}, all)
+		if len(got.Items) == 0 {
+			break
+		}
+		seen = append(seen, pageNames(got)...)
+	}
+	require.Len(t, seen, 900)
+	assert.True(t, slices.IsSorted(seen), "stable order across pages")
+	assert.Len(t, slices.Compact(slices.Clone(seen)), 900, "no spell on two pages")
+}
+
+func TestSearch_TotalAndPagesCountOnlyStatMatches(t *testing.T) {
+	// Every third spell needs M; the stat filter runs before paging.
+	all := numbered(30, func(i int) spellsvc.Spell {
+		c := "V, S"
+		if i%3 == 0 {
+			c = "V, S, M"
+		}
+		s := spell(fmt.Sprintf("S%02d", i), spellstats.Raw{Components: c})
+		return s
+	})
+	f := spellsvc.Filter{Components: []string{"M"}}
+	first := page(t, f, spellsvc.PageRequest{Page: 1, PageSize: 4}, all)
+	assert.Equal(t, 10, first.Total)
+	assert.Equal(t, []string{"S00", "S03", "S06", "S09"}, pageNames(first))
+	last := page(t, f, spellsvc.PageRequest{Page: 3, PageSize: 4}, all)
+	assert.Equal(t, []string{"S24", "S27"}, pageNames(last), "a full last page is not padded with non-matches")
+	assert.Equal(t, 10, last.Total)
 }

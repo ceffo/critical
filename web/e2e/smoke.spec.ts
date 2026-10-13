@@ -21,7 +21,9 @@ test("fr smoke: French toggle shows no raw i18n keys", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Infliger les dégâts" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Round suivant" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Round suivant" }),
+  ).toBeVisible();
 
   const body = (await page.locator("body").innerText()).split("\n");
   // A raw key looks like `ns.key` / `hp.applyDamage`: dotted lowercase identifier.

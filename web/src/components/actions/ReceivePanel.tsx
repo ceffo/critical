@@ -45,7 +45,8 @@ export function ReceivePanel() {
     if (q.length < 2) return;
     let live = true;
     const timer = setTimeout(() => {
-      searchSpells({ ...NO_FILTERS, q })
+      searchSpells({ ...NO_FILTERS, q }, 1, 12)
+        .then((p) => p.items)
         .catch(() => [])
         .then((rows) => {
           if (!live) return;
@@ -56,6 +57,7 @@ export function ReceivePanel() {
             if (!byId.has(id) || byId.get(id)?.level === undefined)
               byId.set(id, { id, name: r.name, level: r.level, cls: r.class });
           }
+          // The API page is already small; this caps the merged list with the catalogue names.
           setFound([...byId.values()].slice(0, 12));
         });
     }, 200);

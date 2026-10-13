@@ -27,20 +27,51 @@ func (s *service) ResetSlots(ctx context.Context, characterID int64) ([]SpellSlo
 	return updated, nil
 }
 
-// Search reads the catalog rows matching the filter's stored columns, then
-// keeps those whose typed stats match the rest of it. It never truncates: the
-// whole catalog is a few hundred rows.
-func (s *service) Search(ctx context.Context, f Filter) ([]Spell, error) {
+// Default and maximum page sizes of a catalog search.
+const (
+	DefaultPageSize = 50
+	MaxPageSize     = 200
+)
+
+// PageRequest selects one page of a search: Page is 1-based. Zero values mean
+// the first page of DefaultPageSize; a size above MaxPageSize is clamped.
+type PageRequest struct {
+	Page     int
+	PageSize int
+}
+
+// Page is one page of matches. Total counts every match after all filters,
+// so the caller can always reach the rest.
+type Page struct {
+	Items    []Spell
+	Total    int
+	Page     int
+	PageSize int
+}
+
+// Search reads the catalog rows matching the filter's stored columns, keeps
+// those whose typed stats match the rest of it, then cuts the requested page.
+// Rows come ordered by level, name, class, so pages are stable. The typed
+// filter runs before paging: Total and the pages are exact.
+func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, error) {
 	rows, err := s.reader.Search(ctx, f)
 	if err != nil {
-		return nil, err
+		return Page{}, err
 	}
-	out := make([]Spell, 0, len(rows))
+	matches := make([]Spell, 0, len(rows))
 	for _, sp := range rows {
-		if !f.matchStats(sp.Stats) {
-			continue
+		if f.matchStats(sp.Stats) {
+			matches = append(matches, sp)
 		}
-		out = append(out, sp)
 	}
-	return out, nil
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.PageSize < 1 {
+		p.PageSize = DefaultPageSize
+	}
+	p.PageSize = min(p.PageSize, MaxPageSize)
+	start := min((p.Page-1)*p.PageSize, len(matches))
+	end := min(start+p.PageSize, len(matches))
+	return Page{Items: matches[start:end:end], Total: len(matches), Page: p.Page, PageSize: p.PageSize}, nil
 }

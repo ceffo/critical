@@ -7,13 +7,18 @@ function attackForm(page: Page) {
 }
 
 function resultCard(page: Page) {
-  return page.getByRole("region", { name: "Last Result" }).getByTestId("attack-result");
+  return page
+    .getByRole("region", { name: "Last Result" })
+    .getByTestId("attack-result");
 }
 
 /** Remaining count shown in the selected ammunition option ("Arrows +3 (2 left)"). */
 async function selectedAmmoCount(page: Page): Promise<number> {
   const text =
-    (await attackForm(page).getByLabel("Ammunition").locator("option:checked").textContent()) ?? "";
+    (await attackForm(page)
+      .getByLabel("Ammunition")
+      .locator("option:checked")
+      .textContent()) ?? "";
   const m = /\((\d+) left\)/.exec(text);
   if (!m) throw new Error(`unexpected ammo option: ${JSON.stringify(text)}`);
   return Number(m[1]);
@@ -25,7 +30,9 @@ async function openAttack(page: Page) {
   await expect(attackForm(page).getByLabel("Weapon")).toBeVisible();
 }
 
-test("a melee attack lists every modifier in the result card and the log", async ({ page }) => {
+test("a melee attack lists every modifier in the result card and the log", async ({
+  page,
+}) => {
   await openAttack(page);
   const form = attackForm(page);
   await form.getByLabel("Weapon").selectOption("longsword");
@@ -43,8 +50,12 @@ test("a melee attack lists every modifier in the result card and the log", async
   const mods = card.getByTestId("to-hit-modifiers");
   await expect(mods.getByRole("listitem")).toHaveCount(3);
   await expect(mods).toContainText(/Strength \d+/);
-  await expect(mods.getByRole("listitem").nth(1)).toHaveText(/Long Sword \+2\s*\+2/);
-  await expect(mods.getByRole("listitem").nth(2)).toHaveText(/Rear attack\s*\+2/);
+  await expect(mods.getByRole("listitem").nth(1)).toHaveText(
+    /Long Sword \+2\s*\+2/,
+  );
+  await expect(mods.getByRole("listitem").nth(2)).toHaveText(
+    /Rear attack\s*\+2/,
+  );
 
   // The attack is in the combat log, in the player's language, rendered from its payload.
   await expect(logEntry(page, "Long Sword +2 vs AC 5")).toBeVisible();
@@ -67,9 +78,13 @@ test("a missile attack spends the chosen arrow", async ({ page }) => {
   await expect(mods).toContainText("Short Bow +2");
   await expect(mods).toContainText("Arrows +3");
   await expect(mods).not.toContainText("Strength");
-  await expect(card.getByTestId("ammo-left")).toHaveText(`Arrows +3: ${before - 1} left`);
+  await expect(card.getByTestId("ammo-left")).toHaveText(
+    `Arrows +3: ${before - 1} left`,
+  );
   await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
-  await expect(logEntry(page, "Short Bow +2 (Arrows +3) vs AC 2")).toBeVisible();
+  await expect(
+    logEntry(page, "Short Bow +2 (Arrows +3) vs AC 2"),
+  ).toBeVisible();
   await snap(page, "missile-ammo");
 });
 
@@ -88,7 +103,9 @@ test("voiding a missile attack gives the arrow back", async ({ page }) => {
   await snap(page, "missile-void");
 });
 
-test("spent ammunition stays selected and must be replaced by an explicit pick", async ({ page }) => {
+test("spent ammunition stays selected and must be replaced by an explicit pick", async ({
+  page,
+}) => {
   await openAttack(page);
   const form = attackForm(page);
   const roll = form.getByRole("button", { name: "Roll Attack" });
@@ -103,7 +120,9 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
 
   // The +3 arrows are spent: still the selection, no silent switch to other arrows.
   await expect(ammo).toHaveValue("arrows_plus3");
-  await expect(form.getByTestId("ammo-spent")).toHaveText("No Arrows +3 left: pick other ammunition");
+  await expect(form.getByTestId("ammo-spent")).toHaveText(
+    "No Arrows +3 left: pick other ammunition",
+  );
   await expect(roll).toBeDisabled();
   await snap(page, "ammo-spent");
 
@@ -112,7 +131,9 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
   await expect(roll).toBeEnabled();
 });
 
-test("a later shot with other arrows does not block voiding an earlier shot", async ({ page }) => {
+test("a later shot with other arrows does not block voiding an earlier shot", async ({
+  page,
+}) => {
   await openAttack(page);
   const form = attackForm(page);
   const ammo = form.getByLabel("Ammunition");

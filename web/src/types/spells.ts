@@ -172,3 +172,12 @@ export interface CastResult {
   untracked: CastUntracked[];
   slots?: SpellSlot[];
 }
+
+/** Mirrors spellhdl.SpellPageDTO: one page of GET /api/spells. */
+export interface SpellPage {
+  items: Spell[];
+  /** Matches after all filters, across every page. */
+  total: number;
+  page: number;
+  page_size: number;
+}

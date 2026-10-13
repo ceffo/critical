@@ -4,7 +4,9 @@ import { openDashboard } from "./helpers";
 const isDark = (page: import("@playwright/test").Page) =>
   page.evaluate(() => document.documentElement.classList.contains("dark"));
 
-test("theme: defaults to the OS scheme and follows it live", async ({ page }) => {
+test("theme: defaults to the OS scheme and follows it live", async ({
+  page,
+}) => {
   await page.emulateMedia({ colorScheme: "light" });
   await openDashboard(page);
   expect(await isDark(page)).toBe(false);
@@ -29,7 +31,10 @@ test("theme: toggle cycles light/dark/system and persists across reload", async 
   // Persisted, and applied before React mounts (no light flash).
   await page.reload();
   expect(await isDark(page)).toBe(true);
-  await expect(page.getByTestId("theme-toggle")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByTestId("theme-toggle")).toHaveAttribute(
+    "data-theme",
+    "dark",
+  );
 
   await page.getByTestId("theme-toggle").click(); // -> system (OS is light)
   expect(await isDark(page)).toBe(false);
@@ -39,7 +44,9 @@ test("theme: toggle cycles light/dark/system and persists across reload", async 
 });
 
 test("theme: .dark is on <html> before the app mounts", async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("critical.theme", "dark"));
+  await page.addInitScript(() =>
+    localStorage.setItem("critical.theme", "dark"),
+  );
   await page.route("**/src/main.tsx*", (r) => r.abort());
   await page.goto("/");
   expect(await isDark(page)).toBe(true);
@@ -58,10 +65,14 @@ test("theme: dashboard screens in light and dark", async ({ page }) => {
   const toggle = page.getByTestId("theme-toggle");
   const tabs = await page.getByRole("tab").all();
   for (const mode of ["light", "dark"]) {
-    while ((await toggle.getAttribute("data-theme")) !== mode) await toggle.click();
+    while ((await toggle.getAttribute("data-theme")) !== mode)
+      await toggle.click();
     for (const tab of tabs) {
       await tab.click();
-      const name = ((await tab.textContent()) ?? "tab").trim().toLowerCase().replace(/\W+/g, "-");
+      const name = ((await tab.textContent()) ?? "tab")
+        .trim()
+        .toLowerCase()
+        .replace(/\W+/g, "-");
       await snap(page, `${mode}-${name}`);
     }
   }

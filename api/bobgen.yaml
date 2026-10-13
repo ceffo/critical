@@ -8,6 +8,7 @@ sqlite:
     - internal/adapters/actionlogdal/queries
     - internal/adapters/weapondal/queries
     - internal/adapters/itemdal/queries
+    - internal/adapters/critdal/queries
 
 plugins:
   models:

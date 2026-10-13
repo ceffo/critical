@@ -348,3 +348,50 @@ func TestGemDispelOncePerDayUntilLongRest(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, itemCount(t, bs, "power_gem_dispel"))
 }
+
+// The crit table is stored: the next crit uses it, an invalid table is refused
+// and leaves the stored one, and editing never rewrites a past attack entry.
+func TestCritTable_EditedTableIsUsedAndPastEntriesKeepTheirMultiplier(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	// AC 1000 makes the roll needed so low that every attack is a crit.
+	shot := combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000}
+
+	def, err := bs.Combat.GetCritTable(ctx)
+	require.NoError(t, err)
+	assert.True(t, def.Placeholder)
+
+	before, err := bs.Combat.ResolveAttack(ctx, id, shot)
+	require.NoError(t, err)
+	require.True(t, before.IsCrit)
+	assert.Equal(t, 2, before.CritMultiplier)
+	assert.True(t, before.CritPlaceholder)
+
+	saved, err := bs.Combat.SetCritTable(ctx, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 5}})
+	require.NoError(t, err)
+	assert.False(t, saved.Placeholder)
+
+	_, err = bs.Combat.SetCritTable(ctx, []combatsvc.CritRow{{From: 1, To: 60, Multiplier: 7}})
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
+	got, err := bs.Combat.GetCritTable(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, saved, got, "the refused table did not replace the stored one")
+
+	after, err := bs.Combat.ResolveAttack(ctx, id, shot)
+	require.NoError(t, err)
+	assert.Equal(t, 5, after.CritMultiplier)
+	assert.Equal(t, [2]int{1, 100}, [2]int{after.CritFrom, after.CritTo})
+	assert.False(t, after.CritPlaceholder)
+
+	entries, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	byID := map[int64]string{}
+	for _, e := range entries {
+		byID[e.ID] = string(e.Payload)
+	}
+	assert.Contains(t, byID[before.LogEntryID], `"critMultiplier":2`)
+	assert.Contains(t, byID[before.LogEntryID], `"critPlaceholder":true`)
+	assert.Contains(t, byID[after.LogEntryID], `"critMultiplier":5`)
+}

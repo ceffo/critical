@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
+	"github.com/ceffo/critical/api/internal/adapters/critdal"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
@@ -97,6 +98,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		dice = cfg.Dice
 	}
 	weaponDAL := weapondal.New(db)
+	critDAL := critdal.New(db)
 	itemDAL := itemdal.New(db)
 
 	// The spell effects casting applies; a malformed formula is a startup
@@ -173,7 +175,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	}
 	registerRestorers(logSvc, itemSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
-		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL,
+		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL, Crit: critDAL,
 		Items: itemSvc, Rules: ruleTables, Log: logSvc, Tx: db,
 	})
 	if err != nil {

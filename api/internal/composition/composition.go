@@ -150,7 +150,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
-	itemSvc, err := itemsvc.New(itemDAL)
+	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: db})
 	if err != nil {
 		_ = db.Close()
 		return nil, err

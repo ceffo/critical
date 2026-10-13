@@ -125,7 +125,15 @@
   },
   "items": {
     "title": "Objets",
-    "placeholder": "Les objets à charges et consommables s'utiliseront d'ici."
+    "ammo": "Munitions",
+    "charged": "Objets à charges et consommables",
+    "use": "Utiliser",
+    "left": "{{count}} restant(s)",
+    "count": "{{count}} / {{max}}",
+    "empty": "Vide",
+    "perDay": "1/jour",
+    "loading": "Chargement des objets…",
+    "none": "Aucun objet."
   },
   "spellSlots": {
     "title": "Emplacements de sorts",
@@ -208,7 +216,15 @@
       "buff": "{{detail}}",
       "situational": "{{detail}}",
       "crit": "Coup critique (provisoire)"
-    }
+    },
+    "itemHeading": "{{name}} utilisé",
+    "effect": "Effet",
+    "dice": "Dés",
+    "rolls": "Jets",
+    "total": "Total",
+    "save": "Sauvegarde : {{name}}",
+    "left": "{{name}} : {{count}} restant(s)",
+    "noRoll": "Rien à lancer : l'effet se résout à la table."
   },
   "log": {
     "title": "Journal de combat",
@@ -255,6 +271,10 @@
       "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
       "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult}}, {{damage}} dégâts",
       "withAmmo": "{{weapon}} ({{ammo}})"
+    },
+    "item": {
+      "rolled": "{{name}} utilisé : {{dice}} = {{total}} ({{left}} restant)",
+      "used": "{{name}} utilisé ({{left}} restant)"
     }
   }
 }

@@ -125,7 +125,15 @@
   },
   "items": {
     "title": "Items",
-    "placeholder": "Charged items and consumables will be used from here."
+    "ammo": "Ammunition",
+    "charged": "Charged items & consumables",
+    "use": "Use",
+    "left": "{{count}} left",
+    "count": "{{count}} / {{max}}",
+    "empty": "Empty",
+    "perDay": "1/day",
+    "loading": "Loading items…",
+    "none": "No items."
   },
   "spellSlots": {
     "title": "Spell Slots",
@@ -208,7 +216,15 @@
       "buff": "{{detail}}",
       "situational": "{{detail}}",
       "crit": "Critical hit (placeholder)"
-    }
+    },
+    "itemHeading": "Used {{name}}",
+    "effect": "Effect",
+    "dice": "Dice",
+    "rolls": "Rolls",
+    "total": "Total",
+    "save": "Save: {{name}}",
+    "left": "{{name}}: {{count}} left",
+    "noRoll": "Nothing to roll — the effect is resolved at the table."
   },
   "log": {
     "title": "Combat Log",
@@ -255,6 +271,10 @@
       "hit": "{{weapon}} vs AC {{ac}}: hit, {{damage}} damage",
       "crit": "{{weapon}} vs AC {{ac}}: critical ×{{mult}}, {{damage}} damage",
       "withAmmo": "{{weapon}} ({{ammo}})"
+    },
+    "item": {
+      "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
+      "used": "Used {{name}} ({{left}} left)"
     }
   }
 }

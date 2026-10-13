@@ -13,6 +13,7 @@ const entry = (id: number, round: number): LogEntry => ({
   effectiveSummary: `e${id}`,
   status: "active",
   payload: {},
+  effectivePayload: {},
   snapshots: [],
   corrections: [],
   createdAt: "2026-10-17T20:00:00Z",

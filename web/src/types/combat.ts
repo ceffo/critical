@@ -10,7 +10,9 @@ export type ModifierKind =
   | "ammo_magic"
   | "buff"
   | "situational"
-  | "crit";
+  | "crit"
+  /** A save adjustment set after the roll; detail = its reason. */
+  | "adjustment";
 
 export interface Modifier {
   kind: ModifierKind;
@@ -73,6 +75,12 @@ export interface RollResult {
   targetAc: number;
   targetSize?: TargetSize;
   ammo?: AmmoUse;
+  // Saving-throw context (absent on attacks).
+  saveCategory?: SaveCategory;
+  /** Adjustment set after the roll (0: none); always present on saves. */
+  adjustment?: number;
+  adjustmentReason?: string;
+  /** The action-log entry recording the attack or save. */
   logEntryId?: number;
 }
 

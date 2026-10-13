@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
 import type { RollResult } from "@/types/combat";
 import { spellName } from "@/i18n/spellName";
+import { formatSigned } from "@/lib/format";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
@@ -85,6 +86,43 @@ function attackPayload(e: LogEntry): RollResult | null {
     : null;
 }
 
+/** Payload of save entries (combatsvc saveRecord); an adjusted save's is the latest amend's. */
+export interface SaveLogPayload {
+  category: string;
+  d20Roll: number;
+  target: number;
+  passed: boolean;
+  adjustment: number;
+  adjustmentReason?: string;
+  /** Verdict before the latest adjustment; set once the save was adjusted. */
+  previousPassed?: boolean;
+}
+
+function savePayload(e: LogEntry): SaveLogPayload | null {
+  if (e.kind !== "save") return null;
+  const p = (e.effectivePayload ?? e.payload) as Partial<SaveLogPayload> | null;
+  return p && typeof p.passed === "boolean" && typeof p.d20Roll === "number" && typeof p.category === "string"
+    ? (p as SaveLogPayload)
+    : null;
+}
+
+function saveText(p: SaveLogPayload, t: TFunction): string {
+  const verdict = (passed: boolean) => t(passed ? "result.passed" : "result.failed").toUpperCase();
+  const args = {
+    name: t(`saves.categories.${p.category}`, { defaultValue: p.category }),
+    d20: p.d20Roll,
+    target: p.target,
+  };
+  if (p.previousPassed === undefined) return t("log.saveThrow.rolled", { ...args, verdict: verdict(p.passed) });
+  const change = { ...args, from: verdict(p.previousPassed), to: verdict(p.passed) };
+  if (p.adjustment === 0) return t("log.saveThrow.removed", change);
+  return t("log.saveThrow.adjusted", {
+    ...change,
+    adjustment: formatSigned(p.adjustment),
+    reason: p.adjustmentReason ? ` ${p.adjustmentReason}` : "",
+  });
+}
+
 /** Payload of item_use entries (itemsvc useRecord, same shape as UseResult). */
 function itemPayload(e: LogEntry): UseResult | null {
   if (e.kind !== "item_use") return null;
@@ -107,12 +145,14 @@ function attackText(p: RollResult, t: TFunction): string {
 }
 
 /**
- * The entry's text in the player's language: buff, round, attack and cast entries are rendered from
+ * The entry's text in the player's language: buff, round, attack, save and cast entries are rendered from
  * their structured payload; everything else (and unknown payloads) uses the server's summary.
  */
 export function entryText(e: LogEntry, t: TFunction): string {
   const attack = attackPayload(e);
   if (attack) return attackText(attack, t);
+  const save = savePayload(e);
+  if (save) return saveText(save, t);
   const cast = castPayload(e);
   if (cast) return castText(cast, t);
   const rest = restText(e, t);

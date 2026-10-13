@@ -88,3 +88,15 @@ packages:
       Characters:
       Slots:
       Log:
+  github.com/ceffo/critical/api/internal/domain/service/castsvc:
+    config:
+      dir: "internal/domain/service/castsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Slots:
+      Texts:
+      Buffs:
+      Characters:
+      Dice:
+      Log:

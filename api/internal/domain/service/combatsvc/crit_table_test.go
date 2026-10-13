@@ -119,20 +119,34 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 		wantTermDet string
 		wantTermVal float64
 	}{
-		{name: "first value of the first range", table: table, d100: 1, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
-			wantTermSrc: "Critical hit (d100 1 in 1-50)", wantTermDet: "1-50", wantTermVal: 2},
-		{name: "last value of the first range", table: table, d100: 50, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
-			wantTermSrc: "Critical hit (d100 50 in 1-50)", wantTermDet: "1-50", wantTermVal: 2},
-		{name: "first value of the second range", table: table, d100: 51, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
-			wantTermSrc: "Critical hit (d100 51 in 51-90)", wantTermDet: "51-90", wantTermVal: 3},
-		{name: "last value of the second range", table: table, d100: 90, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
-			wantTermSrc: "Critical hit (d100 90 in 51-90)", wantTermDet: "51-90", wantTermVal: 3},
-		{name: "first value of the last range", table: table, d100: 91, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
-			wantTermSrc: "Critical hit (d100 91 in 91-100)", wantTermDet: "91-100", wantTermVal: 4},
-		{name: "100 is in the last range", table: table, d100: 100, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
-			wantTermSrc: "Critical hit (d100 100 in 91-100)", wantTermDet: "91-100", wantTermVal: 4},
-		{name: "the default table is a x2 placeholder", table: nil, d100: 77, wantMult: 2, wantFrom: 1, wantTo: 100, wantPlaceh: true,
-			wantTotal: 14, wantTermSrc: "Critical hit (placeholder, d100 77)", wantTermDet: "placeholder", wantTermVal: 2},
+		{
+			name: "first value of the first range", table: table, d100: 1, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
+			wantTermSrc: "Critical hit (d100 1 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
+		},
+		{
+			name: "last value of the first range", table: table, d100: 50, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
+			wantTermSrc: "Critical hit (d100 50 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
+		},
+		{
+			name: "first value of the second range", table: table, d100: 51, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
+			wantTermSrc: "Critical hit (d100 51 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+		},
+		{
+			name: "last value of the second range", table: table, d100: 90, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
+			wantTermSrc: "Critical hit (d100 90 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+		},
+		{
+			name: "first value of the last range", table: table, d100: 91, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
+			wantTermSrc: "Critical hit (d100 91 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
+		},
+		{
+			name: "100 is in the last range", table: table, d100: 100, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
+			wantTermSrc: "Critical hit (d100 100 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
+		},
+		{
+			name: "the default table is a x2 placeholder", table: nil, d100: 77, wantMult: 2, wantFrom: 1, wantTo: 100, wantPlaceh: true,
+			wantTotal: 14, wantTermSrc: "Critical hit (placeholder, d100 77)", wantTermDet: "placeholder", wantTermVal: 2,
+		},
 		{
 			// x3 from the table times x2 from a buff: ((5 × 1) + 2) × 6 = 42.
 			name: "table multiplier stacks with a buff multiplier", table: table, d100: 60, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 42,

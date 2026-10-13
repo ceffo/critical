@@ -200,7 +200,7 @@
     "saveHeading": "Save vs {{name}}",
     "hit": "Hit",
     "miss": "Miss",
-    "crit": "Critical ×{{mult}}",
+    "crit": "Critical ×{{mult}} (d100 in {{from}}–{{to}})",
     "passed": "Passed",
     "failed": "Failed",
     "totalDamage": "Total damage",
@@ -239,7 +239,8 @@
       "ammo_magic": "{{detail}}",
       "buff": "{{detail}}",
       "situational": "{{detail}}",
-      "crit": "Critical hit (placeholder)"
+      "crit": "Critical hit ({{detail}})",
+      "critPlaceholder": "Critical hit (placeholder)"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -375,5 +376,18 @@
       "used": "Used {{name}} ({{left}} left)"
     },
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled"
+  },
+  "critTable": {
+    "title": "Crit table (house rule)",
+    "placeholder": "Placeholder: every crit is ×2 until you enter the DM's table.",
+    "help": "The second d100 of a crit picks the range. Ranges must cover 1–100 exactly.",
+    "from": "From",
+    "to": "To",
+    "multiplier": "×",
+    "row": "Range {{n}}",
+    "remove": "Remove range {{n}}",
+    "add": "Add range",
+    "save": "Save table",
+    "saved": "Saved. The next crit uses it."
   }
 }

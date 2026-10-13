@@ -188,11 +188,11 @@ var beforeTestingInsertCritRow = func(context.Context, bob.Tx) ([]InsertCritRow_
 	return []struct {
 		RollFrom   int64
 		RollTo     int64
-		Multiplier int64
+		Multiplier float64
 	}{{
 		RollFrom:   random_int64(nil),
 		RollTo:     random_int64(nil),
-		Multiplier: random_int64(nil),
+		Multiplier: random_float64(nil),
 	}}, nil
 }
 
@@ -203,11 +203,11 @@ func TestInsertCritRow(t *testing.T) {
 		query := InsertCritRow([]struct {
 			RollFrom   int64
 			RollTo     int64
-			Multiplier int64
+			Multiplier float64
 		}{{
 			RollFrom:   random_int64(nil),
 			RollTo:     random_int64(nil),
-			Multiplier: random_int64(nil),
+			Multiplier: random_float64(nil),
 		}})
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -225,11 +225,11 @@ func TestInsertCritRow(t *testing.T) {
 		query := InsertCritRow([]struct {
 			RollFrom   int64
 			RollTo     int64
-			Multiplier int64
+			Multiplier float64
 		}{{
 			RollFrom:   random_int64(nil),
 			RollTo:     random_int64(nil),
-			Multiplier: random_int64(nil),
+			Multiplier: random_float64(nil),
 		}})
 
 		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {

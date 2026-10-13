@@ -111,7 +111,7 @@ export interface RollResult {
   d20Roll: number;
   d100CritRoll: number;
   isCrit: boolean;
-  critMultiplier: number;
+  critMultiplier: number; // may be a decimal
   baseThac0: number;
   modifiers: Modifier[]; // { kind, source, detail?, value }
   effectiveThac0: number;

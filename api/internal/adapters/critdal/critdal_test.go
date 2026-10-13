@@ -65,3 +65,13 @@ func TestReplace_RolledBackWithItsTransaction(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, old, got)
 }
+
+func TestReplace_KeepsDecimalMultipliers(t *testing.T) {
+	dal, _ := open(t)
+	ctx := context.Background()
+	rows := []combatsvc.CritRow{{From: 1, To: 50, Multiplier: 1.5}, {From: 51, To: 100, Multiplier: 2.25}}
+	require.NoError(t, dal.Replace(ctx, rows))
+	got, err := dal.List(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, rows, got)
+}

@@ -294,9 +294,9 @@ func TestResolveAttack(t *testing.T) {
 			assert.Equal(t, tt.wantCrit, res.IsCrit)
 			assert.Equal(t, tt.wantCrit, res.CritPlaceholder)
 			if tt.wantCrit {
-				assert.Equal(t, 2, res.CritMultiplier)
+				assert.InDelta(t, 2, res.CritMultiplier, 0)
 			} else {
-				assert.Equal(t, 1, res.CritMultiplier)
+				assert.InDelta(t, 1, res.CritMultiplier, 0)
 			}
 			assert.Equal(t, tt.wantTotal, res.TotalDamage)
 			assert.Equal(t, tt.wantBreakdown, res.DamageBreakdown)

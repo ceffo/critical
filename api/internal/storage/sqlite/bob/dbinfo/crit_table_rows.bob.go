@@ -35,7 +35,7 @@ var CritTableRows = Table[
 		},
 		Multiplier: column{
 			Name:      "multiplier",
-			DBType:    "INTEGER",
+			DBType:    "REAL",
 			Default:   "",
 			Comment:   "",
 			Nullable:  false,

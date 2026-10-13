@@ -8,7 +8,7 @@ type attackRecord struct {
 	D20Roll         int              `json:"d20Roll"`
 	D100CritRoll    int              `json:"d100CritRoll"`
 	IsCrit          bool             `json:"isCrit"`
-	CritMultiplier  int              `json:"critMultiplier"`
+	CritMultiplier  float64          `json:"critMultiplier"`
 	CritPlaceholder bool             `json:"critPlaceholder"`
 	CritFrom        int              `json:"critFrom"`
 	CritTo          int              `json:"critTo"`

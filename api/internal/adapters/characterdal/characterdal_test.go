@@ -83,7 +83,7 @@ func TestGetCharacter_RepoSeedIsTheCampaignBard(t *testing.T) {
 
 	got, err := dal.GetCharacter(context.Background(), id)
 	require.NoError(t, err)
-	assert.Equal(t, "Bard", got.Name)
+	assert.Equal(t, "Kelsen Balstriel", got.Name)
 	assert.Equal(t, []int{12, 17, 16, 14, 8, 16}, []int{got.Str, got.Dex, got.Con, got.Int, got.Wis, got.Cha})
 	assert.Equal(t, 15, got.Level)
 	assert.Equal(t, 1293418, got.XPTotal)

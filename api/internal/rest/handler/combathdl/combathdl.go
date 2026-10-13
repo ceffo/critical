@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -141,7 +142,7 @@ type RollResultDTO struct {
 	D20Roll         int           `json:"d20Roll"`
 	D100CritRoll    int           `json:"d100CritRoll"`
 	IsCrit          bool          `json:"isCrit"`
-	CritMultiplier  int           `json:"critMultiplier"`
+	CritMultiplier  float64       `json:"critMultiplier"`
 	CritPlaceholder bool          `json:"critPlaceholder"`
 	CritFrom        int           `json:"critFrom"`
 	CritTo          int           `json:"critTo"`
@@ -229,9 +230,9 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 
 // CritRowDTO is one inclusive D100 range of the crit table.
 type CritRowDTO struct {
-	From       int `json:"from"`
-	To         int `json:"to"`
-	Multiplier int `json:"multiplier"`
+	From       int     `json:"from"`
+	To         int     `json:"to"`
+	Multiplier float64 `json:"multiplier"`
 }
 
 // CritTableDTO is the wire shape of the house crit table. Placeholder is true
@@ -265,7 +266,7 @@ func GetCritTable(svc combatSvc) render.HandlerFunc {
 // {"error"} naming the bad row and the stored table is left alone.
 func PutCritTable(svc combatSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		// Numbers are decoded as text so a 2.5 gets a message about the row,
+		// Numbers are decoded as text so a bad number gets a message about the row,
 		// not "invalid request body".
 		var req struct {
 			Rows []struct {
@@ -284,13 +285,13 @@ func PutCritTable(svc combatSvc) render.HandlerFunc {
 		for i, in := range req.Rows {
 			from, errFrom := strconv.Atoi(in.From.String())
 			to, errTo := strconv.Atoi(in.To.String())
-			mult, errMult := strconv.Atoi(in.Multiplier.String())
+			mult, errMult := strconv.ParseFloat(in.Multiplier.String(), 64)
 			label := fmt.Sprintf("row %d (%s-%s)", i+1, in.From, in.To)
 			switch {
 			case errFrom != nil || errTo != nil:
 				return render.BadRequestError(label + ": from and to must be whole numbers")
-			case errMult != nil:
-				return render.BadRequestError(fmt.Sprintf("%s: multiplier must be a whole number, got %q", label, in.Multiplier.String()))
+			case errMult != nil || math.IsNaN(mult) || math.IsInf(mult, 0):
+				return render.BadRequestError(fmt.Sprintf("%s: multiplier must be a number, got %q", label, in.Multiplier.String()))
 			}
 			rows = append(rows, combatsvc.CritRow{From: from, To: to, Multiplier: mult})
 		}

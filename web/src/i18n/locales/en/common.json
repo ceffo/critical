@@ -414,7 +414,7 @@
   "critTable": {
     "title": "Crit table (house rule)",
     "placeholder": "Placeholder: every crit is ×2 until you enter the DM's table.",
-    "help": "The second d100 of a crit picks the range. Ranges must cover 1–100 exactly.",
+    "help": "The second d100 of a crit picks the range. Ranges must cover 1–100 exactly. A multiplier can be a decimal (1.5); the damage is rounded down.",
     "from": "From",
     "to": "To",
     "multiplier": "×",

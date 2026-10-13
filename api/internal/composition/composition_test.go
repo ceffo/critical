@@ -2,6 +2,7 @@ package composition_test
 
 import (
 	"context"
+	"math"
 	"path/filepath"
 	"testing"
 
@@ -365,7 +366,7 @@ func TestCritTable_EditedTableIsUsedAndPastEntriesKeepTheirMultiplier(t *testing
 	before, err := bs.Combat.ResolveAttack(ctx, id, shot)
 	require.NoError(t, err)
 	require.True(t, before.IsCrit)
-	assert.Equal(t, 2, before.CritMultiplier)
+	assert.InDelta(t, 2, before.CritMultiplier, 0)
 	assert.True(t, before.CritPlaceholder)
 
 	saved, err := bs.Combat.SetCritTable(ctx, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 5}})
@@ -380,7 +381,7 @@ func TestCritTable_EditedTableIsUsedAndPastEntriesKeepTheirMultiplier(t *testing
 
 	after, err := bs.Combat.ResolveAttack(ctx, id, shot)
 	require.NoError(t, err)
-	assert.Equal(t, 5, after.CritMultiplier)
+	assert.InDelta(t, 5, after.CritMultiplier, 0)
 	assert.Equal(t, [2]int{1, 100}, [2]int{after.CritFrom, after.CritTo})
 	assert.False(t, after.CritPlaceholder)
 
@@ -412,6 +413,27 @@ func TestCritTable_SavingTheDefaultExplicitlyClearsPlaceholder(t *testing.T) {
 	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000})
 	require.NoError(t, err)
 	require.True(t, res.IsCrit)
-	assert.Equal(t, 2, res.CritMultiplier)
+	assert.InDelta(t, 2, res.CritMultiplier, 0)
 	assert.False(t, res.CritPlaceholder)
+}
+
+// A decimal multiplier survives the real store and the crit uses it: the
+// damage is floored once, and the log entry keeps the decimal as entered.
+func TestCritTable_DecimalMultiplierIsStoredAndFloored(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	_, err := bs.Combat.SetCritTable(ctx, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 1.5}})
+	require.NoError(t, err)
+	got, err := bs.Combat.GetCritTable(ctx)
+	require.NoError(t, err)
+	assert.InDelta(t, 1.5, got.Rows[0].Multiplier, 0)
+
+	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000})
+	require.NoError(t, err)
+	require.True(t, res.IsCrit)
+	assert.InDelta(t, 1.5, res.CritMultiplier, 0)
+	assert.Equal(t, int(math.Floor(res.UnroundedDamage)), res.TotalDamage)
+	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)
+	require.NoError(t, err)
+	assert.Contains(t, string(entries[0].Payload), `"critMultiplier":1.5`)
 }

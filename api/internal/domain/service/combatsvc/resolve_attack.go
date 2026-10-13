@@ -247,7 +247,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	}
 	res.DamageTerms = append(res.DamageTerms, weaponTerms...)
 	if res.IsCrit {
-		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModCrit, Source: critSource(res), Detail: critDetail(res), Value: float64(res.CritMultiplier)})
+		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModCrit, Source: critSource(res), Detail: critDetail(res), Value: res.CritMultiplier})
 	}
 	for _, f := range mods.MultipliersFrom {
 		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
@@ -259,13 +259,16 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 
 	res.SpellsBuff = mods.SpellsBuff
 	res.WeaponBuff = weaponDmg + ammoDmg
-	res.Multipliers = float64(res.CritMultiplier) * mods.Multipliers
+	res.Multipliers = res.CritMultiplier * mods.Multipliers
 	res.StrengthBonus = strDmg
 	res.BonusDamage = mods.Damage
 
-	total := math.Floor((float64(res.BaseDamage)*res.SpellsBuff+float64(res.WeaponBuff))*res.Multipliers) +
+	// Full precision through the whole formula, floored once at the end. The
+	// strength and buff terms are whole numbers, so flooring the sum is the
+	// same as flooring before adding them for whole multipliers.
+	res.UnroundedDamage = (float64(res.BaseDamage)*res.SpellsBuff+float64(res.WeaponBuff))*res.Multipliers +
 		float64(res.StrengthBonus) + float64(res.BonusDamage)
-	res.TotalDamage = max(int(total), 0)
+	res.TotalDamage = max(int(math.Floor(res.UnroundedDamage+floorEpsilon)), 0)
 	res.DamageBreakdown = explainDamage(res)
 	return res, nil
 }
@@ -313,10 +316,30 @@ func explainDamage(r *RollResult) string {
 	case r.BonusDamage < 0:
 		s += fmt.Sprintf(" - %d", -r.BonusDamage)
 	}
+	// A fractional result shows the unrounded value and the floor step.
+	if u := math.Floor(r.UnroundedDamage + floorEpsilon); math.Abs(r.UnroundedDamage-u) > floorEpsilon && r.UnroundedDamage > 0 {
+		return fmt.Sprintf("%s = %s → %d", s, trimNum(r.UnroundedDamage), r.TotalDamage)
+	}
 	return fmt.Sprintf("%s = %d", s, r.TotalDamage)
 }
 
-func factor(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) }
+// floorEpsilon absorbs float noise (3 × 1.1 = 3.3000000000000003, 1.1 × 10 =
+// 11.000000000000002 but 0.1 sums can land just under) before the final floor.
+const floorEpsilon = 1e-9
+
+// trimNum prints f without trailing zeros and without float noise: 1.5, 2, 3.25.
+func trimNum(f float64) string {
+	return strconv.FormatFloat(math.Round(f*1e6)/1e6, 'f', -1, 64)
+}
+
+// factor prints a multiplier as entered, with at least one decimal: 2.0, 1.5, 1.25.
+func factor(f float64) string {
+	s := trimNum(f)
+	if !strings.Contains(s, ".") {
+		s += ".0"
+	}
+	return s
+}
 
 // rollDice rolls "NdM" (case-insensitive) through the dice port.
 func rollDice(d Dice, dice string) (int, error) {
@@ -343,7 +366,7 @@ func summary(r *RollResult) string {
 	case !r.Hit:
 		return fmt.Sprintf("%s vs AC %d: miss", weapon, r.TargetAC)
 	case r.IsCrit:
-		return fmt.Sprintf("%s vs AC %d: crit ×%d, %d damage", weapon, r.TargetAC, r.CritMultiplier, r.TotalDamage)
+		return fmt.Sprintf("%s vs AC %d: crit ×%s, %d damage", weapon, r.TargetAC, trimNum(r.CritMultiplier), r.TotalDamage)
 	default:
 		return fmt.Sprintf("%s vs AC %d: hit, %d damage", weapon, r.TargetAC, r.TotalDamage)
 	}

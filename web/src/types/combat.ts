@@ -114,6 +114,7 @@ export type SaveCategory = (typeof SAVE_CATEGORIES)[number];
 export interface CritRow {
   from: number;
   to: number;
+  /** May be a decimal (1.5); the server floors the final damage once. */
   multiplier: number;
 }
 

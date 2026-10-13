@@ -414,7 +414,7 @@
   "critTable": {
     "title": "Table des critiques (règle maison)",
     "placeholder": "Provisoire : tout critique est ×2 tant que vous n'avez pas saisi la table du MJ.",
-    "help": "Le second d100 d'un critique choisit la plage. Les plages doivent couvrir exactement 1–100.",
+    "help": "Le second d100 d'un critique choisit la plage. Les plages doivent couvrir exactement 1–100. Un multiplicateur peut être décimal (1,5) ; les dégâts sont arrondis à l'inférieur.",
     "from": "De",
     "to": "À",
     "multiplier": "×",

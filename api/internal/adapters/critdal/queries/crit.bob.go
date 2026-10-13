@@ -58,9 +58,9 @@ func ListCritRows() *ListCritRowsQuery {
 }
 
 type ListCritRowsRow = struct {
-	RollFrom   int64 `db:"roll_from"`
-	RollTo     int64 `db:"roll_to"`
-	Multiplier int64 `db:"multiplier"`
+	RollFrom   int64   `db:"roll_from"`
+	RollTo     int64   `db:"roll_to"`
+	Multiplier float64 `db:"multiplier"`
 }
 
 type listCritRowsTransformer = bob.SliceTransformer[ListCritRowsRow, []ListCritRowsRow]
@@ -130,7 +130,7 @@ var insertCritRowSQL = formattedQueries_crit[309:397]
 type InsertCritRow_CritTableRows = struct {
 	RollFrom   int64
 	RollTo     int64
-	Multiplier int64
+	Multiplier float64
 }
 
 type InsertCritRowQuery = orm.ModExecQuery[*dialect.InsertQuery, insertCritRow]

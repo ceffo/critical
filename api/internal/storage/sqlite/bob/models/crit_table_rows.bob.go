@@ -20,9 +20,9 @@ import (
 
 // CritTableRow is an object representing the database table.
 type CritTableRow struct {
-	RollFrom   int64 `db:"roll_from,pk" `
-	RollTo     int64 `db:"roll_to" `
-	Multiplier int64 `db:"multiplier" `
+	RollFrom   int64   `db:"roll_from,pk" `
+	RollTo     int64   `db:"roll_to" `
+	Multiplier float64 `db:"multiplier" `
 }
 
 // CritTableRowSlice is an alias for a slice of pointers to CritTableRow.
@@ -104,9 +104,9 @@ func (c critTableRowColumn) ShouldOmitParens() bool {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type CritTableRowSetter struct {
-	RollFrom   omit.Val[int64] `db:"roll_from,pk" `
-	RollTo     omit.Val[int64] `db:"roll_to" `
-	Multiplier omit.Val[int64] `db:"multiplier" `
+	RollFrom   omit.Val[int64]   `db:"roll_from,pk" `
+	RollTo     omit.Val[int64]   `db:"roll_to" `
+	Multiplier omit.Val[float64] `db:"multiplier" `
 }
 
 func (s CritTableRowSetter) SetColumns() []string {
@@ -473,7 +473,7 @@ type critTableRowWhere[Q sqlite.Filterable] struct {
 	cols       critTableRowColumns
 	RollFrom   sqlite.WhereMod[Q, int64]
 	RollTo     sqlite.WhereMod[Q, int64]
-	Multiplier sqlite.WhereMod[Q, int64]
+	Multiplier sqlite.WhereMod[Q, float64]
 }
 
 func (critTableRowWhere[Q]) AliasedAs(alias string) critTableRowWhere[Q] {
@@ -485,6 +485,6 @@ func buildCritTableRowWhere[Q sqlite.Filterable](cols critTableRowColumns) critT
 		cols:       cols,
 		RollFrom:   sqlite.Where[Q, int64](cols.RollFrom.Expression),
 		RollTo:     sqlite.Where[Q, int64](cols.RollTo.Expression),
-		Multiplier: sqlite.Where[Q, int64](cols.Multiplier.Expression),
+		Multiplier: sqlite.Where[Q, float64](cols.Multiplier.Expression),
 	}
 }

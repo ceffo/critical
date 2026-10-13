@@ -89,7 +89,7 @@ type RollResult struct {
 	D20Roll        int
 	D100CritRoll   int
 	IsCrit         bool
-	CritMultiplier int
+	CritMultiplier float64
 	// CritFrom..CritTo is the crit-table range the crit d100 fell in (zero
 	// when the attack is not a crit).
 	CritFrom, CritTo int
@@ -111,7 +111,10 @@ type RollResult struct {
 	StrengthBonus int
 	BonusDamage   int
 	// DamageTerms lists every contribution to the damage formula.
-	DamageTerms     []DamageTerm
+	DamageTerms []DamageTerm
+	// UnroundedDamage is the formula result before the final floor and the
+	// zero clamp; TotalDamage is its floor.
+	UnroundedDamage float64
 	TotalDamage     int
 	DamageBreakdown string
 

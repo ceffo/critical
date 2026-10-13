@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchCritTable, saveCritTable } from "@/api/combat";
 import { captionClass, fieldClass } from "@/components/dashboard/fieldStyles";
+import { parseDecimal } from "@/lib/decimalInput";
 import type { CritRow, CritTable } from "@/types/combat";
 
 /** A row being edited: the inputs hold text so a half-typed number is not forced back. */
@@ -26,7 +27,7 @@ const num = (s: string): number => (s.trim() === "" ? Number.NaN : Number(s));
 /**
  * The house crit table: D100 ranges and their multipliers, entered at the table when the DM
  * gives the values. The server validates the whole table on save (no gap, no overlap, 1-100,
- * multiplier ≥ 1) and its message is shown as is; this component only edits and sends rows.
+ * multiplier ≥ 1, decimals allowed) and its message is shown as is; this component only edits and sends rows.
  */
 export function CritTableEditor() {
   const { t } = useTranslation();
@@ -74,7 +75,7 @@ export function CritTableEditor() {
           rows.map((r) => ({
             from: num(r.from),
             to: num(r.to),
-            multiplier: num(r.multiplier),
+            multiplier: parseDecimal(r.multiplier),
           })),
         ),
       );
@@ -116,8 +117,10 @@ export function CritTableEditor() {
                 <input
                   key={f}
                   className={fieldClass}
-                  type="number"
-                  inputMode="numeric"
+                  // The multiplier takes decimals typed with a dot or a comma ("1.5", "1,5"),
+                  // which a number input rejects in some locales: plain text, parsed on save.
+                  type={f === "multiplier" ? "text" : "number"}
+                  inputMode={f === "multiplier" ? "decimal" : "numeric"}
                   aria-label={t(`critTable.${f}`)}
                   value={r[f]}
                   onChange={(e) => edit(i, f, e.target.value)}

@@ -36,7 +36,7 @@ func (mods CritTableRowModSlice) Apply(ctx context.Context, n *CritTableRowTempl
 type CritTableRowTemplate struct {
 	RollFrom   func() int64
 	RollTo     func() int64
-	Multiplier func() int64
+	Multiplier func() float64
 
 	f *Factory
 
@@ -127,7 +127,7 @@ func ensureCreatableCritTableRow(m *models.CritTableRowSetter) {
 		m.RollTo = omit.From(val)
 	}
 	if m.Multiplier.IsUnset() {
-		val := random_int64(nil)
+		val := random_float64(nil)
 		m.Multiplier = omit.From(val)
 	}
 }
@@ -315,14 +315,14 @@ func (m critTableRowMods) RandomRollTo(f *faker.Faker) CritTableRowMod {
 }
 
 // Set the model columns to this value
-func (m critTableRowMods) Multiplier(val int64) CritTableRowMod {
+func (m critTableRowMods) Multiplier(val float64) CritTableRowMod {
 	return CritTableRowModFunc(func(_ context.Context, o *CritTableRowTemplate) {
-		o.Multiplier = func() int64 { return val }
+		o.Multiplier = func() float64 { return val }
 	})
 }
 
 // Set the Column from the function
-func (m critTableRowMods) MultiplierFunc(f func() int64) CritTableRowMod {
+func (m critTableRowMods) MultiplierFunc(f func() float64) CritTableRowMod {
 	return CritTableRowModFunc(func(_ context.Context, o *CritTableRowTemplate) {
 		o.Multiplier = f
 	})
@@ -339,8 +339,8 @@ func (m critTableRowMods) UnsetMultiplier() CritTableRowMod {
 // if faker is nil, a default faker is used
 func (m critTableRowMods) RandomMultiplier(f *faker.Faker) CritTableRowMod {
 	return CritTableRowModFunc(func(_ context.Context, o *CritTableRowTemplate) {
-		o.Multiplier = func() int64 {
-			return random_int64(f)
+		o.Multiplier = func() float64 {
+			return random_float64(f)
 		}
 	})
 }

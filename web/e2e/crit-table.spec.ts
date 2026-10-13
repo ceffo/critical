@@ -109,3 +109,47 @@ test("the table saved in the editor is used by the next crit", async ({
   // The earlier placeholder crit was resolved before the edit and keeps its x2.
   await expect(logEntry(page, "critical ×2").first()).toBeVisible(); // first: the new crit may also be ×2
 });
+
+test("a decimal multiplier typed with a comma is saved and the crit shows the floored total", async ({
+  page,
+}) => {
+  const editor = await openEditor(page);
+
+  // 1-100 at x1.5, typed the French way; below 1 and text are refused with the row named.
+  await range(editor, 1).mult.fill("0,99");
+  await editor.getByRole("button", { name: "Save table" }).click();
+  await expect(editor.getByRole("alert")).toContainText(
+    "row 1 (1-100) has multiplier 0.99",
+  );
+  await range(editor, 1).mult.fill("abc");
+  await editor.getByRole("button", { name: "Save table" }).click();
+  await expect(editor.getByRole("alert")).toContainText("row 1 (1-100)");
+
+  await range(editor, 1).mult.fill("1,5");
+  await editor.getByRole("button", { name: "Save table" }).click();
+  await expect(editor).toContainText("Saved");
+  await expect(range(editor, 1).mult).toHaveValue("1.5");
+
+  await page.reload();
+  const again = await openEditor(page);
+  await expect(range(again, 1).mult).toHaveValue("1.5");
+
+  await page.getByLabel("Target AC").fill("1000");
+  await page.getByRole("button", { name: "Roll Attack" }).click();
+  const card = page
+    .getByRole("region", { name: "Last Result" })
+    .getByTestId("attack-result");
+  await expect(card).toContainText("Critical ×1.5 (d100 in 1–100)");
+
+  // The breakdown shows the multiplier as entered, and the unrounded → floored step when the
+  // damage is not whole; the big total is the floored number.
+  const total = Number(await card.getByTestId("total-damage").textContent());
+  const breakdown = (await card.getByText(/ × 1\.5 \+ /).first().textContent()) ?? "";
+  const final = Number(breakdown.split(/[=→]/).pop()?.trim());
+  expect(final).toBe(total);
+  if (breakdown.includes("→")) {
+    const unrounded = Number(breakdown.split("=").pop()?.split("→")[0].trim());
+    expect(Math.floor(unrounded)).toBe(total);
+  }
+  await snap(page, "decimal-crit");
+});

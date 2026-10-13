@@ -63,6 +63,10 @@ flowchart TD
   situational modifier. The result card labels each modifier and damage term by its `kind`
   (`result.mods.*`); attack log entries are rendered from their payload (`lib/logSummary.ts`).
   An attack refreshes the table state (log, item counts), so voiding it shows the arrow back.
+- Spells tab (`SpellsPanel.tsx`): Cast puts the `CastResult` in the result card (`CastResultView`:
+  buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
+  go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") searches the spell
+  database (English) plus the en/fr `spells` catalogue names and posts `/api/spells/receive`.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).

@@ -326,3 +326,79 @@ func (o resetPerDayItems) subExpr(from, to int) bob.Expression {
 func (o resetPerDayItems) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(resetPerDayItemsSQL)).WriteSQL(ctx, w, d, start)
 }
+
+var setItemCountSQL = formattedQueries_items[804:866]
+
+type SetItemCountQuery = orm.ModQuery[*dialect.UpdateQuery, setItemCount, string, []string, setItemCountTransformer]
+
+func SetItemCount(Count int64, ID string) *SetItemCountQuery {
+	var expressionTypArgs setItemCount
+
+	expressionTypArgs.Count = sqlite.Arg(Count)
+	expressionTypArgs.ID = sqlite.Arg(ID)
+
+	return &SetItemCountQuery{
+		Query: orm.Query[setItemCount, string, []string, setItemCountTransformer]{
+			ExecQuery: orm.ExecQuery[setItemCount]{
+				BaseQuery: bob.BaseQuery[setItemCount]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeUpdate,
+				},
+			},
+			Scanner: scan.ColumnMapper[string]("id"),
+		},
+		Mod: bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+			q.Table.Expression = expressionTypArgs.raw(7, 14)
+			q.AppendSet(expressionTypArgs.subExpr(19, 31))
+			q.AppendWhere(expressionTypArgs.subExpr(37, 47))
+			q.AppendReturning(expressionTypArgs.subExpr(57, 62))
+		}),
+		Build: sqlite.Update,
+	}
+}
+
+type SetItemCountRow = struct {
+	ID string `db:"id"`
+}
+
+type setItemCountTransformer = bob.SliceTransformer[string, []string]
+
+type setItemCount struct {
+	Count bob.Expression
+	ID    bob.Expression
+}
+
+func (o setItemCount) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "count",
+			Start:      29,
+			Stop:       31,
+			Expression: o.Count,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "id",
+			Start:      45,
+			Stop:       47,
+			Expression: o.ID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o setItemCount) raw(from, to int) string {
+	return setItemCountSQL[from:to]
+}
+
+func (o setItemCount) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(setItemCountSQL, from, to, o.args())
+}
+
+func (o setItemCount) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(setItemCountSQL)).WriteSQL(ctx, w, d, start)
+}

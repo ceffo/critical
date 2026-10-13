@@ -11,6 +11,7 @@ package actionlog
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -33,6 +34,10 @@ const (
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.
+//
+// A key may be "family:id" (for example "items:arrows_plus3") to scope the
+// state to one thing: a void is then only blocked by later entries touching
+// the same thing, and the Restorer registered for the family restores it.
 type Snapshot struct {
 	Key    string
 	Before json.RawMessage
@@ -56,6 +61,16 @@ type NewEntry struct {
 // domain.TxRunner transaction so the entry and the state write are atomic.
 type Recorder interface {
 	Record(ctx context.Context, e NewEntry) (int64, error)
+}
+
+// KeySeparator splits a scoped state key into its family and id.
+const KeySeparator = ":"
+
+// Family is the part of a state key before KeySeparator ("items" for
+// "items:arrows_plus3"); a key without one is its own family.
+func Family(key string) string {
+	family, _, _ := strings.Cut(key, KeySeparator)
+	return family
 }
 
 // Restorer writes a "before" snapshot back when an entry is voided. It runs

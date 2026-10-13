@@ -58,6 +58,7 @@ func TestActiveBuffs_RoundTrip(t *testing.T) {
 		{ID: "c", Name: "Strength", Duration: 540, Effects: buffsvc.BuffEffects{
 			StrBonus: intPtr(4), StrMax: intPtr(18), StrSet: intPtr(17), AC: intPtr(-2),
 		}},
+		{ID: "d", Name: "Bless", Duration: 6, Effects: buffsvc.BuffEffects{ToHit: intPtr(1), Damage: intPtr(-1)}},
 	}
 	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, buffs))
 

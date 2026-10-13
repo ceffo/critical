@@ -1,9 +1,7 @@
 package combatsvc
 
-import "fmt"
-
-// rollTrace tracks modifiers and rolls applied during one combat resolution
-// so we can produce a human-readable explanation. Internal to the service.
+// rollTrace collects the modifiers of a saving throw into its RollResult.
+// Internal to the service.
 type rollTrace struct {
 	result RollResult
 	dice   Dice
@@ -16,26 +14,10 @@ func newRollTrace(d Dice, baseThac0 int) *rollTrace {
 	}
 }
 
-func (t *rollTrace) RollDie(sides int) int { return t.dice.RollDie(sides) }
-func (t *rollTrace) RollD20() int          { return t.dice.RollD20() }
-func (t *rollTrace) RollD100() int         { return t.dice.RollD100() }
+func (t *rollTrace) RollD20() int { return t.dice.RollD20() }
 
-func (t *rollTrace) AddModifier(source string, value int) {
-	t.result.Modifiers = append(t.result.Modifiers, Modifier{Source: source, Value: value})
-}
-
-func (t *rollTrace) SumModifiers() int {
-	sum := 0
-	for _, m := range t.result.Modifiers {
-		sum += m.Value
-	}
-	return sum
+func (t *rollTrace) AddModifier(kind ModifierKind, source string, value int) {
+	t.result.Modifiers = append(t.result.Modifiers, Modifier{Kind: kind, Source: source, Value: value})
 }
 
 func (t *rollTrace) Result() *RollResult { return &t.result }
-
-func (t *rollTrace) ExplainDamage() string {
-	return fmt.Sprintf("((%d × %.1f) + %d) × %.1f + %d = %d",
-		t.result.BaseDamage, t.result.SpellsBuff, t.result.WeaponBuff,
-		t.result.Multipliers, t.result.StrengthBonus, t.result.TotalDamage)
-}

@@ -47,7 +47,7 @@ func aggregate(buffs []BuffEffect, baseStr int) BuffModifiers {
 		if !meetsRequirements(b.Effects, str) {
 			continue
 		}
-		applyEffects(&mods, b.Effects)
+		applyEffects(&mods, b.Name, b.Effects)
 	}
 	return mods
 }
@@ -69,15 +69,28 @@ func meetsRequirements(e BuffEffects, str int) bool {
 	return true
 }
 
-func applyEffects(m *BuffModifiers, e BuffEffects) {
+// applyEffects folds one applying buff into m. Multipliers multiply, flat
+// bonuses add, and "weapon becomes +N" effects do not stack: the best wins.
+func applyEffects(m *BuffModifiers, name string, e BuffEffects) {
 	if e.SpellsBuff != nil {
 		m.SpellsBuff *= *e.SpellsBuff
+		m.SpellsBuffFrom = append(m.SpellsBuffFrom, Factor{Buff: name, Value: *e.SpellsBuff})
 	}
-	if e.WeaponBuff != nil {
-		m.WeaponBuff += *e.WeaponBuff
+	if e.WeaponBuff != nil && *e.WeaponBuff > m.WeaponBuff {
+		m.WeaponBuff = *e.WeaponBuff
+		m.WeaponBuffFrom = name
 	}
 	if e.Multiplier != nil {
 		m.Multipliers *= *e.Multiplier
+		m.MultipliersFrom = append(m.MultipliersFrom, Factor{Buff: name, Value: *e.Multiplier})
+	}
+	if e.ToHit != nil && *e.ToHit != 0 {
+		m.ToHit += *e.ToHit
+		m.ToHitFrom = append(m.ToHitFrom, Contribution{Buff: name, Value: *e.ToHit})
+	}
+	if e.Damage != nil && *e.Damage != 0 {
+		m.Damage += *e.Damage
+		m.DamageFrom = append(m.DamageFrom, Contribution{Buff: name, Value: *e.Damage})
 	}
 	if e.SaveBonus != nil {
 		m.SaveBonus += *e.SaveBonus
@@ -107,6 +120,9 @@ func validateBuff(b BuffEffect) error {
 	}
 	if e.StrBonus != nil && *e.StrBonus < 1 {
 		return fmt.Errorf("%w: str_bonus must be positive", domain.ErrInvalidInput)
+	}
+	if e.WeaponBuff != nil && *e.WeaponBuff < 1 {
+		return fmt.Errorf("%w: weapon_buff must be positive (the weapon becomes +N)", domain.ErrInvalidInput)
 	}
 	return nil
 }

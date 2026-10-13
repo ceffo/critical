@@ -61,7 +61,7 @@
     "addEffect": "Effet",
     "removeEffect": "Retirer l'effet",
     "effects": {
-      "weapon_buff": "Arme +N",
+      "weapon_buff": "Arme devient +N",
       "spells_buff": "Sorts ×N",
       "multiplier": "Dégâts ×N",
       "save_bonus": "JS +N",
@@ -69,7 +69,9 @@
       "str_max": "FOR max",
       "str_set": "FOR fixée à",
       "min_str": "FOR requise",
-      "ac": "CA ±N"
+      "ac": "CA ±N",
+      "to_hit": "Toucher +N",
+      "damage": "Dégâts +N"
     },
     "activate": "Activer",
     "save": "Enregistrer",
@@ -89,11 +91,22 @@
   "attack": {
     "weapon": "Arme",
     "selectWeapon": "Choisir une arme",
-    "weapons": {
-      "longsword": "Épée longue (1d8)",
-      "shortbow": "Arc court (1d6)"
-    },
+    "weaponOption": "{{name}} ({{sm}}, grande {{l}})",
+    "ammo": "Munitions",
+    "ammoOption": "{{name}} ({{count}} restantes)",
+    "noAmmo": "Aucune munition pour cette arme",
+    "ammoSpent": "Plus de {{name}} : choisissez d'autres munitions",
+    "pickAmmo": "Choisir des munitions",
     "targetAc": "CA de la cible",
+    "targetSize": "Taille de la cible",
+    "sizes": {
+      "sm": "Petite / Moyenne",
+      "l": "Grande"
+    },
+    "situational": "Situationnel",
+    "situationalLabel": "Raison",
+    "situationalPlaceholder": "ex. attaque de dos",
+    "loading": "Chargement des armes…",
     "roll": "Jet d'attaque",
     "rolling": "Lancer en cours..."
   },
@@ -175,7 +188,27 @@
     "damageWeapon": "Arme +",
     "damageMultiplier": "Multiplicateur ×",
     "damageStrength": "Force +",
-    "breakdown": "Détail"
+    "breakdown": "Détail",
+    "attackHeadingAmmo": "{{weapon}} avec {{ammo}} contre CA {{ac}}",
+    "sizes": {
+      "sm": "cible P/M",
+      "l": "grande cible"
+    },
+    "critPlaceholder": "Critique ×{{mult}} (provisoire)",
+    "ammoLeft": "{{name}} : {{count}} restantes",
+    "damageDice": "Dés",
+    "damageBonus": "Bonus +",
+    "damageTerms": "Modificateurs de dégâts",
+    "mods": {
+      "strength": "Force {{detail}}",
+      "dexterity": "Dextérité {{detail}} (projectile)",
+      "weapon_magic": "{{detail}}",
+      "weapon_buff": "{{detail}} : arme +{{value}}",
+      "ammo_magic": "{{detail}}",
+      "buff": "{{detail}}",
+      "situational": "{{detail}}",
+      "crit": "Coup critique (provisoire)"
+    }
   },
   "log": {
     "title": "Journal de combat",
@@ -216,6 +249,12 @@
       "dismiss": "{{buff}} retiré",
       "nextRound": "Round {{from}} → {{to}}",
       "expired": "— expirés : {{names}}"
+    },
+    "attack": {
+      "miss": "{{weapon}} contre CA {{ac}} : raté",
+      "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
+      "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult}}, {{damage}} dégâts",
+      "withAmmo": "{{weapon}} ({{ammo}})"
     }
   }
 }

@@ -81,6 +81,12 @@ action log in the composition root, so voiding the entry restores the "before" s
 refused (409) while a later non-voided entry changed the same state key. buffsvc records every
 buff change (activate, edit, absorb, dismiss) under the `buffs` key and Next Round under `buffs`
 + `round`, stamped with the round it ends; `buffSvc.Restorers()` is registered in composition.
+combatsvc records every attack (kind `attack`, payload = the full roll breakdown, camelCase like the
+`/api/roll/attack` response); a missile attack spends one ammo item through `itemsvc.Use` in the same
+transaction and snapshots it under the per-item key `items:<id>` (`itemsvc.UseSnapshot`); the
+Restorer registered for the `items` family (`itemSvc.Restorers()`) writes the count back on void.
+A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
+later entries with the same full key (a +1 arrow does not block voiding a +3 shot).
 
 ## Key Go Structs
 
@@ -99,51 +105,80 @@ type BuffEffect struct {
     Charges  int    // left to absorb (Stoneskin layers, Mirror Images); 0 = none; ends at 0
     Duration int    // rounds left, counted down by Next Round; 0 = not timed; expires at 0
     Effects  BuffEffects // min_str, spells_buff, weapon_buff, multiplier, save_bonus,
-                         // str_set, str_bonus + str_max, ac (pointers: nil = no contribution)
+                         // str_set, str_bonus + str_max, ac, to_hit, damage
+                         // (pointers: nil = no contribution)
 }
+// weapon_buff makes the weapon count as +N (Power Gem: "the weapon becomes +5"), to hit and
+// damage; it replaces the weapon's own magic when higher and does not add to it. to_hit adds
+// to attack rolls; damage adds to damage after the multipliers.
 // A buff may have both counters (Mirror Image) or neither (until dismissed).
 // Effective STR = best single STR effect (set, or base + bonus capped at str_max; never
 // lower than base; Strength magic is not cumulative). min_str gates against effective STR.
 
 type RollResult struct {
-    D20Roll       int
-    D100CritRoll  int
-    IsCrit        bool
-    CritMultiplier int
-    BaseThac0     int
-    Modifiers     []Modifier // {source, value} pairs
-    EffectiveThac0 int
-    TargetACNeeded int
-    Hit           bool
-    HitMargin     int
+    D20Roll         int
+    D100CritRoll    int
+    IsCrit          bool
+    CritMultiplier  int
+    CritPlaceholder bool       // x2 until the crit table lands (critical-qki.12)
+    BaseThac0       int
+    Modifiers       []Modifier // {kind, source, detail, value}: every to-hit modifier
+    EffectiveThac0  int
+    TargetACNeeded  int
+    Hit             bool
+    HitMargin       int
     // Damage breakdown (populated if hit)
-    BaseDamage    int
-    SpellsBuff    float64
-    WeaponBuff    int
-    Multipliers   float64
-    StrengthBonus int
-    TotalDamage   int
-    DamageBreakdown string // human-readable formula trace
+    BaseDamage      int
+    DamageDice      string       // dice rolled for the target size
+    SpellsBuff      float64
+    WeaponBuff      int          // weapon (or buff "+N") magic + ammo magic
+    Multipliers     float64
+    StrengthBonus   int
+    BonusDamage     int          // buff damage
+    DamageTerms     []DamageTerm // {term, kind, source, detail, value}: every damage contribution
+    TotalDamage     int
+    DamageBreakdown string       // human-readable formula trace
+    // Attack context: weapon, target AC/size, ammo spent + remaining, log entry id
 }
 ```
+
+## Attack Modifiers
+
+Hit when `d20 + modifiers ≥ THAC0 − target AC`. A natural 1 or 20 is plain arithmetic: no
+auto-miss, no auto-hit. To-hit modifiers, each listed in `Modifiers`:
+
+- Strength hit adjustment, PHB Table 1, from the **effective** STR (buffs) — melee and hurled
+  weapons; never for bows (PHB "Ability Modifiers in Missile Combat": only with a strength bow).
+- Dexterity missile adjustment, PHB Table 2 — every missile weapon (bow or hurled).
+- Weapon magic, or a buff's "weapon becomes +N" when higher (Power Gem, only at effective STR 18).
+- Ammo magic: DMG 2e "Bow +1": with magic arrows, total the bow's and the arrow's bonuses (to hit
+  and damage).
+- Buff `to_hit` effects, one per buff; the situational modifier entered at the table.
+
+A weapon that fires ammunition (`ammo_kind`) needs an ammo item of that kind; the attack spends one.
 
 ## Damage Formula
 
 ```
-Damage = ((BaseDamage × SpellsBuff) + WeaponBuff) × Multipliers + StrengthBonus
+Damage = floor(((BaseDamage × SpellsBuff) + WeaponBuff) × Multipliers) + StrengthBonus + BuffDamage
 ```
+
+Never below 0. Every contribution is listed in `DamageTerms`.
 
 - `BaseDamage`: weapon die roll, selected by target size (S/M vs Large)
 - `SpellsBuff`: multiplier from spells like Enlarge (default 1.0)
-- `WeaponBuff`: weapon magic bonus (Power Gem makes weapon +5 while active)
+- `WeaponBuff`: weapon magic damage (or the buff's "+N", Power Gem +5) plus ammo magic damage
 - `Multipliers`: **multiplicative** product of all active multipliers (Power Gem ×2, crit ×N)
-- `StrengthBonus`: flat STR modifier (+2 for STR 18)
+- `StrengthBonus`: PHB Table 1 damage adjustment for the effective STR (+2 at 18); melee and
+  hurled weapons only, none for bows
+- `BuffDamage`: buff `damage` effects, flat
 
 ## Critical Hit System
 
 1. Roll D20 (attack) and D100 (crit check) simultaneously
 2. If `(D20 - D100) ≥ required_to_hit` → critical hit confirmed
-3. Roll second D100 → look up `seeds/crit_table.json` → get crit multiplier (×2, ×3, ×4...)
+3. The multiplier is ×2, flagged `CritPlaceholder`, until the crit table item (critical-qki.12)
+   adds the second D100 and the table lookup
 4. Multipliers stack multiplicatively with other active multipliers
 
 ## Seed Loader Pattern

@@ -20,7 +20,7 @@ type Router interface {
 type CharacterIDFunc func(r *http.Request) int64
 
 type combatSvc interface {
-	ResolveAttack(ctx context.Context, characterID int64, weaponID string, targetAC int) (*combatsvc.RollResult, error)
+	ResolveAttack(ctx context.Context, characterID int64, req combatsvc.AttackRequest) (*combatsvc.RollResult, error)
 	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error)
 	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
 }
@@ -65,10 +65,21 @@ func ListWeapons(svc combatSvc) render.HandlerFunc {
 	}
 }
 
-// AttackRequestDTO matches the previous request shape.
+// AttackRequestDTO is the body of POST /api/roll/attack.
 type AttackRequestDTO struct {
 	WeaponID string `json:"weapon_id"`
-	TargetAC int    `json:"target_ac"`
+	// AmmoItemID is required for a weapon that fires ammunition (bows).
+	AmmoItemID string `json:"ammo_item_id,omitempty"`
+	TargetAC   int    `json:"target_ac"`
+	// TargetSize is "sm" (small/medium, the default) or "l" (large).
+	TargetSize  string          `json:"target_size,omitempty"`
+	Situational *SituationalDTO `json:"situational,omitempty"`
+}
+
+// SituationalDTO is a to-hit modifier entered at the table.
+type SituationalDTO struct {
+	Value int    `json:"value"`
+	Label string `json:"label"`
 }
 
 // SaveRequestDTO matches the previous request shape.
@@ -83,7 +94,14 @@ func ResolveAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		res, err := svc.ResolveAttack(r.Context(), charID(r), req.WeaponID, req.TargetAC)
+		in := combatsvc.AttackRequest{
+			WeaponID: req.WeaponID, AmmoItemID: req.AmmoItemID,
+			TargetAC: req.TargetAC, TargetSize: combatsvc.TargetSize(req.TargetSize),
+		}
+		if req.Situational != nil {
+			in.Situational = &combatsvc.Situational{Value: req.Situational.Value, Label: req.Situational.Label}
+		}
+		res, err := svc.ResolveAttack(r.Context(), charID(r), in)
 		if err != nil {
 			return err
 		}
@@ -108,48 +126,93 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	}
 }
 
-// RollResultDTO mirrors the previous wire shape (camelCase JSON).
+// RollResultDTO is the full breakdown of a roll (camelCase JSON). The attack
+// fields match combatsvc's action-log payload, so web/src/types/combat.ts
+// reads both.
 type RollResultDTO struct {
-	D20Roll        int           `json:"d20Roll"`
-	D100CritRoll   int           `json:"d100CritRoll"`
-	IsCrit         bool          `json:"isCrit"`
-	CritMultiplier int           `json:"critMultiplier"`
-	BaseThac0      int           `json:"baseThac0"`
-	Modifiers      []ModifierDTO `json:"modifiers"`
-	EffectiveThac0 int           `json:"effectiveThac0"`
-	TargetACNeeded int           `json:"targetACNeeded"`
-	Hit            bool          `json:"hit"`
-	HitMargin      int           `json:"hitMargin"`
+	D20Roll         int           `json:"d20Roll"`
+	D100CritRoll    int           `json:"d100CritRoll"`
+	IsCrit          bool          `json:"isCrit"`
+	CritMultiplier  int           `json:"critMultiplier"`
+	CritPlaceholder bool          `json:"critPlaceholder"`
+	BaseThac0       int           `json:"baseThac0"`
+	Modifiers       []ModifierDTO `json:"modifiers"`
+	EffectiveThac0  int           `json:"effectiveThac0"`
+	TargetACNeeded  int           `json:"targetACNeeded"`
+	Hit             bool          `json:"hit"`
+	HitMargin       int           `json:"hitMargin"`
 
-	BaseDamage      int     `json:"baseDamage"`
-	SpellsBuff      float64 `json:"spellsBuff"`
-	WeaponBuff      int     `json:"weaponBuff"`
-	Multipliers     float64 `json:"multipliers"`
-	StrengthBonus   int     `json:"strengthBonus"`
-	TotalDamage     int     `json:"totalDamage"`
-	DamageBreakdown string  `json:"damageBreakdown"`
+	BaseDamage      int             `json:"baseDamage"`
+	DamageDice      string          `json:"damageDice"`
+	SpellsBuff      float64         `json:"spellsBuff"`
+	WeaponBuff      int             `json:"weaponBuff"`
+	Multipliers     float64         `json:"multipliers"`
+	StrengthBonus   int             `json:"strengthBonus"`
+	BonusDamage     int             `json:"bonusDamage"`
+	DamageTerms     []DamageTermDTO `json:"damageTerms"`
+	TotalDamage     int             `json:"totalDamage"`
+	DamageBreakdown string          `json:"damageBreakdown"`
+
+	// Attack context; empty on saving throws.
+	WeaponID   string   `json:"weaponId,omitempty"`
+	WeaponName string   `json:"weaponName,omitempty"`
+	TargetAC   int      `json:"targetAc"`
+	TargetSize string   `json:"targetSize,omitempty"`
+	Ammo       *AmmoDTO `json:"ammo,omitempty"`
+	LogEntryID int64    `json:"logEntryId,omitempty"`
 }
 
-// ModifierDTO is the wire shape for a single modifier.
+// ModifierDTO is one to-hit (or save) modifier. Kind lets the UI label it
+// in the player's language; Source is the English label.
 type ModifierDTO struct {
+	Kind   string `json:"kind"`
 	Source string `json:"source"`
+	Detail string `json:"detail,omitempty"`
 	Value  int    `json:"value"`
+}
+
+// DamageTermDTO is one contribution to the damage formula.
+type DamageTermDTO struct {
+	Term   string  `json:"term"`
+	Kind   string  `json:"kind"`
+	Source string  `json:"source"`
+	Detail string  `json:"detail,omitempty"`
+	Value  float64 `json:"value"`
+}
+
+// AmmoDTO is the ammunition an attack spent and what is left.
+type AmmoDTO struct {
+	ItemID    string `json:"itemId"`
+	Name      string `json:"name"`
+	Magic     int    `json:"magic"`
+	Remaining int    `json:"remaining"`
 }
 
 func toDTO(r *combatsvc.RollResult) RollResultDTO {
 	if r == nil {
-		return RollResultDTO{Modifiers: []ModifierDTO{}}
+		return RollResultDTO{Modifiers: []ModifierDTO{}, DamageTerms: []DamageTermDTO{}}
 	}
 	mods := make([]ModifierDTO, 0, len(r.Modifiers))
 	for _, m := range r.Modifiers {
-		mods = append(mods, ModifierDTO{Source: m.Source, Value: m.Value})
+		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value})
 	}
-	return RollResultDTO{
+	terms := make([]DamageTermDTO, 0, len(r.DamageTerms))
+	for _, t := range r.DamageTerms {
+		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Source: t.Source, Detail: t.Detail, Value: t.Value})
+	}
+	out := RollResultDTO{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
-		BaseThac0: r.BaseThac0, Modifiers: mods, EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded,
+		CritPlaceholder: r.CritPlaceholder,
+		BaseThac0:       r.BaseThac0, Modifiers: mods, EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded,
 		Hit: r.Hit, HitMargin: r.HitMargin,
-		BaseDamage: r.BaseDamage, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
-		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus,
+		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
+		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
 		TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
+		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
+		LogEntryID: r.LogEntryID,
 	}
+	if a := r.Ammo; a != nil {
+		out.Ammo = &AmmoDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}
+	}
+	return out
 }

@@ -1,9 +1,87 @@
 package combatsvc
 
+// ModifierKind says where a modifier comes from, so the UI can label it in
+// the player's language. Source is the English label.
+type ModifierKind string
+
+// Modifier kinds.
+const (
+	ModStrength    ModifierKind = "strength"     // PHB Table 1, Detail = effective STR
+	ModDexterity   ModifierKind = "dexterity"    // PHB Table 2 missile adj., Detail = DEX
+	ModWeaponMagic ModifierKind = "weapon_magic" // the weapon's own +N, Detail = weapon name
+	ModWeaponBuff  ModifierKind = "weapon_buff"  // a buff making the weapon +N, Detail = buff name
+	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name
+	ModBuff        ModifierKind = "buff"         // a buff's to-hit/damage/save bonus, Detail = buff name
+	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
+	ModCrit        ModifierKind = "crit"         // house crit multiplier (placeholder x2)
+)
+
 // Modifier is a labeled bonus or penalty applied to a roll.
 type Modifier struct {
+	Kind   ModifierKind
 	Source string
+	Detail string
 	Value  int
+}
+
+// DamageTermKind is the place of a contribution in the damage formula
+// ((Base × Spells) + Weapon) × Multiplier + Strength + Bonus.
+type DamageTermKind string
+
+// Damage formula terms.
+const (
+	TermSpells     DamageTermKind = "spells"     // × on the dice
+	TermWeapon     DamageTermKind = "weapon"     // + before the multipliers
+	TermMultiplier DamageTermKind = "multiplier" // × on dice and weapon
+	TermStrength   DamageTermKind = "strength"   // + after the multipliers
+	TermBonus      DamageTermKind = "bonus"      // + after the multipliers (buff damage)
+)
+
+// DamageTerm is one contribution to the damage formula.
+type DamageTerm struct {
+	Term   DamageTermKind
+	Kind   ModifierKind
+	Source string
+	Detail string
+	Value  float64
+}
+
+// TargetSize picks the weapon's damage dice.
+type TargetSize string
+
+// Target sizes as sent on the wire: small/medium or large.
+const (
+	SizeSmallMedium TargetSize = "sm"
+	SizeLarge       TargetSize = "l"
+)
+
+// Valid reports whether s is a known size.
+func (s TargetSize) Valid() bool { return s == SizeSmallMedium || s == SizeLarge }
+
+// Situational is a to-hit modifier entered at the table (rear attack, cover,
+// higher ground...). Label is free text.
+type Situational struct {
+	Value int
+	Label string
+}
+
+// AttackRequest is what the player asks for.
+type AttackRequest struct {
+	WeaponID string
+	// AmmoItemID is required for weapons that fire ammunition (bows) and
+	// must be empty otherwise.
+	AmmoItemID  string
+	TargetAC    int
+	TargetSize  TargetSize
+	Situational *Situational
+}
+
+// AmmoUse is the ammunition an attack spent.
+type AmmoUse struct {
+	ItemID    string
+	Name      string
+	Magic     int
+	Remaining int
 }
 
 // RollResult is the full outcome of a combat roll.
@@ -12,20 +90,36 @@ type RollResult struct {
 	D100CritRoll   int
 	IsCrit         bool
 	CritMultiplier int
-	BaseThac0      int
-	Modifiers      []Modifier
-	EffectiveThac0 int
-	TargetACNeeded int
-	Hit            bool
-	HitMargin      int
+	// CritPlaceholder marks the crit multiplier as the x2 placeholder until
+	// the house crit table lands (critical-qki.12).
+	CritPlaceholder bool
+	BaseThac0       int
+	Modifiers       []Modifier
+	EffectiveThac0  int
+	TargetACNeeded  int
+	Hit             bool
+	HitMargin       int
 
-	BaseDamage      int
-	SpellsBuff      float64
-	WeaponBuff      int
-	Multipliers     float64
-	StrengthBonus   int
+	BaseDamage    int
+	DamageDice    string
+	SpellsBuff    float64
+	WeaponBuff    int
+	Multipliers   float64
+	StrengthBonus int
+	BonusDamage   int
+	// DamageTerms lists every contribution to the damage formula.
+	DamageTerms     []DamageTerm
 	TotalDamage     int
 	DamageBreakdown string
+
+	// Attack context (empty for saving throws).
+	WeaponID   string
+	WeaponName string
+	TargetAC   int
+	TargetSize TargetSize
+	Ammo       *AmmoUse
+	// LogEntryID is the action-log entry recording the attack.
+	LogEntryID int64
 }
 
 // WeaponKind separates melee weapons from missile weapons.
@@ -37,9 +131,7 @@ const (
 	WeaponMissile WeaponKind = "missile"
 )
 
-// Weapon is the catalog entry consumed by ResolveAttack. ResolveAttack only
-// reads BaseDamage today; the magic and size fields are carried for the
-// real-weapon attack resolution that follows.
+// Weapon is the catalog entry consumed by ResolveAttack.
 type Weapon struct {
 	ID          string
 	Name        string
@@ -51,6 +143,10 @@ type Weapon struct {
 	TwoHanded   bool
 	AmmoKind    string // ammo item kind a missile weapon fires, e.g. "arrow"
 }
+
+// FiresAmmo reports whether the weapon is a launcher (a bow) that spends
+// ammunition. A missile weapon without AmmoKind is hurled (darts).
+func (w Weapon) FiresAmmo() bool { return w.Kind == WeaponMissile && w.AmmoKind != "" }
 
 // SaveCategory enumerates AD&D saving-throw categories.
 type SaveCategory string

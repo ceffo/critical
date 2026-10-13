@@ -38,7 +38,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}
 	if mods.SaveBonus != 0 {
-		trace.AddModifier("Buffs", mods.SaveBonus)
+		trace.AddModifier(ModBuff, "Buffs", mods.SaveBonus)
 	}
 
 	res.EffectiveThac0 = target

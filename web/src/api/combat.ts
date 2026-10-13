@@ -1,12 +1,10 @@
-import type { RollResult } from "../types/combat";
-import { post } from "./http";
+import type { AttackRequest, RollResult, Weapon } from "../types/combat";
+import { post, request } from "./http";
 
-export function resolveAttack(
-  weaponId: string,
-  targetAc: number,
-): Promise<RollResult> {
-  return post<RollResult>("/api/roll/attack", {
-    weapon_id: weaponId,
-    target_ac: targetAc,
-  });
+export function resolveAttack(req: AttackRequest): Promise<RollResult> {
+  return post<RollResult>("/api/roll/attack", req);
+}
+
+export function fetchWeapons(): Promise<Weapon[]> {
+  return request<Weapon[]>("/api/weapons");
 }

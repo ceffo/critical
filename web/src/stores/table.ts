@@ -4,6 +4,7 @@ import { amendLogEntry, voidLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
+import { useItemsStore } from "./items";
 
 /** Something to tell the player after an action (rendered with i18n by the Notices component). */
 export type Notice = { kind: "expired"; names: string[] };
@@ -15,7 +16,7 @@ interface TableStore {
   busy: boolean;
   clearError: () => void;
   clearNotice: () => void;
-  /** Reload everything an action can change: HP, action log, buffs, round, effective STR. */
+  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item counts. */
   refresh: () => Promise<void>;
   /**
    * Run a mutation, then refresh the table state. Errors are caught into `error`.
@@ -48,6 +49,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
         useBuffsStore.getState().fetchBuffs(),
         useBuffsStore.getState().fetchRound(),
         useBuffsStore.getState().fetchStrength(),
+        useItemsStore.getState().fetchItems(),
       ]);
     } catch (e) {
       set({ error: message(e) });

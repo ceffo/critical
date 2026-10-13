@@ -7,6 +7,11 @@ export function formatSigned(n: number): string {
   return "0";
 }
 
+/** A multiplier for display: "×2", "×1.5". */
+export function formatFactor(n: number): string {
+  return `×${n}`;
+}
+
 /** HP bar fill as a 0–100 percentage of max, clamped. */
 export function hpPercent(current: number, max: number): number {
   if (max <= 0) return 0;

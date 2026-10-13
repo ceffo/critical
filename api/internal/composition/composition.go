@@ -91,8 +91,9 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 
-	// The PHB rule tables feed spell preparation (Table 32) today and the
-	// attack rules (qki.7) next; a gap in a table is a startup error.
+	// The PHB rule tables: spell preparation takes Table 32, attacks look
+	// STR/DEX adjustments up in Tables 1-2. A gap in a table is a startup
+	// error.
 	ruleTables, err := ruletablesadpt.New(cfg.SeedsDir)
 	if err != nil {
 		_ = db.Close()
@@ -149,12 +150,16 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
-	combatSvc, err := combatsvc.New(charSvc, buffSvc, dice, weaponDAL)
+	itemSvc, err := itemsvc.New(itemDAL)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	itemSvc, err := itemsvc.New(itemDAL)
+	registerRestorers(logSvc, itemSvc.Restorers())
+	combatSvc, err := combatsvc.New(combatsvc.Deps{
+		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL,
+		Items: itemSvc, Rules: ruleTables, Log: logSvc, Tx: db,
+	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err

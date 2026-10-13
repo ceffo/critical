@@ -187,6 +187,8 @@ type BuffEffectsDTO struct {
 	StrBonus   *int     `json:"str_bonus,omitempty"`
 	StrMax     *int     `json:"str_max,omitempty"`
 	AC         *int     `json:"ac,omitempty"`
+	ToHit      *int     `json:"to_hit,omitempty"`
+	Damage     *int     `json:"damage,omitempty"`
 }
 
 // RoundAdvanceDTO mirrors the previous response shape from RoundHandler.Advance.

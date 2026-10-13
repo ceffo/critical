@@ -59,6 +59,9 @@ packages:
       Buffs:
       Dice:
       Weapons:
+      Items:
+      Rules:
+      Log:
   github.com/ceffo/critical/api/internal/domain/service/itemsvc:
     config:
       dir: "internal/domain/service/itemsvc/mocks"

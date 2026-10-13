@@ -11,6 +11,8 @@ export const BUFF_EFFECT_KEYS = [
   "str_set",
   "min_str",
   "ac",
+  "to_hit",
+  "damage",
 ] as const;
 
 export type BuffEffectKey = (typeof BUFF_EFFECT_KEYS)[number];

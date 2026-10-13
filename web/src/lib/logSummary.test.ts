@@ -105,4 +105,31 @@ describe("entryText", () => {
     expect(entryText(entry("hp_change", {}, "orc axe"), t)).toBe("orc axe");
     expect(entryText(entry("buff_change", {}, "legacy"), t)).toBe("legacy");
   });
+
+  it.each([
+    [
+      { hit: true, isCrit: false, critMultiplier: 1, totalDamage: 7, weaponName: "Long Sword +2", targetAc: 5 },
+      "en",
+      "Long Sword +2 vs AC 5: hit, 7 damage",
+    ],
+    [
+      { hit: false, isCrit: false, critMultiplier: 1, totalDamage: 0, weaponName: "Short Bow +2", targetAc: 2,
+        ammo: { itemId: "arrows_plus3", name: "Arrows +3", magic: 3, remaining: 1 } },
+      "en",
+      "Short Bow +2 (Arrows +3) vs AC 2: miss",
+    ],
+    [
+      { hit: true, isCrit: true, critMultiplier: 2, totalDamage: 14, weaponName: "Long Sword +2", targetAc: 5 },
+      "fr",
+      "Long Sword +2 contre CA 5 : critique ×2, 14 dégâts",
+    ],
+  ])("renders attack %j in %s", async (payload, lng, want) => {
+    const t = await makeT(lng);
+    expect(entryText(entry("attack", payload, "server"), t)).toBe(want);
+  });
+
+  it("falls back to the summary for an attack without a payload", async () => {
+    const t = await makeT("en");
+    expect(entryText(entry("attack", {}, "old attack"), t)).toBe("old attack");
+  });
 });

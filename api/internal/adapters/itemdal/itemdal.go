@@ -79,3 +79,16 @@ func (d *DAL) ResetPerDay(ctx context.Context) error {
 	}
 	return nil
 }
+
+// SetCount writes an item's count back (an action-log void restoring a
+// snapshot). ErrItemNotFound when the id is unknown.
+func (d *DAL) SetCount(ctx context.Context, itemID string, count int) error {
+	ids, err := queries.SetItemCount(int64(count), itemID).All(ctx, d.exec(ctx))
+	if err != nil {
+		return fmt.Errorf("set item %s count: %w", itemID, err)
+	}
+	if len(ids) == 0 {
+		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
+	}
+	return nil
+}

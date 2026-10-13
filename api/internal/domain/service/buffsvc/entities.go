@@ -11,14 +11,15 @@ const (
 // missing field means "no contribution" rather than zero.
 //
 // STR effects (StrSet, StrBonus, StrMax) feed the effective STR score; the
-// other effects are gated by MinStr against that effective score. to_hit and
-// damage effects belong to the attack rules (critical-qki.7) and extend this
-// struct there.
+// other effects are gated by MinStr against that effective score.
 type BuffEffects struct {
 	// MinStr gates the buff: it contributes only while effective STR >= MinStr
 	// (the Power Gem needs STR 18).
 	MinStr     *int
 	SpellsBuff *float64
+	// WeaponBuff makes the wielded weapon count as +N (Power Gem: "the
+	// weapon becomes +5"), to hit and damage. It replaces the weapon's own
+	// magic when higher; it does not add to it.
 	WeaponBuff *int
 	Multiplier *float64
 	SaveBonus  *int
@@ -31,6 +32,11 @@ type BuffEffects struct {
 	StrMax   *int
 	// AC is added to armour class (descending AC: negative is better).
 	AC *int
+	// ToHit is added to attack rolls (Bless +1, Prayer +1, Chant +1).
+	ToHit *int
+	// Damage is added to damage rolls after the multipliers, like the
+	// Strength bonus.
+	Damage *int
 }
 
 // BuffEffect is a single active buff or debuff on a character.
@@ -75,14 +81,38 @@ type Strength struct {
 	Effective int
 }
 
+// Contribution is one applying buff's share of an additive effect, so a
+// roll breakdown can name every buff.
+type Contribution struct {
+	Buff  string
+	Value int
+}
+
+// Factor is one applying buff's share of a multiplicative effect.
+type Factor struct {
+	Buff  string
+	Value float64
+}
+
 // BuffModifiers is the aggregated effect set across all currently active buffs
-// (after requirement gating like MinStr).
+// (after requirement gating like MinStr). The *From fields name the buffs
+// behind each total, in buff order.
 type BuffModifiers struct {
 	SpellsBuff  float64
-	WeaponBuff  int
 	Multipliers float64
 	SaveBonus   int
 	AC          int
+	ToHit       int
+	Damage      int
+	// WeaponBuff is the best "weapon becomes +N" effect (0: none) and
+	// WeaponBuffFrom the buff that gives it.
+	WeaponBuff     int
+	WeaponBuffFrom string
 	// EffectiveStr is the STR score the gating used (base plus STR buffs).
 	EffectiveStr int
+
+	SpellsBuffFrom  []Factor
+	MultipliersFrom []Factor
+	ToHitFrom       []Contribution
+	DamageFrom      []Contribution
 }

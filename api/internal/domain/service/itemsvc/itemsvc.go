@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
 // SVC is the driver port.
@@ -20,6 +21,11 @@ type SVC interface {
 	// ResetDaily refills every per-day item to its max (long rest) and
 	// returns the full item list.
 	ResetDaily(ctx context.Context) ([]Item, error)
+
+	// Restorers maps the items state key to the Restorer that writes the
+	// counts of a "before" snapshot back when an action-log entry is voided.
+	// The composition root registers it on the action log.
+	Restorers() map[string]actionlog.Restorer
 }
 
 // DAL is the driven port. Decrement must be a single atomic statement that
@@ -29,6 +35,8 @@ type DAL interface {
 	// Decrement returns the updated item, ErrItemNotFound or ErrItemEmpty.
 	Decrement(ctx context.Context, itemID string) (Item, error)
 	ResetPerDay(ctx context.Context) error
+	// SetCount writes a count back; ErrItemNotFound for an unknown id.
+	SetCount(ctx context.Context, itemID string, count int) error
 }
 
 type service struct {

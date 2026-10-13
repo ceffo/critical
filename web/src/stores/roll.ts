@@ -1,48 +1,50 @@
 import { create } from "zustand";
-import type { RollResult, SaveCategory } from "@/types/combat";
+import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
 import { resolveAttack } from "@/api/combat";
 import { rollSavingThrow } from "@/api/roll";
 import { useTableStore } from "./table";
 
 /** The last roll and what was asked for, so the result card can show its context. */
 export type LastRoll =
-  | { kind: "attack"; weaponId: string; targetAc: number; result: RollResult }
+  | { kind: "attack"; result: RollResult }
   | { kind: "save"; category: SaveCategory; result: RollResult };
 
 interface RollStore {
   last: LastRoll | null;
   rolling: boolean;
-  rollAttack: (weaponId: string, targetAc: number) => Promise<void>;
+  /** Resolves true when the attack was rolled (and logged). */
+  rollAttack: (req: AttackRequest) => Promise<boolean>;
   rollSave: (category: SaveCategory) => Promise<void>;
 }
 
 export const useRollStore = create<RollStore>((set) => {
-  async function roll(fn: () => Promise<LastRoll>) {
+  async function roll(fn: () => Promise<LastRoll>, refresh: boolean): Promise<boolean> {
     set({ rolling: true });
-    useTableStore.getState().clearError();
+    const table = useTableStore.getState();
+    table.clearError();
+    let ok = true;
     try {
       set({ last: await fn() });
     } catch (e) {
+      ok = false;
       useTableStore.setState({ error: e instanceof Error ? e.message : String(e) });
     } finally {
       set({ rolling: false });
     }
+    // An attack is logged and may spend ammo: show the new log entry and counts.
+    if (refresh) await table.refresh();
+    return ok;
   }
   return {
     last: null,
     rolling: false,
-    rollAttack: (weaponId, targetAc) =>
-      roll(async () => ({
-        kind: "attack",
-        weaponId,
-        targetAc,
-        result: await resolveAttack(weaponId, targetAc),
-      })),
-    rollSave: (category) =>
-      roll(async () => ({
-        kind: "save",
-        category,
-        result: await rollSavingThrow(category),
-      })),
+    rollAttack: (req) =>
+      roll(async () => ({ kind: "attack", result: await resolveAttack(req) }), true),
+    rollSave: async (category) => {
+      await roll(
+        async () => ({ kind: "save", category, result: await rollSavingThrow(category) }),
+        false,
+      );
+    },
   };
 });

@@ -2,6 +2,7 @@ package itemsvc_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -56,4 +57,33 @@ func TestResetDaily_ResetErrorSkipsList(t *testing.T) {
 	dal.EXPECT().ResetPerDay(mock.Anything).Return(errors.New("boom"))
 	_, err := svc.ResetDaily(context.Background())
 	require.Error(t, err)
+}
+
+func TestUseSnapshot_BeforeIsOneMore(t *testing.T) {
+	snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Count: 1})
+	require.NoError(t, err)
+	assert.Equal(t, "items:arrows_plus3", snap.Key)
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2}]`, string(snap.Before))
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(snap.After))
+}
+
+func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	svc, _ := itemsvc.New(dal)
+	snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Count: 0})
+	require.NoError(t, err)
+
+	dal.EXPECT().SetCount(mock.Anything, "arrows_plus3", 1).Return(nil).Once()
+	r := svc.Restorers()[itemsvc.StateKeyItems]
+	require.NotNil(t, r)
+	require.NoError(t, r.Restore(context.Background(), 1, snap.Before))
+}
+
+func TestRestorers_RejectBadSnapshots(t *testing.T) {
+	for _, state := range []string{`{"id":"x"}`, `[{"id":"","count":1}]`, `[{"id":"x","count":-1}]`} {
+		dal := mocks.NewMockDAL(t) // nothing is written
+		svc, _ := itemsvc.New(dal)
+		err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(state))
+		assert.Error(t, err, state)
+	}
 }

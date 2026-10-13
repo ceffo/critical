@@ -34,6 +34,7 @@ type buffSvc interface {
 	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, err error)
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
+	PassTime(ctx context.Context, characterID int64, hours float64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, rounds int, round int, err error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 	ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error)
 	SaveBuff(ctx context.Context, characterID int64, saved buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)
@@ -54,6 +55,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Post("/api/round/advance", render.Handle(AdvanceRound(charID, svc)))
 	r.Post("/api/round/reset", render.Handle(ResetRound(charID, svc)))
 	r.Put("/api/round", render.Handle(SetRound(charID, svc)))
+	r.Post("/api/round/pass-time", render.Handle(PassTime(charID, svc)))
 	r.Get("/api/stats/str", render.Handle(GetEffectiveStr(charID, svc)))
 }
 
@@ -191,6 +193,35 @@ func SetRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	}
 }
 
+// PassTimeDTO is the POST /api/round/pass-time body: game hours, decimals
+// allowed (1.5 = 90 rounds).
+type PassTimeDTO struct {
+	Hours *float64 `json:"hours"`
+}
+
+// PassTime fast-forwards game time: timed buffs lose floor(hours × 60)
+// rounds, the counter goes to 0. The response is Next Round's, plus the
+// rounds that passed.
+func PassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var dto PassTimeDTO
+		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil || dto.Hours == nil {
+			return render.BadRequestError("invalid request body")
+		}
+		active, expired, rounds, round, err := svc.PassTime(r.Context(), charID(r), *dto.Hours)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, RoundAdvanceDTO{
+			RoundNumber:  round,
+			ActiveBuffs:  toDTOs(active),
+			ExpiredBuffs: toDTOs(expired),
+			RoundsPassed: rounds,
+		})
+		return nil
+	}
+}
+
 // StrengthDTO is GET /api/stats/str.
 type StrengthDTO struct {
 	Base      int `json:"base"`
@@ -243,6 +274,8 @@ type RoundAdvanceDTO struct {
 	RoundNumber  int             `json:"roundNumber"`
 	ActiveBuffs  []BuffEffectDTO `json:"activeBuffs"`
 	ExpiredBuffs []BuffEffectDTO `json:"expiredBuffs"`
+	// RoundsPassed is set by pass-time only: the rounds the hours gave.
+	RoundsPassed int `json:"roundsPassed,omitempty"`
 }
 
 func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {

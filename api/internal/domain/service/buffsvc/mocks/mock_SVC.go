@@ -846,6 +846,89 @@ func (_c *MockSVC_ListStatus_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
+// PassTime provides a mock function with given fields: ctx, characterID, hours
+func (_m *MockSVC) PassTime(ctx context.Context, characterID int64, hours float64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, int, error) {
+	ret := _m.Called(ctx, characterID, hours)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PassTime")
+	}
+
+	var r0 []buffsvc.BuffEffect
+	var r1 []buffsvc.BuffEffect
+	var r2 int
+	var r3 int
+	var r4 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, int, error)); ok {
+		return rf(ctx, characterID, hours)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) []buffsvc.BuffEffect); ok {
+		r0 = rf(ctx, characterID, hours)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, float64) []buffsvc.BuffEffect); ok {
+		r1 = rf(ctx, characterID, hours)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, float64) int); ok {
+		r2 = rf(ctx, characterID, hours)
+	} else {
+		r2 = ret.Get(2).(int)
+	}
+
+	if rf, ok := ret.Get(3).(func(context.Context, int64, float64) int); ok {
+		r3 = rf(ctx, characterID, hours)
+	} else {
+		r3 = ret.Get(3).(int)
+	}
+
+	if rf, ok := ret.Get(4).(func(context.Context, int64, float64) error); ok {
+		r4 = rf(ctx, characterID, hours)
+	} else {
+		r4 = ret.Error(4)
+	}
+
+	return r0, r1, r2, r3, r4
+}
+
+// MockSVC_PassTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PassTime'
+type MockSVC_PassTime_Call struct {
+	*mock.Call
+}
+
+// PassTime is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - hours float64
+func (_e *MockSVC_Expecter) PassTime(ctx interface{}, characterID interface{}, hours interface{}) *MockSVC_PassTime_Call {
+	return &MockSVC_PassTime_Call{Call: _e.mock.On("PassTime", ctx, characterID, hours)}
+}
+
+func (_c *MockSVC_PassTime_Call) Run(run func(ctx context.Context, characterID int64, hours float64)) *MockSVC_PassTime_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(float64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PassTime_Call) Return(active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, rounds int, round int, err error) *MockSVC_PassTime_Call {
+	_c.Call.Return(active, expired, rounds, round, err)
+	return _c
+}
+
+func (_c *MockSVC_PassTime_Call) RunAndReturn(run func(context.Context, int64, float64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, int, error)) *MockSVC_PassTime_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResetRound provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) ResetRound(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, int, error) {
 	ret := _m.Called(ctx, characterID)

@@ -135,6 +135,9 @@ var endpoints = []endpoint{
 	{"PUT round", "PUT", "/api/round", `{"round":3}`, func(m *mocksSet, err error) {
 		m.buffs.On("SetRound", anyArgs(3)...).Return(nil, 0, err)
 	}},
+	{"POST round/pass-time", "POST", "/api/round/pass-time", `{"hours":1}`, func(m *mocksSet, err error) {
+		m.buffs.On("PassTime", anyArgs(3)...).Return(nil, nil, 0, 0, err)
+	}},
 	{"GET spells/slots", "GET", "/api/spells/slots", "", func(m *mocksSet, err error) {
 		m.spell.On("GetSlots", anyArgs(2)...).Return(nil, err)
 	}},

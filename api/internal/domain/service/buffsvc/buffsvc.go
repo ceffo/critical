@@ -42,6 +42,11 @@ type SVC interface {
 	// SetRound corrects the counter to `to` (>= 0, else ErrInvalidInput).
 	// Active buffs are untouched. Logged, voidable.
 	SetRound(ctx context.Context, characterID int64, to int) (active []BuffEffect, round int, err error)
+	// PassTime fast-forwards game time in hours: timed buffs lose
+	// RoundsForHours(hours) rounds (expired at <= 0), charge-only and untimed
+	// buffs are untouched, the round counter goes to 0. Invalid hours (<= 0,
+	// > MaxPassHours, under one round): ErrInvalidInput. Logged, voidable.
+	PassTime(ctx context.Context, characterID int64, hours float64) (active []BuffEffect, expired []BuffEffect, rounds int, round int, err error)
 
 	// ListSaved returns the saved buff templates, oldest first.
 	ListSaved(ctx context.Context, characterID int64) ([]SavedBuff, error)

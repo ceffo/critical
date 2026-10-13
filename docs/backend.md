@@ -82,6 +82,11 @@ action log in the composition root, so voiding the entry restores the "before" s
 refused (409) while a later non-voided entry changed the same state key. buffsvc records every
 buff change (activate, edit, absorb, dismiss) under the `buffs` key and Next Round under `buffs`
 + `round`, stamped with the round it ends; `buffSvc.Restorers()` is registered in composition.
+Time passes (`POST /api/round/pass-time {hours}`, `buffsvc.PassTime`) is one `time_passed` entry
+under `buffs` + `round`: `buffsvc.RoundsForHours` converts hours to rounds (1 round = 1 minute,
+rounded down; rejects ≤ 0, > 720 h and under one round), timed buffs lose that many rounds and
+expire at ≤ 0, charge-only and untimed buffs are untouched, the counter goes to 0. Daily items are
+not refilled (long rest only).
 combatsvc records every attack (kind `attack`, payload = the full roll breakdown, camelCase like the
 `/api/roll/attack` response); a missile attack spends one ammo item through `itemsvc.Use` in the same
 transaction and snapshots it under the per-item key `items:<id>` (`itemsvc.UseSnapshot`); the

@@ -193,7 +193,6 @@
     "classAll": "Tous",
     "levelsLabel": "Niveaux de sort",
     "levelShort": "Niv. {{level}}",
-    "levelTag": "L{{level}}",
     "levelLabel": "Niveau {{level}}",
     "school": "École",
     "anySchool": "Toutes écoles",
@@ -244,6 +243,73 @@
       "mile": "mi",
       "cu": "cu",
       "sq": "carré"
+    },
+    "spheres": {
+      "all": "Tout",
+      "animal": "Animal",
+      "astral": "Astral",
+      "chaos": "Chaos",
+      "charm": "Charme",
+      "combat": "Combat",
+      "creation": "Création",
+      "divination": "Divination",
+      "elemental": "Élémentaire",
+      "elemental_air": "Élémentaire (Air)",
+      "elemental_earth": "Élémentaire (Terre)",
+      "elemental_fire": "Élémentaire (Feu)",
+      "elemental_water": "Élémentaire (Eau)",
+      "elemental_plant": "Élémentaire (Plante)",
+      "guardian": "Gardien",
+      "healing": "Guérison",
+      "law": "Loi",
+      "necromantic": "Nécromantique",
+      "numbers": "Nombres",
+      "plant": "Plante",
+      "protection": "Protection",
+      "summoning": "Convocation",
+      "sun": "Soleil",
+      "thought": "Pensée",
+      "time": "Temps",
+      "travelers": "Voyageurs",
+      "war": "Guerre",
+      "wards": "Sceaux",
+      "water": "Eau",
+      "weather": "Climat"
+    },
+    "classes": {
+      "wizard": "Magicien",
+      "priest": "Prêtre"
+    },
+    "values": {
+      "range": {
+        "touch": "Contact",
+        "special": "Spéciale",
+        "unlimited": "Illimitée"
+      },
+      "duration": {
+        "special": "Spéciale",
+        "permanent": "Permanente",
+        "instantaneous": "Instantanée"
+      },
+      "area": {
+        "special": "Spéciale",
+        "the_caster": "Le lanceur",
+        "caster": "Le lanceur",
+        "one_creature": "Une créature",
+        "1_creature": "1 créature",
+        "creature_touched": "Créature touchée",
+        "object_touched": "Objet touché"
+      },
+      "castingTime": {
+        "special": "Spécial"
+      },
+      "save": {
+        "none": "Aucune",
+        "neg_": "Annule",
+        "neg": "Annule",
+        "special": "Spéciale",
+        "1_2": "½"
+      }
     }
   },
   "result": {

@@ -58,6 +58,18 @@ const named = [
   row("Flame Strike", "Priest", 5, "Evocation", "Elemental Fire"),
   row("Cure Light Wounds", "Priest", 1, "Necromancy", "Healing"),
   row("Dimensional Folding", "Wizard", 7, "Dimension"),
+  row("Quixotic Probe", "Priest", 2, "Divination", "Sun", {
+    casting_time: "Special",
+    range: "Touch",
+    duration: "Instantaneous",
+    area_of_effect: "The caster",
+    saving_throw: "None",
+  }),
+  row("Quixotic Oddity", "Wizard", 3, "Divination", "", {
+    range: "Sight line",
+    duration: "Instantaneous",
+    area_of_effect: "A weird zone",
+  }),
 ];
 
 test.use({ extraSpells: { rows: named } });
@@ -76,7 +88,7 @@ const selected = (page: Page) =>
   page.getByRole("listbox", { name: "Spells" }).getByRole("option", { selected: true });
 const detail = (page: Page) => page.getByTestId("spell-detail");
 const classButton = (page: Page, name: string) =>
-  page.getByRole("group", { name: "Spell list" }).getByRole("button", { name, exact: true });
+  page.getByRole("group", { name: /^(Spell list|Liste de sorts)$/ }).getByRole("button", { name, exact: true });
 const levelChip = (page: Page, n: number) =>
   page.getByRole("button", { name: `Level ${n}`, exact: true });
 
@@ -413,4 +425,54 @@ test("lookup: a slow response overtaken by a newer query is not written", async 
   await page.waitForTimeout(200);
   await expect(rows(page)).toHaveCount(1);
   await expect(count(page)).toHaveText("1 spell");
+});
+
+test("lookup: level chips and rows show the bare number; French labels classes, spheres and common values", async ({
+  page,
+}) => {
+  await openLookup(page);
+  // The bare level number everywhere, in the chips and in the rows.
+  for (let n = 0; n <= 9; n++) await expect(levelChip(page, n)).toHaveText(`${n}`);
+  await search(page).fill("quixotic");
+  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page).first().locator("span").first()).toHaveText("3");
+  await expect(detail(page).getByTestId("spell-meta")).toContainText("Wizard · Level 3");
+  await snap(page, "bare-levels-en");
+
+  await page.getByRole("button", { name: "FR" }).click();
+  for (let n = 0; n <= 9; n++) {
+    await expect(page.getByRole("button", { name: `Niveau ${n}`, exact: true })).toHaveText(`${n}`);
+  }
+  await expect(detail(page).getByTestId("spell-meta")).toContainText("Magicien · Niveau 3");
+  // Listed values are translated, anything else stays as scraped.
+  const stat = (k: string) => detail(page).getByTestId(`stat-${k}`);
+  await expect(stat("duration")).toContainText("Instantanée");
+  await expect(stat("range")).toContainText("Sight line");
+  await expect(stat("area")).toContainText("A weird zone");
+
+  // All: the class chip is French; the Priest spell shows its values and sphere in French.
+  await classButton(page, "Tous").click();
+  await expect(rows(page)).toHaveCount(2);
+  await expect(page.getByTestId("spell-class")).toHaveText(["Prêtre", "Magicien"]);
+  await rows(page).filter({ hasText: "Quixotic Probe" }).click();
+  const meta = detail(page).getByTestId("spell-meta");
+  await expect(meta).toContainText("Prêtre · Niveau 2");
+  await expect(meta).toContainText("Soleil");
+  await expect(stat("range")).toContainText("Contact");
+  await expect(stat("duration")).toContainText("Instantanée");
+  await expect(stat("area")).toContainText("Le lanceur");
+  await expect(stat("castingTime")).toContainText("Spécial");
+  await expect(stat("save")).toContainText("Aucune");
+  await snap(page, "french-values");
+
+  // The sphere dropdown: French labels, still filtering on the English API value.
+  await classButton(page, "Prêtre").click();
+  const sphere = page.getByRole("combobox", { name: "Sphère" });
+  await expect(sphere.locator("option", { hasText: "Élémentaire (Feu)" })).toHaveCount(1);
+  await expect(sphere.locator("option", { hasText: "Elemental Fire" })).toHaveCount(0);
+  await sphere.selectOption({ label: "Soleil" });
+  await expect(sphere).toHaveValue("Sun");
+  await expect(rows(page)).toHaveCount(1);
+  expect(await names(rows(page))).toEqual(["Quixotic Probe"]);
+  await snap(page, "french-spheres");
 });

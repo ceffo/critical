@@ -103,6 +103,19 @@ describe("entryText", () => {
     expect(entryText(entry(kind, payload), t)).toBe(want);
   });
 
+  it("translates template and note log texts to French", async () => {
+    const t = await makeT("fr");
+    const text = (p: object) => entryText(entry("buff_change", p), t);
+    expect(text({ action: "save_template", buff: "Marteau", rounds: 10 })).toBe("Bonus Marteau enregistré (10 rd.)");
+    expect(text({ action: "delete_template", buff: "Marteau" })).toBe("Bonus enregistré Marteau supprimé");
+    expect(text({ action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "feu", noteChanged: true })).toBe(
+      "Ward : note « feu »",
+    );
+    expect(text({ action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, fromNote: "x", noteChanged: true })).toBe(
+      "Ward : note retirée",
+    );
+  });
+
   it("translates to French", async () => {
     const t = await makeT("fr");
     expect(

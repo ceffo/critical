@@ -94,6 +94,7 @@
     "notePlaceholder": "Note (e.g. +4 saves vs fire)",
     "saveForReuse": "Save for reuse",
     "saved": "Saved buffs",
+    "saveFailedAfterAdd": "{{name}} was activated but not saved for reuse",
     "useSaved": "Fill the form with {{name}}",
     "deleteSaved": "Delete saved buff {{name}}"
   },

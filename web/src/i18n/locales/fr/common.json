@@ -94,6 +94,7 @@
     "notePlaceholder": "Note (p. ex. +4 aux JS contre le feu)",
     "saveForReuse": "Enregistrer pour réutiliser",
     "saved": "Bonus enregistrés",
+    "saveFailedAfterAdd": "{{name}} est activé mais n'a pas été enregistré pour réutilisation",
     "useSaved": "Remplir le formulaire avec {{name}}",
     "deleteSaved": "Supprimer le bonus enregistré {{name}}"
   },

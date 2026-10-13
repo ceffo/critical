@@ -289,11 +289,15 @@ function AddBuffForm({ onDone }: { onDone: () => void }) {
       effects[row.key] = parsed[i];
     });
     const buff = { name: name.trim(), duration: r, charges: c, effects, note };
-    const ok = await run(async () => {
-      await activateBuff(buff);
-      if (saveIt) await saveBuffTemplate(buff);
-    });
-    if (ok) onDone();
+    if (!(await run(() => activateBuff(buff)))) return;
+    if (saveIt && !(await run(() => saveBuffTemplate(buff)))) {
+      // The buff is active already: close the form so a second Add cannot
+      // activate it again, and say what was not saved.
+      useTableStore.setState({
+        error: `${useTableStore.getState().error ?? ""} — ${t("buffs.saveFailedAfterAdd", { name: buff.name })}`,
+      });
+    }
+    onDone();
   }
 
   return (

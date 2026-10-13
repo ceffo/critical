@@ -152,3 +152,85 @@ func TestSavedBuffs_PowerGemFormDoublesDiceThenCrit(t *testing.T) {
 	want := int(math.Floor((float64(res.BaseDamage)*2+5)*1.5)) + res.StrengthBonus + res.BonusDamage
 	assert.Equal(t, want, res.TotalDamage, "(dice ×2 + 5) × crit, then the strength bonus")
 }
+
+// Saving the same name again keeps one template; voiding the second save
+// brings the first back with its old id and values.
+func TestSavedBuffs_VoidingAReplacingSaveRestoresTheOldTemplate(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+
+	first, err := bs.Buffs.SaveBuff(ctx, id, hammer())
+	require.NoError(t, err)
+	again := hammer()
+	again.Duration = 20
+	list, err := bs.Buffs.SaveBuff(ctx, id, again)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, 20, list[0].Duration)
+
+	entries, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	require.NoError(t, err)
+	list, err = bs.Buffs.ListSaved(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, first[0].ID, list[0].ID)
+	assert.Equal(t, 10, list[0].Duration)
+}
+
+// While a delete is live, voiding the earlier save is refused and the error
+// names the later entry.
+func TestSavedBuffs_VoidingAnEarlierSaveIsBlockedByALiveDelete(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+
+	list, err := bs.Buffs.SaveBuff(ctx, id, hammer())
+	require.NoError(t, err)
+	_, err = bs.Buffs.DeleteSaved(ctx, id, list[0].ID)
+	require.NoError(t, err)
+	entries, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+
+	_, err = bs.Log.Void(ctx, id, entries[1].ID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Deleted saved buff Hammer form")
+
+	// Void the delete: the chip is back, same id.
+	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	require.NoError(t, err)
+	back, err := bs.Buffs.ListSaved(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, back, 1)
+	assert.Equal(t, list[0].ID, back[0].ID)
+}
+
+// A note-only edit on a charges-only buff (rounds 0) keeps the buff and logs
+// a note change; clearing the note logs a cleared note.
+func TestBuffNote_EditOnChargesOnlyBuffKeepsIt(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+
+	buffs, err := bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Stoneskin", Charges: 4})
+	require.NoError(t, err)
+	buffs, err = bs.Buffs.Edit(ctx, id, buffs[0].ID, buffsvc.BuffEdit{Note: ptr("vs arrows")})
+	require.NoError(t, err)
+	require.Len(t, buffs, 1)
+	assert.Equal(t, 4, buffs[0].Charges)
+	buffs, err = bs.Buffs.Edit(ctx, id, buffs[0].ID, buffsvc.BuffEdit{Note: ptr("")})
+	require.NoError(t, err)
+	require.Len(t, buffs, 1)
+	assert.Empty(t, buffs[0].Note)
+
+	entries, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	assert.Equal(t, "Edited Stoneskin: note", entries[1].Summary)
+	assert.Equal(t, "Edited Stoneskin: note cleared", entries[0].Summary)
+	assert.Contains(t, string(entries[1].Payload), `"noteChanged":true`)
+	assert.Contains(t, string(entries[0].Payload), `"fromNote":"vs arrows"`)
+	assert.NotContains(t, string(entries[0].Payload), `"note":`+`"vs`)
+}

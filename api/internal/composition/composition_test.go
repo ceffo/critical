@@ -24,7 +24,7 @@ func newBacking(t *testing.T) *composition.BackingServices {
 	ctx := context.Background()
 	bs, err := composition.New(ctx, composition.Config{
 		DSN:      filepath.Join(t.TempDir(), "critical.db"),
-		SeedsDir: filepath.Join("..", "..", "..", "seeds"),
+		SeedsDir: filepath.Join("..", "..", "testdata", "seeds"),
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = bs.Close(ctx) })
@@ -174,7 +174,7 @@ func TestMissileAttackSpendsAmmoAndVoidRestoresIt(t *testing.T) {
 	ctx := context.Background()
 	id := bs.CharacterID
 	before := arrowCount(t, bs, "arrows_plus3")
-	require.GreaterOrEqual(t, before, 2, "seeds/items.json has at least two +3 arrows")
+	require.GreaterOrEqual(t, before, 2, "fixture items.json has at least two +3 arrows")
 
 	shot := combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 5}
 	first, err := bs.Combat.ResolveAttack(ctx, id, shot)

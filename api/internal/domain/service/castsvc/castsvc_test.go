@@ -36,7 +36,7 @@ func boolPtr(v bool) *bool        { return &v }
 // seed entries.
 func catalog(t *testing.T) spelleffectsvc.Catalog {
 	t.Helper()
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "..", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
 	require.NoError(t, err)
 	return c
 }

@@ -27,7 +27,7 @@ func bootMaxDice(t *testing.T) *composition.BackingServices {
 	ctx := context.Background()
 	bs, err := composition.New(ctx, composition.Config{
 		DSN:      filepath.Join(t.TempDir(), "critical.db"),
-		SeedsDir: filepath.Join("..", "..", "..", "seeds"),
+		SeedsDir: filepath.Join("..", "..", "testdata", "seeds"),
 		Dice:     maxDice{},
 	})
 	require.NoError(t, err)

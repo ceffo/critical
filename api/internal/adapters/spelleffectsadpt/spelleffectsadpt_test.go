@@ -1,7 +1,6 @@
 package spelleffectsadpt_test
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var seedsDir = filepath.Join("..", "..", "..", "..", "seeds")
+var seedsDir = filepath.Join("..", "..", "..", "testdata", "seeds")
 
 func loadRepo(t *testing.T) *spelleffectsadpt.Catalog {
 	t.Helper()
@@ -33,54 +32,7 @@ func entry(fields string) string {
 	return `[{"id":"light","name":"Light","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}` + fields + `}]`
 }
 
-func TestRepoSeed_CoversEveryWizardSpell(t *testing.T) {
-	c := loadRepo(t)
-	raw, err := os.ReadFile(filepath.Join(seedsDir, "spells.json")) //nolint:gosec // fixed test path
-	require.NoError(t, err)
-	var spells []struct {
-		Name  string `json:"name"`
-		Class string `json:"class"`
-		Level int    `json:"level"`
-	}
-	require.NoError(t, json.Unmarshal(raw, &spells))
-
-	want := map[string]int{}
-	for _, s := range spells {
-		if s.Class == "Wizard" {
-			want[spelleffectsvc.Slug(s.Name)] = s.Level
-		}
-	}
-	require.NotEmpty(t, want)
-	assert.Equal(t, len(want), c.Len(), "one entry per Wizard spell")
-	for id, level := range want {
-		e, ok := c.Get(id)
-		if assert.True(t, ok, "missing effect for %s", id) {
-			assert.Equal(t, level, e.Level, id)
-		}
-	}
-	for _, e := range c.All() {
-		_, ok := want[e.ID]
-		assert.True(t, ok, "%s is not a Wizard spell in spells.json", e.ID)
-	}
-}
-
-func TestRepoSeed_SpellbookSpellsAreHighConfidence(t *testing.T) {
-	c := loadRepo(t)
-	spellbook := []string{
-		"Strength", "Improved Strength", "Haste", "Enlarge", "Stoneskin", "Mirror Image",
-		"Fireball", "Lightning Bolt", "Cone of Cold", "Magic Missile", "Chromatic Orb",
-		"Melf's Acid Arrow", "Flame Arrow", "Protection From Evil", "Slow", "Dispel Magic",
-		"Polymorph Self", "Improved Invisibility",
-	}
-	for _, name := range spellbook {
-		e, ok := c.Get(spelleffectsvc.Slug(name))
-		if assert.True(t, ok, name) {
-			assert.Equal(t, spelleffectsvc.ConfidenceHigh, e.Confidence, name)
-		}
-	}
-}
-
-func TestRepoSeed_StrengthEncodesRogueBonus(t *testing.T) {
+func TestCatalog_StrengthEncodesRogueBonus(t *testing.T) {
 	c := loadRepo(t)
 	e, ok := c.Get("strength")
 	require.True(t, ok)
@@ -105,7 +57,7 @@ func TestRepoSeed_StrengthEncodesRogueBonus(t *testing.T) {
 	assert.Equal(t, 23, imp.Buff.AbilityGain["str"].MaxByGroup["rogue"])
 }
 
-func TestRepoSeed_EnlargeEncodesDamageMultiplier(t *testing.T) {
+func TestCatalog_EnlargeEncodesDamageMultiplier(t *testing.T) {
 	e, ok := loadRepo(t).Get("enlarge")
 	require.True(t, ok)
 	require.Equal(t, spelleffectsvc.KindBuff, e.Kind)
@@ -114,7 +66,7 @@ func TestRepoSeed_EnlargeEncodesDamageMultiplier(t *testing.T) {
 	assert.Equal(t, 160, pct, "a 6th-level caster grows the target to 160%")
 }
 
-func TestRepoSeed_Formulas(t *testing.T) {
+func TestCatalog_Formulas(t *testing.T) {
 	c := loadRepo(t)
 	fb, _ := c.Get("fireball")
 	require.NotNil(t, fb.Damage)

@@ -1,0 +1,114 @@
+// Package seedcheck holds the integrity tests for the repo's real seeds/
+// directory. They check only that the data is well formed (it loads, it
+// matches the formats the adapters parse, references resolve). They assert no
+// campaign values: editing a name, a stat, a spell number or a table entry
+// must never break them. Every other test uses api/testdata/seeds.
+package seedcheck_test
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
+	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
+	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+var seedsDir = filepath.Join("..", "..", "..", "seeds")
+
+func readJSON(t *testing.T, name string, into any) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(seedsDir, name)) //nolint:gosec // fixed test path
+	require.NoError(t, err, name)
+	require.NoError(t, json.Unmarshal(raw, into), name)
+}
+
+func TestRepoSeeds_BootTheWholeStack(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.New(ctx, composition.Config{
+		DSN:      filepath.Join(t.TempDir(), "critical.db"),
+		SeedsDir: seedsDir,
+	})
+	require.NoError(t, err, "seeds load, migrate and parse")
+	t.Cleanup(func() { _ = bs.Close(ctx) })
+
+	char, err := bs.Character.GetCharacter(ctx, bs.CharacterID)
+	require.NoError(t, err)
+	assert.NotEmpty(t, char.Name)
+	weapons, err := bs.Combat.ListWeapons(ctx)
+	require.NoError(t, err)
+	assert.NotEmpty(t, weapons)
+}
+
+type spell struct {
+	Name  string `json:"name"`
+	Class string `json:"class"`
+	Level int    `json:"level"`
+}
+
+func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
+	var spells []spell
+	readJSON(t, "spells.json", &spells)
+	effects, err := spelleffectsadpt.New(seedsDir)
+	require.NoError(t, err)
+
+	wizard := map[string]int{}
+	for _, s := range spells {
+		if s.Class == "Wizard" {
+			wizard[spelleffectsvc.Slug(s.Name)] = s.Level
+		}
+	}
+	require.NotEmpty(t, wizard)
+	assert.Equal(t, len(wizard), effects.Len(), "one effect entry per Wizard spell")
+	for id, level := range wizard {
+		if e, ok := effects.Get(id); assert.True(t, ok, "no effect for %s", id) {
+			assert.Equal(t, level, e.Level, id)
+		}
+	}
+	for _, e := range effects.All() {
+		_, ok := wizard[e.ID]
+		assert.True(t, ok, "effect %s is not a Wizard spell in spells.json", e.ID)
+	}
+}
+
+func TestRepoSeeds_SpellbookSpellsResolve(t *testing.T) {
+	book, err := spellbookadpt.New(seedsDir)
+	require.NoError(t, err, "spellbook ids/levels match the catalog")
+	effects, err := spelleffectsadpt.New(seedsDir)
+	require.NoError(t, err)
+	for _, e := range book.All() {
+		_, ok := effects.Get(e.ID)
+		assert.True(t, ok, "spellbook spell %s has no effect entry", e.ID)
+	}
+}
+
+func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {
+	var weapons []struct {
+		ID       string `json:"id"`
+		AmmoKind string `json:"ammo_kind"`
+	}
+	var items []struct {
+		ID       string `json:"id"`
+		Kind     string `json:"kind"`
+		AmmoKind string `json:"ammo_kind"`
+	}
+	readJSON(t, "weapons.json", &weapons)
+	readJSON(t, "items.json", &items)
+	launchers := map[string]bool{}
+	for _, w := range weapons {
+		if w.AmmoKind != "" {
+			launchers[w.AmmoKind] = true
+		}
+	}
+	for _, it := range items {
+		if it.Kind == "ammo" {
+			assert.True(t, launchers[it.AmmoKind], "ammo %s fits no weapon", it.ID)
+		}
+	}
+}

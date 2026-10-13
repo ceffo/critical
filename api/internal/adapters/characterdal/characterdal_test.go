@@ -2,7 +2,6 @@ package characterdal_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
@@ -71,24 +70,4 @@ func TestFirstID(t *testing.T) {
 	got, err := dal.GetCharacter(context.Background(), id)
 	require.NoError(t, err)
 	assert.Equal(t, "A", got.Name)
-}
-
-// The repo seed is the campaign sheet's Bard (critical-qki.2).
-func TestGetCharacter_RepoSeedIsTheCampaignBard(t *testing.T) {
-	db := openDB(t)
-	require.NoError(t, db.Seed(context.Background(), filepath.Join("..", "..", "..", "..", "seeds")))
-	dal := characterdal.New(db)
-	id, err := dal.FirstID(context.Background())
-	require.NoError(t, err)
-
-	got, err := dal.GetCharacter(context.Background(), id)
-	require.NoError(t, err)
-	assert.Equal(t, "Bard", got.Name)
-	assert.Equal(t, []int{12, 17, 16, 14, 8, 16}, []int{got.Str, got.Dex, got.Con, got.Int, got.Wis, got.Cha})
-	assert.Equal(t, 15, got.Level)
-	assert.Equal(t, 1293418, got.XPTotal)
-	assert.Equal(t, 85, got.HPMax)
-	assert.Equal(t, 13, got.Thac0Base)
-	assert.Equal(t, []int{10, 8, 9, 13, 9},
-		[]int{got.SaveParaPoison, got.SaveRodStaffWand, got.SavePetriPoly, got.SaveBreath, got.SaveSpell})
 }

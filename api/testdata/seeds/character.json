@@ -1,0 +1,19 @@
+{
+ "name": "Test Bard",
+ "str": 12,
+ "dex": 17,
+ "con": 16,
+ "int": 14,
+ "wis": 8,
+ "cha": 16,
+ "hp_max": 85,
+ "thac0_base": 13,
+ "level": 15,
+ "xp_total": 1293418,
+ "save_para_poison": 10,
+ "save_rod_staff_wand": 8,
+ "save_petri_poly": 9,
+ "save_breath": 13,
+ "save_spell": 9,
+ "slots": []
+}

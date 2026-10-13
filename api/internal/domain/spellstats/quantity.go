@@ -262,7 +262,8 @@ func (q Quantity) unit() (string, error) {
 	return best, nil
 }
 
-// At computes the quantity for casterLevel.
+// At computes the quantity for casterLevel. Max caps the amount only (not
+// Upper or the dice); no PHB form in the seed needs more.
 func (q Quantity) At(casterLevel int) Value {
 	unit, _ := q.unit()
 	outF, _ := unitFactor(unit)

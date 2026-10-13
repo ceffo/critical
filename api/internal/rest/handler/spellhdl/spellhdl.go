@@ -74,9 +74,11 @@ func casterLevel(r *http.Request, charID CharacterIDFunc, chars characterGetter)
 		}
 		return n, nil
 	}
+	// No character (or a failed lookup) must not break the catalog: the
+	// spells are returned without computed values.
 	c, err := chars.GetCharacter(r.Context(), charID(r))
-	if err != nil {
-		return 0, err
+	if err != nil || c == nil {
+		return 0, nil //nolint:nilerr // deliberate fallback, see above
 	}
 	return c.Level, nil
 }
@@ -106,9 +108,9 @@ type SpellDTO struct {
 	SavingThrow  string `json:"saving_throw"`
 	Description  string `json:"description"`
 
-	Stats       spellstats.Stats  `json:"stats"`
-	CasterLevel int               `json:"caster_level"`
-	Values      spellstats.Values `json:"values"`
+	Stats       spellstats.Stats   `json:"stats"`
+	CasterLevel int                `json:"caster_level,omitempty"`
+	Values      *spellstats.Values `json:"values,omitempty"`
 }
 
 // SlotsToDTO maps slots to their wire shape.
@@ -130,11 +132,16 @@ func spellsToDTO(in []spellsvc.Spell, casterLevel int) []SpellDTO {
 
 // SpellToDTO maps one spell to its wire shape, with values at casterLevel.
 func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
-	return SpellDTO{
+	dto := SpellDTO{
 		Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
 		CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
 		AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
 		Description: s.Description,
-		Stats:       s.Stats, CasterLevel: casterLevel, Values: s.Stats.At(casterLevel),
+		Stats:       s.Stats, CasterLevel: casterLevel,
 	}
+	if casterLevel > 0 {
+		v := s.Stats.At(casterLevel)
+		dto.Values = &v
+	}
+	return dto
 }

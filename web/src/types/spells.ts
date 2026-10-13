@@ -89,8 +89,9 @@ export interface Spell {
   /** The six stat fields above, typed. Raw text stays in the string fields. */
   stats: SpellStats;
   /** Level `values` are computed for: ?caster_level=, default the character's. */
-  caster_level: number;
-  values: SpellValues;
+  caster_level?: number;
+  /** Absent when no caster level is known (no character and no ?caster_level=). */
+  values?: SpellValues;
 }
 
 /** Mirrors api/internal/rest/handler/spellprephdl (InfoDTO). */

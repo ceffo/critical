@@ -441,6 +441,15 @@
       "value": "Ajustement",
       "reason": "Raison (facultatif)",
       "apply": "Appliquer"
+    },
+    "adjustAc": {
+      "title": "CA de la cible",
+      "label": "Corriger la CA de la cible",
+      "decrease": "Baisser la CA de la cible",
+      "increase": "Monter la CA de la cible",
+      "value": "CA de la cible corrigée",
+      "apply": "Appliquer",
+      "was": "était CA {{ac}}"
     }
   },
   "log": {
@@ -493,7 +502,13 @@
       "miss": "{{weapon}} contre CA {{ac}} : raté",
       "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
       "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult, number}}, {{damage}} dégâts",
-      "withAmmo": "{{weapon}} ({{ammo}})"
+      "withAmmo": "{{weapon}} ({{ammo}})",
+      "corrected": "{{text}} (CA {{from}} → {{to}} : {{was}} → {{now}})",
+      "outcome": {
+        "miss": "RATÉ",
+        "hit": "TOUCHÉ",
+        "crit": "CRITIQUE"
+      }
     },
     "cast": {
       "cast": "Lancé : {{spell}}",

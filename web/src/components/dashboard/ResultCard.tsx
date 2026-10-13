@@ -8,6 +8,7 @@ import { useRollStore, type LastRoll } from "@/stores/roll";
 import { formatFactor, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
+import { MAX_TARGET_AC, parseTargetAc, stepTargetAc } from "@/lib/attackAdjust";
 import { captionClass, fieldClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
 
@@ -55,6 +56,7 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
 function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
   return (
     <span
+      data-testid="verdict"
       className={cn(
         "text-3xl font-black uppercase",
         ok ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
@@ -113,6 +115,11 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
           </div>
         </div>
       </div>
+
+      {r.logEntryId !== undefined && (
+        // Keyed by entry so a new attack starts from its own AC.
+        <AdjustAttackAc key={r.logEntryId} result={r} />
+      )}
 
       <dl className="grid grid-cols-3 gap-2">
         <Fact label={t("result.d20")}>{r.d20Roll}</Fact>
@@ -180,6 +187,76 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * The target AC of the attack on the card (the latest roll): − / + around the AC field, Apply. The
+ * server recomputes hit, crit and damage with the dice of the attack.
+ */
+function AdjustAttackAc({ result: r }: { result: Extract<LastRoll, { kind: "attack" }>["result"] }) {
+  const { t } = useTranslation();
+  const adjustLastAttack = useRollStore((s) => s.adjustLastAttack);
+  const rolling = useRollStore((s) => s.rolling);
+  const voided = useLogStore((s) =>
+    s.entries.some((e) => e.id === r.logEntryId && e.status === "voided"),
+  );
+  const [text, setText] = useState(String(r.targetAc));
+  if (voided) return null;
+  const ac = parseTargetAc(text);
+  const changed = ac !== null && ac !== r.targetAc;
+  const step = (by: number) => setText((v) => String(stepTargetAc(parseTargetAc(v) ?? r.targetAc, by)));
+
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2 rounded-lg border p-2.5"
+      aria-label={t("result.adjustAc.label")}
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        if (changed) void adjustLastAttack(ac);
+      }}
+    >
+      <span className={captionClass}>{t("result.adjustAc.title")}</span>
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label={t("result.adjustAc.decrease")}
+          onClick={() => step(-1)}
+        >
+          −
+        </Button>
+        <input
+          className={cn(fieldClass, "w-16 text-center font-mono tabular-nums")}
+          type="number"
+          min={-MAX_TARGET_AC}
+          max={MAX_TARGET_AC}
+          step={1}
+          value={text}
+          aria-label={t("result.adjustAc.value")}
+          aria-invalid={ac === null}
+          onChange={(ev) => setText(ev.target.value)}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label={t("result.adjustAc.increase")}
+          onClick={() => step(1)}
+        >
+          +
+        </Button>
+      </div>
+      <Button type="submit" size="sm" disabled={rolling || !changed}>
+        {t("result.adjustAc.apply")}
+      </Button>
+      {r.previousTargetAc !== undefined && (
+        <span className="text-sm text-muted-foreground" data-testid="ac-corrected">
+          {t("result.adjustAc.was", { ac: r.previousTargetAc })}
+        </span>
+      )}
+    </form>
   );
 }
 

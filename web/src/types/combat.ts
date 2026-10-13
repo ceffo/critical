@@ -75,6 +75,10 @@ export interface RollResult {
   targetAc: number;
   targetSize?: TargetSize;
   ammo?: AmmoUse;
+  /** Target AC and outcome before the latest target AC correction (absent until corrected). */
+  previousTargetAc?: number;
+  previousHit?: boolean;
+  previousCrit?: boolean;
   // Saving-throw context (absent on attacks).
   saveCategory?: SaveCategory;
   /** Adjustment set after the roll (0: none); always present on saves. */

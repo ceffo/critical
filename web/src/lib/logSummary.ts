@@ -77,10 +77,13 @@ function counters(t: TFunction, rounds = 0, charges = 0): string {
   return parts.length > 0 ? parts.join(", ") : t("buffs.untilDismissed");
 }
 
-/** Payload of attack entries: the roll breakdown (combatsvc attackRecord, same shape as RollResult). */
+/**
+ * Payload of attack entries: the roll breakdown (combatsvc attackRecord, same shape as RollResult); a
+ * corrected attack's is the latest amend's.
+ */
 function attackPayload(e: LogEntry): RollResult | null {
   if (e.kind !== "attack") return null;
-  const p = e.payload as Partial<RollResult> | null;
+  const p = (e.effectivePayload ?? e.payload) as Partial<RollResult> | null;
   return p && typeof p.hit === "boolean" && typeof p.weaponName === "string"
     ? (p as RollResult)
     : null;
@@ -140,8 +143,19 @@ function attackText(p: RollResult, t: TFunction): string {
     ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
     : (p.weaponName ?? "");
   const args = { weapon, ac: p.targetAc, damage: p.totalDamage, mult: p.critMultiplier };
-  if (!p.hit) return t("log.attack.miss", args);
-  return t(p.isCrit ? "log.attack.crit" : "log.attack.hit", args);
+  const text = !p.hit
+    ? t("log.attack.miss", args)
+    : t(p.isCrit ? "log.attack.crit" : "log.attack.hit", args);
+  if (p.previousTargetAc === undefined || p.previousHit === undefined) return text;
+  const outcome = (hit: boolean, crit: boolean | undefined) =>
+    t(`log.attack.outcome.${crit ? "crit" : hit ? "hit" : "miss"}`);
+  return t("log.attack.corrected", {
+    text,
+    from: p.previousTargetAc,
+    to: p.targetAc,
+    was: outcome(p.previousHit, p.previousCrit),
+    now: outcome(p.hit, p.isCrit),
+  });
 }
 
 /**

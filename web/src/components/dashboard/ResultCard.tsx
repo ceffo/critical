@@ -64,6 +64,11 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
 
 /** A modifier's label in the player's language (detail = score, weapon, ammo or buff name). */
 function modLabel(t: TFunction, m: { kind: string; detail?: string; value: number }): string {
+  // The crit term carries the matched crit-table range; the default table (and entries logged
+  // before the table existed) have none.
+  if (m.kind === "crit" && (!m.detail || m.detail === "placeholder")) {
+    return t("result.mods.critPlaceholder");
+  }
   return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
 }
 
@@ -84,9 +89,9 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
           <Verdict ok={r.hit} yes={t("result.hit")} no={t("result.miss")} />
           {r.isCrit && (
             <Badge variant="destructive">
-              {t(r.critPlaceholder ? "result.critPlaceholder" : "result.crit", {
-                mult: r.critMultiplier,
-              })}
+              {r.critPlaceholder || r.critFrom === undefined
+                ? t("result.critPlaceholder", { mult: r.critMultiplier })
+                : t("result.crit", { mult: r.critMultiplier, from: r.critFrom, to: r.critTo })}
             </Badge>
           )}
         </div>

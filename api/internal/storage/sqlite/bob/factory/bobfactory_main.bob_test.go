@@ -434,6 +434,30 @@ func TestCreateCharacterWithXPEventsDoesNotDuplicateParent(t *testing.T) {
 	}
 }
 
+func TestCreateCritTableRow(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewCritTableRowWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating CritTableRow: %v", err)
+	}
+}
+
 func TestCreateHPEvent(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")

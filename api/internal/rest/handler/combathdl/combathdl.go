@@ -1,10 +1,13 @@
-// Package combathdl exposes /api/roll/attack and /api/roll/save.
+// Package combathdl exposes /api/roll/attack, /api/roll/save, /api/weapons and
+// /api/crit-table.
 package combathdl
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/render"
@@ -14,6 +17,7 @@ import (
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
+	Put(pattern string, h http.HandlerFunc)
 }
 
 // CharacterIDFunc resolves the active character.
@@ -23,6 +27,8 @@ type combatSvc interface {
 	ResolveAttack(ctx context.Context, characterID int64, req combatsvc.AttackRequest) (*combatsvc.RollResult, error)
 	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error)
 	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
+	GetCritTable(ctx context.Context) (combatsvc.CritTable, error)
+	SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error)
 }
 
 // RegisterRoutes wires combat endpoints onto r.
@@ -30,6 +36,8 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/attack", render.Handle(ResolveAttack(charID, svc)))
 	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
 	r.Get("/api/weapons", render.Handle(ListWeapons(svc)))
+	r.Get("/api/crit-table", render.Handle(GetCritTable(svc)))
+	r.Put("/api/crit-table", render.Handle(PutCritTable(svc)))
 }
 
 // WeaponDTO is the wire shape of a weapon catalog entry.
@@ -135,6 +143,8 @@ type RollResultDTO struct {
 	IsCrit          bool          `json:"isCrit"`
 	CritMultiplier  int           `json:"critMultiplier"`
 	CritPlaceholder bool          `json:"critPlaceholder"`
+	CritFrom        int           `json:"critFrom"`
+	CritTo          int           `json:"critTo"`
 	BaseThac0       int           `json:"baseThac0"`
 	Modifiers       []ModifierDTO `json:"modifiers"`
 	EffectiveThac0  int           `json:"effectiveThac0"`
@@ -202,8 +212,8 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 	}
 	out := RollResultDTO{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
-		CritPlaceholder: r.CritPlaceholder,
-		BaseThac0:       r.BaseThac0, Modifiers: mods, EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded,
+		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo,
+		BaseThac0: r.BaseThac0, Modifiers: mods, EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded,
 		Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
@@ -215,4 +225,80 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		out.Ammo = &AmmoDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}
 	}
 	return out
+}
+
+// CritRowDTO is one inclusive D100 range of the crit table.
+type CritRowDTO struct {
+	From       int `json:"from"`
+	To         int `json:"to"`
+	Multiplier int `json:"multiplier"`
+}
+
+// CritTableDTO is the wire shape of the house crit table. Placeholder is true
+// while it is still the unedited default.
+type CritTableDTO struct {
+	Rows        []CritRowDTO `json:"rows"`
+	Placeholder bool         `json:"placeholder"`
+}
+
+func toCritTableDTO(t combatsvc.CritTable) CritTableDTO {
+	rows := make([]CritRowDTO, 0, len(t.Rows))
+	for _, r := range t.Rows {
+		rows = append(rows, CritRowDTO{From: r.From, To: r.To, Multiplier: r.Multiplier})
+	}
+	return CritTableDTO{Rows: rows, Placeholder: t.Placeholder}
+}
+
+// GetCritTable returns the house crit table.
+func GetCritTable(svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		t, err := svc.GetCritTable(r.Context())
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toCritTableDTO(t))
+		return nil
+	}
+}
+
+// PutCritTable replaces the whole crit table; an invalid table is a 400 with
+// {"error"} naming the bad row and the stored table is left alone.
+func PutCritTable(svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		// Numbers are decoded as text so a 2.5 gets a message about the row,
+		// not "invalid request body".
+		var req struct {
+			Rows []struct {
+				From       json.Number `json:"from"`
+				To         json.Number `json:"to"`
+				Multiplier json.Number `json:"multiplier"`
+			} `json:"rows"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if len(req.Rows) == 0 {
+			return render.BadRequestError("rows must list at least one range covering 1-100")
+		}
+		rows := make([]combatsvc.CritRow, 0, len(req.Rows))
+		for i, in := range req.Rows {
+			from, errFrom := strconv.Atoi(in.From.String())
+			to, errTo := strconv.Atoi(in.To.String())
+			mult, errMult := strconv.Atoi(in.Multiplier.String())
+			label := fmt.Sprintf("row %d (%s-%s)", i+1, in.From, in.To)
+			switch {
+			case errFrom != nil || errTo != nil:
+				return render.BadRequestError(label + ": from and to must be whole numbers")
+			case errMult != nil:
+				return render.BadRequestError(fmt.Sprintf("%s: multiplier must be a whole number, got %q", label, in.Multiplier.String()))
+			}
+			rows = append(rows, combatsvc.CritRow{From: from, To: to, Multiplier: mult})
+		}
+		t, err := svc.SetCritTable(r.Context(), rows)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toCritTableDTO(t))
+		return nil
+	}
 }

@@ -10,6 +10,8 @@ type attackRecord struct {
 	IsCrit          bool             `json:"isCrit"`
 	CritMultiplier  int              `json:"critMultiplier"`
 	CritPlaceholder bool             `json:"critPlaceholder"`
+	CritFrom        int              `json:"critFrom"`
+	CritTo          int              `json:"critTo"`
 	BaseThac0       int              `json:"baseThac0"`
 	Modifiers       []modifierRecord `json:"modifiers"`
 	EffectiveThac0  int              `json:"effectiveThac0"`
@@ -66,7 +68,7 @@ func toRecord(r *RollResult) attackRecord {
 	}
 	out := attackRecord{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
-		CritPlaceholder: r.CritPlaceholder, BaseThac0: r.BaseThac0, Modifiers: mods,
+		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo, BaseThac0: r.BaseThac0, Modifiers: mods,
 		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,

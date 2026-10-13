@@ -62,6 +62,7 @@ packages:
       Items:
       Rules:
       Log:
+      CritStore:
   github.com/ceffo/critical/api/internal/domain/service/itemsvc:
     config:
       dir: "internal/domain/service/itemsvc/mocks"

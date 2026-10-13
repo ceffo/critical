@@ -46,8 +46,11 @@ export interface RollResult {
   d100CritRoll: number;
   isCrit: boolean;
   critMultiplier: number;
-  /** The crit multiplier is the ×2 placeholder until the crit table lands. */
+  /** The multiplier came from the default crit table, which nobody has edited yet. */
   critPlaceholder: boolean;
+  /** The crit-table range the crit d100 fell in (absent on entries logged before the table existed). */
+  critFrom?: number;
+  critTo?: number;
   baseThac0: number;
   modifiers: Modifier[];
   effectiveThac0: number;
@@ -106,3 +109,16 @@ export const SAVE_CATEGORIES = [
   "spell",
 ] as const;
 export type SaveCategory = (typeof SAVE_CATEGORIES)[number];
+
+/** One inclusive D100 range of the house crit table and its multiplier. */
+export interface CritRow {
+  from: number;
+  to: number;
+  multiplier: number;
+}
+
+export interface CritTable {
+  rows: CritRow[];
+  /** Still the unedited default (1-100 → ×2). */
+  placeholder: boolean;
+}

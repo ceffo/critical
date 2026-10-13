@@ -23,6 +23,9 @@ var _ bob.HookableType = &ActiveBuff{}
 // Make sure the type Character runs hooks after queries
 var _ bob.HookableType = &Character{}
 
+// Make sure the type CritTableRow runs hooks after queries
+var _ bob.HookableType = &CritTableRow{}
+
 // Make sure the type HPEvent runs hooks after queries
 var _ bob.HookableType = &HPEvent{}
 

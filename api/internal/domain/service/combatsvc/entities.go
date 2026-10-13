@@ -13,7 +13,7 @@ const (
 	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name
 	ModBuff        ModifierKind = "buff"         // a buff's to-hit/damage/save bonus, Detail = buff name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
-	ModCrit        ModifierKind = "crit"         // house crit multiplier (placeholder x2)
+	ModCrit        ModifierKind = "crit"         // house crit multiplier; Detail = matched range or "placeholder"
 )
 
 // Modifier is a labeled bonus or penalty applied to a roll.
@@ -90,8 +90,11 @@ type RollResult struct {
 	D100CritRoll   int
 	IsCrit         bool
 	CritMultiplier int
-	// CritPlaceholder marks the crit multiplier as the x2 placeholder until
-	// the house crit table lands (critical-qki.12).
+	// CritFrom..CritTo is the crit-table range the crit d100 fell in (zero
+	// when the attack is not a crit).
+	CritFrom, CritTo int
+	// CritPlaceholder marks the multiplier as coming from the default
+	// table, which nobody has edited yet.
 	CritPlaceholder bool
 	BaseThac0       int
 	Modifiers       []Modifier

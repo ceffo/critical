@@ -1,0 +1,263 @@
+// Package prepsvc owns the daily spell preparation: the Bard picks, from the
+// spellbook, the spells to have ready today, within the PHB Table 32 limit per
+// spell level for the character's level. The preparation is stored as the
+// spell slot list (spellsvc owns casting and the used flags), changed and
+// recorded in the action log in one transaction, and voidable: prepsvc is the
+// Restorer of the StateKey snapshots.
+package prepsvc
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+)
+
+// StateKey is the action-log snapshot key of the preparation (the slot list).
+const StateKey = "spell_slots"
+
+// Service-local sentinels.
+var (
+	// ErrNotInSpellbook: a requested spell id is not in the Bard's spellbook.
+	ErrNotInSpellbook = errors.New("spell is not in the spellbook")
+	// ErrOverLimit: more spells of one level than the PHB table allows.
+	ErrOverLimit = errors.New("too many spells for this level")
+)
+
+// SpellbookEntry is one spell the Bard knows. ID is the snake_case slug of the
+// English name (the i18n and spell-effects key).
+type SpellbookEntry struct {
+	ID    string
+	Name  string
+	Level int
+}
+
+// LevelLimit is the number of spells of one level that may be prepared.
+type LevelLimit struct {
+	Level int
+	Max   int
+}
+
+// Info is what the preparation editor needs: the spellbook and the limits.
+type Info struct {
+	Spellbook []SpellbookEntry
+	Limits    []LevelLimit
+}
+
+// SVC is the driver port.
+type SVC interface {
+	domain.Service
+	actionlog.Restorer
+
+	// Info returns the spellbook and the per-level limits for the character.
+	Info(ctx context.Context, characterID int64) (Info, error)
+	// Prepare replaces today's preparation with the given spell ids
+	// (duplicates allowed) and returns the new slot list.
+	Prepare(ctx context.Context, characterID int64, spellIDs []string) ([]spellsvc.SpellSlot, error)
+}
+
+// Spellbook is the read port over the spells the Bard knows.
+type Spellbook interface {
+	All() []SpellbookEntry
+	Get(id string) (SpellbookEntry, bool)
+}
+
+// Limits is the PHB bard table port (ruletablesvc.Lookup satisfies it).
+type Limits interface {
+	BardSpellsPerDay(level int) (map[int]int, error)
+}
+
+// Characters supplies the character level (charactersvc.SVC satisfies it).
+type Characters interface {
+	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+}
+
+// Slots is the spell slot store (spellsvc's DAL satisfies it).
+type Slots interface {
+	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
+	SaveSlots(ctx context.Context, characterID int64, slots []spellsvc.SpellSlot) error
+}
+
+// Log records the preparation in the action log (actionlogsvc satisfies it).
+type Log interface {
+	Record(ctx context.Context, e actionlog.NewEntry) (int64, error)
+}
+
+// Deps are the collaborators of the service; all are required.
+type Deps struct {
+	Slots      Slots
+	Spellbook  Spellbook
+	Limits     Limits
+	Characters Characters
+	Log        Log
+	Tx         domain.TxRunner
+}
+
+type service struct{ Deps }
+
+// New constructs the service.
+func New(d Deps) (SVC, error) {
+	if d.Slots == nil || d.Spellbook == nil || d.Limits == nil || d.Characters == nil || d.Log == nil || d.Tx == nil {
+		return nil, fmt.Errorf("prepsvc: nil dependency")
+	}
+	return &service{d}, nil
+}
+
+func (s *service) Health(_ context.Context) error { return nil }
+func (s *service) Close(_ context.Context) error  { return nil }
+
+func (s *service) limits(ctx context.Context, characterID int64) (map[int]int, error) {
+	c, err := s.Characters.GetCharacter(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("get character: %w", err)
+	}
+	limits, err := s.Limits.BardSpellsPerDay(c.Level)
+	if err != nil {
+		return nil, fmt.Errorf("spells per day: %w", err)
+	}
+	return limits, nil
+}
+
+func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
+	limits, err := s.limits(ctx, characterID)
+	if err != nil {
+		return Info{}, err
+	}
+	out := Info{Spellbook: s.Spellbook.All()}
+	for level, max := range limits {
+		out.Limits = append(out.Limits, LevelLimit{Level: level, Max: max})
+	}
+	sort.Slice(out.Limits, func(i, j int) bool { return out.Limits[i].Level < out.Limits[j].Level })
+	return out, nil
+}
+
+func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []string) ([]spellsvc.SpellSlot, error) {
+	limits, err := s.limits(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	picked := make([]SpellbookEntry, 0, len(spellIDs))
+	perLevel := map[int]int{}
+	for _, id := range spellIDs {
+		e, ok := s.Spellbook.Get(id)
+		if !ok {
+			return nil, fmt.Errorf("%w: %q", ErrNotInSpellbook, id)
+		}
+		picked = append(picked, e)
+		perLevel[e.Level]++
+	}
+	for level, n := range perLevel {
+		if n > limits[level] {
+			return nil, fmt.Errorf("%w: %d at level %d, the limit is %d", ErrOverLimit, n, level, limits[level])
+		}
+	}
+	// Stable by level so the request order is kept within a level.
+	sort.SliceStable(picked, func(i, j int) bool { return picked[i].Level < picked[j].Level })
+
+	var out []spellsvc.SpellSlot
+	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
+		before, err := s.Slots.GetSlots(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("get slots: %w", err)
+		}
+		out = carryUsed(before, picked)
+		if err := s.Slots.SaveSlots(ctx, characterID, out); err != nil {
+			return fmt.Errorf("save slots: %w", err)
+		}
+		beforeJSON, err := encode(before)
+		if err != nil {
+			return err
+		}
+		afterJSON, err := encode(out)
+		if err != nil {
+			return err
+		}
+		_, err = s.Log.Record(ctx, actionlog.NewEntry{
+			CharacterID: characterID,
+			Kind:        actionlog.KindSpellPrep,
+			Summary:     summary(picked),
+			Snapshots:   []actionlog.Snapshot{{Key: StateKey, Before: beforeJSON, After: afterJSON}},
+		})
+		if err != nil {
+			return fmt.Errorf("record preparation: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Restore writes a snapshotted slot list back (void of a preparation).
+func (s *service) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
+	var slots []spellsvc.SpellSlot
+	if err := json.Unmarshal(state, &slots); err != nil {
+		return fmt.Errorf("decode spell_slots snapshot: %w", err)
+	}
+	if err := s.Slots.SaveSlots(ctx, characterID, slots); err != nil {
+		return fmt.Errorf("restore slots: %w", err)
+	}
+	return nil
+}
+
+// carryUsed builds the new slot list; a spell that was already prepared keeps
+// its used flag so editing the preparation mid-day does not refill casts.
+func carryUsed(before []spellsvc.SpellSlot, picked []SpellbookEntry) []spellsvc.SpellSlot {
+	usedLeft := map[string]int{}
+	for _, b := range before {
+		if b.Used {
+			usedLeft[b.SpellID]++
+		}
+	}
+	out := make([]spellsvc.SpellSlot, 0, len(picked))
+	for _, e := range picked {
+		used := usedLeft[e.ID] > 0
+		if used {
+			usedLeft[e.ID]--
+		}
+		out = append(out, spellsvc.SpellSlot{Level: e.Level, SpellID: e.ID, PreparedSpellName: e.Name, Used: used})
+	}
+	return out
+}
+
+func summary(picked []SpellbookEntry) string {
+	if len(picked) == 0 {
+		return "Prepared no spells"
+	}
+	var parts []string
+	counts := map[string]int{}
+	var order []string
+	for _, e := range picked {
+		if counts[e.Name] == 0 {
+			order = append(order, e.Name)
+		}
+		counts[e.Name]++
+	}
+	for _, name := range order {
+		if n := counts[name]; n > 1 {
+			parts = append(parts, fmt.Sprintf("%s ×%d", name, n))
+		} else {
+			parts = append(parts, name)
+		}
+	}
+	return "Prepared: " + strings.Join(parts, ", ")
+}
+
+func encode(slots []spellsvc.SpellSlot) (json.RawMessage, error) {
+	if slots == nil {
+		slots = []spellsvc.SpellSlot{}
+	}
+	b, err := json.Marshal(slots)
+	if err != nil {
+		return nil, fmt.Errorf("encode slots: %w", err)
+	}
+	return b, nil
+}

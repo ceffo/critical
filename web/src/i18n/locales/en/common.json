@@ -122,7 +122,21 @@
     "remaining": "{{left}} / {{total}}",
     "used": "Used",
     "cast": "Cast",
-    "castLabel": "Cast {{name}}"
+    "castLabel": "Cast {{name}}",
+    "prepare": "Prepare spells",
+    "prepareTitle": "Prepare today's spells",
+    "preparedCount": "{{count}} / {{max}} prepared",
+    "save": "Save preparation",
+    "cancel": "Cancel",
+    "search": "Search the spellbook...",
+    "searchLabel": "Search the spellbook",
+    "spellbook": "Spellbook",
+    "draft": "Today's preparation",
+    "draftEmpty": "Nothing prepared yet. Add spells from the spellbook.",
+    "add": "Add {{name}}",
+    "addShort": "Add",
+    "remove": "Remove {{name}}",
+    "noMatch": "No spell matches."
   },
   "lookup": {
     "search": "Search spells...",
@@ -175,7 +189,8 @@
       "buff_change": "Buff",
       "round_advance": "Round",
       "attack": "Attack",
-      "item_use": "Item"
+      "item_use": "Item",
+      "spell_prep": "Prepare"
     },
     "status": {
       "active": "Active",

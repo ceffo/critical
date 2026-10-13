@@ -18,7 +18,10 @@ type Spell struct {
 
 // SpellSlot is one prepared-spell slot in the daily allotment.
 type SpellSlot struct {
-	Level             int
+	Level int
+	// SpellID is the snake_case slug of the English name (empty on slots
+	// saved before spell preparation existed).
+	SpellID           string
 	PreparedSpellName string
 	Used              bool
 }

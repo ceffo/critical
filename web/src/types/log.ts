@@ -7,7 +7,8 @@ export type LogKind =
   | "round_advance"
   | "attack"
   | "item_use"
-  | "spell_prep";
+  | "spell_prep"
+  | "long_rest";
 
 export type LogStatus = "active" | "amended" | "voided";
 

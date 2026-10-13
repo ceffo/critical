@@ -105,3 +105,74 @@ test("the Power Gem's Dispel is usable once, until a long rest", async ({ page }
   await expect(gem.getByRole("button", { name: /^Use/ })).toBeEnabled();
   await snap(page, "gem-after-long-rest");
 });
+
+// --- Review checklist: HTTP-level void semantics and stale-UI refusal ---
+
+type Api = { post: (path: string) => Promise<{ status: number; body: Record<string, unknown> }>; count: (id: string) => Promise<number> };
+
+function api(base: string): Api {
+  return {
+    post: async (path) => {
+      const res = await fetch(`${base}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      return { status: res.status, body: (await res.json().catch(() => ({}))) as Record<string, unknown> };
+    },
+    count: async (id) => {
+      const items = (await (await fetch(`${base}/api/items`)).json()) as { id: string; count: number }[];
+      return items.find((i) => i.id === id)!.count;
+    },
+  };
+}
+
+test("voiding the first of two wand uses is blocked (409) and the count stays", async ({ stack }) => {
+  const a = api(stack.apiUrl);
+  const first = await a.post("/api/items/wand_lightning/use");
+  const second = await a.post("/api/items/wand_lightning/use");
+  expect(await a.count("wand_lightning")).toBe(2);
+
+  const blocked = await a.post(`/api/log/${first.body.logEntryId}/void`);
+  expect(blocked.status).toBe(409);
+  expect(blocked.body).toHaveProperty("error");
+  expect(await a.count("wand_lightning")).toBe(2);
+  expect(second.status).toBe(200);
+});
+
+test("use, void the latest, use again: count is right and the new entry is voidable", async ({ stack }) => {
+  const a = api(stack.apiUrl);
+  const first = await a.post("/api/items/wand_lightning/use");
+  expect(await a.count("wand_lightning")).toBe(3);
+  expect((await a.post(`/api/log/${first.body.logEntryId}/void`)).status).toBe(200);
+  expect(await a.count("wand_lightning")).toBe(4);
+
+  const again = await a.post("/api/items/wand_lightning/use");
+  expect(again.body.remaining).toBe(3);
+  expect(await a.count("wand_lightning")).toBe(3);
+  expect((await a.post(`/api/log/${again.body.logEntryId}/void`)).status).toBe(200);
+  expect(await a.count("wand_lightning")).toBe(4);
+});
+
+test("gem: use, long rest, then voiding the old use leaves it at 1", async ({ stack }) => {
+  const a = api(stack.apiUrl);
+  const use = await a.post("/api/items/power_gem_dispel/use");
+  expect(await a.count("power_gem_dispel")).toBe(0);
+  expect((await a.post("/api/rest/long")).status).toBe(200);
+  expect(await a.count("power_gem_dispel")).toBe(1);
+
+  await a.post(`/api/log/${use.body.logEntryId}/void`);
+  expect(await a.count("power_gem_dispel")).toBe(1);
+});
+
+test("Use on an item another client emptied shows the error and the count stays 0; ammo has no Use button", async ({ page, stack }) => {
+  await openItems(page);
+  for (const id of ["arrows_plus1", "arrows_plus2", "arrows_plus3"]) {
+    await expect(row(page, id).getByRole("button")).toHaveCount(0);
+  }
+  // The gem is emptied behind the UI's back; the stale row still offers Use.
+  expect((await api(stack.apiUrl).post("/api/items/power_gem_dispel/use")).status).toBe(200);
+  const gem = row(page, "power_gem_dispel");
+  await expect(gem.getByTestId("item-count")).toHaveText("1 / 1");
+  await gem.getByRole("button", { name: /^Use/ }).click();
+
+  await expect(page.getByRole("alert")).toContainText("empty");
+  await expect(gem.getByTestId("item-count")).toHaveText("0 / 1");
+  await snap(page, "use-at-zero-error");
+});

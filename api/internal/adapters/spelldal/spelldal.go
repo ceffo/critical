@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 	bobmodels "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
@@ -106,18 +107,40 @@ func (d *DAL) Search(ctx context.Context, query, class string) ([]spellsvc.Spell
 	}
 	spells := make([]spellsvc.Spell, 0, len(rows))
 	for _, r := range rows {
-		spells = append(spells, spellsvc.Spell{
-			Name: r.Name, Class: r.Class, Level: int(r.Level),
-			School:       r.School.GetOrZero(),
-			Sphere:       r.Sphere.GetOrZero(),
-			CastingTime:  r.CastingTime.GetOrZero(),
-			Range:        r.Range.GetOrZero(),
-			Duration:     r.Duration.GetOrZero(),
-			AreaOfEffect: r.AreaOfEffect.GetOrZero(),
-			Components:   r.Components.GetOrZero(),
-			SavingThrow:  r.SavingThrow.GetOrZero(),
-			Description:  r.Description.GetOrZero(),
-		})
+		spells = append(spells, toSpell(r))
 	}
 	return spells, nil
+}
+
+// Describe finds the spell whose id (the slug of its English name) is
+// spellID, preferring the Wizard row when both lists have the name. The
+// table holds under a thousand static rows, so it scans the names.
+func (d *DAL) Describe(ctx context.Context, spellID string) (spellsvc.Spell, bool, error) {
+	rows, err := bobmodels.Spells.Query(
+		sm.OrderBy(bobmodels.Spells.Columns.Class).Desc(), // Wizard before Priest
+	).All(ctx, d.exec(ctx))
+	if err != nil {
+		return spellsvc.Spell{}, false, fmt.Errorf("query spells: %w", err)
+	}
+	for _, r := range rows {
+		if spelleffectsvc.Slug(r.Name) == spellID {
+			return toSpell(r), true, nil
+		}
+	}
+	return spellsvc.Spell{}, false, nil
+}
+
+func toSpell(r *bobmodels.Spell) spellsvc.Spell {
+	return spellsvc.Spell{
+		Name: r.Name, Class: r.Class, Level: int(r.Level),
+		School:       r.School.GetOrZero(),
+		Sphere:       r.Sphere.GetOrZero(),
+		CastingTime:  r.CastingTime.GetOrZero(),
+		Range:        r.Range.GetOrZero(),
+		Duration:     r.Duration.GetOrZero(),
+		AreaOfEffect: r.AreaOfEffect.GetOrZero(),
+		Components:   r.Components.GetOrZero(),
+		SavingThrow:  r.SavingThrow.GetOrZero(),
+		Description:  r.Description.GetOrZero(),
+	}
 }

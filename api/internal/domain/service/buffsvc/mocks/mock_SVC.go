@@ -84,6 +84,71 @@ func (_c *MockSVC_Activate_Call) RunAndReturn(run func(context.Context, int64, b
 	return _c
 }
 
+// Add provides a mock function with given fields: ctx, characterID, buff
+func (_m *MockSVC) Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {
+	ret := _m.Called(ctx, characterID, buff)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Add")
+	}
+
+	var r0 buffsvc.BuffEffect
+	var r1 actionlog.Snapshot
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)); ok {
+		return rf(ctx, characterID, buff)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, buffsvc.BuffEffect) buffsvc.BuffEffect); ok {
+		r0 = rf(ctx, characterID, buff)
+	} else {
+		r0 = ret.Get(0).(buffsvc.BuffEffect)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, buffsvc.BuffEffect) actionlog.Snapshot); ok {
+		r1 = rf(ctx, characterID, buff)
+	} else {
+		r1 = ret.Get(1).(actionlog.Snapshot)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, buffsvc.BuffEffect) error); ok {
+		r2 = rf(ctx, characterID, buff)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_Add_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Add'
+type MockSVC_Add_Call struct {
+	*mock.Call
+}
+
+// Add is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - buff buffsvc.BuffEffect
+func (_e *MockSVC_Expecter) Add(ctx interface{}, characterID interface{}, buff interface{}) *MockSVC_Add_Call {
+	return &MockSVC_Add_Call{Call: _e.mock.On("Add", ctx, characterID, buff)}
+}
+
+func (_c *MockSVC_Add_Call) Run(run func(ctx context.Context, characterID int64, buff buffsvc.BuffEffect)) *MockSVC_Add_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(buffsvc.BuffEffect))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Add_Call) Return(_a0 buffsvc.BuffEffect, _a1 actionlog.Snapshot, _a2 error) *MockSVC_Add_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockSVC_Add_Call) RunAndReturn(run func(context.Context, int64, buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)) *MockSVC_Add_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // AdvanceRound provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) AdvanceRound(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, error) {
 	ret := _m.Called(ctx, characterID)

@@ -25,6 +25,10 @@ type SVC interface {
 	// at the current effective STR.
 	ListStatus(ctx context.Context, characterID int64) ([]BuffStatus, error)
 	Activate(ctx context.Context, characterID int64, buff BuffEffect) ([]BuffEffect, error)
+	// Add puts a buff on the active list (replacing one with the same name)
+	// without recording: the caller records the returned snapshot in its own
+	// entry, inside the transaction ctx carries (a spell cast).
+	Add(ctx context.Context, characterID int64, buff BuffEffect) (BuffEffect, actionlog.Snapshot, error)
 	Edit(ctx context.Context, characterID int64, buffID string, e BuffEdit) ([]BuffEffect, error)
 	Dismiss(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
 	// Trigger uses one charge of a charged buff (a Stoneskin layer absorbed a

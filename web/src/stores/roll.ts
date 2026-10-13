@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
+import type { CastResult } from "@/types/spells";
 import { resolveAttack } from "@/api/combat";
 import { rollSavingThrow } from "@/api/roll";
 import { postUseItem } from "@/api/items";
@@ -10,6 +11,7 @@ import { useTableStore } from "./table";
 export type LastRoll =
   | { kind: "attack"; result: RollResult }
   | { kind: "save"; category: SaveCategory; result: RollResult }
+  | { kind: "cast"; result: CastResult }
   | { kind: "item"; result: UseResult };
 
 interface RollStore {

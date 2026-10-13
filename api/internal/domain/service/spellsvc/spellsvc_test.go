@@ -2,7 +2,6 @@ package spellsvc_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -43,66 +42,6 @@ func TestGetSlots(t *testing.T) {
 	got, err := svc.GetSlots(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, slots(), got)
-}
-
-func TestCast(t *testing.T) {
-	tests := []struct {
-		name      string
-		index     int
-		wantErr   error
-		wantSaved bool
-	}{
-		{name: "unused slot is consumed", index: 0, wantSaved: true},
-		{name: "already used", index: 1, wantErr: spellsvc.ErrSlotAlreadyUsed},
-		{name: "negative index", index: -1, wantErr: spellsvc.ErrInvalidSlotIndex},
-		{name: "index past end", index: 3, wantErr: spellsvc.ErrInvalidSlotIndex},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			svc, dal, _ := newSvc(t)
-			dal.EXPECT().GetSlots(mock.Anything, int64(1)).Return(slots(), nil)
-			if tt.wantSaved {
-				want := slots()
-				want[tt.index].Used = true
-				dal.EXPECT().SaveSlots(mock.Anything, int64(1), want).Return(nil)
-			}
-
-			got, err := svc.Cast(context.Background(), 1, tt.index)
-			if tt.wantErr != nil {
-				require.Error(t, err)
-				assert.True(t, errors.Is(err, tt.wantErr))
-				assert.Nil(t, got)
-				dal.AssertNotCalled(t, "SaveSlots", mock.Anything, mock.Anything, mock.Anything)
-				return
-			}
-			require.NoError(t, err)
-			assert.True(t, got[tt.index].Used)
-			// Only the cast slot changes.
-			assert.True(t, got[1].Used)
-			assert.False(t, got[2].Used)
-		})
-	}
-}
-
-func TestCast_DoesNotMutateDALSlice(t *testing.T) {
-	svc, dal, _ := newSvc(t)
-	orig := slots()
-	dal.EXPECT().GetSlots(mock.Anything, int64(1)).Return(orig, nil)
-	dal.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).Return(nil)
-
-	_, err := svc.Cast(context.Background(), 1, 0)
-	require.NoError(t, err)
-	assert.False(t, orig[0].Used)
-}
-
-func TestCast_SaveError(t *testing.T) {
-	svc, dal, _ := newSvc(t)
-	boom := errors.New("boom")
-	dal.EXPECT().GetSlots(mock.Anything, int64(1)).Return(slots(), nil)
-	dal.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).Return(boom)
-
-	_, err := svc.Cast(context.Background(), 1, 0)
-	assert.True(t, errors.Is(err, boom))
 }
 
 func TestResetSlots(t *testing.T) {

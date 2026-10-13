@@ -85,6 +85,12 @@ combatsvc records every attack (kind `attack`, payload = the full roll breakdown
 `/api/roll/attack` response); a missile attack spends one ammo item through `itemsvc.Use` in the same
 transaction and snapshots it under the per-item key `items:<id>` (`itemsvc.UseSnapshot`); the
 Restorer registered for the `items` family (`itemSvc.Restorers()`) writes the count back on void.
+castsvc records every cast and received spell (kind `cast`) as one entry with the `spell_slots`
+snapshot (`prepsvc.SlotsSnapshot`, a cast only) and the `buffs` snapshot (`buffsvc.Add`, which
+writes the buff inside the caller's transaction and replaces a same-name buff), so voiding gives the
+slot back and removes the buff. Effects come from `seeds/spell_effects.json` at the caster level (the
+Bard's level for a cast, the caster's for a received spell; by-group dice use the Bard's group,
+rogue); low-confidence, utility and uncatalogued spells return their text only.
 A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
 later entries with the same full key (a +1 arrow does not block voiding a +3 shot).
 

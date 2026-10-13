@@ -5,7 +5,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -22,42 +24,84 @@ func (f *fakeTx) InTx(ctx context.Context, fn func(context.Context) error) error
 	return fn(ctx)
 }
 
+type fixture struct {
+	svc     restsvc.SVC
+	spells  *mocks.MockSpells
+	items   *mocks.MockItems
+	tx      *fakeTx
+	entries []actionlog.NewEntry
+}
+
+func newFixture(t *testing.T) *fixture {
+	t.Helper()
+	f := &fixture{spells: mocks.NewMockSpells(t), items: mocks.NewMockItems(t), tx: &fakeTx{}}
+	log := mocks.NewMockLog(t)
+	log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, e actionlog.NewEntry) (int64, error) {
+			f.entries = append(f.entries, e)
+			return 7, nil
+		}).Maybe()
+	svc, err := restsvc.New(f.spells, f.items, log, f.tx)
+	require.NoError(t, err)
+	f.svc = svc
+	return f
+}
+
 func TestNew_NilDependency(t *testing.T) {
-	_, err := restsvc.New(nil, mocks.NewMockItems(t), &fakeTx{})
+	_, err := restsvc.New(nil, mocks.NewMockItems(t), mocks.NewMockLog(t), &fakeTx{})
+	require.Error(t, err)
+	_, err = restsvc.New(mocks.NewMockSpells(t), mocks.NewMockItems(t), nil, &fakeTx{})
 	require.Error(t, err)
 }
 
-func TestLongRest_ResetsBothInsideOneTransaction(t *testing.T) {
-	spells, items, tx := mocks.NewMockSpells(t), mocks.NewMockItems(t), &fakeTx{}
-	svc, err := restsvc.New(spells, items, tx)
-	require.NoError(t, err)
-	spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{{Level: 1}}, nil)
-	items.EXPECT().ResetDaily(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Count: 1}}, nil)
+// The rest is one logged entry: the slot list always (so it blocks voiding
+// an older cast), plus each item whose count changed.
+func TestLongRest_ResetsBothInOneLoggedTransaction(t *testing.T) {
+	f := newFixture(t)
+	before := []spellsvc.SpellSlot{{Level: 1, SpellID: "sleep", Used: true}, {Level: 3, SpellID: "haste"}}
+	after := []spellsvc.SpellSlot{{Level: 1, SpellID: "sleep"}, {Level: 3, SpellID: "haste"}}
+	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(before, nil)
+	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(after, nil)
+	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: "Gem", Count: 0}, {ID: "arrows", Count: 9}}, nil)
+	f.items.EXPECT().ResetDaily(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: "Gem", Count: 1}, {ID: "arrows", Count: 9}}, nil)
 
-	got, err := svc.LongRest(context.Background(), 1)
+	got, err := f.svc.LongRest(context.Background(), 1)
 	require.NoError(t, err)
-	assert.Equal(t, 1, tx.calls)
-	assert.Equal(t, []spellsvc.SpellSlot{{Level: 1}}, got.Slots)
-	assert.Equal(t, []itemsvc.Item{{ID: "gem", Count: 1}}, got.Items)
+	assert.Equal(t, 1, f.tx.calls)
+	assert.Equal(t, after, got.Slots)
+	assert.Equal(t, int64(7), got.EntryID)
+	require.Len(t, f.entries, 1)
+	e := f.entries[0]
+	assert.Equal(t, actionlog.KindLongRest, e.Kind)
+	slotSnap, err := prepsvc.SlotsSnapshot(before, after)
+	require.NoError(t, err)
+	gemSnap, err := itemsvc.CountSnapshot("gem", 0, 1)
+	require.NoError(t, err)
+	assert.Equal(t, []actionlog.Snapshot{slotSnap, gemSnap}, e.Snapshots, "arrows did not change")
+	assert.JSONEq(t, `{"slotsReset":1,"itemsRefilled":["Gem"]}`, string(e.Payload))
 }
 
 func TestLongRest_ItemFailureFailsTheRest(t *testing.T) {
-	spells, items := mocks.NewMockSpells(t), mocks.NewMockItems(t)
-	svc, _ := restsvc.New(spells, items, &fakeTx{})
-	spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, nil)
+	f := newFixture(t)
+	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, nil)
 	boom := errors.New("boom")
-	items.EXPECT().ResetDaily(mock.Anything).Return(nil, boom)
+	f.items.EXPECT().ResetDaily(mock.Anything).Return(nil, boom)
 
-	_, err := svc.LongRest(context.Background(), 1)
+	_, err := f.svc.LongRest(context.Background(), 1)
 	require.ErrorIs(t, err, boom)
+	assert.Empty(t, f.entries)
 }
 
 func TestLongRest_SlotFailureSkipsItems(t *testing.T) {
-	spells, items := mocks.NewMockSpells(t), mocks.NewMockItems(t)
-	svc, _ := restsvc.New(spells, items, &fakeTx{})
+	f := newFixture(t)
+	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
 	boom := errors.New("boom")
-	spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, boom)
+	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, boom)
 
-	_, err := svc.LongRest(context.Background(), 1)
+	_, err := f.svc.LongRest(context.Background(), 1)
 	require.ErrorIs(t, err, boom)
+	assert.Empty(t, f.entries)
 }

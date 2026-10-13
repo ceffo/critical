@@ -171,11 +171,7 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 		if err := s.Slots.SaveSlots(ctx, characterID, out); err != nil {
 			return fmt.Errorf("save slots: %w", err)
 		}
-		beforeJSON, err := encode(before)
-		if err != nil {
-			return err
-		}
-		afterJSON, err := encode(out)
+		snap, err := SlotsSnapshot(before, out)
 		if err != nil {
 			return err
 		}
@@ -183,7 +179,7 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 			CharacterID: characterID,
 			Kind:        actionlog.KindSpellPrep,
 			Summary:     summary(picked),
-			Snapshots:   []actionlog.Snapshot{{Key: StateKey, Before: beforeJSON, After: afterJSON}},
+			Snapshots:   []actionlog.Snapshot{snap},
 		})
 		if err != nil {
 			return fmt.Errorf("record preparation: %w", err)
@@ -249,6 +245,21 @@ func summary(picked []SpellbookEntry) string {
 		}
 	}
 	return "Prepared: " + strings.Join(parts, ", ")
+}
+
+// SlotsSnapshot is the StateKey snapshot of a slot-list change, in the
+// encoding Restore reads. Other services that change the slot list (a spell
+// cast) record it so voiding their entry restores the slots.
+func SlotsSnapshot(before, after []spellsvc.SpellSlot) (actionlog.Snapshot, error) {
+	b, err := encode(before)
+	if err != nil {
+		return actionlog.Snapshot{}, err
+	}
+	a, err := encode(after)
+	if err != nil {
+		return actionlog.Snapshot{}, err
+	}
+	return actionlog.Snapshot{Key: StateKey, Before: b, After: a}, nil
 }
 
 func encode(slots []spellsvc.SpellSlot) (json.RawMessage, error) {

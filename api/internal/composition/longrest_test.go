@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,7 @@ func gemCount(t *testing.T, bs *composition.BackingServices) int {
 func spend(t *testing.T, bs *composition.BackingServices) {
 	t.Helper()
 	ctx := context.Background()
-	_, err := bs.Spells.Cast(ctx, bs.CharacterID, 0)
+	_, err := bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{})
 	require.NoError(t, err)
 	_, err = bs.Items.Use(ctx, "power_gem_dispel")
 	require.NoError(t, err)
@@ -74,6 +75,12 @@ func TestLongRest_RefillsSlotsAndPerDayItems(t *testing.T) {
 	var wand int
 	require.NoError(t, bs.DB.QueryRow(`SELECT count FROM items WHERE id = 'wand_lightning'`).Scan(&wand))
 	assert.Equal(t, 3, wand, "charges that are not per-day stay spent")
+
+	// The rest is logged and voidable: the gem is spent again, the slot used.
+	_, err = bs.Log.Void(context.Background(), bs.CharacterID, res.EntryID)
+	require.NoError(t, err)
+	assert.Zero(t, gemCount(t, bs))
+	assert.Equal(t, 1, usedSlots(t, bs))
 }
 
 type failingItems struct{ itemsvc.SVC }
@@ -85,7 +92,7 @@ func (failingItems) ResetDaily(context.Context) ([]itemsvc.Item, error) {
 func TestLongRest_FailureInItemsRollsBackSlots(t *testing.T) {
 	bs := boot(t)
 	spend(t, bs)
-	svc, err := restsvc.New(bs.Spells, failingItems{bs.Items}, bs.DB)
+	svc, err := restsvc.New(bs.Spells, failingItems{bs.Items}, bs.Log, bs.DB)
 	require.NoError(t, err)
 
 	_, err = svc.LongRest(context.Background(), bs.CharacterID)

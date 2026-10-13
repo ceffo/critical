@@ -22,6 +22,64 @@ func (_m *MockItems) EXPECT() *MockItems_Expecter {
 	return &MockItems_Expecter{mock: &_m.Mock}
 }
 
+// List provides a mock function with given fields: ctx
+func (_m *MockItems) List(ctx context.Context) ([]itemsvc.Item, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for List")
+	}
+
+	var r0 []itemsvc.Item
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]itemsvc.Item, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []itemsvc.Item); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]itemsvc.Item)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockItems_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type MockItems_List_Call struct {
+	*mock.Call
+}
+
+// List is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockItems_Expecter) List(ctx interface{}) *MockItems_List_Call {
+	return &MockItems_List_Call{Call: _e.mock.On("List", ctx)}
+}
+
+func (_c *MockItems_List_Call) Run(run func(ctx context.Context)) *MockItems_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockItems_List_Call) Return(_a0 []itemsvc.Item, _a1 error) *MockItems_List_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockItems_List_Call) RunAndReturn(run func(context.Context) ([]itemsvc.Item, error)) *MockItems_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResetDaily provides a mock function with given fields: ctx
 func (_m *MockItems) ResetDaily(ctx context.Context) ([]itemsvc.Item, error) {
 	ret := _m.Called(ctx)

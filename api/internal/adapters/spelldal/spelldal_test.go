@@ -152,3 +152,34 @@ func TestSlots_ReadsStoredJSON(t *testing.T) {
 		{Level: 2, PreparedSpellName: "Invisibility", Used: true},
 	}, got)
 }
+
+func TestDescribe(t *testing.T) {
+	db := openDB(t)
+	ctx := context.Background()
+	for _, r := range []struct{ name, class string }{
+		{"Light", "Priest"}, {"Light", "Wizard"}, {"Melf's Acid Arrow", "Wizard"}, {"Bless", "Priest"},
+	} {
+		_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES (?, ?, 1, ?)`,
+			r.name, r.class, r.class+" text")
+		require.NoError(t, err)
+	}
+	d := spelldal.New(db)
+	tests := []struct {
+		id, wantName, wantClass string
+		found                   bool
+	}{
+		{"light", "Light", "Wizard", true},
+		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", true},
+		{"bless", "Bless", "Priest", true},
+		{"no_such_spell", "", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.id, func(t *testing.T) {
+			got, ok, err := d.Describe(ctx, tt.id)
+			require.NoError(t, err)
+			assert.Equal(t, tt.found, ok)
+			assert.Equal(t, tt.wantName, got.Name)
+			assert.Equal(t, tt.wantClass, got.Class)
+		})
+	}
+}

@@ -60,7 +60,13 @@ func (s *service) void(ctx context.Context, characterID, id int64) error {
 			return fmt.Errorf("check later entries: %w", err)
 		}
 		if blocked {
-			return fmt.Errorf("%w: entry #%d changed the same state later, void it first", ErrVoidBlocked, laterID)
+			// Name the later entry as the log shows it (ids are not shown).
+			later, err := s.dal.GetEntry(ctx, characterID, laterID)
+			if err != nil {
+				return fmt.Errorf("get entry %d: %w", laterID, err)
+			}
+			return fmt.Errorf("%w: a later entry changed the same state (round %d: %q), void it first",
+				ErrVoidBlocked, later.Round, later.EffectiveSummary())
 		}
 		for _, snap := range e.Snapshots {
 			r := s.restorer(snap.Key)

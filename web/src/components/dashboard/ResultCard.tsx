@@ -6,6 +6,7 @@ import { useRollStore, type LastRoll } from "@/stores/roll";
 import { formatFactor, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { captionClass } from "./fieldStyles";
+import { CastResultView } from "./CastResultView";
 
 /** Full breakdown of the last roll, never a bare number. Values come from the API as-is. */
 export function ResultCard() {
@@ -27,6 +28,8 @@ export function ResultCard() {
           </p>
         ) : last.kind === "attack" ? (
           <AttackResult roll={last} />
+        ) : last.kind === "cast" ? (
+          <CastResultView result={last.result} />
         ) : last.kind === "item" ? (
           <ItemResult roll={last} />
         ) : (

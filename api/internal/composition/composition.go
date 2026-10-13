@@ -22,6 +22,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
@@ -45,6 +46,7 @@ type BackingServices struct {
 	Buffs     buffsvc.SVC
 	Spells    spellsvc.SVC
 	Prep      prepsvc.SVC
+	Cast      castsvc.SVC
 	Combat    combatsvc.SVC
 	Items     itemsvc.SVC
 	Rest      restsvc.SVC
@@ -57,6 +59,16 @@ type BackingServices struct {
 type Config struct {
 	DSN      string
 	SeedsDir string
+	// Dice replaces the crypto dice (tests that need known rolls). Nil in
+	// production.
+	Dice Dice
+}
+
+// Dice is every dice port the services take (diceadpt satisfies it).
+type Dice interface {
+	RollDie(sides int) int
+	RollD20() int
+	RollD100() int
 }
 
 // New opens storage, runs migrations + seeding, builds adapters, then services.
@@ -80,13 +92,17 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	logDAL := actionlogdal.New(db)
 	buffDAL := buffdal.New(db)
 	spellDAL := spelldal.New(db)
-	dice := diceadpt.New()
+	var dice Dice = diceadpt.New()
+	if cfg.Dice != nil {
+		dice = cfg.Dice
+	}
 	weaponDAL := weapondal.New(db)
 	itemDAL := itemdal.New(db)
 
-	// The spell-effects seed is not consumed yet (qki.8 buffs, qki.10 casting
-	// will take it); loading it now makes a malformed formula a startup error.
-	if _, err := spelleffectsadpt.New(cfg.SeedsDir); err != nil {
+	// The spell effects casting applies; a malformed formula is a startup
+	// error.
+	effects, err := spelleffectsadpt.New(cfg.SeedsDir)
+	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -164,7 +180,15 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	restSvc, err := restsvc.New(spellSvc, itemSvc, db)
+	castSvc, err := castsvc.New(castsvc.Deps{
+		Slots: spellDAL, Effects: effects, Texts: spellDAL, Buffs: buffSvc,
+		Characters: charSvc, Dice: dice, Log: logSvc, Tx: db,
+	})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	restSvc, err := restsvc.New(spellSvc, itemSvc, logSvc, db)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -179,10 +203,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Buffs:       buffSvc,
 		Spells:      spellSvc,
 		Prep:        prepSvc,
+		Cast:        castSvc,
 		Combat:      combatSvc,
 		Items:       itemSvc,
 		Rest:        restSvc,
-		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, combatSvc, itemSvc, restSvc},
+		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, restSvc},
 	}, nil
 }
 

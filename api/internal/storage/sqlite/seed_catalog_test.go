@@ -10,7 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func repoSeeds() string { return filepath.Join("..", "..", "..", "..", "seeds") }
+// repoSeeds is the frozen test fixture, not the campaign seeds/.
+func repoSeeds() string { return filepath.Join("..", "..", "..", "testdata", "seeds") }
 
 func openMigrated(t *testing.T) *DB {
 	t.Helper()

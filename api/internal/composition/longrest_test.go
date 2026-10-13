@@ -18,7 +18,7 @@ func boot(t *testing.T) *composition.BackingServices {
 	t.Helper()
 	bs, err := composition.New(context.Background(), composition.Config{
 		DSN:      filepath.Join(t.TempDir(), "t.db"),
-		SeedsDir: filepath.Join("..", "..", "..", "seeds"),
+		SeedsDir: filepath.Join("..", "..", "testdata", "seeds"),
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = bs.Close(context.Background()) })

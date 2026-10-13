@@ -1,25 +1,13 @@
 package spellbookadpt_test
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const catalog = `[{"name":"Mirror Image","class":"Wizard","level":2},{"name":"Fireball","class":"Wizard","level":3},{"name":"Cure Light Wounds","class":"Priest","level":1}]`
-
-func TestRepoSeed_LoadsAndMatchesCatalog(t *testing.T) {
-	b, err := spellbookadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
-	require.NoError(t, err)
-	assert.Len(t, b.All(), 38)
-	e, ok := b.Get("melfs_acid_arrow")
-	require.True(t, ok)
-	assert.Equal(t, "Melf's Acid Arrow", e.Name)
-	assert.Equal(t, 2, e.Level)
-}
 
 func TestParse(t *testing.T) {
 	tests := []struct {

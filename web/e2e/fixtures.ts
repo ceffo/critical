@@ -10,7 +10,8 @@ import { createServer } from "vite";
 const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(webDir, "..");
 const apiBinary = path.join(repoRoot, "bin", "critical-srv"); // `just build-api`
-const seedsDir = path.join(repoRoot, "seeds");
+// The frozen test fixture, never the campaign seeds/ (editing those must not break e2e).
+const seedsDir = path.join(repoRoot, "api", "testdata", "seeds");
 const screensDir = path.join(webDir, "e2e-results", "screens");
 
 /** Ask the OS for a free TCP port. */
@@ -52,7 +53,7 @@ export interface Stack {
 }
 
 /**
- * Copy seeds/ into dir with fields of character.json replaced, for tests that need a specific
+ * Copy the fixture seeds into dir with fields of character.json replaced, for tests that need a specific
  * sheet (e.g. STR 12 so a Strength buff is what reaches 18). Returns the seeds dir to use.
  */
 async function seedsWith(
@@ -72,13 +73,13 @@ async function seedsWith(
 }
 
 export interface StackOptions {
-  /** Fields overriding seeds/character.json for this test, e.g. `test.use({ character: { str: 12 } })`. */
+  /** Fields overriding the fixture character.json for this test, e.g. `test.use({ character: { str: 12 } })`. */
   character: Record<string, unknown>;
 }
 
 /**
  * A throwaway stack: Go API on a free port with a fresh temp SQLite DB seeded
- * from the repo's real seeds/, plus a Vite dev server on a free port proxying
+ * from api/testdata/seeds, plus a Vite dev server on a free port proxying
  * /api to that API. Never touches .dev/ or fixed ports.
  */
 export const test = base.extend<{ stack: Stack } & StackOptions>({

@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The Bard's weapons as seeded (seeds/weapons.json).
+// Weapons built by hand for these tests (independent of seeds/weapons.json).
 var (
 	longsword = combatsvc.Weapon{
 		ID: "longsword", Name: "Long Sword +2", BaseDamage: "1d8", DamageLarge: "1d12",

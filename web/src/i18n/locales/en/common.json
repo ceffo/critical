@@ -15,6 +15,12 @@
     "en": "English",
     "fr": "Français"
   },
+  "theme": {
+    "label": "Theme: {{theme}} (click to change)",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
   "attr": {
     "str": "STR",
     "dex": "DEX",

@@ -17,11 +17,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeSvc struct{ spells []spellsvc.Spell }
+type fakeSvc struct {
+	spells []spellsvc.Spell
+	got    *spellsvc.Filter
+}
 
 func (fakeSvc) GetSlots(context.Context, int64) ([]spellsvc.SpellSlot, error)   { return nil, nil }
 func (fakeSvc) ResetSlots(context.Context, int64) ([]spellsvc.SpellSlot, error) { return nil, nil }
-func (f fakeSvc) Search(context.Context, string, string) ([]spellsvc.Spell, error) {
+func (f fakeSvc) Search(_ context.Context, flt spellsvc.Filter) ([]spellsvc.Spell, error) {
+	if f.got != nil {
+		*f.got = flt
+	}
 	return f.spells, nil
 }
 
@@ -96,4 +102,49 @@ func TestSearch_CharacterLookupFailureStillReturnsSpellsWithoutValues(t *testing
 	code, out = searchAs(t, "/api/spells?caster_level=15", fakeChars{err: errors.New("no character")})
 	require.Equal(t, http.StatusOK, code)
 	require.NotNil(t, out[0].Values, "explicit level needs no character")
+}
+
+func filterFor(t *testing.T, url string) (int, spellsvc.Filter) {
+	t.Helper()
+	var got spellsvc.Filter
+	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, fakeSvc{got: &got}, fakeChars{level: 5}))
+	rec := httptest.NewRecorder()
+	h(rec, httptest.NewRequest(http.MethodGet, url, nil))
+	return rec.Code, got
+}
+
+func TestSearch_ReadsEveryFilterFromTheQuery(t *testing.T) {
+	code, f := filterFor(t, "/api/spells?q=fire&class=Wizard&level=3&school=Evocation&components=V,s&save=1/2&casting_time=Round")
+	require.Equal(t, http.StatusOK, code)
+	require.NotNil(t, f.Level)
+	assert.Equal(t, 3, *f.Level)
+	f.Level = nil
+	assert.Equal(t, spellsvc.Filter{
+		Query: "fire", Class: "wizard", School: "Evocation",
+		Components: []string{"V", "S"}, Save: spellstats.SaveHalf, CastingTime: "round",
+	}, f)
+}
+
+func TestSearch_NoFilterParamsMeansNoFilter(t *testing.T) {
+	code, f := filterFor(t, "/api/spells")
+	require.Equal(t, http.StatusOK, code)
+	assert.Equal(t, spellsvc.Filter{}, f)
+	code, f = filterFor(t, "/api/spells?class=both")
+	require.Equal(t, http.StatusOK, code)
+	assert.Equal(t, spellsvc.Filter{}, f, "both classes is no class filter")
+}
+
+func TestSearch_SaveSpellings(t *testing.T) {
+	for in, want := range map[string]string{"none": "none", "neg": "negates", "Neg.": "negates", "1/2": "half", "special": "special"} {
+		code, f := filterFor(t, "/api/spells?save="+in)
+		require.Equal(t, http.StatusOK, code, in)
+		assert.Equal(t, want, f.Save, in)
+	}
+}
+
+func TestSearch_MalformedFilterIs400(t *testing.T) {
+	for _, q := range []string{"class=bard", "level=x", "level=-1", "components=V,Z", "save=maybe", "casting_time=soon"} {
+		code, _ := filterFor(t, "/api/spells?"+q)
+		assert.Equal(t, http.StatusBadRequest, code, q)
+	}
 }

@@ -27,7 +27,25 @@ func (s *service) ResetSlots(ctx context.Context, characterID int64) ([]SpellSlo
 	return updated, nil
 }
 
-// Search delegates to the read port.
-func (s *service) Search(ctx context.Context, query, class string) ([]Spell, error) {
-	return s.reader.Search(ctx, query, class)
+// MaxResults caps one search.
+const MaxResults = 100
+
+// Search reads the catalog rows matching the filter's stored columns, then
+// keeps those whose typed stats match the rest of it.
+func (s *service) Search(ctx context.Context, f Filter) ([]Spell, error) {
+	rows, err := s.reader.Search(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Spell, 0, len(rows))
+	for _, sp := range rows {
+		if !f.matchStats(sp.Stats) {
+			continue
+		}
+		out = append(out, sp)
+		if len(out) == MaxResults {
+			break
+		}
+	}
+	return out, nil
 }

@@ -306,5 +306,33 @@
   "components": "V, S",
   "saving_throw": "None",
   "description": "When the detect magic spell is cast, the wizard detects magical radiations in a path 10 feet wide and up to 60 feet long, in the direction he is facing. The intensity of the magic can be determined (dim, faint, moderate, strong, overwhelming), and the wizard has a 10% chance per level to recognize if a certain type of magic (alteration, conjuration, etc.) is present. The caster can turn, scanning a 60-degree arc per round. A stone wall of 1 foot or more thickness, solid metal of 1 inch thickness, or a yard or more of solid wood blocks the spell. Magical areas, multiple types of magic, or strong local magical emanations may confuse or conceal weaker radiations. Note that this spell does not reveal the presence of good or evil, or reveal alignment. Otherplanar creatures are not necessarily magical."
+ },
+ {
+  "name": "Detect Magic",
+  "class": "Priest",
+  "level": 1,
+  "school": "",
+  "sphere": "Divination",
+  "casting_time": "1 rd.",
+  "range": "0",
+  "duration": "1 turn",
+  "area_of_effect": "10 x 30 yds.",
+  "components": "V, S, M",
+  "saving_throw": "None",
+  "description": "The priest detects magic in a path in front of him."
+ },
+ {
+  "name": "Lightning Bolt",
+  "class": "Wizard",
+  "level": 3,
+  "school": "Evocation",
+  "sphere": "",
+  "casting_time": "3",
+  "range": "40 yds. + 10 yds./level",
+  "duration": "Instantaneous",
+  "area_of_effect": "40 yds. x 10 ft.",
+  "components": "V, S, M",
+  "saving_throw": "1/2",
+  "description": "A stroke of lightning."
  }
 ]

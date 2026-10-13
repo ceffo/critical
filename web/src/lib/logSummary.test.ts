@@ -69,6 +69,23 @@ describe("entryText", () => {
       "Stoneskin absorbed a hit, ended",
     ],
     [{ action: "dismiss", buff: "Haste" }, "Dismissed Haste"],
+    [
+      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "fire −50%", fromNote: "", noteChanged: true },
+      "Ward: note “fire −50%”",
+    ],
+    [
+      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "", fromNote: "x", noteChanged: true },
+      "Ward: note removed",
+    ],
+    [
+      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 3, note: "x", noteChanged: true },
+      "Ward: 5 rd → 3 rd (note changed)",
+    ],
+    [
+      { action: "save_template", buff: "Hammer form", rounds: 10 },
+      "Saved buff Hammer form (10 rd)",
+    ],
+    [{ action: "delete_template", buff: "Hammer form" }, "Deleted saved buff Hammer form"],
     [{ action: "next_round", fromRound: 0, toRound: 1 }, "Round 0 → 1"],
     [
       {

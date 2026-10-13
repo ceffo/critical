@@ -11,6 +11,7 @@ import {
   type BuffEffect,
   type BuffEffectKey,
   type BuffEffects,
+  type SavedBuff,
 } from "@/types/buffs";
 import { captionClass, fieldClass } from "./fieldStyles";
 
@@ -110,6 +111,15 @@ function BuffBadge({
             {t("buffs.charges", { count: b.charges })}
           </span>
         )}
+        {b.note && (
+          <span
+            className="max-w-48 truncate text-xs italic text-muted-foreground"
+            data-testid="buff-note"
+            title={b.note}
+          >
+            {b.note}
+          </span>
+        )}
         {inactive && (
           <span className="text-xs italic">
             {t("buffs.inactive", { min: b.effects.min_str ?? "?" })}
@@ -169,13 +179,14 @@ function EditBuffForm({
   const { run, busy } = useTableStore();
   const [rounds, setRounds] = useState(String(buff.duration));
   const [charges, setCharges] = useState(String(buff.charges));
+  const [note, setNote] = useState(buff.note);
   const r = count(rounds);
   const c = count(charges);
   const valid = !Number.isNaN(r) && !Number.isNaN(c);
 
   async function submit() {
     if (!valid) return;
-    const ok = await run(() => editBuff(buff.id, { duration: r, charges: c }));
+    const ok = await run(() => editBuff(buff.id, { duration: r, charges: c, note }));
     if (ok) onDone();
   }
 
@@ -210,6 +221,13 @@ function EditBuffForm({
           onChange={(e) => setCharges(e.target.value)}
         />
       </label>
+      <input
+        className={`${fieldClass} w-56`}
+        aria-label={t("buffs.note")}
+        placeholder={t("buffs.notePlaceholder")}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
       <Button size="sm" type="submit" disabled={!valid || busy}>
         {t("buffs.save")}
       </Button>
@@ -227,9 +245,12 @@ interface EffectRow {
 
 function AddBuffForm({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
-  const activateBuff = useBuffsStore((s) => s.activateBuff);
+  const { activateBuff, saveBuffTemplate, deleteSavedBuff, saved } =
+    useBuffsStore();
   const { run, busy } = useTableStore();
   const [name, setName] = useState("");
+  const [note, setNote] = useState("");
+  const [saveIt, setSaveIt] = useState(false);
   const [rounds, setRounds] = useState("0");
   const [charges, setCharges] = useState("0");
   const [rows, setRows] = useState<EffectRow[]>([]);
@@ -247,15 +268,31 @@ function AddBuffForm({ onDone }: { onDone: () => void }) {
     setRows(rows.map((old, j) => (j === i ? { ...old, ...row } : old)));
   }
 
+  /** A chip fills every field; the form stays editable before Add. */
+  function fill(s: SavedBuff) {
+    setName(s.name);
+    setRounds(String(s.duration));
+    setCharges(String(s.charges));
+    setNote(s.note);
+    setRows(
+      BUFF_EFFECT_KEYS.filter((k) => s.effects[k] !== undefined).map((k) => ({
+        key: k,
+        value: String(s.effects[k]),
+      })),
+    );
+  }
+
   async function submit() {
     if (!valid) return;
     const effects: BuffEffects = {};
     rows.forEach((row, i) => {
       effects[row.key] = parsed[i];
     });
-    const ok = await run(() =>
-      activateBuff({ name: name.trim(), duration: r, charges: c, effects }),
-    );
+    const buff = { name: name.trim(), duration: r, charges: c, effects, note };
+    const ok = await run(async () => {
+      await activateBuff(buff);
+      if (saveIt) await saveBuffTemplate(buff);
+    });
     if (ok) onDone();
   }
 
@@ -268,6 +305,41 @@ function AddBuffForm({ onDone }: { onDone: () => void }) {
         void submit();
       }}
     >
+      {saved.length > 0 && (
+        <ul
+          className="flex w-full flex-wrap items-center gap-1"
+          aria-label={t("buffs.saved")}
+        >
+          {saved.map((s) => (
+            <li
+              key={s.id}
+              data-testid="saved-buff"
+              className="flex items-center rounded-full border bg-background"
+            >
+              <button
+                type="button"
+                className="px-2 py-0.5 text-sm hover:underline"
+                aria-label={t("buffs.useSaved", { name: s.name })}
+                title={s.note || undefined}
+                onClick={() => fill(s)}
+              >
+                {s.name}
+              </button>
+              <Button
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+                disabled={busy}
+                aria-label={t("buffs.deleteSaved", { name: s.name })}
+                title={t("buffs.deleteSaved", { name: s.name })}
+                onClick={() => void run(() => deleteSavedBuff(s.id))}
+              >
+                <X />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
       <input
         className={`${fieldClass} w-40`}
         aria-label={t("buffs.name")}
@@ -345,6 +417,21 @@ function AddBuffForm({ onDone }: { onDone: () => void }) {
         <Plus />
         {t("buffs.addEffect")}
       </Button>
+      <input
+        className={`${fieldClass} w-56`}
+        aria-label={t("buffs.note")}
+        placeholder={t("buffs.notePlaceholder")}
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <label className="flex items-center gap-1 text-sm">
+        <input
+          type="checkbox"
+          checked={saveIt}
+          onChange={(e) => setSaveIt(e.target.checked)}
+        />
+        {t("buffs.saveForReuse")}
+      </label>
       <Button size="sm" type="submit" disabled={!valid || busy}>
         {t("buffs.activate")}
       </Button>

@@ -49,6 +49,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
         useHpStore.getState().fetchHp(),
         useLogStore.getState().fetchLog(),
         useBuffsStore.getState().fetchBuffs(),
+        useBuffsStore.getState().fetchSaved(),
         useBuffsStore.getState().fetchRound(),
         useBuffsStore.getState().fetchStrength(),
         useItemsStore.getState().fetchItems(),

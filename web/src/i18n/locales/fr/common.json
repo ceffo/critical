@@ -89,7 +89,13 @@
     "activate": "Activer",
     "save": "Enregistrer",
     "cancel": "Annuler",
-    "expired": "Bonus expirés : {{names}}"
+    "expired": "Bonus expirés : {{names}}",
+    "note": "Note",
+    "notePlaceholder": "Note (p. ex. +4 aux JS contre le feu)",
+    "saveForReuse": "Enregistrer pour réutiliser",
+    "saved": "Bonus enregistrés",
+    "useSaved": "Remplir le formulaire avec {{name}}",
+    "deleteSaved": "Supprimer le bonus enregistré {{name}}"
   },
   "actions": {
     "label": "Actions",
@@ -473,6 +479,11 @@
       "absorb": "{{buff}} a absorbé un coup (reste {{count}})",
       "absorbEnded": "{{buff}} a absorbé un coup, terminé",
       "dismiss": "{{buff}} retiré",
+      "editNote": "{{buff}} : note « {{note}} »",
+      "editNoteCleared": "{{buff}} : note retirée",
+      "noteAlso": "(note modifiée)",
+      "saveTemplate": "Bonus {{buff}} enregistré ({{counters}})",
+      "deleteTemplate": "Bonus enregistré {{buff}} supprimé",
       "nextRound": "Round {{from}} → {{to}}",
       "endCombat": "Combat terminé : round {{from}} → {{to}}",
       "setRound": "Round réglé : {{from}} → {{to}}",

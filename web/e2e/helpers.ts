@@ -74,6 +74,9 @@ export interface NewBuff {
   charges?: number;
   /** [effect key as on the wire, value], e.g. ["str_bonus", 6]. */
   effects?: [string, number][];
+  note?: string;
+  /** Tick "Save for reuse". */
+  save?: boolean;
 }
 
 /** Add a buff through the buff strip's form and wait for its badge. */
@@ -90,6 +93,8 @@ export async function addBuff(page: Page, buff: NewBuff) {
     await row.getByLabel("Effect", { exact: true }).selectOption(key);
     await row.getByLabel("Effect value").fill(String(value));
   }
+  if (buff.note) await form.getByLabel("Note").fill(buff.note);
+  if (buff.save) await form.getByLabel("Save for reuse").check();
   await form.getByRole("button", { name: "Activate" }).click();
   await expect(buffBadge(page, buff.name)).toBeVisible();
 }

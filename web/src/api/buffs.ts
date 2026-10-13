@@ -1,4 +1,4 @@
-import type { BuffEdit, BuffEffect, Strength } from "../types/buffs";
+import type { BuffEdit, BuffEffect, SavedBuff, Strength } from "../types/buffs";
 import { post, request } from "./http";
 
 export function fetchActiveBuffs(): Promise<BuffEffect[]> {
@@ -30,4 +30,20 @@ export function triggerBuff(id: string): Promise<BuffEffect[]> {
 
 export function fetchStrength(): Promise<Strength> {
   return request<Strength>("/api/stats/str");
+}
+
+export function fetchSavedBuffs(): Promise<SavedBuff[]> {
+  return request<SavedBuff[]>("/api/buffs/saved");
+}
+
+/** Stores a template (the same name replaces it); returns the list. */
+export function saveBuffTemplate(
+  saved: Omit<SavedBuff, "id">,
+): Promise<SavedBuff[]> {
+  return post<SavedBuff[]>("/api/buffs/saved", saved);
+}
+
+/** Deletes a template; active buffs are untouched. */
+export function deleteSavedBuff(id: number): Promise<SavedBuff[]> {
+  return request<SavedBuff[]>(`/api/buffs/saved/${id}`, { method: "DELETE" });
 }

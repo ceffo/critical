@@ -89,7 +89,13 @@
     "activate": "Activate",
     "save": "Save",
     "cancel": "Cancel",
-    "expired": "Expired buffs: {{names}}"
+    "expired": "Expired buffs: {{names}}",
+    "note": "Note",
+    "notePlaceholder": "Note (e.g. +4 saves vs fire)",
+    "saveForReuse": "Save for reuse",
+    "saved": "Saved buffs",
+    "useSaved": "Fill the form with {{name}}",
+    "deleteSaved": "Delete saved buff {{name}}"
   },
   "actions": {
     "label": "Actions",
@@ -473,6 +479,11 @@
       "absorb": "{{buff}} absorbed a hit ({{count}} left)",
       "absorbEnded": "{{buff}} absorbed a hit, ended",
       "dismiss": "Dismissed {{buff}}",
+      "editNote": "{{buff}}: note “{{note}}”",
+      "editNoteCleared": "{{buff}}: note removed",
+      "noteAlso": "(note changed)",
+      "saveTemplate": "Saved buff {{buff}} ({{counters}})",
+      "deleteTemplate": "Deleted saved buff {{buff}}",
       "nextRound": "Round {{from}} → {{to}}",
       "endCombat": "Combat ended: round {{from}} → {{to}}",
       "setRound": "Round set: {{from}} → {{to}}",

@@ -91,6 +91,12 @@ writes the buff inside the caller's transaction and replaces a same-name buff), 
 slot back and removes the buff. Effects come from `seeds/spell_effects.json` at the caster level (the
 Bard's level for a cast, the caster's for a received spell; by-group dice use the Bard's group,
 rogue); low-confidence, utility and uncatalogued spells return their text only.
+Buffs carry a free-text `Note` (in the active-buffs JSON and the `buffs` snapshot, so void restores it;
+editable through `BuffEdit.Note`). Saved buff templates (`saved_buffs` table, migration 013, nothing seeded)
+are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST` replaces a same-name template,
+`DELETE /{id}`); each save/delete is a `buff_change` entry (`save_template` / `delete_template`) with a
+`saved_buffs` snapshot of the whole list (the restorer writes it back with the same ids). Activating from
+a template is the normal `POST /api/buffs` with the filled values; a delete never touches active buffs.
 A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
 later entries with the same full key (a +1 arrow does not block voiding a +3 shot).
 

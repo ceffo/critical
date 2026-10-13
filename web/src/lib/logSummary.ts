@@ -47,7 +47,7 @@ function restText(e: LogEntry, t: TFunction): string | null {
 
 /** Payload of buff_change / round_advance entries (buffsvc logPayload). */
 export interface BuffLogPayload {
-  action: "activate" | "edit" | "absorb" | "dismiss" | "next_round" | "end_combat" | "set_round";
+  action: "activate" | "edit" | "absorb" | "dismiss" | "next_round" | "end_combat" | "set_round" | "save_template" | "delete_template";
   buff?: string;
   rounds?: number;
   charges?: number;
@@ -57,6 +57,9 @@ export interface BuffLogPayload {
   fromRound?: number;
   toRound?: number;
   expired?: string[];
+  note?: string;
+  fromNote?: string;
+  noteChanged?: boolean;
 }
 
 function buffPayload(e: LogEntry): BuffLogPayload | null {
@@ -128,16 +131,28 @@ export function entryText(e: LogEntry, t: TFunction): string {
         buff,
         counters: counters(t, p.rounds, p.charges),
       });
-    case "edit":
-      return t(p.ended ? "log.buff.editEnded" : "log.buff.edit", {
+    case "edit": {
+      const sameCounters = (p.fromRounds ?? 0) === (p.rounds ?? 0) && (p.fromCharges ?? 0) === (p.charges ?? 0);
+      if (p.noteChanged && !p.ended && sameCounters) {
+        return p.note
+          ? t("log.buff.editNote", { buff, note: p.note })
+          : t("log.buff.editNoteCleared", { buff });
+      }
+      const text = t(p.ended ? "log.buff.editEnded" : "log.buff.edit", {
         buff,
         from: counters(t, p.fromRounds, p.fromCharges),
         to: counters(t, p.rounds, p.charges),
       });
+      return p.noteChanged && !p.ended ? `${text} ${t("log.buff.noteAlso")}` : text;
+    }
     case "absorb":
       return p.ended
         ? t("log.buff.absorbEnded", { buff })
         : t("log.buff.absorb", { buff, count: p.charges ?? 0 });
+    case "save_template":
+      return t("log.buff.saveTemplate", { buff, counters: counters(t, p.rounds, p.charges) });
+    case "delete_template":
+      return t("log.buff.deleteTemplate", { buff });
     case "dismiss":
       return t("log.buff.dismiss", { buff });
     case "next_round": {

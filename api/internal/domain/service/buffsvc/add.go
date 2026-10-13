@@ -35,7 +35,7 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 		}
 	}
 	after = append(after, buff)
-	snaps, err := snapshots(before, after, 0, nil)
+	snaps, err := snapshots(before, after, 0, nil, false)
 	if err != nil {
 		return BuffEffect{}, actionlog.Snapshot{}, err
 	}

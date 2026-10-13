@@ -5,6 +5,8 @@ export type LogKind =
   | "cast"
   | "buff_change"
   | "round_advance"
+  | "round_reset"
+  | "round_set"
   | "attack"
   | "item_use"
   | "spell_prep"

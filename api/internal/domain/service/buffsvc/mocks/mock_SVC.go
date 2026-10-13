@@ -727,6 +727,72 @@ func (_c *MockSVC_ListStatus_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
+// ResetRound provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) ResetRound(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, int, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ResetRound")
+	}
+
+	var r0 []buffsvc.BuffEffect
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.BuffEffect, int, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.BuffEffect); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) int); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64) error); ok {
+		r2 = rf(ctx, characterID)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_ResetRound_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetRound'
+type MockSVC_ResetRound_Call struct {
+	*mock.Call
+}
+
+// ResetRound is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) ResetRound(ctx interface{}, characterID interface{}) *MockSVC_ResetRound_Call {
+	return &MockSVC_ResetRound_Call{Call: _e.mock.On("ResetRound", ctx, characterID)}
+}
+
+func (_c *MockSVC_ResetRound_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_ResetRound_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ResetRound_Call) Return(active []buffsvc.BuffEffect, round int, err error) *MockSVC_ResetRound_Call {
+	_c.Call.Return(active, round, err)
+	return _c
+}
+
+func (_c *MockSVC_ResetRound_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, int, error)) *MockSVC_ResetRound_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Restorers provides a mock function with no fields
 func (_m *MockSVC) Restorers() map[string]actionlog.Restorer {
 	ret := _m.Called()
@@ -770,6 +836,73 @@ func (_c *MockSVC_Restorers_Call) Return(_a0 map[string]actionlog.Restorer) *Moc
 }
 
 func (_c *MockSVC_Restorers_Call) RunAndReturn(run func() map[string]actionlog.Restorer) *MockSVC_Restorers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetRound provides a mock function with given fields: ctx, characterID, to
+func (_m *MockSVC) SetRound(ctx context.Context, characterID int64, to int) ([]buffsvc.BuffEffect, int, error) {
+	ret := _m.Called(ctx, characterID, to)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetRound")
+	}
+
+	var r0 []buffsvc.BuffEffect
+	var r1 int
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) ([]buffsvc.BuffEffect, int, error)); ok {
+		return rf(ctx, characterID, to)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) []buffsvc.BuffEffect); ok {
+		r0 = rf(ctx, characterID, to)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int) int); ok {
+		r1 = rf(ctx, characterID, to)
+	} else {
+		r1 = ret.Get(1).(int)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, int) error); ok {
+		r2 = rf(ctx, characterID, to)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_SetRound_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetRound'
+type MockSVC_SetRound_Call struct {
+	*mock.Call
+}
+
+// SetRound is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - to int
+func (_e *MockSVC_Expecter) SetRound(ctx interface{}, characterID interface{}, to interface{}) *MockSVC_SetRound_Call {
+	return &MockSVC_SetRound_Call{Call: _e.mock.On("SetRound", ctx, characterID, to)}
+}
+
+func (_c *MockSVC_SetRound_Call) Run(run func(ctx context.Context, characterID int64, to int)) *MockSVC_SetRound_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_SetRound_Call) Return(active []buffsvc.BuffEffect, round int, err error) *MockSVC_SetRound_Call {
+	_c.Call.Return(active, round, err)
+	return _c
+}
+
+func (_c *MockSVC_SetRound_Call) RunAndReturn(run func(context.Context, int64, int) ([]buffsvc.BuffEffect, int, error)) *MockSVC_SetRound_Call {
 	_c.Call.Return(run)
 	return _c
 }

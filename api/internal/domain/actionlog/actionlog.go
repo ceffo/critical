@@ -26,6 +26,8 @@ const (
 	KindCast         Kind = "cast"
 	KindBuffChange   Kind = "buff_change"
 	KindRoundAdvance Kind = "round_advance"
+	KindRoundReset   Kind = "round_reset"
+	KindRoundSet     Kind = "round_set"
 	KindAttack       Kind = "attack"
 	KindItemUse      Kind = "item_use"
 	KindSpellPrep    Kind = "spell_prep"

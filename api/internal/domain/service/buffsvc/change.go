@@ -12,7 +12,7 @@ import (
 // logPayload is the structured summary of a buff entry, rendered by the UI
 // in the player's language (the Summary string is the English fallback).
 type logPayload struct {
-	// Action is activate, edit, absorb, dismiss or next_round.
+	// Action is activate, edit, absorb, dismiss next_round, end_combat or set_round.
 	Action      string   `json:"action"`
 	Buff        string   `json:"buff,omitempty"`
 	Rounds      int      `json:"rounds,omitempty"`
@@ -33,6 +33,9 @@ type change struct {
 	payload logPayload
 	buffs   []BuffEffect
 	round   *int
+	// roundOnly: the buff list is neither snapshotted nor written (End combat,
+	// Set round leave buffs untouched).
+	roundOnly bool
 }
 
 // apply runs decide on the current state and, in one transaction, records
@@ -54,7 +57,7 @@ func (s *service) apply(ctx context.Context, characterID int64, decide func(buff
 		if err != nil {
 			return err
 		}
-		snaps, err := snapshots(buffs, ch.buffs, round, ch.round)
+		snaps, err := snapshots(buffs, ch.buffs, round, ch.round, ch.roundOnly)
 		if err != nil {
 			return err
 		}
@@ -71,8 +74,10 @@ func (s *service) apply(ctx context.Context, characterID int64, decide func(buff
 		}); err != nil {
 			return fmt.Errorf("record %s: %w", ch.kind, err)
 		}
-		if err := s.dal.SaveActiveBuffs(ctx, characterID, ch.buffs); err != nil {
-			return fmt.Errorf("save active buffs: %w", err)
+		if !ch.roundOnly {
+			if err := s.dal.SaveActiveBuffs(ctx, characterID, ch.buffs); err != nil {
+				return fmt.Errorf("save active buffs: %w", err)
+			}
 		}
 		if ch.round != nil {
 			if err := s.dal.SaveRoundNumber(ctx, characterID, *ch.round); err != nil {
@@ -87,7 +92,12 @@ func (s *service) apply(ctx context.Context, characterID int64, decide func(buff
 	return ch, nil
 }
 
-func snapshots(before, after []BuffEffect, round int, newRound *int) ([]actionlog.Snapshot, error) {
+func snapshots(before, after []BuffEffect, round int, newRound *int, roundOnly bool) ([]actionlog.Snapshot, error) {
+	if roundOnly {
+		rb, _ := json.Marshal(round)
+		ra, _ := json.Marshal(*newRound)
+		return []actionlog.Snapshot{{Key: StateKeyRound, Before: rb, After: ra}}, nil
+	}
 	b, err := encodeBuffs(before)
 	if err != nil {
 		return nil, fmt.Errorf("encode buffs: %w", err)

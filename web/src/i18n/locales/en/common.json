@@ -35,7 +35,14 @@
   },
   "round": {
     "title": "Round",
-    "next": "Next Round"
+    "next": "Next Round",
+    "endCombat": "End combat",
+    "endCombatConfirm": "End combat? The round goes back to 0.",
+    "set": "Set round",
+    "setLabel": "Round number",
+    "apply": "Set",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   },
   "buffs": {
     "title": "Buffs",
@@ -311,6 +318,8 @@
       "cast": "Cast",
       "buff_change": "Buff",
       "round_advance": "Round",
+      "round_reset": "Round",
+      "round_set": "Round",
       "attack": "Attack",
       "item_use": "Item",
       "spell_prep": "Prepare",
@@ -339,6 +348,8 @@
       "absorbEnded": "{{buff}} absorbed a hit, ended",
       "dismiss": "Dismissed {{buff}}",
       "nextRound": "Round {{from}} → {{to}}",
+      "endCombat": "Combat ended: round {{from}} → {{to}}",
+      "setRound": "Round set: {{from}} → {{to}}",
       "expired": "— expired: {{names}}"
     },
     "attack": {

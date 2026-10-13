@@ -28,6 +28,8 @@ interface TableStore {
   amendEntry: (id: number, delta: number, source: string) => Promise<boolean>;
   voidEntry: (id: number) => Promise<boolean>;
   nextRound: () => Promise<boolean>;
+  endCombat: () => Promise<boolean>;
+  setRound: (round: number) => Promise<boolean>;
 }
 
 function message(e: unknown): string {
@@ -78,6 +80,17 @@ export const useTableStore = create<TableStore>((set, get) => ({
   voidEntry: (id) =>
     get().run(async () => {
       await voidLogEntry(id);
+      set({ notice: null });
+    }),
+  // A round change leaves buffs alone, but an "expired" notice is stale after either.
+  endCombat: () =>
+    get().run(async () => {
+      await useBuffsStore.getState().resetRound();
+      set({ notice: null });
+    }),
+  setRound: (round) =>
+    get().run(async () => {
+      await useBuffsStore.getState().setRound(round);
       set({ notice: null });
     }),
   nextRound: () =>

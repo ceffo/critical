@@ -16,6 +16,7 @@ type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
 	Patch(pattern string, h http.HandlerFunc)
+	Put(pattern string, h http.HandlerFunc)
 	Delete(pattern string, h http.HandlerFunc)
 }
 
@@ -30,6 +31,8 @@ type buffSvc interface {
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, err error)
+	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
+	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 }
 
@@ -42,6 +45,8 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Post("/api/buffs/{id}/trigger", render.Handle(Trigger(charID, svc)))
 	r.Get("/api/round", render.Handle(GetRound(charID, svc)))
 	r.Post("/api/round/advance", render.Handle(AdvanceRound(charID, svc)))
+	r.Post("/api/round/reset", render.Handle(ResetRound(charID, svc)))
+	r.Put("/api/round", render.Handle(SetRound(charID, svc)))
 	r.Get("/api/stats/str", render.Handle(GetEffectiveStr(charID, svc)))
 }
 
@@ -141,6 +146,39 @@ func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 			ActiveBuffs:  toDTOs(active),
 			ExpiredBuffs: toDTOs(expired),
 		})
+		return nil
+	}
+}
+
+// ResetRound is End combat: the counter goes back to 0, buffs untouched.
+func ResetRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		active, round, err := svc.ResetRound(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, RoundAdvanceDTO{RoundNumber: round, ActiveBuffs: toDTOs(active), ExpiredBuffs: []BuffEffectDTO{}})
+		return nil
+	}
+}
+
+// SetRoundDTO is the PUT /api/round body.
+type SetRoundDTO struct {
+	Round *int `json:"round"`
+}
+
+// SetRound corrects the counter to a value >= 0, buffs untouched.
+func SetRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var dto SetRoundDTO
+		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil || dto.Round == nil {
+			return render.BadRequestError("invalid request body")
+		}
+		active, round, err := svc.SetRound(r.Context(), charID(r), *dto.Round)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, RoundAdvanceDTO{RoundNumber: round, ActiveBuffs: toDTOs(active), ExpiredBuffs: []BuffEffectDTO{}})
 		return nil
 	}
 }

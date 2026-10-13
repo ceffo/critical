@@ -22,6 +22,8 @@ interface BuffsStore {
   dismissBuff: (id: string) => Promise<void>;
   triggerBuff: (id: string) => Promise<void>;
   advanceRound: () => Promise<RoundAdvanceResponse>;
+  resetRound: () => Promise<RoundAdvanceResponse>;
+  setRound: (round: number) => Promise<RoundAdvanceResponse>;
 }
 
 export const useBuffsStore = create<BuffsStore>((set) => ({
@@ -53,6 +55,16 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
   },
   advanceRound: async () => {
     const res = await roundApi.advanceRound();
+    set({ round: res.roundNumber });
+    return res;
+  },
+  resetRound: async () => {
+    const res = await roundApi.resetRound();
+    set({ round: res.roundNumber });
+    return res;
+  },
+  setRound: async (round) => {
+    const res = await roundApi.setRound(round);
     set({ round: res.roundNumber });
     return res;
   },

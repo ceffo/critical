@@ -35,7 +35,14 @@
   },
   "round": {
     "title": "Round",
-    "next": "Round suivant"
+    "next": "Round suivant",
+    "endCombat": "Fin du combat",
+    "endCombatConfirm": "Terminer le combat ? Le round repasse à 0.",
+    "set": "Régler le round",
+    "setLabel": "Numéro du round",
+    "apply": "Régler",
+    "confirm": "Confirmer",
+    "cancel": "Annuler"
   },
   "buffs": {
     "title": "Bonus",
@@ -311,6 +318,8 @@
       "cast": "Sort",
       "buff_change": "Bonus",
       "round_advance": "Round",
+      "round_reset": "Round",
+      "round_set": "Round",
       "attack": "Attaque",
       "item_use": "Objet",
       "spell_prep": "Préparation",
@@ -339,6 +348,8 @@
       "absorbEnded": "{{buff}} a absorbé un coup, terminé",
       "dismiss": "{{buff}} retiré",
       "nextRound": "Round {{from}} → {{to}}",
+      "endCombat": "Combat terminé : round {{from}} → {{to}}",
+      "setRound": "Round réglé : {{from}} → {{to}}",
       "expired": "— expirés : {{names}}"
     },
     "attack": {

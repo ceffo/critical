@@ -39,3 +39,12 @@ export function post<T>(url: string, body?: unknown): Promise<T> {
         }),
   });
 }
+
+/** PUT a JSON body and decode the JSON response. */
+export function put<T>(url: string, body: unknown): Promise<T> {
+  return request<T>(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}

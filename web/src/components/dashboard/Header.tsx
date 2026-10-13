@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
@@ -81,7 +82,10 @@ export function Header() {
         </div>
         <HpBar />
         <RoundControl />
-        <LanguageToggle />
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <LanguageToggle />
+        </div>
       </div>
       <div className="mt-2 border-t pt-2">
         <BuffStrip />

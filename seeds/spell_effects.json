@@ -23,17 +23,6 @@
     }
   },
   {
-    "id": "animate_dead_animals",
-    "name": "Animate Dead Animals",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
     "id": "armor",
     "name": "Armor",
     "level": 1,
@@ -217,53 +206,6 @@
     }
   },
   {
-    "id": "conjure_spell_component",
-    "name": "Conjure Spell Component",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1"
-    }
-  },
-  {
-    "id": "copy",
-    "name": "Copy",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
-    "id": "corpse_link",
-    "name": "Corpse Link",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "corpse_visage",
-    "name": "Corpse Visage",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "dancing_lights",
     "name": "Dancing Lights",
     "level": 1,
@@ -273,18 +215,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "2*level"
-    }
-  },
-  {
-    "id": "detect_disease",
-    "name": "Detect Disease",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -300,30 +230,6 @@
     }
   },
   {
-    "id": "detect_phase",
-    "name": "Detect Phase",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    }
-  },
-  {
-    "id": "detect_secret_passages_and_portals",
-    "name": "Detect Secret Passages and Portals",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10"
-    }
-  },
-  {
     "id": "detect_undead",
     "name": "Detect Undead",
     "level": 1,
@@ -333,30 +239,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "30"
-    }
-  },
-  {
-    "id": "dictation",
-    "name": "Dictation",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "divining_rod",
-    "name": "Divining Rod",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -391,33 +273,6 @@
     }
   },
   {
-    "id": "expeditious_retreat",
-    "name": "Expeditious Retreat",
-    "level": 1,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Movement rate tripled; large jumps.",
-    "target": "self",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "3+level"
-    },
-    "modifiers": {
-      "move_pct": 300
-    }
-  },
-  {
-    "id": "exterminate",
-    "name": "Exterminate",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
     "id": "feather_fall",
     "name": "Feather Fall",
     "level": 1,
@@ -438,42 +293,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "fire_burst",
-    "name": "Fire Burst",
-    "level": 1,
-    "kind": "damage",
-    "confidence": "high",
-    "note": "1 point per level, max 10. Cast on a nonmagical fire; 10-ft radius around it.",
-    "target": "area",
-    "duration": {
-      "kind": "instant"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "negates"
-    },
-    "damage": {
-      "dice": "min(level,10)",
-      "type": "fire"
-    }
-  },
-  {
-    "id": "fist_of_stone",
-    "name": "Fist of Stone",
-    "level": 1,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Fist attacks as if Strength 18/00 (combat bonuses only for the fist). Caster cannot cast spells with somatic components meanwhile.",
-    "target": "self",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    },
-    "ability_set": {
-      "str": "18/00"
     }
   },
   {
@@ -531,17 +350,6 @@
     }
   },
   {
-    "id": "hornungs_guess",
-    "name": "Hornung's Guess*",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
     "id": "hypnotism",
     "name": "Hypnotism",
     "level": 1,
@@ -578,18 +386,6 @@
     }
   },
   {
-    "id": "lasting_breath",
-    "name": "Lasting Breath",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1d4+level"
-    }
-  },
-  {
     "id": "light",
     "name": "Light",
     "level": 1,
@@ -599,17 +395,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "10*level"
-    }
-  },
-  {
-    "id": "locate_remains",
-    "name": "Locate Remains",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
     }
   },
   {
@@ -657,17 +442,6 @@
     }
   },
   {
-    "id": "metamorphose_liquids",
-    "name": "Metamorphose Liquids",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
     "id": "mount",
     "name": "Mount",
     "level": 1,
@@ -680,29 +454,6 @@
     }
   },
   {
-    "id": "murdocks_feathery_flyer",
-    "name": "Murdock's Feathery Flyer",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "nahals_reckless_dweomer",
-    "name": "Nahal's Reckless Dweomer*",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "nystuls_magical_aura",
     "name": "Nystul's Magical Aura",
     "level": 1,
@@ -712,18 +463,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "1440*level"
-    }
-  },
-  {
-    "id": "patternweave",
-    "name": "Patternweave*",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1"
     }
   },
   {
@@ -754,43 +493,6 @@
       "save": 2
     },
     "condition": "attacks and saves against evil creatures"
-  },
-  {
-    "id": "protection_from_hunger_and_thirst",
-    "name": "Protection from Hunger and Thirst",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1440*level"
-    }
-  },
-  {
-    "id": "protection_from_vermin",
-    "name": "Protection from Vermin",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    }
-  },
-  {
-    "id": "ray_of_fatigue",
-    "name": "Ray of Fatigue",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Debuff: adds one level of encumbrance (-1/-2/-4 to attack, AC worse by 1/3). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
   },
   {
     "id": "read_magic",
@@ -852,17 +554,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "5*level"
-    }
-  },
-  {
-    "id": "spectral_voice",
-    "name": "Spectral Voice",
-    "level": 1,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
     }
   },
   {
@@ -1023,54 +714,6 @@
     "condition": "save bonus applies to direct magical attacks only"
   },
   {
-    "id": "cats_grace",
-    "name": "Cat’s Grace",
-    "level": 2,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Dexterity gain by class group; cannot raise Dexterity to 20 or more; not cumulative with other Dexterity magic.",
-    "target": "self_or_other",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
-    },
-    "ability_gain": {
-      "dex": {
-        "by_group": {
-          "rogue": "1d8",
-          "warrior": "1d6",
-          "wizard": "1d6",
-          "priest": "1d4"
-        },
-        "max": 19
-      }
-    }
-  },
-  {
-    "id": "chaos_shield",
-    "name": "Chaos Shield*",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1d10+2*level"
-    }
-  },
-  {
-    "id": "choke",
-    "name": "Choke",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Hands deal 1d4 per round (save half), -2 to attack; duration missing from the source text. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "continual_light",
     "name": "Continual Light",
     "level": 2,
@@ -1096,17 +739,6 @@
   {
     "id": "deafness",
     "name": "Deafness",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "death_recall",
-    "name": "Death Recall",
     "level": 2,
     "kind": "utility",
     "confidence": "high",
@@ -1152,31 +784,6 @@
     }
   },
   {
-    "id": "detect_life",
-    "name": "Detect Life",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "5"
-    }
-  },
-  {
-    "id": "displace_self",
-    "name": "Displace Self",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Attacks against the caster: first automatically misses, later ones -2; +2 to saves against targeted spells. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "esp",
     "name": "ESP",
     "level": 2,
@@ -1186,29 +793,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "embalm",
-    "name": "Embalm",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
-    "id": "filter",
-    "name": "Filter",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
     }
   },
   {
@@ -1268,19 +852,6 @@
     }
   },
   {
-    "id": "ghoul_touch",
-    "name": "Ghoul Touch",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Touch paralyses 1d6+2 rounds; stench gives -2 to attacks. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "glitterdust",
     "name": "Glitterdust",
     "level": 2,
@@ -1290,18 +861,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "hornungs_baneful_deflector",
-    "name": "Hornung's Baneful Deflector*",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
     }
   },
   {
@@ -1316,26 +875,6 @@
     }
   },
   {
-    "id": "ice_knife",
-    "name": "Ice Knife",
-    "level": 2,
-    "kind": "damage",
-    "confidence": "high",
-    "note": "Missile attack roll for 2d4. On impact a 5-ft burst of numbing cold affects creatures that fail a save vs paralyzation; the save listed negates that burst, not the 2d4.",
-    "target": "other",
-    "duration": {
-      "kind": "instant"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "negates"
-    },
-    "damage": {
-      "dice": "2d4",
-      "type": "cold"
-    }
-  },
-  {
     "id": "improved_phantasmal_force",
     "name": "Improved Phantasmal Force",
     "level": 2,
@@ -1344,18 +883,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "insatiable_thirst",
-    "name": "Insatiable Thirst",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -1428,18 +955,6 @@
     }
   },
   {
-    "id": "living_link",
-    "name": "Living Link",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "locate_object",
     "name": "Locate Object",
     "level": 2,
@@ -1460,19 +975,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "maximilians_earthen_grasp",
-    "name": "Maximilian's Earthen Grasp",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Held victim: movement 0, AC and attack penalties (-2). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "3+level"
     }
   },
   {
@@ -1523,40 +1025,6 @@
     }
   },
   {
-    "id": "moon_rune",
-    "name": "Moon Rune",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
-    "id": "nahals_nonsensical_nullifier",
-    "name": "Nahal's Nonsensical Nullifier*",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1d6+level"
-    }
-  },
-  {
-    "id": "past_life",
-    "name": "Past Life",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "protection_from_cantrips",
     "name": "Protection From Cantrips",
     "level": 2,
@@ -1566,30 +1034,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "300+60*level"
-    }
-  },
-  {
-    "id": "protection_from_paralysis",
-    "name": "Protection From Paralysis",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "protection_from_poison",
-    "name": "Protection from Poison",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -1618,18 +1062,6 @@
     }
   },
   {
-    "id": "ride_the_wind",
-    "name": "Ride the Wind",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
     "id": "rope_trick",
     "name": "Rope Trick",
     "level": 2,
@@ -1654,18 +1086,6 @@
     }
   },
   {
-    "id": "sense_shifting",
-    "name": "Sense Shifting",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "30"
-    }
-  },
-  {
     "id": "shatter",
     "name": "Shatter",
     "level": 2,
@@ -1675,18 +1095,6 @@
     "target": "none",
     "duration": {
       "kind": "instant"
-    }
-  },
-  {
-    "id": "skeletal_hands",
-    "name": "Skeletal Hands",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10+5*level"
     }
   },
   {
@@ -1764,31 +1172,6 @@
     }
   },
   {
-    "id": "vocalize",
-    "name": "Vocalize",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "5"
-    }
-  },
-  {
-    "id": "wall_of_gloom",
-    "name": "Wall of Gloom",
-    "level": 2,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "-2 to missile attacks through the wall; fear effect. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2d4+level"
-    }
-  },
-  {
     "id": "web",
     "name": "Web",
     "level": 2,
@@ -1823,64 +1206,6 @@
     }
   },
   {
-    "id": "alacrity",
-    "name": "Alacrity",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10+level"
-    }
-  },
-  {
-    "id": "alamirs_fundamental_breakdown",
-    "name": "Alamir's Fundamental Breakdown",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Caster takes 4d8 if the item analysis goes wrong. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "alternate_reality",
-    "name": "Alternate Reality*",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
-    "id": "augmentation_i",
-    "name": "Augmentation I",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "bands_of_sirellyn",
-    "name": "Bands of Sirellyn",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10+level"
-    }
-  },
-  {
     "id": "blink",
     "name": "Blink",
     "level": 3,
@@ -1890,31 +1215,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "bone_club",
-    "name": "Bone Club",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Weapon: club +4 vs undead (1d6+4), +1 otherwise (1d6+1). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "bone_dance",
-    "name": "Bone Dance",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "30*level"
     }
   },
   {
@@ -1939,19 +1239,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "delay_death",
-    "name": "Delay Death",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Target keeps acting down to -10 hit points with -2 to attacks and saves. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
     }
   },
   {
@@ -1998,29 +1285,6 @@
     }
   },
   {
-    "id": "false_face",
-    "name": "False Face",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "far_reaching_i",
-    "name": "Far Reaching I",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "feign_death",
     "name": "Feign Death",
     "level": 3,
@@ -2049,17 +1313,6 @@
     "damage": {
       "dice": "(min(level,10))d6",
       "type": "fire"
-    }
-  },
-  {
-    "id": "fireflow",
-    "name": "Fireflow*",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
     }
   },
   {
@@ -2093,18 +1346,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "fools_speech",
-    "name": "Fool's Speech*",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
     }
   },
   {
@@ -2162,19 +1403,6 @@
     }
   },
   {
-    "id": "hovering_skull",
-    "name": "Hovering Skull",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Skull bites for 1d6 (3 hit points). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    }
-  },
-  {
     "id": "illusionary_script",
     "name": "Illusionary Script",
     "level": 3,
@@ -2210,30 +1438,6 @@
     }
   },
   {
-    "id": "invisible_mail",
-    "name": "Invisible Mail",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Sets AC to 3 and absorbs 1 hit point per level of damage. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "iron_mind",
-    "name": "Iron Mind",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60"
-    }
-  },
-  {
     "id": "item",
     "name": "Item",
     "level": 3,
@@ -2246,26 +1450,6 @@
     }
   },
   {
-    "id": "lance_of_disruption",
-    "name": "Lance of Disruption",
-    "level": 3,
-    "kind": "damage",
-    "confidence": "high",
-    "note": "5-ft x 60-ft beam; half damage to amorphous or nonsolid creatures.",
-    "target": "area",
-    "duration": {
-      "kind": "instant"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "half"
-    },
-    "damage": {
-      "dice": "5d4+2*min(level,15)",
-      "type": "force"
-    }
-  },
-  {
     "id": "leomunds_tiny_hut",
     "name": "Leomund's Tiny Hut",
     "level": 3,
@@ -2275,18 +1459,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "240+60*level"
-    }
-  },
-  {
-    "id": "lesser_sign_of_sealing",
-    "name": "Lesser Sign of Sealing",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Trap: 1d8+level damage to whoever forces the sealed portal (half on a save). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
     }
   },
   {
@@ -2309,31 +1481,6 @@
     }
   },
   {
-    "id": "lorloveims_creeping_shadow",
-    "name": "Lorloveim's Creeping Shadow",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "maximilians_stony_grasp",
-    "name": "Maximilian's Stony Grasp",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Held victim with stone hand; damage and penalties in the text. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "5+level"
-    }
-  },
-  {
     "id": "melfs_minute_meteors",
     "name": "Melf's Minute Meteors",
     "level": 3,
@@ -2348,22 +1495,6 @@
       "dice": "1d4",
       "instances": "level",
       "type": "fire"
-    }
-  },
-  {
-    "id": "minor_malison",
-    "name": "Minor Malison",
-    "level": 3,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Enemies in the area make all saving throws at -1 (or -2 against one chosen school of magic); not cumulative with a specialist penalty.",
-    "target": "area",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    },
-    "modifiers": {
-      "save": -1
     }
   },
   {
@@ -2388,23 +1519,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "60*level"
-    }
-  },
-  {
-    "id": "pain_touch",
-    "name": "Pain Touch",
-    "level": 3,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Needs a successful touch attack. No damage; 1d4 rounds of -2 to hit and AC worsened by 2.",
-    "target": "other",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1d4"
-    },
-    "modifiers": {
-      "to_hit": -2,
-      "ac": 2
     }
   },
   {
@@ -2451,18 +1565,6 @@
     }
   },
   {
-    "id": "protection_from_amorphs",
-    "name": "Protection from Amorphs",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    }
-  },
-  {
     "id": "secret_page",
     "name": "Secret Page",
     "level": 3,
@@ -2479,18 +1581,6 @@
     "level": 3,
     "kind": "utility",
     "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "skulltrap",
-    "name": "Skulltrap",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Trap with a damaging burst when the skull is disturbed. Not modelled.",
     "target": "none",
     "duration": {
       "kind": "special"
@@ -2520,32 +1610,6 @@
     }
   },
   {
-    "id": "snapping_teeth",
-    "name": "Snapping Teeth",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Extra bite attack 1d4 per round. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "solvent_of_corrosion",
-    "name": "Solvent of Corrosion",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Acid: 1d3 per level per sq ft vs stone/metal/wood monsters; 1 per level (round 1 only) vs flesh. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "3"
-    }
-  },
-  {
     "id": "spectral_force",
     "name": "Spectral Force",
     "level": 3,
@@ -2554,36 +1618,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "spirit_armor",
-    "name": "Spirit Armor",
-    "level": 3,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "AC 4 (splint mail) and +3 to saves against magical attacks; not cumulative with other armor or magical protection; Dexterity bonuses apply.",
-    "target": "self",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    },
-    "modifiers": {
-      "ac_set": 4,
-      "save": 3
-    },
-    "condition": "save bonus applies to magical attacks only"
-  },
-  {
-    "id": "squaring_the_circle",
-    "name": "Squaring the Circle",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -2627,17 +1661,6 @@
     }
   },
   {
-    "id": "wall_of_water",
-    "name": "Wall of Water",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "water_breathing",
     "name": "Water Breathing",
     "level": 3,
@@ -2649,32 +1672,8 @@
     }
   },
   {
-    "id": "watery_double",
-    "name": "Watery Double",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Failed save: 1d8 damage per round until destroyed. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "wind_wall",
     "name": "Wind Wall",
-    "level": 3,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "wizard_sight",
-    "name": "Wizard Sight",
     "level": 3,
     "kind": "utility",
     "confidence": "high",
@@ -2694,18 +1693,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "2*level"
-    }
-  },
-  {
-    "id": "brainkill",
-    "name": "Brainkill",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Failed save: 1-6 damage and memory loss. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
     }
   },
   {
@@ -2729,18 +1716,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "2+level"
-    }
-  },
-  {
-    "id": "conjure_elemental_kin",
-    "name": "Conjure Elemental-Kin",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
     }
   },
   {
@@ -2780,17 +1755,6 @@
     }
   },
   {
-    "id": "dilation_i",
-    "name": "Dilation I",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "dimension_door",
     "name": "Dimension Door",
     "level": 4,
@@ -2799,30 +1763,6 @@
     "target": "none",
     "duration": {
       "kind": "instant"
-    }
-  },
-  {
-    "id": "divination_enhancement",
-    "name": "Divination Enhancement",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "20+2*level"
-    }
-  },
-  {
-    "id": "duplicate",
-    "name": "Duplicate",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
     }
   },
   {
@@ -2835,17 +1775,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "empathic_wound_transfer",
-    "name": "Empathic Wound Transfer",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
     }
   },
   {
@@ -2900,17 +1829,6 @@
     }
   },
   {
-    "id": "far_reaching_ii",
-    "name": "Far Reaching II",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "fear",
     "name": "Fear",
     "level": 4,
@@ -2919,19 +1837,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "fire_aura",
-    "name": "Fire Aura",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Fire immunity; 2d4 damage to anyone touching the aura. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
     }
   },
   {
@@ -2983,22 +1888,6 @@
     }
   },
   {
-    "id": "greater_malison",
-    "name": "Greater Malison",
-    "level": 4,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Hostile creatures in the area make all saving throws at -2 (or -3 against one chosen school); not cumulative with a specialist penalty.",
-    "target": "area",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    },
-    "modifiers": {
-      "save": -2
-    }
-  },
-  {
     "id": "hallucinatory_terrain",
     "name": "Hallucinatory Terrain",
     "level": 4,
@@ -3008,18 +1897,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "60*level"
-    }
-  },
-  {
-    "id": "halo_of_eyes",
-    "name": "Halo of Eyes",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
     }
   },
   {
@@ -3111,28 +1988,6 @@
     }
   },
   {
-    "id": "lesser_geas",
-    "name": "Lesser Geas",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "locate_creature",
-    "name": "Locate Creature",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "magic_mirror",
     "name": "Magic Mirror",
     "level": 4,
@@ -3142,18 +1997,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "mask_of_death",
-    "name": "Mask of Death",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
     }
   },
   {
@@ -3192,18 +2035,6 @@
     }
   },
   {
-    "id": "minor_spell_turning",
-    "name": "Minor Spell Turning",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "3*level"
-    }
-  },
-  {
     "id": "monster_summoning_ii",
     "name": "Monster Summoning II",
     "level": 4,
@@ -3213,52 +2044,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "3+level"
-    }
-  },
-  {
-    "id": "mordenkainens_celerity",
-    "name": "Mordenkainen's Celerity",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "+2 to saves against movement-affecting spells; longer movement spells. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10"
-    }
-  },
-  {
-    "id": "mordenkainens_force_missiles",
-    "name": "Mordenkainen’s Force Missiles",
-    "level": 4,
-    "kind": "damage",
-    "confidence": "low",
-    "note": "Each missile 2d4 (no save) plus a burst of 1 per level (save negates the burst); one missile at level 7, +1 per three levels after, max 7. Per-missile dice shown include the burst. Missile count below level 7 is unclear in the text (clamped to 1).",
-    "target": "other",
-    "duration": {
-      "kind": "instant"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "special"
-    },
-    "damage": {
-      "dice": "2d4+level",
-      "instances": "min(7,max(1,1+(level-7)/3))",
-      "type": "force"
-    }
-  },
-  {
-    "id": "otilukes_dispelling_screen",
-    "name": "Otiluke's Dispelling Screen",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -3318,23 +2103,6 @@
       "kind": "rounds",
       "rounds": "20*level"
     }
-  },
-  {
-    "id": "psychic_protection",
-    "name": "Psychic Protection",
-    "level": 4,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "+6 to saves (or a save where none is allowed) against spells that control or destroy the mind; such attempts fail automatically per the text.",
-    "target": "self",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "3*level"
-    },
-    "modifiers": {
-      "save": 6
-    },
-    "condition": "saves against mind-controlling or mind-destroying effects"
   },
   {
     "id": "rainbow_pattern",
@@ -3431,92 +2199,6 @@
     }
   },
   {
-    "id": "summon_lycanthrope",
-    "name": "Summon Lycanthrope",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "summon_spirit",
-    "name": "Summon Spirit",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "there_not_there",
-    "name": "There/Not There*",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "thunder_staff",
-    "name": "Thunder Staff",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Stuns 1d3 rounds, deafens, hurls 4d4+4 feet with 1 damage per two feet (save half). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
-    "id": "turn_pebble_to_boulder",
-    "name": "Turn Pebble to Boulder",
-    "level": 4,
-    "kind": "damage",
-    "confidence": "high",
-    "note": "Missile attack roll with the caster's THAC0, no range penalty; damage on a hit only.",
-    "target": "other",
-    "duration": {
-      "kind": "instant"
-    },
-    "damage": {
-      "dice": "3d6+8",
-      "type": "crushing"
-    }
-  },
-  {
-    "id": "ultravision",
-    "name": "Ultravision",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "120+60*level"
-    }
-  },
-  {
-    "id": "unluck",
-    "name": "Unluck*",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2d10"
-    }
-  },
-  {
     "id": "vacancy",
     "name": "Vacancy",
     "level": 4,
@@ -3526,26 +2208,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "60*level"
-    }
-  },
-  {
-    "id": "vitriolic_sphere",
-    "name": "Vitriolic Sphere",
-    "level": 4,
-    "kind": "damage",
-    "confidence": "low",
-    "note": "Failed save: keeps taking acid damage in following rounds with two fewer dice each round; only the first round is modelled.",
-    "target": "other",
-    "duration": {
-      "kind": "instant"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "half"
-    },
-    "damage": {
-      "dice": "(min(level,12))d4",
-      "type": "acid"
     }
   },
   {
@@ -3571,18 +2233,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "10*level"
-    }
-  },
-  {
-    "id": "wind_breath",
-    "name": "Wind Breath",
-    "level": 4,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Wind force by level; trivial damage. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
     }
   },
   {
@@ -3666,29 +2316,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "bind_undead",
-    "name": "Bind Undead",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2*level"
-    }
-  },
-  {
-    "id": "bone_blight",
-    "name": "Bone Blight",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
     }
   },
   {
@@ -3852,17 +2479,6 @@
     }
   },
   {
-    "id": "far_reaching_iii",
-    "name": "Far Reaching III",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "feeblemind",
     "name": "Feeblemind",
     "level": 5,
@@ -3871,29 +2487,6 @@
     "target": "none",
     "duration": {
       "kind": "permanent"
-    }
-  },
-  {
-    "id": "force_shapechange",
-    "name": "Force Shapechange",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Shapechangers take 3d10 on a failed save. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "graft_flesh",
-    "name": "Graft Flesh",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
     }
   },
   {
@@ -3906,53 +2499,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "improved_blink",
-    "name": "Improved Blink",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "invulnerability_to_normal_weapons",
-    "name": "Invulnerability to Normal Weapons",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "khazids_procurement",
-    "name": "Khazid's Procurement",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "know_value",
-    "name": "Know Value",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
     }
   },
   {
@@ -3979,42 +2525,8 @@
     }
   },
   {
-    "id": "leomunds_hidden_lodge",
-    "name": "Leomund’s Hidden Lodge",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "lower_resistance",
-    "name": "Lower Resistance",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10+level"
-    }
-  },
-  {
     "id": "magic_jar",
     "name": "Magic Jar",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "magic_staff",
-    "name": "Magic Staff",
     "level": 5,
     "kind": "utility",
     "confidence": "high",
@@ -4032,19 +2544,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "mind_fog",
-    "name": "Mind Fog",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Targets take -2 on saves against mind-affecting and low-level spells. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "30"
     }
   },
   {
@@ -4072,39 +2571,6 @@
     }
   },
   {
-    "id": "mordenkainens_private_sanctum",
-    "name": "Mordenkainen's Private Sanctum",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
-    }
-  },
-  {
-    "id": "mummy_rot",
-    "name": "Mummy Rot",
-    "level": 5,
-    "kind": "damage",
-    "confidence": "low",
-    "note": "Touch attack: 2d6 plus a rotting disease (-2 Charisma per month); save not stated clearly.",
-    "target": "other",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "special"
-    },
-    "damage": {
-      "dice": "2d6",
-      "type": "negative"
-    }
-  },
-  {
     "id": "passwall",
     "name": "Passwall",
     "level": 5,
@@ -4114,65 +2580,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "60+10*level"
-    }
-  },
-  {
-    "id": "proofing_versus_combustion",
-    "name": "Proofing versus Combustion",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
-    "id": "prying_eyes",
-    "name": "Prying Eyes",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
-    }
-  },
-  {
-    "id": "rarys_telepathic_bond",
-    "name": "Rary's Telepathic Bond",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "20*level"
-    }
-  },
-  {
-    "id": "rusting_grasp",
-    "name": "Rusting Grasp",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "safeguarding",
-    "name": "Safeguarding",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10+10*level"
     }
   },
   {
@@ -4268,31 +2675,6 @@
     }
   },
   {
-    "id": "tensers_destructive_resonance",
-    "name": "Tenser’s Destructive Resonance",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Destroys one object; no creature damage. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
-    "id": "throbbing_bones",
-    "name": "Throbbing Bones",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Debuff: AC worse by 2, reduced movement, damage on movement (save half). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "transmute_rock_to_mud",
     "name": "Transmute Rock to Mud",
     "level": 5,
@@ -4301,56 +2683,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "vile_venom",
-    "name": "Vile Venom",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
-    }
-  },
-  {
-    "id": "von_gasiks_refusal",
-    "name": "Von Gasik's Refusal",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
-    }
-  },
-  {
-    "id": "vortex",
-    "name": "Vortex*",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Wild-magic vortex dealing 1d4 per level (save half). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1d4+level"
-    }
-  },
-  {
-    "id": "wall_of_bones",
-    "name": "Wall of Bones",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Creatures forcing through take 1d8 per 10 feet. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10"
     }
   },
   {
@@ -4388,19 +2720,6 @@
     }
   },
   {
-    "id": "waveform",
-    "name": "Waveform*",
-    "level": 5,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Wild-magic water form dealing 1d4 per level (save half). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1d10"
-    }
-  },
-  {
     "id": "antimagic_shell",
     "name": "Antimagic Shell",
     "level": 6,
@@ -4410,30 +2729,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "10*level"
-    }
-  },
-  {
-    "id": "arrow_of_bone",
-    "name": "Arrow of Bone",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Enchanted missile with special attack and damage rules. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "augmentation_ii",
-    "name": "Augmentation II",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "30"
     }
   },
   {
@@ -4447,30 +2742,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "blackmantle",
-    "name": "Blackmantle",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "bloodstones_spectral_steed",
-    "name": "Bloodstone's Spectral Steed",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
     }
   },
   {
@@ -4491,19 +2762,6 @@
     "damage": {
       "dice": "(min(level,12))d6",
       "type": "electricity"
-    }
-  },
-  {
-    "id": "claws_of_the_umber_hulk",
-    "name": "Claws of the Umber Hulk",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Claw attacks and burrowing. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
     }
   },
   {
@@ -4542,32 +2800,6 @@
     }
   },
   {
-    "id": "corpse_host",
-    "name": "Corpse Host",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Minor self-damage when harvesting flesh. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1440*level"
-    }
-  },
-  {
-    "id": "dead_mans_eyes",
-    "name": "Dead Man's Eyes",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Gaze kills low-HD victims, others paralysed or stunned; saves at -2 for some. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "death_fog",
     "name": "Death Fog",
     "level": 6,
@@ -4603,30 +2835,6 @@
     }
   },
   {
-    "id": "dilation_ii",
-    "name": "Dilation II",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "dimensional_blade",
-    "name": "Dimensional Blade",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Weapon gets +2 to attack and damage and cuts anything. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "disintegrate",
     "name": "Disintegrate",
     "level": 6,
@@ -4635,22 +2843,6 @@
     "target": "none",
     "duration": {
       "kind": "instant"
-    }
-  },
-  {
-    "id": "dragon_scales",
-    "name": "Dragon Scales",
-    "level": 6,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Improves AC by 2 (e.g. 6 becomes 4), in addition to normal AC.",
-    "target": "self_or_other",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    },
-    "modifiers": {
-      "ac": -2
     }
   },
   {
@@ -4673,18 +2865,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "etherealness",
-    "name": "Etherealness",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
     }
   },
   {
@@ -4711,36 +2891,11 @@
     }
   },
   {
-    "id": "forests_fiery_constrictor",
-    "name": "Forest's Fiery Constrictor",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Fiery tentacle attacking creatures (save or take damage). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "geas",
     "name": "Geas",
     "level": 6,
     "kind": "utility",
     "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "ghoul_gauntlet",
-    "name": "Ghoul Gauntlet",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Victim loses 1-2 hit points per round while transforming. Not modelled.",
     "target": "none",
     "duration": {
       "kind": "special"
@@ -4771,17 +2926,6 @@
     }
   },
   {
-    "id": "greater_sign_of_sealing",
-    "name": "Greater Sign of Sealing",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
     "id": "guards_and_wards",
     "name": "Guards and Wards",
     "level": 6,
@@ -4805,18 +2949,6 @@
     }
   },
   {
-    "id": "invulnerability_to_magical_weapons",
-    "name": "Invulnerability to Magical Weapons",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "legend_lore",
     "name": "Legend Lore",
     "level": 6,
@@ -4825,18 +2957,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "lorloveims_shadowy_transformation",
-    "name": "Lorloveim's Shadowy Transformation",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1d4+level"
     }
   },
   {
@@ -5024,18 +3144,6 @@
     }
   },
   {
-    "id": "superior_magnetism",
-    "name": "Superior Magnetism",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Magnet with damaging effects (2d6). Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "tensers_transformation",
     "name": "Tenser's Transformation",
     "level": 6,
@@ -5052,30 +3160,6 @@
     }
   },
   {
-    "id": "tentacles",
-    "name": "Tentacles",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Two extra attacks per round, 1d6 each. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "transmute_bone_to_steel",
-    "name": "Transmute Bone to Steel",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
     "id": "transmute_water_to_dust",
     "name": "Transmute Water to Dust",
     "level": 6,
@@ -5085,22 +3169,6 @@
     "target": "none",
     "duration": {
       "kind": "permanent"
-    }
-  },
-  {
-    "id": "trollish_fortitude",
-    "name": "Trollish Fortitude",
-    "level": 6,
-    "kind": "buff",
-    "confidence": "high",
-    "note": "Regenerates 3 hit points per round up to normal maximum; ignores dismemberment/decapitation.",
-    "target": "self",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    },
-    "modifiers": {
-      "regen_hp_per_round": 3
     }
   },
   {
@@ -5128,42 +3196,6 @@
     }
   },
   {
-    "id": "wildshield",
-    "name": "Wildshield",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "wildstrike",
-    "name": "Wildstrike*",
-    "level": 6,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "2d4"
-    }
-  },
-  {
-    "id": "acid_storm",
-    "name": "Acid Storm",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Area acid downpour (save half); damage dice not given in the seed text. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "banishment",
     "name": "Banishment",
     "level": 7,
@@ -5185,19 +3217,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "bloodstones_frightful_joining",
-    "name": "Bloodstone's Frightful Joining",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Risk of 5d6 damage on a failed system shock. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
     }
   },
   {
@@ -5241,17 +3260,6 @@
     "damage": {
       "dice": "(min(level,10))d6+min(level,10)",
       "type": "fire"
-    }
-  },
-  {
-    "id": "descent_into_madness",
-    "name": "Descent into Madness",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
     }
   },
   {
@@ -5302,40 +3310,6 @@
     }
   },
   {
-    "id": "hatch_the_stone_from_the_egg",
-    "name": "Hatch the Stone from the Egg",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "hornungs_surge_selector",
-    "name": "Hornung's Surge Selector*",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "intensify_summoning",
-    "name": "Intensify Summoning",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10"
-    }
-  },
-  {
     "id": "limited_wish",
     "name": "Limited Wish",
     "level": 7,
@@ -5344,19 +3318,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "malec_keths_flame_fist",
-    "name": "Malec-Keth's Flame Fist",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Touch: 1d4+2 fire, or on a failed save 1d4 per level for one round. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -5405,29 +3366,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "level"
-    }
-  },
-  {
-    "id": "neutralize_gas",
-    "name": "Neutralize Gas",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
-    "id": "persistence",
-    "name": "Persistence",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1440*level"
     }
   },
   {
@@ -5488,19 +3426,6 @@
     }
   },
   {
-    "id": "seven_eyes",
-    "name": "Seven-Eyes",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Seven orbs with different rays; some strike for 1d4+1. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "shadow_walk",
     "name": "Shadow Walk",
     "level": 7,
@@ -5513,18 +3438,6 @@
     }
   },
   {
-    "id": "shadowcat",
-    "name": "Shadowcat",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
     "id": "simulacrum",
     "name": "Simulacrum",
     "level": 7,
@@ -5533,17 +3446,6 @@
     "target": "none",
     "duration": {
       "kind": "permanent"
-    }
-  },
-  {
-    "id": "spell_shape",
-    "name": "Spell Shape*",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
     }
   },
   {
@@ -5568,30 +3470,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "60*level"
-    }
-  },
-  {
-    "id": "steal_enchantment",
-    "name": "Steal Enchantment",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
-    "id": "suffocate",
-    "name": "Suffocate",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Each round Constitution check or 2d4 damage. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
     }
   },
   {
@@ -5620,72 +3498,6 @@
     "id": "vision",
     "name": "Vision",
     "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "wound_conferral",
-    "name": "Wound Conferral",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
-    "id": "zombie_double",
-    "name": "Zombie Double",
-    "level": 7,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
-    }
-  },
-  {
-    "id": "abi_dalzims_horrid_wilting",
-    "name": "Abi-Dalzim's Horrid Wilting",
-    "level": 8,
-    "kind": "damage",
-    "confidence": "high",
-    "note": "1d8 per level, no stated cap; double penalty to save for water elementals and plants.",
-    "target": "area",
-    "duration": {
-      "kind": "instant"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "half"
-    },
-    "damage": {
-      "dice": "leveld8",
-      "type": "necromantic"
-    }
-  },
-  {
-    "id": "airboat",
-    "name": "Airboat",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
-    }
-  },
-  {
-    "id": "analyze_dweomer",
-    "name": "Analyze Dweomer",
-    "level": 8,
     "kind": "utility",
     "confidence": "high",
     "target": "none",
@@ -5741,29 +3553,6 @@
     }
   },
   {
-    "id": "death_shroud",
-    "name": "Death Shroud",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Aura that drains life from touching creatures. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "defoliate",
-    "name": "Defoliate",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "demand",
     "name": "Demand",
     "level": 8,
@@ -5772,18 +3561,6 @@
     "target": "none",
     "duration": {
       "kind": "special"
-    }
-  },
-  {
-    "id": "fear_ward",
-    "name": "Fear Ward",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "10*level"
     }
   },
   {
@@ -5798,53 +3575,6 @@
     }
   },
   {
-    "id": "gunthers_kaleidoscopic_strike",
-    "name": "Gunther's Kaleidoscopic Strike",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Beam with several possible effects. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
-    "id": "heart_of_stone",
-    "name": "Heart of Stone",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Takes only 1 damage from piercing or slashing attacks. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "homunculus_shield",
-    "name": "Homunculus Shield",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "hornungs_random_dispatcher",
-    "name": "Hornung's Random Dispatcher*",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
     "id": "incendiary_cloud",
     "name": "Incendiary Cloud",
     "level": 8,
@@ -5855,30 +3585,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "4+1d6"
-    }
-  },
-  {
-    "id": "iron_body",
-    "name": "Iron Body",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Resistances to many attacks, fists hit harder. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "life_force_transfer",
-    "name": "Life Force Transfer",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
     }
   },
   {
@@ -6022,19 +3728,6 @@
     }
   },
   {
-    "id": "shadow_form",
-    "name": "Shadow Form",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Shadow touch 1d4+1 and 1 Strength drain; resistances. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
     "id": "sink",
     "name": "Sink",
     "level": 8,
@@ -6068,17 +3761,6 @@
     }
   },
   {
-    "id": "wildzone",
-    "name": "Wildzone*",
-    "level": 8,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "astral_spell",
     "name": "Astral Spell",
     "level": 9,
@@ -6103,18 +3785,6 @@
     }
   },
   {
-    "id": "chain_contingency",
-    "name": "Chain Contingency",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "1440*level"
-    }
-  },
-  {
     "id": "crystalbrittle",
     "name": "Crystalbrittle",
     "level": 9,
@@ -6126,42 +3796,8 @@
     }
   },
   {
-    "id": "death_ward",
-    "name": "Death Ward",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "elemental_aura",
-    "name": "Elemental Aura",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "60*level"
-    }
-  },
-  {
     "id": "energy_drain",
     "name": "Energy Drain",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
-    "id": "estate_transference",
-    "name": "Estate Transference",
     "level": 9,
     "kind": "utility",
     "confidence": "high",
@@ -6194,30 +3830,8 @@
     }
   },
   {
-    "id": "glorious_transmutation",
-    "name": "Glorious Transmutation",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "imprisonment",
     "name": "Imprisonment",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "permanent"
-    }
-  },
-  {
-    "id": "life_force_exchange",
-    "name": "Life Force Exchange",
     "level": 9,
     "kind": "utility",
     "confidence": "high",
@@ -6295,17 +3909,6 @@
     }
   },
   {
-    "id": "programmed_amnesia",
-    "name": "Programmed Amnesia",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
     "id": "shape_change",
     "name": "Shape Change",
     "level": 9,
@@ -6315,30 +3918,6 @@
     "duration": {
       "kind": "rounds",
       "rounds": "10*level"
-    }
-  },
-  {
-    "id": "sphere_of_ultimate_destruction",
-    "name": "Sphere of Ultimate Destruction",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Annihilating sphere; explosion if touched by a rod of cancellation. Not modelled.",
-    "target": "none",
-    "duration": {
-      "kind": "rounds",
-      "rounds": "level"
-    }
-  },
-  {
-    "id": "stabilize",
-    "name": "Stabilize*",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
     }
   },
   {
@@ -6375,45 +3954,11 @@
     }
   },
   {
-    "id": "wail_of_the_banshee",
-    "name": "Wail of the Banshee",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "instant"
-    }
-  },
-  {
     "id": "weird",
     "name": "Weird",
     "level": 9,
     "kind": "utility",
     "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "wildfire",
-    "name": "Wildfire*",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "high",
-    "target": "none",
-    "duration": {
-      "kind": "special"
-    }
-  },
-  {
-    "id": "wildwind",
-    "name": "Wildwind*",
-    "level": 9,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Wall of lights doing 2d6 to creatures struck. Not modelled.",
     "target": "none",
     "duration": {
       "kind": "special"

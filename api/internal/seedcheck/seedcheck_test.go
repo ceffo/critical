@@ -10,7 +10,11 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
@@ -110,5 +114,67 @@ func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {
 		if it.Kind == "ammo" {
 			assert.True(t, launchers[it.AmmoKind], "ammo %s fits no weapon", it.ID)
 		}
+	}
+}
+
+// catalogSpell is the full seeds/spells.json row; every stat is a string.
+type catalogSpell struct {
+	Name         string `json:"name"`
+	Class        string `json:"class"`
+	Level        int    `json:"level"`
+	School       string `json:"school"`
+	Sphere       string `json:"sphere"`
+	CastingTime  string `json:"casting_time"`
+	Range        string `json:"range"`
+	Duration     string `json:"duration"`
+	AreaOfEffect string `json:"area_of_effect"`
+	Components   string `json:"components"`
+	SavingThrow  string `json:"saving_throw"`
+	Description  string `json:"description"`
+}
+
+func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
+	var spells []catalogSpell
+	readJSON(t, "spells.json", &spells)
+	require.NotEmpty(t, spells)
+
+	// A field label ("Range:", "Component: V"), a half-decoded fraction ("_")
+	// or a stat line swallowed by the neighbouring field means the scrape
+	// glued two fields together.
+	leak := regexp.MustCompile(`(?i)_|\b(range|duration|casting time|saving throw|area of effect|components?|reversible|sphere)\s*:|Reversible`)
+
+	type key struct{ name, class string }
+	seen := map[key]bool{}
+	for _, s := range spells {
+		id := s.Class + " " + s.Name
+		k := key{strings.ToLower(s.Name), s.Class}
+		assert.False(t, seen[k], "duplicate spell %s", id)
+		seen[k] = true
+
+		assert.Contains(t, []string{"Wizard", "Priest"}, s.Class, id)
+		assert.GreaterOrEqual(t, s.Level, 1, id)
+		assert.LessOrEqual(t, s.Level, 9, id)
+		if s.Class == "Priest" {
+			assert.NotEmpty(t, s.Sphere, "%s: priest spells have a sphere", id)
+		}
+
+		stats := map[string]string{
+			"name": s.Name, "school": s.School, "casting_time": s.CastingTime,
+			"range": s.Range, "duration": s.Duration, "area_of_effect": s.AreaOfEffect,
+			"components": s.Components, "saving_throw": s.SavingThrow,
+		}
+		for field, v := range stats {
+			assert.NotEmpty(t, strings.TrimSpace(v), "%s: %s is empty", id, field)
+			assert.Equal(t, strings.TrimSpace(v), v, "%s: %s has stray whitespace", id, field)
+			assert.NotRegexp(t, leak, v, "%s: %s leaks a field label or a bad character", id, field)
+			assert.LessOrEqual(t, len(v), 100, "%s: %s looks like leaked prose", id, field)
+		}
+		assert.NotRegexp(t, leak, s.Sphere, "%s: sphere", id)
+		assert.NotEmpty(t, strings.TrimSpace(s.Description), "%s: description is empty", id)
+		head := s.Description[:min(len(s.Description), 120)]
+		assert.NotRegexp(t, `(Saving Throw|Area of Effect|Casting Time|Components?|Range|Duration|Reversible)\s*:`, head,
+			"%s: description starts with a leaked stat line", id)
+		first, _ := utf8.DecodeRuneInString(s.Description)
+		assert.False(t, unicode.IsLower(first), "%s: description starts mid-sentence (a stat swallowed its first words)", id)
 	}
 }

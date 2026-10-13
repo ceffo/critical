@@ -22,66 +22,6 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
-// Cast provides a mock function with given fields: ctx, characterID, slotIndex
-func (_m *MockSVC) Cast(ctx context.Context, characterID int64, slotIndex int) ([]spellsvc.SpellSlot, error) {
-	ret := _m.Called(ctx, characterID, slotIndex)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Cast")
-	}
-
-	var r0 []spellsvc.SpellSlot
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int) ([]spellsvc.SpellSlot, error)); ok {
-		return rf(ctx, characterID, slotIndex)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int) []spellsvc.SpellSlot); ok {
-		r0 = rf(ctx, characterID, slotIndex)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]spellsvc.SpellSlot)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64, int) error); ok {
-		r1 = rf(ctx, characterID, slotIndex)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockSVC_Cast_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Cast'
-type MockSVC_Cast_Call struct {
-	*mock.Call
-}
-
-// Cast is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-//   - slotIndex int
-func (_e *MockSVC_Expecter) Cast(ctx interface{}, characterID interface{}, slotIndex interface{}) *MockSVC_Cast_Call {
-	return &MockSVC_Cast_Call{Call: _e.mock.On("Cast", ctx, characterID, slotIndex)}
-}
-
-func (_c *MockSVC_Cast_Call) Run(run func(ctx context.Context, characterID int64, slotIndex int)) *MockSVC_Cast_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(int))
-	})
-	return _c
-}
-
-func (_c *MockSVC_Cast_Call) Return(_a0 []spellsvc.SpellSlot, _a1 error) *MockSVC_Cast_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockSVC_Cast_Call) RunAndReturn(run func(context.Context, int64, int) ([]spellsvc.SpellSlot, error)) *MockSVC_Cast_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

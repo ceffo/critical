@@ -6,6 +6,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +43,7 @@ func TestPrepare_RealStack_LongRestKeepsPreparationAndResetsUsed(t *testing.T) {
 	ctx := context.Background()
 	_, err := bs.Prep.Prepare(ctx, bs.CharacterID, []string{"mirror_image", "mirror_image", "fireball"})
 	require.NoError(t, err)
-	_, err = bs.Spells.Cast(ctx, bs.CharacterID, 0)
+	_, err = bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{})
 	require.NoError(t, err)
 	require.Equal(t, 1, usedSlots(t, bs))
 

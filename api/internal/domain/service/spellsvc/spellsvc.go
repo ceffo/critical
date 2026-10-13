@@ -1,5 +1,5 @@
-// Package spellsvc owns the spell slot ledger (cast/reset) and the read-side
-// spell catalog search. The catalog is exposed via a separate Reader port —
+// Package spellsvc owns the spell slot ledger (read, reset on a long rest;
+// castsvc spends slots) and the read-side spell catalog search. The catalog is exposed via a separate Reader port —
 // reads don't need the write-side DAL detour (clean_architecture.md §5.4).
 package spellsvc
 
@@ -14,7 +14,6 @@ import (
 type SVC interface {
 	domain.Service
 	GetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
-	Cast(ctx context.Context, characterID int64, slotIndex int) ([]SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	Search(ctx context.Context, query, class string) ([]Spell, error)
 }

@@ -172,8 +172,8 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", Duration: 45, Charges: 8},
 		},
 		{
-			name: "haste: 3 + level rounds; extra attacks, movement and initiative are shown, not tracked",
-			slot: slot("haste", "Haste", 3),
+			name:     "haste: 3 + level rounds; extra attacks, movement and initiative are shown, not tracked",
+			slot:     slot("haste", "Haste", 3),
 			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", Duration: 18},
 			check: func(t *testing.T, r castsvc.CastResult) {
 				assert.Equal(t, []castsvc.Untracked{
@@ -203,8 +203,10 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		{
 			name: "enlarge: damage multiplier 100% + 10%/level",
 			slot: slot("enlarge", "Enlarge", 1),
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Enlarge", Duration: 75,
-				Effects: buffsvc.BuffEffects{SpellsBuff: floatPtr(2.5)}},
+			wantBuff: &buffsvc.BuffEffect{
+				ID: buffsAdded, Name: "Enlarge", Duration: 75,
+				Effects: buffsvc.BuffEffects{SpellsBuff: floatPtr(2.5)},
+			},
 		},
 		{
 			name: "fireball: 1d6 per level, max 10d6; save for half noted",
@@ -232,8 +234,8 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			wantDmg: &castsvc.DamageResult{Dice: "2d4", Type: "acid", Instances: 1, Rounds: 6, Total: 2 + 4 + 6 + 8 + 3 + 2},
 		},
 		{
-			name: "chromatic orb uses the dice of the highest level row",
-			slot: slot("chromatic_orb", "Chromatic Orb", 1),
+			name:    "chromatic orb uses the dice of the highest level row",
+			slot:    slot("chromatic_orb", "Chromatic Orb", 1),
 			wantDmg: &castsvc.DamageResult{Dice: "0", Type: "magic", Instances: 1, Rounds: 1, Total: 0},
 		},
 		{
@@ -340,18 +342,22 @@ func TestReceive(t *testing.T) {
 		{
 			name: "strength from a level 9 wizard",
 			req:  castsvc.ReceiveRequest{SpellID: "strength", CasterLevel: 9}, dice: []int{6},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Strength", Duration: 540,
-				Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(18)}},
+			wantBuff: &buffsvc.BuffEffect{
+				ID: buffsAdded, Name: "Strength", Duration: 540,
+				Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(18)},
+			},
 		},
 		{
 			name: "improved strength: rogue 1d6+4, max 23",
 			req:  castsvc.ReceiveRequest{SpellID: "improved_strength", CasterLevel: 12}, dice: []int{2},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Improved Strength", Duration: 12,
-				Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(23)}},
+			wantBuff: &buffsvc.BuffEffect{
+				ID: buffsAdded, Name: "Improved Strength", Duration: 12,
+				Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(23)},
+			},
 		},
 		{
-			name: "haste received (area) lands on the Bard",
-			req:  castsvc.ReceiveRequest{SpellID: "haste", CasterLevel: 7},
+			name:     "haste received (area) lands on the Bard",
+			req:      castsvc.ReceiveRequest{SpellID: "haste", CasterLevel: 7},
 			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", Duration: 10},
 		},
 		{

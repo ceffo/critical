@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,7 @@ func gemCount(t *testing.T, bs *composition.BackingServices) int {
 func spend(t *testing.T, bs *composition.BackingServices) {
 	t.Helper()
 	ctx := context.Background()
-	_, err := bs.Spells.Cast(ctx, bs.CharacterID, 0)
+	_, err := bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{})
 	require.NoError(t, err)
 	_, err = bs.Items.Use(ctx, "power_gem_dispel")
 	require.NoError(t, err)

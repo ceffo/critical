@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/actionloghdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/combathdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/hphdl"
@@ -41,6 +42,7 @@ func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
 	buffhdl.RegisterRoutes(r, charID, bs.Buffs)
 	spellhdl.RegisterRoutes(r, charID, bs.Spells)
 	spellprephdl.RegisterRoutes(r, charID, bs.Prep)
+	casthdl.RegisterRoutes(r, charID, bs.Cast)
 	combathdl.RegisterRoutes(r, charID, bs.Combat)
 	itemhdl.RegisterRoutes(r, bs.Items)
 	resthdl.RegisterRoutes(r, charID, bs.Rest)

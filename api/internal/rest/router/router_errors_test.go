@@ -16,6 +16,8 @@ import (
 	logmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
+	castmocks "github.com/ceffo/critical/api/internal/domain/service/castsvc/mocks"
 	charmocks "github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
@@ -36,6 +38,7 @@ type mocksSet struct {
 	hp    *hpmocks.MockSVC
 	buffs *buffmocks.MockSVC
 	spell *spellmocks.MockSVC
+	cast  *castmocks.MockSVC
 	cmb   *combatmocks.MockSVC
 	log   *logmocks.MockSVC
 	items *itemmocks.MockSVC
@@ -49,6 +52,7 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		hp:    hpmocks.NewMockSVC(t),
 		buffs: buffmocks.NewMockSVC(t),
 		spell: spellmocks.NewMockSVC(t),
+		cast:  castmocks.NewMockSVC(t),
 		cmb:   combatmocks.NewMockSVC(t),
 		log:   logmocks.NewMockSVC(t),
 		items: itemmocks.NewMockSVC(t),
@@ -56,7 +60,7 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
-		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
+		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m
@@ -132,7 +136,10 @@ var endpoints = []endpoint{
 		m.spell.On("Search", anyArgs(3)...).Return(nil, err)
 	}},
 	{"POST spells/{id}/cast", "POST", "/api/spells/2/cast", "", func(m *mocksSet, err error) {
-		m.spell.On("Cast", anyArgs(3)...).Return(nil, err)
+		m.cast.On("Cast", anyArgs(4)...).Return(castsvc.CastResult{}, err)
+	}},
+	{"POST spells/receive", "POST", "/api/spells/receive", `{"spellId":"strength","casterLevel":9}`, func(m *mocksSet, err error) {
+		m.cast.On("Receive", anyArgs(3)...).Return(castsvc.CastResult{}, err)
 	}},
 	{"POST spells/reset", "POST", "/api/spells/reset", "", func(m *mocksSet, err error) {
 		m.rest.On("LongRest", anyArgs(2)...).Return(restsvc.Result{}, err)

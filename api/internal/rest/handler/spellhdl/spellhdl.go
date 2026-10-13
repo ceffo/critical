@@ -4,11 +4,9 @@ package spellhdl
 import (
 	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/go-chi/chi/v5"
 )
 
 // Router is the chi subset we need.
@@ -22,7 +20,6 @@ type CharacterIDFunc func(r *http.Request) int64
 
 type spellSvc interface {
 	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
-	Cast(ctx context.Context, characterID int64, slotIndex int) ([]spellsvc.SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	Search(ctx context.Context, query, class string) ([]spellsvc.Spell, error)
 }
@@ -31,30 +28,12 @@ type spellSvc interface {
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC) {
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
 	r.Get("/api/spells", render.Handle(Search(svc)))
-	r.Post("/api/spells/{id}/cast", render.Handle(Cast(charID, svc)))
 }
 
 // GetSlots returns the slot list.
 func GetSlots(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		slots, err := svc.GetSlots(r.Context(), charID(r))
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, SlotsToDTO(slots))
-		return nil
-	}
-}
-
-// Cast marks slot {id} used.
-func Cast(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		idStr := chi.URLParam(r, "id")
-		idx, err := strconv.Atoi(idStr)
-		if err != nil {
-			return render.BadRequestError("invalid slot index")
-		}
-		slots, err := svc.Cast(r.Context(), charID(r), idx)
 		if err != nil {
 			return err
 		}
@@ -111,12 +90,17 @@ func SlotsToDTO(in []spellsvc.SpellSlot) []SpellSlotDTO {
 func spellsToDTO(in []spellsvc.Spell) []SpellDTO {
 	out := make([]SpellDTO, 0, len(in))
 	for _, s := range in {
-		out = append(out, SpellDTO{
-			Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
-			CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
-			AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
-			Description: s.Description,
-		})
+		out = append(out, SpellToDTO(s))
 	}
 	return out
+}
+
+// SpellToDTO maps one spell to its wire shape.
+func SpellToDTO(s spellsvc.Spell) SpellDTO {
+	return SpellDTO{
+		Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
+		CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
+		AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
+		Description: s.Description,
+	}
 }

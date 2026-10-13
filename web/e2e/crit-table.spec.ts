@@ -144,7 +144,11 @@ test("a decimal multiplier typed with a comma is saved and the crit shows the fl
   // The breakdown shows the multiplier as entered, and the unrounded → floored step when the
   // damage is not whole; the big total is the floored number.
   const total = Number(await card.getByTestId("total-damage").textContent());
-  const breakdown = (await card.getByText(/ × 1\.5 \+ /).first().textContent()) ?? "";
+  const breakdown =
+    (await card
+      .getByText(/ × 1\.5 \+ /)
+      .first()
+      .textContent()) ?? "";
   const final = Number(breakdown.split(/[=→]/).pop()?.trim());
   expect(final).toBe(total);
   if (breakdown.includes("→")) {
@@ -152,4 +156,36 @@ test("a decimal multiplier typed with a comma is saved and the crit shows the fl
     expect(Math.floor(unrounded)).toBe(total);
   }
   await snap(page, "decimal-crit");
+});
+
+test("French shows the decimal multiplier with a comma on the card and in the log", async ({
+  page,
+  stack,
+}) => {
+  const res = await fetch(`${stack.apiUrl}/api/crit-table`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rows: [{ from: 1, to: 100, multiplier: 1.5 }] }),
+  });
+  expect(res.ok).toBe(true);
+  await page.addInitScript(() =>
+    localStorage.setItem("critical.language", "fr"),
+  );
+  await openDashboard(page);
+  await page.getByRole("tab", { name: "Attaque", exact: true }).click();
+  await page.getByLabel("CA de la cible").fill("1000");
+  await page.getByRole("button", { name: "Jet d'attaque" }).click();
+  const card = page
+    .getByRole("region", { name: "Dernier résultat" })
+    .getByTestId("attack-result");
+  await expect(card).toContainText("Critique ×1,5 (d100 dans 1–100)");
+  await expect(card.getByTestId("damage-terms")).toContainText("×1,5");
+  await expect(
+    page
+      .getByRole("region", { name: "Journal de combat" })
+      .getByRole("listitem")
+      .filter({ hasText: "critique ×1,5" })
+      .first(),
+  ).toBeVisible();
+  await snap(page, "decimal-crit-fr");
 });

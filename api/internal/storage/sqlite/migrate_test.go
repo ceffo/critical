@@ -71,3 +71,27 @@ func TestMigrate006_DedupesStateTables(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(all), count(t, db, `SELECT COUNT(*) FROM schema_migrations`))
 }
+
+// A migration that fails halfway leaves the schema, the data and the
+// bookkeeping exactly as they were (one transaction per file).
+func TestApplyMigration_FailureLeavesNothingBehind(t *testing.T) {
+	ctx := context.Background()
+	db, err := Open(filepath.Join(t.TempDir(), "t.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	applyUpTo(t, db, "001_init.sql")
+	_, err = db.ExecContext(ctx, `CREATE TABLE fixture (n INTEGER NOT NULL); INSERT INTO fixture (n) VALUES (1)`)
+	require.NoError(t, err)
+
+	err = db.applyMigration(ctx, "999_broken.sql", `
+CREATE TABLE fixture_new (n REAL NOT NULL);
+INSERT INTO fixture_new (n) SELECT n FROM fixture;
+DROP TABLE fixture;
+INSERT INTO nowhere (n) VALUES (1);
+ALTER TABLE fixture_new RENAME TO fixture;`)
+	require.Error(t, err)
+
+	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) FROM fixture"))
+	assert.Zero(t, scalar(t, db, "SELECT COUNT(*) FROM sqlite_master WHERE name = 'fixture_new'"))
+	assert.Zero(t, scalar(t, db, "SELECT COUNT(*) FROM schema_migrations WHERE name = '999_broken.sql'"))
+}

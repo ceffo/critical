@@ -27,5 +27,11 @@ describe("formatFactor", () => {
   it.each([
     [2, "×2"],
     [1.5, "×1.5"],
-  ])("%d → %s", (n, want) => expect(formatFactor(n)).toBe(want));
+    [1.15, "×1.15"],
+  ])("%d → %s", (n, want) => expect(formatFactor(n, "en")).toBe(want));
+
+  it("uses the decimal comma in French", () => {
+    expect(formatFactor(1.5, "fr")).toBe("×1,5");
+    expect(formatFactor(2, "fr")).toBe("×2");
+  });
 });

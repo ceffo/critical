@@ -7,9 +7,14 @@ export function formatSigned(n: number): string {
   return "0";
 }
 
-/** A multiplier for display: "×2", "×1.5". */
-export function formatFactor(n: number): string {
-  return `×${n}`;
+/** A number in the UI language: 1.5 → "1.5" (en), "1,5" (fr). */
+export function formatNumber(n: number, lang?: string): string {
+  return new Intl.NumberFormat(lang, { maximumFractionDigits: 4 }).format(n);
+}
+
+/** A multiplier for display: "×2", "×1.5" (en), "×1,5" (fr). */
+export function formatFactor(n: number, lang?: string): string {
+  return `×${formatNumber(n, lang)}`;
 }
 
 /** HP bar fill as a 0–100 percentage of max, clamped. */

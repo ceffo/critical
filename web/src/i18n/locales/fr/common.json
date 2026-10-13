@@ -234,7 +234,7 @@
     "saveHeading": "Sauvegarde contre {{name}}",
     "hit": "Touché",
     "miss": "Raté",
-    "crit": "Critique ×{{mult}} (d100 dans {{from}}–{{to}})",
+    "crit": "Critique ×{{mult, number}} (d100 dans {{from}}–{{to}})",
     "passed": "Réussie",
     "failed": "Échouée",
     "totalDamage": "Dégâts totaux",
@@ -260,7 +260,7 @@
       "sm": "cible P/M",
       "l": "grande cible"
     },
-    "critPlaceholder": "Critique ×{{mult}} (provisoire)",
+    "critPlaceholder": "Critique ×{{mult, number}} (provisoire)",
     "ammoLeft": "{{name}} : {{count}} restantes",
     "damageDice": "Dés",
     "damageBonus": "Bonus +",
@@ -396,7 +396,7 @@
     "attack": {
       "miss": "{{weapon}} contre CA {{ac}} : raté",
       "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
-      "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult}}, {{damage}} dégâts",
+      "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult, number}}, {{damage}} dégâts",
       "withAmmo": "{{weapon}} ({{ammo}})"
     },
     "cast": {

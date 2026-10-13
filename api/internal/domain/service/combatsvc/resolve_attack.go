@@ -316,8 +316,8 @@ func explainDamage(r *RollResult) string {
 	case r.BonusDamage < 0:
 		s += fmt.Sprintf(" - %d", -r.BonusDamage)
 	}
-	// A fractional result shows the unrounded value and the floor step.
-	if u := math.Floor(r.UnroundedDamage + floorEpsilon); math.Abs(r.UnroundedDamage-u) > floorEpsilon && r.UnroundedDamage > 0 {
+	// A fractional result (or one clamped up to 0) shows the unrounded value and the final step.
+	if u := math.Floor(r.UnroundedDamage + floorEpsilon); math.Abs(r.UnroundedDamage-u) > floorEpsilon || int(u) != r.TotalDamage {
 		return fmt.Sprintf("%s = %s → %d", s, trimNum(r.UnroundedDamage), r.TotalDamage)
 	}
 	return fmt.Sprintf("%s = %d", s, r.TotalDamage)

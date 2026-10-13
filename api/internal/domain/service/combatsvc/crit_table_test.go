@@ -294,3 +294,57 @@ func TestResolveAttack_NoCritIgnoresTable(t *testing.T) {
 	assert.InDelta(t, 1, res.CritMultiplier, 0)
 	assert.Equal(t, 7, res.TotalDamage)
 }
+
+// x1.15 on 20 points is 23, and on 100 points 115 (100 × 1.15 is
+// 114.99999999999999 in floats): the epsilon keeps the final floor from losing a point.
+func TestResolveAttack_DecimalFloatNoiseKeepsThePoint(t *testing.T) {
+	tests := []struct {
+		name   string
+		magic  int // dice 5 + magic = points before the multiplier
+		want   int
+		wantBr string
+	}{
+		{name: "x1.15 on 20", magic: 15, want: 23, wantBr: "((5 × 1.0) + 15) × 1.15 + 0 = 23"},
+		{name: "x1.15 on 100 (floats give 114.99999999999999)", magic: 95, want: 115, wantBr: "((5 × 1.0) + 95) × 1.15 + 0 = 115"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.critRows = []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 1.15}}
+			big := longsword
+			big.MagicDamage = tt.magic
+			f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(big, nil)
+			f.withChar(bard())
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
+			f.dice.EXPECT().RollD20().Return(20)
+			f.dice.EXPECT().RollD100().Return(30)
+			f.dice.EXPECT().RollDie(8).Return(5)
+			f.records()
+			res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, res.TotalDamage)
+			assert.Equal(t, tt.wantBr, res.DamageBreakdown)
+		})
+	}
+}
+
+// A negative buff takes the total below 0: it is clamped to 0 and the
+// breakdown shows the unrounded value and the clamp.
+func TestResolveAttack_DecimalCritWithNegativeBonusClampsToZero(t *testing.T) {
+	f := newFixture(t)
+	f.critRows = []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 1.5}}
+	mods := strMods(12)
+	mods.Damage = -20
+	mods.DamageFrom = []buffsvc.Contribution{{Buff: "Curse", Value: -20}}
+	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
+	f.withChar(bard())
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+	f.dice.EXPECT().RollD20().Return(20)
+	f.dice.EXPECT().RollD100().Return(30)
+	f.dice.EXPECT().RollDie(8).Return(5)
+	f.records()
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
+	require.NoError(t, err)
+	assert.Zero(t, res.TotalDamage)
+	assert.Equal(t, "((5 × 1.0) + 2) × 1.5 + 0 - 20 = -9.5 → 0", res.DamageBreakdown)
+}

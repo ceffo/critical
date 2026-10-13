@@ -234,7 +234,7 @@
     "saveHeading": "Save vs {{name}}",
     "hit": "Hit",
     "miss": "Miss",
-    "crit": "Critical ×{{mult}} (d100 in {{from}}–{{to}})",
+    "crit": "Critical ×{{mult, number}} (d100 in {{from}}–{{to}})",
     "passed": "Passed",
     "failed": "Failed",
     "totalDamage": "Total damage",
@@ -260,7 +260,7 @@
       "sm": "S/M target",
       "l": "large target"
     },
-    "critPlaceholder": "Critical ×{{mult}} (placeholder)",
+    "critPlaceholder": "Critical ×{{mult, number}} (placeholder)",
     "ammoLeft": "{{name}}: {{count}} left",
     "damageDice": "Dice",
     "damageBonus": "Bonus +",
@@ -396,7 +396,7 @@
     "attack": {
       "miss": "{{weapon}} vs AC {{ac}}: miss",
       "hit": "{{weapon}} vs AC {{ac}}: hit, {{damage}} damage",
-      "crit": "{{weapon}} vs AC {{ac}}: critical ×{{mult}}, {{damage}} damage",
+      "crit": "{{weapon}} vs AC {{ac}}: critical ×{{mult, number}}, {{damage}} damage",
       "withAmmo": "{{weapon}} ({{ammo}})"
     },
     "cast": {

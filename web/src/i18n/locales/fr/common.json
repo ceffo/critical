@@ -125,7 +125,16 @@
   },
   "items": {
     "title": "Objets",
-    "placeholder": "Les objets à charges et consommables s'utiliseront d'ici."
+    "placeholder": "Les objets à charges et consommables s'utiliseront d'ici.",
+    "ammo": "Munitions",
+    "charged": "Objets à charges et consommables",
+    "use": "Utiliser",
+    "left": "{{count}} restant(s)",
+    "count": "{{count}} / {{max}}",
+    "empty": "Vide",
+    "perDay": "1/jour",
+    "loading": "Chargement des objets…",
+    "none": "Aucun objet."
   },
   "spellSlots": {
     "title": "Emplacements de sorts",
@@ -278,7 +287,15 @@
         "cha_gain": "CHA +{{value}}",
         "charges_hp_damage_taken": "Absorbe {{value}} PV de dégâts"
       }
-    }
+    },
+    "itemHeading": "{{name}} utilisé",
+    "effect": "Effet",
+    "dice": "Dés",
+    "rolls": "Jets",
+    "total": "Total",
+    "save": "Sauvegarde : {{name}}",
+    "left": "{{name}} : {{count}} restant(s)",
+    "noRoll": "Rien à lancer : l'effet se résout à la table."
   },
   "log": {
     "title": "Journal de combat",
@@ -331,6 +348,10 @@
       "received": "{{spell}} lancé sur moi (niveau du lanceur {{level}})",
       "damage": "{{total}} dégâts ({{type}})",
       "strGain": "FOR +{{gain}}"
+    },
+    "item": {
+      "rolled": "{{name}} utilisé : {{dice}} = {{total}} ({{left}} restant)",
+      "used": "{{name}} utilisé ({{left}} restant)"
     }
   }
 }

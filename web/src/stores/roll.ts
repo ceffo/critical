@@ -3,13 +3,16 @@ import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
 import type { CastResult } from "@/types/spells";
 import { resolveAttack } from "@/api/combat";
 import { rollSavingThrow } from "@/api/roll";
+import { postUseItem } from "@/api/items";
+import type { UseResult } from "@/types/items";
 import { useTableStore } from "./table";
 
 /** The last roll and what was asked for, so the result card can show its context. */
 export type LastRoll =
   | { kind: "attack"; result: RollResult }
   | { kind: "save"; category: SaveCategory; result: RollResult }
-  | { kind: "cast"; result: CastResult };
+  | { kind: "cast"; result: CastResult }
+  | { kind: "item"; result: UseResult };
 
 interface RollStore {
   last: LastRoll | null;
@@ -17,6 +20,8 @@ interface RollStore {
   /** Resolves true when the attack was rolled (and logged). */
   rollAttack: (req: AttackRequest) => Promise<boolean>;
   rollSave: (category: SaveCategory) => Promise<void>;
+  /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
+  spendItem: (id: string) => Promise<boolean>;
 }
 
 export const useRollStore = create<RollStore>((set) => {
@@ -42,6 +47,7 @@ export const useRollStore = create<RollStore>((set) => {
     rolling: false,
     rollAttack: (req) =>
       roll(async () => ({ kind: "attack", result: await resolveAttack(req) }), true),
+    spendItem: (id) => roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
     rollSave: async (category) => {
       await roll(
         async () => ({ kind: "save", category, result: await rollSavingThrow(category) }),

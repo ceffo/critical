@@ -125,7 +125,16 @@
   },
   "items": {
     "title": "Items",
-    "placeholder": "Charged items and consumables will be used from here."
+    "placeholder": "Charged items and consumables will be used from here.",
+    "ammo": "Ammunition",
+    "charged": "Charged items & consumables",
+    "use": "Use",
+    "left": "{{count}} left",
+    "count": "{{count}} / {{max}}",
+    "empty": "Empty",
+    "perDay": "1/day",
+    "loading": "Loading items…",
+    "none": "No items."
   },
   "spellSlots": {
     "title": "Spell Slots",
@@ -278,7 +287,15 @@
         "cha_gain": "CHA +{{value}}",
         "charges_hp_damage_taken": "Absorbs {{value}} HP of damage"
       }
-    }
+    },
+    "itemHeading": "Used {{name}}",
+    "effect": "Effect",
+    "dice": "Dice",
+    "rolls": "Rolls",
+    "total": "Total",
+    "save": "Save: {{name}}",
+    "left": "{{name}}: {{count}} left",
+    "noRoll": "Nothing to roll — the effect is resolved at the table."
   },
   "log": {
     "title": "Combat Log",
@@ -331,6 +348,10 @@
       "received": "{{spell}} cast on me (caster level {{level}})",
       "damage": "{{total}} {{type}} damage",
       "strGain": "STR +{{gain}}"
+    },
+    "item": {
+      "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
+      "used": "Used {{name}} ({{left}} left)"
     }
   }
 }

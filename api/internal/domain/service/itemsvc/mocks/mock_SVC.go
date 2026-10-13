@@ -337,6 +337,66 @@ func (_c *MockSVC_Use_Call) RunAndReturn(run func(context.Context, string) (item
 	return _c
 }
 
+// UseItem provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockSVC) UseItem(ctx context.Context, characterID int64, itemID string) (*itemsvc.UseResult, error) {
+	ret := _m.Called(ctx, characterID, itemID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UseItem")
+	}
+
+	var r0 *itemsvc.UseResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (*itemsvc.UseResult, error)); ok {
+		return rf(ctx, characterID, itemID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) *itemsvc.UseResult); ok {
+		r0 = rf(ctx, characterID, itemID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*itemsvc.UseResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, itemID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_UseItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UseItem'
+type MockSVC_UseItem_Call struct {
+	*mock.Call
+}
+
+// UseItem is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - itemID string
+func (_e *MockSVC_Expecter) UseItem(ctx interface{}, characterID interface{}, itemID interface{}) *MockSVC_UseItem_Call {
+	return &MockSVC_UseItem_Call{Call: _e.mock.On("UseItem", ctx, characterID, itemID)}
+}
+
+func (_c *MockSVC_UseItem_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockSVC_UseItem_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_UseItem_Call) Return(_a0 *itemsvc.UseResult, _a1 error) *MockSVC_UseItem_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_UseItem_Call) RunAndReturn(run func(context.Context, int64, string) (*itemsvc.UseResult, error)) *MockSVC_UseItem_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockSVC creates a new instance of MockSVC. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSVC(t interface {

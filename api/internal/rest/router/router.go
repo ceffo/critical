@@ -44,7 +44,7 @@ func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
 	spellprephdl.RegisterRoutes(r, charID, bs.Prep)
 	casthdl.RegisterRoutes(r, charID, bs.Cast)
 	combathdl.RegisterRoutes(r, charID, bs.Combat)
-	itemhdl.RegisterRoutes(r, bs.Items)
+	itemhdl.RegisterRoutes(r, charID, bs.Items)
 	resthdl.RegisterRoutes(r, charID, bs.Rest)
 
 	return r

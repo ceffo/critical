@@ -1,4 +1,5 @@
-// Package combathdl exposes /api/roll/attack, /api/roll/save, /api/weapons and
+// Package combathdl exposes /api/roll/attack, /api/roll/save (and its
+// adjustment), /api/weapons and
 // /api/crit-table.
 package combathdl
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/go-chi/chi/v5"
 )
 
 // Router is the chi subset we need.
@@ -27,6 +29,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type combatSvc interface {
 	ResolveAttack(ctx context.Context, characterID int64, req combatsvc.AttackRequest) (*combatsvc.RollResult, error)
 	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error)
+	AdjustSave(ctx context.Context, characterID, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)
 	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
 	GetCritTable(ctx context.Context) (combatsvc.CritTable, error)
 	SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error)
@@ -36,6 +39,7 @@ type combatSvc interface {
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/attack", render.Handle(ResolveAttack(charID, svc)))
 	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
+	r.Post("/api/roll/save/{id}/adjust", render.Handle(AdjustSave(charID, svc)))
 	r.Get("/api/weapons", render.Handle(ListWeapons(svc)))
 	r.Get("/api/crit-table", render.Handle(GetCritTable(svc)))
 	r.Put("/api/crit-table", render.Handle(PutCritTable(svc)))
@@ -135,6 +139,39 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	}
 }
 
+// SaveAdjustmentDTO is the body of POST /api/roll/save/{id}/adjust: the new
+// signed adjustment (0 removes it) and an optional reason.
+type SaveAdjustmentDTO struct {
+	Adjustment *int   `json:"adjustment"`
+	Reason     string `json:"reason,omitempty"`
+}
+
+// AdjustSave sets the adjustment of the latest save (log entry {id}); the
+// server recomputes the verdict and margin with the same d20 and returns the
+// updated RollResult. 409 when the entry is voided or not the latest save,
+// 400 when it is not a save, 404 when it does not exist.
+func AdjustSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil || id <= 0 {
+			return render.BadRequestError("invalid log entry id")
+		}
+		var req SaveAdjustmentDTO
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if req.Adjustment == nil {
+			return render.BadRequestError("adjustment is required")
+		}
+		res, err := svc.AdjustSave(r.Context(), charID(r), id, combatsvc.SaveAdjustment{Value: *req.Adjustment, Reason: req.Reason})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toDTO(res))
+		return nil
+	}
+}
+
 // RollResultDTO is the full breakdown of a roll (camelCase JSON). The attack
 // fields match combatsvc's action-log payload, so web/src/types/combat.ts
 // reads both.
@@ -170,7 +207,14 @@ type RollResultDTO struct {
 	TargetAC   int      `json:"targetAc"`
 	TargetSize string   `json:"targetSize,omitempty"`
 	Ammo       *AmmoDTO `json:"ammo,omitempty"`
-	LogEntryID int64    `json:"logEntryId,omitempty"`
+
+	// Saving-throw context; empty on attacks. adjustment is always sent on
+	// saves (0: none).
+	SaveCategory     string `json:"saveCategory,omitempty"`
+	Adjustment       *int   `json:"adjustment,omitempty"`
+	AdjustmentReason string `json:"adjustmentReason,omitempty"`
+
+	LogEntryID int64 `json:"logEntryId,omitempty"`
 }
 
 // ModifierDTO is one to-hit (or save) modifier. Kind lets the UI label it
@@ -220,7 +264,12 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
 		TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
+		SaveCategory: string(r.SaveCategory), AdjustmentReason: r.AdjustmentReason,
 		LogEntryID: r.LogEntryID,
+	}
+	if r.SaveCategory != "" {
+		adj := r.Adjustment
+		out.Adjustment = &adj
 	}
 	if a := r.Ammo; a != nil {
 		out.Ammo = &AmmoDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}

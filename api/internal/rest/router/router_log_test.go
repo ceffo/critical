@@ -28,7 +28,7 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"entries":[{
 		"id":4,"characterId":1,"round":2,"kind":"hp_change","summary":"orc","hpDelta":-8,
-		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","status":"amended","payload":{},
+		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","status":"amended","payload":{},"effectivePayload":{},
 		"snapshots":[],
 		"corrections":[{"id":1,"kind":"amend","hpDelta":-12,"source":"orc axe","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
@@ -52,7 +52,7 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
 		"id":4,"characterId":1,"round":0,"kind":"round_advance","summary":"next","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"next","status":"voided","payload":{},
+		"effectiveHpDelta":0,"effectiveSummary":"next","status":"voided","payload":{},"effectivePayload":{},
 		"snapshots":[{"key":"round","before":1,"after":2}],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
@@ -69,4 +69,29 @@ func TestHPEndpoint_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"currentHp":15,"maxHp":20,"events":[
 		{"id":4,"characterId":1,"delta":-5,"source":"orc","createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
+}
+
+// An adjusted save lists the amend's payload as the effective payload.
+func TestLogEndpoints_AdjustedSaveShape(t *testing.T) {
+	save := actionlog.Entry{
+		ID: 7, CharacterID: 1, Round: 1, Kind: actionlog.KindSave, Summary: "Save vs Spells: d20 12 vs 14, FAILED",
+		Payload: json.RawMessage(`{"passed":false}`), CreatedAt: at,
+		Corrections: []actionlog.Correction{{
+			ID: 3, ActionID: 7, Kind: actionlog.CorrectionAmend, CreatedAt: at,
+			Summary: "Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
+			Payload: json.RawMessage(`{"passed":true}`),
+		}},
+	}
+	h, m := newRouter(t)
+	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{save}, nil)
+	rec := do(h, "GET", "/api/log", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"entries":[{
+		"id":7,"characterId":1,"round":1,"kind":"save","summary":"Save vs Spells: d20 12 vs 14, FAILED","hpDelta":0,
+		"effectiveHpDelta":0,"effectiveSummary":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
+		"status":"amended","payload":{"passed":false},"effectivePayload":{"passed":true},
+		"snapshots":[],
+		"corrections":[{"id":3,"kind":"amend","source":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
+			"payload":{"passed":true},"createdAt":"2026-10-17T20:00:00Z"}],
+		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
 }

@@ -222,3 +222,65 @@ func TestLaterEntryTouchingState(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
+
+// A save adjustment is an amend with a payload and no HP delta: it round-trips
+// as the effective payload and leaves current HP alone.
+func TestPayloadAmend_RoundTripAndHPUnchanged(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+
+	insert(t, dal, hp(charID, -8, "orc"))
+	id := insert(t, dal, actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindSave, Summary: "save, FAILED", Payload: json.RawMessage(`{"passed":false}`)})
+	correct(t, dal, actionlog.Correction{ActionID: id, Kind: actionlog.CorrectionAmend, Summary: "save, adjusted +4: FAILED → PASSED", Payload: json.RawMessage(`{"passed":true}`)})
+
+	e, err := dal.GetEntry(ctx, charID, id)
+	require.NoError(t, err)
+	require.Len(t, e.Corrections, 1)
+	assert.Nil(t, e.Corrections[0].HPDelta)
+	assert.JSONEq(t, `{"passed":true}`, string(e.Corrections[0].Payload))
+	assert.JSONEq(t, `{"passed":true}`, string(e.EffectivePayload()))
+	assert.JSONEq(t, `{"passed":false}`, string(e.Payload), "the entry itself is never edited")
+	assert.Equal(t, "save, adjusted +4: FAILED → PASSED", e.EffectiveSummary())
+
+	total, err := dal.HPTotal(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, -8, total)
+
+	// An amend without a payload (HP) stores NULL and reads back empty.
+	hpID := insert(t, dal, hp(charID, -2, "rat"))
+	correct(t, dal, actionlog.Correction{ActionID: hpID, Kind: actionlog.CorrectionAmend, HPDelta: intp(-3)})
+	h, err := dal.GetEntry(ctx, charID, hpID)
+	require.NoError(t, err)
+	assert.Empty(t, h.Corrections[0].Payload)
+}
+
+// LatestID counts voided entries too, so an older save never becomes the
+// latest by voiding a newer one.
+func TestLatestID(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+	save := actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindSave, Summary: "save"}
+
+	_, ok, err := dal.LatestID(ctx, charID, actionlog.KindSave)
+	require.NoError(t, err)
+	assert.False(t, ok)
+
+	first := insert(t, dal, save)
+	second := insert(t, dal, save)
+	insert(t, dal, hp(charID, -1, "later hp"))
+	correct(t, dal, actionlog.Correction{ActionID: second, Kind: actionlog.CorrectionVoid})
+
+	got, ok, err := dal.LatestID(ctx, charID, actionlog.KindSave)
+	require.NoError(t, err)
+	assert.True(t, ok)
+	assert.Equal(t, second, got)
+	assert.NotEqual(t, first, got)
+
+	_, ok, err = dal.LatestID(ctx, charID+1, actionlog.KindSave)
+	require.NoError(t, err)
+	assert.False(t, ok)
+}

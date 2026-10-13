@@ -23,6 +23,67 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// AdjustSave provides a mock function with given fields: ctx, characterID, entryID, adj
+func (_m *MockSVC) AdjustSave(ctx context.Context, characterID int64, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error) {
+	ret := _m.Called(ctx, characterID, entryID, adj)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustSave")
+	}
+
+	var r0 *combatsvc.RollResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)); ok {
+		return rf(ctx, characterID, entryID, adj)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, combatsvc.SaveAdjustment) *combatsvc.RollResult); ok {
+		r0 = rf(ctx, characterID, entryID, adj)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*combatsvc.RollResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64, combatsvc.SaveAdjustment) error); ok {
+		r1 = rf(ctx, characterID, entryID, adj)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AdjustSave_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdjustSave'
+type MockSVC_AdjustSave_Call struct {
+	*mock.Call
+}
+
+// AdjustSave is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - entryID int64
+//   - adj combatsvc.SaveAdjustment
+func (_e *MockSVC_Expecter) AdjustSave(ctx interface{}, characterID interface{}, entryID interface{}, adj interface{}) *MockSVC_AdjustSave_Call {
+	return &MockSVC_AdjustSave_Call{Call: _e.mock.On("AdjustSave", ctx, characterID, entryID, adj)}
+}
+
+func (_c *MockSVC_AdjustSave_Call) Run(run func(ctx context.Context, characterID int64, entryID int64, adj combatsvc.SaveAdjustment)) *MockSVC_AdjustSave_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64), args[3].(combatsvc.SaveAdjustment))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AdjustSave_Call) Return(_a0 *combatsvc.RollResult, _a1 error) *MockSVC_AdjustSave_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AdjustSave_Call) RunAndReturn(run func(context.Context, int64, int64, combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)) *MockSVC_AdjustSave_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

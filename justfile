@@ -132,7 +132,7 @@ e2e-install:
     cd web && npx playwright install chromium
 
 # Run the Playwright suite against a throwaway stack per test (own API + Vite on free ports,
-# fresh temp DB, real seeds/). Extra args go to `playwright test`, e.g. `just e2e smoke.spec.ts`.
+# fresh temp DB, api/testdata/seeds fixture). Extra args go to `playwright test`, e.g. `just e2e smoke.spec.ts`.
 # Artifacts: web/e2e-results/ (screens/, report/, artifacts/ with traces on failure).
 e2e *args: build-api
     cd web && node e2e/check-browser.mjs

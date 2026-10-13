@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var seedsDir = filepath.Join("..", "..", "..", "..", "seeds")
+var seedsDir = filepath.Join("..", "..", "..", "testdata", "seeds")
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
 // p.14, Table 32 on p.42), not derived from the seed file.

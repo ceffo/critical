@@ -19,7 +19,7 @@ func seeded(t *testing.T) *weapondal.DAL {
 	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
 	require.NoError(t, db.Migrate(ctx))
-	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "..", "seeds")))
+	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
 	return weapondal.New(db)
 }
 

@@ -38,11 +38,11 @@ func strMods(str int) buffsvc.BuffModifiers {
 	return buffsvc.BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: str}
 }
 
-// phb is the real PHB Table 1/2 lookup from seeds/rule_tables.json, so the
+// phb is the real PHB Table 1/2 lookup from the testdata fixture, so the
 // expected numbers below are checked against the printed tables.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	tables, err := ruletablesadpt.New(filepath.Join("..", "..", "..", "..", "..", "seeds"))
+	tables, err := ruletablesadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
 	require.NoError(t, err)
 	return tables
 }

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { spellName } from "@/i18n/spellName";
+import { splitPrepared } from "@/lib/prepareDraft";
 import type { LevelLimit, SpellbookEntry } from "@/types/spells";
 
 interface Props {
@@ -23,7 +24,9 @@ interface Props {
  */
 export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCancel }: Props) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<string[]>(initial);
+  // Ids no longer in the spellbook are shown as dropped and never sent (the API refuses them).
+  const [{ kept, dropped }] = useState(() => splitPrepared(initial, spellbook));
+  const [draft, setDraft] = useState<string[]>(kept);
   const [query, setQuery] = useState("");
 
   const byId = useMemo(() => new Map(spellbook.map((s) => [s.id, s])), [spellbook]);
@@ -85,6 +88,16 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
         <h3 className="text-sm font-semibold">{t("spellSlots.draft")}</h3>
         {draftEntries.length === 0 && (
           <p className="text-sm text-muted-foreground">{t("spellSlots.draftEmpty")}</p>
+        )}
+        {dropped.length > 0 && (
+          <div role="status" className="rounded border border-destructive/40 p-2 text-sm" data-testid="stale-prepared">
+            <p className="font-medium">{t("spellSlots.staleTitle")}</p>
+            <ul className="list-disc pl-5 text-muted-foreground">
+              {dropped.map((id) => (
+                <li key={id}>{id ? spellName(t, id, id) : t("spellSlots.staleUnknown")}</li>
+              ))}
+            </ul>
+          </div>
         )}
         {levels.map((level) => {
           const items = draftEntries.filter((d) => d.entry.level === level);

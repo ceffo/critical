@@ -154,6 +154,8 @@
     "searchLabel": "Search the spellbook",
     "spellbook": "Spellbook",
     "draft": "Today's preparation",
+    "staleTitle": "Not in the spellbook any more, will be removed:",
+    "staleUnknown": "unknown spell",
     "draftEmpty": "Nothing prepared yet. Add spells from the spellbook.",
     "add": "Add {{name}}",
     "addShort": "Add",

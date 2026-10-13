@@ -154,6 +154,8 @@
     "searchLabel": "Chercher dans le grimoire",
     "spellbook": "Grimoire",
     "draft": "Préparation du jour",
+    "staleTitle": "Absents du livre de sorts, seront retirés :",
+    "staleUnknown": "sort inconnu",
     "draftEmpty": "Rien de préparé. Ajoutez des sorts depuis le grimoire.",
     "add": "Ajouter {{name}}",
     "addShort": "Ajouter",

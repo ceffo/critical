@@ -183,3 +183,11 @@ export interface SpellPage {
   page: number;
   page_size: number;
 }
+
+/** Mirrors spellhdl.FilterOptionsDTO (GET /api/spells/filters): the lookup's dropdown choices. */
+export interface SpellFilterOptions {
+  /** School group keys: the eight PHB schools, then "other". */
+  schools: string[];
+  /** Priest sphere names. */
+  spheres: string[];
+}

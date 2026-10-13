@@ -1,4 +1,6 @@
 import type { TFunction } from "i18next";
+import { resources } from "./index";
+import { baseKey } from "@/lib/spellSearch";
 
 /**
  * Localised spell name by the spell's stable id (key in the `spells` namespace).
@@ -30,4 +32,26 @@ export function spellId(englishName: string): string {
     .replace(/['’]/g, "")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+/**
+ * The spell's name in the language the UI is not in, when it has one and it differs:
+ * English in the French UI, the French catalogue name in the English UI. Shown in grey
+ * after the name ("Mains brûlantes · Burning Hands").
+ */
+export function otherSpellName(
+  t: TFunction,
+  lang: string,
+  id: string,
+  englishName: string,
+): string | null {
+  const shown = spellName(t, id, englishName);
+  let other: string | undefined;
+  if (lang.startsWith("en")) {
+    const fr = resources.fr.spells as Record<string, string>;
+    other = fr[id] ?? fr[baseKey(id)];
+  } else {
+    other = englishName;
+  }
+  return other && other !== shown ? other : null;
 }

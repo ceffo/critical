@@ -193,7 +193,6 @@
     "classAll": "All",
     "levelsLabel": "Spell levels",
     "levelShort": "Lvl {{level}}",
-    "levelTag": "L{{level}}",
     "levelLabel": "Level {{level}}",
     "school": "School",
     "anySchool": "Any school",
@@ -244,6 +243,73 @@
       "mile": "mi",
       "cu": "cu",
       "sq": "sq"
+    },
+    "spheres": {
+      "all": "All",
+      "animal": "Animal",
+      "astral": "Astral",
+      "chaos": "Chaos",
+      "charm": "Charm",
+      "combat": "Combat",
+      "creation": "Creation",
+      "divination": "Divination",
+      "elemental": "Elemental",
+      "elemental_air": "Elemental Air",
+      "elemental_earth": "Elemental Earth",
+      "elemental_fire": "Elemental Fire",
+      "elemental_water": "Elemental Water",
+      "elemental_plant": "Elemental Plant",
+      "guardian": "Guardian",
+      "healing": "Healing",
+      "law": "Law",
+      "necromantic": "Necromantic",
+      "numbers": "Numbers",
+      "plant": "Plant",
+      "protection": "Protection",
+      "summoning": "Summoning",
+      "sun": "Sun",
+      "thought": "Thought",
+      "time": "Time",
+      "travelers": "Travelers",
+      "war": "War",
+      "wards": "Wards",
+      "water": "Water",
+      "weather": "Weather"
+    },
+    "classes": {
+      "wizard": "Wizard",
+      "priest": "Priest"
+    },
+    "values": {
+      "range": {
+        "touch": "Touch",
+        "special": "Special",
+        "unlimited": "Unlimited"
+      },
+      "duration": {
+        "special": "Special",
+        "permanent": "Permanent",
+        "instantaneous": "Instantaneous"
+      },
+      "area": {
+        "special": "Special",
+        "the_caster": "The caster",
+        "caster": "Caster",
+        "one_creature": "One creature",
+        "1_creature": "1 creature",
+        "creature_touched": "Creature touched",
+        "object_touched": "Object touched"
+      },
+      "castingTime": {
+        "special": "Special"
+      },
+      "save": {
+        "none": "None",
+        "neg_": "Neg.",
+        "neg": "Neg",
+        "special": "Special",
+        "1_2": "1/2"
+      }
     }
   },
   "result": {

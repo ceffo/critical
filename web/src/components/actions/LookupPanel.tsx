@@ -8,6 +8,7 @@ import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellName } from "@/i18n/spellName";
 import { statRaw, statValue, type StatKey } from "@/lib/spellValues";
+import { classLabel, sphereLabel, spheresLabel, translateValue } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
 const CLASSES: { value: SpellClass; key: string }[] = [
@@ -55,10 +56,10 @@ function SpellDetail({ spell }: { spell: Spell }) {
         : null
       : statValue(spell, key, unit);
   const meta = [
-    spell.class,
+    classLabel(t, spell.class),
     t("lookup.levelLabel", { level: spell.level }),
     spell.school,
-    spell.sphere,
+    spheresLabel(t, spell.sphere),
     spell.components,
   ].filter(Boolean);
 
@@ -75,7 +76,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         {STATS.map((key) => {
           const v = value(key);
-          const raw = statRaw(spell, key);
+          const raw = translateValue(t, key, statRaw(spell, key));
           return (
             <div key={key} className="min-w-0" data-testid={`stat-${key}`}>
               <dt className={captionClass}>{t(`lookup.${key}`)}</dt>
@@ -259,7 +260,7 @@ export function LookupPanel() {
                 )}
                 onClick={() => toggleLevel(n)}
               >
-                {t("lookup.levelTag", { level: n })}
+                {n}
               </button>
             );
           })}
@@ -276,7 +277,7 @@ export function LookupPanel() {
           {priest
             ? options?.spheres.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {sphereLabel(t, s)}
                 </option>
               ))
             : options?.schools.map((s) => (
@@ -327,12 +328,12 @@ export function LookupPanel() {
               onClick={() => select(s.id)}
             >
               <span className="w-6 shrink-0 text-xs font-semibold text-muted-foreground tabular-nums">
-                {t("lookup.levelTag", { level: s.level })}
+                {s.level}
               </span>
               <SpellNames spell={s} className="flex-1" />
               {query.cls === "all" && (
                 <Badge variant="secondary" className="h-4 text-[10px]" data-testid="spell-class">
-                  {s.class}
+                  {classLabel(t, s.class)}
                 </Badge>
               )}
               <span className="ml-auto max-w-[35%] shrink-0 truncate text-[11px] text-muted-foreground">

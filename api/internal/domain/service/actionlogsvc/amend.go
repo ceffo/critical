@@ -43,8 +43,9 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 }
 
 // AmendLatest records an amend carrying a new summary and payload on entry
-// id. It is refused when the entry is another kind (ErrNotAmendable), voided
-// (ErrAlreadyVoided) or not the newest entry of kind, voided ones included
+// id. It is refused when the entry is another kind or kind is not a roll
+// (ErrNotAmendable), voided (ErrAlreadyVoided) or not the latest roll: a newer
+// entry of any of actionlog.RollKinds exists, voided ones included
 // (ErrNotLatest). The check and the write share one transaction.
 func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
 	var out *actionlog.Entry
@@ -53,18 +54,18 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 		if err != nil {
 			return fmt.Errorf("get entry %d: %w", id, err)
 		}
-		if e.Kind != kind {
+		if e.Kind != kind || !actionlog.IsRoll(kind) {
 			return fmt.Errorf("%w: #%d is %s, not %s", ErrNotAmendable, id, e.Kind, kind)
 		}
 		if e.Status() == actionlog.StatusVoided {
 			return fmt.Errorf("%w: #%d", ErrAlreadyVoided, id)
 		}
-		latest, ok, err := s.dal.LatestID(ctx, characterID, kind)
+		latest, err := s.latestRoll(ctx, characterID)
 		if err != nil {
-			return fmt.Errorf("latest %s entry: %w", kind, err)
+			return err
 		}
-		if !ok || latest != id {
-			return fmt.Errorf("%w: only the latest %s can be adjusted, void this one and roll again", ErrNotLatest, kind)
+		if latest != id {
+			return fmt.Errorf("%w: only the latest roll can be adjusted, void this %s and roll again", ErrNotLatest, kind)
 		}
 		a, err := fn(*e)
 		if err != nil {
@@ -89,4 +90,19 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 		return nil, err
 	}
 	return out, nil
+}
+
+// latestRoll is the id of the newest entry of any roll kind (0: none).
+func (s *service) latestRoll(ctx context.Context, characterID int64) (int64, error) {
+	var latest int64
+	for _, k := range actionlog.RollKinds {
+		id, ok, err := s.dal.LatestID(ctx, characterID, k)
+		if err != nil {
+			return 0, fmt.Errorf("latest %s entry: %w", k, err)
+		}
+		if ok && id > latest {
+			latest = id
+		}
+	}
+	return latest, nil
 }

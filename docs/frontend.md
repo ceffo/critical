@@ -80,7 +80,7 @@ flowchart TD
   `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
   − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
-  the recomputed save (same d20). Hidden once the entry is voided; older saves are fixed by void + reroll.
+  the recomputed save (same d20). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).

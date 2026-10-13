@@ -93,9 +93,10 @@ slot back and removes the buff. Effects come from `seeds/spell_effects.json` at 
 Bard's level for a cast, the caster's for a received spell; by-group dice use the Bard's group,
 rogue); low-confidence, utility and uncatalogued spells return their text only.
 combatsvc records every saving throw (kind `save`, no snapshots: it changes no state; payload =
-category, d20, buff modifiers, target, adjustment + reason, total, passed, margin, `rolledPassed`).
-`POST /api/roll/save/{id}/adjust` `{adjustment, reason?}` sets the adjustment of the **latest** save
-(newest `save` entry, voided ones included; ±20 max): combatsvc recomputes verdict and margin from
+category, d20, buff modifiers (one per buff, `SaveBonusFrom`), target, adjustment + reason, total, passed, margin, `rolledPassed`).
+`POST /api/roll/save/{id}/adjust` `{adjustment, reason?}` sets the adjustment of the save when it is
+the **latest roll** (newest entry of `actionlog.RollKinds`: attack, save, cast, item use, the ones
+that replace the result card; voided ones included; ±20 max): combatsvc recomputes verdict and margin from
 the stored d20 and modifiers (the d20 never changes) and `actionlogsvc.AmendLatest` records an
 audited amend carrying the new summary and payload (plus `previousPassed`/`previousAdjustment`).
 Not a save → 400, voided or not the latest → 409. The log exposes `effectivePayload`.

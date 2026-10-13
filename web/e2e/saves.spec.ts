@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, recordHp } from "./helpers";
+import { addBuff, currentHp, logEntry, openDashboard, recordHp } from "./helpers";
 
 /** "+2", "−2" (U+2212) or "0" as a number. */
 function signed(text: string | null): number {
@@ -39,6 +39,7 @@ const verdict = (margin: number) => (margin >= 0 ? "PASSED" : "FAILED");
 
 test("a save is logged and its adjustment flips the verdict, never the d20", async ({ page }) => {
   await openDashboard(page);
+  const hp = await currentHp(page);
   await rollSpellSave(page);
   const card = saveCard(page);
   const rolled = await facts(card);
@@ -66,6 +67,7 @@ test("a save is logged and its adjustment flips the verdict, never the d20", asy
   await expect(entry).toContainText(
     `adjustment removed: ${verdict(rolled.margin + 4)} → ${verdict(rolled.margin)}`,
   );
+  expect(await currentHp(page)).toBe(hp);
   await snap(page, "save-adjustment-removed");
 });
 
@@ -87,7 +89,7 @@ test("a voided save can no longer be adjusted; older saves and other entries are
     page.request.post(`/api/roll/save/${id}/adjust`, { data: { adjustment: 4 } });
   const notLatest = await adjustById(older);
   expect(notLatest.status()).toBe(409);
-  expect((await notLatest.json()).error).toContain("only the latest save can be adjusted");
+  expect((await notLatest.json()).error).toContain("only the latest roll can be adjusted");
   const notSave = await adjustById(hpEntry);
   expect(notSave.status()).toBe(400);
 
@@ -103,5 +105,44 @@ test("a voided save can no longer be adjusted; older saves and other entries are
   const voided = await adjustById(latest);
   expect(voided.status()).toBe(409);
   expect((await voided.json()).error).toContain("already voided");
+  // Voiding the newer save does not make the older one adjustable again.
+  const stillOlder = await adjustById(older);
+  expect(stillOlder.status()).toBe(409);
+  expect((await stillOlder.json()).error).toContain("only the latest roll can be adjusted");
   await snap(page, "save-voided");
+});
+
+test("a save is no longer adjustable once another roll (an attack) follows it", async ({ page }) => {
+  await openDashboard(page);
+  await rollSpellSave(page);
+  const save = (
+    (await (await page.request.get("/api/log")).json()) as { entries: { id: number; kind: string }[] }
+  ).entries.find((e) => e.kind === "save")!.id;
+
+  await page.getByRole("tab", { name: "Attack" }).click();
+  await page.getByLabel("Target AC").fill("4");
+  await page.getByRole("button", { name: "Roll Attack" }).click();
+  await expect(page.getByRole("region", { name: "Last Result" }).getByTestId("attack-result")).toBeVisible();
+
+  const res = await page.request.post(`/api/roll/save/${save}/adjust`, { data: { adjustment: 4 } });
+  expect(res.status()).toBe(409);
+  expect((await res.json()).error).toContain("only the latest roll can be adjusted");
+});
+
+test("a save-bonus buff is labelled by its name on the save card (en and fr)", async ({ page }) => {
+  await openDashboard(page);
+  await addBuff(page, { name: "e2e Gaia ward", effects: [["save_bonus", 2]] });
+  await rollSpellSave(page);
+  const mods = saveCard(page).getByTestId("save-modifiers");
+  await expect(mods.getByRole("listitem")).toHaveCount(1);
+  await expect(mods.getByRole("listitem").first()).toHaveText(/^e2e Gaia ward\s*\+2$/);
+  await expect(logEntry(page, "Save vs Spells")).toBeVisible();
+
+  await page.getByRole("button", { name: "FR" }).click();
+  const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("save-result");
+  await expect(frCard).toContainText("Sauvegarde contre Sorts");
+  await expect(frCard.getByTestId("save-modifiers").getByRole("listitem").first()).toHaveText(
+    /^e2e Gaia ward\s*\+2$/,
+  );
+  await snap(page, "save-buff-fr");
 });

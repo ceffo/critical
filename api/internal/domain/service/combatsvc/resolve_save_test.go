@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,7 +25,10 @@ func rollSave(t *testing.T, f *fixture, d20, saveBonus int) *actionlog.Entry {
 	f.withChar(bard())
 	f.dice.EXPECT().RollD20().Return(d20)
 	mods := strMods(12)
-	mods.SaveBonus = saveBonus
+	if saveBonus != 0 {
+		mods.SaveBonus = saveBonus
+		mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Luck", Value: saveBonus}}
+	}
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
 	f.records()
 	_, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
@@ -63,7 +67,7 @@ func TestResolveSavingThrow_LogPayload(t *testing.T) {
 	assert.Equal(t, "Save vs Spells: d20 12 vs 14, FAILED", e.Summary)
 	assert.Equal(t, map[string]any{
 		"category": "spell", "label": "Spells", "d20Roll": 12.0, "target": 14.0,
-		"modifiers":    []any{map[string]any{"kind": "buff", "source": "Buffs", "value": 1.0}},
+		"modifiers":    []any{map[string]any{"kind": "buff", "source": "Luck", "detail": "Luck", "value": 1.0}},
 		"rolledPassed": false, "adjustment": 0.0, "total": 13.0, "passed": false, "margin": -1.0,
 	}, payloadOf(t, e.Payload))
 }
@@ -92,7 +96,7 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			steps:      []combatsvc.SaveAdjustment{{Value: -2}},
 			wantPassed: false, wantMargin: -2,
 			wantMods: []combatsvc.Modifier{
-				{Kind: combatsvc.ModBuff, Source: "Buffs", Value: 1},
+				{Kind: combatsvc.ModBuff, Source: "Luck", Detail: "Luck", Value: 1},
 				{Kind: combatsvc.ModAdjustment, Source: "Adjustment", Value: -2},
 			},
 			wantText: "Roll: 13 + Mod: 1 + Adj: -2 = 12 vs Target: 14 (Spells)",
@@ -195,4 +199,23 @@ func TestAdjustSave_Rejections(t *testing.T) {
 		assert.ErrorContains(t, err, "decode save #9")
 		assert.Empty(t, e.Corrections)
 	})
+}
+
+// Each save-bonus buff is its own modifier, labelled by the buff's name.
+func TestResolveSavingThrow_OneModifierPerBuff(t *testing.T) {
+	f := newFixture(t)
+	f.withChar(bard())
+	f.dice.EXPECT().RollD20().Return(10)
+	mods := strMods(12)
+	mods.SaveBonus = 3
+	mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Gaia", Value: 4}, {Buff: "Curse", Value: -1}}
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+	f.records()
+	res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+	require.NoError(t, err)
+	assert.Equal(t, []combatsvc.Modifier{
+		{Kind: combatsvc.ModBuff, Source: "Gaia", Detail: "Gaia", Value: 4},
+		{Kind: combatsvc.ModBuff, Source: "Curse", Detail: "Curse", Value: -1},
+	}, res.Modifiers)
+	assert.Equal(t, 13, res.HitMargin+14)
 }

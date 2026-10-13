@@ -129,7 +129,10 @@ func TestResolveSavingThrow(t *testing.T) {
 			f.withChar(bard())
 			f.dice.EXPECT().RollD20().Return(tt.d20)
 			mods := strMods(12)
-			mods.SaveBonus = tt.saveBonus
+			if tt.saveBonus != 0 {
+				mods.SaveBonus = tt.saveBonus
+				mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Prayer", Value: tt.saveBonus}}
+			}
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
 			f.records()
 
@@ -148,7 +151,7 @@ func TestResolveSavingThrow(t *testing.T) {
 			assert.Equal(t, tt.wantMargin, res.HitMargin)
 			assert.Contains(t, res.DamageBreakdown, tt.wantText)
 			if tt.saveBonus != 0 {
-				assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Source: "Buffs", Value: tt.saveBonus}}, res.Modifiers)
+				assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Source: "Prayer", Detail: "Prayer", Value: tt.saveBonus}}, res.Modifiers)
 			} else {
 				assert.Empty(t, res.Modifiers)
 			}

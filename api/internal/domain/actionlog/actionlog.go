@@ -38,6 +38,21 @@ const (
 	KindSave Kind = "save"
 )
 
+// RollKinds are the entries whose result replaces the dashboard's result
+// card (attack, save, cast or received spell, item use). Only the newest of
+// them, the one on the card, can be adjusted after the fact.
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse}
+
+// IsRoll reports whether k is one of RollKinds.
+func IsRoll(k Kind) bool {
+	for _, r := range RollKinds {
+		if r == k {
+			return true
+		}
+	}
+	return false
+}
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.
@@ -83,8 +98,9 @@ type AmendFunc func(e Entry) (PayloadAmendment, error)
 
 // LatestAmender corrects an entry whose outcome lives in its payload (a save)
 // after the fact. AmendLatest records an amend replacing the summary and
-// payload of entry id, which must be the newest entry of kind and not
-// voided; fn computes the amendment from the entry inside the transaction.
+// payload of entry id, which must be of kind (a roll kind), not voided, and
+// the latest roll: the newest entry of any of RollKinds, voided ones
+// included. fn computes the amendment from the entry inside the transaction.
 type LatestAmender interface {
 	AmendLatest(ctx context.Context, characterID, id int64, kind Kind, fn AmendFunc) (*Entry, error)
 }

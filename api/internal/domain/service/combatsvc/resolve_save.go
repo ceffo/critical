@@ -63,8 +63,10 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}
-		if mods.SaveBonus != 0 {
-			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModBuff), Source: "Buffs", Value: mods.SaveBonus})
+		// One modifier per buff, named like attack buff modifiers (Detail =
+		// buff name), so the card labels each one.
+		for _, c := range mods.SaveBonusFrom {
+			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModBuff), Source: c.Buff, Detail: c.Buff, Value: c.Value})
 		}
 		rec.settle()
 		rec.RolledPassed = rec.Passed

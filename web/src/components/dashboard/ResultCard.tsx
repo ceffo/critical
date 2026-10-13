@@ -66,12 +66,17 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
 }
 
 /** A modifier's label in the player's language (detail = score, weapon, ammo or buff name). */
-function modLabel(t: TFunction, m: { kind: string; detail?: string; value: number }): string {
+function modLabel(
+  t: TFunction,
+  m: { kind: string; source?: string; detail?: string; value: number },
+): string {
   // The crit term carries the matched crit-table range; the default table (and entries logged
   // before the table existed) have none.
   if (m.kind === "crit" && (!m.detail || m.detail === "placeholder")) {
     return t("result.mods.critPlaceholder");
   }
+  // Buff and situational labels are their detail; without one, show the server's label.
+  if ((m.kind === "buff" || m.kind === "situational") && !m.detail && m.source) return m.source;
   return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
 }
 

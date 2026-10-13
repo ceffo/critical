@@ -225,7 +225,7 @@ func TestSpecialSentinels(t *testing.T) {
 		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend not hp", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #4"}`},
-		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest save can be adjusted, void this one and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest save can be adjusted, void this one and roll again"}`},
+		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
 		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #7"}`},
 		{"adjust not a save", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7 is attack, not save", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #7 is attack, not save"}`},
 		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"error":"ctx: slot already used: 2"}`},

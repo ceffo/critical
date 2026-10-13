@@ -749,3 +749,83 @@ func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
 		})
 	}
 }
+
+func TestRoundMoves(t *testing.T) {
+	buffs := []buffsvc.BuffEffect{{ID: "h", Name: "Haste", Duration: 4}, {ID: "c", Name: "Stoneskin", Charges: 2}}
+	tests := []struct {
+		name        string
+		kind        actionlog.Kind
+		from, to    int
+		call        func(buffsvc.SVC) ([]buffsvc.BuffEffect, int, error)
+		wantSummary string
+	}{
+		{
+			name: "End combat resets to 0", kind: actionlog.KindRoundReset, from: 5, to: 0,
+			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
+				return s.ResetRound(context.Background(), charID)
+			},
+			wantSummary: "Combat ended: round 5 → 0",
+		},
+		{
+			name: "End combat at round 0 still logs", kind: actionlog.KindRoundReset, from: 0, to: 0,
+			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
+				return s.ResetRound(context.Background(), charID)
+			},
+			wantSummary: "Combat ended: round 0 → 0",
+		},
+		{
+			name: "Set round up", kind: actionlog.KindRoundSet, from: 2, to: 9,
+			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
+				return s.SetRound(context.Background(), charID, 9)
+			},
+			wantSummary: "Round set: round 2 → 9",
+		},
+		{
+			name: "Set round down to 0", kind: actionlog.KindRoundSet, from: 4, to: 0,
+			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
+				return s.SetRound(context.Background(), charID, 0)
+			},
+			wantSummary: "Round set: round 4 → 0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.state(buffs, tt.from)
+			f.records()
+			f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, tt.to).RunAndReturn(
+				func(context.Context, int64, int) error { f.calls = append(f.calls, "save round"); return nil }).Once()
+			// SaveActiveBuffs is not expected: the mock fails the test if buffs are written.
+
+			active, round, err := tt.call(f.svc)
+			require.NoError(t, err)
+			assert.Equal(t, tt.to, round)
+			assert.Equal(t, buffs, active, "buffs are untouched")
+
+			require.Len(t, f.entries, 1)
+			e := f.entries[0]
+			assert.Equal(t, tt.kind, e.Kind)
+			assert.Equal(t, tt.wantSummary, e.Summary)
+			assert.Equal(t, []string{buffsvc.StateKeyRound}, snapKeys(e), "round key only")
+			assert.JSONEq(t, jsonInt(tt.from), string(e.Snapshots[0].Before))
+			assert.JSONEq(t, jsonInt(tt.to), string(e.Snapshots[0].After))
+			assert.Equal(t, []string{"record", "save round"}, f.calls)
+			assert.Equal(t, 1, f.tx.calls)
+		})
+	}
+
+	t.Run("Set round rejects a negative round without touching anything", func(t *testing.T) {
+		f := newFixture(t)
+		_, _, err := f.svc.SetRound(context.Background(), charID, -1)
+		assert.ErrorIs(t, err, domain.ErrInvalidInput)
+		assert.Empty(t, f.entries)
+		assert.Zero(t, f.tx.calls)
+	})
+
+	t.Run("voiding restores the previous round", func(t *testing.T) {
+		f := newFixture(t)
+		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 5).Return(nil).Once()
+		err := f.svc.Restorers()[buffsvc.StateKeyRound].Restore(context.Background(), charID, json.RawMessage(`5`))
+		require.NoError(t, err)
+	})
+}

@@ -48,7 +48,7 @@ export interface RoundResponse {
   round: number;
 }
 
-/** POST /api/round/advance */
+/** POST /api/round/advance, POST /api/round/reset, PUT /api/round (the last two never expire buffs) */
 export interface RoundAdvanceResponse {
   roundNumber: number;
   activeBuffs: BuffEffect[];

@@ -36,6 +36,12 @@ type SVC interface {
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, err error)
+	// ResetRound ends combat: the counter goes back to 0 (Next Round then
+	// gives 1). Active buffs are untouched. Logged, voidable.
+	ResetRound(ctx context.Context, characterID int64) (active []BuffEffect, round int, err error)
+	// SetRound corrects the counter to `to` (>= 0, else ErrInvalidInput).
+	// Active buffs are untouched. Logged, voidable.
+	SetRound(ctx context.Context, characterID int64, to int) (active []BuffEffect, round int, err error)
 
 	// Aggregate is consumed by combatsvc (see clean_architecture.md §4.5).
 	// str is the base STR from the sheet; STR buffs raise it before MinStr

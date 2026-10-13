@@ -47,7 +47,7 @@ function restText(e: LogEntry, t: TFunction): string | null {
 
 /** Payload of buff_change / round_advance entries (buffsvc logPayload). */
 export interface BuffLogPayload {
-  action: "activate" | "edit" | "absorb" | "dismiss" | "next_round";
+  action: "activate" | "edit" | "absorb" | "dismiss" | "next_round" | "end_combat" | "set_round";
   buff?: string;
   rounds?: number;
   charges?: number;
@@ -60,7 +60,9 @@ export interface BuffLogPayload {
 }
 
 function buffPayload(e: LogEntry): BuffLogPayload | null {
-  if (e.kind !== "buff_change" && e.kind !== "round_advance") return null;
+  if (e.kind !== "buff_change" && e.kind !== "round_advance" && e.kind !== "round_reset" && e.kind !== "round_set") {
+    return null;
+  }
   const p = e.payload as Partial<BuffLogPayload> | null;
   return p && typeof p.action === "string" ? (p as BuffLogPayload) : null;
 }
@@ -147,6 +149,10 @@ export function entryText(e: LogEntry, t: TFunction): string {
         ? `${text} ${t("log.buff.expired", { names: p.expired.join(", ") })}`
         : text;
     }
+    case "end_combat":
+      return t("log.buff.endCombat", { from: p.fromRound ?? 0, to: p.toRound ?? 0 });
+    case "set_round":
+      return t("log.buff.setRound", { from: p.fromRound ?? 0, to: p.toRound ?? 0 });
     default:
       return e.effectiveSummary;
   }

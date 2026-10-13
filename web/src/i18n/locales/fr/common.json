@@ -181,7 +181,8 @@
     "casterLevel": "Niveau du lanceur",
     "receive": "Appliquer",
     "receiveLabel": "Appliquer {{name}}",
-    "receiveHint": "Tapez une partie du nom du sort (anglais ou français)."
+    "receiveHint": "Tapez une partie du nom du sort (anglais ou français).",
+    "receiveMore": "{{count}} de plus, affinez la recherche"
   },
   "lookup": {
     "search": "Rechercher des sorts...",
@@ -224,6 +225,9 @@
     "saveRaw": "Sauvegarde",
     "componentsRaw": "Composantes",
     "filtersEmptyPrompt": "Aucun sort ne correspond à ces filtres",
+    "showing": "Affichage de {{from}} à {{to}} sur {{total}}",
+    "prevPage": "Précédent",
+    "nextPage": "Suivant",
     "count_one": "{{count}} sort",
     "count_other": "{{count}} sorts"
   },

@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,6 +135,23 @@ type catalogSpell struct {
 	Description  string `json:"description"`
 }
 
+// TestRepoSeeds_SpellKeysAreUnique applies the catalog key rule
+// (spellsvc.Keys): no two spells of the catalog may share a key.
+func TestRepoSeeds_SpellKeysAreUnique(t *testing.T) {
+	var spells []catalogSpell
+	readJSON(t, "spells.json", &spells)
+	refs := make([]spellsvc.Ref, len(spells))
+	for i, s := range spells {
+		refs[i] = spellsvc.Ref{Name: s.Name, Class: s.Class, Level: s.Level}
+	}
+	seen := map[string]string{}
+	for i, k := range spellsvc.Keys(refs) {
+		s := spells[i]
+		assert.NotContains(t, seen, k, "%s %s (level %d) collides with %s", s.Class, s.Name, s.Level, seen[k])
+		seen[k] = s.Class + " " + s.Name
+	}
+}
+
 func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 	var spells []catalogSpell
 	readJSON(t, "spells.json", &spells)
@@ -144,12 +162,15 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 	// glued two fields together.
 	leak := regexp.MustCompile(`(?i)_|\b(range|duration|casting time|saving throw|area of effect|components?|reversible|sphere)\s*:|Reversible`)
 
-	type key struct{ name, class string }
+	type key struct {
+		name, class string
+		level       int
+	}
 	seen := map[key]bool{}
 	for _, s := range spells {
 		id := s.Class + " " + s.Name
-		k := key{strings.ToLower(s.Name), s.Class}
-		assert.False(t, seen[k], "duplicate spell %s", id)
+		k := key{strings.ToLower(s.Name), s.Class, s.Level}
+		assert.False(t, seen[k], "duplicate spell %s (same name, class and level)", id)
 		seen[k] = true
 
 		assert.Contains(t, []string{"Wizard", "Priest"}, s.Class, id)
@@ -186,12 +207,21 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 // other fallback to special in seeds/spells.json fails the test, so a new
 // stat form must get a parser (or an entry here, on purpose).
 var specialAllowed = map[string]map[string]bool{
-	"casting_time":   {},
-	"range":          {"1": true}, // PHB gives the bare "1" (Speak With Dead, 1" indoors)
-	"duration":       {"Time of chanting": true, "Variable": true},
-	"area_of_effect": {"Circle of priests": true, "Hearing range": true, "Line of sight": true, "Script reader": true},
-	"components":     {},
-	"saving_throw":   {},
+	"casting_time": {},
+	// "1": the bare "1" of Speak With Dead (1" indoors). `1"`: Life Force Transfer, same unit.
+	// "Change": a scrape glitch on Death Pact (nothing in the scrape repairs it).
+	"range":    {"1": true, `1"`: true, "Change": true},
+	"duration": {"Time of chanting": true, "Variable": true},
+	// Area prose the book gives instead of a measurable value (counts, "variable", or a
+	// shape the area parser does not model); shown as written.
+	"area_of_effect": {
+		"Circle of priests": true, "Hearing range": true, "Line of sight": true, "Script reader": true,
+		"Varies": true, "Variable": true, "1d6 creatures/level": true, `3" diameter circle`: true,
+		"30' long + 5'/level": true, "1–7 targets": true, "The wizard's staff": true, "Creates 1d4+1": true,
+		"Two or more creatures": true, "Create 7 eyes": true, "Creates a sphere": true,
+	},
+	"components":   {},
+	"saving_throw": {"Variable": true}, // Wildfire: the effect decides
 }
 
 // TestRepoSeeds_EverySpellStatParses checks parseability only: no spell

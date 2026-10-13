@@ -181,7 +181,8 @@
     "casterLevel": "Caster level",
     "receive": "Apply",
     "receiveLabel": "Apply {{name}}",
-    "receiveHint": "Type part of a spell name (English or French)."
+    "receiveHint": "Type part of a spell name (English or French).",
+    "receiveMore": "{{count}} more, refine your search"
   },
   "lookup": {
     "search": "Search spells...",
@@ -224,6 +225,9 @@
     "saveRaw": "Save",
     "componentsRaw": "Components",
     "filtersEmptyPrompt": "No spells match these filters",
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "prevPage": "Previous",
+    "nextPage": "Next",
     "count_one": "{{count}} spell",
     "count_other": "{{count}} spells"
   },

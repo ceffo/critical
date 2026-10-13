@@ -136,7 +136,7 @@ func TestSearch_MapsFields(t *testing.T) {
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Query: "Fireball"})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
-	want := spellsvc.Spell{Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
+	want := spellsvc.Spell{ID: "fireball", Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
 	got[0].Stats = spellstats.Stats{}
 	assert.Equal(t, want, got[0])
 }
@@ -196,22 +196,34 @@ func TestSlots_ReadsStoredJSON(t *testing.T) {
 func TestDescribe(t *testing.T) {
 	db := openDB(t)
 	ctx := context.Background()
-	for _, r := range []struct{ name, class string }{
-		{"Light", "Priest"}, {"Light", "Wizard"}, {"Melf's Acid Arrow", "Wizard"}, {"Bless", "Priest"},
+	for _, r := range []struct {
+		name, class string
+		level       int
+	}{
+		{"Light", "Priest", 1},
+		{"Light", "Wizard", 1},
+		{"Melf's Acid Arrow", "Wizard", 1},
+		{"Bless", "Priest", 1},
+		{"Twin", "Priest", 4},
+		{"Twin", "Priest", 3},
 	} {
-		_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES (?, ?, 1, ?)`,
-			r.name, r.class, r.class+" text")
+		_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES (?, ?, ?, ?)`,
+			r.name, r.class, r.level, r.class+" text")
 		require.NoError(t, err)
 	}
 	d := spelldal.New(db)
 	tests := []struct {
 		id, wantName, wantClass string
+		wantLevel               int
 		found                   bool
 	}{
-		{"light", "Light", "Wizard", true},
-		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", true},
-		{"bless", "Bless", "Priest", true},
-		{"no_such_spell", "", "", false},
+		{"light", "Light", "Wizard", 1, true},
+		{"light_priest", "Light", "Priest", 1, true}, // a Priest spell never answers to the Wizard's key
+		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", 1, true},
+		{"bless", "Bless", "Priest", 1, true},
+		{"twin", "Twin", "Priest", 3, true},    // the lowest level owns the plain slug
+		{"twin_l4", "Twin", "Priest", 4, true}, // the other one gets the level suffix
+		{"no_such_spell", "", "", 0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.id, func(t *testing.T) {
@@ -220,6 +232,7 @@ func TestDescribe(t *testing.T) {
 			assert.Equal(t, tt.found, ok)
 			assert.Equal(t, tt.wantName, got.Name)
 			assert.Equal(t, tt.wantClass, got.Class)
+			assert.Equal(t, tt.wantLevel, got.Level)
 		})
 	}
 }
@@ -274,19 +287,21 @@ func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
 	svc, err := spellsvc.New(dal, dal)
 	require.NoError(t, err)
 
-	both, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic"})
+	all := spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize}
+	both, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic"}, all)
 	require.NoError(t, err)
-	assert.ElementsMatch(t, []string{"Wizard", "Priest"}, []string{both[0].Class, both[1].Class})
+	require.Len(t, both.Items, 2)
+	assert.ElementsMatch(t, []string{"Wizard", "Priest"}, []string{both.Items[0].Class, both.Items[1].Class})
 
-	wiz, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic", Class: "wizard"})
+	wiz, err := svc.Search(ctx, spellsvc.Filter{Query: "Detect Magic", Class: "wizard"}, all)
 	require.NoError(t, err)
-	require.Len(t, wiz, 1)
-	assert.Equal(t, "Wizard", wiz[0].Class)
+	require.Len(t, wiz.Items, 1)
+	assert.Equal(t, "Wizard", wiz.Items[0].Class)
 
-	half, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Level: intp(3), Save: spellstats.SaveHalf})
+	half, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Level: intp(3), Save: spellstats.SaveHalf}, all)
 	require.NoError(t, err)
 	got := []string{}
-	for _, s := range half {
+	for _, s := range half.Items {
 		got = append(got, s.Name)
 	}
 	assert.Contains(t, got, "Fireball")

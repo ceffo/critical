@@ -74,6 +74,8 @@ export interface SpellValues {
 }
 
 export interface Spell {
+  /** Unique key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
+  id: string;
   name: string;
   class: string;
   level: number;
@@ -171,4 +173,13 @@ export interface CastResult {
   damage?: CastDamage;
   untracked: CastUntracked[];
   slots?: SpellSlot[];
+}
+
+/** Mirrors spellhdl.SpellPageDTO: one page of GET /api/spells. */
+export interface SpellPage {
+  items: Spell[];
+  /** Matches after all filters, across every page. */
+  total: number;
+  page: number;
+  page_size: number;
 }

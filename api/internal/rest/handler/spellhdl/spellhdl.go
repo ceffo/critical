@@ -27,7 +27,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type spellSvc interface {
 	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
-	Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error)
+	Search(ctx context.Context, f spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error)
 }
 
 type characterGetter interface {
@@ -60,7 +60,11 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.
 		if err != nil {
 			return err
 		}
-		spells, err := svc.Search(r.Context(), f)
+		pr, err := parsePage(r.URL.Query())
+		if err != nil {
+			return err
+		}
+		page, err := svc.Search(r.Context(), f, pr)
 		if err != nil {
 			return err
 		}
@@ -68,9 +72,32 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, spellsToDTO(spells, level))
+		render.OK(r.Context(), w, SpellPageDTO{
+			Items: spellsToDTO(page.Items, level), Total: page.Total, Page: page.Page, PageSize: page.PageSize,
+		})
 		return nil
 	}
+}
+
+// parsePage reads page (1-based, default 1) and page_size (default 50, max
+// 200). A malformed or out-of-range value is a 400.
+func parsePage(q url.Values) (spellsvc.PageRequest, error) {
+	pr := spellsvc.PageRequest{Page: 1, PageSize: spellsvc.DefaultPageSize}
+	if raw := q.Get("page"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 {
+			return pr, render.BadRequestError("page must be a positive integer")
+		}
+		pr.Page = n
+	}
+	if raw := q.Get("page_size"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 || n > spellsvc.MaxPageSize {
+			return pr, render.BadRequestError("page_size must be an integer from 1 to " + strconv.Itoa(spellsvc.MaxPageSize))
+		}
+		pr.PageSize = n
+	}
+	return pr, nil
 }
 
 // parseFilter reads q, class, level, school, components, save and
@@ -150,6 +177,8 @@ type SpellSlotDTO struct {
 // PHB text; Stats is their typed form and Values the computed values at
 // CasterLevel (domain types carry the JSON tags).
 type SpellDTO struct {
+	// ID is the spell's unique key; cast and receive take it.
+	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Class        string `json:"class"`
 	Level        int    `json:"level"`
@@ -166,6 +195,14 @@ type SpellDTO struct {
 	Stats       spellstats.Stats   `json:"stats"`
 	CasterLevel int                `json:"caster_level,omitempty"`
 	Values      *spellstats.Values `json:"values,omitempty"`
+}
+
+// SpellPageDTO is one page of GET /api/spells; Total counts every match.
+type SpellPageDTO struct {
+	Items    []SpellDTO `json:"items"`
+	Total    int        `json:"total"`
+	Page     int        `json:"page"`
+	PageSize int        `json:"page_size"`
 }
 
 // SlotsToDTO maps slots to their wire shape.
@@ -188,7 +225,7 @@ func spellsToDTO(in []spellsvc.Spell, casterLevel int) []SpellDTO {
 // SpellToDTO maps one spell to its wire shape, with values at casterLevel.
 func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
 	dto := SpellDTO{
-		Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
+		ID: s.ID, Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
 		CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
 		AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
 		Description: s.Description,

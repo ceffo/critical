@@ -4,6 +4,8 @@ import "github.com/ceffo/critical/api/internal/domain/spellstats"
 
 // Spell mirrors the seeds/spells.json schema.
 type Spell struct {
+	// ID is the spell's unique key (see Keys); the database does not store it.
+	ID           string
 	Name         string
 	Class        string
 	Level        int

@@ -232,29 +232,27 @@ func (_c *MockSVC_ResetSlots_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
-// Search provides a mock function with given fields: ctx, f
-func (_m *MockSVC) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
-	ret := _m.Called(ctx, f)
+// Search provides a mock function with given fields: ctx, f, p
+func (_m *MockSVC) Search(ctx context.Context, f spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error) {
+	ret := _m.Called(ctx, f, p)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Search")
 	}
 
-	var r0 []spellsvc.Spell
+	var r0 spellsvc.Page
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, spellsvc.Filter) ([]spellsvc.Spell, error)); ok {
-		return rf(ctx, f)
+	if rf, ok := ret.Get(0).(func(context.Context, spellsvc.Filter, spellsvc.PageRequest) (spellsvc.Page, error)); ok {
+		return rf(ctx, f, p)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, spellsvc.Filter) []spellsvc.Spell); ok {
-		r0 = rf(ctx, f)
+	if rf, ok := ret.Get(0).(func(context.Context, spellsvc.Filter, spellsvc.PageRequest) spellsvc.Page); ok {
+		r0 = rf(ctx, f, p)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]spellsvc.Spell)
-		}
+		r0 = ret.Get(0).(spellsvc.Page)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, spellsvc.Filter) error); ok {
-		r1 = rf(ctx, f)
+	if rf, ok := ret.Get(1).(func(context.Context, spellsvc.Filter, spellsvc.PageRequest) error); ok {
+		r1 = rf(ctx, f, p)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -270,23 +268,24 @@ type MockSVC_Search_Call struct {
 // Search is a helper method to define mock.On call
 //   - ctx context.Context
 //   - f spellsvc.Filter
-func (_e *MockSVC_Expecter) Search(ctx interface{}, f interface{}) *MockSVC_Search_Call {
-	return &MockSVC_Search_Call{Call: _e.mock.On("Search", ctx, f)}
+//   - p spellsvc.PageRequest
+func (_e *MockSVC_Expecter) Search(ctx interface{}, f interface{}, p interface{}) *MockSVC_Search_Call {
+	return &MockSVC_Search_Call{Call: _e.mock.On("Search", ctx, f, p)}
 }
 
-func (_c *MockSVC_Search_Call) Run(run func(ctx context.Context, f spellsvc.Filter)) *MockSVC_Search_Call {
+func (_c *MockSVC_Search_Call) Run(run func(ctx context.Context, f spellsvc.Filter, p spellsvc.PageRequest)) *MockSVC_Search_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(spellsvc.Filter))
+		run(args[0].(context.Context), args[1].(spellsvc.Filter), args[2].(spellsvc.PageRequest))
 	})
 	return _c
 }
 
-func (_c *MockSVC_Search_Call) Return(_a0 []spellsvc.Spell, _a1 error) *MockSVC_Search_Call {
+func (_c *MockSVC_Search_Call) Return(_a0 spellsvc.Page, _a1 error) *MockSVC_Search_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockSVC_Search_Call) RunAndReturn(run func(context.Context, spellsvc.Filter) ([]spellsvc.Spell, error)) *MockSVC_Search_Call {
+func (_c *MockSVC_Search_Call) RunAndReturn(run func(context.Context, spellsvc.Filter, spellsvc.PageRequest) (spellsvc.Page, error)) *MockSVC_Search_Call {
 	_c.Call.Return(run)
 	return _c
 }

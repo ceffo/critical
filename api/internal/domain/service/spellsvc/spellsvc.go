@@ -15,7 +15,7 @@ type SVC interface {
 	domain.Service
 	GetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
-	Search(ctx context.Context, f Filter) ([]Spell, error)
+	Search(ctx context.Context, f Filter, p PageRequest) (Page, error)
 }
 
 // DAL is the write-side driven port (slot ledger).

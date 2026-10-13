@@ -59,22 +59,33 @@ export interface Stack {
 async function seedsWith(
   dir: string,
   character: Record<string, unknown>,
+  extraSpells: unknown[],
 ): Promise<string> {
-  if (Object.keys(character).length === 0) return seedsDir;
+  if (Object.keys(character).length === 0 && extraSpells.length === 0)
+    return seedsDir;
   const out = path.join(dir, "seeds");
   await cp(seedsDir, out, { recursive: true });
-  const file = path.join(out, "character.json");
-  const sheet = JSON.parse(await readFile(file, "utf8")) as Record<
-    string,
-    unknown
-  >;
-  await writeFile(file, JSON.stringify({ ...sheet, ...character }));
+  if (Object.keys(character).length > 0) {
+    const file = path.join(out, "character.json");
+    const sheet = JSON.parse(await readFile(file, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    await writeFile(file, JSON.stringify({ ...sheet, ...character }));
+  }
+  if (extraSpells.length > 0) {
+    const file = path.join(out, "spells.json");
+    const spells = JSON.parse(await readFile(file, "utf8")) as unknown[];
+    await writeFile(file, JSON.stringify([...spells, ...extraSpells]));
+  }
   return out;
 }
 
 export interface StackOptions {
   /** Fields overriding the fixture character.json for this test, e.g. `test.use({ character: { str: 12 } })`. */
   character: Record<string, unknown>;
+  /** Spell rows appended to the fixture spells.json (e.g. enough of them to need several lookup pages); wrapped because Playwright mangles array-valued options. */
+  extraSpells: { rows: unknown[] };
 }
 
 /**
@@ -84,8 +95,9 @@ export interface StackOptions {
  */
 export const test = base.extend<{ stack: Stack } & StackOptions>({
   character: [{}, { option: true }],
+  extraSpells: [{ rows: [] }, { option: true }],
 
-  stack: async ({ character }, provide) => {
+  stack: async ({ character, extraSpells }, provide) => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "critical-e2e-"));
     const apiPort = await freePort();
     const apiUrl = `http://127.0.0.1:${apiPort}`;
@@ -94,7 +106,7 @@ export const test = base.extend<{ stack: Stack } & StackOptions>({
       env: {
         ...process.env,
         CRITICAL_DSN: path.join(tmp, "critical.db"),
-        CRITICAL_SEEDS_DIR: await seedsWith(tmp, character),
+        CRITICAL_SEEDS_DIR: await seedsWith(tmp, character, extraSpells.rows),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,
       },
       stdio: ["ignore", "pipe", "pipe"],

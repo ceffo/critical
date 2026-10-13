@@ -139,7 +139,7 @@ var endpoints = []endpoint{
 		m.spell.On("GetSlots", anyArgs(2)...).Return(nil, err)
 	}},
 	{"GET spells", "GET", "/api/spells?q=a", "", func(m *mocksSet, err error) {
-		m.spell.On("Search", anyArgs(3)...).Return(nil, err)
+		m.spell.On("Search", anyArgs(3)...).Return(spellsvc.Page{}, err)
 	}},
 	{"POST spells/{id}/cast", "POST", "/api/spells/2/cast", "", func(m *mocksSet, err error) {
 		m.cast.On("Cast", anyArgs(4)...).Return(castsvc.CastResult{}, err)

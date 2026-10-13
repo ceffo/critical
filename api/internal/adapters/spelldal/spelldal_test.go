@@ -2,10 +2,12 @@ package spelldal_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,7 +136,45 @@ func TestSearch_MapsFields(t *testing.T) {
 	got, err := spelldal.New(db).Search(context.Background(), "Fireball", "")
 	require.NoError(t, err)
 	require.Len(t, got, 1)
-	assert.Equal(t, spellsvc.Spell{Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}, got[0])
+	want := spellsvc.Spell{Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
+	got[0].Stats = spellstats.Stats{}
+	assert.Equal(t, want, got[0])
+}
+
+// A row without stats JSON (or with garbage) is typed from its raw columns.
+func TestSearch_RowWithoutStatsIsParsedFromRawText(t *testing.T) {
+	db := openDB(t)
+	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (name, class, level, range, saving_throw, stats)
+		VALUES ('A', 'wizard', 1, '10 yds./level', '1/2', NULL), ('B', 'wizard', 2, '20 yds.', 'Neg.', '{not json')`)
+	require.NoError(t, err)
+
+	got, err := spelldal.New(db).Search(context.Background(), "", "")
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, 150.0, got[0].Stats.At(15).Range.Amount)
+	assert.Equal(t, []string{"half"}, got[0].Stats.Save.Kinds)
+	assert.Equal(t, []string{"negates"}, got[1].Stats.Save.Kinds)
+}
+
+// Seeding stores the typed stats; the DAL returns them with the raw text.
+func TestSearch_SeededSpellsCarryTypedStats(t *testing.T) {
+	ctx := context.Background()
+	db := openDB(t)
+	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
+
+	got, err := spelldal.New(db).Search(ctx, "Magic Missile", "")
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	mm := got[0]
+	assert.Equal(t, "60 yds. + 10 yds./level", mm.Range)
+	assert.Equal(t, "60 yds. + 10 yds./level", mm.Stats.Range.Raw)
+	assert.Equal(t, spellstats.RangeDistance, mm.Stats.Range.Kind)
+	assert.Equal(t, 210.0, mm.Stats.At(15).Range.Amount)
+
+	fb, ok, err := spelldal.New(db).Describe(ctx, "fireball")
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, []string{spellstats.SaveHalf}, fb.Stats.Save.Kinds)
 }
 
 func TestSlots_ReadsStoredJSON(t *testing.T) {

@@ -497,6 +497,7 @@ func (f *Factory) fromExistingSpell(ctx context.Context, m *models.Spell) *Spell
 	o.Components = func() null.Val[string] { return m.Components }
 	o.SavingThrow = func() null.Val[string] { return m.SavingThrow }
 	o.Description = func() null.Val[string] { return m.Description }
+	o.Stats = func() null.Val[string] { return m.Stats }
 
 	return o
 }

@@ -13,6 +13,9 @@ export default defineConfig({
   // Playwright specs live in e2e/ and run via `just e2e`, not vitest.
   test: { include: ["src/**/*.test.{ts,tsx}"] },
   server: {
+    // All interfaces (IPv4 too: a tunnel to 127.0.0.1:5173 must work); browsable by tailnet name.
+    host: true,
+    allowedHosts: [".ts.net"],
     // `just dev` runs the API on :8080; forward /api like nginx does in compose.
     proxy: { "/api": process.env.CRITICAL_API_URL ?? "http://localhost:8080" },
   },

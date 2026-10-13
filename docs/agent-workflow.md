@@ -39,7 +39,7 @@ Domain vocabulary and phase scope live in `docs/all.md`.
 
 ## Running the app for acceptance checks
 
-- Full stack with live reload: `just dev` (API via air on :8080, Vite on :5173 proxying `/api`).
+- Full stack with live reload: `just dev` (API via air on :8080, Vite on :5173 proxying `/api`, listening on all interfaces, `*.ts.net` hosts allowed).
   State is in the gitignored `.dev/`; `just dev-reset` deletes the dev database. Use it only
   from the main checkout or a worktree you own; it binds fixed ports, so run one at a time.
 - Backend alone, throwaway data: `just build-api`, then run `bin/critical-srv` with

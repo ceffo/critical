@@ -18,7 +18,7 @@ func newSvc(t *testing.T) (spellsvc.SVC, *mocks.MockDAL, *mocks.MockReader) {
 	t.Helper()
 	dal := mocks.NewMockDAL(t)
 	reader := mocks.NewMockReader(t)
-	svc, err := spellsvc.NewWithConfig(spellsvc.DefaultConfig(), dal, reader)
+	svc, err := spellsvc.NewWithConfig(spellsvc.DefaultConfig(), dal, reader, mocks.NewMockSpellbook(t))
 	require.NoError(t, err)
 	return svc, dal, reader
 }
@@ -32,9 +32,11 @@ func slots() []spellsvc.SpellSlot {
 }
 
 func TestNew_NilDeps(t *testing.T) {
-	_, err := spellsvc.New(nil, mocks.NewMockReader(t))
+	_, err := spellsvc.New(nil, mocks.NewMockReader(t), mocks.NewMockSpellbook(t))
 	require.Error(t, err)
-	_, err = spellsvc.New(mocks.NewMockDAL(t), nil)
+	_, err = spellsvc.New(mocks.NewMockDAL(t), nil, mocks.NewMockSpellbook(t))
+	require.Error(t, err)
+	_, err = spellsvc.New(mocks.NewMockDAL(t), mocks.NewMockReader(t), nil)
 	require.Error(t, err)
 }
 
@@ -66,8 +68,8 @@ func TestResetSlots(t *testing.T) {
 func TestSearch_PassesTheFilterToTheReader(t *testing.T) {
 	svc, _, reader := newSvc(t)
 	lvl := 3
-	f := spellsvc.Filter{Query: "fire", Class: "wizard", Level: &lvl, School: "Evo"}
-	spells := []spellsvc.Spell{{Name: "Fireball", Class: "wizard", Level: 3}}
+	f := spellsvc.Filter{Query: "fire", Class: "wizard", Levels: []int{lvl}, School: spellsvc.SchoolEvocation}
+	spells := []spellsvc.Spell{{Name: "Fireball", Class: "wizard", Level: 3, School: "Evocation"}}
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
 
 	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{})

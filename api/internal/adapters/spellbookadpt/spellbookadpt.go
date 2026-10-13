@@ -102,6 +102,14 @@ func (b *Book) All() []prepsvc.SpellbookEntry {
 	return append([]prepsvc.SpellbookEntry(nil), b.entries...)
 }
 
+// Contains reports whether the spell with unique key id is in the book
+// (spellsvc.Spellbook). The book's ids are slugs of Wizard names, which are
+// the Wizard spells' unique keys.
+func (b *Book) Contains(id string) bool {
+	_, ok := b.byID[id]
+	return ok
+}
+
 // Get returns the entry with id.
 func (b *Book) Get(id string) (prepsvc.SpellbookEntry, bool) {
 	e, ok := b.byID[id]

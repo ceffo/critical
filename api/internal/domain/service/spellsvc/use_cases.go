@@ -1,8 +1,10 @@
 package spellsvc
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 )
 
 // GetSlots returns the persisted slot list.
@@ -50,19 +52,32 @@ type Page struct {
 }
 
 // Search reads the catalog rows matching the filter's stored columns, keeps
-// those whose typed stats match the rest of it, then cuts the requested page.
-// Rows come ordered by level, name, class, so pages are stable. The typed
-// filter runs before paging: Total and the pages are exact.
+// those matching the rest of it, ranks them, then cuts the requested page.
+// Rows come ordered by level, name, class; a search text ranks exact name
+// matches first, then prefix, then substring matches (over the English name
+// and the client's Names), keeping that order within a tier, so pages are
+// stable. Filtering runs before paging: Total and the pages are exact.
 func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, error) {
 	rows, err := s.reader.Search(ctx, f)
 	if err != nil {
 		return Page{}, err
 	}
-	matches := make([]Spell, 0, len(rows))
+	type ranked struct {
+		tier  Tier
+		spell Spell
+	}
+	found := make([]ranked, 0, len(rows))
 	for _, sp := range rows {
-		if f.matchStats(sp.Stats) {
-			matches = append(matches, sp)
+		t := f.tier(sp)
+		if t == TierNone || (f.Mine && !s.book.Contains(sp.ID)) || !f.matchGroups(sp) || !f.matchStats(sp.Stats) {
+			continue
 		}
+		found = append(found, ranked{t, sp})
+	}
+	slices.SortStableFunc(found, func(a, b ranked) int { return cmp.Compare(a.tier, b.tier) })
+	matches := make([]Spell, len(found))
+	for i, r := range found {
+		matches[i] = r.spell
 	}
 	if p.Page < 1 {
 		p.Page = 1

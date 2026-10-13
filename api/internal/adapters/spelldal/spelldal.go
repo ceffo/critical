@@ -84,23 +84,22 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 	return nil
 }
 
-// Search runs the catalog query on the stored columns of f (name, class,
-// level, school); the service applies the typed-stat filters.
+// Search runs the catalog query on the stored columns of f (class, levels),
+// ordered by level, name, class; the service applies the rest of the filter
+// (names, school groups, spheres, typed stats) and ranks the matches.
 // Uses bob's model query builder because the WHERE conditions are dynamic.
 func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
 	where := bobmodels.SelectWhere.Spells
-	mods := make([]bob.Mod[*dialect.SelectQuery], 0, 4)
-	if f.Query != "" {
-		mods = append(mods, where.Name.Like("%"+f.Query+"%"))
-	}
+	mods := make([]bob.Mod[*dialect.SelectQuery], 0, 5)
 	if f.Class != "" {
 		mods = append(mods, where.Class.Like(f.Class)) // LIKE without wildcards: case-insensitive equality
 	}
-	if f.Level != nil {
-		mods = append(mods, where.Level.EQ(int64(*f.Level)))
-	}
-	if f.School != "" {
-		mods = append(mods, where.School.Like("%"+f.School+"%"))
+	if len(f.Levels) > 0 {
+		levels := make([]int64, len(f.Levels))
+		for i, l := range f.Levels {
+			levels[i] = int64(l)
+		}
+		mods = append(mods, where.Level.In(levels...))
 	}
 	mods = append(mods,
 		sm.OrderBy(bobmodels.Spells.Columns.Level),

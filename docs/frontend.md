@@ -65,8 +65,17 @@ flowchart TD
   An attack refreshes the table state (log, item counts), so voiding it shows the arrow back.
 - Spells tab (`SpellsPanel.tsx`): Cast puts the `CastResult` in the result card (`CastResultView`:
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
-  go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") searches the spell
-  database (English) plus the en/fr `spells` catalogue names and posts `/api/spells/receive`.
+  go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
+  the shared name search (below) and posts `/api/spells/receive`.
+- Spell Lookup tab (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives tab switches):
+  search box, `Mine | Wizard | Priest | All` toggle (default Wizard; Mine = the Bard's spellbook),
+  level chips 0-9 (multi-select), a school-group dropdown (spheres in Priest mode); a list (45% of
+  the tab, one line per spell, infinite scroll by 200-row pages under a true "N spells" total) and a
+  detail pane (values at the Bard's level next to the raw text, description collapsed).
+- Spell name search (one module for Lookup and Receive): `api/spells_db.ts` `searchSpells` sends
+  `q` (the server matches English names) plus `match_exact` / `match_prefix` / `match_contains`,
+  the catalogue keys whose French name matched (`lib/spellSearch.ts`); the server ORs both and
+  ranks exact > prefix > contains, then level, name.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).

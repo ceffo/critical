@@ -73,6 +73,9 @@ test("theme: dashboard screens in light and dark", async ({ page }) => {
         .trim()
         .toLowerCase()
         .replace(/\W+/g, "-");
+      if (name === "spell-lookup")
+        await expect(page.getByTestId("spell-row").first()).toBeVisible();
+      await page.waitForTimeout(200); // let the tabs' colour transition finish
       await snap(page, `${mode}-${name}`);
     }
   }

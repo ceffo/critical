@@ -1,393 +1,362 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useSpellsDbStore } from "@/stores/spells_db";
-import { NO_FILTERS, type SpellFilters } from "@/api/spells_db";
-import { spellName } from "@/i18n/spellName";
-import type { Spell, SpellValue } from "@/types/spells";
 import { Search, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { fieldClass, captionClass } from "@/components/dashboard/fieldStyles";
+import { isQuerySet, useLookupStore } from "@/stores/lookup";
+import type { SpellClass } from "@/api/spells_db";
+import { otherSpellName, spellName } from "@/i18n/spellName";
+import { statRaw, statValue, type StatKey } from "@/lib/spellValues";
+import type { Spell } from "@/types/spells";
 
-const CLASSES = [
-  ["", "classAll"],
-  ["wizard", "classWizard"],
-  ["priest", "classPriest"],
-] as const;
-const SAVES = [
-  ["none", "saveNone"],
-  ["neg", "saveNeg"],
-  ["1/2", "saveHalf"],
-  ["special", "saveSpecial"],
-] as const;
-const CASTING_TIMES = [
-  "segment",
-  "round",
-  "turn",
-  "hour",
-  "day",
-  "week",
-  "special",
-] as const;
-const COMPONENTS = ["V", "S", "M"] as const;
+const CLASSES: { value: SpellClass; key: string }[] = [
+  { value: "mine", key: "classMine" },
+  { value: "wizard", key: "classWizard" },
+  { value: "priest", key: "classPriest" },
+  { value: "all", key: "classAll" },
+];
+const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const STATS: StatKey[] = ["range", "duration", "area", "castingTime", "save"];
 
-const selectClass =
-  "h-8 w-full rounded-md border border-input bg-background px-2 text-xs";
-
-/** "210 yard", "3 round + 1d4"; display only, the numbers come from the server. */
-function formatValue(v: SpellValue | undefined, raw: string): string {
-  if (!v) return raw;
-  const parts: string[] = [];
-  if (v.amount !== 0 || !v.dice) {
-    parts.push(v.upper ? `${v.amount}-${v.upper}` : `${v.amount}`);
-  }
-  if (v.dice) parts.push(v.dice);
-  return parts.join(" + ") + (v.unit ? ` ${v.unit}` : "");
+/** "1 rd" and "1 rd." say the same: the raw text is not repeated after its value. */
+function same(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9½/-]/g, "");
+  return norm(a) === norm(b);
 }
 
-function formatArea(spell: Spell): string {
-  const a = spell.values?.area;
-  if (!a) return spell.area_of_effect;
-  const dims = a.dims?.map((d) => formatValue(d, "")).join(" × ");
+/** Load the next page when the list is this close (px) to its bottom. */
+const LOAD_MORE_MARGIN = 400;
+
+/** "Mains brûlantes" + grey "· Burning Hands" (the other language), when it exists. */
+function SpellNames({ spell, className }: { spell: Spell; className?: string }) {
+  const { t, i18n } = useTranslation();
+  const other = otherSpellName(t, i18n.language, spell.id, spell.name);
   return (
-    dims || (a.targets ? formatValue(a.targets, "") : spell.area_of_effect)
+    <span className={cn("min-w-0 truncate", className)}>
+      <span data-testid="spell-name">{spellName(t, spell.id, spell.name)}</span>
+      {other && (
+        <span className="text-muted-foreground font-normal" data-testid="spell-other-name">
+          {" · "}
+          {other}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function SpellDetail({ spell }: { spell: Spell }) {
+  const { t } = useTranslation();
+  const unit = (w: string) => t(`lookup.units.${w}`, { defaultValue: w });
+  const value = (key: StatKey): string | null =>
+    key === "save"
+      ? spell.stats.save.kinds.length
+        ? spell.stats.save.kinds.map((k) => t(`lookup.saveKinds.${k}`)).join(" / ")
+        : null
+      : statValue(spell, key, unit);
+  const meta = [
+    spell.class,
+    t("lookup.levelLabel", { level: spell.level }),
+    spell.school,
+    spell.sphere,
+    spell.components,
+  ].filter(Boolean);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-base font-semibold leading-tight">
+          <SpellNames spell={spell} className="whitespace-normal" />
+        </h3>
+        <p className="text-xs text-muted-foreground" data-testid="spell-meta">
+          {meta.join(" · ")}
+        </p>
+      </div>
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        {STATS.map((key) => {
+          const v = value(key);
+          const raw = statRaw(spell, key);
+          return (
+            <div key={key} className="min-w-0" data-testid={`stat-${key}`}>
+              <dt className={captionClass}>{t(`lookup.${key}`)}</dt>
+              <dd className="min-w-0">
+                {v ? (
+                  <>
+                    <span className="font-medium" data-testid="stat-value">
+                      {v}
+                    </span>
+                    {raw && !same(v, raw) && (
+                      <span className="text-muted-foreground" data-testid="stat-raw">
+                        {" · "}
+                        {raw}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span data-testid="stat-raw">{raw || "—"}</span>
+                )}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+      {spell.caster_level ? (
+        <p className="text-[11px] text-muted-foreground">
+          {t("lookup.atLevel", { level: spell.caster_level })}
+        </p>
+      ) : null}
+      {spell.description && (
+        <details className="text-sm" data-testid="spell-description">
+          <summary className={cn(captionClass, "cursor-pointer select-none")}>
+            {t("lookup.description")}
+          </summary>
+          <p className="mt-1 whitespace-pre-line leading-relaxed">
+            {spell.description}
+          </p>
+        </details>
+      )}
+    </div>
   );
 }
 
 export function LookupPanel() {
   const { t } = useTranslation();
-  const [f, setF] = useState<SpellFilters>(NO_FILTERS);
-  const [page, setPage] = useState(1);
   const {
-    results,
+    query,
+    items,
     total,
-    page: shownPage,
-    pageSize,
-    search,
     loading,
-  } = useSpellsDbStore();
-  // Any filter change goes back to the first page.
-  const patch = (p: Partial<SpellFilters>) => {
-    setF((cur) => ({ ...cur, ...p }));
-    setPage(1);
-  };
-  // The range shown is the one of the response on screen, not of the page asked for.
-  const from = total === 0 ? 0 : (shownPage - 1) * pageSize + 1;
-  const to = Math.min(shownPage * pageSize, total);
-  const lastPage = Math.max(1, Math.ceil(total / pageSize));
-  const filtered =
-    JSON.stringify({ ...f, q: "" }) !==
-    JSON.stringify({ ...NO_FILTERS, q: "" });
-  const query = f.q;
-
-  // The matches shrank under the page asked for: ask for the last page that exists.
-  const reqPage = Math.min(page, lastPage);
+    error,
+    shownKey,
+    selectedId,
+    options,
+    setQuery,
+    reset,
+    search,
+    loadMore,
+    select,
+    move,
+    loadOptions,
+  } = useLookupStore();
+  const listRef = useRef<HTMLDivElement>(null);
+  const priest = query.cls === "priest";
+  const selected = items.find((s) => s.id === selectedId) ?? null;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      search(f, reqPage);
-    }, 300);
+    void loadOptions();
+  }, [loadOptions]);
+
+  // Search as the query changes (debounced while typing); the store skips a query
+  // whose rows are already shown, so coming back to the tab keeps the selection.
+  useEffect(() => {
+    const timer = setTimeout(() => void search(), 150);
     return () => clearTimeout(timer);
-  }, [f, reqPage, search]);
+  }, [query, search]);
+
+  // Keep the selected row visible (keyboard moves, coming back to the tab).
+  useEffect(() => {
+    if (!selectedId) return;
+    document
+      .getElementById(`lookup-row-${selectedId}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selectedId]);
+
+  // A new query starts at the top of the list. Not on mount: coming back to the tab
+  // keeps the selected row in view (the effect above).
+  const mountedKey = useRef(shownKey);
+  useEffect(() => {
+    if (shownKey === mountedKey.current) return;
+    mountedKey.current = shownKey;
+    listRef.current?.scrollTo({ top: 0 });
+  }, [shownKey]);
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      move(e.key === "ArrowDown" ? 1 : -1);
+    }
+  };
+
+  const onScroll = (e: UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - LOAD_MORE_MARGIN) {
+      void loadMore();
+    }
+  };
+
+  const toggleLevel = (n: number) =>
+    setQuery({
+      levels: query.levels.includes(n)
+        ? query.levels.filter((l) => l !== n)
+        : [...query.levels, n].sort((a, b) => a - b),
+    });
 
   return (
-    <div className="flex flex-col h-full space-y-3">
+    <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="relative shrink-0">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
+        <Search className="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
+        <input
           type="search"
+          className={cn(fieldClass, "pl-8")}
           placeholder={t("lookup.search")}
           aria-label={t("lookup.search")}
-          className="pl-8"
-          value={f.q}
-          onChange={(e) => patch({ q: e.target.value })}
+          role="combobox"
+          aria-expanded
+          aria-controls="lookup-list"
+          aria-activedescendant={selectedId ? `lookup-row-${selectedId}` : undefined}
+          autoComplete="off"
+          value={query.q}
+          onChange={(e) => setQuery({ q: e.target.value })}
+          onKeyDown={onKeyDown}
         />
       </div>
 
-      <div
-        className="shrink-0 space-y-2"
-        role="group"
-        aria-label={t("lookup.classLabel")}
-      >
-        <div className="flex gap-1">
-          {CLASSES.map(([value, key]) => (
-            <Button
-              key={key}
+      <div className="flex shrink-0 items-center gap-2">
+        <div
+          role="group"
+          aria-label={t("lookup.classLabel")}
+          className="inline-flex rounded-lg border p-0.5"
+        >
+          {CLASSES.map(({ value, key }) => (
+            <button
+              key={value}
               type="button"
-              size="sm"
-              variant={f.cls === value ? "default" : "outline"}
-              aria-pressed={f.cls === value}
-              className="flex-1 h-7 text-[11px] px-1"
-              onClick={() => patch({ cls: value })}
+              aria-pressed={query.cls === value}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+                query.cls === value && "bg-primary text-primary-foreground hover:text-primary-foreground",
+              )}
+              onClick={() => setQuery({ cls: value })}
             >
               {t(`lookup.${key}`)}
-            </Button>
+            </button>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <select
-            aria-label={t("lookup.level")}
-            className={selectClass}
-            value={f.level}
-            onChange={(e) => patch({ level: e.target.value })}
-          >
-            <option value="">{t("lookup.anyLevel")}</option>
-            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-              <option key={n} value={n}>
-                {t("lookup.levelShort", { level: n })}
-              </option>
-            ))}
-          </select>
-          <Input
-            aria-label={t("lookup.school")}
-            placeholder={t("lookup.schoolPlaceholder")}
-            className="h-8 text-xs"
-            value={f.school}
-            onChange={(e) => patch({ school: e.target.value })}
-          />
-          <select
-            aria-label={t("lookup.save")}
-            className={selectClass}
-            value={f.save}
-            onChange={(e) => patch({ save: e.target.value })}
-          >
-            <option value="">{t("lookup.anySave")}</option>
-            {SAVES.map(([value, key]) => (
-              <option key={value} value={value}>
-                {t(`lookup.${key}`)}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label={t("lookup.castingTime")}
-            className={selectClass}
-            value={f.castingTime}
-            onChange={(e) => patch({ castingTime: e.target.value })}
-          >
-            <option value="">{t("lookup.anyTime")}</option>
-            {CASTING_TIMES.map((u) => (
-              <option key={u} value={u}>
-                {t(`lookup.${u}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase text-muted-foreground">
-            {t("lookup.components")}
-          </span>
-          {COMPONENTS.map((c) => {
-            const on = f.components.includes(c);
-            return (
-              <Button
-                key={c}
-                type="button"
-                size="sm"
-                variant={on ? "default" : "outline"}
-                aria-pressed={on}
-                aria-label={`${t("lookup.components")} ${c}`}
-                className="h-6 w-7 px-0 text-[11px]"
-                onClick={() =>
-                  patch({
-                    components: on
-                      ? f.components.filter((x) => x !== c)
-                      : [...f.components, c],
-                  })
-                }
-              >
-                {c}
-              </Button>
-            );
-          })}
-          <label className="ml-auto flex items-center gap-1 text-[10px] font-bold uppercase text-muted-foreground">
-            {t("lookup.casterLevel")}
-            <Input
-              type="number"
-              min={1}
-              aria-label={t("lookup.casterLevel")}
-              placeholder={t("lookup.casterLevelHint")}
-              className="h-6 w-32 text-[11px] normal-case"
-              value={f.casterLevel}
-              onChange={(e) => patch({ casterLevel: e.target.value })}
-            />
-          </label>
-        </div>
-        {(filtered || f.q) && (
-          <Button
+        {isQuerySet(query) && (
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="h-6 text-[11px]"
-            onClick={() => {
-              setF(NO_FILTERS);
-              setPage(1);
-            }}
+            className="ml-auto text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            onClick={reset}
           >
             {t("lookup.reset")}
-          </Button>
+          </button>
         )}
       </div>
 
-      {total > 0 && (
-        <div className="shrink-0 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span data-testid="lookup-range">
-            {t("lookup.showing", { from, to, total })}
-          </span>
-          <div className="ml-auto flex gap-1">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-6 px-2 text-[11px]"
-              disabled={shownPage <= 1}
-              onClick={() => setPage(shownPage - 1)}
-            >
-              {t("lookup.prevPage")}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-6 px-2 text-[11px]"
-              disabled={to >= total}
-              onClick={() => setPage(shownPage + 1)}
-            >
-              {t("lookup.nextPage")}
-            </Button>
-          </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <div role="group" aria-label={t("lookup.levelsLabel")} className="flex gap-1">
+          {LEVELS.map((n) => {
+            const on = query.levels.includes(n);
+            return (
+              <button
+                key={n}
+                type="button"
+                aria-pressed={on}
+                aria-label={t("lookup.levelLabel", { level: n })}
+                className={cn(
+                  "h-7 w-8 rounded-md border text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+                  on && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
+                )}
+                onClick={() => toggleLevel(n)}
+              >
+                {t("lookup.levelTag", { level: n })}
+              </button>
+            );
+          })}
         </div>
-      )}
+        <select
+          className={cn(fieldClass, "ml-auto h-7 w-44 text-xs")}
+          aria-label={priest ? t("lookup.sphere") : t("lookup.school")}
+          value={priest ? query.sphere : query.school}
+          onChange={(e) =>
+            setQuery(priest ? { sphere: e.target.value } : { school: e.target.value })
+          }
+        >
+          <option value="">{priest ? t("lookup.anySphere") : t("lookup.anySchool")}</option>
+          {priest
+            ? options?.spheres.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))
+            : options?.schools.map((s) => (
+                <option key={s} value={s}>
+                  {t(`lookup.schools.${s}`, { defaultValue: s })}
+                </option>
+              ))}
+        </select>
+      </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-3 scrollbar-thin">
-        {loading && results.length === 0 ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : results.length > 0 ? (
-          results.map((spell) => (
-            <Card
-              key={spell.id}
-              className="overflow-hidden"
-              data-testid="spell-result"
-              data-class={spell.class}
-            >
-              <CardHeader className="py-2 px-3 bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-black uppercase tracking-tight">
-                    {spellName(t, spell.id, spell.name)}
-                  </CardTitle>
-                  <div className="flex gap-1">
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] py-0"
-                      data-testid="spell-class"
-                    >
-                      {spell.class}
-                    </Badge>
-                    <Badge className="text-[10px] py-0">
-                      {t("lookup.levelShort", { level: spell.level })}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-3 text-[11px] space-y-2">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
-                  <div className="flex gap-1">
-                    <span className="font-bold uppercase text-[9px]">
-                      {t("lookup.school")}
-                    </span>
-                    <span className="text-foreground truncate">
-                      {spell.school}
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    <span className="font-bold uppercase text-[9px]">
-                      {t("lookup.time")}
-                    </span>
-                    <span className="text-foreground">
-                      <span data-testid="v-time">
-                        {formatValue(
-                          spell.values?.casting_time,
-                          spell.casting_time,
-                        )}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    <span className="font-bold uppercase text-[9px]">
-                      {t("lookup.range")}
-                    </span>
-                    <span className="text-foreground" data-testid="v-range">
-                      {formatValue(spell.values?.range, spell.range)}
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    <span className="font-bold uppercase text-[9px]">
-                      {t("lookup.duration")}
-                    </span>
-                    <span className="text-foreground" data-testid="v-duration">
-                      {formatValue(spell.values?.duration, spell.duration)}
-                    </span>
-                  </div>
-                  {spell.area_of_effect && (
-                    <div className="flex gap-1 col-span-2">
-                      <span className="font-bold uppercase text-[9px]">
-                        {t("lookup.area")}
-                      </span>
-                      <span className="text-foreground" data-testid="v-area">
-                        {formatArea(spell)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {spell.caster_level ? (
-                  <div className="text-[10px] text-muted-foreground">
-                    {t("lookup.atLevel", { level: spell.caster_level })}
-                  </div>
-                ) : null}
-                <details className="text-[10px] text-muted-foreground">
-                  <summary className="cursor-pointer font-bold uppercase">
-                    {t("lookup.phbText")}
-                  </summary>
-                  <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2">
-                    <dt>{t("lookup.time")}</dt>
-                    <dd>{spell.casting_time}</dd>
-                    <dt>{t("lookup.range")}</dt>
-                    <dd>{spell.range}</dd>
-                    <dt>{t("lookup.duration")}</dt>
-                    <dd>{spell.duration}</dd>
-                    <dt>{t("lookup.area")}</dt>
-                    <dd>{spell.area_of_effect}</dd>
-                    <dt>{t("lookup.componentsRaw")}</dt>
-                    <dd>{spell.components}</dd>
-                    <dt>{t("lookup.saveRaw")}</dt>
-                    <dd>{spell.saving_throw}</dd>
-                  </dl>
-                </details>
-
-                <div className="pt-2 border-t text-muted-foreground leading-relaxed italic">
-                  {spell.description.length > 200
-                    ? spell.description.substring(0, 200) + "..."
-                    : spell.description}
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : filtered ? (
-          <div className="text-center py-8 text-muted-foreground text-sm italic">
-            {t("lookup.filtersEmptyPrompt")}
-          </div>
-        ) : query.length > 1 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm italic">
-            {t("lookup.noResults", { query })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground text-sm italic">
-            {t("lookup.prompt")}
-          </div>
+      <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+        {shownKey && (
+          <span data-testid="lookup-count">{t("lookup.count", { count: total })}</span>
+        )}
+        {loading && <Loader2 className="h-3 w-3 animate-spin" aria-hidden />}
+        {error && (
+          <span role="alert" className="text-destructive">
+            {error}
+          </span>
         )}
       </div>
+
+      <div
+        ref={listRef}
+        id="lookup-list"
+        role="listbox"
+        aria-label={t("lookup.results")}
+        className="h-[45%] shrink-0 overflow-y-auto rounded-lg border"
+        onScroll={onScroll}
+      >
+        {items.length === 0 && !loading && shownKey ? (
+          <p className="p-3 text-sm italic text-muted-foreground">{t("lookup.noMatch")}</p>
+        ) : (
+          items.map((s) => (
+            <div
+              key={s.id}
+              id={`lookup-row-${s.id}`}
+              role="option"
+              aria-selected={s.id === selectedId}
+              data-testid="spell-row"
+              data-id={s.id}
+              data-class={s.class}
+              data-level={s.level}
+              className={cn(
+                "flex cursor-pointer items-center gap-2 border-b px-2 py-1 text-sm last:border-b-0 hover:bg-muted/60",
+                s.id === selectedId && "bg-muted",
+              )}
+              onClick={() => select(s.id)}
+            >
+              <span className="w-6 shrink-0 text-xs font-semibold text-muted-foreground tabular-nums">
+                {t("lookup.levelTag", { level: s.level })}
+              </span>
+              <SpellNames spell={s} className="flex-1" />
+              {query.cls === "all" && (
+                <Badge variant="secondary" className="h-4 text-[10px]" data-testid="spell-class">
+                  {s.class}
+                </Badge>
+              )}
+              <span className="ml-auto max-w-[35%] shrink-0 truncate text-[11px] text-muted-foreground">
+                {s.school}
+              </span>
+            </div>
+          ))
+        )}
+        {items.length > 0 && items.length < total && (
+          <p className="p-2 text-center text-xs text-muted-foreground">{t("lookup.loadingMore")}</p>
+        )}
+      </div>
+
+      <section
+        aria-label={t("lookup.detail")}
+        data-testid="spell-detail"
+        className="min-h-0 flex-1 overflow-y-auto rounded-lg border p-3"
+      >
+        {selected ? (
+          <SpellDetail key={selected.id} spell={selected} />
+        ) : (
+          <p className="text-sm italic text-muted-foreground">{t("lookup.noSelection")}</p>
+        )}
+      </section>
     </div>
   );
 }

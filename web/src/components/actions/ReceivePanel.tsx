@@ -1,34 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { NO_FILTERS, searchSpells } from "@/api/spells_db";
-import { resources } from "@/i18n";
+import { NO_QUERY, searchSpells } from "@/api/spells_db";
 import { spellName } from "@/i18n/spellName";
 import { useSpellStore } from "@/stores/spells";
 import { useTableStore } from "@/stores/table";
 import { captionClass, fieldClass } from "@/components/dashboard/fieldStyles";
-
-interface Candidate {
-  id: string;
-  name: string;
-  level?: number;
-  cls?: string;
-}
-
-/** Lowercase without accents, for matching typed text against names. */
-function fold(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-}
-
-/** Spells whose English or French catalogue name contains the query (the spell database is English only). */
-function catalogueMatches(q: string): Candidate[] {
-  const en = resources.en.spells as Record<string, string>;
-  const fr = resources.fr.spells as Record<string, string>;
-  const needle = fold(q);
-  return Object.keys(en)
-    .filter((id) => fold(en[id]).includes(needle) || fold(fr[id] ?? "").includes(needle))
-    .map((id) => ({ id, name: en[id] }));
-}
+import type { Spell } from "@/types/spells";
 
 const RECEIVE_PAGE_SIZE = 50;
 
@@ -39,7 +17,7 @@ export function ReceivePanel() {
   const { run, busy } = useTableStore();
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState("");
-  const [found, setFound] = useState<Candidate[]>([]);
+  const [found, setFound] = useState<Spell[]>([]);
   /** Matches the API has beyond the page shown. */
   const [more, setMore] = useState(0);
 
@@ -49,23 +27,13 @@ export function ReceivePanel() {
     if (q.length < 2) return;
     let live = true;
     const timer = setTimeout(() => {
-      searchSpells({ ...NO_FILTERS, q }, 1, RECEIVE_PAGE_SIZE)
-        .catch(() => ({ items: [], total: 0 }))
-        .then(({ items: rows, total }) => {
+      // The lookup's ranked search: English and French names, exact > prefix > contains.
+      searchSpells({ ...NO_QUERY, q }, 1, RECEIVE_PAGE_SIZE)
+        .catch(() => ({ items: [] as Spell[], total: 0 }))
+        .then(({ items, total }) => {
           if (!live) return;
-          const byId = new Map<string, Candidate>();
-          for (const c of catalogueMatches(q)) byId.set(c.id, c);
-          for (const r of rows) {
-            if (!byId.has(r.id) || byId.get(r.id)?.level === undefined)
-              byId.set(r.id, {
-                id: r.id,
-                name: r.name,
-                level: r.level,
-                cls: r.class,
-              });
-          }
-          setFound([...byId.values()]);
-          setMore(Math.max(0, total - rows.length));
+          setFound(items);
+          setMore(Math.max(0, total - items.length));
         });
     }, 200);
     return () => {
@@ -118,12 +86,10 @@ export function ReceivePanel() {
               <li key={c.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60">
                 <span className="min-w-0 truncate text-sm">
                   {name}
-                  {c.cls && (
-                    <span className="text-muted-foreground">
-                      {" "}
-                      · {c.cls} {c.level}
-                    </span>
-                  )}
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {c.class} {c.level}
+                  </span>
                 </span>
                 <Button
                   size="xs"

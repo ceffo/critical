@@ -32,7 +32,7 @@ func (d *DAL) List(ctx context.Context) ([]combatsvc.CritRow, error) {
 	}
 	out := make([]combatsvc.CritRow, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, combatsvc.CritRow{From: int(r.RollFrom), To: int(r.RollTo), Multiplier: int(r.Multiplier)})
+		out = append(out, combatsvc.CritRow{From: int(r.RollFrom), To: int(r.RollTo), Multiplier: r.Multiplier})
 	}
 	return out, nil
 }
@@ -45,7 +45,7 @@ func (d *DAL) Replace(ctx context.Context, rows []combatsvc.CritRow) error {
 	}
 	for _, r := range rows {
 		_, err := queries.InsertCritRow([]queries.InsertCritRow_CritTableRows{{
-			RollFrom: int64(r.From), RollTo: int64(r.To), Multiplier: int64(r.Multiplier),
+			RollFrom: int64(r.From), RollTo: int64(r.To), Multiplier: r.Multiplier,
 		}}).Exec(ctx, d.exec(ctx))
 		if err != nil {
 			return fmt.Errorf("insert crit row %d-%d: %w", r.From, r.To, err)

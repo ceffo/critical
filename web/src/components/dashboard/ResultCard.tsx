@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
 import { useRollStore, type LastRoll } from "@/stores/roll";
-import { formatFactor, formatSigned } from "@/lib/format";
+import { formatFactor, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { captionClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
@@ -73,7 +73,7 @@ function modLabel(t: TFunction, m: { kind: string; detail?: string; value: numbe
 }
 
 function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const r = roll.result;
   const heading = r.ammo
     ? t("result.attackHeadingAmmo", { weapon: r.weaponName, ammo: r.ammo.name, ac: r.targetAc })
@@ -140,7 +140,7 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
             </Fact>
             <Fact label={t("result.damageSpells")}>{r.spellsBuff}</Fact>
             <Fact label={t("result.damageWeapon")}>{r.weaponBuff}</Fact>
-            <Fact label={t("result.damageMultiplier")}>{r.multipliers}</Fact>
+            <Fact label={t("result.damageMultiplier")}>{formatNumber(r.multipliers, i18n.language)}</Fact>
             <Fact label={t("result.damageStrength")}>{r.strengthBonus}</Fact>
             <Fact label={t("result.damageBonus")}>{r.bonusDamage}</Fact>
           </dl>
@@ -151,7 +151,7 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
                   <span className="min-w-0 truncate">{modLabel(t, d)}</span>
                   <span className="font-mono">
                     {d.term === "spells" || d.term === "multiplier"
-                      ? formatFactor(d.value)
+                      ? formatFactor(d.value, i18n.language)
                       : formatSigned(d.value)}
                   </span>
                 </li>

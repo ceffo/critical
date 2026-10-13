@@ -125,7 +125,7 @@ type RollResult struct {
     D20Roll         int
     D100CritRoll    int
     IsCrit          bool
-    CritMultiplier  int
+    CritMultiplier  float64 // decimal allowed (x1.5)
     CritPlaceholder bool       // x2 until the crit table lands (critical-qki.12)
     BaseThac0       int
     Modifiers       []Modifier // {kind, source, detail, value}: every to-hit modifier
@@ -183,9 +183,13 @@ Never below 0. Every contribution is listed in `DamageTerms`.
 
 1. Roll D20 (attack) and D100 (crit check) simultaneously
 2. If `(D20 - D100) ≥ required_to_hit` → critical hit confirmed
-3. The multiplier is ×2, flagged `CritPlaceholder`, until the crit table item (critical-qki.12)
-   adds the second D100 and the table lookup
-4. Multipliers stack multiplicatively with other active multipliers
+3. The second D100 is looked up in the house crit table (`crit_table_rows`, edited in the app).
+   Until it is edited the multiplier is ×2, flagged `CritPlaceholder`. Table multipliers may be
+   decimals (×1.5)
+4. Multipliers stack multiplicatively with other active multipliers at full precision. The damage
+   is floored **once**, on the final value after the strength and buff damage terms
+   (`RollResult.UnroundedDamage` → `TotalDamage`); whole multipliers give the same totals as
+   before. The breakdown string shows `… = 10.5 → 10` when the result is fractional
 
 ## Seed Loader Pattern
 

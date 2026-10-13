@@ -317,7 +317,7 @@ func (f *Factory) fromExistingCritTableRow(ctx context.Context, m *models.CritTa
 
 	o.RollFrom = func() int64 { return m.RollFrom }
 	o.RollTo = func() int64 { return m.RollTo }
-	o.Multiplier = func() int64 { return m.Multiplier }
+	o.Multiplier = func() float64 { return m.Multiplier }
 
 	return o
 }

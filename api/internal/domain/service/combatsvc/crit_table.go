@@ -3,6 +3,7 @@ package combatsvc
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -11,9 +12,10 @@ import (
 // CritRow is one inclusive D100 range of the house crit table and the
 // multiplier a second D100 inside it gives.
 type CritRow struct {
-	From       int
-	To         int
-	Multiplier int
+	From int
+	To   int
+	// Multiplier may be a decimal (x1.5); the damage is floored once at the end.
+	Multiplier float64
 }
 
 // Contains reports whether the D100 roll falls in the range.
@@ -49,8 +51,8 @@ func ValidateCritRows(rows []CritRow) ([]CritRow, error) {
 			return nil, fmt.Errorf("%w: row %d (%d-%d) is outside 1-100", domain.ErrInvalidInput, n, r.From, r.To)
 		case r.To < r.From:
 			return nil, fmt.Errorf("%w: row %d (%d-%d) ends before it starts", domain.ErrInvalidInput, n, r.From, r.To)
-		case r.Multiplier < 1:
-			return nil, fmt.Errorf("%w: row %d (%d-%d) has multiplier %d, it must be at least 1", domain.ErrInvalidInput, n, r.From, r.To, r.Multiplier)
+		case math.IsNaN(r.Multiplier) || math.IsInf(r.Multiplier, 0) || r.Multiplier < 1:
+			return nil, fmt.Errorf("%w: row %d (%d-%d) has multiplier %v, it must be a number of at least 1", domain.ErrInvalidInput, n, r.From, r.To, r.Multiplier)
 		}
 		list[i] = indexed{r, n}
 	}

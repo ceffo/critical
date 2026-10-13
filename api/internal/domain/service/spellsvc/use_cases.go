@@ -27,11 +27,9 @@ func (s *service) ResetSlots(ctx context.Context, characterID int64) ([]SpellSlo
 	return updated, nil
 }
 
-// MaxResults caps one search.
-const MaxResults = 100
-
 // Search reads the catalog rows matching the filter's stored columns, then
-// keeps those whose typed stats match the rest of it.
+// keeps those whose typed stats match the rest of it. It never truncates: the
+// whole catalog is a few hundred rows.
 func (s *service) Search(ctx context.Context, f Filter) ([]Spell, error) {
 	rows, err := s.reader.Search(ctx, f)
 	if err != nil {
@@ -43,9 +41,6 @@ func (s *service) Search(ctx context.Context, f Filter) ([]Spell, error) {
 			continue
 		}
 		out = append(out, sp)
-		if len(out) == MaxResults {
-			break
-		}
 	}
 	return out, nil
 }

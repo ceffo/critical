@@ -2,8 +2,10 @@ package sqlite
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,4 +96,88 @@ func TestSeed_MissingCatalogFileIsFineOnceTableIsFilled(t *testing.T) {
 	db := openMigrated(t)
 	require.NoError(t, db.Seed(context.Background(), repoSeeds()))
 	require.NoError(t, db.Seed(context.Background(), t.TempDir()))
+}
+
+type spellRow struct {
+	ID                                                int64
+	Name, Class, School, Duration, Description, Stats string
+}
+
+func spellRows(t *testing.T, db *DB) []spellRow {
+	t.Helper()
+	rows, err := db.Query(`SELECT id, name, class, COALESCE(school,''), COALESCE(duration,''), COALESCE(description,''), COALESCE(stats,'') FROM spells ORDER BY id`)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	var out []spellRow
+	for rows.Next() {
+		var r spellRow
+		require.NoError(t, rows.Scan(&r.ID, &r.Name, &r.Class, &r.School, &r.Duration, &r.Description, &r.Stats))
+		out = append(out, r)
+	}
+	require.NoError(t, rows.Err())
+	return out
+}
+
+func TestSeed_SpellsReconcileAnExistingCatalog(t *testing.T) {
+	ctx := context.Background()
+	db := openMigrated(t)
+	var fixture []spellSeed
+	data, err := os.ReadFile(filepath.Join(repoSeeds(), "spells.json"))
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(data, &fixture))
+	require.Greater(t, len(fixture), 3)
+
+	// A database seeded earlier: a subset of the catalog, one stale value, an
+	// untyped row, a spell the seed does not know, and a duplicated name.
+	first, second := fixture[0], fixture[1]
+	ins := `INSERT INTO spells (id, name, class, level, school, duration, description) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	_, err = db.Exec(ins, 500, first.Name, first.Class, first.Level, "Stale", "Stale", "stale text")
+	require.NoError(t, err)
+	_, err = db.Exec(ins, 600, second.Name, second.Class, second.Level, second.School, second.Duration, second.Description)
+	require.NoError(t, err)
+	_, err = db.Exec(ins, 700, "Homebrew Bolt", "Wizard", 1, "Evocation", "1 rd.", "not in the seed")
+	require.NoError(t, err)
+	_, err = db.Exec(ins, 800, first.Name, first.Class, first.Level, "Stale dup", "Stale", "stale dup")
+	require.NoError(t, err)
+
+	require.NoError(t, db.Seed(ctx, repoSeeds()))
+
+	got := spellRows(t, db)
+	byID := map[int64]spellRow{}
+	for _, r := range got {
+		byID[r.ID] = r
+	}
+	assert.Equal(t, len(fixture)+2, len(got), "every seed spell once, plus the unknown and the duplicate row, none deleted")
+	assert.Equal(t, first.Name, byID[500].Name, "ids of existing rows are unchanged")
+	assert.Equal(t, first.School, byID[500].School, "stale value updated")
+	assert.Equal(t, first.Duration, byID[500].Duration)
+	assert.Equal(t, first.Description, byID[500].Description)
+	assert.NotEmpty(t, byID[500].Stats, "typed stats written")
+	assert.Equal(t, second.Name, byID[600].Name)
+	assert.NotEmpty(t, byID[600].Stats, "untyped row gets its stats")
+	assert.Equal(t, "Homebrew Bolt", byID[700].Name, "a spell outside the seed is kept")
+	assert.Equal(t, "Stale dup", byID[800].School, "only the oldest row of a duplicated name is reconciled")
+	for _, s := range fixture {
+		n := scalar(t, db, "SELECT COUNT(*) FROM spells WHERE name = '"+strings.ReplaceAll(s.Name, "'", "''")+"' AND class = '"+s.Class+"'")
+		want := 1
+		if s.Name == first.Name && s.Class == first.Class {
+			want = 2
+		}
+		assert.Equal(t, want, n, "%s %s", s.Class, s.Name)
+	}
+
+	// A restart changes nothing.
+	require.NoError(t, db.Seed(ctx, repoSeeds()))
+	assert.Equal(t, got, spellRows(t, db))
+}
+
+func TestSeed_SpellsFreshDatabaseLoadsTheWholeCatalog(t *testing.T) {
+	db := openMigrated(t)
+	require.NoError(t, db.Seed(context.Background(), repoSeeds()))
+	var fixture []spellSeed
+	data, err := os.ReadFile(filepath.Join(repoSeeds(), "spells.json"))
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(data, &fixture))
+	assert.Equal(t, len(fixture), scalar(t, db, "SELECT COUNT(*) FROM spells"))
+	assert.Zero(t, scalar(t, db, "SELECT COUNT(*) FROM spells WHERE stats IS NULL"))
 }

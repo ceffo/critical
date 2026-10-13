@@ -134,6 +134,17 @@ type catalogSpell struct {
 	Description  string `json:"description"`
 }
 
+// noComponentsInScrape lists the spells whose source entry carries no
+// component line at all (the scrape left the field empty; nothing in it can
+// repair that). They are the only rows allowed an empty components field.
+var noComponentsInScrape = map[string]bool{
+	"Priest Unearthly Choir": true, "Wizard Hornung's Guess*": true, "Wizard Far Reaching I": true,
+	"Wizard Far Reaching II": true, "Wizard Far Reaching III": true, "Wizard Minor Malison": true,
+	"Wizard Greater Malison": true, "Wizard Dilation I": true, "Wizard Dilation II": true,
+	"Wizard Divination Enhancement": true, "Wizard Hornung's Random Dispatcher*": true,
+	"Wizard Wildzone*": true, "Wizard Elemental Aura": true, "Wizard Wildfire*": true, "Wizard Wildwind*": true,
+}
+
 func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 	var spells []catalogSpell
 	readJSON(t, "spells.json", &spells)
@@ -165,6 +176,9 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 			"components": s.Components, "saving_throw": s.SavingThrow,
 		}
 		for field, v := range stats {
+			if field == "components" && v == "" && noComponentsInScrape[id] {
+				continue
+			}
 			assert.NotEmpty(t, strings.TrimSpace(v), "%s: %s is empty", id, field)
 			assert.Equal(t, strings.TrimSpace(v), v, "%s: %s has stray whitespace", id, field)
 			assert.NotRegexp(t, leak, v, "%s: %s leaks a field label or a bad character", id, field)
@@ -186,12 +200,21 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 // other fallback to special in seeds/spells.json fails the test, so a new
 // stat form must get a parser (or an entry here, on purpose).
 var specialAllowed = map[string]map[string]bool{
-	"casting_time":   {},
-	"range":          {"1": true}, // PHB gives the bare "1" (Speak With Dead, 1" indoors)
-	"duration":       {"Time of chanting": true, "Variable": true},
-	"area_of_effect": {"Circle of priests": true, "Hearing range": true, "Line of sight": true, "Script reader": true},
-	"components":     {},
-	"saving_throw":   {},
+	"casting_time": {},
+	// "1": the bare "1" of Speak With Dead (1" indoors). `1"`: Life Force Transfer, same unit.
+	// "Change": a scrape glitch on Death Pact (nothing in the scrape repairs it).
+	"range":    {"1": true, `1"`: true, "Change": true},
+	"duration": {"Time of chanting": true, "Variable": true},
+	// Area prose the book gives instead of a measurable value (counts, "variable", or a
+	// shape the area parser does not model); shown as written.
+	"area_of_effect": {
+		"Circle of priests": true, "Hearing range": true, "Line of sight": true, "Script reader": true,
+		"Varies": true, "Variable": true, "1d6 creatures/level": true, `3" diameter circle`: true,
+		"30' long + 5'/level": true, "1–7 targets": true, "The wizard's staff": true, "Creates 1d4+1": true,
+		"Two or more creatures": true, "Create 7 eyes": true, "Creates a sphere": true,
+	},
+	"components":   {},
+	"saving_throw": {"Variable": true}, // Wildfire: the effect decides
 }
 
 // TestRepoSeeds_EverySpellStatParses checks parseability only: no spell
@@ -211,6 +234,7 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 	require.NotEmpty(t, spells)
 
 	for _, sp := range spells {
+		noComponents := sp.Components == "" && (noComponentsInScrape["Wizard "+sp.Name] || noComponentsInScrape["Priest "+sp.Name])
 		raws := map[string]string{
 			"casting_time": sp.CastingTime, "range": sp.Range, "duration": sp.Duration,
 			"area_of_effect": sp.AreaOfEffect, "components": sp.Components, "saving_throw": sp.SavingThrow,
@@ -225,6 +249,9 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 				continue
 			}
 			t.Errorf("%s: %s %q falls back to special (add a parser, or allow-list it)", sp.Name, field, raw)
+		}
+		if noComponents {
+			continue
 		}
 		assert.NotEmpty(t, stats.Components.Raw, sp.Name)
 		assert.True(t, stats.Components.V || stats.Components.S || stats.Components.M, "%s: components %q", sp.Name, sp.Components)

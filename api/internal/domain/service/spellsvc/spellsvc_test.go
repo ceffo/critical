@@ -121,7 +121,7 @@ func TestSearch_StatFilters(t *testing.T) {
 	}
 }
 
-func TestSearch_CapsTheResults(t *testing.T) {
-	many := make([]spellsvc.Spell, spellsvc.MaxResults+20)
-	assert.Len(t, searchNames(t, spellsvc.Filter{}, many...), spellsvc.MaxResults)
+func TestSearch_ReturnsEveryMatchWithoutACap(t *testing.T) {
+	many := make([]spellsvc.Spell, 900)
+	assert.Len(t, searchNames(t, spellsvc.Filter{}, many...), len(many))
 }

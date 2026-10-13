@@ -75,7 +75,8 @@ type itemSeed struct {
 }
 
 // Seed loads character.json, spells.json, weapons.json and items.json from
-// seedsDir into their tables if those are empty. Missing character and spell
+// seedsDir into their tables: character, weapons and items only if their table
+// is empty, spells reconciled by (name, class). Missing character and spell
 // files are ignored. A missing weapons or items file while its table is empty
 // is an error: attacks would 404 on an empty catalog.
 func (d *DB) Seed(ctx context.Context, seedsDir string) error {
@@ -149,17 +150,15 @@ func (d *DB) seedCharacter(ctx context.Context, seedPath string) error {
 	return nil
 }
 
+// seedSpells reconciles the spells table with spells.json: rows are keyed by
+// (name, class); missing ones are inserted, existing ones get the seed's
+// values and typed stats, nothing is ever deleted and ids never change. It
+// runs in one transaction and a second run changes nothing. A missing seed
+// file leaves the table alone (only untyped rows get their stats).
 func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
-	var count int
-	if err := d.QueryRowContext(ctx, "SELECT COUNT(*) FROM spells").Scan(&count); err != nil {
-		return fmt.Errorf("count spells: %w", err)
-	}
-	if count > 0 {
-		return d.backfillSpellStats(ctx)
-	}
 	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
-		return nil
+		return d.backfillSpellStats(ctx)
 	}
 	var spells []spellSeed
 	if err := json.Unmarshal(data, &spells); err != nil {
@@ -176,29 +175,50 @@ func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
 		}
 	}()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO spells (
-			name, class, level, school, sphere, casting_time, range,
-			duration, area_of_effect, components, saving_throw, description, stats
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	// A database may hold a name twice (an older, uncleaned catalog): only
+	// the oldest row is kept in step with the seed, the others are left alone.
+	update, err := tx.PrepareContext(ctx, `
+		UPDATE spells SET level = ?, school = ?, sphere = ?, casting_time = ?, range = ?,
+			duration = ?, area_of_effect = ?, components = ?, saving_throw = ?, description = ?, stats = ?
+		WHERE id = (SELECT MIN(id) FROM spells WHERE name = ? AND class = ?)`)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = stmt.Close() }()
+	defer func() { _ = update.Close() }()
+	insert, err := tx.PrepareContext(ctx, `
+		INSERT INTO spells (
+			name, class, level, school, sphere, casting_time, range,
+			duration, area_of_effect, components, saving_throw, description, stats
+		) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+		WHERE NOT EXISTS (SELECT 1 FROM spells WHERE name = ? AND class = ?)`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = insert.Close() }()
 
 	for _, s := range spells {
 		stats, err := spellStatsJSON(s.CastingTime, s.Range, s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow)
 		if err != nil {
 			return fmt.Errorf("spell %q: %w", s.Name, err)
 		}
-		if _, err := stmt.ExecContext(ctx,
+		if _, err := update.ExecContext(ctx,
+			s.Level, s.School, s.Sphere, s.CastingTime, s.Range, s.Duration, s.AreaOfEffect,
+			s.Components, s.SavingThrow, s.Description, stats, s.Name, s.Class,
+		); err != nil {
+			return fmt.Errorf("update spell %q: %w", s.Name, err)
+		}
+		if _, err := insert.ExecContext(ctx,
 			s.Name, s.Class, s.Level, s.School, s.Sphere, s.CastingTime, s.Range,
 			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow, s.Description, stats,
+			s.Name, s.Class,
 		); err != nil {
-			return err
+			return fmt.Errorf("insert spell %q: %w", s.Name, err)
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return d.backfillSpellStats(ctx)
 }
 
 // spellStatsJSON parses the raw PHB stat texts into the typed stats JSON.

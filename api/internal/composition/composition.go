@@ -188,7 +188,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	restSvc, err := restsvc.New(spellSvc, itemSvc, db)
+	restSvc, err := restsvc.New(spellSvc, itemSvc, logSvc, db)
 	if err != nil {
 		_ = db.Close()
 		return nil, err

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -113,4 +114,83 @@ func TestCastIsOneEntryAndVoidRestoresSlotAndBuff(t *testing.T) {
 	buffs, err = bs.Buffs.ListActive(ctx, id)
 	require.NoError(t, err)
 	assert.Empty(t, buffs)
+}
+
+// Checklist 1: a long rest is logged with the slot list, so voiding a cast
+// from before the rest is refused instead of re-marking slots used.
+func TestLongRestBlocksVoidingAnEarlierCast(t *testing.T) {
+	bs := bootMaxDice(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	_, err := bs.Prep.Prepare(ctx, id, []string{"fireball", "haste"})
+	require.NoError(t, err)
+	_, err = bs.Cast.Cast(ctx, id, 0, castsvc.CastRequest{}) // Fireball, used before
+	require.NoError(t, err)
+	haste, err := bs.Cast.Cast(ctx, id, 1, castsvc.CastRequest{})
+	require.NoError(t, err)
+
+	rest, err := bs.Rest.LongRest(ctx, id)
+	require.NoError(t, err)
+	require.NotZero(t, rest.EntryID)
+	require.Equal(t, 0, usedSlots(t, bs))
+
+	_, err = bs.Log.Void(ctx, id, haste.EntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrVoidBlocked)
+	assert.Contains(t, err.Error(), "Long rest")
+	assert.Equal(t, 0, usedSlots(t, bs), "the slots stay as the rest left them")
+
+	// Voiding the rest itself puts the slots back as they were before it.
+	_, err = bs.Log.Void(ctx, id, rest.EntryID)
+	require.NoError(t, err)
+	assert.Equal(t, 2, usedSlots(t, bs))
+}
+
+// Checklist 3: casts touch the same slot list, so voids go newest first.
+func TestCastVoidsGoNewestFirst(t *testing.T) {
+	bs := bootMaxDice(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	_, err := bs.Prep.Prepare(ctx, id, []string{"magic_missile", "fireball"})
+	require.NoError(t, err)
+	fire, err := bs.Cast.Cast(ctx, id, 1, castsvc.CastRequest{})
+	require.NoError(t, err)
+	mm, err := bs.Cast.Cast(ctx, id, 0, castsvc.CastRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, 25, mm.Damage.Total, "5 missiles of 1d4+1 at max")
+
+	_, err = bs.Log.Void(ctx, id, fire.EntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrVoidBlocked)
+	assert.Contains(t, err.Error(), "Cast Magic Missile")
+
+	_, err = bs.Log.Void(ctx, id, mm.EntryID)
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, id, fire.EntryID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, usedSlots(t, bs))
+}
+
+// Checklist 5: Stoneskin on an ally rolls the layers, spends the slot, puts
+// no buff on the Bard; voiding gives the slot back.
+func TestStoneskinOnAnAlly(t *testing.T) {
+	bs := bootMaxDice(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	_, err := bs.Prep.Prepare(ctx, id, []string{"stoneskin"})
+	require.NoError(t, err)
+	onAlly := false
+
+	res, err := bs.Cast.Cast(ctx, id, 0, castsvc.CastRequest{OnSelf: &onAlly})
+	require.NoError(t, err)
+	assert.Equal(t, castsvc.TextOnlyNotOnSelf, res.TextOnly)
+	require.NotNil(t, res.Buff)
+	assert.False(t, res.Buff.Applied)
+	assert.Equal(t, 11, res.Buff.Buff.Charges)
+	assert.Equal(t, 1, usedSlots(t, bs))
+	buffs, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	assert.Empty(t, buffs)
+
+	_, err = bs.Log.Void(ctx, id, res.EntryID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, usedSlots(t, bs))
 }

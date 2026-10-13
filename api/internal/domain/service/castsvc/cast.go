@@ -124,6 +124,9 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		res.TextOnly = TextOnlyNoEffect
 		return res, nil, nil
 	}
+	if r.source == SourceReceived && entry.Target == spelleffectsvc.TargetSelf {
+		return CastResult{}, nil, fmt.Errorf("%w: %s affects only its caster and cannot be cast on you", domain.ErrInvalidInput, entry.Name)
+	}
 	res.Kind, res.Confidence, res.Target, res.Note = entry.Kind, entry.Confidence, entry.Target, entry.Note
 	if entry.Save != nil && entry.Save.Type != "none" {
 		save := *entry.Save
@@ -150,6 +153,10 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}
 		res.Buff, res.Untracked = buff, untracked
+		if entry.Buff != nil && len(entry.Buff.AbilitySet) > 0 {
+			res.TextOnly = TextOnlyByHand
+			return res, nil, nil
+		}
 		// A spell someone casts on the Bard is on him by definition.
 		if r.source == SourceCast && !appliesToSelf(entry.Target, r.onSelf, hostile(buff, untracked)) {
 			res.TextOnly = TextOnlyNotOnSelf

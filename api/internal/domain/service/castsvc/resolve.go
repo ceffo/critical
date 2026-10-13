@@ -142,15 +142,13 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int) (*AppliedBuff, []U
 		}
 		untracked = append(untracked, Untracked{Key: ability + "_gain", Value: r.Total})
 	}
+	// Ability sets are shown, never applied: the only one (Fist of Stone,
+	// STR 18/00) is for the fist alone and must not raise STR for every
+	// attack (it would turn the Power Gem on).
 	for _, ability := range sortedKeys(e.Buff.AbilitySet) {
-		// "18/00": the exceptional percentile is not modelled.
 		score, err := strconv.Atoi(strings.SplitN(e.Buff.AbilitySet[ability], "/", 2)[0])
 		if err != nil {
 			return nil, nil, fmt.Errorf("ability_set %s %q: %w", ability, e.Buff.AbilitySet[ability], err)
-		}
-		if ability == "str" {
-			fx.StrSet = ptr(score)
-			continue
 		}
 		untracked = append(untracked, Untracked{Key: ability + "_set", Value: score})
 	}

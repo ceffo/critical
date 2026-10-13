@@ -37,6 +37,14 @@ function castText(p: CastLogPayload, t: TFunction): string {
 }
 import type { UseResult } from "@/types/items";
 
+/** Payload of long_rest entries (restsvc restRecord). */
+function restText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "long_rest") return null;
+  const p = e.payload as { slotsReset?: number; itemsRefilled?: string[] } | null;
+  if (!p || typeof p.slotsReset !== "number") return null;
+  return t("log.rest", { slots: p.slotsReset, items: p.itemsRefilled?.length ?? 0 });
+}
+
 /** Payload of buff_change / round_advance entries (buffsvc logPayload). */
 export interface BuffLogPayload {
   action: "activate" | "edit" | "absorb" | "dismiss" | "next_round";
@@ -105,6 +113,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (attack) return attackText(attack, t);
   const cast = castPayload(e);
   if (cast) return castText(cast, t);
+  const rest = restText(e, t);
+  if (rest) return rest;
   const item = itemPayload(e);
   if (item) return itemText(item, t);
   const p = buffPayload(e);

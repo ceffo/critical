@@ -212,7 +212,7 @@ func TestSpecialSentinels(t *testing.T) {
 		{"item empty", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemEmpty), 409, `{"error":"item is empty: wand"}`},
 		{"slot already used", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed), 409, `{"error":"slot already used: 2"}`},
 		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"error":"invalid slot index: 2"}`},
-		{"void blocked", "POST log/{id}/void", fmt.Errorf("%w: entry #9 changed the same state later, void it first", actionlogsvc.ErrVoidBlocked), 409, `{"error":"void blocked: entry #9 changed the same state later, void it first"}`},
+		{"void blocked", "POST log/{id}/void", fmt.Errorf("%w: a later entry changed the same state (round 2: \"Round 2 → 3\"), void it first", actionlogsvc.ErrVoidBlocked), 409, `{"error":"void blocked: a later entry changed the same state (round 2: \"Round 2 → 3\"), void it first"}`},
 		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend not hp", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #4"}`},

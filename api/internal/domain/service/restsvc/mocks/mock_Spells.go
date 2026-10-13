@@ -23,6 +23,65 @@ func (_m *MockSpells) EXPECT() *MockSpells_Expecter {
 	return &MockSpells_Expecter{mock: &_m.Mock}
 }
 
+// GetSlots provides a mock function with given fields: ctx, characterID
+func (_m *MockSpells) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSlots")
+	}
+
+	var r0 []spellsvc.SpellSlot
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]spellsvc.SpellSlot, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []spellsvc.SpellSlot); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spellsvc.SpellSlot)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSpells_GetSlots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSlots'
+type MockSpells_GetSlots_Call struct {
+	*mock.Call
+}
+
+// GetSlots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSpells_Expecter) GetSlots(ctx interface{}, characterID interface{}) *MockSpells_GetSlots_Call {
+	return &MockSpells_GetSlots_Call{Call: _e.mock.On("GetSlots", ctx, characterID)}
+}
+
+func (_c *MockSpells_GetSlots_Call) Run(run func(ctx context.Context, characterID int64)) *MockSpells_GetSlots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSpells_GetSlots_Call) Return(_a0 []spellsvc.SpellSlot, _a1 error) *MockSpells_GetSlots_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSpells_GetSlots_Call) RunAndReturn(run func(context.Context, int64) ([]spellsvc.SpellSlot, error)) *MockSpells_GetSlots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResetSlots provides a mock function with given fields: ctx, characterID
 func (_m *MockSpells) ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error) {
 	ret := _m.Called(ctx, characterID)

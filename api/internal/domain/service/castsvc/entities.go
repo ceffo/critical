@@ -47,6 +47,7 @@ const (
 	TextOnlyLowConfidence TextOnly = "low_confidence" // the extraction is not trusted: add a manual buff
 	TextOnlyUtility       TextOnly = "utility"        // nothing the engine tracks numerically
 	TextOnlyNotOnSelf     TextOnly = "not_on_self"    // a buff on somebody else
+	TextOnlyByHand        TextOnly = "by_hand"        // sets an ability for one body part only (Fist of Stone)
 )
 
 // DieRoll is one die thrown.

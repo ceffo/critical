@@ -239,6 +239,14 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			wantDmg: &castsvc.DamageResult{Dice: "0", Type: "magic", Instances: 1, Rounds: 1, Total: 0},
 		},
 		{
+			name: "fist of stone: STR 18/00 for the fist only, shown not applied",
+			slot: slot("fist_of_stone", "Fist of Stone", 1), textOnly: castsvc.TextOnlyByHand,
+			check: func(t *testing.T, r castsvc.CastResult) {
+				assert.Equal(t, []castsvc.Untracked{{Key: "str_set", Value: 18}}, r.Untracked)
+				assert.Nil(t, r.Buff.Buff.Effects.StrSet, "never raises STR for every attack")
+			},
+		},
+		{
 			name: "utility spell shows its text only",
 			slot: slot("identify", "Identify", 1), textOnly: castsvc.TextOnlyUtility,
 		},
@@ -369,6 +377,8 @@ func TestReceive(t *testing.T) {
 			name: "a spell outside the effects seed (priest) is text only",
 			req:  castsvc.ReceiveRequest{SpellID: "bless", CasterLevel: 5}, textOnly: castsvc.TextOnlyNoEffect,
 		},
+		{name: "self-only spell cannot be received", req: castsvc.ReceiveRequest{SpellID: "mirror_image", CasterLevel: 9}, wantErr: domain.ErrInvalidInput},
+		{name: "fist of stone cannot be received", req: castsvc.ReceiveRequest{SpellID: "fist_of_stone", CasterLevel: 9}, wantErr: domain.ErrInvalidInput},
 		{name: "unknown spell", req: castsvc.ReceiveRequest{SpellID: "no_such_spell", CasterLevel: 5}, wantErr: domain.ErrNotFound},
 		{name: "no spell id", req: castsvc.ReceiveRequest{CasterLevel: 5}, wantErr: domain.ErrInvalidInput},
 		{name: "caster level 0", req: castsvc.ReceiveRequest{SpellID: "strength"}, wantErr: domain.ErrInvalidInput},

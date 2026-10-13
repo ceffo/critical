@@ -76,7 +76,7 @@ export interface CastUntracked {
   condition?: string;
 }
 
-export type CastTextOnly = "no_effect" | "low_confidence" | "utility" | "not_on_self";
+export type CastTextOnly = "no_effect" | "low_confidence" | "utility" | "not_on_self" | "by_hand";
 
 /** Mirrors casthdl CastResultDTO: what POST /api/spells/{slot}/cast and /api/spells/receive did. */
 export interface CastResult {

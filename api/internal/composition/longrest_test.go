@@ -75,6 +75,12 @@ func TestLongRest_RefillsSlotsAndPerDayItems(t *testing.T) {
 	var wand int
 	require.NoError(t, bs.DB.QueryRow(`SELECT count FROM items WHERE id = 'wand_lightning'`).Scan(&wand))
 	assert.Equal(t, 3, wand, "charges that are not per-day stay spent")
+
+	// The rest is logged and voidable: the gem is spent again, the slot used.
+	_, err = bs.Log.Void(context.Background(), bs.CharacterID, res.EntryID)
+	require.NoError(t, err)
+	assert.Zero(t, gemCount(t, bs))
+	assert.Equal(t, 1, usedSlots(t, bs))
 }
 
 type failingItems struct{ itemsvc.SVC }
@@ -86,7 +92,7 @@ func (failingItems) ResetDaily(context.Context) ([]itemsvc.Item, error) {
 func TestLongRest_FailureInItemsRollsBackSlots(t *testing.T) {
 	bs := boot(t)
 	spend(t, bs)
-	svc, err := restsvc.New(bs.Spells, failingItems{bs.Items}, bs.DB)
+	svc, err := restsvc.New(bs.Spells, failingItems{bs.Items}, bs.Log, bs.DB)
 	require.NoError(t, err)
 
 	_, err = svc.LongRest(context.Background(), bs.CharacterID)

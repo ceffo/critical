@@ -253,7 +253,8 @@
         "no_effect": "Aucun effet suivi pour ce sort : ajoutez un buff à la main si besoin.",
         "low_confidence": "L'effet n'est pas fiable : lisez le texte et ajoutez un buff à la main.",
         "utility": "Aucun effet chiffré à suivre.",
-        "not_on_self": "Lancé sur quelqu'un d'autre : rien ne vous est appliqué."
+        "not_on_self": "Lancé sur quelqu'un d'autre : rien ne vous est appliqué.",
+        "by_hand": "Une partie de vous seulement est affectée : à appliquer à la main."
       },
       "byHand": "À appliquer à la main",
       "tracked": "Effets suivis",
@@ -310,7 +311,8 @@
       "round_advance": "Round",
       "attack": "Attaque",
       "item_use": "Objet",
-      "spell_prep": "Préparation"
+      "spell_prep": "Préparation",
+      "long_rest": "Repos"
     },
     "status": {
       "active": "Actif",
@@ -352,6 +354,7 @@
     "item": {
       "rolled": "{{name}} utilisé : {{dice}} = {{total}} ({{left}} restant)",
       "used": "{{name}} utilisé ({{left}} restant)"
-    }
+    },
+    "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés"
   }
 }

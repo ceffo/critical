@@ -29,6 +29,8 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc restsvc.SVC) {
 type LongRestDTO struct {
 	Slots []spellhdl.SpellSlotDTO `json:"slots"`
 	Items []itemhdl.ItemDTO       `json:"items"`
+	// EntryID is the long rest's action-log entry.
+	EntryID int64 `json:"entryId"`
 }
 
 // LongRest resets slots and per-day items in one transaction.
@@ -38,7 +40,7 @@ func LongRest(charID CharacterIDFunc, svc restsvc.SVC) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, LongRestDTO{Slots: spellhdl.SlotsToDTO(res.Slots), Items: itemhdl.ToDTOs(res.Items)})
+		render.OK(r.Context(), w, LongRestDTO{Slots: spellhdl.SlotsToDTO(res.Slots), Items: itemhdl.ToDTOs(res.Items), EntryID: res.EntryID})
 		return nil
 	}
 }

@@ -253,7 +253,8 @@
         "no_effect": "No tracked effect for this spell: add a buff by hand if it matters.",
         "low_confidence": "The effect is not reliable: read the text and add a buff by hand.",
         "utility": "No numeric effect to track.",
-        "not_on_self": "Cast on someone else: nothing applied to you."
+        "not_on_self": "Cast on someone else: nothing applied to you.",
+        "by_hand": "Only part of you is affected: apply it by hand."
       },
       "byHand": "Apply by hand",
       "tracked": "Tracked effects",
@@ -310,7 +311,8 @@
       "round_advance": "Round",
       "attack": "Attack",
       "item_use": "Item",
-      "spell_prep": "Prepare"
+      "spell_prep": "Prepare",
+      "long_rest": "Rest"
     },
     "status": {
       "active": "Active",
@@ -352,6 +354,7 @@
     "item": {
       "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
       "used": "Used {{name}} ({{left}} left)"
-    }
+    },
+    "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled"
   }
 }

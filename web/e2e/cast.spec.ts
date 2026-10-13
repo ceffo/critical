@@ -88,3 +88,40 @@ test("Strength cast on me by a party wizard, found by its French name", async ({
   await expect(logEntry(page, "Strength cast on me (caster level 9)")).toBeVisible();
   await snap(page, "strength-received");
 });
+
+test("voiding a cast after Next Round is refused with a message naming the later entry", async ({ page, stack }) => {
+  await prepare(stack.apiUrl, ["stoneskin"]);
+  await openSpells(page);
+  await page.getByRole("button", { name: "Cast Stoneskin" }).click();
+  await expect(buffBadge(page, "Stoneskin")).toBeVisible();
+  await page.getByRole("button", { name: "Next Round" }).click();
+  await expect(logEntry(page, "Round 0 → 1")).toBeVisible();
+
+  const entry = logEntry(page, "Cast Stoneskin");
+  await entry.getByRole("button", { name: "Void" }).click();
+  await entry.getByRole("button", { name: "Confirm" }).click();
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("void blocked: a later entry changed the same state");
+  await expect(alert).toContainText("void it first");
+  await expect(entry).not.toHaveAttribute("data-status", "voided");
+  await expect(buffBadge(page, "Stoneskin")).toBeVisible();
+  await snap(page, "void-blocked-after-next-round");
+});
+
+test("a long rest is logged and blocks voiding an earlier cast", async ({ page, stack }) => {
+  await prepare(stack.apiUrl, ["haste"]);
+  await openSpells(page);
+  const level3 = page.getByRole("region", { name: "Level 3" });
+  await page.getByRole("button", { name: "Cast Haste" }).click();
+  await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
+  await page.getByRole("button", { name: "Long Rest (Reset)" }).click();
+  await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
+  await expect(logEntry(page, "Long rest: 1 spell slots")).toBeVisible();
+
+  const entry = logEntry(page, "Cast Haste");
+  await entry.getByRole("button", { name: "Void" }).click();
+  await entry.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByRole("alert")).toContainText("Long rest");
+  await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
+  await snap(page, "void-blocked-after-long-rest");
+});

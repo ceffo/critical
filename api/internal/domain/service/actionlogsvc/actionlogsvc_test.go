@@ -234,7 +234,7 @@ func TestVoid(t *testing.T) {
 		},
 		{
 			name: "blocked by later entry", entry: withSnaps("round"), laterID: 9, restorers: []string{"round"},
-			wantErr: actionlogsvc.ErrVoidBlocked, wantErrText: "entry #9",
+			wantErr: actionlogsvc.ErrVoidBlocked, wantErrText: `a later entry changed the same state (round 3: "Round 3 → 4"), void it first`,
 		},
 		{
 			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},
@@ -259,6 +259,10 @@ func TestVoid(t *testing.T) {
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
 			if len(c.entry.Snapshots) > 0 && c.entry.Status() != actionlog.StatusVoided {
 				dal.EXPECT().LaterEntryTouchingState(mock.Anything, int64(1), int64(5)).Return(c.laterID, c.laterID != 0, nil)
+				if c.laterID != 0 {
+					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.laterID).
+						Return(&actionlog.Entry{ID: c.laterID, Round: 3, Summary: "Round 3 → 4"}, nil).Once()
+				}
 			}
 			reachesInsert := c.laterID == 0 && c.restoreErr == nil && c.entry.Status() != actionlog.StatusVoided &&
 				(len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""

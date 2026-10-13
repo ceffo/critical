@@ -28,15 +28,21 @@ type snapCount struct {
 // UseSnapshot is the snapshot of one Use: after is the item Use returned,
 // the "before" count is one more (Use always spends exactly one).
 func UseSnapshot(after Item) (actionlog.Snapshot, error) {
-	before, err := json.Marshal([]snapCount{{ID: after.ID, Count: after.Count + 1}})
+	return CountSnapshot(after.ID, after.Count+1, after.Count)
+}
+
+// CountSnapshot is the snapshot of one item's count going from before to
+// after (a long rest refilling a per-day item).
+func CountSnapshot(itemID string, before, after int) (actionlog.Snapshot, error) {
+	b, err := json.Marshal([]snapCount{{ID: itemID, Count: before}})
 	if err != nil {
 		return actionlog.Snapshot{}, fmt.Errorf("encode items snapshot: %w", err)
 	}
-	now, err := json.Marshal([]snapCount{{ID: after.ID, Count: after.Count}})
+	a, err := json.Marshal([]snapCount{{ID: itemID, Count: after}})
 	if err != nil {
 		return actionlog.Snapshot{}, fmt.Errorf("encode items snapshot: %w", err)
 	}
-	return actionlog.Snapshot{Key: StateKey(after.ID), Before: before, After: now}, nil
+	return actionlog.Snapshot{Key: StateKey(itemID), Before: b, After: a}, nil
 }
 
 // restoreFunc adapts a function to actionlog.Restorer.

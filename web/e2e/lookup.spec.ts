@@ -207,9 +207,14 @@ test("lookup: school groups take their aliases and Other; Priest mode filters by
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toHaveAttribute("data-id", "dimensional_folding");
 
+  // All with a school set, then Priest: the school is dropped, the sphere dropdown shows.
+  await classButton(page, "All").click();
+  await expect(school).toHaveValue("other");
   await classButton(page, "Priest").click();
   const sphere = page.getByRole("combobox", { name: "Sphere" });
+  await expect(page.getByRole("combobox", { name: "School" })).toHaveCount(0);
   await expect(sphere).toHaveValue("");
+  await expect(rows(page).filter({ hasText: "Faerie Fire" })).toHaveCount(1);
   await expect(sphere.locator("option", { hasText: "Elemental Fire" })).toHaveCount(1);
   await expect(sphere.locator("option", { hasText: "Invocation/Evocation" })).toHaveCount(0);
   await sphere.selectOption("Elemental Fire");
@@ -345,5 +350,64 @@ test.describe("infinite scroll", () => {
     await expect(rows(page).last()).toHaveAttribute("data-level", "9");
     await list.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await snap(page, "scrolled-to-end");
+
+    // A selection deep in the list is still in view after a tab switch.
+    const deep = rows(page).nth(350);
+    const deepId = (await deep.getAttribute("data-id")) ?? "";
+    await deep.scrollIntoViewIfNeeded();
+    await deep.click();
+    await page.getByRole("tab", { name: "Attack" }).click();
+    await page.getByRole("tab", { name: "Spell Lookup" }).click();
+    await expect(selected(page)).toHaveAttribute("data-id", deepId);
+    await expect(selected(page)).toBeInViewport();
+    await snap(page, "deep-selection-after-tab-switch");
   });
+
+});
+
+// "Force" is Strength's French name; the synthetic rows match it in English too.
+const forceRows = Array.from({ length: 260 }, (_, i) =>
+  row(`Force Test ${String(i).padStart(3, "0")}`, "Wizard", (i % 9) + 1, "Alteration"),
+);
+
+test.describe("keyboard past a page", () => {
+  test.use({ extraSpells: { rows: [...named, ...forceRows] } });
+
+  test("lookup: a French name, then arrow-down past the 200-row page loads more and keeps the selection", async ({
+    page,
+  }) => {
+    await openLookup(page);
+    await search(page).fill("force");
+    await expect(count(page)).toHaveText(`${forceRows.length + 1} spells`);
+    // The French exact match ranks first.
+    await expect(selected(page)).toHaveAttribute("data-id", "strength");
+    await expect(rows(page)).toHaveCount(200);
+    for (let i = 0; i < 205; i++) await search(page).press("ArrowDown");
+    await expect(rows(page)).toHaveCount(forceRows.length + 1);
+    const ids = await attr(rows(page), "data-id");
+    await expect(selected(page)).toHaveAttribute("data-id", ids[205]);
+    await expect(selected(page)).toBeInViewport();
+  });
+});
+
+test("lookup: a slow response overtaken by a newer query is not written", async ({
+  page,
+}) => {
+  await page.route("**/api/spells?*", async (route) => {
+    if (new URL(route.request().url()).searchParams.get("q") === "fir")
+      await new Promise((r) => setTimeout(r, 1500));
+    await route.continue().catch(() => {}); // the page may be gone
+  });
+  await openLookup(page);
+  const slow = page.waitForRequest((r) => new URL(r.url()).searchParams.get("q") === "fir");
+  await search(page).fill("fir");
+  await slow;
+  await search(page).fill("fireball");
+  await expect(rows(page)).toHaveCount(1);
+  await expect(selected(page)).toHaveAttribute("data-id", "fireball");
+  // Let the slow "fir" response land: the rows stay those of "fireball".
+  await page.waitForResponse((r) => new URL(r.url()).searchParams.get("q") === "fir");
+  await page.waitForTimeout(200);
+  await expect(rows(page)).toHaveCount(1);
+  await expect(count(page)).toHaveText("1 spell");
 });

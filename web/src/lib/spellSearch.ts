@@ -8,7 +8,7 @@ import { LANGUAGES, resources } from "@/i18n";
 export function fold(s: string): string {
   return s
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "") // combining accents
     .toLowerCase();
 }
 

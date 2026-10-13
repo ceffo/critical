@@ -161,8 +161,12 @@ export function LookupPanel() {
       ?.scrollIntoView({ block: "nearest" });
   }, [selectedId]);
 
-  // A new query starts at the top of the list.
+  // A new query starts at the top of the list. Not on mount: coming back to the tab
+  // keeps the selected row in view (the effect above).
+  const mountedKey = useRef(shownKey);
   useEffect(() => {
+    if (shownKey === mountedKey.current) return;
+    mountedKey.current = shownKey;
     listRef.current?.scrollTo({ top: 0 });
   }, [shownKey]);
 

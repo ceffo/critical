@@ -35,6 +35,7 @@ type Spell struct {
 	Components   null.Val[string] `db:"components" `
 	SavingThrow  null.Val[string] `db:"saving_throw" `
 	Description  null.Val[string] `db:"description" `
+	Stats        null.Val[string] `db:"stats" `
 }
 
 // SpellSlice is an alias for a slice of pointers to Spell.
@@ -49,7 +50,7 @@ type SpellsQuery = *sqlite.ViewQuery[*Spell, SpellSlice]
 
 func buildSpellColumns(tableName string) spellColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "name", "class", "level", "school", "sphere", "casting_time", "range", "duration", "area_of_effect", "components", "saving_throw", "description",
+		"id", "name", "class", "level", "school", "sphere", "casting_time", "range", "duration", "area_of_effect", "components", "saving_throw", "description", "stats",
 	)
 
 	if tableName != "" {
@@ -72,6 +73,7 @@ func buildSpellColumns(tableName string) spellColumns {
 		Components:   buildSpellColumn(tableName, "components"),
 		SavingThrow:  buildSpellColumn(tableName, "saving_throw"),
 		Description:  buildSpellColumn(tableName, "description"),
+		Stats:        buildSpellColumn(tableName, "stats"),
 	}
 }
 
@@ -91,6 +93,7 @@ type spellColumns struct {
 	Components   spellColumn
 	SavingThrow  spellColumn
 	Description  spellColumn
+	Stats        spellColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -149,10 +152,11 @@ type SpellSetter struct {
 	Components   omitnull.Val[string] `db:"components" `
 	SavingThrow  omitnull.Val[string] `db:"saving_throw" `
 	Description  omitnull.Val[string] `db:"description" `
+	Stats        omitnull.Val[string] `db:"stats" `
 }
 
 func (s SpellSetter) SetColumns() []string {
-	vals := make([]string, 0, 13)
+	vals := make([]string, 0, 14)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -191,6 +195,9 @@ func (s SpellSetter) SetColumns() []string {
 	}
 	if s.Description.IsValue() || s.Description.IsNull() {
 		vals = append(vals, "description")
+	}
+	if s.Stats.IsValue() || s.Stats.IsNull() {
+		vals = append(vals, "stats")
 	}
 	return vals
 }
@@ -234,6 +241,9 @@ func (s SpellSetter) Overwrite(t *Spell) {
 	}
 	if s.Description.IsValue() || s.Description.IsNull() {
 		t.Description = s.Description.MustGetNull()
+	}
+	if s.Stats.IsValue() || s.Stats.IsNull() {
+		t.Stats = s.Stats.MustGetNull()
 	}
 }
 
@@ -344,6 +354,13 @@ func (s *SpellSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.Description.MustGetNull()).WriteSQL(ctx, w, d, start)
 			}))
+		case "stats":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Stats.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Stats.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -355,7 +372,7 @@ func (s SpellSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s SpellSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 13)
+	exprs := make([]bob.Expression, 0, 14)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -448,6 +465,13 @@ func (s SpellSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.Stats.IsValue() || s.Stats.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "stats")...),
+			sqlite.Arg(s.Stats),
+		}})
+	}
+
 	return exprs
 }
 
@@ -458,7 +482,7 @@ func spellScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(
 		idx int
 		dst func(o *Spell) any
 	}
-	targets := make([]target, 0, 13)
+	targets := make([]target, 0, 14)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -487,6 +511,8 @@ func spellScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(
 			targets = append(targets, target{i, func(o *Spell) any { return &o.SavingThrow }})
 		case "description":
 			targets = append(targets, target{i, func(o *Spell) any { return &o.Description }})
+		case "stats":
+			targets = append(targets, target{i, func(o *Spell) any { return &o.Stats }})
 		}
 	}
 
@@ -746,6 +772,7 @@ type spellWhere[Q sqlite.Filterable] struct {
 	Components   sqlite.WhereNullMod[Q, string]
 	SavingThrow  sqlite.WhereNullMod[Q, string]
 	Description  sqlite.WhereNullMod[Q, string]
+	Stats        sqlite.WhereNullMod[Q, string]
 }
 
 func (spellWhere[Q]) AliasedAs(alias string) spellWhere[Q] {
@@ -768,5 +795,6 @@ func buildSpellWhere[Q sqlite.Filterable](cols spellColumns) spellWhere[Q] {
 		Components:   sqlite.WhereNull[Q, string](cols.Components.Expression),
 		SavingThrow:  sqlite.WhereNull[Q, string](cols.SavingThrow.Expression),
 		Description:  sqlite.WhereNull[Q, string](cols.Description.Expression),
+		Stats:        sqlite.WhereNull[Q, string](cols.Stats.Expression),
 	}
 }

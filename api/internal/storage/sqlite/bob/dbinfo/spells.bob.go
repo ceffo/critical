@@ -132,6 +132,15 @@ var Spells = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		Stats: column{
+			Name:      "stats",
+			DBType:    "TEXT",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: spellIndexes{
 		PKMainSpells: index{
@@ -186,11 +195,12 @@ type spellColumns struct {
 	Components   column
 	SavingThrow  column
 	Description  column
+	Stats        column
 }
 
 func (c spellColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description,
+		c.ID, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description, c.Stats,
 	}
 }
 

@@ -1,5 +1,7 @@
 package spellsvc
 
+import "github.com/ceffo/critical/api/internal/domain/spellstats"
+
 // Spell mirrors the seeds/spells.json schema.
 type Spell struct {
 	Name         string
@@ -14,6 +16,8 @@ type Spell struct {
 	Components   string
 	SavingThrow  string
 	Description  string
+	// Stats is the typed form of the six stat fields above, parsed at seed time.
+	Stats spellstats.Stats
 }
 
 // SpellSlot is one prepared-spell slot in the daily allotment.

@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 	bobmodels "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
 	"github.com/stephenafamo/bob"
@@ -131,6 +132,19 @@ func (d *DAL) Describe(ctx context.Context, spellID string) (spellsvc.Spell, boo
 }
 
 func toSpell(r *bobmodels.Spell) spellsvc.Spell {
+	sp := toSpellText(r)
+	// stats is filled at seed time (and backfilled for older databases); a row
+	// without it, or with unreadable JSON, is parsed again from its raw text.
+	if blob := r.Stats.GetOrZero(); blob == "" || json.Unmarshal([]byte(blob), &sp.Stats) != nil {
+		sp.Stats = spellstats.Parse(spellstats.Raw{
+			CastingTime: sp.CastingTime, Range: sp.Range, Duration: sp.Duration,
+			AreaOfEffect: sp.AreaOfEffect, Components: sp.Components, SavingThrow: sp.SavingThrow,
+		})
+	}
+	return sp
+}
+
+func toSpellText(r *bobmodels.Spell) spellsvc.Spell {
 	return spellsvc.Spell{
 		Name: r.Name, Class: r.Class, Level: int(r.Level),
 		School:       r.School.GetOrZero(),

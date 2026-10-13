@@ -167,7 +167,7 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 		Note: res.Note, TextOnly: string(res.TextOnly), Untracked: []UntrackedDTO{},
 	}
 	if res.Spell.Name != "" {
-		s := spellhdl.SpellToDTO(res.Spell)
+		s := spellhdl.SpellToDTO(res.Spell, res.CasterLevel)
 		out.Spell = &s
 	}
 	if res.Save != nil {

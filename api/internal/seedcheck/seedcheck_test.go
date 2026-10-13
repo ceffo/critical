@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -176,5 +177,56 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 			"%s: description starts with a leaked stat line", id)
 		first, _ := utf8.DecodeRuneInString(s.Description)
 		assert.False(t, unicode.IsLower(first), "%s: description starts mid-sentence (a stat swallowed its first words)", id)
+	}
+}
+
+// specialAllowed lists the raw PHB stat texts that legitimately parse to a
+// special kind although they do not literally say "Special": prose the book
+// gives instead of a measurable value. Keyed by field, then raw text. Any
+// other fallback to special in seeds/spells.json fails the test, so a new
+// stat form must get a parser (or an entry here, on purpose).
+var specialAllowed = map[string]map[string]bool{
+	"casting_time":   {},
+	"range":          {"1": true}, // PHB gives the bare "1" (Speak With Dead, 1" indoors)
+	"duration":       {"Time of chanting": true, "Variable": true},
+	"area_of_effect": {"Circle of priests": true, "Hearing range": true, "Line of sight": true, "Script reader": true},
+	"components":     {},
+	"saving_throw":   {},
+}
+
+// TestRepoSeeds_EverySpellStatParses checks parseability only: no spell
+// field may fall back to special unless the PHB text says so ("Special",
+// "... special") or it is in the allow-list above. It asserts no values.
+func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
+	var spells []struct {
+		Name         string `json:"name"`
+		CastingTime  string `json:"casting_time"`
+		Range        string `json:"range"`
+		Duration     string `json:"duration"`
+		AreaOfEffect string `json:"area_of_effect"`
+		Components   string `json:"components"`
+		SavingThrow  string `json:"saving_throw"`
+	}
+	readJSON(t, "spells.json", &spells)
+	require.NotEmpty(t, spells)
+
+	for _, sp := range spells {
+		raws := map[string]string{
+			"casting_time": sp.CastingTime, "range": sp.Range, "duration": sp.Duration,
+			"area_of_effect": sp.AreaOfEffect, "components": sp.Components, "saving_throw": sp.SavingThrow,
+		}
+		stats := spellstats.Parse(spellstats.Raw{
+			CastingTime: sp.CastingTime, Range: sp.Range, Duration: sp.Duration,
+			AreaOfEffect: sp.AreaOfEffect, Components: sp.Components, SavingThrow: sp.SavingThrow,
+		})
+		for _, field := range stats.Special() {
+			raw := raws[field]
+			if strings.Contains(strings.ToLower(raw), "special") || specialAllowed[field][raw] {
+				continue
+			}
+			t.Errorf("%s: %s %q falls back to special (add a parser, or allow-list it)", sp.Name, field, raw)
+		}
+		assert.NotEmpty(t, stats.Components.Raw, sp.Name)
+		assert.True(t, stats.Components.V || stats.Components.S || stats.Components.M, "%s: components %q", sp.Name, sp.Components)
 	}
 }

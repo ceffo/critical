@@ -6,6 +6,73 @@ export interface SpellSlot {
   used: boolean;
 }
 
+/** Mirrors api/internal/domain/spellstats. Every typed field keeps `raw`, the PHB text. */
+export interface SpellTerm {
+  count: number;
+  upper?: number;
+  dice?: string;
+  unit?: string;
+  per_level?: boolean;
+  step?: number;
+  per?: string;
+}
+
+export interface SpellQuantity {
+  terms: SpellTerm[];
+  up_to?: boolean;
+  max?: number;
+  max_unit?: string;
+}
+
+/** A quantity computed at a caster level; `dice` is still to be rolled on top of `amount`. */
+export interface SpellValue {
+  amount: number;
+  upper?: number;
+  dice?: string;
+  unit?: string;
+}
+
+export interface SpellStats {
+  casting_time: { raw: string; kind: "timed" | "special"; time: SpellQuantity };
+  range: {
+    raw: string;
+    kind: "self" | "touch" | "distance" | "unlimited" | "special";
+    distance: SpellQuantity;
+    radius?: boolean;
+  };
+  duration: {
+    raw: string;
+    kind: "instantaneous" | "permanent" | "concentration" | "until" | "timed" | "special";
+    time: SpellQuantity;
+    condition?: string;
+  };
+  area: {
+    raw: string;
+    kind: "area" | "targets" | "self" | "touch" | "special";
+    shape?: string;
+    dims?: SpellQuantity[];
+    targets?: SpellQuantity;
+    noun?: string;
+  };
+  components: {
+    raw: string;
+    v: boolean;
+    s: boolean;
+    m: boolean;
+    m_optional?: boolean;
+    special?: boolean;
+  };
+  save: { raw: string; kinds: ("none" | "negates" | "half" | "special")[] };
+}
+
+export interface SpellValues {
+  caster_level: number;
+  casting_time: SpellValue;
+  range: SpellValue;
+  duration: SpellValue;
+  area: { dims?: SpellValue[]; targets?: SpellValue };
+}
+
 export interface Spell {
   name: string;
   class: string;
@@ -19,6 +86,11 @@ export interface Spell {
   components: string;
   saving_throw: string;
   description: string;
+  /** The six stat fields above, typed. Raw text stays in the string fields. */
+  stats: SpellStats;
+  /** Level `values` are computed for: ?caster_level=, default the character's. */
+  caster_level: number;
+  values: SpellValues;
 }
 
 /** Mirrors api/internal/rest/handler/spellprephdl (InfoDTO). */

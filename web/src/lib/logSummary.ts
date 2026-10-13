@@ -1,6 +1,40 @@
 import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
 import type { RollResult } from "@/types/combat";
+import { spellName } from "@/i18n/spellName";
+
+/** Payload of cast entries (castsvc castRecord). */
+export interface CastLogPayload {
+  action: "cast" | "received";
+  spellId: string;
+  spell: string;
+  casterLevel: number;
+  buff?: { name: string; rounds?: number; charges?: number; strGain?: number; applied: boolean };
+  damage?: { total: number; type: string };
+}
+
+function castPayload(e: LogEntry): CastLogPayload | null {
+  if (e.kind !== "cast") return null;
+  const p = e.payload as Partial<CastLogPayload> | null;
+  return p && typeof p.action === "string" && typeof p.spellId === "string"
+    ? (p as CastLogPayload)
+    : null;
+}
+
+function castText(p: CastLogPayload, t: TFunction): string {
+  const spell = spellName(t, p.spellId, p.spell);
+  const head =
+    p.action === "received"
+      ? t("log.cast.received", { spell, level: p.casterLevel })
+      : t("log.cast.cast", { spell });
+  const details: string[] = [];
+  if (p.buff?.applied) {
+    details.push(counters(t, p.buff.rounds, p.buff.charges));
+    if (p.buff.strGain) details.push(t("log.cast.strGain", { gain: p.buff.strGain }));
+  }
+  if (p.damage) details.push(t("log.cast.damage", { total: p.damage.total, type: p.damage.type }));
+  return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
+}
 
 /** Payload of buff_change / round_advance entries (buffsvc logPayload). */
 export interface BuffLogPayload {
@@ -50,12 +84,14 @@ function attackText(p: RollResult, t: TFunction): string {
 }
 
 /**
- * The entry's text in the player's language: buff, round and attack entries are rendered from
+ * The entry's text in the player's language: buff, round, attack and cast entries are rendered from
  * their structured payload; everything else (and unknown payloads) uses the server's summary.
  */
 export function entryText(e: LogEntry, t: TFunction): string {
   const attack = attackPayload(e);
   if (attack) return attackText(attack, t);
+  const cast = castPayload(e);
+  if (cast) return castText(cast, t);
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
   const buff = p.buff ?? "";

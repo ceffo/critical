@@ -149,7 +149,15 @@
     "add": "Add {{name}}",
     "addShort": "Add",
     "remove": "Remove {{name}}",
-    "noMatch": "No spell matches."
+    "noMatch": "No spell matches.",
+    "onAlly": "Buff spells go on an ally",
+    "receiveTitle": "Spell cast on me",
+    "receiveSearch": "Search the spell database...",
+    "receiveSearchLabel": "Search for a spell cast on me",
+    "casterLevel": "Caster level",
+    "receive": "Apply",
+    "receiveLabel": "Apply {{name}}",
+    "receiveHint": "Type part of a spell name (English or French)."
   },
   "lookup": {
     "search": "Search spells...",
@@ -163,7 +171,7 @@
   },
   "result": {
     "title": "Last Result",
-    "empty": "Roll an attack or a save: the full breakdown shows here.",
+    "empty": "Roll an attack or a save, or cast a spell: the full breakdown shows here.",
     "attackHeading": "{{weapon}} vs AC {{ac}}",
     "saveHeading": "Save vs {{name}}",
     "hit": "Hit",
@@ -208,6 +216,68 @@
       "buff": "{{detail}}",
       "situational": "{{detail}}",
       "crit": "Critical hit (placeholder)"
+    },
+    "cast": {
+      "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
+      "receivedHeading": "{{name}} cast on you, caster level {{casterLevel}}",
+      "onYou": "On you",
+      "notOnYou": "Not on you",
+      "rounds": "Rounds",
+      "charges": "Charges",
+      "strGain": "STR gain",
+      "units": {
+        "attacks": "Layers",
+        "images": "Images"
+      },
+      "damage": "Damage",
+      "damageRoll": "{{instances}} × {{dice}}",
+      "damageRounds": "every round for {{rounds}} rounds",
+      "instance": "#{{n}}",
+      "save": "Target's save: {{type}}, {{effect}}",
+      "saveEffects": {
+        "half": "half damage",
+        "negates": "negates",
+        "none": "no effect",
+        "special": "see the text"
+      },
+      "textOnly": {
+        "no_effect": "No tracked effect for this spell: add a buff by hand if it matters.",
+        "low_confidence": "The effect is not reliable: read the text and add a buff by hand.",
+        "utility": "No numeric effect to track.",
+        "not_on_self": "Cast on someone else: nothing applied to you."
+      },
+      "byHand": "Apply by hand",
+      "tracked": "Tracked effects",
+      "note": "Note",
+      "text": "Spell text",
+      "fx": {
+        "to_hit": "To hit {{value}}",
+        "damage": "Damage {{value}}",
+        "ac": "AC {{value}}",
+        "ac_set": "AC becomes {{value}}",
+        "ac_set_thrown": "AC {{value}} vs thrown",
+        "ac_set_missile": "AC {{value}} vs missiles",
+        "ac_set_other": "AC {{value}} vs other attacks",
+        "save": "Saves {{value}}",
+        "save_bonus": "Saves {{value}}",
+        "attackers_to_hit": "Attackers to hit {{value}}",
+        "attackers_to_hit_first": "First attack against you {{value}}",
+        "initiative": "Initiative {{value}}",
+        "move_pct": "Movement {{value}}%",
+        "attacks_pct": "Attacks per round {{value}}%",
+        "damage_multiplier_pct": "Damage {{value}}%",
+        "weapon_buff": "Weapon becomes +{{value}}",
+        "spells_buff": "Weapon damage ×{{value}}",
+        "multiplier": "Damage ×{{value}}",
+        "regen_hp_per_round": "Regenerates {{value}} HP/round",
+        "str_bonus": "STR +{{value}}",
+        "str_max": "STR max {{value}}",
+        "str_set": "STR becomes {{value}}",
+        "min_str": "Needs STR {{value}}",
+        "dex_gain": "DEX +{{value}}",
+        "cha_gain": "CHA +{{value}}",
+        "charges_hp_damage_taken": "Absorbs {{value}} HP of damage"
+      }
     }
   },
   "log": {
@@ -255,6 +325,12 @@
       "hit": "{{weapon}} vs AC {{ac}}: hit, {{damage}} damage",
       "crit": "{{weapon}} vs AC {{ac}}: critical ×{{mult}}, {{damage}} damage",
       "withAmmo": "{{weapon}} ({{ammo}})"
+    },
+    "cast": {
+      "cast": "Cast {{spell}}",
+      "received": "{{spell}} cast on me (caster level {{level}})",
+      "damage": "{{total}} {{type}} damage",
+      "strGain": "STR +{{gain}}"
     }
   }
 }

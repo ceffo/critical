@@ -9,13 +9,19 @@ import { spellId, spellName } from "@/i18n/spellName";
 import type { SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { PrepareEditor } from "./PrepareEditor";
+import { ReceivePanel } from "./ReceivePanel";
 
-/** Today's prepared spells per level, cast (marks used), long rest and the preparation editor. Cast effects are qki.10. */
+/**
+ * Today's prepared spells per level: cast (result in the result card), long rest, the preparation
+ * editor, and spells cast on the Bard by the party.
+ */
 export function SpellsPanel() {
   const { t } = useTranslation();
   const { slots, info, fetchSlots, fetchInfo, castSpell, resetSlots, prepare, loading } =
     useSpellStore();
   const [editing, setEditing] = useState(false);
+  // Buff spells that can go on someone else land on the Bard unless this is checked.
+  const [onAlly, setOnAlly] = useState(false);
   const logEntries = useLogStore((s) => s.entries);
   const { run, busy } = useTableStore();
 
@@ -77,6 +83,10 @@ export function SpellsPanel() {
           }
         />
       )}
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={onAlly} onChange={(e) => setOnAlly(e.target.checked)} />
+        {t("spellSlots.onAlly")}
+      </label>
       {levels.length === 0 && !loading && (
         <p className="text-sm text-muted-foreground">{t("spellSlots.none")}</p>
       )}
@@ -136,7 +146,7 @@ export function SpellsPanel() {
                         variant={slot.used ? "ghost" : "secondary"}
                         disabled={slot.used || busy}
                         aria-label={t("spellSlots.castLabel", { name })}
-                        onClick={() => void run(() => castSpell(slot.index))}
+                        onClick={() => void run(() => castSpell(slot.index, onAlly ? false : undefined))}
                       >
                         {slot.used ? t("spellSlots.used") : t("spellSlots.cast")}
                       </Button>
@@ -148,6 +158,7 @@ export function SpellsPanel() {
           );
         })}
       </div>
+      <ReceivePanel />
     </div>
   );
 }

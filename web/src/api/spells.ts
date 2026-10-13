@@ -1,12 +1,18 @@
-import type { PreparationInfo, SpellSlot } from "../types/spells";
+import type { CastResult, PreparationInfo, SpellSlot } from "../types/spells";
 import { post, request } from "./http";
 
 export function fetchSpellSlots(): Promise<SpellSlot[]> {
   return request<SpellSlot[]>("/api/spells/slots");
 }
 
-export function castSpell(index: number): Promise<SpellSlot[]> {
-  return post<SpellSlot[]>(`/api/spells/${index}/cast`);
+/** Spend slot `index`; `onSelf` says whether a buff spell lands on the Bard (omitted: the spell's default). */
+export function castSpell(index: number, onSelf?: boolean): Promise<CastResult> {
+  return post<CastResult>(`/api/spells/${index}/cast`, onSelf === undefined ? {} : { onSelf });
+}
+
+/** Apply a spell a party member cast on the Bard, at their caster level. */
+export function receiveSpell(spellId: string, casterLevel: number): Promise<CastResult> {
+  return post<CastResult>("/api/spells/receive", { spellId, casterLevel });
 }
 
 export function resetSpellSlots(): Promise<SpellSlot[]> {

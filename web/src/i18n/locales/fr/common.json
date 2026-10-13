@@ -149,7 +149,15 @@
     "add": "Ajouter {{name}}",
     "addShort": "Ajouter",
     "remove": "Retirer {{name}}",
-    "noMatch": "Aucun sort ne correspond."
+    "noMatch": "Aucun sort ne correspond.",
+    "onAlly": "Sorts de soutien sur un allié",
+    "receiveTitle": "Sort lancé sur moi",
+    "receiveSearch": "Chercher dans les sorts...",
+    "receiveSearchLabel": "Chercher un sort lancé sur moi",
+    "casterLevel": "Niveau du lanceur",
+    "receive": "Appliquer",
+    "receiveLabel": "Appliquer {{name}}",
+    "receiveHint": "Tapez une partie du nom du sort (anglais ou français)."
   },
   "lookup": {
     "search": "Rechercher des sorts...",
@@ -163,7 +171,7 @@
   },
   "result": {
     "title": "Dernier résultat",
-    "empty": "Lancez une attaque ou une sauvegarde : le détail complet s'affiche ici.",
+    "empty": "Lancez une attaque, une sauvegarde ou un sort : le détail complet s'affiche ici.",
     "attackHeading": "{{weapon}} contre CA {{ac}}",
     "saveHeading": "Sauvegarde contre {{name}}",
     "hit": "Touché",
@@ -208,6 +216,68 @@
       "buff": "{{detail}}",
       "situational": "{{detail}}",
       "crit": "Coup critique (provisoire)"
+    },
+    "cast": {
+      "castHeading": "{{name}} (niveau {{level}}), lancé au niveau {{casterLevel}}",
+      "receivedHeading": "{{name}} lancé sur vous, niveau du lanceur {{casterLevel}}",
+      "onYou": "Sur vous",
+      "notOnYou": "Pas sur vous",
+      "rounds": "Rounds",
+      "charges": "Charges",
+      "strGain": "Gain de FOR",
+      "units": {
+        "attacks": "Couches",
+        "images": "Images"
+      },
+      "damage": "Dégâts",
+      "damageRoll": "{{instances}} × {{dice}}",
+      "damageRounds": "chaque round pendant {{rounds}} rounds",
+      "instance": "n°{{n}}",
+      "save": "Sauvegarde de la cible : {{type}}, {{effect}}",
+      "saveEffects": {
+        "half": "moitié des dégâts",
+        "negates": "annule",
+        "none": "sans effet",
+        "special": "voir le texte"
+      },
+      "textOnly": {
+        "no_effect": "Aucun effet suivi pour ce sort : ajoutez un buff à la main si besoin.",
+        "low_confidence": "L'effet n'est pas fiable : lisez le texte et ajoutez un buff à la main.",
+        "utility": "Aucun effet chiffré à suivre.",
+        "not_on_self": "Lancé sur quelqu'un d'autre : rien ne vous est appliqué."
+      },
+      "byHand": "À appliquer à la main",
+      "tracked": "Effets suivis",
+      "note": "Note",
+      "text": "Texte du sort",
+      "fx": {
+        "to_hit": "Toucher {{value}}",
+        "damage": "Dégâts {{value}}",
+        "ac": "CA {{value}}",
+        "ac_set": "CA devient {{value}}",
+        "ac_set_thrown": "CA {{value}} contre les armes lancées",
+        "ac_set_missile": "CA {{value}} contre les projectiles",
+        "ac_set_other": "CA {{value}} contre les autres attaques",
+        "save": "Sauvegardes {{value}}",
+        "save_bonus": "Sauvegardes {{value}}",
+        "attackers_to_hit": "Toucher des attaquants {{value}}",
+        "attackers_to_hit_first": "Première attaque contre vous {{value}}",
+        "initiative": "Initiative {{value}}",
+        "move_pct": "Déplacement {{value}} %",
+        "attacks_pct": "Attaques par round {{value}} %",
+        "damage_multiplier_pct": "Dégâts {{value}} %",
+        "weapon_buff": "L'arme devient +{{value}}",
+        "spells_buff": "Dégâts de l'arme ×{{value}}",
+        "multiplier": "Dégâts ×{{value}}",
+        "regen_hp_per_round": "Régénère {{value}} PV/round",
+        "str_bonus": "FOR +{{value}}",
+        "str_max": "FOR max {{value}}",
+        "str_set": "FOR devient {{value}}",
+        "min_str": "Exige FOR {{value}}",
+        "dex_gain": "DEX +{{value}}",
+        "cha_gain": "CHA +{{value}}",
+        "charges_hp_damage_taken": "Absorbe {{value}} PV de dégâts"
+      }
     }
   },
   "log": {
@@ -255,6 +325,12 @@
       "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
       "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult}}, {{damage}} dégâts",
       "withAmmo": "{{weapon}} ({{ammo}})"
+    },
+    "cast": {
+      "cast": "Lancé : {{spell}}",
+      "received": "{{spell}} lancé sur moi (niveau du lanceur {{level}})",
+      "damage": "{{total}} dégâts ({{type}})",
+      "strGain": "FOR +{{gain}}"
     }
   }
 }

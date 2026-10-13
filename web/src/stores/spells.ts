@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { PreparationInfo, SpellSlot } from "../types/spells";
 import * as api from "../api/spells";
+import { useRollStore } from "./roll";
 
 interface SpellStore {
   slots: SpellSlot[];
@@ -9,7 +10,10 @@ interface SpellStore {
   fetchSlots: () => Promise<void>;
   fetchInfo: () => Promise<void>;
   /** Mutations throw on failure; call them through useTableStore.run to surface errors. */
-  castSpell: (index: number) => Promise<void>;
+  /** Cast from slot `index`; the result goes to the result card. */
+  castSpell: (index: number, onSelf?: boolean) => Promise<void>;
+  /** Apply a spell a party member cast on the Bard; the result goes to the result card. */
+  receiveSpell: (spellId: string, casterLevel: number) => Promise<void>;
   resetSlots: () => Promise<void>;
   prepare: (spells: string[]) => Promise<void>;
 }
@@ -29,8 +33,14 @@ export const useSpellStore = create<SpellStore>((set) => ({
   fetchInfo: async () => {
     set({ info: await api.fetchPreparationInfo() });
   },
-  castSpell: async (index) => {
-    set({ slots: (await api.castSpell(index)) ?? [] });
+  castSpell: async (index, onSelf) => {
+    const result = await api.castSpell(index, onSelf);
+    set({ slots: result.slots ?? [] });
+    useRollStore.setState({ last: { kind: "cast", result } });
+  },
+  receiveSpell: async (spellId, casterLevel) => {
+    const result = await api.receiveSpell(spellId, casterLevel);
+    useRollStore.setState({ last: { kind: "cast", result } });
   },
   resetSlots: async () => {
     set({ slots: (await api.resetSpellSlots()) ?? [] });

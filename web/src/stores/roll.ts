@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
+import type { CastResult } from "@/types/spells";
 import { resolveAttack } from "@/api/combat";
 import { rollSavingThrow } from "@/api/roll";
 import { useTableStore } from "./table";
@@ -7,7 +8,8 @@ import { useTableStore } from "./table";
 /** The last roll and what was asked for, so the result card can show its context. */
 export type LastRoll =
   | { kind: "attack"; result: RollResult }
-  | { kind: "save"; category: SaveCategory; result: RollResult };
+  | { kind: "save"; category: SaveCategory; result: RollResult }
+  | { kind: "cast"; result: CastResult };
 
 interface RollStore {
   last: LastRoll | null;

@@ -27,6 +27,8 @@ export function ResultCard() {
           </p>
         ) : last.kind === "attack" ? (
           <AttackResult roll={last} />
+        ) : last.kind === "item" ? (
+          <ItemResult roll={last} />
         ) : (
           <SaveResult roll={last} />
         )}
@@ -197,6 +199,56 @@ function SaveResult({ roll }: { roll: Extract<LastRoll, { kind: "save" }> }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ItemResult({ roll }: { roll: Extract<LastRoll, { kind: "item" }> }) {
+  const { t } = useTranslation();
+  const r = roll.result;
+  return (
+    <div className="flex flex-col gap-3" data-testid="item-result">
+      <div className="text-sm text-muted-foreground">{t("result.itemHeading", { name: r.name })}</div>
+      {r.dice ? (
+        <>
+          <div className="flex items-end justify-between gap-2">
+            <Badge variant="outline">{r.dice}</Badge>
+            <div className="text-right">
+              <div className={captionClass}>{t("result.total")}</div>
+              <div
+                className="font-mono text-4xl font-black tabular-nums leading-none"
+                data-testid="item-total"
+              >
+                {r.total}
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className={captionClass}>{t("result.rolls")}</div>
+            <ul className="mt-1 flex flex-wrap gap-1.5" data-testid="item-rolls">
+              {r.rolls.map((v, i) => (
+                <li key={i} className="rounded-md bg-muted/60 px-2 py-0.5 font-mono text-sm">
+                  {v}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-lg border bg-background px-2.5 py-1.5 font-mono text-sm">
+            {r.breakdown}
+          </div>
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">{t("result.noRoll")}</p>
+      )}
+      {r.save && (
+        <p className="text-sm font-medium" data-testid="item-save">
+          {t("result.save", { name: t(`saves.categories.${r.save}`, { defaultValue: r.save }) })}
+        </p>
+      )}
+      {r.notes && <p className="text-sm text-muted-foreground">{r.notes}</p>}
+      <p className="text-sm text-muted-foreground" data-testid="item-left">
+        {t("result.left", { name: r.name, count: r.remaining })}
+      </p>
     </div>
   );
 }

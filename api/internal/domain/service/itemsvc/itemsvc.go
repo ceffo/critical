@@ -18,6 +18,11 @@ type SVC interface {
 	// Use spends one count of the item atomically and returns the updated
 	// item. ErrItemNotFound for an unknown id, ErrItemEmpty at 0.
 	Use(ctx context.Context, itemID string) (Item, error)
+	// UseItem spends one count of a charged item or consumable, rolls its
+	// effect dice (if any) through the dice port and records the use in the
+	// action log with a before/after snapshot, all in one transaction.
+	// Ammunition is spent by attacks, not here (ErrInvalidInput).
+	UseItem(ctx context.Context, characterID int64, itemID string) (*UseResult, error)
 	// ResetDaily refills every per-day item to its max (long rest) and
 	// returns the full item list.
 	ResetDaily(ctx context.Context) ([]Item, error)
@@ -39,20 +44,40 @@ type DAL interface {
 	SetCount(ctx context.Context, itemID string, count int) error
 }
 
+// Dice is the dice adapter port.
+type Dice interface {
+	RollDie(sides int) int
+}
+
+// Log is the slice of the action log item uses are recorded into.
+type Log interface {
+	actionlog.Recorder
+}
+
+// Deps are the collaborators UseItem needs besides the DAL.
+type Deps struct {
+	Dice Dice
+	Log  Log
+	Tx   domain.TxRunner
+}
+
 type service struct {
-	dal DAL
+	dal  DAL
+	dice Dice
+	log  Log
+	tx   domain.TxRunner
 }
 
 // New constructs the service.
-func New(dal DAL) (SVC, error) {
-	if dal == nil {
-		return nil, fmt.Errorf("itemsvc: nil dal")
+func New(dal DAL, d Deps) (SVC, error) {
+	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil {
+		return nil, fmt.Errorf("itemsvc: nil dependency")
 	}
-	return &service{dal: dal}, nil
+	return &service{dal: dal, dice: d.Dice, log: d.Log, tx: d.Tx}, nil
 }
 
 // NewWithConfig is here for shape consistency.
-func NewWithConfig(_ *Config, dal DAL) (SVC, error) { return New(dal) }
+func NewWithConfig(_ *Config, dal DAL, d Deps) (SVC, error) { return New(dal, d) }
 
 // Config is reserved for future options.
 type Config struct{}

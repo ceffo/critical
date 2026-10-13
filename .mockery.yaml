@@ -69,6 +69,8 @@ packages:
     interfaces:
       SVC:
       DAL:
+      Dice:
+      Log:
   github.com/ceffo/critical/api/internal/domain/service/restsvc:
     config:
       dir: "internal/domain/service/restsvc/mocks"

@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -272,4 +273,78 @@ func TestVoidingAMeleeAttackLeavesItems(t *testing.T) {
 	after, err := bs.Items.List(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, before, after)
+}
+
+func itemCount(t *testing.T, bs *composition.BackingServices, id string) int {
+	t.Helper()
+	var n int
+	require.NoError(t, bs.DB.QueryRow(`SELECT count FROM items WHERE id = ?`, id).Scan(&n))
+	return n
+}
+
+// The wand: 4 -> 3 charges with a 6d6 roll, the entry carries the snapshot,
+// and voiding it gives the charge back.
+func TestUsingTheWandRollsLogsAndVoidRestoresTheCharge(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	require.Equal(t, 4, itemCount(t, bs, "wand_lightning"))
+
+	res, err := bs.Items.UseItem(ctx, bs.CharacterID, "wand_lightning")
+	require.NoError(t, err)
+	assert.Equal(t, 3, res.Remaining)
+	assert.Equal(t, 3, itemCount(t, bs, "wand_lightning"))
+	assert.Equal(t, "6d6", res.Dice)
+	assert.Len(t, res.Rolls, 6)
+	assert.GreaterOrEqual(t, res.Total, 6)
+	assert.LessOrEqual(t, res.Total, 36)
+	assert.Equal(t, "rod_staff_wand", res.Save)
+
+	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, 4, itemCount(t, bs, "wand_lightning"))
+}
+
+func TestUsingAnEmptyItemFailsAndLogsNothing(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	for i := 0; i < 5; i++ { // fire flasks: 5 in the seed
+		_, err := bs.Items.UseItem(ctx, bs.CharacterID, "fire_flask")
+		require.NoError(t, err)
+	}
+	entries := func() int {
+		var n int
+		require.NoError(t, bs.DB.QueryRow(`SELECT COUNT(*) FROM action_log`).Scan(&n))
+		return n
+	}
+	before := entries()
+	_, err := bs.Items.UseItem(ctx, bs.CharacterID, "fire_flask")
+	assert.ErrorIs(t, err, itemsvc.ErrItemEmpty)
+	assert.Equal(t, before, entries())
+	assert.Zero(t, itemCount(t, bs, "fire_flask"))
+}
+
+func TestUsingAmmoThroughUseIsRefusedAndKeepsTheArrow(t *testing.T) {
+	bs := newBacking(t)
+	before := itemCount(t, bs, "arrows_plus1")
+	_, err := bs.Items.UseItem(context.Background(), bs.CharacterID, "arrows_plus1")
+	assert.ErrorIs(t, err, domain.ErrInvalidInput)
+	assert.Equal(t, before, itemCount(t, bs, "arrows_plus1"))
+}
+
+// The Power Gem's Dispel is once a day: it rolls nothing, a second use is
+// refused, and a long rest refills it.
+func TestGemDispelOncePerDayUntilLongRest(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	res, err := bs.Items.UseItem(ctx, bs.CharacterID, "power_gem_dispel")
+	require.NoError(t, err)
+	assert.Empty(t, res.Rolls)
+	assert.Zero(t, res.Remaining)
+
+	_, err = bs.Items.UseItem(ctx, bs.CharacterID, "power_gem_dispel")
+	assert.ErrorIs(t, err, itemsvc.ErrItemEmpty)
+
+	_, err = bs.Items.ResetDaily(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 1, itemCount(t, bs, "power_gem_dispel"))
 }

@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
 import type { RollResult } from "@/types/combat";
+import type { UseResult } from "@/types/items";
 
 /** Payload of buff_change / round_advance entries (buffsvc logPayload). */
 export interface BuffLogPayload {
@@ -40,6 +41,18 @@ function attackPayload(e: LogEntry): RollResult | null {
     : null;
 }
 
+/** Payload of item_use entries (itemsvc useRecord, same shape as UseResult). */
+function itemPayload(e: LogEntry): UseResult | null {
+  if (e.kind !== "item_use") return null;
+  const p = e.payload as Partial<UseResult> | null;
+  return p && typeof p.name === "string" && typeof p.remaining === "number" ? (p as UseResult) : null;
+}
+
+function itemText(p: UseResult, t: TFunction): string {
+  const args = { name: p.name, dice: p.dice, total: p.total, left: p.remaining };
+  return t(p.dice ? "log.item.rolled" : "log.item.used", args);
+}
+
 function attackText(p: RollResult, t: TFunction): string {
   const weapon = p.ammo
     ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
@@ -56,6 +69,8 @@ function attackText(p: RollResult, t: TFunction): string {
 export function entryText(e: LogEntry, t: TFunction): string {
   const attack = attackPayload(e);
   if (attack) return attackText(attack, t);
+  const item = itemPayload(e);
+  if (item) return itemText(item, t);
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
   const buff = p.buff ?? "";

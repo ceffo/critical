@@ -14,3 +14,21 @@ export interface Item {
   effect_save: string;
   notes: string;
 }
+
+/** POST /api/items/{id}/use (itemhdl UseResultDTO); the item_use log payload has the same shape. */
+export interface UseResult {
+  itemId: string;
+  name: string;
+  kind: "charged" | "consumable";
+  remaining: number;
+  maxCount: number;
+  /** Effect dice ("6d6"); empty when the item rolls nothing. */
+  dice: string;
+  rolls: number[];
+  total: number;
+  /** Save category the effect allows; empty when none. */
+  save: string;
+  notes: string;
+  breakdown: string;
+  logEntryId?: number;
+}

@@ -2333,7 +2333,7 @@
     "range": "0",
     "duration": "Instantaneous",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V",
     "saving_throw": "1/2",
     "description": "This cooperative spell requires at least three priests casting the spell simultaneously.  At the time of casting, the priests must be within 10 feet of each other. Upon completion  of the spell, the priests sing a single, dissonant chord. The result of the spell depends on  the number of voices in the choir.     Trio. In this form, the spell projects a cone of sonic force 120 feet long and 40 feet  wide at the base. All creatures within the area of effect must save vs. spells or suffer 2d4  points of damage. Those who successfully save suffer only 1d4 points. Undead suffer a -2  penalty to their saving throws.     Quartet. With four voices, the spell has the same area of effect as described above.  However, all those who fail their saving throw suffer 2d4 points of damage and are  deafened for one round. Those who successfully save suffer half damage and are not  deafened. Undead creatures are not allowed a saving throw.     Quintet. Five singers produce a chord of major power. All within the area of effect  suffer 3d4 points of damage (saving throw for half damage). Undead are not allowed a  saving throw. All creatures are deafened for one round. Furthermore, pottery, glassware,  crystal, and similar breakable goods must save vs. fall or be shattered.     Ensemble. An ensemble of singers consists of six to ten priests. In this case, the area  of effect increases to a cone 180 feet long and 60 feet wide at the base. All creatures  within this area suffer 1d4 points of damage per priest and are deafened for 1d4 rounds.  A successful saving throw vs. spell reduces the damage and duration of deafness by half.  Undead creatures of 3 hit dice or less are immediately destroyed. All other undead suffer  normal damage, but are not allowed a saving throw. Glass, pottery, crystal, bone, and all  wooden items that are the strength of a door or less (chests, tables, chairs, etc.) must save  vs. crushing blow or be shattered.     Choir. The most powerful group, a choir, requires eleven or more priests. In this  case, the area of effect expands to a cone 300 feet long and 100 feet wide at the base. All  within the area of effect suffer 1d6 points of damage per priest to a maximum of 20d6. A  saving throw vs. spells reduces the damage to half. Those who fail to save are deafened  for 1d10 rounds; those who succeed are deafened only 1d6 rounds. Undead creatures of 5  hit dice or less are immediately destroyed. Undead with more hit dice are not allowed a  saving throw. Structures within the area of effect are damaged as if they suffered a direct  hit from a catapult (one hit per four priests in the choir). Doors, chests, and other  breakable items are instantly shattered."
   },
@@ -5749,7 +5749,7 @@
     "range": "300 yards",
     "duration": "Instantaneous",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "Hornung, one of the leading wizards in the field of wild magic (before his untimely disappearance while experimenting with wildwind ), developed this spell to improve the accuracy of his estimates. The spell provides a wizard with an instant and highly accurate estimate of the number of persons or objects in a group.   The spell's area of effect is one group of a general class of objects. All objects of the group must be within spell range and the group as a whole must be visible to the caster. The wizard need not see every individual in the group, merely the general limits of the group's size and area. For example, a wizard on a hill could look down on a forest and estimate the number of trees in all or part of it. He could not get an estimate of the number of goblins within the forest, however, since the group as a whole (the goblins) is concealed from sight.   The estimate generated is accurate to the largest factor of ten (rounded up). For example, if Hornung's guess were cast on a group of 431 horsemen, the estimate would be 400. If there were 2,670 horsemen, the spell would estimate 3,000. If there were 37 horsemen, the answer would be 40. Clearly, using the spell on small groups (especially those with fewer than 10 members) is pointless.   Hornung's guess can be used to quickly estimate the size of treasure hoards and army units. It is particularly popular with moneylenders and generals."
   },
@@ -7373,7 +7373,7 @@
     "range": "0",
     "duration": "Special",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell allows the wizard to extend the range of any one 1st- or 2nd-level spell by  50% or any one 3rd-level spell by 25%. The spell to be affected must be cast on the  round immediately following the far reaching I spell. If a complete round or more  elapses, the far reaching I is wasted.    Far reaching I affects only a spell cast by the same wizard. Far reaching I does not  affect spells that have range of 0 or touch."
   },
@@ -7723,7 +7723,7 @@
     "range": "60 feet",
     "duration": "2 rounds/level",
     "area_of_effect": "30-foot-radius sphere",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell allows a wizard to adversely affect all the saving throws of his enemies.  Opponents under the influence of this spell make all saving throws at a penalty of -1.    Alternatively, the wizard may select any one school of magic and cause his enemies  to make all saving throws against magic from that school at -2. This penalty is not  cumulative with a saving throw penalty derived from the wizard being a specialist; the  penalty is not increased to -3."
   },
@@ -8185,7 +8185,7 @@
     "range": "0",
     "duration": "Special",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "Dilation I allows a wizard to increase the area of effect of any one spell of levels 1-3.  The area of effect is increased by 25%; thus, a stinking cloud would fill a 25-foot cube,  while a slow spell would affect creatures in a 50-foot cube. Fractions of feet or yards (as  appropriate to the spell) are dropped.    Dilation I must be cast immediately prior to the spell to be dilated; if a complete  round or more elapses, the dilation is wasted. The dilation spell affects only spells which  have areas of effect defined in feet or yards (numbers of creatures cannot be increased). The dilation affects only spells cast by the same wizard."
   },
@@ -8213,7 +8213,7 @@
     "range": "0",
     "duration": "2 turns + 2 rounds/level",
     "area_of_effect": "The caster",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell allows a wizard to extend both the duration and range of the wizard eye  spell and any divination spells of levels 1-4. Duration and range are both increased by  50% for the length of the divination enhancement.    All divination spells cast within the duration of the enhancement are increased. The  expiration of the enhancement cancels all divination spells in effect."
   },
@@ -8325,7 +8325,7 @@
     "range": "0",
     "duration": "Special",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell's function is identical to the 3rd-level far reaching I spell, except that a  spell of 1st or 2nd level has its range doubled and a spell of 3rd level has its range  increased by 50%. In addition, any spell of 4th level has its range extended by 25%."
   },
@@ -8423,7 +8423,7 @@
     "range": "60 feet",
     "duration": "2 rounds/level",
     "area_of_effect": "30-foot-radius sphere",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell operates exactly like the 3rd-level minor malison spell except that the  wizard places a -2 penalty on all saving throws of all hostile creatures within the area of  effect. Optionally, the wizard may create a -3 penalty to saving throws against spells from  one school of magic. This penalty is not cumulative with a saving throw penalty which  derived from the wizard being a specialist; the penalty is not increased to -4."
   },
@@ -9361,7 +9361,7 @@
     "range": "0",
     "duration": "Special",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell operates exactly like the 3rd-level far reaching I spell except that the range  of any spell of levels 1-3 is increased by 150% and the range of any 4th- or 5th-level spell"
   },
@@ -9695,7 +9695,7 @@
     "sphere": "",
     "casting_time": "1 round",
     "range": "20 yards",
-    "duration": "2 turns /level",
+    "duration": "2 turns/level",
     "area_of_effect": "Two or more creatures",
     "components": "V, S, M",
     "saving_throw": "None",
@@ -10229,7 +10229,7 @@
     "range": "0",
     "duration": "Special",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell functions exactly like the 4th-level dilation I spell, except that the area of effect of a 1st-, 2nd-, or 3rd- level spell is extended by 50%. Alternatively, the wizard may extend the area of effect of one 4th- or 5th-level spell by 25%."
   },
@@ -11671,7 +11671,7 @@
     "range": "30 yards",
     "duration": "Instantaneous",
     "area_of_effect": "One creature",
-    "components": "",
+    "components": "V",
     "saving_throw": "Neg.",
     "description": "With the utterance of a few words, this spell can hurl a creature to a random plane and  leave him there. The target, if unwilling, is allowed a saving throw. If successful, the  spell fails. If unsuccessful, the victim and all items carried by him are sent to a random  plane. To determine the plane, roll on the table below.     D100   Roll   Plane   01-03   Abyss   04-06   Acheron   07-12   Alternate Prime Material Plane   13-17   Arcadia   18-23   Astral Plane   24-27   Beastlands (Happy Hunting Grounds)   28-30   Concordant Opposition   31-35   Elemental Plane (Air, Fire, Earth, or Water)   36-38   Elysium   39-44   Ethereal Plane   45-47   Gehenna   48-50   Gladsheim  51-53   Hades   54-58   Limbo   59-61   Negative Material Plane   62-64   Negative Quasi-Plane (Vacuum, Ash, Dust, or Salt)   65-67   Nine Hells   68-70   Nirvana   71-73   Olympus    74-76   Pandemonium  77-79   Para-Elemental Plane (Smoke, Magma, Ooze, or Ice)   80-82   Positive Material Plane   83-85   Positive Quasi-Plane (Lightning, Radiance, Minerals, or Steam)   86-91   Prime Material Plane*   92-94   Seven Heavens   95-97   Tarterus   98-100  Twin Paradises     * Characters sent to the Prime Material plane are teleported elsewhere in the same world.      The caster has no control over the destination of the target. The conditions at the  destination may kill the target (for example, arriving in the elemental plane of fire) or  merely make life difficult. This determination is left to the DM."
   },
@@ -11951,7 +11951,7 @@
     "range": "0",
     "duration": "2d6 turns",
     "area_of_effect": "300 x 300 ft. square",
-    "components": "",
+    "components": "V, S, M",
     "saving_throw": "None",
     "description": "This powerful spell creates a disruption in magical forces similar to the conditions found in wild magic regions (areas where the effects of magic have been permanently altered). This spell has only a temporary effect, although the effects of wildzone could possibly be rendered permanent. The spell creates a wild magic region centered on the caster. The area of effect cannot be shaped in any way; it is always a square 300 feet long on each side (90,000 square feet). Within the wildzone, wild magic reigns. Any spell cast in the area of effect is automatically treated as a wild surge (see Table 2). Effects from magical items that expend charges are also treated as wild surges when used in the area. Other magical items function normally. Spells cast into the wildzone from outside the area of effect function normally, but spells cannot be cast out of the area of effect without triggering a wild surge. The material components are several pots of paint which must be spilled across a sheet of hammered silver worth no less than 2,000 gp."
   },
@@ -12035,7 +12035,7 @@
     "range": "0",
     "duration": "1 hour/level",
     "area_of_effect": "The caster",
-    "components": "",
+    "components": "V",
     "saving_throw": "None",
     "description": "This spell has four very different effects depending on the type (air, earth, fire, water)  of elemental aura cast. Only the caster may receive an elemental aura, and it is not  possible to benefit from more than one aura at one time.    Each aura is three inches thick and covers the caster's entire body. An aura of air is  hazy white in color, an aura of earth is dull grey, an aura of fire is flickering red, and an  aura of water is shimmering blue. The auras have these effects:     Air  • immunity to gas and air-based attacks   • total protection from physical attacks by creatures of the elemental plane of Air   • ability to cast fly and protection from normal missiles once each     Earth  • immunity to attacks from nonmagical weapons made of stone or metal   • immunity to physical attacks by creatures of the elemental plane of Earth   • ability to breathe and move at full movement rate within the element of earth   • ability to cast wall of stone once     Fire  • immunity to normal and magical fire   • total protection from physical attacks by creatures of the elemental plane of Fire   • ability to breathe and move at full movement rate within the element of fire   • total protection from hostile environmental effects while traveling plane of Fire   • ability to cast wall of fire once     Water  • immunity to water- and cold-based attacks   • total protection from physical attacks by creatures of the plane of Water   • ability to breathe and move at full movement rate within the element of water  • ability to cast wall of ice once       The auras do not restrict the caster in any way. He is free to move and act normally  while under the influence of an aura."
   },
@@ -12343,7 +12343,7 @@
     "range": "0",
     "duration": "Variable",
     "area_of_effect": "Variable",
-    "components": "",
+    "components": "V",
     "saving_throw": "Variable",
     "description": "By means of this spell, the wild mage is able to channel raw magical energy through  himself, shaping it into any form or effect he desires. The energy is similar in many ways  to a wish spell, but has unique differences.    Wildfire allows the caster to create the effect of any wizard spell of 8th level or lower.  He need only have general knowledge of the spell and its effects; the spell does not need  to be in his own spellbooks.    Any normal saving throws vs. the spell effects are made at a -2 penalty.    Wildfire can also be used in the creation of magical items. The energy created by the  spell may be used to generate effects that are not created by known spells.    Wildfire can also be used to create items out of nothing. The magical energy can be  shaped and hardened to form solid objects. These objects have a greenish, glowing tinge  and radiate magic. These objects are stronger than steel yet possess almost no weight.  They are immune to fire, cold, electricity, and all forms of magical attack except dispel  magic and wish spells. Even if they are subjected to these spells, a saving throw is  allowed (equal to the creator's saving throw vs. spell).    When creating objects, the caster is limited only by his own skill and the dimensions  of the object. Items larger than a 10-foot-radius sphere cannot be fashioned. Creating the  object requires only one round, regardless of size. Thus, a wizard could make an  impenetrable dome or a small boat with this spell.    Objects made of wildfire are neither stable nor permanent. Since the object is made of  magic separated from the magical continuum, the material gradually deteriorates until the  magical bonds become too weak to hold the wildfire in the chosen form. This decay takes  1d6+4 hours."
   },
@@ -12357,7 +12357,7 @@
     "range": "100 yards",
     "duration": "1d3 turns",
     "area_of_effect": "Special",
-    "components": "",
+    "components": "V, S",
     "saving_throw": "None",
     "description": "This spell is similar in effect to wildstrike and wildzone. When cast, a wall of faint, multi-colored lights springs into existence at the point indicated by the caster. These lights form a line 150 feet long. After the first round of the spell, the wizard can move the wall of lights. Each round, the caster can move the wall in the same direction or as much as 45 degrees to either side. Once the wall is set in motion, it cannot be stopped unless the spell is cancelled or dispelled. The lights can move 60 feet per round. The wildwind has two significant effects. First, all creatures struck by the magical lights suffer 2d6 points of damage. Second, any spellcaster struck while attempting to cast a spell automatically triggers a wild surge (use Table 2). Magical items that expend charges that touch the wall of lights automatically release one charge, also resulting in a wild surge."
   },

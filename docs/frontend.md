@@ -167,7 +167,11 @@ export const useHpStore = create<HpStore>((set) => ({
 ## Display Conventions
 
 - HP bar: colored progress bar (green > 50%, yellow 25-50%, red < 25%)
-- Buff list: each buff shows name + remaining charges/rounds as a Badge
+- Buff list: each buff shows name + remaining charges/rounds as a Badge; from 60 rounds up the
+  rounds also show as hours ("150 rd · 2 h 30", `lib/passTime.ts`)
+- Time passes (RoundControl, "⏩ Time passes"): decimal hours ("1.5" or "1,5") with a "= 90
+  rounds" preview before Confirm; `POST /api/round/pass-time` converts and validates, the preview
+  is display only
 - Roll results: show the full breakdown in a readable format — never just the final number
 - Expiry alerts: use a toast notification (shadcn Toast) when a buff expires
 

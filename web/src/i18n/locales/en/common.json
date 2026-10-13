@@ -48,7 +48,15 @@
     "setLabel": "Round number",
     "apply": "Set",
     "confirm": "Confirm",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "passTime": "⏩ Time passes",
+    "passTimeLabel": "Hours that pass",
+    "passTimeHours": "h",
+    "passTimePreview_other": "= {{count}} rounds",
+    "passTimePreview_one": "= {{count}} round",
+    "passTimeInvalid": "Hours, e.g. 0.25, 1.5 or 8",
+    "passTimeHint": "1 round = 1 minute, rounded down. Timed buffs count down, the round goes back to 0.",
+    "passTimePlaceholder": "1.5"
   },
   "buffs": {
     "title": "Buffs",
@@ -96,7 +104,10 @@
     "saved": "Saved buffs",
     "saveFailedAfterAdd": "{{name}} was activated but not saved for reuse",
     "useSaved": "Fill the form with {{name}}",
-    "deleteSaved": "Delete saved buff {{name}}"
+    "deleteSaved": "Delete saved buff {{name}}",
+    "roundsWithTime": "{{rounds}} · {{time}}",
+    "hoursMinutes": "{{h}} h {{mm}}",
+    "hoursOnly": "{{h}} h"
   },
   "actions": {
     "label": "Actions",
@@ -467,7 +478,8 @@
       "item_use": "Item",
       "spell_prep": "Prepare",
       "long_rest": "Rest",
-      "save": "Save"
+      "save": "Save",
+      "time_passed": "Time"
     },
     "status": {
       "active": "Active",
@@ -499,7 +511,8 @@
       "nextRound": "Round {{from}} → {{to}}",
       "endCombat": "Combat ended: round {{from}} → {{to}}",
       "setRound": "Round set: {{from}} → {{to}}",
-      "expired": "— expired: {{names}}"
+      "expired": "— expired: {{names}}",
+      "passTime": "Time passed: {{hours, number}} h ({{rounds}}), round {{from}} → {{to}}"
     },
     "attack": {
       "miss": "{{weapon}} vs AC {{ac}}: miss",

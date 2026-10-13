@@ -7,6 +7,7 @@ export type LogKind =
   | "round_advance"
   | "round_reset"
   | "round_set"
+  | "time_passed"
   | "attack"
   | "item_use"
   | "spell_prep"

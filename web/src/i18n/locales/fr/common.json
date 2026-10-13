@@ -48,7 +48,15 @@
     "setLabel": "Numéro du round",
     "apply": "Régler",
     "confirm": "Confirmer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "passTime": "⏩ Le temps passe",
+    "passTimeLabel": "Heures écoulées",
+    "passTimeHours": "h",
+    "passTimePreview_other": "= {{count}} rounds",
+    "passTimePreview_one": "= {{count}} round",
+    "passTimeInvalid": "Des heures, par ex. 0,25, 1,5 ou 8",
+    "passTimeHint": "1 round = 1 minute, arrondi à l'inférieur. Les bonus à durée décomptent, le round repasse à 0.",
+    "passTimePlaceholder": "1,5"
   },
   "buffs": {
     "title": "Bonus",
@@ -96,7 +104,10 @@
     "saved": "Bonus enregistrés",
     "saveFailedAfterAdd": "{{name}} est activé mais n'a pas été enregistré pour réutilisation",
     "useSaved": "Remplir le formulaire avec {{name}}",
-    "deleteSaved": "Supprimer le bonus enregistré {{name}}"
+    "deleteSaved": "Supprimer le bonus enregistré {{name}}",
+    "roundsWithTime": "{{rounds}} · {{time}}",
+    "hoursMinutes": "{{h}} h {{mm}}",
+    "hoursOnly": "{{h}} h"
   },
   "actions": {
     "label": "Actions",
@@ -467,7 +478,8 @@
       "item_use": "Objet",
       "spell_prep": "Préparation",
       "long_rest": "Repos",
-      "save": "Sauvegarde"
+      "save": "Sauvegarde",
+      "time_passed": "Temps"
     },
     "status": {
       "active": "Actif",
@@ -499,7 +511,8 @@
       "nextRound": "Round {{from}} → {{to}}",
       "endCombat": "Combat terminé : round {{from}} → {{to}}",
       "setRound": "Round réglé : {{from}} → {{to}}",
-      "expired": "— expirés : {{names}}"
+      "expired": "— expirés : {{names}}",
+      "passTime": "Temps écoulé : {{hours, number}} h ({{rounds}}), round {{from}} → {{to}}"
     },
     "attack": {
       "miss": "{{weapon}} contre CA {{ac}} : raté",

@@ -30,6 +30,12 @@ interface TableStore {
   nextRound: () => Promise<boolean>;
   endCombat: () => Promise<boolean>;
   setRound: (round: number) => Promise<boolean>;
+  /** Fast-forward hours of game time (timed buffs count down, round to 0). */
+  passTime: (hours: number) => Promise<boolean>;
+}
+
+function expiredNotice(expired: { name: string }[] | undefined): Notice | null {
+  return expired && expired.length > 0 ? { kind: "expired", names: expired.map((b) => b.name) } : null;
 }
 
 function message(e: unknown): string {
@@ -97,9 +103,11 @@ export const useTableStore = create<TableStore>((set, get) => ({
   nextRound: () =>
     get().run(async () => {
       const res = await useBuffsStore.getState().advanceRound();
-      const expired = res.expiredBuffs ?? [];
-      set({
-        notice: expired.length > 0 ? { kind: "expired", names: expired.map((b) => b.name) } : null,
-      });
+      set({ notice: expiredNotice(res.expiredBuffs) });
+    }),
+  passTime: (hours) =>
+    get().run(async () => {
+      const res = await useBuffsStore.getState().passTime(hours);
+      set({ notice: expiredNotice(res.expiredBuffs) });
     }),
 }));

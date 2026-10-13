@@ -211,3 +211,20 @@ describe("entryText for saves", () => {
     expect(entryText(entry("save", {}), t)).toBe("server summary");
   });
 });
+
+describe("time_passed entries", () => {
+  const payload = { action: "pass_time", hours: 1.5, rounds: 90, fromRound: 4, toRound: 0, expired: ["Bless"] };
+  it("renders hours, rounds, the round reset and what expired (en/fr)", async () => {
+    expect(entryText(entry("time_passed", payload), await makeT("en"))).toBe(
+      "Time passed: 1.5 h (90 rd), round 4 → 0 — expired: Bless",
+    );
+    expect(entryText(entry("time_passed", payload), await makeT("fr"))).toBe(
+      "Temps écoulé : 1,5 h (90 rd.), round 4 → 0 — expirés : Bless",
+    );
+  });
+  it("without expiries", async () => {
+    expect(
+      entryText(entry("time_passed", { ...payload, hours: 8, rounds: 480, expired: undefined }), await makeT("en")),
+    ).toBe("Time passed: 8 h (480 rd), round 4 → 0");
+  });
+});

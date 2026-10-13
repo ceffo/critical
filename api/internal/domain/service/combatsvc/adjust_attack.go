@@ -35,10 +35,19 @@ func (s *service) AdjustAttackAC(ctx context.Context, characterID, entryID int64
 			return actionlog.PayloadAmendment{}, fmt.Errorf("%w: attack #%d was logged without its damage dice, void it and roll again", domain.ErrInvalidInput, e.ID)
 		}
 		r := rec.result(e.ID)
-		prevAC, prevHit, prevCrit := r.TargetAC, r.Hit, r.IsCrit
+		// The first correction keeps the target AC and outcome as rolled;
+		// later ones keep those, so the line always reads rolled → now.
+		if r.RolledTargetAC == nil || r.RolledHit == nil || r.RolledCrit == nil {
+			ac, hit, crit := r.TargetAC, r.Hit, r.IsCrit
+			r.RolledTargetAC, r.RolledHit, r.RolledCrit = &ac, &hit, &crit
+		}
 		r.TargetAC = targetAC
 		settle(r)
-		r.PreviousTargetAC, r.PreviousHit, r.PreviousCrit = &prevAC, &prevHit, &prevCrit
+		// Back to the rolled AC: the attack is as rolled again (still an
+		// audited amend), its line the plain one.
+		if *r.RolledTargetAC == targetAC {
+			r.RolledTargetAC, r.RolledHit, r.RolledCrit = nil, nil, nil
+		}
 		payload, err := json.Marshal(toRecord(r))
 		if err != nil {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("encode attack payload: %w", err)

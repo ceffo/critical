@@ -242,11 +242,11 @@ type RollResultDTO struct {
 	TargetAC   int      `json:"targetAc"`
 	TargetSize string   `json:"targetSize,omitempty"`
 	Ammo       *AmmoDTO `json:"ammo,omitempty"`
-	// Target AC and outcome before the latest target AC correction; absent
-	// until the attack is corrected.
-	PreviousTargetAC *int  `json:"previousTargetAc,omitempty"`
-	PreviousHit      *bool `json:"previousHit,omitempty"`
-	PreviousCrit     *bool `json:"previousCrit,omitempty"`
+	// Target AC and outcome as rolled; present while a correction differs
+	// from the rolled target AC.
+	RolledTargetAC *int  `json:"rolledTargetAc,omitempty"`
+	RolledHit      *bool `json:"rolledHit,omitempty"`
+	RolledCrit     *bool `json:"rolledCrit,omitempty"`
 
 	// Saving-throw context; empty on attacks. adjustment is always sent on
 	// saves (0: none).
@@ -304,7 +304,7 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
 		TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
-		PreviousTargetAC: r.PreviousTargetAC, PreviousHit: r.PreviousHit, PreviousCrit: r.PreviousCrit,
+		RolledTargetAC: r.RolledTargetAC, RolledHit: r.RolledHit, RolledCrit: r.RolledCrit,
 		SaveCategory: string(r.SaveCategory), AdjustmentReason: r.AdjustmentReason,
 		LogEntryID: r.LogEntryID,
 	}

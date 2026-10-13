@@ -251,9 +251,9 @@ function AdjustAttackAc({ result: r }: { result: Extract<LastRoll, { kind: "atta
       <Button type="submit" size="sm" disabled={rolling || !changed}>
         {t("result.adjustAc.apply")}
       </Button>
-      {r.previousTargetAc !== undefined && (
+      {r.rolledTargetAc !== undefined && (
         <span className="text-sm text-muted-foreground" data-testid="ac-corrected">
-          {t("result.adjustAc.was", { ac: r.previousTargetAc })}
+          {t("result.adjustAc.was", { ac: r.rolledTargetAc })}
         </span>
       )}
     </form>

@@ -105,7 +105,8 @@ latest roll (same rules, AC within ±20). Every attack rolls its damage dice, ev
 payload keeps them with every damage term (`rolled`) and the crit-table row its d100 fell in
 (`critRow`); combatsvc `settle` recomputes hit, margin, crit and damage from those and the new AC
 (no die rolled, no ammo spent, a later crit-table edit changes nothing) and the amend carries
-`previousTargetAc`/`previousHit`/`previousCrit`. Voiding still restores the ammo (snapshots are the
+`rolledTargetAc`/`rolledHit`/`rolledCrit` (the AC and outcome as rolled, kept across corrections, so the line
+reads rolled → now; dropped when the AC is back to the rolled one, which reads as rolled). Voiding still restores the ammo (snapshots are the
 original entry's). An attack logged without `rolled` (before this existed) → 400, void and reroll.
 A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
 later entries with the same full key (a +1 arrow does not block voiding a +3 shot).

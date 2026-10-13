@@ -146,14 +146,14 @@ function attackText(p: RollResult, t: TFunction): string {
   const text = !p.hit
     ? t("log.attack.miss", args)
     : t(p.isCrit ? "log.attack.crit" : "log.attack.hit", args);
-  if (p.previousTargetAc === undefined || p.previousHit === undefined) return text;
+  if (p.rolledTargetAc === undefined || p.rolledHit === undefined) return text;
   const outcome = (hit: boolean, crit: boolean | undefined) =>
     t(`log.attack.outcome.${crit ? "crit" : hit ? "hit" : "miss"}`);
   return t("log.attack.corrected", {
     text,
-    from: p.previousTargetAc,
+    from: p.rolledTargetAc,
     to: p.targetAc,
-    was: outcome(p.previousHit, p.previousCrit),
+    was: outcome(p.rolledHit, p.rolledCrit),
     now: outcome(p.hit, p.isCrit),
   });
 }

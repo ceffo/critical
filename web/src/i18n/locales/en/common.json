@@ -449,7 +449,7 @@
       "increase": "Raise target AC",
       "value": "Corrected target AC",
       "apply": "Apply",
-      "was": "was AC {{ac}}"
+      "was": "rolled vs AC {{ac}}"
     }
   },
   "log": {

@@ -37,11 +37,11 @@ type attackRecord struct {
 	// outcome from (absent on attacks logged before corrections existed).
 	Rolled  *rolledRecord  `json:"rolled,omitempty"`
 	CritRow *critRowRecord `json:"critRow,omitempty"`
-	// PreviousTargetAC, PreviousHit and PreviousCrit are the target AC and
-	// outcome before the latest correction; set on correction amends only.
-	PreviousTargetAC *int  `json:"previousTargetAc,omitempty"`
-	PreviousHit      *bool `json:"previousHit,omitempty"`
-	PreviousCrit     *bool `json:"previousCrit,omitempty"`
+	// RolledTargetAC, RolledHit and RolledCrit are the target AC and
+	// outcome as rolled, set while a correction differs from them.
+	RolledTargetAC *int  `json:"rolledTargetAc,omitempty"`
+	RolledHit      *bool `json:"rolledHit,omitempty"`
+	RolledCrit     *bool `json:"rolledCrit,omitempty"`
 }
 
 // rolledRecord is RolledDamage.
@@ -130,7 +130,7 @@ func toRecord(r *RollResult) attackRecord {
 	if c := r.RollCritRow; c != nil {
 		out.CritRow = &critRowRecord{From: c.From, To: c.To, Multiplier: c.Multiplier, Placeholder: r.RollCritPlaceholder}
 	}
-	out.PreviousTargetAC, out.PreviousHit, out.PreviousCrit = r.PreviousTargetAC, r.PreviousHit, r.PreviousCrit
+	out.RolledTargetAC, out.RolledHit, out.RolledCrit = r.RolledTargetAC, r.RolledHit, r.RolledCrit
 	return out
 }
 
@@ -150,7 +150,7 @@ func (a attackRecord) result(entryID int64) *RollResult {
 		Multipliers: a.Multipliers, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
 		DamageTerms: fromTermRecords(a.DamageTerms), TotalDamage: a.TotalDamage, DamageBreakdown: a.DamageBreakdown,
 		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetAC: a.TargetAC, TargetSize: TargetSize(a.TargetSize),
-		PreviousTargetAC: a.PreviousTargetAC, PreviousHit: a.PreviousHit, PreviousCrit: a.PreviousCrit,
+		RolledTargetAC: a.RolledTargetAC, RolledHit: a.RolledHit, RolledCrit: a.RolledCrit,
 		LogEntryID: entryID,
 	}
 	if m := a.Ammo; m != nil {

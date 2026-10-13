@@ -408,7 +408,8 @@ func rollDice(d Dice, dice string) (int, error) {
 }
 
 // summary is the English log line (the UI renders the payload instead). A
-// corrected attack ends with the correction: "(AC 5 → 7: MISS → HIT)".
+// corrected attack ends with the correction from the rolled AC and outcome:
+// "(AC 5 → 7: MISS → HIT)".
 func summary(r *RollResult) string {
 	weapon := r.WeaponName
 	if r.Ammo != nil {
@@ -423,9 +424,9 @@ func summary(r *RollResult) string {
 	default:
 		out = fmt.Sprintf("%s vs AC %d: hit, %d damage", weapon, r.TargetAC, r.TotalDamage)
 	}
-	if r.PreviousTargetAC != nil && r.PreviousHit != nil && r.PreviousCrit != nil {
-		out += fmt.Sprintf(" (AC %d → %d: %s → %s)", *r.PreviousTargetAC, r.TargetAC,
-			outcome(*r.PreviousHit, *r.PreviousCrit), outcome(r.Hit, r.IsCrit))
+	if r.RolledTargetAC != nil && r.RolledHit != nil && r.RolledCrit != nil {
+		out += fmt.Sprintf(" (AC %d → %d: %s → %s)", *r.RolledTargetAC, r.TargetAC,
+			outcome(*r.RolledHit, *r.RolledCrit), outcome(r.Hit, r.IsCrit))
 	}
 	return out
 }

@@ -150,10 +150,18 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			wantSummary:   "Long Sword +2 vs AC 10: hit, 7 damage (AC 5 → 10: MISS → HIT)",
 		},
 		{
-			// AC 5 → 7 → 5: back to the rolled miss; the line shows the last step.
-			name: "a second correction starts from the first", attack: swordMinus7(11, 50), acs: []int{7, 5},
+			// AC 5 → 7 → 9: the line reads from the rolled AC and outcome.
+			// AC 9 needs 9: 11 hits by 2.
+			name: "a second correction keeps the rolled AC and outcome", attack: swordMinus7(11, 50), acs: []int{7, 9},
+			wantHit: true, wantMargin: 2, wantMult: 1, wantTotal: 7, wantTerms: 2,
+			wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+			wantSummary:   "Long Sword +2 vs AC 9: hit, 7 damage (AC 5 → 9: MISS → HIT)",
+		},
+		{
+			// AC 5 → 7 → 5: back to the rolled AC reads as rolled (still amended).
+			name: "back to the rolled AC reads as rolled", attack: swordMinus7(11, 50), acs: []int{7, 5},
 			wantHit: false, wantMargin: -2, wantMult: 1, wantTotal: 0, wantTerms: 0,
-			wantSummary: "Long Sword +2 vs AC 5: miss (AC 7 → 5: HIT → MISS)",
+			wantSummary: "Long Sword +2 vs AC 5: miss",
 		},
 	}
 	for _, c := range cases {
@@ -189,7 +197,13 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			} else {
 				assert.Zero(t, res.BaseDamage)
 			}
-			require.NotNil(t, res.PreviousTargetAC)
+			backToRolled := last == c.attack.req.TargetAC
+			if backToRolled {
+				assert.Nil(t, res.RolledTargetAC, "back to the rolled AC: nothing to show")
+			} else {
+				require.NotNil(t, res.RolledTargetAC)
+				assert.Equal(t, c.attack.req.TargetAC, *res.RolledTargetAC, "the AC as rolled, not the previous step")
+			}
 			assert.Equal(t, int64(42), res.LogEntryID)
 
 			require.Len(t, e.Corrections, len(c.acs), "one audited amend per correction")
@@ -198,7 +212,11 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			assert.Equal(t, float64(last), p["targetAc"])
 			assert.Equal(t, c.wantHit, p["hit"])
 			assert.Equal(t, float64(c.wantTotal), p["totalDamage"])
-			assert.Contains(t, p, "previousTargetAc")
+			if backToRolled {
+				assert.NotContains(t, p, "rolledTargetAc")
+			} else {
+				assert.Equal(t, float64(c.attack.req.TargetAC), p["rolledTargetAc"])
+			}
 			assert.Contains(t, p, "rolled", "the next correction can recompute again")
 			assert.Equal(t, float64(c.attack.req.TargetAC), payloadOf(t, e.Payload)["targetAc"], "the original entry is untouched")
 		})

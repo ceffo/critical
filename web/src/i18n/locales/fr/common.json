@@ -449,7 +449,7 @@
       "increase": "Monter la CA de la cible",
       "value": "CA de la cible corrigée",
       "apply": "Appliquer",
-      "was": "était CA {{ac}}"
+      "was": "jet contre CA {{ac}}"
     }
   },
   "log": {

@@ -194,7 +194,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await apply.click();
   await expect(card).toContainText("vs AC 20");
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
-  await expect(card.getByTestId("ac-corrected")).toHaveText("was AC -20");
+  await expect(card.getByTestId("ac-corrected")).toHaveText("rolled vs AC -20");
   await expect(card.getByTestId("total-damage")).toHaveText(/^\d+$/);
   const damage = await card.getByTestId("total-damage").textContent();
   expect(await card.getByText("d20", { exact: true }).locator("xpath=..").locator("dd").textContent()).toBe(d20);
@@ -204,17 +204,47 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   expect(await selectedAmmoCount(page)).toBe(before - 1);
   await snap(page, "attack-ac-corrected");
 
-  // Hit → miss hides the damage; back to AC 20 shows the same damage again (no reroll).
+  // A second correction still reads from the rolled AC and outcome.
+  await acField.fill("19");
+  await apply.click();
+  await expect(card).toContainText("vs AC 19");
+  await expect(entry).toContainText(/\(AC -20 → 19: MISS → (HIT|CRIT)\)/);
+  await expect(card.getByTestId("ac-corrected")).toHaveText("rolled vs AC -20");
+
+  // Hit → miss: back to the rolled AC hides the damage and reads as rolled (still amended); back
+  // to AC 20 shows the same damage again (no reroll).
   await acField.fill("-20");
   await apply.click();
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
   await expect(card.getByTestId("total-damage")).toHaveText("–");
-  await expect(entry).toContainText(/\(AC 20 → -20: (HIT|CRIT) → MISS\)/);
+  await expect(card.getByTestId("ac-corrected")).toHaveCount(0);
+  await expect(entry).toContainText("Short Bow +2 (Arrows +2) vs AC -20: miss");
+  await expect(entry).not.toContainText("→ -20");
+  await expect(entry).toContainText("Amended");
   await acField.fill("20");
   await apply.click();
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
   await expect(card.getByTestId("total-damage")).toHaveText(damage!);
+  await expect(entry).toContainText(/\(AC -20 → 20: MISS → (HIT|CRIT)\)/);
   expect(await selectedAmmoCount(page)).toBe(before - 1);
+
+  // In French: the form and the log line.
+  await page.getByRole("button", { name: "FR" }).click();
+  const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("attack-result");
+  const frFix = frCard.getByRole("form", { name: "Corriger la CA de la cible" });
+  await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("20");
+  await expect(frFix.getByRole("button", { name: "Appliquer" })).toBeDisabled();
+  await expect(frFix.getByRole("button", { name: "Monter la CA de la cible" })).toBeVisible();
+  await expect(frCard.getByTestId("ac-corrected")).toHaveText("jet contre CA -20");
+  const frEntry = page
+    .getByRole("region", { name: "Journal de combat" })
+    .getByRole("listitem")
+    .filter({ hasText: "Short Bow +2 (Arrows +2)" });
+  await expect(frEntry).toContainText(
+    /contre CA 20 : (touché|critique).*\(CA -20 → 20 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
+  );
+  await snap(page, "attack-ac-corrected-fr");
+  await page.getByRole("button", { name: "EN" }).click();
 
   // Voiding the corrected attack still gives the arrow back and removes the correction form.
   await voidEntry(page, "Short Bow +2 (Arrows +2)");
@@ -240,4 +270,11 @@ test("only the latest roll's target AC can be corrected", async ({ page }) => {
   const res = await page.request.post(`/api/roll/attack/${older}/adjust`, { data: { targetAc: 7 } });
   expect(res.status()).toBe(409);
   expect((await res.json()).error).toContain("only the latest roll can be adjusted");
+
+  // A save rolled after the attack replaces the card: the attack is no longer the latest roll.
+  const [latest] = log.entries.filter((e) => e.kind === "attack").map((e) => e.id);
+  expect((await page.request.post("/api/roll/save", { data: { category: "spell" } })).ok()).toBe(true);
+  const afterSave = await page.request.post(`/api/roll/attack/${latest}/adjust`, { data: { targetAc: 7 } });
+  expect(afterSave.status()).toBe(409);
+  expect((await afterSave.json()).error).toContain("only the latest roll can be adjusted");
 });

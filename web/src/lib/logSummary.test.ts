@@ -133,19 +133,19 @@ describe("entryText", () => {
     [
       "en",
       { hit: true, isCrit: false, critMultiplier: 1, totalDamage: 7, weaponName: "Long Sword +2", targetAc: 7,
-        previousTargetAc: 5, previousHit: false, previousCrit: false },
+        rolledTargetAc: 5, rolledHit: false, rolledCrit: false },
       "Long Sword +2 vs AC 7: hit, 7 damage (AC 5 → 7: MISS → HIT)",
     ],
     [
       "en",
       { hit: false, isCrit: false, critMultiplier: 1, totalDamage: 0, weaponName: "Long Sword +2", targetAc: 3,
-        previousTargetAc: 6, previousHit: true, previousCrit: true },
+        rolledTargetAc: 6, rolledHit: true, rolledCrit: true },
       "Long Sword +2 vs AC 3: miss (AC 6 → 3: CRIT → MISS)",
     ],
     [
       "fr",
       { hit: true, isCrit: true, critMultiplier: 1.5, totalDamage: 10, weaponName: "Long Sword +2", targetAc: 10,
-        previousTargetAc: -10, previousHit: false, previousCrit: false },
+        rolledTargetAc: -10, rolledHit: false, rolledCrit: false },
       "Long Sword +2 contre CA 10 : critique ×1,5, 10 dégâts (CA -10 → 10 : RATÉ → CRITIQUE)",
     ],
   ])("renders a corrected attack in %s from the effective payload", async (lng, effective, want) => {

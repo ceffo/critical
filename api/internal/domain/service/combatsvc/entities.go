@@ -134,12 +134,11 @@ type RollResult struct {
 	RollCritRow *CritRow
 	// RollCritPlaceholder: RollCritRow came from the unedited default table.
 	RollCritPlaceholder bool
-	// PreviousTargetAC, PreviousHit and PreviousCrit are the target AC and
-	// outcome before the latest target AC correction (nil when never
-	// corrected).
-	PreviousTargetAC *int
-	PreviousHit      *bool
-	PreviousCrit     *bool
+	// RolledTargetAC, RolledHit and RolledCrit are the target AC and
+	// outcome as rolled, set while a correction differs from them.
+	RolledTargetAC *int
+	RolledHit      *bool
+	RolledCrit     *bool
 	// Saving-throw context (empty for attacks): the category and the
 	// adjustment set after the roll (0: none), with its optional reason.
 	SaveCategory     SaveCategory

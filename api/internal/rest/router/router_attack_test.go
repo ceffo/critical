@@ -23,7 +23,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 			BaseDamage: 5, DamageDice: "1d8", SpellsBuff: 1, WeaponBuff: 2, Multipliers: 1,
 			DamageTerms: []combatsvc.DamageTerm{}, TotalDamage: 7, DamageBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
 			WeaponID: "longsword", WeaponName: "Long Sword +2", TargetAC: 7, TargetSize: combatsvc.SizeSmallMedium,
-			PreviousTargetAC: &prevAC, PreviousHit: &prevHit, PreviousCrit: &prevCrit, LogEntryID: 7,
+			RolledTargetAC: &prevAC, RolledHit: &prevHit, RolledCrit: &prevCrit, LogEntryID: 7,
 		}, nil)
 	rec := do(h, "POST", "/api/roll/attack/7/adjust", `{"targetAc":7}`)
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -33,7 +33,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 		"baseDamage":5,"damageDice":"1d8","spellsBuff":1,"weaponBuff":2,"multipliers":1,"strengthBonus":0,"bonusDamage":0,
 		"damageTerms":[],"totalDamage":7,"damageBreakdown":"((5 × 1.0) + 2) × 1.0 + 0 = 7",
 		"weaponId":"longsword","weaponName":"Long Sword +2","targetAc":7,"targetSize":"sm",
-		"previousTargetAc":5,"previousHit":false,"previousCrit":false,"logEntryId":7}`, rec.Body.String())
+		"rolledTargetAc":5,"rolledHit":false,"rolledCrit":false,"logEntryId":7}`, rec.Body.String())
 }
 
 func TestAdjustAttack_BadRequests(t *testing.T) {

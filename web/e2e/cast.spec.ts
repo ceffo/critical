@@ -161,3 +161,86 @@ test("a long rest is logged and blocks voiding an earlier cast", async ({
   await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
   await snap(page, "void-blocked-after-long-rest");
 });
+
+// Spells that share a name: the receive request carries each spell's own key.
+const priest = (name: string, level: number, sphere: string) => ({
+  name,
+  class: "Priest",
+  level,
+  school: "Alteration",
+  sphere,
+  casting_time: "6",
+  range: "0",
+  duration: "Special",
+  area_of_effect: "Creature touched",
+  components: "V, S, M",
+  saving_throw: "None",
+  description: `${name} fixture text.`,
+});
+
+test.describe("same-named spells", () => {
+  test.use({
+    extraSpells: {
+      rows: [
+        priest("Fortify", 3, "War"),
+        priest("Fortify", 4, "Healing"),
+        ...Array.from({ length: 60 }, (_, i) =>
+          priest(`Cure Test ${String(i).padStart(2, "0")}`, 1, "Healing"),
+        ),
+      ],
+    },
+  });
+
+  async function receive(page: Page, query: string, row: string) {
+    await openSpells(page);
+    const picker = page.getByRole("region", { name: "Spell cast on me" });
+    await picker.getByLabel("Search for a spell cast on me").fill(query);
+    await picker.getByLabel("Caster level").fill("9");
+    const item = picker.getByRole("listitem").filter({ hasText: row });
+    const req = page.waitForRequest(
+      (r) => r.url().endsWith("/api/spells/receive") && r.method() === "POST",
+    );
+    await item.getByRole("button", { name: /^Apply/ }).click();
+    return (await req).postDataJSON() as { spellId: string };
+  }
+
+  test("receiving Fortify level 4 sends fortify_l4 and the result names the level 4 spell", async ({
+    page,
+  }) => {
+    const body = await receive(page, "Fortify", "Priest 4");
+    expect(body.spellId).toBe("fortify_l4");
+    const card = resultCard(page).getByTestId("cast-result");
+    await expect(card.getByTestId("cast-spell-ident")).toHaveText(
+      "Priest · Lvl 4",
+    );
+    await expect(card.getByTestId("cast-text")).toContainText(
+      "Fortify fixture text.",
+    );
+    await snap(page, "fortify-l4-received");
+  });
+
+  test("a Priest spell named like a Wizard spell gets no Wizard effect", async ({
+    page,
+  }) => {
+    const body = await receive(page, "Detect Magic", "Priest");
+    expect(body.spellId).toBe("detect_magic_priest");
+    const card = resultCard(page).getByTestId("cast-result");
+    await expect(card.getByTestId("cast-spell-ident")).toContainText("Priest");
+    await expect(card.getByTestId("cast-text-only")).toBeVisible();
+    await expect(page.locator('[data-testid="buff"]')).toHaveCount(0);
+    await snap(page, "priest-detect-magic-received");
+  });
+
+  test("receive search shows how many matches are not listed", async ({
+    page,
+  }) => {
+    await openSpells(page);
+    const picker = page.getByRole("region", { name: "Spell cast on me" });
+    await picker.getByLabel("Search for a spell cast on me").fill("Cure Test");
+    await expect(picker.getByRole("listitem")).toHaveCount(50);
+    await expect(picker.getByTestId("receive-more")).toHaveText(
+      "10 more, refine your search",
+    );
+    await snap(page, "receive-more");
+  });
+});

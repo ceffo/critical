@@ -12,6 +12,9 @@ interface SpellsDbStore {
   search: (f: SpellFilters, page?: number) => Promise<void>;
 }
 
+// Only the latest search may write: a slow older response must not overwrite it.
+let latest = 0;
+
 export const useSpellsDbStore = create<SpellsDbStore>((set) => ({
   results: [],
   total: 0,
@@ -20,9 +23,11 @@ export const useSpellsDbStore = create<SpellsDbStore>((set) => ({
   loading: false,
   error: null,
   search: async (f, page = 1) => {
+    const seq = ++latest;
     set({ loading: true });
     try {
       const r = await searchSpells(f, page);
+      if (seq !== latest) return;
       set({
         results: r.items,
         total: r.total,
@@ -32,6 +37,7 @@ export const useSpellsDbStore = create<SpellsDbStore>((set) => ({
         error: null,
       });
     } catch (e: unknown) {
+      if (seq !== latest) return;
       set({ error: (e as Error).message, loading: false });
     }
   },

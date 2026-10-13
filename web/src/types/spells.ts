@@ -74,6 +74,8 @@ export interface SpellValues {
 }
 
 export interface Spell {
+  /** Unique key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
+  id: string;
   name: string;
   class: string;
   level: number;

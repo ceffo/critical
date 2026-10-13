@@ -91,9 +91,3 @@ func TestValidate(t *testing.T) {
 		})
 	}
 }
-
-func TestLevelSlug(t *testing.T) {
-	assert.Equal(t, "fortify_l4", spelleffectsvc.LevelSlug("Fortify", 4))
-	assert.Equal(t, "cats_grace_l2", spelleffectsvc.LevelSlug("Cat’s Grace", 2))
-	assert.Equal(t, "fortify", spelleffectsvc.Slug("Fortify"), "the plain slug is unchanged")
-}

@@ -11,7 +11,6 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
-	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -113,27 +112,53 @@ func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, 
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}
+	keys, err := d.catalogKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
 	spells := make([]spellsvc.Spell, 0, len(rows))
 	for _, r := range rows {
-		spells = append(spells, toSpell(r))
+		sp := toSpell(r)
+		sp.ID = keys[r.ID]
+		spells = append(spells, sp)
 	}
 	return spells, nil
 }
 
-// Describe finds the spell whose id (the slug of its English name) is
-// spellID, preferring the Wizard row when both lists have the name. The
-// table holds under a thousand static rows, so it scans the names.
+// catalogKeys maps every row id to the spell's unique key (spellsvc.Keys).
+// The table holds under a thousand static rows, so it reads them all.
+func (d *DAL) catalogKeys(ctx context.Context) (map[int64]string, error) {
+	rows, err := bobmodels.Spells.Query(sm.OrderBy(bobmodels.Spells.Columns.ID)).All(ctx, d.exec(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("query spell keys: %w", err)
+	}
+	refs := make([]spellsvc.Ref, len(rows))
+	for i, r := range rows {
+		refs[i] = spellsvc.Ref{Name: r.Name, Class: r.Class, Level: int(r.Level)}
+	}
+	keys := spellsvc.Keys(refs)
+	out := make(map[int64]string, len(rows))
+	for i, r := range rows {
+		out[r.ID] = keys[i]
+	}
+	return out, nil
+}
+
+// Describe finds the spell whose unique key (spellsvc.Keys) is spellID.
 func (d *DAL) Describe(ctx context.Context, spellID string) (spellsvc.Spell, bool, error) {
-	rows, err := bobmodels.Spells.Query(
-		sm.OrderBy(bobmodels.Spells.Columns.Class).Desc(), // Wizard before Priest
-		sm.OrderBy(bobmodels.Spells.Columns.Level),        // the lowest level owns the plain slug
-	).All(ctx, d.exec(ctx))
+	keys, err := d.catalogKeys(ctx)
+	if err != nil {
+		return spellsvc.Spell{}, false, err
+	}
+	rows, err := bobmodels.Spells.Query().All(ctx, d.exec(ctx))
 	if err != nil {
 		return spellsvc.Spell{}, false, fmt.Errorf("query spells: %w", err)
 	}
 	for _, r := range rows {
-		if spelleffectsvc.Slug(r.Name) == spellID || spelleffectsvc.LevelSlug(r.Name, int(r.Level)) == spellID {
-			return toSpell(r), true, nil
+		if keys[r.ID] == spellID {
+			sp := toSpell(r)
+			sp.ID = spellID
+			return sp, true, nil
 		}
 	}
 	return spellsvc.Spell{}, false, nil

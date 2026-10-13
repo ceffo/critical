@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSpellsDbStore } from "@/stores/spells_db";
 import { NO_FILTERS, type SpellFilters } from "@/api/spells_db";
-import { spellId, spellName } from "@/i18n/spellName";
+import { spellName } from "@/i18n/spellName";
 import type { Spell, SpellValue } from "@/types/spells";
 import { Search, Loader2 } from "lucide-react";
 
@@ -59,25 +59,37 @@ export function LookupPanel() {
   const { t } = useTranslation();
   const [f, setF] = useState<SpellFilters>(NO_FILTERS);
   const [page, setPage] = useState(1);
-  const { results, total, pageSize, search, loading } = useSpellsDbStore();
+  const {
+    results,
+    total,
+    page: shownPage,
+    pageSize,
+    search,
+    loading,
+  } = useSpellsDbStore();
   // Any filter change goes back to the first page.
   const patch = (p: Partial<SpellFilters>) => {
     setF((cur) => ({ ...cur, ...p }));
     setPage(1);
   };
-  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, total);
+  // The range shown is the one of the response on screen, not of the page asked for.
+  const from = total === 0 ? 0 : (shownPage - 1) * pageSize + 1;
+  const to = Math.min(shownPage * pageSize, total);
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
   const filtered =
     JSON.stringify({ ...f, q: "" }) !==
     JSON.stringify({ ...NO_FILTERS, q: "" });
   const query = f.q;
 
+  // The matches shrank under the page asked for: ask for the last page that exists.
+  const reqPage = Math.min(page, lastPage);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      search(f, page);
+      search(f, reqPage);
     }, 300);
     return () => clearTimeout(timer);
-  }, [f, page, search]);
+  }, [f, reqPage, search]);
 
   return (
     <div className="flex flex-col h-full space-y-3">
@@ -228,8 +240,8 @@ export function LookupPanel() {
               size="sm"
               variant="outline"
               className="h-6 px-2 text-[11px]"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
+              disabled={shownPage <= 1}
+              onClick={() => setPage(shownPage - 1)}
             >
               {t("lookup.prevPage")}
             </Button>
@@ -239,7 +251,7 @@ export function LookupPanel() {
               variant="outline"
               className="h-6 px-2 text-[11px]"
               disabled={to >= total}
-              onClick={() => setPage((p) => p + 1)}
+              onClick={() => setPage(shownPage + 1)}
             >
               {t("lookup.nextPage")}
             </Button>
@@ -255,7 +267,7 @@ export function LookupPanel() {
         ) : results.length > 0 ? (
           results.map((spell) => (
             <Card
-              key={`${spell.class}:${spell.name}`}
+              key={spell.id}
               className="overflow-hidden"
               data-testid="spell-result"
               data-class={spell.class}
@@ -263,7 +275,7 @@ export function LookupPanel() {
               <CardHeader className="py-2 px-3 bg-muted/30">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-black uppercase tracking-tight">
-                    {spellName(t, spellId(spell.name), spell.name)}
+                    {spellName(t, spell.id, spell.name)}
                   </CardTitle>
                   <div className="flex gap-1">
                     <Badge

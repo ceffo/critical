@@ -10,7 +10,14 @@ export function spellName(
   id: string,
   englishName?: string,
 ): string {
-  return t(id, { ns: "spells", defaultValue: englishName ?? id });
+  // "hold_person_priest" / "fortify_l4" are keys of other spells of the same
+  // name: the translated name is the one of the base id.
+  const base = id.replace(/(_priest)?(_l\d+)?$/, "") || id;
+  const fallback =
+    base === id
+      ? (englishName ?? id)
+      : t(base, { ns: "spells", defaultValue: englishName ?? id });
+  return t(id, { ns: "spells", defaultValue: fallback });
 }
 
 /**

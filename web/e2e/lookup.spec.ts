@@ -94,10 +94,17 @@ test.describe("paging", () => {
     const range = page.getByTestId("lookup-range");
     await expect(range).toHaveText(/^Showing 1–50 of \d+$/);
     await expect(results(page)).toHaveCount(50);
-    await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Previous", exact: true }),
+    ).toBeDisabled();
     await snap(page, "paging-first-page");
 
+    // A typed-stat filter, then page 2: the range and the total agree.
+    await page.getByRole("button", { name: "Components V" }).click();
+    await expect(range).toHaveText(/^Showing 1–50 of \d+$/);
     const next = page.getByRole("button", { name: "Next", exact: true });
+    await next.click();
+    await expect(range).toHaveText(/^Showing 51–100 of \d+$/);
     while (await next.isEnabled()) {
       const before = await range.textContent();
       await next.click();
@@ -111,6 +118,8 @@ test.describe("paging", () => {
 
     await page.getByLabel("Level", { exact: true }).selectOption("2");
     await expect(range).toHaveText(/^Showing 1–/);
-    await expect(page.getByRole("button", { name: "Previous", exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Previous", exact: true }),
+    ).toBeDisabled();
   });
 });

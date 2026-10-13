@@ -177,6 +177,8 @@ type SpellSlotDTO struct {
 // PHB text; Stats is their typed form and Values the computed values at
 // CasterLevel (domain types carry the JSON tags).
 type SpellDTO struct {
+	// ID is the spell's unique key; cast and receive take it.
+	ID           string `json:"id"`
 	Name         string `json:"name"`
 	Class        string `json:"class"`
 	Level        int    `json:"level"`
@@ -223,7 +225,7 @@ func spellsToDTO(in []spellsvc.Spell, casterLevel int) []SpellDTO {
 // SpellToDTO maps one spell to its wire shape, with values at casterLevel.
 func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
 	dto := SpellDTO{
-		Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
+		ID: s.ID, Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
 		CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
 		AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
 		Description: s.Description,

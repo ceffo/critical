@@ -181,7 +181,8 @@
     "casterLevel": "Caster level",
     "receive": "Apply",
     "receiveLabel": "Apply {{name}}",
-    "receiveHint": "Type part of a spell name (English or French)."
+    "receiveHint": "Type part of a spell name (English or French).",
+    "receiveMore": "{{count}} more, refine your search"
   },
   "lookup": {
     "search": "Search spells...",

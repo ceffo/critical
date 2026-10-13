@@ -136,7 +136,7 @@ func TestSearch_MapsFields(t *testing.T) {
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Query: "Fireball"})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
-	want := spellsvc.Spell{Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
+	want := spellsvc.Spell{ID: "fireball", Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
 	got[0].Stats = spellstats.Stats{}
 	assert.Equal(t, want, got[0])
 }
@@ -218,6 +218,7 @@ func TestDescribe(t *testing.T) {
 		found                   bool
 	}{
 		{"light", "Light", "Wizard", 1, true},
+		{"light_priest", "Light", "Priest", 1, true}, // a Priest spell never answers to the Wizard's key
 		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", 1, true},
 		{"bless", "Bless", "Priest", 1, true},
 		{"twin", "Twin", "Priest", 3, true},    // the lowest level owns the plain slug

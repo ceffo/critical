@@ -33,6 +33,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
   return (
     <div className="flex flex-col gap-3" data-testid="cast-result">
       <div className="text-sm text-muted-foreground">{heading}</div>
+      {r.spell?.class && (
+        <div className="text-xs text-muted-foreground" data-testid="cast-spell-ident">
+          {r.spell.class} · {t("lookup.levelShort", { level: r.spell.level })}
+        </div>
+      )}
 
       {b && (
         <div className="flex flex-col gap-2" data-testid="cast-buff">

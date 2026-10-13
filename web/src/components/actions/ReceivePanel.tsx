@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { NO_FILTERS, searchSpells } from "@/api/spells_db";
 import { resources } from "@/i18n";
-import { spellId, spellName } from "@/i18n/spellName";
+import { spellName } from "@/i18n/spellName";
 import { useSpellStore } from "@/stores/spells";
 import { useTableStore } from "@/stores/table";
 import { captionClass, fieldClass } from "@/components/dashboard/fieldStyles";
@@ -30,6 +30,8 @@ function catalogueMatches(q: string): Candidate[] {
     .map((id) => ({ id, name: en[id] }));
 }
 
+const RECEIVE_PAGE_SIZE = 50;
+
 /** "Spell cast on me": find a spell by name (en/fr), enter the caster's level, apply it. No slot is used. */
 export function ReceivePanel() {
   const { t } = useTranslation();
@@ -38,6 +40,8 @@ export function ReceivePanel() {
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState("");
   const [found, setFound] = useState<Candidate[]>([]);
+  /** Matches the API has beyond the page shown. */
+  const [more, setMore] = useState(0);
 
   useEffect(() => {
     const q = query.trim();
@@ -45,20 +49,23 @@ export function ReceivePanel() {
     if (q.length < 2) return;
     let live = true;
     const timer = setTimeout(() => {
-      searchSpells({ ...NO_FILTERS, q }, 1, 12)
-        .then((p) => p.items)
-        .catch(() => [])
-        .then((rows) => {
+      searchSpells({ ...NO_FILTERS, q }, 1, RECEIVE_PAGE_SIZE)
+        .catch(() => ({ items: [], total: 0 }))
+        .then(({ items: rows, total }) => {
           if (!live) return;
           const byId = new Map<string, Candidate>();
           for (const c of catalogueMatches(q)) byId.set(c.id, c);
           for (const r of rows) {
-            const id = spellId(r.name);
-            if (!byId.has(id) || byId.get(id)?.level === undefined)
-              byId.set(id, { id, name: r.name, level: r.level, cls: r.class });
+            if (!byId.has(r.id) || byId.get(r.id)?.level === undefined)
+              byId.set(r.id, {
+                id: r.id,
+                name: r.name,
+                level: r.level,
+                cls: r.class,
+              });
           }
-          // The API page is already small; this caps the merged list with the catalogue names.
-          setFound([...byId.values()].slice(0, 12));
+          setFound([...byId.values()]);
+          setMore(Math.max(0, total - rows.length));
         });
     }, 200);
     return () => {
@@ -131,6 +138,11 @@ export function ReceivePanel() {
             );
           })}
         </ul>
+      )}
+      {query.trim().length >= 2 && more > 0 && (
+        <p className="text-xs text-muted-foreground" data-testid="receive-more">
+          {t("spellSlots.receiveMore", { count: more })}
+        </p>
       )}
     </section>
   );

@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,29 +135,20 @@ type catalogSpell struct {
 	Description  string `json:"description"`
 }
 
-// TestRepoSeeds_SpellSlugsAreUniquePerClass applies the catalog id rule
-// (spelleffectsvc.LevelSlug): a spell sharing name and class with a
-// lower-level one gets a level suffix, every other spell keeps Slug(name).
-// Within a class no two spells may end up with the same id.
-func TestRepoSeeds_SpellSlugsAreUniquePerClass(t *testing.T) {
+// TestRepoSeeds_SpellKeysAreUnique applies the catalog key rule
+// (spellsvc.Keys): no two spells of the catalog may share a key.
+func TestRepoSeeds_SpellKeysAreUnique(t *testing.T) {
 	var spells []catalogSpell
 	readJSON(t, "spells.json", &spells)
-	lowest := map[string]int{}
-	for _, s := range spells {
-		k := s.Class + "|" + spelleffectsvc.Slug(s.Name)
-		if l, ok := lowest[k]; !ok || s.Level < l {
-			lowest[k] = s.Level
-		}
+	refs := make([]spellsvc.Ref, len(spells))
+	for i, s := range spells {
+		refs[i] = spellsvc.Ref{Name: s.Name, Class: s.Class, Level: s.Level}
 	}
 	seen := map[string]string{}
-	for _, s := range spells {
-		id := spelleffectsvc.Slug(s.Name)
-		if s.Level != lowest[s.Class+"|"+id] {
-			id = spelleffectsvc.LevelSlug(s.Name, s.Level)
-		}
-		k := s.Class + "|" + id
+	for i, k := range spellsvc.Keys(refs) {
+		s := spells[i]
 		assert.NotContains(t, seen, k, "%s %s (level %d) collides with %s", s.Class, s.Name, s.Level, seen[k])
-		seen[k] = s.Name
+		seen[k] = s.Class + " " + s.Name
 	}
 }
 

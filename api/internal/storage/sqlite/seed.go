@@ -151,10 +151,11 @@ func (d *DB) seedCharacter(ctx context.Context, seedPath string) error {
 }
 
 // seedSpells reconciles the spells table with spells.json: rows are keyed by
-// (name, class, level) (two Priest "Fortify" spells differ by level); missing ones are inserted, existing ones get the seed's
-// values and typed stats, nothing is ever deleted and ids never change. It
-// runs in one transaction and a second run changes nothing. A missing seed
-// file leaves the table alone (only untyped rows get their stats).
+// (name, class, level) (two Priest "Fortify" spells differ by level).
+// Missing ones are inserted, existing ones get the seed's values and typed
+// stats, nothing is ever deleted and ids never change. It runs in one
+// transaction and a second run changes nothing. A missing seed file leaves
+// the table alone (only untyped rows get their stats).
 func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
 	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
@@ -175,8 +176,9 @@ func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
 		}
 	}()
 
-	// A database may hold a (name, class, level) twice (an older, uncleaned catalog): only
-	// the oldest row is kept in step with the seed, the others are left alone.
+	// A database may hold a (name, class, level) twice (an older, uncleaned
+	// catalog): only the oldest row is kept in step with the seed, the others
+	// are left alone.
 	update, err := tx.PrepareContext(ctx, `
 		UPDATE spells SET school = ?, sphere = ?, casting_time = ?, range = ?,
 			duration = ?, area_of_effect = ?, components = ?, saving_throw = ?, description = ?, stats = ?

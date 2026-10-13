@@ -77,11 +77,40 @@ floor). No file → skip this section.
 - If an agent hit the limit anyway, don't re-prompt blindly: wait for the reset, then prompt it to
   continue from its last committed state.
 
+## Token budget: yours to own
+
+You are responsible for the token consumption of the whole fleet (yourself included) and for the
+usage windows (5-hour and 7-day). Treat tokens as the scarcest resource after the user's attention,
+and keep refining the process to spend fewer of them. The biggest costs, in order:
+
+1. **Your own context.** Every turn re-sends it, including turns triggered by background events.
+   Suggest a restart (handoff via the ledger) after every batch of PRs, about every 2 hours, or as
+   soon as your context feels long. Don't wait for the user to notice.
+2. **Wake-ups that do nothing.** Run **one** PR watcher for all open PRs (see "PR watch"), kill the
+   previous one before arming a new one, and never leave duplicate or stale loops running. A turn
+   that only says "already handled" is waste.
+3. **Opus sessions.** Sonnet is the default for developers and reviewers. Opus only where "Model
+   selection" requires it, and never just to file a small follow-up.
+4. **Agent sessions in general.** Each one starts cold and rereads the docs and the code. Reuse a
+   developer for its rework rounds. Keep one developer at a time unless running two saves wall-clock
+   time the user actually needs. Close idle agents once their PR is merged.
+5. **Mechanical work goes through Bash, not agents:** merging `origin/<db>` into a clean branch,
+   restacking, running the gate (`validate`, e2e) after a sync, pushing, opening PRs.
+
+Keep briefs short (about 30 lines; point at the bead instead of copying it) and PR bodies concise.
+Small follow-ups found while running (a one-line bug, a tooling chore) go to the user as a one-line
+question; file them yourself with their OK instead of spawning a scoper.
+
+**Retro at every handoff.** Before a restart, add a short "Retro" to the ledger: what cost the most
+this session and the one process change you propose. Propose changes to this file to the user as a
+small PR. The process is never done.
+
 ## Filing items: the scoper
 
 When the user says they need to file work (a request, a bug, an idea, an epic), or you discover work
-while running (a bug a developer or reviewer found, a follow-up), **don't write the item yourself and
-don't ask a developer to**: spawn a `scoper`.
+while running (a bug a developer or reviewer found, a follow-up), **don't ask a developer to write the item**: spawn a
+`scoper`, except for small follow-ups, which you file yourself once the user agrees (see "Token
+budget").
 1. A brief file `<wt>/briefs/scope-<slug>.md`: `mode: interactive` (the user asked) or `autonomous`
    (you found it), the **initial description** verbatim (the user's words, or the evidence you hold),
    related items/PRs, and `report: <wt>/reports/scoper-<slug>.md`.
@@ -113,6 +142,10 @@ unfinished agent's results.
 `<main>` is yours and **always on `<db>`, synced to origin**: never commit feature work there, never
 leave it on a feature branch. At session start and after every merge: `git switch <db> && git pull
 --ff-only`. All feature work happens in worktrees.
+
+Your shell stays in `<main>`: never `cd` into a worktree or the ledger folder (use `git -C`,
+absolute paths, or a subshell). The git stash stack is shared with every worktree: when pulling over
+local tracker changes, use a tagged stash entry and apply it by sha, never a bare `git stash pop`.
 
 ## 1. Build the queue
 
@@ -233,17 +266,26 @@ in progress), then prompt the developer to resolve it. If the parent needed rewo
 branched, prompt the child's developer to merge the updated parent branch first. Two levels deep at
 most.
 
+Notes from practice: when a parent PR squash-merges, GitHub's native stack restacks the child and
+retargets it to `<db>` by itself; reset the child's worktree to `origin/<child>` and rerun the gate. A
+stack with no child PR yet needs `gh stack rebase` run from the child's worktree (from `<main>`,
+`gh stack` can't tell stacks apart: "<db> belongs to multiple stacks").
+
 ## PR watch (never rely on remembering to check)
 
-For every open PR keep a watcher running with `run_in_background`, e.g. a loop polling `gh pr view
-<n> --json state,mergeStateStatus` every 5 minutes that exits as soon as the PR is `MERGED`,
-`CLOSED` or `CONFLICTING`.
-- On MERGED: `git fetch origin`, `git switch <db> && git pull --ff-only`, close the item in the
-  tracker and sync, restack stacked children, prompt developers whose branch is now behind ("merge
-  `origin/<db>`"), start the items that were blocked, `git worktree remove` the worktree and close
-  the tab.
+Keep **exactly one** watcher running with `run_in_background` for all open PRs: a loop that fetches,
+polls every 5 minutes, and exits on the first event: a PR `MERGED` or `CLOSED`, `CONFLICTING`, a PR
+branch **behind** its base (`git rev-list --count origin/<head>..origin/<base>` > 0; GitHub still
+shows such a PR as mergeable), or a CI run finishing. Kill the previous watcher before arming a new
+one, and re-arm it after handling each event.
+- On MERGED: `git fetch origin`, update `<main>` (see section 0), close the item in the tracker and
+  sync, check every open branch (next bullet), start the items that were blocked, `git worktree
+  remove` the worktree and close the tab.
+- On BEHIND: `git merge-tree --write-tree origin/<db> <branch>`. If clean and its developer is idle
+  with a clean tree, merge `origin/<db>` yourself (Bash), run the gate, push. Otherwise prompt the
+  developer.
 - On CONFLICT: prompt the developer to merge `origin/<db>`.
-- Don't end a turn without a watcher or an agent wait running while something is in flight.
+- Don't end a turn without the watcher or an agent wait running while something is in flight.
 
 ## When `<db>` moves
 

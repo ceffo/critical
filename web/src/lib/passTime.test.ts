@@ -38,7 +38,7 @@ describe("previewRounds", () => {
     ["8", 480],
   ])("%s h → %d", (text, want) => expect(previewRounds(text)).toBe(want));
 
-  it.each(["", "abc", "-1", "1.5.2"])("%j is not a number", (text) =>
+  it.each(["", "abc", "-1", "1.5.2", "0", "0,0"])("%j is not a positive number", (text) =>
     expect(previewRounds(text)).toBeNull(),
   );
 });

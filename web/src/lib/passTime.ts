@@ -7,11 +7,12 @@ const ROUNDS_PER_HOUR = 60;
 
 /**
  * The "= 90 rounds" preview of typed hours ("1.5" or "1,5"), rounded down like the server;
- * null when the text is not a number. 0 is returned as is: the server refuses it with a message.
+ * null when the text is not a positive number (the form shows its hint). Under one round (0.01 h)
+ * gives 0: the server refuses it with its message.
  */
 export function previewRounds(text: string): number | null {
   const hours = parseDecimal(text);
-  if (Number.isNaN(hours)) return null;
+  if (Number.isNaN(hours) || hours <= 0) return null;
   return Math.floor(hours * ROUNDS_PER_HOUR + 1e-9);
 }
 

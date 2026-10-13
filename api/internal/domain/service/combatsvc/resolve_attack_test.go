@@ -105,7 +105,7 @@ var attackCases = []attackCase{
 	},
 	{
 		name: "long sword +2 vs AC 5 at STR 12 misses on 5", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 5, d100: 50,
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: false, wantMargin: -1,
 	},
@@ -120,7 +120,7 @@ var attackCases = []attackCase{
 	},
 	{
 		name: "long sword +2 vs AC 5 at effective STR 18 misses on 4", weapon: longsword, mods: strMods(18),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 4, d100: 50,
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 4, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(18, 1), modWeapon(longsword)},
 		wantEffThac0: 10, wantHit: false, wantMargin: -1,
 	},
@@ -138,7 +138,7 @@ var attackCases = []attackCase{
 	},
 	{
 		name: "short bow +2 with a +3 arrow at DEX 17 misses on 3", weapon: shortbow, mods: strMods(18), ammo: &arrows3Left1,
-		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 2}, d20: 3, d100: 50,
+		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 2}, d20: 3, d100: 50, sides: 6, dmg: []int{4},
 		wantMods:     []combatsvc.Modifier{modDex(17, 2), modWeapon(shortbow), modAmmo(arrows3Left1)},
 		wantEffThac0: 6, wantHit: false, wantMargin: -1,
 	},
@@ -205,7 +205,7 @@ var attackCases = []attackCase{
 			WeaponID: "longsword", TargetAC: 5,
 			Situational: &combatsvc.Situational{Value: -4},
 		},
-		d20: 9, d100: 50,
+		d20: 9, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword), modSituational("Situational", -4)},
 		wantEffThac0: 15, wantHit: false, wantMargin: -1,
 	},
@@ -215,7 +215,7 @@ var attackCases = []attackCase{
 			WeaponID: "longsword", TargetAC: 5,
 			Situational: &combatsvc.Situational{Value: 0, Label: "nothing"},
 		},
-		d20: 5, d100: 50,
+		d20: 5, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: false, wantMargin: -1,
 	},
@@ -247,7 +247,7 @@ var attackCases = []attackCase{
 	{
 		// Eff. THAC0 11 vs AC -10 needs 21, so a 20 misses.
 		name: "natural 20 is plain THAC0 math: misses when 21 is needed", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: -10}, d20: 20, d100: 50,
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: -10}, d20: 20, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: false, wantMargin: -1,
 	},
@@ -308,8 +308,19 @@ func TestResolveAttack(t *testing.T) {
 				assert.Zero(t, res.BaseDamage)
 				assert.Empty(t, res.DamageTerms)
 			}
+			// The damage dice are rolled and stored on every attack, a miss too.
+			sum := 0
+			for _, d := range tt.dmg {
+				sum += d
+			}
+			require.NotNil(t, res.Rolled)
+			assert.Equal(t, sum, res.Rolled.Total)
 			require.Len(t, f.entries, 1)
 			assert.Equal(t, actionlog.KindAttack, f.entries[0].Kind)
+			p := payloadOf(t, f.entries[0].Payload)
+			require.Contains(t, p, "rolled")
+			assert.Equal(t, float64(sum), p["rolled"].(map[string]any)["total"])
+			assert.Contains(t, p, "critRow")
 		})
 	}
 }
@@ -464,6 +475,7 @@ func TestResolveAttack_MeleeIsLoggedWithoutSnapshot(t *testing.T) {
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 	f.dice.EXPECT().RollD20().Return(3)
 	f.dice.EXPECT().RollD100().Return(50)
+	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 
 	_, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
@@ -557,6 +569,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 		f.dice.EXPECT().RollD20().Return(3)
 		f.dice.EXPECT().RollD100().Return(50)
+		f.dice.EXPECT().RollDie(8).Return(5)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
 		res, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
 		assert.Nil(t, res)

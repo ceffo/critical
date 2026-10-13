@@ -26,6 +26,10 @@ type SVC interface {
 	// AdjustSave sets the adjustment of the latest save entry and returns
 	// the recomputed save (same d20); recorded as an audited amend.
 	AdjustSave(ctx context.Context, characterID, entryID int64, adj SaveAdjustment) (*RollResult, error)
+	// AdjustAttackAC corrects the target AC of the latest attack entry and
+	// returns the recomputed attack (same d20, d100 and damage dice, no ammo
+	// spent); recorded as an audited amend.
+	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*RollResult, error)
 	ListWeapons(ctx context.Context) ([]Weapon, error)
 	// GetCritTable returns the house crit table (the placeholder default
 	// until edited); SetCritTable replaces it after validating it.
@@ -77,7 +81,7 @@ type Rules interface {
 }
 
 // Log is the slice of the action log attacks and saves are recorded into;
-// AmendLatest corrects the latest save after an adjustment.
+// AmendLatest corrects the latest save (adjustment) or attack (target AC).
 type Log interface {
 	actionlog.Recorder
 	actionlog.LatestAmender

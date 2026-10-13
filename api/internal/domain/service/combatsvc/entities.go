@@ -125,6 +125,21 @@ type RollResult struct {
 	TargetAC   int
 	TargetSize TargetSize
 	Ammo       *AmmoUse
+	// Rolled is what the damage is computed from, rolled with every attack
+	// (even a miss) so a target AC correction never rolls again. Nil on
+	// saves and on attacks logged before corrections existed.
+	Rolled *RolledDamage
+	// RollCritRow is the crit-table row the crit d100 falls in, looked up
+	// when rolling whatever the outcome (nil like Rolled).
+	RollCritRow *CritRow
+	// RollCritPlaceholder: RollCritRow came from the unedited default table.
+	RollCritPlaceholder bool
+	// PreviousTargetAC, PreviousHit and PreviousCrit are the target AC and
+	// outcome before the latest target AC correction (nil when never
+	// corrected).
+	PreviousTargetAC *int
+	PreviousHit      *bool
+	PreviousCrit     *bool
 	// Saving-throw context (empty for attacks): the category and the
 	// adjustment set after the roll (0: none), with its optional reason.
 	SaveCategory     SaveCategory
@@ -133,6 +148,22 @@ type RollResult struct {
 
 	// LogEntryID is the action-log entry recording the attack or save.
 	LogEntryID int64
+}
+
+// RolledDamage is the damage side of an attack as rolled, before the crit:
+// the weapon dice and every buff, weapon and strength term. The damage of a
+// hit is ((Dice × SpellsBuff) + WeaponBuff) × (crit × BuffMultipliers) +
+// StrengthBonus + BonusDamage.
+type RolledDamage struct {
+	Dice            string
+	Total           int // the dice total
+	SpellsBuff      float64
+	WeaponBuff      int
+	BuffMultipliers float64
+	StrengthBonus   int
+	BonusDamage     int
+	// Terms are the damage terms in formula order, without the crit term.
+	Terms []DamageTerm
 }
 
 // WeaponKind separates melee weapons from missile weapons.

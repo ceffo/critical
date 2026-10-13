@@ -100,6 +100,13 @@ that replace the result card; voided ones included; ±20 max): combatsvc recompu
 the stored d20 and modifiers (the d20 never changes) and `actionlogsvc.AmendLatest` records an
 audited amend carrying the new summary and payload (plus `previousPassed`/`previousAdjustment`).
 Not a save → 400, voided or not the latest → 409. The log exposes `effectivePayload`.
+`POST /api/roll/attack/{id}/adjust` `{targetAc}` corrects the target AC of the attack when it is the
+latest roll (same rules, AC within ±20). Every attack rolls its damage dice, even a miss, and its
+payload keeps them with every damage term (`rolled`) and the crit-table row its d100 fell in
+(`critRow`); combatsvc `settle` recomputes hit, margin, crit and damage from those and the new AC
+(no die rolled, no ammo spent, a later crit-table edit changes nothing) and the amend carries
+`previousTargetAc`/`previousHit`/`previousCrit`. Voiding still restores the ammo (snapshots are the
+original entry's). An attack logged without `rolled` (before this existed) → 400, void and reroll.
 A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
 later entries with the same full key (a +1 arrow does not block voiding a +3 shot).
 
@@ -171,6 +178,8 @@ auto-miss, no auto-hit. To-hit modifiers, each listed in `Modifiers`:
 - Buff `to_hit` effects, one per buff; the situational modifier entered at the table.
 
 A weapon that fires ammunition (`ammo_kind`) needs an ammo item of that kind; the attack spends one.
+Dice order: d20, crit d100, then the damage dice, rolled on **every** attack (a miss shows no
+damage, but the target AC may be corrected after the roll).
 
 ## Damage Formula
 

@@ -41,7 +41,7 @@ func rollSave(t *testing.T, f *fixture, d20, saveBonus int) *actionlog.Entry {
 // amends makes the log's AmendLatest apply fn to e and append the amend to
 // e's corrections, like actionlogsvc does once its checks pass.
 func amends(f *fixture, e *actionlog.Entry) {
-	f.log.EXPECT().AmendLatest(mock.Anything, charID, e.ID, actionlog.KindSave, mock.Anything).RunAndReturn(
+	f.log.EXPECT().AmendLatest(mock.Anything, charID, e.ID, e.Kind, mock.Anything).RunAndReturn(
 		func(_ context.Context, _ int64, _ int64, _ actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
 			a, err := fn(*e)
 			if err != nil {

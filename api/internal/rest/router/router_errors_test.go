@@ -168,6 +168,9 @@ var endpoints = []endpoint{
 	{"POST roll/save/{id}/adjust", "POST", "/api/roll/save/7/adjust", `{"adjustment":4,"reason":"Gaia fire"}`, func(m *mocksSet, err error) {
 		m.cmb.On("AdjustSave", anyArgs(4)...).Return(nil, err)
 	}},
+	{"POST roll/attack/{id}/adjust", "POST", "/api/roll/attack/7/adjust", `{"targetAc":7}`, func(m *mocksSet, err error) {
+		m.cmb.On("AdjustAttackAC", anyArgs(4)...).Return(nil, err)
+	}},
 }
 
 func do(h http.Handler, method, path, body string) *httptest.ResponseRecorder {
@@ -228,6 +231,9 @@ func TestSpecialSentinels(t *testing.T) {
 		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
 		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #7"}`},
 		{"adjust not a save", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7 is attack, not save", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #7 is attack, not save"}`},
+		{"attack AC not latest", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this attack and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this attack and roll again"}`},
+		{"attack AC voided", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #7"}`},
+		{"attack AC not an attack", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7 is save, not attack", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #7 is save, not attack"}`},
 		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"error":"ctx: slot already used: 2"}`},
 	}
 	for _, c := range cases {

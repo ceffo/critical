@@ -31,6 +31,8 @@ export interface LogCorrection {
   source?: string;
   /** Set on amends that replaced the payload (an adjusted save). */
   payload?: unknown;
+  /** Set on note amends. */
+  note?: string;
   createdAt: string;
 }
 
@@ -45,6 +47,8 @@ export interface LogEntry {
   /** After amends; 0 when voided. */
   effectiveHpDelta: number;
   effectiveSummary: string;
+  /** The latest note amend's note; "" when none. */
+  note: string;
   status: LogStatus;
   payload: unknown;
   /** The latest amend's payload when one set it (an adjusted save), else `payload`. */

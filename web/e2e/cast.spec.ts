@@ -179,7 +179,7 @@ test.describe("Strength received twice on the sheet's STR 12", () => {
   });
 });
 
-test("voiding a cast after Next Round is refused with a message naming the later entry", async ({
+test("after Next Round the cast offers no void until Next Round is popped", async ({
   page,
   stack,
 }) => {
@@ -191,19 +191,16 @@ test("voiding a cast after Next Round is refused with a message naming the later
   await expect(logEntry(page, "Round 0 → 1")).toBeVisible();
 
   const entry = logEntry(page, "Cast Stoneskin");
-  await entry.getByRole("button", { name: "Void" }).click();
-  await entry.getByRole("button", { name: "Confirm" }).click();
-  const alert = page.getByRole("alert");
-  await expect(alert).toContainText(
-    "void blocked: a later entry changed the same state",
-  );
-  await expect(alert).toContainText("void it first");
-  await expect(entry).not.toHaveAttribute("data-status", "voided");
+  await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
+  await snap(page, "void-not-offered-after-next-round");
+
+  await voidEntry(page, "Round 0 → 1");
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
-  await snap(page, "void-blocked-after-next-round");
+  await voidEntry(page, "Cast Stoneskin");
+  await expect(buffBadge(page, "Stoneskin")).toHaveCount(0);
 });
 
-test("a long rest is logged and blocks voiding an earlier cast", async ({
+test("a long rest is logged; popping it, then the cast, walks the slots back", async ({
   page,
   stack,
 }) => {
@@ -216,12 +213,12 @@ test("a long rest is logged and blocks voiding an earlier cast", async ({
   await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
   await expect(logEntry(page, "Long rest: 1 spell slots")).toBeVisible();
 
-  const entry = logEntry(page, "Cast Haste");
-  await entry.getByRole("button", { name: "Void" }).click();
-  await entry.getByRole("button", { name: "Confirm" }).click();
-  await expect(page.getByRole("alert")).toContainText("Long rest");
+  await expect(logEntry(page, "Cast Haste").getByRole("button", { name: "Void" })).toHaveCount(0);
+  await snap(page, "void-not-offered-after-long-rest");
+  await voidEntry(page, "Long rest: 1 spell slots");
+  await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
+  await voidEntry(page, "Cast Haste");
   await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
-  await snap(page, "void-blocked-after-long-rest");
 });
 
 // Spells that share a name: the receive request carries each spell's own key.
@@ -307,7 +304,7 @@ test.describe("same-named spells", () => {
   });
 });
 
-test("a cast buff expired by Time passes: voiding the cast is blocked by the fast-forward", async ({
+test("a cast buff expired by Time passes: pop the fast-forward, then the cast", async ({
   page,
   stack,
 }) => {
@@ -324,12 +321,10 @@ test("a cast buff expired by Time passes: voiding the cast is blocked by the fas
   await expect(buffBadge(page, "Haste")).toHaveCount(0);
 
   const entry = logEntry(page, "Cast Haste");
-  await entry.getByRole("button", { name: "Void" }).click();
-  await entry.getByRole("button", { name: "Confirm" }).click();
-  const alert = page.getByRole("alert");
-  await expect(alert).toContainText("void blocked");
-  await expect(alert).toContainText("Time passed: 1 h (60 rd)");
-  await expect(entry).not.toHaveAttribute("data-status", "voided");
+  await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
+  await snap(page, "void-cast-not-offered-under-pass-time");
+  await voidEntry(page, "Time passed: 1 h (60 rd)");
+  await expect(buffBadge(page, "Haste")).toBeVisible();
+  await voidEntry(page, "Cast Haste");
   await expect(buffBadge(page, "Haste")).toHaveCount(0);
-  await snap(page, "void-cast-blocked-by-pass-time");
 });

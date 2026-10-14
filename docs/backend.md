@@ -50,8 +50,9 @@ id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON
 -- action_snapshots: before/after state an entry changed, one row per state key
 id, action_id, state_key, before_state JSON, after_state JSON
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
-id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, created_at
--- (an amend's payload, when set, replaces the entry's: latest amend with a payload wins)
+id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, created_at
+-- (each amend field, when set, replaces the entry's: latest amend that set it wins; the log's
+--  amend now sets only note, post-roll adjustments set summary + payload)
 
 -- hp_events: legacy HP ledger, carried into action_log by migration 007; no longer written
 
@@ -77,29 +78,40 @@ effective `hp_delta` over `action_log` (latest amend wins, voided entries count 
 
 **HP cap (critical-qki.38).** User, 2026-10-13: *"a player cannot go above its max hp. period. max hp
 grows when leveling up only"*. There are no temporary HP. Current HP ≤ `hp_max` means the ledger
-total (SUM of effective `hp_delta`) is ≤ 0, and the rule is enforced when an entry is written, never
-by rewriting the ledger (`actionlog.CapHeal`, steps HP-1…HP-5):
+total (SUM of effective `hp_delta`) is ≤ 0. The rule is enforced when an entry is written, never
+by rewriting the ledger (`actionlog.CapHeal`):
 - HP-1: `actionlogsvc.Record` caps every positive `hp_delta`, whatever the service, at the gap to
-  max inside the recording transaction: the entry stores `min(heal, -total)`, and its payload gets
+  max inside the recording transaction. The entry stores `min(heal, -total)`, and its payload gets
   `hpRequested` / `hpApplied`. The Combat Log shows "+12 requested, capped at max HP".
 - HP-2: at full HP the heal is still logged, as 0, with the same breakdown.
-- HP-3: an amend of an `hp_change` is checked against the total without that entry: a heal is
-  capped the same way (the amend's payload carries the breakdown, `{}` otherwise); damage that would
-  still leave HP above max (a later heal was capped against the old value) is refused (409,
-  `ErrAboveMaxHP`).
-- HP-4: voiding damage is refused (409, `ErrAboveMaxHP`) when the HP it gives back would put HP
-  above max; void or amend the later heal first. Voiding a heal is always allowed.
 - HP-5: `hpsvc.GetState` shows `min(hp_max, hp_max + total)`, a guard for rows logged before the cap.
 
 Damage is unchanged. Today the only positive deltas come from `POST /api/hp/event` (manual heal:
-cure spells and potions are entered there) and `POST /api/log/{id}/amend`; casts, item uses and
-rests change no HP. ADR 0007 (HP ledger, critical-qki.37) will take this rule over.
+cure spells and potions are entered there); casts, item uses and rests change no HP. No amend or
+void can push HP over max either: amends change only the note, and a pop removes the newest entry,
+which returns the total to what it was before that entry (≤ 0). ADR 0007 (HP ledger,
+critical-qki.37) will take this rule over.
+
+**The log is a stack (critical-qki.38).** User, 2026-10-14: *"no amending values. just the note..
+can only pop elements"*, for every entry kind:
+- `POST /api/log/{id}/amend {"note"}` sets the entry's note (any kind, trimmed, ≤ 500 characters,
+  `""` clears it). It is an `amend` correction with only `note` set (migration 014); a body with any
+  other field (`delta`, `source`, …) is a 400. A note changes no value, and the entry stays
+  `active` (only a value amend makes it `amended`). The log exposes `note`.
+- `POST /api/log/{id}/void` pops: only the newest non-voided entry, any kind, else 409
+  `ErrNotLatest` naming the entry on top. Its snapshots are restored as before, so popping in order
+  walks the state back one step at a time. `POST /api/hp/undo` pops the top when it is an HP change
+  (409 when another kind is on top, a no-op on an empty log).
+- Value amends written before qki.38 (`hp_delta`/`summary` on an `hp_change`) stay valid and still
+  count. Each effective value (HP delta, summary, payload) comes from the latest amend that set it.
+  The post-roll adjustments (save adjustment, attack target AC, below) are value amends on the
+  latest roll and are unchanged.
 
 **Recording actions.** A service that changes state records an `actionlog.NewEntry` through the
 action log's `Record` inside the same `domain.TxRunner.InTx` as its state write, with
 `Snapshots` of the state it changed. It registers an `actionlog.Restorer` for its state key on the
-action log in the composition root, so voiding the entry restores the "before" state. A void is
-refused (409) while a later non-voided entry changed the same state key. buffsvc records every
+action log in the composition root, so voiding (popping) the entry restores the "before" state.
+buffsvc records every
 buff change (activate, edit, absorb, dismiss) under the `buffs` key and Next Round under `buffs`
 + `round`, stamped with the round it ends; `buffSvc.Restorers()` is registered in composition.
 Time passes (`POST /api/round/pass-time {hours}`, `buffsvc.PassTime`) is one `time_passed` entry
@@ -139,8 +151,7 @@ and the crit-table row it fell in (`critRow`); combatsvc `settle` recomputes hit
 `rolledTargetAc`/`rolledHit`/`rolledCrit` (the AC and outcome as rolled, kept across corrections, so the line
 reads rolled → now; dropped when the AC is back to the rolled one, which reads as rolled). Voiding still restores the ammo (snapshots are the
 original entry's). An attack logged without `rolled` (before this existed) → 400, void and reroll.
-A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
-later entries with the same full key (a +1 arrow does not block voiding a +3 shot).
+A state key `family:id` (for example `items:arrows_plus3`) is restored by the Restorer of its family.
 
 ## Key Go Structs
 

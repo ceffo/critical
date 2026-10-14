@@ -1,6 +1,8 @@
 import { test, expect, snap } from "./fixtures";
 import {
+  buffBadge,
   currentHp,
+  voidEntry,
   expectNoReload,
   logEntry,
   markNoReload,
@@ -8,31 +10,80 @@ import {
   recordHp,
 } from "./helpers";
 
-test("amending a damage entry corrects current HP and shows the original", async ({
+// The log is a stack with note-only amends (critical-qki.38). User,
+// 2026-10-14: "no amending values. just the note.. can only pop elements".
+test("a note on a heal and on a buff entry changes no value and no HP", async ({
+  page,
+  stack,
+}) => {
+  const res = await fetch(`${stack.apiUrl}/api/buffs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "e2e Haste", duration: 5, charges: 0, effects: {} }),
+  });
+  expect(res.ok).toBe(true);
+  await openDashboard(page);
+  const max = await currentHp(page);
+  await markNoReload(page);
+  await recordHp(page, "damage", 6, "e2e orc axe");
+  await recordHp(page, "heal", 4, "e2e cure light");
+  await expect.poll(() => currentHp(page)).toBe(max - 2);
+
+  for (const [text, note] of [
+    ["e2e cure light", "e2e DM: rolled 4 on the d8"],
+    ["Activated e2e Haste", "e2e DM: from the scroll"],
+  ]) {
+    const entry = logEntry(page, text);
+    await entry.getByRole("button", { name: "Note" }).click();
+    const form = entry.getByRole("form", { name: "Entry note" });
+    await expect(form.getByRole("spinbutton")).toHaveCount(0); // no value field
+    await form.getByLabel("Note").fill(note);
+    await form.getByRole("button", { name: "Save" }).click();
+    await expect(entry.getByTestId("log-note")).toHaveText(note);
+    await expect(entry).not.toContainText("Amended");
+  }
+  await expect(logEntry(page, "e2e cure light").getByTestId("log-delta")).toHaveText("+4");
+  await expect.poll(() => currentHp(page)).toBe(max - 2);
+  await expect(buffBadge(page, "e2e Haste")).toBeVisible();
+
+  await expectNoReload(page);
+  await snap(page, "notes");
+});
+
+test("only the newest entry offers Void: damage 10, heal 4, pop the heal, pop the damage", async ({
   page,
 }) => {
   await openDashboard(page);
-  const before = await currentHp(page);
-  await markNoReload(page);
+  const max = await currentHp(page);
+  await recordHp(page, "damage", 10, "e2e ogre club");
+  await recordHp(page, "heal", 4, "e2e potion");
+  await expect.poll(() => currentHp(page)).toBe(max - 6);
 
-  await recordHp(page, "damage", 3, "e2e orc axe");
-  await expect.poll(() => currentHp(page)).toBe(before - 3);
+  const damage = logEntry(page, "e2e ogre club");
+  const heal = logEntry(page, "e2e potion");
+  await expect(damage.getByRole("button", { name: "Void" })).toHaveCount(0);
+  await expect(heal.getByRole("button", { name: "Void" })).toHaveCount(1);
+  await snap(page, "void-only-on-top");
 
-  const entry = logEntry(page, "e2e orc axe");
-  await entry.getByRole("button", { name: "Amend" }).click();
-  const form = entry.getByRole("form", { name: "Amend entry" });
-  await form.getByLabel("HP change (− damage, + heal)").fill("-7");
-  await form.getByLabel("Source").fill("e2e orc axe (crit)");
-  await form.getByRole("button", { name: "Save" }).click();
+  await voidEntry(page, "e2e potion");
+  await expect.poll(() => currentHp(page)).toBe(max - 10);
+  await voidEntry(page, "e2e ogre club");
+  await expect.poll(() => currentHp(page)).toBe(max);
+  await snap(page, "popped-in-order");
+});
 
-  await expect.poll(() => currentHp(page)).toBe(before - 7);
-  const amended = logEntry(page, "e2e orc axe (crit)");
-  await expect(amended).toContainText("Amended");
-  await expect(amended).toContainText("was −3");
-  await expect(amended.getByTestId("log-delta")).toHaveText("−7");
-
-  await expectNoReload(page);
-  await snap(page, "amended");
+test("at full HP a heal is logged as 0; undo pops it and HP stays at max", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const max = await currentHp(page);
+  await recordHp(page, "heal", 7, "e2e potion at full");
+  const entry = logEntry(page, "e2e potion at full");
+  await expect(entry.getByTestId("log-delta")).toHaveText("0");
+  await page.getByRole("button", { name: "Undo last HP change" }).click();
+  await expect(entry).toHaveAttribute("data-status", "voided");
+  await expect.poll(() => currentHp(page)).toBe(max);
+  await snap(page, "undo-heal-at-full");
 });
 
 test("voiding an entry restores current HP and marks it voided", async ({
@@ -54,7 +105,7 @@ test("voiding an entry restores current HP and marks it voided", async ({
   await expect(entry).toHaveAttribute("data-status", "voided");
   await expect(entry).toContainText("Voided");
   await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
-  await expect(entry.getByRole("button", { name: "Amend" })).toHaveCount(0);
+  await expect(entry.getByRole("button", { name: "Note" })).toHaveCount(0);
 
   await expectNoReload(page);
   await snap(page, "voided");

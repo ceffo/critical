@@ -132,7 +132,7 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
   await expect(roll).toBeEnabled();
 });
 
-test("a later shot with other arrows does not block voiding an earlier shot", async ({
+test("an earlier shot can only be voided once the later shot is popped", async ({
   page,
 }) => {
   await openAttack(page);
@@ -151,9 +151,15 @@ test("a later shot with other arrows does not block voiding an earlier shot", as
   await form.getByRole("button", { name: "Roll Attack" }).click();
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
 
+  // The log is a stack (critical-qki.38): only the newest entry offers Void.
+  const earlier = logEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
+  await expect(earlier.getByRole("button", { name: "Void" })).toHaveCount(0);
+  await snap(page, "void-earlier-shot-not-offered");
+
+  await voidEntry(page, "Short Bow +2 (Arrows +1) vs AC 7");
+  await expect.poll(() => selectedAmmoCount(page)).toBe(plus1);
   await voidEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
   await ammo.selectOption("arrows_plus3");
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus3);
   await snap(page, "void-earlier-shot");

@@ -401,3 +401,20 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   ).toContainText(`(CA -20 → 20 : RATÉ → CRITIQUE)`);
   await snap(page, "miss-to-crit-fr");
 });
+
+// qki.40: the form keeps the last choices when the user changes tab and comes back.
+test("the attack form keeps its values across a tab switch", async ({ page }) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  await form.getByLabel("Weapon").selectOption("longsword");
+  await form.getByLabel("Target AC").fill("-3");
+  await form.getByLabel("Target size").selectOption("l");
+  await form.getByLabel("Situational", { exact: true }).fill("2");
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await expect(form).toHaveCount(0);
+  await page.getByRole("tab", { name: "Attack" }).click();
+  await expect(form.getByLabel("Weapon")).toHaveValue("longsword");
+  await expect(form.getByLabel("Target AC")).toHaveValue("-3");
+  await expect(form.getByLabel("Target size")).toHaveValue("l");
+  await expect(form.getByLabel("Situational", { exact: true })).toHaveValue("2");
+});

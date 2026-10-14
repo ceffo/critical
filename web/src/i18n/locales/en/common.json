@@ -422,7 +422,8 @@
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
       "receivedHeading": "{{name}} cast on you, caster level {{casterLevel}}",
-      "orbAttack": "Gem {{gem}} spent ({{left}} left). d20 {{d20}}, needs {{needed}} against AC {{ac}} (no critical).",
+      "orbNeeds": "Needs {{needed}} or more against AC {{ac}} (THAC0 {{thac0}}), no critical.",
+      "orbGem": "Gem spent: {{gem}} ({{left}} left)",
       "orbHit": "The orb hits",
       "orbMiss": "The orb misses",
       "onYou": "On you",

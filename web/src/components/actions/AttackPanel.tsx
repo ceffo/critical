@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRollStore } from "@/stores/roll";
 import { useItemsStore } from "@/stores/items";
+import { useAttackFormStore } from "@/stores/attackForm";
 import { useTableStore } from "@/stores/table";
 import { captionClass, fieldClass } from "@/components/dashboard/fieldStyles";
 import { CritTableEditor } from "@/components/actions/CritTableEditor";
@@ -19,12 +20,14 @@ export function AttackPanel() {
   const { t } = useTranslation();
   const { rollAttack, rolling } = useRollStore();
   const { weapons, items, fetchWeapons } = useItemsStore();
-  const [weaponId, setWeaponId] = useState("");
-  const [ammoId, setAmmoId] = useState("");
-  const [targetAc, setTargetAc] = useState("5");
-  const [size, setSize] = useState<TargetSize>("sm");
-  const [sitValue, setSitValue] = useState("0");
-  const [sitLabel, setSitLabel] = useState("");
+  const { form, set } = useAttackFormStore();
+  const { weaponId, ammoId, targetAc, size, sitValue, sitLabel } = form;
+  const setWeaponId = (weaponId: string) => set({ weaponId });
+  const setAmmoId = (ammoId: string) => set({ ammoId });
+  const setTargetAc = (targetAc: string) => set({ targetAc });
+  const setSize = (size: TargetSize) => set({ size });
+  const setSitValue = (sitValue: string) => set({ sitValue });
+  const setSitLabel = (sitLabel: string) => set({ sitLabel });
 
   useEffect(() => {
     fetchWeapons().catch((e: unknown) =>

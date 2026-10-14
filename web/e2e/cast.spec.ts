@@ -49,7 +49,9 @@ test("casting Stoneskin shows the result card, adds the buff; voiding gives the 
     "Stoneskin (level 4), cast at caster level 15",
   );
   await expect(card.getByTestId("cast-buff")).toContainText("On you");
-  await expect(card.getByTestId("cast-charges")).toContainText("1d4+level/2");
+  await expect(card.getByTestId("cast-charges")).toContainText(/1d4\+\d+/);
+  await expect(card.getByTestId("cast-text")).toBeHidden(); // folded by default
+  await card.getByText("Spell text").click();
   await expect(card.getByTestId("cast-text")).toBeVisible();
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await expect(level4.getByTestId("remaining-4")).toHaveText("0 / 1");
@@ -71,7 +73,7 @@ test("casting Fireball rolls 10d6 and notes the save for the DM", async ({
   await page.getByRole("button", { name: "Cast Fireball" }).click();
 
   const damage = resultCard(page).getByTestId("cast-damage");
-  await expect(damage).toContainText("1 × (min(level,10))d6");
+  await expect(damage).toContainText("1 × 10d6");
   const total = Number(
     await damage.getByTestId("cast-damage-total").textContent(),
   );

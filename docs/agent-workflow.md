@@ -126,6 +126,15 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   it implements (code comment and commit). Each numbered step gets one named test that fails on the
   old code. Dice mocks give every roll a distinct value and assert exact call counts, so a reused
   or missing roll fails the test. If code and design disagree, stop and report; don't pick one.
+- **No tracker ids in the code.** No bead/ticket id (`critical-…`, `qki.…`) in source, comments, test
+  names, strings, config or seeds. Code says what it does and why; the link to the work item lives in
+  the commit message and the PR only. (User rule, 2026-10-14.)
+- **No special case per spell, item or buff.** Model the mechanic generically and drive it from the
+  data (`seeds/spell_effects.json`, item behaviour): no `if id == "<some_spell>"` branches and no
+  per-entity constants in services. If a mechanic is missing, add it as a general effect kind.
+- **No presentation text from the backend.** The API returns structured data; wording, formatting and
+  formulas for display are built in the frontend (i18n). No `fmt.Sprintf`/`Fprintf` to compose
+  user-facing text in Go (error messages excepted).
 - Rules items end the report with a `RULES TRACE` block: `ADR step -> code location -> test name`.
   A step with no test is not done.
 
@@ -152,6 +161,8 @@ Reviewer checklist, in priority order:
    committed; bob constraints respected.
 7. **Seeds**: `seeds/*.json` and the loader stay valid and idempotent.
 8. **Tests** prove the criteria and would fail on the old code; table-driven rules, mocks for ports.
+9. **Hard rules for implementers** above, incl. no tracker ids in code, no per-entity special
+   cases, no presentation text built in Go. Each violation is at least medium; design is not style.
 
 Severity examples: critical = wrong game math in a main flow, ledger/state corruption, broken
 migration on existing data; high = game logic in the frontend; medium = architecture-layer

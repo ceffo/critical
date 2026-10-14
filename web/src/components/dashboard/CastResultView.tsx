@@ -4,12 +4,47 @@ import { Badge } from "@/components/ui/badge";
 import type { CastResult, DiceRoll } from "@/types/spells";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { captionClass } from "./fieldStyles";
 
-/** "2d4+1: [3, 1] = 6": the formula, every die and the total, as the API rolled them. */
-function rollText(r: DiceRoll): string {
-  const dice = r.dice.length > 0 ? ` [${r.dice.map((d) => d.value).join(", ")}]` : "";
-  return `${r.formula}${dice} = ${r.total}`;
+/** One die, as a small tile. */
+function Die({ sides, value }: { sides: number; value: number }) {
+  return (
+    <span
+      title={`d${sides}`}
+      className="inline-flex min-w-7 items-center justify-center rounded-md border bg-muted/60 px-1.5 py-0.5 font-mono text-sm font-semibold tabular-nums"
+    >
+      {value}
+    </span>
+  );
+}
+
+/** The dice actually rolled, resolved ("10d6", "1d4+7"): the seed formula ("(min(level,10))d6") stays out of the UI. */
+function resolved(r: DiceRoll): string {
+  if (r.dice.length === 0) return String(r.total);
+  const counts = new Map<number, number>();
+  for (const d of r.dice) counts.set(d.sides, (counts.get(d.sides) ?? 0) + 1);
+  const mod = r.total - r.dice.reduce((sum, d) => sum + d.value, 0);
+  const dice = [...counts].map(([sides, n]) => `${n}d${sides}`).join("+");
+  return mod === 0 ? dice : `${dice}${formatSigned(mod)}`;
+}
+
+/**
+ * A roll from its structured fields: the formula, every die, the flat modifier (total minus the dice)
+ * and the total. Wraps, never truncates.
+ */
+function RollView({ roll: r }: { roll: DiceRoll }) {
+  const mod = r.total - r.dice.reduce((sum, d) => sum + d.value, 0);
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5 font-mono text-sm">
+      <span className="break-all text-muted-foreground" title={r.formula}>{resolved(r)}</span>
+      {r.dice.map((d, i) => (
+        <Die key={i} sides={d.sides} value={d.value} />
+      ))}
+      {mod !== 0 && r.dice.length > 0 && <span>{formatSigned(mod)}</span>}
+      <span className="font-bold">= {r.total}</span>
+    </span>
+  );
 }
 
 /** An effect label; unknown keys fall back to "key value". */
@@ -52,7 +87,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
                 <dt className={captionClass}>{t("result.cast.rounds")}</dt>
                 <dd className="font-mono" data-testid="cast-rounds">
-                  {rollText(b.durationRoll)}
+                  <RollView roll={b.durationRoll} />
                 </dd>
               </div>
             )}
@@ -64,7 +99,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
                     : t("result.cast.charges")}
                 </dt>
                 <dd className="font-mono" data-testid="cast-charges">
-                  {rollText(b.chargesRoll)}
+                  <RollView roll={b.chargesRoll} />
                 </dd>
               </div>
             )}
@@ -72,7 +107,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
                 <dt className={captionClass}>{t("result.cast.strGain")}</dt>
                 <dd className="font-mono" data-testid="cast-str-gain">
-                  {rollText(b.strGainRoll)}
+                  <RollView roll={b.strGainRoll} />
                 </dd>
               </div>
             )}
@@ -93,34 +128,47 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
 
       {r.orb && (
-        <div className="flex flex-col gap-1" data-testid="cast-orb">
-          <div className="text-sm">
-            {t("result.cast.orbAttack", {
-              gem: r.orb.gem,
-              left: r.orb.remaining,
-              d20: r.orb.d20Roll,
+        <div className="flex flex-col gap-2 rounded-lg border p-2.5" data-testid="cast-orb">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span
+              data-testid="cast-orb-verdict"
+              className={cn(
+                "text-3xl font-black uppercase",
+                r.orb.hit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
+              )}
+            >
+              {r.orb.hit ? t("result.cast.orbHit") : t("result.cast.orbMiss")}
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-sm">
+              <span className={captionClass}>d20</span>
+              <Die sides={20} value={r.orb.d20Roll} />
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {t("result.cast.orbNeeds", {
               needed: r.orb.targetACNeeded,
               ac: r.orb.targetAc,
+              thac0: r.orb.effectiveThac0,
             })}
-          </div>
-          <Badge variant={r.orb.hit ? "default" : "secondary"} data-testid="cast-orb-verdict">
-            {r.orb.hit ? t("result.cast.orbHit") : t("result.cast.orbMiss")}
-          </Badge>
+          </p>
+          <p className="text-sm" data-testid="cast-orb-gem">
+            {t("result.cast.orbGem", { gem: r.orb.gem, left: r.orb.remaining })}
+          </p>
         </div>
       )}
 
       {r.damage && (
         <div className="flex flex-col gap-2" data-testid="cast-damage">
-          <div className="flex items-end justify-between gap-2">
-            <div className="text-sm">
-              {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.dice })}
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div className="min-w-0 text-sm">
+              {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.rolls[0] ? resolved(r.damage.rolls[0]) : r.damage.dice })}
               {r.damage.rounds > 1 && <>, {t("result.cast.damageRounds", { rounds: r.damage.rounds })}</>}
               {r.damage.type && <> · {r.damage.type}</>}
             </div>
             <div className="text-right">
               <div className={captionClass}>{t("result.cast.damage")}</div>
               <div
-                className="font-mono text-4xl font-black tabular-nums leading-none"
+                className="font-mono text-5xl font-black tabular-nums leading-none text-red-600 dark:text-red-400"
                 data-testid="cast-damage-total"
               >
                 {r.damage.total}
@@ -128,11 +176,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             </div>
           </div>
           {r.damage.rolls.length > 0 && (
-            <ul className="flex flex-col gap-0.5 font-mono text-sm">
+            <ul className="flex flex-col gap-1">
               {r.damage.rolls.map((roll, i) => (
-                <li key={i} className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">{t("result.cast.instance", { n: i + 1 })}</span>
-                  <span className="min-w-0 truncate">{rollText(roll)}</span>
+                <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-xs text-muted-foreground">{t("result.cast.instance", { n: i + 1 })}</span>
+                  <RollView roll={roll} />
                 </li>
               ))}
             </ul>
@@ -176,12 +224,12 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </div>
       )}
       {r.spell?.description && (
-        <div>
-          <div className={captionClass}>{t("result.cast.text")}</div>
-          <p className="whitespace-pre-line text-sm text-muted-foreground" data-testid="cast-text">
+        <details className="group rounded-lg border px-2.5 py-1.5">
+          <summary className={cn(captionClass, "cursor-pointer select-none")}>{t("result.cast.text")}</summary>
+          <p className="mt-1.5 whitespace-pre-line text-sm text-muted-foreground" data-testid="cast-text">
             {r.spell.description}
           </p>
-        </div>
+        </details>
       )}
     </div>
   );

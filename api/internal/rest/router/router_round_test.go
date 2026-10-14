@@ -94,3 +94,41 @@ func TestSavedBuffs_Wire(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, do(h, "DELETE", "/api/buffs/saved/x", "").Code)
 	})
 }
+
+func TestRoundPassTime(t *testing.T) {
+	t.Run("returns Next Round's shape plus the rounds that passed", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().PassTime(mock.Anything, int64(1), 1.5).Return(
+			[]buffsvc.BuffEffect{{ID: "a", Name: "Long", Duration: 10}},
+			[]buffsvc.BuffEffect{{ID: "b", Name: "Short"}},
+			90, 0, nil)
+		rec := do(h, "POST", "/api/round/pass-time", `{"hours":1.5}`)
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"roundNumber":0,"roundsPassed":90,
+			"activeBuffs":[{"id":"a","name":"Long","charges":0,"duration":10,"effects":{},"note":""}],
+			"expiredBuffs":[{"id":"b","name":"Short","charges":0,"duration":0,"effects":{},"note":""}]}`,
+			rec.Body.String())
+	})
+
+	for name, body := range map[string]string{
+		"missing hours": `{}`,
+		"not json":      `nope`,
+		"not a number":  `{"hours":"1.5"}`,
+	} {
+		t.Run("400 on "+name, func(t *testing.T) {
+			h, _ := newRouter(t) // the service is never called
+			rec := do(h, "POST", "/api/round/pass-time", body)
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Contains(t, rec.Body.String(), `"error"`)
+		})
+	}
+
+	t.Run("400 with the service's message when hours give no round", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().PassTime(mock.Anything, int64(1), 0.01).
+			Return(nil, nil, 0, 0, fmt.Errorf("%w: 0.01 hours is less than one round (1 minute)", domain.ErrInvalidInput))
+		rec := do(h, "POST", "/api/round/pass-time", `{"hours":0.01}`)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "less than one round")
+	})
+}

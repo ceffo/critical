@@ -4,6 +4,7 @@ import { Pencil, Plus, Shield, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatRoundsLeft } from "@/lib/passTime";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
 import {
@@ -100,7 +101,7 @@ function BuffBadge({
             className="font-mono text-xs text-muted-foreground"
             data-testid="buff-rounds"
           >
-            {t("buffs.rounds", { count: b.duration })}
+            {formatRoundsLeft(t, b.duration)}
           </span>
         )}
         {b.charges > 0 && (

@@ -53,6 +53,10 @@ func IsRoll(k Kind) bool {
 	return false
 }
 
+// KindTimePassed is a fast-forward of game time in hours (buffsvc PassTime):
+// timed buffs count down, the round counter goes to 0.
+const KindTimePassed Kind = "time_passed"
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

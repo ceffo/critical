@@ -30,6 +30,7 @@ interface BuffsStore {
   advanceRound: () => Promise<RoundAdvanceResponse>;
   resetRound: () => Promise<RoundAdvanceResponse>;
   setRound: (round: number) => Promise<RoundAdvanceResponse>;
+  passTime: (hours: number) => Promise<RoundAdvanceResponse>;
 }
 
 export const useBuffsStore = create<BuffsStore>((set) => ({
@@ -82,6 +83,11 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
   setRound: async (round) => {
     const res = await roundApi.setRound(round);
     set({ round: res.roundNumber });
+    return res;
+  },
+  passTime: async (hours) => {
+    const res = await roundApi.passTime(hours);
+    set({ round: res.roundNumber, buffs: res.activeBuffs ?? [] });
     return res;
   },
 }));

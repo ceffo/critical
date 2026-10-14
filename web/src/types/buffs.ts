@@ -62,9 +62,14 @@ export interface RoundResponse {
   round: number;
 }
 
-/** POST /api/round/advance, POST /api/round/reset, PUT /api/round (the last two never expire buffs) */
+/**
+ * POST /api/round/advance, POST /api/round/reset, PUT /api/round (the last two never expire buffs),
+ * POST /api/round/pass-time.
+ */
 export interface RoundAdvanceResponse {
   roundNumber: number;
   activeBuffs: BuffEffect[];
   expiredBuffs: BuffEffect[];
+  /** pass-time only: the rounds the hours gave. */
+  roundsPassed?: number;
 }

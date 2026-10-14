@@ -244,3 +244,30 @@ test.describe("same-named spells", () => {
     await snap(page, "receive-more");
   });
 });
+
+test("a cast buff expired by Time passes: voiding the cast is blocked by the fast-forward", async ({
+  page,
+  stack,
+}) => {
+  await prepare(stack.apiUrl, ["haste"]);
+  await openSpells(page);
+  await page.getByRole("button", { name: "Cast Haste" }).click();
+  await expect(buffBadge(page, "Haste")).toBeVisible();
+
+  const form = page.getByRole("form", { name: "⏩ Time passes" });
+  await page.getByRole("button", { name: "⏩ Time passes" }).click();
+  await form.getByLabel("Hours that pass").fill("1");
+  await form.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByRole("status")).toContainText("Expired buffs: Haste");
+  await expect(buffBadge(page, "Haste")).toHaveCount(0);
+
+  const entry = logEntry(page, "Cast Haste");
+  await entry.getByRole("button", { name: "Void" }).click();
+  await entry.getByRole("button", { name: "Confirm" }).click();
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("void blocked");
+  await expect(alert).toContainText("Time passed: 1 h (60 rd)");
+  await expect(entry).not.toHaveAttribute("data-status", "voided");
+  await expect(buffBadge(page, "Haste")).toHaveCount(0);
+  await snap(page, "void-cast-blocked-by-pass-time");
+});

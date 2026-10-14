@@ -46,9 +46,21 @@ function restText(e: LogEntry, t: TFunction): string | null {
   return t("log.rest", { slots: p.slotsReset, items: p.itemsRefilled?.length ?? 0 });
 }
 
-/** Payload of buff_change / round_advance entries (buffsvc logPayload). */
+/** Payload of buff_change / round_* / time_passed entries (buffsvc logPayload). */
 export interface BuffLogPayload {
-  action: "activate" | "edit" | "absorb" | "dismiss" | "next_round" | "end_combat" | "set_round" | "save_template" | "delete_template";
+  action:
+    | "activate"
+    | "edit"
+    | "absorb"
+    | "dismiss"
+    | "next_round"
+    | "end_combat"
+    | "set_round"
+    | "pass_time"
+    | "save_template"
+    | "delete_template";
+  /** pass_time: the hours typed (rounds = the rounds that passed). */
+  hours?: number;
   buff?: string;
   rounds?: number;
   charges?: number;
@@ -64,7 +76,13 @@ export interface BuffLogPayload {
 }
 
 function buffPayload(e: LogEntry): BuffLogPayload | null {
-  if (e.kind !== "buff_change" && e.kind !== "round_advance" && e.kind !== "round_reset" && e.kind !== "round_set") {
+  if (
+    e.kind !== "buff_change" &&
+    e.kind !== "round_advance" &&
+    e.kind !== "round_reset" &&
+    e.kind !== "round_set" &&
+    e.kind !== "time_passed"
+  ) {
     return null;
   }
   const p = e.payload as Partial<BuffLogPayload> | null;
@@ -211,6 +229,17 @@ export function entryText(e: LogEntry, t: TFunction): string {
       return t("log.buff.dismiss", { buff });
     case "next_round": {
       const text = t("log.buff.nextRound", {
+        from: p.fromRound ?? 0,
+        to: p.toRound ?? 0,
+      });
+      return p.expired && p.expired.length > 0
+        ? `${text} ${t("log.buff.expired", { names: p.expired.join(", ") })}`
+        : text;
+    }
+    case "pass_time": {
+      const text = t("log.buff.passTime", {
+        hours: p.hours ?? 0,
+        rounds: t("buffs.rounds", { count: p.rounds ?? 0 }),
         from: p.fromRound ?? 0,
         to: p.toRound ?? 0,
       });

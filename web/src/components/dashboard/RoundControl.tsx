@@ -4,18 +4,23 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
+import { previewRounds } from "@/lib/passTime";
+import { parseDecimal } from "@/lib/decimalInput";
 import { captionClass, fieldClass } from "./fieldStyles";
 
-type Mode = "idle" | "confirmEnd" | "setting";
+type Mode = "idle" | "confirmEnd" | "setting" | "passing";
 
-/** Round number + Next Round, End combat (confirmed) and Set round. */
+/** Round number + Next Round, End combat (confirmed), Set round and Time passes (hours, previewed). */
 export function RoundControl() {
   const { t } = useTranslation();
   const round = useBuffsStore((s) => s.round);
-  const { nextRound, endCombat, setRound, busy } = useTableStore();
+  const { nextRound, endCombat, setRound, passTime, busy } = useTableStore();
   const [mode, setMode] = useState<Mode>("idle");
   const [draft, setDraft] = useState("");
+  const [hours, setHours] = useState("");
   const valid = /^\d+$/.test(draft.trim());
+  // Display only: the server converts and refuses 0 rounds with its own message.
+  const preview = previewRounds(hours);
   return (
     <div
       className="flex items-center gap-3"
@@ -52,7 +57,56 @@ export function RoundControl() {
             >
               {t("round.set")}
             </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              disabled={busy}
+              title={t("round.passTimeHint")}
+              onClick={() => {
+                setHours("");
+                setMode("passing");
+              }}
+            >
+              {t("round.passTime")}
+            </Button>
           </div>
+        )}
+        {mode === "passing" && (
+          <form
+            className="flex items-center gap-1 text-xs"
+            aria-label={t("round.passTime")}
+            onSubmit={async (ev) => {
+              ev.preventDefault();
+              if (preview === null) return;
+              if (await passTime(parseDecimal(hours))) setMode("idle");
+            }}
+          >
+            <input
+              className={`${fieldClass} !w-16 font-mono tabular-nums`}
+              type="text"
+              inputMode="decimal"
+              placeholder={t("round.passTimePlaceholder")}
+              aria-label={t("round.passTimeLabel")}
+              title={t("round.passTimeHint")}
+              value={hours}
+              onChange={(ev) => setHours(ev.target.value)}
+              autoFocus
+            />
+            <span>{t("round.passTimeHours")}</span>
+            <span className="font-mono tabular-nums text-muted-foreground" data-testid="pass-time-preview">
+              {preview === null
+                ? hours.trim() === ""
+                  ? ""
+                  : t("round.passTimeInvalid")
+                : t("round.passTimePreview", { count: preview })}
+            </span>
+            <Button size="xs" type="submit" disabled={busy || preview === null}>
+              {t("round.confirm")}
+            </Button>
+            <Button size="xs" variant="ghost" type="button" onClick={() => setMode("idle")}>
+              {t("round.cancel")}
+            </Button>
+          </form>
         )}
         {mode === "confirmEnd" && (
           <div className="flex items-center gap-1 text-xs" role="alertdialog" aria-label={t("round.endCombat")}>

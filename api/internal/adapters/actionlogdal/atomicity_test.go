@@ -159,7 +159,9 @@ func TestVoid_RestoresBeforeState(t *testing.T) {
 	assert.Equal(t, 0, round(t, db, charID))
 }
 
-func TestVoid_BlockedByLaterEntryOnSameState(t *testing.T) {
+// Pop-only (critical-qki.38): any older entry is refused, even when the newer
+// one touches other state; popping newest first unwinds the state in order.
+func TestVoid_OnlyTheLatestEntry(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	log := newLog(t, db, actionlogdal.New(db))
@@ -171,19 +173,23 @@ func TestVoid_BlockedByLaterEntryOnSameState(t *testing.T) {
 	require.NoError(t, err)
 	second, err := advance(ctx, db, log, rs, charID, 1, 2)
 	require.NoError(t, err)
-
-	_, err = log.Void(ctx, charID, first)
-	require.ErrorIs(t, err, actionlogsvc.ErrVoidBlocked)
-	assert.Contains(t, err.Error(), "void it first")
-	assert.Equal(t, 2, round(t, db, charID))
-
-	// Voiding the later one first, then the earlier one, unwinds both.
-	_, err = log.Void(ctx, charID, second)
+	scratch, err := log.Record(ctx, actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindHPChange, Summary: "scratch", HPDelta: -2})
 	require.NoError(t, err)
-	assert.Equal(t, 1, round(t, db, charID))
-	_, err = log.Void(ctx, charID, first)
-	require.NoError(t, err)
+
+	for _, older := range []int64{first, second} {
+		_, err = log.Void(ctx, charID, older)
+		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+		assert.Contains(t, err.Error(), `void "scratch" (round 4) first`)
+	}
+	assert.Equal(t, 2, round(t, db, charID), "nothing restored")
+
+	for i, id := range []int64{scratch, second, first} {
+		_, err = log.Void(ctx, charID, id)
+		require.NoError(t, err, "pop %d", i)
+	}
 	assert.Equal(t, 0, round(t, db, charID))
+	_, err = log.Void(ctx, charID, first)
+	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
 }
 
 func TestVoid_AtomicWithRestore(t *testing.T) {
@@ -220,7 +226,8 @@ func TestVoid_AtomicWithRestore(t *testing.T) {
 	}
 }
 
-func TestAmendAndVoid_HPTotal(t *testing.T) {
+// Note-only amend and pop-only void on real SQLite (critical-qki.38).
+func TestAmendNoteAndPop_HPTotal(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	log := newLog(t, db, actionlogdal.New(db))
@@ -240,17 +247,17 @@ func TestAmendAndVoid_HPTotal(t *testing.T) {
 	rec(3, "potion")
 	assert.Equal(t, -5, total())
 
-	e, err := log.Amend(ctx, charID, orc, actionlogsvc.Amendment{HPDelta: -12})
+	e, err := log.Amend(ctx, charID, orc, actionlogsvc.Amendment{Note: " axe, not club "})
 	require.NoError(t, err)
-	assert.Equal(t, -9, total())
-	assert.Equal(t, actionlog.StatusAmended, e.Status())
-	assert.Equal(t, -8, e.HPDelta)
-	assert.Equal(t, "orc", e.EffectiveSummary())
+	assert.Equal(t, "axe, not club", e.Note())
+	assert.Equal(t, -8, e.EffectiveHPDelta())
+	assert.Equal(t, actionlog.StatusActive, e.Status())
+	assert.Equal(t, -5, total(), "a note changes no HP")
 
 	ok, err := log.VoidLatest(ctx, charID, actionlog.KindHPChange)
 	require.NoError(t, err)
 	assert.True(t, ok)
-	assert.Equal(t, -12, total(), "potion voided")
+	assert.Equal(t, -8, total(), "potion popped")
 
 	_, err = log.Void(ctx, charID, orc)
 	require.NoError(t, err)
@@ -258,7 +265,7 @@ func TestAmendAndVoid_HPTotal(t *testing.T) {
 
 	_, err = log.Void(ctx, charID, orc)
 	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
-	_, err = log.Amend(ctx, charID, orc, actionlogsvc.Amendment{HPDelta: -1})
+	_, err = log.Amend(ctx, charID, orc, actionlogsvc.Amendment{Note: "late"})
 	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
 
 	ok, err = log.VoidLatest(ctx, charID, actionlog.KindHPChange)

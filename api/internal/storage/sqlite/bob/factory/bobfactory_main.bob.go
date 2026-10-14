@@ -65,6 +65,7 @@ func (f *Factory) fromExistingActionCorrection(ctx context.Context, m *models.Ac
 	o.Summary = func() null.Val[string] { return m.Summary }
 	o.CreatedAt = func() time.Time { return m.CreatedAt }
 	o.Payload = func() null.Val[string] { return m.Payload }
+	o.Note = func() null.Val[string] { return m.Note }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))

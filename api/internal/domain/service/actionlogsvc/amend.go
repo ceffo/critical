@@ -2,21 +2,25 @@ package actionlogsvc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// Amend records an amend correction on an hp_change entry. The original entry
-// stays as it was; its effective delta and summary become the amendment's.
-// The new delta is checked against max HP using the total without this entry
-// (HP-3): a heal is capped at the gap (the amend's payload carries requested vs
-// applied), and damage that would still leave HP above max (a later heal was
-// capped against the old value) is refused with ErrAboveMaxHP.
+// maxNoteLen bounds a note (runes).
+const maxNoteLen = 500
+
+// Amend sets the note of entry id, any kind (critical-qki.38). User,
+// 2026-10-14: "no amending values. just the note". The note is the only thing
+// an amend changes: HP, summary, payload and state are untouched. "" clears it.
 func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error) {
+	note := strings.TrimSpace(a.Note)
+	if utf8.RuneCountInString(note) > maxNoteLen {
+		return nil, fmt.Errorf("%w: a note is at most %d characters", domain.ErrInvalidInput, maxNoteLen)
+	}
 	var out *actionlog.Entry
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		e, err := s.dal.GetEntry(ctx, characterID, id)
@@ -26,32 +30,10 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 		if e.Status() == actionlog.StatusVoided {
 			return fmt.Errorf("%w: #%d", ErrAlreadyVoided, id)
 		}
-		if e.Kind != actionlog.KindHPChange {
-			return fmt.Errorf("%w: #%d is %s, only %s entries can be amended", ErrNotAmendable, id, e.Kind, actionlog.KindHPChange)
-		}
-		total, err := s.dal.HPTotal(ctx, characterID)
-		if err != nil {
-			return fmt.Errorf("hp total: %w", err)
-		}
-		others := total - e.EffectiveHPDelta()
-		delta := actionlog.CapHeal(others, a.HPDelta)
-		if over := others + delta; delta <= 0 && over > 0 {
-			return fmt.Errorf("%w: this would put HP %d above max, void or amend the later heal first", ErrAboveMaxHP, over)
-		}
-		// Always set a payload so a breakdown from an earlier heal value does
-		// not outlive it (the latest amend with a payload wins).
-		payload := json.RawMessage(`{}`)
-		if a.HPDelta > 0 {
-			if payload, err = actionlog.WithHPBreakdown(payload, actionlog.HPBreakdown{Requested: a.HPDelta, Applied: delta}); err != nil {
-				return err
-			}
-		}
 		if err := s.dal.InsertCorrection(ctx, actionlog.Correction{
 			ActionID: id,
 			Kind:     actionlog.CorrectionAmend,
-			HPDelta:  &delta,
-			Summary:  strings.TrimSpace(a.Summary),
-			Payload:  payload,
+			Note:     &note,
 		}); err != nil {
 			return fmt.Errorf("insert amend: %w", err)
 		}

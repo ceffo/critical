@@ -10,8 +10,8 @@ VALUES (?, ?, ?, ?)
 ;
 
 -- InsertCorrection
-INSERT INTO action_corrections (action_id, kind, hp_delta, summary, payload)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO action_corrections (action_id, kind, hp_delta, summary, payload, note)
+VALUES (?, ?, ?, ?, ?, ?)
 ;
 
 -- GetAction
@@ -42,7 +42,7 @@ LIMIT ?
 -- ListCorrectionsFrom
 SELECT action_corrections.id, action_corrections.action_id, action_corrections.kind,
        action_corrections.hp_delta, action_corrections.summary, action_corrections.payload,
-       action_corrections.created_at /*:time.Time:notnull*/
+       action_corrections.note, action_corrections.created_at /*:time.Time:notnull*/
 FROM action_corrections
 JOIN action_log ON action_log.id = action_corrections.action_id
 WHERE action_log.character_id = ? AND action_corrections.action_id >= ?
@@ -58,17 +58,6 @@ WHERE action_log.character_id = ? AND action_snapshots.action_id >= ?
 ORDER BY action_snapshots.id
 ;
 
--- LatestActiveActionID
-SELECT id
-FROM action_log
-WHERE character_id = ? AND kind = ?
-  AND NOT EXISTS (
-    SELECT 1 FROM action_corrections WHERE action_corrections.action_id = action_log.id AND action_corrections.kind = 'void'
-  )
-ORDER BY id DESC
-LIMIT 1
-;
-
 -- LatestActionID
 SELECT id
 FROM action_log
@@ -77,15 +66,13 @@ ORDER BY id DESC
 LIMIT 1
 ;
 
--- LaterActionTouchingState
-SELECT later.id
-FROM action_log AS later
-JOIN action_snapshots AS ls ON ls.action_id = later.id
-WHERE later.character_id = ? AND later.id > ?
-  AND ls.state_key IN (SELECT state_key FROM action_snapshots WHERE action_id = ?)
+-- LatestActiveActionID
+SELECT id
+FROM action_log
+WHERE character_id = ?
   AND NOT EXISTS (
-    SELECT 1 FROM action_corrections WHERE action_corrections.action_id = later.id AND action_corrections.kind = 'void'
+    SELECT 1 FROM action_corrections WHERE action_corrections.action_id = action_log.id AND action_corrections.kind = 'void'
   )
-ORDER BY later.id
+ORDER BY id DESC
 LIMIT 1
 ;

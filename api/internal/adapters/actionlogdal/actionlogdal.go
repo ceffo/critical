@@ -74,6 +74,9 @@ func (d *DAL) InsertCorrection(ctx context.Context, c actionlog.Correction) erro
 	if len(c.Payload) > 0 {
 		row.Payload = null.From(string(c.Payload))
 	}
+	if c.Note != nil {
+		row.Note = null.From(*c.Note)
+	}
 	if _, err := queries.InsertCorrection([]queries.InsertCorrection_ActionCorrections{row}).Exec(ctx, d.exec(ctx)); err != nil {
 		return fmt.Errorf("insert action_corrections: %w", err)
 	}
@@ -129,9 +132,10 @@ func (d *DAL) ListActiveEntries(ctx context.Context, characterID int64, kind act
 	return entries, nil
 }
 
-// LatestActiveID returns the newest non-voided entry of kind.
-func (d *DAL) LatestActiveID(ctx context.Context, characterID int64, kind actionlog.Kind) (int64, bool, error) {
-	id, err := queries.LatestActiveActionID(characterID, string(kind)).One(ctx, d.exec(ctx))
+// LatestActiveID returns the newest non-voided entry, any kind (the top of
+// the stack).
+func (d *DAL) LatestActiveID(ctx context.Context, characterID int64) (int64, bool, error) {
+	id, err := queries.LatestActiveActionID(characterID).One(ctx, d.exec(ctx))
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, false, nil
 	}
@@ -151,19 +155,6 @@ func (d *DAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Ki
 		return 0, false, fmt.Errorf("latest action_log: %w", err)
 	}
 	return id, true, nil
-}
-
-// LaterEntryTouchingState returns the first non-voided entry after id with a
-// snapshot under one of id's state keys.
-func (d *DAL) LaterEntryTouchingState(ctx context.Context, characterID, id int64) (int64, bool, error) {
-	later, err := queries.LaterActionTouchingState(characterID, id, id).One(ctx, d.exec(ctx))
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, false, nil
-	}
-	if err != nil {
-		return 0, false, fmt.Errorf("later action_log: %w", err)
-	}
-	return later, true, nil
 }
 
 // hpTotalSQL sums effective HP deltas: a voided entry counts 0, an amended one
@@ -235,6 +226,9 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 		}
 		if v, ok := c.Payload.Get(); ok {
 			corr.Payload = json.RawMessage(v)
+		}
+		if v, ok := c.Note.Get(); ok {
+			corr.Note = &v
 		}
 		e.Corrections = append(e.Corrections, corr)
 	}

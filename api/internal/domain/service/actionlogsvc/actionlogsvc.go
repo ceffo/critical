@@ -23,8 +23,8 @@ type SVC interface {
 	Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error)
 	actionlog.LatestAmender
 	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
-	// VoidLatest voids the newest non-voided entry of kind; ok is false when
-	// there is none.
+	// VoidLatest pops the newest non-voided entry when it is of kind; ok is
+	// false when the log has none, ErrNotLatest when it is another kind.
 	VoidLatest(ctx context.Context, characterID int64, kind actionlog.Kind) (ok bool, err error)
 	// HPTotal is the SUM of effective HP deltas, computed in storage.
 	HPTotal(ctx context.Context, characterID int64) (int, error)
@@ -47,12 +47,10 @@ type DAL interface {
 	GetEntry(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
 	ListEntries(ctx context.Context, characterID int64, limit int) ([]actionlog.Entry, error)
 	ListActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
-	LatestActiveID(ctx context.Context, characterID int64, kind actionlog.Kind) (id int64, ok bool, err error)
+	// LatestActiveID returns the newest non-voided entry, any kind.
+	LatestActiveID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
 	// LatestID returns the newest entry of kind, voided or not.
 	LatestID(ctx context.Context, characterID int64, kind actionlog.Kind) (id int64, ok bool, err error)
-	// LaterEntryTouchingState returns the first non-voided entry after id
-	// that has a snapshot under one of id's state keys.
-	LaterEntryTouchingState(ctx context.Context, characterID, id int64) (laterID int64, ok bool, err error)
 	HPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
@@ -62,11 +60,10 @@ type Rounds interface {
 	GetRound(ctx context.Context, characterID int64) (int, error)
 }
 
-// Amendment is the new value of an hp_change entry. An empty Summary keeps
-// the current one.
+// Amendment is the only thing an amend may change: the entry's note (any
+// kind; "" clears it). User, 2026-10-14: "no amending values. just the note".
 type Amendment struct {
-	HPDelta int
-	Summary string
+	Note string
 }
 
 type service struct {

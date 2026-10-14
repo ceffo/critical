@@ -33,6 +33,7 @@ type ActionCorrection struct {
 	Summary   null.Val[string] `db:"summary" `
 	CreatedAt time.Time        `db:"created_at" `
 	Payload   null.Val[string] `db:"payload" `
+	Note      null.Val[string] `db:"note" `
 
 	R actionCorrectionR `db:"-" `
 }
@@ -63,7 +64,7 @@ type actionCorrectionRLoaded struct {
 
 func buildActionCorrectionColumns(tableName string) actionCorrectionColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "action_id", "kind", "hp_delta", "summary", "created_at", "payload",
+		"id", "action_id", "kind", "hp_delta", "summary", "created_at", "payload", "note",
 	)
 
 	if tableName != "" {
@@ -80,6 +81,7 @@ func buildActionCorrectionColumns(tableName string) actionCorrectionColumns {
 		Summary:     buildActionCorrectionColumn(tableName, "summary"),
 		CreatedAt:   buildActionCorrectionColumn(tableName, "created_at"),
 		Payload:     buildActionCorrectionColumn(tableName, "payload"),
+		Note:        buildActionCorrectionColumn(tableName, "note"),
 	}
 }
 
@@ -93,6 +95,7 @@ type actionCorrectionColumns struct {
 	Summary    actionCorrectionColumn
 	CreatedAt  actionCorrectionColumn
 	Payload    actionCorrectionColumn
+	Note       actionCorrectionColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -145,10 +148,11 @@ type ActionCorrectionSetter struct {
 	Summary   omitnull.Val[string] `db:"summary" `
 	CreatedAt omit.Val[time.Time]  `db:"created_at" `
 	Payload   omitnull.Val[string] `db:"payload" `
+	Note      omitnull.Val[string] `db:"note" `
 }
 
 func (s ActionCorrectionSetter) SetColumns() []string {
-	vals := make([]string, 0, 7)
+	vals := make([]string, 0, 8)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -169,6 +173,9 @@ func (s ActionCorrectionSetter) SetColumns() []string {
 	}
 	if s.Payload.IsValue() || s.Payload.IsNull() {
 		vals = append(vals, "payload")
+	}
+	if s.Note.IsValue() || s.Note.IsNull() {
+		vals = append(vals, "note")
 	}
 	return vals
 }
@@ -194,6 +201,9 @@ func (s ActionCorrectionSetter) Overwrite(t *ActionCorrection) {
 	}
 	if s.Payload.IsValue() || s.Payload.IsNull() {
 		t.Payload = s.Payload.MustGetNull()
+	}
+	if s.Note.IsValue() || s.Note.IsNull() {
+		t.Note = s.Note.MustGetNull()
 	}
 }
 
@@ -262,6 +272,13 @@ func (s *ActionCorrectionSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.Payload.MustGetNull()).WriteSQL(ctx, w, d, start)
 			}))
+		case "note":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Note.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Note.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -273,7 +290,7 @@ func (s ActionCorrectionSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s ActionCorrectionSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 7)
+	exprs := make([]bob.Expression, 0, 8)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -324,6 +341,13 @@ func (s ActionCorrectionSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.Note.IsValue() || s.Note.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "note")...),
+			sqlite.Arg(s.Note),
+		}})
+	}
+
 	return exprs
 }
 
@@ -334,7 +358,7 @@ func actionCorrectionScanMapper(ctx context.Context, cols []string) (scan.Before
 		idx int
 		dst func(o *ActionCorrection) any
 	}
-	targets := make([]target, 0, 7)
+	targets := make([]target, 0, 8)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -351,6 +375,8 @@ func actionCorrectionScanMapper(ctx context.Context, cols []string) (scan.Before
 			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.CreatedAt }})
 		case "payload":
 			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.Payload }})
+		case "note":
+			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.Note }})
 		}
 	}
 
@@ -674,6 +700,7 @@ type actionCorrectionWhere[Q sqlite.Filterable] struct {
 	Summary   sqlite.WhereNullMod[Q, string]
 	CreatedAt sqlite.WhereMod[Q, time.Time]
 	Payload   sqlite.WhereNullMod[Q, string]
+	Note      sqlite.WhereNullMod[Q, string]
 	R         actionCorrectionWhereR[Q]
 }
 
@@ -691,6 +718,7 @@ func buildActionCorrectionWhere[Q sqlite.Filterable](cols actionCorrectionColumn
 		Summary:   sqlite.WhereNull[Q, string](cols.Summary.Expression),
 		CreatedAt: sqlite.Where[Q, time.Time](cols.CreatedAt.Expression),
 		Payload:   sqlite.WhereNull[Q, string](cols.Payload.Expression),
+		Note:      sqlite.WhereNull[Q, string](cols.Note.Expression),
 		R:         actionCorrectionWhereR[Q]{cols: cols},
 	}
 }

@@ -135,7 +135,7 @@ func TestLongRestBlocksVoidingAnEarlierCast(t *testing.T) {
 	require.Equal(t, 0, usedSlots(t, bs))
 
 	_, err = bs.Log.Void(ctx, id, haste.EntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrVoidBlocked)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
 	assert.Contains(t, err.Error(), "Long rest")
 	assert.Equal(t, 0, usedSlots(t, bs), "the slots stay as the rest left them")
 
@@ -159,7 +159,7 @@ func TestCastVoidsGoNewestFirst(t *testing.T) {
 	assert.Equal(t, 25, mm.Damage.Total, "5 missiles of 1d4+1 at max")
 
 	_, err = bs.Log.Void(ctx, id, fire.EntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrVoidBlocked)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
 	assert.Contains(t, err.Error(), "Cast Magic Missile")
 
 	_, err = bs.Log.Void(ctx, id, mm.EntryID)

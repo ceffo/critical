@@ -256,12 +256,14 @@ var beforeTestingInsertCorrection = func(context.Context, bob.Tx) ([]InsertCorre
 		HPDelta  null.Val[int64]
 		Summary  null.Val[string]
 		Payload  null.Val[string]
+		Note     null.Val[string]
 	}{{
 		ActionID: random_int64(nil),
 		Kind:     random_string(nil),
 		HPDelta:  null.From(random_int64(nil)),
 		Summary:  null.From(random_string(nil)),
 		Payload:  null.From(random_string(nil)),
+		Note:     null.From(random_string(nil)),
 	}}, nil
 }
 
@@ -275,12 +277,14 @@ func TestInsertCorrection(t *testing.T) {
 			HPDelta  null.Val[int64]
 			Summary  null.Val[string]
 			Payload  null.Val[string]
+			Note     null.Val[string]
 		}{{
 			ActionID: random_int64(nil),
 			Kind:     random_string(nil),
 			HPDelta:  null.From(random_int64(nil)),
 			Summary:  null.From(random_string(nil)),
 			Payload:  null.From(random_string(nil)),
+			Note:     null.From(random_string(nil)),
 		}})
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -301,12 +305,14 @@ func TestInsertCorrection(t *testing.T) {
 			HPDelta  null.Val[int64]
 			Summary  null.Val[string]
 			Payload  null.Val[string]
+			Note     null.Val[string]
 		}{{
 			ActionID: random_int64(nil),
 			Kind:     random_string(nil),
 			HPDelta:  null.From(random_int64(nil)),
 			Summary:  null.From(random_string(nil)),
 			Payload:  null.From(random_string(nil)),
+			Note:     null.From(random_string(nil)),
 		}})
 
 		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -796,8 +802,8 @@ func TestListCorrectionsFrom(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 7 {
-			t.Fatalf("expected %d columns, got %d", 7, len(columns))
+		if len(columns) != 8 {
+			t.Fatalf("expected %d columns, got %d", 8, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -824,8 +830,12 @@ func TestListCorrectionsFrom(t *testing.T) {
 			t.Fatalf("expected column %d to be %s, got %s", 5, "payload", columns[5])
 		}
 
-		if columns[6] != "created_at" {
-			t.Fatalf("expected column %d to be %s, got %s", 6, "created_at", columns[6])
+		if columns[6] != "note" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "note", columns[6])
+		}
+
+		if columns[7] != "created_at" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "created_at", columns[7])
 		}
 	})
 }
@@ -938,98 +948,6 @@ func TestListSnapshotsFrom(t *testing.T) {
 	})
 }
 
-var beforeTestingLatestActiveActionID = func(context.Context, bob.Tx) (int64, string, error) {
-	return random_int64(nil), random_string(nil), nil
-}
-
-func TestLatestActiveActionID(t *testing.T) {
-	t.Run("Base", func(t *testing.T) {
-		var sb strings.Builder
-
-		query := LatestActiveActionID(random_int64(nil), random_string(nil))
-
-		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
-			t.Fatal(err)
-		}
-
-		if diff := cmp.Diff(latestActiveActionIDSQL, sb.String()); diff != "" {
-			t.Fatalf("unexpected result (-got +want):\n%s", diff)
-		}
-	})
-
-	t.Run("Mod", func(t *testing.T) {
-		var sb strings.Builder
-
-		query := LatestActiveActionID(random_int64(nil), random_string(nil))
-
-		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
-			t.Fatal(err)
-		}
-
-		queryDiff, err := testutils.QueryDiff(latestActiveActionIDSQL, sb.String(), formatQuery)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if queryDiff != "" {
-			fmt.Println(sb.String())
-			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
-		}
-	})
-
-	t.Run("Scanning", func(t *testing.T) {
-		if testDB == nil {
-			t.Skip("skipping test, no DSN provided")
-		}
-
-		ctxTx, cancel := context.WithCancel(t.Context())
-		defer cancel()
-
-		tx, err := testDB.Begin(ctxTx)
-		if err != nil {
-			t.Fatalf("Error starting transaction: %v", err)
-		}
-
-		defer func() {
-			if err := tx.Rollback(ctxTx); err != nil {
-				t.Fatalf("Error rolling back transaction: %v", err)
-			}
-		}()
-
-		arg0, arg1, beforeHookErr := beforeTestingLatestActiveActionID(ctxTx, tx)
-		if beforeHookErr != nil {
-			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
-		}
-
-		query, args, err := bob.Build(ctxTx, sqlite.Select(LatestActiveActionID(arg0, arg1)))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		rows, err := tx.QueryContext(ctxTx, query, args...)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() {
-			if err := rows.Close(); err != nil {
-				t.Fatalf("Error closing rows: %v", err)
-			}
-		}()
-
-		columns, err := rows.Columns()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if len(columns) != 1 {
-			t.Fatalf("expected %d columns, got %d", 1, len(columns))
-		}
-
-		if columns[0] != "id" {
-			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
-		}
-	})
-}
-
 var beforeTestingLatestActionID = func(context.Context, bob.Tx) (int64, string, error) {
 	return random_int64(nil), random_string(nil), nil
 }
@@ -1122,21 +1040,21 @@ func TestLatestActionID(t *testing.T) {
 	})
 }
 
-var beforeTestingLaterActionTouchingState = func(context.Context, bob.Tx) (int64, int64, int64, error) {
-	return random_int64(nil), random_int64(nil), random_int64(nil), nil
+var beforeTestingLatestActiveActionID = func(context.Context, bob.Tx) (int64, error) {
+	return random_int64(nil), nil
 }
 
-func TestLaterActionTouchingState(t *testing.T) {
+func TestLatestActiveActionID(t *testing.T) {
 	t.Run("Base", func(t *testing.T) {
 		var sb strings.Builder
 
-		query := LaterActionTouchingState(random_int64(nil), random_int64(nil), random_int64(nil))
+		query := LatestActiveActionID(random_int64(nil))
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
 			t.Fatal(err)
 		}
 
-		if diff := cmp.Diff(laterActionTouchingStateSQL, sb.String()); diff != "" {
+		if diff := cmp.Diff(latestActiveActionIDSQL, sb.String()); diff != "" {
 			t.Fatalf("unexpected result (-got +want):\n%s", diff)
 		}
 	})
@@ -1144,13 +1062,13 @@ func TestLaterActionTouchingState(t *testing.T) {
 	t.Run("Mod", func(t *testing.T) {
 		var sb strings.Builder
 
-		query := LaterActionTouchingState(random_int64(nil), random_int64(nil), random_int64(nil))
+		query := LatestActiveActionID(random_int64(nil))
 
 		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
 			t.Fatal(err)
 		}
 
-		queryDiff, err := testutils.QueryDiff(laterActionTouchingStateSQL, sb.String(), formatQuery)
+		queryDiff, err := testutils.QueryDiff(latestActiveActionIDSQL, sb.String(), formatQuery)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1179,12 +1097,12 @@ func TestLaterActionTouchingState(t *testing.T) {
 			}
 		}()
 
-		arg0, arg1, arg2, beforeHookErr := beforeTestingLaterActionTouchingState(ctxTx, tx)
+		arg0, beforeHookErr := beforeTestingLatestActiveActionID(ctxTx, tx)
 		if beforeHookErr != nil {
 			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
 		}
 
-		query, args, err := bob.Build(ctxTx, sqlite.Select(LaterActionTouchingState(arg0, arg1, arg2)))
+		query, args, err := bob.Build(ctxTx, sqlite.Select(LatestActiveActionID(arg0)))
 		if err != nil {
 			t.Fatal(err)
 		}

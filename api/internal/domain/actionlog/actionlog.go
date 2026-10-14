@@ -134,9 +134,12 @@ const (
 	CorrectionVoid  CorrectionKind = "void"
 )
 
-// Correction is an audited change to an entry. An amend carries the new HP
-// delta (nil: unchanged), summary (empty: unchanged) and payload (empty:
-// unchanged); a void carries none of them.
+// Correction is an audited change to an entry. A note amend (the only kind
+// the log's amend writes since critical-qki.38) carries Note and nothing else.
+// A value amend carries the new HP delta (nil: unchanged), summary (empty:
+// unchanged) and payload (empty: unchanged): written by AmendLatest (post-roll
+// adjustments) and by hp_change amends logged before qki.38. A void carries
+// none of them.
 type Correction struct {
 	ID        int64
 	ActionID  int64
@@ -144,7 +147,14 @@ type Correction struct {
 	HPDelta   *int
 	Summary   string
 	Payload   json.RawMessage
+	Note      *string
 	CreatedAt time.Time
+}
+
+// changesValue is true for an amend that changes the entry's HP delta,
+// summary or payload (not a note-only amend).
+func (c Correction) changesValue() bool {
+	return c.Kind == CorrectionAmend && (c.HPDelta != nil || c.Summary != "" || len(c.Payload) > 0)
 }
 
 // Status is derived from an entry's corrections.
@@ -171,8 +181,8 @@ type Entry struct {
 	Corrections []Correction
 }
 
-// Status is voided when any void exists, amended when any amend exists,
-// active otherwise.
+// Status is voided when any void exists, amended when an amend changed a
+// value, active otherwise (a note does not make an entry amended).
 func (e Entry) Status() Status {
 	status := StatusActive
 	for _, c := range e.Corrections {
@@ -180,19 +190,30 @@ func (e Entry) Status() Status {
 		case CorrectionVoid:
 			return StatusVoided
 		case CorrectionAmend:
-			status = StatusAmended
+			if c.changesValue() {
+				status = StatusAmended
+			}
 		}
 	}
 	return status
 }
 
-func (e Entry) latestAmend() *Correction {
+// latestAmend is the newest amend for which set reports true.
+func (e Entry) latestAmend(set func(Correction) bool) *Correction {
 	for i := len(e.Corrections) - 1; i >= 0; i-- {
-		if e.Corrections[i].Kind == CorrectionAmend {
+		if c := e.Corrections[i]; c.Kind == CorrectionAmend && set(c) {
 			return &e.Corrections[i]
 		}
 	}
 	return nil
+}
+
+// Note is the latest note amend's note ("" when none).
+func (e Entry) Note() string {
+	if a := e.latestAmend(func(c Correction) bool { return c.Note != nil }); a != nil {
+		return *a.Note
+	}
+	return ""
 }
 
 // EffectivePayload is the payload of the latest amend that set one, the
@@ -213,7 +234,7 @@ func (e Entry) EffectiveHPDelta() int {
 	if e.Status() == StatusVoided {
 		return 0
 	}
-	if a := e.latestAmend(); a != nil && a.HPDelta != nil {
+	if a := e.latestAmend(func(c Correction) bool { return c.HPDelta != nil }); a != nil {
 		return *a.HPDelta
 	}
 	return e.HPDelta
@@ -222,7 +243,7 @@ func (e Entry) EffectiveHPDelta() int {
 // EffectiveSummary is the latest amend's summary when it set one, the
 // original summary otherwise.
 func (e Entry) EffectiveSummary() string {
-	if a := e.latestAmend(); a != nil && a.Summary != "" {
+	if a := e.latestAmend(func(c Correction) bool { return c.Summary != "" }); a != nil {
 		return a.Summary
 	}
 	return e.Summary

@@ -194,7 +194,7 @@ func TestMissileAttackSpendsAmmoAndVoidRestoresIt(t *testing.T) {
 	assert.Equal(t, second.LogEntryID, entries[0].ID)
 
 	_, err = bs.Log.Void(ctx, id, first.LogEntryID)
-	assert.ErrorIs(t, err, actionlogsvc.ErrVoidBlocked, "a later arrow of the same kind changed the count since")
+	assert.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "a later arrow of the same kind changed the count since")
 
 	_, err = bs.Log.Void(ctx, id, second.LogEntryID)
 	require.NoError(t, err)
@@ -242,9 +242,9 @@ func TestAttackUsesEffectiveStr(t *testing.T) {
 	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 1}, res.Modifiers[0])
 }
 
-// Item snapshots are per item: a later +1 shot does not block voiding an
-// earlier +3 shot, and voiding it restores only the +3 count.
-func TestVoidingAShotIsOnlyBlockedBySameAmmo(t *testing.T) {
+// Pop-only (critical-qki.38): a later +1 shot blocks voiding an earlier +3
+// shot; popping the +1 then the +3 restores each item's own count.
+func TestVoidingAnOlderShotIsRefused(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
 	id := bs.CharacterID
@@ -252,13 +252,20 @@ func TestVoidingAShotIsOnlyBlockedBySameAmmo(t *testing.T) {
 
 	shot3, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 5})
 	require.NoError(t, err)
-	_, err = bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: 5})
+	shot1, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: 5})
 	require.NoError(t, err)
 
 	_, err = bs.Log.Void(ctx, id, shot3.LogEntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+	assert.Equal(t, plus3-1, arrowCount(t, bs, "arrows_plus3"))
+
+	_, err = bs.Log.Void(ctx, id, shot1.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, plus1, arrowCount(t, bs, "arrows_plus1"))
+	assert.Equal(t, plus3-1, arrowCount(t, bs, "arrows_plus3"), "only the +1 came back")
+	_, err = bs.Log.Void(ctx, id, shot3.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, plus3, arrowCount(t, bs, "arrows_plus3"))
-	assert.Equal(t, plus1-1, arrowCount(t, bs, "arrows_plus1"), "the +1 shot stands")
 }
 
 // Voiding a melee attack (no snapshot) changes no item count.

@@ -44,6 +44,7 @@ type ActionCorrectionTemplate struct {
 	Summary   func() null.Val[string]
 	CreatedAt func() time.Time
 	Payload   func() null.Val[string]
+	Note      func() null.Val[string]
 
 	r actionCorrectionR
 	f *Factory
@@ -111,6 +112,10 @@ func (o ActionCorrectionTemplate) BuildSetter() *models.ActionCorrectionSetter {
 		val := o.Payload()
 		m.Payload = omitnull.FromNull(val)
 	}
+	if o.Note != nil {
+		val := o.Note()
+		m.Note = omitnull.FromNull(val)
+	}
 
 	return m
 }
@@ -153,6 +158,9 @@ func (o ActionCorrectionTemplate) Build() *models.ActionCorrection {
 	}
 	if o.Payload != nil {
 		m.Payload = o.Payload()
+	}
+	if o.Note != nil {
+		m.Note = o.Note()
 	}
 
 	o.setModelRels(m)
@@ -335,6 +343,7 @@ func (m actionCorrectionMods) RandomizeAllColumns(f *faker.Faker) ActionCorrecti
 		ActionCorrectionMods.RandomSummary(f),
 		ActionCorrectionMods.RandomCreatedAt(f),
 		ActionCorrectionMods.RandomPayload(f),
+		ActionCorrectionMods.RandomNote(f),
 	}
 }
 
@@ -611,6 +620,59 @@ func (m actionCorrectionMods) RandomPayload(f *faker.Faker) ActionCorrectionMod 
 func (m actionCorrectionMods) RandomPayloadNotNull(f *faker.Faker) ActionCorrectionMod {
 	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
 		o.Payload = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m actionCorrectionMods) Note(val null.Val[string]) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.Note = func() null.Val[string] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m actionCorrectionMods) NoteFunc(f func() null.Val[string]) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.Note = f
+	})
+}
+
+// Clear any values for the column
+func (m actionCorrectionMods) UnsetNote() ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.Note = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m actionCorrectionMods) RandomNote(f *faker.Faker) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.Note = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m actionCorrectionMods) RandomNoteNotNull(f *faker.Faker) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.Note = func() null.Val[string] {
 			if f == nil {
 				f = &defaultFaker
 			}

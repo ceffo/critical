@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
@@ -116,8 +117,12 @@ func TestSavedBuffs_DeleteIsLoggedAndVoidable(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"Hammer form"}, names(active))
 
-	// Voiding the save removes the template again (the delete was voided, so
-	// it no longer blocks; the activation is another state key).
+	// Pop-only (critical-qki.38): the save sits under the activation, so it
+	// is refused until the activation is popped; then the template goes.
+	_, err = bs.Log.Void(ctx, id, entries[2].ID)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+	_, err = bs.Log.Void(ctx, id, entries[1].ID)
+	require.NoError(t, err)
 	_, err = bs.Log.Void(ctx, id, entries[2].ID)
 	require.NoError(t, err)
 	list, err = bs.Buffs.ListSaved(ctx, id)

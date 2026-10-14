@@ -105,24 +105,35 @@ func TestHPCap_HealAtFullHPLogsZero(t *testing.T) {
 	assert.Equal(t, r.max-4, hp)
 }
 
-// HP-4: voiding the damage a capped heal was measured against is refused
-// (it would leave HP above max); voiding the heal first, then the damage,
-// works and ends at max.
-func TestHPCap_VoidDamageAfterCappedHeal(t *testing.T) {
+// Checklist 2: at full HP a heal is logged as 0; undo-last pops that entry
+// and HP stays at max.
+func TestHPCap_UndoHealLoggedAtFullHP(t *testing.T) {
+	r := newHPRig(t)
+	_, e := r.change(8, "e2e potion at full")
+	require.Equal(t, 0, e.HPDelta)
+	st, err := r.bs.HP.UndoLast(context.Background(), r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, r.max, st.CurrentHp)
+	got, err := r.bs.Log.List(context.Background(), r.bs.CharacterID, 1)
+	require.NoError(t, err)
+	assert.Equal(t, e.ID, got[0].ID)
+	assert.Equal(t, actionlog.StatusVoided, got[0].Status())
+}
+
+// Checklist 3: damage 10, heal 4, pop the heal, pop the damage: HP is right
+// after each step and back to the start.
+func TestHPCap_PopHealThenDamage(t *testing.T) {
 	r := newHPRig(t)
 	ctx := context.Background()
-	_, dmg := r.change(-10, "ogre club")
-	hp, heal := r.change(15, "cure serious wounds")
-	require.Equal(t, r.max, hp)
-	require.Equal(t, 10, heal.HPDelta)
+	hp, dmg := r.change(-10, "ogre club")
+	require.Equal(t, r.max-10, hp)
+	hp, heal := r.change(4, "cure light wounds")
+	require.Equal(t, r.max-6, hp)
+	require.Equal(t, 4, heal.HPDelta)
 
 	_, err := r.bs.Log.Void(ctx, r.bs.CharacterID, dmg.ID)
-	require.ErrorIs(t, err, actionlogsvc.ErrAboveMaxHP)
-	assert.Contains(t, err.Error(), "put HP 10 above max")
-	assert.Equal(t, r.max, r.current())
-	e, err := r.bs.Log.List(ctx, r.bs.CharacterID, 5)
-	require.NoError(t, err)
-	assert.Equal(t, actionlog.StatusActive, e[1].Status(), "damage not voided")
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the damage is not the top of the stack")
+	assert.Equal(t, r.max-6, r.current())
 
 	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, heal.ID)
 	require.NoError(t, err)
@@ -130,40 +141,4 @@ func TestHPCap_VoidDamageAfterCappedHeal(t *testing.T) {
 	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, dmg.ID)
 	require.NoError(t, err)
 	assert.Equal(t, r.max, r.current())
-}
-
-// HP-4: undo (void latest) of damage taken after a heal is always fine.
-func TestHPCap_UndoLatestDamage(t *testing.T) {
-	r := newHPRig(t)
-	r.change(-3, "rat")
-	r.change(2, "bandage")
-	r.change(-6, "trap")
-	st, err := r.bs.HP.UndoLast(context.Background(), r.bs.CharacterID)
-	require.NoError(t, err)
-	assert.Equal(t, r.max-1, st.CurrentHp)
-}
-
-// HP-3: amending a heal up is capped against the HP without it; amending
-// damage down when a later heal was capped against it is refused.
-func TestHPCap_Amend(t *testing.T) {
-	r := newHPRig(t)
-	ctx := context.Background()
-	_, dmg := r.change(-11, "troll")
-	_, heal := r.change(4, "potion")
-	require.Equal(t, r.max-7, r.current())
-
-	e, err := r.bs.Log.Amend(ctx, r.bs.CharacterID, heal.ID, actionlogsvc.Amendment{HPDelta: 20})
-	require.NoError(t, err)
-	assert.Equal(t, 11, e.EffectiveHPDelta())
-	assert.Equal(t, actionlog.HPBreakdown{Requested: 20, Applied: 11}, breakdown(t, *e))
-	assert.Equal(t, r.max, r.current())
-
-	_, err = r.bs.Log.Amend(ctx, r.bs.CharacterID, dmg.ID, actionlogsvc.Amendment{HPDelta: -2})
-	require.ErrorIs(t, err, actionlogsvc.ErrAboveMaxHP)
-	assert.Equal(t, r.max, r.current())
-
-	e, err = r.bs.Log.Amend(ctx, r.bs.CharacterID, heal.ID, actionlogsvc.Amendment{HPDelta: -1})
-	require.NoError(t, err)
-	assert.JSONEq(t, `{}`, string(e.EffectivePayload()), "no stale breakdown on a heal amended to damage")
-	assert.Equal(t, r.max-12, r.current())
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -153,36 +154,36 @@ func hpEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
 	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -8, Corrections: corrections}
 }
 
+// Note-only amend (critical-qki.38): any kind, the correction carries only
+// the trimmed note.
 func TestAmend(t *testing.T) {
 	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
+	note := func(s string) *string { return &s }
 	cases := []struct {
 		name    string
 		entry   *actionlog.Entry
 		getErr  error
-		in      actionlogsvc.Amendment
+		in      string
 		wantErr error
 		want    *actionlog.Correction
 	}{
-		{"not found", nil, domain.ErrNotFound, actionlogsvc.Amendment{HPDelta: -1}, domain.ErrNotFound, nil},
-		{"voided", hpEntry(5, voided), nil, actionlogsvc.Amendment{HPDelta: -1}, actionlogsvc.ErrAlreadyVoided, nil},
-		{"not an hp change", &actionlog.Entry{ID: 5, Kind: actionlog.KindAttack, Summary: "swing"}, nil, actionlogsvc.Amendment{HPDelta: -1}, actionlogsvc.ErrNotAmendable, nil},
+		{"not found", nil, domain.ErrNotFound, "x", domain.ErrNotFound, nil},
+		{"voided", hpEntry(5, voided), nil, "x", actionlogsvc.ErrAlreadyVoided, nil},
 		{
-			"delta and source", hpEntry(5), nil,
-			actionlogsvc.Amendment{HPDelta: -12, Summary: " orc axe "},
-			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-12), Summary: "orc axe", Payload: json.RawMessage(`{}`)},
+			"hp change note", hpEntry(5), nil, " axe, not club ", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("axe, not club")},
 		},
 		{
-			"delta to zero keeps source", hpEntry(5), nil,
-			actionlogsvc.Amendment{HPDelta: 0},
-			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(0), Payload: json.RawMessage(`{}`)},
+			"buff change note", &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindBuffChange, Summary: "Activated Bless"}, nil, "DM ruling", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("DM ruling")},
 		},
 		{
-			"amend twice", hpEntry(5, actionlog.Correction{Kind: actionlog.CorrectionAmend, HPDelta: intp(-3)}), nil,
-			actionlogsvc.Amendment{HPDelta: -4},
-			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-4), Payload: json.RawMessage(`{}`)},
+			"attack note", &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindAttack, Summary: "swing"}, nil, "flanking", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("flanking")},
+		},
+		{
+			"empty clears", hpEntry(5), nil, "  ", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("")},
 		},
 	}
 	for _, c := range cases {
@@ -190,23 +191,33 @@ func TestAmend(t *testing.T) {
 			svc, dal, _, tx := newSvc(t)
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, c.getErr).Once()
 			if c.want != nil {
-				// The amended entry is the only HP change: total = its effective delta.
-				dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.entry.EffectiveHPDelta(), nil).Once()
-				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil)
-				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(hpEntry(5, *c.want), nil).Once()
+				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil).Once()
+				done := *c.entry
+				done.Corrections = append(done.Corrections, *c.want)
+				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(&done, nil).Once()
 			}
-			got, err := svc.Amend(context.Background(), 1, 5, c.in)
+			got, err := svc.Amend(context.Background(), 1, 5, actionlogsvc.Amendment{Note: c.in})
 			assert.Equal(t, 1, tx.calls)
 			if c.wantErr != nil {
 				require.ErrorIs(t, err, c.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, actionlog.StatusAmended, got.Status())
+			assert.Equal(t, *c.want.Note, got.Note())
+			assert.Equal(t, c.entry.EffectiveHPDelta(), got.EffectiveHPDelta(), "values untouched")
+			assert.Equal(t, c.entry.Status(), got.Status(), "a note is not a value amend")
 		})
 	}
+	t.Run("too long", func(t *testing.T) {
+		svc, _, _, tx := newSvc(t)
+		_, err := svc.Amend(context.Background(), 1, 5, actionlogsvc.Amendment{Note: strings.Repeat("é", 501)})
+		require.ErrorIs(t, err, domain.ErrInvalidInput)
+		assert.Zero(t, tx.calls)
+	})
 }
 
+// Pop-only void (critical-qki.38): only the newest non-voided entry, any
+// kind; its snapshots are restored through their family's restorer.
 func TestVoid(t *testing.T) {
 	withSnaps := func(keys ...string) *actionlog.Entry {
 		e := &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindRoundAdvance, Summary: "next"}
@@ -220,7 +231,7 @@ func TestVoid(t *testing.T) {
 	cases := []struct {
 		name        string
 		entry       *actionlog.Entry
-		laterID     int64 // 0: no later entry touches the state
+		topID       int64 // newest non-voided entry; 0 = this one
 		restorers   []string
 		restoreErr  error
 		insertErr   error
@@ -235,8 +246,8 @@ func TestVoid(t *testing.T) {
 			wantRestore: []string{`"before-round"`, `"before-buffs"`},
 		},
 		{
-			name: "blocked by later entry", entry: withSnaps("round"), laterID: 9, restorers: []string{"round"},
-			wantErr: actionlogsvc.ErrVoidBlocked, wantErrText: `a later entry changed the same state (round 3: "Round 3 → 4"), void it first`,
+			name: "an older entry is refused", entry: withSnaps("round"), topID: 9, restorers: []string{"round"},
+			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be voided, void "Round 3 → 4" (round 3) first`,
 		},
 		{
 			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},
@@ -259,21 +270,21 @@ func TestVoid(t *testing.T) {
 				}))
 			}
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
-			if c.entry.EffectiveHPDelta() < 0 {
-				// The voided damage is the only HP change: total = its delta.
-				dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.entry.EffectiveHPDelta(), nil).Once()
-			}
-			if len(c.entry.Snapshots) > 0 && c.entry.Status() != actionlog.StatusVoided {
-				dal.EXPECT().LaterEntryTouchingState(mock.Anything, int64(1), int64(5)).Return(c.laterID, c.laterID != 0, nil)
-				if c.laterID != 0 {
-					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.laterID).
-						Return(&actionlog.Entry{ID: c.laterID, Round: 3, Summary: "Round 3 → 4"}, nil).Once()
+			active := c.entry.Status() != actionlog.StatusVoided
+			if active {
+				if c.topID != 0 {
+					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(c.topID, true, nil).Once()
+					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.topID).
+						Return(&actionlog.Entry{ID: c.topID, Round: 3, Summary: "Round 3 → 4"}, nil).Once()
+				} else {
+					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(5, true, nil).Once()
+					dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
 				}
 			}
-			reachesInsert := c.laterID == 0 && c.restoreErr == nil && c.entry.Status() != actionlog.StatusVoided &&
+			reachesInsert := active && c.topID == 0 && c.restoreErr == nil &&
 				(len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""
 			if reachesInsert {
-				dal.EXPECT().InsertCorrection(mock.Anything, voidRow).Return(c.insertErr)
+				dal.EXPECT().InsertCorrection(mock.Anything, voidRow).Return(c.insertErr).Once()
 			}
 			if reachesInsert && c.insertErr == nil {
 				done := *c.entry
@@ -289,8 +300,8 @@ func TestVoid(t *testing.T) {
 					assert.ErrorIs(t, err, c.wantErr)
 				}
 				assert.Contains(t, err.Error(), c.wantErrText)
-				if errors.Is(c.wantErr, actionlogsvc.ErrVoidBlocked) {
-					assert.Empty(t, restored, "nothing restored when blocked")
+				if errors.Is(c.wantErr, actionlogsvc.ErrNotLatest) {
+					assert.Empty(t, restored, "nothing restored when refused")
 				}
 				return
 			}
@@ -301,23 +312,33 @@ func TestVoid(t *testing.T) {
 	}
 }
 
+// VoidLatest pops the top of the stack only when it is of the asked kind.
 func TestVoidLatest(t *testing.T) {
-	t.Run("none", func(t *testing.T) {
+	t.Run("empty log", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().LatestActiveID(mock.Anything, int64(1), actionlog.KindHPChange).Return(0, false, nil)
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(0, false, nil).Once()
 		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
 		require.NoError(t, err)
 		assert.False(t, ok)
 	})
-	t.Run("voids newest", func(t *testing.T) {
+	t.Run("pops the newest", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().LatestActiveID(mock.Anything, int64(1), actionlog.KindHPChange).Return(7, true, nil)
-		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(7)).Return(hpEntry(7), nil)
-		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(-8, nil).Once()
-		dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 7, Kind: actionlog.CorrectionVoid}).Return(nil)
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(7, true, nil).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(7)).Return(hpEntry(7), nil).Once()
+		dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 7, Kind: actionlog.CorrectionVoid}).Return(nil).Once()
 		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
 		require.NoError(t, err)
 		assert.True(t, ok)
+	})
+	t.Run("newest is another kind", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(8, true, nil).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(8)).
+			Return(&actionlog.Entry{ID: 8, Round: 2, Kind: actionlog.KindBuffChange, Summary: "Activated Haste"}, nil).Once()
+		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
+		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+		assert.Contains(t, err.Error(), `the latest entry is not a hp_change, void "Activated Haste" (round 2) first`)
+		assert.False(t, ok)
 	})
 }
 
@@ -345,7 +366,11 @@ func TestEntryStatusAndEffectiveValues(t *testing.T) {
 	}{
 		{"active", nil, actionlog.StatusActive, -8, "orc"},
 		{"amended", []actionlog.Correction{amend(intp(-12), "orc axe")}, actionlog.StatusAmended, -12, "orc axe"},
-		{"latest amend wins", []actionlog.Correction{amend(intp(-12), "a"), amend(intp(-2), "")}, actionlog.StatusAmended, -2, "orc"},
+		// Each value comes from the latest amend that set it (an empty summary
+		// keeps the current one), so a later note-only amend hides nothing.
+		{"latest amend wins", []actionlog.Correction{amend(intp(-12), "a"), amend(intp(-2), "")}, actionlog.StatusAmended, -2, "a"},
+		{"note only stays active", []actionlog.Correction{{Kind: actionlog.CorrectionAmend, Note: new(string)}}, actionlog.StatusActive, -8, "orc"},
+		{"note after a value amend", []actionlog.Correction{amend(intp(-12), "orc axe"), {Kind: actionlog.CorrectionAmend, Note: new(string)}}, actionlog.StatusAmended, -12, "orc axe"},
 		{"voided", []actionlog.Correction{void}, actionlog.StatusVoided, 0, "orc"},
 		{"amended then voided", []actionlog.Correction{amend(intp(-12), "x"), void}, actionlog.StatusVoided, 0, "x"},
 	}
@@ -533,87 +558,4 @@ func TestRecord_CapsHeal(t *testing.T) {
 		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4, Payload: json.RawMessage(`[1]`)})
 		require.ErrorIs(t, err, domain.ErrInvalidInput)
 	})
-}
-
-// HP-3 (critical-qki.38): an amend is checked against the total without the
-// amended entry.
-func TestAmend_HPCap(t *testing.T) {
-	cases := []struct {
-		name        string
-		entryDelta  int // the hp_change entry being amended
-		total       int // SUM including the entry
-		amendTo     int
-		wantDelta   int
-		wantPayload string
-		wantErr     error
-	}{
-		// others = total - entry
-		{"heal amended up is capped at the gap", 3, -2, 14, 5, `{"hpRequested":14,"hpApplied":5}`, nil},
-		{"heal amended up keeps only the gap it had", 4, 0, 6, 4, `{"hpRequested":6,"hpApplied":4}`, nil},
-		{"heal logged 0 at full HP amended up stays 0", 0, 0, 8, 0, `{"hpRequested":8,"hpApplied":0}`, nil},
-		{"heal amended to damage clears the breakdown", 2, -1, -9, -9, `{}`, nil},
-		{"damage amended down within max", -10, -10, -6, -6, `{}`, nil},
-		{"damage amended down above max is refused", -10, 0, -3, 0, "", actionlogsvc.ErrAboveMaxHP},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			svc, dal, _, tx := newSvc(t)
-			entry := &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "x", HPDelta: c.entryDelta}
-			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
-			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
-			var stored actionlog.Correction
-			if c.wantErr == nil {
-				dal.EXPECT().InsertCorrection(mock.Anything, mock.Anything).
-					Run(func(_ context.Context, corr actionlog.Correction) { stored = corr }).Return(nil).Once()
-				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
-			}
-			_, err := svc.Amend(context.Background(), 1, 5, actionlogsvc.Amendment{HPDelta: c.amendTo})
-			assert.Equal(t, 1, tx.calls)
-			if c.wantErr != nil {
-				require.ErrorIs(t, err, c.wantErr)
-				return
-			}
-			require.NoError(t, err)
-			require.NotNil(t, stored.HPDelta)
-			assert.Equal(t, c.wantDelta, *stored.HPDelta)
-			assert.JSONEq(t, c.wantPayload, string(stored.Payload))
-		})
-	}
-}
-
-// HP-4 (critical-qki.38): voiding damage is refused when the HP it gives back
-// would put current HP above max; voiding a heal never reads the total.
-func TestVoid_HPCap(t *testing.T) {
-	cases := []struct {
-		name       string
-		entryDelta int
-		total      int
-		wantErr    error
-	}{
-		{"damage after a capped heal is refused", -10, 0, actionlogsvc.ErrAboveMaxHP},
-		{"damage partly healed is refused", -8, -3, actionlogsvc.ErrAboveMaxHP},
-		{"damage exactly healed back to max is allowed", -8, -8, nil},
-		{"damage with more damage after is allowed", -6, -15, nil},
-		{"heal is always allowed", 7, 0, nil},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			svc, dal, _, _ := newSvc(t)
-			entry := &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "x", HPDelta: c.entryDelta}
-			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
-			if c.entryDelta < 0 {
-				dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
-			}
-			if c.wantErr == nil {
-				dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}).Return(nil).Once()
-				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
-			}
-			_, err := svc.Void(context.Background(), 1, 5)
-			if c.wantErr != nil {
-				require.ErrorIs(t, err, c.wantErr)
-				return
-			}
-			require.NoError(t, err)
-		})
-	}
 }

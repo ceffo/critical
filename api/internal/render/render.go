@@ -108,10 +108,8 @@ var mappings = []mapping{
 	{target: prepsvc.ErrNotInSpellbook, status: http.StatusBadRequest},
 	{target: prepsvc.ErrOverLimit, status: http.StatusConflict},
 	{target: actionlogsvc.ErrAlreadyVoided, status: http.StatusConflict},
-	{target: actionlogsvc.ErrVoidBlocked, status: http.StatusConflict},
 	{target: actionlogsvc.ErrNotAmendable, status: http.StatusBadRequest},
 	{target: actionlogsvc.ErrNotLatest, status: http.StatusConflict},
-	{target: actionlogsvc.ErrAboveMaxHP, status: http.StatusConflict},
 }
 
 func mapError(err error) (int, string) {

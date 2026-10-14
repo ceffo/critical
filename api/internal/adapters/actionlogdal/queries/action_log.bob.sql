@@ -11,8 +11,8 @@ INSERT INTO "action_snapshots" ("action_id", "state_key", "before_state", "after
 VALUES (?1, ?2, ?3, ?4);
 
 -- InsertCorrection
-INSERT INTO "action_corrections" ("action_id", "kind", "hp_delta", "summary", "payload")
-VALUES (?1, ?2, ?3, ?4, ?5);
+INSERT INTO "action_corrections" ("action_id", "kind", "hp_delta", "summary", "payload", "note")
+VALUES (?1, ?2, ?3, ?4, ?5, ?6);
 
 -- GetAction
 SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "created_at" 
@@ -39,7 +39,7 @@ LIMIT ?3;
 -- ListCorrectionsFrom
 SELECT "action_corrections"."id", "action_corrections"."action_id", "action_corrections"."kind",
        "action_corrections"."hp_delta", "action_corrections"."summary", "action_corrections"."payload",
-       "action_corrections"."created_at" 
+       "action_corrections"."note", "action_corrections"."created_at" 
 FROM "action_corrections"
 JOIN "action_log" ON action_log.id = action_corrections.action_id
 WHERE "action_log"."character_id" = ?1 AND "action_corrections"."action_id" >= ?2
@@ -53,16 +53,6 @@ JOIN "action_log" ON action_log.id = action_snapshots.action_id
 WHERE "action_log"."character_id" = ?1 AND "action_snapshots"."action_id" >= ?2
 ORDER BY "action_snapshots"."id";
 
--- LatestActiveActionID
-SELECT "id"
-FROM "action_log"
-WHERE "character_id" = ?1 AND "kind" = ?2
-  AND NOT EXISTS (
-    SELECT 1 FROM "action_corrections" WHERE "action_corrections"."action_id" = "action_log"."id" AND "action_corrections"."kind" = 'void'
-  )
-ORDER BY "id" DESC
-LIMIT 1;
-
 -- LatestActionID
 SELECT "id"
 FROM "action_log"
@@ -70,14 +60,12 @@ WHERE "character_id" = ?1 AND "kind" = ?2
 ORDER BY "id" DESC
 LIMIT 1;
 
--- LaterActionTouchingState
-SELECT "later"."id"
-FROM "action_log" AS "later"
-JOIN "action_snapshots" AS "ls" ON ls.action_id = later.id
-WHERE "later"."character_id" = ?1 AND "later"."id" > ?2
-  AND "ls"."state_key" IN (SELECT "state_key" FROM "action_snapshots" WHERE "action_id" = ?3)
+-- LatestActiveActionID
+SELECT "id"
+FROM "action_log"
+WHERE "character_id" = ?1
   AND NOT EXISTS (
-    SELECT 1 FROM "action_corrections" WHERE "action_corrections"."action_id" = "later"."id" AND "action_corrections"."kind" = 'void'
+    SELECT 1 FROM "action_corrections" WHERE "action_corrections"."action_id" = "action_log"."id" AND "action_corrections"."kind" = 'void'
   )
-ORDER BY "later"."id"
+ORDER BY "id" DESC
 LIMIT 1;

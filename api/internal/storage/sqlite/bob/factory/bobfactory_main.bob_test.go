@@ -358,6 +358,44 @@ func TestCreateCharacterWithRoundStatesDoesNotDuplicateParent(t *testing.T) {
 	}
 }
 
+func TestCreateCharacterWithSavedBuffsDoesNotDuplicateParent(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	before, err := models.Characters.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting Characters: %v", err)
+	}
+
+	if _, err := New().NewCharacterWithContext(ctx, CharacterMods.WithNewSavedBuffs(2)).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating Character with SavedBuffs: %v", err)
+	}
+
+	after, err := models.Characters.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting Characters: %v", err)
+	}
+
+	if got := after - before; got != 1 {
+		t.Fatalf("Expected Characters to increase by 1, got %d", got)
+	}
+}
+
 func TestCreateCharacterWithSpellSlotsDoesNotDuplicateParent(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")
@@ -527,6 +565,30 @@ func TestCreateRoundState(t *testing.T) {
 
 	if _, err := New().NewRoundStateWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating RoundState: %v", err)
+	}
+}
+
+func TestCreateSavedBuff(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewSavedBuffWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating SavedBuff: %v", err)
 	}
 }
 

@@ -27,6 +27,8 @@ export interface BuffEffect {
   /** Rounds left, counted down by Next Round; 0 = not timed. The buff expires at 0. */
   duration: number;
   effects: BuffEffects;
+  /** Free text shown on the badge ("" = none). */
+  note: string;
   /** On list responses: false while min_str is not met by the effective STR. */
   applies?: boolean;
 }
@@ -35,6 +37,18 @@ export interface BuffEffect {
 export interface BuffEdit {
   duration?: number;
   charges?: number;
+  /** "" clears the note. */
+  note?: string;
+}
+
+/** A saved buff template (GET/POST /api/buffs/saved): the starting values of a buff. */
+export interface SavedBuff {
+  id: number;
+  name: string;
+  duration: number;
+  charges: number;
+  effects: BuffEffects;
+  note: string;
 }
 
 /** GET /api/stats/str */

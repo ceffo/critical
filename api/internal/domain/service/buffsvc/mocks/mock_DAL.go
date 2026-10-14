@@ -139,6 +139,113 @@ func (_c *MockDAL_GetRoundNumber_Call) RunAndReturn(run func(context.Context, in
 	return _c
 }
 
+// ListSavedBuffs provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) ListSavedBuffs(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSavedBuffs")
+	}
+
+	var r0 []buffsvc.SavedBuff
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.SavedBuff, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.SavedBuff); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.SavedBuff)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_ListSavedBuffs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSavedBuffs'
+type MockDAL_ListSavedBuffs_Call struct {
+	*mock.Call
+}
+
+// ListSavedBuffs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockDAL_Expecter) ListSavedBuffs(ctx interface{}, characterID interface{}) *MockDAL_ListSavedBuffs_Call {
+	return &MockDAL_ListSavedBuffs_Call{Call: _e.mock.On("ListSavedBuffs", ctx, characterID)}
+}
+
+func (_c *MockDAL_ListSavedBuffs_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_ListSavedBuffs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockDAL_ListSavedBuffs_Call) Return(_a0 []buffsvc.SavedBuff, _a1 error) *MockDAL_ListSavedBuffs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_ListSavedBuffs_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.SavedBuff, error)) *MockDAL_ListSavedBuffs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReplaceSavedBuffs provides a mock function with given fields: ctx, characterID, saved
+func (_m *MockDAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []buffsvc.SavedBuff) error {
+	ret := _m.Called(ctx, characterID, saved)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReplaceSavedBuffs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, []buffsvc.SavedBuff) error); ok {
+		r0 = rf(ctx, characterID, saved)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_ReplaceSavedBuffs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReplaceSavedBuffs'
+type MockDAL_ReplaceSavedBuffs_Call struct {
+	*mock.Call
+}
+
+// ReplaceSavedBuffs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - saved []buffsvc.SavedBuff
+func (_e *MockDAL_Expecter) ReplaceSavedBuffs(ctx interface{}, characterID interface{}, saved interface{}) *MockDAL_ReplaceSavedBuffs_Call {
+	return &MockDAL_ReplaceSavedBuffs_Call{Call: _e.mock.On("ReplaceSavedBuffs", ctx, characterID, saved)}
+}
+
+func (_c *MockDAL_ReplaceSavedBuffs_Call) Run(run func(ctx context.Context, characterID int64, saved []buffsvc.SavedBuff)) *MockDAL_ReplaceSavedBuffs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].([]buffsvc.SavedBuff))
+	})
+	return _c
+}
+
+func (_c *MockDAL_ReplaceSavedBuffs_Call) Return(_a0 error) *MockDAL_ReplaceSavedBuffs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_ReplaceSavedBuffs_Call) RunAndReturn(run func(context.Context, int64, []buffsvc.SavedBuff) error) *MockDAL_ReplaceSavedBuffs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SaveActiveBuffs provides a mock function with given fields: ctx, characterID, buffs
 func (_m *MockDAL) SaveActiveBuffs(ctx context.Context, characterID int64, buffs []buffsvc.BuffEffect) error {
 	ret := _m.Called(ctx, characterID, buffs)

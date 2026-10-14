@@ -87,6 +87,9 @@ func TestCharacterCountStruct(t *testing.T) {
 	// Verify RoundStates count field exists and is *int64
 	var _ *int64 = m.C.RoundStates
 
+	// Verify SavedBuffs count field exists and is *int64
+	var _ *int64 = m.C.SavedBuffs
+
 	// Verify SpellSlots count field exists and is *int64
 	var _ *int64 = m.C.SpellSlots
 
@@ -124,6 +127,12 @@ func TestCharacterLoadCountMethods(t *testing.T) {
 	// Verify LoadCountRoundStates method exists on slice
 	_ = ms.LoadCountRoundStates(ctx, nil)
 
+	// Verify LoadCountSavedBuffs method exists on single model
+	_ = m.LoadCountSavedBuffs(ctx, nil)
+
+	// Verify LoadCountSavedBuffs method exists on slice
+	_ = ms.LoadCountSavedBuffs(ctx, nil)
+
 	// Verify LoadCountSpellSlots method exists on single model
 	_ = m.LoadCountSpellSlots(ctx, nil)
 
@@ -153,6 +162,9 @@ func TestSelectThenLoadCountCharacter(t *testing.T) {
 	// Verify RoundStates loader exists
 	_ = SelectThenLoadCount.Character.RoundStates
 
+	// Verify SavedBuffs loader exists
+	_ = SelectThenLoadCount.Character.SavedBuffs
+
 	// Verify SpellSlots loader exists
 	_ = SelectThenLoadCount.Character.SpellSlots
 
@@ -176,6 +188,9 @@ func TestPreloadCountCharacter(t *testing.T) {
 	// Verify RoundStates preloader exists and returns a Preloader
 	_ = PreloadCount.Character.RoundStates()
 
+	// Verify SavedBuffs preloader exists and returns a Preloader
+	_ = PreloadCount.Character.SavedBuffs()
+
 	// Verify SpellSlots preloader exists and returns a Preloader
 	_ = PreloadCount.Character.SpellSlots()
 
@@ -194,6 +209,8 @@ func TestCharacterPreloadCountMethod(t *testing.T) {
 	_ = m.PreloadCount("HPEvents", 0)
 
 	_ = m.PreloadCount("RoundStates", 0)
+
+	_ = m.PreloadCount("SavedBuffs", 0)
 
 	_ = m.PreloadCount("SpellSlots", 0)
 

@@ -43,6 +43,15 @@ type SVC interface {
 	// Active buffs are untouched. Logged, voidable.
 	SetRound(ctx context.Context, characterID int64, to int) (active []BuffEffect, round int, err error)
 
+	// ListSaved returns the saved buff templates, oldest first.
+	ListSaved(ctx context.Context, characterID int64) ([]SavedBuff, error)
+	// SaveBuff stores a template (replacing one with the same name) and logs
+	// it; returns the list. Voidable.
+	SaveBuff(ctx context.Context, characterID int64, saved SavedBuff) ([]SavedBuff, error)
+	// DeleteSaved removes a template and logs it; active buffs are untouched.
+	// Unknown id: ErrNotFound. Voidable.
+	DeleteSaved(ctx context.Context, characterID int64, id int64) ([]SavedBuff, error)
+
 	// Aggregate is consumed by combatsvc (see clean_architecture.md §4.5).
 	// str is the base STR from the sheet; STR buffs raise it before MinStr
 	// gating, and the result carries the effective STR used.
@@ -63,6 +72,10 @@ type DAL interface {
 	SaveActiveBuffs(ctx context.Context, characterID int64, buffs []BuffEffect) error
 	GetRoundNumber(ctx context.Context, characterID int64) (int, error)
 	SaveRoundNumber(ctx context.Context, characterID int64, round int) error
+	ListSavedBuffs(ctx context.Context, characterID int64) ([]SavedBuff, error)
+	// ReplaceSavedBuffs makes the stored list equal to saved: entries with an
+	// ID keep it (a restore), entries without get a new one.
+	ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []SavedBuff) error
 }
 
 // Log is the slice of the action log buffsvc records into (actionlogsvc).

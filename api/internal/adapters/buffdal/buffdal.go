@@ -38,6 +38,7 @@ type jsonBuff struct {
 	Charges  int         `json:"charges"`
 	Duration int         `json:"duration"`
 	Effects  jsonEffects `json:"effects"`
+	Note     string      `json:"note,omitempty"`
 }
 
 type jsonEffects struct {
@@ -57,14 +58,14 @@ type jsonEffects struct {
 func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
 		ID: j.ID, Name: j.Name, Charges: j.Charges, Duration: j.Duration,
-		Effects: buffsvc.BuffEffects(j.Effects),
+		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note,
 	}
 }
 
 func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 	return jsonBuff{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-		Effects: jsonEffects(b.Effects),
+		Effects: jsonEffects(b.Effects), Note: b.Note,
 	}
 }
 
@@ -129,6 +130,54 @@ func (d *DAL) SaveRoundNumber(ctx context.Context, characterID int64, round int)
 	}).Exec(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("upsert round_state: %w", err)
+	}
+	return nil
+}
+
+// ListSavedBuffs returns the character's templates, oldest first.
+func (d *DAL) ListSavedBuffs(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error) {
+	rows, err := queries.ListSavedBuffs(characterID).All(ctx, d.exec(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("query saved_buffs: %w", err)
+	}
+	out := make([]buffsvc.SavedBuff, 0, len(rows))
+	for _, r := range rows {
+		var eff jsonEffects
+		if err := json.Unmarshal([]byte(r.Effects), &eff); err != nil {
+			return nil, fmt.Errorf("unmarshal saved buff %d effects: %w", r.ID, err)
+		}
+		out = append(out, buffsvc.SavedBuff{
+			ID: r.ID, Name: r.Name, Duration: int(r.Duration), Charges: int(r.Charges),
+			Effects: buffsvc.BuffEffects(eff), Note: r.Note,
+		})
+	}
+	return out, nil
+}
+
+// ReplaceSavedBuffs makes the stored list equal to saved.
+func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []buffsvc.SavedBuff) error {
+	if _, err := queries.DeleteSavedBuffs(characterID).Exec(ctx, d.exec(ctx)); err != nil {
+		return fmt.Errorf("delete saved_buffs: %w", err)
+	}
+	for _, s := range saved {
+		eff, err := json.Marshal(jsonEffects(s.Effects))
+		if err != nil {
+			return fmt.Errorf("marshal saved buff effects: %w", err)
+		}
+		if s.ID != 0 {
+			_, err = queries.InsertSavedBuffWithID([]queries.InsertSavedBuffWithID_SavedBuffs{{
+				ID: s.ID, CharacterID: characterID, Name: s.Name, Duration: int64(s.Duration),
+				Charges: int64(s.Charges), Effects: string(eff), Note: s.Note,
+			}}).Exec(ctx, d.exec(ctx))
+		} else {
+			_, err = queries.InsertSavedBuff([]queries.InsertSavedBuff_SavedBuffs{{
+				CharacterID: characterID, Name: s.Name, Duration: int64(s.Duration),
+				Charges: int64(s.Charges), Effects: string(eff), Note: s.Note,
+			}}).One(ctx, d.exec(ctx))
+		}
+		if err != nil {
+			return fmt.Errorf("insert saved_buffs: %w", err)
+		}
 	}
 	return nil
 }

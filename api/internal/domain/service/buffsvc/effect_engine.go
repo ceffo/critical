@@ -189,7 +189,7 @@ func absorb(buffs []BuffEffect, i int) (next []BuffEffect, after BuffEffect, end
 // edit applies e to the buff at i. A counter the buff used (rounds or
 // charges) set to 0 ends the buff; ended reports that.
 func edit(buffs []BuffEffect, i int, e BuffEdit) (next []BuffEffect, after BuffEffect, ended bool, err error) {
-	if e.Duration == nil && e.Charges == nil {
+	if e.Duration == nil && e.Charges == nil && e.Note == nil {
 		return nil, BuffEffect{}, false, fmt.Errorf("%w: nothing to change", domain.ErrInvalidInput)
 	}
 	before := buffs[i]
@@ -205,6 +205,9 @@ func edit(buffs []BuffEffect, i int, e BuffEdit) (next []BuffEffect, after BuffE
 			return nil, b, false, fmt.Errorf("%w: charges cannot be negative", domain.ErrInvalidInput)
 		}
 		b.Charges = *e.Charges
+	}
+	if e.Note != nil {
+		b.Note = strings.TrimSpace(*e.Note)
 	}
 	if (before.Timed() && !b.Timed()) || (before.Charged() && !b.Charged()) {
 		return without(buffs, i), b, true, nil

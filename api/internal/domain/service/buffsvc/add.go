@@ -18,6 +18,7 @@ import (
 // cumulative with themselves, so casting one again renews it.
 func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (BuffEffect, actionlog.Snapshot, error) {
 	buff.Name = strings.TrimSpace(buff.Name)
+	buff.Note = strings.TrimSpace(buff.Note)
 	if err := validateBuff(buff); err != nil {
 		return BuffEffect{}, actionlog.Snapshot{}, err
 	}

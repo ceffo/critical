@@ -70,6 +70,23 @@ describe("entryText", () => {
       "Stoneskin absorbed a hit, ended",
     ],
     [{ action: "dismiss", buff: "Haste" }, "Dismissed Haste"],
+    [
+      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "fire −50%", fromNote: "", noteChanged: true },
+      "Ward: note “fire −50%”",
+    ],
+    [
+      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "", fromNote: "x", noteChanged: true },
+      "Ward: note removed",
+    ],
+    [
+      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 3, note: "x", noteChanged: true },
+      "Ward: 5 rd → 3 rd (note changed)",
+    ],
+    [
+      { action: "save_template", buff: "Hammer form", rounds: 10 },
+      "Saved buff Hammer form (10 rd)",
+    ],
+    [{ action: "delete_template", buff: "Hammer form" }, "Deleted saved buff Hammer form"],
     [{ action: "next_round", fromRound: 0, toRound: 1 }, "Round 0 → 1"],
     [
       {
@@ -85,6 +102,19 @@ describe("entryText", () => {
     const kind =
       payload.action === "next_round" ? "round_advance" : "buff_change";
     expect(entryText(entry(kind, payload), t)).toBe(want);
+  });
+
+  it("translates template and note log texts to French", async () => {
+    const t = await makeT("fr");
+    const text = (p: object) => entryText(entry("buff_change", p), t);
+    expect(text({ action: "save_template", buff: "Marteau", rounds: 10 })).toBe("Bonus Marteau enregistré (10 rd.)");
+    expect(text({ action: "delete_template", buff: "Marteau" })).toBe("Bonus enregistré Marteau supprimé");
+    expect(text({ action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "feu", noteChanged: true })).toBe(
+      "Ward : note « feu »",
+    );
+    expect(text({ action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, fromNote: "x", noteChanged: true })).toBe(
+      "Ward : note retirée",
+    );
   });
 
   it("translates to French", async () => {

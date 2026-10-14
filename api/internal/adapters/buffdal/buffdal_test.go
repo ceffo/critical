@@ -217,3 +217,54 @@ func TestRoundNumber_ReadsStoredValue(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 9, r)
 }
+
+func TestActiveBuffs_NoteRoundTripsAndOldRowsReadEmpty(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	_, err := db.ExecContext(ctx, `INSERT INTO active_buffs (character_id, buffs) VALUES (?, '[{"id":"o","name":"Old","charges":0,"duration":3,"effects":{}}]')`, charID)
+	require.NoError(t, err)
+	got, err := dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Empty(t, got[0].Note)
+
+	got[0].Note = "+4 saves vs fire"
+	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, got))
+	got, err = dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, "+4 saves vs fire", got[0].Note)
+}
+
+func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	list, err := dal.ListSavedBuffs(ctx, charID)
+	require.NoError(t, err)
+	assert.Empty(t, list)
+
+	form := buffsvc.SavedBuff{
+		Name: "Form", Duration: 4, Charges: 1, Note: "n",
+		Effects: buffsvc.BuffEffects{WeaponBuff: intPtr(5), MinStr: intPtr(18), SpellsBuff: floatPtr(2)},
+	}
+	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{form}))
+	list, err = dal.ListSavedBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	form.ID = list[0].ID
+	assert.NotZero(t, form.ID)
+	assert.Equal(t, form, list[0])
+
+	// A restore writes explicit ids back; a new entry gets the next one.
+	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 42, Name: "Old"}, {Name: "New"}}))
+	list, err = dal.ListSavedBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	assert.Equal(t, int64(42), list[0].ID)
+	assert.Equal(t, "New", list[1].Name)
+}

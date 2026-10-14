@@ -26,6 +26,7 @@ func Where[Q sqlite.Filterable]() struct {
 	HPEvents          hpEventWhere[Q]
 	Items             itemWhere[Q]
 	RoundStates       roundStateWhere[Q]
+	SavedBuffs        savedBuffWhere[Q]
 	SpellSlots        spellSlotWhere[Q]
 	Spells            spellWhere[Q]
 	Weapons           weaponWhere[Q]
@@ -41,6 +42,7 @@ func Where[Q sqlite.Filterable]() struct {
 		HPEvents          hpEventWhere[Q]
 		Items             itemWhere[Q]
 		RoundStates       roundStateWhere[Q]
+		SavedBuffs        savedBuffWhere[Q]
 		SpellSlots        spellSlotWhere[Q]
 		Spells            spellWhere[Q]
 		Weapons           weaponWhere[Q]
@@ -55,6 +57,7 @@ func Where[Q sqlite.Filterable]() struct {
 		HPEvents:          buildHPEventWhere[Q](HPEvents.Columns),
 		Items:             buildItemWhere[Q](Items.Columns),
 		RoundStates:       buildRoundStateWhere[Q](RoundStates.Columns),
+		SavedBuffs:        buildSavedBuffWhere[Q](SavedBuffs.Columns),
 		SpellSlots:        buildSpellSlotWhere[Q](SpellSlots.Columns),
 		Spells:            buildSpellWhere[Q](Spells.Columns),
 		Weapons:           buildWeaponWhere[Q](Weapons.Columns),

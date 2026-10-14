@@ -72,7 +72,10 @@ flowchart TD
   ("+2"), effect dice, type, behaviour badge (Stock / Charges / Daily), − (uses one through
   `stores/roll.ts` `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and +
   on stock items only (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`). A charges
-  item spent to 0 is gone from the list until its use is popped.
+  item spent to 0 is gone from the list until its use is popped. ✎ edits a row in place and
+  "Add item" opens the same form (`ItemForm.tsx`, critical-qki.31); 🗑 removes. The form only parses
+  numbers (`lib/itemForm.ts`); the server validates and the message it returns for a field is shown
+  under that field (`stores/table.ts` `submit`, `ApiError.field`). Edits send only the changed fields.
 - Spells tab (`SpellsPanel.tsx`): Cast puts the `CastResult` in the result card (`CastResultView`:
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with

@@ -11,6 +11,9 @@ export type LogKind =
   | "attack"
   | "item_use"
   | "item_restock"
+  | "item_add"
+  | "item_edit"
+  | "item_remove"
   | "spell_prep"
   | "long_rest"
   | "save";

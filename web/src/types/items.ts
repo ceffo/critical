@@ -1,4 +1,4 @@
-// Mirrors api/internal/rest/handler/itemhdl (ItemDTO, UseResultDTO, RestockResultDTO).
+// Mirrors api/internal/rest/handler/itemhdl (ItemDTO, UseResultDTO, RestockResultDTO, ChangeDTO, ItemBody).
 
 /**
  * How an item's count behaves (critical-qki.13): stock is used and restocked (stays at 0),
@@ -54,4 +54,49 @@ export interface RestockResult {
   added: number;
   count: number;
   logEntryId?: number;
+}
+
+/** Body of POST /api/items and PATCH /api/items/{id} (itemhdl ItemBody); a PATCH changes only the fields present. */
+export interface ItemBody {
+  name?: string;
+  type?: string;
+  behaviour?: ItemBehaviour;
+  count?: number;
+  /** The daily number (daily items only). */
+  maxCount?: number;
+  magicalBonus?: number;
+  ammoKind?: string;
+  effectDice?: string;
+  effectSave?: string;
+  notes?: string;
+}
+
+/** POST/PATCH/DELETE /api/items (itemhdl ChangeDTO): the item as it is now (as it was, for a delete). */
+export interface ItemChange {
+  item: Item;
+  logEntryId: number;
+}
+
+/** One edited field in an item_edit log payload (values as text). */
+export interface FieldChange {
+  field: string;
+  before: string;
+  after: string;
+}
+
+/** Payload of item_add, item_edit and item_remove log entries (itemsvc changeRecord). */
+export interface ItemChangeRecord {
+  itemId: string;
+  name: string;
+  type: string;
+  behaviour: ItemBehaviour;
+  count: number;
+  maxCount: number;
+  magicalBonus: number;
+  ammoKind: string;
+  effectDice: string;
+  effectSave: string;
+  notes: string;
+  /** Only in item_edit. */
+  changes?: FieldChange[];
 }

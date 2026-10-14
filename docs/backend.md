@@ -173,6 +173,14 @@ changes how the count moves:
 - Every count change is one entry with the `items:<id>` snapshot. A use that removed the item
   carries the whole item in its "before" (`snapCount.item`), so popping it re-inserts the item, in
   its list position, with 1 charge. A long rest refills `daily` items only; time fast-forward none.
+- Editor (critical-qki.31): `POST /api/items`, `PATCH /api/items/{id}` (only the fields sent),
+  `DELETE /api/items/{id}`; each is one entry (`item_add` / `item_edit` / `item_remove`, not roll
+  kinds) with the `items:<id>` snapshot and answers `{item, logEntryId}`. The log is pop-only: popping
+  the newest entry deletes a created item (snapshot `absent`), overwrites an edited one with every
+  "before" field, or re-inserts a removed one with its id, position and count (`replace`).
+  Validation (`Item.Validate`) fails with a `domain.FieldError`, rendered `400 {error, field}` so the
+  UI shows the message under that field; effect dice are `NdM` or `NdM+K`. A new item's id is the slug
+  of its name (suffix `_2`, `_3` when taken) and goes last in the list.
 - Ammo is any item whose `ammo_kind` matches the weapon's; the attack picker offers those with
   count > 0.
 

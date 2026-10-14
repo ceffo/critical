@@ -172,7 +172,28 @@
       "charges": "Utilisé seulement ; disparaît à 0",
       "daily": "Utilisé seulement ; rechargé par un repos long"
     },
-    "none": "Aucun objet."
+    "none": "Aucun objet.",
+    "form": {
+      "openAdd": "Ajouter un objet",
+      "addTitle": "Ajouter un objet",
+      "editTitle": "Modifier {{name}}",
+      "edit": "Modifier {{name}}",
+      "remove": "Retirer {{name}}",
+      "name": "Nom",
+      "type": "Type",
+      "behaviour": "Comportement",
+      "count": "Quantité",
+      "maxCount": "Nombre par jour",
+      "ammoKind": "Type de munition",
+      "effectDice": "Dés d'effet",
+      "effectSave": "JS de l'effet",
+      "noSave": "Aucun JS",
+      "notes": "Note",
+      "add": "Ajouter",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "notANumber": "Entrez un nombre entier"
+    }
   },
   "spellSlots": {
     "title": "Emplacements de sorts",
@@ -559,7 +580,23 @@
       "used": "{{name}} utilisé ({{left}} restant)",
       "rolledRemoved": "{{name}} utilisé : {{dice}} = {{total}} (dernière charge, retiré)",
       "usedRemoved": "{{name}} utilisé (dernière charge, retiré)",
-      "restocked": "{{name}} réapprovisionné : +{{added}} ({{count}} maintenant)"
+      "restocked": "{{name}} réapprovisionné : +{{added}} ({{count}} maintenant)",
+      "added": "{{name}} ajouté ({{count}})",
+      "removedItem": "{{name}} retiré ({{count}})",
+      "edited": "{{name}} modifié : {{changes}}",
+      "change": "{{field}} {{before}} → {{after}}",
+      "fields": {
+        "name": "nom",
+        "type": "type",
+        "behaviour": "comportement",
+        "count": "quantité",
+        "maxCount": "nombre par jour",
+        "magicalBonus": "bonus magique",
+        "ammoKind": "type de munition",
+        "effectDice": "dés d'effet",
+        "effectSave": "JS de l'effet",
+        "notes": "note"
+      }
     },
     "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés",
     "saveThrow": {

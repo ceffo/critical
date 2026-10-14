@@ -72,22 +72,48 @@ describe("entryText", () => {
     ],
     [{ action: "dismiss", buff: "Haste" }, "Dismissed Haste"],
     [
-      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "fire −50%", fromNote: "", noteChanged: true },
+      {
+        action: "edit",
+        buff: "Ward",
+        fromRounds: 5,
+        rounds: 5,
+        note: "fire −50%",
+        fromNote: "",
+        noteChanged: true,
+      },
       "Ward: note “fire −50%”",
     ],
     [
-      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "", fromNote: "x", noteChanged: true },
+      {
+        action: "edit",
+        buff: "Ward",
+        fromRounds: 5,
+        rounds: 5,
+        note: "",
+        fromNote: "x",
+        noteChanged: true,
+      },
       "Ward: note removed",
     ],
     [
-      { action: "edit", buff: "Ward", fromRounds: 5, rounds: 3, note: "x", noteChanged: true },
+      {
+        action: "edit",
+        buff: "Ward",
+        fromRounds: 5,
+        rounds: 3,
+        note: "x",
+        noteChanged: true,
+      },
       "Ward: 5 rd → 3 rd (note changed)",
     ],
     [
       { action: "save_template", buff: "Hammer form", rounds: 10 },
       "Saved buff Hammer form (10 rd)",
     ],
-    [{ action: "delete_template", buff: "Hammer form" }, "Deleted saved buff Hammer form"],
+    [
+      { action: "delete_template", buff: "Hammer form" },
+      "Deleted saved buff Hammer form",
+    ],
     [{ action: "next_round", fromRound: 0, toRound: 1 }, "Round 0 → 1"],
     [
       {
@@ -108,14 +134,32 @@ describe("entryText", () => {
   it("translates template and note log texts to French", async () => {
     const t = await makeT("fr");
     const text = (p: object) => entryText(entry("buff_change", p), t);
-    expect(text({ action: "save_template", buff: "Marteau", rounds: 10 })).toBe("Bonus Marteau enregistré (10 rd.)");
-    expect(text({ action: "delete_template", buff: "Marteau" })).toBe("Bonus enregistré Marteau supprimé");
-    expect(text({ action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, note: "feu", noteChanged: true })).toBe(
-      "Ward : note « feu »",
+    expect(text({ action: "save_template", buff: "Marteau", rounds: 10 })).toBe(
+      "Bonus Marteau enregistré (10 rd.)",
     );
-    expect(text({ action: "edit", buff: "Ward", fromRounds: 5, rounds: 5, fromNote: "x", noteChanged: true })).toBe(
-      "Ward : note retirée",
+    expect(text({ action: "delete_template", buff: "Marteau" })).toBe(
+      "Bonus enregistré Marteau supprimé",
     );
+    expect(
+      text({
+        action: "edit",
+        buff: "Ward",
+        fromRounds: 5,
+        rounds: 5,
+        note: "feu",
+        noteChanged: true,
+      }),
+    ).toBe("Ward : note « feu »");
+    expect(
+      text({
+        action: "edit",
+        buff: "Ward",
+        fromRounds: 5,
+        rounds: 5,
+        fromNote: "x",
+        noteChanged: true,
+      }),
+    ).toBe("Ward : note retirée");
   });
 
   it("translates to French", async () => {
@@ -140,31 +184,73 @@ describe("entryText", () => {
 
   it.each([
     [
-      { hit: true, isCrit: false, critMultiplier: 1, totalDamage: 7, weaponName: "Long Sword +2", targetAc: 5 },
+      {
+        hit: true,
+        isCrit: false,
+        critMultiplier: 1,
+        totalDamage: 7,
+        weaponName: "Long Sword +2",
+        targetAc: 5,
+      },
       "en",
       "Long Sword +2 vs AC 5: hit, 7 damage",
     ],
     [
-      { hit: false, isCrit: false, critMultiplier: 1, totalDamage: 0, weaponName: "Short Bow +2", targetAc: 2,
-        ammo: { itemId: "arrows_plus3", name: "Arrows +3", magic: 3, remaining: 1 } },
+      {
+        hit: false,
+        isCrit: false,
+        critMultiplier: 1,
+        totalDamage: 0,
+        weaponName: "Short Bow +2",
+        targetAc: 2,
+        ammo: {
+          itemId: "arrows_plus3",
+          name: "Arrows +3",
+          magic: 3,
+          remaining: 1,
+        },
+      },
       "en",
       "Short Bow +2 (Arrows +3) vs AC 2: miss",
     ],
     [
-      { hit: true, isCrit: true, critMultiplier: 2, totalDamage: 14, weaponName: "Long Sword +2", targetAc: 5 },
+      {
+        hit: true,
+        isCrit: true,
+        critMultiplier: 2,
+        totalDamage: 14,
+        weaponName: "Long Sword +2",
+        targetAc: 5,
+      },
       "fr",
       // Logged before the multiplier d100 existed: the line without the rolls.
       "Long Sword +2 contre CA 5 : critique ×2, 14 dégâts",
     ],
     [
-      { hit: true, isCrit: true, critMultiplier: 3, totalDamage: 21, weaponName: "Long Sword +2", targetAc: 5,
-        d100CritRoll: 7, d100MultiplierRoll: 63 },
+      {
+        hit: true,
+        isCrit: true,
+        critMultiplier: 3,
+        totalDamage: 21,
+        weaponName: "Long Sword +2",
+        targetAc: 5,
+        d100CritRoll: 7,
+        d100MultiplierRoll: 63,
+      },
       "en",
       "Long Sword +2 vs AC 5: critical (check 7 · multiplier 63 → ×3), 21 damage",
     ],
     [
-      { hit: true, isCrit: true, critMultiplier: 1.5, totalDamage: 10, weaponName: "Long Sword +2", targetAc: 5,
-        d100CritRoll: 7, d100MultiplierRoll: 63 },
+      {
+        hit: true,
+        isCrit: true,
+        critMultiplier: 1.5,
+        totalDamage: 10,
+        weaponName: "Long Sword +2",
+        targetAc: 5,
+        d100CritRoll: 7,
+        d100MultiplierRoll: 63,
+      },
       "fr",
       "Long Sword +2 contre CA 5 : critique (test 7 · multiplicateur 63 → ×1,5), 10 dégâts",
     ],
@@ -176,28 +262,71 @@ describe("entryText", () => {
   it.each([
     [
       "en",
-      { hit: true, isCrit: false, critMultiplier: 1, totalDamage: 7, weaponName: "Long Sword +2", targetAc: 7,
-        rolledTargetAc: 5, rolledHit: false, rolledCrit: false },
+      {
+        hit: true,
+        isCrit: false,
+        critMultiplier: 1,
+        totalDamage: 7,
+        weaponName: "Long Sword +2",
+        targetAc: 7,
+        rolledTargetAc: 5,
+        rolledHit: false,
+        rolledCrit: false,
+      },
       "Long Sword +2 vs AC 7: hit, 7 damage (AC 5 → 7: MISS → HIT)",
     ],
     [
       "en",
-      { hit: false, isCrit: false, critMultiplier: 1, totalDamage: 0, weaponName: "Long Sword +2", targetAc: 3,
-        rolledTargetAc: 6, rolledHit: true, rolledCrit: true },
+      {
+        hit: false,
+        isCrit: false,
+        critMultiplier: 1,
+        totalDamage: 0,
+        weaponName: "Long Sword +2",
+        targetAc: 3,
+        rolledTargetAc: 6,
+        rolledHit: true,
+        rolledCrit: true,
+      },
       "Long Sword +2 vs AC 3: miss (AC 6 → 3: CRIT → MISS)",
     ],
     [
       "fr",
-      { hit: true, isCrit: true, critMultiplier: 1.5, totalDamage: 10, weaponName: "Long Sword +2", targetAc: 10,
-        d100CritRoll: 3, d100MultiplierRoll: 77,
-        rolledTargetAc: -10, rolledHit: false, rolledCrit: false },
+      {
+        hit: true,
+        isCrit: true,
+        critMultiplier: 1.5,
+        totalDamage: 10,
+        weaponName: "Long Sword +2",
+        targetAc: 10,
+        d100CritRoll: 3,
+        d100MultiplierRoll: 77,
+        rolledTargetAc: -10,
+        rolledHit: false,
+        rolledCrit: false,
+      },
       "Long Sword +2 contre CA 10 : critique (test 3 · multiplicateur 77 → ×1,5), 10 dégâts (CA -10 → 10 : RATÉ → CRITIQUE)",
     ],
-  ])("renders a corrected attack in %s from the effective payload", async (lng, effective, want) => {
-    const t = await makeT(lng);
-    const rolled = { hit: false, isCrit: false, critMultiplier: 1, totalDamage: 0, weaponName: "Long Sword +2", targetAc: 5 };
-    expect(entryText({ ...entry("attack", rolled, "server"), effectivePayload: effective }, t)).toBe(want);
-  });
+  ])(
+    "renders a corrected attack in %s from the effective payload",
+    async (lng, effective, want) => {
+      const t = await makeT(lng);
+      const rolled = {
+        hit: false,
+        isCrit: false,
+        critMultiplier: 1,
+        totalDamage: 0,
+        weaponName: "Long Sword +2",
+        targetAc: 5,
+      };
+      expect(
+        entryText(
+          { ...entry("attack", rolled, "server"), effectivePayload: effective },
+          t,
+        ),
+      ).toBe(want);
+    },
+  );
 
   it("falls back to the summary for an attack without a payload", async () => {
     const t = await makeT("en");
@@ -206,18 +335,39 @@ describe("entryText", () => {
 });
 
 describe("entryText for saves", () => {
-  const rolled = { category: "spell", d20Roll: 12, target: 14, passed: false, rolledPassed: false, adjustment: 0, margin: -2 };
+  const rolled = {
+    category: "spell",
+    d20Roll: 12,
+    target: 14,
+    passed: false,
+    rolledPassed: false,
+    adjustment: 0,
+    margin: -2,
+  };
 
   it.each([
     ["rolled", rolled, "Save vs Spells: d20 12 vs 14, FAILED"],
     [
       "adjusted with a reason",
-      { ...rolled, adjustment: 4, adjustmentReason: "Gaia fire", passed: true, margin: 2, previousPassed: false },
+      {
+        ...rolled,
+        adjustment: 4,
+        adjustmentReason: "Gaia fire",
+        passed: true,
+        margin: 2,
+        previousPassed: false,
+      },
       "Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
     ],
     [
       "adjusted without a reason",
-      { ...rolled, d20Roll: 15, adjustment: -2, passed: false, previousPassed: true },
+      {
+        ...rolled,
+        d20Roll: 15,
+        adjustment: -2,
+        passed: false,
+        previousPassed: true,
+      },
       "Save vs Spells: d20 15 vs 14, adjusted −2: PASSED → FAILED",
     ],
     [
@@ -234,14 +384,32 @@ describe("entryText for saves", () => {
     const t = await makeT("en");
     const e = {
       ...entry("save", rolled),
-      effectivePayload: { ...rolled, adjustment: 4, passed: true, previousPassed: false },
+      effectivePayload: {
+        ...rolled,
+        adjustment: 4,
+        passed: true,
+        previousPassed: false,
+      },
     };
-    expect(entryText(e, t)).toBe("Save vs Spells: d20 12 vs 14, adjusted +4: FAILED → PASSED");
+    expect(entryText(e, t)).toBe(
+      "Save vs Spells: d20 12 vs 14, adjusted +4: FAILED → PASSED",
+    );
   });
 
   it("renders in French", async () => {
     const t = await makeT("fr");
-    expect(entryText(entry("save", { ...rolled, adjustment: 4, adjustmentReason: "Gaia feu", passed: true, previousPassed: false }), t)).toBe(
+    expect(
+      entryText(
+        entry("save", {
+          ...rolled,
+          adjustment: 4,
+          adjustmentReason: "Gaia feu",
+          passed: true,
+          previousPassed: false,
+        }),
+        t,
+      ),
+    ).toBe(
       "Sauvegarde contre Sorts : d20 12 contre 14, ajustée +4 Gaia feu : ÉCHOUÉE → RÉUSSIE",
     );
   });
@@ -253,7 +421,14 @@ describe("entryText for saves", () => {
 });
 
 describe("time_passed entries", () => {
-  const payload = { action: "pass_time", hours: 1.5, rounds: 90, fromRound: 4, toRound: 0, expired: ["Bless"] };
+  const payload = {
+    action: "pass_time",
+    hours: 1.5,
+    rounds: 90,
+    fromRound: 4,
+    toRound: 0,
+    expired: ["Bless"],
+  };
   it("renders hours, rounds, the round reset and what expired (en/fr)", async () => {
     expect(entryText(entry("time_passed", payload), await makeT("en"))).toBe(
       "Time passed: 1.5 h (90 rd), round 4 → 0 — expired: Bless",
@@ -264,15 +439,33 @@ describe("time_passed entries", () => {
   });
   it("without expiries", async () => {
     expect(
-      entryText(entry("time_passed", { ...payload, hours: 8, rounds: 480, expired: undefined }), await makeT("en")),
+      entryText(
+        entry("time_passed", {
+          ...payload,
+          hours: 8,
+          rounds: 480,
+          expired: undefined,
+        }),
+        await makeT("en"),
+      ),
     ).toBe("Time passed: 8 h (480 rd), round 4 → 0");
   });
 });
 
 describe("inventory entries (critical-qki.13)", () => {
   const use = {
-    itemId: "wand_lightning", name: "Wand of lightning", type: "wand", behaviour: "charges",
-    remaining: 0, maxCount: 4, dice: "6d6", rolls: [1, 2, 3, 4, 5, 6], total: 21, save: "", notes: "", breakdown: "",
+    itemId: "wand_lightning",
+    name: "Wand of lightning",
+    type: "wand",
+    behaviour: "charges",
+    remaining: 0,
+    maxCount: 4,
+    dice: "6d6",
+    rolls: [1, 2, 3, 4, 5, 6],
+    total: 21,
+    save: "",
+    notes: "",
+    breakdown: "",
   };
 
   it("renders a use that removed the item", async () => {
@@ -280,29 +473,71 @@ describe("inventory entries (critical-qki.13)", () => {
     expect(entryText(entry("item_use", { ...use, removed: true }), t)).toBe(
       "Used Wand of lightning: 6d6 = 21 (last charge, removed)",
     );
-    expect(entryText(entry("item_use", { ...use, dice: "", removed: true }), t)).toBe(
-      "Used Wand of lightning (last charge, removed)",
-    );
+    expect(
+      entryText(entry("item_use", { ...use, dice: "", removed: true }), t),
+    ).toBe("Used Wand of lightning (last charge, removed)");
   });
 
   it("renders a use that kept the item, and old entries without behaviour", async () => {
     const t = await makeT("en");
-    expect(entryText(entry("item_use", { ...use, removed: false, remaining: 3 }), t)).toBe(
-      "Used Wand of lightning: 6d6 = 21 (3 left)",
-    );
-    const old = { itemId: "gem", name: "Gem", kind: "charged", remaining: 0, maxCount: 1, dice: "", rolls: [], total: 0 };
+    expect(
+      entryText(entry("item_use", { ...use, removed: false, remaining: 3 }), t),
+    ).toBe("Used Wand of lightning: 6d6 = 21 (3 left)");
+    const old = {
+      itemId: "gem",
+      name: "Gem",
+      kind: "charged",
+      remaining: 0,
+      maxCount: 1,
+      dice: "",
+      rolls: [],
+      total: 0,
+    };
     expect(entryText(entry("item_use", old), t)).toBe("Used Gem (0 left)");
   });
 
   it("renders a restock in both languages", async () => {
-    const p = { itemId: "arrows_plus3", name: "Arrows +3", type: "arrow", added: 1, count: 1 };
-    expect(entryText(entry("item_restock", p), await makeT("en"))).toBe("Restocked Arrows +3: +1 (1 now)");
+    const p = {
+      itemId: "arrows_plus3",
+      name: "Arrows +3",
+      type: "arrow",
+      added: 1,
+      count: 1,
+    };
+    expect(entryText(entry("item_restock", p), await makeT("en"))).toBe(
+      "Restocked Arrows +3: +1 (1 now)",
+    );
     expect(entryText(entry("item_restock", p), await makeT("fr"))).toBe(
       "Arrows +3 réapprovisionné : +1 (1 maintenant)",
     );
   });
 
   it("falls back to the server summary for an unknown restock payload", async () => {
-    expect(entryText(entry("item_restock", { name: "x" }, "srv"), await makeT("en"))).toBe("srv");
+    expect(
+      entryText(entry("item_restock", { name: "x" }, "srv"), await makeT("en")),
+    ).toBe("srv");
+  });
+
+  it("renders item add, edit and remove entries in both languages", async () => {
+    const base = { itemId: "w", name: "Wand of lightning", count: 3 };
+    const edit = entry("item_edit", {
+      ...base,
+      changes: [{ field: "count", before: "4", after: "3" }],
+    });
+    expect(entryText(edit, await makeT("en"))).toBe(
+      "Edited Wand of lightning: count 4 → 3",
+    );
+    expect(entryText(edit, await makeT("fr"))).toBe(
+      "Wand of lightning modifié : quantité 4 → 3",
+    );
+    expect(entryText(entry("item_add", base), await makeT("en"))).toBe(
+      "Added Wand of lightning (3)",
+    );
+    expect(entryText(entry("item_remove", base), await makeT("en"))).toBe(
+      "Removed Wand of lightning (3)",
+    );
+    expect(
+      entryText(entry("item_remove", { name: "x" }, "srv"), await makeT("en")),
+    ).toBe("srv");
   });
 });

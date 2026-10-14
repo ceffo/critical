@@ -50,6 +50,8 @@ test("casting Stoneskin shows the result card, adds the buff; voiding gives the 
   );
   await expect(card.getByTestId("cast-buff")).toContainText("On you");
   await expect(card.getByTestId("cast-charges")).toContainText("1d4+level/2");
+  await expect(card.getByTestId("cast-text")).toBeHidden(); // folded by default
+  await card.getByText("Spell text").click();
   await expect(card.getByTestId("cast-text")).toBeVisible();
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await expect(level4.getByTestId("remaining-4")).toHaveText("0 / 1");

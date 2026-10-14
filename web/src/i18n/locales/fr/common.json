@@ -422,7 +422,8 @@
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), lancé au niveau {{casterLevel}}",
       "receivedHeading": "{{name}} lancé sur vous, niveau du lanceur {{casterLevel}}",
-      "orbAttack": "Gemme {{gem}} dépensée ({{left}} restantes). d20 {{d20}}, il faut {{needed}} contre CA {{ac}} (pas de critique).",
+      "orbNeeds": "Il faut {{needed}} ou plus contre CA {{ac}} (TAC0 {{thac0}}), pas de critique.",
+      "orbGem": "Gemme dépensée : {{gem}} ({{left}} restantes)",
       "orbHit": "L'orbe touche",
       "orbMiss": "L'orbe rate",
       "onYou": "Sur vous",

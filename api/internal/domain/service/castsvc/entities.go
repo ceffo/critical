@@ -2,6 +2,7 @@ package castsvc
 
 import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
@@ -27,6 +28,11 @@ type CastRequest struct {
 	// the levels of the slots granted (3 levels in all: [1 1 1], [1 2] or
 	// [3]). Empty: three level 1 slots.
 	ExtraSlots []int
+	// GemItemID is the inventory gem Chromatic Orb spends. Empty: the only
+	// gem in the inventory, if there is exactly one.
+	GemItemID string
+	// TargetAC is the orb's target AC (required for Chromatic Orb).
+	TargetAC *int
 }
 
 // ReceiveRequest is a spell a party member cast on the Bard.
@@ -140,4 +146,19 @@ type CastResult struct {
 	Slots []spellsvc.SpellSlot
 	// ExtraSlots are the levels of the Rary's extra slots this cast added.
 	ExtraSlots []int
+	// Orb is a Chromatic Orb's gem, attack roll and effect (nil otherwise).
+	Orb *OrbResult
+}
+
+// OrbResult is what a Chromatic Orb did (critical-qki.42): it spent a gem
+// and threw an attack roll; on a hit the gem's effect applies, which the DM
+// announces (the app rolls no save).
+type OrbResult struct {
+	GemItemID string
+	Gem       string
+	// Remaining is the count of that gem left.
+	Remaining int
+	Attack    combatsvc.ToHitRoll
+	// Effect is the gem's effect text when the orb hit (empty on a miss).
+	Effect string
 }

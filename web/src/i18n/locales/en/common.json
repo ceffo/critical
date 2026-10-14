@@ -211,6 +211,8 @@
     "rary111": "3 × level 1",
     "rary12": "level 1 + level 2",
     "rary3": "1 × level 3",
+    "orbAc": "Target AC",
+    "orbGem": "Gem spent",
     "castLabel": "Cast {{name}}",
     "prepare": "Prepare spells",
     "prepareTitle": "Prepare today's spells",
@@ -420,6 +422,9 @@
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
       "receivedHeading": "{{name}} cast on you, caster level {{casterLevel}}",
+      "orbAttack": "Gem {{gem}} spent ({{left}} left). d20 {{d20}}, needs {{needed}} against AC {{ac}} (no critical).",
+      "orbHit": "The orb hits",
+      "orbMiss": "The orb misses",
       "onYou": "On you",
       "notOnYou": "Not on you",
       "rounds": "Rounds",

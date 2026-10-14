@@ -13,6 +13,9 @@ export interface CastOptions {
   spellId?: string;
   /** Rary's Mnemonic Enhancer: the levels of the slots granted ([1,1,1], [1,2] or [3]). */
   extraSlots?: number[];
+  /** Chromatic Orb: the inventory gem spent (omitted: the only gem) and the target AC. */
+  gemItemId?: string;
+  targetAc?: number;
 }
 
 /** Spend slot `index`. */

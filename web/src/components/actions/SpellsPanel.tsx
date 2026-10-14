@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useSpellStore } from "@/stores/spells";
 import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
+import { useItemsStore } from "@/stores/items";
 import { spellId, spellName } from "@/i18n/spellName";
 import type { SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,12 @@ export function SpellsPanel() {
   // Rary's Mnemonic Enhancer: how its 3 spell levels split into slots.
   const [raryChoice, setRaryChoice] = useState("1,1,1");
   // Blank Rary's slots: the spell picked per slot index.
+  // Chromatic Orb: the target AC and the gem spent (inventory gems other than the daily Power Gem).
+  const [orbAc, setOrbAc] = useState("");
+  const [orbGem, setOrbGem] = useState("");
+  const gems = useItemsStore((s) => s.items).filter(
+    (i) => i.type.toLowerCase() === "gem" && i.behaviour !== "daily" && i.count > 0,
+  );
   const [picks, setPicks] = useState<Record<number, string>>({});
   const logEntries = useLogStore((s) => s.entries);
   const { run, busy } = useTableStore();
@@ -133,6 +140,8 @@ export function SpellsPanel() {
                         slot.prepared_spell_name,
                       );
                   const isRary = slot.prepared_spell_id === "rarys_mnemonic_enhancer";
+                  const isOrb = slot.prepared_spell_id === "chromatic_orb";
+                  const orbAcValue = /^-?\d+$/.test(orbAc.trim()) ? Number(orbAc) : undefined;
                   const choices = info.spellbook.filter((s) => s.level === slot.level);
                   return (
                     <li
@@ -166,6 +175,34 @@ export function SpellsPanel() {
                           ))}
                         </select>
                       )}
+                      {isOrb && !slot.used && (
+                        <>
+                          <input
+                            className="h-7 w-16 rounded border bg-background px-1 text-sm"
+                            aria-label={t("spellSlots.orbAc")}
+                            placeholder={t("spellSlots.orbAc")}
+                            data-testid="orb-ac"
+                            inputMode="numeric"
+                            value={orbAc}
+                            onChange={(e) => setOrbAc(e.target.value)}
+                          />
+                          {gems.length > 1 && (
+                            <select
+                              className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
+                              aria-label={t("spellSlots.orbGem")}
+                              data-testid="orb-gem"
+                              value={orbGem || gems[0].id}
+                              onChange={(e) => setOrbGem(e.target.value)}
+                            >
+                              {gems.map((g) => (
+                                <option key={g.id} value={g.id}>
+                                  {g.name} ({g.count})
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </>
+                      )}
                       {isRary && !slot.used && (
                         <select
                           className="h-7 rounded border bg-background px-1 text-sm"
@@ -182,7 +219,7 @@ export function SpellsPanel() {
                       <Button
                         size="xs"
                         variant={slot.used ? "ghost" : "secondary"}
-                        disabled={slot.used || busy || (blank && !picks[slot.index])}
+                        disabled={slot.used || busy || (blank && !picks[slot.index]) || (isOrb && orbAcValue === undefined)}
                         aria-label={t("spellSlots.castLabel", { name })}
                         onClick={() =>
                           void run(() =>
@@ -190,6 +227,8 @@ export function SpellsPanel() {
                               onSelf: onAlly ? false : undefined,
                               spellId: blank ? picks[slot.index] : undefined,
                               extraSlots: isRary ? raryChoice.split(",").map(Number) : undefined,
+                              targetAc: isOrb ? orbAcValue : undefined,
+                              gemItemId: isOrb && gems.length > 1 ? orbGem || gems[0].id : undefined,
                             }),
                           )
                         }

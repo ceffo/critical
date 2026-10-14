@@ -72,6 +72,8 @@ type fixture struct {
 	slots   *mocks.MockSlots
 	texts   *mocks.MockTexts
 	buffs   *mocks.MockBuffs
+	items   *mocks.MockItems
+	attacks *mocks.MockAttacks
 	dice    *seqDice
 	tx      *fakeTx
 	entries []actionlog.NewEntry
@@ -82,11 +84,13 @@ type fixture struct {
 func newFixture(t *testing.T, dice ...int) *fixture {
 	t.Helper()
 	f := &fixture{
-		slots: mocks.NewMockSlots(t),
-		texts: mocks.NewMockTexts(t),
-		buffs: mocks.NewMockBuffs(t),
-		dice:  &seqDice{t: t, vals: dice},
-		tx:    &fakeTx{},
+		slots:   mocks.NewMockSlots(t),
+		texts:   mocks.NewMockTexts(t),
+		buffs:   mocks.NewMockBuffs(t),
+		items:   mocks.NewMockItems(t),
+		attacks: mocks.NewMockAttacks(t),
+		dice:    &seqDice{t: t, vals: dice},
+		tx:      &fakeTx{},
 	}
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Level: bardLevel, Str: 12}, nil).Maybe()
@@ -116,6 +120,7 @@ func newFixture(t *testing.T, dice ...int) *fixture {
 		}).Maybe()
 	svc, err := castsvc.New(castsvc.Deps{
 		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: f.buffs,
+		Items: f.items, Attacks: f.attacks,
 		Characters: chars, Dice: f.dice, Log: log, Tx: f.tx,
 	})
 	require.NoError(t, err)
@@ -232,11 +237,6 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			name: "melf's acid arrow: 2d4 repeated 1 + level/3 rounds",
 			slot: slot("melfs_acid_arrow", "Melf's Acid Arrow", 2), dice: []int{1, 1, 2, 2, 3, 3, 4, 4, 1, 2, 1, 1},
 			wantDmg: &castsvc.DamageResult{Dice: "2d4", Type: "acid", Instances: 1, Rounds: 6, Total: 2 + 4 + 6 + 8 + 3 + 2},
-		},
-		{
-			name:    "chromatic orb uses the dice of the highest level row",
-			slot:    slot("chromatic_orb", "Chromatic Orb", 1),
-			wantDmg: &castsvc.DamageResult{Dice: "0", Type: "magic", Instances: 1, Rounds: 1, Total: 0},
 		},
 		{
 			name: "fist of stone: STR 18/00 for the fist only, shown not applied",
@@ -430,7 +430,7 @@ func TestCast_BuffErrorAborts(t *testing.T) {
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{Level: bardLevel}, nil)
 	svc, err := castsvc.New(castsvc.Deps{
-		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: buffs,
+		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: buffs, Items: f.items, Attacks: f.attacks,
 		Characters: chars, Dice: f.dice, Log: mocks.NewMockLog(t), Tx: f.tx,
 	})
 	require.NoError(t, err)

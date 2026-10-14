@@ -69,7 +69,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Level, source: SourceCast, onSelf: req.OnSelf,
+			casterLevel: c.Level, source: SourceCast, onSelf: req.OnSelf, req: req,
 		})
 		if err != nil {
 			return err
@@ -121,6 +121,7 @@ type effectReq struct {
 	casterLevel int
 	source      Source
 	onSelf      *bool
+	req         CastRequest // the cast request (Chromatic Orb: gem, target AC)
 }
 
 // resolve looks the spell up and applies its effect; it returns the buffs
@@ -156,6 +157,16 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 	if entry.Confidence == spelleffectsvc.ConfidenceLow {
 		res.TextOnly = TextOnlyLowConfidence
 		return res, nil, nil
+	}
+	// Chromatic Orb (critical-qki.42): a gem is spent, an attack is rolled
+	// and the gem decides the effect; the level damage table is not used.
+	if r.spellID == OrbID && r.source == SourceCast {
+		orb, snap, err := s.throwOrb(ctx, characterID, r.req)
+		if err != nil {
+			return CastResult{}, nil, err
+		}
+		res.Orb = orb
+		return res, []actionlog.Snapshot{snap}, nil
 	}
 	switch entry.Kind {
 	case spelleffectsvc.KindDamage:
@@ -229,6 +240,12 @@ func summary(res CastResult) string {
 		}
 	case res.Damage != nil:
 		fmt.Fprintf(&b, ": %d %s damage", res.Damage.Total, res.Damage.Type)
+	case res.Orb != nil:
+		verdict := "missed"
+		if res.Orb.Attack.Hit {
+			verdict = "hit"
+		}
+		fmt.Fprintf(&b, ": %s, %s (d20 %d vs AC %d)", res.Orb.Gem, verdict, res.Orb.Attack.D20Roll, res.Orb.Attack.TargetAC)
 	case len(res.ExtraSlots) > 0:
 		fmt.Fprintf(&b, ": extra slots, levels %v", res.ExtraSlots)
 	}

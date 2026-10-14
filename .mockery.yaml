@@ -102,6 +102,8 @@ packages:
       Slots:
       Texts:
       Buffs:
+      Items:
+      Attacks:
       Characters:
       Dice:
       Log:

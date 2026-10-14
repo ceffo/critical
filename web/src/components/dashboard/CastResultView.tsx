@@ -92,6 +92,26 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </div>
       )}
 
+      {r.orb && (
+        <div className="flex flex-col gap-1" data-testid="cast-orb">
+          <div className="text-sm">
+            {t("result.cast.orbAttack", {
+              gem: r.orb.gem,
+              left: r.orb.remaining,
+              d20: r.orb.d20Roll,
+              needed: r.orb.targetACNeeded,
+              ac: r.orb.targetAc,
+            })}
+          </div>
+          <Badge variant={r.orb.hit ? "default" : "secondary"} data-testid="cast-orb-verdict">
+            {r.orb.hit ? t("result.cast.orbHit") : t("result.cast.orbMiss")}
+          </Badge>
+          {r.orb.hit && r.orb.effect && (
+            <p className="text-sm font-medium" data-testid="cast-orb-effect">{r.orb.effect}</p>
+          )}
+        </div>
+      )}
+
       {r.damage && (
         <div className="flex flex-col gap-2" data-testid="cast-damage">
           <div className="flex items-end justify-between gap-2">

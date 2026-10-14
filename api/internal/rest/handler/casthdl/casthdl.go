@@ -44,6 +44,9 @@ type CastRequestDTO struct {
 	SpellID string `json:"spellId,omitempty"`
 	// ExtraSlots: the levels of the slots Rary's grants ([1,1,1] by default).
 	ExtraSlots []int `json:"extraSlots,omitempty"`
+	// GemItemID / TargetAC: Chromatic Orb's gem (omitted: the only gem) and target AC.
+	GemItemID string `json:"gemItemId,omitempty"`
+	TargetAC  *int   `json:"targetAc,omitempty"`
 }
 
 // ReceiveRequestDTO is the body of POST /api/spells/receive.
@@ -63,7 +66,7 @@ func Cast(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
 			return render.BadRequestError("invalid JSON body")
 		}
-		res, err := svc.Cast(r.Context(), charID(r), idx, castsvc.CastRequest{OnSelf: body.OnSelf, SpellID: body.SpellID, ExtraSlots: body.ExtraSlots})
+		res, err := svc.Cast(r.Context(), charID(r), idx, castsvc.CastRequest{OnSelf: body.OnSelf, SpellID: body.SpellID, ExtraSlots: body.ExtraSlots, GemItemID: body.GemItemID, TargetAC: body.TargetAC})
 		if err != nil {
 			return err
 		}
@@ -110,6 +113,33 @@ type CastResultDTO struct {
 	Slots       []spellhdl.SpellSlotDTO `json:"slots,omitempty"`
 	// ExtraSlots: levels of the Rary's slots this cast added.
 	ExtraSlots []int `json:"extraSlots,omitempty"`
+	// Orb: a Chromatic Orb's gem, attack roll and effect.
+	Orb *OrbDTO `json:"orb,omitempty"`
+}
+
+// OrbDTO is a Chromatic Orb's outcome: the spent gem, the attack roll (no
+// crit) and, on a hit, the gem's effect text for the DM to announce.
+type OrbDTO struct {
+	GemItemID      string      `json:"gemItemId"`
+	Gem            string      `json:"gem"`
+	Remaining      int         `json:"remaining"`
+	D20Roll        int         `json:"d20Roll"`
+	BaseThac0      int         `json:"baseThac0"`
+	Modifiers      []OrbModDTO `json:"modifiers"`
+	EffectiveThac0 int         `json:"effectiveThac0"`
+	TargetAC       int         `json:"targetAc"`
+	TargetACNeeded int         `json:"targetACNeeded"`
+	Hit            bool        `json:"hit"`
+	HitMargin      int         `json:"hitMargin"`
+	Effect         string      `json:"effect,omitempty"`
+}
+
+// OrbModDTO is one to-hit modifier of the orb's attack.
+type OrbModDTO struct {
+	Kind   string `json:"kind"`
+	Source string `json:"source"`
+	Detail string `json:"detail,omitempty"`
+	Value  int    `json:"value"`
 }
 
 // SaveDTO is the target's saving throw (the DM's side).
@@ -196,6 +226,17 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 		out.Untracked = append(out.Untracked, UntrackedDTO{Key: u.Key, Value: u.Value, Condition: u.Condition})
 	}
 	out.ExtraSlots = res.ExtraSlots
+	if o := res.Orb; o != nil {
+		out.Orb = &OrbDTO{
+			GemItemID: o.GemItemID, Gem: o.Gem, Remaining: o.Remaining, D20Roll: o.Attack.D20Roll,
+			BaseThac0: o.Attack.BaseThac0, Modifiers: []OrbModDTO{}, EffectiveThac0: o.Attack.EffectiveThac0,
+			TargetAC: o.Attack.TargetAC, TargetACNeeded: o.Attack.TargetACNeeded, Hit: o.Attack.Hit,
+			HitMargin: o.Attack.HitMargin, Effect: o.Effect,
+		}
+		for _, m := range o.Attack.Modifiers {
+			out.Orb.Modifiers = append(out.Orb.Modifiers, OrbModDTO{Kind: string(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value})
+		}
+	}
 	if res.Slots != nil {
 		out.Slots = spellhdl.SlotsToDTO(res.Slots)
 	}

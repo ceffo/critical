@@ -134,6 +134,14 @@ slots, split by the caster at cast time (`extraSlots`: `[1,1,1]` by default, `[1
 `Extra` slots in the same list, blank until cast (`spellId` picks a spell of the slot's level then), kept by a
 new preparation, and **removed by the next long rest** (the spell's 24 h duration is not tracked; user
 to confirm). The same `spell_slots` snapshot undoes the cast.
+Chromatic Orb (critical-qki.42): casting it needs `targetAc` and spends one inventory gem (type `gem`, not
+the daily Power Gem; `gemItemId` when several are left, an error naming the problem when none), then
+`combatsvc.RollSpellToHit` rolls one d20 (THAC0, Strength and Dexterity missile adjustments, buff to-hit; no
+crit check, no natural 20 rule, nothing logged on its own). On a hit the result carries the gem's effect text
+(diamond: death, or petrification if the save succeeds; the app rolls no save, the DM announces it). The level
+damage table of the seed is not used. The gem count rides the cast entry as an `items:<id>` snapshot, so voiding
+the cast gives the gem back. Only the diamond effect is known: any other gem tells the DM to apply it (the
+book's gem table is not in the rulebooks repo).
 Buffs carry a free-text `Note` (in the active-buffs JSON and the `buffs` snapshot, so void restores it;
 editable through `BuffEdit.Note`). Saved buff templates (`saved_buffs` table, migration 013, nothing seeded)
 are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST` replaces a same-name template,

@@ -90,7 +90,9 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    previous one before arming a new one, and never leave duplicate or stale loops running. A turn
    that only says "already handled" is waste.
 3. **Opus sessions.** Sonnet is the default for developers and reviewers. Opus only where "Model
-   selection" requires it, and never just to file a small follow-up.
+   selection" requires it, and never just to file a small follow-up. Where it requires Opus, quota
+   pressure doesn't lower the model: cut scope or rounds instead (Sonnet on rules-engine work shipped
+   per-spell special cases that a later Opus cleanup had to undo).
 4. **Agent sessions in general.** Each one starts cold and rereads the docs and the code. Reuse a
    developer for its rework rounds. Keep one developer at a time unless running two saves wall-clock
    time the user actually needs. Close idle agents once their PR is merged.
@@ -139,11 +141,19 @@ unfinished agent's results.
 
 ## 0. Your own checkout stays on the default branch
 
-`<main>` is yours and **always on `<db>`, synced to origin**: never commit feature work there, never
-leave it on a feature branch. At session start and after every merge: `git switch <db> && git pull
---ff-only`. All feature work happens in worktrees.
+`<main>` is yours and **on `<db>`, synced to origin**. Code is never yours: no code change, no
+worktree of your own. Process and documentation changes (agent definitions, workflow and ADR docs,
+justfile recipes for the fleet) are: make them on a short-lived branch in `<main>` (`git switch -c
+chore/<slug>`), commit, push, open the PR, and `git switch <db>` straight after. Never leave `<main>`
+on a branch while you wait. At session start and after every merge: `git switch <db> && git pull
+--ff-only`, or `just sync-main` when the tracker export is dirty (keeps the tracker DB as the truth and
+prints any status that changed). All feature work happens in worktrees.
 
-Your shell stays in `<main>`: never `cd` into a worktree or the ledger folder (use `git -C`,
+Start the supervisor session in `<main>` (`claude --agent supervisor` launched there): the project's
+permission rules and this file only load from there. **Check your cwd at session start**: herdr
+resumes every agent in `~` after a reboot. If yours isn't `<main>`, stop and ask the user to relaunch
+you from `<main>` (a `/cd` doesn't reload this definition). A `PreToolUse` hook refuses `cd` into the
+worktree root from a session started in `<main>`: use `git -C` and absolute paths. Your shell stays in `<main>`: never `cd` into a worktree or the ledger folder (use `git -C`,
 absolute paths, or a subshell). The git stash stack is shared with every worktree: when pulling over
 local tracker changes, use a tagged stash entry and apply it by sha, never a bare `git stash pop`.
 
@@ -191,6 +201,8 @@ developer on the same worktree only if the original's session is gone, with full
   whatever its size; say so in your log.
 - Review → launch `rev-<id>` (`--agent code-reviewer`, model per "Model selection") in a tab on the
   worktree, with a brief holding item, branch, worktree, and the path of the developer's report.
+  The brief adds focus; it never narrows the workflow doc's reviewer checklist (design and
+  architecture are findings, not style).
 - No review → the report should already show the gate green; go to section 5.
 
 ## 4. When a reviewer reports
@@ -271,6 +283,12 @@ retargets it to `<db>` by itself; reset the child's worktree to `origin/<child>`
 stack with no child PR yet needs `gh stack rebase` run from the child's worktree (from `<main>`,
 `gh stack` can't tell stacks apart: "<db> belongs to multiple stacks").
 
+When the child has merge commits (it merged an updated parent), the squash-merge leaves it
+CONFLICTING. If `git diff --stat <parent-tip> origin/<db>` is empty and the child contains the parent
+tip, `git -C <child-worktree> merge -s ours origin/<db>` is exact: check the tree is unchanged, push,
+no gate rerun needed. CI runs only on PRs based on `<db>`: a stacked child has no checks until it is
+retargeted, so watch its CI after the parent merges.
+
 ## PR watch (never rely on remembering to check)
 
 Keep **exactly one** watcher running with `run_in_background` for all open PRs: a loop that fetches,
@@ -332,6 +350,9 @@ add a "Notes for the next supervisor" line for anything subtle, and sync the tra
 durable situational lessons (how-tos, gotchas), not this state and not decisions.
 
 ## Reporting to the user
+
+End **every** reply with all pending questions to the user, restated in full and numbered, each
+with the default you apply meanwhile; never "still open, see above".
 
 Short status lines as things move: dispatched, in review, rework (why), verified, PR opened, CI
 green/red. The running item → stage → PR table is the ledger's "In flight" (show it on request). At

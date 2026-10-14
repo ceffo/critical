@@ -206,6 +206,48 @@ changes how the count moves:
 - Ammo is any item whose `ammo_kind` matches the weapon's; the attack picker offers those with
   count > 0.
 
+## DAL code generation (bob)
+
+The DAL adapters in `api/internal/adapters/*/` use [bob](https://github.com/stephenafamo/bob) for typed SQL queries. Generated files are committed and should not be edited by hand.
+
+### When to regenerate
+
+Regenerate whenever:
+- A migration is added or changed (new table/column)
+- A `.sql` query file under `api/internal/adapters/*/queries/` is added or changed
+- The bob version in `api/go.mod` is bumped
+
+### How to regenerate
+
+```bash
+just generate
+```
+
+This recipe (defined in `justfile`):
+1. Applies all migrations in `api/internal/storage/sqlite/migrations/` to a temp SQLite DB (`.tmp_schema.db`)
+2. Runs `bobgen-sqlite -c bobgen.yaml` to regenerate Go wrappers
+3. Deletes the temp DB
+4. Runs `go mod tidy`
+
+### Layout
+
+| Path | Contents |
+|------|----------|
+| `api/bobgen.yaml` | Generator config: DSN, query dirs, output destinations |
+| `api/internal/storage/sqlite/bob/models/` | ORM models for all tables (generated) |
+| `api/internal/storage/sqlite/bob/factory/` | Test factories (generated) |
+| `api/internal/adapters/*/queries/*.sql` | Hand-written SQL query sources |
+| `api/internal/adapters/*/queries/*.bob.go` | Generated typed Go query wrappers |
+
+### Key constraints
+
+- `SUM()`, `COUNT()`, and other aggregates are **not supported** by bob's static parser — keep those as raw `d.q.QueryRowContext(...)` calls in the DAL.
+- LIMIT parameters generate as `string` — pass `strconv.Itoa(n)` from the DAL.
+- `DATETIME` columns require an inline type annotation in the `.sql` file: `created_at /*:time.Time:notnull*/`
+- The `sqlite.BobExec` wrapper in `api/internal/storage/sqlite/bob_exec.go` bridges `sqlite.Querier` (returns `*sql.Rows`) to `bob.Executor` (expects `scan.Rows`)
+
+<!-- br-agent-instructions-v1 -->
+
 ## Key Go Structs
 
 ```go

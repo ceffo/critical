@@ -81,6 +81,11 @@ flowchart TD
   − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
   the recomputed save (same d20). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
+- The attack card (`ResultCard` `AttackResult`) has a "Correct the target AC" form: − / + around
+  the AC (starts at the attack's, ±20), Apply → `POST /api/roll/attack/{logEntryId}/adjust`
+  (`stores/roll.ts` `adjustLastAttack`); the server returns the recomputed attack (same dice, no ammo
+  spent). Hidden once the entry is voided. Attack log lines render `effectivePayload`, with
+  "AC 5 → 7: MISS → HIT" once corrected.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).

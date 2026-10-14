@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
 import type { CastResult } from "@/types/spells";
 import { resolveAttack } from "@/api/combat";
-import { adjustSave, rollSavingThrow } from "@/api/roll";
+import { adjustAttack, adjustSave, rollSavingThrow } from "@/api/roll";
 import { postUseItem } from "@/api/items";
 import type { UseResult } from "@/types/items";
 import { useTableStore } from "./table";
@@ -22,6 +22,8 @@ interface RollStore {
   rollSave: (category: SaveCategory) => Promise<void>;
   /** Sets the adjustment of the save on the card; resolves true on success. */
   adjustLastSave: (adjustment: number, reason: string) => Promise<boolean>;
+  /** Corrects the target AC of the attack on the card; resolves true on success. */
+  adjustLastAttack: (targetAc: number) => Promise<boolean>;
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
 }
@@ -56,6 +58,12 @@ export const useRollStore = create<RollStore>((set, get) => {
         async () => ({ kind: "save", category, result: await rollSavingThrow(category) }),
         true,
       );
+    },
+    adjustLastAttack: async (targetAc) => {
+      const last = get().last;
+      if (last?.kind !== "attack" || last.result.logEntryId === undefined) return false;
+      const id = last.result.logEntryId;
+      return roll(async () => ({ kind: "attack", result: await adjustAttack(id, targetAc) }), true);
     },
     adjustLastSave: async (adjustment, reason) => {
       const last = get().last;

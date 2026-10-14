@@ -1,5 +1,5 @@
-// Package combathdl exposes /api/roll/attack, /api/roll/save (and its
-// adjustment), /api/weapons and
+// Package combathdl exposes /api/roll/attack (and its target AC
+// correction), /api/roll/save (and its adjustment), /api/weapons and
 // /api/crit-table.
 package combathdl
 
@@ -30,6 +30,7 @@ type combatSvc interface {
 	ResolveAttack(ctx context.Context, characterID int64, req combatsvc.AttackRequest) (*combatsvc.RollResult, error)
 	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error)
 	AdjustSave(ctx context.Context, characterID, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)
+	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*combatsvc.RollResult, error)
 	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
 	GetCritTable(ctx context.Context) (combatsvc.CritTable, error)
 	SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error)
@@ -38,6 +39,7 @@ type combatSvc interface {
 // RegisterRoutes wires combat endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/attack", render.Handle(ResolveAttack(charID, svc)))
+	r.Post("/api/roll/attack/{id}/adjust", render.Handle(AdjustAttack(charID, svc)))
 	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
 	r.Post("/api/roll/save/{id}/adjust", render.Handle(AdjustSave(charID, svc)))
 	r.Get("/api/weapons", render.Handle(ListWeapons(svc)))
@@ -139,6 +141,39 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	}
 }
 
+// AttackAdjustmentDTO is the body of POST /api/roll/attack/{id}/adjust: the
+// corrected target AC.
+type AttackAdjustmentDTO struct {
+	TargetAC *int `json:"targetAc"`
+}
+
+// AdjustAttack corrects the target AC of the latest attack (log entry {id});
+// the server recomputes hit, margin, crit and damage with the dice rolled
+// with the attack (no reroll, no ammo spent) and returns the updated
+// RollResult. 409 when the entry is voided or not the latest roll, 400 when
+// it is not an attack or the AC is out of range, 404 when it does not exist.
+func AdjustAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil || id <= 0 {
+			return render.BadRequestError("invalid log entry id")
+		}
+		var req AttackAdjustmentDTO
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if req.TargetAC == nil {
+			return render.BadRequestError("targetAc is required")
+		}
+		res, err := svc.AdjustAttackAC(r.Context(), charID(r), id, *req.TargetAC)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toDTO(res))
+		return nil
+	}
+}
+
 // SaveAdjustmentDTO is the body of POST /api/roll/save/{id}/adjust: the new
 // signed adjustment (0 removes it) and an optional reason.
 type SaveAdjustmentDTO struct {
@@ -207,6 +242,11 @@ type RollResultDTO struct {
 	TargetAC   int      `json:"targetAc"`
 	TargetSize string   `json:"targetSize,omitempty"`
 	Ammo       *AmmoDTO `json:"ammo,omitempty"`
+	// Target AC and outcome as rolled; present while a correction differs
+	// from the rolled target AC.
+	RolledTargetAC *int  `json:"rolledTargetAc,omitempty"`
+	RolledHit      *bool `json:"rolledHit,omitempty"`
+	RolledCrit     *bool `json:"rolledCrit,omitempty"`
 
 	// Saving-throw context; empty on attacks. adjustment is always sent on
 	// saves (0: none).
@@ -264,6 +304,7 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
 		TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
+		RolledTargetAC: r.RolledTargetAC, RolledHit: r.RolledHit, RolledCrit: r.RolledCrit,
 		SaveCategory: string(r.SaveCategory), AdjustmentReason: r.AdjustmentReason,
 		LogEntryID: r.LogEntryID,
 	}

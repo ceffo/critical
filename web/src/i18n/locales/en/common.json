@@ -448,6 +448,15 @@
       "value": "Adjustment",
       "reason": "Reason (optional)",
       "apply": "Apply"
+    },
+    "adjustAc": {
+      "title": "Target AC",
+      "label": "Correct the target AC",
+      "decrease": "Lower target AC",
+      "increase": "Raise target AC",
+      "value": "Corrected target AC",
+      "apply": "Apply",
+      "was": "rolled vs AC {{ac}}"
     }
   },
   "log": {
@@ -505,7 +514,13 @@
       "miss": "{{weapon}} vs AC {{ac}}: miss",
       "hit": "{{weapon}} vs AC {{ac}}: hit, {{damage}} damage",
       "crit": "{{weapon}} vs AC {{ac}}: critical ×{{mult, number}}, {{damage}} damage",
-      "withAmmo": "{{weapon}} ({{ammo}})"
+      "withAmmo": "{{weapon}} ({{ammo}})",
+      "corrected": "{{text}} (AC {{from}} → {{to}}: {{was}} → {{now}})",
+      "outcome": {
+        "miss": "MISS",
+        "hit": "HIT",
+        "crit": "CRIT"
+      }
     },
     "cast": {
       "cast": "Cast {{spell}}",

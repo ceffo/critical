@@ -157,3 +157,124 @@ test("a later shot with other arrows does not block voiding an earlier shot", as
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus3);
   await snap(page, "void-earlier-shot");
 });
+
+test("the target AC is corrected on the card after the roll: same dice, no arrow spent", async ({
+  page,
+}) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  await form.getByLabel("Weapon").selectOption("shortbow");
+  await form.getByLabel("Ammunition").selectOption("arrows_plus2");
+  const before = await selectedAmmoCount(page);
+  // AC -20 can't be hit and AC 20 can't be missed whatever the d20, so the flips are certain.
+  await form.getByLabel("Target AC").fill("-20");
+  await form.getByRole("button", { name: "Roll Attack" }).click();
+
+  const card = resultCard(page);
+  const fix = card.getByRole("form", { name: "Correct the target AC" });
+  const acField = fix.getByLabel("Corrected target AC");
+  const apply = fix.getByRole("button", { name: "Apply" });
+  const entry = logEntry(page, "Short Bow +2 (Arrows +2)");
+  await expect(card).toContainText("vs AC -20");
+  await expect(card.getByTestId("verdict")).toHaveText("Miss");
+  await expect(card.getByTestId("total-damage")).toHaveText("–");
+  await expect(acField).toHaveValue("-20");
+  await expect(apply).toBeDisabled();
+  await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
+  const d20 = await card.getByText("d20", { exact: true }).locator("xpath=..").locator("dd").textContent();
+
+  // − / + step the field; nothing is sent until Apply.
+  await fix.getByRole("button", { name: "Raise target AC" }).click();
+  await expect(acField).toHaveValue("-19");
+  await fix.getByRole("button", { name: "Lower target AC" }).click();
+  await expect(acField).toHaveValue("-20");
+
+  // Miss → hit: the damage shown is the dice rolled with the attack.
+  await acField.fill("20");
+  await apply.click();
+  await expect(card).toContainText("vs AC 20");
+  await expect(card.getByTestId("verdict")).toHaveText("Hit");
+  await expect(card.getByTestId("ac-corrected")).toHaveText("rolled vs AC -20");
+  await expect(card.getByTestId("total-damage")).toHaveText(/^\d+$/);
+  const damage = await card.getByTestId("total-damage").textContent();
+  expect(await card.getByText("d20", { exact: true }).locator("xpath=..").locator("dd").textContent()).toBe(d20);
+  await expect(entry).toContainText(/\(AC -20 → 20: MISS → (HIT|CRIT)\)/);
+  await expect(entry).toContainText("Amended");
+  await expect(card.getByTestId("ammo-left")).toHaveText(`Arrows +2: ${before - 1} left`);
+  expect(await selectedAmmoCount(page)).toBe(before - 1);
+  await snap(page, "attack-ac-corrected");
+
+  // A second correction still reads from the rolled AC and outcome.
+  await acField.fill("19");
+  await apply.click();
+  await expect(card).toContainText("vs AC 19");
+  await expect(entry).toContainText(/\(AC -20 → 19: MISS → (HIT|CRIT)\)/);
+  await expect(card.getByTestId("ac-corrected")).toHaveText("rolled vs AC -20");
+
+  // Hit → miss: back to the rolled AC hides the damage and reads as rolled (still amended); back
+  // to AC 20 shows the same damage again (no reroll).
+  await acField.fill("-20");
+  await apply.click();
+  await expect(card.getByTestId("verdict")).toHaveText("Miss");
+  await expect(card.getByTestId("total-damage")).toHaveText("–");
+  await expect(card.getByTestId("ac-corrected")).toHaveCount(0);
+  await expect(entry).toContainText("Short Bow +2 (Arrows +2) vs AC -20: miss");
+  await expect(entry).not.toContainText("→ -20");
+  await expect(entry).toContainText("Amended");
+  await acField.fill("20");
+  await apply.click();
+  await expect(card.getByTestId("verdict")).toHaveText("Hit");
+  await expect(card.getByTestId("total-damage")).toHaveText(damage!);
+  await expect(entry).toContainText(/\(AC -20 → 20: MISS → (HIT|CRIT)\)/);
+  expect(await selectedAmmoCount(page)).toBe(before - 1);
+
+  // In French: the form and the log line.
+  await page.getByRole("button", { name: "FR" }).click();
+  const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("attack-result");
+  const frFix = frCard.getByRole("form", { name: "Corriger la CA de la cible" });
+  await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("20");
+  await expect(frFix.getByRole("button", { name: "Appliquer" })).toBeDisabled();
+  await expect(frFix.getByRole("button", { name: "Monter la CA de la cible" })).toBeVisible();
+  await expect(frCard.getByTestId("ac-corrected")).toHaveText("jet contre CA -20");
+  const frEntry = page
+    .getByRole("region", { name: "Journal de combat" })
+    .getByRole("listitem")
+    .filter({ hasText: "Short Bow +2 (Arrows +2)" });
+  await expect(frEntry).toContainText(
+    /contre CA 20 : (touché|critique).*\(CA -20 → 20 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
+  );
+  await snap(page, "attack-ac-corrected-fr");
+  await page.getByRole("button", { name: "EN" }).click();
+
+  // Voiding the corrected attack still gives the arrow back and removes the correction form.
+  await voidEntry(page, "Short Bow +2 (Arrows +2)");
+  await expect.poll(() => selectedAmmoCount(page)).toBe(before);
+  await expect(fix).toHaveCount(0);
+  await snap(page, "attack-ac-corrected-voided");
+});
+
+test("only the latest roll's target AC can be corrected", async ({ page }) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  await form.getByLabel("Weapon").selectOption("longsword");
+  await form.getByLabel("Target AC").fill("5");
+  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await expect(resultCard(page)).toContainText("vs AC 5");
+  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await expect.poll(async () => (await logEntry(page, "Long Sword +2 vs AC 5").count())).toBe(2);
+
+  const log = (await (await page.request.get("/api/log")).json()) as {
+    entries: { id: number; kind: string }[];
+  };
+  const [, older] = log.entries.filter((e) => e.kind === "attack").map((e) => e.id);
+  const res = await page.request.post(`/api/roll/attack/${older}/adjust`, { data: { targetAc: 7 } });
+  expect(res.status()).toBe(409);
+  expect((await res.json()).error).toContain("only the latest roll can be adjusted");
+
+  // A save rolled after the attack replaces the card: the attack is no longer the latest roll.
+  const [latest] = log.entries.filter((e) => e.kind === "attack").map((e) => e.id);
+  expect((await page.request.post("/api/roll/save", { data: { category: "spell" } })).ok()).toBe(true);
+  const afterSave = await page.request.post(`/api/roll/attack/${latest}/adjust`, { data: { targetAc: 7 } });
+  expect(afterSave.status()).toBe(409);
+  expect((await afterSave.json()).error).toContain("only the latest roll can be adjusted");
+});

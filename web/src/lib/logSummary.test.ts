@@ -159,6 +159,31 @@ describe("entryText", () => {
     expect(entryText(entry("attack", payload, "server"), t)).toBe(want);
   });
 
+  it.each([
+    [
+      "en",
+      { hit: true, isCrit: false, critMultiplier: 1, totalDamage: 7, weaponName: "Long Sword +2", targetAc: 7,
+        rolledTargetAc: 5, rolledHit: false, rolledCrit: false },
+      "Long Sword +2 vs AC 7: hit, 7 damage (AC 5 → 7: MISS → HIT)",
+    ],
+    [
+      "en",
+      { hit: false, isCrit: false, critMultiplier: 1, totalDamage: 0, weaponName: "Long Sword +2", targetAc: 3,
+        rolledTargetAc: 6, rolledHit: true, rolledCrit: true },
+      "Long Sword +2 vs AC 3: miss (AC 6 → 3: CRIT → MISS)",
+    ],
+    [
+      "fr",
+      { hit: true, isCrit: true, critMultiplier: 1.5, totalDamage: 10, weaponName: "Long Sword +2", targetAc: 10,
+        rolledTargetAc: -10, rolledHit: false, rolledCrit: false },
+      "Long Sword +2 contre CA 10 : critique ×1,5, 10 dégâts (CA -10 → 10 : RATÉ → CRITIQUE)",
+    ],
+  ])("renders a corrected attack in %s from the effective payload", async (lng, effective, want) => {
+    const t = await makeT(lng);
+    const rolled = { hit: false, isCrit: false, critMultiplier: 1, totalDamage: 0, weaponName: "Long Sword +2", targetAc: 5 };
+    expect(entryText({ ...entry("attack", rolled, "server"), effectivePayload: effective }, t)).toBe(want);
+  });
+
   it("falls back to the summary for an attack without a payload", async () => {
     const t = await makeT("en");
     expect(entryText(entry("attack", {}, "old attack"), t)).toBe("old attack");

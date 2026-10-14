@@ -132,8 +132,8 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 }
 
 // resolve rolls and computes the attack. Dice are rolled in this order:
-// d20, crit d100, then the damage dice on a hit. The crit multiplier is the
-// one of the crit-table range holding the crit d100.
+// d20, crit d100, then the damage dice (on every attack). The crit
+// multiplier is the one of the crit-table range holding the crit d100.
 func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, crit CritTable, req AttackRequest) (*RollResult, error) {
 	res := &RollResult{
 		BaseThac0:      char.Thac0Base,
@@ -150,7 +150,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	}
 	add := func(m Modifier) { res.Modifiers = append(res.Modifiers, m) }
 	// Damage terms are collected per formula term and listed in formula
-	// order on a hit.
+	// order (settle adds the crit term on a crit).
 	var weaponTerms, strTerms []DamageTerm
 
 	// Strength (PHB Table 1, from the effective STR with buffs). PHB
@@ -210,27 +210,18 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		sum += m.Value
 	}
 	res.EffectiveThac0 = res.BaseThac0 - sum
-	needed := res.EffectiveThac0 - req.TargetAC
 
 	res.D20Roll = s.dice.RollD20()
 	res.D100CritRoll = s.dice.RollD100()
-	res.TargetACNeeded = res.EffectiveThac0 - res.D20Roll
-	res.Hit = res.D20Roll >= needed
-	res.HitMargin = res.D20Roll - needed
-	if res.D20Roll-res.D100CritRoll >= needed {
-		res.IsCrit = true
-		row, err := lookupCrit(crit.Rows, res.D100CritRoll)
-		if err != nil {
-			return nil, err
-		}
-		res.CritMultiplier = row.Multiplier
-		res.CritFrom, res.CritTo = row.From, row.To
-		res.CritPlaceholder = crit.Placeholder
+	row, err := lookupCrit(crit.Rows, res.D100CritRoll)
+	if err != nil {
+		return nil, err
 	}
-	if !res.Hit {
-		return res, nil
-	}
+	res.RollCritRow = &row
+	res.RollCritPlaceholder = crit.Placeholder
 
+	// The damage dice are rolled on every attack, even a miss, so a target
+	// AC corrected after the roll (AdjustAttackAC) never rolls again.
 	dice := weapon.BaseDamage
 	if req.TargetSize == SizeLarge && weapon.DamageLarge != "" {
 		dice = weapon.DamageLarge
@@ -239,29 +230,90 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	if err != nil {
 		return nil, fmt.Errorf("weapon %s damage: %w", weapon.ID, err)
 	}
-	res.BaseDamage = base
-	res.DamageDice = dice
-
-	for _, f := range mods.SpellsBuffFrom {
-		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermSpells, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
+	rolled := &RolledDamage{
+		Dice: dice, Total: base, SpellsBuff: mods.SpellsBuff, WeaponBuff: weaponDmg + ammoDmg,
+		BuffMultipliers: mods.Multipliers, StrengthBonus: strDmg, BonusDamage: mods.Damage,
+		Terms: []DamageTerm{},
 	}
-	res.DamageTerms = append(res.DamageTerms, weaponTerms...)
+	for _, f := range mods.SpellsBuffFrom {
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermSpells, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
+	}
+	rolled.Terms = append(rolled.Terms, weaponTerms...)
+	for _, f := range mods.MultipliersFrom {
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermMultiplier, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
+	}
+	rolled.Terms = append(rolled.Terms, strTerms...)
+	for _, c := range mods.DamageFrom {
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermBonus, Kind: ModBuff, Source: c.Buff, Detail: c.Buff, Value: float64(c.Value)})
+	}
+	res.Rolled = rolled
+
+	settle(res)
+	return res, nil
+}
+
+// settle computes the outcome of a rolled attack from its d20, crit d100,
+// effective THAC0, target AC, crit row and rolled damage, all already set:
+//
+//   - hit when d20 >= effective THAC0 - target AC (a natural 1 or 20 is plain
+//     arithmetic);
+//   - crit when d20 - d100 >= that same number; the multiplier is the one
+//     of the crit row;
+//   - on a hit, damage = ((dice × SpellsBuff) + WeaponBuff) × (crit ×
+//     BuffMultipliers) + StrengthBonus + BonusDamage, full precision,
+//     floored once at the end, never below 0. A miss has no damage.
+//
+// ResolveAttack and AdjustAttackAC share it so a corrected attack is exactly
+// the attack rolled against the new AC.
+func settle(res *RollResult) {
+	needed := res.EffectiveThac0 - res.TargetAC
+	res.TargetACNeeded = res.EffectiveThac0 - res.D20Roll
+	res.Hit = res.D20Roll >= needed
+	res.HitMargin = res.D20Roll - needed
+
+	res.IsCrit = false
+	res.CritMultiplier = 1
+	res.CritFrom, res.CritTo = 0, 0
+	res.CritPlaceholder = false
+	if row := res.RollCritRow; row != nil && res.D20Roll-res.D100CritRoll >= needed {
+		res.IsCrit = true
+		res.CritMultiplier = row.Multiplier
+		res.CritFrom, res.CritTo = row.From, row.To
+		res.CritPlaceholder = res.RollCritPlaceholder
+	}
+
+	res.BaseDamage, res.DamageDice = 0, ""
+	res.SpellsBuff, res.WeaponBuff, res.Multipliers = 0, 0, 0
+	res.StrengthBonus, res.BonusDamage = 0, 0
+	res.DamageTerms = []DamageTerm{}
+	res.UnroundedDamage, res.TotalDamage, res.DamageBreakdown = 0, 0, ""
+	d := res.Rolled
+	if !res.Hit || d == nil {
+		return
+	}
+
+	res.BaseDamage = d.Total
+	res.DamageDice = d.Dice
+	// Terms in formula order; the crit multiplier goes before the buff
+	// multipliers (spells, weapon, crit, multipliers, strength, bonus).
+	critAt := len(d.Terms)
+	for i, t := range d.Terms {
+		if t.Term != TermSpells && t.Term != TermWeapon {
+			critAt = i
+			break
+		}
+	}
+	res.DamageTerms = append(res.DamageTerms, d.Terms[:critAt]...)
 	if res.IsCrit {
 		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModCrit, Source: critSource(res), Detail: critDetail(res), Value: res.CritMultiplier})
 	}
-	for _, f := range mods.MultipliersFrom {
-		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
-	}
-	res.DamageTerms = append(res.DamageTerms, strTerms...)
-	for _, c := range mods.DamageFrom {
-		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermBonus, Kind: ModBuff, Source: c.Buff, Detail: c.Buff, Value: float64(c.Value)})
-	}
+	res.DamageTerms = append(res.DamageTerms, d.Terms[critAt:]...)
 
-	res.SpellsBuff = mods.SpellsBuff
-	res.WeaponBuff = weaponDmg + ammoDmg
-	res.Multipliers = res.CritMultiplier * mods.Multipliers
-	res.StrengthBonus = strDmg
-	res.BonusDamage = mods.Damage
+	res.SpellsBuff = d.SpellsBuff
+	res.WeaponBuff = d.WeaponBuff
+	res.Multipliers = res.CritMultiplier * d.BuffMultipliers
+	res.StrengthBonus = d.StrengthBonus
+	res.BonusDamage = d.BonusDamage
 
 	// Full precision through the whole formula, floored once at the end. The
 	// strength and buff terms are whole numbers, so flooring the sum is the
@@ -270,7 +322,6 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		float64(res.StrengthBonus) + float64(res.BonusDamage)
 	res.TotalDamage = max(int(math.Floor(res.UnroundedDamage+floorEpsilon)), 0)
 	res.DamageBreakdown = explainDamage(res)
-	return res, nil
 }
 
 // critSource is the English label of the crit damage term.
@@ -356,19 +407,39 @@ func rollDice(d Dice, dice string) (int, error) {
 	return total, nil
 }
 
-// summary is the English log line (the UI renders the payload instead).
+// summary is the English log line (the UI renders the payload instead). A
+// corrected attack ends with the correction from the rolled AC and outcome:
+// "(AC 5 → 7: MISS → HIT)".
 func summary(r *RollResult) string {
 	weapon := r.WeaponName
 	if r.Ammo != nil {
 		weapon = fmt.Sprintf("%s (%s)", weapon, r.Ammo.Name)
 	}
+	var out string
 	switch {
 	case !r.Hit:
-		return fmt.Sprintf("%s vs AC %d: miss", weapon, r.TargetAC)
+		out = fmt.Sprintf("%s vs AC %d: miss", weapon, r.TargetAC)
 	case r.IsCrit:
-		return fmt.Sprintf("%s vs AC %d: crit ×%s, %d damage", weapon, r.TargetAC, trimNum(r.CritMultiplier), r.TotalDamage)
+		out = fmt.Sprintf("%s vs AC %d: crit ×%s, %d damage", weapon, r.TargetAC, trimNum(r.CritMultiplier), r.TotalDamage)
 	default:
-		return fmt.Sprintf("%s vs AC %d: hit, %d damage", weapon, r.TargetAC, r.TotalDamage)
+		out = fmt.Sprintf("%s vs AC %d: hit, %d damage", weapon, r.TargetAC, r.TotalDamage)
+	}
+	if r.RolledTargetAC != nil && r.RolledHit != nil && r.RolledCrit != nil {
+		out += fmt.Sprintf(" (AC %d → %d: %s → %s)", *r.RolledTargetAC, r.TargetAC,
+			outcome(*r.RolledHit, *r.RolledCrit), outcome(r.Hit, r.IsCrit))
+	}
+	return out
+}
+
+// outcome is MISS, HIT or CRIT.
+func outcome(hit, crit bool) string {
+	switch {
+	case crit:
+		return "CRIT"
+	case hit:
+		return "HIT"
+	default:
+		return "MISS"
 	}
 }
 

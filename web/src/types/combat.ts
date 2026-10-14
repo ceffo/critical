@@ -75,6 +75,10 @@ export interface RollResult {
   targetAc: number;
   targetSize?: TargetSize;
   ammo?: AmmoUse;
+  /** Target AC and outcome as rolled; present while a correction differs from the rolled AC. */
+  rolledTargetAc?: number;
+  rolledHit?: boolean;
+  rolledCrit?: boolean;
   // Saving-throw context (absent on attacks).
   saveCategory?: SaveCategory;
   /** Adjustment set after the roll (0: none); always present on saves. */

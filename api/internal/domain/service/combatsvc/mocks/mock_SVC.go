@@ -23,6 +23,67 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// AdjustAttackAC provides a mock function with given fields: ctx, characterID, entryID, targetAC
+func (_m *MockSVC) AdjustAttackAC(ctx context.Context, characterID int64, entryID int64, targetAC int) (*combatsvc.RollResult, error) {
+	ret := _m.Called(ctx, characterID, entryID, targetAC)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustAttackAC")
+	}
+
+	var r0 *combatsvc.RollResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, int) (*combatsvc.RollResult, error)); ok {
+		return rf(ctx, characterID, entryID, targetAC)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, int) *combatsvc.RollResult); ok {
+		r0 = rf(ctx, characterID, entryID, targetAC)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*combatsvc.RollResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64, int) error); ok {
+		r1 = rf(ctx, characterID, entryID, targetAC)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AdjustAttackAC_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdjustAttackAC'
+type MockSVC_AdjustAttackAC_Call struct {
+	*mock.Call
+}
+
+// AdjustAttackAC is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - entryID int64
+//   - targetAC int
+func (_e *MockSVC_Expecter) AdjustAttackAC(ctx interface{}, characterID interface{}, entryID interface{}, targetAC interface{}) *MockSVC_AdjustAttackAC_Call {
+	return &MockSVC_AdjustAttackAC_Call{Call: _e.mock.On("AdjustAttackAC", ctx, characterID, entryID, targetAC)}
+}
+
+func (_c *MockSVC_AdjustAttackAC_Call) Run(run func(ctx context.Context, characterID int64, entryID int64, targetAC int)) *MockSVC_AdjustAttackAC_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AdjustAttackAC_Call) Return(_a0 *combatsvc.RollResult, _a1 error) *MockSVC_AdjustAttackAC_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AdjustAttackAC_Call) RunAndReturn(run func(context.Context, int64, int64, int) (*combatsvc.RollResult, error)) *MockSVC_AdjustAttackAC_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // AdjustSave provides a mock function with given fields: ctx, characterID, entryID, adj
 func (_m *MockSVC) AdjustSave(ctx context.Context, characterID int64, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error) {
 	ret := _m.Called(ctx, characterID, entryID, adj)

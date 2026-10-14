@@ -36,3 +36,9 @@ RETURNING id
 INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ;
+
+-- UpdateItem
+UPDATE items SET position = ?, name = ?, type = ?, behaviour = ?, magic_bonus = ?, ammo_kind = ?, count = ?, max_count = ?, effect_dice = ?, effect_save = ?, notes = ?
+WHERE id = ?
+RETURNING id
+;

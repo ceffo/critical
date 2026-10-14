@@ -60,7 +60,12 @@ func Error(ctx context.Context, w http.ResponseWriter, err error) {
 	} else {
 		Logger(ctx).Info("client error", "status", status, "error", err)
 	}
-	JSON(ctx, w, status, map[string]string{"error": msg})
+	body := map[string]string{"error": msg}
+	var fe *domain.FieldError
+	if errors.As(err, &fe) {
+		body["error"], body["field"] = fe.Message, fe.Field
+	}
+	JSON(ctx, w, status, body)
 }
 
 // StatusError is an error that carries its own HTTP status and client-facing

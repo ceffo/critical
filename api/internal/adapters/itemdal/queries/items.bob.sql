@@ -31,3 +31,8 @@ RETURNING "id";
 -- InsertItem
 INSERT INTO "items" ("id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes")
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12);
+
+-- UpdateItem
+UPDATE "items" SET "position" = ?1, "name" = ?2, "type" = ?3, "behaviour" = ?4, "magic_bonus" = ?5, "ammo_kind" = ?6, "count" = ?7, "max_count" = ?8, "effect_dice" = ?9, "effect_save" = ?10, "notes" = ?11
+WHERE "id" = ?12
+RETURNING "id";

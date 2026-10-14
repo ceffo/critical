@@ -15,6 +15,8 @@ import (
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
+	Patch(pattern string, h http.HandlerFunc)
+	Delete(pattern string, h http.HandlerFunc)
 }
 
 // CharacterIDFunc resolves the active character.
@@ -24,11 +26,17 @@ type itemSvc interface {
 	List(ctx context.Context) ([]itemsvc.Item, error)
 	UseItem(ctx context.Context, characterID int64, itemID string) (*itemsvc.UseResult, error)
 	Restock(ctx context.Context, characterID int64, itemID string, n int) (*itemsvc.RestockResult, error)
+	Create(ctx context.Context, characterID int64, in itemsvc.ItemInput) (*itemsvc.ChangeResult, error)
+	Update(ctx context.Context, characterID int64, itemID string, p itemsvc.ItemPatch) (*itemsvc.ChangeResult, error)
+	Delete(ctx context.Context, characterID int64, itemID string) (*itemsvc.ChangeResult, error)
 }
 
 // RegisterRoutes wires item endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC) {
 	r.Get("/api/items", render.Handle(List(svc)))
+	r.Post("/api/items", render.Handle(Create(charID, svc)))
+	r.Patch("/api/items/{id}", render.Handle(Update(charID, svc)))
+	r.Delete("/api/items/{id}", render.Handle(Delete(charID, svc)))
 	r.Post("/api/items/{id}/use", render.Handle(Use(charID, svc)))
 	r.Post("/api/items/{id}/restock", render.Handle(Restock(charID, svc)))
 }
@@ -150,4 +158,105 @@ func ToDTOs(items []itemsvc.Item) []ItemDTO {
 		})
 	}
 	return out
+}
+
+// ChangeDTO is the wire shape of POST/PATCH/DELETE /api/items: the item as it
+// is now (as it was, for a delete) and the log entry written.
+type ChangeDTO struct {
+	Item       ItemDTO `json:"item"`
+	LogEntryID int64   `json:"logEntryId"`
+}
+
+// ItemBody is the body of POST and PATCH /api/items. On a PATCH only the
+// fields present change. maxCount is the daily number (daily items only).
+type ItemBody struct {
+	Name         *string `json:"name"`
+	Type         *string `json:"type"`
+	Behaviour    *string `json:"behaviour"`
+	Count        *int    `json:"count"`
+	MaxCount     *int    `json:"maxCount"`
+	MagicalBonus *int    `json:"magicalBonus"`
+	AmmoKind     *string `json:"ammoKind"`
+	EffectDice   *string `json:"effectDice"`
+	EffectSave   *string `json:"effectSave"`
+	Notes        *string `json:"notes"`
+}
+
+func decodeBody(r *http.Request) (ItemBody, error) {
+	var b ItemBody
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&b); err != nil {
+		return b, render.BadRequestError("invalid JSON body")
+	}
+	return b, nil
+}
+
+func change(ctx context.Context, w http.ResponseWriter, res *itemsvc.ChangeResult) {
+	render.OK(ctx, w, ChangeDTO{Item: ToDTOs([]itemsvc.Item{res.Item})[0], LogEntryID: res.LogEntryID})
+}
+
+func deref[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
+	}
+	return *p
+}
+
+// Create adds an item and logs it.
+func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		b, err := decodeBody(r)
+		if err != nil {
+			return err
+		}
+		res, err := svc.Create(r.Context(), charID(r), itemsvc.ItemInput{
+			Name: deref(b.Name), Type: deref(b.Type), Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
+			Count: deref(b.Count), MaxCount: deref(b.MaxCount), MagicBonus: deref(b.MagicalBonus),
+			AmmoKind: deref(b.AmmoKind), EffectDice: deref(b.EffectDice), EffectSave: deref(b.EffectSave),
+			Notes: deref(b.Notes),
+		})
+		if err != nil {
+			return err
+		}
+		change(r.Context(), w, res)
+		return nil
+	}
+}
+
+// Update edits the fields present in the body and logs the change.
+func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		b, err := decodeBody(r)
+		if err != nil {
+			return err
+		}
+		p := itemsvc.ItemPatch{
+			Name: b.Name, Type: b.Type, Count: b.Count, MaxCount: b.MaxCount, MagicBonus: b.MagicalBonus,
+			AmmoKind: b.AmmoKind, EffectDice: b.EffectDice, EffectSave: b.EffectSave, Notes: b.Notes,
+		}
+		if b.Behaviour != nil {
+			bh := itemsvc.Behaviour(*b.Behaviour)
+			p.Behaviour = &bh
+		}
+		res, err := svc.Update(r.Context(), charID(r), chi.URLParam(r, "id"), p)
+		if err != nil {
+			return err
+		}
+		change(r.Context(), w, res)
+		return nil
+	}
+}
+
+// Delete removes an item and logs it.
+func Delete(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		res, err := svc.Delete(r.Context(), charID(r), chi.URLParam(r, "id"))
+		if err != nil {
+			return err
+		}
+		change(r.Context(), w, res)
+		return nil
+	}
 }

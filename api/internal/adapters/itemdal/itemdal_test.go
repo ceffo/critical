@@ -186,3 +186,24 @@ func TestSetCount(t *testing.T) {
 
 	assert.ErrorIs(t, dal.SetCount(ctx, "nope", 1), itemsvc.ErrItemNotFound)
 }
+
+func TestGetAndUpdate_WholeItem(t *testing.T) {
+	db := openDB(t)
+	insert(t, db, "w", 2, 4, 4, itemsvc.BehaviourCharges)
+	dal := itemdal.New(db)
+	ctx := context.Background()
+
+	got, err := dal.Get(ctx, "w")
+	require.NoError(t, err)
+	got.Name, got.Count, got.Behaviour, got.MaxCount, got.MagicBonus, got.AmmoKind = "Staff", 2, itemsvc.BehaviourDaily, 3, 1, "bolt"
+	got.EffectDice, got.EffectSave, got.Notes, got.Type, got.Position = "1d4+1", "spell", "hum", "staff", 9
+	require.NoError(t, dal.Update(ctx, got))
+	back, err := dal.Get(ctx, "w")
+	require.NoError(t, err)
+	assert.Equal(t, got, back)
+
+	_, err = dal.Get(ctx, "nope")
+	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
+	got.ID = "nope"
+	assert.ErrorIs(t, dal.Update(ctx, got), itemsvc.ErrItemNotFound)
+}

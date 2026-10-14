@@ -1,6 +1,6 @@
 # ADR 0001: Critical hits (house rule)
 
-Status: accepted, 2026-10-13 (critical-qki.28; supersedes the one-d100 implementation from
+**Status**: accepted, 2026-10-13 (critical-qki.28; supersedes the one-d100 implementation from
 critical-qki.7 / critical-qki.12)
 
 ## Context

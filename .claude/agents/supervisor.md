@@ -141,12 +141,19 @@ unfinished agent's results.
 
 ## 0. Your own checkout stays on the default branch
 
-`<main>` is yours and **always on `<db>`, synced to origin**: never commit feature work there, never
-leave it on a feature branch. At session start and after every merge: `git switch <db> && git pull
+`<main>` is yours and **on `<db>`, synced to origin**. Code is never yours: no code change, no
+worktree of your own. Process and documentation changes (agent definitions, workflow and ADR docs,
+justfile recipes for the fleet) are: make them on a short-lived branch in `<main>` (`git switch -c
+chore/<slug>`), commit, push, open the PR, and `git switch <db>` straight after. Never leave `<main>`
+on a branch while you wait. At session start and after every merge: `git switch <db> && git pull
 --ff-only`, or `just sync-main` when the tracker export is dirty (keeps the tracker DB as the truth and
 prints any status that changed). All feature work happens in worktrees.
 
-Start the supervisor session in `<main>` (`claude` launched there, or `/cd` to it): the project's permission rules only load from there, and from `~` routine git and herdr commands get blocked. Your shell stays in `<main>`: never `cd` into a worktree or the ledger folder (use `git -C`,
+Start the supervisor session in `<main>` (`claude --agent supervisor` launched there): the project's
+permission rules and this file only load from there. **Check your cwd at session start**: herdr
+resumes every agent in `~` after a reboot. If yours isn't `<main>`, stop and ask the user to relaunch
+you from `<main>` (a `/cd` doesn't reload this definition). A `PreToolUse` hook refuses `cd` into the
+worktree root from a session started in `<main>`: use `git -C` and absolute paths. Your shell stays in `<main>`: never `cd` into a worktree or the ledger folder (use `git -C`,
 absolute paths, or a subshell). The git stash stack is shared with every worktree: when pulling over
 local tracker changes, use a tagged stash entry and apply it by sha, never a bare `git stash pop`.
 

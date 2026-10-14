@@ -96,6 +96,18 @@ in `AGENTS.md` ("Beads Workflow Integration"). Bare `bv` launches a TUI: never r
   a missing ADR is filed first.
 - Defaults when filing autonomously: priority 3 (2 for a correctness bug in rules math).
 
+## Rulebooks
+
+The PHB and DMG live as agent-readable files in a private sibling repo, `~/code/critical-rulebooks`
+(shared by every worktree). Run `just rulebooks` to clone it (or fast-forward it); it needs access to
+the private repo and is never part of `just validate` or `just dev`.
+
+For a rules question: `grep -i '<term>' ~/code/critical-rulebooks/INDEX.md` first, then open only the
+file it names. Never read whole chapters or INDEX.md whole. If the clone is missing, run
+`just rulebooks`; if that fails, say so instead of guessing the rule. The book is a reference: the
+project's decided rules (ADRs in `docs/adr`, user rulings) win where they differ. Never copy book text
+into this public repo.
+
 ## Scope
 
 Current phase and what is out of scope: `docs/all.md` ("Phase 1 Scope"). Later-phase work is filed

@@ -137,3 +137,17 @@ e2e-install:
 e2e *args: build-api
     cd web && node e2e/check-browser.mjs
     cd web && npx playwright test {{args}}
+
+# Clone (or fast-forward) the private rulebooks repo used as a rules reference. Not part of validate/dev.
+# Override the target dir with RULEBOOKS_DIR and the remote with RULEBOOKS_REMOTE.
+rulebooks:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${RULEBOOKS_DIR:-$HOME/code/critical-rulebooks}"
+    remote="${RULEBOOKS_REMOTE:-git@github.com:ceffo/critical-rulebooks.git}"
+    if [ -d "$dir/.git" ]; then
+        git -C "$dir" pull --ff-only || { echo "rulebooks: could not update $dir (no access, or local changes diverge)" >&2; exit 1; }
+    else
+        mkdir -p "$(dirname "$dir")"
+        git clone "$remote" "$dir" || { echo "rulebooks: cannot clone $remote (the repo is private; you need access). Do not guess rules without it." >&2; exit 1; }
+    fi

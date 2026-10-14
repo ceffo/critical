@@ -24,6 +24,18 @@ code, tracker usage, review triggers and checklist, model selection, commit form
 Rules and design decisions (house rules, architecture choices) live only in the ADRs indexed in
 [docs/adr/README.md](docs/adr/README.md).
 
+## Rulebooks
+
+The PHB and DMG live as agent-readable files in a private sibling repo, `~/code/critical-rulebooks`
+(shared by every worktree). Run `just rulebooks` to clone it (or fast-forward it); it needs access to
+the private repo and is never part of `just validate` or `just dev`.
+
+For a rules question: `grep -i '<term>' ~/code/critical-rulebooks/INDEX.md` first, then open only the
+file it names. Never read whole chapters or INDEX.md whole. If the clone is missing, run
+`just rulebooks`; if that fails, say so instead of guessing the rule. The book is a reference: the
+project's decided rules (ADRs in `docs/adr`, user rulings) win where they differ. Never copy book text
+into this public repo.
+
 ## DAL Code Generation (bob)
 
 The DAL adapters in `api/internal/adapters/*/` use [bob](https://github.com/stephenafamo/bob) for typed SQL queries. Generated files are committed and should not be edited by hand.

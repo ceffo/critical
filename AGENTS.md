@@ -21,6 +21,9 @@ Project-specific configuration for the agents in `.claude/agents/` (validation, 
 code, tracker usage, review triggers and checklist, model selection, commit format) lives in
 [docs/agent-workflow.md](docs/agent-workflow.md). Read it before working as one of those agents.
 
+Rules and design decisions (house rules, architecture choices) live only in the ADRs indexed in
+[docs/adr/README.md](docs/adr/README.md).
+
 ## DAL Code Generation (bob)
 
 The DAL adapters in `api/internal/adapters/*/` use [bob](https://github.com/stephenafamo/bob) for typed SQL queries. Generated files are committed and should not be edited by hand.

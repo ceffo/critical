@@ -41,8 +41,8 @@ docs already answer):
 - **Existing items first**: the tracker's search and list commands, open AND closed. Duplicate,
   superseded or already decided? Say so instead of filing. Related open items become dependencies or
   "out of scope". Use the tracker's graph/triage view where the workflow doc names one.
-- engram: `mem_search` for the project named in the workflow doc (2–4 keywords), and `personal`.
-  Carry the conclusions, not the memories.
+- Decisions already made: the docs index (ADRs, project docs) and the tracker. engram (the project
+  named in the workflow doc, and `personal`) only for situational know-how, never for decisions.
 
 ## 2. Pick the method by scope
 
@@ -93,8 +93,8 @@ NOT FILED: duplicates/out of scope, with the item they duplicate
 OPEN QUESTIONS (needs-info items or priority defaults you chose): …
 ```
 The supervisor waits on that file's modification time, not on your session's status: write it last,
-and only when you're done. Save durable decisions the user made to engram (`mem_save`, title =
-search keys). Then stop.
+and only when you're done. Decisions the user made go into the items you file, plus an ADR item
+(a doc change in the PR) when one is a rule or design choice; never into engram. Then stop.
 
 ## Never
 - Implement, edit repo files, create branches or PRs, merge.

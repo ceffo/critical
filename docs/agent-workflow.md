@@ -15,6 +15,9 @@ contract; keep them stable.
 
 Domain vocabulary and phase scope live in `docs/all.md`.
 
+Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and rules are indexed in
+`docs/adr/README.md`. Design decisions are read from these docs and the tracker, never from engram.
+
 ## Validation
 
 - Full gate, from the repo root: `just validate` (backend lint + tests + build, frontend lint +
@@ -171,4 +174,8 @@ model actually running.
 
 ## Memory
 
-Engram project: `critical`; cross-project gotchas go to `personal`.
+Engram (project `critical`; cross-project gotchas in `personal`) holds **only** situational
+know-how: how to do X, tool gotchas, environment quirks. Design decisions (rules, architecture,
+data, UI, process choices the user makes) go **only** into project docs: an ADR in `docs/adr/`
+(indexed in `docs/adr/README.md`) or the relevant doc, in the PR the decision belongs to. Never read
+design decisions from engram; read the docs.

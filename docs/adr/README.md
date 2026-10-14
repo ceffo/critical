@@ -1,7 +1,8 @@
 # Architecture and rules decisions (ADRs)
 
 House rules and design decisions live here as `docs/adr/NNNN-<slug>.md` (four digits, next free
-number). Rules in `docs/backend.md` link to their ADR; **the ADR wins** when the two differ.
+number). Game rules and design live **only** here; `docs/backend.md` is infrastructure and
+architecture. This index is the entry point for rules.
 
 Each ADR has:
 

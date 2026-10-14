@@ -84,6 +84,8 @@ in `AGENTS.md` ("Beads Workflow Integration"). Bare `bv` launches a TUI: never r
 - Work items are written in the vertical-slice convention: one bead = schema + Go engine + REST
   endpoint + React panel for one feature; split only when too big for one PR (backend bead first,
   UI bead blocked by it).
+- Rules items: acceptance criteria name the ADR/doc steps to implement (one criterion per step);
+  a missing ADR is filed first.
 - Defaults when filing autonomously: priority 3 (2 for a correctness bug in rules math).
 
 ## Scope
@@ -100,6 +102,12 @@ From `docs/all.md` and `docs/backend.md`; the ones reviewers check hardest:
 - Architecture layering per `docs/clean_architecture.md`; wiring only in the composition root.
 - Tests follow "Testing Conventions" in `docs/backend.md`; rule changes get a test that fails on
   the old code.
+- Rules math traces to its design (`docs/adr/`, `docs/backend.md`). A change cites the ADR/doc step
+  it implements (code comment and commit). Each numbered step gets one named test that fails on the
+  old code. Dice mocks give every roll a distinct value and assert exact call counts, so a reused
+  or missing roll fails the test. If code and design disagree, stop and report; don't pick one.
+- Rules items end the report with a `RULES TRACE` block: `ADR/doc step -> code location -> test name`.
+  A step with no test is not done.
 
 ## Review
 
@@ -109,7 +117,9 @@ domain structs used by several packages; a wide architectural refactor. Not revi
 docs, tests, small refactors.
 
 Reviewer checklist, in priority order:
-1. **Rules correctness**: AD&D 2.5 math per `docs/backend.md` (hit if `roll + modifiers ≥ THAC0 -
+1. **Rules correctness**: quote each ADR/doc step the change touches and verify its test exists
+   and would fail if the step were broken (reused dice, wrong order, wrong count). "Met by reading"
+   is not acceptable for rules math: a rules criterion without a test is a finding. AD&D 2.5 math per `docs/backend.md` (hit if `roll + modifiers ≥ THAC0 -
    target_AC`, damage formula, crit table, nat 1 / nat 20), off-by-one in rounds/charges,
    negative/overflow values, dice injected through the dice port.
 2. **State integrity**: append-only ledger; buff expiry on Next Round (charge vs duration); spell

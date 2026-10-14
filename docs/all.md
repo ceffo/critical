@@ -60,7 +60,8 @@ labelled `mvp-saturday` are the must-haves.
 2. HP Ledger and Combat Roll Resolution (attack + crit + damage) with real weapons, ammo by arrow
    type, and the full AD&D 2.5 modifiers (STR, DEX, buffs); no special natural 1 / natural 20
 3. Active Buffs + Round Counter, including charge buffs and effective STR (Power Gem effects apply
-   only at effective STR 18, usually via Strength spells cast by others)
+   at effective STR 18 or more, usually via Strength spells cast by others; user: "not exactly
+   18 >= 18")
 4. Spells with effects (Wizard-list effects extracted into a seed) and spells received from the party
 5. Daily spell preparation from the spellbook within the PHB Bard limits
 6. One append-only action log (also the combat log) with before/after snapshots; any action can be

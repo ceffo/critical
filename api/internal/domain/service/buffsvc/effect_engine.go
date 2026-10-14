@@ -11,29 +11,59 @@ import (
 // out at 25).
 const maxAbility = 25
 
-// effectiveStr is the STR score with buffs. STR magic is not cumulative
-// (PHB Strength: "not cumulative with other Strength magic"), so the best
-// single effect wins: a StrSet raises the score to its value, a StrBonus
-// gives base+bonus capped at its StrMax. Neither ever lowers the score.
-// STR effects are not themselves gated by MinStr.
+// strengthSpellCap is the highest STR Strength (wizard L2) magic confers
+// (PHB Strength: it "cannot confer a Strength of 19 or more").
+const strengthSpellCap = 18
+
+// isStrengthSpell reports whether e is a Strength (wizard L2) bonus: a
+// StrBonus capped at 18 or less. Any other STR effect (a StrSet, a bonus
+// capped above 18 such as Improved Strength, an uncapped bonus) is other
+// Strength magic.
+func isStrengthSpell(e BuffEffects) bool {
+	return e.StrBonus != nil && e.StrMax != nil && *e.StrMax <= strengthSpellCap
+}
+
+// effectiveStr is the STR score with buffs (docs/backend.md "Attack
+// Modifiers", effective STR rules, critical-qki.33). STR effects are not
+// themselves gated by MinStr; no result is ever lower than base.
+//
+//  1. No other Strength magic active: base + the SUM of all active Strength
+//     (L2) bonuses, capped at their StrMax (18). Strength stacks with itself.
+//  2. Other Strength magic active (Improved Strength, a StrSet, ...): it
+//     REPLACES the Strength (L2) bonuses, which contribute nothing. Other
+//     Strength magic is not cumulative: the best single effect wins (a StrSet
+//     raises the score to its value, a StrBonus gives base+bonus capped at
+//     its StrMax).
 func effectiveStr(buffs []BuffEffect, base int) int {
-	best := base
+	other, hasOther := base, false
+	sum, strCap := 0, 0
 	for _, b := range buffs {
 		e := b.Effects
-		if e.StrSet != nil && *e.StrSet > best {
-			best = *e.StrSet
+		if isStrengthSpell(e) {
+			sum += *e.StrBonus
+			strCap = max(strCap, *e.StrMax)
+			continue
+		}
+		if e.StrSet != nil {
+			hasOther = true
+			other = max(other, *e.StrSet)
 		}
 		if e.StrBonus != nil {
+			hasOther = true
 			v := base + *e.StrBonus
-			if e.StrMax != nil && v > *e.StrMax {
-				v = *e.StrMax
+			if e.StrMax != nil {
+				v = min(v, *e.StrMax)
 			}
-			if v > best {
-				best = v
-			}
+			other = max(other, v)
 		}
 	}
-	return best
+	if hasOther {
+		return other
+	}
+	if sum == 0 {
+		return base
+	}
+	return max(base, min(base+sum, strCap))
 }
 
 // aggregate is the pure effect-stacking core: given a list of buffs and the

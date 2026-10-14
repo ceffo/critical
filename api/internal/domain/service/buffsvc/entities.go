@@ -16,7 +16,7 @@ const (
 // other effects are gated by MinStr against that effective score.
 type BuffEffects struct {
 	// MinStr gates the buff: it contributes only while effective STR >= MinStr
-	// (the Power Gem needs STR 18).
+	// (the Power Gem needs STR 18 or more).
 	MinStr     *int
 	SpellsBuff *float64
 	// WeaponBuff makes the wielded weapon count as +N (Power Gem: "the
@@ -30,6 +30,8 @@ type BuffEffects struct {
 	StrSet *int
 	// StrBonus adds to the base STR score, capped at StrMax when set
 	// (Strength: +1d6 for a bard, max 18; Improved Strength: 1d6+4, max 23).
+	// A bonus capped at 18 or less is Strength (wizard L2) magic: those add
+	// up (see effectiveStr).
 	StrBonus *int
 	StrMax   *int
 	// AC is added to armour class (descending AC: negative is better).

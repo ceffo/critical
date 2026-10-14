@@ -146,8 +146,8 @@ type BuffEffect struct {
 // damage; it replaces the weapon's own magic when higher and does not add to it. to_hit adds
 // to attack rolls; damage adds to damage after the multipliers.
 // A buff may have both counters (Mirror Image) or neither (until dismissed).
-// Effective STR = best single STR effect (set, or base + bonus capped at str_max; never
-// lower than base; Strength magic is not cumulative). min_str gates against effective STR.
+// Effective STR: see "Effective STR" under Attack Modifiers. min_str gates the buff's
+// other effects: they apply while effective STR >= min_str.
 
 type RollResult struct {
     D20Roll         int
@@ -184,10 +184,34 @@ auto-miss, no auto-hit. To-hit modifiers, each listed in `Modifiers`:
 - Strength hit adjustment, PHB Table 1, from the **effective** STR (buffs) — melee and hurled
   weapons; never for bows (PHB "Ability Modifiers in Missile Combat": only with a strength bow).
 - Dexterity missile adjustment, PHB Table 2 — every missile weapon (bow or hurled).
-- Weapon magic, or a buff's "weapon becomes +N" when higher (Power Gem, only at effective STR 18).
+- Weapon magic, or a buff's "weapon becomes +N" when higher (Power Gem, at effective STR 18 or
+  more: rule 3 below).
 - Ammo magic: DMG 2e "Bow +1": with magic arrows, total the bow's and the arrow's bonuses (to hit
   and damage).
 - Buff `to_hit` effects, one per buff; the situational modifier entered at the table.
+
+### Effective STR
+
+The STR score used for the Strength adjustments and for buff gates (critical-qki.33). STR
+effects themselves are never gated, and no rule lowers the score below the sheet's.
+
+1. **Strength (wizard L2) stacks with itself, up to 18.** With no other Strength magic active,
+   effective STR = base + the **sum** of every active Strength bonus, capped at 18 (PHB: the
+   spell "cannot confer a Strength of 19 or more"). A Strength bonus is a `str_bonus` with a
+   `str_max` of 18 or less; casting or receiving Strength again adds a second buff instead of
+   renewing the first. User, 2026-10-13: "strength level 2 says WItH OTHER. it's find with
+   ITSELF".
+2. **Improved Strength replaces Strength (L2).** While any other Strength magic is active
+   (Improved Strength, 1d6+4 for a bard, cap 23; a `str_set`; a bonus capped above 18 or
+   uncapped), the Strength (L2) bonuses contribute nothing and the best single other effect
+   wins (it is not cumulative with itself; a set raises the score to its value). User,
+   2026-10-13: "improved replaces. level 2 can stack with itself. this is why kelsen often
+   equips 2 str lvl 2 to be sure to get to 18".
+3. **Gate.** A buff's other effects apply while effective STR ≥ its `min_str`. The Power Gem
+   forms set `min_str` 18: +5 and ×2 at effective STR 18 **or more** (19-23 with Improved
+   Strength included). User, 2026-10-13: "not exactly 18 >= 18".
+
+Exceptional Strength (18/xx) is not modelled: PHB, warriors only; Kelsen is a Bard.
 
 A weapon that fires ammunition (`ammo_kind`) needs an ammo item of that kind; the attack spends one.
 Dice order: d20, crit-check d100, multiplier d100, then the damage dice, all rolled on **every** attack (a miss shows no

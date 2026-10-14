@@ -37,3 +37,9 @@ web/blob-report/
 *.db
 *.db-wal
 *.db-shm
+
+# agents skills 
+.claude/skills/
+.agents/skills 
+skills-lock.json 
+

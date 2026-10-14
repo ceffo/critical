@@ -25,7 +25,9 @@ test("a note on a heal and on a buff entry changes no value and no HP", async ({
   await openDashboard(page);
   const max = await currentHp(page);
   await markNoReload(page);
+  // Wait for each change to land: the HP form resets after a success.
   await recordHp(page, "damage", 6, "e2e orc axe");
+  await expect.poll(() => currentHp(page)).toBe(max - 6);
   await recordHp(page, "heal", 4, "e2e cure light");
   await expect.poll(() => currentHp(page)).toBe(max - 2);
 
@@ -56,6 +58,7 @@ test("only the newest entry offers Void: damage 10, heal 4, pop the heal, pop th
   await openDashboard(page);
   const max = await currentHp(page);
   await recordHp(page, "damage", 10, "e2e ogre club");
+  await expect.poll(() => currentHp(page)).toBe(max - 10);
   await recordHp(page, "heal", 4, "e2e potion");
   await expect.poll(() => currentHp(page)).toBe(max - 6);
 

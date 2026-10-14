@@ -37,7 +37,7 @@ flowchart TD
     BS["BuffStrip: active buffs (rounds / charges, Absorbed, edit, dismiss) + Add buff"]
   end
   subgraph M["Main grid: 1fr | 380px | 420px"]
-    AA["ActionArea tabs (components/actions/): Attack, Spells, Items, Saves, Spell Lookup"]
+    AA["ActionArea tabs (components/actions/): Attack, Spells, Inventory, Saves, Spell Lookup"]
     RCARD["ResultCard: full breakdown of the last roll"]
     subgraph R["Right column"]
       QH["QuickHp: amount + source, Apply Damage / Apply Heal, Undo last"]
@@ -51,7 +51,7 @@ flowchart TD
 ```
 
 - Plug-in slots: each action tab is one panel component in `components/actions/ActionArea.tsx`
-  (`TABS`). Attack → critical-qki.7, Spells → qki.9/qki.10, Items → qki.11 (placeholder today),
+  (`TABS`). Attack → critical-qki.7, Spells → qki.9/qki.10, Inventory → qki.13,
   buff editing → qki.8 (`BuffStrip`).
 - Buffs: every change (add, edit rounds/charges, "Absorbed" for charge buffs, dismiss, Next
   Round) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
@@ -63,10 +63,16 @@ flowchart TD
   bonus that an active Improved Strength replaces (`applies: false`, no `min_str`) shows dashed
   with "replaced by Improved Strength".
 - Attack tab (`components/actions/AttackPanel.tsx`): weapon (`GET /api/weapons`), ammunition for
-  weapons with an `ammo_kind` (`GET /api/items`, count shown, `stores/items.ts`), target AC and size,
+  weapons with an `ammo_kind` (`GET /api/items`, items of that `ammoKind` with count > 0, the
+  current pick kept while spent so the panel can say so, `stores/items.ts`), target AC and size,
   situational modifier. The result card labels each modifier and damage term by its `kind`
   (`result.mods.*`); attack log entries are rendered from their payload (`lib/logSummary.ts`).
   An attack refreshes the table state (log, item counts), so voiding it shows the arrow back.
+- Inventory tab (`InventoryPanel.tsx`, critical-qki.13): one list, each row name, magical bonus
+  ("+2"), effect dice, type, behaviour badge (Stock / Charges / Daily), − (uses one through
+  `stores/roll.ts` `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and +
+  on stock items only (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`). A charges
+  item spent to 0 is gone from the list until its use is popped.
 - Spells tab (`SpellsPanel.tsx`): Cast puts the `CastResult` in the result card (`CastResultView`:
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with

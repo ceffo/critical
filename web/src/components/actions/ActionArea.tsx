@@ -3,18 +3,18 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { AttackPanel } from "./AttackPanel";
 import { SpellsPanel } from "./SpellsPanel";
-import { ItemsPanel } from "./ItemsPanel";
+import { InventoryPanel } from "./InventoryPanel";
 import { SavesPanel } from "./SavesPanel";
 import { LookupPanel } from "./LookupPanel";
 
 /**
  * Tabs of the action area. Later items replace a tab's panel component:
- * attack → critical-qki.7, spells → qki.9/qki.10, items → qki.11.
+ * attack → critical-qki.7, spells → qki.9/qki.10, inventory → qki.13.
  */
 const TABS = [
   { id: "attack", Panel: AttackPanel },
   { id: "spells", Panel: SpellsPanel },
-  { id: "items", Panel: ItemsPanel },
+  { id: "inventory", Panel: InventoryPanel },
   { id: "saves", Panel: SavesPanel },
   { id: "lookup", Panel: LookupPanel },
 ] as const satisfies readonly { id: string; Panel: ComponentType }[];

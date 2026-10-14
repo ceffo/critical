@@ -268,3 +268,41 @@ describe("time_passed entries", () => {
     ).toBe("Time passed: 8 h (480 rd), round 4 → 0");
   });
 });
+
+describe("inventory entries (critical-qki.13)", () => {
+  const use = {
+    itemId: "wand_lightning", name: "Wand of lightning", type: "wand", behaviour: "charges",
+    remaining: 0, maxCount: 4, dice: "6d6", rolls: [1, 2, 3, 4, 5, 6], total: 21, save: "", notes: "", breakdown: "",
+  };
+
+  it("renders a use that removed the item", async () => {
+    const t = await makeT("en");
+    expect(entryText(entry("item_use", { ...use, removed: true }), t)).toBe(
+      "Used Wand of lightning: 6d6 = 21 (last charge, removed)",
+    );
+    expect(entryText(entry("item_use", { ...use, dice: "", removed: true }), t)).toBe(
+      "Used Wand of lightning (last charge, removed)",
+    );
+  });
+
+  it("renders a use that kept the item, and old entries without behaviour", async () => {
+    const t = await makeT("en");
+    expect(entryText(entry("item_use", { ...use, removed: false, remaining: 3 }), t)).toBe(
+      "Used Wand of lightning: 6d6 = 21 (3 left)",
+    );
+    const old = { itemId: "gem", name: "Gem", kind: "charged", remaining: 0, maxCount: 1, dice: "", rolls: [], total: 0 };
+    expect(entryText(entry("item_use", old), t)).toBe("Used Gem (0 left)");
+  });
+
+  it("renders a restock in both languages", async () => {
+    const p = { itemId: "arrows_plus3", name: "Arrows +3", type: "arrow", added: 1, count: 1 };
+    expect(entryText(entry("item_restock", p), await makeT("en"))).toBe("Restocked Arrows +3: +1 (1 now)");
+    expect(entryText(entry("item_restock", p), await makeT("fr"))).toBe(
+      "Arrows +3 réapprovisionné : +1 (1 maintenant)",
+    );
+  });
+
+  it("falls back to the server summary for an unknown restock payload", async () => {
+    expect(entryText(entry("item_restock", { name: "x" }, "srv"), await makeT("en"))).toBe("srv");
+  });
+});

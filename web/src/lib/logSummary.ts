@@ -36,7 +36,7 @@ function castText(p: CastLogPayload, t: TFunction): string {
   if (p.damage) details.push(t("log.cast.damage", { total: p.damage.total, type: p.damage.type }));
   return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
 }
-import type { UseResult } from "@/types/items";
+import type { RestockResult, UseResult } from "@/types/items";
 
 /** Payload of long_rest entries (restsvc restRecord). */
 function restText(e: LogEntry, t: TFunction): string | null {
@@ -156,7 +156,16 @@ function itemPayload(e: LogEntry): UseResult | null {
 
 function itemText(p: UseResult, t: TFunction): string {
   const args = { name: p.name, dice: p.dice, total: p.total, left: p.remaining };
+  if (p.removed) return t(p.dice ? "log.item.rolledRemoved" : "log.item.usedRemoved", args);
   return t(p.dice ? "log.item.rolled" : "log.item.used", args);
+}
+
+/** Payload of item_restock entries (itemsvc restockRecord, same shape as RestockResult). */
+function restockText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "item_restock") return null;
+  const p = e.payload as Partial<RestockResult> | null;
+  if (!p || typeof p.name !== "string" || typeof p.added !== "number" || typeof p.count !== "number") return null;
+  return t("log.item.restocked", { name: p.name, added: p.added, count: p.count });
 }
 
 function attackText(p: RollResult, t: TFunction): string {
@@ -201,6 +210,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (rest) return rest;
   const item = itemPayload(e);
   if (item) return itemText(item, t);
+  const restock = restockText(e, t);
+  if (restock) return restock;
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
   const buff = p.buff ?? "";

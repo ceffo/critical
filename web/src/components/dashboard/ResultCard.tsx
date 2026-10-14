@@ -450,7 +450,9 @@ function ItemResult({ roll }: { roll: Extract<LastRoll, { kind: "item" }> }) {
       )}
       {r.notes && <p className="text-sm text-muted-foreground">{r.notes}</p>}
       <p className="text-sm text-muted-foreground" data-testid="item-left">
-        {t("result.left", { name: r.name, count: r.remaining })}
+        {r.removed
+          ? t("result.leftRemoved", { name: r.name })
+          : t("result.left", { name: r.name, count: r.remaining })}
       </p>
     </div>
   );

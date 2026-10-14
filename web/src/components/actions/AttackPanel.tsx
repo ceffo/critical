@@ -35,11 +35,14 @@ export function AttackPanel() {
   }, [fetchWeapons]);
 
   const weapon = weapons.find((w) => w.id === weaponId) ?? weapons[0];
-  // Ammo the weapon can fire. Before the player picks, the first with anything left is
-  // preselected; once picked (or fired), the choice is never switched behind their back: when it
-  // runs out the panel says so and waits for an explicit pick.
+  // Ammo the weapon can fire: every item of its ammo kind with anything left. Before the player
+  // picks, the first is preselected; once picked (or fired), the choice is never switched behind
+  // their back: when it runs out it stays shown (disabled), the panel says so and waits for an
+  // explicit pick.
   const ammoChoices = weapon?.ammo_kind
-    ? items.filter((i) => i.kind === "ammo" && i.ammo_kind === weapon.ammo_kind)
+    ? items.filter(
+        (i) => i.ammoKind === weapon.ammo_kind && (i.count > 0 || i.id === ammoId),
+      )
     : [];
   const ammo =
     ammoChoices.find((i) => i.id === ammoId) ??
@@ -128,7 +131,7 @@ export function AttackPanel() {
                   <option
                     key={i.id}
                     value={i.id}
-                    disabled={i.count === 0 && i.id !== ammo?.id}
+                    disabled={i.count === 0}
                   >
                     {t("attack.ammoOption", { name: i.name, count: i.count })}
                   </option>

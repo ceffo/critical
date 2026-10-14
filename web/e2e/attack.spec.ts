@@ -130,6 +130,8 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
   await ammo.selectOption("arrows_plus1");
   await expect(form.getByTestId("ammo-spent")).toHaveCount(0);
   await expect(roll).toBeEnabled();
+  // Once another pick replaces it, the spent arrows are no longer offered (critical-qki.13).
+  await expect(ammo.locator('option[value="arrows_plus3"]')).toHaveCount(0);
 });
 
 test("an earlier shot can only be voided once the later shot is popped", async ({

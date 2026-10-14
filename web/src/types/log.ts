@@ -10,6 +10,7 @@ export type LogKind =
   | "time_passed"
   | "attack"
   | "item_use"
+  | "item_restock"
   | "spell_prep"
   | "long_rest"
   | "save";

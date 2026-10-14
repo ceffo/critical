@@ -1,0 +1,215 @@
+import { useId, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { fieldClass, captionClass } from "@/components/dashboard/fieldStyles";
+import { cn } from "@/lib/utils";
+import {
+  changedWeaponFields,
+  weaponDraftToBody,
+  type WeaponDraft,
+  type WeaponField,
+} from "@/lib/weaponForm";
+import type { ApiError } from "@/api/http";
+import type { Weapon, WeaponBody } from "@/types/combat";
+
+interface Props {
+  /** Starting values. */
+  initial: WeaponDraft;
+  /** The weapon being edited; undefined when adding. */
+  editing?: Weapon;
+  /** Ammo kinds offered as suggestions. */
+  ammoKinds: string[];
+  busy: boolean;
+  /** Save a body; resolves the server's rejection, or null when saved. */
+  onSave: (body: WeaponBody) => Promise<ApiError | null>;
+  onCancel: () => void;
+}
+
+/**
+ * Add / edit form of a weapon (critical-qki.32). Validation is the server's: its message is shown
+ * under the field it names. Only number parsing happens here.
+ */
+export function WeaponForm({
+  initial,
+  editing,
+  ammoKinds,
+  busy,
+  onSave,
+  onCancel,
+}: Props) {
+  const { t } = useTranslation();
+  const id = useId();
+  const [draft, setDraft] = useState<WeaponDraft>(initial);
+  const [errors, setErrors] = useState<Partial<Record<WeaponField, string>>>(
+    {},
+  );
+  const set = <K extends WeaponField>(k: K, v: WeaponDraft[K]) => {
+    setDraft((d) => ({ ...d, [k]: v }));
+    setErrors((e) => ({ ...e, [k]: undefined }));
+  };
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const { body, errors: parseErrors } = weaponDraftToBody(draft);
+    const local = Object.fromEntries(
+      Object.entries(parseErrors).map(([k, v]) => [k, t(`items.form.${v}`)]),
+    );
+    if (Object.keys(local).length > 0) {
+      setErrors(local);
+      return;
+    }
+    const toSend = editing ? changedWeaponFields(editing, body) : body;
+    if (editing && Object.keys(toSend).length === 0) {
+      onCancel();
+      return;
+    }
+    const rejected = await onSave(toSend);
+    if (rejected?.field) setErrors({ [rejected.field]: rejected.message });
+  }
+
+  const field = (
+    name: WeaponField,
+    label: string,
+    input: (props: object) => ReactNode,
+    className?: string,
+  ) => {
+    const err = errors[name];
+    const inputId = `${id}-${name}`;
+    return (
+      <div
+        className={cn("flex min-w-0 flex-col gap-1", className)}
+        data-field={name}
+      >
+        <label htmlFor={inputId} className={captionClass}>
+          {label}
+        </label>
+        {input({
+          id: inputId,
+          "aria-invalid": err ? true : undefined,
+          "aria-describedby": err ? `${inputId}-error` : undefined,
+        })}
+        {err && (
+          <p
+            id={`${inputId}-error`}
+            role="alert"
+            className="text-xs text-destructive"
+            data-testid="field-error"
+          >
+            {err}
+          </p>
+        )}
+      </div>
+    );
+  };
+  const text =
+    (
+      name: "name" | "damage_sm" | "damage_l" | "magic_to_hit" | "magic_damage",
+      extra: object = {},
+    ) =>
+    (props: object) => (
+      <input
+        {...props}
+        {...extra}
+        className={cn(fieldClass, errors[name] && "border-destructive")}
+        value={draft[name]}
+        onChange={(e) => set(name, e.target.value)}
+      />
+    );
+
+  return (
+    <form
+      onSubmit={(e) => void submit(e)}
+      noValidate
+      className="flex max-w-2xl flex-col gap-2 rounded-lg border bg-muted/30 p-3"
+      aria-label={
+        editing
+          ? t("weapons.form.editTitle", { name: editing.name })
+          : t("weapons.form.addTitle")
+      }
+      data-testid="weapon-form"
+    >
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {field(
+          "name",
+          t("weapons.form.name"),
+          text("name"),
+          "col-span-2 sm:col-span-4",
+        )}
+        {field(
+          "damage_sm",
+          t("weapons.form.damageSm"),
+          text("damage_sm", { placeholder: "1d8" }),
+        )}
+        {field(
+          "damage_l",
+          t("weapons.form.damageL"),
+          text("damage_l", { placeholder: "1d12" }),
+        )}
+        {field(
+          "magic_to_hit",
+          t("weapons.form.magicToHit"),
+          text("magic_to_hit", { inputMode: "numeric" }),
+        )}
+        {field(
+          "magic_damage",
+          t("weapons.form.magicDamage"),
+          text("magic_damage", { inputMode: "numeric" }),
+        )}
+        {field("kind", t("weapons.form.kind"), (props) => (
+          <select
+            {...props}
+            className={fieldClass}
+            value={draft.kind}
+            onChange={(e) => set("kind", e.target.value as "melee" | "missile")}
+          >
+            <option value="melee">{t("weapons.kind.melee")}</option>
+            <option value="missile">{t("weapons.kind.missile")}</option>
+          </select>
+        ))}
+        {field("two_handed", t("weapons.form.twoHanded"), (props) => (
+          <input
+            {...props}
+            type="checkbox"
+            className="size-5"
+            checked={draft.two_handed}
+            onChange={(e) => set("two_handed", e.target.checked)}
+          />
+        ))}
+        {draft.kind === "missile" &&
+          field(
+            "ammo_kind",
+            t("weapons.form.ammoKind"),
+            (props) => (
+              <>
+                <input
+                  {...props}
+                  list={`${id}-ammo`}
+                  placeholder={t("weapons.form.ammoNone")}
+                  className={cn(
+                    fieldClass,
+                    errors.ammo_kind && "border-destructive",
+                  )}
+                  value={draft.ammo_kind}
+                  onChange={(e) => set("ammo_kind", e.target.value)}
+                />
+                <datalist id={`${id}-ammo`}>
+                  {ammoKinds.map((k) => (
+                    <option key={k} value={k} />
+                  ))}
+                </datalist>
+              </>
+            ),
+            "col-span-2",
+          )}
+      </div>
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={busy}>
+          {editing ? t("items.form.save") : t("items.form.add")}
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onCancel}>
+          {t("items.form.cancel")}
+        </Button>
+      </div>
+    </form>
+  );
+}

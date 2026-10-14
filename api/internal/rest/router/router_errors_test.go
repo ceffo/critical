@@ -28,39 +28,42 @@ import (
 	restmocks "github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	spellmocks "github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
+	weaponmocks "github.com/ceffo/critical/api/internal/domain/service/weaponsvc/mocks"
 	"github.com/ceffo/critical/api/internal/rest/router"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 type mocksSet struct {
-	char  *charmocks.MockSVC
-	hp    *hpmocks.MockSVC
-	buffs *buffmocks.MockSVC
-	spell *spellmocks.MockSVC
-	cast  *castmocks.MockSVC
-	cmb   *combatmocks.MockSVC
-	log   *logmocks.MockSVC
-	items *itemmocks.MockSVC
-	rest  *restmocks.MockSVC
+	char    *charmocks.MockSVC
+	hp      *hpmocks.MockSVC
+	buffs   *buffmocks.MockSVC
+	spell   *spellmocks.MockSVC
+	cast    *castmocks.MockSVC
+	cmb     *combatmocks.MockSVC
+	log     *logmocks.MockSVC
+	items   *itemmocks.MockSVC
+	weapons *weaponmocks.MockSVC
+	rest    *restmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 	t.Helper()
 	m := &mocksSet{
-		char:  charmocks.NewMockSVC(t),
-		hp:    hpmocks.NewMockSVC(t),
-		buffs: buffmocks.NewMockSVC(t),
-		spell: spellmocks.NewMockSVC(t),
-		cast:  castmocks.NewMockSVC(t),
-		cmb:   combatmocks.NewMockSVC(t),
-		log:   logmocks.NewMockSVC(t),
-		items: itemmocks.NewMockSVC(t),
-		rest:  restmocks.NewMockSVC(t),
+		char:    charmocks.NewMockSVC(t),
+		hp:      hpmocks.NewMockSVC(t),
+		buffs:   buffmocks.NewMockSVC(t),
+		spell:   spellmocks.NewMockSVC(t),
+		cast:    castmocks.NewMockSVC(t),
+		cmb:     combatmocks.NewMockSVC(t),
+		log:     logmocks.NewMockSVC(t),
+		items:   itemmocks.NewMockSVC(t),
+		weapons: weaponmocks.NewMockSVC(t),
+		rest:    restmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
-		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
+		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m

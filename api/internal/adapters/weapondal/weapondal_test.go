@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,4 +54,45 @@ func TestList_SheetOrder(t *testing.T) {
 		ids = append(ids, w.ID)
 	}
 	assert.Equal(t, []string{"bastard_sword", "longsword", "shortbow", "dagger", "mace", "darts"}, ids)
+}
+
+func seededEditor(t *testing.T) *weapondal.Editor {
+	t.Helper()
+	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	require.NoError(t, db.Migrate(ctx))
+	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
+	return weapondal.NewEditor(db)
+}
+
+func TestEditor_ListGetInsertUpdateDelete(t *testing.T) {
+	ctx := context.Background()
+	e := seededEditor(t)
+	all, err := e.List(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, all)
+	assert.Equal(t, 0, all[0].Position)
+
+	w := weaponsvc.Weapon{
+		ID: "long_bow", Position: 99, Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8",
+		MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+	}
+	require.NoError(t, e.Insert(ctx, w))
+	got, err := e.Get(ctx, "long_bow")
+	require.NoError(t, err)
+	assert.Equal(t, w, got)
+
+	w.MagicToHit, w.TwoHanded, w.AmmoKind = 3, false, "bolt"
+	require.NoError(t, e.Update(ctx, w))
+	got, err = e.Get(ctx, "long_bow")
+	require.NoError(t, err)
+	assert.Equal(t, w, got)
+
+	require.NoError(t, e.Delete(ctx, "long_bow"))
+	_, err = e.Get(ctx, "long_bow")
+	require.ErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
+	require.ErrorIs(t, e.Delete(ctx, "long_bow"), weaponsvc.ErrWeaponNotFound)
+	require.ErrorIs(t, e.Update(ctx, w), weaponsvc.ErrWeaponNotFound)
 }

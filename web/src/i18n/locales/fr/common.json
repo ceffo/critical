@@ -521,7 +521,10 @@
       "spell_prep": "Préparation",
       "long_rest": "Repos",
       "save": "Sauvegarde",
-      "time_passed": "Temps"
+      "time_passed": "Temps",
+      "weapon_add": "Arme",
+      "weapon_edit": "Arme",
+      "weapon_remove": "Arme"
     },
     "status": {
       "active": "Actif",
@@ -603,6 +606,22 @@
       "rolled": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, {{verdict}}",
       "adjusted": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustée {{adjustment}}{{reason}} : {{from}} → {{to}}",
       "removed": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustement retiré : {{from}} → {{to}}"
+    },
+    "weapon": {
+      "added": "Arme {{name}} ajoutée",
+      "removed": "Arme {{name}} retirée",
+      "edited": "Arme {{name}} modifiée : {{changes}}",
+      "change": "{{field}} {{before}} → {{after}}",
+      "fields": {
+        "name": "nom",
+        "damage_sm": "dégâts P-M",
+        "damage_l": "dégâts grande",
+        "magic_to_hit": "bonus au toucher",
+        "magic_damage": "bonus aux dégâts",
+        "kind": "type",
+        "two_handed": "à deux mains",
+        "ammo_kind": "type de munition"
+      }
     }
   },
   "critTable": {
@@ -617,5 +636,32 @@
     "add": "Ajouter une plage",
     "save": "Enregistrer la table",
     "saved": "Enregistré. Le prochain critique l'utilise."
+  },
+  "weapons": {
+    "title": "Armes",
+    "list": "Liste des armes",
+    "none": "Aucune arme.",
+    "detail": "{{sm}} / grande {{l}}",
+    "twoHanded": "à deux mains",
+    "kind": {
+      "melee": "Mêlée",
+      "missile": "Tir"
+    },
+    "form": {
+      "openAdd": "Ajouter une arme",
+      "addTitle": "Ajouter une arme",
+      "editTitle": "Modifier {{name}}",
+      "edit": "Modifier {{name}}",
+      "remove": "Retirer {{name}}",
+      "name": "Nom",
+      "damageSm": "Dégâts P-M",
+      "damageL": "Dégâts Grande",
+      "magicToHit": "Bonus au toucher",
+      "magicDamage": "Bonus aux dégâts",
+      "kind": "Type",
+      "twoHanded": "À deux mains",
+      "ammoKind": "Type de munition",
+      "ammoNone": "aucune (lancée)"
+    }
   }
 }

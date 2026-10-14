@@ -105,3 +105,11 @@ packages:
       Characters:
       Dice:
       Log:
+  github.com/ceffo/critical/api/internal/domain/service/weaponsvc:
+    config:
+      dir: "internal/domain/service/weaponsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Log:

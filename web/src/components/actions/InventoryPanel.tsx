@@ -14,6 +14,7 @@ import {
 } from "@/api/items";
 import { draftFromItem, emptyDraft, typeSuggestions } from "@/lib/itemForm";
 import { ItemForm } from "./ItemForm";
+import { WeaponsSection } from "./WeaponsSection";
 import { formatSigned } from "@/lib/format";
 import type { Item } from "@/types/items";
 
@@ -36,64 +37,67 @@ export function InventoryPanel() {
   const close = () => setForm(null);
 
   return (
-    <div className="flex max-w-2xl flex-col gap-2">
-      {form === "add" ? (
-        <ItemForm
-          initial={emptyDraft}
-          types={types}
-          busy={busy}
-          onCancel={close}
-          onSave={async (body) => {
-            const rejected = await submit(() => postCreateItem(body));
-            if (!rejected) close();
-            return rejected;
-          }}
-        />
-      ) : (
-        <div>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => setForm("add")}
-          >
-            <Plus /> {t("items.form.openAdd")}
-          </Button>
-        </div>
-      )}
-      {items.length === 0 && (
-        <p className="text-sm text-muted-foreground">{t("items.none")}</p>
-      )}
-      <ul className="flex flex-col gap-1" aria-label={t("items.title")}>
-        {items.map((i) =>
-          form === i.id ? (
-            <li key={i.id}>
-              <ItemForm
-                initial={draftFromItem(i)}
-                editing={i}
-                types={types}
-                busy={busy}
-                onCancel={close}
-                onSave={async (body) => {
-                  const rejected = await submit(() => patchItem(i.id, body));
-                  if (!rejected) close();
-                  return rejected;
-                }}
-              />
-            </li>
-          ) : (
-            <ItemRow
-              key={i.id}
-              item={i}
-              busy={busy}
-              onUse={() => void spendItem(i.id)}
-              onRestock={() => void run(() => postRestockItem(i.id, 1))}
-              onEdit={() => setForm(i.id)}
-              onRemove={() => void run(() => deleteItem(i.id))}
-            />
-          ),
+    <div className="flex flex-col gap-4">
+      <div className="flex max-w-2xl flex-col gap-2">
+        {form === "add" ? (
+          <ItemForm
+            initial={emptyDraft}
+            types={types}
+            busy={busy}
+            onCancel={close}
+            onSave={async (body) => {
+              const rejected = await submit(() => postCreateItem(body));
+              if (!rejected) close();
+              return rejected;
+            }}
+          />
+        ) : (
+          <div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => setForm("add")}
+            >
+              <Plus /> {t("items.form.openAdd")}
+            </Button>
+          </div>
         )}
-      </ul>
+        {items.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t("items.none")}</p>
+        )}
+        <ul className="flex flex-col gap-1" aria-label={t("items.title")}>
+          {items.map((i) =>
+            form === i.id ? (
+              <li key={i.id}>
+                <ItemForm
+                  initial={draftFromItem(i)}
+                  editing={i}
+                  types={types}
+                  busy={busy}
+                  onCancel={close}
+                  onSave={async (body) => {
+                    const rejected = await submit(() => patchItem(i.id, body));
+                    if (!rejected) close();
+                    return rejected;
+                  }}
+                />
+              </li>
+            ) : (
+              <ItemRow
+                key={i.id}
+                item={i}
+                busy={busy}
+                onUse={() => void spendItem(i.id)}
+                onRestock={() => void run(() => postRestockItem(i.id, 1))}
+                onEdit={() => setForm(i.id)}
+                onRemove={() => void run(() => deleteItem(i.id))}
+              />
+            ),
+          )}
+        </ul>
+      </div>
+      <WeaponsSection />
     </div>
   );
 }

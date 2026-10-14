@@ -76,6 +76,10 @@ flowchart TD
   "Add item" opens the same form (`ItemForm.tsx`, critical-qki.31); 🗑 removes. The form only parses
   numbers (`lib/itemForm.ts`); the server validates and the message it returns for a field is shown
   under that field (`stores/table.ts` `submit`, `ApiError.field`). Edits send only the changed fields.
+- The Inventory tab also lists the weapons (`WeaponsSection.tsx`, critical-qki.32): name, dice,
+  to-hit and damage bonus, melee / missile, ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
+  `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
+  refreshes the weapons store, so the Attack picker follows.
 - Spells tab (`SpellsPanel.tsx`): Cast puts the `CastResult` in the result card (`CastResultView`:
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with

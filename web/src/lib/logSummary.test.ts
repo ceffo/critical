@@ -540,4 +540,33 @@ describe("inventory entries (critical-qki.13)", () => {
       entryText(entry("item_remove", { name: "x" }, "srv"), await makeT("en")),
     ).toBe("srv");
   });
+
+  it("renders weapon add, edit and remove entries in both languages", async () => {
+    const base = { weapon_id: "bastard_sword", name: "Bastard Sword +2" };
+    const edit = entry("weapon_edit", {
+      ...base,
+      changes: [
+        { field: "magic_to_hit", before: "2", after: "3" },
+        { field: "magic_damage", before: "2", after: "3" },
+      ],
+    });
+    expect(entryText(edit, await makeT("en"))).toBe(
+      "Edited weapon Bastard Sword +2: to-hit bonus 2 → 3, damage bonus 2 → 3",
+    );
+    expect(entryText(edit, await makeT("fr"))).toBe(
+      "Arme Bastard Sword +2 modifiée : bonus au toucher 2 → 3, bonus aux dégâts 2 → 3",
+    );
+    expect(entryText(entry("weapon_add", base), await makeT("en"))).toBe(
+      "Added weapon Bastard Sword +2",
+    );
+    expect(entryText(entry("weapon_remove", base), await makeT("en"))).toBe(
+      "Removed weapon Bastard Sword +2",
+    );
+    expect(
+      entryText(
+        entry("weapon_remove", { weapon_id: "x" }, "srv"),
+        await makeT("en"),
+      ),
+    ).toBe("srv");
+  });
 });

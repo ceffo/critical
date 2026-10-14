@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 )
 
 // JSON writes v as JSON with the given status code. Encoding errors are logged,
@@ -106,6 +107,7 @@ var mappings = []mapping{
 	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound},
 	{target: domain.ErrNotFound, status: http.StatusNotFound},
 	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, message: fixed("weapon not found")},
+	{target: weaponsvc.ErrWeaponNotFound, status: http.StatusNotFound, message: fixed("weapon not found")},
 	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound},
 	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict},
 	{target: itemsvc.ErrNotRestockable, status: http.StatusConflict},

@@ -14,6 +14,9 @@ export type LogKind =
   | "item_add"
   | "item_edit"
   | "item_remove"
+  | "weapon_add"
+  | "weapon_edit"
+  | "weapon_remove"
   | "spell_prep"
   | "long_rest"
   | "save";

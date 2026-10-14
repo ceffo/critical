@@ -181,6 +181,15 @@ changes how the count moves:
   Validation (`Item.Validate`) fails with a `domain.FieldError`, rendered `400 {error, field}` so the
   UI shows the message under that field; effect dice are `NdM` or `NdM+K`. A new item's id is the slug
   of its name (suffix `_2`, `_3` when taken) and goes last in the list.
+- Weapon editor (critical-qki.32, `weaponsvc`): `POST /api/weapons`, `PATCH /api/weapons/{id}`,
+  `DELETE /api/weapons/{id}` (the list stays `GET /api/weapons`, combatsvc), same mechanics as the
+  item editor: one entry each (`weapon_add` / `weapon_edit` / `weapon_remove`) with the
+  `weapons:<id>` snapshot, pop-only, `{weapon, logEntryId}`, `400 {error, field}` with snake_case
+  field names (`damage_sm`, `magic_to_hit`...). A remove is a hard delete: attack entries store the
+  weapon's name and id in their payload, so old log lines still read right, and popping the remove
+  re-inserts the same id, position and fields. Damage dice are `NdM` only (the attack rolls NdM and
+  the weapon's magic is its own field); to-hit and damage magic are separate, -10..10; a melee weapon
+  has no ammo kind. The next attack reads the table, so an edit applies at once.
 - Ammo is any item whose `ammo_kind` matches the weapon's; the attack picker offers those with
   count > 0.
 

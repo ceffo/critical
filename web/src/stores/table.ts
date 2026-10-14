@@ -17,7 +17,7 @@ interface TableStore {
   busy: boolean;
   clearError: () => void;
   clearNotice: () => void;
-  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item counts. */
+  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item counts, weapons. */
   refresh: () => Promise<void>;
   /**
    * Run a mutation, then refresh the table state. Errors are caught into `error`.
@@ -68,6 +68,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
         useBuffsStore.getState().fetchRound(),
         useBuffsStore.getState().fetchStrength(),
         useItemsStore.getState().fetchItems(),
+        useItemsStore.getState().fetchWeapons(),
       ]);
     } catch (e) {
       set({ error: message(e) });

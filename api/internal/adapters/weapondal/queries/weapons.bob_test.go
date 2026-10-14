@@ -262,3 +262,578 @@ func TestGetWeapon(t *testing.T) {
 		}
 	})
 }
+
+var beforeTestingListWeaponsFull = func(context.Context, bob.Tx) error {
+	return nil
+}
+
+func TestListWeaponsFull(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := ListWeaponsFull()
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(listWeaponsFullSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := ListWeaponsFull()
+
+		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(listWeaponsFullSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		beforeHookErr := beforeTestingListWeaponsFull(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Select(ListWeaponsFull()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 10 {
+			t.Fatalf("expected %d columns, got %d", 10, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+
+		if columns[1] != "position" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "position", columns[1])
+		}
+
+		if columns[2] != "name" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "name", columns[2])
+		}
+
+		if columns[3] != "damage_sm" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "damage_sm", columns[3])
+		}
+
+		if columns[4] != "damage_l" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "damage_l", columns[4])
+		}
+
+		if columns[5] != "magic_to_hit" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "magic_to_hit", columns[5])
+		}
+
+		if columns[6] != "magic_damage" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "magic_damage", columns[6])
+		}
+
+		if columns[7] != "kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "kind", columns[7])
+		}
+
+		if columns[8] != "two_handed" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "two_handed", columns[8])
+		}
+
+		if columns[9] != "ammo_kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 9, "ammo_kind", columns[9])
+		}
+	})
+}
+
+var beforeTestingGetWeaponFull = func(context.Context, bob.Tx) (string, error) {
+	return random_string(nil), nil
+}
+
+func TestGetWeaponFull(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := GetWeaponFull(random_string(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(getWeaponFullSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := GetWeaponFull(random_string(nil))
+
+		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(getWeaponFullSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingGetWeaponFull(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Select(GetWeaponFull(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 10 {
+			t.Fatalf("expected %d columns, got %d", 10, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+
+		if columns[1] != "position" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "position", columns[1])
+		}
+
+		if columns[2] != "name" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "name", columns[2])
+		}
+
+		if columns[3] != "damage_sm" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "damage_sm", columns[3])
+		}
+
+		if columns[4] != "damage_l" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "damage_l", columns[4])
+		}
+
+		if columns[5] != "magic_to_hit" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "magic_to_hit", columns[5])
+		}
+
+		if columns[6] != "magic_damage" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "magic_damage", columns[6])
+		}
+
+		if columns[7] != "kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "kind", columns[7])
+		}
+
+		if columns[8] != "two_handed" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "two_handed", columns[8])
+		}
+
+		if columns[9] != "ammo_kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 9, "ammo_kind", columns[9])
+		}
+	})
+}
+
+var beforeTestingInsertWeapon = func(context.Context, bob.Tx) ([]InsertWeapon_Weapons, error) {
+	return []struct {
+		ID          string
+		Position    int64
+		Name        string
+		DamageSM    string
+		DamageL     string
+		MagicToHit  int64
+		MagicDamage int64
+		Kind        string
+		TwoHanded   int64
+		AmmoKind    string
+	}{{
+		ID:          random_string(nil),
+		Position:    random_int64(nil),
+		Name:        random_string(nil),
+		DamageSM:    random_string(nil),
+		DamageL:     random_string(nil),
+		MagicToHit:  random_int64(nil),
+		MagicDamage: random_int64(nil),
+		Kind:        random_string(nil),
+		TwoHanded:   random_int64(nil),
+		AmmoKind:    random_string(nil),
+	}}, nil
+}
+
+func TestInsertWeapon(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertWeapon([]struct {
+			ID          string
+			Position    int64
+			Name        string
+			DamageSM    string
+			DamageL     string
+			MagicToHit  int64
+			MagicDamage int64
+			Kind        string
+			TwoHanded   int64
+			AmmoKind    string
+		}{{
+			ID:          random_string(nil),
+			Position:    random_int64(nil),
+			Name:        random_string(nil),
+			DamageSM:    random_string(nil),
+			DamageL:     random_string(nil),
+			MagicToHit:  random_int64(nil),
+			MagicDamage: random_int64(nil),
+			Kind:        random_string(nil),
+			TwoHanded:   random_int64(nil),
+			AmmoKind:    random_string(nil),
+		}})
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(insertWeaponSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertWeapon([]struct {
+			ID          string
+			Position    int64
+			Name        string
+			DamageSM    string
+			DamageL     string
+			MagicToHit  int64
+			MagicDamage int64
+			Kind        string
+			TwoHanded   int64
+			AmmoKind    string
+		}{{
+			ID:          random_string(nil),
+			Position:    random_int64(nil),
+			Name:        random_string(nil),
+			DamageSM:    random_string(nil),
+			DamageL:     random_string(nil),
+			MagicToHit:  random_int64(nil),
+			MagicDamage: random_int64(nil),
+			Kind:        random_string(nil),
+			TwoHanded:   random_int64(nil),
+			AmmoKind:    random_string(nil),
+		}})
+
+		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(insertWeaponSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Exec", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingInsertWeapon(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query := sqlite.Insert(InsertWeapon(arg0))
+		if _, err := bob.Exec(ctxTx, tx, query); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+var beforeTestingUpdateWeapon = func(context.Context, bob.Tx) (int64, string, string, string, int64, int64, string, int64, string, string, error) {
+	return random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_int64(nil), random_string(nil), random_string(nil), nil
+}
+
+func TestUpdateWeapon(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := UpdateWeapon(random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_int64(nil), random_string(nil), random_string(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(updateWeaponSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := UpdateWeapon(random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_int64(nil), random_string(nil), random_string(nil))
+
+		if _, err := sqlite.Update(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(updateWeaponSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, beforeHookErr := beforeTestingUpdateWeapon(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Update(UpdateWeapon(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}
+
+var beforeTestingDeleteWeapon = func(context.Context, bob.Tx) (string, error) {
+	return random_string(nil), nil
+}
+
+func TestDeleteWeapon(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := DeleteWeapon(random_string(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(deleteWeaponSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := DeleteWeapon(random_string(nil))
+
+		if _, err := sqlite.Delete(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(deleteWeaponSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingDeleteWeapon(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Delete(DeleteWeapon(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}

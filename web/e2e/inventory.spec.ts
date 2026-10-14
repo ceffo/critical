@@ -122,7 +122,7 @@ test("a wand used down to 0 disappears; popping that use brings it back with 1 c
   await expect(row(page, "power_gem_dispel")).toBeVisible();
   // Back in its place, between the flasks and the gem.
   const ids = await page
-    .getByRole("tabpanel")
+    .getByRole("list", { name: "Inventory", exact: true })
     .getByRole("listitem")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
   expect(ids.slice(3)).toEqual(["item-fire_flask", "item-wand_lightning", "item-power_gem_dispel"]);

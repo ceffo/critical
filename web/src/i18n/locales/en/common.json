@@ -521,7 +521,10 @@
       "spell_prep": "Prepare",
       "long_rest": "Rest",
       "save": "Save",
-      "time_passed": "Time"
+      "time_passed": "Time",
+      "weapon_add": "Weapon",
+      "weapon_edit": "Weapon",
+      "weapon_remove": "Weapon"
     },
     "status": {
       "active": "Active",
@@ -603,6 +606,22 @@
       "rolled": "Save vs {{name}}: d20 {{d20}} vs {{target}}, {{verdict}}",
       "adjusted": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjusted {{adjustment}}{{reason}}: {{from}} → {{to}}",
       "removed": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjustment removed: {{from}} → {{to}}"
+    },
+    "weapon": {
+      "added": "Added weapon {{name}}",
+      "removed": "Removed weapon {{name}}",
+      "edited": "Edited weapon {{name}}: {{changes}}",
+      "change": "{{field}} {{before}} → {{after}}",
+      "fields": {
+        "name": "name",
+        "damage_sm": "damage S-M",
+        "damage_l": "damage large",
+        "magic_to_hit": "to-hit bonus",
+        "magic_damage": "damage bonus",
+        "kind": "kind",
+        "two_handed": "two-handed",
+        "ammo_kind": "ammo kind"
+      }
     }
   },
   "critTable": {
@@ -617,5 +636,32 @@
     "add": "Add range",
     "save": "Save table",
     "saved": "Saved. The next crit uses it."
+  },
+  "weapons": {
+    "title": "Weapons",
+    "list": "Weapon list",
+    "none": "No weapons.",
+    "detail": "{{sm}} / large {{l}}",
+    "twoHanded": "two-handed",
+    "kind": {
+      "melee": "Melee",
+      "missile": "Missile"
+    },
+    "form": {
+      "openAdd": "Add weapon",
+      "addTitle": "Add weapon",
+      "editTitle": "Edit {{name}}",
+      "edit": "Edit {{name}}",
+      "remove": "Remove {{name}}",
+      "name": "Name",
+      "damageSm": "Damage S-M",
+      "damageL": "Damage Large",
+      "magicToHit": "To-hit bonus",
+      "magicDamage": "Damage bonus",
+      "kind": "Kind",
+      "twoHanded": "Two-handed",
+      "ammoKind": "Ammo kind",
+      "ammoNone": "none (hurled)"
+    }
   }
 }

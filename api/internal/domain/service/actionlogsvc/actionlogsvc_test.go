@@ -170,19 +170,19 @@ func TestAmend(t *testing.T) {
 			"delta and source", hpEntry(5), nil,
 			actionlogsvc.Amendment{HPDelta: -12, Summary: " orc axe "},
 			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-12), Summary: "orc axe"},
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-12), Summary: "orc axe", Payload: json.RawMessage(`{}`)},
 		},
 		{
 			"delta to zero keeps source", hpEntry(5), nil,
 			actionlogsvc.Amendment{HPDelta: 0},
 			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(0)},
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(0), Payload: json.RawMessage(`{}`)},
 		},
 		{
 			"amend twice", hpEntry(5, actionlog.Correction{Kind: actionlog.CorrectionAmend, HPDelta: intp(-3)}), nil,
 			actionlogsvc.Amendment{HPDelta: -4},
 			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-4)},
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-4), Payload: json.RawMessage(`{}`)},
 		},
 	}
 	for _, c := range cases {
@@ -190,6 +190,8 @@ func TestAmend(t *testing.T) {
 			svc, dal, _, tx := newSvc(t)
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, c.getErr).Once()
 			if c.want != nil {
+				// The amended entry is the only HP change: total = its effective delta.
+				dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.entry.EffectiveHPDelta(), nil).Once()
 				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil)
 				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(hpEntry(5, *c.want), nil).Once()
 			}
@@ -257,6 +259,10 @@ func TestVoid(t *testing.T) {
 				}))
 			}
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
+			if c.entry.EffectiveHPDelta() < 0 {
+				// The voided damage is the only HP change: total = its delta.
+				dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.entry.EffectiveHPDelta(), nil).Once()
+			}
 			if len(c.entry.Snapshots) > 0 && c.entry.Status() != actionlog.StatusVoided {
 				dal.EXPECT().LaterEntryTouchingState(mock.Anything, int64(1), int64(5)).Return(c.laterID, c.laterID != 0, nil)
 				if c.laterID != 0 {
@@ -307,6 +313,7 @@ func TestVoidLatest(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
 		dal.EXPECT().LatestActiveID(mock.Anything, int64(1), actionlog.KindHPChange).Return(7, true, nil)
 		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(7)).Return(hpEntry(7), nil)
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(-8, nil).Once()
 		dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 7, Kind: actionlog.CorrectionVoid}).Return(nil)
 		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
 		require.NoError(t, err)
@@ -468,6 +475,145 @@ func TestEntryEffectivePayload(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			assert.JSONEq(t, c.want, string(saveEntry(1, c.corrections...).EffectivePayload()))
+		})
+	}
+}
+
+// HP-1/HP-2 (critical-qki.38): Record caps a heal at the gap to max HP, reading
+// the total exactly once inside its transaction, and stores the breakdown.
+// Damage never reads the total.
+func TestRecord_CapsHeal(t *testing.T) {
+	cases := []struct {
+		name        string
+		total       int // SUM before the entry; 0 = at max
+		delta       int
+		payload     string
+		wantDelta   int
+		wantPayload string
+	}{
+		{"heal at max-1", -1, 6, "", 1, `{"hpRequested":6,"hpApplied":1}`},
+		{"heal exactly to max", -7, 7, "", 7, `{"hpRequested":7,"hpApplied":7}`},
+		{"heal bigger than the gap", -5, 12, "", 5, `{"hpRequested":12,"hpApplied":5}`},
+		{"heal at full HP logs 0", 0, 9, "", 0, `{"hpRequested":9,"hpApplied":0}`},
+		{"payload kept", -3, 11, `{"spell":"cure"}`, 3, `{"spell":"cure","hpRequested":11,"hpApplied":3}`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc, dal, _, tx := newSvc(t)
+			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
+			var stored actionlog.NewEntry
+			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, e actionlog.NewEntry) { stored = e }).Return(42, nil).Once()
+			_, err := svc.Record(context.Background(), actionlog.NewEntry{
+				CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: c.delta, Payload: json.RawMessage(c.payload),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, 1, tx.calls)
+			assert.Equal(t, c.wantDelta, stored.HPDelta)
+			assert.JSONEq(t, c.wantPayload, string(stored.Payload))
+		})
+	}
+	t.Run("damage is stored as is, total not read", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().InsertEntry(mock.Anything, actionlog.NewEntry{
+			CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -13, Payload: json.RawMessage(`{}`),
+		}).Return(42, nil).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -13})
+		require.NoError(t, err)
+	})
+	t.Run("total fails", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(0, errBoom).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4})
+		require.ErrorIs(t, err, errBoom)
+	})
+	t.Run("payload not an object", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(-6, nil).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4, Payload: json.RawMessage(`[1]`)})
+		require.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
+}
+
+// HP-3 (critical-qki.38): an amend is checked against the total without the
+// amended entry.
+func TestAmend_HPCap(t *testing.T) {
+	cases := []struct {
+		name        string
+		entryDelta  int // the hp_change entry being amended
+		total       int // SUM including the entry
+		amendTo     int
+		wantDelta   int
+		wantPayload string
+		wantErr     error
+	}{
+		// others = total - entry
+		{"heal amended up is capped at the gap", 3, -2, 14, 5, `{"hpRequested":14,"hpApplied":5}`, nil},
+		{"heal amended up keeps only the gap it had", 4, 0, 6, 4, `{"hpRequested":6,"hpApplied":4}`, nil},
+		{"heal logged 0 at full HP amended up stays 0", 0, 0, 8, 0, `{"hpRequested":8,"hpApplied":0}`, nil},
+		{"heal amended to damage clears the breakdown", 2, -1, -9, -9, `{}`, nil},
+		{"damage amended down within max", -10, -10, -6, -6, `{}`, nil},
+		{"damage amended down above max is refused", -10, 0, -3, 0, "", actionlogsvc.ErrAboveMaxHP},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc, dal, _, tx := newSvc(t)
+			entry := &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "x", HPDelta: c.entryDelta}
+			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
+			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
+			var stored actionlog.Correction
+			if c.wantErr == nil {
+				dal.EXPECT().InsertCorrection(mock.Anything, mock.Anything).
+					Run(func(_ context.Context, corr actionlog.Correction) { stored = corr }).Return(nil).Once()
+				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
+			}
+			_, err := svc.Amend(context.Background(), 1, 5, actionlogsvc.Amendment{HPDelta: c.amendTo})
+			assert.Equal(t, 1, tx.calls)
+			if c.wantErr != nil {
+				require.ErrorIs(t, err, c.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, stored.HPDelta)
+			assert.Equal(t, c.wantDelta, *stored.HPDelta)
+			assert.JSONEq(t, c.wantPayload, string(stored.Payload))
+		})
+	}
+}
+
+// HP-4 (critical-qki.38): voiding damage is refused when the HP it gives back
+// would put current HP above max; voiding a heal never reads the total.
+func TestVoid_HPCap(t *testing.T) {
+	cases := []struct {
+		name       string
+		entryDelta int
+		total      int
+		wantErr    error
+	}{
+		{"damage after a capped heal is refused", -10, 0, actionlogsvc.ErrAboveMaxHP},
+		{"damage partly healed is refused", -8, -3, actionlogsvc.ErrAboveMaxHP},
+		{"damage exactly healed back to max is allowed", -8, -8, nil},
+		{"damage with more damage after is allowed", -6, -15, nil},
+		{"heal is always allowed", 7, 0, nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc, dal, _, _ := newSvc(t)
+			entry := &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "x", HPDelta: c.entryDelta}
+			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
+			if c.entryDelta < 0 {
+				dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
+			}
+			if c.wantErr == nil {
+				dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}).Return(nil).Once()
+				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(entry, nil).Once()
+			}
+			_, err := svc.Void(context.Background(), 1, 5)
+			if c.wantErr != nil {
+				require.ErrorIs(t, err, c.wantErr)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }

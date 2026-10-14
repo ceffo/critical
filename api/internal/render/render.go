@@ -111,6 +111,7 @@ var mappings = []mapping{
 	{target: actionlogsvc.ErrVoidBlocked, status: http.StatusConflict},
 	{target: actionlogsvc.ErrNotAmendable, status: http.StatusBadRequest},
 	{target: actionlogsvc.ErrNotLatest, status: http.StatusConflict},
+	{target: actionlogsvc.ErrAboveMaxHP, status: http.StatusConflict},
 }
 
 func mapError(err error) (int, string) {

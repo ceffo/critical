@@ -104,7 +104,7 @@ func TestAppendEvent(t *testing.T) {
 			svc, dal, log := newSvc(t)
 			if c.want != nil {
 				log.EXPECT().Record(mock.Anything, *c.want).Return(1, nil)
-				stubState(dal, log, 20, c.delta, nil)
+				stubState(dal, log, 20, c.delta-10, nil) // from 10/20
 			}
 			state, err := svc.AppendEvent(context.Background(), 7, c.delta, c.source)
 			if c.wantErr != nil {
@@ -112,8 +112,21 @@ func TestAppendEvent(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, 20+c.delta, state.CurrentHp)
+			assert.Equal(t, 10+c.delta, state.CurrentHp)
 		})
+	}
+}
+
+// HP-5 (critical-qki.38): a total above 0 (rows logged before the cap) is
+// never shown above max.
+func TestGetState_NeverAboveMax(t *testing.T) {
+	for _, c := range []struct{ total, want int }{{-1, 19}, {0, 20}, {7, 20}} {
+		svc, dal, log := newSvc(t)
+		stubState(dal, log, 20, c.total, nil)
+		state, err := svc.GetState(context.Background(), 1)
+		require.NoError(t, err)
+		assert.Equal(t, c.want, state.CurrentHp, "total %d", c.total)
+		assert.Equal(t, 20, state.MaxHp)
 	}
 }
 

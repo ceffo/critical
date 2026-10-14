@@ -75,6 +75,26 @@ id, character_id, round_number INTEGER
 effective `hp_delta` over `action_log` (latest amend wins, voided entries count 0), see
 `actionlogdal.HPTotal`.
 
+**HP cap (critical-qki.38).** User, 2026-10-13: *"a player cannot go above its max hp. period. max hp
+grows when leveling up only"*. There are no temporary HP. Current HP ≤ `hp_max` means the ledger
+total (SUM of effective `hp_delta`) is ≤ 0, and the rule is enforced when an entry is written, never
+by rewriting the ledger (`actionlog.CapHeal`, steps HP-1…HP-5):
+- HP-1: `actionlogsvc.Record` caps every positive `hp_delta`, whatever the service, at the gap to
+  max inside the recording transaction: the entry stores `min(heal, -total)`, and its payload gets
+  `hpRequested` / `hpApplied`. The Combat Log shows "+12 requested, capped at max HP".
+- HP-2: at full HP the heal is still logged, as 0, with the same breakdown.
+- HP-3: an amend of an `hp_change` is checked against the total without that entry: a heal is
+  capped the same way (the amend's payload carries the breakdown, `{}` otherwise); damage that would
+  still leave HP above max (a later heal was capped against the old value) is refused (409,
+  `ErrAboveMaxHP`).
+- HP-4: voiding damage is refused (409, `ErrAboveMaxHP`) when the HP it gives back would put HP
+  above max; void or amend the later heal first. Voiding a heal is always allowed.
+- HP-5: `hpsvc.GetState` shows `min(hp_max, hp_max + total)`, a guard for rows logged before the cap.
+
+Damage is unchanged. Today the only positive deltas come from `POST /api/hp/event` (manual heal:
+cure spells and potions are entered there) and `POST /api/log/{id}/amend`; casts, item uses and
+rests change no HP. ADR 0007 (HP ledger, critical-qki.37) will take this rule over.
+
 **Recording actions.** A service that changes state records an `actionlog.NewEntry` through the
 action log's `Record` inside the same `domain.TxRunner.InTx` as its state write, with
 `Snapshots` of the state it changed. It registers an `actionlog.Restorer` for its state key on the

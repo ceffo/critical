@@ -12,7 +12,9 @@ import (
 
 // Record validates and stores an entry with its snapshots in one transaction,
 // joining the caller's transaction when ctx carries one. Round 0 is stamped
-// with the current round.
+// with the current round. A positive HPDelta (a heal, from any service) is
+// capped at max HP before it is stored (actionlog.CapHeal, HP-1/HP-2) and the
+// payload gets the requested vs applied breakdown.
 func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, error) {
 	if e.Kind == "" {
 		return 0, fmt.Errorf("%w: kind is required", domain.ErrInvalidInput)
@@ -41,6 +43,11 @@ func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, erro
 			}
 			e.Round = round
 		}
+		if e.HPDelta > 0 {
+			if err := s.capHeal(ctx, &e); err != nil {
+				return err
+			}
+		}
 		var err error
 		id, err = s.dal.InsertEntry(ctx, e)
 		if err != nil {
@@ -52,4 +59,21 @@ func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, erro
 		return 0, err
 	}
 	return id, nil
+}
+
+// capHeal clips e's heal to the gap to max HP and records the breakdown in its
+// payload (HP-1, HP-2). It must run inside the recording transaction so the
+// total it reads is the one the entry is added to.
+func (s *service) capHeal(ctx context.Context, e *actionlog.NewEntry) error {
+	total, err := s.dal.HPTotal(ctx, e.CharacterID)
+	if err != nil {
+		return fmt.Errorf("hp total: %w", err)
+	}
+	b := actionlog.HPBreakdown{Requested: e.HPDelta, Applied: actionlog.CapHeal(total, e.HPDelta)}
+	payload, err := actionlog.WithHPBreakdown(e.Payload, b)
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrInvalidInput, err)
+	}
+	e.HPDelta, e.Payload = b.Applied, payload
+	return nil
 }

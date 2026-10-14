@@ -14,4 +14,7 @@ var (
 	// ErrNotLatest: only the newest entry of its kind can be adjusted; fix
 	// an older one with void and a new roll.
 	ErrNotLatest = errors.New("not the latest entry")
+	// ErrAboveMaxHP: the amend or void would leave current HP above max HP
+	// (HP-3, HP-4); fix the later heal first.
+	ErrAboveMaxHP = errors.New("hp would exceed max hp")
 )

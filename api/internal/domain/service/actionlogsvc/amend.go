@@ -2,6 +2,7 @@ package actionlogsvc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,10 @@ import (
 
 // Amend records an amend correction on an hp_change entry. The original entry
 // stays as it was; its effective delta and summary become the amendment's.
+// The new delta is checked against max HP using the total without this entry
+// (HP-3): a heal is capped at the gap (the amend's payload carries requested vs
+// applied), and damage that would still leave HP above max (a later heal was
+// capped against the old value) is refused with ErrAboveMaxHP.
 func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error) {
 	var out *actionlog.Entry
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -24,12 +29,29 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 		if e.Kind != actionlog.KindHPChange {
 			return fmt.Errorf("%w: #%d is %s, only %s entries can be amended", ErrNotAmendable, id, e.Kind, actionlog.KindHPChange)
 		}
-		delta := a.HPDelta
+		total, err := s.dal.HPTotal(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("hp total: %w", err)
+		}
+		others := total - e.EffectiveHPDelta()
+		delta := actionlog.CapHeal(others, a.HPDelta)
+		if over := others + delta; delta <= 0 && over > 0 {
+			return fmt.Errorf("%w: this would put HP %d above max, void or amend the later heal first", ErrAboveMaxHP, over)
+		}
+		// Always set a payload so a breakdown from an earlier heal value does
+		// not outlive it (the latest amend with a payload wins).
+		payload := json.RawMessage(`{}`)
+		if a.HPDelta > 0 {
+			if payload, err = actionlog.WithHPBreakdown(payload, actionlog.HPBreakdown{Requested: a.HPDelta, Applied: delta}); err != nil {
+				return err
+			}
+		}
 		if err := s.dal.InsertCorrection(ctx, actionlog.Correction{
 			ActionID: id,
 			Kind:     actionlog.CorrectionAmend,
 			HPDelta:  &delta,
 			Summary:  strings.TrimSpace(a.Summary),
+			Payload:  payload,
 		}); err != nil {
 			return fmt.Errorf("insert amend: %w", err)
 		}

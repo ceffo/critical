@@ -54,6 +54,9 @@ func (s *service) void(ctx context.Context, characterID, id int64) error {
 	if e.Status() == actionlog.StatusVoided {
 		return fmt.Errorf("%w: #%d", ErrAlreadyVoided, id)
 	}
+	if err := s.checkVoidKeepsHPAtMostMax(ctx, characterID, e); err != nil {
+		return err
+	}
 	if len(e.Snapshots) > 0 {
 		laterID, blocked, err := s.dal.LaterEntryTouchingState(ctx, characterID, id)
 		if err != nil {
@@ -80,6 +83,26 @@ func (s *service) void(ctx context.Context, characterID, id int64) error {
 	}
 	if err := s.dal.InsertCorrection(ctx, actionlog.Correction{ActionID: id, Kind: actionlog.CorrectionVoid}); err != nil {
 		return fmt.Errorf("insert void: %w", err)
+	}
+	return nil
+}
+
+// checkVoidKeepsHPAtMostMax refuses voiding damage when the HP it gives back
+// would put current HP above max (HP-4): a later heal was capped against that
+// damage, so the heal must be voided or amended first. Voiding a heal or an
+// entry without HP is always fine.
+func (s *service) checkVoidKeepsHPAtMostMax(ctx context.Context, characterID int64, e *actionlog.Entry) error {
+	eff := e.EffectiveHPDelta()
+	if eff >= 0 {
+		return nil
+	}
+	total, err := s.dal.HPTotal(ctx, characterID)
+	if err != nil {
+		return fmt.Errorf("hp total: %w", err)
+	}
+	if over := total - eff; over > 0 {
+		return fmt.Errorf("%w: voiding this damage would put HP %d above max, void or amend the later heal first",
+			ErrAboveMaxHP, over)
 	}
 	return nil
 }

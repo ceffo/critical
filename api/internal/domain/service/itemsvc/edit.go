@@ -201,6 +201,11 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		if p.MagicBonus != nil {
 			item.MagicBonus = *p.MagicBonus
 		}
+		// Becoming daily needs an explicit daily number: the stored max of a stock or
+		// charges item is informational.
+		if item.Behaviour == BehaviourDaily && old.Behaviour != BehaviourDaily && p.MaxCount == nil {
+			item.MaxCount = 0
+		}
 		// A non-daily item's max is informational: keep it from going below the count.
 		if item.Behaviour != BehaviourDaily && p.MaxCount == nil && item.Count > item.MaxCount {
 			item.MaxCount = item.Count

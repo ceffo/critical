@@ -32,6 +32,7 @@ func TestCreate_ValidationNamesTheField(t *testing.T) {
 		"bad dice 0d6":        {func(i *itemsvc.ItemInput) { i.EffectDice = "0d6" }, "effectDice"},
 		"bad dice 1d1":        {func(i *itemsvc.ItemInput) { i.EffectDice = "1d1" }, "effectDice"},
 		"bad dice trailing":   {func(i *itemsvc.ItemInput) { i.EffectDice = "2d6+" }, "effectDice"},
+		"charges at zero":     {func(i *itemsvc.ItemInput) { i.Behaviour = itemsvc.BehaviourCharges; i.Count = 0 }, "count"},
 		"unknown save":        {func(i *itemsvc.ItemInput) { i.EffectSave = "fire" }, "effectSave"},
 		"bonus out of range":  {func(i *itemsvc.ItemInput) { i.MagicBonus = 11 }, "magicalBonus"},
 		"daily without daily": {func(i *itemsvc.ItemInput) { i.Behaviour = itemsvc.BehaviourDaily }, "maxCount"},
@@ -135,11 +136,13 @@ func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 		patch itemsvc.ItemPatch
 		field string
 	}{
-		"empty name":     {itemsvc.ItemPatch{Name: ptr("")}, "name"},
-		"negative count": {itemsvc.ItemPatch{Count: ptr(-1)}, "count"},
-		"bad dice":       {itemsvc.ItemPatch{EffectDice: ptr("2x6")}, "effectDice"},
-		"daily 0":        {itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(0)}, "maxCount"},
-		"nothing":        {itemsvc.ItemPatch{Count: ptr(4)}, ""},
+		"empty name":         {itemsvc.ItemPatch{Name: ptr("")}, "name"},
+		"negative count":     {itemsvc.ItemPatch{Count: ptr(-1)}, "count"},
+		"bad dice":           {itemsvc.ItemPatch{EffectDice: ptr("2x6")}, "effectDice"},
+		"daily 0":            {itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(0)}, "maxCount"},
+		"charges to 0":       {itemsvc.ItemPatch{Count: ptr(0)}, "count"},
+		"stock 0 to charges": {itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourCharges), Count: ptr(0)}, "count"},
+		"nothing":            {itemsvc.ItemPatch{Count: ptr(4)}, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			dal := mocks.NewMockDAL(t) // no Update

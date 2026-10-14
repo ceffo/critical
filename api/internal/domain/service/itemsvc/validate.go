@@ -58,6 +58,10 @@ func (i Item) Validate() error {
 	if i.Count > MaxItemCount {
 		return fieldErr("count", fmt.Sprintf("Count must be at most %d", MaxItemCount))
 	}
+	// A charges item at 0 is gone (Removed, Use): removing it is what remove is for.
+	if i.Behaviour.RemovedAtZero() && i.Count == 0 {
+		return fieldErr("count", "A charges item needs at least 1 charge (remove it instead)")
+	}
 	if i.Behaviour == BehaviourDaily {
 		if i.MaxCount < 1 {
 			return fieldErr("maxCount", "Daily number must be at least 1")

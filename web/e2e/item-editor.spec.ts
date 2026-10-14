@@ -146,3 +146,27 @@ test("a daily item and an effect with a modifier: add, use rolls the modifier in
   expect(total).toBeLessThanOrEqual(7);
   await expect(page.getByTestId("item-result")).toContainText("1d4+3");
 });
+
+test("a charges item cannot be added at 0; stock to daily keeps its count and takes the daily number", async ({
+  page,
+}) => {
+  await openInventory(page);
+  await page.getByRole("button", { name: "Add item" }).click();
+  const f = form(page);
+  await f.getByLabel("Name").fill("Rod");
+  await f.getByLabel("Behaviour").selectOption("charges");
+  await f.getByLabel("Count").fill("0");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(fieldError(page, "count")).toContainText("at least 1 charge");
+  await f.getByRole("button", { name: "Cancel" }).click();
+
+  await row(page, "fire_flask").getByRole("button", { name: "Edit Fire flasks" }).click();
+  await form(page).getByLabel("Behaviour").selectOption("daily");
+  await form(page).getByLabel("Daily number").fill("5");
+  await form(page).getByRole("button", { name: "Save" }).click();
+  await expect(row(page, "fire_flask").getByTestId("item-count")).toHaveText("5 / 5");
+  await voidEntry(page, "Edited Fire flasks");
+  await expect(row(page, "fire_flask").getByTestId("item-count")).toHaveText("5");
+  await expect(row(page, "fire_flask").getByTestId("item-behaviour")).toHaveText("Stock");
+  await snap(page, "stock-to-daily-popped");
+});

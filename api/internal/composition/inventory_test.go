@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -259,4 +260,110 @@ func TestInventory_InvalidEditsLogNothing(t *testing.T) {
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 	assert.Equal(t, before, logCount(t, bs))
 	assert.Equal(t, 4, itemCount(t, bs, "wand_lightning"))
+}
+
+func itemIDs(t *testing.T, bs *composition.BackingServices) []string {
+	t.Helper()
+	items, err := bs.Items.List(context.Background())
+	require.NoError(t, err)
+	var ids []string
+	for _, i := range items {
+		ids = append(ids, i.ID)
+	}
+	return ids
+}
+
+// Review checklist 1: an add whose later use was popped can itself be popped.
+func TestInventory_PopAddAfterItsUseWasPopped(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	add, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{
+		Name: "Arrows +4", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 3, MagicBonus: 4, AmmoKind: "arrow",
+	})
+	require.NoError(t, err)
+	use, err := bs.Items.UseItem(ctx, bs.CharacterID, add.Item.ID)
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, bs.CharacterID, use.LogEntryID)
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, bs.CharacterID, add.LogEntryID)
+	require.NoError(t, err)
+	assert.NotContains(t, itemIDs(t, bs), add.Item.ID)
+	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: add.Item.ID, TargetAC: 10})
+	require.Error(t, err, "the popped item is no longer ammo")
+}
+
+// Checklist 2: removing then popping a charges item changes nothing, order included.
+func TestInventory_RemoveChargesItemAndPopKeepsOrder(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	order, orig := itemIDs(t, bs), listed(t, bs)["wand_lightning"]
+	res, err := bs.Items.Delete(ctx, bs.CharacterID, "wand_lightning")
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, orig, listed(t, bs)["wand_lightning"])
+	assert.Equal(t, order, itemIDs(t, bs))
+}
+
+// Checklist 3: stock -> daily (needs a daily number) -> charges, each popped back field by field.
+func TestInventory_EditBehavioursAndPopEach(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	orig := listed(t, bs)["fire_flask"]
+
+	_, err := bs.Items.Update(ctx, bs.CharacterID, "fire_flask", itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourDaily)})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "maxCount", fe.Field)
+	assert.Equal(t, orig, listed(t, bs)["fire_flask"])
+
+	toDaily, err := bs.Items.Update(ctx, bs.CharacterID, "fire_flask", itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(7)})
+	require.NoError(t, err)
+	daily := listed(t, bs)["fire_flask"]
+	assert.Equal(t, 7, daily.MaxCount)
+	toCharges, err := bs.Items.Update(ctx, bs.CharacterID, "fire_flask", itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourCharges)})
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.BehaviourCharges, listed(t, bs)["fire_flask"].Behaviour)
+
+	_, err = bs.Log.Void(ctx, bs.CharacterID, toCharges.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, daily, listed(t, bs)["fire_flask"])
+	_, err = bs.Log.Void(ctx, bs.CharacterID, toDaily.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, orig, listed(t, bs)["fire_flask"], "maxCount included")
+}
+
+// Checklist 4 (review fix): a charges item at 0 is refused on add and edit.
+func TestInventory_ChargesAtZeroRefused(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	before := logCount(t, bs)
+	_, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Rod", Behaviour: itemsvc.BehaviourCharges, Count: 0})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "count", fe.Field)
+	_, err = bs.Items.Update(ctx, bs.CharacterID, "wand_lightning", itemsvc.ItemPatch{Count: ptr(0)})
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "count", fe.Field)
+	assert.Equal(t, 4, itemCount(t, bs, "wand_lightning"))
+	assert.Equal(t, before, logCount(t, bs))
+}
+
+// Checklist 5: remove X, add a new X (same id), pop the add, pop the remove: the original is back.
+func TestInventory_RemoveAddSameNamePopBoth(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	orig := listed(t, bs)["fire_flask"]
+	order := itemIDs(t, bs)
+	rm, err := bs.Items.Delete(ctx, bs.CharacterID, "fire_flask")
+	require.NoError(t, err)
+	add, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Fire flasks", Type: "other", Behaviour: itemsvc.BehaviourStock, Count: 1})
+	require.NoError(t, err)
+	assert.Equal(t, "fire_flasks", add.Item.ID)
+	_, err = bs.Log.Void(ctx, bs.CharacterID, add.LogEntryID)
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, bs.CharacterID, rm.LogEntryID)
+	require.NoError(t, err)
+	assert.Equal(t, orig, listed(t, bs)["fire_flask"])
+	assert.Equal(t, order, itemIDs(t, bs))
 }

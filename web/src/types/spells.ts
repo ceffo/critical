@@ -4,6 +4,8 @@ export interface SpellSlot {
   prepared_spell_id: string;
   prepared_spell_name: string;
   used: boolean;
+  /** A Rary's Mnemonic Enhancer slot: blank until cast, gone at the long rest. */
+  extra?: boolean;
 }
 
 /** Mirrors api/internal/domain/spellstats. Every typed field keeps `raw`, the PHB text. */
@@ -173,6 +175,8 @@ export interface CastResult {
   damage?: CastDamage;
   untracked: CastUntracked[];
   slots?: SpellSlot[];
+  /** Levels of the Rary's extra slots this cast added. */
+  extraSlots?: number[];
 }
 
 /** Mirrors spellhdl.SpellPageDTO: one page of GET /api/spells. */

@@ -11,7 +11,7 @@ interface SpellStore {
   fetchInfo: () => Promise<void>;
   /** Mutations throw on failure; call them through useTableStore.run to surface errors. */
   /** Cast from slot `index`; the result goes to the result card. */
-  castSpell: (index: number, onSelf?: boolean) => Promise<void>;
+  castSpell: (index: number, opts?: api.CastOptions) => Promise<void>;
   /** Apply a spell a party member cast on the Bard; the result goes to the result card. */
   receiveSpell: (spellId: string, casterLevel: number) => Promise<void>;
   resetSlots: () => Promise<void>;
@@ -33,8 +33,8 @@ export const useSpellStore = create<SpellStore>((set) => ({
   fetchInfo: async () => {
     set({ info: await api.fetchPreparationInfo() });
   },
-  castSpell: async (index, onSelf) => {
-    const result = await api.castSpell(index, onSelf);
+  castSpell: async (index, opts) => {
+    const result = await api.castSpell(index, opts);
     set({ slots: result.slots ?? [] });
     useRollStore.setState({ last: { kind: "cast", result } });
   },

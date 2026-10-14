@@ -239,6 +239,8 @@ type SpellSlotDTO struct {
 	PreparedSpellID   string `json:"prepared_spell_id"`
 	PreparedSpellName string `json:"prepared_spell_name"`
 	Used              bool   `json:"used"`
+	// Extra: a Rary's Mnemonic Enhancer slot, blank until cast, gone at the long rest.
+	Extra bool `json:"extra,omitempty"`
 }
 
 // SpellDTO is the wire shape of a spell. The six stat fields keep their raw
@@ -277,7 +279,7 @@ type SpellPageDTO struct {
 func SlotsToDTO(in []spellsvc.SpellSlot) []SpellSlotDTO {
 	out := make([]SpellSlotDTO, 0, len(in))
 	for _, s := range in {
-		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used})
+		out = append(out, SpellSlotDTO{Level: s.Level, PreparedSpellID: s.SpellID, PreparedSpellName: s.PreparedSpellName, Used: s.Used, Extra: s.Extra})
 	}
 	return out
 }

@@ -129,6 +129,11 @@ writes the buff inside the caller's transaction and replaces a same-name buff), 
 slot back and removes the buff. Effects come from `seeds/spell_effects.json` at the caster level (the
 Bard's level for a cast, the caster's for a received spell; by-group dice use the Bard's group,
 rogue); low-confidence, utility and uncatalogued spells return their text only.
+Rary's Mnemonic Enhancer (critical-qki.41, the only spell that adds slots) grants 3 spell levels as extra
+slots, split by the caster at cast time (`extraSlots`: `[1,1,1]` by default, `[1,2]` or `[3]`). They are
+`Extra` slots in the same list, blank until cast (`spellId` picks a spell of the slot's level then), kept by a
+new preparation, and **removed by the next long rest** (the spell's 24 h duration is not tracked; user
+to confirm). The same `spell_slots` snapshot undoes the cast.
 Buffs carry a free-text `Note` (in the active-buffs JSON and the `buffs` snapshot, so void restores it;
 editable through `BuffEdit.Note`). Saved buff templates (`saved_buffs` table, migration 013, nothing seeded)
 are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST` replaces a same-name template,

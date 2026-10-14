@@ -18,10 +18,14 @@ func (s *service) ResetSlots(ctx context.Context, characterID int64) ([]SpellSlo
 	if err != nil {
 		return nil, fmt.Errorf("get slots: %w", err)
 	}
-	updated := make([]SpellSlot, len(slots))
-	for i, s := range slots {
+	// A long rest ends Rary's extra slots (docs/backend.md "Spell slots").
+	updated := make([]SpellSlot, 0, len(slots))
+	for _, s := range slots {
+		if s.Extra {
+			continue
+		}
 		s.Used = false
-		updated[i] = s
+		updated = append(updated, s)
 	}
 	if err := s.dal.SaveSlots(ctx, characterID, updated); err != nil {
 		return nil, fmt.Errorf("save slots: %w", err)

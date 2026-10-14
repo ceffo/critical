@@ -22,6 +22,10 @@ export function SpellsPanel() {
   const [editing, setEditing] = useState(false);
   // Buff spells that can go on someone else land on the Bard unless this is checked.
   const [onAlly, setOnAlly] = useState(false);
+  // Rary's Mnemonic Enhancer: how its 3 spell levels split into slots.
+  const [raryChoice, setRaryChoice] = useState("1,1,1");
+  // Blank Rary's slots: the spell picked per slot index.
+  const [picks, setPicks] = useState<Record<number, string>>({});
   const logEntries = useLogStore((s) => s.entries);
   const { run, busy } = useTableStore();
 
@@ -73,7 +77,7 @@ export function SpellsPanel() {
         <PrepareEditor
           spellbook={info.spellbook}
           limits={info.limits}
-          initial={slots.map((s) => s.prepared_spell_id || spellId(s.prepared_spell_name))}
+          initial={slots.filter((s) => !s.extra).map((s) => s.prepared_spell_id || spellId(s.prepared_spell_name))}
           busy={busy}
           onCancel={() => setEditing(false)}
           onSave={(ids) =>
@@ -107,7 +111,7 @@ export function SpellsPanel() {
                 <div className="flex items-center gap-1.5">
                   {maxOf(level) !== undefined && (
                     <span className="text-xs text-muted-foreground">
-                      {t("spellSlots.preparedCount", { count: list.length, max: maxOf(level) })}
+                      {t("spellSlots.preparedCount", { count: list.filter((s) => !s.extra).length, max: maxOf(level) })}
                     </span>
                   )}
                   <Badge
@@ -120,11 +124,16 @@ export function SpellsPanel() {
               </div>
               <ul className="flex flex-col gap-1 p-1.5">
                 {list.map((slot) => {
-                  const name = spellName(
-                    t,
-                    slot.prepared_spell_id || spellId(slot.prepared_spell_name),
-                    slot.prepared_spell_name,
-                  );
+                  const blank = slot.extra && !slot.prepared_spell_id && !slot.prepared_spell_name;
+                  const name = blank
+                    ? t("spellSlots.extraBlank")
+                    : spellName(
+                        t,
+                        slot.prepared_spell_id || spellId(slot.prepared_spell_name),
+                        slot.prepared_spell_name,
+                      );
+                  const isRary = slot.prepared_spell_id === "rarys_mnemonic_enhancer";
+                  const choices = info.spellbook.filter((s) => s.level === slot.level);
                   return (
                     <li
                       key={slot.index}
@@ -141,12 +150,49 @@ export function SpellsPanel() {
                       >
                         {name}
                       </span>
+                      {blank && !slot.used && (
+                        <select
+                          className="h-7 min-w-0 flex-1 rounded border bg-background px-1 text-sm"
+                          aria-label={t("spellSlots.extraPick")}
+                          data-testid="extra-pick"
+                          value={picks[slot.index] ?? ""}
+                          onChange={(e) => setPicks({ ...picks, [slot.index]: e.target.value })}
+                        >
+                          <option value="">{t("spellSlots.extraPick")}</option>
+                          {choices.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {spellName(t, s.id, s.name)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {isRary && !slot.used && (
+                        <select
+                          className="h-7 rounded border bg-background px-1 text-sm"
+                          aria-label={t("spellSlots.raryChoice")}
+                          data-testid="rary-split"
+                          value={raryChoice}
+                          onChange={(e) => setRaryChoice(e.target.value)}
+                        >
+                          <option value="1,1,1">{t("spellSlots.rary111")}</option>
+                          <option value="1,2">{t("spellSlots.rary12")}</option>
+                          <option value="3">{t("spellSlots.rary3")}</option>
+                        </select>
+                      )}
                       <Button
                         size="xs"
                         variant={slot.used ? "ghost" : "secondary"}
-                        disabled={slot.used || busy}
+                        disabled={slot.used || busy || (blank && !picks[slot.index])}
                         aria-label={t("spellSlots.castLabel", { name })}
-                        onClick={() => void run(() => castSpell(slot.index, onAlly ? false : undefined))}
+                        onClick={() =>
+                          void run(() =>
+                            castSpell(slot.index, {
+                              onSelf: onAlly ? false : undefined,
+                              spellId: blank ? picks[slot.index] : undefined,
+                              extraSlots: isRary ? raryChoice.split(",").map(Number) : undefined,
+                            }),
+                          )
+                        }
                       >
                         {slot.used ? t("spellSlots.used") : t("spellSlots.cast")}
                       </Button>

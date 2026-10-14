@@ -5,9 +5,19 @@ export function fetchSpellSlots(): Promise<SpellSlot[]> {
   return request<SpellSlot[]>("/api/spells/slots");
 }
 
-/** Spend slot `index`; `onSelf` says whether a buff spell lands on the Bard (omitted: the spell's default). */
-export function castSpell(index: number, onSelf?: boolean): Promise<CastResult> {
-  return post<CastResult>(`/api/spells/${index}/cast`, onSelf === undefined ? {} : { onSelf });
+/** What a cast can carry besides the slot (all optional). */
+export interface CastOptions {
+  /** Whether a buff spell lands on the Bard (omitted: the spell's default). */
+  onSelf?: boolean;
+  /** The spell cast from a blank Rary's extra slot. */
+  spellId?: string;
+  /** Rary's Mnemonic Enhancer: the levels of the slots granted ([1,1,1], [1,2] or [3]). */
+  extraSlots?: number[];
+}
+
+/** Spend slot `index`. */
+export function castSpell(index: number, opts: CastOptions = {}): Promise<CastResult> {
+  return post<CastResult>(`/api/spells/${index}/cast`, opts);
 }
 
 /** Apply a spell a party member cast on the Bard, at their caster level. */

@@ -35,6 +35,30 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		}
 		after := append([]spellsvc.SpellSlot(nil), before...)
 		after[slotIndex].Used = true
+		id := slot.SpellID
+		if id == "" {
+			id = spelleffectsvc.Slug(slot.PreparedSpellName)
+		}
+		name := slot.PreparedSpellName
+		if slot.Extra && id == "" {
+			// A blank Rary's slot: the player picks the spell now.
+			var err error
+			id, name, err = s.pickForExtra(ctx, slot.Level, req.SpellID)
+			if err != nil {
+				return err
+			}
+			after[slotIndex].SpellID, after[slotIndex].PreparedSpellName = id, name
+		}
+		var extra []int
+		if id == RaryID {
+			var err error
+			if extra, err = raryLevels(req.ExtraSlots); err != nil {
+				return err
+			}
+			for _, l := range extra {
+				after = append(after, spellsvc.SpellSlot{Level: l, Extra: true})
+			}
+		}
 		if err := s.Slots.SaveSlots(ctx, characterID, after); err != nil {
 			return fmt.Errorf("save slots: %w", err)
 		}
@@ -42,19 +66,16 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		if err != nil {
 			return err
 		}
-		id := slot.SpellID
-		if id == "" {
-			id = spelleffectsvc.Slug(slot.PreparedSpellName)
-		}
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, name: slot.PreparedSpellName, level: slot.Level,
+			spellID: id, name: name, level: slot.Level,
 			casterLevel: c.Level, source: SourceCast, onSelf: req.OnSelf,
 		})
 		if err != nil {
 			return err
 		}
 		res.SlotIndex = &slotIndex
+		res.ExtraSlots = extra
 		res.Slots = after
 		res.EntryID, err = s.record(ctx, characterID, res, append([]actionlog.Snapshot{slotSnap}, snaps...))
 		return err
@@ -208,6 +229,8 @@ func summary(res CastResult) string {
 		}
 	case res.Damage != nil:
 		fmt.Fprintf(&b, ": %d %s damage", res.Damage.Total, res.Damage.Type)
+	case len(res.ExtraSlots) > 0:
+		fmt.Fprintf(&b, ": extra slots, levels %v", res.ExtraSlots)
 	}
 	return b.String()
 }

@@ -31,12 +31,12 @@ type DamageTermKind string
 
 // Damage formula terms.
 const (
-	TermSpells     DamageTermKind = "spells"     // × on the dice
+	TermSpells     DamageTermKind = "spells"          // × on the dice
 	TermDiceMult   DamageTermKind = "dice_multiplier" // × on the raw dice only (Power Gem ×2)
-	TermWeapon     DamageTermKind = "weapon"     // + before the crit multiplier
-	TermMultiplier DamageTermKind = "multiplier" // crit × on dice and weapon
-	TermStrength   DamageTermKind = "strength"   // + after the multipliers
-	TermBonus      DamageTermKind = "bonus"      // + after the multipliers (buff damage)
+	TermWeapon     DamageTermKind = "weapon"          // + before the crit multiplier
+	TermMultiplier DamageTermKind = "multiplier"      // crit × on dice and weapon
+	TermStrength   DamageTermKind = "strength"        // + after the multipliers
+	TermBonus      DamageTermKind = "bonus"           // + after the multipliers (buff damage)
 )
 
 // DamageTerm is one contribution to the damage formula.
@@ -111,15 +111,15 @@ type RollResult struct {
 	Hit             bool
 	HitMargin       int
 
-	BaseDamage    int
-	DamageDice    string
-	SpellsBuff    float64
-	WeaponBuff    int
-	Multipliers   float64 // crit multiplier (1 without a crit)
+	BaseDamage  int
+	DamageDice  string
+	SpellsBuff  float64
+	WeaponBuff  int
+	Multipliers float64 // crit multiplier (1 without a crit)
 	// DiceMultiplier is the buffs' multiplier on the raw dice only.
 	DiceMultiplier float64
-	StrengthBonus int
-	BonusDamage   int
+	StrengthBonus  int
+	BonusDamage    int
 	// DamageTerms lists every contribution to the damage formula.
 	DamageTerms []DamageTerm
 	// UnroundedDamage is the formula result before the final floor and the

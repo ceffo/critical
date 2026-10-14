@@ -40,6 +40,10 @@ type CastRequestDTO struct {
 	// OnSelf: does a buff spell affect the Bard? Omitted: the spell's
 	// default (see castsvc).
 	OnSelf *bool `json:"onSelf,omitempty"`
+	// SpellID: the spell cast from a blank Rary's extra slot.
+	SpellID string `json:"spellId,omitempty"`
+	// ExtraSlots: the levels of the slots Rary's grants ([1,1,1] by default).
+	ExtraSlots []int `json:"extraSlots,omitempty"`
 }
 
 // ReceiveRequestDTO is the body of POST /api/spells/receive.
@@ -59,7 +63,7 @@ func Cast(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
 			return render.BadRequestError("invalid JSON body")
 		}
-		res, err := svc.Cast(r.Context(), charID(r), idx, castsvc.CastRequest{OnSelf: body.OnSelf})
+		res, err := svc.Cast(r.Context(), charID(r), idx, castsvc.CastRequest{OnSelf: body.OnSelf, SpellID: body.SpellID, ExtraSlots: body.ExtraSlots})
 		if err != nil {
 			return err
 		}
@@ -104,6 +108,8 @@ type CastResultDTO struct {
 	Damage      *DamageDTO              `json:"damage,omitempty"`
 	Untracked   []UntrackedDTO          `json:"untracked"`
 	Slots       []spellhdl.SpellSlotDTO `json:"slots,omitempty"`
+	// ExtraSlots: levels of the Rary's slots this cast added.
+	ExtraSlots []int `json:"extraSlots,omitempty"`
 }
 
 // SaveDTO is the target's saving throw (the DM's side).
@@ -189,6 +195,7 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 	for _, u := range res.Untracked {
 		out.Untracked = append(out.Untracked, UntrackedDTO{Key: u.Key, Value: u.Value, Condition: u.Condition})
 	}
+	out.ExtraSlots = res.ExtraSlots
 	if res.Slots != nil {
 		out.Slots = spellhdl.SlotsToDTO(res.Slots)
 	}

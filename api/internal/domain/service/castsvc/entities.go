@@ -20,6 +20,13 @@ type CastRequest struct {
 	// default from the spell's target (see appliesToSelf). Ignored for
 	// self-only spells, which always affect the caster.
 	OnSelf *bool
+	// SpellID names the spell to cast from a blank Rary's extra slot (the
+	// player picks it at cast time). Ignored for a prepared slot.
+	SpellID string
+	// ExtraSlots is the split chosen when casting Rary's Mnemonic Enhancer:
+	// the levels of the slots granted (3 levels in all: [1 1 1], [1 2] or
+	// [3]). Empty: three level 1 slots.
+	ExtraSlots []int
 }
 
 // ReceiveRequest is a spell a party member cast on the Bard.
@@ -131,4 +138,6 @@ type CastResult struct {
 	Untracked []Untracked
 	// Slots is the slot list after a cast.
 	Slots []spellsvc.SpellSlot
+	// ExtraSlots are the levels of the Rary's extra slots this cast added.
+	ExtraSlots []int
 }

@@ -113,12 +113,12 @@ type CastResultDTO struct {
 	Slots       []spellhdl.SpellSlotDTO `json:"slots,omitempty"`
 	// ExtraSlots: levels of the Rary's slots this cast added.
 	ExtraSlots []int `json:"extraSlots,omitempty"`
-	// Orb: a Chromatic Orb's gem, attack roll and effect.
+	// Orb: a Chromatic Orb's gem and attack roll.
 	Orb *OrbDTO `json:"orb,omitempty"`
 }
 
 // OrbDTO is a Chromatic Orb's outcome: the spent gem, the attack roll (no
-// crit) and, on a hit, the gem's effect text for the DM to announce.
+// crit); no gem effect is modelled.
 type OrbDTO struct {
 	GemItemID      string      `json:"gemItemId"`
 	Gem            string      `json:"gem"`
@@ -131,7 +131,6 @@ type OrbDTO struct {
 	TargetACNeeded int         `json:"targetACNeeded"`
 	Hit            bool        `json:"hit"`
 	HitMargin      int         `json:"hitMargin"`
-	Effect         string      `json:"effect,omitempty"`
 }
 
 // OrbModDTO is one to-hit modifier of the orb's attack.
@@ -231,7 +230,7 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 			GemItemID: o.GemItemID, Gem: o.Gem, Remaining: o.Remaining, D20Roll: o.Attack.D20Roll,
 			BaseThac0: o.Attack.BaseThac0, Modifiers: []OrbModDTO{}, EffectiveThac0: o.Attack.EffectiveThac0,
 			TargetAC: o.Attack.TargetAC, TargetACNeeded: o.Attack.TargetACNeeded, Hit: o.Attack.Hit,
-			HitMargin: o.Attack.HitMargin, Effect: o.Effect,
+			HitMargin: o.Attack.HitMargin,
 		}
 		for _, m := range o.Attack.Modifiers {
 			out.Orb.Modifiers = append(out.Orb.Modifiers, OrbModDTO{Kind: string(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value})

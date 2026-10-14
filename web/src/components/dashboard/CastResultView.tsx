@@ -19,6 +19,16 @@ function Die({ sides, value }: { sides: number; value: number }) {
   );
 }
 
+/** The dice actually rolled, resolved ("10d6", "1d4+7"): the seed formula ("(min(level,10))d6") stays out of the UI. */
+function resolved(r: DiceRoll): string {
+  if (r.dice.length === 0) return String(r.total);
+  const counts = new Map<number, number>();
+  for (const d of r.dice) counts.set(d.sides, (counts.get(d.sides) ?? 0) + 1);
+  const mod = r.total - r.dice.reduce((sum, d) => sum + d.value, 0);
+  const dice = [...counts].map(([sides, n]) => `${n}d${sides}`).join("+");
+  return mod === 0 ? dice : `${dice}${formatSigned(mod)}`;
+}
+
 /**
  * A roll from its structured fields: the formula, every die, the flat modifier (total minus the dice)
  * and the total. Wraps, never truncates.
@@ -27,7 +37,7 @@ function RollView({ roll: r }: { roll: DiceRoll }) {
   const mod = r.total - r.dice.reduce((sum, d) => sum + d.value, 0);
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5 font-mono text-sm">
-      <span className="break-all text-muted-foreground">{r.formula}</span>
+      <span className="break-all text-muted-foreground" title={r.formula}>{resolved(r)}</span>
       {r.dice.map((d, i) => (
         <Die key={i} sides={d.sides} value={d.value} />
       ))}
@@ -144,11 +154,6 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           <p className="text-sm" data-testid="cast-orb-gem">
             {t("result.cast.orbGem", { gem: r.orb.gem, left: r.orb.remaining })}
           </p>
-          {r.orb.hit && r.orb.effect && (
-            <p className="rounded-md bg-muted/60 px-2.5 py-1.5 text-sm font-medium" data-testid="cast-orb-effect">
-              {r.orb.effect}
-            </p>
-          )}
         </div>
       )}
 
@@ -156,7 +161,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         <div className="flex flex-col gap-2" data-testid="cast-damage">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0 text-sm">
-              {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.dice })}
+              {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.rolls[0] ? resolved(r.damage.rolls[0]) : r.damage.dice })}
               {r.damage.rounds > 1 && <>, {t("result.cast.damageRounds", { rounds: r.damage.rounds })}</>}
               {r.damage.type && <> · {r.damage.type}</>}
             </div>

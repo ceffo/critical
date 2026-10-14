@@ -136,12 +136,12 @@ new preparation, and **removed by the next long rest** (the spell's 24 h duratio
 to confirm). The same `spell_slots` snapshot undoes the cast.
 Chromatic Orb (critical-qki.42): casting it needs `targetAc` and spends one inventory gem (type `gem`, not
 the daily Power Gem; `gemItemId` when several are left, an error naming the problem when none), then
-`combatsvc.RollSpellToHit` rolls one d20 (THAC0, Strength and Dexterity missile adjustments, buff to-hit; no
-crit check, no natural 20 rule, nothing logged on its own). On a hit the result carries the gem's effect text
-(diamond: death, or petrification if the save succeeds; the app rolls no save, the DM announces it). The level
-damage table of the seed is not used. The gem count rides the cast entry as an `items:<id>` snapshot, so voiding
-the cast gives the gem back. Only the diamond effect is known: any other gem tells the DM to apply it (the
-book's gem table is not in the rulebooks repo).
+`combatsvc.RollSpellToHit` rolls one d20 (THAC0, Strength and Dexterity missile adjustments, buff to-hit; nothing
+logged on its own). It follows the combat rules ("Attack Modifiers": a natural 1 or 20 is plain arithmetic, user
+2026-10-14: "same rules as combat") but never crits: no crit check, no crit table, no damage multiplier. The result
+shows hit or miss, the gem used and how many are left; the app models no gem effect and no damage (user: "i just
+need the selected gem type to be consumed"; the DM rules what a hit does). The level damage table of the seed is not
+used. The gem count rides the cast entry as an `items:<id>` snapshot, so voiding the cast gives the gem back.
 Buffs carry a free-text `Note` (in the active-buffs JSON and the `buffs` snapshot, so void restores it;
 editable through `BuffEdit.Note`). Saved buff templates (`saved_buffs` table, migration 013, nothing seeded)
 are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST` replaces a same-name template,

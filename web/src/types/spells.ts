@@ -180,7 +180,7 @@ export interface CastResult {
   orb?: CastOrb;
 }
 
-/** Mirrors casthdl OrbDTO: a Chromatic Orb's spent gem, attack (no crit) and effect. */
+/** Mirrors casthdl OrbDTO: a Chromatic Orb's spent gem, attack (no crit). */
 export interface CastOrb {
   gemItemId: string;
   gem: string;
@@ -193,8 +193,6 @@ export interface CastOrb {
   targetACNeeded: number;
   hit: boolean;
   hitMargin: number;
-  /** The gem's effect when the orb hit; the DM announces the save. */
-  effect?: string;
 }
 
 /** Mirrors spellhdl.SpellPageDTO: one page of GET /api/spells. */

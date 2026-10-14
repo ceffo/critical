@@ -145,14 +145,9 @@
     "level": 1,
     "kind": "damage",
     "confidence": "high",
-    "note": "Orb colour = caster level (white 1 .. black 9); damage is for the best colour available. Violet (8) and black (9) deal no damage but petrify/kill. Colour special powers are not modelled. Thrown: +3/+2/+1 to hit at under 10/20/30 yards.",
     "target": "other",
     "duration": {
       "kind": "instant"
-    },
-    "save": {
-      "type": "spell",
-      "effect": "negates"
     },
     "damage": {
       "by_level": [

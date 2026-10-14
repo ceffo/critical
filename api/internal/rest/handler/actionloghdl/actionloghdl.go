@@ -1,5 +1,5 @@
 // Package actionloghdl exposes the action log over HTTP: list entries with
-// their correction status, amend an HP change, void an entry.
+// their correction status, set an entry's note, pop (void) the latest entry.
 package actionloghdl
 
 import (
@@ -66,28 +66,30 @@ func List(charID CharacterIDFunc, svc lister) render.HandlerFunc {
 	}
 }
 
-type amendBody struct {
-	Delta  *int   `json:"delta"`
-	Source string `json:"source"`
-}
-
-// Amend records an amend correction on an hp_change entry. Body:
-// {"delta": -7, "source": "orc axe"}; source is optional (keeps the current
-// one when empty).
+// Amend sets the note of an entry, any kind. Body: {"note": "the DM's ruling"}
+// ("" clears it). The note is the only amendable field (critical-qki.38): a
+// body with any other field (delta, source, ...) is a 400.
 func Amend(charID CharacterIDFunc, svc amender) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		id, err := entryID(r)
 		if err != nil {
 			return err
 		}
-		var body amendBody
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		var body map[string]json.RawMessage
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body == nil {
 			return render.BadRequestError("invalid request body")
 		}
-		if body.Delta == nil {
-			return render.BadRequestError("delta is required")
+		for k := range body {
+			if k != "note" {
+				return render.BadRequestError("only the note of an entry can be amended (got " + strconv.Quote(k) + "): void the entry and log it again")
+			}
 		}
-		e, err := svc.Amend(r.Context(), charID(r), id, actionlogsvc.Amendment{HPDelta: *body.Delta, Summary: body.Source})
+		raw, ok := body["note"]
+		var note string
+		if !ok || json.Unmarshal(raw, &note) != nil {
+			return render.BadRequestError("note is required (a string)")
+		}
+		e, err := svc.Amend(r.Context(), charID(r), id, actionlogsvc.Amendment{Note: note})
 		if err != nil {
 			return err
 		}
@@ -96,7 +98,7 @@ func Amend(charID CharacterIDFunc, svc amender) render.HandlerFunc {
 	}
 }
 
-// Void records a void correction, restoring snapshotted state.
+// Void pops an entry (only the latest non-voided one), restoring snapshotted state.
 func Void(charID CharacterIDFunc, svc voider) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		id, err := entryID(r)
@@ -128,16 +130,18 @@ type LogDTO struct {
 // EntryDTO is one log entry on the wire. hpDelta is the original value;
 // effectiveHpDelta/effectiveSummary apply amends (and 0 for voided).
 type EntryDTO struct {
-	ID               int64           `json:"id"`
-	CharacterID      int64           `json:"characterId"`
-	Round            int             `json:"round"`
-	Kind             string          `json:"kind"`
-	Summary          string          `json:"summary"`
-	HPDelta          int             `json:"hpDelta"`
-	EffectiveHPDelta int             `json:"effectiveHpDelta"`
-	EffectiveSummary string          `json:"effectiveSummary"`
-	Status           string          `json:"status"`
-	Payload          json.RawMessage `json:"payload"`
+	ID               int64  `json:"id"`
+	CharacterID      int64  `json:"characterId"`
+	Round            int    `json:"round"`
+	Kind             string `json:"kind"`
+	Summary          string `json:"summary"`
+	HPDelta          int    `json:"hpDelta"`
+	EffectiveHPDelta int    `json:"effectiveHpDelta"`
+	EffectiveSummary string `json:"effectiveSummary"`
+	// Note is the latest note amend's note ("" when none).
+	Note    string          `json:"note"`
+	Status  string          `json:"status"`
+	Payload json.RawMessage `json:"payload"`
 	// EffectivePayload is the latest amend's payload when one set it (an
 	// adjusted save), the original payload otherwise.
 	EffectivePayload json.RawMessage `json:"effectivePayload"`
@@ -153,14 +157,16 @@ type SnapshotDTO struct {
 	After  json.RawMessage `json:"after"`
 }
 
-// CorrectionDTO is one amend or void. hpDelta, source and payload are set on
-// amends that changed them.
+// CorrectionDTO is one amend or void. note is set on note amends; hpDelta,
+// source and payload on value amends (post-roll adjustments, and hp_change
+// amends logged before critical-qki.38).
 type CorrectionDTO struct {
 	ID        int64           `json:"id"`
 	Kind      string          `json:"kind"`
 	HPDelta   *int            `json:"hpDelta,omitempty"`
 	Source    string          `json:"source,omitempty"`
 	Payload   json.RawMessage `json:"payload,omitempty"`
+	Note      *string         `json:"note,omitempty"`
 	CreatedAt time.Time       `json:"createdAt"`
 }
 
@@ -176,7 +182,7 @@ func toDTO(e actionlog.Entry) EntryDTO {
 	out := EntryDTO{
 		ID: e.ID, CharacterID: e.CharacterID, Round: e.Round, Kind: string(e.Kind),
 		Summary: e.Summary, HPDelta: e.HPDelta,
-		EffectiveHPDelta: e.EffectiveHPDelta(), EffectiveSummary: e.EffectiveSummary(),
+		EffectiveHPDelta: e.EffectiveHPDelta(), EffectiveSummary: e.EffectiveSummary(), Note: e.Note(),
 		Status: string(e.Status()), Payload: payload, EffectivePayload: effective, CreatedAt: e.CreatedAt,
 		Snapshots:   make([]SnapshotDTO, 0, len(e.Snapshots)),
 		Corrections: make([]CorrectionDTO, 0, len(e.Corrections)),
@@ -186,7 +192,7 @@ func toDTO(e actionlog.Entry) EntryDTO {
 	}
 	for _, c := range e.Corrections {
 		out.Corrections = append(out.Corrections, CorrectionDTO{
-			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, Payload: c.Payload, CreatedAt: c.CreatedAt,
+			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, Payload: c.Payload, Note: c.Note, CreatedAt: c.CreatedAt,
 		})
 	}
 	return out

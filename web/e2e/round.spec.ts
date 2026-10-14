@@ -179,7 +179,7 @@ async function voidFr(page: Page, text: string) {
   await entry.getByRole("button", { name: "Confirmer" }).click();
 }
 
-test("Time passes in French: '1,5' previews 90 rounds; a later Next Round blocks the void", async ({
+test("Time passes in French: '1,5' previews 90 rounds; a later Next Round must be popped first", async ({
   page,
   stack,
 }) => {
@@ -217,13 +217,13 @@ test("Time passes in French: '1,5' previews 90 rounds; a later Next Round blocks
   await expect(logEntryFr(page, text)).toBeVisible();
   await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText("9 rd.");
 
-  // A later Next Round blocks voiding the fast-forward; the message names it.
+  // The log is a stack: under a later Next Round the fast-forward offers no void.
   await page.getByRole("button", { name: "Round suivant" }).click();
   await expect.poll(() => currentRound(page)).toBe(1);
-  await voidFr(page, text);
-  await expect(page.getByRole("alert")).toContainText("Round 0 → 1");
-  await expect(logEntryFr(page, text)).not.toHaveAttribute("data-status", "voided");
-  await snap(page, "pass-time-void-blocked-fr");
+  await expect(
+    logEntryFr(page, text).getByRole("button", { name: "Annuler", exact: true }),
+  ).toHaveCount(0);
+  await snap(page, "pass-time-void-not-offered-fr");
 
   // Void Next Round first, then the fast-forward: the buff and round 1 come back.
   await voidFr(page, "Round 0 → 1");

@@ -25,7 +25,8 @@ interface TableStore {
   run: (action: () => Promise<unknown>) => Promise<boolean>;
   recordHp: (delta: number, source: string) => Promise<boolean>;
   undoHp: () => Promise<boolean>;
-  amendEntry: (id: number, delta: number, source: string) => Promise<boolean>;
+  /** Set an entry's note (the only amendable field). */
+  amendEntry: (id: number, note: string) => Promise<boolean>;
   voidEntry: (id: number) => Promise<boolean>;
   nextRound: () => Promise<boolean>;
   endCombat: () => Promise<boolean>;
@@ -82,7 +83,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
   recordHp: (delta, source) =>
     get().run(async () => useHpStore.getState().setHp(await appendHpEvent(delta, source))),
   undoHp: () => get().run(async () => useHpStore.getState().setHp(await undoLastEvent())),
-  amendEntry: (id, delta, source) => get().run(() => amendLogEntry(id, delta, source)),
+  amendEntry: (id, note) => get().run(() => amendLogEntry(id, note)),
   // A void can bring expired buffs back: an "expired" notice would now be stale.
   voidEntry: (id) =>
     get().run(async () => {

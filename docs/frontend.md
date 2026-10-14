@@ -41,12 +41,12 @@ flowchart TD
     RCARD["ResultCard: full breakdown of the last roll"]
     subgraph R["Right column"]
       QH["QuickHp: amount + source, Apply Damage / Apply Heal, Undo last"]
-      CL["CombatLog: GET /api/log grouped by round, inline Amend (HP) / Void"]
+      CL["CombatLog: GET /api/log grouped by round, inline Note (any entry) / Void (newest only)"]
     end
   end
   AA -->|roll| RCARD
   QH -->|POST /api/hp/event| CL
-  CL -->|amend / void| HP
+  CL -->|note / pop| HP
   RC -->|POST /api/round/advance| CL
 ```
 
@@ -54,7 +54,9 @@ flowchart TD
   (`TABS`). Attack → critical-qki.7, Spells → qki.9/qki.10, Items → qki.11 (placeholder today),
   buff editing → qki.8 (`BuffStrip`).
 - Buffs: every change (add, edit rounds/charges, "Absorbed" for charge buffs, dismiss, Next
-  Round) is a log entry, voidable from the CombatLog. Buff/round entries are rendered from their
+  Round) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
+  stack (critical-qki.38): only the newest non-voided entry shows Void; every entry has Note
+  (the only amend, shown in italics under the line); values are never edited in the log. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The header's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; a Strength

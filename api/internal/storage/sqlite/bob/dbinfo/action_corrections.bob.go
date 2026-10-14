@@ -78,6 +78,15 @@ var ActionCorrections = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		Note: column{
+			Name:      "note",
+			DBType:    "TEXT",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: actionCorrectionIndexes{
 		PKMainActionCorrections: index{
@@ -156,11 +165,12 @@ type actionCorrectionColumns struct {
 	Summary   column
 	CreatedAt column
 	Payload   column
+	Note      column
 }
 
 func (c actionCorrectionColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.ActionID, c.Kind, c.HPDelta, c.Summary, c.CreatedAt, c.Payload,
+		c.ID, c.ActionID, c.Kind, c.HPDelta, c.Summary, c.CreatedAt, c.Payload, c.Note,
 	}
 }
 

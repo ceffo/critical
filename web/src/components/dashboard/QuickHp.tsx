@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Heart, Undo2, Sword } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
+import { entryText } from "@/lib/logSummary";
 import { captionClass, fieldClass } from "./fieldStyles";
 
 /** Quick damage/heal entry with a source. The server records it in the action log. */
@@ -11,6 +13,10 @@ export function QuickHp() {
   const { recordHp, undoHp, busy } = useTableStore();
   const [amount, setAmount] = useState("");
   const [source, setSource] = useState("");
+  // The log is a stack (critical-qki.38): undo pops the newest entry, so it is
+  // only offered when that entry is an HP change (entries are newest first).
+  const top = useLogStore((st) => st.entries.find((e) => e.status !== "voided"));
+  const blockedBy = top && top.kind !== "hp_change" ? entryText(top, t) : null;
 
   const n = Number.parseInt(amount, 10);
   const valid = n > 0 && source.trim() !== "";
@@ -34,13 +40,24 @@ export function QuickHp() {
         <Button
           size="xs"
           variant="ghost"
-          disabled={busy}
+          disabled={busy || blockedBy !== null}
+          aria-describedby={blockedBy ? "hp-undo-hint" : undefined}
           onClick={() => void undoHp()}
         >
           <Undo2 />
           {t("hp.undoLast")}
         </Button>
       </div>
+      {blockedBy && (
+        <p
+          id="hp-undo-hint"
+          className="-mt-1 mb-2 truncate text-xs text-muted-foreground"
+          data-testid="hp-undo-hint"
+          title={t("hp.undoBlocked", { entry: blockedBy })}
+        >
+          {t("hp.undoBlocked", { entry: blockedBy })}
+        </p>
+      )}
       <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
         <label className="flex min-w-0 flex-col gap-1">
           <span className={captionClass}>{t("hp.amount")}</span>

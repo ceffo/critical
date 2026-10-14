@@ -175,52 +175,52 @@ func TestListEntries(t *testing.T) {
 	assert.Equal(t, []int64{b, a}, []int64{active[0].ID, active[1].ID})
 	assert.Equal(t, -6, active[1].EffectiveHPDelta())
 
-	id, ok, err := dal.LatestActiveID(ctx, charID, actionlog.KindHPChange)
+	id, ok, err := dal.LatestActiveID(ctx, charID)
 	require.NoError(t, err)
 	assert.True(t, ok)
-	assert.Equal(t, b, id)
-	_, ok, err = dal.LatestActiveID(ctx, charID, actionlog.KindCast)
+	assert.Equal(t, b, id, "c is voided: b is the top of the stack")
+	_, ok, err = dal.LatestActiveID(ctx, charID+1)
 	require.NoError(t, err)
-	assert.False(t, ok)
+	assert.False(t, ok, "another character's log is empty")
 }
 
-func TestLaterEntryTouchingState(t *testing.T) {
+// A note amend (critical-qki.38) round-trips its note, leaves HP, summary,
+// payload and status alone, and does not hide an earlier value amend (an
+// hp_change amended before qki.38).
+func TestNoteAmend_RoundTrip(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
 	dal := actionlogdal.New(db)
 	ctx := context.Background()
-	snap := func(key string) []actionlog.Snapshot {
-		return []actionlog.Snapshot{{Key: key, Before: json.RawMessage(`0`), After: json.RawMessage(`1`)}}
-	}
-	entry := func(keys ...string) int64 {
-		e := actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindBuffChange, Summary: "x"}
-		for _, k := range keys {
-			e.Snapshots = append(e.Snapshots, snap(k)...)
-		}
-		return insert(t, dal, e)
-	}
+	note := func(s string) *string { return &s }
 
-	first := entry("buffs", "round")
-	insert(t, dal, hp(charID, -3, "no snapshot"))
-	slots := entry("spell_slots")
-	_, ok, err := dal.LaterEntryTouchingState(ctx, charID, first)
-	require.NoError(t, err)
-	assert.False(t, ok, "later entries touch other state only")
+	legacy := insert(t, dal, hp(charID, -8, "orc"))
+	correct(t, dal, actionlog.Correction{ActionID: legacy, Kind: actionlog.CorrectionAmend, HPDelta: intp(-11), Summary: "orc axe"})
+	correct(t, dal, actionlog.Correction{ActionID: legacy, Kind: actionlog.CorrectionAmend, Note: note("DM said 11")})
+	heal := insert(t, dal, actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4, Payload: json.RawMessage(`{"hpRequested":4,"hpApplied":4}`)})
+	correct(t, dal, actionlog.Correction{ActionID: heal, Kind: actionlog.CorrectionAmend, Note: note("first")})
+	correct(t, dal, actionlog.Correction{ActionID: heal, Kind: actionlog.CorrectionAmend, Note: note("second")})
 
-	later := entry("round")
-	got, ok, err := dal.LaterEntryTouchingState(ctx, charID, first)
+	l, err := dal.GetEntry(ctx, charID, legacy)
 	require.NoError(t, err)
-	assert.True(t, ok)
-	assert.Equal(t, later, got)
+	assert.Equal(t, -11, l.EffectiveHPDelta(), "the note does not hide the value amend")
+	assert.Equal(t, "orc axe", l.EffectiveSummary())
+	assert.Equal(t, "DM said 11", l.Note())
+	assert.Equal(t, actionlog.StatusAmended, l.Status())
 
-	correct(t, dal, actionlog.Correction{ActionID: later, Kind: actionlog.CorrectionVoid})
-	_, ok, err = dal.LaterEntryTouchingState(ctx, charID, first)
+	h, err := dal.GetEntry(ctx, charID, heal)
 	require.NoError(t, err)
-	assert.False(t, ok, "voided later entries do not block")
+	assert.Equal(t, "second", h.Note(), "latest note wins")
+	assert.Equal(t, 4, h.EffectiveHPDelta())
+	assert.Equal(t, "potion", h.EffectiveSummary())
+	assert.JSONEq(t, `{"hpRequested":4,"hpApplied":4}`, string(h.EffectivePayload()))
+	assert.Equal(t, actionlog.StatusActive, h.Status(), "a note is not a value amend")
+	require.Len(t, h.Corrections, 2)
+	assert.Nil(t, h.Corrections[0].HPDelta)
 
-	_, ok, err = dal.LaterEntryTouchingState(ctx, charID, slots)
+	total, err := dal.HPTotal(ctx, charID)
 	require.NoError(t, err)
-	assert.False(t, ok)
+	assert.Equal(t, -7, total)
 }
 
 // A save adjustment is an amend with a payload and no HP delta: it round-trips
@@ -283,4 +283,40 @@ func TestLatestID(t *testing.T) {
 	_, ok, err = dal.LatestID(ctx, charID+1, actionlog.KindSave)
 	require.NoError(t, err)
 	assert.False(t, ok)
+}
+
+// Checklist 3 (critical-qki.38): a value amend stored before migration 014
+// (raw row, no note column written) still gives the amended delta and HP
+// total through the DAL, and a note added afterwards changes neither.
+func TestLegacyValueAmend_ReadsAfterMigration014(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+
+	orc := insert(t, dal, hp(charID, -8, "orc"))
+	insert(t, dal, hp(charID, 3, "potion"))
+	trap := insert(t, dal, hp(charID, -6, "trap"))
+	_, err := db.ExecContext(ctx, `INSERT INTO action_corrections (action_id, kind, hp_delta, summary) VALUES (?, 'amend', -12, 'orc axe')`, orc)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO action_corrections (action_id, kind) VALUES (?, 'void')`, trap)
+	require.NoError(t, err)
+
+	check := func(wantNote string) {
+		t.Helper()
+		e, err := dal.GetEntry(ctx, charID, orc)
+		require.NoError(t, err)
+		assert.Equal(t, actionlog.StatusAmended, e.Status())
+		assert.Equal(t, -8, e.HPDelta)
+		assert.Equal(t, -12, e.EffectiveHPDelta())
+		assert.Equal(t, "orc axe", e.EffectiveSummary())
+		assert.Equal(t, wantNote, e.Note())
+		total, err := dal.HPTotal(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, -9, total, "-12 + 3, trap voided")
+	}
+	check("")
+	note := "DM: the axe crit"
+	correct(t, dal, actionlog.Correction{ActionID: orc, Kind: actionlog.CorrectionAmend, Note: &note})
+	check(note)
 }

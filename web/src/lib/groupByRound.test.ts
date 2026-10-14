@@ -10,6 +10,7 @@ const entry = (id: number, round: number): LogEntry => ({
   summary: `e${id}`,
   hpDelta: -1,
   effectiveHpDelta: -1,
+  note: "",
   effectiveSummary: `e${id}`,
   status: "active",
   payload: {},

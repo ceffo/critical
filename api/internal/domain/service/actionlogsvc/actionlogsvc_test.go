@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -153,36 +154,36 @@ func hpEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
 	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -8, Corrections: corrections}
 }
 
+// Note-only amend (critical-qki.38): any kind, the correction carries only
+// the trimmed note.
 func TestAmend(t *testing.T) {
 	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
+	note := func(s string) *string { return &s }
 	cases := []struct {
 		name    string
 		entry   *actionlog.Entry
 		getErr  error
-		in      actionlogsvc.Amendment
+		in      string
 		wantErr error
 		want    *actionlog.Correction
 	}{
-		{"not found", nil, domain.ErrNotFound, actionlogsvc.Amendment{HPDelta: -1}, domain.ErrNotFound, nil},
-		{"voided", hpEntry(5, voided), nil, actionlogsvc.Amendment{HPDelta: -1}, actionlogsvc.ErrAlreadyVoided, nil},
-		{"not an hp change", &actionlog.Entry{ID: 5, Kind: actionlog.KindAttack, Summary: "swing"}, nil, actionlogsvc.Amendment{HPDelta: -1}, actionlogsvc.ErrNotAmendable, nil},
+		{"not found", nil, domain.ErrNotFound, "x", domain.ErrNotFound, nil},
+		{"voided", hpEntry(5, voided), nil, "x", actionlogsvc.ErrAlreadyVoided, nil},
 		{
-			"delta and source", hpEntry(5), nil,
-			actionlogsvc.Amendment{HPDelta: -12, Summary: " orc axe "},
-			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-12), Summary: "orc axe"},
+			"hp change note", hpEntry(5), nil, " axe, not club ", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("axe, not club")},
 		},
 		{
-			"delta to zero keeps source", hpEntry(5), nil,
-			actionlogsvc.Amendment{HPDelta: 0},
-			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(0)},
+			"buff change note", &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindBuffChange, Summary: "Activated Bless"}, nil, "DM ruling", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("DM ruling")},
 		},
 		{
-			"amend twice", hpEntry(5, actionlog.Correction{Kind: actionlog.CorrectionAmend, HPDelta: intp(-3)}), nil,
-			actionlogsvc.Amendment{HPDelta: -4},
-			nil,
-			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, HPDelta: intp(-4)},
+			"attack note", &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindAttack, Summary: "swing"}, nil, "flanking", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("flanking")},
+		},
+		{
+			"empty clears", hpEntry(5), nil, "  ", nil,
+			&actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Note: note("")},
 		},
 	}
 	for _, c := range cases {
@@ -190,21 +191,33 @@ func TestAmend(t *testing.T) {
 			svc, dal, _, tx := newSvc(t)
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, c.getErr).Once()
 			if c.want != nil {
-				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil)
-				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(hpEntry(5, *c.want), nil).Once()
+				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil).Once()
+				done := *c.entry
+				done.Corrections = append(done.Corrections, *c.want)
+				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(&done, nil).Once()
 			}
-			got, err := svc.Amend(context.Background(), 1, 5, c.in)
+			got, err := svc.Amend(context.Background(), 1, 5, actionlogsvc.Amendment{Note: c.in})
 			assert.Equal(t, 1, tx.calls)
 			if c.wantErr != nil {
 				require.ErrorIs(t, err, c.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, actionlog.StatusAmended, got.Status())
+			assert.Equal(t, *c.want.Note, got.Note())
+			assert.Equal(t, c.entry.EffectiveHPDelta(), got.EffectiveHPDelta(), "values untouched")
+			assert.Equal(t, c.entry.Status(), got.Status(), "a note is not a value amend")
 		})
 	}
+	t.Run("too long", func(t *testing.T) {
+		svc, _, _, tx := newSvc(t)
+		_, err := svc.Amend(context.Background(), 1, 5, actionlogsvc.Amendment{Note: strings.Repeat("é", 501)})
+		require.ErrorIs(t, err, domain.ErrInvalidInput)
+		assert.Zero(t, tx.calls)
+	})
 }
 
+// Pop-only void (critical-qki.38): only the newest non-voided entry, any
+// kind; its snapshots are restored through their family's restorer.
 func TestVoid(t *testing.T) {
 	withSnaps := func(keys ...string) *actionlog.Entry {
 		e := &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindRoundAdvance, Summary: "next"}
@@ -218,7 +231,7 @@ func TestVoid(t *testing.T) {
 	cases := []struct {
 		name        string
 		entry       *actionlog.Entry
-		laterID     int64 // 0: no later entry touches the state
+		topID       int64 // newest non-voided entry; 0 = this one
 		restorers   []string
 		restoreErr  error
 		insertErr   error
@@ -233,8 +246,8 @@ func TestVoid(t *testing.T) {
 			wantRestore: []string{`"before-round"`, `"before-buffs"`},
 		},
 		{
-			name: "blocked by later entry", entry: withSnaps("round"), laterID: 9, restorers: []string{"round"},
-			wantErr: actionlogsvc.ErrVoidBlocked, wantErrText: `a later entry changed the same state (round 3: "Round 3 → 4"), void it first`,
+			name: "an older entry is refused", entry: withSnaps("round"), topID: 9, restorers: []string{"round"},
+			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be voided, void "Round 3 → 4" (round 3) first`,
 		},
 		{
 			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},
@@ -257,17 +270,21 @@ func TestVoid(t *testing.T) {
 				}))
 			}
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
-			if len(c.entry.Snapshots) > 0 && c.entry.Status() != actionlog.StatusVoided {
-				dal.EXPECT().LaterEntryTouchingState(mock.Anything, int64(1), int64(5)).Return(c.laterID, c.laterID != 0, nil)
-				if c.laterID != 0 {
-					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.laterID).
-						Return(&actionlog.Entry{ID: c.laterID, Round: 3, Summary: "Round 3 → 4"}, nil).Once()
+			active := c.entry.Status() != actionlog.StatusVoided
+			if active {
+				if c.topID != 0 {
+					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(c.topID, true, nil).Once()
+					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.topID).
+						Return(&actionlog.Entry{ID: c.topID, Round: 3, Summary: "Round 3 → 4"}, nil).Once()
+				} else {
+					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(5, true, nil).Once()
+					dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
 				}
 			}
-			reachesInsert := c.laterID == 0 && c.restoreErr == nil && c.entry.Status() != actionlog.StatusVoided &&
+			reachesInsert := active && c.topID == 0 && c.restoreErr == nil &&
 				(len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""
 			if reachesInsert {
-				dal.EXPECT().InsertCorrection(mock.Anything, voidRow).Return(c.insertErr)
+				dal.EXPECT().InsertCorrection(mock.Anything, voidRow).Return(c.insertErr).Once()
 			}
 			if reachesInsert && c.insertErr == nil {
 				done := *c.entry
@@ -283,8 +300,8 @@ func TestVoid(t *testing.T) {
 					assert.ErrorIs(t, err, c.wantErr)
 				}
 				assert.Contains(t, err.Error(), c.wantErrText)
-				if errors.Is(c.wantErr, actionlogsvc.ErrVoidBlocked) {
-					assert.Empty(t, restored, "nothing restored when blocked")
+				if errors.Is(c.wantErr, actionlogsvc.ErrNotLatest) {
+					assert.Empty(t, restored, "nothing restored when refused")
 				}
 				return
 			}
@@ -295,22 +312,33 @@ func TestVoid(t *testing.T) {
 	}
 }
 
+// VoidLatest pops the top of the stack only when it is of the asked kind.
 func TestVoidLatest(t *testing.T) {
-	t.Run("none", func(t *testing.T) {
+	t.Run("empty log", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().LatestActiveID(mock.Anything, int64(1), actionlog.KindHPChange).Return(0, false, nil)
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(0, false, nil).Once()
 		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
 		require.NoError(t, err)
 		assert.False(t, ok)
 	})
-	t.Run("voids newest", func(t *testing.T) {
+	t.Run("pops the newest", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().LatestActiveID(mock.Anything, int64(1), actionlog.KindHPChange).Return(7, true, nil)
-		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(7)).Return(hpEntry(7), nil)
-		dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 7, Kind: actionlog.CorrectionVoid}).Return(nil)
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(7, true, nil).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(7)).Return(hpEntry(7), nil).Once()
+		dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 7, Kind: actionlog.CorrectionVoid}).Return(nil).Once()
 		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
 		require.NoError(t, err)
 		assert.True(t, ok)
+	})
+	t.Run("newest is another kind", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(8, true, nil).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(8)).
+			Return(&actionlog.Entry{ID: 8, Round: 2, Kind: actionlog.KindBuffChange, Summary: "Activated Haste"}, nil).Once()
+		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
+		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+		assert.Contains(t, err.Error(), `the latest entry is not a hp_change, void "Activated Haste" (round 2) first`)
+		assert.False(t, ok)
 	})
 }
 
@@ -338,7 +366,11 @@ func TestEntryStatusAndEffectiveValues(t *testing.T) {
 	}{
 		{"active", nil, actionlog.StatusActive, -8, "orc"},
 		{"amended", []actionlog.Correction{amend(intp(-12), "orc axe")}, actionlog.StatusAmended, -12, "orc axe"},
-		{"latest amend wins", []actionlog.Correction{amend(intp(-12), "a"), amend(intp(-2), "")}, actionlog.StatusAmended, -2, "orc"},
+		// Each value comes from the latest amend that set it (an empty summary
+		// keeps the current one), so a later note-only amend hides nothing.
+		{"latest amend wins", []actionlog.Correction{amend(intp(-12), "a"), amend(intp(-2), "")}, actionlog.StatusAmended, -2, "a"},
+		{"note only stays active", []actionlog.Correction{{Kind: actionlog.CorrectionAmend, Note: new(string)}}, actionlog.StatusActive, -8, "orc"},
+		{"note after a value amend", []actionlog.Correction{amend(intp(-12), "orc axe"), {Kind: actionlog.CorrectionAmend, Note: new(string)}}, actionlog.StatusAmended, -12, "orc axe"},
 		{"voided", []actionlog.Correction{void}, actionlog.StatusVoided, 0, "orc"},
 		{"amended then voided", []actionlog.Correction{amend(intp(-12), "x"), void}, actionlog.StatusVoided, 0, "x"},
 	}
@@ -470,4 +502,60 @@ func TestEntryEffectivePayload(t *testing.T) {
 			assert.JSONEq(t, c.want, string(saveEntry(1, c.corrections...).EffectivePayload()))
 		})
 	}
+}
+
+// HP-1/HP-2 (critical-qki.38): Record caps a heal at the gap to max HP, reading
+// the total exactly once inside its transaction, and stores the breakdown.
+// Damage never reads the total.
+func TestRecord_CapsHeal(t *testing.T) {
+	cases := []struct {
+		name        string
+		total       int // SUM before the entry; 0 = at max
+		delta       int
+		payload     string
+		wantDelta   int
+		wantPayload string
+	}{
+		{"heal at max-1", -1, 6, "", 1, `{"hpRequested":6,"hpApplied":1}`},
+		{"heal exactly to max", -7, 7, "", 7, `{"hpRequested":7,"hpApplied":7}`},
+		{"heal bigger than the gap", -5, 12, "", 5, `{"hpRequested":12,"hpApplied":5}`},
+		{"heal at full HP logs 0", 0, 9, "", 0, `{"hpRequested":9,"hpApplied":0}`},
+		{"payload kept", -3, 11, `{"spell":"cure"}`, 3, `{"spell":"cure","hpRequested":11,"hpApplied":3}`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc, dal, _, tx := newSvc(t)
+			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
+			var stored actionlog.NewEntry
+			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, e actionlog.NewEntry) { stored = e }).Return(42, nil).Once()
+			_, err := svc.Record(context.Background(), actionlog.NewEntry{
+				CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: c.delta, Payload: json.RawMessage(c.payload),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, 1, tx.calls)
+			assert.Equal(t, c.wantDelta, stored.HPDelta)
+			assert.JSONEq(t, c.wantPayload, string(stored.Payload))
+		})
+	}
+	t.Run("damage is stored as is, total not read", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().InsertEntry(mock.Anything, actionlog.NewEntry{
+			CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -13, Payload: json.RawMessage(`{}`),
+		}).Return(42, nil).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -13})
+		require.NoError(t, err)
+	})
+	t.Run("total fails", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(0, errBoom).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4})
+		require.ErrorIs(t, err, errBoom)
+	})
+	t.Run("payload not an object", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(-6, nil).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4, Payload: json.RawMessage(`[1]`)})
+		require.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
 }

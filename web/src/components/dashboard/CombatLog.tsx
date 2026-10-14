@@ -9,15 +9,21 @@ import { groupByRound } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
-import type { LogEntry } from "@/types/log";
+import type { HpBreakdown, LogEntry } from "@/types/log";
 import { captionClass, fieldClass } from "./fieldStyles";
 
-/** The action log (GET /api/log) as a timeline grouped by round, with inline amend/void. */
+/**
+ * The action log (GET /api/log) as a timeline grouped by round. The log is a
+ * stack (critical-qki.38): only the newest non-voided entry offers Void (pop);
+ * any entry can get a note, values are never edited.
+ */
 export function CombatLog() {
   const { t } = useTranslation();
   const entries = useLogStore((s) => s.entries);
   const round = useBuffsStore((s) => s.round);
   const groups = groupByRound(entries, round);
+  // Entries are newest first: the first non-voided one is the top of the stack.
+  const topId = entries.find((e) => e.status !== "voided")?.id;
 
   return (
     <section
@@ -45,7 +51,7 @@ export function CombatLog() {
             ) : (
               <ul className="flex flex-col gap-1">
                 {g.entries.map((e) => (
-                  <LogRow key={e.id} entry={e} />
+                  <LogRow key={e.id} entry={e} isTop={e.id === topId} />
                 ))}
               </ul>
             )}
@@ -58,7 +64,7 @@ export function CombatLog() {
 
 type Mode = "view" | "amend" | "confirmVoid";
 
-function LogRow({ entry: e }: { entry: LogEntry }) {
+function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
   const { t, i18n } = useTranslation();
   const { voidEntry, busy } = useTableStore();
   const [mode, setMode] = useState<Mode>("view");
@@ -66,6 +72,7 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
   const amended = e.status === "amended";
   const isHp = e.kind === "hp_change";
   const text = entryText(e, t);
+  const capped = isHp && !voided ? cappedHeal(e) : null;
 
   return (
     <li
@@ -112,25 +119,35 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
             {isHp && <span>{t("log.was", { delta: formatSigned(e.hpDelta) })}</span>}
           </>
         )}
+        {capped && (
+          <span data-testid="log-capped">
+            {t("log.capped", { requested: formatSigned(capped.hpRequested) })}
+          </span>
+        )}
         {voided && <Badge variant="destructive">{t("log.status.voided")}</Badge>}
         {!voided && mode === "view" && (
           <span className="ml-auto flex gap-1">
-            {isHp && (
-              <Button size="xs" variant="ghost" onClick={() => setMode("amend")}>
-                {t("log.amend")}
+            <Button size="xs" variant="ghost" onClick={() => setMode("amend")}>
+              {t("log.amend")}
+            </Button>
+            {isTop && (
+              <Button
+                size="xs"
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => setMode("confirmVoid")}
+              >
+                {t("log.void")}
               </Button>
             )}
-            <Button
-              size="xs"
-              variant="ghost"
-              className="text-destructive"
-              onClick={() => setMode("confirmVoid")}
-            >
-              {t("log.void")}
-            </Button>
           </span>
         )}
       </div>
+      {e.note && (
+        <p className="mt-0.5 text-xs italic text-muted-foreground" data-testid="log-note">
+          {e.note}
+        </p>
+      )}
       {mode === "confirmVoid" && !voided && (
         <div className="mt-1.5 flex items-center gap-2 rounded-md bg-destructive/5 px-2 py-1 text-sm">
           <span className="flex-1">{t("log.confirmVoid")}</span>
@@ -157,50 +174,44 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
   );
 }
 
+/** The server's breakdown when the heal was cut by the max-HP cap, else null. */
+function cappedHeal(e: LogEntry): HpBreakdown | null {
+  const p = e.effectivePayload as Partial<HpBreakdown> | null;
+  if (typeof p?.hpRequested !== "number" || typeof p.hpApplied !== "number") return null;
+  return p.hpRequested !== p.hpApplied ? (p as HpBreakdown) : null;
+}
+
 function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }) {
   const { t } = useTranslation();
   const { amendEntry, busy } = useTableStore();
-  const [delta, setDelta] = useState(String(e.effectiveHpDelta));
-  const [source, setSource] = useState(e.effectiveSummary);
-  const n = Number.parseInt(delta, 10);
+  const [note, setNote] = useState(e.note);
 
   return (
     <form
-      className="mt-1.5 grid grid-cols-[96px_minmax(0,1fr)] items-end gap-2 rounded-md bg-muted/50 p-2"
+      className="mt-1.5 flex items-end gap-2 rounded-md bg-muted/50 p-2"
       aria-label={t("log.amendLabel")}
       onSubmit={async (ev) => {
         ev.preventDefault();
-        if (Number.isNaN(n)) return;
-        if (await amendEntry(e.id, n, source.trim())) onDone();
+        if (await amendEntry(e.id, note.trim())) onDone();
       }}
     >
-      <label className="flex min-w-0 flex-col gap-1">
-        <span className={captionClass}>{t("log.newDelta")}</span>
-        <input
-          className={fieldClass}
-          type="number"
-          value={delta}
-          onChange={(ev) => setDelta(ev.target.value)}
-          autoFocus
-        />
-      </label>
-      <label className="flex min-w-0 flex-col gap-1">
-        <span className={captionClass}>{t("log.source")}</span>
+      <label className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className={captionClass}>{t("log.note")}</span>
         <input
           className={fieldClass}
           type="text"
-          value={source}
-          onChange={(ev) => setSource(ev.target.value)}
+          maxLength={500}
+          value={note}
+          onChange={(ev) => setNote(ev.target.value)}
+          autoFocus
         />
       </label>
-      <div className="col-span-2 flex justify-end gap-1">
-        <Button size="xs" type="button" variant="ghost" onClick={onDone}>
-          {t("log.cancel")}
-        </Button>
-        <Button size="xs" type="submit" disabled={busy || Number.isNaN(n)}>
-          {t("log.save")}
-        </Button>
-      </div>
+      <Button size="xs" type="button" variant="ghost" onClick={onDone}>
+        {t("log.cancel")}
+      </Button>
+      <Button size="xs" type="submit" disabled={busy}>
+        {t("log.save")}
+      </Button>
     </form>
   );
 }

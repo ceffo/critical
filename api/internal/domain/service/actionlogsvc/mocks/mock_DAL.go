@@ -244,74 +244,9 @@ func (_c *MockDAL_InsertEntry_Call) RunAndReturn(run func(context.Context, actio
 	return _c
 }
 
-// LaterEntryTouchingState provides a mock function with given fields: ctx, characterID, id
-func (_m *MockDAL) LaterEntryTouchingState(ctx context.Context, characterID int64, id int64) (int64, bool, error) {
-	ret := _m.Called(ctx, characterID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for LaterEntryTouchingState")
-	}
-
-	var r0 int64
-	var r1 bool
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) (int64, bool, error)); ok {
-		return rf(ctx, characterID, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) int64); ok {
-		r0 = rf(ctx, characterID, id)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64, int64) bool); ok {
-		r1 = rf(ctx, characterID, id)
-	} else {
-		r1 = ret.Get(1).(bool)
-	}
-
-	if rf, ok := ret.Get(2).(func(context.Context, int64, int64) error); ok {
-		r2 = rf(ctx, characterID, id)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// MockDAL_LaterEntryTouchingState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LaterEntryTouchingState'
-type MockDAL_LaterEntryTouchingState_Call struct {
-	*mock.Call
-}
-
-// LaterEntryTouchingState is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-//   - id int64
-func (_e *MockDAL_Expecter) LaterEntryTouchingState(ctx interface{}, characterID interface{}, id interface{}) *MockDAL_LaterEntryTouchingState_Call {
-	return &MockDAL_LaterEntryTouchingState_Call{Call: _e.mock.On("LaterEntryTouchingState", ctx, characterID, id)}
-}
-
-func (_c *MockDAL_LaterEntryTouchingState_Call) Run(run func(ctx context.Context, characterID int64, id int64)) *MockDAL_LaterEntryTouchingState_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(int64))
-	})
-	return _c
-}
-
-func (_c *MockDAL_LaterEntryTouchingState_Call) Return(laterID int64, ok bool, err error) *MockDAL_LaterEntryTouchingState_Call {
-	_c.Call.Return(laterID, ok, err)
-	return _c
-}
-
-func (_c *MockDAL_LaterEntryTouchingState_Call) RunAndReturn(run func(context.Context, int64, int64) (int64, bool, error)) *MockDAL_LaterEntryTouchingState_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// LatestActiveID provides a mock function with given fields: ctx, characterID, kind
-func (_m *MockDAL) LatestActiveID(ctx context.Context, characterID int64, kind actionlog.Kind) (int64, bool, error) {
-	ret := _m.Called(ctx, characterID, kind)
+// LatestActiveID provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) LatestActiveID(ctx context.Context, characterID int64) (int64, bool, error) {
+	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for LatestActiveID")
@@ -320,23 +255,23 @@ func (_m *MockDAL) LatestActiveID(ctx context.Context, characterID int64, kind a
 	var r0 int64
 	var r1 bool
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, actionlog.Kind) (int64, bool, error)); ok {
-		return rf(ctx, characterID, kind)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int64, bool, error)); ok {
+		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, actionlog.Kind) int64); ok {
-		r0 = rf(ctx, characterID, kind)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int64); ok {
+		r0 = rf(ctx, characterID)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, actionlog.Kind) bool); ok {
-		r1 = rf(ctx, characterID, kind)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) bool); ok {
+		r1 = rf(ctx, characterID)
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, int64, actionlog.Kind) error); ok {
-		r2 = rf(ctx, characterID, kind)
+	if rf, ok := ret.Get(2).(func(context.Context, int64) error); ok {
+		r2 = rf(ctx, characterID)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -352,14 +287,13 @@ type MockDAL_LatestActiveID_Call struct {
 // LatestActiveID is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-//   - kind actionlog.Kind
-func (_e *MockDAL_Expecter) LatestActiveID(ctx interface{}, characterID interface{}, kind interface{}) *MockDAL_LatestActiveID_Call {
-	return &MockDAL_LatestActiveID_Call{Call: _e.mock.On("LatestActiveID", ctx, characterID, kind)}
+func (_e *MockDAL_Expecter) LatestActiveID(ctx interface{}, characterID interface{}) *MockDAL_LatestActiveID_Call {
+	return &MockDAL_LatestActiveID_Call{Call: _e.mock.On("LatestActiveID", ctx, characterID)}
 }
 
-func (_c *MockDAL_LatestActiveID_Call) Run(run func(ctx context.Context, characterID int64, kind actionlog.Kind)) *MockDAL_LatestActiveID_Call {
+func (_c *MockDAL_LatestActiveID_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_LatestActiveID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(actionlog.Kind))
+		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
@@ -369,7 +303,7 @@ func (_c *MockDAL_LatestActiveID_Call) Return(id int64, ok bool, err error) *Moc
 	return _c
 }
 
-func (_c *MockDAL_LatestActiveID_Call) RunAndReturn(run func(context.Context, int64, actionlog.Kind) (int64, bool, error)) *MockDAL_LatestActiveID_Call {
+func (_c *MockDAL_LatestActiveID_Call) RunAndReturn(run func(context.Context, int64) (int64, bool, error)) *MockDAL_LatestActiveID_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -6,12 +6,9 @@ import "errors"
 var (
 	// ErrAlreadyVoided: amend or void on a voided entry.
 	ErrAlreadyVoided = errors.New("entry already voided")
-	// ErrVoidBlocked: a later non-voided entry changed the same state, so
-	// restoring this entry's "before" state would overwrite it.
-	ErrVoidBlocked = errors.New("void blocked")
-	// ErrNotAmendable: only hp_change entries can be amended.
+	// ErrNotAmendable: AmendLatest on an entry that is not the roll kind asked.
 	ErrNotAmendable = errors.New("entry cannot be amended")
-	// ErrNotLatest: only the newest entry of its kind can be adjusted; fix
-	// an older one with void and a new roll.
+	// ErrNotLatest: only the newest non-voided entry can be voided (pop), and
+	// only the latest roll can be adjusted.
 	ErrNotLatest = errors.New("not the latest entry")
 )

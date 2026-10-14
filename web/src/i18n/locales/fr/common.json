@@ -37,7 +37,8 @@
     "sourcePlaceholder": "Hache d'orque, potion...",
     "applyDamage": "Infliger les dégâts",
     "applyHeal": "Appliquer les soins",
-    "undoLast": "Annuler la dernière modification de PV"
+    "undoLast": "Annuler la dernière modification de PV",
+    "undoBlocked": "Dernière entrée : « {{entry}} ». Annulez-la d’abord dans le journal."
   },
   "round": {
     "title": "Round",
@@ -500,15 +501,15 @@
       "voided": "Annulé"
     },
     "was": "était {{delta}}",
-    "amend": "Corriger",
+    "capped": "{{requested}} demandés, plafonnés aux PV max",
+    "amend": "Note",
     "void": "Annuler",
     "confirmVoid": "Annuler cette entrée ?",
     "confirm": "Confirmer",
     "cancel": "Retour",
     "save": "Enregistrer",
-    "amendLabel": "Corriger l'entrée",
-    "newDelta": "Modification de PV (− dégâts, + soins)",
-    "source": "Source",
+    "amendLabel": "Note de l’entrée",
+    "note": "Note",
     "buff": {
       "activate": "{{buff}} activé ({{counters}})",
       "edit": "{{buff}} : {{from}} → {{to}}",

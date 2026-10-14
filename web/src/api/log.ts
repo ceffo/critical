@@ -8,16 +8,13 @@ export async function fetchLog(limit?: number): Promise<LogEntry[]> {
   return res.entries ?? [];
 }
 
-/** Amend an hp_change entry: new HP delta, and optionally a new source. */
-export function amendLogEntry(
-  id: number,
-  delta: number,
-  source?: string,
-): Promise<LogEntry> {
-  return post<LogEntry>(`/api/log/${id}/amend`, { delta, source: source ?? "" });
+/** Set the note of an entry, any kind ("" clears it). The note is the only
+ * thing an amend may change (critical-qki.38). */
+export function amendLogEntry(id: number, note: string): Promise<LogEntry> {
+  return post<LogEntry>(`/api/log/${id}/amend`, { note });
 }
 
-/** Void an entry (restores any state it changed). */
+/** Pop an entry: only the newest non-voided one (restores any state it changed). */
 export function voidLogEntry(id: number): Promise<LogEntry> {
   return post<LogEntry>(`/api/log/${id}/void`);
 }

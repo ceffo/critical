@@ -41,7 +41,7 @@ critical/
 
 - **Bard**: the single character this app manages in Phase 1
 - **HP Ledger**: append-only event log of all damage/healing. Current HP = SUM(delta).
-- **Buff**: an active effect with a charge count (decremented when it absorbs a hit, ends at 0), a duration in rounds (decremented on Next Round, expires at 0), both (Mirror Image) or neither (until dismissed). Every buff change is in the action log and voidable
+- **Buff**: an active effect with a charge count (decremented when it absorbs a hit, ends at 0), a duration in rounds (decremented on Next Round, expires at 0), both (Mirror Image) or neither (until dismissed). Every buff change is in the action log and can be popped (voided) while it is the newest entry
 - **Round Counter**: manually advanced by the player; one tap = Next Round = decrement all duration buffs
 - **THAC0**: "To Hit Armor Class 0" — lower is better. Attack hits if `roll + modifiers ≥ THAC0 - target_AC`
 - **Spell Slot**: a prepared spell instance consumable once per day; reset on long rest
@@ -65,8 +65,10 @@ labelled `mvp-saturday` are the must-haves.
    usually via Strength spells cast by others; user: "not exactly 18 >= 18")
 4. Spells with effects (Wizard-list effects extracted into a seed) and spells received from the party
 5. Daily spell preparation from the spellbook within the PHB Bard limits
-6. One append-only action log (also the combat log) with before/after snapshots; any action can be
-   amended or voided, audited
+6. One append-only action log (also the combat log) with before/after snapshots, used as a stack.
+   User, 2026-10-14: "no amending values. just the note.. can only pop elements", for every entry
+   kind: an amend only sets the entry's note, and only the newest non-voided entry can be voided
+   (popped, restoring what it changed); both are audited corrections
 7. Weapons and items in DB tables seeded from JSON; charged items and consumables
 8. i18n: en/fr string keys for the UI and spell names (spell descriptions stay English)
 9. A round-centric dashboard; Playwright e2e harness behind `just e2e`

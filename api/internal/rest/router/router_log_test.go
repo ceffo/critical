@@ -28,18 +28,27 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"entries":[{
 		"id":4,"characterId":1,"round":2,"kind":"hp_change","summary":"orc","hpDelta":-8,
-		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","status":"amended","payload":{},"effectivePayload":{},
+		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","note":"","status":"amended","payload":{},"effectivePayload":{},
 		"snapshots":[],
 		"corrections":[{"id":1,"kind":"amend","hpDelta":-12,"source":"orc axe","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
 
+	// Note-only amend (critical-qki.38): the note is the only field read.
+	note := "DM: axe, not club"
+	noted := actionlog.Entry{
+		ID: 5, CharacterID: 1, Round: 2, Kind: actionlog.KindBuffChange, Summary: "Activated Haste", CreatedAt: at,
+		Corrections: []actionlog.Correction{{ID: 3, ActionID: 5, Kind: actionlog.CorrectionAmend, Note: &note, CreatedAt: at}},
+	}
 	h, m = newRouter(t)
-	m.log.EXPECT().Amend(mock.Anything, int64(1), int64(4), actionlogsvc.Amendment{HPDelta: -12, Summary: "orc axe"}).Return(&amended, nil)
-	rec = do(h, "POST", "/api/log/4/amend", `{"delta":-12,"source":"orc axe"}`)
+	m.log.EXPECT().Amend(mock.Anything, int64(1), int64(5), actionlogsvc.Amendment{Note: note}).Return(&noted, nil).Once()
+	rec = do(h, "POST", "/api/log/5/amend", `{"note":"DM: axe, not club"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	var got map[string]any
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	assert.Equal(t, "amended", got["status"])
+	assert.JSONEq(t, `{
+		"id":5,"characterId":1,"round":2,"kind":"buff_change","summary":"Activated Haste","hpDelta":0,
+		"effectiveHpDelta":0,"effectiveSummary":"Activated Haste","note":"DM: axe, not club","status":"active",
+		"payload":{},"effectivePayload":{},"snapshots":[],
+		"corrections":[{"id":3,"kind":"amend","note":"DM: axe, not club","createdAt":"2026-10-17T20:00:00Z"}],
+		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
 
 	voided := actionlog.Entry{
 		ID: 4, CharacterID: 1, Kind: actionlog.KindRoundAdvance, Summary: "next",
@@ -52,7 +61,7 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
 		"id":4,"characterId":1,"round":0,"kind":"round_advance","summary":"next","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"next","status":"voided","payload":{},"effectivePayload":{},
+		"effectiveHpDelta":0,"effectiveSummary":"next","note":"","status":"voided","payload":{},"effectivePayload":{},
 		"snapshots":[{"key":"round","before":1,"after":2}],
 		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
@@ -89,7 +98,7 @@ func TestLogEndpoints_AdjustedSaveShape(t *testing.T) {
 	assert.JSONEq(t, `{"entries":[{
 		"id":7,"characterId":1,"round":1,"kind":"save","summary":"Save vs Spells: d20 12 vs 14, FAILED","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
-		"status":"amended","payload":{"passed":false},"effectivePayload":{"passed":true},
+		"note":"","status":"amended","payload":{"passed":false},"effectivePayload":{"passed":true},
 		"snapshots":[],
 		"corrections":[{"id":3,"kind":"amend","source":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
 			"payload":{"passed":true},"createdAt":"2026-10-17T20:00:00Z"}],

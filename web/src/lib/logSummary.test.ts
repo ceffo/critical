@@ -29,6 +29,7 @@ function entry(
     summary,
     hpDelta: 0,
     effectiveHpDelta: 0,
+    note: "",
     effectiveSummary: summary,
     status: "active",
     payload,

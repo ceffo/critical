@@ -34,7 +34,9 @@ func (s *service) GetState(ctx context.Context, characterID int64) (*HPState, er
 		}
 	}
 	return &HPState{
-		CurrentHp: maxHP + sum,
+		// HP-5 (critical-qki.38): never shown above max. Writes keep the
+		// total <= 0 (actionlog.CapHeal); this guards rows logged before.
+		CurrentHp: min(maxHP, maxHP+sum),
 		MaxHp:     maxHP,
 		Events:    events,
 	}, nil

@@ -99,7 +99,7 @@ var endpoints = []endpoint{
 	{"GET log", "GET", "/api/log?limit=10", "", func(m *mocksSet, err error) {
 		m.log.On("List", anyArgs(3)...).Return(nil, err)
 	}},
-	{"POST log/{id}/amend", "POST", "/api/log/4/amend", `{"delta":-3,"source":"x"}`, func(m *mocksSet, err error) {
+	{"POST log/{id}/amend", "POST", "/api/log/4/amend", `{"note":"x"}`, func(m *mocksSet, err error) {
 		m.log.On("Amend", anyArgs(4)...).Return(nil, err)
 	}},
 	{"POST log/{id}/void", "POST", "/api/log/4/void", "", func(m *mocksSet, err error) {
@@ -227,10 +227,10 @@ func TestSpecialSentinels(t *testing.T) {
 		{"item empty", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemEmpty), 409, `{"error":"item is empty: wand"}`},
 		{"slot already used", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed), 409, `{"error":"slot already used: 2"}`},
 		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"error":"invalid slot index: 2"}`},
-		{"void blocked", "POST log/{id}/void", fmt.Errorf("%w: a later entry changed the same state (round 2: \"Round 2 → 3\"), void it first", actionlogsvc.ErrVoidBlocked), 409, `{"error":"void blocked: a later entry changed the same state (round 2: \"Round 2 → 3\"), void it first"}`},
+		{"void not the latest", "POST log/{id}/void", fmt.Errorf("%w: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first"}`},
+		{"hp undo not the latest", "POST hp/undo", fmt.Errorf("%w: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first"}`},
 		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
-		{"amend not hp", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #4"}`},
 		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
 		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #7"}`},
 		{"adjust not a save", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7 is attack, not save", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #7 is attack, not save"}`},
@@ -269,9 +269,15 @@ func TestRequestParsingErrors(t *testing.T) {
 		{"save bad json", "POST", "/api/roll/save", "nope", "invalid request body"},
 		{"log bad limit", "GET", "/api/log?limit=abc", "", "limit must be a positive integer"},
 		{"log zero limit", "GET", "/api/log?limit=0", "", "limit must be a positive integer"},
-		{"amend bad id", "POST", "/api/log/abc/amend", `{"delta":1}`, "invalid log entry id"},
+		{"amend bad id", "POST", "/api/log/abc/amend", `{"note":"x"}`, "invalid log entry id"},
 		{"amend bad json", "POST", "/api/log/4/amend", "{", "invalid request body"},
-		{"amend missing delta", "POST", "/api/log/4/amend", `{"source":"x"}`, "delta is required"},
+		{"amend null body", "POST", "/api/log/4/amend", "null", "invalid request body"},
+		{"amend missing note", "POST", "/api/log/4/amend", `{}`, "note is required (a string)"},
+		{"amend note not a string", "POST", "/api/log/4/amend", `{"note":3}`, "note is required (a string)"},
+		// Note-only amend (critical-qki.38): any value field is refused.
+		{"amend value delta", "POST", "/api/log/4/amend", `{"delta":-3}`, `only the note of an entry can be amended (got \"delta\"): void the entry and log it again`},
+		{"amend value with note", "POST", "/api/log/4/amend", `{"note":"x","source":"orc axe"}`, `only the note of an entry can be amended (got \"source\"): void the entry and log it again`},
+		{"amend payload", "POST", "/api/log/4/amend", `{"payload":{}}`, `only the note of an entry can be amended (got \"payload\"): void the entry and log it again`},
 		{"void bad id", "POST", "/api/log/0/void", "", "invalid log entry id"},
 		{"adjust bad id", "POST", "/api/roll/save/x/adjust", `{"adjustment":1}`, "invalid log entry id"},
 		{"adjust bad json", "POST", "/api/roll/save/7/adjust", "{", "invalid request body"},

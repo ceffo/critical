@@ -57,6 +57,10 @@ func IsRoll(k Kind) bool {
 // timed buffs count down, the round counter goes to 0.
 const KindTimePassed Kind = "time_passed"
 
+// KindItemRestock is a stock item's count going up at the table (itemsvc
+// Restock, critical-qki.13). Not a roll: it leaves the result card alone.
+const KindItemRestock Kind = "item_restock"
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

@@ -116,7 +116,7 @@
     "tabs": {
       "attack": "Attack",
       "spells": "Spells",
-      "items": "Items",
+      "inventory": "Inventory",
       "saves": "Saves",
       "lookup": "Spell Lookup"
     }
@@ -157,16 +157,21 @@
     }
   },
   "items": {
-    "title": "Items",
-    "placeholder": "Charged items and consumables will be used from here.",
-    "ammo": "Ammunition",
-    "charged": "Charged items & consumables",
-    "use": "Use",
-    "left": "{{count}} left",
+    "title": "Inventory",
+    "useOne": "Use one {{name}}",
+    "addOne": "Add one {{name}}",
     "count": "{{count}} / {{max}}",
-    "empty": "Empty",
-    "perDay": "1/day",
-    "loading": "Loading items…",
+    "magicalBonus": "Magical bonus",
+    "behaviour": {
+      "stock": "Stock",
+      "charges": "Charges",
+      "daily": "Daily"
+    },
+    "behaviourHint": {
+      "stock": "Used and restocked; stays listed at 0",
+      "charges": "Used only; gone at 0",
+      "daily": "Used only; refilled by a long rest"
+    },
     "none": "No items."
   },
   "spellSlots": {
@@ -452,6 +457,7 @@
     "total": "Total",
     "save": "Save: {{name}}",
     "left": "{{name}}: {{count}} left",
+    "leftRemoved": "{{name}}: last charge used, removed from the inventory",
     "noRoll": "Nothing to roll — the effect is resolved at the table.",
     "adjust": {
       "title": "Adjust after the roll",
@@ -490,6 +496,7 @@
       "round_set": "Round",
       "attack": "Attack",
       "item_use": "Item",
+      "item_restock": "Item",
       "spell_prep": "Prepare",
       "long_rest": "Rest",
       "save": "Save",
@@ -549,7 +556,10 @@
     },
     "item": {
       "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
-      "used": "Used {{name}} ({{left}} left)"
+      "used": "Used {{name}} ({{left}} left)",
+      "rolledRemoved": "Used {{name}}: {{dice}} = {{total}} (last charge, removed)",
+      "usedRemoved": "Used {{name}} (last charge, removed)",
+      "restocked": "Restocked {{name}}: +{{added}} ({{count}} now)"
     },
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
     "saveThrow": {

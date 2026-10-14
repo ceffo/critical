@@ -30,9 +30,10 @@ type row = queries.ListItemsRow
 
 func toItem(r row) itemsvc.Item {
 	return itemsvc.Item{
-		ID: r.ID, Name: r.Name, Kind: itemsvc.Kind(r.Kind),
+		ID: r.ID, Position: int(r.Position), Name: r.Name, Type: r.Type,
+		Behaviour:  itemsvc.Behaviour(r.Behaviour),
 		MagicBonus: int(r.MagicBonus), AmmoKind: r.AmmoKind,
-		Count: int(r.Count), MaxCount: int(r.MaxCount), PerDay: r.PerDay != 0,
+		Count: int(r.Count), MaxCount: int(r.MaxCount),
 		EffectDice: r.EffectDice, EffectSave: r.EffectSave, Notes: r.Notes,
 	}
 }
@@ -72,10 +73,50 @@ func (d *DAL) Decrement(ctx context.Context, itemID string) (itemsvc.Item, error
 	return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemEmpty, itemID)
 }
 
-// ResetPerDay refills every per-day item to its max count.
-func (d *DAL) ResetPerDay(ctx context.Context) error {
-	if _, err := queries.ResetPerDayItems().Exec(ctx, d.exec(ctx)); err != nil {
-		return fmt.Errorf("reset per-day items: %w", err)
+// Increment adds n with a single UPDATE and returns the updated item;
+// ErrItemNotFound when the id is unknown.
+func (d *DAL) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item, error) {
+	rows, err := queries.IncrementItem(int64(n), itemID).All(ctx, d.exec(ctx))
+	if err != nil {
+		return itemsvc.Item{}, fmt.Errorf("increment item %s: %w", itemID, err)
+	}
+	if len(rows) == 0 {
+		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
+	}
+	return toItem(rows[0]), nil
+}
+
+// ResetDaily refills every daily item to its max count.
+func (d *DAL) ResetDaily(ctx context.Context) error {
+	if _, err := queries.ResetDailyItems().Exec(ctx, d.exec(ctx)); err != nil {
+		return fmt.Errorf("reset daily items: %w", err)
+	}
+	return nil
+}
+
+// Delete removes an item (a charges item spent to 0). ErrItemNotFound when
+// the id is unknown.
+func (d *DAL) Delete(ctx context.Context, itemID string) error {
+	ids, err := queries.DeleteItem(itemID).All(ctx, d.exec(ctx))
+	if err != nil {
+		return fmt.Errorf("delete item %s: %w", itemID, err)
+	}
+	if len(ids) == 0 {
+		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
+	}
+	return nil
+}
+
+// Insert writes a whole item (a void restoring a removed item).
+func (d *DAL) Insert(ctx context.Context, it itemsvc.Item) error {
+	_, err := queries.InsertItem([]queries.InsertItem_Items{{
+		ID: it.ID, Position: int64(it.Position), Name: it.Name, Type: it.Type,
+		Behaviour: string(it.Behaviour), MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind,
+		Count: int64(it.Count), MaxCount: int64(it.MaxCount),
+		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes,
+	}}).Exec(ctx, d.exec(ctx))
+	if err != nil {
+		return fmt.Errorf("insert item %s: %w", it.ID, err)
 	}
 	return nil
 }

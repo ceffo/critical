@@ -2,6 +2,7 @@ package composition_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -60,11 +61,15 @@ func spend(t *testing.T, bs *composition.BackingServices) {
 	require.Zero(t, gemCount(t, bs))
 }
 
-func TestLongRest_RefillsSlotsAndPerDayItems(t *testing.T) {
+// A long rest refills the daily gem and nothing else: wand charges, arrows
+// and flasks (stock) stay spent (critical-qki.13).
+func TestLongRest_RefillsSlotsAndDailyItemsOnly(t *testing.T) {
 	bs := boot(t)
 	spend(t, bs)
-	_, err := bs.Items.Use(context.Background(), "wand_lightning")
-	require.NoError(t, err)
+	for _, id := range []string{"wand_lightning", "arrows_plus1", "fire_flask"} {
+		_, err := bs.Items.Use(context.Background(), id)
+		require.NoError(t, err)
+	}
 
 	res, err := bs.Rest.LongRest(context.Background(), bs.CharacterID)
 	require.NoError(t, err)
@@ -74,7 +79,10 @@ func TestLongRest_RefillsSlotsAndPerDayItems(t *testing.T) {
 	assert.Len(t, res.Items, 6)
 	var wand int
 	require.NoError(t, bs.DB.QueryRow(`SELECT count FROM items WHERE id = 'wand_lightning'`).Scan(&wand))
-	assert.Equal(t, 3, wand, "charges that are not per-day stay spent")
+	assert.Equal(t, 3, wand, "charges stay spent")
+	assert.Equal(t, 17, itemCount(t, bs, "arrows_plus1"), "stock is not refilled")
+	assert.Equal(t, 4, itemCount(t, bs, "fire_flask"), "stock is not refilled")
+	assert.Equal(t, []string{"Power Gem: Dispel Magic"}, refilled(t, bs, res.EntryID))
 
 	// The rest is logged and voidable: the gem is spent again, the slot used.
 	_, err = bs.Log.Void(context.Background(), bs.CharacterID, res.EntryID)
@@ -112,4 +120,16 @@ func TestLongRest_FailureInSlotsLeavesGemSpent(t *testing.T) {
 	_, err = bs.Rest.LongRest(context.Background(), bs.CharacterID)
 	require.Error(t, err)
 	assert.Zero(t, gemCount(t, bs))
+}
+
+// refilled is the long rest entry's itemsRefilled list.
+func refilled(t *testing.T, bs *composition.BackingServices, entryID int64) []string {
+	t.Helper()
+	var payload string
+	require.NoError(t, bs.DB.QueryRow(`SELECT payload FROM action_log WHERE id = ?`, entryID).Scan(&payload))
+	var rec struct {
+		ItemsRefilled []string `json:"itemsRefilled"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(payload), &rec))
+	return rec.ItemsRefilled
 }

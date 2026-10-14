@@ -37,7 +37,7 @@ var (
 	}
 	// arrows3Left1 is what itemsvc.Use returns after firing one of two +3 arrows.
 	arrows3Left1 = itemsvc.Item{
-		ID: "arrows_plus3", Name: "Arrows +3", Kind: itemsvc.KindAmmo, MagicBonus: 3, AmmoKind: "arrow", Count: 1,
+		ID: "arrows_plus3", Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, MagicBonus: 3, AmmoKind: "arrow", Count: 1,
 	}
 )
 
@@ -609,11 +609,11 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		},
 		{
 			name: "not ammunition", weapon: shortbow, ammoID: "wand",
-			use: &itemsvc.Item{ID: "wand", Name: "Wand", Kind: itemsvc.KindCharged}, wantErr: domain.ErrInvalidInput,
+			use: &itemsvc.Item{ID: "wand", Name: "Wand", Behaviour: itemsvc.BehaviourCharges, Count: 3}, wantErr: domain.ErrInvalidInput,
 		},
 		{
 			name: "ammunition of another kind", weapon: shortbow, ammoID: "bolts",
-			use: &itemsvc.Item{ID: "bolts", Name: "Bolts", Kind: itemsvc.KindAmmo, AmmoKind: "bolt"}, wantErr: domain.ErrInvalidInput,
+			use: &itemsvc.Item{ID: "bolts", Name: "Bolts", Behaviour: itemsvc.BehaviourStock, AmmoKind: "bolt"}, wantErr: domain.ErrInvalidInput,
 		},
 	}
 	for _, tt := range ammoCases {

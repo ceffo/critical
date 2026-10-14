@@ -12,6 +12,7 @@ import (
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
+	"github.com/stephenafamo/bob/expr"
 	"github.com/stephenafamo/bob/orm"
 	"github.com/stephenafamo/scan"
 )
@@ -19,7 +20,7 @@ import (
 //go:embed items.bob.sql
 var formattedQueries_items string
 
-var listItemsSQL = formattedQueries_items[149:309]
+var listItemsSQL = formattedQueries_items[149:323]
 
 type ListItemsQuery = orm.ModQuery[*dialect.SelectQuery, listItems, ListItemsRow, []ListItemsRow, listItemsTransformer]
 
@@ -39,16 +40,17 @@ func ListItems() *ListItemsQuery {
 				return func(row *scan.Row) (any, error) {
 						var t ListItemsRow
 						row.ScheduleScanByIndex(0, &t.ID)
-						row.ScheduleScanByIndex(1, &t.Name)
-						row.ScheduleScanByIndex(2, &t.Kind)
-						row.ScheduleScanByIndex(3, &t.MagicBonus)
-						row.ScheduleScanByIndex(4, &t.AmmoKind)
-						row.ScheduleScanByIndex(5, &t.Count)
-						row.ScheduleScanByIndex(6, &t.MaxCount)
-						row.ScheduleScanByIndex(7, &t.PerDay)
-						row.ScheduleScanByIndex(8, &t.EffectDice)
-						row.ScheduleScanByIndex(9, &t.EffectSave)
-						row.ScheduleScanByIndex(10, &t.Notes)
+						row.ScheduleScanByIndex(1, &t.Position)
+						row.ScheduleScanByIndex(2, &t.Name)
+						row.ScheduleScanByIndex(3, &t.Type)
+						row.ScheduleScanByIndex(4, &t.Behaviour)
+						row.ScheduleScanByIndex(5, &t.MagicBonus)
+						row.ScheduleScanByIndex(6, &t.AmmoKind)
+						row.ScheduleScanByIndex(7, &t.Count)
+						row.ScheduleScanByIndex(8, &t.MaxCount)
+						row.ScheduleScanByIndex(9, &t.EffectDice)
+						row.ScheduleScanByIndex(10, &t.EffectSave)
+						row.ScheduleScanByIndex(11, &t.Notes)
 						return &t, nil
 					}, func(v any) (ListItemsRow, error) {
 						return *v.(*ListItemsRow), nil
@@ -56,9 +58,9 @@ func ListItems() *ListItemsQuery {
 			},
 		},
 		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
-			q.AppendSelect(expressionTypArgs.subExpr(7, 127))
-			q.SetTable(expressionTypArgs.subExpr(133, 140))
-			q.AppendOrder(expressionTypArgs.subExpr(149, 160))
+			q.AppendSelect(expressionTypArgs.subExpr(7, 141))
+			q.SetTable(expressionTypArgs.subExpr(147, 154))
+			q.AppendOrder(expressionTypArgs.subExpr(163, 174))
 		}),
 		Build: sqlite.Select,
 	}
@@ -66,13 +68,14 @@ func ListItems() *ListItemsQuery {
 
 type ListItemsRow = struct {
 	ID         string `db:"id"`
+	Position   int64  `db:"position"`
 	Name       string `db:"name"`
-	Kind       string `db:"kind"`
+	Type       string `db:"type"`
+	Behaviour  string `db:"behaviour"`
 	MagicBonus int64  `db:"magic_bonus"`
 	AmmoKind   string `db:"ammo_kind"`
 	Count      int64  `db:"count"`
 	MaxCount   int64  `db:"max_count"`
-	PerDay     int64  `db:"per_day"`
 	EffectDice string `db:"effect_dice"`
 	EffectSave string `db:"effect_save"`
 	Notes      string `db:"notes"`
@@ -99,7 +102,7 @@ func (o listItems) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialec
 	return o.subExpr(0, len(listItemsSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var getItemSQL = formattedQueries_items[323:479]
+var getItemSQL = formattedQueries_items[337:507]
 
 type GetItemQuery = orm.ModQuery[*dialect.SelectQuery, getItem, GetItemRow, []GetItemRow, getItemTransformer]
 
@@ -121,16 +124,17 @@ func GetItem(ID string) *GetItemQuery {
 				return func(row *scan.Row) (any, error) {
 						var t GetItemRow
 						row.ScheduleScanByIndex(0, &t.ID)
-						row.ScheduleScanByIndex(1, &t.Name)
-						row.ScheduleScanByIndex(2, &t.Kind)
-						row.ScheduleScanByIndex(3, &t.MagicBonus)
-						row.ScheduleScanByIndex(4, &t.AmmoKind)
-						row.ScheduleScanByIndex(5, &t.Count)
-						row.ScheduleScanByIndex(6, &t.MaxCount)
-						row.ScheduleScanByIndex(7, &t.PerDay)
-						row.ScheduleScanByIndex(8, &t.EffectDice)
-						row.ScheduleScanByIndex(9, &t.EffectSave)
-						row.ScheduleScanByIndex(10, &t.Notes)
+						row.ScheduleScanByIndex(1, &t.Position)
+						row.ScheduleScanByIndex(2, &t.Name)
+						row.ScheduleScanByIndex(3, &t.Type)
+						row.ScheduleScanByIndex(4, &t.Behaviour)
+						row.ScheduleScanByIndex(5, &t.MagicBonus)
+						row.ScheduleScanByIndex(6, &t.AmmoKind)
+						row.ScheduleScanByIndex(7, &t.Count)
+						row.ScheduleScanByIndex(8, &t.MaxCount)
+						row.ScheduleScanByIndex(9, &t.EffectDice)
+						row.ScheduleScanByIndex(10, &t.EffectSave)
+						row.ScheduleScanByIndex(11, &t.Notes)
 						return &t, nil
 					}, func(v any) (GetItemRow, error) {
 						return *v.(*GetItemRow), nil
@@ -138,9 +142,9 @@ func GetItem(ID string) *GetItemQuery {
 			},
 		},
 		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
-			q.AppendSelect(expressionTypArgs.subExpr(7, 127))
-			q.SetTable(expressionTypArgs.subExpr(133, 140))
-			q.AppendWhere(expressionTypArgs.subExpr(146, 156))
+			q.AppendSelect(expressionTypArgs.subExpr(7, 141))
+			q.SetTable(expressionTypArgs.subExpr(147, 154))
+			q.AppendWhere(expressionTypArgs.subExpr(160, 170))
 		}),
 		Build: sqlite.Select,
 	}
@@ -148,13 +152,14 @@ func GetItem(ID string) *GetItemQuery {
 
 type GetItemRow = struct {
 	ID         string `db:"id"`
+	Position   int64  `db:"position"`
 	Name       string `db:"name"`
-	Kind       string `db:"kind"`
+	Type       string `db:"type"`
+	Behaviour  string `db:"behaviour"`
 	MagicBonus int64  `db:"magic_bonus"`
 	AmmoKind   string `db:"ammo_kind"`
 	Count      int64  `db:"count"`
 	MaxCount   int64  `db:"max_count"`
-	PerDay     int64  `db:"per_day"`
 	EffectDice string `db:"effect_dice"`
 	EffectSave string `db:"effect_save"`
 	Notes      string `db:"notes"`
@@ -170,8 +175,8 @@ func (o getItem) args() iter.Seq[orm.ArgWithPosition] {
 	return func(yield func(arg orm.ArgWithPosition) bool) {
 		if !yield(orm.ArgWithPosition{
 			Name:       "id",
-			Start:      154,
-			Stop:       156,
+			Start:      168,
+			Stop:       170,
 			Expression: o.ID,
 		}) {
 			return
@@ -191,7 +196,7 @@ func (o getItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect,
 	return o.subExpr(0, len(getItemSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var decrementItemSQL = formattedQueries_items[499:702]
+var decrementItemSQL = formattedQueries_items[527:744]
 
 type DecrementItemQuery = orm.ModQuery[*dialect.UpdateQuery, decrementItem, DecrementItemRow, []DecrementItemRow, decrementItemTransformer]
 
@@ -213,16 +218,17 @@ func DecrementItem(ID string) *DecrementItemQuery {
 				return func(row *scan.Row) (any, error) {
 						var t DecrementItemRow
 						row.ScheduleScanByIndex(0, &t.ID)
-						row.ScheduleScanByIndex(1, &t.Name)
-						row.ScheduleScanByIndex(2, &t.Kind)
-						row.ScheduleScanByIndex(3, &t.MagicBonus)
-						row.ScheduleScanByIndex(4, &t.AmmoKind)
-						row.ScheduleScanByIndex(5, &t.Count)
-						row.ScheduleScanByIndex(6, &t.MaxCount)
-						row.ScheduleScanByIndex(7, &t.PerDay)
-						row.ScheduleScanByIndex(8, &t.EffectDice)
-						row.ScheduleScanByIndex(9, &t.EffectSave)
-						row.ScheduleScanByIndex(10, &t.Notes)
+						row.ScheduleScanByIndex(1, &t.Position)
+						row.ScheduleScanByIndex(2, &t.Name)
+						row.ScheduleScanByIndex(3, &t.Type)
+						row.ScheduleScanByIndex(4, &t.Behaviour)
+						row.ScheduleScanByIndex(5, &t.MagicBonus)
+						row.ScheduleScanByIndex(6, &t.AmmoKind)
+						row.ScheduleScanByIndex(7, &t.Count)
+						row.ScheduleScanByIndex(8, &t.MaxCount)
+						row.ScheduleScanByIndex(9, &t.EffectDice)
+						row.ScheduleScanByIndex(10, &t.EffectSave)
+						row.ScheduleScanByIndex(11, &t.Notes)
 						return &t, nil
 					}, func(v any) (DecrementItemRow, error) {
 						return *v.(*DecrementItemRow), nil
@@ -233,7 +239,7 @@ func DecrementItem(ID string) *DecrementItemQuery {
 			q.Table.Expression = expressionTypArgs.raw(7, 14)
 			q.AppendSet(expressionTypArgs.subExpr(19, 40))
 			q.AppendWhere(expressionTypArgs.subExpr(46, 72))
-			q.AppendReturning(expressionTypArgs.subExpr(82, 203))
+			q.AppendReturning(expressionTypArgs.subExpr(82, 217))
 		}),
 		Build: sqlite.Update,
 	}
@@ -241,13 +247,14 @@ func DecrementItem(ID string) *DecrementItemQuery {
 
 type DecrementItemRow = struct {
 	ID         string `db:"id"`
+	Position   int64  `db:"position"`
 	Name       string `db:"name"`
-	Kind       string `db:"kind"`
+	Type       string `db:"type"`
+	Behaviour  string `db:"behaviour"`
 	MagicBonus int64  `db:"magic_bonus"`
 	AmmoKind   string `db:"ammo_kind"`
 	Count      int64  `db:"count"`
 	MaxCount   int64  `db:"max_count"`
-	PerDay     int64  `db:"per_day"`
 	EffectDice string `db:"effect_dice"`
 	EffectSave string `db:"effect_save"`
 	Notes      string `db:"notes"`
@@ -284,16 +291,122 @@ func (o decrementItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Di
 	return o.subExpr(0, len(decrementItemSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var resetPerDayItemsSQL = formattedQueries_items[725:785]
+var incrementItemSQL = formattedQueries_items[764:966]
 
-type ResetPerDayItemsQuery = orm.ModExecQuery[*dialect.UpdateQuery, resetPerDayItems]
+type IncrementItemQuery = orm.ModQuery[*dialect.UpdateQuery, incrementItem, IncrementItemRow, []IncrementItemRow, incrementItemTransformer]
 
-func ResetPerDayItems() *ResetPerDayItemsQuery {
-	var expressionTypArgs resetPerDayItems
+func IncrementItem(Arg int64, ID string) *IncrementItemQuery {
+	var expressionTypArgs incrementItem
 
-	return &ResetPerDayItemsQuery{
-		ExecQuery: orm.ExecQuery[resetPerDayItems]{
-			BaseQuery: bob.BaseQuery[resetPerDayItems]{
+	expressionTypArgs.Arg = sqlite.Arg(Arg)
+	expressionTypArgs.ID = sqlite.Arg(ID)
+
+	return &IncrementItemQuery{
+		Query: orm.Query[incrementItem, IncrementItemRow, []IncrementItemRow, incrementItemTransformer]{
+			ExecQuery: orm.ExecQuery[incrementItem]{
+				BaseQuery: bob.BaseQuery[incrementItem]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeUpdate,
+				},
+			},
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (IncrementItemRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t IncrementItemRow
+						row.ScheduleScanByIndex(0, &t.ID)
+						row.ScheduleScanByIndex(1, &t.Position)
+						row.ScheduleScanByIndex(2, &t.Name)
+						row.ScheduleScanByIndex(3, &t.Type)
+						row.ScheduleScanByIndex(4, &t.Behaviour)
+						row.ScheduleScanByIndex(5, &t.MagicBonus)
+						row.ScheduleScanByIndex(6, &t.AmmoKind)
+						row.ScheduleScanByIndex(7, &t.Count)
+						row.ScheduleScanByIndex(8, &t.MaxCount)
+						row.ScheduleScanByIndex(9, &t.EffectDice)
+						row.ScheduleScanByIndex(10, &t.EffectSave)
+						row.ScheduleScanByIndex(11, &t.Notes)
+						return &t, nil
+					}, func(v any) (IncrementItemRow, error) {
+						return *v.(*IncrementItemRow), nil
+					}
+			},
+		},
+		Mod: bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+			q.Table.Expression = expressionTypArgs.raw(7, 14)
+			q.AppendSet(expressionTypArgs.subExpr(19, 41))
+			q.AppendWhere(expressionTypArgs.subExpr(47, 57))
+			q.AppendReturning(expressionTypArgs.subExpr(67, 202))
+		}),
+		Build: sqlite.Update,
+	}
+}
+
+type IncrementItemRow = struct {
+	ID         string `db:"id"`
+	Position   int64  `db:"position"`
+	Name       string `db:"name"`
+	Type       string `db:"type"`
+	Behaviour  string `db:"behaviour"`
+	MagicBonus int64  `db:"magic_bonus"`
+	AmmoKind   string `db:"ammo_kind"`
+	Count      int64  `db:"count"`
+	MaxCount   int64  `db:"max_count"`
+	EffectDice string `db:"effect_dice"`
+	EffectSave string `db:"effect_save"`
+	Notes      string `db:"notes"`
+}
+
+type incrementItemTransformer = bob.SliceTransformer[IncrementItemRow, []IncrementItemRow]
+
+type incrementItem struct {
+	Arg bob.Expression
+	ID  bob.Expression
+}
+
+func (o incrementItem) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "arg",
+			Start:      39,
+			Stop:       41,
+			Expression: o.Arg,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "id",
+			Start:      55,
+			Stop:       57,
+			Expression: o.ID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o incrementItem) raw(from, to int) string {
+	return incrementItemSQL[from:to]
+}
+
+func (o incrementItem) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(incrementItemSQL, from, to, o.args())
+}
+
+func (o incrementItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(incrementItemSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var resetDailyItemsSQL = formattedQueries_items[988:1056]
+
+type ResetDailyItemsQuery = orm.ModExecQuery[*dialect.UpdateQuery, resetDailyItems]
+
+func ResetDailyItems() *ResetDailyItemsQuery {
+	var expressionTypArgs resetDailyItems
+
+	return &ResetDailyItemsQuery{
+		ExecQuery: orm.ExecQuery[resetDailyItems]{
+			BaseQuery: bob.BaseQuery[resetDailyItems]{
 				Expression: expressionTypArgs,
 				Dialect:    dialect.Dialect,
 				QueryType:  bob.QueryTypeUpdate,
@@ -302,32 +415,32 @@ func ResetPerDayItems() *ResetPerDayItemsQuery {
 		Mod: bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
 			q.Table.Expression = expressionTypArgs.raw(7, 14)
 			q.AppendSet(expressionTypArgs.subExpr(19, 40))
-			q.AppendWhere(expressionTypArgs.subExpr(46, 60))
+			q.AppendWhere(expressionTypArgs.subExpr(46, 68))
 		}),
 		Build: sqlite.Update,
 	}
 }
 
-type resetPerDayItems struct{}
+type resetDailyItems struct{}
 
-func (o resetPerDayItems) args() iter.Seq[orm.ArgWithPosition] {
+func (o resetDailyItems) args() iter.Seq[orm.ArgWithPosition] {
 	return func(yield func(arg orm.ArgWithPosition) bool) {
 	}
 }
 
-func (o resetPerDayItems) raw(from, to int) string {
-	return resetPerDayItemsSQL[from:to]
+func (o resetDailyItems) raw(from, to int) string {
+	return resetDailyItemsSQL[from:to]
 }
 
-func (o resetPerDayItems) subExpr(from, to int) bob.Expression {
-	return orm.ArgsToExpression(resetPerDayItemsSQL, from, to, o.args())
+func (o resetDailyItems) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(resetDailyItemsSQL, from, to, o.args())
 }
 
-func (o resetPerDayItems) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-	return o.subExpr(0, len(resetPerDayItemsSQL)).WriteSQL(ctx, w, d, start)
+func (o resetDailyItems) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(resetDailyItemsSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var setItemCountSQL = formattedQueries_items[804:866]
+var setItemCountSQL = formattedQueries_items[1075:1137]
 
 type SetItemCountQuery = orm.ModQuery[*dialect.UpdateQuery, setItemCount, string, []string, setItemCountTransformer]
 
@@ -401,4 +514,236 @@ func (o setItemCount) subExpr(from, to int) bob.Expression {
 
 func (o setItemCount) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(setItemCountSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var deleteItemSQL = formattedQueries_items[1154:1204]
+
+type DeleteItemQuery = orm.ModQuery[*dialect.DeleteQuery, deleteItem, string, []string, deleteItemTransformer]
+
+func DeleteItem(ID string) *DeleteItemQuery {
+	var expressionTypArgs deleteItem
+
+	expressionTypArgs.ID = sqlite.Arg(ID)
+
+	return &DeleteItemQuery{
+		Query: orm.Query[deleteItem, string, []string, deleteItemTransformer]{
+			ExecQuery: orm.ExecQuery[deleteItem]{
+				BaseQuery: bob.BaseQuery[deleteItem]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeDelete,
+				},
+			},
+			Scanner: scan.ColumnMapper[string]("id"),
+		},
+		Mod: bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
+			q.TableRef.Expression = expressionTypArgs.raw(12, 19)
+			q.AppendWhere(expressionTypArgs.subExpr(25, 35))
+			q.AppendReturning(expressionTypArgs.subExpr(45, 50))
+		}),
+		Build: sqlite.Delete,
+	}
+}
+
+type DeleteItemRow = struct {
+	ID string `db:"id"`
+}
+
+type deleteItemTransformer = bob.SliceTransformer[string, []string]
+
+type deleteItem struct {
+	ID bob.Expression
+}
+
+func (o deleteItem) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "id",
+			Start:      33,
+			Stop:       35,
+			Expression: o.ID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o deleteItem) raw(from, to int) string {
+	return deleteItemSQL[from:to]
+}
+
+func (o deleteItem) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(deleteItemSQL, from, to, o.args())
+}
+
+func (o deleteItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(deleteItemSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var insertItemSQL = formattedQueries_items[1221:1436]
+
+type InsertItem_Items = struct {
+	ID         string
+	Position   int64
+	Name       string
+	Type       string
+	Behaviour  string
+	MagicBonus int64
+	AmmoKind   string
+	Count      int64
+	MaxCount   int64
+	EffectDice string
+	EffectSave string
+	Notes      string
+}
+
+type InsertItemQuery = orm.ModExecQuery[*dialect.InsertQuery, insertItem]
+
+func InsertItem(Items []InsertItem_Items) *InsertItemQuery {
+	var expressionTypArgs insertItem
+
+	expressionTypArgs.Items = func() bob.Expression {
+		expressions := make([]bob.Expression, len(Items))
+		for i, child := range Items {
+			expressions[i] = bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				args := make([]any, 0, 12)
+				w.WriteString(insertItemSQL[164:165])
+				IDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.ID))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, IDArgs...)
+
+				w.WriteString(insertItemSQL[167:169])
+				PositionArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Position))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, PositionArgs...)
+
+				w.WriteString(insertItemSQL[171:173])
+				NameArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Name))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, NameArgs...)
+
+				w.WriteString(insertItemSQL[175:177])
+				TypeArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Type))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, TypeArgs...)
+
+				w.WriteString(insertItemSQL[179:181])
+				BehaviourArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Behaviour))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, BehaviourArgs...)
+
+				w.WriteString(insertItemSQL[183:185])
+				MagicBonusArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.MagicBonus))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, MagicBonusArgs...)
+
+				w.WriteString(insertItemSQL[187:189])
+				AmmoKindArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.AmmoKind))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, AmmoKindArgs...)
+
+				w.WriteString(insertItemSQL[191:193])
+				CountArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Count))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, CountArgs...)
+
+				w.WriteString(insertItemSQL[195:197])
+				MaxCountArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.MaxCount))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, MaxCountArgs...)
+
+				w.WriteString(insertItemSQL[199:201])
+				EffectDiceArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.EffectDice))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, EffectDiceArgs...)
+
+				w.WriteString(insertItemSQL[204:206])
+				EffectSaveArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.EffectSave))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, EffectSaveArgs...)
+
+				w.WriteString(insertItemSQL[209:211])
+				NotesArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Notes))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, NotesArgs...)
+
+				w.WriteString(insertItemSQL[214:215])
+				return args, nil
+			})
+		}
+		return expr.Join{Exprs: expressions, Sep: ", "}
+	}()
+
+	return &InsertItemQuery{
+		ExecQuery: orm.ExecQuery[insertItem]{
+			BaseQuery: bob.BaseQuery[insertItem]{
+				Expression: expressionTypArgs,
+				Dialect:    dialect.Dialect,
+				QueryType:  bob.QueryTypeInsert,
+			},
+		},
+		Mod: bob.ModFunc[*dialect.InsertQuery](func(q *dialect.InsertQuery) {
+			q.TableRef.Columns = []string{"id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes"}
+			q.TableRef.Expression = expressionTypArgs.raw(12, 19)
+			q.Query = bob.BaseQuery[bob.Expression]{
+				Expression: expressionTypArgs.subExpr(157, 215),
+				Dialect:    dialect.Dialect,
+				QueryType:  bob.QueryTypeSelect,
+			}
+		}),
+		Build: sqlite.Insert,
+	}
+}
+
+type insertItem struct {
+	Items bob.Expression
+}
+
+func (o insertItem) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "items",
+			Start:      164,
+			Stop:       215,
+			Expression: o.Items,
+		}) {
+			return
+		}
+	}
+}
+
+func (o insertItem) raw(from, to int) string {
+	return insertItemSQL[from:to]
+}
+
+func (o insertItem) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(insertItemSQL, from, to, o.args())
+}
+
+func (o insertItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(insertItemSQL)).WriteSQL(ctx, w, d, start)
 }

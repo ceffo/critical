@@ -3,6 +3,7 @@ package itemsvc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -20,25 +21,70 @@ func StateKey(itemID string) string { return StateKeyItems + actionlog.KeySepara
 
 // snapCount is itemsvc's JSON encoding of one item count inside a snapshot.
 // Entries already in the log must stay decodable: add fields, never rename.
+// Item is the whole item as it was (a use's "before"), so a pop can put back
+// an item the use removed. Removed marks an "after" in which the item is gone.
 type snapCount struct {
-	ID    string `json:"id"`
-	Count int    `json:"count"`
+	ID      string    `json:"id"`
+	Count   int       `json:"count"`
+	Item    *snapItem `json:"item,omitempty"`
+	Removed bool      `json:"removed,omitempty"`
+}
+
+// snapItem is the whole item inside a snapshot (add fields, never rename).
+type snapItem struct {
+	Position   int    `json:"position"`
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Behaviour  string `json:"behaviour"`
+	MagicBonus int    `json:"magicalBonus"`
+	AmmoKind   string `json:"ammoKind"`
+	MaxCount   int    `json:"maxCount"`
+	EffectDice string `json:"effectDice"`
+	EffectSave string `json:"effectSave"`
+	Notes      string `json:"notes"`
+}
+
+func toSnapItem(i Item) *snapItem {
+	return &snapItem{
+		Position: i.Position, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour),
+		MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind, MaxCount: i.MaxCount,
+		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes,
+	}
+}
+
+func (c snapCount) item() Item {
+	it := c.Item
+	return Item{
+		ID: c.ID, Position: it.Position, Name: it.Name, Type: it.Type, Behaviour: Behaviour(it.Behaviour),
+		MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind, Count: c.Count, MaxCount: it.MaxCount,
+		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes,
+	}
 }
 
 // UseSnapshot is the snapshot of one Use: after is the item Use returned,
-// the "before" count is one more (Use always spends exactly one).
+// the "before" count is one more (Use always spends exactly one). When the
+// use removed the item (a charges item spent to 0), "before" carries the
+// whole item, so popping the use brings it back with 1 charge.
 func UseSnapshot(after Item) (actionlog.Snapshot, error) {
-	return CountSnapshot(after.ID, after.Count+1, after.Count)
+	before := snapCount{ID: after.ID, Count: after.Count + 1}
+	if after.Removed() {
+		before.Item = toSnapItem(after)
+	}
+	return encodeSnapshot(after.ID, before, snapCount{ID: after.ID, Count: after.Count, Removed: after.Removed()})
 }
 
 // CountSnapshot is the snapshot of one item's count going from before to
-// after (a long rest refilling a per-day item).
+// after (a long rest refilling a daily item, a restock).
 func CountSnapshot(itemID string, before, after int) (actionlog.Snapshot, error) {
-	b, err := json.Marshal([]snapCount{{ID: itemID, Count: before}})
+	return encodeSnapshot(itemID, snapCount{ID: itemID, Count: before}, snapCount{ID: itemID, Count: after})
+}
+
+func encodeSnapshot(itemID string, before, after snapCount) (actionlog.Snapshot, error) {
+	b, err := json.Marshal([]snapCount{before})
 	if err != nil {
 		return actionlog.Snapshot{}, fmt.Errorf("encode items snapshot: %w", err)
 	}
-	a, err := json.Marshal([]snapCount{{ID: itemID, Count: after}})
+	a, err := json.Marshal([]snapCount{after})
 	if err != nil {
 		return actionlog.Snapshot{}, fmt.Errorf("encode items snapshot: %w", err)
 	}
@@ -53,9 +99,10 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 }
 
 // Restorers writes the counts of an items snapshot back (registered for the
-// StateKeyItems family, so it serves every "items:<id>" key). It runs inside the
-// void's transaction (ctx carries it). Items are not per character, so the
-// character id is unused.
+// StateKeyItems family, so it serves every "items:<id>" key). An item that is
+// gone (a charges item its use removed) is inserted back whole when the
+// snapshot carries it. It runs inside the void's transaction (ctx carries
+// it). Items are not per character, so the character id is unused.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
 		StateKeyItems: restoreFunc(func(ctx context.Context, _ int64, state json.RawMessage) error {
@@ -69,7 +116,11 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 				}
 			}
 			for _, c := range counts {
-				if err := s.dal.SetCount(ctx, c.ID, c.Count); err != nil {
+				err := s.dal.SetCount(ctx, c.ID, c.Count)
+				if errors.Is(err, ErrItemNotFound) && c.Item != nil {
+					err = s.dal.Insert(ctx, c.item())
+				}
+				if err != nil {
 					return fmt.Errorf("restore item %s: %w", c.ID, err)
 				}
 			}

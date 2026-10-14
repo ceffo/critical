@@ -23,12 +23,12 @@ type Item struct {
 	ID         string `db:"id,pk" `
 	Position   int64  `db:"position" `
 	Name       string `db:"name" `
-	Kind       string `db:"kind" `
+	Type       string `db:"type" `
+	Behaviour  string `db:"behaviour" `
 	MagicBonus int64  `db:"magic_bonus" `
 	AmmoKind   string `db:"ammo_kind" `
 	Count      int64  `db:"count" `
 	MaxCount   int64  `db:"max_count" `
-	PerDay     int64  `db:"per_day" `
 	EffectDice string `db:"effect_dice" `
 	EffectSave string `db:"effect_save" `
 	Notes      string `db:"notes" `
@@ -46,7 +46,7 @@ type ItemsQuery = *sqlite.ViewQuery[*Item, ItemSlice]
 
 func buildItemColumns(tableName string) itemColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "position", "name", "kind", "magic_bonus", "ammo_kind", "count", "max_count", "per_day", "effect_dice", "effect_save", "notes",
+		"id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes",
 	)
 
 	if tableName != "" {
@@ -59,12 +59,12 @@ func buildItemColumns(tableName string) itemColumns {
 		ID:          buildItemColumn(tableName, "id"),
 		Position:    buildItemColumn(tableName, "position"),
 		Name:        buildItemColumn(tableName, "name"),
-		Kind:        buildItemColumn(tableName, "kind"),
+		Type:        buildItemColumn(tableName, "type"),
+		Behaviour:   buildItemColumn(tableName, "behaviour"),
 		MagicBonus:  buildItemColumn(tableName, "magic_bonus"),
 		AmmoKind:    buildItemColumn(tableName, "ammo_kind"),
 		Count:       buildItemColumn(tableName, "count"),
 		MaxCount:    buildItemColumn(tableName, "max_count"),
-		PerDay:      buildItemColumn(tableName, "per_day"),
 		EffectDice:  buildItemColumn(tableName, "effect_dice"),
 		EffectSave:  buildItemColumn(tableName, "effect_save"),
 		Notes:       buildItemColumn(tableName, "notes"),
@@ -77,12 +77,12 @@ type itemColumns struct {
 	ID         itemColumn
 	Position   itemColumn
 	Name       itemColumn
-	Kind       itemColumn
+	Type       itemColumn
+	Behaviour  itemColumn
 	MagicBonus itemColumn
 	AmmoKind   itemColumn
 	Count      itemColumn
 	MaxCount   itemColumn
-	PerDay     itemColumn
 	EffectDice itemColumn
 	EffectSave itemColumn
 	Notes      itemColumn
@@ -134,12 +134,12 @@ type ItemSetter struct {
 	ID         omit.Val[string] `db:"id,pk" `
 	Position   omit.Val[int64]  `db:"position" `
 	Name       omit.Val[string] `db:"name" `
-	Kind       omit.Val[string] `db:"kind" `
+	Type       omit.Val[string] `db:"type" `
+	Behaviour  omit.Val[string] `db:"behaviour" `
 	MagicBonus omit.Val[int64]  `db:"magic_bonus" `
 	AmmoKind   omit.Val[string] `db:"ammo_kind" `
 	Count      omit.Val[int64]  `db:"count" `
 	MaxCount   omit.Val[int64]  `db:"max_count" `
-	PerDay     omit.Val[int64]  `db:"per_day" `
 	EffectDice omit.Val[string] `db:"effect_dice" `
 	EffectSave omit.Val[string] `db:"effect_save" `
 	Notes      omit.Val[string] `db:"notes" `
@@ -156,8 +156,11 @@ func (s ItemSetter) SetColumns() []string {
 	if s.Name.IsValue() {
 		vals = append(vals, "name")
 	}
-	if s.Kind.IsValue() {
-		vals = append(vals, "kind")
+	if s.Type.IsValue() {
+		vals = append(vals, "type")
+	}
+	if s.Behaviour.IsValue() {
+		vals = append(vals, "behaviour")
 	}
 	if s.MagicBonus.IsValue() {
 		vals = append(vals, "magic_bonus")
@@ -170,9 +173,6 @@ func (s ItemSetter) SetColumns() []string {
 	}
 	if s.MaxCount.IsValue() {
 		vals = append(vals, "max_count")
-	}
-	if s.PerDay.IsValue() {
-		vals = append(vals, "per_day")
 	}
 	if s.EffectDice.IsValue() {
 		vals = append(vals, "effect_dice")
@@ -196,8 +196,11 @@ func (s ItemSetter) Overwrite(t *Item) {
 	if s.Name.IsValue() {
 		t.Name = s.Name.MustGet()
 	}
-	if s.Kind.IsValue() {
-		t.Kind = s.Kind.MustGet()
+	if s.Type.IsValue() {
+		t.Type = s.Type.MustGet()
+	}
+	if s.Behaviour.IsValue() {
+		t.Behaviour = s.Behaviour.MustGet()
 	}
 	if s.MagicBonus.IsValue() {
 		t.MagicBonus = s.MagicBonus.MustGet()
@@ -210,9 +213,6 @@ func (s ItemSetter) Overwrite(t *Item) {
 	}
 	if s.MaxCount.IsValue() {
 		t.MaxCount = s.MaxCount.MustGet()
-	}
-	if s.PerDay.IsValue() {
-		t.PerDay = s.PerDay.MustGet()
 	}
 	if s.EffectDice.IsValue() {
 		t.EffectDice = s.EffectDice.MustGet()
@@ -262,12 +262,19 @@ func (s *ItemSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.Name.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
-		case "kind":
+		case "type":
 			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				if s.Kind.IsUnset() {
+				if s.Type.IsUnset() {
 					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
 				}
-				return sqlite.Arg(s.Kind.MustGet()).WriteSQL(ctx, w, d, start)
+				return sqlite.Arg(s.Type.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "behaviour":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Behaviour.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Behaviour.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
 		case "magic_bonus":
 			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
@@ -296,13 +303,6 @@ func (s *ItemSetter) Apply(q *dialect.InsertQuery) {
 					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
 				}
 				return sqlite.Arg(s.MaxCount.MustGet()).WriteSQL(ctx, w, d, start)
-			}))
-		case "per_day":
-			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				if s.PerDay.IsUnset() {
-					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
-				}
-				return sqlite.Arg(s.PerDay.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
 		case "effect_dice":
 			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
@@ -359,10 +359,17 @@ func (s ItemSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if s.Kind.IsValue() {
+	if s.Type.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			sqlite.Quote(append(prefix, "kind")...),
-			sqlite.Arg(s.Kind),
+			sqlite.Quote(append(prefix, "type")...),
+			sqlite.Arg(s.Type),
+		}})
+	}
+
+	if s.Behaviour.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "behaviour")...),
+			sqlite.Arg(s.Behaviour),
 		}})
 	}
 
@@ -391,13 +398,6 @@ func (s ItemSetter) Expressions(prefix ...string) []bob.Expression {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "max_count")...),
 			sqlite.Arg(s.MaxCount),
-		}})
-	}
-
-	if s.PerDay.IsValue() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			sqlite.Quote(append(prefix, "per_day")...),
-			sqlite.Arg(s.PerDay),
 		}})
 	}
 
@@ -441,8 +441,10 @@ func itemScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(a
 			targets = append(targets, target{i, func(o *Item) any { return &o.Position }})
 		case "name":
 			targets = append(targets, target{i, func(o *Item) any { return &o.Name }})
-		case "kind":
-			targets = append(targets, target{i, func(o *Item) any { return &o.Kind }})
+		case "type":
+			targets = append(targets, target{i, func(o *Item) any { return &o.Type }})
+		case "behaviour":
+			targets = append(targets, target{i, func(o *Item) any { return &o.Behaviour }})
 		case "magic_bonus":
 			targets = append(targets, target{i, func(o *Item) any { return &o.MagicBonus }})
 		case "ammo_kind":
@@ -451,8 +453,6 @@ func itemScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(a
 			targets = append(targets, target{i, func(o *Item) any { return &o.Count }})
 		case "max_count":
 			targets = append(targets, target{i, func(o *Item) any { return &o.MaxCount }})
-		case "per_day":
-			targets = append(targets, target{i, func(o *Item) any { return &o.PerDay }})
 		case "effect_dice":
 			targets = append(targets, target{i, func(o *Item) any { return &o.EffectDice }})
 		case "effect_save":
@@ -708,12 +708,12 @@ type itemWhere[Q sqlite.Filterable] struct {
 	ID         sqlite.WhereMod[Q, string]
 	Position   sqlite.WhereMod[Q, int64]
 	Name       sqlite.WhereMod[Q, string]
-	Kind       sqlite.WhereMod[Q, string]
+	Type       sqlite.WhereMod[Q, string]
+	Behaviour  sqlite.WhereMod[Q, string]
 	MagicBonus sqlite.WhereMod[Q, int64]
 	AmmoKind   sqlite.WhereMod[Q, string]
 	Count      sqlite.WhereMod[Q, int64]
 	MaxCount   sqlite.WhereMod[Q, int64]
-	PerDay     sqlite.WhereMod[Q, int64]
 	EffectDice sqlite.WhereMod[Q, string]
 	EffectSave sqlite.WhereMod[Q, string]
 	Notes      sqlite.WhereMod[Q, string]
@@ -729,12 +729,12 @@ func buildItemWhere[Q sqlite.Filterable](cols itemColumns) itemWhere[Q] {
 		ID:         sqlite.Where[Q, string](cols.ID.Expression),
 		Position:   sqlite.Where[Q, int64](cols.Position.Expression),
 		Name:       sqlite.Where[Q, string](cols.Name.Expression),
-		Kind:       sqlite.Where[Q, string](cols.Kind.Expression),
+		Type:       sqlite.Where[Q, string](cols.Type.Expression),
+		Behaviour:  sqlite.Where[Q, string](cols.Behaviour.Expression),
 		MagicBonus: sqlite.Where[Q, int64](cols.MagicBonus.Expression),
 		AmmoKind:   sqlite.Where[Q, string](cols.AmmoKind.Expression),
 		Count:      sqlite.Where[Q, int64](cols.Count.Expression),
 		MaxCount:   sqlite.Where[Q, int64](cols.MaxCount.Expression),
-		PerDay:     sqlite.Where[Q, int64](cols.PerDay.Expression),
 		EffectDice: sqlite.Where[Q, string](cols.EffectDice.Expression),
 		EffectSave: sqlite.Where[Q, string](cols.EffectSave.Expression),
 		Notes:      sqlite.Where[Q, string](cols.Notes.Expression),

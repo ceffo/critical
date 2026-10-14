@@ -153,6 +153,29 @@ reads rolled → now; dropped when the AC is back to the rolled one, which reads
 original entry's). An attack logged without `rolled` (before this existed) → 400, void and reroll.
 A state key `family:id` (for example `items:arrows_plus3`) is restored by the Restorer of its family.
 
+**Items: one model, three count behaviours (critical-qki.13).** User, 2026-10-13: *"these are all
+consumables... it's just their type"*. An item is a name, a free-text `type` label (arrow, flask,
+wand, gem…), a count, a note and optional mechanics: effect dice and save, `magic_bonus` (the
+"Magical bonus" +N), `ammo_kind`. Only `behaviour` (migration 015, replacing `kind`/`per_day`)
+changes how the count moves:
+
+| Behaviour | Example | − (use) | + (restock) | At 0 | Long rest |
+|---|---|---|---|---|---|
+| `stock` | arrows, fire flasks | yes | yes | stays listed | no |
+| `charges` | wand of lightning | yes | no (409 `ErrNotRestockable`) | removed | no |
+| `daily` | Power Gem dispel 1/day | yes | no (409) | stays listed | refilled to `max_count` |
+
+- `itemsvc.Use` spends one of any item (the attack's arrow, the inventory's −); the use that takes
+  a `charges` item to 0 deletes it in the same transaction and entry. `UseItem` (`POST
+  /api/items/{id}/use`) adds the effect roll and the `item_use` entry (payload `removed`).
+- `itemsvc.Restock` (`POST /api/items/{id}/restock {count}`, 1-999) adds to a `stock` item: one
+  `item_restock` entry (not a roll kind).
+- Every count change is one entry with the `items:<id>` snapshot. A use that removed the item
+  carries the whole item in its "before" (`snapCount.item`), so popping it re-inserts the item, in
+  its list position, with 1 charge. A long rest refills `daily` items only; time fast-forward none.
+- Ammo is any item whose `ammo_kind` matches the weapon's; the attack picker offers those with
+  count > 0.
+
 ## Key Go Structs
 
 ```go

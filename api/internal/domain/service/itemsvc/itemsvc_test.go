@@ -45,7 +45,7 @@ func TestUse_PropagatesSentinels(t *testing.T) {
 func TestResetDaily_ResetsThenLists(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().ResetPerDay(mock.Anything).Return(nil)
+	dal.EXPECT().ResetDaily(mock.Anything).Return(nil)
 	dal.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Count: 1}}, nil)
 
 	got, err := svc.ResetDaily(context.Background())
@@ -56,17 +56,90 @@ func TestResetDaily_ResetsThenLists(t *testing.T) {
 func TestResetDaily_ResetErrorSkipsList(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().ResetPerDay(mock.Anything).Return(errors.New("boom"))
+	dal.EXPECT().ResetDaily(mock.Anything).Return(errors.New("boom"))
 	_, err := svc.ResetDaily(context.Background())
 	require.Error(t, err)
 }
 
+func TestBehaviour_Rules(t *testing.T) {
+	tests := []struct {
+		b                    itemsvc.Behaviour
+		valid, restock, gone bool
+	}{
+		{itemsvc.BehaviourStock, true, true, false},
+		{itemsvc.BehaviourCharges, true, false, true},
+		{itemsvc.BehaviourDaily, true, false, false},
+		{"charged", false, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.b), func(t *testing.T) {
+			assert.Equal(t, tt.valid, tt.b.Valid())
+			assert.Equal(t, tt.restock, tt.b.Restockable())
+			assert.Equal(t, tt.gone, tt.b.RemovedAtZero())
+		})
+	}
+}
+
+// Use at 0: a charges item is removed, a stock or daily item stays listed.
+func TestUse_RemovesChargesItemAtZeroOnly(t *testing.T) {
+	tests := []struct {
+		name    string
+		item    itemsvc.Item
+		removed bool
+	}{
+		{"wand spends its last charge", itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourCharges, Count: 0}, true},
+		{"wand with charges left", itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourCharges, Count: 1}, false},
+		{"arrows at 0 stay", itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourStock, Count: 0}, false},
+		{"gem at 0 stays", itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourDaily, Count: 0}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dal := mocks.NewMockDAL(t) // Delete fails the test unless expected
+			svc, _ := itemsvc.New(dal, deps(t).Deps)
+			dal.EXPECT().Decrement(mock.Anything, "x").Return(tt.item, nil)
+			if tt.removed {
+				dal.EXPECT().Delete(mock.Anything, "x").Return(nil).Once()
+			}
+			got, err := svc.Use(context.Background(), "x")
+			require.NoError(t, err)
+			assert.Equal(t, tt.removed, got.Removed())
+			assert.Equal(t, tt.item.Count, got.Count)
+		})
+	}
+}
+
+func TestUse_RemoveErrorFails(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	svc, _ := itemsvc.New(dal, deps(t).Deps)
+	dal.EXPECT().Decrement(mock.Anything, "x").Return(itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourCharges}, nil)
+	dal.EXPECT().Delete(mock.Anything, "x").Return(errors.New("boom"))
+	_, err := svc.Use(context.Background(), "x")
+	require.Error(t, err)
+}
+
+var wand = itemsvc.Item{
+	ID: "wand_lightning", Position: 4, Name: "Wand of lightning", Type: "wand", Behaviour: itemsvc.BehaviourCharges,
+	Count: 0, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand",
+}
+
+const wandBefore = `[{"id":"wand_lightning","count":1,"item":{"position":4,"name":"Wand of lightning","type":"wand",
+	"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`
+
 func TestUseSnapshot_BeforeIsOneMore(t *testing.T) {
-	snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Count: 1})
+	for _, b := range []itemsvc.Behaviour{itemsvc.BehaviourStock, itemsvc.BehaviourDaily} {
+		snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Name: "Arrows +3", Behaviour: b, Count: 0})
+		require.NoError(t, err)
+		assert.Equal(t, "items:arrows_plus3", snap.Key)
+		assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(snap.Before), "kept at 0: no item data")
+		assert.JSONEq(t, `[{"id":"arrows_plus3","count":0}]`, string(snap.After))
+	}
+}
+
+func TestUseSnapshot_MarksARemovedItem(t *testing.T) {
+	snap, err := itemsvc.UseSnapshot(wand)
 	require.NoError(t, err)
-	assert.Equal(t, "items:arrows_plus3", snap.Key)
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2}]`, string(snap.Before))
-	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(snap.After))
+	assert.JSONEq(t, wandBefore, string(snap.Before))
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true}]`, string(snap.After))
 }
 
 func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
@@ -79,6 +152,29 @@ func TestRestorers_WriteTheBeforeCountsBack(t *testing.T) {
 	r := svc.Restorers()[itemsvc.StateKeyItems]
 	require.NotNil(t, r)
 	require.NoError(t, r.Restore(context.Background(), 1, snap.Before))
+}
+
+// Popping the use that removed a wand inserts it back whole, with 1 charge.
+func TestRestorers_PutBackARemovedItem(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	svc, _ := itemsvc.New(dal, deps(t).Deps)
+	snap, err := itemsvc.UseSnapshot(wand)
+	require.NoError(t, err)
+
+	dal.EXPECT().SetCount(mock.Anything, "wand_lightning", 1).Return(fmt.Errorf("%w: wand_lightning", itemsvc.ErrItemNotFound)).Once()
+	back := wand
+	back.Count = 1
+	dal.EXPECT().Insert(mock.Anything, back).Return(nil).Once()
+	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snap.Before))
+}
+
+// A snapshot written before qki.13 (count only) cannot recreate a missing item.
+func TestRestorers_MissingItemWithoutDataFails(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	svc, _ := itemsvc.New(dal, deps(t).Deps)
+	dal.EXPECT().SetCount(mock.Anything, "x", 2).Return(fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
+	err := svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, json.RawMessage(`[{"id":"x","count":2}]`))
+	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
 func TestRestorers_RejectBadSnapshots(t *testing.T) {
@@ -113,7 +209,7 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	svc, err := itemsvc.New(dal, f.Deps)
 	require.NoError(t, err)
 	dal.EXPECT().Decrement(mock.Anything, "wand_lightning").Return(itemsvc.Item{
-		ID: "wand_lightning", Name: "Wand of lightning", Kind: itemsvc.KindCharged, Count: 3, MaxCount: 4,
+		ID: "wand_lightning", Name: "Wand of lightning", Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4,
 		EffectDice: "6d6", EffectSave: "rod_staff_wand",
 	}, nil)
 	for _, v := range []int{1, 2, 3, 4, 5, 6} {
@@ -136,7 +232,7 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	assert.Equal(t, "items:wand_lightning", got.Snapshots[0].Key)
 	assert.JSONEq(t, `[{"id":"wand_lightning","count":4}]`, string(got.Snapshots[0].Before))
 	assert.JSONEq(t, `[{"id":"wand_lightning","count":3}]`, string(got.Snapshots[0].After))
-	assert.JSONEq(t, `{"itemId":"wand_lightning","name":"Wand of lightning","kind":"charged","remaining":3,"maxCount":4,
+	assert.JSONEq(t, `{"itemId":"wand_lightning","name":"Wand of lightning","type":"wand","behaviour":"charges","removed":false,"remaining":3,"maxCount":4,
 		"dice":"6d6","rolls":[1,2,3,4,5,6],"total":21,"save":"rod_staff_wand","breakdown":"6d6: 1 + 2 + 3 + 4 + 5 + 6 = 21"}`, string(got.Payload))
 }
 
@@ -144,7 +240,7 @@ func TestUseItem_NoDiceRollsNothing(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t) // the dice mock fails the test on any call
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "gem").Return(itemsvc.Item{ID: "gem", Name: "Gem", Kind: itemsvc.KindCharged, Count: 0, MaxCount: 1}, nil)
+	dal.EXPECT().Decrement(mock.Anything, "gem").Return(itemsvc.Item{ID: "gem", Name: "Gem", Behaviour: itemsvc.BehaviourDaily, Count: 0, MaxCount: 1}, nil)
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 
 	res, err := svc.UseItem(context.Background(), 1, "gem")
@@ -164,10 +260,94 @@ func TestUseItem_EmptyAndUnknownLogNothing(t *testing.T) {
 	}
 }
 
-func TestUseItem_AmmoIsRefused(t *testing.T) {
+// The inventory's − spends arrows too (lost, broken): any behaviour is usable.
+func TestUseItem_SpendsStockAmmo(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Decrement(mock.Anything, "arrows").Return(itemsvc.Item{ID: "arrows", Name: "Arrows", Behaviour: itemsvc.BehaviourStock, AmmoKind: "arrow", Count: 0}, nil)
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(3), nil)
+	res, err := svc.UseItem(context.Background(), 1, "arrows")
+	require.NoError(t, err)
+	assert.Equal(t, 0, res.Remaining)
+	assert.False(t, res.Removed, "stock stays listed at 0")
+}
+
+// The use that spends a wand's last charge removes it in the same entry,
+// whose snapshot carries the whole wand so popping it brings it back.
+func TestUseItem_LastChargeRemovesTheItem(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Decrement(mock.Anything, "wand_lightning").Return(wand, nil)
+	dal.EXPECT().Delete(mock.Anything, "wand_lightning").Return(nil).Once()
+	for _, v := range []int{6, 5, 4, 3, 2, 1} {
+		f.dice.EXPECT().RollDie(6).Return(v).Once()
+	}
+	var got actionlog.NewEntry
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(5), nil)
+
+	res, err := svc.UseItem(context.Background(), 1, "wand_lightning")
+	require.NoError(t, err)
+	assert.True(t, res.Removed)
+	assert.Equal(t, 0, res.Remaining)
+	assert.Equal(t, "Used Wand of lightning: 6d6 = 21 (last charge, removed)", got.Summary)
+	require.Len(t, got.Snapshots, 1)
+	assert.JSONEq(t, wandBefore, string(got.Snapshots[0].Before))
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true}]`, string(got.Snapshots[0].After))
+	assert.Contains(t, string(got.Payload), `"removed":true`)
+}
+
+func TestRestock_AddsToStockAndLogs(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Increment(mock.Anything, "arrows_plus3", 1).Return(itemsvc.Item{
+		ID: "arrows_plus3", Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 1,
+	}, nil).Once()
+	var got actionlog.NewEntry
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(7), nil)
+
+	res, err := svc.Restock(context.Background(), 1, "arrows_plus3", 1)
+	require.NoError(t, err)
+	assert.Equal(t, &itemsvc.RestockResult{ItemID: "arrows_plus3", Name: "Arrows +3", Type: "arrow", Added: 1, Count: 1, LogEntryID: 7}, res)
+	assert.Equal(t, actionlog.KindItemRestock, got.Kind)
+	assert.False(t, actionlog.IsRoll(got.Kind), "a restock leaves the result card alone")
+	assert.Equal(t, "Restocked Arrows +3: +1 (1 now)", got.Summary)
+	require.Len(t, got.Snapshots, 1)
+	assert.Equal(t, "items:arrows_plus3", got.Snapshots[0].Key)
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":0}]`, string(got.Snapshots[0].Before))
+	assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(got.Snapshots[0].After))
+	assert.JSONEq(t, `{"itemId":"arrows_plus3","name":"Arrows +3","type":"arrow","added":1,"count":1}`, string(got.Payload))
+}
+
+// Charges and daily items are only used: the restock is refused and nothing
+// is logged (the transaction rolls the increment back).
+func TestRestock_RejectsChargesAndDaily(t *testing.T) {
+	for _, b := range []itemsvc.Behaviour{itemsvc.BehaviourCharges, itemsvc.BehaviourDaily} {
+		t.Run(string(b), func(t *testing.T) {
+			dal := mocks.NewMockDAL(t)
+			svc, _ := itemsvc.New(dal, deps(t).Deps) // log mock fails on any call
+			dal.EXPECT().Increment(mock.Anything, "x", 1).Return(itemsvc.Item{ID: "x", Behaviour: b, Count: 2}, nil)
+			_, err := svc.Restock(context.Background(), 1, "x", 1)
+			assert.ErrorIs(t, err, itemsvc.ErrNotRestockable)
+		})
+	}
+}
+
+func TestRestock_RejectsOutOfRangeCounts(t *testing.T) {
+	for _, n := range []int{0, -1, itemsvc.MaxRestock + 1} {
+		dal := mocks.NewMockDAL(t) // nothing is written
+		svc, _ := itemsvc.New(dal, deps(t).Deps)
+		_, err := svc.Restock(context.Background(), 1, "x", n)
+		assert.ErrorIs(t, err, domain.ErrInvalidInput, n)
+	}
+}
+
+func TestRestock_UnknownItem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Decrement(mock.Anything, "arrows").Return(itemsvc.Item{ID: "arrows", Kind: itemsvc.KindAmmo, Count: 1}, nil)
-	_, err := svc.UseItem(context.Background(), 1, "arrows")
-	assert.True(t, errors.Is(err, domain.ErrInvalidInput))
+	dal.EXPECT().Increment(mock.Anything, "nope", 2).Return(itemsvc.Item{}, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound))
+	_, err := svc.Restock(context.Background(), 1, "nope", 2)
+	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }

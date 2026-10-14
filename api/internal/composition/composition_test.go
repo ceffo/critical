@@ -331,14 +331,6 @@ func TestUsingAnEmptyItemFailsAndLogsNothing(t *testing.T) {
 	assert.Zero(t, itemCount(t, bs, "fire_flask"))
 }
 
-func TestUsingAmmoThroughUseIsRefusedAndKeepsTheArrow(t *testing.T) {
-	bs := newBacking(t)
-	before := itemCount(t, bs, "arrows_plus1")
-	_, err := bs.Items.UseItem(context.Background(), bs.CharacterID, "arrows_plus1")
-	assert.ErrorIs(t, err, domain.ErrInvalidInput)
-	assert.Equal(t, before, itemCount(t, bs, "arrows_plus1"))
-}
-
 // The Power Gem's Dispel is once a day: it rolls nothing, a second use is
 // refused, and a long rest refills it.
 func TestGemDispelOncePerDayUntilLongRest(t *testing.T) {

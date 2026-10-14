@@ -126,7 +126,9 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 	if err != nil {
 		return nil, fmt.Errorf("use ammunition %s: %w", ammoID, err)
 	}
-	if item.Kind != itemsvc.KindAmmo || item.AmmoKind != weapon.AmmoKind {
+	// Ammo is any item of the weapon's ammo kind, whatever its behaviour
+	// (critical-qki.13). The weapon fires ammo, so its kind is never empty.
+	if item.AmmoKind != weapon.AmmoKind {
 		return nil, fmt.Errorf("%w: %s cannot fire %s", domain.ErrInvalidInput, weapon.Name, item.Name)
 	}
 	return &item, nil

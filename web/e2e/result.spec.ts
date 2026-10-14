@@ -46,11 +46,11 @@ test("a saving throw shows target, roll and margin", async ({ page }) => {
   await snap(page, "save-result");
 });
 
-test("spells and items tabs render their panels", async ({ page }) => {
+test("spells and inventory tabs render their panels", async ({ page }) => {
   await openDashboard(page);
   await page.getByRole("tab", { name: "Spells" }).click();
   await expect(page.getByRole("tabpanel")).toContainText("Spell Slots");
   await snap(page, "spells-tab");
-  await page.getByRole("tab", { name: "Items" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("Charged items");
+  await page.getByRole("tab", { name: "Inventory" }).click();
+  await expect(page.getByRole("tabpanel")).toContainText("Wand of lightning");
 });

@@ -116,7 +116,7 @@
     "tabs": {
       "attack": "Attaque",
       "spells": "Sorts",
-      "items": "Objets",
+      "inventory": "Inventaire",
       "saves": "Sauvegardes",
       "lookup": "Recherche de sorts"
     }
@@ -157,16 +157,21 @@
     }
   },
   "items": {
-    "title": "Objets",
-    "placeholder": "Les objets à charges et consommables s'utiliseront d'ici.",
-    "ammo": "Munitions",
-    "charged": "Objets à charges et consommables",
-    "use": "Utiliser",
-    "left": "{{count}} restant(s)",
+    "title": "Inventaire",
+    "useOne": "Utiliser un(e) {{name}}",
+    "addOne": "Ajouter un(e) {{name}}",
     "count": "{{count}} / {{max}}",
-    "empty": "Vide",
-    "perDay": "1/jour",
-    "loading": "Chargement des objets…",
+    "magicalBonus": "Bonus magique",
+    "behaviour": {
+      "stock": "Stock",
+      "charges": "Charges",
+      "daily": "Quotidien"
+    },
+    "behaviourHint": {
+      "stock": "Utilisé et réapprovisionné ; reste listé à 0",
+      "charges": "Utilisé seulement ; disparaît à 0",
+      "daily": "Utilisé seulement ; rechargé par un repos long"
+    },
     "none": "Aucun objet."
   },
   "spellSlots": {
@@ -452,6 +457,7 @@
     "total": "Total",
     "save": "Sauvegarde : {{name}}",
     "left": "{{name}} : {{count}} restant(s)",
+    "leftRemoved": "{{name}} : dernière charge utilisée, retiré de l'inventaire",
     "noRoll": "Rien à lancer : l'effet se résout à la table.",
     "adjust": {
       "title": "Ajuster après le jet",
@@ -490,6 +496,7 @@
       "round_set": "Round",
       "attack": "Attaque",
       "item_use": "Objet",
+      "item_restock": "Objet",
       "spell_prep": "Préparation",
       "long_rest": "Repos",
       "save": "Sauvegarde",
@@ -549,7 +556,10 @@
     },
     "item": {
       "rolled": "{{name}} utilisé : {{dice}} = {{total}} ({{left}} restant)",
-      "used": "{{name}} utilisé ({{left}} restant)"
+      "used": "{{name}} utilisé ({{left}} restant)",
+      "rolledRemoved": "{{name}} utilisé : {{dice}} = {{total}} (dernière charge, retiré)",
+      "usedRemoved": "{{name}} utilisé (dernière charge, retiré)",
+      "restocked": "{{name}} réapprovisionné : +{{added}} ({{count}} maintenant)"
     },
     "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés",
     "saveThrow": {

@@ -42,8 +42,17 @@ var Items = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
-		Kind: column{
-			Name:      "kind",
+		Type: column{
+			Name:      "type",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Behaviour: column{
+			Name:      "behaviour",
 			DBType:    "TEXT",
 			Default:   "",
 			Comment:   "",
@@ -82,15 +91,6 @@ var Items = Table[
 			Name:      "max_count",
 			DBType:    "INTEGER",
 			Default:   "",
-			Comment:   "",
-			Nullable:  false,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		PerDay: column{
-			Name:      "per_day",
-			DBType:    "INTEGER",
-			Default:   "0",
 			Comment:   "",
 			Nullable:  false,
 			Generated: false,
@@ -153,12 +153,12 @@ type itemColumns struct {
 	ID         column
 	Position   column
 	Name       column
-	Kind       column
+	Type       column
+	Behaviour  column
 	MagicBonus column
 	AmmoKind   column
 	Count      column
 	MaxCount   column
-	PerDay     column
 	EffectDice column
 	EffectSave column
 	Notes      column
@@ -166,7 +166,7 @@ type itemColumns struct {
 
 func (c itemColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.Position, c.Name, c.Kind, c.MagicBonus, c.AmmoKind, c.Count, c.MaxCount, c.PerDay, c.EffectDice, c.EffectSave, c.Notes,
+		c.ID, c.Position, c.Name, c.Type, c.Behaviour, c.MagicBonus, c.AmmoKind, c.Count, c.MaxCount, c.EffectDice, c.EffectSave, c.Notes,
 	}
 }
 

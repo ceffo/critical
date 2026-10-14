@@ -37,12 +37,12 @@ type ItemTemplate struct {
 	ID         func() string
 	Position   func() int64
 	Name       func() string
-	Kind       func() string
+	Type       func() string
+	Behaviour  func() string
 	MagicBonus func() int64
 	AmmoKind   func() string
 	Count      func() int64
 	MaxCount   func() int64
-	PerDay     func() int64
 	EffectDice func() string
 	EffectSave func() string
 	Notes      func() string
@@ -80,9 +80,13 @@ func (o ItemTemplate) BuildSetter() *models.ItemSetter {
 		val := o.Name()
 		m.Name = omit.From(val)
 	}
-	if o.Kind != nil {
-		val := o.Kind()
-		m.Kind = omit.From(val)
+	if o.Type != nil {
+		val := o.Type()
+		m.Type = omit.From(val)
+	}
+	if o.Behaviour != nil {
+		val := o.Behaviour()
+		m.Behaviour = omit.From(val)
 	}
 	if o.MagicBonus != nil {
 		val := o.MagicBonus()
@@ -99,10 +103,6 @@ func (o ItemTemplate) BuildSetter() *models.ItemSetter {
 	if o.MaxCount != nil {
 		val := o.MaxCount()
 		m.MaxCount = omit.From(val)
-	}
-	if o.PerDay != nil {
-		val := o.PerDay()
-		m.PerDay = omit.From(val)
 	}
 	if o.EffectDice != nil {
 		val := o.EffectDice()
@@ -147,8 +147,11 @@ func (o ItemTemplate) Build() *models.Item {
 	if o.Name != nil {
 		m.Name = o.Name()
 	}
-	if o.Kind != nil {
-		m.Kind = o.Kind()
+	if o.Type != nil {
+		m.Type = o.Type()
+	}
+	if o.Behaviour != nil {
+		m.Behaviour = o.Behaviour()
 	}
 	if o.MagicBonus != nil {
 		m.MagicBonus = o.MagicBonus()
@@ -161,9 +164,6 @@ func (o ItemTemplate) Build() *models.Item {
 	}
 	if o.MaxCount != nil {
 		m.MaxCount = o.MaxCount()
-	}
-	if o.PerDay != nil {
-		m.PerDay = o.PerDay()
 	}
 	if o.EffectDice != nil {
 		m.EffectDice = o.EffectDice()
@@ -206,9 +206,9 @@ func ensureCreatableItem(m *models.ItemSetter) {
 		val := random_string(nil)
 		m.Name = omit.From(val)
 	}
-	if m.Kind.IsUnset() {
+	if m.Behaviour.IsUnset() {
 		val := random_string(nil)
-		m.Kind = omit.From(val)
+		m.Behaviour = omit.From(val)
 	}
 	if m.Count.IsUnset() {
 		val := random_int64(nil)
@@ -337,12 +337,12 @@ func (m itemMods) RandomizeAllColumns(f *faker.Faker) ItemMod {
 		ItemMods.RandomID(f),
 		ItemMods.RandomPosition(f),
 		ItemMods.RandomName(f),
-		ItemMods.RandomKind(f),
+		ItemMods.RandomType(f),
+		ItemMods.RandomBehaviour(f),
 		ItemMods.RandomMagicBonus(f),
 		ItemMods.RandomAmmoKind(f),
 		ItemMods.RandomCount(f),
 		ItemMods.RandomMaxCount(f),
-		ItemMods.RandomPerDay(f),
 		ItemMods.RandomEffectDice(f),
 		ItemMods.RandomEffectSave(f),
 		ItemMods.RandomNotes(f),
@@ -443,31 +443,62 @@ func (m itemMods) RandomName(f *faker.Faker) ItemMod {
 }
 
 // Set the model columns to this value
-func (m itemMods) Kind(val string) ItemMod {
+func (m itemMods) Type(val string) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.Kind = func() string { return val }
+		o.Type = func() string { return val }
 	})
 }
 
 // Set the Column from the function
-func (m itemMods) KindFunc(f func() string) ItemMod {
+func (m itemMods) TypeFunc(f func() string) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.Kind = f
+		o.Type = f
 	})
 }
 
 // Clear any values for the column
-func (m itemMods) UnsetKind() ItemMod {
+func (m itemMods) UnsetType() ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.Kind = nil
+		o.Type = nil
 	})
 }
 
 // Generates a random value for the column using the given faker
 // if faker is nil, a default faker is used
-func (m itemMods) RandomKind(f *faker.Faker) ItemMod {
+func (m itemMods) RandomType(f *faker.Faker) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.Kind = func() string {
+		o.Type = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m itemMods) Behaviour(val string) ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Behaviour = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m itemMods) BehaviourFunc(f func() string) ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Behaviour = f
+	})
+}
+
+// Clear any values for the column
+func (m itemMods) UnsetBehaviour() ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Behaviour = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m itemMods) RandomBehaviour(f *faker.Faker) ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Behaviour = func() string {
 			return random_string(f)
 		}
 	})
@@ -592,37 +623,6 @@ func (m itemMods) UnsetMaxCount() ItemMod {
 func (m itemMods) RandomMaxCount(f *faker.Faker) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
 		o.MaxCount = func() int64 {
-			return random_int64(f)
-		}
-	})
-}
-
-// Set the model columns to this value
-func (m itemMods) PerDay(val int64) ItemMod {
-	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.PerDay = func() int64 { return val }
-	})
-}
-
-// Set the Column from the function
-func (m itemMods) PerDayFunc(f func() int64) ItemMod {
-	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.PerDay = f
-	})
-}
-
-// Clear any values for the column
-func (m itemMods) UnsetPerDay() ItemMod {
-	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.PerDay = nil
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-func (m itemMods) RandomPerDay(f *faker.Faker) ItemMod {
-	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.PerDay = func() int64 {
 			return random_int64(f)
 		}
 	})

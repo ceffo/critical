@@ -427,6 +427,79 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 	}
 }
 
+// docs/backend.md "Attack Modifiers", weapon magic: the weapon's own +N, or a
+// buff's "weapon becomes +N" when higher; never stacked. Here the own +3
+// beats the buff's +2, so the breakdown names the weapon, not the buff. Fails
+// if the buff always replaced the weapon (it would show +2 from the buff).
+func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
+	dagger := combatsvc.Weapon{
+		ID: "dagger3", Name: "Dagger +3", BaseDamage: "1d4", DamageLarge: "1d3",
+		MagicToHit: 3, MagicDamage: 3, Kind: combatsvc.WeaponMelee,
+	}
+	f := newFixture(t)
+	f.weapons.EXPECT().Get(mock.Anything, "dagger3").Return(dagger, nil)
+	f.withChar(bard())
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(buffsvc.BuffModifiers{
+		SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, WeaponBuff: 2, WeaponBuffFrom: "Magic Weapon",
+	}, nil)
+	f.dice.EXPECT().RollD20().Return(10).Once()
+	f.d100s(t, 33, noCritMult)
+	f.dice.EXPECT().RollDie(4).Return(3).Once()
+	f.records()
+
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "dagger3", TargetAC: 5})
+	require.NoError(t, err)
+
+	// To hit: STR 12 +0, dagger +3 (the buff's +2 is not added). Eff. THAC0 10; needs 5.
+	assert.Equal(t, []combatsvc.Modifier{modStr(12, 0), modWeapon(dagger)}, res.Modifiers)
+	assert.Equal(t, 10, res.EffectiveThac0)
+	assert.True(t, res.Hit)
+	// Damage 1d4=3: ((3 × 1) + 3) × 1 + 0 = 6; one weapon term, the dagger's.
+	assert.Equal(t, 3, res.WeaponBuff)
+	assert.Equal(t, 6, res.TotalDamage)
+	assert.Equal(t, []combatsvc.DamageTerm{
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Dagger +3", Detail: "Dagger +3", Value: 3},
+		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 12", Detail: "12", Value: 0},
+	}, res.DamageTerms)
+}
+
+// docs/backend.md "Attack Modifiers", ammo magic: a bow with no magic of its
+// own, a buff making it +5, and a +3 arrow total +8 (to hit and damage) as two
+// separate entries. Fails if the buff replaced the ammo bonus (+5 only).
+func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
+	bow := combatsvc.Weapon{
+		ID: "plainbow", Name: "Short Bow", BaseDamage: "1d6", DamageLarge: "1d6",
+		Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
+	}
+	f := newFixture(t)
+	f.weapons.EXPECT().Get(mock.Anything, "plainbow").Return(bow, nil)
+	f.withChar(bard())
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(buffsvc.BuffModifiers{
+		SpellsBuff: 1, Multipliers: 1, EffectiveStr: 18, WeaponBuff: 5, WeaponBuffFrom: "Magic Weapon",
+	}, nil)
+	f.items.EXPECT().Use(mock.Anything, "arrows_plus3").Return(arrows3Left1, nil).Once()
+	f.dice.EXPECT().RollD20().Return(9).Once()
+	f.d100s(t, 33, noCritMult)
+	f.dice.EXPECT().RollDie(6).Return(4).Once()
+	f.records()
+
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "plainbow", AmmoItemID: "arrows_plus3", TargetAC: 5})
+	require.NoError(t, err)
+
+	buffMod := combatsvc.Modifier{Kind: combatsvc.ModWeaponBuff, Source: "Magic Weapon (weapon +5)", Detail: "Magic Weapon", Value: 5}
+	// To hit: DEX 17 +2 (no STR for a bow), buff +5, arrow +3 = +10. Eff. THAC0 3; needs -2.
+	assert.Equal(t, []combatsvc.Modifier{modDex(17, 2), buffMod, modAmmo(arrows3Left1)}, res.Modifiers)
+	assert.Equal(t, 3, res.EffectiveThac0)
+	assert.True(t, res.Hit)
+	// Damage 1d6=4: ((4 × 1) + (5 + 3)) × 1 + 0 = 12; two separate weapon terms.
+	assert.Equal(t, 8, res.WeaponBuff)
+	assert.Equal(t, 12, res.TotalDamage)
+	assert.Equal(t, []combatsvc.DamageTerm{
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponBuff, Source: "Magic Weapon (weapon +5)", Detail: "Magic Weapon", Value: 5},
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModAmmoMagic, Source: "Arrows +3", Detail: "Arrows +3", Value: 3},
+	}, res.DamageTerms)
+}
+
 // A missile attack spends the arrow and records the attack with the full
 // result and an items snapshot in the same transaction.
 func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {

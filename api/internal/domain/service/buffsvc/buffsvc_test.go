@@ -189,7 +189,7 @@ func TestActivate(t *testing.T) {
 		{"negative rounds", buffsvc.BuffEffect{Name: "X", Duration: -1}},
 		{"negative charges", buffsvc.BuffEffect{Name: "X", Charges: -1}},
 		{"zero STR bonus", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{StrBonus: intPtr(0)}}},
-		{"STR set above 25", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{StrSet: intPtr(26)}}},
+		{"STR cap above 25", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{StrMax: intPtr(26)}}},
 		{"STR cap below 1", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{StrMax: intPtr(0)}}},
 		{"min STR above 25", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{MinStr: intPtr(30)}}},
 		{"weapon +0", buffsvc.BuffEffect{Name: "X", Effects: buffsvc.BuffEffects{WeaponBuff: intPtr(0)}}},
@@ -489,8 +489,8 @@ func jsonInt(n int) string {
 	return string(b)
 }
 
-// Strength is +1d6 for a bard, max 18; Improved Strength 1d6+4, max 23;
-// Strength magic is not cumulative. The Power Gem needs STR 18.
+// Strength is +1d6 for a bard, max 18, and stacks with itself; Improved
+// Strength 1d6+4, max 23, replaces it. The Power Gem needs STR 18 or more.
 var (
 	powerGem = buffsvc.BuffEffect{ID: "g", Name: "Power Gem", Effects: buffsvc.BuffEffects{
 		MinStr: intPtr(18), WeaponBuff: intPtr(5), Multiplier: floatPtr(2.0),
@@ -505,40 +505,42 @@ var (
 			StrBonus: intPtr(bonus), StrMax: intPtr(23),
 		}}
 	}
-	gauntlets = buffsvc.BuffEffect{ID: "o", Name: "Ogre gauntlets", Effects: buffsvc.BuffEffects{StrSet: intPtr(18)}}
+	// handMade is a Strength bonus entered in the buff form: no cap, or a
+	// custom one.
+	handMade = func(bonus int, strMax *int) buffsvc.BuffEffect {
+		return buffsvc.BuffEffect{ID: "h", Name: "Strength (hand-made)", Effects: buffsvc.BuffEffects{
+			StrBonus: intPtr(bonus), StrMax: strMax,
+		}}
+	}
 )
 
-func TestGetEffectiveStr(t *testing.T) {
-	tests := []struct {
-		name  string
-		base  int
-		buffs []buffsvc.BuffEffect
-		want  int
-	}{
-		{"no buffs: the sheet", 12, nil, 12},
-		{"Strength +6 from 12 reaches 18", 12, []buffsvc.BuffEffect{strength(6)}, 18},
-		{"Strength +4 from 12 gives 16", 12, []buffsvc.BuffEffect{strength(4)}, 16},
-		{"Strength never confers more than 18", 15, []buffsvc.BuffEffect{strength(6)}, 18},
-		{"Strength on an 18 stays 18", 18, []buffsvc.BuffEffect{strength(3)}, 18},
-		{"Improved Strength 1d6+4 from 12", 12, []buffsvc.BuffEffect{improvedStrength(10)}, 22},
-		{"Improved Strength caps at 23", 16, []buffsvc.BuffEffect{improvedStrength(10)}, 23},
-		{"not cumulative: the best one wins", 12, []buffsvc.BuffEffect{strength(6), improvedStrength(5)}, 18},
-		{"not cumulative: Improved beats Strength", 12, []buffsvc.BuffEffect{strength(6), improvedStrength(9)}, 21},
-		{"a set raises the score", 12, []buffsvc.BuffEffect{gauntlets}, 18},
-		{"a set never lowers it", 19, []buffsvc.BuffEffect{gauntlets}, 19},
-		{"other buffs do not touch STR", 12, []buffsvc.BuffEffect{powerGem}, 12},
-	}
+type strCase struct {
+	name  string
+	base  int
+	buffs []buffsvc.BuffEffect
+	want  int
+}
+
+func runEffectiveStr(t *testing.T, tests []strCase) {
+	t.Helper()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.base(tt.base)
-			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil)
+			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil).Once()
 
 			got, err := f.svc.GetEffectiveStr(context.Background(), charID)
 			require.NoError(t, err)
 			assert.Equal(t, buffsvc.Strength{Base: tt.base, Effective: tt.want}, got)
 		})
 	}
+}
+
+func TestGetEffectiveStr(t *testing.T) {
+	runEffectiveStr(t, []strCase{
+		{"no buffs: the sheet", 12, nil, 12},
+		{"other buffs do not touch STR", 12, []buffsvc.BuffEffect{powerGem}, 12},
+	})
 
 	t.Run("character error is wrapped", func(t *testing.T) {
 		f := newFixture(t)
@@ -550,6 +552,108 @@ func TestGetEffectiveStr(t *testing.T) {
 	})
 }
 
+// Effective STR rule 1 (docs/backend.md "Attack Modifiers"): with no
+// Improved Strength, base + the sum of every Strength bonus, capped at 18
+// (user: "all str spells stack up to 18").
+func TestEffectiveStr_Rule1_StrengthStacksUpTo18(t *testing.T) {
+	runEffectiveStr(t, []strCase{
+		{"one cast: 12 + 4 = 16", 12, []buffsvc.BuffEffect{strength(4)}, 16},
+		{"one cast reaching 18: 12 + 6", 12, []buffsvc.BuffEffect{strength(6)}, 18},
+		{"two casts sum: 12 + 2 + 3 = 17", 12, []buffsvc.BuffEffect{strength(2), strength(3)}, 17},
+		{"two casts sum to 18: 12 + 1 + 5", 12, []buffsvc.BuffEffect{strength(1), strength(5)}, 18},
+		{"sum capped at 18: 12 + 4 + 5 = 21 -> 18", 12, []buffsvc.BuffEffect{strength(4), strength(5)}, 18},
+		{"one cast capped at 18: 15 + 6", 15, []buffsvc.BuffEffect{strength(6)}, 18},
+		{"never lowers a score above 18", 19, []buffsvc.BuffEffect{strength(3), strength(2)}, 19},
+		{
+			"hand-made +4 with no cap + received +3: 12 + 7 -> 18", 12,
+			[]buffsvc.BuffEffect{handMade(4, nil), strength(3)},
+			18,
+		},
+		{
+			"hand-made +2 with no cap + received +1: 12 + 3 = 15", 12,
+			[]buffsvc.BuffEffect{handMade(2, nil), strength(1)},
+			15,
+		},
+		{
+			"hand-made uncapped alone is still capped at 18: 12 + 9", 12,
+			[]buffsvc.BuffEffect{handMade(9, nil)},
+			18,
+		},
+		{
+			"a custom cap below 18 is ignored, the total cap is 18: 12 + 5(max 16) + 2", 12,
+			[]buffsvc.BuffEffect{handMade(5, intPtr(16)), strength(2)},
+			18,
+		},
+	})
+}
+
+// Effective STR rule 2: Improved Strength (a bonus with str_max above 18)
+// replaces every other Strength bonus and can reach 23; it is not
+// cumulative with itself (best single one).
+func TestEffectiveStr_Rule2_ImprovedReplacesStrength(t *testing.T) {
+	runEffectiveStr(t, []strCase{
+		{"Improved 1d6+4 alone: 12 + 10 = 22", 12, []buffsvc.BuffEffect{improvedStrength(10)}, 22},
+		{"Improved caps at 23", 16, []buffsvc.BuffEffect{improvedStrength(9)}, 23},
+		{
+			"replaces a higher L2 sum: L2 12+6 = 18, Improved 12+5 = 17", 12,
+			[]buffsvc.BuffEffect{strength(6), strength(3), improvedStrength(5)},
+			17,
+		},
+		{
+			"replaces a lower L2 sum: L2 12+2 = 14, Improved 12+7 = 19", 12,
+			[]buffsvc.BuffEffect{strength(2), improvedStrength(7)},
+			19,
+		},
+		{
+			"two Improved: the best single one wins", 12,
+			[]buffsvc.BuffEffect{improvedStrength(6), improvedStrength(8)},
+			20,
+		},
+		{
+			"replaces hand-made bonuses too: 12 + 4 + 3, Improved 12+5 = 17", 12,
+			[]buffsvc.BuffEffect{handMade(4, nil), strength(3), improvedStrength(5)},
+			17,
+		},
+	})
+}
+
+// Effective STR rule 3 (Power Gem, docs/backend.md "Attack Modifiers"): a
+// buff with min_str 18 applies at effective STR 18 or more (user: "not
+// exactly 18 >= 18"): on at 18, 19 and 23, off at 17.
+func TestEffectiveStr_Rule3_PowerGemFrom18Up(t *testing.T) {
+	on := func(str int) buffsvc.BuffModifiers {
+		return buffsvc.BuffModifiers{
+			SpellsBuff: 1.0, WeaponBuff: 5, WeaponBuffFrom: "Power Gem", Multipliers: 2.0, EffectiveStr: str,
+			MultipliersFrom: []buffsvc.Factor{{Buff: "Power Gem", Value: 2.0}},
+		}
+	}
+	tests := []struct {
+		name  string
+		base  int
+		buffs []buffsvc.BuffEffect
+		want  buffsvc.BuffModifiers
+	}{
+		{
+			"17 (12 + Strength 5): off", 12,
+			[]buffsvc.BuffEffect{strength(5), powerGem},
+			buffsvc.BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: 17},
+		},
+		{"18 (12 + Strength 2 + 4): on", 12, []buffsvc.BuffEffect{strength(2), strength(4), powerGem}, on(18)},
+		{"19 (12 + Improved 7): on", 12, []buffsvc.BuffEffect{improvedStrength(7), powerGem}, on(19)},
+		{"23 (14 + Improved 10, capped): on", 14, []buffsvc.BuffEffect{improvedStrength(10), powerGem}, on(23)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil).Once()
+
+			got, err := f.svc.Aggregate(context.Background(), charID, tt.base)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestListStatus(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -559,6 +663,12 @@ func TestListStatus(t *testing.T) {
 		{"Power Gem alone at STR 12 does not apply", []buffsvc.BuffEffect{powerGem}, []bool{false}},
 		{"Strength to 18 makes the Power Gem apply", []buffsvc.BuffEffect{strength(6), powerGem}, []bool{true, true}},
 		{"Strength to 17 is not enough", []buffsvc.BuffEffect{strength(5), powerGem}, []bool{true, false}},
+		// Rule 2: while Improved Strength replaces them, Strength bonuses do not apply.
+		{
+			"Improved active: the Strength bonuses show as not applying",
+			[]buffsvc.BuffEffect{strength(3), handMade(2, nil), improvedStrength(6), powerGem},
+			[]bool{false, false, true, true},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

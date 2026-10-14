@@ -139,15 +139,15 @@ type BuffEffect struct {
     Charges  int    // left to absorb (Stoneskin layers, Mirror Images); 0 = none; ends at 0
     Duration int    // rounds left, counted down by Next Round; 0 = not timed; expires at 0
     Effects  BuffEffects // min_str, spells_buff, weapon_buff, multiplier, save_bonus,
-                         // str_set, str_bonus + str_max, ac, to_hit, damage
+                         // str_bonus + str_max, ac, to_hit, damage
                          // (pointers: nil = no contribution)
 }
 // weapon_buff makes the weapon count as +N (Power Gem: "the weapon becomes +5"), to hit and
 // damage; it replaces the weapon's own magic when higher and does not add to it. to_hit adds
 // to attack rolls; damage adds to damage after the multipliers.
 // A buff may have both counters (Mirror Image) or neither (until dismissed).
-// Effective STR = best single STR effect (set, or base + bonus capped at str_max; never
-// lower than base; Strength magic is not cumulative). min_str gates against effective STR.
+// Effective STR: see "Effective STR" under Attack Modifiers. min_str gates the buff's
+// other effects: they apply while effective STR >= min_str.
 
 type RollResult struct {
     D20Roll         int
@@ -184,10 +184,38 @@ auto-miss, no auto-hit. To-hit modifiers, each listed in `Modifiers`:
 - Strength hit adjustment, PHB Table 1, from the **effective** STR (buffs) — melee and hurled
   weapons; never for bows (PHB "Ability Modifiers in Missile Combat": only with a strength bow).
 - Dexterity missile adjustment, PHB Table 2 — every missile weapon (bow or hurled).
-- Weapon magic, or a buff's "weapon becomes +N" when higher (Power Gem, only at effective STR 18).
+- Weapon magic, or a buff's "weapon becomes +N" when higher (Power Gem, at effective STR 18 or
+  more: rule 3 below).
 - Ammo magic: DMG 2e "Bow +1": with magic arrows, total the bow's and the arrow's bonuses (to hit
   and damage).
 - Buff `to_hit` effects, one per buff; the situational modifier entered at the table.
+
+### Effective STR
+
+The STR score used for the Strength adjustments and for buff gates (critical-qki.33). STR
+effects themselves are never gated, and no rule lowers the score below the sheet's.
+
+User rulings, 2026-10-13: "strength level 2 says WItH OTHER. it's find with ITSELF"; "improved
+replaces. level 2 can stack with itself. this is why kelsen often equips 2 str lvl 2 to be sure
+to get to 18"; "simple: all str spells stack up to 18. unless it's improved strength that can go
+to 23."
+
+1. **Strength bonuses stack, up to 18.** With no Improved Strength active, effective STR = base +
+   the **sum** of every active `str_bonus` (Strength cast or received, or entered by hand, with
+   or without a `str_max`), total capped at 18 (PHB: Strength "cannot confer a Strength of 19 or
+   more"). A buff's own `str_max` of 18 or less is not used. Casting or receiving Strength again
+   adds a second buff instead of renewing the first.
+2. **Improved Strength replaces them.** A `str_bonus` whose `str_max` is above 18 is Improved
+   Strength (seeded 1d6+4, cap 23, for a bard). While one is active, every other Strength bonus
+   contributes nothing (its badge shows "replaced"), and the best single Improved wins: base +
+   bonus capped at its `str_max`. Casting it again renews it.
+3. **Gate.** A buff's other effects apply while effective STR ≥ its `min_str`. The Power Gem
+   forms set `min_str` 18: +5 and ×2 at effective STR 18 **or more** (19-23 with Improved
+   Strength included). User, 2026-10-13: "not exactly 18 >= 18".
+
+Exceptional Strength (18/xx) is not modelled: PHB, warriors only; Kelsen is a Bard. There is no
+"set STR to X" effect (user, 2026-10-13: "remove that buff type"); a `str_set` key in a stored
+buff is ignored when read, and in a request body it is ignored like any unknown key.
 
 A weapon that fires ammunition (`ammo_kind`) needs an ammo item of that kind; the attack spends one.
 Dice order: d20, crit-check d100, multiplier d100, then the damage dice, all rolled on **every** attack (a miss shows no

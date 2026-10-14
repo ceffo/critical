@@ -56,7 +56,7 @@ func TestActiveBuffs_RoundTrip(t *testing.T) {
 		}},
 		{ID: "b", Name: "Mirror Image", Duration: 27, Charges: 3},
 		{ID: "c", Name: "Strength", Duration: 540, Effects: buffsvc.BuffEffects{
-			StrBonus: intPtr(4), StrMax: intPtr(18), StrSet: intPtr(17), AC: intPtr(-2),
+			StrBonus: intPtr(4), StrMax: intPtr(18), AC: intPtr(-2),
 		}},
 		{ID: "d", Name: "Bless", Duration: 6, Effects: buffsvc.BuffEffects{ToHit: intPtr(1), Damage: intPtr(-1)}},
 	}
@@ -192,6 +192,23 @@ func TestActiveBuffs_ReadsStoredJSON(t *testing.T) {
 	assert.Equal(t, []buffsvc.BuffEffect{{
 		ID: "a", Name: "Power Gem", Duration: 5,
 		Effects: buffsvc.BuffEffects{WeaponBuff: intPtr(5), Multiplier: floatPtr(2.0), MinStr: intPtr(18)},
+	}}, got)
+}
+
+// str_set ("set Strength to X") was removed (critical-qki.33): a row written
+// before still reads, and the effect is ignored.
+func TestActiveBuffs_IgnoresRemovedStrSet(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	_, err := db.ExecContext(context.Background(),
+		`INSERT INTO active_buffs (character_id, buffs) VALUES (?, ?)`, charID,
+		`[{"id":"o","name":"Ogre gauntlets","charges":0,"duration":0,"effects":{"str_set":18,"ac":-1}}]`)
+	require.NoError(t, err)
+
+	got, err := buffdal.New(db).GetActiveBuffs(context.Background(), charID)
+	require.NoError(t, err)
+	assert.Equal(t, []buffsvc.BuffEffect{{
+		ID: "o", Name: "Ogre gauntlets", Effects: buffsvc.BuffEffects{AC: intPtr(-1)},
 	}}, got)
 }
 

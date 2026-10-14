@@ -90,9 +90,11 @@ function BuffBadge({
           inactive && "border-dashed text-muted-foreground",
         )}
         title={
-          inactive && b.effects.min_str !== undefined
-            ? t("buffs.inactiveHint", { min: b.effects.min_str })
-            : undefined
+          !inactive
+            ? undefined
+            : b.effects.min_str !== undefined
+              ? t("buffs.inactiveHint", { min: b.effects.min_str })
+              : t("buffs.replacedHint")
         }
       >
         <span className="font-medium">{b.name}</span>
@@ -123,7 +125,9 @@ function BuffBadge({
         )}
         {inactive && (
           <span className="text-xs italic">
-            {t("buffs.inactive", { min: b.effects.min_str ?? "?" })}
+            {b.effects.min_str !== undefined
+              ? t("buffs.inactive", { min: b.effects.min_str })
+              : t("buffs.replaced")}
           </span>
         )}
         {b.charges > 0 && (
@@ -187,7 +191,9 @@ function EditBuffForm({
 
   async function submit() {
     if (!valid) return;
-    const ok = await run(() => editBuff(buff.id, { duration: r, charges: c, note }));
+    const ok = await run(() =>
+      editBuff(buff.id, { duration: r, charges: c, note }),
+    );
     if (ok) onDone();
   }
 

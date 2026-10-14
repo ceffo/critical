@@ -11,29 +11,59 @@ import (
 // out at 25).
 const maxAbility = 25
 
-// effectiveStr is the STR score with buffs. STR magic is not cumulative
-// (PHB Strength: "not cumulative with other Strength magic"), so the best
-// single effect wins: a StrSet raises the score to its value, a StrBonus
-// gives base+bonus capped at its StrMax. Neither ever lowers the score.
-// STR effects are not themselves gated by MinStr.
+// strengthCap is the highest STR that stacked Strength bonuses reach
+// (PHB Strength: it "cannot confer a Strength of 19 or more").
+const strengthCap = 18
+
+// isImproved reports whether e is an Improved Strength bonus: a StrBonus
+// whose StrMax is above 18 (the seed caps it at 23 for a bard, 25 for a
+// warrior). It is the only Strength magic that goes past 18.
+func isImproved(e BuffEffects) bool {
+	return e.StrBonus != nil && e.StrMax != nil && *e.StrMax > strengthCap
+}
+
+// isStrengthBonus reports whether e is a stacking Strength bonus: any
+// StrBonus that is not Improved Strength (wizard L2 Strength, or a hand-made
+// bonus with or without a StrMax).
+func isStrengthBonus(e BuffEffects) bool {
+	return e.StrBonus != nil && !isImproved(e)
+}
+
+// effectiveStr is the STR score with buffs (docs/backend.md "Attack
+// Modifiers" > "Effective STR", critical-qki.33). STR effects are not
+// themselves gated by MinStr; no result is ever lower than base.
+//
+//  1. No Improved Strength active: base + the SUM of every Strength bonus,
+//     total capped at 18 (each bonus's own StrMax is not used).
+//  2. Improved Strength active: it REPLACES every other Strength bonus; the
+//     best single Improved wins, base + bonus capped at its StrMax (23).
 func effectiveStr(buffs []BuffEffect, base int) int {
-	best := base
+	improved, hasImproved := base, false
+	sum := 0
 	for _, b := range buffs {
 		e := b.Effects
-		if e.StrSet != nil && *e.StrSet > best {
-			best = *e.StrSet
-		}
-		if e.StrBonus != nil {
-			v := base + *e.StrBonus
-			if e.StrMax != nil && v > *e.StrMax {
-				v = *e.StrMax
-			}
-			if v > best {
-				best = v
-			}
+		switch {
+		case isImproved(e):
+			hasImproved = true
+			improved = max(improved, min(base+*e.StrBonus, *e.StrMax))
+		case isStrengthBonus(e):
+			sum += *e.StrBonus
 		}
 	}
-	return best
+	if hasImproved {
+		return improved
+	}
+	return max(base, min(base+sum, strengthCap))
+}
+
+// improvedActive reports whether an Improved Strength is among buffs.
+func improvedActive(buffs []BuffEffect) bool {
+	for _, b := range buffs {
+		if isImproved(b.Effects) {
+			return true
+		}
+	}
+	return false
 }
 
 // aggregate is the pure effect-stacking core: given a list of buffs and the
@@ -52,12 +82,16 @@ func aggregate(buffs []BuffEffect, baseStr int) BuffModifiers {
 	return mods
 }
 
-// statuses marks each buff with whether its effects apply at baseStr.
+// statuses marks each buff with whether its effects apply at baseStr. A
+// Strength bonus does not apply while an Improved Strength replaces it
+// (effective STR rule 2).
 func statuses(buffs []BuffEffect, baseStr int) []BuffStatus {
 	str := effectiveStr(buffs, baseStr)
+	replaced := improvedActive(buffs)
 	out := make([]BuffStatus, len(buffs))
 	for i, b := range buffs {
-		out[i] = BuffStatus{BuffEffect: b, Applies: meetsRequirements(b.Effects, str)}
+		applies := meetsRequirements(b.Effects, str) && (!replaced || !isStrengthBonus(b.Effects))
+		out[i] = BuffStatus{BuffEffect: b, Applies: applies}
 	}
 	return out
 }
@@ -114,7 +148,7 @@ func validateBuff(b BuffEffect) error {
 	for _, s := range []struct {
 		name string
 		v    *int
-	}{{"str_set", e.StrSet}, {"str_max", e.StrMax}, {"min_str", e.MinStr}} {
+	}{{"str_max", e.StrMax}, {"min_str", e.MinStr}} {
 		if s.v != nil && (*s.v < 1 || *s.v > maxAbility) {
 			return fmt.Errorf("%w: %s must be between 1 and %d", domain.ErrInvalidInput, s.name, maxAbility)
 		}

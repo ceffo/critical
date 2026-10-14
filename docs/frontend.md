@@ -57,7 +57,9 @@ flowchart TD
   Round) is a log entry, voidable from the CombatLog. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The header's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
-  (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N".
+  (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; a Strength
+  bonus that an active Improved Strength replaces (`applies: false`, no `min_str`) shows dashed
+  with "replaced by Improved Strength".
 - Attack tab (`components/actions/AttackPanel.tsx`): weapon (`GET /api/weapons`), ammunition for
   weapons with an `ammo_kind` (`GET /api/items`, count shown, `stores/items.ts`), target AC and size,
   situational modifier. The result card labels each modifier and damage term by its `kind`

@@ -356,3 +356,118 @@ func TestFamily(t *testing.T) {
 	assert.Equal(t, "items", actionlog.Family("items:arrows_plus3"))
 	assert.Equal(t, "buffs", actionlog.Family("buffs"))
 }
+
+func saveEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
+	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindSave, Summary: "save", Payload: json.RawMessage(`{"passed":false}`), Corrections: corrections}
+}
+
+func TestAmendLatest(t *testing.T) {
+	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
+	good := actionlog.PayloadAmendment{Summary: " adjusted ", Payload: json.RawMessage(`{"passed":true}`)}
+	onlySave := map[actionlog.Kind]int64{actionlog.KindSave: 5}
+	cases := []struct {
+		name    string
+		entry   *actionlog.Entry
+		getErr  error
+		kind    actionlog.Kind // what the caller amends; default save
+		latest  map[actionlog.Kind]int64
+		fnOut   actionlog.PayloadAmendment
+		fnErr   error
+		wantErr error
+		want    *actionlog.Correction
+	}{
+		{name: "not found", getErr: domain.ErrNotFound, wantErr: domain.ErrNotFound},
+		{name: "not a save", entry: hpEntry(5), wantErr: actionlogsvc.ErrNotAmendable},
+		{name: "not a roll kind", entry: hpEntry(5), kind: actionlog.KindHPChange, wantErr: actionlogsvc.ErrNotAmendable},
+		{name: "voided", entry: saveEntry(5, voided), wantErr: actionlogsvc.ErrAlreadyVoided},
+		{name: "a later save exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 8}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "a later attack exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindAttack: 6}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "a later cast exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindCast: 9}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "a later item use exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindItemUse: 7}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "no roll at all", entry: saveEntry(5), latest: map[actionlog.Kind]int64{}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "fn fails", entry: saveEntry(5), latest: onlySave, fnErr: errBoom, wantErr: errBoom},
+		{name: "empty summary", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Summary: " ", Payload: good.Payload}, wantErr: domain.ErrInvalidInput},
+		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Summary: "x"}, wantErr: domain.ErrInvalidInput},
+		{
+			name: "latest roll amended, older attack ignored", entry: saveEntry(5),
+			latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindAttack: 3}, fnOut: good,
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Summary: "adjusted", Payload: good.Payload},
+		},
+		{
+			name: "amended again", entry: saveEntry(5, actionlog.Correction{Kind: actionlog.CorrectionAmend, Summary: "a", Payload: json.RawMessage(`{}`)}), latest: onlySave, fnOut: good,
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Summary: "adjusted", Payload: good.Payload},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc, dal, _, tx := newSvc(t)
+			kind := c.kind
+			if kind == "" {
+				kind = actionlog.KindSave
+			}
+			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, c.getErr).Once()
+			if c.latest != nil {
+				for _, k := range actionlog.RollKinds {
+					id := c.latest[k]
+					dal.EXPECT().LatestID(mock.Anything, int64(1), k).Return(id, id != 0, nil)
+				}
+			}
+			if c.want != nil {
+				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil)
+				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(saveEntry(5, *c.want), nil).Once()
+			}
+			called := false
+			got, err := svc.AmendLatest(context.Background(), 1, 5, kind, func(e actionlog.Entry) (actionlog.PayloadAmendment, error) {
+				called = true
+				assert.Equal(t, int64(5), e.ID)
+				return c.fnOut, c.fnErr
+			})
+			assert.Equal(t, 1, tx.calls)
+			if c.wantErr != nil {
+				require.ErrorIs(t, err, c.wantErr)
+				if errors.Is(c.wantErr, actionlogsvc.ErrNotLatest) {
+					assert.Contains(t, err.Error(), "only the latest roll can be adjusted")
+				}
+				return
+			}
+			require.NoError(t, err)
+			assert.True(t, called)
+			assert.JSONEq(t, `{"passed":true}`, string(got.EffectivePayload()))
+			assert.Equal(t, "adjusted", got.EffectiveSummary())
+			assert.Equal(t, 0, got.EffectiveHPDelta())
+		})
+	}
+
+	t.Run("latest lookup fails", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(saveEntry(5), nil)
+		dal.EXPECT().LatestID(mock.Anything, int64(1), actionlog.RollKinds[0]).Return(0, false, errBoom)
+		_, err := svc.AmendLatest(context.Background(), 1, 5, actionlog.KindSave, nil)
+		require.ErrorIs(t, err, errBoom)
+	})
+}
+
+func TestEntryEffectivePayload(t *testing.T) {
+	amend := func(p string) actionlog.Correction {
+		c := actionlog.Correction{Kind: actionlog.CorrectionAmend}
+		if p != "" {
+			c.Payload = json.RawMessage(p)
+		}
+		return c
+	}
+	cases := []struct {
+		name        string
+		corrections []actionlog.Correction
+		want        string
+	}{
+		{"original", nil, `{"passed":false}`},
+		{"amended", []actionlog.Correction{amend(`{"passed":true}`)}, `{"passed":true}`},
+		{"latest amend with a payload wins", []actionlog.Correction{amend(`{"a":1}`), amend(`{"a":2}`), amend("")}, `{"a":2}`},
+		{"void keeps the effective payload", []actionlog.Correction{amend(`{"a":1}`), {Kind: actionlog.CorrectionVoid}}, `{"a":1}`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.JSONEq(t, c.want, string(saveEntry(1, c.corrections...).EffectivePayload()))
+		})
+	}
+}

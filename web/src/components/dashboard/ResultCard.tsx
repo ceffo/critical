@@ -1,11 +1,14 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useLogStore } from "@/stores/log";
 import { useRollStore, type LastRoll } from "@/stores/roll";
 import { formatFactor, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { captionClass } from "./fieldStyles";
+import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
+import { captionClass, fieldClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
 
 /** Full breakdown of the last roll, never a bare number. Values come from the API as-is. */
@@ -63,12 +66,17 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
 }
 
 /** A modifier's label in the player's language (detail = score, weapon, ammo or buff name). */
-function modLabel(t: TFunction, m: { kind: string; detail?: string; value: number }): string {
+function modLabel(
+  t: TFunction,
+  m: { kind: string; source?: string; detail?: string; value: number },
+): string {
   // The crit term carries the matched crit-table range; the default table (and entries logged
   // before the table existed) have none.
   if (m.kind === "crit" && (!m.detail || m.detail === "placeholder")) {
     return t("result.mods.critPlaceholder");
   }
+  // Buff and situational labels are their detail; without one, show the server's label.
+  if ((m.kind === "buff" || m.kind === "situational") && !m.detail && m.source) return m.source;
   return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
 }
 
@@ -190,10 +198,10 @@ function SaveResult({ roll }: { roll: Extract<LastRoll, { kind: "save" }> }) {
         <Fact label={t("result.margin")}>{formatSigned(r.hitMargin)}</Fact>
       </dl>
       {r.modifiers.length > 0 && (
-        <ul className="flex flex-col gap-0.5 text-sm">
+        <ul className="flex flex-col gap-0.5 text-sm" data-testid="save-modifiers">
           {r.modifiers.map((m, i) => (
             <li key={i} className="flex justify-between gap-2">
-              <span className="min-w-0 truncate">{m.source}</span>
+              <span className="min-w-0 truncate">{modLabel(t, m)}</span>
               <span className="font-mono">{formatSigned(m.value)}</span>
             </li>
           ))}
@@ -207,7 +215,84 @@ function SaveResult({ roll }: { roll: Extract<LastRoll, { kind: "save" }> }) {
           </div>
         </div>
       )}
+      {r.logEntryId !== undefined && (
+        // Keyed by entry so a new save starts from its own adjustment.
+        <AdjustSave key={r.logEntryId} result={r} />
+      )}
     </div>
+  );
+}
+
+/**
+ * The adjustment of the save on the card (the latest one): − / + around a signed value starting at
+ * the current adjustment, an optional reason, Apply. The server recomputes verdict and margin.
+ */
+function AdjustSave({ result: r }: { result: Extract<LastRoll, { kind: "save" }>["result"] }) {
+  const { t } = useTranslation();
+  const adjustLastSave = useRollStore((s) => s.adjustLastSave);
+  const rolling = useRollStore((s) => s.rolling);
+  const voided = useLogStore((s) =>
+    s.entries.some((e) => e.id === r.logEntryId && e.status === "voided"),
+  );
+  const [value, setValue] = useState(r.adjustment ?? 0);
+  const [reason, setReason] = useState(r.adjustmentReason ?? "");
+  if (voided) return null;
+  const changed = adjustmentChanged(r, value, reason);
+
+  return (
+    <form
+      className="flex flex-col gap-2 rounded-lg border p-2.5"
+      aria-label={t("result.adjust.label")}
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        if (changed) void adjustLastSave(value, value === 0 ? "" : reason.trim());
+      }}
+    >
+      <div className={captionClass}>{t("result.adjust.title")}</div>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-label={t("result.adjust.decrease")}
+            onClick={() => setValue((v) => stepAdjustment(v, -1))}
+          >
+            −
+          </Button>
+          <output
+            className="w-10 text-center font-mono text-lg font-semibold tabular-nums"
+            aria-label={t("result.adjust.value")}
+            data-testid="save-adjustment"
+          >
+            {formatSigned(value)}
+          </output>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-label={t("result.adjust.increase")}
+            onClick={() => setValue((v) => stepAdjustment(v, 1))}
+          >
+            +
+          </Button>
+        </div>
+        <input
+          className={fieldClass}
+          type="text"
+          maxLength={80}
+          value={reason}
+          aria-label={t("result.adjust.reason")}
+          placeholder={t("result.adjust.reason")}
+          onChange={(ev) => setReason(ev.target.value)}
+        />
+      </div>
+      <div className="flex justify-end">
+        <Button type="submit" size="sm" disabled={rolling || !changed}>
+          {t("result.adjust.apply")}
+        </Button>
+      </div>
+    </form>
   );
 }
 

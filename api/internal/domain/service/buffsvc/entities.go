@@ -115,4 +115,5 @@ type BuffModifiers struct {
 	MultipliersFrom []Factor
 	ToHitFrom       []Contribution
 	DamageFrom      []Contribution
+	SaveBonusFrom   []Contribution
 }

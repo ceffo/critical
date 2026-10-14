@@ -11,8 +11,8 @@ INSERT INTO "action_snapshots" ("action_id", "state_key", "before_state", "after
 VALUES (?1, ?2, ?3, ?4);
 
 -- InsertCorrection
-INSERT INTO "action_corrections" ("action_id", "kind", "hp_delta", "summary")
-VALUES (?1, ?2, ?3, ?4);
+INSERT INTO "action_corrections" ("action_id", "kind", "hp_delta", "summary", "payload")
+VALUES (?1, ?2, ?3, ?4, ?5);
 
 -- GetAction
 SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "created_at" 
@@ -38,7 +38,7 @@ LIMIT ?3;
 
 -- ListCorrectionsFrom
 SELECT "action_corrections"."id", "action_corrections"."action_id", "action_corrections"."kind",
-       "action_corrections"."hp_delta", "action_corrections"."summary",
+       "action_corrections"."hp_delta", "action_corrections"."summary", "action_corrections"."payload",
        "action_corrections"."created_at" 
 FROM "action_corrections"
 JOIN "action_log" ON action_log.id = action_corrections.action_id
@@ -60,6 +60,13 @@ WHERE "character_id" = ?1 AND "kind" = ?2
   AND NOT EXISTS (
     SELECT 1 FROM "action_corrections" WHERE "action_corrections"."action_id" = "action_log"."id" AND "action_corrections"."kind" = 'void'
   )
+ORDER BY "id" DESC
+LIMIT 1;
+
+-- LatestActionID
+SELECT "id"
+FROM "action_log"
+WHERE "character_id" = ?1 AND "kind" = ?2
 ORDER BY "id" DESC
 LIMIT 1;
 

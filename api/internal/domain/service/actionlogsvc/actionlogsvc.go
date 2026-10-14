@@ -21,6 +21,7 @@ type SVC interface {
 	// List returns the newest entries first, every kind, with corrections.
 	List(ctx context.Context, characterID int64, limit int) ([]actionlog.Entry, error)
 	Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error)
+	actionlog.LatestAmender
 	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
 	// VoidLatest voids the newest non-voided entry of kind; ok is false when
 	// there is none.
@@ -47,6 +48,8 @@ type DAL interface {
 	ListEntries(ctx context.Context, characterID int64, limit int) ([]actionlog.Entry, error)
 	ListActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 	LatestActiveID(ctx context.Context, characterID int64, kind actionlog.Kind) (id int64, ok bool, err error)
+	// LatestID returns the newest entry of kind, voided or not.
+	LatestID(ctx context.Context, characterID int64, kind actionlog.Kind) (id int64, ok bool, err error)
 	// LaterEntryTouchingState returns the first non-voided entry after id
 	// that has a snapshot under one of id's state keys.
 	LaterEntryTouchingState(ctx context.Context, characterID, id int64) (laterID int64, ok bool, err error)

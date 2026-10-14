@@ -23,6 +23,68 @@ func (_m *MockLog) EXPECT() *MockLog_Expecter {
 	return &MockLog_Expecter{mock: &_m.Mock}
 }
 
+// AmendLatest provides a mock function with given fields: ctx, characterID, id, kind, fn
+func (_m *MockLog) AmendLatest(ctx context.Context, characterID int64, id int64, kind actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
+	ret := _m.Called(ctx, characterID, id, kind, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AmendLatest")
+	}
+
+	var r0 *actionlog.Entry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, actionlog.Kind, actionlog.AmendFunc) (*actionlog.Entry, error)); ok {
+		return rf(ctx, characterID, id, kind, fn)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, actionlog.Kind, actionlog.AmendFunc) *actionlog.Entry); ok {
+		r0 = rf(ctx, characterID, id, kind, fn)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*actionlog.Entry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64, actionlog.Kind, actionlog.AmendFunc) error); ok {
+		r1 = rf(ctx, characterID, id, kind, fn)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockLog_AmendLatest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AmendLatest'
+type MockLog_AmendLatest_Call struct {
+	*mock.Call
+}
+
+// AmendLatest is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - id int64
+//   - kind actionlog.Kind
+//   - fn actionlog.AmendFunc
+func (_e *MockLog_Expecter) AmendLatest(ctx interface{}, characterID interface{}, id interface{}, kind interface{}, fn interface{}) *MockLog_AmendLatest_Call {
+	return &MockLog_AmendLatest_Call{Call: _e.mock.On("AmendLatest", ctx, characterID, id, kind, fn)}
+}
+
+func (_c *MockLog_AmendLatest_Call) Run(run func(ctx context.Context, characterID int64, id int64, kind actionlog.Kind, fn actionlog.AmendFunc)) *MockLog_AmendLatest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64), args[3].(actionlog.Kind), args[4].(actionlog.AmendFunc))
+	})
+	return _c
+}
+
+func (_c *MockLog_AmendLatest_Call) Return(_a0 *actionlog.Entry, _a1 error) *MockLog_AmendLatest_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockLog_AmendLatest_Call) RunAndReturn(run func(context.Context, int64, int64, actionlog.Kind, actionlog.AmendFunc) (*actionlog.Entry, error)) *MockLog_AmendLatest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Record provides a mock function with given fields: ctx, e
 func (_m *MockLog) Record(ctx context.Context, e actionlog.NewEntry) (int64, error) {
 	ret := _m.Called(ctx, e)

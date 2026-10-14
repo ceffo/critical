@@ -359,7 +359,8 @@
       "buff": "{{detail}}",
       "situational": "{{detail}}",
       "crit": "Critical hit ({{detail}})",
-      "critPlaceholder": "Critical hit (placeholder)"
+      "critPlaceholder": "Critical hit (placeholder)",
+      "adjustment": "Adjustment {{detail}}"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -431,7 +432,16 @@
     "total": "Total",
     "save": "Save: {{name}}",
     "left": "{{name}}: {{count}} left",
-    "noRoll": "Nothing to roll — the effect is resolved at the table."
+    "noRoll": "Nothing to roll — the effect is resolved at the table.",
+    "adjust": {
+      "title": "Adjust after the roll",
+      "label": "Adjust this save",
+      "decrease": "Decrease adjustment",
+      "increase": "Increase adjustment",
+      "value": "Adjustment",
+      "reason": "Reason (optional)",
+      "apply": "Apply"
+    }
   },
   "log": {
     "title": "Combat Log",
@@ -449,7 +459,8 @@
       "attack": "Attack",
       "item_use": "Item",
       "spell_prep": "Prepare",
-      "long_rest": "Rest"
+      "long_rest": "Rest",
+      "save": "Save"
     },
     "status": {
       "active": "Active",
@@ -494,7 +505,12 @@
       "rolled": "Used {{name}}: {{dice}} = {{total}} ({{left}} left)",
       "used": "Used {{name}} ({{left}} left)"
     },
-    "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled"
+    "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
+    "saveThrow": {
+      "rolled": "Save vs {{name}}: d20 {{d20}} vs {{target}}, {{verdict}}",
+      "adjusted": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjusted {{adjustment}}{{reason}}: {{from}} → {{to}}",
+      "removed": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjustment removed: {{from}} → {{to}}"
+    }
   },
   "critTable": {
     "title": "Crit table (house rule)",

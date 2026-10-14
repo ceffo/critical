@@ -374,6 +374,71 @@ func (_c *MockDAL_LatestActiveID_Call) RunAndReturn(run func(context.Context, in
 	return _c
 }
 
+// LatestID provides a mock function with given fields: ctx, characterID, kind
+func (_m *MockDAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Kind) (int64, bool, error) {
+	ret := _m.Called(ctx, characterID, kind)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LatestID")
+	}
+
+	var r0 int64
+	var r1 bool
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, actionlog.Kind) (int64, bool, error)); ok {
+		return rf(ctx, characterID, kind)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, actionlog.Kind) int64); ok {
+		r0 = rf(ctx, characterID, kind)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, actionlog.Kind) bool); ok {
+		r1 = rf(ctx, characterID, kind)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, actionlog.Kind) error); ok {
+		r2 = rf(ctx, characterID, kind)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockDAL_LatestID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LatestID'
+type MockDAL_LatestID_Call struct {
+	*mock.Call
+}
+
+// LatestID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - kind actionlog.Kind
+func (_e *MockDAL_Expecter) LatestID(ctx interface{}, characterID interface{}, kind interface{}) *MockDAL_LatestID_Call {
+	return &MockDAL_LatestID_Call{Call: _e.mock.On("LatestID", ctx, characterID, kind)}
+}
+
+func (_c *MockDAL_LatestID_Call) Run(run func(ctx context.Context, characterID int64, kind actionlog.Kind)) *MockDAL_LatestID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(actionlog.Kind))
+	})
+	return _c
+}
+
+func (_c *MockDAL_LatestID_Call) Return(id int64, ok bool, err error) *MockDAL_LatestID_Call {
+	_c.Call.Return(id, ok, err)
+	return _c
+}
+
+func (_c *MockDAL_LatestID_Call) RunAndReturn(run func(context.Context, int64, actionlog.Kind) (int64, bool, error)) *MockDAL_LatestID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListActiveEntries provides a mock function with given fields: ctx, characterID, kind, limit
 func (_m *MockDAL) ListActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error) {
 	ret := _m.Called(ctx, characterID, kind, limit)

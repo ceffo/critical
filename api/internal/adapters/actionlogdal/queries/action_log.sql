@@ -10,8 +10,8 @@ VALUES (?, ?, ?, ?)
 ;
 
 -- InsertCorrection
-INSERT INTO action_corrections (action_id, kind, hp_delta, summary)
-VALUES (?, ?, ?, ?)
+INSERT INTO action_corrections (action_id, kind, hp_delta, summary, payload)
+VALUES (?, ?, ?, ?, ?)
 ;
 
 -- GetAction
@@ -41,7 +41,7 @@ LIMIT ?
 
 -- ListCorrectionsFrom
 SELECT action_corrections.id, action_corrections.action_id, action_corrections.kind,
-       action_corrections.hp_delta, action_corrections.summary,
+       action_corrections.hp_delta, action_corrections.summary, action_corrections.payload,
        action_corrections.created_at /*:time.Time:notnull*/
 FROM action_corrections
 JOIN action_log ON action_log.id = action_corrections.action_id
@@ -65,6 +65,14 @@ WHERE character_id = ? AND kind = ?
   AND NOT EXISTS (
     SELECT 1 FROM action_corrections WHERE action_corrections.action_id = action_log.id AND action_corrections.kind = 'void'
   )
+ORDER BY id DESC
+LIMIT 1
+;
+
+-- LatestActionID
+SELECT id
+FROM action_log
+WHERE character_id = ? AND kind = ?
 ORDER BY id DESC
 LIMIT 1
 ;

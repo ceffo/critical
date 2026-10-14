@@ -591,6 +591,7 @@ func TestAggregate(t *testing.T) {
 				MultipliersFrom: []buffsvc.Factor{{Buff: "A", Value: 2.0}, {Buff: "B", Value: 1.5}},
 				ToHitFrom:       []buffsvc.Contribution{{Buff: "A", Value: 1}, {Buff: "B", Value: -3}},
 				DamageFrom:      []buffsvc.Contribution{{Buff: "A", Value: 2}, {Buff: "B", Value: 1}},
+				SaveBonusFrom:   []buffsvc.Contribution{{Buff: "A", Value: 1}, {Buff: "B", Value: 2}},
 			},
 		},
 		{
@@ -649,6 +650,7 @@ func TestAggregate(t *testing.T) {
 			assert.Equal(t, tt.want.Damage, got.Damage)
 			assert.Equal(t, tt.want.ToHitFrom, got.ToHitFrom)
 			assert.Equal(t, tt.want.DamageFrom, got.DamageFrom)
+			assert.Equal(t, tt.want.SaveBonusFrom, got.SaveBonusFrom)
 			if tt.want.SpellsBuffFrom != nil {
 				assert.Equal(t, tt.want.SpellsBuffFrom, got.SpellsBuffFrom)
 				assert.Equal(t, tt.want.MultipliersFrom, got.MultipliersFrom)

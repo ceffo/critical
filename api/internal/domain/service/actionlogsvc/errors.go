@@ -11,4 +11,7 @@ var (
 	ErrVoidBlocked = errors.New("void blocked")
 	// ErrNotAmendable: only hp_change entries can be amended.
 	ErrNotAmendable = errors.New("entry cannot be amended")
+	// ErrNotLatest: only the newest entry of its kind can be adjusted; fix
+	// an older one with void and a new roll.
+	ErrNotLatest = errors.New("not the latest entry")
 )

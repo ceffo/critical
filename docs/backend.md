@@ -50,7 +50,8 @@ id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON
 -- action_snapshots: before/after state an entry changed, one row per state key
 id, action_id, state_key, before_state JSON, after_state JSON
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
-id, action_id, kind ('amend'|'void'), hp_delta, summary, created_at
+id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, created_at
+-- (an amend's payload, when set, replaces the entry's: latest amend with a payload wins)
 
 -- hp_events: legacy HP ledger, carried into action_log by migration 007; no longer written
 
@@ -91,6 +92,14 @@ writes the buff inside the caller's transaction and replaces a same-name buff), 
 slot back and removes the buff. Effects come from `seeds/spell_effects.json` at the caster level (the
 Bard's level for a cast, the caster's for a received spell; by-group dice use the Bard's group,
 rogue); low-confidence, utility and uncatalogued spells return their text only.
+combatsvc records every saving throw (kind `save`, no snapshots: it changes no state; payload =
+category, d20, buff modifiers (one per buff, `SaveBonusFrom`), target, adjustment + reason, total, passed, margin, `rolledPassed`).
+`POST /api/roll/save/{id}/adjust` `{adjustment, reason?}` sets the adjustment of the save when it is
+the **latest roll** (newest entry of `actionlog.RollKinds`: attack, save, cast, item use, the ones
+that replace the result card; voided ones included; ±20 max): combatsvc recomputes verdict and margin from
+the stored d20 and modifiers (the d20 never changes) and `actionlogsvc.AmendLatest` records an
+audited amend carrying the new summary and payload (plus `previousPassed`/`previousAdjustment`).
+Not a save → 400, voided or not the latest → 409. The log exposes `effectivePayload`.
 A state key `family:id` is restored by the Restorer of its family, and a void is only blocked by
 later entries with the same full key (a +1 arrow does not block voiding a +3 shot).
 

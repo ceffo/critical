@@ -138,6 +138,9 @@ type EntryDTO struct {
 	EffectiveSummary string          `json:"effectiveSummary"`
 	Status           string          `json:"status"`
 	Payload          json.RawMessage `json:"payload"`
+	// EffectivePayload is the latest amend's payload when one set it (an
+	// adjusted save), the original payload otherwise.
+	EffectivePayload json.RawMessage `json:"effectivePayload"`
 	Snapshots        []SnapshotDTO   `json:"snapshots"`
 	Corrections      []CorrectionDTO `json:"corrections"`
 	CreatedAt        time.Time       `json:"createdAt"`
@@ -150,13 +153,15 @@ type SnapshotDTO struct {
 	After  json.RawMessage `json:"after"`
 }
 
-// CorrectionDTO is one amend or void. hpDelta and source are set on amends.
+// CorrectionDTO is one amend or void. hpDelta, source and payload are set on
+// amends that changed them.
 type CorrectionDTO struct {
-	ID        int64     `json:"id"`
-	Kind      string    `json:"kind"`
-	HPDelta   *int      `json:"hpDelta,omitempty"`
-	Source    string    `json:"source,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID        int64           `json:"id"`
+	Kind      string          `json:"kind"`
+	HPDelta   *int            `json:"hpDelta,omitempty"`
+	Source    string          `json:"source,omitempty"`
+	Payload   json.RawMessage `json:"payload,omitempty"`
+	CreatedAt time.Time       `json:"createdAt"`
 }
 
 func toDTO(e actionlog.Entry) EntryDTO {
@@ -164,11 +169,15 @@ func toDTO(e actionlog.Entry) EntryDTO {
 	if len(payload) == 0 {
 		payload = json.RawMessage(`{}`)
 	}
+	effective := e.EffectivePayload()
+	if len(effective) == 0 {
+		effective = payload
+	}
 	out := EntryDTO{
 		ID: e.ID, CharacterID: e.CharacterID, Round: e.Round, Kind: string(e.Kind),
 		Summary: e.Summary, HPDelta: e.HPDelta,
 		EffectiveHPDelta: e.EffectiveHPDelta(), EffectiveSummary: e.EffectiveSummary(),
-		Status: string(e.Status()), Payload: payload, CreatedAt: e.CreatedAt,
+		Status: string(e.Status()), Payload: payload, EffectivePayload: effective, CreatedAt: e.CreatedAt,
 		Snapshots:   make([]SnapshotDTO, 0, len(e.Snapshots)),
 		Corrections: make([]CorrectionDTO, 0, len(e.Corrections)),
 	}
@@ -177,7 +186,7 @@ func toDTO(e actionlog.Entry) EntryDTO {
 	}
 	for _, c := range e.Corrections {
 		out.Corrections = append(out.Corrections, CorrectionDTO{
-			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, CreatedAt: c.CreatedAt,
+			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, Payload: c.Payload, CreatedAt: c.CreatedAt,
 		})
 	}
 	return out

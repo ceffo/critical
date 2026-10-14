@@ -10,7 +10,8 @@ export type LogKind =
   | "attack"
   | "item_use"
   | "spell_prep"
-  | "long_rest";
+  | "long_rest"
+  | "save";
 
 export type LogStatus = "active" | "amended" | "voided";
 
@@ -27,6 +28,8 @@ export interface LogCorrection {
   hpDelta?: number;
   /** Set on amends that changed the source. */
   source?: string;
+  /** Set on amends that replaced the payload (an adjusted save). */
+  payload?: unknown;
   createdAt: string;
 }
 
@@ -43,6 +46,8 @@ export interface LogEntry {
   effectiveSummary: string;
   status: LogStatus;
   payload: unknown;
+  /** The latest amend's payload when one set it (an adjusted save), else `payload`. */
+  effectivePayload: unknown;
   snapshots: LogSnapshot[];
   corrections: LogCorrection[];
   createdAt: string;

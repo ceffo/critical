@@ -500,6 +500,7 @@
       "voided": "Voided"
     },
     "was": "was {{delta}}",
+    "capped": "{{requested}} requested, capped at max HP",
     "amend": "Amend",
     "void": "Void",
     "confirmVoid": "Void this entry?",

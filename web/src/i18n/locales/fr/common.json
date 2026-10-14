@@ -500,6 +500,7 @@
       "voided": "Annulé"
     },
     "was": "était {{delta}}",
+    "capped": "{{requested}} demandés, plafonnés aux PV max",
     "amend": "Corriger",
     "void": "Annuler",
     "confirmVoid": "Annuler cette entrée ?",

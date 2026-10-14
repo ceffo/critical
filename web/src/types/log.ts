@@ -54,6 +54,13 @@ export interface LogEntry {
   createdAt: string;
 }
 
+/** Merged by the server into a heal's payload: the heal asked for vs the part
+ * logged after the max-HP cap (critical-qki.38). */
+export interface HpBreakdown {
+  hpRequested: number;
+  hpApplied: number;
+}
+
 export interface LogResponse {
   entries: LogEntry[];
 }

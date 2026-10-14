@@ -44,3 +44,26 @@ test("HP buttons stay disabled until amount and source are filled", async ({
   await box.getByLabel("Source").fill("e2e trap");
   await expect(damage).toBeEnabled();
 });
+
+test("a heal never takes HP above max: the excess is dropped and shown", async ({ page }) => {
+  await openDashboard(page);
+  const max = await currentHp(page); // a fresh character starts at full HP
+
+  await recordHp(page, "damage", 5, "e2e arrow");
+  await expect.poll(() => currentHp(page)).toBe(max - 5);
+
+  await recordHp(page, "heal", 12, "e2e cure serious");
+  await expect.poll(() => currentHp(page)).toBe(max);
+  const cure = logEntry(page, "e2e cure serious");
+  await expect(cure.getByTestId("log-delta")).toHaveText("+5");
+  await expect(cure.getByTestId("log-capped")).toHaveText("+12 requested, capped at max HP");
+
+  // At full HP the heal is still logged, as 0.
+  await recordHp(page, "heal", 9, "e2e potion at full");
+  await expect.poll(() => currentHp(page)).toBe(max);
+  await expect(logEntry(page, "e2e potion at full").getByTestId("log-capped")).toHaveText(
+    "+9 requested, capped at max HP",
+  );
+
+  await snap(page, "heal-capped-at-max");
+});

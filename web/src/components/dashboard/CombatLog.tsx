@@ -9,7 +9,7 @@ import { groupByRound } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
-import type { LogEntry } from "@/types/log";
+import type { HpBreakdown, LogEntry } from "@/types/log";
 import { captionClass, fieldClass } from "./fieldStyles";
 
 /** The action log (GET /api/log) as a timeline grouped by round, with inline amend/void. */
@@ -66,6 +66,7 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
   const amended = e.status === "amended";
   const isHp = e.kind === "hp_change";
   const text = entryText(e, t);
+  const capped = isHp && !voided ? cappedHeal(e) : null;
 
   return (
     <li
@@ -112,6 +113,11 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
             {isHp && <span>{t("log.was", { delta: formatSigned(e.hpDelta) })}</span>}
           </>
         )}
+        {capped && (
+          <span data-testid="log-capped">
+            {t("log.capped", { requested: formatSigned(capped.hpRequested) })}
+          </span>
+        )}
         {voided && <Badge variant="destructive">{t("log.status.voided")}</Badge>}
         {!voided && mode === "view" && (
           <span className="ml-auto flex gap-1">
@@ -155,6 +161,13 @@ function LogRow({ entry: e }: { entry: LogEntry }) {
       )}
     </li>
   );
+}
+
+/** The server's breakdown when the heal was cut by the max-HP cap, else null. */
+function cappedHeal(e: LogEntry): HpBreakdown | null {
+  const p = e.effectivePayload as Partial<HpBreakdown> | null;
+  if (typeof p?.hpRequested !== "number" || typeof p.hpApplied !== "number") return null;
+  return p.hpRequested !== p.hpApplied ? (p as HpBreakdown) : null;
 }
 
 function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }) {

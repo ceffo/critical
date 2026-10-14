@@ -72,8 +72,12 @@ merge instead of hand-merging.
 
 ## Tracker
 
-Beads, with the `br` CLI (never `bd` here), plus `bv --robot-*` for triage; commands and rules are
-in `AGENTS.md` ("Beads Workflow Integration"). Bare `bv` launches a TUI: never run it.
+Beads, with the `br` CLI (never `bd` here), plus `bv --robot-*` for triage (`bv --robot-triage`,
+`bv --robot-plan`; `bv --robot-help` lists the rest). Bare `bv` launches a TUI: never run it.
+Commands: `br ready --json`, `br list --status=open`, `br show <id>`, `br search "<words>"`,
+`br create --title … -t <type> -p <0-4> [--parent <id>] [-d …]`, `br update <id> --claim`,
+`br close <id> --reason "PR #n"`, `br dep add <issue> <depends-on>`, `br sync --flush-only`. On the
+main checkout, pull with `just sync-main`, never `br sync --merge`.
 
 - Work item = bead; id looks like `critical-518.3`. Read: `br show <id>`, `br list`, `br search`,
   `br ready`. Everything that writes (`update`, `close`, `create`, `dep add`, `sync`) is the

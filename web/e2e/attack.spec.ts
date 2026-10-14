@@ -409,12 +409,12 @@ test("the attack form keeps its values across a tab switch", async ({ page }) =>
   await form.getByLabel("Weapon").selectOption("longsword");
   await form.getByLabel("Target AC").fill("-3");
   await form.getByLabel("Target size").selectOption("l");
-  await form.getByLabel("Situational modifier").fill("2");
+  await form.getByLabel("Situational", { exact: true }).fill("2");
   await page.getByRole("tab", { name: "Spells" }).click();
   await expect(form).toHaveCount(0);
   await page.getByRole("tab", { name: "Attack" }).click();
   await expect(form.getByLabel("Weapon")).toHaveValue("longsword");
   await expect(form.getByLabel("Target AC")).toHaveValue("-3");
   await expect(form.getByLabel("Target size")).toHaveValue("l");
-  await expect(form.getByLabel("Situational modifier")).toHaveValue("2");
+  await expect(form.getByLabel("Situational", { exact: true })).toHaveValue("2");
 });

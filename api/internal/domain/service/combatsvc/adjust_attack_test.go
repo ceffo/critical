@@ -328,6 +328,23 @@ func TestAdjustAttackAC_Rejections(t *testing.T) {
 		assert.Empty(t, e.Corrections)
 	})
 
+	t.Run("attack logged before the multiplier d100", func(t *testing.T) {
+		f := newFixture(t)
+		// Rolled with damage dice and a crit row but one d100 (before ADR
+		// 0001): its crit can't be re-evaluated with two d100s.
+		e := &actionlog.Entry{ID: 9, Kind: actionlog.KindAttack, Summary: "x", Payload: json.RawMessage(
+			`{"d20Roll":15,"d100CritRoll":4,"hit":false,"effectiveThac0":11,"targetAc":-10,"weaponName":"Long Sword +2",` +
+				`"modifiers":[],"damageTerms":[],` +
+				`"rolled":{"dice":"1d8","total":5,"spellsBuff":1,"weaponBuff":2,"buffMultipliers":1,"strengthBonus":0,"bonusDamage":0,"terms":[]},` +
+				`"critRow":{"from":1,"to":100,"multiplier":2,"placeholder":true}}`)}
+		amends(f, e)
+		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 9, 5)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, domain.ErrInvalidInput)
+		assert.ErrorContains(t, err, "void it and roll again")
+		assert.Empty(t, e.Corrections)
+	})
+
 	t.Run("undecodable payload", func(t *testing.T) {
 		f := newFixture(t)
 		e := &actionlog.Entry{ID: 9, Kind: actionlog.KindAttack, Summary: "x", Payload: json.RawMessage(`[]`)}

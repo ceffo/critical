@@ -90,9 +90,8 @@ test("the table saved in the editor is used by the next crit", async ({
   await expect(range(again, 3).mult).toHaveValue("4");
 
   await page.getByLabel("Target AC").fill("1000");
-  await page.getByRole("button", { name: "Roll Attack" }).click();
-  await expect(card).toBeVisible();
-  // ADR 0001 step 4: the row is the one of the second (multiplier) d100, not the crit check.
+  // ADR 0001 step 4: the row is the one of the second (multiplier) d100, not the crit check. Roll
+  // until the two d100s fall in different rows so the test tells them apart.
   const fact = async (label: string) =>
     Number(
       await card
@@ -100,8 +99,16 @@ test("the table saved in the editor is used by the next crit", async ({
         .locator("xpath=following-sibling::dd")
         .textContent(),
     );
-  const check = await fact("Crit check d100");
-  const d100 = await fact("Multiplier d100");
+  const rowOf = (d: number) => TABLE.findIndex((r) => d >= r.from && d <= r.to);
+  let check = 0;
+  let d100 = 0;
+  for (let i = 0; i < 30 && rowOf(check) === rowOf(d100); i++) {
+    await page.getByRole("button", { name: "Roll Attack" }).click();
+    await expect.poll(async () => (await logEntry(page, "vs AC 1000").count())).toBe(i + 2);
+    check = await fact("Crit check d100");
+    d100 = await fact("Multiplier d100");
+  }
+  expect(rowOf(check), "the two d100s never fell in different rows").not.toBe(rowOf(d100));
   const row = TABLE.find((r) => d100 >= r.from && d100 <= r.to);
   if (!row) throw new Error(`d100 ${d100} is in no range`);
   await expect(card.getByTestId("crit-badge")).toHaveText(

@@ -93,7 +93,6 @@ func TestOrb_VoidRestoresTheGem(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res.Orb)
 	assert.True(t, res.Orb.Attack.Hit, "d20 20 vs AC 5")
-	assert.Contains(t, res.Orb.Effect, "petrification")
 	assert.Equal(t, 2, count())
 
 	_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)

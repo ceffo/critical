@@ -106,9 +106,6 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           <Badge variant={r.orb.hit ? "default" : "secondary"} data-testid="cast-orb-verdict">
             {r.orb.hit ? t("result.cast.orbHit") : t("result.cast.orbMiss")}
           </Badge>
-          {r.orb.hit && r.orb.effect && (
-            <p className="text-sm font-medium" data-testid="cast-orb-effect">{r.orb.effect}</p>
-          )}
         </div>
       )}
 

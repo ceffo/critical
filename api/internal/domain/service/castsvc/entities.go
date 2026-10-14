@@ -151,14 +151,12 @@ type CastResult struct {
 }
 
 // OrbResult is what a Chromatic Orb did (critical-qki.42): it spent a gem
-// and threw an attack roll; on a hit the gem's effect applies, which the DM
-// announces (the app rolls no save).
+// and threw an attack roll. The app shows hit or miss and the gem used; what a
+// hit does is the DM's call (no gem effect is modelled).
 type OrbResult struct {
 	GemItemID string
 	Gem       string
 	// Remaining is the count of that gem left.
 	Remaining int
 	Attack    combatsvc.ToHitRoll
-	// Effect is the gem's effect text when the orb hit (empty on a miss).
-	Effect string
 }

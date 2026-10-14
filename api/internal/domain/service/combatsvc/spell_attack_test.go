@@ -11,7 +11,7 @@ import (
 )
 
 // critical-qki.42: a spell's to-hit is one d20 against THAC0 - AC with the
-// Dex missile adjustment, no crit (no d100 is rolled) and no natural 20 rule.
+// Dex missile adjustment, no crit (no d100 is rolled); a natural 1 or 20 is plain arithmetic, as in combat.
 func TestRollSpellToHit(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -21,6 +21,7 @@ func TestRollSpellToHit(t *testing.T) {
 	}{
 		{"exactly the number needed hits", 6, 5, true, 6},
 		{"one below misses", 5, 5, false, 6},
+		{"a natural 1 is plain arithmetic: it hits when the sum reaches the number needed (AC 10 needs 1)", 1, 10, true, 1},
 		{"a natural 20 is plain arithmetic: it misses when the sum falls short", 20, -15, false, 26},
 	}
 	for _, tt := range tests {

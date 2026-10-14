@@ -20,7 +20,6 @@ type orbRecord struct {
 	D20      int    `json:"d20"`
 	TargetAC int    `json:"targetAc"`
 	Hit      bool   `json:"hit"`
-	Effect   string `json:"effect,omitempty"`
 }
 
 type buffRecord struct {
@@ -48,7 +47,7 @@ func toRecord(res CastResult) castRecord {
 		r.Damage = &damageRecord{Total: d.Total, Type: d.Type}
 	}
 	if o := res.Orb; o != nil {
-		r.Orb = &orbRecord{Gem: o.Gem, D20: o.Attack.D20Roll, TargetAC: o.Attack.TargetAC, Hit: o.Attack.Hit, Effect: o.Effect}
+		r.Orb = &orbRecord{Gem: o.Gem, D20: o.Attack.D20Roll, TargetAC: o.Attack.TargetAC, Hit: o.Attack.Hit}
 	}
 	return r
 }

@@ -14,8 +14,7 @@ import (
 )
 
 // critical-qki.42: Chromatic Orb spends a gem, rolls an attack with no crit
-// and, on a hit, shows the gem's effect (diamond: death or petrification,
-// the DM announces the save).
+// and shows hit or miss and the gem used (no gem effect is modelled).
 var (
 	diamonds = itemsvc.Item{ID: "diamond", Name: "Diamond", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 41}
 	rubies   = itemsvc.Item{ID: "ruby", Name: "Ruby", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2}
@@ -49,7 +48,6 @@ func TestCast_ChromaticOrb_HitShowsTheGemEffect(t *testing.T) {
 	assert.Equal(t, "Diamond", res.Orb.Gem)
 	assert.Equal(t, 40, res.Orb.Remaining)
 	assert.True(t, res.Orb.Attack.Hit)
-	assert.Contains(t, res.Orb.Effect, "petrification")
 	require.Len(t, f.entries, 1)
 	assert.Contains(t, keys(f.entries[0].Snapshots), "items:diamond", "voiding gives the gem back")
 	assert.Contains(t, string(f.entries[0].Payload), `"orb"`)
@@ -65,7 +63,6 @@ func TestCast_ChromaticOrb_MissSpendsTheGemNoEffect(t *testing.T) {
 	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{TargetAC: &ac})
 	require.NoError(t, err)
 	assert.False(t, res.Orb.Attack.Hit)
-	assert.Empty(t, res.Orb.Effect)
 	assert.Equal(t, 40, res.Orb.Remaining)
 }
 
@@ -104,5 +101,4 @@ func TestCast_ChromaticOrb_PicksTheChosenGem(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Ruby", res.Orb.Gem)
 	assert.Equal(t, 1, res.Orb.Remaining)
-	assert.Contains(t, res.Orb.Effect, "DM", "an unlisted gem points to the DM")
 }

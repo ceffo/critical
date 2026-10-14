@@ -194,3 +194,22 @@ test("a prepared spell outside the spellbook is listed as removed and not sent",
   await expect(page.getByRole("alert")).toHaveCount(0);
   await snap(page, "stale-saved");
 });
+
+// qki.43: a spell prepared several times is one row with a count; rows are sorted by name.
+test("a repeated spell shows once with a count that drops as copies are cast; rows are alphabetical", async ({
+  page,
+  stack,
+}) => {
+  expect((await put(stack.apiUrl, ["magic_missile", "alarm", "magic_missile"])).ok).toBe(true);
+  await openSpells(page);
+  const level1 = page.getByRole("region", { name: "Level 1" });
+  await expect(level1.getByRole("listitem")).toHaveCount(2);
+  await expect(level1.getByRole("listitem").nth(0)).toContainText("Alarm");
+  await expect(level1.getByRole("listitem").nth(1)).toContainText("Magic Missile ×2");
+  await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
+  await expect(level1.getByRole("listitem").nth(1)).not.toContainText("×");
+  await expect(level1.getByTestId("remaining-1")).toHaveText("2 / 3");
+  await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
+  await expect(level1.getByTestId("remaining-1")).toHaveText("1 / 3");
+  await snap(page, "grouped-spells");
+});

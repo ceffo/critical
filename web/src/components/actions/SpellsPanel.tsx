@@ -12,6 +12,44 @@ import { cn } from "@/lib/utils";
 import { PrepareEditor } from "./PrepareEditor";
 import { ReceivePanel } from "./ReceivePanel";
 
+interface SlotRow {
+  /** The copy a cast uses: the first unused one (the first when all are used). */
+  slot: SpellSlot & { index: number };
+  blank: boolean;
+  name: string;
+  remaining: number;
+}
+
+/** One row per distinct prepared spell (copies counted), sorted by displayed name; blank Rary slots last. */
+function groupSlots(
+  list: (SpellSlot & { index: number })[],
+  nameOf: (s: SpellSlot) => string,
+  blankName: string,
+): SlotRow[] {
+  const rows: SlotRow[] = [];
+  const byKey = new Map<string, SlotRow>();
+  for (const slot of list) {
+    const blank = Boolean(slot.extra && !slot.prepared_spell_id && !slot.prepared_spell_name);
+    if (blank) {
+      rows.push({ slot, blank, name: blankName, remaining: slot.used ? 0 : 1 });
+      continue;
+    }
+    const key = slot.prepared_spell_id || slot.prepared_spell_name;
+    const row = byKey.get(key);
+    if (!row) {
+      const r = { slot, blank, name: nameOf(slot), remaining: slot.used ? 0 : 1 };
+      byKey.set(key, r);
+      rows.push(r);
+    } else if (!slot.used) {
+      if (row.remaining === 0) row.slot = slot;
+      row.remaining++;
+    }
+  }
+  return rows.sort(
+    (a, b) => Number(a.blank) - Number(b.blank) || a.name.localeCompare(b.name) || a.slot.index - b.slot.index,
+  );
+}
+
 /**
  * Today's prepared spells per level: cast (result in the result card), long rest, the preparation
  * editor, and spells cast on the Bard by the party.
@@ -130,15 +168,16 @@ export function SpellsPanel() {
                 </div>
               </div>
               <ul className="flex flex-col gap-1 p-1.5">
-                {list.map((slot) => {
-                  const blank = slot.extra && !slot.prepared_spell_id && !slot.prepared_spell_name;
-                  const name = blank
-                    ? t("spellSlots.extraBlank")
-                    : spellName(
-                        t,
-                        slot.prepared_spell_id || spellId(slot.prepared_spell_name),
-                        slot.prepared_spell_name,
-                      );
+                {groupSlots(list, (slot) =>
+                  spellName(
+                    t,
+                    slot.prepared_spell_id || spellId(slot.prepared_spell_name),
+                    slot.prepared_spell_name,
+                  ),
+                  t("spellSlots.extraBlank"),
+                ).map(({ slot, blank, name: baseName, remaining }) => {
+                  // A spell prepared several times is one row with the copies left; casting uses one.
+                  const name = remaining > 1 ? `${baseName} ×${remaining}` : baseName;
                   const isRary = slot.prepared_spell_id === "rarys_mnemonic_enhancer";
                   const isOrb = slot.prepared_spell_id === "chromatic_orb";
                   const orbAcValue = /^-?\d+$/.test(orbAc.trim()) ? Number(orbAc) : undefined;
@@ -220,7 +259,7 @@ export function SpellsPanel() {
                         size="xs"
                         variant={slot.used ? "ghost" : "secondary"}
                         disabled={slot.used || busy || (blank && !picks[slot.index]) || (isOrb && orbAcValue === undefined)}
-                        aria-label={t("spellSlots.castLabel", { name })}
+                        aria-label={t("spellSlots.castLabel", { name: baseName })}
                         onClick={() =>
                           void run(() =>
                             castSpell(slot.index, {

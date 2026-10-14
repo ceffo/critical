@@ -76,8 +76,12 @@ in `AGENTS.md` ("Beads Workflow Integration"). Bare `bv` launches a TUI: never r
   `br ready`. Everything that writes (`update`, `close`, `create`, `dep add`, `sync`) is the
   supervisor's or scoper's, run from the main checkout; developers, reviewers and testers never
   write to `.beads/`.
-- Claim: `br update <id> --claim`. Close after the PR is merged: `br close <id> --reason="…"`.
-  Export after tracker changes: `br sync --flush-only`.
+- Claim: `br update <id> --claim`.
+- Tracker changes ship in the PR they relate to, never in a tracker-only PR. The supervisor exports
+  (`br sync --flush-only`) and commits `.beads/issues.jsonl` on the item's branch: the claim at
+  dispatch, and the close (`br close`, reason "PR #n") as the last commit before the PR is reported
+  ready, so merging the PR closes the item. Items filed by a scoper ride in the PR of the work that
+  produced them (or the next related PR). If a PR is closed unmerged, reopen its item.
 - Priorities are numbers 0-4. Types: task, bug, feature, epic, chore, docs, question.
 - Labels in use: `needs-info` (cannot start, questions listed), `risky` (needs review).
 - Queue: `bv --robot-triage`, `br ready --json`.

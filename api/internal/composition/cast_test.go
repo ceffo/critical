@@ -66,7 +66,7 @@ func TestReceivedStrengthActivatesThePowerGem(t *testing.T) {
 	after, err := bs.Combat.ResolveAttack(ctx, id, attack)
 	require.NoError(t, err)
 	assert.Equal(t, 5, after.WeaponBuff, "Power Gem: the weapon becomes +5")
-	assert.InDelta(t, 2.0, after.Multipliers, 0.001)
+	assert.InDelta(t, 2.0, after.DiceMultiplier, 0.001)
 
 	// Void the two attacks, then the receive: Strength is gone.
 	_, err = bs.Log.Void(ctx, id, after.LogEntryID)

@@ -277,14 +277,14 @@ func TestAdjustAttackAC_DamageTermsInFormulaOrder(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
+		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (check d100 5, multiplier d100 77, placeholder)", Detail: "placeholder", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
 		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
 	}, res.DamageTerms)
-	// Same as rolling a crit directly: floor(((5 × 1.5) + 2) × 4) + 2 + 1 = 41.
-	assert.Equal(t, 41, res.TotalDamage)
+	// Same as rolling a crit directly: floor(((5 × 1.5 × 2 buff) + 2) × 2 crit) + 2 + 1 = 37.
+	assert.Equal(t, 37, res.TotalDamage)
 	assert.True(t, res.CritPlaceholder)
 }
 
@@ -354,4 +354,35 @@ func TestAdjustAttackAC_Rejections(t *testing.T) {
 		assert.ErrorContains(t, err, "decode attack #9")
 		assert.Empty(t, e.Corrections)
 	})
+}
+
+// An attack logged before the dice-only gem multiplier has no top-level
+// diceMultiplier and an old multipliers value (crit × buff): correcting its
+// AC does not fail and re-settles with the new formula from the stored rolled
+// damage (BuffMultipliers).
+func TestAdjustAttackAC_PreChangeEntryResettles(t *testing.T) {
+	f := newFixture(t)
+	m := strMods(12)
+	m.Multipliers = 2
+	m.MultipliersFrom = []buffsvc.Factor{{Buff: "Power Gem", Value: 2}}
+	e := rollAttack(t, f, rolledAttack{
+		weapon: longsword, mods: m,
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: -10}, // a miss
+		d20: 15, d100: 50, sides: 8, dmg: []int{5},
+	})
+	var p map[string]any
+	require.NoError(t, json.Unmarshal(e.Payload, &p))
+	delete(p, "diceMultiplier")
+	p["multipliers"] = 2.0
+	var err error
+	e.Payload, err = json.Marshal(p)
+	require.NoError(t, err)
+	amends(f, e)
+
+	res, err := f.svc.AdjustAttackAC(context.Background(), charID, 42, 7)
+	require.NoError(t, err)
+	assert.True(t, res.Hit)
+	assert.Equal(t, 2.0, res.DiceMultiplier)
+	// ((5 × 1 × 2) + 2) × 1 = 12.
+	assert.Equal(t, 12, res.TotalDamage)
 }

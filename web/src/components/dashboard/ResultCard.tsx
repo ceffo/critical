@@ -188,6 +188,9 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
             </Fact>
             <Fact label={t("result.damageSpells")}>{r.spellsBuff}</Fact>
             <Fact label={t("result.damageWeapon")}>{r.weaponBuff}</Fact>
+            {r.diceMultiplier !== undefined && r.diceMultiplier > 0 && r.diceMultiplier !== 1 && (
+              <Fact label={t("result.damageDiceMultiplier")}>{formatNumber(r.diceMultiplier, i18n.language)}</Fact>
+            )}
             <Fact label={t("result.damageMultiplier")}>{formatNumber(r.multipliers, i18n.language)}</Fact>
             <Fact label={t("result.damageStrength")}>{r.strengthBonus}</Fact>
             <Fact label={t("result.damageBonus")}>{r.bonusDamage}</Fact>
@@ -198,7 +201,7 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
                 <li key={i} className="flex justify-between gap-2">
                   <span className="min-w-0 truncate">{modLabel(t, d)}</span>
                   <span className="font-mono">
-                    {d.term === "spells" || d.term === "multiplier"
+                    {d.term === "spells" || d.term === "dice_multiplier" || d.term === "multiplier"
                       ? formatFactor(d.value, i18n.language)
                       : formatSigned(d.value)}
                   </span>

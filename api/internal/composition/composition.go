@@ -192,7 +192,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	castSvc, err := castsvc.New(castsvc.Deps{
-		Slots: spellDAL, Effects: effects, Texts: spellDAL, Buffs: buffSvc,
+		Slots: spellDAL, Effects: effects, Texts: spellDAL, Buffs: buffSvc, Items: itemSvc, Attacks: combatSvc,
 		Characters: charSvc, Dice: dice, Log: logSvc, Tx: db,
 	})
 	if err != nil {

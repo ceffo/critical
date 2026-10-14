@@ -27,7 +27,7 @@ func TestAdjustSave_WireShape(t *testing.T) {
 		"d20Roll":12,"d100CritRoll":0,"isCrit":false,"critMultiplier":0,"critPlaceholder":false,"critFrom":0,"critTo":0,
 		"baseThac0":14,"modifiers":[{"kind":"adjustment","source":"Adjustment","detail":"Gaia fire","value":4}],
 		"effectiveThac0":14,"targetACNeeded":0,"hit":true,"hitMargin":2,
-		"baseDamage":0,"damageDice":"","spellsBuff":0,"weaponBuff":0,"multipliers":0,"strengthBonus":0,"bonusDamage":0,
+		"baseDamage":0,"damageDice":"","spellsBuff":0,"weaponBuff":0,"multipliers":0,"diceMultiplier":0,"strengthBonus":0,"bonusDamage":0,
 		"damageTerms":[],"totalDamage":0,"damageBreakdown":"Roll: 12 + Mod: 0 + Adj: +4 = 16 vs Target: 14 (Spells)",
 		"targetAc":0,"saveCategory":"spell","adjustment":4,"adjustmentReason":"Gaia fire","logEntryId":7}`, rec.Body.String())
 }

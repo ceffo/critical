@@ -30,7 +30,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 	assert.JSONEq(t, `{
 		"d20Roll":11,"d100CritRoll":50,"d100MultiplierRoll":63,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critFrom":0,"critTo":0,
 		"baseThac0":13,"modifiers":[],"effectiveThac0":11,"targetACNeeded":0,"hit":true,"hitMargin":7,
-		"baseDamage":5,"damageDice":"1d8","spellsBuff":1,"weaponBuff":2,"multipliers":1,"strengthBonus":0,"bonusDamage":0,
+		"baseDamage":5,"damageDice":"1d8","spellsBuff":1,"weaponBuff":2,"multipliers":1,"diceMultiplier":0,"strengthBonus":0,"bonusDamage":0,
 		"damageTerms":[],"totalDamage":7,"damageBreakdown":"((5 × 1.0) + 2) × 1.0 + 0 = 7",
 		"weaponId":"longsword","weaponName":"Long Sword +2","targetAc":7,"targetSize":"sm",
 		"rolledTargetAc":5,"rolledHit":false,"rolledCrit":false,"logEntryId":7}`, rec.Body.String())

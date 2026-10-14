@@ -233,6 +233,7 @@ type RollResultDTO struct {
 	SpellsBuff      float64         `json:"spellsBuff"`
 	WeaponBuff      int             `json:"weaponBuff"`
 	Multipliers     float64         `json:"multipliers"`
+	DiceMultiplier  float64         `json:"diceMultiplier"`
 	StrengthBonus   int             `json:"strengthBonus"`
 	BonusDamage     int             `json:"bonusDamage"`
 	DamageTerms     []DamageTermDTO `json:"damageTerms"`
@@ -304,7 +305,7 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		BaseThac0: r.BaseThac0, Modifiers: mods, EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded,
 		Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
-		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
+		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
 		TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
 		RolledTargetAC: r.RolledTargetAC, RolledHit: r.RolledHit, RolledCrit: r.RolledCrit,

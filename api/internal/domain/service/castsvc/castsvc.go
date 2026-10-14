@@ -18,6 +18,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
@@ -51,6 +53,18 @@ type Buffs interface {
 	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
 }
 
+// Items is the inventory (itemsvc): Chromatic Orb lists the gems and spends
+// one. Use joins the caller's transaction.
+type Items interface {
+	List(ctx context.Context) ([]itemsvc.Item, error)
+	Use(ctx context.Context, itemID string) (itemsvc.Item, error)
+}
+
+// Attacks rolls the to-hit of a thrown spell (combatsvc).
+type Attacks interface {
+	RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*combatsvc.ToHitRoll, error)
+}
+
 // Characters supplies the caster level of the Bard (charactersvc).
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
@@ -72,6 +86,8 @@ type Deps struct {
 	Effects    spelleffectsvc.Catalog
 	Texts      Texts
 	Buffs      Buffs
+	Items      Items
+	Attacks    Attacks
 	Characters Characters
 	Dice       Dice
 	Log        Log
@@ -82,7 +98,7 @@ type service struct{ Deps }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Slots == nil || d.Effects == nil || d.Texts == nil || d.Buffs == nil ||
+	if d.Slots == nil || d.Effects == nil || d.Texts == nil || d.Buffs == nil || d.Items == nil || d.Attacks == nil ||
 		d.Characters == nil || d.Dice == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("castsvc: nil dependency")
 	}

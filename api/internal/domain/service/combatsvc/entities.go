@@ -26,16 +26,17 @@ type Modifier struct {
 }
 
 // DamageTermKind is the place of a contribution in the damage formula
-// ((Base × Spells) + Weapon) × Multiplier + Strength + Bonus.
+// ((Base × Spells × DiceMultiplier) + Weapon) × Crit + Strength + Bonus.
 type DamageTermKind string
 
 // Damage formula terms.
 const (
-	TermSpells     DamageTermKind = "spells"     // × on the dice
-	TermWeapon     DamageTermKind = "weapon"     // + before the multipliers
-	TermMultiplier DamageTermKind = "multiplier" // × on dice and weapon
-	TermStrength   DamageTermKind = "strength"   // + after the multipliers
-	TermBonus      DamageTermKind = "bonus"      // + after the multipliers (buff damage)
+	TermSpells     DamageTermKind = "spells"          // × on the dice
+	TermDiceMult   DamageTermKind = "dice_multiplier" // × on the raw dice only (Power Gem ×2)
+	TermWeapon     DamageTermKind = "weapon"          // + before the crit multiplier
+	TermMultiplier DamageTermKind = "multiplier"      // crit × on dice and weapon
+	TermStrength   DamageTermKind = "strength"        // + after the multipliers
+	TermBonus      DamageTermKind = "bonus"           // + after the multipliers (buff damage)
 )
 
 // DamageTerm is one contribution to the damage formula.
@@ -110,13 +111,15 @@ type RollResult struct {
 	Hit             bool
 	HitMargin       int
 
-	BaseDamage    int
-	DamageDice    string
-	SpellsBuff    float64
-	WeaponBuff    int
-	Multipliers   float64
-	StrengthBonus int
-	BonusDamage   int
+	BaseDamage  int
+	DamageDice  string
+	SpellsBuff  float64
+	WeaponBuff  int
+	Multipliers float64 // crit multiplier (1 without a crit)
+	// DiceMultiplier is the buffs' multiplier on the raw dice only.
+	DiceMultiplier float64
+	StrengthBonus  int
+	BonusDamage    int
 	// DamageTerms lists every contribution to the damage formula.
 	DamageTerms []DamageTerm
 	// UnroundedDamage is the formula result before the final floor and the
@@ -158,7 +161,7 @@ type RollResult struct {
 
 // RolledDamage is the damage side of an attack as rolled, before the crit:
 // the weapon dice and every buff, weapon and strength term. The damage of a
-// hit is ((Dice × SpellsBuff) + WeaponBuff) × (crit × BuffMultipliers) +
+// hit is ((Dice × SpellsBuff × BuffMultipliers) + WeaponBuff) × crit +
 // StrengthBonus + BonusDamage.
 type RolledDamage struct {
 	Dice            string

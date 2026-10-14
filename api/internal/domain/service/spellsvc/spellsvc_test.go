@@ -216,3 +216,17 @@ func TestSearch_TotalAndPagesCountOnlyStatMatches(t *testing.T) {
 	assert.Equal(t, []string{"S24", "S27"}, pageNames(last), "a full last page is not padded with non-matches")
 	assert.Equal(t, 10, last.Total)
 }
+
+// critical-qki.41: a long rest ends Rary's extra slots.
+func TestResetSlots_DropsRarysExtraSlots(t *testing.T) {
+	svc, dal, _ := newSvc(t)
+	dal.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{
+		{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true},
+		{Level: 2, Extra: true},
+	}, nil)
+	dal.EXPECT().SaveSlots(mock.Anything, int64(1), []spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm"}}).Return(nil)
+
+	got, err := svc.ResetSlots(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Len(t, got, 1)
+}

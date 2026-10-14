@@ -11,6 +11,15 @@ type castRecord struct {
 	CasterLevel int           `json:"casterLevel"`
 	Buff        *buffRecord   `json:"buff,omitempty"`
 	Damage      *damageRecord `json:"damage,omitempty"`
+	Orb         *orbRecord    `json:"orb,omitempty"`
+}
+
+// orbRecord is a Chromatic Orb's gem and attack.
+type orbRecord struct {
+	Gem      string `json:"gem"`
+	D20      int    `json:"d20"`
+	TargetAC int    `json:"targetAc"`
+	Hit      bool   `json:"hit"`
 }
 
 type buffRecord struct {
@@ -36,6 +45,9 @@ func toRecord(res CastResult) castRecord {
 	}
 	if d := res.Damage; d != nil {
 		r.Damage = &damageRecord{Total: d.Total, Type: d.Type}
+	}
+	if o := res.Orb; o != nil {
+		r.Orb = &orbRecord{Gem: o.Gem, D20: o.Attack.D20Roll, TargetAC: o.Attack.TargetAC, Hit: o.Attack.Hit}
 	}
 	return r
 }

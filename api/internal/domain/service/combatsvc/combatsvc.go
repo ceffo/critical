@@ -30,6 +30,9 @@ type SVC interface {
 	// returns the recomputed attack (same d20, d100 and damage dice, no ammo
 	// spent); recorded as an audited amend.
 	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*RollResult, error)
+	// RollSpellToHit rolls a to-hit (no weapon, no damage, no crit) for a
+	// thrown spell; it logs nothing, the spell's own cast entry does.
+	RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*ToHitRoll, error)
 	ListWeapons(ctx context.Context) ([]Weapon, error)
 	// GetCritTable returns the house crit table (the placeholder default
 	// until edited); SetCritTable replaces it after validating it.

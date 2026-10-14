@@ -471,6 +471,66 @@ func (_c *MockSVC_ResolveSavingThrow_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
+// RollSpellToHit provides a mock function with given fields: ctx, characterID, targetAC
+func (_m *MockSVC) RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*combatsvc.ToHitRoll, error) {
+	ret := _m.Called(ctx, characterID, targetAC)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RollSpellToHit")
+	}
+
+	var r0 *combatsvc.ToHitRoll
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) (*combatsvc.ToHitRoll, error)); ok {
+		return rf(ctx, characterID, targetAC)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) *combatsvc.ToHitRoll); ok {
+		r0 = rf(ctx, characterID, targetAC)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*combatsvc.ToHitRoll)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int) error); ok {
+		r1 = rf(ctx, characterID, targetAC)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_RollSpellToHit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RollSpellToHit'
+type MockSVC_RollSpellToHit_Call struct {
+	*mock.Call
+}
+
+// RollSpellToHit is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - targetAC int
+func (_e *MockSVC_Expecter) RollSpellToHit(ctx interface{}, characterID interface{}, targetAC interface{}) *MockSVC_RollSpellToHit_Call {
+	return &MockSVC_RollSpellToHit_Call{Call: _e.mock.On("RollSpellToHit", ctx, characterID, targetAC)}
+}
+
+func (_c *MockSVC_RollSpellToHit_Call) Run(run func(ctx context.Context, characterID int64, targetAC int)) *MockSVC_RollSpellToHit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_RollSpellToHit_Call) Return(_a0 *combatsvc.ToHitRoll, _a1 error) *MockSVC_RollSpellToHit_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_RollSpellToHit_Call) RunAndReturn(run func(context.Context, int64, int) (*combatsvc.ToHitRoll, error)) *MockSVC_RollSpellToHit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetCritTable provides a mock function with given fields: ctx, rows
 func (_m *MockSVC) SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error) {
 	ret := _m.Called(ctx, rows)

@@ -2,6 +2,7 @@ package castsvc
 
 import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
@@ -20,6 +21,18 @@ type CastRequest struct {
 	// default from the spell's target (see appliesToSelf). Ignored for
 	// self-only spells, which always affect the caster.
 	OnSelf *bool
+	// SpellID names the spell to cast from a blank Rary's extra slot (the
+	// player picks it at cast time). Ignored for a prepared slot.
+	SpellID string
+	// ExtraSlots is the split chosen when casting Rary's Mnemonic Enhancer:
+	// the levels of the slots granted (3 levels in all: [1 1 1], [1 2] or
+	// [3]). Empty: three level 1 slots.
+	ExtraSlots []int
+	// GemItemID is the inventory gem Chromatic Orb spends. Empty: the only
+	// gem in the inventory, if there is exactly one.
+	GemItemID string
+	// TargetAC is the orb's target AC (required for Chromatic Orb).
+	TargetAC *int
 }
 
 // ReceiveRequest is a spell a party member cast on the Bard.
@@ -131,4 +144,19 @@ type CastResult struct {
 	Untracked []Untracked
 	// Slots is the slot list after a cast.
 	Slots []spellsvc.SpellSlot
+	// ExtraSlots are the levels of the Rary's extra slots this cast added.
+	ExtraSlots []int
+	// Orb is a Chromatic Orb's gem, attack roll and effect (nil otherwise).
+	Orb *OrbResult
+}
+
+// OrbResult is what a Chromatic Orb did (critical-qki.42): it spent a gem
+// and threw an attack roll. The app shows hit or miss and the gem used; what a
+// hit does is the DM's call (no gem effect is modelled).
+type OrbResult struct {
+	GemItemID string
+	Gem       string
+	// Remaining is the count of that gem left.
+	Remaining int
+	Attack    combatsvc.ToHitRoll
 }

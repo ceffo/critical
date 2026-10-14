@@ -190,3 +190,21 @@ func TestRestore_WritesTheSnapshotBack(t *testing.T) {
 
 	require.Error(t, f.svc.Restore(context.Background(), 1, json.RawMessage(`{`)))
 }
+
+// critical-qki.41: Rary's extra slots are not part of the preparation, so
+// preparing again keeps them as they are.
+func TestPrepare_KeepsRarysExtraSlots(t *testing.T) {
+	f := newFixture(t)
+	extra := spellsvc.SpellSlot{Level: 2, SpellID: "mirror_image", PreparedSpellName: "Mirror Image", Used: true, Extra: true}
+	f.slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{
+		{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm"}, extra,
+	}, nil)
+	f.slots.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).Return(nil)
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	got, err := f.svc.Prepare(context.Background(), 1, []string{"mirror_image"})
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.False(t, got[0].Used, "a fresh mirror_image: the extra slot's cast does not count against it")
+	assert.Equal(t, extra, got[1])
+}

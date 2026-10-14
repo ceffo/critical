@@ -129,6 +129,19 @@ writes the buff inside the caller's transaction and replaces a same-name buff), 
 slot back and removes the buff. Effects come from `seeds/spell_effects.json` at the caster level (the
 Bard's level for a cast, the caster's for a received spell; by-group dice use the Bard's group,
 rogue); low-confidence, utility and uncatalogued spells return their text only.
+Rary's Mnemonic Enhancer (critical-qki.41, the only spell that adds slots) grants 3 spell levels as extra
+slots, split by the caster at cast time (`extraSlots`: `[1,1,1]` by default, `[1,2]` or `[3]`). They are
+`Extra` slots in the same list, blank until cast (`spellId` picks a spell of the slot's level then), kept by a
+new preparation, and **removed by the next long rest** (the spell's 24 h duration is not tracked; user
+to confirm). The same `spell_slots` snapshot undoes the cast.
+Chromatic Orb (critical-qki.42): casting it needs `targetAc` and spends one inventory gem (type `gem`, not
+the daily Power Gem; `gemItemId` when several are left, an error naming the problem when none), then
+`combatsvc.RollSpellToHit` rolls one d20 (THAC0, Strength and Dexterity missile adjustments, buff to-hit; nothing
+logged on its own). It follows the combat rules ("Attack Modifiers": a natural 1 or 20 is plain arithmetic, user
+2026-10-14: "same rules as combat") but never crits: no crit check, no crit table, no damage multiplier. The result
+shows hit or miss, the gem used and how many are left; the app models no gem effect and no damage (user: "i just
+need the selected gem type to be consumed"; the DM rules what a hit does). The level damage table of the seed is not
+used. The gem count rides the cast entry as an `items:<id>` snapshot, so voiding the cast gives the gem back.
 Buffs carry a free-text `Note` (in the active-buffs JSON and the `buffs` snapshot, so void restores it;
 editable through `BuffEdit.Note`). Saved buff templates (`saved_buffs` table, migration 013, nothing seeded)
 are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST` replaces a same-name template,
@@ -215,7 +228,7 @@ type BuffEffect struct {
 }
 // weapon_buff makes the weapon count as +N (Power Gem: "the weapon becomes +5"), to hit and
 // damage; it replaces the weapon's own magic when higher and does not add to it. to_hit adds
-// to attack rolls; damage adds to damage after the multipliers.
+// to attack rolls; damage adds to damage after the crit multiplier.
 // A buff may have both counters (Mirror Image) or neither (until dismissed).
 // Effective STR: see "Effective STR" under Attack Modifiers. min_str gates the buff's
 // other effects: they apply while effective STR >= min_str.
@@ -237,7 +250,8 @@ type RollResult struct {
     DamageDice      string       // dice rolled for the target size
     SpellsBuff      float64
     WeaponBuff      int          // weapon (or buff "+N") magic + ammo magic
-    Multipliers     float64
+    Multipliers     float64      // crit multiplier (1 without a crit)
+    DiceMultiplier  float64      // buffs' multiplier on the raw dice only (Power Gem x2)
     StrengthBonus   int
     BonusDamage     int          // buff damage
     DamageTerms     []DamageTerm // {term, kind, source, detail, value}: every damage contribution
@@ -295,7 +309,7 @@ damage, but the target AC may be corrected after the roll).
 ## Damage Formula
 
 ```
-Damage = floor(((BaseDamage × SpellsBuff) + WeaponBuff) × Multipliers) + StrengthBonus + BuffDamage
+Damage = floor(((BaseDamage × SpellsBuff × DiceMultiplier) + WeaponBuff) × Crit) + StrengthBonus + BuffDamage
 ```
 
 Never below 0. Every contribution is listed in `DamageTerms`.
@@ -303,7 +317,12 @@ Never below 0. Every contribution is listed in `DamageTerms`.
 - `BaseDamage`: weapon die roll, selected by target size (S/M vs Large)
 - `SpellsBuff`: multiplier from spells like Enlarge (default 1.0)
 - `WeaponBuff`: weapon magic damage (or the buff's "+N", Power Gem +5) plus ammo magic damage
-- `Multipliers`: **multiplicative** product of all active multipliers (Power Gem ×2, crit ×N)
+- `DiceMultiplier`: **multiplicative** product of the buffs'' `multiplier` effects (Power Gem ×2). It
+  multiplies **only the raw dice result**: the +5, the Strength bonus and other flat adds are never
+  doubled (user, 2026-10-14: "x2 multiplier on raw dice result"). With the gem, 1d8 = 6 gives
+  6 × 2 + 5 + STR, not (6 + 5) × 2 + STR.
+- `Crit`: the crit-table multiplier (ADR 0001), 1 without a crit. It still multiplies dice and
+  weapon bonus together, after the gem: a crit with the gem is ((dice × 2) + 5) × crit
 - `StrengthBonus`: PHB Table 1 damage adjustment for the effective STR (+2 at 18); melee and
   hurled weapons only, none for bows
 - `BuffDamage`: buff `damage` effects, flat

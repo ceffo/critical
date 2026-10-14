@@ -4,6 +4,8 @@ export interface SpellSlot {
   prepared_spell_id: string;
   prepared_spell_name: string;
   used: boolean;
+  /** A Rary's Mnemonic Enhancer slot: blank until cast, gone at the long rest. */
+  extra?: boolean;
 }
 
 /** Mirrors api/internal/domain/spellstats. Every typed field keeps `raw`, the PHB text. */
@@ -173,6 +175,24 @@ export interface CastResult {
   damage?: CastDamage;
   untracked: CastUntracked[];
   slots?: SpellSlot[];
+  /** Levels of the Rary's extra slots this cast added. */
+  extraSlots?: number[];
+  orb?: CastOrb;
+}
+
+/** Mirrors casthdl OrbDTO: a Chromatic Orb's spent gem, attack (no crit). */
+export interface CastOrb {
+  gemItemId: string;
+  gem: string;
+  remaining: number;
+  d20Roll: number;
+  baseThac0: number;
+  modifiers: { kind: string; source: string; detail?: string; value: number }[];
+  effectiveThac0: number;
+  targetAc: number;
+  targetACNeeded: number;
+  hit: boolean;
+  hitMargin: number;
 }
 
 /** Mirrors spellhdl.SpellPageDTO: one page of GET /api/spells. */

@@ -23,7 +23,7 @@ import (
 //     together; crit when d20 - check d100 >= the roll needed; a second,
 //     independent d100 (rolled on every attack) picks the multiplier's row
 //     in the stored crit table (x2 until the table is edited);
-//   - damage = ((dice × SpellsBuff) + WeaponBuff) × Multipliers +
+//   - damage = ((dice × SpellsBuff × DiceMultiplier) + WeaponBuff) × crit +
 //     StrengthBonus + buff damage, floored once, never below 0.
 //
 // A weapon that fires ammunition spends one through itemsvc. The ammo use
@@ -245,10 +245,10 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	for _, f := range mods.SpellsBuffFrom {
 		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermSpells, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
 	}
-	rolled.Terms = append(rolled.Terms, weaponTerms...)
 	for _, f := range mods.MultipliersFrom {
-		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermMultiplier, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
 	}
+	rolled.Terms = append(rolled.Terms, weaponTerms...)
 	rolled.Terms = append(rolled.Terms, strTerms...)
 	for _, c := range mods.DamageFrom {
 		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermBonus, Kind: ModBuff, Source: c.Buff, Detail: c.Buff, Value: float64(c.Value)})
@@ -294,7 +294,7 @@ func settle(res *RollResult) {
 	}
 
 	res.BaseDamage, res.DamageDice = 0, ""
-	res.SpellsBuff, res.WeaponBuff, res.Multipliers = 0, 0, 0
+	res.SpellsBuff, res.WeaponBuff, res.Multipliers, res.DiceMultiplier = 0, 0, 0, 0
 	res.StrengthBonus, res.BonusDamage = 0, 0
 	res.DamageTerms = []DamageTerm{}
 	res.UnroundedDamage, res.TotalDamage, res.DamageBreakdown = 0, 0, ""
@@ -309,7 +309,7 @@ func settle(res *RollResult) {
 	// multipliers (spells, weapon, crit, multipliers, strength, bonus).
 	critAt := len(d.Terms)
 	for i, t := range d.Terms {
-		if t.Term != TermSpells && t.Term != TermWeapon {
+		if t.Term != TermSpells && t.Term != TermDiceMult && t.Term != TermWeapon {
 			critAt = i
 			break
 		}
@@ -322,14 +322,15 @@ func settle(res *RollResult) {
 
 	res.SpellsBuff = d.SpellsBuff
 	res.WeaponBuff = d.WeaponBuff
-	res.Multipliers = res.CritMultiplier * d.BuffMultipliers
+	res.Multipliers = res.CritMultiplier
+	res.DiceMultiplier = d.BuffMultipliers
 	res.StrengthBonus = d.StrengthBonus
 	res.BonusDamage = d.BonusDamage
 
 	// Full precision through the whole formula, floored once at the end. The
 	// strength and buff terms are whole numbers, so flooring the sum is the
 	// same as flooring before adding them for whole multipliers.
-	res.UnroundedDamage = (float64(res.BaseDamage)*res.SpellsBuff+float64(res.WeaponBuff))*res.Multipliers +
+	res.UnroundedDamage = (float64(res.BaseDamage)*res.SpellsBuff*res.DiceMultiplier+float64(res.WeaponBuff))*res.Multipliers +
 		float64(res.StrengthBonus) + float64(res.BonusDamage)
 	res.TotalDamage = max(int(math.Floor(res.UnroundedDamage+floorEpsilon)), 0)
 	res.DamageBreakdown = explainDamage(res)
@@ -354,7 +355,7 @@ func critDetail(r *RollResult) string {
 // weaponMagic is the better of the weapon's own bonus and a buff's "weapon
 // becomes +N"; ok is false when neither gives anything.
 func weaponMagic(weaponName string, own int, mods buffsvc.BuffModifiers) (Modifier, bool) {
-	if mods.WeaponBuff > own {
+	if mods.WeaponBuff > 0 && mods.WeaponBuff >= own {
 		return Modifier{
 			Kind:   ModWeaponBuff,
 			Source: fmt.Sprintf("%s (weapon +%d)", mods.WeaponBuffFrom, mods.WeaponBuff),
@@ -370,8 +371,11 @@ func weaponMagic(weaponName string, own int, mods buffsvc.BuffModifiers) (Modifi
 
 // explainDamage is the formula with the numbers filled in.
 func explainDamage(r *RollResult) string {
-	s := fmt.Sprintf("((%d × %s) + %d) × %s + %d",
-		r.BaseDamage, factor(r.SpellsBuff), r.WeaponBuff, factor(r.Multipliers), r.StrengthBonus)
+	dice := fmt.Sprintf("%d × %s", r.BaseDamage, factor(r.SpellsBuff))
+	if r.DiceMultiplier != 1 { // buff multiplier on the raw dice only (Power Gem ×2)
+		dice += " × " + factor(r.DiceMultiplier)
+	}
+	s := fmt.Sprintf("((%s) + %d) × %s + %d", dice, r.WeaponBuff, factor(r.Multipliers), r.StrengthBonus)
 	switch {
 	case r.BonusDamage > 0:
 		s += fmt.Sprintf(" + %d", r.BonusDamage)

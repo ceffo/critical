@@ -345,15 +345,15 @@ func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
+		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (check d100 5, multiplier d100 77, placeholder)", Detail: "placeholder", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
 		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
 	}, res.DamageTerms)
-	// floor(((5 × 1.5) + 2) × (2 crit × 2 buff)) + 2 + 1 = floor(9.5 × 4) + 3 = 41.
-	assert.Equal(t, 41, res.TotalDamage)
-	assert.Equal(t, "((5 × 1.5) + 2) × 4.0 + 2 + 1 = 41", res.DamageBreakdown)
+	// floor(((5 × 1.5 × 2 buff) + 2) × 2 crit) + 2 + 1 = 34 + 3 = 37.
+	assert.Equal(t, 37, res.TotalDamage)
+	assert.Equal(t, "((5 × 1.5 × 2.0) + 2) × 2.0 + 2 + 1 = 37", res.DamageBreakdown)
 }
 
 // The Power Gem's effects (weapon becomes +5, damage x2, min_str 18) apply
@@ -377,12 +377,20 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 		wantMods  []combatsvc.Modifier
 		wantEff   int
 		wantTotal int
+		die       int // the 1d8; 0 = 5
+		wantDiceX bool
 	}{
 		{
+			// docs/backend.md "Damage Formula": the gem doubles the raw dice
+			// only. 1d8=6: (6 × 2) + 5 + 2 = 19, NOT ((6 + 5) × 2) + 2 = 24.
+			name: "x2 on the raw dice only, not on the +5", bonus: 6, d100: 50, die: 6, wantDiceX: true,
+			wantMods: []combatsvc.Modifier{modStr(18, 1), gemMod}, wantEff: 7, wantTotal: 19,
+		},
+		{
 			// 12 + 6 = 18. Mods: STR 18 +1, weapon becomes +5 (replaces the
-			// sword's +2) = +6. Eff. THAC0 7. 1d8=5: ((5 × 1) + 5) × 2 + 2 = 22.
+			// sword's +2) = +6. Eff. THAC0 7. 1d8=5: (5 × 2 gem dice) + 5 + 2 = 17 (the +5 and STR are not doubled).
 			name: "active at effective STR 18", bonus: 6, d100: 50,
-			wantMods: []combatsvc.Modifier{modStr(18, 1), gemMod}, wantEff: 7, wantTotal: 22,
+			wantMods: []combatsvc.Modifier{modStr(18, 1), gemMod}, wantEff: 7, wantTotal: 17,
 		},
 		{
 			// 12 + 5 = 17: the gem is ignored. Mods: STR 17 +1, sword +2 = +3.
@@ -392,9 +400,9 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 		},
 		{
 			// Needs 7 - 5 = 2; 10 - 2 = 8 >= 2: crit. Multipliers stack:
-			// ((5 × 1) + 5) × (2 crit × 2 gem) + 2 = 42.
-			name: "crit with the gem multiplies x4", bonus: 6, d100: 2,
-			wantMods: []combatsvc.Modifier{modStr(18, 1), gemMod}, wantEff: 7, wantTotal: 42,
+			// ((5 × 2 gem) + 5) × 2 crit + 2 = 32.
+			name: "crit with the gem: gem on the dice, crit on dice and weapon", bonus: 6, d100: 2,
+			wantMods: []combatsvc.Modifier{modStr(18, 1), gemMod}, wantEff: 7, wantTotal: 32,
 		},
 	}
 	for _, tt := range tests {
@@ -414,11 +422,21 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 			f.withChar(bard())
 			f.dice.EXPECT().RollD20().Return(10)
 			f.d100s(t, tt.d100, noCritMult)
-			f.dice.EXPECT().RollDie(8).Return(5)
+			die := tt.die
+			if die == 0 {
+				die = 5
+			}
+			f.dice.EXPECT().RollDie(8).Return(die)
 			f.records()
 
 			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
 			require.NoError(t, err)
+			if tt.wantDiceX {
+				assert.Equal(t, 2.0, res.DiceMultiplier)
+				assert.Equal(t, 1.0, res.Multipliers, "no crit: the crit multiplier is 1")
+				assert.Contains(t, res.DamageTerms, combatsvc.DamageTerm{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Source: "Power Gem", Detail: "Power Gem", Value: 2})
+				assert.Equal(t, "((6 × 1.0 × 2.0) + 5) × 1.0 + 2 = 19", res.DamageBreakdown)
+			}
 			assert.Equal(t, tt.wantMods, res.Modifiers)
 			assert.Equal(t, tt.wantEff, res.EffectiveThac0)
 			assert.True(t, res.Hit)

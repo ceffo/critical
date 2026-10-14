@@ -209,7 +209,7 @@ func (s *service) Restore(ctx context.Context, characterID int64, state json.Raw
 func carryUsed(before []spellsvc.SpellSlot, picked []SpellbookEntry) []spellsvc.SpellSlot {
 	usedLeft := map[string]int{}
 	for _, b := range before {
-		if b.Used {
+		if b.Used && !b.Extra {
 			usedLeft[b.SpellID]++
 		}
 	}
@@ -220,6 +220,12 @@ func carryUsed(before []spellsvc.SpellSlot, picked []SpellbookEntry) []spellsvc.
 			usedLeft[e.ID]--
 		}
 		out = append(out, spellsvc.SpellSlot{Level: e.Level, SpellID: e.ID, PreparedSpellName: e.Name, Used: used})
+	}
+	// Rary's extra slots are not part of the preparation: keep them.
+	for _, b := range before {
+		if b.Extra {
+			out = append(out, b)
+		}
 	}
 	return out
 }

@@ -30,4 +30,7 @@ type SpellSlot struct {
 	SpellID           string
 	PreparedSpellName string
 	Used              bool
+	// Extra marks a slot granted by Rary's Mnemonic Enhancer: blank until
+	// cast (the player picks the spell then) and gone at the next long rest.
+	Extra bool
 }

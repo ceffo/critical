@@ -243,7 +243,7 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			slot: slot("fist_of_stone", "Fist of Stone", 1), textOnly: castsvc.TextOnlyByHand,
 			check: func(t *testing.T, r castsvc.CastResult) {
 				assert.Equal(t, []castsvc.Untracked{{Key: "str_set", Value: 18}}, r.Untracked)
-				assert.Nil(t, r.Buff.Buff.Effects.StrSet, "never raises STR for every attack")
+				assert.Nil(t, r.Buff.Buff.Effects.StrBonus, "never raises STR for every attack")
 			},
 		},
 		{

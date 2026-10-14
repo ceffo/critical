@@ -8,7 +8,6 @@ export const BUFF_EFFECT_KEYS = [
   "save_bonus",
   "str_bonus",
   "str_max",
-  "str_set",
   "min_str",
   "ac",
   "to_hit",
@@ -29,7 +28,10 @@ export interface BuffEffect {
   effects: BuffEffects;
   /** Free text shown on the badge ("" = none). */
   note: string;
-  /** On list responses: false while min_str is not met by the effective STR. */
+  /**
+   * On list responses: false while min_str is not met by the effective STR, or (a Strength bonus)
+   * while an Improved Strength replaces it.
+   */
   applies?: boolean;
 }
 

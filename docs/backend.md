@@ -139,7 +139,7 @@ type BuffEffect struct {
     Charges  int    // left to absorb (Stoneskin layers, Mirror Images); 0 = none; ends at 0
     Duration int    // rounds left, counted down by Next Round; 0 = not timed; expires at 0
     Effects  BuffEffects // min_str, spells_buff, weapon_buff, multiplier, save_bonus,
-                         // str_set, str_bonus + str_max, ac, to_hit, damage
+                         // str_bonus + str_max, ac, to_hit, damage
                          // (pointers: nil = no contribution)
 }
 // weapon_buff makes the weapon count as +N (Power Gem: "the weapon becomes +5"), to hit and
@@ -195,23 +195,27 @@ auto-miss, no auto-hit. To-hit modifiers, each listed in `Modifiers`:
 The STR score used for the Strength adjustments and for buff gates (critical-qki.33). STR
 effects themselves are never gated, and no rule lowers the score below the sheet's.
 
-1. **Strength (wizard L2) stacks with itself, up to 18.** With no other Strength magic active,
-   effective STR = base + the **sum** of every active Strength bonus, capped at 18 (PHB: the
-   spell "cannot confer a Strength of 19 or more"). A Strength bonus is a `str_bonus` with a
-   `str_max` of 18 or less; casting or receiving Strength again adds a second buff instead of
-   renewing the first. User, 2026-10-13: "strength level 2 says WItH OTHER. it's find with
-   ITSELF".
-2. **Improved Strength replaces Strength (L2).** While any other Strength magic is active
-   (Improved Strength, 1d6+4 for a bard, cap 23; a `str_set`; a bonus capped above 18 or
-   uncapped), the Strength (L2) bonuses contribute nothing and the best single other effect
-   wins (it is not cumulative with itself; a set raises the score to its value). User,
-   2026-10-13: "improved replaces. level 2 can stack with itself. this is why kelsen often
-   equips 2 str lvl 2 to be sure to get to 18".
+User rulings, 2026-10-13: "strength level 2 says WItH OTHER. it's find with ITSELF"; "improved
+replaces. level 2 can stack with itself. this is why kelsen often equips 2 str lvl 2 to be sure
+to get to 18"; "simple: all str spells stack up to 18. unless it's improved strength that can go
+to 23."
+
+1. **Strength bonuses stack, up to 18.** With no Improved Strength active, effective STR = base +
+   the **sum** of every active `str_bonus` (Strength cast or received, or entered by hand, with
+   or without a `str_max`), total capped at 18 (PHB: Strength "cannot confer a Strength of 19 or
+   more"). A buff's own `str_max` of 18 or less is not used. Casting or receiving Strength again
+   adds a second buff instead of renewing the first.
+2. **Improved Strength replaces them.** A `str_bonus` whose `str_max` is above 18 is Improved
+   Strength (seeded 1d6+4, cap 23, for a bard). While one is active, every other Strength bonus
+   contributes nothing (its badge shows "replaced"), and the best single Improved wins: base +
+   bonus capped at its `str_max`. Casting it again renews it.
 3. **Gate.** A buff's other effects apply while effective STR ≥ its `min_str`. The Power Gem
    forms set `min_str` 18: +5 and ×2 at effective STR 18 **or more** (19-23 with Improved
    Strength included). User, 2026-10-13: "not exactly 18 >= 18".
 
-Exceptional Strength (18/xx) is not modelled: PHB, warriors only; Kelsen is a Bard.
+Exceptional Strength (18/xx) is not modelled: PHB, warriors only; Kelsen is a Bard. There is no
+"set STR to X" effect (user, 2026-10-13: "remove that buff type"); a `str_set` key in a stored
+buff is ignored when read, and in a request body it is ignored like any unknown key.
 
 A weapon that fires ammunition (`ammo_kind`) needs an ammo item of that kind; the attack spends one.
 Dice order: d20, crit-check d100, multiplier d100, then the damage dice, all rolled on **every** attack (a miss shows no

@@ -211,7 +211,7 @@ func effects(b *castsvc.AppliedBuff) map[string]float64 {
 	out := map[string]float64{}
 	ints := map[string]*int{
 		"min_str": fx.MinStr, "weapon_buff": fx.WeaponBuff, "save_bonus": fx.SaveBonus,
-		"str_set": fx.StrSet, "str_bonus": fx.StrBonus, "str_max": fx.StrMax,
+		"str_bonus": fx.StrBonus, "str_max": fx.StrMax,
 		"ac": fx.AC, "to_hit": fx.ToHit, "damage": fx.Damage,
 	}
 	for k, v := range ints {

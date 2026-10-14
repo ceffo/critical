@@ -12,7 +12,7 @@ const (
 // BuffEffects is the modifier payload of one buff. Pointers are used so a
 // missing field means "no contribution" rather than zero.
 //
-// STR effects (StrSet, StrBonus, StrMax) feed the effective STR score; the
+// STR effects (StrBonus, StrMax) feed the effective STR score; the
 // other effects are gated by MinStr against that effective score.
 type BuffEffects struct {
 	// MinStr gates the buff: it contributes only while effective STR >= MinStr
@@ -26,12 +26,10 @@ type BuffEffects struct {
 	Multiplier *float64
 	SaveBonus  *int
 
-	// StrSet raises STR to this score (never lowers it).
-	StrSet *int
-	// StrBonus adds to the base STR score, capped at StrMax when set
-	// (Strength: +1d6 for a bard, max 18; Improved Strength: 1d6+4, max 23).
-	// A bonus capped at 18 or less is Strength (wizard L2) magic: those add
-	// up (see effectiveStr).
+	// StrBonus adds to the base STR score (Strength: +1d6 for a bard;
+	// Improved Strength: 1d6+4, max 23). StrMax above 18 marks Improved
+	// Strength; every other bonus stacks, total capped at 18 (see
+	// effectiveStr).
 	StrBonus *int
 	StrMax   *int
 	// AC is added to armour class (descending AC: negative is better).

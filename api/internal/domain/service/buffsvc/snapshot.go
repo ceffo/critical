@@ -26,7 +26,6 @@ type snapEffects struct {
 	WeaponBuff *int     `json:"weapon_buff,omitempty"`
 	Multiplier *float64 `json:"multiplier,omitempty"`
 	SaveBonus  *int     `json:"save_bonus,omitempty"`
-	StrSet     *int     `json:"str_set,omitempty"`
 	StrBonus   *int     `json:"str_bonus,omitempty"`
 	StrMax     *int     `json:"str_max,omitempty"`
 	AC         *int     `json:"ac,omitempty"`

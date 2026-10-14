@@ -59,9 +59,10 @@ labelled `mvp-saturday` are the must-haves.
    THAC0 13, STR 12), plus the PHB Strength / Dexterity / Bard spell tables as seed data
 2. HP Ledger and Combat Roll Resolution (attack + crit + damage) with real weapons, ammo by arrow
    type, and the full AD&D 2.5 modifiers (STR, DEX, buffs); no special natural 1 / natural 20
-3. Active Buffs + Round Counter, including charge buffs and effective STR (Power Gem effects apply
-   at effective STR 18 or more, usually via Strength spells cast by others; user: "not exactly
-   18 >= 18")
+3. Active Buffs + Round Counter, including charge buffs and effective STR (Strength bonuses stack up
+   to 18, Improved Strength replaces them up to 23: "all str spells stack up to 18. unless it's
+   improved strength that can go to 23"; Power Gem effects apply at effective STR 18 or more,
+   usually via Strength spells cast by others; user: "not exactly 18 >= 18")
 4. Spells with effects (Wizard-list effects extracted into a seed) and spells received from the party
 5. Daily spell preparation from the spellbook within the PHB Bard limits
 6. One append-only action log (also the combat log) with before/after snapshots; any action can be

@@ -163,6 +163,67 @@ test.describe("with the sheet's STR 12", () => {
     await expectNoReload(page);
     await snap(page, "strength-expired-gem-off");
   });
+
+  test("a hand-made Strength with no max stacks with a capped one up to 18; Improved replaces both", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    await markNoReload(page);
+    await expect.poll(() => effectiveStr(page)).toBe(12);
+    await addBuff(page, {
+      name: "e2e Gem",
+      effects: [
+        ["min_str", 18],
+        ["weapon_buff", 5],
+      ],
+    });
+    const gem = buffBadge(page, "e2e Gem");
+
+    // Rule 1: +4 (no max) and +3 (max 18) on 12: 19, capped at 18.
+    await addBuff(page, {
+      name: "e2e Strength hand",
+      rounds: 20,
+      effects: [["str_bonus", 4]],
+    });
+    await addBuff(page, {
+      name: "e2e Strength cast",
+      rounds: 20,
+      effects: [
+        ["str_bonus", 3],
+        ["str_max", 18],
+      ],
+    });
+    await expect.poll(() => effectiveStr(page)).toBe(18);
+    await expect(gem).toHaveAttribute("data-applies", "true");
+
+    // Rule 2: a low Improved Strength (1 + 4) replaces both: 17, the gem goes off and the
+    // Strength badges say they are replaced.
+    await addBuff(page, {
+      name: "e2e Improved",
+      rounds: 5,
+      effects: [
+        ["str_bonus", 5],
+        ["str_max", 23],
+      ],
+    });
+    await expect.poll(() => effectiveStr(page)).toBe(17);
+    await expect(gem).toHaveAttribute("data-applies", "false");
+    for (const name of ["e2e Strength hand", "e2e Strength cast"]) {
+      await expect(buffBadge(page, name)).toHaveAttribute(
+        "data-applies",
+        "false",
+      );
+      await expect(buffBadge(page, name)).toContainText(
+        "replaced by Improved Strength",
+      );
+    }
+    await expect(buffBadge(page, "e2e Improved")).toHaveAttribute(
+      "data-applies",
+      "true",
+    );
+    await expectNoReload(page);
+    await snap(page, "improved-replaces-strength");
+  });
 });
 
 test("a buff note shows on the badge, edits are logged, void restores it", async ({
@@ -171,7 +232,11 @@ test("a buff note shows on the badge, edits are logged, void restores it", async
   await openDashboard(page);
   await markNoReload(page);
 
-  await addBuff(page, { name: "e2e Ward", rounds: 5, note: "+4 saves vs fire" });
+  await addBuff(page, {
+    name: "e2e Ward",
+    rounds: 5,
+    note: "+4 saves vs fire",
+  });
   const badge = buffBadge(page, "e2e Ward");
   await expect(badge.getByTestId("buff-note")).toHaveText("+4 saves vs fire");
 
@@ -210,7 +275,9 @@ test("a saved buff fills the form from its chip, deleting it leaves active buffs
     note: "thunderclap stuns 30 m",
     save: true,
   });
-  await expect(logEntry(page, "Saved buff e2e Hammer form (10 rd)")).toBeVisible();
+  await expect(
+    logEntry(page, "Saved buff e2e Hammer form (10 rd)"),
+  ).toBeVisible();
 
   // Re-add from the chip, changing the rounds first.
   await strip.getByRole("button", { name: "Add buff" }).click();

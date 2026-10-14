@@ -2,20 +2,32 @@
 -- This file is meant to be re-generated in place and/or deleted at any time.
 
 -- ListItems
-SELECT "id", "name", "kind", "magic_bonus", "ammo_kind", "count", "max_count", "per_day", "effect_dice", "effect_save", "notes"
+SELECT "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes"
 FROM "items" ORDER BY "position";
 
 -- GetItem
-SELECT "id", "name", "kind", "magic_bonus", "ammo_kind", "count", "max_count", "per_day", "effect_dice", "effect_save", "notes"
+SELECT "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes"
 FROM "items" WHERE "id" = ?1;
 
 -- DecrementItem
 UPDATE "items" SET "count" = "count" - 1 WHERE "id" = ?1 AND "count" > 0
-RETURNING "id", "name", "kind", "magic_bonus", "ammo_kind", "count", "max_count", "per_day", "effect_dice", "effect_save", "notes";
+RETURNING "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes";
 
--- ResetPerDayItems
-UPDATE "items" SET "count" = "max_count" WHERE "per_day" = 1;
+-- IncrementItem
+UPDATE "items" SET "count" = "count" + ?1 WHERE "id" = ?2
+RETURNING "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes";
+
+-- ResetDailyItems
+UPDATE "items" SET "count" = "max_count" WHERE "behaviour" = 'daily';
 
 -- SetItemCount
 UPDATE "items" SET "count" = ?1 WHERE "id" = ?2
 RETURNING "id";
+
+-- DeleteItem
+DELETE FROM "items" WHERE "id" = ?1
+RETURNING "id";
+
+-- InsertItem
+INSERT INTO "items" ("id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes")
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12);

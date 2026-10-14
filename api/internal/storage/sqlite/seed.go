@@ -60,15 +60,18 @@ type weaponSeed struct {
 	AmmoKind    string `json:"ammo_kind"`
 }
 
+// itemSeed is one seeds/items.json entry (critical-qki.13): behaviour is
+// stock, charges or daily, type a free-text label, max_count defaults to
+// count (a daily item's refill value).
 type itemSeed struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
-	Kind       string `json:"kind"`
+	Type       string `json:"type"`
+	Behaviour  string `json:"behaviour"`
 	MagicBonus int    `json:"magic_bonus"`
 	AmmoKind   string `json:"ammo_kind"`
 	Count      int    `json:"count"`
 	MaxCount   *int   `json:"max_count"`
-	PerDay     bool   `json:"per_day"`
 	EffectDice string `json:"effect_dice"`
 	EffectSave string `json:"effect_save"`
 	Notes      string `json:"notes"`
@@ -345,6 +348,14 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 			return fmt.Errorf("items.json entry %d: duplicate id %q", i, it.ID)
 		}
 		seen[it.ID] = true
+		switch it.Behaviour {
+		case "stock", "charges", "daily":
+		default:
+			return fmt.Errorf("items.json entry %d (%q): behaviour must be stock, charges or daily, got %q", i, it.ID, it.Behaviour)
+		}
+		if it.Count < 0 {
+			return fmt.Errorf("items.json entry %d (%q): negative count", i, it.ID)
+		}
 		if it.MaxCount != nil && it.Count > *it.MaxCount {
 			return fmt.Errorf("items.json entry %d (%q): count %d exceeds max_count %d", i, it.ID, it.Count, *it.MaxCount)
 		}
@@ -356,9 +367,9 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 				maxCount = *it.MaxCount
 			}
 			if _, err := q.ExecContext(ctx, `
-				INSERT INTO items (id, position, name, kind, magic_bonus, ammo_kind, count, max_count, per_day, effect_dice, effect_save, notes)
+				INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				it.ID, i, it.Name, it.Kind, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.PerDay, it.EffectDice, it.EffectSave, it.Notes,
+				it.ID, i, it.Name, it.Type, it.Behaviour, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.EffectDice, it.EffectSave, it.Notes,
 			); err != nil {
 				return fmt.Errorf("insert item %q: %w", it.ID, err)
 			}

@@ -79,6 +79,158 @@ func (_c *MockDAL_Decrement_Call) RunAndReturn(run func(context.Context, string)
 	return _c
 }
 
+// Delete provides a mock function with given fields: ctx, itemID
+func (_m *MockDAL) Delete(ctx context.Context, itemID string) error {
+	ret := _m.Called(ctx, itemID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, itemID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type MockDAL_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - itemID string
+func (_e *MockDAL_Expecter) Delete(ctx interface{}, itemID interface{}) *MockDAL_Delete_Call {
+	return &MockDAL_Delete_Call{Call: _e.mock.On("Delete", ctx, itemID)}
+}
+
+func (_c *MockDAL_Delete_Call) Run(run func(ctx context.Context, itemID string)) *MockDAL_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockDAL_Delete_Call) Return(_a0 error) *MockDAL_Delete_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_Delete_Call) RunAndReturn(run func(context.Context, string) error) *MockDAL_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Increment provides a mock function with given fields: ctx, itemID, n
+func (_m *MockDAL) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item, error) {
+	ret := _m.Called(ctx, itemID, n)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Increment")
+	}
+
+	var r0 itemsvc.Item
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) (itemsvc.Item, error)); ok {
+		return rf(ctx, itemID, n)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) itemsvc.Item); ok {
+		r0 = rf(ctx, itemID, n)
+	} else {
+		r0 = ret.Get(0).(itemsvc.Item)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, itemID, n)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_Increment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Increment'
+type MockDAL_Increment_Call struct {
+	*mock.Call
+}
+
+// Increment is a helper method to define mock.On call
+//   - ctx context.Context
+//   - itemID string
+//   - n int
+func (_e *MockDAL_Expecter) Increment(ctx interface{}, itemID interface{}, n interface{}) *MockDAL_Increment_Call {
+	return &MockDAL_Increment_Call{Call: _e.mock.On("Increment", ctx, itemID, n)}
+}
+
+func (_c *MockDAL_Increment_Call) Run(run func(ctx context.Context, itemID string, n int)) *MockDAL_Increment_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockDAL_Increment_Call) Return(_a0 itemsvc.Item, _a1 error) *MockDAL_Increment_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_Increment_Call) RunAndReturn(run func(context.Context, string, int) (itemsvc.Item, error)) *MockDAL_Increment_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Insert provides a mock function with given fields: ctx, item
+func (_m *MockDAL) Insert(ctx context.Context, item itemsvc.Item) error {
+	ret := _m.Called(ctx, item)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Insert")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, itemsvc.Item) error); ok {
+		r0 = rf(ctx, item)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_Insert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Insert'
+type MockDAL_Insert_Call struct {
+	*mock.Call
+}
+
+// Insert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - item itemsvc.Item
+func (_e *MockDAL_Expecter) Insert(ctx interface{}, item interface{}) *MockDAL_Insert_Call {
+	return &MockDAL_Insert_Call{Call: _e.mock.On("Insert", ctx, item)}
+}
+
+func (_c *MockDAL_Insert_Call) Run(run func(ctx context.Context, item itemsvc.Item)) *MockDAL_Insert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(itemsvc.Item))
+	})
+	return _c
+}
+
+func (_c *MockDAL_Insert_Call) Return(_a0 error) *MockDAL_Insert_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_Insert_Call) RunAndReturn(run func(context.Context, itemsvc.Item) error) *MockDAL_Insert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function with given fields: ctx
 func (_m *MockDAL) List(ctx context.Context) ([]itemsvc.Item, error) {
 	ret := _m.Called(ctx)
@@ -137,12 +289,12 @@ func (_c *MockDAL_List_Call) RunAndReturn(run func(context.Context) ([]itemsvc.I
 	return _c
 }
 
-// ResetPerDay provides a mock function with given fields: ctx
-func (_m *MockDAL) ResetPerDay(ctx context.Context) error {
+// ResetDaily provides a mock function with given fields: ctx
+func (_m *MockDAL) ResetDaily(ctx context.Context) error {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ResetPerDay")
+		panic("no return value specified for ResetDaily")
 	}
 
 	var r0 error
@@ -155,30 +307,30 @@ func (_m *MockDAL) ResetPerDay(ctx context.Context) error {
 	return r0
 }
 
-// MockDAL_ResetPerDay_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetPerDay'
-type MockDAL_ResetPerDay_Call struct {
+// MockDAL_ResetDaily_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetDaily'
+type MockDAL_ResetDaily_Call struct {
 	*mock.Call
 }
 
-// ResetPerDay is a helper method to define mock.On call
+// ResetDaily is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *MockDAL_Expecter) ResetPerDay(ctx interface{}) *MockDAL_ResetPerDay_Call {
-	return &MockDAL_ResetPerDay_Call{Call: _e.mock.On("ResetPerDay", ctx)}
+func (_e *MockDAL_Expecter) ResetDaily(ctx interface{}) *MockDAL_ResetDaily_Call {
+	return &MockDAL_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx)}
 }
 
-func (_c *MockDAL_ResetPerDay_Call) Run(run func(ctx context.Context)) *MockDAL_ResetPerDay_Call {
+func (_c *MockDAL_ResetDaily_Call) Run(run func(ctx context.Context)) *MockDAL_ResetDaily_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context))
 	})
 	return _c
 }
 
-func (_c *MockDAL_ResetPerDay_Call) Return(_a0 error) *MockDAL_ResetPerDay_Call {
+func (_c *MockDAL_ResetDaily_Call) Return(_a0 error) *MockDAL_ResetDaily_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockDAL_ResetPerDay_Call) RunAndReturn(run func(context.Context) error) *MockDAL_ResetPerDay_Call {
+func (_c *MockDAL_ResetDaily_Call) RunAndReturn(run func(context.Context) error) *MockDAL_ResetDaily_Call {
 	_c.Call.Return(run)
 	return _c
 }

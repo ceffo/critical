@@ -1,8 +1,8 @@
 [
-  { "id": "arrows_plus1", "name": "Arrows +1", "kind": "ammo", "magic_bonus": 1, "ammo_kind": "arrow", "count": 18 },
-  { "id": "arrows_plus2", "name": "Arrows +2", "kind": "ammo", "magic_bonus": 2, "ammo_kind": "arrow", "count": 16 },
-  { "id": "arrows_plus3", "name": "Arrows +3", "kind": "ammo", "magic_bonus": 3, "ammo_kind": "arrow", "count": 2 },
-  { "id": "fire_flask", "name": "Fire flasks", "kind": "consumable", "count": 5, "effect_dice": "5d6" },
-  { "id": "wand_lightning", "name": "Wand of lightning", "kind": "charged", "count": 4, "effect_dice": "6d6", "effect_save": "rod_staff_wand" },
-  { "id": "power_gem_dispel", "name": "Power Gem: Dispel Magic", "kind": "charged", "count": 1, "per_day": true, "notes": "1/day big Dispel Magic. The weapon becomes +5 while the gem is used (STR 18 gate, handled by buffs)." }
+  { "id": "arrows_plus1", "name": "Arrows +1", "type": "arrow", "behaviour": "stock", "magic_bonus": 1, "ammo_kind": "arrow", "count": 18 },
+  { "id": "arrows_plus2", "name": "Arrows +2", "type": "arrow", "behaviour": "stock", "magic_bonus": 2, "ammo_kind": "arrow", "count": 16 },
+  { "id": "arrows_plus3", "name": "Arrows +3", "type": "arrow", "behaviour": "stock", "magic_bonus": 3, "ammo_kind": "arrow", "count": 2 },
+  { "id": "fire_flask", "name": "Fire flasks", "type": "flask", "behaviour": "stock", "count": 5, "effect_dice": "5d6" },
+  { "id": "wand_lightning", "name": "Wand of lightning", "type": "wand", "behaviour": "charges", "count": 4, "effect_dice": "6d6", "effect_save": "rod_staff_wand" },
+  { "id": "power_gem_dispel", "name": "Power Gem: Dispel Magic", "type": "gem", "behaviour": "daily", "count": 1, "notes": "1/day big Dispel Magic. The weapon becomes +5 while the gem is used (STR 18 gate, handled by buffs)." }
 ]

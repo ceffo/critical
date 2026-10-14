@@ -103,6 +103,7 @@ var mappings = []mapping{
 	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, message: fixed("weapon not found")},
 	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound},
 	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict},
+	{target: itemsvc.ErrNotRestockable, status: http.StatusConflict},
 	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict},
 	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest},
 	{target: prepsvc.ErrNotInSpellbook, status: http.StatusBadRequest},

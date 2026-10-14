@@ -1,6 +1,9 @@
-// Package itemsvc owns the counted items (ammo, charged items, consumables).
-// Counters change at the table: Use spends one, ResetDaily refills the per-day
-// items on a long rest.
+// Package itemsvc owns the counted items. One model (critical-qki.13): an
+// item's Behaviour says how its count moves. Use spends one of any item (a
+// charges item is removed at 0), Restock adds to a stock item, ResetDaily
+// refills the daily items on a long rest. Every change at the table is one
+// action-log entry with the item's "items:<id>" snapshot, so popping it
+// restores the count (and a removed item).
 package itemsvc
 
 import (
@@ -16,14 +19,20 @@ type SVC interface {
 	domain.Service
 	List(ctx context.Context) ([]Item, error)
 	// Use spends one count of the item atomically and returns the updated
-	// item. ErrItemNotFound for an unknown id, ErrItemEmpty at 0.
+	// item; a charges item spent to 0 is removed (Item.Removed). It must run
+	// in the caller's transaction (the attack that fires an arrow) and the
+	// caller logs UseSnapshot of the result. ErrItemNotFound for an unknown
+	// id, ErrItemEmpty at 0.
 	Use(ctx context.Context, itemID string) (Item, error)
-	// UseItem spends one count of a charged item or consumable, rolls its
-	// effect dice (if any) through the dice port and records the use in the
-	// action log with a before/after snapshot, all in one transaction.
-	// Ammunition is spent by attacks, not here (ErrInvalidInput).
+	// UseItem spends one count of any item (Use), rolls its effect dice (if
+	// any) through the dice port and records the use in the action log with
+	// the item's snapshot, all in one transaction.
 	UseItem(ctx context.Context, characterID int64, itemID string) (*UseResult, error)
-	// ResetDaily refills every per-day item to its max (long rest) and
+	// Restock adds n (1..MaxRestock) to a stock item and logs it with the
+	// item's snapshot, in one transaction. ErrNotRestockable for a charges or
+	// daily item, ErrInvalidInput for n out of range.
+	Restock(ctx context.Context, characterID int64, itemID string, n int) (*RestockResult, error)
+	// ResetDaily refills every daily item to its max (long rest) and
 	// returns the full item list.
 	ResetDaily(ctx context.Context) ([]Item, error)
 
@@ -33,15 +42,23 @@ type SVC interface {
 	Restorers() map[string]actionlog.Restorer
 }
 
-// DAL is the driven port. Decrement must be a single atomic statement that
-// never takes the count below 0.
+// DAL is the driven port. Decrement and Increment must be single atomic
+// statements; Decrement never takes the count below 0. Every method joins
+// the transaction carried by ctx.
 type DAL interface {
 	List(ctx context.Context) ([]Item, error)
 	// Decrement returns the updated item, ErrItemNotFound or ErrItemEmpty.
 	Decrement(ctx context.Context, itemID string) (Item, error)
-	ResetPerDay(ctx context.Context) error
+	// Increment adds n and returns the updated item, or ErrItemNotFound.
+	Increment(ctx context.Context, itemID string, n int) (Item, error)
+	// ResetDaily refills every daily item to its max count.
+	ResetDaily(ctx context.Context) error
 	// SetCount writes a count back; ErrItemNotFound for an unknown id.
 	SetCount(ctx context.Context, itemID string, count int) error
+	// Delete removes an item; ErrItemNotFound for an unknown id.
+	Delete(ctx context.Context, itemID string) error
+	// Insert writes a whole item back (restoring a removed one).
+	Insert(ctx context.Context, item Item) error
 }
 
 // Dice is the dice adapter port.
@@ -91,12 +108,23 @@ func (s *service) Close(_ context.Context) error  { return nil }
 func (s *service) List(ctx context.Context) ([]Item, error) { return s.dal.List(ctx) }
 
 func (s *service) Use(ctx context.Context, itemID string) (Item, error) {
-	return s.dal.Decrement(ctx, itemID)
+	item, err := s.dal.Decrement(ctx, itemID)
+	if err != nil {
+		return Item{}, err
+	}
+	if item.Removed() {
+		if err := s.dal.Delete(ctx, item.ID); err != nil {
+			return Item{}, fmt.Errorf("remove spent item %s: %w", item.ID, err)
+		}
+	}
+	return item, nil
 }
 
+// ResetDaily refills the daily items only: stock and charges items are never
+// refilled by a rest.
 func (s *service) ResetDaily(ctx context.Context) ([]Item, error) {
-	if err := s.dal.ResetPerDay(ctx); err != nil {
-		return nil, fmt.Errorf("reset per-day items: %w", err)
+	if err := s.dal.ResetDaily(ctx); err != nil {
+		return nil, fmt.Errorf("reset daily items: %w", err)
 	}
 	return s.dal.List(ctx)
 }

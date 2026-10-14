@@ -44,7 +44,9 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 	assert.Equal(t, 2, scalar(t, db, "SELECT count FROM items WHERE id = 'arrows_plus3'"))
 	assert.Equal(t, 5, scalar(t, db, "SELECT count FROM items WHERE id = 'fire_flask'"))
 	assert.Equal(t, 4, scalar(t, db, "SELECT max_count FROM items WHERE id = 'wand_lightning'"), "max_count defaults to count")
-	assert.Equal(t, 1, scalar(t, db, "SELECT per_day FROM items WHERE id = 'power_gem_dispel'"))
+	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) FROM items WHERE id = 'power_gem_dispel' AND behaviour = 'daily' AND type = 'gem'"))
+	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) FROM items WHERE id = 'wand_lightning' AND behaviour = 'charges' AND type = 'wand'"))
+	assert.Equal(t, 4, scalar(t, db, "SELECT COUNT(*) FROM items WHERE behaviour = 'stock'"), "arrows and flasks")
 
 	// A table change must survive a re-seed (a restart).
 	_, err := db.Exec("UPDATE items SET count = 3 WHERE id = 'arrows_plus1'")
@@ -59,11 +61,12 @@ func TestSeed_InvalidCatalogsFailWithoutPartialRows(t *testing.T) {
 	tests := map[string]struct{ file, content, table string }{
 		"weapon missing damage": {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"},{"id":"b","name":"B"}]`, "weapons"},
 		"weapon bad kind":       {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"magic"}]`, "weapons"},
-		"item bad kind":         {"items.json", `[{"id":"a","name":"A","kind":"relic","count":1}]`, "items"},
-		"item negative count":   {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":-1}]`, "items"},
+		"item bad behaviour":    {"items.json", `[{"id":"a","name":"A","behaviour":"relic","count":1}]`, "items"},
+		"item old kind":         {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":1}]`, "items"},
+		"item negative count":   {"items.json", `[{"id":"a","name":"A","behaviour":"stock","count":-1}]`, "items"},
 		"weapon duplicate id":   {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"},{"id":"a","name":"B","damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`, "weapons"},
-		"item duplicate id":     {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":1},{"id":"a","name":"B","kind":"ammo","count":1}]`, "items"},
-		"item count over max":   {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":5,"max_count":3}]`, "items"},
+		"item duplicate id":     {"items.json", `[{"id":"a","name":"A","behaviour":"stock","count":1},{"id":"a","name":"B","behaviour":"stock","count":1}]`, "items"},
+		"item count over max":   {"items.json", `[{"id":"a","name":"A","behaviour":"daily","count":5,"max_count":3}]`, "items"},
 		"invalid json":          {"items.json", `{nope`, "items"},
 	}
 	for name, tt := range tests {
@@ -81,7 +84,7 @@ func TestSeed_MissingCatalogFileIsAStartupError(t *testing.T) {
 	for _, missing := range []string{"weapons.json", "items.json"} {
 		t.Run(missing, func(t *testing.T) {
 			dir := t.TempDir()
-			present, content := "items.json", `[{"id":"a","name":"A","kind":"ammo","count":1}]`
+			present, content := "items.json", `[{"id":"a","name":"A","behaviour":"stock","count":1}]`
 			if missing == "items.json" {
 				present, content = "weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`
 			}

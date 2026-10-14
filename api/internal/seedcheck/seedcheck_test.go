@@ -101,7 +101,6 @@ func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {
 	}
 	var items []struct {
 		ID       string `json:"id"`
-		Kind     string `json:"kind"`
 		AmmoKind string `json:"ammo_kind"`
 	}
 	readJSON(t, "weapons.json", &weapons)
@@ -113,7 +112,7 @@ func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {
 		}
 	}
 	for _, it := range items {
-		if it.Kind == "ammo" {
+		if it.AmmoKind != "" {
 			assert.True(t, launchers[it.AmmoKind], "ammo %s fits no weapon", it.ID)
 		}
 	}

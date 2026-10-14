@@ -399,12 +399,12 @@ func (f *Factory) fromExistingItem(ctx context.Context, m *models.Item) *ItemTem
 	o.ID = func() string { return m.ID }
 	o.Position = func() int64 { return m.Position }
 	o.Name = func() string { return m.Name }
-	o.Kind = func() string { return m.Kind }
+	o.Type = func() string { return m.Type }
+	o.Behaviour = func() string { return m.Behaviour }
 	o.MagicBonus = func() int64 { return m.MagicBonus }
 	o.AmmoKind = func() string { return m.AmmoKind }
 	o.Count = func() int64 { return m.Count }
 	o.MaxCount = func() int64 { return m.MaxCount }
-	o.PerDay = func() int64 { return m.PerDay }
 	o.EffectDice = func() string { return m.EffectDice }
 	o.EffectSave = func() string { return m.EffectSave }
 	o.Notes = func() string { return m.Notes }

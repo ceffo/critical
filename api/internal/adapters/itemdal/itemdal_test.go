@@ -27,30 +27,37 @@ func openDSN(t *testing.T, dsn string) *sqlite.DB {
 	return db
 }
 
-func insert(t *testing.T, db *sqlite.DB, id string, pos, count, maxCount int, perDay bool) {
+func insert(t *testing.T, db *sqlite.DB, id string, pos, count, maxCount int, b itemsvc.Behaviour) {
 	t.Helper()
-	_, err := db.Exec(`INSERT INTO items (id, position, name, kind, count, max_count, per_day, effect_dice)
-		VALUES (?, ?, ?, 'charged', ?, ?, ?, '6d6')`, id, pos, "Name "+id, count, maxCount, perDay)
+	_, err := db.Exec(`INSERT INTO items (id, position, name, type, behaviour, count, max_count, effect_dice)
+		VALUES (?, ?, ?, 'wand', ?, ?, ?, '6d6')`, id, pos, "Name "+id, string(b), count, maxCount)
 	require.NoError(t, err)
+}
+
+func count(t *testing.T, db *sqlite.DB, id string) int {
+	t.Helper()
+	var n int
+	require.NoError(t, db.QueryRow(`SELECT count FROM items WHERE id = ?`, id).Scan(&n))
+	return n
 }
 
 func TestListAndMapping(t *testing.T) {
 	db := openDB(t)
-	insert(t, db, "b", 1, 4, 4, false)
-	insert(t, db, "a", 0, 1, 1, true)
+	insert(t, db, "b", 1, 4, 4, itemsvc.BehaviourCharges)
+	insert(t, db, "a", 0, 1, 1, itemsvc.BehaviourDaily)
 
 	got, err := itemdal.New(db).List(context.Background())
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	assert.Equal(t, "a", got[0].ID, "ordered by position, not id")
 	assert.Equal(t, itemsvc.Item{
-		ID: "a", Name: "Name a", Kind: itemsvc.KindCharged, Count: 1, MaxCount: 1, PerDay: true, EffectDice: "6d6",
+		ID: "a", Name: "Name a", Type: "wand", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1, EffectDice: "6d6",
 	}, got[0])
 }
 
 func TestDecrement_StopsAtZero(t *testing.T) {
 	db := openDB(t)
-	insert(t, db, "wand", 0, 2, 4, false)
+	insert(t, db, "wand", 0, 2, 4, itemsvc.BehaviourCharges)
 	dal := itemdal.New(db)
 	ctx := context.Background()
 
@@ -63,9 +70,7 @@ func TestDecrement_StopsAtZero(t *testing.T) {
 
 	_, err = dal.Decrement(ctx, "wand")
 	require.ErrorIs(t, err, itemsvc.ErrItemEmpty)
-	var n int
-	require.NoError(t, db.QueryRow(`SELECT count FROM items WHERE id = 'wand'`).Scan(&n))
-	assert.Equal(t, 0, n, "never below 0")
+	assert.Equal(t, 0, count(t, db, "wand"), "never below 0")
 }
 
 func TestDecrement_UnknownItem(t *testing.T) {
@@ -77,7 +82,7 @@ func TestDecrement_UnknownItem(t *testing.T) {
 func TestDecrement_ConcurrentUsesNeverOverspend(t *testing.T) {
 	// busy_timeout makes writers queue instead of failing with SQLITE_BUSY.
 	db := openDSN(t, "file:"+filepath.Join(t.TempDir(), "t.db")+"?_pragma=busy_timeout(5000)")
-	insert(t, db, "arrows", 0, 5, 5, false)
+	insert(t, db, "arrows", 0, 5, 5, itemsvc.BehaviourStock)
 	dal := itemdal.New(db)
 
 	var wg sync.WaitGroup
@@ -105,7 +110,7 @@ func TestDecrement_ConcurrentUsesNeverOverspend(t *testing.T) {
 
 func TestDecrement_JoinsCtxTransaction(t *testing.T) {
 	db := openDB(t)
-	insert(t, db, "wand", 0, 2, 2, false)
+	insert(t, db, "wand", 0, 2, 2, itemsvc.BehaviourCharges)
 	dal := itemdal.New(db)
 
 	err := db.InTx(context.Background(), func(ctx context.Context) error {
@@ -114,27 +119,63 @@ func TestDecrement_JoinsCtxTransaction(t *testing.T) {
 		return assert.AnError
 	})
 	require.ErrorIs(t, err, assert.AnError)
-	var n int
-	require.NoError(t, db.QueryRow(`SELECT count FROM items WHERE id = 'wand'`).Scan(&n))
-	assert.Equal(t, 2, n, "rolled back with the surrounding transaction")
+	assert.Equal(t, 2, count(t, db, "wand"), "rolled back with the surrounding transaction")
 }
 
-func TestResetPerDay_OnlyRefillsPerDayItems(t *testing.T) {
+func TestResetDaily_OnlyRefillsDailyItems(t *testing.T) {
 	db := openDB(t)
-	insert(t, db, "gem", 0, 0, 1, true)
-	insert(t, db, "wand", 1, 1, 4, false)
+	insert(t, db, "gem", 0, 0, 1, itemsvc.BehaviourDaily)
+	insert(t, db, "wand", 1, 1, 4, itemsvc.BehaviourCharges)
+	insert(t, db, "arrows", 2, 3, 18, itemsvc.BehaviourStock)
 	dal := itemdal.New(db)
 
-	require.NoError(t, dal.ResetPerDay(context.Background()))
-	got, err := dal.List(context.Background())
+	require.NoError(t, dal.ResetDaily(context.Background()))
+	assert.Equal(t, 1, count(t, db, "gem"), "daily gem refilled")
+	assert.Equal(t, 1, count(t, db, "wand"), "charges untouched")
+	assert.Equal(t, 3, count(t, db, "arrows"), "stock untouched")
+}
+
+func TestIncrement(t *testing.T) {
+	db := openDB(t)
+	insert(t, db, "arrows", 0, 0, 18, itemsvc.BehaviourStock)
+	dal := itemdal.New(db)
+	ctx := context.Background()
+
+	got, err := dal.Increment(ctx, "arrows", 3)
 	require.NoError(t, err)
-	assert.Equal(t, 1, got[0].Count, "per-day gem refilled")
-	assert.Equal(t, 1, got[1].Count, "wand untouched")
+	assert.Equal(t, 3, got.Count)
+	assert.Equal(t, itemsvc.BehaviourStock, got.Behaviour)
+	assert.Equal(t, 3, count(t, db, "arrows"))
+
+	_, err = dal.Increment(ctx, "nope", 1)
+	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
+}
+
+func TestDeleteThenInsertRestoresTheItem(t *testing.T) {
+	db := openDB(t)
+	insert(t, db, "a", 0, 1, 1, itemsvc.BehaviourDaily)
+	insert(t, db, "wand", 1, 0, 4, itemsvc.BehaviourCharges)
+	insert(t, db, "z", 2, 1, 1, itemsvc.BehaviourStock)
+	dal := itemdal.New(db)
+	ctx := context.Background()
+	before, err := dal.List(ctx)
+	require.NoError(t, err)
+
+	require.NoError(t, dal.Delete(ctx, "wand"))
+	got, err := dal.List(ctx)
+	require.NoError(t, err)
+	assert.Len(t, got, 2)
+	assert.ErrorIs(t, dal.Delete(ctx, "wand"), itemsvc.ErrItemNotFound)
+
+	require.NoError(t, dal.Insert(ctx, before[1]))
+	got, err = dal.List(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, before, got, "same fields and list position")
 }
 
 func TestSetCount(t *testing.T) {
 	db := openDB(t)
-	insert(t, db, "arrows", 0, 2, 0, false)
+	insert(t, db, "arrows", 0, 2, 0, itemsvc.BehaviourStock)
 	dal := itemdal.New(db)
 	ctx := context.Background()
 

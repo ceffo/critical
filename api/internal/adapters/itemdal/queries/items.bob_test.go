@@ -97,52 +97,56 @@ func TestListItems(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 11 {
-			t.Fatalf("expected %d columns, got %d", 11, len(columns))
+		if len(columns) != 12 {
+			t.Fatalf("expected %d columns, got %d", 12, len(columns))
 		}
 
 		if columns[0] != "id" {
 			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
 		}
 
-		if columns[1] != "name" {
-			t.Fatalf("expected column %d to be %s, got %s", 1, "name", columns[1])
+		if columns[1] != "position" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "position", columns[1])
 		}
 
-		if columns[2] != "kind" {
-			t.Fatalf("expected column %d to be %s, got %s", 2, "kind", columns[2])
+		if columns[2] != "name" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "name", columns[2])
 		}
 
-		if columns[3] != "magic_bonus" {
-			t.Fatalf("expected column %d to be %s, got %s", 3, "magic_bonus", columns[3])
+		if columns[3] != "type" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "type", columns[3])
 		}
 
-		if columns[4] != "ammo_kind" {
-			t.Fatalf("expected column %d to be %s, got %s", 4, "ammo_kind", columns[4])
+		if columns[4] != "behaviour" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "behaviour", columns[4])
 		}
 
-		if columns[5] != "count" {
-			t.Fatalf("expected column %d to be %s, got %s", 5, "count", columns[5])
+		if columns[5] != "magic_bonus" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "magic_bonus", columns[5])
 		}
 
-		if columns[6] != "max_count" {
-			t.Fatalf("expected column %d to be %s, got %s", 6, "max_count", columns[6])
+		if columns[6] != "ammo_kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "ammo_kind", columns[6])
 		}
 
-		if columns[7] != "per_day" {
-			t.Fatalf("expected column %d to be %s, got %s", 7, "per_day", columns[7])
+		if columns[7] != "count" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "count", columns[7])
 		}
 
-		if columns[8] != "effect_dice" {
-			t.Fatalf("expected column %d to be %s, got %s", 8, "effect_dice", columns[8])
+		if columns[8] != "max_count" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "max_count", columns[8])
 		}
 
-		if columns[9] != "effect_save" {
-			t.Fatalf("expected column %d to be %s, got %s", 9, "effect_save", columns[9])
+		if columns[9] != "effect_dice" {
+			t.Fatalf("expected column %d to be %s, got %s", 9, "effect_dice", columns[9])
 		}
 
-		if columns[10] != "notes" {
-			t.Fatalf("expected column %d to be %s, got %s", 10, "notes", columns[10])
+		if columns[10] != "effect_save" {
+			t.Fatalf("expected column %d to be %s, got %s", 10, "effect_save", columns[10])
+		}
+
+		if columns[11] != "notes" {
+			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
 		}
 	})
 }
@@ -229,52 +233,56 @@ func TestGetItem(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 11 {
-			t.Fatalf("expected %d columns, got %d", 11, len(columns))
+		if len(columns) != 12 {
+			t.Fatalf("expected %d columns, got %d", 12, len(columns))
 		}
 
 		if columns[0] != "id" {
 			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
 		}
 
-		if columns[1] != "name" {
-			t.Fatalf("expected column %d to be %s, got %s", 1, "name", columns[1])
+		if columns[1] != "position" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "position", columns[1])
 		}
 
-		if columns[2] != "kind" {
-			t.Fatalf("expected column %d to be %s, got %s", 2, "kind", columns[2])
+		if columns[2] != "name" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "name", columns[2])
 		}
 
-		if columns[3] != "magic_bonus" {
-			t.Fatalf("expected column %d to be %s, got %s", 3, "magic_bonus", columns[3])
+		if columns[3] != "type" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "type", columns[3])
 		}
 
-		if columns[4] != "ammo_kind" {
-			t.Fatalf("expected column %d to be %s, got %s", 4, "ammo_kind", columns[4])
+		if columns[4] != "behaviour" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "behaviour", columns[4])
 		}
 
-		if columns[5] != "count" {
-			t.Fatalf("expected column %d to be %s, got %s", 5, "count", columns[5])
+		if columns[5] != "magic_bonus" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "magic_bonus", columns[5])
 		}
 
-		if columns[6] != "max_count" {
-			t.Fatalf("expected column %d to be %s, got %s", 6, "max_count", columns[6])
+		if columns[6] != "ammo_kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "ammo_kind", columns[6])
 		}
 
-		if columns[7] != "per_day" {
-			t.Fatalf("expected column %d to be %s, got %s", 7, "per_day", columns[7])
+		if columns[7] != "count" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "count", columns[7])
 		}
 
-		if columns[8] != "effect_dice" {
-			t.Fatalf("expected column %d to be %s, got %s", 8, "effect_dice", columns[8])
+		if columns[8] != "max_count" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "max_count", columns[8])
 		}
 
-		if columns[9] != "effect_save" {
-			t.Fatalf("expected column %d to be %s, got %s", 9, "effect_save", columns[9])
+		if columns[9] != "effect_dice" {
+			t.Fatalf("expected column %d to be %s, got %s", 9, "effect_dice", columns[9])
 		}
 
-		if columns[10] != "notes" {
-			t.Fatalf("expected column %d to be %s, got %s", 10, "notes", columns[10])
+		if columns[10] != "effect_save" {
+			t.Fatalf("expected column %d to be %s, got %s", 10, "effect_save", columns[10])
+		}
+
+		if columns[11] != "notes" {
+			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
 		}
 	})
 }
@@ -361,71 +369,75 @@ func TestDecrementItem(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 11 {
-			t.Fatalf("expected %d columns, got %d", 11, len(columns))
+		if len(columns) != 12 {
+			t.Fatalf("expected %d columns, got %d", 12, len(columns))
 		}
 
 		if columns[0] != "id" {
 			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
 		}
 
-		if columns[1] != "name" {
-			t.Fatalf("expected column %d to be %s, got %s", 1, "name", columns[1])
+		if columns[1] != "position" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "position", columns[1])
 		}
 
-		if columns[2] != "kind" {
-			t.Fatalf("expected column %d to be %s, got %s", 2, "kind", columns[2])
+		if columns[2] != "name" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "name", columns[2])
 		}
 
-		if columns[3] != "magic_bonus" {
-			t.Fatalf("expected column %d to be %s, got %s", 3, "magic_bonus", columns[3])
+		if columns[3] != "type" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "type", columns[3])
 		}
 
-		if columns[4] != "ammo_kind" {
-			t.Fatalf("expected column %d to be %s, got %s", 4, "ammo_kind", columns[4])
+		if columns[4] != "behaviour" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "behaviour", columns[4])
 		}
 
-		if columns[5] != "count" {
-			t.Fatalf("expected column %d to be %s, got %s", 5, "count", columns[5])
+		if columns[5] != "magic_bonus" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "magic_bonus", columns[5])
 		}
 
-		if columns[6] != "max_count" {
-			t.Fatalf("expected column %d to be %s, got %s", 6, "max_count", columns[6])
+		if columns[6] != "ammo_kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "ammo_kind", columns[6])
 		}
 
-		if columns[7] != "per_day" {
-			t.Fatalf("expected column %d to be %s, got %s", 7, "per_day", columns[7])
+		if columns[7] != "count" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "count", columns[7])
 		}
 
-		if columns[8] != "effect_dice" {
-			t.Fatalf("expected column %d to be %s, got %s", 8, "effect_dice", columns[8])
+		if columns[8] != "max_count" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "max_count", columns[8])
 		}
 
-		if columns[9] != "effect_save" {
-			t.Fatalf("expected column %d to be %s, got %s", 9, "effect_save", columns[9])
+		if columns[9] != "effect_dice" {
+			t.Fatalf("expected column %d to be %s, got %s", 9, "effect_dice", columns[9])
 		}
 
-		if columns[10] != "notes" {
-			t.Fatalf("expected column %d to be %s, got %s", 10, "notes", columns[10])
+		if columns[10] != "effect_save" {
+			t.Fatalf("expected column %d to be %s, got %s", 10, "effect_save", columns[10])
+		}
+
+		if columns[11] != "notes" {
+			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
 		}
 	})
 }
 
-var beforeTestingResetPerDayItems = func(context.Context, bob.Tx) error {
-	return nil
+var beforeTestingIncrementItem = func(context.Context, bob.Tx) (int64, string, error) {
+	return random_int64(nil), random_string(nil), nil
 }
 
-func TestResetPerDayItems(t *testing.T) {
+func TestIncrementItem(t *testing.T) {
 	t.Run("Base", func(t *testing.T) {
 		var sb strings.Builder
 
-		query := ResetPerDayItems()
+		query := IncrementItem(random_int64(nil), random_string(nil))
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
 			t.Fatal(err)
 		}
 
-		if diff := cmp.Diff(resetPerDayItemsSQL, sb.String()); diff != "" {
+		if diff := cmp.Diff(incrementItemSQL, sb.String()); diff != "" {
 			t.Fatalf("unexpected result (-got +want):\n%s", diff)
 		}
 	})
@@ -433,13 +445,149 @@ func TestResetPerDayItems(t *testing.T) {
 	t.Run("Mod", func(t *testing.T) {
 		var sb strings.Builder
 
-		query := ResetPerDayItems()
+		query := IncrementItem(random_int64(nil), random_string(nil))
 
 		if _, err := sqlite.Update(query).WriteQuery(t.Context(), &sb, 1); err != nil {
 			t.Fatal(err)
 		}
 
-		queryDiff, err := testutils.QueryDiff(resetPerDayItemsSQL, sb.String(), formatQuery)
+		queryDiff, err := testutils.QueryDiff(incrementItemSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, arg1, beforeHookErr := beforeTestingIncrementItem(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Update(IncrementItem(arg0, arg1)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 12 {
+			t.Fatalf("expected %d columns, got %d", 12, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+
+		if columns[1] != "position" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "position", columns[1])
+		}
+
+		if columns[2] != "name" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "name", columns[2])
+		}
+
+		if columns[3] != "type" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "type", columns[3])
+		}
+
+		if columns[4] != "behaviour" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "behaviour", columns[4])
+		}
+
+		if columns[5] != "magic_bonus" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "magic_bonus", columns[5])
+		}
+
+		if columns[6] != "ammo_kind" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "ammo_kind", columns[6])
+		}
+
+		if columns[7] != "count" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "count", columns[7])
+		}
+
+		if columns[8] != "max_count" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "max_count", columns[8])
+		}
+
+		if columns[9] != "effect_dice" {
+			t.Fatalf("expected column %d to be %s, got %s", 9, "effect_dice", columns[9])
+		}
+
+		if columns[10] != "effect_save" {
+			t.Fatalf("expected column %d to be %s, got %s", 10, "effect_save", columns[10])
+		}
+
+		if columns[11] != "notes" {
+			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
+		}
+	})
+}
+
+var beforeTestingResetDailyItems = func(context.Context, bob.Tx) error {
+	return nil
+}
+
+func TestResetDailyItems(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := ResetDailyItems()
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(resetDailyItemsSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := ResetDailyItems()
+
+		if _, err := sqlite.Update(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(resetDailyItemsSQL, sb.String(), formatQuery)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -468,12 +616,12 @@ func TestResetPerDayItems(t *testing.T) {
 			}
 		}()
 
-		beforeHookErr := beforeTestingResetPerDayItems(ctxTx, tx)
+		beforeHookErr := beforeTestingResetDailyItems(ctxTx, tx)
 		if beforeHookErr != nil {
 			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
 		}
 
-		query := sqlite.Update(ResetPerDayItems())
+		query := sqlite.Update(ResetDailyItems())
 		if _, err := bob.Exec(ctxTx, tx, query); err != nil {
 			t.Fatal(err)
 		}
@@ -568,6 +716,245 @@ func TestSetItemCount(t *testing.T) {
 
 		if columns[0] != "id" {
 			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}
+
+var beforeTestingDeleteItem = func(context.Context, bob.Tx) (string, error) {
+	return random_string(nil), nil
+}
+
+func TestDeleteItem(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := DeleteItem(random_string(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(deleteItemSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := DeleteItem(random_string(nil))
+
+		if _, err := sqlite.Delete(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(deleteItemSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingDeleteItem(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Delete(DeleteItem(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}
+
+var beforeTestingInsertItem = func(context.Context, bob.Tx) ([]InsertItem_Items, error) {
+	return []struct {
+		ID         string
+		Position   int64
+		Name       string
+		Type       string
+		Behaviour  string
+		MagicBonus int64
+		AmmoKind   string
+		Count      int64
+		MaxCount   int64
+		EffectDice string
+		EffectSave string
+		Notes      string
+	}{{
+		ID:         random_string(nil),
+		Position:   random_int64(nil),
+		Name:       random_string(nil),
+		Type:       random_string(nil),
+		Behaviour:  random_string(nil),
+		MagicBonus: random_int64(nil),
+		AmmoKind:   random_string(nil),
+		Count:      random_int64(nil),
+		MaxCount:   random_int64(nil),
+		EffectDice: random_string(nil),
+		EffectSave: random_string(nil),
+		Notes:      random_string(nil),
+	}}, nil
+}
+
+func TestInsertItem(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertItem([]struct {
+			ID         string
+			Position   int64
+			Name       string
+			Type       string
+			Behaviour  string
+			MagicBonus int64
+			AmmoKind   string
+			Count      int64
+			MaxCount   int64
+			EffectDice string
+			EffectSave string
+			Notes      string
+		}{{
+			ID:         random_string(nil),
+			Position:   random_int64(nil),
+			Name:       random_string(nil),
+			Type:       random_string(nil),
+			Behaviour:  random_string(nil),
+			MagicBonus: random_int64(nil),
+			AmmoKind:   random_string(nil),
+			Count:      random_int64(nil),
+			MaxCount:   random_int64(nil),
+			EffectDice: random_string(nil),
+			EffectSave: random_string(nil),
+			Notes:      random_string(nil),
+		}})
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(insertItemSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertItem([]struct {
+			ID         string
+			Position   int64
+			Name       string
+			Type       string
+			Behaviour  string
+			MagicBonus int64
+			AmmoKind   string
+			Count      int64
+			MaxCount   int64
+			EffectDice string
+			EffectSave string
+			Notes      string
+		}{{
+			ID:         random_string(nil),
+			Position:   random_int64(nil),
+			Name:       random_string(nil),
+			Type:       random_string(nil),
+			Behaviour:  random_string(nil),
+			MagicBonus: random_int64(nil),
+			AmmoKind:   random_string(nil),
+			Count:      random_int64(nil),
+			MaxCount:   random_int64(nil),
+			EffectDice: random_string(nil),
+			EffectSave: random_string(nil),
+			Notes:      random_string(nil),
+		}})
+
+		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(insertItemSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Exec", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingInsertItem(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query := sqlite.Insert(InsertItem(arg0))
+		if _, err := bob.Exec(ctxTx, tx, query); err != nil {
+			t.Fatal(err)
 		}
 	})
 }

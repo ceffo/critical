@@ -233,6 +233,67 @@ func (_c *MockSVC_ResetDaily_Call) RunAndReturn(run func(context.Context) ([]ite
 	return _c
 }
 
+// Restock provides a mock function with given fields: ctx, characterID, itemID, n
+func (_m *MockSVC) Restock(ctx context.Context, characterID int64, itemID string, n int) (*itemsvc.RestockResult, error) {
+	ret := _m.Called(ctx, characterID, itemID, n)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Restock")
+	}
+
+	var r0 *itemsvc.RestockResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) (*itemsvc.RestockResult, error)); ok {
+		return rf(ctx, characterID, itemID, n)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) *itemsvc.RestockResult); ok {
+		r0 = rf(ctx, characterID, itemID, n)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*itemsvc.RestockResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, int) error); ok {
+		r1 = rf(ctx, characterID, itemID, n)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Restock_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Restock'
+type MockSVC_Restock_Call struct {
+	*mock.Call
+}
+
+// Restock is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - itemID string
+//   - n int
+func (_e *MockSVC_Expecter) Restock(ctx interface{}, characterID interface{}, itemID interface{}, n interface{}) *MockSVC_Restock_Call {
+	return &MockSVC_Restock_Call{Call: _e.mock.On("Restock", ctx, characterID, itemID, n)}
+}
+
+func (_c *MockSVC_Restock_Call) Run(run func(ctx context.Context, characterID int64, itemID string, n int)) *MockSVC_Restock_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Restock_Call) Return(_a0 *itemsvc.RestockResult, _a1 error) *MockSVC_Restock_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Restock_Call) RunAndReturn(run func(context.Context, int64, string, int) (*itemsvc.RestockResult, error)) *MockSVC_Restock_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Restorers provides a mock function with no fields
 func (_m *MockSVC) Restorers() map[string]actionlog.Restorer {
 	ret := _m.Called()

@@ -113,8 +113,8 @@ audited amend carrying the new summary and payload (plus `previousPassed`/`previ
 Not a save → 400, voided or not the latest → 409. The log exposes `effectivePayload`.
 `POST /api/roll/attack/{id}/adjust` `{targetAc}` corrects the target AC of the attack when it is the
 latest roll (same rules, AC within ±20). Every attack rolls its damage dice, even a miss, and its
-payload keeps them with every damage term (`rolled`) and the crit-table row its d100 fell in
-(`critRow`); combatsvc `settle` recomputes hit, margin, crit and damage from those and the new AC
+payload keeps them with every damage term (`rolled`), the multiplier d100 (`d100MultiplierRoll`)
+and the crit-table row it fell in (`critRow`); combatsvc `settle` recomputes hit, margin, crit and damage from those and the new AC
 (no die rolled, no ammo spent, a later crit-table edit changes nothing) and the amend carries
 `rolledTargetAc`/`rolledHit`/`rolledCrit` (the AC and outcome as rolled, kept across corrections, so the line
 reads rolled → now; dropped when the AC is back to the rolled one, which reads as rolled). Voiding still restores the ammo (snapshots are the
@@ -190,7 +190,7 @@ auto-miss, no auto-hit. To-hit modifiers, each listed in `Modifiers`:
 - Buff `to_hit` effects, one per buff; the situational modifier entered at the table.
 
 A weapon that fires ammunition (`ammo_kind`) needs an ammo item of that kind; the attack spends one.
-Dice order: d20, crit d100, then the damage dice, rolled on **every** attack (a miss shows no
+Dice order: d20, crit-check d100, multiplier d100, then the damage dice, all rolled on **every** attack (a miss shows no
 damage, but the target AC may be corrected after the roll).
 
 ## Damage Formula
@@ -208,18 +208,6 @@ Never below 0. Every contribution is listed in `DamageTerms`.
 - `StrengthBonus`: PHB Table 1 damage adjustment for the effective STR (+2 at 18); melee and
   hurled weapons only, none for bows
 - `BuffDamage`: buff `damage` effects, flat
-
-## Critical Hit System
-
-1. Roll D20 (attack) and D100 (crit check) simultaneously
-2. If `(D20 - D100) ≥ required_to_hit` → critical hit confirmed
-3. The second D100 is looked up in the house crit table (`crit_table_rows`, edited in the app).
-   Until it is edited the multiplier is ×2, flagged `CritPlaceholder`. Table multipliers may be
-   decimals (×1.5)
-4. Multipliers stack multiplicatively with other active multipliers at full precision. The damage
-   is floored **once**, on the final value after the strength and buff damage terms
-   (`RollResult.UnroundedDamage` → `TotalDamage`); whole multipliers give the same totals as
-   before. The breakdown string shows `… = 10.5 → 10` when the result is fractional
 
 ## Seed Loader Pattern
 

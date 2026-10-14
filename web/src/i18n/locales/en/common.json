@@ -337,13 +337,13 @@
     "saveHeading": "Save vs {{name}}",
     "hit": "Hit",
     "miss": "Miss",
-    "crit": "Critical ×{{mult, number}} (d100 in {{from}}–{{to}})",
+    "crit": "Crit check {{check}} · multiplier {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
     "passed": "Passed",
     "failed": "Failed",
     "totalDamage": "Total damage",
     "noDamage": "No damage",
     "d20": "d20",
-    "critRoll": "Crit d100",
+    "critRoll": "Crit check d100",
     "baseThac0": "Base THAC0",
     "effectiveThac0": "Effective THAC0",
     "hitsAc": "Hits AC",
@@ -363,7 +363,7 @@
       "sm": "S/M target",
       "l": "large target"
     },
-    "critPlaceholder": "Critical ×{{mult, number}} (placeholder)",
+    "critPlaceholder": "Crit check {{check}} · multiplier {{roll}} → ×{{mult, number}} (placeholder)",
     "ammoLeft": "{{name}}: {{count}} left",
     "damageDice": "Dice",
     "damageBonus": "Bonus +",
@@ -468,7 +468,10 @@
       "value": "Corrected target AC",
       "apply": "Apply",
       "was": "rolled vs AC {{ac}}"
-    }
+    },
+    "critLegacy": "Critical ×{{mult, number}} (d100 in {{from}}–{{to}})",
+    "critPlaceholderLegacy": "Critical ×{{mult, number}} (placeholder)",
+    "multRoll": "Multiplier d100"
   },
   "log": {
     "title": "Combat Log",
@@ -527,6 +530,7 @@
       "miss": "{{weapon}} vs AC {{ac}}: miss",
       "hit": "{{weapon}} vs AC {{ac}}: hit, {{damage}} damage",
       "crit": "{{weapon}} vs AC {{ac}}: critical ×{{mult, number}}, {{damage}} damage",
+      "critRolls": "{{weapon}} vs AC {{ac}}: critical (check {{check}} · multiplier {{roll}} → ×{{mult, number}}), {{damage}} damage",
       "withAmmo": "{{weapon}} ({{ammo}})",
       "corrected": "{{text}} (AC {{from}} → {{to}}: {{was}} → {{now}})",
       "outcome": {

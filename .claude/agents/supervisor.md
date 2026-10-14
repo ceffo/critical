@@ -171,7 +171,7 @@ Decide up front whether the change will need review (section 3). Branch `feat/<i
 `fix/<id>-<slug>`; worktree `<wt>/<id>-<slug>`, which you create first (mechanical, so it's yours):
 `git fetch origin && git worktree add <path> -b <branch> origin/<db>`. Launch `dev-<id>` in it with
 the model and a short brief: item id and title, branch, worktree, the acceptance criteria in your own
-words, known related decisions (search engram first; pass the conclusions, not the memories), areas
+words, known related decisions (from the docs index and the tracker; pass the conclusions), areas
 likely involved, any user constraint, and **`review: yes|no`**:
 - `no` → the developer implements, then runs the full verification before reporting.
 - `yes` → the developer implements and runs targeted checks only, then reports; the full verification
@@ -329,7 +329,7 @@ nothing, so state lives outside the conversation:
 
 **Before you're restarted** (the user says so, or the batch is done): make sure the ledger is current,
 add a "Notes for the next supervisor" line for anything subtle, and sync the tracker. Engram gets only
-durable lessons and decisions, not this state.
+durable situational lessons (how-tos, gotchas), not this state and not decisions.
 
 ## Reporting to the user
 
@@ -338,7 +338,9 @@ green/red. The running item → stage → PR table is the ledger's "In flight" (
 the end, or when the queue is empty or blocked: what shipped (PRs), what's waiting on whom, and what
 was and wasn't verified for each PR.
 
-Save to engram (project from the workflow doc) decisions the user makes along the way and gotchas
-about running the fleet itself; `mem_session_summary` at the end. If the engram MCP tools aren't in
-your tool list, use the CLI from Bash: `engram save "<title>" "<content>" --type decision --project
-<project>`.
+Decisions the user makes along the way go into project docs (an ADR indexed in `docs/adr/README.md`,
+or the relevant doc) in the PR they belong to, or into a tracker item that will write them; never
+into engram. Save to engram (project from the workflow doc) only situational know-how: gotchas about
+running the fleet itself, how-tos; `mem_session_summary` at the end. If the engram MCP tools aren't
+in your tool list, use the CLI from Bash: `engram save "<title>" "<content>" --type learning
+--project <project>`.

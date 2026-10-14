@@ -106,8 +106,8 @@ func TestGetCritTable(t *testing.T) {
 	assert.Equal(t, combatsvc.CritTable{Rows: rows([3]int{1, 100, 3})}, got)
 }
 
-// The crit d100 is looked up in the stored table. Target AC 100 makes the
-// roll needed so low that a d20 of 20 against any d100 is a crit; the long
+// The multiplier d100 is looked up in the stored table. Target AC 100 makes
+// the roll needed so low that a d20 of 20 against any check d100 is a crit; the long
 // sword at STR 12 deals ((5 × 1) + 2) × multiplier.
 func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 	table := rows([3]int{1, 50, 2}, [3]int{51, 90, 3}, [3]int{91, 100, 4})
@@ -127,31 +127,31 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 	}{
 		{
 			name: "first value of the first range", table: table, d100: 1, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
-			wantTermSrc: "Critical hit (d100 1 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
+			wantTermSrc: "Critical hit (check d100 99, multiplier d100 1 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
 		},
 		{
 			name: "last value of the first range", table: table, d100: 50, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
-			wantTermSrc: "Critical hit (d100 50 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
+			wantTermSrc: "Critical hit (check d100 99, multiplier d100 50 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
 		},
 		{
 			name: "first value of the second range", table: table, d100: 51, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
-			wantTermSrc: "Critical hit (d100 51 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+			wantTermSrc: "Critical hit (check d100 99, multiplier d100 51 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
 		},
 		{
 			name: "last value of the second range", table: table, d100: 90, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
-			wantTermSrc: "Critical hit (d100 90 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+			wantTermSrc: "Critical hit (check d100 99, multiplier d100 90 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
 		},
 		{
 			name: "first value of the last range", table: table, d100: 91, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
-			wantTermSrc: "Critical hit (d100 91 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
+			wantTermSrc: "Critical hit (check d100 99, multiplier d100 91 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
 		},
 		{
 			name: "100 is in the last range", table: table, d100: 100, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
-			wantTermSrc: "Critical hit (d100 100 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
+			wantTermSrc: "Critical hit (check d100 99, multiplier d100 100 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
 		},
 		{
 			name: "the default table is a x2 placeholder", table: nil, d100: 77, wantMult: 2, wantFrom: 1, wantTo: 100, wantPlaceh: true,
-			wantTotal: 14, wantTermSrc: "Critical hit (placeholder, d100 77)", wantTermDet: "placeholder", wantTermVal: 2,
+			wantTotal: 14, wantTermSrc: "Critical hit (check d100 99, multiplier d100 77, placeholder)", wantTermDet: "placeholder", wantTermVal: 2,
 		},
 		{
 			// x3 from the table times x2 from a buff: ((5 × 1) + 2) × 6 = 42.
@@ -160,7 +160,7 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 				SpellsBuff: 1, Multipliers: 2, EffectiveStr: 12,
 				MultipliersFrom: []buffsvc.Factor{{Buff: "Gem", Value: 2}},
 			},
-			wantTermSrc: "Critical hit (d100 60 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+			wantTermSrc: "Critical hit (check d100 99, multiplier d100 60 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
 		},
 	}
 	for _, tt := range tests {
@@ -175,14 +175,15 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 			f.withChar(bard())
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
 			f.dice.EXPECT().RollD20().Return(20)
-			f.dice.EXPECT().RollD100().Return(tt.d100)
+			f.d100s(t, 99, tt.d100) // check 99: 20 - 99 still reaches the -89 needed vs AC 100
 			f.dice.EXPECT().RollDie(8).Return(5)
 			f.records()
 
 			res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
 			require.NoError(t, err)
 			assert.True(t, res.IsCrit)
-			assert.Equal(t, tt.d100, res.D100CritRoll)
+			assert.Equal(t, 99, res.D100CritRoll)
+			assert.Equal(t, tt.d100, res.D100MultiplierRoll)
 			assert.Equal(t, tt.wantMult, res.CritMultiplier)
 			assert.Equal(t, tt.wantFrom, res.CritFrom)
 			assert.Equal(t, tt.wantTo, res.CritTo)
@@ -241,7 +242,7 @@ func TestResolveAttack_DecimalCritMultiplier(t *testing.T) {
 			f.withChar(bard())
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
 			f.dice.EXPECT().RollD20().Return(20)
-			f.dice.EXPECT().RollD100().Return(30)
+			f.d100s(t, 30, noCritMult)
 			f.dice.EXPECT().RollDie(8).Return(5)
 			f.records()
 
@@ -268,7 +269,7 @@ func TestResolveAttack_DecimalFloorsAfterBonusDamage(t *testing.T) {
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
 	f.dice.EXPECT().RollD20().Return(20)
-	f.dice.EXPECT().RollD100().Return(30)
+	f.d100s(t, 30, noCritMult)
 	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
@@ -285,7 +286,7 @@ func TestResolveAttack_NoCritIgnoresTable(t *testing.T) {
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 	f.dice.EXPECT().RollD20().Return(15)
-	f.dice.EXPECT().RollD100().Return(10) // 15 - 10 = 5 < 6 needed
+	f.d100s(t, 10, noCritMult) // 15 - 10 = 5 < 6 needed
 	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
@@ -317,7 +318,7 @@ func TestResolveAttack_DecimalFloatNoiseKeepsThePoint(t *testing.T) {
 			f.withChar(bard())
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 			f.dice.EXPECT().RollD20().Return(20)
-			f.dice.EXPECT().RollD100().Return(30)
+			f.d100s(t, 30, noCritMult)
 			f.dice.EXPECT().RollDie(8).Return(5)
 			f.records()
 			res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
@@ -340,7 +341,7 @@ func TestResolveAttack_DecimalCritWithNegativeBonusClampsToZero(t *testing.T) {
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
 	f.dice.EXPECT().RollD20().Return(20)
-	f.dice.EXPECT().RollD100().Return(30)
+	f.d100s(t, 30, noCritMult)
 	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})

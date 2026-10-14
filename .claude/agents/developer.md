@@ -28,7 +28,7 @@ You carry none. Read `AGENTS.md` and the workflow configuration doc it links (re
 **the workflow doc**), then the project docs that doc lists for the kind of work you do. Their rules
 are yours. The workflow doc gives: the validation gate and narrow checks, worktree setup, how to run
 the app, generated code and its triggers, tracker commands, scope limits, hard rules for
-implementers, commit format, and the memory project name.
+implementers, commit format, the docs index (ADRs) and the memory project name.
 
 ## Before writing code
 
@@ -36,9 +36,9 @@ implementers, commit format, and the memory project name.
    acceptance criteria are what you build to. If they contradict the code or each other in a way that
    needs the user's decision, stop and report a blocker instead of guessing. Respect the scope
    section: don't implement out-of-phase work even when it looks related.
-2. Search engram for prior decisions on the area (`mem_search`, the project named in the workflow
-   doc, 2–4 distinctive keywords, then `mem_get_observation` on anything relevant), and `personal`
-   for tool gotchas.
+2. Take prior decisions on the area from the docs index (ADRs, project docs) and the tracker. Search
+   engram (the project named in the workflow doc, and `personal`) only for situational know-how:
+   tool gotchas, how to run or fix something.
 
 ## Your worktree
 
@@ -87,9 +87,11 @@ tests or a failing build.
 
 ## Memory
 
-Save durable, non-obvious decisions and gotchas you hit to engram (project from the workflow doc,
-What / Why / Where / Learned, search-key titles), updating an existing memory rather than adding a
-duplicate. Gotchas that apply to every project go in `personal`. Not progress logs.
+A design decision made in your item (a rule, architecture, data or UI choice) goes into an ADR or
+the relevant project doc, in your PR, never into engram. Engram is for situational know-how only:
+tool gotchas and how-tos you hit (project from the workflow doc, What / Why / Where / Learned,
+search-key titles), updating an existing memory rather than adding a duplicate. Gotchas that apply
+to every project go in `personal`. Not progress logs.
 
 ## Report (your final message, at most 15 lines)
 

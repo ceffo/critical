@@ -1,3 +1,4 @@
+import { DatabaseSync } from "node:sqlite";
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import { logEntry, openDashboard, voidEntry } from "./helpers";
@@ -277,4 +278,118 @@ test("only the latest roll's target AC can be corrected", async ({ page }) => {
   const afterSave = await page.request.post(`/api/roll/attack/${latest}/adjust`, { data: { targetAc: 7 } });
   expect(afterSave.status()).toBe(409);
   expect((await afterSave.json()).error).toContain("only the latest roll can be adjusted");
+});
+
+test("an attack logged before the multiplier d100 keeps the old crit text and can't be corrected", async ({
+  page,
+  stack,
+}) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  await form.getByLabel("Weapon").selectOption("longsword");
+  // AC 1000: so low a roll is needed that every attack is a crit.
+  await form.getByLabel("Target AC").fill("1000");
+
+  // The card of an old response (no multiplier d100): the old crit text and two dice facts.
+  await page.route("**/api/roll/attack", async (route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as Record<string, unknown>;
+    delete body.d100MultiplierRoll;
+    await route.fulfill({ response: res, json: body });
+  });
+  await form.getByRole("button", { name: "Roll Attack" }).click();
+  const card = resultCard(page);
+  await expect(card.getByTestId("crit-badge")).toHaveText("Critical ×2 (placeholder)");
+  await expect(card.locator("dt", { hasText: "Crit check d100" })).toHaveCount(1);
+  await expect(card.locator("dt", { hasText: "Multiplier d100" })).toHaveCount(0);
+  await snap(page, "legacy-crit-card");
+  await page.unroute("**/api/roll/attack");
+
+  // Make the stored entry an old one, as logged before the multiplier d100 existed.
+  const db = new DatabaseSync(stack.dbPath);
+  try {
+    const changed = db
+      .prepare(
+        "UPDATE action_log SET payload = json_remove(payload, '$.d100MultiplierRoll') WHERE kind = 'attack'",
+      )
+      .run();
+    expect(changed.changes).toBe(1);
+  } finally {
+    db.close();
+  }
+  const log = (await (await page.request.get("/api/log")).json()) as {
+    entries: { id: number; kind: string }[];
+  };
+  const id = log.entries.find((e) => e.kind === "attack")!.id;
+
+  await page.reload();
+  await expect(logEntry(page, "Long Sword +2 vs AC 1000")).toContainText(
+    /Long Sword \+2 vs AC 1000: critical ×2, \d+ damage/,
+  );
+  await expect(logEntry(page, "Long Sword +2 vs AC 1000")).not.toContainText("multiplier");
+
+  const res = await page.request.post(`/api/roll/attack/${id}/adjust`, { data: { targetAc: 5 } });
+  expect(res.status()).toBe(400);
+  expect((await res.json()).error).toContain("void it and roll again");
+});
+
+test("a miss corrected into a crit shows both d100s on the card and in the log", async ({
+  page,
+}) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  await form.getByLabel("Weapon").selectOption("longsword");
+  // AC -20 can't be hit (effective THAC0 11 needs 31). AC 20 needs -9: a crit when
+  // d20 − check d100 ≥ -9 (ADR 0001 step 2). Roll until the dice make that a crit (~1 in 5).
+  await form.getByLabel("Target AC").fill("-20");
+  const card = resultCard(page);
+  const fact = async (label: string) =>
+    Number(
+      await card
+        .locator("dt", { hasText: label })
+        .locator("xpath=following-sibling::dd")
+        .textContent(),
+    );
+  let d20 = 0;
+  let check = 100;
+  for (let i = 0; i < 60 && d20 - check < -9; i++) {
+    await form.getByRole("button", { name: "Roll Attack" }).click();
+    await expect.poll(async () => (await logEntry(page, "Long Sword +2 vs AC -20").count())).toBe(i + 1);
+    d20 = await fact("d20");
+    check = await fact("Crit check d100");
+  }
+  expect(d20 - check, "no roll in 60 makes AC 20 a crit").toBeGreaterThanOrEqual(-9);
+  await expect(card.getByTestId("verdict")).toHaveText("Miss");
+  const mult = await fact("Multiplier d100");
+
+  const fix = card.getByRole("form", { name: "Correct the target AC" });
+  await fix.getByLabel("Corrected target AC").fill("20");
+  await fix.getByRole("button", { name: "Apply" }).click();
+  await expect(card).toContainText("vs AC 20");
+  await expect(card.getByTestId("verdict")).toHaveText("Hit");
+  await expect(card.getByTestId("crit-badge")).toHaveText(
+    `Crit check ${check} · multiplier ${mult} → ×2 (placeholder)`,
+  );
+  expect(await fact("Crit check d100")).toBe(check);
+  expect(await fact("Multiplier d100")).toBe(mult);
+  await expect(logEntry(page, "Long Sword +2 vs AC 20")).toContainText(
+    `critical (check ${check} · multiplier ${mult} → ×2)`,
+  );
+  await expect(logEntry(page, "Long Sword +2 vs AC 20")).toContainText("(AC -20 → 20: MISS → CRIT)");
+  await snap(page, "miss-to-crit");
+
+  // In French: the three dice facts and the crit text.
+  await page.getByRole("button", { name: "FR" }).click();
+  const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("attack-result");
+  await expect(frCard.getByTestId("crit-badge")).toHaveText(
+    `Test critique ${check} · multiplicateur ${mult} → ×2 (provisoire)`,
+  );
+  await expect(frCard.locator("dt", { hasText: "d100 multiplicateur" })).toHaveCount(1);
+  await expect(
+    page
+      .getByRole("region", { name: "Journal de combat" })
+      .getByRole("listitem")
+      .filter({ hasText: "Long Sword +2 contre CA 20" }),
+  ).toContainText(`(CA -20 → 20 : RATÉ → CRITIQUE)`);
+  await snap(page, "miss-to-crit-fr");
 });

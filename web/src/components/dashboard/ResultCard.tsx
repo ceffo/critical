@@ -44,9 +44,17 @@ export function ResultCard() {
   );
 }
 
-function Fact({ label, children }: { label: string; children: ReactNode }) {
+function Fact({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
+    <div className={cn("rounded-lg bg-muted/60 px-2.5 py-1.5", className)}>
       <dt className={captionClass}>{label}</dt>
       <dd className="font-mono text-lg font-semibold tabular-nums">{children}</dd>
     </div>
@@ -82,6 +90,20 @@ function modLabel(
   return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
 }
 
+/** "Crit check 7 · multiplier 63 → ×3 (51–90)"; entries without the multiplier d100 show the old text. */
+function critText(t: TFunction, r: Extract<LastRoll, { kind: "attack" }>["result"]): string {
+  const placeholder = r.critPlaceholder || r.critFrom === undefined;
+  if (r.d100MultiplierRoll === undefined) {
+    return placeholder
+      ? t("result.critPlaceholderLegacy", { mult: r.critMultiplier })
+      : t("result.critLegacy", { mult: r.critMultiplier, from: r.critFrom, to: r.critTo });
+  }
+  const args = { check: r.d100CritRoll, roll: r.d100MultiplierRoll, mult: r.critMultiplier };
+  return placeholder
+    ? t("result.critPlaceholder", args)
+    : t("result.crit", { ...args, from: r.critFrom, to: r.critTo });
+}
+
 function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> }) {
   const { t, i18n } = useTranslation();
   const r = roll.result;
@@ -98,10 +120,8 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
         <div className="flex flex-wrap items-center gap-2">
           <Verdict ok={r.hit} yes={t("result.hit")} no={t("result.miss")} />
           {r.isCrit && (
-            <Badge variant="destructive">
-              {r.critPlaceholder || r.critFrom === undefined
-                ? t("result.critPlaceholder", { mult: r.critMultiplier })
-                : t("result.crit", { mult: r.critMultiplier, from: r.critFrom, to: r.critTo })}
+            <Badge variant="destructive" data-testid="crit-badge">
+              {critText(t, r)}
             </Badge>
           )}
         </div>
@@ -121,13 +141,26 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
         <AdjustAttackAc key={r.logEntryId} result={r} />
       )}
 
-      <dl className="grid grid-cols-3 gap-2">
-        <Fact label={t("result.d20")}>{r.d20Roll}</Fact>
-        <Fact label={t("result.critRoll")}>{r.d100CritRoll}</Fact>
-        <Fact label={t("result.margin")}>{formatSigned(r.hitMargin)}</Fact>
-        <Fact label={t("result.baseThac0")}>{r.baseThac0}</Fact>
-        <Fact label={t("result.effectiveThac0")}>{r.effectiveThac0}</Fact>
-        <Fact label={t("result.hitsAc")}>{r.targetACNeeded}</Fact>
+      {/* The dice on the first row (thirds), the THAC0 numbers on the second (quarters). */}
+      <dl className="grid grid-cols-12 gap-2">
+        {(() => {
+          const third = r.d100MultiplierRoll !== undefined ? "col-span-4" : "col-span-6";
+          return (
+            <>
+              <Fact className={third} label={t("result.d20")}>{r.d20Roll}</Fact>
+              <Fact className={third} label={t("result.critRoll")}>{r.d100CritRoll}</Fact>
+              {r.d100MultiplierRoll !== undefined && (
+                <Fact className={third} label={t("result.multRoll")}>
+                  {r.d100MultiplierRoll}
+                </Fact>
+              )}
+            </>
+          );
+        })()}
+        <Fact className="col-span-3" label={t("result.margin")}>{formatSigned(r.hitMargin)}</Fact>
+        <Fact className="col-span-3" label={t("result.baseThac0")}>{r.baseThac0}</Fact>
+        <Fact className="col-span-3" label={t("result.effectiveThac0")}>{r.effectiveThac0}</Fact>
+        <Fact className="col-span-3" label={t("result.hitsAc")}>{r.targetACNeeded}</Fact>
       </dl>
 
       <div>

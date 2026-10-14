@@ -24,7 +24,8 @@ type rolledAttack struct {
 	mods   buffsvc.BuffModifiers
 	req    combatsvc.AttackRequest
 	d20    int
-	d100   int
+	d100   int // crit check
+	mult   int // multiplier d100 (0: noCritMult)
 	sides  int
 	dmg    []int
 }
@@ -42,7 +43,11 @@ func rollAttack(t *testing.T, f *fixture, a rolledAttack) *actionlog.Entry {
 		f.items.EXPECT().Use(mock.Anything, a.req.AmmoItemID).Return(*a.ammo, nil).Once()
 	}
 	f.dice.EXPECT().RollD20().Return(a.d20).Once()
-	f.dice.EXPECT().RollD100().Return(a.d100).Once()
+	mult := a.mult
+	if mult == 0 {
+		mult = noCritMult
+	}
+	f.d100s(t, a.d100, mult)
 	for _, d := range a.dmg {
 		f.dice.EXPECT().RollDie(a.sides).Return(d).Once()
 	}
@@ -76,8 +81,14 @@ func sword(ac, d20, d100 int) rolledAttack {
 	}
 }
 
+// withMult sets the multiplier d100 of a.
+func withMult(a rolledAttack, mult int) rolledAttack {
+	a.mult = mult
+	return a
+}
+
 func TestAdjustAttackAC_Recompute(t *testing.T) {
-	// Crit rows: d100 1-10 gives x3, 11-100 x1.5.
+	// Crit rows: a multiplier d100 of 1-10 gives x3, 11-100 x1.5.
 	critRows := []combatsvc.CritRow{{From: 1, To: 10, Multiplier: 3}, {From: 11, To: 100, Multiplier: 1.5}}
 	cases := []struct {
 		name     string
@@ -110,29 +121,30 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 		},
 		{
 			// Rolled: d20 15, d100 10 vs AC 5 (needs 6): 15 - 10 = 5 < 6, a
-			// plain hit. AC 6 needs 5: 5 >= 5, a crit; d100 10 is in 1-10, x3:
+			// plain hit. AC 6 needs 5: 5 >= 5, a crit; the multiplier d100 4 is
+			// in 1-10, x3 (the check d100 10 is not looked up):
 			// ((5 × 1) + 2) × 3 = 21.
-			name: "a crit appears from the stored d100", attack: sword(5, 15, 10), critRows: critRows, acs: []int{6},
+			name: "a crit appears from the stored d100", attack: withMult(sword(5, 15, 10), 4), critRows: critRows, acs: []int{6},
 			wantHit: true, wantMargin: 10, wantCrit: true, wantMult: 3, wantTotal: 21, wantTerms: 3,
 			wantBreakdown: "((5 × 1.0) + 2) × 3.0 + 0 = 21",
-			wantSummary:   "Long Sword +2 vs AC 6: crit ×3, 21 damage (AC 5 → 6: HIT → CRIT)",
+			wantSummary:   "Long Sword +2 vs AC 6: crit (check 10 · multiplier 4 → ×3), 21 damage (AC 5 → 6: HIT → CRIT)",
 		},
 		{
 			// Rolled: d20 15, d100 10 vs AC 6 (needs 5): a x3 crit. AC 5 needs
 			// 6: 15 - 10 = 5 < 6, a plain hit: 7.
-			name: "a crit disappears", attack: sword(6, 15, 10), critRows: critRows, acs: []int{5},
+			name: "a crit disappears", attack: withMult(sword(6, 15, 10), 4), critRows: critRows, acs: []int{5},
 			wantHit: true, wantMargin: 9, wantMult: 1, wantTotal: 7, wantTerms: 2,
 			wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
 			wantSummary:   "Long Sword +2 vs AC 5: hit, 7 damage (AC 6 → 5: CRIT → HIT)",
 		},
 		{
 			// Rolled: d20 15 vs AC -10 needs 21, a miss. AC 10 needs 1:
-			// 15 - 12 = 3 >= 1, a crit; d100 12 is in 11-100, x1.5:
+			// 15 - 12 = 3 >= 1, a crit; the multiplier d100 77 is in 11-100, x1.5:
 			// ((5 × 1) + 2) × 1.5 = 10.5, floored once: 10.
 			name: "miss to decimal crit floors once", attack: sword(-10, 15, 12), critRows: critRows, acs: []int{10},
 			wantHit: true, wantMargin: 14, wantCrit: true, wantMult: 1.5, wantTotal: 10, wantTerms: 3,
 			wantBreakdown: "((5 × 1.0) + 2) × 1.5 + 0 = 10.5 → 10",
-			wantSummary:   "Long Sword +2 vs AC 10: crit ×1.5, 10 damage (AC -10 → 10: MISS → CRIT)",
+			wantSummary:   "Long Sword +2 vs AC 10: crit (check 12 · multiplier 77 → ×1.5), 10 damage (AC -10 → 10: MISS → CRIT)",
 		},
 		{
 			// A natural 20 is plain arithmetic: vs AC -10 (needs 21) it misses,
@@ -266,7 +278,7 @@ func TestAdjustAttackAC_DamageTermsInFormulaOrder(t *testing.T) {
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (placeholder, d100 5)", Detail: "placeholder", Value: 2},
+		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (check d100 5, multiplier d100 77, placeholder)", Detail: "placeholder", Value: 2},
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
 		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
@@ -310,6 +322,23 @@ func TestAdjustAttackAC_Rejections(t *testing.T) {
 			`{"d20Roll":3,"d100CritRoll":50,"hit":false,"effectiveThac0":11,"targetAc":5,"weaponName":"Long Sword +2","modifiers":[],"damageTerms":[]}`)}
 		amends(f, e)
 		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 9, 7)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, domain.ErrInvalidInput)
+		assert.ErrorContains(t, err, "void it and roll again")
+		assert.Empty(t, e.Corrections)
+	})
+
+	t.Run("attack logged before the multiplier d100", func(t *testing.T) {
+		f := newFixture(t)
+		// Rolled with damage dice and a crit row but one d100 (before ADR
+		// 0001): its crit can't be re-evaluated with two d100s.
+		e := &actionlog.Entry{ID: 9, Kind: actionlog.KindAttack, Summary: "x", Payload: json.RawMessage(
+			`{"d20Roll":15,"d100CritRoll":4,"hit":false,"effectiveThac0":11,"targetAc":-10,"weaponName":"Long Sword +2",` +
+				`"modifiers":[],"damageTerms":[],` +
+				`"rolled":{"dice":"1d8","total":5,"spellsBuff":1,"weaponBuff":2,"buffMultipliers":1,"strengthBonus":0,"bonusDamage":0,"terms":[]},` +
+				`"critRow":{"from":1,"to":100,"multiplier":2,"placeholder":true}}`)}
+		amends(f, e)
+		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 9, 5)
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, domain.ErrInvalidInput)
 		assert.ErrorContains(t, err, "void it and roll again")

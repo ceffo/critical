@@ -19,11 +19,12 @@ import (
 //
 //   - hit when d20 + modifiers >= THAC0 - target AC; a natural 1 or 20 is
 //     plain arithmetic, nothing special;
-//   - house crit: (d20 - d100) >= the roll needed -> crit, and a second
-//     D100 looked up in the stored crit table gives the multiplier (x2 until
-//     the table is edited);
+//   - house crit, docs/adr/0001-critical-hits.md: d20 and a crit-check d100
+//     together; crit when d20 - check d100 >= the roll needed; a second,
+//     independent d100 (rolled on every attack) picks the multiplier's row
+//     in the stored crit table (x2 until the table is edited);
 //   - damage = ((dice × SpellsBuff) + WeaponBuff) × Multipliers +
-//     StrengthBonus + buff damage, floored, never below 0.
+//     StrengthBonus + buff damage, floored once, never below 0.
 //
 // A weapon that fires ammunition spends one through itemsvc. The ammo use
 // and the action-log entry (full RollResult + items snapshot) share one
@@ -132,8 +133,9 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 }
 
 // resolve rolls and computes the attack. Dice are rolled in this order:
-// d20, crit d100, then the damage dice (on every attack). The crit
-// multiplier is the one of the crit-table range holding the crit d100.
+// d20, crit-check d100, multiplier d100, then the damage dice (all on every
+// attack). The crit multiplier is the one of the crit-table range holding
+// the multiplier d100.
 func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, crit CritTable, req AttackRequest) (*RollResult, error) {
 	res := &RollResult{
 		BaseThac0:      char.Thac0Base,
@@ -211,9 +213,12 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	}
 	res.EffectiveThac0 = res.BaseThac0 - sum
 
+	// ADR 0001 steps 1 and 3: the d20 and the crit-check d100 together,
+	// then a second, independent d100 for the multiplier, on every attack.
 	res.D20Roll = s.dice.RollD20()
 	res.D100CritRoll = s.dice.RollD100()
-	row, err := lookupCrit(crit.Rows, res.D100CritRoll)
+	res.D100MultiplierRoll = s.dice.RollD100()
+	row, err := lookupCrit(crit.Rows, res.D100MultiplierRoll)
 	if err != nil {
 		return nil, err
 	}
@@ -252,13 +257,15 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	return res, nil
 }
 
-// settle computes the outcome of a rolled attack from its d20, crit d100,
-// effective THAC0, target AC, crit row and rolled damage, all already set:
+// settle computes the outcome of a rolled attack from its d20, crit-check
+// and multiplier d100s, effective THAC0, target AC, crit row and rolled
+// damage, all already set (crit rule: docs/adr/0001-critical-hits.md steps
+// 2, 4 and 5):
 //
 //   - hit when d20 >= effective THAC0 - target AC (a natural 1 or 20 is plain
 //     arithmetic);
-//   - crit when d20 - d100 >= that same number; the multiplier is the one
-//     of the crit row;
+//   - crit when d20 - crit-check d100 >= that same number; the multiplier
+//     is the one of the crit row of the multiplier d100;
 //   - on a hit, damage = ((dice × SpellsBuff) + WeaponBuff) × (crit ×
 //     BuffMultipliers) + StrengthBonus + BonusDamage, full precision,
 //     floored once at the end, never below 0. A miss has no damage.
@@ -275,6 +282,8 @@ func settle(res *RollResult) {
 	res.CritMultiplier = 1
 	res.CritFrom, res.CritTo = 0, 0
 	res.CritPlaceholder = false
+	// ADR 0001 step 2: crit when d20 - crit-check d100 >= the roll needed;
+	// step 4: the multiplier is the row of the multiplier d100.
 	if row := res.RollCritRow; row != nil && res.D20Roll-res.D100CritRoll >= needed {
 		res.IsCrit = true
 		res.CritMultiplier = row.Multiplier
@@ -327,9 +336,9 @@ func settle(res *RollResult) {
 // critSource is the English label of the crit damage term.
 func critSource(r *RollResult) string {
 	if r.CritPlaceholder {
-		return fmt.Sprintf("Critical hit (placeholder, d100 %d)", r.D100CritRoll)
+		return fmt.Sprintf("Critical hit (check d100 %d, multiplier d100 %d, placeholder)", r.D100CritRoll, r.D100MultiplierRoll)
 	}
-	return fmt.Sprintf("Critical hit (d100 %d in %d-%d)", r.D100CritRoll, r.CritFrom, r.CritTo)
+	return fmt.Sprintf("Critical hit (check d100 %d, multiplier d100 %d in %d-%d)", r.D100CritRoll, r.D100MultiplierRoll, r.CritFrom, r.CritTo)
 }
 
 // critDetail is the matched range, "51-90", or "placeholder" for the default.
@@ -420,7 +429,8 @@ func summary(r *RollResult) string {
 	case !r.Hit:
 		out = fmt.Sprintf("%s vs AC %d: miss", weapon, r.TargetAC)
 	case r.IsCrit:
-		out = fmt.Sprintf("%s vs AC %d: crit ×%s, %d damage", weapon, r.TargetAC, trimNum(r.CritMultiplier), r.TotalDamage)
+		out = fmt.Sprintf("%s vs AC %d: crit (check %d · multiplier %d → ×%s), %d damage",
+			weapon, r.TargetAC, r.D100CritRoll, r.D100MultiplierRoll, trimNum(r.CritMultiplier), r.TotalDamage)
 	default:
 		out = fmt.Sprintf("%s vs AC %d: hit, %d damage", weapon, r.TargetAC, r.TotalDamage)
 	}

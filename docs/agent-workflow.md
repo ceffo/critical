@@ -9,10 +9,14 @@ contract; keep them stable.
 
 | Always | `AGENTS.md`, `docs/all.md` (scope, vocabulary, core architectural rule, REST conventions) |
 |---|---|
-| Backend work | `docs/backend.md`, `docs/clean_architecture.md` |
+| Backend work | `docs/backend.md` (infrastructure), `docs/clean_architecture.md` |
+| Rules / game math | `docs/adr/README.md` (index), the relevant ADRs |
 | Frontend work | `docs/frontend.md` |
 
 Domain vocabulary and phase scope live in `docs/all.md`.
+
+Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and rules are indexed in
+`docs/adr/README.md`. Design decisions are read from these docs and the tracker, never from engram.
 
 ## Validation
 
@@ -75,8 +79,12 @@ in `AGENTS.md` ("Beads Workflow Integration"). Bare `bv` launches a TUI: never r
   `br ready`. Everything that writes (`update`, `close`, `create`, `dep add`, `sync`) is the
   supervisor's or scoper's, run from the main checkout; developers, reviewers and testers never
   write to `.beads/`.
-- Claim: `br update <id> --claim`. Close after the PR is merged: `br close <id> --reason="…"`.
-  Export after tracker changes: `br sync --flush-only`.
+- Claim: `br update <id> --claim`.
+- Tracker changes ship in the PR they relate to, never in a tracker-only PR. The supervisor exports
+  (`br sync --flush-only`) and commits `.beads/issues.jsonl` on the item's branch: the claim at
+  dispatch, and the close (`br close`, reason "PR #n") as the last commit before the PR is reported
+  ready, so merging the PR closes the item. Items filed by a scoper ride in the PR of the work that
+  produced them (or the next related PR). If a PR is closed unmerged, reopen its item.
 - Priorities are numbers 0-4. Types: task, bug, feature, epic, chore, docs, question.
 - Labels in use: `needs-info` (cannot start, questions listed), `risky` (needs review).
 - Queue: `bv --robot-triage`, `br ready --json`.
@@ -84,6 +92,8 @@ in `AGENTS.md` ("Beads Workflow Integration"). Bare `bv` launches a TUI: never r
 - Work items are written in the vertical-slice convention: one bead = schema + Go engine + REST
   endpoint + React panel for one feature; split only when too big for one PR (backend bead first,
   UI bead blocked by it).
+- Rules items: acceptance criteria name the ADR steps to implement (one criterion per step);
+  a missing ADR is filed first.
 - Defaults when filing autonomously: priority 3 (2 for a correctness bug in rules math).
 
 ## Scope
@@ -93,13 +103,19 @@ as backlog (P4) and never dispatched without the user's say-so.
 
 ## Hard rules for implementers
 
-From `docs/all.md` and `docs/backend.md`; the ones reviewers check hardest:
+From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check hardest:
 - Game logic lives only in Go; the frontend sends intent and renders structured responses.
 - Roll endpoints return a complete breakdown struct. Errors are `{"error": "message"}`.
 - HP is an append-only ledger; current HP = `SUM(delta)`.
 - Architecture layering per `docs/clean_architecture.md`; wiring only in the composition root.
 - Tests follow "Testing Conventions" in `docs/backend.md`; rule changes get a test that fails on
   the old code.
+- Rules math traces to its design (`docs/adr/`). A change cites the ADR step
+  it implements (code comment and commit). Each numbered step gets one named test that fails on the
+  old code. Dice mocks give every roll a distinct value and assert exact call counts, so a reused
+  or missing roll fails the test. If code and design disagree, stop and report; don't pick one.
+- Rules items end the report with a `RULES TRACE` block: `ADR step -> code location -> test name`.
+  A step with no test is not done.
 
 ## Review
 
@@ -109,7 +125,9 @@ domain structs used by several packages; a wide architectural refactor. Not revi
 docs, tests, small refactors.
 
 Reviewer checklist, in priority order:
-1. **Rules correctness**: AD&D 2.5 math per `docs/backend.md` (hit if `roll + modifiers ≥ THAC0 -
+1. **Rules correctness**: quote each ADR step the change touches and verify its test exists
+   and would fail if the step were broken (reused dice, wrong order, wrong count). "Met by reading"
+   is not acceptable for rules math: a rules criterion without a test is a finding. AD&D 2.5 math per `docs/adr/` (hit if `roll + modifiers ≥ THAC0 -
    target_AC`, damage formula, crit table, nat 1 / nat 20), off-by-one in rounds/charges,
    negative/overflow values, dice injected through the dice port.
 2. **State integrity**: append-only ledger; buff expiry on Next Round (charge vs duration); spell
@@ -156,4 +174,8 @@ model actually running.
 
 ## Memory
 
-Engram project: `critical`; cross-project gotchas go to `personal`.
+Engram (project `critical`; cross-project gotchas in `personal`) holds **only** situational
+know-how: how to do X, tool gotchas, environment quirks. Design decisions (rules, architecture,
+data, UI, process choices the user makes) go **only** into project docs: an ADR in `docs/adr/`
+(indexed in `docs/adr/README.md`) or the relevant doc, in the PR the decision belongs to. Never read
+design decisions from engram; read the docs.

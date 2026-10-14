@@ -17,7 +17,8 @@ test("an attack shows its full breakdown in the result card", async ({
   await expect(card).toContainText("vs AC 4");
   for (const label of [
     "d20",
-    "Crit d100",
+    "Crit check d100",
+    "Multiplier d100",
     "Margin",
     "Base THAC0",
     "Effective THAC0",

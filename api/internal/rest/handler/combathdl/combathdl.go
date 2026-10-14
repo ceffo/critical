@@ -211,19 +211,22 @@ func AdjustSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 // fields match combatsvc's action-log payload, so web/src/types/combat.ts
 // reads both.
 type RollResultDTO struct {
-	D20Roll         int           `json:"d20Roll"`
-	D100CritRoll    int           `json:"d100CritRoll"`
-	IsCrit          bool          `json:"isCrit"`
-	CritMultiplier  float64       `json:"critMultiplier"`
-	CritPlaceholder bool          `json:"critPlaceholder"`
-	CritFrom        int           `json:"critFrom"`
-	CritTo          int           `json:"critTo"`
-	BaseThac0       int           `json:"baseThac0"`
-	Modifiers       []ModifierDTO `json:"modifiers"`
-	EffectiveThac0  int           `json:"effectiveThac0"`
-	TargetACNeeded  int           `json:"targetACNeeded"`
-	Hit             bool          `json:"hit"`
-	HitMargin       int           `json:"hitMargin"`
+	D20Roll      int `json:"d20Roll"`
+	D100CritRoll int `json:"d100CritRoll"`
+	// D100MultiplierRoll is the second d100 whose crit-table row gives the
+	// multiplier (docs/adr/0001-critical-hits.md); absent on saves.
+	D100MultiplierRoll int           `json:"d100MultiplierRoll,omitempty"`
+	IsCrit             bool          `json:"isCrit"`
+	CritMultiplier     float64       `json:"critMultiplier"`
+	CritPlaceholder    bool          `json:"critPlaceholder"`
+	CritFrom           int           `json:"critFrom"`
+	CritTo             int           `json:"critTo"`
+	BaseThac0          int           `json:"baseThac0"`
+	Modifiers          []ModifierDTO `json:"modifiers"`
+	EffectiveThac0     int           `json:"effectiveThac0"`
+	TargetACNeeded     int           `json:"targetACNeeded"`
+	Hit                bool          `json:"hit"`
+	HitMargin          int           `json:"hitMargin"`
 
 	BaseDamage      int             `json:"baseDamage"`
 	DamageDice      string          `json:"damageDice"`
@@ -296,7 +299,7 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Source: t.Source, Detail: t.Detail, Value: t.Value})
 	}
 	out := RollResultDTO{
-		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
+		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
 		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo,
 		BaseThac0: r.BaseThac0, Modifiers: mods, EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded,
 		Hit: r.Hit, HitMargin: r.HitMargin,

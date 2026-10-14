@@ -50,6 +50,8 @@ export interface Stack {
   webUrl: string;
   /** Base URL of this stack's own Go API. */
   apiUrl: string;
+  /** This stack's SQLite database, for tests that must plant data the API can't create (old rows). */
+  dbPath: string;
 }
 
 /**
@@ -99,13 +101,14 @@ export const test = base.extend<{ stack: Stack } & StackOptions>({
 
   stack: async ({ character, extraSpells }, provide) => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "critical-e2e-"));
+    const dbPath = path.join(tmp, "critical.db");
     const apiPort = await freePort();
     const apiUrl = `http://127.0.0.1:${apiPort}`;
     let output = "";
     const api = spawn(apiBinary, [], {
       env: {
         ...process.env,
-        CRITICAL_DSN: path.join(tmp, "critical.db"),
+        CRITICAL_DSN: dbPath,
         CRITICAL_SEEDS_DIR: await seedsWith(tmp, character, extraSpells.rows),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,
       },
@@ -131,7 +134,7 @@ export const test = base.extend<{ stack: Stack } & StackOptions>({
       await vite.listen();
       const webUrl = vite.resolvedUrls?.local[0]?.replace(/\/$/, "");
       if (!webUrl) throw new Error("Vite did not report a URL");
-      await provide({ webUrl, apiUrl });
+      await provide({ webUrl, apiUrl, dbPath });
     } finally {
       await vite?.close();
       api.kill("SIGTERM");

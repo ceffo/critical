@@ -65,7 +65,9 @@ test("the table saved in the editor is used by the next crit", async ({
   const card = page
     .getByRole("region", { name: "Last Result" })
     .getByTestId("attack-result");
-  await expect(card).toContainText("Critical ×2 (placeholder)");
+  await expect(card.getByTestId("crit-badge")).toHaveText(
+    /^Crit check \d+ · multiplier \d+ → ×2 \(placeholder\)$/,
+  );
   await snap(page, "placeholder-crit");
 
   await range(editor, 1).to.fill("50");
@@ -88,18 +90,29 @@ test("the table saved in the editor is used by the next crit", async ({
   await expect(range(again, 3).mult).toHaveValue("4");
 
   await page.getByLabel("Target AC").fill("1000");
-  await page.getByRole("button", { name: "Roll Attack" }).click();
-  await expect(card).toBeVisible();
-  const d100 = Number(
-    await card
-      .locator("dt", { hasText: "Crit d100" })
-      .locator("xpath=following-sibling::dd")
-      .textContent(),
-  );
+  // ADR 0001 step 4: the row is the one of the second (multiplier) d100, not the crit check. Roll
+  // until the two d100s fall in different rows so the test tells them apart.
+  const fact = async (label: string) =>
+    Number(
+      await card
+        .locator("dt", { hasText: label })
+        .locator("xpath=following-sibling::dd")
+        .textContent(),
+    );
+  const rowOf = (d: number) => TABLE.findIndex((r) => d >= r.from && d <= r.to);
+  let check = 0;
+  let d100 = 0;
+  for (let i = 0; i < 30 && rowOf(check) === rowOf(d100); i++) {
+    await page.getByRole("button", { name: "Roll Attack" }).click();
+    await expect.poll(async () => (await logEntry(page, "vs AC 1000").count())).toBe(i + 2);
+    check = await fact("Crit check d100");
+    d100 = await fact("Multiplier d100");
+  }
+  expect(rowOf(check), "the two d100s never fell in different rows").not.toBe(rowOf(d100));
   const row = TABLE.find((r) => d100 >= r.from && d100 <= r.to);
   if (!row) throw new Error(`d100 ${d100} is in no range`);
-  await expect(card).toContainText(
-    `Critical ×${row.mult} (d100 in ${row.from}–${row.to})`,
+  await expect(card.getByTestId("crit-badge")).toHaveText(
+    `Crit check ${check} · multiplier ${d100} → ×${row.mult} (${row.from}–${row.to})`,
   );
   await expect(card.getByTestId("damage-terms")).toContainText(
     `Critical hit (${row.from}-${row.to})`,
@@ -107,7 +120,7 @@ test("the table saved in the editor is used by the next crit", async ({
   await snap(page, "table-crit");
 
   // The earlier placeholder crit was resolved before the edit and keeps its x2.
-  await expect(logEntry(page, "critical ×2").first()).toBeVisible(); // first: the new crit may also be ×2
+  await expect(logEntry(page, "→ ×2)").first()).toBeVisible(); // first: the new crit may also be ×2
 });
 
 test("a decimal multiplier typed with a comma is saved and the crit shows the floored total", async ({
@@ -139,7 +152,9 @@ test("a decimal multiplier typed with a comma is saved and the crit shows the fl
   const card = page
     .getByRole("region", { name: "Last Result" })
     .getByTestId("attack-result");
-  await expect(card).toContainText("Critical ×1.5 (d100 in 1–100)");
+  await expect(card.getByTestId("crit-badge")).toHaveText(
+    /^Crit check \d+ · multiplier \d+ → ×1\.5 \(1–100\)$/,
+  );
 
   // The breakdown shows the multiplier as entered, and the unrounded → floored step when the
   // damage is not whole; the big total is the floored number.
@@ -178,13 +193,15 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
   const card = page
     .getByRole("region", { name: "Dernier résultat" })
     .getByTestId("attack-result");
-  await expect(card).toContainText("Critique ×1,5 (d100 dans 1–100)");
+  await expect(card.getByTestId("crit-badge")).toHaveText(
+    /^Test critique \d+ · multiplicateur \d+ → ×1,5 \(1–100\)$/,
+  );
   await expect(card.getByTestId("damage-terms")).toContainText("×1,5");
   await expect(
     page
       .getByRole("region", { name: "Journal de combat" })
       .getByRole("listitem")
-      .filter({ hasText: "critique ×1,5" })
+      .filter({ hasText: /critique \(test \d+ · multiplicateur \d+ → ×1,5\)/ })
       .first(),
   ).toBeVisible();
   await snap(page, "decimal-crit-fr");

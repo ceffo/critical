@@ -45,7 +45,13 @@ export type TargetSize = "sm" | "l";
 
 export interface RollResult {
   d20Roll: number;
+  /** The crit-check d100 (crit when d20 − it ≥ the roll needed). */
   d100CritRoll: number;
+  /**
+   * The second d100, whose crit-table row gives the multiplier of a crit (docs/adr/0001). Absent on
+   * saves and on attacks logged before it existed.
+   */
+  d100MultiplierRoll?: number;
   isCrit: boolean;
   critMultiplier: number;
   /** The multiplier came from the default crit table, which nobody has edited yet. */

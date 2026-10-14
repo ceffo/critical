@@ -37,7 +37,8 @@
     "sourcePlaceholder": "Hache d'orque, potion...",
     "applyDamage": "Infliger les dégâts",
     "applyHeal": "Appliquer les soins",
-    "undoLast": "Annuler la dernière modification de PV"
+    "undoLast": "Annuler la dernière modification de PV",
+    "undoBlocked": "Dernière entrée : « {{entry}} ». Annulez-la d’abord dans le journal."
   },
   "round": {
     "title": "Round",

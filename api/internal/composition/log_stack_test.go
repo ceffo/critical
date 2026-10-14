@@ -7,9 +7,11 @@ package composition_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -148,4 +150,27 @@ func TestLogStack_AmendNoteOnly(t *testing.T) {
 		assert.Equal(t, before[i].EffectiveSummary(), after[i].EffectiveSummary())
 		assert.JSONEq(t, string(before[i].EffectivePayload()), string(after[i].EffectivePayload()))
 	}
+}
+
+// Checklist 4 (critical-qki.38): a note on a voided entry is refused
+// (ErrAlreadyVoided, 409) and a note over 500 characters too (ErrInvalidInput,
+// 400); exactly 500 is fine. Status mapping: router_errors_test.
+func TestLogStack_NoteRefusals(t *testing.T) {
+	bs, ids, _ := buildStack(t)
+	ctx := context.Background()
+	top := ids[len(ids)-1]
+
+	_, err := bs.Log.Amend(ctx, bs.CharacterID, top, actionlogsvc.Amendment{Note: strings.Repeat("é", 501)})
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
+	e, err := bs.Log.Amend(ctx, bs.CharacterID, top, actionlogsvc.Amendment{Note: strings.Repeat("é", 500)})
+	require.NoError(t, err)
+	assert.Len(t, []rune(e.Note()), 500)
+
+	_, err = bs.Log.Void(ctx, bs.CharacterID, top)
+	require.NoError(t, err)
+	_, err = bs.Log.Amend(ctx, bs.CharacterID, top, actionlogsvc.Amendment{Note: "too late"})
+	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
+	e, err = bs.Log.Amend(ctx, bs.CharacterID, ids[0], actionlogsvc.Amendment{Note: "older entries still take a note"})
+	require.NoError(t, err)
+	assert.Equal(t, "older entries still take a note", e.Note())
 }

@@ -284,3 +284,39 @@ func TestLatestID(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
+
+// Checklist 3 (critical-qki.38): a value amend stored before migration 014
+// (raw row, no note column written) still gives the amended delta and HP
+// total through the DAL, and a note added afterwards changes neither.
+func TestLegacyValueAmend_ReadsAfterMigration014(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+
+	orc := insert(t, dal, hp(charID, -8, "orc"))
+	insert(t, dal, hp(charID, 3, "potion"))
+	trap := insert(t, dal, hp(charID, -6, "trap"))
+	_, err := db.ExecContext(ctx, `INSERT INTO action_corrections (action_id, kind, hp_delta, summary) VALUES (?, 'amend', -12, 'orc axe')`, orc)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO action_corrections (action_id, kind) VALUES (?, 'void')`, trap)
+	require.NoError(t, err)
+
+	check := func(wantNote string) {
+		t.Helper()
+		e, err := dal.GetEntry(ctx, charID, orc)
+		require.NoError(t, err)
+		assert.Equal(t, actionlog.StatusAmended, e.Status())
+		assert.Equal(t, -8, e.HPDelta)
+		assert.Equal(t, -12, e.EffectiveHPDelta())
+		assert.Equal(t, "orc axe", e.EffectiveSummary())
+		assert.Equal(t, wantNote, e.Note())
+		total, err := dal.HPTotal(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, -9, total, "-12 + 3, trap voided")
+	}
+	check("")
+	note := "DM: the axe crit"
+	correct(t, dal, actionlog.Correction{ActionID: orc, Kind: actionlog.CorrectionAmend, Note: &note})
+	check(note)
+}

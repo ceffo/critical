@@ -1,9 +1,11 @@
 import { test, expect, snap } from "./fixtures";
 import {
   buffBadge,
+  currentHp,
   effectiveStr,
   logEntry,
   openDashboard,
+  recordHp,
   voidEntry,
 } from "./helpers";
 import type { Page } from "@playwright/test";
@@ -327,4 +329,55 @@ test("a cast buff expired by Time passes: pop the fast-forward, then the cast", 
   await expect(buffBadge(page, "Haste")).toBeVisible();
   await voidEntry(page, "Cast Haste");
   await expect(buffBadge(page, "Haste")).toHaveCount(0);
+});
+
+// The log is a stack (critical-qki.38): cast, HP change, cast. Only the last
+// cast offers Void and the HP panel's undo is off (with a hint) while it is on
+// top; popping it, then the heal, walks HP and slots back one step each.
+test("cast, heal, cast: pop the last cast, then the heal; HP undo is off under a cast", async ({
+  page,
+  stack,
+}) => {
+  await prepare(stack.apiUrl, ["haste", "stoneskin"]);
+  await openSpells(page);
+  const max = await currentHp(page);
+  const level3 = page.getByRole("region", { name: "Level 3" });
+  const level4 = page.getByRole("region", { name: "Level 4" });
+  const undo = page.getByRole("button", { name: "Undo last HP change" });
+  const hint = page.getByTestId("hp-undo-hint");
+
+  await recordHp(page, "damage", 9, "e2e troll");
+  await expect.poll(() => currentHp(page)).toBe(max - 9);
+  await page.getByRole("button", { name: "Cast Haste" }).click();
+  await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
+  await expect(undo).toBeDisabled();
+  await recordHp(page, "heal", 4, "e2e cure light");
+  await expect.poll(() => currentHp(page)).toBe(max - 5);
+  await expect(undo).toBeEnabled();
+  await expect(hint).toHaveCount(0);
+  await page.getByRole("button", { name: "Cast Stoneskin" }).click();
+  await expect(level4.getByTestId("remaining-4")).toHaveText("0 / 1");
+
+  // Only the newest entry (the Stoneskin cast) offers Void.
+  for (const text of ["Cast Haste", "e2e cure light", "e2e troll"]) {
+    await expect(logEntry(page, text).getByRole("button", { name: "Void" })).toHaveCount(0);
+  }
+  await expect(logEntry(page, "Cast Stoneskin").getByRole("button", { name: "Void" })).toHaveCount(1);
+  await expect(undo).toBeDisabled();
+  await expect(hint).toContainText("Latest entry: “Cast Stoneskin");
+  await expect(hint).toContainText("Undo it from the log first.");
+  await snap(page, "hp-undo-off-under-a-cast");
+
+  await voidEntry(page, "Cast Stoneskin");
+  await expect(level4.getByTestId("remaining-4")).toHaveText("1 / 1");
+  await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
+  await expect.poll(() => currentHp(page)).toBe(max - 5);
+  await expect(undo).toBeEnabled();
+
+  await voidEntry(page, "e2e cure light");
+  await expect.poll(() => currentHp(page)).toBe(max - 9);
+  await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
+  await expect(logEntry(page, "Cast Haste").getByRole("button", { name: "Void" })).toHaveCount(1);
+  await expect(undo).toBeDisabled();
+  await snap(page, "popped-cast-then-heal");
 });

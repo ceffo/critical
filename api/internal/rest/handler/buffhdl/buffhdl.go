@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/render"
@@ -34,12 +35,18 @@ type buffSvc interface {
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
+	ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error)
+	SaveBuff(ctx context.Context, characterID int64, saved buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)
+	DeleteSaved(ctx context.Context, characterID int64, id int64) ([]buffsvc.SavedBuff, error)
 }
 
 // RegisterRoutes wires buff, round and effective-STR endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Get("/api/buffs", render.Handle(ListActive(charID, svc)))
 	r.Post("/api/buffs", render.Handle(Activate(charID, svc)))
+	r.Get("/api/buffs/saved", render.Handle(ListSaved(charID, svc)))
+	r.Post("/api/buffs/saved", render.Handle(SaveBuff(charID, svc)))
+	r.Delete("/api/buffs/saved/{id}", render.Handle(DeleteSaved(charID, svc)))
 	r.Patch("/api/buffs/{id}", render.Handle(Edit(charID, svc)))
 	r.Delete("/api/buffs/{id}", render.Handle(Dismiss(charID, svc)))
 	r.Post("/api/buffs/{id}/trigger", render.Handle(Trigger(charID, svc)))
@@ -83,8 +90,9 @@ func Activate(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 
 // BuffEditDTO is the PATCH /api/buffs/{id} body; omitted fields are unchanged.
 type BuffEditDTO struct {
-	Duration *int `json:"duration"`
-	Charges  *int `json:"charges"`
+	Duration *int    `json:"duration"`
+	Charges  *int    `json:"charges"`
+	Note     *string `json:"note"`
 }
 
 // Edit corrects a buff's remaining rounds and/or charges.
@@ -94,7 +102,7 @@ func Edit(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		edit := buffsvc.BuffEdit{Duration: dto.Duration, Charges: dto.Charges}
+		edit := buffsvc.BuffEdit{Duration: dto.Duration, Charges: dto.Charges, Note: dto.Note}
 		if _, err := svc.Edit(r.Context(), charID(r), chi.URLParam(r, "id"), edit); err != nil {
 			return err
 		}
@@ -211,6 +219,7 @@ type BuffEffectDTO struct {
 	Charges  int            `json:"charges"`
 	Duration int            `json:"duration"`
 	Effects  BuffEffectsDTO `json:"effects"`
+	Note     string         `json:"note"`
 	Applies  *bool          `json:"applies,omitempty"`
 }
 
@@ -239,14 +248,14 @@ type RoundAdvanceDTO struct {
 func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
 		ID: d.ID, Name: d.Name, Charges: d.Charges, Duration: d.Duration,
-		Effects: buffsvc.BuffEffects(d.Effects),
+		Effects: buffsvc.BuffEffects(d.Effects), Note: d.Note,
 	}
 }
 
 func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-		Effects: BuffEffectsDTO(b.Effects),
+		Effects: BuffEffectsDTO(b.Effects), Note: b.Note,
 	}
 }
 
@@ -267,4 +276,73 @@ func toStatusDTOs(bs []buffsvc.BuffStatus) []BuffEffectDTO {
 		out = append(out, d)
 	}
 	return out
+}
+
+// SavedBuffDTO is the wire shape of a saved buff template: the starting
+// values of a buff (duration = rounds, charges), its effects and note.
+type SavedBuffDTO struct {
+	ID       int64          `json:"id"`
+	Name     string         `json:"name"`
+	Duration int            `json:"duration"`
+	Charges  int            `json:"charges"`
+	Effects  BuffEffectsDTO `json:"effects"`
+	Note     string         `json:"note"`
+}
+
+func toSavedDTOs(list []buffsvc.SavedBuff) []SavedBuffDTO {
+	out := make([]SavedBuffDTO, 0, len(list))
+	for _, s := range list {
+		out = append(out, SavedBuffDTO{
+			ID: s.ID, Name: s.Name, Duration: s.Duration, Charges: s.Charges,
+			Effects: BuffEffectsDTO(s.Effects), Note: s.Note,
+		})
+	}
+	return out
+}
+
+// ListSaved returns the saved buff templates.
+func ListSaved(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		list, err := svc.ListSaved(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toSavedDTOs(list))
+		return nil
+	}
+}
+
+// SaveBuff stores a template (same name replaces) and returns the list.
+func SaveBuff(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var dto SavedBuffDTO
+		if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		list, err := svc.SaveBuff(r.Context(), charID(r), buffsvc.SavedBuff{
+			Name: dto.Name, Duration: dto.Duration, Charges: dto.Charges,
+			Effects: buffsvc.BuffEffects(dto.Effects), Note: dto.Note,
+		})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toSavedDTOs(list))
+		return nil
+	}
+}
+
+// DeleteSaved removes a template; active buffs are untouched.
+func DeleteSaved(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil {
+			return render.BadRequestError("invalid saved buff id")
+		}
+		list, err := svc.DeleteSaved(r.Context(), charID(r), id)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toSavedDTOs(list))
+		return nil
+	}
 }

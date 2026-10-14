@@ -36,6 +36,7 @@ type joins[Q dialect.Joinable] struct {
 	Characters        joinSet[characterJoins[Q]]
 	HPEvents          joinSet[hpEventJoins[Q]]
 	RoundStates       joinSet[roundStateJoins[Q]]
+	SavedBuffs        joinSet[savedBuffJoins[Q]]
 	SpellSlots        joinSet[spellSlotJoins[Q]]
 	XPEvents          joinSet[xpEventJoins[Q]]
 }
@@ -57,6 +58,7 @@ func getJoins[Q dialect.Joinable]() joins[Q] {
 		Characters:        buildJoinSet[characterJoins[Q]](Characters.Columns, buildCharacterJoins),
 		HPEvents:          buildJoinSet[hpEventJoins[Q]](HPEvents.Columns, buildHPEventJoins),
 		RoundStates:       buildJoinSet[roundStateJoins[Q]](RoundStates.Columns, buildRoundStateJoins),
+		SavedBuffs:        buildJoinSet[savedBuffJoins[Q]](SavedBuffs.Columns, buildSavedBuffJoins),
 		SpellSlots:        buildJoinSet[spellSlotJoins[Q]](SpellSlots.Columns, buildSpellSlotJoins),
 		XPEvents:          buildJoinSet[xpEventJoins[Q]](XPEvents.Columns, buildXPEventJoins),
 	}

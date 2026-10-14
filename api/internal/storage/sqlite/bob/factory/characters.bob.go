@@ -63,6 +63,7 @@ type characterR struct {
 	ActiveBuffs []*characterRActiveBuffsR
 	HPEvents    []*characterRHPEventsR
 	RoundStates []*characterRRoundStatesR
+	SavedBuffs  []*characterRSavedBuffsR
 	SpellSlots  []*characterRSpellSlotsR
 	XPEvents    []*characterRXPEventsR
 }
@@ -82,6 +83,10 @@ type characterRHPEventsR struct {
 type characterRRoundStatesR struct {
 	number int
 	o      *RoundStateTemplate
+}
+type characterRSavedBuffsR struct {
+	number int
+	o      *SavedBuffTemplate
 }
 type characterRSpellSlotsR struct {
 	number int
@@ -160,6 +165,21 @@ func (t CharacterTemplate) setModelRels(o *models.Character) {
 		}
 		o.R.RoundStates = rel
 		o.R.Loaded.RoundStates = true
+	}
+
+	if t.r.SavedBuffs != nil {
+		rel := models.SavedBuffSlice{}
+		for _, r := range t.r.SavedBuffs {
+			related := r.o.BuildMany(r.number)
+			for _, rel := range related {
+				rel.CharacterID = o.ID // h2
+				rel.R.Character = o
+				rel.R.Loaded.Character = true
+			}
+			rel = append(rel, related...)
+		}
+		o.R.SavedBuffs = rel
+		o.R.Loaded.SavedBuffs = true
 	}
 
 	if t.r.SpellSlots != nil {
@@ -483,6 +503,26 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 		}
 	}
 
+	isSavedBuffsDone, _ := characterRelSavedBuffsCtx.Value(ctx)
+	if !isSavedBuffsDone && o.r.SavedBuffs != nil {
+		ctx = characterRelSavedBuffsCtx.WithValue(ctx, true)
+		for _, r := range o.r.SavedBuffs {
+			if r.o.alreadyPersisted {
+				m.R.SavedBuffs = append(m.R.SavedBuffs, r.o.Build())
+			} else {
+				rel4, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
+
+				err = m.AttachSavedBuffs(ctx, exec, rel4...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	isSpellSlotsDone, _ := characterRelSpellSlotsCtx.Value(ctx)
 	if !isSpellSlotsDone && o.r.SpellSlots != nil {
 		ctx = characterRelSpellSlotsCtx.WithValue(ctx, true)
@@ -490,12 +530,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.SpellSlots = append(m.R.SpellSlots, r.o.Build())
 			} else {
-				rel4, err := r.o.CreateMany(ctx, exec, r.number)
+				rel5, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachSpellSlots(ctx, exec, rel4...)
+				err = m.AttachSpellSlots(ctx, exec, rel5...)
 				if err != nil {
 					return err
 				}
@@ -510,12 +550,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.XPEvents = append(m.R.XPEvents, r.o.Build())
 			} else {
-				rel5, err := r.o.CreateMany(ctx, exec, r.number)
+				rel6, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachXPEvents(ctx, exec, rel5...)
+				err = m.AttachXPEvents(ctx, exec, rel6...)
 				if err != nil {
 					return err
 				}
@@ -555,6 +595,7 @@ func (o *CharacterTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	newMInCreation["characters:active_buffs:fk_active_buffs_0"] = m
 	newMInCreation["characters:hp_events:fk_hp_events_0"] = m
 	newMInCreation["characters:round_state:fk_round_state_0"] = m
+	newMInCreation["characters:saved_buffs:fk_saved_buffs_0"] = m
 	newMInCreation["characters:spell_slots:fk_spell_slots_0"] = m
 	newMInCreation["characters:xp_events:fk_xp_events_0"] = m
 
@@ -1382,6 +1423,54 @@ func (m characterMods) AddExistingRoundStates(existingModels ...*models.RoundSta
 func (m characterMods) WithoutRoundStates() CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
 		o.r.RoundStates = nil
+	})
+}
+
+func (m characterMods) WithSavedBuffs(number int, related *SavedBuffTemplate) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.SavedBuffs = []*characterRSavedBuffsR{{
+			number: number,
+			o:      related,
+		}}
+	})
+}
+
+func (m characterMods) WithNewSavedBuffs(number int, mods ...SavedBuffMod) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		related := o.f.NewSavedBuffWithContext(ctx, mods...)
+		m.WithSavedBuffs(number, related).Apply(ctx, o)
+	})
+}
+
+func (m characterMods) AddSavedBuffs(number int, related *SavedBuffTemplate) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.SavedBuffs = append(o.r.SavedBuffs, &characterRSavedBuffsR{
+			number: number,
+			o:      related,
+		})
+	})
+}
+
+func (m characterMods) AddNewSavedBuffs(number int, mods ...SavedBuffMod) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		related := o.f.NewSavedBuffWithContext(ctx, mods...)
+		m.AddSavedBuffs(number, related).Apply(ctx, o)
+	})
+}
+
+func (m characterMods) AddExistingSavedBuffs(existingModels ...*models.SavedBuff) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		for _, em := range existingModels {
+			o.r.SavedBuffs = append(o.r.SavedBuffs, &characterRSavedBuffsR{
+				o: o.f.fromExistingSavedBuff(ctx, em),
+			})
+		}
+	})
+}
+
+func (m characterMods) WithoutSavedBuffs() CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.SavedBuffs = nil
 	})
 }
 

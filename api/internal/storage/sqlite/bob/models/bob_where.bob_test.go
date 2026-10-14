@@ -187,6 +187,20 @@ func TestCharacterHasRelationsEmitExists(t *testing.T) {
 		}
 	})
 
+	t.Run("SavedBuffs", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(Characters.NameExpr()),
+			SelectWhere.Characters.R.HasSavedBuffs(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasSavedBuffs: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasSavedBuffs: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
 	t.Run("SpellSlots", func(t *testing.T) {
 		q := sqlite.Select(
 			sm.From(Characters.NameExpr()),
@@ -247,6 +261,27 @@ func TestRoundStateHasRelationsEmitExists(t *testing.T) {
 		q := sqlite.Select(
 			sm.From(RoundStates.NameExpr()),
 			SelectWhere.RoundStates.R.HasCharacter(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasCharacter: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasCharacter: expected EXISTS in query, got: %s", sql)
+		}
+	})
+}
+
+// TestSavedBuffHasRelationsEmitExists verifies that every generated
+// Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
+// an INNER JOIN, so the parent rows are never multiplied.
+func TestSavedBuffHasRelationsEmitExists(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Character", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(SavedBuffs.NameExpr()),
+			SelectWhere.SavedBuffs.R.HasCharacter(),
 		)
 		sql, _, err := bob.Build(ctx, q)
 		if err != nil {

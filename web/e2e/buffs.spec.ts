@@ -164,3 +164,87 @@ test.describe("with the sheet's STR 12", () => {
     await snap(page, "strength-expired-gem-off");
   });
 });
+
+test("a buff note shows on the badge, edits are logged, void restores it", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await markNoReload(page);
+
+  await addBuff(page, { name: "e2e Ward", rounds: 5, note: "+4 saves vs fire" });
+  const badge = buffBadge(page, "e2e Ward");
+  await expect(badge.getByTestId("buff-note")).toHaveText("+4 saves vs fire");
+
+  await badge.getByRole("button", { name: "Edit e2e Ward" }).click();
+  const form = page.getByRole("form", { name: "Edit e2e Ward" });
+  await form.getByLabel("Note").fill("fire damage −50%");
+  await form.getByRole("button", { name: "Save" }).click();
+  await expect(badge.getByTestId("buff-note")).toHaveText("fire damage −50%");
+  await expect(
+    logEntry(page, "e2e Ward: note “fire damage −50%”"),
+  ).toBeVisible();
+  await snap(page, "note-edited");
+
+  await voidEntry(page, "e2e Ward: note “fire damage −50%”");
+  await expect(badge.getByTestId("buff-note")).toHaveText("+4 saves vs fire");
+
+  await expectNoReload(page);
+  await snap(page, "note-voided");
+});
+
+test("a saved buff fills the form from its chip, deleting it leaves active buffs alone and is voidable", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await markNoReload(page);
+  const strip = page.getByRole("group", { name: "Buffs" });
+
+  await addBuff(page, {
+    name: "e2e Hammer form",
+    rounds: 10,
+    effects: [
+      ["weapon_buff", 5],
+      ["min_str", 18],
+      ["spells_buff", 2],
+    ],
+    note: "thunderclap stuns 30 m",
+    save: true,
+  });
+  await expect(logEntry(page, "Saved buff e2e Hammer form (10 rd)")).toBeVisible();
+
+  // Re-add from the chip, changing the rounds first.
+  await strip.getByRole("button", { name: "Add buff" }).click();
+  const form = strip.getByRole("form", { name: "Add buff" });
+  await expect(form.getByTestId("saved-buff")).toHaveCount(1);
+  await form
+    .getByRole("button", { name: "Fill the form with e2e Hammer form" })
+    .click();
+  await expect(form.getByLabel("Buff name")).toHaveValue("e2e Hammer form");
+  await expect(form.getByLabel("Rounds")).toHaveValue("10");
+  await expect(form.getByLabel("Note")).toHaveValue("thunderclap stuns 30 m");
+  await expect(form.getByTestId("effect-row")).toHaveCount(3);
+  await snap(page, "saved-chip-filled");
+  await form.getByLabel("Rounds").fill("4");
+  await form.getByRole("button", { name: "Activate" }).click();
+  await expect(
+    buffBadge(page, "e2e Hammer form").last().getByTestId("buff-rounds"),
+  ).toHaveText("4 rd");
+
+  // Delete the template: the active buff stays.
+  await strip.getByRole("button", { name: "Add buff" }).click();
+  const form2 = strip.getByRole("form", { name: "Add buff" });
+  await form2
+    .getByRole("button", { name: "Delete saved buff e2e Hammer form" })
+    .click();
+  await expect(form2.getByTestId("saved-buff")).toHaveCount(0);
+  await expect(buffBadge(page, "e2e Hammer form")).toHaveCount(2);
+  await expect(
+    logEntry(page, "Deleted saved buff e2e Hammer form"),
+  ).toBeVisible();
+  await snap(page, "saved-deleted");
+
+  await voidEntry(page, "Deleted saved buff e2e Hammer form");
+  await expect(form2.getByTestId("saved-buff")).toHaveCount(1);
+
+  await expectNoReload(page);
+});

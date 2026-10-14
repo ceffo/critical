@@ -12,7 +12,8 @@ import (
 // logPayload is the structured summary of a buff entry, rendered by the UI
 // in the player's language (the Summary string is the English fallback).
 type logPayload struct {
-	// Action is activate, edit, absorb, dismiss next_round, end_combat or set_round.
+	// Action is activate, edit, absorb, dismiss next_round, end_combat, set_round,
+	// save_template or delete_template.
 	Action      string   `json:"action"`
 	Buff        string   `json:"buff,omitempty"`
 	Rounds      int      `json:"rounds,omitempty"`
@@ -23,6 +24,11 @@ type logPayload struct {
 	FromRound   *int     `json:"fromRound,omitempty"`
 	ToRound     *int     `json:"toRound,omitempty"`
 	Expired     []string `json:"expired,omitempty"`
+	// Note is the buff's note (activate, save_template) or its new note (edit,
+	// with NoteChanged); FromNote is the previous one.
+	Note        string `json:"note,omitempty"`
+	FromNote    string `json:"fromNote,omitempty"`
+	NoteChanged bool   `json:"noteChanged,omitempty"`
 }
 
 // change is what a use case decided: the new buff list, the new round when

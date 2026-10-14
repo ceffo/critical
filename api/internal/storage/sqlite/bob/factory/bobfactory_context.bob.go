@@ -34,6 +34,7 @@ var (
 	characterRelActiveBuffsCtx       = newContextual[bool]("active_buffs.characters.fk_active_buffs_0")
 	characterRelHPEventsCtx          = newContextual[bool]("characters.hp_events.fk_hp_events_0")
 	characterRelRoundStatesCtx       = newContextual[bool]("characters.round_state.fk_round_state_0")
+	characterRelSavedBuffsCtx        = newContextual[bool]("characters.saved_buffs.fk_saved_buffs_0")
 	characterRelSpellSlotsCtx        = newContextual[bool]("characters.spell_slots.fk_spell_slots_0")
 	characterRelXPEventsCtx          = newContextual[bool]("characters.xp_events.fk_xp_events_0")
 
@@ -50,6 +51,10 @@ var (
 	// Relationship Contexts for round_state
 	roundStateWithParentsCascadingCtx = newContextual[bool]("roundStateWithParentsCascading")
 	roundStateRelCharacterCtx         = newContextual[bool]("characters.round_state.fk_round_state_0")
+
+	// Relationship Contexts for saved_buffs
+	savedBuffWithParentsCascadingCtx = newContextual[bool]("savedBuffWithParentsCascading")
+	savedBuffRelCharacterCtx         = newContextual[bool]("characters.saved_buffs.fk_saved_buffs_0")
 
 	// Relationship Contexts for spell_slots
 	spellSlotWithParentsCascadingCtx = newContextual[bool]("spellSlotWithParentsCascading")

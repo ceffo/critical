@@ -20,6 +20,7 @@ const charID = int64(1)
 
 func intPtr(v int) *int           { return &v }
 func floatPtr(v float64) *float64 { return &v }
+func strPtr(v string) *string     { return &v }
 
 // fakeTx runs the unit of work directly and counts transactions.
 type fakeTx struct{ calls int }
@@ -264,6 +265,18 @@ func TestEdit(t *testing.T) {
 			edit:        buffsvc.BuffEdit{Duration: intPtr(5)},
 			want:        []buffsvc.BuffEffect{{ID: "g", Name: "Power Gem", Duration: 5}},
 			wantSummary: "Edited Power Gem: until dismissed → 5 rd",
+		},
+		{
+			name: "note only", start: []buffsvc.BuffEffect{str}, id: "s",
+			edit:        buffsvc.BuffEdit{Note: strPtr(" fire −50% ")},
+			want:        []buffsvc.BuffEffect{{ID: "s", Name: "Strength", Duration: 10, Note: "fire −50%"}},
+			wantSummary: "Edited Strength: note",
+		},
+		{
+			name: "note with rounds", start: []buffsvc.BuffEffect{{ID: "s", Name: "Strength", Duration: 10, Note: "old"}}, id: "s",
+			edit:        buffsvc.BuffEdit{Duration: intPtr(3), Note: strPtr("")},
+			want:        []buffsvc.BuffEffect{{ID: "s", Name: "Strength", Duration: 3}},
+			wantSummary: "Edited Strength: 10 rd → 3 rd and note",
 		},
 		{name: "unknown id", start: []buffsvc.BuffEffect{str}, id: "nope", edit: buffsvc.BuffEdit{Duration: intPtr(1)}, wantErr: domain.ErrNotFound},
 		{name: "negative rounds", start: []buffsvc.BuffEffect{str}, id: "s", edit: buffsvc.BuffEdit{Duration: intPtr(-1)}, wantErr: domain.ErrInvalidInput},

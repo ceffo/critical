@@ -5,6 +5,8 @@ package buffsvc
 const (
 	StateKeyBuffs = "buffs"
 	StateKeyRound = "round"
+	// StateKeySavedBuffs is the whole saved-buff template list.
+	StateKeySavedBuffs = "saved_buffs"
 )
 
 // BuffEffects is the modifier payload of one buff. Pointers are used so a
@@ -52,6 +54,9 @@ type BuffEffect struct {
 	Charges  int
 	Duration int
 	Effects  BuffEffects
+	// Note is free text shown on the buff (e.g. "+4 saves vs fire"). No
+	// rules meaning.
+	Note string
 }
 
 // Timed reports whether Next Round counts this buff down.
@@ -67,11 +72,25 @@ type BuffStatus struct {
 	Applies bool
 }
 
-// BuffEdit sets a buff's remaining rounds and/or charges. Nil leaves the
-// value unchanged. Setting a counter the buff uses to 0 ends the buff.
+// BuffEdit sets a buff's remaining rounds, charges and/or note. Nil leaves
+// the value unchanged (a non-nil empty note clears it). Setting a counter the
+// buff uses to 0 ends the buff.
 type BuffEdit struct {
 	Duration *int
 	Charges  *int
+	Note     *string
+}
+
+// SavedBuff is a buff template the player re-adds with one click: the
+// starting rounds, charges, effects and note of a buff. Activating one is the
+// normal Activate with these values (editable first). ID is 0 until stored.
+type SavedBuff struct {
+	ID       int64
+	Name     string
+	Duration int
+	Charges  int
+	Effects  BuffEffects
+	Note     string
 }
 
 // Strength is the base STR score from the character sheet and the effective

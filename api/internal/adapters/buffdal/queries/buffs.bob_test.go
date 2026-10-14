@@ -372,3 +372,435 @@ func TestUpsertRoundNumber(t *testing.T) {
 		}
 	})
 }
+
+var beforeTestingListSavedBuffs = func(context.Context, bob.Tx) (int64, error) {
+	return random_int64(nil), nil
+}
+
+func TestListSavedBuffs(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := ListSavedBuffs(random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(listSavedBuffsSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := ListSavedBuffs(random_int64(nil))
+
+		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(listSavedBuffsSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingListSavedBuffs(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Select(ListSavedBuffs(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 6 {
+			t.Fatalf("expected %d columns, got %d", 6, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+
+		if columns[1] != "name" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "name", columns[1])
+		}
+
+		if columns[2] != "duration" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "duration", columns[2])
+		}
+
+		if columns[3] != "charges" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "charges", columns[3])
+		}
+
+		if columns[4] != "effects" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "effects", columns[4])
+		}
+
+		if columns[5] != "note" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "note", columns[5])
+		}
+	})
+}
+
+var beforeTestingInsertSavedBuff = func(context.Context, bob.Tx) ([]InsertSavedBuff_SavedBuffs, error) {
+	return []struct {
+		CharacterID int64
+		Name        string
+		Duration    int64
+		Charges     int64
+		Effects     string
+		Note        string
+	}{{
+		CharacterID: random_int64(nil),
+		Name:        random_string(nil),
+		Duration:    random_int64(nil),
+		Charges:     random_int64(nil),
+		Effects:     random_string(nil),
+		Note:        random_string(nil),
+	}}, nil
+}
+
+func TestInsertSavedBuff(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertSavedBuff([]struct {
+			CharacterID int64
+			Name        string
+			Duration    int64
+			Charges     int64
+			Effects     string
+			Note        string
+		}{{
+			CharacterID: random_int64(nil),
+			Name:        random_string(nil),
+			Duration:    random_int64(nil),
+			Charges:     random_int64(nil),
+			Effects:     random_string(nil),
+			Note:        random_string(nil),
+		}})
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(insertSavedBuffSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertSavedBuff([]struct {
+			CharacterID int64
+			Name        string
+			Duration    int64
+			Charges     int64
+			Effects     string
+			Note        string
+		}{{
+			CharacterID: random_int64(nil),
+			Name:        random_string(nil),
+			Duration:    random_int64(nil),
+			Charges:     random_int64(nil),
+			Effects:     random_string(nil),
+			Note:        random_string(nil),
+		}})
+
+		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(insertSavedBuffSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingInsertSavedBuff(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Insert(InsertSavedBuff(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}
+
+var beforeTestingInsertSavedBuffWithID = func(context.Context, bob.Tx) ([]InsertSavedBuffWithID_SavedBuffs, error) {
+	return []struct {
+		ID          int64
+		CharacterID int64
+		Name        string
+		Duration    int64
+		Charges     int64
+		Effects     string
+		Note        string
+	}{{
+		ID:          random_int64(nil),
+		CharacterID: random_int64(nil),
+		Name:        random_string(nil),
+		Duration:    random_int64(nil),
+		Charges:     random_int64(nil),
+		Effects:     random_string(nil),
+		Note:        random_string(nil),
+	}}, nil
+}
+
+func TestInsertSavedBuffWithID(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertSavedBuffWithID([]struct {
+			ID          int64
+			CharacterID int64
+			Name        string
+			Duration    int64
+			Charges     int64
+			Effects     string
+			Note        string
+		}{{
+			ID:          random_int64(nil),
+			CharacterID: random_int64(nil),
+			Name:        random_string(nil),
+			Duration:    random_int64(nil),
+			Charges:     random_int64(nil),
+			Effects:     random_string(nil),
+			Note:        random_string(nil),
+		}})
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(insertSavedBuffWithIDSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := InsertSavedBuffWithID([]struct {
+			ID          int64
+			CharacterID int64
+			Name        string
+			Duration    int64
+			Charges     int64
+			Effects     string
+			Note        string
+		}{{
+			ID:          random_int64(nil),
+			CharacterID: random_int64(nil),
+			Name:        random_string(nil),
+			Duration:    random_int64(nil),
+			Charges:     random_int64(nil),
+			Effects:     random_string(nil),
+			Note:        random_string(nil),
+		}})
+
+		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(insertSavedBuffWithIDSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Exec", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingInsertSavedBuffWithID(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query := sqlite.Insert(InsertSavedBuffWithID(arg0))
+		if _, err := bob.Exec(ctxTx, tx, query); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+var beforeTestingDeleteSavedBuffs = func(context.Context, bob.Tx) (int64, error) {
+	return random_int64(nil), nil
+}
+
+func TestDeleteSavedBuffs(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := DeleteSavedBuffs(random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(deleteSavedBuffsSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := DeleteSavedBuffs(random_int64(nil))
+
+		if _, err := sqlite.Delete(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(deleteSavedBuffsSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Exec", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingDeleteSavedBuffs(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query := sqlite.Delete(DeleteSavedBuffs(arg0))
+		if _, err := bob.Exec(ctxTx, tx, query); err != nil {
+			t.Fatal(err)
+		}
+	})
+}

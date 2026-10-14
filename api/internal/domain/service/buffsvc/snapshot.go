@@ -17,6 +17,7 @@ type snapBuff struct {
 	Charges  int         `json:"charges"`
 	Duration int         `json:"duration"`
 	Effects  snapEffects `json:"effects"`
+	Note     string      `json:"note,omitempty"`
 }
 
 type snapEffects struct {
@@ -38,7 +39,7 @@ func encodeBuffs(buffs []BuffEffect) (json.RawMessage, error) {
 	for i, b := range buffs {
 		out[i] = snapBuff{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-			Effects: snapEffects(b.Effects),
+			Effects: snapEffects(b.Effects), Note: b.Note,
 		}
 	}
 	return json.Marshal(out)
@@ -53,7 +54,7 @@ func decodeBuffs(raw json.RawMessage) ([]BuffEffect, error) {
 	for i, b := range in {
 		out[i] = BuffEffect{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-			Effects: BuffEffects(b.Effects),
+			Effects: BuffEffects(b.Effects), Note: b.Note,
 		}
 	}
 	return out, nil
@@ -76,6 +77,13 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 				return err
 			}
 			return s.dal.SaveActiveBuffs(ctx, characterID, buffs)
+		}),
+		StateKeySavedBuffs: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
+			saved, err := decodeSaved(state)
+			if err != nil {
+				return err
+			}
+			return s.dal.ReplaceSavedBuffs(ctx, characterID, saved)
 		}),
 		StateKeyRound: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
 			var round int

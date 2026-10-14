@@ -20,10 +20,19 @@ func (s *service) Edit(ctx context.Context, characterID int64, buffID string, e 
 		if err != nil {
 			return change{}, err
 		}
+		noteChanged := e.Note != nil && after.Note != before.Note
 		summary := fmt.Sprintf("Edited %s: %s → %s", before.Name,
 			counters(before.Duration, before.Charges), counters(after.Duration, after.Charges))
-		if ended {
+		switch {
+		case ended:
 			summary = fmt.Sprintf("Edited %s: %s → ended", before.Name, counters(before.Duration, before.Charges))
+		case noteChanged && before.Duration == after.Duration && before.Charges == after.Charges:
+			summary = fmt.Sprintf("Edited %s: note", before.Name)
+			if after.Note == "" {
+				summary = fmt.Sprintf("Edited %s: note cleared", before.Name)
+			}
+		case noteChanged:
+			summary += " and note"
 		}
 		return change{
 			kind:    actionlog.KindBuffChange,
@@ -32,6 +41,7 @@ func (s *service) Edit(ctx context.Context, characterID int64, buffID string, e 
 				Action: "edit", Buff: before.Name,
 				FromRounds: before.Duration, FromCharges: before.Charges,
 				Rounds: after.Duration, Charges: after.Charges, Ended: ended,
+				Note: after.Note, FromNote: before.Note, NoteChanged: noteChanged,
 			},
 			buffs: next,
 		}, nil

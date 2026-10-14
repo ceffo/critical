@@ -32,7 +32,26 @@ const (
 	KindItemUse      Kind = "item_use"
 	KindSpellPrep    Kind = "spell_prep"
 	KindLongRest     Kind = "long_rest"
+	// KindSave is a saving throw (combatsvc). It changes no state, so it has
+	// no snapshots; its outcome lives in the payload and an adjustment after
+	// the roll is an amend carrying the recomputed payload.
+	KindSave Kind = "save"
 )
+
+// RollKinds are the entries whose result replaces the dashboard's result
+// card (attack, save, cast or received spell, item use). Only the newest of
+// them, the one on the card, can be adjusted after the fact.
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse}
+
+// IsRoll reports whether k is one of RollKinds.
+func IsRoll(k Kind) bool {
+	for _, r := range RollKinds {
+		if r == k {
+			return true
+		}
+	}
+	return false
+}
 
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
@@ -66,6 +85,26 @@ type Recorder interface {
 	Record(ctx context.Context, e NewEntry) (int64, error)
 }
 
+// PayloadAmendment replaces an entry's summary and payload; its HP delta is
+// unchanged. Both are required.
+type PayloadAmendment struct {
+	Summary string
+	Payload json.RawMessage
+}
+
+// AmendFunc computes a PayloadAmendment from the entry being amended (with its
+// corrections so far).
+type AmendFunc func(e Entry) (PayloadAmendment, error)
+
+// LatestAmender corrects an entry whose outcome lives in its payload (a save)
+// after the fact. AmendLatest records an amend replacing the summary and
+// payload of entry id, which must be of kind (a roll kind), not voided, and
+// the latest roll: the newest entry of any of RollKinds, voided ones
+// included. fn computes the amendment from the entry inside the transaction.
+type LatestAmender interface {
+	AmendLatest(ctx context.Context, characterID, id int64, kind Kind, fn AmendFunc) (*Entry, error)
+}
+
 // KeySeparator splits a scoped state key into its family and id.
 const KeySeparator = ":"
 
@@ -92,13 +131,15 @@ const (
 )
 
 // Correction is an audited change to an entry. An amend carries the new HP
-// delta and summary; a void carries neither.
+// delta (nil: unchanged), summary (empty: unchanged) and payload (empty:
+// unchanged); a void carries none of them.
 type Correction struct {
 	ID        int64
 	ActionID  int64
 	Kind      CorrectionKind
 	HPDelta   *int
 	Summary   string
+	Payload   json.RawMessage
 	CreatedAt time.Time
 }
 
@@ -148,6 +189,17 @@ func (e Entry) latestAmend() *Correction {
 		}
 	}
 	return nil
+}
+
+// EffectivePayload is the payload of the latest amend that set one, the
+// original payload otherwise.
+func (e Entry) EffectivePayload() json.RawMessage {
+	for i := len(e.Corrections) - 1; i >= 0; i-- {
+		if c := e.Corrections[i]; c.Kind == CorrectionAmend && len(c.Payload) > 0 {
+			return c.Payload
+		}
+	}
+	return e.Payload
 }
 
 // EffectiveHPDelta is 0 for a voided entry, the latest amend's delta for an

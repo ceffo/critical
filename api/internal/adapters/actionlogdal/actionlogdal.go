@@ -61,7 +61,8 @@ func (d *DAL) InsertEntry(ctx context.Context, e actionlog.NewEntry) (int64, err
 	return id, nil
 }
 
-// InsertCorrection appends an amend or void row.
+// InsertCorrection appends an amend or void row. An empty payload is stored
+// as NULL (the entry's payload is unchanged).
 func (d *DAL) InsertCorrection(ctx context.Context, c actionlog.Correction) error {
 	row := queries.InsertCorrection_ActionCorrections{ActionID: c.ActionID, Kind: string(c.Kind)}
 	if c.HPDelta != nil {
@@ -69,6 +70,9 @@ func (d *DAL) InsertCorrection(ctx context.Context, c actionlog.Correction) erro
 	}
 	if c.Summary != "" {
 		row.Summary = null.From(c.Summary)
+	}
+	if len(c.Payload) > 0 {
+		row.Payload = null.From(string(c.Payload))
 	}
 	if _, err := queries.InsertCorrection([]queries.InsertCorrection_ActionCorrections{row}).Exec(ctx, d.exec(ctx)); err != nil {
 		return fmt.Errorf("insert action_corrections: %w", err)
@@ -128,6 +132,18 @@ func (d *DAL) ListActiveEntries(ctx context.Context, characterID int64, kind act
 // LatestActiveID returns the newest non-voided entry of kind.
 func (d *DAL) LatestActiveID(ctx context.Context, characterID int64, kind actionlog.Kind) (int64, bool, error) {
 	id, err := queries.LatestActiveActionID(characterID, string(kind)).One(ctx, d.exec(ctx))
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, fmt.Errorf("latest action_log: %w", err)
+	}
+	return id, true, nil
+}
+
+// LatestID returns the newest entry of kind, voided or not.
+func (d *DAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Kind) (int64, bool, error) {
+	id, err := queries.LatestActionID(characterID, string(kind)).One(ctx, d.exec(ctx))
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, false, nil
 	}
@@ -216,6 +232,9 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 		if v, ok := c.HPDelta.Get(); ok {
 			delta := int(v)
 			corr.HPDelta = &delta
+		}
+		if v, ok := c.Payload.Get(); ok {
+			corr.Payload = json.RawMessage(v)
 		}
 		e.Corrections = append(e.Corrections, corr)
 	}

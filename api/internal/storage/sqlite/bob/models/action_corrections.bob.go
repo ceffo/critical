@@ -32,6 +32,7 @@ type ActionCorrection struct {
 	HPDelta   null.Val[int64]  `db:"hp_delta" `
 	Summary   null.Val[string] `db:"summary" `
 	CreatedAt time.Time        `db:"created_at" `
+	Payload   null.Val[string] `db:"payload" `
 
 	R actionCorrectionR `db:"-" `
 }
@@ -62,7 +63,7 @@ type actionCorrectionRLoaded struct {
 
 func buildActionCorrectionColumns(tableName string) actionCorrectionColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "action_id", "kind", "hp_delta", "summary", "created_at",
+		"id", "action_id", "kind", "hp_delta", "summary", "created_at", "payload",
 	)
 
 	if tableName != "" {
@@ -78,6 +79,7 @@ func buildActionCorrectionColumns(tableName string) actionCorrectionColumns {
 		HPDelta:     buildActionCorrectionColumn(tableName, "hp_delta"),
 		Summary:     buildActionCorrectionColumn(tableName, "summary"),
 		CreatedAt:   buildActionCorrectionColumn(tableName, "created_at"),
+		Payload:     buildActionCorrectionColumn(tableName, "payload"),
 	}
 }
 
@@ -90,6 +92,7 @@ type actionCorrectionColumns struct {
 	HPDelta    actionCorrectionColumn
 	Summary    actionCorrectionColumn
 	CreatedAt  actionCorrectionColumn
+	Payload    actionCorrectionColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -141,10 +144,11 @@ type ActionCorrectionSetter struct {
 	HPDelta   omitnull.Val[int64]  `db:"hp_delta" `
 	Summary   omitnull.Val[string] `db:"summary" `
 	CreatedAt omit.Val[time.Time]  `db:"created_at" `
+	Payload   omitnull.Val[string] `db:"payload" `
 }
 
 func (s ActionCorrectionSetter) SetColumns() []string {
-	vals := make([]string, 0, 6)
+	vals := make([]string, 0, 7)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -162,6 +166,9 @@ func (s ActionCorrectionSetter) SetColumns() []string {
 	}
 	if s.CreatedAt.IsValue() {
 		vals = append(vals, "created_at")
+	}
+	if s.Payload.IsValue() || s.Payload.IsNull() {
+		vals = append(vals, "payload")
 	}
 	return vals
 }
@@ -184,6 +191,9 @@ func (s ActionCorrectionSetter) Overwrite(t *ActionCorrection) {
 	}
 	if s.CreatedAt.IsValue() {
 		t.CreatedAt = s.CreatedAt.MustGet()
+	}
+	if s.Payload.IsValue() || s.Payload.IsNull() {
+		t.Payload = s.Payload.MustGetNull()
 	}
 }
 
@@ -245,6 +255,13 @@ func (s *ActionCorrectionSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.CreatedAt.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "payload":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Payload.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Payload.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -256,7 +273,7 @@ func (s ActionCorrectionSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s ActionCorrectionSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 6)
+	exprs := make([]bob.Expression, 0, 7)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -300,6 +317,13 @@ func (s ActionCorrectionSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.Payload.IsValue() || s.Payload.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "payload")...),
+			sqlite.Arg(s.Payload),
+		}})
+	}
+
 	return exprs
 }
 
@@ -310,7 +334,7 @@ func actionCorrectionScanMapper(ctx context.Context, cols []string) (scan.Before
 		idx int
 		dst func(o *ActionCorrection) any
 	}
-	targets := make([]target, 0, 6)
+	targets := make([]target, 0, 7)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -325,6 +349,8 @@ func actionCorrectionScanMapper(ctx context.Context, cols []string) (scan.Before
 			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.Summary }})
 		case "created_at":
 			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.CreatedAt }})
+		case "payload":
+			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.Payload }})
 		}
 	}
 
@@ -647,6 +673,7 @@ type actionCorrectionWhere[Q sqlite.Filterable] struct {
 	HPDelta   sqlite.WhereNullMod[Q, int64]
 	Summary   sqlite.WhereNullMod[Q, string]
 	CreatedAt sqlite.WhereMod[Q, time.Time]
+	Payload   sqlite.WhereNullMod[Q, string]
 	R         actionCorrectionWhereR[Q]
 }
 
@@ -663,6 +690,7 @@ func buildActionCorrectionWhere[Q sqlite.Filterable](cols actionCorrectionColumn
 		HPDelta:   sqlite.WhereNull[Q, int64](cols.HPDelta.Expression),
 		Summary:   sqlite.WhereNull[Q, string](cols.Summary.Expression),
 		CreatedAt: sqlite.Where[Q, time.Time](cols.CreatedAt.Expression),
+		Payload:   sqlite.WhereNull[Q, string](cols.Payload.Expression),
 		R:         actionCorrectionWhereR[Q]{cols: cols},
 	}
 }

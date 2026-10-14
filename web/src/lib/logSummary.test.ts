@@ -32,6 +32,7 @@ function entry(
     effectiveSummary: summary,
     status: "active",
     payload,
+    effectivePayload: payload,
     snapshots: [],
     corrections: [],
     createdAt: "2026-10-12T00:00:00Z",
@@ -161,5 +162,52 @@ describe("entryText", () => {
   it("falls back to the summary for an attack without a payload", async () => {
     const t = await makeT("en");
     expect(entryText(entry("attack", {}, "old attack"), t)).toBe("old attack");
+  });
+});
+
+describe("entryText for saves", () => {
+  const rolled = { category: "spell", d20Roll: 12, target: 14, passed: false, rolledPassed: false, adjustment: 0, margin: -2 };
+
+  it.each([
+    ["rolled", rolled, "Save vs Spells: d20 12 vs 14, FAILED"],
+    [
+      "adjusted with a reason",
+      { ...rolled, adjustment: 4, adjustmentReason: "Gaia fire", passed: true, margin: 2, previousPassed: false },
+      "Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
+    ],
+    [
+      "adjusted without a reason",
+      { ...rolled, d20Roll: 15, adjustment: -2, passed: false, previousPassed: true },
+      "Save vs Spells: d20 15 vs 14, adjusted −2: PASSED → FAILED",
+    ],
+    [
+      "adjustment removed",
+      { ...rolled, previousPassed: true },
+      "Save vs Spells: d20 12 vs 14, adjustment removed: PASSED → FAILED",
+    ],
+  ])("%s", async (_name, payload, want) => {
+    const t = await makeT("en");
+    expect(entryText(entry("save", payload), t)).toBe(want);
+  });
+
+  it("reads the effective payload, not the original", async () => {
+    const t = await makeT("en");
+    const e = {
+      ...entry("save", rolled),
+      effectivePayload: { ...rolled, adjustment: 4, passed: true, previousPassed: false },
+    };
+    expect(entryText(e, t)).toBe("Save vs Spells: d20 12 vs 14, adjusted +4: FAILED → PASSED");
+  });
+
+  it("renders in French", async () => {
+    const t = await makeT("fr");
+    expect(entryText(entry("save", { ...rolled, adjustment: 4, adjustmentReason: "Gaia feu", passed: true, previousPassed: false }), t)).toBe(
+      "Sauvegarde contre Sorts : d20 12 contre 14, ajustée +4 Gaia feu : ÉCHOUÉE → RÉUSSIE",
+    );
+  });
+
+  it("falls back to the server summary on an unknown payload", async () => {
+    const t = await makeT("en");
+    expect(entryText(entry("save", {}), t)).toBe("server summary");
   });
 });

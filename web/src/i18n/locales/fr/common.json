@@ -366,7 +366,8 @@
       "buff": "{{detail}}",
       "situational": "{{detail}}",
       "crit": "Coup critique ({{detail}})",
-      "critPlaceholder": "Coup critique (provisoire)"
+      "critPlaceholder": "Coup critique (provisoire)",
+      "adjustment": "Ajustement {{detail}}"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), lancé au niveau {{casterLevel}}",
@@ -438,7 +439,16 @@
     "total": "Total",
     "save": "Sauvegarde : {{name}}",
     "left": "{{name}} : {{count}} restant(s)",
-    "noRoll": "Rien à lancer : l'effet se résout à la table."
+    "noRoll": "Rien à lancer : l'effet se résout à la table.",
+    "adjust": {
+      "title": "Ajuster après le jet",
+      "label": "Ajuster cette sauvegarde",
+      "decrease": "Diminuer l'ajustement",
+      "increase": "Augmenter l'ajustement",
+      "value": "Ajustement",
+      "reason": "Raison (facultatif)",
+      "apply": "Appliquer"
+    }
   },
   "log": {
     "title": "Journal de combat",
@@ -456,7 +466,8 @@
       "attack": "Attaque",
       "item_use": "Objet",
       "spell_prep": "Préparation",
-      "long_rest": "Repos"
+      "long_rest": "Repos",
+      "save": "Sauvegarde"
     },
     "status": {
       "active": "Actif",
@@ -506,7 +517,12 @@
       "rolled": "{{name}} utilisé : {{dice}} = {{total}} ({{left}} restant)",
       "used": "{{name}} utilisé ({{left}} restant)"
     },
-    "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés"
+    "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés",
+    "saveThrow": {
+      "rolled": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, {{verdict}}",
+      "adjusted": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustée {{adjustment}}{{reason}} : {{from}} → {{to}}",
+      "removed": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustement retiré : {{from}} → {{to}}"
+    }
   },
   "critTable": {
     "title": "Table des critiques (règle maison)",

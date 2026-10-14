@@ -14,6 +14,7 @@ const (
 	ModBuff        ModifierKind = "buff"         // a buff's to-hit/damage/save bonus, Detail = buff name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
 	ModCrit        ModifierKind = "crit"         // house crit multiplier; Detail = matched range or "placeholder"
+	ModAdjustment  ModifierKind = "adjustment"   // save adjustment set after the roll, Detail = reason
 )
 
 // Modifier is a labeled bonus or penalty applied to a roll.
@@ -124,7 +125,13 @@ type RollResult struct {
 	TargetAC   int
 	TargetSize TargetSize
 	Ammo       *AmmoUse
-	// LogEntryID is the action-log entry recording the attack.
+	// Saving-throw context (empty for attacks): the category and the
+	// adjustment set after the roll (0: none), with its optional reason.
+	SaveCategory     SaveCategory
+	Adjustment       int
+	AdjustmentReason string
+
+	// LogEntryID is the action-log entry recording the attack or save.
 	LogEntryID int64
 }
 

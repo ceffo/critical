@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
 import type { CastResult } from "@/types/spells";
 import { resolveAttack } from "@/api/combat";
-import { rollSavingThrow } from "@/api/roll";
+import { adjustSave, rollSavingThrow } from "@/api/roll";
 import { postUseItem } from "@/api/items";
 import type { UseResult } from "@/types/items";
 import { useTableStore } from "./table";
@@ -20,11 +20,13 @@ interface RollStore {
   /** Resolves true when the attack was rolled (and logged). */
   rollAttack: (req: AttackRequest) => Promise<boolean>;
   rollSave: (category: SaveCategory) => Promise<void>;
+  /** Sets the adjustment of the save on the card; resolves true on success. */
+  adjustLastSave: (adjustment: number, reason: string) => Promise<boolean>;
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
 }
 
-export const useRollStore = create<RollStore>((set) => {
+export const useRollStore = create<RollStore>((set, get) => {
   async function roll(fn: () => Promise<LastRoll>, refresh: boolean): Promise<boolean> {
     set({ rolling: true });
     const table = useTableStore.getState();
@@ -48,10 +50,24 @@ export const useRollStore = create<RollStore>((set) => {
     rollAttack: (req) =>
       roll(async () => ({ kind: "attack", result: await resolveAttack(req) }), true),
     spendItem: (id) => roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
+    // A save is logged: refresh to show its entry.
     rollSave: async (category) => {
       await roll(
         async () => ({ kind: "save", category, result: await rollSavingThrow(category) }),
-        false,
+        true,
+      );
+    },
+    adjustLastSave: async (adjustment, reason) => {
+      const last = get().last;
+      if (last?.kind !== "save" || last.result.logEntryId === undefined) return false;
+      const id = last.result.logEntryId;
+      return roll(
+        async () => ({
+          kind: "save",
+          category: last.category,
+          result: await adjustSave(id, adjustment, reason),
+        }),
+        true,
       );
     },
   };

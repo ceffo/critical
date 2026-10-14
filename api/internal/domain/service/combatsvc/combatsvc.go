@@ -21,7 +21,11 @@ type SVC interface {
 	// weapon and records the attack in the action log, all in one
 	// transaction.
 	ResolveAttack(ctx context.Context, characterID int64, req AttackRequest) (*RollResult, error)
+	// ResolveSavingThrow rolls a save and records it in the action log.
 	ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*RollResult, error)
+	// AdjustSave sets the adjustment of the latest save entry and returns
+	// the recomputed save (same d20); recorded as an audited amend.
+	AdjustSave(ctx context.Context, characterID, entryID int64, adj SaveAdjustment) (*RollResult, error)
 	ListWeapons(ctx context.Context) ([]Weapon, error)
 	// GetCritTable returns the house crit table (the placeholder default
 	// until edited); SetCritTable replaces it after validating it.
@@ -72,9 +76,11 @@ type Rules interface {
 	DexMods(dex int) (missile, ac int, err error)
 }
 
-// Log is the slice of the action log attacks are recorded into.
+// Log is the slice of the action log attacks and saves are recorded into;
+// AmendLatest corrects the latest save after an adjustment.
 type Log interface {
 	actionlog.Recorder
+	actionlog.LatestAmender
 }
 
 // Deps are the service's collaborators.

@@ -76,6 +76,11 @@ flowchart TD
   `q` (the server matches English names) plus `match_exact` / `match_prefix` / `match_contains`,
   the catalogue keys whose French name matched (`lib/spellSearch.ts`); the server ORs both and
   ranks exact > prefix > contains, then level, name.
+- Saves tab (`SavesPanel.tsx`): a save is logged (kind `save`, rendered from `effectivePayload` in
+  `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
+  − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
+  `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
+  the recomputed save (same d20). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).

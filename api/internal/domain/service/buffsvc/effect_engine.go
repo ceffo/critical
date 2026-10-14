@@ -92,8 +92,9 @@ func applyEffects(m *BuffModifiers, name string, e BuffEffects) {
 		m.Damage += *e.Damage
 		m.DamageFrom = append(m.DamageFrom, Contribution{Buff: name, Value: *e.Damage})
 	}
-	if e.SaveBonus != nil {
+	if e.SaveBonus != nil && *e.SaveBonus != 0 {
 		m.SaveBonus += *e.SaveBonus
+		m.SaveBonusFrom = append(m.SaveBonusFrom, Contribution{Buff: name, Value: *e.SaveBonus})
 	}
 	if e.AC != nil {
 		m.AC += *e.AC

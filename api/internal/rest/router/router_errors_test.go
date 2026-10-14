@@ -165,6 +165,9 @@ var endpoints = []endpoint{
 	{"POST roll/save", "POST", "/api/roll/save", `{"category":"spell"}`, func(m *mocksSet, err error) {
 		m.cmb.On("ResolveSavingThrow", anyArgs(3)...).Return(nil, err)
 	}},
+	{"POST roll/save/{id}/adjust", "POST", "/api/roll/save/7/adjust", `{"adjustment":4,"reason":"Gaia fire"}`, func(m *mocksSet, err error) {
+		m.cmb.On("AdjustSave", anyArgs(4)...).Return(nil, err)
+	}},
 }
 
 func do(h http.Handler, method, path, body string) *httptest.ResponseRecorder {
@@ -222,6 +225,9 @@ func TestSpecialSentinels(t *testing.T) {
 		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend not hp", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #4"}`},
+		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
+		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #7"}`},
+		{"adjust not a save", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7 is attack, not save", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #7 is attack, not save"}`},
 		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"error":"ctx: slot already used: 2"}`},
 	}
 	for _, c := range cases {
@@ -258,6 +264,9 @@ func TestRequestParsingErrors(t *testing.T) {
 		{"amend bad json", "POST", "/api/log/4/amend", "{", "invalid request body"},
 		{"amend missing delta", "POST", "/api/log/4/amend", `{"source":"x"}`, "delta is required"},
 		{"void bad id", "POST", "/api/log/0/void", "", "invalid log entry id"},
+		{"adjust bad id", "POST", "/api/roll/save/x/adjust", `{"adjustment":1}`, "invalid log entry id"},
+		{"adjust bad json", "POST", "/api/roll/save/7/adjust", "{", "invalid request body"},
+		{"adjust missing adjustment", "POST", "/api/roll/save/7/adjust", `{"reason":"x"}`, "adjustment is required"},
 		{"cast non-numeric", "POST", "/api/spells/abc/cast", "", "invalid slot index"},
 	}
 	for _, c := range cases {

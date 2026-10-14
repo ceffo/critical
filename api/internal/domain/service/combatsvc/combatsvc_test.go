@@ -129,11 +129,21 @@ func TestResolveSavingThrow(t *testing.T) {
 			f.withChar(bard())
 			f.dice.EXPECT().RollD20().Return(tt.d20)
 			mods := strMods(12)
-			mods.SaveBonus = tt.saveBonus
+			if tt.saveBonus != 0 {
+				mods.SaveBonus = tt.saveBonus
+				mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Prayer", Value: tt.saveBonus}}
+			}
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+			f.records()
 
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, tt.category)
 			require.NoError(t, err)
+			assert.Equal(t, int64(42), res.LogEntryID)
+			assert.Equal(t, tt.category, res.SaveCategory)
+			assert.Zero(t, res.Adjustment)
+			require.Len(t, f.entries, 1)
+			assert.Equal(t, actionlog.KindSave, f.entries[0].Kind)
+			assert.Empty(t, f.entries[0].Snapshots, "a save changes no state")
 			assert.Equal(t, tt.d20, res.D20Roll)
 			assert.Equal(t, tt.wantTarget, res.BaseThac0)
 			assert.Equal(t, tt.wantTarget, res.EffectiveThac0)
@@ -141,7 +151,7 @@ func TestResolveSavingThrow(t *testing.T) {
 			assert.Equal(t, tt.wantMargin, res.HitMargin)
 			assert.Contains(t, res.DamageBreakdown, tt.wantText)
 			if tt.saveBonus != 0 {
-				assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Source: "Buffs", Value: tt.saveBonus}}, res.Modifiers)
+				assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Source: "Prayer", Detail: "Prayer", Value: tt.saveBonus}}, res.Modifiers)
 			} else {
 				assert.Empty(t, res.Modifiers)
 			}
@@ -170,6 +180,25 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 		assert.Nil(t, res)
 		assert.True(t, errors.Is(err, boom))
+	})
+
+	t.Run("unknown category", func(t *testing.T) {
+		f := newFixture(t) // no call reaches a port
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, "fire")
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
+
+	t.Run("record error", func(t *testing.T) {
+		f := newFixture(t)
+		f.withChar(bard())
+		f.dice.EXPECT().RollD20().Return(10)
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
+		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
+
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, boom)
 	})
 }
 

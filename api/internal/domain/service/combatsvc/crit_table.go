@@ -10,7 +10,8 @@ import (
 )
 
 // CritRow is one inclusive D100 range of the house crit table and the
-// multiplier a second D100 inside it gives.
+// multiplier a multiplier d100 inside it gives (docs/adr/0001-critical-hits.md
+// step 4).
 type CritRow struct {
 	From int
 	To   int
@@ -77,8 +78,8 @@ func ValidateCritRows(rows []CritRow) ([]CritRow, error) {
 	return out, nil
 }
 
-// lookupCrit finds the row holding the D100 roll. The stored table is always
-// valid, so a miss means corrupt data.
+// lookupCrit finds the row holding the multiplier d100 (ADR 0001 step 4).
+// The stored table is always valid, so a miss means corrupt data.
 func lookupCrit(rows []CritRow, roll int) (CritRow, error) {
 	for _, r := range rows {
 		if r.Contains(roll) {

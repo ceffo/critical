@@ -5,34 +5,36 @@ package combatsvc
 // /api/roll/attack response, so the UI reads both with one type. Entries
 // already in the log must stay decodable: add fields, never rename them.
 type attackRecord struct {
-	D20Roll         int              `json:"d20Roll"`
-	D100CritRoll    int              `json:"d100CritRoll"`
-	IsCrit          bool             `json:"isCrit"`
-	CritMultiplier  float64          `json:"critMultiplier"`
-	CritPlaceholder bool             `json:"critPlaceholder"`
-	CritFrom        int              `json:"critFrom"`
-	CritTo          int              `json:"critTo"`
-	BaseThac0       int              `json:"baseThac0"`
-	Modifiers       []modifierRecord `json:"modifiers"`
-	EffectiveThac0  int              `json:"effectiveThac0"`
-	TargetACNeeded  int              `json:"targetACNeeded"`
-	Hit             bool             `json:"hit"`
-	HitMargin       int              `json:"hitMargin"`
-	BaseDamage      int              `json:"baseDamage"`
-	DamageDice      string           `json:"damageDice"`
-	SpellsBuff      float64          `json:"spellsBuff"`
-	WeaponBuff      int              `json:"weaponBuff"`
-	Multipliers     float64          `json:"multipliers"`
-	StrengthBonus   int              `json:"strengthBonus"`
-	BonusDamage     int              `json:"bonusDamage"`
-	DamageTerms     []termRecord     `json:"damageTerms"`
-	TotalDamage     int              `json:"totalDamage"`
-	DamageBreakdown string           `json:"damageBreakdown"`
-	WeaponID        string           `json:"weaponId"`
-	WeaponName      string           `json:"weaponName"`
-	TargetAC        int              `json:"targetAc"`
-	TargetSize      string           `json:"targetSize"`
-	Ammo            *ammoRecord      `json:"ammo,omitempty"`
+	D20Roll      int `json:"d20Roll"`
+	D100CritRoll int `json:"d100CritRoll"`
+	// D100MultiplierRoll is absent on attacks logged before it existed.
+	D100MultiplierRoll int              `json:"d100MultiplierRoll,omitempty"`
+	IsCrit             bool             `json:"isCrit"`
+	CritMultiplier     float64          `json:"critMultiplier"`
+	CritPlaceholder    bool             `json:"critPlaceholder"`
+	CritFrom           int              `json:"critFrom"`
+	CritTo             int              `json:"critTo"`
+	BaseThac0          int              `json:"baseThac0"`
+	Modifiers          []modifierRecord `json:"modifiers"`
+	EffectiveThac0     int              `json:"effectiveThac0"`
+	TargetACNeeded     int              `json:"targetACNeeded"`
+	Hit                bool             `json:"hit"`
+	HitMargin          int              `json:"hitMargin"`
+	BaseDamage         int              `json:"baseDamage"`
+	DamageDice         string           `json:"damageDice"`
+	SpellsBuff         float64          `json:"spellsBuff"`
+	WeaponBuff         int              `json:"weaponBuff"`
+	Multipliers        float64          `json:"multipliers"`
+	StrengthBonus      int              `json:"strengthBonus"`
+	BonusDamage        int              `json:"bonusDamage"`
+	DamageTerms        []termRecord     `json:"damageTerms"`
+	TotalDamage        int              `json:"totalDamage"`
+	DamageBreakdown    string           `json:"damageBreakdown"`
+	WeaponID           string           `json:"weaponId"`
+	WeaponName         string           `json:"weaponName"`
+	TargetAC           int              `json:"targetAc"`
+	TargetSize         string           `json:"targetSize"`
+	Ammo               *ammoRecord      `json:"ammo,omitempty"`
 	// Rolled and CritRow are what a target AC correction recomputes the
 	// outcome from (absent on attacks logged before corrections existed).
 	Rolled  *rolledRecord  `json:"rolled,omitempty"`
@@ -56,7 +58,7 @@ type rolledRecord struct {
 	Terms           []termRecord `json:"terms"`
 }
 
-// critRowRecord is the crit-table row of the crit d100 when rolling.
+// critRowRecord is the crit-table row of the multiplier d100 when rolling.
 type critRowRecord struct {
 	From        int     `json:"from"`
 	To          int     `json:"to"`
@@ -109,7 +111,7 @@ func toRecord(r *RollResult) attackRecord {
 	}
 	terms := toTermRecords(r.DamageTerms)
 	out := attackRecord{
-		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
+		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
 		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo, BaseThac0: r.BaseThac0, Modifiers: mods,
 		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
@@ -143,7 +145,7 @@ func (a attackRecord) result(entryID int64) *RollResult {
 		mods[i] = Modifier{Kind: ModifierKind(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value}
 	}
 	r := &RollResult{
-		D20Roll: a.D20Roll, D100CritRoll: a.D100CritRoll, IsCrit: a.IsCrit, CritMultiplier: a.CritMultiplier,
+		D20Roll: a.D20Roll, D100CritRoll: a.D100CritRoll, D100MultiplierRoll: a.D100MultiplierRoll, IsCrit: a.IsCrit, CritMultiplier: a.CritMultiplier,
 		CritPlaceholder: a.CritPlaceholder, CritFrom: a.CritFrom, CritTo: a.CritTo, BaseThac0: a.BaseThac0, Modifiers: mods,
 		EffectiveThac0: a.EffectiveThac0, TargetACNeeded: a.TargetACNeeded, Hit: a.Hit, HitMargin: a.HitMargin,
 		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,

@@ -87,6 +87,19 @@ func (f *fixture) withChar(c *charactersvc.Character) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil)
 }
 
+// d100s expects exactly two d100 rolls per attack, in order: the crit check
+// then the multiplier (ADR 0001 steps 1 and 3). The values must differ so a
+// roll used twice, or for the wrong purpose, shows in the results.
+func (f *fixture) d100s(t *testing.T, check, multiplier int) {
+	t.Helper()
+	require.NotEqual(t, check, multiplier, "use distinct d100 values")
+	f.dice.EXPECT().RollD100().Return(check).Once()
+	f.dice.EXPECT().RollD100().Return(multiplier).Once()
+}
+
+// noCritMult is the multiplier d100 of tests where it does not matter.
+const noCritMult = 77
+
 // records captures every logged entry and returns id 42.
 func (f *fixture) records() {
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(

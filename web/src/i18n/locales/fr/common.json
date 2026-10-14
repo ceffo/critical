@@ -337,13 +337,13 @@
     "saveHeading": "Sauvegarde contre {{name}}",
     "hit": "Touché",
     "miss": "Raté",
-    "crit": "Critique ×{{mult, number}} (d100 dans {{from}}–{{to}})",
+    "crit": "Test critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
     "passed": "Réussie",
     "failed": "Échouée",
     "totalDamage": "Dégâts totaux",
     "noDamage": "Aucun dégât",
     "d20": "d20",
-    "critRoll": "d100 critique",
+    "critRoll": "d100 test critique",
     "baseThac0": "TAC0 de base",
     "effectiveThac0": "TAC0 effectif",
     "hitsAc": "Touche la CA",
@@ -363,7 +363,7 @@
       "sm": "cible P/M",
       "l": "grande cible"
     },
-    "critPlaceholder": "Critique ×{{mult, number}} (provisoire)",
+    "critPlaceholder": "Test critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} (provisoire)",
     "ammoLeft": "{{name}} : {{count}} restantes",
     "damageDice": "Dés",
     "damageBonus": "Bonus +",
@@ -468,7 +468,10 @@
       "value": "CA de la cible corrigée",
       "apply": "Appliquer",
       "was": "jet contre CA {{ac}}"
-    }
+    },
+    "critLegacy": "Critique ×{{mult, number}} (d100 dans {{from}}–{{to}})",
+    "critPlaceholderLegacy": "Critique ×{{mult, number}} (provisoire)",
+    "multRoll": "d100 multiplicateur"
   },
   "log": {
     "title": "Journal de combat",
@@ -527,6 +530,7 @@
       "miss": "{{weapon}} contre CA {{ac}} : raté",
       "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
       "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult, number}}, {{damage}} dégâts",
+      "critRolls": "{{weapon}} contre CA {{ac}} : critique (test {{check}} · multiplicateur {{roll}} → ×{{mult, number}}), {{damage}} dégâts",
       "withAmmo": "{{weapon}} ({{ammo}})",
       "corrected": "{{text}} (CA {{from}} → {{to}} : {{was}} → {{now}})",
       "outcome": {

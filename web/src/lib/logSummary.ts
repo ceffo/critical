@@ -163,10 +163,17 @@ function attackText(p: RollResult, t: TFunction): string {
   const weapon = p.ammo
     ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
     : (p.weaponName ?? "");
-  const args = { weapon, ac: p.targetAc, damage: p.totalDamage, mult: p.critMultiplier };
-  const text = !p.hit
-    ? t("log.attack.miss", args)
-    : t(p.isCrit ? "log.attack.crit" : "log.attack.hit", args);
+  const args = {
+    weapon,
+    ac: p.targetAc,
+    damage: p.totalDamage,
+    mult: p.critMultiplier,
+    check: p.d100CritRoll,
+    roll: p.d100MultiplierRoll,
+  };
+  // Attacks logged before the multiplier d100 existed keep the line without the rolls.
+  const crit = p.d100MultiplierRoll === undefined ? "log.attack.crit" : "log.attack.critRolls";
+  const text = !p.hit ? t("log.attack.miss", args) : t(p.isCrit ? crit : "log.attack.hit", args);
   if (p.rolledTargetAc === undefined || p.rolledHit === undefined) return text;
   const outcome = (hit: boolean, crit: boolean | undefined) =>
     t(`log.attack.outcome.${crit ? "crit" : hit ? "hit" : "miss"}`);

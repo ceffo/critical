@@ -18,7 +18,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 	prevAC, prevHit, prevCrit := 5, false, false
 	m.cmb.EXPECT().AdjustAttackAC(mock.Anything, int64(1), int64(7), 7).
 		Return(&combatsvc.RollResult{
-			D20Roll: 11, D100CritRoll: 50, CritMultiplier: 1, BaseThac0: 13, EffectiveThac0: 11,
+			D20Roll: 11, D100CritRoll: 50, D100MultiplierRoll: 63, CritMultiplier: 1, BaseThac0: 13, EffectiveThac0: 11,
 			TargetACNeeded: 0, Hit: true, HitMargin: 7, Modifiers: []combatsvc.Modifier{},
 			BaseDamage: 5, DamageDice: "1d8", SpellsBuff: 1, WeaponBuff: 2, Multipliers: 1,
 			DamageTerms: []combatsvc.DamageTerm{}, TotalDamage: 7, DamageBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
@@ -28,7 +28,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/roll/attack/7/adjust", `{"targetAc":7}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
-		"d20Roll":11,"d100CritRoll":50,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critFrom":0,"critTo":0,
+		"d20Roll":11,"d100CritRoll":50,"d100MultiplierRoll":63,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critFrom":0,"critTo":0,
 		"baseThac0":13,"modifiers":[],"effectiveThac0":11,"targetACNeeded":0,"hit":true,"hitMargin":7,
 		"baseDamage":5,"damageDice":"1d8","spellsBuff":1,"weaponBuff":2,"multipliers":1,"strengthBonus":0,"bonusDamage":0,
 		"damageTerms":[],"totalDamage":7,"damageBreakdown":"((5 × 1.0) + 2) × 1.0 + 0 = 7",

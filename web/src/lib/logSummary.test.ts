@@ -152,7 +152,20 @@ describe("entryText", () => {
     [
       { hit: true, isCrit: true, critMultiplier: 2, totalDamage: 14, weaponName: "Long Sword +2", targetAc: 5 },
       "fr",
+      // Logged before the multiplier d100 existed: the line without the rolls.
       "Long Sword +2 contre CA 5 : critique ×2, 14 dégâts",
+    ],
+    [
+      { hit: true, isCrit: true, critMultiplier: 3, totalDamage: 21, weaponName: "Long Sword +2", targetAc: 5,
+        d100CritRoll: 7, d100MultiplierRoll: 63 },
+      "en",
+      "Long Sword +2 vs AC 5: critical (check 7 · multiplier 63 → ×3), 21 damage",
+    ],
+    [
+      { hit: true, isCrit: true, critMultiplier: 1.5, totalDamage: 10, weaponName: "Long Sword +2", targetAc: 5,
+        d100CritRoll: 7, d100MultiplierRoll: 63 },
+      "fr",
+      "Long Sword +2 contre CA 5 : critique (test 7 · multiplicateur 63 → ×1,5), 10 dégâts",
     ],
   ])("renders attack %j in %s", async (payload, lng, want) => {
     const t = await makeT(lng);
@@ -175,8 +188,9 @@ describe("entryText", () => {
     [
       "fr",
       { hit: true, isCrit: true, critMultiplier: 1.5, totalDamage: 10, weaponName: "Long Sword +2", targetAc: 10,
+        d100CritRoll: 3, d100MultiplierRoll: 77,
         rolledTargetAc: -10, rolledHit: false, rolledCrit: false },
-      "Long Sword +2 contre CA 10 : critique ×1,5, 10 dégâts (CA -10 → 10 : RATÉ → CRITIQUE)",
+      "Long Sword +2 contre CA 10 : critique (test 3 · multiplicateur 77 → ×1,5), 10 dégâts (CA -10 → 10 : RATÉ → CRITIQUE)",
     ],
   ])("renders a corrected attack in %s from the effective payload", async (lng, effective, want) => {
     const t = await makeT(lng);

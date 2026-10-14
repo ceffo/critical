@@ -274,7 +274,7 @@ func TestResolveAttack(t *testing.T) {
 				f.items.EXPECT().Use(mock.Anything, tt.req.AmmoItemID).Return(*tt.ammo, nil).Once()
 			}
 			f.dice.EXPECT().RollD20().Return(tt.d20).Once()
-			f.dice.EXPECT().RollD100().Return(tt.d100).Once()
+			f.d100s(t, tt.d100, noCritMult)
 			for _, d := range tt.dmg {
 				f.dice.EXPECT().RollDie(tt.sides).Return(d).Once()
 			}
@@ -337,7 +337,7 @@ func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 		DamageFrom:      []buffsvc.Contribution{{Buff: "Rage", Value: 1}},
 	}, nil)
 	f.dice.EXPECT().RollD20().Return(15)
-	f.dice.EXPECT().RollD100().Return(5) // 15 - 5 = 10 >= 5 needed: crit
+	f.d100s(t, 5, noCritMult) // 15 - 5 = 10 >= 5 needed: crit
 	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 
@@ -346,7 +346,7 @@ func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (placeholder, d100 5)", Detail: "placeholder", Value: 2},
+		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (check d100 5, multiplier d100 77, placeholder)", Detail: "placeholder", Value: 2},
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
 		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
@@ -413,7 +413,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 			f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)
 			f.withChar(bard())
 			f.dice.EXPECT().RollD20().Return(10)
-			f.dice.EXPECT().RollD100().Return(tt.d100)
+			f.d100s(t, tt.d100, noCritMult)
 			f.dice.EXPECT().RollDie(8).Return(5)
 			f.records()
 
@@ -436,7 +436,7 @@ func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 	f.items.EXPECT().Use(mock.Anything, "arrows_plus3").Return(arrows3Left1, nil).Once()
 	f.dice.EXPECT().RollD20().Return(4)
-	f.dice.EXPECT().RollD100().Return(50)
+	f.d100s(t, 50, noCritMult)
 	f.dice.EXPECT().RollDie(6).Return(4)
 	f.records()
 
@@ -474,7 +474,7 @@ func TestResolveAttack_MeleeIsLoggedWithoutSnapshot(t *testing.T) {
 	f.withChar(bard())
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 	f.dice.EXPECT().RollD20().Return(3)
-	f.dice.EXPECT().RollD100().Return(50)
+	f.d100s(t, 50, noCritMult)
 	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 
@@ -568,7 +568,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		f.withChar(bard())
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 		f.dice.EXPECT().RollD20().Return(3)
-		f.dice.EXPECT().RollD100().Return(50)
+		f.d100s(t, 50, noCritMult)
 		f.dice.EXPECT().RollDie(8).Return(5)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
 		res, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
@@ -584,7 +584,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		f.withChar(bard())
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 		f.dice.EXPECT().RollD20().Return(20)
-		f.dice.EXPECT().RollD100().Return(99)
+		f.d100s(t, 99, noCritMult)
 		_, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
 		assert.ErrorContains(t, err, `invalid damage dice "d8"`)
 	})

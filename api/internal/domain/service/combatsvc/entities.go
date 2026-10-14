@@ -87,12 +87,18 @@ type AmmoUse struct {
 
 // RollResult is the full outcome of a combat roll.
 type RollResult struct {
-	D20Roll        int
-	D100CritRoll   int
-	IsCrit         bool
-	CritMultiplier float64
-	// CritFrom..CritTo is the crit-table range the crit d100 fell in (zero
-	// when the attack is not a crit).
+	D20Roll int
+	// D100CritRoll is the crit-check d100 (ADR 0001 step 1): crit when
+	// d20 - D100CritRoll >= the roll needed.
+	D100CritRoll int
+	// D100MultiplierRoll is the second, independent d100 (step 3) whose
+	// crit-table row gives the multiplier of a crit. Rolled on every attack;
+	// 0 on saves and on attacks logged before it existed.
+	D100MultiplierRoll int
+	IsCrit             bool
+	CritMultiplier     float64
+	// CritFrom..CritTo is the crit-table range the multiplier d100 fell in
+	// (zero when the attack is not a crit).
 	CritFrom, CritTo int
 	// CritPlaceholder marks the multiplier as coming from the default
 	// table, which nobody has edited yet.
@@ -129,8 +135,9 @@ type RollResult struct {
 	// (even a miss) so a target AC correction never rolls again. Nil on
 	// saves and on attacks logged before corrections existed.
 	Rolled *RolledDamage
-	// RollCritRow is the crit-table row the crit d100 falls in, looked up
-	// when rolling whatever the outcome (nil like Rolled).
+	// RollCritRow is the crit-table row the multiplier d100 falls in,
+	// looked up when rolling whatever the outcome (nil like Rolled), so a
+	// correction uses the table as it was at the roll.
 	RollCritRow *CritRow
 	// RollCritPlaceholder: RollCritRow came from the unedited default table.
 	RollCritPlaceholder bool

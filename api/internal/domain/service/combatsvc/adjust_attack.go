@@ -15,8 +15,9 @@ const MaxTargetAC = 20
 
 // AdjustAttackAC corrects the target AC of the latest attack (log entry
 // entryID) after the roll, when the DM gives or changes it. Hit, margin and
-// crit are recomputed with the same d20 and crit d100 against the crit row
-// the d100 fell in when rolling, and the damage from the dice rolled with the
+// crit are recomputed with the same d20, crit-check d100 and multiplier
+// d100 (ADR 0001 step 6; the multiplier is the crit row the multiplier d100
+// fell in when rolling), and the damage from the dice rolled with the
 // attack: no die is rolled and no ammunition is spent. The change is an
 // audited amend on the entry; voiding the entry still gives the ammunition
 // back. Refused for an entry that is not an attack, is voided or is not the
@@ -31,7 +32,7 @@ func (s *service) AdjustAttackAC(ctx context.Context, characterID, entryID int64
 		if err := json.Unmarshal(e.EffectivePayload(), &rec); err != nil {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("decode attack #%d: %w", e.ID, err)
 		}
-		if rec.Rolled == nil || rec.CritRow == nil {
+		if rec.Rolled == nil || rec.CritRow == nil || rec.D100MultiplierRoll == 0 {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("%w: attack #%d was logged without its damage dice, void it and roll again", domain.ErrInvalidInput, e.ID)
 		}
 		r := rec.result(e.ID)

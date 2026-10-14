@@ -173,14 +173,13 @@ func TestCrit_Step5_MultipliersStackFlooredOnce(t *testing.T) {
 		wantBreak string
 	}{
 		{
-			// ((5 × 1) + 2) × (1.5 crit × 3 buff) = 31.5 → 31. A floor after
-			// the crit (7 × 1.5 = 10.5 → 10, × 3 = 30) gives a different total.
+			// ((5 × 3 dice buff) + 2) × 1.5 crit = 25.5 → 25, floored once at the end.
 			name: "x1.5 crit times x3 buff floors once, not after the crit",
 			mods: buffsvc.BuffModifiers{
 				SpellsBuff: 1, Multipliers: 3, EffectiveStr: 12,
 				MultipliersFrom: []buffsvc.Factor{{Buff: "Gem", Value: 3}},
 			},
-			wantTotal: 31, wantBreak: "((5 × 1.0) + 2) × 4.5 + 0 = 31.5 → 31",
+			wantTotal: 25, wantBreak: "((5 × 1.0 × 3.0) + 2) × 1.5 + 0 = 25.5 → 25",
 		},
 		{
 			// 7 × 1.5 - 20 = -9.5 → 0.

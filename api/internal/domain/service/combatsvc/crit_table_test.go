@@ -154,8 +154,8 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 			wantTotal: 14, wantTermSrc: "Critical hit (check d100 99, multiplier d100 77, placeholder)", wantTermDet: "placeholder", wantTermVal: 2,
 		},
 		{
-			// x3 from the table times x2 from a buff: ((5 × 1) + 2) × 6 = 42.
-			name: "table multiplier stacks with a buff multiplier", table: table, d100: 60, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 42,
+			// x3 from the table times x2 from a buff: ((5 × 2) + 2) × 3 = 36.
+			name: "table multiplier stacks with a buff multiplier", table: table, d100: 60, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 36,
 			mult: buffsvc.BuffModifiers{
 				SpellsBuff: 1, Multipliers: 2, EffectiveStr: 12,
 				MultipliersFrom: []buffsvc.Factor{{Buff: "Gem", Value: 2}},
@@ -223,8 +223,8 @@ func TestResolveAttack_DecimalCritMultiplier(t *testing.T) {
 	}{
 		{name: "x1.5 on odd damage floors", mult: 1.5, wantTotal: 10, wantMult: 1.5, wantBreak: "((5 × 1.0) + 2) × 1.5 + 0 = 10.5 → 10"},
 		{name: "x2.5 floors", mult: 2.5, wantTotal: 17, wantMult: 2.5, wantBreak: "((5 × 1.0) + 2) × 2.5 + 0 = 17.5 → 17"},
-		{name: "x1.5 stacked with a x2 buff is exactly 21", mult: 1.5, buff: 2, wantTotal: 21, wantMult: 1.5, wantBreak: "((5 × 1.0) + 2) × 3.0 + 0 = 21"},
-		{name: "x1.5 stacked with a x1.5 buff floors once at the end", mult: 1.5, buff: 1.5, wantTotal: 15, wantMult: 1.5, wantBreak: "((5 × 1.0) + 2) × 2.25 + 0 = 15.75 → 15"},
+		{name: "x1.5 crit on a x2 dice buff doubles only the dice: (10 + 2) × 1.5 = 18", mult: 1.5, buff: 2, wantTotal: 18, wantMult: 1.5, wantBreak: "((5 × 1.0 × 2.0) + 2) × 1.5 + 0 = 18"},
+		{name: "x1.5 stacked with a x1.5 buff floors once at the end", mult: 1.5, buff: 1.5, wantTotal: 14, wantMult: 1.5, wantBreak: "((5 × 1.0 × 1.5) + 2) × 1.5 + 0 = 14.25 → 14"},
 		{name: "x1.1 float noise does not lose a point", mult: 1.1, wantTotal: 7, wantMult: 1.1, wantBreak: "((5 × 1.0) + 2) × 1.1 + 0 = 7.7 → 7"},
 		{name: "x1 boundary", mult: 1, wantTotal: 7, wantMult: 1, wantBreak: "((5 × 1.0) + 2) × 1.0 + 0 = 7"},
 		{name: "integer x3 is unchanged", mult: 3, wantTotal: 21, wantMult: 3, wantBreak: "((5 × 1.0) + 2) × 3.0 + 0 = 21"},

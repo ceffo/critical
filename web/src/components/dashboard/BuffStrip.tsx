@@ -123,6 +123,16 @@ function BuffBadge({
             {b.note}
           </span>
         )}
+        {!inactive && (b.effects.weapon_buff !== undefined || b.effects.multiplier !== undefined) && (
+          <span className="font-mono text-xs text-muted-foreground" data-testid="buff-effects">
+            {[
+              b.effects.weapon_buff !== undefined && t("buffs.effWeapon", { n: b.effects.weapon_buff }),
+              b.effects.multiplier !== undefined && t("buffs.effDice", { n: b.effects.multiplier }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        )}
         {inactive && (
           <span className="text-xs italic">
             {b.effects.min_str !== undefined

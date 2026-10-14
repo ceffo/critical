@@ -25,7 +25,7 @@ export interface Modifier {
 
 /** Place of a contribution in ((dice × spells) + weapon) × multiplier + strength + bonus. */
 export type DamageTermKind =
-  "spells" | "weapon" | "multiplier" | "strength" | "bonus";
+  "spells" | "dice_multiplier" | "weapon" | "multiplier" | "strength" | "bonus";
 
 export interface DamageTerm {
   term: DamageTermKind;
@@ -71,6 +71,8 @@ export interface RollResult {
   spellsBuff: number;
   weaponBuff: number;
   multipliers: number;
+  /** Buff multiplier on the raw dice only (Power Gem ×2); absent on old log entries. */
+  diceMultiplier?: number;
   strengthBonus: number;
   bonusDamage: number;
   damageTerms: DamageTerm[];

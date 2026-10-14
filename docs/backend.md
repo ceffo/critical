@@ -215,7 +215,7 @@ type BuffEffect struct {
 }
 // weapon_buff makes the weapon count as +N (Power Gem: "the weapon becomes +5"), to hit and
 // damage; it replaces the weapon's own magic when higher and does not add to it. to_hit adds
-// to attack rolls; damage adds to damage after the multipliers.
+// to attack rolls; damage adds to damage after the crit multiplier.
 // A buff may have both counters (Mirror Image) or neither (until dismissed).
 // Effective STR: see "Effective STR" under Attack Modifiers. min_str gates the buff's
 // other effects: they apply while effective STR >= min_str.
@@ -237,7 +237,8 @@ type RollResult struct {
     DamageDice      string       // dice rolled for the target size
     SpellsBuff      float64
     WeaponBuff      int          // weapon (or buff "+N") magic + ammo magic
-    Multipliers     float64
+    Multipliers     float64      // crit multiplier (1 without a crit)
+    DiceMultiplier  float64      // buffs' multiplier on the raw dice only (Power Gem x2)
     StrengthBonus   int
     BonusDamage     int          // buff damage
     DamageTerms     []DamageTerm // {term, kind, source, detail, value}: every damage contribution
@@ -295,7 +296,7 @@ damage, but the target AC may be corrected after the roll).
 ## Damage Formula
 
 ```
-Damage = floor(((BaseDamage × SpellsBuff) + WeaponBuff) × Multipliers) + StrengthBonus + BuffDamage
+Damage = floor(((BaseDamage × SpellsBuff × DiceMultiplier) + WeaponBuff) × Crit) + StrengthBonus + BuffDamage
 ```
 
 Never below 0. Every contribution is listed in `DamageTerms`.
@@ -303,7 +304,12 @@ Never below 0. Every contribution is listed in `DamageTerms`.
 - `BaseDamage`: weapon die roll, selected by target size (S/M vs Large)
 - `SpellsBuff`: multiplier from spells like Enlarge (default 1.0)
 - `WeaponBuff`: weapon magic damage (or the buff's "+N", Power Gem +5) plus ammo magic damage
-- `Multipliers`: **multiplicative** product of all active multipliers (Power Gem ×2, crit ×N)
+- `DiceMultiplier`: **multiplicative** product of the buffs'' `multiplier` effects (Power Gem ×2). It
+  multiplies **only the raw dice result**: the +5, the Strength bonus and other flat adds are never
+  doubled (user, 2026-10-14: "x2 multiplier on raw dice result"). With the gem, 1d8 = 6 gives
+  6 × 2 + 5 + STR, not (6 + 5) × 2 + STR.
+- `Crit`: the crit-table multiplier (ADR 0001), 1 without a crit. It still multiplies dice and
+  weapon bonus together, after the gem: a crit with the gem is ((dice × 2) + 5) × crit
 - `StrengthBonus`: PHB Table 1 damage adjustment for the effective STR (+2 at 18); melee and
   hurled weapons only, none for bows
 - `BuffDamage`: buff `damage` effects, flat

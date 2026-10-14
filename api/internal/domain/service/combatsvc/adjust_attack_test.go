@@ -277,14 +277,14 @@ func TestAdjustAttackAC_DamageTermsInFormulaOrder(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
+		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
 		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (check d100 5, multiplier d100 77, placeholder)", Detail: "placeholder", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
 		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
 		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
 	}, res.DamageTerms)
-	// Same as rolling a crit directly: floor(((5 × 1.5) + 2) × 4) + 2 + 1 = 41.
-	assert.Equal(t, 41, res.TotalDamage)
+	// Same as rolling a crit directly: floor(((5 × 1.5 × 2 buff) + 2) × 2 crit) + 2 + 1 = 37.
+	assert.Equal(t, 37, res.TotalDamage)
 	assert.True(t, res.CritPlaceholder)
 }
 

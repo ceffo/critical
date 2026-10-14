@@ -146,7 +146,7 @@ func TestEffectiveStr_StrengthStacksThenImprovedReplacesIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, at18.StrengthBonus, "PHB Table 1 damage at STR 18")
 	assert.Equal(t, 5, at18.WeaponBuff, "Power Gem: the weapon becomes +5")
-	assert.InDelta(t, 2.0, at18.Multipliers, 1e-9)
+	assert.InDelta(t, 2.0, at18.DiceMultiplier, 1e-9)
 	assert.Equal(t, 3, at18.Rolled.Total)
 
 	// Rule 2: Improved Strength 1d6+4 = 3+4 replaces the two Strength casts:
@@ -160,7 +160,7 @@ func TestEffectiveStr_StrengthStacksThenImprovedReplacesIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 7, at19.StrengthBonus, "PHB Table 1 damage at STR 19")
 	assert.Equal(t, 5, at19.WeaponBuff, "Power Gem at STR 19")
-	assert.InDelta(t, 2.0, at19.Multipliers, 1e-9)
+	assert.InDelta(t, 2.0, at19.DiceMultiplier, 1e-9)
 	assert.InDelta(t, 2.0, at19.Rolled.BuffMultipliers, 1e-9)
 	assert.Equal(t, 5, at19.Rolled.Total)
 	assert.Equal(t, 13, at19.D20Roll)

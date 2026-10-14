@@ -25,6 +25,7 @@ type attackRecord struct {
 	SpellsBuff         float64          `json:"spellsBuff"`
 	WeaponBuff         int              `json:"weaponBuff"`
 	Multipliers        float64          `json:"multipliers"`
+	DiceMultiplier     float64          `json:"diceMultiplier"`
 	StrengthBonus      int              `json:"strengthBonus"`
 	BonusDamage        int              `json:"bonusDamage"`
 	DamageTerms        []termRecord     `json:"damageTerms"`
@@ -115,7 +116,7 @@ func toRecord(r *RollResult) attackRecord {
 		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo, BaseThac0: r.BaseThac0, Modifiers: mods,
 		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
-		Multipliers: r.Multipliers, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
+		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
 		DamageTerms: terms, TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
 	}
@@ -149,7 +150,7 @@ func (a attackRecord) result(entryID int64) *RollResult {
 		CritPlaceholder: a.CritPlaceholder, CritFrom: a.CritFrom, CritTo: a.CritTo, BaseThac0: a.BaseThac0, Modifiers: mods,
 		EffectiveThac0: a.EffectiveThac0, TargetACNeeded: a.TargetACNeeded, Hit: a.Hit, HitMargin: a.HitMargin,
 		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
-		Multipliers: a.Multipliers, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
+		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
 		DamageTerms: fromTermRecords(a.DamageTerms), TotalDamage: a.TotalDamage, DamageBreakdown: a.DamageBreakdown,
 		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetAC: a.TargetAC, TargetSize: TargetSize(a.TargetSize),
 		RolledTargetAC: a.RolledTargetAC, RolledHit: a.RolledHit, RolledCrit: a.RolledCrit,

@@ -172,7 +172,28 @@
       "charges": "Used only; gone at 0",
       "daily": "Used only; refilled by a long rest"
     },
-    "none": "No items."
+    "none": "No items.",
+    "form": {
+      "openAdd": "Add item",
+      "addTitle": "Add item",
+      "editTitle": "Edit {{name}}",
+      "edit": "Edit {{name}}",
+      "remove": "Remove {{name}}",
+      "name": "Name",
+      "type": "Type",
+      "behaviour": "Behaviour",
+      "count": "Count",
+      "maxCount": "Daily number",
+      "ammoKind": "Ammo kind",
+      "effectDice": "Effect dice",
+      "effectSave": "Effect save",
+      "noSave": "No save",
+      "notes": "Note",
+      "add": "Add",
+      "save": "Save",
+      "cancel": "Cancel",
+      "notANumber": "Enter a whole number"
+    }
   },
   "spellSlots": {
     "title": "Spell Slots",
@@ -559,7 +580,23 @@
       "used": "Used {{name}} ({{left}} left)",
       "rolledRemoved": "Used {{name}}: {{dice}} = {{total}} (last charge, removed)",
       "usedRemoved": "Used {{name}} (last charge, removed)",
-      "restocked": "Restocked {{name}}: +{{added}} ({{count}} now)"
+      "restocked": "Restocked {{name}}: +{{added}} ({{count}} now)",
+      "added": "Added {{name}} ({{count}})",
+      "removedItem": "Removed {{name}} ({{count}})",
+      "edited": "Edited {{name}}: {{changes}}",
+      "change": "{{field}} {{before}} → {{after}}",
+      "fields": {
+        "name": "name",
+        "type": "type",
+        "behaviour": "behaviour",
+        "count": "count",
+        "maxCount": "daily number",
+        "magicalBonus": "magical bonus",
+        "ammoKind": "ammo kind",
+        "effectDice": "effect dice",
+        "effectSave": "effect save",
+        "notes": "note"
+      }
     },
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
     "saveThrow": {

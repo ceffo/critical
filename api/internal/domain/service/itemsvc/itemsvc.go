@@ -1,4 +1,5 @@
-// Package itemsvc owns the counted items. One model (critical-qki.13): an
+// Package itemsvc owns the counted items (and, critical-qki.31, adding,
+// editing and removing them by hand). One model (critical-qki.13): an
 // item's Behaviour says how its count moves. Use spends one of any item (a
 // charges item is removed at 0), Restock adds to a stock item, ResetDaily
 // refills the daily items on a long rest. Every change at the table is one
@@ -35,6 +36,15 @@ type SVC interface {
 	// ResetDaily refills every daily item to its max (long rest) and
 	// returns the full item list.
 	ResetDaily(ctx context.Context) ([]Item, error)
+	// Create adds an item (loot, a purchase) and logs it with the item's
+	// snapshot, in one transaction. A *domain.FieldError for invalid input.
+	Create(ctx context.Context, characterID int64, in ItemInput) (*ChangeResult, error)
+	// Update edits any field of an item (only the set fields of the patch)
+	// and logs the before/after fields. ErrItemNotFound, *domain.FieldError.
+	Update(ctx context.Context, characterID int64, itemID string, p ItemPatch) (*ChangeResult, error)
+	// Delete removes an item (sold, broken) and logs it; popping the entry
+	// brings it back with its id, place and count. ErrItemNotFound.
+	Delete(ctx context.Context, characterID int64, itemID string) (*ChangeResult, error)
 
 	// Restorers maps the items state key to the Restorer that writes the
 	// counts of a "before" snapshot back when an action-log entry is voided.
@@ -47,6 +57,11 @@ type SVC interface {
 // the transaction carried by ctx.
 type DAL interface {
 	List(ctx context.Context) ([]Item, error)
+	// Get returns one item, or ErrItemNotFound.
+	Get(ctx context.Context, itemID string) (Item, error)
+	// Update overwrites every field of an existing item (position
+	// included); ErrItemNotFound for an unknown id.
+	Update(ctx context.Context, item Item) error
 	// Decrement returns the updated item, ErrItemNotFound or ErrItemEmpty.
 	Decrement(ctx context.Context, itemID string) (Item, error)
 	// Increment adds n and returns the updated item, or ErrItemNotFound.

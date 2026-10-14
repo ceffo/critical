@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { appendHpEvent, undoLastEvent } from "@/api/hp";
+import { ApiError } from "@/api/http";
 import { amendLogEntry, voidLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
@@ -23,6 +24,11 @@ interface TableStore {
    * Resolves true on success.
    */
   run: (action: () => Promise<unknown>) => Promise<boolean>;
+  /**
+   * Like `run` for a form: resolves null on success, or the ApiError when the server rejected a
+   * field (shown by the form under that field, not in the global error). Other failures go to `error`.
+   */
+  submit: (action: () => Promise<unknown>) => Promise<ApiError | null>;
   recordHp: (delta: number, source: string) => Promise<boolean>;
   undoHp: () => Promise<boolean>;
   /** Set an entry's note (the only amendable field). */
@@ -36,7 +42,9 @@ interface TableStore {
 }
 
 function expiredNotice(expired: { name: string }[] | undefined): Notice | null {
-  return expired && expired.length > 0 ? { kind: "expired", names: expired.map((b) => b.name) } : null;
+  return expired && expired.length > 0
+    ? { kind: "expired", names: expired.map((b) => b.name) }
+    : null;
 }
 
 function message(e: unknown): string {
@@ -80,9 +88,26 @@ export const useTableStore = create<TableStore>((set, get) => ({
     return ok;
   },
 
+  submit: async (action) => {
+    set({ busy: true, error: null });
+    let rejected: ApiError | null = null;
+    try {
+      await action();
+    } catch (e) {
+      if (e instanceof ApiError && e.field) rejected = e;
+      else set({ error: message(e) });
+    }
+    await get().refresh();
+    set({ busy: false });
+    return rejected;
+  },
+
   recordHp: (delta, source) =>
-    get().run(async () => useHpStore.getState().setHp(await appendHpEvent(delta, source))),
-  undoHp: () => get().run(async () => useHpStore.getState().setHp(await undoLastEvent())),
+    get().run(async () =>
+      useHpStore.getState().setHp(await appendHpEvent(delta, source)),
+    ),
+  undoHp: () =>
+    get().run(async () => useHpStore.getState().setHp(await undoLastEvent())),
   amendEntry: (id, note) => get().run(() => amendLogEntry(id, note)),
   // A void can bring expired buffs back: an "expired" notice would now be stale.
   voidEntry: (id) =>

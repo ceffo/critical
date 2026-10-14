@@ -10,7 +10,13 @@ export interface CastLogPayload {
   spellId: string;
   spell: string;
   casterLevel: number;
-  buff?: { name: string; rounds?: number; charges?: number; strGain?: number; applied: boolean };
+  buff?: {
+    name: string;
+    rounds?: number;
+    charges?: number;
+    strGain?: number;
+    applied: boolean;
+  };
   damage?: { total: number; type: string };
 }
 
@@ -31,19 +37,29 @@ function castText(p: CastLogPayload, t: TFunction): string {
   const details: string[] = [];
   if (p.buff?.applied) {
     details.push(counters(t, p.buff.rounds, p.buff.charges));
-    if (p.buff.strGain) details.push(t("log.cast.strGain", { gain: p.buff.strGain }));
+    if (p.buff.strGain)
+      details.push(t("log.cast.strGain", { gain: p.buff.strGain }));
   }
-  if (p.damage) details.push(t("log.cast.damage", { total: p.damage.total, type: p.damage.type }));
+  if (p.damage)
+    details.push(
+      t("log.cast.damage", { total: p.damage.total, type: p.damage.type }),
+    );
   return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
 }
-import type { RestockResult, UseResult } from "@/types/items";
+import type { ItemChangeRecord, RestockResult, UseResult } from "@/types/items";
 
 /** Payload of long_rest entries (restsvc restRecord). */
 function restText(e: LogEntry, t: TFunction): string | null {
   if (e.kind !== "long_rest") return null;
-  const p = e.payload as { slotsReset?: number; itemsRefilled?: string[] } | null;
+  const p = e.payload as {
+    slotsReset?: number;
+    itemsRefilled?: string[];
+  } | null;
   if (!p || typeof p.slotsReset !== "number") return null;
-  return t("log.rest", { slots: p.slotsReset, items: p.itemsRefilled?.length ?? 0 });
+  return t("log.rest", {
+    slots: p.slotsReset,
+    items: p.itemsRefilled?.length ?? 0,
+  });
 }
 
 /** Payload of buff_change / round_* / time_passed entries (buffsvc logPayload). */
@@ -125,20 +141,29 @@ export interface SaveLogPayload {
 function savePayload(e: LogEntry): SaveLogPayload | null {
   if (e.kind !== "save") return null;
   const p = (e.effectivePayload ?? e.payload) as Partial<SaveLogPayload> | null;
-  return p && typeof p.passed === "boolean" && typeof p.d20Roll === "number" && typeof p.category === "string"
+  return p &&
+    typeof p.passed === "boolean" &&
+    typeof p.d20Roll === "number" &&
+    typeof p.category === "string"
     ? (p as SaveLogPayload)
     : null;
 }
 
 function saveText(p: SaveLogPayload, t: TFunction): string {
-  const verdict = (passed: boolean) => t(passed ? "result.passed" : "result.failed").toUpperCase();
+  const verdict = (passed: boolean) =>
+    t(passed ? "result.passed" : "result.failed").toUpperCase();
   const args = {
     name: t(`saves.categories.${p.category}`, { defaultValue: p.category }),
     d20: p.d20Roll,
     target: p.target,
   };
-  if (p.previousPassed === undefined) return t("log.saveThrow.rolled", { ...args, verdict: verdict(p.passed) });
-  const change = { ...args, from: verdict(p.previousPassed), to: verdict(p.passed) };
+  if (p.previousPassed === undefined)
+    return t("log.saveThrow.rolled", { ...args, verdict: verdict(p.passed) });
+  const change = {
+    ...args,
+    from: verdict(p.previousPassed),
+    to: verdict(p.passed),
+  };
   if (p.adjustment === 0) return t("log.saveThrow.removed", change);
   return t("log.saveThrow.adjusted", {
     ...change,
@@ -151,12 +176,20 @@ function saveText(p: SaveLogPayload, t: TFunction): string {
 function itemPayload(e: LogEntry): UseResult | null {
   if (e.kind !== "item_use") return null;
   const p = e.payload as Partial<UseResult> | null;
-  return p && typeof p.name === "string" && typeof p.remaining === "number" ? (p as UseResult) : null;
+  return p && typeof p.name === "string" && typeof p.remaining === "number"
+    ? (p as UseResult)
+    : null;
 }
 
 function itemText(p: UseResult, t: TFunction): string {
-  const args = { name: p.name, dice: p.dice, total: p.total, left: p.remaining };
-  if (p.removed) return t(p.dice ? "log.item.rolledRemoved" : "log.item.usedRemoved", args);
+  const args = {
+    name: p.name,
+    dice: p.dice,
+    total: p.total,
+    left: p.remaining,
+  };
+  if (p.removed)
+    return t(p.dice ? "log.item.rolledRemoved" : "log.item.usedRemoved", args);
   return t(p.dice ? "log.item.rolled" : "log.item.used", args);
 }
 
@@ -164,8 +197,44 @@ function itemText(p: UseResult, t: TFunction): string {
 function restockText(e: LogEntry, t: TFunction): string | null {
   if (e.kind !== "item_restock") return null;
   const p = e.payload as Partial<RestockResult> | null;
-  if (!p || typeof p.name !== "string" || typeof p.added !== "number" || typeof p.count !== "number") return null;
-  return t("log.item.restocked", { name: p.name, added: p.added, count: p.count });
+  if (
+    !p ||
+    typeof p.name !== "string" ||
+    typeof p.added !== "number" ||
+    typeof p.count !== "number"
+  )
+    return null;
+  return t("log.item.restocked", {
+    name: p.name,
+    added: p.added,
+    count: p.count,
+  });
+}
+
+/** Payload of item_add, item_edit and item_remove entries (itemsvc changeRecord). */
+function itemChangeText(e: LogEntry, t: TFunction): string | null {
+  if (
+    e.kind !== "item_add" &&
+    e.kind !== "item_edit" &&
+    e.kind !== "item_remove"
+  )
+    return null;
+  const p = e.payload as Partial<ItemChangeRecord> | null;
+  if (!p || typeof p.name !== "string" || typeof p.count !== "number")
+    return null;
+  if (e.kind === "item_add")
+    return t("log.item.added", { name: p.name, count: p.count });
+  if (e.kind === "item_remove")
+    return t("log.item.removedItem", { name: p.name, count: p.count });
+  const changes = (p.changes ?? [])
+    .map((c) =>
+      t("log.item.change", {
+        ...c,
+        field: t(`log.item.fields.${c.field}`, { defaultValue: c.field }),
+      }),
+    )
+    .join(", ");
+  return t("log.item.edited", { name: p.name, changes });
 }
 
 function attackText(p: RollResult, t: TFunction): string {
@@ -181,8 +250,13 @@ function attackText(p: RollResult, t: TFunction): string {
     roll: p.d100MultiplierRoll,
   };
   // Attacks logged before the multiplier d100 existed keep the line without the rolls.
-  const crit = p.d100MultiplierRoll === undefined ? "log.attack.crit" : "log.attack.critRolls";
-  const text = !p.hit ? t("log.attack.miss", args) : t(p.isCrit ? crit : "log.attack.hit", args);
+  const crit =
+    p.d100MultiplierRoll === undefined
+      ? "log.attack.crit"
+      : "log.attack.critRolls";
+  const text = !p.hit
+    ? t("log.attack.miss", args)
+    : t(p.isCrit ? crit : "log.attack.hit", args);
   if (p.rolledTargetAc === undefined || p.rolledHit === undefined) return text;
   const outcome = (hit: boolean, crit: boolean | undefined) =>
     t(`log.attack.outcome.${crit ? "crit" : hit ? "hit" : "miss"}`);
@@ -212,6 +286,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (item) return itemText(item, t);
   const restock = restockText(e, t);
   if (restock) return restock;
+  const itemChange = itemChangeText(e, t);
+  if (itemChange) return itemChange;
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
   const buff = p.buff ?? "";
@@ -222,7 +298,9 @@ export function entryText(e: LogEntry, t: TFunction): string {
         counters: counters(t, p.rounds, p.charges),
       });
     case "edit": {
-      const sameCounters = (p.fromRounds ?? 0) === (p.rounds ?? 0) && (p.fromCharges ?? 0) === (p.charges ?? 0);
+      const sameCounters =
+        (p.fromRounds ?? 0) === (p.rounds ?? 0) &&
+        (p.fromCharges ?? 0) === (p.charges ?? 0);
       if (p.noteChanged && !p.ended && sameCounters) {
         return p.note
           ? t("log.buff.editNote", { buff, note: p.note })
@@ -233,14 +311,19 @@ export function entryText(e: LogEntry, t: TFunction): string {
         from: counters(t, p.fromRounds, p.fromCharges),
         to: counters(t, p.rounds, p.charges),
       });
-      return p.noteChanged && !p.ended ? `${text} ${t("log.buff.noteAlso")}` : text;
+      return p.noteChanged && !p.ended
+        ? `${text} ${t("log.buff.noteAlso")}`
+        : text;
     }
     case "absorb":
       return p.ended
         ? t("log.buff.absorbEnded", { buff })
         : t("log.buff.absorb", { buff, count: p.charges ?? 0 });
     case "save_template":
-      return t("log.buff.saveTemplate", { buff, counters: counters(t, p.rounds, p.charges) });
+      return t("log.buff.saveTemplate", {
+        buff,
+        counters: counters(t, p.rounds, p.charges),
+      });
     case "delete_template":
       return t("log.buff.deleteTemplate", { buff });
     case "dismiss":
@@ -266,9 +349,15 @@ export function entryText(e: LogEntry, t: TFunction): string {
         : text;
     }
     case "end_combat":
-      return t("log.buff.endCombat", { from: p.fromRound ?? 0, to: p.toRound ?? 0 });
+      return t("log.buff.endCombat", {
+        from: p.fromRound ?? 0,
+        to: p.toRound ?? 0,
+      });
     case "set_round":
-      return t("log.buff.setRound", { from: p.fromRound ?? 0, to: p.toRound ?? 0 });
+      return t("log.buff.setRound", {
+        from: p.fromRound ?? 0,
+        to: p.toRound ?? 0,
+      });
     default:
       return e.effectiveSummary;
   }

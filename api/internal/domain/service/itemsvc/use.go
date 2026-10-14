@@ -74,15 +74,16 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 			Save: item.EffectSave, Notes: item.Notes, Rolls: []int{},
 		}
 		if item.EffectDice != "" {
-			rolls, err := rollDice(s.dice, item.EffectDice)
+			rolls, mod, err := rollDice(s.dice, item.EffectDice)
 			if err != nil {
 				return fmt.Errorf("item %s effect: %w", item.ID, err)
 			}
 			r.Dice, r.Rolls = item.EffectDice, rolls
+			r.Total = mod
 			for _, v := range rolls {
 				r.Total += v
 			}
-			r.Breakdown = breakdown(r)
+			r.Breakdown = breakdown(r, mod)
 		}
 		snap, err := UseSnapshot(item)
 		if err != nil {
@@ -117,31 +118,35 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 	return res, nil
 }
 
-// rollDice rolls "NdM" (case-insensitive) through the dice port and returns
-// every die.
-func rollDice(d Dice, dice string) ([]int, error) {
-	n, m, ok := strings.Cut(strings.ToLower(strings.TrimSpace(dice)), "d")
-	num, err1 := strconv.Atoi(n)
-	sides, err2 := strconv.Atoi(m)
-	if !ok || err1 != nil || err2 != nil || num < 1 || sides < 1 {
-		return nil, fmt.Errorf("invalid effect dice %q", dice)
+// rollDice rolls "NdM" or "NdM+K" through the dice port: the dice in order
+// and the flat modifier K (0 without one).
+func rollDice(d Dice, dice string) (rolls []int, mod int, err error) {
+	n, sides, mod, err := ParseDice(dice)
+	if err != nil {
+		return nil, 0, err
 	}
-	rolls := make([]int, num)
+	rolls = make([]int, n)
 	for i := range rolls {
 		rolls[i] = d.RollDie(sides)
 	}
-	return rolls, nil
+	return rolls, mod, nil
 }
 
-func breakdown(r *UseResult) string {
+func breakdown(r *UseResult, mod int) string {
 	parts := make([]string, len(r.Rolls))
 	for i, v := range r.Rolls {
 		parts[i] = strconv.Itoa(v)
 	}
-	return fmt.Sprintf("%s: %s = %d", r.Dice, strings.Join(parts, " + "), r.Total)
+	expr := strings.Join(parts, " + ")
+	switch {
+	case mod > 0:
+		expr += fmt.Sprintf(" + %d", mod)
+	case mod < 0:
+		expr += fmt.Sprintf(" - %d", -mod)
+	}
+	return fmt.Sprintf("%s: %s = %d", r.Dice, expr, r.Total)
 }
 
-// summary is the English log line (the UI renders the payload instead).
 func summary(r *UseResult) string {
 	if r.Removed && r.Dice == "" {
 		return fmt.Sprintf("Used %s (last charge, removed)", r.Name)

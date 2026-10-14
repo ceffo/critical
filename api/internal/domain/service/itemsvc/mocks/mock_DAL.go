@@ -126,6 +126,63 @@ func (_c *MockDAL_Delete_Call) RunAndReturn(run func(context.Context, string) er
 	return _c
 }
 
+// Get provides a mock function with given fields: ctx, itemID
+func (_m *MockDAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
+	ret := _m.Called(ctx, itemID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Get")
+	}
+
+	var r0 itemsvc.Item
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (itemsvc.Item, error)); ok {
+		return rf(ctx, itemID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) itemsvc.Item); ok {
+		r0 = rf(ctx, itemID)
+	} else {
+		r0 = ret.Get(0).(itemsvc.Item)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, itemID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
+type MockDAL_Get_Call struct {
+	*mock.Call
+}
+
+// Get is a helper method to define mock.On call
+//   - ctx context.Context
+//   - itemID string
+func (_e *MockDAL_Expecter) Get(ctx interface{}, itemID interface{}) *MockDAL_Get_Call {
+	return &MockDAL_Get_Call{Call: _e.mock.On("Get", ctx, itemID)}
+}
+
+func (_c *MockDAL_Get_Call) Run(run func(ctx context.Context, itemID string)) *MockDAL_Get_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockDAL_Get_Call) Return(_a0 itemsvc.Item, _a1 error) *MockDAL_Get_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_Get_Call) RunAndReturn(run func(context.Context, string) (itemsvc.Item, error)) *MockDAL_Get_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Increment provides a mock function with given fields: ctx, itemID, n
 func (_m *MockDAL) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item, error) {
 	ret := _m.Called(ctx, itemID, n)
@@ -379,6 +436,53 @@ func (_c *MockDAL_SetCount_Call) Return(_a0 error) *MockDAL_SetCount_Call {
 }
 
 func (_c *MockDAL_SetCount_Call) RunAndReturn(run func(context.Context, string, int) error) *MockDAL_SetCount_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function with given fields: ctx, item
+func (_m *MockDAL) Update(ctx context.Context, item itemsvc.Item) error {
+	ret := _m.Called(ctx, item)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, itemsvc.Item) error); ok {
+		r0 = rf(ctx, item)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type MockDAL_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - item itemsvc.Item
+func (_e *MockDAL_Expecter) Update(ctx interface{}, item interface{}) *MockDAL_Update_Call {
+	return &MockDAL_Update_Call{Call: _e.mock.On("Update", ctx, item)}
+}
+
+func (_c *MockDAL_Update_Call) Run(run func(ctx context.Context, item itemsvc.Item)) *MockDAL_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(itemsvc.Item))
+	})
+	return _c
+}
+
+func (_c *MockDAL_Update_Call) Return(_a0 error) *MockDAL_Update_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_Update_Call) RunAndReturn(run func(context.Context, itemsvc.Item) error) *MockDAL_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

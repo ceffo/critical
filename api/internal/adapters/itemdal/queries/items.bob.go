@@ -747,3 +747,189 @@ func (o insertItem) subExpr(from, to int) bob.Expression {
 func (o insertItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(insertItemSQL)).WriteSQL(ctx, w, d, start)
 }
+
+var updateItemSQL = formattedQueries_items[1453:1689]
+
+type UpdateItemQuery = orm.ModQuery[*dialect.UpdateQuery, updateItem, string, []string, updateItemTransformer]
+
+func UpdateItem(Position int64, Name string, Type string, Behaviour string, MagicBonus int64, AmmoKind string, Count int64, MaxCount int64, EffectDice string, EffectSave string, Notes string, ID string) *UpdateItemQuery {
+	var expressionTypArgs updateItem
+
+	expressionTypArgs.Position = sqlite.Arg(Position)
+	expressionTypArgs.Name = sqlite.Arg(Name)
+	expressionTypArgs.Type = sqlite.Arg(Type)
+	expressionTypArgs.Behaviour = sqlite.Arg(Behaviour)
+	expressionTypArgs.MagicBonus = sqlite.Arg(MagicBonus)
+	expressionTypArgs.AmmoKind = sqlite.Arg(AmmoKind)
+	expressionTypArgs.Count = sqlite.Arg(Count)
+	expressionTypArgs.MaxCount = sqlite.Arg(MaxCount)
+	expressionTypArgs.EffectDice = sqlite.Arg(EffectDice)
+	expressionTypArgs.EffectSave = sqlite.Arg(EffectSave)
+	expressionTypArgs.Notes = sqlite.Arg(Notes)
+	expressionTypArgs.ID = sqlite.Arg(ID)
+
+	return &UpdateItemQuery{
+		Query: orm.Query[updateItem, string, []string, updateItemTransformer]{
+			ExecQuery: orm.ExecQuery[updateItem]{
+				BaseQuery: bob.BaseQuery[updateItem]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeUpdate,
+				},
+			},
+			Scanner: scan.ColumnMapper[string]("id"),
+		},
+		Mod: bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+			q.Table.Expression = expressionTypArgs.raw(7, 14)
+			q.AppendSet(expressionTypArgs.subExpr(19, 204))
+			q.AppendWhere(expressionTypArgs.subExpr(210, 221))
+			q.AppendReturning(expressionTypArgs.subExpr(231, 236))
+		}),
+		Build: sqlite.Update,
+	}
+}
+
+type UpdateItemRow = struct {
+	ID string `db:"id"`
+}
+
+type updateItemTransformer = bob.SliceTransformer[string, []string]
+
+type updateItem struct {
+	Position   bob.Expression
+	Name       bob.Expression
+	Type       bob.Expression
+	Behaviour  bob.Expression
+	MagicBonus bob.Expression
+	AmmoKind   bob.Expression
+	Count      bob.Expression
+	MaxCount   bob.Expression
+	EffectDice bob.Expression
+	EffectSave bob.Expression
+	Notes      bob.Expression
+	ID         bob.Expression
+}
+
+func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "position",
+			Start:      32,
+			Stop:       34,
+			Expression: o.Position,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "name",
+			Start:      45,
+			Stop:       47,
+			Expression: o.Name,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "type",
+			Start:      58,
+			Stop:       60,
+			Expression: o.Type,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "behaviour",
+			Start:      76,
+			Stop:       78,
+			Expression: o.Behaviour,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "magicBonus",
+			Start:      96,
+			Stop:       98,
+			Expression: o.MagicBonus,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "ammoKind",
+			Start:      114,
+			Stop:       116,
+			Expression: o.AmmoKind,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "count",
+			Start:      128,
+			Stop:       130,
+			Expression: o.Count,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "maxCount",
+			Start:      146,
+			Stop:       148,
+			Expression: o.MaxCount,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "effectDice",
+			Start:      166,
+			Stop:       168,
+			Expression: o.EffectDice,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "effectSave",
+			Start:      186,
+			Stop:       189,
+			Expression: o.EffectSave,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "notes",
+			Start:      201,
+			Stop:       204,
+			Expression: o.Notes,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "id",
+			Start:      218,
+			Stop:       221,
+			Expression: o.ID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o updateItem) raw(from, to int) string {
+	return updateItemSQL[from:to]
+}
+
+func (o updateItem) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(updateItemSQL, from, to, o.args())
+}
+
+func (o updateItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(updateItemSQL)).WriteSQL(ctx, w, d, start)
+}

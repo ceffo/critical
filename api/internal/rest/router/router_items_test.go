@@ -73,3 +73,59 @@ func TestItems_Restock(t *testing.T) {
 		})
 	}
 }
+
+const wandJSON = `{"id":"w","name":"Wand","type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
+	"maxCount":4,"effectDice":"","effectSave":"","notes":""}`
+
+var wandItem = itemsvc.Item{ID: "w", Name: "Wand", Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4}
+
+func TestItems_Create(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
+		Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
+	}).Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 12}, nil)
+	rec := do(h, "POST", "/api/items", `{"name":"Arrows +3","type":"arrow","behaviour":"stock","count":6,"magicalBonus":3,"ammoKind":"arrow"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"item":`+wandJSON+`,"logEntryId":12}`, rec.Body.String())
+}
+
+// An invalid field comes back as 400 with the message and the field name.
+func TestItems_CreateInvalidNamesTheField(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().Create(mock.Anything, int64(1), mock.Anything).
+		Return(nil, fmt.Errorf("wrapped: %w", &domain.FieldError{Field: "effectDice", Message: "Effect dice must look like 2d6 or 1d8+2"}))
+	rec := do(h, "POST", "/api/items", `{"name":"X","behaviour":"stock","effectDice":"2x6"}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.JSONEq(t, `{"error":"Effect dice must look like 2d6 or 1d8+2","field":"effectDice"}`, rec.Body.String())
+}
+
+func TestItems_UpdatePatchesOnlyTheFieldsSent(t *testing.T) {
+	h, m := newRouter(t)
+	three := 3
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Count: &three}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil)
+	rec := do(h, "PATCH", "/api/items/w", `{"count":3}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"item":`+wandJSON+`,"logEntryId":13}`, rec.Body.String())
+}
+
+func TestItems_Delete(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().Delete(mock.Anything, int64(1), "w").Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 14}, nil)
+	rec := do(h, "DELETE", "/api/items/w", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"item":`+wandJSON+`,"logEntryId":14}`, rec.Body.String())
+}
+
+func TestItems_EditErrors(t *testing.T) {
+	for _, body := range []string{`nope`, `{"bogus":1}`, `{"count":"x"}`} {
+		h, _ := newRouter(t)
+		assert.Equal(t, http.StatusBadRequest, do(h, "PATCH", "/api/items/w", body).Code, body)
+		assert.Equal(t, http.StatusBadRequest, do(h, "POST", "/api/items", body).Code, body)
+	}
+	h, m := newRouter(t)
+	m.items.EXPECT().Update(mock.Anything, int64(1), "x", mock.Anything).Return(nil, fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
+	m.items.EXPECT().Delete(mock.Anything, int64(1), "x").Return(nil, fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
+	assert.Equal(t, http.StatusNotFound, do(h, "PATCH", "/api/items/x", `{"count":1}`).Code)
+	assert.Equal(t, http.StatusNotFound, do(h, "DELETE", "/api/items/x", "").Code)
+}

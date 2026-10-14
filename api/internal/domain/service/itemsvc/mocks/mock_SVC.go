@@ -71,6 +71,126 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// Create provides a mock function with given fields: ctx, characterID, in
+func (_m *MockSVC) Create(ctx context.Context, characterID int64, in itemsvc.ItemInput) (*itemsvc.ChangeResult, error) {
+	ret := _m.Called(ctx, characterID, in)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Create")
+	}
+
+	var r0 *itemsvc.ChangeResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, itemsvc.ItemInput) (*itemsvc.ChangeResult, error)); ok {
+		return rf(ctx, characterID, in)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, itemsvc.ItemInput) *itemsvc.ChangeResult); ok {
+		r0 = rf(ctx, characterID, in)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*itemsvc.ChangeResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, itemsvc.ItemInput) error); ok {
+		r1 = rf(ctx, characterID, in)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
+type MockSVC_Create_Call struct {
+	*mock.Call
+}
+
+// Create is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - in itemsvc.ItemInput
+func (_e *MockSVC_Expecter) Create(ctx interface{}, characterID interface{}, in interface{}) *MockSVC_Create_Call {
+	return &MockSVC_Create_Call{Call: _e.mock.On("Create", ctx, characterID, in)}
+}
+
+func (_c *MockSVC_Create_Call) Run(run func(ctx context.Context, characterID int64, in itemsvc.ItemInput)) *MockSVC_Create_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(itemsvc.ItemInput))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Create_Call) Return(_a0 *itemsvc.ChangeResult, _a1 error) *MockSVC_Create_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Create_Call) RunAndReturn(run func(context.Context, int64, itemsvc.ItemInput) (*itemsvc.ChangeResult, error)) *MockSVC_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Delete provides a mock function with given fields: ctx, characterID, itemID
+func (_m *MockSVC) Delete(ctx context.Context, characterID int64, itemID string) (*itemsvc.ChangeResult, error) {
+	ret := _m.Called(ctx, characterID, itemID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Delete")
+	}
+
+	var r0 *itemsvc.ChangeResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (*itemsvc.ChangeResult, error)); ok {
+		return rf(ctx, characterID, itemID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) *itemsvc.ChangeResult); ok {
+		r0 = rf(ctx, characterID, itemID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*itemsvc.ChangeResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, itemID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
+type MockSVC_Delete_Call struct {
+	*mock.Call
+}
+
+// Delete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - itemID string
+func (_e *MockSVC_Expecter) Delete(ctx interface{}, characterID interface{}, itemID interface{}) *MockSVC_Delete_Call {
+	return &MockSVC_Delete_Call{Call: _e.mock.On("Delete", ctx, characterID, itemID)}
+}
+
+func (_c *MockSVC_Delete_Call) Run(run func(ctx context.Context, characterID int64, itemID string)) *MockSVC_Delete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Delete_Call) Return(_a0 *itemsvc.ChangeResult, _a1 error) *MockSVC_Delete_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Delete_Call) RunAndReturn(run func(context.Context, int64, string) (*itemsvc.ChangeResult, error)) *MockSVC_Delete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Health provides a mock function with given fields: ctx
 func (_m *MockSVC) Health(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -337,6 +457,67 @@ func (_c *MockSVC_Restorers_Call) Return(_a0 map[string]actionlog.Restorer) *Moc
 }
 
 func (_c *MockSVC_Restorers_Call) RunAndReturn(run func() map[string]actionlog.Restorer) *MockSVC_Restorers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function with given fields: ctx, characterID, itemID, p
+func (_m *MockSVC) Update(ctx context.Context, characterID int64, itemID string, p itemsvc.ItemPatch) (*itemsvc.ChangeResult, error) {
+	ret := _m.Called(ctx, characterID, itemID, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 *itemsvc.ChangeResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, itemsvc.ItemPatch) (*itemsvc.ChangeResult, error)); ok {
+		return rf(ctx, characterID, itemID, p)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, itemsvc.ItemPatch) *itemsvc.ChangeResult); ok {
+		r0 = rf(ctx, characterID, itemID, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*itemsvc.ChangeResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, itemsvc.ItemPatch) error); ok {
+		r1 = rf(ctx, characterID, itemID, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type MockSVC_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - itemID string
+//   - p itemsvc.ItemPatch
+func (_e *MockSVC_Expecter) Update(ctx interface{}, characterID interface{}, itemID interface{}, p interface{}) *MockSVC_Update_Call {
+	return &MockSVC_Update_Call{Call: _e.mock.On("Update", ctx, characterID, itemID, p)}
+}
+
+func (_c *MockSVC_Update_Call) Run(run func(ctx context.Context, characterID int64, itemID string, p itemsvc.ItemPatch)) *MockSVC_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(itemsvc.ItemPatch))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Update_Call) Return(_a0 *itemsvc.ChangeResult, _a1 error) *MockSVC_Update_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Update_Call) RunAndReturn(run func(context.Context, int64, string, itemsvc.ItemPatch) (*itemsvc.ChangeResult, error)) *MockSVC_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -133,3 +133,30 @@ func (d *DAL) SetCount(ctx context.Context, itemID string, count int) error {
 	}
 	return nil
 }
+
+// Get returns one item; ErrItemNotFound when the id is unknown.
+func (d *DAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
+	r, err := queries.GetItem(itemID).One(ctx, d.exec(ctx))
+	if errors.Is(err, sql.ErrNoRows) {
+		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
+	}
+	if err != nil {
+		return itemsvc.Item{}, fmt.Errorf("get item %s: %w", itemID, err)
+	}
+	return toItem(r), nil
+}
+
+// Update overwrites every field of an existing item. ErrItemNotFound when
+// the id is unknown.
+func (d *DAL) Update(ctx context.Context, it itemsvc.Item) error {
+	ids, err := queries.UpdateItem(int64(it.Position), it.Name, it.Type, string(it.Behaviour),
+		int64(it.MagicBonus), it.AmmoKind, int64(it.Count), int64(it.MaxCount),
+		it.EffectDice, it.EffectSave, it.Notes, it.ID).All(ctx, d.exec(ctx))
+	if err != nil {
+		return fmt.Errorf("update item %s: %w", it.ID, err)
+	}
+	if len(ids) == 0 {
+		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, it.ID)
+	}
+	return nil
+}

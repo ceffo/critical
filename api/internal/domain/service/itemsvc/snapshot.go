@@ -28,6 +28,12 @@ type snapCount struct {
 	Count   int       `json:"count"`
 	Item    *snapItem `json:"item,omitempty"`
 	Removed bool      `json:"removed,omitempty"`
+	// Absent marks a "before" in which the item did not exist yet (an item
+	// added by hand): restoring it deletes the item.
+	Absent bool `json:"absent,omitempty"`
+	// Replace marks a snapshot whose Item is the whole truth (edit, remove):
+	// restoring overwrites every field, or inserts the item when it is gone.
+	Replace bool `json:"replace,omitempty"`
 }
 
 // snapItem is the whole item inside a snapshot (add fields, never rename).
@@ -79,6 +85,21 @@ func CountSnapshot(itemID string, before, after int) (actionlog.Snapshot, error)
 	return encodeSnapshot(itemID, snapCount{ID: itemID, Count: before}, snapCount{ID: itemID, Count: after})
 }
 
+// itemSnapshot is the snapshot of an item going from before to after by hand
+// (nil = it did not exist / no longer exists). Restoring "before" undoes it:
+// a nil before deletes the item, any other before overwrites it or puts it
+// back.
+func itemSnapshot(itemID string, before, after *Item) (actionlog.Snapshot, error) {
+	return encodeSnapshot(itemID, wholeItem(itemID, before), wholeItem(itemID, after))
+}
+
+func wholeItem(id string, i *Item) snapCount {
+	if i == nil {
+		return snapCount{ID: id, Absent: true, Removed: true}
+	}
+	return snapCount{ID: id, Count: i.Count, Item: toSnapItem(*i), Replace: true}
+}
+
 func encodeSnapshot(itemID string, before, after snapCount) (actionlog.Snapshot, error) {
 	b, err := json.Marshal([]snapCount{before})
 	if err != nil {
@@ -116,9 +137,20 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 				}
 			}
 			for _, c := range counts {
-				err := s.dal.SetCount(ctx, c.ID, c.Count)
-				if errors.Is(err, ErrItemNotFound) && c.Item != nil {
-					err = s.dal.Insert(ctx, c.item())
+				var err error
+				switch {
+				case c.Absent:
+					err = s.dal.Delete(ctx, c.ID)
+				case c.Replace && c.Item != nil:
+					err = s.dal.Update(ctx, c.item())
+					if errors.Is(err, ErrItemNotFound) {
+						err = s.dal.Insert(ctx, c.item())
+					}
+				default:
+					err = s.dal.SetCount(ctx, c.ID, c.Count)
+					if errors.Is(err, ErrItemNotFound) && c.Item != nil {
+						err = s.dal.Insert(ctx, c.item())
+					}
 				}
 				if err != nil {
 					return fmt.Errorf("restore item %s: %w", c.ID, err)

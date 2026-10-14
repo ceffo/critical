@@ -70,6 +70,15 @@ const (
 	KindItemRemove Kind = "item_remove"
 )
 
+// Weapon editor entries (weaponsvc Create, Update, Delete, critical-qki.32): a
+// weapon added, edited or removed by hand. Not rolls. Each carries the
+// weapon's "weapons:<id>" snapshot, so popping it undoes the change.
+const (
+	KindWeaponAdd    Kind = "weapon_add"
+	KindWeaponEdit   Kind = "weapon_edit"
+	KindWeaponRemove Kind = "weapon_remove"
+)
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

@@ -31,6 +31,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
@@ -50,6 +51,7 @@ type BackingServices struct {
 	Cast      castsvc.SVC
 	Combat    combatsvc.SVC
 	Items     itemsvc.SVC
+	Weapons   weaponsvc.SVC
 	Rest      restsvc.SVC
 
 	services []domain.Service
@@ -98,6 +100,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		dice = cfg.Dice
 	}
 	weaponDAL := weapondal.New(db)
+	weaponEditor := weapondal.NewEditor(db)
 	critDAL := critdal.New(db)
 	itemDAL := itemdal.New(db)
 
@@ -174,6 +177,12 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	registerRestorers(logSvc, itemSvc.Restorers())
+	weaponSvc, err := weaponsvc.New(weaponEditor, weaponsvc.Deps{Log: logSvc, Tx: db})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	registerRestorers(logSvc, weaponSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL, Crit: critDAL,
 		Items: itemSvc, Rules: ruleTables, Log: logSvc, Tx: db,
@@ -208,8 +217,9 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Cast:        castSvc,
 		Combat:      combatSvc,
 		Items:       itemSvc,
+		Weapons:     weaponSvc,
 		Rest:        restSvc,
-		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, restSvc},
+		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc},
 	}, nil
 }
 

@@ -8,3 +8,24 @@ FROM "weapons" ORDER BY "position";
 -- GetWeapon
 SELECT "id", "name", "damage_sm", "damage_l", "magic_to_hit", "magic_damage", "kind", "two_handed", "ammo_kind"
 FROM "weapons" WHERE "id" = ?1;
+
+-- ListWeaponsFull
+SELECT "id", "position", "name", "damage_sm", "damage_l", "magic_to_hit", "magic_damage", "kind", "two_handed", "ammo_kind"
+FROM "weapons" ORDER BY "position";
+
+-- GetWeaponFull
+SELECT "id", "position", "name", "damage_sm", "damage_l", "magic_to_hit", "magic_damage", "kind", "two_handed", "ammo_kind"
+FROM "weapons" WHERE "id" = ?1;
+
+-- InsertWeapon
+INSERT INTO "weapons" ("id", "position", "name", "damage_sm", "damage_l", "magic_to_hit", "magic_damage", "kind", "two_handed", "ammo_kind")
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10);
+
+-- UpdateWeapon
+UPDATE "weapons" SET "position" = ?1, "name" = ?2, "damage_sm" = ?3, "damage_l" = ?4, "magic_to_hit" = ?5, "magic_damage" = ?6, "kind" = ?7, "two_handed" = ?8, "ammo_kind" = ?9
+WHERE "id" = ?10
+RETURNING "id";
+
+-- DeleteWeapon
+DELETE FROM "weapons" WHERE "id" = ?1
+RETURNING "id";

@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
-import type { RollResult } from "@/types/combat";
+import type { RollResult, WeaponChangeRecord } from "@/types/combat";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 
@@ -237,6 +237,30 @@ function itemChangeText(e: LogEntry, t: TFunction): string | null {
   return t("log.item.edited", { name: p.name, changes });
 }
 
+/** Payload of weapon_add, weapon_edit and weapon_remove entries (weaponsvc changeRecord). */
+function weaponChangeText(e: LogEntry, t: TFunction): string | null {
+  if (
+    e.kind !== "weapon_add" &&
+    e.kind !== "weapon_edit" &&
+    e.kind !== "weapon_remove"
+  )
+    return null;
+  const p = e.payload as Partial<WeaponChangeRecord> | null;
+  if (!p || typeof p.name !== "string") return null;
+  if (e.kind === "weapon_add") return t("log.weapon.added", { name: p.name });
+  if (e.kind === "weapon_remove")
+    return t("log.weapon.removed", { name: p.name });
+  const changes = (p.changes ?? [])
+    .map((c) =>
+      t("log.weapon.change", {
+        ...c,
+        field: t(`log.weapon.fields.${c.field}`, { defaultValue: c.field }),
+      }),
+    )
+    .join(", ");
+  return t("log.weapon.edited", { name: p.name, changes });
+}
+
 function attackText(p: RollResult, t: TFunction): string {
   const weapon = p.ammo
     ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
@@ -288,6 +312,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (restock) return restock;
   const itemChange = itemChangeText(e, t);
   if (itemChange) return itemChange;
+  const weaponChange = weaponChangeText(e, t);
+  if (weaponChange) return weaponChange;
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
   const buff = p.buff ?? "";

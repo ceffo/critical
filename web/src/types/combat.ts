@@ -24,7 +24,8 @@ export interface Modifier {
 }
 
 /** Place of a contribution in ((dice × spells) + weapon) × multiplier + strength + bonus. */
-export type DamageTermKind = "spells" | "weapon" | "multiplier" | "strength" | "bonus";
+export type DamageTermKind =
+  "spells" | "weapon" | "multiplier" | "strength" | "bonus";
 
 export interface DamageTerm {
   term: DamageTermKind;
@@ -140,4 +141,36 @@ export interface CritTable {
   rows: CritRow[];
   /** Still the unedited default (1-100 → ×2). */
   placeholder: boolean;
+}
+
+/** Body of POST /api/weapons and PATCH /api/weapons/{id} (weaponhdl WeaponBody); a PATCH changes only the fields present. */
+export interface WeaponBody {
+  name?: string;
+  damage_sm?: string;
+  damage_l?: string;
+  magic_to_hit?: number;
+  magic_damage?: number;
+  kind?: "melee" | "missile";
+  two_handed?: boolean;
+  ammo_kind?: string;
+}
+
+/** POST/PATCH/DELETE /api/weapons (weaponhdl ChangeDTO): the weapon as it is now (as it was, for a delete). */
+export interface WeaponChange {
+  weapon: Weapon;
+  logEntryId: number;
+}
+
+/** One edited field in a weapon_edit log payload (values as text). */
+export interface WeaponFieldChange {
+  field: string;
+  before: string;
+  after: string;
+}
+
+/** Payload of weapon_add, weapon_edit and weapon_remove log entries (weaponsvc changeRecord). */
+export interface WeaponChangeRecord extends Weapon {
+  weapon_id: string;
+  /** Only in weapon_edit. */
+  changes?: WeaponFieldChange[];
 }

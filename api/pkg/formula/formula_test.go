@@ -154,3 +154,34 @@ func TestExpandRejectsDiceNotAdded(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0008 step 15: the step variable is the 1-based number of a dice step,
+// accepted only by ParseStep, which probes every step up to MaxSteps (a dice
+// count going negative at a later step is refused, so the data caps it).
+func TestParseStep(t *testing.T) {
+	_, err := formula.Parse("(step)d6")
+	require.ErrorContains(t, err, "step is only allowed in a dice step")
+
+	f := must.Do(formula.ParseStep("(max(min(level,12)-2*(step-1),0))d4"))
+	d4 := func(n int) formula.Sum { return formula.Sum{Dice: []formula.Dice{{Count: n, Sides: 4}}} }
+	for _, tt := range []struct {
+		level, step int
+		want        formula.Sum
+	}{{12, 1, d4(12)}, {12, 2, d4(10)}, {12, 6, d4(2)}, {12, 7, formula.Sum{}}, {20, 1, d4(12)}, {5, 3, d4(1)}} {
+		got, err := f.ExpandStep(tt.level, tt.step)
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, got, "level %d step %d", tt.level, tt.step)
+		v, err := f.EvalStep(tt.level, tt.step, maxRoll)
+		require.NoError(t, err)
+		if len(tt.want.Dice) > 0 {
+			assert.Equal(t, 4*tt.want.Dice[0].Count, v)
+		}
+	}
+
+	_, err = formula.ParseStep("(min(level,12)-2*(step-1))d4")
+	require.ErrorContains(t, err, "negative number of dice", "step 7 at level 12 would roll -2d4")
+	_, err = formula.ParseStep("(step*20)d6")
+	require.ErrorContains(t, err, "too many dice", "2000 dice at step 100")
+	_, err = formula.ParseStep("(stepx)d6")
+	require.Error(t, err)
+}

@@ -3516,8 +3516,8 @@
     "name": "Vitriolic Sphere",
     "level": 4,
     "kind": "damage",
-    "confidence": "low",
-    "note": "First round (min(level,12))d4, half on a save. A failed save keeps the acid burning in following rounds with two fewer dice each round, a new save each round ending it; the 5-ft splash deals 1d4 per five levels (save vs. paralyzation negates). Not modelled: the damage model repeats the same dice every round and has no per-round decrement or secondary targets.",
+    "confidence": "high",
+    "note": "First round (min(level,12))d4, half on a save. A failed save keeps the acid burning in following rounds with two fewer dice each round, a new save each round ending it: every round is rolled, drop the rounds after a successful save. Not modelled: the 5-ft splash on secondary targets (1d4 per five levels, save vs. paralyzation negates).",
     "target": "other",
     "duration": {
       "kind": "instant"
@@ -3527,7 +3527,11 @@
       "effect": "half"
     },
     "damage": {
-      "dice": "(min(level,12))d4",
+      "steps": {
+        "per": "round",
+        "dice": "(max(min(level,12)-2*(step-1),0))d4",
+        "count": "level"
+      },
       "type": "acid"
     }
   },
@@ -4485,8 +4489,8 @@
     "name": "Chain Lightning",
     "level": 6,
     "kind": "damage",
-    "confidence": "low",
-    "note": "The first strike is (min(level,12))d6, half on a save; the bolt then arcs to up to (level - 1) further targets, each jump 1d6 weaker, each with its own save. Not modelled: the damage model has no per-instance decrement, so arcs cannot be served.",
+    "confidence": "high",
+    "note": "The first strike is (min(level,12))d6, half on a save; the bolt then arcs to further targets, each jump 1d6 weaker, each with its own save, for as many strikes as the caster has levels. Every strike the bolt can make is rolled (the most there can be): drop the strikes past the last target.",
     "target": "area",
     "duration": {
       "kind": "instant"
@@ -4496,7 +4500,11 @@
       "effect": "half"
     },
     "damage": {
-      "dice": "(min(level,12))d6",
+      "steps": {
+        "per": "instance",
+        "dice": "(max(min(level,12)-(step-1),0))d6",
+        "count": "level"
+      },
       "type": "electricity"
     }
   },
@@ -5855,13 +5863,24 @@
     "id": "incendiary_cloud",
     "name": "Incendiary Cloud",
     "level": 8,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Rounds 3/4/5: 1d2 / 1d4 / 1d2 per caster level fire damage; save to halve. Not modelled.",
-    "target": "none",
+    "kind": "damage",
+    "confidence": "high",
+    "note": "The cloud flames from its third round: 1d2 per caster level, then 1d4 per level on the fourth and 1d2 per level on the fifth; later rounds are harmless smoke. A save halves; a creature that saves once needs no further save, one that fails saves again on the fourth and fifth rounds.",
+    "target": "area",
     "duration": {
       "kind": "rounds",
       "rounds": "4+1d6"
+    },
+    "save": {
+      "type": "spell",
+      "effect": "half"
+    },
+    "damage": {
+      "steps": {
+        "per": "round",
+        "list": ["0", "0", "leveld2", "leveld4", "leveld2"]
+      },
+      "type": "fire"
     }
   },
   {

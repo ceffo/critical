@@ -155,6 +155,37 @@ named otherwise.
     `TestSearch_ServesModesAtTheCasterLevel` (rest/handler/spellhdl), `TestGetInfo_ServesTheModes`
     (rest/handler/spellprephdl), `TestCastAndReceive_CarryTheMode` (rest/handler/casthdl),
     `TestSpecialSentinels` (rest/router).
+15. **Dice steps.** A spell whose dice change from one round, or one instance, to the next
+    (Vitriolic Sphere: two dice fewer each round; Chain Lightning: 1d6 fewer each strike;
+    Incendiary Cloud: nothing for two rounds, then 1d2, 1d4 and 1d2 per level) writes its damage
+    as `steps` instead of `dice` / `by_level` / `parts` (exactly one of the four), and without
+    `instances` or `rounds`: the steps are the rounds (`per: round`) or the instances
+    (`per: instance`). The steps are either one formula for every step (`dice`, with a `count`,
+    the most steps there can be) or one formula per step (`list`). A step formula may use `step`,
+    the step's number from 1 (no other formula may); each must reduce to dice plus a constant (step
+    8) at every caster level and step, so a decreasing dice count is capped at 0 in the data
+    (`max(...,0)`). At a caster level the steps are numbered from 1; a step may have no damage (a
+    round of smoke before the cloud flames) and is kept, but the steps after the last one with
+    damage are dropped (the dice ran out). The data is refused at startup when it mixes steps with
+    another dice form, `instances` or `rounds`, has both or neither of `dice` and `list`, a `dice`
+    without `count` or a `list` with one, a `count` that is not a number from 1 to 100 at some
+    level, an empty or longer list, or a level at which no step has damage. Served unrolled
+    (step 8): the unit and every step's number and dice in order, with no dice of one instance and
+    the steps counted as the rounds or the instances. A cast, or a spell received, rolls every
+    served step up front (user ruling 2026-10-15: each is shown on its own, as Melf's Acid Arrow
+    rolls every round), in order, exactly once, a step without damage rolling no die; Chain
+    Lightning rolls the most strikes the caster's level allows (user ruling 2026-10-15), not a
+    target count. The result and the cast entry record the unit and each roll's step; entries
+    logged before steps existed still render. Stopping the sequence on a save, and the saves, stay
+    the DM's side: the app shows each step, the DM drops the ones a save ended. A cast-time mode's
+    damage (step 14) may be made of steps. Spells without steps serve and roll exactly as in steps
+    8, 13 and 14. The mechanic is data (`seeds/spell_effects.json`), never a branch on a spell id.
+    Tests: `TestParseStep` (pkg/formula), `TestEntry_DamageAt_Steps`, `TestEntry_ModesAt_Steps`
+    (spelleffectsvc), `TestParse_DamageSteps`, `TestParse_DamageStepsRefused`
+    (adapters/spelleffectsadpt), `TestDamageAt_StepsMatchThePHB` (levels 12, 15 and 20),
+    `TestCast_DamageSteps_RollsEachStepOnce`, `TestReceive_DamageSteps_AtTheCastersLevel`,
+    `TestDamageAt_IsWhatACastRolls`, `TestDamageToDTO_Steps` (rest/handler/spellhdl),
+    `TestToDTO_DamageSteps` (rest/handler/casthdl).
 
 ## Consequences
 
@@ -170,3 +201,8 @@ named otherwise.
 - Cast-time modes (step 14) choose the damage only. What a mode does besides (Ice Storm's sleet
   blinds and slows; the ice plane's damage to whoever breaks through it later) is not rolled or
   tracked: the spell's note says it.
+- Dice steps (step 15) roll every round or strike there can be. A round the target's save ends,
+  and a strike past the last target, are rolled anyway and dropped by the DM. Vitriolic Sphere is
+  not in the PHB of the rulebooks repo: its numbers are the ones of its data entry, and its splash
+  on secondary targets is not modelled. Incendiary Cloud's save rule (one success ends the saves,
+  a failure saves again on the fourth and fifth rounds) is the DM's.

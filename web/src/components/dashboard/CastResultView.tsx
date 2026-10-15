@@ -7,6 +7,7 @@ import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
+import { rollLabel, stepsHeader } from "@/lib/spellDice";
 import { labelClass } from "./fieldStyles";
 
 /** One die, as a small tile. */
@@ -197,8 +198,14 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         <div className="flex flex-col gap-2" data-testid="cast-damage">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0 text-sm">
-              {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.rolls[0] ? resolved(r.damage.rolls[0]) : r.damage.dice })}
-              {r.damage.rounds > 1 && <>, {t("result.cast.damageRounds", { rounds: r.damage.rounds })}</>}
+              {r.damage.stepsPer ? (
+                stepsHeader(t, r.damage.stepsPer, r.damage.rolls.length)
+              ) : (
+                <>
+                  {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.rolls[0] ? resolved(r.damage.rolls[0]) : r.damage.dice })}
+                  {r.damage.rounds > 1 && <>, {t("result.cast.damageRounds", { rounds: r.damage.rounds })}</>}
+                </>
+              )}
               {r.damage.type && <> · {r.damage.type}</>}
             </div>
             <div className="text-right">
@@ -219,10 +226,12 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           {r.damage.rolls.length > 0 && (
             <ul className="flex flex-col gap-1">
               {r.damage.rolls.map((roll, i) => (
-                <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-xs text-muted-foreground">{t("result.cast.instance", { n: i + 1 })}</span>
+                <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1" data-testid="cast-damage-roll">
+                  <span className="text-xs text-muted-foreground">{rollLabel(t, r.damage?.stepsPer, roll.step, i)}</span>
                   {roll.parts && r.damage?.parts ? (
                     <PartsView parts={roll.parts} saves={r.damage.parts.map((p) => p.save)} total={roll.total} />
+                  ) : roll.step && roll.dice.length === 0 && roll.total === 0 ? (
+                    <span className="text-sm text-muted-foreground">{t("result.cast.noDamage")}</span>
                   ) : (
                     <RollView roll={roll} />
                   )}

@@ -193,6 +193,23 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   ).toHaveText("5 × 1d4+1 force");
   await snap(page, "damage-dice");
 
+  // A damage whose dice change from one strike to the next: every step, in order.
+  await search(page).fill("chain lightning");
+  await rows(page).filter({ hasText: "Chain Lightning" }).click();
+  await expect(
+    detail(page).getByTestId("spell-dice-damage").getByTestId("spell-dice-formula"),
+  ).toHaveText("in turn: 12d6, 11d6, 10d6, 9d6, 8d6, 7d6, 6d6, 5d6, 4d6, 3d6, 2d6, 1d6 electricity");
+  await snap(page, "damage-dice-steps");
+  await search(page).fill("incendiary cloud");
+  await rows(page).filter({ hasText: "Incendiary Cloud" }).click();
+  const cloud = detail(page).getByTestId("spell-dice-damage");
+  await expect(cloud.getByTestId("spell-dice-formula")).toHaveText("by round: —, —, 15d2, 15d4, 15d2 fire");
+  await cloud.getByRole("button", { name: "To the dice" }).click();
+  await expect(page.getByRole("form", { name: "Dice" }).getByLabel("Formula")).toHaveValue("15d2");
+  await snap(page, "damage-dice-steps-round");
+  await search(page).fill("magic");
+  await rows(page).filter({ hasText: "Magic Missile" }).click();
+
   const description = detail(page).getByTestId("spell-description");
   const text = description.locator("p");
   await expect(text).toBeHidden();

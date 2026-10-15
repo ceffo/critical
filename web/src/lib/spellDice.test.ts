@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
-import { damageFormula, damageText, diceText } from "./spellDice";
+import { damageFormula, damageText, diceText, rollLabel, stepsHeader } from "./spellDice";
 import type { DiceSum, SpellDamage } from "@/types/spells";
 
 async function makeT(lng: string) {
@@ -78,5 +78,52 @@ describe("damageText with parts", () => {
   });
   it("the composer gets the whole instance", () => {
     expect(damageFormula(missiles)).toBe("2d4+15");
+  });
+});
+
+describe("dice steps", () => {
+  const stepped = (per: "round" | "instance", type: string | undefined, ...steps: DiceSum[]): SpellDamage => ({
+    ...damage(n(0), type, per === "instance" ? n(steps.length) : n(1), per === "round" ? n(steps.length) : n(1)),
+    steps_per: per,
+    steps: steps.map((d, i) => ({ step: i + 1, dice: d })),
+  });
+
+  it.each([
+    [
+      stepped("round", "fire", n(0), n(0), dice(0, [12, 2]), dice(0, [12, 4]), dice(0, [12, 2])),
+      "by round: —, —, 12d2, 12d4, 12d2 fire",
+      "par round : —, —, 12d2, 12d4, 12d2 feu",
+    ],
+    [
+      stepped("instance", "electricity", dice(0, [3, 6]), dice(0, [2, 6]), dice(0, [1, 6])),
+      "in turn: 3d6, 2d6, 1d6 electricity",
+      "successivement : 3d6, 2d6, 1d6 électricité",
+    ],
+    [stepped("round", undefined, dice(1, [2, 4]), n(3)), "by round: 2d4+1, 3", "par round : 2d4+1, 3"],
+  ])("%j", async (d, en, fr) => {
+    expect(damageText(await makeT("en"), d)).toBe(en);
+    expect(damageText(await makeT("fr"), d)).toBe(fr);
+  });
+
+  it("sends the first step with damage to the dice composer", () => {
+    expect(damageFormula(stepped("round", "fire", n(0), dice(0, [12, 2]), dice(0, [12, 4])))).toBe("12d2");
+  });
+
+  it("labels each roll by its step: a turn for a step per round, else its number", async () => {
+    const t = await makeT("en");
+    expect(rollLabel(t, "round", 3, 0)).toBe("Turn 3");
+    expect(rollLabel(t, "instance", 2, 0)).toBe("#2");
+    expect(rollLabel(t, undefined, undefined, 4)).toBe("#5");
+    expect(rollLabel(await makeT("fr"), "round", 3, 0)).toBe("Tour 3");
+  });
+
+  it.each([
+    ["round", 5, "5 turns, one roll each", "5 tours, un jet chacun"],
+    ["round", 1, "1 turn, one roll", "1 tour, un jet"],
+    ["instance", 12, "12 rolls in turn", "12 jets successifs"],
+    ["instance", 1, "1 roll", "1 jet"],
+  ] as const)("header of %s steps, %d", async (per, count, en, fr) => {
+    expect(stepsHeader(await makeT("en"), per, count)).toBe(en);
+    expect(stepsHeader(await makeT("fr"), per, count)).toBe(fr);
   });
 });

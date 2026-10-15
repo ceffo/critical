@@ -47,6 +47,9 @@ type rollRecord struct {
 	Dice    []dieRecord  `json:"dice"`
 	Total   int          `json:"total"`
 	Parts   []rollRecord `json:"parts,omitempty"`
+	// Step is the dice step (round or instance number) of the roll; absent
+	// without steps and on casts logged before steps existed.
+	Step int `json:"step,omitempty"`
 }
 
 // itemRecord is the item a cast spent and how many are left.
@@ -83,6 +86,9 @@ type damageRecord struct {
 	Rolls       []rollRecord `json:"rolls,omitempty"`
 	Parts       []partRecord `json:"parts,omitempty"`
 	TotalOnSave *int         `json:"totalOnSave,omitempty"`
+	// StepsPer is "round" or "instance" for a damage made of dice steps (each
+	// roll carries its step); absent otherwise.
+	StepsPer string `json:"stepsPer,omitempty"`
 }
 
 // partRecord is one damage part: its formula and what a save does to it.
@@ -102,7 +108,7 @@ func toRecord(res CastResult) castRecord {
 	if d := res.Damage; d != nil {
 		r.Damage = &damageRecord{
 			Total: d.Total, Type: d.Type, Dice: d.Dice, Instances: d.Instances, Rounds: d.Rounds,
-			TotalOnSave: d.TotalOnSave,
+			TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
 		}
 		for _, roll := range d.Rolls {
 			r.Damage.Rolls = append(r.Damage.Rolls, toRollRecord(roll))
@@ -129,7 +135,7 @@ func toRollRecord(roll Roll) rollRecord {
 	for i, die := range roll.Dice {
 		dice[i] = dieRecord(die)
 	}
-	out := rollRecord{Formula: roll.Formula, Dice: dice, Total: roll.Total}
+	out := rollRecord{Formula: roll.Formula, Dice: dice, Total: roll.Total, Step: roll.Step}
 	for _, p := range roll.Parts {
 		out.Parts = append(out.Parts, toRollRecord(p))
 	}

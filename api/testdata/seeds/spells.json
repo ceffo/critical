@@ -362,5 +362,33 @@
   "components": "V, S, M",
   "saving_throw": "None",
   "description": "This spell can have one of two effects, at the caster's option: Either great hail stones pound down for one round in a 40-foot-diameter area and inflict 3d10 points of damage to any creatures within the area of effect, or driving sleet falls in an 80-foot-diameter area for one round per caster level. The sleet blinds creatures within its area for the duration of the spell and causes the ground in the area to be icy, slowing movement by 50% and making it 50% probable that a creature trying to move in the area slips and falls. The sleet also extinguishes torches and small fires. Note that this spell will negate a heat metal spell. The material components for this spell are a pinch of dust and a few drops of water."
+ },
+ {
+  "name": "Chain Lightning",
+  "class": "Wizard",
+  "level": 6,
+  "school": "Evocation",
+  "sphere": "",
+  "casting_time": "5",
+  "range": "40 yds. + 5 yds./level",
+  "duration": "Instantaneous",
+  "area_of_effect": "Special",
+  "components": "V, S, M",
+  "saving_throw": "1/2",
+  "description": "This spell creates an electrical discharge that begins as a single stroke of lightning, 2_ feet wide, commencing from the fingertips of the caster. Unlike a lightning bolt spell, chain lightning strikes one object or creature initially, then arcs to a series of other objects or creatures within range, losing energy with each jump. The bolt initially inflicts 1d6 points of damage per level of the caster, to a maximum of 12d6 (half damage if the object or creature rolls a successful saving throw vs. spell). After the first strike, the lightning arcs to the next nearest object or creature. Each jump reduces the strength of the lightning by 1d6. Each creature or magical object hit receives a saving throw vs. spell. Success on this save indicates the creature suffers only half damage from the bolt. The chain can strike as many times (including the first object or creature) as the spellcaster has levels, although each creature or object can be struck only once. Thus, a bolt cast by a 12th-level wizard can strike up to 12 times, causing less damage with each strike. The bolt continues to arc until it has struck the appropriate number of objects or creatures, until it strikes an object that grounds it (interconnecting iron bars of a large cell or cage, a large pool of liquid, etc.), or until there are no more objects or creatures to strike. Direction is not a consideration when plotting chain lightning arcs. Distance is a factor- -an arc cannot exceed the spell's range. If the only possible arc is greater than the spell's range, the stroke fades into nothingness. Creatures immune to electrical attack can bestruck, even though no damage is taken. Note that it is possible for the chain to arc back to the caster! The material components are a bit of fur, a piece of amber, glass, or crystal rod, and one silver pin for each experience level of the caster."
+ },
+ {
+  "name": "Incendiary Cloud",
+  "class": "Wizard",
+  "level": 8,
+  "school": "Alteration, Evocation",
+  "sphere": "",
+  "casting_time": "2",
+  "range": "30 yds.",
+  "duration": "4 rds. + 1d6 rounds",
+  "area_of_effect": "Special",
+  "components": "V, S, M",
+  "saving_throw": "1/2",
+  "description": "An incendiary cloud spell exactly resembles the smoke effects of a pyrotechnics spell, except that its minimum dimensions are a cloud 10 feet tall, 20 feet wide, and 20 feet long. This dense vapor cloud billows forth, and on the third round of its existence begins to flame, causing 1-2 points of damage per level of the spellcaster. On the fourth round it inflicts 1d4 points of damage per level of the caster, and on the fifth round this drops back to 1-2 points of damage per level as its flames burn out. In any successive rounds of existence, the cloud is simply harmless smoke that obscures vision within its confines. Creatures within the cloud need to make only one saving throw if it is successful, but if they fail the first saving throw, they roll again on the fourth and fifth rounds (if necessary) to attempt to reduce the damage sustained by one-half. In order to cast this spell, the wizard must have an available fire source (just as with a pyrotechnics spell), scrapings from beneath a dung pile, and a pinch of dust."
  }
 ]

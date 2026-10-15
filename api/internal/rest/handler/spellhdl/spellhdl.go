@@ -346,6 +346,18 @@ type SpellDamageDTO struct {
 	// save effect key (none, negates); Dice adds them up. Absent when the
 	// damage has no parts.
 	Parts []SpellDamagePartDTO `json:"parts,omitempty"`
+	// StepsPer ("round", "instance") and Steps are the dice of every round or
+	// instance of a damage whose dice change, in order; Dice is then empty
+	// and Rounds or Instances counts the steps. Absent without steps.
+	StepsPer string               `json:"steps_per,omitempty"`
+	Steps    []SpellDamageStepDTO `json:"steps,omitempty"`
+}
+
+// SpellDamageStepDTO is one dice step at the caster level: its 1-based round
+// or instance number and its dice (no groups and 0: no damage that step).
+type SpellDamageStepDTO struct {
+	Step int        `json:"step"`
+	Dice DiceSumDTO `json:"dice"`
 }
 
 // SpellDamagePartDTO is one damage part at the caster level.
@@ -361,7 +373,10 @@ func DamageToDTO(d *spelleffectsvc.DamageAt) *SpellDamageDTO {
 	}
 	out := &SpellDamageDTO{
 		CasterLevel: d.CasterLevel, Dice: sumToDTO(d.Dice), Instances: sumToDTO(d.Instances),
-		Rounds: sumToDTO(d.Rounds), Type: d.Type,
+		Rounds: sumToDTO(d.Rounds), Type: d.Type, StepsPer: string(d.StepsPer),
+	}
+	for _, st := range d.Steps {
+		out.Steps = append(out.Steps, SpellDamageStepDTO{Step: st.Step, Dice: sumToDTO(st.Dice)})
 	}
 	for _, p := range d.Parts {
 		out.Parts = append(out.Parts, SpellDamagePartDTO{Dice: sumToDTO(p.Dice), Save: string(p.Save)})

@@ -207,3 +207,98 @@ func TestCorrectionStep_IsTheExpectedTop(t *testing.T) {
 	assert.Equal(t, 2, *v.TargetAC, "the correction stays")
 	assert.Equal(t, actionlog.StatusAmended, status)
 }
+
+// Migration 023: amends written before correction steps (step_id NULL), on an
+// attack and on a save, still give their corrected payload, sit under any new
+// correction step, and pop only with their roll (ADR 0010 step 6, older amends).
+func TestCorrectionStep_PreStepAmendsPopWithTheirRoll(t *testing.T) {
+	bs := newBacking(t)
+	ctx, id := context.Background(), bs.CharacterID
+	legacyAmend := func(entryID int64, edit func(map[string]any)) {
+		t.Helper()
+		var p map[string]any
+		require.NoError(t, json.Unmarshal(entryByID(t, bs, entryID).Payload, &p))
+		edit(p)
+		raw, err := json.Marshal(p)
+		require.NoError(t, err)
+		_, err = bs.DB.ExecContext(ctx, `INSERT INTO action_corrections (action_id, kind, payload) VALUES (?, 'amend', ?)`, entryID, string(raw))
+		require.NoError(t, err)
+	}
+
+	save, err := bs.Combat.ResolveSavingThrow(ctx, id, combatsvc.SaveSpell)
+	require.NoError(t, err)
+	legacyAmend(save.LogEntryID, func(p map[string]any) { p["adjustment"] = 4 })
+	shot, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
+	require.NoError(t, err)
+	legacyAmend(shot.LogEntryID, func(p map[string]any) { p["targetAc"] = 9; p["rolledTargetAc"] = 5 })
+
+	e := entryByID(t, bs, save.LogEntryID)
+	assert.Equal(t, actionlog.StatusAmended, e.Status())
+	assert.JSONEq(t, "4", string(mustField(t, e.EffectivePayload(), "adjustment")))
+	v, status := attackOf(t, bs, shot.LogEntryID)
+	assert.Equal(t, 9, *v.TargetAC)
+	assert.Equal(t, actionlog.StatusAmended, status)
+
+	// A new correction stacks above the old amend; popping it gives the old amend back.
+	_, err = bs.Combat.AdjustAttackAC(ctx, id, shot.LogEntryID, 2)
+	require.NoError(t, err)
+	undoCorrection(t, bs, shot.LogEntryID)
+	v, _ = attackOf(t, bs, shot.LogEntryID)
+	assert.Equal(t, 9, *v.TargetAC, "the pre-step amend is still in effect")
+
+	// The old amends are no steps: the next undo pops the attack, then the save.
+	for _, want := range []int64{shot.LogEntryID, save.LogEntryID} {
+		popped, err := bs.Log.Undo(ctx, id, topID(t, bs))
+		require.NoError(t, err)
+		assert.Equal(t, want, popped.ID)
+		assert.Equal(t, actionlog.StatusVoided, popped.Status())
+	}
+	_, ok, err := bs.Log.TopID(ctx, id)
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+func mustField(t *testing.T, payload json.RawMessage, key string) json.RawMessage {
+	t.Helper()
+	var m map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(payload, &m))
+	return m[key]
+}
+
+// A save adjusted, then an attack whose AC is corrected: the attack is the
+// latest roll (the save can no longer be adjusted), the top is the AC
+// correction naming the attack, and an undo still expecting the save's
+// correction is stale (ADR 0006 step 6, ADR 0010 steps 3 and 6).
+func TestCorrectionStep_SaveThenAttackCorrection(t *testing.T) {
+	bs := newBacking(t)
+	ctx, id := context.Background(), bs.CharacterID
+	save, err := bs.Combat.ResolveSavingThrow(ctx, id, combatsvc.SaveSpell)
+	require.NoError(t, err)
+	_, err = bs.Combat.AdjustSave(ctx, id, save.LogEntryID, combatsvc.SaveAdjustment{Value: 2})
+	require.NoError(t, err)
+	saveStep := topID(t, bs)
+
+	shot, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
+	require.NoError(t, err)
+	_, err = bs.Combat.AdjustAttackAC(ctx, id, shot.LogEntryID, 3)
+	require.NoError(t, err)
+	_, err = bs.Combat.AdjustSave(ctx, id, save.LogEntryID, combatsvc.SaveAdjustment{Value: 1})
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+
+	top := entryByID(t, bs, topID(t, bs))
+	require.Equal(t, actionlog.KindCorrection, top.Kind)
+	var step actionlog.CorrectionStep
+	require.NoError(t, json.Unmarshal(top.Payload, &step))
+	assert.Equal(t, shot.LogEntryID, step.EntryID)
+	assert.Equal(t, actionlog.KindAttack, step.EntryKind)
+
+	_, err = bs.Log.Undo(ctx, id, saveStep)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+	v, _ := attackOf(t, bs, shot.LogEntryID)
+	assert.Equal(t, 3, *v.TargetAC, "nothing popped")
+	assert.JSONEq(t, "2", string(mustField(t, entryByID(t, bs, save.LogEntryID).EffectivePayload(), "adjustment")))
+
+	undoCorrection(t, bs, shot.LogEntryID)
+	v, _ = attackOf(t, bs, shot.LogEntryID)
+	assert.Equal(t, 5, *v.TargetAC)
+}

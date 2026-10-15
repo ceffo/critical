@@ -89,9 +89,11 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    `TestMigrate023_KeepsCorrectionsWithoutStep`; `composition`
    `TestCorrectionStep_TargetACTwiceUndoneTwice`, `TestCorrectionStep_SaveAdjustmentTwiceUndoneTwice`,
    `TestCorrectionStep_VerdictTwiceUndoneTwice`, `TestCorrectionStep_IsTheExpectedTop`,
+   `TestCorrectionStep_PreStepAmendsPopWithTheirRoll`, `TestCorrectionStep_SaveThenAttackCorrection`,
    `TestUnknownAC_AmmoSpentOnceAndUndoPopsTheAttack`; `router`
    `TestLogEndpoints_CorrectionStepShape`; `web/src/lib/undoButton.test.ts` (the correction
    tooltip, en/fr); `web/src/stores/undo.test.ts` ("a pop drops this session's live roll");
+   `web/src/lib/filCard.test.ts` ("a popped correction under the Rolls filter");
    `web/e2e/attack.spec.ts` "the target AC is corrected on the card after the roll" (Annuler
    pops the corrections back to the rolled AC, then the attack is voided).
 

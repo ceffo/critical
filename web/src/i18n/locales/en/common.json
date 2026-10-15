@@ -691,6 +691,11 @@
         "two_handed": "two-handed",
         "ammo_kind": "ammo kind"
       }
+    },
+    "undo": {
+      "label": "Undo",
+      "tooltip": "Undo: {{action}} (Ctrl+Z / ⌘Z)",
+      "nothing": "Nothing to undo"
     }
   },
   "critTable": {

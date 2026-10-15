@@ -691,6 +691,11 @@
         "two_handed": "à deux mains",
         "ammo_kind": "type de munition"
       }
+    },
+    "undo": {
+      "label": "Annuler",
+      "tooltip": "Annuler : {{action}} (Ctrl+Z / ⌘Z)",
+      "nothing": "Rien à annuler"
     }
   },
   "critTable": {

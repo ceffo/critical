@@ -103,11 +103,11 @@ test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and th
     .getByRole("complementary", { name: "Character" })
     .getByRole("group", { name: "e2e Stoneskin" });
   const absorb = card.getByRole("button", { name: "Absorb a hit with e2e Stoneskin" });
-  await expect(card.getByTestId("charge-count")).toHaveText("2 charges left");
+  await expect(card.getByTestId("charge-count")).toHaveText("2 / 2 charges");
   await expect(badge.getByTestId("pip-left")).toHaveCount(2);
 
   await absorb.click();
-  await expect(card.getByTestId("charge-count")).toHaveText("1 charge left");
+  await expect(card.getByTestId("charge-count")).toHaveText("1 / 2 charges");
   await expect(badge.getByTestId("buff-charges")).toHaveText("1 / 2 charges · until spent");
   await expect(badge.getByTestId("pip-left")).toHaveCount(1);
   await expect(badge.getByTestId("pip-used")).toHaveCount(1);
@@ -129,7 +129,7 @@ test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and th
 
   await voidEntry(page, "e2e Stoneskin absorbed a hit, ended");
   await expect(badge.getByTestId("buff-charges")).toHaveText("1 / 2 charges · until spent");
-  await expect(card.getByTestId("charge-count")).toHaveText("1 charge left");
+  await expect(card.getByTestId("charge-count")).toHaveText("1 / 2 charges");
 
   await expectNoReload(page);
   await snap(page, "stoneskin-voided");

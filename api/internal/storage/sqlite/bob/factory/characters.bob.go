@@ -69,14 +69,15 @@ type CharacterTemplate struct {
 }
 
 type characterR struct {
-	ActionLogs  []*characterRActionLogsR
-	ActiveBuffs []*characterRActiveBuffsR
-	AttackForm  *characterRAttackFormR
-	HPEvents    []*characterRHPEventsR
-	RoundStates []*characterRRoundStatesR
-	SavedBuffs  []*characterRSavedBuffsR
-	SpellSlots  []*characterRSpellSlotsR
-	XPEntries   []*characterRXPEntriesR
+	ActionLogs     []*characterRActionLogsR
+	ActiveBuffs    []*characterRActiveBuffsR
+	AttackForm     *characterRAttackFormR
+	DiceFavourites []*characterRDiceFavouritesR
+	HPEvents       []*characterRHPEventsR
+	RoundStates    []*characterRRoundStatesR
+	SavedBuffs     []*characterRSavedBuffsR
+	SpellSlots     []*characterRSpellSlotsR
+	XPEntries      []*characterRXPEntriesR
 }
 
 type characterRActionLogsR struct {
@@ -89,6 +90,10 @@ type characterRActiveBuffsR struct {
 }
 type characterRAttackFormR struct {
 	o *AttackFormTemplate
+}
+type characterRDiceFavouritesR struct {
+	number int
+	o      *DiceFavouriteTemplate
 }
 type characterRHPEventsR struct {
 	number int
@@ -158,6 +163,21 @@ func (t CharacterTemplate) setModelRels(o *models.Character) {
 		rel.CharacterID = o.ID // h2
 		o.R.AttackForm = rel
 		o.R.Loaded.AttackForm = true
+	}
+
+	if t.r.DiceFavourites != nil {
+		rel := models.DiceFavouriteSlice{}
+		for _, r := range t.r.DiceFavourites {
+			related := r.o.BuildMany(r.number)
+			for _, rel := range related {
+				rel.CharacterID = o.ID // h2
+				rel.R.Character = o
+				rel.R.Loaded.Character = true
+			}
+			rel = append(rel, related...)
+		}
+		o.R.DiceFavourites = rel
+		o.R.Loaded.DiceFavourites = true
 	}
 
 	if t.r.HPEvents != nil {
@@ -576,6 +596,26 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 
 	}
 
+	isDiceFavouritesDone, _ := characterRelDiceFavouritesCtx.Value(ctx)
+	if !isDiceFavouritesDone && o.r.DiceFavourites != nil {
+		ctx = characterRelDiceFavouritesCtx.WithValue(ctx, true)
+		for _, r := range o.r.DiceFavourites {
+			if r.o.alreadyPersisted {
+				m.R.DiceFavourites = append(m.R.DiceFavourites, r.o.Build())
+			} else {
+				rel3, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
+
+				err = m.AttachDiceFavourites(ctx, exec, rel3...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	isHPEventsDone, _ := characterRelHPEventsCtx.Value(ctx)
 	if !isHPEventsDone && o.r.HPEvents != nil {
 		ctx = characterRelHPEventsCtx.WithValue(ctx, true)
@@ -583,12 +623,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.HPEvents = append(m.R.HPEvents, r.o.Build())
 			} else {
-				rel3, err := r.o.CreateMany(ctx, exec, r.number)
+				rel4, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachHPEvents(ctx, exec, rel3...)
+				err = m.AttachHPEvents(ctx, exec, rel4...)
 				if err != nil {
 					return err
 				}
@@ -603,12 +643,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.RoundStates = append(m.R.RoundStates, r.o.Build())
 			} else {
-				rel4, err := r.o.CreateMany(ctx, exec, r.number)
+				rel5, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachRoundStates(ctx, exec, rel4...)
+				err = m.AttachRoundStates(ctx, exec, rel5...)
 				if err != nil {
 					return err
 				}
@@ -623,12 +663,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.SavedBuffs = append(m.R.SavedBuffs, r.o.Build())
 			} else {
-				rel5, err := r.o.CreateMany(ctx, exec, r.number)
+				rel6, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachSavedBuffs(ctx, exec, rel5...)
+				err = m.AttachSavedBuffs(ctx, exec, rel6...)
 				if err != nil {
 					return err
 				}
@@ -643,12 +683,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.SpellSlots = append(m.R.SpellSlots, r.o.Build())
 			} else {
-				rel6, err := r.o.CreateMany(ctx, exec, r.number)
+				rel7, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachSpellSlots(ctx, exec, rel6...)
+				err = m.AttachSpellSlots(ctx, exec, rel7...)
 				if err != nil {
 					return err
 				}
@@ -663,12 +703,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.XPEntries = append(m.R.XPEntries, r.o.Build())
 			} else {
-				rel7, err := r.o.CreateMany(ctx, exec, r.number)
+				rel8, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachXPEntries(ctx, exec, rel7...)
+				err = m.AttachXPEntries(ctx, exec, rel8...)
 				if err != nil {
 					return err
 				}
@@ -707,6 +747,7 @@ func (o *CharacterTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	newMInCreation["characters:action_log:fk_action_log_0"] = m
 	newMInCreation["characters:active_buffs:fk_active_buffs_0"] = m
 	newMInCreation["characters:attack_forms:fk_attack_forms_0"] = m
+	newMInCreation["characters:dice_favourites:fk_dice_favourites_0"] = m
 	newMInCreation["characters:hp_events:fk_hp_events_0"] = m
 	newMInCreation["characters:round_state:fk_round_state_0"] = m
 	newMInCreation["characters:saved_buffs:fk_saved_buffs_0"] = m
@@ -1796,6 +1837,54 @@ func (m characterMods) AddExistingActiveBuffs(existingModels ...*models.ActiveBu
 func (m characterMods) WithoutActiveBuffs() CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
 		o.r.ActiveBuffs = nil
+	})
+}
+
+func (m characterMods) WithDiceFavourites(number int, related *DiceFavouriteTemplate) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.DiceFavourites = []*characterRDiceFavouritesR{{
+			number: number,
+			o:      related,
+		}}
+	})
+}
+
+func (m characterMods) WithNewDiceFavourites(number int, mods ...DiceFavouriteMod) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		related := o.f.NewDiceFavouriteWithContext(ctx, mods...)
+		m.WithDiceFavourites(number, related).Apply(ctx, o)
+	})
+}
+
+func (m characterMods) AddDiceFavourites(number int, related *DiceFavouriteTemplate) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.DiceFavourites = append(o.r.DiceFavourites, &characterRDiceFavouritesR{
+			number: number,
+			o:      related,
+		})
+	})
+}
+
+func (m characterMods) AddNewDiceFavourites(number int, mods ...DiceFavouriteMod) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		related := o.f.NewDiceFavouriteWithContext(ctx, mods...)
+		m.AddDiceFavourites(number, related).Apply(ctx, o)
+	})
+}
+
+func (m characterMods) AddExistingDiceFavourites(existingModels ...*models.DiceFavourite) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		for _, em := range existingModels {
+			o.r.DiceFavourites = append(o.r.DiceFavourites, &characterRDiceFavouritesR{
+				o: o.f.fromExistingDiceFavourite(ctx, em),
+			})
+		}
+	})
+}
+
+func (m characterMods) WithoutDiceFavourites() CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.DiceFavourites = nil
 	})
 }
 

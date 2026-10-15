@@ -32,6 +32,9 @@ var _ bob.HookableType = &Character{}
 // Make sure the type CritTableRow runs hooks after queries
 var _ bob.HookableType = &CritTableRow{}
 
+// Make sure the type DiceFavourite runs hooks after queries
+var _ bob.HookableType = &DiceFavourite{}
+
 // Make sure the type HPEvent runs hooks after queries
 var _ bob.HookableType = &HPEvent{}
 

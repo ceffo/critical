@@ -127,9 +127,20 @@ const profCheck = {
 };
 const bardCheck = { id: "climb_walls", kind: "bardSkill", die: 100, roll: 42, target: 85, success: true, modifier: 0 };
 
+const diceRoll = {
+  formula: "2d6-d4+3",
+  groups: [
+    { sides: 6, rolls: [2, 5], negative: false, subtotal: 7 },
+    { sides: 4, rolls: [3], negative: true, subtotal: -3 },
+  ],
+  modifier: 3,
+  total: 7,
+};
+
 const KINDS: [LogKind, unknown, CardModel["layout"], Partial<LogEntry>?][] = [
   ["attack", attackPayload, "attack"],
   ["skill_check", profCheck, "skill"],
+  ["dice", diceRoll, "dice"],
   ["save", savePayload, "save"],
   ["cast", castPayload, "cast"],
   ["item_use", usePayload, "item"],
@@ -155,8 +166,8 @@ describe("cardModel: every log kind renders from its payload", () => {
   it("covers every kind", () => {
     const kinds = new Set(KINDS.map(([k]) => k));
     expect(kinds.size).toBe(KINDS.length);
-    // LogKind has 21 members (types/log.ts); a new kind must be added here.
-    expect(kinds.size).toBe(21);
+    // LogKind has 22 members (types/log.ts); a new kind must be added here.
+    expect(kinds.size).toBe(22);
   });
 
   it.each(KINDS)("%s → %s", async (kind, payload, layout, over) => {
@@ -412,6 +423,7 @@ describe("journal: rolls filter and row values", () => {
     expect(isRollEntry(entry("item_use", usePayload))).toBe(true);
     expect(isRollEntry(entry("initiative", { round: 1, d10: 3 }))).toBe(true);
     expect(isRollEntry(entry("skill_check", bardCheck))).toBe(true);
+    expect(isRollEntry(entry("dice", diceRoll))).toBe(true);
     expect(isRollEntry(entry("cast", castPayload))).toBe(true);
     expect(
       isRollEntry(entry("cast", { ...castPayload, damage: undefined, attack: { d20: 9, targetAc: 4, hit: true } })),
@@ -444,6 +456,7 @@ describe("journal: rolls filter and row values", () => {
     [entry("initiative", { round: 3, d10: 7 }), { text: "7", tone: "accent" }],
     [entry("skill_check", profCheck), { text: "17", tone: "fail" }],
     [entry("skill_check", bardCheck), { text: "42", tone: "pass" }],
+    [entry("dice", diceRoll), { text: "7", tone: "accent" }],
     [entry("cast", castPayload), { text: "17", tone: "accent" }],
     [entry("buff_change", { action: "dismiss", buff: "Haste" }), null],
   ])("row value %#", (e, want) => {

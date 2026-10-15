@@ -194,6 +194,20 @@ func TestCharacterHasRelationsEmitExists(t *testing.T) {
 		}
 	})
 
+	t.Run("DiceFavourites", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(Characters.NameExpr()),
+			SelectWhere.Characters.R.HasDiceFavourites(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasDiceFavourites: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasDiceFavourites: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
 	t.Run("HPEvents", func(t *testing.T) {
 		q := sqlite.Select(
 			sm.From(Characters.NameExpr()),
@@ -261,6 +275,27 @@ func TestCharacterHasRelationsEmitExists(t *testing.T) {
 		}
 		if !strings.Contains(sql, "EXISTS") {
 			t.Errorf("HasXPEntries: expected EXISTS in query, got: %s", sql)
+		}
+	})
+}
+
+// TestDiceFavouriteHasRelationsEmitExists verifies that every generated
+// Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
+// an INNER JOIN, so the parent rows are never multiplied.
+func TestDiceFavouriteHasRelationsEmitExists(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Character", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(DiceFavourites.NameExpr()),
+			SelectWhere.DiceFavourites.R.HasCharacter(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasCharacter: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasCharacter: expected EXISTS in query, got: %s", sql)
 		}
 	})
 }

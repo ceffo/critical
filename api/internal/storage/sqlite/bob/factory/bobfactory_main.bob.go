@@ -21,6 +21,7 @@ type Factory struct {
 	baseBardSkillMods        BardSkillModSlice
 	baseCharacterMods        CharacterModSlice
 	baseCritTableRowMods     CritTableRowModSlice
+	baseDiceFavouriteMods    DiceFavouriteModSlice
 	baseHPEventMods          HPEventModSlice
 	baseItemMods             ItemModSlice
 	baseProficiencyMods      ProficiencyModSlice
@@ -374,6 +375,9 @@ func (f *Factory) fromExistingCharacter(ctx context.Context, m *models.Character
 	if m.R.AttackForm != nil {
 		CharacterMods.WithExistingAttackForm(m.R.AttackForm).Apply(ctx, o)
 	}
+	if len(m.R.DiceFavourites) > 0 {
+		CharacterMods.AddExistingDiceFavourites(m.R.DiceFavourites...).Apply(ctx, o)
+	}
 	if len(m.R.HPEvents) > 0 {
 		CharacterMods.AddExistingHPEvents(m.R.HPEvents...).Apply(ctx, o)
 	}
@@ -419,6 +423,49 @@ func (f *Factory) fromExistingCritTableRow(ctx context.Context, m *models.CritTa
 	o.RollFrom = func() int64 { return m.RollFrom }
 	o.RollTo = func() int64 { return m.RollTo }
 	o.Multiplier = func() float64 { return m.Multiplier }
+
+	return o
+}
+
+func (f *Factory) NewDiceFavourite(mods ...DiceFavouriteMod) *DiceFavouriteTemplate {
+	return f.NewDiceFavouriteWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewDiceFavouriteWithContext(ctx context.Context, mods ...DiceFavouriteMod) *DiceFavouriteTemplate {
+	o := &DiceFavouriteTemplate{f: f}
+
+	if f != nil {
+		f.baseDiceFavouriteMods.Apply(ctx, o)
+	}
+
+	DiceFavouriteModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingDiceFavourite(ctx context.Context, m *models.DiceFavourite) *DiceFavouriteTemplate {
+	visited := make(map[uintptr]struct{})
+	ctx = factoryVisitedCtx.WithValue(ctx, visited)
+	return f.fromExistingDiceFavourite(ctx, m)
+}
+
+func (f *Factory) fromExistingDiceFavourite(ctx context.Context, m *models.DiceFavourite) *DiceFavouriteTemplate {
+	o := &DiceFavouriteTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int64 { return m.ID }
+	o.CharacterID = func() int64 { return m.CharacterID }
+	o.Formula = func() string { return m.Formula }
+
+	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
+		ptr := uintptr(unsafe.Pointer(m))
+		if _, seen := visited[ptr]; seen {
+			return o
+		}
+		visited[ptr] = struct{}{}
+	}
+	if m.R.Character != nil {
+		DiceFavouriteMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)
+	}
 
 	return o
 }
@@ -861,6 +908,14 @@ func (f *Factory) ClearBaseCritTableRowMods() {
 
 func (f *Factory) AddBaseCritTableRowMod(mods ...CritTableRowMod) {
 	f.baseCritTableRowMods = append(f.baseCritTableRowMods, mods...)
+}
+
+func (f *Factory) ClearBaseDiceFavouriteMods() {
+	f.baseDiceFavouriteMods = nil
+}
+
+func (f *Factory) AddBaseDiceFavouriteMod(mods ...DiceFavouriteMod) {
+	f.baseDiceFavouriteMods = append(f.baseDiceFavouriteMods, mods...)
 }
 
 func (f *Factory) ClearBaseHPEventMods() {

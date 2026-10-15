@@ -66,7 +66,26 @@ id, character_id, entry_date TEXT, session TEXT, reason TEXT, base INTEGER, bonu
 -- at startup; a check is an action_log entry (skill_check), nothing is stored here
 id TEXT, position, ability TEXT ('str'..'cha'), modifier INTEGER
 id TEXT, position, percent INTEGER (0-100)
+
+-- dice_favourites: the composer's saved formulas, per character, in normal form (unique per character)
+id, character_id, formula TEXT
 ```
+
+### Dice composer (dicesvc)
+
+`POST /api/roll/dice {formula}` rolls a free formula through the dice port and records a `dice` action
+log entry (payload `{formula, groups, modifier, total}`, no snapshot: undo only pops it). `dice` is
+deliberately not a roll kind (`actionlog.RollKinds`): a stray composer roll neither replaces the result
+card nor ends the correction window of the latest save or attack (ADR 0006 step 6). Favourites:
+`GET|POST /api/dice/favourites`, `DELETE /api/dice/favourites/{id}` (answers the remaining list).
+
+Grammar (`dicesvc.Parse`, not `pkg/formula`, which serves spell effects): terms joined by `+` or `-`, each
+`NdM`, `dM`, `d%` (a d100) or an integer constant; spaces ignored, `d` case-insensitive. At least one
+die. Limits: formula up to 200 characters, 1 to 100 dice per term and 100 in total, 2 to 1000 sides,
+constants adding up to at most 10000 (in absolute value), 50 favourites. A violation is a 400 with a
+`formula` field error. The answer's `formula` is the normal form (same dice merged in order of first
+appearance, one trailing constant, `d%` for 100 sides, no count for one die), which is also what a
+favourite stores. Out of scope: keep-highest, advantage, named rolls.
 
 ### JSON column tables (complex state)
 ```sql

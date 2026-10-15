@@ -35,6 +35,7 @@ type joins[Q dialect.Joinable] struct {
 	ActiveBuffs       joinSet[activeBuffJoins[Q]]
 	AttackForms       joinSet[attackFormJoins[Q]]
 	Characters        joinSet[characterJoins[Q]]
+	DiceFavourites    joinSet[diceFavouriteJoins[Q]]
 	HPEvents          joinSet[hpEventJoins[Q]]
 	RoundStates       joinSet[roundStateJoins[Q]]
 	SavedBuffs        joinSet[savedBuffJoins[Q]]
@@ -58,6 +59,7 @@ func getJoins[Q dialect.Joinable]() joins[Q] {
 		ActiveBuffs:       buildJoinSet[activeBuffJoins[Q]](ActiveBuffs.Columns, buildActiveBuffJoins),
 		AttackForms:       buildJoinSet[attackFormJoins[Q]](AttackForms.Columns, buildAttackFormJoins),
 		Characters:        buildJoinSet[characterJoins[Q]](Characters.Columns, buildCharacterJoins),
+		DiceFavourites:    buildJoinSet[diceFavouriteJoins[Q]](DiceFavourites.Columns, buildDiceFavouriteJoins),
 		HPEvents:          buildJoinSet[hpEventJoins[Q]](HPEvents.Columns, buildHPEventJoins),
 		RoundStates:       buildJoinSet[roundStateJoins[Q]](RoundStates.Columns, buildRoundStateJoins),
 		SavedBuffs:        buildJoinSet[savedBuffJoins[Q]](SavedBuffs.Columns, buildSavedBuffJoins),

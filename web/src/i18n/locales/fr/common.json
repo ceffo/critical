@@ -644,7 +644,8 @@
       "item_add": "Objet",
       "item_edit": "Objet",
       "item_remove": "Objet",
-      "skill_check": "Compétence"
+      "skill_check": "Compétence",
+      "dice": "Dés"
     },
     "status": {
       "active": "Actif",
@@ -762,7 +763,8 @@
     "skill": {
       "success": "{{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
       "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec"
-    }
+    },
+    "dice": "Dés {{formula}} = {{total}}"
   },
   "critTable": {
     "title": "Table des critiques (règle maison)",
@@ -944,5 +946,30 @@
       "pick_pockets": "Vol à la tire",
       "read_languages": "Lecture des langues"
     }
+  },
+  "dice": {
+    "title": "Dés",
+    "formula": "Formule",
+    "placeholder": "2d6+1",
+    "roll": "Lancer",
+    "reroll": "Relancer",
+    "rerollTitle": "Relancer {{formula}}",
+    "clear": "Effacer",
+    "plus": "Ajouter 1",
+    "minus": "Retirer 1",
+    "add": "Ajouter un {{die}}",
+    "remove": "Retirer un {{die}}",
+    "count": "{{count}} × {{die}}, en retirer un",
+    "invalid": "Formule invalide",
+    "saveFavourite": "Enregistrer en favori",
+    "favourites": "Favoris",
+    "noFavourites": "Aucun favori",
+    "rollFavourite": "Lancer {{formula}}",
+    "removeFavourite": "Retirer {{formula}} des favoris",
+    "result": "Jet de dés",
+    "modifier": "Modificateur",
+    "total": "Total",
+    "group": "{{count}}d{{sides}}",
+    "groupPercent": "{{count}}d%"
   }
 }

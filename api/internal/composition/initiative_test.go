@@ -146,6 +146,7 @@ func TestInitiative_OutOfCombatOnTheRealLog(t *testing.T) {
 	assert.Nil(t, initiativeOf(t, bs))
 	_, err = bs.Buffs.RerollInitiative(ctx, id)
 	assert.ErrorIs(t, err, domain.ErrConflict)
+	assert.ErrorIs(t, err, buffsvc.ErrNoInitiative)
 
 	_, err = bs.Log.Void(ctx, id, latest(t, bs).ID)
 	require.NoError(t, err)

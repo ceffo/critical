@@ -80,7 +80,7 @@ func TestAttackForm_PatchUnknownTargetAC(t *testing.T) {
 	h, _ = newRouter(t)
 	rec = do(h, "PATCH", "/api/attack/form", `{"targetAc":"five"}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.JSONEq(t, `{"error":"targetAc must be a whole number or null"}`, rec.Body.String())
+	assert.JSONEq(t, `{"error":"targetAc must be a whole number or null","code":"bad_request"}`, rec.Body.String())
 }
 
 func TestAttackForm_PatchErrors(t *testing.T) {
@@ -92,5 +92,5 @@ func TestAttackForm_PatchErrors(t *testing.T) {
 		Return(nil, fmt.Errorf("wrapped: %w", domain.FieldErrorf("targetAc", "target AC must be between -20 and 20")))
 	rec := do(h, "PATCH", "/api/attack/form", `{"targetAc":30}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.JSONEq(t, `{"error":"target AC must be between -20 and 20","field":"targetAc"}`, rec.Body.String())
+	assert.JSONEq(t, `{"error":"target AC must be between -20 and 20","field":"targetAc","code":"invalid_input"}`, rec.Body.String())
 }

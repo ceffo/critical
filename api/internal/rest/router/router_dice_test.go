@@ -35,7 +35,7 @@ func TestDice_InvalidFormulaIs400WithTheField(t *testing.T) {
 	m.dice.EXPECT().Roll(mock.Anything, int64(1), "x").Return(nil, domain.FieldErrorf("formula", "bad"))
 	rec := do(h, "POST", "/api/roll/dice", `{"formula":"x"}`)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.JSONEq(t, `{"error":"bad","field":"formula"}`, rec.Body.String())
+	assert.JSONEq(t, `{"error":"bad","field":"formula","code":"invalid_input"}`, rec.Body.String())
 }
 
 func TestDice_RequestParsing(t *testing.T) {
@@ -51,7 +51,7 @@ func TestDice_RequestParsing(t *testing.T) {
 			h, _ := newRouter(t)
 			rec := do(h, c.method, c.path, c.body)
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
-			assert.JSONEq(t, fmt.Sprintf(`{"error":%q}`, c.msg), rec.Body.String())
+			assert.JSONEq(t, fmt.Sprintf(`{"error":%q,"code":"bad_request"}`, c.msg), rec.Body.String())
 		})
 	}
 }

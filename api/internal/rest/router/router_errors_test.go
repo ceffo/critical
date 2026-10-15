@@ -23,6 +23,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	detailsmocks "github.com/ceffo/critical/api/internal/domain/service/detailssvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	dicemocks "github.com/ceffo/critical/api/internal/domain/service/dicesvc/mocks"
 	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -259,11 +260,11 @@ func TestServiceErrorsMapToStatusAndBody(t *testing.T) {
 		status int
 		body   string
 	}{
-		{"invalid input", fmt.Errorf("%w: bad delta", domain.ErrInvalidInput), 400, `{"error":"invalid input: bad delta"}`},
-		{"conflict", fmt.Errorf("%w: dup", domain.ErrConflict), 409, `{"error":"conflict: dup"}`},
-		{"not found", fmt.Errorf("%w: x", domain.ErrNotFound), 404, `{"error":"not found: x"}`},
-		{"character not found", domain.ErrCharacterNotFound, 404, `{"error":"character not found"}`},
-		{"unknown", errors.New("boom"), 500, `{"error":"boom"}`},
+		{"invalid input", fmt.Errorf("%w: bad delta", domain.ErrInvalidInput), 400, `{"code":"invalid_input","error":"invalid input: bad delta"}`},
+		{"conflict", fmt.Errorf("%w: dup", domain.ErrConflict), 409, `{"code":"conflict","error":"conflict: dup"}`},
+		{"not found", fmt.Errorf("%w: x", domain.ErrNotFound), 404, `{"code":"not_found","error":"not found: x"}`},
+		{"character not found", domain.ErrCharacterNotFound, 404, `{"code":"character_not_found","error":"character not found"}`},
+		{"unknown", errors.New("boom"), 500, `{"code":"internal","error":"boom"}`},
 	}
 	for _, ep := range endpoints {
 		for _, e := range errs {
@@ -289,24 +290,26 @@ func TestSpecialSentinels(t *testing.T) {
 		status int
 		body   string
 	}{
-		{"weapon not found", "POST roll/attack", fmt.Errorf("%w: sword", combatsvc.ErrWeaponNotFound), 404, `{"error":"weapon not found"}`},
-		{"item not found", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemNotFound), 404, `{"error":"item not found: wand"}`},
-		{"item empty", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemEmpty), 409, `{"error":"item is empty: wand"}`},
-		{"slot already used", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed), 409, `{"error":"slot already used: 2"}`},
-		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"error":"invalid slot index: 2"}`},
-		{"void not the latest", "POST log/{id}/void", fmt.Errorf("%w: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first"}`},
-		{"hp undo not the latest", "POST hp/undo", fmt.Errorf("%w: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first"}`},
-		{"undo stale top", "POST log/undo", fmt.Errorf("%w: the newest entry is #5 (attack, round 2), not #4", actionlogsvc.ErrTopChanged), 409, `{"error":"the newest entry changed: the newest entry is #5 (attack, round 2), not #4"}`},
-		{"undo empty log", "POST log/undo", fmt.Errorf("%w: expected #4 on top", actionlogsvc.ErrNothingToUndo), 409, `{"error":"nothing to undo: expected #4 on top"}`},
-		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
-		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
-		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
-		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #7"}`},
-		{"adjust not a save", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7 is attack, not save", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #7 is attack, not save"}`},
-		{"attack AC not latest", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this attack and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this attack and roll again"}`},
-		{"attack AC voided", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #7"}`},
-		{"attack AC not an attack", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7 is save, not attack", actionlogsvc.ErrNotAmendable), 400, `{"error":"entry cannot be amended: #7 is save, not attack"}`},
-		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"error":"ctx: slot already used: 2"}`},
+		{"weapon not found", "POST roll/attack", fmt.Errorf("%w: sword", combatsvc.ErrWeaponNotFound), 404, `{"code":"weapon_not_found","error":"weapon not found"}`},
+		{"item not found", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemNotFound), 404, `{"code":"item_not_found","error":"item not found: wand"}`},
+		{"item empty", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemEmpty), 409, `{"code":"item_empty","error":"item is empty: wand"}`},
+		{"slot already used", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed), 409, `{"code":"slot_already_used","error":"slot already used: 2"}`},
+		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"code":"invalid_slot_index","error":"invalid slot index: 2"}`},
+		{"void not the latest", "POST log/{id}/void", fmt.Errorf("%w: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first"}`},
+		{"hp undo not the latest", "POST hp/undo", fmt.Errorf("%w: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first"}`},
+		{"undo stale top", "POST log/undo", fmt.Errorf("%w: the newest entry is #5 (attack, round 2), not #4", actionlogsvc.ErrTopChanged), 409, `{"code":"log_top_changed","error":"the newest entry changed: the newest entry is #5 (attack, round 2), not #4"}`},
+		{"undo empty log", "POST log/undo", fmt.Errorf("%w: expected #4 on top", actionlogsvc.ErrNothingToUndo), 409, `{"code":"nothing_to_undo","error":"nothing to undo: expected #4 on top"}`},
+		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already voided: #4"}`},
+		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already voided: #4"}`},
+		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
+		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already voided: #7"}`},
+		{"adjust not a save", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7 is attack, not save", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is attack, not save"}`},
+		{"attack AC not latest", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this attack and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, void this attack and roll again"}`},
+		{"attack AC voided", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already voided: #7"}`},
+		{"attack AC not an attack", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7 is save, not attack", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is save, not attack"}`},
+		{"reroll without initiative", "POST log/undo", fmt.Errorf("%w: %w", domain.ErrConflict, buffsvc.ErrNoInitiative), 409, `{"code":"no_initiative","error":"conflict: no initiative to reroll"}`},
+		{"too many favourites", "POST log/undo", fmt.Errorf("%w: %w (at most 50)", domain.ErrConflict, dicesvc.ErrTooManyFavourites), 409, `{"code":"too_many_favourites","error":"conflict: too many favourites (at most 50)"}`},
+		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"code":"slot_already_used","error":"ctx: slot already used: 2"}`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -363,7 +366,7 @@ func TestRequestParsingErrors(t *testing.T) {
 			h, _ := newRouter(t) // mocks fail the test on any unexpected call
 			rec := do(h, c.method, c.path, c.body)
 			assert.Equal(t, 400, rec.Code)
-			assert.Equal(t, `{"error":"`+c.body400+`"}`+"\n", rec.Body.String())
+			assert.Equal(t, `{"code":"bad_request","error":"`+c.body400+`"}`+"\n", rec.Body.String())
 			assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 		})
 	}

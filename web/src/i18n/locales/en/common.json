@@ -1003,5 +1003,23 @@
     "groupPercent": "{{count}}d%",
     "send": "Send {{formula}} to the dice",
     "rollFormula": "Roll {{formula}}"
+  },
+  "apiError": {
+    "character_not_found": "This character no longer exists.",
+    "weapon_not_found": "That weapon no longer exists.",
+    "item_not_found": "That item no longer exists.",
+    "item_empty": "That item is empty.",
+    "item_not_restockable": "That item cannot be restocked.",
+    "slot_already_used": "That spell slot is already used.",
+    "invalid_slot_index": "That spell slot does not exist.",
+    "not_in_spellbook": "That spell is not in the spellbook.",
+    "prep_over_limit": "Too many spells prepared for this level.",
+    "entry_already_voided": "That entry is already voided.",
+    "entry_not_amendable": "That entry cannot be amended.",
+    "entry_not_latest": "Only the newest entry can be changed: undo the newer entries first.",
+    "log_top_changed": "The newest entry changed in the meantime. Check the journal and try again.",
+    "nothing_to_undo": "There is nothing to undo.",
+    "no_initiative": "There is no initiative to reroll: start a combat first.",
+    "too_many_favourites": "Too many favourite rolls: remove one first."
   }
 }

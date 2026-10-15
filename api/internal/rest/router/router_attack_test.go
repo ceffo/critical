@@ -74,7 +74,7 @@ func TestAttackVerdict_BadRequests(t *testing.T) {
 			h, _ := newRouter(t)
 			rec := do(h, "POST", tt.path, tt.body)
 			require.Equal(t, http.StatusBadRequest, rec.Code)
-			assert.JSONEq(t, `{"error":"`+tt.want+`"}`, rec.Body.String())
+			assert.JSONEq(t, `{"error":"`+tt.want+`","code":"bad_request"}`, rec.Body.String())
 		})
 	}
 }
@@ -109,7 +109,7 @@ func TestAdjustAttack_BadRequests(t *testing.T) {
 			h, _ := newRouter(t)
 			rec := do(h, "POST", tt.path, tt.body)
 			require.Equal(t, http.StatusBadRequest, rec.Code)
-			assert.JSONEq(t, `{"error":"`+tt.want+`"}`, rec.Body.String())
+			assert.JSONEq(t, `{"error":"`+tt.want+`","code":"bad_request"}`, rec.Body.String())
 		})
 	}
 }

@@ -9,6 +9,7 @@ package dicesvc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -17,6 +18,10 @@ import (
 
 // MaxFavourites is how many formulas a character can keep.
 const MaxFavourites = 50
+
+// ErrTooManyFavourites is the conflict returned beyond MaxFavourites; it also
+// wraps domain.ErrConflict.
+var ErrTooManyFavourites = errors.New("too many favourites")
 
 // SVC is the driver port.
 type SVC interface {
@@ -185,7 +190,7 @@ func (s *service) AddFavourite(ctx context.Context, characterID int64, formula s
 			}
 		}
 		if len(all) >= MaxFavourites {
-			return fmt.Errorf("%w: at most %d favourites", domain.ErrConflict, MaxFavourites)
+			return fmt.Errorf("%w: %w (at most %d)", domain.ErrConflict, ErrTooManyFavourites, MaxFavourites)
 		}
 		id, err := s.dal.Insert(ctx, characterID, normal)
 		if err != nil {

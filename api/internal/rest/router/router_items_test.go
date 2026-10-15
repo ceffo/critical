@@ -96,7 +96,7 @@ func TestItems_CreateInvalidNamesTheField(t *testing.T) {
 		Return(nil, fmt.Errorf("wrapped: %w", &domain.FieldError{Field: "effectDice", Message: "Effect dice must look like 2d6 or 1d8+2"}))
 	rec := do(h, "POST", "/api/items", `{"name":"X","behaviour":"stock","effectDice":"2x6"}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.JSONEq(t, `{"error":"Effect dice must look like 2d6 or 1d8+2","field":"effectDice"}`, rec.Body.String())
+	assert.JSONEq(t, `{"error":"Effect dice must look like 2d6 or 1d8+2","field":"effectDice","code":"invalid_input"}`, rec.Body.String())
 }
 
 func TestItems_UpdatePatchesOnlyTheFieldsSent(t *testing.T) {

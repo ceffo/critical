@@ -127,7 +127,7 @@ as backlog (P4) and never dispatched without the user's say-so.
 
 From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check hardest:
 - Game logic lives only in Go; the frontend sends intent and renders structured responses.
-- Roll endpoints return a complete breakdown struct. Errors are `{"error": "message"}`.
+- Roll endpoints return a complete breakdown struct. Errors are `{"error": "message", "code": "…"}`; a new refusal gets a row (and code) in `internal/render` and an `apiError.<code>` i18n key (en + fr).
 - HP is an append-only ledger; current HP = `SUM(delta)`.
 - Architecture layering per `docs/clean_architecture.md`; wiring only in the composition root.
 - Tests follow "Testing Conventions" in `docs/backend.md`; rule changes get a test that fails on

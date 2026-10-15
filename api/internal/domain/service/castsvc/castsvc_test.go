@@ -261,7 +261,7 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		},
 		{
 			name: "low-confidence spell shows its text only",
-			slot: slot("cloudkill", "Cloudkill", 5), textOnly: castsvc.TextOnlyLowConfidence,
+			slot: slot("tashas_uncontrollable_hideous_laughter", "Tasha's Uncontrollable Hideous Laughter", 2), textOnly: castsvc.TextOnlyLowConfidence,
 		},
 		{
 			name: "slot saved before preparation: id from the name",
@@ -674,7 +674,7 @@ func TestDamageAt_NoneAndBounds(t *testing.T) {
 	got, err := f.svc.DamageAt(context.Background(), "alarm", bardLevel)
 	require.NoError(t, err)
 	assert.Nil(t, got, "a utility spell rolls no damage")
-	got, err = f.svc.DamageAt(context.Background(), "cloudkill", bardLevel)
+	got, err = f.svc.DamageAt(context.Background(), "tashas_uncontrollable_hideous_laughter", bardLevel)
 	require.NoError(t, err)
 	assert.Nil(t, got, "a low-confidence spell rolls no damage")
 	got, err = f.svc.DamageAt(context.Background(), "no_such_spell", bardLevel)

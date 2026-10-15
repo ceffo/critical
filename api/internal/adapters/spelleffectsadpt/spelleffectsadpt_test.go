@@ -359,3 +359,74 @@ func TestParse_DamageStepsRefused(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0008 step 16: the loader maps an exposure, one damage (steps per
+// round allowed) or modes each with its damage, on a damage spell that may
+// have no damage of its own.
+func TestParse_Exposure(t *testing.T) {
+	seed := `[` +
+		`{"id":"fog","name":"Fog","level":6,"kind":"damage","confidence":"high","target":"area","duration":{"kind":"instant"},
+		  "exposure":{"damage":{"steps":{"per":"round","list":["1","2","4","8"]},"type":"acid"}}},` +
+		`{"id":"wall","name":"Wall","level":4,"kind":"damage","confidence":"high","target":"area","duration":{"kind":"instant"},
+		  "exposure":{"modes":[{"key":"near","damage":{"dice":"2d4","type":"fire"}},{"key":"through","damage":{"dice":"2d6+level","type":"fire"}}]}},` +
+		`{"id":"cloud","name":"Cloud","level":5,"kind":"damage","confidence":"high","target":"area","duration":{"kind":"instant"},
+		  "damage":{"dice":"1d4"},"exposure":{"damage":{"parts":[{"dice":"1d10"}],"type":"poison"}}}]`
+	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	require.NoError(t, err)
+
+	fog, ok := c.Get("fog")
+	require.True(t, ok)
+	assert.Nil(t, fog.Damage, "no cast damage")
+	require.NotNil(t, fog.Exposure)
+	require.NotNil(t, fog.Exposure.Damage.Steps)
+	assert.Equal(t, spelleffectsvc.StepPerRound, fog.Exposure.Damage.Steps.Per)
+	assert.Len(t, fog.Exposure.Damage.Steps.List, 4)
+	assert.Equal(t, "acid", fog.Exposure.Damage.Type)
+
+	wall, ok := c.Get("wall")
+	require.True(t, ok)
+	require.Len(t, wall.Exposure.Modes, 2)
+	assert.Equal(t, "near", wall.Exposure.Modes[0].Key)
+	assert.Equal(t, "2d4", wall.Exposure.Modes[0].Damage.Dice.String())
+	assert.Equal(t, "through", wall.Exposure.Modes[1].Key)
+	assert.Equal(t, "2d6+level", wall.Exposure.Modes[1].Damage.Dice.String())
+	assert.Nil(t, wall.Exposure.Damage)
+
+	cloud, ok := c.Get("cloud")
+	require.True(t, ok)
+	assert.Equal(t, "1d4", cloud.Damage.Dice.String(), "a cast damage besides the exposure")
+	require.Len(t, cloud.Exposure.Damage.Parts, 1)
+}
+
+// ADR 0008 step 16: an exposure that is not one roll per round of exposure,
+// has both or neither of damage and modes, modes that break the rules of
+// step 14 or lack damage, or sits on a spell that is not a damage spell is a
+// startup error naming the spell and the field.
+func TestParse_ExposureRefused(t *testing.T) {
+	near := `{"key":"near","damage":{"dice":"2d4"}}`
+	tests := map[string]struct{ kind, rest, want string }{
+		"not a damage spell":     {"utility", `"exposure":{"damage":{"dice":"1d10"}}`, "only a damage spell can have an exposure"},
+		"neither":                {"damage", `"exposure":{}`, "exposure: set exactly one of damage and modes"},
+		"both":                   {"damage", `"exposure":{"damage":{"dice":"1d10"},"modes":[` + near + `,{"key":"far","damage":{"dice":"1d4"}}]}`, "exposure: set exactly one of damage and modes"},
+		"instances":              {"damage", `"exposure":{"damage":{"dice":"1d10","instances":"2"}}`, "exposure.damage: one roll is one round of exposure"},
+		"rounds":                 {"damage", `"exposure":{"damage":{"dice":"1d10","rounds":"level"}}`, "exposure.damage: one roll is one round of exposure"},
+		"steps per instance":     {"damage", `"exposure":{"damage":{"steps":{"per":"instance","list":["1","2"]}}}`, `exposure.damage.steps: the steps of an exposure are its rounds`},
+		"dice not added":         {"damage", `"exposure":{"damage":{"dice":"2*1d4"}}`, "exposure.damage: expand 2*1d4"},
+		"no dice":                {"damage", `"exposure":{"damage":{"type":"fire"}}`, "exposure.damage: set exactly one of dice, by_level and parts"},
+		"one mode":               {"damage", `"exposure":{"modes":[` + near + `]}`, "exposure.modes: at least two are needed, got 1"},
+		"empty modes":            {"damage", `"exposure":{"modes":[]}`, "exposure.modes: at least two are needed, got 0"},
+		"duplicate key":          {"damage", `"exposure":{"modes":[` + near + `,` + near + `]}`, `exposure.modes[1]: duplicate key "near"`},
+		"key not snake_case":     {"damage", `"exposure":{"modes":[{"key":"Near","damage":{"dice":"1d4"}},` + near + `]}`, `exposure.modes[0]: key "Near" is not snake_case`},
+		"mode without damage":    {"damage", `"exposure":{"modes":[{"key":"far"},` + near + `]}`, "exposure.modes[0]: an exposure mode needs damage"},
+		"mode with instances":    {"damage", `"exposure":{"modes":[{"key":"far","damage":{"dice":"1d4","instances":"3"}},` + near + `]}`, "exposure.modes[0].damage: one roll is one round of exposure"},
+		"no damage, no exposure": {"damage", `"note":"x"`, "a damage spell needs damage, modes or an exposure"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := spelleffectsadpt.New(writeSeed(t, modesSeed(tt.kind, "", tt.rest)))
+			require.Error(t, err)
+			assert.ErrorContains(t, err, `spell "bolt"`)
+			assert.ErrorContains(t, err, tt.want)
+		})
+	}
+}

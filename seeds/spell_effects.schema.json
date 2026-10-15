@@ -105,6 +105,28 @@
           }
         }
       },
+      "exposure": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "The damage of one round of exposure to the area the spell leaves, rolled on request by the player for whoever is in it or passes through it (docs/adr/0008 step 16). Only on a damage spell, which may then have no damage of its own. Set exactly one of damage and modes. The damage is one roll per round: no instances or rounds; steps only per round, a step being the round of exposure (a later round rolls the last step).",
+        "properties": {
+          "damage": { "$ref": "#/items/properties/damage" },
+          "modes": {
+            "type": "array",
+            "minItems": 2,
+            "description": "Options picked at each exposure (the first is the default), each with its damage; keys are unique.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "damage"],
+              "properties": {
+                "key": { "type": "string", "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$", "description": "snake_case, unique in the exposure; the UI words it (spellMode.<spell id>.<key>)" },
+                "damage": { "$ref": "#/items/properties/damage" }
+              }
+            }
+          }
+        }
+      },
       "modifiers": {
         "type": "object",
         "additionalProperties": false,

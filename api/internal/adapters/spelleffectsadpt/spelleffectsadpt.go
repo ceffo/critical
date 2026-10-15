@@ -128,6 +128,7 @@ type entryDTO struct {
 	Save        *saveDTO                  `json:"save"`
 	Damage      *damageDTO                `json:"damage"`
 	Modes       []modeDTO                 `json:"modes"`
+	Exposure    *exposureDTO              `json:"exposure"`
 	Modifiers   map[string]flexString     `json:"modifiers"`
 	AbilityGain map[string]abilityGainDTO `json:"ability_gain"`
 	AbilitySet  map[string]flexString     `json:"ability_set"`
@@ -188,6 +189,13 @@ type stepsDTO struct {
 type modeDTO struct {
 	Key    string     `json:"key"`
 	Damage *damageDTO `json:"damage"`
+}
+
+// exposureDTO is the damage of one round of exposure: one damage, or the
+// modes picked at each exposure.
+type exposureDTO struct {
+	Damage *damageDTO `json:"damage"`
+	Modes  []modeDTO  `json:"modes"`
 }
 
 // partDTO is one damage part; Save is a save effect ("" takes the entry's).
@@ -264,23 +272,44 @@ func (d entryDTO) toDomain() (spelleffectsvc.Entry, error) {
 			return e, err
 		}
 	}
-	// An empty "modes": [] stays an empty, non-nil list: validation refuses it.
-	if d.Modes != nil {
-		e.Modes = make([]spelleffectsvc.Mode, 0, len(d.Modes))
+	if e.Modes, err = modesToDomain("modes", d.Modes); err != nil {
+		return e, err
 	}
-	for i, m := range d.Modes {
-		mode := spelleffectsvc.Mode{Key: m.Key}
-		if m.Damage != nil {
-			if mode.Damage, err = m.Damage.toDomain(fmt.Sprintf("modes[%d].damage", i)); err != nil {
+	if x := d.Exposure; x != nil {
+		e.Exposure = &spelleffectsvc.Exposure{}
+		if x.Damage != nil {
+			if e.Exposure.Damage, err = x.Damage.toDomain("exposure.damage"); err != nil {
 				return e, err
 			}
 		}
-		e.Modes = append(e.Modes, mode)
+		if e.Exposure.Modes, err = modesToDomain("exposure.modes", x.Modes); err != nil {
+			return e, err
+		}
 	}
 	if e.Buff, err = d.buffToDomain(); err != nil {
 		return e, err
 	}
 	return e, nil
+}
+
+// modesToDomain maps a list of modes; field is its JSON path in errors. An
+// empty "modes": [] stays an empty, non-nil list: validation refuses it.
+func modesToDomain(field string, modes []modeDTO) ([]spelleffectsvc.Mode, error) {
+	if modes == nil {
+		return nil, nil
+	}
+	out := make([]spelleffectsvc.Mode, 0, len(modes))
+	for i, m := range modes {
+		mode := spelleffectsvc.Mode{Key: m.Key}
+		if m.Damage != nil {
+			var err error
+			if mode.Damage, err = m.Damage.toDomain(fmt.Sprintf("%s[%d].damage", field, i)); err != nil {
+				return nil, err
+			}
+		}
+		out = append(out, mode)
+	}
+	return out, nil
 }
 
 func (d entryDTO) buffToDomain() (*spelleffectsvc.Buff, error) {

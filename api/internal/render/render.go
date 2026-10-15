@@ -115,6 +115,7 @@ var mappings = []mapping{
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
 	{target: spelleffectsvc.ErrUnknownMode, status: http.StatusBadRequest, code: "unknown_spell_mode"},
+	{target: spelleffectsvc.ErrNoExposure, status: http.StatusBadRequest, code: "no_exposure"},
 	{target: domain.ErrInvalidInput, status: http.StatusBadRequest, code: "invalid_input"},
 	{target: domain.ErrConflict, status: http.StatusConflict, code: "conflict"},
 	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound, code: "character_not_found"},

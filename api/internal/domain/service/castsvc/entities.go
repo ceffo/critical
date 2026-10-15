@@ -185,6 +185,38 @@ type CastResult struct {
 	// Attack is the spell's to-hit roll (nil: the spell has no attack roll).
 	// The app shows hit or miss; what a hit does is the DM's call.
 	Attack *combatsvc.ToHitRoll
+	// Exposure is the spell's exposure damage at the caster level, for the
+	// player to roll each round of exposure from (nil: none; ADR 0008 step
+	// 16).
+	Exposure *spelleffectsvc.ExposureAt
+}
+
+// ExposureRequest is one round of exposure to a spell's area (ADR 0008
+// step 16).
+type ExposureRequest struct {
+	SpellID     string
+	CasterLevel int
+	// Mode is the key of the exposure mode (empty: the first).
+	Mode string
+	// Round is the round of exposure, from 1 (0: the first).
+	Round int
+	// OnSelf: the Bard is the one exposed; the damage comes off his HP.
+	OnSelf bool
+}
+
+// ExposureResult is one round of exposure rolled.
+type ExposureResult struct {
+	EntryID     int64
+	SpellID     string
+	Name        string
+	CasterLevel int
+	// Mode is the key of the exposure mode rolled (empty: none).
+	Mode  string
+	Round int
+	// OnSelf: the Bard was the one exposed and the entry took Damage.Total
+	// off his HP (down to the floor of ADR 0011 step 1).
+	OnSelf bool
+	Damage *DamageResult
 }
 
 // ConsumedItem is one unit of an inventory item a cast spent.

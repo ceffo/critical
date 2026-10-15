@@ -25,13 +25,18 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
 2. **Current HP.** `hp_max` plus the SUM of the effective `hp_delta` of the log, computed in SQL
    (`HPTotal`) and never summed in application code. The effective delta of an entry is its
    original delta, replaced by the latest correction that set one, and 0 once voided. Other
-   characters' entries do not count; entries of other kinds have delta 0.
+   characters' entries do not count; entries of other kinds have delta 0, except an `exposure`
+   the Bard takes himself ([ADR 0008](0008-spell-slots-and-long-rest.md) step 16, user ruling
+   2026-10-15), whose delta is the damage rolled.
    Tests: `TestHPTotal` (actionlogdal: plain sum, "latest amend wins", "void counts zero", "void
-   after amend counts zero", "summary-only amend keeps delta"), `TestGetState`.
+   after amend counts zero", "summary-only amend keeps delta"), `TestGetState`,
+   `TestExposureOnTheBard_VoidGivesTheHPBack` (composition).
 3. **Damage taken is entered as final.** The app never works the damage out: the player types the
    number after the DM's rulings (armour, resistance, saves), and it is logged as typed, never
    capped (HP may go below 0) down to the floor of -10, where it is clamped
-   ([ADR 0011](0011-hp-below-zero.md) step 1).
+   ([ADR 0011](0011-hp-below-zero.md) step 1). The one damage the app rolls itself is a spell's
+   exposure the player says the Bard takes ([ADR 0008](0008-spell-slots-and-long-rest.md)
+   step 16): it is logged as rolled, under the same floor.
    Tests: `TestAppendEvent` ("damage"), `TestRecord_CapsHeal` (actionlogsvc: "damage does not go
    through the cap"), `TestRecord_FloorsDamage` (actionlogsvc: "damage below 0 but above the
    floor is stored as is").

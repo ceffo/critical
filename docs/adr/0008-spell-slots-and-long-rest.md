@@ -187,6 +187,46 @@ named otherwise.
     `TestDamageAt_IsWhatACastRolls`, `TestDamageToDTO_Steps` (rest/handler/spellhdl),
     `TestToDTO_DamageSteps` (rest/handler/casthdl).
 
+16. **Exposure damage.** A spell whose damage is taken each round by whoever is in the area it
+    leaves, or passes through it (Cloudkill: 1d10 poison per round above 6 Hit Dice; Wall of Fire:
+    2d4 within 10 ft, 1d4 within 20 ft, 2d6 + 1 per level passing through; Death Fog: 1, 2, 4,
+    then 8 points per round of exposure), has an `exposure` in its data: the damage of one round of
+    exposure, written as one `damage` or as `modes` to pick from at each exposure (Wall of Fire's
+    distances), exactly one of the two. The `damage` has the shape of step 8 (parts of step 13
+    allowed) or steps per round (step 15), a step being the round of exposure, and never
+    `instances` or `rounds` (one roll is one round). The `modes` have the shape of step 14: at
+    least two, keys snake_case and unique in the exposure, each with its damage under the same
+    rules. Only a `damage` spell has an exposure; it may have no cast damage of its own (a cast
+    then rolls nothing and spends the slot). Any other block is a startup error. User ruling
+    2026-10-15: exposure is stateless. The app tracks no area, no duration and no count of
+    exposures, and neither a cast nor Next Round asks for an exposure: the player rolls each one.
+    Served unrolled (step 8) next to the spell's damage: in the spellbook at the Bard's level, in
+    the spell lookup at its caster level, and on the cast result at the cast's caster level; with
+    modes, every mode and its damage. An exposure roll names the spell, the caster level (1 to
+    40), the mode (none: the first; one the exposure does not list, or any for an exposure without
+    modes, is refused, `unknown_spell_mode`), the round of exposure (1 to 100, none: 1) and
+    whether the Bard is the one exposed. It rolls exactly the dice served for that round, once:
+    with steps, the step of that round, or the last step for a later round (Death Fog's 8 points
+    from the fourth round on); without steps, the same dice every round. A spell with no exposure,
+    a low-confidence one, or one not in the catalogue is refused (400, `no_exposure`), as is a
+    caster level or round out of range, with nothing rolled or logged. The roll is one `exposure`
+    entry (a roll kind: it replaces the result card), recording the spell, the caster level, the
+    mode, the round, whether the Bard was exposed and the roll as a cast records its damage. User
+    ruling 2026-10-15: when the Bard is the one exposed (his own cloud or a spell received), the
+    same entry takes the total off his HP through the HP ledger ([ADR 0007](0007-hp-ledger.md),
+    the floor of [ADR 0011](0011-hp-below-zero.md) step 1), so popping it gives the HP back;
+    otherwise the roll is the DM's and changes no HP. Spells without an exposure serve and cast
+    exactly as before. The mechanic is data (`seeds/spell_effects.json`), never a branch on a
+    spell id.
+    Tests: `TestEntry_ExposureAt`, `TestEntry_ExposureRound` (spelleffectsvc),
+    `TestParse_Exposure`, `TestParse_ExposureRefused` (adapters/spelleffectsadpt),
+    `TestExposureAt_MatchesThePHB` (levels 9 and 15), `TestExpose_RollsTheServedDiceOnce`,
+    `TestExposureAt_IsWhatAnExposureRolls`, `TestExpose_OnTheBardTakesHP`, `TestExpose_Refused`,
+    `TestCast_Exposure_ServedOnTheResult` (castsvc), `TestInfo_ServesTheExposure` (prepsvc),
+    `TestSearch_ServesExposureAtTheCasterLevel` (rest/handler/spellhdl),
+    `TestExpose_Handler` (rest/handler/casthdl), `TestExposureOnTheBard_VoidGivesTheHPBack`
+    (composition), `TestSpecialSentinels` (rest/router).
+
 ## Consequences
 
 - A spell with no catalogued effect still spends its slot: the cast is logged and its text shown.
@@ -206,3 +246,8 @@ named otherwise.
   not in the PHB of the rulebooks repo: its numbers are the ones of its data entry, and its splash
   on secondary targets is not modelled. Incendiary Cloud's save rule (one success ends the saves,
   a failure saves again on the fourth and fifth rounds) is the DM's.
+- Exposure damage (step 16) is rolled one round at a time on request: who is in the area, for how
+  many rounds, and Cloudkill's slaying by Hit Dice are the DM's (the note says them). Incendiary
+  Cloud has no exposure: its dice follow the cloud's round, not the creature's, so they stay the
+  steps a cast rolls up front (step 15). Undead and creatures subject to fire taking more from a
+  Wall of Fire are the DM's too.

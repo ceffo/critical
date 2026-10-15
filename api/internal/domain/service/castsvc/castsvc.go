@@ -40,6 +40,12 @@ type SVC interface {
 	// ModesAt is the cast-time modes of spellID, each with the damage a cast
 	// in it rolls at casterLevel; nil when the spell has none.
 	ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error)
+	// ExposureAt is the exposure damage of spellID at casterLevel (ADR 0008
+	// step 16); nil when it has none.
+	ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error)
+	// Expose rolls one round of exposure to a spell's area and logs it; on
+	// the Bard, the damage comes off his HP in the same entry.
+	Expose(ctx context.Context, characterID int64, req ExposureRequest) (ExposureResult, error)
 }
 
 // Slots is the spell slot store (spellsvc's DAL satisfies it).

@@ -105,18 +105,7 @@ func toRecord(res CastResult) castRecord {
 			r.Buff.StrGain = b.StrGain.Total
 		}
 	}
-	if d := res.Damage; d != nil {
-		r.Damage = &damageRecord{
-			Total: d.Total, Type: d.Type, Dice: d.Dice, Instances: d.Instances, Rounds: d.Rounds,
-			TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
-		}
-		for _, roll := range d.Rolls {
-			r.Damage.Rolls = append(r.Damage.Rolls, toRollRecord(roll))
-		}
-		for _, p := range d.Parts {
-			r.Damage.Parts = append(r.Damage.Parts, partRecord{Formula: p.Formula, Save: string(p.Save)})
-		}
-	}
+	r.Damage = toDamageRecord(res.Damage)
 	if s := res.Save; s != nil {
 		r.Save = &saveRecord{Type: string(s.Type), Effect: string(s.Effect)}
 	}
@@ -140,4 +129,43 @@ func toRollRecord(roll Roll) rollRecord {
 		out.Parts = append(out.Parts, toRollRecord(p))
 	}
 	return out
+}
+
+// exposureRecord is castsvc's JSON encoding of one round of exposure inside
+// its action-log entry (ADR 0008 step 16). Add fields, never rename them.
+type exposureRecord struct {
+	SpellID     string `json:"spellId"`
+	Spell       string `json:"spell"`
+	CasterLevel int    `json:"casterLevel"`
+	// Mode is the key of the exposure mode rolled; absent without modes.
+	Mode string `json:"mode,omitempty"`
+	// Round is the round of exposure, from 1.
+	Round int `json:"round"`
+	// OnSelf: the Bard was exposed and the entry's HP delta is the damage.
+	OnSelf bool          `json:"onSelf"`
+	Damage *damageRecord `json:"damage"`
+}
+
+func toExposureRecord(res ExposureResult) exposureRecord {
+	return exposureRecord{
+		SpellID: res.SpellID, Spell: res.Name, CasterLevel: res.CasterLevel, Mode: res.Mode,
+		Round: res.Round, OnSelf: res.OnSelf, Damage: toDamageRecord(res.Damage),
+	}
+}
+
+func toDamageRecord(d *DamageResult) *damageRecord {
+	if d == nil {
+		return nil
+	}
+	r := &damageRecord{
+		Total: d.Total, Type: d.Type, Dice: d.Dice, Instances: d.Instances, Rounds: d.Rounds,
+		TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
+	}
+	for _, roll := range d.Rolls {
+		r.Rolls = append(r.Rolls, toRollRecord(roll))
+	}
+	for _, p := range d.Parts {
+		r.Parts = append(r.Parts, partRecord{Formula: p.Formula, Save: string(p.Save)})
+	}
+	return r
 }

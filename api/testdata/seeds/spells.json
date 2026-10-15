@@ -182,6 +182,20 @@
   "description": "Application of this spell increases the Strength of the character by a number of points-- or tenths of points after 18 Strength is attained (only if the character is a warrior). Benefits of the strength spell last for the duration of the magic. The amount of added Strength depends upon the spell recipient's group and is subject to all restrictions on Strength due to race and class. Multiclass characters use the best die. Class Strength Gain Priest 1d6 points Rogue 1d6 points Warrior 1d8 points Wizard 1d4 points If a warrior has an 18 Strength already, from 10% to 80% is added to his extraordinary Strength roll. The spell cannot confer a Strength of 19 or more, nor is it cumulative with other magic that adds to Strength. Beings without Strength scores (kobolds, lizard men, etc.) receive a +1 to attack and damage rolls. The material component of this spell is a few hairs, or a pinch of dung, from a particularly strong animal--ape, bear, ox, etc."
  },
  {
+  "name": "Tasha's Uncontrollable Hideous Laughter",
+  "class": "Wizard",
+  "level": 2,
+  "school": "Enchantment/Charm",
+  "sphere": "",
+  "casting_time": "2",
+  "range": "60 yds.",
+  "duration": "1 rd./level",
+  "area_of_effect": "1 or more creatures in a 30-ft. cube",
+  "components": "V, S, M",
+  "saving_throw": "Neg.",
+  "description": "The victim of this spell perceives everything as hilariously funny. The effect is not immediate, and the creature feels only a slight tingling on the round the spell is cast. On the round immediately following, the victim begins smiling, then giggling, chuckling, tittering, snickering, guffawing, and finally collapsing into gales of uncontrollable, hideous laughter. Although this magical mirth lasts only a single round, the affected creature must spend the next round regaining its feet, and it loses 2 points from its Strength (or -2 to attack and damage rolls) for all remaining rounds of the spell. The saving throw vs. spell is modified by the Intelligence of the creature. Creatures with Intelligences of 4 or less (semi-intelligent) are totally unaffected. Those withIntelligences of 5-7 (low) save with -6 penalties. Those with Intelligences of 8-12 (average to very) save with -4 penalties. Those with Intelligences of 13-14 (high) save with -2 penalties. Those with Intelligences of 15 or greater (exceptional) have unmodified saving throws. The caster can affect one creature for every three levels attained--for example, one at 3rd level, two at 6th level, three at 9th level, etc. All affected beings must be within 30 feet of each other. The material components are a small feather and minute tarts. The tarts are hurled at the subjects, while the feather is waved in one hand."
+ },
+ {
   "name": "Dispel Magic",
   "class": "Wizard",
   "level": 3,

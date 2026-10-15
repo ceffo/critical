@@ -104,6 +104,9 @@ func (e Entry) Validate() error {
 	if e.Modes != nil && e.Kind != KindDamage {
 		return fmt.Errorf("only a damage spell can have modes")
 	}
+	if e.Exposure != nil && e.Kind != KindDamage {
+		return fmt.Errorf("only a damage spell can have an exposure")
+	}
 	hasBuff := e.Buff != nil && (len(e.Buff.Modifiers) > 0 || len(e.Buff.AbilityGain) > 0 || len(e.Buff.AbilitySet) > 0)
 	switch e.Kind {
 	case KindBuff:
@@ -118,11 +121,19 @@ func (e Entry) Validate() error {
 		if hasBuff || e.Charges != nil {
 			return fmt.Errorf("a damage spell cannot have buff fields")
 		}
+		if e.Exposure != nil {
+			if err := e.validateExposure(); err != nil {
+				return fmt.Errorf("exposure%w", err)
+			}
+		}
 		if e.Modes != nil {
 			return e.validateModes()
 		}
 		if e.Damage == nil {
-			return fmt.Errorf("a damage spell needs damage or modes")
+			if e.Exposure != nil {
+				return nil // ADR 0008 step 16: a cast rolls nothing, exposures do
+			}
+			return fmt.Errorf("a damage spell needs damage, modes or an exposure")
 		}
 		if err := e.Damage.validate(); err != nil {
 			return fmt.Errorf("damage%w", err)
@@ -334,32 +345,93 @@ func (e Entry) validateModes() error {
 	if e.Damage != nil {
 		return fmt.Errorf("set damage or modes, not both")
 	}
-	if len(e.Modes) < 2 {
-		return fmt.Errorf("modes: at least two are needed, got %d", len(e.Modes))
+	withDamage, err := e.validateModeList("modes", e.Modes, nil)
+	if err != nil {
+		return err
+	}
+	if !withDamage {
+		return fmt.Errorf("modes: no mode has damage (a utility spell)")
+	}
+	return nil
+}
+
+// validateModeList checks a list of modes at path ("modes",
+// "exposure.modes"): at least two, keys snake_case and unique, each damage
+// valid (and passing extra, when set). It reports whether a mode has damage.
+func (e Entry) validateModeList(path string, modes []Mode, extra func(*Damage) error) (bool, error) {
+	if len(modes) < 2 {
+		return false, fmt.Errorf("%s: at least two are needed, got %d", path, len(modes))
 	}
 	seen := map[string]bool{}
 	withDamage := false
-	for i, m := range e.Modes {
+	for i, m := range modes {
 		if !modeKey.MatchString(m.Key) {
-			return fmt.Errorf("modes[%d]: key %q is not snake_case", i, m.Key)
+			return false, fmt.Errorf("%s[%d]: key %q is not snake_case", path, i, m.Key)
 		}
 		if seen[m.Key] {
-			return fmt.Errorf("modes[%d]: duplicate key %q", i, m.Key)
+			return false, fmt.Errorf("%s[%d]: duplicate key %q", path, i, m.Key)
 		}
 		seen[m.Key] = true
 		if m.Damage == nil {
 			continue
 		}
 		withDamage = true
-		if err := m.Damage.validate(); err != nil {
-			return fmt.Errorf("modes[%d].damage%w", i, err)
-		}
-		if err := e.validateParts(m.Damage); err != nil {
-			return fmt.Errorf("modes[%d].damage%w", i, err)
+		if err := e.validateDamage(m.Damage, extra); err != nil {
+			return false, fmt.Errorf("%s[%d].damage%w", path, i, err)
 		}
 	}
-	if !withDamage {
-		return fmt.Errorf("modes: no mode has damage (a utility spell)")
+	return withDamage, nil
+}
+
+// validateDamage checks a damage (step 8, parts step 13, steps step 15) and,
+// when set, extra; the error starts after the damage's path.
+func (e Entry) validateDamage(d *Damage, extra func(*Damage) error) error {
+	if err := d.validate(); err != nil {
+		return err
+	}
+	if err := e.validateParts(d); err != nil {
+		return err
+	}
+	if extra != nil {
+		return extra(d)
+	}
+	return nil
+}
+
+// validateExposure checks a spell's exposure (ADR 0008 step 16): exactly one
+// of damage and modes; the damage, or every mode's, valid as a cast's and of
+// one roll per round of exposure (no instances or rounds, steps per round
+// only). Its error starts after "exposure".
+func (e Entry) validateExposure() error {
+	x := e.Exposure
+	if (x.Damage == nil) == (x.Modes == nil) {
+		return fmt.Errorf(": set exactly one of damage and modes")
+	}
+	if x.Damage != nil {
+		if err := e.validateDamage(x.Damage, oneRoundOfExposure); err != nil {
+			return fmt.Errorf(".damage%w", err)
+		}
+		return nil
+	}
+	if _, err := e.validateModeList(".modes", x.Modes, oneRoundOfExposure); err != nil {
+		return err
+	}
+	for i, m := range x.Modes {
+		if m.Damage == nil {
+			return fmt.Errorf(".modes[%d]: an exposure mode needs damage", i)
+		}
+	}
+	return nil
+}
+
+// oneRoundOfExposure refuses a damage that is not one roll per round of
+// exposure: instances, rounds, or steps per instance.
+func oneRoundOfExposure(d *Damage) error {
+	switch {
+	case d.Instances != nil || d.Rounds != nil:
+		return fmt.Errorf(": one roll is one round of exposure, set neither instances nor rounds")
+	case d.Steps != nil && d.Steps.Per != StepPerRound:
+		return fmt.Errorf(".steps: the steps of an exposure are its rounds, per must be %q", StepPerRound)
 	}
 	return nil
 }

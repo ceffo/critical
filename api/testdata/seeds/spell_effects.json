@@ -218,6 +218,19 @@
   }
  },
  {
+  "id": "tashas_uncontrollable_hideous_laughter",
+  "name": "Tasha's Uncontrollable Hideous Laughter",
+  "level": 2,
+  "kind": "utility",
+  "confidence": "low",
+  "note": "Victim loses 2 Strength (or -2 to attack and damage) after the first round of laughter. Not modelled.",
+  "target": "none",
+  "duration": {
+   "kind": "rounds",
+   "rounds": "level"
+  }
+ },
+ {
   "id": "dispel_magic",
   "name": "Dispel Magic",
   "level": 3,
@@ -499,13 +512,83 @@
   "id": "cloudkill",
   "name": "Cloudkill",
   "level": 5,
-  "kind": "utility",
-  "confidence": "low",
-  "note": "Kills creatures under 4+1 HD; save vs. poison (-4 up to 5+1 HD) or die up to 6 HD; stronger creatures take 1d10 poison per round while in the moving cloud. Not modelled: the damage depends on who is in the cloud each round (a per-round area effect), and the slaying by Hit Dice is no damage roll.",
-  "target": "none",
+  "kind": "damage",
+  "confidence": "high",
+  "note": "Creatures under 4+1 HD die; 4+1 to 5+1 HD save vs. poison at -4 or die; up to 6 HD save vs. poison or die (no damage roll: the DM's). Stronger creatures take 1d10 poison for each round in the cloud, rolled as an exposure. The cloud rolls away from the caster at 10 ft per round.",
+  "target": "area",
   "duration": {
    "kind": "rounds",
    "rounds": "level"
+  },
+  "exposure": {
+   "damage": {
+    "dice": "1d10",
+    "type": "poison"
+   }
+  }
+ },
+ {
+  "id": "death_fog",
+  "name": "Death Fog",
+  "level": 6,
+  "kind": "damage",
+  "confidence": "high",
+  "note": "Acidic solid fog: a creature takes 1 point on its first round of exposure, 2 on the second, 4 on the third and 8 on each round after, rolled as exposures. Movement through it is 1 ft per unit of movement rate.",
+  "target": "area",
+  "duration": {
+   "kind": "rounds",
+   "rounds": "1d4+level"
+  },
+  "exposure": {
+   "damage": {
+    "steps": {
+     "per": "round",
+     "list": [
+      "1",
+      "2",
+      "4",
+      "8"
+     ]
+    },
+    "type": "acid"
+   }
+  }
+ },
+ {
+  "id": "wall_of_fire",
+  "name": "Wall of Fire",
+  "level": 4,
+  "kind": "damage",
+  "confidence": "high",
+  "note": "The heat on the side the caster picks deals 2d4 within 10 ft and 1d4 within 20 ft each round; passing through the wall deals 2d6 + 1 per caster level. Each is an exposure, picked when rolling. Lasts while the caster concentrates, or 1 round per level. Undead and creatures subject to fire take more (the DM's).",
+  "target": "area",
+  "duration": {
+   "kind": "special"
+  },
+  "exposure": {
+   "modes": [
+    {
+     "key": "within_10_ft",
+     "damage": {
+      "dice": "2d4",
+      "type": "fire"
+     }
+    },
+    {
+     "key": "within_20_ft",
+     "damage": {
+      "dice": "1d4",
+      "type": "fire"
+     }
+    },
+    {
+     "key": "passing_through",
+     "damage": {
+      "dice": "2d6+level",
+      "type": "fire"
+     }
+    }
+   ]
   }
  },
  {

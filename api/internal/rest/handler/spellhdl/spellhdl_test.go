@@ -69,6 +69,18 @@ func (f fakeDamage) ModesAt(_ context.Context, id string, level int) ([]spelleff
 	}, nil
 }
 
+// ExposureAt serves cloudkill's 1d10 poison at any level and nothing for
+// other spells.
+func (f fakeDamage) ExposureAt(_ context.Context, id string, level int) (*spelleffectsvc.ExposureAt, error) {
+	if id != "cloudkill" {
+		return nil, nil
+	}
+	return &spelleffectsvc.ExposureAt{Damage: &spelleffectsvc.DamageAt{
+		CasterLevel: level, Dice: formula.Sum{Dice: []formula.Dice{{Count: 1, Sides: 10}}},
+		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "poison",
+	}}, nil
+}
+
 func (f fakeDamage) DamageAt(_ context.Context, id string, level int) (*spelleffectsvc.DamageAt, error) {
 	if f.levels != nil {
 		*f.levels = append(*f.levels, level)
@@ -388,4 +400,26 @@ func TestSearch_ServesModesAtTheCasterLevel(t *testing.T) {
 			"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":1}}},
 		{"key":"sleet"}]`, string(page.Items[0].Modes))
 	assert.Nil(t, page.Items[1].Modes, "fireball has no modes")
+}
+
+// ADR 0008 step 16: the lookup serves the exposure damage at its caster
+// level, next to the spell's damage; none for a spell without one.
+func TestSearch_ServesExposureAtTheCasterLevel(t *testing.T) {
+	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 },
+		fakeSvc{spells: []spellsvc.Spell{{ID: "cloudkill", Name: "Cloudkill"}, {ID: "fireball", Name: "Fireball"}}},
+		fakeChars{level: 15}, fakeDamage{}))
+	rec := httptest.NewRecorder()
+	h(rec, httptest.NewRequest(http.MethodGet, "/api/spells?caster_level=9", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var page struct {
+		Items []struct {
+			ID       string          `json:"id"`
+			Exposure json.RawMessage `json:"exposure"`
+		} `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+	require.Len(t, page.Items, 2)
+	assert.JSONEq(t, `{"damage":{"caster_level":9,"type":"poison","dice":{"groups":[{"count":1,"sides":10}],"modifier":0},
+		"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":1}}}`, string(page.Items[0].Exposure))
+	assert.Nil(t, page.Items[1].Exposure, "fireball has no exposure")
 }

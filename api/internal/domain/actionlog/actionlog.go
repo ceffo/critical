@@ -40,12 +40,18 @@ const (
 	// 0014). Like a save it changes no state and has no snapshots: popping it
 	// only removes it. It is never adjusted.
 	KindSkillCheck Kind = "skill_check"
+	// KindExposure is one round of exposure to a spell's area rolled on
+	// request (castsvc, ADR 0008 step 16). It has no snapshots; when the Bard
+	// is the one exposed, its HP delta takes the damage off his HP, so
+	// popping it gives the HP back.
+	KindExposure Kind = "exposure"
 )
 
 // RollKinds are the entries whose result replaces the dashboard's result
-// card (attack, save, cast or received spell, item use, skill check). Only
+// card (attack, save, cast or received spell, item use, skill check, spell
+// exposure). Only
 // the newest of them, the one on the card, can be adjusted after the fact.
-var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck}
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindExposure}
 
 // IsRoll reports whether k is one of RollKinds.
 func IsRoll(k Kind) bool {

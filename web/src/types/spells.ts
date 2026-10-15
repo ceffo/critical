@@ -94,6 +94,22 @@ export interface SpellDamage {
   type?: string;
   /** The parts of one instance, rolled separately (`dice` adds them up); absent when it has none. */
   parts?: SpellDamagePart[];
+  /**
+   * What one dice step is, for a damage whose dice change from one round or instance to the next
+   * (ADR 0008 step 15); `steps` then holds each step's dice, `dice` is empty and `rounds` or
+   * `instances` counts the steps. Both absent without steps.
+   */
+  steps_per?: StepPer;
+  steps?: SpellDamageStep[];
+}
+
+/** What one dice step of a damage is: a round, or one separate roll of the casting. */
+export type StepPer = "round" | "instance";
+
+/** Mirrors spellhdl.SpellDamageStepDTO: one dice step at caster_level (no groups and 0: no damage). */
+export interface SpellDamageStep {
+  step: number;
+  dice: DiceSum;
 }
 
 /** What a successful save does to a damage part. */
@@ -185,6 +201,8 @@ export interface DiceRoll {
   total: number;
   /** A damage instance's part rolls, in the order of CastDamage.parts; absent when it has none. */
   parts?: DiceRoll[];
+  /** The round or instance (1-based) of a damage made of dice steps; absent without steps. */
+  step?: number;
 }
 
 /** Mirrors casthdl AppliedBuffDTO. `applied` is false when the buff went on somebody else. */
@@ -213,6 +231,8 @@ export interface CastDamage {
   parts?: CastDamagePart[];
   /** The total without the parts a save negates; absent when the damage has no parts. */
   totalOnSave?: number;
+  /** Set for a damage made of dice steps: each roll is one step (its `step`), `dice` is empty. */
+  stepsPer?: StepPer;
 }
 
 /** Mirrors casthdl DamagePartDTO. */

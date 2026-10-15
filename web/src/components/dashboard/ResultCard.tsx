@@ -39,6 +39,7 @@ import {
 } from "@/lib/filCard";
 import { spellName } from "@/i18n/spellName";
 import { modeName } from "@/lib/spellMode";
+import { rollLabel } from "@/lib/spellDice";
 import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
 import type { RollResult, SaveCategory } from "@/types/combat";
 import type { UseResult } from "@/types/items";
@@ -751,7 +752,7 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
               <ul className="flex flex-col gap-1" data-testid="cast-entry-instances">
                 {instances.map((inst, i) => (
                   <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-xs text-muted-foreground">{t("result.cast.instance", { n: i + 1 })}</span>
+                    <span className="text-xs text-muted-foreground">{rollLabel(t, c.damage?.stepsPer, inst.step, i)}</span>
                     {inst.parts ? (
                       <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="cast-entry-parts">
                         {inst.parts.map((p, j) => (
@@ -775,6 +776,8 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
                         ))}
                         <span className="text-sm font-semibold tabular-nums">Σ {inst.total}</span>
                       </span>
+                    ) : inst.step && inst.dice.length === 0 && inst.total === 0 ? (
+                      <span className="text-sm text-muted-foreground">{t("result.cast.noDamage")}</span>
                     ) : (
                       <>
                         <ul className="flex flex-wrap gap-1.5">

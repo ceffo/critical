@@ -178,6 +178,9 @@ type RollDTO struct {
 	// Parts are the rolls of a damage instance's parts, in the order of
 	// DamageDTO.Parts (absent: no parts).
 	Parts []RollDTO `json:"parts,omitempty"`
+	// Step is the 1-based round or instance of a damage made of dice steps
+	// (absent: no steps).
+	Step int `json:"step,omitempty"`
 }
 
 // AppliedBuffDTO is the buff and its rolls.
@@ -209,6 +212,9 @@ type DamageDTO struct {
 	// when the damage has no parts.
 	Parts       []DamagePartDTO `json:"parts,omitempty"`
 	TotalOnSave *int            `json:"totalOnSave,omitempty"`
+	// StepsPer is "round" or "instance" for a damage made of dice steps:
+	// each roll is one step of its own dice (Dice is empty). Absent otherwise.
+	StepsPer string `json:"stepsPer,omitempty"`
 }
 
 // DamagePartDTO is one damage part: its formula and its save effect key
@@ -250,7 +256,7 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 	if d := res.Damage; d != nil {
 		out.Damage = &DamageDTO{
 			Dice: d.Dice, Type: d.Type, Instances: d.Instances, Rounds: d.Rounds, Total: d.Total,
-			Rolls: []RollDTO{}, TotalOnSave: d.TotalOnSave,
+			Rolls: []RollDTO{}, TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
 		}
 		for _, p := range d.Parts {
 			out.Damage.Parts = append(out.Damage.Parts, DamagePartDTO{Formula: p.Formula, Save: string(p.Save)})
@@ -285,7 +291,7 @@ func rollDTO(r *castsvc.Roll) *RollDTO {
 	if r == nil {
 		return nil
 	}
-	out := &RollDTO{Formula: r.Formula, Total: r.Total, Dice: []DieDTO{}}
+	out := &RollDTO{Formula: r.Formula, Total: r.Total, Dice: []DieDTO{}, Step: r.Step}
 	for _, d := range r.Dice {
 		out.Dice = append(out.Dice, DieDTO{Sides: d.Sides, Value: d.Value})
 	}

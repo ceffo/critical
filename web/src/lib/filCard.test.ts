@@ -616,6 +616,34 @@ describe("die chips from the payload", () => {
     expect(m.cast.damage?.totalOnSave).toBe(11);
   });
 
+  it("cast with dice steps: each roll keeps its step, a step without damage has no dice", async () => {
+    const t = await makeT("en");
+    const m = cardModel(
+      entry("cast", {
+        ...castBase,
+        damage: {
+          total: 5,
+          type: "fire",
+          dice: "",
+          instances: 1,
+          rounds: 3,
+          stepsPer: "round",
+          rolls: [
+            { formula: "0", dice: [], total: 0, step: 1 },
+            { formula: "leveld2", dice: [{ sides: 2, value: 2 }, { sides: 2, value: 1 }], total: 3, step: 2 },
+            { formula: "leveld2", dice: [{ sides: 2, value: 1 }, { sides: 2, value: 1 }], total: 2, step: 3 },
+          ],
+        },
+      }),
+      t,
+    );
+    if (m.layout !== "cast") throw new Error("not a cast card");
+    const got = castInstances(m.cast);
+    expect(got?.map((i) => i.step)).toEqual([1, 2, 3]);
+    expect(got?.[0]).toEqual({ dice: [], total: 0, step: 1 });
+    expect(m.cast.damage?.stepsPer).toBe("round");
+  });
+
   it("cast, old entry without the dice: no instances, still a cast card", async () => {
     const t = await makeT("en");
     const m = cardModel(entry("cast", { ...castBase, damage: { total: 24, type: "fire" } }), t);

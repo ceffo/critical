@@ -32,6 +32,9 @@ func (s *service) roll(f *formula.Formula, level int) (Roll, error) {
 // step 13). d is the entry's damage, or the damage of the cast-time mode
 // picked (ADR 0008 step 14).
 func (s *service) rollDamage(e spelleffectsvc.Entry, d *spelleffectsvc.Damage, level int) (*DamageResult, error) {
+	if d.Steps != nil {
+		return s.rollDamageSteps(d, level)
+	}
 	if len(d.Parts) > 0 {
 		return s.rollDamageParts(e, d, level)
 	}
@@ -52,6 +55,39 @@ func (s *service) rollDamage(e spelleffectsvc.Entry, d *spelleffectsvc.Damage, l
 			out.Rolls = append(out.Rolls, r)
 			out.Total += r.Total
 		}
+	}
+	return out, nil
+}
+
+// rollDamageSteps rolls a damage made of dice steps (ADR 0008 step 15): every
+// step DamageSteps.At serves at the level, once, in order, each roll keeping
+// its step number; a step without damage rolls nothing (total 0). The steps
+// are the rounds or the instances.
+func (s *service) rollDamageSteps(d *spelleffectsvc.Damage, level int) (*DamageResult, error) {
+	steps, err := d.Steps.At(level)
+	if err != nil {
+		return nil, err
+	}
+	out := &DamageResult{Type: d.Type, Instances: 1, Rounds: 1, StepsPer: d.Steps.Per}
+	if d.Steps.Per == spelleffectsvc.StepPerRound {
+		out.Rounds = len(steps)
+	} else {
+		out.Instances = len(steps)
+	}
+	for _, st := range steps {
+		f := d.Steps.FormulaOf(st.Step)
+		r := Roll{Formula: f.String(), Step: st.Step}
+		total, err := f.EvalStep(level, st.Step, func(sides int) int {
+			v := s.Dice.RollDie(sides)
+			r.Dice = append(r.Dice, DieRoll{Sides: sides, Value: v})
+			return v
+		})
+		if err != nil {
+			return nil, fmt.Errorf("roll %s at level %d step %d: %w", f, level, st.Step, err)
+		}
+		r.Total = total
+		out.Rolls = append(out.Rolls, r)
+		out.Total += total
 	}
 	return out, nil
 }

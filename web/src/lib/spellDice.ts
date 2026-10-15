@@ -1,6 +1,6 @@
 // Wording of the damage dice the server evaluated at a caster level; no game rules here.
 import type { TFunction } from "i18next";
-import type { DiceSum, SpellDamage } from "@/types/spells";
+import type { DiceSum, SpellDamage, StepPer } from "@/types/spells";
 
 /** "10d6", "1d4+1", "1d6+4d6", "5": the server's groups then its constant, as a dice formula. */
 export function diceText(sum: DiceSum): string {
@@ -15,9 +15,35 @@ function isOne(sum: DiceSum): boolean {
   return sum.groups.length === 0 && sum.modifier === 1;
 }
 
-/** The roll of one instance as a dice composer formula ("1d4+1"); the server parses it. */
+/** True when a sum rolls nothing: no dice and 0 (a dice step without damage). */
+function isNone(sum: DiceSum): boolean {
+  return sum.groups.length === 0 && sum.modifier === 0;
+}
+
+/**
+ * The roll of one instance as a dice composer formula ("1d4+1"); the server parses it. A damage
+ * made of dice steps sends its first step with damage.
+ */
 export function damageFormula(d: SpellDamage): string {
-  return diceText(d.dice);
+  const step = d.steps?.find((s) => !isNone(s.dice));
+  return diceText(step ? step.dice : d.dice);
+}
+
+/** The label of one damage roll of a cast: "Turn 3" for a step per round, else "#n". */
+export function rollLabel(t: TFunction, stepsPer: StepPer | undefined, step: number | undefined, index: number): string {
+  if (stepsPer === "round") return t("result.cast.round", { n: step ?? index + 1 });
+  return t("result.cast.instance", { n: step ?? index + 1 });
+}
+
+/** The header of a cast's damage made of dice steps: "5 turns, one roll each", "1 roll". */
+export function stepsHeader(t: TFunction, stepsPer: StepPer, count: number): string {
+  return t(`result.cast.damageSteps.${stepsPer}`, { count });
+}
+
+/** Each dice step in order, "—" for one without damage: "by round: —, —, 20d2, 20d4, 20d2". */
+function stepsText(t: TFunction, d: SpellDamage): string {
+  const steps = (d.steps ?? []).map((s) => (isNone(s.dice) ? "—" : diceText(s.dice))).join(", ");
+  return t(`spellDice.steps.${d.steps_per ?? "instance"}`, { steps });
 }
 
 /**
@@ -32,13 +58,20 @@ function instanceText(t: TFunction, d: SpellDamage): string {
   return d.parts.length > 1 && !isOne(d.instances) ? `(${parts})` : parts;
 }
 
-/** "10d6 fire", "5 × 1d4+1 force", "2d4 acid per round, 6 rounds", in the player's language. */
+/**
+ * "10d6 fire", "5 × 1d4+1 force", "2d4 acid per round, 6 rounds", "by round: 12d4, 10d4 acid"
+ * (each dice step), in the player's language.
+ */
 export function damageText(t: TFunction, d: SpellDamage): string {
+  const type = d.type ? t(`spellDice.types.${d.type}`, { defaultValue: d.type }) : "";
+  if (d.steps && d.steps.length > 0) {
+    const steps = stepsText(t, d);
+    return type ? t("spellDice.typed", { dice: steps, type }) : steps;
+  }
   let dice = instanceText(t, d);
   if (!isOne(d.instances)) {
     dice = t("spellDice.instances", { instances: diceText(d.instances), dice });
   }
-  const type = d.type ? t(`spellDice.types.${d.type}`, { defaultValue: d.type }) : "";
   let text = type ? t("spellDice.typed", { dice, type }) : dice;
   if (!isOne(d.rounds)) {
     text = t("spellDice.perRound", { text, rounds: diceText(d.rounds) });

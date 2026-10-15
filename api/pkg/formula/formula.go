@@ -7,8 +7,12 @@
 //	expr    = term { ("+" | "-") term }
 //	term    = unary { ("*" | "/") unary }
 //	unary   = "-" unary | primary
-//	primary = ( INT | "level" | "(" expr ")" ) [ "d" INT ]
+//	primary = ( INT | "level" | "step" | "(" expr ")" ) [ "d" INT ]
 //	        | ("min" | "max") "(" expr "," expr ")"
+//
+// "step" is the 1-based number of a dice step (a round or an instance whose
+// dice change from one to the next, "(max(min(level,12)-2*(step-1),0))d4"):
+// only a formula parsed with ParseStep may use it.
 //
 // A trailing "d" INT turns the preceding primary into a dice roll: the primary
 // is the number of dice, the INT the number of sides ("1d6", "leveld6",
@@ -41,17 +45,33 @@ type Formula struct {
 	root node
 }
 
+// vars are the values of a formula's variables: the caster level and the
+// dice step (0 outside a step).
+type vars struct{ level, step int }
+
 // String returns the source text the formula was parsed from.
 func (f *Formula) String() string { return f.src }
 
 // Parse parses src and probes it for runtime errors (division by zero, a
 // negative number of dice, too many dice) at caster levels 1..40, so a formula
-// that parses is safe to evaluate at any realistic level.
-func Parse(src string) (*Formula, error) {
+// that parses is safe to evaluate at any realistic level. The step variable
+// is refused (see ParseStep).
+func Parse(src string) (*Formula, error) { return parse(src, false) }
+
+// ParseStep parses a formula that may use the step variable, the 1-based
+// number of a dice step, and probes it as Parse at every caster level and
+// every step from 1 to MaxSteps: a dice count that would go negative at a
+// later step must be capped in the formula (max(...,0)).
+func ParseStep(src string) (*Formula, error) { return parse(src, true) }
+
+// MaxSteps is the highest step a ParseStep formula is probed at.
+const MaxSteps = 100
+
+func parse(src string, allowStep bool) (*Formula, error) {
 	if strings.TrimSpace(src) == "" {
 		return nil, errors.New("empty formula")
 	}
-	p := &parser{toks: lex(src)}
+	p := &parser{toks: lex(src), allowStep: allowStep}
 	root, err := p.parseExpr()
 	if err != nil {
 		return nil, fmt.Errorf("formula %q: %w", src, err)
@@ -60,10 +80,19 @@ func Parse(src string) (*Formula, error) {
 		return nil, fmt.Errorf("formula %q: unexpected %s", src, t)
 	}
 	f := &Formula{src: src, root: root}
+	lastStep := 0
+	if allowStep {
+		lastStep = MaxSteps
+	}
 	for level := 1; level <= checkMaxLevel; level++ {
-		for _, roll := range []Roller{func(int) int { return 1 }, func(s int) int { return s }} {
-			if _, err := f.Eval(level, roll); err != nil {
-				return nil, fmt.Errorf("formula %q at level %d: %w", src, level, err)
+		for step := min(1, lastStep); step <= lastStep; step++ {
+			for _, roll := range []Roller{func(int) int { return 1 }, func(s int) int { return s }} {
+				if _, err := f.root.eval(vars{level: level, step: step}, roll); err != nil {
+					if allowStep {
+						return nil, fmt.Errorf("formula %q at level %d step %d: %w", src, level, step, err)
+					}
+					return nil, fmt.Errorf("formula %q at level %d: %w", src, level, err)
+				}
 			}
 		}
 	}
@@ -72,7 +101,13 @@ func Parse(src string) (*Formula, error) {
 
 // Eval evaluates the formula for a caster level, rolling dice with roll.
 func (f *Formula) Eval(level int, roll Roller) (int, error) {
-	return f.root.eval(level, roll)
+	return f.root.eval(vars{level: level}, roll)
+}
+
+// EvalStep evaluates the formula for a caster level at a dice step (1-based),
+// rolling dice with roll.
+func (f *Formula) EvalStep(level, step int, roll Roller) (int, error) {
+	return f.root.eval(vars{level: level, step: step}, roll)
 }
 
 // Min returns the smallest value the formula can take at the level (every die
@@ -110,9 +145,18 @@ type Sum struct {
 // its two groups. Groups of zero dice are dropped. A formula whose dice are
 // not simply added (see ErrNotDiceSum) returns that error.
 func (f *Formula) Expand(level int) (Sum, error) {
-	s, err := expand(f.root, level)
+	s, err := expand(f.root, vars{level: level})
 	if err != nil {
 		return Sum{}, fmt.Errorf("expand %s at level %d: %w", f, level, err)
+	}
+	return s, nil
+}
+
+// ExpandStep is Expand at a dice step (1-based).
+func (f *Formula) ExpandStep(level, step int) (Sum, error) {
+	s, err := expand(f.root, vars{level: level, step: step})
+	if err != nil {
+		return Sum{}, fmt.Errorf("expand %s at level %d step %d: %w", f, level, step, err)
 	}
 	return s, nil
 }
@@ -120,17 +164,17 @@ func (f *Formula) Expand(level int) (Sum, error) {
 // noRoll is the roller of a subtree without dice: it is never called.
 func noRoll(int) int { return 0 }
 
-func expand(n node, level int) (Sum, error) {
+func expand(n node, v vars) (Sum, error) {
 	if !hasDice(n) {
-		v, err := n.eval(level, noRoll)
-		return Sum{Constant: v}, err
+		c, err := n.eval(v, noRoll)
+		return Sum{Constant: c}, err
 	}
 	switch n := n.(type) {
 	case diceNode:
 		if hasDice(n.count) {
 			return Sum{}, ErrNotDiceSum
 		}
-		c, err := n.count.eval(level, noRoll)
+		c, err := n.count.eval(v, noRoll)
 		if err != nil {
 			return Sum{}, err
 		}
@@ -148,11 +192,11 @@ func expand(n node, level int) (Sum, error) {
 		if n.op != '+' && n.op != '-' || n.op == '-' && hasDice(n.r) {
 			return Sum{}, ErrNotDiceSum
 		}
-		a, err := expand(n.l, level)
+		a, err := expand(n.l, v)
 		if err != nil {
 			return Sum{}, err
 		}
-		b, err := expand(n.r, level)
+		b, err := expand(n.r, v)
 		if err != nil {
 			return Sum{}, err
 		}
@@ -176,7 +220,7 @@ func hasDice(n node) bool {
 		return hasDice(n.l) || hasDice(n.r)
 	case minMaxNode:
 		return hasDice(n.l) || hasDice(n.r)
-	default: // numNode, levelNode
+	default: // numNode, levelNode, stepNode
 		return false
 	}
 }
@@ -184,22 +228,27 @@ func hasDice(n node) bool {
 // ---- AST ----
 
 type node interface {
-	eval(level int, roll Roller) (int, error)
+	eval(v vars, roll Roller) (int, error)
 }
 
 type numNode int
 
-func (n numNode) eval(int, Roller) (int, error) { return int(n), nil }
+func (n numNode) eval(vars, Roller) (int, error) { return int(n), nil }
 
 type levelNode struct{}
 
-func (levelNode) eval(level int, _ Roller) (int, error) { return level, nil }
+func (levelNode) eval(v vars, _ Roller) (int, error) { return v.level, nil }
+
+// stepNode is the 1-based number of the dice step (ParseStep only).
+type stepNode struct{}
+
+func (stepNode) eval(v vars, _ Roller) (int, error) { return v.step, nil }
 
 type negNode struct{ x node }
 
-func (n negNode) eval(level int, r Roller) (int, error) {
-	v, err := n.x.eval(level, r)
-	return -v, err
+func (n negNode) eval(v vars, r Roller) (int, error) {
+	x, err := n.x.eval(v, r)
+	return -x, err
 }
 
 type binNode struct {
@@ -207,12 +256,12 @@ type binNode struct {
 	l, r node
 }
 
-func (n binNode) eval(level int, r Roller) (int, error) {
-	a, err := n.l.eval(level, r)
+func (n binNode) eval(v vars, r Roller) (int, error) {
+	a, err := n.l.eval(v, r)
 	if err != nil {
 		return 0, err
 	}
-	b, err := n.r.eval(level, r)
+	b, err := n.r.eval(v, r)
 	if err != nil {
 		return 0, err
 	}
@@ -236,12 +285,12 @@ type minMaxNode struct {
 	l, r  node
 }
 
-func (n minMaxNode) eval(level int, r Roller) (int, error) {
-	a, err := n.l.eval(level, r)
+func (n minMaxNode) eval(v vars, r Roller) (int, error) {
+	a, err := n.l.eval(v, r)
 	if err != nil {
 		return 0, err
 	}
-	b, err := n.r.eval(level, r)
+	b, err := n.r.eval(v, r)
 	if err != nil {
 		return 0, err
 	}
@@ -256,8 +305,8 @@ type diceNode struct {
 	sides int
 }
 
-func (n diceNode) eval(level int, r Roller) (int, error) {
-	c, err := n.count.eval(level, r)
+func (n diceNode) eval(v vars, r Roller) (int, error) {
+	c, err := n.count.eval(v, r)
 	if err != nil {
 		return 0, err
 	}
@@ -282,6 +331,7 @@ const (
 	tokEOF tokKind = iota
 	tokInt
 	tokLevel
+	tokStep
 	tokD
 	tokMin
 	tokMax
@@ -340,6 +390,8 @@ func lex(src string) []token {
 			switch word {
 			case "level":
 				toks = append(toks, token{kind: tokLevel, text: word})
+			case "step":
+				toks = append(toks, token{kind: tokStep, text: word})
 			case "d":
 				toks = append(toks, token{kind: tokD, text: word})
 			case "min":
@@ -363,6 +415,8 @@ func lex(src string) []token {
 type parser struct {
 	toks []token
 	pos  int
+	// allowStep accepts the step variable (ParseStep).
+	allowStep bool
 }
 
 func (p *parser) peek() token { return p.toks[p.pos] }
@@ -440,6 +494,11 @@ func (p *parser) parsePrimary() (node, error) {
 		n = numNode(t.num)
 	case t.kind == tokLevel:
 		n = levelNode{}
+	case t.kind == tokStep:
+		if !p.allowStep {
+			return nil, errors.New("step is only allowed in a dice step")
+		}
+		n = stepNode{}
 	case t.kind == tokOp && t.text == "(":
 		inner, err := p.parseExpr()
 		if err != nil {

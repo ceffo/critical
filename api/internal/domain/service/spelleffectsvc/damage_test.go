@@ -251,3 +251,94 @@ func TestEntry_ModesAt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, plain, "no modes")
 }
+
+// ADR 0008 step 15: a damage made of dice steps serves every step at the
+// caster level, in order, numbered from 1; the steps are the rounds or the
+// instances (counted there, Dice empty). A step without damage before one
+// with damage is kept; the steps after the last one with damage are dropped.
+func TestEntry_DamageAt_Steps(t *testing.T) {
+	ps := func(src string) *formula.Formula { return must.Do(formula.ParseStep(src)) }
+	p := func(src string) *formula.Formula { return must.Do(formula.Parse(src)) }
+	step := func(n int, s formula.Sum) spelleffectsvc.DamageStepAt {
+		return spelleffectsvc.DamageStepAt{Step: n, Dice: s}
+	}
+	tests := map[string]struct {
+		steps spelleffectsvc.DamageSteps
+		level int
+		want  spelleffectsvc.DamageAt
+	}{
+		"one formula per instance, two fewer dice each, until none are left": {
+			steps: spelleffectsvc.DamageSteps{
+				Per: spelleffectsvc.StepPerInstance, Dice: ps("(max(min(level,7)-2*(step-1),0))d6"), Count: p("10"),
+			},
+			level: 9,
+			want: spelleffectsvc.DamageAt{
+				CasterLevel: 9, Instances: sum(4), Rounds: sum(1), StepsPer: spelleffectsvc.StepPerInstance,
+				Steps: []spelleffectsvc.DamageStepAt{
+					step(1, sum(0, dice(7, 6))), step(2, sum(0, dice(5, 6))), step(3, sum(0, dice(3, 6))), step(4, sum(0, dice(1, 6))),
+				},
+			},
+		},
+		"a constant keeps every step up to count": {
+			steps: spelleffectsvc.DamageSteps{
+				Per: spelleffectsvc.StepPerRound, Dice: ps("(max(2-(step-1),0))d6+1"), Count: p("3"),
+			},
+			level: 9,
+			want: spelleffectsvc.DamageAt{
+				CasterLevel: 9, Instances: sum(1), Rounds: sum(3), StepsPer: spelleffectsvc.StepPerRound,
+				Steps: []spelleffectsvc.DamageStepAt{step(1, sum(1, dice(2, 6))), step(2, sum(1, dice(1, 6))), step(3, sum(1))},
+			},
+		},
+		"count caps the steps": {
+			steps: spelleffectsvc.DamageSteps{
+				Per: spelleffectsvc.StepPerInstance, Dice: ps("(max(12-(step-1),0))d6"), Count: p("level"),
+			},
+			level: 3,
+			want: spelleffectsvc.DamageAt{
+				CasterLevel: 3, Instances: sum(3), Rounds: sum(1), StepsPer: spelleffectsvc.StepPerInstance,
+				Steps: []spelleffectsvc.DamageStepAt{step(1, sum(0, dice(12, 6))), step(2, sum(0, dice(11, 6))), step(3, sum(0, dice(10, 6)))},
+			},
+		},
+		"a list per round keeps the rounds without damage before the last with damage": {
+			steps: spelleffectsvc.DamageSteps{
+				Per: spelleffectsvc.StepPerRound, List: []*formula.Formula{ps("0"), ps("leveld2"), ps("0"), ps("4"), ps("0")},
+			},
+			level: 12,
+			want: spelleffectsvc.DamageAt{
+				CasterLevel: 12, Instances: sum(1), Rounds: sum(4), StepsPer: spelleffectsvc.StepPerRound,
+				Steps: []spelleffectsvc.DamageStepAt{step(1, sum(0)), step(2, sum(0, dice(12, 2))), step(3, sum(0)), step(4, sum(4))},
+			},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := damageEntry(spelleffectsvc.Damage{Steps: &tt.steps})
+			require.NoError(t, e.Validate())
+			got, err := e.DamageAt(tt.level)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			assert.Equal(t, tt.want, *got)
+		})
+	}
+}
+
+// ADR 0008 steps 14 and 15: a cast-time mode's damage may be made of steps,
+// served as any other damage.
+func TestEntry_ModesAt_Steps(t *testing.T) {
+	e := damageEntry(spelleffectsvc.Damage{})
+	e.Damage = nil
+	e.Modes = []spelleffectsvc.Mode{
+		{Key: "burst", Damage: &spelleffectsvc.Damage{Dice: must.Do(formula.Parse("3d6"))}},
+		{Key: "fading", Damage: &spelleffectsvc.Damage{Steps: &spelleffectsvc.DamageSteps{
+			Per: spelleffectsvc.StepPerRound, List: []*formula.Formula{must.Do(formula.ParseStep("2d6")), must.Do(formula.ParseStep("1d6"))},
+		}}},
+	}
+	require.NoError(t, e.Validate())
+	modes, err := e.ModesAt(5)
+	require.NoError(t, err)
+	require.Len(t, modes, 2)
+	assert.Equal(t, &spelleffectsvc.DamageAt{
+		CasterLevel: 5, Instances: sum(1), Rounds: sum(2), StepsPer: spelleffectsvc.StepPerRound,
+		Steps: []spelleffectsvc.DamageStepAt{{Step: 1, Dice: sum(0, dice(2, 6))}, {Step: 2, Dice: sum(0, dice(1, 6))}},
+	}, modes[1].Damage)
+}

@@ -70,6 +70,61 @@ type DamageAt struct {
 	// Parts are the parts of one instance, each rolled on its own (nil: the
 	// damage has no parts).
 	Parts []DamagePartAt
+	// Steps are the dice of every round (StepsPer round) or every instance
+	// (StepsPer instance) of a damage whose dice change, in order (nil: the
+	// damage has no steps; ADR 0008 step 15). Dice is then empty, and Rounds
+	// or Instances counts the steps.
+	StepsPer StepPer
+	Steps    []DamageStepAt
+}
+
+// DamageStepAt is one dice step at a caster level: its number (1-based, the
+// round or the instance) and its dice (none: no damage that step).
+type DamageStepAt struct {
+	Step int
+	Dice formula.Sum
+}
+
+// FormulaOf is the formula of step (1-based): the shared Dice, or the list's
+// row.
+func (s *DamageSteps) FormulaOf(step int) *formula.Formula {
+	if s.Dice != nil {
+		return s.Dice
+	}
+	return s.List[step-1]
+}
+
+// At is every step of s at a caster level, in order (ADR 0008 step 15): the
+// list's rows, or Dice for steps 1 to Count; the steps after the last one
+// with damage are dropped, a step without damage before it is kept.
+func (s *DamageSteps) At(level int) ([]DamageStepAt, error) {
+	n := len(s.List)
+	if s.Dice != nil {
+		count, err := s.Count.Expand(level)
+		if err != nil {
+			return nil, fmt.Errorf("steps.count: %w", err)
+		}
+		if len(count.Dice) > 0 || count.Constant < 1 || count.Constant > formula.MaxSteps {
+			return nil, fmt.Errorf("steps.count must be a number from 1 to %d at caster level %d", formula.MaxSteps, level)
+		}
+		n = count.Constant
+	}
+	out := make([]DamageStepAt, 0, n)
+	last := 0
+	for step := 1; step <= n; step++ {
+		sum, err := s.FormulaOf(step).ExpandStep(level, step)
+		if err != nil {
+			return nil, fmt.Errorf("step %d: %w", step, err)
+		}
+		out = append(out, DamageStepAt{Step: step, Dice: sum})
+		if len(sum.Dice) > 0 || sum.Constant != 0 {
+			last = step
+		}
+	}
+	if last == 0 {
+		return nil, fmt.Errorf("no step has damage at caster level %d", level)
+	}
+	return out[:last], nil
 }
 
 // DamagePartAt is one damage part at a caster level: its dice and what a
@@ -159,6 +214,19 @@ func (e Entry) ModeDamageAt(m *Mode, level int) (*DamageAt, error) {
 		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1},
 	}
 	var err error
+	if d.Steps != nil {
+		if out.Steps, err = d.Steps.At(level); err != nil {
+			return nil, fmt.Errorf("%s damage: %w", e.ID, err)
+		}
+		out.StepsPer = d.Steps.Per
+		n := formula.Sum{Constant: len(out.Steps)}
+		if d.Steps.Per == StepPerRound {
+			out.Rounds = n
+		} else {
+			out.Instances = n
+		}
+		return out, nil
+	}
 	if len(d.Parts) > 0 {
 		for i, p := range d.Parts {
 			dice := p.DiceAt(level)

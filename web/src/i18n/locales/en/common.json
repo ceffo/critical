@@ -359,6 +359,10 @@
     "typed": "{{dice}} {{type}}",
     "instances": "{{instances}} × {{dice}}",
     "perRound": "{{text}} per round, {{rounds}} rounds",
+    "steps": {
+      "round": "by round: {{steps}}",
+      "instance": "in turn: {{steps}}"
+    },
     "types": {
       "acid": "acid",
       "cold": "cold",
@@ -572,6 +576,14 @@
       "damageRoll": "{{instances}} × {{dice}}",
       "damageRounds": "every turn for {{rounds}} turns",
       "instance": "#{{n}}",
+      "round": "Turn {{n}}",
+      "damageSteps": {
+        "round_one": "{{count}} turn, one roll",
+        "round_other": "{{count}} turns, one roll each",
+        "instance_one": "{{count}} roll",
+        "instance_other": "{{count}} rolls in turn"
+      },
+      "noDamage": "no damage",
       "save": "Target's save: {{type}}, {{effect}}",
       "saveEffects": {
         "half": "half damage",

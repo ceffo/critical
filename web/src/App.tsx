@@ -78,7 +78,7 @@ function App() {
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
       <Header />
-      <div className="grid min-h-0 grid-cols-[clamp(68px,5vw,96px)_minmax(0,1fr)_clamp(340px,26vw,520px)_clamp(300px,22vw,440px)] gap-3 py-3 pr-3 pl-1.5">
+      <div className="grid min-h-0 grid-cols-[clamp(68px,5vw,96px)_minmax(0,1fr)_clamp(340px,26vw,520px)_clamp(300px,22vw,440px)] gap-3 py-3 pr-3 pl-2">
         <Rail active={workspace} onSelect={open} />
 
         <div className="flex min-h-0 min-w-0 flex-col" data-testid="workspace">
@@ -119,7 +119,8 @@ function App() {
 
         <aside
           aria-label={t("shell.moi")}
-          className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto rounded-xl bg-card p-4"
+          className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto rounded-xl bg-card p-3"
+          data-testid="moi"
         >
           <Identity onOpenXp={() => open("xp")} />
           <HpBar />

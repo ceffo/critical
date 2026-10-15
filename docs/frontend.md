@@ -30,9 +30,12 @@ web/
 
 One screen, no page scroll, organised around a combat round: see state, act, see the result, fix
 mistakes, advance the round. Responsive from 1280 to 2560 CSS px at full width, no horizontal
-scroll down to 1024; columns are clamped and type/spacing scale with the root size. The grid,
+scroll down to 1024; columns are clamped, the root font size is a fixed 16px. The grid,
 clamps, tokens and house rules are decided in
-[ADR 0009](adr/0009-dashboard-layout-and-theme-system.md). `App.tsx` composes it.
+[ADR 0009](adr/0009-dashboard-layout-and-theme-system.md); type sizes, spacing, control heights,
+the 64px header and the content target in [ADR 0017](adr/0017-type-scale-and-density.md): text
+uses only `text-label` / `text-body` / `text-title` / `text-key` / `text-headline`. `App.tsx`
+composes it.
 
 ```mermaid
 flowchart TD
@@ -95,7 +98,9 @@ flowchart TD
   onto them, never raw colours.
 - Plug-in slots: each Agir tab is one panel component in `components/actions/ActionArea.tsx`
   (`TABS`, the tab label shows a count where it has one: spells left, combat items); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
-- Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): the turn
+- Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): one row
+  of at most 64px (ADR 0017 step 6); the effects track shows its turn row and one effect row and
+  scrolls under the sticky turn row, "Effects" shows the number of effects. The turn
   block shows the turn (the round counter), the initiative row ("Out of combat" at turn 0, a
   placeholder otherwise), Next turn and a ⋯ popover menu (Time passes…, Set turn number…, End combat,
   each a small form or confirm inside the popover). The effects track has a label column and N turn

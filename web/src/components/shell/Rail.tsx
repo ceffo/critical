@@ -35,7 +35,7 @@ export function Rail({
             type="button"
             aria-current={on ? "page" : undefined}
             className={cn(
-              "relative flex flex-col items-center gap-1 rounded-md px-0.5 py-2 text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-6",
+              "relative flex flex-col items-center gap-1 rounded-md px-0.5 py-2 text-label transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5",
               on
                 ? "bg-amb-900 text-amb-200 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-tint"
                 : "text-muted-foreground hover:bg-neu-900 hover:text-foreground",

@@ -28,8 +28,8 @@ export function Saves() {
   const last = lastSaves(useLogStore((s) => s.entries));
 
   return (
-    <section className="flex min-w-0 flex-col gap-1.5" aria-labelledby="moi-saves-title">
-      <h2 id="moi-saves-title" className="text-sm font-medium">
+    <section className="flex min-w-0 flex-col gap-1" aria-labelledby="moi-saves-title">
+      <h2 id="moi-saves-title" className="text-title">
         {t("saves.title")}
       </h2>
       <ul className="flex flex-col gap-1">
@@ -46,7 +46,7 @@ export function Saves() {
                 data-testid="save-row"
                 data-save={cat}
                 onClick={() => void rollSave(cat)}
-                className="grid h-9 w-full grid-cols-[minmax(0,1fr)_auto_3.25rem] items-center gap-2 rounded-md bg-neu-900/60 px-2.5 text-left text-sm transition-colors outline-none hover:bg-neu-800 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                className="grid h-7 w-full grid-cols-[minmax(0,1fr)_auto_3.25rem] items-center gap-2 rounded-md bg-neu-900/60 px-2 text-left text-body transition-colors outline-none hover:bg-neu-800 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
               >
                 <span className="truncate">{name}</span>
                 <span className="text-muted-foreground tabular-nums">

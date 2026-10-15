@@ -18,7 +18,7 @@ export function ChargeCards() {
   if (absorbing.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       {absorbing.map((b) => (
         <div
           key={b.id}
@@ -30,11 +30,11 @@ export function ChargeCards() {
         >
           <Shield aria-hidden className="size-5 shrink-0 text-amb-300" weight="duotone" />
           <div className="flex min-w-0 flex-1 flex-col leading-tight">
-            <span className="truncate text-sm font-medium" title={b.name}>
+            <span className="truncate text-body font-medium" title={b.name}>
               {b.name}
             </span>
             <span
-              className="truncate text-xs text-muted-foreground tabular-nums"
+              className="truncate text-label text-muted-foreground tabular-nums"
               title={t("moi.chargesHint")}
               data-testid="charge-count"
             >

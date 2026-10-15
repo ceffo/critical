@@ -20,7 +20,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const strBuffed = strength !== null && strength.effective !== strength.base;
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-2">
       <div className="min-w-0">
         <h1 className="min-w-0">
           <CharacterDetails character={character} />
@@ -38,7 +38,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   })
                 : undefined
             }
-            className="relative pb-1 text-sm text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="relative pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {t("app.levelValue", { level: character.level })}
             {xp && (
@@ -63,29 +63,29 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             return (
               <div
                 key={k}
-                className="flex min-w-0 flex-col items-center rounded-md bg-neu-900/60 py-1.5 leading-tight"
+                className="flex min-w-0 flex-col items-center rounded-md bg-neu-900/60 py-1"
                 title={isStr ? t("app.strTitle", { ...strength }) : undefined}
               >
-                <dt className="text-xs text-muted-foreground">{t(`attr.${k}`)}</dt>
+                <dt className="text-label text-muted-foreground">{t(`attr.${k}`)}</dt>
                 <dd
                   className={cn(
-                    "text-base font-semibold tabular-nums",
+                    "text-key tabular-nums",
                     isStr && strBuffed && "text-heal",
                   )}
                 >
                   {isStr ? <span data-testid="str-value">{strength.effective}</span> : character[k]}
                 </dd>
                 {isStr && strBuffed && (
-                  <dd className="text-xs text-muted-foreground tabular-nums">
+                  <dd className="text-label text-muted-foreground tabular-nums">
                     {t("app.strBase", { base: strength.base })}
                   </dd>
                 )}
               </div>
             );
           })}
-          <div className="flex min-w-0 flex-col items-center rounded-md bg-neu-800 py-1.5 leading-tight">
-            <dt className="text-xs text-muted-foreground">{t("app.thac0")}</dt>
-            <dd className="text-base font-semibold tabular-nums" data-testid="thac0-value">
+          <div className="flex min-w-0 flex-col items-center rounded-md bg-neu-800 py-1">
+            <dt className="text-label text-muted-foreground">{t("app.thac0")}</dt>
+            <dd className="text-key tabular-nums" data-testid="thac0-value">
               {character.thac0Base}
             </dd>
           </div>

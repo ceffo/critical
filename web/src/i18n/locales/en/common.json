@@ -859,6 +859,11 @@
       "tooltip": "Undo: {{action}} (Ctrl+Z / ⌘Z)",
       "nothing": "Nothing to undo"
     },
+    "redo": {
+      "label": "Redo",
+      "tooltip": "Redo: {{action}} (Ctrl+Shift+Z / ⇧⌘Z)",
+      "nothing": "Nothing to redo"
+    },
     "skill": {
       "success": "{{name}}: d{{die}} {{roll}} vs {{target}}, success",
       "failure": "{{name}}: d{{die}} {{roll}} vs {{target}}, failure"
@@ -1118,6 +1123,8 @@
     "entry_not_amendable": "That entry cannot be amended.",
     "log_top_changed": "The newest entry changed in the meantime. Check the journal and try again.",
     "nothing_to_undo": "There is nothing to undo.",
+    "log_redo_changed": "What can be redone changed in the meantime. Check the journal and try again.",
+    "nothing_to_redo": "There is nothing to redo.",
     "no_initiative": "There is no initiative to reroll: start a combat first.",
     "initiative_not_on_top": "The initiative is no longer the newest action: undo what came after it, or roll again at the next round.",
     "too_many_favourites": "Too many favourite rolls: remove one first.",

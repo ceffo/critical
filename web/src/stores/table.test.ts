@@ -18,7 +18,7 @@ vi.mock("@/api/hp", () => ({
   }),
 }));
 vi.mock("@/api/log", () => ({
-  fetchLog: async () => ({ entries: [], topId: null }),
+  fetchLog: async () => ({ entries: [], topId: null, redo: null }),
 }));
 vi.mock("@/api/items", () => ({ fetchItems: async () => [] }));
 vi.mock("@/api/combat", () => ({ fetchWeapons: async () => [] }));

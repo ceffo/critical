@@ -42,6 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { LogEntry, LogKind } from "@/types/log";
 import { fieldClass } from "./fieldStyles";
+import { RedoButton } from "./RedoButton";
 import { UndoButton } from "./UndoButton";
 import { DiceComposer } from "./DiceComposer";
 import { useDiceStore } from "@/stores/dice";
@@ -132,8 +133,9 @@ export function CombatLog() {
             </button>
           ))}
         </div>
-        <span className="ml-auto">
+        <span className="ml-auto flex gap-1">
           <UndoButton />
+          <RedoButton />
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">

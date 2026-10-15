@@ -489,4 +489,25 @@ test("cast, heal, cast: the journal Undo pops the cast on top, then the heal", a
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
   await expectUndoOn(page, "Cast Haste");
   await snap(page, "popped-cast-then-heal");
+
+  // ADR 0019: Redo replays the popped transactions, the last popped first: its tooltip names the
+  // heal, the button replays it, then Ctrl+Shift+Z replays the cast; the state is back.
+  const redo = page.getByTestId("redo");
+  await expect(redo).toHaveAttribute("title", /^Redo: .*e2e cure light/);
+  await expect(redo).toBeEnabled();
+  await snap(page, "redo-names-the-heal");
+  await redo.click();
+  await expect(logEntry(page, "e2e cure light")).toHaveAttribute(
+    "data-status",
+    "active",
+  );
+  await expect.poll(() => currentHp(page)).toBe(max - 5);
+  await expect(redo).toHaveAttribute("title", /^Redo: .*Cast Stoneskin/);
+  await page.keyboard.press("Control+Shift+Z");
+  await expect(level4.getByTestId("remaining-4")).toHaveText("0 / 1");
+  await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
+  await expect.poll(() => currentHp(page)).toBe(max - 5);
+  await expect(redo).toBeDisabled();
+  await expectUndoOn(page, "Cast Stoneskin");
+  await snap(page, "redone-heal-then-cast");
 });

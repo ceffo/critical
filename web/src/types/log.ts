@@ -42,7 +42,8 @@ export interface LogSnapshot {
 
 export interface LogCorrection {
   id: number;
-  kind: "amend" | "void";
+  /** A void pops the entry, a redo un-pops it (ADR 0019 step 1): the newest of the two decides. */
+  kind: "amend" | "void" | "redo";
   /** Set on amends. */
   hpDelta?: number;
   /** Set on amends that changed the source. */
@@ -96,4 +97,7 @@ export interface LogResponse {
   /** The newest non-voided entry, the one POST /api/log/undo pops; null when nothing can be popped.
    * It may be older than every listed entry. */
   topId: number | null;
+  /** The first entry of the transaction POST /api/log/redo replays (ADR 0019 step 2); its id is the
+   * `expectedRedoId`. Null when there is nothing to redo. It may be older than every listed entry. */
+  redo: LogEntry | null;
 }

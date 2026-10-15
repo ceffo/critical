@@ -22,3 +22,18 @@ export function undoButtonState(
     }),
   };
 }
+
+/** What the Redo button shows (ADR 0019 step 2): disabled with "Nothing to redo" when the server
+ * has no popped transaction to replay, else a tooltip naming it, worded from the payload of its
+ * first entry (the server sends it, so it is named even when it is not among the listed entries). */
+export function redoButtonState(
+  redo: LogEntry | null,
+  busy: boolean,
+  t: TFunction,
+): { disabled: boolean; label: string } {
+  if (redo === null) return { disabled: true, label: t("log.redo.nothing") };
+  return {
+    disabled: busy,
+    label: t("log.redo.tooltip", { action: entryText(redo, t) }),
+  };
+}

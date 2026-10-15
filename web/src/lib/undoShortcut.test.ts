@@ -3,6 +3,7 @@ import {
   OPEN_OVERLAY_SELECTOR,
   hasOpenOverlay,
   isTypingTarget,
+  isRedoShortcut,
   isUndoShortcut,
   type UndoKey,
 } from "./undoShortcut";
@@ -87,5 +88,26 @@ describe("hasOpenOverlay", () => {
       "dialog[open]",
     ])
       expect(OPEN_OVERLAY_SELECTOR).toContain(part);
+  });
+});
+
+describe("isRedoShortcut", () => {
+  // ADR 0019 step 3: Ctrl/Cmd+Shift+Z is the redo; one press replays one transaction.
+  it("Ctrl+Shift+Z and Cmd+Shift+Z, only", () => {
+    expect(isRedoShortcut(key({ ctrlKey: true, shiftKey: true }))).toBe(true);
+    expect(
+      isRedoShortcut(key({ metaKey: true, shiftKey: true, key: "Z" })),
+    ).toBe(true);
+    expect(isRedoShortcut(key({ ctrlKey: true }))).toBe(false);
+    expect(isRedoShortcut(key({ shiftKey: true }))).toBe(false);
+    expect(
+      isRedoShortcut(key({ ctrlKey: true, shiftKey: true, altKey: true })),
+    ).toBe(false);
+    expect(
+      isRedoShortcut(key({ ctrlKey: true, shiftKey: true, repeat: true })),
+    ).toBe(false);
+    expect(
+      isRedoShortcut(key({ ctrlKey: true, shiftKey: true, key: "y" })),
+    ).toBe(false);
   });
 });

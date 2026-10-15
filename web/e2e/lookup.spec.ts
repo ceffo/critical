@@ -114,13 +114,15 @@ async function names(list: Locator): Promise<string[]> {
     .evaluateAll((els) => els.map((e) => e.textContent ?? ""));
 }
 
-test("lookup: typing 'proj' selects Project Image with no click and shows its stats", async ({
+test("lookup: typing 'project im' selects Project Image with no click and shows its stats", async ({
   page,
 }) => {
   await openLookup(page);
-  await search(page).fill("proj");
+  await search(page).fill("project im");
   await expect(selected(page)).toHaveAttribute("data-id", "project_image");
-  await expect(detail(page).getByRole("heading")).toHaveText("Project Image");
+  await expect(detail(page).getByRole("heading")).toHaveText(
+    "Project Image · Projection de l'image",
+  );
   // Values at the Bard's level (fixture: 15) next to the raw text.
   const range = detail(page).getByTestId("stat-range");
   await expect(range.getByTestId("stat-value")).toHaveText("150 yd");

@@ -189,7 +189,7 @@ contract or domain struct.
 
 ## CI and PRs
 
-CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`, Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (bob/mockery output is up to date). PR body ends with
+CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (bob/mockery output is up to date). PR body ends with
 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Only the user merges PRs. Agents and the supervisor never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more.
 
 ## Commits

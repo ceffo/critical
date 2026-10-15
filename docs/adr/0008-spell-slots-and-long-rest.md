@@ -62,8 +62,8 @@ named otherwise.
    level-1 and a level-2, or one level-3; any other split is refused. An extra slot is blank
    until cast, and the spell cast from it is picked then, of the slot's level (none picked, or
    another level, is refused). A new preparation keeps the extra slots; voiding the cast removes
-   them and frees Rary's slot; a long rest removes them (the spell's 24 hour duration is not
-   tracked; to be confirmed with the user).
+   them and frees Rary's slot; a long rest removes them (user ruling 2026-10-15; the spell's 24 hour duration is not
+   tracked).
    Tests: `TestCast_RarysMnemonicEnhancer_AddsTheChosenSlots`,
    `TestCast_RarysMnemonicEnhancer_RejectsAWrongSplit`, `TestCast_ExtraSlot_PicksTheSpell`,
    `TestPrepare_KeepsRarysExtraSlots`, `TestResetSlots_DropsRarysExtraSlots`,

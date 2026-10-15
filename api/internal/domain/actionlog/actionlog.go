@@ -36,12 +36,16 @@ const (
 	// no snapshots; its outcome lives in the payload and an adjustment after
 	// the roll is an amend carrying the recomputed payload.
 	KindSave Kind = "save"
+	// KindSkillCheck is a proficiency or bard skill check (skillsvc, ADR
+	// 0014). Like a save it changes no state and has no snapshots: popping it
+	// only removes it. It is never adjusted.
+	KindSkillCheck Kind = "skill_check"
 )
 
 // RollKinds are the entries whose result replaces the dashboard's result
-// card (attack, save, cast or received spell, item use). Only the newest of
-// them, the one on the card, can be adjusted after the fact.
-var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse}
+// card (attack, save, cast or received spell, item use, skill check). Only
+// the newest of them, the one on the card, can be adjusted after the fact.
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck}
 
 // IsRoll reports whether k is one of RollKinds.
 func IsRoll(k Kind) bool {

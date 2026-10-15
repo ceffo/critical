@@ -31,9 +31,10 @@ import {
   type SaveView,
 } from "@/lib/filCard";
 import { spellName } from "@/i18n/spellName";
-import { counters, type CastLogPayload } from "@/lib/logSummary";
+import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
 import type { RollResult, SaveCategory } from "@/types/combat";
 import type { UseResult } from "@/types/items";
+import type { SkillCheck } from "@/types/skills";
 import { fieldClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
 
@@ -129,6 +130,8 @@ function CardBody({ model, interactive }: { model: CardModel; interactive: boole
       return <ItemResult r={model.item} />;
     case "initiative":
       return <InitiativeResult d10={model.d10} />;
+    case "skill":
+      return <SkillResult check={model.check} />;
     case "info":
       return <InfoResult info={model.info} />;
   }
@@ -708,6 +711,37 @@ function InitiativeResult({ d10 }: { d10: number }) {
         </ul>
       </div>
       <Total label={t("turn.initiative")} value={d10} testId="initiative-total" />
+    </div>
+  );
+}
+
+/** Skill check: the die, "roll vs target", the verdict, and what the target is made of. */
+function SkillResult({ check: c }: { check: SkillCheck }) {
+  const { t } = useTranslation();
+  const proficiency = c.kind === "proficiency";
+  return (
+    <div className="flex flex-col gap-3" data-testid="skill-result">
+      <div className="flex items-center gap-3">
+        <HexDie value={c.roll} label={t("fil.die", { faces: c.die, value: c.roll })} />
+        <div className="min-w-0 flex-1">
+          <div className="text-2xl font-medium tabular-nums" data-testid="skill-vs">
+            {t(proficiency ? "fil.skillVs" : "fil.skillVsPercent", { roll: c.roll, target: c.target })}
+          </div>
+          <div className="text-sm text-muted-foreground tabular-nums">
+            {proficiency
+              ? t("result.skill.proficiency", {
+                  die: c.die,
+                  stat: abilityText(t, c.ability ?? "", c.abilityScore ?? 0, c.modifier ?? 0),
+                })
+              : t("result.skill.bardSkill", { die: c.die, percent: c.target })}
+          </div>
+        </div>
+        <Verdict ok={c.success} yes={t("result.skill.success")} no={t("result.skill.failure")} />
+      </div>
+      <dl className="grid grid-cols-3 gap-2">
+        <Fact label={t("result.skill.die", { die: c.die })}>{c.roll}</Fact>
+        <Fact label={t("result.target")}>{proficiency ? c.target : t("skills.percent", { value: c.target })}</Fact>
+      </dl>
     </div>
   );
 }

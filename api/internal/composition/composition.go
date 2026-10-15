@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/adapters/skilldal"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
@@ -32,6 +33,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
@@ -57,6 +59,7 @@ type BackingServices struct {
 	Weapons   weaponsvc.SVC
 	Rest      restsvc.SVC
 	XP        xpsvc.SVC
+	Skills    skillsvc.SVC
 
 	services []domain.Service
 }
@@ -215,6 +218,15 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	// Skill checks change no state: their entries carry no snapshot, so
+	// there is no restorer to register.
+	skillSvc, err := skillsvc.New(skillsvc.Deps{
+		DAL: skilldal.New(db), Characters: charSvc, Dice: dice, Log: logSvc, Tx: db,
+	})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	return &BackingServices{
 		DB:          db,
@@ -231,8 +243,9 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Weapons:     weaponSvc,
 		Rest:        restSvc,
 		XP:          xpSvc,
+		Skills:      skillSvc,
 		services: []domain.Service{
-			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc,
+			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc,
 		},
 	}, nil
 }

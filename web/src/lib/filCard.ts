@@ -6,6 +6,7 @@ import type { HpBreakdown, LogEntry, LogKind } from "@/types/log";
 import type { Modifier, RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import type { CastResult } from "@/types/spells";
+import type { SkillCheck } from "@/types/skills";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned, formatTime } from "./format";
 import { attackSettled } from "./attackAdjust";
@@ -15,6 +16,8 @@ import {
   entryText,
   itemPayload,
   savePayload,
+  skillCheckPayload,
+  skillName,
   type CastLogPayload,
 } from "./logSummary";
 
@@ -23,7 +26,8 @@ export type LiveResult =
   | { kind: "attack"; result: RollResult }
   | { kind: "save"; category: string; result: RollResult }
   | { kind: "cast"; result: CastResult }
-  | { kind: "item"; result: UseResult };
+  | { kind: "item"; result: UseResult }
+  | { kind: "skill"; result: SkillCheck };
 
 /** The journal filter: everything, or rolls only. */
 export type LogFilter = "all" | "rolls";
@@ -32,7 +36,7 @@ export type LogFilter = "all" | "rolls";
  * The entries whose result is "the latest result", as the server's actionlog.RollKinds: the card
  * shows the newest of them by default, and only that one takes corrections (AC, save adjustment).
  */
-export const RESULT_KINDS: readonly LogKind[] = ["attack", "save", "cast", "item_use"];
+export const RESULT_KINDS: readonly LogKind[] = ["attack", "save", "cast", "item_use", "skill_check"];
 
 /** The newest entry of RESULT_KINDS, voided ones included (the server's "latest roll"). */
 export function latestResult(entries: readonly LogEntry[]): LogEntry | null {
@@ -41,12 +45,13 @@ export function latestResult(entries: readonly LogEntry[]): LogEntry | null {
 
 /**
  * The "rolls" filter: entries that carry dice the server rolled (attacks, saves, item uses,
- * initiative, and casts with a damage roll or a to-hit d20).
+ * initiative, skill checks, and casts with a damage roll or a to-hit d20).
  */
 export function isRollEntry(e: LogEntry): boolean {
   switch (e.kind) {
     case "attack":
     case "save":
+    case "skill_check":
     case "item_use":
     case "initiative":
       return true;
@@ -155,6 +160,7 @@ export type CardModel =
   | { layout: "castLive"; result: CastResult }
   | { layout: "item"; item: UseResult }
   | { layout: "initiative"; round: number; d10: number }
+  | { layout: "skill"; check: SkillCheck }
   | { layout: "info"; info: InfoView };
 
 /** HP change value as the journal and the card show it: a voided change keeps its original delta. */
@@ -208,6 +214,8 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
   if (item) return { layout: "item", item: { ...item, logEntryId: e.id } };
   const initiative = initiativePayload(e);
   if (initiative) return { layout: "initiative", ...initiative };
+  const skill = skillCheckPayload(e);
+  if (skill) return { layout: "skill", check: { ...skill, logEntryId: e.id } };
   return {
     layout: "info",
     info: { text: entryText(e, t), value: hpValue(e), capped: cappedHeal(e) },
@@ -225,12 +233,21 @@ export function liveModel(last: LiveResult): CardModel {
       return { layout: "castLive", result: last.result };
     case "item":
       return { layout: "item", item: last.result };
+    case "skill":
+      return { layout: "skill", check: last.result };
   }
 }
 
 /** The log kind a live result is recorded as (for its tag before the log has caught up). */
 export function liveKind(last: LiveResult): LogKind {
-  return last.kind === "item" ? "item_use" : last.kind;
+  switch (last.kind) {
+    case "item":
+      return "item_use";
+    case "skill":
+      return "skill_check";
+    default:
+      return last.kind;
+  }
 }
 
 /** "Turn 3" or "Out of combat" (turn 0). */
@@ -278,6 +295,9 @@ export function cardHeader(
     case "initiative":
       subtitle = turnLabel(t, model.round);
       break;
+    case "skill":
+      subtitle = skillName(t, model.check.id);
+      break;
     case "info":
       break;
   }
@@ -312,6 +332,8 @@ export function rowValue(e: LogEntry): RowValue | null {
   if (item) return item.dice ? { text: String(item.total), tone: "accent" } : null;
   const initiative = initiativePayload(e);
   if (initiative) return { text: String(initiative.d10), tone: "accent" };
+  const skill = skillCheckPayload(e);
+  if (skill) return { text: String(skill.roll), tone: skill.success ? "pass" : "fail" };
   const cast = castPayload(e);
   if (cast?.damage) return { text: String(cast.damage.total), tone: "accent" };
   if (cast?.attack) return { text: String(cast.attack.d20), tone: cast.attack.hit ? "pass" : "fail" };

@@ -18,10 +18,12 @@ type Factory struct {
 	baseActionSnapshotMods   ActionSnapshotModSlice
 	baseActiveBuffMods       ActiveBuffModSlice
 	baseAttackFormMods       AttackFormModSlice
+	baseBardSkillMods        BardSkillModSlice
 	baseCharacterMods        CharacterModSlice
 	baseCritTableRowMods     CritTableRowModSlice
 	baseHPEventMods          HPEventModSlice
 	baseItemMods             ItemModSlice
+	baseProficiencyMods      ProficiencyModSlice
 	baseRoundStateMods       RoundStateModSlice
 	baseSavedBuffMods        SavedBuffModSlice
 	baseSpellSlotMods        SpellSlotModSlice
@@ -273,6 +275,36 @@ func (f *Factory) fromExistingAttackForm(ctx context.Context, m *models.AttackFo
 	return o
 }
 
+func (f *Factory) NewBardSkill(mods ...BardSkillMod) *BardSkillTemplate {
+	return f.NewBardSkillWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewBardSkillWithContext(ctx context.Context, mods ...BardSkillMod) *BardSkillTemplate {
+	o := &BardSkillTemplate{f: f}
+
+	if f != nil {
+		f.baseBardSkillMods.Apply(ctx, o)
+	}
+
+	BardSkillModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingBardSkill(ctx context.Context, m *models.BardSkill) *BardSkillTemplate {
+	return f.fromExistingBardSkill(ctx, m)
+}
+
+func (f *Factory) fromExistingBardSkill(ctx context.Context, m *models.BardSkill) *BardSkillTemplate {
+	o := &BardSkillTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() string { return m.ID }
+	o.Position = func() int64 { return m.Position }
+	o.Percent = func() int64 { return m.Percent }
+
+	return o
+}
+
 func (f *Factory) NewCharacter(mods ...CharacterMod) *CharacterTemplate {
 	return f.NewCharacterWithContext(context.Background(), mods...)
 }
@@ -461,6 +493,37 @@ func (f *Factory) fromExistingItem(ctx context.Context, m *models.Item) *ItemTem
 	o.EffectDice = func() string { return m.EffectDice }
 	o.EffectSave = func() string { return m.EffectSave }
 	o.Notes = func() string { return m.Notes }
+
+	return o
+}
+
+func (f *Factory) NewProficiency(mods ...ProficiencyMod) *ProficiencyTemplate {
+	return f.NewProficiencyWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewProficiencyWithContext(ctx context.Context, mods ...ProficiencyMod) *ProficiencyTemplate {
+	o := &ProficiencyTemplate{f: f}
+
+	if f != nil {
+		f.baseProficiencyMods.Apply(ctx, o)
+	}
+
+	ProficiencyModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingProficiency(ctx context.Context, m *models.Proficiency) *ProficiencyTemplate {
+	return f.fromExistingProficiency(ctx, m)
+}
+
+func (f *Factory) fromExistingProficiency(ctx context.Context, m *models.Proficiency) *ProficiencyTemplate {
+	o := &ProficiencyTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() string { return m.ID }
+	o.Position = func() int64 { return m.Position }
+	o.Ability = func() string { return m.Ability }
+	o.Modifier = func() int64 { return m.Modifier }
 
 	return o
 }
@@ -766,6 +829,14 @@ func (f *Factory) AddBaseAttackFormMod(mods ...AttackFormMod) {
 	f.baseAttackFormMods = append(f.baseAttackFormMods, mods...)
 }
 
+func (f *Factory) ClearBaseBardSkillMods() {
+	f.baseBardSkillMods = nil
+}
+
+func (f *Factory) AddBaseBardSkillMod(mods ...BardSkillMod) {
+	f.baseBardSkillMods = append(f.baseBardSkillMods, mods...)
+}
+
 func (f *Factory) ClearBaseCharacterMods() {
 	f.baseCharacterMods = nil
 }
@@ -796,6 +867,14 @@ func (f *Factory) ClearBaseItemMods() {
 
 func (f *Factory) AddBaseItemMod(mods ...ItemMod) {
 	f.baseItemMods = append(f.baseItemMods, mods...)
+}
+
+func (f *Factory) ClearBaseProficiencyMods() {
+	f.baseProficiencyMods = nil
+}
+
+func (f *Factory) AddBaseProficiencyMod(mods ...ProficiencyMod) {
+	f.baseProficiencyMods = append(f.baseProficiencyMods, mods...)
 }
 
 func (f *Factory) ClearBaseRoundStateMods() {

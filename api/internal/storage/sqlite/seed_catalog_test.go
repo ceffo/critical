@@ -199,7 +199,7 @@ func TestSeed_SpellsKeyedByNameClassAndLevel(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "spells.json"),
 		[]byte("["+row(3, "War", "level three")+","+row(4, "Healing", "level four")+"]"), 0o600))
 
-	for _, f := range []string{"weapons.json", "items.json"} {
+	for _, f := range []string{"weapons.json", "items.json", "skills.json"} {
 		b, err := os.ReadFile(filepath.Clean(filepath.Join(repoSeeds(), f)))
 		require.NoError(t, err)
 		require.NoError(t, os.WriteFile(filepath.Join(dir, f), b, 0o600)) //nolint:gosec // test temp dir, fixed file names

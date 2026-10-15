@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   Clock,
+  MusicNotes,
   Flask,
   Heart,
   Hourglass,
@@ -60,6 +61,7 @@ const KIND_ICONS: Record<LogKind, Icon> = {
   spell_prep: BookOpen,
   long_rest: Moon,
   save: Shield,
+  skill_check: MusicNotes,
 };
 
 const VALUE_TONES: Record<RowValue["tone"], string> = {

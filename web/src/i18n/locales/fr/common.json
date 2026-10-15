@@ -172,7 +172,8 @@
     "tabs": {
       "weapons": "Armes",
       "spells": "Sorts",
-      "items": "Objets"
+      "items": "Objets",
+      "skills": "Compétences"
     },
     "items": {
       "list": "Objets de combat",
@@ -597,6 +598,13 @@
     "critLegacy": "Critique ×{{mult, number}} (d100 dans {{from}}–{{to}})",
     "critPlaceholderLegacy": "Critique ×{{mult, number}} (provisoire)",
     "multRoll": "d100 multiplicateur",
+    "skill": {
+      "proficiency": "Compétence · d{{die}} sous {{stat}}",
+      "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
+      "success": "Réussi",
+      "failure": "Échec",
+      "die": "d{{die}}"
+    },
     "attackHeadingUnknown": "{{weapon}} contre CA inconnue",
     "attackHeadingAmmoUnknown": "{{weapon}} avec {{ammo}} contre CA inconnue",
     "critsFromAc": "Critique dès CA",
@@ -635,7 +643,8 @@
       "initiative": "Initiative",
       "item_add": "Objet",
       "item_edit": "Objet",
-      "item_remove": "Objet"
+      "item_remove": "Objet",
+      "skill_check": "Compétence"
     },
     "status": {
       "active": "Actif",
@@ -749,6 +758,10 @@
       "label": "Annuler",
       "tooltip": "Annuler : {{action}} (Ctrl+Z / ⌘Z)",
       "nothing": "Rien à annuler"
+    },
+    "skill": {
+      "success": "{{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
+      "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec"
     }
   },
   "critTable": {
@@ -817,7 +830,10 @@
       "label": "Filtre du journal",
       "all": "Tout",
       "rolls": "Jets"
-    }
+    },
+    "die": "d{{faces}} : {{value}}",
+    "skillVs": "{{roll}} contre {{target}}",
+    "skillVsPercent": "{{roll}} contre {{target}} %"
   },
   "xp": {
     "heading": "Expérience · niveau {{level}}",
@@ -860,6 +876,34 @@
       "opening": "XP de départ (fiche de personnage)",
       "confirm": "Confirmer",
       "confirmDelete": "Confirmer la suppression de {{reason}}"
+    }
+  },
+  "skills": {
+    "proficiencies": "Compétences diverses",
+    "bardSkills": "Talents de barde",
+    "columns": {
+      "ability": "Carac.",
+      "target": "Seuil",
+      "percent": "Chance",
+      "last": "Dernier"
+    },
+    "percent": "{{value}} %",
+    "rollLabel": "Lancer {{name}}",
+    "lastSuccess": "Dernier jet : {{roll}}, réussi",
+    "lastFailure": "Dernier jet : {{roll}}, échec",
+    "names": {
+      "musical_instrument": "Instrument de musique",
+      "tumbling": "Acrobaties",
+      "ventriloquism": "Ventriloquie",
+      "riding_land": "Équitation (terrestre)",
+      "appraising": "Estimation",
+      "singing": "Chant",
+      "reading_writing": "Lecture/écriture",
+      "local_history": "Histoire locale",
+      "climb_walls": "Escalade",
+      "detect_noise": "Détection des bruits",
+      "pick_pockets": "Vol à la tire",
+      "read_languages": "Lecture des langues"
     }
   }
 }

@@ -26,6 +26,7 @@ import (
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	restmocks "github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
+	skillmocks "github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	spellmocks "github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
 	weaponmocks "github.com/ceffo/critical/api/internal/domain/service/weaponsvc/mocks"
@@ -48,6 +49,7 @@ type mocksSet struct {
 	weapons *weaponmocks.MockSVC
 	rest    *restmocks.MockSVC
 	xp      *xpmocks.MockSVC
+	skills  *skillmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -64,11 +66,12 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		weapons: weaponmocks.NewMockSVC(t),
 		rest:    restmocks.NewMockSVC(t),
 		xp:      xpmocks.NewMockSVC(t),
+		skills:  skillmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
 		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
-		XP: m.xp,
+		XP: m.xp, Skills: m.skills,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m
@@ -92,6 +95,12 @@ type endpoint struct {
 }
 
 var endpoints = []endpoint{
+	{"GET skills", "GET", "/api/skills", "", func(m *mocksSet, err error) {
+		m.skills.On("List", anyArgs(2)...).Return(nil, err)
+	}},
+	{"POST roll/skill", "POST", "/api/roll/skill/tumbling", "", func(m *mocksSet, err error) {
+		m.skills.On("Roll", anyArgs(3)...).Return(nil, err)
+	}},
 	{"GET xp", "GET", "/api/xp", "", func(m *mocksSet, err error) {
 		m.xp.On("Get", anyArgs(2)...).Return(nil, err)
 	}},

@@ -437,6 +437,7 @@ func TestAmendLatest(t *testing.T) {
 		{name: "a later attack exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindAttack: 6}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "a later cast exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindCast: 9}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "a later item use exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindItemUse: 7}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "a later skill check exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindSkillCheck: 7}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "no roll at all", entry: saveEntry(5), latest: map[actionlog.Kind]int64{}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "fn fails", entry: saveEntry(5), latest: onlySave, fnErr: errBoom, wantErr: errBoom},
 		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{}, wantErr: domain.ErrInvalidInput},

@@ -4,6 +4,7 @@ import {
   chooseLanguage,
   chooseSetting,
   chooseWeapon,
+  combatLog,
   openDashboard,
   openSettings,
   openWeapons,
@@ -183,4 +184,74 @@ test("agir: weapons, spells and items tabs from 1280 to 2560", async ({ page }) 
   await expect(page.getByRole("navigation", { name: "Workspaces" }).getByRole("button", { name: "Inventory" })).toHaveAttribute("aria-current", "page");
   await openWorkspace(page, "Act");
   await snap(page, "agir-items");
+});
+
+// What only a browser proves: the Inventaire dice chip and the Sorts "To the dice" fill the composer
+// (a client store shared across workspaces), and Roll on a spell's dice reaches the dice endpoint
+// and lands in the card and the journal. The formula wording is a unit test (spellValues), the
+// values at level are Go tests (spellstats). Screens of both workspaces at the four viewports.
+test.describe("workspaces to the dice composer", () => {
+  test.use({
+    extraSpells: {
+      rows: [
+        {
+          name: "Quixotic Stillness",
+          class: "Wizard",
+          level: 3,
+          school: "Alteration",
+          sphere: "",
+          casting_time: "3",
+          range: "Touch",
+          duration: "8 rds. + 1d8 rds.",
+          area_of_effect: "The caster",
+          components: "V, S",
+          saving_throw: "None",
+          description: "Quixotic Stillness fixture text.",
+        },
+      ],
+    },
+  });
+
+  test("Inventaire dice chip and Sorts 'To the dice' fill the composer; Roll rolls on the server", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    const formula = page.getByRole("form", { name: "Dice" }).getByLabel("Formula");
+
+    await openWorkspace(page, "Inventory");
+    await page.getByTestId("item-fire_flask").getByRole("button", { name: "Send 5d6 to the dice" }).click();
+    await expect(formula).toHaveValue("5d6");
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      await expectNoPageScroll(page);
+      await snap(page, `inventory-${vp.width}x${vp.height}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await openWorkspace(page, "Spells");
+    await page.getByRole("combobox", { name: "Search spells..." }).fill("quixotic still");
+    const detail = page.getByTestId("spell-detail");
+    await expect(detail.getByRole("heading")).toHaveText("Quixotic Stillness");
+    const dice = detail.getByTestId("spell-dice-duration");
+    await expect(dice.getByTestId("spell-dice-formula")).toHaveText("1d8+8");
+    await dice.getByRole("button", { name: "Send 1d8+8 to the dice" }).click();
+    await expect(formula).toHaveValue("1d8+8");
+
+    await formula.fill("");
+    await dice.getByRole("button", { name: "Roll 1d8+8" }).click();
+    const result = page.getByRole("region", { name: "Detail", exact: true }).getByTestId("dice-result");
+    // The server answers with its normal form (a single die has no count).
+    await expect(result.getByTestId("dice-formula")).toHaveText("d8+8");
+    const total = Number(await result.getByTestId("dice-total").textContent());
+    expect(total).toBeGreaterThanOrEqual(9);
+    expect(total).toBeLessThanOrEqual(16);
+    await expect(combatLog(page).locator("[data-selected=true]")).toContainText(`Dice d8+8 = ${total}`);
+    await expect(formula).toHaveValue("d8+8");
+
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      await expectNoPageScroll(page);
+      await snap(page, `spells-${vp.width}x${vp.height}`);
+    }
+  });
 });

@@ -1,7 +1,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { fieldClass, captionClass } from "@/components/dashboard/fieldStyles";
+import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
 import {
   changedWeaponFields,
@@ -80,7 +80,7 @@ export function WeaponForm({
         className={cn("flex min-w-0 flex-col gap-1", className)}
         data-field={name}
       >
-        <label htmlFor={inputId} className={captionClass}>
+        <label htmlFor={inputId} className="text-xs text-muted-foreground">
           {label}
         </label>
         {input({
@@ -120,7 +120,7 @@ export function WeaponForm({
     <form
       onSubmit={(e) => void submit(e)}
       noValidate
-      className="flex max-w-2xl flex-col gap-2 rounded-lg border bg-muted/30 p-3"
+      className="flex flex-col gap-2 rounded-lg bg-neu-900/50 p-3"
       aria-label={
         editing
           ? t("weapons.form.editTitle", { name: editing.name })

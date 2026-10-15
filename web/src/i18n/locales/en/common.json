@@ -286,6 +286,12 @@
       "save": "Save",
       "cancel": "Cancel",
       "notANumber": "Enter a whole number"
+    },
+    "heading": "Items",
+    "columns": {
+      "name": "Name",
+      "effect": "Effect",
+      "quantity": "Quantity"
     }
   },
   "spellSlots": {
@@ -455,7 +461,11 @@
         "special": "Special",
         "1_2": "1/2"
       }
-    }
+    },
+    "filters": "Spell filters",
+    "diceRow": "Dice at the caster level",
+    "toDice": "To the dice",
+    "rollDice": "Roll"
   },
   "result": {
     "empty": "Roll an attack or a save, or cast a spell: the full breakdown shows here.",
@@ -795,7 +805,7 @@
     "title": "Weapons",
     "list": "Weapon list",
     "none": "No weapons.",
-    "detail": "{{sm}} / large {{l}}",
+    "detail": "{{sm}} · L {{l}}",
     "twoHanded": "two-handed",
     "kind": {
       "melee": "Melee",
@@ -816,6 +826,11 @@
       "twoHanded": "Two-handed",
       "ammoKind": "Ammo kind",
       "ammoNone": "none (hurled)"
+    },
+    "columns": {
+      "name": "Name",
+      "damage": "Damage (S-M · L)",
+      "bonus": "To-hit / dmg"
     }
   },
   "moi": {
@@ -982,6 +997,8 @@
     "modifier": "Modifier",
     "total": "Total",
     "group": "{{count}}d{{sides}}",
-    "groupPercent": "{{count}}d%"
+    "groupPercent": "{{count}}d%",
+    "send": "Send {{formula}} to the dice",
+    "rollFormula": "Roll {{formula}}"
   }
 }

@@ -286,6 +286,12 @@
       "save": "Enregistrer",
       "cancel": "Annuler",
       "notANumber": "Entrez un nombre entier"
+    },
+    "heading": "Objets",
+    "columns": {
+      "name": "Nom",
+      "effect": "Effet",
+      "quantity": "Quantité"
     }
   },
   "spellSlots": {
@@ -455,7 +461,11 @@
         "special": "Spéciale",
         "1_2": "½"
       }
-    }
+    },
+    "filters": "Filtres de sorts",
+    "diceRow": "Dés au niveau du lanceur",
+    "toDice": "Aux dés",
+    "rollDice": "Lancer"
   },
   "result": {
     "empty": "Lancez une attaque, une sauvegarde ou un sort : le détail complet s'affiche ici.",
@@ -795,7 +805,7 @@
     "title": "Armes",
     "list": "Liste des armes",
     "none": "Aucune arme.",
-    "detail": "{{sm}} / grande {{l}}",
+    "detail": "{{sm}} · G {{l}}",
     "twoHanded": "à deux mains",
     "kind": {
       "melee": "Mêlée",
@@ -816,6 +826,11 @@
       "twoHanded": "À deux mains",
       "ammoKind": "Type de munition",
       "ammoNone": "aucune (lancée)"
+    },
+    "columns": {
+      "name": "Nom",
+      "damage": "Dégâts (P-M · G)",
+      "bonus": "Tou. / dég."
     }
   },
   "moi": {
@@ -982,6 +997,8 @@
     "modifier": "Modificateur",
     "total": "Total",
     "group": "{{count}}d{{sides}}",
-    "groupPercent": "{{count}}d%"
+    "groupPercent": "{{count}}d%",
+    "send": "Envoyer {{formula}} aux dés",
+    "rollFormula": "Lancer {{formula}}"
   }
 }

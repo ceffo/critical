@@ -18,4 +18,24 @@ export interface Character {
   savePetriPoly: number;
   saveBreath: number;
   saveSpell: number;
+
+  /** Class key (e.g. "bard"), read-only. */
+  class: string;
+
+  // Details the player edits; age is null when not set.
+  race: string;
+  alignment: string;
+  age: number | null;
+  sex: string;
+  height: string;
+  weight: string;
+  hair: string;
+  eyes: string;
+  languages: string[];
 }
+
+/** The editable details, as the server stores them. */
+export type CharacterDetails = Pick<
+  Character,
+  "race" | "alignment" | "age" | "sex" | "height" | "weight" | "hair" | "eyes" | "languages"
+>;

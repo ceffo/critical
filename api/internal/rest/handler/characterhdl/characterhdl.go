@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
 )
 
 // Router is the chi subset we need.
@@ -57,6 +58,8 @@ type CharacterDTO struct {
 	SavePetriPoly    int    `json:"savePetriPoly"`
 	SaveBreath       int    `json:"saveBreath"`
 	SaveSpell        int    `json:"saveSpell"`
+	Class            string `json:"class"`
+	detailshdl.DetailsDTO
 }
 
 func toDTO(c *charactersvc.Character) CharacterDTO {
@@ -69,5 +72,6 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 		HPMax: c.HPMax, Thac0Base: c.Thac0Base, Level: c.Level, XPTotal: c.XPTotal,
 		SaveParaPoison: c.SaveParaPoison, SaveRodStaffWand: c.SaveRodStaffWand,
 		SavePetriPoly: c.SavePetriPoly, SaveBreath: c.SaveBreath, SaveSpell: c.SaveSpell,
+		Class: c.Class, DetailsDTO: detailshdl.ToDTO(c.Details),
 	}
 }

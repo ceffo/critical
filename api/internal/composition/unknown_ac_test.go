@@ -13,7 +13,7 @@ import (
 
 // An arrow shot at an unknown AC is spent once, whatever the GM's verdicts
 // and the AC given after (docs/adr/0012 steps 4 and 5, ADR 0002 step 10);
-// undo pops the whole attack and gives the arrow back.
+// undo pops each of them, then the attack, which gives the arrow back.
 func TestUnknownAC_AmmoSpentOnceAndUndoPopsTheAttack(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
@@ -37,13 +37,21 @@ func TestUnknownAC_AmmoSpentOnceAndUndoPopsTheAttack(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, before-1, arrowCount(t, bs, "arrows_plus3"), "one arrow, whatever was said after")
 
-	// The log reads the attack as amended, its payload the AC given.
+	// Each verdict and correction is its own step above the attack (ADR 0010 step 6).
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
-	require.Len(t, entries, 1, "verdicts and corrections are amends, not entries")
-	assert.Equal(t, actionlog.KindAttack, entries[0].Kind)
+	require.Len(t, entries, 5)
+	for _, e := range entries[:4] {
+		assert.Equal(t, actionlog.KindCorrection, e.Kind)
+	}
+	assert.Equal(t, actionlog.KindAttack, entries[4].Kind)
 
-	// ADR 0010: undo pops the attack (any amend with it) and gives the arrow back.
+	// ADR 0010: undo pops the four steps, then the attack, which gives the arrow back.
+	for range 4 {
+		_, err = bs.Log.Undo(ctx, id, topID(t, bs))
+		require.NoError(t, err)
+		assert.Equal(t, before-1, arrowCount(t, bs, "arrows_plus3"))
+	}
 	popped, err := bs.Log.Undo(ctx, id, topID(t, bs))
 	require.NoError(t, err)
 	assert.Equal(t, shot.LogEntryID, popped.ID)

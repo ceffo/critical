@@ -74,6 +74,25 @@ const KindInitiative Kind = "initiative"
 // no snapshots, so popping it only removes it.
 const KindDice Kind = "dice"
 
+// KindCorrection is a correction made after a roll (a target AC, a save
+// adjustment, a GM verdict): its own step on the action stack (ADR 0010 step
+// 6). Its payload is a CorrectionStep naming what changed; the corrected
+// entry's new payload is an amend linked to it (Correction.StepID). It has no
+// snapshots: popping it only puts that amend out of effect, so the corrected
+// entry reads its previous payload again. Not one of RollKinds.
+const KindCorrection Kind = "correction"
+
+// CorrectionStep is the payload of a KindCorrection entry: which entry was
+// corrected and what changed, From and To as the corrected kind encodes the
+// field (nil: none, for example an AC that was unknown). The UI words it.
+type CorrectionStep struct {
+	EntryID   int64  `json:"entryId"`
+	EntryKind Kind   `json:"entryKind"`
+	Field     string `json:"field"`
+	From      any    `json:"from"`
+	To        any    `json:"to"`
+}
+
 // KindItemRestock is a stock item's count going up at the table (itemsvc
 // Restock). Not a roll: it leaves the result card alone.
 const KindItemRestock Kind = "item_restock"
@@ -132,9 +151,19 @@ type Recorder interface {
 }
 
 // PayloadAmendment replaces an entry's payload; its HP delta is unchanged.
-// The payload is required.
+// The payload and the change's field are required.
 type PayloadAmendment struct {
 	Payload json.RawMessage
+	// Change names what the amendment changed, for the correction step.
+	Change Change
+}
+
+// Change is the field a correction changed, with its value before and after
+// (see CorrectionStep).
+type Change struct {
+	Field string
+	From  any
+	To    any
 }
 
 // AmendFunc computes a PayloadAmendment from the entry being amended (with its
@@ -142,10 +171,11 @@ type PayloadAmendment struct {
 type AmendFunc func(e Entry) (PayloadAmendment, error)
 
 // LatestAmender corrects an entry whose outcome lives in its payload (a save)
-// after the fact. AmendLatest records an amend replacing the payload of
-// entry id, which must be of kind (a roll kind), not voided, and
-// the latest roll: the newest entry of any of RollKinds, voided ones
-// included. fn computes the amendment from the entry inside the transaction.
+// after the fact. AmendLatest records a correction step (a KindCorrection
+// entry) and an amend linked to it replacing the payload of entry id, which
+// must be of kind (a roll kind), not voided, and the latest roll: the newest
+// entry of any of RollKinds, voided ones included. fn computes the amendment
+// from the entry inside the transaction.
 type LatestAmender interface {
 	AmendLatest(ctx context.Context, characterID, id int64, kind Kind, fn AmendFunc) (*Entry, error)
 }
@@ -181,21 +211,33 @@ const (
 // unchanged) and payload (empty: unchanged): written by AmendLatest (post-roll
 // adjustments, payload only) and, with an HP delta or a summary, by hp_change
 // amends logged before amends became note-only. A void carries none of them.
+//
+// StepID is the KindCorrection entry an amend written by AmendLatest belongs
+// to (nil for older amends, which stay in effect until their entry is popped).
+// StepUndone is true once that step was popped: the amend is then out of
+// effect, kept only for the audit.
 type Correction struct {
-	ID        int64
-	ActionID  int64
-	Kind      CorrectionKind
-	HPDelta   *int
-	Summary   string
-	Payload   json.RawMessage
-	Note      *string
-	CreatedAt time.Time
+	ID         int64
+	ActionID   int64
+	Kind       CorrectionKind
+	HPDelta    *int
+	Summary    string
+	Payload    json.RawMessage
+	Note       *string
+	StepID     *int64
+	StepUndone bool
+	CreatedAt  time.Time
 }
 
-// changesValue is true for an amend that changes the entry's HP delta,
-// summary or payload (not a note-only amend).
+// InEffect is false for an amend whose correction step was popped.
+func (c Correction) InEffect() bool {
+	return c.StepID == nil || !c.StepUndone
+}
+
+// changesValue is true for an amend in effect that changes the entry's HP
+// delta, summary or payload (not a note-only amend).
 func (c Correction) changesValue() bool {
-	return c.Kind == CorrectionAmend && (c.HPDelta != nil || c.Summary != "" || len(c.Payload) > 0)
+	return c.Kind == CorrectionAmend && c.InEffect() && (c.HPDelta != nil || c.Summary != "" || len(c.Payload) > 0)
 }
 
 // Status is derived from an entry's corrections.
@@ -239,10 +281,10 @@ func (e Entry) Status() Status {
 	return status
 }
 
-// latestAmend is the newest amend for which set reports true.
+// latestAmend is the newest amend in effect for which set reports true.
 func (e Entry) latestAmend(set func(Correction) bool) *Correction {
 	for i := len(e.Corrections) - 1; i >= 0; i-- {
-		if c := e.Corrections[i]; c.Kind == CorrectionAmend && set(c) {
+		if c := e.Corrections[i]; c.Kind == CorrectionAmend && c.InEffect() && set(c) {
 			return &e.Corrections[i]
 		}
 	}
@@ -257,13 +299,12 @@ func (e Entry) Note() string {
 	return ""
 }
 
-// EffectivePayload is the payload of the latest amend that set one, the
-// original payload otherwise.
+// EffectivePayload is the payload of the latest amend in effect that set one,
+// the original payload otherwise (ADR 0010 step 6: popping a correction step
+// gives back the payload before it).
 func (e Entry) EffectivePayload() json.RawMessage {
-	for i := len(e.Corrections) - 1; i >= 0; i-- {
-		if c := e.Corrections[i]; c.Kind == CorrectionAmend && len(c.Payload) > 0 {
-			return c.Payload
-		}
+	if a := e.latestAmend(func(c Correction) bool { return len(c.Payload) > 0 }); a != nil {
+		return a.Payload
 	}
 	return e.Payload
 }

@@ -20,6 +20,7 @@ import {
   type CardModel,
   type LiveResult,
 } from "./filCard";
+import { undoButtonState } from "./undoButton";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -160,14 +161,15 @@ const KINDS: [LogKind, unknown, CardModel["layout"], Partial<LogEntry>?][] = [
   ["weapon_remove", { name: "Dagger" }, "info"],
   ["spell_prep", { spells: [{ id: "sleep", name: "Sleep", count: 2 }] }, "info"],
   ["long_rest", { slotsReset: 9, itemsRefilled: ["holy_water"] }, "info"],
+  ["correction", { entryId: 2, entryKind: "attack", field: "targetAc", from: 5, to: 7 }, "info"],
 ];
 
 describe("cardModel: every log kind renders from its payload", () => {
   it("covers every kind", () => {
     const kinds = new Set(KINDS.map(([k]) => k));
     expect(kinds.size).toBe(KINDS.length);
-    // LogKind has 22 members (types/log.ts); a new kind must be added here.
-    expect(kinds.size).toBe(22);
+    // LogKind has 23 members (types/log.ts); a new kind must be added here.
+    expect(kinds.size).toBe(23);
   });
 
   it.each(KINDS)("%s → %s", async (kind, payload, layout, over) => {
@@ -477,5 +479,34 @@ describe("dice chips", () => {
     expect(dieTone(1, 6)).toBe("min");
     expect(dieTone(3, 6)).toBe("plain");
     expect(dieTone(6, null)).toBe("plain");
+  });
+});
+
+// ADR 0010 step 6: popping a correction while the Rolls filter hides correction rows. The journal
+// shows only the roll; the card (which reads the whole log, the live roll dropped by the pop) shows
+// the roll's payload from the log, and the Undo tooltip still names the correction on top.
+describe("a popped correction under the Rolls filter", () => {
+  const rolled = { ...attackPayload, targetAc: 5 };
+  const corrected = { ...attackPayload, targetAc: 7, rolledTargetAc: 5, rolledHit: true };
+  const step = (id: number, status: LogEntry["status"]) =>
+    entry("correction", { entryId: 2, entryKind: "attack", field: "targetAc", from: 5, to: 7 }, { id, status });
+
+  it("the filter hides the correction rows, not the roll", () => {
+    const log = [step(3, "active"), entry("attack", rolled, { id: 2, effectivePayload: corrected })];
+    expect(filterEntries(log, "rolls").map((e) => e.id)).toEqual([2]);
+  });
+
+  it("after the pop the card reads the log's roll payload; the tooltip is in French", async () => {
+    const before = [step(3, "active"), entry("attack", rolled, { id: 2, effectivePayload: corrected, status: "amended" })];
+    const fr = await makeT("fr");
+    expect(undoButtonState(3, before, false, fr).label).toBe("Annuler : Correction CA 5 → 7 (Ctrl+Z / ⌘Z)");
+
+    const after = [step(3, "voided"), entry("attack", rolled, { id: 2 })];
+    const source = cardSource(null, after, null);
+    expect(source).toEqual({ kind: "entry", entry: after[1], latest: true });
+    const m = cardModel(after[1], fr);
+    expect(m.layout === "attack" && m.roll.targetAc).toBe(5);
+    expect(m.layout === "attack" && m.roll.rolledTargetAc).toBeUndefined();
+    expect(undoButtonState(2, after, false, fr).label).toMatch(/^Annuler : .*CA 5/);
   });
 });

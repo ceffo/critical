@@ -40,6 +40,7 @@ func (s *service) AdjustAttackAC(ctx context.Context, characterID, entryID int64
 		// The first correction keeps the target AC and outcome as rolled;
 		// later ones keep those, so the line always reads rolled → now. An
 		// attack rolled without the AC has none to keep.
+		change := actionlog.Change{Field: ChangeTargetAC, From: knownAC(r), To: targetAC}
 		if !r.RolledACUnknown && (r.RolledTargetAC == nil || r.RolledHit == nil || r.RolledCrit == nil) {
 			ac, hit, crit := r.TargetAC, r.Hit, r.IsCrit
 			r.RolledTargetAC, r.RolledHit, r.RolledCrit = &ac, &hit, &crit
@@ -52,7 +53,7 @@ func (s *service) AdjustAttackAC(ctx context.Context, characterID, entryID int64
 			r.RolledTargetAC, r.RolledHit, r.RolledCrit = nil, nil, nil
 		}
 		res = r
-		return encodeAmendment(r)
+		return encodeAmendment(r, change)
 	})
 	if err != nil {
 		return nil, err
@@ -77,13 +78,15 @@ func (s *service) SetAttackVerdict(ctx context.Context, characterID, entryID int
 		if r.ACKnown {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("%w: the target AC of attack #%d is known, correct the AC instead", domain.ErrInvalidInput, e.ID)
 		}
+		change := actionlog.Change{Field: ChangeVerdict, From: verdictValue(r.Verdict)}
 		r.Verdict = VerdictMiss
 		if hit {
 			r.Verdict = VerdictHit
 		}
+		change.To = verdictValue(r.Verdict)
 		settle(r)
 		res = r
-		return encodeAmendment(r)
+		return encodeAmendment(r, change)
 	})
 	if err != nil {
 		return nil, err
@@ -104,10 +107,39 @@ func decodeCorrectable(e actionlog.Entry) (*RollResult, error) {
 	return rec.result(e.ID), nil
 }
 
-func encodeAmendment(r *RollResult) (actionlog.PayloadAmendment, error) {
+func encodeAmendment(r *RollResult, c actionlog.Change) (actionlog.PayloadAmendment, error) {
 	payload, err := json.Marshal(toRecord(r))
 	if err != nil {
 		return actionlog.PayloadAmendment{}, fmt.Errorf("encode attack payload: %w", err)
 	}
-	return actionlog.PayloadAmendment{Payload: payload}, nil
+	return actionlog.PayloadAmendment{Payload: payload, Change: c}, nil
+}
+
+// The fields a correction step names (actionlog.CorrectionStep.Field).
+const (
+	// ChangeTargetAC is a target AC correction: from the AC before (null
+	// when it was unknown) to the AC given.
+	ChangeTargetAC = "targetAc"
+	// ChangeVerdict is a GM verdict: from the verdict before (null: none)
+	// to "hit" or "miss".
+	ChangeVerdict = "verdict"
+	// ChangeSaveAdjustment is a save adjustment: from the adjustment
+	// before to the new one (0: none).
+	ChangeSaveAdjustment = "saveAdjustment"
+)
+
+// knownAC is the attack's target AC, nil while it is unknown.
+func knownAC(r *RollResult) any {
+	if !r.ACKnown {
+		return nil
+	}
+	return r.TargetAC
+}
+
+// verdictValue is the verdict as a correction step encodes it, nil for none.
+func verdictValue(v Verdict) any {
+	if v == VerdictNone {
+		return nil
+	}
+	return string(v)
 }

@@ -50,7 +50,9 @@ id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON
 -- action_snapshots: before/after state an entry changed, one row per state key
 id, action_id, state_key, before_state JSON, after_state JSON
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
-id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, created_at
+id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, step_id, created_at
+-- (step_id: the 'correction' entry a post-roll correction belongs to, ADR 0010 step 6; popping
+--  that entry puts the amend out of effect. NULL on older amends, which stay in effect)
 -- (each amend field, when set, replaces the entry's: latest amend that set it wins; the log's
 --  amend now sets only note, post-roll adjustments set the payload)
 -- summary holds only text the player typed (an HP change's source); every other entry is a

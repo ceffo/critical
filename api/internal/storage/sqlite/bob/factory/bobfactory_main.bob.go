@@ -70,6 +70,7 @@ func (f *Factory) fromExistingActionCorrection(ctx context.Context, m *models.Ac
 	o.CreatedAt = func() time.Time { return m.CreatedAt }
 	o.Payload = func() null.Val[string] { return m.Payload }
 	o.Note = func() null.Val[string] { return m.Note }
+	o.StepID = func() null.Val[int64] { return m.StepID }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))
@@ -77,6 +78,9 @@ func (f *Factory) fromExistingActionCorrection(ctx context.Context, m *models.Ac
 			return o
 		}
 		visited[ptr] = struct{}{}
+	}
+	if m.R.StepActionLog != nil {
+		ActionCorrectionMods.WithExistingStepActionLog(m.R.StepActionLog).Apply(ctx, o)
 	}
 	if m.R.ActionActionLog != nil {
 		ActionCorrectionMods.WithExistingActionActionLog(m.R.ActionActionLog).Apply(ctx, o)
@@ -125,6 +129,9 @@ func (f *Factory) fromExistingActionLog(ctx context.Context, m *models.ActionLog
 			return o
 		}
 		visited[ptr] = struct{}{}
+	}
+	if len(m.R.StepActionCorrections) > 0 {
+		ActionLogMods.AddExistingStepActionCorrections(m.R.StepActionCorrections...).Apply(ctx, o)
 	}
 	if len(m.R.ActionActionCorrections) > 0 {
 		ActionLogMods.AddExistingActionActionCorrections(m.R.ActionActionCorrections...).Apply(ctx, o)

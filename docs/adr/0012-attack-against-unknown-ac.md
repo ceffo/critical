@@ -65,8 +65,9 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
   (step 4), the real AC stepper with Corriger (step 5), and the damage dimmed "if it hits" until
   settled. The sentence is built in the frontend from `hitsAc` and `critsFromAc`; the server
   sends numbers only.
-- Undo pops the attack with its verdicts and corrections ([ADR 0010](0010-action-stack-and-undo.md));
-  a verdict is not its own undoable step.
+- A verdict and an AC given are each their own undoable step above the attack
+  ([ADR 0010](0010-action-stack-and-undo.md) step 6): undo pops them newest first, then the attack
+  (which gives the ammunition back).
 - Attacks logged before this ADR have no `acKnown`: they read as known, with their `targetAc`.
 - Migration 019 adds `attack_forms.target_ac_known`; forms saved before keep their AC (known).
 - Not covered: an unknown AC for a spell's to-hit roll (ADR 0002 consequences), going back to an

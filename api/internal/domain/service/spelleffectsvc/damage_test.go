@@ -66,6 +66,23 @@ func TestEntry_DamageAt(t *testing.T) {
 			15,
 			spelleffectsvc.DamageAt{CasterLevel: 15, Dice: sum(0, dice(3, 6)), Instances: sum(1), Rounds: sum(1)},
 		},
+		// Missiles by level with a floor and a cap: one at level 7, one more
+		// every three levels, seven at most.
+		"force missiles: one missile at level 7": {
+			spelleffectsvc.Damage{Dice: p("2d4+level"), Instances: p("min(7,max(1,1+(level-7)/3))"), Type: "force"},
+			7,
+			spelleffectsvc.DamageAt{CasterLevel: 7, Dice: sum(7, dice(2, 4)), Instances: sum(1), Rounds: sum(1), Type: "force"},
+		},
+		"force missiles: three missiles at level 15": {
+			spelleffectsvc.Damage{Dice: p("2d4+level"), Instances: p("min(7,max(1,1+(level-7)/3))"), Type: "force"},
+			15,
+			spelleffectsvc.DamageAt{CasterLevel: 15, Dice: sum(15, dice(2, 4)), Instances: sum(3), Rounds: sum(1), Type: "force"},
+		},
+		"force missiles: seven missiles at most": {
+			spelleffectsvc.Damage{Dice: p("2d4+level"), Instances: p("min(7,max(1,1+(level-7)/3))"), Type: "force"},
+			30,
+			spelleffectsvc.DamageAt{CasterLevel: 30, Dice: sum(30, dice(2, 4)), Instances: sum(7), Rounds: sum(1), Type: "force"},
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

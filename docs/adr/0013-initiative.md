@@ -42,7 +42,8 @@ Tests live in `api/internal/domain/service/buffsvc/initiative_test.go` unless na
    passing time end it, in their own entry's snapshot, so voiding that entry brings it back. Set
    round to another round keeps it. There is nothing to reroll at round 0. `GET /api/round`
    returns `initiative: null` then.
-   Tests: `TestInitiative_Step5_NoneOutOfCombat`; `composition` `TestInitiative_EndCombat`.
+   Tests: `TestInitiative_Step5_NoneOutOfCombat`; `composition`
+   `TestInitiative_OutOfCombatOnTheRealLog`.
 
 ## Consequences
 

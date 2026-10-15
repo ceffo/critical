@@ -129,9 +129,10 @@ func TestInitiative_RerollOnTheRealLog(t *testing.T) {
 	assert.Equal(t, 5, initiativeOf(t, bs).D10, "nothing changed")
 }
 
-// End combat ends the initiative; voiding it brings it back; nothing to
-// reroll at round 0 (ADR 0013 step 5).
-func TestInitiative_EndCombat(t *testing.T) {
+// End combat and passing time end the initiative; voiding them brings it
+// back; nothing to reroll at round 0; Set round 0 -> 3 rolls none (ADR 0013
+// step 5).
+func TestInitiative_OutOfCombatOnTheRealLog(t *testing.T) {
 	bs, dice := newDiceBacking(t)
 	ctx, id := context.Background(), bs.CharacterID
 
@@ -149,4 +150,19 @@ func TestInitiative_EndCombat(t *testing.T) {
 	_, err = bs.Log.Void(ctx, id, latest(t, bs).ID)
 	require.NoError(t, err)
 	assert.Equal(t, before, initiativeOf(t, bs))
+
+	// Time passes, then undo: the same.
+	_, _, _, _, err = bs.Buffs.PassTime(ctx, id, 1)
+	require.NoError(t, err)
+	assert.Nil(t, initiativeOf(t, bs))
+	_, err = bs.Log.Void(ctx, id, latest(t, bs).ID)
+	require.NoError(t, err)
+	assert.Equal(t, before, initiativeOf(t, bs))
+
+	// Set round from 0 to 3 rolls nothing: no initiative until Next Round.
+	_, _, err = bs.Buffs.ResetRound(ctx, id)
+	require.NoError(t, err)
+	_, _, err = bs.Buffs.SetRound(ctx, id, 3)
+	require.NoError(t, err)
+	assert.Nil(t, initiativeOf(t, bs))
 }

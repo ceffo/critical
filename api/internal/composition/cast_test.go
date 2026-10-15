@@ -206,7 +206,7 @@ func TestReceivedBuffStartsInTheCurrentRoundAndVoidRestoresTheList(t *testing.T)
 	_, err := bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Haste", Duration: 20})
 	require.NoError(t, err)
 	for range 3 {
-		_, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+		_, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
 		require.NoError(t, err)
 	}
 	before, err := bs.Buffs.ListActive(ctx, id)

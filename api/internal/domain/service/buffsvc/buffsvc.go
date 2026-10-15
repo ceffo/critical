@@ -1,4 +1,5 @@
-// Package buffsvc owns active buffs, the round counter, and effect aggregation.
+// Package buffsvc owns active buffs, the round counter and its initiative, and
+// effect aggregation.
 // Round advancement is here because it expires duration-based buffs — the
 // round counter and buff list are one bounded concern.
 //
@@ -35,7 +36,9 @@ type SVC interface {
 	// hit); the buff ends at 0.
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
-	AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, err error)
+	// AdvanceRound is Next Round; it returns the new round's initiative
+	// (ADR 0013 steps 1 and 2).
+	AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, initiative Initiative, err error)
 	// ResetRound ends combat: the counter goes back to 0 (Next Round then
 	// gives 1). Active buffs are untouched. Logged, voidable.
 	ResetRound(ctx context.Context, characterID int64) (active []BuffEffect, round int, err error)
@@ -68,6 +71,14 @@ type SVC interface {
 	// GetEffectiveStr is the character's base STR and its STR with buffs.
 	GetEffectiveStr(ctx context.Context, characterID int64) (Strength, error)
 
+	// GetInitiative is the round's initiative, nil when there is none (ADR
+	// 0013 step 5).
+	GetInitiative(ctx context.Context, characterID int64) (*Initiative, error)
+	// RerollInitiative pops the round's initiative entry and rolls a new one,
+	// in one transaction (ADR 0013 step 4). Refused (a conflict) when there
+	// is no initiative or another entry is newer than its entry.
+	RerollInitiative(ctx context.Context, characterID int64) (Initiative, error)
+
 	// Restorers maps each state key buffsvc snapshots to the Restorer that
 	// writes a "before" state back on void. The composition root registers
 	// every one on the action log.
@@ -81,6 +92,10 @@ type DAL interface {
 	SaveActiveBuffs(ctx context.Context, characterID int64, buffs []BuffEffect) error
 	GetRoundNumber(ctx context.Context, characterID int64) (int, error)
 	SaveRoundNumber(ctx context.Context, characterID int64, round int) error
+	// GetInitiative returns the stored initiative, nil when there is none.
+	GetInitiative(ctx context.Context, characterID int64) (*Initiative, error)
+	// SaveInitiative stores the initiative; nil clears it.
+	SaveInitiative(ctx context.Context, characterID int64, initiative *Initiative) error
 	ListSavedBuffs(ctx context.Context, characterID int64) ([]SavedBuff, error)
 	// ReplaceSavedBuffs makes the stored list equal to saved: entries with an
 	// ID keep it (a restore), entries without get a new one.
@@ -88,8 +103,16 @@ type DAL interface {
 }
 
 // Log is the slice of the action log buffsvc records into (actionlogsvc).
+// Void pops entry id (it must be the newest non-voided entry) and restores
+// its snapshots; the initiative reroll uses it inside its own transaction.
 type Log interface {
 	actionlog.Recorder
+	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
+}
+
+// Dice is the dice port (diceadpt): initiative is rolled through it.
+type Dice interface {
+	RollDie(sides int) int
 }
 
 // Characters supplies the base STR from the sheet (charactersvc).
@@ -102,15 +125,16 @@ type service struct {
 	tx    domain.TxRunner
 	log   Log
 	chars Characters
+	dice  Dice
 }
 
 // New constructs the service.
-func New(dal DAL, tx domain.TxRunner, log Log, chars Characters) (SVC, error) {
-	return NewWithConfig(DefaultConfig(), dal, tx, log, chars)
+func New(dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice) (SVC, error) {
+	return NewWithConfig(DefaultConfig(), dal, tx, log, chars, dice)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("buffsvc: nil config")
@@ -122,11 +146,13 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Char
 		return nil, fmt.Errorf("buffsvc: nil log")
 	case chars == nil:
 		return nil, fmt.Errorf("buffsvc: nil characters")
+	case dice == nil:
+		return nil, fmt.Errorf("buffsvc: nil dice")
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("buffsvc: invalid config: %w", err)
 	}
-	return &service{dal: dal, tx: tx, log: log, chars: chars}, nil
+	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

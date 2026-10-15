@@ -82,6 +82,65 @@ func (_c *MockDAL_GetActiveBuffs_Call) RunAndReturn(run func(context.Context, in
 	return _c
 }
 
+// GetInitiative provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInitiative")
+	}
+
+	var r0 *buffsvc.Initiative
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (*buffsvc.Initiative, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *buffsvc.Initiative); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*buffsvc.Initiative)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_GetInitiative_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInitiative'
+type MockDAL_GetInitiative_Call struct {
+	*mock.Call
+}
+
+// GetInitiative is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockDAL_Expecter) GetInitiative(ctx interface{}, characterID interface{}) *MockDAL_GetInitiative_Call {
+	return &MockDAL_GetInitiative_Call{Call: _e.mock.On("GetInitiative", ctx, characterID)}
+}
+
+func (_c *MockDAL_GetInitiative_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_GetInitiative_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockDAL_GetInitiative_Call) Return(_a0 *buffsvc.Initiative, _a1 error) *MockDAL_GetInitiative_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_GetInitiative_Call) RunAndReturn(run func(context.Context, int64) (*buffsvc.Initiative, error)) *MockDAL_GetInitiative_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRoundNumber provides a mock function with given fields: ctx, characterID
 func (_m *MockDAL) GetRoundNumber(ctx context.Context, characterID int64) (int, error) {
 	ret := _m.Called(ctx, characterID)
@@ -290,6 +349,54 @@ func (_c *MockDAL_SaveActiveBuffs_Call) Return(_a0 error) *MockDAL_SaveActiveBuf
 }
 
 func (_c *MockDAL_SaveActiveBuffs_Call) RunAndReturn(run func(context.Context, int64, []buffsvc.BuffEffect) error) *MockDAL_SaveActiveBuffs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SaveInitiative provides a mock function with given fields: ctx, characterID, initiative
+func (_m *MockDAL) SaveInitiative(ctx context.Context, characterID int64, initiative *buffsvc.Initiative) error {
+	ret := _m.Called(ctx, characterID, initiative)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveInitiative")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, *buffsvc.Initiative) error); ok {
+		r0 = rf(ctx, characterID, initiative)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_SaveInitiative_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SaveInitiative'
+type MockDAL_SaveInitiative_Call struct {
+	*mock.Call
+}
+
+// SaveInitiative is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - initiative *buffsvc.Initiative
+func (_e *MockDAL_Expecter) SaveInitiative(ctx interface{}, characterID interface{}, initiative interface{}) *MockDAL_SaveInitiative_Call {
+	return &MockDAL_SaveInitiative_Call{Call: _e.mock.On("SaveInitiative", ctx, characterID, initiative)}
+}
+
+func (_c *MockDAL_SaveInitiative_Call) Run(run func(ctx context.Context, characterID int64, initiative *buffsvc.Initiative)) *MockDAL_SaveInitiative_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(*buffsvc.Initiative))
+	})
+	return _c
+}
+
+func (_c *MockDAL_SaveInitiative_Call) Return(_a0 error) *MockDAL_SaveInitiative_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_SaveInitiative_Call) RunAndReturn(run func(context.Context, int64, *buffsvc.Initiative) error) *MockDAL_SaveInitiative_Call {
 	_c.Call.Return(run)
 	return _c
 }

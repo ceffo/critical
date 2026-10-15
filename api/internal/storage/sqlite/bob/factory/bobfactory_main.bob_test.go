@@ -330,6 +330,44 @@ func TestCreateCharacterWithActiveBuffsDoesNotDuplicateParent(t *testing.T) {
 	}
 }
 
+func TestCreateCharacterWithDiceFavouritesDoesNotDuplicateParent(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	before, err := models.Characters.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting Characters: %v", err)
+	}
+
+	if _, err := New().NewCharacterWithContext(ctx, CharacterMods.WithNewDiceFavourites(2)).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating Character with DiceFavourites: %v", err)
+	}
+
+	after, err := models.Characters.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting Characters: %v", err)
+	}
+
+	if got := after - before; got != 1 {
+		t.Fatalf("Expected Characters to increase by 1, got %d", got)
+	}
+}
+
 func TestCreateCharacterWithHPEventsDoesNotDuplicateParent(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")
@@ -541,6 +579,30 @@ func TestCreateCritTableRow(t *testing.T) {
 
 	if _, err := New().NewCritTableRowWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating CritTableRow: %v", err)
+	}
+}
+
+func TestCreateDiceFavourite(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewDiceFavouriteWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating DiceFavourite: %v", err)
 	}
 }
 

@@ -81,6 +81,9 @@ func TestCharacterCountStruct(t *testing.T) {
 	// Verify ActiveBuffs count field exists and is *int64
 	var _ *int64 = m.C.ActiveBuffs
 
+	// Verify DiceFavourites count field exists and is *int64
+	var _ *int64 = m.C.DiceFavourites
+
 	// Verify HPEvents count field exists and is *int64
 	var _ *int64 = m.C.HPEvents
 
@@ -114,6 +117,12 @@ func TestCharacterLoadCountMethods(t *testing.T) {
 
 	// Verify LoadCountActiveBuffs method exists on slice
 	_ = ms.LoadCountActiveBuffs(ctx, nil)
+
+	// Verify LoadCountDiceFavourites method exists on single model
+	_ = m.LoadCountDiceFavourites(ctx, nil)
+
+	// Verify LoadCountDiceFavourites method exists on slice
+	_ = ms.LoadCountDiceFavourites(ctx, nil)
 
 	// Verify LoadCountHPEvents method exists on single model
 	_ = m.LoadCountHPEvents(ctx, nil)
@@ -156,6 +165,9 @@ func TestSelectThenLoadCountCharacter(t *testing.T) {
 	// Verify ActiveBuffs loader exists
 	_ = SelectThenLoadCount.Character.ActiveBuffs
 
+	// Verify DiceFavourites loader exists
+	_ = SelectThenLoadCount.Character.DiceFavourites
+
 	// Verify HPEvents loader exists
 	_ = SelectThenLoadCount.Character.HPEvents
 
@@ -182,6 +194,9 @@ func TestPreloadCountCharacter(t *testing.T) {
 	// Verify ActiveBuffs preloader exists and returns a Preloader
 	_ = PreloadCount.Character.ActiveBuffs()
 
+	// Verify DiceFavourites preloader exists and returns a Preloader
+	_ = PreloadCount.Character.DiceFavourites()
+
 	// Verify HPEvents preloader exists and returns a Preloader
 	_ = PreloadCount.Character.HPEvents()
 
@@ -205,6 +220,8 @@ func TestCharacterPreloadCountMethod(t *testing.T) {
 	_ = m.PreloadCount("ActionLogs", 0)
 
 	_ = m.PreloadCount("ActiveBuffs", 0)
+
+	_ = m.PreloadCount("DiceFavourites", 0)
 
 	_ = m.PreloadCount("HPEvents", 0)
 

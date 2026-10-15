@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   Clock,
+  DiceFive,
   MusicNotes,
   Flask,
   Heart,
@@ -39,6 +40,9 @@ import { cn } from "@/lib/utils";
 import type { LogEntry, LogKind } from "@/types/log";
 import { fieldClass } from "./fieldStyles";
 import { UndoButton } from "./UndoButton";
+import { DiceComposer } from "./DiceComposer";
+import { useDiceStore } from "@/stores/dice";
+import { dicePayload } from "@/lib/logSummary";
 
 const KIND_ICONS: Record<LogKind, Icon> = {
   hp_change: Heart,
@@ -62,6 +66,7 @@ const KIND_ICONS: Record<LogKind, Icon> = {
   long_rest: Moon,
   save: Shield,
   skill_check: MusicNotes,
+  dice: DiceFive,
 };
 
 const VALUE_TONES: Record<RowValue["tone"], string> = {
@@ -157,6 +162,7 @@ export function CombatLog() {
           </section>
         ))}
       </div>
+      <DiceComposer />
     </section>
   );
 }
@@ -176,6 +182,9 @@ function LogRow({
 }) {
   const { t, i18n } = useTranslation();
   const { voidEntry, busy } = useTableStore();
+  const reroll = useDiceStore((s) => s.roll);
+  const rolling = useDiceStore((s) => s.rolling);
+  const diceFormula = dicePayload(e)?.formula;
   const [mode, setMode] = useState<Mode>("view");
   const voided = e.status === "voided";
   const amended = e.status === "amended";
@@ -251,6 +260,17 @@ function LogRow({
         {voided && <span className="text-danger">{t("log.status.voided")}</span>}
         {!voided && mode === "view" && (
           <span className="ml-auto flex gap-1">
+            {diceFormula !== undefined && (
+              <Button
+                size="xs"
+                variant="ghost"
+                disabled={rolling}
+                title={t("dice.rerollTitle", { formula: diceFormula })}
+                onClick={() => void reroll(diceFormula)}
+              >
+                {t("dice.reroll")}
+              </Button>
+            )}
             <Button size="xs" variant="ghost" onClick={() => setMode("amend")}>
               {t("log.amend")}
             </Button>

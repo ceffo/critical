@@ -70,14 +70,15 @@ type CharactersQuery = *sqlite.ViewQuery[*Character, CharacterSlice]
 
 // characterR is where relationships are stored.
 type characterR struct {
-	ActionLogs  ActionLogSlice  // fk_action_log_0
-	ActiveBuffs ActiveBuffSlice // fk_active_buffs_0
-	AttackForm  *AttackForm     // fk_attack_forms_0
-	HPEvents    HPEventSlice    // fk_hp_events_0
-	RoundStates RoundStateSlice // fk_round_state_0
-	SavedBuffs  SavedBuffSlice  // fk_saved_buffs_0
-	SpellSlots  SpellSlotSlice  // fk_spell_slots_0
-	XPEntries   XPEntrySlice    // fk_xp_entries_0
+	ActionLogs     ActionLogSlice     // fk_action_log_0
+	ActiveBuffs    ActiveBuffSlice    // fk_active_buffs_0
+	AttackForm     *AttackForm        // fk_attack_forms_0
+	DiceFavourites DiceFavouriteSlice // fk_dice_favourites_0
+	HPEvents       HPEventSlice       // fk_hp_events_0
+	RoundStates    RoundStateSlice    // fk_round_state_0
+	SavedBuffs     SavedBuffSlice     // fk_saved_buffs_0
+	SpellSlots     SpellSlotSlice     // fk_spell_slots_0
+	XPEntries      XPEntrySlice       // fk_xp_entries_0
 	// Loaded reports whether each relationship has been loaded.
 	// A relationship's bool is set by Load*, Preload, ThenLoad, factory builds,
 	// and to-one Attach/Insert operations. To-many Attach/Insert operations leave it unchanged.
@@ -86,14 +87,15 @@ type characterR struct {
 
 // characterRLoaded tracks which relationships on Character have been loaded.
 type characterRLoaded struct {
-	ActionLogs  bool // fk_action_log_0
-	ActiveBuffs bool // fk_active_buffs_0
-	AttackForm  bool // fk_attack_forms_0
-	HPEvents    bool // fk_hp_events_0
-	RoundStates bool // fk_round_state_0
-	SavedBuffs  bool // fk_saved_buffs_0
-	SpellSlots  bool // fk_spell_slots_0
-	XPEntries   bool // fk_xp_entries_0
+	ActionLogs     bool // fk_action_log_0
+	ActiveBuffs    bool // fk_active_buffs_0
+	AttackForm     bool // fk_attack_forms_0
+	DiceFavourites bool // fk_dice_favourites_0
+	HPEvents       bool // fk_hp_events_0
+	RoundStates    bool // fk_round_state_0
+	SavedBuffs     bool // fk_saved_buffs_0
+	SpellSlots     bool // fk_spell_slots_0
+	XPEntries      bool // fk_xp_entries_0
 }
 
 func buildCharacterColumns(tableName string) characterColumns {
@@ -1188,6 +1190,25 @@ func (os CharacterSlice) AttackForm(mods ...bob.Mod[*dialect.SelectQuery]) Attac
 	)...)
 }
 
+// DiceFavourites starts a query for related objects on dice_favourites
+func (o *Character) DiceFavourites(mods ...bob.Mod[*dialect.SelectQuery]) DiceFavouritesQuery {
+	return DiceFavourites.Query(append(mods,
+		sm.Where(DiceFavourites.Columns.CharacterID.EQ(sqlite.Arg(o.ID))),
+	)...)
+}
+
+func (os CharacterSlice) DiceFavourites(mods ...bob.Mod[*dialect.SelectQuery]) DiceFavouritesQuery {
+	PKArgSlice := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgSlice[i] = sqlite.ArgGroup(o.ID)
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	return DiceFavourites.Query(append(mods,
+		sm.Where(sqlite.Group(DiceFavourites.Columns.CharacterID).OP("IN", PKArgExpr)),
+	)...)
+}
+
 // HPEvents starts a query for related objects on hp_events
 func (o *Character) HPEvents(mods ...bob.Mod[*dialect.SelectQuery]) HPEventsQuery {
 	return HPEvents.Query(append(mods,
@@ -1477,6 +1498,76 @@ func (character0 *Character) AttachAttackForm(ctx context.Context, exec bob.Exec
 
 	attackForm1.R.Character = character0
 	attackForm1.R.Loaded.Character = true
+
+	return nil
+}
+
+func insertCharacterDiceFavourites0(ctx context.Context, exec bob.Executor, diceFavourites1 []*DiceFavouriteSetter, character0 *Character) (DiceFavouriteSlice, error) {
+	for i := range diceFavourites1 {
+		diceFavourites1[i].CharacterID = omit.From(character0.ID)
+	}
+
+	ret, err := DiceFavourites.Insert(bob.ToMods(diceFavourites1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertCharacterDiceFavourites0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachCharacterDiceFavourites0(ctx context.Context, exec bob.Executor, count int, diceFavourites1 DiceFavouriteSlice, character0 *Character) (DiceFavouriteSlice, error) {
+	setter := &DiceFavouriteSetter{
+		CharacterID: omit.From(character0.ID),
+	}
+
+	err := diceFavourites1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachCharacterDiceFavourites0: %w", err)
+	}
+
+	return diceFavourites1, nil
+}
+
+func (character0 *Character) InsertDiceFavourites(ctx context.Context, exec bob.Executor, related ...*DiceFavouriteSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	diceFavourites1, err := insertCharacterDiceFavourites0(ctx, exec, related, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.DiceFavourites = append(character0.R.DiceFavourites, diceFavourites1...)
+
+	for _, rel := range diceFavourites1 {
+		rel.R.Character = character0
+		rel.R.Loaded.Character = true
+	}
+	return nil
+}
+
+func (character0 *Character) AttachDiceFavourites(ctx context.Context, exec bob.Executor, related ...*DiceFavourite) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	diceFavourites1 := DiceFavouriteSlice(related)
+
+	_, err = attachCharacterDiceFavourites0(ctx, exec, len(related), diceFavourites1, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.DiceFavourites = append(character0.R.DiceFavourites, diceFavourites1...)
+
+	for _, rel := range related {
+		rel.R.Character = character0
+		rel.R.Loaded.Character = true
+	}
 
 	return nil
 }
@@ -1950,6 +2041,20 @@ func (w characterWhereR[Q]) HasAttackForm(filters ...bob.Mod[*dialect.SelectQuer
 	return mods.Where[Q]{E: sqlite.Exists(q)}
 }
 
+// HasDiceFavourites filters parents that have a matching DiceFavourites using a
+// correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
+// multiply parent rows, so no DISTINCT is needed. The optional filters are
+// applied to the subquery (i.e. to DiceFavourites).
+func (w characterWhereR[Q]) HasDiceFavourites(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+	q := sqlite.Select(
+		sm.Columns(sqlite.Raw("1")),
+		sm.From(DiceFavourites.NameExpr()),
+		sm.Where(DiceFavourites.Columns.CharacterID.EQ(w.cols.ID)),
+	)
+	q.Apply(filters...)
+	return mods.Where[Q]{E: sqlite.Exists(q)}
+}
+
 // HasHPEvents filters parents that have a matching HPEvents using a
 // correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
 // multiply parent rows, so no DISTINCT is needed. The optional filters are
@@ -2317,6 +2422,22 @@ func (o *Character) Preload(name string, retrieved any) error {
 			rel.R.Loaded.Character = true
 		}
 		return nil
+	case "DiceFavourites":
+		rels, ok := retrieved.(DiceFavouriteSlice)
+		if !ok {
+			return fmt.Errorf("character cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.DiceFavourites = rels
+		o.R.Loaded.DiceFavourites = true
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.Character = o
+				rel.R.Loaded.Character = true
+			}
+		}
+		return nil
 	case "HPEvents":
 		rels, ok := retrieved.(HPEventSlice)
 		if !ok {
@@ -2425,14 +2546,15 @@ func buildCharacterPreloader() characterPreloader {
 }
 
 type characterThenLoader[Q orm.Loadable] struct {
-	ActionLogs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	AttackForm  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	XPEntries   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	ActionLogs     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	ActiveBuffs    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	AttackForm     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	DiceFavourites func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	HPEvents       func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	RoundStates    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	SavedBuffs     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	SpellSlots     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	XPEntries      func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
 
 func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
@@ -2444,6 +2566,9 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 	}
 	type AttackFormLoadInterface interface {
 		LoadAttackForm(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type DiceFavouritesLoadInterface interface {
+		LoadDiceFavourites(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 	type HPEventsLoadInterface interface {
 		LoadHPEvents(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
@@ -2478,6 +2603,12 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 			"AttackForm",
 			func(ctx context.Context, exec bob.Executor, retrieved AttackFormLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
 				return retrieved.LoadAttackForm(ctx, exec, mods...)
+			},
+		),
+		DiceFavourites: thenLoadBuilder[Q](
+			"DiceFavourites",
+			func(ctx context.Context, exec bob.Executor, retrieved DiceFavouritesLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadDiceFavourites(ctx, exec, mods...)
 			},
 		),
 		HPEvents: thenLoadBuilder[Q](
@@ -2731,6 +2862,80 @@ func (os CharacterSlice) LoadAttackForm(ctx context.Context, exec bob.Executor, 
 			rel.R.Loaded.Character = true
 
 			o.R.AttackForm = rel
+
+		}
+	}
+
+	return nil
+}
+
+// LoadDiceFavourites loads the character's DiceFavourites into the .R struct
+func (o *Character) LoadDiceFavourites(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.DiceFavourites = nil
+	o.R.Loaded.DiceFavourites = false
+
+	related, err := o.DiceFavourites(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.Character = o
+		rel.R.Loaded.Character = true
+	}
+
+	o.R.DiceFavourites = related
+	o.R.Loaded.DiceFavourites = true
+	return nil
+}
+
+// LoadDiceFavourites loads the character's DiceFavourites into the .R struct
+func (os CharacterSlice) LoadDiceFavourites(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	diceFavourites, err := os.DiceFavourites(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		o.R.DiceFavourites = nil
+		o.R.Loaded.DiceFavourites = true
+	}
+	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
+	characterByKey := make(map[int64][]*Character, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		characterByKey[o.ID] = append(characterByKey[o.ID], o)
+	}
+
+	for _, rel := range diceFavourites {
+
+		owners, ok := characterByKey[rel.CharacterID]
+		if !ok {
+			continue
+		}
+
+		for _, o := range owners {
+
+			rel.R.Character = o
+			rel.R.Loaded.Character = true
+
+			o.R.DiceFavourites = append(o.R.DiceFavourites, rel)
 
 		}
 	}
@@ -3110,13 +3315,14 @@ func (os CharacterSlice) LoadXPEntries(ctx context.Context, exec bob.Executor, m
 
 // characterC is where relationship counts are stored.
 type characterC struct {
-	ActionLogs  *int64
-	ActiveBuffs *int64
-	HPEvents    *int64
-	RoundStates *int64
-	SavedBuffs  *int64
-	SpellSlots  *int64
-	XPEntries   *int64
+	ActionLogs     *int64
+	ActiveBuffs    *int64
+	DiceFavourites *int64
+	HPEvents       *int64
+	RoundStates    *int64
+	SavedBuffs     *int64
+	SpellSlots     *int64
+	XPEntries      *int64
 }
 
 // PreloadCount sets a count in the C struct by name
@@ -3130,6 +3336,8 @@ func (o *Character) PreloadCount(name string, count int64) error {
 		o.C.ActionLogs = &count
 	case "ActiveBuffs":
 		o.C.ActiveBuffs = &count
+	case "DiceFavourites":
+		o.C.DiceFavourites = &count
 	case "HPEvents":
 		o.C.HPEvents = &count
 	case "RoundStates":
@@ -3145,13 +3353,14 @@ func (o *Character) PreloadCount(name string, count int64) error {
 }
 
 type characterCountPreloader struct {
-	ActionLogs  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
-	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
-	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
-	RoundStates func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
-	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
-	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
-	XPEntries   func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	ActionLogs     func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	ActiveBuffs    func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	DiceFavourites func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	HPEvents       func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	RoundStates    func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	SavedBuffs     func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	SpellSlots     func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	XPEntries      func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 }
 
 func buildCharacterCountPreloader() characterCountPreloader {
@@ -3185,6 +3394,23 @@ func buildCharacterCountPreloader() characterCountPreloader {
 
 					sm.From(ActiveBuffs.NameAsExpr()),
 					sm.Where(sqlite.Quote(ActiveBuffs.Alias(), "character_id").EQ(sqlite.Quote(parent, "id"))),
+				}
+				subqueryMods = append(subqueryMods, mods...)
+				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
+			})
+		},
+		DiceFavourites: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
+			return countPreloader[*Character]("DiceFavourites", func(parent string) bob.Expression {
+				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
+				if parent == "" {
+					parent = Characters.Alias()
+				}
+
+				subqueryMods := []bob.Mod[*dialect.SelectQuery]{
+					sm.Columns(sqlite.Raw("count(*)")),
+
+					sm.From(DiceFavourites.NameAsExpr()),
+					sm.Where(sqlite.Quote(DiceFavourites.Alias(), "character_id").EQ(sqlite.Quote(parent, "id"))),
 				}
 				subqueryMods = append(subqueryMods, mods...)
 				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
@@ -3279,13 +3505,14 @@ func buildCharacterCountPreloader() characterCountPreloader {
 }
 
 type characterCountThenLoader[Q orm.Loadable] struct {
-	ActionLogs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	XPEntries   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	ActionLogs     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	ActiveBuffs    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	DiceFavourites func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	HPEvents       func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	RoundStates    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	SavedBuffs     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	SpellSlots     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	XPEntries      func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
 
 func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q] {
@@ -3294,6 +3521,9 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 	}
 	type ActiveBuffsCountInterface interface {
 		LoadCountActiveBuffs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type DiceFavouritesCountInterface interface {
+		LoadCountDiceFavourites(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 	type HPEventsCountInterface interface {
 		LoadCountHPEvents(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
@@ -3322,6 +3552,12 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 			"ActiveBuffs",
 			func(ctx context.Context, exec bob.Executor, retrieved ActiveBuffsCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
 				return retrieved.LoadCountActiveBuffs(ctx, exec, mods...)
+			},
+		),
+		DiceFavourites: countThenLoadBuilder[Q](
+			"DiceFavourites",
+			func(ctx context.Context, exec bob.Executor, retrieved DiceFavouritesCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadCountDiceFavourites(ctx, exec, mods...)
 			},
 		),
 		HPEvents: countThenLoadBuilder[Q](
@@ -3508,6 +3744,84 @@ func (os CharacterSlice) LoadCountActiveBuffs(ctx context.Context, exec bob.Exec
 		}
 		count := countMap[o.ID]
 		o.C.ActiveBuffs = &count
+	}
+
+	return nil
+}
+
+// LoadCountDiceFavourites loads the count of DiceFavourites into the C struct
+func (o *Character) LoadCountDiceFavourites(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	count, err := o.DiceFavourites(mods...).Count(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.C.DiceFavourites = &count
+	return nil
+}
+
+// LoadCountDiceFavourites loads the count of DiceFavourites for a slice in a single batch query
+func (os CharacterSlice) LoadCountDiceFavourites(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	// Build the IN arg expression from parent PKs
+	PKArgSlice := make([]bob.Expression, 0, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		PKArgSlice = append(PKArgSlice, sqlite.Arg(o.ID))
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	// countResult holds one scanned row from the batch count query.
+	// FK columns are aliased to the parent PK column names for direct map lookup.
+	type countResult struct {
+		ID    int64
+		Count int64
+	}
+
+	batchMods := []bob.Mod[*dialect.SelectQuery]{
+		// SELECT fk AS parent_pk, count(*)
+		sm.Columns(
+			DiceFavourites.Columns.CharacterID.As("id"),
+			sqlite.Raw("count(*) as count"),
+		),
+		// Single-hop: FROM related table directly
+		sm.From(DiceFavourites.NameAsExpr()),
+
+		// WHERE fk IN (parent PKs) — psql single-column FK uses `= ANY(array)` (see PKArgExpr above)
+		sm.Where(DiceFavourites.Columns.CharacterID.OP("IN", PKArgExpr)),
+		// GROUP BY fk columns
+		sm.GroupBy(DiceFavourites.Columns.CharacterID),
+	}
+	batchMods = append(batchMods, mods...)
+
+	results, err := bob.All(ctx, exec,
+		sqlite.Select(batchMods...),
+		scan.StructMapper[countResult](),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Single-column FK: direct map lookup
+	countMap := make(map[int64]int64, len(results))
+	for _, r := range results {
+		countMap[r.ID] = r.Count
+	}
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		count := countMap[o.ID]
+		o.C.DiceFavourites = &count
 	}
 
 	return nil
@@ -3904,15 +4218,16 @@ func (os CharacterSlice) LoadCountXPEntries(ctx context.Context, exec bob.Execut
 }
 
 type characterJoins[Q dialect.Joinable] struct {
-	typ         string
-	ActionLogs  modAs[Q, actionLogColumns]
-	ActiveBuffs modAs[Q, activeBuffColumns]
-	AttackForm  modAs[Q, attackFormColumns]
-	HPEvents    modAs[Q, hpEventColumns]
-	RoundStates modAs[Q, roundStateColumns]
-	SavedBuffs  modAs[Q, savedBuffColumns]
-	SpellSlots  modAs[Q, spellSlotColumns]
-	XPEntries   modAs[Q, xpEntryColumns]
+	typ            string
+	ActionLogs     modAs[Q, actionLogColumns]
+	ActiveBuffs    modAs[Q, activeBuffColumns]
+	AttackForm     modAs[Q, attackFormColumns]
+	DiceFavourites modAs[Q, diceFavouriteColumns]
+	HPEvents       modAs[Q, hpEventColumns]
+	RoundStates    modAs[Q, roundStateColumns]
+	SavedBuffs     modAs[Q, savedBuffColumns]
+	SpellSlots     modAs[Q, spellSlotColumns]
+	XPEntries      modAs[Q, xpEntryColumns]
 }
 
 func (j characterJoins[Q]) aliasedAs(alias string) characterJoins[Q] {
@@ -3957,6 +4272,20 @@ func buildCharacterJoins[Q dialect.Joinable](cols characterColumns, typ string) 
 
 				{
 					mods = append(mods, dialect.Join[Q](typ, AttackForms.NameExpr().As(to.Alias())).On(
+						to.CharacterID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
+		DiceFavourites: modAs[Q, diceFavouriteColumns]{
+			c: DiceFavourites.Columns,
+			f: func(to diceFavouriteColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, DiceFavourites.NameExpr().As(to.Alias())).On(
 						to.CharacterID.EQ(cols.ID),
 					))
 				}

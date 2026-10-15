@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/combathdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/dicehdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/hphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/itemhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
@@ -54,6 +55,7 @@ func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
 	xphdl.RegisterRoutes(r, charID, bs.XP)
 	detailshdl.RegisterRoutes(r, charID, bs.Details)
 	skillhdl.RegisterRoutes(r, charID, bs.Skills)
+	dicehdl.RegisterRoutes(r, charID, bs.Dice)
 
 	return r
 }

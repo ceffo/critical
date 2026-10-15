@@ -40,6 +40,7 @@ var (
 	characterRelActionLogsCtx        = newContextual[bool]("action_log.characters.fk_action_log_0")
 	characterRelActiveBuffsCtx       = newContextual[bool]("active_buffs.characters.fk_active_buffs_0")
 	characterRelAttackFormCtx        = newContextual[bool]("attack_forms.characters.fk_attack_forms_0")
+	characterRelDiceFavouritesCtx    = newContextual[bool]("characters.dice_favourites.fk_dice_favourites_0")
 	characterRelHPEventsCtx          = newContextual[bool]("characters.hp_events.fk_hp_events_0")
 	characterRelRoundStatesCtx       = newContextual[bool]("characters.round_state.fk_round_state_0")
 	characterRelSavedBuffsCtx        = newContextual[bool]("characters.saved_buffs.fk_saved_buffs_0")
@@ -48,6 +49,10 @@ var (
 
 	// Relationship Contexts for crit_table_rows
 	critTableRowWithParentsCascadingCtx = newContextual[bool]("critTableRowWithParentsCascading")
+
+	// Relationship Contexts for dice_favourites
+	diceFavouriteWithParentsCascadingCtx = newContextual[bool]("diceFavouriteWithParentsCascading")
+	diceFavouriteRelCharacterCtx         = newContextual[bool]("characters.dice_favourites.fk_dice_favourites_0")
 
 	// Relationship Contexts for hp_events
 	hpEventWithParentsCascadingCtx = newContextual[bool]("hpEventWithParentsCascading")

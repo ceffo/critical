@@ -725,3 +725,12 @@ describe("entryText for skill checks", () => {
     expect(abilityText(fr, "wis", 8, 0)).toBe("SAG 8");
   });
 });
+
+describe("entryText for dice rolls", () => {
+  const roll = { formula: "2d6+3", groups: [{ sides: 6, rolls: [2, 5], negative: false, subtotal: 7 }], modifier: 3, total: 10 };
+  it("words the formula and the total (en, fr), an unreadable payload falls back", async () => {
+    expect(entryText(entry("dice", roll, ""), await makeT("en"))).toBe("Dice 2d6+3 = 10");
+    expect(entryText(entry("dice", roll, ""), await makeT("fr"))).toBe("Dés 2d6+3 = 10");
+    expect(entryText(entry("dice", { formula: "x" }), await makeT("en"))).toBe("server summary");
+  });
+});

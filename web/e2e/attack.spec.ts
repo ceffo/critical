@@ -493,12 +493,20 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({ page
 
   const rolled = page.waitForResponse((r) => r.url().endsWith("/api/roll/attack"));
   await form.getByRole("button", { name: "Attack", exact: true }).click();
-  const r = (await (await rolled).json()) as { hitsAc: number; critsFromAc: number; totalDamage: number };
+  const r = (await (await rolled).json()) as {
+    hitsAc: number;
+    critsFromAc: number;
+    critPossible?: boolean;
+    totalDamage: number;
+  };
   const card = resultCard(page);
   await expect(card).toContainText("Long Sword +2 vs unknown AC");
   await expect(card.getByTestId("hits-ac")).toHaveText(`Hits AC ${r.hitsAc}`);
   await expect(card.getByTestId("tell-gm")).toHaveText(
-    `Tell the GM: “hits AC ${r.hitsAc}”. A crit from AC ${r.critsFromAc}.`,
+    // The crit part is dropped when no real AC can crit (critPossible=false, random with the dice).
+    r.critPossible === false
+      ? `Tell the GM: “hits AC ${r.hitsAc}”.`
+      : `Tell the GM: “hits AC ${r.hitsAc}”. A crit from AC ${r.critsFromAc}.`,
   );
   await expect(card.getByTestId("verdict")).toHaveText("?");
   await expect(card.getByText("Damage if it hits")).toBeVisible();

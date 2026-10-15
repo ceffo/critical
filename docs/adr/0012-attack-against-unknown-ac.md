@@ -16,7 +16,7 @@ nat-20/nat-1 rule is not adopted.
 ## Decision
 
 Tests live in `api/internal/domain/service/combatsvc/unknown_ac_steps_test.go`
-(`TestUnknownAC_StepN_…`) unless named otherwise. The dice mocks return a distinct value for each
+(names start with the prefix `TestUnknownAC_StepN_`, N being the step number) unless named otherwise. The dice mocks return a distinct value for each
 call and expect an exact number of calls (d20 once, d100 twice, the damage dice once per attack).
 
 1. **The AC is optional.** `POST /api/roll/attack` may omit `target_ac` (or send null): the

@@ -6,8 +6,27 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-api check-web
+validate: check-no-tracker-ids check-adr-tests check-api check-web
     @echo "--- Project Validation Successful ---"
+
+# Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
+# in `_` is a prefix (e.g. TestCrit_StepN_ stands for TestCrit_Step1_..., so the N placeholder is
+# written as `StepN_` and matched by dropping it: only the part before `StepN_` is checked).
+check-adr-tests:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    funcs=$(git grep -hoE '^func (\([^)]*\) )?Test[A-Za-z0-9_]+' -- '*_test.go' | sed -E 's/^func (\([^)]*\) )?//')
+    missing=0
+    for name in $(grep -rhoE '\bTest[A-Z][A-Za-z0-9_]*' docs/adr | sort -u); do
+        prefix="${name%%StepN_*}"
+        if [ "$prefix" != "$name" ] || [[ "$name" == *_ ]]; then
+            grep -q "^${prefix}" <<<"$funcs" && continue
+        else
+            grep -qx "$name" <<<"$funcs" && continue
+        fi
+        echo "docs/adr cites $name: no such test in the code"; missing=1
+    done
+    exit $missing
 
 # Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
 # says what it does and why; the link to the work item lives in commits and PRs only

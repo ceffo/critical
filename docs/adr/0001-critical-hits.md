@@ -16,7 +16,7 @@ outcome depends on has to be stored.
 ## Decision
 
 Each step has one named test in `api/internal/domain/service/combatsvc/crit_steps_test.go`
-(`TestCrit_StepN_…`). The dice mocks return a distinct value for each call and expect an exact
+(names start with the prefix `TestCrit_StepN_`, N being the step number). The dice mocks return a distinct value for each call and expect an exact
 number of calls (d20 once, d100 twice per attack).
 
 1. **Rolls.** Every attack rolls the d20 and the crit-check d100 together.

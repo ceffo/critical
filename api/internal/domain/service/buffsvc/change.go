@@ -44,6 +44,10 @@ type change struct {
 	// roundOnly: the buff list is neither snapshotted nor written (End combat,
 	// Set round leave buffs untouched).
 	roundOnly bool
+	// clearInitiative: the round's initiative ends with this change (Next
+	// Round, and any move to round 0: ADR 0013 steps 2 and 5). When there is
+	// one, the entry snapshots it so voiding the entry brings it back.
+	clearInitiative bool
 }
 
 // apply runs decide on the current state and, in one transaction, records
@@ -53,6 +57,20 @@ type change struct {
 func (s *service) apply(ctx context.Context, characterID int64, decide func(buffs []BuffEffect, round int) (change, error)) (change, error) {
 	var ch change
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		var err error
+		ch, err = s.applyIn(ctx, characterID, decide)
+		return err
+	})
+	if err != nil {
+		return change{}, err
+	}
+	return ch, nil
+}
+
+// applyIn is apply inside the transaction ctx carries.
+func (s *service) applyIn(ctx context.Context, characterID int64, decide func(buffs []BuffEffect, round int) (change, error)) (change, error) {
+	var ch change
+	err := func() error {
 		buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("get active buffs: %w", err)
@@ -68,6 +86,19 @@ func (s *service) apply(ctx context.Context, characterID int64, decide func(buff
 		snaps, err := snapshots(buffs, ch.buffs, round, ch.round, ch.roundOnly)
 		if err != nil {
 			return err
+		}
+		var initiative *Initiative
+		if ch.clearInitiative {
+			if initiative, err = s.dal.GetInitiative(ctx, characterID); err != nil {
+				return fmt.Errorf("get initiative: %w", err)
+			}
+			if initiative != nil {
+				snap, err := initiativeSnapshot(initiative, nil)
+				if err != nil {
+					return err
+				}
+				snaps = append(snaps, snap)
+			}
 		}
 		payload, err := json.Marshal(ch.payload)
 		if err != nil {
@@ -92,8 +123,13 @@ func (s *service) apply(ctx context.Context, characterID int64, decide func(buff
 				return fmt.Errorf("save round: %w", err)
 			}
 		}
+		if initiative != nil {
+			if err := s.dal.SaveInitiative(ctx, characterID, nil); err != nil {
+				return fmt.Errorf("clear initiative: %w", err)
+			}
+		}
 		return nil
-	})
+	}()
 	if err != nil {
 		return change{}, err
 	}

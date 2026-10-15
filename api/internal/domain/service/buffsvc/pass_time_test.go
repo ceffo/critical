@@ -121,6 +121,7 @@ func TestPassTime(t *testing.T) {
 			f.records()
 			f.saves(tt.wantActive)
 			f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
+			f.initiativeIs(nil)
 
 			active, expired, rounds, round, err := f.svc.PassTime(context.Background(), charID, tt.hours)
 			require.NoError(t, err)

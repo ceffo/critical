@@ -35,11 +35,14 @@ type fixture struct {
 	dal   *mocks.MockDAL
 	log   *mocks.MockLog
 	chars *mocks.MockCharacters
+	dice  *mocks.MockDice
 	tx    *fakeTx
 	// entries recorded through the log mock, in order.
 	entries []actionlog.NewEntry
 	// order of Record / Save* calls, to prove the entry precedes the writes.
 	calls []string
+	// initiatives written through SaveInitiative, in order (nil: cleared).
+	initiatives []*buffsvc.Initiative
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -48,9 +51,10 @@ func newFixture(t *testing.T) *fixture {
 		dal:   mocks.NewMockDAL(t),
 		log:   mocks.NewMockLog(t),
 		chars: mocks.NewMockCharacters(t),
+		dice:  mocks.NewMockDice(t),
 		tx:    &fakeTx{},
 	}
-	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars)
+	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars, f.dice)
 	require.NoError(t, err)
 	f.svc = svc
 	return f
@@ -81,6 +85,30 @@ func (f *fixture) saves(want []buffsvc.BuffEffect) {
 		}).Once()
 }
 
+// initiativeIs answers one GetInitiative read with cur.
+func (f *fixture) initiativeIs(cur *buffsvc.Initiative) {
+	f.dal.EXPECT().GetInitiative(mock.Anything, charID).Return(cur, nil).Once()
+}
+
+// savesInitiative accepts one SaveInitiative call and captures it.
+func (f *fixture) savesInitiative() {
+	f.dal.EXPECT().SaveInitiative(mock.Anything, charID, mock.Anything).RunAndReturn(
+		func(_ context.Context, _ int64, i *buffsvc.Initiative) error {
+			f.initiatives = append(f.initiatives, i)
+			f.calls = append(f.calls, "save initiative")
+			return nil
+		}).Once()
+}
+
+// rollsInitiative expects one initiative roll: the read of the state before
+// it (none), exactly one d10 that shows d10, its entry, then the store.
+func (f *fixture) rollsInitiative(d10 int) {
+	f.initiativeIs(nil)
+	f.dice.EXPECT().RollDie(10).Return(d10).Once()
+	f.records()
+	f.savesInitiative()
+}
+
 func (f *fixture) base(str int) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: str}, nil)
 }
@@ -108,14 +136,15 @@ func payload(t *testing.T, e actionlog.NewEntry) map[string]any {
 }
 
 func TestNew_NilDependencies(t *testing.T) {
-	dal, log, chars := mocks.NewMockDAL(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t)
+	dal, log, chars, dice := mocks.NewMockDAL(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t), mocks.NewMockDice(t)
 	tx := &fakeTx{}
 	for name, build := range map[string]func() (buffsvc.SVC, error){
-		"config": func() (buffsvc.SVC, error) { return buffsvc.NewWithConfig(nil, dal, tx, log, chars) },
-		"dal":    func() (buffsvc.SVC, error) { return buffsvc.New(nil, tx, log, chars) },
-		"tx":     func() (buffsvc.SVC, error) { return buffsvc.New(dal, nil, log, chars) },
-		"log":    func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, nil, chars) },
-		"chars":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil) },
+		"config": func() (buffsvc.SVC, error) { return buffsvc.NewWithConfig(nil, dal, tx, log, chars, dice) },
+		"dal":    func() (buffsvc.SVC, error) { return buffsvc.New(nil, tx, log, chars, dice) },
+		"tx":     func() (buffsvc.SVC, error) { return buffsvc.New(dal, nil, log, chars, dice) },
+		"log":    func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, nil, chars, dice) },
+		"chars":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil, dice) },
+		"dice":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, nil) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := build()
@@ -456,6 +485,8 @@ func TestAdvanceRound(t *testing.T) {
 					f.calls = append(f.calls, "save round")
 					return nil
 				})
+			f.initiativeIs(nil) // no initiative to end
+			f.rollsInitiative(7)
 
 			active, expired, round, err := f.svc.AdvanceRound(context.Background(), charID)
 			require.NoError(t, err)
@@ -463,15 +494,16 @@ func TestAdvanceRound(t *testing.T) {
 			assert.Equal(t, tt.wantActive, active)
 			assert.Equal(t, tt.wantExpired, expired)
 
-			require.Len(t, f.entries, 1)
+			require.Len(t, f.entries, 2, "the advance, then the initiative")
 			e := f.entries[0]
 			assert.Equal(t, actionlog.KindRoundAdvance, e.Kind)
+			assert.Equal(t, actionlog.KindInitiative, f.entries[1].Kind)
 			assert.Equal(t, tt.wantSummary, e.Summary)
 			assert.Equal(t, []string{buffsvc.StateKeyBuffs, buffsvc.StateKeyRound}, snapKeys(e))
 			assert.JSONEq(t, jsonInt(tt.round), string(e.Snapshots[1].Before))
 			assert.JSONEq(t, jsonInt(tt.round+1), string(e.Snapshots[1].After))
 			assert.Len(t, decodeSnap(t, e.Snapshots[0].Before), len(tt.start))
-			assert.Equal(t, []string{"record", "save buffs", "save round"}, f.calls,
+			assert.Equal(t, []string{"record", "save buffs", "save round", "record", "save initiative"}, f.calls,
 				"the entry is recorded before the round moves, so it belongs to the round it ends")
 			assert.Equal(t, 1, f.tx.calls)
 		})
@@ -830,6 +862,11 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 		})
 	f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, mock.Anything).Return(nil)
 	f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, mock.Anything).Return(nil)
+	f.dal.EXPECT().GetInitiative(mock.Anything, charID).Return(&buffsvc.Initiative{D10: 3, LogEntryID: 1}, nil)
+	f.dal.EXPECT().SaveInitiative(mock.Anything, charID, mock.Anything).Return(nil)
+	f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(1, nil)
+	f.dice.EXPECT().RollDie(10).Return(4)
+	f.log.EXPECT().Void(mock.Anything, charID, int64(1)).Return(&actionlog.Entry{}, nil)
 
 	_, err := f.svc.Activate(ctx, charID, buffsvc.BuffEffect{Name: "X", Duration: 1})
 	require.NoError(t, err)
@@ -841,6 +878,12 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 	require.NoError(t, err)
 	_, _, _, err = f.svc.AdvanceRound(ctx, charID)
 	require.NoError(t, err)
+	_, err = f.svc.RerollInitiative(ctx, charID)
+	require.NoError(t, err)
+	_, _, err = f.svc.ResetRound(ctx, charID)
+	require.NoError(t, err)
+	_, _, _, _, err = f.svc.PassTime(ctx, charID, 1)
+	require.NoError(t, err)
 
 	restorers := f.svc.Restorers()
 	seen := map[string]bool{}
@@ -850,7 +893,7 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 			assert.Contains(t, restorers, s.Key, "no Restorer for state key %q", s.Key)
 		}
 	}
-	assert.Equal(t, map[string]bool{buffsvc.StateKeyBuffs: true, buffsvc.StateKeyRound: true}, seen)
+	assert.Equal(t, map[string]bool{buffsvc.StateKeyBuffs: true, buffsvc.StateKeyRound: true, buffsvc.StateKeyInitiative: true}, seen)
 }
 
 func TestRestorers_WriteTheSnapshotBack(t *testing.T) {
@@ -939,6 +982,9 @@ func TestRoundMoves(t *testing.T) {
 			f := newFixture(t)
 			f.state(buffs, tt.from)
 			f.records()
+			if tt.to == 0 {
+				f.initiativeIs(nil) // round 0 ends the initiative; there is none here
+			}
 			f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, tt.to).RunAndReturn(
 				func(context.Context, int64, int) error { f.calls = append(f.calls, "save round"); return nil }).Once()
 			// SaveActiveBuffs is not expected: the mock fails the test if buffs are written.

@@ -214,6 +214,7 @@ func TestEffectiveStr_ImprovedExpiresStrengthsCountAgain(t *testing.T) {
 	require.Equal(t, 17, s.effective())
 	require.False(t, s.gemOn())
 
+	s.dice.expect(roll{"d10", 4}) // Next Round's initiative
 	_, expired, _, err := s.bs.Buffs.AdvanceRound(s.ctx, s.id)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"Improved Strength"}, names(expired))
@@ -250,6 +251,7 @@ func TestEffectiveStr_StrengthsExpireIndependently(t *testing.T) {
 	_, err = s.bs.Buffs.Edit(s.ctx, s.id, b.Buff.Buff.ID, buffsvc.BuffEdit{Duration: intPtr(2)})
 	require.NoError(t, err)
 
+	s.dice.expect(roll{"d10", 4}, roll{"d10", 7}) // each Next Round's initiative
 	active, expired, _, err := s.bs.Buffs.AdvanceRound(s.ctx, s.id)
 	require.NoError(t, err)
 	require.Len(t, expired, 1)

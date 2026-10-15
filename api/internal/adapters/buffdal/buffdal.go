@@ -1,6 +1,6 @@
 // Package buffdal is the storage adapter for buffsvc. The active buff list is
 // persisted as JSON in active_buffs.buffs for simplicity; the round counter
-// lives in round_state.round_number. Delegates to bob-generated typed queries.
+// lives in round_state.round_number, the round's initiative next to it. Delegates to bob-generated typed queries.
 package buffdal
 
 import (
@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aarondl/opt/null"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -132,6 +133,37 @@ func (d *DAL) SaveRoundNumber(ctx context.Context, characterID int64, round int)
 	}).Exec(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("upsert round_state: %w", err)
+	}
+	return nil
+}
+
+// GetInitiative returns the stored initiative; nil when there is none or no
+// row exists.
+func (d *DAL) GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error) {
+	row, err := queries.GetInitiative(characterID).One(ctx, d.exec(ctx))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query initiative: %w", err)
+	}
+	d10, ok := row.InitiativeD10.Get()
+	if !ok {
+		return nil, nil
+	}
+	entryID, _ := row.InitiativeEntryID.Get()
+	return &buffsvc.Initiative{D10: int(d10), LogEntryID: entryID}, nil
+}
+
+// SaveInitiative upserts the initiative; nil writes NULL (none).
+func (d *DAL) SaveInitiative(ctx context.Context, characterID int64, initiative *buffsvc.Initiative) error {
+	row := queries.UpsertInitiative_RoundState{CharacterID: characterID}
+	if initiative != nil {
+		row.InitiativeD10 = null.From(int64(initiative.D10))
+		row.InitiativeEntryID = null.From(initiative.LogEntryID)
+	}
+	if _, err := queries.UpsertInitiative([]queries.UpsertInitiative_RoundState{row}).Exec(ctx, d.exec(ctx)); err != nil {
+		return fmt.Errorf("upsert initiative: %w", err)
 	}
 	return nil
 }

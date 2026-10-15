@@ -87,9 +87,14 @@ func TestRecord(t *testing.T) {
 			wantErr: domain.ErrInvalidInput,
 		},
 		{
-			name:    "summary required",
+			name:    "summary or payload required",
 			in:      actionlog.NewEntry{CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "  "},
 			wantErr: domain.ErrInvalidInput,
+		},
+		{
+			name:      "a payload without a summary (the UI words it)",
+			in:        actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindBuffChange, Payload: json.RawMessage(`{"action":"dismiss"}`)},
+			wantStore: &actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindBuffChange, Payload: json.RawMessage(`{"action":"dismiss"}`)},
 		},
 		{
 			name:    "duplicate snapshot keys",

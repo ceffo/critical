@@ -41,6 +41,9 @@ func (s *service) moveRound(ctx context.Context, characterID int64, kind actionl
 			payload:   logPayload{Action: action, FromRound: &from, ToRound: &to},
 			round:     &to,
 			roundOnly: true,
+			// Round 0 is out of combat: no initiative (ADR 0013 step 5). A
+			// set to another round keeps the round's initiative.
+			clearInitiative: to == 0,
 		}, nil
 	})
 	if err != nil {

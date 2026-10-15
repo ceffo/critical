@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -169,5 +170,51 @@ func TestRoundPassTimePreview(t *testing.T) {
 		rec := do(h, "GET", "/api/round/pass-time/preview?hours=0.01", "")
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Contains(t, rec.Body.String(), "less than one round")
+	})
+}
+
+func TestRoundInitiative_WireShape(t *testing.T) {
+	t.Run("GET /api/round carries the initiative", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil)
+		m.buffs.EXPECT().GetInitiative(mock.Anything, int64(1)).Return(&buffsvc.Initiative{D10: 4, LogEntryID: 12}, nil)
+		rec := do(h, "GET", "/api/round", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"round":3,"initiative":{"value":4,"logEntryId":12}}`, rec.Body.String())
+	})
+
+	t.Run("GET /api/round out of combat: null", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().GetRound(mock.Anything, int64(1)).Return(0, nil)
+		m.buffs.EXPECT().GetInitiative(mock.Anything, int64(1)).Return(nil, nil)
+		rec := do(h, "GET", "/api/round", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"round":0,"initiative":null}`, rec.Body.String())
+	})
+
+	t.Run("Next Round returns the new round's initiative", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().AdvanceRound(mock.Anything, int64(1)).Return([]buffsvc.BuffEffect{}, []buffsvc.BuffEffect{}, 1, nil)
+		m.buffs.EXPECT().GetInitiative(mock.Anything, int64(1)).Return(&buffsvc.Initiative{D10: 9, LogEntryID: 2}, nil)
+		rec := do(h, "POST", "/api/round/advance", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"roundNumber":1,"activeBuffs":[],"expiredBuffs":[],"initiative":{"value":9,"logEntryId":2}}`, rec.Body.String())
+	})
+
+	t.Run("reroll returns the new roll", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().RerollInitiative(mock.Anything, int64(1)).Return(buffsvc.Initiative{D10: 2, LogEntryID: 13}, nil)
+		rec := do(h, "POST", "/api/round/initiative/reroll", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"value":2,"logEntryId":13}`, rec.Body.String())
+	})
+
+	t.Run("reroll: 409 when another entry is newer", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().RerollInitiative(mock.Anything, int64(1)).
+			Return(buffsvc.Initiative{}, fmt.Errorf("pop initiative: %w", actionlogsvc.ErrNotLatest))
+		rec := do(h, "POST", "/api/round/initiative/reroll", "")
+		assert.Equal(t, http.StatusConflict, rec.Code)
+		assert.Contains(t, rec.Body.String(), `"error"`)
 	})
 }

@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -23,9 +25,11 @@ import (
 
 // RoundState is an object representing the database table.
 type RoundState struct {
-	ID          int64 `db:"id,pk" `
-	CharacterID int64 `db:"character_id" `
-	RoundNumber int64 `db:"round_number" `
+	ID                int64           `db:"id,pk" `
+	CharacterID       int64           `db:"character_id" `
+	RoundNumber       int64           `db:"round_number" `
+	InitiativeD10     null.Val[int64] `db:"initiative_d10" `
+	InitiativeEntryID null.Val[int64] `db:"initiative_entry_id" `
 
 	R roundStateR `db:"-" `
 }
@@ -56,7 +60,7 @@ type roundStateRLoaded struct {
 
 func buildRoundStateColumns(tableName string) roundStateColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "character_id", "round_number",
+		"id", "character_id", "round_number", "initiative_d10", "initiative_entry_id",
 	)
 
 	if tableName != "" {
@@ -64,20 +68,24 @@ func buildRoundStateColumns(tableName string) roundStateColumns {
 	}
 
 	return roundStateColumns{
-		ColumnsExpr: columnsExpr,
-		tableAlias:  tableName,
-		ID:          buildRoundStateColumn(tableName, "id"),
-		CharacterID: buildRoundStateColumn(tableName, "character_id"),
-		RoundNumber: buildRoundStateColumn(tableName, "round_number"),
+		ColumnsExpr:       columnsExpr,
+		tableAlias:        tableName,
+		ID:                buildRoundStateColumn(tableName, "id"),
+		CharacterID:       buildRoundStateColumn(tableName, "character_id"),
+		RoundNumber:       buildRoundStateColumn(tableName, "round_number"),
+		InitiativeD10:     buildRoundStateColumn(tableName, "initiative_d10"),
+		InitiativeEntryID: buildRoundStateColumn(tableName, "initiative_entry_id"),
 	}
 }
 
 type roundStateColumns struct {
 	expr.ColumnsExpr
-	tableAlias  string
-	ID          roundStateColumn
-	CharacterID roundStateColumn
-	RoundNumber roundStateColumn
+	tableAlias        string
+	ID                roundStateColumn
+	CharacterID       roundStateColumn
+	RoundNumber       roundStateColumn
+	InitiativeD10     roundStateColumn
+	InitiativeEntryID roundStateColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -123,13 +131,15 @@ func (c roundStateColumn) ShouldOmitParens() bool {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type RoundStateSetter struct {
-	ID          omit.Val[int64] `db:"id,pk" `
-	CharacterID omit.Val[int64] `db:"character_id" `
-	RoundNumber omit.Val[int64] `db:"round_number" `
+	ID                omit.Val[int64]     `db:"id,pk" `
+	CharacterID       omit.Val[int64]     `db:"character_id" `
+	RoundNumber       omit.Val[int64]     `db:"round_number" `
+	InitiativeD10     omitnull.Val[int64] `db:"initiative_d10" `
+	InitiativeEntryID omitnull.Val[int64] `db:"initiative_entry_id" `
 }
 
 func (s RoundStateSetter) SetColumns() []string {
-	vals := make([]string, 0, 3)
+	vals := make([]string, 0, 5)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -138,6 +148,12 @@ func (s RoundStateSetter) SetColumns() []string {
 	}
 	if s.RoundNumber.IsValue() {
 		vals = append(vals, "round_number")
+	}
+	if s.InitiativeD10.IsValue() || s.InitiativeD10.IsNull() {
+		vals = append(vals, "initiative_d10")
+	}
+	if s.InitiativeEntryID.IsValue() || s.InitiativeEntryID.IsNull() {
+		vals = append(vals, "initiative_entry_id")
 	}
 	return vals
 }
@@ -151,6 +167,12 @@ func (s RoundStateSetter) Overwrite(t *RoundState) {
 	}
 	if s.RoundNumber.IsValue() {
 		t.RoundNumber = s.RoundNumber.MustGet()
+	}
+	if s.InitiativeD10.IsValue() || s.InitiativeD10.IsNull() {
+		t.InitiativeD10 = s.InitiativeD10.MustGetNull()
+	}
+	if s.InitiativeEntryID.IsValue() || s.InitiativeEntryID.IsNull() {
+		t.InitiativeEntryID = s.InitiativeEntryID.MustGetNull()
 	}
 }
 
@@ -191,6 +213,20 @@ func (s *RoundStateSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.RoundNumber.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "initiative_d10":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.InitiativeD10.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.InitiativeD10.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
+		case "initiative_entry_id":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.InitiativeEntryID.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.InitiativeEntryID.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -202,7 +238,7 @@ func (s RoundStateSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s RoundStateSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 3)
+	exprs := make([]bob.Expression, 0, 5)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -225,6 +261,20 @@ func (s RoundStateSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.InitiativeD10.IsValue() || s.InitiativeD10.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "initiative_d10")...),
+			sqlite.Arg(s.InitiativeD10),
+		}})
+	}
+
+	if s.InitiativeEntryID.IsValue() || s.InitiativeEntryID.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "initiative_entry_id")...),
+			sqlite.Arg(s.InitiativeEntryID),
+		}})
+	}
+
 	return exprs
 }
 
@@ -235,7 +285,7 @@ func roundStateScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, 
 		idx int
 		dst func(o *RoundState) any
 	}
-	targets := make([]target, 0, 3)
+	targets := make([]target, 0, 5)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -244,6 +294,10 @@ func roundStateScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, 
 			targets = append(targets, target{i, func(o *RoundState) any { return &o.CharacterID }})
 		case "round_number":
 			targets = append(targets, target{i, func(o *RoundState) any { return &o.RoundNumber }})
+		case "initiative_d10":
+			targets = append(targets, target{i, func(o *RoundState) any { return &o.InitiativeD10 }})
+		case "initiative_entry_id":
+			targets = append(targets, target{i, func(o *RoundState) any { return &o.InitiativeEntryID }})
 		}
 	}
 
@@ -559,11 +613,13 @@ func (roundState0 *RoundState) AttachCharacter(ctx context.Context, exec bob.Exe
 }
 
 type roundStateWhere[Q sqlite.Filterable] struct {
-	cols        roundStateColumns
-	ID          sqlite.WhereMod[Q, int64]
-	CharacterID sqlite.WhereMod[Q, int64]
-	RoundNumber sqlite.WhereMod[Q, int64]
-	R           roundStateWhereR[Q]
+	cols              roundStateColumns
+	ID                sqlite.WhereMod[Q, int64]
+	CharacterID       sqlite.WhereMod[Q, int64]
+	RoundNumber       sqlite.WhereMod[Q, int64]
+	InitiativeD10     sqlite.WhereNullMod[Q, int64]
+	InitiativeEntryID sqlite.WhereNullMod[Q, int64]
+	R                 roundStateWhereR[Q]
 }
 
 func (roundStateWhere[Q]) AliasedAs(alias string) roundStateWhere[Q] {
@@ -572,11 +628,13 @@ func (roundStateWhere[Q]) AliasedAs(alias string) roundStateWhere[Q] {
 
 func buildRoundStateWhere[Q sqlite.Filterable](cols roundStateColumns) roundStateWhere[Q] {
 	return roundStateWhere[Q]{
-		cols:        cols,
-		ID:          sqlite.Where[Q, int64](cols.ID.Expression),
-		CharacterID: sqlite.Where[Q, int64](cols.CharacterID.Expression),
-		RoundNumber: sqlite.Where[Q, int64](cols.RoundNumber.Expression),
-		R:           roundStateWhereR[Q]{cols: cols},
+		cols:              cols,
+		ID:                sqlite.Where[Q, int64](cols.ID.Expression),
+		CharacterID:       sqlite.Where[Q, int64](cols.CharacterID.Expression),
+		RoundNumber:       sqlite.Where[Q, int64](cols.RoundNumber.Expression),
+		InitiativeD10:     sqlite.WhereNull[Q, int64](cols.InitiativeD10.Expression),
+		InitiativeEntryID: sqlite.WhereNull[Q, int64](cols.InitiativeEntryID.Expression),
+		R:                 roundStateWhereR[Q]{cols: cols},
 	}
 }
 

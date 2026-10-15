@@ -95,12 +95,17 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 
 	entries, err := bs.Log.List(ctx, id, 50)
 	require.NoError(t, err)
-	require.Len(t, entries, 7)
-	assert.Equal(t, actionlog.KindRoundAdvance, entries[0].Kind)
-	assert.Equal(t, 0, entries[0].Round, "Next Round is logged in the round it ends")
+	require.Len(t, entries, 8)
+	assert.Equal(t, actionlog.KindInitiative, entries[0].Kind, "the new round's initiative is the newest entry")
+	assert.Equal(t, 1, entries[0].Round, "the initiative belongs to the round it is rolled for")
+	assert.Equal(t, actionlog.KindRoundAdvance, entries[1].Kind)
+	assert.Equal(t, 0, entries[1].Round, "Next Round is logged in the round it ends")
 
-	// Void Next Round: the round, the durations and the expired buff come back.
+	// Void the initiative, then Next Round: the round, the durations and the
+	// expired buff come back.
 	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, id, entries[1].ID)
 	require.NoError(t, err)
 	r, err := bs.Buffs.GetRound(ctx, id)
 	require.NoError(t, err)
@@ -114,7 +119,7 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 	assert.Equal(t, 18, str.Effective)
 
 	// Void the rest newest first (edit, both absorbs, three activations).
-	for _, e := range entries[1:] {
+	for _, e := range entries[2:] {
 		_, err := bs.Log.Void(ctx, id, e.ID)
 		require.NoError(t, err, "void #%d %s", e.ID, e.Summary)
 		if e.Summary == "Edited Strength: 2 rd → 1 rd" {
@@ -147,8 +152,8 @@ func TestVoidingAnOlderBuffChangeIsBlocked(t *testing.T) {
 
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
-	require.Len(t, entries, 2)
-	_, err = bs.Log.Void(ctx, id, entries[1].ID)
+	require.Len(t, entries, 3, "activate, Next Round, its initiative")
+	_, err = bs.Log.Void(ctx, id, entries[2].ID)
 	assert.Error(t, err)
 }
 

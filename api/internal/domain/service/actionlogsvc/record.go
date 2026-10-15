@@ -20,8 +20,8 @@ func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, erro
 		return 0, fmt.Errorf("%w: kind is required", domain.ErrInvalidInput)
 	}
 	e.Summary = strings.TrimSpace(e.Summary)
-	if e.Summary == "" {
-		return 0, fmt.Errorf("%w: summary is required", domain.ErrInvalidInput)
+	if e.Summary == "" && len(e.Payload) == 0 {
+		return 0, fmt.Errorf("%w: an entry needs a payload or a summary", domain.ErrInvalidInput)
 	}
 	if len(e.Payload) == 0 {
 		e.Payload = json.RawMessage(`{}`)

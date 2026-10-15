@@ -63,6 +63,8 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 			payload: logPayload{Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names},
 			buffs:   active,
 			round:   &to,
+			// Out of combat: no initiative (ADR 0013 step 5).
+			clearInitiative: true,
 		}, nil
 	})
 	if err != nil {

@@ -57,6 +57,12 @@ func IsRoll(k Kind) bool {
 // timed buffs count down, the round counter goes to 0.
 const KindTimePassed Kind = "time_passed"
 
+// KindInitiative is the round's initiative roll (buffsvc, ADR 0013), recorded
+// right after the round_advance entry of Next Round and on a reroll. Its
+// payload is {round, d10}. Not one of RollKinds: it leaves the result card and
+// the adjustment of the latest roll alone.
+const KindInitiative Kind = "initiative"
+
 // KindItemRestock is a stock item's count going up at the table (itemsvc
 // Restock, critical-qki.13). Not a roll: it leaves the result card alone.
 const KindItemRestock Kind = "item_restock"

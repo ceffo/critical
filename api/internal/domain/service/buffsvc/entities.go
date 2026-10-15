@@ -7,7 +7,21 @@ const (
 	StateKeyRound = "round"
 	// StateKeySavedBuffs is the whole saved-buff template list.
 	StateKeySavedBuffs = "saved_buffs"
+	// StateKeyInitiative is the round's initiative (ADR 0013), JSON null when
+	// there is none.
+	StateKeyInitiative = "initiative"
 )
+
+// InitiativeDie is the die initiative is rolled with (ADR 0013 step 1).
+const InitiativeDie = 10
+
+// Initiative is the round's initiative roll (ADR 0013): the plain d10,
+// lowest acts first, and the action-log entry that rolled it. There is
+// none out of combat (round 0).
+type Initiative struct {
+	D10        int
+	LogEntryID int64
+}
 
 // BuffEffects is the modifier payload of one buff. Pointers are used so a
 // missing field means "no contribution" rather than zero.

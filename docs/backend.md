@@ -70,7 +70,7 @@ id, character_id, buffs JSON
 -- spell_slots: JSON object of slots by level
 id, character_id, slots JSON
 
--- round_state: current round counter
+-- round_state: current round counter and its initiative (d10, the log entry that rolled it; NULL: none)
 id, character_id, round_number INTEGER
 ```
 

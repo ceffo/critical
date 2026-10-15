@@ -65,9 +65,19 @@ export interface Strength {
   effective: number;
 }
 
+/**
+ * The round's initiative (ADR 0013): the plain d10, lowest acts first, and the log entry that
+ * rolled it. Null out of combat.
+ */
+export interface Initiative {
+  value: number;
+  logEntryId: number;
+}
+
 /** GET /api/round */
 export interface RoundResponse {
   round: number;
+  initiative: Initiative | null;
 }
 
 /** GET /api/round/pass-time/preview?hours=: what Time passes would do, nothing written. */
@@ -87,4 +97,6 @@ export interface RoundAdvanceResponse {
   expiredBuffs: BuffEffect[];
   /** pass-time only: the rounds the hours gave. */
   roundsPassed?: number;
+  /** advance only: the new round's initiative. */
+  initiative?: Initiative;
 }

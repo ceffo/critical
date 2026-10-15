@@ -1,4 +1,4 @@
-import type { PassTimePreview, RoundAdvanceResponse, RoundResponse } from "../types/buffs";
+import type { Initiative, PassTimePreview, RoundAdvanceResponse, RoundResponse } from "../types/buffs";
 import { post, put, request } from "./http";
 
 export function fetchRound(): Promise<RoundResponse> {
@@ -7,6 +7,11 @@ export function fetchRound(): Promise<RoundResponse> {
 
 export function advanceRound(): Promise<RoundAdvanceResponse> {
   return post<RoundAdvanceResponse>("/api/round/advance");
+}
+
+/** Pop the round's initiative entry and roll again (409 when another entry is newer). */
+export function rerollInitiative(): Promise<Initiative> {
+  return post<Initiative>("/api/round/initiative/reroll");
 }
 
 export function resetRound(): Promise<RoundAdvanceResponse> {

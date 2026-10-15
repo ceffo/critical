@@ -230,6 +230,9 @@ export const useHpStore = create<HpStore>((set) => ({
   them (`GET /api/round/pass-time/preview`, ADR 0005 step 8): "= 90 turns" and the effects that
   would end, or its refusal message; Confirm is enabled only on a valid preview and posts
   `POST /api/round/pass-time`
+- Initiative row (turn block): the server's d10 for the turn (`GET /api/round` `initiative`,
+  ADR 0013), "d10" and a reroll button (`POST /api/round/initiative/reroll`), hint "1d10, the
+  lowest acts first"; at turn 0 "Out of combat · initiative will be rolled"
 - Roll results: show the full breakdown in a readable format — never just the final number
 - Expiry alerts: use a toast notification (shadcn Toast) when a buff expires
 

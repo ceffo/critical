@@ -35,6 +35,8 @@ interface TableStore {
   amendEntry: (id: number, note: string) => Promise<boolean>;
   voidEntry: (id: number) => Promise<boolean>;
   nextRound: () => Promise<boolean>;
+  /** Pop the round's initiative entry and roll a new one (refused when another entry is newer). */
+  rerollInitiative: () => Promise<boolean>;
   endCombat: () => Promise<boolean>;
   setRound: (round: number) => Promise<boolean>;
   /** Fast-forward hours of game time (timed buffs count down, round to 0). */
@@ -132,6 +134,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
       const res = await useBuffsStore.getState().advanceRound();
       set({ notice: expiredNotice(res.expiredBuffs) });
     }),
+  rerollInitiative: () => get().run(() => useBuffsStore.getState().rerollInitiative()),
   passTime: (hours) =>
     get().run(async () => {
       const res = await useBuffsStore.getState().passTime(hours);

@@ -81,6 +81,7 @@ function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
         voided && "bg-muted/50",
       )}
       data-status={e.status}
+      data-entry-id={e.id}
     >
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="shrink-0">

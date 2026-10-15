@@ -101,7 +101,7 @@ func TestLogStack_VoidOlderEntryIsRefused(t *testing.T) {
 	for i, id := range ids[:len(ids)-1] {
 		_, err := bs.Log.Void(ctx, bs.CharacterID, id)
 		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "entry %d", i)
-		assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (hp_change", ids[len(ids)-1]))
+		assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (hp_change", ids[len(ids)-1]))
 	}
 	assert.Equal(t, states[len(states)-1], stateOf(t, bs), "nothing restored")
 	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)
@@ -109,25 +109,6 @@ func TestLogStack_VoidOlderEntryIsRefused(t *testing.T) {
 	for _, e := range entries {
 		assert.NotEqual(t, actionlog.StatusVoided, e.Status())
 	}
-}
-
-// Undo last HP change pops like a void: refused while a newer entry of
-// another kind is on top.
-func TestLogStack_HPUndoOnlyPopsTheTop(t *testing.T) {
-	bs, ids, states := buildStack(t)
-	ctx := context.Background()
-	st, err := bs.HP.UndoLast(ctx, bs.CharacterID)
-	require.NoError(t, err)
-	assert.Equal(t, states[3].HP, st.CurrentHp)
-
-	_, err = bs.HP.UndoLast(ctx, bs.CharacterID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the bow shot is on top now")
-	assert.Equal(t, states[3], stateOf(t, bs))
-	entries, err := bs.Log.List(ctx, bs.CharacterID, 2)
-	require.NoError(t, err)
-	assert.Equal(t, actionlog.StatusVoided, entries[0].Status(), "the damage, popped")
-	assert.Equal(t, ids[2], entries[1].ID)
-	assert.Equal(t, actionlog.StatusActive, entries[1].Status(), "the shot stays")
 }
 
 // Amend note OK, for every kind: the note changes, values and state don't.

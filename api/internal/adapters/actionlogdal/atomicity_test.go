@@ -185,7 +185,7 @@ func TestVoid_OnlyTheLatestEntry(t *testing.T) {
 	for _, older := range []int64{first, second} {
 		_, err = log.Void(ctx, charID, older)
 		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-		assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (hp_change, round 4) first", scratch))
+		assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (hp_change, round 4) first", scratch))
 	}
 	assert.Equal(t, 2, round(t, db, charID), "nothing restored")
 
@@ -260,9 +260,13 @@ func TestAmendNoteAndPop_HPTotal(t *testing.T) {
 	assert.Equal(t, actionlog.StatusActive, e.Status())
 	assert.Equal(t, -5, total(), "a note changes no HP")
 
-	ok, err := log.VoidLatest(ctx, charID, actionlog.KindHPChange)
+	_, err = log.Void(ctx, charID, orc)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the potion is on top")
+	assert.Equal(t, -5, total())
+	topID, _, err := log.TopID(ctx, charID)
 	require.NoError(t, err)
-	assert.True(t, ok)
+	_, err = log.Void(ctx, charID, topID)
+	require.NoError(t, err)
 	assert.Equal(t, -8, total(), "potion popped")
 
 	_, err = log.Void(ctx, charID, orc)
@@ -273,8 +277,4 @@ func TestAmendNoteAndPop_HPTotal(t *testing.T) {
 	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
 	_, err = log.Amend(ctx, charID, orc, actionlogsvc.Amendment{Note: "late"})
 	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
-
-	ok, err = log.VoidLatest(ctx, charID, actionlog.KindHPChange)
-	require.NoError(t, err)
-	assert.False(t, ok, "nothing left to undo")
 }

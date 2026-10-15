@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { appendHpEvent, undoLastEvent } from "@/api/hp";
+import { appendHpEvent } from "@/api/hp";
 import { ApiError } from "@/api/http";
-import { amendLogEntry, undoLogEntry, voidLogEntry } from "@/api/log";
+import { amendLogEntry, undoLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
@@ -31,10 +31,8 @@ interface TableStore {
    */
   submit: (action: () => Promise<unknown>) => Promise<ApiError | null>;
   recordHp: (delta: number, source: string) => Promise<boolean>;
-  undoHp: () => Promise<boolean>;
   /** Set an entry's note (the only amendable field). */
   amendEntry: (id: number, note: string) => Promise<boolean>;
-  voidEntry: (id: number) => Promise<boolean>;
   /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
    * refused (another action landed first) or there was nothing to pop. */
   undo: () => Promise<boolean>;
@@ -121,18 +119,12 @@ export const useTableStore = create<TableStore>((set, get) => ({
     get().run(async () =>
       useHpStore.getState().setHp(await appendHpEvent(delta, source)),
     ),
-  undoHp: () =>
-    get().run(async () => useHpStore.getState().setHp(await undoLastEvent())),
   amendEntry: (id, note) => get().run(() => amendLogEntry(id, note)),
-  // A void can bring expired buffs back: an "expired" notice would now be stale. A pop can also
-  // take back a correction (ADR 0010 step 6): the card then shows the latest roll from the
-  // refreshed log, not this session's (corrected) roll response.
-  voidEntry: (id) =>
-    get().run(async () => {
-      await voidLogEntry(id);
-      set({ notice: null });
-      useRollStore.setState({ last: null });
-    }),
+  // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
+  // with the top this client last read, so a stale top (another client acted since) is refused
+  // and nothing changes. A pop can bring expired buffs back (an "expired" notice would now be
+  // stale) and can take back a correction (ADR 0010 step 6): the card then shows the latest roll
+  // from the refreshed log, not this session's (corrected) roll response.
   undo: () => {
     const expected = useLogStore.getState().topId;
     if (expected === null) return Promise.resolve(false);

@@ -31,7 +31,7 @@ func (s *service) Void(ctx context.Context, characterID, id int64) (*actionlog.E
 			return err
 		}
 		if top.ID != id {
-			return fmt.Errorf("%w: only the latest entry can be voided, void #%d (%s, round %d) first",
+			return fmt.Errorf("%w: only the latest entry can be undone, undo #%d (%s, round %d) first",
 				ErrNotLatest, top.ID, top.Kind, top.Round)
 		}
 		if err := s.pop(ctx, characterID, e); err != nil {
@@ -44,26 +44,6 @@ func (s *service) Void(ctx context.Context, characterID, id int64) (*actionlog.E
 		return nil, err
 	}
 	return out, nil
-}
-
-// VoidLatest pops the newest non-voided entry when it is of kind (the HP
-// panel's undo). ok is false when the log has nothing to pop; ErrNotLatest
-// when the newest entry is another kind (it must be popped first).
-func (s *service) VoidLatest(ctx context.Context, characterID int64, kind actionlog.Kind) (bool, error) {
-	var ok bool
-	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		top, err := s.top(ctx, characterID)
-		if err != nil || top == nil {
-			return err
-		}
-		if top.Kind != kind {
-			return fmt.Errorf("%w: the latest entry is not a %s, void #%d (%s, round %d) first",
-				ErrNotLatest, kind, top.ID, top.Kind, top.Round)
-		}
-		ok = true
-		return s.pop(ctx, characterID, top)
-	})
-	return ok, err
 }
 
 // top returns the newest non-voided entry, nil when there is none.

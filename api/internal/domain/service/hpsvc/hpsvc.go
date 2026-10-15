@@ -21,7 +21,6 @@ type SVC interface {
 	domain.Service
 	GetState(ctx context.Context, characterID int64) (*HPState, error)
 	AppendEvent(ctx context.Context, characterID int64, delta int, source string) (*HPState, error)
-	UndoLast(ctx context.Context, characterID int64) (*HPState, error)
 }
 
 // DAL is the storage-driven port. Adapters in internal/adapters/hpdal satisfy
@@ -35,7 +34,6 @@ type Log interface {
 	actionlog.Recorder
 	HPTotal(ctx context.Context, characterID int64) (int, error)
 	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
-	VoidLatest(ctx context.Context, characterID int64, kind actionlog.Kind) (bool, error)
 }
 
 type service struct {

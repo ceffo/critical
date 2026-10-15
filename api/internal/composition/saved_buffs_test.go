@@ -204,7 +204,7 @@ func TestSavedBuffs_VoidingAnEarlierSaveIsBlockedByALiveDelete(t *testing.T) {
 
 	_, err = bs.Log.Void(ctx, id, entries[1].ID)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (buff_change", entries[0].ID))
+	assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (buff_change", entries[0].ID))
 
 	// Void the delete: the chip is back, same id.
 	_, err = bs.Log.Void(ctx, id, entries[0].ID)

@@ -124,33 +124,3 @@ func TestExposure_ClosesTheSaveAdjustmentUntilPopped(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, again.Damage.Total, "round 1: 1 point")
 }
-
-// ADR 0007 step 9 / ADR 0010: with an exposure on the Bard on top, the HP
-// panel's undo (hp_change only) pops nothing; the general undo pops the
-// exposure and gives the HP back. Death Fog rounds 1 to 5 take 1, 2, 4, 8, 8.
-func TestExposureOnTheBard_HPUndoRefusedGeneralUndoGivesHPBack(t *testing.T) {
-	bs := bootMaxDice(t)
-	ctx, id := context.Background(), bs.CharacterID
-	st, err := bs.HP.GetState(ctx, id)
-	require.NoError(t, err)
-	start := st.CurrentHp
-
-	var last castsvc.ExposureResult
-	for round, want := range []int{1, 2, 4, 8, 8} {
-		last, err = bs.Cast.Expose(ctx, id, castsvc.ExposureRequest{SpellID: "death_fog", CasterLevel: 12, Round: round + 1, OnSelf: true})
-		require.NoError(t, err)
-		assert.Equal(t, want, last.Damage.Total, "round %d", round+1)
-		assert.Equal(t, -want, last.HPDelta)
-	}
-	st, err = bs.HP.GetState(ctx, id)
-	require.NoError(t, err)
-	assert.Equal(t, start-23, st.CurrentHp)
-
-	_, err = bs.HP.UndoLast(ctx, id)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the HP undo pops only an HP change")
-	_, err = bs.Log.Undo(ctx, id, last.EntryID)
-	require.NoError(t, err)
-	st, err = bs.HP.GetState(ctx, id)
-	require.NoError(t, err)
-	assert.Equal(t, start-15, st.CurrentHp, "the last round's 8 comes back")
-}

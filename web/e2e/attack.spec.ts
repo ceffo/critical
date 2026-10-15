@@ -11,7 +11,8 @@ import {
   logEntry,
   openDashboard,
   openWeapons,
-  voidEntry,
+  undoEntry,
+  expectUndoOn,
 } from "./helpers";
 
 function resultCard(page: Page) {
@@ -109,7 +110,7 @@ test("voiding a missile attack gives the arrow back", async ({ page }) => {
   await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
 
-  await voidEntry(page, "Short Bow +2 (Arrows +2) vs AC 3");
+  await undoEntry(page, "Short Bow +2 (Arrows +2) vs AC 3");
   await expect.poll(() => selectedAmmoCount(page)).toBe(before);
   await snap(page, "missile-void");
 });
@@ -165,14 +166,13 @@ test("an earlier shot can only be voided once the later shot is popped", async (
   await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
 
-  // The log is a stack: only the newest entry offers Void.
-  const earlier = logEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
-  await expect(earlier.getByRole("button", { name: "Void" })).toHaveCount(0);
-  await snap(page, "void-earlier-shot-not-offered");
+  // The log is a stack: the journal's Undo names the newest entry only.
+  await expectUndoOn(page, "Short Bow +2 (Arrows +3) vs AC 7", true);
+  await snap(page, "undo-earlier-shot-not-offered");
 
-  await voidEntry(page, "Short Bow +2 (Arrows +1) vs AC 7");
+  await undoEntry(page, "Short Bow +2 (Arrows +1) vs AC 7");
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus1);
-  await voidEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
+  await undoEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
   await expect(page.getByRole("alert")).toHaveCount(0);
   await chooseAmmo(page, "Arrows +3");
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus3);
@@ -317,7 +317,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(entry).not.toContainText("Amended");
 
   // Voiding the attack then gives the arrow back and removes the correction form.
-  await voidEntry(page, "Short Bow +2 (Arrows +2)");
+  await undoEntry(page, "Short Bow +2 (Arrows +2)");
   await expect.poll(() => selectedAmmoCount(page)).toBe(before);
   await expect(fix).toHaveCount(0);
   await snap(page, "attack-ac-corrected-voided");
@@ -429,7 +429,7 @@ test("an attack logged before the multiplier d100 keeps the old crit text and ca
     data: { targetAc: 5 },
   });
   expect(res.status()).toBe(400);
-  expect((await res.json()).error).toContain("void it and roll again");
+  expect((await res.json()).error).toContain("undo it and roll again");
 });
 
 test("a miss corrected into a crit shows both d100s on the card and in the log", async ({

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LogEntry, LogKind } from "@/types/log";
 
-// A fake server action stack: what GET /api/log, POST /api/log/undo, POST /api/log/{id}/void and
+// A fake server action stack: what GET /api/log, POST /api/log/undo and
 // the initiative reroll do to it (the rules themselves are Go tests). It lets the store be driven
 // through its real refresh path, as two clients would see the server.
 const server = vi.hoisted(() => {
@@ -46,10 +46,6 @@ vi.mock("@/api/log", () => ({
   undoLogEntry: async (expected: number) => {
     server.calls.push(`undo ${expected}`);
     server.pop(expected);
-  },
-  voidLogEntry: async (id: number) => {
-    server.calls.push(`void ${id}`);
-    server.pop(id);
   },
   amendLogEntry: async () => undefined,
 }));
@@ -127,7 +123,7 @@ describe("global undo against the server stack", () => {
 
   // Checklist 3: initiative reroll and the row Void after a global undo: the topId the row Void
   // and the button use follows the server after every action.
-  it("reroll and row Void after an undo keep topId in step with the server", async () => {
+  it("reroll and a second undo after an undo keep topId in step with the server", async () => {
     server.push("round_advance");
     server.push("initiative");
     server.push("hp_change");
@@ -139,13 +135,41 @@ describe("global undo against the server stack", () => {
     expect(topId()).toBe(4);
     expect(topId()).toBe(server.top()?.id);
 
-    // The row Void targets topId (CombatLog), then the global undo the next top.
-    expect(await useTableStore.getState().voidEntry(topId()!)).toBe(true);
+    // The undo targets topId, then the next top.
+    expect(await useTableStore.getState().undo()).toBe(true);
     expect(topId()).toBe(1);
     expect(await useTableStore.getState().undo()).toBe(true);
-    expect(server.calls).toEqual(["undo 3", "reroll", "void 4", "undo 1"]);
+    expect(server.calls).toEqual(["undo 3", "reroll", "undo 4", "undo 1"]);
     expect(topId()).toBeNull();
     expect(useTableStore.getState().error).toBeNull();
+  });
+
+  // ADR 0018 step 3: the journal's Undo is the one undo, so an exposure or a cast on top is
+  // popped like an HP change.
+  it.each(["exposure", "cast"])("journal Undo with %s on top", async (kind) => {
+    server.push("hp_change");
+    server.push(kind);
+    await useTableStore.getState().refresh();
+
+    expect(await useTableStore.getState().undo()).toBe(true);
+    expect(server.calls).toEqual(["undo 2"]);
+    expect(server.rows[1].voided).toBe(true);
+    expect(topId()).toBe(1);
+  });
+
+  // ADR 0018 step 3: Undo sends the top this client last read; when another client acted since,
+  // the server refuses and nothing changes.
+  it("journal Undo with a stale top", async () => {
+    server.push("attack");
+    server.push("hp_change");
+    await useTableStore.getState().refresh();
+
+    server.push("cast"); // client A, after this client's last read
+    expect(await useTableStore.getState().undo()).toBe(false);
+    expect(server.calls).toEqual(["undo 2"]);
+    expect(useTableStore.getState().error).toMatch(/newest entry changed/);
+    expect(server.rows.every((r) => !r.voided)).toBe(true);
+    expect(topId()).toBe(3); // refreshed: the next Undo targets the new top
   });
 
   // ADR 0010 step 6: popping a correction gives the attack its previous payload; the card must
@@ -165,7 +189,7 @@ describe("global undo against the server stack", () => {
     useRollStore.setState({
       last: { kind: "attack", result: { logEntryId: 1 } as RollResult },
     });
-    expect(await useTableStore.getState().voidEntry(1)).toBe(true);
+    expect(await useTableStore.getState().undo()).toBe(true);
     expect(useRollStore.getState().last).toBeNull();
   });
 });

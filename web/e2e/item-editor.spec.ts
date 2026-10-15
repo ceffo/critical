@@ -7,7 +7,7 @@ import {
   openDashboard,
   openWeapons,
   openWorkspace,
-  voidEntry,
+  undoEntry,
 } from "./helpers";
 
 // Inventory editor: add, edit and remove items; each is one log entry and the
@@ -64,7 +64,7 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   await snap(page, "ammo-picker-with-new-arrows");
 
   await openWorkspace(page, "Inventory");
-  await voidEntry(page, "Added Arrows +3 (blessed)");
+  await undoEntry(page, "Added Arrows +3 (blessed)");
   await expect(added).toHaveCount(0);
   await openWorkspace(page, "Act");
   await expect(
@@ -91,7 +91,7 @@ test("edit the wand's charges 4 to 3: logged; pop restores 4", async ({
   );
   await snap(page, "item-edited");
 
-  await voidEntry(page, "Edited Wand of lightning");
+  await undoEntry(page, "Edited Wand of lightning");
   await expect(
     row(page, "wand_lightning").getByTestId("item-count"),
   ).toHaveText("4");
@@ -119,7 +119,7 @@ test("remove an item: gone from the Inventory and the ammo picker; pop brings it
   ).toHaveCount(0);
 
   await openWorkspace(page, "Inventory");
-  await voidEntry(page, "Removed Arrows +2");
+  await undoEntry(page, "Removed Arrows +2");
   await expect(row(page, "arrows_plus2").getByTestId("item-count")).toHaveText(
     "16",
   );

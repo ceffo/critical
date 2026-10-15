@@ -5,7 +5,7 @@ import "errors"
 // Service-local sentinels, mapped to HTTP statuses in internal/render.
 var (
 	// ErrAlreadyVoided: amend or void on a voided entry.
-	ErrAlreadyVoided = errors.New("entry already voided")
+	ErrAlreadyVoided = errors.New("entry already undone")
 	// ErrNotAmendable: AmendLatest on an entry that is not the roll kind asked.
 	ErrNotAmendable = errors.New("entry cannot be amended")
 	// ErrNotLatest: only the newest non-voided entry can be voided (pop), and

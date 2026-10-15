@@ -9,10 +9,11 @@ import {
   openDashboard,
   receivePicker,
   recordHp,
-  voidEntry,
+  undoEntry,
+  expectUndoOn,
   nextTurn,
   turnMenu,
-  voidInitiative,
+  undoInitiative,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -40,7 +41,7 @@ function resultCard(page: Page) {
   return page.getByRole("region", { name: "Detail", exact: true });
 }
 
-test("casting Stoneskin shows the result card, adds the buff; voiding gives the slot back", async ({
+test("casting Stoneskin shows the result card, adds the buff; undoing gives the slot back", async ({
   page,
   stack,
 }) => {
@@ -64,10 +65,10 @@ test("casting Stoneskin shows the result card, adds the buff; voiding gives the 
   await expect(logEntry(page, "Cast Stoneskin")).toBeVisible();
   await snap(page, "stoneskin-cast");
 
-  await voidEntry(page, "Cast Stoneskin");
+  await undoEntry(page, "Cast Stoneskin");
   await expect(buffBadge(page, "Stoneskin")).toHaveCount(0);
   await expect(level4.getByTestId("remaining-4")).toHaveText("1 / 1");
-  await snap(page, "stoneskin-voided");
+  await snap(page, "stoneskin-undone");
 });
 
 test("casting Fireball rolls 10d6 and notes the save for the DM", async ({
@@ -313,7 +314,7 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   await snap(page, "strength-received");
 });
 
-test("after Next turn the cast offers no void until Next turn is popped", async ({
+test("after Next turn the journal Undo is not on the cast until Next turn is popped", async ({
   page,
   stack,
 }) => {
@@ -324,14 +325,13 @@ test("after Next turn the cast offers no void until Next turn is popped", async 
   await nextTurn(page);
   await expect(logEntry(page, "Turn 0 → 1")).toBeVisible();
 
-  const entry = logEntry(page, "Cast Stoneskin");
-  await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
-  await snap(page, "void-not-offered-after-next-round");
+  await expectUndoOn(page, "Cast Stoneskin", true);
+  await snap(page, "undo-not-on-the-cast-after-next-round");
 
-  await voidInitiative(page);
-  await voidEntry(page, "Turn 0 → 1");
+  await undoInitiative(page);
+  await undoEntry(page, "Turn 0 → 1");
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
-  await voidEntry(page, "Cast Stoneskin");
+  await undoEntry(page, "Cast Stoneskin");
   await expect(buffBadge(page, "Stoneskin")).toHaveCount(0);
 });
 
@@ -348,13 +348,11 @@ test("a long rest is logged; popping it, then the cast, walks the slots back", a
   await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
   await expect(logEntry(page, "Long rest: 1 spell slots")).toBeVisible();
 
-  await expect(
-    logEntry(page, "Cast Haste").getByRole("button", { name: "Void" }),
-  ).toHaveCount(0);
-  await snap(page, "void-not-offered-after-long-rest");
-  await voidEntry(page, "Long rest: 1 spell slots");
+  await expectUndoOn(page, "Cast Haste", true);
+  await snap(page, "undo-not-on-the-cast-after-long-rest");
+  await undoEntry(page, "Long rest: 1 spell slots");
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
-  await voidEntry(page, "Cast Haste");
+  await undoEntry(page, "Cast Haste");
   await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
 });
 
@@ -445,19 +443,17 @@ test("a cast buff expired by Time passes: pop the fast-forward, then the cast", 
   await expect(page.getByRole("status")).toContainText("Expired buffs: Haste");
   await expect(buffBadge(page, "Haste")).toHaveCount(0);
 
-  const entry = logEntry(page, "Cast Haste");
-  await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
-  await snap(page, "void-cast-not-offered-under-pass-time");
-  await voidEntry(page, "Time passed: 1 h (60 rd)");
+  await expectUndoOn(page, "Cast Haste", true);
+  await snap(page, "undo-cast-not-on-top-under-pass-time");
+  await undoEntry(page, "Time passed: 1 h (60 rd)");
   await expect(buffBadge(page, "Haste")).toBeVisible();
-  await voidEntry(page, "Cast Haste");
+  await undoEntry(page, "Cast Haste");
   await expect(buffBadge(page, "Haste")).toHaveCount(0);
 });
 
-// The log is a stack: cast, HP change, cast. Only the last
-// cast offers Void and the HP panel's undo is off (with a hint) while it is on
-// top; popping it, then the heal, walks HP and slots back one step each.
-test("cast, heal, cast: pop the last cast, then the heal; HP undo is off under a cast", async ({
+// The log is a stack: cast, HP change, cast. The journal's one Undo (ADR 0018 step 3) names and
+// pops the cast on top, then the heal: HP and slots walk back one step each.
+test("cast, heal, cast: the journal Undo pops the cast on top, then the heal", async ({
   page,
   stack,
 }) => {
@@ -466,47 +462,32 @@ test("cast, heal, cast: pop the last cast, then the heal; HP undo is off under a
   const max = await currentHp(page);
   const level3 = page.getByRole("region", { name: "Level 3" });
   const level4 = page.getByRole("region", { name: "Level 4" });
-  const undo = page.getByRole("button", { name: "Undo last HP change" });
-  const hint = page.getByTestId("hp-undo-hint");
+  const undo = page.getByTestId("undo");
 
   await recordHp(page, "damage", 9, "e2e troll");
   await expect.poll(() => currentHp(page)).toBe(max - 9);
   await page.getByRole("button", { name: "Cast Haste" }).click();
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
-  await expect(undo).toBeDisabled();
   await recordHp(page, "heal", 4, "e2e cure light");
   await expect.poll(() => currentHp(page)).toBe(max - 5);
-  await expect(undo).toBeEnabled();
-  await expect(hint).toHaveCount(0);
   await page.getByRole("button", { name: "Cast Stoneskin" }).click();
   await expect(level4.getByTestId("remaining-4")).toHaveText("0 / 1");
 
-  // Only the newest entry (the Stoneskin cast) offers Void.
+  // The journal's one Undo button names the newest entry (the Stoneskin cast) only.
   for (const text of ["Cast Haste", "e2e cure light", "e2e troll"]) {
-    await expect(
-      logEntry(page, text).getByRole("button", { name: "Void" }),
-    ).toHaveCount(0);
+    await expectUndoOn(page, text, true);
   }
-  await expect(
-    logEntry(page, "Cast Stoneskin").getByRole("button", { name: "Void" }),
-  ).toHaveCount(1);
-  await expect(undo).toBeDisabled();
-  await expect(hint).toContainText("Latest entry: “Cast Stoneskin");
-  await expect(hint).toContainText("Undo it from the log first.");
-  await snap(page, "hp-undo-off-under-a-cast");
+  await expectUndoOn(page, "Cast Stoneskin");
+  await snap(page, "undo-names-the-cast");
 
-  await voidEntry(page, "Cast Stoneskin");
+  await undo.click();
   await expect(level4.getByTestId("remaining-4")).toHaveText("1 / 1");
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
   await expect.poll(() => currentHp(page)).toBe(max - 5);
-  await expect(undo).toBeEnabled();
 
-  await voidEntry(page, "e2e cure light");
+  await undoEntry(page, "e2e cure light");
   await expect.poll(() => currentHp(page)).toBe(max - 9);
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
-  await expect(
-    logEntry(page, "Cast Haste").getByRole("button", { name: "Void" }),
-  ).toHaveCount(1);
-  await expect(undo).toBeDisabled();
+  await expectUndoOn(page, "Cast Haste");
   await snap(page, "popped-cast-then-heal");
 });

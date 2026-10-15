@@ -51,22 +51,16 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 		"payload":{},"effectivePayload":{},"snapshots":[],
 		"corrections":[{"id":3,"kind":"amend","note":"DM: axe, not club","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
+}
 
-	voided := actionlog.Entry{
-		ID: 4, CharacterID: 1, Kind: actionlog.KindRoundAdvance, Summary: "next",
-		Snapshots:   []actionlog.Snapshot{{Key: "round", Before: json.RawMessage(`1`), After: json.RawMessage(`2`)}},
-		Corrections: []actionlog.Correction{{ID: 2, ActionID: 4, Kind: actionlog.CorrectionVoid, CreatedAt: at}}, CreatedAt: at,
+// ADR 0018 step 3: the HP undo and the per-row void are retired; the global
+// undo is the only way to pop.
+func TestRetiredUndoEndpointsAreGone(t *testing.T) {
+	for _, path := range []string{"/api/hp/undo", "/api/log/4/void"} {
+		h, _ := newRouter(t)
+		rec := do(h, "POST", path, "")
+		assert.Contains(t, []int{http.StatusNotFound, http.StatusMethodNotAllowed}, rec.Code, path)
 	}
-	h, m = newRouter(t)
-	m.log.EXPECT().Void(mock.Anything, int64(1), int64(4)).Return(&voided, nil)
-	rec = do(h, "POST", "/api/log/4/void", "")
-	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{
-		"id":4,"characterId":1,"round":0,"kind":"round_advance","summary":"next","hpDelta":0,
-		"effectiveHpDelta":0,"effectiveSummary":"next","note":"","status":"voided","payload":{},"effectivePayload":{},
-		"snapshots":[{"key":"round","before":1,"after":2}],
-		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
-		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
 }
 
 // POST /api/log/undo sends the expected top to the service and answers with

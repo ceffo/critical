@@ -195,24 +195,6 @@ func TestAppendEvent_RecordFails(t *testing.T) {
 	require.ErrorIs(t, err, errBoom)
 }
 
-func TestUndoLast(t *testing.T) {
-	for _, voided := range []bool{true, false} {
-		svc, dal, log := newSvc(t)
-		log.EXPECT().VoidLatest(mock.Anything, int64(3), actionlog.KindHPChange).Return(voided, nil)
-		stubState(dal, log, 20, 0, nil)
-		state, err := svc.UndoLast(context.Background(), 3)
-		require.NoError(t, err)
-		assert.Equal(t, 20, state.CurrentHp)
-	}
-}
-
-func TestUndoLast_VoidFails(t *testing.T) {
-	svc, _, log := newSvc(t)
-	log.EXPECT().VoidLatest(mock.Anything, int64(3), actionlog.KindHPChange).Return(false, errBoom)
-	_, err := svc.UndoLast(context.Background(), 3)
-	require.ErrorIs(t, err, errBoom)
-}
-
 // historyLimitSeen builds the service via New (env-driven) and returns the
 // limit it passes to the log's ActiveEntries.
 func historyLimitSeen(t *testing.T) int {

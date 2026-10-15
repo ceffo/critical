@@ -1,8 +1,9 @@
 import { test, expect, snap } from "./fixtures";
 import {
   buffBadge,
+  expectUndoOn,
   currentHp,
-  voidEntry,
+  undoEntry,
   expectNoReload,
   logEntry,
   markNoReload,
@@ -59,7 +60,7 @@ test("a note on a heal and on a buff entry changes no value and no HP", async ({
   await snap(page, "notes");
 });
 
-test("only the newest entry offers Void: damage 10, heal 4, pop the heal, pop the damage", async ({
+test("the journal Undo names only the newest entry: damage 10, heal 4, pop the heal, pop the damage", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -69,20 +70,18 @@ test("only the newest entry offers Void: damage 10, heal 4, pop the heal, pop th
   await recordHp(page, "heal", 4, "e2e potion");
   await expect.poll(() => currentHp(page)).toBe(max - 6);
 
-  const damage = logEntry(page, "e2e ogre club");
-  const heal = logEntry(page, "e2e potion");
-  await expect(damage.getByRole("button", { name: "Void" })).toHaveCount(0);
-  await expect(heal.getByRole("button", { name: "Void" })).toHaveCount(1);
-  await snap(page, "void-only-on-top");
+  await expectUndoOn(page, "e2e potion");
+  await expectUndoOn(page, "e2e ogre club", true);
+  await snap(page, "undo-names-the-top");
 
-  await voidEntry(page, "e2e potion");
+  await undoEntry(page, "e2e potion");
   await expect.poll(() => currentHp(page)).toBe(max - 10);
-  await voidEntry(page, "e2e ogre club");
+  await undoEntry(page, "e2e ogre club");
   await expect.poll(() => currentHp(page)).toBe(max);
   await snap(page, "popped-in-order");
 });
 
-test("voiding an entry restores current HP and marks it voided", async ({
+test("undoing an entry restores current HP and marks it undone", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -93,18 +92,16 @@ test("voiding an entry restores current HP and marks it voided", async ({
   await expect.poll(() => currentHp(page)).toBe(before - 5);
 
   const entry = logEntry(page, "e2e wrong target");
-  await entry.getByRole("button", { name: "Void" }).click();
-  await expect(entry).toContainText("Void this entry?");
-  await entry.getByRole("button", { name: "Confirm" }).click();
+  await page.getByTestId("undo").click();
 
   await expect.poll(() => currentHp(page)).toBe(before);
   await expect(entry).toHaveAttribute("data-status", "voided");
-  await expect(entry).toContainText("Voided");
-  await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
+  await expect(entry).toContainText("Undone");
+  await expect(entry.getByRole("button", { name: "Undo" })).toHaveCount(0);
   await expect(entry.getByRole("button", { name: "Note" })).toHaveCount(0);
 
   await expectNoReload(page);
-  await snap(page, "voided");
+  await snap(page, "undone");
 });
 
 test("a server error is shown to the user", async ({ page, stack }) => {
@@ -121,14 +118,19 @@ test("a server error is shown to the user", async ({ page, stack }) => {
   };
   const id = entries.find((e) => e.summary === "e2e stale entry")!.id;
   expect(
-    (await fetch(`${stack.apiUrl}/api/log/${id}/void`, { method: "POST" })).ok,
+    (
+      await fetch(`${stack.apiUrl}/api/log/undo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedTopId: id }),
+      })
+    ).ok,
   ).toBe(true);
 
-  await entry.getByRole("button", { name: "Void" }).click();
-  await entry.getByRole("button", { name: "Confirm" }).click();
+  await page.getByTestId("undo").click();
 
   const alert = page.getByRole("alert");
-  await expect(alert).toContainText("already voided");
+  await expect(alert).toContainText(/nothing to undo|changed in the meantime/);
   await snap(page, "server-error");
   await alert.getByRole("button", { name: "Dismiss" }).click();
   await expect(alert).toHaveCount(0);
@@ -178,7 +180,7 @@ test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({
 
   // Annuler: the shot is popped and its arrow is back.
   await undo.click();
-  await expect(logEntry(page, "Short Bow +2")).toContainText("Voided");
+  await expect(logEntry(page, "Short Bow +2")).toContainText("Undone");
   await expect.poll(arrows).toBe(before);
 
   // Ctrl/Cmd+Z while typing in a field is the field's own undo: nothing is popped.
@@ -194,13 +196,13 @@ test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({
   await page.keyboard.press("Meta+z");
   // A refresh would have landed by now; the damage is still on top.
   await page.waitForTimeout(300);
-  await expect(logEntry(page, "e2e undo goblin")).not.toContainText("Voided");
+  await expect(logEntry(page, "e2e undo goblin")).not.toContainText("Undone");
   expect(await currentHp(page)).toBe(max - 5);
 
   // Outside a field the shortcut pops the damage.
   await source.blur();
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(logEntry(page, "e2e undo goblin")).toContainText("Voided");
+  await expect(logEntry(page, "e2e undo goblin")).toContainText("Undone");
   await expect.poll(() => currentHp(page)).toBe(max);
   await snap(page, "undo-popped");
 });

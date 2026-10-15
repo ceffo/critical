@@ -105,7 +105,7 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
 
 - `POST /api/log/{id}/void` (the journal row's Void) and `POST /api/hp/undo` stay: both pop the
   top too, and both already check what is on top inside their transaction. (*Amended by
-  [ADR 0018](0018-transactions-and-undo.md) step 3:* both are retired; the row's Void and the HP panel's undo send the
+  [ADR 0018](0018-transactions-and-undo.md) step 3:* both are retired; the journal's Undo is the only control and sends the
   global undo with `expectedTopId`.)
 - Popping in order walks the state back one step at a time; to fix an old mistake the player pops
   everything above it and replays.

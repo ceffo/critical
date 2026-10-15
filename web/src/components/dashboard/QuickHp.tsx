@@ -1,10 +1,8 @@
 import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowUUpLeft, Heart, Sword } from "@phosphor-icons/react";
+import { Heart, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
-import { entryText } from "@/lib/logSummary";
 import { fieldClass } from "./fieldStyles";
 
 /**
@@ -14,16 +12,9 @@ import { fieldClass } from "./fieldStyles";
  */
 export function QuickHp() {
   const { t } = useTranslation();
-  const { recordHp, undoHp, busy } = useTableStore();
+  const { recordHp, busy } = useTableStore();
   const [amount, setAmount] = useState("");
   const [source, setSource] = useState("");
-  // The log is a stack: undo pops the newest entry, so it is
-  // only offered when that entry is an HP change (entries are newest first).
-  const top = useLogStore((st) =>
-    st.entries.find((e) => e.status !== "voided"),
-  );
-  const blockedBy = top && top.kind !== "hp_change" ? entryText(top, t) : null;
-
   const n = Number.parseInt(amount, 10);
   const valid = n > 0;
 
@@ -49,28 +40,7 @@ export function QuickHp() {
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-title">{t("hp.change")}</h2>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          disabled={busy || blockedBy !== null}
-          aria-label={t("hp.undoLast")}
-          title={t("hp.undoLast")}
-          aria-describedby={blockedBy ? "hp-undo-hint" : undefined}
-          onClick={() => void undoHp()}
-        >
-          <ArrowUUpLeft />
-        </Button>
       </div>
-      {blockedBy && (
-        <p
-          id="hp-undo-hint"
-          className="-mt-1 truncate text-label text-muted-foreground"
-          data-testid="hp-undo-hint"
-          title={t("hp.undoBlocked", { entry: blockedBy })}
-        >
-          {t("hp.undoBlocked", { entry: blockedBy })}
-        </p>
-      )}
       <div className="grid grid-cols-[minmax(3.5rem,5rem)_minmax(0,1fr)_minmax(0,1fr)] gap-1">
         <input
           className={`${fieldClass} tabular-nums`}

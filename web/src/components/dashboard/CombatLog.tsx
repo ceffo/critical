@@ -92,7 +92,6 @@ const FILTERS: LogFilter[] = ["all", "rolls"];
 export function CombatLog() {
   const { t } = useTranslation();
   const entries = useLogStore((s) => s.entries);
-  const topId = useLogStore((s) => s.topId);
   const round = useBuffsStore((s) => s.round);
   const last = useRollStore((s) => s.last);
   const { selectedId, filter, setFilter, select } = useFilStore();
@@ -164,7 +163,6 @@ export function CombatLog() {
                   <LogRow
                     key={e.id}
                     entry={e}
-                    isTop={e.id === topId}
                     selected={e.id === shownId}
                     onSelect={() => select(e.id)}
                   />
@@ -179,21 +177,18 @@ export function CombatLog() {
   );
 }
 
-type Mode = "view" | "amend" | "confirmVoid";
+type Mode = "view" | "amend";
 
 function LogRow({
   entry: e,
-  isTop,
   selected,
   onSelect,
 }: {
   entry: LogEntry;
-  isTop: boolean;
   selected: boolean;
   onSelect: () => void;
 }) {
   const { t, i18n } = useTranslation();
-  const { voidEntry, busy } = useTableStore();
   const reroll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
   const diceFormula = dicePayload(e)?.formula;
@@ -299,16 +294,6 @@ function LogRow({
             <Button size="xs" variant="ghost" onClick={() => setMode("amend")}>
               {t("log.amend")}
             </Button>
-            {isTop && (
-              <Button
-                size="xs"
-                variant="ghost"
-                className="text-destructive"
-                onClick={() => setMode("confirmVoid")}
-              >
-                {t("log.void")}
-              </Button>
-            )}
           </span>
         )}
       </div>
@@ -319,25 +304,6 @@ function LogRow({
         >
           {e.note}
         </p>
-      )}
-      {mode === "confirmVoid" && !voided && (
-        <div className="mt-2 flex items-center gap-2 rounded-md bg-destructive/10 px-2 py-1 text-body">
-          <span className="flex-1">{t("log.confirmVoid")}</span>
-          <Button
-            size="xs"
-            variant="destructive"
-            disabled={busy}
-            onClick={async () => {
-              await voidEntry(e.id);
-              setMode("view");
-            }}
-          >
-            {t("log.confirm")}
-          </Button>
-          <Button size="xs" variant="ghost" onClick={() => setMode("view")}>
-            {t("log.cancel")}
-          </Button>
-        </div>
       )}
       {mode === "amend" && !voided && (
         <AmendForm entry={e} onDone={() => setMode("view")} />

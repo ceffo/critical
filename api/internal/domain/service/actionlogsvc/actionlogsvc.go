@@ -24,9 +24,6 @@ type SVC interface {
 	Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error)
 	actionlog.LatestAmender
 	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
-	// VoidLatest pops the newest non-voided entry when it is of kind; ok is
-	// false when the log has none, ErrNotLatest when it is another kind.
-	VoidLatest(ctx context.Context, characterID int64, kind actionlog.Kind) (ok bool, err error)
 	// Undo pops the newest non-voided entry, any kind, when its id is
 	// expectedTopID (ADR 0010): ErrTopChanged when another entry is on top,
 	// ErrNothingToUndo when the log has none. Returns the voided entry.

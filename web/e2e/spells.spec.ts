@@ -118,8 +118,7 @@ test("preparing is logged and voiding it restores the previous preparation", asy
   const entry = logEntry(page, "Prepared: Magic Missile, Identify");
   await expect(entry).toBeVisible();
   await snap(page, "prepared-logged");
-  await entry.getByRole("button", { name: "Void" }).click();
-  await entry.getByRole("button", { name: "Confirm" }).click();
+  await page.getByTestId("undo").click();
 
   await expect(entry).toHaveAttribute("data-status", "voided");
   await expect(level1).toContainText("Alarm");

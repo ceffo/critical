@@ -80,11 +80,10 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
 9. **Undo.** `POST /api/hp/undo` pops the newest entry when it is an HP change; when another kind
    is on top it is refused (409, naming it) and nothing changes; on an empty log it does nothing.
    A heal that was logged as 0 at full HP is undone like any other. (*Amended by
-   [ADR 0018](0018-transactions-and-undo.md) step 3:* `POST /api/hp/undo` is retired; the HP panel's undo is the global undo
+   [ADR 0018](0018-transactions-and-undo.md) step 3:* `POST /api/hp/undo` is retired; the journal's Undo is the one undo
    and pops whatever transaction is on top.)
-   Tests: `TestUndoLast`, `TestVoidLatest` (actionlogsvc: "empty log", "pops the newest", "newest
-   is another kind"), `TestHPUndo_NothingToUndoIsNoop` (actionlogdal),
-   `TestLogStack_HPUndoOnlyPopsTheTop`, `TestHPCap_UndoHealLoggedAtFullHP`.
+   Tests: `TestOneUndo_JournalPopsWhateverIsOnTop` (composition),
+   `TestRetiredUndoEndpointsAreGone` (rest/router), `TestHPCap_UndoHealLoggedAtFullHP`.
 
 ## Consequences
 

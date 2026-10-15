@@ -7,7 +7,7 @@ import {
   openDashboard,
   openWeapons,
   openWorkspace,
-  voidEntry,
+  undoEntry,
 } from "./helpers";
 
 // Inventory tab: one item model, the count behaves as stock (− and +, stays
@@ -102,9 +102,9 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   );
   await snap(page, "flask-used-and-restocked");
 
-  await voidEntry(page, "Restocked Fire flasks");
+  await undoEntry(page, "Restocked Fire flasks");
   await expect(count(page, "fire_flask")).toHaveText("4");
-  await voidEntry(page, "Used Fire flasks");
+  await undoEntry(page, "Used Fire flasks");
   await expect(count(page, "fire_flask")).toHaveText("5");
 });
 
@@ -154,7 +154,7 @@ test("a wand used down to 0 disappears; popping that use brings it back with 1 c
   await expect(last).toContainText("Used Wand of lightning: 6d6");
   await snap(page, "wand-removed");
 
-  await voidEntry(page, "(last charge, removed)");
+  await undoEntry(page, "(last charge, removed)");
   await expect(count(page, "wand_lightning")).toHaveText("1");
   await expect(row(page, "power_gem_dispel")).toBeVisible();
   // Back in its place, between the flasks and the gem.

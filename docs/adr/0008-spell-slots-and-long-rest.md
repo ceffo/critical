@@ -229,7 +229,6 @@ named otherwise.
     `TestSearch_ServesExposureAtTheCasterLevel` (rest/handler/spellhdl),
     `TestExpose_Handler` (rest/handler/casthdl), `TestExposureOnTheBard_VoidGivesTheHPBack`,
     `TestExposureOnTheBard_FloorCutsTheAppliedHP`, `TestExposureRecord_MatchesTheLookupsWireShape`,
-    `TestExposureOnTheBard_HPUndoRefusedGeneralUndoGivesHPBack` (composition),
     `TestSpecialSentinels` (rest/router).
 
 ## Consequences

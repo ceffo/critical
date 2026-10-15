@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -142,6 +143,29 @@ func TestCast_Mode_UnknownIsRefused(t *testing.T) {
 	require.ErrorIs(t, err, spelleffectsvc.ErrUnknownMode)
 	assert.Empty(t, f.entries, "nothing logged")
 	assert.Zero(t, f.tx.calls, "refused before the transaction")
+}
+
+// levelModes is a test-only spell whose mode damage depends on the caster
+// level: "bolts" is 1d6 per caster level, "burst" 1d4 per caster level.
+func levelModes(t *testing.T) spelleffectsvc.Catalog {
+	t.Helper()
+	c, err := spelleffectsadpt.Parse([]byte(`[{"id":"level_bolts","name":"Level Bolts","level":3,
+	  "kind":"damage","confidence":"high","target":"area","duration":{"kind":"instant"},
+	  "modes":[{"key":"bolts","damage":{"dice":"leveld6"}},{"key":"burst","damage":{"dice":"leveld4"}}]}]`))
+	require.NoError(t, err)
+	return c
+}
+
+// ADR 0008 step 14: a received spell rolls the picked mode's damage at the
+// caster's level (7 dice at level 7), not at the Bard's (15).
+func TestReceive_Mode_RollsAtTheCastersLevel(t *testing.T) {
+	f := newFixtureWith(t, levelModes(t), 1, 2, 3, 4, 1, 2, 3)
+	res, err := f.svc.Receive(context.Background(), charID, castsvc.ReceiveRequest{SpellID: "level_bolts", CasterLevel: 7, Mode: "burst"})
+	require.NoError(t, err)
+	assert.Empty(t, f.dice.vals, "every queued die is rolled")
+	assert.Equal(t, []int{4, 4, 4, 4, 4, 4, 4}, f.dice.sides, "seven d4: the burst at caster level 7")
+	assert.Equal(t, "burst", res.Mode)
+	assert.Equal(t, 16, res.Damage.Total)
 }
 
 // ADR 0008 step 14: a spell received from someone else picks its mode too,

@@ -83,6 +83,11 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
   /** Spells with cast-time modes: the mode the caster picked, per spell id (none: the first). */
   const [modes, setModes] = useState<Record<string, string>>({});
 
+  const casterLevel = Number(level);
+  const levelOk = Number.isInteger(casterLevel) && casterLevel >= 1 && casterLevel <= 40;
+  // The modes' dice are served at the caster level typed, the one the receive rolls at.
+  const searchLevel = levelOk ? casterLevel : undefined;
+
   useEffect(() => {
     const q = query.trim();
     // Below two letters the hint shows instead of the (stale) results.
@@ -90,7 +95,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
     let live = true;
     const timer = setTimeout(() => {
       // The lookup's ranked search: English and French names, exact > prefix > contains.
-      searchSpells({ ...NO_QUERY, q }, 1, SEARCH_PAGE_SIZE)
+      searchSpells({ ...NO_QUERY, q }, 1, SEARCH_PAGE_SIZE, searchLevel)
         .catch(() => ({ items: [] as Spell[], total: 0 }))
         .then(({ items, total }) => {
           if (!live) return;
@@ -102,10 +107,8 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
       live = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, searchLevel]);
 
-  const casterLevel = Number(level);
-  const levelOk = Number.isInteger(casterLevel) && casterLevel >= 1 && casterLevel <= 40;
   const searching = query.trim().length >= 2;
 
   async function apply(id: string) {

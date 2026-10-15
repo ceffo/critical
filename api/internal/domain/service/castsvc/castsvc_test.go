@@ -86,6 +86,12 @@ type fixture struct {
 
 func newFixture(t *testing.T, dice ...int) *fixture {
 	t.Helper()
+	return newFixtureWith(t, catalog(t), dice...)
+}
+
+// newFixtureWith is newFixture over another spell-effects catalog.
+func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *fixture {
+	t.Helper()
 	f := &fixture{
 		slots:   mocks.NewMockSlots(t),
 		texts:   mocks.NewMockTexts(t),
@@ -122,7 +128,7 @@ func newFixture(t *testing.T, dice ...int) *fixture {
 			return nil
 		}).Maybe()
 	svc, err := castsvc.New(castsvc.Deps{
-		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: f.buffs,
+		Slots: f.slots, Effects: effects, Texts: f.texts, Buffs: f.buffs,
 		Items: f.items, Attacks: f.attacks,
 		Characters: chars, Dice: f.dice, Log: log, Tx: f.tx,
 	})

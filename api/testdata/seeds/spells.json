@@ -348,5 +348,19 @@
   "components": "V, S",
   "saving_throw": "None",
   "description": "This spell generates a billowing cloud of ghastly yellowish green vapors that is so toxic as to slay any creature with fewer than 4+1 Hit Dice, cause creatures with 4+1 to 5+1 Hit Dice to roll saving throws vs. poison with -4 penalties or be slain, and creatures with up to 6 Hit Dice (inclusive) to roll unmodified saving throws vs. poison or be slain. Holding one's breath has no effect on the lethality of the spell. Those above 6th level (or 6 Hit Dice) must leave the cloud immediately or suffer 1d10 points of poison damage each round while in the area of effect. The cloudkill moves away from the spellcaster at 10 feet per round, rolling along the surface of the ground. A moderate breeze causes it to alter course (roll for direction), but it does not move back toward its caster. A strong wind breaks it up in four rounds, and a greater wind force prevents the use of the spell. Very thick vegetation will disperse the cloud in two rounds. As the vapors are heavier than air, they sink to the lowest level of the land, even pouring down den or sinkhole openings; thus, the spell is ideal for slaying nests of giant ants, for example. It cannot penetrate liquids, nor can it be cast under water."
+ },
+ {
+  "name": "Ice Storm",
+  "class": "Wizard",
+  "level": 4,
+  "school": "Evocation",
+  "sphere": "",
+  "casting_time": "4",
+  "range": "10 yds./level",
+  "duration": "Special",
+  "area_of_effect": "20 or 40 ft. radius",
+  "components": "V, S, M",
+  "saving_throw": "None",
+  "description": "This spell can have one of two effects, at the caster's option: Either great hail stones pound down for one round in a 40-foot-diameter area and inflict 3d10 points of damage to any creatures within the area of effect, or driving sleet falls in an 80-foot-diameter area for one round per caster level. The sleet blinds creatures within its area for the duration of the spell and causes the ground in the area to be icy, slowing movement by 50% and making it 50% probable that a creature trying to move in the area slips and falls. The sleet also extinguishes torches and small fires. Note that this spell will negate a heat metal spell. The material components for this spell are a pinch of dust and a few drops of water."
  }
 ]

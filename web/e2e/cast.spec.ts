@@ -120,9 +120,7 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   await level4.getByRole("button", { name: "Cast Wall of Ice" }).click();
 
   const card = resultCard(page);
-  await expect(card.getByTestId("cast-mode")).toHaveText(
-    "Option: Ice sheet",
-  );
+  await expect(card.getByTestId("cast-mode")).toHaveText("Option: Ice sheet");
   const damage = card.getByTestId("cast-damage");
   await expect(damage).toContainText("1 × 3d10");
   const total = Number(
@@ -134,6 +132,18 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
     logEntry(page, `Cast Wall of Ice: Ice sheet, ${total} cold damage`),
   ).toBeVisible();
   await snap(page, "wall-of-ice-sheet");
+
+  // Received from a party wizard, Ice Storm as sleet: no damage, no text-only banner.
+  const picker = await receivePicker(page);
+  await picker.getByLabel("Search for a spell cast on me").fill("Ice Storm");
+  await picker.getByLabel("Caster level").fill("9");
+  await picker.getByLabel("Option of Ice Storm").selectOption("sleet");
+  await picker.getByRole("button", { name: "Apply Ice Storm" }).click();
+  await expect(page.getByTestId("add-effect-popover")).toBeHidden();
+  await expect(card.getByTestId("cast-mode")).toHaveText("Option: Sleet");
+  await expect(card.getByTestId("cast-damage")).toHaveCount(0);
+  await expect(card.getByTestId("cast-text-only")).toHaveCount(0);
+  await snap(page, "ice-storm-sleet-received");
 });
 
 test("Strength cast on me by a party wizard, found by its French name; a saved effect joins it", async ({

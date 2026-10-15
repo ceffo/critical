@@ -150,6 +150,7 @@ named otherwise.
     `TestParse_ModesRefused` (adapters/spelleffectsadpt), `TestCast_Mode_RollsTheChosenModesDamage`,
     `TestCast_Mode_DefaultIsTheFirst`, `TestCast_Mode_WithoutDamageSpendsTheSlot`,
     `TestCast_Mode_UnknownIsRefused`, `TestReceive_Mode_AtTheCastersLevel`,
+    `TestReceive_Mode_RollsAtTheCastersLevel`,
     `TestDamageAt_IsWhatACastRolls`, `TestInfo_ServesTheModes` (prepsvc),
     `TestSearch_ServesModesAtTheCasterLevel` (rest/handler/spellhdl), `TestGetInfo_ServesTheModes`
     (rest/handler/spellprephdl), `TestCastAndReceive_CarryTheMode` (rest/handler/casthdl),

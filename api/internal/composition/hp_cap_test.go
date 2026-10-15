@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -141,4 +142,57 @@ func TestHPCap_PopHealThenDamage(t *testing.T) {
 	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, dmg.ID)
 	require.NoError(t, err)
 	assert.Equal(t, r.max, r.current())
+}
+
+// ADR 0011 step 1 on the real stack: damage to below 0 is logged as typed,
+// damage past -10 is logged clamped, at the floor further damage logs 0, and
+// the ledger SUM is the shown HP throughout.
+func TestHPFloor_DamagePastTheFloorIsClamped(t *testing.T) {
+	r := newHPRig(t)
+	hp, e := r.change(-(r.max + 4), "dragon breath")
+	require.Equal(t, -4, hp)
+	assert.Equal(t, -(r.max + 4), e.HPDelta, "below 0 but above the floor: as typed")
+
+	hp, e = r.change(-9, "bleeding")
+	assert.Equal(t, -10, hp)
+	assert.Equal(t, -6, e.HPDelta)
+	assert.Equal(t, actionlog.HPBreakdown{Requested: -9, Applied: -6}, breakdown(t, e))
+
+	hp, e = r.change(-3, "kick")
+	assert.Equal(t, -10, hp)
+	assert.Equal(t, 0, e.HPDelta)
+	assert.Equal(t, actionlog.HPBreakdown{Requested: -3, Applied: 0}, breakdown(t, e))
+
+	total, err := r.bs.Log.HPTotal(context.Background(), r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, -10-r.max, total, "the ledger holds no damage past the floor")
+	st, err := r.bs.HP.GetState(context.Background(), r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, hpsvc.ConditionDead, st.Condition)
+
+	// A heal from the floor counts from -10, not from a hidden deficit.
+	hp, _ = r.change(5, "cure light wounds")
+	assert.Equal(t, -5, hp)
+}
+
+// Undo of a clamped damage restores the exact HP before it, and undoing in
+// order walks back each step.
+func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
+	r := newHPRig(t)
+	ctx := context.Background()
+	before, _ := r.change(-(r.max - 3), "fireball")
+	require.Equal(t, 3, before)
+	hp, e := r.change(-40, "ogre club")
+	require.Equal(t, -10, hp)
+	require.Equal(t, -13, e.HPDelta)
+
+	st, err := r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, before, st.CurrentHp)
+	assert.Equal(t, hpsvc.ConditionBadlyWounded, st.Condition)
+
+	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, r.max, st.CurrentHp)
+	assert.Equal(t, hpsvc.ConditionOK, st.Condition)
 }

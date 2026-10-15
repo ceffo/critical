@@ -14,9 +14,13 @@ type HpEvent struct {
 }
 
 // HPState is the materialized view of a character's hit points: current value,
-// maximum, and the last few ledger entries.
+// maximum, the floor and the condition (ADR 0011), and the last few ledger
+// entries.
 type HPState struct {
 	CurrentHp int
 	MaxHp     int
+	// FloorHp is the lowest HP a character can have (actionlog.HPFloor).
+	FloorHp   int
+	Condition Condition
 	Events    []HpEvent
 }

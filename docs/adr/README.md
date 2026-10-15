@@ -27,5 +27,6 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0007 | [HP ledger](0007-hp-ledger.md) | accepted |
 | 0008 | [Spell slots and long rest](0008-spell-slots-and-long-rest.md) | accepted |
 | 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted |
+| 0011 | [HP below zero](0011-hp-below-zero.md) | accepted |
 | 0013 | [Initiative](0013-initiative.md) | accepted |
 | 0016 | [Inventory and editors](0016-inventory.md) | accepted |

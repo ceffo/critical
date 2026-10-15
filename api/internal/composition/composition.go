@@ -141,7 +141,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// buffdal (buffsvc itself records into the log, so it cannot be the
 	// log's dependency). Services that record snapshots register their
 	// Restorers on logSvc here.
-	logSvc, err := actionlogsvc.New(logDAL, db, roundReader{buffDAL})
+	logSvc, err := actionlogsvc.New(logDAL, db, roundReader{buffDAL}, hpDAL)
 	if err != nil {
 		_ = db.Close()
 		return nil, err

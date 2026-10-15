@@ -183,7 +183,9 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 - **Step 4, which file runs where**: Go tests and the e2e suite **always** use the fixture (its counts and
   search results are what the specs assert; CI has no access anyway). `just dev` uses the real file when
   `.catalogue/catalogue.json` exists, and otherwise the fixture **together with** `api/testdata/seeds`
-  (the campaign spellbook and spell effects refer to spells only the real artifact holds). The tests of
+  (the campaign spellbook and spell effects refer to spells only the real artifact holds), on a database
+  of their own, `.dev/fixture.db`: the dev database `.dev/critical.db` is only ever opened with the real
+  file, so a missing `.catalogue` can never replace its spells with the fixture's. The tests of
   the real seeds against the real artifact (`seedcheck`) skip when it is absent. The repo root of a
   relative `CRITICAL_CATALOGUE` is the nearest directory above the working directory with a `.git`
   entry; outside a checkout the path stays relative to the working directory.
@@ -194,9 +196,16 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   today, and later renames happen on databases that are already keyed.
 - **Step 5.4.3, scanned references**: also the payloads of the corrections (`action_corrections`) of
   cast, exposure and spell_prep entries, since an amend replaces the entry's payload.
+  Its refusal also names the catalogue the database was built from (the version in `catalogue_meta`)
+  and `just catalogue`, for a database started on the wrong catalogue.
+- **Spell effects seed**: every `spell_effects.json` id is checked against the catalogue at startup, as
+  the spellbook is (an id the catalogue does not hold would never apply); unknown ids refuse the start,
+  all listed (`TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold`,
+  `TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup`).
 - **Storage**: `spells.key` (unique, NULL allowed), `name_fr`, `description_fr`, `source` (migration 027)
   and the one-row `catalogue_meta (format, version)`. The fixture's version is `1970-01-01`, so switching
-  between the fixture and a real artifact always imports.
+  between the fixture and a real artifact always imports
+  (`TestRealCatalogue_SwitchingADatabaseBetweenTheFixtureAndTheRealCatalogue`).
 - **REST**: spell payloads keep `name` and `description` (English) and add `name_fr` and
   `description_fr`, omitted when the catalogue has no French text, and `source`. The client picks the
   language (fallback per field); no `lang` query parameter.

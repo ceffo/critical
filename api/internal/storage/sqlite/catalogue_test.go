@@ -360,6 +360,9 @@ func TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells(t *testing.T) {
 	} {
 		assert.Contains(t, err.Error(), want)
 	}
+	assert.Contains(t, err.Error(), "the artifact (version 1970-01-02)")
+	assert.Contains(t, err.Error(), "This database was built from catalogue version 1970-01-01", "names the catalogue it expects")
+	assert.Contains(t, err.Error(), "`just catalogue`")
 	assert.Equal(t, before, catalogueRows(t, db), "rolled back: no spell updated or deleted")
 	assert.Equal(t, cat.Version, recordedVersion(t, db), "the old version stays recorded")
 }

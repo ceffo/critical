@@ -12,7 +12,14 @@ services:
       CRITICAL_CATALOGUE: /app/.catalogue/catalogue.json
     volumes:
       - ./seeds:/app/seeds:ro
-      - ./.catalogue:/app/.catalogue:ro
+      # Long syntax so a missing ./.catalogue stops `up` instead of docker creating it empty and
+      # root-owned (which `just catalogue` could not write into).
+      - type: bind
+        source: ./.catalogue
+        target: /app/.catalogue
+        read_only: true
+        bind:
+          create_host_path: false
       - critical-data:/data
     restart: unless-stopped
 

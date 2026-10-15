@@ -218,8 +218,14 @@ func deleteRemoved(ctx context.Context, q Querier, cat catalogue.Catalogue, seed
 		for i, k := range keys {
 			list[i] = k + " (" + strings.Join(uses[k], ", ") + ")"
 		}
-		return fmt.Errorf("spell catalogue: the artifact removes spells that are still referenced, refusing to import: %s",
-			strings.Join(list, "; "))
+		recorded, err := recordedCatalogue(ctx, q)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("spell catalogue: the artifact (version %s) removes spells that are still referenced, refusing to import: %s. "+
+			"This database was built from %s: start it with that catalogue (the real one is fetched by `just catalogue` "+
+			"to .catalogue/catalogue.json, the default CRITICAL_CATALOGUE), or start this catalogue on a database of its own",
+			cat.Version, strings.Join(list, "; "), recorded)
 	}
 	for k := range removed {
 		if _, err := q.ExecContext(ctx, `DELETE FROM spells WHERE key = ?`, k); err != nil {
@@ -227,6 +233,21 @@ func deleteRemoved(ctx context.Context, q Querier, cat catalogue.Catalogue, seed
 		}
 	}
 	return nil
+}
+
+// recordedCatalogue names the catalogue the database was last imported from,
+// for the refusal message of deleteRemoved: a database used with the real
+// catalogue started on the fixture (or the reverse) is refused there.
+func recordedCatalogue(ctx context.Context, q Querier) (string, error) {
+	var version string
+	err := q.QueryRowContext(ctx, `SELECT version FROM catalogue_meta WHERE id = 1`).Scan(&version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "the spell seeds that predate the catalogue artifact (the real catalogue's spells)", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read catalogue version: %w", err)
+	}
+	return "catalogue version " + version, nil
 }
 
 func removedKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) (map[string]bool, error) {

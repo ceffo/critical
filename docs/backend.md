@@ -239,8 +239,11 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   `just catalogue`.
 - **Without access**: `api/testdata/catalogue.json` is a small fixture in the same format with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
-  table). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds`, when
-  `.catalogue/catalogue.json` is absent (the campaign seeds refer to spells only the real artifact holds).
+  table). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
+  own database `.dev/fixture.db`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
+  spells only the real artifact holds). `.dev/critical.db` is only ever opened with the real catalogue.
+- **Seed checks**: the spellbook and every `spell_effects.json` id are checked against the catalogue at
+  startup; an id it does not hold refuses the start.
 - **Import** (`catalogueadpt` reads and validates against the embedded copy of
   `schemas/catalogue.schema.json`, kept identical by a test; `sqlite.ImportCatalogue` imports): same
   version as recorded in `catalogue_meta` → no writes; otherwise one transaction keys old rows (first
@@ -277,7 +280,7 @@ values against the PHB pages, not against the seed.
 ## Seeding the character
 
 `seeds/character.json` (the campaign Bard) only loads into an empty `characters` table. To pick up
-an edited seed in the dev database: stop `just dev`, run `just dev-reset` (deletes `.dev/critical.db`),
+an edited seed in the dev database: stop `just dev`, run `just dev-reset` (deletes `.dev/critical.db` and `.dev/fixture.db`),
 and start `just dev` again. This discards all dev state (HP ledger, buffs, action log).
 
 ## Testing Conventions

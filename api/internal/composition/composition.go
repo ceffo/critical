@@ -144,6 +144,10 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if err := effects.CheckAgainst(cat); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	spellbook, err := spellbookadpt.New(cfg.SeedsDir, cat)
 	if err != nil {
 		_ = db.Close()

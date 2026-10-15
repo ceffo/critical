@@ -103,6 +103,30 @@ func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
 	}
 }
 
+// The real seeds with one spell effect the real catalogue does not hold do
+// not start: startup names the unknown id.
+func TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup(t *testing.T) {
+	realCatalogue(t)
+	seeds := t.TempDir()
+	require.NoError(t, os.CopyFS(seeds, os.DirFS(seedsDir)))
+	path := filepath.Join(seeds, spelleffectsadpt.FileName)
+	raw, err := os.ReadFile(path) //nolint:gosec // test temp dir
+	require.NoError(t, err)
+	var entries []json.RawMessage
+	require.NoError(t, json.Unmarshal(raw, &entries))
+	entries = append(entries, json.RawMessage(`{"id":"magic_rocket","name":"Magic Rocket","level":1,`+
+		`"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}}`))
+	raw, err = json.Marshal(entries)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, raw, 0o600))
+
+	_, err = composition.New(context.Background(), composition.Config{
+		DSN: filepath.Join(t.TempDir(), "critical.db"), SeedsDir: seeds, Catalogue: catalogueFile,
+	})
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "spell effects: ids not in the spell catalogue: magic_rocket")
+}
+
 func TestRepoSeeds_SpellbookSpellsResolve(t *testing.T) {
 	book, err := spellbookadpt.New(seedsDir, realCatalogue(t))
 	require.NoError(t, err, "spellbook ids/levels match the catalog")
@@ -301,6 +325,68 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 		assert.True(t, n == 1 && inArtifact, "%s (%s) resolves", r.ID, r.Where)
 	}
 	t.Logf("%d spell references in the seeds and the game state, all resolved", len(refs))
+}
+
+// One database switched between the fixture catalogue (with the fixture
+// seeds) and the real one: every switch imports, and a spell only the real
+// catalogue holds that game state refers to blocks the switch back to the
+// fixture, with a message naming the catalogue the database was built from
+// and `just catalogue`, and leaves the database as it was.
+func TestRealCatalogue_SwitchingADatabaseBetweenTheFixtureAndTheRealCatalogue(t *testing.T) {
+	realCat := realCatalogue(t)
+	fixtureFile := filepath.Join("..", "..", "testdata", "catalogue.json")
+	fixtureSeeds := filepath.Join("..", "..", "testdata", "seeds")
+	fixture, err := catalogueadpt.Load(fixtureFile)
+	require.NoError(t, err)
+	ctx := context.Background()
+	dsn := filepath.Join(t.TempDir(), "scratch.db")
+	start := func(seeds, file string) (*composition.BackingServices, error) {
+		return composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seeds, Catalogue: file})
+	}
+	served := func(bs *composition.BackingServices) int {
+		page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
+		require.NoError(t, err)
+		return page.Total
+	}
+
+	bs, err := start(fixtureSeeds, fixtureFile)
+	require.NoError(t, err, "fixture")
+	assert.Equal(t, len(fixture.Spells), served(bs))
+	require.NoError(t, bs.Close(ctx))
+
+	bs, err = start(seedsDir, catalogueFile)
+	require.NoError(t, err, "fixture -> real")
+	assert.Equal(t, len(realCat.Spells), served(bs))
+	inFixture := fixture.ByID()
+	var realOnly string
+	for _, s := range realCat.Spells {
+		if _, ok := inFixture[s.ID]; !ok {
+			realOnly = s.ID
+			break
+		}
+	}
+	require.NotEmpty(t, realOnly)
+	_, err = bs.DB.ExecContext(ctx, `INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
+		VALUES (?, 0, 'cast', '', 0, ?, 999999)`, bs.CharacterID, `{"action":"cast","spellId":"`+realOnly+`","casterLevel":5}`)
+	require.NoError(t, err)
+	require.NoError(t, bs.Close(ctx))
+
+	_, err = start(fixtureSeeds, fixtureFile)
+	require.Error(t, err, "real -> fixture with a real-only spell in the log")
+	assert.ErrorContains(t, err, realOnly+" (action_log ")
+	assert.ErrorContains(t, err, "This database was built from catalogue version "+realCat.Version)
+	assert.ErrorContains(t, err, "`just catalogue`")
+	bs, err = start(seedsDir, catalogueFile)
+	require.NoError(t, err, "the refused switch left the real catalogue in place")
+	assert.Equal(t, len(realCat.Spells), served(bs))
+	_, err = bs.DB.ExecContext(ctx, `DELETE FROM action_log WHERE transaction_id = 999999`)
+	require.NoError(t, err)
+	require.NoError(t, bs.Close(ctx))
+
+	bs, err = start(fixtureSeeds, fixtureFile)
+	require.NoError(t, err, "real -> fixture once nothing refers to the real-only spells")
+	assert.Equal(t, len(fixture.Spells), served(bs))
+	require.NoError(t, bs.Close(ctx))
 }
 
 // The web's list of PHB spell ids (web/src/i18n/phbSpellIds.json, the ids

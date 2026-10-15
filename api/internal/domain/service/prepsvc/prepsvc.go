@@ -138,6 +138,7 @@ func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
 	return out, nil
 }
 
+// Prepare applies ADR 0008 steps 1 to 5.
 func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []string) ([]spellsvc.SpellSlot, error) {
 	limits, err := s.limits(ctx, characterID)
 	if err != nil {

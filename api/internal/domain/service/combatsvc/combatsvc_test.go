@@ -172,6 +172,40 @@ func TestResolveSavingThrow(t *testing.T) {
 	}
 }
 
+// The d20 is plain arithmetic: a natural 1 passes when the bonuses carry it to
+// the target and a natural 20 fails when they pull it below.
+func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
+	tests := []struct {
+		name      string
+		d20       int
+		saveBonus int
+		wantHit   bool
+		wantTotal string
+	}{
+		{"natural 1 passes with +13", 1, 13, true, "Roll: 1 + Mod: 13 = 14 vs Target: 14"},
+		{"natural 1 fails with +12", 1, 12, false, "Roll: 1 + Mod: 12 = 13 vs Target: 14"},
+		{"natural 20 fails with -7", 20, -7, false, "Roll: 20 + Mod: -7 = 13 vs Target: 14"},
+		{"natural 20 passes with -6", 20, -6, true, "Roll: 20 + Mod: -6 = 14 vs Target: 14"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.withChar(bard())
+			f.dice.EXPECT().RollD20().Return(tt.d20).Once()
+			mods := strMods(12)
+			mods.SaveBonus = tt.saveBonus
+			mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Luck", Value: tt.saveBonus}}
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+			f.records()
+
+			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantHit, res.Hit)
+			assert.Contains(t, res.DamageBreakdown, tt.wantTotal)
+		})
+	}
+}
+
 func TestResolveSavingThrow_Errors(t *testing.T) {
 	boom := errors.New("boom")
 

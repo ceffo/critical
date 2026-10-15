@@ -49,10 +49,12 @@ func BonusEligible(dex, cha int) bool {
 // of the sheet's level, the ceiling the next level's. ToNext is what is
 // left to the ceiling (0 once reached), Progress the share of the way from
 // floor to ceiling clamped to 0..1. At the last level there is no ceiling
-// and the progress is full. The cells are LevelCells consecutive levels
+// and the progress is full; a sheet level above the table (an override) is
+// treated as the last level, keeping its own Level. The cells are LevelCells consecutive levels
 // starting two below the sheet's, kept inside the table.
 func ComputeProgress(level, total int, table Thresholds) (Progress, error) {
-	floor, err := table.BardXPThreshold(level)
+	tableLevel := min(level, ruletablesvc.MaxBardLevel)
+	floor, err := table.BardXPThreshold(tableLevel)
 	if err != nil {
 		return Progress{}, fmt.Errorf("xp progress: %w", err)
 	}

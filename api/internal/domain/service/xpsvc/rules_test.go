@@ -140,6 +140,13 @@ func TestComputeProgress_FromTable25(t *testing.T) {
 			},
 		},
 		{
+			name: "level override above the table: the last level's state", level: 25, total: 2_300_000,
+			want: xpsvc.Progress{
+				Level: 25, CurrentFloor: 2_200_000, Progress: 1, ProgressPercent: 100,
+				Levels: cells(13, past, past, past, past, past, past, past, past),
+			},
+		},
+		{
 			name: "first level: cells start at 1", level: 1, total: 625,
 			want: xpsvc.Progress{
 				Level: 1, CurrentFloor: 0, NextLevel: 2, NextThreshold: ptr(1250),
@@ -156,6 +163,6 @@ func TestComputeProgress_FromTable25(t *testing.T) {
 		})
 	}
 
-	_, err := xpsvc.ComputeProgress(21, 0, table25{})
-	require.Error(t, err, "a level outside the table")
+	_, err := xpsvc.ComputeProgress(0, 0, table25{})
+	require.Error(t, err, "a level below the table")
 }

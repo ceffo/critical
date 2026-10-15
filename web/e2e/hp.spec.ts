@@ -109,3 +109,46 @@ test("Moi column: Enter applies damage, Shift+Enter healing; last change, ghost 
     await snap(page, `moi-${vp.width}x${vp.height}`);
   }
 });
+
+test("below 0 HP: the condition and the dying zone show, and HP stops at the floor", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const moi = page.getByRole("complementary", { name: "Character" });
+  const max = await currentHp(page); // a fresh character starts at full HP
+  await expect(moi.getByTestId("hp-condition")).toHaveCount(0);
+  await expect(moi.getByTestId("hp-dying-fill")).toHaveCount(0);
+
+  // Down to 4 below 0: unconscious, the dying zone fills from 0.
+  await recordHp(page, "damage", max + 4, "e2e dragon breath");
+  await expect.poll(() => currentHp(page)).toBe(-4);
+  await expect(moi.getByTestId("hp-condition")).toHaveText("Unconscious");
+  await expect(moi.getByTestId("hp-dying-fill")).toBeVisible();
+  await expect(moi.getByTestId("hp-scale")).toContainText("0");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await snap(page, `hp-unconscious-${vp.width}x${vp.height}`);
+  }
+
+  // Further damage stops at the floor; the log shows what was asked.
+  await recordHp(page, "damage", 20, "e2e ogre club");
+  await expect.poll(() => currentHp(page)).toBe(-10);
+  await expect(moi.getByTestId("hp-condition")).toHaveText("Dead");
+  const club = logEntry(page, "e2e ogre club");
+  await expect(club.getByTestId("log-delta")).toHaveText("−6");
+  await expect(club.getByTestId("log-capped")).toHaveText("−20 requested, stopped at the HP floor");
+
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(moi.getByTestId("hp-dying-zone")).toBeVisible();
+    await snap(page, `hp-floor-${vp.width}x${vp.height}`);
+  }
+});

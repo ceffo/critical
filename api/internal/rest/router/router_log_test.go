@@ -92,12 +92,12 @@ func TestLogUndo_WireShape(t *testing.T) {
 func TestHPEndpoint_WireShape(t *testing.T) {
 	h, m := newRouter(t)
 	m.hp.EXPECT().GetState(mock.Anything, int64(1)).Return(&hpsvc.HPState{
-		CurrentHp: 15, MaxHp: 20,
+		CurrentHp: 15, MaxHp: 20, FloorHp: -10, Condition: hpsvc.ConditionOK,
 		Events: []hpsvc.HpEvent{{ID: 4, CharacterID: 1, Delta: -5, Source: "orc", CreatedAt: at}},
 	}, nil)
 	rec := do(h, "GET", "/api/hp", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"currentHp":15,"maxHp":20,"events":[
+	assert.JSONEq(t, `{"currentHp":15,"maxHp":20,"floor":-10,"condition":"ok","events":[
 		{"id":4,"characterId":1,"delta":-5,"source":"orc","createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
 }
 

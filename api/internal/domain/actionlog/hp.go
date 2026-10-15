@@ -29,8 +29,25 @@ func CapHeal(total, delta int) int {
 	return min(delta, max(0, -total))
 }
 
-// HPBreakdown is the requested vs applied heal, merged into the payload of a
-// heal entry (and of a heal amend) as hpRequested/hpApplied.
+// HPFloor is the lowest current HP a character can have (ADR 0011 step 1):
+// at -10 the character is dead, and damage beyond it is not recorded.
+const HPFloor = -10
+
+// FloorDamage returns the HP delta to log for a requested delta when the
+// character's max HP is maxHP and the ledger total is total (current HP is
+// maxHP+total), ADR 0011 step 1. A heal (delta >= 0) is unchanged; damage is
+// clipped so current HP stops at HPFloor, and to 0 when HP is already at or
+// below it. It mirrors CapHeal at the other end of the scale.
+func FloorDamage(maxHP, total, delta int) int {
+	if delta >= 0 {
+		return delta
+	}
+	return max(delta, min(0, HPFloor-(maxHP+total)))
+}
+
+// HPBreakdown is the requested vs applied HP change, merged into the payload of
+// every heal entry and of a damage entry clamped at HPFloor as
+// hpRequested/hpApplied.
 type HPBreakdown struct {
 	Requested int `json:"hpRequested"`
 	Applied   int `json:"hpApplied"`

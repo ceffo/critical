@@ -142,7 +142,7 @@ export function saveFromRoll(category: string, r: RollResult): SaveView {
 export interface InfoView {
   text: string;
   value: { amount: number; tone: "damage" | "heal" } | null;
-  /** A heal cut by the max-HP cap: what was asked for. */
+  /** A change cut by max HP or the floor: what was asked for. */
   capped: HpBreakdown | null;
 }
 
@@ -163,7 +163,7 @@ function hpValue(e: LogEntry): InfoView["value"] {
   return { amount, tone: amount < 0 ? "damage" : "heal" };
 }
 
-/** The server's breakdown when a heal was cut by the max-HP cap, else null. */
+/** The server's breakdown when an HP change was cut (a heal by max HP, damage by the floor), else null. */
 export function cappedHeal(e: LogEntry): HpBreakdown | null {
   if (e.kind !== "hp_change" || e.status === "voided") return null;
   const p = e.effectivePayload as Partial<HpBreakdown> | null;

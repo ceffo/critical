@@ -35,12 +35,21 @@ var errBoom = errors.New("boom")
 
 func newSvc(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRounds, *passTx) {
 	t.Helper()
+	svc, dal, rounds, tx, _ := newSvcMaxHP(t)
+	return svc, dal, rounds, tx
+}
+
+// newSvcMaxHP also returns the max HP port, which only damage (the HP floor)
+// reads.
+func newSvcMaxHP(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRounds, *passTx, *mocks.MockMaxHP) {
+	t.Helper()
 	dal := mocks.NewMockDAL(t)
 	rounds := mocks.NewMockRounds(t)
+	maxHP := mocks.NewMockMaxHP(t)
 	tx := &passTx{}
-	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, rounds)
+	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, rounds, maxHP)
 	require.NoError(t, err)
-	return svc, dal, rounds, tx
+	return svc, dal, rounds, tx, maxHP
 }
 
 func intp(v int) *int { return &v }
@@ -48,23 +57,26 @@ func intp(v int) *int { return &v }
 func TestNewWithConfig_Validation(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	rounds := mocks.NewMockRounds(t)
+	maxHP := mocks.NewMockMaxHP(t)
 	cases := []struct {
 		name   string
 		cfg    *actionlogsvc.Config
 		dal    actionlogsvc.DAL
 		tx     domain.TxRunner
 		rounds actionlogsvc.Rounds
+		maxHP  actionlogsvc.MaxHP
 	}{
-		{"nil config", nil, dal, &passTx{}, rounds},
-		{"nil dal", actionlogsvc.DefaultConfig(), nil, &passTx{}, rounds},
-		{"nil tx", actionlogsvc.DefaultConfig(), dal, nil, rounds},
-		{"nil rounds", actionlogsvc.DefaultConfig(), dal, &passTx{}, nil},
-		{"default above max", &actionlogsvc.Config{DefaultLimit: 10, MaxLimit: 5}, dal, &passTx{}, rounds},
-		{"zero limit", &actionlogsvc.Config{DefaultLimit: 0, MaxLimit: 5}, dal, &passTx{}, rounds},
+		{"nil config", nil, dal, &passTx{}, rounds, maxHP},
+		{"nil dal", actionlogsvc.DefaultConfig(), nil, &passTx{}, rounds, maxHP},
+		{"nil tx", actionlogsvc.DefaultConfig(), dal, nil, rounds, maxHP},
+		{"nil rounds", actionlogsvc.DefaultConfig(), dal, &passTx{}, nil, maxHP},
+		{"nil max hp", actionlogsvc.DefaultConfig(), dal, &passTx{}, rounds, nil},
+		{"default above max", &actionlogsvc.Config{DefaultLimit: 10, MaxLimit: 5}, dal, &passTx{}, rounds, maxHP},
+		{"zero limit", &actionlogsvc.Config{DefaultLimit: 0, MaxLimit: 5}, dal, &passTx{}, rounds, maxHP},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := actionlogsvc.NewWithConfig(c.cfg, c.dal, c.tx, c.rounds)
+			_, err := actionlogsvc.NewWithConfig(c.cfg, c.dal, c.tx, c.rounds, c.maxHP)
 			require.Error(t, err)
 		})
 	}
@@ -120,8 +132,12 @@ func TestRecord(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			svc, dal, rounds, tx := newSvc(t)
+			svc, dal, rounds, tx, maxHP := newSvcMaxHP(t)
 			if c.wantStore != nil {
+				if c.in.HPDelta < 0 { // at full HP, far from the floor
+					maxHP.EXPECT().GetMaxHP(mock.Anything, c.in.CharacterID).Return(40, nil).Once()
+					dal.EXPECT().HPTotal(mock.Anything, c.in.CharacterID).Return(0, nil).Once()
+				}
 				if c.in.Round == 0 {
 					rounds.EXPECT().GetRound(mock.Anything, c.in.CharacterID).Return(c.round, nil)
 				}
@@ -541,8 +557,10 @@ func TestRecord_CapsHeal(t *testing.T) {
 			assert.JSONEq(t, c.wantPayload, string(stored.Payload))
 		})
 	}
-	t.Run("damage is stored as is, total not read", func(t *testing.T) {
-		svc, dal, _, _ := newSvc(t)
+	t.Run("damage does not go through the cap", func(t *testing.T) {
+		svc, dal, _, _, maxHP := newSvcMaxHP(t)
+		maxHP.EXPECT().GetMaxHP(mock.Anything, int64(1)).Return(40, nil).Once()
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(0, nil).Once()
 		dal.EXPECT().InsertEntry(mock.Anything, actionlog.NewEntry{
 			CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -13, Payload: json.RawMessage(`{}`),
 		}).Return(42, nil).Once()
@@ -559,6 +577,65 @@ func TestRecord_CapsHeal(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
 		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(-6, nil).Once()
 		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4, Payload: json.RawMessage(`[1]`)})
+		require.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
+}
+
+// ADR 0011 step 1: damage that would take HP below -10 is logged clamped, in
+// the recording transaction, with the requested vs applied breakdown. Max HP
+// is 40, so current HP is 40+total.
+func TestRecord_FloorsDamage(t *testing.T) {
+	cases := []struct {
+		name        string
+		total       int // SUM before the entry
+		delta       int
+		payload     string
+		wantDelta   int
+		wantPayload string
+	}{
+		{"damage above the floor is stored as is", 0, -13, "", -13, `{}`},
+		{"damage below 0 but above the floor is stored as is", -35, -12, "", -12, `{}`},
+		{"damage exactly to the floor is stored as is", -30, -20, "", -20, `{}`},
+		{"damage past the floor is clamped", -30, -25, "", -20, `{"hpRequested":-25,"hpApplied":-20}`},
+		{"damage at the floor logs 0", -50, -6, "", 0, `{"hpRequested":-6,"hpApplied":0}`},
+		{"damage below the floor (legacy rows) logs 0", -55, -3, "", 0, `{"hpRequested":-3,"hpApplied":0}`},
+		{"payload kept", -45, -9, `{"weapon":"club"}`, -5, `{"weapon":"club","hpRequested":-9,"hpApplied":-5}`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc, dal, _, tx, maxHP := newSvcMaxHP(t)
+			maxHP.EXPECT().GetMaxHP(mock.Anything, int64(1)).Return(40, nil).Once()
+			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
+			var stored actionlog.NewEntry
+			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).
+				Run(func(_ context.Context, e actionlog.NewEntry) { stored = e }).Return(42, nil).Once()
+			_, err := svc.Record(context.Background(), actionlog.NewEntry{
+				CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "ogre", HPDelta: c.delta, Payload: json.RawMessage(c.payload),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, 1, tx.calls)
+			assert.Equal(t, c.wantDelta, stored.HPDelta)
+			assert.JSONEq(t, c.wantPayload, string(stored.Payload))
+		})
+	}
+	t.Run("max hp fails", func(t *testing.T) {
+		svc, _, _, _, maxHP := newSvcMaxHP(t)
+		maxHP.EXPECT().GetMaxHP(mock.Anything, int64(1)).Return(0, errBoom).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "ogre", HPDelta: -4})
+		require.ErrorIs(t, err, errBoom)
+	})
+	t.Run("total fails", func(t *testing.T) {
+		svc, dal, _, _, maxHP := newSvcMaxHP(t)
+		maxHP.EXPECT().GetMaxHP(mock.Anything, int64(1)).Return(40, nil).Once()
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(0, errBoom).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "ogre", HPDelta: -4})
+		require.ErrorIs(t, err, errBoom)
+	})
+	t.Run("payload not an object", func(t *testing.T) {
+		svc, dal, _, _, maxHP := newSvcMaxHP(t)
+		maxHP.EXPECT().GetMaxHP(mock.Anything, int64(1)).Return(40, nil).Once()
+		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(-48, nil).Once()
+		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "ogre", HPDelta: -4, Payload: json.RawMessage(`[1]`)})
 		require.ErrorIs(t, err, domain.ErrInvalidInput)
 	})
 }

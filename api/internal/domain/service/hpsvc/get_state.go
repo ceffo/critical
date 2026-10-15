@@ -33,11 +33,16 @@ func (s *service) GetState(ctx context.Context, characterID int64) (*HPState, er
 			CreatedAt:   e.CreatedAt,
 		}
 	}
+	// ADR 0007 step 6: never shown above max. Writes keep the total <= 0
+	// (actionlog.CapHeal); this guards rows logged before. ADR 0011 step 1
+	// guards the other end the same way: writes stop at the floor
+	// (actionlog.FloorDamage), rows logged before it never show below it.
+	current := max(actionlog.HPFloor, min(maxHP, maxHP+sum))
 	return &HPState{
-		// ADR 0007 step 6: never shown above max. Writes keep the
-		// total <= 0 (actionlog.CapHeal); this guards rows logged before.
-		CurrentHp: min(maxHP, maxHP+sum),
+		CurrentHp: current,
 		MaxHp:     maxHP,
+		FloorHp:   actionlog.HPFloor,
+		Condition: ConditionOf(current, maxHP), // ADR 0011 step 2
 		Events:    events,
 	}, nil
 }

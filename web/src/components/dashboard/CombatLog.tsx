@@ -241,7 +241,9 @@ function LogRow({
         )}
         {capped && (
           <span data-testid="log-capped">
-            {t("log.capped", { requested: formatSigned(capped.hpRequested) })}
+            {t(capped.hpRequested < 0 ? "log.floored" : "log.capped", {
+              requested: formatSigned(capped.hpRequested),
+            })}
           </span>
         )}
         {voided && <span className="text-danger">{t("log.status.voided")}</span>}

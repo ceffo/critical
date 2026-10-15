@@ -30,9 +30,11 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    after amend counts zero", "summary-only amend keeps delta"), `TestGetState`.
 3. **Damage taken is entered as final.** The app never works the damage out: the player types the
    number after the DM's rulings (armour, resistance, saves), and it is logged as typed, never
-   capped (HP may go below 0).
-   Tests: `TestAppendEvent` ("damage"), `TestRecord_CapsHeal` (actionlogsvc: "damage is stored as
-   is, total not read").
+   capped (HP may go below 0) down to the floor of -10, where it is clamped
+   ([ADR 0011](0011-hp-below-zero.md) step 1).
+   Tests: `TestAppendEvent` ("damage"), `TestRecord_CapsHeal` (actionlogsvc: "damage does not go
+   through the cap"), `TestRecord_FloorsDamage` (actionlogsvc: "damage below 0 but above the
+   floor is stored as is").
 4. **A heal never goes above max HP.** There are no temporary HP, and max HP grows only when the
    character levels up. When a positive delta is recorded (whatever the service that records it),
    it is capped at the gap to max inside the recording transaction: the entry stores
@@ -82,4 +84,5 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
   there); casts, item uses and rests change no HP. Step 4 holds for any future source because it
   lives in the recording path.
 - Level-up (max HP growth) is not an app action yet; `hp_max` is the character sheet's.
-- Not covered: temporary HP, death and unconsciousness thresholds, regeneration over time.
+- Not covered: temporary HP, regeneration over time. The floor at -10 and the death and
+  unconsciousness thresholds are [ADR 0011](0011-hp-below-zero.md).

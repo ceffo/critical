@@ -14,7 +14,9 @@ import (
 // joining the caller's transaction when ctx carries one. Round 0 is stamped
 // with the current round. A positive HPDelta (a heal, from any service) is
 // capped at max HP before it is stored (actionlog.CapHeal, ADR 0007 steps 4 and 5) and the
-// payload gets the requested vs applied breakdown.
+// payload gets the requested vs applied breakdown. A negative HPDelta (damage)
+// is clamped so HP stops at the floor (actionlog.FloorDamage, ADR 0011 step 1);
+// a clamped entry gets the breakdown too.
 func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, error) {
 	if e.Kind == "" {
 		return 0, fmt.Errorf("%w: kind is required", domain.ErrInvalidInput)
@@ -43,8 +45,13 @@ func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, erro
 			}
 			e.Round = round
 		}
-		if e.HPDelta > 0 {
+		switch {
+		case e.HPDelta > 0:
 			if err := s.capHeal(ctx, &e); err != nil {
+				return err
+			}
+		case e.HPDelta < 0:
+			if err := s.floorDamage(ctx, &e); err != nil {
 				return err
 			}
 		}
@@ -75,5 +82,30 @@ func (s *service) capHeal(ctx context.Context, e *actionlog.NewEntry) error {
 		return fmt.Errorf("%w: %w", domain.ErrInvalidInput, err)
 	}
 	e.HPDelta, e.Payload = b.Applied, payload
+	return nil
+}
+
+// floorDamage clips e's damage so current HP stops at actionlog.HPFloor and,
+// when it clipped, records the breakdown in its payload (ADR 0011 step 1). Like
+// capHeal it runs inside the recording transaction, so the total it reads is
+// the one the entry is added to and the ledger SUM stays the truth.
+func (s *service) floorDamage(ctx context.Context, e *actionlog.NewEntry) error {
+	maxHP, err := s.maxHP.GetMaxHP(ctx, e.CharacterID)
+	if err != nil {
+		return fmt.Errorf("max hp: %w", err)
+	}
+	total, err := s.dal.HPTotal(ctx, e.CharacterID)
+	if err != nil {
+		return fmt.Errorf("hp total: %w", err)
+	}
+	applied := actionlog.FloorDamage(maxHP, total, e.HPDelta)
+	if applied == e.HPDelta {
+		return nil
+	}
+	payload, err := actionlog.WithHPBreakdown(e.Payload, actionlog.HPBreakdown{Requested: e.HPDelta, Applied: applied})
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrInvalidInput, err)
+	}
+	e.HPDelta, e.Payload = applied, payload
 	return nil
 }

@@ -67,7 +67,13 @@
     "healHint": "Appliquer en soins (Maj+Entrée)",
     "keysHint": "Entrée : dégâts · Maj+Entrée : soins",
     "lastChange": "{{delta}} {{source}}",
-    "lastDamage": "Derniers dégâts subis : {{amount}}"
+    "lastDamage": "Derniers dégâts subis : {{amount}}",
+    "condition": {
+      "badlyWounded": "Gravement blessé",
+      "unconscious": "Inconscient",
+      "dead": "Mort"
+    },
+    "dyingZone": "Agonie, jusqu’à {{floor}}"
   },
   "turn": {
     "title": "Tour",
@@ -616,6 +622,7 @@
     },
     "was": "était {{delta}}",
     "capped": "{{requested}} demandés, plafonnés aux PV max",
+    "floored": "{{requested}} demandés, arrêtés au plancher de PV",
     "amend": "Note",
     "void": "Annuler",
     "confirmVoid": "Annuler cette entrée ?",

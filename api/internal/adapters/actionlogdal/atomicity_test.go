@@ -24,6 +24,10 @@ type fixedRound int
 
 func (r fixedRound) GetRound(context.Context, int64) (int, error) { return int(r), nil }
 
+type fixedMaxHP int
+
+func (m fixedMaxHP) GetMaxHP(context.Context, int64) (int, error) { return int(m), nil }
+
 // failingDAL performs the base InsertCorrection and then fails, like a
 // storage error after a partial write.
 type failingDAL struct {
@@ -79,7 +83,7 @@ func round(t *testing.T, db *sqlite.DB, charID int64) int {
 
 func newLog(t *testing.T, db *sqlite.DB, dal actionlogsvc.DAL) actionlogsvc.SVC {
 	t.Helper()
-	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, db, fixedRound(4))
+	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, db, fixedRound(4), fixedMaxHP(40))
 	require.NoError(t, err)
 	return svc
 }

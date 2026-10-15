@@ -617,7 +617,9 @@ function InfoResult({ info }: { info: InfoView }) {
         <p className="text-sm break-words">{info.text}</p>
         {info.capped && (
           <p className="text-xs text-muted-foreground">
-            {t("log.capped", { requested: formatSigned(info.capped.hpRequested) })}
+            {t(info.capped.hpRequested < 0 ? "log.floored" : "log.capped", {
+              requested: formatSigned(info.capped.hpRequested),
+            })}
           </p>
         )}
       </div>

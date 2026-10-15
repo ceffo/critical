@@ -18,9 +18,11 @@ import (
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	castmocks "github.com/ceffo/critical/api/internal/domain/service/castsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	charmocks "github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
+	detailsmocks "github.com/ceffo/critical/api/internal/domain/service/detailssvc/mocks"
 	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
@@ -48,6 +50,7 @@ type mocksSet struct {
 	weapons *weaponmocks.MockSVC
 	rest    *restmocks.MockSVC
 	xp      *xpmocks.MockSVC
+	details *detailsmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -64,11 +67,12 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		weapons: weaponmocks.NewMockSVC(t),
 		rest:    restmocks.NewMockSVC(t),
 		xp:      xpmocks.NewMockSVC(t),
+		details: detailsmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
 		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
-		XP: m.xp,
+		XP: m.xp, Details: m.details,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m
@@ -92,6 +96,9 @@ type endpoint struct {
 }
 
 var endpoints = []endpoint{
+	{"PATCH character/details", "PATCH", "/api/character/details", `{"race":"Elf"}`, func(m *mocksSet, err error) {
+		m.details.On("Update", anyArgs(3)...).Return(charactersvc.Details{}, err)
+	}},
 	{"GET xp", "GET", "/api/xp", "", func(m *mocksSet, err error) {
 		m.xp.On("Get", anyArgs(2)...).Return(nil, err)
 	}},

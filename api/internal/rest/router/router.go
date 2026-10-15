@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/combathdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/hphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/itemhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
@@ -50,6 +51,7 @@ func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
 	weaponhdl.RegisterRoutes(r, charID, bs.Weapons)
 	resthdl.RegisterRoutes(r, charID, bs.Rest)
 	xphdl.RegisterRoutes(r, charID, bs.XP)
+	detailshdl.RegisterRoutes(r, charID, bs.Details)
 
 	return r
 }

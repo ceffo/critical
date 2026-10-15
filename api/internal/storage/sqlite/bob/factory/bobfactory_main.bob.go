@@ -314,6 +314,16 @@ func (f *Factory) fromExistingCharacter(ctx context.Context, m *models.Character
 	o.SavePetriPoly = func() int64 { return m.SavePetriPoly }
 	o.SaveBreath = func() int64 { return m.SaveBreath }
 	o.SaveSpell = func() int64 { return m.SaveSpell }
+	o.Class = func() string { return m.Class }
+	o.Race = func() string { return m.Race }
+	o.Alignment = func() string { return m.Alignment }
+	o.Age = func() int64 { return m.Age }
+	o.Sex = func() string { return m.Sex }
+	o.Height = func() string { return m.Height }
+	o.Weight = func() string { return m.Weight }
+	o.Hair = func() string { return m.Hair }
+	o.Eyes = func() string { return m.Eyes }
+	o.Languages = func() string { return m.Languages }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))

@@ -31,7 +31,7 @@ func Where[Q sqlite.Filterable]() struct {
 	SpellSlots        spellSlotWhere[Q]
 	Spells            spellWhere[Q]
 	Weapons           weaponWhere[Q]
-	XPEvents          xpEventWhere[Q]
+	XPEntries         xpEntryWhere[Q]
 } {
 	return struct {
 		ActionCorrections actionCorrectionWhere[Q]
@@ -48,7 +48,7 @@ func Where[Q sqlite.Filterable]() struct {
 		SpellSlots        spellSlotWhere[Q]
 		Spells            spellWhere[Q]
 		Weapons           weaponWhere[Q]
-		XPEvents          xpEventWhere[Q]
+		XPEntries         xpEntryWhere[Q]
 	}{
 		ActionCorrections: buildActionCorrectionWhere[Q](ActionCorrections.Columns),
 		ActionLogs:        buildActionLogWhere[Q](ActionLogs.Columns),
@@ -64,6 +64,6 @@ func Where[Q sqlite.Filterable]() struct {
 		SpellSlots:        buildSpellSlotWhere[Q](SpellSlots.Columns),
 		Spells:            buildSpellWhere[Q](Spells.Columns),
 		Weapons:           buildWeaponWhere[Q](Weapons.Columns),
-		XPEvents:          buildXPEventWhere[Q](XPEvents.Columns),
+		XPEntries:         buildXPEntryWhere[Q](XPEntries.Columns),
 	}
 }

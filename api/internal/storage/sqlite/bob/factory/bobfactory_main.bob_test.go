@@ -458,7 +458,7 @@ func TestCreateCharacterWithSpellSlotsDoesNotDuplicateParent(t *testing.T) {
 	}
 }
 
-func TestCreateCharacterWithXPEventsDoesNotDuplicateParent(t *testing.T) {
+func TestCreateCharacterWithXPEntriesDoesNotDuplicateParent(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")
 	}
@@ -482,8 +482,8 @@ func TestCreateCharacterWithXPEventsDoesNotDuplicateParent(t *testing.T) {
 		t.Fatalf("Error counting Characters: %v", err)
 	}
 
-	if _, err := New().NewCharacterWithContext(ctx, CharacterMods.WithNewXPEvents(2)).Create(ctx, tx); err != nil {
-		t.Fatalf("Error creating Character with XPEvents: %v", err)
+	if _, err := New().NewCharacterWithContext(ctx, CharacterMods.WithNewXPEntries(2)).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating Character with XPEntries: %v", err)
 	}
 
 	after, err := models.Characters.Query().Count(ctx, tx)
@@ -688,7 +688,7 @@ func TestCreateWeapon(t *testing.T) {
 	}
 }
 
-func TestCreateXPEvent(t *testing.T) {
+func TestCreateXPEntry(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")
 	}
@@ -707,7 +707,7 @@ func TestCreateXPEvent(t *testing.T) {
 		}
 	}()
 
-	if _, err := New().NewXPEventWithContext(ctx).Create(ctx, tx); err != nil {
-		t.Fatalf("Error creating XPEvent: %v", err)
+	if _, err := New().NewXPEntryWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating XPEntry: %v", err)
 	}
 }

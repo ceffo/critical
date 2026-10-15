@@ -13,10 +13,12 @@ import { HpBar } from "@/components/dashboard/HpBar";
 import { Identity } from "@/components/dashboard/Identity";
 import { Notices } from "@/components/dashboard/Notices";
 import { Rail } from "@/components/shell/Rail";
+import { XpPanel } from "@/components/xp/XpPanel";
 import type { Workspace } from "@/lib/workspaces";
 import { cn } from "@/lib/utils";
 import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
+import { useXpStore } from "@/stores/xp";
 
 /**
  * A workspace mounts on its first visit and then stays mounted while hidden, so its state (tab,
@@ -59,6 +61,7 @@ function App() {
   const { t } = useTranslation();
   const loadCharacter = useCharacterStore((s) => s.loadCharacter);
   const refresh = useTableStore((s) => s.refresh);
+  const fetchXp = useXpStore((s) => s.fetchXp);
   const [workspace, setWorkspace] = useState<Workspace>("act");
   const [visited, setVisited] = useState<ReadonlySet<Workspace>>(() => new Set(["act"]));
   const open = (w: Workspace) => {
@@ -69,7 +72,8 @@ function App() {
   useEffect(() => {
     void loadCharacter();
     void refresh();
-  }, [loadCharacter, refresh]);
+    void fetchXp();
+  }, [loadCharacter, refresh, fetchXp]);
 
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
@@ -99,6 +103,9 @@ function App() {
           >
             <LookupPanel />
           </Pane>
+          <Pane id="xp" active={workspace} visited={visited} label={t("shell.workspace.xp")}>
+            <XpPanel />
+          </Pane>
         </div>
 
         <aside
@@ -115,7 +122,7 @@ function App() {
           aria-label={t("shell.moi")}
           className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto rounded-xl bg-card p-4"
         >
-          <Identity />
+          <Identity onOpenXp={() => open("xp")} />
           <HpBar />
           <ChargeCards />
           <QuickHp />

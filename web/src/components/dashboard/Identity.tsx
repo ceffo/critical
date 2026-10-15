@@ -2,15 +2,18 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
+import { useXpStore } from "@/stores/xp";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 
 /**
- * Who: name, level, then the abilities in one row of seven cells, STR as the server's effective
+ * Who: name, level (a button opening the Expérience workspace, underlined with the server's
+ * progress to the next level, ADR 0015), then the abilities in one row of seven cells, STR as the server's effective
  * value (sheet value in brackets when buffed) and THAC0 last, set apart by a tone step.
  */
-export function Identity() {
-  const { t } = useTranslation();
+export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
+  const { t, i18n } = useTranslation();
+  const xp = useXpStore((s) => s.ledger);
   const character = useCharacterStore((s) => s.character);
   const strength = useBuffsStore((s) => s.strength);
   const strBuffed = strength !== null && strength.effective !== strength.base;
@@ -22,9 +25,31 @@ export function Identity() {
           {character?.name || t("app.loading")}
         </h1>
         {character && (
-          <div className="text-sm text-muted-foreground tabular-nums">
+          <button
+            type="button"
+            onClick={onOpenXp}
+            title={
+              xp?.nextLevel
+                ? t("xp.levelLinkTitle", {
+                    xp: new Intl.NumberFormat(i18n.language).format(xp.total),
+                    percent: xp.progressPercent,
+                    level: xp.nextLevel,
+                  })
+                : undefined
+            }
+            className="relative pb-1 text-sm text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
             {t("app.levelValue", { level: character.level })}
-          </div>
+            {xp && (
+              <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-neu-800">
+                <span
+                  className="absolute inset-y-0 left-0 rounded-full bg-tint"
+                  style={{ width: `${xp.progress * 100}%` }}
+                  data-testid="level-progress"
+                />
+              </span>
+            )}
+          </button>
         )}
       </div>
       {character && (

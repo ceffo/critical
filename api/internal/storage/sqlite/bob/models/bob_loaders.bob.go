@@ -27,7 +27,7 @@ type preloaders struct {
 	RoundState       roundStatePreloader
 	SavedBuff        savedBuffPreloader
 	SpellSlot        spellSlotPreloader
-	XPEvent          xpEventPreloader
+	XPEntry          xpEntryPreloader
 }
 
 func getPreloaders() preloaders {
@@ -42,7 +42,7 @@ func getPreloaders() preloaders {
 		RoundState:       buildRoundStatePreloader(),
 		SavedBuff:        buildSavedBuffPreloader(),
 		SpellSlot:        buildSpellSlotPreloader(),
-		XPEvent:          buildXPEventPreloader(),
+		XPEntry:          buildXPEntryPreloader(),
 	}
 }
 
@@ -63,7 +63,7 @@ type thenLoaders[Q orm.Loadable] struct {
 	RoundState       roundStateThenLoader[Q]
 	SavedBuff        savedBuffThenLoader[Q]
 	SpellSlot        spellSlotThenLoader[Q]
-	XPEvent          xpEventThenLoader[Q]
+	XPEntry          xpEntryThenLoader[Q]
 }
 
 func getThenLoaders[Q orm.Loadable]() thenLoaders[Q] {
@@ -78,7 +78,7 @@ func getThenLoaders[Q orm.Loadable]() thenLoaders[Q] {
 		RoundState:       buildRoundStateThenLoader[Q](),
 		SavedBuff:        buildSavedBuffThenLoader[Q](),
 		SpellSlot:        buildSpellSlotThenLoader[Q](),
-		XPEvent:          buildXPEventThenLoader[Q](),
+		XPEntry:          buildXPEntryThenLoader[Q](),
 	}
 }
 

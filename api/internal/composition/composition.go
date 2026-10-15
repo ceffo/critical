@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
+	"github.com/ceffo/critical/api/internal/adapters/xpdal"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
@@ -33,6 +34,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
@@ -54,6 +56,7 @@ type BackingServices struct {
 	Items     itemsvc.SVC
 	Weapons   weaponsvc.SVC
 	Rest      restsvc.SVC
+	XP        xpsvc.SVC
 
 	services []domain.Service
 }
@@ -114,7 +117,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	}
 
 	// The PHB rule tables: spell preparation takes Table 32, attacks look
-	// STR/DEX adjustments up in Tables 1-2. A gap in a table is a startup
+	// STR/DEX adjustments up in Tables 1-2, the XP ledger Table 25. A gap in a table is a startup
 	// error.
 	ruleTables, err := ruletablesadpt.New(cfg.SeedsDir)
 	if err != nil {
@@ -205,6 +208,13 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	xpSvc, err := xpsvc.New(xpsvc.Deps{
+		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Tx: db,
+	})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	return &BackingServices{
 		DB:          db,
@@ -220,7 +230,10 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Items:       itemSvc,
 		Weapons:     weaponSvc,
 		Rest:        restSvc,
-		services:    []domain.Service{charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc},
+		XP:          xpSvc,
+		services: []domain.Service{
+			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc,
+		},
 	}, nil
 }
 

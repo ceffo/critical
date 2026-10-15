@@ -39,7 +39,7 @@ type joins[Q dialect.Joinable] struct {
 	RoundStates       joinSet[roundStateJoins[Q]]
 	SavedBuffs        joinSet[savedBuffJoins[Q]]
 	SpellSlots        joinSet[spellSlotJoins[Q]]
-	XPEvents          joinSet[xpEventJoins[Q]]
+	XPEntries         joinSet[xpEntryJoins[Q]]
 }
 
 func buildJoinSet[Q interface{ aliasedAs(string) Q }, C any, F func(C, string) Q](c C, f F) joinSet[Q] {
@@ -62,7 +62,7 @@ func getJoins[Q dialect.Joinable]() joins[Q] {
 		RoundStates:       buildJoinSet[roundStateJoins[Q]](RoundStates.Columns, buildRoundStateJoins),
 		SavedBuffs:        buildJoinSet[savedBuffJoins[Q]](SavedBuffs.Columns, buildSavedBuffJoins),
 		SpellSlots:        buildJoinSet[spellSlotJoins[Q]](SpellSlots.Columns, buildSpellSlotJoins),
-		XPEvents:          buildJoinSet[xpEventJoins[Q]](XPEvents.Columns, buildXPEventJoins),
+		XPEntries:         buildJoinSet[xpEntryJoins[Q]](XPEntries.Columns, buildXPEntryJoins),
 	}
 }
 

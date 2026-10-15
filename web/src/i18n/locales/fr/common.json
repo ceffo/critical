@@ -39,7 +39,8 @@
     "workspace": {
       "act": "Agir",
       "inventory": "Inventaire",
-      "spells": "Sorts"
+      "spells": "Sorts",
+      "xp": "Expérience"
     },
     "fil": "Résultats et journal",
     "moi": "Personnage"
@@ -816,6 +817,49 @@
       "label": "Filtre du journal",
       "all": "Tout",
       "rolls": "Jets"
+    }
+  },
+  "xp": {
+    "heading": "Expérience · niveau {{level}}",
+    "unit": "XP",
+    "toNext": "Avant le niveau {{level}} · {{xp}} XP",
+    "reached": "Assez d'XP pour le niveau {{level}}",
+    "maxLevel": "Dernier niveau de la table",
+    "progressTitle": "Progression",
+    "progressLabel": "Progression vers le niveau {{level}}",
+    "levels": "Niveaux et leurs seuils",
+    "levelTitle": "Niveau {{level}} : {{xp}} XP",
+    "levelLinkTitle": "{{xp}} XP · {{percent}} % vers le niveau {{level}}",
+    "bonus": "+10 %",
+    "bonusHint": "+10 % sur les XP gagnés quand la Dextérité et le Charisme sont tous deux à 16 ou plus",
+    "defaultReason": "XP gagnés",
+    "add": {
+      "title": "Ajouter des XP",
+      "amount": "Montant",
+      "reason": "Motif",
+      "reasonPlaceholder": "Monstre, quête, prestation…",
+      "session": "Séance",
+      "submit": "Ajouter",
+      "submitWith": "Ajouter {{total}}"
+    },
+    "ledger": {
+      "title": "Registre",
+      "count_one": "{{count}} entrée",
+      "count_other": "{{count}} entrées",
+      "reason": "Motif",
+      "base": "Base",
+      "bonus": "Bonus",
+      "total": "Total",
+      "none": "Aucun XP enregistré pour l'instant.",
+      "meta": "{{date}} · {{session}}",
+      "edit": "Modifier {{reason}}",
+      "delete": "Supprimer {{reason}}",
+      "editing": "Modification d'une entrée",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "opening": "XP de départ (fiche de personnage)",
+      "confirm": "Confirmer",
+      "confirmDelete": "Confirmer la suppression de {{reason}}"
     }
   }
 }

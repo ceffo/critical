@@ -21,6 +21,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellprephdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/weaponhdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/xphdl"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/go-chi/chi/v5"
 )
@@ -48,6 +49,7 @@ func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
 	itemhdl.RegisterRoutes(r, charID, bs.Items)
 	weaponhdl.RegisterRoutes(r, charID, bs.Weapons)
 	resthdl.RegisterRoutes(r, charID, bs.Rest)
+	xphdl.RegisterRoutes(r, charID, bs.XP)
 
 	return r
 }

@@ -27,7 +27,7 @@ type Factory struct {
 	baseSpellSlotMods        SpellSlotModSlice
 	baseSpellMods            SpellModSlice
 	baseWeaponMods           WeaponModSlice
-	baseXPEventMods          XPEventModSlice
+	baseXPEntryMods          XPEntryModSlice
 }
 
 func New() *Factory {
@@ -344,8 +344,8 @@ func (f *Factory) fromExistingCharacter(ctx context.Context, m *models.Character
 	if len(m.R.SpellSlots) > 0 {
 		CharacterMods.AddExistingSpellSlots(m.R.SpellSlots...).Apply(ctx, o)
 	}
-	if len(m.R.XPEvents) > 0 {
-		CharacterMods.AddExistingXPEvents(m.R.XPEvents...).Apply(ctx, o)
+	if len(m.R.XPEntries) > 0 {
+		CharacterMods.AddExistingXPEntries(m.R.XPEntries...).Apply(ctx, o)
 	}
 
 	return o
@@ -679,36 +679,38 @@ func (f *Factory) fromExistingWeapon(ctx context.Context, m *models.Weapon) *Wea
 	return o
 }
 
-func (f *Factory) NewXPEvent(mods ...XPEventMod) *XPEventTemplate {
-	return f.NewXPEventWithContext(context.Background(), mods...)
+func (f *Factory) NewXPEntry(mods ...XPEntryMod) *XPEntryTemplate {
+	return f.NewXPEntryWithContext(context.Background(), mods...)
 }
 
-func (f *Factory) NewXPEventWithContext(ctx context.Context, mods ...XPEventMod) *XPEventTemplate {
-	o := &XPEventTemplate{f: f}
+func (f *Factory) NewXPEntryWithContext(ctx context.Context, mods ...XPEntryMod) *XPEntryTemplate {
+	o := &XPEntryTemplate{f: f}
 
 	if f != nil {
-		f.baseXPEventMods.Apply(ctx, o)
+		f.baseXPEntryMods.Apply(ctx, o)
 	}
 
-	XPEventModSlice(mods).Apply(ctx, o)
+	XPEntryModSlice(mods).Apply(ctx, o)
 
 	return o
 }
 
-func (f *Factory) FromExistingXPEvent(ctx context.Context, m *models.XPEvent) *XPEventTemplate {
+func (f *Factory) FromExistingXPEntry(ctx context.Context, m *models.XPEntry) *XPEntryTemplate {
 	visited := make(map[uintptr]struct{})
 	ctx = factoryVisitedCtx.WithValue(ctx, visited)
-	return f.fromExistingXPEvent(ctx, m)
+	return f.fromExistingXPEntry(ctx, m)
 }
 
-func (f *Factory) fromExistingXPEvent(ctx context.Context, m *models.XPEvent) *XPEventTemplate {
-	o := &XPEventTemplate{f: f, alreadyPersisted: true}
+func (f *Factory) fromExistingXPEntry(ctx context.Context, m *models.XPEntry) *XPEntryTemplate {
+	o := &XPEntryTemplate{f: f, alreadyPersisted: true}
 
 	o.ID = func() int64 { return m.ID }
 	o.CharacterID = func() int64 { return m.CharacterID }
-	o.Delta = func() int64 { return m.Delta }
-	o.Source = func() string { return m.Source }
-	o.SessionDate = func() time.Time { return m.SessionDate }
+	o.EntryDate = func() string { return m.EntryDate }
+	o.Session = func() string { return m.Session }
+	o.Reason = func() string { return m.Reason }
+	o.Base = func() int64 { return m.Base }
+	o.Bonus = func() int64 { return m.Bonus }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))
@@ -718,7 +720,7 @@ func (f *Factory) fromExistingXPEvent(ctx context.Context, m *models.XPEvent) *X
 		visited[ptr] = struct{}{}
 	}
 	if m.R.Character != nil {
-		XPEventMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)
+		XPEntryMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)
 	}
 
 	return o
@@ -836,10 +838,10 @@ func (f *Factory) AddBaseWeaponMod(mods ...WeaponMod) {
 	f.baseWeaponMods = append(f.baseWeaponMods, mods...)
 }
 
-func (f *Factory) ClearBaseXPEventMods() {
-	f.baseXPEventMods = nil
+func (f *Factory) ClearBaseXPEntryMods() {
+	f.baseXPEntryMods = nil
 }
 
-func (f *Factory) AddBaseXPEventMod(mods ...XPEventMod) {
-	f.baseXPEventMods = append(f.baseXPEventMods, mods...)
+func (f *Factory) AddBaseXPEntryMod(mods ...XPEntryMod) {
+	f.baseXPEntryMods = append(f.baseXPEntryMods, mods...)
 }

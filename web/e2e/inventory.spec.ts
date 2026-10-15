@@ -211,7 +211,7 @@ test("an empty item is refused by the API, and a stale − shows the error", asy
   expect((await post(stack.apiUrl, "/api/items/power_gem_dispel/use")).status).toBe(200);
   const refused = await post(stack.apiUrl, "/api/items/power_gem_dispel/use");
   expect(refused.status).toBe(409);
-  expect(refused.body).toEqual({ error: expect.stringContaining("empty") });
+  expect(refused.body).toEqual({ code: "item_empty", error: expect.stringContaining("empty") });
 
   await expect(count(page, "power_gem_dispel")).toHaveText("1 / 1");
   await minus(page, "Power Gem: Dispel Magic").click();

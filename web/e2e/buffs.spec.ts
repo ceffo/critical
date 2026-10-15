@@ -35,7 +35,7 @@ test("Next turn then void restores the round, the durations and the expired buff
   await expect(
     buffBadge(page, "e2e Bless").getByTestId("buff-rounds"),
   ).toHaveText("2 turns");
-  const advance = `Round ${r0} → ${r0 + 1} — expired: e2e Haste`;
+  const advance = `Turn ${r0} → ${r0 + 1} — expired: e2e Haste`;
   // Logged in the round it ends.
   await expect(
     turnGroup(page, r0)
@@ -70,7 +70,7 @@ test("editing a buff's remaining rounds is logged and voidable", async ({
     .getByRole("button", { name: "Edit e2e Strength" })
     .click();
   const form = page.getByRole("form", { name: "Edit e2e Strength" });
-  await form.getByLabel("Rounds").fill("4");
+  await form.getByLabel("Turns").fill("4");
   await form.getByRole("button", { name: "Save" }).click();
 
   await expect(

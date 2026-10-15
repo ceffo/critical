@@ -3,6 +3,7 @@ package buffsvc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -101,6 +102,10 @@ func (s *service) GetInitiative(ctx context.Context, characterID int64) (*Initia
 	return s.dal.GetInitiative(ctx, characterID)
 }
 
+// ErrNoInitiative is the conflict for rerolling out of combat; it also wraps
+// domain.ErrConflict.
+var ErrNoInitiative = errors.New("no initiative to reroll")
+
 // RerollInitiative is ADR 0013 step 4: in one transaction, the round's
 // initiative entry is popped (which must be the newest entry, else the log's
 // not-latest conflict) and a new d10 is rolled and recorded.
@@ -117,7 +122,7 @@ func (s *service) RerollInitiative(ctx context.Context, characterID int64) (Init
 		}
 		// ADR 0013 step 5: out of combat there is nothing to reroll.
 		if current == nil || round == 0 {
-			return fmt.Errorf("%w: no initiative to reroll", domain.ErrConflict)
+			return fmt.Errorf("%w: %w", domain.ErrConflict, ErrNoInitiative)
 		}
 		if _, err := s.log.Void(ctx, characterID, current.LogEntryID); err != nil {
 			return fmt.Errorf("pop initiative: %w", err)

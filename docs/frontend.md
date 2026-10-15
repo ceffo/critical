@@ -216,7 +216,8 @@ flowchart TD
   adjust endpoint) that replaces any verdict.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`, `undo`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
-  (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).
+  (`{"error": …, "code": …}`, parsed by `api/http.ts`) are shown in `Notices` (`role="alert"`): a known code in the
+  player's language (`apiError.*`), else the server text verbatim.
 - The journal groups entries by the turn the server stamped (`lib/groupByRound.ts`); the current
   turn always has a group. Display helpers live in `lib/format.ts` (no game rules).
 - Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`) and sit in

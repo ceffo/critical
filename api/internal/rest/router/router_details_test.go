@@ -54,7 +54,7 @@ func TestDetails_FieldErrorNamesTheField(t *testing.T) {
 		Return(charactersvc.Details{}, &domain.FieldError{Field: "age", Message: detailssvc.CodeOutOfRange})
 	rec := do(h, "PATCH", "/api/character/details", `{"age":-1}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.JSONEq(t, `{"error":"out_of_range","field":"age"}`, rec.Body.String())
+	assert.JSONEq(t, `{"error":"out_of_range","field":"age","code":"invalid_input"}`, rec.Body.String())
 }
 
 func TestDetails_RejectsUnknownFieldAndBadJSON(t *testing.T) {

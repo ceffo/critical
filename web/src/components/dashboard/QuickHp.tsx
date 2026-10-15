@@ -9,8 +9,8 @@ import { fieldClass } from "./fieldStyles";
 
 /**
  * Damage / healing entry: an amount, Damage and Healing, and the source. Enter in either field
- * applies damage, Shift+Enter healing. The server records the change in the action log (and
- * requires a source).
+ * applies damage, Shift+Enter healing. The source is optional; the server records the change in
+ * the action log.
  */
 export function QuickHp() {
   const { t } = useTranslation();
@@ -23,7 +23,7 @@ export function QuickHp() {
   const blockedBy = top && top.kind !== "hp_change" ? entryText(top, t) : null;
 
   const n = Number.parseInt(amount, 10);
-  const valid = n > 0 && source.trim() !== "";
+  const valid = n > 0;
 
   async function apply(sign: 1 | -1) {
     if (!valid || busy) return;

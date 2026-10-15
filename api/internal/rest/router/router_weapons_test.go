@@ -37,7 +37,7 @@ func TestWeapons_CreateInvalidNamesTheField(t *testing.T) {
 		Return(nil, fmt.Errorf("wrapped: %w", &domain.FieldError{Field: "damage_sm", Message: "Damage must look like 1d8 or 2d4"}))
 	rec := do(h, "POST", "/api/weapons", `{"name":"X","damage_sm":"2x6","kind":"melee"}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.JSONEq(t, `{"error":"Damage must look like 1d8 or 2d4","field":"damage_sm"}`, rec.Body.String())
+	assert.JSONEq(t, `{"error":"Damage must look like 1d8 or 2d4","field":"damage_sm","code":"invalid_input"}`, rec.Body.String())
 }
 
 func TestWeapons_UpdatePatchesOnlyTheFieldsSent(t *testing.T) {
@@ -69,6 +69,6 @@ func TestWeapons_EditErrors(t *testing.T) {
 	m.weapons.EXPECT().Delete(mock.Anything, int64(1), "x").Return(nil, fmt.Errorf("%w: x", weaponsvc.ErrWeaponNotFound))
 	rec := do(h, "PATCH", "/api/weapons/x", `{"name":"y"}`)
 	assert.Equal(t, http.StatusNotFound, rec.Code)
-	assert.JSONEq(t, `{"error":"weapon not found"}`, rec.Body.String())
+	assert.JSONEq(t, `{"error":"weapon not found","code":"weapon_not_found"}`, rec.Body.String())
 	assert.Equal(t, http.StatusNotFound, do(h, "DELETE", "/api/weapons/x", "").Code)
 }

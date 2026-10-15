@@ -13,7 +13,9 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -55,19 +57,24 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 // Error renders an error response, mapping known domain sentinels to specific
 // HTTP statuses. Anything unknown becomes a 500.
 func Error(ctx context.Context, w http.ResponseWriter, err error) {
-	status, msg := mapError(err)
+	status, code, msg := mapError(err)
 	if status >= 500 {
 		Logger(ctx).Error("internal error", "error", err)
 	} else {
 		Logger(ctx).Info("client error", "status", status, "error", err)
 	}
-	body := map[string]string{"error": msg}
+	body := map[string]string{"error": msg, "code": code}
+	// A field error's message stays verbatim for the web: invalid_input is
+	// deliberately not localized, the message says what is wrong with the field.
 	var fe *domain.FieldError
 	if errors.As(err, &fe) {
 		body["error"], body["field"] = fe.Message, fe.Field
 	}
 	JSON(ctx, w, status, body)
 }
+
+// CodeBadRequest is the error code of a request that could not be parsed.
+const CodeBadRequest = "bad_request"
 
 // StatusError is an error that carries its own HTTP status and client-facing
 // message. Handlers return it for request-parsing failures (bad JSON, bad path
@@ -84,11 +91,13 @@ func BadRequestError(msg string) error {
 	return &StatusError{Status: http.StatusBadRequest, Message: msg}
 }
 
-// mapping is one row of the sentinel -> HTTP status table. message returns the
+// mapping is one row of the sentinel -> HTTP status + error code table. A
+// specific sentinel goes above the generic one it wraps (the first match wins). message returns the
 // client-facing text; nil means err.Error().
 type mapping struct {
 	target  error
 	status  int
+	code    string // stable, machine-readable; the web words it (en + fr)
 	message func(err error) string
 }
 
@@ -102,40 +111,42 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 // is transport-layer code and may depend inward on the service packages, while
 // services never import render, so layering holds without widening domain.
 var mappings = []mapping{
-	{target: domain.ErrInvalidInput, status: http.StatusBadRequest},
-	{target: domain.ErrConflict, status: http.StatusConflict},
-	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound},
-	{target: domain.ErrNotFound, status: http.StatusNotFound},
-	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, message: fixed("weapon not found")},
-	{target: weaponsvc.ErrWeaponNotFound, status: http.StatusNotFound, message: fixed("weapon not found")},
-	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound},
-	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict},
-	{target: itemsvc.ErrNotRestockable, status: http.StatusConflict},
-	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict},
-	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest},
-	{target: prepsvc.ErrNotInSpellbook, status: http.StatusBadRequest},
-	{target: prepsvc.ErrOverLimit, status: http.StatusConflict},
-	{target: actionlogsvc.ErrAlreadyVoided, status: http.StatusConflict},
-	{target: actionlogsvc.ErrNotAmendable, status: http.StatusBadRequest},
-	{target: actionlogsvc.ErrNotLatest, status: http.StatusConflict},
-	{target: actionlogsvc.ErrTopChanged, status: http.StatusConflict},
-	{target: actionlogsvc.ErrNothingToUndo, status: http.StatusConflict},
+	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
+	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
+	{target: domain.ErrInvalidInput, status: http.StatusBadRequest, code: "invalid_input"},
+	{target: domain.ErrConflict, status: http.StatusConflict, code: "conflict"},
+	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound, code: "character_not_found"},
+	{target: domain.ErrNotFound, status: http.StatusNotFound, code: "not_found"},
+	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, code: "weapon_not_found", message: fixed("weapon not found")},
+	{target: weaponsvc.ErrWeaponNotFound, status: http.StatusNotFound, code: "weapon_not_found", message: fixed("weapon not found")},
+	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound, code: "item_not_found"},
+	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict, code: "item_empty"},
+	{target: itemsvc.ErrNotRestockable, status: http.StatusConflict, code: "item_not_restockable"},
+	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict, code: "slot_already_used"},
+	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest, code: "invalid_slot_index"},
+	{target: prepsvc.ErrNotInSpellbook, status: http.StatusBadRequest, code: "not_in_spellbook"},
+	{target: prepsvc.ErrOverLimit, status: http.StatusConflict, code: "prep_over_limit"},
+	{target: actionlogsvc.ErrAlreadyVoided, status: http.StatusConflict, code: "entry_already_voided"},
+	{target: actionlogsvc.ErrNotAmendable, status: http.StatusBadRequest, code: "entry_not_amendable"},
+	{target: actionlogsvc.ErrNotLatest, status: http.StatusConflict, code: "entry_not_latest"},
+	{target: actionlogsvc.ErrTopChanged, status: http.StatusConflict, code: "log_top_changed"},
+	{target: actionlogsvc.ErrNothingToUndo, status: http.StatusConflict, code: "nothing_to_undo"},
 }
 
-func mapError(err error) (int, string) {
+func mapError(err error) (int, string, string) {
 	var se *StatusError
 	if errors.As(err, &se) {
-		return se.Status, se.Message
+		return se.Status, CodeBadRequest, se.Message
 	}
 	for _, m := range mappings {
 		if errors.Is(err, m.target) {
 			if m.message != nil {
-				return m.status, m.message(err)
+				return m.status, m.code, m.message(err)
 			}
-			return m.status, err.Error()
+			return m.status, m.code, err.Error()
 		}
 	}
-	return http.StatusInternalServerError, err.Error()
+	return http.StatusInternalServerError, "internal", err.Error()
 }
 
 // Logger extracts a *slog.Logger from ctx, or returns the default.

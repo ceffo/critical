@@ -58,7 +58,7 @@
     "change": "Modifier les PV",
     "amount": "Montant",
     "source": "Source",
-    "sourcePlaceholder": "Source : hache d'orque, potion...",
+    "sourcePlaceholder": "Source (facultative) : hache d'orque, potion...",
     "applyDamage": "Dégâts",
     "applyHeal": "Soins",
     "undoLast": "Annuler la dernière modification de PV",
@@ -653,6 +653,8 @@
     "title": "Journal",
     "empty": "Rien d'enregistré pour l'instant.",
     "current": "en cours",
+    "hpDamage": "Dégâts {{amount}}",
+    "hpHeal": "Soins {{amount}}",
     "nothingThisRound": "Rien d'enregistré ce round.",
     "kinds": {
       "hp_change": "PV",
@@ -1018,5 +1020,21 @@
     "groupPercent": "{{count}}d%",
     "send": "Envoyer {{formula}} aux dés",
     "rollFormula": "Lancer {{formula}}"
+  },
+  "apiError": {
+    "character_not_found": "Ce personnage n'existe plus.",
+    "weapon_not_found": "Cette arme n'existe plus.",
+    "item_not_found": "Cet objet n'existe plus.",
+    "item_empty": "Cet objet est vide.",
+    "item_not_restockable": "Cet objet ne peut pas être réapprovisionné.",
+    "slot_already_used": "Cet emplacement de sort est déjà utilisé.",
+    "invalid_slot_index": "Cet emplacement de sort n'existe pas.",
+    "not_in_spellbook": "Ce sort n'est pas dans le grimoire.",
+    "entry_already_voided": "Cette entrée est déjà annulée.",
+    "entry_not_amendable": "Cette entrée ne peut pas être modifiée.",
+    "log_top_changed": "L'entrée la plus récente a changé entre-temps. Vérifiez le journal et réessayez.",
+    "nothing_to_undo": "Il n'y a rien à annuler.",
+    "no_initiative": "Il n'y a pas d'initiative à relancer : lancez d'abord un combat.",
+    "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord."
   }
 }

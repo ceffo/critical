@@ -104,3 +104,42 @@ func TestConcurrentWriteTxsBothCommit(t *testing.T) {
 		t.Fatalf("rows=%d err=%v", n, err)
 	}
 }
+
+// Every transaction takes the write lock when it begins, before any statement
+// of its own, so a read-then-write transaction can never lose a snapshot race.
+// A second connection with a 1 ms busy_timeout cannot write while the
+// transaction is open, even though the transaction has only read.
+func TestWrapTxTakesTheWriteLockAtBegin(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "lock.db")
+	db, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	other, err := Open(path + "?_pragma=busy_timeout(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = other.Close() }()
+	ctx := context.Background()
+	if _, err := db.ExecContext(ctx, "CREATE TABLE t (v INTEGER)"); err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.WrapTx(ctx, func(q Querier) error {
+		var n int
+		if err := q.QueryRowContext(ctx, "SELECT COUNT(*) FROM t").Scan(&n); err != nil {
+			return err
+		}
+		if _, err := other.ExecContext(ctx, "INSERT INTO t VALUES (1)"); err == nil {
+			t.Error("a write from another connection succeeded inside an open transaction")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := other.ExecContext(ctx, "INSERT INTO t VALUES (1)"); err != nil {
+		t.Fatalf("write after commit: %v", err)
+	}
+}

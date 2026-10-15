@@ -59,8 +59,10 @@ When the wait returns:
 - A timeout → `herdr agent get` / `agent read` before deciding anything; never re-send blindly.
 
 Next round (review findings, CI failure, merge `<db>`): a new brief file, then `herdr agent prompt`
-and wait again. The agent's context is intact. Close a reviewer's tab once you've read its report; a
-developer's once its PR is merged or the user says so. Never type into an agent's tab other than
+and wait again. The agent's context is intact. Close finished agents promptly: a reviewer's tab once
+you've read its report, a developer's once its PR is open and CI is green (a later CI or merge fix
+goes to a fresh developer with a short brief), a scoper's once you've read its report, and at session
+start any agent left over from the previous supervisor. Never type into an agent's tab other than
 through `herdr agent prompt`.
 
 ## Quota gate (before every dispatch or rework prompt)
@@ -101,7 +103,7 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    per-spell special cases that a later Opus cleanup had to undo).
 4. **Agent sessions in general.** Each one starts cold and rereads the docs and the code. Reuse a
    developer for its rework rounds. Keep one developer at a time unless running two saves wall-clock
-   time the user actually needs. Close idle agents once their PR is merged.
+   time the user actually needs. Close idle agents as soon as they are done (see "Launching agents").
 5. **Mechanical work goes through Bash, not agents:** merging `origin/<db>` into a clean branch,
    restacking, running the gate (`validate`, e2e) after a sync, pushing, opening PRs.
 

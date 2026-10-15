@@ -43,7 +43,7 @@ flowchart TD
   subgraph G["Columns: rail | workspace 1fr | Fil clamp(340px, 26vw, 520px) | Moi clamp(300px, 22vw, 440px)"]
     RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts; gear opens SettingsPopover"]
     subgraph WS["Workspace (one shown, each mounted on first visit, then kept)"]
-      ACT["Agir: ActionArea tabs Attack, Spells"]
+      ACT["Agir: ActionArea tabs Weapons, Spells, Items"]
       INV["Inventaire: InventoryPanel + WeaponsSection"]
       SP["Sorts: LookupPanel"]
     end
@@ -78,7 +78,7 @@ flowchart TD
   `bg-danger` / `heal` / `warning`, `shadow-float` for popovers only) or the shadcn names mapped
   onto them, never raw colours.
 - Plug-in slots: each Agir tab is one panel component in `components/actions/ActionArea.tsx`
-  (`TABS`); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
+  (`TABS`, the tab label shows a count where it has one: spells left, combat items); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
 - Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): the turn
   block shows the turn (the round counter), the initiative row ("Out of combat" at turn 0, a
   placeholder otherwise), Next turn and a ⋯ popover menu (Time passes…, Set turn number…, End combat,
@@ -103,12 +103,25 @@ flowchart TD
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect under its name ("weapon +5 · dice ×2"); a Strength
   bonus that an active Improved Strength replaces (`applies: false`, no `min_str`) shows dashed
   with "replaced by Improved Strength".
-- Attack tab (`components/actions/AttackPanel.tsx`): weapon (`GET /api/weapons`), ammunition for
-  weapons with an `ammo_kind` (`GET /api/items`, items of that `ammoKind` with count > 0, the
-  current pick kept while spent so the panel can say so, `stores/items.ts`), target AC and size,
-  situational modifier. The result card labels each modifier and damage term by its `kind`
-  (`result.mods.*`); attack log entries are rendered from their payload (`lib/logSummary.ts`).
-  An attack refreshes the table state (log, item counts), so voiding it shows the arrow back.
+- Weapons tab (`components/actions/AttackPanel.tsx`, `stores/attack.ts`): the attack form's
+  choices are server state (`GET` / `PATCH /api/attack/form`, ADR 0009 step 6), restored on load and
+  in every tab or device. The target bar has the AC stepper, the size (S / M | L) and the
+  situational stepper with its reason (shown when not 0), both bounded to ±20 like the server. The
+  weapon-in-hand card shows the name, melee / missile, two-handed, Attack, and four tiles from the
+  server's preview (ADR 0002 step 12): damage dice S/M and L (the current size ringed, the other
+  dimmed), to-hit / damage bonus and the effective THAC0 with the roll needed against the target AC.
+  A bow shows its ammunition as chips (`ammoChoices`, counts amber at 3 or less; the chosen one
+  stays chosen when spent and the panel says so). "Switch to {previous}" and the "Other weapon"
+  popover change the weapon in hand and never attack. Changes are sent one after the other and
+  only the newest answer is shown; target and situational changes show at once. The preview is
+  reloaded when buffs, effective STR, items or weapons change. An attack sends the saved choices
+  (an offered first arrow becomes the choice first, so it stays chosen once spent); the result
+  card labels each modifier and damage term by its `kind` (`result.mods.*`); attack log entries
+  are rendered from their payload (`lib/logSummary.ts`). An attack refreshes the table state (log,
+  item counts), so voiding it shows the arrow back.
+- Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a 40px row:
+  name, behaviour and count, dice, Roll (it has dice) or Use, through `stores/roll.ts`
+  `spendItem`; "Manage the inventory" opens the Inventaire workspace.
 - Inventaire workspace (`InventoryPanel.tsx`): one list, each row name, magical bonus
   ("+2"), effect dice, type, behaviour badge (Stock / Charges / Daily), − (uses one through
   `stores/roll.ts` `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and +
@@ -120,8 +133,10 @@ flowchart TD
 - The Inventaire workspace also lists the weapons (`WeaponsSection.tsx`): name, dice,
   to-hit and damage bonus, melee / missile, ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
   `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
-  refreshes the weapons store, so the Attack picker follows.
-- Spells tab (`SpellsPanel.tsx`): Cast puts the `CastResult` in the result card (`CastResultView`:
+  refreshes the weapons store, so the Weapons tab follows.
+- Spells tab (`SpellsPanel.tsx`): "Buff spells go on an ally", Prepare spells and Long rest on
+  top; one group per level with a pip per slot (filled while unused) and "left / total"; 40px rows
+  with Cast or Used. Cast puts the `CastResult` in the result card (`CastResultView`:
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
   the shared name search (below) and posts `/api/spells/receive`.

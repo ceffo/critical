@@ -142,71 +142,15 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	if ammo != nil {
 		res.Ammo = &AmmoUse{ItemID: ammo.ID, Name: ammo.Name, Magic: ammo.MagicBonus, Remaining: ammo.Count}
 	}
-	add := func(m Modifier) { res.Modifiers = append(res.Modifiers, m) }
-	// Damage terms are collected per formula term and listed in formula
-	// order (settle adds the crit term on a crit).
-	var weaponTerms, strTerms []DamageTerm
+	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational)
+	if err != nil {
+		return nil, err
+	}
+	res.Modifiers = am.modifiers
+	strDmg, weaponDmg, ammoDmg := am.strDmg, am.weaponDmg, am.ammoDmg
+	weaponTerms, strTerms := am.weaponTerms, am.strTerms
 
-	// ADR 0002 step 4 and ADR 0003 step 7: Strength (PHB Table 1, from the
-	// effective STR with buffs). PHB "Ability Modifiers in Missile Combat":
-	// always for melee and hurled weapons; for bows only with a strength
-	// bow, which the Bard's are not.
-	strDmg := 0
-	if !weapon.FiresAmmo() {
-		str := mods.EffectiveStr
-		hit, dmg, err := s.rules.StrengthMods(str, 0)
-		if err != nil {
-			return nil, fmt.Errorf("strength table: %w", err)
-		}
-		detail := strconv.Itoa(str)
-		add(Modifier{Kind: ModStrength, Detail: detail, Value: hit})
-		strDmg = dmg
-		strTerms = append(strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, Value: float64(dmg)})
-	}
-	// ADR 0002 step 5: Dexterity missile attack adjustment (PHB Table 2) for
-	// every missile attack with a hand-held weapon, bow or hurled.
-	if weapon.Kind == WeaponMissile {
-		missile, _, err := s.rules.DexMods(char.Dex)
-		if err != nil {
-			return nil, fmt.Errorf("dexterity table: %w", err)
-		}
-		detail := strconv.Itoa(char.Dex)
-		add(Modifier{Kind: ModDexterity, Detail: detail, Value: missile})
-	}
-
-	// ADR 0002 step 6: weapon magic, the weapon's own +N, or a buff that
-	// makes it +N (Power Gem: "the weapon becomes +5") when that is better.
-	// They do not add up.
-	weaponDmg := 0
-	if m, ok := weaponMagic(weapon.Name, weapon.MagicToHit, mods); ok {
-		add(m)
-	}
-	if m, ok := weaponMagic(weapon.Name, weapon.MagicDamage, mods); ok {
-		weaponDmg = m.Value
-		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: m.Kind, Detail: m.Detail, Value: float64(m.Value)})
-	}
-	// ADR 0002 step 7: magic ammunition adds to hit and damage, on top of
-	// the weapon's (DMG 2e, "Bow +1").
-	ammoDmg := 0
-	if ammo != nil && ammo.MagicBonus != 0 {
-		add(Modifier{Kind: ModAmmoMagic, Detail: ammo.Name, Value: ammo.MagicBonus})
-		ammoDmg = ammo.MagicBonus
-		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: ModAmmoMagic, Detail: ammo.Name, Value: float64(ammo.MagicBonus)})
-	}
-
-	// ADR 0002 step 8: one modifier per buff; step 9: the situational one.
-	for _, c := range mods.ToHitFrom {
-		add(Modifier{Kind: ModBuff, Detail: c.Buff, Value: c.Value})
-	}
-	if sit := req.Situational; sit != nil {
-		add(Modifier{Kind: ModSituational, Detail: sit.Label, Value: sit.Value})
-	}
-
-	sum := 0
-	for _, m := range res.Modifiers {
-		sum += m.Value
-	}
-	res.EffectiveThac0 = res.BaseThac0 - sum
+	res.EffectiveThac0 = res.BaseThac0 - am.toHit()
 
 	// ADR 0001 steps 1 and 3: the d20 and the crit-check d100 together,
 	// then a second, independent d100 for the multiplier, on every attack.

@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, openWorkspace, voidEntry } from "./helpers";
+import {
+  ammoChips,
+  chooseWeapon,
+  logEntry,
+  openDashboard,
+  openWeapons,
+  openWorkspace,
+  voidEntry,
+} from "./helpers";
 
 // Inventory tab: one item model, the count behaves as stock (− and +, stays
 // at 0), charges (− only, gone at 0) or daily (− only, refilled by a long rest).
@@ -143,11 +151,13 @@ test("arrows at 0 stay listed and can be restocked; the attack picker offers onl
   await snap(page, "arrows-at-zero");
 
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  const form = page.getByRole("form", { name: "Attack" });
-  await form.getByLabel("Weapon").selectOption("shortbow");
-  const ammo = form.getByLabel("Ammunition");
-  await expect(ammo.locator("option")).toHaveText(["Arrows +1 (18 left)", "Arrows +2 (16 left)"]);
+  await openWeapons(page);
+  await chooseWeapon(page, "Short Bow +2");
+  const ammo = ammoChips(page);
+  // The spent +3 arrows were never chosen here: not offered.
+  await expect(ammo.getByRole("radio")).toHaveCount(2);
+  await expect(ammo.getByRole("radio", { name: "Arrows +1, 18 left" })).toBeVisible();
+  await expect(ammo.getByRole("radio", { name: "Arrows +2, 16 left" })).toBeVisible();
 
   await openWorkspace(page, "Inventory");
   await plus(page, "Arrows +3").click();
@@ -155,9 +165,7 @@ test("arrows at 0 stay listed and can be restocked; the attack picker offers onl
   await expect(logEntry(page, "Restocked Arrows +3: +1 (1 now)")).toBeVisible();
 
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await form.getByLabel("Weapon").selectOption("shortbow");
-  await expect(ammo.locator('option[value="arrows_plus3"]')).toHaveText("Arrows +3 (1 left)");
+  await expect(ammo.getByRole("radio", { name: "Arrows +3, 1 left" })).toBeVisible();
   await snap(page, "arrows-restocked-in-picker");
 });
 

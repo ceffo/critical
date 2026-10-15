@@ -79,7 +79,7 @@ function App() {
 
         <div className="flex min-h-0 min-w-0 flex-col" data-testid="workspace">
           <Pane id="act" active={workspace} visited={visited} label={t("shell.workspace.act")}>
-            <ActionArea />
+            <ActionArea onOpenInventory={() => open("inventory")} />
           </Pane>
           <Pane
             id="inventory"

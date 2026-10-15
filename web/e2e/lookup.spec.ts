@@ -285,7 +285,7 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
   await expect(reset).toBeVisible();
 
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
+  await page.getByRole("tab", { name: "Weapons" }).click();
   await openWorkspace(page, "Spells");
   await expect(search(page)).toHaveValue("fire");
   await expect(classButton(page, "All")).toHaveAttribute("aria-pressed", "true");
@@ -371,7 +371,7 @@ test.describe("infinite scroll", () => {
     await deep.scrollIntoViewIfNeeded();
     await deep.click();
     await openWorkspace(page, "Act");
-    await page.getByRole("tab", { name: "Attack" }).click();
+    await page.getByRole("tab", { name: "Weapons" }).click();
     await openWorkspace(page, "Spells");
     await expect(selected(page)).toHaveAttribute("data-id", deepId);
     await expect(selected(page)).toBeInViewport();

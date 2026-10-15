@@ -109,6 +109,59 @@ export interface AttackRequest {
   situational?: { value: number; label: string };
 }
 
+/** The attack form's last choices, kept on the server (combathdl AttackFormDTO). */
+export interface AttackForm {
+  weaponId: string;
+  /** The weapon held before the current one (one-click switch back); empty when none. */
+  previousWeaponId: string;
+  /** Empty for a weapon without ammunition, or when none is left to offer. */
+  ammoItemId: string;
+  targetAc: number;
+  targetSize: TargetSize;
+  /** Kept with its label at 0. */
+  situational: { value: number; label: string };
+}
+
+/** One ammunition the weapon in hand can fire (combathdl AmmoChoiceDTO). */
+export interface AmmoChoice {
+  itemId: string;
+  name: string;
+  magic: number;
+  count: number;
+}
+
+/** The effective THAC0 of the current choices, before rolling (ADR 0002 step 12). */
+export interface AttackPreview {
+  baseThac0: number;
+  modifiers: Modifier[];
+  effectiveThac0: number;
+  /** Sum of the modifiers (baseThac0 − effectiveThac0). */
+  toHit: number;
+  /** The d20 that hits the target AC. */
+  rollNeeded: number;
+  /** Flat damage terms: weapon or buff "+N", ammunition, Strength, buff damage. */
+  damageBonus: number;
+}
+
+/** GET / PATCH /api/attack/form (combathdl AttackFormViewDTO). */
+export interface AttackFormView {
+  form: AttackForm;
+  /** No ammunition was chosen: ammoItemId is the first one left; an attack makes it the choice. */
+  ammoFromDefault: boolean;
+  ammoChoices: AmmoChoice[];
+  /** Null when there is no weapon at all. */
+  preview: AttackPreview | null;
+}
+
+/** PATCH /api/attack/form: only the fields present change. */
+export interface AttackFormPatch {
+  weaponId?: string;
+  ammoItemId?: string;
+  targetAc?: number;
+  targetSize?: TargetSize;
+  situational?: { value: number; label: string };
+}
+
 /** GET /api/weapons */
 export interface Weapon {
   id: string;

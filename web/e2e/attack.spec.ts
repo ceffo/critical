@@ -1,11 +1,18 @@
 import { DatabaseSync } from "node:sqlite";
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, logEntry, openDashboard, voidEntry } from "./helpers";
-
-function attackForm(page: Page) {
-  return page.getByRole("form", { name: "Attack" });
-}
+import {
+  attackForm,
+  ammoChips,
+  chooseAmmo,
+  chooseLanguage,
+  chooseWeapon,
+  chosenAmmoCount,
+  logEntry,
+  openDashboard,
+  openWeapons,
+  voidEntry,
+} from "./helpers";
 
 function resultCard(page: Page) {
   return page
@@ -13,22 +20,11 @@ function resultCard(page: Page) {
     .getByTestId("attack-result");
 }
 
-/** Remaining count shown in the selected ammunition option ("Arrows +3 (2 left)"). */
-async function selectedAmmoCount(page: Page): Promise<number> {
-  const text =
-    (await attackForm(page)
-      .getByLabel("Ammunition")
-      .locator("option:checked")
-      .textContent()) ?? "";
-  const m = /\((\d+) left\)/.exec(text);
-  if (!m) throw new Error(`unexpected ammo option: ${JSON.stringify(text)}`);
-  return Number(m[1]);
-}
+const selectedAmmoCount = chosenAmmoCount;
 
 async function openAttack(page: Page) {
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await expect(attackForm(page).getByLabel("Weapon")).toBeVisible();
+  await openWeapons(page);
 }
 
 test("a melee attack lists every modifier in the result card and the log", async ({
@@ -36,13 +32,14 @@ test("a melee attack lists every modifier in the result card and the log", async
 }) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("longsword");
-  await expect(form.getByLabel("Ammunition")).toHaveCount(0);
+  await chooseWeapon(page, "Long Sword +2");
+  await expect(ammoChips(page)).toHaveCount(0);
   await form.getByLabel("Target AC").fill("5");
-  await form.getByLabel("Target size").selectOption("l");
-  await form.getByLabel("Situational").fill("2");
-  await form.getByLabel("Reason").fill("Rear attack");
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("radio", { name: "Large" }).click();
+  await form.getByLabel("Situational", { exact: true }).fill("2");
+  // Typed key by key: every keystroke is saved on the server, spaces included.
+  await form.getByLabel("Reason").pressSequentially("Rear attack");
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
 
   const card = resultCard(page);
   await expect(card).toContainText("Long Sword +2 vs AC 5");
@@ -57,6 +54,13 @@ test("a melee attack lists every modifier in the result card and the log", async
   await expect(mods.getByRole("listitem").nth(2)).toHaveText(
     /Rear attack\s*\+2/,
   );
+  const log = (await (await page.request.get("/api/log")).json()) as {
+    entries: { kind: string; payload: { modifiers: { kind: string; detail?: string }[] } }[];
+  };
+  expect(
+    log.entries.find((e) => e.kind === "attack")!.payload.modifiers.find((m) => m.kind === "situational")
+      ?.detail,
+  ).toBe("Rear attack");
 
   // The attack is in the combat log, in the player's language, rendered from its payload.
   await expect(logEntry(page, "Long Sword +2 vs AC 5")).toBeVisible();
@@ -66,11 +70,11 @@ test("a melee attack lists every modifier in the result card and the log", async
 test("a missile attack spends the chosen arrow", async ({ page }) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("shortbow");
-  await form.getByLabel("Ammunition").selectOption("arrows_plus3");
+  await chooseWeapon(page, "Short Bow +2");
+  await chooseAmmo(page, "Arrows +3");
   const before = await selectedAmmoCount(page);
   await form.getByLabel("Target AC").fill("2");
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
 
   const card = resultCard(page);
   await expect(card).toContainText("Short Bow +2 with Arrows +3 vs AC 2");
@@ -92,11 +96,11 @@ test("a missile attack spends the chosen arrow", async ({ page }) => {
 test("voiding a missile attack gives the arrow back", async ({ page }) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("shortbow");
-  await form.getByLabel("Ammunition").selectOption("arrows_plus2");
+  await chooseWeapon(page, "Short Bow +2");
+  await chooseAmmo(page, "Arrows +2");
   const before = await selectedAmmoCount(page);
   await form.getByLabel("Target AC").fill("3");
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
 
   await voidEntry(page, "Short Bow +2 (Arrows +2) vs AC 3");
@@ -109,29 +113,28 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
 }) => {
   await openAttack(page);
   const form = attackForm(page);
-  const roll = form.getByRole("button", { name: "Roll Attack" });
-  await form.getByLabel("Weapon").selectOption("shortbow");
-  const ammo = form.getByLabel("Ammunition");
-  await ammo.selectOption("arrows_plus3");
+  const roll = form.getByRole("button", { name: "Attack", exact: true });
+  await chooseWeapon(page, "Short Bow +2");
+  await chooseAmmo(page, "Arrows +3");
   const left = await selectedAmmoCount(page);
   for (let i = left; i > 0; i--) {
     await roll.click();
     await expect.poll(() => selectedAmmoCount(page)).toBe(i - 1);
   }
 
-  // The +3 arrows are spent: still the selection, no silent switch to other arrows.
-  await expect(ammo).toHaveValue("arrows_plus3");
+  // The +3 arrows are spent: still the choice, no silent switch to other arrows.
+  await expect(ammoChips(page).locator('[aria-checked="true"]')).toHaveAttribute("data-item", "arrows_plus3");
   await expect(form.getByTestId("ammo-spent")).toHaveText(
     "No Arrows +3 left: pick other ammunition",
   );
   await expect(roll).toBeDisabled();
   await snap(page, "ammo-spent");
 
-  await ammo.selectOption("arrows_plus1");
+  await chooseAmmo(page, "Arrows +1");
   await expect(form.getByTestId("ammo-spent")).toHaveCount(0);
   await expect(roll).toBeEnabled();
   // Once another pick replaces it, the spent arrows are no longer offered.
-  await expect(ammo.locator('option[value="arrows_plus3"]')).toHaveCount(0);
+  await expect(ammoChips(page).locator('[data-item="arrows_plus3"]')).toHaveCount(0);
 });
 
 test("an earlier shot can only be voided once the later shot is popped", async ({
@@ -139,18 +142,17 @@ test("an earlier shot can only be voided once the later shot is popped", async (
 }) => {
   await openAttack(page);
   const form = attackForm(page);
-  const ammo = form.getByLabel("Ammunition");
-  await form.getByLabel("Weapon").selectOption("shortbow");
+  await chooseWeapon(page, "Short Bow +2");
   await form.getByLabel("Target AC").fill("7");
 
-  await ammo.selectOption("arrows_plus3");
+  await chooseAmmo(page, "Arrows +3");
   const plus3 = await selectedAmmoCount(page);
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus3 - 1);
 
-  await ammo.selectOption("arrows_plus1");
+  await chooseAmmo(page, "Arrows +1");
   const plus1 = await selectedAmmoCount(page);
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
 
   // The log is a stack: only the newest entry offers Void.
@@ -162,7 +164,7 @@ test("an earlier shot can only be voided once the later shot is popped", async (
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus1);
   await voidEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await ammo.selectOption("arrows_plus3");
+  await chooseAmmo(page, "Arrows +3");
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus3);
   await snap(page, "void-earlier-shot");
 });
@@ -172,12 +174,12 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
 }) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("shortbow");
-  await form.getByLabel("Ammunition").selectOption("arrows_plus2");
+  await chooseWeapon(page, "Short Bow +2");
+  await chooseAmmo(page, "Arrows +2");
   const before = await selectedAmmoCount(page);
   // AC -20 can't be hit and AC 20 can't be missed whatever the d20, so the flips are certain.
   await form.getByLabel("Target AC").fill("-20");
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
 
   const card = resultCard(page);
   const fix = card.getByRole("form", { name: "Correct the target AC" });
@@ -265,11 +267,11 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
 test("only the latest roll's target AC can be corrected", async ({ page }) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("longsword");
+  await chooseWeapon(page, "Long Sword +2");
   await form.getByLabel("Target AC").fill("5");
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect(resultCard(page)).toContainText("vs AC 5");
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect.poll(async () => (await logEntry(page, "Long Sword +2 vs AC 5").count())).toBe(2);
 
   const log = (await (await page.request.get("/api/log")).json()) as {
@@ -294,18 +296,17 @@ test("an attack logged before the multiplier d100 keeps the old crit text and ca
 }) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("longsword");
-  // AC 1000: so low a roll is needed that every attack is a crit.
-  await form.getByLabel("Target AC").fill("1000");
-
-  // The card of an old response (no multiplier d100): the old crit text and two dice facts.
+  await chooseWeapon(page, "Long Sword +2");
+  // The card of an old response (no multiplier d100): the old crit text and two dice facts. The
+  // attack is sent at AC 1000 (beyond the form's ±20): so low a roll is needed that it crits.
   await page.route("**/api/roll/attack", async (route) => {
-    const res = await route.fetch();
+    const sent = route.request().postDataJSON() as Record<string, unknown>;
+    const res = await route.fetch({ postData: JSON.stringify({ ...sent, target_ac: 1000 }) });
     const body = (await res.json()) as Record<string, unknown>;
     delete body.d100MultiplierRoll;
     await route.fulfill({ response: res, json: body });
   });
-  await form.getByRole("button", { name: "Roll Attack" }).click();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
   const card = resultCard(page);
   await expect(card.getByTestId("crit-badge")).toHaveText("Critical ×2 (placeholder)");
   await expect(card.locator("dt", { hasText: "Crit check d100" })).toHaveCount(1);
@@ -346,7 +347,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
 }) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("longsword");
+  await chooseWeapon(page, "Long Sword +2");
   // AC -20 can't be hit (effective THAC0 11 needs 31). AC 20 needs -9: a crit when
   // d20 − check d100 ≥ -9 (ADR 0001 step 2). Roll until the dice make that a crit (~1 in 5).
   await form.getByLabel("Target AC").fill("-20");
@@ -361,7 +362,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   let d20 = 0;
   let check = 100;
   for (let i = 0; i < 60 && d20 - check < -9; i++) {
-    await form.getByRole("button", { name: "Roll Attack" }).click();
+    await form.getByRole("button", { name: "Attack", exact: true }).click();
     await expect.poll(async () => (await logEntry(page, "Long Sword +2 vs AC -20").count())).toBe(i + 1);
     d20 = await fact("d20");
     check = await fact("Crit check d100");
@@ -402,19 +403,51 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   await snap(page, "miss-to-crit-fr");
 });
 
-// the form keeps the last choices when the user changes tab and comes back.
-test("the attack form keeps its values across a tab switch", async ({ page }) => {
+// The form's choices are server state: a reload restores them all, and switching weapons
+// (previous weapon, other weapon) never attacks.
+test("the attack form is kept on the server across a reload; switching weapons never attacks", async ({
+  page,
+}) => {
   await openAttack(page);
   const form = attackForm(page);
-  await form.getByLabel("Weapon").selectOption("longsword");
+  const held = form.getByTestId("weapon-in-hand");
+  await chooseWeapon(page, "Long Sword +2");
+  await chooseWeapon(page, "Short Bow +2");
+  await expect(form.getByRole("button", { name: "Switch to Long Sword +2" })).toBeVisible();
+  await chooseAmmo(page, "Arrows +2");
   await form.getByLabel("Target AC").fill("-3");
-  await form.getByLabel("Target size").selectOption("l");
-  await form.getByLabel("Situational", { exact: true }).fill("2");
-  await page.getByRole("tab", { name: "Spells" }).click();
-  await expect(form).toHaveCount(0);
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await expect(form.getByLabel("Weapon")).toHaveValue("longsword");
+  await form.getByRole("radio", { name: "Large" }).click();
+  await form.getByRole("button", { name: "Raise the modifier" }).click();
+  await form.getByRole("button", { name: "Raise the modifier" }).click();
+  await form.getByLabel("Reason").fill("cover");
+  const thac0 = form.getByTestId("tile-thac0");
+  await expect(form.getByTestId("tile-damage-l")).toHaveText("1d6");
+  // Wait until the server has every change (the THAC0 tile is its preview).
+  await expect
+    .poll(async () => (await (await page.request.get("/api/attack/form")).json()).form)
+    .toEqual({
+      weaponId: "shortbow", previousWeaponId: "longsword", ammoItemId: "arrows_plus2", targetAc: -3,
+      targetSize: "l", situational: { value: 2, label: "cover" },
+    });
+  const shown = await thac0.textContent();
+  await expect(logEntry(page, "vs AC")).toHaveCount(0);
+
+  await page.reload();
+  await expect(held).toHaveText("Short Bow +2");
+  await expect(ammoChips(page).locator('[aria-checked="true"]')).toHaveAttribute("data-item", "arrows_plus2");
   await expect(form.getByLabel("Target AC")).toHaveValue("-3");
-  await expect(form.getByLabel("Target size")).toHaveValue("l");
-  await expect(form.getByLabel("Situational", { exact: true })).toHaveValue("2");
+  await expect(form.getByRole("radio", { name: "Large" })).toHaveAttribute("aria-checked", "true");
+  await expect(form.getByLabel("Situational", { exact: true })).toHaveValue("+2");
+  await expect(form.getByLabel("Reason")).toHaveValue("cover");
+  await expect(thac0).toHaveText(shown!);
+  await snap(page, "form-restored");
+
+  // One click back to the sword: it is in hand, the bow is now the previous weapon, no attack.
+  await form.getByRole("button", { name: "Switch to Long Sword +2" }).click();
+  await expect(held).toHaveText("Long Sword +2");
+  await expect(form.getByRole("button", { name: "Switch to Short Bow +2" })).toBeVisible();
+  await expect(ammoChips(page)).toHaveCount(0);
+  await expect(logEntry(page, "vs AC")).toHaveCount(0);
+  await expect(resultCard(page)).toHaveCount(0);
+  await snap(page, "weapon-switched");
 });

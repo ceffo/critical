@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard } from "./helpers";
+import { forceAttackAc, logEntry, openDashboard } from "./helpers";
 
 // Dice are random on the real stack: the tests read the rolled crit d100 from the result card and
 // check the multiplier and range against the table they typed in.
@@ -13,7 +13,7 @@ const TABLE = [
 
 async function openEditor(page: Page): Promise<Locator> {
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Attack" }).click();
+  await page.getByRole("tab", { name: "Weapons" }).click();
   const editor = page.getByTestId("crit-table");
   await editor.getByText("Crit table (house rule)").click();
   await expect(editor.getByRole("group", { name: "Range 1" })).toBeVisible();
@@ -35,8 +35,8 @@ test("the table saved in the editor is used by the next crit", async ({
   const editor = await openEditor(page);
 
   // Before editing, a crit is the x2 placeholder.
-  await page.getByLabel("Target AC").fill("1000"); // so low a roll is needed that every attack crits
-  await page.getByRole("button", { name: "Roll Attack" }).click();
+  await forceAttackAc(page, 1000); // so low a roll is needed that every attack crits
+  await page.getByRole("button", { name: "Attack", exact: true }).click();
   const card = page
     .getByRole("region", { name: "Last Result" })
     .getByTestId("attack-result");
@@ -64,7 +64,6 @@ test("the table saved in the editor is used by the next crit", async ({
   await expect(range(again, 3).from).toHaveValue("91");
   await expect(range(again, 3).mult).toHaveValue("4");
 
-  await page.getByLabel("Target AC").fill("1000");
   // ADR 0001 step 4: the row is the one of the second (multiplier) d100, not the crit check. Roll
   // until the two d100s fall in different rows so the test tells them apart.
   const fact = async (label: string) =>
@@ -78,7 +77,7 @@ test("the table saved in the editor is used by the next crit", async ({
   let check = 0;
   let d100 = 0;
   for (let i = 0; i < 30 && rowOf(check) === rowOf(d100); i++) {
-    await page.getByRole("button", { name: "Roll Attack" }).click();
+    await page.getByRole("button", { name: "Attack", exact: true }).click();
     await expect.poll(async () => (await logEntry(page, "vs AC 1000").count())).toBe(i + 2);
     check = await fact("Crit check d100");
     d100 = await fact("Multiplier d100");
@@ -122,8 +121,8 @@ test("a decimal multiplier typed with a comma is saved and the crit shows the fl
   const again = await openEditor(page);
   await expect(range(again, 1).mult).toHaveValue("1.5");
 
-  await page.getByLabel("Target AC").fill("1000");
-  await page.getByRole("button", { name: "Roll Attack" }).click();
+  await forceAttackAc(page, 1000);
+  await page.getByRole("button", { name: "Attack", exact: true }).click();
   const card = page
     .getByRole("region", { name: "Last Result" })
     .getByTestId("attack-result");
@@ -165,9 +164,9 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
     ),
   );
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Attaque", exact: true }).click();
-  await page.getByLabel("CA de la cible").fill("1000");
-  await page.getByRole("button", { name: "Jet d'attaque" }).click();
+  await forceAttackAc(page, 1000);
+  await page.getByRole("tab", { name: "Armes" }).click();
+  await page.getByRole("button", { name: "Attaquer", exact: true }).click();
   const card = page
     .getByRole("region", { name: "Dernier résultat" })
     .getByTestId("attack-result");

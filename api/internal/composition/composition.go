@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
+	"github.com/ceffo/critical/api/internal/adapters/attackformdal"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
@@ -185,7 +186,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	registerRestorers(logSvc, weaponSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL, Crit: critDAL,
-		Items: itemSvc, Rules: ruleTables, Log: logSvc, Tx: db,
+		Items: itemSvc, Forms: attackformdal.New(db), Rules: ruleTables, Log: logSvc, Tx: db,
 	})
 	if err != nil {
 		_ = db.Close()

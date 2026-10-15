@@ -54,7 +54,7 @@ func TestGrantedSlots_VoidRemovesExtrasAndRestoresTheBaseSlot(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, string(entries[0].Payload), `"extraSlots":`+strings.ReplaceAll(fmt.Sprint(split), " ", ","))
 
-			_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)
+			_, err = bs.Log.Undo(ctx, bs.CharacterID, res.EntryID)
 			require.NoError(t, err)
 			got = slotList(t, bs)
 			require.Len(t, got, 1)
@@ -111,7 +111,7 @@ func TestConsumedItem_VoidRestoresTheItem(t *testing.T) {
 	assert.True(t, res.Attack.Hit, "d20 20 vs AC 5")
 	assert.Equal(t, 2, count())
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.EntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 3, count())
 	assert.Equal(t, 0, usedSlots(t, bs))

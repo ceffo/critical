@@ -10,6 +10,7 @@ import (
 
 	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	models "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
 	"github.com/jaswdr/faker/v2"
 	"github.com/stephenafamo/bob"
@@ -36,14 +37,15 @@ func (mods ActionLogModSlice) Apply(ctx context.Context, n *ActionLogTemplate) {
 // ActionLogTemplate is an object representing the database table.
 // all columns are optional and should be set by mods
 type ActionLogTemplate struct {
-	ID          func() int64
-	CharacterID func() int64
-	Round       func() int64
-	Kind        func() string
-	Summary     func() string
-	HPDelta     func() int64
-	Payload     func() string
-	CreatedAt   func() time.Time
+	ID            func() int64
+	CharacterID   func() int64
+	Round         func() int64
+	Kind          func() string
+	Summary       func() string
+	HPDelta       func() int64
+	Payload       func() string
+	CreatedAt     func() time.Time
+	TransactionID func() null.Val[int64]
 
 	r actionLogR
 	f *Factory
@@ -54,6 +56,8 @@ type ActionLogTemplate struct {
 type actionLogR struct {
 	StepActionCorrections   []*actionLogRStepActionCorrectionsR
 	ActionActionCorrections []*actionLogRActionActionCorrectionsR
+	Transaction             *actionLogRTransactionR
+	ReverseTransactions     []*actionLogRReverseTransactionsR
 	Character               *actionLogRCharacterR
 	ActionActionSnapshots   []*actionLogRActionActionSnapshotsR
 }
@@ -65,6 +69,13 @@ type actionLogRStepActionCorrectionsR struct {
 type actionLogRActionActionCorrectionsR struct {
 	number int
 	o      *ActionCorrectionTemplate
+}
+type actionLogRTransactionR struct {
+	o *ActionLogTemplate
+}
+type actionLogRReverseTransactionsR struct {
+	number int
+	o      *ActionLogTemplate
 }
 type actionLogRCharacterR struct {
 	o *CharacterTemplate
@@ -112,6 +123,29 @@ func (t ActionLogTemplate) setModelRels(o *models.ActionLog) {
 		}
 		o.R.ActionActionCorrections = rel
 		o.R.Loaded.ActionActionCorrections = true
+	}
+
+	if t.r.Transaction != nil {
+		rel := t.r.Transaction.o.Build()
+		rel.R.ReverseTransactions = append(rel.R.ReverseTransactions, o)
+		o.TransactionID = null.From(rel.ID) // h2
+		o.R.Transaction = rel
+		o.R.Loaded.Transaction = true
+	}
+
+	if t.r.ReverseTransactions != nil {
+		rel := models.ActionLogSlice{}
+		for _, r := range t.r.ReverseTransactions {
+			related := r.o.BuildMany(r.number)
+			for _, rel := range related {
+				rel.TransactionID = null.From(o.ID) // h2
+				rel.R.Transaction = o
+				rel.R.Loaded.Transaction = true
+			}
+			rel = append(rel, related...)
+		}
+		o.R.ReverseTransactions = rel
+		o.R.Loaded.ReverseTransactions = true
 	}
 
 	if t.r.Character != nil {
@@ -175,6 +209,10 @@ func (o ActionLogTemplate) BuildSetter() *models.ActionLogSetter {
 		val := o.CreatedAt()
 		m.CreatedAt = omit.From(val)
 	}
+	if o.TransactionID != nil {
+		val := o.TransactionID()
+		m.TransactionID = omitnull.FromNull(val)
+	}
 
 	return m
 }
@@ -220,6 +258,9 @@ func (o ActionLogTemplate) Build() *models.ActionLog {
 	}
 	if o.CreatedAt != nil {
 		m.CreatedAt = o.CreatedAt()
+	}
+	if o.TransactionID != nil {
+		m.TransactionID = o.TransactionID()
 	}
 
 	o.setModelRels(m)
@@ -301,6 +342,46 @@ func (o *ActionLogTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 		}
 	}
 
+	isTransactionDone, _ := actionLogRelTransactionCtx.Value(ctx)
+	if !isTransactionDone && o.r.Transaction != nil {
+		ctx = actionLogRelTransactionCtx.WithValue(ctx, true)
+		if o.r.Transaction.o.alreadyPersisted {
+			m.R.Transaction = o.r.Transaction.o.Build()
+			m.R.Loaded.Transaction = true
+		} else {
+			var rel2 *models.ActionLog
+			rel2, err = o.r.Transaction.o.Create(ctx, exec)
+			if err != nil {
+				return err
+			}
+			err = m.AttachTransaction(ctx, exec, rel2)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
+	isReverseTransactionsDone, _ := actionLogRelReverseTransactionsCtx.Value(ctx)
+	if !isReverseTransactionsDone && o.r.ReverseTransactions != nil {
+		ctx = actionLogRelReverseTransactionsCtx.WithValue(ctx, true)
+		for _, r := range o.r.ReverseTransactions {
+			if r.o.alreadyPersisted {
+				m.R.ReverseTransactions = append(m.R.ReverseTransactions, r.o.Build())
+			} else {
+				rel3, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
+
+				err = m.AttachReverseTransactions(ctx, exec, rel3...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	isActionActionSnapshotsDone, _ := actionLogRelActionActionSnapshotsCtx.Value(ctx)
 	if !isActionActionSnapshotsDone && o.r.ActionActionSnapshots != nil {
 		ctx = actionLogRelActionActionSnapshotsCtx.WithValue(ctx, true)
@@ -308,12 +389,12 @@ func (o *ActionLogTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.ActionActionSnapshots = append(m.R.ActionActionSnapshots, r.o.Build())
 			} else {
-				rel3, err := r.o.CreateMany(ctx, exec, r.number)
+				rel5, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachActionActionSnapshots(ctx, exec, rel3...)
+				err = m.AttachActionActionSnapshots(ctx, exec, rel5...)
 				if err != nil {
 					return err
 				}
@@ -336,32 +417,32 @@ func (o *ActionLogTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	// This works regardless of NoBackReferencing since it only uses child-side metadata.
 	mInCreation, _ := modelsInCreationCtx.Value(ctx)
 
-	var rel2 *models.Character
+	var rel4 *models.Character
 
 	if o.r.Character == nil {
-		if parentModel, found := mInCreation["characters:action_log:fk_action_log_0"]; found {
+		if parentModel, found := mInCreation["characters:action_log:fk_action_log_1"]; found {
 			if pModel, ok := parentModel.(*models.Character); ok {
-				rel2 = pModel
+				rel4 = pModel
 			}
 		}
 	}
 
-	if rel2 == nil {
+	if rel4 == nil {
 		if o.r.Character == nil {
 			ActionLogMods.WithNewCharacter().Apply(ctx, o)
 		}
 
 		if o.r.Character.o.alreadyPersisted {
-			rel2 = o.r.Character.o.Build()
+			rel4 = o.r.Character.o.Build()
 		} else {
-			rel2, err = o.r.Character.o.Create(ctx, exec)
+			rel4, err = o.r.Character.o.Create(ctx, exec)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	opt.CharacterID = omit.From(rel2.ID)
+	opt.CharacterID = omit.From(rel4.ID)
 
 	m, err := models.ActionLogs.Insert(opt).One(ctx, exec)
 	if err != nil {
@@ -378,11 +459,12 @@ func (o *ActionLogTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	}
 	newMInCreation["action_log:action_corrections:fk_action_corrections_0"] = m
 	newMInCreation["action_log:action_corrections:fk_action_corrections_1"] = m
+	newMInCreation["action_log:action_log:fk_action_log_0"] = m
 	newMInCreation["action_log:action_snapshots:fk_action_snapshots_0"] = m
 
 	ctx = modelsInCreationCtx.WithValue(ctx, newMInCreation)
 
-	m.R.Character = rel2
+	m.R.Character = rel4
 	m.R.Loaded.Character = true
 
 	if err := o.insertOptRels(ctx, exec, m); err != nil {
@@ -470,6 +552,7 @@ func (m actionLogMods) RandomizeAllColumns(f *faker.Faker) ActionLogMod {
 		ActionLogMods.RandomHPDelta(f),
 		ActionLogMods.RandomPayload(f),
 		ActionLogMods.RandomCreatedAt(f),
+		ActionLogMods.RandomTransactionID(f),
 	}
 }
 
@@ -721,6 +804,59 @@ func (m actionLogMods) RandomCreatedAt(f *faker.Faker) ActionLogMod {
 	})
 }
 
+// Set the model columns to this value
+func (m actionLogMods) TransactionID(val null.Val[int64]) ActionLogMod {
+	return ActionLogModFunc(func(_ context.Context, o *ActionLogTemplate) {
+		o.TransactionID = func() null.Val[int64] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m actionLogMods) TransactionIDFunc(f func() null.Val[int64]) ActionLogMod {
+	return ActionLogModFunc(func(_ context.Context, o *ActionLogTemplate) {
+		o.TransactionID = f
+	})
+}
+
+// Clear any values for the column
+func (m actionLogMods) UnsetTransactionID() ActionLogMod {
+	return ActionLogModFunc(func(_ context.Context, o *ActionLogTemplate) {
+		o.TransactionID = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m actionLogMods) RandomTransactionID(f *faker.Faker) ActionLogMod {
+	return ActionLogModFunc(func(_ context.Context, o *ActionLogTemplate) {
+		o.TransactionID = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m actionLogMods) RandomTransactionIDNotNull(f *faker.Faker) ActionLogMod {
+	return ActionLogModFunc(func(_ context.Context, o *ActionLogTemplate) {
+		o.TransactionID = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
+		}
+	})
+}
+
 func (m actionLogMods) WithParentsCascading() ActionLogMod {
 	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
 		if isDone, _ := actionLogWithParentsCascadingCtx.Value(ctx); isDone {
@@ -729,9 +865,44 @@ func (m actionLogMods) WithParentsCascading() ActionLogMod {
 		ctx = actionLogWithParentsCascadingCtx.WithValue(ctx, true)
 		{
 
+			related := o.f.NewActionLogWithContext(ctx, ActionLogMods.WithParentsCascading())
+			m.WithTransaction(related).Apply(ctx, o)
+		}
+		{
+
 			related := o.f.NewCharacterWithContext(ctx, CharacterMods.WithParentsCascading())
 			m.WithCharacter(related).Apply(ctx, o)
 		}
+	})
+}
+
+func (m actionLogMods) WithTransaction(rel *ActionLogTemplate) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.Transaction = &actionLogRTransactionR{
+			o: rel,
+		}
+	})
+}
+
+func (m actionLogMods) WithNewTransaction(mods ...ActionLogMod) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		related := o.f.NewActionLogWithContext(ctx, mods...)
+
+		m.WithTransaction(related).Apply(ctx, o)
+	})
+}
+
+func (m actionLogMods) WithExistingTransaction(em *models.ActionLog) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.Transaction = &actionLogRTransactionR{
+			o: o.f.fromExistingActionLog(ctx, em),
+		}
+	})
+}
+
+func (m actionLogMods) WithoutTransaction() ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.Transaction = nil
 	})
 }
 
@@ -858,6 +1029,54 @@ func (m actionLogMods) AddExistingActionActionCorrections(existingModels ...*mod
 func (m actionLogMods) WithoutActionActionCorrections() ActionLogMod {
 	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
 		o.r.ActionActionCorrections = nil
+	})
+}
+
+func (m actionLogMods) WithReverseTransactions(number int, related *ActionLogTemplate) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.ReverseTransactions = []*actionLogRReverseTransactionsR{{
+			number: number,
+			o:      related,
+		}}
+	})
+}
+
+func (m actionLogMods) WithNewReverseTransactions(number int, mods ...ActionLogMod) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		related := o.f.NewActionLogWithContext(ctx, mods...)
+		m.WithReverseTransactions(number, related).Apply(ctx, o)
+	})
+}
+
+func (m actionLogMods) AddReverseTransactions(number int, related *ActionLogTemplate) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.ReverseTransactions = append(o.r.ReverseTransactions, &actionLogRReverseTransactionsR{
+			number: number,
+			o:      related,
+		})
+	})
+}
+
+func (m actionLogMods) AddNewReverseTransactions(number int, mods ...ActionLogMod) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		related := o.f.NewActionLogWithContext(ctx, mods...)
+		m.AddReverseTransactions(number, related).Apply(ctx, o)
+	})
+}
+
+func (m actionLogMods) AddExistingReverseTransactions(existingModels ...*models.ActionLog) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		for _, em := range existingModels {
+			o.r.ReverseTransactions = append(o.r.ReverseTransactions, &actionLogRReverseTransactionsR{
+				o: o.f.fromExistingActionLog(ctx, em),
+			})
+		}
+	})
+}
+
+func (m actionLogMods) WithoutReverseTransactions() ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.ReverseTransactions = nil
 	})
 }
 

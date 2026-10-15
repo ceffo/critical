@@ -108,7 +108,8 @@ func Amend(charID CharacterIDFunc, svc amender) render.HandlerFunc {
 	}
 }
 
-// Undo pops the newest non-voided entry, any kind (ADR 0010). Body:
+// Undo pops the transaction of the newest non-voided entry, any kind, whole
+// (ADR 0010, ADR 0018 step 2) and answers with its first entry. Body:
 // {"expectedTopId": 12}, the topId the client read from GET /api/log. 409 when
 // another entry is on top or there is nothing to pop; nothing changes then.
 func Undo(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
@@ -150,7 +151,11 @@ type LogDTO struct {
 // EntryDTO is one log entry on the wire. hpDelta is the original value;
 // effectiveHpDelta/effectiveSummary apply amends (and 0 for voided).
 type EntryDTO struct {
-	ID               int64  `json:"id"`
+	ID int64 `json:"id"`
+	// TransactionID is the id of the first entry of the entry's transaction
+	// (its own id when it is that entry): an undo pops the whole transaction
+	// and the UI names it by that first entry (ADR 0018 steps 1 and 2).
+	TransactionID    int64  `json:"transactionId"`
 	CharacterID      int64  `json:"characterId"`
 	Round            int    `json:"round"`
 	Kind             string `json:"kind"`
@@ -204,7 +209,7 @@ func toDTO(e actionlog.Entry) EntryDTO {
 		effective = payload
 	}
 	out := EntryDTO{
-		ID: e.ID, CharacterID: e.CharacterID, Round: e.Round, Kind: string(e.Kind),
+		ID: e.ID, TransactionID: e.TransactionID, CharacterID: e.CharacterID, Round: e.Round, Kind: string(e.Kind),
 		Summary: e.Summary, HPDelta: e.HPDelta,
 		EffectiveHPDelta: e.EffectiveHPDelta(), EffectiveSummary: e.EffectiveSummary(), Note: e.Note(),
 		Status: string(e.Status()), Payload: payload, EffectivePayload: effective, CreatedAt: e.CreatedAt,

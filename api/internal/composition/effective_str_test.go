@@ -177,7 +177,7 @@ func TestEffectiveStr_VoidSecondStrength(t *testing.T) {
 	assert.Equal(t, 18, s.effective())
 	assert.True(t, s.gemOn())
 
-	_, err := s.bs.Log.Void(s.ctx, s.id, second.EntryID)
+	_, err := s.bs.Log.Undo(s.ctx, s.id, second.EntryID)
 	require.NoError(t, err)
 	names, _ = s.status()
 	assert.Equal(t, []string{"Power Gem", "Strength"}, names)

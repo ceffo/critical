@@ -73,12 +73,12 @@ func TestPrepare_RealStack_VoidRestoresThePreviousPreparation(t *testing.T) {
 	assert.JSONEq(t, `{"spells":[{"id":"fireball","name":"Fireball","count":1},{"id":"haste","name":"Haste","count":1}]}`,
 		string(entries[0].Payload)) // newest first
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, entries[0].ID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, entries[0].ID)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"alarm"}, slotIDs(t, bs))
 
 	// The older entry changed the same state before: now it can be voided too.
-	_, err = bs.Log.Void(ctx, bs.CharacterID, entries[1].ID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, entries[1].ID)
 	require.NoError(t, err)
 	assert.Len(t, slotIDs(t, bs), 2, "back to the two slots the test booted with")
 }

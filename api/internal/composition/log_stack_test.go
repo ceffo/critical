@@ -87,7 +87,7 @@ func TestLogStack_PopInOrderRestoresEachStep(t *testing.T) {
 	bs, ids, states := buildStack(t)
 	ctx := context.Background()
 	for i := len(ids) - 1; i >= 0; i-- {
-		e, err := bs.Log.Void(ctx, bs.CharacterID, ids[i])
+		e, err := bs.Log.Undo(ctx, bs.CharacterID, ids[i])
 		require.NoError(t, err, "pop entry %d", i)
 		assert.Equal(t, actionlog.StatusVoided, e.Status())
 		assert.Equal(t, states[i], stateOf(t, bs), "state after popping entry %d", i)
@@ -99,9 +99,9 @@ func TestLogStack_VoidOlderEntryIsRefused(t *testing.T) {
 	bs, ids, states := buildStack(t)
 	ctx := context.Background()
 	for i, id := range ids[:len(ids)-1] {
-		_, err := bs.Log.Void(ctx, bs.CharacterID, id)
-		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "entry %d", i)
-		assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (hp_change", ids[len(ids)-1]))
+		_, err := bs.Log.Undo(ctx, bs.CharacterID, id)
+		require.ErrorIs(t, err, actionlogsvc.ErrTopChanged, "entry %d", i)
+		assert.Contains(t, err.Error(), fmt.Sprintf("the newest entry is #%d (hp_change", ids[len(ids)-1]))
 	}
 	assert.Equal(t, states[len(states)-1], stateOf(t, bs), "nothing restored")
 	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)
@@ -149,7 +149,7 @@ func TestLogStack_NoteRefusals(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, []rune(e.Note()), 500)
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, top)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, top)
 	require.NoError(t, err)
 	_, err = bs.Log.Amend(ctx, bs.CharacterID, top, actionlogsvc.Amendment{Note: "too late"})
 	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)

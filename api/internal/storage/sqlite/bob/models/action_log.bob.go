@@ -27,14 +27,15 @@ import (
 
 // ActionLog is an object representing the database table.
 type ActionLog struct {
-	ID          int64     `db:"id,pk" `
-	CharacterID int64     `db:"character_id" `
-	Round       int64     `db:"round" `
-	Kind        string    `db:"kind" `
-	Summary     string    `db:"summary" `
-	HPDelta     int64     `db:"hp_delta" `
-	Payload     string    `db:"payload" `
-	CreatedAt   time.Time `db:"created_at" `
+	ID            int64           `db:"id,pk" `
+	CharacterID   int64           `db:"character_id" `
+	Round         int64           `db:"round" `
+	Kind          string          `db:"kind" `
+	Summary       string          `db:"summary" `
+	HPDelta       int64           `db:"hp_delta" `
+	Payload       string          `db:"payload" `
+	CreatedAt     time.Time       `db:"created_at" `
+	TransactionID null.Val[int64] `db:"transaction_id" `
 
 	R actionLogR `db:"-" `
 
@@ -55,7 +56,9 @@ type ActionLogsQuery = *sqlite.ViewQuery[*ActionLog, ActionLogSlice]
 type actionLogR struct {
 	StepActionCorrections   ActionCorrectionSlice // fk_action_corrections_0
 	ActionActionCorrections ActionCorrectionSlice // fk_action_corrections_1
-	Character               *Character            // fk_action_log_0
+	Transaction             *ActionLog            // fk_action_log_0
+	ReverseTransactions     ActionLogSlice        // fk_action_log_0__self_join_reverse
+	Character               *Character            // fk_action_log_1
 	ActionActionSnapshots   ActionSnapshotSlice   // fk_action_snapshots_0
 	// Loaded reports whether each relationship has been loaded.
 	// A relationship's bool is set by Load*, Preload, ThenLoad, factory builds,
@@ -67,13 +70,15 @@ type actionLogR struct {
 type actionLogRLoaded struct {
 	StepActionCorrections   bool // fk_action_corrections_0
 	ActionActionCorrections bool // fk_action_corrections_1
-	Character               bool // fk_action_log_0
+	Transaction             bool // fk_action_log_0
+	ReverseTransactions     bool // fk_action_log_0__self_join_reverse
+	Character               bool // fk_action_log_1
 	ActionActionSnapshots   bool // fk_action_snapshots_0
 }
 
 func buildActionLogColumns(tableName string) actionLogColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "created_at",
+		"id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "created_at", "transaction_id",
 	)
 
 	if tableName != "" {
@@ -81,30 +86,32 @@ func buildActionLogColumns(tableName string) actionLogColumns {
 	}
 
 	return actionLogColumns{
-		ColumnsExpr: columnsExpr,
-		tableAlias:  tableName,
-		ID:          buildActionLogColumn(tableName, "id"),
-		CharacterID: buildActionLogColumn(tableName, "character_id"),
-		Round:       buildActionLogColumn(tableName, "round"),
-		Kind:        buildActionLogColumn(tableName, "kind"),
-		Summary:     buildActionLogColumn(tableName, "summary"),
-		HPDelta:     buildActionLogColumn(tableName, "hp_delta"),
-		Payload:     buildActionLogColumn(tableName, "payload"),
-		CreatedAt:   buildActionLogColumn(tableName, "created_at"),
+		ColumnsExpr:   columnsExpr,
+		tableAlias:    tableName,
+		ID:            buildActionLogColumn(tableName, "id"),
+		CharacterID:   buildActionLogColumn(tableName, "character_id"),
+		Round:         buildActionLogColumn(tableName, "round"),
+		Kind:          buildActionLogColumn(tableName, "kind"),
+		Summary:       buildActionLogColumn(tableName, "summary"),
+		HPDelta:       buildActionLogColumn(tableName, "hp_delta"),
+		Payload:       buildActionLogColumn(tableName, "payload"),
+		CreatedAt:     buildActionLogColumn(tableName, "created_at"),
+		TransactionID: buildActionLogColumn(tableName, "transaction_id"),
 	}
 }
 
 type actionLogColumns struct {
 	expr.ColumnsExpr
-	tableAlias  string
-	ID          actionLogColumn
-	CharacterID actionLogColumn
-	Round       actionLogColumn
-	Kind        actionLogColumn
-	Summary     actionLogColumn
-	HPDelta     actionLogColumn
-	Payload     actionLogColumn
-	CreatedAt   actionLogColumn
+	tableAlias    string
+	ID            actionLogColumn
+	CharacterID   actionLogColumn
+	Round         actionLogColumn
+	Kind          actionLogColumn
+	Summary       actionLogColumn
+	HPDelta       actionLogColumn
+	Payload       actionLogColumn
+	CreatedAt     actionLogColumn
+	TransactionID actionLogColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -150,18 +157,19 @@ func (c actionLogColumn) ShouldOmitParens() bool {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type ActionLogSetter struct {
-	ID          omit.Val[int64]     `db:"id,pk" `
-	CharacterID omit.Val[int64]     `db:"character_id" `
-	Round       omit.Val[int64]     `db:"round" `
-	Kind        omit.Val[string]    `db:"kind" `
-	Summary     omit.Val[string]    `db:"summary" `
-	HPDelta     omit.Val[int64]     `db:"hp_delta" `
-	Payload     omit.Val[string]    `db:"payload" `
-	CreatedAt   omit.Val[time.Time] `db:"created_at" `
+	ID            omit.Val[int64]     `db:"id,pk" `
+	CharacterID   omit.Val[int64]     `db:"character_id" `
+	Round         omit.Val[int64]     `db:"round" `
+	Kind          omit.Val[string]    `db:"kind" `
+	Summary       omit.Val[string]    `db:"summary" `
+	HPDelta       omit.Val[int64]     `db:"hp_delta" `
+	Payload       omit.Val[string]    `db:"payload" `
+	CreatedAt     omit.Val[time.Time] `db:"created_at" `
+	TransactionID omitnull.Val[int64] `db:"transaction_id" `
 }
 
 func (s ActionLogSetter) SetColumns() []string {
-	vals := make([]string, 0, 8)
+	vals := make([]string, 0, 9)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -185,6 +193,9 @@ func (s ActionLogSetter) SetColumns() []string {
 	}
 	if s.CreatedAt.IsValue() {
 		vals = append(vals, "created_at")
+	}
+	if s.TransactionID.IsValue() || s.TransactionID.IsNull() {
+		vals = append(vals, "transaction_id")
 	}
 	return vals
 }
@@ -213,6 +224,9 @@ func (s ActionLogSetter) Overwrite(t *ActionLog) {
 	}
 	if s.CreatedAt.IsValue() {
 		t.CreatedAt = s.CreatedAt.MustGet()
+	}
+	if s.TransactionID.IsValue() || s.TransactionID.IsNull() {
+		t.TransactionID = s.TransactionID.MustGetNull()
 	}
 }
 
@@ -288,6 +302,13 @@ func (s *ActionLogSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.CreatedAt.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "transaction_id":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.TransactionID.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.TransactionID.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -299,7 +320,7 @@ func (s ActionLogSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s ActionLogSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 8)
+	exprs := make([]bob.Expression, 0, 9)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -357,6 +378,13 @@ func (s ActionLogSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.TransactionID.IsValue() || s.TransactionID.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "transaction_id")...),
+			sqlite.Arg(s.TransactionID),
+		}})
+	}
+
 	return exprs
 }
 
@@ -367,7 +395,7 @@ func actionLogScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, f
 		idx int
 		dst func(o *ActionLog) any
 	}
-	targets := make([]target, 0, 8)
+	targets := make([]target, 0, 9)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -386,6 +414,8 @@ func actionLogScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, f
 			targets = append(targets, target{i, func(o *ActionLog) any { return &o.Payload }})
 		case "created_at":
 			targets = append(targets, target{i, func(o *ActionLog) any { return &o.CreatedAt }})
+		case "transaction_id":
+			targets = append(targets, target{i, func(o *ActionLog) any { return &o.TransactionID }})
 		}
 	}
 
@@ -669,6 +699,44 @@ func (os ActionLogSlice) ActionActionCorrections(mods ...bob.Mod[*dialect.Select
 	)...)
 }
 
+// Transaction starts a query for related objects on action_log
+func (o *ActionLog) Transaction(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	return ActionLogs.Query(append(mods,
+		sm.Where(ActionLogs.Columns.ID.EQ(sqlite.Arg(o.TransactionID))),
+	)...)
+}
+
+func (os ActionLogSlice) Transaction(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	PKArgSlice := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgSlice[i] = sqlite.ArgGroup(o.TransactionID)
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	return ActionLogs.Query(append(mods,
+		sm.Where(sqlite.Group(ActionLogs.Columns.ID).OP("IN", PKArgExpr)),
+	)...)
+}
+
+// ReverseTransactions starts a query for related objects on action_log
+func (o *ActionLog) ReverseTransactions(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	return ActionLogs.Query(append(mods,
+		sm.Where(ActionLogs.Columns.TransactionID.EQ(sqlite.Arg(o.ID))),
+	)...)
+}
+
+func (os ActionLogSlice) ReverseTransactions(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	PKArgSlice := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgSlice[i] = sqlite.ArgGroup(o.ID)
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	return ActionLogs.Query(append(mods,
+		sm.Where(sqlite.Group(ActionLogs.Columns.TransactionID).OP("IN", PKArgExpr)),
+	)...)
+}
+
 // Character starts a query for related objects on characters
 func (o *ActionLog) Character(mods ...bob.Mod[*dialect.SelectQuery]) CharactersQuery {
 	return Characters.Query(append(mods,
@@ -847,6 +915,126 @@ func (actionLog0 *ActionLog) AttachActionActionCorrections(ctx context.Context, 
 	return nil
 }
 
+func attachActionLogTransaction0(ctx context.Context, exec bob.Executor, count int, actionLog0 *ActionLog, actionLog1 *ActionLog) (*ActionLog, error) {
+	setter := &ActionLogSetter{
+		TransactionID: omitnull.From(actionLog1.ID),
+	}
+
+	err := actionLog0.Update(ctx, exec, setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachActionLogTransaction0: %w", err)
+	}
+
+	return actionLog0, nil
+}
+
+func (actionLog0 *ActionLog) InsertTransaction(ctx context.Context, exec bob.Executor, related *ActionLogSetter) error {
+	var err error
+
+	actionLog1, err := ActionLogs.Insert(related).One(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachActionLogTransaction0(ctx, exec, 1, actionLog0, actionLog1)
+	if err != nil {
+		return err
+	}
+
+	actionLog0.R.Transaction = actionLog1
+	actionLog0.R.Loaded.Transaction = true
+
+	actionLog1.R.ReverseTransactions = append(actionLog1.R.ReverseTransactions, actionLog0)
+
+	return nil
+}
+
+func (actionLog0 *ActionLog) AttachTransaction(ctx context.Context, exec bob.Executor, actionLog1 *ActionLog) error {
+	var err error
+
+	_, err = attachActionLogTransaction0(ctx, exec, 1, actionLog0, actionLog1)
+	if err != nil {
+		return err
+	}
+
+	actionLog0.R.Transaction = actionLog1
+	actionLog0.R.Loaded.Transaction = true
+
+	actionLog1.R.ReverseTransactions = append(actionLog1.R.ReverseTransactions, actionLog0)
+
+	return nil
+}
+
+func insertActionLogReverseTransactions0(ctx context.Context, exec bob.Executor, actionLogs1 []*ActionLogSetter, actionLog0 *ActionLog) (ActionLogSlice, error) {
+	for i := range actionLogs1 {
+		actionLogs1[i].TransactionID = omitnull.From(actionLog0.ID)
+	}
+
+	ret, err := ActionLogs.Insert(bob.ToMods(actionLogs1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertActionLogReverseTransactions0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachActionLogReverseTransactions0(ctx context.Context, exec bob.Executor, count int, actionLogs1 ActionLogSlice, actionLog0 *ActionLog) (ActionLogSlice, error) {
+	setter := &ActionLogSetter{
+		TransactionID: omitnull.From(actionLog0.ID),
+	}
+
+	err := actionLogs1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachActionLogReverseTransactions0: %w", err)
+	}
+
+	return actionLogs1, nil
+}
+
+func (actionLog0 *ActionLog) InsertReverseTransactions(ctx context.Context, exec bob.Executor, related ...*ActionLogSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	actionLogs1, err := insertActionLogReverseTransactions0(ctx, exec, related, actionLog0)
+	if err != nil {
+		return err
+	}
+
+	actionLog0.R.ReverseTransactions = append(actionLog0.R.ReverseTransactions, actionLogs1...)
+
+	for _, rel := range actionLogs1 {
+		rel.R.Transaction = actionLog0
+		rel.R.Loaded.Transaction = true
+	}
+	return nil
+}
+
+func (actionLog0 *ActionLog) AttachReverseTransactions(ctx context.Context, exec bob.Executor, related ...*ActionLog) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	actionLogs1 := ActionLogSlice(related)
+
+	_, err = attachActionLogReverseTransactions0(ctx, exec, len(related), actionLogs1, actionLog0)
+	if err != nil {
+		return err
+	}
+
+	actionLog0.R.ReverseTransactions = append(actionLog0.R.ReverseTransactions, actionLogs1...)
+
+	for _, rel := range related {
+		rel.R.Transaction = actionLog0
+		rel.R.Loaded.Transaction = true
+	}
+
+	return nil
+}
+
 func attachActionLogCharacter0(ctx context.Context, exec bob.Executor, count int, actionLog0 *ActionLog, character1 *Character) (*ActionLog, error) {
 	setter := &ActionLogSetter{
 		CharacterID: omit.From(character1.ID),
@@ -968,16 +1156,17 @@ func (actionLog0 *ActionLog) AttachActionActionSnapshots(ctx context.Context, ex
 }
 
 type actionLogWhere[Q sqlite.Filterable] struct {
-	cols        actionLogColumns
-	ID          sqlite.WhereMod[Q, int64]
-	CharacterID sqlite.WhereMod[Q, int64]
-	Round       sqlite.WhereMod[Q, int64]
-	Kind        sqlite.WhereMod[Q, string]
-	Summary     sqlite.WhereMod[Q, string]
-	HPDelta     sqlite.WhereMod[Q, int64]
-	Payload     sqlite.WhereMod[Q, string]
-	CreatedAt   sqlite.WhereMod[Q, time.Time]
-	R           actionLogWhereR[Q]
+	cols          actionLogColumns
+	ID            sqlite.WhereMod[Q, int64]
+	CharacterID   sqlite.WhereMod[Q, int64]
+	Round         sqlite.WhereMod[Q, int64]
+	Kind          sqlite.WhereMod[Q, string]
+	Summary       sqlite.WhereMod[Q, string]
+	HPDelta       sqlite.WhereMod[Q, int64]
+	Payload       sqlite.WhereMod[Q, string]
+	CreatedAt     sqlite.WhereMod[Q, time.Time]
+	TransactionID sqlite.WhereNullMod[Q, int64]
+	R             actionLogWhereR[Q]
 }
 
 func (actionLogWhere[Q]) AliasedAs(alias string) actionLogWhere[Q] {
@@ -986,16 +1175,17 @@ func (actionLogWhere[Q]) AliasedAs(alias string) actionLogWhere[Q] {
 
 func buildActionLogWhere[Q sqlite.Filterable](cols actionLogColumns) actionLogWhere[Q] {
 	return actionLogWhere[Q]{
-		cols:        cols,
-		ID:          sqlite.Where[Q, int64](cols.ID.Expression),
-		CharacterID: sqlite.Where[Q, int64](cols.CharacterID.Expression),
-		Round:       sqlite.Where[Q, int64](cols.Round.Expression),
-		Kind:        sqlite.Where[Q, string](cols.Kind.Expression),
-		Summary:     sqlite.Where[Q, string](cols.Summary.Expression),
-		HPDelta:     sqlite.Where[Q, int64](cols.HPDelta.Expression),
-		Payload:     sqlite.Where[Q, string](cols.Payload.Expression),
-		CreatedAt:   sqlite.Where[Q, time.Time](cols.CreatedAt.Expression),
-		R:           actionLogWhereR[Q]{cols: cols},
+		cols:          cols,
+		ID:            sqlite.Where[Q, int64](cols.ID.Expression),
+		CharacterID:   sqlite.Where[Q, int64](cols.CharacterID.Expression),
+		Round:         sqlite.Where[Q, int64](cols.Round.Expression),
+		Kind:          sqlite.Where[Q, string](cols.Kind.Expression),
+		Summary:       sqlite.Where[Q, string](cols.Summary.Expression),
+		HPDelta:       sqlite.Where[Q, int64](cols.HPDelta.Expression),
+		Payload:       sqlite.Where[Q, string](cols.Payload.Expression),
+		CreatedAt:     sqlite.Where[Q, time.Time](cols.CreatedAt.Expression),
+		TransactionID: sqlite.WhereNull[Q, int64](cols.TransactionID.Expression),
+		R:             actionLogWhereR[Q]{cols: cols},
 	}
 }
 
@@ -1034,6 +1224,40 @@ func (w actionLogWhereR[Q]) HasActionActionCorrections(filters ...bob.Mod[*diale
 	return mods.Where[Q]{E: sqlite.Exists(q)}
 }
 
+// HasTransaction filters parents that have a matching Transaction using a
+// correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
+// multiply parent rows, so no DISTINCT is needed. The optional filters are
+// applied to the subquery (i.e. to ActionLogs).
+func (w actionLogWhereR[Q]) HasTransaction(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+	// self-referential relation: alias the subquery table so the correlation
+	// columns still reference the parent row rather than the subquery's own row.
+	relTbl := ActionLogs.Columns.AliasedAs("Transaction")
+	q := sqlite.Select(
+		sm.Columns(sqlite.Raw("1")),
+		sm.From(ActionLogs.NameExpr().As("Transaction")),
+		sm.Where(relTbl.ID.EQ(w.cols.TransactionID)),
+	)
+	q.Apply(filters...)
+	return mods.Where[Q]{E: sqlite.Exists(q)}
+}
+
+// HasReverseTransactions filters parents that have a matching ReverseTransactions using a
+// correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
+// multiply parent rows, so no DISTINCT is needed. The optional filters are
+// applied to the subquery (i.e. to ActionLogs).
+func (w actionLogWhereR[Q]) HasReverseTransactions(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+	// self-referential relation: alias the subquery table so the correlation
+	// columns still reference the parent row rather than the subquery's own row.
+	relTbl := ActionLogs.Columns.AliasedAs("ReverseTransactions")
+	q := sqlite.Select(
+		sm.Columns(sqlite.Raw("1")),
+		sm.From(ActionLogs.NameExpr().As("ReverseTransactions")),
+		sm.Where(relTbl.TransactionID.EQ(w.cols.ID)),
+	)
+	q.Apply(filters...)
+	return mods.Where[Q]{E: sqlite.Exists(q)}
+}
+
 // HasCharacter filters parents that have a matching Character using a
 // correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
 // multiply parent rows, so no DISTINCT is needed. The optional filters are
@@ -1066,14 +1290,15 @@ func (w actionLogWhereR[Q]) HasActionActionSnapshots(filters ...bob.Mod[*dialect
 // on a LEFT JOIN miss every column comes back NULL, so each field uses the
 // nullable version of the column type even when the column itself is NOT NULL.
 type actionLogPreloadBuf struct {
-	ID          null.Val[int64]
-	CharacterID null.Val[int64]
-	Round       null.Val[int64]
-	Kind        null.Val[string]
-	Summary     null.Val[string]
-	HPDelta     null.Val[int64]
-	Payload     null.Val[string]
-	CreatedAt   null.Val[time.Time]
+	ID            null.Val[int64]
+	CharacterID   null.Val[int64]
+	Round         null.Val[int64]
+	Kind          null.Val[string]
+	Summary       null.Val[string]
+	HPDelta       null.Val[int64]
+	Payload       null.Val[string]
+	CreatedAt     null.Val[time.Time]
+	TransactionID null.Val[int64]
 }
 
 // actionLogScanMapperNullable maps the preloaded actionLog
@@ -1088,7 +1313,7 @@ func actionLogScanMapperNullable(prefix string) scan.Mapper[*ActionLog] {
 			idx int
 			dst func(b *actionLogPreloadBuf) any
 		}
-		targets := make([]target, 0, 8)
+		targets := make([]target, 0, 9)
 		for i, col := range cols {
 			name, ok := strings.CutPrefix(col, prefix)
 			if !ok {
@@ -1111,6 +1336,8 @@ func actionLogScanMapperNullable(prefix string) scan.Mapper[*ActionLog] {
 				targets = append(targets, target{i, func(b *actionLogPreloadBuf) any { return &b.Payload }})
 			case "created_at":
 				targets = append(targets, target{i, func(b *actionLogPreloadBuf) any { return &b.CreatedAt }})
+			case "transaction_id":
+				targets = append(targets, target{i, func(b *actionLogPreloadBuf) any { return &b.TransactionID }})
 			}
 		}
 
@@ -1140,7 +1367,8 @@ func actionLogScanMapperNullable(prefix string) scan.Mapper[*ActionLog] {
 					!buf.Summary.IsValue() &&
 					!buf.HPDelta.IsValue() &&
 					!buf.Payload.IsValue() &&
-					!buf.CreatedAt.IsValue() {
+					!buf.CreatedAt.IsValue() &&
+					!buf.TransactionID.IsValue() {
 					return nil, nil
 				}
 
@@ -1169,6 +1397,7 @@ func actionLogScanMapperNullable(prefix string) scan.Mapper[*ActionLog] {
 				if buf.CreatedAt.IsValue() {
 					o.CreatedAt = buf.CreatedAt.MustGet()
 				}
+				o.TransactionID = buf.TransactionID
 				return o, nil
 			}
 	}
@@ -1212,6 +1441,35 @@ func (o *ActionLog) Preload(name string, retrieved any) error {
 			}
 		}
 		return nil
+	case "Transaction":
+		rel, ok := retrieved.(*ActionLog)
+		if !ok {
+			return fmt.Errorf("actionLog cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.Transaction = rel
+		o.R.Loaded.Transaction = true
+
+		if rel != nil {
+			rel.R.ReverseTransactions = ActionLogSlice{o}
+		}
+		return nil
+	case "ReverseTransactions":
+		rels, ok := retrieved.(ActionLogSlice)
+		if !ok {
+			return fmt.Errorf("actionLog cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.ReverseTransactions = rels
+		o.R.Loaded.ReverseTransactions = true
+
+		for _, rel := range rels {
+			if rel != nil {
+				rel.R.Transaction = o
+				rel.R.Loaded.Transaction = true
+			}
+		}
+		return nil
 	case "Character":
 		rel, ok := retrieved.(*Character)
 		if !ok {
@@ -1247,11 +1505,25 @@ func (o *ActionLog) Preload(name string, retrieved any) error {
 }
 
 type actionLogPreloader struct {
-	Character func(...sqlite.PreloadOption) sqlite.Preloader
+	Transaction func(...sqlite.PreloadOption) sqlite.Preloader
+	Character   func(...sqlite.PreloadOption) sqlite.Preloader
 }
 
 func buildActionLogPreloader() actionLogPreloader {
 	return actionLogPreloader{
+		Transaction: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
+			return sqlite.Preload[*ActionLog, ActionLogSlice](sqlite.PreloadRel{
+				Name: "Transaction",
+				Sides: []sqlite.PreloadSide{
+					{
+						From:        ActionLogs,
+						To:          ActionLogs,
+						FromColumns: []string{"transaction_id"},
+						ToColumns:   []string{"id"},
+					},
+				},
+			}, ActionLogs.Columns.Names(), actionLogScanMapperNullable, opts...)
+		},
 		Character: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
 			return sqlite.Preload[*Character, CharacterSlice](sqlite.PreloadRel{
 				Name: "Character",
@@ -1271,6 +1543,8 @@ func buildActionLogPreloader() actionLogPreloader {
 type actionLogThenLoader[Q orm.Loadable] struct {
 	StepActionCorrections   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActionActionCorrections func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	Transaction             func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	ReverseTransactions     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	Character               func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActionActionSnapshots   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
@@ -1281,6 +1555,12 @@ func buildActionLogThenLoader[Q orm.Loadable]() actionLogThenLoader[Q] {
 	}
 	type ActionActionCorrectionsLoadInterface interface {
 		LoadActionActionCorrections(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type TransactionLoadInterface interface {
+		LoadTransaction(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type ReverseTransactionsLoadInterface interface {
+		LoadReverseTransactions(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 	type CharacterLoadInterface interface {
 		LoadCharacter(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
@@ -1300,6 +1580,18 @@ func buildActionLogThenLoader[Q orm.Loadable]() actionLogThenLoader[Q] {
 			"ActionActionCorrections",
 			func(ctx context.Context, exec bob.Executor, retrieved ActionActionCorrectionsLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
 				return retrieved.LoadActionActionCorrections(ctx, exec, mods...)
+			},
+		),
+		Transaction: thenLoadBuilder[Q](
+			"Transaction",
+			func(ctx context.Context, exec bob.Executor, retrieved TransactionLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadTransaction(ctx, exec, mods...)
+			},
+		),
+		ReverseTransactions: thenLoadBuilder[Q](
+			"ReverseTransactions",
+			func(ctx context.Context, exec bob.Executor, retrieved ReverseTransactionsLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadReverseTransactions(ctx, exec, mods...)
 			},
 		),
 		Character: thenLoadBuilder[Q](
@@ -1469,6 +1761,164 @@ func (os ActionLogSlice) LoadActionActionCorrections(ctx context.Context, exec b
 	return nil
 }
 
+// LoadTransaction loads the actionLog's Transaction into the .R struct
+func (o *ActionLog) LoadTransaction(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.Transaction = nil
+	o.R.Loaded.Transaction = false
+
+	related, err := o.Transaction(mods...).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	related.R.ReverseTransactions = ActionLogSlice{o}
+
+	o.R.Transaction = related
+	o.R.Loaded.Transaction = true
+	return nil
+}
+
+// LoadTransaction loads the actionLog's Transaction into the .R struct
+func (os ActionLogSlice) LoadTransaction(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	actionLogs, err := os.Transaction(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		o.R.Transaction = nil
+		o.R.Loaded.Transaction = true
+	}
+	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
+	actionLogByKey := make(map[int64][]*ActionLog, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		// NULL never matches any row in SQL, so don't add it to the map
+		if !o.TransactionID.IsValue() {
+			continue
+		}
+
+		actionLogByKey[o.TransactionID.MustGet()] = append(actionLogByKey[o.TransactionID.MustGet()], o)
+	}
+
+	for _, rel := range actionLogs {
+
+		owners, ok := actionLogByKey[rel.ID]
+		if !ok {
+			continue
+		}
+
+		for _, o := range owners {
+
+			// to-one: keep only the first matching child (matches the previous break)
+			if o.R.Transaction != nil {
+				continue
+			}
+
+			rel.R.ReverseTransactions = append(rel.R.ReverseTransactions, o)
+
+			o.R.Transaction = rel
+
+		}
+	}
+
+	return nil
+}
+
+// LoadReverseTransactions loads the actionLog's ReverseTransactions into the .R struct
+func (o *ActionLog) LoadReverseTransactions(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.ReverseTransactions = nil
+	o.R.Loaded.ReverseTransactions = false
+
+	related, err := o.ReverseTransactions(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, rel := range related {
+		rel.R.Transaction = o
+		rel.R.Loaded.Transaction = true
+	}
+
+	o.R.ReverseTransactions = related
+	o.R.Loaded.ReverseTransactions = true
+	return nil
+}
+
+// LoadReverseTransactions loads the actionLog's ReverseTransactions into the .R struct
+func (os ActionLogSlice) LoadReverseTransactions(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	actionLogs, err := os.ReverseTransactions(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		o.R.ReverseTransactions = nil
+		o.R.Loaded.ReverseTransactions = true
+	}
+	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
+	actionLogByKey := make(map[int64][]*ActionLog, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		actionLogByKey[o.ID] = append(actionLogByKey[o.ID], o)
+	}
+
+	for _, rel := range actionLogs {
+
+		if !rel.TransactionID.IsValue() {
+			continue
+		}
+
+		owners, ok := actionLogByKey[rel.TransactionID.MustGet()]
+		if !ok {
+			continue
+		}
+
+		for _, o := range owners {
+
+			rel.R.Transaction = o
+			rel.R.Loaded.Transaction = true
+
+			o.R.ReverseTransactions = append(o.R.ReverseTransactions, rel)
+
+		}
+	}
+
+	return nil
+}
+
 // LoadCharacter loads the actionLog's Character into the .R struct
 func (o *ActionLog) LoadCharacter(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if o == nil {
@@ -1622,6 +2072,7 @@ func (os ActionLogSlice) LoadActionActionSnapshots(ctx context.Context, exec bob
 type actionLogC struct {
 	StepActionCorrections   *int64
 	ActionActionCorrections *int64
+	ReverseTransactions     *int64
 	ActionActionSnapshots   *int64
 }
 
@@ -1636,6 +2087,8 @@ func (o *ActionLog) PreloadCount(name string, count int64) error {
 		o.C.StepActionCorrections = &count
 	case "ActionActionCorrections":
 		o.C.ActionActionCorrections = &count
+	case "ReverseTransactions":
+		o.C.ReverseTransactions = &count
 	case "ActionActionSnapshots":
 		o.C.ActionActionSnapshots = &count
 	}
@@ -1645,6 +2098,7 @@ func (o *ActionLog) PreloadCount(name string, count int64) error {
 type actionLogCountPreloader struct {
 	StepActionCorrections   func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	ActionActionCorrections func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	ReverseTransactions     func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	ActionActionSnapshots   func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 }
 
@@ -1684,6 +2138,23 @@ func buildActionLogCountPreloader() actionLogCountPreloader {
 				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
 			})
 		},
+		ReverseTransactions: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
+			return countPreloader[*ActionLog]("ReverseTransactions", func(parent string) bob.Expression {
+				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
+				if parent == "" {
+					parent = ActionLogs.Alias()
+				}
+
+				subqueryMods := []bob.Mod[*dialect.SelectQuery]{
+					sm.Columns(sqlite.Raw("count(*)")),
+
+					sm.From(ActionLogs.NameAsExpr()),
+					sm.Where(sqlite.Quote(ActionLogs.Alias(), "transaction_id").EQ(sqlite.Quote(parent, "id"))),
+				}
+				subqueryMods = append(subqueryMods, mods...)
+				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
+			})
+		},
 		ActionActionSnapshots: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
 			return countPreloader[*ActionLog]("ActionActionSnapshots", func(parent string) bob.Expression {
 				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
@@ -1707,6 +2178,7 @@ func buildActionLogCountPreloader() actionLogCountPreloader {
 type actionLogCountThenLoader[Q orm.Loadable] struct {
 	StepActionCorrections   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActionActionCorrections func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	ReverseTransactions     func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActionActionSnapshots   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
 
@@ -1716,6 +2188,9 @@ func buildActionLogCountThenLoader[Q orm.Loadable]() actionLogCountThenLoader[Q]
 	}
 	type ActionActionCorrectionsCountInterface interface {
 		LoadCountActionActionCorrections(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type ReverseTransactionsCountInterface interface {
+		LoadCountReverseTransactions(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 	type ActionActionSnapshotsCountInterface interface {
 		LoadCountActionActionSnapshots(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
@@ -1732,6 +2207,12 @@ func buildActionLogCountThenLoader[Q orm.Loadable]() actionLogCountThenLoader[Q]
 			"ActionActionCorrections",
 			func(ctx context.Context, exec bob.Executor, retrieved ActionActionCorrectionsCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
 				return retrieved.LoadCountActionActionCorrections(ctx, exec, mods...)
+			},
+		),
+		ReverseTransactions: countThenLoadBuilder[Q](
+			"ReverseTransactions",
+			func(ctx context.Context, exec bob.Executor, retrieved ReverseTransactionsCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadCountReverseTransactions(ctx, exec, mods...)
 			},
 		),
 		ActionActionSnapshots: countThenLoadBuilder[Q](
@@ -1899,6 +2380,84 @@ func (os ActionLogSlice) LoadCountActionActionCorrections(ctx context.Context, e
 	return nil
 }
 
+// LoadCountReverseTransactions loads the count of ReverseTransactions into the C struct
+func (o *ActionLog) LoadCountReverseTransactions(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	count, err := o.ReverseTransactions(mods...).Count(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	o.C.ReverseTransactions = &count
+	return nil
+}
+
+// LoadCountReverseTransactions loads the count of ReverseTransactions for a slice in a single batch query
+func (os ActionLogSlice) LoadCountReverseTransactions(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	// Build the IN arg expression from parent PKs
+	PKArgSlice := make([]bob.Expression, 0, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		PKArgSlice = append(PKArgSlice, sqlite.Arg(o.ID))
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	// countResult holds one scanned row from the batch count query.
+	// FK columns are aliased to the parent PK column names for direct map lookup.
+	type countResult struct {
+		ID    int64
+		Count int64
+	}
+
+	batchMods := []bob.Mod[*dialect.SelectQuery]{
+		// SELECT fk AS parent_pk, count(*)
+		sm.Columns(
+			ActionLogs.Columns.TransactionID.As("id"),
+			sqlite.Raw("count(*) as count"),
+		),
+		// Single-hop: FROM related table directly
+		sm.From(ActionLogs.NameAsExpr()),
+
+		// WHERE fk IN (parent PKs) — psql single-column FK uses `= ANY(array)` (see PKArgExpr above)
+		sm.Where(ActionLogs.Columns.TransactionID.OP("IN", PKArgExpr)),
+		// GROUP BY fk columns
+		sm.GroupBy(ActionLogs.Columns.TransactionID),
+	}
+	batchMods = append(batchMods, mods...)
+
+	results, err := bob.All(ctx, exec,
+		sqlite.Select(batchMods...),
+		scan.StructMapper[countResult](),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Single-column FK: direct map lookup
+	countMap := make(map[int64]int64, len(results))
+	for _, r := range results {
+		countMap[r.ID] = r.Count
+	}
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+		count := countMap[o.ID]
+		o.C.ReverseTransactions = &count
+	}
+
+	return nil
+}
+
 // LoadCountActionActionSnapshots loads the count of ActionActionSnapshots into the C struct
 func (o *ActionLog) LoadCountActionActionSnapshots(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if o == nil {
@@ -1981,6 +2540,8 @@ type actionLogJoins[Q dialect.Joinable] struct {
 	typ                     string
 	StepActionCorrections   modAs[Q, actionCorrectionColumns]
 	ActionActionCorrections modAs[Q, actionCorrectionColumns]
+	Transaction             modAs[Q, actionLogColumns]
+	ReverseTransactions     modAs[Q, actionLogColumns]
 	Character               modAs[Q, characterColumns]
 	ActionActionSnapshots   modAs[Q, actionSnapshotColumns]
 }
@@ -2014,6 +2575,34 @@ func buildActionLogJoins[Q dialect.Joinable](cols actionLogColumns, typ string) 
 				{
 					mods = append(mods, dialect.Join[Q](typ, ActionCorrections.NameExpr().As(to.Alias())).On(
 						to.ActionID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
+		Transaction: modAs[Q, actionLogColumns]{
+			c: ActionLogs.Columns,
+			f: func(to actionLogColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, ActionLogs.NameExpr().As(to.Alias())).On(
+						to.ID.EQ(cols.TransactionID),
+					))
+				}
+
+				return mods
+			},
+		},
+		ReverseTransactions: modAs[Q, actionLogColumns]{
+			c: ActionLogs.Columns,
+			f: func(to actionLogColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, ActionLogs.NameExpr().As(to.Alias())).On(
+						to.TransactionID.EQ(cols.ID),
 					))
 				}
 

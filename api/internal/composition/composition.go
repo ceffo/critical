@@ -153,12 +153,17 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// buffdal (buffsvc itself records into the log, so it cannot be the
 	// log's dependency). Services that record snapshots register their
 	// Restorers on logSvc here.
-	logSvc, err := actionlogsvc.New(logDAL, db, roundReader{buffDAL}, hpDAL)
+	//
+	// tx is the one TxRunner every service gets: each outermost InTx is one
+	// action-log transaction, so whatever a request records is popped by one
+	// undo (ADR 0018 steps 1 and 2).
+	tx := actionlogsvc.Transactions(db)
+	logSvc, err := actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	buffSvc, err := buffsvc.New(buffDAL, db, logSvc, charSvc, dice)
+	buffSvc, err := buffsvc.New(buffDAL, tx, logSvc, charSvc, dice)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -174,7 +179,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: db})
+	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: tx})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -182,14 +187,14 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	registerRestorers(logSvc, itemSvc.Restorers())
 	prepSvc, err := prepsvc.New(prepsvc.Deps{
 		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Limits: ruleTables, Items: itemSvc,
-		Characters: charSvc, Log: logSvc, Tx: db,
+		Characters: charSvc, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
-	weaponSvc, err := weaponsvc.New(weaponEditor, weaponsvc.Deps{Log: logSvc, Tx: db})
+	weaponSvc, err := weaponsvc.New(weaponEditor, weaponsvc.Deps{Log: logSvc, Tx: tx})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -197,7 +202,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	registerRestorers(logSvc, weaponSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL, Crit: critDAL,
-		Items: itemSvc, Forms: attackformdal.New(db), Rules: ruleTables, Log: logSvc, Tx: db,
+		Items: itemSvc, Forms: attackformdal.New(db), Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -205,24 +210,24 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	}
 	castSvc, err := castsvc.New(castsvc.Deps{
 		Slots: spellDAL, Effects: effects, Texts: spellDAL, Buffs: buffSvc, Items: itemSvc, Attacks: combatSvc,
-		Characters: charSvc, Dice: dice, Log: logSvc, Tx: db,
+		Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	restSvc, err := restsvc.New(spellSvc, itemSvc, logSvc, db)
+	restSvc, err := restsvc.New(spellSvc, itemSvc, logSvc, tx)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
-	detailsSvc, err := detailssvc.New(characterDAL, db)
+	detailsSvc, err := detailssvc.New(characterDAL, tx)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	xpSvc, err := xpsvc.New(xpsvc.Deps{
-		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Tx: db,
+		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -231,14 +236,14 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// Skill checks change no state: their entries carry no snapshot, so
 	// there is no restorer to register.
 	skillSvc, err := skillsvc.New(skillsvc.Deps{
-		DAL: skilldal.New(db), Characters: charSvc, Dice: dice, Log: logSvc, Tx: db,
+		DAL: skilldal.New(db), Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	// Free dice rolls change no state: no snapshot, no restorer.
-	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: dicedal.New(db), Dice: dice, Log: logSvc, Tx: db})
+	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: dicedal.New(db), Dice: dice, Log: logSvc, Tx: tx})
 	if err != nil {
 		_ = db.Close()
 		return nil, err

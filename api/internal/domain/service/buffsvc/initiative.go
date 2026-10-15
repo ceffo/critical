@@ -60,8 +60,9 @@ func initiativeSnapshot(before, after *Initiative) (actionlog.Snapshot, error) {
 }
 
 // rollInitiative rolls round's initiative and records it as its own entry,
-// stamped with that round, then stores it with the entry's id. It must run
-// inside a transaction.
+// stamped with that round, whose snapshot has the stored initiative as
+// "before", then stores it with the entry's id. It must run inside a
+// transaction, as the last entry that transaction records.
 //
 // ADR 0013 step 1: one d10 through the dice port. Step 3: the value is the
 // plain die, no modifier; the lowest acts first, which only the display says.
@@ -106,9 +107,20 @@ func (s *service) GetInitiative(ctx context.Context, characterID int64) (*Initia
 // domain.ErrConflict.
 var ErrNoInitiative = errors.New("no initiative to reroll")
 
-// RerollInitiative is ADR 0013 step 4: in one transaction, the round's
-// initiative entry is popped (which must be the newest entry, else the log's
-// not-latest conflict) and a new d10 is rolled and recorded.
+// ErrInitiativeNotOnTop is the conflict for rerolling once another
+// transaction is newer than the one that recorded the round's initiative; it
+// also wraps domain.ErrConflict.
+var ErrInitiativeNotOnTop = errors.New("the initiative is no longer the newest action")
+
+// RerollInitiative is ADR 0013 step 4 as amended by ADR 0018 step 5: a new
+// d10 recorded as its own transaction, whose initiative snapshot keeps the
+// roll it replaces as "before", so undo gives that roll back. Nothing is
+// voided. It is allowed only when the newest transaction is the one that
+// recorded the round's current initiative (the Next Round or a previous
+// reroll): that transaction ends with the initiative entry (rollInitiative is
+// the last thing both record), so it is the newest one exactly when the
+// initiative's entry is the newest non-voided entry. Refused, with nothing
+// rolled, otherwise or when there is no initiative.
 func (s *service) RerollInitiative(ctx context.Context, characterID int64) (Initiative, error) {
 	var out Initiative
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -124,8 +136,13 @@ func (s *service) RerollInitiative(ctx context.Context, characterID int64) (Init
 		if current == nil || round == 0 {
 			return fmt.Errorf("%w: %w", domain.ErrConflict, ErrNoInitiative)
 		}
-		if _, err := s.log.Void(ctx, characterID, current.LogEntryID); err != nil {
-			return fmt.Errorf("pop initiative: %w", err)
+		top, ok, err := s.log.TopID(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("top of the log: %w", err)
+		}
+		if !ok || top != current.LogEntryID {
+			return fmt.Errorf("%w: %w: the initiative is #%d, the newest entry #%d",
+				domain.ErrConflict, ErrInitiativeNotOnTop, current.LogEntryID, top)
 		}
 		out, err = s.rollInitiative(ctx, characterID, round)
 		return err

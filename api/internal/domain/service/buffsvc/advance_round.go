@@ -10,8 +10,9 @@ import (
 // atomically, with a round_advance entry snapshotting both the buff list and
 // the round so voiding it steps back (expired buffs come back). In the same
 // transaction it rolls the new round's initiative, logged as its own entry
-// after the advance (ADR 0013 steps 1 and 2): undo pops the initiative first,
-// then the advance.
+// after the advance (ADR 0013 steps 1 and 2). Both entries are one action-log
+// transaction (ADR 0018 step 1), so one undo pops the advance and its
+// initiative together (step 2).
 func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, expired []BuffEffect, round int, initiative Initiative, err error) {
 	var ch change
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {

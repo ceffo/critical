@@ -142,7 +142,7 @@ func TestRecord(t *testing.T) {
 				if c.in.Round == 0 {
 					rounds.EXPECT().GetRound(mock.Anything, c.in.CharacterID).Return(c.round, nil)
 				}
-				dal.EXPECT().InsertEntry(mock.Anything, *c.wantStore).Return(42, nil)
+				dal.EXPECT().InsertEntry(mock.Anything, *c.wantStore, int64(0)).Return(42, nil)
 			}
 			id, err := svc.Record(context.Background(), c.in)
 			if c.wantErr != nil {
@@ -166,14 +166,72 @@ func TestRecord_PropagatesErrors(t *testing.T) {
 	})
 	t.Run("insert", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).Return(0, errBoom)
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).Return(0, errBoom)
 		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "x"})
 		require.ErrorIs(t, err, errBoom)
 	})
 }
 
+// ADR 0018 step 1: the entries one request records, inside one outermost
+// InTx of a runner wrapped by Transactions, share a transaction: the first
+// starts it (0: its id becomes the transaction's), the others join it, also
+// through a nested InTx and through another service's Record. The next
+// request starts its own; an entry recorded alone is its own transaction.
+func TestRecord_EntriesOfOneRequestShareATransaction(t *testing.T) {
+	svc, dal, _, _ := newSvc(t)
+	runner := actionlogsvc.Transactions(&passTx{})
+	ctx := context.Background()
+	entry := func(kind actionlog.Kind) actionlog.NewEntry {
+		return actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: kind, Payload: json.RawMessage(`{}`)}
+	}
+	var inserted [][2]int64 // {id, transaction id asked}
+	next := int64(10)
+	dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, _ actionlog.NewEntry, transactionID int64) (int64, error) {
+			next++
+			inserted = append(inserted, [2]int64{next, transactionID})
+			return next, nil
+		})
+
+	// Next Round: the advance, then (nested, as rollInitiative runs) its initiative.
+	require.NoError(t, runner.InTx(ctx, func(ctx context.Context) error {
+		if _, err := svc.Record(ctx, entry(actionlog.KindRoundAdvance)); err != nil {
+			return err
+		}
+		return runner.InTx(ctx, func(ctx context.Context) error {
+			_, err := svc.Record(ctx, entry(actionlog.KindInitiative))
+			return err
+		})
+	}))
+	// The next request, then an entry recorded with no request transaction.
+	require.NoError(t, runner.InTx(ctx, func(ctx context.Context) error {
+		_, err := svc.Record(ctx, entry(actionlog.KindInitiative))
+		return err
+	}))
+	_, err := svc.Record(ctx, entry(actionlog.KindHPChange))
+	require.NoError(t, err)
+
+	assert.Equal(t, [][2]int64{
+		{11, 0}, {12, 11}, // one transaction, #11
+		{13, 0}, // the next request starts its own
+		{14, 0}, // and so does a lone Record
+	}, inserted)
+
+	// A failed request leaves nothing behind: the next one starts fresh.
+	inserted = nil
+	_ = runner.InTx(ctx, func(ctx context.Context) error {
+		if _, err := svc.Record(ctx, entry(actionlog.KindAttack)); err != nil {
+			return err
+		}
+		return errBoom
+	})
+	_, err = svc.Record(ctx, entry(actionlog.KindAttack))
+	require.NoError(t, err)
+	assert.Equal(t, [][2]int64{{15, 0}, {16, 0}}, inserted)
+}
+
 func hpEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
-	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -8, Corrections: corrections}
+	return &actionlog.Entry{ID: id, TransactionID: id, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -8, Corrections: corrections}
 }
 
 // Note-only amend: any kind, the correction carries only
@@ -240,9 +298,12 @@ func TestAmend(t *testing.T) {
 
 // Pop-only void: only the newest non-voided entry, any
 // kind; its snapshots are restored through their family's restorer.
-func TestVoid(t *testing.T) {
+// Undo restores each snapshot of the popped entry through the Restorer
+// registered for its key (or its family) and records the void; a missing or
+// failing restorer, or a failing void insert, fails the undo (ADR 0010 step 2).
+func TestUndo_RestoresThroughRestorers(t *testing.T) {
 	withSnaps := func(keys ...string) *actionlog.Entry {
-		e := &actionlog.Entry{ID: 5, CharacterID: 1, Kind: actionlog.KindRoundAdvance, Summary: "next"}
+		e := &actionlog.Entry{ID: 5, TransactionID: 5, CharacterID: 1, Kind: actionlog.KindRoundAdvance, Summary: "next"}
 		for _, k := range keys {
 			e.Snapshots = append(e.Snapshots, actionlog.Snapshot{Key: k, Before: json.RawMessage(`"before-` + k + `"`), After: json.RawMessage(`"after"`)})
 		}
@@ -253,7 +314,6 @@ func TestVoid(t *testing.T) {
 	cases := []struct {
 		name        string
 		entry       *actionlog.Entry
-		topID       int64 // newest non-voided entry; 0 = this one
 		restorers   []string
 		restoreErr  error
 		insertErr   error
@@ -262,14 +322,9 @@ func TestVoid(t *testing.T) {
 		wantRestore []string
 	}{
 		{name: "hp change, no snapshots", entry: hpEntry(5)},
-		{name: "already voided", entry: hpEntry(5, voidRow), wantErr: actionlogsvc.ErrAlreadyVoided},
 		{
 			name: "restores every snapshot", entry: withSnaps("round", "buffs"), restorers: []string{"round", "buffs"},
 			wantRestore: []string{`"before-round"`, `"before-buffs"`},
-		},
-		{
-			name: "an older entry is refused", entry: withSnaps("round"), topID: 9, restorers: []string{"round"},
-			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be undone, undo #9 (round_advance, round 3) first`,
 		},
 		{
 			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},
@@ -291,20 +346,10 @@ func TestVoid(t *testing.T) {
 					return c.restoreErr
 				}))
 			}
+			dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(5, true, nil).Once()
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
-			active := c.entry.Status() != actionlog.StatusVoided
-			if active {
-				if c.topID != 0 {
-					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(c.topID, true, nil).Once()
-					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.topID).
-						Return(&actionlog.Entry{ID: c.topID, Round: 3, Kind: actionlog.KindRoundAdvance}, nil).Once()
-				} else {
-					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(5, true, nil).Once()
-					dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
-				}
-			}
-			reachesInsert := active && c.topID == 0 && c.restoreErr == nil &&
-				(len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""
+			dal.EXPECT().ListTransaction(mock.Anything, int64(1), int64(5)).Return([]actionlog.Entry{*c.entry}, nil).Once()
+			reachesInsert := c.restoreErr == nil && (len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""
 			if reachesInsert {
 				dal.EXPECT().InsertCorrection(mock.Anything, voidRow).Return(c.insertErr).Once()
 			}
@@ -314,7 +359,7 @@ func TestVoid(t *testing.T) {
 				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(&done, nil).Once()
 			}
 
-			got, err := svc.Void(context.Background(), 1, 5)
+			got, err := svc.Undo(context.Background(), 1, 5)
 			assert.Equal(t, 1, tx.calls)
 			if c.wantErr != nil || c.wantErrText != "" {
 				require.Error(t, err)
@@ -322,9 +367,6 @@ func TestVoid(t *testing.T) {
 					assert.ErrorIs(t, err, c.wantErr)
 				}
 				assert.Contains(t, err.Error(), c.wantErrText)
-				if errors.Is(c.wantErr, actionlogsvc.ErrNotLatest) {
-					assert.Empty(t, restored, "nothing restored when refused")
-				}
 				return
 			}
 			require.NoError(t, err)
@@ -440,7 +482,7 @@ func TestAmendLatest(t *testing.T) {
 			}
 			if c.want != nil {
 				rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
-				dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).Return(step, nil).Once()
+				dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).Return(step, nil).Once()
 				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil)
 				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(saveEntry(5, *c.want), nil).Once()
 			}
@@ -497,7 +539,7 @@ func TestAmendLatest_RecordsTheCorrectionStep(t *testing.T) {
 		expect(dal)
 		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
 		var calls []string
-		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, e actionlog.NewEntry) (int64, error) {
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).RunAndReturn(func(_ context.Context, e actionlog.NewEntry, _ int64) (int64, error) {
 			calls = append(calls, "step")
 			assert.Equal(t, actionlog.NewEntry{CharacterID: 1, Round: 3, Kind: actionlog.KindCorrection, Payload: e.Payload}, e)
 			assert.JSONEq(t, `{"entryId":5,"entryKind":"save","field":"targetAc","from":null,"to":4}`, string(e.Payload))
@@ -526,7 +568,7 @@ func TestAmendLatest_RecordsTheCorrectionStep(t *testing.T) {
 		svc, dal, rounds, _ := newSvc(t)
 		expect(dal)
 		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
-		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).Return(0, errBoom).Once()
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).Return(0, errBoom).Once()
 		_, err := amend(svc)
 		require.ErrorIs(t, err, errBoom)
 	})
@@ -610,8 +652,8 @@ func TestRecord_CapsHeal(t *testing.T) {
 			svc, dal, _, tx := newSvc(t)
 			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
 			var stored actionlog.NewEntry
-			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).
-				Run(func(_ context.Context, e actionlog.NewEntry) { stored = e }).Return(42, nil).Once()
+			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).
+				Run(func(_ context.Context, e actionlog.NewEntry, _ int64) { stored = e }).Return(42, nil).Once()
 			_, err := svc.Record(context.Background(), actionlog.NewEntry{
 				CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: c.delta, Payload: json.RawMessage(c.payload),
 			})
@@ -627,7 +669,7 @@ func TestRecord_CapsHeal(t *testing.T) {
 		dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(0, nil).Once()
 		dal.EXPECT().InsertEntry(mock.Anything, actionlog.NewEntry{
 			CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -13, Payload: json.RawMessage(`{}`),
-		}).Return(42, nil).Once()
+		}, int64(0)).Return(42, nil).Once()
 		_, err := svc.Record(context.Background(), actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -13})
 		require.NoError(t, err)
 	})
@@ -671,8 +713,8 @@ func TestRecord_FloorsDamage(t *testing.T) {
 			maxHP.EXPECT().GetMaxHP(mock.Anything, int64(1)).Return(40, nil).Once()
 			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
 			var stored actionlog.NewEntry
-			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).
-				Run(func(_ context.Context, e actionlog.NewEntry) { stored = e }).Return(42, nil).Once()
+			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).
+				Run(func(_ context.Context, e actionlog.NewEntry, _ int64) { stored = e }).Return(42, nil).Once()
 			_, err := svc.Record(context.Background(), actionlog.NewEntry{
 				CharacterID: 1, Round: 2, Kind: actionlog.KindHPChange, Summary: "ogre", HPDelta: c.delta, Payload: json.RawMessage(c.payload),
 			})

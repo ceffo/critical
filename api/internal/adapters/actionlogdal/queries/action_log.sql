@@ -1,7 +1,12 @@
 -- InsertAction
-INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 RETURNING id
+;
+
+-- StartActionTransaction
+UPDATE action_log SET transaction_id = id
+WHERE id = ?
 ;
 
 -- InsertSnapshot
@@ -15,13 +20,13 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 ;
 
 -- GetAction
-SELECT id, character_id, round, kind, summary, hp_delta, payload, created_at /*:time.Time:notnull*/
+SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at /*:time.Time:notnull*/
 FROM action_log
 WHERE character_id = ? AND id = ?
 ;
 
 -- ListActions
-SELECT id, character_id, round, kind, summary, hp_delta, payload, created_at /*:time.Time:notnull*/
+SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at /*:time.Time:notnull*/
 FROM action_log
 WHERE character_id = ?
 ORDER BY id DESC
@@ -29,7 +34,7 @@ LIMIT ?
 ;
 
 -- ListActiveActionsByKind
-SELECT id, character_id, round, kind, summary, hp_delta, payload, created_at /*:time.Time:notnull*/
+SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at /*:time.Time:notnull*/
 FROM action_log
 WHERE character_id = ? AND kind = ?
   AND NOT EXISTS (
@@ -76,4 +81,11 @@ WHERE character_id = ?
   )
 ORDER BY id DESC
 LIMIT 1
+;
+
+-- ListTransactionActions
+SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at /*:time.Time:notnull*/
+FROM action_log
+WHERE character_id = ? AND transaction_id = ?
+ORDER BY id DESC
 ;

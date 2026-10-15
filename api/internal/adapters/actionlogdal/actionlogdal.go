@@ -33,23 +33,34 @@ func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
 	return sqlite.BobExec{Querier: d.conn(ctx)}
 }
 
-// InsertEntry inserts the entry and its snapshots. Callers run it inside a
-// transaction (actionlogsvc.Record does).
-func (d *DAL) InsertEntry(ctx context.Context, e actionlog.NewEntry) (int64, error) {
+// InsertEntry inserts the entry and its snapshots into action-log
+// transaction transactionID; 0 starts a new transaction, whose id is the new
+// entry's (ADR 0018 step 1). Callers run it inside a DB transaction
+// (actionlogsvc.Record does).
+func (d *DAL) InsertEntry(ctx context.Context, e actionlog.NewEntry, transactionID int64) (int64, error) {
 	payload := string(e.Payload)
 	if payload == "" {
 		payload = "{}"
 	}
-	id, err := queries.InsertAction([]queries.InsertAction_ActionLog{{
+	row := queries.InsertAction_ActionLog{
 		CharacterID: e.CharacterID,
 		Round:       int64(e.Round),
 		Kind:        string(e.Kind),
 		Summary:     e.Summary,
 		HPDelta:     int64(e.HPDelta),
 		Payload:     payload,
-	}}).One(ctx, d.exec(ctx))
+	}
+	if transactionID != 0 {
+		row.TransactionID = null.From(transactionID)
+	}
+	id, err := queries.InsertAction([]queries.InsertAction_ActionLog{row}).One(ctx, d.exec(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("insert action_log: %w", err)
+	}
+	if transactionID == 0 {
+		if _, err := queries.StartActionTransaction(id).Exec(ctx, d.exec(ctx)); err != nil {
+			return 0, fmt.Errorf("start action_log transaction %d: %w", id, err)
+		}
 	}
 	for _, s := range e.Snapshots {
 		_, err := queries.InsertSnapshot([]queries.InsertSnapshot_ActionSnapshots{{
@@ -109,6 +120,23 @@ func (d *DAL) ListEntries(ctx context.Context, characterID int64, limit int) ([]
 	rows, err := queries.ListActions(characterID, strconv.Itoa(limit)).All(ctx, d.exec(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("list action_log: %w", err)
+	}
+	entries := make([]actionlog.Entry, len(rows))
+	for i, r := range rows {
+		entries[i] = toEntry(r)
+	}
+	if err := d.attach(ctx, characterID, entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+// ListTransaction returns every entry of transaction transactionID, voided
+// ones included, newest first, with snapshots and corrections.
+func (d *DAL) ListTransaction(ctx context.Context, characterID, transactionID int64) ([]actionlog.Entry, error) {
+	rows, err := queries.ListTransactionActions(characterID, transactionID).All(ctx, d.exec(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("list action_log transaction %d: %w", transactionID, err)
 	}
 	entries := make([]actionlog.Entry, len(rows))
 	for i, r := range rows {
@@ -253,11 +281,13 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 	return nil
 }
 
-// toEntry maps an action_log row. GetActionRow, ListActionsRow and
-// ListActiveActionsByKindRow are aliases of the same struct type.
+// toEntry maps an action_log row. GetActionRow, ListActionsRow,
+// ListActiveActionsByKindRow and ListTransactionActionsRow are aliases of the
+// same struct type. A row without a transaction id (none is left after the
+// migration that added it) is its own transaction.
 func toEntry(f queries.GetActionRow) actionlog.Entry {
 	return actionlog.Entry{
-		ID: f.ID, CharacterID: f.CharacterID, Round: int(f.Round), Kind: actionlog.Kind(f.Kind),
+		ID: f.ID, TransactionID: f.TransactionID.GetOr(f.ID), CharacterID: f.CharacterID, Round: int(f.Round), Kind: actionlog.Kind(f.Kind),
 		Summary: f.Summary, HPDelta: int(f.HPDelta), Payload: json.RawMessage(f.Payload), CreatedAt: f.CreatedAt,
 	}
 }

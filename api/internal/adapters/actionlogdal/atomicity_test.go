@@ -159,7 +159,7 @@ func TestVoid_RestoresBeforeState(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, round(t, db, charID))
 
-	e, err := log.Void(ctx, charID, id)
+	e, err := log.Undo(ctx, charID, id)
 	require.NoError(t, err)
 	assert.Equal(t, actionlog.StatusVoided, e.Status())
 	assert.Equal(t, 0, round(t, db, charID))
@@ -183,19 +183,19 @@ func TestVoid_OnlyTheLatestEntry(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, older := range []int64{first, second} {
-		_, err = log.Void(ctx, charID, older)
-		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-		assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (hp_change, round 4) first", scratch))
+		_, err = log.Undo(ctx, charID, older)
+		require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+		assert.Contains(t, err.Error(), fmt.Sprintf("the newest entry is #%d (hp_change, round 4)", scratch))
 	}
 	assert.Equal(t, 2, round(t, db, charID), "nothing restored")
 
 	for i, id := range []int64{scratch, second, first} {
-		_, err = log.Void(ctx, charID, id)
+		_, err = log.Undo(ctx, charID, id)
 		require.NoError(t, err, "pop %d", i)
 	}
 	assert.Equal(t, 0, round(t, db, charID))
-	_, err = log.Void(ctx, charID, first)
-	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
+	_, err = log.Undo(ctx, charID, first)
+	require.ErrorIs(t, err, actionlogsvc.ErrNothingToUndo)
 }
 
 func TestVoid_AtomicWithRestore(t *testing.T) {
@@ -220,7 +220,7 @@ func TestVoid_AtomicWithRestore(t *testing.T) {
 			log := newLog(t, db, failingDAL{DAL: base, failCorrection: c.failCorrection})
 			log.RegisterRestorer("round", roundState{db: db, fail: c.failRestore})
 
-			_, err = log.Void(context.Background(), charID, id)
+			_, err = log.Undo(context.Background(), charID, id)
 			require.ErrorIs(t, err, errBoom)
 
 			assert.Equal(t, 1, round(t, db, charID), "restored state rolled back")
@@ -260,21 +260,81 @@ func TestAmendNoteAndPop_HPTotal(t *testing.T) {
 	assert.Equal(t, actionlog.StatusActive, e.Status())
 	assert.Equal(t, -5, total(), "a note changes no HP")
 
-	_, err = log.Void(ctx, charID, orc)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the potion is on top")
+	_, err = log.Undo(ctx, charID, orc)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged, "the potion is on top")
 	assert.Equal(t, -5, total())
 	topID, _, err := log.TopID(ctx, charID)
 	require.NoError(t, err)
-	_, err = log.Void(ctx, charID, topID)
+	_, err = log.Undo(ctx, charID, topID)
 	require.NoError(t, err)
 	assert.Equal(t, -8, total(), "potion popped")
 
-	_, err = log.Void(ctx, charID, orc)
+	_, err = log.Undo(ctx, charID, orc)
 	require.NoError(t, err)
 	assert.Equal(t, 0, total())
 
-	_, err = log.Void(ctx, charID, orc)
-	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
+	_, err = log.Undo(ctx, charID, orc)
+	require.ErrorIs(t, err, actionlogsvc.ErrNothingToUndo)
 	_, err = log.Amend(ctx, charID, orc, actionlogsvc.Amendment{Note: "late"})
 	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
+}
+
+// failingRestorer always fails, after nothing.
+type failingRestorer struct{}
+
+func (failingRestorer) Restore(context.Context, int64, json.RawMessage) error { return errBoom }
+
+// ADR 0018 steps 1 and 2 on SQLite: two entries recorded in one InTx of the
+// Transactions runner are one transaction; an undo pops both, newest first.
+// When the older entry's restore fails after the newer one was restored and
+// voided, the DB transaction rolls everything back: no void, the state as it
+// was, the same top.
+func TestUndo_RestorerFailsMidTransaction_RollsBackEverything(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	log := newLog(t, db, actionlogdal.New(db))
+	rs := roundState{db: db}
+	log.RegisterRestorer("round", rs)
+	ctx := context.Background()
+	tx := actionlogsvc.Transactions(db)
+
+	record := func(ctx context.Context, key string, from, to int) (int64, error) {
+		return log.Record(ctx, actionlog.NewEntry{
+			CharacterID: charID, Kind: actionlog.KindRoundAdvance, Payload: json.RawMessage(`{}`),
+			Snapshots: []actionlog.Snapshot{{Key: key, Before: json.RawMessage(itoa(from)), After: json.RawMessage(itoa(to))}},
+		})
+	}
+	var older, newer int64
+	require.NoError(t, tx.InTx(ctx, func(ctx context.Context) error {
+		var err error
+		if older, err = record(ctx, "fragile", 0, 1); err != nil {
+			return err
+		}
+		if err := rs.set(ctx, charID, 1); err != nil {
+			return err
+		}
+		newer, err = record(ctx, "round", 0, 1)
+		return err
+	}))
+	entries, err := log.List(ctx, charID, 0)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, []int64{older, older}, []int64{entries[0].TransactionID, entries[1].TransactionID}, "one transaction, the first entry's id")
+
+	log.RegisterRestorer("fragile", failingRestorer{})
+	_, err = log.Undo(ctx, charID, newer)
+	require.ErrorIs(t, err, errBoom)
+	assert.Equal(t, 1, round(t, db, charID), "the newer entry's restore is rolled back")
+	after, err := log.List(ctx, charID, 0)
+	require.NoError(t, err)
+	assert.Equal(t, entries, after, "no void written")
+
+	log.RegisterRestorer("fragile", roundState{db: db})
+	popped, err := log.Undo(ctx, charID, newer)
+	require.NoError(t, err)
+	assert.Equal(t, older, popped.ID, "answers with the transaction's first entry")
+	assert.Equal(t, 0, round(t, db, charID))
+	_, ok, err := log.TopID(ctx, charID)
+	require.NoError(t, err)
+	assert.False(t, ok, "both entries popped in one undo")
 }

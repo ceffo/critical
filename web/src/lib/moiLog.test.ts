@@ -7,6 +7,7 @@ function entry(kind: LogKind, over: Partial<LogEntry> = {}): LogEntry {
   const id = nextId--;
   return {
     id,
+    transactionId: id,
     characterId: 1,
     round: 0,
     kind,

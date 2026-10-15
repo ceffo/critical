@@ -49,7 +49,7 @@ func TestPassTimeIsLoggedAndVoidRestoresBuffsAndRound(t *testing.T) {
 	assert.Equal(t, actionlog.KindTimePassed, entries[0].Kind)
 	assert.Equal(t, 3, entries[0].Round, "logged in the round it ends")
 
-	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[0].ID)
 	require.NoError(t, err)
 	r, err = bs.Buffs.GetRound(ctx, id)
 	require.NoError(t, err)

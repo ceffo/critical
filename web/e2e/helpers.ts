@@ -206,17 +206,17 @@ export async function turnMenu(
 }
 
 /**
- * Undo the turn's initiative entry, the one the turn block shows (Next turn logs it after the
- * advance, so it is popped first).
+ * Undo the Next turn on top: its advance and the initiative it rolled are one transaction
+ * (ADR 0018), so the journal's one Undo pops both. `advance` is the advance entry's text.
  */
-export async function undoInitiative(page: Page) {
+export async function undoNextTurn(page: Page, advance: Locator) {
   const id = await page
     .getByTestId("initiative-value")
     .getAttribute("data-entry-id");
-  const entry = page.locator(`li[data-entry-id="${id}"]`);
+  const initiative = page.locator(`li[data-entry-id="${id}"]`);
   await page.getByTestId("undo").click();
-  await expect(entry).toHaveAttribute("data-status", "voided");
-  await expect(page.getByTestId("initiative-value")).toHaveCount(0);
+  await expect(initiative).toHaveAttribute("data-status", "voided");
+  await expect(advance).toHaveAttribute("data-status", "voided");
 }
 
 /** The Weapons tab's attack form (target bar, weapon in hand, switching). */

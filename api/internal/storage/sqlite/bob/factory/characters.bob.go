@@ -744,7 +744,7 @@ func (o *CharacterTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	for k, v := range mInCreation {
 		newMInCreation[k] = v
 	}
-	newMInCreation["characters:action_log:fk_action_log_0"] = m
+	newMInCreation["characters:action_log:fk_action_log_1"] = m
 	newMInCreation["characters:active_buffs:fk_active_buffs_0"] = m
 	newMInCreation["characters:attack_forms:fk_attack_forms_0"] = m
 	newMInCreation["characters:dice_favourites:fk_dice_favourites_0"] = m

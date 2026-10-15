@@ -23,10 +23,10 @@ type SVC interface {
 	List(ctx context.Context, characterID int64, limit int) ([]actionlog.Entry, error)
 	Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error)
 	actionlog.LatestAmender
-	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
-	// Undo pops the newest non-voided entry, any kind, when its id is
-	// expectedTopID (ADR 0010): ErrTopChanged when another entry is on top,
-	// ErrNothingToUndo when the log has none. Returns the voided entry.
+	// Undo pops the transaction of the newest non-voided entry, whole, when
+	// that entry's id is expectedTopID (ADR 0010, ADR 0018 step 2):
+	// ErrTopChanged when another entry is on top, ErrNothingToUndo when the
+	// log has none. Returns the transaction's first entry, voided.
 	Undo(ctx context.Context, characterID, expectedTopID int64) (*actionlog.Entry, error)
 	// TopID is the newest non-voided entry, the one Undo pops; ok is false
 	// when there is none.
@@ -45,12 +45,17 @@ type SVC interface {
 // DAL is the storage port. Every method must use the transaction carried by
 // ctx when there is one (see domain.TxRunner).
 type DAL interface {
-	InsertEntry(ctx context.Context, e actionlog.NewEntry) (int64, error)
+	// InsertEntry stores e in action-log transaction transactionID; 0 starts
+	// a new transaction whose id is the new entry's (ADR 0018 step 1).
+	InsertEntry(ctx context.Context, e actionlog.NewEntry, transactionID int64) (int64, error)
 	InsertCorrection(ctx context.Context, c actionlog.Correction) error
 	// GetEntry returns the entry with snapshots and corrections, or
 	// domain.ErrNotFound.
 	GetEntry(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
 	ListEntries(ctx context.Context, characterID int64, limit int) ([]actionlog.Entry, error)
+	// ListTransaction returns every entry of a transaction, voided ones
+	// included, newest first.
+	ListTransaction(ctx context.Context, characterID, transactionID int64) ([]actionlog.Entry, error)
 	ListActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 	// LatestActiveID returns the newest non-voided entry, any kind.
 	LatestActiveID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
@@ -114,7 +119,7 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxH
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: invalid config: %w", err)
 	}
-	return &service{cfg: cfg, dal: dal, tx: tx, rounds: rounds, maxHP: maxHP, restorers: map[string]actionlog.Restorer{}}, nil
+	return &service{cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxHP: maxHP, restorers: map[string]actionlog.Restorer{}}, nil
 }
 
 func (s *service) RegisterRestorer(stateKey string, r actionlog.Restorer) {

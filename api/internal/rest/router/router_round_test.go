@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -211,12 +210,12 @@ func TestRoundInitiative_WireShape(t *testing.T) {
 		assert.JSONEq(t, `{"value":2,"logEntryId":13}`, rec.Body.String())
 	})
 
-	t.Run("reroll: 409 when another entry is newer", func(t *testing.T) {
+	t.Run("reroll: 409 when another transaction is newer", func(t *testing.T) {
 		h, m := newRouter(t)
 		m.buffs.EXPECT().RerollInitiative(mock.Anything, int64(1)).
-			Return(buffsvc.Initiative{}, fmt.Errorf("pop initiative: %w", actionlogsvc.ErrNotLatest))
+			Return(buffsvc.Initiative{}, fmt.Errorf("%w: %w", domain.ErrConflict, buffsvc.ErrInitiativeNotOnTop))
 		rec := do(h, "POST", "/api/round/initiative/reroll", "")
 		assert.Equal(t, http.StatusConflict, rec.Code)
-		assert.Contains(t, rec.Body.String(), `"error"`)
+		assert.Contains(t, rec.Body.String(), `"code":"initiative_not_on_top"`)
 	})
 }

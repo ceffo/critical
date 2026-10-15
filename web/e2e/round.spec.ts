@@ -15,7 +15,8 @@ import {
   openDashboard,
   recordHp,
   undoEntry,
-  undoInitiative,
+  undoNextTurn,
+  expectUndoOn,
 } from "./helpers";
 
 test("Next turn advances the counter and starts a new log group", async ({
@@ -104,8 +105,7 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(1);
   // The newest "Turn 0 → 1" entry (the earlier Next Rounds also went through 0 → 1).
-  await undoInitiative(page);
-  await page.getByTestId("undo").click();
+  await undoNextTurn(page, logEntry(page, "Turn 0 → 1").first());
   await expect.poll(() => currentRound(page)).toBe(0);
 
   // Voiding End combat brings round 7 back.
@@ -250,10 +250,9 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   ).toHaveCount(0);
   await snap(page, "pass-time-void-not-offered-fr");
 
-  // Void Next Round first (its initiative, then the advance), then the fast-forward: the buff
-  // and round 1 come back.
-  await undoInitiative(page);
-  await voidFr(page, "Tour 0 → 1");
+  // Undo Next Round first (one Undo: the advance and its initiative), then the fast-forward: the
+  // buff and round 1 come back.
+  await undoNextTurn(page, logEntryFr(page, "Tour 0 → 1").first());
   await expect.poll(() => currentRound(page)).toBe(0);
   await voidFr(page, text);
   await expect(logEntryFr(page, text)).toHaveAttribute("data-status", "voided");
@@ -321,7 +320,7 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   );
 });
 
-test("Next turn rolls the initiative; reroll replaces its log entry", async ({
+test("Next turn rolls the initiative; one Undo pops a turn with its initiative; reroll replaces it", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -332,16 +331,29 @@ test("Next turn rolls the initiative; reroll replaces its log entry", async ({
   await expect.poll(() => currentRound(page)).toBe(1);
   const value = page.getByTestId("initiative-value");
   await expect(value).toHaveText(/^([1-9]|10)$/);
+  const firstValue = await value.textContent();
   const firstId = await value.getAttribute("data-entry-id");
   const first = combatLog(page).locator(`[data-entry-id="${firstId}"]`);
   await expect(first).toContainText(
-    `Initiative ${await value.textContent()} (d10) for turn 1`,
+    `Initiative ${firstValue} (d10) for turn 1`,
   );
 
-  // The reroll pops that entry and logs a new roll (the d10 may show the same face).
+  // Next turn and the initiative it rolls are one transaction (ADR 0018): the Undo names the
+  // turn, and one click brings back turn 1 with its initiative.
+  await nextTurn(page);
+  await expect.poll(() => currentRound(page)).toBe(2);
+  await expect(value).not.toHaveAttribute("data-entry-id", firstId ?? "");
+  await expectUndoOn(page, "Turn 1 → 2");
+  await snap(page, "undo-names-next-turn");
+  await undoNextTurn(page, logEntry(page, "Turn 1 → 2"));
+  await expect.poll(() => currentRound(page)).toBe(1);
+  await expect(value).toHaveAttribute("data-entry-id", firstId ?? "");
+  await expect(value).toHaveText(firstValue ?? "");
+
+  // The reroll logs a new roll as its own step; the roll it replaces stays (an Undo gives it back).
   await page.getByRole("button", { name: "Reroll initiative" }).click();
   await expect(value).not.toHaveAttribute("data-entry-id", firstId ?? "");
-  await expect(first).toHaveAttribute("data-status", "voided");
+  await expect(first).toHaveAttribute("data-status", "active");
   const rerolled = combatLog(page).locator(
     `[data-entry-id="${await value.getAttribute("data-entry-id")}"]`,
   );

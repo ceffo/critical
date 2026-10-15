@@ -49,8 +49,9 @@ func topID(t *testing.T, bs *composition.BackingServices) int64 {
 
 // buildUndoStack logs one entry of each state-changing kind: spell
 // preparation, a cast (slot and Stoneskin), Haste, a bow shot (one +3 arrow),
-// damage, a wand charge and a Next Round (advance, then its initiative). It
-// returns the kinds in order and the state before the first entry and after each.
+// damage, a wand charge and a Next Round (the advance and its initiative, one
+// transaction, ADR 0018 step 1). It returns each transaction's first kind in
+// order and the state before the first transaction and after each.
 func buildUndoStack(t *testing.T) (*composition.BackingServices, []actionlog.Kind, []undoState) {
 	t.Helper()
 	bs := bootMaxDice(t)
@@ -76,16 +77,10 @@ func buildUndoStack(t *testing.T) (*composition.BackingServices, []actionlog.Kin
 	step(err, actionlog.KindHPChange)
 	_, err = bs.Items.UseItem(ctx, id, "wand_lightning")
 	step(err, actionlog.KindItemUse)
-	// One call, two entries: the intermediate state (advanced, no initiative)
-	// is what popping the initiative leaves.
+	// One call, two entries, one transaction: one step.
 	_, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
-	require.NoError(t, err)
-	afterAdvance := undoStateOf(t, bs)
-	require.NotNil(t, afterAdvance.Initiative)
-	noInitiative := afterAdvance
-	noInitiative.Initiative = nil
-	kinds = append(kinds, actionlog.KindRoundAdvance, actionlog.KindInitiative)
-	states = append(states, noInitiative, afterAdvance)
+	step(err, actionlog.KindRoundAdvance)
+	require.NotNil(t, states[len(states)-1].Initiative)
 
 	for i := 1; i < len(states); i++ {
 		require.NotEqual(t, states[i-1], states[i], "%s changed no state", kinds[i-1])
@@ -93,17 +88,18 @@ func buildUndoStack(t *testing.T) (*composition.BackingServices, []actionlog.Kin
 	return bs, kinds, states
 }
 
-// ADR 0010 step 2: undo with the expected top pops the newest entry of any
-// kind and reverts its whole effect (HP, buffs, round, initiative, ammo,
-// slots, item charges); popping in order walks back every step, then there is
-// nothing left to undo.
+// ADR 0010 step 2, ADR 0018 step 2: undo with the expected top pops the
+// newest transaction, any kind, and reverts its whole effect (HP, buffs,
+// round, initiative, ammo, slots, item charges): Next Round pops in one step,
+// its initiative with it. Popping in order walks back every step, then there
+// is nothing left to undo.
 func TestUndo_PopsEveryKindInOrder(t *testing.T) {
 	bs, kinds, states := buildUndoStack(t)
 	ctx := context.Background()
 	for i := len(kinds) - 1; i >= 0; i-- {
 		e, err := bs.Log.Undo(ctx, bs.CharacterID, topID(t, bs))
 		require.NoError(t, err, "undo %s", kinds[i])
-		assert.Equal(t, kinds[i], e.Kind)
+		assert.Equal(t, kinds[i], e.Kind, "the undo answers with the transaction's first entry")
 		assert.Equal(t, actionlog.StatusVoided, e.Status())
 		assert.Equal(t, states[i], undoStateOf(t, bs), "state after undoing %s", kinds[i])
 	}

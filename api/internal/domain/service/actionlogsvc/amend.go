@@ -130,7 +130,7 @@ func (s *service) recordStep(ctx context.Context, characterID int64, e *actionlo
 	if err != nil {
 		return 0, fmt.Errorf("current round: %w", err)
 	}
-	id, err := s.dal.InsertEntry(ctx, actionlog.NewEntry{
+	id, err := s.insert(ctx, actionlog.NewEntry{
 		CharacterID: characterID, Round: round, Kind: actionlog.KindCorrection, Payload: payload,
 	})
 	if err != nil {

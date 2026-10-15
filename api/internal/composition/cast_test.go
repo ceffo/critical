@@ -71,9 +71,9 @@ func TestReceivedStrengthActivatesThePowerGem(t *testing.T) {
 	assert.InDelta(t, 2.0, after.DiceMultiplier, 0.001)
 
 	// Void the two attacks, then the receive: Strength is gone.
-	_, err = bs.Log.Void(ctx, id, after.LogEntryID)
+	_, err = bs.Log.Undo(ctx, id, after.LogEntryID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, id, res.EntryID)
+	_, err = bs.Log.Undo(ctx, id, res.EntryID)
 	require.NoError(t, err)
 	str, err = bs.Buffs.GetEffectiveStr(ctx, id)
 	require.NoError(t, err)
@@ -108,9 +108,9 @@ func TestCastIsOneEntryAndVoidRestoresSlotAndBuff(t *testing.T) {
 	require.Len(t, entries, 3, "prepare + two casts")
 	assert.Equal(t, actionlog.KindCast, entries[0].Kind)
 
-	_, err = bs.Log.Void(ctx, id, fire.EntryID)
+	_, err = bs.Log.Undo(ctx, id, fire.EntryID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, id, res.EntryID)
+	_, err = bs.Log.Undo(ctx, id, res.EntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 0, usedSlots(t, bs))
 	buffs, err = bs.Buffs.ListActive(ctx, id)
@@ -136,13 +136,13 @@ func TestLongRestBlocksVoidingAnEarlierCast(t *testing.T) {
 	require.NotZero(t, rest.EntryID)
 	require.Equal(t, 0, usedSlots(t, bs))
 
-	_, err = bs.Log.Void(ctx, id, haste.EntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-	assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (long_rest", rest.EntryID))
+	_, err = bs.Log.Undo(ctx, id, haste.EntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+	assert.Contains(t, err.Error(), fmt.Sprintf("the newest entry is #%d (long_rest", rest.EntryID))
 	assert.Equal(t, 0, usedSlots(t, bs), "the slots stay as the rest left them")
 
 	// Voiding the rest itself puts the slots back as they were before it.
-	_, err = bs.Log.Void(ctx, id, rest.EntryID)
+	_, err = bs.Log.Undo(ctx, id, rest.EntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 2, usedSlots(t, bs))
 }
@@ -160,13 +160,13 @@ func TestCastVoidsGoNewestFirst(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 25, mm.Damage.Total, "5 missiles of 1d4+1 at max")
 
-	_, err = bs.Log.Void(ctx, id, fire.EntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-	assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (cast", mm.EntryID))
+	_, err = bs.Log.Undo(ctx, id, fire.EntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+	assert.Contains(t, err.Error(), fmt.Sprintf("the newest entry is #%d (cast", mm.EntryID))
 
-	_, err = bs.Log.Void(ctx, id, mm.EntryID)
+	_, err = bs.Log.Undo(ctx, id, mm.EntryID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, id, fire.EntryID)
+	_, err = bs.Log.Undo(ctx, id, fire.EntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 0, usedSlots(t, bs))
 }
@@ -192,7 +192,7 @@ func TestStoneskinOnAnAlly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, buffs)
 
-	_, err = bs.Log.Void(ctx, id, res.EntryID)
+	_, err = bs.Log.Undo(ctx, id, res.EntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 0, usedSlots(t, bs))
 }
@@ -223,7 +223,7 @@ func TestReceivedBuffStartsInTheCurrentRoundAndVoidRestoresTheList(t *testing.T)
 	assert.Equal(t, "Strength", after[1].Name)
 	assert.Equal(t, 3, after[1].StartRound, "starts in the round it was received")
 
-	_, err = bs.Log.Void(ctx, id, res.EntryID)
+	_, err = bs.Log.Undo(ctx, id, res.EntryID)
 	require.NoError(t, err)
 	restored, err := bs.Buffs.ListActive(ctx, id)
 	require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestCastChargeBuff_SpendThenVoidRestoresChargesAndTotal(t *testing.T) {
 
 	entries, err := bs.Log.List(ctx, id, 1)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[0].ID)
 	require.NoError(t, err)
 	buffs, err = bs.Buffs.ListActive(ctx, id)
 	require.NoError(t, err)
@@ -288,9 +288,9 @@ func TestExposureOnTheBard_VoidGivesTheHPBack(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, before.CurrentHp-10, st.CurrentHp)
 
-	_, err = bs.Log.Void(ctx, id, other.EntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "newest first")
-	_, err = bs.Log.Void(ctx, id, self.EntryID)
+	_, err = bs.Log.Undo(ctx, id, other.EntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged, "newest first")
+	_, err = bs.Log.Undo(ctx, id, self.EntryID)
 	require.NoError(t, err)
 	st, err = bs.HP.GetState(ctx, id)
 	require.NoError(t, err)

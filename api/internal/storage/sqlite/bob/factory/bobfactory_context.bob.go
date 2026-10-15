@@ -19,7 +19,9 @@ var (
 	actionLogWithParentsCascadingCtx       = newContextual[bool]("actionLogWithParentsCascading")
 	actionLogRelStepActionCorrectionsCtx   = newContextual[bool]("action_corrections.action_log.fk_action_corrections_0")
 	actionLogRelActionActionCorrectionsCtx = newContextual[bool]("action_corrections.action_log.fk_action_corrections_1")
-	actionLogRelCharacterCtx               = newContextual[bool]("action_log.characters.fk_action_log_0")
+	actionLogRelTransactionCtx             = newContextual[bool]("action_log.action_log.fk_action_log_0")
+	actionLogRelReverseTransactionsCtx     = newContextual[bool]("action_log.action_log.fk_action_log_0")
+	actionLogRelCharacterCtx               = newContextual[bool]("action_log.characters.fk_action_log_1")
 	actionLogRelActionActionSnapshotsCtx   = newContextual[bool]("action_log.action_snapshots.fk_action_snapshots_0")
 
 	// Relationship Contexts for action_snapshots
@@ -39,7 +41,7 @@ var (
 
 	// Relationship Contexts for characters
 	characterWithParentsCascadingCtx = newContextual[bool]("characterWithParentsCascading")
-	characterRelActionLogsCtx        = newContextual[bool]("action_log.characters.fk_action_log_0")
+	characterRelActionLogsCtx        = newContextual[bool]("action_log.characters.fk_action_log_1")
 	characterRelActiveBuffsCtx       = newContextual[bool]("active_buffs.characters.fk_active_buffs_0")
 	characterRelAttackFormCtx        = newContextual[bool]("attack_forms.characters.fk_attack_forms_0")
 	characterRelDiceFavouritesCtx    = newContextual[bool]("characters.dice_favourites.fk_dice_favourites_0")

@@ -56,6 +56,9 @@ export interface LogCorrection {
 
 export interface LogEntry {
   id: number;
+  /** The id of the first entry of this entry's transaction (its own id when it is that entry):
+   * everything one request recorded. Undo pops the whole transaction (ADR 0018 steps 1 and 2). */
+  transactionId: number;
   characterId: number;
   round: number;
   kind: LogKind;

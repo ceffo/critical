@@ -46,7 +46,10 @@ id, name, str, dex, con, int, wis, cha,
 hp_max, thac0_base, level, xp_total
 
 -- action_log: THE append-only log of table actions (HP ledger + combat log)
-id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON, created_at
+id, character_id, round, kind TEXT, summary TEXT, hp_delta INTEGER, payload JSON, created_at,
+transaction_id
+-- (transaction_id: the id of the first entry of the request that recorded it, ADR 0018 step 1;
+--  undo pops a transaction whole. Rows older than the column are each their own transaction)
 -- action_snapshots: before/after state an entry changed, one row per state key
 id, action_id, state_key, before_state JSON, after_state JSON
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
@@ -106,7 +109,9 @@ situational_value, situational_label
 ```
 
 **Recording actions.** A service that changes state records an `actionlog.NewEntry` through the
-action log's `Record` inside the same `domain.TxRunner.InTx` as its state write, with
+action log's `Record` inside the same `domain.TxRunner.InTx` as its state write (the runner is
+`actionlogsvc.Transactions(db)`, built once in the composition root: every entry recorded in one
+outermost `InTx` is one transaction, popped by one undo, ADR 0018), with
 `Snapshots` of the state it changed (a `before` and an `after` JSON per state key). It registers an
 `actionlog.Restorer` for its state key on the action log in the composition root, so voiding
 (popping) the entry restores the "before" state; a service exposes its restorers (for example

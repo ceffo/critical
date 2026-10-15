@@ -257,17 +257,22 @@ const (
 )
 
 // Entry is a recorded action with its corrections in id order.
+//
+// TransactionID is the transaction the entry belongs to (ADR 0018 step 1):
+// the id of the first entry its request recorded, its own id when it is that
+// first entry (and for every entry written before transactions existed).
 type Entry struct {
-	ID          int64
-	CharacterID int64
-	Round       int
-	Kind        Kind
-	Summary     string
-	HPDelta     int
-	Payload     json.RawMessage
-	Snapshots   []Snapshot
-	CreatedAt   time.Time
-	Corrections []Correction
+	ID            int64
+	TransactionID int64
+	CharacterID   int64
+	Round         int
+	Kind          Kind
+	Summary       string
+	HPDelta       int
+	Payload       json.RawMessage
+	Snapshots     []Snapshot
+	CreatedAt     time.Time
+	Corrections   []Correction
 }
 
 // Status is voided when any void exists, amended when an amend changed a

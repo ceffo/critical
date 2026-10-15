@@ -86,7 +86,7 @@ func TestLongRest_RefillsSlotsAndDailyItemsOnly(t *testing.T) {
 	assert.Equal(t, []string{"Power Gem: Dispel Magic"}, refilled(t, bs, res.EntryID))
 
 	// The rest is logged and voidable: the gem is spent again, the slot used.
-	_, err = bs.Log.Void(context.Background(), bs.CharacterID, res.EntryID)
+	_, err = bs.Log.Undo(context.Background(), bs.CharacterID, res.EntryID)
 	require.NoError(t, err)
 	assert.Zero(t, gemCount(t, bs))
 	assert.Equal(t, 1, usedSlots(t, bs))

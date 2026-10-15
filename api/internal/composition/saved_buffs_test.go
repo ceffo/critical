@@ -38,7 +38,7 @@ func TestBuffNoteIsLoggedEditableAndVoidRestoresIt(t *testing.T) {
 	assert.Contains(t, string(entries[0].Payload), `"fromNote":"+4 saves vs fire"`)
 	assert.Contains(t, string(entries[1].Payload), `"note":"+4 saves vs fire"`)
 
-	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[0].ID)
 	require.NoError(t, err)
 	buffs, err = bs.Buffs.ListActive(ctx, id)
 	require.NoError(t, err)
@@ -108,7 +108,7 @@ func TestSavedBuffs_DeleteIsLoggedAndVoidable(t *testing.T) {
 	assert.Equal(t, actionlog.KindBuffChange, entries[0].Kind)
 	assert.JSONEq(t, `{"action":"delete_template","buff":"Hammer form"}`, string(entries[0].Payload))
 
-	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[0].ID)
 	require.NoError(t, err)
 	list, err = bs.Buffs.ListSaved(ctx, id)
 	require.NoError(t, err)
@@ -121,11 +121,11 @@ func TestSavedBuffs_DeleteIsLoggedAndVoidable(t *testing.T) {
 
 	// Pop-only: the save sits under the activation, so it
 	// is refused until the activation is popped; then the template goes.
-	_, err = bs.Log.Void(ctx, id, entries[2].ID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-	_, err = bs.Log.Void(ctx, id, entries[1].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[2].ID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+	_, err = bs.Log.Undo(ctx, id, entries[1].ID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, id, entries[2].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[2].ID)
 	require.NoError(t, err)
 	list, err = bs.Buffs.ListSaved(ctx, id)
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestSavedBuffs_VoidingAReplacingSaveRestoresTheOldTemplate(t *testing.T) {
 
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[0].ID)
 	require.NoError(t, err)
 	list, err = bs.Buffs.ListSaved(ctx, id)
 	require.NoError(t, err)
@@ -202,12 +202,12 @@ func TestSavedBuffs_VoidingAnEarlierSaveIsBlockedByALiveDelete(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
 
-	_, err = bs.Log.Void(ctx, id, entries[1].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[1].ID)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (buff_change", entries[0].ID))
+	assert.Contains(t, err.Error(), fmt.Sprintf("the newest entry is #%d (buff_change", entries[0].ID))
 
 	// Void the delete: the chip is back, same id.
-	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[0].ID)
 	require.NoError(t, err)
 	back, err := bs.Buffs.ListSaved(ctx, id)
 	require.NoError(t, err)

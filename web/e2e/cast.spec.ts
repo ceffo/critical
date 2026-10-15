@@ -13,7 +13,7 @@ import {
   expectUndoOn,
   nextTurn,
   turnMenu,
-  undoInitiative,
+  undoNextTurn,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -328,8 +328,7 @@ test("after Next turn the journal Undo is not on the cast until Next turn is pop
   await expectUndoOn(page, "Cast Stoneskin", true);
   await snap(page, "undo-not-on-the-cast-after-next-round");
 
-  await undoInitiative(page);
-  await undoEntry(page, "Turn 0 → 1");
+  await undoNextTurn(page, logEntry(page, "Turn 0 → 1"));
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await undoEntry(page, "Cast Stoneskin");
   await expect(buffBadge(page, "Stoneskin")).toHaveCount(0);

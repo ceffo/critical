@@ -8,11 +8,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
+	"github.com/ceffo/critical/api/pkg/formula"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,6 +50,26 @@ func (f fakeChars) GetCharacter(context.Context, int64) (*charactersvc.Character
 	return &charactersvc.Character{Level: f.level}, nil
 }
 
+// fakeDamage serves 10d6+2 fire, once per round, at any level for
+// "fireball" and nothing for other spells; it records the levels asked.
+type fakeDamage struct{ levels *[]int }
+
+func (f fakeDamage) DamageAt(_ context.Context, id string, level int) (*spelleffectsvc.DamageAt, error) {
+	if f.levels != nil {
+		*f.levels = append(*f.levels, level)
+	}
+	if level > spelleffectsvc.MaxCasterLevel {
+		return nil, domain.ErrInvalidInput // as castsvc
+	}
+	if id != "fireball" {
+		return nil, nil
+	}
+	return &spelleffectsvc.DamageAt{
+		CasterLevel: level, Dice: formula.Sum{Dice: []formula.Dice{{Count: 10, Sides: 6}}, Constant: 2},
+		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
+	}, nil
+}
+
 func search(t *testing.T, url string) (int, []spellhdl.SpellDTO) {
 	return searchAs(t, url, fakeChars{level: 15})
 }
@@ -55,9 +78,9 @@ func searchAs(t *testing.T, url string, chars fakeChars) (int, []spellhdl.SpellD
 	t.Helper()
 	raw := spellstats.Raw{CastingTime: "1", Range: "60 yds. + 10 yds./level", Duration: "3 rds./level", SavingThrow: "None"}
 	svc := fakeSvc{spells: []spellsvc.Spell{{
-		Name: "Magic Missile", Range: raw.Range, Duration: raw.Duration, Stats: spellstats.Parse(raw),
-	}}}
-	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, svc, chars))
+		ID: "magic_missile", Name: "Magic Missile", Range: raw.Range, Duration: raw.Duration, Stats: spellstats.Parse(raw),
+	}, {ID: "fireball", Name: "Fireball", Stats: spellstats.Parse(spellstats.Raw{})}}}
+	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, svc, chars, fakeDamage{}))
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	var page spellhdl.SpellPageDTO
@@ -70,7 +93,7 @@ func searchAs(t *testing.T, url string, chars fakeChars) (int, []spellhdl.SpellD
 func TestSearch_ReturnsRawTextTypedStatsAndValuesAtCharacterLevel(t *testing.T) {
 	code, out := search(t, "/api/spells")
 	require.Equal(t, http.StatusOK, code)
-	require.Len(t, out, 1)
+	require.Len(t, out, 2)
 	assert.Equal(t, "60 yds. + 10 yds./level", out[0].Range, "raw text kept for existing callers")
 	assert.Equal(t, spellstats.RangeDistance, out[0].Stats.Range.Kind)
 	assert.Equal(t, 15, out[0].CasterLevel)
@@ -89,7 +112,7 @@ func TestSearch_CasterLevelQueryOverridesTheCharacter(t *testing.T) {
 }
 
 func TestSearch_BadCasterLevelIs400(t *testing.T) {
-	for _, q := range []string{"abc", "0", "-3"} {
+	for _, q := range []string{"abc", "0", "-3", "41"} {
 		code, _ := search(t, "/api/spells?caster_level="+q)
 		assert.Equal(t, http.StatusBadRequest, code, q)
 	}
@@ -98,7 +121,7 @@ func TestSearch_BadCasterLevelIs400(t *testing.T) {
 func TestSearch_CharacterLookupFailureStillReturnsSpellsWithoutValues(t *testing.T) {
 	code, out := searchAs(t, "/api/spells", fakeChars{err: errors.New("no character")})
 	require.Equal(t, http.StatusOK, code)
-	require.Len(t, out, 1)
+	require.Len(t, out, 2)
 	assert.Equal(t, "Magic Missile", out[0].Name)
 	assert.Nil(t, out[0].Values)
 	assert.Equal(t, spellstats.RangeDistance, out[0].Stats.Range.Kind, "typed stats still returned")
@@ -111,7 +134,7 @@ func TestSearch_CharacterLookupFailureStillReturnsSpellsWithoutValues(t *testing
 func filterFor(t *testing.T, url string) (int, spellsvc.Filter) {
 	t.Helper()
 	var got spellsvc.Filter
-	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, fakeSvc{got: &got}, fakeChars{level: 5}))
+	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, fakeSvc{got: &got}, fakeChars{level: 5}, fakeDamage{}))
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	return rec.Code, got
@@ -188,7 +211,7 @@ func TestSearch_MalformedFilterIs400(t *testing.T) {
 func pageFor(t *testing.T, url string) (int, spellsvc.PageRequest, spellhdl.SpellPageDTO) {
 	t.Helper()
 	var got spellsvc.PageRequest
-	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, fakeSvc{gotReq: &got}, fakeChars{level: 5}))
+	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, fakeSvc{gotReq: &got}, fakeChars{level: 5}, fakeDamage{}))
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest(http.MethodGet, url, nil))
 	var out spellhdl.SpellPageDTO
@@ -231,4 +254,46 @@ func TestFilterOptions_ListsSchoolGroupsAndSpheres(t *testing.T) {
 	}, out.Schools)
 	assert.Contains(t, out.Spheres, "Elemental Fire")
 	assert.Contains(t, out.Spheres, "Charm")
+}
+
+// The damage a cast rolls is served at the level the values are for, as dice
+// groups plus a modifier; a spell that rolls none has no damage.
+func TestSearch_ServesDamageAtTheCasterLevel(t *testing.T) {
+	code, out := search(t, "/api/spells")
+	require.Equal(t, http.StatusOK, code)
+	require.Len(t, out, 2)
+	assert.Nil(t, out[0].Damage, "magic_missile: the fake serves none")
+	assert.Equal(t, &spellhdl.SpellDamageDTO{
+		CasterLevel: 15,
+		Dice:        spellhdl.DiceSumDTO{Groups: []spellhdl.DiceGroupDTO{{Count: 10, Sides: 6}}, Modifier: 2},
+		Instances:   spellhdl.DiceSumDTO{Groups: []spellhdl.DiceGroupDTO{}, Modifier: 1},
+		Rounds:      spellhdl.DiceSumDTO{Groups: []spellhdl.DiceGroupDTO{}, Modifier: 1},
+		Type:        "fire",
+	}, out[1].Damage)
+
+	code, out = search(t, "/api/spells?caster_level=7")
+	require.Equal(t, http.StatusOK, code)
+	assert.Equal(t, 7, out[1].Damage.CasterLevel)
+}
+
+func TestSearch_NoCasterLevelNoDamage(t *testing.T) {
+	var levels []int
+	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 },
+		fakeSvc{spells: []spellsvc.Spell{{ID: "fireball", Name: "Fireball"}}},
+		fakeChars{err: errors.New("no character")}, fakeDamage{levels: &levels}))
+	rec := httptest.NewRecorder()
+	h(rec, httptest.NewRequest(http.MethodGet, "/api/spells", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var page spellhdl.SpellPageDTO
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+	assert.Nil(t, page.Items[0].Damage)
+	assert.Empty(t, levels, "no level, no damage lookup")
+}
+
+func TestSearch_CharacterLevelAboveTheMaxServesNoDamage(t *testing.T) {
+	code, out := searchAs(t, "/api/spells", fakeChars{level: spelleffectsvc.MaxCasterLevel + 1})
+	require.Equal(t, http.StatusOK, code, "the page does not fail")
+	require.Len(t, out, 2)
+	assert.NotNil(t, out[1].Values)
+	assert.Nil(t, out[1].Damage)
 }

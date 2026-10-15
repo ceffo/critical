@@ -41,6 +41,14 @@ type DB struct {
 // file-backed databases, journal_mode=WAL. Both are applied as DSN _pragma
 // parameters, which the driver runs on each new connection. A pragma the
 // caller's DSN already sets is left alone.
+//
+// Transactions begin with BEGIN IMMEDIATE (_txlock=immediate), so every
+// transaction takes the write lock up front. A deferred transaction that reads
+// and then writes (the action stack's expected-top check, then its pop) cannot
+// upgrade in WAL mode once another writer committed after its first read: it
+// fails at once with SQLITE_BUSY_SNAPSHOT, which busy_timeout does not retry.
+// Taking the lock first makes the second writer wait, then see the first one's
+// result and refuse it as a domain conflict.
 func Open(dsn string) (*DB, error) {
 	db, err := sql.Open("sqlite", withPragmas(dsn))
 	if err != nil {
@@ -64,6 +72,9 @@ func withPragmas(dsn string) string {
 	var extra []string
 	if !hasPragma(lower, "busy_timeout") {
 		extra = append(extra, "_pragma=busy_timeout(5000)")
+	}
+	if !strings.Contains(lower, "_txlock=") {
+		extra = append(extra, "_txlock=immediate")
 	}
 	if !inMemory && !hasPragma(lower, "journal_mode") {
 		extra = append(extra, "_pragma=journal_mode(wal)")

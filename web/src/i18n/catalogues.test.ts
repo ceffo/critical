@@ -32,6 +32,19 @@ describe("catalogues", () => {
     }
   });
 
+  it("every damage type of seeds/spell_effects.json has an en and a fr word", () => {
+    const seed = JSON.parse(
+      readFileSync(join(__dirname, "..", "..", "..", "seeds", "spell_effects.json"), "utf8"),
+    ) as { damage?: { type?: string } }[];
+    const types = [...new Set(seed.flatMap((e) => (e.damage?.type ? [e.damage.type] : [])))];
+    expect(types.length).toBeGreaterThan(0);
+    for (const lang of ["en", "fr"] as const) {
+      const words = (resources[lang].common as { spellDice: { types: Record<string, string> } })
+        .spellDice.types;
+      for (const type of types) expect(words[type], `${lang} ${type}`).toBeTruthy();
+    }
+  });
+
   it("every fr spell key exists in en (en is the fallback)", () => {
     const en = new Set(flatten(resources.en.spells));
     for (const k of flatten(resources.fr.spells)) expect(en.has(k)).toBe(true);

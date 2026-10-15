@@ -11,7 +11,8 @@ type txKey struct{}
 // DALs built on Conn pick that transaction up, so writes from several adapters
 // (for example a state write and its action-log entry) commit or roll back
 // together. A nested InTx joins the outer transaction instead of opening a new
-// one. *DB satisfies domain.TxRunner through this method.
+// one. No slow work inside fn: every transaction holds the write lock from
+// its BEGIN. *DB satisfies domain.TxRunner through this method.
 func (d *DB) InTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	if _, ok := ctx.Value(txKey{}).(*sql.Tx); ok {
 		return fn(ctx)

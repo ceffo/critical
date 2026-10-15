@@ -336,6 +336,22 @@
     "receiveHint": "Tapez une partie du nom du sort (anglais ou français).",
     "receiveMore": "{{count}} de plus, affinez la recherche"
   },
+  "spellDice": {
+    "typed": "{{dice}} {{type}}",
+    "instances": "{{instances}} × {{dice}}",
+    "perRound": "{{text}} par round, {{rounds}} rounds",
+    "types": {
+      "acid": "acide",
+      "cold": "froid",
+      "crushing": "écrasement",
+      "electricity": "électricité",
+      "fire": "feu",
+      "force": "force",
+      "necromantic": "nécromantique",
+      "negative": "énergie négative",
+      "sound": "son"
+    }
+  },
   "lookup": {
     "search": "Rechercher des sorts...",
     "classLabel": "Liste de sorts",
@@ -370,6 +386,7 @@
     "detail": "Détail du sort",
     "noSelection": "Choisissez un sort pour l'afficher ici.",
     "atLevel": "Au niveau {{level}}",
+    "damage": "Dégâts",
     "castingTime": "Temps d'incantation",
     "range": "Portée",
     "duration": "Durée",

@@ -236,3 +236,16 @@ func firstNonEmpty(v ...string) string {
 	}
 	return ""
 }
+
+// DamageAt reads the damage a cast of spellID rolls at casterLevel from the
+// effect entry: the same dice rollDamage rolls, left unrolled.
+func (s *service) DamageAt(_ context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error) {
+	if casterLevel < 1 || casterLevel > MaxCasterLevel {
+		return nil, fmt.Errorf("%w: caster level must be between 1 and %d", domain.ErrInvalidInput, MaxCasterLevel)
+	}
+	e, ok := s.Effects.Get(spellID)
+	if !ok {
+		return nil, nil
+	}
+	return e.DamageAt(casterLevel)
+}

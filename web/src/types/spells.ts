@@ -75,6 +75,25 @@ export interface SpellValues {
   area: { dims?: SpellValue[]; targets?: SpellValue };
 }
 
+/** Mirrors spellhdl.DiceSumDTO: dice groups (in the data's order) plus a constant; no groups is a plain number. */
+export interface DiceSum {
+  groups: { count: number; sides: number }[];
+  modifier: number;
+}
+
+/**
+ * Mirrors spellhdl.SpellDamageDTO: the damage a cast rolls at caster_level, evaluated by the
+ * server. `dice` is one instance; `instances` of them every round, for `rounds` rounds.
+ */
+export interface SpellDamage {
+  caster_level: number;
+  dice: DiceSum;
+  instances: DiceSum;
+  rounds: DiceSum;
+  /** Damage type key ("fire"), from the spell effects data. */
+  type?: string;
+}
+
 export interface Spell {
   /** Unique key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
   id: string;
@@ -96,6 +115,8 @@ export interface Spell {
   caster_level?: number;
   /** Absent when no caster level is known (no character and no ?caster_level=). */
   values?: SpellValues;
+  /** The damage a cast rolls at caster_level; absent when it rolls none or no level is known. */
+  damage?: SpellDamage;
 }
 
 /** Mirrors spellprephdl.SpellbookEntryDTO. The cast fields come from the spell effects data. */
@@ -109,6 +130,8 @@ export interface SpellbookEntry {
   consume_item_type?: string;
   /** The spell rolls a to-hit: a target AC is required. */
   attack_roll?: boolean;
+  /** The damage a cast rolls at the Bard's level; absent when it rolls none. */
+  damage?: SpellDamage;
 }
 
 export interface LevelLimit {

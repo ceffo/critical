@@ -2,6 +2,7 @@ package composition_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
@@ -79,4 +80,29 @@ func TestPrepare_RealStack_VoidRestoresThePreviousPreparation(t *testing.T) {
 	_, err = bs.Log.Void(ctx, bs.CharacterID, entries[1].ID)
 	require.NoError(t, err)
 	assert.Len(t, slotIDs(t, bs), 2, "back to the two slots the test booted with")
+}
+
+// Every spellbook damage spell carries its dice at the Bard's level (15) and
+// the others none; the lookup serves the same values.
+func TestPrepare_RealStack_SpellbookDamageAtTheBardLevel(t *testing.T) {
+	bs := boot(t)
+	ctx := context.Background()
+	info, err := bs.Prep.Info(ctx, bs.CharacterID)
+	require.NoError(t, err)
+	got := map[string]string{}
+	for _, e := range info.Spellbook {
+		if d := e.Damage; d != nil {
+			assert.Equal(t, 15, d.CasterLevel, e.ID)
+			got[e.ID] = fmt.Sprintf("%v %v x%v r%v %s", d.Dice.Dice, d.Dice.Constant, d.Instances.Constant, d.Rounds.Constant, d.Type)
+			lookup, err := bs.Cast.DamageAt(ctx, e.ID, 15)
+			require.NoError(t, err)
+			assert.Equal(t, d, lookup, "lookup and spellbook serve the same damage for %s", e.ID)
+		}
+	}
+	assert.Equal(t, map[string]string{
+		"burning_hands":    "[{1 3}] 20 x1 r1 fire",
+		"magic_missile":    "[{1 4}] 1 x5 r1 force",
+		"melfs_acid_arrow": "[{2 4}] 0 x1 r6 acid",
+		"fireball":         "[{10 6}] 0 x1 r1 fire",
+	}, got)
 }

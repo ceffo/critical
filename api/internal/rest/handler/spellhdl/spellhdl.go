@@ -10,9 +10,11 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/pkg/formula"
 )
 
 // Router is the chi subset we need.
@@ -34,10 +36,16 @@ type characterGetter interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
+// damageReader serves the damage a cast rolls at a caster level (castsvc
+// satisfies it).
+type damageReader interface {
+	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
+}
+
 // RegisterRoutes wires spell endpoints onto r.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars characterGetter) {
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars characterGetter, damage damageReader) {
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
-	r.Get("/api/spells", render.Handle(Search(charID, svc, chars)))
+	r.Get("/api/spells", render.Handle(Search(charID, svc, chars, damage)))
 	r.Get("/api/spells/filters", render.Handle(FilterOptions()))
 }
 
@@ -70,8 +78,9 @@ func GetSlots(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
 }
 
 // Search runs the catalog query. The optional caster_level query parameter
-// sets the level the computed values are for; it defaults to the character's.
-func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.HandlerFunc {
+// (1 to spelleffectsvc.MaxCasterLevel) sets the level the computed values and
+// the damage dice are for; it defaults to the character's.
+func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage damageReader) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		f, err := parseFilter(r.URL.Query())
 		if err != nil {
@@ -89,8 +98,21 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.
 		if err != nil {
 			return err
 		}
+		items := spellsToDTO(page.Items, level)
+		// An explicit caster_level is bounded above; the character's level
+		// is not, and a level the formulas are not checked at gets no damage
+		// rather than failing the page.
+		if level > 0 && level <= spelleffectsvc.MaxCasterLevel {
+			for i := range items {
+				d, err := damage.DamageAt(r.Context(), items[i].ID, level)
+				if err != nil {
+					return err
+				}
+				items[i].Damage = DamageToDTO(d)
+			}
+		}
 		render.OK(r.Context(), w, SpellPageDTO{
-			Items: spellsToDTO(page.Items, level), Total: page.Total, Page: page.Page, PageSize: page.PageSize,
+			Items: items, Total: page.Total, Page: page.Page, PageSize: page.PageSize,
 		})
 		return nil
 	}
@@ -219,8 +241,8 @@ var castingTimes = []string{"segment", "round", "turn", "hour", "day", "week", "
 func casterLevel(r *http.Request, charID CharacterIDFunc, chars characterGetter) (int, error) {
 	if raw := r.URL.Query().Get("caster_level"); raw != "" {
 		n, err := strconv.Atoi(raw)
-		if err != nil || n < 1 {
-			return 0, render.BadRequestError("caster_level must be a positive integer")
+		if err != nil || n < 1 || n > spelleffectsvc.MaxCasterLevel {
+			return 0, render.BadRequestError("caster_level must be an integer from 1 to " + strconv.Itoa(spelleffectsvc.MaxCasterLevel))
 		}
 		return n, nil
 	}
@@ -265,6 +287,54 @@ type SpellDTO struct {
 	Stats       spellstats.Stats   `json:"stats"`
 	CasterLevel int                `json:"caster_level,omitempty"`
 	Values      *spellstats.Values `json:"values,omitempty"`
+	// Damage is what a cast rolls at CasterLevel (absent: no caster level,
+	// or a cast rolls no damage).
+	Damage *SpellDamageDTO `json:"damage,omitempty"`
+}
+
+// DiceGroupDTO is Count dice of Sides sides.
+type DiceGroupDTO struct {
+	Count int `json:"count"`
+	Sides int `json:"sides"`
+}
+
+// DiceSumDTO is a formula evaluated at a caster level down to what is left
+// to roll: dice groups, in the order the spell's data writes them, plus a
+// constant. No groups: a plain number.
+type DiceSumDTO struct {
+	Groups   []DiceGroupDTO `json:"groups"`
+	Modifier int            `json:"modifier"`
+}
+
+// SpellDamageDTO is the damage a cast of a spell rolls at CasterLevel: Dice
+// for one instance, Instances separate instances every round, for Rounds
+// rounds; Type is the damage type key ("fire"). The spell lookup and the
+// spellbook serve this same shape; the client words it.
+type SpellDamageDTO struct {
+	CasterLevel int        `json:"caster_level"`
+	Dice        DiceSumDTO `json:"dice"`
+	Instances   DiceSumDTO `json:"instances"`
+	Rounds      DiceSumDTO `json:"rounds"`
+	Type        string     `json:"type,omitempty"`
+}
+
+// DamageToDTO maps the damage at a caster level to its wire shape (nil: none).
+func DamageToDTO(d *spelleffectsvc.DamageAt) *SpellDamageDTO {
+	if d == nil {
+		return nil
+	}
+	return &SpellDamageDTO{
+		CasterLevel: d.CasterLevel, Dice: sumToDTO(d.Dice), Instances: sumToDTO(d.Instances),
+		Rounds: sumToDTO(d.Rounds), Type: d.Type,
+	}
+}
+
+func sumToDTO(s formula.Sum) DiceSumDTO {
+	out := DiceSumDTO{Groups: make([]DiceGroupDTO, 0, len(s.Dice)), Modifier: s.Constant}
+	for _, g := range s.Dice {
+		out.Groups = append(out.Groups, DiceGroupDTO{Count: g.Count, Sides: g.Sides})
+	}
+	return out
 }
 
 // SpellPageDTO is one page of GET /api/spells; Total counts every match.

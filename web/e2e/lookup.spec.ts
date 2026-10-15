@@ -256,6 +256,10 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   const range = detail(page).getByTestId("stat-range");
   await expect(range.getByTestId("stat-value")).toHaveText("210 yd");
   await expect(range.getByTestId("stat-raw")).toHaveText("60 yds. + 10 yds./level");
+  await expect(
+    detail(page).getByTestId("spell-dice-damage").getByTestId("spell-dice-formula"),
+  ).toHaveText("5 × 1d4+1 force");
+  await snap(page, "damage-dice");
 
   const description = detail(page).getByTestId("spell-description");
   const text = description.locator("p");

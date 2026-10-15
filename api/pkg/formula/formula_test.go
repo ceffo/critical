@@ -97,3 +97,59 @@ func TestParse_ErrorNamesFormula(t *testing.T) {
 	_, err := formula.Parse("3 rounds")
 	require.ErrorContains(t, err, `"3 rounds"`)
 }
+
+func TestExpand(t *testing.T) {
+	d := func(count, sides int) formula.Dice { return formula.Dice{Count: count, Sides: sides} }
+	tests := []struct {
+		src   string
+		level int
+		want  formula.Sum
+	}{
+		{"(min(level,10))d6", 15, formula.Sum{Dice: []formula.Dice{d(10, 6)}}},
+		{"(min(level,10))d6", 4, formula.Sum{Dice: []formula.Dice{d(4, 6)}}},
+		{"1d3+2*min(level,10)", 15, formula.Sum{Dice: []formula.Dice{d(1, 3)}, Constant: 20}},
+		{"1d8+level", 15, formula.Sum{Dice: []formula.Dice{d(1, 8)}, Constant: 15}},
+		{"leveld4+level", 15, formula.Sum{Dice: []formula.Dice{d(15, 4)}, Constant: 15}},
+		{"1d6+4d6", 15, formula.Sum{Dice: []formula.Dice{d(1, 6), d(4, 6)}}},
+		{"5d4+2*min(level,15)", 20, formula.Sum{Dice: []formula.Dice{d(5, 4)}, Constant: 30}},
+		{"(min(level/2,6))d6", 1, formula.Sum{}}, // zero dice are dropped
+		{"min(level,10)", 15, formula.Sum{Constant: 10}},
+		{"2d4-1", 1, formula.Sum{Dice: []formula.Dice{d(2, 4)}, Constant: -1}},
+		{"3+1d4", 1, formula.Sum{Dice: []formula.Dice{d(1, 4)}, Constant: 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.src, func(t *testing.T) {
+			got, err := must.Do(formula.Parse(tt.src)).Expand(tt.level)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestExpandMatchesEval: the expansion and Eval agree on the lowest and the
+// highest roll, so the served dice are the ones a cast rolls.
+func TestExpandMatchesEval(t *testing.T) {
+	for _, src := range []string{"1d3+2*min(level,10)", "leveld4+level", "1d6+4d6", "(min(level,12))d4", "2d4+level"} {
+		f := must.Do(formula.Parse(src))
+		for level := 1; level <= 20; level++ {
+			s, err := f.Expand(level)
+			require.NoError(t, err)
+			lo, hi := s.Constant, s.Constant
+			for _, g := range s.Dice {
+				lo += g.Count
+				hi += g.Count * g.Sides
+			}
+			assert.Equal(t, must.Do(f.Min(level)), lo, "%s min at %d", src, level)
+			assert.Equal(t, must.Do(f.Max(level)), hi, "%s max at %d", src, level)
+		}
+	}
+}
+
+func TestExpandRejectsDiceNotAdded(t *testing.T) {
+	for _, src := range []string{"2*1d4", "1d6/2", "-1d4", "10-1d4", "min(1d6,3)", "(1d4)d6"} {
+		t.Run(src, func(t *testing.T) {
+			_, err := must.Do(formula.Parse(src)).Expand(5)
+			assert.ErrorIs(t, err, formula.ErrNotDiceSum)
+		})
+	}
+}

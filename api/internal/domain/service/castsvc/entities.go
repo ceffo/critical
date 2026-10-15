@@ -12,8 +12,8 @@ import (
 const ClassGroup = "rogue"
 
 // MaxCasterLevel bounds a received spell's caster level (formulas are
-// checked up to level 40 when the seed loads).
-const MaxCasterLevel = 40
+// checked up to this level when the seed loads).
+const MaxCasterLevel = spelleffectsvc.MaxCasterLevel
 
 // CastRequest is what the player asks for when casting from a slot.
 type CastRequest struct {

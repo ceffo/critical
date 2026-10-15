@@ -2,7 +2,7 @@
 
 **Status**: accepted, 2026-10-15. Amends [ADR 0007](0007-hp-ledger.md) steps 2, 3, 8 and 9,
 [ADR 0010](0010-action-stack-and-undo.md) steps 1 and 2 and its Consequences,
-[ADR 0013](0013-initiative.md) steps 2 and 4.
+[ADR 0013](0013-initiative.md) steps 2 and 4, [ADR 0015](0015-experience.md) step 4 (step 7).
 
 ## Context
 
@@ -98,6 +98,27 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    Redo itself (replaying the newest popped transaction) is a later ADR.
    Tests: `adapters/actionlogdal` `TestPop_KeepsEntriesAndSnapshots` (after a pop the
    transaction's entries, payloads and both snapshots read back unchanged, each voided).
+7. **What joins the stack: gameplay state, not metadata.** Every mutation of state that affects
+   gameplay is a transaction (step 1) and is popped by the journal's Undo (step 3); player
+   metadata and preferences are not. User, 2026-10-15: *"editing player metadata is not in the
+   undo pipeline. gaining xp is. anything that mutates the state that affects gameplay"*.
+   - Joins: HP, buffs and saved buffs, the round and its initiative, spell slots and
+     preparation, casts and exposures, attacks, saves, skill checks, free dice rolls and the
+     corrections after a roll, items (use, restock, editor), weapons (editor), long rest, and the
+     XP ledger: adding, editing and deleting an award are each one transaction, and an edit keeps
+     the award before and after in its snapshot ([ADR 0015](0015-experience.md) step 4).
+   - Stays outside (writes no entry, never undone): character details (race, alignment, age,
+     languages…), from the ruling. As a default, not yet confirmed by the user: dice favourites,
+     the saved attack form (the composer's last choices), note amends on log entries (ADR 0010
+     step 2) and the crit table (a rules setting, [ADR 0001](0001-critical-hits.md)).
+   A new state-changing request joins the stack unless it is listed as outside here.
+   Tests: `composition` `TestUndo_OneUndoWalksEveryMutationFullyBack` (every mutation that
+   joins, the XP verbs included, `xp_entries` compared), `TestXPUndo_EachVerbGivesTheLedgerBack`
+   (add, edit and delete: the ledger, its total and progress come back);
+   `domain/service/xpsvc` `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
+   `TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction` (before and after),
+   `TestDelete_RecordsTheRemovedAwardOrReportsNotFound`, `TestRestorer_WritesTheSnapshotBack`;
+   `adapters/xpdal` `TestReinsert_KeepsIDAndDate`.
 
 ## Consequences
 
@@ -107,10 +128,7 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
   unit is now the gesture, not the row.
 - ADR 0010 step 6 is unchanged: a correction is its own one-entry transaction, popped before its
   roll.
-- **Open: which mutations outside the stack join it.** Today XP add / edit / delete
-  ([ADR 0015](0015-experience.md) step 4), character details, the crit table, dice favourites,
-  the saved attack form and note amends (ADR 0007 step 7) write no log entry and are not
-  undoable. Whether each becomes a transaction or stays outside as a setting or a preference is
-  for the user to decide; until then they stay outside, and this ADR is amended with the answer.
+- Undoing an XP delete writes the award back under its id and date, so an undo of an older edit
+  of the same award still finds it.
 - Not covered: redo (step 6 only keeps it possible), multi-transaction undo, undo of a request
   that wrote nothing.

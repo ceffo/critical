@@ -7,7 +7,8 @@ import type {
   DiceRoll,
   ExposureResult,
 } from "@/types/spells";
-import { spellName } from "@/i18n/spellName";
+import { spellTexts, useSpellName } from "@/i18n/spellName";
+import { SpellDescription } from "./SpellDescription";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
@@ -117,8 +118,12 @@ function fxLabel(t: TFunction, key: string, value: number): string {
 
 /** What a cast or a received spell did: buff with its rolls, damage rolls, or the text only. */
 export function CastResultView({ result: r }: { result: CastResult }) {
-  const { t } = useTranslation();
-  const name = spellName(t, r.spellId, r.name);
+  const { t, i18n } = useTranslation();
+  const spellName = useSpellName();
+  const name = spellName(r.spellId, r.name);
+  const description = r.spell
+    ? spellTexts(i18n.language, r.spell).description
+    : "";
   const heading =
     r.source === "received"
       ? t("result.cast.receivedHeading", { name, casterLevel: r.casterLevel })
@@ -383,17 +388,16 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           <p className="text-body">{r.note}</p>
         </div>
       )}
-      {r.spell?.description && (
+      {description && (
         <details className="group rounded-lg border px-3 py-2">
           <summary className={cn(labelClass, "cursor-pointer select-none")}>
             {t("result.cast.text")}
           </summary>
-          <p
-            className="mt-2 whitespace-pre-line text-body text-muted-foreground"
-            data-testid="cast-text"
-          >
-            {r.spell.description}
-          </p>
+          <SpellDescription
+            text={description}
+            className="mt-2 text-body text-muted-foreground"
+            testId="cast-text"
+          />
         </details>
       )}
     </div>
@@ -414,7 +418,8 @@ export function ExposureResultView({
   interactive: boolean;
 }) {
   const { t } = useTranslation();
-  const name = spellName(t, r.spellId, r.name);
+  const spellName = useSpellName();
+  const name = spellName(r.spellId, r.name);
   const roll = r.damage.rolls[0];
   const type = r.damage.type
     ? t(`spellDice.types.${r.damage.type}`, { defaultValue: r.damage.type })

@@ -220,3 +220,18 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   `TestImportCatalogue_Step6_TypedStatsParsedAtImport`; the upgrade of a database seeded before the
   catalogue `TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue`, and of a live one
   `TestRealCatalogue_UpgradesACopyOfALiveDatabase`.
+
+## Implementation notes (the UI, 2026-10-15)
+
+- **French names have one source.** The web i18n `spells` namespace, `web/src/i18n/phbSpellIds.json`
+  (and its Go check) and the spellbook seed's `sheet` names are gone. The client shows `name_fr` /
+  `description_fr` in the French UI, English per missing field.
+- **Spells known only by id** (spellbook, slots, journal payloads, which record the English name at
+  write time) are named from `GET /api/spells/names` (`[{id, name, name_fr?}]`, every catalogue
+  spell), loaded once by the client; payloads are not rewritten.
+- **Search** matches `q` against both names on the server (case, accents and ligatures ignored,
+  best tier of the two), in either UI language; the client-side French match and the `match_exact`
+  / `match_prefix` / `match_contains` parameters are retired (`TestSearch_RankingTiers`).
+- **Descriptions** are rendered by a small parser of exactly the step 1 subset
+  (`web/src/lib/spellMarkdown.ts`) into React text, never HTML; a block that does not fit the subset
+  is shown as text rather than dropped.

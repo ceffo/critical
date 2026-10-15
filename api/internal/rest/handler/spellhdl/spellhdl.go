@@ -30,6 +30,7 @@ type spellSvc interface {
 	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	Search(ctx context.Context, f spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error)
+	Names(ctx context.Context) ([]spellsvc.SpellName, error)
 }
 
 type characterGetter interface {
@@ -49,6 +50,32 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars ch
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
 	r.Get("/api/spells", render.Handle(Search(charID, svc, chars, damage)))
 	r.Get("/api/spells/filters", render.Handle(FilterOptions()))
+	r.Get("/api/spells/names", render.Handle(Names(svc)))
+}
+
+// SpellNameDTO is one spell's id with its English name and its French one
+// (absent when the catalogue has none, ADR 0021): the client names a spell
+// it knows only by id (spellbook, slots, journal) in the player's language.
+type SpellNameDTO struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	NameFR string `json:"name_fr,omitempty"`
+}
+
+// Names returns every catalogue spell's names (GET /api/spells/names).
+func Names(svc spellSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		names, err := svc.Names(r.Context())
+		if err != nil {
+			return err
+		}
+		out := make([]SpellNameDTO, 0, len(names))
+		for _, n := range names {
+			out = append(out, SpellNameDTO{ID: n.ID, Name: n.Name, NameFR: n.NameFR})
+		}
+		render.OK(r.Context(), w, out)
+		return nil
+	}
 }
 
 // FilterOptionsDTO lists the choices of the lookup's school / sphere
@@ -154,21 +181,14 @@ func parsePage(q url.Values) (spellsvc.PageRequest, error) {
 // parseFilter reads the filter parameters. A malformed value is a 400,
 // never silently ignored.
 //
-//   - q: text matched against the English name (exact, prefix, substring).
-//   - match_exact, match_prefix, match_contains: comma-separated catalogue
-//     keys the client matched by another name (French), with that tier; a
-//     spell matching q or any of them is kept, ranked by its best tier.
+//   - q: text matched against the English and the French name, case and
+//     accents ignored (exact, prefix, substring; the best tier ranks).
 //   - class: mine (the Bard's spellbook), wizard, priest, or all/both/empty.
 //   - level: comma-separated levels, e.g. "1,3"; empty means any.
 //   - school: a school group key (GET /api/spells/filters); sphere: a sphere.
 //   - components, save, casting_time: typed-stat filters.
 func parseFilter(q url.Values) (spellsvc.Filter, error) {
 	f := spellsvc.Filter{Query: strings.TrimSpace(q.Get("q"))}
-	for _, tier := range matchTiers {
-		for _, key := range splitCSV(q.Get(tier.param)) {
-			f.Names = append(f.Names, spellsvc.NameMatch{Key: key, Tier: tier.tier})
-		}
-	}
 	switch c := strings.ToLower(q.Get("class")); c {
 	case "", "both", "all":
 	case "wizard", "priest":
@@ -221,15 +241,6 @@ func parseFilter(q url.Values) (spellsvc.Filter, error) {
 		f.CastingTime = raw
 	}
 	return f, nil
-}
-
-var matchTiers = []struct {
-	param string
-	tier  spellsvc.Tier
-}{
-	{"match_exact", spellsvc.TierExact},
-	{"match_prefix", spellsvc.TierPrefix},
-	{"match_contains", spellsvc.TierContains},
 }
 
 // splitCSV splits "a, b,,c" into a, b, c.

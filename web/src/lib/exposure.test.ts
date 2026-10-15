@@ -22,6 +22,7 @@ import {
   rowValue,
 } from "./filCard";
 import { lastHpChange } from "./moiLog";
+import { spellNamer } from "@/i18n/spellName";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -303,7 +304,14 @@ describe("exposure entries", () => {
     expect(entryText(wall, await makeT("en"))).toBe(
       "Wall of Fire exposure, round 1: 19 fire damage · Passing through",
     );
-    expect(entryText(wall, await makeT("fr"))).toBe(
+    const frNames = spellNamer("fr", {
+      wall_of_fire: {
+        id: "wall_of_fire",
+        name: "Wall of Fire",
+        name_fr: "Mur de feu",
+      },
+    });
+    expect(entryText(wall, await makeT("fr"), frNames)).toBe(
       "Mur de feu, exposition au round 1 : 19 dégâts (feu) · En la traversant",
     );
   });

@@ -146,6 +146,16 @@ export interface SpellExposure {
   modes?: SpellMode[];
 }
 
+/** Mirrors spellhdl.SpellNameDTO: a spell's id and names; `name_fr` absent when it has none. */
+export interface SpellName {
+  id: string;
+  name: string;
+  name_fr?: string;
+}
+
+/** The catalogue's spell names by id. */
+export type SpellNames = Readonly<Record<string, SpellName>>;
+
 /**
  * Mirrors spellhdl.SpellDTO. `name` and `description` are English; `name_fr` and `description_fr`
  * are the spell catalogue's French texts, absent when it has none: show French when present and

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { test, expect, snap, catalogueSpell } from "./fixtures";
 import {
   chooseLanguage,
+  chooseSetting,
   openDashboard,
   openWorkspace,
   receivePicker,
@@ -117,9 +118,7 @@ test("lookup: typing 'project im' selects Project Image with no click and shows 
   await openLookup(page);
   await search(page).fill("project im");
   await expect(selected(page)).toHaveAttribute("data-id", "project_image");
-  await expect(detail(page).getByRole("heading")).toHaveText(
-    "Project Image · Projection de l'image",
-  );
+  await expect(detail(page).getByRole("heading")).toHaveText("Project Image");
   // Values at the Bard's level (fixture: 15) next to the raw text.
   const range = detail(page).getByTestId("stat-range");
   await expect(range.getByTestId("stat-value")).toHaveText("150 yd");
@@ -130,20 +129,39 @@ test("lookup: typing 'project im' selects Project Image with no click and shows 
   await snap(page, "search-selected");
 });
 
-test("lookup: a French name finds the spell; the row shows both names in the UI language order", async ({
+test("lookup in French: a French name finds the spell, its French text shows with its table; a spell without French shows English", async ({
   page,
 }) => {
   await openLookup(page);
-  await search(page).fill("mains");
-  const first = rows(page).first();
-  await expect(first).toHaveAttribute("data-id", "burning_hands");
-  await expect(first).toContainText("Burning Hands · Mains brûlantes");
   await chooseLanguage(page, "fr");
-  await expect(first).toContainText("Mains brûlantes · Burning Hands");
+  const searchFr = page.getByRole("combobox", {
+    name: "Rechercher des sorts...",
+  });
+  await searchFr.fill("orbe chrom");
+  const first = rows(page).first();
+  await expect(first).toHaveAttribute("data-id", "chromatic_orb");
+  await expect(first).toContainText("Orbe chromatique · Chromatic Orb");
   await expect(detail(page).getByRole("heading")).toHaveText(
-    "Mains brûlantes · Burning Hands",
+    "Orbe chromatique · Chromatic Orb",
   );
-  await snap(page, "french-name");
+  const text = detail(page).getByTestId("spell-description-text");
+  await expect(text).toContainText("Texte de test pour Orbe chromatique");
+  const table = text.getByTestId("spell-table").getByRole("table");
+  await expect(table.getByRole("columnheader")).toHaveText([
+    "Niveau",
+    "Couleur",
+    "Effet",
+  ]);
+  await expect(table.getByRole("row")).toHaveCount(4);
+  await chooseSetting(page, "Clair");
+  await snap(page, "french-table-light");
+  await chooseSetting(page, "Sombre");
+  await snap(page, "french-table-dark");
+
+  await searchFr.fill("armor");
+  await expect(detail(page).getByRole("heading")).toHaveText("Armor");
+  await expect(text).toContainText("Fixture text for Armor");
+  await snap(page, "french-english-fallback");
 });
 
 test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and All work; class chip only on All", async ({

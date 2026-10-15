@@ -12,7 +12,8 @@ import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { useDiceStore } from "@/stores/dice";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
-import { otherSpellName, spellName } from "@/i18n/spellName";
+import { otherSpellName, spellTexts } from "@/i18n/spellName";
+import { SpellDescription } from "@/components/dashboard/SpellDescription";
 import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
 import { damageFormula, damageText } from "@/lib/spellDice";
 import { damageRows, exposureRows } from "@/lib/spellMode";
@@ -51,11 +52,13 @@ function SpellNames({
   spell: Spell;
   className?: string;
 }) {
-  const { t, i18n } = useTranslation();
-  const other = otherSpellName(t, i18n.language, spell.id, spell.name);
+  const { i18n } = useTranslation();
+  const other = otherSpellName(i18n.language, spell);
   return (
     <span className={cn("min-w-0 truncate", className)}>
-      <span data-testid="spell-name">{spellName(t, spell.id, spell.name)}</span>
+      <span data-testid="spell-name">
+        {spellTexts(i18n.language, spell).name}
+      </span>
       {other && (
         <span
           className="text-muted-foreground font-normal"
@@ -70,7 +73,8 @@ function SpellNames({
 }
 
 function SpellDetail({ spell }: { spell: Spell }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { description } = spellTexts(i18n.language, spell);
   const toComposer = useDiceStore((s) => s.setFormula);
   const roll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
@@ -213,18 +217,18 @@ function SpellDetail({ spell }: { spell: Spell }) {
       {/* The description takes the panel's width and the height left below the stats, and
           scrolls inside it; a block container, so the text can hold any flow content. When the
           panel is too short for its floor, the whole detail scrolls instead. */}
-      {spell.description && (
+      {description && (
         <section
           className="flex min-h-40 flex-1 flex-col text-body"
           data-testid="spell-description"
         >
           <p className="shrink-0 py-1 font-medium">{t("lookup.description")}</p>
           <div
-            className="mt-1 min-h-0 flex-1 overflow-y-auto pr-2 leading-relaxed whitespace-pre-line text-foreground/85"
+            className="mt-1 min-h-0 flex-1 overflow-y-auto pr-2 leading-relaxed text-foreground/85"
             data-testid="spell-description-text"
             tabIndex={0}
           >
-            {spell.description}
+            <SpellDescription text={description} />
           </div>
         </section>
       )}

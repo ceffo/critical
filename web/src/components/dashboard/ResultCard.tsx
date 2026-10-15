@@ -37,7 +37,7 @@ import {
   type InfoView,
   type SaveView,
 } from "@/lib/filCard";
-import { spellName } from "@/i18n/spellName";
+import { useSpellName } from "@/i18n/spellName";
 import { modeName } from "@/lib/spellMode";
 import { rollLabel } from "@/lib/spellDice";
 import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
@@ -59,6 +59,7 @@ const labelClass = "text-label text-muted-foreground";
  */
 export function ResultCard() {
   const { t, i18n } = useTranslation();
+  const spellName = useSpellName();
   const last = useRollStore((s) => s.last);
   const entries = useLogStore((s) => s.entries);
   const selectedId = useFilStore((s) => s.selectedId);
@@ -77,11 +78,11 @@ export function ResultCard() {
     const model =
       source.kind === "live"
         ? liveModel(source.last)
-        : cardModel(source.entry, t);
+        : cardModel(source.entry, t, spellName);
     const kind =
       entry?.kind ??
       (source.kind === "live" ? liveKind(source.last) : "attack");
-    const h = cardHeader(kind, model, entry, t, i18n.language);
+    const h = cardHeader(kind, model, entry, t, i18n.language, spellName);
     header = (
       <div
         className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1"
@@ -916,7 +917,7 @@ function CastEntry({
   interactive: boolean;
 }) {
   const { t } = useTranslation();
-  const spell = spellName(t, c.spellId, c.spell);
+  const spell = useSpellName()(c.spellId, c.spell);
   const instances = castInstances(c);
   return (
     <div className="flex flex-col gap-3" data-testid="cast-entry">

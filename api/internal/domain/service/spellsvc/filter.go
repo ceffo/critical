@@ -10,13 +10,10 @@ import (
 // applies the stored columns Class and Levels; the service the rest (names,
 // spellbook, school group, sphere, typed stats) and the ranking.
 type Filter struct {
-	// Query is matched against the English name, case-insensitively: exact,
-	// prefix or substring (Tier). Together with Names it selects the spells
-	// matching either; both empty means every spell.
+	// Query is matched against the English and the French name, ignoring
+	// case and accents: exact, prefix or substring (Tier), the best of the
+	// two. Empty means every spell.
 	Query string
-	// Names are the spells the client matched by a name the server does not
-	// know (French), with their tier.
-	Names []NameMatch
 	// Class is "Wizard" or "Priest" (any case); empty means both.
 	Class string
 	// Mine keeps only the spells of the Bard's spellbook (set with Class

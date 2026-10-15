@@ -4,7 +4,7 @@ import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
-import { spellName } from "@/i18n/spellName";
+import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
@@ -94,8 +94,12 @@ export function exposurePayload(e: LogEntry): ExposureLogPayload | null {
 }
 
 /** "Cloudkill exposure, round 2 (Within 10 ft): 7 fire damage, on me". */
-function exposureText(p: ExposureLogPayload, t: TFunction): string {
-  const spell = spellName(t, p.spellId, p.spell);
+function exposureText(
+  p: ExposureLogPayload,
+  t: TFunction,
+  spellName: SpellNamer,
+): string {
+  const spell = spellName(p.spellId, p.spell);
   const text = t(p.onSelf ? "log.exposure.onMe" : "log.exposure.forDm", {
     spell,
     round: p.round,
@@ -124,8 +128,12 @@ export function castPayload(e: LogEntry): CastLogPayload | null {
     : null;
 }
 
-function castText(p: CastLogPayload, t: TFunction): string {
-  const spell = spellName(t, p.spellId, p.spell);
+function castText(
+  p: CastLogPayload,
+  t: TFunction,
+  spellName: SpellNamer,
+): string {
+  const spell = spellName(p.spellId, p.spell);
   const head =
     p.action === "received"
       ? t("log.cast.received", { spell, level: p.casterLevel })
@@ -184,7 +192,11 @@ function initiativeText(e: LogEntry, t: TFunction): string | null {
 }
 
 /** Payload of spell_prep entries (prepsvc prepRecord): each spell once, with its copies. */
-function prepText(e: LogEntry, t: TFunction): string | null {
+function prepText(
+  e: LogEntry,
+  t: TFunction,
+  spellName: SpellNamer,
+): string | null {
   if (e.kind !== "spell_prep") return null;
   const p = e.payload as {
     spells?: { id: string; name: string; count: number }[];
@@ -193,7 +205,7 @@ function prepText(e: LogEntry, t: TFunction): string | null {
   if (p.spells.length === 0) return t("log.prepNone");
   const spells = p.spells
     .map((s) => {
-      const name = spellName(t, s.id, s.name);
+      const name = spellName(s.id, s.name);
       return s.count > 1 ? `${name} ×${s.count}` : name;
     })
     .join(", ");
@@ -580,9 +592,13 @@ function hpChangeText(e: LogEntry, t: TFunction): string | null {
 /**
  * The entry's text in the player's language, worded from its structured payload. The server's summary
  * is only the player's own text (an HP change's source) or, on entries logged before the payloads
- * existed, an older English line.
+ * existed, an older English line. Spell names come from `spellName` (useSpellName in a component).
  */
-export function entryText(e: LogEntry, t: TFunction): string {
+export function entryText(
+  e: LogEntry,
+  t: TFunction,
+  spellName: SpellNamer = englishSpellName,
+): string {
   const attack = attackPayload(e);
   if (attack) return attackText(attack, t);
   const skill = skillCheckPayload(e);
@@ -594,12 +610,12 @@ export function entryText(e: LogEntry, t: TFunction): string {
   const correction = correctionPayload(e);
   if (correction) return correctionText(correction, t);
   const cast = castPayload(e);
-  if (cast) return castText(cast, t);
+  if (cast) return castText(cast, t, spellName);
   const exposure = exposurePayload(e);
-  if (exposure) return exposureText(exposure, t);
+  if (exposure) return exposureText(exposure, t, spellName);
   const rest = restText(e, t);
   if (rest) return rest;
-  const prep = prepText(e, t);
+  const prep = prepText(e, t, spellName);
   if (prep) return prep;
   const initiative = initiativeText(e, t);
   if (initiative) return initiative;

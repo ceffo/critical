@@ -30,6 +30,14 @@ type Spell struct {
 	Stats spellstats.Stats
 }
 
+// SpellName is a spell's id with its English name and its French one (empty
+// when the catalogue has none).
+type SpellName struct {
+	ID     string
+	Name   string
+	NameFR string
+}
+
 // SpellSlot is one prepared-spell slot in the daily allotment.
 type SpellSlot struct {
 	Level int

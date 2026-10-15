@@ -18,6 +18,7 @@ import type { Workspace } from "@/lib/workspaces";
 import { cn } from "@/lib/utils";
 import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
+import { useSpellNamesStore } from "@/stores/spellNames";
 import { useXpStore } from "@/stores/xp";
 
 /**
@@ -66,6 +67,7 @@ function App() {
   const loadCharacter = useCharacterStore((s) => s.loadCharacter);
   const refresh = useTableStore((s) => s.refresh);
   const fetchXp = useXpStore((s) => s.fetchXp);
+  const loadSpellNames = useSpellNamesStore((s) => s.load);
   const [workspace, setWorkspace] = useState<Workspace>("act");
   const [visited, setVisited] = useState<ReadonlySet<Workspace>>(
     () => new Set(["act"]),
@@ -79,7 +81,8 @@ function App() {
     void loadCharacter();
     void refresh();
     void fetchXp();
-  }, [loadCharacter, refresh, fetchXp]);
+    void loadSpellNames();
+  }, [loadCharacter, refresh, fetchXp, loadSpellNames]);
 
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">

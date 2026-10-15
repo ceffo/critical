@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { spellName } from "@/i18n/spellName";
+import { useSpellName } from "@/i18n/spellName";
 import { splitPrepared } from "@/lib/prepareDraft";
 import type { LevelLimit, SpellbookEntry } from "@/types/spells";
 
@@ -31,6 +31,7 @@ export function PrepareEditor({
   onCancel,
 }: Props) {
   const { t } = useTranslation();
+  const spellName = useSpellName();
   // Ids no longer in the spellbook are shown as dropped and never sent (the API refuses them).
   const [{ kept, dropped }] = useState(() => splitPrepared(initial, spellbook));
   const [draft, setDraft] = useState<string[]>(kept);
@@ -40,7 +41,7 @@ export function PrepareEditor({
     () => new Map(spellbook.map((s) => [s.id, s])),
     [spellbook],
   );
-  const label = (s: SpellbookEntry) => spellName(t, s.id, s.name);
+  const label = (s: SpellbookEntry) => spellName(s.id, s.name);
 
   const needle = query.trim().toLowerCase();
   const matches = spellbook.filter(
@@ -130,7 +131,7 @@ export function PrepareEditor({
             <ul className="list-disc pl-5 text-muted-foreground">
               {dropped.map((id) => (
                 <li key={id}>
-                  {id ? spellName(t, id, id) : t("spellSlots.staleUnknown")}
+                  {id ? spellName(id, id) : t("spellSlots.staleUnknown")}
                 </li>
               ))}
             </ul>

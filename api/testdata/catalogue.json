@@ -64,9 +64,10 @@
       "area_of_effect": "One creature",
       "components": "V, S, M",
       "saving_throw": "Neg.",
-      "name": { "en": "Chromatic Orb" },
+      "name": { "en": "Chromatic Orb", "fr": "Orbe chromatique" },
       "description": {
-        "en": "Fixture text for Chromatic Orb: the colour of the orb follows the caster's level.\n\n| Level | Colour | Effect |\n| --- | --- | --- |\n| 1 | Pearl | Placeholder glow |\n| 2 | Ruby | Placeholder heat |\n\nThe table above is invented for the tests."
+        "en": "Fixture text for Chromatic Orb: the colour of the orb follows the caster's level.\n\n| Level | Colour | Effect |\n| --- | --- | --- |\n| 1 | Pearl | Placeholder glow |\n| 2 | Ruby | Placeholder heat |\n\nThe table above is invented for the tests.",
+        "fr": "Texte de test pour Orbe chromatique : la couleur de l'orbe suit le niveau du lanceur.\n\n| Niveau | Couleur | Effet |\n| --- | --- | --- |\n| 1 | Perle | Lueur de remplissage |\n| 2 | Rubis | Chaleur de remplissage |\n| 3 | Flamme | Étincelles inventées |\n\nLa table ci-dessus est inventée pour les tests."
       },
       "source": "PHB"
     },

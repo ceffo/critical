@@ -4,7 +4,7 @@ import { useLogStore } from "@/stores/log";
 import { formatSigned, hpPercent, hpTone } from "@/lib/format";
 import { lastDamage, lastHpChange } from "@/lib/moiLog";
 import { cn } from "@/lib/utils";
-import { spellName } from "@/i18n/spellName";
+import { useSpellName } from "@/i18n/spellName";
 import type { HpCondition } from "@/types/hp";
 
 /** Bar fill per threshold (display only, docs/frontend.md "Display Conventions"). */
@@ -31,6 +31,7 @@ const CONDITION: Record<Exclude<HpCondition, "ok">, string> = {
  */
 export function HpBar() {
   const { t } = useTranslation();
+  const spellName = useSpellName();
   const { currentHp, maxHp, floor, condition, loaded } = useHpStore();
   const entries = useLogStore((s) => s.entries);
   const last = lastHpChange(entries);
@@ -50,7 +51,7 @@ export function HpBar() {
     ? last.exposure
       ? t("hp.lastExposure", {
           delta: formatSigned(last.delta),
-          spell: spellName(t, last.exposure.spellId, last.exposure.spell),
+          spell: spellName(last.exposure.spellId, last.exposure.spell),
         })
       : last.source
         ? t("hp.lastChange", {

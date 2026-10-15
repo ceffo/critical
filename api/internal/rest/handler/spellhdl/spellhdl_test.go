@@ -29,6 +29,14 @@ type fakeSvc struct {
 
 func (fakeSvc) GetSlots(context.Context, int64) ([]spellsvc.SpellSlot, error)   { return nil, nil }
 func (fakeSvc) ResetSlots(context.Context, int64) ([]spellsvc.SpellSlot, error) { return nil, nil }
+func (f fakeSvc) Names(context.Context) ([]spellsvc.SpellName, error) {
+	out := []spellsvc.SpellName{}
+	for _, s := range f.spells {
+		out = append(out, spellsvc.SpellName{ID: s.ID, Name: s.Name, NameFR: s.NameFR})
+	}
+	return out, nil
+}
+
 func (f fakeSvc) Search(_ context.Context, flt spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error) {
 	if f.got != nil {
 		*f.got = flt
@@ -176,16 +184,12 @@ func TestSearch_ReadsEveryFilterFromTheQuery(t *testing.T) {
 	}, f)
 }
 
-func TestSearch_ClientNameMatchesCarryTheirTier(t *testing.T) {
-	code, f := filterFor(t, "/api/spells?q=mains&match_exact=fireball&match_prefix=burning_hands,+detect_magic&match_contains=fortify,")
+// The French names are matched by the server: the old client-side match
+// parameters are no longer read.
+func TestSearch_IgnoresTheRetiredClientMatchParams(t *testing.T) {
+	code, f := filterFor(t, "/api/spells?q=mains&match_exact=fireball&match_prefix=burning_hands")
 	require.Equal(t, http.StatusOK, code)
-	assert.Equal(t, "mains", f.Query)
-	assert.Equal(t, []spellsvc.NameMatch{
-		{Key: "fireball", Tier: spellsvc.TierExact},
-		{Key: "burning_hands", Tier: spellsvc.TierPrefix},
-		{Key: "detect_magic", Tier: spellsvc.TierPrefix},
-		{Key: "fortify", Tier: spellsvc.TierContains},
-	}, f.Names)
+	assert.Equal(t, spellsvc.Filter{Query: "mains"}, f)
 }
 
 func TestSearch_ClassValues(t *testing.T) {
@@ -281,6 +285,19 @@ func TestFilterOptions_ListsSchoolGroupsAndSpheres(t *testing.T) {
 	}, out.Schools)
 	assert.Contains(t, out.Spheres, "Elemental Fire")
 	assert.Contains(t, out.Spheres, "Charm")
+}
+
+// Every spell's id and names; the French name is absent when the catalogue
+// has none.
+func TestNames_ServesIDsWithTheEnglishAndFrenchNames(t *testing.T) {
+	svc := fakeSvc{spells: []spellsvc.Spell{
+		{ID: "fireball", Name: "Fireball", NameFR: "Boule de feu"},
+		{ID: "armor", Name: "Armor"},
+	}}
+	rec := httptest.NewRecorder()
+	render.Handle(spellhdl.Names(svc))(rec, httptest.NewRequest(http.MethodGet, "/api/spells/names", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `[{"id":"fireball","name":"Fireball","name_fr":"Boule de feu"},{"id":"armor","name":"Armor"}]`, rec.Body.String())
 }
 
 // The damage a cast rolls is served at the level the values are for, as dice

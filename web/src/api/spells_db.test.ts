@@ -26,7 +26,6 @@ describe("searchSpells", () => {
     expect(params().get("school")).toBe("abjuration");
     expect(params().has("sphere")).toBe(false);
     expect(params().has("q")).toBe(false);
-    expect(params().has("match_exact")).toBe(false);
   });
 
   it("sends a Priest sphere by its English name", async () => {
@@ -39,10 +38,12 @@ describe("searchSpells", () => {
     expect(params().get("sphere")).toBe("Elemental Fire");
   });
 
-  it("sends the French catalogue keys of the typed text with their tier", async () => {
-    await searchSpells({ ...NO_QUERY, q: "mains brûlantes" });
+  it("sends the typed text as is: the server matches French names too", async () => {
+    await searchSpells({ ...NO_QUERY, q: " mains brûlantes " });
     expect(params().get("q")).toBe("mains brûlantes");
-    expect(params().get("match_exact")).toBe("burning_hands");
+    expect([...params().keys()].some((k) => k.startsWith("match_"))).toBe(
+      false,
+    );
   });
 
   it("sends the caster level the receive rolls at, none when not given", async () => {

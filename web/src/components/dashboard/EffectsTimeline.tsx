@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { LockSimple, PencilSimple, Plus, Shield, X } from "@phosphor-icons/react";
+import { LockSimple, PencilSimple, Shield, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { formatTurnsLeft } from "@/lib/passTime";
 import { effectSpan, trackSize, windowStart, type ColumnRun, type TrackSize } from "@/lib/timeline";
@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
 import type { BuffEffect } from "@/types/buffs";
-import { AddBuffForm, EditBuffForm } from "./BuffForms";
+import { AddEffect } from "./AddEffect";
+import { EditBuffForm } from "./BuffForms";
 
 /** The label column, then one column per turn of the window. */
 const LABEL_COLUMN = "clamp(10rem, 13vw, 15rem)";
@@ -24,7 +25,6 @@ export function EffectsTimeline() {
   const { t } = useTranslation();
   const buffs = useBuffsStore((s) => s.buffs);
   const turn = useBuffsStore((s) => s.round);
-  const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const edited = buffs.find((b) => b.id === editing);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -49,17 +49,7 @@ export function EffectsTimeline() {
           />
           <div className="flex items-center gap-2" style={{ gridColumn: 1, gridRow: 1 }}>
             <span className="text-sm font-medium">{t("effects.title")}</span>
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => {
-                setEditing(null);
-                setAdding(true);
-              }}
-            >
-              <Plus />
-              {t("buffs.add")}
-            </Button>
+            <AddEffect />
           </div>
           {columns.map((n, i) => (
             <span
@@ -84,7 +74,6 @@ export function EffectsTimeline() {
               start={start}
               size={size}
               onEdit={() => {
-                setAdding(false);
                 setEditing(b.id);
               }}
             />
@@ -96,11 +85,7 @@ export function EffectsTimeline() {
           )}
         </div>
       </div>
-      {edited ? (
-        <EditBuffForm key={edited.id} buff={edited} onDone={() => setEditing(null)} />
-      ) : (
-        adding && <AddBuffForm onDone={() => setAdding(false)} />
-      )}
+      {edited && <EditBuffForm key={edited.id} buff={edited} onDone={() => setEditing(null)} />}
     </div>
   );
 }

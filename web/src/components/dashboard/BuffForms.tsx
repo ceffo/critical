@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash, X } from "@phosphor-icons/react";
+import { Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
@@ -9,7 +9,6 @@ import {
   type BuffEffect,
   type BuffEffectKey,
   type BuffEffects,
-  type SavedBuff,
 } from "@/types/buffs";
 import { fieldClass } from "./fieldStyles";
 
@@ -104,8 +103,7 @@ interface EffectRow {
 
 export function AddBuffForm({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
-  const { activateBuff, saveBuffTemplate, deleteSavedBuff, saved } =
-    useBuffsStore();
+  const { activateBuff, saveBuffTemplate } = useBuffsStore();
   const { run, busy } = useTableStore();
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
@@ -125,20 +123,6 @@ export function AddBuffForm({ onDone }: { onDone: () => void }) {
 
   function setRow(i: number, row: Partial<EffectRow>) {
     setRows(rows.map((old, j) => (j === i ? { ...old, ...row } : old)));
-  }
-
-  /** A chip fills every field; the form stays editable before Add. */
-  function fill(s: SavedBuff) {
-    setName(s.name);
-    setRounds(String(s.duration));
-    setCharges(String(s.charges));
-    setNote(s.note);
-    setRows(
-      BUFF_EFFECT_KEYS.filter((k) => s.effects[k] !== undefined).map((k) => ({
-        key: k,
-        value: String(s.effects[k]),
-      })),
-    );
   }
 
   async function submit() {
@@ -161,48 +145,13 @@ export function AddBuffForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form
-      className="flex flex-wrap items-center gap-1.5 rounded-lg bg-neu-900 p-1.5"
+      className="flex flex-wrap items-center gap-1.5"
       aria-label={t("buffs.add")}
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
       }}
     >
-      {saved.length > 0 && (
-        <ul
-          className="flex w-full flex-wrap items-center gap-1"
-          aria-label={t("buffs.saved")}
-        >
-          {saved.map((s) => (
-            <li
-              key={s.id}
-              data-testid="saved-buff"
-              className="flex items-center rounded-full border bg-background"
-            >
-              <button
-                type="button"
-                className="px-2 py-0.5 text-sm hover:underline"
-                aria-label={t("buffs.useSaved", { name: s.name })}
-                title={s.note || undefined}
-                onClick={() => fill(s)}
-              >
-                {s.name}
-              </button>
-              <Button
-                size="icon-xs"
-                type="button"
-                variant="ghost"
-                disabled={busy}
-                aria-label={t("buffs.deleteSaved", { name: s.name })}
-                title={t("buffs.deleteSaved", { name: s.name })}
-                onClick={() => void run(() => deleteSavedBuff(s.id))}
-              >
-                <X />
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
       <input
         className={`${fieldClass} w-40`}
         aria-label={t("buffs.name")}

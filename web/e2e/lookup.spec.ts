@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard, openWorkspace } from "./helpers";
+import { chooseLanguage, openDashboard, openWorkspace, receivePicker } from "./helpers";
 import type { Locator, Page } from "@playwright/test";
 
 // The frozen fixture catalogue the stack seeds from (never the campaign seeds/).
@@ -319,8 +319,7 @@ test("lookup: the Receive picker finds spells by French and English names with t
   const lookupOrder = await attr(rows(page), "data-id");
 
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Spells" }).click();
-  const picker = page.getByRole("region", { name: "Spell cast on me" });
+  const picker = await receivePicker(page);
   const box = picker.getByLabel("Search for a spell cast on me");
   await box.fill("fire");
   await expect(picker.getByRole("listitem")).toHaveCount(5);

@@ -34,7 +34,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			return fmt.Errorf("%w: %d", spellsvc.ErrSlotAlreadyUsed, slotIndex)
 		}
 		after := append([]spellsvc.SpellSlot(nil), before...)
-		after[slotIndex].Used = true
+		after[slotIndex].Used = true // ADR 0008 step 6: this slot and no other
 		id := slot.SpellID
 		if id == "" {
 			id = spelleffectsvc.Slug(slot.PreparedSpellName)

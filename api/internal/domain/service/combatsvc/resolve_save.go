@@ -155,7 +155,8 @@ type saveRecord struct {
 }
 
 // settle computes total, verdict and margin: the save passes when
-// d20 + modifiers + adjustment >= target.
+// d20 + modifiers + adjustment >= target, a natural 1 or 20 included (ADR 0006
+// steps 2 and 3).
 func (r *saveRecord) settle() {
 	r.Total = r.D20Roll + r.modTotal() + r.Adjustment
 	r.Passed = r.Total >= r.Target

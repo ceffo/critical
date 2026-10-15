@@ -155,9 +155,6 @@ test.describe("with the sheet's STR 12", () => {
     await expect(gem).not.toContainText("needs STR");
     await expect(gem.getByTestId("buff-effects")).toHaveText("weapon +5 · dice ×2");
     await snap(page, "strength-18-gem-on");
-    await page
-      .getByRole("group", { name: "Buffs" })
-      .screenshot({ path: "/home/moncef/code/critical.worktrees/reports/qki.39-buffs.png" });
 
     await page.getByRole("button", { name: "Next Round" }).click();
     await expect(buffBadge(page, "e2e Strength")).toHaveCount(0);

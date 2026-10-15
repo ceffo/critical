@@ -30,7 +30,7 @@ return a distinct value for each call and expect an exact number of calls.
    for the crit check, ADR 0001 step 2). Tests: `TestResolveAttack` ("natural 1 is plain THAC0
    math: hits when 1 is enough", "natural 20 is plain THAC0 math: misses when 21 is needed").
 4. **Strength.** The PHB Table 1 hit adjustment for the **effective** STR (the sheet's STR with
-   the Strength buffs, see `docs/backend.md` "Effective STR"), for melee and hurled weapons. A bow
+   the Strength buffs, [ADR 0004](0004-buffs.md)), for melee and hurled weapons. A bow
    (a weapon that fires ammunition) gets none: PHB "Ability Modifiers in Missile Combat" gives
    Strength to a bow only when it is a strength bow, and the Bard's are not.
    Tests: `TestResolveAttack` ("long sword +2 vs AC 5 at effective STR 18 hits on 5", "short bow
@@ -74,7 +74,7 @@ return a distinct value for each call and expect an exact number of calls.
   (Strength, Dexterity, weapon or buff "+N", ammunition, buffs, situational).
 - The Power Gem's "+5" (step 6) and its ×2 (ADR 0003 step 4) apply only while the buff's
   `min_str` gate is met: effective STR 18 or more (user, 2026-10-13: "not exactly 18 >= 18").
-  The gate is a buff rule (ADR 0004 once written; until then `docs/backend.md` "Effective STR").
+  The gate is a buff rule ([ADR 0004](0004-buffs.md)).
   Tests: `buffsvc` `TestEffectiveStr_Rule3_PowerGemFrom18Up` (STR 17 off; 18, 19, 23 on),
   `TestResolveAttack_PowerGem` ("ignored at effective STR 17").
 - A tie between the weapon's own magic and a buff "+N" shows the buff in the breakdown; the value

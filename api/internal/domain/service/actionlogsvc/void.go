@@ -7,7 +7,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// The log is a stack (critical-qki.38). User, 2026-10-14: "no amending values.
+// The log is a stack (ADR 0007 step 8). User, 2026-10-14: "no amending values.
 // just the note.. can only pop elements", for every entry kind. Only the
 // newest non-voided entry can be voided; its snapshots are restored, so popping
 // in order walks the state back step by step.

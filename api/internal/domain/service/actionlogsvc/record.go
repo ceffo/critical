@@ -13,7 +13,7 @@ import (
 // Record validates and stores an entry with its snapshots in one transaction,
 // joining the caller's transaction when ctx carries one. Round 0 is stamped
 // with the current round. A positive HPDelta (a heal, from any service) is
-// capped at max HP before it is stored (actionlog.CapHeal, HP-1/HP-2) and the
+// capped at max HP before it is stored (actionlog.CapHeal, ADR 0007 steps 4 and 5) and the
 // payload gets the requested vs applied breakdown.
 func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, error) {
 	if e.Kind == "" {
@@ -62,7 +62,7 @@ func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, erro
 }
 
 // capHeal clips e's heal to the gap to max HP and records the breakdown in its
-// payload (HP-1, HP-2). It must run inside the recording transaction so the
+// payload (ADR 0007 steps 4 and 5). It must run inside the recording transaction so the
 // total it reads is the one the entry is added to.
 func (s *service) capHeal(ctx context.Context, e *actionlog.NewEntry) error {
 	total, err := s.dal.HPTotal(ctx, e.CharacterID)

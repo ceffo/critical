@@ -12,13 +12,14 @@ func (s *service) GetSlots(ctx context.Context, characterID int64) ([]SpellSlot,
 	return s.dal.GetSlots(ctx, characterID)
 }
 
-// ResetSlots marks every slot unused — invoked on a long rest.
+// ResetSlots marks every slot unused and keeps the preparation (ADR 0008
+// step 11); invoked on a long rest.
 func (s *service) ResetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error) {
 	slots, err := s.dal.GetSlots(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("get slots: %w", err)
 	}
-	// A long rest ends Rary's extra slots (docs/backend.md "Spell slots").
+	// A long rest ends Rary's extra slots (ADR 0008 step 9).
 	updated := make([]SpellSlot, 0, len(slots))
 	for _, s := range slots {
 		if s.Extra {

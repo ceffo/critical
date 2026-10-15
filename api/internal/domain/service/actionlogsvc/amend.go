@@ -13,7 +13,7 @@ import (
 // maxNoteLen bounds a note (runes).
 const maxNoteLen = 500
 
-// Amend sets the note of entry id, any kind (critical-qki.38). User,
+// Amend sets the note of entry id, any kind (ADR 0007 step 7). User,
 // 2026-10-14: "no amending values. just the note". The note is the only thing
 // an amend changes: HP, summary, payload and state are untouched. "" clears it.
 func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error) {

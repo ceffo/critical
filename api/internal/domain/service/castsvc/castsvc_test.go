@@ -312,6 +312,40 @@ func TestCast_PerSeedEntry(t *testing.T) {
 	}
 }
 
+// A cast marks the chosen slot used and no other, even when two slots hold
+// the same spell, and writes the list once.
+func TestCast_ConsumesExactlyTheChosenSlot(t *testing.T) {
+	f := newFixture(t)
+	f.prepared(
+		slot("alarm", "Alarm", 1),
+		slot("fireball", "Fireball", 3),
+		slot("fireball", "Fireball", 3),
+		slot("haste", "Haste", 3),
+	)
+	// Fireball is 10d6 at level 15: ten distinct rolls.
+	f.dice.vals = []int{1, 2, 3, 4, 5, 6, 1, 2, 3, 4}
+	res, err := f.svc.Cast(context.Background(), charID, 2, castsvc.CastRequest{})
+	require.NoError(t, err)
+
+	require.Len(t, f.saved, 1, "the slot list is written once")
+	used := []bool{}
+	for _, s := range f.saved[0] {
+		used = append(used, s.Used)
+	}
+	assert.Equal(t, []bool{false, false, true, false}, used)
+	assert.Equal(t, used, usedFlags(res.Slots))
+	assert.Empty(t, f.dice.vals, "every damage die was rolled once")
+	require.Len(t, f.entries, 1, "one entry per cast")
+}
+
+func usedFlags(slots []spellsvc.SpellSlot) []bool {
+	out := []bool{}
+	for _, s := range slots {
+		out = append(out, s.Used)
+	}
+	return out
+}
+
 func TestCast_SlotErrors(t *testing.T) {
 	tests := []struct {
 		name  string

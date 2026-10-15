@@ -5,13 +5,16 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createServer } from "vite";
+import http from "node:http";
+import { createReadStream, existsSync, statSync } from "node:fs";
 
 const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(webDir, "..");
 const apiBinary = path.join(repoRoot, "bin", "critical-srv"); // `just build-api`
 // The frozen test fixture, never the campaign seeds/ (editing those must not break e2e).
 const seedsDir = path.join(repoRoot, "api", "testdata", "seeds");
+// Built once per run by e2e/global-setup.ts (the production bundle, not a dev server).
+export const distDir = path.join(webDir, "e2e-results", "dist");
 const screensDir = path.join(webDir, "e2e-results", "screens");
 
 /** Ask the OS for a free TCP port. */
@@ -46,7 +49,7 @@ async function waitForApi(url: string, proc: ChildProcess, log: () => string) {
 }
 
 export interface Stack {
-  /** Base URL of the Vite server (what the browser opens). */
+  /** Base URL of the web server (what the browser opens). */
   webUrl: string;
   /** Base URL of this stack's own Go API. */
   apiUrl: string;
@@ -90,16 +93,110 @@ export interface StackOptions {
   extraSpells: { rows: unknown[] };
 }
 
+const mime: Record<string, string> = {
+  ".html": "text/html",
+  ".js": "text/javascript",
+  ".css": "text/css",
+  ".svg": "image/svg+xml",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".woff2": "font/woff2",
+  ".ico": "image/x-icon",
+};
+
+interface WebServer {
+  url: string;
+  /** Where /api goes: the API of the test currently running on this worker. */
+  setApi(url: string): void;
+}
+
 /**
- * A throwaway stack: Go API on a free port with a fresh temp SQLite DB seeded
- * from api/testdata/seeds, plus a Vite dev server on a free port proxying
- * /api to that API. Never touches .dev/ or fixed ports.
+ * Serves the built bundle (SPA fallback) and forwards /api to the current test's API, like nginx
+ * does in compose. One per worker: a worker runs one test at a time, so a mutable target is enough.
  */
-export const test = base.extend<{ stack: Stack } & StackOptions>({
+async function startWebServer(): Promise<{
+  server: WebServer;
+  close(): Promise<void>;
+}> {
+  let apiTarget = new URL("http://127.0.0.1:1");
+  const srv = http.createServer((req, res) => {
+    const urlPath = (req.url ?? "/").split("?")[0];
+    if (urlPath.startsWith("/api/") || urlPath === "/api") {
+      const up = http.request(
+        {
+          host: apiTarget.hostname,
+          port: apiTarget.port,
+          method: req.method,
+          path: req.url,
+          headers: { ...req.headers, host: apiTarget.host },
+        },
+        (r) => {
+          res.writeHead(r.statusCode ?? 502, r.headers);
+          r.pipe(res);
+        },
+      );
+      up.on("error", () => {
+        res.writeHead(502).end();
+      });
+      req.pipe(up);
+      return;
+    }
+    let file = path.join(distDir, path.normalize(decodeURIComponent(urlPath)));
+    if (
+      !file.startsWith(distDir) ||
+      !existsSync(file) ||
+      !statSync(file).isFile()
+    ) {
+      file = path.join(distDir, "index.html");
+    }
+    res.writeHead(200, {
+      "content-type": mime[path.extname(file)] ?? "application/octet-stream",
+    });
+    createReadStream(file).pipe(res);
+  });
+  await new Promise<void>((r) => srv.listen(0, "127.0.0.1", r));
+  const { port } = srv.address() as net.AddressInfo;
+  return {
+    server: {
+      url: `http://127.0.0.1:${port}`,
+      setApi: (u) => {
+        apiTarget = new URL(u);
+      },
+    },
+    close: () =>
+      new Promise<void>((r) => {
+        srv.closeAllConnections();
+        srv.close(() => r());
+      }),
+  };
+}
+
+/**
+ * A throwaway stack: Go API on a free port with a fresh temp SQLite DB seeded from
+ * api/testdata/seeds, behind the worker's web server (built bundle, /api proxied to this API).
+ * Never touches .dev/ or fixed ports.
+ */
+export const test = base.extend<
+  { stack: Stack } & StackOptions,
+  { webServer: WebServer }
+>({
   character: [{}, { option: true }],
   extraSpells: [{ rows: [] }, { option: true }],
 
-  stack: async ({ character, extraSpells }, provide) => {
+  webServer: [
+    // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructuring pattern
+    async ({}, provide) => {
+      const { server, close } = await startWebServer();
+      try {
+        await provide(server);
+      } finally {
+        await close();
+      }
+    },
+    { scope: "worker" },
+  ],
+
+  stack: async ({ character, extraSpells, webServer }, provide) => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "critical-e2e-"));
     const dbPath = path.join(tmp, "critical.db");
     const apiPort = await freePort();
@@ -118,25 +215,11 @@ export const test = base.extend<{ stack: Stack } & StackOptions>({
     api.stderr?.on("data", (d) => (output += d));
     api.on("error", (e) => (output += String(e)));
 
-    let vite: Awaited<ReturnType<typeof createServer>> | undefined;
     try {
       await waitForApi(apiUrl, api, () => output);
-      vite = await createServer({
-        root: webDir,
-        logLevel: "silent",
-        server: {
-          port: await freePort(),
-          strictPort: true,
-          host: "127.0.0.1",
-          proxy: { "/api": apiUrl },
-        },
-      });
-      await vite.listen();
-      const webUrl = vite.resolvedUrls?.local[0]?.replace(/\/$/, "");
-      if (!webUrl) throw new Error("Vite did not report a URL");
-      await provide({ webUrl, apiUrl, dbPath });
+      webServer.setApi(apiUrl);
+      await provide({ webUrl: webServer.url, apiUrl, dbPath });
     } finally {
-      await vite?.close();
       api.kill("SIGTERM");
       await rm(tmp, { recursive: true, force: true });
     }

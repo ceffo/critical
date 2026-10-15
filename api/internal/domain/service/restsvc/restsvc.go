@@ -73,7 +73,8 @@ type restRecord struct {
 	ItemsRefilled []string `json:"itemsRefilled"`
 }
 
-// LongRest resets spell slots and per-day items atomically and logs it.
+// LongRest resets spell slots and per-day items atomically and logs it (ADR
+// 0008 steps 11 and 12).
 func (s *service) LongRest(ctx context.Context, characterID int64) (Result, error) {
 	var res Result
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {

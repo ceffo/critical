@@ -411,21 +411,36 @@ test.describe("keyboard past a page", () => {
 test("lookup: a slow response overtaken by a newer query is not written", async ({
   page,
 }) => {
+  // The "fir" request is held until the test releases it: no timers, no guessing when it lands.
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let held!: () => void;
+  const heldSeen = new Promise<void>((r) => (held = r));
+  let delivered!: () => void;
+  const slowDelivered = new Promise<void>((r) => (delivered = r));
   await page.route("**/api/spells?*", async (route) => {
-    if (new URL(route.request().url()).searchParams.get("q") === "fir")
-      await new Promise((r) => setTimeout(r, 1500));
-    await route.continue().catch(() => {}); // the page may be gone
+    if (new URL(route.request().url()).searchParams.get("q") === "fir") {
+      held();
+      await gate;
+      await route.continue().catch(() => {}); // the page may have aborted it
+      delivered();
+      return;
+    }
+    await route.continue().catch(() => {});
   });
   await openLookup(page);
-  const slow = page.waitForRequest((r) => new URL(r.url()).searchParams.get("q") === "fir");
   await search(page).fill("fir");
-  await slow;
+  await heldSeen;
   await search(page).fill("fireball");
   await expect(rows(page)).toHaveCount(1);
   await expect(selected(page)).toHaveAttribute("data-id", "fireball");
   // Let the slow "fir" response land: the rows stay those of "fireball".
-  await page.waitForResponse((r) => new URL(r.url()).searchParams.get("q") === "fir");
-  await page.waitForTimeout(200);
+  release();
+  await slowDelivered;
+  // Two frames: whatever the page does with that response has been rendered.
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
   await expect(rows(page)).toHaveCount(1);
   await expect(count(page)).toHaveText("1 spell");
 });

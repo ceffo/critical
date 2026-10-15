@@ -50,48 +50,19 @@ type catalogueRow struct {
 	Key, NameFR, DescriptionFR, Source      sql.NullString
 	Name, Class, Description, Stats, Sphere string
 	Level                                   int
-	StatsFR                                 statsFRRow
-}
-
-// statsFRRow is the six French stat columns, in catalogue.StatsFR's order.
-type statsFRRow struct {
-	CastingTime, Range, Duration, AreaOfEffect, Components, SavingThrow sql.NullString
-}
-
-func (r statsFRRow) texts() catalogue.StatsFR {
-	return catalogue.StatsFR{
-		CastingTime: r.CastingTime.String, Range: r.Range.String, Duration: r.Duration.String,
-		AreaOfEffect: r.AreaOfEffect.String, Components: r.Components.String, SavingThrow: r.SavingThrow.String,
-	}
-}
-
-func (r statsFRRow) nulls() []bool {
-	return []bool{
-		!r.CastingTime.Valid, !r.Range.Valid, !r.Duration.Valid,
-		!r.AreaOfEffect.Valid, !r.Components.Valid, !r.SavingThrow.Valid,
-	}
-}
-
-func emptyFR(s catalogue.StatsFR) []bool {
-	return []bool{
-		s.CastingTime == "", s.Range == "", s.Duration == "",
-		s.AreaOfEffect == "", s.Components == "", s.SavingThrow == "",
-	}
 }
 
 func catalogueRows(t *testing.T, db *DB) []catalogueRow {
 	t.Helper()
 	rows, err := db.Query(`SELECT id, key, name, name_fr, class, level, COALESCE(sphere, ''), COALESCE(description, ''),
-		description_fr, source, COALESCE(stats, ''), casting_time_fr, range_fr, duration_fr, area_of_effect_fr,
-		components_fr, saving_throw_fr FROM spells ORDER BY id`)
+		description_fr, source, COALESCE(stats, '') FROM spells ORDER BY id`)
 	require.NoError(t, err)
 	defer func() { _ = rows.Close() }()
 	var out []catalogueRow
 	for rows.Next() {
 		var r catalogueRow
 		require.NoError(t, rows.Scan(&r.ID, &r.Key, &r.Name, &r.NameFR, &r.Class, &r.Level, &r.Sphere, &r.Description,
-			&r.DescriptionFR, &r.Source, &r.Stats, &r.StatsFR.CastingTime, &r.StatsFR.Range, &r.StatsFR.Duration,
-			&r.StatsFR.AreaOfEffect, &r.StatsFR.Components, &r.StatsFR.SavingThrow))
+			&r.DescriptionFR, &r.Source, &r.Stats))
 		out = append(out, r)
 	}
 	require.NoError(t, rows.Err())
@@ -144,20 +115,13 @@ func TestImportCatalogue_FreshDatabase(t *testing.T) {
 		assert.Equal(t, s.NameFR != "", r.NameFR.Valid, "%s: an absent French name is NULL", s.ID)
 		assert.Equal(t, s.DescriptionFR != "", r.DescriptionFR.Valid, s.ID)
 		assert.Equal(t, s.Source, r.Source.String, s.ID)
-		assert.Equal(t, s.StatsFR, r.StatsFR.texts(), s.ID)
-		assert.Equal(t, emptyFR(s.StatsFR), r.StatsFR.nulls(), "%s: an absent French stat is NULL, per field", s.ID)
 	}
 	assert.Equal(t, cat.Version, recordedVersion(t, db))
-	assert.Equal(t, "60 mètres + 10 mètres par niveau", keyed["magic_missile"].StatsFR.Range.String)
-	assert.False(t, keyed["magic_missile"].StatsFR.CastingTime.Valid)
 }
 
-// Step 5.6: the typed stats are parsed from the English texts only; magic_missile
-// has French stat texts, which must not change them.
 func TestImportCatalogue_Step6_TypedStatsParsedAtImport(t *testing.T) {
 	db := openMigrated(t)
 	cat := fixtureCatalogue(t)
-	require.NotEmpty(t, cat.ByID()["magic_missile"].StatsFR.Range)
 	require.NoError(t, db.ImportCatalogue(context.Background(), cat, nil))
 	r := byKey(catalogueRows(t, db))["magic_missile"]
 	var stats spellstats.Stats
@@ -200,10 +164,6 @@ func TestImportCatalogue_Step4_NewVersionUpserts(t *testing.T) {
 				in[i].Description = "Fixture text, corrected."
 				in[i].NameFR = ""
 				in[i].Range = "20 yds."
-				in[i].StatsFR.Duration = "Instantanée"
-			}
-			if in[i].ID == "magic_missile" {
-				in[i].StatsFR.Range = ""
 			}
 		}
 		return append(in, catalogue.Spell{
@@ -220,9 +180,6 @@ func TestImportCatalogue_Step4_NewVersionUpserts(t *testing.T) {
 	assert.Equal(t, "Fixture text, corrected.", fb.Description)
 	assert.False(t, fb.NameFR.Valid, "a French name the artifact dropped is cleared")
 	assert.Contains(t, fb.Stats, "20 yds.", "stats parsed again")
-	assert.Equal(t, "Instantanée", fb.StatsFR.Duration.String, "a French stat the artifact added is stored")
-	assert.False(t, rows["magic_missile"].StatsFR.Range.Valid, "a French stat the artifact dropped is cleared")
-	assert.Equal(t, "Instantanée", rows["magic_missile"].StatsFR.Duration.String, "the other French stats stay")
 	assert.Equal(t, "Nouveau sort", rows["new_spell"].NameFR.String)
 	assert.Equal(t, "All", rows["new_spell"].Sphere)
 	assert.Equal(t, "1970-01-02", recordedVersion(t, db))

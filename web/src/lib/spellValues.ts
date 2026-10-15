@@ -66,34 +66,20 @@ export function statValue(
   }
 }
 
-/** The six raw stat fields of a spell, by their wire names. */
-export type StatField =
-  | "casting_time"
-  | "range"
-  | "duration"
-  | "area_of_effect"
-  | "components"
-  | "saving_throw";
-
-/** The wire field of a stat of the detail grid. */
-export function statField(key: StatKey): StatField {
+/** Raw book text of a stat. */
+export function statRaw(spell: Spell, key: StatKey): string {
   switch (key) {
     case "range":
-      return "range";
+      return spell.range;
     case "duration":
-      return "duration";
+      return spell.duration;
     case "area":
-      return "area_of_effect";
+      return spell.area_of_effect;
     case "castingTime":
-      return "casting_time";
+      return spell.casting_time;
     case "save":
-      return "saving_throw";
+      return spell.saving_throw;
   }
-}
-
-/** Raw English book text of a stat. */
-export function statRaw(spell: Spell, key: StatKey): string {
-  return spell[statField(key)];
 }
 
 /** A stat whose value at the caster level has dice to roll, and that roll as a composer formula. */

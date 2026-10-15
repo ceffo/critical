@@ -136,9 +136,7 @@ func TestSearch_MapsFields(t *testing.T) {
 	seedSpells(t, db)
 
 	_, err := db.ExecContext(context.Background(),
-		`UPDATE spells SET name_fr = 'Boule de feu', description_fr = 'texte', source = 'PHB',
-			casting_time_fr = 'ct', range_fr = 'r', duration_fr = 'd', area_of_effect_fr = 'a', components_fr = 'c',
-			saving_throw_fr = 's' WHERE key = 'fireball'`)
+		`UPDATE spells SET name_fr = 'Boule de feu', description_fr = 'texte', source = 'PHB' WHERE key = 'fireball'`)
 	require.NoError(t, err)
 
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Levels: []int{3}})
@@ -147,7 +145,6 @@ func TestSearch_MapsFields(t *testing.T) {
 	want := spellsvc.Spell{
 		ID: "fireball", Name: "Fireball", NameFR: "Boule de feu", Class: "wizard", Level: 3, School: "Enchantment",
 		Description: "desc", DescriptionFR: "texte", Source: "PHB",
-		StatsFR: catalogue.StatsFR{CastingTime: "ct", Range: "r", Duration: "d", AreaOfEffect: "a", Components: "c", SavingThrow: "s"},
 	}
 	got[0].Stats = spellstats.Stats{}
 	assert.Equal(t, want, got[0])

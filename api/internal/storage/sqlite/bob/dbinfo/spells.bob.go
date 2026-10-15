@@ -177,60 +177,6 @@ var Spells = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
-		CastingTimeFR: column{
-			Name:      "casting_time_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		RangeFR: column{
-			Name:      "range_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		DurationFR: column{
-			Name:      "duration_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		AreaOfEffectFR: column{
-			Name:      "area_of_effect_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		ComponentsFR: column{
-			Name:      "components_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		SavingThrowFR: column{
-			Name:      "saving_throw_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
 	},
 	Indexes: spellIndexes{
 		PKMainSpells: index{
@@ -286,35 +232,29 @@ var Spells = Table[
 }
 
 type spellColumns struct {
-	ID             column
-	Name           column
-	Class          column
-	Level          column
-	School         column
-	Sphere         column
-	CastingTime    column
-	Range          column
-	Duration       column
-	AreaOfEffect   column
-	Components     column
-	SavingThrow    column
-	Description    column
-	Stats          column
-	Key            column
-	NameFR         column
-	DescriptionFR  column
-	Source         column
-	CastingTimeFR  column
-	RangeFR        column
-	DurationFR     column
-	AreaOfEffectFR column
-	ComponentsFR   column
-	SavingThrowFR  column
+	ID            column
+	Name          column
+	Class         column
+	Level         column
+	School        column
+	Sphere        column
+	CastingTime   column
+	Range         column
+	Duration      column
+	AreaOfEffect  column
+	Components    column
+	SavingThrow   column
+	Description   column
+	Stats         column
+	Key           column
+	NameFR        column
+	DescriptionFR column
+	Source        column
 }
 
 func (c spellColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description, c.Stats, c.Key, c.NameFR, c.DescriptionFR, c.Source, c.CastingTimeFR, c.RangeFR, c.DurationFR, c.AreaOfEffectFR, c.ComponentsFR, c.SavingThrowFR,
+		c.ID, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description, c.Stats, c.Key, c.NameFR, c.DescriptionFR, c.Source,
 	}
 }
 

@@ -36,30 +36,24 @@ func (mods SpellModSlice) Apply(ctx context.Context, n *SpellTemplate) {
 // SpellTemplate is an object representing the database table.
 // all columns are optional and should be set by mods
 type SpellTemplate struct {
-	ID             func() int64
-	Name           func() string
-	Class          func() string
-	Level          func() int64
-	School         func() null.Val[string]
-	Sphere         func() null.Val[string]
-	CastingTime    func() null.Val[string]
-	Range          func() null.Val[string]
-	Duration       func() null.Val[string]
-	AreaOfEffect   func() null.Val[string]
-	Components     func() null.Val[string]
-	SavingThrow    func() null.Val[string]
-	Description    func() null.Val[string]
-	Stats          func() null.Val[string]
-	Key            func() null.Val[string]
-	NameFR         func() null.Val[string]
-	DescriptionFR  func() null.Val[string]
-	Source         func() null.Val[string]
-	CastingTimeFR  func() null.Val[string]
-	RangeFR        func() null.Val[string]
-	DurationFR     func() null.Val[string]
-	AreaOfEffectFR func() null.Val[string]
-	ComponentsFR   func() null.Val[string]
-	SavingThrowFR  func() null.Val[string]
+	ID            func() int64
+	Name          func() string
+	Class         func() string
+	Level         func() int64
+	School        func() null.Val[string]
+	Sphere        func() null.Val[string]
+	CastingTime   func() null.Val[string]
+	Range         func() null.Val[string]
+	Duration      func() null.Val[string]
+	AreaOfEffect  func() null.Val[string]
+	Components    func() null.Val[string]
+	SavingThrow   func() null.Val[string]
+	Description   func() null.Val[string]
+	Stats         func() null.Val[string]
+	Key           func() null.Val[string]
+	NameFR        func() null.Val[string]
+	DescriptionFR func() null.Val[string]
+	Source        func() null.Val[string]
 
 	f *Factory
 
@@ -154,30 +148,6 @@ func (o SpellTemplate) BuildSetter() *models.SpellSetter {
 		val := o.Source()
 		m.Source = omitnull.FromNull(val)
 	}
-	if o.CastingTimeFR != nil {
-		val := o.CastingTimeFR()
-		m.CastingTimeFR = omitnull.FromNull(val)
-	}
-	if o.RangeFR != nil {
-		val := o.RangeFR()
-		m.RangeFR = omitnull.FromNull(val)
-	}
-	if o.DurationFR != nil {
-		val := o.DurationFR()
-		m.DurationFR = omitnull.FromNull(val)
-	}
-	if o.AreaOfEffectFR != nil {
-		val := o.AreaOfEffectFR()
-		m.AreaOfEffectFR = omitnull.FromNull(val)
-	}
-	if o.ComponentsFR != nil {
-		val := o.ComponentsFR()
-		m.ComponentsFR = omitnull.FromNull(val)
-	}
-	if o.SavingThrowFR != nil {
-		val := o.SavingThrowFR()
-		m.SavingThrowFR = omitnull.FromNull(val)
-	}
 
 	return m
 }
@@ -253,24 +223,6 @@ func (o SpellTemplate) Build() *models.Spell {
 	}
 	if o.Source != nil {
 		m.Source = o.Source()
-	}
-	if o.CastingTimeFR != nil {
-		m.CastingTimeFR = o.CastingTimeFR()
-	}
-	if o.RangeFR != nil {
-		m.RangeFR = o.RangeFR()
-	}
-	if o.DurationFR != nil {
-		m.DurationFR = o.DurationFR()
-	}
-	if o.AreaOfEffectFR != nil {
-		m.AreaOfEffectFR = o.AreaOfEffectFR()
-	}
-	if o.ComponentsFR != nil {
-		m.ComponentsFR = o.ComponentsFR()
-	}
-	if o.SavingThrowFR != nil {
-		m.SavingThrowFR = o.SavingThrowFR()
 	}
 
 	o.setModelRels(m)
@@ -438,12 +390,6 @@ func (m spellMods) RandomizeAllColumns(f *faker.Faker) SpellMod {
 		SpellMods.RandomNameFR(f),
 		SpellMods.RandomDescriptionFR(f),
 		SpellMods.RandomSource(f),
-		SpellMods.RandomCastingTimeFR(f),
-		SpellMods.RandomRangeFR(f),
-		SpellMods.RandomDurationFR(f),
-		SpellMods.RandomAreaOfEffectFR(f),
-		SpellMods.RandomComponentsFR(f),
-		SpellMods.RandomSavingThrowFR(f),
 	}
 }
 
@@ -1303,324 +1249,6 @@ func (m spellMods) RandomSource(f *faker.Faker) SpellMod {
 func (m spellMods) RandomSourceNotNull(f *faker.Faker) SpellMod {
 	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
 		o.Source = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Set the model columns to this value
-func (m spellMods) CastingTimeFR(val null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.CastingTimeFR = func() null.Val[string] { return val }
-	})
-}
-
-// Set the Column from the function
-func (m spellMods) CastingTimeFRFunc(f func() null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.CastingTimeFR = f
-	})
-}
-
-// Clear any values for the column
-func (m spellMods) UnsetCastingTimeFR() SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.CastingTimeFR = nil
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is sometimes null
-func (m spellMods) RandomCastingTimeFR(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.CastingTimeFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is never null
-func (m spellMods) RandomCastingTimeFRNotNull(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.CastingTimeFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Set the model columns to this value
-func (m spellMods) RangeFR(val null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.RangeFR = func() null.Val[string] { return val }
-	})
-}
-
-// Set the Column from the function
-func (m spellMods) RangeFRFunc(f func() null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.RangeFR = f
-	})
-}
-
-// Clear any values for the column
-func (m spellMods) UnsetRangeFR() SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.RangeFR = nil
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is sometimes null
-func (m spellMods) RandomRangeFR(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.RangeFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is never null
-func (m spellMods) RandomRangeFRNotNull(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.RangeFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Set the model columns to this value
-func (m spellMods) DurationFR(val null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.DurationFR = func() null.Val[string] { return val }
-	})
-}
-
-// Set the Column from the function
-func (m spellMods) DurationFRFunc(f func() null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.DurationFR = f
-	})
-}
-
-// Clear any values for the column
-func (m spellMods) UnsetDurationFR() SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.DurationFR = nil
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is sometimes null
-func (m spellMods) RandomDurationFR(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.DurationFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is never null
-func (m spellMods) RandomDurationFRNotNull(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.DurationFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Set the model columns to this value
-func (m spellMods) AreaOfEffectFR(val null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.AreaOfEffectFR = func() null.Val[string] { return val }
-	})
-}
-
-// Set the Column from the function
-func (m spellMods) AreaOfEffectFRFunc(f func() null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.AreaOfEffectFR = f
-	})
-}
-
-// Clear any values for the column
-func (m spellMods) UnsetAreaOfEffectFR() SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.AreaOfEffectFR = nil
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is sometimes null
-func (m spellMods) RandomAreaOfEffectFR(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.AreaOfEffectFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is never null
-func (m spellMods) RandomAreaOfEffectFRNotNull(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.AreaOfEffectFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Set the model columns to this value
-func (m spellMods) ComponentsFR(val null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.ComponentsFR = func() null.Val[string] { return val }
-	})
-}
-
-// Set the Column from the function
-func (m spellMods) ComponentsFRFunc(f func() null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.ComponentsFR = f
-	})
-}
-
-// Clear any values for the column
-func (m spellMods) UnsetComponentsFR() SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.ComponentsFR = nil
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is sometimes null
-func (m spellMods) RandomComponentsFR(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.ComponentsFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is never null
-func (m spellMods) RandomComponentsFRNotNull(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.ComponentsFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Set the model columns to this value
-func (m spellMods) SavingThrowFR(val null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.SavingThrowFR = func() null.Val[string] { return val }
-	})
-}
-
-// Set the Column from the function
-func (m spellMods) SavingThrowFRFunc(f func() null.Val[string]) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.SavingThrowFR = f
-	})
-}
-
-// Clear any values for the column
-func (m spellMods) UnsetSavingThrowFR() SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.SavingThrowFR = nil
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is sometimes null
-func (m spellMods) RandomSavingThrowFR(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.SavingThrowFR = func() null.Val[string] {
-			if f == nil {
-				f = &defaultFaker
-			}
-
-			val := random_string(f)
-			return null.From(val)
-		}
-	})
-}
-
-// Generates a random value for the column using the given faker
-// if faker is nil, a default faker is used
-// The generated value is never null
-func (m spellMods) RandomSavingThrowFRNotNull(f *faker.Faker) SpellMod {
-	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
-		o.SavingThrowFR = func() null.Val[string] {
 			if f == nil {
 				f = &defaultFaker
 			}

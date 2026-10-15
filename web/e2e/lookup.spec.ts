@@ -491,7 +491,7 @@ test("lookup: a slow response overtaken by a newer query is not written", async 
   await expect(count(page)).toHaveText("1 spell");
 });
 
-test("lookup: level chips and rows show the bare number; French labels classes, spheres and common values; French stat texts", async ({
+test("lookup: level chips and rows show the bare number; French labels classes, spheres and common values", async ({
   page,
 }) => {
   await openLookup(page);
@@ -529,23 +529,6 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
   await expect(meta).toContainText("Soleil");
   await expect(detail(page).getByTestId("stat-range")).toContainText("Contact");
   await snap(page, "french-values");
-
-  // A spell with French stat texts in the catalogue shows them (the fixture's Magic Missile).
-  const searchFr = page.getByRole("combobox", {
-    name: "Rechercher des sorts...",
-  });
-  await searchFr.fill("Projectile magique");
-  await rows(page).first().click();
-  await expect(detail(page).getByTestId("stat-range")).toContainText(
-    "60 mètres + 10 mètres par niveau",
-  );
-  // the area's value repeats the English text ("1-5 targets"): the French text stands alone
-  await expect(detail(page).getByTestId("stat-area")).toHaveText(
-    /Zone\s*1 à 5 cibles$/,
-  );
-  await snap(page, "french-stats");
-  await searchFr.fill("quixotic");
-  await expect(rows(page)).toHaveCount(2);
 
   // The sphere dropdown: French labels, still filtering on the English API value.
   await classButton(page, "Prêtre").click();

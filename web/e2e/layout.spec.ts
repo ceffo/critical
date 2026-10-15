@@ -1,5 +1,6 @@
 import { test, expect, snap } from "./fixtures";
 import {
+  addBuff,
   ammoChips,
   chooseLanguage,
   chooseSetting,
@@ -83,6 +84,30 @@ test("layout: four regions, full width, no page scroll from 1024 to 2560", async
   await expectRegions(page);
   await expectNoPageScroll(page);
 
+  // ADR 0017 step 6: the header is as tall as its effects need, up to the turn row + 3 effect rows
+  // (24 + 3 * 24 px + 16 px padding = 112 px); the rest sits behind the expander.
+  const header = page.locator("[data-screen=turn-header]");
+  const heightOf = async () => (await header.boundingBox())!.height;
+  const empty = await heightOf();
+  await addBuff(page, { name: "Aid", rounds: 6 });
+  const one = await heightOf();
+  // The turn block sets a floor (64px); a single effect row fits inside it.
+  expect(one, "one effect").toBe(empty);
+  for (const name of ["Bless", "Shield"])
+    await addBuff(page, { name, rounds: 6 });
+  const three = await heightOf();
+  expect(three, "three effects").toBeLessThanOrEqual(112);
+  expect(three, "three effects grow the header").toBeGreaterThan(one);
+  await expect(page.getByTestId("effects-expander")).toHaveCount(0);
+  for (const name of ["Haste", "Prayer"])
+    await addBuff(page, { name, rounds: 6 });
+  const expander = page.getByTestId("effects-expander");
+  await expander.click(); // addBuff left it open
+  const buffs = page.getByTestId("buff");
+  await expect(expander).toHaveAttribute("aria-expanded", "false");
+  await expect(buffs).toHaveCount(3);
+  expect(await heightOf(), "five effects at rest").toBe(three);
+
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
     await expectRegions(page);
@@ -95,11 +120,12 @@ test("layout: four regions, full width, no page scroll from 1024 to 2560", async
     // The workspace keeps a usable width.
     const ws = await page.getByTestId("workspace").boundingBox();
     expect(ws!.width).toBeGreaterThan(vp.width * 0.3);
-    // The header is one row of at most 64px.
-    const header = await page
-      .locator("[data-screen=turn-header]")
-      .boundingBox();
-    expect(header!.height, "header height").toBeLessThanOrEqual(64);
+    // The header at rest: turn row + 3 effect rows, no scrollbar on the track.
+    expect(await heightOf(), "header height").toBeLessThanOrEqual(112);
+    await expectNoScroll(
+      page.getByTestId("effects-track").locator(".."),
+      "track",
+    );
     if (vp.width === 1280) {
       // Moi shows identity, abilities, HP, HP change and the five saves without scrolling, and the
       // weapon in hand is fully inside the workspace.
@@ -121,6 +147,16 @@ test("layout: four regions, full width, no page scroll from 1024 to 2560", async
       );
     }
     await snap(page, `dashboard-${vp.width}x${vp.height}`);
+    if (vp.width === 1280 || vp.width === 1707) {
+      await expander.click();
+      await expect(expander).toHaveAttribute("aria-expanded", "true");
+      await expect(buffs).toHaveCount(5);
+      expect(await heightOf(), "expanded header").toBeGreaterThan(three);
+      await expectNoPageScroll(page);
+      await snap(page, `dashboard-${vp.width}x${vp.height}-effects-expanded`);
+      await expander.click();
+      await expect(buffs).toHaveCount(3);
+    }
   }
 });
 

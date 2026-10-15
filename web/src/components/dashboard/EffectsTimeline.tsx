@@ -1,6 +1,13 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { LockSimple, PencilSimple, Shield, X } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  CaretUp,
+  LockSimple,
+  PencilSimple,
+  Shield,
+  X,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { formatTurnsLeft } from "@/lib/passTime";
 import {
@@ -20,29 +27,36 @@ import { EditBuffForm } from "./BuffForms";
 /** The label column, then one column per turn of the window. */
 const LABEL_COLUMN = "clamp(10rem, 13vw, 15rem)";
 
+/** Effect rows shown at rest; more than this and an expander shows the rest (ADR 0017 step 6). */
+const REST_ROWS = 3;
+
 /**
  * The effects track: one row per active buff over a window of turns that follows the current one.
  * A timed buff is a thin line for the turns it has run and a pill for what is left (from the
  * server's `duration`), in the warning colour on its last turn; a charge buff shows its charges as
  * pips; a buff that does not apply is dashed with a lock and the reason. Edit and remove per row,
- * Add below the label. The number of turn columns follows the width available (8, 12 or 16). The
- * track is one header row tall plus one effect row and scrolls under its sticky turn row, so the
- * header stays at most 64px (ADR 0017 step 6).
+ * Add next to the label. The number of turn columns follows the width available (8, 12 or 16). At
+ * rest the track shows its turn row and up to 3 effect rows, no scrollbar; with more effects an
+ * expander (aria-expanded) grows the track in place to show them all, capped at 40% of the viewport
+ * height where it scrolls (ADR 0017 step 6).
  */
 export function EffectsTimeline() {
   const { t } = useTranslation();
   const buffs = useBuffsStore((s) => s.buffs);
   const turn = useBuffsStore((s) => s.round);
   const [editing, setEditing] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const edited = buffs.find((b) => b.id === editing);
   const trackRef = useRef<HTMLDivElement>(null);
   const size = useTrackSize(trackRef);
+  const hidden = Math.max(buffs.length - REST_ROWS, 0);
+  const shown = expanded ? buffs : buffs.slice(0, REST_ROWS);
   const start = windowStart(turn);
   const current = turn - start;
   const columns = Array.from({ length: size }, (_, i) => start + i);
   const grid: CSSProperties = {
     gridTemplateColumns: `${LABEL_COLUMN} repeat(${size}, minmax(0, 1fr))`,
-    gridTemplateRows: `1.5rem repeat(${Math.max(buffs.length, 1)}, 1.5rem)`,
+    gridTemplateRows: `1.5rem repeat(${Math.max(shown.length, 1)}, 1.5rem)`,
   };
 
   return (
@@ -51,7 +65,10 @@ export function EffectsTimeline() {
       role="group"
       aria-label={t("effects.title")}
     >
-      <div ref={trackRef} className="max-h-12 min-w-0 overflow-y-auto">
+      <div
+        ref={trackRef}
+        className={cn("min-w-0", expanded && "max-h-[40vh] overflow-y-auto")}
+      >
         <div
           className="relative grid items-center"
           style={grid}
@@ -69,16 +86,29 @@ export function EffectsTimeline() {
             style={{ gridColumn: 1, gridRow: 1 }}
           >
             <span className="text-title">{t("effects.title")}</span>
-            {/* The track shows about one row; the count says how many there are. */}
-            {buffs.length > 0 && (
-              <span
-                className="text-label text-muted-foreground tabular-nums"
-                data-testid="effects-count"
-              >
-                {buffs.length}
-              </span>
-            )}
             <AddEffect />
+            {hidden > 0 && (
+              <Button
+                size="xs"
+                variant="ghost"
+                aria-expanded={expanded}
+                aria-label={
+                  expanded
+                    ? t("effects.showLess")
+                    : t("effects.showMore", { count: hidden })
+                }
+                title={
+                  expanded
+                    ? t("effects.showLess")
+                    : t("effects.showMore", { count: hidden })
+                }
+                data-testid="effects-expander"
+                onClick={() => setExpanded((v) => !v)}
+              >
+                {expanded ? <CaretUp /> : <CaretDown />}
+                {!expanded && <span className="tabular-nums">+{hidden}</span>}
+              </Button>
+            )}
           </div>
           {columns.map((n, i) => (
             <span
@@ -101,7 +131,7 @@ export function EffectsTimeline() {
               {t("effects.column", { n })}
             </span>
           ))}
-          {buffs.map((b, row) => (
+          {shown.map((b, row) => (
             <EffectRow
               key={b.id}
               buff={b}

@@ -556,3 +556,143 @@ func TestDeleteXPEntry(t *testing.T) {
 		}
 	})
 }
+
+var beforeTestingRestoreXPEntry = func(context.Context, bob.Tx) ([]RestoreXPEntry_XPEntries, error) {
+	return []struct {
+		ID          int64
+		CharacterID int64
+		EntryDate   string
+		Session     string
+		Reason      string
+		Base        int64
+		Bonus       int64
+	}{{
+		ID:          random_int64(nil),
+		CharacterID: random_int64(nil),
+		EntryDate:   random_string(nil),
+		Session:     random_string(nil),
+		Reason:      random_string(nil),
+		Base:        random_int64(nil),
+		Bonus:       random_int64(nil),
+	}}, nil
+}
+
+func TestRestoreXPEntry(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := RestoreXPEntry([]struct {
+			ID          int64
+			CharacterID int64
+			EntryDate   string
+			Session     string
+			Reason      string
+			Base        int64
+			Bonus       int64
+		}{{
+			ID:          random_int64(nil),
+			CharacterID: random_int64(nil),
+			EntryDate:   random_string(nil),
+			Session:     random_string(nil),
+			Reason:      random_string(nil),
+			Base:        random_int64(nil),
+			Bonus:       random_int64(nil),
+		}})
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(restoreXPEntrySQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := RestoreXPEntry([]struct {
+			ID          int64
+			CharacterID int64
+			EntryDate   string
+			Session     string
+			Reason      string
+			Base        int64
+			Bonus       int64
+		}{{
+			ID:          random_int64(nil),
+			CharacterID: random_int64(nil),
+			EntryDate:   random_string(nil),
+			Session:     random_string(nil),
+			Reason:      random_string(nil),
+			Base:        random_int64(nil),
+			Bonus:       random_int64(nil),
+		}})
+
+		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(restoreXPEntrySQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingRestoreXPEntry(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Insert(RestoreXPEntry(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}

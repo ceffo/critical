@@ -126,6 +126,7 @@ packages:
     interfaces:
       SVC:
       DAL:
+      Log:
       Characters:
       Thresholds:
   github.com/ceffo/critical/api/internal/domain/service/detailssvc:

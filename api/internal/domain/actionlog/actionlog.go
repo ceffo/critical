@@ -121,6 +121,15 @@ const (
 	KindWeaponRemove Kind = "weapon_remove"
 )
 
+// XP ledger entries (xpsvc Add, Update, Delete, ADR 0015 step 4): an award
+// added, edited or removed. Not rolls. Each carries the entry's "xp:<id>"
+// snapshot, so popping it gives the XP total back.
+const (
+	KindXPAdd    Kind = "xp_add"
+	KindXPEdit   Kind = "xp_edit"
+	KindXPRemove Kind = "xp_remove"
+)
+
 // Snapshot is the state an entry changed, under a state key owned by one
 // service (for example "buffs" or "spell_slots"). Before and After are that
 // service's own JSON encoding of the state.

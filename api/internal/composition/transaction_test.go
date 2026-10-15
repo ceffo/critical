@@ -22,12 +22,13 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
-// stackTables hold the state the action stack restores (ADR 0010 Context).
-// Tables outside the stack (XP, details, crit table, dice favourites, the
-// attack form) are not compared.
-var stackTables = []string{"active_buffs", "spell_slots", "round_state", "items", "weapons", "saved_buffs"}
+// stackTables hold the state the action stack restores (ADR 0010 Context,
+// ADR 0018 scope). Tables outside the stack (character details, crit table,
+// dice favourites, the attack form) are not compared.
+var stackTables = []string{"active_buffs", "spell_slots", "round_state", "items", "weapons", "saved_buffs", "xp_entries"}
 
 // tableState is every row of the stack's tables, current HP and the log as
 // it reads (each non-voided entry with its effective payload): what one undo
@@ -107,7 +108,14 @@ func attackOn(ac *int) func(ctx context.Context, bs *composition.BackingServices
 // stack (the epic's audit list). A new state-changing service belongs here.
 func stackMutations() []mutation {
 	var lastAttack, lastSave int64
-	var savedID int64
+	var savedID, xpID int64
+	award := func(ctx context.Context, bs *composition.BackingServices) error {
+		l, err := bs.XP.Add(ctx, bs.CharacterID, xpsvc.EntryInput{Base: 1205, Bonus: true, Reason: "troll"})
+		if err == nil {
+			xpID = l.Entries[0].ID
+		}
+		return err
+	}
 	var buffID string
 	activate := func(ctx context.Context, bs *composition.BackingServices) error {
 		list, err := bs.Buffs.Activate(ctx, bs.CharacterID, buffsvc.BuffEffect{Name: "Stoneskin", Charges: 3, Duration: 4})
@@ -287,6 +295,18 @@ func stackMutations() []mutation {
 		}},
 		{name: "weapon delete", run: func(ctx context.Context, bs *composition.BackingServices) error {
 			_, err := bs.Weapons.Delete(ctx, bs.CharacterID, "bastard_sword")
+			return err
+		}},
+		{name: "xp add", setup: award, run: func(ctx context.Context, bs *composition.BackingServices) error {
+			_, err := bs.XP.Add(ctx, bs.CharacterID, xpsvc.EntryInput{Base: 100, Reason: "riddle", Session: "S42"})
+			return err
+		}},
+		{name: "xp edit", setup: award, run: func(ctx context.Context, bs *composition.BackingServices) error {
+			_, err := bs.XP.Update(ctx, bs.CharacterID, xpID, xpsvc.EntryPatch{Base: ptr(1100), Bonus: ptr(false), Reason: ptr("ogre")})
+			return err
+		}},
+		{name: "xp delete", setup: award, run: func(ctx context.Context, bs *composition.BackingServices) error {
+			_, err := bs.XP.Delete(ctx, bs.CharacterID, xpID)
 			return err
 		}},
 	}

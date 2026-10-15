@@ -520,3 +520,141 @@ func (o deleteXPEntry) subExpr(from, to int) bob.Expression {
 func (o deleteXPEntry) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(deleteXPEntrySQL)).WriteSQL(ctx, w, d, start)
 }
+
+var restoreXPEntrySQL = formattedQueries_xp[852:1002]
+
+type RestoreXPEntry_XPEntries = struct {
+	ID          int64
+	CharacterID int64
+	EntryDate   string
+	Session     string
+	Reason      string
+	Base        int64
+	Bonus       int64
+}
+
+type RestoreXPEntryQuery = orm.ModQuery[*dialect.InsertQuery, restoreXPEntry, int64, []int64, restoreXPEntryTransformer]
+
+func RestoreXPEntry(XPEntries []RestoreXPEntry_XPEntries) *RestoreXPEntryQuery {
+	var expressionTypArgs restoreXPEntry
+
+	expressionTypArgs.XPEntries = func() bob.Expression {
+		expressions := make([]bob.Expression, len(XPEntries))
+		for i, child := range XPEntries {
+			expressions[i] = bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				args := make([]any, 0, 7)
+				w.WriteString(restoreXPEntrySQL[107:108])
+				IDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.ID))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, IDArgs...)
+
+				w.WriteString(restoreXPEntrySQL[110:112])
+				CharacterIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.CharacterID))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, CharacterIDArgs...)
+
+				w.WriteString(restoreXPEntrySQL[114:116])
+				EntryDateArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.EntryDate))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, EntryDateArgs...)
+
+				w.WriteString(restoreXPEntrySQL[118:120])
+				SessionArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Session))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, SessionArgs...)
+
+				w.WriteString(restoreXPEntrySQL[122:124])
+				ReasonArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Reason))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, ReasonArgs...)
+
+				w.WriteString(restoreXPEntrySQL[126:128])
+				BaseArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Base))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, BaseArgs...)
+
+				w.WriteString(restoreXPEntrySQL[130:132])
+				BonusArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Bonus))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, BonusArgs...)
+
+				w.WriteString(restoreXPEntrySQL[134:135])
+				return args, nil
+			})
+		}
+		return expr.Join{Exprs: expressions, Sep: ", "}
+	}()
+
+	return &RestoreXPEntryQuery{
+		Query: orm.Query[restoreXPEntry, int64, []int64, restoreXPEntryTransformer]{
+			ExecQuery: orm.ExecQuery[restoreXPEntry]{
+				BaseQuery: bob.BaseQuery[restoreXPEntry]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeInsert,
+				},
+			},
+			Scanner: scan.ColumnMapper[int64]("id"),
+		},
+		Mod: bob.ModFunc[*dialect.InsertQuery](func(q *dialect.InsertQuery) {
+			q.TableRef.Columns = []string{"id", "character_id", "entry_date", "session", "reason", "base", "bonus"}
+			q.TableRef.Expression = expressionTypArgs.raw(12, 24)
+			q.Query = bob.BaseQuery[bob.Expression]{
+				Expression: expressionTypArgs.subExpr(100, 135),
+				Dialect:    dialect.Dialect,
+				QueryType:  bob.QueryTypeSelect,
+			}
+			q.AppendReturning(expressionTypArgs.subExpr(145, 150))
+		}),
+		Build: sqlite.Insert,
+	}
+}
+
+type RestoreXPEntryRow = struct {
+	ID int64 `db:"id"`
+}
+
+type restoreXPEntryTransformer = bob.SliceTransformer[int64, []int64]
+
+type restoreXPEntry struct {
+	XPEntries bob.Expression
+}
+
+func (o restoreXPEntry) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "xpEntries",
+			Start:      107,
+			Stop:       135,
+			Expression: o.XPEntries,
+		}) {
+			return
+		}
+	}
+}
+
+func (o restoreXPEntry) raw(from, to int) string {
+	return restoreXPEntrySQL[from:to]
+}
+
+func (o restoreXPEntry) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(restoreXPEntrySQL, from, to, o.args())
+}
+
+func (o restoreXPEntry) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(restoreXPEntrySQL)).WriteSQL(ctx, w, d, start)
+}

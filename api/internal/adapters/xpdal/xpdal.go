@@ -77,6 +77,19 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, e xpsvc.Entry) (int
 	return id, nil
 }
 
+// Reinsert writes an entry back under its own id and date (an undone
+// delete).
+func (d *DAL) Reinsert(ctx context.Context, characterID int64, e xpsvc.Entry) error {
+	_, err := queries.RestoreXPEntry([]queries.RestoreXPEntry_XPEntries{{
+		ID: e.ID, CharacterID: characterID, EntryDate: e.Date, Session: e.Session, Reason: e.Reason,
+		Base: int64(e.Base), Bonus: boolInt(e.Bonus),
+	}}).One(ctx, d.exec(ctx))
+	if err != nil {
+		return fmt.Errorf("reinsert xp_entries %d: %w", e.ID, err)
+	}
+	return nil
+}
+
 // Update overwrites the session, reason, base and bonus of an entry.
 func (d *DAL) Update(ctx context.Context, characterID int64, e xpsvc.Entry) error {
 	ids, err := queries.UpdateXPEntry(e.Session, e.Reason, int64(e.Base), boolInt(e.Bonus), characterID, e.ID).

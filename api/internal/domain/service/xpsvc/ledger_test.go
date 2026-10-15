@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
@@ -28,6 +29,7 @@ type fixture struct {
 	svc   xpsvc.SVC
 	dal   *mocks.MockDAL
 	chars *mocks.MockCharacters
+	log   *mocks.MockLog
 	tx    *recordingTx
 }
 
@@ -35,9 +37,9 @@ var today = time.Date(2026, 10, 17, 21, 30, 0, 0, time.Local)
 
 func newFixture(t *testing.T) fixture {
 	t.Helper()
-	f := fixture{dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), tx: &recordingTx{}}
+	f := fixture{dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), log: mocks.NewMockLog(t), tx: &recordingTx{}}
 	svc, err := xpsvc.New(xpsvc.Deps{
-		DAL: f.dal, Characters: f.chars, Thresholds: table25{}, Tx: f.tx,
+		DAL: f.dal, Characters: f.chars, Thresholds: table25{}, Log: f.log, Tx: f.tx,
 		Now: func() time.Time { return today },
 	})
 	require.NoError(t, err)
@@ -48,6 +50,14 @@ func newFixture(t *testing.T) fixture {
 func (f fixture) sheet(dex, cha, level, xp int) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
 		Return(&charactersvc.Character{ID: 1, Dex: dex, Cha: cha, Level: level, XPTotal: xp}, nil)
+}
+
+// recorded captures the one action-log entry a write records.
+func (f fixture) recorded() *actionlog.NewEntry {
+	got := &actionlog.NewEntry{}
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, e actionlog.NewEntry) { *got = e }).Return(42, nil).Once()
+	return got
 }
 
 func TestNew_RejectsNilDependencies(t *testing.T) {
@@ -85,11 +95,14 @@ func TestGet_NotEligibleBelow16(t *testing.T) {
 	assert.False(t, got.BonusEligible)
 }
 
-func TestAdd_DatesTodayTrimsAndReturnsTheLedger(t *testing.T) {
+// ADR 0015 step 4 (amended by ADR 0018): an add is one transaction whose
+// entry carries the award's "xp:<id>" snapshot, absent before.
+func TestAdd_RecordsOneTransactionWithTheAwardsSnapshot(t *testing.T) {
 	f := newFixture(t)
 	f.dal.EXPECT().Insert(mock.Anything, int64(1), xpsvc.Entry{
 		Date: "2026-10-17", Session: "S42", Reason: "troll", Base: 1200, Bonus: true,
 	}).Return(7, nil).Once()
+	rec := f.recorded()
 	f.sheet(17, 16, 15, 0)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{
 		{ID: 7, Date: "2026-10-17", Session: "S42", Reason: "troll", Base: 1200, Bonus: true},
@@ -100,6 +113,14 @@ func TestAdd_DatesTodayTrimsAndReturnsTheLedger(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 1320, got.Total)
+	assert.Equal(t, 1, f.tx.n)
+	assert.Equal(t, actionlog.KindXPAdd, rec.Kind)
+	assert.Equal(t, int64(1), rec.CharacterID)
+	assert.JSONEq(t, `{"entry":{"id":7,"date":"2026-10-17","session":"S42","reason":"troll","base":1200,"bonus":true,"bonusAmount":120,"total":1320}}`, string(rec.Payload))
+	require.Len(t, rec.Snapshots, 1)
+	assert.Equal(t, "xp:7", rec.Snapshots[0].Key)
+	assert.JSONEq(t, `{"id":7,"absent":true,"date":"","session":"","reason":"","base":0,"bonus":false}`, string(rec.Snapshots[0].Before))
+	assert.JSONEq(t, `{"id":7,"date":"2026-10-17","session":"S42","reason":"troll","base":1200,"bonus":true}`, string(rec.Snapshots[0].After))
 }
 
 func TestAdd_RejectsInvalidInput(t *testing.T) {
@@ -115,7 +136,7 @@ func TestAdd_RejectsInvalidInput(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			f := newFixture(t) // no DAL call expected
+			f := newFixture(t) // no DAL call, no Record expected
 			_, err := f.svc.Add(context.Background(), 1, tt.in)
 			require.ErrorIs(t, err, domain.ErrInvalidInput)
 			var fe *domain.FieldError
@@ -125,6 +146,8 @@ func TestAdd_RejectsInvalidInput(t *testing.T) {
 	}
 }
 
+// ADR 0015 step 4 (amended by ADR 0018): an edit is one transaction whose
+// entry keeps the award before and after, in its payload and its snapshot.
 func TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction(t *testing.T) {
 	f := newFixture(t)
 	stored := xpsvc.Entry{ID: 3, Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1000, Bonus: true}
@@ -132,6 +155,7 @@ func TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction(t *testing.T) {
 	f.dal.EXPECT().Update(mock.Anything, int64(1), xpsvc.Entry{
 		ID: 3, Date: "2026-10-10", Session: "S41", Reason: "ogre chief", Base: 1100, Bonus: false,
 	}).Return(nil).Once()
+	rec := f.recorded()
 	f.sheet(17, 16, 15, 0)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 
@@ -139,6 +163,30 @@ func TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction(t *testing.T) {
 	_, err := f.svc.Update(context.Background(), 1, 3, xpsvc.EntryPatch{Base: &base, Bonus: &bonus, Reason: &reason})
 	require.NoError(t, err)
 	assert.Equal(t, 1, f.tx.n)
+	assert.Equal(t, actionlog.KindXPEdit, rec.Kind)
+	assert.JSONEq(t, `{
+		"entry":{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre chief","base":1100,"bonus":false,"bonusAmount":0,"total":1100},
+		"before":{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true,"bonusAmount":100,"total":1100}
+	}`, string(rec.Payload))
+	require.Len(t, rec.Snapshots, 1)
+	assert.Equal(t, "xp:3", rec.Snapshots[0].Key)
+	assert.JSONEq(t, `{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true}`, string(rec.Snapshots[0].Before))
+	assert.JSONEq(t, `{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre chief","base":1100,"bonus":false}`, string(rec.Snapshots[0].After))
+}
+
+// ADR 0018 step 1: an edit that changes nothing writes nothing and records
+// no transaction.
+func TestUpdate_NothingChangedRecordsNothing(t *testing.T) {
+	f := newFixture(t) // no Update, no Record expected
+	stored := xpsvc.Entry{ID: 3, Date: "2026-10-10", Reason: "ogre", Base: 1000}
+	f.dal.EXPECT().Get(mock.Anything, int64(1), int64(3)).Return(stored, nil).Once()
+	f.sheet(17, 16, 15, 0)
+	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{stored}, nil)
+
+	base, reason := 1000, " ogre"
+	got, err := f.svc.Update(context.Background(), 1, 3, xpsvc.EntryPatch{Base: &base, Reason: &reason})
+	require.NoError(t, err)
+	assert.Equal(t, 1000, got.Total)
 }
 
 func TestUpdate_UnknownEntryAndInvalidBase(t *testing.T) {
@@ -150,21 +198,62 @@ func TestUpdate_UnknownEntryAndInvalidBase(t *testing.T) {
 	f.dal.EXPECT().Get(mock.Anything, int64(1), int64(3)).Return(xpsvc.Entry{ID: 3, Base: 10}, nil).Once()
 	zero := 0
 	_, err = f.svc.Update(context.Background(), 1, 3, xpsvc.EntryPatch{Base: &zero})
-	require.ErrorIs(t, err, domain.ErrInvalidInput) // and no Update call
+	require.ErrorIs(t, err, domain.ErrInvalidInput) // and no Update, no Record
 }
 
-func TestDelete_RemovesOrReportsNotFound(t *testing.T) {
+// ADR 0015 step 4 (amended by ADR 0018): a delete is one transaction whose
+// entry keeps the removed award in its payload and as its snapshot's "before".
+func TestDelete_RecordsTheRemovedAwardOrReportsNotFound(t *testing.T) {
 	f := newFixture(t)
+	stored := xpsvc.Entry{ID: 3, Date: "2026-10-10", Reason: "ogre", Base: 15, Bonus: true}
+	f.dal.EXPECT().Get(mock.Anything, int64(1), int64(3)).Return(stored, nil).Once()
 	f.dal.EXPECT().Delete(mock.Anything, int64(1), int64(3)).Return(nil).Once()
+	rec := f.recorded()
 	f.sheet(17, 16, 15, 0)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	got, err := f.svc.Delete(context.Background(), 1, 3)
 	require.NoError(t, err)
 	assert.Empty(t, got.Entries)
+	assert.Equal(t, 1, f.tx.n)
+	assert.Equal(t, actionlog.KindXPRemove, rec.Kind)
+	assert.JSONEq(t, `{"entry":{"id":3,"date":"2026-10-10","session":"","reason":"ogre","base":15,"bonus":true,"bonusAmount":2,"total":17}}`, string(rec.Payload))
+	require.Len(t, rec.Snapshots, 1)
+	assert.JSONEq(t, `{"id":3,"date":"2026-10-10","session":"","reason":"ogre","base":15,"bonus":true}`, string(rec.Snapshots[0].Before))
+	assert.JSONEq(t, `{"id":3,"absent":true,"date":"","session":"","reason":"","base":0,"bonus":false}`, string(rec.Snapshots[0].After))
 
-	f.dal.EXPECT().Delete(mock.Anything, int64(1), int64(4)).Return(xpsvc.ErrEntryNotFound).Once()
+	f.dal.EXPECT().Get(mock.Anything, int64(1), int64(4)).Return(xpsvc.Entry{}, xpsvc.ErrEntryNotFound).Once()
 	_, err = f.svc.Delete(context.Background(), 1, 4)
-	require.ErrorIs(t, err, domain.ErrNotFound)
+	require.ErrorIs(t, err, domain.ErrNotFound) // and no Delete, no Record
+}
+
+// The restorer writes a snapshot back: absent deletes, present overwrites,
+// or writes the entry back under its id when it is gone.
+func TestRestorer_WritesTheSnapshotBack(t *testing.T) {
+	ctx := context.Background()
+	entry := xpsvc.Entry{ID: 3, Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1000, Bonus: true}
+	present := `{"id":3,"date":"2026-10-10","session":"S41","reason":"ogre","base":1000,"bonus":true}`
+	restorer := func(f fixture) actionlog.Restorer { return f.svc.Restorers()[xpsvc.StateKeyXP] }
+
+	t.Run("absent deletes", func(t *testing.T) {
+		f := newFixture(t)
+		f.dal.EXPECT().Delete(mock.Anything, int64(1), int64(3)).Return(nil).Once()
+		require.NoError(t, restorer(f).Restore(ctx, 1, []byte(`{"id":3,"absent":true}`)))
+	})
+	t.Run("present overwrites", func(t *testing.T) {
+		f := newFixture(t)
+		f.dal.EXPECT().Update(mock.Anything, int64(1), entry).Return(nil).Once()
+		require.NoError(t, restorer(f).Restore(ctx, 1, []byte(present)))
+	})
+	t.Run("gone is written back under its id", func(t *testing.T) {
+		f := newFixture(t)
+		f.dal.EXPECT().Update(mock.Anything, int64(1), entry).Return(xpsvc.ErrEntryNotFound).Once()
+		f.dal.EXPECT().Reinsert(mock.Anything, int64(1), entry).Return(nil).Once()
+		require.NoError(t, restorer(f).Restore(ctx, 1, []byte(present)))
+	})
+	t.Run("no id is refused", func(t *testing.T) {
+		f := newFixture(t)
+		require.Error(t, restorer(f).Restore(ctx, 1, []byte(`{"absent":true}`)))
+	})
 }
 
 func TestPreview_IsStep1AndValidatesTheBase(t *testing.T) {

@@ -95,7 +95,9 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
 6. **Redo stays possible.** A popped transaction stays on the log, voided: its entries, payloads
    and snapshots ("before" and "after") are kept unchanged, and a void is a correction row, never
    a delete or a rewrite. No undo path may drop what a later replay of the transaction needs.
-   Redo itself (replaying the newest popped transaction) is a later ADR.
+   Redo itself (replaying the newest popped transaction) is a later ADR. (*Amended by
+   [ADR 0019](0019-redo.md):* redo replays it; a popped entry can be redone and popped again, each
+   time with a new correction row.)
    Tests: `adapters/actionlogdal` `TestPop_KeepsEntriesAndSnapshots` (after a pop the
    transaction's entries, payloads and both snapshots read back unchanged, each voided).
 7. **What joins the stack: gameplay state, not metadata.** Every mutation of state that affects
@@ -130,5 +132,5 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
   roll.
 - Undoing an XP delete writes the award back under its id and date, so an undo of an older edit
   of the same award still finds it.
-- Not covered: redo (step 6 only keeps it possible), multi-transaction undo, undo of a request
+- Not covered: redo (step 6 only keeps it possible; *amended:* [ADR 0019](0019-redo.md)), multi-transaction undo, undo of a request
   that wrote nothing.

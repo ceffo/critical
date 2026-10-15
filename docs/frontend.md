@@ -117,7 +117,9 @@ flowchart TD
   turn) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
   stack: only the newest non-voided entry (`topId` from `GET /api/log`) shows Void; the CombatLog
   header's Undo button and Ctrl/Cmd+Z (not while typing in a field) pop it from anywhere with
-  `POST /api/log/undo` and that `topId` ([ADR 0010](adr/0010-action-stack-and-undo.md)); every entry has Note
+  `POST /api/log/undo` and that `topId` ([ADR 0010](adr/0010-action-stack-and-undo.md)); the Redo button next to it
+  and Ctrl/Cmd+Shift+Z replay the `redo` target of `GET /api/log` with `POST /api/log/redo`
+  ([ADR 0019](adr/0019-redo.md)); every entry has Note
   (the only amend, shown in italics under the line); values are never edited in the log. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The Moi column's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met

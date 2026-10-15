@@ -6,6 +6,8 @@ import { InventoryPanel } from "@/components/actions/InventoryPanel";
 import { LookupPanel } from "@/components/actions/LookupPanel";
 import { ResultCard } from "@/components/dashboard/ResultCard";
 import { QuickHp } from "@/components/dashboard/QuickHp";
+import { ChargeCards } from "@/components/dashboard/ChargeCards";
+import { Saves } from "@/components/dashboard/Saves";
 import { CombatLog } from "@/components/dashboard/CombatLog";
 import { HpBar } from "@/components/dashboard/HpBar";
 import { Identity } from "@/components/dashboard/Identity";
@@ -50,8 +52,8 @@ function Pane({
 
 /**
  * Dashboard v3 shell (ADR 0009, docs/frontend.md "Dashboard Layout"): a full-width header region,
- * then rail | workspace | Fil (result + journal) | Moi (identity, HP). Columns have clamped widths
- * and scroll on their own; the page itself never scrolls.
+ * then rail | workspace | Fil (result + journal) | Moi (identity, HP, absorb, damage entry,
+ * saves). Columns have clamped widths and scroll on their own; the page itself never scrolls.
  */
 function App() {
   const { t } = useTranslation();
@@ -111,11 +113,13 @@ function App() {
 
         <aside
           aria-label={t("shell.moi")}
-          className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto rounded-xl bg-card p-4"
+          className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto rounded-xl bg-card p-4"
         >
           <Identity />
           <HpBar />
+          <ChargeCards />
           <QuickHp />
+          <Saves />
         </aside>
       </div>
       <Notices />

@@ -6,7 +6,7 @@ import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
-import { captionClass } from "./fieldStyles";
+import { labelClass } from "./fieldStyles";
 
 /** One die, as a small tile. */
 function Die({ sides, value }: { sides: number; value: number }) {
@@ -86,7 +86,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           <dl className="grid grid-cols-2 gap-1.5 text-sm">
             {b.durationRoll && (
               <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
-                <dt className={captionClass}>{t("result.cast.rounds")}</dt>
+                <dt className={labelClass}>{t("result.cast.rounds")}</dt>
                 <dd className="font-mono" data-testid="cast-rounds">
                   <RollView roll={b.durationRoll} />
                 </dd>
@@ -94,7 +94,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             )}
             {b.chargesRoll && (
               <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
-                <dt className={captionClass}>
+                <dt className={labelClass}>
                   {b.chargeUnit
                     ? t(`result.cast.units.${b.chargeUnit}`, { defaultValue: t("result.cast.charges") })
                     : t("result.cast.charges")}
@@ -106,7 +106,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             )}
             {b.strGainRoll && (
               <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
-                <dt className={captionClass}>{t("result.cast.strGain")}</dt>
+                <dt className={labelClass}>{t("result.cast.strGain")}</dt>
                 <dd className="font-mono" data-testid="cast-str-gain">
                   <RollView roll={b.strGainRoll} />
                 </dd>
@@ -115,7 +115,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           </dl>
           {Object.keys(b.effects).length > 0 && (
             <div>
-              <div className={captionClass}>{t("result.cast.tracked")}</div>
+              <div className={labelClass}>{t("result.cast.tracked")}</div>
               <ul className="mt-1 flex flex-wrap gap-1">
                 {Object.entries(b.effects).map(([k, v]) => (
                   <li key={k}>
@@ -141,7 +141,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               {r.attack.hit ? t("result.cast.attackHit") : t("result.cast.attackMiss")}
             </span>
             <span className="inline-flex items-center gap-1.5 text-sm">
-              <span className={captionClass}>d20</span>
+              <span className={labelClass}>d20</span>
               <Die sides={20} value={r.attack.d20Roll} />
             </span>
           </div>
@@ -176,7 +176,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               {r.damage.type && <> · {r.damage.type}</>}
             </div>
             <div className="text-right">
-              <div className={captionClass}>{t("result.cast.damage")}</div>
+              <div className={labelClass}>{t("result.cast.damage")}</div>
               <div
                 className="font-mono text-5xl font-black tabular-nums leading-none text-red-600 dark:text-red-400"
                 data-testid="cast-damage-total"
@@ -215,7 +215,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
 
       {r.untracked.length > 0 && (
         <div>
-          <div className={captionClass}>{t("result.cast.byHand")}</div>
+          <div className={labelClass}>{t("result.cast.byHand")}</div>
           <ul className="mt-1 flex flex-col gap-0.5 text-sm" data-testid="cast-untracked">
             {r.untracked.map((u, i) => (
               <li key={i}>
@@ -229,13 +229,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
 
       {r.note && (
         <div>
-          <div className={captionClass}>{t("result.cast.note")}</div>
+          <div className={labelClass}>{t("result.cast.note")}</div>
           <p className="text-sm">{r.note}</p>
         </div>
       )}
       {r.spell?.description && (
         <details className="group rounded-lg border px-2.5 py-1.5">
-          <summary className={cn(captionClass, "cursor-pointer select-none")}>{t("result.cast.text")}</summary>
+          <summary className={cn(labelClass, "cursor-pointer select-none")}>{t("result.cast.text")}</summary>
           <p className="mt-1.5 whitespace-pre-line text-sm text-muted-foreground" data-testid="cast-text">
             {r.spell.description}
           </p>

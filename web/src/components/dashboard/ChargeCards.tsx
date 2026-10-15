@@ -38,7 +38,9 @@ export function ChargeCards() {
               title={t("moi.chargesHint")}
               data-testid="charge-count"
             >
-              {t("moi.chargesLeft", { count: b.charges })}
+              {b.chargesTotal >= b.charges
+                ? t("effects.chargesOf", { count: b.charges, total: b.chargesTotal })
+                : t("moi.chargesLeft", { count: b.charges })}
             </span>
           </div>
           <Button

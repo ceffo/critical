@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useItemsStore } from "@/stores/items";
@@ -151,7 +151,7 @@ function WeaponRow({
         onClick={onEdit}
         aria-label={t("weapons.form.edit", { name: w.name })}
       >
-        <Pencil />
+        <PencilSimple />
       </Button>
       <Button
         size="icon-sm"
@@ -160,7 +160,7 @@ function WeaponRow({
         onClick={onRemove}
         aria-label={t("weapons.form.remove", { name: w.name })}
       >
-        <Trash2 />
+        <Trash />
       </Button>
     </li>
   );

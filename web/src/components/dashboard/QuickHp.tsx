@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Heart, Undo2, Sword } from "lucide-react";
+import { Heart, ArrowUUpLeft, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
@@ -44,7 +44,7 @@ export function QuickHp() {
           aria-describedby={blockedBy ? "hp-undo-hint" : undefined}
           onClick={() => void undoHp()}
         >
-          <Undo2 />
+          <ArrowUUpLeft />
           {t("hp.undoLast")}
         </Button>
       </div>

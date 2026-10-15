@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { fetchCritTable, saveCritTable } from "@/api/combat";
 import { captionClass, fieldClass } from "@/components/dashboard/fieldStyles";
@@ -136,7 +136,7 @@ export function CritTableEditor() {
                   setRows((rs) => rs.filter((_, j) => j !== i));
                 }}
               >
-                <Trash2 />
+                <Trash />
               </Button>
             </div>
           ))}

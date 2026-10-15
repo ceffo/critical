@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
+import { CaretRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
@@ -39,7 +39,7 @@ export function RoundControl() {
       <div className="flex flex-col gap-1">
         <Button size="lg" className="h-11 px-4 text-base" disabled={busy} onClick={() => void nextRound()}>
           {t("round.next")}
-          <ChevronRight />
+          <CaretRight />
         </Button>
         {mode === "idle" && (
           <div className="flex gap-1">

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { Minus, Pencil, Plus, Trash2 } from "lucide-react";
+import { Minus, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useItemsStore } from "@/stores/items";
@@ -192,7 +192,7 @@ function ItemRow({
         onClick={onEdit}
         aria-label={t("items.form.edit", { name: i.name })}
       >
-        <Pencil />
+        <PencilSimple />
       </Button>
       <Button
         size="icon-sm"
@@ -201,7 +201,7 @@ function ItemRow({
         onClick={onRemove}
         aria-label={t("items.form.remove", { name: i.name })}
       >
-        <Trash2 />
+        <Trash />
       </Button>
     </li>
   );

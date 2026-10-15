@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus, Shield, Trash2, X } from "lucide-react";
+import { PencilSimple, Plus, Shield, Trash, X } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -160,7 +160,7 @@ function BuffBadge({
           title={t("buffs.edit", { name: b.name })}
           onClick={onEdit}
         >
-          <Pencil />
+          <PencilSimple />
         </Button>
         <Button
           size="icon-xs"
@@ -425,7 +425,7 @@ function AddBuffForm({ onDone }: { onDone: () => void }) {
             title={t("buffs.removeEffect")}
             onClick={() => setRows(rows.filter((_, j) => j !== i))}
           >
-            <Trash2 />
+            <Trash />
           </Button>
         </span>
       ))}

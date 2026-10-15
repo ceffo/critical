@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useTableStore } from "@/stores/table";
 

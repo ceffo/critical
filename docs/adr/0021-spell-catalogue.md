@@ -264,7 +264,7 @@ book's text is shipped, as for names and descriptions, and the UI keeps no rules
   OCR prints for the foot mark, `S` or an unreadable character; a digit in the components). A
   French value that differs from the English one in substance (another range in the French book)
   is the French book's and is kept.
-- **Storage and API.** Six nullable columns `casting_time_fr` … `saving_throw_fr` (migration 028),
+- **Storage and API.** Six nullable columns `casting_time_fr` … `saving_throw_fr` (migration 029),
   NULL when the artifact has no French text. Spell payloads add `casting_time_fr`, `range_fr`,
   `duration_fr`, `area_of_effect_fr`, `components_fr`, `saving_throw_fr`, each omitted when absent
   (`TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback`).

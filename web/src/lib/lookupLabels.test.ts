@@ -320,6 +320,20 @@ describe("statCell", () => {
     });
   });
 
+  it("keeps a level-scaled area value in bold, the full French text under it", async () => {
+    const t = await tFor("fr");
+    const scaled = {
+      ...spell,
+      area_of_effect: "1 creature/level",
+      area_of_effect_fr: "1 créature par niveau, dans un rayon de 3 mètres",
+    } as Spell;
+    // nothing is shortened: the cell carries both strings whole (the panel wraps them)
+    expect(statCell(t, "fr", scaled, "area", "9 créatures")).toEqual({
+      value: "9 créatures",
+      text: "1 créature par niveau, dans un rayon de 3 mètres",
+    });
+  });
+
   it("without a French text: the value, and the English text unless it says the same", async () => {
     const t = await tFor("fr");
     expect(statCell(t, "fr", spell, "castingTime", "1 seg")).toEqual({

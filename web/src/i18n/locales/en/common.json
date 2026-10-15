@@ -112,6 +112,7 @@
     "turns_other": "{{count}} turns",
     "charges_one": "{{count}} charge",
     "charges_other": "{{count}} charges",
+    "chargesOf": "{{count}} / {{total}} charges",
     "untilSpent": "until spent",
     "untilDismissed": "until dismissed",
     "lastTurn": "Last turn"

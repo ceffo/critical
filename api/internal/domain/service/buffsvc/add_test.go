@@ -44,7 +44,9 @@ func TestAdd(t *testing.T) {
 
 			got, snap, err := f.svc.Add(context.Background(), charID, tt.add)
 			require.NoError(t, err)
-			assert.Equal(t, tt.add, got)
+			want := tt.add
+			want.ChargesTotal = want.Charges // ADR 0004 step 16
+			assert.Equal(t, want, got)
 			var ids []string
 			for _, b := range saved {
 				ids = append(ids, b.ID)

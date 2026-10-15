@@ -112,6 +112,7 @@
     "turns_other": "{{count}} tours",
     "charges_one": "{{count}} charge",
     "charges_other": "{{count}} charges",
+    "chargesOf": "{{count}} / {{total}} charges",
     "untilSpent": "jusqu'à épuisement",
     "untilDismissed": "jusqu'à retrait",
     "lastTurn": "Dernier tour"

@@ -38,6 +38,7 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 		return BuffEffect{}, actionlog.Snapshot{}, fmt.Errorf("get round: %w", err)
 	}
 	buff.StartRound = round
+	buff.ChargesTotal = buff.Charges // ADR 0004 step 16
 	after := make([]BuffEffect, 0, len(before)+1)
 	stacks := isStrengthBonus(buff.Effects)
 	for _, b := range before {

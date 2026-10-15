@@ -40,7 +40,7 @@ export function AttackPanel() {
   }, [load, weapons, items, buffs, strength]);
 
   if (!view || weapons.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t("attack.loading")}</p>;
+    return <p className="text-body text-muted-foreground">{t("attack.loading")}</p>;
   }
   const { form, preview } = view;
   const weapon = weapons.find((w) => w.id === form.weaponId);
@@ -51,9 +51,9 @@ export function AttackPanel() {
   const ready = preview !== null && weapon !== undefined && (!needsAmmo || (ammo && !ammoSpent));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <form
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3"
         aria-label={t("attack.form")}
         onSubmit={(e) => {
           e.preventDefault();
@@ -64,15 +64,15 @@ export function AttackPanel() {
         {weapon && (
           <section
             aria-label={t("attack.inHand")}
-            className="@container flex flex-col gap-4 rounded-xl bg-amb-900/40 p-4 ring-1 ring-amb-700"
+            className="@container flex flex-col gap-3 rounded-xl bg-amb-900/40 p-3 ring-1 ring-amb-700"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">{t("attack.inHand")}</p>
-                <h3 className="truncate text-xl font-medium" data-testid="weapon-in-hand">
+                <p className="text-body text-muted-foreground">{t("attack.inHand")}</p>
+                <h3 className="truncate text-key" data-testid="weapon-in-hand">
                   {weapon.name}
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-body text-muted-foreground">
                   {t(`attack.kinds.${weapon.kind}`)}
                   {weapon.two_handed && ` · ${t("attack.twoHanded")}`}
                 </p>
@@ -80,7 +80,7 @@ export function AttackPanel() {
               <Button
                 type="submit"
                 size="lg"
-                className="h-12 shrink-0 px-6 text-base"
+                className="shrink-0 px-3 text-body"
                 disabled={rolling || !ready}
               >
                 <Sword />
@@ -90,7 +90,7 @@ export function AttackPanel() {
             {preview && <Tiles weapon={weapon} view={view} />}
             {needsAmmo && <AmmoChips choices={view.ammoChoices} chosen={form.ammoItemId} />}
             {ammoSpent && (
-              <p className="text-sm text-danger" data-testid="ammo-spent">
+              <p className="text-body text-danger" data-testid="ammo-spent">
                 {t("attack.ammoSpent", { name: ammo.name })}
               </p>
             )}
@@ -128,7 +128,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
     <div
       role="group"
       aria-label={t("attack.target")}
-      className="flex flex-wrap items-end gap-x-6 gap-y-3 rounded-lg bg-neu-900 px-4 py-3"
+      className="flex flex-wrap items-end gap-x-3 gap-y-3 rounded-lg bg-neu-900 px-3 py-3"
     >
       <div className="flex items-end gap-1">
         <Stepper
@@ -155,7 +155,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
         )}
       </div>
       <div className="flex flex-col gap-1">
-        <span id={sizeLabel} className="text-xs text-muted-foreground">
+        <span id={sizeLabel} className="text-label text-muted-foreground">
           {t("attack.targetSize")}
         </span>
         <div
@@ -171,7 +171,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
               aria-checked={targetSize === s}
               aria-label={t(`attack.sizes.${s}`)}
               className={cn(
-                "h-7 rounded-md px-3 text-sm text-muted-foreground",
+                "h-7 rounded-md px-3 text-body text-muted-foreground",
                 targetSize === s && "bg-amb-800 text-foreground",
               )}
               onClick={() => void update({ targetSize: s })}
@@ -191,7 +191,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
       />
       {situational.value !== 0 && (
         <label className="flex min-w-40 flex-1 flex-col gap-1">
-          <span className="text-xs text-muted-foreground">{t("attack.situationalLabel")}</span>
+          <span className="text-label text-muted-foreground">{t("attack.situationalLabel")}</span>
           <input
             className={fieldClass}
             type="text"
@@ -247,7 +247,7 @@ function Stepper({
   };
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-xs text-muted-foreground">
+      <label htmlFor={id} className="text-label text-muted-foreground">
         {label}
       </label>
       <span className="flex items-center gap-1">
@@ -341,16 +341,16 @@ function Tile({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-0.5 rounded-lg bg-background/60 px-3 py-2",
+        "flex min-w-0 flex-col gap-1 rounded-lg bg-background/60 px-3 py-2",
         current && "ring-1 ring-amb-600",
         dim && "opacity-60",
       )}
     >
-      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-lg font-medium" data-testid={testId}>
+      <dt className="truncate text-label text-muted-foreground">{label}</dt>
+      <dd className="text-key" data-testid={testId}>
         {children}
       </dd>
-      {hint && <dd className="truncate text-xs text-muted-foreground">{hint}</dd>}
+      {hint && <dd className="truncate text-label text-muted-foreground">{hint}</dd>}
     </div>
   );
 }
@@ -360,7 +360,7 @@ function AmmoChips({ choices, chosen }: { choices: AmmoChoice[]; chosen: string 
   const { t } = useTranslation();
   const update = useAttackStore((s) => s.update);
   if (choices.length === 0) {
-    return <p className="text-sm text-danger">{t("attack.noAmmo")}</p>;
+    return <p className="text-body text-danger">{t("attack.noAmmo")}</p>;
   }
   return (
     <div role="radiogroup" aria-label={t("attack.ammo")} className="flex flex-wrap gap-2">
@@ -373,7 +373,7 @@ function AmmoChips({ choices, chosen }: { choices: AmmoChoice[]; chosen: string 
           aria-label={t("attack.ammoOption", { name: a.name, count: a.count })}
           data-item={a.itemId}
           className={cn(
-            "flex h-8 items-center gap-2 rounded-full bg-background/60 px-3 text-sm",
+            "flex h-7 items-center gap-2 rounded-full bg-background/60 px-3 text-body",
             a.itemId === chosen && "bg-amb-800 ring-1 ring-amb-500",
           )}
           onClick={() => void update({ ammoItemId: a.itemId })}
@@ -415,7 +415,7 @@ function OtherWeapon({ weapons, onPick }: { weapons: Weapon[]; onPick: (id: stri
             <li key={w.id}>
               <button
                 type="button"
-                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-neu-900"
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-body hover:bg-neu-900"
                 onClick={() => {
                   setOpen(false);
                   onPick(w.id);

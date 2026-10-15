@@ -92,11 +92,11 @@ export function CritTableEditor() {
       className="mt-4 max-w-xl rounded-lg border px-3 py-2"
       data-testid="crit-table"
     >
-      <summary className="cursor-pointer text-sm font-medium">
+      <summary className="cursor-pointer text-body font-medium">
         {t("critTable.title")}
       </summary>
       <div className="mt-3 flex flex-col gap-2">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body text-muted-foreground">
           {table?.placeholder
             ? t("critTable.placeholder")
             : t("critTable.help")}
@@ -142,12 +142,12 @@ export function CritTableEditor() {
           ))}
         </div>
         {error && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-body text-destructive">
             {error}
           </p>
         )}
         {saved && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body text-muted-foreground">
             {t("critTable.saved")}
           </p>
         )}

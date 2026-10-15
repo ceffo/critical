@@ -47,10 +47,10 @@ export function InventoryPanel() {
     <div className="flex flex-col gap-3">
       <section
         aria-labelledby="inventory-items-title"
-        className="flex flex-col gap-1 rounded-xl bg-card px-4 py-3.5"
+        className="flex flex-col gap-1 rounded-xl bg-card px-3 py-3"
       >
         <div className="mb-1.5 flex items-center justify-between gap-3">
-          <h2 id="inventory-items-title" className="text-lg font-medium">
+          <h2 id="inventory-items-title" className="text-title">
             {t("items.heading")}
           </h2>
           {form !== "add" && (
@@ -75,9 +75,9 @@ export function InventoryPanel() {
           </div>
         )}
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("items.none")}</p>
+          <p className="text-body text-muted-foreground">{t("items.none")}</p>
         ) : (
-          <div className={cn(ITEM_COLS, "px-2 pb-1 text-xs text-muted-foreground")} aria-hidden>
+          <div className={cn(ITEM_COLS, "px-2 pb-1 text-label text-muted-foreground")} aria-hidden>
             <span>{t("items.columns.name")}</span>
             <span>{t("items.columns.effect")}</span>
             <span className="text-center">{t("items.columns.quantity")}</span>
@@ -141,15 +141,15 @@ function ItemRow({
   const { t } = useTranslation();
   return (
     <li
-      className={cn(ITEM_COLS, "min-h-12 rounded-lg bg-neu-900/40 px-2 py-1.5 text-sm")}
+      className={cn(ITEM_COLS, "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body")}
       data-testid={`item-${i.id}`}
     >
       <div className="flex min-w-0 flex-col">
-        <span className="flex min-w-0 items-center gap-1.5">
+        <span className="flex min-w-0 items-center gap-2">
           <span className="min-w-0 truncate font-medium">{i.name}</span>
           {i.magicalBonus !== 0 && (
             <span
-              className="shrink-0 rounded-md bg-amb-900 px-1.5 text-xs font-medium text-amb-300 tabular-nums"
+              className="shrink-0 rounded-md bg-amb-900 px-1.5 text-label font-medium text-amb-300 tabular-nums"
               title={t("items.magicalBonus")}
               aria-label={`${t("items.magicalBonus")} ${formatSigned(i.magicalBonus)}`}
               data-testid="item-bonus"
@@ -158,7 +158,7 @@ function ItemRow({
             </span>
           )}
         </span>
-        <span className="min-w-0 truncate text-xs text-muted-foreground">
+        <span className="min-w-0 truncate text-label text-muted-foreground">
           {i.type && (
             <>
               <span data-testid="item-type">{i.type}</span>
@@ -174,7 +174,7 @@ function ItemRow({
         {i.effectDice ? (
           <button
             type="button"
-            className="inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-sm font-medium text-amb-300 tabular-nums outline-none ring-1 ring-amb-700 ring-inset hover:bg-amb-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-body font-medium text-amb-300 tabular-nums outline-none ring-1 ring-amb-700 ring-inset hover:bg-amb-900 focus-visible:ring-3 focus-visible:ring-ring/50"
             title={t("dice.send", { formula: i.effectDice })}
             aria-label={t("dice.send", { formula: i.effectDice })}
             data-testid="item-dice"

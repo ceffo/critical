@@ -259,6 +259,7 @@ func (f *Factory) fromExistingAttackForm(ctx context.Context, m *models.AttackFo
 	o.TargetSize = func() string { return m.TargetSize }
 	o.SituationalValue = func() int64 { return m.SituationalValue }
 	o.SituationalLabel = func() string { return m.SituationalLabel }
+	o.TargetAcKnown = func() int64 { return m.TargetAcKnown }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))

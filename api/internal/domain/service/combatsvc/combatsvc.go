@@ -30,6 +30,9 @@ type SVC interface {
 	// returns the recomputed attack (same d20, d100 and damage dice, no ammo
 	// spent); recorded as an audited amend.
 	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*RollResult, error)
+	// SetAttackVerdict records the GM's hit or miss on the latest attack
+	// when its target AC is unknown (no crit); an audited amend.
+	SetAttackVerdict(ctx context.Context, characterID, entryID int64, hit bool) (*RollResult, error)
 	// RollSpellToHit rolls a to-hit (no weapon, no damage, no crit) for a
 	// thrown spell; it logs nothing, the spell's own cast entry does.
 	RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*ToHitRoll, error)

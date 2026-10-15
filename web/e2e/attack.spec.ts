@@ -453,3 +453,89 @@ test("the attack form is kept on the server across a reload; switching weapons n
   await expect(resultCard(page)).toHaveCount(0);
   await snap(page, "weapon-switched");
 });
+
+// docs/adr/0012: the target AC is unknown by default; the card says which AC the roll hits and what
+// to tell the GM, the GM's Hit settles it without a crit. Screenshots of the unsettled card at the
+// four desktop sizes.
+test("an attack against an unknown AC is settled by the GM's Hit", async ({ page }) => {
+  await openAttack(page);
+  const form = attackForm(page);
+  await chooseWeapon(page, "Long Sword +2");
+  const ac = form.getByLabel("Target AC");
+  await expect(ac).toHaveValue("");
+  await expect(ac).toHaveAttribute("placeholder", "?");
+  // A known AC can be forgotten again with Unknown.
+  await ac.fill("4");
+  await expect(form.getByText("vs AC 4")).toBeVisible();
+  await form.getByRole("button", { name: "Unknown" }).click();
+  await expect(ac).toHaveValue("");
+  await expect(form.getByText("AC unknown")).toBeVisible();
+
+  const rolled = page.waitForResponse((r) => r.url().endsWith("/api/roll/attack"));
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
+  const r = (await (await rolled).json()) as { hitsAc: number; critsFromAc: number; totalDamage: number };
+  const card = resultCard(page);
+  await expect(card).toContainText("Long Sword +2 vs unknown AC");
+  await expect(card.getByTestId("hits-ac")).toHaveText(`Hits AC ${r.hitsAc}`);
+  await expect(card.getByTestId("tell-gm")).toHaveText(
+    `Tell the GM: “hits AC ${r.hitsAc}”. A crit from AC ${r.critsFromAc}.`,
+  );
+  await expect(card.getByTestId("verdict")).toHaveText("?");
+  await expect(card.getByText("Damage if it hits")).toBeVisible();
+  await expect(logEntry(page, `Long Sword +2 vs unknown AC: hits AC ${r.hitsAc}`)).toBeVisible();
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(card.getByTestId("tell-gm")).toBeVisible();
+    await snap(page, `unknown-ac-${vp.width}x${vp.height}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await card
+    .getByRole("group", { name: "The GM’s hit or miss" })
+    .getByRole("button", { name: "Hit" })
+    .click();
+  await expect(card.getByTestId("verdict")).toHaveText("Hit");
+  await expect(card.getByTestId("verdict-by-gm")).toBeVisible();
+  await expect(card.getByTestId("crit-badge")).toHaveCount(0);
+  await expect(card.getByTestId("total-damage")).toHaveText(String(r.totalDamage));
+  await expect(
+    logEntry(page, `Long Sword +2 vs unknown AC: hit (GM), ${r.totalDamage} damage`),
+  ).toBeVisible();
+  await snap(page, "unknown-ac-gm-hit");
+});
+
+// docs/adr/0012 step 5: the GM gives the AC after the roll; at AC 20 the stored dice make a crit.
+// A THAC0 of -100 keeps critsFromAc (effective THAC0 − d20 + crit-check d100) at most about -3, so
+// every roll crits AC 20 whatever the dice.
+test.describe("with a THAC0 low enough that AC 20 always crits", () => {
+  test.use({ character: { thac0_base: -100 } });
+
+  test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({ page }) => {
+    await openAttack(page);
+    const form = attackForm(page);
+    await chooseWeapon(page, "Long Sword +2");
+    const rolled = page.waitForResponse((res) => res.url().endsWith("/api/roll/attack"));
+    await form.getByRole("button", { name: "Attack", exact: true }).click();
+    const r = (await (await rolled).json()) as { critsFromAc: number };
+    expect(r.critsFromAc).toBeLessThanOrEqual(20);
+
+    const card = resultCard(page);
+    await expect(card.getByTestId("verdict")).toHaveText("?");
+    const give = card.getByRole("form", { name: "Give the real AC" });
+    await give.getByLabel("Real target AC").fill("20");
+    await give.getByRole("button", { name: "Correct" }).click();
+    await expect(card).toContainText("Long Sword +2 vs AC 20");
+    await expect(card.getByTestId("ac-given")).toBeVisible();
+    await expect(card.getByTestId("tell-gm")).toHaveCount(0);
+    await expect(card.getByRole("group", { name: "The GM’s hit or miss" })).toHaveCount(0);
+    await expect(card.getByTestId("verdict")).toHaveText("Hit");
+    await expect(card.getByTestId("crit-badge")).toBeVisible();
+    await expect(logEntry(page, "Long Sword +2 vs AC 20: critical")).toBeVisible();
+    await snap(page, "unknown-ac-given-crit");
+  });
+});

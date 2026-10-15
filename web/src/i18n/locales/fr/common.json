@@ -227,8 +227,12 @@
       "damageL": "Dégâts G",
       "bonus": "Tou. / Dég.",
       "thac0": "TAC0 effectif",
-      "rollNeeded": "{{n}} contre CA {{ac}}"
-    }
+      "rollNeeded": "{{n}} contre CA {{ac}}",
+      "rollNeededUnknown": "CA inconnue"
+    },
+    "unknownAc": "Inconnue",
+    "unknownAcHint": "Oublier la CA de la cible : l’attaque dit quelle CA elle touche",
+    "unknownAcPlaceholder": "?"
   },
   "saves": {
     "title": "Jets de sauvegarde",
@@ -584,7 +588,12 @@
       "increase": "Monter la CA de la cible",
       "value": "CA de la cible corrigée",
       "apply": "Appliquer",
-      "was": "jet contre CA {{ac}}"
+      "was": "jet contre CA {{ac}}",
+      "giveLabel": "Donner la CA réelle",
+      "realTitle": "CA réelle",
+      "realValue": "CA réelle de la cible",
+      "give": "Corriger",
+      "given": "CA donnée par le MJ"
     },
     "critLegacy": "Critique ×{{mult, number}} (d100 dans {{from}}–{{to}})",
     "critPlaceholderLegacy": "Critique ×{{mult, number}} (provisoire)",
@@ -595,6 +604,18 @@
       "success": "Réussi",
       "failure": "Échec",
       "die": "d{{die}}"
+    },
+    "attackHeadingUnknown": "{{weapon}} contre CA inconnue",
+    "attackHeadingAmmoUnknown": "{{weapon}} avec {{ammo}} contre CA inconnue",
+    "critsFromAc": "Critique dès CA",
+    "unknownAc": {
+      "tellGm": "Annoncez « touche CA {{hits}} » au MJ. Critique dès CA {{crits}}.",
+      "noCrit": "Pas de critique sans la CA : donnez-la pour régler un critique.",
+      "unsettled": "En attente du MJ : donnez la CA, ou Touché / Raté",
+      "byGm": "selon le MJ",
+      "damageIfHit": "Dégâts si touché",
+      "verdictTitle": "Le MJ dit",
+      "verdictLabel": "Touché ou raté selon le MJ"
     }
   },
   "log": {
@@ -670,7 +691,10 @@
         "miss": "RATÉ",
         "hit": "TOUCHÉ",
         "crit": "CRITIQUE"
-      }
+      },
+      "unknown": "{{weapon}} contre CA inconnue : touche CA {{hits}}",
+      "verdictHit": "{{weapon}} contre CA inconnue : touché (MJ), {{damage}} dégâts",
+      "verdictMiss": "{{weapon}} contre CA inconnue : raté (MJ)"
     },
     "cast": {
       "cast": "Lancé : {{spell}}",

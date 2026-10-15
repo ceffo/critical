@@ -18,26 +18,37 @@ type attackRecord struct {
 	Modifiers          []modifierRecord `json:"modifiers"`
 	EffectiveThac0     int              `json:"effectiveThac0"`
 	TargetACNeeded     int              `json:"targetACNeeded"`
-	Hit                bool             `json:"hit"`
-	HitMargin          int              `json:"hitMargin"`
-	BaseDamage         int              `json:"baseDamage"`
-	DamageDice         string           `json:"damageDice"`
-	SpellsBuff         float64          `json:"spellsBuff"`
-	WeaponBuff         int              `json:"weaponBuff"`
-	Multipliers        float64          `json:"multipliers"`
-	DiceMultiplier     float64          `json:"diceMultiplier"`
-	StrengthBonus      int              `json:"strengthBonus"`
-	BonusDamage        int              `json:"bonusDamage"`
-	DamageTerms        []termRecord     `json:"damageTerms"`
-	TotalDamage        int              `json:"totalDamage"`
+	// HitsAC and CritsFromAC (ADR 0012 steps 2 and 3); 0 on attacks logged
+	// before them (targetACNeeded is HitsAC there).
+	HitsAC         int          `json:"hitsAc"`
+	CritsFromAC    int          `json:"critsFromAc"`
+	Hit            bool         `json:"hit"`
+	HitMargin      int          `json:"hitMargin"`
+	BaseDamage     int          `json:"baseDamage"`
+	DamageDice     string       `json:"damageDice"`
+	SpellsBuff     float64      `json:"spellsBuff"`
+	WeaponBuff     int          `json:"weaponBuff"`
+	Multipliers    float64      `json:"multipliers"`
+	DiceMultiplier float64      `json:"diceMultiplier"`
+	StrengthBonus  int          `json:"strengthBonus"`
+	BonusDamage    int          `json:"bonusDamage"`
+	DamageTerms    []termRecord `json:"damageTerms"`
+	TotalDamage    int          `json:"totalDamage"`
 	// UnroundedDamage is the formula result before the final floor (absent
 	// on attacks logged before it was recorded).
-	UnroundedDamage float64     `json:"unroundedDamage,omitempty"`
-	WeaponID        string      `json:"weaponId"`
-	WeaponName      string      `json:"weaponName"`
-	TargetAC        int         `json:"targetAc"`
-	TargetSize      string      `json:"targetSize"`
-	Ammo            *ammoRecord `json:"ammo,omitempty"`
+	UnroundedDamage float64 `json:"unroundedDamage,omitempty"`
+	WeaponID        string  `json:"weaponId"`
+	WeaponName      string  `json:"weaponName"`
+	// TargetAC is null while the AC is unknown (ADR 0012).
+	TargetAC   *int        `json:"targetAc"`
+	TargetSize string      `json:"targetSize"`
+	Ammo       *ammoRecord `json:"ammo,omitempty"`
+	// ACKnown is absent on attacks logged before unknown ACs existed, which
+	// all had one. RolledACUnknown: rolled without the AC. Verdict: the GM's
+	// hit or miss while the AC is unknown.
+	ACKnown         *bool  `json:"acKnown,omitempty"`
+	RolledACUnknown bool   `json:"rolledAcUnknown,omitempty"`
+	Verdict         string `json:"verdict,omitempty"`
 	// Rolled and CritRow are what a target AC correction recomputes the
 	// outcome from (absent on attacks logged before corrections existed).
 	Rolled  *rolledRecord  `json:"rolled,omitempty"`
@@ -116,11 +127,17 @@ func toRecord(r *RollResult) attackRecord {
 	out := attackRecord{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
 		CritPlaceholder: r.CritPlaceholder, CritFrom: r.CritFrom, CritTo: r.CritTo, BaseThac0: r.BaseThac0, Modifiers: mods,
-		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, Hit: r.Hit, HitMargin: r.HitMargin,
+		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, HitsAC: r.HitsAC, CritsFromAC: r.CritsFromAC,
+		Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
 		DamageTerms: terms, TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
-		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
+		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
+		ACKnown: &r.ACKnown, RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
+	}
+	if r.ACKnown {
+		ac := r.TargetAC
+		out.TargetAC = &ac
 	}
 	if a := r.Ammo; a != nil {
 		out.Ammo = &ammoRecord{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}
@@ -150,13 +167,18 @@ func (a attackRecord) result(entryID int64) *RollResult {
 	r := &RollResult{
 		D20Roll: a.D20Roll, D100CritRoll: a.D100CritRoll, D100MultiplierRoll: a.D100MultiplierRoll, IsCrit: a.IsCrit, CritMultiplier: a.CritMultiplier,
 		CritPlaceholder: a.CritPlaceholder, CritFrom: a.CritFrom, CritTo: a.CritTo, BaseThac0: a.BaseThac0, Modifiers: mods,
-		EffectiveThac0: a.EffectiveThac0, TargetACNeeded: a.TargetACNeeded, Hit: a.Hit, HitMargin: a.HitMargin,
+		EffectiveThac0: a.EffectiveThac0, TargetACNeeded: a.TargetACNeeded, HitsAC: a.HitsAC, CritsFromAC: a.CritsFromAC,
+		Hit: a.Hit, HitMargin: a.HitMargin,
 		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
 		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
 		DamageTerms: fromTermRecords(a.DamageTerms), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
-		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetAC: a.TargetAC, TargetSize: TargetSize(a.TargetSize),
+		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetSize: TargetSize(a.TargetSize),
+		ACKnown: a.ACKnown == nil || *a.ACKnown, RolledACUnknown: a.RolledACUnknown, Verdict: Verdict(a.Verdict),
 		RolledTargetAC: a.RolledTargetAC, RolledHit: a.RolledHit, RolledCrit: a.RolledCrit,
 		LogEntryID: entryID,
+	}
+	if a.TargetAC != nil {
+		r.TargetAC = *a.TargetAC
 	}
 	if m := a.Ammo; m != nil {
 		r.Ammo = &AmmoUse{ItemID: m.ItemID, Name: m.Name, Magic: m.Magic, Remaining: m.Remaining}

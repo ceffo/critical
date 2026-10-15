@@ -184,7 +184,7 @@ func TestMissileAttackSpendsAmmoAndVoidRestoresIt(t *testing.T) {
 	before := arrowCount(t, bs, "arrows_plus3")
 	require.GreaterOrEqual(t, before, 2, "fixture items.json has at least two +3 arrows")
 
-	shot := combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 5}
+	shot := combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(5)}
 	first, err := bs.Combat.ResolveAttack(ctx, id, shot)
 	require.NoError(t, err)
 	require.NotNil(t, first.Ammo)
@@ -219,7 +219,7 @@ func TestFailedMissileAttackLeavesAmmo(t *testing.T) {
 	before := arrowCount(t, bs, "fire_flask")
 
 	_, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{
-		WeaponID: "shortbow", AmmoItemID: "fire_flask", TargetAC: 5,
+		WeaponID: "shortbow", AmmoItemID: "fire_flask", TargetAC: new(5),
 	})
 	assert.ErrorIs(t, err, domain.ErrInvalidInput)
 	assert.Equal(t, before, arrowCount(t, bs, "fire_flask"))
@@ -234,7 +234,7 @@ func TestAttackUsesEffectiveStr(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
 	id := bs.CharacterID
-	sword := combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}
+	sword := combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}
 
 	res, err := bs.Combat.ResolveAttack(ctx, id, sword)
 	require.NoError(t, err)
@@ -257,9 +257,9 @@ func TestVoidingAnOlderShotIsRefused(t *testing.T) {
 	id := bs.CharacterID
 	plus3, plus1 := arrowCount(t, bs, "arrows_plus3"), arrowCount(t, bs, "arrows_plus1")
 
-	shot3, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 5})
+	shot3, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(5)})
 	require.NoError(t, err)
-	shot1, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: 5})
+	shot1, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: new(5)})
 	require.NoError(t, err)
 
 	_, err = bs.Log.Void(ctx, id, shot3.LogEntryID)
@@ -281,7 +281,7 @@ func TestVoidingAMeleeAttackLeavesItems(t *testing.T) {
 	ctx := context.Background()
 	before, err := bs.Items.List(ctx)
 	require.NoError(t, err)
-	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
+	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 	require.NoError(t, err)
 	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
@@ -363,7 +363,7 @@ func TestCritTable_EditedTableIsUsedAndPastEntriesKeepTheirMultiplier(t *testing
 	ctx := context.Background()
 	id := bs.CharacterID
 	// AC 1000 makes the roll needed so low that every attack is a crit.
-	shot := combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000}
+	shot := combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(1000)}
 
 	def, err := bs.Combat.GetCritTable(ctx)
 	require.NoError(t, err)
@@ -416,7 +416,7 @@ func TestCritTable_SavingTheDefaultExplicitlyClearsPlaceholder(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, got.Placeholder)
 
-	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000})
+	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(1000)})
 	require.NoError(t, err)
 	require.True(t, res.IsCrit)
 	assert.InDelta(t, 2, res.CritMultiplier, 0)
@@ -434,7 +434,7 @@ func TestCritTable_DecimalMultiplierIsStoredAndFloored(t *testing.T) {
 	require.NoError(t, err)
 	assert.InDelta(t, 1.5, got.Rows[0].Multiplier, 0)
 
-	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000})
+	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(1000)})
 	require.NoError(t, err)
 	require.True(t, res.IsCrit)
 	assert.InDelta(t, 1.5, res.CritMultiplier, 0)

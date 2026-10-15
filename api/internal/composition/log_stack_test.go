@@ -67,7 +67,7 @@ func buildStack(t *testing.T) (*composition.BackingServices, []int64, []stackSta
 	_, err = bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Haste", Duration: 3})
 	require.NoError(t, err)
 	step(topEntry(t, bs).ID)
-	shot, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 5})
+	shot, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(5)})
 	require.NoError(t, err)
 	step(shot.LogEntryID)
 	_, err = bs.HP.AppendEvent(ctx, id, -7, "troll claw")

@@ -9,7 +9,14 @@ import { useRollStore } from "@/stores/roll";
 import { formatFactor, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
-import { MAX_TARGET_AC, parseTargetAc, stepTargetAc } from "@/lib/attackAdjust";
+import {
+  MAX_TARGET_AC,
+  UNKNOWN_AC_STEP_BASE,
+  attackSettled,
+  hitsAc,
+  parseTargetAc,
+  stepTargetAc,
+} from "@/lib/attackAdjust";
 import { damageFormula, itemRollText, modLabel } from "@/lib/rollText";
 import {
   cardHeader,
@@ -196,32 +203,75 @@ function critText(t: TFunction, r: RollResult): string {
     : t("result.crit", { ...args, from: r.critFrom, to: r.critTo });
 }
 
-/** Attack: d20, the AC it hits, the verdict, the damage row and the calculation behind a toggle. */
+/** "Long Sword +2 vs AC 5", "… vs unknown AC". */
+function attackHeading(t: TFunction, r: RollResult): string {
+  const unknown = r.targetAc === null;
+  if (r.ammo) {
+    return unknown
+      ? t("result.attackHeadingAmmoUnknown", { weapon: r.weaponName, ammo: r.ammo.name })
+      : t("result.attackHeadingAmmo", { weapon: r.weaponName, ammo: r.ammo.name, ac: r.targetAc });
+  }
+  return unknown
+    ? t("result.attackHeadingUnknown", { weapon: r.weaponName })
+    : t("result.attackHeading", { weapon: r.weaponName, ac: r.targetAc });
+}
+
+/**
+ * Attack: d20, the AC it hits, the verdict, the damage row and the calculation behind a toggle.
+ * Against an unknown AC (docs/adr/0012) the card also says what to tell the GM, offers the GM's
+ * Touché / Raté, and dims the damage "if it hits" until the AC or a verdict settles it.
+ */
 function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean }) {
   const { t, i18n } = useTranslation();
   const detailOpen = useFilStore((s) => s.detailOpen);
   const setDetailOpen = useFilStore((s) => s.setDetailOpen);
-  const heading = r.ammo
-    ? t("result.attackHeadingAmmo", { weapon: r.weaponName, ammo: r.ammo.name, ac: r.targetAc })
-    : t("result.attackHeading", { weapon: r.weaponName, ac: r.targetAc });
+  const settled = attackSettled(r);
+  const voided = useLogStore((s) =>
+    s.entries.some((e) => e.id === r.logEntryId && e.status === "voided"),
+  );
+  const correctable = interactive && r.logEntryId !== undefined && !voided;
   return (
     <div className="flex flex-col gap-3" data-testid="attack-result">
       <div className="flex items-center gap-3">
         <HexDie value={r.d20Roll} label={t("fil.d20", { value: r.d20Roll })} />
         <div className="min-w-0 flex-1">
           <div className="text-2xl font-medium tabular-nums" data-testid="hits-ac">
-            {t("fil.hitsAc", { ac: r.targetACNeeded })}
+            {t("fil.hitsAc", { ac: hitsAc(r) })}
           </div>
           <div className="text-sm text-muted-foreground">
-            {heading}
+            {attackHeading(t, r)}
             {r.targetSize && <> · {t(`result.sizes.${r.targetSize}`)}</>}
           </div>
         </div>
-        <Verdict ok={r.hit} yes={t("result.hit")} no={t("result.miss")} />
+        {settled ? (
+          <span className="flex shrink-0 flex-col items-end">
+            <Verdict ok={r.hit} yes={t("result.hit")} no={t("result.miss")} />
+            {r.verdict && (
+              <span className="text-xs text-muted-foreground" data-testid="verdict-by-gm">
+                {t("result.unknownAc.byGm")}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span
+            data-testid="verdict"
+            className="shrink-0 text-2xl font-semibold text-muted-foreground"
+            title={t("result.unknownAc.unsettled")}
+          >
+            ?
+          </span>
+        )}
       </div>
       {r.isCrit && (
         <p className="rounded-md bg-amb-900 px-2.5 py-1 text-sm font-medium text-amb-300" data-testid="crit-badge">
           {critText(t, r)}
+        </p>
+      )}
+      {r.acKnown === false && r.critsFromAc !== undefined && (
+        <p className="rounded-md bg-neu-900/60 px-2.5 py-1.5 text-sm tabular-nums" data-testid="tell-gm">
+          {r.verdict
+            ? t("result.unknownAc.noCrit")
+            : t("result.unknownAc.tellGm", { hits: hitsAc(r), crits: r.critsFromAc })}
         </p>
       )}
 
@@ -231,23 +281,26 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
           <span className="w-fit rounded-md bg-neu-900 px-2 py-0.5 text-sm font-semibold tabular-nums" data-testid="damage-dice">
             {t("fil.diceRolled", { dice: r.damageDice, total: r.baseDamage })}
           </span>
-          {r.hit && (
+          {(r.hit || !settled) && (
             <span className="text-xs break-words text-muted-foreground tabular-nums" data-testid="damage-formula">
               {damageFormula(r, i18n.language)}
             </span>
           )}
         </div>
         <Total
-          label={t("result.totalDamage")}
-          value={r.hit ? r.totalDamage : "–"}
+          label={settled ? t("result.totalDamage") : t("result.unknownAc.damageIfHit")}
+          value={r.hit || !settled ? r.totalDamage : "–"}
           testId="total-damage"
           dim={!r.hit}
         />
       </div>
 
-      {interactive && r.logEntryId !== undefined && (
+      {correctable && r.acKnown === false && (
+        <GmVerdict result={r} entryId={r.logEntryId as number} />
+      )}
+      {correctable && (
         // Keyed by entry so a new attack starts from its own AC.
-        <AdjustAttackAc key={r.logEntryId} result={r} entryId={r.logEntryId} />
+        <AdjustAttackAc key={r.logEntryId} result={r} entryId={r.logEntryId as number} />
       )}
 
       {r.ammo && (
@@ -271,8 +324,13 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
             )}
             <Fact label={t("result.baseThac0")}>{r.baseThac0}</Fact>
             <Fact label={t("result.effectiveThac0")}>{r.effectiveThac0}</Fact>
-            <Fact label={t("result.hitsAc")}>{r.targetACNeeded}</Fact>
-            <Fact label={t("result.margin")}>{formatSigned(r.hitMargin)}</Fact>
+            <Fact label={t("result.hitsAc")}>{hitsAc(r)}</Fact>
+            {r.critsFromAc !== undefined && (
+              <Fact label={t("result.critsFromAc")}>{r.critsFromAc}</Fact>
+            )}
+            <Fact label={t("result.margin")}>
+              {r.acKnown === false ? "–" : formatSigned(r.hitMargin)}
+            </Fact>
           </dl>
           <div>
             <div className={labelClass}>{t("result.modifiers")}</div>
@@ -289,7 +347,7 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
               </ul>
             )}
           </div>
-          {r.hit && r.damageTerms.length > 0 && (
+          {(r.hit || !settled) && r.damageTerms.length > 0 && (
             <div>
               <div className={labelClass}>{t("result.damageTerms")}</div>
               <ul className="mt-1 flex flex-col gap-0.5 text-sm" data-testid="damage-terms">
@@ -312,33 +370,72 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
   );
 }
 
+/** The GM's Touché / Raté on the latest attack while its AC is unknown; the server settles it. */
+function GmVerdict({ result: r, entryId }: { result: RollResult; entryId: number }) {
+  const { t } = useTranslation();
+  const verdictLastAttack = useRollStore((s) => s.verdictLastAttack);
+  const rolling = useRollStore((s) => s.rolling);
+  return (
+    <div
+      role="group"
+      aria-label={t("result.unknownAc.verdictLabel")}
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-2.5"
+    >
+      <span className="text-sm font-medium">{t("result.unknownAc.verdictTitle")}</span>
+      <Button
+        type="button"
+        size="sm"
+        variant={r.verdict === "hit" ? "default" : "outline"}
+        aria-pressed={r.verdict === "hit"}
+        disabled={rolling}
+        onClick={() => void verdictLastAttack(entryId, true)}
+      >
+        {t("result.hit")}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant={r.verdict === "miss" ? "default" : "outline"}
+        aria-pressed={r.verdict === "miss"}
+        disabled={rolling}
+        onClick={() => void verdictLastAttack(entryId, false)}
+      >
+        {t("result.miss")}
+      </Button>
+    </div>
+  );
+}
+
 /**
  * The target AC of the latest attack: − / + around the AC field, Apply. The server recomputes hit,
- * crit and damage with the dice of the attack.
+ * crit and damage with the dice of the attack. Against an unknown AC the field starts empty and
+ * Apply gives the GM's AC (it replaces a verdict).
  */
 function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: number }) {
   const { t } = useTranslation();
   const adjustLastAttack = useRollStore((s) => s.adjustLastAttack);
   const rolling = useRollStore((s) => s.rolling);
-  const voided = useLogStore((s) =>
-    s.entries.some((e) => e.id === entryId && e.status === "voided"),
-  );
-  const [text, setText] = useState(String(r.targetAc));
-  if (voided) return null;
+  const [text, setText] = useState(r.targetAc === null ? "" : String(r.targetAc));
+  const unknown = r.targetAc === null;
   const ac = parseTargetAc(text);
   const changed = ac !== null && ac !== r.targetAc;
-  const step = (by: number) => setText((v) => String(stepTargetAc(parseTargetAc(v) ?? r.targetAc, by)));
+  const step = (by: number) =>
+    setText((v) =>
+      String(stepTargetAc(parseTargetAc(v) ?? r.targetAc ?? UNKNOWN_AC_STEP_BASE, by)),
+    );
 
   return (
     <form
       className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-2.5"
-      aria-label={t("result.adjustAc.label")}
+      aria-label={unknown ? t("result.adjustAc.giveLabel") : t("result.adjustAc.label")}
       onSubmit={(ev) => {
         ev.preventDefault();
         if (changed) void adjustLastAttack(entryId, ac);
       }}
     >
-      <span className="text-sm font-medium">{t("result.adjustAc.title")}</span>
+      <span className="text-sm font-medium">
+        {unknown ? t("result.adjustAc.realTitle") : t("result.adjustAc.title")}
+      </span>
       <div className="flex items-center gap-1">
         <Button
           type="button"
@@ -356,8 +453,9 @@ function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: n
           max={MAX_TARGET_AC}
           step={1}
           value={text}
-          aria-label={t("result.adjustAc.value")}
-          aria-invalid={ac === null}
+          placeholder={t("attack.unknownAcPlaceholder")}
+          aria-label={unknown ? t("result.adjustAc.realValue") : t("result.adjustAc.value")}
+          aria-invalid={text !== "" && ac === null}
           onChange={(ev) => setText(ev.target.value)}
         />
         <Button
@@ -371,11 +469,16 @@ function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: n
         </Button>
       </div>
       <Button type="submit" size="sm" disabled={rolling || !changed}>
-        {t("result.adjustAc.apply")}
+        {unknown ? t("result.adjustAc.give") : t("result.adjustAc.apply")}
       </Button>
       {r.rolledTargetAc !== undefined && (
         <span className="text-sm text-muted-foreground" data-testid="ac-corrected">
           {t("result.adjustAc.was", { ac: r.rolledTargetAc })}
+        </span>
+      )}
+      {r.rolledAcUnknown && !unknown && (
+        <span className="text-sm text-muted-foreground" data-testid="ac-given">
+          {t("result.adjustAc.given")}
         </span>
       )}
     </form>

@@ -29,6 +29,7 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted |
 | 0010 | [Action stack and undo](0010-action-stack-and-undo.md) | accepted |
 | 0011 | [HP below zero](0011-hp-below-zero.md) | accepted |
+| 0012 | [Attack against an unknown AC](0012-attack-against-unknown-ac.md) | accepted |
 | 0013 | [Initiative](0013-initiative.md) | accepted |
 | 0014 | [Skill checks](0014-skill-checks.md) | accepted |
 | 0015 | [Experience](0015-experience.md) | accepted |

@@ -17,34 +17,36 @@ type AttackForm struct {
 	// one-click switch back; empty when there is none.
 	PreviousWeaponID string
 	AmmoItemID       string
-	TargetAC         int
-	TargetSize       TargetSize
+	// TargetAC is nil while the target's AC is unknown, the default (ADR
+	// 0012 step 1).
+	TargetAC   *int
+	TargetSize TargetSize
 	// Situational is kept with its label even at 0, so the reason typed
 	// stays while the value is stepped through 0. The label is stored as
 	// typed, untrimmed.
 	Situational Situational
 }
 
-// DefaultTargetAC is the target AC of a form never saved.
-const DefaultTargetAC = 5
-
 // MaxSituational bounds the situational modifier (±MaxSituational).
 const MaxSituational = 20
 
 // DefaultAttackForm is the form of a character who never changed it.
 func DefaultAttackForm() AttackForm {
-	return AttackForm{TargetAC: DefaultTargetAC, TargetSize: SizeSmallMedium}
+	return AttackForm{TargetSize: SizeSmallMedium}
 }
 
 // AttackFormPatch changes the set fields of the form; nil leaves a field as
 // it is. A new WeaponID makes the weapon held until then the previous one.
 // An empty AmmoItemID clears the choice (the first arrow left is offered).
+// UnknownTargetAC forgets the target AC (it is unknown again); it cannot
+// come with a TargetAC.
 type AttackFormPatch struct {
-	WeaponID    *string
-	AmmoItemID  *string
-	TargetAC    *int
-	TargetSize  *TargetSize
-	Situational *Situational
+	WeaponID        *string
+	AmmoItemID      *string
+	TargetAC        *int
+	UnknownTargetAC bool
+	TargetSize      *TargetSize
+	Situational     *Situational
 }
 
 // AmmoChoice is one ammunition the weapon in hand can fire.
@@ -64,8 +66,9 @@ type AttackPreview struct {
 	EffectiveThac0 int
 	// ToHit is the sum of the modifiers (BaseThac0 - EffectiveThac0).
 	ToHit int
-	// RollNeeded is the d20 that hits the target AC (step 2).
-	RollNeeded int
+	// RollNeeded is the d20 that hits the target AC (step 2); nil while the
+	// AC is unknown.
+	RollNeeded *int
 	// DamageBonus is the sum of the flat damage terms: weapon or buff "+N",
 	// magic ammunition, Strength and buff damage (ADR 0003).
 	DamageBonus int
@@ -109,6 +112,9 @@ func (s *service) GetAttackForm(ctx context.Context, characterID int64) (*Attack
 // the form with its preview. Switching weapon never attacks: it only moves
 // the weapon held until then to PreviousWeaponID.
 func (s *service) UpdateAttackForm(ctx context.Context, characterID int64, p AttackFormPatch) (*AttackFormView, error) {
+	if p.TargetAC != nil && p.UnknownTargetAC {
+		return nil, domain.FieldErrorf("targetAc", "the target AC cannot be both given and unknown")
+	}
 	var view *AttackFormView
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		form, err := s.storedForm(ctx, characterID)
@@ -141,11 +147,15 @@ func (s *service) UpdateAttackForm(ctx context.Context, characterID int64, p Att
 			}
 			form.AmmoItemID = id
 		}
-		if p.TargetAC != nil {
+		switch {
+		case p.UnknownTargetAC:
+			form.TargetAC = nil
+		case p.TargetAC != nil:
 			if ac := *p.TargetAC; ac < -MaxTargetAC || ac > MaxTargetAC {
 				return domain.FieldErrorf("targetAc", "target AC must be between -%d and %d", MaxTargetAC, MaxTargetAC)
 			}
-			form.TargetAC = *p.TargetAC
+			ac := *p.TargetAC
+			form.TargetAC = &ac
 		}
 		if p.TargetSize != nil {
 			if !p.TargetSize.Valid() {
@@ -285,14 +295,18 @@ func (s *service) preview(ctx context.Context, characterID int64, weapon Weapon,
 	}
 	toHit := am.toHit()
 	eff := char.Thac0Base - toHit
-	return &AttackPreview{
+	p := &AttackPreview{
 		BaseThac0:      char.Thac0Base,
 		Modifiers:      am.modifiers,
 		EffectiveThac0: eff,
 		ToHit:          toHit,
-		RollNeeded:     eff - form.TargetAC,
 		DamageBonus:    am.weaponDmg + am.ammoDmg + am.strDmg + mods.Damage,
-	}, nil
+	}
+	if form.TargetAC != nil {
+		needed := eff - *form.TargetAC
+		p.RollNeeded = &needed
+	}
+	return p, nil
 }
 
 // resolveWeapon is the weapon with id, else the first of the list; ok is

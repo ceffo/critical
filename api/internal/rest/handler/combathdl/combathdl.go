@@ -1,5 +1,5 @@
 // Package combathdl exposes /api/roll/attack (and its target AC
-// correction), /api/roll/save (and its adjustment), /api/weapons,
+// correction and GM verdict), /api/roll/save (and its adjustment), /api/weapons,
 // /api/attack/form and /api/crit-table.
 package combathdl
 
@@ -32,6 +32,7 @@ type combatSvc interface {
 	ResolveSavingThrow(ctx context.Context, characterID int64, category combatsvc.SaveCategory) (*combatsvc.RollResult, error)
 	AdjustSave(ctx context.Context, characterID, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)
 	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*combatsvc.RollResult, error)
+	SetAttackVerdict(ctx context.Context, characterID, entryID int64, hit bool) (*combatsvc.RollResult, error)
 	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
 	GetAttackForm(ctx context.Context, characterID int64) (*combatsvc.AttackFormView, error)
 	UpdateAttackForm(ctx context.Context, characterID int64, p combatsvc.AttackFormPatch) (*combatsvc.AttackFormView, error)
@@ -43,6 +44,7 @@ type combatSvc interface {
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/attack", render.Handle(ResolveAttack(charID, svc)))
 	r.Post("/api/roll/attack/{id}/adjust", render.Handle(AdjustAttack(charID, svc)))
+	r.Post("/api/roll/attack/{id}/verdict", render.Handle(AttackVerdict(charID, svc)))
 	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
 	r.Post("/api/roll/save/{id}/adjust", render.Handle(AdjustSave(charID, svc)))
 	r.Get("/api/weapons", render.Handle(ListWeapons(svc)))
@@ -90,7 +92,8 @@ type AttackRequestDTO struct {
 	WeaponID string `json:"weapon_id"`
 	// AmmoItemID is required for a weapon that fires ammunition (bows).
 	AmmoItemID string `json:"ammo_item_id,omitempty"`
-	TargetAC   int    `json:"target_ac"`
+	// TargetAC absent or null: the target's AC is unknown (docs/adr/0012).
+	TargetAC *int `json:"target_ac"`
 	// TargetSize is "sm" (small/medium, the default) or "l" (large).
 	TargetSize  string          `json:"target_size,omitempty"`
 	Situational *SituationalDTO `json:"situational,omitempty"`
@@ -179,6 +182,39 @@ func AdjustAttack(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 	}
 }
 
+// AttackVerdictDTO is the body of POST /api/roll/attack/{id}/verdict: the
+// GM's hit (true) or miss (false).
+type AttackVerdictDTO struct {
+	Hit *bool `json:"hit"`
+}
+
+// AttackVerdict records the GM's hit or miss on the latest attack (log entry
+// {id}) when its target AC is unknown: no crit, damage as rolled, nothing
+// rolled or spent (docs/adr/0012 step 4). Returns the updated RollResult.
+// 409 when the entry is voided or not the latest roll, 400 when it is not an
+// attack or its AC is known, 404 when it does not exist.
+func AttackVerdict(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil || id <= 0 {
+			return render.BadRequestError("invalid log entry id")
+		}
+		var req AttackVerdictDTO
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if req.Hit == nil {
+			return render.BadRequestError("hit is required")
+		}
+		res, err := svc.SetAttackVerdict(r.Context(), charID(r), id, *req.Hit)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toDTO(res))
+		return nil
+	}
+}
+
 // SaveAdjustmentDTO is the body of POST /api/roll/save/{id}/adjust: the new
 // signed adjustment (0 removes it) and an optional reason.
 type SaveAdjustmentDTO struct {
@@ -230,8 +266,15 @@ type RollResultDTO struct {
 	Modifiers          []ModifierDTO `json:"modifiers"`
 	EffectiveThac0     int           `json:"effectiveThac0"`
 	TargetACNeeded     int           `json:"targetACNeeded"`
-	Hit                bool          `json:"hit"`
-	HitMargin          int           `json:"hitMargin"`
+	// HitsAC is the lowest target AC the attack hits, CritsFromAC the
+	// lowest it crits (docs/adr/0012 steps 2 and 3); sent on attacks.
+	HitsAC      *int `json:"hitsAc,omitempty"`
+	CritsFromAC *int `json:"critsFromAc,omitempty"`
+	// Hit, hitMargin, isCrit and the damage are final only when acKnown or
+	// verdict is set; until then hit is false and the damage is the one of
+	// a hit at x1.
+	Hit       bool `json:"hit"`
+	HitMargin int  `json:"hitMargin"`
 
 	BaseDamage     int             `json:"baseDamage"`
 	DamageDice     string          `json:"damageDice"`
@@ -248,11 +291,18 @@ type RollResultDTO struct {
 	UnroundedDamage float64 `json:"unroundedDamage"`
 
 	// Attack context; empty on saving throws.
-	WeaponID   string   `json:"weaponId,omitempty"`
-	WeaponName string   `json:"weaponName,omitempty"`
-	TargetAC   int      `json:"targetAc"`
+	WeaponID   string `json:"weaponId,omitempty"`
+	WeaponName string `json:"weaponName,omitempty"`
+	// TargetAC is null on an attack whose AC is unknown (0 on saves).
+	TargetAC   *int     `json:"targetAc"`
 	TargetSize string   `json:"targetSize,omitempty"`
 	Ammo       *AmmoDTO `json:"ammo,omitempty"`
+	// ACKnown is sent on attacks; RolledACUnknown: rolled without the AC
+	// (still set once the GM gave it); Verdict: the GM's "hit" or "miss"
+	// while the AC is unknown.
+	ACKnown         *bool  `json:"acKnown,omitempty"`
+	RolledACUnknown bool   `json:"rolledAcUnknown,omitempty"`
+	Verdict         string `json:"verdict,omitempty"`
 	// Target AC and outcome as rolled; present while a correction differs
 	// from the rolled target AC.
 	RolledTargetAC *int  `json:"rolledTargetAc,omitempty"`
@@ -316,10 +366,19 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
 		TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
-		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
+		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
+		RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
 		RolledTargetAC: r.RolledTargetAC, RolledHit: r.RolledHit, RolledCrit: r.RolledCrit,
 		SaveCategory: string(r.SaveCategory), AdjustmentReason: r.AdjustmentReason,
 		LogEntryID: r.LogEntryID,
+	}
+	if r.SaveCategory == "" {
+		known, hits, crits := r.ACKnown, r.HitsAC, r.CritsFromAC
+		out.ACKnown, out.HitsAC, out.CritsFromAC = &known, &hits, &crits
+	}
+	if r.SaveCategory != "" || r.ACKnown {
+		ac := r.TargetAC
+		out.TargetAC = &ac
 	}
 	if r.SaveCategory != "" {
 		adj, bonus, total := r.Adjustment, r.SaveBonus, r.SaveTotal

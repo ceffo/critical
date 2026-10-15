@@ -116,7 +116,10 @@
     "chargesOf": "{{count}} / {{total}} charges",
     "untilSpent": "until spent",
     "untilDismissed": "until dismissed",
-    "lastTurn": "Last turn"
+    "lastTurn": "Last turn",
+    "showMore_one": "Show {{count}} more effect",
+    "showMore_other": "Show {{count}} more effects",
+    "showLess": "Show fewer effects"
   },
   "buffs": {
     "charges": "{{count}} ch",

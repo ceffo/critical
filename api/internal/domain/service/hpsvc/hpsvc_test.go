@@ -130,6 +130,62 @@ func TestGetState_NeverAboveMax(t *testing.T) {
 	}
 }
 
+// ADR 0011 step 1 (display guard): rows logged before the floor existed
+// never show HP below -10; the state carries the floor.
+func TestGetState_NeverBelowFloor(t *testing.T) {
+	for _, c := range []struct{ total, want int }{{-29, -9}, {-30, -10}, {-45, -10}} {
+		svc, dal, log := newSvc(t)
+		stubState(dal, log, 20, c.total, nil)
+		state, err := svc.GetState(context.Background(), 1)
+		require.NoError(t, err)
+		assert.Equal(t, c.want, state.CurrentHp, "total %d", c.total)
+		assert.Equal(t, -10, state.FloorHp)
+	}
+}
+
+// ADR 0011 step 2: the condition thresholds, at each boundary. Max 40: a
+// quarter is 10; max 41: a quarter is 10.25.
+func TestConditionOf(t *testing.T) {
+	cases := []struct {
+		name         string
+		current, max int
+		want         hpsvc.Condition
+	}{
+		{"full HP", 40, 40, hpsvc.ConditionOK},
+		{"one above a quarter", 11, 40, hpsvc.ConditionOK},
+		{"exactly a quarter", 10, 40, hpsvc.ConditionBadlyWounded},
+		{"just above a fractional quarter", 11, 41, hpsvc.ConditionOK},
+		{"just below a fractional quarter", 10, 41, hpsvc.ConditionBadlyWounded},
+		{"1 HP", 1, 40, hpsvc.ConditionBadlyWounded},
+		{"1 HP of 3 is above a quarter", 1, 3, hpsvc.ConditionOK},
+		{"exactly 0", 0, 40, hpsvc.ConditionUnconscious},
+		{"-1", -1, 40, hpsvc.ConditionUnconscious},
+		{"-9, one above the floor", -9, 40, hpsvc.ConditionUnconscious},
+		{"-10, the floor", -10, 40, hpsvc.ConditionDead},
+		{"below the floor (legacy)", -12, 40, hpsvc.ConditionDead},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, hpsvc.ConditionOf(c.current, c.max))
+		})
+	}
+}
+
+// ADR 0011 step 2: GetState evaluates the condition on the HP it returns
+// (after the floor and max guards).
+func TestGetState_Condition(t *testing.T) {
+	for _, c := range []struct {
+		total int
+		want  hpsvc.Condition
+	}{{0, hpsvc.ConditionOK}, {-15, hpsvc.ConditionBadlyWounded}, {-20, hpsvc.ConditionUnconscious}, {-30, hpsvc.ConditionDead}, {-41, hpsvc.ConditionDead}} {
+		svc, dal, log := newSvc(t)
+		stubState(dal, log, 20, c.total, nil)
+		state, err := svc.GetState(context.Background(), 1)
+		require.NoError(t, err)
+		assert.Equal(t, c.want, state.Condition, "total %d", c.total)
+	}
+}
+
 func TestAppendEvent_RecordFails(t *testing.T) {
 	svc, _, log := newSvc(t)
 	log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, errBoom)

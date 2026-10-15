@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +50,13 @@ func (r *hpRig) current() int {
 	st, err := r.bs.HP.GetState(context.Background(), r.bs.CharacterID)
 	require.NoError(r.t, err)
 	return st.CurrentHp
+}
+
+func (r *hpRig) condition() hpsvc.Condition {
+	r.t.Helper()
+	st, err := r.bs.HP.GetState(context.Background(), r.bs.CharacterID)
+	require.NoError(r.t, err)
+	return st.Condition
 }
 
 func breakdown(t *testing.T, e actionlog.Entry) actionlog.HPBreakdown {
@@ -141,4 +149,106 @@ func TestHPCap_PopHealThenDamage(t *testing.T) {
 	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, dmg.ID)
 	require.NoError(t, err)
 	assert.Equal(t, r.max, r.current())
+}
+
+// ADR 0011 step 1 on the real stack: damage to below 0 is logged as typed,
+// damage past -10 is logged clamped, at the floor further damage logs 0, and
+// the ledger SUM is the shown HP throughout.
+func TestHPFloor_DamagePastTheFloorIsClamped(t *testing.T) {
+	r := newHPRig(t)
+	hp, e := r.change(-(r.max + 4), "dragon breath")
+	require.Equal(t, -4, hp)
+	assert.Equal(t, -(r.max + 4), e.HPDelta, "below 0 but above the floor: as typed")
+
+	hp, e = r.change(-9, "bleeding")
+	assert.Equal(t, -10, hp)
+	assert.Equal(t, -6, e.HPDelta)
+	assert.Equal(t, actionlog.HPBreakdown{Requested: -9, Applied: -6}, breakdown(t, e))
+
+	hp, e = r.change(-3, "kick")
+	assert.Equal(t, -10, hp)
+	assert.Equal(t, 0, e.HPDelta)
+	assert.Equal(t, actionlog.HPBreakdown{Requested: -3, Applied: 0}, breakdown(t, e))
+
+	total, err := r.bs.Log.HPTotal(context.Background(), r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, -10-r.max, total, "the ledger holds no damage past the floor")
+	st, err := r.bs.HP.GetState(context.Background(), r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, hpsvc.ConditionDead, st.Condition)
+
+	// A heal from the floor counts from -10, not from a hidden deficit.
+	hp, _ = r.change(5, "cure light wounds")
+	assert.Equal(t, -5, hp)
+	assert.Equal(t, hpsvc.ConditionUnconscious, r.condition())
+
+	// Healed to exactly a quarter of max: still badly wounded; one more: ok.
+	quarter := r.max / 4
+	hp, _ = r.change(quarter+5, "cure serious wounds")
+	require.Equal(t, quarter, hp)
+	assert.Equal(t, hpsvc.ConditionBadlyWounded, r.condition())
+	_, _ = r.change(1, "potion")
+	assert.Equal(t, hpsvc.ConditionOK, r.condition(), "the label clears above a quarter of max")
+}
+
+// ADR 0007 step 8 applies to clamped entries too: the row Void of a clamped
+// entry that is not the top is refused and changes nothing; once the entries
+// above it are popped, voiding it puts HP back exactly to the SUM before it.
+func TestHPFloor_VoidClampedEntryBelowTheTop(t *testing.T) {
+	r := newHPRig(t)
+	ctx := context.Background()
+	before, _ := r.change(-(r.max - 2), "fireball")
+	require.Equal(t, 2, before)
+	hp, clamped := r.change(-30, "ogre club")
+	require.Equal(t, -10, hp)
+	require.Equal(t, -12, clamped.HPDelta)
+	hp, heal := r.change(4, "cure light wounds")
+	require.Equal(t, -6, hp)
+
+	_, err := r.bs.Log.Void(ctx, r.bs.CharacterID, clamped.ID)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+	assert.Equal(t, -6, r.current(), "a refused void changes nothing")
+
+	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, heal.ID)
+	require.NoError(t, err)
+	assert.Equal(t, -10, r.current())
+	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, clamped.ID)
+	require.NoError(t, err)
+	assert.Equal(t, before, r.current())
+	total, err := r.bs.Log.HPTotal(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, before-r.max, total, "HP is the ledger SUM")
+}
+
+// Undo of a clamped damage (global undo or HP undo) restores the exact HP
+// before it, and undoing in order walks back each step.
+func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
+	r := newHPRig(t)
+	ctx := context.Background()
+	before, _ := r.change(-(r.max - 3), "fireball")
+	require.Equal(t, 3, before)
+	hp, e := r.change(-40, "ogre club")
+	require.Equal(t, -10, hp)
+	require.Equal(t, -13, e.HPDelta)
+
+	// The global undo (ADR 0010) pops the clamped entry.
+	popped, err := r.bs.Log.Undo(ctx, r.bs.CharacterID, e.ID)
+	require.NoError(t, err)
+	require.Equal(t, e.ID, popped.ID)
+	st, err := r.bs.HP.GetState(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, before, st.CurrentHp)
+	assert.Equal(t, hpsvc.ConditionBadlyWounded, st.Condition)
+
+	// Clamped again, then popped by the HP block's undo.
+	hp, _ = r.change(-40, "ogre club again")
+	require.Equal(t, -10, hp)
+	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, before, st.CurrentHp)
+
+	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, r.max, st.CurrentHp)
+	assert.Equal(t, hpsvc.ConditionOK, st.Condition)
 }

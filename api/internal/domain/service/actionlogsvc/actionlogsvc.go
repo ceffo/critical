@@ -67,6 +67,12 @@ type Rounds interface {
 	GetRound(ctx context.Context, characterID int64) (int, error)
 }
 
+// MaxHP supplies a character's max HP, which the HP floor needs (current HP is
+// max HP plus the ledger total). Read inside the recording transaction.
+type MaxHP interface {
+	GetMaxHP(ctx context.Context, characterID int64) (int, error)
+}
+
 // Amendment is the only thing an amend may change: the entry's note (any
 // kind; "" clears it). User, 2026-10-14: "no amending values. just the note".
 type Amendment struct {
@@ -78,22 +84,23 @@ type service struct {
 	dal    DAL
 	tx     domain.TxRunner
 	rounds Rounds
+	maxHP  MaxHP
 
 	mu        sync.RWMutex
 	restorers map[string]actionlog.Restorer
 }
 
 // New constructs the service from environment-driven config.
-func New(dal DAL, tx domain.TxRunner, rounds Rounds) (SVC, error) {
+func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: parse env: %w", err)
 	}
-	return NewWithConfig(cfg, dal, tx, rounds)
+	return NewWithConfig(cfg, dal, tx, rounds, maxHP)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil config")
@@ -103,11 +110,13 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds) (SVC
 		return nil, fmt.Errorf("actionlogsvc: nil tx runner")
 	case rounds == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil rounds")
+	case maxHP == nil:
+		return nil, fmt.Errorf("actionlogsvc: nil max hp")
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: invalid config: %w", err)
 	}
-	return &service{cfg: cfg, dal: dal, tx: tx, rounds: rounds, restorers: map[string]actionlog.Restorer{}}, nil
+	return &service{cfg: cfg, dal: dal, tx: tx, rounds: rounds, maxHP: maxHP, restorers: map[string]actionlog.Restorer{}}, nil
 }
 
 func (s *service) RegisterRestorer(stateKey string, r actionlog.Restorer) {

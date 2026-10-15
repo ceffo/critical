@@ -33,6 +33,32 @@ func TestCapHeal(t *testing.T) {
 	}
 }
 
+// ADR 0011 step 1: current HP is maxHP+total and never goes below -10.
+func TestFloorDamage(t *testing.T) {
+	cases := []struct {
+		name                      string
+		maxHP, total, delta, want int
+	}{
+		{"damage at full HP unchanged", 40, 0, -13, -13},
+		{"damage to exactly 0 unchanged", 40, -30, -10, -10},
+		{"damage below 0 unchanged", 40, -38, -7, -7},
+		{"damage exactly to the floor unchanged", 40, -30, -20, -20},
+		{"damage past the floor clamped", 40, -30, -21, -20},
+		{"one past the floor from -9", 40, -49, -2, -1},
+		{"damage at the floor logs 0", 40, -50, -6, 0},
+		{"damage below the floor (legacy rows) logs 0", 40, -60, -1, 0},
+		{"heal unchanged", 40, -50, 5, 5},
+		{"zero unchanged", 40, -50, 0, 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, actionlog.FloorDamage(c.maxHP, c.total, c.delta))
+			assert.GreaterOrEqual(t, c.maxHP+c.total+actionlog.FloorDamage(c.maxHP, c.total, c.delta),
+				min(actionlog.HPFloor, c.maxHP+c.total), "never lands below the floor")
+		})
+	}
+}
+
 func TestWithHPBreakdown(t *testing.T) {
 	got, err := actionlog.WithHPBreakdown(nil, actionlog.HPBreakdown{Requested: 12, Applied: 5})
 	require.NoError(t, err)

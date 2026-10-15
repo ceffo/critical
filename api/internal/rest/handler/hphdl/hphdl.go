@@ -91,9 +91,13 @@ func UndoLast(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
 }
 
 // HPStateDTO is the wire shape used by the React frontend (web/src/types/hp.ts).
+// Condition is one of ok, badlyWounded, unconscious, dead (ADR 0011 step 2);
+// floor is the lowest HP (-10).
 type HPStateDTO struct {
 	CurrentHp int          `json:"currentHp"`
 	MaxHp     int          `json:"maxHp"`
+	Floor     int          `json:"floor"`
+	Condition string       `json:"condition"`
 	Events    []HpEventDTO `json:"events"`
 }
 
@@ -110,7 +114,7 @@ type HpEventDTO struct {
 
 func toDTO(s *hpsvc.HPState) HPStateDTO {
 	if s == nil {
-		return HPStateDTO{Events: []HpEventDTO{}}
+		return HPStateDTO{Condition: string(hpsvc.ConditionOK), Events: []HpEventDTO{}}
 	}
 	events := make([]HpEventDTO, 0, len(s.Events))
 	for _, e := range s.Events {
@@ -122,7 +126,9 @@ func toDTO(s *hpsvc.HPState) HPStateDTO {
 			CreatedAt:   e.CreatedAt,
 		})
 	}
-	return HPStateDTO{CurrentHp: s.CurrentHp, MaxHp: s.MaxHp, Events: events}
+	return HPStateDTO{
+		CurrentHp: s.CurrentHp, MaxHp: s.MaxHp, Floor: s.FloorHp, Condition: string(s.Condition), Events: events,
+	}
 }
 
 // Compile-time check that *chi.Mux satisfies our small Router interface.

@@ -3,20 +3,16 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { AttackPanel } from "./AttackPanel";
 import { SpellsPanel } from "./SpellsPanel";
-import { InventoryPanel } from "./InventoryPanel";
 import { SavesPanel } from "./SavesPanel";
-import { LookupPanel } from "./LookupPanel";
 
 /**
- * Tabs of the action area. Later items replace a tab's panel component:
- * attack → critical-qki.7, spells → qki.9/qki.10, inventory → qki.13.
+ * Tabs of the Agir (act) workspace, one panel component each. Inventory and spell lookup are
+ * workspaces of their own in the rail (App.tsx).
  */
 const TABS = [
   { id: "attack", Panel: AttackPanel },
   { id: "spells", Panel: SpellsPanel },
-  { id: "inventory", Panel: InventoryPanel },
   { id: "saves", Panel: SavesPanel },
-  { id: "lookup", Panel: LookupPanel },
 ] as const satisfies readonly { id: string; Panel: ComponentType }[];
 
 type TabId = (typeof TABS)[number]["id"];

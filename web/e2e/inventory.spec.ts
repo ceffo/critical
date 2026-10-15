@@ -1,13 +1,13 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, voidEntry } from "./helpers";
+import { logEntry, openDashboard, openWorkspace, voidEntry } from "./helpers";
 
 // Inventory tab (critical-qki.13): one item model, the count behaves as stock (− and +, stays
 // at 0), charges (− only, gone at 0) or daily (− only, refilled by a long rest).
 
 async function openInventory(page: Page) {
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
   await expect(page.getByTestId("item-wand_lightning")).toBeVisible();
 }
 
@@ -32,10 +32,11 @@ function resultCard(page: Page) {
 }
 
 async function longRest(page: Page) {
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Spells" }).click();
   await page.getByRole("button", { name: "Long Rest (Reset)" }).click();
   await expect(logEntry(page, "Long rest")).toBeVisible();
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
 }
 
 test("the Inventory tab lists every item with its type, behaviour and count; + only on stock", async ({
@@ -141,17 +142,19 @@ test("arrows at 0 stay listed and can be restocked; the attack picker offers onl
   await expect(minus(page, "Arrows +3")).toBeDisabled();
   await snap(page, "arrows-at-zero");
 
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   const form = page.getByRole("form", { name: "Attack" });
   await form.getByLabel("Weapon").selectOption("shortbow");
   const ammo = form.getByLabel("Ammunition");
   await expect(ammo.locator("option")).toHaveText(["Arrows +1 (18 left)", "Arrows +2 (16 left)"]);
 
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
   await plus(page, "Arrows +3").click();
   await expect(count(page, "arrows_plus3")).toHaveText("1");
   await expect(logEntry(page, "Restocked Arrows +3: +1 (1 now)")).toBeVisible();
 
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   await form.getByLabel("Weapon").selectOption("shortbow");
   await expect(ammo.locator('option[value="arrows_plus3"]')).toHaveText("Arrows +3 (1 left)");

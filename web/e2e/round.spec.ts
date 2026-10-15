@@ -190,7 +190,10 @@ test("Time passes in French: '1,5' previews 90 rounds; a later Next Round must b
   });
   expect(res.ok).toBe(true);
   await page.addInitScript(() =>
-    localStorage.setItem("critical.language", "fr"),
+    localStorage.setItem(
+      "critical.settings.v1",
+      JSON.stringify({ lang: "fr", mode: "system", amb: "arcane" }),
+    ),
   );
   await openDashboard(page);
   await page.getByRole("button", { name: "Round suivant" }).click();

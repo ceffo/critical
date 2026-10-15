@@ -11,15 +11,38 @@
     "strBase": "({{base}})"
   },
   "language": {
-    "label": "Language",
     "en": "English",
     "fr": "Français"
   },
-  "theme": {
-    "label": "Theme: {{theme}} (click to change)",
-    "light": "Light",
-    "dark": "Dark",
-    "system": "System"
+  "settings": {
+    "open": "Settings",
+    "title": "Settings",
+    "language": "Language",
+    "appearance": "Appearance",
+    "ambiance": "Ambiance",
+    "mode": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "ambiances": {
+      "arcane": "Arcane",
+      "sylve": "Grove",
+      "sang": "Blood",
+      "ocean": "Ocean",
+      "ambre": "Amber",
+      "obsidienne": "Obsidian"
+    }
+  },
+  "shell": {
+    "workspaces": "Workspaces",
+    "workspace": {
+      "act": "Act",
+      "inventory": "Inventory",
+      "spells": "Spells"
+    },
+    "fil": "Results and journal",
+    "moi": "Character"
   },
   "attr": {
     "str": "STR",
@@ -118,9 +141,7 @@
     "tabs": {
       "attack": "Attack",
       "spells": "Spells",
-      "inventory": "Inventory",
-      "saves": "Saves",
-      "lookup": "Spell Lookup"
+      "saves": "Saves"
     }
   },
   "attack": {

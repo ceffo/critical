@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, voidEntry } from "./helpers";
+import { chooseLanguage, logEntry, openDashboard, voidEntry } from "./helpers";
 
 function attackForm(page: Page) {
   return page.getByRole("form", { name: "Attack" });
@@ -238,7 +238,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   expect(await selectedAmmoCount(page)).toBe(before - 1);
 
   // In French: the form and the log line.
-  await page.getByRole("button", { name: "FR" }).click();
+  await chooseLanguage(page, "fr");
   const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("attack-result");
   const frFix = frCard.getByRole("form", { name: "Corriger la CA de la cible" });
   await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("20");
@@ -253,7 +253,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
     /contre CA 20 : (touché|critique).*\(CA -20 → 20 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
   );
   await snap(page, "attack-ac-corrected-fr");
-  await page.getByRole("button", { name: "EN" }).click();
+  await chooseLanguage(page, "en");
 
   // Voiding the corrected attack still gives the arrow back and removes the correction form.
   await voidEntry(page, "Short Bow +2 (Arrows +2)");
@@ -387,7 +387,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   await snap(page, "miss-to-crit");
 
   // In French: the three dice facts and the crit text.
-  await page.getByRole("button", { name: "FR" }).click();
+  await chooseLanguage(page, "fr");
   const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("attack-result");
   await expect(frCard.getByTestId("crit-badge")).toHaveText(
     `Test critique ${check} · multiplicateur ${mult} → ×2 (provisoire)`,

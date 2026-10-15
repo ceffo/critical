@@ -50,8 +50,8 @@ critical/
 ## Phase 1 Scope (MVP for the 2026-10-17 game)
 
 The goal is a tool the player can use at the table on Saturday 2026-10-17, run locally on a laptop
-(`just dev`, desktop layout, no hosting). Hard cut at Saturday. The epic is `critical-qki`; items
-labelled `mvp-saturday` are the must-haves.
+(`just dev`, desktop layout, no hosting). Hard cut at Saturday. The epics are `critical-qki` and the
+dashboard v3 redesign `critical-kiv`; items labelled `mvp-saturday` are the must-haves.
 
 **In for Saturday:**
 
@@ -72,10 +72,16 @@ labelled `mvp-saturday` are the must-haves.
 7. Weapons and items in DB tables seeded from JSON; charged items and consumables
 8. i18n: en/fr string keys for the UI and spell names (spell descriptions stay English)
 9. A round-centric dashboard; Playwright e2e harness behind `just e2e`
+10. Dashboard v3 (ADR 0009): responsive desktop layout from 1280 to 2560 CSS px (rail, workspaces,
+    Fil and Moi columns), Nocturne themes with six ambiances, light / dark / system, and the per-device
+    settings popover
+11. Skill checks: bard skills and non-weapon proficiencies from the campaign sheet, rolled on the
+    server
+12. XP ledger: total, progress to the next level and the ledger (no level-up)
 
 **After Saturday (not to be built now):** the real crit multiplier table (house crit stays x2 as a
 placeholder), editing weapons/items in the app, Gaia fire/lightning protections, Power Gem weapon
-forms, hosting/deployment (`critical-8g1`), other devices/layouts, multiple characters, XP ledger,
-skill checks.
+forms, hosting/deployment (`critical-8g1`), mobile and other device layouts (below 1024 CSS px), level-up
+mechanics, multiple characters.
 
 Do not implement anything from the "after" list even if it seems related.

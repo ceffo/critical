@@ -3,7 +3,8 @@
 ## Stack
 
 - **Framework**: React 18 + Vite + TypeScript (strict mode)
-- **Styling**: Tailwind CSS v3
+- **Styling**: Tailwind CSS v4; Nocturne tokens and ambiances (ADR 0009, `lib/theme.ts`, `index.css`)
+- **Type and icons**: Inter (`@fontsource-variable/inter`), Phosphor (`@phosphor-icons/react`); no other family or icon set
 - **Components**: shadcn/ui (components live in `web/src/components/ui/`)
 - **i18n**: i18next + react-i18next (see "Internationalisation")
 - **State**: Zustand (one store per domain: hp, combat, buffs, spells)
@@ -27,32 +28,53 @@ web/
 
 ## Dashboard Layout
 
-One screen organised around a combat round (laptop, 1440x900): see state, act, see the result,
-fix mistakes, advance the round. `App.tsx` composes it; nothing is behind a modal.
+One screen, no page scroll, organised around a combat round: see state, act, see the result, fix
+mistakes, advance the round. Responsive from 1280 to 2560 CSS px at full width, no horizontal
+scroll down to 1024; columns are clamped and type/spacing scale with the root size. The grid,
+clamps, tokens and house rules are decided in
+[ADR 0009](adr/0009-dashboard-layout-and-theme-system.md). `App.tsx` composes it.
 
 ```mermaid
 flowchart TD
-  subgraph H["Header (components/dashboard/Header.tsx, always visible)"]
-    ID["Name, level, abilities, THAC0"] --- HP["HpBar: current / max"] --- RC["RoundControl: round + Next Round"]
-    BS["BuffStrip: active buffs (rounds / charges, Absorbed, edit, dismiss) + Add buff"]
+  subgraph H["Header region, full width (components/dashboard/Header.tsx)"]
+    RC["RoundControl: round + Next Round, end combat, set round, time passes"]
+    BS["BuffStrip: active buffs + Add buff"]
   end
-  subgraph M["Main grid: 1fr | 380px | 420px"]
-    AA["ActionArea tabs (components/actions/): Attack, Spells, Inventory, Saves, Spell Lookup"]
-    RCARD["ResultCard: full breakdown of the last roll"]
-    subgraph R["Right column"]
-      QH["QuickHp: amount + source, Apply Damage / Apply Heal, Undo last"]
-      CL["CombatLog: GET /api/log grouped by round, inline Note (any entry) / Void (newest only)"]
+  subgraph G["Columns: rail | workspace 1fr | Fil clamp(340px, 26vw, 520px) | Moi clamp(300px, 22vw, 440px)"]
+    RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts; gear opens SettingsPopover"]
+    subgraph WS["Workspace (one shown, each mounted on first visit, then kept)"]
+      ACT["Agir: ActionArea tabs Attack, Spells, Saves"]
+      INV["Inventaire: InventoryPanel + WeaponsSection"]
+      SP["Sorts: LookupPanel"]
+    end
+    subgraph FIL["Fil (aside 'Results and journal')"]
+      RCARD["ResultCard: full breakdown of the last roll"]
+      CL["CombatLog: GET /api/log grouped by round, Note / Void"]
+    end
+    subgraph MOI["Moi (aside 'Character')"]
+      ID["Identity: name, level, abilities, THAC0"]
+      HP["HpBar: current / max"]
+      QH["QuickHp: Apply Damage / Apply Heal, Undo last"]
     end
   end
-  AA -->|roll| RCARD
+  RAIL -->|selects| WS
+  ACT -->|roll| RCARD
   QH -->|POST /api/hp/event| CL
-  CL -->|note / pop| HP
   RC -->|POST /api/round/advance| CL
 ```
 
-- Plug-in slots: each action tab is one panel component in `components/actions/ActionArea.tsx`
-  (`TABS`). Attack → critical-qki.7, Spells → qki.9/qki.10, Inventory → qki.13,
-  buff editing → qki.8 (`BuffStrip`).
+- Each column scrolls on its own; the result card takes at most 60% of the Fil column, the log
+  the rest.
+- Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`): language
+  (English / Français), appearance (Dark / Light / System, System follows the OS live), six
+  ambiance swatches. Applied live, stored per device in `localStorage['critical.settings.v1']`
+  (`lib/settings.ts`, which migrates the older `critical.theme` / `critical.language` keys once).
+- Theme: `lib/theme.ts` `themeVars(ambiance, light)` computes the ramps and surfaces set on
+  `<html>`; use the tokens (`bg-surface`, `bg-neu-900`, `text-amb-300`, `text-ink-muted`,
+  `bg-danger` / `heal` / `warning`, `shadow-float` for popovers only) or the shadcn names mapped
+  onto them, never raw colours.
+- Plug-in slots: each Agir tab is one panel component in `components/actions/ActionArea.tsx`
+  (`TABS`); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
 - Buffs: every change (add, edit rounds/charges, "Absorbed" for charge buffs, dismiss, Next
   Round) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
   stack (critical-qki.38): only the newest non-voided entry shows Void; every entry has Note
@@ -68,7 +90,7 @@ flowchart TD
   situational modifier. The result card labels each modifier and damage term by its `kind`
   (`result.mods.*`); attack log entries are rendered from their payload (`lib/logSummary.ts`).
   An attack refreshes the table state (log, item counts), so voiding it shows the arrow back.
-- Inventory tab (`InventoryPanel.tsx`, critical-qki.13): one list, each row name, magical bonus
+- Inventaire workspace (`InventoryPanel.tsx`, critical-qki.13): one list, each row name, magical bonus
   ("+2"), effect dice, type, behaviour badge (Stock / Charges / Daily), − (uses one through
   `stores/roll.ts` `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and +
   on stock items only (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`). A charges
@@ -76,7 +98,7 @@ flowchart TD
   "Add item" opens the same form (`ItemForm.tsx`, critical-qki.31); 🗑 removes. The form only parses
   numbers (`lib/itemForm.ts`); the server validates and the message it returns for a field is shown
   under that field (`stores/table.ts` `submit`, `ApiError.field`). Edits send only the changed fields.
-- The Inventory tab also lists the weapons (`WeaponsSection.tsx`, critical-qki.32): name, dice,
+- The Inventaire workspace also lists the weapons (`WeaponsSection.tsx`, critical-qki.32): name, dice,
   to-hit and damage bonus, melee / missile, ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
   `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
   refreshes the weapons store, so the Attack picker follows.
@@ -84,7 +106,7 @@ flowchart TD
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
   the shared name search (below) and posts `/api/spells/receive`.
-- Spell Lookup tab (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives tab switches):
+- Sorts workspace, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives tab switches):
   search box, `Mine | Wizard | Priest | All` toggle (default Wizard; Mine = the Bard's spellbook),
   level chips 0-9 (multi-select), a school-group dropdown (spheres in Priest mode); a list (45% of
   the tab, one line per spell, infinite scroll by 200-row pages under a true "N spells" total) and a
@@ -213,8 +235,9 @@ outside `ui/`).
   to `en`, then to the supplied English name. `spellId(name)` derives the id until the spell database
   carries an explicit one. Spell descriptions stay English.
 - Use `const { t } = useTranslation()` in components. Dynamic keys are fine, e.g. a template literal per tab id.
-- Language toggle (`components/LanguageToggle.tsx`) switches live and persists to `localStorage`
-  (`critical.language`); presentation only, never sent to the API.
+- Language: chosen in the settings popover, switches live and persists with the other display
+  preferences (`localStorage['critical.settings.v1']`, ADR 0009); presentation only, never sent to
+  the API.
 - Not translated: server error messages and user-entered text (buff names, HP sources).
 
 ## Testing
@@ -233,6 +256,11 @@ outside `ui/`).
   (e.g. `hp-value`).
 - **Relative assertions:** never hard-code seeded character values (reseeds change them). Read the value
   before, act, assert the delta (HP drops by exactly the damage entered).
+- **Shell:** switch workspaces with `openWorkspace(page, "Act" | "Inventory" | "Spells")` and settings
+  with `chooseSetting` / `chooseLanguage` (`e2e/helpers.ts`). A visited workspace stays in the DOM
+  while hidden, so scope `getByLabel` / `getByText` to the visible region (role locators skip
+  hidden elements). `layout.spec.ts` covers 1024, 1280x800, 1440x900, 1920x1080 and 2560x1440;
+  `theme.spec.ts` screenshots every ambiance in dark and light.
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
   are visible. Don't add per-flow fr specs.
 - **Add a spec:** create `web/e2e/<name>.spec.ts`, `import { test, expect, snap } from "./fixtures"`, one

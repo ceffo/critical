@@ -1,13 +1,13 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, voidEntry } from "./helpers";
+import { logEntry, openDashboard, openWorkspace, voidEntry } from "./helpers";
 
 // Weapon editor (critical-qki.32): add, edit and remove weapons in the Inventory tab; each is one
 // log entry and the newest can be popped.
 
 async function openInventory(page: Page) {
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
   await expect(page.getByTestId("weapon-bastard_sword")).toBeVisible();
 }
 
@@ -30,6 +30,7 @@ function attackForm(page: Page) {
 }
 
 async function rollAttack(page: Page, weapon: string, ammo?: string) {
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   const f = attackForm(page);
   await f.getByLabel("Weapon").selectOption(weapon);
@@ -70,7 +71,7 @@ test("edit Bastard Sword +2 to +3 to hit and damage: the next attack uses +3; po
 
   // The attack is newer than the edit: pop the attack, then the edit.
   await voidEntry(page, "Bastard Sword +2 vs AC");
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
   await voidEntry(page, "Edited weapon Bastard Sword +2");
   await expect(r.getByTestId("weapon-to-hit")).toHaveText("+2");
   await expect(r.getByTestId("weapon-damage")).toHaveText("+2");
@@ -100,6 +101,7 @@ test("add a Long Bow (missile, arrow): it is in the attack picker and offered ar
   await expect(logEntry(page, "Added weapon Long Bow")).toBeVisible();
   await snap(page, "weapon-added");
 
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   await attackForm(page).getByLabel("Weapon").selectOption("long_bow");
   await expect(
@@ -109,9 +111,10 @@ test("add a Long Bow (missile, arrow): it is in the attack picker and offered ar
   ).toHaveCount(1);
   await snap(page, "bow-offered-arrows");
 
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
   await voidEntry(page, "Added weapon Long Bow");
   await expect(row(page, "long_bow")).toHaveCount(0);
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   await expect(
     attackForm(page).getByLabel("Weapon").locator("option", {
@@ -127,7 +130,7 @@ test("remove the darts: gone from the picker, an earlier attack line still reads
   await rollAttack(page, "darts");
   await expect(logEntry(page, "Darts vs AC -10")).toBeVisible();
 
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
   await row(page, "darts")
     .getByRole("button", { name: "Remove Darts" })
     .click();
@@ -136,6 +139,7 @@ test("remove the darts: gone from the picker, an earlier attack line still reads
   await expect(logEntry(page, "Darts vs AC -10")).toBeVisible();
   await snap(page, "darts-removed");
 
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   await expect(
     attackForm(page).getByLabel("Weapon").locator("option", {
@@ -143,9 +147,10 @@ test("remove the darts: gone from the picker, an earlier attack line still reads
     }),
   ).toHaveCount(0);
 
-  await page.getByRole("tab", { name: "Inventory" }).click();
+  await openWorkspace(page, "Inventory");
   await voidEntry(page, "Removed weapon Darts");
   await expect(row(page, "darts")).toBeVisible();
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   await expect(
     attackForm(page).getByLabel("Weapon").locator("option", {
@@ -187,6 +192,7 @@ test("a weapon removed behind the Attack panel's back: the attack says so and th
   page,
 }) => {
   await openDashboard(page);
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   const f = attackForm(page);
   await f.getByLabel("Weapon").selectOption("darts");

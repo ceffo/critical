@@ -184,7 +184,10 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
   });
   expect(res.ok).toBe(true);
   await page.addInitScript(() =>
-    localStorage.setItem("critical.language", "fr"),
+    localStorage.setItem(
+      "critical.settings.v1",
+      JSON.stringify({ lang: "fr", mode: "system", amb: "arcane" }),
+    ),
   );
   await openDashboard(page);
   await page.getByRole("tab", { name: "Attaque", exact: true }).click();

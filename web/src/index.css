@@ -1,66 +1,126 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Nocturne tokens (ADR 0009). The ramps, ground, surface, ink and tint below are the Arcane
+ * defaults, painted before the app starts; stores/settings.ts then sets the values of the chosen
+ * ambiance and mode inline on <html> (lib/theme.ts `themeVars`, which a unit test keeps in sync
+ * with these blocks). Everything else derives from them.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --amb-100: oklch(0.27 0.05 289);
+  --amb-200: oklch(0.38 0.075 289);
+  --amb-300: oklch(0.48 0.1 289);
+  --amb-400: oklch(0.58 0.119 289);
+  --amb-500: oklch(0.68 0.125 289);
+  --amb-600: oklch(0.78 0.106 289);
+  --amb-700: oklch(0.87 0.069 289);
+  --amb-800: oklch(0.93 0.037 289);
+  --amb-900: oklch(0.97 0.019 289);
+  --neu-100: oklch(0.28 0.02 289);
+  --neu-200: oklch(0.37 0.02 289);
+  --neu-300: oklch(0.46 0.02 289);
+  --neu-400: oklch(0.56 0.02 289);
+  --neu-500: oklch(0.66 0.02 289);
+  --neu-600: oklch(0.77 0.02 289);
+  --neu-700: oklch(0.87 0.02 289);
+  --neu-800: oklch(0.93 0.02 289);
+  --neu-900: oklch(0.97 0.02 289);
+  --tint: oklch(0.52 0.125 289);
+  --ground: oklch(0.965 0.017 289);
+  --surface: oklch(0.995 0.002 289);
+  --ink: oklch(0.24 0.034 289);
+  --lA: 1.3;
+  --lB: -1;
+  --shadow-alpha: 0.16;
 
   color-scheme: light;
+}
+
+.dark {
+  --amb-100: oklch(0.97 0.019 289);
+  --amb-200: oklch(0.93 0.037 289);
+  --amb-300: oklch(0.87 0.069 289);
+  --amb-400: oklch(0.78 0.106 289);
+  --amb-500: oklch(0.68 0.125 289);
+  --amb-600: oklch(0.58 0.119 289);
+  --amb-700: oklch(0.48 0.1 289);
+  --amb-800: oklch(0.38 0.075 289);
+  --amb-900: oklch(0.27 0.05 289);
+  --neu-100: oklch(0.97 0.02 289);
+  --neu-200: oklch(0.93 0.02 289);
+  --neu-300: oklch(0.87 0.02 289);
+  --neu-400: oklch(0.77 0.02 289);
+  --neu-500: oklch(0.66 0.02 289);
+  --neu-600: oklch(0.56 0.02 289);
+  --neu-700: oklch(0.46 0.02 289);
+  --neu-800: oklch(0.37 0.02 289);
+  --neu-900: oklch(0.28 0.02 289);
+  --tint: oklch(0.68 0.125 289);
+  --ground: oklch(0.19 0.045 289);
+  --surface: oklch(0.245 0.042 289);
+  --ink: oklch(0.94 0.006 289);
+  --lA: 0;
+  --lB: 1;
+  --shadow-alpha: 0.65;
+
+  color-scheme: dark;
+}
+
+:root {
+  /* State colours keep a readable lightness in both modes: L' = lA + lB * L. */
+  --danger: oklch(calc(var(--lA) + var(--lB) * 0.78) 0.12 25);
+  --heal: oklch(calc(var(--lA) + var(--lB) * 0.84) 0.09 165);
+  --warning: oklch(calc(var(--lA) + var(--lB) * 0.84) 0.12 80);
+  /* Muted text is the ink at reduced strength, never a separate grey. */
+  --ink-muted: color-mix(in oklab, var(--ink) 64%, transparent);
+  /* Only floating things (popovers, menus) cast a shadow. */
+  --float-shadow: 0 0 0 1px var(--neu-500), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
+
+  /* shadcn variables, derived from the Nocturne tokens. */
+  --background: var(--ground);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--tint);
+  --primary-foreground: var(--ground);
+  --secondary: var(--neu-900);
+  --secondary-foreground: var(--ink);
+  --muted: var(--neu-900);
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--amb-900);
+  --accent-foreground: var(--ink);
+  --destructive: var(--danger);
+  --border: color-mix(in oklab, var(--ink) 16%, transparent);
+  --input: color-mix(in oklab, var(--ink) 20%, transparent);
+  --ring: var(--tint);
+  --radius: 0.5rem;
+
+  /*
+   * Fluid root size: 16px up to 1280 CSS px wide, 20px at 2560. Tailwind's spacing and type are
+   * in rem, so the whole layout scales with the screen instead of leaving it empty.
+   */
+  font-size: clamp(16px, 0.3125vw + 12px, 20px);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-}
-
 @theme inline {
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -73,21 +133,52 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
+
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-tint: var(--tint);
+  --color-danger: var(--danger);
+  --color-heal: var(--heal);
+  --color-warning: var(--warning);
+  --color-amb-100: var(--amb-100);
+  --color-amb-200: var(--amb-200);
+  --color-amb-300: var(--amb-300);
+  --color-amb-400: var(--amb-400);
+  --color-amb-500: var(--amb-500);
+  --color-amb-600: var(--amb-600);
+  --color-amb-700: var(--amb-700);
+  --color-amb-800: var(--amb-800);
+  --color-amb-900: var(--amb-900);
+  --color-neu-100: var(--neu-100);
+  --color-neu-200: var(--neu-200);
+  --color-neu-300: var(--neu-300);
+  --color-neu-400: var(--neu-400);
+  --color-neu-500: var(--neu-500);
+  --color-neu-600: var(--neu-600);
+  --color-neu-700: var(--neu-700);
+  --color-neu-800: var(--neu-800);
+  --color-neu-900: var(--neu-900);
+  --shadow-float: var(--float-shadow);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.25);
+  --radius-xl: calc(var(--radius) * 1.75);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    /* Tabular figures on every number. */
+    font-variant-numeric: tabular-nums;
+  }
   body {
     @apply bg-background text-foreground;
     margin: 0;
-  }
-  html {
-    @apply font-sans;
   }
 }

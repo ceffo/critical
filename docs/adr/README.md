@@ -19,3 +19,4 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | # | Title | Status |
 |---|---|---|
 | 0001 | [Critical hits](0001-critical-hits.md) | accepted |
+| 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted |

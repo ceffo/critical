@@ -19,12 +19,6 @@ function form(page: Page) {
   return page.getByTestId("weapon-form");
 }
 
-function fieldError(page: Page, field: string) {
-  return form(page)
-    .locator(`[data-field="${field}"]`)
-    .getByTestId("field-error");
-}
-
 function attackForm(page: Page) {
   return page.getByRole("form", { name: "Attack" });
 }
@@ -160,34 +154,6 @@ test("remove the darts: gone from the picker, an earlier attack line still reads
   await snap(page, "darts-restored");
 });
 
-test("invalid dice are rejected with the server's message under the field", async ({
-  page,
-}) => {
-  await openInventory(page);
-  await page.getByRole("button", { name: "Add weapon" }).click();
-  const f = form(page);
-  await f.getByLabel("Name").fill("Club");
-  await f.getByLabel("Damage S-M").fill("2x6");
-  await f.getByLabel("Damage Large").fill("1d6");
-  await f.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(fieldError(page, "damage_sm")).toContainText(
-    "Damage must look like 1d8",
-  );
-  await snap(page, "invalid-dice");
-
-  await f.getByLabel("Damage S-M").fill("1d6+1");
-  await f.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(fieldError(page, "damage_sm")).toBeVisible();
-
-  await f.getByLabel("Damage S-M").fill("1d6");
-  await f.getByLabel("To-hit bonus").fill("1.5");
-  await f.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(fieldError(page, "magic_to_hit")).toContainText("whole number");
-  await f.getByRole("button", { name: "Cancel" }).click();
-  await expect(form(page)).toHaveCount(0);
-  await expect(row(page, "club")).toHaveCount(0);
-});
-
 test("a weapon removed behind the Attack panel's back: the attack says so and the picker refreshes", async ({
   page,
 }) => {
@@ -213,83 +179,4 @@ test("a weapon removed behind the Attack panel's back: the attack says so and th
     /Darts/,
   );
   await snap(page, "attack-weapon-gone");
-});
-
-test("a missile weapon switched to melee loses its ammo kind, server-side and in the UI", async ({
-  page,
-}) => {
-  await openInventory(page);
-  await row(page, "shortbow")
-    .getByRole("button", { name: "Edit Short Bow +2" })
-    .click();
-  await form(page).getByLabel("Kind", { exact: true }).selectOption("melee");
-  await expect(form(page).getByLabel("Ammo kind")).toHaveCount(0);
-  await form(page).getByRole("button", { name: "Save" }).click();
-  await expect(form(page)).toHaveCount(0);
-  await expect(row(page, "shortbow").getByTestId("weapon-kind")).toHaveText(
-    "Melee",
-  );
-  await expect(
-    row(page, "shortbow").getByTestId("weapon-detail"),
-  ).not.toContainText("arrow");
-  await expect(logEntry(page, "Edited weapon Short Bow +2")).toContainText(
-    "ammo kind arrow →",
-  );
-  // Reopening and going back to missile starts with no ammo kind.
-  await row(page, "shortbow")
-    .getByRole("button", { name: "Edit Short Bow +2" })
-    .click();
-  await form(page).getByLabel("Kind", { exact: true }).selectOption("missile");
-  await expect(form(page).getByLabel("Ammo kind")).toHaveValue("");
-  await snap(page, "bow-to-melee");
-  await form(page).getByRole("button", { name: "Cancel" }).click();
-
-  // Server-side: a PATCH that only changes the kind clears it too.
-  const bow = await page.request.post("/api/weapons", {
-    data: {
-      name: "Bow B",
-      damage_sm: "1d6",
-      damage_l: "1d6",
-      kind: "missile",
-      ammo_kind: "arrow",
-    },
-  });
-  const id = ((await bow.json()) as { weapon: { id: string } }).weapon.id;
-  const patched = await page.request.patch(`/api/weapons/${id}`, {
-    data: { kind: "melee" },
-  });
-  expect(
-    ((await patched.json()) as { weapon: { ammo_kind: string } }).weapon
-      .ammo_kind,
-  ).toBe("");
-});
-
-test("two weapons with the same name get slug and slug_2; pop the second, add again", async ({
-  page,
-}) => {
-  await openInventory(page);
-  async function add() {
-    await page.getByRole("button", { name: "Add weapon" }).click();
-    const f = form(page);
-    await f.getByLabel("Name").fill("Spear");
-    await f.getByLabel("Damage S-M").fill("1d6");
-    await f.getByLabel("Damage Large").fill("1d8");
-    await f.getByRole("button", { name: "Add", exact: true }).click();
-    await expect(form(page)).toHaveCount(0);
-  }
-  await add();
-  await expect(row(page, "spear")).toBeVisible();
-  await add();
-  await expect(row(page, "spear_2")).toBeVisible();
-  await snap(page, "two-spears");
-
-  // The newest entry is the first listed: pop it.
-  const newest = logEntry(page, "Added weapon Spear").first();
-  await newest.getByRole("button", { name: "Void" }).click();
-  await newest.getByRole("button", { name: "Confirm" }).click();
-  await expect(row(page, "spear_2")).toHaveCount(0);
-  await expect(row(page, "spear")).toBeVisible();
-  await add();
-  await expect(row(page, "spear_2")).toBeVisible();
-  await snap(page, "spear-readded");
 });

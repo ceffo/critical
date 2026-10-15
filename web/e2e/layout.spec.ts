@@ -19,8 +19,8 @@ async function expectNoPageScroll(page: Page) {
 
 async function expectRegions(page: Page) {
   await expect(page.getByRole("navigation", { name: "Workspaces" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Round" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Buffs" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Turn" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Effects" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Actions" })).toBeVisible();
   const fil = page.getByRole("complementary", { name: "Results and journal" });
   await expect(fil.getByRole("region", { name: "Last Result" })).toBeVisible();
@@ -118,11 +118,11 @@ test("settings: language, appearance and ambiance apply live and persist across 
   await chooseSetting(page, "Blood");
   await expect.poll(() => rootVar(page, "--tint")).toBe("oklch(0.68 0.15 22)");
   await chooseLanguage(page, "fr");
-  await expect(page.getByRole("button", { name: "Round suivant" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tour suivant" })).toBeVisible();
 
   await page.reload();
   expect(await isDark(page)).toBe(true); // painted before the app mounts
-  await expect(page.getByRole("button", { name: "Round suivant" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Tour suivant" })).toBeVisible();
   expect(await rootVar(page, "--tint")).toBe("oklch(0.68 0.15 22)");
   const popover = await openSettings(page);
   for (const name of ["Français", "Sombre", "Sang"])

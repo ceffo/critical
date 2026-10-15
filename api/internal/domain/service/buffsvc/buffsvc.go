@@ -47,6 +47,10 @@ type SVC interface {
 	// buffs are untouched, the round counter goes to 0. Invalid hours (<= 0,
 	// > MaxPassHours, under one round): ErrInvalidInput. Logged, voidable.
 	PassTime(ctx context.Context, characterID int64, hours float64) (active []BuffEffect, expired []BuffEffect, rounds int, round int, err error)
+	// PreviewPassTime is what PassTime(hours) would do, without writing or
+	// logging anything: the rounds the hours give and the buffs that would
+	// expire. Same validation (ErrInvalidInput).
+	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []BuffEffect, err error)
 
 	// ListSaved returns the saved buff templates, oldest first.
 	ListSaved(ctx context.Context, characterID int64) ([]SavedBuff, error)

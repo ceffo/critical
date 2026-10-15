@@ -64,3 +64,19 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 	}
 	return active, expired, rounds, *ch.round, nil
 }
+
+// PreviewPassTime runs the PassTime rules on the current buffs and returns
+// the rounds and the buffs that would expire, writing nothing (ADR 0005
+// step 8): the time-passes form lists them before the player confirms.
+func (s *service) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []BuffEffect, error) {
+	rounds, err := RoundsForHours(hours)
+	if err != nil {
+		return 0, nil, err
+	}
+	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
+	if err != nil {
+		return 0, nil, fmt.Errorf("get active buffs: %w", err)
+	}
+	_, expiring := elapseBuffs(buffs, rounds)
+	return rounds, expiring, nil
+}

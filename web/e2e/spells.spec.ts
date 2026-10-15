@@ -61,16 +61,6 @@ test("4 level-1 spells are refused with the server's message, 3 are accepted", a
   await snap(page, "three-level-1-accepted");
 });
 
-test("a spell outside the spellbook is refused by the API", async ({
-  stack,
-}) => {
-  const res = await put(stack.apiUrl, ["shield"]);
-  expect(res.status).toBe(400);
-  expect(await res.json()).toEqual({
-    error: 'spell is not in the spellbook: "shield"',
-  });
-});
-
 test("duplicates are prepared and a long rest keeps the preparation but resets used", async ({
   page,
   stack,

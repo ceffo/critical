@@ -39,6 +39,9 @@ type jsonBuff struct {
 	Duration int         `json:"duration"`
 	Effects  jsonEffects `json:"effects"`
 	Note     string      `json:"note,omitempty"`
+	// StartRound is absent from rows written before it existed: they read
+	// as 0 (no migration, the list is a JSON blob).
+	StartRound int `json:"start_round,omitempty"`
 }
 
 type jsonEffects struct {
@@ -57,14 +60,14 @@ type jsonEffects struct {
 func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
 		ID: j.ID, Name: j.Name, Charges: j.Charges, Duration: j.Duration,
-		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note,
+		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note, StartRound: j.StartRound,
 	}
 }
 
 func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 	return jsonBuff{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-		Effects: jsonEffects(b.Effects), Note: b.Note,
+		Effects: jsonEffects(b.Effects), Note: b.Note, StartRound: b.StartRound,
 	}
 }
 

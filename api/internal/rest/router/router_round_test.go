@@ -19,7 +19,7 @@ func TestRoundReset_WireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/round/reset", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"roundNumber":0,"expiredBuffs":[],"activeBuffs":[
-		{"id":"h","name":"Haste","charges":0,"duration":4,"effects":{},"note":""}]}`, rec.Body.String())
+		{"id":"h","name":"Haste","charges":0,"duration":4,"effects":{},"note":"","startRound":0}]}`, rec.Body.String())
 }
 
 func TestRoundSet(t *testing.T) {
@@ -99,14 +99,14 @@ func TestRoundPassTime(t *testing.T) {
 	t.Run("returns Next Round's shape plus the rounds that passed", func(t *testing.T) {
 		h, m := newRouter(t)
 		m.buffs.EXPECT().PassTime(mock.Anything, int64(1), 1.5).Return(
-			[]buffsvc.BuffEffect{{ID: "a", Name: "Long", Duration: 10}},
+			[]buffsvc.BuffEffect{{ID: "a", Name: "Long", Duration: 10, StartRound: 3}},
 			[]buffsvc.BuffEffect{{ID: "b", Name: "Short"}},
 			90, 0, nil)
 		rec := do(h, "POST", "/api/round/pass-time", `{"hours":1.5}`)
 		require.Equal(t, http.StatusOK, rec.Code)
 		assert.JSONEq(t, `{"roundNumber":0,"roundsPassed":90,
-			"activeBuffs":[{"id":"a","name":"Long","charges":0,"duration":10,"effects":{},"note":""}],
-			"expiredBuffs":[{"id":"b","name":"Short","charges":0,"duration":0,"effects":{},"note":""}]}`,
+			"activeBuffs":[{"id":"a","name":"Long","charges":0,"duration":10,"effects":{},"note":"","startRound":3}],
+			"expiredBuffs":[{"id":"b","name":"Short","charges":0,"duration":0,"effects":{},"note":"","startRound":0}]}`,
 			rec.Body.String())
 	})
 
@@ -128,6 +128,45 @@ func TestRoundPassTime(t *testing.T) {
 		m.buffs.EXPECT().PassTime(mock.Anything, int64(1), 0.01).
 			Return(nil, nil, 0, 0, fmt.Errorf("%w: 0.01 hours is less than one round (1 minute)", domain.ErrInvalidInput))
 		rec := do(h, "POST", "/api/round/pass-time", `{"hours":0.01}`)
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.Contains(t, rec.Body.String(), "less than one round")
+	})
+}
+
+func TestRoundPassTimePreview(t *testing.T) {
+	t.Run("returns the rounds and the buffs that would expire", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().PreviewPassTime(mock.Anything, int64(1), 1.5).Return(
+			90, []buffsvc.BuffEffect{{ID: "b", Name: "Short", Duration: 60, StartRound: 2}}, nil)
+		rec := do(h, "GET", "/api/round/pass-time/preview?hours=1.5", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"rounds":90,
+			"expiring":[{"id":"b","name":"Short","charges":0,"duration":60,"effects":{},"note":"","startRound":2}]}`,
+			rec.Body.String())
+	})
+
+	t.Run("nothing expiring is an empty list", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().PreviewPassTime(mock.Anything, int64(1), 0.5).Return(30, []buffsvc.BuffEffect{}, nil)
+		rec := do(h, "GET", "/api/round/pass-time/preview?hours=0.5", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.JSONEq(t, `{"rounds":30,"expiring":[]}`, rec.Body.String())
+	})
+
+	for name, q := range map[string]string{"missing hours": "", "not a number": "?hours=abc"} {
+		t.Run("400 on "+name, func(t *testing.T) {
+			h, _ := newRouter(t) // the service is never called
+			rec := do(h, "GET", "/api/round/pass-time/preview"+q, "")
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Contains(t, rec.Body.String(), `"error"`)
+		})
+	}
+
+	t.Run("400 with the service's message when hours give no round", func(t *testing.T) {
+		h, m := newRouter(t)
+		m.buffs.EXPECT().PreviewPassTime(mock.Anything, int64(1), 0.01).
+			Return(0, nil, fmt.Errorf("%w: 0.01 hours is less than one round (1 minute)", domain.ErrInvalidInput))
+		rec := do(h, "GET", "/api/round/pass-time/preview?hours=0.01", "")
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Contains(t, rec.Body.String(), "less than one round")
 	})

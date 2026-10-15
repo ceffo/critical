@@ -110,6 +110,18 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     activating from a template is a normal activation (step 13).
     Tests: `TestSaveBuff`, `TestDeleteSaved` ("removes and logs, active buffs not read": the
     mock fails on any read of the active buffs), `TestSavedRestorer_WritesTheSnapshotBack`.
+15. **Start round.** A buff carries the round it was put on the list in (`StartRound`): the round
+    counter when it is activated, cast or received, stamped by the server (a value sent by the
+    client is ignored). A renewed buff (step 6) starts again. Nothing else changes it: editing,
+    absorbing, Next Round, passing time, End combat and Set round leave it as it is, so after End
+    combat or passing time it can be above the counter. Voiding an entry restores it with the list.
+    A buff stored before the field existed, or an entry recorded before it, reads as round 0. It
+    has no rules meaning: the turn header draws a buff's elapsed rounds from it; what is left is
+    `Duration` (step 2).
+    Tests: `TestBuffs_Step15_StartRound` (activate and add stamp the round and ignore the caller's,
+    renewal starts again, edit / absorb / Next Round / passing time keep it, the void restores it,
+    an old entry restores 0); `TestActiveBuffs_StartRoundRoundTripsAndOldRowsReadZero`
+    (`api/internal/adapters/buffdal/`).
 
 ## Consequences
 

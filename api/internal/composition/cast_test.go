@@ -195,3 +195,36 @@ func TestStoneskinOnAnAlly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, usedSlots(t, bs))
 }
+
+// ADR 0004 step 15 on the real stack: a spell received mid-combat starts in
+// the round it was received; voiding it leaves the list as it was, the older
+// buff's start round included.
+func TestReceivedBuffStartsInTheCurrentRoundAndVoidRestoresTheList(t *testing.T) {
+	bs := bootMaxDice(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	_, err := bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Haste", Duration: 20})
+	require.NoError(t, err)
+	for range 3 {
+		_, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+		require.NoError(t, err)
+	}
+	before, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, before, 1)
+	assert.Equal(t, 0, before[0].StartRound)
+
+	res, err := bs.Cast.Receive(ctx, id, castsvc.ReceiveRequest{SpellID: "strength", CasterLevel: 9})
+	require.NoError(t, err)
+	after, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, after, 2)
+	assert.Equal(t, "Strength", after[1].Name)
+	assert.Equal(t, 3, after[1].StartRound, "starts in the round it was received")
+
+	_, err = bs.Log.Void(ctx, id, res.EntryID)
+	require.NoError(t, err)
+	restored, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, before, restored)
+}

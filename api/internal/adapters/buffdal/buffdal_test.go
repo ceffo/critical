@@ -255,6 +255,26 @@ func TestActiveBuffs_NoteRoundTripsAndOldRowsReadEmpty(t *testing.T) {
 	assert.Equal(t, "+4 saves vs fire", got[0].Note)
 }
 
+func TestActiveBuffs_StartRoundRoundTripsAndOldRowsReadZero(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	_, err := db.ExecContext(ctx, `INSERT INTO active_buffs (character_id, buffs) VALUES (?, '[{"id":"o","name":"Old","charges":0,"duration":3,"effects":{}}]')`, charID)
+	require.NoError(t, err)
+	got, err := dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Zero(t, got[0].StartRound, "a buff stored before the field reads as round 0")
+
+	got[0].StartRound = 4
+	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, got))
+	got, err = dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, 4, got[0].StartRound)
+}
+
 func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)

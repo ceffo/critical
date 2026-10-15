@@ -15,6 +15,15 @@ test("damage then heal change current HP by the amounts entered, without reload"
   const before = await currentHp(page);
   await markNoReload(page);
 
+  // The buttons stay disabled until amount and source are both filled.
+  const box = page.getByRole("group", { name: "HP change" });
+  const apply = box.getByRole("button", { name: "Apply Damage" });
+  await expect(apply).toBeDisabled();
+  await box.getByLabel("Amount").fill("3");
+  await expect(apply).toBeDisabled();
+  await box.getByLabel("Source").fill("e2e trap");
+  await expect(apply).toBeEnabled();
+
   await recordHp(page, "damage", 4, "e2e goblin club");
   await expect.poll(() => currentHp(page)).toBe(before - 4);
   await expect(logEntry(page, "e2e goblin club")).toContainText("−4");
@@ -30,19 +39,6 @@ test("damage then heal change current HP by the amounts entered, without reload"
 
   await expectNoReload(page);
   await snap(page, "damage-and-heal");
-});
-
-test("HP buttons stay disabled until amount and source are filled", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  const box = page.getByRole("group", { name: "HP change" });
-  const damage = box.getByRole("button", { name: "Apply Damage" });
-  await expect(damage).toBeDisabled();
-  await box.getByLabel("Amount").fill("3");
-  await expect(damage).toBeDisabled();
-  await box.getByLabel("Source").fill("e2e trap");
-  await expect(damage).toBeEnabled();
 });
 
 test("a heal never takes HP above max: the excess is dropped and shown", async ({ page }) => {

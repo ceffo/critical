@@ -24,7 +24,7 @@ export function damageFormula(d: SpellDamage): string {
 export function damageText(t: TFunction, d: SpellDamage): string {
   let dice = diceText(d.dice);
   if (!isOne(d.instances)) {
-    dice = t("spellDice.instances", { count: diceText(d.instances), dice });
+    dice = t("spellDice.instances", { instances: diceText(d.instances), dice });
   }
   const type = d.type ? t(`spellDice.types.${d.type}`, { defaultValue: d.type }) : "";
   let text = type ? t("spellDice.typed", { dice, type }) : dice;

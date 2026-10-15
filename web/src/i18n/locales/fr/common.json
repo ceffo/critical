@@ -337,7 +337,7 @@
   },
   "spellDice": {
     "typed": "{{dice}} {{type}}",
-    "instances": "{{count}} × {{dice}}",
+    "instances": "{{instances}} × {{dice}}",
     "perRound": "{{text}} par round, {{rounds}} rounds",
     "types": {
       "acid": "acide",

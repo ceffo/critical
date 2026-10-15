@@ -99,7 +99,10 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 			return err
 		}
 		items := spellsToDTO(page.Items, level)
-		if level > 0 {
+		// An explicit caster_level is bounded above; the character's level
+		// is not, and a level the formulas are not checked at gets no damage
+		// rather than failing the page.
+		if level > 0 && level <= spelleffectsvc.MaxCasterLevel {
 			for i := range items {
 				d, err := damage.DamageAt(r.Context(), items[i].ID, level)
 				if err != nil {

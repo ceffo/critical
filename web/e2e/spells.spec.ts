@@ -128,7 +128,7 @@ test("preparing is logged and voiding it restores the previous preparation", asy
 });
 
 test("the spell names follow the language", async ({ page, stack }) => {
-  expect((await put(stack.apiUrl, ["mirror_image", "fireball"])).ok).toBe(true);
+  expect((await put(stack.apiUrl, ["mirror_image", "melfs_acid_arrow", "fireball"])).ok).toBe(true);
   await page.addInitScript(() =>
     localStorage.setItem(
       "critical.settings.v1",
@@ -139,6 +139,13 @@ test("the spell names follow the language", async ({ page, stack }) => {
   await page.getByRole("tab", { name: "Sorts", exact: true }).click();
   await expect(page.getByText("Images miroir", { exact: true })).toBeVisible();
   await expect(page.getByText("Boule de feu", { exact: true })).toBeVisible();
+  // The longest dice text in a narrow two-column row: name and dice shown whole, no overflow,
+  // Cast still visible.
+  const acid = page.getByRole("listitem").filter({ hasText: "2d4 acide par round, 6 rounds" });
+  await expect(acid.getByRole("button", { name: "Lancer" })).toBeInViewport({ ratio: 1 });
+  for (const el of [acid, acid.getByTestId("slot-dice"), acid.getByText("Flèche acide de Melf")]) {
+    expect(await el.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
+  }
   await snap(page, "french");
 });
 

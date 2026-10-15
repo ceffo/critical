@@ -210,7 +210,7 @@ export function SpellsPanel() {
                         slot.used ? "opacity-60" : "hover:bg-muted/60",
                       )}
                     >
-                      <span className="flex min-w-0 items-baseline gap-2">
+                      <span className="flex min-w-0 flex-col leading-tight">
                         <span
                           className={cn(
                             "min-w-0 truncate text-sm",
@@ -221,7 +221,7 @@ export function SpellsPanel() {
                         </span>
                         {damage && (
                           <span
-                            className="shrink-0 text-xs text-muted-foreground tabular-nums"
+                            className="min-w-0 truncate text-xs text-muted-foreground tabular-nums"
                             data-testid="slot-dice"
                           >
                             {damageText(t, damage)}

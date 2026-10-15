@@ -155,7 +155,7 @@ flowchart TD
   refreshes the weapons store, so the Weapons tab follows.
 - Spells tab (`SpellsPanel.tsx`): "Buff spells go on an ally", Prepare spells and Long rest on
   top; one group per level with a pip per slot (filled while unused) and "left / total"; 40px rows
-  with the name, the damage a cast rolls at the Bard's level when the spellbook entry serves one
+  with the name, under it the damage a cast rolls at the Bard's level when the spellbook entry serves one
   (`lib/spellDice.ts` `damageText`: "10d6 fire", "5 × 1d4+1 force", "2d4 acid per round, 6
   rounds", type words in `spellDice.types`), and Cast or Used. Cast puts the `CastResult` in the result card (`CastResultView`:
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells

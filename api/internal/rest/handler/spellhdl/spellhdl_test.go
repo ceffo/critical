@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -56,6 +57,9 @@ type fakeDamage struct{ levels *[]int }
 func (f fakeDamage) DamageAt(_ context.Context, id string, level int) (*spelleffectsvc.DamageAt, error) {
 	if f.levels != nil {
 		*f.levels = append(*f.levels, level)
+	}
+	if level > spelleffectsvc.MaxCasterLevel {
+		return nil, domain.ErrInvalidInput // as castsvc
 	}
 	if id != "fireball" {
 		return nil, nil
@@ -284,4 +288,12 @@ func TestSearch_NoCasterLevelNoDamage(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
 	assert.Nil(t, page.Items[0].Damage)
 	assert.Empty(t, levels, "no level, no damage lookup")
+}
+
+func TestSearch_CharacterLevelAboveTheMaxServesNoDamage(t *testing.T) {
+	code, out := searchAs(t, "/api/spells", fakeChars{level: spelleffectsvc.MaxCasterLevel + 1})
+	require.Equal(t, http.StatusOK, code, "the page does not fail")
+	require.Len(t, out, 2)
+	assert.NotNil(t, out[1].Values)
+	assert.Nil(t, out[1].Damage)
 }

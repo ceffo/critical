@@ -57,7 +57,8 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    is dated by the server (its local day) when it is added. Every write answers with the whole
    ledger. The payload is the entry as stored with its `bonusAmount` and `total` (and `before` for
    an edit); the web words it.
-   Tests: `TestXPLedger_AddEditDeleteOnTheRealStack`, `TestXPUndo_EachVerbGivesTheLedgerBack`
+   Tests: `TestXPLedger_AddEditDeleteOnTheRealStack`, `TestXPUndo_EachVerbGivesTheLedgerBack`,
+   `TestXPUndo_SequencesOnOneAward`
    (composition), `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
    `TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction`, `TestUpdate_NothingChangedRecordsNothing`,
    `TestDelete_RecordsTheRemovedAwardOrReportsNotFound`, `TestRestorer_WritesTheSnapshotBack`,

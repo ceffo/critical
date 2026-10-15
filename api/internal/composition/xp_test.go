@@ -128,3 +128,60 @@ func TestXPUndo_EachVerbGivesTheLedgerBack(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0015 step 4: undos that walk back several writes on the ledger. A
+// delete then an add: the added award gets a new id, so putting the deleted
+// one back under its own id conflicts with nothing. An edit then a delete of
+// the same award: the delete's undo writes back the edited award, the edit's
+// undo then its values before the edit. A no-op edit records nothing.
+func TestXPUndo_SequencesOnOneAward(t *testing.T) {
+	ctx := context.Background()
+	undo := func(t *testing.T, bs *composition.BackingServices) {
+		t.Helper()
+		_, err := bs.Log.Undo(ctx, bs.CharacterID, topID(t, bs))
+		require.NoError(t, err)
+	}
+	setup := func(t *testing.T) (*composition.BackingServices, *xpsvc.Ledger, int64) {
+		bs := bootMaxDice(t)
+		l, err := bs.XP.Add(ctx, bs.CharacterID, xpsvc.EntryInput{Base: 1205, Bonus: true, Reason: "troll", Session: "S41"})
+		require.NoError(t, err)
+		return bs, l, l.Entries[0].ID
+	}
+
+	t.Run("delete, add, undo twice", func(t *testing.T) {
+		bs, original, id := setup(t)
+		_, err := bs.XP.Delete(ctx, bs.CharacterID, id)
+		require.NoError(t, err)
+		l, err := bs.XP.Add(ctx, bs.CharacterID, xpsvc.EntryInput{Base: 50, Reason: "riddle"})
+		require.NoError(t, err)
+		require.NotEqual(t, id, l.Entries[0].ID)
+		undo(t, bs)
+		undo(t, bs)
+		got, err := bs.XP.Get(ctx, bs.CharacterID)
+		require.NoError(t, err)
+		assert.Equal(t, original, got, "the original ledger, the award under its id and date")
+	})
+	t.Run("edit then delete, undo twice", func(t *testing.T) {
+		bs, original, id := setup(t)
+		_, err := bs.XP.Update(ctx, bs.CharacterID, id, xpsvc.EntryPatch{Base: ptr(900), Bonus: ptr(false), Reason: ptr("ogre")})
+		require.NoError(t, err)
+		_, err = bs.XP.Delete(ctx, bs.CharacterID, id)
+		require.NoError(t, err)
+		undo(t, bs)
+		got, err := bs.XP.Get(ctx, bs.CharacterID)
+		require.NoError(t, err)
+		require.Len(t, got.Entries, 1)
+		assert.Equal(t, "ogre", got.Entries[0].Reason, "the delete's undo gives the edited award")
+		undo(t, bs)
+		got, err = bs.XP.Get(ctx, bs.CharacterID)
+		require.NoError(t, err)
+		assert.Equal(t, original, got, "the values before the edit")
+	})
+	t.Run("a no-op edit records nothing", func(t *testing.T) {
+		bs, _, id := setup(t)
+		top := topID(t, bs)
+		_, err := bs.XP.Update(ctx, bs.CharacterID, id, xpsvc.EntryPatch{Base: ptr(1205), Bonus: ptr(true), Reason: ptr("troll")})
+		require.NoError(t, err)
+		assert.Equal(t, top, topID(t, bs))
+	})
+}

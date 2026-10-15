@@ -40,9 +40,9 @@ export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void })
       <div
         role="tablist"
         aria-label={t("actions.label")}
-        className="flex shrink-0 items-center gap-1 bg-neu-900/50 px-4 pt-2"
+        className="flex shrink-0 items-center gap-1 bg-neu-900/50 px-3 pt-2"
       >
-        <span className="mr-3 text-sm font-semibold">{t("shell.workspace.act")}</span>
+        <span className="mr-3 text-body font-semibold">{t("shell.workspace.act")}</span>
         {TABS.map((id) => (
           <button
             key={id}
@@ -51,7 +51,7 @@ export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void })
             aria-selected={active === id}
             aria-controls={`panel-${id}`}
             className={cn(
-              "flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+              "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
               active === id && "border-amb-500 text-foreground",
             )}
             onClick={() => setActive(id)}
@@ -60,7 +60,7 @@ export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void })
             {counts[id] !== undefined && (
               <span
                 aria-hidden
-                className="text-xs text-muted-foreground"
+                className="text-label text-muted-foreground"
                 data-testid={`tab-count-${id}`}
               >
                 {counts[id]}
@@ -73,7 +73,7 @@ export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void })
         role="tabpanel"
         id={`panel-${active}`}
         aria-labelledby={`tab-${active}`}
-        className="min-h-0 flex-1 overflow-y-auto p-4"
+        className="min-h-0 flex-1 overflow-y-auto p-3"
       >
         {active === "weapons" && <AttackPanel />}
         {active === "spells" && <SpellsPanel />}

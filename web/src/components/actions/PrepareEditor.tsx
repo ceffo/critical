@@ -52,18 +52,18 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
   return (
     <div className="grid grid-cols-2 gap-3" role="form" aria-label={t("spellSlots.prepareTitle")}>
       <section className="flex min-w-0 flex-col gap-2 rounded-lg border p-2" aria-label={t("spellSlots.spellbook")}>
-        <h3 className="text-sm font-semibold">{t("spellSlots.spellbook")}</h3>
+        <h3 className="text-title">{t("spellSlots.spellbook")}</h3>
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("spellSlots.search")}
           aria-label={t("spellSlots.searchLabel")}
         />
-        <ul className="flex max-h-72 flex-col gap-0.5 overflow-y-auto">
+        <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
           {matches.map((s) => (
             <li key={s.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60">
-              <span className="min-w-0 truncate text-sm">
-                <span className="mr-2 text-xs text-muted-foreground">
+              <span className="min-w-0 truncate text-body">
+                <span className="mr-2 text-label text-muted-foreground">
                   {t("spellSlots.level", { level: s.level })}
                 </span>
                 {label(s)}
@@ -79,18 +79,18 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
             </li>
           ))}
           {matches.length === 0 && (
-            <li className="px-2 py-1 text-sm text-muted-foreground">{t("spellSlots.noMatch")}</li>
+            <li className="px-2 py-1 text-body text-muted-foreground">{t("spellSlots.noMatch")}</li>
           )}
         </ul>
       </section>
 
       <section className="flex min-w-0 flex-col gap-2 rounded-lg border p-2" aria-label={t("spellSlots.draft")}>
-        <h3 className="text-sm font-semibold">{t("spellSlots.draft")}</h3>
+        <h3 className="text-title">{t("spellSlots.draft")}</h3>
         {draftEntries.length === 0 && (
-          <p className="text-sm text-muted-foreground">{t("spellSlots.draftEmpty")}</p>
+          <p className="text-body text-muted-foreground">{t("spellSlots.draftEmpty")}</p>
         )}
         {dropped.length > 0 && (
-          <div role="status" className="rounded border border-destructive/40 p-2 text-sm" data-testid="stale-prepared">
+          <div role="status" className="rounded border border-destructive/40 p-2 text-body" data-testid="stale-prepared">
             <p className="font-medium">{t("spellSlots.staleTitle")}</p>
             <ul className="list-disc pl-5 text-muted-foreground">
               {dropped.map((id) => (
@@ -105,17 +105,17 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
           return (
             <div key={level} data-testid={`draft-level-${level}`}>
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-muted-foreground">
+                <h4 className="text-label font-semibold text-muted-foreground">
                   {t("spellSlots.level", { level })}
                 </h4>
                 <Badge variant={items.length > maxOf(level) ? "destructive" : "secondary"}>
                   {t("spellSlots.preparedCount", { count: items.length, max: maxOf(level) })}
                 </Badge>
               </div>
-              <ul className="flex flex-col gap-0.5">
+              <ul className="flex flex-col gap-1">
                 {items.map(({ entry, index }) => (
                   <li key={index} className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-muted/60">
-                    <span className="min-w-0 truncate text-sm">{label(entry)}</span>
+                    <span className="min-w-0 truncate text-body">{label(entry)}</span>
                     <Button
                       size="xs"
                       variant="ghost"

@@ -106,7 +106,7 @@ export function SpellsPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-body">
           <input type="checkbox" checked={onAlly} onChange={(e) => setOnAlly(e.target.checked)} />
           {t("spellSlots.onAlly")}
         </label>
@@ -144,7 +144,7 @@ export function SpellsPanel() {
         />
       )}
       {levels.length === 0 && !loading && (
-        <p className="text-sm text-muted-foreground">{t("spellSlots.none")}</p>
+        <p className="text-body text-muted-foreground">{t("spellSlots.none")}</p>
       )}
       <div className="grid grid-cols-2 gap-3">
         {levels.map((level) => {
@@ -157,12 +157,12 @@ export function SpellsPanel() {
               aria-label={t("spellSlots.level", { level })}
             >
               <div className="flex items-center justify-between px-3 pt-2 pb-1">
-                <h3 className="text-sm font-semibold">
+                <h3 className="text-title">
                   {t("spellSlots.level", { level })}
                 </h3>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   {maxOf(level) !== undefined && (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-label text-muted-foreground">
                       {t("spellSlots.preparedCount", { count: list.filter((s) => !s.extra).length, max: maxOf(level) })}
                     </span>
                   )}
@@ -177,7 +177,7 @@ export function SpellsPanel() {
                   <span
                     data-testid={`remaining-${level}`}
                     className={cn(
-                      "text-xs",
+                      "text-label",
                       list.length > 0 && left === 0 ? "text-danger" : "text-muted-foreground",
                     )}
                   >
@@ -219,14 +219,14 @@ export function SpellsPanel() {
                     <li
                       key={slot.index}
                       className={cn(
-                        "flex min-h-10 items-center justify-between gap-2 rounded px-2 py-1",
+                        "flex min-h-7 items-center justify-between gap-2 rounded px-2 py-1",
                         slot.used ? "opacity-60" : "hover:bg-muted/60",
                       )}
                     >
                       <span className="flex min-w-0 flex-col leading-tight">
                         <span
                           className={cn(
-                            "min-w-0 truncate text-sm",
+                            "min-w-0 truncate text-body",
                             slot.used && "text-muted-foreground line-through",
                           )}
                         >
@@ -234,7 +234,7 @@ export function SpellsPanel() {
                         </span>
                         {damage && (
                           <span
-                            className="min-w-0 truncate text-xs text-muted-foreground tabular-nums"
+                            className="min-w-0 truncate text-label text-muted-foreground tabular-nums"
                             data-testid="slot-dice"
                           >
                             {damageText(t, damage)}
@@ -243,7 +243,7 @@ export function SpellsPanel() {
                       </span>
                       {blank && !slot.used && (
                         <select
-                          className="h-7 min-w-0 flex-1 rounded border bg-background px-1 text-sm"
+                          className="h-7 min-w-0 flex-1 rounded border bg-background px-1 text-body"
                           aria-label={t("spellSlots.extraPick")}
                           data-testid="extra-pick"
                           value={picks[slot.index] ?? ""}
@@ -259,7 +259,7 @@ export function SpellsPanel() {
                       )}
                       {needs?.attack_roll && !slot.used && (
                         <input
-                          className="h-7 w-16 rounded border bg-background px-1 text-sm"
+                          className="h-7 w-16 rounded border bg-background px-1 text-body"
                           aria-label={t("spellSlots.targetAc")}
                           placeholder={t("spellSlots.targetAc")}
                           data-testid="cast-target-ac"
@@ -270,7 +270,7 @@ export function SpellsPanel() {
                       )}
                       {spendable.length > 1 && !slot.used && (
                         <select
-                          className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
+                          className="h-7 min-w-0 rounded border bg-background px-1 text-body"
                           aria-label={t("spellSlots.itemSpent")}
                           data-testid="cast-item"
                           value={itemId}
@@ -285,7 +285,7 @@ export function SpellsPanel() {
                       )}
                       {modes.length > 0 && needs && !slot.used && (
                         <select
-                          className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
+                          className="h-7 min-w-0 rounded border bg-background px-1 text-body"
                           aria-label={t("spellSlots.modeChoice")}
                           data-testid="slot-mode"
                           value={mode?.key}
@@ -300,7 +300,7 @@ export function SpellsPanel() {
                       )}
                       {slotSplits.length > 0 && !slot.used && (
                         <select
-                          className="h-7 rounded border bg-background px-1 text-sm"
+                          className="h-7 rounded border bg-background px-1 text-body"
                           aria-label={t("spellSlots.splitChoice")}
                           data-testid="slot-split"
                           value={split}

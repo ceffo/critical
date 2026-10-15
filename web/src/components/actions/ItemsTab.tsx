@@ -18,16 +18,16 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
   return (
     <div className="flex flex-col gap-3">
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("items.none")}</p>
+        <p className="text-body text-muted-foreground">{t("items.none")}</p>
       ) : (
         <ul aria-label={t("actions.items.list")} className="flex flex-col gap-1">
           {items.map((i) => (
             <li
               key={i.id}
-              className="flex h-10 items-center gap-3 rounded-lg px-3 hover:bg-neu-900"
+              className="flex h-7 items-center gap-3 rounded-lg px-3 hover:bg-neu-900"
             >
-              <span className="min-w-0 flex-1 truncate text-sm">{i.name}</span>
-              <span className="shrink-0 text-sm text-muted-foreground" data-testid="item-count">
+              <span className="min-w-0 flex-1 truncate text-body">{i.name}</span>
+              <span className="shrink-0 text-body text-muted-foreground" data-testid="item-count">
                 {i.behaviour === "daily"
                   ? t("actions.items.dailyCount", {
                       behaviour: t(`items.behaviour.${i.behaviour}`),
@@ -39,7 +39,7 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
                       count: i.count,
                     })}
               </span>
-              <span className="w-16 shrink-0 text-right text-sm text-muted-foreground">
+              <span className="w-16 shrink-0 text-right text-body text-muted-foreground">
                 {i.effectDice}
               </span>
               <Button

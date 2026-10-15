@@ -44,7 +44,7 @@ export function XpPanel() {
     void fetchXp();
   }, [fetchXp]);
 
-  if (!ledger) return <p className="text-sm text-muted-foreground">{t("app.loading")}</p>;
+  if (!ledger) return <p className="text-body text-muted-foreground">{t("app.loading")}</p>;
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <ProgressCard ledger={ledger} />
@@ -66,21 +66,21 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
   return (
     <section
       aria-label={t("xp.progressTitle")}
-      className="flex shrink-0 flex-col gap-3 rounded-xl bg-card p-4"
+      className="flex shrink-0 flex-col gap-3 rounded-xl bg-card p-3"
     >
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
         <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-body text-muted-foreground">
             {t("xp.heading", { level: l.level })}
           </span>
           <span className="flex items-baseline gap-2 tabular-nums">
-            <span className="text-4xl leading-none font-semibold tracking-tight" data-testid="xp-total">
+            <span className="text-headline" data-testid="xp-total">
               {f.n(l.total)}
             </span>
-            <span className="text-base text-muted-foreground">{t("xp.unit")}</span>
+            <span className="text-body text-muted-foreground">{t("xp.unit")}</span>
           </span>
         </div>
-        <span className="text-base font-medium text-amb-300 tabular-nums" data-testid="xp-to-next">
+        <span className="text-body font-medium text-amb-300 tabular-nums" data-testid="xp-to-next">
           {headline}
         </span>
       </div>
@@ -107,7 +107,7 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
             />
           ))}
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground tabular-nums">
+        <div className="flex justify-between text-label text-muted-foreground tabular-nums">
           <span>{f.n(l.currentFloor)}</span>
           <span className="text-foreground" data-testid="xp-percent">
             {f.pct(l.progressPercent)}
@@ -118,7 +118,7 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
 
       <ol
         aria-label={t("xp.levels")}
-        className="grid gap-1.5"
+        className="grid gap-2"
         style={{ gridTemplateColumns: `repeat(${Math.max(1, l.levels.length)}, minmax(0, 1fr))` }}
       >
         {l.levels.map((c) => (
@@ -144,8 +144,8 @@ function LevelCell({ cell: c }: { cell: XpLevel }) {
         c.status === "ahead" && "bg-neu-900/60",
       )}
     >
-      <span className="text-sm font-semibold">{c.level}</span>
-      <span className="max-w-full truncate text-xs text-muted-foreground">{f.compact(c.threshold)}</span>
+      <span className="text-body font-semibold">{c.level}</span>
+      <span className="max-w-full truncate text-label text-muted-foreground">{f.compact(c.threshold)}</span>
     </li>
   );
 }
@@ -153,7 +153,7 @@ function LevelCell({ cell: c }: { cell: XpLevel }) {
 function FieldMessage({ error, field }: { error: ApiError | null; field: string }) {
   if (error?.field !== field) return null;
   return (
-    <span role="alert" className="text-xs text-danger">
+    <span role="alert" className="text-label text-danger">
       {error.message}
     </span>
   );
@@ -192,13 +192,13 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
   return (
     <section
       aria-label={t("xp.add.title")}
-      className="flex shrink-0 flex-col gap-2 rounded-xl bg-card p-4"
+      className="flex shrink-0 flex-col gap-2 rounded-xl bg-card p-3"
     >
-      <h2 className="text-sm font-medium">{t("xp.add.title")}</h2>
+      <h2 className="text-title">{t("xp.add.title")}</h2>
       <div className="flex flex-wrap items-start gap-2">
         <label className="flex w-28 min-w-0 flex-col gap-1">
           <input
-            className={cn(fieldClass, "h-9 tabular-nums")}
+            className={cn(fieldClass, "h-7 tabular-nums")}
             inputMode="numeric"
             aria-label={t("xp.add.amount")}
             placeholder={t("xp.add.amount")}
@@ -211,7 +211,7 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
         </label>
         <label className="flex min-w-48 flex-1 flex-col gap-1">
           <input
-            className={cn(fieldClass, "h-9")}
+            className={cn(fieldClass, "h-7")}
             aria-label={t("xp.add.reason")}
             placeholder={t("xp.add.reasonPlaceholder")}
             value={reason}
@@ -222,7 +222,7 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
         </label>
         <label className="flex w-28 min-w-0 flex-col gap-1">
           <input
-            className={cn(fieldClass, "h-9")}
+            className={cn(fieldClass, "h-7")}
             aria-label={t("xp.add.session")}
             placeholder={t("xp.add.session")}
             value={session}
@@ -232,7 +232,7 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           <FieldMessage error={error} field="session" />
         </label>
         <label
-          className="flex h-9 cursor-pointer items-center gap-1.5 text-sm whitespace-nowrap"
+          className="flex h-7 cursor-pointer items-center gap-2 text-body whitespace-nowrap"
           title={t("xp.bonusHint")}
         >
           <input
@@ -244,7 +244,7 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           />
           {t("xp.bonus")}
         </label>
-        <Button className="h-9" disabled={busy || base === null || base < 1} onClick={() => void submit()}>
+        <Button className="h-7" disabled={busy || base === null || base < 1} onClick={() => void submit()}>
           <Plus />
           <span className="tabular-nums">
             {preview ? t("xp.add.submitWith", { total: f.n(preview.total) }) : t("xp.add.submit")}
@@ -264,13 +264,13 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
       aria-label={t("xp.ledger.title")}
       className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card"
     >
-      <div className="flex shrink-0 items-center justify-between bg-neu-900/50 px-4 py-2.5">
-        <h2 className="text-sm font-medium">{t("xp.ledger.title")}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">
+      <div className="flex shrink-0 items-center justify-between bg-neu-900/50 px-3 py-2.5">
+        <h2 className="text-title">{t("xp.ledger.title")}</h2>
+        <span className="text-label text-muted-foreground tabular-nums">
           {t("xp.ledger.count", { count: ledger.entries.length })}
         </span>
       </div>
-      <div className={cn(cols, "shrink-0 px-4 pt-2 pb-1 text-xs text-muted-foreground")}>
+      <div className={cn(cols, "shrink-0 px-3 pt-2 pb-1 text-label text-muted-foreground")}>
         <span>{t("xp.ledger.reason")}</span>
         <span className="text-right">{t("xp.ledger.base")}</span>
         <span className="text-right">{t("xp.ledger.bonus")}</span>
@@ -279,7 +279,7 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
       </div>
       <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {ledger.entries.length === 0 && (
-          <li className="px-2 py-2 text-sm text-muted-foreground">{t("xp.ledger.none")}</li>
+          <li className="px-2 py-2 text-body text-muted-foreground">{t("xp.ledger.none")}</li>
         )}
         {ledger.entries.map((e) =>
           editing === e.id ? (
@@ -308,11 +308,11 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
     <li
       aria-label={reason}
       data-testid="xp-row"
-      className={cn(cols, "rounded-md px-2 py-1.5 text-sm tabular-nums", fresh && "bg-amb-900/50")}
+      className={cn(cols, "rounded-md px-2 py-1.5 text-body tabular-nums", fresh && "bg-amb-900/50")}
     >
       <span className="flex min-w-0 flex-col">
         <span className="truncate">{reason}</span>
-        <span className="truncate text-xs text-muted-foreground">{meta}</span>
+        <span className="truncate text-label text-muted-foreground">{meta}</span>
       </span>
       <span className="text-right">{f.n(e.base)}</span>
       <span className={cn("text-right", e.bonus ? "text-amb-300" : "text-muted-foreground")}>
@@ -347,7 +347,7 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
           <span className="text-right font-semibold" data-testid="xp-row-total">
             {f.n(e.total)}
           </span>
-          <span className="flex justify-end gap-0.5">
+          <span className="flex justify-end gap-1">
             <Button size="icon-sm" variant="ghost" disabled={busy} onClick={onEdit} aria-label={t("xp.ledger.edit", { reason })}>
               <PencilSimple />
             </Button>
@@ -397,7 +397,7 @@ function EditRow({ entry: e, cols, onDone }: { entry: XpEntry; cols: string; onD
   return (
     <li
       aria-label={t("xp.ledger.editing")}
-      className={cn(cols, "rounded-md bg-neu-900 px-2 py-1.5 text-sm tabular-nums")}
+      className={cn(cols, "rounded-md bg-neu-900 px-2 py-1.5 text-body tabular-nums")}
     >
       <span className="flex min-w-0 flex-col gap-1">
         <input
@@ -421,7 +421,7 @@ function EditRow({ entry: e, cols, onDone }: { entry: XpEntry; cols: string; onD
         />
         <FieldMessage error={error} field="base" />
       </span>
-      <label className="flex cursor-pointer items-center justify-end gap-1 text-xs" title={t("xp.bonusHint")}>
+      <label className="flex cursor-pointer items-center justify-end gap-1 text-label" title={t("xp.bonusHint")}>
         <input
           type="checkbox"
           className="size-4 accent-tint"
@@ -434,7 +434,7 @@ function EditRow({ entry: e, cols, onDone }: { entry: XpEntry; cols: string; onD
       <span className="text-right font-semibold" data-testid="xp-edit-total">
         {preview ? f.n(preview.total) : "–"}
       </span>
-      <span className="flex justify-end gap-0.5">
+      <span className="flex justify-end gap-1">
         <Button size="icon-sm" variant="ghost" disabled={busy || base === null} onClick={() => void save()} aria-label={t("xp.ledger.save")}>
           <Check />
         </Button>
@@ -451,7 +451,7 @@ function OpeningRow({ opening, cols }: { opening: number; cols: string }) {
   const { t } = useTranslation();
   const f = useFormats();
   return (
-    <li className={cn(cols, "px-2 py-1.5 text-sm text-muted-foreground tabular-nums")} data-testid="xp-opening">
+    <li className={cn(cols, "px-2 py-1.5 text-body text-muted-foreground tabular-nums")} data-testid="xp-opening">
       <span className="col-span-3 truncate">{t("xp.ledger.opening")}</span>
       <span className="text-right">{f.n(opening)}</span>
       <span />

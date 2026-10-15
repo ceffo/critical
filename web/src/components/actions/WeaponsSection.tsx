@@ -40,11 +40,11 @@ export function WeaponsSection() {
 
   return (
     <section
-      className="flex flex-col gap-1 rounded-xl bg-card px-4 py-3.5"
+      className="flex flex-col gap-1 rounded-xl bg-card px-3 py-3"
       aria-label={t("weapons.title")}
     >
       <div className="mb-1.5 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-medium">{t("weapons.title")}</h2>
+        <h2 className="text-title">{t("weapons.title")}</h2>
         {form !== "add" && (
           <Button size="sm" disabled={busy} onClick={() => setForm("add")}>
             <Plus /> {t("weapons.form.openAdd")}
@@ -67,9 +67,9 @@ export function WeaponsSection() {
         </div>
       )}
       {weapons.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("weapons.none")}</p>
+        <p className="text-body text-muted-foreground">{t("weapons.none")}</p>
       ) : (
-        <div className={cn(WEAPON_COLS, "px-2 pb-1 text-xs text-muted-foreground")} aria-hidden>
+        <div className={cn(WEAPON_COLS, "px-2 pb-1 text-label text-muted-foreground")} aria-hidden>
           <span>{t("weapons.columns.name")}</span>
           <span>{t("weapons.columns.damage")}</span>
           <span>{t("weapons.columns.bonus")}</span>
@@ -122,12 +122,12 @@ function WeaponRow({
   const { t } = useTranslation();
   return (
     <li
-      className={cn(WEAPON_COLS, "min-h-12 rounded-lg bg-neu-900/40 px-2 py-1.5 text-sm")}
+      className={cn(WEAPON_COLS, "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body")}
       data-testid={`weapon-${w.id}`}
     >
       <div className="flex min-w-0 flex-col">
         <span className="min-w-0 truncate font-medium">{w.name}</span>
-        <span className="min-w-0 truncate text-xs text-muted-foreground">
+        <span className="min-w-0 truncate text-label text-muted-foreground">
           <span data-testid="weapon-kind">{t(`weapons.kind.${w.kind}`)}</span>
           {w.two_handed ? ` · ${t("weapons.twoHanded")}` : ""}
           {w.ammo_kind ? ` · ${w.ammo_kind}` : ""}

@@ -103,14 +103,33 @@
   --radius: 0.5rem;
 
   /*
-   * Fluid root size: 16px up to 1280 CSS px wide, 20px at 2560. Tailwind's spacing and type are
-   * in rem, so the whole layout scales with the screen instead of leaving it empty.
+   * Fixed root size at every viewport (ADR 0017 step 1): a wider screen shows more content, not
+   * bigger letters.
    */
-  font-size: clamp(16px, 0.3125vw + 12px, 20px);
+  font-size: 16px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * Type scale by role (ADR 0017 step 2): text uses only these five sizes. 1rem = 16px (fixed root).
+ */
+@theme {
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1rem;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.125rem;
+  --text-title: 0.875rem;
+  --text-title--line-height: 1.25rem;
+  --text-title--font-weight: 600;
+  --text-key: 1rem;
+  --text-key--line-height: 1.25rem;
+  --text-key--font-weight: 600;
+  --text-headline: 1.5rem;
+  --text-headline--line-height: 1.75rem;
+  --text-headline--font-weight: 600;
 }
 
 @theme inline {

@@ -10,7 +10,7 @@ import {
   openWeapons,
   openWorkspace,
 } from "./helpers";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 /** The page itself never scrolls: each column scrolls on its own. */
 async function expectNoPageScroll(page: Page) {
@@ -41,9 +41,25 @@ async function expectRegions(page: Page) {
   await expect(moi.getByRole("group", { name: "HP change" })).toBeVisible();
 }
 
+/** `inner` lies entirely within `outer` (bounding boxes, 1px tolerance for subpixel rounding). */
+async function expectInside(inner: Locator, outer: Locator, what: string) {
+  const i = (await inner.boundingBox())!;
+  const o = (await outer.boundingBox())!;
+  expect(i.y, `${what}: top`).toBeGreaterThanOrEqual(o.y - 1);
+  expect(i.y + i.height, `${what}: bottom`).toBeLessThanOrEqual(o.y + o.height + 1);
+}
+
+/** The column scrolls no content out of view. */
+async function expectNoScroll(column: Locator, what: string) {
+  const m = await column.evaluate((el) => ({ sh: el.scrollHeight, ch: el.clientHeight }));
+  expect(m.sh, `${what} scrolls`).toBeLessThanOrEqual(m.ch);
+}
+
+// ADR 0017 step 7 (content target). 1707x1300 is a third of the user's 5120x1440 table screen.
 const VIEWPORTS = [
   { width: 1280, height: 800 },
   { width: 1440, height: 900 },
+  { width: 1707, height: 1300 },
   { width: 1920, height: 1080 },
   { width: 2560, height: 1440 },
 ];
@@ -64,6 +80,29 @@ test("layout: four regions, full width, no page scroll from 1024 to 2560", async
     // The workspace keeps a usable width.
     const ws = await page.getByTestId("workspace").boundingBox();
     expect(ws!.width).toBeGreaterThan(vp.width * 0.3);
+    // The header is one row of at most 64px.
+    const header = await page.locator("[data-screen=turn-header]").boundingBox();
+    expect(header!.height, "header height").toBeLessThanOrEqual(64);
+    if (vp.width === 1280) {
+      // Moi shows identity, abilities, HP, HP change and the five saves without scrolling, and the
+      // weapon in hand is fully inside the workspace.
+      const moi = page.getByTestId("moi");
+      await expectNoScroll(moi, "Moi");
+      for (const [what, el] of [
+        ["identity", moi.getByRole("heading", { level: 1 })],
+        ["abilities", moi.locator("dl")],
+        ["HP", moi.getByTestId("hp-value")],
+        ["HP change", moi.getByRole("group", { name: "HP change" })],
+        ["last save", moi.getByTestId("save-row").last()],
+      ] as const)
+        await expectInside(el, moi, what);
+      await expect(moi.getByTestId("save-row")).toHaveCount(5);
+      await expectInside(
+        page.getByRole("region", { name: "Weapon in hand" }),
+        page.getByTestId("workspace"),
+        "weapon card",
+      );
+    }
     await snap(page, `dashboard-${vp.width}x${vp.height}`);
   }
 });

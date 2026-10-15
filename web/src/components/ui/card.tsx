@@ -20,7 +20,7 @@ function CardHeader({
   return (
     <div
       data-slot="card-header"
-      className={cn("flex flex-col gap-1.5 p-4", className)}
+      className={cn("flex flex-col gap-1 p-3", className)}
       {...props}
     />
   );
@@ -34,7 +34,7 @@ function CardTitle({
     <h3
       data-slot="card-title"
       className={cn(
-        "text-sm font-semibold leading-none tracking-tight",
+        "text-title",
         className,
       )}
       {...props}
@@ -49,7 +49,7 @@ function CardContent({
   return (
     <div
       data-slot="card-content"
-      className={cn("p-4 pt-0", className)}
+      className={cn("p-3 pt-0", className)}
       {...props}
     />
   );

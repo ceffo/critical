@@ -19,7 +19,9 @@ const LABEL_COLUMN = "clamp(10rem, 13vw, 15rem)";
  * A timed buff is a thin line for the turns it has run and a pill for what is left (from the
  * server's `duration`), in the warning colour on its last turn; a charge buff shows its charges as
  * pips; a buff that does not apply is dashed with a lock and the reason. Edit and remove per row,
- * Add below the label. The number of turn columns follows the width available (8, 12 or 16).
+ * Add below the label. The number of turn columns follows the width available (8, 12 or 16). The
+ * track is one header row tall plus one effect row and scrolls under its sticky turn row, so the
+ * header stays at most 64px (ADR 0017 step 6).
  */
 export function EffectsTimeline() {
   const { t } = useTranslation();
@@ -34,30 +36,39 @@ export function EffectsTimeline() {
   const columns = Array.from({ length: size }, (_, i) => start + i);
   const grid: CSSProperties = {
     gridTemplateColumns: `${LABEL_COLUMN} repeat(${size}, minmax(0, 1fr))`,
-    gridTemplateRows: `auto repeat(${Math.max(buffs.length, 1)}, minmax(1.75rem, auto))`,
+    gridTemplateRows: `1.5rem repeat(${Math.max(buffs.length, 1)}, 1.5rem)`,
   };
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-2" role="group" aria-label={t("effects.title")}>
-      <div ref={trackRef} className="max-h-[clamp(9rem,22vh,16rem)] min-w-0 overflow-y-auto">
-        <div className="relative grid items-center gap-y-1" style={grid} data-testid="effects-track" data-columns={size}>
+      <div ref={trackRef} className="max-h-12 min-w-0 overflow-y-auto">
+        <div className="relative grid items-center" style={grid} data-testid="effects-track" data-columns={size}>
           {/* The current turn, highlighted across every row. */}
           <div
             aria-hidden
             className="pointer-events-none self-stretch rounded-md bg-tint/10 ring-1 ring-tint/30 ring-inset"
             style={{ gridColumn: current + 2, gridRow: "1 / -1" }}
           />
-          <div className="flex items-center gap-2" style={{ gridColumn: 1, gridRow: 1 }}>
-            <span className="text-sm font-medium">{t("effects.title")}</span>
+          <div className="sticky top-0 z-10 flex h-full items-center gap-2 bg-card" style={{ gridColumn: 1, gridRow: 1 }}>
+            <span className="text-title">{t("effects.title")}</span>
+            {/* The track shows about one row; the count says how many there are. */}
+            {buffs.length > 0 && (
+              <span className="text-label text-muted-foreground tabular-nums" data-testid="effects-count">
+                {buffs.length}
+              </span>
+            )}
             <AddEffect />
           </div>
           {columns.map((n, i) => (
             <span
               key={n}
               className={cn(
-                "text-center text-xs tabular-nums",
+                "sticky top-0 z-10 flex h-full items-center justify-center text-label tabular-nums",
+                // Opaque, so effect rows scrolled under the sticky turn row stay hidden; the current
+                // column keeps its highlight tint.
+                i === current ? "bg-[color-mix(in_oklab,var(--tint)_10%,var(--card))]" : "bg-card",
                 i === current ? "font-semibold text-amb-300" : "text-muted-foreground",
-                i < current && "opacity-40",
+                i < current && "text-muted-foreground/40",
               )}
               style={{ gridColumn: i + 2, gridRow: 1 }}
               aria-current={i === current ? "step" : undefined}
@@ -79,7 +90,7 @@ export function EffectsTimeline() {
             />
           ))}
           {buffs.length === 0 && (
-            <span className="text-sm text-muted-foreground italic" style={{ gridColumn: "1 / -1", gridRow: 2 }}>
+            <span className="text-body text-muted-foreground italic" style={{ gridColumn: "1 / -1", gridRow: 2 }}>
               {t("effects.none")}
             </span>
           )}
@@ -158,15 +169,15 @@ function EffectRow({
       data-last-turn={String(lastTurn)}
     >
       <div className="flex min-w-0 items-center gap-1 pr-2" style={{ gridColumn: 1, gridRow: row }}>
-        <div className="flex min-w-0 flex-1 flex-col leading-tight">
+        <span className="min-w-0 flex-1 truncate" title={[b.name, effectsText, b.note].filter(Boolean).join(" · ")}>
           <span
-            className={cn("truncate text-sm font-medium", lastTurn && "text-warning", inactive && "text-muted-foreground")}
-            title={b.name}
+            className={cn("text-body font-medium", lastTurn && "text-warning", inactive && "text-muted-foreground")}
           >
             {b.name}
           </span>
           {(b.note || effectsText) && (
-            <span className="truncate text-xs text-muted-foreground" title={[effectsText, b.note].filter(Boolean).join(" · ")}>
+            <span className="text-label text-muted-foreground">
+              {" · "}
               {effectsText && <span data-testid="buff-effects">{effectsText}</span>}
               {effectsText && b.note && " · "}
               {b.note && (
@@ -176,7 +187,7 @@ function EffectRow({
               )}
             </span>
           )}
-        </div>
+        </span>
         {b.charges > 0 && (
           <Button
             size="icon-xs"
@@ -215,7 +226,7 @@ function EffectRow({
       {span.remaining && (
         <div
           className={cn(
-            "flex h-[1.35rem] min-w-0 items-center gap-1.5 overflow-hidden rounded-full px-2 text-xs whitespace-nowrap tabular-nums",
+            "flex h-5 min-w-0 items-center gap-1 overflow-hidden rounded-full px-2 text-label whitespace-nowrap tabular-nums",
             inactive
               ? "border border-dashed border-neu-500 text-muted-foreground"
               : lastTurn

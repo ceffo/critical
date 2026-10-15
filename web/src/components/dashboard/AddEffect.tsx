@@ -53,7 +53,7 @@ export function AddEffect() {
               role="tab"
               aria-selected={tab === id}
               className={cn(
-                "flex-1 rounded-md px-2 py-1 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "flex-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 tab === id ? "bg-tint/15 font-medium text-amb-200" : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => setTab(id)}
@@ -119,7 +119,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
     <section className="flex flex-col gap-2" aria-label={t("spellSlots.receiveTitle")}>
       <div className="grid grid-cols-[1fr_8rem] gap-2">
         <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-sm text-muted-foreground">{t("spellSlots.receiveSearchLabel")}</span>
+          <span className="text-label text-muted-foreground">{t("spellSlots.receiveSearchLabel")}</span>
           <input
             className={fieldClass}
             type="search"
@@ -130,7 +130,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-sm text-muted-foreground">{t("spellSlots.casterLevel")}</span>
+          <span className="text-label text-muted-foreground">{t("spellSlots.casterLevel")}</span>
           <input
             className={`${fieldClass} tabular-nums`}
             type="number"
@@ -142,16 +142,16 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
         </label>
       </div>
       {!searching ? (
-        <p className="text-sm text-muted-foreground">{t("spellSlots.receiveHint")}</p>
+        <p className="text-body text-muted-foreground">{t("spellSlots.receiveHint")}</p>
       ) : found.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("spellSlots.noMatch")}</p>
+        <p className="text-body text-muted-foreground">{t("spellSlots.noMatch")}</p>
       ) : (
         <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
           {found.map((c) => {
             const name = spellName(t, c.id, c.name);
             return (
               <li key={c.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60">
-                <span className="min-w-0 truncate text-sm">
+                <span className="min-w-0 truncate text-body">
                   {name}
                   <span className="text-muted-foreground tabular-nums">
                     {" "}
@@ -160,7 +160,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
                 </span>
                 {c.modes && c.modes.length > 0 && (
                   <select
-                    className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
+                    className="h-7 min-w-0 rounded border bg-background px-1 text-body"
                     aria-label={t("spellSlots.modeChoiceFor", { name })}
                     data-testid="receive-mode"
                     value={modes[c.id] ?? c.modes[0].key}
@@ -188,7 +188,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
         </ul>
       )}
       {searching && more > 0 && (
-        <p className="text-sm text-muted-foreground tabular-nums" data-testid="receive-more">
+        <p className="text-body text-muted-foreground tabular-nums" data-testid="receive-more">
           {t("spellSlots.receiveMore", { count: more })}
         </p>
       )}
@@ -203,7 +203,7 @@ function SavedEffects({ onDone }: { onDone: () => void }) {
   const { run, busy } = useTableStore();
 
   if (saved.length === 0) {
-    return <p className="text-sm text-muted-foreground">{t("buffs.savedNone")}</p>;
+    return <p className="text-body text-muted-foreground">{t("buffs.savedNone")}</p>;
   }
   return (
     <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" aria-label={t("buffs.saved")}>
@@ -214,8 +214,8 @@ function SavedEffects({ onDone }: { onDone: () => void }) {
           className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
         >
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-sm">{s.name}</span>
-            {s.note && <span className="truncate text-xs text-muted-foreground">{s.note}</span>}
+            <span className="truncate text-body">{s.name}</span>
+            {s.note && <span className="truncate text-label text-muted-foreground">{s.note}</span>}
           </span>
           <span className="flex shrink-0 items-center gap-1">
             <Button

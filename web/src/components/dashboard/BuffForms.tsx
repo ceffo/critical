@@ -16,7 +16,7 @@ import { fieldClass } from "./fieldStyles";
 // from the log; the server stamps the round an effect starts in.
 
 /** Field caption: sentence case, readable size (ADR 0009 house rules). */
-const labelClass = "text-sm text-muted-foreground";
+const labelClass = "text-label text-muted-foreground";
 
 /** Parses a non-negative integer field; NaN when invalid. */
 function count(v: string): number {
@@ -50,14 +50,14 @@ export function EditBuffForm({
 
   return (
     <form
-      className="flex flex-wrap items-center gap-1.5 rounded-lg bg-neu-900 p-1.5"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900 p-2"
       aria-label={t("buffs.editLabel", { name: buff.name })}
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
       }}
     >
-      <span className="px-1 text-sm font-medium">{buff.name}</span>
+      <span className="px-1 text-body font-medium">{buff.name}</span>
       <label className="flex items-center gap-1">
         <span className={labelClass}>{t("buffs.roundsLeft")}</span>
         <input
@@ -145,7 +145,7 @@ export function AddBuffForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form
-      className="flex flex-wrap items-center gap-1.5"
+      className="flex flex-wrap items-center gap-2"
       aria-label={t("buffs.add")}
       onSubmit={(e) => {
         e.preventDefault();
@@ -236,7 +236,7 @@ export function AddBuffForm({ onDone }: { onDone: () => void }) {
         value={note}
         onChange={(e) => setNote(e.target.value)}
       />
-      <label className="flex items-center gap-1 text-sm">
+      <label className="flex items-center gap-1 text-body">
         <input
           type="checkbox"
           checked={saveIt}

@@ -24,7 +24,7 @@ export function CharacterDetails({ character }: { character: Character | null })
         disabled={!character}
         title={t("details.open")}
         data-testid="details-trigger"
-        className="block max-w-full truncate rounded-sm text-left text-xl leading-tight font-semibold tracking-tight outline-none hover:text-amb-300 focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:text-amb-300"
+        className="block max-w-full truncate rounded-sm text-left text-title outline-none hover:text-amb-300 focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:text-amb-300"
       >
         {name}
       </PopoverTrigger>
@@ -32,11 +32,11 @@ export function CharacterDetails({ character }: { character: Character | null })
         <PopoverContent
           side="right"
           align="start"
-          className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-4"
+          className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3"
           aria-label={t("details.title")}
           data-testid="details-popover"
         >
-          <PopoverTitle className="text-base font-semibold">{t("details.title")}</PopoverTitle>
+          <PopoverTitle className="text-title">{t("details.title")}</PopoverTitle>
           {editing ? (
             <DetailsForm character={character} onDone={() => setEditing(false)} />
           ) : (
@@ -50,7 +50,7 @@ export function CharacterDetails({ character }: { character: Character | null })
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-2 text-sm">
+    <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-2 text-body">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0 break-words tabular-nums">{children}</dd>
     </div>
@@ -122,14 +122,14 @@ function DetailsForm({ character, onDone }: { character: Character; onDone: () =
     if (error?.field !== field) return null;
     const key = `details.errors.${error.code}`;
     return (
-      <span role="alert" className="text-xs text-danger">
+      <span role="alert" className="text-label text-danger">
         {i18n.exists(key) ? t(key) : error.code}
       </span>
     );
   };
   const input = (field: keyof Draft, props: { inputMode?: "numeric"; hint?: string } = {}) => (
-    <div key={field} className="flex min-w-0 flex-col gap-1 text-sm">
-      <label htmlFor={`details-${field}`} className="text-muted-foreground">
+    <div key={field} className="flex min-w-0 flex-col gap-1 text-body">
+      <label htmlFor={`details-${field}`} className="text-label text-muted-foreground">
         {t(`details.fields.${field}`)}
       </label>
       <input
@@ -140,7 +140,7 @@ function DetailsForm({ character, onDone }: { character: Character; onDone: () =
         aria-invalid={error?.field === field}
         onChange={(e) => set(field)(e.target.value)}
       />
-      {props.hint && <span className="text-xs text-muted-foreground">{props.hint}</span>}
+      {props.hint && <span className="text-label text-muted-foreground">{props.hint}</span>}
       {message(field)}
     </div>
   );

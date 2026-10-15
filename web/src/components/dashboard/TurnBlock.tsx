@@ -25,21 +25,14 @@ export function TurnBlock() {
   const [mode, setMode] = useState<Mode>("menu");
 
   return (
-    <div
-      className="flex w-[clamp(15rem,20vw,19rem)] shrink-0 flex-col justify-between gap-2 pr-4"
-      role="group"
-      aria-label={t("turn.title")}
-    >
-      <div className="flex items-baseline gap-3">
-        <span className="text-sm text-muted-foreground">{t("turn.title")}</span>
-        <span
-          className="text-5xl leading-none font-medium tracking-tight tabular-nums"
-          data-testid="round-value"
-        >
+    <div className="flex shrink-0 items-center gap-3 pr-3" role="group" aria-label={t("turn.title")}>
+      <div className="flex items-baseline gap-2">
+        <span className="text-body text-muted-foreground">{t("turn.title")}</span>
+        <span className="min-w-[2ch] text-headline tabular-nums" data-testid="round-value">
           {turn}
         </span>
       </div>
-      <div className="text-sm text-muted-foreground" data-testid="initiative-row">
+      <div className="line-clamp-2 w-44 text-body text-muted-foreground" data-testid="initiative-row">
         {turn === 0 ? (
           t("turn.outOfCombatInitiative")
         ) : (
@@ -61,7 +54,7 @@ export function TurnBlock() {
                   title={t("turn.initiativeReroll")}
                   disabled={busy}
                   onClick={() => void rerollInitiative()}
-                  className="flex size-7 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 [&_svg]:size-4"
+                  className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 [&_svg]:size-4"
                 >
                   <ArrowsClockwise />
                 </button>
@@ -72,8 +65,8 @@ export function TurnBlock() {
           </span>
         )}
       </div>
-      <div className="flex gap-1.5">
-        <Button size="lg" className="h-10 flex-1 text-base" disabled={busy} onClick={() => void nextRound()}>
+      <div className="flex gap-1">
+        <Button size="lg" disabled={busy} onClick={() => void nextRound()}>
           {t("turn.next")}
           <ArrowRight />
         </Button>
@@ -87,7 +80,7 @@ export function TurnBlock() {
           <PopoverTrigger
             aria-label={t("turn.menu")}
             title={t("turn.menu")}
-            className="flex size-10 items-center justify-center rounded-lg bg-neu-900 text-foreground transition-colors outline-none hover:bg-neu-800 focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5"
+            className="flex size-8 items-center justify-center rounded-lg bg-neu-900 text-foreground transition-colors outline-none hover:bg-neu-800 focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
           >
             <DotsThree weight="bold" />
           </PopoverTrigger>
@@ -104,7 +97,7 @@ export function TurnBlock() {
 }
 
 const menuItem =
-  "flex h-9 w-full items-center rounded-md px-2.5 text-left text-sm outline-none hover:bg-neu-900 focus-visible:bg-neu-900";
+  "flex h-7 w-full items-center rounded-md px-2 text-left text-body outline-none hover:bg-neu-900 focus-visible:bg-neu-900";
 
 function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
   const { t } = useTranslation();
@@ -163,8 +156,8 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
         if (await passTime(value)) onDone();
       }}
     >
-      <span className="text-sm font-medium">{t("turn.passTime")}</span>
-      <div className="flex items-center gap-2 text-sm">
+      <span className="text-title">{t("turn.passTime")}</span>
+      <div className="flex items-center gap-2 text-body">
         <input
           className={`${fieldClass} !w-20 tabular-nums`}
           type="text"
@@ -188,14 +181,14 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
         </span>
       </div>
       {preview.kind === "ok" && (
-        <p className="text-sm" data-testid="pass-time-ending">
+        <p className="text-body" data-testid="pass-time-ending">
           {preview.expiring.length > 0
             ? t("turn.passTimeEnding", { names: preview.expiring.map((b) => b.name).join(", ") })
             : t("turn.passTimeNothingEnds")}
         </p>
       )}
-      <p className="text-sm text-muted-foreground">{t("turn.passTimeHint")}</p>
-      <div className="flex justify-end gap-1.5">
+      <p className="text-label text-muted-foreground">{t("turn.passTimeHint")}</p>
+      <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" type="button" onClick={onDone}>
           {t("turn.cancel")}
         </Button>
@@ -223,7 +216,7 @@ function SetTurnForm({ onDone }: { onDone: () => void }) {
         if (await setRound(Number(draft))) onDone();
       }}
     >
-      <label className="flex items-center justify-between gap-2 text-sm">
+      <label className="flex items-center justify-between gap-2 text-body">
         {t("turn.setLabel")}
         <input
           className={`${fieldClass} !w-20 tabular-nums`}
@@ -235,7 +228,7 @@ function SetTurnForm({ onDone }: { onDone: () => void }) {
           autoFocus
         />
       </label>
-      <div className="flex justify-end gap-1.5">
+      <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" type="button" onClick={onDone}>
           {t("turn.cancel")}
         </Button>
@@ -252,8 +245,8 @@ function EndCombatConfirm({ onDone }: { onDone: () => void }) {
   const { endCombat, busy } = useTableStore();
   return (
     <div className="flex flex-col gap-2 p-1" role="alertdialog" aria-label={t("turn.endCombat")}>
-      <p className="text-sm">{t("turn.endCombatConfirm")}</p>
-      <div className="flex justify-end gap-1.5">
+      <p className="text-body">{t("turn.endCombatConfirm")}</p>
+      <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" onClick={onDone}>
           {t("turn.cancel")}
         </Button>

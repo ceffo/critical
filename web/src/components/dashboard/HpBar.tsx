@@ -48,13 +48,13 @@ export function HpBar() {
     : "";
 
   return (
-    <div className="flex min-w-0 flex-col gap-1.5" role="group" aria-label={t("hp.title")}>
+    <div className="flex min-w-0 flex-col gap-1" role="group" aria-label={t("hp.title")}>
       <div className="flex min-w-0 items-baseline justify-between gap-2">
-        <span className="shrink-0 text-sm text-muted-foreground">{t("hp.title")}</span>
+        <h2 className="shrink-0 text-title">{t("hp.title")}</h2>
         {last && (
           <span
             className={cn(
-              "min-w-0 truncate text-sm tabular-nums",
+              "min-w-0 truncate text-body tabular-nums",
               last.delta < 0 ? "text-danger" : "text-heal",
             )}
             title={lastText}
@@ -65,11 +65,11 @@ export function HpBar() {
         )}
       </div>
       <div className="flex min-w-0 items-baseline justify-between gap-2">
-        <div className="flex items-baseline gap-1.5 tabular-nums" data-testid="hp-value">
+        <div className="flex items-baseline gap-1 tabular-nums" data-testid="hp-value">
           {loaded ? (
             <>
-              <span className="text-4xl leading-none font-semibold tracking-tight">{currentHp}</span>
-              <span className="text-base text-muted-foreground"> / {maxHp}</span>
+              <span className="text-headline">{currentHp}</span>
+              <span className="text-body text-muted-foreground"> / {maxHp}</span>
             </>
           ) : (
             "–"
@@ -77,7 +77,7 @@ export function HpBar() {
         </div>
         {loaded && condition !== "ok" && (
           <span
-            className={cn("min-w-0 truncate text-sm", CONDITION[condition])}
+            className={cn("min-w-0 truncate text-body", CONDITION[condition])}
             data-testid="hp-condition"
             data-condition={condition}
           >
@@ -87,7 +87,7 @@ export function HpBar() {
       </div>
       <div className="flex flex-col gap-1">
         <div
-          className="flex h-3 w-full overflow-hidden rounded-full bg-neu-900"
+          className="flex h-2 w-full overflow-hidden rounded-full bg-neu-900"
           role="meter"
           aria-label={t("hp.title")}
           aria-valuemin={floor}
@@ -128,7 +128,7 @@ export function HpBar() {
         </div>
         {dyingPct > 0 && (
           <div
-            className="relative h-4 text-xs leading-4 text-muted-foreground tabular-nums"
+            className="relative h-4 text-label text-muted-foreground tabular-nums"
             aria-hidden
             data-testid="hp-scale"
           >

@@ -24,8 +24,8 @@ const MODE_ICONS: Record<Mode, ReactNode> = {
 function Choice({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
+      <span className="text-label text-muted-foreground">{label}</span>
+      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1">
         {children}
       </div>
     </div>
@@ -33,7 +33,7 @@ function Choice({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const segment =
-  "flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
+  "flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-2 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
 
 /**
  * Display preferences of this device (ADR 0009): language, appearance and ambiance. Each choice
@@ -51,18 +51,18 @@ export function SettingsPopover() {
         data-testid="settings-trigger"
         aria-label={t("settings.open")}
         title={t("settings.open")}
-        className="flex size-11 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-neu-900 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-neu-900 data-popup-open:text-foreground [&_svg]:size-6"
+        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-neu-900 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-neu-900 data-popup-open:text-foreground [&_svg]:size-5"
       >
         <GearSix />
       </PopoverTrigger>
       <PopoverContent
         side="right"
         align="end"
-        className="flex w-80 flex-col gap-5"
+        className="flex w-80 flex-col gap-3"
         aria-label={t("settings.title")}
         data-testid="settings-popover"
       >
-        <PopoverTitle className="text-base font-semibold">{t("settings.title")}</PopoverTitle>
+        <PopoverTitle className="text-title">{t("settings.title")}</PopoverTitle>
 
         <Choice label={t("settings.language")}>
           {LANGUAGES.map((l) => (
@@ -102,7 +102,7 @@ export function SettingsPopover() {
         </Choice>
 
         <Choice label={t("settings.ambiance")}>
-          <div className="grid w-full grid-cols-2 gap-1.5">
+          <div className="grid w-full grid-cols-2 gap-1">
             {AMBIANCES.map((a) => (
               <button
                 key={a.id}
@@ -110,7 +110,7 @@ export function SettingsPopover() {
                 role="radio"
                 aria-checked={amb === a.id}
                 className={cn(
-                  "flex h-10 items-center gap-2 rounded-md px-2 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "flex h-7 items-center gap-2 rounded-md px-2 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                   amb === a.id ? "bg-amb-900 text-amb-200" : "bg-neu-900/60 hover:bg-neu-900",
                 )}
                 onClick={() => update({ amb: a.id })}

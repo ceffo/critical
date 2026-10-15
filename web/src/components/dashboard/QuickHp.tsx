@@ -46,7 +46,7 @@ export function QuickHp() {
       aria-label={t("hp.change")}
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium">{t("hp.change")}</h2>
+        <h2 className="text-title">{t("hp.change")}</h2>
         <Button
           size="icon-xs"
           variant="ghost"
@@ -62,16 +62,16 @@ export function QuickHp() {
       {blockedBy && (
         <p
           id="hp-undo-hint"
-          className="-mt-1 truncate text-xs text-muted-foreground"
+          className="-mt-1 truncate text-label text-muted-foreground"
           data-testid="hp-undo-hint"
           title={t("hp.undoBlocked", { entry: blockedBy })}
         >
           {t("hp.undoBlocked", { entry: blockedBy })}
         </p>
       )}
-      <div className="grid grid-cols-[minmax(3.5rem,5rem)_minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
+      <div className="grid grid-cols-[minmax(3.5rem,5rem)_minmax(0,1fr)_minmax(0,1fr)] gap-1">
         <input
-          className={`${fieldClass} h-9 text-base tabular-nums`}
+          className={`${fieldClass} tabular-nums`}
           type="number"
           min={1}
           inputMode="numeric"
@@ -83,7 +83,7 @@ export function QuickHp() {
         />
         <Button
           variant="outline"
-          className="h-9 min-w-0 border-danger/60 text-danger hover:bg-danger/10 hover:text-danger"
+          className="min-w-0 border-danger/60 text-danger hover:bg-danger/10 hover:text-danger"
           disabled={!valid || busy}
           title={t("hp.damageHint")}
           onClick={() => void apply(-1)}
@@ -92,7 +92,7 @@ export function QuickHp() {
           {t("hp.applyDamage")}
         </Button>
         <Button
-          className="h-9 min-w-0 bg-heal text-ground hover:bg-heal/85"
+          className="min-w-0 bg-heal text-ground hover:bg-heal/85"
           disabled={!valid || busy}
           title={t("hp.healHint")}
           onClick={() => void apply(1)}

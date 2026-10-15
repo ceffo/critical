@@ -189,7 +189,7 @@ test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and A
   );
 });
 
-test("lookup: up/down in the search box moves the selection, a click selects; values at level with raw text; description collapsed then full", async ({
+test("lookup: up/down in the search box moves the selection, a click selects; values at level with raw text; description always shown, scrolling in its own area", async ({
   page,
 }) => {
   await openLookup(page);
@@ -245,15 +245,18 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   await rows(page).filter({ hasText: "Magic Missile" }).click();
 
   const description = detail(page).getByTestId("spell-description");
-  const text = description.locator("p");
-  await expect(text).toBeHidden();
-  await description.getByText("Description").click();
+  const text = description.locator("p").nth(1);
   await expect(text).toBeVisible();
+  await expect(description.locator("summary")).toHaveCount(0);
   const full = (await text.textContent()) ?? "";
   expect(full.length).toBeGreaterThan(200); // not cut
   expect(full.trimEnd().endsWith("as desired.")).toBe(true);
-  await text.evaluate((el) => el.scrollIntoView({ block: "end" }));
-  await snap(page, "description-open");
+  // Bounded: a long text scrolls inside its own area.
+  expect(await text.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(
+    true,
+  );
+  await text.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await snap(page, "description-scroll");
 });
 
 test("lookup: tab switch keeps search, filters and selection; Reset only when set; reload clears", async ({

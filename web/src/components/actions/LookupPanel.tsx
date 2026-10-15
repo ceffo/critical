@@ -2,7 +2,6 @@ import { useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
-  CaretRight,
   CircleNotch,
   DiceFive,
   MagnifyingGlass,
@@ -212,18 +211,15 @@ function SpellDetail({ spell }: { spell: Spell }) {
         )
       ) : null}
       {spell.description && (
-        <details className="group text-body" data-testid="spell-description">
-          <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-md py-1 font-medium select-none hover:text-amb-300 [&::-webkit-details-marker]:hidden">
-            <CaretRight
-              aria-hidden
-              className="size-3.5 transition-transform group-open:rotate-90"
-            />
-            {t("lookup.description")}
-          </summary>
-          <p className="mt-1 max-w-[65ch] leading-relaxed whitespace-pre-line text-foreground/85">
+        <section className="text-body" data-testid="spell-description">
+          <p className="py-1 font-medium">{t("lookup.description")}</p>
+          <p
+            className="mt-1 max-h-48 max-w-[65ch] overflow-y-auto leading-relaxed whitespace-pre-line text-foreground/85"
+            tabIndex={0}
+          >
             {spell.description}
           </p>
-        </details>
+        </section>
       )}
     </div>
   );

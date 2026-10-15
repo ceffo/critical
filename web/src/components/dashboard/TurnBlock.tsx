@@ -4,10 +4,9 @@ import { ArrowRight, DotsThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { previewPassTime } from "@/api/round";
-import { parseDecimal } from "@/lib/decimalInput";
+import { hoursToAsk, previewFor, type KeyedAnswer } from "@/lib/passTimePreview";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
-import type { PassTimePreview } from "@/types/buffs";
 import { fieldClass } from "./fieldStyles";
 
 type Mode = "menu" | "passing" | "setting" | "confirmEnd";
@@ -100,32 +99,21 @@ function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
   );
 }
 
-type Answer = { kind: "error"; message: string } | ({ kind: "ok" } & PassTimePreview);
-type Preview = { kind: "empty" } | { kind: "invalid" } | { kind: "pending" } | Answer;
-
 /**
  * Hours (decimal, "1.5" or "1,5"). The server answers what they would do: the turns and the
- * effects that would end (GET /api/round/pass-time/preview), or why it refuses them.
+ * effects that would end (GET /api/round/pass-time/preview), or why it refuses them. Only the
+ * answer for the hours typed now is shown (`previewFor`); older requests are aborted.
  */
 function PassTimeForm({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
   const { passTime, busy } = useTableStore();
   const [hours, setHours] = useState("");
-  // The server's answer and the hours it is for, so a stale answer is never shown.
-  const [answer, setAnswer] = useState<{ hours: number; answer: Answer } | null>(null);
-  const value = parseDecimal(hours);
-  const asked = !Number.isNaN(value) && value > 0;
-  const preview: Preview =
-    hours.trim() === ""
-      ? { kind: "empty" }
-      : !asked
-        ? { kind: "invalid" }
-        : answer?.hours === value
-          ? answer.answer
-          : { kind: "pending" };
+  const [answer, setAnswer] = useState<KeyedAnswer | null>(null);
+  const value = hoursToAsk(hours);
+  const preview = previewFor(hours, answer);
 
   useEffect(() => {
-    if (!asked) return;
+    if (value === null) return;
     const ctl = new AbortController();
     const timer = setTimeout(() => {
       previewPassTime(value, { signal: ctl.signal })
@@ -139,7 +127,7 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
       clearTimeout(timer);
       ctl.abort();
     };
-  }, [asked, value]);
+  }, [value]);
 
   return (
     <form
@@ -147,7 +135,7 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
       aria-label={t("turn.passTime")}
       onSubmit={async (ev) => {
         ev.preventDefault();
-        if (preview.kind !== "ok") return;
+        if (preview.kind !== "ok" || value === null) return;
         if (await passTime(value)) onDone();
       }}
     >

@@ -6,6 +6,7 @@ import {
   logEntry,
   markNoReload,
   addBuff,
+  chooseSetting,
   nextTurn,
   turnMenu,
   buffBadge,
@@ -284,6 +285,9 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
     await snap(page, `turn-header-${vp.width}x${vp.height}`);
   }
   expect(columns, "16 turns at 2560").toBe(16);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await chooseSetting(page, "Dark");
+  await snap(page, "turn-header-dark-1440x900");
 
   await nextTurn(page);
   await expect(blink).toHaveCount(0);

@@ -62,7 +62,11 @@ describe("effectSpan", () => {
     });
   });
 
-  it("a start round above the turn (after End combat) has no past part", () => {
-    expect(effectSpan({ turn: 0, start: 0, size: 8, duration: 3, startRound: 6 }).past).toBeNull();
+  it("a buff added at turn 5, then End combat: no past part, the pill starts at column 0", () => {
+    expect(effectSpan({ turn: 0, start: windowStart(0), size: 8, duration: 3, startRound: 5 })).toEqual({
+      past: null,
+      remaining: { from: 0, to: 2 },
+      overflows: false,
+    });
   });
 });

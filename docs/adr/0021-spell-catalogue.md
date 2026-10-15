@@ -60,7 +60,7 @@ is only ever appended to by play.
      (`\n\n`); a block is a **paragraph** (one line, no hard wrap, not starting with `- `, `|` or
      `#`), a **bullet list** (consecutive lines starting with `- `) or a **pipe table** (consecutive
      lines starting and ending with `|`, the second one the `| --- |` delimiter row). No headings,
-     no HTML, no emphasis markers, no leading or trailing whitespace. Tables stay tables (Prismatic
+     no HTML, no emphasis markers (the builder checks both: the schema cannot), no leading or trailing whitespace. Tables stay tables (Prismatic
      Spray's colour table is not flattened into prose). The schema checks the block structure with an
      RE2-safe pattern (Go's default regex engine); the builder additionally checks that each table
      has a delimiter row and a constant column count. The UI renders exactly this subset.
@@ -78,9 +78,15 @@ is only ever appended to by play.
      spell, `(class, level, English name) -> id`, seeded from the 885 ids in use today (so every id in
      `spellbook.json`, `spell_effects.json` and saved slots stays valid);
    - a spell found in the ledger takes its id from it; a **new** spell takes the `Keys` candidate,
-     which is then added to the ledger; if the candidate equals any published or other id, or a
-     published spell cannot be found in the ledger (an English name or level was corrected), the
-     **build fails** and a human resolves it by editing the ledger (a renamed spell keeps its id);
+     which is then added to the ledger; if the candidate equals any published or other id, the
+     **build fails**;
+   - the build also **fails when a ledger entry matches no spell in the build**, unless that entry
+     is explicitly marked `"removed": true`. This is how a rename is caught: a spell whose English
+     name or level was corrected looks new, and its old entry is left unmatched. A human then either
+     **re-keys** the entry (edits its `(class, level, name)` to the corrected values, keeping the
+     id: a renamed spell keeps its id) or marks it `"removed": true` (the spell really left the
+     catalogue; its id stays reserved and is never reused). A removed id still trips step 5.4.3 if
+     game state references it;
    - an id is never changed and never reused for a different spell; ids are unique in the artifact;
    - the API **stores and serves the artifact's id** and stops calling `Keys` (the catalogue DAL's
      `catalogKeys`); `Keys` lives on only in the builder.
@@ -118,13 +124,19 @@ is only ever appended to by play.
          NULL `key`, are never updated, never served and never referenced (state refers to keys),
          and are left in place. This is the last use of `Keys` in the API and is removed with the
          old seed loader. Without it the first import would insert all spells a second time.
+         Before the upsert, **each backfilled key is verified**: the row's `(name, class, level)`
+         must equal that of the artifact spell with the same `key` (or of its ledger entry, when the
+         artifact corrected the name or level). A live database may hold rows outside the set the
+         ledger was seeded from (`seedSpells` never deleted), which shifts `Keys` suffixes; a
+         mismatch would let the upsert silently overwrite a different spell. On any mismatch
+         the importer refuses to start and lists the keys, with both triples.
       2. Upsert every artifact spell by `key` (insert if new, overwrite every catalogue field if
          present).
       3. Delete the spells whose `key` is no longer in the artifact, **only if nothing references
          them**; the importer scans all of: the spellbook and spell-effect seeds, the
          `spell_slots` table, the `before_state` and `after_state` JSON of `action_snapshots` (they
-         hold `spell_slots`, which undo and redo restore) and the `spellId` of cast payloads in
-         `action_log`. If any removed spell is referenced, roll back and refuse to start, listing
+         hold `spell_slots`, which undo and redo restore) and every spell id in `action_log` payloads (`spellId` of cast and
+         exposure entries, `spells[].id` of spell_prep entries). If any removed spell is referenced, roll back and refuse to start, listing
          every such `key` and where it is used. No spell is silently lost.
    5. Record the imported `format` and `version` in the same transaction; a failed import changes
       nothing, and a second run of the same artifact changes nothing.

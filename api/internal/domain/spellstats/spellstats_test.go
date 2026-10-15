@@ -3,8 +3,9 @@ package spellstats_test
 import (
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
 // All inputs are literal PHB strings written here; nothing reads seeds/.

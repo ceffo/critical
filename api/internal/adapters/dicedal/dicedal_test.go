@@ -5,11 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ceffo/critical/api/internal/adapters/dicedal"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func open(t *testing.T) *dicedal.DAL {

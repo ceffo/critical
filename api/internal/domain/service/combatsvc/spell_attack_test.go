@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
 // a spell's to-hit is one d20 against THAC0 - AC with the

@@ -3,8 +3,9 @@ package spellsvc_test
 import (
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
 func TestKeys(t *testing.T) {

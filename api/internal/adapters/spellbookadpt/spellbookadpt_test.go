@@ -3,8 +3,9 @@ package spellbookadpt_test
 import (
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 )
 
 const catalog = `[{"name":"Mirror Image","class":"Wizard","level":2},{"name":"Fireball","class":"Wizard","level":3},{"name":"Cure Light Wounds","class":"Priest","level":1}]`

@@ -3,11 +3,12 @@ package spelleffectsvc_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/pkg/formula"
 	"github.com/ceffo/critical/api/pkg/must"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func damageEntry(d spelleffectsvc.Damage) spelleffectsvc.Entry {

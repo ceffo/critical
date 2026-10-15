@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
 )
 
 // catalogue is a fixture in the Reader's order (level, name, class).

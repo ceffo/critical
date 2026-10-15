@@ -11,12 +11,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
 // seqDice is a Dice that hands out scripted values and records the order of

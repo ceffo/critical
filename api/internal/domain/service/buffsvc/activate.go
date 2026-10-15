@@ -4,8 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/google/uuid"
+
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
 // Activate appends buff to the active list and logs it. Assigns a UUID when

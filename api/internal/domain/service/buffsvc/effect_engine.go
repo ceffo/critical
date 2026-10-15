@@ -164,14 +164,14 @@ func validateBuff(b BuffEffect) error {
 
 // advanceRoundBuffs decrements timed buffs by 1 and partitions into
 // (still-active, just-expired). Untimed buffs pass through.
-func advanceRoundBuffs(buffs []BuffEffect) (active []BuffEffect, expired []BuffEffect) {
+func advanceRoundBuffs(buffs []BuffEffect) (active, expired []BuffEffect) {
 	return elapseBuffs(buffs, 1)
 }
 
 // elapseBuffs counts timed buffs down by rounds and partitions into
 // (still-active, just-expired); an expired buff's Duration is 0. Untimed
 // buffs (charge-only, until dismissed) pass through unchanged.
-func elapseBuffs(buffs []BuffEffect, rounds int) (active []BuffEffect, expired []BuffEffect) {
+func elapseBuffs(buffs []BuffEffect, rounds int) (active, expired []BuffEffect) {
 	active = []BuffEffect{}
 	expired = []BuffEffect{}
 	for _, b := range buffs {

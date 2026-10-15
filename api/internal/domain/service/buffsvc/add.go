@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/google/uuid"
+
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
 // Add puts buff on the active list without recording an entry, for a use

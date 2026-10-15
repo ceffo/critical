@@ -7,12 +7,13 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
 func rows(r ...[3]int) []combatsvc.CritRow {

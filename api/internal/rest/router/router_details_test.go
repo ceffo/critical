@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 )
 
 func TestDetails_PatchMapsBodyToPatchAndAnswersWithDetails(t *testing.T) {

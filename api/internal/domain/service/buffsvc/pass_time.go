@@ -40,7 +40,7 @@ func RoundsForHours(hours float64) (int, error) {
 // untimed buffs are untouched; the round counter goes to 0 (out of combat).
 // One time_passed entry snapshots the buffs and the round, so voiding it
 // restores both.
-func (s *service) PassTime(ctx context.Context, characterID int64, hours float64) (active []BuffEffect, expired []BuffEffect, rounds int, round int, err error) {
+func (s *service) PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []BuffEffect, rounds, round int, err error) {
 	rounds, err = RoundsForHours(hours)
 	if err != nil {
 		return nil, nil, 0, 0, err

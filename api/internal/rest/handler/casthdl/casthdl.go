@@ -10,10 +10,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
-	"github.com/go-chi/chi/v5"
 )
 
 // Router is the chi subset we need.

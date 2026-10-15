@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // ADR 0004 step 15: a buff carries the round it was put on the list in;

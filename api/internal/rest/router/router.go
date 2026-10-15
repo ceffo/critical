@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/actionloghdl"
@@ -26,7 +28,6 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/weaponhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/xphdl"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
-	"github.com/go-chi/chi/v5"
 )
 
 // New builds the router and mounts each handler package against bs.

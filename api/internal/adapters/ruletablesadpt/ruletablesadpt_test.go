@@ -6,10 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
-	"github.com/ceffo/critical/api/pkg/must"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/pkg/must"
 )
 
 var seedsDir = filepath.Join("..", "..", "..", "testdata", "seeds")

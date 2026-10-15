@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/caarlos0/env/v11"
+
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )

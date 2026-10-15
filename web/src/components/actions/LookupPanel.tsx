@@ -14,7 +14,7 @@ import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellTexts } from "@/i18n/spellName";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
-import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
+import { statDice, statValue, type StatKey } from "@/lib/spellValues";
 import { damageFormula, damageText } from "@/lib/spellDice";
 import { damageRows, exposureRows } from "@/lib/spellMode";
 import { exposureDamageText } from "@/lib/spellDice";
@@ -23,7 +23,8 @@ import {
   sphereLabel,
   schoolLabel,
   spheresLabel,
-  translateValue,
+  componentsText,
+  statText,
 } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -93,7 +94,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
     t("lookup.levelLabel", { level: spell.level }),
     schoolLabel(t, spell.school),
     spheresLabel(t, spell.sphere),
-    spell.components,
+    componentsText(i18n.language, spell),
   ].filter(Boolean);
   // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
   // mode with damage for a spell with modes, then the stats with dice.
@@ -137,7 +138,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
       <dl className="flex flex-col text-body">
         {STATS.map((key) => {
           const v = value(key);
-          const raw = translateValue(t, key, statRaw(spell, key));
+          const raw = statText(t, i18n.language, spell, key);
           return (
             <div
               key={key}

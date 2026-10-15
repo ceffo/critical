@@ -7,8 +7,11 @@ import {
   schoolLabel,
   sphereLabel,
   spheresLabel,
+  componentsText,
+  statText,
   translateValue,
 } from "./lookupLabels";
+import type { Spell } from "@/types/spells";
 
 async function tFor(lng: "en" | "fr") {
   const i = i18next.createInstance();
@@ -236,5 +239,48 @@ describe("schoolLabel", () => {
     const t = await tFor("fr");
     expect(schoolLabel(t, "Chronomancy")).toBe("Chronomancy");
     expect(schoolLabel(t, "")).toBe("");
+  });
+});
+
+describe("statText", () => {
+  // Magic Missile with French text for its range and duration only (the fixture's shape): the
+  // other stats fall back to English, per field.
+  const mm = {
+    casting_time: "1",
+    range: "60 yds. + 10 yds./level",
+    duration: "Instantaneous",
+    area_of_effect: "1-5 targets",
+    components: "V, S",
+    saving_throw: "None",
+    range_fr: "60 mètres + 10 mètres par niveau",
+    duration_fr: "Instantanée immédiate",
+    components_fr: "V, S (M optionnel)",
+  } as Spell;
+
+  it("shows the catalogue's French text in French", async () => {
+    const t = await tFor("fr");
+    expect(statText(t, "fr", mm, "range")).toBe(
+      "60 mètres + 10 mètres par niveau",
+    );
+    // the French text wins over the label of the English value
+    expect(statText(t, "fr", mm, "duration")).toBe("Instantanée immédiate");
+    expect(componentsText("fr", mm)).toBe("V, S (M optionnel)");
+  });
+
+  it("falls back to the English text per field, its common values labelled", async () => {
+    const t = await tFor("fr");
+    expect(statText(t, "fr", mm, "castingTime")).toBe("1");
+    expect(statText(t, "fr", mm, "area")).toBe("1-5 targets");
+    expect(statText(t, "fr", mm, "save")).toBe("Aucune");
+    expect(
+      componentsText("fr", { ...mm, components_fr: undefined } as Spell),
+    ).toBe("V, S");
+  });
+
+  it("is English in English, even with French texts", async () => {
+    const t = await tFor("en");
+    expect(statText(t, "en", mm, "range")).toBe("60 yds. + 10 yds./level");
+    expect(statText(t, "en", mm, "duration")).toBe("Instantaneous");
+    expect(componentsText("en", mm)).toBe("V, S");
   });
 });

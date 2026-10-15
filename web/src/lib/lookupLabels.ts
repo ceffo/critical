@@ -2,7 +2,9 @@
 // stat values. The stored data and the API values are never changed; text with no entry
 // in the catalogue shows exactly as scraped.
 import type { TFunction } from "i18next";
-import type { StatKey } from "@/lib/spellValues";
+import { frenchStat } from "@/i18n/spellName";
+import { statField, statRaw, type StatKey } from "@/lib/spellValues";
+import type { Spell } from "@/types/spells";
 
 /** Catalogue key of a raw text: trimmed, lowercased, every run of non-alphanumerics -> "_". */
 export function labelKey(raw: string): string {
@@ -26,6 +28,28 @@ export function translateValue(
   raw: string,
 ): string {
   return lookupLabel(t, `values.${stat}`, raw);
+}
+
+/**
+ * A stat's text in the detail grid: the catalogue's French text in French (ADR 0021), else the
+ * English text, its common values labelled (`translateValue`). Per field: a spell may have a
+ * French range and an English casting time.
+ */
+export function statText(
+  t: TFunction,
+  lang: string,
+  spell: Spell,
+  key: StatKey,
+): string {
+  return (
+    frenchStat(lang, spell, statField(key)) ??
+    translateValue(t, key, statRaw(spell, key))
+  );
+}
+
+/** The components of the spell's meta line: French in French when the catalogue has them. */
+export function componentsText(lang: string, spell: Spell): string {
+  return frenchStat(lang, spell, "components") ?? spell.components;
 }
 
 /** A Priest sphere name ("Elemental Fire"). */

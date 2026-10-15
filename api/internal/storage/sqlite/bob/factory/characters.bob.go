@@ -66,7 +66,7 @@ type characterR struct {
 	RoundStates []*characterRRoundStatesR
 	SavedBuffs  []*characterRSavedBuffsR
 	SpellSlots  []*characterRSpellSlotsR
-	XPEvents    []*characterRXPEventsR
+	XPEntries   []*characterRXPEntriesR
 }
 
 type characterRActionLogsR struct {
@@ -96,9 +96,9 @@ type characterRSpellSlotsR struct {
 	number int
 	o      *SpellSlotTemplate
 }
-type characterRXPEventsR struct {
+type characterRXPEntriesR struct {
 	number int
-	o      *XPEventTemplate
+	o      *XPEntryTemplate
 }
 
 // Apply mods to the CharacterTemplate
@@ -210,9 +210,9 @@ func (t CharacterTemplate) setModelRels(o *models.Character) {
 		o.R.Loaded.SpellSlots = true
 	}
 
-	if t.r.XPEvents != nil {
-		rel := models.XPEventSlice{}
-		for _, r := range t.r.XPEvents {
+	if t.r.XPEntries != nil {
+		rel := models.XPEntrySlice{}
+		for _, r := range t.r.XPEntries {
 			related := r.o.BuildMany(r.number)
 			for _, rel := range related {
 				rel.CharacterID = o.ID // h2
@@ -221,8 +221,8 @@ func (t CharacterTemplate) setModelRels(o *models.Character) {
 			}
 			rel = append(rel, related...)
 		}
-		o.R.XPEvents = rel
-		o.R.Loaded.XPEvents = true
+		o.R.XPEntries = rel
+		o.R.Loaded.XPEntries = true
 	}
 }
 
@@ -576,19 +576,19 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 		}
 	}
 
-	isXPEventsDone, _ := characterRelXPEventsCtx.Value(ctx)
-	if !isXPEventsDone && o.r.XPEvents != nil {
-		ctx = characterRelXPEventsCtx.WithValue(ctx, true)
-		for _, r := range o.r.XPEvents {
+	isXPEntriesDone, _ := characterRelXPEntriesCtx.Value(ctx)
+	if !isXPEntriesDone && o.r.XPEntries != nil {
+		ctx = characterRelXPEntriesCtx.WithValue(ctx, true)
+		for _, r := range o.r.XPEntries {
 			if r.o.alreadyPersisted {
-				m.R.XPEvents = append(m.R.XPEvents, r.o.Build())
+				m.R.XPEntries = append(m.R.XPEntries, r.o.Build())
 			} else {
 				rel7, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachXPEvents(ctx, exec, rel7...)
+				err = m.AttachXPEntries(ctx, exec, rel7...)
 				if err != nil {
 					return err
 				}
@@ -631,7 +631,7 @@ func (o *CharacterTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	newMInCreation["characters:round_state:fk_round_state_0"] = m
 	newMInCreation["characters:saved_buffs:fk_saved_buffs_0"] = m
 	newMInCreation["characters:spell_slots:fk_spell_slots_0"] = m
-	newMInCreation["characters:xp_events:fk_xp_events_0"] = m
+	newMInCreation["characters:xp_entries:fk_xp_entries_0"] = m
 
 	ctx = modelsInCreationCtx.WithValue(ctx, newMInCreation)
 
@@ -1591,50 +1591,50 @@ func (m characterMods) WithoutSpellSlots() CharacterMod {
 	})
 }
 
-func (m characterMods) WithXPEvents(number int, related *XPEventTemplate) CharacterMod {
+func (m characterMods) WithXPEntries(number int, related *XPEntryTemplate) CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
-		o.r.XPEvents = []*characterRXPEventsR{{
+		o.r.XPEntries = []*characterRXPEntriesR{{
 			number: number,
 			o:      related,
 		}}
 	})
 }
 
-func (m characterMods) WithNewXPEvents(number int, mods ...XPEventMod) CharacterMod {
+func (m characterMods) WithNewXPEntries(number int, mods ...XPEntryMod) CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
-		related := o.f.NewXPEventWithContext(ctx, mods...)
-		m.WithXPEvents(number, related).Apply(ctx, o)
+		related := o.f.NewXPEntryWithContext(ctx, mods...)
+		m.WithXPEntries(number, related).Apply(ctx, o)
 	})
 }
 
-func (m characterMods) AddXPEvents(number int, related *XPEventTemplate) CharacterMod {
+func (m characterMods) AddXPEntries(number int, related *XPEntryTemplate) CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
-		o.r.XPEvents = append(o.r.XPEvents, &characterRXPEventsR{
+		o.r.XPEntries = append(o.r.XPEntries, &characterRXPEntriesR{
 			number: number,
 			o:      related,
 		})
 	})
 }
 
-func (m characterMods) AddNewXPEvents(number int, mods ...XPEventMod) CharacterMod {
+func (m characterMods) AddNewXPEntries(number int, mods ...XPEntryMod) CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
-		related := o.f.NewXPEventWithContext(ctx, mods...)
-		m.AddXPEvents(number, related).Apply(ctx, o)
+		related := o.f.NewXPEntryWithContext(ctx, mods...)
+		m.AddXPEntries(number, related).Apply(ctx, o)
 	})
 }
 
-func (m characterMods) AddExistingXPEvents(existingModels ...*models.XPEvent) CharacterMod {
+func (m characterMods) AddExistingXPEntries(existingModels ...*models.XPEntry) CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
 		for _, em := range existingModels {
-			o.r.XPEvents = append(o.r.XPEvents, &characterRXPEventsR{
-				o: o.f.fromExistingXPEvent(ctx, em),
+			o.r.XPEntries = append(o.r.XPEntries, &characterRXPEntriesR{
+				o: o.f.fromExistingXPEntry(ctx, em),
 			})
 		}
 	})
 }
 
-func (m characterMods) WithoutXPEvents() CharacterMod {
+func (m characterMods) WithoutXPEntries() CharacterMod {
 	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
-		o.r.XPEvents = nil
+		o.r.XPEntries = nil
 	})
 }

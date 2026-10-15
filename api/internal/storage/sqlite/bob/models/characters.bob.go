@@ -67,7 +67,7 @@ type characterR struct {
 	RoundStates RoundStateSlice // fk_round_state_0
 	SavedBuffs  SavedBuffSlice  // fk_saved_buffs_0
 	SpellSlots  SpellSlotSlice  // fk_spell_slots_0
-	XPEvents    XPEventSlice    // fk_xp_events_0
+	XPEntries   XPEntrySlice    // fk_xp_entries_0
 	// Loaded reports whether each relationship has been loaded.
 	// A relationship's bool is set by Load*, Preload, ThenLoad, factory builds,
 	// and to-one Attach/Insert operations. To-many Attach/Insert operations leave it unchanged.
@@ -83,7 +83,7 @@ type characterRLoaded struct {
 	RoundStates bool // fk_round_state_0
 	SavedBuffs  bool // fk_saved_buffs_0
 	SpellSlots  bool // fk_spell_slots_0
-	XPEvents    bool // fk_xp_events_0
+	XPEntries   bool // fk_xp_entries_0
 }
 
 func buildCharacterColumns(tableName string) characterColumns {
@@ -1004,22 +1004,22 @@ func (os CharacterSlice) SpellSlots(mods ...bob.Mod[*dialect.SelectQuery]) Spell
 	)...)
 }
 
-// XPEvents starts a query for related objects on xp_events
-func (o *Character) XPEvents(mods ...bob.Mod[*dialect.SelectQuery]) XPEventsQuery {
-	return XPEvents.Query(append(mods,
-		sm.Where(XPEvents.Columns.CharacterID.EQ(sqlite.Arg(o.ID))),
+// XPEntries starts a query for related objects on xp_entries
+func (o *Character) XPEntries(mods ...bob.Mod[*dialect.SelectQuery]) XPEntriesQuery {
+	return XPEntries.Query(append(mods,
+		sm.Where(XPEntries.Columns.CharacterID.EQ(sqlite.Arg(o.ID))),
 	)...)
 }
 
-func (os CharacterSlice) XPEvents(mods ...bob.Mod[*dialect.SelectQuery]) XPEventsQuery {
+func (os CharacterSlice) XPEntries(mods ...bob.Mod[*dialect.SelectQuery]) XPEntriesQuery {
 	PKArgSlice := make([]bob.Expression, len(os))
 	for i, o := range os {
 		PKArgSlice[i] = sqlite.ArgGroup(o.ID)
 	}
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
-	return XPEvents.Query(append(mods,
-		sm.Where(sqlite.Group(XPEvents.Columns.CharacterID).OP("IN", PKArgExpr)),
+	return XPEntries.Query(append(mods,
+		sm.Where(sqlite.Group(XPEntries.Columns.CharacterID).OP("IN", PKArgExpr)),
 	)...)
 }
 
@@ -1501,67 +1501,67 @@ func (character0 *Character) AttachSpellSlots(ctx context.Context, exec bob.Exec
 	return nil
 }
 
-func insertCharacterXPEvents0(ctx context.Context, exec bob.Executor, xpEvents1 []*XPEventSetter, character0 *Character) (XPEventSlice, error) {
-	for i := range xpEvents1 {
-		xpEvents1[i].CharacterID = omit.From(character0.ID)
+func insertCharacterXPEntries0(ctx context.Context, exec bob.Executor, xpEntries1 []*XPEntrySetter, character0 *Character) (XPEntrySlice, error) {
+	for i := range xpEntries1 {
+		xpEntries1[i].CharacterID = omit.From(character0.ID)
 	}
 
-	ret, err := XPEvents.Insert(bob.ToMods(xpEvents1...)).All(ctx, exec)
+	ret, err := XPEntries.Insert(bob.ToMods(xpEntries1...)).All(ctx, exec)
 	if err != nil {
-		return ret, fmt.Errorf("insertCharacterXPEvents0: %w", err)
+		return ret, fmt.Errorf("insertCharacterXPEntries0: %w", err)
 	}
 
 	return ret, nil
 }
 
-func attachCharacterXPEvents0(ctx context.Context, exec bob.Executor, count int, xpEvents1 XPEventSlice, character0 *Character) (XPEventSlice, error) {
-	setter := &XPEventSetter{
+func attachCharacterXPEntries0(ctx context.Context, exec bob.Executor, count int, xpEntries1 XPEntrySlice, character0 *Character) (XPEntrySlice, error) {
+	setter := &XPEntrySetter{
 		CharacterID: omit.From(character0.ID),
 	}
 
-	err := xpEvents1.UpdateAll(ctx, exec, *setter)
+	err := xpEntries1.UpdateAll(ctx, exec, *setter)
 	if err != nil {
-		return nil, fmt.Errorf("attachCharacterXPEvents0: %w", err)
+		return nil, fmt.Errorf("attachCharacterXPEntries0: %w", err)
 	}
 
-	return xpEvents1, nil
+	return xpEntries1, nil
 }
 
-func (character0 *Character) InsertXPEvents(ctx context.Context, exec bob.Executor, related ...*XPEventSetter) error {
+func (character0 *Character) InsertXPEntries(ctx context.Context, exec bob.Executor, related ...*XPEntrySetter) error {
 	if len(related) == 0 {
 		return nil
 	}
 
 	var err error
 
-	xpEvents1, err := insertCharacterXPEvents0(ctx, exec, related, character0)
+	xpEntries1, err := insertCharacterXPEntries0(ctx, exec, related, character0)
 	if err != nil {
 		return err
 	}
 
-	character0.R.XPEvents = append(character0.R.XPEvents, xpEvents1...)
+	character0.R.XPEntries = append(character0.R.XPEntries, xpEntries1...)
 
-	for _, rel := range xpEvents1 {
+	for _, rel := range xpEntries1 {
 		rel.R.Character = character0
 		rel.R.Loaded.Character = true
 	}
 	return nil
 }
 
-func (character0 *Character) AttachXPEvents(ctx context.Context, exec bob.Executor, related ...*XPEvent) error {
+func (character0 *Character) AttachXPEntries(ctx context.Context, exec bob.Executor, related ...*XPEntry) error {
 	if len(related) == 0 {
 		return nil
 	}
 
 	var err error
-	xpEvents1 := XPEventSlice(related)
+	xpEntries1 := XPEntrySlice(related)
 
-	_, err = attachCharacterXPEvents0(ctx, exec, len(related), xpEvents1, character0)
+	_, err = attachCharacterXPEntries0(ctx, exec, len(related), xpEntries1, character0)
 	if err != nil {
 		return err
 	}
 
-	character0.R.XPEvents = append(character0.R.XPEvents, xpEvents1...)
+	character0.R.XPEntries = append(character0.R.XPEntries, xpEntries1...)
 
 	for _, rel := range related {
 		rel.R.Character = character0
@@ -1726,15 +1726,15 @@ func (w characterWhereR[Q]) HasSpellSlots(filters ...bob.Mod[*dialect.SelectQuer
 	return mods.Where[Q]{E: sqlite.Exists(q)}
 }
 
-// HasXPEvents filters parents that have a matching XPEvents using a
+// HasXPEntries filters parents that have a matching XPEntries using a
 // correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
 // multiply parent rows, so no DISTINCT is needed. The optional filters are
-// applied to the subquery (i.e. to XPEvents).
-func (w characterWhereR[Q]) HasXPEvents(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+// applied to the subquery (i.e. to XPEntries).
+func (w characterWhereR[Q]) HasXPEntries(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
 	q := sqlite.Select(
 		sm.Columns(sqlite.Raw("1")),
-		sm.From(XPEvents.NameExpr()),
-		sm.Where(XPEvents.Columns.CharacterID.EQ(w.cols.ID)),
+		sm.From(XPEntries.NameExpr()),
+		sm.Where(XPEntries.Columns.CharacterID.EQ(w.cols.ID)),
 	)
 	q.Apply(filters...)
 	return mods.Where[Q]{E: sqlite.Exists(q)}
@@ -2031,14 +2031,14 @@ func (o *Character) Preload(name string, retrieved any) error {
 			}
 		}
 		return nil
-	case "XPEvents":
-		rels, ok := retrieved.(XPEventSlice)
+	case "XPEntries":
+		rels, ok := retrieved.(XPEntrySlice)
 		if !ok {
 			return fmt.Errorf("character cannot load %T as %q", retrieved, name)
 		}
 
-		o.R.XPEvents = rels
-		o.R.Loaded.XPEvents = true
+		o.R.XPEntries = rels
+		o.R.Loaded.XPEntries = true
 
 		for _, rel := range rels {
 			if rel != nil {
@@ -2082,7 +2082,7 @@ type characterThenLoader[Q orm.Loadable] struct {
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	XPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	XPEntries   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
 
 func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
@@ -2107,8 +2107,8 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 	type SpellSlotsLoadInterface interface {
 		LoadSpellSlots(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
-	type XPEventsLoadInterface interface {
-		LoadXPEvents(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	type XPEntriesLoadInterface interface {
+		LoadXPEntries(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 
 	return characterThenLoader[Q]{
@@ -2154,10 +2154,10 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 				return retrieved.LoadSpellSlots(ctx, exec, mods...)
 			},
 		),
-		XPEvents: thenLoadBuilder[Q](
-			"XPEvents",
-			func(ctx context.Context, exec bob.Executor, retrieved XPEventsLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
-				return retrieved.LoadXPEvents(ctx, exec, mods...)
+		XPEntries: thenLoadBuilder[Q](
+			"XPEntries",
+			func(ctx context.Context, exec bob.Executor, retrieved XPEntriesLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadXPEntries(ctx, exec, mods...)
 			},
 		),
 	}
@@ -2684,17 +2684,17 @@ func (os CharacterSlice) LoadSpellSlots(ctx context.Context, exec bob.Executor, 
 	return nil
 }
 
-// LoadXPEvents loads the character's XPEvents into the .R struct
-func (o *Character) LoadXPEvents(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+// LoadXPEntries loads the character's XPEntries into the .R struct
+func (o *Character) LoadXPEntries(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if o == nil {
 		return nil
 	}
 
 	// Reset the relationship
-	o.R.XPEvents = nil
-	o.R.Loaded.XPEvents = false
+	o.R.XPEntries = nil
+	o.R.Loaded.XPEntries = false
 
-	related, err := o.XPEvents(mods...).All(ctx, exec)
+	related, err := o.XPEntries(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -2704,18 +2704,18 @@ func (o *Character) LoadXPEvents(ctx context.Context, exec bob.Executor, mods ..
 		rel.R.Loaded.Character = true
 	}
 
-	o.R.XPEvents = related
-	o.R.Loaded.XPEvents = true
+	o.R.XPEntries = related
+	o.R.Loaded.XPEntries = true
 	return nil
 }
 
-// LoadXPEvents loads the character's XPEvents into the .R struct
-func (os CharacterSlice) LoadXPEvents(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+// LoadXPEntries loads the character's XPEntries into the .R struct
+func (os CharacterSlice) LoadXPEntries(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if len(os) == 0 {
 		return nil
 	}
 
-	xpEvents, err := os.XPEvents(mods...).All(ctx, exec)
+	xpEntries, err := os.XPEntries(mods...).All(ctx, exec)
 	if err != nil {
 		return err
 	}
@@ -2725,8 +2725,8 @@ func (os CharacterSlice) LoadXPEvents(ctx context.Context, exec bob.Executor, mo
 			continue
 		}
 
-		o.R.XPEvents = nil
-		o.R.Loaded.XPEvents = true
+		o.R.XPEntries = nil
+		o.R.Loaded.XPEntries = true
 	}
 	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
 	characterByKey := make(map[int64][]*Character, len(os))
@@ -2738,7 +2738,7 @@ func (os CharacterSlice) LoadXPEvents(ctx context.Context, exec bob.Executor, mo
 		characterByKey[o.ID] = append(characterByKey[o.ID], o)
 	}
 
-	for _, rel := range xpEvents {
+	for _, rel := range xpEntries {
 
 		owners, ok := characterByKey[rel.CharacterID]
 		if !ok {
@@ -2750,7 +2750,7 @@ func (os CharacterSlice) LoadXPEvents(ctx context.Context, exec bob.Executor, mo
 			rel.R.Character = o
 			rel.R.Loaded.Character = true
 
-			o.R.XPEvents = append(o.R.XPEvents, rel)
+			o.R.XPEntries = append(o.R.XPEntries, rel)
 
 		}
 	}
@@ -2766,7 +2766,7 @@ type characterC struct {
 	RoundStates *int64
 	SavedBuffs  *int64
 	SpellSlots  *int64
-	XPEvents    *int64
+	XPEntries   *int64
 }
 
 // PreloadCount sets a count in the C struct by name
@@ -2788,8 +2788,8 @@ func (o *Character) PreloadCount(name string, count int64) error {
 		o.C.SavedBuffs = &count
 	case "SpellSlots":
 		o.C.SpellSlots = &count
-	case "XPEvents":
-		o.C.XPEvents = &count
+	case "XPEntries":
+		o.C.XPEntries = &count
 	}
 	return nil
 }
@@ -2801,7 +2801,7 @@ type characterCountPreloader struct {
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
-	XPEvents    func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
+	XPEntries   func(...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader
 }
 
 func buildCharacterCountPreloader() characterCountPreloader {
@@ -2908,8 +2908,8 @@ func buildCharacterCountPreloader() characterCountPreloader {
 				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
 			})
 		},
-		XPEvents: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
-			return countPreloader[*Character]("XPEvents", func(parent string) bob.Expression {
+		XPEntries: func(mods ...bob.Mod[*dialect.SelectQuery]) sqlite.Preloader {
+			return countPreloader[*Character]("XPEntries", func(parent string) bob.Expression {
 				// Build a correlated subquery: (SELECT COUNT(*) FROM related WHERE fk = parent.pk)
 				if parent == "" {
 					parent = Characters.Alias()
@@ -2918,8 +2918,8 @@ func buildCharacterCountPreloader() characterCountPreloader {
 				subqueryMods := []bob.Mod[*dialect.SelectQuery]{
 					sm.Columns(sqlite.Raw("count(*)")),
 
-					sm.From(XPEvents.NameAsExpr()),
-					sm.Where(sqlite.Quote(XPEvents.Alias(), "character_id").EQ(sqlite.Quote(parent, "id"))),
+					sm.From(XPEntries.NameAsExpr()),
+					sm.Where(sqlite.Quote(XPEntries.Alias(), "character_id").EQ(sqlite.Quote(parent, "id"))),
 				}
 				subqueryMods = append(subqueryMods, mods...)
 				return sqlite.Group(sqlite.Select(subqueryMods...).Expression)
@@ -2935,7 +2935,7 @@ type characterCountThenLoader[Q orm.Loadable] struct {
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	SpellSlots  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
-	XPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	XPEntries   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
 
 func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q] {
@@ -2957,8 +2957,8 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 	type SpellSlotsCountInterface interface {
 		LoadCountSpellSlots(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
-	type XPEventsCountInterface interface {
-		LoadCountXPEvents(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	type XPEntriesCountInterface interface {
+		LoadCountXPEntries(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 
 	return characterCountThenLoader[Q]{
@@ -2998,10 +2998,10 @@ func buildCharacterCountThenLoader[Q orm.Loadable]() characterCountThenLoader[Q]
 				return retrieved.LoadCountSpellSlots(ctx, exec, mods...)
 			},
 		),
-		XPEvents: countThenLoadBuilder[Q](
-			"XPEvents",
-			func(ctx context.Context, exec bob.Executor, retrieved XPEventsCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
-				return retrieved.LoadCountXPEvents(ctx, exec, mods...)
+		XPEntries: countThenLoadBuilder[Q](
+			"XPEntries",
+			func(ctx context.Context, exec bob.Executor, retrieved XPEntriesCountInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadCountXPEntries(ctx, exec, mods...)
 			},
 		),
 	}
@@ -3475,23 +3475,23 @@ func (os CharacterSlice) LoadCountSpellSlots(ctx context.Context, exec bob.Execu
 	return nil
 }
 
-// LoadCountXPEvents loads the count of XPEvents into the C struct
-func (o *Character) LoadCountXPEvents(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+// LoadCountXPEntries loads the count of XPEntries into the C struct
+func (o *Character) LoadCountXPEntries(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if o == nil {
 		return nil
 	}
 
-	count, err := o.XPEvents(mods...).Count(ctx, exec)
+	count, err := o.XPEntries(mods...).Count(ctx, exec)
 	if err != nil {
 		return err
 	}
 
-	o.C.XPEvents = &count
+	o.C.XPEntries = &count
 	return nil
 }
 
-// LoadCountXPEvents loads the count of XPEvents for a slice in a single batch query
-func (os CharacterSlice) LoadCountXPEvents(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+// LoadCountXPEntries loads the count of XPEntries for a slice in a single batch query
+func (os CharacterSlice) LoadCountXPEntries(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
 	if len(os) == 0 {
 		return nil
 	}
@@ -3516,16 +3516,16 @@ func (os CharacterSlice) LoadCountXPEvents(ctx context.Context, exec bob.Executo
 	batchMods := []bob.Mod[*dialect.SelectQuery]{
 		// SELECT fk AS parent_pk, count(*)
 		sm.Columns(
-			XPEvents.Columns.CharacterID.As("id"),
+			XPEntries.Columns.CharacterID.As("id"),
 			sqlite.Raw("count(*) as count"),
 		),
 		// Single-hop: FROM related table directly
-		sm.From(XPEvents.NameAsExpr()),
+		sm.From(XPEntries.NameAsExpr()),
 
 		// WHERE fk IN (parent PKs) — psql single-column FK uses `= ANY(array)` (see PKArgExpr above)
-		sm.Where(XPEvents.Columns.CharacterID.OP("IN", PKArgExpr)),
+		sm.Where(XPEntries.Columns.CharacterID.OP("IN", PKArgExpr)),
 		// GROUP BY fk columns
-		sm.GroupBy(XPEvents.Columns.CharacterID),
+		sm.GroupBy(XPEntries.Columns.CharacterID),
 	}
 	batchMods = append(batchMods, mods...)
 
@@ -3547,7 +3547,7 @@ func (os CharacterSlice) LoadCountXPEvents(ctx context.Context, exec bob.Executo
 			continue
 		}
 		count := countMap[o.ID]
-		o.C.XPEvents = &count
+		o.C.XPEntries = &count
 	}
 
 	return nil
@@ -3562,7 +3562,7 @@ type characterJoins[Q dialect.Joinable] struct {
 	RoundStates modAs[Q, roundStateColumns]
 	SavedBuffs  modAs[Q, savedBuffColumns]
 	SpellSlots  modAs[Q, spellSlotColumns]
-	XPEvents    modAs[Q, xpEventColumns]
+	XPEntries   modAs[Q, xpEntryColumns]
 }
 
 func (j characterJoins[Q]) aliasedAs(alias string) characterJoins[Q] {
@@ -3670,13 +3670,13 @@ func buildCharacterJoins[Q dialect.Joinable](cols characterColumns, typ string) 
 				return mods
 			},
 		},
-		XPEvents: modAs[Q, xpEventColumns]{
-			c: XPEvents.Columns,
-			f: func(to xpEventColumns) bob.Mod[Q] {
+		XPEntries: modAs[Q, xpEntryColumns]{
+			c: XPEntries.Columns,
+			f: func(to xpEntryColumns) bob.Mod[Q] {
 				mods := make(mods.QueryMods[Q], 0, 1)
 
 				{
-					mods = append(mods, dialect.Join[Q](typ, XPEvents.NameExpr().As(to.Alias())).On(
+					mods = append(mods, dialect.Join[Q](typ, XPEntries.NameExpr().As(to.Alias())).On(
 						to.CharacterID.EQ(cols.ID),
 					))
 				}

@@ -1,6 +1,7 @@
 // Package ruletablesvc holds the AD&D 2e Player's Handbook rule tables the
 // engine looks values up in: Table 1 (Strength), Table 2 (Dexterity) and
-// Table 32 (Bard spell progression), plus the validation that makes a table
+// Table 32 (Bard spell progression) and Table 25 (the Thief/Bard experience
+// levels), plus the validation that makes a table
 // usable (contiguous, no overlap). The seed adapter builds a Tables from
 // seeds/rule_tables.json; consumers (attack resolution, spell preparation)
 // depend on Lookup only.
@@ -51,6 +52,13 @@ type DexRow struct {
 	Defensive      int
 }
 
+// XPRow is one row of PHB Table 25 (Thief/Bard column): the experience
+// points that reach Level.
+type XPRow struct {
+	Level int
+	XP    int
+}
+
 // BardRow is one row of PHB Table 32: PerSpellLevel[i] is the number of
 // spells of spell level i+1.
 type BardRow struct {
@@ -63,14 +71,16 @@ type Tables struct {
 	str  []StrengthRow
 	dex  []DexRow
 	bard map[int]BardRow
+	xp   []int // xp[level-1] is the threshold of that level
 }
 
 var _ Lookup = (*Tables)(nil)
 
 // New validates the rows and builds the lookup. Strength rows must cover
 // scores 1..25 with 18 split into a contiguous 0..100 exceptional range;
-// dexterity rows 1..25 contiguously; bard rows levels 1..20 exactly once.
-func New(str []StrengthRow, dex []DexRow, bard []BardRow) (*Tables, error) {
+// dexterity rows 1..25 contiguously; bard rows levels 1..20 exactly once;
+// experience rows levels 1..20 in order, from 0 and strictly increasing.
+func New(str []StrengthRow, dex []DexRow, bard []BardRow, xp []XPRow) (*Tables, error) {
 	if err := validateStrength(str); err != nil {
 		return nil, fmt.Errorf("strength table: %w", err)
 	}
@@ -97,11 +107,41 @@ func New(str []StrengthRow, dex []DexRow, bard []BardRow) (*Tables, error) {
 			return nil, fmt.Errorf("bard table: missing level %d", l)
 		}
 	}
+	thresholds, err := validateXP(xp)
+	if err != nil {
+		return nil, fmt.Errorf("experience table: %w", err)
+	}
 	return &Tables{
 		str:  append([]StrengthRow(nil), str...),
 		dex:  append([]DexRow(nil), dex...),
 		bard: byLevel,
+		xp:   thresholds,
 	}, nil
+}
+
+// validateXP checks that the rows are levels 1..MaxBardLevel in order, that
+// level 1 starts at 0 XP and that every level needs more XP than the one
+// before, and returns the thresholds indexed by level-1.
+func validateXP(rows []XPRow) ([]int, error) {
+	if len(rows) != MaxBardLevel {
+		return nil, fmt.Errorf("needs levels 1..%d, got %d rows", MaxBardLevel, len(rows))
+	}
+	out := make([]int, 0, MaxBardLevel)
+	prev := 0
+	for i, r := range rows {
+		if r.Level != i+1 {
+			return nil, fmt.Errorf("row %d: level %d expected, got %d", i, i+1, r.Level)
+		}
+		if i == 0 && r.XP != 0 {
+			return nil, errors.New("level 1 must start at 0 XP")
+		}
+		if i > 0 && r.XP <= prev {
+			return nil, fmt.Errorf("level %d: %d XP is not above level %d", r.Level, r.XP, i)
+		}
+		out = append(out, r.XP)
+		prev = r.XP
+	}
+	return out, nil
 }
 
 func validateStrength(rows []StrengthRow) error {
@@ -194,4 +234,13 @@ func (t *Tables) BardSpellsPerDay(level int) (map[int]int, error) {
 		}
 	}
 	return out, nil
+}
+
+// BardXPThreshold returns the experience points that reach level (PHB Table
+// 25, Thief/Bard column), or an error outside 1..MaxBardLevel.
+func (t *Tables) BardXPThreshold(level int) (int, error) {
+	if level < 1 || level > len(t.xp) {
+		return 0, fmt.Errorf("bard level %d out of range 1..%d", level, MaxBardLevel)
+	}
+	return t.xp[level-1], nil
 }

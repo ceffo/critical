@@ -93,8 +93,8 @@ func TestCharacterCountStruct(t *testing.T) {
 	// Verify SpellSlots count field exists and is *int64
 	var _ *int64 = m.C.SpellSlots
 
-	// Verify XPEvents count field exists and is *int64
-	var _ *int64 = m.C.XPEvents
+	// Verify XPEntries count field exists and is *int64
+	var _ *int64 = m.C.XPEntries
 }
 
 // Test that Character has LoadCount methods for to-many relationships
@@ -139,11 +139,11 @@ func TestCharacterLoadCountMethods(t *testing.T) {
 	// Verify LoadCountSpellSlots method exists on slice
 	_ = ms.LoadCountSpellSlots(ctx, nil)
 
-	// Verify LoadCountXPEvents method exists on single model
-	_ = m.LoadCountXPEvents(ctx, nil)
+	// Verify LoadCountXPEntries method exists on single model
+	_ = m.LoadCountXPEntries(ctx, nil)
 
-	// Verify LoadCountXPEvents method exists on slice
-	_ = ms.LoadCountXPEvents(ctx, nil)
+	// Verify LoadCountXPEntries method exists on slice
+	_ = ms.LoadCountXPEntries(ctx, nil)
 }
 
 // Test that SelectThenLoadCount has Character with methods for to-many relationships
@@ -168,8 +168,8 @@ func TestSelectThenLoadCountCharacter(t *testing.T) {
 	// Verify SpellSlots loader exists
 	_ = SelectThenLoadCount.Character.SpellSlots
 
-	// Verify XPEvents loader exists
-	_ = SelectThenLoadCount.Character.XPEvents
+	// Verify XPEntries loader exists
+	_ = SelectThenLoadCount.Character.XPEntries
 }
 
 // Test that PreloadCount has Character with methods for to-many relationships
@@ -194,8 +194,8 @@ func TestPreloadCountCharacter(t *testing.T) {
 	// Verify SpellSlots preloader exists and returns a Preloader
 	_ = PreloadCount.Character.SpellSlots()
 
-	// Verify XPEvents preloader exists and returns a Preloader
-	_ = PreloadCount.Character.XPEvents()
+	// Verify XPEntries preloader exists and returns a Preloader
+	_ = PreloadCount.Character.XPEntries()
 }
 
 // Test that Character has PreloadCount method
@@ -214,5 +214,5 @@ func TestCharacterPreloadCountMethod(t *testing.T) {
 
 	_ = m.PreloadCount("SpellSlots", 0)
 
-	_ = m.PreloadCount("XPEvents", 0)
+	_ = m.PreloadCount("XPEntries", 0)
 }

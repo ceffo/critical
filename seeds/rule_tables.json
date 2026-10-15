@@ -1,5 +1,5 @@
 {
-  "_source": "AD&D 2e Player's Handbook: Table 1 (Strength), Table 2 (Dexterity), Table 32 (Bard Spell Progression). exc_min/exc_max are the 18/xx percentile range (18/00 = 100); 0/0 means no exceptional strength.",
+  "_source": "AD&D 2e Player's Handbook: Table 1 (Strength), Table 2 (Dexterity), Table 32 (Bard Spell Progression), Table 25 (Rogue Experience Levels, Thief/Bard column: the XP that reaches each level). exc_min/exc_max are the 18/xx percentile range (18/00 = 100); 0/0 means no exceptional strength.",
   "strength": [
     {"str_min": 1, "str_max": 1, "exc_min": 0, "exc_max": 0, "hit": -5, "dmg": -4},
     {"str_min": 2, "str_max": 2, "exc_min": 0, "exc_max": 0, "hit": -3, "dmg": -2},
@@ -64,5 +64,27 @@
     {"level": 18, "per_spell_level": [4, 4, 4, 3, 3, 2]},
     {"level": 19, "per_spell_level": [4, 4, 4, 4, 3, 2]},
     {"level": 20, "per_spell_level": [4, 4, 4, 4, 4, 3]}
+  ],
+  "bard_experience": [
+    {"level": 1, "xp": 0},
+    {"level": 2, "xp": 1250},
+    {"level": 3, "xp": 2500},
+    {"level": 4, "xp": 5000},
+    {"level": 5, "xp": 10000},
+    {"level": 6, "xp": 20000},
+    {"level": 7, "xp": 40000},
+    {"level": 8, "xp": 70000},
+    {"level": 9, "xp": 110000},
+    {"level": 10, "xp": 160000},
+    {"level": 11, "xp": 220000},
+    {"level": 12, "xp": 440000},
+    {"level": 13, "xp": 660000},
+    {"level": 14, "xp": 880000},
+    {"level": 15, "xp": 1100000},
+    {"level": 16, "xp": 1320000},
+    {"level": 17, "xp": 1540000},
+    {"level": 18, "xp": 1760000},
+    {"level": 19, "xp": 1980000},
+    {"level": 20, "xp": 2200000}
   ]
 }

@@ -41,7 +41,7 @@ var (
 	characterRelRoundStatesCtx       = newContextual[bool]("characters.round_state.fk_round_state_0")
 	characterRelSavedBuffsCtx        = newContextual[bool]("characters.saved_buffs.fk_saved_buffs_0")
 	characterRelSpellSlotsCtx        = newContextual[bool]("characters.spell_slots.fk_spell_slots_0")
-	characterRelXPEventsCtx          = newContextual[bool]("characters.xp_events.fk_xp_events_0")
+	characterRelXPEntriesCtx         = newContextual[bool]("characters.xp_entries.fk_xp_entries_0")
 
 	// Relationship Contexts for crit_table_rows
 	critTableRowWithParentsCascadingCtx = newContextual[bool]("critTableRowWithParentsCascading")
@@ -71,9 +71,9 @@ var (
 	// Relationship Contexts for weapons
 	weaponWithParentsCascadingCtx = newContextual[bool]("weaponWithParentsCascading")
 
-	// Relationship Contexts for xp_events
-	xpEventWithParentsCascadingCtx = newContextual[bool]("xpEventWithParentsCascading")
-	xpEventRelCharacterCtx         = newContextual[bool]("characters.xp_events.fk_xp_events_0")
+	// Relationship Contexts for xp_entries
+	xpEntryWithParentsCascadingCtx = newContextual[bool]("xpEntryWithParentsCascading")
+	xpEntryRelCharacterCtx         = newContextual[bool]("characters.xp_entries.fk_xp_entries_0")
 
 	modelsInCreationCtx = newContextual[map[string]any]("modelsInCreation")
 )

@@ -29,6 +29,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	spellmocks "github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
 	weaponmocks "github.com/ceffo/critical/api/internal/domain/service/weaponsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	xpmocks "github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
 	"github.com/ceffo/critical/api/internal/rest/router"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -45,6 +47,7 @@ type mocksSet struct {
 	items   *itemmocks.MockSVC
 	weapons *weaponmocks.MockSVC
 	rest    *restmocks.MockSVC
+	xp      *xpmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -60,10 +63,12 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		items:   itemmocks.NewMockSVC(t),
 		weapons: weaponmocks.NewMockSVC(t),
 		rest:    restmocks.NewMockSVC(t),
+		xp:      xpmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
 		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
+		XP: m.xp,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m
@@ -87,6 +92,21 @@ type endpoint struct {
 }
 
 var endpoints = []endpoint{
+	{"GET xp", "GET", "/api/xp", "", func(m *mocksSet, err error) {
+		m.xp.On("Get", anyArgs(2)...).Return(nil, err)
+	}},
+	{"GET xp/preview", "GET", "/api/xp/preview?base=10&bonus=true", "", func(m *mocksSet, err error) {
+		m.xp.On("Preview", anyArgs(2)...).Return(xpsvc.Amount{}, err)
+	}},
+	{"POST xp", "POST", "/api/xp", `{"base":10}`, func(m *mocksSet, err error) {
+		m.xp.On("Add", anyArgs(3)...).Return(nil, err)
+	}},
+	{"PATCH xp/{id}", "PATCH", "/api/xp/3", `{"base":10}`, func(m *mocksSet, err error) {
+		m.xp.On("Update", anyArgs(4)...).Return(nil, err)
+	}},
+	{"DELETE xp/{id}", "DELETE", "/api/xp/3", "", func(m *mocksSet, err error) {
+		m.xp.On("Delete", anyArgs(3)...).Return(nil, err)
+	}},
 	{"GET character", "GET", "/api/character", "", func(m *mocksSet, err error) {
 		m.char.On("GetCharacter", anyArgs(2)...).Return(nil, err)
 	}},

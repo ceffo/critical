@@ -11,7 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/pkg/formula"
 )
@@ -89,6 +91,24 @@ func (c *Catalog) All() []spelleffectsvc.Entry {
 		out = append(out, c.byID[id])
 	}
 	return out
+}
+
+// CheckAgainst is the startup cross-check against the spell catalogue: an
+// entry whose id the catalogue does not hold would never apply (a typo, or a
+// spell the catalogue renamed or dropped), so every such id is an error,
+// listed in file order.
+func (c *Catalog) CheckAgainst(cat catalogue.Catalogue) error {
+	spells := cat.ByID()
+	var unknown []string
+	for _, id := range c.order {
+		if _, ok := spells[id]; !ok {
+			unknown = append(unknown, id)
+		}
+	}
+	if len(unknown) > 0 {
+		return fmt.Errorf("spell effects: ids not in the spell catalogue: %s", strings.Join(unknown, ", "))
+	}
+	return nil
 }
 
 // ---- JSON DTOs ----

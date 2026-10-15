@@ -1,4 +1,4 @@
-import { test, expect, snap } from "./fixtures";
+import { test, expect, snap, catalogueSpell } from "./fixtures";
 import {
   addBuff,
   buffBadge,
@@ -356,29 +356,34 @@ test("a long rest is logged; popping it, then the cast, walks the slots back", a
 });
 
 // Spells that share a name: the receive request carries each spell's own key.
-const priest = (name: string, level: number, sphere: string) => ({
-  name,
-  class: "Priest",
-  level,
-  school: "Alteration",
-  sphere,
-  casting_time: "6",
-  range: "0",
-  duration: "Special",
-  area_of_effect: "Creature touched",
-  components: "V, S, M",
-  saving_throw: "None",
-  description: `${name} fixture text.`,
-});
+const priest = (id: string, name: string, level: number, sphere: string) =>
+  catalogueSpell({
+    id,
+    name,
+    class: "Priest",
+    level,
+    school: "Alteration",
+    sphere,
+    casting_time: "6",
+    range: "0",
+    duration: "Special",
+    area_of_effect: "Creature touched",
+    components: "V, S, M",
+  });
 
 test.describe("same-named spells", () => {
   test.use({
     extraSpells: {
       rows: [
-        priest("Fortify", 3, "War"),
-        priest("Fortify", 4, "Healing"),
+        priest("fortify", "Fortify", 3, "War"),
+        priest("fortify_l4", "Fortify", 4, "Healing"),
         ...Array.from({ length: 60 }, (_, i) =>
-          priest(`Cure Test ${String(i).padStart(2, "0")}`, 1, "Healing"),
+          priest(
+            `cure_test_${String(i).padStart(2, "0")}`,
+            `Cure Test ${String(i).padStart(2, "0")}`,
+            1,
+            "Healing",
+          ),
         ),
       ],
     },

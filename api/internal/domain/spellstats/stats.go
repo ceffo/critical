@@ -1,6 +1,6 @@
 package spellstats
 
-// Raw is the six PHB stat texts of a spell, as in seeds/spells.json.
+// Raw is the six PHB stat texts of a spell, as in the spell catalogue artifact.
 type Raw struct {
 	CastingTime, Range, Duration, AreaOfEffect, Components, SavingThrow string
 }

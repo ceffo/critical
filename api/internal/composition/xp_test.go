@@ -23,7 +23,7 @@ func TestXPLedger_AddEditDeleteOnTheRealStack(t *testing.T) {
 	dsn := filepath.Join(t.TempDir(), "critical.db")
 	seeds := filepath.Join("..", "..", "testdata", "seeds")
 	open := func() *composition.BackingServices {
-		bs, err := composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seeds})
+		bs, err := composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seeds, Catalogue: filepath.Join("..", "..", "testdata", "catalogue.json")})
 		require.NoError(t, err)
 		return bs
 	}

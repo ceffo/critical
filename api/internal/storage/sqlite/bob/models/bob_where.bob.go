@@ -23,6 +23,7 @@ func Where[Q sqlite.Filterable]() struct {
 	ActiveBuffs       activeBuffWhere[Q]
 	AttackForms       attackFormWhere[Q]
 	BardSkills        bardSkillWhere[Q]
+	CatalogueMeta     catalogueMetumWhere[Q]
 	Characters        characterWhere[Q]
 	CritTableRows     critTableRowWhere[Q]
 	DiceFavourites    diceFavouriteWhere[Q]
@@ -43,6 +44,7 @@ func Where[Q sqlite.Filterable]() struct {
 		ActiveBuffs       activeBuffWhere[Q]
 		AttackForms       attackFormWhere[Q]
 		BardSkills        bardSkillWhere[Q]
+		CatalogueMeta     catalogueMetumWhere[Q]
 		Characters        characterWhere[Q]
 		CritTableRows     critTableRowWhere[Q]
 		DiceFavourites    diceFavouriteWhere[Q]
@@ -62,6 +64,7 @@ func Where[Q sqlite.Filterable]() struct {
 		ActiveBuffs:       buildActiveBuffWhere[Q](ActiveBuffs.Columns),
 		AttackForms:       buildAttackFormWhere[Q](AttackForms.Columns),
 		BardSkills:        buildBardSkillWhere[Q](BardSkills.Columns),
+		CatalogueMeta:     buildCatalogueMetumWhere[Q](CatalogueMeta.Columns),
 		Characters:        buildCharacterWhere[Q](Characters.Columns),
 		CritTableRows:     buildCritTableRowWhere[Q](CritTableRows.Columns),
 		DiceFavourites:    buildDiceFavouriteWhere[Q](DiceFavourites.Columns),

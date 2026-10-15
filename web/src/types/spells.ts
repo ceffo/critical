@@ -146,10 +146,17 @@ export interface SpellExposure {
   modes?: SpellMode[];
 }
 
+/**
+ * Mirrors spellhdl.SpellDTO. `name` and `description` are English; `name_fr` and `description_fr`
+ * are the spell catalogue's French texts, absent when it has none: show French when present and
+ * fall back to English per field (ADR 0021). Descriptions are in the catalogue's Markdown subset
+ * (paragraphs, `- ` bullet lists, pipe tables, blocks separated by a blank line).
+ */
 export interface Spell {
-  /** Unique key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
+  /** Catalogue key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
   id: string;
   name: string;
+  name_fr?: string;
   class: string;
   level: number;
   school: string;
@@ -161,6 +168,9 @@ export interface Spell {
   components: string;
   saving_throw: string;
   description: string;
+  description_fr?: string;
+  /** Book code of the English text (PHB, TOM, ...; WEB when no book was matched). */
+  source: string;
   /** The six stat fields above, typed. Raw text stays in the string fields. */
   stats: SpellStats;
   /** Level `values` are computed for: ?caster_level=, default the character's. */

@@ -369,7 +369,8 @@ outside `ui/`).
 - **First run:** `just e2e-install` once (downloads Playwright Chromium); `just e2e` says so if it's missing.
   `just e2e smoke.spec.ts` passes args through to `playwright test`.
 - **Stack per test:** the `test` fixture from `web/e2e/fixtures.ts` starts the API binary (`just build-api`
-  output) on a free port with a fresh temp SQLite DB and the repo's real `seeds/`, plus a Vite server on a
+  output) on a free port with a fresh temp SQLite DB and the `api/testdata` fixture (seeds and the spell
+  catalogue `catalogue.json`; extra spells via `extraSpells` + `catalogueSpell`), plus a Vite server on a
   free port proxying `/api` to it; both and the DB are removed afterwards. No fixed ports, `.dev/` is never
   touched, so parallel runs/worktrees don't collide. `page.goto("/")` opens that test's dashboard.
 - **Selectors:** `getByRole` / `getByLabel` with the English accessible name first (give panels

@@ -64,10 +64,27 @@ dev:
     just dev-web &
     wait
 
-# API with live reload (rebuilds on .go changes), SQLite at .dev/critical.db
+# API with live reload (rebuilds on .go changes). Spells come from the catalogue artifact
+# (`just catalogue`), with the campaign seeds and the SQLite database .dev/critical.db. Without the
+# artifact it runs on the fixture catalogue and seeds (api/testdata) and a database of their own,
+# .dev/fixture.db: .dev/critical.db is only ever opened with the real catalogue.
 dev-api:
+    #!/usr/bin/env bash
+    set -euo pipefail
     mkdir -p .dev
-    cd api && CRITICAL_DSN=../.dev/critical.db CRITICAL_SEEDS_DIR=../seeds go tool air -c .air.toml
+    root="$(pwd)"
+    if [ -f .catalogue/catalogue.json ]; then
+        catalogue="$root/.catalogue/catalogue.json"; seeds="$root/seeds"; db="../.dev/critical.db"
+        echo "dev-api: real catalogue .catalogue/catalogue.json, campaign seeds, database .dev/critical.db" >&2
+    else
+        catalogue="$root/api/testdata/catalogue.json"; seeds="$root/api/testdata/seeds"; db="../.dev/fixture.db"
+        echo "dev-api: ==================================================================================" >&2
+        echo "dev-api: NO .catalogue/catalogue.json: running on the FIXTURE catalogue and api/testdata/seeds," >&2
+        echo "dev-api: database .dev/fixture.db (.dev/critical.db is left untouched)." >&2
+        echo "dev-api: run \`just catalogue\` to fetch the real catalogue and use the campaign database." >&2
+        echo "dev-api: ==================================================================================" >&2
+    fi
+    cd api && CRITICAL_DSN="$db" CRITICAL_SEEDS_DIR="$seeds" CRITICAL_CATALOGUE="$catalogue" go tool air -c .air.toml
 
 # Frontend dev server with HMR (needs the API from dev-api). Reinstalls web deps first when
 # web/package-lock.json is newer than the last install (e.g. after pulling a new dependency).
@@ -82,9 +99,9 @@ dev-web:
     fi
     npm run dev
 
-# Delete the local dev database; the next dev-api start re-seeds from seeds/
+# Delete the local dev databases (real and fixture); the next dev-api start re-seeds and imports the catalogue
 dev-reset:
-    rm -f .dev/critical.db
+    rm -f .dev/critical.db .dev/critical.db-wal .dev/critical.db-shm .dev/fixture.db .dev/fixture.db-wal .dev/fixture.db-shm
 
 # --- Code Generation ---
 
@@ -188,6 +205,25 @@ rulebooks:
         mkdir -p "$(dirname "$dir")"
         git clone "$remote" "$dir" || { echo "rulebooks: cannot clone $remote (the repo is private; you need access). Do not guess rules without it." >&2; exit 1; }
     fi
+
+# Fetch the spell catalogue artifact (ADR 0021) into the gitignored .catalogue/catalogue.json: the
+# rulebooks repo is cloned or fast-forwarded (`just rulebooks`), then its dist/catalogue.json is taken
+# at CATALOGUE_REF (default: the checked-out branch). Needs access to the private repo; never part of
+# validate. Without it, dev-api runs on the fixture api/testdata/catalogue.json.
+catalogue: rulebooks
+    #!/usr/bin/env bash
+    set -euo pipefail
+    dir="${RULEBOOKS_DIR:-$HOME/code/critical-rulebooks}"
+    ref="${CATALOGUE_REF:-HEAD}"
+    mkdir -p .catalogue
+    tmp="$(mktemp .catalogue/catalogue.json.XXXXXX)"
+    if ! git -C "$dir" show "$ref:dist/catalogue.json" > "$tmp"; then
+        rm -f "$tmp"
+        echo "catalogue: no dist/catalogue.json at $ref in $dir" >&2; exit 1
+    fi
+    chmod 644 "$tmp"
+    mv "$tmp" .catalogue/catalogue.json
+    echo "catalogue: .catalogue/catalogue.json from $dir at $(git -C "$dir" rev-parse --short "$ref")"
 
 # The tracker DB is the truth: it is exported again after the pull and every changed status is printed.
 # Never `br sync --merge` here: it lets the pulled JSONL overwrite local tracker changes.

@@ -171,3 +171,52 @@ is only ever appended to by play.
   `seeds/` until they move to the catalogue in a later format or artifact; this ADR covers spells.
 - Only English and French exist. A third language is a new `format`.
 - Corrections to book text are a new artifact version; nothing in the app edits catalogue rows.
+
+## Implementation notes (the importer, 2026-10-15)
+
+Where the importer had to settle a detail the decision above leaves open, or reads differently:
+
+- **Step 4, `just catalogue`**: it reuses the rulebooks clone (`just rulebooks`, remote `RULEBOOKS_REMOTE`,
+  directory `RULEBOOKS_DIR`) and takes `dist/catalogue.json` at `CATALOGUE_REF` (default: the checked-out
+  branch) with `git show`, instead of a separate shallow fetch from a `CATALOGUE_REMOTE`. The deployment
+  fetch stays the hosting item's.
+- **Step 4, which file runs where**: Go tests and the e2e suite **always** use the fixture (its counts and
+  search results are what the specs assert; CI has no access anyway). `just dev` uses the real file when
+  `.catalogue/catalogue.json` exists, and otherwise the fixture **together with** `api/testdata/seeds`
+  (the campaign spellbook and spell effects refer to spells only the real artifact holds), on a database
+  of their own, `.dev/fixture.db`: the dev database `.dev/critical.db` is only ever opened with the real
+  file, so a missing `.catalogue` can never replace its spells with the fixture's. The tests of
+  the real seeds against the real artifact (`seedcheck`) skip when it is absent. The repo root of a
+  relative `CRITICAL_CATALOGUE` is the nearest directory above the working directory with a `.git`
+  entry; outside a checkout the path stays relative to the working directory.
+- **Step 5.4.1, verification**: the artifact does not carry the builder's ledger, so a backfilled key is
+  verified against the artifact spell with that key only. A first import onto a database whose spell was
+  renamed in the same artifact is therefore refused; no artifact renames anything relative to the 885 ids
+  it was seeded from (checked on the real artifact, which adds one new spell), so this cannot happen
+  today, and later renames happen on databases that are already keyed.
+- **Step 5.4.3, scanned references**: also the payloads of the corrections (`action_corrections`) of
+  cast, exposure and spell_prep entries, since an amend replaces the entry's payload.
+  Its refusal also names the catalogue the database was built from (the version in `catalogue_meta`)
+  and `just catalogue`, for a database started on the wrong catalogue.
+- **Spell effects seed**: every `spell_effects.json` id is checked against the catalogue at startup, as
+  the spellbook is (an id the catalogue does not hold would never apply); unknown ids refuse the start,
+  all listed (`TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold`,
+  `TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup`).
+- **Storage**: `spells.key` (unique, NULL allowed), `name_fr`, `description_fr`, `source` (migration 027)
+  and the one-row `catalogue_meta (format, version)`. The fixture's version is `1970-01-01`, so switching
+  between the fixture and a real artifact always imports
+  (`TestRealCatalogue_SwitchingADatabaseBetweenTheFixtureAndTheRealCatalogue`).
+- **REST**: spell payloads keep `name` and `description` (English) and add `name_fr` and
+  `description_fr`, omitted when the catalogue has no French text, and `source`. The client picks the
+  language (fallback per field); no `lang` query parameter.
+- **Tests per step**: 5.1 `TestLoad_Step1_MissingFileNamesThePathAndTheRecipe`; 5.2
+  `TestParse_Step2_Refusals`; 5.3 `TestImportCatalogue_Step3_SameVersionWritesNothing`; 5.4.1
+  `TestImportCatalogue_Step4_1_BackfillsKeysOfAnExistingDatabase` and
+  `TestImportCatalogue_Step4_1_RefusesKeysThatDoNotMatchTheArtifact`; 5.4.2
+  `TestImportCatalogue_Step4_NewVersionUpserts`; 5.4.3
+  `TestImportCatalogue_Step4_3_DeletesAnUnreferencedRemovedSpell`,
+  `TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells` and `TestStateSpellRefs_ScansEveryPlace`;
+  5.5 the two refusal tests (nothing changes, the old version stays recorded); 5.6
+  `TestImportCatalogue_Step6_TypedStatsParsedAtImport`; the upgrade of a database seeded before the
+  catalogue `TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue`, and of a live one
+  `TestRealCatalogue_UpgradesACopyOfALiveDatabase`.

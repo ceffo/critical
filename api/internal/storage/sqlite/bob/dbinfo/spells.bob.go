@@ -141,6 +141,42 @@ var Spells = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		Key: column{
+			Name:      "key",
+			DBType:    "TEXT",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		NameFR: column{
+			Name:      "name_fr",
+			DBType:    "TEXT",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		DescriptionFR: column{
+			Name:      "description_fr",
+			DBType:    "TEXT",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Source: column{
+			Name:      "source",
+			DBType:    "TEXT",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: spellIndexes{
 		PKMainSpells: index{
@@ -149,6 +185,20 @@ var Spells = Table[
 			Columns: []indexColumn{
 				{
 					Name:         "id",
+					Desc:         null.FromCond(false, true),
+					IsExpression: false,
+				},
+			},
+			Unique:  true,
+			Comment: "",
+			Partial: false,
+		},
+		IdxSpellsKey: index{
+			Type: "c",
+			Name: "idx_spells_key",
+			Columns: []indexColumn{
+				{
+					Name:         "key",
 					Desc:         null.FromCond(false, true),
 					IsExpression: false,
 				},
@@ -182,36 +232,41 @@ var Spells = Table[
 }
 
 type spellColumns struct {
-	ID           column
-	Name         column
-	Class        column
-	Level        column
-	School       column
-	Sphere       column
-	CastingTime  column
-	Range        column
-	Duration     column
-	AreaOfEffect column
-	Components   column
-	SavingThrow  column
-	Description  column
-	Stats        column
+	ID            column
+	Name          column
+	Class         column
+	Level         column
+	School        column
+	Sphere        column
+	CastingTime   column
+	Range         column
+	Duration      column
+	AreaOfEffect  column
+	Components    column
+	SavingThrow   column
+	Description   column
+	Stats         column
+	Key           column
+	NameFR        column
+	DescriptionFR column
+	Source        column
 }
 
 func (c spellColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description, c.Stats,
+		c.ID, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description, c.Stats, c.Key, c.NameFR, c.DescriptionFR, c.Source,
 	}
 }
 
 type spellIndexes struct {
 	PKMainSpells  index
+	IdxSpellsKey  index
 	IdxSpellsName index
 }
 
 func (i spellIndexes) AsSlice() []index {
 	return []index{
-		i.PKMainSpells, i.IdxSpellsName,
+		i.PKMainSpells, i.IdxSpellsKey, i.IdxSpellsName,
 	}
 }
 

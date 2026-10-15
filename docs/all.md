@@ -12,7 +12,7 @@ Critical is a personal AD&D 2.5 character sheet engine for a single Bard charact
 critical/
   api/              ← Go backend (ALL game logic lives here)
   web/              ← React frontend (presentation only)
-  seeds/            ← JSON seed data (spells.json, spell_effects.json, character.json, crit_table.json, weapons.json, skills.json)
+  seeds/            ← JSON seed data (spell_effects.json, spellbook.json, character.json, crit_table.json, weapons.json, skills.json); spells come from the catalogue artifact (ADR 0021, `just catalogue`)
   docs/             ← Agent context files (this folder)
   docker-compose.yml
   nginx.conf

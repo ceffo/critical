@@ -279,11 +279,16 @@ type SpellSlotDTO struct {
 
 // SpellDTO is the wire shape of a spell. The six stat fields keep their raw
 // PHB text; Stats is their typed form and Values the computed values at
-// CasterLevel (domain types carry the JSON tags).
+// CasterLevel (domain types carry the JSON tags). Name and Description are
+// English; NameFR and DescriptionFR are the catalogue's French texts, absent
+// when it has none (the client falls back to English per field, ADR 0021).
+// Descriptions are in the catalogue's Markdown subset (paragraphs, bullet
+// lists, pipe tables).
 type SpellDTO struct {
-	// ID is the spell's unique key; cast and receive take it.
+	// ID is the spell's catalogue key; cast and receive take it.
 	ID           string `json:"id"`
 	Name         string `json:"name"`
+	NameFR       string `json:"name_fr,omitempty"`
 	Class        string `json:"class"`
 	Level        int    `json:"level"`
 	School       string `json:"school"`
@@ -295,6 +300,11 @@ type SpellDTO struct {
 	Components   string `json:"components"`
 	SavingThrow  string `json:"saving_throw"`
 	Description  string `json:"description"`
+	// DescriptionFR is absent when the catalogue has no French text.
+	DescriptionFR string `json:"description_fr,omitempty"`
+	// Source is the book code of the English text (PHB, TOM, ...; WEB when
+	// no book was matched).
+	Source string `json:"source"`
 
 	Stats       spellstats.Stats   `json:"stats"`
 	CasterLevel int                `json:"caster_level,omitempty"`
@@ -445,11 +455,11 @@ func spellsToDTO(in []spellsvc.Spell, casterLevel int) []SpellDTO {
 // SpellToDTO maps one spell to its wire shape, with values at casterLevel.
 func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
 	dto := SpellDTO{
-		ID: s.ID, Name: s.Name, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
+		ID: s.ID, Name: s.Name, NameFR: s.NameFR, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
 		CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
 		AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
-		Description: s.Description,
-		Stats:       s.Stats, CasterLevel: casterLevel,
+		Description: s.Description, DescriptionFR: s.DescriptionFR, Source: s.Source,
+		Stats: s.Stats, CasterLevel: casterLevel,
 	}
 	if casterLevel > 0 {
 		v := s.Stats.At(casterLevel)

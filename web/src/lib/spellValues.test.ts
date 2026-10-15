@@ -31,6 +31,7 @@ function spell(
     components: "V",
     saving_throw: "None",
     description: "",
+    source: "PHB",
     stats,
     caster_level: 15,
     values,

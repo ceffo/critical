@@ -8,8 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -81,19 +83,19 @@ func TestSlots_PerCharacter(t *testing.T) {
 func seedSpells(t *testing.T, db *sqlite.DB) {
 	t.Helper()
 	rows := []struct {
-		name, class string
-		level       int
+		key, name, class string
+		level            int
 	}{
-		{"Sleep", "bard", 1},
-		{"Charm Person", "bard", 1},
-		{"Invisibility", "bard", 2},
-		{"Sleep", "wizard", 1},
-		{"Fireball", "wizard", 3},
+		{"sleep_bard", "Sleep", "bard", 1},
+		{"charm_person", "Charm Person", "bard", 1},
+		{"invisibility", "Invisibility", "bard", 2},
+		{"sleep", "Sleep", "wizard", 1},
+		{"fireball", "Fireball", "wizard", 3},
 	}
 	for _, r := range rows {
 		_, err := db.ExecContext(context.Background(),
-			`INSERT INTO spells (name, class, level, school, description) VALUES (?, ?, ?, 'Enchantment', 'desc')`,
-			r.name, r.class, r.level)
+			`INSERT INTO spells (key, name, class, level, school, description) VALUES (?, ?, ?, ?, 'Enchantment', 'desc')`,
+			r.key, r.name, r.class, r.level)
 		require.NoError(t, err)
 	}
 }
@@ -133,19 +135,45 @@ func TestSearch_MapsFields(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
 
+	_, err := db.ExecContext(context.Background(),
+		`UPDATE spells SET name_fr = 'Boule de feu', description_fr = 'texte', source = 'PHB' WHERE key = 'fireball'`)
+	require.NoError(t, err)
+
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Levels: []int{3}})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
-	want := spellsvc.Spell{ID: "fireball", Name: "Fireball", Class: "wizard", Level: 3, School: "Enchantment", Description: "desc"}
+	want := spellsvc.Spell{
+		ID: "fireball", Name: "Fireball", NameFR: "Boule de feu", Class: "wizard", Level: 3, School: "Enchantment",
+		Description: "desc", DescriptionFR: "texte", Source: "PHB",
+	}
 	got[0].Stats = spellstats.Stats{}
 	assert.Equal(t, want, got[0])
+}
+
+// Rows without a key (older duplicates the catalogue import left in place)
+// are never served, by Search or Describe.
+func TestSearchAndDescribe_RowsWithoutAKeyAreNotServed(t *testing.T) {
+	ctx := context.Background()
+	db := openDB(t)
+	seedSpells(t, db)
+	_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES ('Fireball', 'wizard', 3, 'older duplicate')`)
+	require.NoError(t, err)
+
+	got, err := spelldal.New(db).Search(ctx, spellsvc.Filter{Levels: []int{3}})
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "desc", got[0].Description)
+	fb, ok, err := spelldal.New(db).Describe(ctx, "fireball")
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, "desc", fb.Description)
 }
 
 // A row without stats JSON (or with garbage) is typed from its raw columns.
 func TestSearch_RowWithoutStatsIsParsedFromRawText(t *testing.T) {
 	db := openDB(t)
-	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (name, class, level, range, saving_throw, stats)
-		VALUES ('A', 'wizard', 1, '10 yds./level', '1/2', NULL), ('B', 'wizard', 2, '20 yds.', 'Neg.', '{not json')`)
+	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (key, name, class, level, range, saving_throw, stats)
+		VALUES ('a', 'A', 'wizard', 1, '10 yds./level', '1/2', NULL), ('b', 'B', 'wizard', 2, '20 yds.', 'Neg.', '{not json')`)
 	require.NoError(t, err)
 
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{})
@@ -156,11 +184,20 @@ func TestSearch_RowWithoutStatsIsParsedFromRawText(t *testing.T) {
 	assert.Equal(t, []string{"negates"}, got[1].Stats.Save.Kinds)
 }
 
-// Seeding stores the typed stats; the DAL returns them with the raw text.
-func TestSearch_SeededSpellsCarryTypedStats(t *testing.T) {
+func importFixture(t *testing.T, db *sqlite.DB) catalogue.Catalogue {
+	t.Helper()
+	cat, err := catalogueadpt.Load(filepath.Join("..", "..", "..", "testdata", "catalogue.json"))
+	require.NoError(t, err)
+	require.NoError(t, db.ImportCatalogue(context.Background(), cat, nil))
+	return cat
+}
+
+// The import stores the typed stats; the DAL returns them with the raw text,
+// and the French texts when the catalogue has them.
+func TestSearch_ImportedSpellsCarryTypedStatsAndFrench(t *testing.T) {
 	ctx := context.Background()
 	db := openDB(t)
-	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
+	importFixture(t, db)
 
 	got, err := spelldal.New(db).Search(ctx, spellsvc.Filter{Class: "wizard", Levels: []int{1}})
 	require.NoError(t, err)
@@ -171,6 +208,8 @@ func TestSearch_SeededSpellsCarryTypedStats(t *testing.T) {
 		}
 	}
 	require.Equal(t, "magic_missile", mm.ID)
+	assert.Equal(t, "Projectile magique", mm.NameFR)
+	assert.NotEmpty(t, mm.DescriptionFR)
 	assert.Equal(t, "60 yds. + 10 yds./level", mm.Range)
 	assert.Equal(t, "60 yds. + 10 yds./level", mm.Stats.Range.Raw)
 	assert.Equal(t, spellstats.RangeDistance, mm.Stats.Range.Kind)
@@ -180,6 +219,12 @@ func TestSearch_SeededSpellsCarryTypedStats(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 	assert.Equal(t, []string{spellstats.SaveHalf}, fb.Stats.Save.Kinds)
+
+	armor, ok, err := spelldal.New(db).Describe(ctx, "armor")
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Empty(t, armor.NameFR, "no French source: empty, the reader falls back to English")
+	assert.Empty(t, armor.DescriptionFR)
 }
 
 func TestSlots_ReadsStoredJSON(t *testing.T) {
@@ -201,19 +246,22 @@ func TestSlots_ReadsStoredJSON(t *testing.T) {
 func TestDescribe(t *testing.T) {
 	db := openDB(t)
 	ctx := context.Background()
+	// Describe answers to the stored catalogue key, never a key computed
+	// from the name.
 	for _, r := range []struct {
-		name, class string
-		level       int
+		key, name, class string
+		level            int
 	}{
-		{"Light", "Priest", 1},
-		{"Light", "Wizard", 1},
-		{"Melf's Acid Arrow", "Wizard", 1},
-		{"Bless", "Priest", 1},
-		{"Twin", "Priest", 4},
-		{"Twin", "Priest", 3},
+		{"light_priest", "Light", "Priest", 1},
+		{"light", "Light", "Wizard", 1},
+		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", 1},
+		{"bless", "Bless", "Priest", 1},
+		{"twin_l4", "Twin", "Priest", 4},
+		{"twin", "Twin", "Priest", 3},
+		{"renamed_spell", "A New Name", "Wizard", 2},
 	} {
-		_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES (?, ?, ?, ?)`,
-			r.name, r.class, r.level, r.class+" text")
+		_, err := db.ExecContext(ctx, `INSERT INTO spells (key, name, class, level, description) VALUES (?, ?, ?, ?, ?)`,
+			r.key, r.name, r.class, r.level, r.class+" text")
 		require.NoError(t, err)
 	}
 	d := spelldal.New(db)
@@ -223,11 +271,13 @@ func TestDescribe(t *testing.T) {
 		found                   bool
 	}{
 		{"light", "Light", "Wizard", 1, true},
-		{"light_priest", "Light", "Priest", 1, true}, // a Priest spell never answers to the Wizard's key
+		{"light_priest", "Light", "Priest", 1, true},
 		{"melfs_acid_arrow", "Melf's Acid Arrow", "Wizard", 1, true},
 		{"bless", "Bless", "Priest", 1, true},
-		{"twin", "Twin", "Priest", 3, true},    // the lowest level owns the plain slug
-		{"twin_l4", "Twin", "Priest", 4, true}, // the other one gets the level suffix
+		{"twin", "Twin", "Priest", 3, true},
+		{"twin_l4", "Twin", "Priest", 4, true},
+		{"renamed_spell", "A New Name", "Wizard", 2, true},
+		{"a_new_name", "", "", 0, false}, // the slug of the name is not the key
 		{"no_such_spell", "", "", 0, false},
 	}
 	for _, tt := range tests {
@@ -274,7 +324,7 @@ func TestSearch_ColumnFilters(t *testing.T) {
 func TestSearch_SameNameInBothClassesComesBackAsTwoRows(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
-	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (name, class, level) VALUES ('Sleep', 'priest', 1)`)
+	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (key, name, class, level) VALUES ('sleep_priest', 'Sleep', 'priest', 1)`)
 	require.NoError(t, err)
 
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Levels: []int{1}})
@@ -288,8 +338,9 @@ func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
 	db := openDB(t)
 	seeds := filepath.Join("..", "..", "..", "testdata", "seeds")
 	require.NoError(t, db.Seed(ctx, seeds))
+	cat := importFixture(t, db)
 	dal := spelldal.New(db)
-	book, err := spellbookadpt.New(seeds)
+	book, err := spellbookadpt.New(seeds, cat)
 	require.NoError(t, err)
 	svc, err := spellsvc.New(dal, dal, book)
 	require.NoError(t, err)

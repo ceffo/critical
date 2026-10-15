@@ -1,4 +1,4 @@
-import { test, expect, snap } from "./fixtures";
+import { test, expect, snap, catalogueSpell } from "./fixtures";
 import {
   addBuff,
   ammoChips,
@@ -370,20 +370,17 @@ test.describe("workspaces to the dice composer", () => {
   test.use({
     extraSpells: {
       rows: [
-        {
+        catalogueSpell({
+          id: "quixotic_stillness",
           name: "Quixotic Stillness",
           class: "Wizard",
           level: 3,
           school: "Alteration",
-          sphere: "",
           casting_time: "3",
           range: "Touch",
           duration: "8 rds. + 1d8 rds.",
           area_of_effect: "The caster",
-          components: "V, S",
-          saving_throw: "None",
-          description: "Quixotic Stillness fixture text.",
-        },
+        }),
       ],
     },
   });

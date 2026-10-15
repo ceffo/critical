@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -26,6 +27,10 @@ type Config struct {
 	DSN      string `env:"CRITICAL_DSN" envDefault:"critical.db"`
 	SeedsDir string `env:"CRITICAL_SEEDS_DIR" envDefault:"seeds"`
 	Addr     string `env:"CRITICAL_ADDR" envDefault:":8080"`
+	// Catalogue is the spell catalogue artifact (ADR 0021 step 4): `just
+	// catalogue` fetches it to .catalogue/catalogue.json. A relative path is
+	// resolved against the repo root (resolveFromRepoRoot).
+	Catalogue string `env:"CRITICAL_CATALOGUE" envDefault:".catalogue/catalogue.json"`
 }
 
 // Validate rejects empty required fields (e.g. CRITICAL_DSN set to "").
@@ -37,6 +42,8 @@ func (c Config) Validate() error {
 		return errors.New("CRITICAL_SEEDS_DIR must not be empty")
 	case c.Addr == "":
 		return errors.New("CRITICAL_ADDR must not be empty")
+	case c.Catalogue == "":
+		return errors.New("CRITICAL_CATALOGUE must not be empty")
 	}
 	return nil
 }
@@ -48,6 +55,26 @@ func loadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("parse env: %w", err)
 	}
 	return cfg, cfg.Validate()
+}
+
+// resolveFromRepoRoot resolves a relative path against the repo root: the
+// nearest directory at or above cwd holding a .git entry (a directory, or a
+// file in a worktree). Outside a checkout (a deployment) it is left relative
+// to cwd. An absolute path is returned as is.
+func resolveFromRepoRoot(path, cwd string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	for dir := cwd; ; {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return filepath.Join(dir, path)
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return path
+		}
+		dir = parent
+	}
 }
 
 // Start boots the api: load env, build composition root, build router, run
@@ -64,7 +91,13 @@ func Start() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	bs, err := composition.New(ctx, composition.Config{DSN: cfg.DSN, SeedsDir: cfg.SeedsDir})
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("working directory: %w", err)
+	}
+	bs, err := composition.New(ctx, composition.Config{
+		DSN: cfg.DSN, SeedsDir: cfg.SeedsDir, Catalogue: resolveFromRepoRoot(cfg.Catalogue, cwd),
+	})
 	if err != nil {
 		return err
 	}

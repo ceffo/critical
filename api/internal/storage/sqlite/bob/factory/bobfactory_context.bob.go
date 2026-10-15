@@ -39,6 +39,9 @@ var (
 	// Relationship Contexts for bard_skills
 	bardSkillWithParentsCascadingCtx = newContextual[bool]("bardSkillWithParentsCascading")
 
+	// Relationship Contexts for catalogue_meta
+	catalogueMetumWithParentsCascadingCtx = newContextual[bool]("catalogueMetumWithParentsCascading")
+
 	// Relationship Contexts for characters
 	characterWithParentsCascadingCtx = newContextual[bool]("characterWithParentsCascading")
 	characterRelActionLogsCtx        = newContextual[bool]("action_log.characters.fk_action_log_1")

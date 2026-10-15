@@ -19,6 +19,7 @@ type Factory struct {
 	baseActiveBuffMods       ActiveBuffModSlice
 	baseAttackFormMods       AttackFormModSlice
 	baseBardSkillMods        BardSkillModSlice
+	baseCatalogueMetumMods   CatalogueMetumModSlice
 	baseCharacterMods        CharacterModSlice
 	baseCritTableRowMods     CritTableRowModSlice
 	baseDiceFavouriteMods    DiceFavouriteModSlice
@@ -316,6 +317,36 @@ func (f *Factory) fromExistingBardSkill(ctx context.Context, m *models.BardSkill
 	o.ID = func() string { return m.ID }
 	o.Position = func() int64 { return m.Position }
 	o.Percent = func() int64 { return m.Percent }
+
+	return o
+}
+
+func (f *Factory) NewCatalogueMetum(mods ...CatalogueMetumMod) *CatalogueMetumTemplate {
+	return f.NewCatalogueMetumWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewCatalogueMetumWithContext(ctx context.Context, mods ...CatalogueMetumMod) *CatalogueMetumTemplate {
+	o := &CatalogueMetumTemplate{f: f}
+
+	if f != nil {
+		f.baseCatalogueMetumMods.Apply(ctx, o)
+	}
+
+	CatalogueMetumModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingCatalogueMetum(ctx context.Context, m *models.CatalogueMetum) *CatalogueMetumTemplate {
+	return f.fromExistingCatalogueMetum(ctx, m)
+}
+
+func (f *Factory) fromExistingCatalogueMetum(ctx context.Context, m *models.CatalogueMetum) *CatalogueMetumTemplate {
+	o := &CatalogueMetumTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int64 { return m.ID }
+	o.Format = func() int64 { return m.Format }
+	o.Version = func() string { return m.Version }
 
 	return o
 }
@@ -773,6 +804,10 @@ func (f *Factory) fromExistingSpell(ctx context.Context, m *models.Spell) *Spell
 	o.SavingThrow = func() null.Val[string] { return m.SavingThrow }
 	o.Description = func() null.Val[string] { return m.Description }
 	o.Stats = func() null.Val[string] { return m.Stats }
+	o.Key = func() null.Val[string] { return m.Key }
+	o.NameFR = func() null.Val[string] { return m.NameFR }
+	o.DescriptionFR = func() null.Val[string] { return m.DescriptionFR }
+	o.Source = func() null.Val[string] { return m.Source }
 
 	return o
 }
@@ -907,6 +942,14 @@ func (f *Factory) ClearBaseBardSkillMods() {
 
 func (f *Factory) AddBaseBardSkillMod(mods ...BardSkillMod) {
 	f.baseBardSkillMods = append(f.baseBardSkillMods, mods...)
+}
+
+func (f *Factory) ClearBaseCatalogueMetumMods() {
+	f.baseCatalogueMetumMods = nil
+}
+
+func (f *Factory) AddBaseCatalogueMetumMod(mods ...CatalogueMetumMod) {
+	f.baseCatalogueMetumMods = append(f.baseCatalogueMetumMods, mods...)
 }
 
 func (f *Factory) ClearBaseCharacterMods() {

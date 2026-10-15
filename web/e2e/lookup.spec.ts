@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { test, expect, snap } from "./fixtures";
+import { test, expect, snap, catalogueSpell } from "./fixtures";
 import {
   chooseLanguage,
   openDashboard,
@@ -10,19 +10,21 @@ import {
 } from "./helpers";
 import type { Locator, Page } from "@playwright/test";
 
-// The frozen fixture catalogue the stack seeds from (never the campaign seeds/).
-const fixtureDir = path.resolve(
+// The frozen fixture catalogue and spellbook the stack runs on (never the campaign seeds/).
+const testdata = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../api/testdata/seeds",
+  "../../api/testdata",
 );
-const fixtureSpells = JSON.parse(
-  readFileSync(path.join(fixtureDir, "spells.json"), "utf8"),
-) as unknown[];
+const fixtureSpells = (
+  JSON.parse(readFileSync(path.join(testdata, "catalogue.json"), "utf8")) as {
+    spells: unknown[];
+  }
+).spells;
 const fixtureBook = JSON.parse(
-  readFileSync(path.join(fixtureDir, "spellbook.json"), "utf8"),
+  readFileSync(path.join(testdata, "seeds", "spellbook.json"), "utf8"),
 ) as { id: string }[];
 
-/** A catalogue row appended to the fixture for these tests. */
+/** A catalogue spell appended to the fixture for these tests; its id is the slug of its name. */
 function row(
   name: string,
   cls: "Wizard" | "Priest",
@@ -31,21 +33,16 @@ function row(
   sphere = "",
   extra: Record<string, string> = {},
 ) {
-  return {
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  return catalogueSpell({
+    id,
     name,
     class: cls,
     level,
     school,
     sphere,
-    casting_time: "1",
-    range: "10 yds.",
-    duration: "1 rd.",
-    area_of_effect: "1 creature",
-    components: "V, S",
-    saving_throw: "None",
-    description: `${name} fixture text.`,
     ...extra,
-  };
+  });
 }
 
 // The fixture has Fireball, Magic Missile, Burning Hands...; these add what the criteria name.
@@ -421,7 +418,9 @@ test.describe("keyboard past a page", () => {
   }) => {
     await openLookup(page);
     await search(page).fill("force");
-    await expect(count(page)).toHaveText(`${forceRows.length + 1} spells`);
+    // The synthetic rows, Strength (French "Force") and the fixture's Mordenkainen's Force Missiles.
+    const total = forceRows.length + 2;
+    await expect(count(page)).toHaveText(`${total} spells`);
     // The French exact match ranks first.
     await expect(selected(page)).toHaveAttribute("data-id", "strength");
     await expect(rows(page)).toHaveCount(200);
@@ -429,7 +428,7 @@ test.describe("keyboard past a page", () => {
     await rows(page).nth(195).scrollIntoViewIfNeeded();
     await rows(page).nth(195).click();
     for (let i = 0; i < 10; i++) await search(page).press("ArrowDown");
-    await expect(rows(page)).toHaveCount(forceRows.length + 1);
+    await expect(rows(page)).toHaveCount(total);
     const ids = await attr(rows(page), "data-id");
     await expect(selected(page)).toHaveAttribute("data-id", ids[205]);
     await expect(selected(page)).toBeInViewport();

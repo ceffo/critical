@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
@@ -429,4 +430,19 @@ func TestParse_ExposureRefused(t *testing.T) {
 			assert.ErrorContains(t, err, tt.want)
 		})
 	}
+}
+
+func TestCheckAgainst_ListsEveryIDTheCatalogueDoesNotHold(t *testing.T) {
+	c, err := spelleffectsadpt.Parse([]byte(`[
+	  {"id":"light","name":"Light","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}},
+	  {"id":"sleep","name":"Sleep","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}},
+	  {"id":"lihgt","name":"Lihgt","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}}]`))
+	require.NoError(t, err)
+
+	held := catalogue.Catalogue{Spells: []catalogue.Spell{{ID: "light"}, {ID: "sleep"}, {ID: "lihgt"}}}
+	require.NoError(t, c.CheckAgainst(held))
+
+	err = c.CheckAgainst(catalogue.Catalogue{Spells: []catalogue.Spell{{ID: "light"}}})
+	require.Error(t, err)
+	assert.EqualError(t, err, "spell effects: ids not in the spell catalogue: sleep, lihgt")
 }

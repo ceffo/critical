@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
 	"github.com/ceffo/critical/api/internal/adapters/attackformdal"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
@@ -25,6 +26,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/xpdal"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
@@ -74,6 +76,9 @@ type BackingServices struct {
 type Config struct {
 	DSN      string
 	SeedsDir string
+	// Catalogue is the path of the spell catalogue artifact (ADR 0021),
+	// imported into the database at startup.
+	Catalogue string
 	// Dice replaces the crypto dice (tests that need known rolls). Nil in
 	// production.
 	Dice Dice
@@ -132,8 +137,23 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	spellbook, err := spellbookadpt.New(cfg.SeedsDir)
+	// The spell catalogue (ADR 0021 step 5): a missing or invalid artifact,
+	// or one that removes a spell still referenced, is a startup error.
+	cat, err := catalogueadpt.Load(cfg.Catalogue)
 	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := effects.CheckAgainst(cat); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	spellbook, err := spellbookadpt.New(cfg.SeedsDir, cat)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbook, effects)); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
@@ -304,4 +324,17 @@ func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Rest
 	for key, r := range restorers {
 		log.RegisterRestorer(key, r)
 	}
+}
+
+// seedSpellRefs are the spell ids the seeds refer to: a catalogue import may
+// not remove any of them (ADR 0021 step 5.4.3).
+func seedSpellRefs(book *spellbookadpt.Book, effects *spelleffectsadpt.Catalog) []catalogue.Ref {
+	var refs []catalogue.Ref
+	for _, e := range book.All() {
+		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spellbook seed"})
+	}
+	for _, e := range effects.All() {
+		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spell effects seed"})
+	}
+	return refs
 }

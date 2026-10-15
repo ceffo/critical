@@ -1,7 +1,6 @@
 package combatsvc_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -42,8 +41,8 @@ func TestPreviewAttack_Step12_SameModifiersAsAttack(t *testing.T) {
 				TargetSize: combatsvc.SizeSmallMedium,
 			}
 			if s := c.req.Situational; s != nil {
-				// Stored labels are trimmed (UpdateAttackForm).
-				stored.Situational = combatsvc.Situational{Value: s.Value, Label: strings.TrimSpace(s.Label)}
+				// Stored as typed: the preview trims like the attack.
+				stored.Situational = *s
 			}
 			var items []itemsvc.Item
 			if c.ammo != nil {
@@ -234,7 +233,7 @@ func TestUpdateAttackForm_SavesTargetAndSituational(t *testing.T) {
 	f.withForm(nil, []combatsvc.Weapon{longsword}, nil, strMods(12))
 	want := combatsvc.AttackForm{
 		WeaponID: "", TargetAC: -2, TargetSize: combatsvc.SizeLarge,
-		Situational: combatsvc.Situational{Value: -4, Label: "cover"},
+		Situational: combatsvc.Situational{Value: -4, Label: "  cover "},
 	}
 	f.forms.EXPECT().Put(mock.Anything, charID, want).Return(nil).Once()
 	size := combatsvc.SizeLarge
@@ -243,6 +242,8 @@ func TestUpdateAttackForm_SavesTargetAndSituational(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "longsword", v.Form.WeaponID)
+	assert.Equal(t, "  cover ", v.Form.Situational.Label, "kept as typed")
+	assert.Equal(t, "cover", v.Preview.Modifiers[len(v.Preview.Modifiers)-1].Detail, "the preview trims like the attack")
 	// THAC0 13 - (STR 0 + sword 2 - 4) = 15; vs AC -2 needs 17.
 	assert.Equal(t, 15, v.Preview.EffectiveThac0)
 	assert.Equal(t, 17, v.Preview.RollNeeded)
@@ -294,4 +295,25 @@ func TestUpdateAttackForm_Rejections(t *testing.T) {
 			f.forms.AssertNotCalled(t, "Put", mock.Anything, mock.Anything, mock.Anything)
 		})
 	}
+}
+
+// The reason input sends every keystroke: a label saved mid-word ("Rear ")
+// keeps its trailing space, so typing "Rear attack" one key at a time ends
+// as "Rear attack", not "Rearattack".
+func TestUpdateAttackForm_KeepsTheReasonAsTyped(t *testing.T) {
+	label := ""
+	for _, key := range "Rear attack" {
+		f := newFixture(t)
+		f.withForm(&combatsvc.AttackForm{
+			WeaponID: "longsword", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium,
+			Situational: combatsvc.Situational{Value: 2, Label: label},
+		}, []combatsvc.Weapon{longsword}, nil, strMods(12))
+		f.forms.EXPECT().Put(mock.Anything, charID, mock.Anything).Return(nil).Once()
+		v, err := f.svc.UpdateAttackForm(t.Context(), charID, combatsvc.AttackFormPatch{
+			Situational: &combatsvc.Situational{Value: 2, Label: label + string(key)},
+		})
+		require.NoError(t, err)
+		label = v.Form.Situational.Label
+	}
+	assert.Equal(t, "Rear attack", label)
 }

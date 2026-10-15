@@ -20,7 +20,8 @@ type AttackForm struct {
 	TargetAC         int
 	TargetSize       TargetSize
 	// Situational is kept with its label even at 0, so the reason typed
-	// stays while the value is stepped through 0.
+	// stays while the value is stepped through 0. The label is stored as
+	// typed, untrimmed.
 	Situational Situational
 }
 
@@ -156,7 +157,9 @@ func (s *service) UpdateAttackForm(ctx context.Context, characterID int64, p Att
 			if sit.Value < -MaxSituational || sit.Value > MaxSituational {
 				return domain.FieldErrorf("situational", "situational modifier must be between -%d and %d", MaxSituational, MaxSituational)
 			}
-			form.Situational = Situational{Value: sit.Value, Label: strings.TrimSpace(sit.Label)}
+			// The label is kept as typed (the reason input sends every keystroke, so a
+			// trailing space is the start of the next word); the attack trims it.
+			form.Situational = Situational{Value: sit.Value, Label: sit.Label}
 		}
 		if err := s.forms.Put(ctx, characterID, form); err != nil {
 			return fmt.Errorf("save attack form: %w", err)
@@ -274,7 +277,8 @@ func (s *service) preview(ctx context.Context, characterID int64, weapon Weapon,
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}
-	sit := form.Situational
+	// Trimmed like ResolveAttack does, so the preview lists the same modifier.
+	sit := Situational{Value: form.Situational.Value, Label: strings.TrimSpace(form.Situational.Label)}
 	am, err := s.attackModifiers(char, weapon, ammo, mods, &sit)
 	if err != nil {
 		return nil, err

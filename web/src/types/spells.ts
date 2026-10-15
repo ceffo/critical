@@ -318,6 +318,8 @@ export interface ExposureResult {
   mode?: string;
   round: number;
   onSelf: boolean;
+  /** The HP change the ledger applied on the Bard (the floor may cut it); 0 when not on him. */
+  hpDelta: number;
   damage: CastDamage;
   /** The exposure damage at casterLevel, for the next round of exposure. */
   exposure?: SpellExposure;

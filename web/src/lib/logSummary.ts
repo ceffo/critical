@@ -72,6 +72,9 @@ export interface ExposureLogPayload {
   damage: NonNullable<CastLogPayload["damage"]>;
   /** The exposure damage served at casterLevel, for the next round. */
   exposure?: SpellExposure;
+  /** Set by the server when the HP floor cut an exposure on the Bard: what was asked and applied. */
+  hpRequested?: number;
+  hpApplied?: number;
 }
 
 export function exposurePayload(e: LogEntry): ExposureLogPayload | null {
@@ -91,7 +94,12 @@ function exposureText(p: ExposureLogPayload, t: TFunction): string {
     total: p.damage.total,
     type: p.damage.type ? t(`spellDice.types.${p.damage.type}`, { defaultValue: p.damage.type }) : "",
   });
-  return p.mode ? `${text} · ${modeName(t, p.spellId, p.mode)}` : text;
+  const parts = [text];
+  if (p.mode) parts.push(modeName(t, p.spellId, p.mode));
+  // Cut by the HP floor (ADR 0011): the server merged what was asked and applied into the payload.
+  if (typeof p.hpRequested === "number" && typeof p.hpApplied === "number" && p.hpRequested !== p.hpApplied)
+    parts.push(t("log.floored", { requested: formatSigned(p.hpRequested) }));
+  return parts.join(" · ");
 }
 
 export function castPayload(e: LogEntry): CastLogPayload | null {

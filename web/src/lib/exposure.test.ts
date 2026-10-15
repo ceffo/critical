@@ -165,6 +165,7 @@ describe("exposure entries", () => {
         mode: undefined,
         round: 2,
         onSelf: true,
+        hpDelta: 0,
         damage: {
           dice: "1d10",
           type: "poison",
@@ -190,6 +191,7 @@ describe("exposure entries", () => {
       casterLevel: 15,
       round: 3,
       onSelf: false,
+      hpDelta: 0,
       damage: { dice: "1d10", type: "poison", instances: 1, rounds: 1, rolls: [], total: 4 },
     };
     const last = { kind: "exposure" as const, result };
@@ -206,5 +208,49 @@ describe("exposure entries", () => {
     });
     expect(lastHpChange([entry({ ...payload, onSelf: false })])).toBeNull();
     expect(lastHpChange([{ ...onMe, status: "voided", effectiveHpDelta: 0 }])).toBeNull();
+  });
+
+  it("an exposure cut by the HP floor shows the HP applied, on the card and the journal row", async () => {
+    const t = await makeT("en");
+    const floored = entry(
+      { ...payload, damage: { ...payload.damage, total: 10 }, hpRequested: -10, hpApplied: -2 },
+      { hpDelta: -2, effectiveHpDelta: -2 },
+    );
+    const model = cardModel(floored, t);
+    expect(model.layout === "exposure" && model.exposure.hpDelta).toBe(-2);
+    expect(rowValue(floored)).toEqual({ text: "−2", tone: "damage" });
+    expect(entryText(floored, t)).toBe(
+      "Cloudkill exposure, round 2: 10 poison damage to me · −10 requested, stopped at the HP floor",
+    );
+  });
+
+  it("Wall of Fire passing through names its mode in the journal, in French too (spell names outside the spellbook stay English)", async () => {
+    const wall = entry({
+      ...payload,
+      spellId: "wall_of_fire",
+      spell: "Wall of Fire",
+      casterLevel: 11,
+      mode: "passing_through",
+      round: 1,
+      onSelf: false,
+      damage: { ...payload.damage, total: 19, type: "fire", dice: "2d6+level" },
+    });
+    expect(entryText(wall, await makeT("en"))).toBe(
+      "Wall of Fire exposure, round 1: 19 fire damage · Passing through",
+    );
+    expect(entryText(wall, await makeT("fr"))).toBe(
+      "Wall of Fire, exposition au round 1 : 19 dégâts (feu) · En la traversant",
+    );
+  });
+
+  it("a cast entry from the journal keeps the exposure it served, to roll from after a reload", async () => {
+    const t = await makeT("en");
+    const cast = {
+      ...entry({ action: "cast", spellId: "cloudkill", spell: "Cloudkill", casterLevel: 15, exposure: cloud }),
+      kind: "cast" as const,
+    };
+    const model = cardModel(cast, t);
+    expect(model.layout).toBe("cast");
+    expect(model.layout === "cast" && model.cast.exposure).toEqual(cloud);
   });
 });

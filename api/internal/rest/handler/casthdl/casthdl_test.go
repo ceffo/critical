@@ -117,7 +117,7 @@ func (f fakeCast) Expose(_ context.Context, _ int64, req castsvc.ExposureRequest
 	*f.expose = req
 	return castsvc.ExposureResult{
 		EntryID: 7, SpellID: req.SpellID, Name: "Wall of Fire", CasterLevel: req.CasterLevel, Mode: req.Mode,
-		Round: req.Round, OnSelf: req.OnSelf,
+		Round: req.Round, OnSelf: req.OnSelf, HPDelta: -4,
 		Damage: &castsvc.DamageResult{
 			Dice: "2d4", Type: "fire", Instances: 1, Rounds: 1, Total: 5,
 			Rolls: []castsvc.Roll{{Formula: "2d4", Dice: []castsvc.DieRoll{{Sides: 4, Value: 2}, {Sides: 4, Value: 3}}, Total: 5}},
@@ -176,7 +176,7 @@ func TestExpose_Handler(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, castsvc.ExposureRequest{SpellID: "wall_of_fire", CasterLevel: 9, Mode: "within_10_ft", Round: 2, OnSelf: true}, *svc.expose)
 	assert.JSONEq(t, `{"entryId":7,"spellId":"wall_of_fire","name":"Wall of Fire","casterLevel":9,"mode":"within_10_ft",
-		"round":2,"onSelf":true,"damage":{"dice":"2d4","type":"fire","instances":1,"rounds":1,"total":5,
+		"round":2,"onSelf":true,"hpDelta":-4,"damage":{"dice":"2d4","type":"fire","instances":1,"rounds":1,"total":5,
 		"rolls":[{"formula":"2d4","dice":[{"sides":4,"value":2},{"sides":4,"value":3}],"total":5}]}}`, rec.Body.String())
 
 	rec = httptest.NewRecorder()

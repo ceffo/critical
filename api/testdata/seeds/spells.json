@@ -404,5 +404,33 @@
   "components": "V, S, M",
   "saving_throw": "1/2",
   "description": "An incendiary cloud spell exactly resembles the smoke effects of a pyrotechnics spell, except that its minimum dimensions are a cloud 10 feet tall, 20 feet wide, and 20 feet long. This dense vapor cloud billows forth, and on the third round of its existence begins to flame, causing 1-2 points of damage per level of the spellcaster. On the fourth round it inflicts 1d4 points of damage per level of the caster, and on the fifth round this drops back to 1-2 points of damage per level as its flames burn out. In any successive rounds of existence, the cloud is simply harmless smoke that obscures vision within its confines. Creatures within the cloud need to make only one saving throw if it is successful, but if they fail the first saving throw, they roll again on the fourth and fifth rounds (if necessary) to attempt to reduce the damage sustained by one-half. In order to cast this spell, the wizard must have an available fire source (just as with a pyrotechnics spell), scrapings from beneath a dung pile, and a pinch of dust."
+ },
+ {
+  "name": "Wall of Fire",
+  "class": "Wizard",
+  "level": 4,
+  "school": "Evocation",
+  "sphere": "",
+  "casting_time": "4",
+  "range": "60 yds.",
+  "duration": "Special",
+  "area_of_effect": "Special",
+  "components": "V, S, M",
+  "saving_throw": "None",
+  "description": "The wall of fire spell brings forth an immobile, blazing curtain of magical fire of shimmering color--violet or reddish blue. The spell creates either an opaque sheet of flame up to one 20-foot square per level of the spellcaster, or a ring with a radius of up to 10 feet + 5 feet per two levels of experience of the wizard. In either form, the wall of fire is 20 feet high. The wall of fire must be cast so that it is vertical with respect to the caster. One side of the wall, selected by the caster, sends forth waves of heat, inflicting 2d4 points of damage upon creatures within 10 feet and 1d4 points of damage upon those within 20 feet. In addition, the wall inflicts 2d6 points of damage, plus 1 point of damage per level of the spellcaster, upon any creature passing through it. Creatures especially subject to fire may take additional damage, and undead always take twice normal damage. Note that attempting to catch a moving creature with a newly-created wall of fire is difficult; a successful saving throw enables the creature to avoid the wall, while its rate and direction of movement determine which side of the created wall it is on. The wall of fire lasts as long as the wizard concentrates on maintaining it, or one round per level of experience of the wizard, in the event he does not wish to concentrate upon it. The material component of the spell is phosphorus."
+ },
+ {
+  "name": "Death Fog",
+  "class": "Wizard",
+  "level": 6,
+  "school": "Alteration, Evocation",
+  "sphere": "",
+  "casting_time": "6",
+  "range": "30 yds.",
+  "duration": "1d4 rds. + 1/level",
+  "area_of_effect": "Two 10-ft. cubes/level",
+  "components": "V, S, M",
+  "saving_throw": "None",
+  "description": "The casting of a death fog spell creates an area of solid fog that has the additional property of being highly acidic. The vapors are deadly to living things, so that vegetation exposed to them will die--grass and similar small plants in two rounds, bushes and shrubs in four, small trees in eight, and large trees in 16 rounds. Animal life not immune to acid suffers damage according to the length of time it is exposed to the vapors of a death fog, as follows: 1st round:   1 point 2nd round:  2 points 3rd round:  4 points 4th and each succeeding round: 8 points The death fog otherwise resembles the 2nd-level fog cloud spell: rolling, billowing vapors that can be moved only by a very strong wind. Any creature attempting to move through the death fog progresses at a rate of 1 foot per unit of normal movement rate per round. A gust of wind spell cannot affect it, but a fireball, flame strike, or wall of fire can burn it away in a single round. The material components are a pinch of dried and powdered peas, powdered animal hoof, and strong acid of any sort (including highly distilled vinegar or acid crystals), which must be obtained from an alchemist."
  }
 ]

@@ -1090,7 +1090,7 @@
     "onMe": "I am exposed",
     "roll": "Roll exposure",
     "heading": "{{name}} exposure, round {{round}} (caster level {{casterLevel}})",
-    "onYou": "Taken off your HP",
+    "onYou": "Taken off your HP: {{delta}}",
     "forDm": "For the DM: your HP is unchanged"
   },
   "apiError": {

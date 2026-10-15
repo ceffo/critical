@@ -109,6 +109,16 @@ func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *
 			f.entries = append(f.entries, e)
 			return int64(len(f.entries)), nil
 		}).Maybe()
+	// The ledger total: the sum of the deltas recorded (no floor here; the
+	// composition tests use the real one).
+	log.EXPECT().HPTotal(mock.Anything, charID).RunAndReturn(
+		func(context.Context, int64) (int, error) {
+			total := 0
+			for _, e := range f.entries {
+				total += e.HPDelta
+			}
+			return total, nil
+		}).Maybe()
 	f.texts.EXPECT().Describe(mock.Anything, mock.Anything).RunAndReturn(
 		func(_ context.Context, id string) (spellsvc.Spell, bool, error) {
 			if id == "no_such_spell" {

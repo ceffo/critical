@@ -216,7 +216,10 @@ type ExposureResult struct {
 	// OnSelf: the Bard was the one exposed and the entry took Damage.Total
 	// off his HP (down to the floor of ADR 0011 step 1).
 	OnSelf bool
-	Damage *DamageResult
+	// HPDelta is the HP change the ledger applied: -Damage.Total, or less
+	// when the floor cut it; 0 when the Bard was not exposed.
+	HPDelta int
+	Damage  *DamageResult
 	// Exposure is the spell's exposure damage at the caster level, for the
 	// next round of exposure.
 	Exposure *spelleffectsvc.ExposureAt

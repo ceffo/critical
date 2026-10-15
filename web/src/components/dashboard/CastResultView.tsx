@@ -334,9 +334,16 @@ export function ExposureResultView({ result: r, interactive }: { result: Exposur
           </div>
         </div>
       </div>
-      <p className={cn("text-body", r.onSelf && "text-danger")} data-testid="exposure-target">
-        {r.onSelf ? t("exposure.onYou") : t("exposure.forDm")}
-      </p>
+      <div className="flex flex-col gap-1">
+        <p className={cn("text-body tabular-nums", r.onSelf && "text-danger")} data-testid="exposure-target">
+          {r.onSelf ? t("exposure.onYou", { delta: formatSigned(r.hpDelta) }) : t("exposure.forDm")}
+        </p>
+        {r.onSelf && r.hpDelta !== -r.damage.total && (
+          <p className="text-label text-muted-foreground" data-testid="exposure-floored">
+            {t("log.floored", { requested: formatSigned(-r.damage.total) })}
+          </p>
+        )}
+      </div>
       {interactive && r.exposure && (
         <ExposureControls
           key={r.entryId}

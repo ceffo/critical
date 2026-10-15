@@ -67,11 +67,33 @@ func (s *service) Expose(ctx context.Context, characterID int64, req ExposureReq
 		return ExposureResult{}, fmt.Errorf("encode exposure payload: %w", err)
 	}
 	e := actionlog.NewEntry{CharacterID: characterID, Kind: actionlog.KindExposure, Payload: payload}
-	if req.OnSelf {
-		e.HPDelta = -res.Damage.Total
+	if !req.OnSelf {
+		if res.EntryID, err = s.Log.Record(ctx, e); err != nil {
+			return ExposureResult{}, fmt.Errorf("record exposure: %w", err)
+		}
+		return res, nil
 	}
-	if res.EntryID, err = s.Log.Record(ctx, e); err != nil {
-		return ExposureResult{}, fmt.Errorf("record exposure: %w", err)
+	// On the Bard: the ledger applies the damage (down to the floor of ADR
+	// 0011); the HP total before and after, in the recording transaction,
+	// is what it applied.
+	e.HPDelta = -res.Damage.Total
+	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
+		before, err := s.Log.HPTotal(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("hp total: %w", err)
+		}
+		if res.EntryID, err = s.Log.Record(ctx, e); err != nil {
+			return fmt.Errorf("record exposure: %w", err)
+		}
+		after, err := s.Log.HPTotal(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("hp total: %w", err)
+		}
+		res.HPDelta = after - before
+		return nil
+	})
+	if err != nil {
+		return ExposureResult{}, err
 	}
 	return res, nil
 }

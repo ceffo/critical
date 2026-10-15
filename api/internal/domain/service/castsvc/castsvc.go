@@ -88,9 +88,12 @@ type Dice interface {
 	RollDie(sides int) int
 }
 
-// Log records the cast (actionlogsvc).
+// Log records the cast (actionlogsvc). HPTotal is the ledger's sum of HP
+// deltas, read around an exposure the Bard takes to report the HP the
+// ledger applied (the floor of ADR 0011 may cut it).
 type Log interface {
 	actionlog.Recorder
+	HPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
 // Deps are the collaborators; all are required.

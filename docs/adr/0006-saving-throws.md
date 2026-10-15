@@ -42,12 +42,13 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    restores the rolled verdict, reason dropped", "a new adjustment replaces the previous one"),
    `TestAdjustSave_Rejections` ("above +20", "below -20", "reason too long").
 6. **Latest roll only.** Only the newest entry among the roll kinds (`actionlog.RollKinds`:
-   attack, save, cast, item use, skill check ([ADR 0014](0014-skill-checks.md)): the ones that
+   attack, save, cast, item use, skill check ([ADR 0014](0014-skill-checks.md)), spell exposure
+   ([ADR 0008](0008-spell-slots-and-long-rest.md) step 16): the ones that
    replace the result card) can be adjusted, and that
    entry must be a save. Voided entries count when looking for the newest roll. Another kind is
    refused (400), a voided save or one that is not the latest roll is refused (409).
    Tests: `TestAmendLatest` (actionlogsvc: "not a save", "voided", "a later save exists", "a later
-   attack exists", "a later cast exists", "a later item use exists", "a later skill check exists"), `TestAdjustSave_Rejections`
+   attack exists", "a later cast exists", "a later item use exists", "a later skill check exists"), `TestExposure_ClosesTheSaveAdjustmentUntilPopped` (composition), `TestAdjustSave_Rejections`
    ("not the latest", "voided", "not a save"), router `TestSpecialSentinels` ("adjust voided", "adjust not latest",
    "adjust not a save").
 7. **Audited.** The adjustment is an `amend` correction on the entry carrying the new

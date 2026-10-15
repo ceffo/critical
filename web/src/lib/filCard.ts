@@ -229,7 +229,7 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
   const cast = castPayload(e);
   if (cast) return { layout: "cast", cast };
   const exposure = exposurePayload(e);
-  if (exposure) return { layout: "exposure", exposure: exposureFromPayload(e.id, exposure) };
+  if (exposure) return { layout: "exposure", exposure: exposureFromPayload(e, exposure) };
   const item = itemPayload(e);
   if (item) return { layout: "item", item: { ...item, logEntryId: e.id } };
   const initiative = initiativePayload(e);
@@ -244,16 +244,20 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
   };
 }
 
-/** An exposure entry's payload as the exposure endpoint's result, so one view shows both. */
-export function exposureFromPayload(entryId: number, p: ExposureLogPayload): ExposureResult {
+/**
+ * An exposure entry's payload as the exposure endpoint's result, so one view shows both; the HP
+ * applied is the entry's (a voided one keeps its original delta, as an HP change shows it).
+ */
+export function exposureFromPayload(e: LogEntry, p: ExposureLogPayload): ExposureResult {
   return {
-    entryId,
+    entryId: e.id,
     spellId: p.spellId,
     name: p.spell,
     casterLevel: p.casterLevel,
     mode: p.mode,
     round: p.round,
     onSelf: p.onSelf,
+    hpDelta: e.status === "voided" ? e.hpDelta : e.effectiveHpDelta,
     damage: {
       dice: p.damage.dice ?? "",
       type: p.damage.type,

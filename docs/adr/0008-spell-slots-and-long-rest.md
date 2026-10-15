@@ -216,7 +216,8 @@ named otherwise.
     from a journal entry as well as from a fresh result. User
     ruling 2026-10-15: when the Bard is the one exposed (his own cloud or a spell received), the
     same entry takes the total off his HP through the HP ledger ([ADR 0007](0007-hp-ledger.md),
-    the floor of [ADR 0011](0011-hp-below-zero.md) step 1), so popping it gives the HP back;
+    the floor of [ADR 0011](0011-hp-below-zero.md) step 1) and the result says what the ledger
+    applied (less than the damage when the floor cuts it), so popping it gives the HP back;
     otherwise the roll is the DM's and changes no HP. Spells without an exposure serve and cast
     exactly as before. The mechanic is data (`seeds/spell_effects.json`), never a branch on a
     spell id.
@@ -226,8 +227,10 @@ named otherwise.
     `TestExposureAt_IsWhatAnExposureRolls`, `TestExpose_OnTheBardTakesHP`, `TestExpose_Refused`,
     `TestCast_Exposure_ServedOnTheResult` (castsvc), `TestInfo_ServesTheExposure` (prepsvc),
     `TestSearch_ServesExposureAtTheCasterLevel` (rest/handler/spellhdl),
-    `TestExpose_Handler` (rest/handler/casthdl), `TestExposureOnTheBard_VoidGivesTheHPBack`
-    (composition), `TestSpecialSentinels` (rest/router).
+    `TestExpose_Handler` (rest/handler/casthdl), `TestExposureOnTheBard_VoidGivesTheHPBack`,
+    `TestExposureOnTheBard_FloorCutsTheAppliedHP`, `TestExposureRecord_MatchesTheLookupsWireShape`,
+    `TestExposureOnTheBard_HPUndoRefusedGeneralUndoGivesHPBack` (composition),
+    `TestSpecialSentinels` (rest/router).
 
 ## Consequences
 

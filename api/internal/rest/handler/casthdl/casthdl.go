@@ -58,10 +58,13 @@ type ExposureResultDTO struct {
 	Name        string `json:"name"`
 	CasterLevel int    `json:"casterLevel"`
 	// Mode: the key of the exposure mode rolled (absent: none).
-	Mode   string     `json:"mode,omitempty"`
-	Round  int        `json:"round"`
-	OnSelf bool       `json:"onSelf"`
-	Damage *DamageDTO `json:"damage"`
+	Mode   string `json:"mode,omitempty"`
+	Round  int    `json:"round"`
+	OnSelf bool   `json:"onSelf"`
+	// HPDelta: the HP change the ledger applied when the Bard was exposed
+	// (the floor may make it smaller than the damage); 0 otherwise.
+	HPDelta int        `json:"hpDelta"`
+	Damage  *DamageDTO `json:"damage"`
 	// Exposure: the spell's exposure damage at the caster level, for the
 	// next round of exposure.
 	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
@@ -89,7 +92,7 @@ func Expose(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 func ExposureToDTO(res castsvc.ExposureResult) ExposureResultDTO {
 	return ExposureResultDTO{
 		EntryID: res.EntryID, SpellID: res.SpellID, Name: res.Name, CasterLevel: res.CasterLevel,
-		Mode: res.Mode, Round: res.Round, OnSelf: res.OnSelf, Damage: damageDTO(res.Damage),
+		Mode: res.Mode, Round: res.Round, OnSelf: res.OnSelf, HPDelta: res.HPDelta, Damage: damageDTO(res.Damage),
 		Exposure: spellhdl.ExposureToDTO(res.Exposure),
 	}
 }

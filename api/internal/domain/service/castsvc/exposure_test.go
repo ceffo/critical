@@ -122,6 +122,7 @@ func TestExpose_RollsTheServedDiceOnce(t *testing.T) {
 			e := f.entries[0]
 			assert.Equal(t, actionlog.KindExposure, e.Kind)
 			assert.Zero(t, e.HPDelta, "not the Bard: the DM's roll")
+			assert.Zero(t, res.HPDelta)
 			assert.Empty(t, e.Snapshots)
 			assert.Equal(t, int64(1), res.EntryID)
 			var p struct {
@@ -211,6 +212,8 @@ func TestExpose_OnTheBardTakesHP(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.OnSelf)
 	assert.Equal(t, 9, res.Damage.Total)
+	assert.Equal(t, -9, res.HPDelta, "the HP the ledger applied")
+	assert.Equal(t, 1, f.tx.calls, "read and recorded in one transaction")
 	assert.Equal(t, &spelleffectsvc.ExposureAt{Damage: exposureDamage(12, once(1, 10), "poison")}, res.Exposure,
 		"served for the next round")
 	require.Len(t, f.entries, 1, "one entry: the roll and the HP change")

@@ -1090,7 +1090,7 @@
     "onMe": "Je suis exposé",
     "roll": "Jeter l'exposition",
     "heading": "{{name}}, exposition au round {{round}} (niveau de lanceur {{casterLevel}})",
-    "onYou": "Retiré de vos PV",
+    "onYou": "Retiré de vos PV : {{delta}}",
     "forDm": "Pour le MD : vos PV ne changent pas"
   },
   "apiError": {

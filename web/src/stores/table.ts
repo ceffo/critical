@@ -51,6 +51,8 @@ function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+let refreshQueue: Promise<void> = Promise.resolve();
+
 export const useTableStore = create<TableStore>((set, get) => ({
   error: null,
   notice: null,
@@ -58,21 +60,27 @@ export const useTableStore = create<TableStore>((set, get) => ({
   clearError: () => set({ error: null }),
   clearNotice: () => set({ notice: null }),
 
-  refresh: async () => {
-    try {
-      await Promise.all([
-        useHpStore.getState().fetchHp(),
-        useLogStore.getState().fetchLog(),
-        useBuffsStore.getState().fetchBuffs(),
-        useBuffsStore.getState().fetchSaved(),
-        useBuffsStore.getState().fetchRound(),
-        useBuffsStore.getState().fetchStrength(),
-        useItemsStore.getState().fetchItems(),
-        useItemsStore.getState().fetchWeapons(),
-      ]);
-    } catch (e) {
-      set({ error: message(e) });
-    }
+  // Refreshes run one after the other: when two actions overlap, an older refresh response
+  // can no longer land after (and overwrite) the newer one.
+  refresh: () => {
+    const next = refreshQueue.then(async () => {
+      try {
+        await Promise.all([
+          useHpStore.getState().fetchHp(),
+          useLogStore.getState().fetchLog(),
+          useBuffsStore.getState().fetchBuffs(),
+          useBuffsStore.getState().fetchSaved(),
+          useBuffsStore.getState().fetchRound(),
+          useBuffsStore.getState().fetchStrength(),
+          useItemsStore.getState().fetchItems(),
+          useItemsStore.getState().fetchWeapons(),
+        ]);
+      } catch (e) {
+        set({ error: message(e) });
+      }
+    });
+    refreshQueue = next;
+    return next;
   },
 
   run: async (action) => {

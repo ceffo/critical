@@ -457,7 +457,7 @@ describe("time_passed entries", () => {
       "Time passed: 1.5 h (90 rd), turn 4 → 0 — expired: Bless",
     );
     expect(entryText(entry("time_passed", payload), await makeT("fr"))).toBe(
-      "Temps écoulé : 1,5 h (90 rd.), round 4 → 0 — expirés : Bless",
+      "Temps écoulé : 1,5 h (90 rd.), tour 4 → 0 — expirés : Bless",
     );
   });
   it("without expiries", async () => {

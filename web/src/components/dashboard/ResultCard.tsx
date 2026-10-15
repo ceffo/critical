@@ -746,12 +746,39 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
                 {instances.map((inst, i) => (
                   <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-xs text-muted-foreground">{t("result.cast.instance", { n: i + 1 })}</span>
-                    <ul className="flex flex-wrap gap-1.5">
-                      {inst.dice.map((d, j) => (
-                        <DieChip key={j} value={d.value} tone={d.tone} />
-                      ))}
-                    </ul>
-                    <span className="text-sm font-semibold tabular-nums">= {inst.total}</span>
+                    {inst.parts ? (
+                      <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="cast-entry-parts">
+                        {inst.parts.map((p, j) => (
+                          <span key={j} className="inline-flex flex-wrap items-center gap-1.5">
+                            {p.dice.length > 0 ? (
+                              <>
+                                <ul className="flex flex-wrap gap-1.5">
+                                  {p.dice.map((d, k) => (
+                                    <DieChip key={k} value={d.value} tone={d.tone} />
+                                  ))}
+                                </ul>
+                                <span className="text-sm font-semibold tabular-nums">= {p.total}</span>
+                              </>
+                            ) : (
+                              <span className="text-sm font-semibold tabular-nums">{p.total}</span>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {t(`result.cast.partSave.${p.save}`, { defaultValue: p.save })}
+                            </span>
+                          </span>
+                        ))}
+                        <span className="text-sm font-semibold tabular-nums">Σ {inst.total}</span>
+                      </span>
+                    ) : (
+                      <>
+                        <ul className="flex flex-wrap gap-1.5">
+                          {inst.dice.map((d, j) => (
+                            <DieChip key={j} value={d.value} tone={d.tone} />
+                          ))}
+                        </ul>
+                        <span className="text-sm font-semibold tabular-nums">= {inst.total}</span>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>

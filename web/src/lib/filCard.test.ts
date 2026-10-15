@@ -573,6 +573,49 @@ describe("die chips from the payload", () => {
     expect(m.cast.save).toEqual({ type: "spell", effect: "half" });
   });
 
+  it("cast with damage parts: each instance lists its parts and their save", async () => {
+    const t = await makeT("en");
+    const d4 = (a: number, b: number) => [
+      { sides: 4, value: a },
+      { sides: 4, value: b },
+    ];
+    const burst = { formula: "level", dice: [], total: 10 };
+    const m = cardModel(
+      entry("cast", {
+        ...castBase,
+        damage: {
+          total: 31,
+          totalOnSave: 11,
+          type: "force",
+          dice: "2d4+level",
+          instances: 2,
+          rounds: 1,
+          parts: [
+            { formula: "2d4", save: "none" },
+            { formula: "level", save: "negates" },
+          ],
+          rolls: [
+            { formula: "2d4+level", dice: d4(3, 3), total: 16, parts: [{ formula: "2d4", dice: d4(3, 3), total: 6 }, burst] },
+            { formula: "2d4+level", dice: d4(4, 1), total: 15, parts: [{ formula: "2d4", dice: d4(4, 1), total: 5 }, burst] },
+          ],
+        },
+      }),
+      t,
+    );
+    if (m.layout !== "cast") throw new Error("not a cast card");
+    const max = { value: 4, tone: "max" };
+    const min = { value: 1, tone: "min" };
+    expect(castInstances(m.cast)?.[1]).toEqual({
+      dice: [max, min],
+      total: 15,
+      parts: [
+        { dice: [max, min], total: 5, save: "none" },
+        { dice: [], total: 10, save: "negates" },
+      ],
+    });
+    expect(m.cast.damage?.totalOnSave).toBe(11);
+  });
+
   it("cast, old entry without the dice: no instances, still a cast card", async () => {
     const t = await makeT("en");
     const m = cardModel(entry("cast", { ...castBase, damage: { total: 24, type: "fire" } }), t);

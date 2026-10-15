@@ -40,6 +40,12 @@ export interface BuffEffect {
    */
   chargesTotal: number;
   /**
+   * Catalogue id of the spell the buff comes from (cast or received), absent for a buff entered by
+   * hand or stored before the server kept it. Set by the server; never sent. The UI names the buff
+   * from the catalogue in the player's language (buffName), `name` otherwise.
+   */
+  spellId?: string;
+  /**
    * On list responses: false while min_str is not met by the effective STR, or (a Strength bonus)
    * while an Improved Strength replaces it.
    */

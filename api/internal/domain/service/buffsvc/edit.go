@@ -23,7 +23,7 @@ func (s *service) Edit(ctx context.Context, characterID int64, buffID string, e 
 		return change{
 			kind: actionlog.KindBuffChange,
 			payload: logPayload{
-				Action: "edit", Buff: before.Name,
+				Action: "edit", Buff: before.Name, SpellID: before.SpellID,
 				FromRounds: before.Duration, FromCharges: before.Charges,
 				Rounds: after.Duration, Charges: after.Charges, Ended: ended,
 				Note: after.Note, FromNote: before.Note, NoteChanged: noteChanged,

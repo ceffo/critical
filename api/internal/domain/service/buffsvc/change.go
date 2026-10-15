@@ -25,6 +25,13 @@ type logPayload struct {
 	FromRound   *int     `json:"fromRound,omitempty"`
 	ToRound     *int     `json:"toRound,omitempty"`
 	Expired     []string `json:"expired,omitempty"`
+	// SpellID is the buff's spell (activate, edit, absorb, dismiss), when it
+	// comes from one, so the UI names it in the player's language; Buff is the
+	// stored name, used otherwise and by entries recorded before it existed.
+	SpellID string `json:"spellId,omitempty"`
+	// ExpiredSpellIDs runs parallel to Expired: the spell of each expired
+	// buff, "" for a buff not from a spell. Omitted when none has one.
+	ExpiredSpellIDs []string `json:"expiredSpellIds,omitempty"`
 	// Note is the buff's note (activate, save_template) or its new note (edit,
 	// with NoteChanged); FromNote is the previous one.
 	Note        string  `json:"note,omitempty"`
@@ -155,6 +162,23 @@ func snapshots(before, after []BuffEffect, round int, newRound *int, roundOnly b
 		snaps = append(snaps, actionlog.Snapshot{Key: StateKeyRound, Before: rb, After: ra})
 	}
 	return snaps, nil
+}
+
+// expiredNames returns the names of the expired buffs and, parallel to them,
+// their spell ids (nil when no expired buff comes from a spell).
+func expiredNames(expired []BuffEffect) (names, spellIDs []string) {
+	names = make([]string, len(expired))
+	ids := make([]string, len(expired))
+	anySpell := false
+	for i, b := range expired {
+		names[i] = b.Name
+		ids[i] = b.SpellID
+		anySpell = anySpell || b.SpellID != ""
+	}
+	if anySpell {
+		spellIDs = ids
+	}
+	return names, spellIDs
 }
 
 // find returns the index of buffID or ErrNotFound.

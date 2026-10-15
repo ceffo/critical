@@ -328,8 +328,13 @@ type BuffEffectDTO struct {
 	StartRound int `json:"startRound"`
 	// ChargesTotal is the charge count the buff started with (0: unknown, or
 	// no charges). Response only, like startRound.
-	ChargesTotal int   `json:"chargesTotal"`
-	Applies      *bool `json:"applies,omitempty"`
+	ChargesTotal int `json:"chargesTotal"`
+	// SpellID is the catalogue id of the spell the buff comes from, omitted
+	// for a buff not from a spell (the client names it from the catalogue,
+	// name otherwise). Response only, like startRound: a request's value is
+	// ignored, only a spell cast stamps it.
+	SpellID string `json:"spellId,omitempty"`
+	Applies *bool  `json:"applies,omitempty"`
 }
 
 // BuffEffectsDTO is the modifier payload.
@@ -368,6 +373,7 @@ func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
+		SpellID: b.SpellID,
 	}
 }
 

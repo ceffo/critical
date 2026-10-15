@@ -48,13 +48,10 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 	ch, err := s.apply(ctx, characterID, func(buffs []BuffEffect, from int) (change, error) {
 		to := 0
 		active, expired = elapseBuffs(buffs, rounds)
-		names := make([]string, len(expired))
-		for i, b := range expired {
-			names[i] = b.Name
-		}
+		names, spellIDs := expiredNames(expired)
 		return change{
 			kind:    actionlog.KindTimePassed,
-			payload: logPayload{Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names},
+			payload: logPayload{Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names, ExpiredSpellIDs: spellIDs},
 			buffs:   active,
 			round:   &to,
 			// Out of combat: no initiative (ADR 0013 step 5).

@@ -24,6 +24,9 @@ type snapBuff struct {
 	// ChargesTotal is absent from entries recorded before it existed: they
 	// restore it as 0 (unknown).
 	ChargesTotal int `json:"charges_total,omitempty"`
+	// SpellID is absent from entries recorded before it existed (and for a
+	// buff not from a spell): they restore it empty.
+	SpellID string `json:"spell_id,omitempty"`
 }
 
 type snapEffects struct {
@@ -45,6 +48,7 @@ func encodeBuffs(buffs []BuffEffect) (json.RawMessage, error) {
 		out[i] = snapBuff{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
+			SpellID: b.SpellID,
 		}
 	}
 	return json.Marshal(out)
@@ -60,6 +64,7 @@ func decodeBuffs(raw json.RawMessage) ([]BuffEffect, error) {
 		out[i] = BuffEffect{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
+			SpellID: b.SpellID,
 		}
 	}
 	return out, nil

@@ -917,7 +917,8 @@ function CastEntry({
   interactive: boolean;
 }) {
   const { t } = useTranslation();
-  const spell = useSpellName()(c.spellId, c.spell);
+  const spellName = useSpellName();
+  const spell = spellName(c.spellId, c.spell);
   const instances = castInstances(c);
   return (
     <div className="flex flex-col gap-3" data-testid="cast-entry">
@@ -950,7 +951,7 @@ function CastEntry({
       {c.buff?.applied && (
         <p className="text-body" data-testid="cast-entry-buff">
           {t("fil.castBuff", {
-            buff: c.buff.name,
+            buff: spellName(c.spellId, c.buff.name),
             counters: counters(t, c.buff.rounds, c.buff.charges),
           })}
           {c.buff.strGain ? (

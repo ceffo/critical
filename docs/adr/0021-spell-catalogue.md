@@ -196,6 +196,11 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   today, and later renames happen on databases that are already keyed.
 - **Step 5.4.3, scanned references**: also the payloads of the corrections (`action_corrections`) of
   cast, exposure and spell_prep entries, since an amend replaces the entry's payload.
+  Since buffs carry their spell's id ([ADR 0004](0004-buffs.md) step 17), the scan also reads the
+  `spell_id` of the active buffs (`active_buffs`) and of the buff snapshots (`state_key = 'buffs'`),
+  the `spellId` of `buff_change` entries and the `expiredSpellIds` of `round_advance` and
+  `time_passed` entries (and of their corrections): a catalogue that drops a spell still on a buff,
+  live or restorable, is refused like any other reference (`TestStateSpellRefs_ScansEveryPlace`).
   Its refusal also names the catalogue the database was built from (the version in `catalogue_meta`)
   and `just catalogue`, for a database started on the wrong catalogue.
 - **Spell effects seed**: every `spell_effects.json` id is checked against the catalogue at startup, as

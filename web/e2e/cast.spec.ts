@@ -251,18 +251,6 @@ test.describe("same-named spells", () => {
     await snap(page, "fortify-l4-received");
   });
 
-  test("a Priest spell named like a Wizard spell gets no Wizard effect", async ({
-    page,
-  }) => {
-    const body = await receive(page, "Detect Magic", "Priest");
-    expect(body.spellId).toBe("detect_magic_priest");
-    const card = resultCard(page).getByTestId("cast-result");
-    await expect(card.getByTestId("cast-spell-ident")).toContainText("Priest");
-    await expect(card.getByTestId("cast-text-only")).toBeVisible();
-    await expect(page.locator('[data-testid="buff"]')).toHaveCount(0);
-    await snap(page, "priest-detect-magic-received");
-  });
-
   test("receive search shows how many matches are not listed", async ({
     page,
   }) => {

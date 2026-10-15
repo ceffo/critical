@@ -140,7 +140,10 @@ test("preparing is logged and voiding it restores the previous preparation", asy
 test("the spell names follow the language", async ({ page, stack }) => {
   expect((await put(stack.apiUrl, ["mirror_image", "fireball"])).ok).toBe(true);
   await page.addInitScript(() =>
-    localStorage.setItem("critical.language", "fr"),
+    localStorage.setItem(
+      "critical.settings.v1",
+      JSON.stringify({ lang: "fr", mode: "system", amb: "arcane" }),
+    ),
   );
   await openDashboard(page);
   await page.getByRole("tab", { name: "Sorts", exact: true }).click();

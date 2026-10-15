@@ -5,15 +5,21 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Set .dark before first paint (keep in sync with src/lib/theme.ts).
+      // Paint in the saved appearance before the app starts (keep in sync with src/lib/settings.ts
+      // and src/lib/theme.ts): critical.settings.v1, else the older critical.theme key.
       (function () {
-        var t = null;
-        try { t = localStorage.getItem("critical.theme"); } catch (e) {}
-        var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-        if (dark) document.documentElement.classList.add("dark");
+        var mode = null, lang = null;
+        try {
+          var s = JSON.parse(localStorage.getItem("critical.settings.v1") || "null");
+          if (s && typeof s === "object") { mode = s.mode; lang = s.lang; }
+          else { mode = localStorage.getItem("critical.theme"); lang = localStorage.getItem("critical.language"); }
+        } catch (e) {}
+        var light = mode === "light" || (mode !== "dark" && !matchMedia("(prefers-color-scheme: dark)").matches);
+        if (!light) document.documentElement.classList.add("dark");
+        if (lang === "fr" || lang === "en") document.documentElement.lang = lang;
       })();
     </script>
-    <title>web</title>
+    <title>Critical</title>
   </head>
   <body>
     <div id="root"></div>

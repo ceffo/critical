@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { addBuff, currentHp, logEntry, openDashboard, recordHp } from "./helpers";
+import { addBuff, chooseLanguage, currentHp, logEntry, openDashboard, recordHp } from "./helpers";
 
 /** "+2", "−2" (U+2212) or "0" as a number. */
 function signed(text: string | null): number {
@@ -138,7 +138,7 @@ test("a save-bonus buff is labelled by its name on the save card (en and fr)", a
   await expect(mods.getByRole("listitem").first()).toHaveText(/^e2e Gaia ward\s*\+2$/);
   await expect(logEntry(page, "Save vs Spells")).toBeVisible();
 
-  await page.getByRole("button", { name: "FR" }).click();
+  await chooseLanguage(page, "fr");
   const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("save-result");
   await expect(frCard).toContainText("Sauvegarde contre Sorts");
   await expect(frCard.getByTestId("save-modifiers").getByRole("listitem").first()).toHaveText(

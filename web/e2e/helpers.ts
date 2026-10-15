@@ -111,3 +111,34 @@ export async function voidEntry(page: Page, text: string) {
 export async function effectiveStr(page: Page): Promise<number> {
   return Number((await page.getByTestId("str-value").textContent()) ?? "NaN");
 }
+
+/** Switch the workspace from the rail (English labels). */
+export async function openWorkspace(page: Page, name: "Act" | "Inventory" | "Spells") {
+  await page
+    .getByRole("navigation", { name: "Workspaces" })
+    .getByRole("button", { name, exact: true })
+    .click();
+}
+
+/** Open the settings popover from the rail's gear; returns the popover. */
+export async function openSettings(page: Page): Promise<Locator> {
+  await page.getByTestId("settings-trigger").click();
+  const popover = page.getByTestId("settings-popover");
+  await expect(popover).toBeVisible();
+  return popover;
+}
+
+/** Pick one option in the settings popover (by its visible name), then close it. */
+export async function chooseSetting(page: Page, option: string) {
+  const popover = await openSettings(page);
+  const radio = popover.getByRole("radio", { name: option, exact: true });
+  await radio.click();
+  await expect(radio).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+}
+
+/** Switch the UI language through the settings popover. */
+export async function chooseLanguage(page: Page, lang: "en" | "fr") {
+  await chooseSetting(page, lang === "fr" ? "Français" : "English");
+}

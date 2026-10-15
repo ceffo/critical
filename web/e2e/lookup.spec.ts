@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect, snap } from "./fixtures";
-import { openDashboard } from "./helpers";
+import { chooseLanguage, openDashboard, openWorkspace } from "./helpers";
 import type { Locator, Page } from "@playwright/test";
 
 // The frozen fixture catalogue the stack seeds from (never the campaign seeds/).
@@ -76,7 +76,7 @@ test.use({ extraSpells: { rows: named } });
 
 async function openLookup(page: Page) {
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Spell Lookup" }).click();
+  await openWorkspace(page, "Spells");
   await expect(search(page)).toBeVisible();
   await expect(rows(page).first()).toBeVisible();
 }
@@ -130,7 +130,7 @@ test("lookup: a French name finds the spell; the row shows both names in the UI 
   const first = rows(page).first();
   await expect(first).toHaveAttribute("data-id", "burning_hands");
   await expect(first).toContainText("Burning Hands · Mains brûlantes");
-  await page.getByRole("button", { name: "FR" }).click();
+  await chooseLanguage(page, "fr");
   await expect(first).toContainText("Mains brûlantes · Burning Hands");
   await expect(detail(page).getByRole("heading")).toHaveText("Mains brûlantes · Burning Hands");
   await snap(page, "french-name");
@@ -284,8 +284,9 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
   await expect(selected(page)).toHaveAttribute("data-id", "fire_trap");
   await expect(reset).toBeVisible();
 
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
-  await page.getByRole("tab", { name: "Spell Lookup" }).click();
+  await openWorkspace(page, "Spells");
   await expect(search(page)).toHaveValue("fire");
   await expect(classButton(page, "All")).toHaveAttribute("aria-pressed", "true");
   await expect(levelChip(page, 4)).toHaveAttribute("aria-pressed", "true");
@@ -302,7 +303,7 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
   await search(page).fill("magic");
   await levelChip(page, 1).click();
   await page.reload();
-  await page.getByRole("tab", { name: "Spell Lookup" }).click();
+  await openWorkspace(page, "Spells");
   await expect(search(page)).toHaveValue("");
   await expect(levelChip(page, 1)).toHaveAttribute("aria-pressed", "false");
   await expect(reset).toHaveCount(0);
@@ -317,6 +318,7 @@ test("lookup: the Receive picker finds spells by French and English names with t
   await expect(rows(page)).toHaveCount(5);
   const lookupOrder = await attr(rows(page), "data-id");
 
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Spells" }).click();
   const picker = page.getByRole("region", { name: "Spell cast on me" });
   const box = picker.getByLabel("Search for a spell cast on me");
@@ -368,8 +370,9 @@ test.describe("infinite scroll", () => {
     const deepId = (await deep.getAttribute("data-id")) ?? "";
     await deep.scrollIntoViewIfNeeded();
     await deep.click();
+    await openWorkspace(page, "Act");
     await page.getByRole("tab", { name: "Attack" }).click();
-    await page.getByRole("tab", { name: "Spell Lookup" }).click();
+    await openWorkspace(page, "Spells");
     await expect(selected(page)).toHaveAttribute("data-id", deepId);
     await expect(selected(page)).toBeInViewport();
     await snap(page, "deep-selection-after-tab-switch");
@@ -454,7 +457,7 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
   await expect(detail(page).getByTestId("spell-meta")).toContainText("Wizard · Level 3");
   await snap(page, "bare-levels-en");
 
-  await page.getByRole("button", { name: "FR" }).click();
+  await chooseLanguage(page, "fr");
   for (let n = 0; n <= 9; n++) {
     await expect(page.getByRole("button", { name: `Niveau ${n}`, exact: true })).toHaveText(`${n}`);
   }

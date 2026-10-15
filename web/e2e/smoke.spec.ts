@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { currentHp, openDashboard } from "./helpers";
+import { chooseLanguage, currentHp, openDashboard } from "./helpers";
 
 test("app loads and shows the character's HP", async ({ page }) => {
   await openDashboard(page);
@@ -17,7 +17,7 @@ test("app loads and shows the character's HP", async ({ page }) => {
 
 test("fr smoke: French toggle shows no raw i18n keys", async ({ page }) => {
   await openDashboard(page);
-  await page.getByRole("button", { name: "FR" }).click();
+  await chooseLanguage(page, "fr");
   await expect(
     page.getByRole("button", { name: "Infliger les dégâts" }),
   ).toBeVisible();

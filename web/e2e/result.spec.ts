@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { openDashboard } from "./helpers";
+import { openDashboard, openWorkspace } from "./helpers";
 
 test("an attack shows its full breakdown in the result card", async ({
   page,
@@ -8,6 +8,7 @@ test("an attack shows its full breakdown in the result card", async ({
   const result = page.getByRole("region", { name: "Last Result" });
   await expect(result).toContainText("Roll an attack or a save");
 
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Attack" }).click();
   await page.getByLabel("Target AC").fill("4");
   await page.getByRole("button", { name: "Roll Attack" }).click();
@@ -32,6 +33,7 @@ test("an attack shows its full breakdown in the result card", async ({
 
 test("a saving throw shows target, roll and margin", async ({ page }) => {
   await openDashboard(page);
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Saves" }).click();
   await page.getByRole("button", { name: "Roll save vs Spells" }).click();
 
@@ -46,11 +48,12 @@ test("a saving throw shows target, roll and margin", async ({ page }) => {
   await snap(page, "save-result");
 });
 
-test("spells and inventory tabs render their panels", async ({ page }) => {
+test("spells tab and inventory workspace render their panels", async ({ page }) => {
   await openDashboard(page);
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Spells" }).click();
   await expect(page.getByRole("tabpanel")).toContainText("Spell Slots");
   await snap(page, "spells-tab");
-  await page.getByRole("tab", { name: "Inventory" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("Wand of lightning");
+  await openWorkspace(page, "Inventory");
+  await expect(page.getByRole("region", { name: "Inventory" })).toContainText("Wand of lightning");
 });

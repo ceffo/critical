@@ -1,6 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, Loader2 } from "lucide-react";
+import { MagnifyingGlass, CircleNotch } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { fieldClass, captionClass } from "@/components/dashboard/fieldStyles";
@@ -195,7 +195,7 @@ export function LookupPanel() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="relative shrink-0">
-        <Search className="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
+        <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
         <input
           type="search"
           className={cn(fieldClass, "pl-8")}
@@ -292,7 +292,7 @@ export function LookupPanel() {
         {shownKey && (
           <span data-testid="lookup-count">{t("lookup.count", { count: total })}</span>
         )}
-        {loading && <Loader2 className="h-3 w-3 animate-spin" aria-hidden />}
+        {loading && <CircleNotch className="h-3 w-3 animate-spin" aria-hidden />}
         {error && (
           <span role="alert" className="text-destructive">
             {error}

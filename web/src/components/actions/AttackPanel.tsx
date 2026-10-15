@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Swords } from "lucide-react";
+import { Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useRollStore } from "@/stores/roll";
 import { useItemsStore } from "@/stores/items";
@@ -202,7 +202,7 @@ export function AttackPanel() {
           className="col-span-2 h-10 text-base"
           disabled={rolling || !valid}
         >
-          <Swords />
+          <Sword />
           {rolling ? t("attack.rolling") : t("attack.roll")}
         </Button>
       </form>

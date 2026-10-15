@@ -11,15 +11,38 @@
     "strBase": "({{base}})"
   },
   "language": {
-    "label": "Langue",
     "en": "English",
     "fr": "Français"
   },
-  "theme": {
-    "label": "Thème : {{theme}} (cliquer pour changer)",
-    "light": "Clair",
-    "dark": "Sombre",
-    "system": "Système"
+  "settings": {
+    "open": "Réglages",
+    "title": "Réglages",
+    "language": "Langue",
+    "appearance": "Apparence",
+    "ambiance": "Ambiance",
+    "mode": {
+      "dark": "Sombre",
+      "light": "Clair",
+      "system": "Système"
+    },
+    "ambiances": {
+      "arcane": "Arcane",
+      "sylve": "Sylve",
+      "sang": "Sang",
+      "ocean": "Océan",
+      "ambre": "Ambre",
+      "obsidienne": "Obsidienne"
+    }
+  },
+  "shell": {
+    "workspaces": "Espaces de travail",
+    "workspace": {
+      "act": "Agir",
+      "inventory": "Inventaire",
+      "spells": "Sorts"
+    },
+    "fil": "Résultats et journal",
+    "moi": "Personnage"
   },
   "attr": {
     "str": "FOR",
@@ -118,9 +141,7 @@
     "tabs": {
       "attack": "Attaque",
       "spells": "Sorts",
-      "inventory": "Inventaire",
-      "saves": "Sauvegardes",
-      "lookup": "Recherche de sorts"
+      "saves": "Sauvegardes"
     }
   },
   "attack": {

@@ -2,10 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./i18n";
-import { watchSystemTheme } from "./lib/theme";
+import { startSettings } from "./stores/settings";
 import App from "./App.tsx";
 
-watchSystemTheme();
+// Theme variables and language before the first React render.
+startSettings();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

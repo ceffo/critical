@@ -315,6 +315,15 @@ function attackText(p: RollResult, t: TFunction): string {
   const weapon = p.ammo
     ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
     : (p.weaponName ?? "");
+  // Against an unknown AC (docs/adr/0012): the AC it hits until the GM settles it, then the GM's
+  // verdict (no crit).
+  if (p.targetAc === null) {
+    const hits = p.hitsAc ?? p.targetACNeeded;
+    if (p.verdict === undefined) return t("log.attack.unknown", { weapon, hits });
+    return p.verdict === "hit"
+      ? t("log.attack.verdictHit", { weapon, damage: p.totalDamage })
+      : t("log.attack.verdictMiss", { weapon });
+  }
   const args = {
     weapon,
     ac: p.targetAc,

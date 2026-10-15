@@ -3,7 +3,7 @@ import type { AttackFormPatch, AttackFormView } from "@/types/combat";
 
 const calls: { patch?: AttackFormPatch; resolve: (v: AttackFormView) => void }[] = [];
 
-function view(targetAc: number): AttackFormView {
+function view(targetAc: number | null): AttackFormView {
   return {
     form: {
       weaponId: "longsword", previousWeaponId: "", ammoItemId: "", targetAc, targetSize: "sm",
@@ -84,6 +84,31 @@ describe("attack form store", () => {
     await tick();
     calls[1].resolve(bow(false)); // the reload after the attack
     expect(await done).toBe(true);
+  });
+
+  it("an unknown target AC is sent as no target_ac (docs/adr/0012 step 1)", async () => {
+    const rollAttack = vi.fn(async () => true);
+    useRollStore.setState({ rollAttack });
+    useAttackStore.setState({
+      view: {
+        ...view(null),
+        preview: { baseThac0: 13, modifiers: [], effectiveThac0: 11, toHit: 2, rollNeeded: null, damageBonus: 2 },
+      },
+    });
+    const done = useAttackStore.getState().attack();
+    await tick();
+    expect(rollAttack).toHaveBeenCalledWith({ weapon_id: "longsword", target_size: "sm" });
+    calls[0].resolve(view(null));
+    expect(await done).toBe(true);
+  });
+
+  it("Unknown shows at once and sends targetAc null", async () => {
+    const done = useAttackStore.getState().update({ targetAc: null });
+    expect(useAttackStore.getState().view?.form.targetAc).toBeNull();
+    await tick();
+    expect(calls[0].patch).toEqual({ targetAc: null });
+    calls[0].resolve(view(null));
+    await done;
   });
 });
 

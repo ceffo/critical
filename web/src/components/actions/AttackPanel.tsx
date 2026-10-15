@@ -10,6 +10,7 @@ import { useRollStore } from "@/stores/roll";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { CritTableEditor } from "@/components/actions/CritTableEditor";
 import { formatSigned } from "@/lib/format";
+import { UNKNOWN_AC_STEP_BASE } from "@/lib/attackAdjust";
 import { cn } from "@/lib/utils";
 import type { AmmoChoice, AttackFormView, TargetSize, Weapon } from "@/types/combat";
 
@@ -129,13 +130,29 @@ function TargetBar({ view }: { view: AttackFormView }) {
       aria-label={t("attack.target")}
       className="flex flex-wrap items-end gap-x-6 gap-y-3 rounded-lg bg-neu-900 px-4 py-3"
     >
-      <Stepper
-        label={t("attack.targetAc")}
-        lower={t("attack.lowerAc")}
-        raise={t("attack.raiseAc")}
-        value={targetAc}
-        onChange={(v) => void update({ targetAc: v })}
-      />
+      <div className="flex items-end gap-1">
+        <Stepper
+          label={t("attack.targetAc")}
+          lower={t("attack.lowerAc")}
+          raise={t("attack.raiseAc")}
+          value={targetAc}
+          placeholder={t("attack.unknownAcPlaceholder")}
+          emptyBase={UNKNOWN_AC_STEP_BASE}
+          onChange={(v) => void update({ targetAc: v })}
+          onClear={() => void update({ targetAc: null })}
+        />
+        {targetAc !== null && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            title={t("attack.unknownAcHint")}
+            onClick={() => void update({ targetAc: null })}
+          >
+            {t("attack.unknownAc")}
+          </Button>
+        )}
+      </div>
       <div className="flex flex-col gap-1">
         <span id={sizeLabel} className="text-xs text-muted-foreground">
           {t("attack.targetSize")}
@@ -189,25 +206,37 @@ function TargetBar({ view }: { view: AttackFormView }) {
   );
 }
 
-/** − / + around a whole number in ±BOUND; typing is kept as text until it is a number. */
+/**
+ * − / + around a whole number in ±BOUND; typing is kept as text until it is a number. A null value
+ * shows an empty field with the placeholder, − / + then start from emptyBase; clearing the field
+ * calls onClear when given.
+ */
 function Stepper({
   label,
   lower,
   raise,
-  value,
+  value: current,
   signed = false,
+  placeholder,
+  emptyBase = 0,
   onChange,
+  onClear,
 }: {
   label: string;
   lower: string;
   raise: string;
-  value: number;
+  value: number | null;
   signed?: boolean;
+  placeholder?: string;
+  emptyBase?: number;
   onChange: (v: number) => void;
+  onClear?: () => void;
 }) {
   const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? (signed && value > 0 ? `+${value}` : String(value));
+  const value = current ?? emptyBase;
+  const shown =
+    draft ?? (current === null ? "" : signed && current > 0 ? `+${current}` : String(current));
   const set = (v: number) => {
     setDraft(null);
     onChange(Math.max(-BOUND, Math.min(BOUND, v)));
@@ -233,11 +262,13 @@ function Stepper({
           className={cn(fieldClass, "w-14 text-center")}
           inputMode="numeric"
           value={shown}
+          placeholder={placeholder}
           onChange={(e) => {
             const text = e.target.value;
             setDraft(text);
             const n = Number(text.trim());
             if (/^[+-]?\d+$/.test(text.trim()) && Math.abs(n) <= BOUND) onChange(n);
+            else if (text.trim() === "" && onClear) onClear();
           }}
           onBlur={() => setDraft(null)}
         />
@@ -276,7 +307,11 @@ function Tiles({ weapon, view }: { weapon: Weapon; view: AttackFormView }) {
       <Tile
         label={t("attack.tiles.thac0")}
         testId="tile-thac0"
-        hint={t("attack.tiles.rollNeeded", { ac: view.form.targetAc, n: preview.rollNeeded })}
+        hint={
+          preview.rollNeeded === null || view.form.targetAc === null
+            ? t("attack.tiles.rollNeededUnknown")
+            : t("attack.tiles.rollNeeded", { ac: view.form.targetAc, n: preview.rollNeeded })
+        }
       >
         {preview.effectiveThac0}
       </Tile>

@@ -40,6 +40,13 @@ export function HpBar() {
   const dyingPct = span > 0 && floor < 0 ? (-floor / span) * 100 : 0;
   const deepPct = currentHp < 0 && floor < 0 ? Math.min(100, (currentHp / floor) * 100) : 0;
 
+  // A change logged without a source is worded like the journal does: Damage N / Healing N.
+  const lastText = last
+    ? last.source
+      ? t("hp.lastChange", { delta: formatSigned(last.delta), source: last.source })
+      : t(last.delta < 0 ? "log.hpDamage" : "log.hpHeal", { amount: Math.abs(last.delta) })
+    : "";
+
   return (
     <div className="flex min-w-0 flex-col gap-1.5" role="group" aria-label={t("hp.title")}>
       <div className="flex min-w-0 items-baseline justify-between gap-2">
@@ -50,10 +57,10 @@ export function HpBar() {
               "min-w-0 truncate text-sm tabular-nums",
               last.delta < 0 ? "text-danger" : "text-heal",
             )}
-            title={last.source}
+            title={lastText}
             data-testid="hp-last-change"
           >
-            {t("hp.lastChange", { delta: formatSigned(last.delta), source: last.source }).trim()}
+            {lastText}
           </span>
         )}
       </div>

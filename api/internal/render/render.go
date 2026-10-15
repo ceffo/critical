@@ -64,6 +64,8 @@ func Error(ctx context.Context, w http.ResponseWriter, err error) {
 		Logger(ctx).Info("client error", "status", status, "error", err)
 	}
 	body := map[string]string{"error": msg, "code": code}
+	// A field error's message stays verbatim for the web: invalid_input is
+	// deliberately not localized, the message says what is wrong with the field.
 	var fe *domain.FieldError
 	if errors.As(err, &fe) {
 		body["error"], body["field"] = fe.Message, fe.Field

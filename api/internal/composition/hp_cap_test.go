@@ -274,3 +274,28 @@ func TestHP_NoSourceOnTheRealStack(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, r.max, st.CurrentHp)
 }
+
+// A source-less HP change can be given a note, then voided: the journal keeps
+// the note beside an empty source, the voided entry stops counting and HP is back at max.
+func TestHP_AmendThenVoidSourceLessChange(t *testing.T) {
+	r := newHPRig(t)
+	ctx, id := context.Background(), r.bs.CharacterID
+
+	_, e := r.change(-7, "")
+	amended, err := r.bs.Log.Amend(ctx, id, e.ID, actionlogsvc.Amendment{Note: "trap"})
+	require.NoError(t, err)
+	assert.Equal(t, "trap", amended.Note())
+	assert.Empty(t, amended.EffectiveSummary(), "an amend sets the note, never the source")
+	assert.Equal(t, r.max-7, r.current(), "an amend never changes the delta")
+	st, err := r.bs.HP.GetState(ctx, id)
+	require.NoError(t, err)
+	assert.Empty(t, st.Events[0].Source)
+
+	_, err = r.bs.Log.Void(ctx, id, e.ID)
+	require.NoError(t, err)
+	assert.Equal(t, r.max, r.current())
+	entries, err := r.bs.Log.List(ctx, id, 1)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, actionlog.StatusVoided, entries[0].Status())
+}

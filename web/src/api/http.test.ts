@@ -33,6 +33,8 @@ describe("request errors", () => {
   it.each([
     ["an unknown code", { code: "brand_new", error: "server words" }],
     ["a generic code", { code: "invalid_input", error: "server words" }],
+    ["the internal code", { code: "internal", error: "server words" }],
+    ["the bad_request code", { code: "bad_request", error: "server words" }],
     ["no code", { error: "server words" }],
   ])("falls back to the server message for %s", async (_name, body) => {
     respond(400, body);

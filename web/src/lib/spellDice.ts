@@ -78,3 +78,16 @@ export function damageText(t: TFunction, d: SpellDamage): string {
   }
   return text;
 }
+
+/**
+ * One round of exposure's damage (ADR 0008 step 16): "1d10 poison", or for dice steps, each round
+ * of exposure's then the last one's for the rounds after ("1, 2, 4, 8 acid by round of exposure,
+ * then 8 each round").
+ */
+export function exposureDamageText(t: TFunction, d: SpellDamage): string {
+  if (!d.steps || d.steps.length === 0) return damageText(t, d);
+  let steps = d.steps.map((s) => (isNone(s.dice) ? "—" : diceText(s.dice))).join(", ");
+  const type = d.type ? t(`spellDice.types.${d.type}`, { defaultValue: d.type }) : "";
+  if (type) steps = t("spellDice.typed", { dice: steps, type });
+  return t("spellDice.exposureSteps", { steps, last: diceText(d.steps[d.steps.length - 1].dice) });
+}

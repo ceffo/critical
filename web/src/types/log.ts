@@ -23,6 +23,8 @@ export type LogKind =
   | "save"
   | "skill_check"
   | "dice"
+  /** One round of exposure to a spell's area (ADR 0008 step 16); on the Bard it carries an HP delta. */
+  | "exposure"
   /** A correction after a roll (target AC, save adjustment, GM verdict), its own undoable step. */
   | "correction";
 

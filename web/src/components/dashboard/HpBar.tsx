@@ -4,6 +4,7 @@ import { useLogStore } from "@/stores/log";
 import { formatSigned, hpPercent, hpTone } from "@/lib/format";
 import { lastDamage, lastHpChange } from "@/lib/moiLog";
 import { cn } from "@/lib/utils";
+import { spellName } from "@/i18n/spellName";
 import type { HpCondition } from "@/types/hp";
 
 /** Bar fill per threshold (display only, docs/frontend.md "Display Conventions"). */
@@ -42,7 +43,12 @@ export function HpBar() {
 
   // A change logged without a source is worded like the journal does: Damage N / Healing N.
   const lastText = last
-    ? last.source
+    ? last.exposure
+      ? t("hp.lastExposure", {
+          delta: formatSigned(last.delta),
+          spell: spellName(t, last.exposure.spellId, last.exposure.spell),
+        })
+      : last.source
       ? t("hp.lastChange", { delta: formatSigned(last.delta), source: last.source })
       : t(last.delta < 0 ? "log.hpDamage" : "log.hpHeal", { amount: Math.abs(last.delta) })
     : "";

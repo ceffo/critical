@@ -130,6 +130,16 @@ export interface SpellMode {
   damage?: SpellDamage;
 }
 
+/**
+ * Mirrors spellhdl.SpellExposureDTO: the damage of one round of exposure to the area a spell leaves
+ * (ADR 0008 step 16), at caster_level: one `damage` (its `steps`, if any, are the rounds of
+ * exposure; a later round rolls the last step), or the `modes` picked at each exposure.
+ */
+export interface SpellExposure {
+  damage?: SpellDamage;
+  modes?: SpellMode[];
+}
+
 export interface Spell {
   /** Unique key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
   id: string;
@@ -155,6 +165,8 @@ export interface Spell {
   damage?: SpellDamage;
   /** Cast-time modes, each with its damage at caster_level (the first is the default; `damage` is its). */
   modes?: SpellMode[];
+  /** The exposure damage at caster_level; absent when the spell has none. */
+  exposure?: SpellExposure;
 }
 
 /** Mirrors spellprephdl.SpellbookEntryDTO. The cast fields come from the spell effects data. */
@@ -172,6 +184,8 @@ export interface SpellbookEntry {
   damage?: SpellDamage;
   /** Cast-time modes to pick from, each with its damage (the first is the default); absent: none. */
   modes?: SpellMode[];
+  /** The exposure damage at the Bard's level; absent when the spell has none. */
+  exposure?: SpellExposure;
   /** Inventory items the spell can spend now, as the server decides; absent when none. */
   items?: SpendableItem[];
 }
@@ -278,6 +292,35 @@ export interface CastResult {
   consumedItem?: CastConsumedItem;
   /** The spell's to-hit roll. */
   attack?: CastAttack;
+  /** The exposure damage at casterLevel, to roll each round of exposure from; absent: none. */
+  exposure?: SpellExposure;
+}
+
+/** The body of POST /api/spells/exposure (casthdl ExposureRequestDTO). */
+export interface ExposureRequest {
+  spellId: string;
+  casterLevel: number;
+  /** The exposure mode's key (omitted: the first). */
+  mode?: string;
+  /** The round of exposure, from 1 (omitted: 1). */
+  round?: number;
+  /** The Bard is the one exposed: the server takes the damage off his HP. */
+  onSelf?: boolean;
+}
+
+/** Mirrors casthdl ExposureResultDTO: one round of exposure rolled and logged. */
+export interface ExposureResult {
+  entryId: number;
+  spellId: string;
+  name: string;
+  casterLevel: number;
+  /** The exposure mode rolled; absent when the exposure has none. */
+  mode?: string;
+  round: number;
+  onSelf: boolean;
+  damage: CastDamage;
+  /** The exposure damage at casterLevel, for the next round of exposure. */
+  exposure?: SpellExposure;
 }
 
 /** Mirrors casthdl ConsumedItemDTO. */

@@ -62,6 +62,9 @@ type ExposureResultDTO struct {
 	Round  int        `json:"round"`
 	OnSelf bool       `json:"onSelf"`
 	Damage *DamageDTO `json:"damage"`
+	// Exposure: the spell's exposure damage at the caster level, for the
+	// next round of exposure.
+	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
 }
 
 // Expose rolls one round of exposure to a spell's area and logs it.
@@ -87,6 +90,7 @@ func ExposureToDTO(res castsvc.ExposureResult) ExposureResultDTO {
 	return ExposureResultDTO{
 		EntryID: res.EntryID, SpellID: res.SpellID, Name: res.Name, CasterLevel: res.CasterLevel,
 		Mode: res.Mode, Round: res.Round, OnSelf: res.OnSelf, Damage: damageDTO(res.Damage),
+		Exposure: spellhdl.ExposureToDTO(res.Exposure),
 	}
 }
 

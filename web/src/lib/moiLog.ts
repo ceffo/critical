@@ -2,22 +2,35 @@
 // rules here (docs/all.md, "Core Architectural Rule"): HP and save verdicts come from the server.
 import type { LogEntry } from "@/types/log";
 import type { SaveCategory } from "@/types/combat";
+import { exposurePayload } from "./logSummary";
 
-/** The newest HP change still in force: the delta the server applied and the player's source. */
+/**
+ * The newest HP change still in force: the delta the server applied and the player's source, or
+ * for a spell's exposure the Bard took (ADR 0008 step 16) the spell.
+ */
 export interface LastHpChange {
   delta: number;
   source: string;
+  exposure?: { spellId: string; spell: string };
 }
 
 /**
- * The newest non-voided HP change entry with a non-zero applied delta (entries are newest first, as
- * `GET /api/log` returns them). A heal capped to nothing at full HP is skipped: it changed nothing.
+ * The newest non-voided entry with a non-zero applied HP delta, an HP change or an exposure the
+ * Bard took (entries are newest first, as `GET /api/log` returns them). A heal capped to nothing at
+ * full HP is skipped: it changed nothing.
  */
 export function lastHpChange(entries: readonly LogEntry[]): LastHpChange | null {
   const e = entries.find(
-    (x) => x.kind === "hp_change" && x.status !== "voided" && x.effectiveHpDelta !== 0,
+    (x) =>
+      (x.kind === "hp_change" || x.kind === "exposure") &&
+      x.status !== "voided" &&
+      x.effectiveHpDelta !== 0,
   );
-  return e ? { delta: e.effectiveHpDelta, source: e.effectiveSummary } : null;
+  if (!e) return null;
+  const p = exposurePayload(e);
+  return p
+    ? { delta: e.effectiveHpDelta, source: "", exposure: { spellId: p.spellId, spell: p.spell } }
+    : { delta: e.effectiveHpDelta, source: e.effectiveSummary };
 }
 
 /** The damage to draw as a ghost segment on the HP bar: the newest HP change, when it is damage. */

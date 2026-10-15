@@ -162,8 +162,14 @@ flowchart TD
   top; one group per level with a pip per slot (filled while unused) and "left / total"; 40px rows
   with the name, under it the damage a cast rolls at the Bard's level when the spellbook entry serves one
   (`lib/spellDice.ts` `damageText`: "10d6 fire", "5 × 1d4+1 force", "2d4 acid per round, 6
-  rounds", type words in `spellDice.types`), and Cast or Used. Cast puts the `CastResult` in the result card (`CastResultView`:
-  buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text); "Buff spells
+  rounds", type words in `spellDice.types`) and, for a spell that leaves a damaging area, its
+  exposure dice (`lib/spellMode.ts` `exposureText`: "1d10 poison per round of exposure", ADR 0008
+  step 16), and Cast or Used. Cast puts the `CastResult` in the result card (`CastResultView`:
+  buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text; for a spell
+  with an exposure, the exposure block `ExposureControls.tsx`: its dice, the mode, the round of
+  exposure, "I am exposed" and Roll exposure, which posts `/api/spells/exposure` through
+  `stores/roll.ts` `rollExposure`; the result is an exposure card, `ExposureResultView`, with the
+  dice, the total, "Taken off your HP" or "For the DM", and the same block set to the next round); "Buff spells
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
   the shared name search (below) and posts `/api/spells/receive`.
 - Sorts workspace, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives tab switches):
@@ -174,7 +180,9 @@ flowchart TD
   infinite scroll by 200-row pages). The detail pane: name, meta line, one row per stat (label |
   value at the Bard's level with the raw text dimmed under it), then the dice rows: the damage a
   cast rolls when the spell DTO serves one (`damage`, same shape as the spellbook's: "At level 15 ·
-  Damage 5 × 1d4+1 force", one instance goes to the composer), then one per value the
+  Damage 5 × 1d4+1 force", one instance goes to the composer), then its exposure (`exposure`, one
+  row per exposure mode: "Exposure (Within 10 ft) 2d4 fire"; rolled as an exposure from a cast or
+  received spell's card, here only to the composer), then one per value the
   server computed with dice still to roll (`lib/spellValues.ts` `statDice`: "At level 15 ·
   Duration 1d8+8", the served dice then the served flat amount), each with "To the dice" (fills the
   composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and the Description

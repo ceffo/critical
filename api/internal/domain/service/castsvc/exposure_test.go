@@ -211,10 +211,13 @@ func TestExpose_OnTheBardTakesHP(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.OnSelf)
 	assert.Equal(t, 9, res.Damage.Total)
+	assert.Equal(t, &spelleffectsvc.ExposureAt{Damage: exposureDamage(12, once(1, 10), "poison")}, res.Exposure,
+		"served for the next round")
 	require.Len(t, f.entries, 1, "one entry: the roll and the HP change")
 	assert.Equal(t, actionlog.KindExposure, f.entries[0].Kind)
 	assert.Equal(t, -9, f.entries[0].HPDelta)
 	assert.Contains(t, string(f.entries[0].Payload), `"onSelf":true`)
+	assert.Contains(t, string(f.entries[0].Payload), `"exposure":{"damage":{"caster_level":12,`, "the served exposure, for the next round")
 }
 
 // ADR 0008 step 16: a spell without a usable exposure, an unknown mode, a
@@ -265,6 +268,14 @@ func TestCast_Exposure_ServedOnTheResult(t *testing.T) {
 	require.Len(t, f.entries, 1)
 	assert.Equal(t, actionlog.KindCast, f.entries[0].Kind)
 	assert.Zero(t, f.entries[0].HPDelta)
+	// The entry records the served exposure in the lookup's wire shape, so
+	// the journal's cast card rolls an exposure from it.
+	var p struct {
+		Exposure json.RawMessage `json:"exposure"`
+	}
+	require.NoError(t, json.Unmarshal(f.entries[0].Payload, &p))
+	assert.JSONEq(t, `{"damage":{"caster_level":15,"type":"poison","dice":{"groups":[{"count":1,"sides":10}],"modifier":0},
+		"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":1}}}`, string(p.Exposure))
 
 	r, err = f.svc.Receive(context.Background(), charID, castsvc.ReceiveRequest{SpellID: "wall_of_fire", CasterLevel: 11})
 	require.NoError(t, err)

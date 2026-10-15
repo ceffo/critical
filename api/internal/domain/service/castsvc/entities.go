@@ -217,6 +217,9 @@ type ExposureResult struct {
 	// off his HP (down to the floor of ADR 0011 step 1).
 	OnSelf bool
 	Damage *DamageResult
+	// Exposure is the spell's exposure damage at the caster level, for the
+	// next round of exposure.
+	Exposure *spelleffectsvc.ExposureAt
 }
 
 // ConsumedItem is one unit of an inventory item a cast spent.

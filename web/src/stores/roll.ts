@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
-import type { CastResult } from "@/types/spells";
+import type { CastResult, ExposureRequest, ExposureResult } from "@/types/spells";
+import { rollExposure as postExposure } from "@/api/spells";
 import { resolveAttack } from "@/api/combat";
 import { adjustAttack, adjustSave, attackVerdict, clearAttackAc, rollSavingThrow } from "@/api/roll";
 import { postUseItem } from "@/api/items";
@@ -15,7 +16,8 @@ export type LastRoll =
   | { kind: "save"; category: SaveCategory; result: RollResult }
   | { kind: "cast"; result: CastResult }
   | { kind: "item"; result: UseResult }
-  | { kind: "skill"; result: SkillCheck };
+  | { kind: "skill"; result: SkillCheck }
+  | { kind: "exposure"; result: ExposureResult };
 
 interface RollStore {
   last: LastRoll | null;
@@ -43,6 +45,8 @@ interface RollStore {
   spendItem: (id: string) => Promise<boolean>;
   /** Rolls a proficiency or bard skill check (the server rolls and logs it). */
   rollSkill: (id: string) => Promise<boolean>;
+  /** Rolls one round of exposure to a spell's area (logged; on the Bard, off his HP). */
+  rollExposure: (req: ExposureRequest) => Promise<boolean>;
 }
 
 export const useRollStore = create<RollStore>((set) => {
@@ -70,6 +74,8 @@ export const useRollStore = create<RollStore>((set) => {
       roll(async () => ({ kind: "attack", result: await resolveAttack(req) }), true),
     spendItem: (id) => roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
     rollSkill: (id) => roll(async () => ({ kind: "skill", result: await rollSkill(id) }), true),
+    rollExposure: (req) =>
+      roll(async () => ({ kind: "exposure", result: await postExposure(req) }), true),
     // A save is logged: refresh to show its entry.
     rollSave: async (category) => {
       await roll(

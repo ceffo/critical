@@ -5,7 +5,7 @@ import type { TFunction } from "i18next";
 import type { HpBreakdown, LogEntry, LogKind } from "@/types/log";
 import type { Modifier, RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
-import type { CastResult } from "@/types/spells";
+import type { CastResult, ExposureResult } from "@/types/spells";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import { spellName } from "@/i18n/spellName";
@@ -16,6 +16,8 @@ import {
   castPayload,
   dicePayload,
   entryText,
+  exposurePayload,
+  type ExposureLogPayload,
   itemPayload,
   savePayload,
   skillCheckPayload,
@@ -29,7 +31,8 @@ export type LiveResult =
   | { kind: "save"; category: string; result: RollResult }
   | { kind: "cast"; result: CastResult }
   | { kind: "item"; result: UseResult }
-  | { kind: "skill"; result: SkillCheck };
+  | { kind: "skill"; result: SkillCheck }
+  | { kind: "exposure"; result: ExposureResult };
 
 /** The journal filter: everything, or rolls only. */
 export type LogFilter = "all" | "rolls";
@@ -40,7 +43,14 @@ export type LogFilter = "all" | "rolls";
  * A free dice roll is not one: it neither replaces the card nor ends the latest save's correction
  * window; the composer shows it by selecting its entry.
  */
-export const RESULT_KINDS: readonly LogKind[] = ["attack", "save", "cast", "item_use", "skill_check"];
+export const RESULT_KINDS: readonly LogKind[] = [
+  "attack",
+  "save",
+  "cast",
+  "item_use",
+  "skill_check",
+  "exposure",
+];
 
 /** The newest entry of RESULT_KINDS, voided ones included (the server's "latest roll"). */
 export function latestResult(entries: readonly LogEntry[]): LogEntry | null {
@@ -59,6 +69,7 @@ export function isRollEntry(e: LogEntry): boolean {
     case "dice":
     case "item_use":
     case "initiative":
+    case "exposure":
       return true;
     case "cast": {
       const p = castPayload(e);
@@ -75,7 +86,7 @@ export function filterEntries(entries: LogEntry[], filter: LogFilter): LogEntry[
 
 /** The log entry recording a live result. */
 export function liveEntryId(last: LiveResult): number | undefined {
-  return last.kind === "cast" ? last.result.entryId : last.result.logEntryId;
+  return last.kind === "cast" || last.kind === "exposure" ? last.result.entryId : last.result.logEntryId;
 }
 
 /**
@@ -163,6 +174,7 @@ export type CardModel =
   | { layout: "save"; save: SaveView }
   | { layout: "cast"; cast: CastLogPayload }
   | { layout: "castLive"; result: CastResult }
+  | { layout: "exposure"; exposure: ExposureResult }
   | { layout: "item"; item: UseResult }
   | { layout: "initiative"; round: number; d10: number }
   | { layout: "skill"; check: SkillCheck }
@@ -216,6 +228,8 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
   }
   const cast = castPayload(e);
   if (cast) return { layout: "cast", cast };
+  const exposure = exposurePayload(e);
+  if (exposure) return { layout: "exposure", exposure: exposureFromPayload(e.id, exposure) };
   const item = itemPayload(e);
   if (item) return { layout: "item", item: { ...item, logEntryId: e.id } };
   const initiative = initiativePayload(e);
@@ -227,6 +241,30 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
   return {
     layout: "info",
     info: { text: entryText(e, t), value: hpValue(e), capped: cappedHeal(e) },
+  };
+}
+
+/** An exposure entry's payload as the exposure endpoint's result, so one view shows both. */
+export function exposureFromPayload(entryId: number, p: ExposureLogPayload): ExposureResult {
+  return {
+    entryId,
+    spellId: p.spellId,
+    name: p.spell,
+    casterLevel: p.casterLevel,
+    mode: p.mode,
+    round: p.round,
+    onSelf: p.onSelf,
+    damage: {
+      dice: p.damage.dice ?? "",
+      type: p.damage.type,
+      instances: p.damage.instances ?? 1,
+      rounds: p.damage.rounds ?? 1,
+      rolls: p.damage.rolls ?? [],
+      total: p.damage.total,
+      parts: p.damage.parts?.map((x) => ({ formula: x.formula, save: x.save as "none" | "negates" })),
+      stepsPer: p.damage.stepsPer,
+    },
+    exposure: p.exposure,
   };
 }
 
@@ -243,6 +281,8 @@ export function liveModel(last: LiveResult): CardModel {
       return { layout: "item", item: last.result };
     case "skill":
       return { layout: "skill", check: last.result };
+    case "exposure":
+      return { layout: "exposure", exposure: last.result };
   }
 }
 
@@ -297,6 +337,9 @@ export function cardHeader(
     case "castLive":
       subtitle = spellName(t, model.result.spellId, model.result.name);
       break;
+    case "exposure":
+      subtitle = spellName(t, model.exposure.spellId, model.exposure.name);
+      break;
     case "item":
       subtitle = model.item.name;
       break;
@@ -347,6 +390,13 @@ export function rowValue(e: LogEntry): RowValue | null {
   if (skill) return { text: String(skill.roll), tone: skill.success ? "pass" : "fail" };
   const dice = dicePayload(e);
   if (dice) return { text: String(dice.total), tone: "accent" };
+  const exposure = exposurePayload(e);
+  if (exposure) {
+    if (!exposure.onSelf) return { text: String(exposure.damage.total), tone: "accent" };
+    // On the Bard: the HP the server applied (the floor may cut it), as an HP change shows it.
+    const amount = e.status === "voided" ? e.hpDelta : e.effectiveHpDelta;
+    return { text: formatSigned(amount), tone: "damage" };
+  }
   const cast = castPayload(e);
   if (cast?.damage) return { text: String(cast.damage.total), tone: "accent" };
   if (cast?.attack) return { text: String(cast.attack.d20), tone: cast.attack.hit ? "pass" : "fail" };

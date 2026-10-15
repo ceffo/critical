@@ -56,6 +56,9 @@ func (s *service) Expose(ctx context.Context, characterID int64, req ExposureReq
 		SpellID: entry.ID, Name: entry.Name, CasterLevel: req.CasterLevel,
 		Mode: mode, Round: round, OnSelf: req.OnSelf,
 	}
+	if res.Exposure, err = entry.ExposureAt(req.CasterLevel); err != nil {
+		return ExposureResult{}, fmt.Errorf("%s: %w", entry.ID, err)
+	}
 	if res.Damage, err = s.rollExposure(entry, damage, req.CasterLevel, round); err != nil {
 		return ExposureResult{}, fmt.Errorf("%s exposure: %w", entry.ID, err)
 	}

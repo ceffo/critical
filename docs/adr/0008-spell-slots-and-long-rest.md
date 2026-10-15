@@ -211,7 +211,9 @@ named otherwise.
     a low-confidence one, or one not in the catalogue is refused (400, `no_exposure`), as is a
     caster level or round out of range, with nothing rolled or logged. The roll is one `exposure`
     entry (a roll kind: it replaces the result card), recording the spell, the caster level, the
-    mode, the round, whether the Bard was exposed and the roll as a cast records its damage. User
+    mode, the round, whether the Bard was exposed and the roll as a cast records its damage; it and
+    the cast entry also record the exposure served at the caster level, so the next exposure rolls
+    from a journal entry as well as from a fresh result. User
     ruling 2026-10-15: when the Bard is the one exposed (his own cloud or a spell received), the
     same entry takes the total off his HP through the HP ledger ([ADR 0007](0007-hp-ledger.md),
     the floor of [ADR 0011](0011-hp-below-zero.md) step 1), so popping it gives the HP back;

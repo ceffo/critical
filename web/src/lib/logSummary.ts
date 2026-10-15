@@ -7,6 +7,7 @@ import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
+import type { SpellExposure } from "@/types/spells";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
@@ -54,6 +55,43 @@ export interface CastLogPayload {
   attack?: { d20: number; targetAc: number; hit: boolean };
   /** The target's saving throw (the DM's side); absent on older casts. */
   save?: { type: string; effect: string };
+  /** The exposure damage served at casterLevel (as GET /api/spells serves it); absent without one. */
+  exposure?: SpellExposure;
+}
+
+/** Payload of exposure entries (castsvc exposureRecord, ADR 0008 step 16). */
+export interface ExposureLogPayload {
+  spellId: string;
+  spell: string;
+  casterLevel: number;
+  /** The exposure mode's key; absent without modes. */
+  mode?: string;
+  round: number;
+  /** The Bard was exposed: the entry's HP delta is the damage. */
+  onSelf: boolean;
+  damage: NonNullable<CastLogPayload["damage"]>;
+  /** The exposure damage served at casterLevel, for the next round. */
+  exposure?: SpellExposure;
+}
+
+export function exposurePayload(e: LogEntry): ExposureLogPayload | null {
+  if (e.kind !== "exposure") return null;
+  const p = e.payload as Partial<ExposureLogPayload> | null;
+  return p && typeof p.spellId === "string" && typeof p.round === "number" && p.damage
+    ? (p as ExposureLogPayload)
+    : null;
+}
+
+/** "Cloudkill exposure, round 2 (Within 10 ft): 7 fire damage, on me". */
+function exposureText(p: ExposureLogPayload, t: TFunction): string {
+  const spell = spellName(t, p.spellId, p.spell);
+  const text = t(p.onSelf ? "log.exposure.onMe" : "log.exposure.forDm", {
+    spell,
+    round: p.round,
+    total: p.damage.total,
+    type: p.damage.type ? t(`spellDice.types.${p.damage.type}`, { defaultValue: p.damage.type }) : "",
+  });
+  return p.mode ? `${text} · ${modeName(t, p.spellId, p.mode)}` : text;
 }
 
 export function castPayload(e: LogEntry): CastLogPayload | null {
@@ -496,6 +534,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (correction) return correctionText(correction, t);
   const cast = castPayload(e);
   if (cast) return castText(cast, t);
+  const exposure = exposurePayload(e);
+  if (exposure) return exposureText(exposure, t);
   const rest = restText(e, t);
   if (rest) return rest;
   const prep = prepText(e, t);

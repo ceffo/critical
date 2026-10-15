@@ -94,15 +94,43 @@ test("casting Fireball rolls 10d6 and notes the save for the DM", async ({
   await snap(page, "fireball");
 });
 
-test("a low-confidence spell shows its text only", async ({ page, stack }) => {
-  await prepare(stack.apiUrl, ["cloudkill"]);
+test("a low-confidence spell shows its text only; Cloudkill rolls an exposure on me from its card", async ({
+  page,
+  stack,
+}) => {
+  await prepare(stack.apiUrl, ["tashas_uncontrollable_hideous_laughter", "cloudkill"]);
   await openSpells(page);
-  await page.getByRole("button", { name: "Cast Cloudkill" }).click();
+  await page.getByRole("button", { name: "Cast Tasha's Uncontrollable Hideous Laughter" }).click();
   await expect(resultCard(page).getByTestId("cast-text-only")).toContainText(
     "add a buff by hand",
   );
   await expect(page.locator('[data-testid="buff"]')).toHaveCount(0);
   await snap(page, "low-confidence");
+
+  // ADR 0008 step 16: the spellbook and the cast card serve the exposure dice; one exposure on me
+  // is one journal entry and comes off the HP.
+  await expect(page.getByTestId("slot-exposure")).toHaveText("1d10 poison per round of exposure");
+  const hpBefore = await currentHp(page);
+  await page.getByRole("button", { name: "Cast Cloudkill" }).click();
+  const card = resultCard(page);
+  const block = card.getByTestId("cast-exposure");
+  await expect(block.getByTestId("exposure-dice")).toHaveText("1d10 poison per round of exposure");
+  await expect(card.getByTestId("cast-text-only")).toHaveCount(0);
+  await block.getByLabel("I am exposed").check();
+  await snap(page, "cloudkill-exposure-controls");
+  await block.getByRole("button", { name: "Roll exposure" }).click();
+
+  const result = card.getByTestId("exposure-result");
+  await expect(result).toContainText("Cloudkill exposure, round 1 (caster level 15)");
+  await expect(result.getByTestId("exposure-target")).toHaveText("Taken off your HP");
+  const total = Number(await result.getByTestId("exposure-total").textContent());
+  expect(total).toBeGreaterThanOrEqual(1);
+  expect(total).toBeLessThanOrEqual(10);
+  await expect.poll(() => currentHp(page)).toBe(hpBefore - total);
+  await expect(logEntry(page, `Cloudkill exposure, round 1: ${total} poison damage to me`)).toBeVisible();
+  // The next round rolls from the exposure card.
+  await expect(result.getByLabel("Round of exposure")).toHaveValue("2");
+  await snap(page, "cloudkill-exposure");
 });
 
 test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the option", async ({

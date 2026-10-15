@@ -47,7 +47,8 @@ import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import { dieName } from "@/lib/diceFormula";
 import { fieldClass } from "./fieldStyles";
-import { CastResultView } from "./CastResultView";
+import { CastResultView, ExposureResultView } from "./CastResultView";
+import { ExposureControls } from "./ExposureControls";
 
 const labelClass = "text-label text-muted-foreground";
 
@@ -136,7 +137,9 @@ function CardBody({ model, interactive }: { model: CardModel; interactive: boole
     case "castLive":
       return <CastResultView result={model.result} />;
     case "cast":
-      return <CastEntry cast={model.cast} />;
+      return <CastEntry cast={model.cast} interactive={interactive} />;
+    case "exposure":
+      return <ExposureResultView result={model.exposure} interactive={interactive} />;
     case "item":
       return <ItemResult r={model.item} />;
     case "initiative":
@@ -712,7 +715,7 @@ function ItemResult({ r }: { r: UseResult }) {
 }
 
 /** A cast from its journal payload: who cast it, the buff, the to-hit roll, the damage, the item. */
-function CastEntry({ cast: c }: { cast: CastLogPayload }) {
+function CastEntry({ cast: c, interactive }: { cast: CastLogPayload; interactive: boolean }) {
   const { t } = useTranslation();
   const spell = spellName(t, c.spellId, c.spell);
   const instances = castInstances(c);
@@ -813,6 +816,9 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
       )}
       {c.item && (
         <p className="text-body">{t("result.cast.itemSpent", { name: c.item.name, left: c.item.remaining })}</p>
+      )}
+      {interactive && c.exposure && (
+        <ExposureControls spellId={c.spellId} casterLevel={c.casterLevel} exposure={c.exposure} />
       )}
     </div>
   );

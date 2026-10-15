@@ -74,7 +74,8 @@
       "unconscious": "Inconscient",
       "dead": "Mort"
     },
-    "dyingZone": "Agonie, jusqu’à {{floor}}"
+    "dyingZone": "Agonie, jusqu’à {{floor}}",
+    "lastExposure": "{{delta}} {{spell}}"
   },
   "turn": {
     "title": "Tour",
@@ -353,6 +354,11 @@
     "ice_storm": {
       "hail": "Grêle",
       "sleet": "Grésil"
+    },
+    "wall_of_fire": {
+      "within_10_ft": "À 10 pi ou moins",
+      "within_20_ft": "À 20 pi ou moins",
+      "passing_through": "En la traversant"
     }
   },
   "spellDice": {
@@ -372,12 +378,15 @@
       "force": "force",
       "necromantic": "nécromantique",
       "negative": "énergie négative",
-      "sound": "son"
+      "sound": "son",
+      "poison": "poison"
     },
     "parts": {
       "none": "{{dice}} [sans sauvegarde]",
       "negates": "{{dice}} [annulé par la sauvegarde]"
-    }
+    },
+    "exposure": "{{damage}} par round d'exposition",
+    "exposureSteps": "{{steps}} par round d'exposition, puis {{last}} chaque round"
   },
   "lookup": {
     "search": "Rechercher des sorts...",
@@ -511,7 +520,9 @@
     "filters": "Filtres de sorts",
     "diceRow": "Dés au niveau du lanceur",
     "toDice": "Aux dés",
-    "rollDice": "Lancer"
+    "rollDice": "Lancer",
+    "exposure": "Exposition",
+    "exposureMode": "Exposition ({{mode}})"
   },
   "result": {
     "empty": "Lancez une attaque, une sauvegarde ou un sort : le détail complet s'affiche ici.",
@@ -700,6 +711,10 @@
     "hpDamage": "Dégâts {{amount}}",
     "hpHeal": "Soins {{amount}}",
     "nothingThisRound": "Rien d'enregistré ce tour.",
+    "exposure": {
+      "onMe": "{{spell}}, exposition au round {{round}} : {{total}} dégâts ({{type}}) sur moi",
+      "forDm": "{{spell}}, exposition au round {{round}} : {{total}} dégâts ({{type}})"
+    },
     "kinds": {
       "hp_change": "PV",
       "cast": "Sort",
@@ -723,7 +738,8 @@
       "item_remove": "Objet",
       "skill_check": "Compétence",
       "dice": "Dés",
-      "correction": "Correction"
+      "correction": "Correction",
+      "exposure": "Exposition"
     },
     "status": {
       "active": "Actif",
@@ -1067,6 +1083,16 @@
     "send": "Envoyer {{formula}} aux dés",
     "rollFormula": "Lancer {{formula}}"
   },
+  "exposure": {
+    "title": "Exposition, jetée à chaque round",
+    "mode": "Où",
+    "round": "Round d'exposition",
+    "onMe": "Je suis exposé",
+    "roll": "Jeter l'exposition",
+    "heading": "{{name}}, exposition au round {{round}} (niveau de lanceur {{casterLevel}})",
+    "onYou": "Retiré de vos PV",
+    "forDm": "Pour le MD : vos PV ne changent pas"
+  },
   "apiError": {
     "character_not_found": "Ce personnage n'existe plus.",
     "weapon_not_found": "Cette arme n'existe plus.",
@@ -1082,6 +1108,7 @@
     "log_top_changed": "L'entrée la plus récente a changé entre-temps. Vérifiez le journal et réessayez.",
     "nothing_to_undo": "Il n'y a rien à annuler.",
     "no_initiative": "Il n'y a pas d'initiative à relancer : lancez d'abord un combat.",
-    "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord."
+    "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord.",
+    "no_exposure": "Ce sort n'inflige aucun dégât d'exposition."
   }
 }

@@ -1,4 +1,10 @@
-import type { CastResult, PreparationInfo, SpellSlot } from "../types/spells";
+import type {
+  CastResult,
+  ExposureRequest,
+  ExposureResult,
+  PreparationInfo,
+  SpellSlot,
+} from "../types/spells";
 import { post, request } from "./http";
 
 export function fetchSpellSlots(): Promise<SpellSlot[]> {
@@ -29,6 +35,11 @@ export function castSpell(index: number, opts: CastOptions = {}): Promise<CastRe
 /** Apply a spell a party member cast on the Bard, at their caster level (`mode`: the mode they picked). */
 export function receiveSpell(spellId: string, casterLevel: number, mode?: string): Promise<CastResult> {
   return post<CastResult>("/api/spells/receive", { spellId, casterLevel, mode });
+}
+
+/** Roll one round of exposure to a spell's area (logged; on the Bard, off his HP). */
+export function rollExposure(req: ExposureRequest): Promise<ExposureResult> {
+  return post<ExposureResult>("/api/spells/exposure", req);
 }
 
 export function resetSpellSlots(): Promise<SpellSlot[]> {

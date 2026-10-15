@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   BookOpen,
   Clock,
+  CloudFog,
   DiceFive,
   MusicNotes,
   Flask,
@@ -48,6 +49,7 @@ import { dicePayload } from "@/lib/logSummary";
 const KIND_ICONS: Record<LogKind, Icon> = {
   hp_change: Heart,
   cast: MagicWand,
+  exposure: CloudFog,
   buff_change: Sparkle,
   round_advance: Hourglass,
   round_reset: Hourglass,

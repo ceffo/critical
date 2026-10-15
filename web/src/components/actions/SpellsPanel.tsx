@@ -12,6 +12,7 @@ import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
 import { planCast } from "@/lib/castInputs";
 import { damageText } from "@/lib/spellDice";
+import { exposureText } from "@/lib/spellMode";
 import { PrepareEditor } from "./PrepareEditor";
 
 interface SlotRow {
@@ -208,13 +209,15 @@ export function SpellsPanel() {
                   const acText = targetAcs[slot.index] ?? "";
                   // The damage a cast rolls at the Bard's level, as the server serves it: the picked
                   // mode's for a spell with modes.
-                  const damage = blank
+                  const entry = blank
                     ? undefined
-                    : mode
-                      ? mode.damage
-                      : info.spellbook.find(
-                          (s) => s.id === (slot.prepared_spell_id || spellId(slot.prepared_spell_name)),
-                        )?.damage;
+                    : info.spellbook.find(
+                        (s) => s.id === (slot.prepared_spell_id || spellId(slot.prepared_spell_name)),
+                      );
+                  const damage = blank ? undefined : mode ? mode.damage : entry?.damage;
+                  // A lasting area's damage per round of exposure (ADR 0008 step 16), rolled from
+                  // the cast card.
+                  const exposure = entry?.exposure;
                   return (
                     <li
                       key={slot.index}
@@ -238,6 +241,14 @@ export function SpellsPanel() {
                             data-testid="slot-dice"
                           >
                             {damageText(t, damage)}
+                          </span>
+                        )}
+                        {exposure && entry && (
+                          <span
+                            className="min-w-0 truncate text-label text-muted-foreground tabular-nums"
+                            data-testid="slot-exposure"
+                          >
+                            {exposureText(t, entry.id, exposure)}
                           </span>
                         )}
                       </span>

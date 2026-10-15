@@ -109,6 +109,16 @@ func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *
 			f.entries = append(f.entries, e)
 			return int64(len(f.entries)), nil
 		}).Maybe()
+	// The ledger total: the sum of the deltas recorded (no floor here; the
+	// composition tests use the real one).
+	log.EXPECT().HPTotal(mock.Anything, charID).RunAndReturn(
+		func(context.Context, int64) (int, error) {
+			total := 0
+			for _, e := range f.entries {
+				total += e.HPDelta
+			}
+			return total, nil
+		}).Maybe()
 	f.texts.EXPECT().Describe(mock.Anything, mock.Anything).RunAndReturn(
 		func(_ context.Context, id string) (spellsvc.Spell, bool, error) {
 			if id == "no_such_spell" {
@@ -261,7 +271,7 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		},
 		{
 			name: "low-confidence spell shows its text only",
-			slot: slot("cloudkill", "Cloudkill", 5), textOnly: castsvc.TextOnlyLowConfidence,
+			slot: slot("tashas_uncontrollable_hideous_laughter", "Tasha's Uncontrollable Hideous Laughter", 2), textOnly: castsvc.TextOnlyLowConfidence,
 		},
 		{
 			name: "slot saved before preparation: id from the name",
@@ -674,7 +684,7 @@ func TestDamageAt_NoneAndBounds(t *testing.T) {
 	got, err := f.svc.DamageAt(context.Background(), "alarm", bardLevel)
 	require.NoError(t, err)
 	assert.Nil(t, got, "a utility spell rolls no damage")
-	got, err = f.svc.DamageAt(context.Background(), "cloudkill", bardLevel)
+	got, err = f.svc.DamageAt(context.Background(), "tashas_uncontrollable_hideous_laughter", bardLevel)
 	require.NoError(t, err)
 	assert.Nil(t, got, "a low-confidence spell rolls no damage")
 	got, err = f.svc.DamageAt(context.Background(), "no_such_spell", bardLevel)

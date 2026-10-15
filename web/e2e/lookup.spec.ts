@@ -53,7 +53,6 @@ const named = [
   }),
   row("Fire Trap", "Wizard", 4, "Abjuration, Evocation"),
   row("Fire Shield", "Wizard", 4, "Evocation, Alteration"),
-  row("Wall of Fire", "Wizard", 4, "Evocation"),
   row("Faerie Fire", "Priest", 1, "Alteration", "Elemental Fire"),
   row("Flame Strike", "Priest", 5, "Evocation", "Elemental Fire"),
   row("Cure Light Wounds", "Priest", 1, "Necromancy", "Healing"),

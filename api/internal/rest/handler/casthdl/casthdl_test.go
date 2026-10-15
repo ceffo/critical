@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
+	"github.com/ceffo/critical/api/pkg/formula"
 )
 
 // The spell in a cast result carries the caster level of that cast and the
@@ -109,6 +110,19 @@ func TestToDTO_DamageSteps(t *testing.T) {
 type fakeCast struct {
 	cast    *castsvc.CastRequest
 	receive *castsvc.ReceiveRequest
+	expose  *castsvc.ExposureRequest
+}
+
+func (f fakeCast) Expose(_ context.Context, _ int64, req castsvc.ExposureRequest) (castsvc.ExposureResult, error) {
+	*f.expose = req
+	return castsvc.ExposureResult{
+		EntryID: 7, SpellID: req.SpellID, Name: "Wall of Fire", CasterLevel: req.CasterLevel, Mode: req.Mode,
+		Round: req.Round, OnSelf: req.OnSelf, HPDelta: -4,
+		Damage: &castsvc.DamageResult{
+			Dice: "2d4", Type: "fire", Instances: 1, Rounds: 1, Total: 5,
+			Rolls: []castsvc.Roll{{Formula: "2d4", Dice: []castsvc.DieRoll{{Sides: 4, Value: 2}, {Sides: 4, Value: 3}}, Total: 5}},
+		},
+	}, nil
 }
 
 func (f fakeCast) Cast(_ context.Context, _ int64, _ int, req castsvc.CastRequest) (castsvc.CastResult, error) {
@@ -146,4 +160,44 @@ func TestCastAndReceive_CarryTheMode(t *testing.T) {
 	raw, err := json.Marshal(casthdl.ToDTO(castsvc.CastResult{}))
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), `"mode"`)
+}
+
+// ADR 0008 step 16: POST /api/spells/exposure carries the spell, caster
+// level, mode, round and who is exposed to the service and answers with the
+// roll; the cast result serves the exposure damage, absent without one.
+func TestExpose_Handler(t *testing.T) {
+	svc := fakeCast{expose: &castsvc.ExposureRequest{}}
+	r := chi.NewRouter()
+	r.Post("/api/spells/exposure", render.Handle(casthdl.Expose(func(*http.Request) int64 { return 1 }, svc)))
+
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/spells/exposure",
+		strings.NewReader(`{"spellId":"wall_of_fire","casterLevel":9,"mode":"within_10_ft","round":2,"onSelf":true}`)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, castsvc.ExposureRequest{SpellID: "wall_of_fire", CasterLevel: 9, Mode: "within_10_ft", Round: 2, OnSelf: true}, *svc.expose)
+	assert.JSONEq(t, `{"entryId":7,"spellId":"wall_of_fire","name":"Wall of Fire","casterLevel":9,"mode":"within_10_ft",
+		"round":2,"onSelf":true,"hpDelta":-4,"damage":{"dice":"2d4","type":"fire","instances":1,"rounds":1,"total":5,
+		"rolls":[{"formula":"2d4","dice":[{"sides":4,"value":2},{"sides":4,"value":3}],"total":5}]}}`, rec.Body.String())
+
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/spells/exposure", strings.NewReader(`{`)))
+	assert.Equal(t, http.StatusBadRequest, rec.Code, "a malformed body")
+
+	raw, err := json.Marshal(casthdl.ToDTO(castsvc.CastResult{Exposure: &spelleffectsvc.ExposureAt{
+		Modes: []spelleffectsvc.ModeAt{{Key: "within_10_ft", Damage: &spelleffectsvc.DamageAt{
+			CasterLevel: 9, Dice: formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}},
+			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
+		}}},
+	}}))
+	require.NoError(t, err)
+	var got struct {
+		Exposure json.RawMessage `json:"exposure"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &got))
+	assert.JSONEq(t, `{"modes":[{"key":"within_10_ft","damage":{"caster_level":9,"type":"fire",
+		"dice":{"groups":[{"count":2,"sides":4}],"modifier":0},
+		"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":1}}}]}`, string(got.Exposure))
+	raw, err = json.Marshal(casthdl.ToDTO(castsvc.CastResult{}))
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), `"exposure"`)
 }

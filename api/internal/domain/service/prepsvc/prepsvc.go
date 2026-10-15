@@ -44,6 +44,9 @@ type SpellbookEntry struct {
 	// Damage is the damage a cast rolls at the character's level, from the
 	// spell effects catalog (Info fills it; nil: the cast rolls none).
 	Damage *spelleffectsvc.DamageAt
+	// Exposure is the exposure damage at the character's level (Info fills
+	// it; nil: none; ADR 0008 step 16).
+	Exposure *spelleffectsvc.ExposureAt
 	// Items are the inventory items the spell can spend right now (Info
 	// fills it; empty: the spell consumes none, or none is left).
 	Items []itemsvc.Item
@@ -185,6 +188,9 @@ func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
 				return Info{}, err
 			}
 			if out.Spellbook[i].Cast.Modes, err = fx.ModesAt(level); err != nil {
+				return Info{}, err
+			}
+			if out.Spellbook[i].Exposure, err = fx.ExposureAt(level); err != nil {
 				return Info{}, err
 			}
 		}

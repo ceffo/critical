@@ -263,3 +263,36 @@ func TestCastChargeBuff_SpendThenVoidRestoresChargesAndTotal(t *testing.T) {
 	assert.Equal(t, 11, buffs[0].Charges)
 	assert.Equal(t, 11, buffs[0].ChargesTotal)
 }
+
+// ADR 0008 step 16 on the real stack: an exposure the Bard takes (his own
+// Cloudkill, 1d10 at max = 10) is one entry that lowers his HP through the
+// ledger; popping it gives the HP back. An exposure for someone else changes
+// no HP.
+func TestExposureOnTheBard_VoidGivesTheHPBack(t *testing.T) {
+	bs := bootMaxDice(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	before, err := bs.HP.GetState(ctx, id)
+	require.NoError(t, err)
+
+	other, err := bs.Cast.Expose(ctx, id, castsvc.ExposureRequest{SpellID: "cloudkill", CasterLevel: 15})
+	require.NoError(t, err)
+	assert.Equal(t, 10, other.Damage.Total)
+	st, err := bs.HP.GetState(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, before.CurrentHp, st.CurrentHp, "the DM's roll: no HP change")
+
+	self, err := bs.Cast.Expose(ctx, id, castsvc.ExposureRequest{SpellID: "cloudkill", CasterLevel: 15, OnSelf: true})
+	require.NoError(t, err)
+	st, err = bs.HP.GetState(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, before.CurrentHp-10, st.CurrentHp)
+
+	_, err = bs.Log.Void(ctx, id, other.EntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "newest first")
+	_, err = bs.Log.Void(ctx, id, self.EntryID)
+	require.NoError(t, err)
+	st, err = bs.HP.GetState(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, before.CurrentHp, st.CurrentHp, "popping it gives the HP back")
+}

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
-import type { CastResult, DamagePartSave, DiceRoll } from "@/types/spells";
+import type { CastResult, DamagePartSave, DiceRoll, ExposureResult } from "@/types/spells";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
 import { rollLabel, stepsHeader } from "@/lib/spellDice";
 import { labelClass } from "./fieldStyles";
+import { ExposureControls } from "./ExposureControls";
 
 /** One die, as a small tile. */
 function Die({ sides, value }: { sides: number; value: number }) {
@@ -242,6 +243,10 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </div>
       )}
 
+      {r.exposure && (
+        <ExposureControls spellId={r.spellId} casterLevel={r.casterLevel} exposure={r.exposure} />
+      )}
+
       {r.save && (
         <p className="text-body" data-testid="cast-save">
           {t("result.cast.save", {
@@ -284,6 +289,69 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             {r.spell.description}
           </p>
         </details>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One round of exposure to a spell's area (ADR 0008 step 16), from the exposure endpoint or its
+ * journal entry: the round, the mode, the dice and the total, and whether it came off the Bard's HP
+ * or is the DM's. While it is the latest result, the next round of exposure rolls from here (the
+ * entry records the exposure served, so a journal entry offers it too).
+ */
+export function ExposureResultView({ result: r, interactive }: { result: ExposureResult; interactive: boolean }) {
+  const { t } = useTranslation();
+  const name = spellName(t, r.spellId, r.name);
+  const roll = r.damage.rolls[0];
+  const type = r.damage.type ? t(`spellDice.types.${r.damage.type}`, { defaultValue: r.damage.type }) : "";
+  return (
+    <div className="flex flex-col gap-3" data-testid="exposure-result">
+      <div className="text-body text-muted-foreground">
+        {t("exposure.heading", { name, round: r.round, casterLevel: r.casterLevel })}
+      </div>
+      {r.mode && (
+        <p className="text-body" data-testid="exposure-mode">
+          {t("result.cast.mode", { mode: modeName(t, r.spellId, r.mode) })}
+        </p>
+      )}
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-body" data-testid="exposure-roll">
+          {roll &&
+            (roll.parts && r.damage.parts ? (
+              <PartsView parts={roll.parts} saves={r.damage.parts.map((p) => p.save)} total={roll.total} />
+            ) : roll.dice.length > 0 ? (
+              <RollView roll={roll} />
+            ) : (
+              <span className="font-semibold tabular-nums">{roll.total}</span>
+            ))}
+          {type && <span className="text-muted-foreground">{type}</span>}
+        </div>
+        <div className="text-right">
+          <div className={labelClass}>{t("result.cast.damage")}</div>
+          <div className="text-headline tabular-nums text-danger" data-testid="exposure-total">
+            {r.damage.total}
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <p className={cn("text-body tabular-nums", r.onSelf && "text-danger")} data-testid="exposure-target">
+          {r.onSelf ? t("exposure.onYou", { delta: formatSigned(r.hpDelta) }) : t("exposure.forDm")}
+        </p>
+        {r.onSelf && r.hpDelta !== -r.damage.total && (
+          <p className="text-label text-muted-foreground" data-testid="exposure-floored">
+            {t("log.floored", { requested: formatSigned(-r.damage.total) })}
+          </p>
+        )}
+      </div>
+      {interactive && r.exposure && (
+        <ExposureControls
+          key={r.entryId}
+          spellId={r.spellId}
+          casterLevel={r.casterLevel}
+          exposure={r.exposure}
+          initial={{ mode: r.mode, round: r.round + 1, onSelf: r.onSelf }}
+        />
       )}
     </div>
   );

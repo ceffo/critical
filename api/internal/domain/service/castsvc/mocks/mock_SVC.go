@@ -190,6 +190,124 @@ func (_c *MockSVC_DamageAt_Call) RunAndReturn(run func(context.Context, string, 
 	return _c
 }
 
+// Expose provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) Expose(ctx context.Context, characterID int64, req castsvc.ExposureRequest) (castsvc.ExposureResult, error) {
+	ret := _m.Called(ctx, characterID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Expose")
+	}
+
+	var r0 castsvc.ExposureResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, castsvc.ExposureRequest) (castsvc.ExposureResult, error)); ok {
+		return rf(ctx, characterID, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, castsvc.ExposureRequest) castsvc.ExposureResult); ok {
+		r0 = rf(ctx, characterID, req)
+	} else {
+		r0 = ret.Get(0).(castsvc.ExposureResult)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, castsvc.ExposureRequest) error); ok {
+		r1 = rf(ctx, characterID, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Expose_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Expose'
+type MockSVC_Expose_Call struct {
+	*mock.Call
+}
+
+// Expose is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - req castsvc.ExposureRequest
+func (_e *MockSVC_Expecter) Expose(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_Expose_Call {
+	return &MockSVC_Expose_Call{Call: _e.mock.On("Expose", ctx, characterID, req)}
+}
+
+func (_c *MockSVC_Expose_Call) Run(run func(ctx context.Context, characterID int64, req castsvc.ExposureRequest)) *MockSVC_Expose_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(castsvc.ExposureRequest))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Expose_Call) Return(_a0 castsvc.ExposureResult, _a1 error) *MockSVC_Expose_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Expose_Call) RunAndReturn(run func(context.Context, int64, castsvc.ExposureRequest) (castsvc.ExposureResult, error)) *MockSVC_Expose_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ExposureAt provides a mock function with given fields: ctx, spellID, casterLevel
+func (_m *MockSVC) ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error) {
+	ret := _m.Called(ctx, spellID, casterLevel)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ExposureAt")
+	}
+
+	var r0 *spelleffectsvc.ExposureAt
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) (*spelleffectsvc.ExposureAt, error)); ok {
+		return rf(ctx, spellID, casterLevel)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) *spelleffectsvc.ExposureAt); ok {
+		r0 = rf(ctx, spellID, casterLevel)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*spelleffectsvc.ExposureAt)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, spellID, casterLevel)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ExposureAt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExposureAt'
+type MockSVC_ExposureAt_Call struct {
+	*mock.Call
+}
+
+// ExposureAt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - spellID string
+//   - casterLevel int
+func (_e *MockSVC_Expecter) ExposureAt(ctx interface{}, spellID interface{}, casterLevel interface{}) *MockSVC_ExposureAt_Call {
+	return &MockSVC_ExposureAt_Call{Call: _e.mock.On("ExposureAt", ctx, spellID, casterLevel)}
+}
+
+func (_c *MockSVC_ExposureAt_Call) Run(run func(ctx context.Context, spellID string, casterLevel int)) *MockSVC_ExposureAt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ExposureAt_Call) Return(_a0 *spelleffectsvc.ExposureAt, _a1 error) *MockSVC_ExposureAt_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ExposureAt_Call) RunAndReturn(run func(context.Context, string, int) (*spelleffectsvc.ExposureAt, error)) *MockSVC_ExposureAt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Health provides a mock function with given fields: ctx
 func (_m *MockSVC) Health(ctx context.Context) error {
 	ret := _m.Called(ctx)

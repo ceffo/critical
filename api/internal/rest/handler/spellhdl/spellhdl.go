@@ -41,6 +41,7 @@ type characterGetter interface {
 type damageReader interface {
 	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
 	ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error)
+	ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error)
 }
 
 // RegisterRoutes wires spell endpoints onto r.
@@ -115,6 +116,11 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 					return err
 				}
 				items[i].Modes = ModesToDTO(modes)
+				x, err := damage.ExposureAt(r.Context(), items[i].ID, level)
+				if err != nil {
+					return err
+				}
+				items[i].Exposure = ExposureToDTO(x)
 			}
 		}
 		render.OK(r.Context(), w, SpellPageDTO{
@@ -300,6 +306,25 @@ type SpellDTO struct {
 	// the damage a cast in it rolls at CasterLevel (the first is the default;
 	// Damage is its damage). Absent: the spell has none.
 	Modes []SpellModeDTO `json:"modes,omitempty"`
+	// Exposure is the damage of one round of exposure to the spell's area
+	// at CasterLevel (absent: none, or no caster level; ADR 0008 step 16).
+	Exposure *SpellExposureDTO `json:"exposure,omitempty"`
+}
+
+// SpellExposureDTO is a spell's exposure damage at a caster level: one
+// damage, or the modes picked at each exposure (the first is the default),
+// each with its damage.
+type SpellExposureDTO struct {
+	Damage *SpellDamageDTO `json:"damage,omitempty"`
+	Modes  []SpellModeDTO  `json:"modes,omitempty"`
+}
+
+// ExposureToDTO maps an exposure damage to its wire shape (nil: none).
+func ExposureToDTO(x *spelleffectsvc.ExposureAt) *SpellExposureDTO {
+	if x == nil {
+		return nil
+	}
+	return &SpellExposureDTO{Damage: DamageToDTO(x.Damage), Modes: ModesToDTO(x.Modes)}
 }
 
 // SpellModeDTO is one cast-time mode: its key (the client words it) and the

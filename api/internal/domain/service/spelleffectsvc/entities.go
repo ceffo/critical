@@ -144,6 +144,17 @@ type Mode struct {
 	Damage *Damage
 }
 
+// Exposure is the damage of one round of exposure to the area a spell leaves,
+// for whoever is in it or passes through it (ADR 0008 step 16): exactly one
+// of Damage and Modes, the options picked at each exposure (Wall of Fire's
+// distances). The damage is one roll per round of exposure: never Instances
+// or Rounds; its Steps, if any, are per round, a step being the round of
+// exposure.
+type Exposure struct {
+	Damage *Damage
+	Modes  []Mode
+}
+
 // AbilityGain raises an ability score. Gain applies to everybody; ByGroup picks
 // the die by class group (warrior, priest, rogue, wizard; a bard is a rogue).
 type AbilityGain struct {
@@ -194,7 +205,10 @@ type Entry struct {
 	// own damage (or none); the first is the default (ADR 0008 step 14). A
 	// spell with modes has no Damage of its own.
 	Modes []Mode
-	Buff  *Buff
+	// Exposure is the damage each round of exposure to the area the spell
+	// leaves deals, rolled on request (nil: none; ADR 0008 step 16).
+	Exposure *Exposure
+	Buff     *Buff
 	// Cast mechanics, applied when the Bard casts the spell (not when it is
 	// received from someone else): GrantSlots adds extra slots, ConsumeItem
 	// spends an inventory item and AttackRoll rolls a spell to-hit (one d20,

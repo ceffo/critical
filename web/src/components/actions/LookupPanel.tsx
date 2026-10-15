@@ -10,7 +10,8 @@ import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellName } from "@/i18n/spellName";
 import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
 import { damageFormula, damageText } from "@/lib/spellDice";
-import { damageRows } from "@/lib/spellMode";
+import { damageRows, exposureRows } from "@/lib/spellMode";
+import { exposureDamageText } from "@/lib/spellDice";
 import { classLabel, sphereLabel, spheresLabel, translateValue } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -76,6 +77,13 @@ function SpellDetail({ spell }: { spell: Spell }) {
       key: d.key,
       label: d.label,
       text: damageText(t, d.damage),
+      formula: damageFormula(d.damage),
+    })),
+    // One round of exposure to the spell's area (ADR 0008 step 16), per mode when it has modes.
+    ...exposureRows(t, spell).map((d) => ({
+      key: d.key,
+      label: d.label,
+      text: exposureDamageText(t, d.damage),
       formula: damageFormula(d.damage),
     })),
     ...statDice(spell, unit).map((d) => ({

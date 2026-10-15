@@ -1,5 +1,5 @@
-// Package casthdl exposes POST /api/spells/{id}/cast and
-// POST /api/spells/receive.
+// Package casthdl exposes POST /api/spells/{id}/cast,
+// POST /api/spells/receive and POST /api/spells/exposure.
 package casthdl
 
 import (
@@ -28,12 +28,73 @@ type CharacterIDFunc func(r *http.Request) int64
 type castSvc interface {
 	Cast(ctx context.Context, characterID int64, slotIndex int, req castsvc.CastRequest) (castsvc.CastResult, error)
 	Receive(ctx context.Context, characterID int64, req castsvc.ReceiveRequest) (castsvc.CastResult, error)
+	Expose(ctx context.Context, characterID int64, req castsvc.ExposureRequest) (castsvc.ExposureResult, error)
 }
 
 // RegisterRoutes wires the cast endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc castsvc.SVC) {
 	r.Post("/api/spells/{id}/cast", render.Handle(Cast(charID, svc)))
 	r.Post("/api/spells/receive", render.Handle(Receive(charID, svc)))
+	r.Post("/api/spells/exposure", render.Handle(Expose(charID, svc)))
+}
+
+// ExposureRequestDTO is the body of POST /api/spells/exposure: one round of
+// exposure to a spell's area (ADR 0008 step 16).
+type ExposureRequestDTO struct {
+	SpellID     string `json:"spellId"`
+	CasterLevel int    `json:"casterLevel"`
+	// Mode: the key of the exposure mode (omitted: the first).
+	Mode string `json:"mode,omitempty"`
+	// Round: the round of exposure, from 1 (omitted: 1).
+	Round int `json:"round,omitempty"`
+	// OnSelf: the Bard is the one exposed; the damage comes off his HP.
+	OnSelf bool `json:"onSelf,omitempty"`
+}
+
+// ExposureResultDTO is the wire shape of castsvc.ExposureResult.
+type ExposureResultDTO struct {
+	EntryID     int64  `json:"entryId"`
+	SpellID     string `json:"spellId"`
+	Name        string `json:"name"`
+	CasterLevel int    `json:"casterLevel"`
+	// Mode: the key of the exposure mode rolled (absent: none).
+	Mode   string `json:"mode,omitempty"`
+	Round  int    `json:"round"`
+	OnSelf bool   `json:"onSelf"`
+	// HPDelta: the HP change the ledger applied when the Bard was exposed
+	// (the floor may make it smaller than the damage); 0 otherwise.
+	HPDelta int        `json:"hpDelta"`
+	Damage  *DamageDTO `json:"damage"`
+	// Exposure: the spell's exposure damage at the caster level, for the
+	// next round of exposure.
+	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
+}
+
+// Expose rolls one round of exposure to a spell's area and logs it.
+func Expose(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body ExposureRequestDTO
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid JSON body")
+		}
+		res, err := svc.Expose(r.Context(), charID(r), castsvc.ExposureRequest{
+			SpellID: body.SpellID, CasterLevel: body.CasterLevel, Mode: body.Mode, Round: body.Round, OnSelf: body.OnSelf,
+		})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, ExposureToDTO(res))
+		return nil
+	}
+}
+
+// ExposureToDTO maps an exposure roll to its wire shape.
+func ExposureToDTO(res castsvc.ExposureResult) ExposureResultDTO {
+	return ExposureResultDTO{
+		EntryID: res.EntryID, SpellID: res.SpellID, Name: res.Name, CasterLevel: res.CasterLevel,
+		Mode: res.Mode, Round: res.Round, OnSelf: res.OnSelf, HPDelta: res.HPDelta, Damage: damageDTO(res.Damage),
+		Exposure: spellhdl.ExposureToDTO(res.Exposure),
+	}
 }
 
 // CastRequestDTO is the optional body of POST /api/spells/{id}/cast.
@@ -129,6 +190,9 @@ type CastResultDTO struct {
 	ConsumedItem *ConsumedItemDTO `json:"consumedItem,omitempty"`
 	// Attack: the spell's to-hit roll (one d20, no crit).
 	Attack *SpellAttackDTO `json:"attack,omitempty"`
+	// Exposure: the spell's exposure damage at the caster level, to roll
+	// each round of exposure from (absent: none; ADR 0008 step 16).
+	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
 }
 
 // ConsumedItemDTO is the item a cast spent and how many are left.
@@ -253,18 +317,8 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 			ChargeUnit: b.ChargeUnit, StrGain: rollDTO(b.StrGain), Effects: effects(b),
 		}
 	}
-	if d := res.Damage; d != nil {
-		out.Damage = &DamageDTO{
-			Dice: d.Dice, Type: d.Type, Instances: d.Instances, Rounds: d.Rounds, Total: d.Total,
-			Rolls: []RollDTO{}, TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
-		}
-		for _, p := range d.Parts {
-			out.Damage.Parts = append(out.Damage.Parts, DamagePartDTO{Formula: p.Formula, Save: string(p.Save)})
-		}
-		for i := range d.Rolls {
-			out.Damage.Rolls = append(out.Damage.Rolls, *rollDTO(&d.Rolls[i]))
-		}
-	}
+	out.Damage = damageDTO(res.Damage)
+	out.Exposure = spellhdl.ExposureToDTO(res.Exposure)
 	for _, u := range res.Untracked {
 		out.Untracked = append(out.Untracked, UntrackedDTO{Key: u.Key, Value: u.Value, Condition: u.Condition})
 	}
@@ -283,6 +337,23 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 	}
 	if res.Slots != nil {
 		out.Slots = spellhdl.SlotsToDTO(res.Slots)
+	}
+	return out
+}
+
+func damageDTO(d *castsvc.DamageResult) *DamageDTO {
+	if d == nil {
+		return nil
+	}
+	out := &DamageDTO{
+		Dice: d.Dice, Type: d.Type, Instances: d.Instances, Rounds: d.Rounds, Total: d.Total,
+		Rolls: []RollDTO{}, TotalOnSave: d.TotalOnSave, StepsPer: string(d.StepsPer),
+	}
+	for _, p := range d.Parts {
+		out.Parts = append(out.Parts, DamagePartDTO{Formula: p.Formula, Save: string(p.Save)})
+	}
+	for i := range d.Rolls {
+		out.Rolls = append(out.Rolls, *rollDTO(&d.Rolls[i]))
 	}
 	return out
 }

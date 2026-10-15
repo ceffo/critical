@@ -185,6 +185,11 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		res.TextOnly = TextOnlyLowConfidence
 		return res, nil, nil
 	}
+	// ADR 0008 step 16: the exposure damage is served on the result, for
+	// the player to roll each round of exposure from.
+	if res.Exposure, err = entry.ExposureAt(r.casterLevel); err != nil {
+		return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
+	}
 	// The caster's own mechanics (spend an item, roll to hit) apply only to
 	// a cast, not to a spell received from someone else.
 	var snaps []actionlog.Snapshot
@@ -201,6 +206,9 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		case damage == nil && r.mode != nil:
 			// ADR 0008 step 14: a mode without damage rolls nothing; the
 			// slot is still spent.
+			return res, snaps, nil
+		case damage == nil && res.Exposure != nil:
+			// ADR 0008 step 16: a cast rolls nothing, each exposure does.
 			return res, snaps, nil
 		case damage == nil:
 			res.TextOnly = TextOnlyUtility

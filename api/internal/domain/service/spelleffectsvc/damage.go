@@ -209,6 +209,11 @@ func (e Entry) ModeDamageAt(m *Mode, level int) (*DamageAt, error) {
 	if e.Kind != KindDamage || d == nil || e.Confidence == ConfidenceLow {
 		return nil, nil
 	}
+	return e.damageAt(d, level)
+}
+
+// damageAt evaluates the damage data d of e at level (steps 8, 13 and 15).
+func (e Entry) damageAt(d *Damage, level int) (*DamageAt, error) {
 	out := &DamageAt{
 		CasterLevel: level, Type: d.Type,
 		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1},

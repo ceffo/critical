@@ -45,6 +45,9 @@ type SpellbookEntryDTO struct {
 	// Damage is what a cast rolls at the character's level, in the shape
 	// of the spell lookup's (absent: the cast rolls no damage).
 	Damage *spellhdl.SpellDamageDTO `json:"damage,omitempty"`
+	// Exposure is the damage of one round of exposure to the spell's area
+	// at the character's level (absent: none; ADR 0008 step 16).
+	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
 	// Items are the inventory items the spell can spend now (consuming
 	// spells only); the cast takes the one chosen, or the only one.
 	Items []SpendableItemDTO `json:"items,omitempty"`
@@ -87,6 +90,7 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 				ID: e.ID, Name: e.Name, Level: e.Level,
 				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
 				Damage: spellhdl.DamageToDTO(e.Damage), Modes: spellhdl.ModesToDTO(e.Cast.Modes),
+				Exposure: spellhdl.ExposureToDTO(e.Exposure),
 			}
 			for _, it := range e.Items {
 				dto.Items = append(dto.Items, SpendableItemDTO{ID: it.ID, Name: it.Name, Count: it.Count})

@@ -51,6 +51,7 @@ var book = map[string]prepsvc.SpellbookEntry{
 	"chromatic_orb":           {ID: "chromatic_orb", Name: "Chromatic Orb", Level: 1},
 	"rarys_mnemonic_enhancer": {ID: "rarys_mnemonic_enhancer", Name: "Rary's Mnemonic Enhancer", Level: 4},
 	"wall_of_ice":             {ID: "wall_of_ice", Name: "Wall of Ice", Level: 4},
+	"cloudkill":               {ID: "cloudkill", Name: "Cloudkill", Level: 5},
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -63,7 +64,7 @@ func newFixture(t *testing.T) *fixture {
 		return e, ok
 	}).Maybe()
 	b.EXPECT().All().RunAndReturn(func() []prepsvc.SpellbookEntry {
-		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"]}
+		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"], book["cloudkill"]}
 	}).Maybe()
 
 	limits := mocks.NewMockLimits(t)
@@ -91,7 +92,7 @@ func TestInfo(t *testing.T) {
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 2}}, info.Limits)
-	require.Len(t, info.Spellbook, 5)
+	require.Len(t, info.Spellbook, 6)
 	assert.Equal(t, prepsvc.CastInputs{}, info.Spellbook[0].Cast, "alarm asks nothing")
 }
 
@@ -115,6 +116,24 @@ func TestInfo_ServesTheModes(t *testing.T) {
 		}},
 	}, wall.Cast.Modes)
 	assert.Nil(t, info.Spellbook[1].Cast.Modes, "fireball has no modes")
+}
+
+// ADR 0008 step 16: a spellbook entry carries the exposure damage at the
+// character's level (Cloudkill: 1d10 poison a round, and no cast damage);
+// none for a spell without one.
+func TestInfo_ServesTheExposure(t *testing.T) {
+	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	info, err := f.svc.Info(context.Background(), 1)
+	require.NoError(t, err)
+	cloud := info.Spellbook[5]
+	require.Equal(t, "cloudkill", cloud.ID)
+	assert.Nil(t, cloud.Damage, "a cast rolls none")
+	assert.Equal(t, &spelleffectsvc.ExposureAt{Damage: &spelleffectsvc.DamageAt{
+		CasterLevel: 15, Dice: formula.Sum{Dice: []formula.Dice{{Count: 1, Sides: 10}}},
+		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "poison",
+	}}, cloud.Exposure)
+	assert.Nil(t, info.Spellbook[1].Exposure, "fireball has none")
 }
 
 // ADR 0008 steps 9 and 10: what a cast asks of the player comes from the

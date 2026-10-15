@@ -54,6 +54,12 @@
   "sheet": "Force"
  },
  {
+  "id": "tashas_uncontrollable_hideous_laughter",
+  "name": "Tasha's Uncontrollable Hideous Laughter",
+  "level": 2,
+  "sheet": "Irrésistible rire de Tasha"
+ },
+ {
   "id": "dispel_magic",
   "name": "Dispel Magic",
   "level": 3,

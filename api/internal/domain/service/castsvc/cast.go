@@ -219,7 +219,6 @@ func (s *service) record(ctx context.Context, characterID int64, res CastResult,
 	id, err := s.Log.Record(ctx, actionlog.NewEntry{
 		CharacterID: characterID,
 		Kind:        actionlog.KindCast,
-		Summary:     summary(res),
 		Payload:     payload,
 		Snapshots:   snaps,
 	})
@@ -227,47 +226,6 @@ func (s *service) record(ctx context.Context, characterID int64, res CastResult,
 		return 0, fmt.Errorf("record cast: %w", err)
 	}
 	return id, nil
-}
-
-// summary is the English log text (the UI renders the payload instead).
-func summary(res CastResult) string {
-	var b strings.Builder
-	if res.Source == SourceReceived {
-		fmt.Fprintf(&b, "Received %s (caster level %d)", res.Name, res.CasterLevel)
-	} else {
-		fmt.Fprintf(&b, "Cast %s", res.Name)
-	}
-	switch {
-	case res.Buff != nil && res.Buff.Applied:
-		b.WriteString(": " + counters(res.Buff.Buff.Duration, res.Buff.Buff.Charges))
-		if res.Buff.StrGain != nil {
-			fmt.Fprintf(&b, ", STR +%d", res.Buff.StrGain.Total)
-		}
-	case res.Damage != nil:
-		fmt.Fprintf(&b, ": %d %s damage", res.Damage.Total, res.Damage.Type)
-	case res.Attack != nil:
-		verdict := "missed"
-		if res.Attack.Hit {
-			verdict = "hit"
-		}
-		fmt.Fprintf(&b, ": %s (d20 %d vs AC %d)", verdict, res.Attack.D20Roll, res.Attack.TargetAC)
-	case len(res.ExtraSlots) > 0:
-		fmt.Fprintf(&b, ": extra slots, levels %v", res.ExtraSlots)
-	}
-	return b.String()
-}
-
-func counters(duration, charges int) string {
-	switch {
-	case duration > 0 && charges > 0:
-		return fmt.Sprintf("%d rd, %d ch", duration, charges)
-	case duration > 0:
-		return fmt.Sprintf("%d rd", duration)
-	case charges > 0:
-		return fmt.Sprintf("%d ch", charges)
-	default:
-		return "until dismissed"
-	}
 }
 
 func firstNonEmpty(v ...string) string {

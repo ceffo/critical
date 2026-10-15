@@ -33,7 +33,7 @@ func TestItems_UseWireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/items/wand_lightning/use", "{}")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"itemId":"wand_lightning","name":"Wand of lightning","type":"wand","behaviour":"charges",
-		"removed":true,"remaining":0,"maxCount":4,"dice":"","rolls":[],"total":0,"save":"","notes":"","breakdown":"","logEntryId":9}`, rec.Body.String())
+		"removed":true,"remaining":0,"maxCount":4,"dice":"","rolls":[],"modifier":0,"total":0,"save":"","notes":"","logEntryId":9}`, rec.Body.String())
 }
 
 func TestItems_Restock(t *testing.T) {

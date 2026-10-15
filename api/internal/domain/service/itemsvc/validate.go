@@ -56,7 +56,7 @@ func (i Item) Validate() error {
 		return fieldErr("count", "Count must be 0 or more")
 	}
 	if i.Count > MaxItemCount {
-		return fieldErr("count", fmt.Sprintf("Count must be at most %d", MaxItemCount))
+		return domain.FieldErrorf("count", "Count must be at most %d", MaxItemCount)
 	}
 	// A charges item at 0 is gone (Removed, Use): removing it is what remove is for.
 	if i.Behaviour.RemovedAtZero() && i.Count == 0 {
@@ -67,14 +67,14 @@ func (i Item) Validate() error {
 			return fieldErr("maxCount", "Daily number must be at least 1")
 		}
 		if i.MaxCount > MaxItemCount {
-			return fieldErr("maxCount", fmt.Sprintf("Daily number must be at most %d", MaxItemCount))
+			return domain.FieldErrorf("maxCount", "Daily number must be at most %d", MaxItemCount)
 		}
 		if i.Count > i.MaxCount {
 			return fieldErr("count", "Count cannot exceed the daily number")
 		}
 	}
 	if i.MagicBonus < -MaxBonus || i.MagicBonus > MaxBonus {
-		return fieldErr("magicalBonus", fmt.Sprintf("Magical bonus must be between -%d and %d", MaxBonus, MaxBonus))
+		return domain.FieldErrorf("magicalBonus", "Magical bonus must be between -%d and %d", MaxBonus, MaxBonus)
 	}
 	if i.EffectDice != "" {
 		if _, _, _, err := ParseDice(i.EffectDice); err != nil {

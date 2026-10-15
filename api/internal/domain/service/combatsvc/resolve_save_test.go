@@ -48,7 +48,7 @@ func amends(f *fixture, e *actionlog.Entry) {
 				return nil, err
 			}
 			e.Corrections = append(e.Corrections, actionlog.Correction{
-				ActionID: e.ID, Kind: actionlog.CorrectionAmend, Summary: a.Summary, Payload: a.Payload,
+				ActionID: e.ID, Kind: actionlog.CorrectionAmend, Payload: a.Payload,
 			})
 			return e, nil
 		})
@@ -64,10 +64,10 @@ func payloadOf(t *testing.T, raw json.RawMessage) map[string]any {
 func TestResolveSavingThrow_LogPayload(t *testing.T) {
 	f := newFixture(t)
 	e := rollSave(t, f, 12, 1)
-	assert.Equal(t, "Save vs Spells: d20 12 vs 14, FAILED", e.Summary)
+	assert.Empty(t, e.Summary, "the UI words the save from its payload")
 	assert.Equal(t, map[string]any{
-		"category": "spell", "label": "Spells", "d20Roll": 12.0, "target": 14.0,
-		"modifiers":    []any{map[string]any{"kind": "buff", "source": "Luck", "detail": "Luck", "value": 1.0}},
+		"category": "spell", "d20Roll": 12.0, "target": 14.0,
+		"modifiers":    []any{map[string]any{"kind": "buff", "detail": "Luck", "value": 1.0}},
 		"rolledPassed": false, "adjustment": 0.0, "total": 13.0, "passed": false, "margin": -1.0,
 	}, payloadOf(t, e.Payload))
 }
@@ -80,51 +80,53 @@ func TestAdjustSave_Recompute(t *testing.T) {
 		wantPassed bool
 		wantMargin int
 		wantMods   []combatsvc.Modifier
-		wantText   string
-		wantLog    string
+		wantBonus  int
+		wantTotal  int
+		// wantPrevPassed is the verdict before the last adjustment.
+		wantPrevPassed bool
 	}{
 		{
 			name: "fail to pass", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: " Gaia fire "}},
 			wantPassed: true, wantMargin: 2,
-			wantMods: []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Source: "Adjustment", Detail: "Gaia fire", Value: 4}},
-			wantText: "Roll: 12 + Mod: 0 + Adj: +4 = 16 vs Target: 14 (Spells)",
-			wantLog:  "Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
+			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Detail: "Gaia fire", Value: 4}},
+			wantBonus: 0, wantTotal: 16,
+			wantPrevPassed: false,
 		},
 		{
 			name: "pass to fail, buff kept", d20: 13, bonus: 1,
 			steps:      []combatsvc.SaveAdjustment{{Value: -2}},
 			wantPassed: false, wantMargin: -2,
 			wantMods: []combatsvc.Modifier{
-				{Kind: combatsvc.ModBuff, Source: "Luck", Detail: "Luck", Value: 1},
-				{Kind: combatsvc.ModAdjustment, Source: "Adjustment", Value: -2},
+				{Kind: combatsvc.ModBuff, Detail: "Luck", Value: 1},
+				{Kind: combatsvc.ModAdjustment, Value: -2},
 			},
-			wantText: "Roll: 13 + Mod: 1 + Adj: -2 = 12 vs Target: 14 (Spells)",
-			wantLog:  "Save vs Spells: d20 13 vs 14, adjusted -2: PASSED → FAILED",
+			wantBonus: 1, wantTotal: 12,
+			wantPrevPassed: true,
 		},
 		{
 			name: "back to 0 restores the rolled verdict, reason dropped", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: "Gaia fire"}, {Value: 0, Reason: "oops"}},
 			wantPassed: false, wantMargin: -2,
-			wantMods: []combatsvc.Modifier{},
-			wantText: "Roll: 12 + Mod: 0 = 12 vs Target: 14 (Spells)",
-			wantLog:  "Save vs Spells: d20 12 vs 14, adjustment removed: PASSED → FAILED",
+			wantMods:  []combatsvc.Modifier{},
+			wantBonus: 0, wantTotal: 12,
+			wantPrevPassed: true,
 		},
 		{
 			name: "a new adjustment replaces the previous one", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: "Gaia fire"}, {Value: 1, Reason: "luck"}},
 			wantPassed: false, wantMargin: -1,
-			wantMods: []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Source: "Adjustment", Detail: "luck", Value: 1}},
-			wantText: "Roll: 12 + Mod: 0 + Adj: +1 = 13 vs Target: 14 (Spells)",
-			wantLog:  "Save vs Spells: d20 12 vs 14, adjusted +1 luck: PASSED → FAILED",
+			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Detail: "luck", Value: 1}},
+			wantBonus: 0, wantTotal: 13,
+			wantPrevPassed: true,
 		},
 		{
 			name: "natural 1 is plain arithmetic", d20: 1,
 			steps:      []combatsvc.SaveAdjustment{{Value: 13}},
 			wantPassed: true, wantMargin: 0,
-			wantMods: []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Source: "Adjustment", Value: 13}},
-			wantText: "Roll: 1 + Mod: 0 + Adj: +13 = 14 vs Target: 14 (Spells)",
-			wantLog:  "Save vs Spells: d20 1 vs 14, adjusted +13: FAILED → PASSED",
+			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Value: 13}},
+			wantBonus: 0, wantTotal: 14,
+			wantPrevPassed: false,
 		},
 	}
 	for _, c := range cases {
@@ -145,18 +147,18 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			assert.Equal(t, c.wantMargin, res.HitMargin)
 			assert.Equal(t, last.Value, res.Adjustment)
 			assert.Equal(t, c.wantMods, res.Modifiers)
-			assert.Equal(t, c.wantText, res.DamageBreakdown)
+			assert.Equal(t, c.wantBonus, res.SaveBonus)
+			assert.Equal(t, c.wantTotal, res.SaveTotal)
 			assert.Equal(t, int64(42), res.LogEntryID)
 			assert.Equal(t, combatsvc.SaveSpell, res.SaveCategory)
 
 			require.Len(t, e.Corrections, len(c.steps), "one audited amend per adjustment")
-			assert.Equal(t, c.wantLog, e.EffectiveSummary())
 			p := payloadOf(t, e.EffectivePayload())
 			assert.Equal(t, float64(c.d20), p["d20Roll"])
 			assert.Equal(t, c.wantPassed, p["passed"])
 			assert.Equal(t, float64(c.wantMargin), p["margin"])
 			assert.Equal(t, float64(last.Value), p["adjustment"])
-			assert.Contains(t, p, "previousPassed")
+			assert.Equal(t, c.wantPrevPassed, p["previousPassed"])
 			assert.Equal(t, payloadOf(t, e.Payload)["passed"], p["rolledPassed"], "rolled verdict kept")
 		})
 	}
@@ -214,8 +216,8 @@ func TestResolveSavingThrow_OneModifierPerBuff(t *testing.T) {
 	res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.Modifier{
-		{Kind: combatsvc.ModBuff, Source: "Gaia", Detail: "Gaia", Value: 4},
-		{Kind: combatsvc.ModBuff, Source: "Curse", Detail: "Curse", Value: -1},
+		{Kind: combatsvc.ModBuff, Detail: "Gaia", Value: 4},
+		{Kind: combatsvc.ModBuff, Detail: "Curse", Value: -1},
 	}, res.Modifiers)
 	assert.Equal(t, 13, res.HitMargin+14)
 }

@@ -2,6 +2,7 @@ package composition_test
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -136,7 +137,7 @@ func TestLongRestBlocksVoidingAnEarlierCast(t *testing.T) {
 
 	_, err = bs.Log.Void(ctx, id, haste.EntryID)
 	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-	assert.Contains(t, err.Error(), "Long rest")
+	assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (long_rest", rest.EntryID))
 	assert.Equal(t, 0, usedSlots(t, bs), "the slots stay as the rest left them")
 
 	// Voiding the rest itself puts the slots back as they were before it.
@@ -160,7 +161,7 @@ func TestCastVoidsGoNewestFirst(t *testing.T) {
 
 	_, err = bs.Log.Void(ctx, id, fire.EntryID)
 	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-	assert.Contains(t, err.Error(), "Cast Magic Missile")
+	assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (cast", mm.EntryID))
 
 	_, err = bs.Log.Void(ctx, id, mm.EntryID)
 	require.NoError(t, err)

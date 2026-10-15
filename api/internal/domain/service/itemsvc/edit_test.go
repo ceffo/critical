@@ -123,7 +123,8 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, after, res.Item)
 	assert.Equal(t, actionlog.KindItemEdit, got.Kind)
-	assert.Equal(t, "Edited Wand of lightning: count 4 → 3", got.Summary)
+	assert.Empty(t, got.Summary, "the UI words the change from its payload")
+	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
 	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Wand of lightning","type":"wand",
 		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`,
 		string(got.Snapshots[0].Before))
@@ -224,5 +225,5 @@ func TestUseItem_DiceWithModifier(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []int{5}, res.Rolls)
 	assert.Equal(t, 7, res.Total)
-	assert.Equal(t, "1d8+2: 5 + 2 = 7", res.Breakdown)
+	assert.Equal(t, 2, res.Modifier, "the flat +2 of 1d8+2")
 }

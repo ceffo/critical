@@ -2,6 +2,7 @@ package composition_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 
@@ -32,7 +33,7 @@ func TestBuffNoteIsLoggedEditableAndVoidRestoresIt(t *testing.T) {
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
-	assert.Equal(t, "Edited Ward: note", entries[0].Summary)
+	assert.Contains(t, string(entries[0].Payload), `"noteChanged":true`)
 	assert.Contains(t, string(entries[0].Payload), `"fromNote":"+4 saves vs fire"`)
 	assert.Contains(t, string(entries[1].Payload), `"note":"+4 saves vs fire"`)
 
@@ -104,7 +105,7 @@ func TestSavedBuffs_DeleteIsLoggedAndVoidable(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, entries, 3)
 	assert.Equal(t, actionlog.KindBuffChange, entries[0].Kind)
-	assert.Equal(t, "Deleted saved buff Hammer form", entries[0].Summary)
+	assert.JSONEq(t, `{"action":"delete_template","buff":"Hammer form"}`, string(entries[0].Payload))
 
 	_, err = bs.Log.Void(ctx, id, entries[0].ID)
 	require.NoError(t, err)
@@ -202,7 +203,7 @@ func TestSavedBuffs_VoidingAnEarlierSaveIsBlockedByALiveDelete(t *testing.T) {
 
 	_, err = bs.Log.Void(ctx, id, entries[1].ID)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Deleted saved buff Hammer form")
+	assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (buff_change", entries[0].ID))
 
 	// Void the delete: the chip is back, same id.
 	_, err = bs.Log.Void(ctx, id, entries[0].ID)
@@ -233,8 +234,7 @@ func TestBuffNote_EditOnChargesOnlyBuffKeepsIt(t *testing.T) {
 
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
-	assert.Equal(t, "Edited Stoneskin: note", entries[1].Summary)
-	assert.Equal(t, "Edited Stoneskin: note cleared", entries[0].Summary)
+	assert.Contains(t, string(entries[1].Payload), `"note":"vs arrows"`)
 	assert.Contains(t, string(entries[1].Payload), `"noteChanged":true`)
 	assert.Contains(t, string(entries[0].Payload), `"fromNote":"vs arrows"`)
 	assert.NotContains(t, string(entries[0].Payload), `"note":`+`"vs`)

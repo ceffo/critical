@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -53,13 +52,8 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 		for i, b := range expired {
 			names[i] = b.Name
 		}
-		summary := fmt.Sprintf("Time passed: %g h (%d rd), round %d → %d", hours, rounds, from, to)
-		if len(names) > 0 {
-			summary += " (expired: " + strings.Join(names, ", ") + ")"
-		}
 		return change{
 			kind:    actionlog.KindTimePassed,
-			summary: summary,
 			payload: logPayload{Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names},
 			buffs:   active,
 			round:   &to,

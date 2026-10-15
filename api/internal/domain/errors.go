@@ -1,6 +1,9 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Cross-cutting sentinels. DALs translate driver-specific errors into these
 // before returning to a service. Handlers map them to HTTP statuses through
@@ -23,3 +26,10 @@ func (e *FieldError) Error() string { return e.Message }
 
 // Is makes errors.Is(err, ErrInvalidInput) true for a FieldError.
 func (e *FieldError) Is(target error) bool { return target == ErrInvalidInput }
+
+// FieldErrorf is a FieldError whose message is formatted like fmt.Errorf's.
+// It is error construction, the one place in the domain a message is
+// formatted.
+func FieldErrorf(field, format string, args ...any) *FieldError {
+	return &FieldError{Field: field, Message: fmt.Errorf(format, args...).Error()}
+}

@@ -87,9 +87,14 @@ func TestRecord(t *testing.T) {
 			wantErr: domain.ErrInvalidInput,
 		},
 		{
-			name:    "summary required",
+			name:    "summary or payload required",
 			in:      actionlog.NewEntry{CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "  "},
 			wantErr: domain.ErrInvalidInput,
+		},
+		{
+			name:      "a payload without a summary (the UI words it)",
+			in:        actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindBuffChange, Payload: json.RawMessage(`{"action":"dismiss"}`)},
+			wantStore: &actionlog.NewEntry{CharacterID: 1, Round: 2, Kind: actionlog.KindBuffChange, Payload: json.RawMessage(`{"action":"dismiss"}`)},
 		},
 		{
 			name:    "duplicate snapshot keys",
@@ -247,7 +252,7 @@ func TestVoid(t *testing.T) {
 		},
 		{
 			name: "an older entry is refused", entry: withSnaps("round"), topID: 9, restorers: []string{"round"},
-			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be voided, void "Round 3 → 4" (round 3) first`,
+			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be voided, void #9 (round_advance, round 3) first`,
 		},
 		{
 			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},
@@ -275,7 +280,7 @@ func TestVoid(t *testing.T) {
 				if c.topID != 0 {
 					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(c.topID, true, nil).Once()
 					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.topID).
-						Return(&actionlog.Entry{ID: c.topID, Round: 3, Summary: "Round 3 → 4"}, nil).Once()
+						Return(&actionlog.Entry{ID: c.topID, Round: 3, Kind: actionlog.KindRoundAdvance}, nil).Once()
 				} else {
 					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(5, true, nil).Once()
 					dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
@@ -334,10 +339,10 @@ func TestVoidLatest(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
 		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(8, true, nil).Once()
 		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(8)).
-			Return(&actionlog.Entry{ID: 8, Round: 2, Kind: actionlog.KindBuffChange, Summary: "Activated Haste"}, nil).Once()
+			Return(&actionlog.Entry{ID: 8, Round: 2, Kind: actionlog.KindBuffChange}, nil).Once()
 		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
 		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-		assert.Contains(t, err.Error(), `the latest entry is not a hp_change, void "Activated Haste" (round 2) first`)
+		assert.Contains(t, err.Error(), `the latest entry is not a hp_change, void #8 (buff_change, round 2) first`)
 		assert.False(t, ok)
 	})
 }
@@ -395,7 +400,7 @@ func saveEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
 
 func TestAmendLatest(t *testing.T) {
 	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
-	good := actionlog.PayloadAmendment{Summary: " adjusted ", Payload: json.RawMessage(`{"passed":true}`)}
+	good := actionlog.PayloadAmendment{Payload: json.RawMessage(`{"passed":true}`)}
 	onlySave := map[actionlog.Kind]int64{actionlog.KindSave: 5}
 	cases := []struct {
 		name    string
@@ -418,16 +423,15 @@ func TestAmendLatest(t *testing.T) {
 		{name: "a later item use exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindItemUse: 7}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "no roll at all", entry: saveEntry(5), latest: map[actionlog.Kind]int64{}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "fn fails", entry: saveEntry(5), latest: onlySave, fnErr: errBoom, wantErr: errBoom},
-		{name: "empty summary", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Summary: " ", Payload: good.Payload}, wantErr: domain.ErrInvalidInput},
-		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Summary: "x"}, wantErr: domain.ErrInvalidInput},
+		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{}, wantErr: domain.ErrInvalidInput},
 		{
 			name: "latest roll amended, older attack ignored", entry: saveEntry(5),
 			latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindAttack: 3}, fnOut: good,
-			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Summary: "adjusted", Payload: good.Payload},
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload},
 		},
 		{
 			name: "amended again", entry: saveEntry(5, actionlog.Correction{Kind: actionlog.CorrectionAmend, Summary: "a", Payload: json.RawMessage(`{}`)}), latest: onlySave, fnOut: good,
-			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Summary: "adjusted", Payload: good.Payload},
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload},
 		},
 	}
 	for _, c := range cases {
@@ -465,7 +469,6 @@ func TestAmendLatest(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, called)
 			assert.JSONEq(t, `{"passed":true}`, string(got.EffectivePayload()))
-			assert.Equal(t, "adjusted", got.EffectiveSummary())
 			assert.Equal(t, 0, got.EffectiveHPDelta())
 		})
 	}

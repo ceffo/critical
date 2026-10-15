@@ -94,7 +94,10 @@ type Snapshot struct {
 
 // NewEntry is what a service records. Round 0 means "stamp the current round".
 // HPDelta is the entry's contribution to current HP (0 for most kinds).
-// Payload is an optional JSON summary (for example a full attack breakdown).
+// Payload is the structured record of what happened (for example a full
+// attack breakdown); the UI words it in the player's language. Summary is
+// only free text the player typed (an HP change's source): the backend never
+// composes display text. An entry needs a payload or a summary.
 type NewEntry struct {
 	CharacterID int64
 	Round       int
@@ -111,10 +114,9 @@ type Recorder interface {
 	Record(ctx context.Context, e NewEntry) (int64, error)
 }
 
-// PayloadAmendment replaces an entry's summary and payload; its HP delta is
-// unchanged. Both are required.
+// PayloadAmendment replaces an entry's payload; its HP delta is unchanged.
+// The payload is required.
 type PayloadAmendment struct {
-	Summary string
 	Payload json.RawMessage
 }
 
@@ -123,8 +125,8 @@ type PayloadAmendment struct {
 type AmendFunc func(e Entry) (PayloadAmendment, error)
 
 // LatestAmender corrects an entry whose outcome lives in its payload (a save)
-// after the fact. AmendLatest records an amend replacing the summary and
-// payload of entry id, which must be of kind (a roll kind), not voided, and
+// after the fact. AmendLatest records an amend replacing the payload of
+// entry id, which must be of kind (a roll kind), not voided, and
 // the latest roll: the newest entry of any of RollKinds, voided ones
 // included. fn computes the amendment from the entry inside the transaction.
 type LatestAmender interface {

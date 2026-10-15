@@ -417,6 +417,8 @@
     "damageMultiplier": "Multiplicateur ×",
     "damageStrength": "Force +",
     "breakdown": "Détail",
+    "saveFormula": "Jet : {{d20}} + Mod : {{mod}} = {{total}} contre Cible : {{target}} ({{name}})",
+    "saveFormulaAdjusted": "Jet : {{d20}} + Mod : {{mod}} + Ajust : {{adj}} = {{total}} contre Cible : {{target}} ({{name}})",
     "attackHeadingAmmo": "{{weapon}} avec {{ammo}} contre CA {{ac}}",
     "sizes": {
       "sm": "cible P/M",
@@ -435,7 +437,8 @@
       "ammo_magic": "{{detail}}",
       "buff": "{{detail}}",
       "situational": "{{detail}}",
-      "crit": "Coup critique ({{detail}})",
+      "situationalUnnamed": "Situationnel",
+      "critRange": "Coup critique ({{from}}–{{to}})",
       "critPlaceholder": "Coup critique (provisoire)",
       "adjustment": "Ajustement {{detail}}"
     },
@@ -642,6 +645,8 @@
       }
     },
     "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés",
+    "prep": "Préparé : {{spells}}",
+    "prepNone": "Aucun sort préparé",
     "saveThrow": {
       "rolled": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, {{verdict}}",
       "adjusted": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustée {{adjustment}}{{reason}} : {{from}} → {{to}}",

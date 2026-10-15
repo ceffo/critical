@@ -55,7 +55,7 @@ func (s *service) AdjustAttackAC(ctx context.Context, characterID, entryID int64
 			return actionlog.PayloadAmendment{}, fmt.Errorf("encode attack payload: %w", err)
 		}
 		res = r
-		return actionlog.PayloadAmendment{Summary: summary(r), Payload: payload}, nil
+		return actionlog.PayloadAmendment{Payload: payload}, nil
 	})
 	if err != nil {
 		return nil, err

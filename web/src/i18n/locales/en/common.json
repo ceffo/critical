@@ -417,6 +417,8 @@
     "damageMultiplier": "Multiplier ×",
     "damageStrength": "Strength +",
     "breakdown": "Breakdown",
+    "saveFormula": "Roll: {{d20}} + Mod: {{mod}} = {{total}} vs Target: {{target}} ({{name}})",
+    "saveFormulaAdjusted": "Roll: {{d20}} + Mod: {{mod}} + Adj: {{adj}} = {{total}} vs Target: {{target}} ({{name}})",
     "attackHeadingAmmo": "{{weapon}} with {{ammo}} vs AC {{ac}}",
     "sizes": {
       "sm": "S/M target",
@@ -435,7 +437,8 @@
       "ammo_magic": "{{detail}}",
       "buff": "{{detail}}",
       "situational": "{{detail}}",
-      "crit": "Critical hit ({{detail}})",
+      "situationalUnnamed": "Situational",
+      "critRange": "Critical hit ({{from}}–{{to}})",
       "critPlaceholder": "Critical hit (placeholder)",
       "adjustment": "Adjustment {{detail}}"
     },
@@ -642,6 +645,8 @@
       }
     },
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
+    "prep": "Prepared: {{spells}}",
+    "prepNone": "Prepared no spells",
     "saveThrow": {
       "rolled": "Save vs {{name}}: d20 {{d20}} vs {{target}}, {{verdict}}",
       "adjusted": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjusted {{adjustment}}{{reason}}: {{from}} → {{to}}",

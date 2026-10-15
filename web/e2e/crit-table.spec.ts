@@ -115,7 +115,7 @@ test("the table saved in the editor is used by the next crit", async ({
     `Crit check ${check} · multiplier ${d100} → ×${row.mult} (${row.from}–${row.to})`,
   );
   await expect(card.getByTestId("damage-terms")).toContainText(
-    `Critical hit (${row.from}-${row.to})`,
+    `Critical hit (${row.from}–${row.to})`,
   );
   await snap(page, "table-crit");
 

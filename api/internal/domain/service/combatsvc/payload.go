@@ -30,12 +30,14 @@ type attackRecord struct {
 	BonusDamage        int              `json:"bonusDamage"`
 	DamageTerms        []termRecord     `json:"damageTerms"`
 	TotalDamage        int              `json:"totalDamage"`
-	DamageBreakdown    string           `json:"damageBreakdown"`
-	WeaponID           string           `json:"weaponId"`
-	WeaponName         string           `json:"weaponName"`
-	TargetAC           int              `json:"targetAc"`
-	TargetSize         string           `json:"targetSize"`
-	Ammo               *ammoRecord      `json:"ammo,omitempty"`
+	// UnroundedDamage is the formula result before the final floor (absent
+	// on attacks logged before it was recorded).
+	UnroundedDamage float64     `json:"unroundedDamage,omitempty"`
+	WeaponID        string      `json:"weaponId"`
+	WeaponName      string      `json:"weaponName"`
+	TargetAC        int         `json:"targetAc"`
+	TargetSize      string      `json:"targetSize"`
+	Ammo            *ammoRecord `json:"ammo,omitempty"`
 	// Rolled and CritRow are what a target AC correction recomputes the
 	// outcome from (absent on attacks logged before corrections existed).
 	Rolled  *rolledRecord  `json:"rolled,omitempty"`
@@ -67,9 +69,10 @@ type critRowRecord struct {
 	Placeholder bool    `json:"placeholder"`
 }
 
+// modifierRecord and termRecord: entries logged before the UI labelled them
+// also carry an English "source", no longer read.
 type modifierRecord struct {
 	Kind   string `json:"kind"`
-	Source string `json:"source"`
 	Detail string `json:"detail,omitempty"`
 	Value  int    `json:"value"`
 }
@@ -77,7 +80,6 @@ type modifierRecord struct {
 type termRecord struct {
 	Term   string  `json:"term"`
 	Kind   string  `json:"kind"`
-	Source string  `json:"source"`
 	Detail string  `json:"detail,omitempty"`
 	Value  float64 `json:"value"`
 }
@@ -92,7 +94,7 @@ type ammoRecord struct {
 func toTermRecords(in []DamageTerm) []termRecord {
 	out := make([]termRecord, len(in))
 	for i, t := range in {
-		out[i] = termRecord{Term: string(t.Term), Kind: string(t.Kind), Source: t.Source, Detail: t.Detail, Value: t.Value}
+		out[i] = termRecord{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, Value: t.Value}
 	}
 	return out
 }
@@ -100,7 +102,7 @@ func toTermRecords(in []DamageTerm) []termRecord {
 func fromTermRecords(in []termRecord) []DamageTerm {
 	out := make([]DamageTerm, len(in))
 	for i, t := range in {
-		out[i] = DamageTerm{Term: DamageTermKind(t.Term), Kind: ModifierKind(t.Kind), Source: t.Source, Detail: t.Detail, Value: t.Value}
+		out[i] = DamageTerm{Term: DamageTermKind(t.Term), Kind: ModifierKind(t.Kind), Detail: t.Detail, Value: t.Value}
 	}
 	return out
 }
@@ -108,7 +110,7 @@ func fromTermRecords(in []termRecord) []DamageTerm {
 func toRecord(r *RollResult) attackRecord {
 	mods := make([]modifierRecord, len(r.Modifiers))
 	for i, m := range r.Modifiers {
-		mods[i] = modifierRecord{Kind: string(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value}
+		mods[i] = modifierRecord{Kind: string(m.Kind), Detail: m.Detail, Value: m.Value}
 	}
 	terms := toTermRecords(r.DamageTerms)
 	out := attackRecord{
@@ -117,7 +119,7 @@ func toRecord(r *RollResult) attackRecord {
 		EffectiveThac0: r.EffectiveThac0, TargetACNeeded: r.TargetACNeeded, Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
-		DamageTerms: terms, TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
+		DamageTerms: terms, TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
 	}
 	if a := r.Ammo; a != nil {
@@ -143,7 +145,7 @@ func toRecord(r *RollResult) attackRecord {
 func (a attackRecord) result(entryID int64) *RollResult {
 	mods := make([]Modifier, len(a.Modifiers))
 	for i, m := range a.Modifiers {
-		mods[i] = Modifier{Kind: ModifierKind(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value}
+		mods[i] = Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, Value: m.Value}
 	}
 	r := &RollResult{
 		D20Roll: a.D20Roll, D100CritRoll: a.D100CritRoll, D100MultiplierRoll: a.D100MultiplierRoll, IsCrit: a.IsCrit, CritMultiplier: a.CritMultiplier,
@@ -151,7 +153,7 @@ func (a attackRecord) result(entryID int64) *RollResult {
 		EffectiveThac0: a.EffectiveThac0, TargetACNeeded: a.TargetACNeeded, Hit: a.Hit, HitMargin: a.HitMargin,
 		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
 		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
-		DamageTerms: fromTermRecords(a.DamageTerms), TotalDamage: a.TotalDamage, DamageBreakdown: a.DamageBreakdown,
+		DamageTerms: fromTermRecords(a.DamageTerms), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
 		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetAC: a.TargetAC, TargetSize: TargetSize(a.TargetSize),
 		RolledTargetAC: a.RolledTargetAC, RolledHit: a.RolledHit, RolledCrit: a.RolledCrit,
 		LogEntryID: entryID,

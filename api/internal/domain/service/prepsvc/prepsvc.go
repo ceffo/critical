@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -211,10 +210,14 @@ func (s *service) Prepare(ctx context.Context, characterID int64, spellIDs []str
 		if err != nil {
 			return err
 		}
+		payload, err := json.Marshal(prepRecordOf(picked))
+		if err != nil {
+			return fmt.Errorf("encode preparation payload: %w", err)
+		}
 		_, err = s.Log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindSpellPrep,
-			Summary:     summary(picked),
+			Payload:     payload,
 			Snapshots:   []actionlog.Snapshot{snap},
 		})
 		if err != nil {
@@ -267,27 +270,31 @@ func carryUsed(before []spellsvc.SpellSlot, picked []SpellbookEntry) []spellsvc.
 	return out
 }
 
-func summary(picked []SpellbookEntry) string {
-	if len(picked) == 0 {
-		return "Prepared no spells"
-	}
-	var parts []string
-	counts := map[string]int{}
-	var order []string
+// prepRecord is the spell_prep entry's payload: the spells prepared, each
+// once with its number of copies, in preparation order. The UI words it.
+// Add fields, never rename.
+type prepRecord struct {
+	Spells []prepSpell `json:"spells"`
+}
+
+type prepSpell struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
+func prepRecordOf(picked []SpellbookEntry) prepRecord {
+	rec := prepRecord{Spells: []prepSpell{}}
+	at := map[string]int{}
 	for _, e := range picked {
-		if counts[e.Name] == 0 {
-			order = append(order, e.Name)
+		if i, ok := at[e.ID]; ok {
+			rec.Spells[i].Count++
+			continue
 		}
-		counts[e.Name]++
+		at[e.ID] = len(rec.Spells)
+		rec.Spells = append(rec.Spells, prepSpell{ID: e.ID, Name: e.Name, Count: 1})
 	}
-	for _, name := range order {
-		if n := counts[name]; n > 1 {
-			parts = append(parts, fmt.Sprintf("%s ×%d", name, n))
-		} else {
-			parts = append(parts, name)
-		}
-	}
-	return "Prepared: " + strings.Join(parts, ", ")
+	return rec
 }
 
 // SlotsSnapshot is the StateKey snapshot of a slot-list change, in the

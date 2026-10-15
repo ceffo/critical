@@ -451,7 +451,7 @@ func TestReceive_LogPayload(t *testing.T) {
 	_, err := f.svc.Receive(context.Background(), charID, castsvc.ReceiveRequest{SpellID: "strength", CasterLevel: 9})
 	require.NoError(t, err)
 	e := f.entries[0]
-	assert.Equal(t, "Received Strength (caster level 9): 540 rd, STR +4", e.Summary)
+	assert.Empty(t, e.Summary, "the UI words the cast from its payload")
 	assert.JSONEq(t, `{"action":"received","spellId":"strength","spell":"Strength","casterLevel":9,
 		"buff":{"name":"Strength","rounds":540,"strGain":4,"applied":true}}`, string(e.Payload))
 }

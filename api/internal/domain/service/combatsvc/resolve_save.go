@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -26,21 +27,16 @@ type SaveAdjustment struct {
 	Reason string
 }
 
-var saveLabels = map[SaveCategory]string{
-	SaveParaPoison:   "Paralyze/Poison",
-	SaveRodStaffWand: "Rod/Staff/Wand",
-	SavePetriPoly:    "Petrify/Polymorph",
-	SaveBreath:       "Breath Weapon",
-	SaveSpell:        "Spells",
-}
+// saveCategories are the categories a save can be rolled in; the UI names
+// them.
+var saveCategories = []SaveCategory{SaveParaPoison, SaveRodStaffWand, SavePetriPoly, SaveBreath, SaveSpell}
 
 // ResolveSavingThrow rolls a D20 against the character's per-category target,
 // applying buff SaveBonus modifiers, and records the save in the action log
 // (kind save, no snapshots: it changes no state). A natural 1 or 20 is plain
 // arithmetic.
 func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory) (*RollResult, error) {
-	label, ok := saveLabels[category]
-	if !ok {
+	if !slices.Contains(saveCategories, category) {
 		return nil, fmt.Errorf("%w: unknown save category %q", domain.ErrInvalidInput, category)
 	}
 	var res *RollResult
@@ -57,7 +53,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 			SaveSpell:        char.SaveSpell,
 		}[category]
 
-		rec := saveRecord{Category: string(category), Label: label, Target: target, Modifiers: []modifierRecord{}}
+		rec := saveRecord{Category: string(category), Target: target, Modifiers: []modifierRecord{}}
 		rec.D20Roll = s.dice.RollD20()
 		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str)
 		if err != nil {
@@ -66,7 +62,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// One modifier per buff, named like attack buff modifiers (Detail =
 		// buff name), so the card labels each one.
 		for _, c := range mods.SaveBonusFrom {
-			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModBuff), Source: c.Buff, Detail: c.Buff, Value: c.Value})
+			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModBuff), Detail: c.Buff, Value: c.Value})
 		}
 		rec.settle()
 		rec.RolledPassed = rec.Passed
@@ -78,7 +74,6 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		id, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindSave,
-			Summary:     rec.summary(),
 			Payload:     payload,
 		})
 		if err != nil {
@@ -122,7 +117,7 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 		if err != nil {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("encode save payload: %w", err)
 		}
-		return actionlog.PayloadAmendment{Summary: rec.summary(), Payload: payload}, nil
+		return actionlog.PayloadAmendment{Payload: payload}, nil
 	})
 	if err != nil {
 		return nil, err
@@ -134,9 +129,10 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 // action-log entry (payload); an adjustment amend carries the recomputed
 // record. Entries already in the log must stay decodable: add fields, never
 // rename them.
+// Saves logged before the UI named the category also carry an English
+// "label", no longer read.
 type saveRecord struct {
 	Category string `json:"category"`
-	Label    string `json:"label"`
 	D20Roll  int    `json:"d20Roll"`
 	// Modifiers are the ones applied when rolling (buffs), not the adjustment.
 	Modifiers []modifierRecord `json:"modifiers"`
@@ -171,52 +167,20 @@ func (r *saveRecord) modTotal() int {
 	return sum
 }
 
-func verdict(passed bool) string {
-	if passed {
-		return "PASSED"
-	}
-	return "FAILED"
-}
-
-// summary is the English log line; the UI renders the payload instead.
-func (r *saveRecord) summary() string {
-	head := fmt.Sprintf("Save vs %s: d20 %d vs %d", r.Label, r.D20Roll, r.Target)
-	if r.PreviousPassed == nil {
-		return fmt.Sprintf("%s, %s", head, verdict(r.Passed))
-	}
-	adj := fmt.Sprintf("adjusted %+d", r.Adjustment)
-	if r.Adjustment == 0 {
-		adj = "adjustment removed"
-	}
-	if r.AdjustmentReason != "" {
-		adj += " " + r.AdjustmentReason
-	}
-	return fmt.Sprintf("%s, %s: %s → %s", head, adj, verdict(*r.PreviousPassed), verdict(r.Passed))
-}
-
-func (r *saveRecord) breakdown() string {
-	mod := r.modTotal()
-	if r.Adjustment == 0 {
-		return fmt.Sprintf("Roll: %d + Mod: %d = %d vs Target: %d (%s)", r.D20Roll, mod, r.Total, r.Target, r.Label)
-	}
-	return fmt.Sprintf("Roll: %d + Mod: %d + Adj: %+d = %d vs Target: %d (%s)",
-		r.D20Roll, mod, r.Adjustment, r.Total, r.Target, r.Label)
-}
-
 // result is the RollResult of the save: the target is BaseThac0 and
 // EffectiveThac0, the verdict Hit, the margin HitMargin; the adjustment is
 // listed among the modifiers.
 func (r *saveRecord) result(entryID int64) *RollResult {
 	mods := make([]Modifier, 0, len(r.Modifiers)+1)
 	for _, m := range r.Modifiers {
-		mods = append(mods, Modifier{Kind: ModifierKind(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value})
+		mods = append(mods, Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, Value: m.Value})
 	}
 	if r.Adjustment != 0 {
-		mods = append(mods, Modifier{Kind: ModAdjustment, Source: "Adjustment", Detail: r.AdjustmentReason, Value: r.Adjustment})
+		mods = append(mods, Modifier{Kind: ModAdjustment, Detail: r.AdjustmentReason, Value: r.Adjustment})
 	}
 	return &RollResult{
 		D20Roll: r.D20Roll, BaseThac0: r.Target, EffectiveThac0: r.Target, Modifiers: mods,
-		Hit: r.Passed, HitMargin: r.Margin, DamageBreakdown: r.breakdown(),
+		Hit: r.Passed, HitMargin: r.Margin, SaveBonus: r.modTotal(), SaveTotal: r.Total,
 		SaveCategory: SaveCategory(r.Category), Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason,
 		LogEntryID: entryID,
 	}

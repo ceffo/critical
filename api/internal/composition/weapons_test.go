@@ -183,14 +183,13 @@ func TestWeapons_RemoveDartsKeepsOldLogLinesAndPopRestores(t *testing.T) {
 
 	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)
 	require.NoError(t, err)
-	var line string
+	var payload string
 	for _, e := range entries {
 		if e.ID == atk.LogEntryID {
-			line = e.Summary
-			assert.Contains(t, string(e.Payload), `"weaponName":"Darts"`)
+			payload = string(e.Payload)
 		}
 	}
-	assert.Contains(t, line, "Darts", "the earlier attack still reads Darts")
+	assert.Contains(t, payload, `"weaponName":"Darts"`, "the earlier attack still reads Darts")
 
 	// The remove is the newest entry: the attack before it cannot be popped.
 	_, err = bs.Log.Void(ctx, bs.CharacterID, atk.LogEntryID)

@@ -147,8 +147,8 @@ test("the spell names follow the language", async ({ page, stack }) => {
   );
   await openDashboard(page);
   await page.getByRole("tab", { name: "Sorts", exact: true }).click();
-  await expect(page.getByText("Images miroir")).toBeVisible();
-  await expect(page.getByText("Boule de feu")).toBeVisible();
+  await expect(page.getByText("Images miroir", { exact: true })).toBeVisible();
+  await expect(page.getByText("Boule de feu", { exact: true })).toBeVisible();
   await snap(page, "french");
 });
 

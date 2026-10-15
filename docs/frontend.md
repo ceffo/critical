@@ -162,7 +162,7 @@ export interface RollResult {
   isCrit: boolean;
   critMultiplier: number; // may be a decimal
   baseThac0: number;
-  modifiers: Modifier[]; // { kind, source, detail?, value }
+  modifiers: Modifier[]; // { kind, detail?, value }: labelled with result.mods.<kind>
   effectiveThac0: number;
   targetACNeeded: number;
   hit: boolean;
@@ -173,7 +173,7 @@ export interface RollResult {
   multipliers: number;
   strengthBonus: number;
   totalDamage: number;
-  damageBreakdown: string;
+  unroundedDamage?: number; // the formula text is built by lib/rollText.ts
   // … see web/src/types/combat.ts for the full shape (damageTerms, ammo, critPlaceholder…)
 }
 ```

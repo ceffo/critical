@@ -52,7 +52,9 @@ id, action_id, state_key, before_state JSON, after_state JSON
 -- action_corrections: audited amend/void events pointing at an entry (never edit an entry)
 id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, created_at
 -- (each amend field, when set, replaces the entry's: latest amend that set it wins; the log's
---  amend now sets only note, post-roll adjustments set summary + payload)
+--  amend now sets only note, post-roll adjustments set the payload)
+-- summary holds only text the player typed (an HP change's source); every other entry is a
+-- structured payload the UI words in the player's language (older rows keep an English summary)
 
 -- hp_events: legacy HP ledger, carried into action_log by migration 007; no longer written
 
@@ -152,7 +154,7 @@ type RollResult struct {
     CritMultiplier  float64
     CritPlaceholder bool
     BaseThac0       int
-    Modifiers       []Modifier // {kind, source, detail, value}: every to-hit modifier
+    Modifiers       []Modifier // {kind, detail, value}: every to-hit modifier
     EffectiveThac0  int
     TargetACNeeded  int
     Hit             bool
@@ -166,9 +168,9 @@ type RollResult struct {
     DiceMultiplier  float64
     StrengthBonus   int
     BonusDamage     int
-    DamageTerms     []DamageTerm // {term, kind, source, detail, value}: every damage contribution
+    DamageTerms     []DamageTerm // {term, kind, detail, value}: every damage contribution
+    UnroundedDamage float64      // before the final floor; the UI lays out the formula
     TotalDamage     int
-    DamageBreakdown string
     // Attack context: weapon, target AC/size, ammo spent + remaining, log entry id
 }
 ```

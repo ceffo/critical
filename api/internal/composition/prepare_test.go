@@ -68,7 +68,8 @@ func TestPrepare_RealStack_VoidRestoresThePreviousPreparation(t *testing.T) {
 	entries, err := bs.Log.ActiveEntries(ctx, bs.CharacterID, actionlog.KindSpellPrep, 10)
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
-	assert.Equal(t, "Prepared: Fireball, Haste", entries[0].Summary) // newest first
+	assert.JSONEq(t, `{"spells":[{"id":"fireball","name":"Fireball","count":1},{"id":"haste","name":"Haste","count":1}]}`,
+		string(entries[0].Payload)) // newest first
 
 	_, err = bs.Log.Void(ctx, bs.CharacterID, entries[0].ID)
 	require.NoError(t, err)

@@ -596,3 +596,21 @@ describe("cast entries", () => {
     );
   });
 });
+
+describe("spell_prep entries", () => {
+  it("lists the spells with their copies (en/fr)", async () => {
+    const e = entry("spell_prep", {
+      spells: [
+        { id: "magic_missile", name: "Magic Missile", count: 1 },
+        { id: "mirror_image", name: "Mirror Image", count: 2 },
+      ],
+    });
+    expect(entryText(e, await makeT("en"))).toBe("Prepared: Magic Missile, Mirror Image ×2");
+    expect(entryText(e, await makeT("fr"))).toMatch(/^Préparé : .+ ×2$/);
+    expect(entryText(entry("spell_prep", { spells: [] }), await makeT("en"))).toBe("Prepared no spells");
+  });
+
+  it("falls back to the summary of an entry logged before the payload", async () => {
+    expect(entryText(entry("spell_prep", {}, "Prepared: Alarm"), await makeT("en"))).toBe("Prepared: Alarm");
+  });
+});

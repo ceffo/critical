@@ -7,6 +7,7 @@ package composition_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -99,7 +100,7 @@ func TestLogStack_VoidOlderEntryIsRefused(t *testing.T) {
 	for i, id := range ids[:len(ids)-1] {
 		_, err := bs.Log.Void(ctx, bs.CharacterID, id)
 		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "entry %d", i)
-		assert.Contains(t, err.Error(), `void "troll claw"`)
+		assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (hp_change", ids[len(ids)-1]))
 	}
 	assert.Equal(t, states[len(states)-1], stateOf(t, bs), "nothing restored")
 	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)

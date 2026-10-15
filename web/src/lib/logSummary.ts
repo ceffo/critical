@@ -84,6 +84,21 @@ function restText(e: LogEntry, t: TFunction): string | null {
   });
 }
 
+/** Payload of spell_prep entries (prepsvc prepRecord): each spell once, with its copies. */
+function prepText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "spell_prep") return null;
+  const p = e.payload as { spells?: { id: string; name: string; count: number }[] } | null;
+  if (!p || !Array.isArray(p.spells)) return null;
+  if (p.spells.length === 0) return t("log.prepNone");
+  const spells = p.spells
+    .map((s) => {
+      const name = spellName(t, s.id, s.name);
+      return s.count > 1 ? `${name} ×${s.count}` : name;
+    })
+    .join(", ");
+  return t("log.prep", { spells });
+}
+
 /** Payload of buff_change / round_* / time_passed entries (buffsvc logPayload). */
 export interface BuffLogPayload {
   action:
@@ -316,8 +331,9 @@ function attackText(p: RollResult, t: TFunction): string {
 }
 
 /**
- * The entry's text in the player's language: buff, round, attack, save and cast entries are rendered from
- * their structured payload; everything else (and unknown payloads) uses the server's summary.
+ * The entry's text in the player's language, worded from its structured payload. The server's summary
+ * is only the player's own text (an HP change's source) or, on entries logged before the payloads
+ * existed, an older English line.
  */
 export function entryText(e: LogEntry, t: TFunction): string {
   const attack = attackPayload(e);
@@ -328,6 +344,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (cast) return castText(cast, t);
   const rest = restText(e, t);
   if (rest) return rest;
+  const prep = prepText(e, t);
+  if (prep) return prep;
   const item = itemPayload(e);
   if (item) return itemText(item, t);
   const restock = restockText(e, t);

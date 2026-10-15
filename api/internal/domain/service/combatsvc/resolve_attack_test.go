@@ -43,28 +43,28 @@ var (
 
 func modStr(str, v int) combatsvc.Modifier {
 	s := fmt.Sprint(str)
-	return combatsvc.Modifier{Kind: combatsvc.ModStrength, Source: "Strength " + s, Detail: s, Value: v}
+	return combatsvc.Modifier{Kind: combatsvc.ModStrength, Detail: s, Value: v}
 }
 
 func modDex(dex, v int) combatsvc.Modifier {
 	s := fmt.Sprint(dex)
-	return combatsvc.Modifier{Kind: combatsvc.ModDexterity, Source: "Dexterity " + s, Detail: s, Value: v}
+	return combatsvc.Modifier{Kind: combatsvc.ModDexterity, Detail: s, Value: v}
 }
 
 func modWeapon(w combatsvc.Weapon) combatsvc.Modifier {
-	return combatsvc.Modifier{Kind: combatsvc.ModWeaponMagic, Source: w.Name, Detail: w.Name, Value: w.MagicToHit}
+	return combatsvc.Modifier{Kind: combatsvc.ModWeaponMagic, Detail: w.Name, Value: w.MagicToHit}
 }
 
 func modAmmo(i itemsvc.Item) combatsvc.Modifier {
-	return combatsvc.Modifier{Kind: combatsvc.ModAmmoMagic, Source: i.Name, Detail: i.Name, Value: i.MagicBonus}
+	return combatsvc.Modifier{Kind: combatsvc.ModAmmoMagic, Detail: i.Name, Value: i.MagicBonus}
 }
 
 func modBuff(name string, v int) combatsvc.Modifier {
-	return combatsvc.Modifier{Kind: combatsvc.ModBuff, Source: name, Detail: name, Value: v}
+	return combatsvc.Modifier{Kind: combatsvc.ModBuff, Detail: name, Value: v}
 }
 
 func modSituational(label string, v int) combatsvc.Modifier {
-	return combatsvc.Modifier{Kind: combatsvc.ModSituational, Source: label, Detail: label, Value: v}
+	return combatsvc.Modifier{Kind: combatsvc.ModSituational, Detail: label, Value: v}
 }
 
 type attackCase struct {
@@ -87,7 +87,7 @@ type attackCase struct {
 	wantCrit      bool
 	wantDice      string
 	wantTotal     int
-	wantBreakdown string
+	wantBreakdown float64
 }
 
 // All expected values are worked by hand from PHB Table 1 (Strength: 8-15
@@ -101,7 +101,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 6, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 7,
-		wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+		wantBreakdown: 7,
 	},
 	{
 		name: "long sword +2 vs AC 5 at STR 12 misses on 5", weapon: longsword, mods: strMods(12),
@@ -116,7 +116,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(18, 1), modWeapon(longsword)},
 		wantEffThac0: 10, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 9,
-		wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 2 = 9",
+		wantBreakdown: 9,
 	},
 	{
 		name: "long sword +2 vs AC 5 at effective STR 18 misses on 4", weapon: longsword, mods: strMods(18),
@@ -134,7 +134,7 @@ var attackCases = []attackCase{
 		sides: 6, dmg: []int{4},
 		wantMods:     []combatsvc.Modifier{modDex(17, 2), modWeapon(shortbow), modAmmo(arrows3Left1)},
 		wantEffThac0: 6, wantHit: true, wantMargin: 0, wantDice: "1d6", wantTotal: 9,
-		wantBreakdown: "((4 × 1.0) + 5) × 1.0 + 0 = 9",
+		wantBreakdown: 9,
 	},
 	{
 		name: "short bow +2 with a +3 arrow at DEX 17 misses on 3", weapon: shortbow, mods: strMods(18), ammo: &arrows3Left1,
@@ -150,7 +150,7 @@ var attackCases = []attackCase{
 		d20: 14, d100: 50, sides: 8, dmg: []int{3, 6},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(bastardSword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 8, wantDice: "2d8", wantTotal: 11,
-		wantBreakdown: "((9 × 1.0) + 2) × 1.0 + 0 = 11",
+		wantBreakdown: 11,
 	},
 	{
 		// Small/medium: 2d4 = 3 + 4 = 7; ((7 × 1) + 2) × 1 + 0 = 9.
@@ -159,7 +159,7 @@ var attackCases = []attackCase{
 		d20: 14, d100: 50, sides: 4, dmg: []int{3, 4},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(bastardSword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 8, wantDice: "2d4", wantTotal: 9,
-		wantBreakdown: "((7 × 1.0) + 2) × 1.0 + 0 = 9",
+		wantBreakdown: 9,
 	},
 	{
 		// Mods: STR 12 +0, sword +2, Bless +1 = +3. Eff. THAC0 10; vs AC 5
@@ -172,7 +172,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword), modBuff("Bless", 1)},
 		wantEffThac0: 10, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 7,
-		wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+		wantBreakdown: 7,
 	},
 	{
 		// Buff damage is added after the multipliers: ((5 × 1) + 2) × 1 + 0 + 2 = 9.
@@ -184,7 +184,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 6, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 9,
-		wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 + 2 = 9",
+		wantBreakdown: 9,
 	},
 	{
 		// Mods: +2 (sword) +2 (rear attack) = +4. Eff. THAC0 9; vs AC 5 needs 4.
@@ -196,7 +196,7 @@ var attackCases = []attackCase{
 		d20: 4, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword), modSituational("Rear attack", 2)},
 		wantEffThac0: 9, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 7,
-		wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+		wantBreakdown: 7,
 	},
 	{
 		// Mods: +2 (sword) -4 (cover) = -2. Eff. THAC0 15; vs AC 5 needs 10.
@@ -206,7 +206,7 @@ var attackCases = []attackCase{
 			Situational: &combatsvc.Situational{Value: -4},
 		},
 		d20: 9, d100: 50, sides: 8, dmg: []int{5},
-		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword), modSituational("Situational", -4)},
+		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword), modSituational("", -4)},
 		wantEffThac0: 15, wantHit: false, wantMargin: -1,
 	},
 	{
@@ -226,7 +226,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 15, d100: 9, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 9, wantCrit: true, wantDice: "1d8", wantTotal: 14,
-		wantBreakdown: "((5 × 1.0) + 2) × 2.0 + 0 = 14",
+		wantBreakdown: 14,
 	},
 	{
 		// 15 - 10 = 5 < 6: a plain hit.
@@ -234,7 +234,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 15, d100: 10, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 9, wantDice: "1d8", wantTotal: 7,
-		wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+		wantBreakdown: 7,
 	},
 	{
 		// No special natural rolls: eff. THAC0 11 vs AC 10 needs 1, so a 1 hits.
@@ -242,7 +242,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 10}, d20: 1, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 7,
-		wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+		wantBreakdown: 7,
 	},
 	{
 		// Eff. THAC0 11 vs AC -10 needs 21, so a 20 misses.
@@ -259,7 +259,7 @@ var attackCases = []attackCase{
 		req: combatsvc.AttackRequest{WeaponID: "darts", TargetAC: 5}, d20: 5, d100: 50, sides: 3, dmg: []int{2},
 		wantMods:     []combatsvc.Modifier{modStr(18, 1), modDex(17, 2)},
 		wantEffThac0: 10, wantHit: true, wantMargin: 0, wantDice: "1d3", wantTotal: 4,
-		wantBreakdown: "((2 × 1.0) + 0) × 1.0 + 2 = 4",
+		wantBreakdown: 4,
 	},
 }
 
@@ -299,7 +299,7 @@ func TestResolveAttack(t *testing.T) {
 				assert.InDelta(t, 1, res.CritMultiplier, 0)
 			}
 			assert.Equal(t, tt.wantTotal, res.TotalDamage)
-			assert.Equal(t, tt.wantBreakdown, res.DamageBreakdown)
+			assert.InDelta(t, tt.wantBreakdown, res.UnroundedDamage, 1e-9)
 			assert.Equal(t, tt.wantDice, res.DamageDice)
 			assert.Equal(t, tt.weapon.Name, res.WeaponName)
 			assert.Equal(t, tt.req.TargetAC, res.TargetAC)
@@ -344,16 +344,16 @@ func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.DamageTerm{
-		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
-		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
-		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (check d100 5, multiplier d100 77, placeholder)", Detail: "placeholder", Value: 2},
-		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
-		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
+		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Detail: "Enlarge", Value: 1.5},
+		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Detail: "Haste blade", Value: 2},
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Detail: "Long Sword +2", Value: 2},
+		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Value: 2},
+		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Detail: "18", Value: 2},
+		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Detail: "Rage", Value: 1},
 	}, res.DamageTerms)
 	// floor(((5 × 1.5 × 2 buff) + 2) × 2 crit) + 2 + 1 = 34 + 3 = 37.
 	assert.Equal(t, 37, res.TotalDamage)
-	assert.Equal(t, "((5 × 1.5 × 2.0) + 2) × 2.0 + 2 + 1 = 37", res.DamageBreakdown)
+	assert.InDelta(t, 37, res.UnroundedDamage, 1e-9, "((5 × 1.5 × 2.0) + 2) × 2.0 + 2 + 1")
 }
 
 // The Power Gem's effects (weapon becomes +5, damage x2, min_str 18) apply
@@ -368,7 +368,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 			StrBonus: intPtr(bonus), StrMax: intPtr(18),
 		}}
 	}
-	gemMod := combatsvc.Modifier{Kind: combatsvc.ModWeaponBuff, Source: "Power Gem (weapon +5)", Detail: "Power Gem", Value: 5}
+	gemMod := combatsvc.Modifier{Kind: combatsvc.ModWeaponBuff, Detail: "Power Gem", Value: 5}
 
 	tests := []struct {
 		name      string
@@ -434,8 +434,8 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 			if tt.wantDiceX {
 				assert.Equal(t, 2.0, res.DiceMultiplier)
 				assert.Equal(t, 1.0, res.Multipliers, "no crit: the crit multiplier is 1")
-				assert.Contains(t, res.DamageTerms, combatsvc.DamageTerm{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Source: "Power Gem", Detail: "Power Gem", Value: 2})
-				assert.Equal(t, "((6 × 1.0 × 2.0) + 5) × 1.0 + 2 = 19", res.DamageBreakdown)
+				assert.Contains(t, res.DamageTerms, combatsvc.DamageTerm{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Detail: "Power Gem", Value: 2})
+				assert.InDelta(t, 19, res.UnroundedDamage, 1e-9, "((6 × 1.0 × 2.0) + 5) × 1.0 + 2")
 			}
 			assert.Equal(t, tt.wantMods, res.Modifiers)
 			assert.Equal(t, tt.wantEff, res.EffectiveThac0)
@@ -476,8 +476,8 @@ func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 	assert.Equal(t, 3, res.WeaponBuff)
 	assert.Equal(t, 6, res.TotalDamage)
 	assert.Equal(t, []combatsvc.DamageTerm{
-		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Dagger +3", Detail: "Dagger +3", Value: 3},
-		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 12", Detail: "12", Value: 0},
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Detail: "Dagger +3", Value: 3},
+		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Detail: "12", Value: 0},
 	}, res.DamageTerms)
 }
 
@@ -504,7 +504,7 @@ func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "plainbow", AmmoItemID: "arrows_plus3", TargetAC: 5})
 	require.NoError(t, err)
 
-	buffMod := combatsvc.Modifier{Kind: combatsvc.ModWeaponBuff, Source: "Magic Weapon (weapon +5)", Detail: "Magic Weapon", Value: 5}
+	buffMod := combatsvc.Modifier{Kind: combatsvc.ModWeaponBuff, Detail: "Magic Weapon", Value: 5}
 	// To hit: DEX 17 +2 (no STR for a bow), buff +5, arrow +3 = +10. Eff. THAC0 3; needs -2.
 	assert.Equal(t, []combatsvc.Modifier{modDex(17, 2), buffMod, modAmmo(arrows3Left1)}, res.Modifiers)
 	assert.Equal(t, 3, res.EffectiveThac0)
@@ -513,8 +513,8 @@ func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 	assert.Equal(t, 8, res.WeaponBuff)
 	assert.Equal(t, 12, res.TotalDamage)
 	assert.Equal(t, []combatsvc.DamageTerm{
-		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponBuff, Source: "Magic Weapon (weapon +5)", Detail: "Magic Weapon", Value: 5},
-		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModAmmoMagic, Source: "Arrows +3", Detail: "Arrows +3", Value: 3},
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponBuff, Detail: "Magic Weapon", Value: 5},
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModAmmoMagic, Detail: "Arrows +3", Value: 3},
 	}, res.DamageTerms)
 }
 
@@ -542,7 +542,7 @@ func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 	assert.Equal(t, charID, e.CharacterID)
 	assert.Equal(t, actionlog.KindAttack, e.Kind)
 	assert.Zero(t, e.HPDelta)
-	assert.Equal(t, "Short Bow +2 (Arrows +3) vs AC 2: hit, 9 damage", e.Summary)
+	assert.Empty(t, e.Summary, "the UI words the attack from its payload")
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, "items:arrows_plus3", e.Snapshots[0].Key)
 	assert.JSONEq(t, `[{"id":"arrows_plus3","count":2}]`, string(e.Snapshots[0].Before))
@@ -572,7 +572,7 @@ func TestResolveAttack_MeleeIsLoggedWithoutSnapshot(t *testing.T) {
 	_, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
 	require.NoError(t, err)
 	require.Len(t, f.entries, 1)
-	assert.Equal(t, "Long Sword +2 vs AC 5: miss", f.entries[0].Summary)
+	assert.Empty(t, f.entries[0].Summary, "the UI words the attack from its payload")
 	assert.Empty(t, f.entries[0].Snapshots)
 }
 

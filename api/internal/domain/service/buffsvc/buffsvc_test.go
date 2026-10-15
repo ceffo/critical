@@ -158,7 +158,7 @@ func TestActivate(t *testing.T) {
 		require.Len(t, f.entries, 1)
 		e := f.entries[0]
 		assert.Equal(t, actionlog.KindBuffChange, e.Kind)
-		assert.Equal(t, "Activated Stoneskin (5 ch)", e.Summary)
+		assert.Empty(t, e.Summary, "the UI words the entry from its payload")
 		assert.Zero(t, e.Round, "stamped with the current round by the log")
 		assert.Equal(t, []string{buffsvc.StateKeyBuffs}, snapKeys(e))
 		assert.Len(t, decodeSnap(t, e.Snapshots[0].Before), 1)
@@ -178,7 +178,7 @@ func TestActivate(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, got, 1)
 		assert.Equal(t, "mine", got[0].ID)
-		assert.Equal(t, "Activated X (until dismissed)", f.entries[0].Summary)
+		assert.JSONEq(t, `{"action":"activate","buff":"X"}`, string(f.entries[0].Payload))
 	})
 
 	invalid := []struct {
@@ -233,50 +233,50 @@ func TestEdit(t *testing.T) {
 		id          string
 		edit        buffsvc.BuffEdit
 		want        []buffsvc.BuffEffect
-		wantSummary string
+		wantPayload string
 		wantErr     error
 	}{
 		{
 			name: "sets remaining rounds", start: []buffsvc.BuffEffect{str, mirror}, id: "s",
 			edit:        buffsvc.BuffEdit{Duration: intPtr(3)},
 			want:        []buffsvc.BuffEffect{{ID: "s", Name: "Strength", Duration: 3}, mirror},
-			wantSummary: "Edited Strength: 10 rd → 3 rd",
+			wantPayload: `{"action":"edit","buff":"Strength","fromRounds":10,"rounds":3}`,
 		},
 		{
 			name: "sets charges only", start: []buffsvc.BuffEffect{mirror}, id: "m",
 			edit:        buffsvc.BuffEdit{Charges: intPtr(2)},
 			want:        []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 20, Charges: 2}},
-			wantSummary: "Edited Mirror Image: 20 rd, 4 ch → 20 rd, 2 ch",
+			wantPayload: `{"action":"edit","buff":"Mirror Image","fromRounds":20,"fromCharges":4,"rounds":20,"charges":2}`,
 		},
 		{
 			name: "rounds set to 0 ends a timed buff", start: []buffsvc.BuffEffect{str, mirror}, id: "s",
 			edit:        buffsvc.BuffEdit{Duration: intPtr(0)},
 			want:        []buffsvc.BuffEffect{mirror},
-			wantSummary: "Edited Strength: 10 rd → ended",
+			wantPayload: `{"action":"edit","buff":"Strength","fromRounds":10,"ended":true}`,
 		},
 		{
 			name: "charges set to 0 ends a charged buff", start: []buffsvc.BuffEffect{mirror}, id: "m",
 			edit:        buffsvc.BuffEdit{Charges: intPtr(0)},
 			want:        []buffsvc.BuffEffect{},
-			wantSummary: "Edited Mirror Image: 20 rd, 4 ch → ended",
+			wantPayload: `{"action":"edit","buff":"Mirror Image","fromRounds":20,"fromCharges":4,"rounds":20,"ended":true}`,
 		},
 		{
 			name: "rounds on an untimed buff make it timed", start: []buffsvc.BuffEffect{gem}, id: "g",
 			edit:        buffsvc.BuffEdit{Duration: intPtr(5)},
 			want:        []buffsvc.BuffEffect{{ID: "g", Name: "Power Gem", Duration: 5}},
-			wantSummary: "Edited Power Gem: until dismissed → 5 rd",
+			wantPayload: `{"action":"edit","buff":"Power Gem","rounds":5}`,
 		},
 		{
 			name: "note only", start: []buffsvc.BuffEffect{str}, id: "s",
 			edit:        buffsvc.BuffEdit{Note: strPtr(" fire −50% ")},
 			want:        []buffsvc.BuffEffect{{ID: "s", Name: "Strength", Duration: 10, Note: "fire −50%"}},
-			wantSummary: "Edited Strength: note",
+			wantPayload: `{"action":"edit","buff":"Strength","fromRounds":10,"rounds":10,"note":"fire −50%","noteChanged":true}`,
 		},
 		{
 			name: "note with rounds", start: []buffsvc.BuffEffect{{ID: "s", Name: "Strength", Duration: 10, Note: "old"}}, id: "s",
 			edit:        buffsvc.BuffEdit{Duration: intPtr(3), Note: strPtr("")},
 			want:        []buffsvc.BuffEffect{{ID: "s", Name: "Strength", Duration: 3}},
-			wantSummary: "Edited Strength: 10 rd → 3 rd and note",
+			wantPayload: `{"action":"edit","buff":"Strength","fromRounds":10,"rounds":3,"fromNote":"old","noteChanged":true}`,
 		},
 		{name: "unknown id", start: []buffsvc.BuffEffect{str}, id: "nope", edit: buffsvc.BuffEdit{Duration: intPtr(1)}, wantErr: domain.ErrNotFound},
 		{name: "negative rounds", start: []buffsvc.BuffEffect{str}, id: "s", edit: buffsvc.BuffEdit{Duration: intPtr(-1)}, wantErr: domain.ErrInvalidInput},
@@ -301,7 +301,8 @@ func TestEdit(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 			require.Len(t, f.entries, 1)
 			assert.Equal(t, actionlog.KindBuffChange, f.entries[0].Kind)
-			assert.Equal(t, tt.wantSummary, f.entries[0].Summary)
+			assert.Empty(t, f.entries[0].Summary, "the UI words the entry")
+			assert.JSONEq(t, tt.wantPayload, string(f.entries[0].Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyBuffs}, snapKeys(f.entries[0]))
 		})
 	}
@@ -313,7 +314,7 @@ func TestTrigger(t *testing.T) {
 		start       []buffsvc.BuffEffect
 		id          string
 		want        []buffsvc.BuffEffect
-		wantSummary string
+		wantPayload string
 		wantErr     error
 	}{
 		{
@@ -321,28 +322,28 @@ func TestTrigger(t *testing.T) {
 			start:       []buffsvc.BuffEffect{{ID: "c", Name: "Stoneskin", Charges: 3}},
 			id:          "c",
 			want:        []buffsvc.BuffEffect{{ID: "c", Name: "Stoneskin", Charges: 2}},
-			wantSummary: "Stoneskin absorbed a hit (2 left)",
+			wantPayload: `{"action":"absorb","buff":"Stoneskin","charges":2}`,
 		},
 		{
 			name:        "the last layer ends the buff",
 			start:       []buffsvc.BuffEffect{{ID: "c", Name: "Stoneskin", Charges: 1}, {ID: "d", Name: "Haste", Duration: 2}},
 			id:          "c",
 			want:        []buffsvc.BuffEffect{{ID: "d", Name: "Haste", Duration: 2}},
-			wantSummary: "Stoneskin absorbed a hit, ended",
+			wantPayload: `{"action":"absorb","buff":"Stoneskin","ended":true}`,
 		},
 		{
 			name:        "Mirror Image loses an image, keeps its rounds",
 			start:       []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 9, Charges: 2}},
 			id:          "m",
 			want:        []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 9, Charges: 1}},
-			wantSummary: "Mirror Image absorbed a hit (1 left)",
+			wantPayload: `{"action":"absorb","buff":"Mirror Image","charges":1}`,
 		},
 		{
 			name:        "the last image ends Mirror Image though rounds are left",
 			start:       []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 9, Charges: 1}, {ID: "d", Name: "Haste", Duration: 2}},
 			id:          "m",
 			want:        []buffsvc.BuffEffect{{ID: "d", Name: "Haste", Duration: 2}},
-			wantSummary: "Mirror Image absorbed a hit, ended",
+			wantPayload: `{"action":"absorb","buff":"Mirror Image","ended":true}`,
 		},
 		{name: "a buff without charges cannot absorb", start: []buffsvc.BuffEffect{{ID: "d", Name: "Haste", Duration: 2}}, id: "d", wantErr: domain.ErrInvalidInput},
 		{name: "unknown id", start: []buffsvc.BuffEffect{{ID: "c", Charges: 3}}, id: "nope", wantErr: domain.ErrNotFound},
@@ -363,7 +364,8 @@ func TestTrigger(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
-			assert.Equal(t, tt.wantSummary, f.entries[0].Summary)
+			assert.Empty(t, f.entries[0].Summary, "the UI words the entry")
+			assert.JSONEq(t, tt.wantPayload, string(f.entries[0].Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyBuffs}, snapKeys(f.entries[0]))
 		})
 	}
@@ -382,7 +384,7 @@ func TestDismiss(t *testing.T) {
 		got, err := f.svc.Dismiss(context.Background(), charID, "a")
 		require.NoError(t, err)
 		assert.Equal(t, []buffsvc.BuffEffect{b}, got)
-		assert.Equal(t, "Dismissed Bless", f.entries[0].Summary)
+		assert.JSONEq(t, `{"action":"dismiss","buff":"Bless"}`, string(f.entries[0].Payload))
 	})
 
 	t.Run("unknown id is not found and nothing is logged", func(t *testing.T) {
@@ -410,7 +412,7 @@ func TestAdvanceRound(t *testing.T) {
 		round       int
 		wantActive  []buffsvc.BuffEffect
 		wantExpired []buffsvc.BuffEffect
-		wantSummary string
+		wantPayload string
 	}{
 		{
 			name: "counts timed buffs down, expires at 0, leaves charges alone",
@@ -427,14 +429,14 @@ func TestAdvanceRound(t *testing.T) {
 				{ID: "m", Name: "Mirror Image", Duration: 2, Charges: 2},
 			},
 			wantExpired: []buffsvc.BuffEffect{{ID: "d1", Name: "Strength", Duration: 0}},
-			wantSummary: "Round 5 → 6 (expired: Strength)",
+			wantPayload: `{"action":"next_round","fromRound":5,"toRound":6,"expired":["Strength"]}`,
 		},
 		{
 			name:        "from round 0 with no buffs",
 			round:       0,
 			wantActive:  []buffsvc.BuffEffect{},
 			wantExpired: []buffsvc.BuffEffect{},
-			wantSummary: "Round 0 → 1",
+			wantPayload: `{"action":"next_round","fromRound":0,"toRound":1}`,
 		},
 		{
 			name:        "Mirror Image with images left still expires with its rounds",
@@ -442,7 +444,7 @@ func TestAdvanceRound(t *testing.T) {
 			round:       2,
 			wantActive:  []buffsvc.BuffEffect{},
 			wantExpired: []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 0, Charges: 3}},
-			wantSummary: "Round 2 → 3 (expired: Mirror Image)",
+			wantPayload: `{"action":"next_round","fromRound":2,"toRound":3,"expired":["Mirror Image"]}`,
 		},
 	}
 	for _, tt := range tests {
@@ -466,7 +468,8 @@ func TestAdvanceRound(t *testing.T) {
 			require.Len(t, f.entries, 1)
 			e := f.entries[0]
 			assert.Equal(t, actionlog.KindRoundAdvance, e.Kind)
-			assert.Equal(t, tt.wantSummary, e.Summary)
+			assert.Empty(t, e.Summary, "the UI words the entry")
+			assert.JSONEq(t, tt.wantPayload, string(e.Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyBuffs, buffsvc.StateKeyRound}, snapKeys(e))
 			assert.JSONEq(t, jsonInt(tt.round), string(e.Snapshots[1].Before))
 			assert.JSONEq(t, jsonInt(tt.round+1), string(e.Snapshots[1].After))
@@ -903,35 +906,35 @@ func TestRoundMoves(t *testing.T) {
 		kind        actionlog.Kind
 		from, to    int
 		call        func(buffsvc.SVC) ([]buffsvc.BuffEffect, int, error)
-		wantSummary string
+		wantPayload string
 	}{
 		{
 			name: "End combat resets to 0", kind: actionlog.KindRoundReset, from: 5, to: 0,
 			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
 				return s.ResetRound(context.Background(), charID)
 			},
-			wantSummary: "Combat ended: round 5 → 0",
+			wantPayload: `{"action":"end_combat","fromRound":5,"toRound":0}`,
 		},
 		{
 			name: "End combat at round 0 still logs", kind: actionlog.KindRoundReset, from: 0, to: 0,
 			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
 				return s.ResetRound(context.Background(), charID)
 			},
-			wantSummary: "Combat ended: round 0 → 0",
+			wantPayload: `{"action":"end_combat","fromRound":0,"toRound":0}`,
 		},
 		{
 			name: "Set round up", kind: actionlog.KindRoundSet, from: 2, to: 9,
 			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
 				return s.SetRound(context.Background(), charID, 9)
 			},
-			wantSummary: "Round set: round 2 → 9",
+			wantPayload: `{"action":"set_round","fromRound":2,"toRound":9}`,
 		},
 		{
 			name: "Set round down to 0", kind: actionlog.KindRoundSet, from: 4, to: 0,
 			call: func(s buffsvc.SVC) ([]buffsvc.BuffEffect, int, error) {
 				return s.SetRound(context.Background(), charID, 0)
 			},
-			wantSummary: "Round set: round 4 → 0",
+			wantPayload: `{"action":"set_round","fromRound":4,"toRound":0}`,
 		},
 	}
 	for _, tt := range tests {
@@ -951,7 +954,8 @@ func TestRoundMoves(t *testing.T) {
 			require.Len(t, f.entries, 1)
 			e := f.entries[0]
 			assert.Equal(t, tt.kind, e.Kind)
-			assert.Equal(t, tt.wantSummary, e.Summary)
+			assert.Empty(t, e.Summary, "the UI words the entry")
+			assert.JSONEq(t, tt.wantPayload, string(e.Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyRound}, snapKeys(e), "round key only")
 			assert.JSONEq(t, jsonInt(tt.from), string(e.Snapshots[0].Before))
 			assert.JSONEq(t, jsonInt(tt.to), string(e.Snapshots[0].After))

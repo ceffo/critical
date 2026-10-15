@@ -156,7 +156,9 @@ func TestPrepare_AcceptsTheLimit_KeepsOrderAndDuplicates(t *testing.T) {
 	// Recorded in the same transaction, with a snapshot under the state key.
 	assert.Equal(t, 1, f.tx.calls)
 	assert.Equal(t, actionlog.KindSpellPrep, rec.Kind)
-	assert.Equal(t, "Prepared: Magic Missile, Alarm, Identify, Mirror Image ×2, Fireball", rec.Summary)
+	assert.JSONEq(t, `{"spells":[{"id":"magic_missile","name":"Magic Missile","count":1},{"id":"alarm","name":"Alarm","count":1},
+		{"id":"identify","name":"Identify","count":1},{"id":"mirror_image","name":"Mirror Image","count":2},{"id":"fireball","name":"Fireball","count":1}]}`,
+		string(rec.Payload))
 	require.Len(t, rec.Snapshots, 1)
 	assert.Equal(t, prepsvc.StateKey, rec.Snapshots[0].Key)
 	assert.JSONEq(t, `[]`, string(rec.Snapshots[0].Before))

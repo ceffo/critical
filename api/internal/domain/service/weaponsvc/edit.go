@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -62,7 +63,7 @@ func slug(name string) string {
 	return b.String()
 }
 
-func (s *service) logChange(ctx context.Context, characterID int64, kind actionlog.Kind, summary string, rec changeRecord, before, after *Weapon) (int64, error) {
+func (s *service) logChange(ctx context.Context, characterID int64, kind actionlog.Kind, rec changeRecord, before, after *Weapon) (int64, error) {
 	snap, err := weaponSnapshot(rec.WeaponID, before, after)
 	if err != nil {
 		return 0, err
@@ -72,7 +73,7 @@ func (s *service) logChange(ctx context.Context, characterID int64, kind actionl
 		return 0, fmt.Errorf("encode %s payload: %w", kind, err)
 	}
 	id, err := s.log.Record(ctx, actionlog.NewEntry{
-		CharacterID: characterID, Kind: kind, Summary: summary, Payload: payload,
+		CharacterID: characterID, Kind: kind, Payload: payload,
 		Snapshots: []actionlog.Snapshot{snap},
 	})
 	if err != nil {
@@ -114,14 +115,13 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 		base := slug(w.Name)
 		w.ID = base
 		for n := 2; taken[w.ID]; n++ {
-			w.ID = fmt.Sprintf("%s_%d", base, n)
+			w.ID = base + "_" + strconv.Itoa(n)
 		}
 		w.Position = pos
 		if err := s.dal.Insert(ctx, w); err != nil {
 			return err
 		}
-		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponAdd,
-			fmt.Sprintf("Added weapon %s", w.Name), record(w, nil), nil, &w)
+		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponAdd, record(w, nil), nil, &w)
 		if err != nil {
 			return err
 		}
@@ -182,8 +182,7 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 		if err := s.dal.Update(ctx, w); err != nil {
 			return err
 		}
-		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponEdit,
-			fmt.Sprintf("Edited weapon %s: %s", w.Name, describe(changes)), record(w, changes), &old, &w)
+		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponEdit, record(w, changes), &old, &w)
 		if err != nil {
 			return err
 		}
@@ -206,8 +205,7 @@ func (s *service) Delete(ctx context.Context, characterID int64, id string) (*Ch
 		if err := s.dal.Delete(ctx, id); err != nil {
 			return err
 		}
-		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponRemove,
-			fmt.Sprintf("Removed weapon %s", old.Name), record(old, nil), &old, nil)
+		logID, err := s.logChange(ctx, characterID, actionlog.KindWeaponRemove, record(old, nil), &old, nil)
 		if err != nil {
 			return err
 		}
@@ -231,18 +229,10 @@ func diff(a, b Weapon) []FieldChange {
 	add("name", a.Name, b.Name)
 	add("damage_sm", a.DamageSM, b.DamageSM)
 	add("damage_l", a.DamageL, b.DamageL)
-	add("magic_to_hit", fmt.Sprint(a.MagicToHit), fmt.Sprint(b.MagicToHit))
-	add("magic_damage", fmt.Sprint(a.MagicDamage), fmt.Sprint(b.MagicDamage))
+	add("magic_to_hit", strconv.Itoa(a.MagicToHit), strconv.Itoa(b.MagicToHit))
+	add("magic_damage", strconv.Itoa(a.MagicDamage), strconv.Itoa(b.MagicDamage))
 	add("kind", a.Kind, b.Kind)
-	add("two_handed", fmt.Sprint(a.TwoHanded), fmt.Sprint(b.TwoHanded))
+	add("two_handed", strconv.FormatBool(a.TwoHanded), strconv.FormatBool(b.TwoHanded))
 	add("ammo_kind", a.AmmoKind, b.AmmoKind)
 	return out
-}
-
-func describe(changes []FieldChange) string {
-	parts := make([]string, len(changes))
-	for i, c := range changes {
-		parts[i] = fmt.Sprintf("%s %s → %s", c.Field, c.Before, c.After)
-	}
-	return strings.Join(parts, ", ")
 }

@@ -37,8 +37,8 @@ func TestRollSpellToHit(t *testing.T) {
 			assert.Equal(t, 11, res.EffectiveThac0)
 			assert.Equal(t, tt.wantNeed, res.TargetACNeeded)
 			assert.Equal(t, []combatsvc.Modifier{
-				{Kind: combatsvc.ModStrength, Source: "Strength 12", Detail: "12", Value: 0},
-				{Kind: combatsvc.ModDexterity, Source: "Dexterity 17", Detail: "17", Value: 2},
+				{Kind: combatsvc.ModStrength, Detail: "12", Value: 0},
+				{Kind: combatsvc.ModDexterity, Detail: "17", Value: 2},
 			}, res.Modifiers)
 		})
 	}

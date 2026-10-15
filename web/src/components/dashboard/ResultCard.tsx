@@ -9,6 +9,7 @@ import { formatFactor, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
 import { MAX_TARGET_AC, parseTargetAc, stepTargetAc } from "@/lib/attackAdjust";
+import { damageFormula, itemRollText } from "@/lib/rollText";
 import { captionClass, fieldClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
 
@@ -75,18 +76,21 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
   );
 }
 
-/** A modifier's label in the player's language (detail = score, weapon, ammo or buff name). */
+/**
+ * A modifier's label in the player's language (detail = score, weapon, ammo or buff name). The crit
+ * term is labelled with the roll's crit-table range (none: the default placeholder table).
+ */
 function modLabel(
   t: TFunction,
-  m: { kind: string; source?: string; detail?: string; value: number },
+  m: { kind: string; detail?: string; value: number },
+  roll?: { critPlaceholder?: boolean; critFrom?: number; critTo?: number },
 ): string {
-  // The crit term carries the matched crit-table range; the default table (and entries logged
-  // before the table existed) have none.
-  if (m.kind === "crit" && (!m.detail || m.detail === "placeholder")) {
-    return t("result.mods.critPlaceholder");
+  if (m.kind === "crit") {
+    return roll && !roll.critPlaceholder && roll.critFrom
+      ? t("result.mods.critRange", { from: roll.critFrom, to: roll.critTo })
+      : t("result.mods.critPlaceholder");
   }
-  // Buff and situational labels are their detail; without one, show the server's label.
-  if ((m.kind === "buff" || m.kind === "situational") && !m.detail && m.source) return m.source;
+  if (m.kind === "situational" && !m.detail) return t("result.mods.situationalUnnamed");
   return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
 }
 
@@ -199,7 +203,7 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
             <ul className="mt-2 flex flex-col gap-0.5 text-sm" data-testid="damage-terms">
               {r.damageTerms.map((d, i) => (
                 <li key={i} className="flex justify-between gap-2">
-                  <span className="min-w-0 truncate">{modLabel(t, d)}</span>
+                  <span className="min-w-0 truncate">{modLabel(t, d, r)}</span>
                   <span className="font-mono">
                     {d.term === "spells" || d.term === "dice_multiplier" || d.term === "multiplier"
                       ? formatFactor(d.value, i18n.language)
@@ -209,11 +213,12 @@ function AttackResult({ roll }: { roll: Extract<LastRoll, { kind: "attack" }> })
               ))}
             </ul>
           )}
-          {r.damageBreakdown && (
-            <div className="mt-2 rounded-lg border bg-background px-2.5 py-1.5 font-mono text-sm">
-              {r.damageBreakdown}
-            </div>
-          )}
+          <div
+            className="mt-2 rounded-lg border bg-background px-2.5 py-1.5 font-mono text-sm"
+            data-testid="damage-formula"
+          >
+            {damageFormula(r, i18n.language)}
+          </div>
         </div>
       )}
 
@@ -320,11 +325,18 @@ function SaveResult({ roll }: { roll: Extract<LastRoll, { kind: "save" }> }) {
           ))}
         </ul>
       )}
-      {r.damageBreakdown && (
+      {r.saveTotal !== undefined && (
         <div>
           <div className={captionClass}>{t("result.breakdown")}</div>
           <div className="mt-1 rounded-lg border bg-background px-2.5 py-1.5 font-mono text-sm">
-            {r.damageBreakdown}
+            {t(r.adjustment ? "result.saveFormulaAdjusted" : "result.saveFormula", {
+              d20: r.d20Roll,
+              mod: r.saveBonus ?? 0,
+              adj: formatSigned(r.adjustment ?? 0),
+              total: r.saveTotal,
+              target: r.effectiveThac0,
+              name: t(`saves.categories.${roll.category}`),
+            })}
           </div>
         </div>
       )}
@@ -440,7 +452,7 @@ function ItemResult({ roll }: { roll: Extract<LastRoll, { kind: "item" }> }) {
             </ul>
           </div>
           <div className="rounded-lg border bg-background px-2.5 py-1.5 font-mono text-sm">
-            {r.breakdown}
+            {itemRollText(r)}
           </div>
         </>
       ) : (

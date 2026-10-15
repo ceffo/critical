@@ -52,6 +52,13 @@ func (r *hpRig) current() int {
 	return st.CurrentHp
 }
 
+func (r *hpRig) condition() hpsvc.Condition {
+	r.t.Helper()
+	st, err := r.bs.HP.GetState(context.Background(), r.bs.CharacterID)
+	require.NoError(r.t, err)
+	return st.Condition
+}
+
 func breakdown(t *testing.T, e actionlog.Entry) actionlog.HPBreakdown {
 	t.Helper()
 	var b actionlog.HPBreakdown
@@ -173,6 +180,44 @@ func TestHPFloor_DamagePastTheFloorIsClamped(t *testing.T) {
 	// A heal from the floor counts from -10, not from a hidden deficit.
 	hp, _ = r.change(5, "cure light wounds")
 	assert.Equal(t, -5, hp)
+	assert.Equal(t, hpsvc.ConditionUnconscious, r.condition())
+
+	// Healed to exactly a quarter of max: still badly wounded; one more: ok.
+	quarter := r.max / 4
+	hp, _ = r.change(quarter+5, "cure serious wounds")
+	require.Equal(t, quarter, hp)
+	assert.Equal(t, hpsvc.ConditionBadlyWounded, r.condition())
+	_, _ = r.change(1, "potion")
+	assert.Equal(t, hpsvc.ConditionOK, r.condition(), "the label clears above a quarter of max")
+}
+
+// ADR 0007 step 8 applies to clamped entries too: the row Void of a clamped
+// entry that is not the top is refused and changes nothing; once the entries
+// above it are popped, voiding it puts HP back exactly to the SUM before it.
+func TestHPFloor_VoidClampedEntryBelowTheTop(t *testing.T) {
+	r := newHPRig(t)
+	ctx := context.Background()
+	before, _ := r.change(-(r.max - 2), "fireball")
+	require.Equal(t, 2, before)
+	hp, clamped := r.change(-30, "ogre club")
+	require.Equal(t, -10, hp)
+	require.Equal(t, -12, clamped.HPDelta)
+	hp, heal := r.change(4, "cure light wounds")
+	require.Equal(t, -6, hp)
+
+	_, err := r.bs.Log.Void(ctx, r.bs.CharacterID, clamped.ID)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+	assert.Equal(t, -6, r.current(), "a refused void changes nothing")
+
+	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, heal.ID)
+	require.NoError(t, err)
+	assert.Equal(t, -10, r.current())
+	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, clamped.ID)
+	require.NoError(t, err)
+	assert.Equal(t, before, r.current())
+	total, err := r.bs.Log.HPTotal(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, before-r.max, total, "HP is the ledger SUM")
 }
 
 // Undo of a clamped damage (global undo or HP undo) restores the exact HP

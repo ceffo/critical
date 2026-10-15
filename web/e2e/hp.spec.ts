@@ -124,6 +124,13 @@ test("below 0 HP: the condition and the dying zone show, and HP stops at the flo
   await expect(moi.getByTestId("hp-condition")).toHaveText("Unconscious");
   await expect(moi.getByTestId("hp-dying-fill")).toBeVisible();
   await expect(moi.getByTestId("hp-scale")).toContainText("0");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await snap(page, `hp-unconscious-${vp.width}x${vp.height}`);
+  }
 
   // Further damage stops at the floor; the log shows what was asked.
   await recordHp(page, "damage", 20, "e2e ogre club");

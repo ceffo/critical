@@ -21,6 +21,7 @@ import (
 	charmocks "github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
+	dicemocks "github.com/ceffo/critical/api/internal/domain/service/dicesvc/mocks"
 	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
@@ -50,6 +51,7 @@ type mocksSet struct {
 	rest    *restmocks.MockSVC
 	xp      *xpmocks.MockSVC
 	skills  *skillmocks.MockSVC
+	dice    *dicemocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -67,11 +69,12 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		rest:    restmocks.NewMockSVC(t),
 		xp:      xpmocks.NewMockSVC(t),
 		skills:  skillmocks.NewMockSVC(t),
+		dice:    dicemocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		CharacterID: 1,
 		Character:   m.char, HP: m.hp, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Weapons: m.weapons, Rest: m.rest,
-		XP: m.xp, Skills: m.skills,
+		XP: m.xp, Skills: m.skills, Dice: m.dice,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs), m
@@ -100,6 +103,18 @@ var endpoints = []endpoint{
 	}},
 	{"POST roll/skill", "POST", "/api/roll/skill/tumbling", "", func(m *mocksSet, err error) {
 		m.skills.On("Roll", anyArgs(3)...).Return(nil, err)
+	}},
+	{"POST roll/dice", "POST", "/api/roll/dice", `{"formula":"d6"}`, func(m *mocksSet, err error) {
+		m.dice.On("Roll", anyArgs(3)...).Return(nil, err)
+	}},
+	{"GET dice/favourites", "GET", "/api/dice/favourites", "", func(m *mocksSet, err error) {
+		m.dice.On("Favourites", anyArgs(2)...).Return(nil, err)
+	}},
+	{"POST dice/favourites", "POST", "/api/dice/favourites", `{"formula":"d6"}`, func(m *mocksSet, err error) {
+		m.dice.On("AddFavourite", anyArgs(3)...).Return(nil, err)
+	}},
+	{"DELETE dice/favourites/{id}", "DELETE", "/api/dice/favourites/3", "", func(m *mocksSet, err error) {
+		m.dice.On("DeleteFavourite", anyArgs(3)...).Return(err)
 	}},
 	{"GET xp", "GET", "/api/xp", "", func(m *mocksSet, err error) {
 		m.xp.On("Get", anyArgs(2)...).Return(nil, err)

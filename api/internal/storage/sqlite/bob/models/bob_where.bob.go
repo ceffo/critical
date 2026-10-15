@@ -25,6 +25,7 @@ func Where[Q sqlite.Filterable]() struct {
 	BardSkills        bardSkillWhere[Q]
 	Characters        characterWhere[Q]
 	CritTableRows     critTableRowWhere[Q]
+	DiceFavourites    diceFavouriteWhere[Q]
 	HPEvents          hpEventWhere[Q]
 	Items             itemWhere[Q]
 	Proficiencies     proficiencyWhere[Q]
@@ -44,6 +45,7 @@ func Where[Q sqlite.Filterable]() struct {
 		BardSkills        bardSkillWhere[Q]
 		Characters        characterWhere[Q]
 		CritTableRows     critTableRowWhere[Q]
+		DiceFavourites    diceFavouriteWhere[Q]
 		HPEvents          hpEventWhere[Q]
 		Items             itemWhere[Q]
 		Proficiencies     proficiencyWhere[Q]
@@ -62,6 +64,7 @@ func Where[Q sqlite.Filterable]() struct {
 		BardSkills:        buildBardSkillWhere[Q](BardSkills.Columns),
 		Characters:        buildCharacterWhere[Q](Characters.Columns),
 		CritTableRows:     buildCritTableRowWhere[Q](CritTableRows.Columns),
+		DiceFavourites:    buildDiceFavouriteWhere[Q](DiceFavourites.Columns),
 		HPEvents:          buildHPEventWhere[Q](HPEvents.Columns),
 		Items:             buildItemWhere[Q](Items.Columns),
 		Proficiencies:     buildProficiencyWhere[Q](Proficiencies.Columns),

@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
+	"github.com/ceffo/critical/api/internal/adapters/dicedal"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
@@ -29,6 +30,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -60,6 +62,7 @@ type BackingServices struct {
 	Rest      restsvc.SVC
 	XP        xpsvc.SVC
 	Skills    skillsvc.SVC
+	Dice      dicesvc.SVC
 
 	services []domain.Service
 }
@@ -227,6 +230,12 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	// Free dice rolls change no state: no snapshot, no restorer.
+	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: dicedal.New(db), Dice: dice, Log: logSvc, Tx: db})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	return &BackingServices{
 		DB:          db,
@@ -244,8 +253,9 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Rest:        restSvc,
 		XP:          xpSvc,
 		Skills:      skillSvc,
+		Dice:        diceSvc,
 		services: []domain.Service{
-			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc,
+			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, diceSvc,
 		},
 	}, nil
 }

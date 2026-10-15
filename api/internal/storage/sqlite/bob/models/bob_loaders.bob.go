@@ -23,6 +23,7 @@ type preloaders struct {
 	ActiveBuff       activeBuffPreloader
 	AttackForm       attackFormPreloader
 	Character        characterPreloader
+	DiceFavourite    diceFavouritePreloader
 	HPEvent          hpEventPreloader
 	RoundState       roundStatePreloader
 	SavedBuff        savedBuffPreloader
@@ -38,6 +39,7 @@ func getPreloaders() preloaders {
 		ActiveBuff:       buildActiveBuffPreloader(),
 		AttackForm:       buildAttackFormPreloader(),
 		Character:        buildCharacterPreloader(),
+		DiceFavourite:    buildDiceFavouritePreloader(),
 		HPEvent:          buildHPEventPreloader(),
 		RoundState:       buildRoundStatePreloader(),
 		SavedBuff:        buildSavedBuffPreloader(),
@@ -59,6 +61,7 @@ type thenLoaders[Q orm.Loadable] struct {
 	ActiveBuff       activeBuffThenLoader[Q]
 	AttackForm       attackFormThenLoader[Q]
 	Character        characterThenLoader[Q]
+	DiceFavourite    diceFavouriteThenLoader[Q]
 	HPEvent          hpEventThenLoader[Q]
 	RoundState       roundStateThenLoader[Q]
 	SavedBuff        savedBuffThenLoader[Q]
@@ -74,6 +77,7 @@ func getThenLoaders[Q orm.Loadable]() thenLoaders[Q] {
 		ActiveBuff:       buildActiveBuffThenLoader[Q](),
 		AttackForm:       buildAttackFormThenLoader[Q](),
 		Character:        buildCharacterThenLoader[Q](),
+		DiceFavourite:    buildDiceFavouriteThenLoader[Q](),
 		HPEvent:          buildHPEventThenLoader[Q](),
 		RoundState:       buildRoundStateThenLoader[Q](),
 		SavedBuff:        buildSavedBuffThenLoader[Q](),

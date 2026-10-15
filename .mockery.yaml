@@ -137,3 +137,12 @@ packages:
       Characters:
       Dice:
       Log:
+  github.com/ceffo/critical/api/internal/domain/service/dicesvc:
+    config:
+      dir: "internal/domain/service/dicesvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Dice:
+      Log:

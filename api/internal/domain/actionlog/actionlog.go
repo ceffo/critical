@@ -67,6 +67,13 @@ const KindTimePassed Kind = "time_passed"
 // the adjustment of the latest roll alone.
 const KindInitiative Kind = "initiative"
 
+// KindDice is a free roll of the dice composer (dicesvc). Its payload is
+// {formula, groups, modifier, total}. Not one of RollKinds: a stray composer
+// roll must neither replace the dashboard's result card nor close the
+// correction window of the latest save or attack (ADR 0006 step 6). It has
+// no snapshots, so popping it only removes it.
+const KindDice Kind = "dice"
+
 // KindItemRestock is a stock item's count going up at the table (itemsvc
 // Restock). Not a roll: it leaves the result card alone.
 const KindItemRestock Kind = "item_restock"

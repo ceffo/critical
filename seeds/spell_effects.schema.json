@@ -46,7 +46,7 @@
       "damage": {
         "type": "object",
         "additionalProperties": false,
-        "description": "Exactly one of dice and by_level.",
+        "description": "Exactly one of dice, by_level and parts.",
         "properties": {
           "dice": { "$ref": "#/definitions/formula", "description": "Damage of one instance, e.g. (min(level,10))d6 for Fireball" },
           "by_level": {
@@ -57,6 +57,21 @@
               "additionalProperties": false,
               "required": ["min_level", "dice"],
               "properties": { "min_level": { "type": "integer", "minimum": 1 }, "dice": { "$ref": "#/definitions/formula" } }
+            }
+          },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "description": "One instance split into parts rolled separately, each with what a save does to it, so the GM can drop the part a save negates (docs/adr/0008 step 13). The instance is the parts added up, in this order.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Exactly one of dice and by_level (same rules as the damage's).",
+              "properties": {
+                "dice": { "$ref": "#/definitions/formula" },
+                "by_level": { "$ref": "#/items/properties/damage/properties/by_level" },
+                "save": { "enum": ["none", "negates"], "description": "What a successful save does to this part. Default: the entry's save effect, which must then be none or negates." }
+              }
             }
           },
           "instances": { "$ref": "#/definitions/formula", "description": "Separate damage rolls per casting (missiles, bolts). Default 1." },

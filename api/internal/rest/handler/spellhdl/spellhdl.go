@@ -316,6 +316,16 @@ type SpellDamageDTO struct {
 	Instances   DiceSumDTO `json:"instances"`
 	Rounds      DiceSumDTO `json:"rounds"`
 	Type        string     `json:"type,omitempty"`
+	// Parts are the parts of one instance, rolled separately, each with its
+	// save effect key (none, negates); Dice adds them up. Absent when the
+	// damage has no parts.
+	Parts []SpellDamagePartDTO `json:"parts,omitempty"`
+}
+
+// SpellDamagePartDTO is one damage part at the caster level.
+type SpellDamagePartDTO struct {
+	Dice DiceSumDTO `json:"dice"`
+	Save string     `json:"save"`
 }
 
 // DamageToDTO maps the damage at a caster level to its wire shape (nil: none).
@@ -323,10 +333,14 @@ func DamageToDTO(d *spelleffectsvc.DamageAt) *SpellDamageDTO {
 	if d == nil {
 		return nil
 	}
-	return &SpellDamageDTO{
+	out := &SpellDamageDTO{
 		CasterLevel: d.CasterLevel, Dice: sumToDTO(d.Dice), Instances: sumToDTO(d.Instances),
 		Rounds: sumToDTO(d.Rounds), Type: d.Type,
 	}
+	for _, p := range d.Parts {
+		out.Parts = append(out.Parts, SpellDamagePartDTO{Dice: sumToDTO(p.Dice), Save: string(p.Save)})
+	}
+	return out
 }
 
 func sumToDTO(s formula.Sum) DiceSumDTO {

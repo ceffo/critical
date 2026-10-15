@@ -83,10 +83,15 @@ type LevelDice struct {
 	Dice     *formula.Formula
 }
 
-// Damage describes hit-point damage. Exactly one of Dice and ByLevel is set.
+// Damage describes hit-point damage. Exactly one of Dice, ByLevel and Parts
+// is set.
 type Damage struct {
 	Dice    *formula.Formula
 	ByLevel []LevelDice // ascending MinLevel; the last row with MinLevel <= level applies
+	// Parts split one instance into parts rolled separately, each with its
+	// own save effect, so the GM can drop the part a save negates (ADR 0008
+	// step 13). The instance is the parts added up, in the data's order.
+	Parts []DamagePart
 	// Instances is how many separate damage rolls one casting makes (missiles,
 	// bolts). Nil means one.
 	Instances *formula.Formula
@@ -94,6 +99,15 @@ type Damage struct {
 	// (Melf's acid). Nil means once.
 	Rounds *formula.Formula
 	Type   string
+}
+
+// DamagePart is one part of a damage instance: its dice (exactly one of Dice
+// and ByLevel, as for Damage) and what a successful save does to it (none or
+// negates; ADR 0008 step 13).
+type DamagePart struct {
+	Dice    *formula.Formula
+	ByLevel []LevelDice
+	Save    SaveEffect
 }
 
 // AbilityGain raises an ability score. Gain applies to everybody; ByGroup picks

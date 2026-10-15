@@ -298,3 +298,28 @@ func TestSearch_CharacterLevelAboveTheMaxServesNoDamage(t *testing.T) {
 	assert.NotNil(t, out[1].Values)
 	assert.Nil(t, out[1].Damage)
 }
+
+// ADR 0008 step 13: the served damage carries each part's dice and save
+// effect key; a damage without parts serves none.
+func TestDamageToDTO_Parts(t *testing.T) {
+	d2d4 := formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}}
+	got := spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{
+		CasterLevel: 15, Dice: formula.Sum{Dice: d2d4.Dice, Constant: 15},
+		Instances: formula.Sum{Constant: 3}, Rounds: formula.Sum{Constant: 1}, Type: "force",
+		Parts: []spelleffectsvc.DamagePartAt{
+			{Dice: d2d4, Save: spelleffectsvc.SaveNone},
+			{Dice: formula.Sum{Constant: 15}, Save: spelleffectsvc.SaveNegates},
+		},
+	})
+	raw, err := json.Marshal(got)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"caster_level":15,"type":"force",
+		"dice":{"groups":[{"count":2,"sides":4}],"modifier":15},
+		"instances":{"groups":[],"modifier":3},"rounds":{"groups":[],"modifier":1},
+		"parts":[{"dice":{"groups":[{"count":2,"sides":4}],"modifier":0},"save":"none"},
+		         {"dice":{"groups":[],"modifier":15},"save":"negates"}]}`, string(raw))
+
+	raw, err = json.Marshal(spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{CasterLevel: 1}))
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "parts")
+}

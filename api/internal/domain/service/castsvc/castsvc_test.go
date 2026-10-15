@@ -412,6 +412,12 @@ func TestReceive(t *testing.T) {
 			name: "a spell outside the effects seed (priest) is text only",
 			req:  castsvc.ReceiveRequest{SpellID: "bless", CasterLevel: 5}, textOnly: castsvc.TextOnlyNoEffect,
 		},
+		{
+			// The Priest spell shares its name with the Wizard one but has its own id: it gets no
+			// effect (and no buff) from the Wizard spell's entry.
+			name: "a Priest spell named like a Wizard spell is text only",
+			req:  castsvc.ReceiveRequest{SpellID: "detect_magic_priest", CasterLevel: 9}, textOnly: castsvc.TextOnlyNoEffect,
+		},
 		{name: "self-only spell cannot be received", req: castsvc.ReceiveRequest{SpellID: "mirror_image", CasterLevel: 9}, wantErr: domain.ErrInvalidInput},
 		{name: "fist of stone cannot be received", req: castsvc.ReceiveRequest{SpellID: "fist_of_stone", CasterLevel: 9}, wantErr: domain.ErrInvalidInput},
 		{name: "unknown spell", req: castsvc.ReceiveRequest{SpellID: "no_such_spell", CasterLevel: 5}, wantErr: domain.ErrNotFound},

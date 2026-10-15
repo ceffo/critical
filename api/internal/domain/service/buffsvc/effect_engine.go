@@ -29,9 +29,9 @@ func isStrengthBonus(e BuffEffects) bool {
 	return e.StrBonus != nil && !isImproved(e)
 }
 
-// effectiveStr is the STR score with buffs (docs/backend.md "Attack
-// Modifiers" > "Effective STR", critical-qki.33). STR effects are not
-// themselves gated by MinStr; no result is ever lower than base.
+// effectiveStr is the STR score with buffs (ADR 0004 steps 7 to 9). STR
+// effects are not themselves gated by MinStr; no result is ever lower than
+// base.
 //
 //  1. No Improved Strength active: base + the SUM of every Strength bonus,
 //     total capped at 18 (each bonus's own StrMax is not used).
@@ -84,7 +84,7 @@ func aggregate(buffs []BuffEffect, baseStr int) BuffModifiers {
 
 // statuses marks each buff with whether its effects apply at baseStr. A
 // Strength bonus does not apply while an Improved Strength replaces it
-// (effective STR rule 2).
+// (ADR 0004 step 8).
 func statuses(buffs []BuffEffect, baseStr int) []BuffStatus {
 	str := effectiveStr(buffs, baseStr)
 	replaced := improvedActive(buffs)

@@ -19,4 +19,8 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | # | Title | Status |
 |---|---|---|
 | 0001 | [Critical hits](0001-critical-hits.md) | accepted |
+| 0002 | [Attack resolution](0002-attack-resolution.md) | accepted |
+| 0003 | [Damage](0003-damage.md) | accepted |
+| 0004 | [Buffs](0004-buffs.md) | accepted |
+| 0005 | [Rounds and time](0005-rounds-and-time.md) | accepted |
 | 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted |

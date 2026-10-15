@@ -28,7 +28,7 @@ func TestAdd(t *testing.T) {
 	}{
 		{"appends", []buffsvc.BuffEffect{haste}, buffsvc.BuffEffect{ID: "n", Name: "Stoneskin", Charges: 9}, []string{"h1", "n"}},
 		{"replaces same name", []buffsvc.BuffEffect{old, haste}, buffsvc.BuffEffect{ID: "n", Name: "stoneskin", Charges: 9}, []string{"h1", "n"}},
-		// Effective STR rule 1: Strength (L2) stacks with itself.
+		// ADR 0004 steps 6 and 7: Strength (L2) stacks with itself.
 		{"a second Strength is a second buff", []buffsvc.BuffEffect{str1, haste}, str2, []string{"st1", "h1", "st2"}},
 		{"a hand-made uncapped Strength stacks too", []buffsvc.BuffEffect{str1, haste}, buffsvc.BuffEffect{ID: "st3", Name: "Strength", Effects: buffsvc.BuffEffects{StrBonus: intPtr(3)}}, []string{"st1", "h1", "st3"}},
 		{"Improved Strength is renewed", []buffsvc.BuffEffect{imp1, haste}, imp2, []string{"h1", "i2"}},

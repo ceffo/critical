@@ -381,7 +381,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 		wantDiceX bool
 	}{
 		{
-			// docs/backend.md "Damage Formula": the gem doubles the raw dice
+			// ADR 0003 step 4: the gem doubles the raw dice
 			// only. 1d8=6: (6 × 2) + 5 + 2 = 19, NOT ((6 + 5) × 2) + 2 = 24.
 			name: "x2 on the raw dice only, not on the +5", bonus: 6, d100: 50, die: 6, wantDiceX: true,
 			wantMods: []combatsvc.Modifier{modStr(18, 1), gemMod}, wantEff: 7, wantTotal: 19,
@@ -445,7 +445,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 	}
 }
 
-// docs/backend.md "Attack Modifiers", weapon magic: the weapon's own +N, or a
+// ADR 0002 step 6, weapon magic: the weapon's own +N, or a
 // buff's "weapon becomes +N" when higher; never stacked. Here the own +3
 // beats the buff's +2, so the breakdown names the weapon, not the buff. Fails
 // if the buff always replaced the weapon (it would show +2 from the buff).
@@ -481,7 +481,7 @@ func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 	}, res.DamageTerms)
 }
 
-// docs/backend.md "Attack Modifiers", ammo magic: a bow with no magic of its
+// ADR 0002 step 7, ammo magic: a bow with no magic of its
 // own, a buff making it +5, and a +3 arrow total +8 (to hit and damage) as two
 // separate entries. Fails if the buff replaced the ammo bonus (+5 only).
 func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {

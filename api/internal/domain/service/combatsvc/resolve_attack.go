@@ -15,21 +15,16 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
-// ResolveAttack resolves one attack (AD&D 2.5, docs/backend.md):
+// ResolveAttack resolves one attack (AD&D 2.5):
 //
-//   - hit when d20 + modifiers >= THAC0 - target AC; a natural 1 or 20 is
-//     plain arithmetic, nothing special;
-//   - house crit, docs/adr/0001-critical-hits.md: d20 and a crit-check d100
-//     together; crit when d20 - check d100 >= the roll needed; a second,
-//     independent d100 (rolled on every attack) picks the multiplier's row
-//     in the stored crit table (x2 until the table is edited);
-//   - damage = ((dice × SpellsBuff × DiceMultiplier) + WeaponBuff) × crit +
-//     StrengthBonus + buff damage, floored once, never below 0.
+//   - to hit: docs/adr/0002-attack-resolution.md;
+//   - house crit: docs/adr/0001-critical-hits.md;
+//   - damage: docs/adr/0003-damage.md.
 //
-// A weapon that fires ammunition spends one through itemsvc. The ammo use
-// and the action-log entry (full RollResult + items snapshot) share one
-// transaction, so a failure leaves the count untouched and voiding the entry
-// gives the arrow back.
+// A weapon that fires ammunition spends one through itemsvc (ADR 0002 step
+// 10). The ammo use and the action-log entry (full RollResult + items
+// snapshot) share one transaction, so a failure leaves the count untouched
+// and voiding the entry gives the arrow back.
 func (s *service) ResolveAttack(ctx context.Context, characterID int64, req AttackRequest) (*RollResult, error) {
 	if req.TargetSize == "" {
 		req.TargetSize = SizeSmallMedium
@@ -127,7 +122,7 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 		return nil, fmt.Errorf("use ammunition %s: %w", ammoID, err)
 	}
 	// Ammo is any item of the weapon's ammo kind, whatever its behaviour
-	// (critical-qki.13). The weapon fires ammo, so its kind is never empty.
+	// (ADR 0002 step 10). The weapon fires ammo, so its kind is never empty.
 	if item.AmmoKind != weapon.AmmoKind {
 		return nil, fmt.Errorf("%w: %s cannot fire %s", domain.ErrInvalidInput, weapon.Name, item.Name)
 	}
@@ -135,9 +130,9 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 }
 
 // resolve rolls and computes the attack. Dice are rolled in this order:
-// d20, crit-check d100, multiplier d100, then the damage dice (all on every
-// attack). The crit multiplier is the one of the crit-table range holding
-// the multiplier d100.
+// d20, crit-check d100, multiplier d100, then the damage dice, all on every
+// attack (ADR 0002 step 1). The crit multiplier is the one of the crit-table
+// range holding the multiplier d100.
 func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, crit CritTable, req AttackRequest) (*RollResult, error) {
 	res := &RollResult{
 		BaseThac0:      char.Thac0Base,
@@ -157,9 +152,10 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	// order (settle adds the crit term on a crit).
 	var weaponTerms, strTerms []DamageTerm
 
-	// Strength (PHB Table 1, from the effective STR with buffs). PHB
-	// "Ability Modifiers in Missile Combat": always for melee and hurled
-	// weapons; for bows only with a strength bow, which the Bard's are not.
+	// ADR 0002 step 4 and ADR 0003 step 7: Strength (PHB Table 1, from the
+	// effective STR with buffs). PHB "Ability Modifiers in Missile Combat":
+	// always for melee and hurled weapons; for bows only with a strength
+	// bow, which the Bard's are not.
 	strDmg := 0
 	if !weapon.FiresAmmo() {
 		str := mods.EffectiveStr
@@ -172,8 +168,8 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		strDmg = dmg
 		strTerms = append(strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Source: "Strength " + detail, Detail: detail, Value: float64(dmg)})
 	}
-	// Dexterity missile attack adjustment (PHB Table 2) for every missile
-	// attack with a hand-held weapon, bow or hurled.
+	// ADR 0002 step 5: Dexterity missile attack adjustment (PHB Table 2) for
+	// every missile attack with a hand-held weapon, bow or hurled.
 	if weapon.Kind == WeaponMissile {
 		missile, _, err := s.rules.DexMods(char.Dex)
 		if err != nil {
@@ -183,8 +179,9 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		add(Modifier{Kind: ModDexterity, Source: "Dexterity " + detail, Detail: detail, Value: missile})
 	}
 
-	// Weapon magic: the weapon's own +N, or a buff that makes it +N (Power
-	// Gem: "the weapon becomes +5") when that is better. They do not add up.
+	// ADR 0002 step 6: weapon magic, the weapon's own +N, or a buff that
+	// makes it +N (Power Gem: "the weapon becomes +5") when that is better.
+	// They do not add up.
 	weaponDmg := 0
 	if m, ok := weaponMagic(weapon.Name, weapon.MagicToHit, mods); ok {
 		add(m)
@@ -193,8 +190,8 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		weaponDmg = m.Value
 		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: m.Kind, Source: m.Source, Detail: m.Detail, Value: float64(m.Value)})
 	}
-	// Magic ammunition: DMG 2e, "Bow +1": "If magical arrows are used, total
-	// the bonuses of both the bow and the arrows used" (to hit and damage).
+	// ADR 0002 step 7: magic ammunition adds to hit and damage, on top of
+	// the weapon's (DMG 2e, "Bow +1").
 	ammoDmg := 0
 	if ammo != nil && ammo.MagicBonus != 0 {
 		add(Modifier{Kind: ModAmmoMagic, Source: ammo.Name, Detail: ammo.Name, Value: ammo.MagicBonus})
@@ -202,6 +199,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: ModAmmoMagic, Source: ammo.Name, Detail: ammo.Name, Value: float64(ammo.MagicBonus)})
 	}
 
+	// ADR 0002 step 8: one modifier per buff; step 9: the situational one.
 	for _, c := range mods.ToHitFrom {
 		add(Modifier{Kind: ModBuff, Source: c.Buff, Detail: c.Buff, Value: c.Value})
 	}
@@ -227,8 +225,9 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	res.RollCritRow = &row
 	res.RollCritPlaceholder = crit.Placeholder
 
-	// The damage dice are rolled on every attack, even a miss, so a target
-	// AC corrected after the roll (AdjustAttackAC) never rolls again.
+	// ADR 0003 step 1: the dice for the target size, rolled on every attack,
+	// even a miss, so a target AC corrected after the roll (AdjustAttackAC)
+	// never rolls again.
 	dice := weapon.BaseDamage
 	if req.TargetSize == SizeLarge && weapon.DamageLarge != "" {
 		dice = weapon.DamageLarge
@@ -261,16 +260,17 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 
 // settle computes the outcome of a rolled attack from its d20, crit-check
 // and multiplier d100s, effective THAC0, target AC, crit row and rolled
-// damage, all already set (crit rule: docs/adr/0001-critical-hits.md steps
-// 2, 4 and 5):
+// damage, all already set:
 //
-//   - hit when d20 >= effective THAC0 - target AC (a natural 1 or 20 is plain
-//     arithmetic);
+//   - hit when d20 >= effective THAC0 - target AC; a natural 1 or 20 is plain
+//     arithmetic (ADR 0002 steps 2 and 3);
 //   - crit when d20 - crit-check d100 >= that same number; the multiplier
-//     is the one of the crit row of the multiplier d100;
-//   - on a hit, damage = ((dice × SpellsBuff) + WeaponBuff) × (crit ×
-//     BuffMultipliers) + StrengthBonus + BonusDamage, full precision,
-//     floored once at the end, never below 0. A miss has no damage.
+//     is the one of the crit row of the multiplier d100 (ADR 0001 steps 2
+//     and 4);
+//   - on a hit, damage = ((dice × SpellsBuff × DiceMultiplier) +
+//     WeaponBuff) × crit + StrengthBonus + BonusDamage, full precision,
+//     floored once at the end, never below 0 (ADR 0003 steps 2 to 10). A
+//     miss has no damage.
 //
 // ResolveAttack and AdjustAttackAC share it so a corrected attack is exactly
 // the attack rolled against the new AC.
@@ -305,8 +305,8 @@ func settle(res *RollResult) {
 
 	res.BaseDamage = d.Total
 	res.DamageDice = d.Dice
-	// Terms in formula order; the crit multiplier goes before the buff
-	// multipliers (spells, weapon, crit, multipliers, strength, bonus).
+	// ADR 0003 step 11: terms in formula order (spells, dice multipliers,
+	// weapon, crit, strength, bonus).
 	critAt := len(d.Terms)
 	for i, t := range d.Terms {
 		if t.Term != TermSpells && t.Term != TermDiceMult && t.Term != TermWeapon {
@@ -327,9 +327,8 @@ func settle(res *RollResult) {
 	res.StrengthBonus = d.StrengthBonus
 	res.BonusDamage = d.BonusDamage
 
-	// Full precision through the whole formula, floored once at the end. The
-	// strength and buff terms are whole numbers, so flooring the sum is the
-	// same as flooring before adding them for whole multipliers.
+	// ADR 0003 steps 2, 9 and 10: full precision through the whole formula,
+	// floored once at the end, never below 0.
 	res.UnroundedDamage = (float64(res.BaseDamage)*res.SpellsBuff*res.DiceMultiplier+float64(res.WeaponBuff))*res.Multipliers +
 		float64(res.StrengthBonus) + float64(res.BonusDamage)
 	res.TotalDamage = max(int(math.Floor(res.UnroundedDamage+floorEpsilon)), 0)

@@ -183,7 +183,7 @@ test.describe("with the sheet's STR 12", () => {
     });
     const gem = buffBadge(page, "e2e Gem");
 
-    // Rule 1: +4 (no max) and +3 (max 18) on 12: 19, capped at 18.
+    // ADR 0004 step 7: +4 (no max) and +3 (max 18) on 12: 19, capped at 18.
     await addBuff(page, {
       name: "e2e Strength hand",
       rounds: 20,
@@ -200,7 +200,7 @@ test.describe("with the sheet's STR 12", () => {
     await expect.poll(() => effectiveStr(page)).toBe(18);
     await expect(gem).toHaveAttribute("data-applies", "true");
 
-    // Rule 2: a low Improved Strength (1 + 4) replaces both: 17, the gem goes off and the
+    // ADR 0004 step 8: a low Improved Strength (1 + 4) replaces both: 17, the gem goes off and the
     // Strength badges say they are replaced.
     await addBuff(page, {
       name: "e2e Improved",

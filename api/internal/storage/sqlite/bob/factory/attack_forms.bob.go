@@ -42,6 +42,7 @@ type AttackFormTemplate struct {
 	TargetSize       func() string
 	SituationalValue func() int64
 	SituationalLabel func() string
+	TargetAcKnown    func() int64
 
 	r attackFormR
 	f *Factory
@@ -114,6 +115,10 @@ func (o AttackFormTemplate) BuildSetter() *models.AttackFormSetter {
 		val := o.SituationalLabel()
 		m.SituationalLabel = omit.From(val)
 	}
+	if o.TargetAcKnown != nil {
+		val := o.TargetAcKnown()
+		m.TargetAcKnown = omit.From(val)
+	}
 
 	return m
 }
@@ -159,6 +164,9 @@ func (o AttackFormTemplate) Build() *models.AttackForm {
 	}
 	if o.SituationalLabel != nil {
 		m.SituationalLabel = o.SituationalLabel()
+	}
+	if o.TargetAcKnown != nil {
+		m.TargetAcKnown = o.TargetAcKnown()
 	}
 
 	o.setModelRels(m)
@@ -335,6 +343,7 @@ func (m attackFormMods) RandomizeAllColumns(f *faker.Faker) AttackFormMod {
 		AttackFormMods.RandomTargetSize(f),
 		AttackFormMods.RandomSituationalValue(f),
 		AttackFormMods.RandomSituationalLabel(f),
+		AttackFormMods.RandomTargetAcKnown(f),
 	}
 }
 
@@ -582,6 +591,37 @@ func (m attackFormMods) RandomSituationalLabel(f *faker.Faker) AttackFormMod {
 	return AttackFormModFunc(func(_ context.Context, o *AttackFormTemplate) {
 		o.SituationalLabel = func() string {
 			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m attackFormMods) TargetAcKnown(val int64) AttackFormMod {
+	return AttackFormModFunc(func(_ context.Context, o *AttackFormTemplate) {
+		o.TargetAcKnown = func() int64 { return val }
+	})
+}
+
+// Set the Column from the function
+func (m attackFormMods) TargetAcKnownFunc(f func() int64) AttackFormMod {
+	return AttackFormModFunc(func(_ context.Context, o *AttackFormTemplate) {
+		o.TargetAcKnown = f
+	})
+}
+
+// Clear any values for the column
+func (m attackFormMods) UnsetTargetAcKnown() AttackFormMod {
+	return AttackFormModFunc(func(_ context.Context, o *AttackFormTemplate) {
+		o.TargetAcKnown = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m attackFormMods) RandomTargetAcKnown(f *faker.Faker) AttackFormMod {
+	return AttackFormModFunc(func(_ context.Context, o *AttackFormTemplate) {
+		o.TargetAcKnown = func() int64 {
+			return random_int64(f)
 		}
 	})
 }

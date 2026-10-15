@@ -131,7 +131,7 @@ func (s *strStack) gemOn() bool {
 // (STR >= 18).
 func TestEffectiveStr_StrengthStacksThenImprovedReplacesIt(t *testing.T) {
 	s := newStrStack(t)
-	attack := combatsvc.AttackRequest{WeaponID: "mace", TargetAC: 5}
+	attack := combatsvc.AttackRequest{WeaponID: "mace", TargetAC: new(5)}
 
 	// Step 7: Strength 1d6 = 2, then 1d6 = 4: 12 + 2 + 4 = 18.
 	s.receive("strength", 9, 2)

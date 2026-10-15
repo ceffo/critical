@@ -98,14 +98,14 @@ var attackCases = []attackCase{
 		// Mods: STR 12 +0, sword +2 = +2. Eff. THAC0 13-2 = 11; vs AC 5 needs 6.
 		// Damage 1d8=5: ((5 × 1) + 2) × 1 + 0 = 7.
 		name: "long sword +2 vs AC 5 at STR 12 hits on 6", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 6, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 6, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 7,
 		wantBreakdown: 7,
 	},
 	{
 		name: "long sword +2 vs AC 5 at STR 12 misses on 5", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: false, wantMargin: -1,
 	},
@@ -113,14 +113,14 @@ var attackCases = []attackCase{
 		// Mods: STR 18 +1, sword +2 = +3. Eff. THAC0 10; vs AC 5 needs 5.
 		// Damage 1d8=5: ((5 × 1) + 2) × 1 + 2 (STR 18) = 9.
 		name: "long sword +2 vs AC 5 at effective STR 18 hits on 5", weapon: longsword, mods: strMods(18),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(18, 1), modWeapon(longsword)},
 		wantEffThac0: 10, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 9,
 		wantBreakdown: 9,
 	},
 	{
 		name: "long sword +2 vs AC 5 at effective STR 18 misses on 4", weapon: longsword, mods: strMods(18),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 4, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 4, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(18, 1), modWeapon(longsword)},
 		wantEffThac0: 10, wantHit: false, wantMargin: -1,
 	},
@@ -130,7 +130,7 @@ var attackCases = []attackCase{
 		// Mods: DEX 17 +2, bow +2, arrow +3 = +7. Eff. THAC0 6; vs AC 2 needs 4.
 		// Damage 1d6=4: ((4 × 1) + (2 + 3)) × 1 + 0 = 9.
 		name: "short bow +2 with a +3 arrow at DEX 17 hits on 4", weapon: shortbow, mods: strMods(18), ammo: &arrows3Left1,
-		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 2}, d20: 4, d100: 50,
+		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(2)}, d20: 4, d100: 50,
 		sides: 6, dmg: []int{4},
 		wantMods:     []combatsvc.Modifier{modDex(17, 2), modWeapon(shortbow), modAmmo(arrows3Left1)},
 		wantEffThac0: 6, wantHit: true, wantMargin: 0, wantDice: "1d6", wantTotal: 9,
@@ -138,7 +138,7 @@ var attackCases = []attackCase{
 	},
 	{
 		name: "short bow +2 with a +3 arrow at DEX 17 misses on 3", weapon: shortbow, mods: strMods(18), ammo: &arrows3Left1,
-		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 2}, d20: 3, d100: 50, sides: 6, dmg: []int{4},
+		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(2)}, d20: 3, d100: 50, sides: 6, dmg: []int{4},
 		wantMods:     []combatsvc.Modifier{modDex(17, 2), modWeapon(shortbow), modAmmo(arrows3Left1)},
 		wantEffThac0: 6, wantHit: false, wantMargin: -1,
 	},
@@ -146,7 +146,7 @@ var attackCases = []attackCase{
 		// Mods: STR 12 +0, sword +2. Eff. THAC0 11; vs AC 5 needs 6; 14 hits by 8.
 		// Large target: 2d8 = 3 + 6 = 9; ((9 × 1) + 2) × 1 + 0 = 11.
 		name: "bastard sword +2 two-handed vs a large target rolls 2d8", weapon: bastardSword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "bastard_sword", TargetAC: 5, TargetSize: combatsvc.SizeLarge},
+		req: combatsvc.AttackRequest{WeaponID: "bastard_sword", TargetAC: new(5), TargetSize: combatsvc.SizeLarge},
 		d20: 14, d100: 50, sides: 8, dmg: []int{3, 6},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(bastardSword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 8, wantDice: "2d8", wantTotal: 11,
@@ -155,7 +155,7 @@ var attackCases = []attackCase{
 	{
 		// Small/medium: 2d4 = 3 + 4 = 7; ((7 × 1) + 2) × 1 + 0 = 9.
 		name: "bastard sword +2 vs small/medium rolls 2d4", weapon: bastardSword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "bastard_sword", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+		req: combatsvc.AttackRequest{WeaponID: "bastard_sword", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 		d20: 14, d100: 50, sides: 4, dmg: []int{3, 4},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(bastardSword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 8, wantDice: "2d4", wantTotal: 9,
@@ -169,7 +169,7 @@ var attackCases = []attackCase{
 			SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, ToHit: 1,
 			ToHitFrom: []buffsvc.Contribution{{Buff: "Bless", Value: 1}},
 		},
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 5, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword), modBuff("Bless", 1)},
 		wantEffThac0: 10, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 7,
 		wantBreakdown: 7,
@@ -181,7 +181,7 @@ var attackCases = []attackCase{
 			SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, Damage: 2,
 			DamageFrom: []buffsvc.Contribution{{Buff: "Rage", Value: 2}},
 		},
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 6, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 6, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 9,
 		wantBreakdown: 9,
@@ -190,7 +190,7 @@ var attackCases = []attackCase{
 		// Mods: +2 (sword) +2 (rear attack) = +4. Eff. THAC0 9; vs AC 5 needs 4.
 		name: "situational +2 (rear attack)", weapon: longsword, mods: strMods(12),
 		req: combatsvc.AttackRequest{
-			WeaponID: "longsword", TargetAC: 5,
+			WeaponID: "longsword", TargetAC: new(5),
 			Situational: &combatsvc.Situational{Value: 2, Label: " Rear attack "},
 		},
 		d20: 4, d100: 50, sides: 8, dmg: []int{5},
@@ -202,7 +202,7 @@ var attackCases = []attackCase{
 		// Mods: +2 (sword) -4 (cover) = -2. Eff. THAC0 15; vs AC 5 needs 10.
 		name: "situational -4 without a label", weapon: longsword, mods: strMods(12),
 		req: combatsvc.AttackRequest{
-			WeaponID: "longsword", TargetAC: 5,
+			WeaponID: "longsword", TargetAC: new(5),
 			Situational: &combatsvc.Situational{Value: -4},
 		},
 		d20: 9, d100: 50, sides: 8, dmg: []int{5},
@@ -212,7 +212,7 @@ var attackCases = []attackCase{
 	{
 		name: "situational 0 is not listed", weapon: longsword, mods: strMods(12),
 		req: combatsvc.AttackRequest{
-			WeaponID: "longsword", TargetAC: 5,
+			WeaponID: "longsword", TargetAC: new(5),
 			Situational: &combatsvc.Situational{Value: 0, Label: "nothing"},
 		},
 		d20: 5, d100: 50, sides: 8, dmg: []int{5},
@@ -223,7 +223,7 @@ var attackCases = []attackCase{
 		// Needs 6. House crit: 15 - 9 = 6 >= 6 -> crit, x2 placeholder.
 		// ((5 × 1) + 2) × 2 + 0 = 14.
 		name: "crit: d20 - d100 reaches the roll needed (placeholder x2)", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 15, d100: 9, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 15, d100: 9, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 9, wantCrit: true, wantDice: "1d8", wantTotal: 14,
 		wantBreakdown: 14,
@@ -231,7 +231,7 @@ var attackCases = []attackCase{
 	{
 		// 15 - 10 = 5 < 6: a plain hit.
 		name: "no crit one short", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5}, d20: 15, d100: 10, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}, d20: 15, d100: 10, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 9, wantDice: "1d8", wantTotal: 7,
 		wantBreakdown: 7,
@@ -239,7 +239,7 @@ var attackCases = []attackCase{
 	{
 		// No special natural rolls: eff. THAC0 11 vs AC 10 needs 1, so a 1 hits.
 		name: "natural 1 is plain THAC0 math: hits when 1 is enough", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 10}, d20: 1, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(10)}, d20: 1, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: true, wantMargin: 0, wantDice: "1d8", wantTotal: 7,
 		wantBreakdown: 7,
@@ -247,7 +247,7 @@ var attackCases = []attackCase{
 	{
 		// Eff. THAC0 11 vs AC -10 needs 21, so a 20 misses.
 		name: "natural 20 is plain THAC0 math: misses when 21 is needed", weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: -10}, d20: 20, d100: 50, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(-10)}, d20: 20, d100: 50, sides: 8, dmg: []int{5},
 		wantMods:     []combatsvc.Modifier{modStr(12, 0), modWeapon(longsword)},
 		wantEffThac0: 11, wantHit: false, wantMargin: -1,
 	},
@@ -256,7 +256,7 @@ var attackCases = []attackCase{
 		// Mods: STR 18 +1, DEX 17 +2 = +3. Eff. THAC0 10; vs AC 5 needs 5.
 		// 1d3 = 2: ((2 × 1) + 0) × 1 + 2 = 4.
 		name: "hurled darts take STR and DEX", weapon: darts, mods: strMods(18),
-		req: combatsvc.AttackRequest{WeaponID: "darts", TargetAC: 5}, d20: 5, d100: 50, sides: 3, dmg: []int{2},
+		req: combatsvc.AttackRequest{WeaponID: "darts", TargetAC: new(5)}, d20: 5, d100: 50, sides: 3, dmg: []int{2},
 		wantMods:     []combatsvc.Modifier{modStr(18, 1), modDex(17, 2)},
 		wantEffThac0: 10, wantHit: true, wantMargin: 0, wantDice: "1d3", wantTotal: 4,
 		wantBreakdown: 4,
@@ -302,7 +302,8 @@ func TestResolveAttack(t *testing.T) {
 			assert.InDelta(t, tt.wantBreakdown, res.UnroundedDamage, 1e-9)
 			assert.Equal(t, tt.wantDice, res.DamageDice)
 			assert.Equal(t, tt.weapon.Name, res.WeaponName)
-			assert.Equal(t, tt.req.TargetAC, res.TargetAC)
+			assert.Equal(t, *tt.req.TargetAC, res.TargetAC)
+			assert.True(t, res.ACKnown)
 			assert.Equal(t, int64(42), res.LogEntryID)
 			if !tt.wantHit {
 				assert.Zero(t, res.BaseDamage)
@@ -341,7 +342,7 @@ func TestResolveAttack_DamageTermsListEveryModifier(t *testing.T) {
 	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 
-	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Detail: "Enlarge", Value: 1.5},
@@ -429,7 +430,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 			f.dice.EXPECT().RollDie(8).Return(die)
 			f.records()
 
-			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
+			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 			require.NoError(t, err)
 			if tt.wantDiceX {
 				assert.Equal(t, 2.0, res.DiceMultiplier)
@@ -465,7 +466,7 @@ func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 	f.dice.EXPECT().RollDie(4).Return(3).Once()
 	f.records()
 
-	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "dagger3", TargetAC: 5})
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "dagger3", TargetAC: new(5)})
 	require.NoError(t, err)
 
 	// To hit: STR 12 +0, dagger +3 (the buff's +2 is not added). Eff. THAC0 10; needs 5.
@@ -501,7 +502,7 @@ func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 	f.dice.EXPECT().RollDie(6).Return(4).Once()
 	f.records()
 
-	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "plainbow", AmmoItemID: "arrows_plus3", TargetAC: 5})
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "plainbow", AmmoItemID: "arrows_plus3", TargetAC: new(5)})
 	require.NoError(t, err)
 
 	buffMod := combatsvc.Modifier{Kind: combatsvc.ModWeaponBuff, Detail: "Magic Weapon", Value: 5}
@@ -532,7 +533,7 @@ func TestResolveAttack_RecordsAttackWithAmmoSnapshot(t *testing.T) {
 	f.records()
 
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
-		WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 2,
+		WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(2),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, &combatsvc.AmmoUse{ItemID: "arrows_plus3", Name: "Arrows +3", Magic: 3, Remaining: 1}, res.Ammo)
@@ -569,7 +570,7 @@ func TestResolveAttack_MeleeIsLoggedWithoutSnapshot(t *testing.T) {
 	f.dice.EXPECT().RollDie(8).Return(5)
 	f.records()
 
-	_, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
+	_, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 	require.NoError(t, err)
 	require.Len(t, f.entries, 1)
 	assert.Empty(t, f.entries[0].Summary, "the UI words the attack from its payload")
@@ -662,7 +663,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		f.d100s(t, 50, noCritMult)
 		f.dice.EXPECT().RollDie(8).Return(5)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
-		res, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
+		res, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, boom)
 	})
@@ -676,7 +677,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
 		f.dice.EXPECT().RollD20().Return(20)
 		f.d100s(t, 99, noCritMult)
-		_, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
+		_, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 		assert.ErrorContains(t, err, `invalid damage dice "d8"`)
 	})
 }

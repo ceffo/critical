@@ -31,7 +31,7 @@ func stepAttack(t *testing.T, f *fixture, ac, d20, check, mult int, mods *buffsv
 	f.d100s(t, check, mult)
 	f.dice.EXPECT().RollDie(8).Return(5).Once()
 	f.records()
-	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: ac})
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(ac)})
 	require.NoError(t, err)
 	return res
 }

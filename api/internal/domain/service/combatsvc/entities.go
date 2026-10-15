@@ -71,11 +71,26 @@ type AttackRequest struct {
 	WeaponID string
 	// AmmoItemID is required for weapons that fire ammunition (bows) and
 	// must be empty otherwise.
-	AmmoItemID  string
-	TargetAC    int
+	AmmoItemID string
+	// TargetAC is nil when the target's AC is unknown (ADR 0012 step 1).
+	TargetAC    *int
 	TargetSize  TargetSize
 	Situational *Situational
 }
+
+// Verdict is the GM's word on an attack against an unknown AC.
+type Verdict string
+
+// Verdicts as sent on the wire.
+const (
+	VerdictNone Verdict = ""
+	VerdictHit  Verdict = "hit"
+	VerdictMiss Verdict = "miss"
+)
+
+// Settled reports whether the attack's hit, crit and damage are final: the
+// target AC is known or the GM gave a verdict (ADR 0012).
+func (r *RollResult) Settled() bool { return r.ACKnown || r.Verdict != VerdictNone }
 
 // AmmoUse is the ammunition an attack spent.
 type AmmoUse struct {
@@ -106,9 +121,19 @@ type RollResult struct {
 	BaseThac0       int
 	Modifiers       []Modifier
 	EffectiveThac0  int
-	TargetACNeeded  int
-	Hit             bool
-	HitMargin       int
+	// TargetACNeeded is the lowest AC the d20 hits (effective THAC0 - d20),
+	// the same number as HitsAC; kept for the entries logged before HitsAC.
+	TargetACNeeded int
+	// HitsAC is the lowest target AC the attack hits: effective THAC0 - d20
+	// (ADR 0012 step 2). CritsFromAC is the lowest target AC it crits:
+	// HitsAC + crit-check d100 (step 3, ADR 0001 step 2 solved for the AC).
+	HitsAC      int
+	CritsFromAC int
+	// Hit, HitMargin, IsCrit and the damage are final only when Settled():
+	// the AC is known or the GM gave a verdict. Unsettled, Hit is false,
+	// there is no crit and the damage is the one of a hit at x1 (ADR 0012).
+	Hit       bool
+	HitMargin int
 
 	BaseDamage  int
 	DamageDice  string
@@ -132,6 +157,14 @@ type RollResult struct {
 	TargetAC   int
 	TargetSize TargetSize
 	Ammo       *AmmoUse
+	// ACKnown is false while the target AC is unknown (TargetAC is then
+	// meaningless); RolledACUnknown says the attack was rolled without it,
+	// even once the GM gave it.
+	ACKnown         bool
+	RolledACUnknown bool
+	// Verdict is the GM's hit or miss given instead of the AC (ADR 0012
+	// step 4); VerdictNone once the AC is known.
+	Verdict Verdict
 	// Rolled is what the damage is computed from, rolled with every attack
 	// (even a miss) so a target AC correction never rolls again. Nil on
 	// saves and on attacks logged before corrections existed.

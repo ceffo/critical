@@ -187,6 +187,9 @@ var endpoints = []endpoint{
 	{"POST roll/attack/{id}/adjust", "POST", "/api/roll/attack/7/adjust", `{"targetAc":7}`, func(m *mocksSet, err error) {
 		m.cmb.On("AdjustAttackAC", anyArgs(4)...).Return(nil, err)
 	}},
+	{"POST roll/attack/{id}/verdict", "POST", "/api/roll/attack/7/verdict", `{"hit":false}`, func(m *mocksSet, err error) {
+		m.cmb.On("SetAttackVerdict", anyArgs(4)...).Return(nil, err)
+	}},
 }
 
 func do(h http.Handler, method, path, body string) *httptest.ResponseRecorder {

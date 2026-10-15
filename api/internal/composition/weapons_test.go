@@ -71,7 +71,7 @@ func toHitMagic(r *combatsvc.RollResult) int {
 func TestWeapons_EditBastardSwordIsUsedByNextAttackAndPopRestores(t *testing.T) {
 	bs, dice := newWeaponStack(t)
 	ctx := context.Background()
-	atk := combatsvc.AttackRequest{WeaponID: "bastard_sword", TargetAC: 1000}
+	atk := combatsvc.AttackRequest{WeaponID: "bastard_sword", TargetAC: new(1000)}
 
 	res, err := bs.Weapons.Update(ctx, bs.CharacterID, "bastard_sword", weaponsvc.WeaponPatch{MagicToHit: ptr(3), MagicDamage: ptr(4)})
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestWeapons_EditedDamageDiceAreRolled(t *testing.T) {
 	_, err := bs.Weapons.Update(ctx, bs.CharacterID, "mace", weaponsvc.WeaponPatch{DamageL: ptr("3d10")})
 	require.NoError(t, err)
 	dice.expect(roll{"d20", 11}, roll{"d100", 37}, roll{"d100", 58}, roll{"d10", 4}, roll{"d10", 6}, roll{"d10", 9})
-	at, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "mace", TargetAC: 1000, TargetSize: combatsvc.SizeLarge})
+	at, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "mace", TargetAC: new(1000), TargetSize: combatsvc.SizeLarge})
 	require.NoError(t, err)
 	assert.Equal(t, "3d10", at.Rolled.Dice)
 	assert.Equal(t, 19, at.Rolled.Total)
@@ -133,7 +133,7 @@ func TestWeapons_AddLongBowFiresArrowItems(t *testing.T) {
 
 	before := itemCount(t, bs, "arrows_plus1")
 	dice.expect(roll{"d20", 11}, roll{"d100", 37}, roll{"d100", 58}, roll{"d8", 7})
-	at, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "long_bow", AmmoItemID: "arrows_plus1", TargetAC: 1000})
+	at, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "long_bow", AmmoItemID: "arrows_plus1", TargetAC: new(1000)})
 	require.NoError(t, err)
 	assert.Equal(t, before-1, itemCount(t, bs, "arrows_plus1"), "one arrow spent")
 	assert.Equal(t, 2, toHitMagic(at), "bow +1 and Arrows +1 to hit")
@@ -145,7 +145,7 @@ func TestWeapons_AmmoKindEditedToBoltRefusesArrows(t *testing.T) {
 	ctx := context.Background()
 	_, err := bs.Weapons.Update(ctx, bs.CharacterID, "shortbow", weaponsvc.WeaponPatch{AmmoKind: ptr("bolt")})
 	require.NoError(t, err)
-	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: 10})
+	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: new(10)})
 	require.Error(t, err)
 	assert.Equal(t, 18, itemCount(t, bs, "arrows_plus1"), "nothing spent")
 }
@@ -171,14 +171,14 @@ func TestWeapons_RemoveDartsKeepsOldLogLinesAndPopRestores(t *testing.T) {
 	order, orig := weaponIDs(t, bs), weaponList(t, bs)["darts"]
 
 	dice.expect(roll{"d20", 11}, roll{"d100", 37}, roll{"d100", 58}, roll{"d3", 2})
-	atk, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "darts", TargetAC: 1000})
+	atk, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "darts", TargetAC: new(1000)})
 	require.NoError(t, err)
 
 	rm, err := bs.Weapons.Delete(ctx, bs.CharacterID, "darts")
 	require.NoError(t, err)
 	assert.Equal(t, actionlog.KindWeaponRemove, newestEntry(t, bs).Kind)
 	assert.NotContains(t, weaponIDs(t, bs), "darts")
-	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "darts", TargetAC: 10})
+	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "darts", TargetAC: new(10)})
 	require.ErrorIs(t, err, combatsvc.ErrWeaponNotFound)
 
 	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)

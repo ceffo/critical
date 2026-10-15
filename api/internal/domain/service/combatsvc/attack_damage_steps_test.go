@@ -76,7 +76,7 @@ func TestAttack_Step1_DiceInOrderOnEveryAttack(t *testing.T) {
 			f.records()
 
 			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
-				WeaponID: "bastard_sword", TargetAC: c.ac, TargetSize: c.size,
+				WeaponID: "bastard_sword", TargetAC: new(c.ac), TargetSize: c.size,
 			})
 			require.NoError(t, err)
 			assert.Equal(t, c.want, dice.calls, "every die once, in order")
@@ -105,7 +105,7 @@ func TestAttack_Step8_OneToHitModifierPerBuff(t *testing.T) {
 	f.dice.EXPECT().RollDie(8).Return(6).Once()
 	f.records()
 
-	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 5})
+	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.Modifier{
 		modStr(12, 0), modWeapon(longsword), modBuff("Bless", 1), modBuff("Prayer", 1), modBuff("Chill", -4),
@@ -150,7 +150,7 @@ func TestDamage_Step1_DiceByTargetSize(t *testing.T) {
 			f.records()
 
 			res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
-				WeaponID: c.weapon.ID, TargetAC: 5, TargetSize: c.size,
+				WeaponID: c.weapon.ID, TargetAC: new(5), TargetSize: c.size,
 			})
 			require.NoError(t, err)
 			require.True(t, res.Hit)

@@ -65,7 +65,7 @@ func swordMinus7(d20, d100 int) rolledAttack {
 	return rolledAttack{
 		weapon: longsword, mods: strMods(12),
 		req: combatsvc.AttackRequest{
-			WeaponID: "longsword", TargetAC: 5,
+			WeaponID: "longsword", TargetAC: new(5),
 			Situational: &combatsvc.Situational{Value: -7, Label: "Blinded"},
 		},
 		d20: d20, d100: d100, sides: 8, dmg: []int{5},
@@ -76,7 +76,7 @@ func swordMinus7(d20, d100 int) rolledAttack {
 func sword(ac, d20, d100 int) rolledAttack {
 	return rolledAttack{
 		weapon: longsword, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: ac},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(ac)},
 		d20: d20, d100: d100, sides: 8, dmg: []int{5},
 	}
 }
@@ -211,12 +211,12 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			} else {
 				assert.Zero(t, res.BaseDamage)
 			}
-			backToRolled := last == c.attack.req.TargetAC
+			backToRolled := last == *c.attack.req.TargetAC
 			if backToRolled {
 				assert.Nil(t, res.RolledTargetAC, "back to the rolled AC: nothing to show")
 			} else {
 				require.NotNil(t, res.RolledTargetAC)
-				assert.Equal(t, c.attack.req.TargetAC, *res.RolledTargetAC, "the AC as rolled, not the previous step")
+				assert.Equal(t, *c.attack.req.TargetAC, *res.RolledTargetAC, "the AC as rolled, not the previous step")
 			}
 			assert.Equal(t, int64(42), res.LogEntryID)
 
@@ -228,12 +228,12 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			if backToRolled {
 				assert.NotContains(t, p, "rolledTargetAc")
 			} else {
-				assert.Equal(t, float64(c.attack.req.TargetAC), p["rolledTargetAc"])
+				assert.Equal(t, float64(*c.attack.req.TargetAC), p["rolledTargetAc"])
 				assert.Equal(t, c.wantRolled != "MISS", p["rolledHit"])
 				assert.Equal(t, c.wantRolled == "CRIT", p["rolledCrit"])
 			}
 			assert.Contains(t, p, "rolled", "the next correction can recompute again")
-			assert.Equal(t, float64(c.attack.req.TargetAC), payloadOf(t, e.Payload)["targetAc"], "the original entry is untouched")
+			assert.Equal(t, float64(*c.attack.req.TargetAC), payloadOf(t, e.Payload)["targetAc"], "the original entry is untouched")
 		})
 	}
 }
@@ -245,7 +245,7 @@ func TestAdjustAttackAC_SpendsNoAmmo(t *testing.T) {
 	// Short bow +2 with a +3 arrow at DEX 17: effective THAC0 6, AC 2 needs 4.
 	e := rollAttack(t, f, rolledAttack{
 		weapon: shortbow, ammo: &arrows3Left1, mods: strMods(12),
-		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 2},
+		req: combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(2)},
 		d20: 3, d100: 50, sides: 6, dmg: []int{4},
 	})
 	amends(f, e)
@@ -273,7 +273,7 @@ func TestAdjustAttackAC_DamageTermsInFormulaOrder(t *testing.T) {
 			DamageFrom:      []buffsvc.Contribution{{Buff: "Rage", Value: 1}},
 		},
 		// STR 18 +1, sword +2: effective THAC0 10; AC -10 needs 20, a miss.
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: -10}, d20: 15, d100: 5, sides: 8, dmg: []int{5},
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(-10)}, d20: 15, d100: 5, sides: 8, dmg: []int{5},
 	})
 	amends(f, e)
 	// AC 5 needs 5: 15 - 5 = 10 >= 5, a crit (placeholder x2).
@@ -371,7 +371,7 @@ func TestAdjustAttackAC_PreChangeEntryResettles(t *testing.T) {
 	m.MultipliersFrom = []buffsvc.Factor{{Buff: "Power Gem", Value: 2}}
 	e := rollAttack(t, f, rolledAttack{
 		weapon: longsword, mods: m,
-		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: -10}, // a miss
+		req: combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(-10)}, // a miss
 		d20: 15, d100: 50, sides: 8, dmg: []int{5},
 	})
 	var p map[string]any

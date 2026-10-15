@@ -84,6 +84,9 @@ type Roll struct {
 	// DamageResult.Parts; the instance's Dice and Total add them up (nil: the
 	// damage has no parts).
 	Parts []Roll
+	// Step is the dice step (1-based round or instance) this roll is of
+	// (0: the damage has no steps; ADR 0008 step 15).
+	Step int
 }
 
 // Untracked is an effect the engine does not apply (movement, attacks per
@@ -117,7 +120,8 @@ type AppliedBuff struct {
 // DamageResult is a damage spell rolled at the caster level; saves are the
 // DM's side.
 type DamageResult struct {
-	// Dice is the formula rolled for one instance at this level.
+	// Dice is the formula rolled for one instance at this level (empty for a
+	// damage made of steps: each roll has its own).
 	Dice string
 	Type string
 	// Instances is the number of separate rolls per round (missiles).
@@ -133,6 +137,10 @@ type DamageResult struct {
 	// TotalOnSave is Total without the parts a save negates, for a target
 	// that saves against every instance (nil: the damage has no parts).
 	TotalOnSave *int
+	// StepsPer is set for a damage made of dice steps: each roll is one
+	// round, or one instance, of its own dice, numbered by Roll.Step; Dice
+	// is then empty (ADR 0008 step 15).
+	StepsPer spelleffectsvc.StepPer
 }
 
 // DamagePart is one part of a damage instance: the formula it rolls and what

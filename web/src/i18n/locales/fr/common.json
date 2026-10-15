@@ -359,6 +359,10 @@
     "typed": "{{dice}} {{type}}",
     "instances": "{{instances}} × {{dice}}",
     "perRound": "{{text}} par round, {{rounds}} rounds",
+    "steps": {
+      "round": "par round : {{steps}}",
+      "instance": "successivement : {{steps}}"
+    },
     "types": {
       "acid": "acide",
       "cold": "froid",
@@ -572,6 +576,12 @@
       "damageRoll": "{{instances}} × {{dice}}",
       "damageRounds": "chaque tour pendant {{rounds}} tours",
       "instance": "n°{{n}}",
+      "round": "Tour {{n}}",
+      "damageSteps": {
+        "round": "{{count}} tours, un jet chacun",
+        "instance": "{{count}} jets successifs"
+      },
+      "noDamage": "pas de dégâts",
       "save": "Sauvegarde de la cible : {{type}}, {{effect}}",
       "saveEffects": {
         "half": "moitié des dégâts",

@@ -542,7 +542,8 @@ func TestCast_BuffErrorAborts(t *testing.T) {
 }
 
 // The damage served for a spell is what a cast of it rolls: the same number
-// of rolls (instances x rounds), each of the same dice, and the same constant.
+// of rolls (instances x rounds), each of the same dice (each step's, for a
+// damage made of steps), and the same constant.
 func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 	tests := []struct {
 		slot spellsvc.SpellSlot
@@ -585,6 +586,22 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 3, Sides: 10}}},
 			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "cold",
 		}},
+		// ADR 0008 step 15: a damage made of dice steps serves every step, and
+		// a cast rolls each one, numbered, a step without damage rolling none.
+		{vitriolicSphere, "", spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 6}, Type: "acid",
+			StepsPer: spelleffectsvc.StepPerRound, Steps: stepsOf(4, 12, 10, 8, 6, 4, 2),
+		}},
+		{incendiaryCloud, "", spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 5}, Type: "fire",
+			StepsPer: spelleffectsvc.StepPerRound, Steps: []spelleffectsvc.DamageStepAt{
+				{Step: 1},
+				{Step: 2},
+				{Step: 3, Dice: formula.Sum{Dice: []formula.Dice{{Count: bardLevel, Sides: 2}}}},
+				{Step: 4, Dice: formula.Sum{Dice: []formula.Dice{{Count: bardLevel, Sides: 4}}}},
+				{Step: 5, Dice: formula.Sum{Dice: []formula.Dice{{Count: bardLevel, Sides: 2}}}},
+			},
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.slot.SpellID+" "+tt.mode, func(t *testing.T) {
@@ -602,12 +619,30 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 			assert.Equal(t, tt.want, *got)
 
 			// Every die shows 1: each roll totals its dice count plus the constant.
-			perRoll := got.Dice.Constant
-			for _, g := range got.Dice.Dice {
-				perRoll += g.Count
+			count := func(s formula.Sum) int {
+				n := 0
+				for _, g := range s.Dice {
+					n += g.Count
+				}
+				return n
 			}
 			rolls := got.Instances.Constant * got.Rounds.Constant
-			f.dice.vals = make([]int, rolls*(perRoll-got.Dice.Constant))
+			// The served dice of each roll: one instance repeated, or each step.
+			served := make([]formula.Sum, rolls)
+			for i := range served {
+				served[i] = got.Dice
+			}
+			if got.Steps != nil {
+				require.Len(t, got.Steps, rolls, "the steps are the rolls")
+				for i, st := range got.Steps {
+					served[i] = st.Dice
+				}
+			}
+			n := 0
+			for _, s := range served {
+				n += count(s)
+			}
+			f.dice.vals = make([]int, n)
 			for i := range f.dice.vals {
 				f.dice.vals[i] = 1
 			}
@@ -615,8 +650,11 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 			res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{Mode: tt.mode})
 			require.NoError(t, err)
 			require.Len(t, res.Damage.Rolls, rolls)
-			for _, r := range res.Damage.Rolls {
-				assert.Equal(t, perRoll, r.Total)
+			for i, r := range res.Damage.Rolls {
+				assert.Equal(t, count(served[i])+served[i].Constant, r.Total, "roll %d", i)
+				if got.Steps != nil {
+					assert.Equal(t, got.Steps[i].Step, r.Step, "roll %d is its step", i)
+				}
 				require.Len(t, r.Parts, len(got.Parts), "one roll per served part")
 				for i, p := range got.Parts {
 					want := p.Dice.Constant

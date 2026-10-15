@@ -36,11 +36,15 @@ export interface CastLogPayload {
       dice: { sides: number; value: number }[];
       total: number;
       parts?: { formula: string; dice: { sides: number; value: number }[]; total: number }[];
+      /** The round or instance of a damage made of dice steps; absent without steps and on older casts. */
+      step?: number;
     }[];
     /** The parts of one instance and what a save does to each; absent without parts and on older casts. */
     parts?: { formula: string; save: string }[];
     /** The total without the parts a save negates; absent without parts and on older casts. */
     totalOnSave?: number;
+    /** "round" or "instance" for a damage made of dice steps; absent otherwise and on older casts. */
+    stepsPer?: "round" | "instance";
   };
   /** Levels of the extra slots the cast granted. */
   extraSlots?: number[];

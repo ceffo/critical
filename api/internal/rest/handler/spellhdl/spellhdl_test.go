@@ -338,6 +338,33 @@ func TestDamageToDTO_Parts(t *testing.T) {
 	assert.NotContains(t, string(raw), "parts")
 }
 
+// ADR 0008 step 15: the served damage carries the steps' unit and each
+// step's number and dice (none: no groups, 0); a damage without steps serves
+// neither.
+func TestDamageToDTO_Steps(t *testing.T) {
+	got := spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{
+		CasterLevel: 12, Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 3}, Type: "fire",
+		StepsPer: spelleffectsvc.StepPerRound, Steps: []spelleffectsvc.DamageStepAt{
+			{Step: 1},
+			{Step: 2, Dice: formula.Sum{Dice: []formula.Dice{{Count: 12, Sides: 2}}}},
+			{Step: 3, Dice: formula.Sum{Dice: []formula.Dice{{Count: 12, Sides: 4}}, Constant: 1}},
+		},
+	})
+	raw, err := json.Marshal(got)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"caster_level":12,"type":"fire",
+		"dice":{"groups":[],"modifier":0},
+		"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":3},
+		"steps_per":"round","steps":[
+		  {"step":1,"dice":{"groups":[],"modifier":0}},
+		  {"step":2,"dice":{"groups":[{"count":12,"sides":2}],"modifier":0}},
+		  {"step":3,"dice":{"groups":[{"count":12,"sides":4}],"modifier":1}}]}`, string(raw))
+
+	raw, err = json.Marshal(spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{CasterLevel: 1}))
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "steps")
+}
+
 // ADR 0008 step 14: the lookup serves every cast-time mode with the damage a
 // cast in it rolls at the caster level (none for a mode without damage); a
 // spell without modes serves none.

@@ -386,6 +386,8 @@ export interface CastInstanceView {
   dice: DieChipView[];
   total: number;
   parts?: CastPartView[];
+  /** The round or instance of a damage made of dice steps; absent without steps. */
+  step?: number;
 }
 
 /** One part of a damage instance: its dice as chips (none for a flat part), its total and what a save does to it. */
@@ -405,6 +407,7 @@ export function castInstances(c: CastLogPayload): CastInstanceView[] | null {
   const saves = c.damage?.parts;
   return rolls.map((r) => {
     const view: CastInstanceView = { dice: chips(r.dice), total: r.total };
+    if (r.step) view.step = r.step;
     if (r.parts && saves && r.parts.length === saves.length) {
       view.parts = r.parts.map((p, i) => ({ dice: chips(p.dice), total: p.total, save: saves[i].save }));
     }

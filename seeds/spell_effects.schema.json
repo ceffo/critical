@@ -46,7 +46,7 @@
       "damage": {
         "type": "object",
         "additionalProperties": false,
-        "description": "Exactly one of dice, by_level and parts. A spell with modes has no damage of its own: each mode carries its own.",
+        "description": "Exactly one of dice, by_level, parts and steps. A spell with modes has no damage of its own: each mode carries its own.",
         "properties": {
           "dice": { "$ref": "#/definitions/formula", "description": "Damage of one instance, e.g. (min(level,10))d6 for Fireball" },
           "by_level": {
@@ -72,6 +72,18 @@
                 "by_level": { "$ref": "#/items/properties/damage/properties/by_level" },
                 "save": { "enum": ["none", "negates"], "description": "What a successful save does to this part. Default: the entry's save effect, which must then be none or negates." }
               }
+            }
+          },
+          "steps": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["per"],
+            "description": "Dice that change from one round, or one instance, to the next (docs/adr/0008 step 15): exactly one of dice (with count) and list. Their formulas may use step, the 1-based step number; a step may have no damage (0), and the steps after the last one with damage are dropped. Replaces instances and rounds: the steps are the rounds or the instances.",
+            "properties": {
+              "per": { "enum": ["round", "instance"], "description": "What one step is: a round of a lasting damage, or one separate roll of the casting." },
+              "dice": { "$ref": "#/definitions/formula", "description": "The formula of every step, e.g. (max(min(level,12)-(step-1),0))d6 for Chain Lightning (cap a decreasing dice count at 0)." },
+              "count": { "$ref": "#/definitions/formula", "description": "With dice: how many steps at most (no dice, 1 to 100 at every level)." },
+              "list": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "$ref": "#/definitions/formula" }, "description": "The formula of each step, in order, e.g. [0, 0, \"leveld2\", \"leveld4\", \"leveld2\"] for Incendiary Cloud." }
             }
           },
           "instances": { "$ref": "#/definitions/formula", "description": "Separate damage rolls per casting (missiles, bolts). Default 1." },
@@ -157,7 +169,7 @@
   },
   "definitions": {
     "formula": {
-      "description": "Integer expression over INT, dice NdM, 'level', + - * /, parentheses, min(a,b), max(a,b). 'leveld6' rolls level d6; '(min(level,10))d6' caps the dice. Division truncates. See api/pkg/formula.",
+      "description": "Integer expression over INT, dice NdM, 'level', + - * /, parentheses, min(a,b), max(a,b). 'leveld6' rolls level d6; '(min(level,10))d6' caps the dice. Division truncates. 'step' (only in damage.steps) is the 1-based step number. See api/pkg/formula.",
       "type": ["string", "number"]
     }
   }

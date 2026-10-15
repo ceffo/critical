@@ -83,8 +83,8 @@ type LevelDice struct {
 	Dice     *formula.Formula
 }
 
-// Damage describes hit-point damage. Exactly one of Dice, ByLevel and Parts
-// is set.
+// Damage describes hit-point damage. Exactly one of Dice, ByLevel, Parts and
+// Steps is set.
 type Damage struct {
 	Dice    *formula.Formula
 	ByLevel []LevelDice // ascending MinLevel; the last row with MinLevel <= level applies
@@ -92,6 +92,10 @@ type Damage struct {
 	// own save effect, so the GM can drop the part a save negates (ADR 0008
 	// step 13). The instance is the parts added up, in the data's order.
 	Parts []DamagePart
+	// Steps are dice that change from one round, or one instance, to the
+	// next (ADR 0008 step 15). With Steps, Instances and Rounds are nil: the
+	// steps are the rounds or the instances.
+	Steps *DamageSteps
 	// Instances is how many separate damage rolls one casting makes (missiles,
 	// bolts). Nil means one.
 	Instances *formula.Formula
@@ -99,6 +103,28 @@ type Damage struct {
 	// (Melf's acid). Nil means once.
 	Rounds *formula.Formula
 	Type   string
+}
+
+// StepPer says what one dice step of a damage is.
+type StepPer string
+
+// Dice step units.
+const (
+	StepPerRound    StepPer = "round"    // one round of a damage that lasts (Vitriolic Sphere)
+	StepPerInstance StepPer = "instance" // one separate roll of one casting (a Chain Lightning strike)
+)
+
+// DamageSteps are the dice of a damage whose rounds, or instances, differ
+// (ADR 0008 step 15). Exactly one of Dice and List is set: Dice is the formula
+// of every step, its step variable the step's number (1-based), for Count
+// steps at most; List is the formula of each step, in order. A step may have
+// no damage (a round before a cloud flames); the steps after the last one
+// with damage are dropped (the damage has run out).
+type DamageSteps struct {
+	Per   StepPer
+	Dice  *formula.Formula
+	Count *formula.Formula
+	List  []*formula.Formula
 }
 
 // DamagePart is one part of a damage instance: its dice (exactly one of Dice

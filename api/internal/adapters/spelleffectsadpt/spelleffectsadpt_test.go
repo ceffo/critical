@@ -289,3 +289,73 @@ func TestParse_ModesRefused(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0008 step 15: the loader maps dice steps, one formula for every step
+// (with its count) or a list, the step variable allowed in their formulas;
+// a mode's damage may have steps too.
+func TestParse_DamageSteps(t *testing.T) {
+	seed := damageSeed(`,"save":{"type":"spell","effect":"half"}`, `{"steps":{
+	  "per":"instance","dice":"(max(min(level,12)-(step-1),0))d6","count":"level"},"type":"electricity"}`)
+	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	require.NoError(t, err)
+	e, ok := c.Get("bolt")
+	require.True(t, ok)
+	st := e.Damage.Steps
+	require.NotNil(t, st)
+	assert.Nil(t, e.Damage.Dice)
+	assert.Equal(t, spelleffectsvc.StepPerInstance, st.Per)
+	assert.Equal(t, "(max(min(level,12)-(step-1),0))d6", st.Dice.String())
+	assert.Equal(t, "level", st.Count.String())
+	assert.Nil(t, st.List)
+
+	seed = damageSeed("", `{"steps":{"per":"round","list":[0,"0","leveld2"]},"type":"fire"}`)
+	c, err = spelleffectsadpt.New(writeSeed(t, seed))
+	require.NoError(t, err)
+	e, _ = c.Get("bolt")
+	require.Len(t, e.Damage.Steps.List, 3)
+	assert.Equal(t, "0", e.Damage.Steps.List[0].String(), "a bare number is a formula")
+	assert.Equal(t, "leveld2", e.Damage.Steps.List[2].String())
+
+	seed = modesSeed("damage", "", `"modes":[{"key":"a","damage":{"dice":"1d6"}},
+	  {"key":"b","damage":{"steps":{"per":"round","list":["2d6","1d6"]}}}]`)
+	c, err = spelleffectsadpt.New(writeSeed(t, seed))
+	require.NoError(t, err)
+	e, _ = c.Get("bolt")
+	require.NotNil(t, e.Modes[1].Damage.Steps)
+}
+
+// ADR 0008 step 15: invalid dice steps are refused at startup.
+func TestParse_DamageStepsRefused(t *testing.T) {
+	tests := map[string]struct{ damage, want string }{
+		"dice and steps":        {`{"dice":"1d6","steps":{"per":"round","list":["1d6"]}}`, "exactly one of dice, by_level and parts (or steps)"},
+		"parts and steps":       {`{"parts":[{"dice":"1d4"}],"steps":{"per":"round","list":["1d6"]}}`, "exactly one of dice, by_level and parts (or steps)"},
+		"steps and rounds":      {`{"steps":{"per":"round","list":["1d6"]},"rounds":"3"}`, "steps replace instances and rounds"},
+		"steps and instances":   {`{"steps":{"per":"instance","list":["1d6"]},"instances":"3"}`, "steps replace instances and rounds"},
+		"unknown per":           {`{"steps":{"per":"turn","list":["1d6"]}}`, "damage.steps: per turn is not one of"},
+		"no per":                {`{"steps":{"list":["1d6"]}}`, "damage.steps: per  is not one of"},
+		"dice and list":         {`{"steps":{"per":"round","dice":"1d6","count":"2","list":["1d6"]}}`, "damage.steps: set exactly one of dice and list"},
+		"neither dice nor list": {`{"steps":{"per":"round"}}`, "damage.steps: set exactly one of dice and list"},
+		"dice without count":    {`{"steps":{"per":"round","dice":"1d6"}}`, "damage.steps: dice needs a count"},
+		"list with a count":     {`{"steps":{"per":"round","list":["1d6"],"count":"2"}}`, "damage.steps: a list has no count"},
+		"empty list":            {`{"steps":{"per":"round","list":[]}}`, "damage.steps.list: the list is empty"},
+		"no damage at all":      {`{"steps":{"per":"round","list":["0","0"]}}`, "damage.steps: no step has damage at caster level 1"},
+		"no damage at a level":  {`{"steps":{"per":"round","dice":"(max(level-3,0))d6","count":"2"}}`, "no step has damage at caster level 1"},
+		"step dice multiplied":  {`{"steps":{"per":"round","list":["1d6","2*1d6"]}}`, "damage.steps: step 2: expand 2*1d6"},
+		"dice count rolled":     {`{"steps":{"per":"round","dice":"(1d4)d6","count":"2"}}`, "expand (1d4)d6"},
+		"dice count negative":   {`{"steps":{"per":"round","dice":"(12-2*step)d4","count":"6"}}`, "damage.steps.dice: formula"},
+		"count rolled":          {`{"steps":{"per":"round","dice":"1d6","count":"1d4"}}`, "steps.count must be a number from 1 to 100"},
+		"count zero":            {`{"steps":{"per":"round","dice":"1d6","count":"level-1"}}`, "steps.count must be a number from 1 to 100 at caster level 1"},
+		"count too high":        {`{"steps":{"per":"round","dice":"1d6","count":"101"}}`, "steps.count must be a number from 1 to 100"},
+		"count uses step":       {`{"steps":{"per":"round","dice":"1d6","count":"step"}}`, "damage.steps.count: formula"},
+		"step outside steps":    {`{"dice":"(step)d6"}`, "step is only allowed in a dice step"},
+		"rounds use step":       {`{"dice":"1d6","rounds":"step"}`, "step is only allowed in a dice step"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := spelleffectsadpt.New(writeSeed(t, damageSeed("", tt.damage)))
+			require.Error(t, err)
+			assert.ErrorContains(t, err, `spell "bolt"`)
+			assert.ErrorContains(t, err, tt.want)
+		})
+	}
+}

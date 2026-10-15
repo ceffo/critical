@@ -169,9 +169,19 @@ type damageDTO struct {
 	Dice      flexString     `json:"dice"`
 	ByLevel   []levelDiceDTO `json:"by_level"`
 	Parts     []partDTO      `json:"parts"`
+	Steps     *stepsDTO      `json:"steps"`
 	Instances flexString     `json:"instances"`
 	Rounds    flexString     `json:"rounds"`
 	Type      string         `json:"type"`
+}
+
+// stepsDTO are the dice steps of a damage: per round or per instance, one
+// formula for every step (dice, with count) or one per step (list).
+type stepsDTO struct {
+	Per   string       `json:"per"`
+	Dice  flexString   `json:"dice"`
+	Count flexString   `json:"count"`
+	List  []flexString `json:"list"`
 }
 
 // modeDTO is one cast-time mode: its key and its damage (absent: none).
@@ -343,11 +353,43 @@ func (d damageDTO) toDomain(field string) (*spelleffectsvc.Damage, error) {
 		}
 		out.Parts = append(out.Parts, part)
 	}
+	if d.Steps != nil {
+		if out.Steps, err = d.Steps.toDomain(field + ".steps"); err != nil {
+			return nil, err
+		}
+	}
 	if out.Instances, err = optFormula(field+".instances", d.Instances); err != nil {
 		return nil, err
 	}
 	if out.Rounds, err = optFormula(field+".rounds", d.Rounds); err != nil {
 		return nil, err
+	}
+	return out, nil
+}
+
+// toDomain maps dice steps; their formulas may use the step variable, the
+// count may not. An empty "list": [] stays an empty, non-nil list:
+// validation refuses it.
+func (d stepsDTO) toDomain(field string) (*spelleffectsvc.DamageSteps, error) {
+	out := &spelleffectsvc.DamageSteps{Per: spelleffectsvc.StepPer(d.Per)}
+	var err error
+	if d.Dice != "" {
+		if out.Dice, err = formula.ParseStep(string(d.Dice)); err != nil {
+			return nil, fmt.Errorf("%s.dice: %w", field, err)
+		}
+	}
+	if out.Count, err = optFormula(field+".count", d.Count); err != nil {
+		return nil, err
+	}
+	if d.List != nil {
+		out.List = make([]*formula.Formula, 0, len(d.List))
+	}
+	for i, src := range d.List {
+		f, err := formula.ParseStep(string(src))
+		if err != nil {
+			return nil, fmt.Errorf("%s.list[%d]: %w", field, i, err)
+		}
+		out.List = append(out.List, f)
 	}
 	return out, nil
 }

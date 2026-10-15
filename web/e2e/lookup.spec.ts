@@ -58,6 +58,7 @@ const named = [
   row("Flame Strike", "Priest", 5, "Evocation", "Elemental Fire"),
   row("Cure Light Wounds", "Priest", 1, "Necromancy", "Healing"),
   row("Dimensional Folding", "Wizard", 7, "Dimension"),
+  row("Chain Lightning", "Wizard", 6, "Evocation"),
   row("Quixotic Probe", "Priest", 2, "Divination", "Sun", {
     casting_time: "Special",
     range: "Touch",
@@ -192,6 +193,16 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
     detail(page).getByTestId("spell-dice-damage").getByTestId("spell-dice-formula"),
   ).toHaveText("5 × 1d4+1 force");
   await snap(page, "damage-dice");
+
+  // A damage whose dice change from one strike to the next: every step, in order.
+  await search(page).fill("chain lightning");
+  await rows(page).filter({ hasText: "Chain Lightning" }).click();
+  await expect(
+    detail(page).getByTestId("spell-dice-damage").getByTestId("spell-dice-formula"),
+  ).toHaveText("in turn: 12d6, 11d6, 10d6, 9d6, 8d6, 7d6, 6d6, 5d6, 4d6, 3d6, 2d6, 1d6 electricity");
+  await snap(page, "damage-dice-steps");
+  await search(page).fill("magic");
+  await rows(page).filter({ hasText: "Magic Missile" }).click();
 
   const description = detail(page).getByTestId("spell-description");
   const text = description.locator("p");

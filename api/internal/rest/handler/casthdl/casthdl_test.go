@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/render"
@@ -79,6 +80,29 @@ func TestToDTO_DamageParts(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "parts")
 	assert.NotContains(t, string(raw), "totalOnSave")
+}
+
+// ADR 0008 step 15: a cast's damage made of steps carries the steps' unit and
+// each roll's step; without steps neither.
+func TestToDTO_DamageSteps(t *testing.T) {
+	dto := casthdl.ToDTO(castsvc.CastResult{Damage: &castsvc.DamageResult{
+		Type: "acid", Instances: 1, Rounds: 2, Total: 9, StepsPer: spelleffectsvc.StepPerRound,
+		Rolls: []castsvc.Roll{
+			{Formula: "(max(4-2*(step-1),0))d4", Step: 1, Total: 7, Dice: []castsvc.DieRoll{{Sides: 4, Value: 3}, {Sides: 4, Value: 4}}},
+			{Formula: "(max(4-2*(step-1),0))d4", Step: 2, Total: 2, Dice: []castsvc.DieRoll{{Sides: 4, Value: 2}}},
+		},
+	}})
+	raw, err := json.Marshal(dto.Damage)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"dice":"","type":"acid","instances":1,"rounds":2,"total":9,"stepsPer":"round","rolls":[
+		{"formula":"(max(4-2*(step-1),0))d4","step":1,"dice":[{"sides":4,"value":3},{"sides":4,"value":4}],"total":7},
+		{"formula":"(max(4-2*(step-1),0))d4","step":2,"dice":[{"sides":4,"value":2}],"total":2}]}`, string(raw))
+
+	raw, err = json.Marshal(casthdl.ToDTO(castsvc.CastResult{Damage: &castsvc.DamageResult{
+		Rolls: []castsvc.Roll{{Formula: "1d4"}},
+	}}).Damage)
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "step")
 }
 
 // fakeCast records the requests and answers with the mode it was given.

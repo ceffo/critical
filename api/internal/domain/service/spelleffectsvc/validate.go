@@ -211,14 +211,19 @@ var validPartSaves = []SaveEffect{SaveNone, SaveNegates}
 // validate checks a damage: its error starts after the field path (": ..."
 // or ".parts[0]..."), which the caller prefixes ("damage", "modes[1].damage").
 func (d *Damage) validate() error {
-	single := d.Dice != nil || len(d.ByLevel) > 0
+	set := 0
+	for _, ok := range []bool{d.Dice != nil, len(d.ByLevel) > 0, d.Parts != nil, d.Steps != nil} {
+		if ok {
+			set++
+		}
+	}
 	switch {
-	case d.Parts != nil && single:
-		return fmt.Errorf(": set exactly one of dice, by_level and parts")
+	case set != 1:
+		return fmt.Errorf(": set exactly one of dice, by_level and parts (or steps)")
 	case d.Parts != nil && len(d.Parts) == 0:
 		return fmt.Errorf(".parts: the list is empty")
-	case d.Parts == nil && (d.Dice == nil) == (len(d.ByLevel) == 0):
-		return fmt.Errorf(": set exactly one of dice, by_level and parts")
+	case d.Steps != nil:
+		return d.validateSteps()
 	}
 	if err := validateByLevel(d.ByLevel); err != nil {
 		return fmt.Errorf(".%w", err)
@@ -246,6 +251,40 @@ func (d *Damage) validate() error {
 			if _, err := f.Expand(level); err != nil {
 				return fmt.Errorf(": %w", err)
 			}
+		}
+	}
+	return nil
+}
+
+var validStepPers = []StepPer{StepPerRound, StepPerInstance}
+
+// validateSteps checks a damage made of dice steps (ADR 0008 step 15): steps
+// per round or per instance, which replace instances and rounds; exactly one
+// of dice (with count) and a non-empty list; at every caster level each step
+// reduces to dice plus a constant, count is a number from 1 to
+// formula.MaxSteps and at least one step has damage.
+func (d *Damage) validateSteps() error {
+	st := d.Steps
+	switch {
+	case d.Instances != nil || d.Rounds != nil:
+		return fmt.Errorf(": steps replace instances and rounds, set neither")
+	case (st.Dice == nil) == (st.List == nil):
+		return fmt.Errorf(".steps: set exactly one of dice and list")
+	case st.Dice != nil && st.Count == nil:
+		return fmt.Errorf(".steps: dice needs a count")
+	case st.List != nil && st.Count != nil:
+		return fmt.Errorf(".steps: a list has no count (it is its length)")
+	case st.List != nil && len(st.List) == 0:
+		return fmt.Errorf(".steps.list: the list is empty")
+	case len(st.List) > formula.MaxSteps:
+		return fmt.Errorf(".steps.list: more than %d steps", formula.MaxSteps)
+	}
+	if err := oneOf(st.Per, validStepPers, "per"); err != nil {
+		return fmt.Errorf(".steps: %w", err)
+	}
+	for level := 1; level <= MaxCasterLevel; level++ {
+		if _, err := st.At(level); err != nil {
+			return fmt.Errorf(".steps: %w", err)
 		}
 	}
 	return nil

@@ -51,6 +51,16 @@ type CharacterTemplate struct {
 	SavePetriPoly    func() int64
 	SaveBreath       func() int64
 	SaveSpell        func() int64
+	Class            func() string
+	Race             func() string
+	Alignment        func() string
+	Age              func() int64
+	Sex              func() string
+	Height           func() string
+	Weight           func() string
+	Hair             func() string
+	Eyes             func() string
+	Languages        func() string
 
 	r characterR
 	f *Factory
@@ -319,6 +329,46 @@ func (o CharacterTemplate) BuildSetter() *models.CharacterSetter {
 		val := o.SaveSpell()
 		m.SaveSpell = omit.From(val)
 	}
+	if o.Class != nil {
+		val := o.Class()
+		m.Class = omit.From(val)
+	}
+	if o.Race != nil {
+		val := o.Race()
+		m.Race = omit.From(val)
+	}
+	if o.Alignment != nil {
+		val := o.Alignment()
+		m.Alignment = omit.From(val)
+	}
+	if o.Age != nil {
+		val := o.Age()
+		m.Age = omit.From(val)
+	}
+	if o.Sex != nil {
+		val := o.Sex()
+		m.Sex = omit.From(val)
+	}
+	if o.Height != nil {
+		val := o.Height()
+		m.Height = omit.From(val)
+	}
+	if o.Weight != nil {
+		val := o.Weight()
+		m.Weight = omit.From(val)
+	}
+	if o.Hair != nil {
+		val := o.Hair()
+		m.Hair = omit.From(val)
+	}
+	if o.Eyes != nil {
+		val := o.Eyes()
+		m.Eyes = omit.From(val)
+	}
+	if o.Languages != nil {
+		val := o.Languages()
+		m.Languages = omit.From(val)
+	}
 
 	return m
 }
@@ -391,6 +441,36 @@ func (o CharacterTemplate) Build() *models.Character {
 	}
 	if o.SaveSpell != nil {
 		m.SaveSpell = o.SaveSpell()
+	}
+	if o.Class != nil {
+		m.Class = o.Class()
+	}
+	if o.Race != nil {
+		m.Race = o.Race()
+	}
+	if o.Alignment != nil {
+		m.Alignment = o.Alignment()
+	}
+	if o.Age != nil {
+		m.Age = o.Age()
+	}
+	if o.Sex != nil {
+		m.Sex = o.Sex()
+	}
+	if o.Height != nil {
+		m.Height = o.Height()
+	}
+	if o.Weight != nil {
+		m.Weight = o.Weight()
+	}
+	if o.Hair != nil {
+		m.Hair = o.Hair()
+	}
+	if o.Eyes != nil {
+		m.Eyes = o.Eyes()
+	}
+	if o.Languages != nil {
+		m.Languages = o.Languages()
 	}
 
 	o.setModelRels(m)
@@ -770,6 +850,16 @@ func (m characterMods) RandomizeAllColumns(f *faker.Faker) CharacterMod {
 		CharacterMods.RandomSavePetriPoly(f),
 		CharacterMods.RandomSaveBreath(f),
 		CharacterMods.RandomSaveSpell(f),
+		CharacterMods.RandomClass(f),
+		CharacterMods.RandomRace(f),
+		CharacterMods.RandomAlignment(f),
+		CharacterMods.RandomAge(f),
+		CharacterMods.RandomSex(f),
+		CharacterMods.RandomHeight(f),
+		CharacterMods.RandomWeight(f),
+		CharacterMods.RandomHair(f),
+		CharacterMods.RandomEyes(f),
+		CharacterMods.RandomLanguages(f),
 	}
 }
 
@@ -1296,6 +1386,316 @@ func (m characterMods) RandomSaveSpell(f *faker.Faker) CharacterMod {
 	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
 		o.SaveSpell = func() int64 {
 			return random_int64(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Class(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Class = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) ClassFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Class = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetClass() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Class = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomClass(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Class = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Race(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Race = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) RaceFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Race = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetRace() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Race = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomRace(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Race = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Alignment(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Alignment = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) AlignmentFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Alignment = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetAlignment() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Alignment = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomAlignment(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Alignment = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Age(val int64) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Age = func() int64 { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) AgeFunc(f func() int64) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Age = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetAge() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Age = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomAge(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Age = func() int64 {
+			return random_int64(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Sex(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Sex = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) SexFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Sex = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetSex() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Sex = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomSex(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Sex = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Height(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Height = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) HeightFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Height = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetHeight() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Height = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomHeight(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Height = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Weight(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Weight = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) WeightFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Weight = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetWeight() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Weight = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomWeight(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Weight = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Hair(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Hair = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) HairFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Hair = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetHair() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Hair = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomHair(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Hair = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Eyes(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Eyes = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) EyesFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Eyes = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetEyes() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Eyes = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomEyes(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Eyes = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m characterMods) Languages(val string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Languages = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m characterMods) LanguagesFunc(f func() string) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Languages = f
+	})
+}
+
+// Clear any values for the column
+func (m characterMods) UnsetLanguages() CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Languages = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m characterMods) RandomLanguages(f *faker.Faker) CharacterMod {
+	return CharacterModFunc(func(_ context.Context, o *CharacterTemplate) {
+		o.Languages = func() string {
+			return random_string(f)
 		}
 	})
 }

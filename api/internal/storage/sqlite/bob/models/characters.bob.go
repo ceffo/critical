@@ -42,6 +42,16 @@ type Character struct {
 	SavePetriPoly    int64  `db:"save_petri_poly" `
 	SaveBreath       int64  `db:"save_breath" `
 	SaveSpell        int64  `db:"save_spell" `
+	Class            string `db:"class" `
+	Race             string `db:"race" `
+	Alignment        string `db:"alignment" `
+	Age              int64  `db:"age" `
+	Sex              string `db:"sex" `
+	Height           string `db:"height" `
+	Weight           string `db:"weight" `
+	Hair             string `db:"hair" `
+	Eyes             string `db:"eyes" `
+	Languages        string `db:"languages" `
 
 	R characterR `db:"-" `
 
@@ -90,7 +100,7 @@ type characterRLoaded struct {
 
 func buildCharacterColumns(tableName string) characterColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "name", "str", "dex", "con", "int", "wis", "cha", "hp_max", "thac0_base", "level", "xp_total", "save_para_poison", "save_rod_staff_wand", "save_petri_poly", "save_breath", "save_spell",
+		"id", "name", "str", "dex", "con", "int", "wis", "cha", "hp_max", "thac0_base", "level", "xp_total", "save_para_poison", "save_rod_staff_wand", "save_petri_poly", "save_breath", "save_spell", "class", "race", "alignment", "age", "sex", "height", "weight", "hair", "eyes", "languages",
 	)
 
 	if tableName != "" {
@@ -117,6 +127,16 @@ func buildCharacterColumns(tableName string) characterColumns {
 		SavePetriPoly:    buildCharacterColumn(tableName, "save_petri_poly"),
 		SaveBreath:       buildCharacterColumn(tableName, "save_breath"),
 		SaveSpell:        buildCharacterColumn(tableName, "save_spell"),
+		Class:            buildCharacterColumn(tableName, "class"),
+		Race:             buildCharacterColumn(tableName, "race"),
+		Alignment:        buildCharacterColumn(tableName, "alignment"),
+		Age:              buildCharacterColumn(tableName, "age"),
+		Sex:              buildCharacterColumn(tableName, "sex"),
+		Height:           buildCharacterColumn(tableName, "height"),
+		Weight:           buildCharacterColumn(tableName, "weight"),
+		Hair:             buildCharacterColumn(tableName, "hair"),
+		Eyes:             buildCharacterColumn(tableName, "eyes"),
+		Languages:        buildCharacterColumn(tableName, "languages"),
 	}
 }
 
@@ -140,6 +160,16 @@ type characterColumns struct {
 	SavePetriPoly    characterColumn
 	SaveBreath       characterColumn
 	SaveSpell        characterColumn
+	Class            characterColumn
+	Race             characterColumn
+	Alignment        characterColumn
+	Age              characterColumn
+	Sex              characterColumn
+	Height           characterColumn
+	Weight           characterColumn
+	Hair             characterColumn
+	Eyes             characterColumn
+	Languages        characterColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -202,10 +232,20 @@ type CharacterSetter struct {
 	SavePetriPoly    omit.Val[int64]  `db:"save_petri_poly" `
 	SaveBreath       omit.Val[int64]  `db:"save_breath" `
 	SaveSpell        omit.Val[int64]  `db:"save_spell" `
+	Class            omit.Val[string] `db:"class" `
+	Race             omit.Val[string] `db:"race" `
+	Alignment        omit.Val[string] `db:"alignment" `
+	Age              omit.Val[int64]  `db:"age" `
+	Sex              omit.Val[string] `db:"sex" `
+	Height           omit.Val[string] `db:"height" `
+	Weight           omit.Val[string] `db:"weight" `
+	Hair             omit.Val[string] `db:"hair" `
+	Eyes             omit.Val[string] `db:"eyes" `
+	Languages        omit.Val[string] `db:"languages" `
 }
 
 func (s CharacterSetter) SetColumns() []string {
-	vals := make([]string, 0, 17)
+	vals := make([]string, 0, 27)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -256,6 +296,36 @@ func (s CharacterSetter) SetColumns() []string {
 	}
 	if s.SaveSpell.IsValue() {
 		vals = append(vals, "save_spell")
+	}
+	if s.Class.IsValue() {
+		vals = append(vals, "class")
+	}
+	if s.Race.IsValue() {
+		vals = append(vals, "race")
+	}
+	if s.Alignment.IsValue() {
+		vals = append(vals, "alignment")
+	}
+	if s.Age.IsValue() {
+		vals = append(vals, "age")
+	}
+	if s.Sex.IsValue() {
+		vals = append(vals, "sex")
+	}
+	if s.Height.IsValue() {
+		vals = append(vals, "height")
+	}
+	if s.Weight.IsValue() {
+		vals = append(vals, "weight")
+	}
+	if s.Hair.IsValue() {
+		vals = append(vals, "hair")
+	}
+	if s.Eyes.IsValue() {
+		vals = append(vals, "eyes")
+	}
+	if s.Languages.IsValue() {
+		vals = append(vals, "languages")
 	}
 	return vals
 }
@@ -311,6 +381,36 @@ func (s CharacterSetter) Overwrite(t *Character) {
 	}
 	if s.SaveSpell.IsValue() {
 		t.SaveSpell = s.SaveSpell.MustGet()
+	}
+	if s.Class.IsValue() {
+		t.Class = s.Class.MustGet()
+	}
+	if s.Race.IsValue() {
+		t.Race = s.Race.MustGet()
+	}
+	if s.Alignment.IsValue() {
+		t.Alignment = s.Alignment.MustGet()
+	}
+	if s.Age.IsValue() {
+		t.Age = s.Age.MustGet()
+	}
+	if s.Sex.IsValue() {
+		t.Sex = s.Sex.MustGet()
+	}
+	if s.Height.IsValue() {
+		t.Height = s.Height.MustGet()
+	}
+	if s.Weight.IsValue() {
+		t.Weight = s.Weight.MustGet()
+	}
+	if s.Hair.IsValue() {
+		t.Hair = s.Hair.MustGet()
+	}
+	if s.Eyes.IsValue() {
+		t.Eyes = s.Eyes.MustGet()
+	}
+	if s.Languages.IsValue() {
+		t.Languages = s.Languages.MustGet()
 	}
 }
 
@@ -449,6 +549,76 @@ func (s *CharacterSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.SaveSpell.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "class":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Class.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Class.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "race":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Race.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Race.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "alignment":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Alignment.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Alignment.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "age":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Age.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Age.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "sex":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Sex.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Sex.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "height":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Height.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Height.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "weight":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Weight.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Weight.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "hair":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Hair.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Hair.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "eyes":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Eyes.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Eyes.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
+		case "languages":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Languages.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Languages.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -460,7 +630,7 @@ func (s CharacterSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s CharacterSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 17)
+	exprs := make([]bob.Expression, 0, 27)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -581,6 +751,76 @@ func (s CharacterSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.Class.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "class")...),
+			sqlite.Arg(s.Class),
+		}})
+	}
+
+	if s.Race.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "race")...),
+			sqlite.Arg(s.Race),
+		}})
+	}
+
+	if s.Alignment.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "alignment")...),
+			sqlite.Arg(s.Alignment),
+		}})
+	}
+
+	if s.Age.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "age")...),
+			sqlite.Arg(s.Age),
+		}})
+	}
+
+	if s.Sex.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "sex")...),
+			sqlite.Arg(s.Sex),
+		}})
+	}
+
+	if s.Height.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "height")...),
+			sqlite.Arg(s.Height),
+		}})
+	}
+
+	if s.Weight.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "weight")...),
+			sqlite.Arg(s.Weight),
+		}})
+	}
+
+	if s.Hair.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "hair")...),
+			sqlite.Arg(s.Hair),
+		}})
+	}
+
+	if s.Eyes.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "eyes")...),
+			sqlite.Arg(s.Eyes),
+		}})
+	}
+
+	if s.Languages.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "languages")...),
+			sqlite.Arg(s.Languages),
+		}})
+	}
+
 	return exprs
 }
 
@@ -591,7 +831,7 @@ func characterScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, f
 		idx int
 		dst func(o *Character) any
 	}
-	targets := make([]target, 0, 17)
+	targets := make([]target, 0, 27)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -628,6 +868,26 @@ func characterScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, f
 			targets = append(targets, target{i, func(o *Character) any { return &o.SaveBreath }})
 		case "save_spell":
 			targets = append(targets, target{i, func(o *Character) any { return &o.SaveSpell }})
+		case "class":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Class }})
+		case "race":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Race }})
+		case "alignment":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Alignment }})
+		case "age":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Age }})
+		case "sex":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Sex }})
+		case "height":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Height }})
+		case "weight":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Weight }})
+		case "hair":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Hair }})
+		case "eyes":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Eyes }})
+		case "languages":
+			targets = append(targets, target{i, func(o *Character) any { return &o.Languages }})
 		}
 	}
 
@@ -1681,6 +1941,16 @@ type characterWhere[Q sqlite.Filterable] struct {
 	SavePetriPoly    sqlite.WhereMod[Q, int64]
 	SaveBreath       sqlite.WhereMod[Q, int64]
 	SaveSpell        sqlite.WhereMod[Q, int64]
+	Class            sqlite.WhereMod[Q, string]
+	Race             sqlite.WhereMod[Q, string]
+	Alignment        sqlite.WhereMod[Q, string]
+	Age              sqlite.WhereMod[Q, int64]
+	Sex              sqlite.WhereMod[Q, string]
+	Height           sqlite.WhereMod[Q, string]
+	Weight           sqlite.WhereMod[Q, string]
+	Hair             sqlite.WhereMod[Q, string]
+	Eyes             sqlite.WhereMod[Q, string]
+	Languages        sqlite.WhereMod[Q, string]
 	R                characterWhereR[Q]
 }
 
@@ -1708,6 +1978,16 @@ func buildCharacterWhere[Q sqlite.Filterable](cols characterColumns) characterWh
 		SavePetriPoly:    sqlite.Where[Q, int64](cols.SavePetriPoly.Expression),
 		SaveBreath:       sqlite.Where[Q, int64](cols.SaveBreath.Expression),
 		SaveSpell:        sqlite.Where[Q, int64](cols.SaveSpell.Expression),
+		Class:            sqlite.Where[Q, string](cols.Class.Expression),
+		Race:             sqlite.Where[Q, string](cols.Race.Expression),
+		Alignment:        sqlite.Where[Q, string](cols.Alignment.Expression),
+		Age:              sqlite.Where[Q, int64](cols.Age.Expression),
+		Sex:              sqlite.Where[Q, string](cols.Sex.Expression),
+		Height:           sqlite.Where[Q, string](cols.Height.Expression),
+		Weight:           sqlite.Where[Q, string](cols.Weight.Expression),
+		Hair:             sqlite.Where[Q, string](cols.Hair.Expression),
+		Eyes:             sqlite.Where[Q, string](cols.Eyes.Expression),
+		Languages:        sqlite.Where[Q, string](cols.Languages.Expression),
 		R:                characterWhereR[Q]{cols: cols},
 	}
 }
@@ -1866,6 +2146,16 @@ type characterPreloadBuf struct {
 	SavePetriPoly    null.Val[int64]
 	SaveBreath       null.Val[int64]
 	SaveSpell        null.Val[int64]
+	Class            null.Val[string]
+	Race             null.Val[string]
+	Alignment        null.Val[string]
+	Age              null.Val[int64]
+	Sex              null.Val[string]
+	Height           null.Val[string]
+	Weight           null.Val[string]
+	Hair             null.Val[string]
+	Eyes             null.Val[string]
+	Languages        null.Val[string]
 }
 
 // characterScanMapperNullable maps the preloaded character
@@ -1880,7 +2170,7 @@ func characterScanMapperNullable(prefix string) scan.Mapper[*Character] {
 			idx int
 			dst func(b *characterPreloadBuf) any
 		}
-		targets := make([]target, 0, 17)
+		targets := make([]target, 0, 27)
 		for i, col := range cols {
 			name, ok := strings.CutPrefix(col, prefix)
 			if !ok {
@@ -1921,6 +2211,26 @@ func characterScanMapperNullable(prefix string) scan.Mapper[*Character] {
 				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.SaveBreath }})
 			case "save_spell":
 				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.SaveSpell }})
+			case "class":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Class }})
+			case "race":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Race }})
+			case "alignment":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Alignment }})
+			case "age":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Age }})
+			case "sex":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Sex }})
+			case "height":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Height }})
+			case "weight":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Weight }})
+			case "hair":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Hair }})
+			case "eyes":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Eyes }})
+			case "languages":
+				targets = append(targets, target{i, func(b *characterPreloadBuf) any { return &b.Languages }})
 			}
 		}
 
@@ -1959,7 +2269,17 @@ func characterScanMapperNullable(prefix string) scan.Mapper[*Character] {
 					!buf.SaveRodStaffWand.IsValue() &&
 					!buf.SavePetriPoly.IsValue() &&
 					!buf.SaveBreath.IsValue() &&
-					!buf.SaveSpell.IsValue() {
+					!buf.SaveSpell.IsValue() &&
+					!buf.Class.IsValue() &&
+					!buf.Race.IsValue() &&
+					!buf.Alignment.IsValue() &&
+					!buf.Age.IsValue() &&
+					!buf.Sex.IsValue() &&
+					!buf.Height.IsValue() &&
+					!buf.Weight.IsValue() &&
+					!buf.Hair.IsValue() &&
+					!buf.Eyes.IsValue() &&
+					!buf.Languages.IsValue() {
 					return nil, nil
 				}
 
@@ -2014,6 +2334,36 @@ func characterScanMapperNullable(prefix string) scan.Mapper[*Character] {
 				}
 				if buf.SaveSpell.IsValue() {
 					o.SaveSpell = buf.SaveSpell.MustGet()
+				}
+				if buf.Class.IsValue() {
+					o.Class = buf.Class.MustGet()
+				}
+				if buf.Race.IsValue() {
+					o.Race = buf.Race.MustGet()
+				}
+				if buf.Alignment.IsValue() {
+					o.Alignment = buf.Alignment.MustGet()
+				}
+				if buf.Age.IsValue() {
+					o.Age = buf.Age.MustGet()
+				}
+				if buf.Sex.IsValue() {
+					o.Sex = buf.Sex.MustGet()
+				}
+				if buf.Height.IsValue() {
+					o.Height = buf.Height.MustGet()
+				}
+				if buf.Weight.IsValue() {
+					o.Weight = buf.Weight.MustGet()
+				}
+				if buf.Hair.IsValue() {
+					o.Hair = buf.Hair.MustGet()
+				}
+				if buf.Eyes.IsValue() {
+					o.Eyes = buf.Eyes.MustGet()
+				}
+				if buf.Languages.IsValue() {
+					o.Languages = buf.Languages.MustGet()
 				}
 				return o, nil
 			}

@@ -97,8 +97,8 @@ func TestGetCharacter(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 17 {
-			t.Fatalf("expected %d columns, got %d", 17, len(columns))
+		if len(columns) != 27 {
+			t.Fatalf("expected %d columns, got %d", 27, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -168,6 +168,46 @@ func TestGetCharacter(t *testing.T) {
 		if columns[16] != "save_spell" {
 			t.Fatalf("expected column %d to be %s, got %s", 16, "save_spell", columns[16])
 		}
+
+		if columns[17] != "class" {
+			t.Fatalf("expected column %d to be %s, got %s", 17, "class", columns[17])
+		}
+
+		if columns[18] != "race" {
+			t.Fatalf("expected column %d to be %s, got %s", 18, "race", columns[18])
+		}
+
+		if columns[19] != "alignment" {
+			t.Fatalf("expected column %d to be %s, got %s", 19, "alignment", columns[19])
+		}
+
+		if columns[20] != "age" {
+			t.Fatalf("expected column %d to be %s, got %s", 20, "age", columns[20])
+		}
+
+		if columns[21] != "sex" {
+			t.Fatalf("expected column %d to be %s, got %s", 21, "sex", columns[21])
+		}
+
+		if columns[22] != "height" {
+			t.Fatalf("expected column %d to be %s, got %s", 22, "height", columns[22])
+		}
+
+		if columns[23] != "weight" {
+			t.Fatalf("expected column %d to be %s, got %s", 23, "weight", columns[23])
+		}
+
+		if columns[24] != "hair" {
+			t.Fatalf("expected column %d to be %s, got %s", 24, "hair", columns[24])
+		}
+
+		if columns[25] != "eyes" {
+			t.Fatalf("expected column %d to be %s, got %s", 25, "eyes", columns[25])
+		}
+
+		if columns[26] != "languages" {
+			t.Fatalf("expected column %d to be %s, got %s", 26, "languages", columns[26])
+		}
 	})
 }
 
@@ -234,6 +274,226 @@ func TestGetFirstCharacterID(t *testing.T) {
 		}
 
 		query, args, err := bob.Build(ctxTx, sqlite.Select(GetFirstCharacterID()))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}
+
+var beforeTestingGetCharacterDetails = func(context.Context, bob.Tx) (int64, error) {
+	return random_int64(nil), nil
+}
+
+func TestGetCharacterDetails(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := GetCharacterDetails(random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(getCharacterDetailsSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := GetCharacterDetails(random_int64(nil))
+
+		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(getCharacterDetailsSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingGetCharacterDetails(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Select(GetCharacterDetails(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 10 {
+			t.Fatalf("expected %d columns, got %d", 10, len(columns))
+		}
+
+		if columns[0] != "class" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "class", columns[0])
+		}
+
+		if columns[1] != "race" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "race", columns[1])
+		}
+
+		if columns[2] != "alignment" {
+			t.Fatalf("expected column %d to be %s, got %s", 2, "alignment", columns[2])
+		}
+
+		if columns[3] != "age" {
+			t.Fatalf("expected column %d to be %s, got %s", 3, "age", columns[3])
+		}
+
+		if columns[4] != "sex" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "sex", columns[4])
+		}
+
+		if columns[5] != "height" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "height", columns[5])
+		}
+
+		if columns[6] != "weight" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "weight", columns[6])
+		}
+
+		if columns[7] != "hair" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "hair", columns[7])
+		}
+
+		if columns[8] != "eyes" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "eyes", columns[8])
+		}
+
+		if columns[9] != "languages" {
+			t.Fatalf("expected column %d to be %s, got %s", 9, "languages", columns[9])
+		}
+	})
+}
+
+var beforeTestingUpdateCharacterDetails = func(context.Context, bob.Tx) (string, string, int64, string, string, string, string, string, string, int64, error) {
+	return random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), nil
+}
+
+func TestUpdateCharacterDetails(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := UpdateCharacterDetails(random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(updateCharacterDetailsSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := UpdateCharacterDetails(random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil))
+
+		if _, err := sqlite.Update(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(updateCharacterDetailsSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, beforeHookErr := beforeTestingUpdateCharacterDetails(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Update(UpdateCharacterDetails(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)))
 		if err != nil {
 			t.Fatal(err)
 		}

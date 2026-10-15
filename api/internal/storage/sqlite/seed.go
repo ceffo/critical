@@ -14,23 +14,24 @@ import (
 )
 
 type characterSeed struct {
-	Name             string `json:"name"`
-	Str              int    `json:"str"`
-	Dex              int    `json:"dex"`
-	Con              int    `json:"con"`
-	Int              int    `json:"int"`
-	Wis              int    `json:"wis"`
-	Cha              int    `json:"cha"`
-	HPMax            int    `json:"hp_max"`
-	Thac0Base        int    `json:"thac0_base"`
-	Level            int    `json:"level"`
-	XPTotal          int    `json:"xp_total"`
-	SaveParaPoison   int    `json:"save_para_poison"`
-	SaveRodStaffWand int    `json:"save_rod_staff_wand"`
-	SavePetriPoly    int    `json:"save_petri_poly"`
-	SaveBreath       int    `json:"save_breath"`
-	SaveSpell        int    `json:"save_spell"`
-	Slots            []any  `json:"slots"`
+	Name             string   `json:"name"`
+	Str              int      `json:"str"`
+	Dex              int      `json:"dex"`
+	Con              int      `json:"con"`
+	Int              int      `json:"int"`
+	Wis              int      `json:"wis"`
+	Cha              int      `json:"cha"`
+	HPMax            int      `json:"hp_max"`
+	Thac0Base        int      `json:"thac0_base"`
+	Level            int      `json:"level"`
+	XPTotal          int      `json:"xp_total"`
+	SaveParaPoison   int      `json:"save_para_poison"`
+	SaveRodStaffWand int      `json:"save_rod_staff_wand"`
+	SavePetriPoly    int      `json:"save_petri_poly"`
+	SaveBreath       int      `json:"save_breath"`
+	SaveSpell        int      `json:"save_spell"`
+	Slots            []any    `json:"slots"`
+	Languages        []string `json:"languages"`
 }
 
 type spellSeed struct {
@@ -124,14 +125,18 @@ func (d *DB) seedCharacter(ctx context.Context, seedPath string) error {
 		return nil
 	}
 
+	languages, err := json.Marshal(append([]string{}, c.Languages...))
+	if err != nil {
+		return fmt.Errorf("marshal languages: %w", err)
+	}
 	res, err := d.ExecContext(ctx,
 		`INSERT INTO characters (
 			name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
-			save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		c.Name, c.Str, c.Dex, c.Con, c.Int, c.Wis, c.Cha,
 		c.HPMax, c.Thac0Base, c.Level, c.XPTotal,
-		c.SaveParaPoison, c.SaveRodStaffWand, c.SavePetriPoly, c.SaveBreath, c.SaveSpell,
+		c.SaveParaPoison, c.SaveRodStaffWand, c.SavePetriPoly, c.SaveBreath, c.SaveSpell, string(languages),
 	)
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)

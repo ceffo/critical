@@ -168,6 +168,96 @@ var Characters = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		Class: column{
+			Name:      "class",
+			DBType:    "TEXT",
+			Default:   "'bard'",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Race: column{
+			Name:      "race",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Alignment: column{
+			Name:      "alignment",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Age: column{
+			Name:      "age",
+			DBType:    "INTEGER",
+			Default:   "0",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Sex: column{
+			Name:      "sex",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Height: column{
+			Name:      "height",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Weight: column{
+			Name:      "weight",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Hair: column{
+			Name:      "hair",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Eyes: column{
+			Name:      "eyes",
+			DBType:    "TEXT",
+			Default:   "''",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Languages: column{
+			Name:      "languages",
+			DBType:    "TEXT",
+			Default:   "'[]'",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: characterIndexes{
 		PKMainCharacters: index{
@@ -212,11 +302,21 @@ type characterColumns struct {
 	SavePetriPoly    column
 	SaveBreath       column
 	SaveSpell        column
+	Class            column
+	Race             column
+	Alignment        column
+	Age              column
+	Sex              column
+	Height           column
+	Weight           column
+	Hair             column
+	Eyes             column
+	Languages        column
 }
 
 func (c characterColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.Name, c.STR, c.Dex, c.Con, c.Int, c.Wis, c.Cha, c.HPMax, c.Thac0Base, c.Level, c.XPTotal, c.SaveParaPoison, c.SaveRodStaffWand, c.SavePetriPoly, c.SaveBreath, c.SaveSpell,
+		c.ID, c.Name, c.STR, c.Dex, c.Con, c.Int, c.Wis, c.Cha, c.HPMax, c.Thac0Base, c.Level, c.XPTotal, c.SaveParaPoison, c.SaveRodStaffWand, c.SavePetriPoly, c.SaveBreath, c.SaveSpell, c.Class, c.Race, c.Alignment, c.Age, c.Sex, c.Height, c.Weight, c.Hair, c.Eyes, c.Languages,
 	}
 }
 

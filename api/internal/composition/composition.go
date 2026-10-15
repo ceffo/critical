@@ -30,6 +30,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -61,6 +62,7 @@ type BackingServices struct {
 	Weapons   weaponsvc.SVC
 	Rest      restsvc.SVC
 	XP        xpsvc.SVC
+	Details   detailssvc.SVC
 	Skills    skillsvc.SVC
 	Dice      dicesvc.SVC
 
@@ -214,6 +216,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	detailsSvc, err := detailssvc.New(characterDAL, db)
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	xpSvc, err := xpsvc.New(xpsvc.Deps{
 		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Tx: db,
 	})
@@ -252,10 +259,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Weapons:     weaponSvc,
 		Rest:        restSvc,
 		XP:          xpSvc,
+		Details:     detailsSvc,
 		Skills:      skillSvc,
 		Dice:        diceSvc,
 		services: []domain.Service{
-			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, diceSvc,
+			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, detailsSvc, diceSvc,
 		},
 	}, nil
 }

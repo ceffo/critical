@@ -15,5 +15,6 @@
   "save_petri_poly": 9,
   "save_breath": 13,
   "save_spell": 9,
+  "languages": ["Elfique", "Commun", "Orque", "Nain"],
   "slots": []
 }

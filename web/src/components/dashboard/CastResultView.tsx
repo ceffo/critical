@@ -5,6 +5,7 @@ import type { CastResult, DiceRoll } from "@/types/spells";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { splitText } from "@/lib/slotSplit";
 import { captionClass } from "./fieldStyles";
 
 /** One die, as a small tile. */
@@ -127,34 +128,43 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </div>
       )}
 
-      {r.orb && (
-        <div className="flex flex-col gap-2 rounded-lg border p-2.5" data-testid="cast-orb">
+      {r.attack && (
+        <div className="flex flex-col gap-2 rounded-lg border p-2.5" data-testid="cast-attack">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span
-              data-testid="cast-orb-verdict"
+              data-testid="cast-attack-verdict"
               className={cn(
                 "text-3xl font-black uppercase",
-                r.orb.hit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
+                r.attack.hit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
               )}
             >
-              {r.orb.hit ? t("result.cast.orbHit") : t("result.cast.orbMiss")}
+              {r.attack.hit ? t("result.cast.attackHit") : t("result.cast.attackMiss")}
             </span>
             <span className="inline-flex items-center gap-1.5 text-sm">
               <span className={captionClass}>d20</span>
-              <Die sides={20} value={r.orb.d20Roll} />
+              <Die sides={20} value={r.attack.d20Roll} />
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {t("result.cast.orbNeeds", {
-              needed: r.orb.targetACNeeded,
-              ac: r.orb.targetAc,
-              thac0: r.orb.effectiveThac0,
+            {t("result.cast.attackNeeds", {
+              needed: r.attack.targetACNeeded,
+              ac: r.attack.targetAc,
+              thac0: r.attack.effectiveThac0,
             })}
           </p>
-          <p className="text-sm" data-testid="cast-orb-gem">
-            {t("result.cast.orbGem", { gem: r.orb.gem, left: r.orb.remaining })}
-          </p>
         </div>
+      )}
+
+      {r.consumedItem && (
+        <p className="text-sm" data-testid="cast-item">
+          {t("result.cast.itemSpent", { name: r.consumedItem.name, left: r.consumedItem.remaining })}
+        </p>
+      )}
+
+      {r.extraSlots && r.extraSlots.length > 0 && (
+        <p className="text-sm" data-testid="cast-extra-slots">
+          {t("result.cast.extraSlots", { slots: splitText(t, r.extraSlots) })}
+        </p>
       )}
 
       {r.damage && (

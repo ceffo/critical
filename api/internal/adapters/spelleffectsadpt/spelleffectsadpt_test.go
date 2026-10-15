@@ -94,8 +94,15 @@ func TestCatalog_Formulas(t *testing.T) {
 	hi, _ = mi.Charges.Count.Max(30)
 	assert.Equal(t, 8, hi, "max 8 images")
 
+	// Cast mechanics are data: the orb spends a gem and rolls a to-hit, Rary's
+	// grants 3 spell levels of slots.
 	co, _ := c.Get("chromatic_orb")
-	require.Len(t, co.Damage.ByLevel, 8)
+	require.NotNil(t, co.ConsumeItem)
+	assert.Equal(t, "gem", co.ConsumeItem.Type)
+	assert.True(t, co.AttackRoll)
+	rm, _ := c.Get("rarys_mnemonic_enhancer")
+	require.NotNil(t, rm.GrantSlots)
+	assert.Equal(t, 3, rm.GrantSlots.Levels)
 
 	h, _ := c.Get("haste")
 	d, _ := h.Duration.Rounds.Eval(7, nil)

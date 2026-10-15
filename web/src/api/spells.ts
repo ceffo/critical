@@ -9,12 +9,13 @@ export function fetchSpellSlots(): Promise<SpellSlot[]> {
 export interface CastOptions {
   /** Whether a buff spell lands on the Bard (omitted: the spell's default). */
   onSelf?: boolean;
-  /** The spell cast from a blank Rary's extra slot. */
+  /** The spell cast from a blank extra slot. */
   spellId?: string;
-  /** Rary's Mnemonic Enhancer: the levels of the slots granted ([1,1,1], [1,2] or [3]). */
+  /** A spell that grants slots: one of its slot_splits (omitted: the first). */
   extraSlots?: number[];
-  /** Chromatic Orb: the inventory gem spent (omitted: the only gem) and the target AC. */
-  gemItemId?: string;
+  /** A spell that consumes an item: the item spent (omitted: the only one of its type left). */
+  itemId?: string;
+  /** A spell with an attack roll: the target's AC. */
   targetAc?: number;
 }
 

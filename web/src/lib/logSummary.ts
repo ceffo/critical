@@ -3,6 +3,7 @@ import type { LogEntry } from "@/types/log";
 import type { RollResult, WeaponChangeRecord } from "@/types/combat";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
+import { splitText } from "@/lib/slotSplit";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
@@ -18,6 +19,12 @@ export interface CastLogPayload {
     applied: boolean;
   };
   damage?: { total: number; type: string };
+  /** Levels of the extra slots the cast granted. */
+  extraSlots?: number[];
+  /** The inventory item the cast spent. */
+  item?: { itemId: string; name: string; remaining: number };
+  /** The spell's to-hit roll. */
+  attack?: { d20: number; targetAc: number; hit: boolean };
 }
 
 function castPayload(e: LogEntry): CastLogPayload | null {
@@ -43,6 +50,21 @@ function castText(p: CastLogPayload, t: TFunction): string {
   if (p.damage)
     details.push(
       t("log.cast.damage", { total: p.damage.total, type: p.damage.type }),
+    );
+  if (p.extraSlots && p.extraSlots.length > 0)
+    details.push(
+      t("log.cast.extraSlots", { slots: splitText(t, p.extraSlots) }),
+    );
+  if (p.item)
+    details.push(
+      t("log.cast.item", { name: p.item.name, left: p.item.remaining }),
+    );
+  if (p.attack)
+    details.push(
+      t(p.attack.hit ? "log.cast.attackHit" : "log.cast.attackMiss", {
+        d20: p.attack.d20,
+        ac: p.attack.targetAc,
+      }),
     );
   return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
 }

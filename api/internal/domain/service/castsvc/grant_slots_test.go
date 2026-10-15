@@ -11,9 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// critical-qki.41: Rary's Mnemonic Enhancer grants 3 spell levels of extra
-// slots, split by the caster: 3 x L1, or L1 + L2, or one L3.
-func TestCast_RarysMnemonicEnhancer_AddsTheChosenSlots(t *testing.T) {
+const raryID = "rarys_mnemonic_enhancer"
+
+// ADR 0008 step 9: a spell with grant_slots (Rary's Mnemonic Enhancer, 3
+// levels in the seed) adds extra slots split by the caster: 3 x L1, or L1 +
+// L2, or one L3.
+func TestCast_GrantSlots_AddsTheChosenSlots(t *testing.T) {
 	tests := []struct {
 		name   string
 		split  []int
@@ -26,14 +29,15 @@ func TestCast_RarysMnemonicEnhancer_AddsTheChosenSlots(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.prepared(slot(castsvc.RaryID, "Rary's Mnemonic Enhancer", 4))
+			f.prepared(slot(raryID, "Rary's Mnemonic Enhancer", 4))
 			res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{ExtraSlots: tt.split})
 			require.NoError(t, err)
 			assert.Equal(t, tt.extras, res.ExtraSlots)
 			require.Len(t, f.saved, 1)
 			got := f.saved[0]
 			require.Len(t, got, 1+len(tt.extras))
-			assert.True(t, got[0].Used, "Rary's own slot is spent")
+			assert.True(t, got[0].Used, "the granting spell's own slot is spent")
+			assert.Empty(t, res.TextOnly, "the cast did something")
 			for i, l := range tt.extras {
 				assert.Equal(t, spellsvc.SpellSlot{Level: l, Extra: true}, got[1+i])
 			}
@@ -42,17 +46,18 @@ func TestCast_RarysMnemonicEnhancer_AddsTheChosenSlots(t *testing.T) {
 	}
 }
 
-func TestCast_RarysMnemonicEnhancer_RejectsAWrongSplit(t *testing.T) {
+func TestCast_GrantSlots_RejectsAWrongSplit(t *testing.T) {
 	for _, split := range [][]int{{1, 1}, {2, 2}, {4}, {0, 3}, {1, 1, 1, 1}} {
 		f := newFixture(t)
-		f.prepared(slot(castsvc.RaryID, "Rary's Mnemonic Enhancer", 4))
+		f.prepared(slot(raryID, "Rary's Mnemonic Enhancer", 4))
 		_, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{ExtraSlots: split})
 		assert.ErrorIs(t, err, domain.ErrInvalidInput, "%v", split)
 		assert.Empty(t, f.saved)
 	}
 }
 
-// A blank extra slot is cast with a spell of its level picked at cast time.
+// ADR 0008 step 9: a blank extra slot is cast with a spell of its level
+// picked at cast time.
 func TestCast_ExtraSlot_PicksTheSpell(t *testing.T) {
 	extra := spellsvc.SpellSlot{Level: 1, Extra: true}
 

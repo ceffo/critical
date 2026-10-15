@@ -2,6 +2,7 @@ package castsvc_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -13,15 +14,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// critical-qki.42: Chromatic Orb spends a gem, rolls an attack with no crit
-// and shows hit or miss and the gem used (no gem effect is modelled).
+// ADR 0008 step 10: a spell with consume_item and attack_roll (Chromatic Orb
+// in the seed: a gem) spends one item of that type, rolls a to-hit with no
+// crit and shows hit or miss and the item used (no gem effect is modelled).
 var (
 	diamonds = itemsvc.Item{ID: "diamond", Name: "Diamond", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 41}
 	rubies   = itemsvc.Item{ID: "ruby", Name: "Ruby", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2}
 	powerGem = itemsvc.Item{ID: "power_gem_dispel", Name: "Power Gem: Dispel Magic", Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1}
 )
 
-func (f *fixture) orbSetup(items ...itemsvc.Item) {
+func (f *fixture) gemSpellSetup(items ...itemsvc.Item) {
 	f.prepared(slot("chromatic_orb", "Chromatic Orb", 1))
 	f.items.EXPECT().List(mock.Anything).Return(items, nil)
 }
@@ -32,9 +34,9 @@ func (f *fixture) spend(it itemsvc.Item) {
 	f.items.EXPECT().Use(mock.Anything, it.ID).Return(left, nil).Once()
 }
 
-func TestCast_ChromaticOrb_HitShowsTheGemEffect(t *testing.T) {
+func TestCast_ConsumeItemAttackRoll_HitShowsTheItemSpent(t *testing.T) {
 	f := newFixture(t) // no dice: the spell's level damage must not be rolled
-	f.orbSetup(powerGem, diamonds)
+	f.gemSpellSetup(powerGem, diamonds)
 	f.spend(diamonds)
 	f.attacks.EXPECT().RollSpellToHit(mock.Anything, charID, 4).Return(&combatsvc.ToHitRoll{
 		D20Roll: 20, BaseThac0: 12, EffectiveThac0: 12, TargetAC: 4, TargetACNeeded: 8, Hit: true, HitMargin: 12,
@@ -43,30 +45,32 @@ func TestCast_ChromaticOrb_HitShowsTheGemEffect(t *testing.T) {
 	ac := 4
 	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{TargetAC: &ac})
 	require.NoError(t, err)
-	require.NotNil(t, res.Orb)
-	assert.Nil(t, res.Damage, "the gem decides the effect, not the level damage table")
-	assert.Equal(t, "Diamond", res.Orb.Gem)
-	assert.Equal(t, 40, res.Orb.Remaining)
-	assert.True(t, res.Orb.Attack.Hit)
+	require.NotNil(t, res.Consumed)
+	require.NotNil(t, res.Attack)
+	assert.Nil(t, res.Damage, "no damage is rolled")
+	assert.Empty(t, res.TextOnly, "the cast did something")
+	assert.Equal(t, castsvc.ConsumedItem{ItemID: "diamond", Name: "Diamond", Remaining: 40}, *res.Consumed)
+	assert.True(t, res.Attack.Hit)
 	require.Len(t, f.entries, 1)
 	assert.Contains(t, keys(f.entries[0].Snapshots), "items:diamond", "voiding gives the gem back")
-	assert.Contains(t, string(f.entries[0].Payload), `"orb"`)
+	assert.JSONEq(t, `{"itemId":"diamond","name":"Diamond","remaining":40}`, field(t, f.entries[0].Payload, "item"))
+	assert.JSONEq(t, `{"d20":20,"targetAc":4,"hit":true}`, field(t, f.entries[0].Payload, "attack"))
 }
 
-func TestCast_ChromaticOrb_MissSpendsTheGemNoEffect(t *testing.T) {
+func TestCast_ConsumeItemAttackRoll_MissSpendsTheItemNoEffect(t *testing.T) {
 	f := newFixture(t)
-	f.orbSetup(diamonds)
+	f.gemSpellSetup(diamonds)
 	f.spend(diamonds)
 	f.attacks.EXPECT().RollSpellToHit(mock.Anything, charID, 4).Return(&combatsvc.ToHitRoll{D20Roll: 3, TargetAC: 4, TargetACNeeded: 8}, nil)
 
 	ac := 4
 	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{TargetAC: &ac})
 	require.NoError(t, err)
-	assert.False(t, res.Orb.Attack.Hit)
-	assert.Equal(t, 40, res.Orb.Remaining)
+	assert.False(t, res.Attack.Hit)
+	assert.Equal(t, 40, res.Consumed.Remaining)
 }
 
-func TestCast_ChromaticOrb_Refusals(t *testing.T) {
+func TestCast_ConsumeItemAttackRoll_Refusals(t *testing.T) {
 	ac := 4
 	tests := []struct {
 		name  string
@@ -75,7 +79,7 @@ func TestCast_ChromaticOrb_Refusals(t *testing.T) {
 	}{
 		{"no gem left", []itemsvc.Item{powerGem, {ID: "diamond", Name: "Diamond", Type: "gem", Behaviour: itemsvc.BehaviourStock}}, castsvc.CastRequest{TargetAC: &ac}},
 		{"several gems, none chosen", []itemsvc.Item{diamonds, rubies}, castsvc.CastRequest{TargetAC: &ac}},
-		{"a gem that is not in the inventory", []itemsvc.Item{diamonds}, castsvc.CastRequest{TargetAC: &ac, GemItemID: "emerald"}},
+		{"a gem that is not in the inventory", []itemsvc.Item{diamonds}, castsvc.CastRequest{TargetAC: &ac, ItemID: "emerald"}},
 		{"no target AC", []itemsvc.Item{diamonds}, castsvc.CastRequest{}},
 	}
 	for _, tt := range tests {
@@ -90,15 +94,34 @@ func TestCast_ChromaticOrb_Refusals(t *testing.T) {
 	}
 }
 
-func TestCast_ChromaticOrb_PicksTheChosenGem(t *testing.T) {
+func TestCast_ConsumeItem_PicksTheChosenItem(t *testing.T) {
 	f := newFixture(t)
-	f.orbSetup(diamonds, rubies)
+	f.gemSpellSetup(diamonds, rubies)
 	f.spend(rubies)
 	f.attacks.EXPECT().RollSpellToHit(mock.Anything, charID, 4).Return(&combatsvc.ToHitRoll{D20Roll: 19, Hit: true}, nil)
 
 	ac := 4
-	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{TargetAC: &ac, GemItemID: "ruby"})
+	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{TargetAC: &ac, ItemID: "ruby"})
 	require.NoError(t, err)
-	assert.Equal(t, "Ruby", res.Orb.Gem)
-	assert.Equal(t, 1, res.Orb.Remaining)
+	assert.Equal(t, castsvc.ConsumedItem{ItemID: "ruby", Name: "Ruby", Remaining: 1}, *res.Consumed)
+}
+
+// A spell received from someone else: the item and the to-hit are the
+// caster's, nothing is spent or rolled here.
+func TestReceive_CastMechanicsAreTheCasters(t *testing.T) {
+	f := newFixture(t) // no items, no attacks, no dice expected
+	res, err := f.svc.Receive(context.Background(), charID, castsvc.ReceiveRequest{SpellID: "chromatic_orb", CasterLevel: 5})
+	require.NoError(t, err)
+	assert.Nil(t, res.Consumed)
+	assert.Nil(t, res.Attack)
+	assert.Equal(t, castsvc.TextOnlyUtility, res.TextOnly)
+}
+
+// field returns the raw JSON of a top-level key of payload.
+func field(t *testing.T, payload []byte, key string) string {
+	t.Helper()
+	var m map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(payload, &m))
+	require.Contains(t, m, key)
+	return string(m[key])
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
@@ -37,6 +38,19 @@ type SpellbookEntry struct {
 	ID    string
 	Name  string
 	Level int
+	// Cast is what casting the spell asks of the player, from the spell
+	// effects catalog (Info fills it).
+	Cast CastInputs
+}
+
+// CastInputs are the choices a spell's cast mechanics need from the player
+// (spelleffectsvc.Entry): how to split the extra slots it grants (SlotSplits,
+// the first is the default), the type of the inventory item it spends, and
+// whether it rolls a to-hit (a target AC is then required).
+type CastInputs struct {
+	SlotSplits      [][]int
+	ConsumeItemType string
+	AttackRoll      bool
 }
 
 // LevelLimit is the number of spells of one level that may be prepared.
@@ -94,6 +108,7 @@ type Log interface {
 type Deps struct {
 	Slots      Slots
 	Spellbook  Spellbook
+	Effects    spelleffectsvc.Catalog
 	Limits     Limits
 	Characters Characters
 	Log        Log
@@ -104,7 +119,7 @@ type service struct{ Deps }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Slots == nil || d.Spellbook == nil || d.Limits == nil || d.Characters == nil || d.Log == nil || d.Tx == nil {
+	if d.Slots == nil || d.Spellbook == nil || d.Effects == nil || d.Limits == nil || d.Characters == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("prepsvc: nil dependency")
 	}
 	return &service{d}, nil
@@ -130,12 +145,32 @@ func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
 	if err != nil {
 		return Info{}, err
 	}
-	out := Info{Spellbook: s.Spellbook.All()}
+	out := Info{Spellbook: append([]SpellbookEntry(nil), s.Spellbook.All()...)}
+	for i, e := range out.Spellbook {
+		out.Spellbook[i].Cast = s.castInputs(e.ID)
+	}
 	for level, max := range limits {
 		out.Limits = append(out.Limits, LevelLimit{Level: level, Max: max})
 	}
 	sort.Slice(out.Limits, func(i, j int) bool { return out.Limits[i].Level < out.Limits[j].Level })
 	return out, nil
+}
+
+// castInputs reads the cast mechanics of spell id from the catalog (ADR 0008
+// steps 9 and 10).
+func (s *service) castInputs(id string) CastInputs {
+	e, ok := s.Effects.Get(id)
+	if !ok {
+		return CastInputs{}
+	}
+	out := CastInputs{AttackRoll: e.AttackRoll}
+	if e.GrantSlots != nil {
+		out.SlotSplits = e.GrantSlots.SlotSplits()
+	}
+	if e.ConsumeItem != nil {
+		out.ConsumeItemType = e.ConsumeItem.Type
+	}
+	return out
 }
 
 // Prepare applies ADR 0008 steps 1 to 5.
@@ -222,7 +257,8 @@ func carryUsed(before []spellsvc.SpellSlot, picked []SpellbookEntry) []spellsvc.
 		}
 		out = append(out, spellsvc.SpellSlot{Level: e.Level, SpellID: e.ID, PreparedSpellName: e.Name, Used: used})
 	}
-	// Rary's extra slots are not part of the preparation: keep them.
+	// Extra slots (granted by a spell) are not part of the preparation:
+	// keep them (ADR 0008 step 9).
 	for _, b := range before {
 		if b.Extra {
 			out = append(out, b)

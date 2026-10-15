@@ -11,15 +11,28 @@ type castRecord struct {
 	CasterLevel int           `json:"casterLevel"`
 	Buff        *buffRecord   `json:"buff,omitempty"`
 	Damage      *damageRecord `json:"damage,omitempty"`
-	Orb         *orbRecord    `json:"orb,omitempty"`
+	// ExtraSlots are the levels of the extra slots the cast granted.
+	ExtraSlots []int `json:"extraSlots,omitempty"`
+	// Item is the inventory item the cast spent.
+	Item *itemRecord `json:"item,omitempty"`
+	// Attack is the spell's to-hit roll. Entries logged before the cast
+	// mechanics were general carry it as "orb" (with the gem name), which the
+	// UI no longer reads.
+	Attack *attackRecord `json:"attack,omitempty"`
 }
 
-// orbRecord is a Chromatic Orb's gem and attack.
-type orbRecord struct {
-	Gem      string `json:"gem"`
-	D20      int    `json:"d20"`
-	TargetAC int    `json:"targetAc"`
-	Hit      bool   `json:"hit"`
+// itemRecord is the item a cast spent and how many are left.
+type itemRecord struct {
+	ItemID    string `json:"itemId"`
+	Name      string `json:"name"`
+	Remaining int    `json:"remaining"`
+}
+
+// attackRecord is a spell's to-hit roll.
+type attackRecord struct {
+	D20      int  `json:"d20"`
+	TargetAC int  `json:"targetAc"`
+	Hit      bool `json:"hit"`
 }
 
 type buffRecord struct {
@@ -46,8 +59,12 @@ func toRecord(res CastResult) castRecord {
 	if d := res.Damage; d != nil {
 		r.Damage = &damageRecord{Total: d.Total, Type: d.Type}
 	}
-	if o := res.Orb; o != nil {
-		r.Orb = &orbRecord{Gem: o.Gem, D20: o.Attack.D20Roll, TargetAC: o.Attack.TargetAC, Hit: o.Attack.Hit}
+	r.ExtraSlots = res.ExtraSlots
+	if c := res.Consumed; c != nil {
+		r.Item = &itemRecord{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}
+	}
+	if a := res.Attack; a != nil {
+		r.Attack = &attackRecord{D20: a.D20Roll, TargetAC: a.TargetAC, Hit: a.Hit}
 	}
 	return r
 }

@@ -239,7 +239,7 @@ type SpellSlotDTO struct {
 	PreparedSpellID   string `json:"prepared_spell_id"`
 	PreparedSpellName string `json:"prepared_spell_name"`
 	Used              bool   `json:"used"`
-	// Extra: a Rary's Mnemonic Enhancer slot, blank until cast, gone at the long rest.
+	// Extra: a slot granted by a spell (grant_slots), blank until cast, gone at the long rest.
 	Extra bool `json:"extra,omitempty"`
 }
 

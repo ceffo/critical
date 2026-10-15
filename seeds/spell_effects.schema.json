@@ -108,7 +108,22 @@
         "propertyNames": { "enum": ["str", "dex", "con", "int", "wis", "cha"] },
         "additionalProperties": { "type": ["string", "number"] }
       },
-      "condition": { "type": "string", "description": "When the buff's modifiers apply, if not always." }
+      "condition": { "type": "string", "description": "When the buff's modifiers apply, if not always." },
+      "grant_slots": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["levels"],
+        "description": "Cast mechanic: casting adds blank extra spell slots worth this many spell levels in all, split by the caster at cast time (default: all level 1). Extra slots go at the long rest (docs/adr/0008 step 9).",
+        "properties": { "levels": { "type": "integer", "minimum": 1, "maximum": 9 } }
+      },
+      "consume_item": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type"],
+        "description": "Cast mechanic: casting spends one unit of an inventory item of this type (never a daily item), chosen by the caster when several are left (docs/adr/0008 step 10).",
+        "properties": { "type": { "type": "string" } }
+      },
+      "attack_roll": { "type": "boolean", "description": "Cast mechanic: casting needs a target AC and rolls one spell to-hit d20, never a crit (docs/adr/0002 Consequences)." }
     }
   },
   "definitions": {

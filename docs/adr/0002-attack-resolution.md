@@ -80,7 +80,8 @@ return a distinct value for each call and expect an exact number of calls.
 - A tie between the weapon's own magic and a buff "+N" shows the buff in the breakdown; the value
   is the same.
 - Exceptional Strength (18/xx) is not used: Kelsen is a Bard (warriors only, PHB).
-- Chromatic Orb's to-hit roll (a hurled spell) follows steps 2 to 5 and 8 but never crits: it rolls
+- A spell's to-hit roll (`attack_roll` in the spell effects data, e.g. Chromatic Orb, a hurled
+  spell) follows steps 2 to 5 and 8 but never crits: it rolls
   one d20 only (user, 2026-10-14: "same rules as combat"). Test: `TestRollSpellToHit`.
 - Not covered: called shots, weapon speed, two-weapon fighting, proficiency penalties, range
   modifiers other than through the situational modifier.

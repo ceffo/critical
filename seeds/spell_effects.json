@@ -143,49 +143,17 @@
     "id": "chromatic_orb",
     "name": "Chromatic Orb",
     "level": 1,
-    "kind": "damage",
+    "kind": "utility",
     "confidence": "high",
+    "note": "The gem's effect on a hit is the DM's call: the app spends the gem and rolls the to-hit only.",
     "target": "other",
     "duration": {
       "kind": "instant"
     },
-    "damage": {
-      "by_level": [
-        {
-          "min_level": 1,
-          "dice": "1d4"
-        },
-        {
-          "min_level": 2,
-          "dice": "1d6"
-        },
-        {
-          "min_level": 3,
-          "dice": "1d8"
-        },
-        {
-          "min_level": 4,
-          "dice": "1d10"
-        },
-        {
-          "min_level": 5,
-          "dice": "1d12"
-        },
-        {
-          "min_level": 6,
-          "dice": "2d4"
-        },
-        {
-          "min_level": 7,
-          "dice": "2d8"
-        },
-        {
-          "min_level": 8,
-          "dice": "0"
-        }
-      ],
-      "type": "magic"
-    }
+    "consume_item": {
+      "type": "gem"
+    },
+    "attack_roll": true
   },
   {
     "id": "color_spray",
@@ -3352,6 +3320,9 @@
     "duration": {
       "kind": "rounds",
       "rounds": "1440"
+    },
+    "grant_slots": {
+      "levels": 3
     }
   },
   {

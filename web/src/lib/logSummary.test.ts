@@ -570,3 +570,29 @@ describe("inventory entries (critical-qki.13)", () => {
     ).toBe("srv");
   });
 });
+
+describe("cast entries", () => {
+  const cast = (extra: object) =>
+    entry("cast", { action: "cast", spellId: "x_spell", spell: "X Spell", casterLevel: 15, ...extra });
+
+  it("renders the extra slots a cast granted (en/fr)", async () => {
+    const e = cast({ extraSlots: [1, 1, 1] });
+    expect(entryText(e, await makeT("en"))).toBe("Cast X Spell: extra slots 3 × level 1");
+    expect(entryText(cast({ extraSlots: [1, 2] }), await makeT("fr"))).toBe(
+      "Lancé : X Spell: emplacements supplémentaires niveau 1 + niveau 2",
+    );
+  });
+
+  it("renders the item spent and the to-hit roll (en/fr)", async () => {
+    const e = cast({
+      item: { itemId: "ruby", name: "Ruby", remaining: 1 },
+      attack: { d20: 14, targetAc: 4, hit: true },
+    });
+    expect(entryText(e, await makeT("en"))).toBe(
+      "Cast X Spell: Ruby spent (1 left), hit (d20 14 vs AC 4)",
+    );
+    expect(entryText(cast({ attack: { d20: 3, targetAc: 4, hit: false } }), await makeT("fr"))).toBe(
+      "Lancé : X Spell: raté (d20 3 contre CA 4)",
+    );
+  });
+});

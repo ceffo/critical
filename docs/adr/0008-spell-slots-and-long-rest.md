@@ -57,27 +57,34 @@ named otherwise.
    Bard's group, rogue). A spell that is low-confidence, a utility or not in the catalogue is
    shown as text only and changes nothing.
    Tests: `TestCast_PerSeedEntry`, `TestReceive`.
-9. **Rary's Mnemonic Enhancer adds slots.** It is the only spell that adds slots: 3 spell levels
-   of extra slots, split by the caster at cast time as three level-1 slots (the default), a
-   level-1 and a level-2, or one level-3; any other split is refused. An extra slot is blank
-   until cast, and the spell cast from it is picked then, of the slot's level (none picked, or
-   another level, is refused). A new preparation keeps the extra slots; voiding the cast removes
-   them and frees Rary's slot; a long rest removes them (user ruling 2026-10-15; the spell's 24 hour duration is not
-   tracked).
-   Tests: `TestCast_RarysMnemonicEnhancer_AddsTheChosenSlots`,
-   `TestCast_RarysMnemonicEnhancer_RejectsAWrongSplit`, `TestCast_ExtraSlot_PicksTheSpell`,
-   `TestPrepare_KeepsRarysExtraSlots`, `TestResetSlots_DropsRarysExtraSlots`,
-   `TestRary_VoidRemovesExtrasAndRestoresTheBaseSlot`, `TestRary_PrepareKeepsExtrasLongRestRemovesThem`
-   (composition).
-10. **Chromatic Orb spends a gem.** Casting it needs a target AC and spends one gem from the
-    inventory (an item of type `gem`, not the daily Power Gem; the gem is named when several are
-    left, refused when none), then rolls one d20 against the AC ([ADR 0002](0002-attack-resolution.md),
-    Consequences). The result shows hit or miss, the gem and how many are left; the app models no
-    gem effect and no damage (user: *"i just need the selected gem type to be consumed"*). The gem
-    count rides the cast entry, so voiding the cast gives the gem back.
-    Tests: `TestCast_ChromaticOrb_HitShowsTheGemEffect`, `TestCast_ChromaticOrb_MissSpendsTheGemNoEffect`,
-    `TestCast_ChromaticOrb_Refusals`, `TestCast_ChromaticOrb_PicksTheChosenGem`,
-    `TestOrb_VoidRestoresTheGem` (composition).
+9. **A spell can grant extra slots.** A spell whose effect data has `grant_slots` (Rary's
+   Mnemonic Enhancer: 3 levels) adds that many spell levels of extra slots, split by the caster at
+   cast time into slots of level 1 or more (3 levels: three level-1 slots, the default, a level-1
+   and a level-2, or one level-3); any other split is refused. An extra slot is blank until cast,
+   and the spell cast from it is picked then, of the slot's level (none picked, or another level,
+   is refused). A new preparation keeps the extra slots; voiding the cast removes them and frees
+   the granting spell's slot; a long rest removes them (user ruling 2026-10-15; the spell's
+   duration is not tracked). The mechanic is data, never a branch on a spell id.
+   Tests: `TestGrantSlots_SlotSplits`, `TestCast_GrantSlots_AddsTheChosenSlots`,
+   `TestCast_GrantSlots_RejectsAWrongSplit`, `TestCast_ExtraSlot_PicksTheSpell`,
+   `TestPrepare_KeepsExtraSlots`, `TestResetSlots_DropsExtraSlots`,
+   `TestGrantedSlots_VoidRemovesExtrasAndRestoresTheBaseSlot`,
+   `TestGrantedSlots_PrepareKeepsExtrasLongRestRemovesThem` (composition).
+10. **A spell can spend an item and roll a to-hit.** A spell whose effect data has
+    `consume_item` spends one inventory item of that type when cast (never a daily item such as
+    the Power Gem; the item is named when several are left, refused when none); one with
+    `attack_roll` needs a target AC and rolls one d20 against it
+    ([ADR 0002](0002-attack-resolution.md), Consequences). The target AC is checked before anything
+    is spent. The result shows hit or miss, the item and how many are left. Chromatic Orb is both
+    (a `gem`); the app models no gem effect and no damage (user: *"i just need the selected gem
+    type to be consumed"*), so its data is a `utility` spell. The item count rides the cast
+    entry, so voiding the cast gives the item back. A spell received from someone else spends and
+    rolls nothing: these are the caster's. What a cast asks of the player (split, item, target AC)
+    is sent with the spellbook, from the same data.
+    Tests: `TestCast_ConsumeItemAttackRoll_HitShowsTheItemSpent`,
+    `TestCast_ConsumeItemAttackRoll_MissSpendsTheItemNoEffect`, `TestCast_ConsumeItemAttackRoll_Refusals`,
+    `TestCast_ConsumeItem_PicksTheChosenItem`, `TestReceive_CastMechanicsAreTheCasters`,
+    `TestInfo_CastInputsFromTheCatalog`, `TestConsumedItem_VoidRestoresTheItem` (composition).
 11. **Long rest.** One transaction marks every slot unused (the preparation stays) and refills the
     per-day items ([ADR 0016](0016-inventory.md) step 3), and nothing else: stock and charges are
     not refilled. If either part fails nothing changes.

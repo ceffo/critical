@@ -9,6 +9,7 @@ import { useItemsStore } from "@/stores/items";
 import { spellId, spellName } from "@/i18n/spellName";
 import type { SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
+import { splitText } from "@/lib/slotSplit";
 import { PrepareEditor } from "./PrepareEditor";
 import { ReceivePanel } from "./ReceivePanel";
 
@@ -20,7 +21,7 @@ interface SlotRow {
   remaining: number;
 }
 
-/** One row per distinct prepared spell (copies counted), sorted by displayed name; blank Rary slots last. */
+/** One row per distinct prepared spell (copies counted), sorted by displayed name; blank extra slots last. */
 function groupSlots(
   list: (SpellSlot & { index: number })[],
   nameOf: (s: SpellSlot) => string,
@@ -61,15 +62,13 @@ export function SpellsPanel() {
   const [editing, setEditing] = useState(false);
   // Buff spells that can go on someone else land on the Bard unless this is checked.
   const [onAlly, setOnAlly] = useState(false);
-  // Rary's Mnemonic Enhancer: how its 3 spell levels split into slots.
-  const [raryChoice, setRaryChoice] = useState("1,1,1");
-  // Blank Rary's slots: the spell picked per slot index.
-  // Chromatic Orb: the target AC and the gem spent (inventory gems other than the daily Power Gem).
-  const [orbAc, setOrbAc] = useState("");
-  const [orbGem, setOrbGem] = useState("");
-  const gems = useItemsStore((s) => s.items).filter(
-    (i) => i.type.toLowerCase() === "gem" && i.behaviour !== "daily" && i.count > 0,
-  );
+  // What a cast asks of the player comes from the spellbook data (slot_splits, consume_item_type,
+  // attack_roll), per slot index: the split of the extra slots granted, the target AC, the item spent.
+  const [splits, setSplits] = useState<Record<number, string>>({});
+  const [targetAcs, setTargetAcs] = useState<Record<number, string>>({});
+  const [itemPicks, setItemPicks] = useState<Record<number, string>>({});
+  const items = useItemsStore((s) => s.items);
+  // Blank extra slots: the spell picked per slot index.
   const [picks, setPicks] = useState<Record<number, string>>({});
   const logEntries = useLogStore((s) => s.entries);
   const { run, busy } = useTableStore();
@@ -178,10 +177,23 @@ export function SpellsPanel() {
                 ).map(({ slot, blank, name: baseName, remaining }) => {
                   // A spell prepared several times is one row with the copies left; casting uses one.
                   const name = remaining > 1 ? `${baseName} ×${remaining}` : baseName;
-                  const isRary = slot.prepared_spell_id === "rarys_mnemonic_enhancer";
-                  const isOrb = slot.prepared_spell_id === "chromatic_orb";
-                  const orbAcValue = /^-?\d+$/.test(orbAc.trim()) ? Number(orbAc) : undefined;
                   const choices = info.spellbook.filter((s) => s.level === slot.level);
+                  const castId = blank ? picks[slot.index] : slot.prepared_spell_id;
+                  const needs = info.spellbook.find((s) => s.id === castId);
+                  const slotSplits = needs?.slot_splits ?? [];
+                  const split = splits[slot.index] ?? slotSplits[0]?.join(",");
+                  const acText = targetAcs[slot.index] ?? "";
+                  const targetAc = /^-?\d+$/.test(acText.trim()) ? Number(acText) : undefined;
+                  // Items a spell can spend: of its type, not a daily item (never spent by a spell), some left.
+                  const spendable = needs?.consume_item_type
+                    ? items.filter(
+                        (i) =>
+                          i.type.toLowerCase() === needs.consume_item_type!.toLowerCase() &&
+                          i.behaviour !== "daily" &&
+                          i.count > 0,
+                      )
+                    : [];
+                  const itemId = itemPicks[slot.index] ?? spendable[0]?.id;
                   return (
                     <li
                       key={slot.index}
@@ -214,60 +226,65 @@ export function SpellsPanel() {
                           ))}
                         </select>
                       )}
-                      {isOrb && !slot.used && (
-                        <>
-                          <input
-                            className="h-7 w-16 rounded border bg-background px-1 text-sm"
-                            aria-label={t("spellSlots.orbAc")}
-                            placeholder={t("spellSlots.orbAc")}
-                            data-testid="orb-ac"
-                            inputMode="numeric"
-                            value={orbAc}
-                            onChange={(e) => setOrbAc(e.target.value)}
-                          />
-                          {gems.length > 1 && (
-                            <select
-                              className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
-                              aria-label={t("spellSlots.orbGem")}
-                              data-testid="orb-gem"
-                              value={orbGem || gems[0].id}
-                              onChange={(e) => setOrbGem(e.target.value)}
-                            >
-                              {gems.map((g) => (
-                                <option key={g.id} value={g.id}>
-                                  {g.name} ({g.count})
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </>
+                      {needs?.attack_roll && !slot.used && (
+                        <input
+                          className="h-7 w-16 rounded border bg-background px-1 text-sm"
+                          aria-label={t("spellSlots.targetAc")}
+                          placeholder={t("spellSlots.targetAc")}
+                          data-testid="cast-target-ac"
+                          inputMode="numeric"
+                          value={acText}
+                          onChange={(e) => setTargetAcs({ ...targetAcs, [slot.index]: e.target.value })}
+                        />
                       )}
-                      {isRary && !slot.used && (
+                      {spendable.length > 1 && !slot.used && (
+                        <select
+                          className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
+                          aria-label={t("spellSlots.itemSpent")}
+                          data-testid="cast-item"
+                          value={itemId}
+                          onChange={(e) => setItemPicks({ ...itemPicks, [slot.index]: e.target.value })}
+                        >
+                          {spendable.map((i) => (
+                            <option key={i.id} value={i.id}>
+                              {i.name} ({i.count})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {slotSplits.length > 0 && !slot.used && (
                         <select
                           className="h-7 rounded border bg-background px-1 text-sm"
-                          aria-label={t("spellSlots.raryChoice")}
-                          data-testid="rary-split"
-                          value={raryChoice}
-                          onChange={(e) => setRaryChoice(e.target.value)}
+                          aria-label={t("spellSlots.splitChoice")}
+                          data-testid="slot-split"
+                          value={split}
+                          onChange={(e) => setSplits({ ...splits, [slot.index]: e.target.value })}
                         >
-                          <option value="1,1,1">{t("spellSlots.rary111")}</option>
-                          <option value="1,2">{t("spellSlots.rary12")}</option>
-                          <option value="3">{t("spellSlots.rary3")}</option>
+                          {slotSplits.map((levels) => (
+                            <option key={levels.join(",")} value={levels.join(",")}>
+                              {splitText(t, levels)}
+                            </option>
+                          ))}
                         </select>
                       )}
                       <Button
                         size="xs"
                         variant={slot.used ? "ghost" : "secondary"}
-                        disabled={slot.used || busy || (blank && !picks[slot.index]) || (isOrb && orbAcValue === undefined)}
+                        disabled={
+                          slot.used ||
+                          busy ||
+                          (blank && !picks[slot.index]) ||
+                          (needs?.attack_roll === true && targetAc === undefined)
+                        }
                         aria-label={t("spellSlots.castLabel", { name: baseName })}
                         onClick={() =>
                           void run(() =>
                             castSpell(slot.index, {
                               onSelf: onAlly ? false : undefined,
                               spellId: blank ? picks[slot.index] : undefined,
-                              extraSlots: isRary ? raryChoice.split(",").map(Number) : undefined,
-                              targetAc: isOrb ? orbAcValue : undefined,
-                              gemItemId: isOrb && gems.length > 1 ? orbGem || gems[0].id : undefined,
+                              extraSlots: split ? split.split(",").map(Number) : undefined,
+                              targetAc: needs?.attack_roll ? targetAc : undefined,
+                              itemId: spendable.length > 1 ? itemId : undefined,
                             }),
                           )
                         }

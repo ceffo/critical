@@ -131,6 +131,17 @@ type entryDTO struct {
 	AbilityGain map[string]abilityGainDTO `json:"ability_gain"`
 	AbilitySet  map[string]flexString     `json:"ability_set"`
 	Condition   string                    `json:"condition"`
+	GrantSlots  *grantSlotsDTO            `json:"grant_slots"`
+	ConsumeItem *consumeItemDTO           `json:"consume_item"`
+	AttackRoll  bool                      `json:"attack_roll"`
+}
+
+type grantSlotsDTO struct {
+	Levels int `json:"levels"`
+}
+
+type consumeItemDTO struct {
+	Type string `json:"type"`
 }
 
 type durationDTO struct {
@@ -195,6 +206,13 @@ func (d entryDTO) toDomain() (spelleffectsvc.Entry, error) {
 		Note:       d.Note,
 		Target:     spelleffectsvc.Target(d.Target),
 		Duration:   spelleffectsvc.Duration{Kind: spelleffectsvc.DurationKind(d.Duration.Kind)},
+		AttackRoll: d.AttackRoll,
+	}
+	if d.GrantSlots != nil {
+		e.GrantSlots = &spelleffectsvc.GrantSlots{Levels: d.GrantSlots.Levels}
+	}
+	if d.ConsumeItem != nil {
+		e.ConsumeItem = &spelleffectsvc.ConsumeItem{Type: d.ConsumeItem.Type}
 	}
 	var err error
 	// A rounds-kind duration with no formula must fail on the formula, not be skipped.

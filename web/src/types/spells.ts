@@ -4,7 +4,7 @@ export interface SpellSlot {
   prepared_spell_id: string;
   prepared_spell_name: string;
   used: boolean;
-  /** A Rary's Mnemonic Enhancer slot: blank until cast, gone at the long rest. */
+  /** A slot granted by a spell (grant_slots): blank until cast, gone at the long rest. */
   extra?: boolean;
 }
 
@@ -99,10 +99,17 @@ export interface Spell {
 }
 
 /** Mirrors api/internal/rest/handler/spellprephdl (InfoDTO). */
+/** Mirrors spellprephdl.SpellbookEntryDTO. The cast fields come from the spell effects data. */
 export interface SpellbookEntry {
   id: string;
   name: string;
   level: number;
+  /** The spell grants extra slots: the ways to split them (levels, ascending); the first is the default. */
+  slot_splits?: number[][];
+  /** The spell spends one inventory item of this type. */
+  consume_item_type?: string;
+  /** The spell rolls a to-hit: a target AC is required. */
+  attack_roll?: boolean;
 }
 
 export interface LevelLimit {
@@ -175,19 +182,26 @@ export interface CastResult {
   damage?: CastDamage;
   untracked: CastUntracked[];
   slots?: SpellSlot[];
-  /** Levels of the Rary's extra slots this cast added. */
+  /** Levels of the extra slots this cast added. */
   extraSlots?: number[];
-  orb?: CastOrb;
+  /** The inventory item the cast spent. */
+  consumedItem?: CastConsumedItem;
+  /** The spell's to-hit roll. */
+  attack?: CastAttack;
 }
 
-/** Mirrors casthdl OrbDTO: a Chromatic Orb's spent gem, attack (no crit). */
-export interface CastOrb {
-  gemItemId: string;
-  gem: string;
+/** Mirrors casthdl ConsumedItemDTO. */
+export interface CastConsumedItem {
+  itemId: string;
+  name: string;
   remaining: number;
+}
+
+/** Mirrors casthdl SpellAttackDTO: a spell's to-hit roll (one d20, no crit). */
+export interface CastAttack {
   d20Roll: number;
   baseThac0: number;
-  modifiers: { kind: string; source: string; detail?: string; value: number }[];
+  modifiers: { kind: string; detail?: string; value: number }[];
   effectiveThac0: number;
   targetAc: number;
   targetACNeeded: number;

@@ -28,9 +28,10 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	h, m := newRouter(t)
 	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{amended}, nil)
 	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(4, true, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(nil, nil)
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"topId":4,"entries":[{
+	assert.JSONEq(t, `{"topId":4,"redo":null,"entries":[{
 		"id":4,"transactionId":3,"characterId":1,"round":2,"kind":"hp_change","summary":"orc","hpDelta":-8,
 		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","note":"","status":"amended","payload":{},"effectivePayload":{},
 		"snapshots":[],
@@ -86,6 +87,48 @@ func TestLogUndo_WireShape(t *testing.T) {
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
 }
 
+// ADR 0019 steps 2 and 3: GET /api/log names the redo target (the popped
+// transaction's first entry, shaped as a log entry, even when it is not among
+// the listed entries); POST /api/log/redo sends the expected target and
+// answers with that entry, live again.
+func TestLogRedo_WireShape(t *testing.T) {
+	popped := actionlog.Entry{
+		ID: 9, TransactionID: 9, CharacterID: 1, Round: 3, Kind: actionlog.KindRoundAdvance, Payload: json.RawMessage(`{"fromRound":3,"toRound":4}`),
+		Corrections: []actionlog.Correction{{ID: 2, ActionID: 9, Kind: actionlog.CorrectionVoid, CreatedAt: at}}, CreatedAt: at,
+	}
+	h, m := newRouter(t)
+	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{}, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(8, true, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(&popped, nil)
+	rec := do(h, "GET", "/api/log", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"topId":8,"entries":[],"redo":{
+		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","summary":"","hpDelta":0,
+		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"voided",
+		"payload":{"fromRound":3,"toRound":4},"effectivePayload":{"fromRound":3,"toRound":4},"snapshots":[],
+		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
+		"createdAt":"2026-10-17T20:00:00Z"}}`, rec.Body.String())
+
+	redone := popped
+	redone.Corrections = append(append([]actionlog.Correction{}, popped.Corrections...), actionlog.Correction{ID: 3, ActionID: 9, Kind: actionlog.CorrectionRedo, CreatedAt: at})
+	h, m = newRouter(t)
+	m.log.EXPECT().Redo(mock.Anything, int64(1), int64(9)).Return(&redone, nil).Once()
+	rec = do(h, "POST", "/api/log/redo", `{"expectedRedoId":9}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{
+		"id":9,"transactionId":9,"characterId":1,"round":3,"kind":"round_advance","summary":"","hpDelta":0,
+		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"active",
+		"payload":{"fromRound":3,"toRound":4},"effectivePayload":{"fromRound":3,"toRound":4},"snapshots":[],
+		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"},{"id":3,"kind":"redo","createdAt":"2026-10-17T20:00:00Z"}],
+		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
+
+	for _, body := range []string{`{}`, `{"expectedRedoId":0}`, `not json`} {
+		h, _ = newRouter(t)
+		rec = do(h, "POST", "/api/log/redo", body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
+	}
+}
+
 // GET /api/hp events use the camelCase keys of web/src/types/hp.ts.
 func TestHPEndpoint_WireShape(t *testing.T) {
 	h, m := newRouter(t)
@@ -113,9 +156,10 @@ func TestLogEndpoints_AdjustedSaveShape(t *testing.T) {
 	h, m := newRouter(t)
 	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{save}, nil)
 	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(0, false, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(nil, nil)
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"topId":null,"entries":[{
+	assert.JSONEq(t, `{"topId":null,"redo":null,"entries":[{
 		"id":7,"transactionId":7,"characterId":1,"round":1,"kind":"save","summary":"Save vs Spells: d20 12 vs 14, FAILED","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
 		"note":"","status":"amended","payload":{"passed":false},"effectivePayload":{"passed":true},
@@ -145,9 +189,10 @@ func TestLogEndpoints_CorrectionStepShape(t *testing.T) {
 	h, m := newRouter(t)
 	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{step, attack}, nil)
 	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(9, true, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(nil, nil)
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"topId":9,"entries":[{
+	assert.JSONEq(t, `{"topId":9,"redo":null,"entries":[{
 		"id":9,"transactionId":9,"characterId":1,"round":1,"kind":"correction","summary":"","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"active",
 		"payload":{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2},

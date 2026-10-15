@@ -177,6 +177,20 @@ func (d *DAL) LatestActiveID(ctx context.Context, characterID int64) (int64, boo
 	return id, true, nil
 }
 
+// LatestPopped returns the entry whose standing void is the newest (popped
+// last and not redone since) and its transaction; ok is false when no entry
+// is popped (ADR 0019 step 2).
+func (d *DAL) LatestPopped(ctx context.Context, characterID int64) (id, transactionID int64, ok bool, err error) {
+	row, err := queries.LatestPoppedAction(characterID).One(ctx, d.exec(ctx))
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, 0, false, nil
+	}
+	if err != nil {
+		return 0, 0, false, fmt.Errorf("latest popped action_log: %w", err)
+	}
+	return row.ID, row.TransactionID.GetOr(row.ID), true, nil
+}
+
 // LatestID returns the newest entry of kind, voided or not.
 func (d *DAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Kind) (int64, bool, error) {
 	id, err := queries.LatestActionID(characterID, string(kind)).One(ctx, d.exec(ctx))
@@ -189,19 +203,23 @@ func (d *DAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Ki
 	return id, true, nil
 }
 
-// hpTotalSQL sums effective HP deltas: a voided entry counts 0, an amended one
+// hpTotalSQL sums effective HP deltas: a popped entry counts 0, an amended one
 // counts its latest amend's delta, leaving out an amend whose correction step
-// was popped (actionlog.Correction.InEffect). Raw SQL because bob's parser
-// does not support aggregates.
+// is popped (actionlog.Correction.InEffect). An entry is popped when it has a
+// void with no redo after it (ADR 0019 step 1: the newest void or redo
+// decides, as in actionlog.Entry.Voided and the bob queries). Raw SQL because
+// bob's parser does not support aggregates.
 const hpTotalSQL = `
 SELECT COALESCE(SUM(
   CASE
-    WHEN EXISTS (SELECT 1 FROM action_corrections v WHERE v.action_id = a.id AND v.kind = 'void') THEN 0
+    WHEN EXISTS (SELECT 1 FROM action_corrections v WHERE v.action_id = a.id AND v.kind = 'void'
+      AND NOT EXISTS (SELECT 1 FROM action_corrections vr WHERE vr.action_id = v.action_id AND vr.kind = 'redo' AND vr.id > v.id)) THEN 0
     ELSE COALESCE(
       (SELECT m.hp_delta FROM action_corrections m
         WHERE m.action_id = a.id AND m.kind = 'amend' AND m.hp_delta IS NOT NULL
           AND (m.step_id IS NULL OR NOT EXISTS (
-            SELECT 1 FROM action_corrections sv WHERE sv.action_id = m.step_id AND sv.kind = 'void'))
+            SELECT 1 FROM action_corrections sv WHERE sv.action_id = m.step_id AND sv.kind = 'void'
+              AND NOT EXISTS (SELECT 1 FROM action_corrections svr WHERE svr.action_id = sv.action_id AND svr.kind = 'redo' AND svr.id > sv.id)))
         ORDER BY m.id DESC LIMIT 1),
       a.hp_delta)
   END), 0)
@@ -246,12 +264,16 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 	if err != nil {
 		return fmt.Errorf("list action_corrections: %w", err)
 	}
-	// A correction step is newer than the entry it corrects, so its void (if
-	// popped) is among the corrections listed from minID.
+	// A correction step is newer than the entry it corrects, so its voids
+	// and redos are among the corrections listed from minID, in id order: the
+	// newest one says whether the step is popped (ADR 0019 step 1).
 	voided := map[int64]bool{}
 	for _, c := range corrs {
-		if c.Kind == string(actionlog.CorrectionVoid) {
+		switch actionlog.CorrectionKind(c.Kind) {
+		case actionlog.CorrectionVoid:
 			voided[c.ActionID] = true
+		case actionlog.CorrectionRedo:
+			voided[c.ActionID] = false
 		}
 	}
 	for _, c := range corrs {

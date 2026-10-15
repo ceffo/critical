@@ -122,7 +122,8 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 // Restorers writes the counts of an items snapshot back (registered for the
 // StateKeyItems family, so it serves every "items:<id>" key). An item that is
 // gone (a charges item its use removed) is inserted back whole when the
-// snapshot carries it. It runs inside the void's transaction (ctx carries
+// snapshot carries it; a state in which the item is gone (Absent or Removed)
+// deletes it. It runs inside the void's transaction (ctx carries
 // it). Items are not per character, so the character id is unused.
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
@@ -139,7 +140,10 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			for _, c := range counts {
 				var err error
 				switch {
-				case c.Absent:
+				case c.Absent, c.Removed:
+					// Gone in this state: an add's "before", a remove's
+					// "after", the "after" of a use that spent the last
+					// charge (written back by a redo, ADR 0019 step 1).
 					err = s.dal.Delete(ctx, c.ID)
 				case c.Replace && c.Item != nil:
 					err = s.dal.Update(ctx, c.item())

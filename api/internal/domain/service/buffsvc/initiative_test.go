@@ -259,6 +259,19 @@ func TestInitiativeRestorer(t *testing.T) {
 			assert.Error(t, f.svc.Restorers()[buffsvc.StateKeyInitiative].Restore(ctx, charID, json.RawMessage(bad)))
 		})
 	}
+	// ADR 0019 step 1: the "after" of the entry that rolled the initiative
+	// has no entry id (it was not assigned yet); a redo replays it with the
+	// replayed entry's id, which the reroll guard reads (ADR 0018 step 5).
+	t.Run("replay names the replayed entry", func(t *testing.T) {
+		f := newFixture(t)
+		replayer, ok := f.svc.Restorers()[buffsvc.StateKeyInitiative].(actionlog.Replayer)
+		require.True(t, ok, "the initiative restorer replays with the entry id")
+		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, &buffsvc.Initiative{D10: 8, LogEntryID: 21}).Return(nil).Once()
+		require.NoError(t, replayer.Replay(ctx, charID, 21, json.RawMessage(`{"d10":8}`)))
+		f.dal.EXPECT().SaveInitiative(mock.Anything, charID, (*buffsvc.Initiative)(nil)).Return(nil).Once()
+		require.NoError(t, replayer.Replay(ctx, charID, 21, json.RawMessage(`null`)), "an after with no initiative clears it")
+		assert.Error(t, replayer.Replay(ctx, charID, 21, json.RawMessage(`{"d10":11}`)))
+	})
 }
 
 func TestGetInitiative(t *testing.T) {

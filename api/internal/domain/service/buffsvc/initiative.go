@@ -20,7 +20,8 @@ type initiativePayload struct {
 // snapInitiative is buffsvc's JSON encoding of the initiative in action-log
 // snapshots (StateKeyInitiative); JSON null is "no initiative". EntryID is
 // absent from the "after" of the entry that rolled it (its id is not known
-// before it is recorded); restores only ever write a "before" back.
+// before it is recorded): a redo writes that "after" back through
+// initiativeRestorer.Replay, which knows the entry (ADR 0019 step 1).
 type snapInitiative struct {
 	D10     int   `json:"d10"`
 	EntryID int64 `json:"entryId,omitempty"`
@@ -153,11 +154,29 @@ func (s *service) RerollInitiative(ctx context.Context, characterID int64) (Init
 	return out, nil
 }
 
-// restoreInitiative writes an initiative snapshot back (null clears it).
-func (s *service) restoreInitiative(ctx context.Context, characterID int64, state json.RawMessage) error {
+// initiativeRestorer writes an initiative snapshot back (null clears it).
+type initiativeRestorer struct{ s *service }
+
+// Restore writes a "before" back: it names the entry that rolled it.
+func (r initiativeRestorer) Restore(ctx context.Context, characterID int64, state json.RawMessage) error {
 	initiative, err := decodeInitiative(state)
 	if err != nil {
 		return err
 	}
-	return s.dal.SaveInitiative(ctx, characterID, initiative)
+	return r.s.dal.SaveInitiative(ctx, characterID, initiative)
+}
+
+// Replay writes the "after" of entry entryID back on a redo (ADR 0019 step
+// 1). That "after" was encoded before the entry had an id, so the initiative
+// gets entryID, the entry that rolled it, as when it was first stored: the
+// reroll guard (ADR 0018 step 5) reads it.
+func (r initiativeRestorer) Replay(ctx context.Context, characterID, entryID int64, after json.RawMessage) error {
+	initiative, err := decodeInitiative(after)
+	if err != nil {
+		return err
+	}
+	if initiative != nil && initiative.LogEntryID == 0 {
+		initiative.LogEntryID = entryID
+	}
+	return r.s.dal.SaveInitiative(ctx, characterID, initiative)
 }

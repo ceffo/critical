@@ -39,7 +39,7 @@ func (s *service) popTransaction(ctx context.Context, characterID, transactionID
 		return nil, fmt.Errorf("list transaction %d: %w", transactionID, err)
 	}
 	for i := range entries {
-		if entries[i].Status() == actionlog.StatusVoided {
+		if entries[i].Voided() {
 			continue
 		}
 		if err := s.pop(ctx, characterID, &entries[i]); err != nil {

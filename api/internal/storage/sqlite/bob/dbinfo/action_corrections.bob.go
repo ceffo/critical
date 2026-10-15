@@ -112,20 +112,6 @@ var ActionCorrections = Table[
 			Comment: "",
 			Partial: false,
 		},
-		IdxActionCorrectionsOneVoid: index{
-			Type: "c",
-			Name: "idx_action_corrections_one_void",
-			Columns: []indexColumn{
-				{
-					Name:         "action_id",
-					Desc:         null.FromCond(false, true),
-					IsExpression: false,
-				},
-			},
-			Unique:  true,
-			Comment: "",
-			Partial: true,
-		},
 		IdxActionCorrectionsAction: index{
 			Type: "c",
 			Name: "idx_action_corrections_action",
@@ -194,14 +180,13 @@ func (c actionCorrectionColumns) AsSlice() []column {
 }
 
 type actionCorrectionIndexes struct {
-	PKMainActionCorrections     index
-	IdxActionCorrectionsOneVoid index
-	IdxActionCorrectionsAction  index
+	PKMainActionCorrections    index
+	IdxActionCorrectionsAction index
 }
 
 func (i actionCorrectionIndexes) AsSlice() []index {
 	return []index{
-		i.PKMainActionCorrections, i.IdxActionCorrectionsOneVoid, i.IdxActionCorrectionsAction,
+		i.PKMainActionCorrections, i.IdxActionCorrectionsAction,
 	}
 }
 

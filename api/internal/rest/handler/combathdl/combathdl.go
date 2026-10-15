@@ -285,7 +285,9 @@ type RollResultDTO struct {
 	StrengthBonus  int             `json:"strengthBonus"`
 	BonusDamage    int             `json:"bonusDamage"`
 	DamageTerms    []DamageTermDTO `json:"damageTerms"`
-	TotalDamage    int             `json:"totalDamage"`
+	// DamageRolls are the damage dice as thrown (absent when there is no damage).
+	DamageRolls []DieDTO `json:"damageRolls,omitempty"`
+	TotalDamage int      `json:"totalDamage"`
 	// UnroundedDamage is the damage formula's result before the final
 	// floor (ADR 0003 step 9); the UI shows the formula from these fields.
 	UnroundedDamage float64 `json:"unroundedDamage"`
@@ -365,6 +367,7 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
+		DamageRolls: dieDTOs(r.DamageRolls),
 		TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
 		RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
@@ -464,4 +467,19 @@ func PutCritTable(svc combatSvc) render.HandlerFunc {
 		render.OK(r.Context(), w, toCritTableDTO(t))
 		return nil
 	}
+}
+
+// DieDTO is one die thrown.
+type DieDTO struct {
+	Sides int `json:"sides"`
+	Value int `json:"value"`
+}
+
+// dieDTOs maps thrown dice to their wire shape.
+func dieDTOs(in []combatsvc.DieRoll) []DieDTO {
+	var out []DieDTO
+	for _, d := range in {
+		out = append(out, DieDTO{Sides: d.Sides, Value: d.Value})
+	}
+	return out
 }

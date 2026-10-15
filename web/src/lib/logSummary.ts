@@ -20,13 +20,25 @@ export interface CastLogPayload {
     strGain?: number;
     applied: boolean;
   };
-  damage?: { total: number; type: string };
+  damage?: {
+    total: number;
+    type: string;
+    /** Absent on casts logged before the dice were recorded. */
+    dice?: string;
+    instances?: number;
+    rounds?: number;
+    /** Every instance roll, round by round. */
+    rolls?: { formula: string; dice: { sides: number; value: number }[]; total: number }[];
+  };
   /** Levels of the extra slots the cast granted. */
   extraSlots?: number[];
   /** The inventory item the cast spent. */
   item?: { itemId: string; name: string; remaining: number };
   /** The spell's to-hit roll. */
   attack?: { d20: number; targetAc: number; hit: boolean };
+  /** The target's saving throw (the DM's side) and the catalog's note; absent on older casts. */
+  save?: { type: string; effect: string };
+  note?: string;
 }
 
 export function castPayload(e: LogEntry): CastLogPayload | null {

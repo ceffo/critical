@@ -362,6 +362,41 @@ export function dieFaces(dice: string): number | null {
   return m ? Number(m[1]) : null;
 }
 
+/** One die as a chip: its value and emphasis. */
+export interface DieChipView {
+  value: number;
+  tone: "max" | "min" | "plain";
+}
+
+function chips(dice: readonly { sides: number; value: number }[]): DieChipView[] {
+  return dice.map((d) => ({ value: d.value, tone: dieTone(d.value, d.sides) }));
+}
+
+/**
+ * The attack's damage dice as chips, from the roll as recorded (the payload or the roll endpoint);
+ * null when it has none (a miss, or an attack logged before they were recorded): the card then
+ * shows "dice -> total".
+ */
+export function attackDiceChips(r: Pick<RollResult, "damageRolls">): DieChipView[] | null {
+  return r.damageRolls && r.damageRolls.length > 0 ? chips(r.damageRolls) : null;
+}
+
+/** One damage instance of a cast: its dice as chips and its total. */
+export interface CastInstanceView {
+  dice: DieChipView[];
+  total: number;
+}
+
+/**
+ * The dice instances of a cast's damage, from its payload; null on a cast logged before they were
+ * recorded (the card then shows the total only).
+ */
+export function castInstances(c: CastLogPayload): CastInstanceView[] | null {
+  const rolls = c.damage?.rolls;
+  if (!rolls || rolls.length === 0) return null;
+  return rolls.map((r) => ({ dice: chips(r.dice), total: r.total }));
+}
+
 /** A die's emphasis: its maximum in the accent, a 1 dimmed. */
 export function dieTone(value: number, faces: number | null): "max" | "min" | "plain" {
   if (faces !== null && value === faces) return "max";

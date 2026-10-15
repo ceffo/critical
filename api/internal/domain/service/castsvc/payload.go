@@ -19,6 +19,29 @@ type castRecord struct {
 	// mechanics were general carry it as "orb" (with the gem name), which the
 	// UI no longer reads.
 	Attack *attackRecord `json:"attack,omitempty"`
+	// Save is the target's saving throw and Note the catalog's note; both
+	// are absent on casts logged before they were recorded.
+	Save *saveRecord `json:"save,omitempty"`
+	Note string      `json:"note,omitempty"`
+}
+
+// saveRecord is the target's saving throw (the DM's side).
+type saveRecord struct {
+	Type   string `json:"type"`
+	Effect string `json:"effect"`
+}
+
+// dieRecord is one die thrown: its sides and the value it showed.
+type dieRecord struct {
+	Sides int `json:"sides"`
+	Value int `json:"value"`
+}
+
+// rollRecord is one evaluated damage formula (one instance).
+type rollRecord struct {
+	Formula string      `json:"formula"`
+	Dice    []dieRecord `json:"dice"`
+	Total   int         `json:"total"`
 }
 
 // itemRecord is the item a cast spent and how many are left.
@@ -43,9 +66,16 @@ type buffRecord struct {
 	Applied bool   `json:"applied"`
 }
 
+// damageRecord: Dice, Instances, Rounds and Rolls (every instance roll, round
+// by round, with its dice) are absent on casts logged before they were
+// recorded.
 type damageRecord struct {
-	Total int    `json:"total"`
-	Type  string `json:"type"`
+	Total     int          `json:"total"`
+	Type      string       `json:"type"`
+	Dice      string       `json:"dice,omitempty"`
+	Instances int          `json:"instances,omitempty"`
+	Rounds    int          `json:"rounds,omitempty"`
+	Rolls     []rollRecord `json:"rolls,omitempty"`
 }
 
 func toRecord(res CastResult) castRecord {
@@ -57,8 +87,19 @@ func toRecord(res CastResult) castRecord {
 		}
 	}
 	if d := res.Damage; d != nil {
-		r.Damage = &damageRecord{Total: d.Total, Type: d.Type}
+		r.Damage = &damageRecord{Total: d.Total, Type: d.Type, Dice: d.Dice, Instances: d.Instances, Rounds: d.Rounds}
+		for _, roll := range d.Rolls {
+			dice := make([]dieRecord, len(roll.Dice))
+			for i, die := range roll.Dice {
+				dice[i] = dieRecord(die)
+			}
+			r.Damage.Rolls = append(r.Damage.Rolls, rollRecord{Formula: roll.Formula, Dice: dice, Total: roll.Total})
+		}
 	}
+	if s := res.Save; s != nil {
+		r.Save = &saveRecord{Type: string(s.Type), Effect: string(s.Effect)}
+	}
+	r.Note = res.Note
 	r.ExtraSlots = res.ExtraSlots
 	if c := res.Consumed; c != nil {
 		r.Item = &itemRecord{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}

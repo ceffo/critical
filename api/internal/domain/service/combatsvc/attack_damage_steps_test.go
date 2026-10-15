@@ -159,3 +159,48 @@ func TestDamage_Step1_DiceByTargetSize(t *testing.T) {
 		})
 	}
 }
+
+// The log payload keeps the damage dice as thrown (value per die), so an older
+// attack shows them after a reload; a miss deals none, and an AC correction
+// keeps the same dice without rolling again.
+func TestAttack_LogPayloadHoldsTheDamageDice(t *testing.T) {
+	cases := []struct {
+		name string
+		ac   int
+		want []any
+	}{
+		{"hit", 5, []any{map[string]any{"sides": float64(4), "value": float64(3)}, map[string]any{"sides": float64(4), "value": float64(2)}}},
+		{"miss", -10, nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			dice := &seqDice{t: t, want: []string{"d20", "d100", "d100", "d4", "d4"}, vals: []int{14, 61, 37, 3, 2}}
+			svc, err := combatsvc.New(combatsvc.Deps{
+				Chars: f.chars, Buffs: f.buffs, Dice: dice, Weapons: f.weapons, Crit: f.crit,
+				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
+			})
+			require.NoError(t, err)
+			f.weapons.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardSword, nil).Once()
+			f.withChar(bard())
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil).Once()
+			f.records()
+
+			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
+				WeaponID: "bastard_sword", TargetAC: new(c.ac), TargetSize: combatsvc.SizeSmallMedium,
+			})
+			require.NoError(t, err)
+			p := payloadOf(t, f.entries[0].Payload)
+			if c.want == nil {
+				assert.NotContains(t, p, "damageRolls")
+				assert.Empty(t, res.DamageRolls)
+			} else {
+				assert.Equal(t, c.want, p["damageRolls"])
+				assert.Equal(t, []combatsvc.DieRoll{{Sides: 4, Value: 3}, {Sides: 4, Value: 2}}, res.DamageRolls)
+			}
+			assert.Equal(t, []any{
+				map[string]any{"sides": float64(4), "value": float64(3)}, map[string]any{"sides": float64(4), "value": float64(2)},
+			}, p["rolled"].(map[string]any)["rolls"], "rolled damage keeps its dice even on a miss")
+		})
+	}
+}

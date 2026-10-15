@@ -177,12 +177,12 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	if req.TargetSize == SizeLarge && weapon.DamageLarge != "" {
 		dice = weapon.DamageLarge
 	}
-	base, err := rollDice(s.dice, dice)
+	base, dieRolls, err := rollDice(s.dice, dice)
 	if err != nil {
 		return nil, fmt.Errorf("weapon %s damage: %w", weapon.ID, err)
 	}
 	rolled := &RolledDamage{
-		Dice: dice, Total: base, SpellsBuff: mods.SpellsBuff, WeaponBuff: weaponDmg + ammoDmg,
+		Dice: dice, Total: base, Rolls: dieRolls, SpellsBuff: mods.SpellsBuff, WeaponBuff: weaponDmg + ammoDmg,
 		BuffMultipliers: mods.Multipliers, StrengthBonus: strDmg, BonusDamage: mods.Damage,
 		Terms: []DamageTerm{},
 	}
@@ -266,6 +266,7 @@ func settle(res *RollResult) {
 	res.SpellsBuff, res.WeaponBuff, res.Multipliers, res.DiceMultiplier = 0, 0, 0, 0
 	res.StrengthBonus, res.BonusDamage = 0, 0
 	res.DamageTerms = []DamageTerm{}
+	res.DamageRolls = nil
 	res.UnroundedDamage, res.TotalDamage = 0, 0
 	d := res.Rolled
 	if !withDamage || d == nil {
@@ -274,6 +275,7 @@ func settle(res *RollResult) {
 
 	res.BaseDamage = d.Total
 	res.DamageDice = d.Dice
+	res.DamageRolls = d.Rolls
 	// ADR 0003 step 11: terms in formula order (spells, dice multipliers,
 	// weapon, crit, strength, bonus).
 	critAt := len(d.Terms)
@@ -323,19 +325,23 @@ func weaponMagic(weaponName string, own int, mods buffsvc.BuffModifiers) (Modifi
 // 11.000000000000002 but 0.1 sums can land just under) before the final floor.
 const floorEpsilon = 1e-9
 
-// rollDice rolls "NdM" (case-insensitive) through the dice port.
-func rollDice(d Dice, dice string) (int, error) {
+// rollDice rolls "NdM" (case-insensitive) through the dice port and returns
+// the total and every die thrown, in order.
+func rollDice(d Dice, dice string) (int, []DieRoll, error) {
 	n, m, ok := strings.Cut(strings.ToLower(strings.TrimSpace(dice)), "d")
 	num, err1 := strconv.Atoi(n)
 	sides, err2 := strconv.Atoi(m)
 	if !ok || err1 != nil || err2 != nil || num < 1 || sides < 1 {
-		return 0, fmt.Errorf("invalid damage dice %q", dice)
+		return 0, nil, fmt.Errorf("invalid damage dice %q", dice)
 	}
 	total := 0
+	rolls := make([]DieRoll, 0, num)
 	for i := 0; i < num; i++ {
-		total += d.RollDie(sides)
+		v := d.RollDie(sides)
+		total += v
+		rolls = append(rolls, DieRoll{Sides: sides, Value: v})
 	}
-	return total, nil
+	return total, rolls, nil
 }
 
 // ListWeapons returns the weapons catalog in sheet order.

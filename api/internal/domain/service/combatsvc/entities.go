@@ -146,6 +146,9 @@ type RollResult struct {
 	BonusDamage    int
 	// DamageTerms lists every contribution to the damage formula.
 	DamageTerms []DamageTerm
+	// DamageRolls are the damage dice as thrown (empty when the attack
+	// deals no damage); BaseDamage is their sum.
+	DamageRolls []DieRoll
 	// UnroundedDamage is the formula result before the final floor and the
 	// zero clamp; TotalDamage is its floor.
 	UnroundedDamage float64
@@ -195,13 +198,21 @@ type RollResult struct {
 	LogEntryID int64
 }
 
+// DieRoll is one die thrown: its sides and the value it showed.
+type DieRoll struct {
+	Sides int
+	Value int
+}
+
 // RolledDamage is the damage side of an attack as rolled, before the crit:
 // the weapon dice and every buff, weapon and strength term. The damage of a
 // hit is ((Dice × SpellsBuff × BuffMultipliers) + WeaponBuff) × crit +
 // StrengthBonus + BonusDamage.
 type RolledDamage struct {
-	Dice            string
-	Total           int // the dice total
+	Dice  string
+	Total int // the dice total
+	// Rolls are the dice thrown for Total, in order.
+	Rolls           []DieRoll
 	SpellsBuff      float64
 	WeaponBuff      int
 	BuffMultipliers float64

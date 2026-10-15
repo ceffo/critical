@@ -132,6 +132,26 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
 }
 
+// A stock item turned daily keeps its count and takes the daily number sent with the change.
+func TestUpdate_StockToDailyKeepsCountAndTakesDailyNumber(t *testing.T) {
+	flask := itemsvc.Item{ID: "fire_flask", Position: 1, Name: "Fire flasks", Type: "flask", Behaviour: itemsvc.BehaviourStock, Count: 5, MaxCount: 1, EffectDice: "5d6"}
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(9), nil)
+	dal.EXPECT().Get(mock.Anything, "fire_flask").Return(flask, nil)
+	after := flask
+	after.Behaviour = itemsvc.BehaviourDaily
+	after.MaxCount = 5
+	dal.EXPECT().Update(mock.Anything, after).Return(nil).Once()
+
+	res, err := svc.Update(context.Background(), 1, "fire_flask", itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(5)})
+	require.NoError(t, err)
+	assert.Equal(t, 5, res.Item.Count)
+	assert.Equal(t, 5, res.Item.MaxCount)
+	assert.Equal(t, itemsvc.BehaviourDaily, res.Item.Behaviour)
+}
+
 func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 	for name, c := range map[string]struct {
 		patch itemsvc.ItemPatch

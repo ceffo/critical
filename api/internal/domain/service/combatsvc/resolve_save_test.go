@@ -6,14 +6,15 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 // fixture save targets: spell 14 (see bard()).
@@ -42,7 +43,7 @@ func rollSave(t *testing.T, f *fixture, d20, saveBonus int) *actionlog.Entry {
 // e's corrections, like actionlogsvc does once its checks pass.
 func amends(f *fixture, e *actionlog.Entry) {
 	f.log.EXPECT().AmendLatest(mock.Anything, charID, e.ID, e.Kind, mock.Anything).RunAndReturn(
-		func(_ context.Context, _ int64, _ int64, _ actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
+		func(_ context.Context, _, _ int64, _ actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
 			a, err := fn(*e)
 			if err != nil {
 				return nil, err

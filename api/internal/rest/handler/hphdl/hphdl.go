@@ -9,9 +9,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/go-chi/chi/v5"
 )
 
 // Router is the small subset of chi.Router we need for registration.

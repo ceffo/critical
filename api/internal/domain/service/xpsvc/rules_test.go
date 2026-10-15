@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
 // table25 is the Thief/Bard column of PHB Table 25 (p.38), as printed.

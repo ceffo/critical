@@ -4,8 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ceffo/critical/api/pkg/must"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/ceffo/critical/api/pkg/must"
 )
 
 func TestDo_ReturnsValue(t *testing.T) {

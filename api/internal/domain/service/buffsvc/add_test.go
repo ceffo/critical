@@ -4,11 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // Add writes the list and returns the buffs snapshot for the caller's entry;

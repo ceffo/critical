@@ -10,11 +10,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
 // unknownSword is the long sword at STR 12 (effective THAC0 11) against an

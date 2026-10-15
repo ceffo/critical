@@ -9,8 +9,9 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/ceffo/critical/api/internal/render"
 	chimw "github.com/go-chi/chi/v5/middleware"
+
+	"github.com/ceffo/critical/api/internal/render"
 )
 
 // Logger is a minimal slog-based request logger. It also stashes a

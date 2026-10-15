@@ -3,10 +3,11 @@ package formula_test
 import (
 	"testing"
 
-	"github.com/ceffo/critical/api/pkg/formula"
-	"github.com/ceffo/critical/api/pkg/must"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/pkg/formula"
+	"github.com/ceffo/critical/api/pkg/must"
 )
 
 // maxRoll makes every die show its highest face; minRoll its lowest.

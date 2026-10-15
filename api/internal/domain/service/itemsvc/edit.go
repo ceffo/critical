@@ -176,7 +176,7 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 			return err
 		}
 		item := old
-		setStr := func(dst *string, v *string) {
+		setStr := func(dst, v *string) {
 			if v != nil {
 				*dst = strings.TrimSpace(*v)
 			}

@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/aarondl/opt/null"
+
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"

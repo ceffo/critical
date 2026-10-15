@@ -10,14 +10,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
+	"github.com/stephenafamo/bob/dialect/sqlite/sm"
+
 	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 	bobmodels "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
-	"github.com/stephenafamo/bob"
-	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
-	"github.com/stephenafamo/bob/dialect/sqlite/sm"
 )
 
 // DAL is the SQLite-backed implementation.

@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
 func TestCritTable_Get(t *testing.T) {

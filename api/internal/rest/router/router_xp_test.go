@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
 func intPtr(n int) *int { return &n }

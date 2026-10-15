@@ -99,7 +99,7 @@ func (s *service) Update(ctx context.Context, id int64, p Patch) (charactersvc.D
 }
 
 func apply(cur charactersvc.Details, p Patch) (charactersvc.Details, error) {
-	text := func(field string, dst *string, v *string, limit int) error {
+	text := func(field string, dst, v *string, limit int) error {
 		if v == nil {
 			return nil
 		}

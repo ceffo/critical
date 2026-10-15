@@ -6,12 +6,13 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
-	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
 func newSvc(t *testing.T) (spellsvc.SVC, *mocks.MockDAL, *mocks.MockReader) {

@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 linters:
   enable:
@@ -15,6 +15,17 @@ linters:
     - misspell
     - forbidigo
   settings:
+    govet:
+      enable-all: true
+      disable:
+        # Struct reordering is churn on JSON/payload-shaped structs, for no behavioural gain.
+        - fieldalignment
+        # Re-declaring err in an inner scope (if err := ...) is idiomatic here; ~45 hits, no real bugs.
+        - shadow
+    revive:
+      rules:
+        - name: exported
+          severity: warning
     forbidigo:
       # No presentation text from the domain (docs/agent-workflow.md, "Hard rules for
       # implementers"): the API returns structured data and the frontend words it with i18n.
@@ -32,30 +43,19 @@ linters:
       - path: _test\.go
         linters:
           - forbidigo
+          - gosec
 
 formatters:
   enable:
     - gofumpt
     - goimports
     - gci
-
-linters-settings:
-  govet:
-    enable-all: true
-  revive:
-    rules:
-      - name: exported
-        severity: warning
-  gofumpt:
-    extra-rules: true
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/ceffo/critical/api)
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
+  settings:
+    gofumpt:
+      extra:
+        group-params: true
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/ceffo/critical/api)

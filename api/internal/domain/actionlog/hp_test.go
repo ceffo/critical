@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
 // HP-1/HP-2: total is SUM(effective hp_delta); HP is at max

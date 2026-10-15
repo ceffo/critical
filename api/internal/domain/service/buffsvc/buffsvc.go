@@ -38,7 +38,7 @@ type SVC interface {
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	// AdvanceRound is Next Round; it returns the new round's initiative
 	// (ADR 0013 steps 1 and 2).
-	AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, initiative Initiative, err error)
+	AdvanceRound(ctx context.Context, characterID int64) (active, expired []BuffEffect, round int, initiative Initiative, err error)
 	// ResetRound ends combat: the counter goes back to 0 (Next Round then
 	// gives 1). Active buffs are untouched. Logged, voidable.
 	ResetRound(ctx context.Context, characterID int64) (active []BuffEffect, round int, err error)
@@ -49,7 +49,7 @@ type SVC interface {
 	// RoundsForHours(hours) rounds (expired at <= 0), charge-only and untimed
 	// buffs are untouched, the round counter goes to 0. Invalid hours (<= 0,
 	// > MaxPassHours, under one round): ErrInvalidInput. Logged, voidable.
-	PassTime(ctx context.Context, characterID int64, hours float64) (active []BuffEffect, expired []BuffEffect, rounds int, round int, err error)
+	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []BuffEffect, rounds, round int, err error)
 	// PreviewPassTime is what PassTime(hours) would do, without writing or
 	// logging anything: the rounds the hours give and the buffs that would
 	// expire. Same validation (ErrInvalidInput).
@@ -62,7 +62,7 @@ type SVC interface {
 	SaveBuff(ctx context.Context, characterID int64, saved SavedBuff) ([]SavedBuff, error)
 	// DeleteSaved removes a template and logs it; active buffs are untouched.
 	// Unknown id: ErrNotFound. Voidable.
-	DeleteSaved(ctx context.Context, characterID int64, id int64) ([]SavedBuff, error)
+	DeleteSaved(ctx context.Context, characterID, id int64) ([]SavedBuff, error)
 
 	// Aggregate is consumed by combatsvc (see clean_architecture.md §4.5).
 	// str is the base STR from the sheet; STR buffs raise it before MinStr

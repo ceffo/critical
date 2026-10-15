@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/go-chi/chi/v5"
 )
 
 // Router is the chi subset we need.

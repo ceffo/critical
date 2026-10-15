@@ -5,10 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
-	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 var seedsDir = filepath.Join("..", "..", "..", "testdata", "seeds")

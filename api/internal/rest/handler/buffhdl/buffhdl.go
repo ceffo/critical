@@ -7,9 +7,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/go-chi/chi/v5"
 )
 
 // Router is the chi subset we need.
@@ -33,15 +34,15 @@ type buffSvc interface {
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error)
 	RerollInitiative(ctx context.Context, characterID int64) (buffsvc.Initiative, error)
-	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, initiative buffsvc.Initiative, err error)
+	AdvanceRound(ctx context.Context, characterID int64) (active, expired []buffsvc.BuffEffect, round int, initiative buffsvc.Initiative, err error)
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
-	PassTime(ctx context.Context, characterID int64, hours float64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, rounds int, round int, err error)
+	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []buffsvc.BuffEffect, rounds, round int, err error)
 	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []buffsvc.BuffEffect, err error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 	ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error)
 	SaveBuff(ctx context.Context, characterID int64, saved buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)
-	DeleteSaved(ctx context.Context, characterID int64, id int64) ([]buffsvc.SavedBuff, error)
+	DeleteSaved(ctx context.Context, characterID, id int64) ([]buffsvc.SavedBuff, error)
 }
 
 // RegisterRoutes wires buff, round and effective-STR endpoints onto r.

@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 )
 
 // ADR 0010 steps 2 to 4: Undo pops the newest non-voided entry of any kind,

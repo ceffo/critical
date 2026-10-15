@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 )
 
 var at = time.Date(2026, 10, 17, 20, 0, 0, 0, time.UTC)

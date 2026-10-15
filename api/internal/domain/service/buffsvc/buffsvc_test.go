@@ -6,14 +6,15 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 )
 
 const charID = int64(1)
@@ -699,7 +700,7 @@ func TestStrength_Step10_PowerGemFrom18Up(t *testing.T) {
 // min_str far above the score still counts toward the effective STR, while
 // the buff's other effects stay gated on that effective STR.
 func TestStrength_Step9_StrengthEffectsAreNotGated(t *testing.T) {
-	gated := func(id string, bonus int, strMax int) buffsvc.BuffEffect {
+	gated := func(id string, bonus, strMax int) buffsvc.BuffEffect {
 		return buffsvc.BuffEffect{ID: id, Name: "Gated " + id, Effects: buffsvc.BuffEffects{
 			StrBonus: intPtr(bonus), StrMax: intPtr(strMax), MinStr: intPtr(25),
 		}}

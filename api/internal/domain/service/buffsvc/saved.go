@@ -37,7 +37,7 @@ func (s *service) SaveBuff(ctx context.Context, characterID int64, saved SavedBu
 }
 
 // DeleteSaved removes the template with id.
-func (s *service) DeleteSaved(ctx context.Context, characterID int64, id int64) ([]SavedBuff, error) {
+func (s *service) DeleteSaved(ctx context.Context, characterID, id int64) ([]SavedBuff, error) {
 	return s.changeSaved(ctx, characterID, func(before []SavedBuff) ([]SavedBuff, logPayload, error) {
 		after := make([]SavedBuff, 0, len(before))
 		var gone *SavedBuff

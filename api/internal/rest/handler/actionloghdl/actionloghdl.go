@@ -10,10 +10,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/render"
-	"github.com/go-chi/chi/v5"
 )
 
 // Router is the small subset of chi.Router we need for registration.

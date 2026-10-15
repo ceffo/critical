@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 )
 
 const bowJSON = `{"id":"long_bow","name":"Long Bow","damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,

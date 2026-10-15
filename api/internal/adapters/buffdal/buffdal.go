@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/aarondl/opt/null"
+
 	"github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"

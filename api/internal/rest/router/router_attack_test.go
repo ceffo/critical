@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
 // POST /api/roll/attack/{id}/adjust passes the entry id and the corrected

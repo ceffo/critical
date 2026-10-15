@@ -165,66 +165,6 @@ test.describe("with the sheet's STR 12", () => {
     await snap(page, "strength-expired-gem-off");
   });
 
-  test("a hand-made Strength with no max stacks with a capped one up to 18; Improved replaces both", async ({
-    page,
-  }) => {
-    await openDashboard(page);
-    await markNoReload(page);
-    await expect.poll(() => effectiveStr(page)).toBe(12);
-    await addBuff(page, {
-      name: "e2e Gem",
-      effects: [
-        ["min_str", 18],
-        ["weapon_buff", 5],
-      ],
-    });
-    const gem = buffBadge(page, "e2e Gem");
-
-    // ADR 0004 step 7: +4 (no max) and +3 (max 18) on 12: 19, capped at 18.
-    await addBuff(page, {
-      name: "e2e Strength hand",
-      rounds: 20,
-      effects: [["str_bonus", 4]],
-    });
-    await addBuff(page, {
-      name: "e2e Strength cast",
-      rounds: 20,
-      effects: [
-        ["str_bonus", 3],
-        ["str_max", 18],
-      ],
-    });
-    await expect.poll(() => effectiveStr(page)).toBe(18);
-    await expect(gem).toHaveAttribute("data-applies", "true");
-
-    // ADR 0004 step 8: a low Improved Strength (1 + 4) replaces both: 17, the gem goes off and the
-    // Strength badges say they are replaced.
-    await addBuff(page, {
-      name: "e2e Improved",
-      rounds: 5,
-      effects: [
-        ["str_bonus", 5],
-        ["str_max", 23],
-      ],
-    });
-    await expect.poll(() => effectiveStr(page)).toBe(17);
-    await expect(gem).toHaveAttribute("data-applies", "false");
-    for (const name of ["e2e Strength hand", "e2e Strength cast"]) {
-      await expect(buffBadge(page, name)).toHaveAttribute(
-        "data-applies",
-        "false",
-      );
-      await expect(buffBadge(page, name)).toContainText(
-        "replaced by Improved Strength",
-      );
-    }
-    await expect(buffBadge(page, "e2e Improved")).toHaveAttribute(
-      "data-applies",
-      "true",
-    );
-    await expectNoReload(page);
-    await snap(page, "improved-replaces-strength");
-  });
 });
 
 test("a buff note shows on the badge, edits are logged, void restores it", async ({

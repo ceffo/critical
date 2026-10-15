@@ -29,31 +29,6 @@ function range(editor: Locator, n: number) {
   };
 }
 
-test("an invalid table is refused with the bad row named and the stored table stays", async ({
-  page,
-}) => {
-  const editor = await openEditor(page);
-  await expect(editor).toContainText("Placeholder");
-  await expect(range(editor, 1).to).toHaveValue("100");
-
-  // 1-40 then 50-100: 41-49 is a gap.
-  await range(editor, 1).to.fill("40");
-  await editor.getByRole("button", { name: "Add range" }).click();
-  await range(editor, 2).from.fill("50");
-  await range(editor, 2).to.fill("100");
-  await editor.getByRole("button", { name: "Save table" }).click();
-  await expect(editor.getByRole("alert")).toContainText(
-    "gap before row 2 (50-100)",
-  );
-  await snap(page, "invalid-table");
-
-  await page.reload();
-  const again = await openEditor(page);
-  await expect(again).toContainText("Placeholder");
-  await expect(range(again, 1).to).toHaveValue("100");
-  await expect(again.getByRole("group", { name: "Range 2" })).toHaveCount(0);
-});
-
 test("the table saved in the editor is used by the next crit", async ({
   page,
 }) => {

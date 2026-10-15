@@ -29,6 +29,12 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   `just e2e` green (separate from `just validate`, which only lints/typechecks the e2e TS files).
   List the screenshot paths (`web/e2e-results/screens/<spec>/<name>.png`) in the report. First run
   on a machine: `just e2e-install` (Playwright Chromium).
+- **e2e budget (hard rule):** the whole suite stays under 5 minutes on CI, absolute (the job times out
+  at 6). e2e is for what only a browser proves: wiring, navigation, persistence across reload, one
+  happy path per user flow, plus the screenshots. Rules, edge cases and error branches belong in Go
+  or unit tests; add the lower-level test first, then drop the e2e one it makes redundant. Tests
+  that only call the API belong in Go. A new spec justifies itself in the report: what only a
+  browser proves there, and why no Go or unit test can. Layout screenshots stay in `layout.spec`.
 - Use `just` recipes rather than bare `go` / `golangci-lint` / `npm` (except the single-test case).
 
 ## Worktree setup
@@ -165,6 +171,8 @@ Reviewer checklist, in priority order:
    committed; bob constraints respected.
 7. **Seeds**: `seeds/*.json` and the loader stay valid and idempotent.
 8. **Tests** prove the criteria and would fail on the old code; table-driven rules, mocks for ports.
+   **e2e budget**: a new or extended Playwright spec is one happy path per flow, justified in the
+   report; rules, edge cases and API-only checks are in Go/unit tests, not e2e (suite < 5 min on CI).
 9. **Hard rules for implementers** above, incl. no tracker ids in code, no per-entity special
    cases, no presentation text built in Go. Each violation is at least medium; design is not style.
 

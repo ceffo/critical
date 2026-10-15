@@ -20,7 +20,7 @@ import (
 //go:embed dice.bob.sql
 var formattedQueries_dice string
 
-var listDiceFavouritesSQL = formattedQueries_dice[158:243]
+var listDiceFavouritesSQL = formattedQueries_dice[158:255]
 
 type ListDiceFavouritesQuery = orm.ModQuery[*dialect.SelectQuery, listDiceFavourites, ListDiceFavouritesRow, []ListDiceFavouritesRow, listDiceFavouritesTransformer]
 
@@ -53,7 +53,7 @@ func ListDiceFavourites(CharacterID int64) *ListDiceFavouritesQuery {
 			q.AppendSelect(expressionTypArgs.subExpr(7, 22))
 			q.SetTable(expressionTypArgs.subExpr(28, 45))
 			q.AppendWhere(expressionTypArgs.subExpr(51, 71))
-			q.AppendOrder(expressionTypArgs.subExpr(80, 85))
+			q.AppendOrder(expressionTypArgs.subExpr(80, 97))
 		}),
 		Build: sqlite.Select,
 	}
@@ -95,11 +95,12 @@ func (o listDiceFavourites) WriteSQL(ctx context.Context, w io.StringWriter, d b
 	return o.subExpr(0, len(listDiceFavouritesSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var insertDiceFavouriteSQL = formattedQueries_dice[269:357]
+var insertDiceFavouriteSQL = formattedQueries_dice[281:385]
 
 type InsertDiceFavourite_DiceFavourites = struct {
 	CharacterID int64
 	Formula     string
+	Position    int64
 }
 
 type InsertDiceFavouriteQuery = orm.ModQuery[*dialect.InsertQuery, insertDiceFavourite, int64, []int64, insertDiceFavouriteTransformer]
@@ -111,22 +112,29 @@ func InsertDiceFavourite(DiceFavourites []InsertDiceFavourite_DiceFavourites) *I
 		expressions := make([]bob.Expression, len(DiceFavourites))
 		for i, child := range DiceFavourites {
 			expressions[i] = bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				args := make([]any, 0, 2)
-				w.WriteString(insertDiceFavouriteSQL[65:66])
+				args := make([]any, 0, 3)
+				w.WriteString(insertDiceFavouriteSQL[77:78])
 				CharacterIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.CharacterID))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, CharacterIDArgs...)
 
-				w.WriteString(insertDiceFavouriteSQL[68:70])
+				w.WriteString(insertDiceFavouriteSQL[80:82])
 				FormulaArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Formula))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, FormulaArgs...)
 
-				w.WriteString(insertDiceFavouriteSQL[72:73])
+				w.WriteString(insertDiceFavouriteSQL[84:86])
+				PositionArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Position))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, PositionArgs...)
+
+				w.WriteString(insertDiceFavouriteSQL[88:89])
 				return args, nil
 			})
 		}
@@ -145,14 +153,14 @@ func InsertDiceFavourite(DiceFavourites []InsertDiceFavourite_DiceFavourites) *I
 			Scanner: scan.ColumnMapper[int64]("id"),
 		},
 		Mod: bob.ModFunc[*dialect.InsertQuery](func(q *dialect.InsertQuery) {
-			q.TableRef.Columns = []string{"character_id", "formula"}
+			q.TableRef.Columns = []string{"character_id", "formula", "position"}
 			q.TableRef.Expression = expressionTypArgs.raw(12, 29)
 			q.Query = bob.BaseQuery[bob.Expression]{
-				Expression: expressionTypArgs.subExpr(58, 73),
+				Expression: expressionTypArgs.subExpr(70, 89),
 				Dialect:    dialect.Dialect,
 				QueryType:  bob.QueryTypeSelect,
 			}
-			q.AppendReturning(expressionTypArgs.subExpr(83, 88))
+			q.AppendReturning(expressionTypArgs.subExpr(99, 104))
 		}),
 		Build: sqlite.Insert,
 	}
@@ -172,8 +180,8 @@ func (o insertDiceFavourite) args() iter.Seq[orm.ArgWithPosition] {
 	return func(yield func(arg orm.ArgWithPosition) bool) {
 		if !yield(orm.ArgWithPosition{
 			Name:       "diceFavourites",
-			Start:      65,
-			Stop:       73,
+			Start:      77,
+			Stop:       89,
 			Expression: o.DiceFavourites,
 		}) {
 			return
@@ -193,7 +201,73 @@ func (o insertDiceFavourite) WriteSQL(ctx context.Context, w io.StringWriter, d 
 	return o.subExpr(0, len(insertDiceFavouriteSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var deleteDiceFavouriteSQL = formattedQueries_dice[383:467]
+var lastDiceFavouritePositionSQL = formattedQueries_dice[417:516]
+
+type LastDiceFavouritePositionQuery = orm.ModQuery[*dialect.SelectQuery, lastDiceFavouritePosition, int64, []int64, lastDiceFavouritePositionTransformer]
+
+func LastDiceFavouritePosition(CharacterID int64) *LastDiceFavouritePositionQuery {
+	var expressionTypArgs lastDiceFavouritePosition
+
+	expressionTypArgs.CharacterID = sqlite.Arg(CharacterID)
+
+	return &LastDiceFavouritePositionQuery{
+		Query: orm.Query[lastDiceFavouritePosition, int64, []int64, lastDiceFavouritePositionTransformer]{
+			ExecQuery: orm.ExecQuery[lastDiceFavouritePosition]{
+				BaseQuery: bob.BaseQuery[lastDiceFavouritePosition]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeSelect,
+				},
+			},
+			Scanner: scan.ColumnMapper[int64]("position"),
+		},
+		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
+			q.AppendSelect(expressionTypArgs.subExpr(7, 17))
+			q.SetTable(expressionTypArgs.subExpr(23, 40))
+			q.AppendWhere(expressionTypArgs.subExpr(46, 66))
+			q.AppendOrder(expressionTypArgs.subExpr(75, 91))
+			q.SetLimit(expressionTypArgs.subExpr(98, 99))
+		}),
+		Build: sqlite.Select,
+	}
+}
+
+type LastDiceFavouritePositionRow = struct {
+	Position int64 `db:"position"`
+}
+
+type lastDiceFavouritePositionTransformer = bob.SliceTransformer[int64, []int64]
+
+type lastDiceFavouritePosition struct {
+	CharacterID bob.Expression
+}
+
+func (o lastDiceFavouritePosition) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "characterID",
+			Start:      64,
+			Stop:       66,
+			Expression: o.CharacterID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o lastDiceFavouritePosition) raw(from, to int) string {
+	return lastDiceFavouritePositionSQL[from:to]
+}
+
+func (o lastDiceFavouritePosition) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(lastDiceFavouritePositionSQL, from, to, o.args())
+}
+
+func (o lastDiceFavouritePosition) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(lastDiceFavouritePositionSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var deleteDiceFavouriteSQL = formattedQueries_dice[542:626]
 
 type DeleteDiceFavouriteQuery = orm.ModQuery[*dialect.DeleteQuery, deleteDiceFavourite, int64, []int64, deleteDiceFavouriteTransformer]
 
@@ -266,4 +340,91 @@ func (o deleteDiceFavourite) subExpr(from, to int) bob.Expression {
 
 func (o deleteDiceFavourite) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(deleteDiceFavouriteSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var setDiceFavouritePositionSQL = formattedQueries_dice[657:756]
+
+type SetDiceFavouritePositionQuery = orm.ModQuery[*dialect.UpdateQuery, setDiceFavouritePosition, int64, []int64, setDiceFavouritePositionTransformer]
+
+func SetDiceFavouritePosition(Position int64, CharacterID int64, ID int64) *SetDiceFavouritePositionQuery {
+	var expressionTypArgs setDiceFavouritePosition
+
+	expressionTypArgs.Position = sqlite.Arg(Position)
+	expressionTypArgs.CharacterID = sqlite.Arg(CharacterID)
+	expressionTypArgs.ID = sqlite.Arg(ID)
+
+	return &SetDiceFavouritePositionQuery{
+		Query: orm.Query[setDiceFavouritePosition, int64, []int64, setDiceFavouritePositionTransformer]{
+			ExecQuery: orm.ExecQuery[setDiceFavouritePosition]{
+				BaseQuery: bob.BaseQuery[setDiceFavouritePosition]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeUpdate,
+				},
+			},
+			Scanner: scan.ColumnMapper[int64]("id"),
+		},
+		Mod: bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
+			q.Table.Expression = expressionTypArgs.raw(7, 24)
+			q.AppendSet(expressionTypArgs.subExpr(29, 44))
+			q.AppendWhere(expressionTypArgs.subExpr(50, 84))
+			q.AppendReturning(expressionTypArgs.subExpr(94, 99))
+		}),
+		Build: sqlite.Update,
+	}
+}
+
+type SetDiceFavouritePositionRow = struct {
+	ID int64 `db:"id"`
+}
+
+type setDiceFavouritePositionTransformer = bob.SliceTransformer[int64, []int64]
+
+type setDiceFavouritePosition struct {
+	Position    bob.Expression
+	CharacterID bob.Expression
+	ID          bob.Expression
+}
+
+func (o setDiceFavouritePosition) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "position",
+			Start:      42,
+			Stop:       44,
+			Expression: o.Position,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "characterID",
+			Start:      68,
+			Stop:       70,
+			Expression: o.CharacterID,
+		}) {
+			return
+		}
+
+		if !yield(orm.ArgWithPosition{
+			Name:       "id",
+			Start:      82,
+			Stop:       84,
+			Expression: o.ID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o setDiceFavouritePosition) raw(from, to int) string {
+	return setDiceFavouritePositionSQL[from:to]
+}
+
+func (o setDiceFavouritePosition) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(setDiceFavouritePositionSQL, from, to, o.args())
+}
+
+func (o setDiceFavouritePosition) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(setDiceFavouritePositionSQL)).WriteSQL(ctx, w, d, start)
 }

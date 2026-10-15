@@ -26,6 +26,7 @@ type DiceFavourite struct {
 	ID          int64  `db:"id,pk" `
 	CharacterID int64  `db:"character_id" `
 	Formula     string `db:"formula" `
+	Position    int64  `db:"position" `
 
 	R diceFavouriteR `db:"-" `
 }
@@ -56,7 +57,7 @@ type diceFavouriteRLoaded struct {
 
 func buildDiceFavouriteColumns(tableName string) diceFavouriteColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "character_id", "formula",
+		"id", "character_id", "formula", "position",
 	)
 
 	if tableName != "" {
@@ -69,6 +70,7 @@ func buildDiceFavouriteColumns(tableName string) diceFavouriteColumns {
 		ID:          buildDiceFavouriteColumn(tableName, "id"),
 		CharacterID: buildDiceFavouriteColumn(tableName, "character_id"),
 		Formula:     buildDiceFavouriteColumn(tableName, "formula"),
+		Position:    buildDiceFavouriteColumn(tableName, "position"),
 	}
 }
 
@@ -78,6 +80,7 @@ type diceFavouriteColumns struct {
 	ID          diceFavouriteColumn
 	CharacterID diceFavouriteColumn
 	Formula     diceFavouriteColumn
+	Position    diceFavouriteColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -126,10 +129,11 @@ type DiceFavouriteSetter struct {
 	ID          omit.Val[int64]  `db:"id,pk" `
 	CharacterID omit.Val[int64]  `db:"character_id" `
 	Formula     omit.Val[string] `db:"formula" `
+	Position    omit.Val[int64]  `db:"position" `
 }
 
 func (s DiceFavouriteSetter) SetColumns() []string {
-	vals := make([]string, 0, 3)
+	vals := make([]string, 0, 4)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -138,6 +142,9 @@ func (s DiceFavouriteSetter) SetColumns() []string {
 	}
 	if s.Formula.IsValue() {
 		vals = append(vals, "formula")
+	}
+	if s.Position.IsValue() {
+		vals = append(vals, "position")
 	}
 	return vals
 }
@@ -151,6 +158,9 @@ func (s DiceFavouriteSetter) Overwrite(t *DiceFavourite) {
 	}
 	if s.Formula.IsValue() {
 		t.Formula = s.Formula.MustGet()
+	}
+	if s.Position.IsValue() {
+		t.Position = s.Position.MustGet()
 	}
 }
 
@@ -191,6 +201,13 @@ func (s *DiceFavouriteSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.Formula.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "position":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Position.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Position.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -202,7 +219,7 @@ func (s DiceFavouriteSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s DiceFavouriteSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 3)
+	exprs := make([]bob.Expression, 0, 4)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -225,6 +242,13 @@ func (s DiceFavouriteSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.Position.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "position")...),
+			sqlite.Arg(s.Position),
+		}})
+	}
+
 	return exprs
 }
 
@@ -235,7 +259,7 @@ func diceFavouriteScanMapper(ctx context.Context, cols []string) (scan.BeforeFun
 		idx int
 		dst func(o *DiceFavourite) any
 	}
-	targets := make([]target, 0, 3)
+	targets := make([]target, 0, 4)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -244,6 +268,8 @@ func diceFavouriteScanMapper(ctx context.Context, cols []string) (scan.BeforeFun
 			targets = append(targets, target{i, func(o *DiceFavourite) any { return &o.CharacterID }})
 		case "formula":
 			targets = append(targets, target{i, func(o *DiceFavourite) any { return &o.Formula }})
+		case "position":
+			targets = append(targets, target{i, func(o *DiceFavourite) any { return &o.Position }})
 		}
 	}
 
@@ -563,6 +589,7 @@ type diceFavouriteWhere[Q sqlite.Filterable] struct {
 	ID          sqlite.WhereMod[Q, int64]
 	CharacterID sqlite.WhereMod[Q, int64]
 	Formula     sqlite.WhereMod[Q, string]
+	Position    sqlite.WhereMod[Q, int64]
 	R           diceFavouriteWhereR[Q]
 }
 
@@ -576,6 +603,7 @@ func buildDiceFavouriteWhere[Q sqlite.Filterable](cols diceFavouriteColumns) dic
 		ID:          sqlite.Where[Q, int64](cols.ID.Expression),
 		CharacterID: sqlite.Where[Q, int64](cols.CharacterID.Expression),
 		Formula:     sqlite.Where[Q, string](cols.Formula.Expression),
+		Position:    sqlite.Where[Q, int64](cols.Position.Expression),
 		R:           diceFavouriteWhereR[Q]{cols: cols},
 	}
 }

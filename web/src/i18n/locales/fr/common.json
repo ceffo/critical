@@ -1015,6 +1015,8 @@
     "noFavourites": "Aucun favori",
     "rollFavourite": "Lancer {{formula}}",
     "removeFavourite": "Retirer {{formula}} des favoris",
+    "moveFavouriteEarlier": "Avancer {{formula}}",
+    "moveFavouriteLater": "Reculer {{formula}}",
     "result": "Jet de dés",
     "modifier": "Modificateur",
     "total": "Total",

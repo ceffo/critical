@@ -175,8 +175,8 @@ func TestHPFloor_DamagePastTheFloorIsClamped(t *testing.T) {
 	assert.Equal(t, -5, hp)
 }
 
-// Undo of a clamped damage restores the exact HP before it, and undoing in
-// order walks back each step.
+// Undo of a clamped damage (global undo or HP undo) restores the exact HP
+// before it, and undoing in order walks back each step.
 func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
 	r := newHPRig(t)
 	ctx := context.Background()
@@ -186,10 +186,21 @@ func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
 	require.Equal(t, -10, hp)
 	require.Equal(t, -13, e.HPDelta)
 
-	st, err := r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	// The global undo (ADR 0010) pops the clamped entry.
+	popped, err := r.bs.Log.Undo(ctx, r.bs.CharacterID, e.ID)
+	require.NoError(t, err)
+	require.Equal(t, e.ID, popped.ID)
+	st, err := r.bs.HP.GetState(ctx, r.bs.CharacterID)
 	require.NoError(t, err)
 	assert.Equal(t, before, st.CurrentHp)
 	assert.Equal(t, hpsvc.ConditionBadlyWounded, st.Condition)
+
+	// Clamped again, then popped by the HP block's undo.
+	hp, _ = r.change(-40, "ogre club again")
+	require.Equal(t, -10, hp)
+	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, before, st.CurrentHp)
 
 	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
 	require.NoError(t, err)

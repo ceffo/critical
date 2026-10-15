@@ -508,6 +508,130 @@ func (_c *MockSVC_RegisterRestorer_Call) RunAndReturn(run func(string, actionlog
 	return _c
 }
 
+// TopID provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) TopID(ctx context.Context, characterID int64) (int64, bool, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TopID")
+	}
+
+	var r0 int64
+	var r1 bool
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int64, bool, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int64); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) bool); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64) error); ok {
+		r2 = rf(ctx, characterID)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_TopID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'TopID'
+type MockSVC_TopID_Call struct {
+	*mock.Call
+}
+
+// TopID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) TopID(ctx interface{}, characterID interface{}) *MockSVC_TopID_Call {
+	return &MockSVC_TopID_Call{Call: _e.mock.On("TopID", ctx, characterID)}
+}
+
+func (_c *MockSVC_TopID_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_TopID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_TopID_Call) Return(id int64, ok bool, err error) *MockSVC_TopID_Call {
+	_c.Call.Return(id, ok, err)
+	return _c
+}
+
+func (_c *MockSVC_TopID_Call) RunAndReturn(run func(context.Context, int64) (int64, bool, error)) *MockSVC_TopID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Undo provides a mock function with given fields: ctx, characterID, expectedTopID
+func (_m *MockSVC) Undo(ctx context.Context, characterID int64, expectedTopID int64) (*actionlog.Entry, error) {
+	ret := _m.Called(ctx, characterID, expectedTopID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Undo")
+	}
+
+	var r0 *actionlog.Entry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) (*actionlog.Entry, error)); ok {
+		return rf(ctx, characterID, expectedTopID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) *actionlog.Entry); ok {
+		r0 = rf(ctx, characterID, expectedTopID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*actionlog.Entry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64) error); ok {
+		r1 = rf(ctx, characterID, expectedTopID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Undo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Undo'
+type MockSVC_Undo_Call struct {
+	*mock.Call
+}
+
+// Undo is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - expectedTopID int64
+func (_e *MockSVC_Expecter) Undo(ctx interface{}, characterID interface{}, expectedTopID interface{}) *MockSVC_Undo_Call {
+	return &MockSVC_Undo_Call{Call: _e.mock.On("Undo", ctx, characterID, expectedTopID)}
+}
+
+func (_c *MockSVC_Undo_Call) Run(run func(ctx context.Context, characterID int64, expectedTopID int64)) *MockSVC_Undo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Undo_Call) Return(_a0 *actionlog.Entry, _a1 error) *MockSVC_Undo_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Undo_Call) RunAndReturn(run func(context.Context, int64, int64) (*actionlog.Entry, error)) *MockSVC_Undo_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Void provides a mock function with given fields: ctx, characterID, id
 func (_m *MockSVC) Void(ctx context.Context, characterID int64, id int64) (*actionlog.Entry, error) {
 	ret := _m.Called(ctx, characterID, id)

@@ -11,7 +11,7 @@ vi.mock("../api/round", () => ({
 vi.mock("@/api/hp", () => ({
   getHpState: async () => ({ currentHp: 1, maxHp: 1, floor: -10, condition: "ok" as const, events: [] }),
 }));
-vi.mock("@/api/log", () => ({ fetchLog: async () => [] }));
+vi.mock("@/api/log", () => ({ fetchLog: async () => ({ entries: [], topId: null }) }));
 vi.mock("@/api/items", () => ({ fetchItems: async () => [] }));
 vi.mock("@/api/combat", () => ({ fetchWeapons: async () => [] }));
 vi.mock("../api/buffs", () => ({

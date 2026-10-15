@@ -118,6 +118,8 @@ var mappings = []mapping{
 	{target: actionlogsvc.ErrAlreadyVoided, status: http.StatusConflict},
 	{target: actionlogsvc.ErrNotAmendable, status: http.StatusBadRequest},
 	{target: actionlogsvc.ErrNotLatest, status: http.StatusConflict},
+	{target: actionlogsvc.ErrTopChanged, status: http.StatusConflict},
+	{target: actionlogsvc.ErrNothingToUndo, status: http.StatusConflict},
 }
 
 func mapError(err error) (int, string) {

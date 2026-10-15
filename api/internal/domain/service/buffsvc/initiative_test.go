@@ -11,7 +11,6 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -104,53 +103,72 @@ func TestInitiative_Step3_PlainD10NoModifier(t *testing.T) {
 	}
 }
 
-// ADR 0013 step 4: a reroll pops the round's initiative entry and records a
-// new roll, in one transaction; refused when another entry is newer.
+// ADR 0013 step 4 as amended by ADR 0018 step 5: a reroll voids nothing; it
+// records a new initiative entry (its own transaction) whose snapshot keeps
+// the replaced roll as "before", and is refused unless the initiative's entry
+// is the newest one.
 func TestInitiative_Step4_RerollReplacesTheNewestInitiative(t *testing.T) {
 	ctx := context.Background()
 	current := &buffsvc.Initiative{D10: 4, LogEntryID: 12}
 
-	t.Run("pops the entry, rolls one new d10", func(t *testing.T) {
+	t.Run("records one new d10 with the replaced roll as before, voids nothing", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(3, nil).Once()
 		f.initiativeIs(current)
-		f.log.EXPECT().Void(mock.Anything, charID, int64(12)).RunAndReturn(
-			func(context.Context, int64, int64) (*actionlog.Entry, error) {
-				f.calls = append(f.calls, "pop 12")
-				return &actionlog.Entry{ID: 12}, nil
-			}).Once()
-		f.rollsInitiative(9)
+		f.log.EXPECT().TopID(mock.Anything, charID).Return(12, true, nil).Once()
+		f.initiativeIs(current)
+		f.dice.EXPECT().RollDie(10).Return(9).Once()
+		f.records()
+		f.savesInitiative()
 
 		got, err := f.svc.RerollInitiative(ctx, charID)
 		require.NoError(t, err)
 		assert.Equal(t, buffsvc.Initiative{D10: 9, LogEntryID: 1}, got)
 		f.dice.AssertNumberOfCalls(t, "RollDie", 1)
-		assert.Equal(t, []string{"pop 12", "record", "save initiative"}, f.calls)
+		assert.Equal(t, []string{"record", "save initiative"}, f.calls)
 		require.Len(t, f.entries, 1)
+		assert.Equal(t, actionlog.KindInitiative, f.entries[0].Kind)
 		assert.Equal(t, 3, f.entries[0].Round)
 		assert.Equal(t, map[string]any{"round": 3.0, "d10": 9.0}, initiativePayload(t, f.entries[0]))
+		require.Len(t, f.entries[0].Snapshots, 1)
+		snap := f.entries[0].Snapshots[0]
+		assert.Equal(t, buffsvc.StateKeyInitiative, snap.Key)
+		assert.JSONEq(t, `{"d10":4,"entryId":12}`, string(snap.Before), "undo gives the replaced roll back")
+		assert.JSONEq(t, `{"d10":9}`, string(snap.After))
 		assert.Equal(t, 1, f.tx.calls)
 	})
 
-	t.Run("another entry is newer: refused, nothing rolled", func(t *testing.T) {
-		f := newFixture(t)
-		f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(3, nil).Once()
-		f.initiativeIs(current)
-		f.log.EXPECT().Void(mock.Anything, charID, int64(12)).Return(nil, actionlogsvc.ErrNotLatest).Once()
+	refused := []struct {
+		name string
+		top  int64
+		ok   bool
+	}{
+		{"another entry is newer", 13, true},
+		{"nothing on the log", 0, false},
+	}
+	for _, tt := range refused {
+		t.Run(tt.name+": refused, nothing rolled", func(t *testing.T) {
+			f := newFixture(t)
+			f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(3, nil).Once()
+			f.initiativeIs(current)
+			f.log.EXPECT().TopID(mock.Anything, charID).Return(tt.top, tt.ok, nil).Once()
 
-		_, err := f.svc.RerollInitiative(ctx, charID)
-		assert.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-		assert.Empty(t, f.entries)
-		f.dice.AssertNotCalled(t, "RollDie", mock.Anything)
-	})
+			_, err := f.svc.RerollInitiative(ctx, charID)
+			assert.ErrorIs(t, err, domain.ErrConflict)
+			assert.ErrorIs(t, err, buffsvc.ErrInitiativeNotOnTop)
+			assert.Empty(t, f.entries)
+			f.dice.AssertNotCalled(t, "RollDie", mock.Anything)
+		})
+	}
 
-	t.Run("no initiative: a conflict, nothing popped", func(t *testing.T) {
+	t.Run("no initiative: a conflict, nothing rolled", func(t *testing.T) {
 		f := newFixture(t)
 		f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(3, nil).Once()
 		f.initiativeIs(nil)
 
 		_, err := f.svc.RerollInitiative(ctx, charID)
 		assert.ErrorIs(t, err, domain.ErrConflict)
+		assert.ErrorIs(t, err, buffsvc.ErrNoInitiative)
 		assert.Empty(t, f.entries)
 	})
 }

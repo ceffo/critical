@@ -4,6 +4,7 @@ import { groupByRound } from "./groupByRound";
 
 const entry = (id: number, round: number): LogEntry => ({
   id,
+  transactionId: id,
   characterId: 1,
   round,
   kind: "hp_change",

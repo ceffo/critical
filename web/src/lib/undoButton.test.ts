@@ -18,6 +18,7 @@ async function makeT(lng: string) {
 
 const initiative: LogEntry = {
   id: 7,
+  transactionId: 7,
   characterId: 1,
   round: 2,
   kind: "initiative",
@@ -63,6 +64,32 @@ describe("undoButtonState", () => {
       disabled: false,
       label: "Annuler : Initiative 4 (d10) pour le tour 2 (Ctrl+Z / ⌘Z)",
     });
+  });
+
+  // ADR 0018 step 2: the undo pops the whole transaction on top; the tooltip names it by its
+  // first entry (the Next Round), not by the initiative that Next Round rolled last.
+  it("names the transaction on top by its first entry, en and fr", async () => {
+    const advance: LogEntry = {
+      ...initiative,
+      id: 6,
+      transactionId: 6,
+      round: 1,
+      kind: "round_advance",
+      payload: { action: "next_round", fromRound: 1, toRound: 2 },
+      effectivePayload: { action: "next_round", fromRound: 1, toRound: 2 },
+    };
+    const rolled: LogEntry = { ...initiative, transactionId: 6 };
+    const entries = [rolled, advance];
+    expect(undoButtonState(7, entries, false, await makeT("en")).label).toBe(
+      "Undo: Turn 1 → 2 (Ctrl+Z / ⌘Z)",
+    );
+    expect(undoButtonState(7, entries, false, await makeT("fr")).label).toBe(
+      "Annuler : Tour 1 → 2 (Ctrl+Z / ⌘Z)",
+    );
+    // A first entry older than the listed ones: named by the entry on top.
+    expect(undoButtonState(7, [rolled], false, await makeT("en")).label).toBe(
+      "Undo: Initiative 4 (d10) for turn 2 (Ctrl+Z / ⌘Z)",
+    );
   });
 
   it("disabled while an action runs", async () => {

@@ -2,9 +2,13 @@
 -- This file is meant to be re-generated in place and/or deleted at any time.
 
 -- InsertAction
-INSERT INTO "action_log" ("character_id", "round", "kind", "summary", "hp_delta", "payload")
-VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+INSERT INTO "action_log" ("character_id", "round", "kind", "summary", "hp_delta", "payload", "transaction_id")
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
 RETURNING "id";
+
+-- StartActionTransaction
+UPDATE "action_log" SET "transaction_id" = "id"
+WHERE "id" = ?1;
 
 -- InsertSnapshot
 INSERT INTO "action_snapshots" ("action_id", "state_key", "before_state", "after_state")
@@ -15,19 +19,19 @@ INSERT INTO "action_corrections" ("action_id", "kind", "hp_delta", "summary", "p
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7);
 
 -- GetAction
-SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "created_at" 
+SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "transaction_id", "created_at" 
 FROM "action_log"
 WHERE "character_id" = ?1 AND "id" = ?2;
 
 -- ListActions
-SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "created_at" 
+SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "transaction_id", "created_at" 
 FROM "action_log"
 WHERE "character_id" = ?1
 ORDER BY "id" DESC
 LIMIT ?2;
 
 -- ListActiveActionsByKind
-SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "created_at" 
+SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "transaction_id", "created_at" 
 FROM "action_log"
 WHERE "character_id" = ?1 AND "kind" = ?2
   AND NOT EXISTS (
@@ -70,3 +74,9 @@ WHERE "character_id" = ?1
   )
 ORDER BY "id" DESC
 LIMIT 1;
+
+-- ListTransactionActions
+SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", "transaction_id", "created_at" 
+FROM "action_log"
+WHERE "character_id" = ?1 AND "transaction_id" = ?2
+ORDER BY "id" DESC;

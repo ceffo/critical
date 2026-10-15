@@ -187,9 +187,9 @@ func (_c *MockDAL_InsertCorrection_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
-// InsertEntry provides a mock function with given fields: ctx, e
-func (_m *MockDAL) InsertEntry(ctx context.Context, e actionlog.NewEntry) (int64, error) {
-	ret := _m.Called(ctx, e)
+// InsertEntry provides a mock function with given fields: ctx, e, transactionID
+func (_m *MockDAL) InsertEntry(ctx context.Context, e actionlog.NewEntry, transactionID int64) (int64, error) {
+	ret := _m.Called(ctx, e, transactionID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for InsertEntry")
@@ -197,17 +197,17 @@ func (_m *MockDAL) InsertEntry(ctx context.Context, e actionlog.NewEntry) (int64
 
 	var r0 int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, actionlog.NewEntry) (int64, error)); ok {
-		return rf(ctx, e)
+	if rf, ok := ret.Get(0).(func(context.Context, actionlog.NewEntry, int64) (int64, error)); ok {
+		return rf(ctx, e, transactionID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, actionlog.NewEntry) int64); ok {
-		r0 = rf(ctx, e)
+	if rf, ok := ret.Get(0).(func(context.Context, actionlog.NewEntry, int64) int64); ok {
+		r0 = rf(ctx, e, transactionID)
 	} else {
 		r0 = ret.Get(0).(int64)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, actionlog.NewEntry) error); ok {
-		r1 = rf(ctx, e)
+	if rf, ok := ret.Get(1).(func(context.Context, actionlog.NewEntry, int64) error); ok {
+		r1 = rf(ctx, e, transactionID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -223,13 +223,14 @@ type MockDAL_InsertEntry_Call struct {
 // InsertEntry is a helper method to define mock.On call
 //   - ctx context.Context
 //   - e actionlog.NewEntry
-func (_e *MockDAL_Expecter) InsertEntry(ctx interface{}, e interface{}) *MockDAL_InsertEntry_Call {
-	return &MockDAL_InsertEntry_Call{Call: _e.mock.On("InsertEntry", ctx, e)}
+//   - transactionID int64
+func (_e *MockDAL_Expecter) InsertEntry(ctx interface{}, e interface{}, transactionID interface{}) *MockDAL_InsertEntry_Call {
+	return &MockDAL_InsertEntry_Call{Call: _e.mock.On("InsertEntry", ctx, e, transactionID)}
 }
 
-func (_c *MockDAL_InsertEntry_Call) Run(run func(ctx context.Context, e actionlog.NewEntry)) *MockDAL_InsertEntry_Call {
+func (_c *MockDAL_InsertEntry_Call) Run(run func(ctx context.Context, e actionlog.NewEntry, transactionID int64)) *MockDAL_InsertEntry_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(actionlog.NewEntry))
+		run(args[0].(context.Context), args[1].(actionlog.NewEntry), args[2].(int64))
 	})
 	return _c
 }
@@ -239,7 +240,7 @@ func (_c *MockDAL_InsertEntry_Call) Return(_a0 int64, _a1 error) *MockDAL_Insert
 	return _c
 }
 
-func (_c *MockDAL_InsertEntry_Call) RunAndReturn(run func(context.Context, actionlog.NewEntry) (int64, error)) *MockDAL_InsertEntry_Call {
+func (_c *MockDAL_InsertEntry_Call) RunAndReturn(run func(context.Context, actionlog.NewEntry, int64) (int64, error)) *MockDAL_InsertEntry_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -490,6 +491,66 @@ func (_c *MockDAL_ListEntries_Call) Return(_a0 []actionlog.Entry, _a1 error) *Mo
 }
 
 func (_c *MockDAL_ListEntries_Call) RunAndReturn(run func(context.Context, int64, int) ([]actionlog.Entry, error)) *MockDAL_ListEntries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListTransaction provides a mock function with given fields: ctx, characterID, transactionID
+func (_m *MockDAL) ListTransaction(ctx context.Context, characterID int64, transactionID int64) ([]actionlog.Entry, error) {
+	ret := _m.Called(ctx, characterID, transactionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTransaction")
+	}
+
+	var r0 []actionlog.Entry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) ([]actionlog.Entry, error)); ok {
+		return rf(ctx, characterID, transactionID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) []actionlog.Entry); ok {
+		r0 = rf(ctx, characterID, transactionID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]actionlog.Entry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64) error); ok {
+		r1 = rf(ctx, characterID, transactionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDAL_ListTransaction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTransaction'
+type MockDAL_ListTransaction_Call struct {
+	*mock.Call
+}
+
+// ListTransaction is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - transactionID int64
+func (_e *MockDAL_Expecter) ListTransaction(ctx interface{}, characterID interface{}, transactionID interface{}) *MockDAL_ListTransaction_Call {
+	return &MockDAL_ListTransaction_Call{Call: _e.mock.On("ListTransaction", ctx, characterID, transactionID)}
+}
+
+func (_c *MockDAL_ListTransaction_Call) Run(run func(ctx context.Context, characterID int64, transactionID int64)) *MockDAL_ListTransaction_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockDAL_ListTransaction_Call) Return(_a0 []actionlog.Entry, _a1 error) *MockDAL_ListTransaction_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDAL_ListTransaction_Call) RunAndReturn(run func(context.Context, int64, int64) ([]actionlog.Entry, error)) *MockDAL_ListTransaction_Call {
 	_c.Call.Return(run)
 	return _c
 }

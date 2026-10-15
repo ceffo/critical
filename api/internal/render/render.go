@@ -113,6 +113,7 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 // services never import render, so layering holds without widening domain.
 var mappings = []mapping{
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
+	{target: buffsvc.ErrInitiativeNotOnTop, status: http.StatusConflict, code: "initiative_not_on_top"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
 	{target: spelleffectsvc.ErrUnknownMode, status: http.StatusBadRequest, code: "unknown_spell_mode"},
 	{target: spelleffectsvc.ErrNoExposure, status: http.StatusBadRequest, code: "no_exposure"},

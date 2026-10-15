@@ -70,7 +70,7 @@ type CharactersQuery = *sqlite.ViewQuery[*Character, CharacterSlice]
 
 // characterR is where relationships are stored.
 type characterR struct {
-	ActionLogs     ActionLogSlice     // fk_action_log_0
+	ActionLogs     ActionLogSlice     // fk_action_log_1
 	ActiveBuffs    ActiveBuffSlice    // fk_active_buffs_0
 	AttackForm     *AttackForm        // fk_attack_forms_0
 	DiceFavourites DiceFavouriteSlice // fk_dice_favourites_0
@@ -87,7 +87,7 @@ type characterR struct {
 
 // characterRLoaded tracks which relationships on Character have been loaded.
 type characterRLoaded struct {
-	ActionLogs     bool // fk_action_log_0
+	ActionLogs     bool // fk_action_log_1
 	ActiveBuffs    bool // fk_active_buffs_0
 	AttackForm     bool // fk_attack_forms_0
 	DiceFavourites bool // fk_dice_favourites_0

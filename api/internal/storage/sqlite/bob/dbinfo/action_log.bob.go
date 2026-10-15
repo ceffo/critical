@@ -87,6 +87,15 @@ var ActionLogs = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		TransactionID: column{
+			Name:      "transaction_id",
+			DBType:    "INTEGER",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: actionLogIndexes{
 		PKMainActionLog: index{
@@ -100,6 +109,30 @@ var ActionLogs = Table[
 				},
 			},
 			Unique:  true,
+			Comment: "",
+			Partial: false,
+		},
+		IdxActionLogTransaction: index{
+			Type: "c",
+			Name: "idx_action_log_transaction",
+			Columns: []indexColumn{
+				{
+					Name:         "character_id",
+					Desc:         null.FromCond(false, true),
+					IsExpression: false,
+				},
+				{
+					Name:         "transaction_id",
+					Desc:         null.FromCond(false, true),
+					IsExpression: false,
+				},
+				{
+					Name:         "id",
+					Desc:         null.FromCond(false, true),
+					IsExpression: false,
+				},
+			},
+			Unique:  false,
 			Comment: "",
 			Partial: false,
 		},
@@ -132,6 +165,15 @@ var ActionLogs = Table[
 		FKActionLog0: foreignKey{
 			constraint: constraint{
 				Name:    "fk_action_log_0",
+				Columns: []string{"transaction_id"},
+				Comment: "",
+			},
+			ForeignTable:   "action_log",
+			ForeignColumns: []string{"id"},
+		},
+		FKActionLog1: foreignKey{
+			constraint: constraint{
+				Name:    "fk_action_log_1",
 				Columns: []string{"character_id"},
 				Comment: "",
 			},
@@ -144,40 +186,43 @@ var ActionLogs = Table[
 }
 
 type actionLogColumns struct {
-	ID          column
-	CharacterID column
-	Round       column
-	Kind        column
-	Summary     column
-	HPDelta     column
-	Payload     column
-	CreatedAt   column
+	ID            column
+	CharacterID   column
+	Round         column
+	Kind          column
+	Summary       column
+	HPDelta       column
+	Payload       column
+	CreatedAt     column
+	TransactionID column
 }
 
 func (c actionLogColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.CharacterID, c.Round, c.Kind, c.Summary, c.HPDelta, c.Payload, c.CreatedAt,
+		c.ID, c.CharacterID, c.Round, c.Kind, c.Summary, c.HPDelta, c.Payload, c.CreatedAt, c.TransactionID,
 	}
 }
 
 type actionLogIndexes struct {
-	PKMainActionLog       index
-	IdxActionLogCharacter index
+	PKMainActionLog         index
+	IdxActionLogTransaction index
+	IdxActionLogCharacter   index
 }
 
 func (i actionLogIndexes) AsSlice() []index {
 	return []index{
-		i.PKMainActionLog, i.IdxActionLogCharacter,
+		i.PKMainActionLog, i.IdxActionLogTransaction, i.IdxActionLogCharacter,
 	}
 }
 
 type actionLogForeignKeys struct {
 	FKActionLog0 foreignKey
+	FKActionLog1 foreignKey
 }
 
 func (f actionLogForeignKeys) AsSlice() []foreignKey {
 	return []foreignKey{
-		f.FKActionLog0,
+		f.FKActionLog0, f.FKActionLog1,
 	}
 }
 

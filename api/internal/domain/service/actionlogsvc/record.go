@@ -17,6 +17,10 @@ import (
 // payload gets the requested vs applied breakdown. A negative HPDelta (damage)
 // is clamped so HP stops at the floor (actionlog.FloorDamage, ADR 0011 step 1);
 // a clamped entry gets the breakdown too.
+//
+// The entry joins the action-log transaction of the request (ADR 0018 step
+// 1): the first entry recorded inside an outermost InTx of a runner wrapped by
+// Transactions starts it, every later one in the same InTx shares its id.
 func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, error) {
 	if e.Kind == "" {
 		return 0, fmt.Errorf("%w: kind is required", domain.ErrInvalidInput)
@@ -56,7 +60,7 @@ func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, erro
 			}
 		}
 		var err error
-		id, err = s.dal.InsertEntry(ctx, e)
+		id, err = s.insert(ctx, e)
 		if err != nil {
 			return fmt.Errorf("insert entry: %w", err)
 		}

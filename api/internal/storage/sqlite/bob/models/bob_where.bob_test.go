@@ -82,6 +82,34 @@ func TestActionLogHasRelationsEmitExists(t *testing.T) {
 		}
 	})
 
+	t.Run("Transaction", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionLogs.NameExpr()),
+			SelectWhere.ActionLogs.R.HasTransaction(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasTransaction: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasTransaction: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
+	t.Run("ReverseTransactions", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionLogs.NameExpr()),
+			SelectWhere.ActionLogs.R.HasReverseTransactions(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasReverseTransactions: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasReverseTransactions: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
 	t.Run("Character", func(t *testing.T) {
 		q := sqlite.Select(
 			sm.From(ActionLogs.NameExpr()),

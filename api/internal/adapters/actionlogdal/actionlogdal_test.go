@@ -42,7 +42,7 @@ func hp(charID int64, delta int, source string) actionlog.NewEntry {
 
 func insert(t *testing.T, dal *actionlogdal.DAL, e actionlog.NewEntry) int64 {
 	t.Helper()
-	id, err := dal.InsertEntry(context.Background(), e)
+	id, err := dal.InsertEntry(context.Background(), e, 0)
 	require.NoError(t, err)
 	return id
 }

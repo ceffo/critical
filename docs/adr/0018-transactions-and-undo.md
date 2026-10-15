@@ -31,10 +31,14 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    this rule is its own transaction. A request that changes no table state writes no transaction.
    A correction step ([ADR 0010](0010-action-stack-and-undo.md) step 6) is a one-entry
    transaction (its amend is not an entry). The undo itself is not a transaction: it writes void
-   corrections (step 2). Every `GET /api/log` entry exposes its transaction id.
+   corrections (step 2). Every `GET /api/log` entry exposes its transaction id (`transactionId`).
+   The grouping is generic, never per kind: every service runs its request in one `InTx` of the
+   one runner the composition root hands out (`actionlogsvc.Transactions`), and every entry
+   recorded inside its outermost `InTx` joins the transaction its first entry started
+   (`action_log.transaction_id`).
    Tests: `domain/service/actionlogsvc` `TestRecord_EntriesOfOneRequestShareATransaction`;
-   `storage/sqlite` migration test "each existing entry is its own transaction" (on existing
-   rows); `rest/router` `TestLogEndpoints_WireShape` (the transaction id).
+   `storage/sqlite` `TestMigrate025_EachExistingEntryIsItsOwnTransaction` (on existing rows);
+   `rest/router` `TestLogEndpoints_WireShape` (the transaction id).
 2. **Undo pops the newest transaction whole.** `topId` (ADR 0010 step 1) still names the newest
    non-voided entry. The undo pops every non-voided entry of that entry's transaction, newest
    first: for each, every snapshot's "before" is written back through its restorer, then a void
@@ -45,10 +49,12 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    (the Next Round, not its initiative).
    Tests: `domain/service/actionlogsvc` `TestUndo_PopsTheWholeTransaction` ("newest first",
    "restorer fails mid-transaction: no void, no partial state", "stale expected top changes
-   nothing"); `composition` `TestNextRound_OneUndoRestoresRoundBuffsAndInitiative`,
-   `TestUndo_PopsEveryKindInOrder` (existing, updated: Next Round pops in one step), a table test
-   over every table-state mutation (ADR 0010 Context) asserting one undo walks the state fully
-   back; `web/src/lib/undoButton.test.ts` (the tooltip names the transaction, en/fr).
+   nothing"); `adapters/actionlogdal` `TestUndo_RestorerFailsMidTransaction_RollsBackEverything`
+   (the rollback on SQLite); `composition` `TestNextRound_OneUndoRestoresRoundBuffsAndInitiative`,
+   `TestUndo_PopsEveryKindInOrder` (existing, updated: Next Round pops in one step),
+   `TestUndo_OneUndoWalksEveryMutationFullyBack` (a table test over every table-state mutation,
+   ADR 0010 Context, asserting one undo walks the state fully back);
+   `web/src/lib/undoButton.test.ts` (the tooltip names the transaction, en/fr).
 3. **One undo system, on the journal.** There is one way to pop: `POST /api/log/undo` with
    `expectedTopId`. `POST /api/hp/undo` and `POST /api/log/{id}/void` are retired. The one undo
    control lives in the journal (its header: the Undo button, "Annuler" in French, and Ctrl/Cmd+Z);
@@ -78,8 +84,10 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    no longer voids the initiative it replaces: it records a new `initiative` entry, in its own
    transaction, whose `initiative` snapshot has the replaced roll as "before". It is allowed when
    the newest transaction is the one that recorded the round's current initiative (the Next Round
-   or a previous reroll), otherwise refused (409) and nothing is rolled; with no initiative it is
-   refused (409). Undo right after a reroll gives back the roll it replaced; undo again pops the
+   or a previous reroll), otherwise refused (409, `initiative_not_on_top`) and nothing is rolled;
+   with no initiative it is refused (409, `no_initiative`). The initiative entry is the last one
+   its transaction records, so that transaction is the newest exactly when the initiative's entry
+   is the newest non-voided entry. Undo right after a reroll gives back the roll it replaced; undo again pops the
    Next Round (the previous round and its initiative come back).
    Tests: `domain/service/buffsvc` `TestInitiative_Step4_RerollReplacesTheNewestInitiative`
    (existing, updated: no void, the "before"); `composition`

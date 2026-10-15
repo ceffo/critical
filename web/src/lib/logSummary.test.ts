@@ -23,6 +23,7 @@ function entry(
 ): LogEntry {
   return {
     id: 1,
+    transactionId: 1,
     characterId: 1,
     round: 0,
     kind,

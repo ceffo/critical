@@ -74,9 +74,10 @@ type SVC interface {
 	// GetInitiative is the round's initiative, nil when there is none (ADR
 	// 0013 step 5).
 	GetInitiative(ctx context.Context, characterID int64) (*Initiative, error)
-	// RerollInitiative pops the round's initiative entry and rolls a new one,
-	// in one transaction (ADR 0013 step 4). Refused (a conflict) when there
-	// is no initiative or another entry is newer than its entry.
+	// RerollInitiative rolls a new initiative for the round as its own
+	// transaction, replacing the current one (ADR 0013 step 4, ADR 0018 step
+	// 5). Refused (a conflict) when there is no initiative or a newer
+	// transaction is on the log.
 	RerollInitiative(ctx context.Context, characterID int64) (Initiative, error)
 
 	// Restorers maps each state key buffsvc snapshots to the Restorer that
@@ -103,11 +104,11 @@ type DAL interface {
 }
 
 // Log is the slice of the action log buffsvc records into (actionlogsvc).
-// Void pops entry id (it must be the newest non-voided entry) and restores
-// its snapshots; the initiative reroll uses it inside its own transaction.
+// TopID is the newest non-voided entry (ok false: none); the initiative
+// reroll reads it inside its transaction.
 type Log interface {
 	actionlog.Recorder
-	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
+	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
 }
 
 // Dice is the dice port (diceadpt): initiative is rolled through it.

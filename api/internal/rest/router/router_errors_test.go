@@ -309,6 +309,7 @@ func TestSpecialSentinels(t *testing.T) {
 		{"attack AC voided", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},
 		{"attack AC not an attack", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7 is save, not attack", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is save, not attack"}`},
 		{"reroll without initiative", "POST log/undo", fmt.Errorf("%w: %w", domain.ErrConflict, buffsvc.ErrNoInitiative), 409, `{"code":"no_initiative","error":"conflict: no initiative to reroll"}`},
+		{"reroll not on top", "POST round/initiative/reroll", fmt.Errorf("%w: %w: the initiative is #4, the newest entry #5", domain.ErrConflict, buffsvc.ErrInitiativeNotOnTop), 409, `{"code":"initiative_not_on_top","error":"conflict: the initiative is no longer the newest action: the initiative is #4, the newest entry #5"}`},
 		{"too many favourites", "POST log/undo", fmt.Errorf("%w: %w (at most 50)", domain.ErrConflict, dicesvc.ErrTooManyFavourites), 409, `{"code":"too_many_favourites","error":"conflict: too many favourites (at most 50)"}`},
 		{"wrapped twice", "POST spells/{id}/cast", fmt.Errorf("ctx: %w", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed)), 409, `{"code":"slot_already_used","error":"ctx: slot already used: 2"}`},
 	}

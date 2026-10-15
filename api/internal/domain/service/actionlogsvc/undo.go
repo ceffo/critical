@@ -7,12 +7,14 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// Undo pops the newest non-voided entry, of any kind, when it is the entry
-// the client saw on top (ADR 0010 steps 2 to 4). The expected-top check, the
-// restores and the void correction share one transaction, so an action that
-// lands between the client's read and its undo makes the undo fail (ErrTopChanged)
-// instead of popping something the player never saw. ErrNothingToUndo when the
-// log has nothing to pop. Returns the voided entry.
+// Undo pops the transaction of the newest non-voided entry, of any kind,
+// whole, when that entry is the one the client saw on top (ADR 0010 steps 2
+// to 4, ADR 0018 step 2). The expected-top check, every restore and every void
+// correction share one DB transaction, so an action that lands between the
+// client's read and its undo makes the undo fail (ErrTopChanged) instead of
+// popping something the player never saw, and a failing restore leaves no void
+// and no partial state. ErrNothingToUndo when the log has nothing to pop.
+// Returns the transaction's first entry, voided.
 func (s *service) Undo(ctx context.Context, characterID, expectedTopID int64) (*actionlog.Entry, error) {
 	var out *actionlog.Entry
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -27,14 +29,8 @@ func (s *service) Undo(ctx context.Context, characterID, expectedTopID int64) (*
 			return fmt.Errorf("%w: the newest entry is #%d (%s, round %d), not #%d",
 				ErrTopChanged, top.ID, top.Kind, top.Round, expectedTopID)
 		}
-		if err := s.pop(ctx, characterID, top); err != nil {
-			return err
-		}
-		out, err = s.dal.GetEntry(ctx, characterID, top.ID)
-		if err != nil {
-			return fmt.Errorf("get entry %d: %w", top.ID, err)
-		}
-		return nil
+		out, err = s.popTransaction(ctx, characterID, top.TransactionID)
+		return err
 	})
 	if err != nil {
 		return nil, err

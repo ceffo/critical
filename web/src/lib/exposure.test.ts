@@ -76,6 +76,7 @@ const fog: SpellExposure = {
 function entry(payload: unknown, over: Partial<LogEntry> = {}): LogEntry {
   return {
     id: 7,
+    transactionId: 7,
     characterId: 1,
     round: 2,
     kind: "exposure",

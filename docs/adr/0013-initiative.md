@@ -27,7 +27,8 @@ Tests live in `api/internal/domain/service/buffsvc/initiative_test.go` unless na
    initiative are one transaction, so one undo after Next Round brings back the previous round
    and its initiative.)
    Tests: `TestInitiative_Step2_OwnEntryAfterTheAdvance` (order of the entries and writes, the
-   snapshots, one transaction); `composition` `TestInitiative_UndoPopsTheInitiativeThenTheAdvance`.
+   snapshots, one transaction); `composition` `TestNextRound_OneUndoRestoresRoundBuffsAndInitiative`
+   (ADR 0018 step 2: one undo).
 3. **Lowest acts first, display only.** The initiative is the plain die: no modifier from buffs,
    abilities or weapon speed. The app orders nothing; the turn header shows the value with the hint
    "1d10, the lowest acts first".
@@ -39,9 +40,9 @@ Tests live in `api/internal/domain/service/buffsvc/initiative_test.go` unless na
    newer it is refused (409) and nothing is rolled; with no initiative it is refused (409) too.
    (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 5:* the reroll voids nothing; it is its own transaction whose
    snapshot keeps the replaced roll, so undo after a reroll gives that roll back.)
-   Tests: `TestInitiative_Step4_RerollReplacesTheNewestInitiative` (pop, then exactly one d10;
-   the refusals); `composition` `TestInitiative_RerollOnTheRealLog`; `router`
-   `TestRoundInitiative_WireShape`.
+   Tests: `TestInitiative_Step4_RerollReplacesTheNewestInitiative` (no void, exactly one d10, the
+   replaced roll as "before"; the refusals); `composition` `TestInitiative_RerollOnTheRealLog`,
+   `TestInitiative_RerollThenUndoThenUndo`; `router` `TestRoundInitiative_WireShape`.
 5. **None out of combat.** At round 0 there is no initiative: End combat, Set round to 0 and
    passing time end it, in their own entry's snapshot, so voiding that entry brings it back. Set
    round to another round keeps it. There is nothing to reroll at round 0. `GET /api/round`

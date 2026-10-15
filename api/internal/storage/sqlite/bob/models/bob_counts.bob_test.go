@@ -19,6 +19,9 @@ func TestActionLogCountStruct(t *testing.T) {
 	// Verify ActionActionCorrections count field exists and is *int64
 	var _ *int64 = m.C.ActionActionCorrections
 
+	// Verify ReverseTransactions count field exists and is *int64
+	var _ *int64 = m.C.ReverseTransactions
+
 	// Verify ActionActionSnapshots count field exists and is *int64
 	var _ *int64 = m.C.ActionActionSnapshots
 }
@@ -41,6 +44,12 @@ func TestActionLogLoadCountMethods(t *testing.T) {
 	// Verify LoadCountActionActionCorrections method exists on slice
 	_ = ms.LoadCountActionActionCorrections(ctx, nil)
 
+	// Verify LoadCountReverseTransactions method exists on single model
+	_ = m.LoadCountReverseTransactions(ctx, nil)
+
+	// Verify LoadCountReverseTransactions method exists on slice
+	_ = ms.LoadCountReverseTransactions(ctx, nil)
+
 	// Verify LoadCountActionActionSnapshots method exists on single model
 	_ = m.LoadCountActionActionSnapshots(ctx, nil)
 
@@ -58,6 +67,9 @@ func TestSelectThenLoadCountActionLog(t *testing.T) {
 	// Verify ActionActionCorrections loader exists
 	_ = SelectThenLoadCount.ActionLog.ActionActionCorrections
 
+	// Verify ReverseTransactions loader exists
+	_ = SelectThenLoadCount.ActionLog.ReverseTransactions
+
 	// Verify ActionActionSnapshots loader exists
 	_ = SelectThenLoadCount.ActionLog.ActionActionSnapshots
 }
@@ -72,6 +84,9 @@ func TestPreloadCountActionLog(t *testing.T) {
 	// Verify ActionActionCorrections preloader exists and returns a Preloader
 	_ = PreloadCount.ActionLog.ActionActionCorrections()
 
+	// Verify ReverseTransactions preloader exists and returns a Preloader
+	_ = PreloadCount.ActionLog.ReverseTransactions()
+
 	// Verify ActionActionSnapshots preloader exists and returns a Preloader
 	_ = PreloadCount.ActionLog.ActionActionSnapshots()
 }
@@ -83,6 +98,8 @@ func TestActionLogPreloadCountMethod(t *testing.T) {
 	_ = m.PreloadCount("StepActionCorrections", 0)
 
 	_ = m.PreloadCount("ActionActionCorrections", 0)
+
+	_ = m.PreloadCount("ReverseTransactions", 0)
 
 	_ = m.PreloadCount("ActionActionSnapshots", 0)
 }

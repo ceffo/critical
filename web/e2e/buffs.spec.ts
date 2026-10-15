@@ -11,7 +11,7 @@ import {
   openAddEffect,
   openDashboard,
   undoEntry,
-  undoInitiative,
+  undoNextTurn,
   turnGroup,
 } from "./helpers";
 
@@ -42,8 +42,7 @@ test("Next turn then void restores the round, the durations and the expired buff
   ).toBeVisible();
   await snap(page, "next-round-expired");
 
-  await undoInitiative(page);
-  await undoEntry(page, advance);
+  await undoNextTurn(page, logEntry(page, advance));
   await expect.poll(() => currentRound(page)).toBe(r0);
   await expect(page.getByRole("status")).toHaveCount(0);
   await expect(

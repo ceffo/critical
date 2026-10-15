@@ -870,7 +870,7 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 	f.dal.EXPECT().SaveInitiative(mock.Anything, charID, mock.Anything).Return(nil)
 	f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(1, nil)
 	f.dice.EXPECT().RollDie(10).Return(4)
-	f.log.EXPECT().Void(mock.Anything, charID, int64(1)).Return(&actionlog.Entry{}, nil)
+	f.log.EXPECT().TopID(mock.Anything, charID).Return(1, true, nil)
 
 	_, err := f.svc.Activate(ctx, charID, buffsvc.BuffEffect{Name: "X", Duration: 1})
 	require.NoError(t, err)

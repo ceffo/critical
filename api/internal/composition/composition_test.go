@@ -103,12 +103,13 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 	assert.Equal(t, actionlog.KindRoundAdvance, entries[1].Kind)
 	assert.Equal(t, 0, entries[1].Round, "Next Round is logged in the round it ends")
 
-	// Void the initiative, then Next Round: the round, the durations and the
-	// expired buff come back.
-	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	assert.Equal(t, entries[1].ID, entries[0].TransactionID, "the advance and its initiative are one transaction")
+
+	// One pop of Next Round (its initiative on top): the round, the
+	// durations and the expired buff come back (ADR 0018 step 2).
+	popped, err := bs.Log.Void(ctx, id, entries[0].ID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, id, entries[1].ID)
-	require.NoError(t, err)
+	assert.Equal(t, entries[1].ID, popped.ID, "answers with the transaction's first entry, the advance")
 	r, err := bs.Buffs.GetRound(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, 0, r)

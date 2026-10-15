@@ -8,6 +8,7 @@ package composition_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -113,9 +114,10 @@ func TestConcurrentPops_OneWinsTheOtherConflicts(t *testing.T) {
 	}
 }
 
-// Two rerolls of the round's initiative run one after the other: the second
-// pops the first's roll. Neither fails, the first roll is voided once and
-// exactly one initiative is left active.
+// Two rerolls of the round's initiative run one after the other: each is its
+// own transaction replacing the newest initiative (ADR 0018 step 5), so the
+// second replaces the first's roll. Neither fails, nothing is voided, and the
+// newest initiative entry keeps the one before it as its "before".
 func TestConcurrentPops_InitiativeReroll(t *testing.T) {
 	bs := bootMaxDice(t)
 	ctx := context.Background()
@@ -129,7 +131,16 @@ func TestConcurrentPops_InitiativeReroll(t *testing.T) {
 		)
 		require.NoError(t, errs[0])
 		require.NoError(t, errs[1])
-		assert.Equal(t, before+2, voidedCount(t, bs), "each reroll popped the roll it replaced")
-		assert.NotNil(t, initiativeOf(t, bs))
+		assert.Equal(t, before, voidedCount(t, bs), "a reroll voids nothing")
+		current := initiativeOf(t, bs)
+		require.NotNil(t, current)
+		entries, err := bs.Log.List(ctx, bs.CharacterID, 2)
+		require.NoError(t, err)
+		require.Len(t, entries, 2)
+		assert.Equal(t, current.LogEntryID, entries[0].ID, "the second reroll is on top")
+		assert.Equal(t, entries[0].ID, entries[0].TransactionID, "its own transaction")
+		require.Len(t, entries[0].Snapshots, 1)
+		assert.JSONEq(t, fmt.Sprintf(`{"d10":10,"entryId":%d}`, entries[1].ID), string(entries[0].Snapshots[0].Before),
+			"it replaced the first reroll's roll")
 	}
 }

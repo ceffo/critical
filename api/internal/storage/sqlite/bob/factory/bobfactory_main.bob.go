@@ -122,6 +122,7 @@ func (f *Factory) fromExistingActionLog(ctx context.Context, m *models.ActionLog
 	o.HPDelta = func() int64 { return m.HPDelta }
 	o.Payload = func() string { return m.Payload }
 	o.CreatedAt = func() time.Time { return m.CreatedAt }
+	o.TransactionID = func() null.Val[int64] { return m.TransactionID }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))
@@ -135,6 +136,12 @@ func (f *Factory) fromExistingActionLog(ctx context.Context, m *models.ActionLog
 	}
 	if len(m.R.ActionActionCorrections) > 0 {
 		ActionLogMods.AddExistingActionActionCorrections(m.R.ActionActionCorrections...).Apply(ctx, o)
+	}
+	if m.R.Transaction != nil {
+		ActionLogMods.WithExistingTransaction(m.R.Transaction).Apply(ctx, o)
+	}
+	if len(m.R.ReverseTransactions) > 0 {
+		ActionLogMods.AddExistingReverseTransactions(m.R.ReverseTransactions...).Apply(ctx, o)
 	}
 	if m.R.Character != nil {
 		ActionLogMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)

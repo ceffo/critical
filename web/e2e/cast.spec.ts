@@ -1,10 +1,13 @@
 import { test, expect, snap } from "./fixtures";
 import {
+  addBuff,
   buffBadge,
   currentHp,
   effectiveStr,
   logEntry,
+  openAddEffect,
   openDashboard,
+  receivePicker,
   recordHp,
   voidEntry,
   nextTurn,
@@ -102,12 +105,12 @@ test("a low-confidence spell shows its text only", async ({ page, stack }) => {
   await snap(page, "low-confidence");
 });
 
-test("Strength cast on me by a party wizard, found by its French name", async ({
+test("Strength cast on me by a party wizard, found by its French name; a saved effect joins it", async ({
   page,
 }) => {
-  await openSpells(page);
+  await openDashboard(page);
   const before = await effectiveStr(page);
-  const picker = page.getByRole("region", { name: "Spell cast on me" });
+  const picker = await receivePicker(page);
   await picker.getByLabel("Search for a spell cast on me").fill("Force");
   await picker.getByLabel("Caster level").fill("9");
   await picker.getByRole("button", { name: "Apply Strength" }).click();
@@ -116,11 +119,35 @@ test("Strength cast on me by a party wizard, found by its French name", async ({
   await expect(card).toContainText("Strength cast on you, caster level 9");
   await expect(card.getByTestId("cast-rounds")).toContainText("= 540");
   await expect(card.getByTestId("cast-str-gain")).toContainText("1d6");
+  // One entry point: the popover closes, the buff is on the timeline from the current turn.
+  await expect(page.getByTestId("add-effect-popover")).toBeHidden();
   await expect(buffBadge(page, "Strength")).toBeVisible();
+  await expect(
+    buffBadge(page, "Strength").getByTestId("buff-rounds"),
+  ).toContainText("540 turns");
   await expect.poll(() => effectiveStr(page)).toBeGreaterThan(before);
   await expect(
     logEntry(page, "Strength cast on me (caster level 9)"),
   ).toBeVisible();
+
+  // A saved effect from the same popover.
+  await addBuff(page, { name: "e2e Ward", rounds: 5, save: true });
+  const saved = await openAddEffect(page, "Saved effect");
+  await saved.getByRole("button", { name: "Add saved effect e2e Ward" }).click();
+  await expect(buffBadge(page, "e2e Ward")).toHaveCount(2);
+
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await openAddEffect(page, "Spell cast on me");
+    await snap(page, `add-effect-${vp.width}x${vp.height}`);
+    await page.keyboard.press("Escape");
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
   await snap(page, "strength-received");
 });
 
@@ -197,8 +224,8 @@ test.describe("same-named spells", () => {
   });
 
   async function receive(page: Page, query: string, row: string) {
-    await openSpells(page);
-    const picker = page.getByRole("region", { name: "Spell cast on me" });
+    await openDashboard(page);
+    const picker = await receivePicker(page);
     await picker.getByLabel("Search for a spell cast on me").fill(query);
     await picker.getByLabel("Caster level").fill("9");
     const item = picker.getByRole("listitem").filter({ hasText: row });
@@ -239,8 +266,8 @@ test.describe("same-named spells", () => {
   test("receive search shows how many matches are not listed", async ({
     page,
   }) => {
-    await openSpells(page);
-    const picker = page.getByRole("region", { name: "Spell cast on me" });
+    await openDashboard(page);
+    const picker = await receivePicker(page);
     await picker.getByLabel("Search for a spell cast on me").fill("Cure Test");
     await expect(picker.getByRole("listitem")).toHaveCount(50);
     await expect(picker.getByTestId("receive-more")).toHaveText(

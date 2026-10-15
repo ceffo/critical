@@ -58,7 +58,7 @@
     "change": "Modifier les PV",
     "amount": "Montant",
     "source": "Source",
-    "sourcePlaceholder": "Source : hache d'orque, potion...",
+    "sourcePlaceholder": "Source (facultative) : hache d'orque, potion...",
     "applyDamage": "Dégâts",
     "applyHeal": "Soins",
     "undoLast": "Annuler la dernière modification de PV",
@@ -636,6 +636,8 @@
     "title": "Journal",
     "empty": "Rien d'enregistré pour l'instant.",
     "current": "en cours",
+    "hpDamage": "Dégâts {{amount}}",
+    "hpHeal": "Soins {{amount}}",
     "nothingThisRound": "Rien d'enregistré ce round.",
     "kinds": {
       "hp_change": "PV",

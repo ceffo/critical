@@ -58,7 +58,7 @@
     "change": "HP change",
     "amount": "Amount",
     "source": "Source",
-    "sourcePlaceholder": "Source: orc axe, potion...",
+    "sourcePlaceholder": "Source (optional): orc axe, potion...",
     "applyDamage": "Damage",
     "applyHeal": "Healing",
     "undoLast": "Undo last HP change",
@@ -636,6 +636,8 @@
     "title": "Journal",
     "empty": "Nothing recorded yet.",
     "current": "current",
+    "hpDamage": "Damage {{amount}}",
+    "hpHeal": "Healing {{amount}}",
     "nothingThisRound": "Nothing recorded this round yet.",
     "kinds": {
       "hp_change": "HP",

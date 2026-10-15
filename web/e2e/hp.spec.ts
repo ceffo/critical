@@ -17,14 +17,13 @@ test("damage then heal change current HP by the amounts entered, without reload"
   const before = await currentHp(page);
   await markNoReload(page);
 
-  // The buttons stay disabled until amount and source are both filled.
+  // The buttons stay disabled until an amount is filled; the source is optional.
   const box = page.getByRole("group", { name: "HP change" });
   const apply = box.getByRole("button", { name: "Damage", exact: true });
   await expect(apply).toBeDisabled();
   await box.getByLabel("Amount").fill("3");
-  await expect(apply).toBeDisabled();
-  await box.getByLabel("Source").fill("e2e trap");
   await expect(apply).toBeEnabled();
+  await box.getByLabel("Source").fill("e2e trap");
 
   await recordHp(page, "damage", 4, "e2e goblin club");
   await expect.poll(() => currentHp(page)).toBe(before - 4);

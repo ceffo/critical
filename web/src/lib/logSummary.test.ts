@@ -734,3 +734,24 @@ describe("entryText for dice rolls", () => {
     expect(entryText(entry("dice", { formula: "x" }), await makeT("en"))).toBe("server summary");
   });
 });
+
+describe("hp_change entries without a source", () => {
+  const hp = (delta: number, summary: string): LogEntry => ({
+    ...entry("hp_change", {}, summary),
+    hpDelta: delta,
+    effectiveHpDelta: delta,
+  });
+
+  it.each([
+    ["en", -5, "Damage 5"],
+    ["en", 4, "Healing 4"],
+    ["fr", -5, "Dégâts 5"],
+    ["fr", 4, "Soins 4"],
+  ])("%s, delta %i: %s", async (lng, delta, want) => {
+    expect(entryText(hp(delta, ""), await makeT(lng))).toBe(want);
+  });
+
+  it("keeps the player's own text when there is one", async () => {
+    expect(entryText(hp(-5, "orc axe"), await makeT("en"))).toBe("orc axe");
+  });
+});

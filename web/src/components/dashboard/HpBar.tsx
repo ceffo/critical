@@ -53,7 +53,7 @@ export function HpBar() {
             title={last.source}
             data-testid="hp-last-change"
           >
-            {t("hp.lastChange", { delta: formatSigned(last.delta), source: last.source })}
+            {t("hp.lastChange", { delta: formatSigned(last.delta), source: last.source }).trim()}
           </span>
         )}
       </div>

@@ -252,3 +252,25 @@ func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
 	assert.Equal(t, r.max, st.CurrentHp)
 	assert.Equal(t, hpsvc.ConditionOK, st.Condition)
 }
+
+// A damage or healing entry without a source is stored with no player text,
+// still counts against the HP ledger and can be undone.
+func TestHP_NoSourceOnTheRealStack(t *testing.T) {
+	r := newHPRig(t)
+	ctx := context.Background()
+
+	cur, e := r.change(-7, "")
+	assert.Equal(t, r.max-7, cur)
+	assert.Equal(t, actionlog.KindHPChange, e.Kind)
+	assert.Empty(t, e.Summary)
+	assert.Equal(t, -7, e.HPDelta)
+
+	st, err := r.bs.HP.GetState(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	require.NotEmpty(t, st.Events)
+	assert.Empty(t, st.Events[0].Source)
+
+	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, r.max, st.CurrentHp)
+}

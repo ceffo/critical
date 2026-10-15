@@ -22,12 +22,13 @@ export function toDraft(d: CharacterDetails): Draft {
 }
 
 /**
- * The PATCH body for a draft. Only the shape is checked here (an age that is not a whole number
- * gives null, the caller reports it), every limit is the server's.
+ * The PATCH body for a draft. Only the shape is checked here: an age that is not a whole number
+ * from 1 up is flagged for the caller to report, and an empty age is sent as null, which clears it.
+ * Every limit is the server's.
  */
 export function toBody(draft: Draft): { body: CharacterDetails; ageInvalid: boolean } {
   const age = draft.age.trim();
-  const ageInvalid = age !== "" && !/^\d+$/.test(age);
+  const ageInvalid = age !== "" && !/^0*[1-9]\d*$/.test(age);
   const languages = draft.languages.trim() === "" ? [] : draft.languages.split(",").map((l) => l.trim());
   return {
     ageInvalid,

@@ -51,7 +51,7 @@ func TestUpdate_ClearsTextAgeAndLanguages(t *testing.T) {
 	want := charactersvc.Details{Languages: []string{}}
 	dal.EXPECT().GetDetails(mockAny, int64(1)).Return(stored, nil)
 	dal.EXPECT().UpdateDetails(mockAny, int64(1), want).Return(nil)
-	got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Race: ptr(""), Age: ptr(0), Languages: &[]string{}})
+	got, err := svc.Update(context.Background(), 1, detailssvc.Patch{Race: ptr(""), ClearAge: true, Languages: &[]string{}})
 	require.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -71,6 +71,7 @@ func TestUpdate_Validation(t *testing.T) {
 		{"weight too long", detailssvc.Patch{Weight: ptr(long(21))}, "weight", detailssvc.CodeTooLong},
 		{"hair too long", detailssvc.Patch{Hair: ptr(long(41))}, "hair", detailssvc.CodeTooLong},
 		{"eyes too long", detailssvc.Patch{Eyes: ptr(long(41))}, "eyes", detailssvc.CodeTooLong},
+		{"zero age is not a clear", detailssvc.Patch{Age: ptr(0)}, "age", detailssvc.CodeOutOfRange},
 		{"negative age", detailssvc.Patch{Age: ptr(-1)}, "age", detailssvc.CodeOutOfRange},
 		{"huge age", detailssvc.Patch{Age: ptr(10_001)}, "age", detailssvc.CodeOutOfRange},
 		{"blank language", detailssvc.Patch{Languages: &[]string{"Commun", "  "}}, "languages", detailssvc.CodeEmpty},

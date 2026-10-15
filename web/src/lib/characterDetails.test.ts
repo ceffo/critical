@@ -18,6 +18,7 @@ describe("character details draft", () => {
   it("flags an age that is not a whole number", () => {
     expect(toBody({ ...toDraft(details), age: "12a" }).ageInvalid).toBe(true);
     expect(toBody({ ...toDraft(details), age: "-3" }).ageInvalid).toBe(true);
+    expect(toBody({ ...toDraft(details), age: "0" }).ageInvalid).toBe(true);
   });
   it("keeps blank entries so the server can reject them", () => {
     expect(toBody({ ...toDraft(details), languages: "Commun, ,Nain" }).body.languages).toEqual(["Commun", "", "Nain"]);

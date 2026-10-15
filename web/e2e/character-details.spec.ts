@@ -44,9 +44,24 @@ test("character details: view, edit with a field error, save, reload", async ({ 
   await expect(pop.getByText("112")).toBeVisible();
   await expect(pop.getByText("Common, Dwarvish, Sylvain")).toBeVisible();
 
+  // Cancel drops the draft, and an emptied age is cleared (null), not kept.
+  await pop.getByRole("button", { name: "Edit" }).click();
+  await pop.getByLabel("Race", { exact: true }).fill("Dwarf");
+  await pop.getByRole("button", { name: "Cancel" }).click();
+  await pop.getByRole("button", { name: "Edit" }).click();
+  await expect(pop.getByLabel("Race", { exact: true })).toHaveValue("Half-elf");
+  await pop.getByLabel("Age", { exact: true }).fill("0");
+  await pop.getByRole("button", { name: "Save" }).click();
+  await expect(pop.getByRole("alert")).toBeVisible();
+  await pop.getByLabel("Age", { exact: true }).fill("");
+  await pop.getByRole("button", { name: "Save" }).click();
+  await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
+  await expect(pop.getByText("112")).toHaveCount(0);
+
   await page.reload();
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
   await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("green")).toBeVisible();
+  await expect(pop.getByText("112")).toHaveCount(0);
   await expect(pop.getByText("Common, Dwarvish, Sylvain")).toBeVisible();
 });

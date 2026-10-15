@@ -33,11 +33,13 @@ const (
 )
 
 // Patch holds the fields to change, nil leaves a field as it is. An empty
-// string clears a text field, Age 0 clears the age.
+// string clears a text field, an empty list the languages and ClearAge the
+// age (Age itself must be 1 to MaxAge).
 type Patch struct {
 	Race      *string
 	Alignment *string
 	Age       *int
+	ClearAge  bool
 	Sex       *string
 	Height    *string
 	Weight    *string
@@ -126,8 +128,11 @@ func apply(cur charactersvc.Details, p Patch) (charactersvc.Details, error) {
 			return cur, err
 		}
 	}
+	if p.ClearAge {
+		cur.Age = 0
+	}
 	if p.Age != nil {
-		if *p.Age < 0 || *p.Age > MaxAge {
+		if *p.Age < 1 || *p.Age > MaxAge {
 			return cur, &domain.FieldError{Field: "age", Message: CodeOutOfRange}
 		}
 		cur.Age = *p.Age

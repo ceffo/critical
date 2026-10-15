@@ -84,8 +84,12 @@ usage windows (5-hour and 7-day). Treat tokens as the scarcest resource after th
 and keep refining the process to spend fewer of them. The biggest costs, in order:
 
 1. **Your own context.** Every turn re-sends it, including turns triggered by background events.
-   Suggest a restart (handoff via the ledger) after every batch of PRs, about every 2 hours, or as
-   soon as your context feels long. Don't wait for the user to notice.
+   **Measure it, don't guess.** Under herdr your pane's status line shows your context (`68k (7%)`);
+   read it with `herdr agent read <your-name> --source recent-unwrapped --lines 8` and grep
+   `[0-9.]+k \([0-9]+%\)` (or the ledger's helper script). Check it at every transition. Hand off
+   (via the ledger) at the next quiet point once it reaches **40%** of the window; hand off at once
+   at 60%. PR count and hours elapsed are not reasons to hand off: a fresh supervisor costs a full
+   cold start. Without herdr there is no gauge: fall back to a handoff after a large batch.
 2. **Wake-ups that do nothing.** Run **one** PR watcher for all open PRs (see "PR watch"), kill the
    previous one before arming a new one, and never leave duplicate or stale loops running. A turn
    that only says "already handled" is waste.
@@ -325,9 +329,9 @@ A worktree is removed only after its PR is merged. Never delete a branch with an
 
 ## Your own context, and the handoff to the next supervisor
 
-**Agent reports are at most 15 lines.** If one is longer, don't relay it whole: summarise. Suggest the
-user restart you after each batch (a few PRs ready, or about every 2 hours). A restart must lose
-nothing, so state lives outside the conversation:
+**Agent reports are at most 15 lines.** If one is longer, don't relay it whole: summarise. Hand off
+when the context gauge says so (section "Token budget", item 1), not by PR count or time. A restart
+must lose nothing, so state lives outside the conversation:
 
 - **The ledger**, `<wt>/supervisor/ledger.md`: what live sources can't tell a successor: each item's
   stage, agent and model, `review: yes|no`, rework round, a stacked child's `BASE` sha, what each

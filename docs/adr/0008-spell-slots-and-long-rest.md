@@ -79,7 +79,7 @@ named otherwise.
     `TestCast_ChromaticOrb_Refusals`, `TestCast_ChromaticOrb_PicksTheChosenGem`,
     `TestOrb_VoidRestoresTheGem` (composition).
 11. **Long rest.** One transaction marks every slot unused (the preparation stays) and refills the
-    per-day items ([ADR 0010](0010-inventory.md) step 3), and nothing else: stock and charges are
+    per-day items ([ADR 0016](0016-inventory.md) step 3), and nothing else: stock and charges are
     not refilled. If either part fails nothing changes.
     Tests: `TestResetSlots`, `TestLongRest_ResetsBothInOneLoggedTransaction`,
     `TestLongRest_ItemFailureFailsTheRest`, `TestLongRest_SlotFailureSkipsItems`,

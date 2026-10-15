@@ -1,4 +1,4 @@
-# ADR 0010: Inventory and editors
+# ADR 0016: Inventory and editors
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.13,
 critical-qki.31 and critical-qki.32, until then in `docs/backend.md`)

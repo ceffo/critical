@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Critical! mark option "Facet": A line-drawn icosahedron (the d20 seen from a vertex) in the primary; its front face lights up in gold: the crit face. Colours: --tint / --highlight with Arcane dark fallbacks. -->
+<polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="none" stroke="var(--tint, #a99bf5)" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="16,8.5 23,20.5 9,20.5" fill="var(--highlight, #f0c437)" stroke="var(--highlight, #f0c437)" stroke-width="1" stroke-linejoin="round"/>
+<path d="M16 8.5L4 9M16 8.5L28 9M23 20.5L28 23M23 20.5L16 30M9 20.5L4 23M9 20.5L16 30" fill="none" stroke="var(--tint, #a99bf5)" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

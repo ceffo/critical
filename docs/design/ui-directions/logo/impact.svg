@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Critical! mark option "Impact": An eight-point burst in the primary (the hit landing) carrying a bold gold "!": loud, unmistakable at 16 px. Colours: --tint / --highlight with Arcane dark fallbacks. -->
+<path d="M16 1.5l3 6.1 6.1-3-3 6.1 6.1 3-6.1 3 3 6.1-6.1-3-3 6.1-3-6.1-6.1 3 3-6.1-6.1-3 6.1-3-3-6.1 6.1 3z" fill="var(--tint, #a99bf5)" stroke="var(--tint, #a99bf5)" stroke-width="1" stroke-linejoin="round"/>
+<rect x="14.4" y="8" width="3.2" height="10.5" rx="1.6" fill="var(--highlight, #f0c437)"/>
+<circle cx="16" cy="22.4" r="2.1" fill="var(--highlight, #f0c437)"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Critical! mark option "Blade": The "!" itself is the mark: a sword point-down in the primary, its dot the gold spark where the blade lands. Colours: --tint / --highlight with Arcane dark fallbacks. -->
+<rect x="14.4" y="1.5" width="3.2" height="4" rx="1" fill="var(--tint, #a99bf5)"/>
+<rect x="8.5" y="5" width="15" height="2.8" rx="1.4" fill="var(--tint, #a99bf5)"/>
+<path d="M12.6 8.2h6.8L17 21.5h-2z" fill="var(--tint, #a99bf5)"/>
+<path d="M16 23.2l2.3 1.7-.9 2.7h-2.8l-.9-2.7z" fill="var(--highlight, #f0c437)"/>
+</svg>

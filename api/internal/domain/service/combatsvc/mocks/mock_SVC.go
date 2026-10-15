@@ -145,6 +145,66 @@ func (_c *MockSVC_AdjustSave_Call) RunAndReturn(run func(context.Context, int64,
 	return _c
 }
 
+// ClearAttackAC provides a mock function with given fields: ctx, characterID, entryID
+func (_m *MockSVC) ClearAttackAC(ctx context.Context, characterID int64, entryID int64) (*combatsvc.RollResult, error) {
+	ret := _m.Called(ctx, characterID, entryID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClearAttackAC")
+	}
+
+	var r0 *combatsvc.RollResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) (*combatsvc.RollResult, error)); ok {
+		return rf(ctx, characterID, entryID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) *combatsvc.RollResult); ok {
+		r0 = rf(ctx, characterID, entryID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*combatsvc.RollResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64) error); ok {
+		r1 = rf(ctx, characterID, entryID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ClearAttackAC_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClearAttackAC'
+type MockSVC_ClearAttackAC_Call struct {
+	*mock.Call
+}
+
+// ClearAttackAC is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - entryID int64
+func (_e *MockSVC_Expecter) ClearAttackAC(ctx interface{}, characterID interface{}, entryID interface{}) *MockSVC_ClearAttackAC_Call {
+	return &MockSVC_ClearAttackAC_Call{Call: _e.mock.On("ClearAttackAC", ctx, characterID, entryID)}
+}
+
+func (_c *MockSVC_ClearAttackAC_Call) Run(run func(ctx context.Context, characterID int64, entryID int64)) *MockSVC_ClearAttackAC_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ClearAttackAC_Call) Return(_a0 *combatsvc.RollResult, _a1 error) *MockSVC_ClearAttackAC_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ClearAttackAC_Call) RunAndReturn(run func(context.Context, int64, int64) (*combatsvc.RollResult, error)) *MockSVC_ClearAttackAC_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

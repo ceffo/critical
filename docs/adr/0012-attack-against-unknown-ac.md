@@ -58,6 +58,22 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
    the damage dice. A verdict or the AC given later rolls nothing; the ammunition is spent once,
    with the attack. Tests: `TestUnknownAC_Step6_SameDiceAsKnownAC`; `composition`
    `TestUnknownAC_AmmoSpentOnceAndUndoPopsTheAttack`.
+7. **Crit hint bound.** The line to tell the GM mentions the crit only when some real AC can
+   crit. The server sends `critPossible: true` when `critsFromAc` is at most 10, the highest
+   armor class the rules allow (`combatsvc.MaxRealAC`), and false when the roll crits no real
+   target (a "crit from AC 57" is noise). The frontend only reads the flag.
+   Test: `TestUnknownAC_Step7_CritPossibleOnlyWithinRealACs`; `router`
+   `TestClearAttackAC_WireShape`.
+8. **Back to unknown.** After the AC was given (or the attack was rolled with one), the **latest**
+   attack can go back to an unknown AC (`POST /api/roll/attack/{id}/unknown-ac`, no body), like
+   the AC correction: an audited amend and its own undoable step (the step's `to` is null),
+   no die rolled, no ammunition spent, refused like an AC correction (not an attack, voided, not
+   the latest roll) and refused (400) when the AC is already unknown. The attack is unsettled
+   again: no hit, no crit, no verdict, damage "if it hits"; the AC as rolled stays for the "was"
+   line. The ledger stays append-only and undo pops the step.
+   Tests: `TestUnknownAC_Step8_BackToUnknownAfterTheACWasGiven`,
+   `TestUnknownAC_Step8_KnownAtRollGoesUnknown`; `composition`
+   `TestUnknownAC_BackToUnknownOnlyOnTheLatestAttackAndUndoable`.
 
 ## Consequences
 
@@ -70,5 +86,4 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
   (which gives the ammunition back).
 - Attacks logged before this ADR have no `acKnown`: they read as known, with their `targetAc`.
 - Migration 019 adds `attack_forms.target_ac_known`; forms saved before keep their AC (known).
-- Not covered: an unknown AC for a spell's to-hit roll (ADR 0002 consequences), going back to an
-  unknown AC after giving it.
+- Not covered: an unknown AC for a spell's to-hit roll (ADR 0002 consequences).

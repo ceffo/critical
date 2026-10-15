@@ -618,6 +618,7 @@
       "decrease": "Baisser la CA de la cible",
       "increase": "Monter la CA de la cible",
       "value": "CA de la cible corrigée",
+      "backToUnknown": "CA de nouveau inconnue",
       "apply": "Appliquer",
       "was": "jet contre CA {{ac}}",
       "giveLabel": "Donner la CA réelle",
@@ -641,6 +642,7 @@
     "critsFromAc": "Critique dès CA",
     "unknownAc": {
       "tellGm": "Annoncez « touche CA {{hits}} » au MJ. Critique dès CA {{crits}}.",
+      "tellGmNoCrit": "Annoncez « touche CA {{hits}} » au MJ.",
       "noCrit": "Pas de critique sans la CA : donnez-la pour régler un critique.",
       "unsettled": "En attente du MJ : donnez la CA, ou Touché / Raté",
       "byGm": "selon le MJ",

@@ -30,6 +30,14 @@ export function attackSettled(r: { acKnown?: boolean; verdict?: string }): boole
   return r.acKnown !== false || r.verdict !== undefined;
 }
 
+/**
+ * Whether the tell-the-GM line mentions the crit: only when the server says some real AC can crit
+ * (critPossible, docs/adr/0012 step 7); an entry without the field keeps the crit part.
+ */
+export function tellGmWithCrit(r: { critPossible?: boolean }): boolean {
+  return r.critPossible !== false;
+}
+
 /** The lowest AC the attack hits, as the server sent it (older entries only have targetACNeeded). */
 export function hitsAc(r: { hitsAc?: number; targetACNeeded: number }): number {
   return r.hitsAc ?? r.targetACNeeded;

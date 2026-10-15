@@ -11,6 +11,11 @@ export function adjustAttack(entryId: number, targetAc: number): Promise<RollRes
   return post<RollResult>(`/api/roll/attack/${entryId}/adjust`, { targetAc });
 }
 
+/** Makes the target AC of the latest attack unknown again (docs/adr/0012 step 8). */
+export function clearAttackAc(entryId: number): Promise<RollResult> {
+  return post<RollResult>(`/api/roll/attack/${entryId}/unknown-ac`, {});
+}
+
 /** The GM's hit or miss on the latest attack while its AC is unknown; the server settles it (no crit). */
 export function attackVerdict(entryId: number, hit: boolean): Promise<RollResult> {
   return post<RollResult>(`/api/roll/attack/${entryId}/verdict`, { hit });

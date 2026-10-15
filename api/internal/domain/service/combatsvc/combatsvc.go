@@ -33,6 +33,9 @@ type SVC interface {
 	// SetAttackVerdict records the GM's hit or miss on the latest attack
 	// when its target AC is unknown (no crit); an audited amend.
 	SetAttackVerdict(ctx context.Context, characterID, entryID int64, hit bool) (*RollResult, error)
+	// ClearAttackAC makes the target AC of the latest attack unknown again
+	// (ADR 0012 step 8).
+	ClearAttackAC(ctx context.Context, characterID, entryID int64) (*RollResult, error)
 	// RollSpellToHit rolls a to-hit (no weapon, no damage, no crit) for a
 	// thrown spell; it logs nothing, the spell's own cast entry does.
 	RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*ToHitRoll, error)

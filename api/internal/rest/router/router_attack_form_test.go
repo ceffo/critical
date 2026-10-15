@@ -30,7 +30,7 @@ const bowFormJSON = `{"form":{"weaponId":"shortbow","previousWeaponId":"longswor
 	"targetSize":"l","situational":{"value":2,"label":"rear"}},"ammoFromDefault":true,
 	"ammoChoices":[{"itemId":"a3","name":"Arrows +3","magic":3,"count":2}],
 	"preview":{"baseThac0":13,"modifiers":[{"kind":"dexterity","detail":"17","value":2}],"effectiveThac0":11,
-	"toHit":2,"rollNeeded":7,"damageBonus":5}}`
+	"toHit":2,"rollNeeded":7,"damageBonus":5},"maxRealAc":10}`
 
 func TestAttackForm_Get(t *testing.T) {
 	h, m := newRouter(t)
@@ -48,7 +48,7 @@ func TestAttackForm_GetWithoutWeaponHasNullPreview(t *testing.T) {
 	rec := do(h, "GET", "/api/attack/form", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"form":{"weaponId":"","previousWeaponId":"","ammoItemId":"","targetAc":null,"targetSize":"sm",
-		"situational":{"value":0,"label":""}},"ammoFromDefault":false,"ammoChoices":[],"preview":null}`, rec.Body.String())
+		"situational":{"value":0,"label":""}},"ammoFromDefault":false,"ammoChoices":[],"preview":null,"maxRealAc":10}`, rec.Body.String())
 }
 
 // PATCH sends only the fields in the body.
@@ -76,7 +76,7 @@ func TestAttackForm_PatchUnknownTargetAC(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"form":{"weaponId":"shortbow","previousWeaponId":"","ammoItemId":"","targetAc":null,"targetSize":"sm",
 		"situational":{"value":0,"label":""}},"ammoFromDefault":false,"ammoChoices":[],
-		"preview":{"baseThac0":13,"modifiers":[],"effectiveThac0":13,"toHit":0,"rollNeeded":null,"damageBonus":0}}`, rec.Body.String())
+		"preview":{"baseThac0":13,"modifiers":[],"effectiveThac0":13,"toHit":0,"rollNeeded":null,"damageBonus":0},"maxRealAc":10}`, rec.Body.String())
 
 	h, _ = newRouter(t)
 	rec = do(h, "PATCH", "/api/attack/form", `{"targetAc":"five"}`)

@@ -176,6 +176,8 @@ export interface AttackFormView {
   ammoChoices: AmmoChoice[];
   /** Null when there is no weapon at all. */
   preview: AttackPreview | null;
+  /** The highest AC the rules allow: the target AC stepper stops there (docs/adr/0012 step 7). */
+  maxRealAc: number;
 }
 
 /** PATCH /api/attack/form: only the fields present change; targetAc null makes the AC unknown. */

@@ -179,7 +179,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await chooseWeapon(page, "Short Bow +2");
   await chooseAmmo(page, "Arrows +2");
   const before = await selectedAmmoCount(page);
-  // AC -20 can't be hit and AC 20 can't be missed whatever the d20, so the flips are certain.
+  // AC -20 can't be hit and AC 10 can't be missed (effective THAC0 11) whatever the d20, so the flips are certain.
   await form.getByLabel("Target AC").fill("-20");
   await form.getByRole("button", { name: "Attack", exact: true }).click();
 
@@ -203,29 +203,29 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(acField).toHaveValue("-20");
 
   // Miss → hit: the damage shown is the dice rolled with the attack.
-  await acField.fill("20");
+  await acField.fill("10");
   await apply.click();
-  await expect(card).toContainText("vs AC 20");
+  await expect(card).toContainText("vs AC 10");
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
   await expect(card.getByTestId("ac-corrected")).toHaveText("rolled vs AC -20");
   await expect(card.getByTestId("total-damage")).toHaveText(/^\d+$/);
   const damage = await card.getByTestId("total-damage").textContent();
   expect(await card.getByText("d20", { exact: true }).locator("xpath=..").locator("dd").textContent()).toBe(d20);
-  await expect(entry).toContainText(/\(AC -20 → 20: MISS → (HIT|CRIT)\)/);
+  await expect(entry).toContainText(/\(AC -20 → 10: MISS → (HIT|CRIT)\)/);
   await expect(entry).toContainText("Amended");
   await expect(card.getByTestId("ammo-left")).toHaveText(`Arrows +2: ${before - 1} left`);
   expect(await selectedAmmoCount(page)).toBe(before - 1);
   await snap(page, "attack-ac-corrected");
 
   // A second correction still reads from the rolled AC and outcome.
-  await acField.fill("19");
+  await acField.fill("9");
   await apply.click();
-  await expect(card).toContainText("vs AC 19");
-  await expect(entry).toContainText(/\(AC -20 → 19: MISS → (HIT|CRIT)\)/);
+  await expect(card).toContainText("vs AC 9");
+  await expect(entry).toContainText(/\(AC -20 → 9: MISS → (HIT|CRIT)\)/);
   await expect(card.getByTestId("ac-corrected")).toHaveText("rolled vs AC -20");
 
   // Hit → miss: back to the rolled AC hides the damage and reads as rolled (still amended); back
-  // to AC 20 shows the same damage again (no reroll).
+  // to AC 10 shows the same damage again (no reroll).
   await acField.fill("-20");
   await apply.click();
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
@@ -234,18 +234,18 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(entry).toContainText("Short Bow +2 (Arrows +2) vs AC -20: miss");
   await expect(entry).not.toContainText("→ -20");
   await expect(entry).toContainText("Amended");
-  await acField.fill("20");
+  await acField.fill("10");
   await apply.click();
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
   await expect(card.getByTestId("total-damage")).toHaveText(damage!);
-  await expect(entry).toContainText(/\(AC -20 → 20: MISS → (HIT|CRIT)\)/);
+  await expect(entry).toContainText(/\(AC -20 → 10: MISS → (HIT|CRIT)\)/);
   expect(await selectedAmmoCount(page)).toBe(before - 1);
 
   // In French: the form and the log line.
   await chooseLanguage(page, "fr");
   const frCard = page.getByRole("region", { name: "Détail", exact: true }).getByTestId("attack-result");
   const frFix = frCard.getByRole("form", { name: "Corriger la CA de la cible" });
-  await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("20");
+  await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("10");
   await expect(frFix.getByRole("button", { name: "Appliquer" })).toBeDisabled();
   await expect(frFix.getByRole("button", { name: "Monter la CA de la cible" })).toBeVisible();
   await expect(frCard.getByTestId("ac-corrected")).toHaveText("jet contre CA -20");
@@ -254,7 +254,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
     .getByRole("listitem")
     .filter({ hasText: "Short Bow +2 (Arrows +2)" });
   await expect(frEntry).toContainText(
-    /contre CA 20 : (touché|critique).*\(CA -20 → 20 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
+    /contre CA 10 : (touché|critique).*\(CA -20 → 10 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
   );
   await snap(page, "attack-ac-corrected-fr");
   await chooseLanguage(page, "en");
@@ -262,7 +262,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   // Each correction is its own step (ADR 0010 step 6): Annuler names the newest one and pops it,
   // and the card reads the attack as it was before it, here the rolled AC again (no arrow back).
   const undo = page.getByTestId("undo");
-  await expect(undo).toHaveAttribute("title", "Undo: Correction AC -20 → 20 (Ctrl+Z / ⌘Z)");
+  await expect(undo).toHaveAttribute("title", "Undo: Correction AC -20 → 10 (Ctrl+Z / ⌘Z)");
   await undo.click();
   await expect(card).toContainText("vs AC -20");
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
@@ -272,7 +272,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   expect(await selectedAmmoCount(page)).toBe(before - 1);
   await snap(page, "attack-ac-correction-undone");
   // The two corrections before it, then the first one: the attack is as rolled, still logged.
-  for (const step of ["19 → -20", "20 → 19", "-20 → 20"]) {
+  for (const step of ["9 → -20", "10 → 9", "-20 → 10"]) {
     await expect(undo).toHaveAttribute("title", `Undo: Correction AC ${step} (Ctrl+Z / ⌘Z)`);
     await undo.click();
   }
@@ -370,8 +370,8 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   await openAttack(page);
   const form = attackForm(page);
   await chooseWeapon(page, "Long Sword +2");
-  // AC -20 can't be hit (effective THAC0 11 needs 31). AC 20 needs -9: a crit when
-  // d20 − check d100 ≥ -9 (ADR 0001 step 2). Roll until the dice make that a crit (~1 in 5).
+  // AC -20 can't be hit (effective THAC0 11 needs 31). AC 10 needs 1: a crit when
+  // d20 − check d100 ≥ 1 (ADR 0001 step 2). Roll until the dice make that a crit (~1 in 10).
   await form.getByLabel("Target AC").fill("-20");
   const card = resultCard(page);
   const fact = async (label: string) =>
@@ -383,30 +383,30 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
     );
   let d20 = 0;
   let check = 100;
-  for (let i = 0; i < 60 && d20 - check < -9; i++) {
+  for (let i = 0; i < 100 && d20 - check < 1; i++) {
     await form.getByRole("button", { name: "Attack", exact: true }).click();
     await expect.poll(async () => (await logEntry(page, "Long Sword +2 vs AC -20").count())).toBe(i + 1);
     d20 = await fact("d20");
     check = await fact("Crit check d100");
   }
-  expect(d20 - check, "no roll in 60 makes AC 20 a crit").toBeGreaterThanOrEqual(-9);
+  expect(d20 - check, "no roll in 100 makes AC 10 a crit").toBeGreaterThanOrEqual(1);
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
   const mult = await fact("Multiplier d100");
 
   const fix = card.getByRole("form", { name: "Correct the target AC" });
-  await fix.getByLabel("Corrected target AC").fill("20");
+  await fix.getByLabel("Corrected target AC").fill("10");
   await fix.getByRole("button", { name: "Apply" }).click();
-  await expect(card).toContainText("vs AC 20");
+  await expect(card).toContainText("vs AC 10");
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
   await expect(card.getByTestId("crit-badge")).toHaveText(
     `Crit check ${check} · multiplier ${mult} → ×2 (placeholder)`,
   );
   expect(await fact("Crit check d100")).toBe(check);
   expect(await fact("Multiplier d100")).toBe(mult);
-  await expect(logEntry(page, "Long Sword +2 vs AC 20")).toContainText(
+  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText(
     `critical (check ${check} · multiplier ${mult} → ×2)`,
   );
-  await expect(logEntry(page, "Long Sword +2 vs AC 20")).toContainText("(AC -20 → 20: MISS → CRIT)");
+  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText("(AC -20 → 10: MISS → CRIT)");
   await snap(page, "miss-to-crit");
 
   // In French: the three dice facts and the crit text.
@@ -420,8 +420,8 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
     page
       .getByRole("region", { name: "Journal", exact: true })
       .getByRole("listitem")
-      .filter({ hasText: "Long Sword +2 contre CA 20" }),
-  ).toContainText(`(CA -20 → 20 : RATÉ → CRITIQUE)`);
+      .filter({ hasText: "Long Sword +2 contre CA 10" }),
+  ).toContainText(`(CA -20 → 10 : RATÉ → CRITIQUE)`);
   await snap(page, "miss-to-crit-fr");
 });
 
@@ -537,10 +537,10 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({ page
   await snap(page, "unknown-ac-gm-hit");
 });
 
-// docs/adr/0012 step 5: the GM gives the AC after the roll; at AC 20 the stored dice make a crit.
+// docs/adr/0012 step 5: the GM gives the AC after the roll; at AC 10 the stored dice make a crit.
 // A THAC0 of -100 keeps critsFromAc (effective THAC0 − d20 + crit-check d100) at most about -3, so
-// every roll crits AC 20 whatever the dice.
-test.describe("with a THAC0 low enough that AC 20 always crits", () => {
+// every roll crits AC 10 whatever the dice.
+test.describe("with a THAC0 low enough that AC 10 always crits", () => {
   test.use({ character: { thac0_base: -100 } });
 
   test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({ page }) => {
@@ -550,20 +550,20 @@ test.describe("with a THAC0 low enough that AC 20 always crits", () => {
     const rolled = page.waitForResponse((res) => res.url().endsWith("/api/roll/attack"));
     await form.getByRole("button", { name: "Attack", exact: true }).click();
     const r = (await (await rolled).json()) as { critsFromAc: number };
-    expect(r.critsFromAc).toBeLessThanOrEqual(20);
+    expect(r.critsFromAc).toBeLessThanOrEqual(10);
 
     const card = resultCard(page);
     await expect(card.getByTestId("verdict")).toHaveText("?");
     const give = card.getByRole("form", { name: "Give the real AC" });
-    await give.getByLabel("Real target AC").fill("20");
+    await give.getByLabel("Real target AC").fill("10");
     await give.getByRole("button", { name: "Correct" }).click();
-    await expect(card).toContainText("Long Sword +2 vs AC 20");
+    await expect(card).toContainText("Long Sword +2 vs AC 10");
     await expect(card.getByTestId("ac-given")).toBeVisible();
     await expect(card.getByTestId("tell-gm")).toHaveCount(0);
     await expect(card.getByRole("group", { name: "The GM’s hit or miss" })).toHaveCount(0);
     await expect(card.getByTestId("verdict")).toHaveText("Hit");
     await expect(card.getByTestId("crit-badge")).toBeVisible();
-    await expect(logEntry(page, "Long Sword +2 vs AC 20: critical")).toBeVisible();
+    await expect(logEntry(page, "Long Sword +2 vs AC 10: critical")).toBeVisible();
     await snap(page, "unknown-ac-given-crit");
   });
 });

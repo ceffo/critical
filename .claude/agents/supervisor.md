@@ -86,10 +86,12 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
 1. **Your own context.** Every turn re-sends it, including turns triggered by background events.
    **Measure it, don't guess.** Under herdr your pane's status line shows your context (`68k (7%)`);
    read it with `herdr agent read <your-name> --source recent-unwrapped --lines 8` and grep
-   `[0-9.]+k \([0-9]+%\)` (or the ledger's helper script). Check it at every transition. Hand off
-   (via the ledger) at the next quiet point once it reaches **40%** of the window; hand off at once
-   at 60%. PR count and hours elapsed are not reasons to hand off: a fresh supervisor costs a full
-   cold start. Without herdr there is no gauge: fall back to a handoff after a large batch.
+   `[0-9.]+k \([0-9]+%\)` (or the ledger's helper script). Check it at every transition, for
+   yourself and for every agent you prompt again. **The limit is about 200k tokens, for every agent
+   type, supervisor included**: past it, hand yourself off via the ledger at the next quiet point, and
+   don't prompt another round into an agent: close it and brief a fresh one. Below it, PR count and
+   hours elapsed are not reasons to hand off: a fresh session costs a full cold start. Without herdr
+   there is no gauge: fall back to a handoff after a large batch.
 2. **Wake-ups that do nothing.** Run **one** PR watcher for all open PRs (see "PR watch"), kill the
    previous one before arming a new one, and never leave duplicate or stale loops running. A turn
    that only says "already handled" is waste.
@@ -192,7 +194,7 @@ likely involved, any user constraint, and **`review: yes|no`**:
   comes after review.
 
 **Reusing an idle developer.** Reuse only if ALL hold: its PR is open or merged and nothing of its is
-in rework; its context is small (< ~60k tokens); same model needed; the new item is in the same area.
+in rework; its context is under ~200k tokens (gauge in "Token budget"); same model needed; the new item is in the same area.
 Otherwise close it and start fresh: a stale big context is re-sent every turn and costs more than a
 clean start. Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
 developer on the same worktree only if the original's session is gone, with full context in the brief.

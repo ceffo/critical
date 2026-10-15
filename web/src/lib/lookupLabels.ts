@@ -45,3 +45,26 @@ export function spheresLabel(t: TFunction, raw: string): string {
 export function classLabel(t: TFunction, cls: string): string {
   return lookupLabel(t, "classes", cls);
 }
+
+/** One school name: the whole text, else its "/" halves, else its words; unknown stays as scraped. */
+function schoolPart(t: TFunction, raw: string): string {
+  const known = (r: string) =>
+    t(`lookup.schoolNames.${labelKey(r)}`, { defaultValue: "" });
+  const whole = known(raw);
+  if (whole) return whole;
+  const halves = raw.split("/").map((p) => known(p.trim()));
+  if (halves.length > 1 && halves.every(Boolean)) return halves.join("/");
+  const words = raw.split(/\s+/);
+  if (words.length > 1) return words.map((w) => schoolPart(t, w)).join(" ");
+  return raw;
+}
+
+/** A spell's school field: comma-separated names ("Alteration, Elemental Water"), each translated on its own. */
+export function schoolLabel(t: TFunction, raw: string): string {
+  return raw
+    .split(",")
+    .map((p) => p.trim().replace(/^\(/, ""))
+    .filter(Boolean)
+    .map((p) => schoolPart(t, p))
+    .join(", ");
+}

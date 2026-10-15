@@ -374,6 +374,77 @@ func (_c *MockDAL_LatestID_Call) RunAndReturn(run func(context.Context, int64, a
 	return _c
 }
 
+// LatestPopped provides a mock function with given fields: ctx, characterID
+func (_m *MockDAL) LatestPopped(ctx context.Context, characterID int64) (int64, int64, bool, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LatestPopped")
+	}
+
+	var r0 int64
+	var r1 int64
+	var r2 bool
+	var r3 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int64, int64, bool, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int64); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) int64); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Get(1).(int64)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64) bool); ok {
+		r2 = rf(ctx, characterID)
+	} else {
+		r2 = ret.Get(2).(bool)
+	}
+
+	if rf, ok := ret.Get(3).(func(context.Context, int64) error); ok {
+		r3 = rf(ctx, characterID)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
+}
+
+// MockDAL_LatestPopped_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LatestPopped'
+type MockDAL_LatestPopped_Call struct {
+	*mock.Call
+}
+
+// LatestPopped is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockDAL_Expecter) LatestPopped(ctx interface{}, characterID interface{}) *MockDAL_LatestPopped_Call {
+	return &MockDAL_LatestPopped_Call{Call: _e.mock.On("LatestPopped", ctx, characterID)}
+}
+
+func (_c *MockDAL_LatestPopped_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_LatestPopped_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockDAL_LatestPopped_Call) Return(id int64, transactionID int64, ok bool, err error) *MockDAL_LatestPopped_Call {
+	_c.Call.Return(id, transactionID, ok, err)
+	return _c
+}
+
+func (_c *MockDAL_LatestPopped_Call) RunAndReturn(run func(context.Context, int64) (int64, int64, bool, error)) *MockDAL_LatestPopped_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListActiveEntries provides a mock function with given fields: ctx, characterID, kind, limit
 func (_m *MockDAL) ListActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error) {
 	ret := _m.Called(ctx, characterID, kind, limit)

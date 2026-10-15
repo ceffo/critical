@@ -166,6 +166,9 @@ var endpoints = []endpoint{
 	{"POST log/undo", "POST", "/api/log/undo", `{"expectedTopId":4}`, func(m *mocksSet, err error) {
 		m.log.On("Undo", anyArgs(3)...).Return(nil, err)
 	}},
+	{"POST log/redo", "POST", "/api/log/redo", `{"expectedRedoId":4}`, func(m *mocksSet, err error) {
+		m.log.On("Redo", anyArgs(3)...).Return(nil, err)
+	}},
 	{"GET buffs", "GET", "/api/buffs", "", func(m *mocksSet, err error) {
 		m.buffs.On("ListStatus", anyArgs(2)...).Return(nil, err)
 	}},
@@ -301,6 +304,8 @@ func TestSpecialSentinels(t *testing.T) {
 		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"code":"invalid_slot_index","error":"invalid slot index: 2"}`},
 		{"undo stale top", "POST log/undo", fmt.Errorf("%w: the newest entry is #5 (attack, round 2), not #4", actionlogsvc.ErrTopChanged), 409, `{"code":"log_top_changed","error":"the newest entry changed: the newest entry is #5 (attack, round 2), not #4"}`},
 		{"undo empty log", "POST log/undo", fmt.Errorf("%w: expected #4 on top", actionlogsvc.ErrNothingToUndo), 409, `{"code":"nothing_to_undo","error":"nothing to undo: expected #4 on top"}`},
+		{"redo stale target", "POST log/redo", fmt.Errorf("%w: the transaction to redo is #5 (attack, round 2), not #4", actionlogsvc.ErrRedoChanged), 409, `{"code":"log_redo_changed","error":"the transaction to redo changed: the transaction to redo is #5 (attack, round 2), not #4"}`},
+		{"nothing to redo", "POST log/redo", fmt.Errorf("%w: expected #4", actionlogsvc.ErrNothingToRedo), 409, `{"code":"nothing_to_redo","error":"nothing to redo: expected #4"}`},
 		{"amend already undone", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #4"}`},
 		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, undo this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, undo this save and roll again"}`},
 		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},

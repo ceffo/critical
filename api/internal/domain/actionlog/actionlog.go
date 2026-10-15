@@ -205,19 +205,33 @@ func Family(key string) string {
 	return family
 }
 
-// Restorer writes a "before" snapshot back when an entry is voided. It runs
-// inside the void's transaction (use ctx for every storage call).
+// Restorer writes a snapshot back: its "before" when an entry is voided, its
+// "after" when the entry is replayed by a redo (ADR 0019 step 1). It runs
+// inside the void's or the redo's transaction (use ctx for every storage
+// call).
 type Restorer interface {
 	Restore(ctx context.Context, characterID int64, state json.RawMessage) error
 }
 
-// CorrectionKind is amend or void.
+// Replayer is implemented by a Restorer whose "after" cannot name the entry
+// that recorded it, because the entry's id is assigned once its snapshots
+// are taken (the initiative remembers the entry that rolled it). A redo
+// writes such an "after" back through Replay, with the replayed entry's id;
+// every other Restorer gets its "after" through Restore (ADR 0019 step 1).
+type Replayer interface {
+	Replay(ctx context.Context, characterID, entryID int64, after json.RawMessage) error
+}
+
+// CorrectionKind is amend, void or redo.
 type CorrectionKind string
 
-// Correction kinds.
+// Correction kinds. A void pops an entry (ADR 0018 step 2); a redo un-pops it
+// when its transaction is replayed (ADR 0019 step 1). An entry may be popped
+// and replayed several times: its newest void or redo decides (Entry.Status).
 const (
 	CorrectionAmend CorrectionKind = "amend"
 	CorrectionVoid  CorrectionKind = "void"
+	CorrectionRedo  CorrectionKind = "redo"
 )
 
 // Correction is an audited change to an entry. A note amend (the only kind
@@ -225,7 +239,8 @@ const (
 // A value amend carries the new HP delta (nil: unchanged), summary (empty:
 // unchanged) and payload (empty: unchanged): written by AmendLatest (post-roll
 // adjustments, payload only) and, with an HP delta or a summary, by hp_change
-// amends logged before amends became note-only. A void carries none of them.
+// amends logged before amends became note-only. A void or a redo carries none
+// of them.
 //
 // StepID is the KindCorrection entry an amend written by AmendLatest belongs
 // to (nil for older amends, which stay in effect until their entry is popped).
@@ -284,21 +299,33 @@ type Entry struct {
 	Corrections   []Correction
 }
 
-// Status is voided when any void exists, amended when an amend changed a
-// value, active otherwise (a note does not make an entry amended).
+// Status is voided when the newest void or redo is a void (ADR 0019 step 1),
+// amended when an amend changed a value, active otherwise (a note does not
+// make an entry amended).
 func (e Entry) Status() Status {
-	status := StatusActive
+	if e.Voided() {
+		return StatusVoided
+	}
 	for _, c := range e.Corrections {
-		switch c.Kind {
-		case CorrectionVoid:
-			return StatusVoided
-		case CorrectionAmend:
-			if c.changesValue() {
-				status = StatusAmended
-			}
+		if c.changesValue() {
+			return StatusAmended
 		}
 	}
-	return status
+	return StatusActive
+}
+
+// Voided reports whether the entry is popped: its newest void or redo
+// correction is a void (corrections are in id order).
+func (e Entry) Voided() bool {
+	for i := len(e.Corrections) - 1; i >= 0; i-- {
+		switch e.Corrections[i].Kind {
+		case CorrectionVoid:
+			return true
+		case CorrectionRedo:
+			return false
+		}
+	}
+	return false
 }
 
 // latestAmend is the newest amend in effect for which set reports true.

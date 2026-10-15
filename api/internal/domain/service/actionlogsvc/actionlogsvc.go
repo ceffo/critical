@@ -28,6 +28,14 @@ type SVC interface {
 	// ErrTopChanged when another entry is on top, ErrNothingToUndo when the
 	// log has none. Returns the transaction's first entry, voided.
 	Undo(ctx context.Context, characterID, expectedTopID int64) (*actionlog.Entry, error)
+	// Redo replays the newest popped transaction, when its first entry's id
+	// is expectedRedoID (ADR 0019): ErrRedoChanged when another transaction
+	// is the one to redo, ErrNothingToRedo when there is none. Returns the
+	// transaction's first entry, live again.
+	Redo(ctx context.Context, characterID, expectedRedoID int64) (*actionlog.Entry, error)
+	// RedoTarget is the first entry of the transaction Redo replays, nil
+	// when there is nothing to redo.
+	RedoTarget(ctx context.Context, characterID int64) (*actionlog.Entry, error)
 	// TopID is the newest non-voided entry, the one Undo pops; ok is false
 	// when there is none.
 	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
@@ -59,6 +67,9 @@ type DAL interface {
 	ListActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 	// LatestActiveID returns the newest non-voided entry, any kind.
 	LatestActiveID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
+	// LatestPopped returns the entry whose standing void is the newest (the
+	// last one popped and not redone since) and its transaction.
+	LatestPopped(ctx context.Context, characterID int64) (id, transactionID int64, ok bool, err error)
 	// LatestID returns the newest entry of kind, voided or not.
 	LatestID(ctx context.Context, characterID int64, kind actionlog.Kind) (id int64, ok bool, err error)
 	HPTotal(ctx context.Context, characterID int64) (int, error)

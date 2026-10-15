@@ -91,7 +91,7 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			}
 			return s.dal.ReplaceSavedBuffs(ctx, characterID, saved)
 		}),
-		StateKeyInitiative: restoreFunc(s.restoreInitiative),
+		StateKeyInitiative: initiativeRestorer{s: s},
 		StateKeyRound: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
 			var round int
 			if err := json.Unmarshal(state, &round); err != nil {

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { appendHpEvent } from "@/api/hp";
 import { ApiError } from "@/api/http";
-import { amendLogEntry, undoLogEntry } from "@/api/log";
+import { amendLogEntry, redoLogEntry, undoLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
@@ -39,6 +39,9 @@ interface TableStore {
   /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
    * refused (another action landed first) or there was nothing to pop. */
   undo: () => Promise<boolean>;
+  /** Replay the newest popped transaction, as last read (ADR 0019). False when the server refused
+   * (another action landed or another client redid first) or there was nothing to redo. */
+  redo: () => Promise<boolean>;
   nextRound: () => Promise<boolean>;
   /** Pop the round's initiative entry and roll a new one (refused when another entry is newer). */
   rerollInitiative: () => Promise<boolean>;
@@ -137,6 +140,18 @@ export const useTableStore = create<TableStore>((set, get) => ({
     if (expected === null) return Promise.resolve(false);
     return get().run(async () => {
       await undoLogEntry(expected);
+      set({ notice: null });
+      useRollStore.setState({ last: null });
+    });
+  },
+  // Redo (ADR 0019 step 3), the journal's Redo button and Ctrl+Shift+Z: replays the transaction
+  // this client last read as the redo target, so a stale one is refused and nothing changes. Like
+  // an undo, it can change anything the card or a notice shows: both are re-read from the log.
+  redo: () => {
+    const expected = useLogStore.getState().redo?.id ?? null;
+    if (expected === null) return Promise.resolve(false);
+    return get().run(async () => {
+      await redoLogEntry(expected);
       set({ notice: null });
       useRollStore.setState({ last: null });
     });

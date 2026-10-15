@@ -647,7 +647,7 @@ func (o listActions) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dial
 	return o.subExpr(0, len(listActionsSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var listActiveActionsByKindSQL = formattedQueries_action_log[1120:1481]
+var listActiveActionsByKindSQL = formattedQueries_action_log[1120:1621]
 
 type ListActiveActionsByKindQuery = orm.ModQuery[*dialect.SelectQuery, listActiveActionsByKind, ListActiveActionsByKindRow, []ListActiveActionsByKindRow, listActiveActionsByKindTransformer]
 
@@ -688,9 +688,9 @@ func ListActiveActionsByKind(CharacterID int64, Kind string, Arg string) *ListAc
 		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
 			q.AppendSelect(expressionTypArgs.subExpr(7, 110))
 			q.SetTable(expressionTypArgs.subExpr(117, 129))
-			q.AppendWhere(expressionTypArgs.subExpr(135, 333))
-			q.AppendOrder(expressionTypArgs.subExpr(342, 352))
-			q.SetLimit(expressionTypArgs.subExpr(359, 361))
+			q.AppendWhere(expressionTypArgs.subExpr(135, 473))
+			q.AppendOrder(expressionTypArgs.subExpr(482, 492))
+			q.SetLimit(expressionTypArgs.subExpr(499, 501))
 		}),
 		Build: sqlite.Select,
 	}
@@ -738,8 +738,8 @@ func (o listActiveActionsByKind) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "arg",
-			Start:      359,
-			Stop:       361,
+			Start:      499,
+			Stop:       501,
 			Expression: o.Arg,
 		}) {
 			return
@@ -759,7 +759,7 @@ func (o listActiveActionsByKind) WriteSQL(ctx context.Context, w io.StringWriter
 	return o.subExpr(0, len(listActiveActionsByKindSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var listCorrectionsFromSQL = formattedQueries_action_log[1507:2026]
+var listCorrectionsFromSQL = formattedQueries_action_log[1647:2166]
 
 type ListCorrectionsFromQuery = orm.ModQuery[*dialect.SelectQuery, listCorrectionsFrom, ListCorrectionsFromRow, []ListCorrectionsFromRow, listCorrectionsFromTransformer]
 
@@ -859,7 +859,7 @@ func (o listCorrectionsFrom) WriteSQL(ctx context.Context, w io.StringWriter, d 
 	return o.subExpr(0, len(listCorrectionsFromSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var listSnapshotsFromSQL = formattedQueries_action_log[2050:2421]
+var listSnapshotsFromSQL = formattedQueries_action_log[2190:2561]
 
 type ListSnapshotsFromQuery = orm.ModQuery[*dialect.SelectQuery, listSnapshotsFrom, ListSnapshotsFromRow, []ListSnapshotsFromRow, listSnapshotsFromTransformer]
 
@@ -951,7 +951,7 @@ func (o listSnapshotsFrom) WriteSQL(ctx context.Context, w io.StringWriter, d bo
 	return o.subExpr(0, len(listSnapshotsFromSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var latestActionIDSQL = formattedQueries_action_log[2442:2540]
+var latestActionIDSQL = formattedQueries_action_log[2582:2680]
 
 type LatestActionIDQuery = orm.ModQuery[*dialect.SelectQuery, latestActionID, int64, []int64, latestActionIDTransformer]
 
@@ -1028,7 +1028,7 @@ func (o latestActionID) WriteSQL(ctx context.Context, w io.StringWriter, d bob.D
 	return o.subExpr(0, len(latestActionIDSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var latestActiveActionIDSQL = formattedQueries_action_log[2567:2811]
+var latestActiveActionIDSQL = formattedQueries_action_log[2707:3091]
 
 type LatestActiveActionIDQuery = orm.ModQuery[*dialect.SelectQuery, latestActiveActionID, int64, []int64, latestActiveActionIDTransformer]
 
@@ -1051,9 +1051,9 @@ func LatestActiveActionID(CharacterID int64) *LatestActiveActionIDQuery {
 		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
 			q.AppendSelect(expressionTypArgs.subExpr(7, 11))
 			q.SetTable(expressionTypArgs.subExpr(17, 29))
-			q.AppendWhere(expressionTypArgs.subExpr(35, 217))
-			q.AppendOrder(expressionTypArgs.subExpr(226, 236))
-			q.SetLimit(expressionTypArgs.subExpr(243, 244))
+			q.AppendWhere(expressionTypArgs.subExpr(35, 357))
+			q.AppendOrder(expressionTypArgs.subExpr(366, 376))
+			q.SetLimit(expressionTypArgs.subExpr(383, 384))
 		}),
 		Build: sqlite.Select,
 	}
@@ -1094,7 +1094,7 @@ func (o latestActiveActionID) WriteSQL(ctx context.Context, w io.StringWriter, d
 	return o.subExpr(0, len(latestActiveActionIDSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var listTransactionActionsSQL = formattedQueries_action_log[2840:3040]
+var listTransactionActionsSQL = formattedQueries_action_log[3120:3320]
 
 type ListTransactionActionsQuery = orm.ModQuery[*dialect.SelectQuery, listTransactionActions, ListTransactionActionsRow, []ListTransactionActionsRow, listTransactionActionsTransformer]
 
@@ -1192,4 +1192,80 @@ func (o listTransactionActions) subExpr(from, to int) bob.Expression {
 
 func (o listTransactionActions) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(listTransactionActionsSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var latestPoppedActionSQL = formattedQueries_action_log[3345:3727]
+
+type LatestPoppedActionQuery = orm.ModQuery[*dialect.SelectQuery, latestPoppedAction, LatestPoppedActionRow, []LatestPoppedActionRow, latestPoppedActionTransformer]
+
+func LatestPoppedAction(CharacterID int64) *LatestPoppedActionQuery {
+	var expressionTypArgs latestPoppedAction
+
+	expressionTypArgs.CharacterID = sqlite.Arg(CharacterID)
+
+	return &LatestPoppedActionQuery{
+		Query: orm.Query[latestPoppedAction, LatestPoppedActionRow, []LatestPoppedActionRow, latestPoppedActionTransformer]{
+			ExecQuery: orm.ExecQuery[latestPoppedAction]{
+				BaseQuery: bob.BaseQuery[latestPoppedAction]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeSelect,
+				},
+			},
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (LatestPoppedActionRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t LatestPoppedActionRow
+						row.ScheduleScanByIndex(0, &t.ID)
+						row.ScheduleScanByIndex(1, &t.TransactionID)
+						return &t, nil
+					}, func(v any) (LatestPoppedActionRow, error) {
+						return *v.(*LatestPoppedActionRow), nil
+					}
+			},
+		},
+		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
+			q.AppendSelect(expressionTypArgs.subExpr(7, 55))
+			q.SetTable(expressionTypArgs.subExpr(61, 134))
+			q.AppendWhere(expressionTypArgs.subExpr(140, 351))
+			q.AppendOrder(expressionTypArgs.subExpr(360, 374))
+			q.SetLimit(expressionTypArgs.subExpr(381, 382))
+		}),
+		Build: sqlite.Select,
+	}
+}
+
+type LatestPoppedActionRow = struct {
+	ID            int64           `db:"id"`
+	TransactionID null.Val[int64] `db:"transaction_id"`
+}
+
+type latestPoppedActionTransformer = bob.SliceTransformer[LatestPoppedActionRow, []LatestPoppedActionRow]
+
+type latestPoppedAction struct {
+	CharacterID bob.Expression
+}
+
+func (o latestPoppedAction) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "characterID",
+			Start:      171,
+			Stop:       173,
+			Expression: o.CharacterID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o latestPoppedAction) raw(from, to int) string {
+	return latestPoppedActionSQL[from:to]
+}
+
+func (o latestPoppedAction) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(latestPoppedActionSQL, from, to, o.args())
+}
+
+func (o latestPoppedAction) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(latestPoppedActionSQL)).WriteSQL(ctx, w, d, start)
 }

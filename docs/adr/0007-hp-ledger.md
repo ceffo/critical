@@ -29,7 +29,9 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    characters' entries do not count; entries of other kinds have delta 0, except an `exposure`
    the Bard takes himself ([ADR 0008](0008-spell-slots-and-long-rest.md) step 16, user ruling
    2026-10-15), whose delta is the damage rolled. (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 4:* an entry of any
-   kind may carry a delta, and every entry's effective delta counts.)
+   kind may carry a delta, and every entry's effective delta counts. *Amended by
+   [ADR 0019](0019-redo.md) step 1:* "voided" means popped: the entry's newest void or redo is a
+   void, so a redone entry counts again.)
    Tests: `TestHPTotal` (actionlogdal: plain sum, "latest amend wins", "void counts zero", "void
    after amend counts zero", "summary-only amend keeps delta"), `TestGetState`,
    `TestExposureOnTheBard_VoidGivesTheHPBack` (composition).

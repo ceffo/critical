@@ -1,6 +1,6 @@
 // Package actionloghdl exposes the action log over HTTP: list entries with
-// their correction status and the top of the stack, set an entry's note, pop
-// (void) the latest entry, undo with an expected top.
+// their correction status, the top of the stack and the redo target, set an
+// entry's note, undo with an expected top, redo with an expected target.
 package actionloghdl
 
 import (
@@ -29,6 +29,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type lister interface {
 	List(ctx context.Context, characterID int64, limit int) ([]actionlog.Entry, error)
 	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
+	RedoTarget(ctx context.Context, characterID int64) (*actionlog.Entry, error)
 }
 type amender interface {
 	Amend(ctx context.Context, characterID, id int64, a actionlogsvc.Amendment) (*actionlog.Entry, error)
@@ -36,11 +37,15 @@ type amender interface {
 type undoer interface {
 	Undo(ctx context.Context, characterID, expectedTopID int64) (*actionlog.Entry, error)
 }
+type redoer interface {
+	Redo(ctx context.Context, characterID, expectedRedoID int64) (*actionlog.Entry, error)
+}
 
 // RegisterRoutes wires the action log endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc actionlogsvc.SVC) {
 	r.Get("/api/log", render.Handle(List(charID, svc)))
 	r.Post("/api/log/undo", render.Handle(Undo(charID, svc)))
+	r.Post("/api/log/redo", render.Handle(Redo(charID, svc)))
 	r.Post("/api/log/{id}/amend", render.Handle(Amend(charID, svc)))
 }
 
@@ -64,9 +69,17 @@ func List(charID CharacterIDFunc, svc lister) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
+		redo, err := svc.RedoTarget(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
 		out := LogDTO{Entries: make([]EntryDTO, 0, len(entries))}
 		if ok {
 			out.TopID = &top
+		}
+		if redo != nil {
+			dto := toDTO(*redo)
+			out.Redo = &dto
 		}
 		for _, e := range entries {
 			out.Entries = append(out.Entries, toDTO(e))
@@ -132,6 +145,31 @@ func Undo(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
 	}
 }
 
+// Redo replays the newest popped transaction (ADR 0019 step 3) and answers
+// with its first entry, live again. Body: {"expectedRedoId": 12}, the id of
+// the redo entry the client read from GET /api/log. 409 when another
+// transaction is the one to redo or there is nothing to redo; nothing changes
+// then.
+func Redo(charID CharacterIDFunc, svc redoer) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body struct {
+			ExpectedRedoID *int64 `json:"expectedRedoId"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if body.ExpectedRedoID == nil || *body.ExpectedRedoID <= 0 {
+			return render.BadRequestError("expectedRedoId is required (a positive entry id)")
+		}
+		e, err := svc.Redo(r.Context(), charID(r), *body.ExpectedRedoID)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toDTO(*e))
+		return nil
+	}
+}
+
 func entryID(r *http.Request) (int64, error) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -146,6 +184,10 @@ type LogDTO struct {
 	// TopID is the newest non-voided entry, the one POST /api/log/undo pops
 	// (null when there is none). It may be older than every listed entry.
 	TopID *int64 `json:"topId"`
+	// Redo is the first entry of the transaction POST /api/log/redo replays
+	// (null when there is nothing to redo, ADR 0019 step 2); its id is the
+	// expectedRedoId. It may be older than every listed entry.
+	Redo *EntryDTO `json:"redo"`
 }
 
 // EntryDTO is one log entry on the wire. hpDelta is the original value;
@@ -182,7 +224,7 @@ type SnapshotDTO struct {
 	After  json.RawMessage `json:"after"`
 }
 
-// CorrectionDTO is one amend or void. note is set on note amends; hpDelta,
+// CorrectionDTO is one amend, void or redo. note is set on note amends; hpDelta,
 // source and payload on value amends (post-roll adjustments, and hp_change
 // amends logged before amends became note-only). stepId is the correction
 // entry a post-roll correction belongs to; undone is true once that entry was

@@ -135,6 +135,8 @@ var mappings = []mapping{
 	{target: actionlogsvc.ErrNotLatest, status: http.StatusConflict, code: "entry_not_latest"},
 	{target: actionlogsvc.ErrTopChanged, status: http.StatusConflict, code: "log_top_changed"},
 	{target: actionlogsvc.ErrNothingToUndo, status: http.StatusConflict, code: "nothing_to_undo"},
+	{target: actionlogsvc.ErrRedoChanged, status: http.StatusConflict, code: "log_redo_changed"},
+	{target: actionlogsvc.ErrNothingToRedo, status: http.StatusConflict, code: "nothing_to_redo"},
 }
 
 func mapError(err error) (int, string, string) {

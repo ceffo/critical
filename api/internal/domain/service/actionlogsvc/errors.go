@@ -15,4 +15,9 @@ var (
 	ErrTopChanged = errors.New("the newest entry changed")
 	// ErrNothingToUndo: an undo on a log with no non-voided entry.
 	ErrNothingToUndo = errors.New("nothing to undo")
+	// ErrRedoChanged: a redo whose expected transaction is no longer the one
+	// a redo replays (another action landed, or it was already replayed).
+	ErrRedoChanged = errors.New("the transaction to redo changed")
+	// ErrNothingToRedo: a redo with no popped transaction above the live top.
+	ErrNothingToRedo = errors.New("nothing to redo")
 )

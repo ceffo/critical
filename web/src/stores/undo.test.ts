@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LogEntry, LogKind } from "@/types/log";
 
-// A fake server action stack: what GET /api/log, POST /api/log/undo and
+// A fake server action stack: what GET /api/log, POST /api/log/undo, POST /api/log/redo and
 // the initiative reroll do to it (the rules themselves are Go tests). It lets the store be driven
 // through its real refresh path, as two clients would see the server.
 const server = vi.hoisted(() => {
@@ -10,8 +10,11 @@ const server = vi.hoisted(() => {
     rows: [] as Row[],
     nextId: 1,
     calls: [] as string[],
+    /** Popped rows, the last popped last; a push empties it (ADR 0019 step 2). */
+    redoable: [] as Row[],
     push(kind: string) {
       s.rows.push({ id: s.nextId++, kind, voided: false });
+      s.redoable = [];
     },
     top(): Row | undefined {
       return [...s.rows].reverse().find((r) => !r.voided);
@@ -24,6 +27,17 @@ const server = vi.hoisted(() => {
           `the newest entry changed: #${top.id}, not #${expected}`,
         );
       top.voided = true;
+      s.redoable.push(top);
+    },
+    redo(expected: number) {
+      const target = s.redoable.at(-1);
+      if (!target) throw new Error("nothing to redo: expected #" + expected);
+      if (target.id !== expected)
+        throw new Error(
+          `the transaction to redo changed: #${target.id}, not #${expected}`,
+        );
+      s.redoable.pop();
+      target.voided = false;
     },
   };
   return s;
@@ -42,10 +56,20 @@ vi.mock("@/api/log", () => ({
         }) as LogEntry,
     ),
     topId: server.top()?.id ?? null,
+    redo: (() => {
+      const r = server.redoable.at(-1);
+      return r
+        ? ({ id: r.id, kind: r.kind as LogKind, status: "voided" } as LogEntry)
+        : null;
+    })(),
   }),
   undoLogEntry: async (expected: number) => {
     server.calls.push(`undo ${expected}`);
     server.pop(expected);
+  },
+  redoLogEntry: async (expected: number) => {
+    server.calls.push(`redo ${expected}`);
+    server.redo(expected);
   },
   amendLogEntry: async () => undefined,
 }));
@@ -78,12 +102,14 @@ import { useRollStore } from "./roll";
 import type { RollResult } from "@/types/combat";
 
 const topId = () => useLogStore.getState().topId;
+const redoId = () => useLogStore.getState().redo?.id ?? null;
 
 describe("global undo against the server stack", () => {
   beforeEach(async () => {
     server.rows = [];
     server.nextId = 1;
     server.calls = [];
+    server.redoable = [];
     useTableStore.setState({ error: null, busy: false });
     await useTableStore.getState().refresh();
   });
@@ -191,5 +217,58 @@ describe("global undo against the server stack", () => {
     });
     expect(await useTableStore.getState().undo()).toBe(true);
     expect(useRollStore.getState().last).toBeNull();
+  });
+
+  // ADR 0019 steps 2 and 3: Redo replays what the last undo popped, sending the target this client
+  // read; undo twice, redo twice replays in order; then there is nothing to redo.
+  it("journal Redo replays the popped transactions in order", async () => {
+    server.push("hp_change");
+    server.push("cast");
+    await useTableStore.getState().refresh();
+    expect(await useTableStore.getState().redo()).toBe(false); // nothing popped: no request
+
+    await useTableStore.getState().undo();
+    await useTableStore.getState().undo();
+    expect(redoId()).toBe(1);
+    expect(await useTableStore.getState().redo()).toBe(true);
+    expect(topId()).toBe(1);
+    expect(redoId()).toBe(2);
+    expect(await useTableStore.getState().redo()).toBe(true);
+    expect(topId()).toBe(2);
+    expect(redoId()).toBeNull();
+    expect(await useTableStore.getState().redo()).toBe(false);
+    expect(server.calls).toEqual(["undo 2", "undo 1", "redo 1", "redo 2"]);
+    expect(useTableStore.getState().error).toBeNull();
+  });
+
+  // ADR 0019 step 3: another client redid since this client's last read: refused, nothing changes,
+  // and the refreshed target is the next one.
+  it("journal Redo with a stale target", async () => {
+    server.push("hp_change");
+    server.push("cast");
+    await useTableStore.getState().refresh();
+    await useTableStore.getState().undo();
+    await useTableStore.getState().undo();
+
+    server.redo(1); // client A
+    expect(await useTableStore.getState().redo()).toBe(false);
+    expect(useTableStore.getState().error).toMatch(
+      /transaction to redo changed/,
+    );
+    expect(server.rows.map((r) => r.voided)).toEqual([false, true]);
+    expect(redoId()).toBe(2);
+  });
+
+  // ADR 0019 step 2: a new action after an undo empties the redo stack.
+  it("a new action after an undo leaves nothing to redo", async () => {
+    server.push("hp_change");
+    await useTableStore.getState().refresh();
+    await useTableStore.getState().undo();
+    expect(redoId()).toBe(1);
+
+    server.push("attack");
+    await useTableStore.getState().refresh();
+    expect(redoId()).toBeNull();
+    expect(await useTableStore.getState().redo()).toBe(false);
   });
 });

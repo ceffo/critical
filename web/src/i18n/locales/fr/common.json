@@ -859,6 +859,11 @@
       "tooltip": "Annuler : {{action}} (Ctrl+Z / ⌘Z)",
       "nothing": "Rien à annuler"
     },
+    "redo": {
+      "label": "Rétablir",
+      "tooltip": "Rétablir : {{action}} (Ctrl+Maj+Z / ⇧⌘Z)",
+      "nothing": "Rien à rétablir"
+    },
     "skill": {
       "success": "{{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
       "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec"
@@ -1118,6 +1123,8 @@
     "entry_not_amendable": "Cette entrée ne peut pas être modifiée.",
     "log_top_changed": "L'entrée la plus récente a changé entre-temps. Vérifiez le journal et réessayez.",
     "nothing_to_undo": "Il n'y a rien à annuler.",
+    "log_redo_changed": "Ce qui peut être rétabli a changé entre-temps. Vérifiez le journal et réessayez.",
+    "nothing_to_redo": "Il n'y a rien à rétablir.",
     "no_initiative": "Il n'y a pas d'initiative à relancer : lancez d'abord un combat.",
     "initiative_not_on_top": "L'initiative n'est plus la dernière action : annulez ce qui a suivi, ou relancez au prochain tour.",
     "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord.",

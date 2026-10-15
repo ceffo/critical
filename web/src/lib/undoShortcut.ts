@@ -8,13 +8,25 @@ export interface UndoKey {
   repeat: boolean;
 }
 
-/** Ctrl+Z, or Cmd+Z on macOS (ADR 0010 step 5). Shift (redo elsewhere), Alt and auto-repeat
+/** Ctrl+Z, or Cmd+Z on macOS (ADR 0010 step 5). Shift (the redo, isRedoShortcut), Alt and auto-repeat
  * from a held key are not an undo: one press pops one entry. */
 export function isUndoShortcut(e: UndoKey): boolean {
   return (
     (e.ctrlKey || e.metaKey) &&
     !e.altKey &&
     !e.shiftKey &&
+    !e.repeat &&
+    e.key.toLowerCase() === "z"
+  );
+}
+
+/** Ctrl+Shift+Z, or Cmd+Shift+Z on macOS (ADR 0019 step 3): the redo. Alt and auto-repeat are not
+ * a redo: one press replays one transaction. */
+export function isRedoShortcut(e: UndoKey): boolean {
+  return (
+    (e.ctrlKey || e.metaKey) &&
+    !e.altKey &&
+    e.shiftKey &&
     !e.repeat &&
     e.key.toLowerCase() === "z"
   );

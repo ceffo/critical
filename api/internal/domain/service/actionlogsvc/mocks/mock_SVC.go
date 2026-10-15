@@ -474,6 +474,125 @@ func (_c *MockSVC_Record_Call) RunAndReturn(run func(context.Context, actionlog.
 	return _c
 }
 
+// Redo provides a mock function with given fields: ctx, characterID, expectedRedoID
+func (_m *MockSVC) Redo(ctx context.Context, characterID int64, expectedRedoID int64) (*actionlog.Entry, error) {
+	ret := _m.Called(ctx, characterID, expectedRedoID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Redo")
+	}
+
+	var r0 *actionlog.Entry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) (*actionlog.Entry, error)); ok {
+		return rf(ctx, characterID, expectedRedoID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) *actionlog.Entry); ok {
+		r0 = rf(ctx, characterID, expectedRedoID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*actionlog.Entry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64) error); ok {
+		r1 = rf(ctx, characterID, expectedRedoID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Redo_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Redo'
+type MockSVC_Redo_Call struct {
+	*mock.Call
+}
+
+// Redo is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - expectedRedoID int64
+func (_e *MockSVC_Expecter) Redo(ctx interface{}, characterID interface{}, expectedRedoID interface{}) *MockSVC_Redo_Call {
+	return &MockSVC_Redo_Call{Call: _e.mock.On("Redo", ctx, characterID, expectedRedoID)}
+}
+
+func (_c *MockSVC_Redo_Call) Run(run func(ctx context.Context, characterID int64, expectedRedoID int64)) *MockSVC_Redo_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Redo_Call) Return(_a0 *actionlog.Entry, _a1 error) *MockSVC_Redo_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Redo_Call) RunAndReturn(run func(context.Context, int64, int64) (*actionlog.Entry, error)) *MockSVC_Redo_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RedoTarget provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) RedoTarget(ctx context.Context, characterID int64) (*actionlog.Entry, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RedoTarget")
+	}
+
+	var r0 *actionlog.Entry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (*actionlog.Entry, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *actionlog.Entry); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*actionlog.Entry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_RedoTarget_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RedoTarget'
+type MockSVC_RedoTarget_Call struct {
+	*mock.Call
+}
+
+// RedoTarget is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) RedoTarget(ctx interface{}, characterID interface{}) *MockSVC_RedoTarget_Call {
+	return &MockSVC_RedoTarget_Call{Call: _e.mock.On("RedoTarget", ctx, characterID)}
+}
+
+func (_c *MockSVC_RedoTarget_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_RedoTarget_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_RedoTarget_Call) Return(_a0 *actionlog.Entry, _a1 error) *MockSVC_RedoTarget_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_RedoTarget_Call) RunAndReturn(run func(context.Context, int64) (*actionlog.Entry, error)) *MockSVC_RedoTarget_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RegisterRestorer provides a mock function with given fields: stateKey, r
 func (_m *MockSVC) RegisterRestorer(stateKey string, r actionlog.Restorer) {
 	_m.Called(stateKey, r)

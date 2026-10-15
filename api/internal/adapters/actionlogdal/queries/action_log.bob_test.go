@@ -1352,3 +1352,99 @@ func TestListTransactionActions(t *testing.T) {
 		}
 	})
 }
+
+var beforeTestingLatestPoppedAction = func(context.Context, bob.Tx) (int64, error) {
+	return random_int64(nil), nil
+}
+
+func TestLatestPoppedAction(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := LatestPoppedAction(random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(latestPoppedActionSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := LatestPoppedAction(random_int64(nil))
+
+		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(latestPoppedActionSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingLatestPoppedAction(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Select(LatestPoppedAction(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 2 {
+			t.Fatalf("expected %d columns, got %d", 2, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+
+		if columns[1] != "transaction_id" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "transaction_id", columns[1])
+		}
+	})
+}

@@ -35,7 +35,11 @@ SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", 
 FROM "action_log"
 WHERE "character_id" = ?1 AND "kind" = ?2
   AND NOT EXISTS (
-    SELECT 1 FROM "action_corrections" WHERE "action_corrections"."action_id" = "action_log"."id" AND "action_corrections"."kind" = 'void'
+    SELECT 1 FROM "action_corrections" "v"
+    WHERE "v"."action_id" = "action_log"."id" AND "v"."kind" = 'void'
+      AND NOT EXISTS (
+        SELECT 1 FROM "action_corrections" "r" WHERE "r"."action_id" = "v"."action_id" AND "r"."kind" = 'redo' AND "r"."id" > "v"."id"
+      )
   )
 ORDER BY "id" DESC
 LIMIT ?3;
@@ -70,7 +74,11 @@ SELECT "id"
 FROM "action_log"
 WHERE "character_id" = ?1
   AND NOT EXISTS (
-    SELECT 1 FROM "action_corrections" WHERE "action_corrections"."action_id" = "action_log"."id" AND "action_corrections"."kind" = 'void'
+    SELECT 1 FROM "action_corrections" "v"
+    WHERE "v"."action_id" = "action_log"."id" AND "v"."kind" = 'void'
+      AND NOT EXISTS (
+        SELECT 1 FROM "action_corrections" "r" WHERE "r"."action_id" = "v"."action_id" AND "r"."kind" = 'redo' AND "r"."id" > "v"."id"
+      )
   )
 ORDER BY "id" DESC
 LIMIT 1;
@@ -80,3 +88,14 @@ SELECT "id", "character_id", "round", "kind", "summary", "hp_delta", "payload", 
 FROM "action_log"
 WHERE "character_id" = ?1 AND "transaction_id" = ?2
 ORDER BY "id" DESC;
+
+-- LatestPoppedAction
+SELECT "action_log"."id", "action_log"."transaction_id"
+FROM "action_corrections" "v"
+JOIN "action_log" ON action_log.id = v.action_id
+WHERE "action_log"."character_id" = ?1 AND "v"."kind" = 'void'
+  AND NOT EXISTS (
+    SELECT 1 FROM "action_corrections" "r" WHERE "r"."action_id" = "v"."action_id" AND "r"."kind" = 'redo' AND "r"."id" > "v"."id"
+  )
+ORDER BY "v"."id" DESC
+LIMIT 1;

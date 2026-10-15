@@ -116,4 +116,5 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
 - Migration 023 adds `action_corrections.step_id`; rows written before keep NULL (step 6, older
   amends).
 - Not covered: redo (a popped entry stays voided; the action is replayed instead). (*Amended by
-  [ADR 0018](0018-transactions-and-undo.md) step 6:* redo is reserved for a later ADR, which replays a popped transaction.)
+  [ADR 0018](0018-transactions-and-undo.md) step 6:* redo is reserved for a later ADR, which replays a popped transaction.
+  *Amended by [ADR 0019](0019-redo.md):* redo replays the newest popped transaction.)

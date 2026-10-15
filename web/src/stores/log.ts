@@ -7,6 +7,9 @@ interface LogStore {
   entries: LogEntry[];
   /** The entry an undo pops (GET /api/log topId); null when nothing can be popped. */
   topId: number | null;
+  /** The transaction a redo replays, named by its first entry (GET /api/log redo); null when
+   * there is nothing to redo. */
+  redo: LogEntry | null;
   loaded: boolean;
   fetchLog: () => Promise<void>;
 }
@@ -14,9 +17,10 @@ interface LogStore {
 export const useLogStore = create<LogStore>((set) => ({
   entries: [],
   topId: null,
+  redo: null,
   loaded: false,
   fetchLog: async () => {
-    const { entries, topId } = await fetchLog();
-    set({ entries, topId, loaded: true });
+    const { entries, topId, redo } = await fetchLog();
+    set({ entries, topId, redo, loaded: true });
   },
 }));

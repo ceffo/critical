@@ -20,7 +20,7 @@ vi.mock("@/api/xp", () => ({
 vi.mock("@/api/log", () => ({
   fetchLog: async () => {
     calls.fetchLog++;
-    return { entries: [], topId: 7 };
+    return { entries: [], topId: 7, redo: null };
   },
   undoLogEntry: async () => {
     calls.undo++;

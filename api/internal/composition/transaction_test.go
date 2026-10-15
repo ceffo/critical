@@ -269,6 +269,16 @@ func stackMutations() []mutation {
 			_, err := bs.Items.UseItem(ctx, bs.CharacterID, "wand_lightning")
 			return err
 		}},
+		{name: "item use that removes it", setup: func(ctx context.Context, bs *composition.BackingServices) error {
+			_, err := bs.Items.Update(ctx, bs.CharacterID, "wand_lightning", itemsvc.ItemPatch{Count: ptr(1)})
+			return err
+		}, run: func(ctx context.Context, bs *composition.BackingServices) error {
+			res, err := bs.Items.UseItem(ctx, bs.CharacterID, "wand_lightning")
+			if err == nil && !res.Removed {
+				return fmt.Errorf("the last charge must remove the wand")
+			}
+			return err
+		}},
 		{name: "item restock", run: func(ctx context.Context, bs *composition.BackingServices) error {
 			_, err := bs.Items.Restock(ctx, bs.CharacterID, "arrows_plus3", 2)
 			return err

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
-import { undoButtonState } from "./undoButton";
+import { redoButtonState, undoButtonState } from "./undoButton";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -143,5 +143,47 @@ describe("undoButtonState", () => {
     expect(
       await label("en", { field: "verdict", from: "hit", to: "miss" }),
     ).toBe("Undo: Correction GM verdict Hit → Miss (Ctrl+Z / ⌘Z)");
+  });
+});
+
+describe("redoButtonState", () => {
+  it("nothing to redo: disabled, en and fr", async () => {
+    expect(redoButtonState(null, false, await makeT("en"))).toEqual({
+      disabled: true,
+      label: "Nothing to redo",
+    });
+    expect(redoButtonState(null, false, await makeT("fr"))).toEqual({
+      disabled: true,
+      label: "Rien à rétablir",
+    });
+  });
+
+  // ADR 0019 step 2: the tooltip names the transaction the redo replays by its first entry (the
+  // Next Round), which the server sends with the log.
+  it("names the transaction to redo by its first entry, en and fr", async () => {
+    const advance: LogEntry = {
+      ...initiative,
+      id: 6,
+      transactionId: 6,
+      round: 1,
+      kind: "round_advance",
+      status: "voided",
+      payload: { action: "next_round", fromRound: 1, toRound: 2 },
+      effectivePayload: { action: "next_round", fromRound: 1, toRound: 2 },
+    };
+    expect(redoButtonState(advance, false, await makeT("en"))).toEqual({
+      disabled: false,
+      label: "Redo: Turn 1 → 2 (Ctrl+Shift+Z / ⇧⌘Z)",
+    });
+    expect(redoButtonState(advance, false, await makeT("fr"))).toEqual({
+      disabled: false,
+      label: "Rétablir : Tour 1 → 2 (Ctrl+Maj+Z / ⇧⌘Z)",
+    });
+  });
+
+  it("disabled while an action runs", async () => {
+    expect(redoButtonState(initiative, true, await makeT("en")).disabled).toBe(
+      true,
+    );
   });
 });

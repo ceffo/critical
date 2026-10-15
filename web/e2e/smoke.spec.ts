@@ -19,7 +19,7 @@ test("fr smoke: French toggle shows no raw i18n keys", async ({ page }) => {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await expect(
-    page.getByRole("button", { name: "Infliger les dégâts" }),
+    page.getByRole("button", { name: "Dégâts", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),

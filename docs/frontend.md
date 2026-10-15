@@ -43,7 +43,7 @@ flowchart TD
   subgraph G["Columns: rail | workspace 1fr | Fil clamp(340px, 26vw, 520px) | Moi clamp(300px, 22vw, 440px)"]
     RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts; gear opens SettingsPopover"]
     subgraph WS["Workspace (one shown, each mounted on first visit, then kept)"]
-      ACT["Agir: ActionArea tabs Attack, Spells, Saves"]
+      ACT["Agir: ActionArea tabs Attack, Spells"]
       INV["Inventaire: InventoryPanel + WeaponsSection"]
       SP["Sorts: LookupPanel"]
     end
@@ -53,13 +53,17 @@ flowchart TD
     end
     subgraph MOI["Moi (aside 'Character')"]
       ID["Identity: name, level, abilities, THAC0"]
-      HP["HpBar: current / max"]
-      QH["QuickHp: Apply Damage / Apply Heal, Undo last"]
+      HP["HpBar: last change, current / max, threshold bar, last-damage ghost"]
+      CC["ChargeCards: one per absorbing buff, Absorb"]
+      QH["QuickHp: amount, Damage / Healing, source, Undo last"]
+      SV["Saves: five rows, name, target, last roll"]
     end
   end
   RAIL -->|selects| WS
   ACT -->|roll| RCARD
   QH -->|POST /api/hp/event| CL
+  SV -->|POST /api/roll/save| RCARD
+  CC -->|POST /api/buffs/id/trigger| CL
   RC -->|POST /api/round/advance| CL
 ```
 
@@ -128,7 +132,16 @@ flowchart TD
   `q` (the server matches English names) plus `match_exact` / `match_prefix` / `match_contains`,
   the catalogue keys whose French name matched (`lib/spellSearch.ts`); the server ORs both and
   ranks exact > prefix > contains, then level, name.
-- Saves tab (`SavesPanel.tsx`): a save is logged (kind `save`, rendered from `effectivePayload` in
+- Moi column (`Identity`, `HpBar`, `ChargeCards`, `QuickHp`, `Saves` in `components/dashboard/`),
+  beside every workspace: identity (name, level, abilities in seven cells, effective STR, THAC0);
+  HP (the newest HP change still in force on the right, current over max, the bar coloured by
+  threshold with the last damage taken as a faint segment after the fill when the newest change is
+  damage, `lib/moiLog.ts`); one card per applying buff with charges left (Stoneskin layers…) above
+  the damage entry, Absorb = the buff trigger endpoint; damage / healing entry (amount, Damage,
+  Healing, source, which the server requires): Enter in either field applies damage, Shift+Enter
+  healing; the five saving throws, one button row each: name, target (the sheet's), the newest
+  logged roll in that category (server verdict ✓ / ✗ and the d20), a click rolls it.
+- Saves (`Saves.tsx`, Moi column): a save is logged (kind `save`, rendered from `effectivePayload` in
   `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
   − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
@@ -223,7 +236,7 @@ export const useHpStore = create<HpStore>((set) => ({
 
 ## Display Conventions
 
-- HP bar: colored progress bar (green > 50%, yellow 25-50%, red < 25%)
+- HP bar: accent fill > 50%, warning 25-50%, danger < 25% (display only, `lib/format.ts` `hpTone`)
 - Effects timeline: from 60 turns up the pill also shows hours ("150 turns · 2 h 30",
   `lib/passTime.ts`)
 - Time passes (turn menu, "Time passes…"): decimal hours ("1.5" or "1,5"); the server previews

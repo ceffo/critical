@@ -23,7 +23,7 @@ export function hpPercent(current: number, max: number): number {
   return Math.max(0, Math.min(100, (current / max) * 100));
 }
 
-/** HP bar colour per docs/frontend.md: green > 50 %, yellow 25–50 %, red < 25 %. */
+/** HP bar tone per docs/frontend.md: good > 50 %, warn 25–50 %, bad < 25 %. */
 export function hpTone(pct: number): "good" | "warn" | "bad" {
   if (pct > 50) return "good";
   if (pct >= 25) return "warn";

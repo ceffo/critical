@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
-/** Current HP as shown in the header ("current / max"). */
+/** Current HP as shown in the Moi column ("current / max"). */
 export async function currentHp(page: Page): Promise<number> {
   const text = (await page.getByTestId("hp-value").textContent()) ?? "";
   const m = /^\s*(-?\d+)\s*\/\s*(\d+)/.exec(text);
@@ -48,9 +48,7 @@ export async function recordHp(
   await box.getByLabel("Amount").fill(String(amount));
   await box.getByLabel("Source").fill(source);
   await box
-    .getByRole("button", {
-      name: kind === "damage" ? "Apply Damage" : "Apply Heal",
-    })
+    .getByRole("button", { name: kind === "damage" ? "Damage" : "Healing", exact: true })
     .click();
 }
 

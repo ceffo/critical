@@ -88,7 +88,7 @@ test("editing a buff's remaining rounds is logged and voidable", async ({
   await snap(page, "edit-rounds-voided");
 });
 
-test("Stoneskin layers absorb hits, the buff ends at 0, and the absorb is voidable", async ({
+test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and the absorb is voidable", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -97,20 +97,27 @@ test("Stoneskin layers absorb hits, the buff ends at 0, and the absorb is voidab
   await addBuff(page, { name: "e2e Stoneskin", charges: 2 });
   const badge = buffBadge(page, "e2e Stoneskin");
   await expect(badge.getByTestId("buff-charges")).toHaveText("2 charges · until spent");
+  // The Moi column shows a card for it, above the damage entry.
+  const card = page
+    .getByRole("complementary", { name: "Character" })
+    .getByRole("group", { name: "e2e Stoneskin" });
+  const absorb = card.getByRole("button", { name: "Absorb a hit with e2e Stoneskin" });
+  await expect(card.getByTestId("charge-count")).toHaveText("2 charges left");
 
-  await badge
-    .getByRole("button", { name: "e2e Stoneskin absorbed a hit" })
-    .click();
+  await absorb.click();
+  await expect(card.getByTestId("charge-count")).toHaveText("1 charge left");
   await expect(badge.getByTestId("buff-charges")).toHaveText("1 charge · until spent");
   await expect(
     logEntry(page, "e2e Stoneskin absorbed a hit (1 left)"),
   ).toBeVisible();
   await snap(page, "stoneskin-absorbed");
 
+  // The timeline row's absorb does the same.
   await badge
     .getByRole("button", { name: "e2e Stoneskin absorbed a hit" })
     .click();
   await expect(badge).toHaveCount(0);
+  await expect(card).toHaveCount(0);
   await expect(
     logEntry(page, "e2e Stoneskin absorbed a hit, ended"),
   ).toBeVisible();
@@ -118,6 +125,7 @@ test("Stoneskin layers absorb hits, the buff ends at 0, and the absorb is voidab
 
   await voidEntry(page, "e2e Stoneskin absorbed a hit, ended");
   await expect(badge.getByTestId("buff-charges")).toHaveText("1 charge · until spent");
+  await expect(card.getByTestId("charge-count")).toHaveText("1 charge left");
 
   await expectNoReload(page);
   await snap(page, "stoneskin-voided");

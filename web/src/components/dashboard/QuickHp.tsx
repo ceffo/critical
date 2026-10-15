@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Heart, ArrowUUpLeft, Sword } from "@phosphor-icons/react";
+import { ArrowUUpLeft, Heart, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
 import { entryText } from "@/lib/logSummary";
-import { captionClass, fieldClass } from "./fieldStyles";
+import { fieldClass } from "./fieldStyles";
 
-/** Quick damage/heal entry with a source. The server records it in the action log. */
+/**
+ * Damage / healing entry: an amount, Damage and Healing, and the source. Enter in either field
+ * applies damage, Shift+Enter healing. The server records the change in the action log (and
+ * requires a source).
+ */
 export function QuickHp() {
   const { t } = useTranslation();
   const { recordHp, undoHp, busy } = useTableStore();
@@ -22,85 +26,91 @@ export function QuickHp() {
   const valid = n > 0 && source.trim() !== "";
 
   async function apply(sign: 1 | -1) {
-    if (!valid) return;
+    if (!valid || busy) return;
     if (await recordHp(sign * n, source.trim())) {
       setAmount("");
       setSource("");
     }
   }
 
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    void apply(e.shiftKey ? 1 : -1);
+  }
+
   return (
     <section
-      className="shrink-0 rounded-xl border bg-card p-3"
+      className="flex shrink-0 flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
       role="group"
       aria-label={t("hp.change")}
     >
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">{t("hp.change")}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-medium">{t("hp.change")}</h2>
         <Button
-          size="xs"
+          size="icon-xs"
           variant="ghost"
           disabled={busy || blockedBy !== null}
+          aria-label={t("hp.undoLast")}
+          title={t("hp.undoLast")}
           aria-describedby={blockedBy ? "hp-undo-hint" : undefined}
           onClick={() => void undoHp()}
         >
           <ArrowUUpLeft />
-          {t("hp.undoLast")}
         </Button>
       </div>
       {blockedBy && (
         <p
           id="hp-undo-hint"
-          className="-mt-1 mb-2 truncate text-xs text-muted-foreground"
+          className="-mt-1 truncate text-xs text-muted-foreground"
           data-testid="hp-undo-hint"
           title={t("hp.undoBlocked", { entry: blockedBy })}
         >
           {t("hp.undoBlocked", { entry: blockedBy })}
         </p>
       )}
-      <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-2">
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={captionClass}>{t("hp.amount")}</span>
-          <input
-            className={fieldClass}
-            type="number"
-            min={1}
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={captionClass}>{t("hp.source")}</span>
-          <input
-            className={fieldClass}
-            type="text"
-            placeholder={t("hp.sourcePlaceholder")}
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-          />
-        </label>
-        <div className="col-span-2 grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-[minmax(3.5rem,5rem)_minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
+        <input
+          className={`${fieldClass} h-9 text-base tabular-nums`}
+          type="number"
+          min={1}
+          inputMode="numeric"
+          aria-label={t("hp.amount")}
+          placeholder={t("hp.amountPlaceholder")}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          onKeyDown={onKeyDown}
+        />
         <Button
-          variant="destructive"
-          className="h-9"
+          variant="outline"
+          className="h-9 min-w-0 border-danger/60 text-danger hover:bg-danger/10 hover:text-danger"
           disabled={!valid || busy}
+          title={t("hp.damageHint")}
           onClick={() => void apply(-1)}
         >
-          <Sword />
+          <Sword className="max-[1440px]:hidden" />
           {t("hp.applyDamage")}
         </Button>
         <Button
-          variant="outline"
-          className="h-9 text-green-700 dark:text-green-400"
+          className="h-9 min-w-0 bg-heal text-ground hover:bg-heal/85"
           disabled={!valid || busy}
+          title={t("hp.healHint")}
           onClick={() => void apply(1)}
         >
-          <Heart />
+          <Heart className="max-[1440px]:hidden" />
           {t("hp.applyHeal")}
         </Button>
-        </div>
       </div>
+      <input
+        className={fieldClass}
+        type="text"
+        aria-label={t("hp.source")}
+        title={t("hp.keysHint")}
+        placeholder={t("hp.sourcePlaceholder")}
+        value={source}
+        onChange={(e) => setSource(e.target.value)}
+        onKeyDown={onKeyDown}
+      />
     </section>
   );
 }

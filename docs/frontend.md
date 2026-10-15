@@ -227,7 +227,7 @@ flowchart TD
   `hitsAc` and `critsFromAc`, a "?" verdict, the damage dimmed "if it hits", the GM's Hit / Miss
   (`POST /api/roll/attack/{logEntryId}/verdict`, `verdictLastAttack`) and a "Real AC" form (the
   adjust endpoint) that replaces any verdict.
-- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`, `undo`,
+- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `undo`,
   `nextRound`; the journal's Undo button and Ctrl+Z are the one global undo, ADR 0018 step 3): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …, "code": …}`, parsed by `api/http.ts`) are shown in `Notices` (`role="alert"`): a known code in the
   player's language (`apiError.*`), else the server text verbatim.

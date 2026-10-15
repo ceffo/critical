@@ -132,6 +132,15 @@ export interface SpellbookEntry {
   attack_roll?: boolean;
   /** The damage a cast rolls at the Bard's level; absent when it rolls none. */
   damage?: SpellDamage;
+  /** Inventory items the spell can spend now, as the server decides; absent when none. */
+  items?: SpendableItem[];
+}
+
+/** Mirrors spellprephdl.SpendableItemDTO. */
+export interface SpendableItem {
+  id: string;
+  name: string;
+  count: number;
 }
 
 export interface LevelLimit {

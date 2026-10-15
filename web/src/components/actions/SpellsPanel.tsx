@@ -67,7 +67,6 @@ export function SpellsPanel() {
   const [splits, setSplits] = useState<Record<number, string>>({});
   const [targetAcs, setTargetAcs] = useState<Record<number, string>>({});
   const [itemPicks, setItemPicks] = useState<Record<number, string>>({});
-  const items = useItemsStore((s) => s.items);
   // Blank extra slots: the spell picked per slot index.
   const [picks, setPicks] = useState<Record<number, string>>({});
   const logEntries = useLogStore((s) => s.entries);
@@ -83,6 +82,13 @@ export function SpellsPanel() {
   useEffect(() => {
     void fetchSlots().catch(() => undefined);
   }, [logEntries, fetchSlots]);
+
+  // The items a spell can spend are served with the spellbook: ask again when the inventory
+  // changes (an item edited or restocked, a cast or a void in the log).
+  const items = useItemsStore((s) => s.items);
+  useEffect(() => {
+    void fetchInfo().catch(() => undefined);
+  }, [items, logEntries, fetchInfo]);
 
   // Group by level for display, keeping each slot's index (the cast endpoint's id).
   const byLevel = new Map<number, (SpellSlot & { index: number })[]>();
@@ -188,7 +194,7 @@ export function SpellsPanel() {
                   // A spell prepared several times is one row with the copies left; casting uses one.
                   const name = remaining > 1 ? `${baseName} ×${remaining}` : baseName;
                   const choices = info.spellbook.filter((s) => s.level === slot.level);
-                  const plan = planCast(slot, blank, info.spellbook, items, {
+                  const plan = planCast(slot, blank, info.spellbook, {
                     pick: picks[slot.index],
                     split: splits[slot.index],
                     acText: targetAcs[slot.index],

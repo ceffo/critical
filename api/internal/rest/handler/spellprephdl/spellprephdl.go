@@ -42,6 +42,16 @@ type SpellbookEntryDTO struct {
 	// Damage is what a cast rolls at the character's level, in the shape
 	// of the spell lookup's (absent: the cast rolls no damage).
 	Damage *spellhdl.SpellDamageDTO `json:"damage,omitempty"`
+	// Items are the inventory items the spell can spend now (consuming
+	// spells only); the cast takes the one chosen, or the only one.
+	Items []SpendableItemDTO `json:"items,omitempty"`
+}
+
+// SpendableItemDTO is an inventory item a spell can spend.
+type SpendableItemDTO struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 // LevelLimitDTO is the preparation limit of one spell level.
@@ -70,11 +80,15 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 		}
 		out := InfoDTO{Spellbook: []SpellbookEntryDTO{}, Limits: []LevelLimitDTO{}}
 		for _, e := range info.Spellbook {
-			out.Spellbook = append(out.Spellbook, SpellbookEntryDTO{
+			dto := SpellbookEntryDTO{
 				ID: e.ID, Name: e.Name, Level: e.Level,
 				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
 				Damage: spellhdl.DamageToDTO(e.Damage),
-			})
+			}
+			for _, it := range e.Items {
+				dto.Items = append(dto.Items, SpendableItemDTO{ID: it.ID, Name: it.Name, Count: it.Count})
+			}
+			out.Spellbook = append(out.Spellbook, dto)
 		}
 		for _, l := range info.Limits {
 			out.Limits = append(out.Limits, LevelLimitDTO{Level: l.Level, Max: l.Max})

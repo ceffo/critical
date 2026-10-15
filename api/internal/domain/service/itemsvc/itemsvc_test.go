@@ -351,3 +351,26 @@ func TestRestock_UnknownItem(t *testing.T) {
 	_, err := svc.Restock(context.Background(), 1, "nope", 2)
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
+
+func TestItem_Spendable(t *testing.T) {
+	base := itemsvc.Item{Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 1}
+	tests := []struct {
+		name string
+		mod  func(*itemsvc.Item)
+		want bool
+	}{
+		{"stock with some left", func(*itemsvc.Item) {}, true},
+		{"charges with some left", func(i *itemsvc.Item) { i.Behaviour = itemsvc.BehaviourCharges }, true},
+		{"type compared without case", func(i *itemsvc.Item) { i.Type = "GEM" }, true},
+		{"other type", func(i *itemsvc.Item) { i.Type = "arrow" }, false},
+		{"daily item", func(i *itemsvc.Item) { i.Behaviour = itemsvc.BehaviourDaily }, false},
+		{"none left", func(i *itemsvc.Item) { i.Count = 0 }, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			it := base
+			tt.mod(&it)
+			assert.Equal(t, tt.want, it.Spendable("gem"))
+		})
+	}
+}

@@ -21,6 +21,7 @@ import { exposureDamageText } from "@/lib/spellDice";
 import {
   classLabel,
   sphereLabel,
+  schoolLabel,
   spheresLabel,
   translateValue,
 } from "@/lib/lookupLabels";
@@ -90,7 +91,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
   const meta = [
     classLabel(t, spell.class),
     t("lookup.levelLabel", { level: spell.level }),
-    spell.school,
+    schoolLabel(t, spell.school),
     spheresLabel(t, spell.sphere),
     spell.components,
   ].filter(Boolean);
@@ -460,7 +461,7 @@ export function LookupPanel() {
                 id={`lookup-row-${s.id}`}
                 role="option"
                 aria-selected={s.id === selectedId}
-                title={s.school}
+                title={schoolLabel(t, s.school)}
                 data-testid="spell-row"
                 data-id={s.id}
                 data-class={s.class}

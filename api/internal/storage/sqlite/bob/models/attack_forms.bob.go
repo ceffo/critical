@@ -33,6 +33,7 @@ type AttackForm struct {
 	TargetSize       string `db:"target_size" `
 	SituationalValue int64  `db:"situational_value" `
 	SituationalLabel string `db:"situational_label" `
+	TargetAcKnown    int64  `db:"target_ac_known" `
 
 	R attackFormR `db:"-" `
 }
@@ -63,7 +64,7 @@ type attackFormRLoaded struct {
 
 func buildAttackFormColumns(tableName string) attackFormColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"character_id", "weapon_id", "previous_weapon_id", "ammo_item_id", "target_ac", "target_size", "situational_value", "situational_label",
+		"character_id", "weapon_id", "previous_weapon_id", "ammo_item_id", "target_ac", "target_size", "situational_value", "situational_label", "target_ac_known",
 	)
 
 	if tableName != "" {
@@ -81,6 +82,7 @@ func buildAttackFormColumns(tableName string) attackFormColumns {
 		TargetSize:       buildAttackFormColumn(tableName, "target_size"),
 		SituationalValue: buildAttackFormColumn(tableName, "situational_value"),
 		SituationalLabel: buildAttackFormColumn(tableName, "situational_label"),
+		TargetAcKnown:    buildAttackFormColumn(tableName, "target_ac_known"),
 	}
 }
 
@@ -95,6 +97,7 @@ type attackFormColumns struct {
 	TargetSize       attackFormColumn
 	SituationalValue attackFormColumn
 	SituationalLabel attackFormColumn
+	TargetAcKnown    attackFormColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -148,10 +151,11 @@ type AttackFormSetter struct {
 	TargetSize       omit.Val[string] `db:"target_size" `
 	SituationalValue omit.Val[int64]  `db:"situational_value" `
 	SituationalLabel omit.Val[string] `db:"situational_label" `
+	TargetAcKnown    omit.Val[int64]  `db:"target_ac_known" `
 }
 
 func (s AttackFormSetter) SetColumns() []string {
-	vals := make([]string, 0, 8)
+	vals := make([]string, 0, 9)
 	if s.CharacterID.IsValue() {
 		vals = append(vals, "character_id")
 	}
@@ -175,6 +179,9 @@ func (s AttackFormSetter) SetColumns() []string {
 	}
 	if s.SituationalLabel.IsValue() {
 		vals = append(vals, "situational_label")
+	}
+	if s.TargetAcKnown.IsValue() {
+		vals = append(vals, "target_ac_known")
 	}
 	return vals
 }
@@ -203,6 +210,9 @@ func (s AttackFormSetter) Overwrite(t *AttackForm) {
 	}
 	if s.SituationalLabel.IsValue() {
 		t.SituationalLabel = s.SituationalLabel.MustGet()
+	}
+	if s.TargetAcKnown.IsValue() {
+		t.TargetAcKnown = s.TargetAcKnown.MustGet()
 	}
 }
 
@@ -278,6 +288,13 @@ func (s *AttackFormSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.SituationalLabel.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "target_ac_known":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.TargetAcKnown.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.TargetAcKnown.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -289,7 +306,7 @@ func (s AttackFormSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s AttackFormSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 8)
+	exprs := make([]bob.Expression, 0, 9)
 
 	if s.CharacterID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -347,6 +364,13 @@ func (s AttackFormSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.TargetAcKnown.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "target_ac_known")...),
+			sqlite.Arg(s.TargetAcKnown),
+		}})
+	}
+
 	return exprs
 }
 
@@ -357,7 +381,7 @@ func attackFormScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, 
 		idx int
 		dst func(o *AttackForm) any
 	}
-	targets := make([]target, 0, 8)
+	targets := make([]target, 0, 9)
 	for i, col := range cols {
 		switch col {
 		case "character_id":
@@ -376,6 +400,8 @@ func attackFormScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, 
 			targets = append(targets, target{i, func(o *AttackForm) any { return &o.SituationalValue }})
 		case "situational_label":
 			targets = append(targets, target{i, func(o *AttackForm) any { return &o.SituationalLabel }})
+		case "target_ac_known":
+			targets = append(targets, target{i, func(o *AttackForm) any { return &o.TargetAcKnown }})
 		}
 	}
 
@@ -702,6 +728,7 @@ type attackFormWhere[Q sqlite.Filterable] struct {
 	TargetSize       sqlite.WhereMod[Q, string]
 	SituationalValue sqlite.WhereMod[Q, int64]
 	SituationalLabel sqlite.WhereMod[Q, string]
+	TargetAcKnown    sqlite.WhereMod[Q, int64]
 	R                attackFormWhereR[Q]
 }
 
@@ -720,6 +747,7 @@ func buildAttackFormWhere[Q sqlite.Filterable](cols attackFormColumns) attackFor
 		TargetSize:       sqlite.Where[Q, string](cols.TargetSize.Expression),
 		SituationalValue: sqlite.Where[Q, int64](cols.SituationalValue.Expression),
 		SituationalLabel: sqlite.Where[Q, string](cols.SituationalLabel.Expression),
+		TargetAcKnown:    sqlite.Where[Q, int64](cols.TargetAcKnown.Expression),
 		R:                attackFormWhereR[Q]{cols: cols},
 	}
 }
@@ -757,6 +785,7 @@ type attackFormPreloadBuf struct {
 	TargetSize       null.Val[string]
 	SituationalValue null.Val[int64]
 	SituationalLabel null.Val[string]
+	TargetAcKnown    null.Val[int64]
 }
 
 // attackFormScanMapperNullable maps the preloaded attackForm
@@ -771,7 +800,7 @@ func attackFormScanMapperNullable(prefix string) scan.Mapper[*AttackForm] {
 			idx int
 			dst func(b *attackFormPreloadBuf) any
 		}
-		targets := make([]target, 0, 8)
+		targets := make([]target, 0, 9)
 		for i, col := range cols {
 			name, ok := strings.CutPrefix(col, prefix)
 			if !ok {
@@ -794,6 +823,8 @@ func attackFormScanMapperNullable(prefix string) scan.Mapper[*AttackForm] {
 				targets = append(targets, target{i, func(b *attackFormPreloadBuf) any { return &b.SituationalValue }})
 			case "situational_label":
 				targets = append(targets, target{i, func(b *attackFormPreloadBuf) any { return &b.SituationalLabel }})
+			case "target_ac_known":
+				targets = append(targets, target{i, func(b *attackFormPreloadBuf) any { return &b.TargetAcKnown }})
 			}
 		}
 
@@ -823,7 +854,8 @@ func attackFormScanMapperNullable(prefix string) scan.Mapper[*AttackForm] {
 					!buf.TargetAc.IsValue() &&
 					!buf.TargetSize.IsValue() &&
 					!buf.SituationalValue.IsValue() &&
-					!buf.SituationalLabel.IsValue() {
+					!buf.SituationalLabel.IsValue() &&
+					!buf.TargetAcKnown.IsValue() {
 					return nil, nil
 				}
 
@@ -851,6 +883,9 @@ func attackFormScanMapperNullable(prefix string) scan.Mapper[*AttackForm] {
 				}
 				if buf.SituationalLabel.IsValue() {
 					o.SituationalLabel = buf.SituationalLabel.MustGet()
+				}
+				if buf.TargetAcKnown.IsValue() {
+					o.TargetAcKnown = buf.TargetAcKnown.MustGet()
 				}
 				return o, nil
 			}

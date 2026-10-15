@@ -226,8 +226,12 @@
       "damageL": "Damage L",
       "bonus": "To hit / dmg",
       "thac0": "Effective THAC0",
-      "rollNeeded": "needs {{n}} vs AC {{ac}}"
-    }
+      "rollNeeded": "needs {{n}} vs AC {{ac}}",
+      "rollNeededUnknown": "AC unknown"
+    },
+    "unknownAc": "Unknown",
+    "unknownAcHint": "Forget the target AC: the attack says which AC it hits",
+    "unknownAcPlaceholder": "?"
   },
   "saves": {
     "title": "Saving Throws",
@@ -583,11 +587,28 @@
       "increase": "Raise target AC",
       "value": "Corrected target AC",
       "apply": "Apply",
-      "was": "rolled vs AC {{ac}}"
+      "was": "rolled vs AC {{ac}}",
+      "giveLabel": "Give the real AC",
+      "realTitle": "Real AC",
+      "realValue": "Real target AC",
+      "give": "Correct",
+      "given": "AC given by the GM"
     },
     "critLegacy": "Critical ×{{mult, number}} (d100 in {{from}}–{{to}})",
     "critPlaceholderLegacy": "Critical ×{{mult, number}} (placeholder)",
-    "multRoll": "Multiplier d100"
+    "multRoll": "Multiplier d100",
+    "attackHeadingUnknown": "{{weapon}} vs unknown AC",
+    "attackHeadingAmmoUnknown": "{{weapon}} with {{ammo}} vs unknown AC",
+    "critsFromAc": "Crits from AC",
+    "unknownAc": {
+      "tellGm": "Tell the GM: “hits AC {{hits}}”. A crit from AC {{crits}}.",
+      "noCrit": "No crit without the AC: give it to settle a crit.",
+      "unsettled": "Waiting for the GM: give the AC, or Hit / Miss",
+      "byGm": "GM’s call",
+      "damageIfHit": "Damage if it hits",
+      "verdictTitle": "GM says",
+      "verdictLabel": "The GM’s hit or miss"
+    }
   },
   "log": {
     "title": "Journal",
@@ -661,7 +682,10 @@
         "miss": "MISS",
         "hit": "HIT",
         "crit": "CRIT"
-      }
+      },
+      "unknown": "{{weapon}} vs unknown AC: hits AC {{hits}}",
+      "verdictHit": "{{weapon}} vs unknown AC: hit (GM), {{damage}} damage",
+      "verdictMiss": "{{weapon}} vs unknown AC: miss (GM)"
     },
     "cast": {
       "cast": "Cast {{spell}}",

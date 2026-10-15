@@ -69,7 +69,7 @@ func buildUndoStack(t *testing.T) (*composition.BackingServices, []actionlog.Kin
 	step(err, actionlog.KindCast)
 	_, err = bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Haste", Duration: 3})
 	step(err, actionlog.KindBuffChange)
-	_, err = bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: 5})
+	_, err = bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus3", TargetAC: new(5)})
 	step(err, actionlog.KindAttack)
 	_, err = bs.HP.AppendEvent(ctx, id, -7, "troll claw")
 	step(err, actionlog.KindHPChange)

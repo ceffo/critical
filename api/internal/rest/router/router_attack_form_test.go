@@ -14,14 +14,14 @@ import (
 
 var bowForm = &combatsvc.AttackFormView{
 	Form: combatsvc.AttackForm{
-		WeaponID: "shortbow", PreviousWeaponID: "longsword", AmmoItemID: "a3", TargetAC: 4,
+		WeaponID: "shortbow", PreviousWeaponID: "longsword", AmmoItemID: "a3", TargetAC: new(4),
 		TargetSize: combatsvc.SizeLarge, Situational: combatsvc.Situational{Value: 2, Label: "rear"},
 	},
 	AmmoFromDefault: true,
 	AmmoChoices:     []combatsvc.AmmoChoice{{ItemID: "a3", Name: "Arrows +3", Magic: 3, Count: 2}},
 	Preview: &combatsvc.AttackPreview{
 		BaseThac0: 13, Modifiers: []combatsvc.Modifier{{Kind: combatsvc.ModDexterity, Detail: "17", Value: 2}},
-		EffectiveThac0: 11, ToHit: 2, RollNeeded: 7, DamageBonus: 5,
+		EffectiveThac0: 11, ToHit: 2, RollNeeded: new(7), DamageBonus: 5,
 	},
 }
 
@@ -46,7 +46,7 @@ func TestAttackForm_GetWithoutWeaponHasNullPreview(t *testing.T) {
 	}, nil)
 	rec := do(h, "GET", "/api/attack/form", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"form":{"weaponId":"","previousWeaponId":"","ammoItemId":"","targetAc":5,"targetSize":"sm",
+	assert.JSONEq(t, `{"form":{"weaponId":"","previousWeaponId":"","ammoItemId":"","targetAc":null,"targetSize":"sm",
 		"situational":{"value":0,"label":""}},"ammoFromDefault":false,"ammoChoices":[],"preview":null}`, rec.Body.String())
 }
 
@@ -61,6 +61,26 @@ func TestAttackForm_PatchPassesOnlyTheFieldsSent(t *testing.T) {
 	rec := do(h, "PATCH", "/api/attack/form", `{"weaponId":"shortbow","targetAc":4,"targetSize":"l","situational":{"value":2,"label":"rear"}}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, bowFormJSON, rec.Body.String())
+}
+
+// "targetAc": null makes the target AC unknown; a non-number is refused.
+func TestAttackForm_PatchUnknownTargetAC(t *testing.T) {
+	h, m := newRouter(t)
+	m.cmb.EXPECT().UpdateAttackForm(mock.Anything, int64(1), combatsvc.AttackFormPatch{UnknownTargetAC: true}).
+		Return(&combatsvc.AttackFormView{
+			Form: combatsvc.AttackForm{WeaponID: "shortbow", TargetSize: combatsvc.SizeSmallMedium}, AmmoChoices: []combatsvc.AmmoChoice{},
+			Preview: &combatsvc.AttackPreview{BaseThac0: 13, Modifiers: []combatsvc.Modifier{}, EffectiveThac0: 13},
+		}, nil)
+	rec := do(h, "PATCH", "/api/attack/form", `{"targetAc":null}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"form":{"weaponId":"shortbow","previousWeaponId":"","ammoItemId":"","targetAc":null,"targetSize":"sm",
+		"situational":{"value":0,"label":""}},"ammoFromDefault":false,"ammoChoices":[],
+		"preview":{"baseThac0":13,"modifiers":[],"effectiveThac0":13,"toHit":0,"rollNeeded":null,"damageBonus":0}}`, rec.Body.String())
+
+	h, _ = newRouter(t)
+	rec = do(h, "PATCH", "/api/attack/form", `{"targetAc":"five"}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.JSONEq(t, `{"error":"targetAc must be a whole number or null"}`, rec.Body.String())
 }
 
 func TestAttackForm_PatchErrors(t *testing.T) {

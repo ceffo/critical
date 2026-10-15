@@ -33,7 +33,7 @@ func TestPut_RoundTripsAndOverwrites(t *testing.T) {
 	ctx := context.Background()
 	first := combatsvc.AttackForm{
 		WeaponID: "short_bow", PreviousWeaponID: "long_sword", AmmoItemID: "arrows",
-		TargetAC: -3, TargetSize: combatsvc.SizeLarge,
+		TargetAC: new(-3), TargetSize: combatsvc.SizeLarge,
 		Situational: combatsvc.Situational{Value: 2, Label: "rear"},
 	}
 	require.NoError(t, dal.Put(ctx, 1, first))
@@ -42,7 +42,8 @@ func TestPut_RoundTripsAndOverwrites(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, first, got)
 
-	second := combatsvc.AttackForm{WeaponID: "long_sword", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium}
+	// An unknown target AC (nil) round-trips as unknown, not as AC 0.
+	second := combatsvc.AttackForm{WeaponID: "long_sword", TargetSize: combatsvc.SizeSmallMedium}
 	require.NoError(t, dal.Put(ctx, 1, second))
 	got, _, err = dal.Get(ctx, 1)
 	require.NoError(t, err)

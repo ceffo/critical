@@ -49,7 +49,7 @@ func TestAttackForm_PersistsAcrossRestartAndMatchesTheAttack(t *testing.T) {
 	v, err = bs.Combat.GetAttackForm(ctx, bs.CharacterID)
 	require.NoError(t, err)
 	assert.Equal(t, combatsvc.AttackForm{
-		WeaponID: "shortbow", PreviousWeaponID: held, AmmoItemID: "arrows_plus3", TargetAC: -1,
+		WeaponID: "shortbow", PreviousWeaponID: held, AmmoItemID: "arrows_plus3", TargetAC: new(-1),
 		TargetSize: combatsvc.SizeLarge, Situational: combatsvc.Situational{Value: -2, Label: "cover"},
 	}, v.Form)
 	assert.False(t, v.AmmoFromDefault)

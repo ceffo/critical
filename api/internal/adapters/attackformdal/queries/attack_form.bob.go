@@ -20,7 +20,7 @@ import (
 //go:embed attack_form.bob.sql
 var formattedQueries_attack_form string
 
-var getAttackFormSQL = formattedQueries_attack_form[153:325]
+var getAttackFormSQL = formattedQueries_attack_form[153:344]
 
 type GetAttackFormQuery = orm.ModQuery[*dialect.SelectQuery, getAttackForm, GetAttackFormRow, []GetAttackFormRow, getAttackFormTransformer]
 
@@ -45,9 +45,10 @@ func GetAttackForm(CharacterID int64) *GetAttackFormQuery {
 						row.ScheduleScanByIndex(1, &t.PreviousWeaponID)
 						row.ScheduleScanByIndex(2, &t.AmmoItemID)
 						row.ScheduleScanByIndex(3, &t.TargetAc)
-						row.ScheduleScanByIndex(4, &t.TargetSize)
-						row.ScheduleScanByIndex(5, &t.SituationalValue)
-						row.ScheduleScanByIndex(6, &t.SituationalLabel)
+						row.ScheduleScanByIndex(4, &t.TargetAcKnown)
+						row.ScheduleScanByIndex(5, &t.TargetSize)
+						row.ScheduleScanByIndex(6, &t.SituationalValue)
+						row.ScheduleScanByIndex(7, &t.SituationalLabel)
 						return &t, nil
 					}, func(v any) (GetAttackFormRow, error) {
 						return *v.(*GetAttackFormRow), nil
@@ -55,9 +56,9 @@ func GetAttackForm(CharacterID int64) *GetAttackFormQuery {
 			},
 		},
 		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
-			q.AppendSelect(expressionTypArgs.subExpr(7, 126))
-			q.SetTable(expressionTypArgs.subExpr(132, 146))
-			q.AppendWhere(expressionTypArgs.subExpr(152, 172))
+			q.AppendSelect(expressionTypArgs.subExpr(7, 145))
+			q.SetTable(expressionTypArgs.subExpr(151, 165))
+			q.AppendWhere(expressionTypArgs.subExpr(171, 191))
 		}),
 		Build: sqlite.Select,
 	}
@@ -68,6 +69,7 @@ type GetAttackFormRow = struct {
 	PreviousWeaponID string `db:"previous_weapon_id"`
 	AmmoItemID       string `db:"ammo_item_id"`
 	TargetAc         int64  `db:"target_ac"`
+	TargetAcKnown    int64  `db:"target_ac_known"`
 	TargetSize       string `db:"target_size"`
 	SituationalValue int64  `db:"situational_value"`
 	SituationalLabel string `db:"situational_label"`
@@ -83,8 +85,8 @@ func (o getAttackForm) args() iter.Seq[orm.ArgWithPosition] {
 	return func(yield func(arg orm.ArgWithPosition) bool) {
 		if !yield(orm.ArgWithPosition{
 			Name:       "characterID",
-			Start:      170,
-			Stop:       172,
+			Start:      189,
+			Stop:       191,
 			Expression: o.CharacterID,
 		}) {
 			return
@@ -104,7 +106,7 @@ func (o getAttackForm) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Di
 	return o.subExpr(0, len(getAttackFormSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var upsertAttackFormSQL = formattedQueries_attack_form[348:947]
+var upsertAttackFormSQL = formattedQueries_attack_form[367:1043]
 
 type UpsertAttackForm_AttackForms = struct {
 	CharacterID      int64
@@ -112,6 +114,7 @@ type UpsertAttackForm_AttackForms = struct {
 	PreviousWeaponID string
 	AmmoItemID       string
 	TargetAc         int64
+	TargetAcKnown    int64
 	TargetSize       string
 	SituationalValue int64
 	SituationalLabel string
@@ -126,64 +129,71 @@ func UpsertAttackForm(AttackForms []UpsertAttackForm_AttackForms) *UpsertAttackF
 		expressions := make([]bob.Expression, len(AttackForms))
 		for i, child := range AttackForms {
 			expressions[i] = bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				args := make([]any, 0, 8)
-				w.WriteString(upsertAttackFormSQL[172:173])
+				args := make([]any, 0, 9)
+				w.WriteString(upsertAttackFormSQL[191:192])
 				CharacterIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.CharacterID))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, CharacterIDArgs...)
 
-				w.WriteString(upsertAttackFormSQL[175:177])
+				w.WriteString(upsertAttackFormSQL[194:196])
 				WeaponIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.WeaponID))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, WeaponIDArgs...)
 
-				w.WriteString(upsertAttackFormSQL[179:181])
+				w.WriteString(upsertAttackFormSQL[198:200])
 				PreviousWeaponIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.PreviousWeaponID))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, PreviousWeaponIDArgs...)
 
-				w.WriteString(upsertAttackFormSQL[183:185])
+				w.WriteString(upsertAttackFormSQL[202:204])
 				AmmoItemIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.AmmoItemID))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, AmmoItemIDArgs...)
 
-				w.WriteString(upsertAttackFormSQL[187:189])
+				w.WriteString(upsertAttackFormSQL[206:208])
 				TargetAcArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.TargetAc))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, TargetAcArgs...)
 
-				w.WriteString(upsertAttackFormSQL[191:193])
+				w.WriteString(upsertAttackFormSQL[210:212])
+				TargetAcKnownArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.TargetAcKnown))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, TargetAcKnownArgs...)
+
+				w.WriteString(upsertAttackFormSQL[214:216])
 				TargetSizeArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.TargetSize))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, TargetSizeArgs...)
 
-				w.WriteString(upsertAttackFormSQL[195:197])
+				w.WriteString(upsertAttackFormSQL[218:220])
 				SituationalValueArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.SituationalValue))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, SituationalValueArgs...)
 
-				w.WriteString(upsertAttackFormSQL[199:201])
+				w.WriteString(upsertAttackFormSQL[222:224])
 				SituationalLabelArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.SituationalLabel))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, SituationalLabelArgs...)
 
-				w.WriteString(upsertAttackFormSQL[203:204])
+				w.WriteString(upsertAttackFormSQL[226:227])
 				return args, nil
 			})
 		}
@@ -199,14 +209,14 @@ func UpsertAttackForm(AttackForms []UpsertAttackForm_AttackForms) *UpsertAttackF
 			},
 		},
 		Mod: bob.ModFunc[*dialect.InsertQuery](func(q *dialect.InsertQuery) {
-			q.TableRef.Columns = []string{"character_id", "weapon_id", "previous_weapon_id", "ammo_item_id", "target_ac", "target_size", "situational_value", "situational_label"}
+			q.TableRef.Columns = []string{"character_id", "weapon_id", "previous_weapon_id", "ammo_item_id", "target_ac", "target_ac_known", "target_size", "situational_value", "situational_label"}
 			q.TableRef.Expression = expressionTypArgs.raw(12, 26)
 			q.Query = bob.BaseQuery[bob.Expression]{
-				Expression: expressionTypArgs.subExpr(165, 204),
+				Expression: expressionTypArgs.subExpr(184, 227),
 				Dialect:    dialect.Dialect,
 				QueryType:  bob.QueryTypeSelect,
 			}
-			q.SetConflict(expressionTypArgs.subExpr(205, 599))
+			q.SetConflict(expressionTypArgs.subExpr(228, 676))
 		}),
 		Build: sqlite.Insert,
 	}
@@ -220,8 +230,8 @@ func (o upsertAttackForm) args() iter.Seq[orm.ArgWithPosition] {
 	return func(yield func(arg orm.ArgWithPosition) bool) {
 		if !yield(orm.ArgWithPosition{
 			Name:       "attackForms",
-			Start:      172,
-			Stop:       204,
+			Start:      191,
+			Stop:       227,
 			Expression: o.AttackForms,
 		}) {
 			return

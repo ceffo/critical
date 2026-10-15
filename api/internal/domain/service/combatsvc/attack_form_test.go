@@ -56,7 +56,8 @@ func TestPreviewAttack_Step12_SameModifiersAsAttack(t *testing.T) {
 			assert.Equal(t, c.wantMods, v.Preview.Modifiers)
 			assert.Equal(t, c.wantEffThac0, v.Preview.EffectiveThac0)
 			assert.Equal(t, 13-c.wantEffThac0, v.Preview.ToHit)
-			assert.Equal(t, c.wantEffThac0-c.req.TargetAC, v.Preview.RollNeeded)
+			require.NotNil(t, v.Preview.RollNeeded)
+			assert.Equal(t, c.wantEffThac0-*c.req.TargetAC, *v.Preview.RollNeeded)
 		})
 	}
 }
@@ -87,7 +88,7 @@ func TestPreviewAttack_Step12_DamageBonus(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.withForm(&combatsvc.AttackForm{WeaponID: c.weapon.ID, TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+			f.withForm(&combatsvc.AttackForm{WeaponID: c.weapon.ID, TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 				[]combatsvc.Weapon{c.weapon}, c.items, c.mods)
 			v, err := f.svc.GetAttackForm(t.Context(), charID)
 			require.NoError(t, err)
@@ -102,11 +103,11 @@ func TestGetAttackForm_DefaultsWhenNeverSaved(t *testing.T) {
 	v, err := f.svc.GetAttackForm(t.Context(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, combatsvc.AttackForm{
-		WeaponID: "longsword", TargetAC: combatsvc.DefaultTargetAC, TargetSize: combatsvc.SizeSmallMedium,
-	}, v.Form, "the first weapon of the list, AC 5, small/medium")
+		WeaponID: "longsword", TargetSize: combatsvc.SizeSmallMedium,
+	}, v.Form, "the first weapon of the list, unknown AC (ADR 0012 step 1), small/medium")
 	assert.Empty(t, v.AmmoChoices)
 	assert.Equal(t, 11, v.Preview.EffectiveThac0, "THAC0 13 - sword +2")
-	assert.Equal(t, 6, v.Preview.RollNeeded, "vs AC 5")
+	assert.Nil(t, v.Preview.RollNeeded, "no roll needed without an AC")
 }
 
 func TestGetAttackForm_NoWeaponNoPreview(t *testing.T) {
@@ -165,7 +166,7 @@ func TestGetAttackForm_Ammunition(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.withForm(&combatsvc.AttackForm{WeaponID: "shortbow", AmmoItemID: c.storedAmmo, TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+			f.withForm(&combatsvc.AttackForm{WeaponID: "shortbow", AmmoItemID: c.storedAmmo, TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 				[]combatsvc.Weapon{shortbow}, all, strMods(12))
 			v, err := f.svc.GetAttackForm(t.Context(), charID)
 			require.NoError(t, err)
@@ -180,7 +181,7 @@ func TestGetAttackForm_Ammunition(t *testing.T) {
 
 	t.Run("a melee weapon shows no ammunition but keeps the bow's choice", func(t *testing.T) {
 		f := newFixture(t)
-		f.withForm(&combatsvc.AttackForm{WeaponID: "longsword", AmmoItemID: "arrows_plus3", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+		f.withForm(&combatsvc.AttackForm{WeaponID: "longsword", AmmoItemID: "arrows_plus3", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 			[]combatsvc.Weapon{longsword, shortbow}, all, strMods(12))
 		v, err := f.svc.GetAttackForm(t.Context(), charID)
 		require.NoError(t, err)
@@ -200,19 +201,19 @@ func TestUpdateAttackForm_WeaponSwitch(t *testing.T) {
 	}{
 		{
 			"from the default weapon: it becomes the previous one", nil, "shortbow",
-			combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "longsword", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+			combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "longsword", TargetSize: combatsvc.SizeSmallMedium},
 		},
 		{
 			"switching back swaps them",
-			&combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "longsword", AmmoItemID: "a", TargetAC: 3, TargetSize: combatsvc.SizeLarge},
+			&combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "longsword", AmmoItemID: "a", TargetAC: new(3), TargetSize: combatsvc.SizeLarge},
 			"longsword",
-			combatsvc.AttackForm{WeaponID: "longsword", PreviousWeaponID: "shortbow", AmmoItemID: "a", TargetAC: 3, TargetSize: combatsvc.SizeLarge},
+			combatsvc.AttackForm{WeaponID: "longsword", PreviousWeaponID: "shortbow", AmmoItemID: "a", TargetAC: new(3), TargetSize: combatsvc.SizeLarge},
 		},
 		{
 			"the same weapon changes nothing",
-			&combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "darts", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+			&combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "darts", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 			"shortbow",
-			combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "darts", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+			combatsvc.AttackForm{WeaponID: "shortbow", PreviousWeaponID: "darts", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 		},
 	}
 	for _, c := range cases {
@@ -232,7 +233,7 @@ func TestUpdateAttackForm_SavesTargetAndSituational(t *testing.T) {
 	f := newFixture(t)
 	f.withForm(nil, []combatsvc.Weapon{longsword}, nil, strMods(12))
 	want := combatsvc.AttackForm{
-		WeaponID: "", TargetAC: -2, TargetSize: combatsvc.SizeLarge,
+		WeaponID: "", TargetAC: new(-2), TargetSize: combatsvc.SizeLarge,
 		Situational: combatsvc.Situational{Value: -4, Label: "  cover "},
 	}
 	f.forms.EXPECT().Put(mock.Anything, charID, want).Return(nil).Once()
@@ -246,16 +247,35 @@ func TestUpdateAttackForm_SavesTargetAndSituational(t *testing.T) {
 	assert.Equal(t, "cover", v.Preview.Modifiers[len(v.Preview.Modifiers)-1].Detail, "the preview trims like the attack")
 	// THAC0 13 - (STR 0 + sword 2 - 4) = 15; vs AC -2 needs 17.
 	assert.Equal(t, 15, v.Preview.EffectiveThac0)
-	assert.Equal(t, 17, v.Preview.RollNeeded)
+	assert.Equal(t, new(17), v.Preview.RollNeeded)
+}
+
+// ADR 0012 step 1: "Inconnue" forgets the target AC; the preview has no roll
+// needed then. Giving an AC and forgetting it at once is refused.
+func TestUpdateAttackForm_UnknownTargetAC(t *testing.T) {
+	f := newFixture(t)
+	f.withForm(&combatsvc.AttackForm{WeaponID: "longsword", TargetAC: new(3), TargetSize: combatsvc.SizeSmallMedium},
+		[]combatsvc.Weapon{longsword}, nil, strMods(12))
+	f.forms.EXPECT().Put(mock.Anything, charID, combatsvc.AttackForm{WeaponID: "longsword", TargetSize: combatsvc.SizeSmallMedium}).Return(nil).Once()
+	v, err := f.svc.UpdateAttackForm(t.Context(), charID, combatsvc.AttackFormPatch{UnknownTargetAC: true})
+	require.NoError(t, err)
+	assert.Nil(t, v.Form.TargetAC)
+	assert.Nil(t, v.Preview.RollNeeded)
+	assert.Equal(t, 11, v.Preview.EffectiveThac0, "the effective THAC0 does not need the AC")
+
+	_, err = f.svc.UpdateAttackForm(t.Context(), charID, combatsvc.AttackFormPatch{TargetAC: intPtr(4), UnknownTargetAC: true})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "targetAc", fe.Field)
 }
 
 func TestUpdateAttackForm_ChoosesAmmunition(t *testing.T) {
 	f := newFixture(t)
 	arrows := itemsvc.Item{ID: "a3", Name: "Arrows +3", AmmoKind: "arrow", MagicBonus: 3, Count: 2}
-	f.withForm(&combatsvc.AttackForm{WeaponID: "shortbow", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+	f.withForm(&combatsvc.AttackForm{WeaponID: "shortbow", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 		[]combatsvc.Weapon{shortbow}, []itemsvc.Item{arrows}, strMods(12))
 	f.forms.EXPECT().Put(mock.Anything, charID, combatsvc.AttackForm{
-		WeaponID: "shortbow", AmmoItemID: "a3", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium,
+		WeaponID: "shortbow", AmmoItemID: "a3", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium,
 	}).Return(nil).Once()
 	v, err := f.svc.UpdateAttackForm(t.Context(), charID, combatsvc.AttackFormPatch{AmmoItemID: strPtr("a3")})
 	require.NoError(t, err)
@@ -285,7 +305,7 @@ func TestUpdateAttackForm_Rejections(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.withForm(&combatsvc.AttackForm{WeaponID: c.held, TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium},
+			f.withForm(&combatsvc.AttackForm{WeaponID: c.held, TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium},
 				[]combatsvc.Weapon{longsword, shortbow}, []itemsvc.Item{arrows, bolts}, strMods(12))
 			_, err := f.svc.UpdateAttackForm(t.Context(), charID, c.patch)
 			require.ErrorIs(t, err, domain.ErrInvalidInput)
@@ -305,7 +325,7 @@ func TestUpdateAttackForm_KeepsTheReasonAsTyped(t *testing.T) {
 	for _, key := range "Rear attack" {
 		f := newFixture(t)
 		f.withForm(&combatsvc.AttackForm{
-			WeaponID: "longsword", TargetAC: 5, TargetSize: combatsvc.SizeSmallMedium,
+			WeaponID: "longsword", TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium,
 			Situational: combatsvc.Situational{Value: 2, Label: label},
 		}, []combatsvc.Weapon{longsword}, nil, strMods(12))
 		f.forms.EXPECT().Put(mock.Anything, charID, mock.Anything).Return(nil).Once()

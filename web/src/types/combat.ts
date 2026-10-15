@@ -42,6 +42,9 @@ export interface AmmoUse {
 
 export type TargetSize = "sm" | "l";
 
+/** The GM's word on an attack against an unknown AC (POST /api/roll/attack/{id}/verdict). */
+export type AttackVerdict = "hit" | "miss";
+
 export interface RollResult {
   d20Roll: number;
   /** The crit-check d100 (crit when d20 − it ≥ the roll needed). */
@@ -61,7 +64,16 @@ export interface RollResult {
   baseThac0: number;
   modifiers: Modifier[];
   effectiveThac0: number;
+  /** The lowest AC the d20 hits (effective THAC0 − d20), same as hitsAc; kept for older entries. */
   targetACNeeded: number;
+  /** The lowest target AC the attack hits (docs/adr/0012 step 2); absent on saves and older entries. */
+  hitsAc?: number;
+  /** The lowest target AC the attack crits (docs/adr/0012 step 3); absent on saves and older entries. */
+  critsFromAc?: number;
+  /**
+   * Final only when the AC is known or the GM gave a verdict (attackSettled); until then false, with
+   * the damage of a hit at ×1 ("if it hits").
+   */
   hit: boolean;
   hitMargin: number;
   baseDamage: number;
@@ -80,7 +92,14 @@ export interface RollResult {
   // Attack context (absent on saving throws).
   weaponId?: string;
   weaponName?: string;
-  targetAc: number;
+  /** Null on an attack whose target AC is unknown (docs/adr/0012); 0 on saves. */
+  targetAc: number | null;
+  /** False while the target AC is unknown; absent on saves and on attacks logged before it existed (known). */
+  acKnown?: boolean;
+  /** The attack was rolled without the AC (still true once the GM gave it). */
+  rolledAcUnknown?: boolean;
+  /** The GM's hit or miss while the AC is unknown (no crit). */
+  verdict?: AttackVerdict;
   targetSize?: TargetSize;
   ammo?: AmmoUse;
   /** Target AC and outcome as rolled; present while a correction differs from the rolled AC. */
@@ -104,7 +123,8 @@ export interface AttackRequest {
   weapon_id: string;
   /** Required for weapons with an ammo_kind (bows). */
   ammo_item_id?: string;
-  target_ac: number;
+  /** Absent: the target AC is unknown. */
+  target_ac?: number;
   target_size: TargetSize;
   situational?: { value: number; label: string };
 }
@@ -116,7 +136,8 @@ export interface AttackForm {
   previousWeaponId: string;
   /** Empty for a weapon without ammunition, or when none is left to offer. */
   ammoItemId: string;
-  targetAc: number;
+  /** Null while the target AC is unknown (the default). */
+  targetAc: number | null;
   targetSize: TargetSize;
   /** Kept with its label at 0. */
   situational: { value: number; label: string };
@@ -137,8 +158,8 @@ export interface AttackPreview {
   effectiveThac0: number;
   /** Sum of the modifiers (baseThac0 − effectiveThac0). */
   toHit: number;
-  /** The d20 that hits the target AC. */
-  rollNeeded: number;
+  /** The d20 that hits the target AC; null while the AC is unknown. */
+  rollNeeded: number | null;
   /** Flat damage terms: weapon or buff "+N", ammunition, Strength, buff damage. */
   damageBonus: number;
 }
@@ -153,11 +174,11 @@ export interface AttackFormView {
   preview: AttackPreview | null;
 }
 
-/** PATCH /api/attack/form: only the fields present change. */
+/** PATCH /api/attack/form: only the fields present change; targetAc null makes the AC unknown. */
 export interface AttackFormPatch {
   weaponId?: string;
   ammoItemId?: string;
-  targetAc?: number;
+  targetAc?: number | null;
   targetSize?: TargetSize;
   situational?: { value: number; label: string };
 }

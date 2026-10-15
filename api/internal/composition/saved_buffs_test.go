@@ -149,7 +149,7 @@ func TestSavedBuffs_PowerGemFormDoublesDiceThenCrit(t *testing.T) {
 	_, err = bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: s.Name, Duration: s.Duration, Charges: s.Charges, Effects: s.Effects, Note: s.Note})
 	require.NoError(t, err)
 
-	res, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 1000})
+	res, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(1000)})
 	require.NoError(t, err)
 	require.True(t, res.IsCrit)
 	assert.InDelta(t, 2, res.SpellsBuff, 0)

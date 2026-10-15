@@ -328,6 +328,29 @@ describe("entryText", () => {
     },
   );
 
+  it.each([
+    ["en", {}, "Long Sword +2 vs unknown AC: hits AC -2"],
+    ["fr", {}, "Long Sword +2 contre CA inconnue : touche CA -2"],
+    ["en", { verdict: "hit", hit: true, totalDamage: 7 }, "Long Sword +2 vs unknown AC: hit (GM), 7 damage"],
+    ["fr", { verdict: "miss" }, "Long Sword +2 contre CA inconnue : raté (MJ)"],
+  ])("renders an attack against an unknown AC in %s (%j)", async (lng, extra, want) => {
+    const t = await makeT(lng);
+    const payload = {
+      hit: false,
+      isCrit: false,
+      critMultiplier: 1,
+      totalDamage: 7,
+      weaponName: "Long Sword +2",
+      targetAc: null,
+      acKnown: false,
+      targetACNeeded: -2,
+      hitsAc: -2,
+      critsFromAc: 40,
+      ...extra,
+    };
+    expect(entryText(entry("attack", payload, "server"), t)).toBe(want);
+  });
+
   it("falls back to the summary for an attack without a payload", async () => {
     const t = await makeT("en");
     expect(entryText(entry("attack", {}, "old attack"), t)).toBe("old attack");

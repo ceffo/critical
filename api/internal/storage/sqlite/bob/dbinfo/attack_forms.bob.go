@@ -87,6 +87,15 @@ var AttackForms = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		TargetAcKnown: column{
+			Name:      "target_ac_known",
+			DBType:    "INTEGER",
+			Default:   "0",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: attackFormIndexes{
 		PKMainAttackForms: index{
@@ -133,11 +142,12 @@ type attackFormColumns struct {
 	TargetSize       column
 	SituationalValue column
 	SituationalLabel column
+	TargetAcKnown    column
 }
 
 func (c attackFormColumns) AsSlice() []column {
 	return []column{
-		c.CharacterID, c.WeaponID, c.PreviousWeaponID, c.AmmoItemID, c.TargetAc, c.TargetSize, c.SituationalValue, c.SituationalLabel,
+		c.CharacterID, c.WeaponID, c.PreviousWeaponID, c.AmmoItemID, c.TargetAc, c.TargetSize, c.SituationalValue, c.SituationalLabel, c.TargetAcKnown,
 	}
 }
 

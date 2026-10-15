@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import { ArrowUp } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useDiceStore } from "@/stores/dice";
+import { useAttackStore } from "@/stores/attack";
 import { useFilStore } from "@/stores/fil";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
@@ -13,6 +14,7 @@ import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
 import {
   MAX_TARGET_AC,
   UNKNOWN_AC_STEP_BASE,
+  adjustFormKey,
   attackSettled,
   hitsAc,
   parseTargetAc,
@@ -309,7 +311,7 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
       {correctable && (
         // Keyed by entry and AC so a new attack, or a popped correction, starts from the AC shown.
         <AdjustAttackAc
-          key={`${r.logEntryId}:${r.targetAc}`}
+          key={adjustFormKey(r)}
           result={r}
           entryId={r.logEntryId as number}
         />
@@ -428,13 +430,14 @@ function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: n
   const adjustLastAttack = useRollStore((s) => s.adjustLastAttack);
   const clearLastAttackAc = useRollStore((s) => s.clearLastAttackAc);
   const rolling = useRollStore((s) => s.rolling);
+  const maxAc = useAttackStore((s) => s.view?.maxRealAc);
   const [text, setText] = useState(r.targetAc === null ? "" : String(r.targetAc));
   const unknown = r.targetAc === null;
-  const ac = parseTargetAc(text);
+  const ac = parseTargetAc(text, maxAc);
   const changed = ac !== null && ac !== r.targetAc;
   const step = (by: number) =>
     setText((v) =>
-      String(stepTargetAc(parseTargetAc(v) ?? r.targetAc ?? UNKNOWN_AC_STEP_BASE, by)),
+      String(stepTargetAc(parseTargetAc(v, maxAc) ?? r.targetAc ?? UNKNOWN_AC_STEP_BASE, by, maxAc)),
     );
 
   return (
@@ -463,7 +466,7 @@ function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: n
           className={cn(fieldClass, "w-16 text-center tabular-nums")}
           type="number"
           min={-MAX_TARGET_AC}
-          max={MAX_TARGET_AC}
+          max={maxAc ?? MAX_TARGET_AC}
           step={1}
           value={text}
           placeholder={t("attack.unknownAcPlaceholder")}

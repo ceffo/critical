@@ -10,6 +10,7 @@ function view(targetAc: number | null): AttackFormView {
       situational: { value: 0, label: "" },
     },
     ammoFromDefault: false,
+    maxRealAc: 10,
     ammoChoices: [],
     preview: null,
   };

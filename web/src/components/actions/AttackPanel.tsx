@@ -138,6 +138,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
           value={targetAc}
           placeholder={t("attack.unknownAcPlaceholder")}
           emptyBase={UNKNOWN_AC_STEP_BASE}
+          max={view.maxRealAc}
           onChange={(v) => void update({ targetAc: v })}
           onClear={() => void update({ targetAc: null })}
         />
@@ -219,6 +220,7 @@ function Stepper({
   signed = false,
   placeholder,
   emptyBase = 0,
+  max = BOUND,
   onChange,
   onClear,
 }: {
@@ -229,6 +231,8 @@ function Stepper({
   signed?: boolean;
   placeholder?: string;
   emptyBase?: number;
+  /** Upper bound, when below BOUND (the target AC stops at the highest real AC). */
+  max?: number;
   onChange: (v: number) => void;
   onClear?: () => void;
 }) {
@@ -239,7 +243,7 @@ function Stepper({
     draft ?? (current === null ? "" : signed && current > 0 ? `+${current}` : String(current));
   const set = (v: number) => {
     setDraft(null);
-    onChange(Math.max(-BOUND, Math.min(BOUND, v)));
+    onChange(Math.max(-BOUND, Math.min(max, v)));
   };
   return (
     <div className="flex flex-col gap-1">
@@ -267,7 +271,7 @@ function Stepper({
             const text = e.target.value;
             setDraft(text);
             const n = Number(text.trim());
-            if (/^[+-]?\d+$/.test(text.trim()) && Math.abs(n) <= BOUND) onChange(n);
+            if (/^[+-]?\d+$/.test(text.trim()) && n >= -BOUND && n <= max) onChange(n);
             else if (text.trim() === "" && onClear) onClear();
           }}
           onBlur={() => setDraft(null)}
@@ -277,7 +281,7 @@ function Stepper({
           variant="ghost"
           size="icon-sm"
           aria-label={raise}
-          disabled={value >= BOUND}
+          disabled={value >= max}
           onClick={() => set(value + 1)}
         >
           <Plus />

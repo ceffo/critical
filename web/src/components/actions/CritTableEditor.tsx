@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { fetchCritTable, saveCritTable } from "@/api/combat";
-import { captionClass, fieldClass } from "@/components/dashboard/fieldStyles";
+import { labelClass, fieldClass } from "@/components/dashboard/fieldStyles";
 import { parseDecimal } from "@/lib/decimalInput";
 import type { CritRow, CritTable } from "@/types/combat";
 
@@ -102,9 +102,9 @@ export function CritTableEditor() {
             : t("critTable.help")}
         </p>
         <div className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
-          <span className={captionClass}>{t("critTable.from")}</span>
-          <span className={captionClass}>{t("critTable.to")}</span>
-          <span className={captionClass}>{t("critTable.multiplier")}</span>
+          <span className={labelClass}>{t("critTable.from")}</span>
+          <span className={labelClass}>{t("critTable.to")}</span>
+          <span className={labelClass}>{t("critTable.multiplier")}</span>
           <span />
           {rows.map((r, i) => (
             <div

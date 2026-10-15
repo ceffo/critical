@@ -56,11 +56,11 @@ export function ResultCard() {
     const kind = entry?.kind ?? (source.kind === "live" ? liveKind(source.last) : "attack");
     const h = cardHeader(kind, model, entry, t, i18n.language);
     header = (
-      <div className="flex min-w-0 items-center gap-2" data-testid="card-header">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1" data-testid="card-header">
         <span className="shrink-0 rounded-md bg-neu-900 px-1.5 py-0.5 text-xs font-medium">
           {h.tag}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium" title={h.subtitle}>
+        <span className="min-w-0 flex-1 basis-24 truncate text-sm font-medium" title={h.subtitle}>
           {h.subtitle}
         </span>
         {entry?.status === "voided" && (
@@ -72,7 +72,7 @@ export function ResultCard() {
           </span>
         )}
         {readOnly && (
-          <Button size="xs" variant="outline" className="shrink-0" onClick={showLatest}>
+          <Button size="xs" variant="outline" className="ml-auto shrink-0" onClick={showLatest}>
             {t("fil.latest")}
             <ArrowUp aria-hidden />
           </Button>

@@ -3196,8 +3196,8 @@
     "name": "Mordenkainen’s Force Missiles",
     "level": 4,
     "kind": "damage",
-    "confidence": "low",
-    "note": "Each missile 2d4 (no save) plus a burst of 1 per level (save negates the burst); one missile at level 7, +1 per three levels after, max 7. Per-missile dice shown include the burst. Missile count below level 7 is unclear in the text (clamped to 1).",
+    "confidence": "high",
+    "note": "Each missile 2d4 (no save) plus a burst of 1 per level (a save vs. spell negates the burst only); one missile at level 7, +1 per three levels after, max 7 at level 25. Per-missile dice shown include the burst. Below level 7 (cast from a device) one missile.",
     "target": "other",
     "duration": {
       "kind": "instant"
@@ -3500,7 +3500,7 @@
     "level": 4,
     "kind": "damage",
     "confidence": "low",
-    "note": "Failed save: keeps taking acid damage in following rounds with two fewer dice each round; only the first round is modelled.",
+    "note": "First round (min(level,12))d4, half on a save. A failed save keeps the acid burning in following rounds with two fewer dice each round, a new save each round ending it; the 5-ft splash deals 1d4 per five levels (save vs. paralyzation negates). Not modelled: the damage model repeats the same dice every round and has no per-round decrement or secondary targets.",
     "target": "other",
     "duration": {
       "kind": "instant"
@@ -3532,7 +3532,7 @@
     "level": 4,
     "kind": "utility",
     "confidence": "low",
-    "note": "Breaking through costs 2 damage per inch of thickness; ice-storm mode. Not modelled.",
+    "note": "Three castings: an ice plane (anything breaking through takes 2 per inch of thickness, 1 inch per level; 3 for fire users, 1 for cold users), a hemisphere (no damage) or a falling ice sheet (3d10, as Ice Storm hail). Not modelled: the cast cannot choose the mode, and two of the three deal no damage on casting.",
     "target": "none",
     "duration": {
       "kind": "rounds",
@@ -3675,7 +3675,7 @@
     "level": 5,
     "kind": "utility",
     "confidence": "low",
-    "note": "Kills creatures under 4+1 HD; save or die up to 6 HD; 1d10 per round above that. Not modelled.",
+    "note": "Kills creatures under 4+1 HD; save vs. poison (-4 up to 5+1 HD) or die up to 6 HD; stronger creatures take 1d10 poison per round while in the moving cloud. Not modelled: the damage depends on who is in the cloud each round (a per-round area effect), and the slaying by Hit Dice is no damage roll.",
     "target": "none",
     "duration": {
       "kind": "rounds",
@@ -4054,8 +4054,8 @@
     "name": "Mummy Rot",
     "level": 5,
     "kind": "damage",
-    "confidence": "low",
-    "note": "Touch attack: 2d6 plus a rotting disease (-2 Charisma per month); save not stated clearly.",
+    "confidence": "high",
+    "note": "Touch attack: 2d6 always (the save only avoids the disease). The rot kills in 1d6 months, costs 2 Charisma per month and slows healing to 10%; only the damage is modelled. The touch stays ready for 1 round per level.",
     "target": "other",
     "duration": {
       "kind": "rounds",
@@ -4445,7 +4445,7 @@
     "level": 6,
     "kind": "damage",
     "confidence": "low",
-    "note": "First strike only. The bolt then arcs to up to (level - 1) further targets, each jump 1d6 weaker; arcs are not modelled.",
+    "note": "The first strike is (min(level,12))d6, half on a save; the bolt then arcs to up to (level - 1) further targets, each jump 1d6 weaker, each with its own save. Not modelled: the damage model has no per-instance decrement, so arcs cannot be served.",
     "target": "area",
     "duration": {
       "kind": "instant"
@@ -5194,8 +5194,8 @@
     "name": "Delayed Blast Fireball",
     "level": 7,
     "kind": "damage",
-    "confidence": "low",
-    "note": "Fireball with +1 per die; the seed text only says \"otherwise the same as fireball\" (max 10d6); the printed PHB cap is 20d6. Blast delayed up to 5 rounds.",
+    "confidence": "high",
+    "note": "A fireball with +1 per die (max 10d6+10, as Fireball); the blast can be delayed up to 5 rounds.",
     "target": "area",
     "duration": {
       "kind": "instant"
@@ -6197,8 +6197,8 @@
     "name": "Meteor Swarm",
     "level": 9,
     "kind": "damage",
-    "confidence": "low",
-    "note": "Either 4 spheres of 10d4 or 8 spheres of 5d4, each bursting as a fireball (half on a save); a creature in the straight-line path takes the full effect without a save. Only the large-sphere option is modelled.",
+    "confidence": "high",
+    "note": "Either 4 spheres of 10d4 or 8 spheres of 5d4, each bursting as a fireball (one save per area for half); a creature in the straight-line path takes the full effect without a save. Only the large-sphere option is served; a creature takes the spheres whose areas it is in.",
     "target": "area",
     "duration": {
       "kind": "instant"

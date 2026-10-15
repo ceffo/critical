@@ -37,6 +37,7 @@ func TestAdd(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.before, nil).Once()
+			f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(0, nil).Once()
 			var saved []buffsvc.BuffEffect
 			f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, mock.Anything).RunAndReturn(
 				func(_ context.Context, _ int64, b []buffsvc.BuffEffect) error { saved = b; return nil }).Once()

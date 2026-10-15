@@ -31,6 +31,13 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	if err != nil {
 		return BuffEffect{}, actionlog.Snapshot{}, fmt.Errorf("get active buffs: %w", err)
 	}
+	// ADR 0004 step 15: a buff starts in the round it is added (a renewed
+	// one starts again).
+	round, err := s.dal.GetRoundNumber(ctx, characterID)
+	if err != nil {
+		return BuffEffect{}, actionlog.Snapshot{}, fmt.Errorf("get round: %w", err)
+	}
+	buff.StartRound = round
 	after := make([]BuffEffect, 0, len(before)+1)
 	stacks := isStrengthBonus(buff.Effects)
 	for _, b := range before {

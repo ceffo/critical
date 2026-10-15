@@ -1,4 +1,5 @@
-// Mirrors api/internal/rest/handler/buffhdl (BuffEffectDTO, StrengthDTO, RoundAdvanceDTO).
+// Mirrors api/internal/rest/handler/buffhdl (BuffEffectDTO, StrengthDTO, RoundAdvanceDTO,
+// PassTimePreviewDTO).
 
 /** Effect keys a buff can carry (snake_case, as on the wire). */
 export const BUFF_EFFECT_KEYS = [
@@ -26,8 +27,13 @@ export interface BuffEffect {
   /** Rounds left, counted down by Next Round; 0 = not timed. The buff expires at 0. */
   duration: number;
   effects: BuffEffects;
-  /** Free text shown on the badge ("" = none). */
+  /** Free text shown on the effect's row ("" = none). */
   note: string;
+  /**
+   * Round the buff was added in (0: out of combat, or stored before the server kept it). Set by the
+   * server; never sent. The timeline draws the elapsed turns from it.
+   */
+  startRound: number;
   /**
    * On list responses: false while min_str is not met by the effective STR, or (a Strength bonus)
    * while an Improved Strength replaces it.
@@ -62,6 +68,13 @@ export interface Strength {
 /** GET /api/round */
 export interface RoundResponse {
   round: number;
+}
+
+/** GET /api/round/pass-time/preview?hours=: what Time passes would do, nothing written. */
+export interface PassTimePreview {
+  rounds: number;
+  /** The buffs that would expire. */
+  expiring: BuffEffect[];
 }
 
 /**

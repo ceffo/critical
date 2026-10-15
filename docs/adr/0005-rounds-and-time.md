@@ -51,6 +51,12 @@ Tests live in `api/internal/domain/service/buffsvc/` unless named otherwise.
    It changes no other state: daily items and spell slots are refilled by a long rest only.
    Tests: `TestPassTime` (the entry, its snapshots, payload), `composition`
    `TestPassTimeIsLoggedAndVoidRestoresBuffsAndRound`, `TestPassTimeDoesNotRefillDailyItemsOrSlots`.
+8. **Preview.** Before confirming, the player sees what passing a time would do: the server applies
+   steps 5 and 6 to the current buffs and returns the rounds and the buffs that would expire,
+   writing and logging nothing (`GET /api/round/pass-time/preview?hours=`). Invalid hours are
+   refused with step 5's message. The client never decides which buffs end.
+   Tests: `TestRounds_Step8_PreviewPassTime` ("1.5 h: 90 rounds, the buffs at 90 or less would
+   expire, nothing is written", "invalid hours read nothing"); `router` `TestRoundPassTimePreview`.
 
 ## Consequences
 

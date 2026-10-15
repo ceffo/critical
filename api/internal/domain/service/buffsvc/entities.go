@@ -57,6 +57,12 @@ type BuffEffect struct {
 	// Note is free text shown on the buff (e.g. "+4 saves vs fire"). No
 	// rules meaning.
 	Note string
+	// StartRound is the round counter when the buff was put on the list
+	// (activated, cast or received); 0 for a buff added out of combat or
+	// stored before the field existed. Set by Add and Activate only, never
+	// by the caller; nothing changes it afterwards (ADR 0004 step 15). It
+	// has no rules meaning: the turn header draws the elapsed part from it.
+	StartRound int
 }
 
 // Timed reports whether Next Round counts this buff down.

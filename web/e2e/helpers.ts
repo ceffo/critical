@@ -8,7 +8,7 @@ export async function currentHp(page: Page): Promise<number> {
   return Number(m[1]);
 }
 
-/** Current round as shown in the header. */
+/** Current turn (round) as shown in the header's turn block. */
 export async function currentRound(page: Page): Promise<number> {
   const text = (await page.getByTestId("round-value").textContent()) ?? "";
   if (!/^\d+$/.test(text.trim())) throw new Error(`unexpected round: ${text}`);
@@ -63,7 +63,7 @@ export function logEntry(page: Page, source: string): Locator {
   return combatLog(page).getByRole("listitem").filter({ hasText: source });
 }
 
-/** The badge of the active buff called `name` in the header's buff strip. */
+/** The row of the active buff called `name` in the header's effects timeline. */
 export function buffBadge(page: Page, name: string): Locator {
   return page.locator(`[data-testid="buff"][data-buff="${name}"]`);
 }
@@ -79,11 +79,11 @@ export interface NewBuff {
   save?: boolean;
 }
 
-/** Add a buff through the buff strip's form and wait for its badge. */
+/** Add a buff through the effects timeline's form and wait for its row. */
 export async function addBuff(page: Page, buff: NewBuff) {
-  const strip = page.getByRole("group", { name: "Buffs" });
-  await strip.getByRole("button", { name: "Add buff" }).click();
-  const form = strip.getByRole("form", { name: "Add buff" });
+  const strip = page.getByRole("group", { name: "Effects" });
+  await strip.getByRole("button", { name: "Add effect" }).click();
+  const form = strip.getByRole("form", { name: "Add effect" });
   await form.getByLabel("Buff name").fill(buff.name);
   await form.getByLabel("Rounds").fill(String(buff.rounds ?? 0));
   await form.getByLabel("Charges").fill(String(buff.charges ?? 0));
@@ -141,4 +141,15 @@ export async function chooseSetting(page: Page, option: string) {
 /** Switch the UI language through the settings popover. */
 export async function chooseLanguage(page: Page, lang: "en" | "fr") {
   await chooseSetting(page, lang === "fr" ? "Français" : "English");
+}
+
+/** Next turn from the turn block (English UI). */
+export async function nextTurn(page: Page) {
+  await page.getByRole("button", { name: "Next turn" }).click();
+}
+
+/** Open the turn block's ⋯ menu and pick an action (English UI). */
+export async function turnMenu(page: Page, item: "Time passes…" | "Set turn number…" | "End combat") {
+  await page.getByRole("button", { name: "More turn actions" }).click();
+  await page.getByRole("menuitem", { name: item }).click();
 }

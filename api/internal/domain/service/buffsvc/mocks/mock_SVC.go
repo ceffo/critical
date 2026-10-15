@@ -929,6 +929,73 @@ func (_c *MockSVC_PassTime_Call) RunAndReturn(run func(context.Context, int64, f
 	return _c
 }
 
+// PreviewPassTime provides a mock function with given fields: ctx, characterID, hours
+func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []buffsvc.BuffEffect, error) {
+	ret := _m.Called(ctx, characterID, hours)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PreviewPassTime")
+	}
+
+	var r0 int
+	var r1 []buffsvc.BuffEffect
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, error)); ok {
+		return rf(ctx, characterID, hours)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) int); ok {
+		r0 = rf(ctx, characterID, hours)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, float64) []buffsvc.BuffEffect); ok {
+		r1 = rf(ctx, characterID, hours)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, float64) error); ok {
+		r2 = rf(ctx, characterID, hours)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_PreviewPassTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PreviewPassTime'
+type MockSVC_PreviewPassTime_Call struct {
+	*mock.Call
+}
+
+// PreviewPassTime is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - hours float64
+func (_e *MockSVC_Expecter) PreviewPassTime(ctx interface{}, characterID interface{}, hours interface{}) *MockSVC_PreviewPassTime_Call {
+	return &MockSVC_PreviewPassTime_Call{Call: _e.mock.On("PreviewPassTime", ctx, characterID, hours)}
+}
+
+func (_c *MockSVC_PreviewPassTime_Call) Run(run func(ctx context.Context, characterID int64, hours float64)) *MockSVC_PreviewPassTime_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(float64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PreviewPassTime_Call) Return(rounds int, expiring []buffsvc.BuffEffect, err error) *MockSVC_PreviewPassTime_Call {
+	_c.Call.Return(rounds, expiring, err)
+	return _c
+}
+
+func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, error)) *MockSVC_PreviewPassTime_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ResetRound provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) ResetRound(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, int, error) {
 	ret := _m.Called(ctx, characterID)

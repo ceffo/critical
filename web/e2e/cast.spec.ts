@@ -7,6 +7,8 @@ import {
   openDashboard,
   recordHp,
   voidEntry,
+  nextTurn,
+  turnMenu,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -129,7 +131,7 @@ test("after Next Round the cast offers no void until Next Round is popped", asyn
   await openSpells(page);
   await page.getByRole("button", { name: "Cast Stoneskin" }).click();
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
-  await page.getByRole("button", { name: "Next Round" }).click();
+  await nextTurn(page);
   await expect(logEntry(page, "Round 0 → 1")).toBeVisible();
 
   const entry = logEntry(page, "Cast Stoneskin");
@@ -255,8 +257,8 @@ test("a cast buff expired by Time passes: pop the fast-forward, then the cast", 
   await page.getByRole("button", { name: "Cast Haste" }).click();
   await expect(buffBadge(page, "Haste")).toBeVisible();
 
-  const form = page.getByRole("form", { name: "⏩ Time passes" });
-  await page.getByRole("button", { name: "⏩ Time passes" }).click();
+  const form = page.getByRole("form", { name: "Time passes…" });
+  await turnMenu(page, "Time passes…");
   await form.getByLabel("Hours that pass").fill("1");
   await form.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByRole("status")).toContainText("Expired buffs: Haste");

@@ -22,7 +22,7 @@ test("fr smoke: French toggle shows no raw i18n keys", async ({ page }) => {
     page.getByRole("button", { name: "Infliger les dégâts" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Round suivant" }),
+    page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
 
   const body = (await page.locator("body").innerText()).split("\n");

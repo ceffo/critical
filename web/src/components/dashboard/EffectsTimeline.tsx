@@ -57,7 +57,8 @@ export function EffectsTimeline() {
   const columns = Array.from({ length: size }, (_, i) => start + i);
   const grid: CSSProperties = {
     gridTemplateColumns: `${LABEL_COLUMN} repeat(${size}, minmax(0, 1fr))`,
-    gridTemplateRows: `1.5rem repeat(${Math.max(shown.length, 1)}, 1.5rem)`,
+    // An effect row grows when its name wraps (names are never truncated).
+    gridTemplateRows: `1.5rem repeat(${Math.max(shown.length, 1)}, minmax(1.5rem, auto))`,
   };
 
   return (
@@ -254,7 +255,7 @@ function EffectRow({
         style={{ gridColumn: 1, gridRow: row }}
       >
         <span
-          className="min-w-0 flex-1 truncate"
+          className="min-w-0 flex-1 break-words"
           title={[name, effectsText, b.note].filter(Boolean).join(" · ")}
         >
           <span

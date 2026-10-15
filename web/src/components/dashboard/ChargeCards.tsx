@@ -38,11 +38,11 @@ export function ChargeCards() {
               weight="duotone"
             />
             <div className="flex min-w-0 flex-1 flex-col leading-tight">
-              <span className="truncate text-body font-medium" title={name}>
+              <span className="min-w-0 text-body font-medium break-words">
                 {name}
               </span>
               <span
-                className="truncate text-label text-muted-foreground tabular-nums"
+                className="min-w-0 text-label break-words text-muted-foreground tabular-nums"
                 title={t("moi.chargesHint")}
                 data-testid="charge-count"
               >

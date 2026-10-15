@@ -73,9 +73,12 @@
     "title": "Turn",
     "next": "Next turn",
     "menu": "More turn actions",
-    "outOfCombat": "Out of combat",
     "initiative": "Initiative",
     "initiativeNone": "Not rolled",
+    "outOfCombatInitiative": "Out of combat · initiative will be rolled",
+    "initiativeDie": "d10",
+    "initiativeHint": "1d10, the lowest acts first",
+    "initiativeReroll": "Reroll initiative",
     "passTime": "Time passes…",
     "setTurn": "Set turn number…",
     "endCombat": "End combat",
@@ -582,7 +585,8 @@
       "time_passed": "Time",
       "weapon_add": "Weapon",
       "weapon_edit": "Weapon",
-      "weapon_remove": "Weapon"
+      "weapon_remove": "Weapon",
+      "initiative": "Initiative"
     },
     "status": {
       "active": "Active",
@@ -663,6 +667,7 @@
         "notes": "note"
       }
     },
+    "initiative": "Initiative {{value}} (d10) for round {{round}}",
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
     "prep": "Prepared: {{spells}}",
     "prepNone": "Prepared no spells",

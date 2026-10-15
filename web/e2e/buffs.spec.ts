@@ -10,6 +10,7 @@ import {
   nextTurn,
   openDashboard,
   voidEntry,
+  voidInitiative,
 } from "./helpers";
 
 test("Next turn then void restores the round, the durations and the expired buff", async ({
@@ -42,6 +43,7 @@ test("Next turn then void restores the round, the durations and the expired buff
   ).toBeVisible();
   await snap(page, "next-round-expired");
 
+  await voidInitiative(page);
   await voidEntry(page, advance);
   await expect.poll(() => currentRound(page)).toBe(r0);
   await expect(page.getByRole("status")).toHaveCount(0);

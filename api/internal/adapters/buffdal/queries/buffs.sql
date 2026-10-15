@@ -32,3 +32,12 @@ INSERT INTO saved_buffs (id, character_id, name, duration, charges, effects, not
 -- DeleteSavedBuffs
 DELETE FROM saved_buffs WHERE character_id = ?
 ;
+
+-- GetInitiative
+SELECT initiative_d10, initiative_entry_id FROM round_state WHERE character_id = ?
+;
+
+-- UpsertInitiative
+INSERT INTO round_state (character_id, initiative_d10, initiative_entry_id) VALUES (?, ?, ?)
+ON CONFLICT(character_id) DO UPDATE SET initiative_d10 = excluded.initiative_d10, initiative_entry_id = excluded.initiative_entry_id
+;

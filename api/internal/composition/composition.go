@@ -146,7 +146,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	buffSvc, err := buffsvc.New(buffDAL, db, logSvc, charSvc)
+	buffSvc, err := buffsvc.New(buffDAL, db, logSvc, charSvc, dice)
 	if err != nil {
 		_ = db.Close()
 		return nil, err

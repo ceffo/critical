@@ -150,7 +150,7 @@ func (_c *MockSVC_Add_Call) RunAndReturn(run func(context.Context, int64, buffsv
 }
 
 // AdvanceRound provides a mock function with given fields: ctx, characterID
-func (_m *MockSVC) AdvanceRound(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, error) {
+func (_m *MockSVC) AdvanceRound(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, buffsvc.Initiative, error) {
 	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
@@ -160,8 +160,9 @@ func (_m *MockSVC) AdvanceRound(ctx context.Context, characterID int64) ([]buffs
 	var r0 []buffsvc.BuffEffect
 	var r1 []buffsvc.BuffEffect
 	var r2 int
-	var r3 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, error)); ok {
+	var r3 buffsvc.Initiative
+	var r4 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, buffsvc.Initiative, error)); ok {
 		return rf(ctx, characterID)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.BuffEffect); ok {
@@ -186,13 +187,19 @@ func (_m *MockSVC) AdvanceRound(ctx context.Context, characterID int64) ([]buffs
 		r2 = ret.Get(2).(int)
 	}
 
-	if rf, ok := ret.Get(3).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(3).(func(context.Context, int64) buffsvc.Initiative); ok {
 		r3 = rf(ctx, characterID)
 	} else {
-		r3 = ret.Error(3)
+		r3 = ret.Get(3).(buffsvc.Initiative)
 	}
 
-	return r0, r1, r2, r3
+	if rf, ok := ret.Get(4).(func(context.Context, int64) error); ok {
+		r4 = rf(ctx, characterID)
+	} else {
+		r4 = ret.Error(4)
+	}
+
+	return r0, r1, r2, r3, r4
 }
 
 // MockSVC_AdvanceRound_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdvanceRound'
@@ -214,12 +221,12 @@ func (_c *MockSVC_AdvanceRound_Call) Run(run func(ctx context.Context, character
 	return _c
 }
 
-func (_c *MockSVC_AdvanceRound_Call) Return(active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, err error) *MockSVC_AdvanceRound_Call {
-	_c.Call.Return(active, expired, round, err)
+func (_c *MockSVC_AdvanceRound_Call) Return(active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, initiative buffsvc.Initiative, err error) *MockSVC_AdvanceRound_Call {
+	_c.Call.Return(active, expired, round, initiative, err)
 	return _c
 }
 
-func (_c *MockSVC_AdvanceRound_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, error)) *MockSVC_AdvanceRound_Call {
+func (_c *MockSVC_AdvanceRound_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, buffsvc.Initiative, error)) *MockSVC_AdvanceRound_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -562,6 +569,65 @@ func (_c *MockSVC_GetEffectiveStr_Call) Return(_a0 buffsvc.Strength, _a1 error) 
 }
 
 func (_c *MockSVC_GetEffectiveStr_Call) RunAndReturn(run func(context.Context, int64) (buffsvc.Strength, error)) *MockSVC_GetEffectiveStr_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetInitiative provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetInitiative")
+	}
+
+	var r0 *buffsvc.Initiative
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (*buffsvc.Initiative, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *buffsvc.Initiative); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*buffsvc.Initiative)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_GetInitiative_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInitiative'
+type MockSVC_GetInitiative_Call struct {
+	*mock.Call
+}
+
+// GetInitiative is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) GetInitiative(ctx interface{}, characterID interface{}) *MockSVC_GetInitiative_Call {
+	return &MockSVC_GetInitiative_Call{Call: _e.mock.On("GetInitiative", ctx, characterID)}
+}
+
+func (_c *MockSVC_GetInitiative_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_GetInitiative_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_GetInitiative_Call) Return(_a0 *buffsvc.Initiative, _a1 error) *MockSVC_GetInitiative_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_GetInitiative_Call) RunAndReturn(run func(context.Context, int64) (*buffsvc.Initiative, error)) *MockSVC_GetInitiative_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -992,6 +1058,63 @@ func (_c *MockSVC_PreviewPassTime_Call) Return(rounds int, expiring []buffsvc.Bu
 }
 
 func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, error)) *MockSVC_PreviewPassTime_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RerollInitiative provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) RerollInitiative(ctx context.Context, characterID int64) (buffsvc.Initiative, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RerollInitiative")
+	}
+
+	var r0 buffsvc.Initiative
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (buffsvc.Initiative, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) buffsvc.Initiative); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Get(0).(buffsvc.Initiative)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_RerollInitiative_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RerollInitiative'
+type MockSVC_RerollInitiative_Call struct {
+	*mock.Call
+}
+
+// RerollInitiative is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) RerollInitiative(ctx interface{}, characterID interface{}) *MockSVC_RerollInitiative_Call {
+	return &MockSVC_RerollInitiative_Call{Call: _e.mock.On("RerollInitiative", ctx, characterID)}
+}
+
+func (_c *MockSVC_RerollInitiative_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_RerollInitiative_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_RerollInitiative_Call) Return(_a0 buffsvc.Initiative, _a1 error) *MockSVC_RerollInitiative_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_RerollInitiative_Call) RunAndReturn(run func(context.Context, int64) (buffsvc.Initiative, error)) *MockSVC_RerollInitiative_Call {
 	_c.Call.Return(run)
 	return _c
 }

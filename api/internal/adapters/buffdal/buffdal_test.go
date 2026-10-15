@@ -127,6 +127,35 @@ func TestRoundNumber(t *testing.T) {
 	assert.Equal(t, 4, r)
 }
 
+func TestInitiative(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	got, err := dal.GetInitiative(ctx, charID)
+	require.NoError(t, err)
+	assert.Nil(t, got, "missing row means none")
+
+	require.NoError(t, dal.SaveRoundNumber(ctx, charID, 3))
+	got, err = dal.GetInitiative(ctx, charID)
+	require.NoError(t, err)
+	assert.Nil(t, got, "a round without a roll has none")
+
+	require.NoError(t, dal.SaveInitiative(ctx, charID, &buffsvc.Initiative{D10: 7, LogEntryID: 21}))
+	got, err = dal.GetInitiative(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, &buffsvc.Initiative{D10: 7, LogEntryID: 21}, got)
+	r, err := dal.GetRoundNumber(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, r, "the round is untouched")
+
+	require.NoError(t, dal.SaveInitiative(ctx, charID, nil))
+	got, err = dal.GetInitiative(ctx, charID)
+	require.NoError(t, err)
+	assert.Nil(t, got, "nil clears it")
+}
+
 func TestInTx_CommitsOnSuccess(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)

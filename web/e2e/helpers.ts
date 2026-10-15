@@ -151,3 +151,16 @@ export async function turnMenu(page: Page, item: "Time passes…" | "Set turn nu
   await page.getByRole("button", { name: "More turn actions" }).click();
   await page.getByRole("menuitem", { name: item }).click();
 }
+
+/**
+ * Void the turn's initiative entry, the one the turn block shows (Next turn logs it after the
+ * advance, so it is popped first). Labels default to the English UI.
+ */
+export async function voidInitiative(page: Page, labels = { void: "Void", confirm: "Confirm" }) {
+  const id = await page.getByTestId("initiative-value").getAttribute("data-entry-id");
+  const entry = page.locator(`li[data-entry-id="${id}"]`);
+  await entry.getByRole("button", { name: labels.void, exact: true }).click();
+  await entry.getByRole("button", { name: labels.confirm }).click();
+  await expect(entry).toHaveAttribute("data-status", "voided");
+  await expect(page.getByTestId("initiative-value")).toHaveCount(0);
+}

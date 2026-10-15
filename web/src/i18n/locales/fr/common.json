@@ -73,9 +73,12 @@
     "title": "Tour",
     "next": "Tour suivant",
     "menu": "Autres actions du tour",
-    "outOfCombat": "Hors combat",
     "initiative": "Initiative",
     "initiativeNone": "Pas lancée",
+    "outOfCombatInitiative": "Hors combat · l’initiative sera lancée",
+    "initiativeDie": "d10",
+    "initiativeHint": "1d10, le plus bas agit en premier",
+    "initiativeReroll": "Relancer l’initiative",
     "passTime": "Le temps passe…",
     "setTurn": "Régler le numéro de tour…",
     "endCombat": "Fin du combat",
@@ -582,7 +585,8 @@
       "time_passed": "Temps",
       "weapon_add": "Arme",
       "weapon_edit": "Arme",
-      "weapon_remove": "Arme"
+      "weapon_remove": "Arme",
+      "initiative": "Initiative"
     },
     "status": {
       "active": "Actif",
@@ -663,6 +667,7 @@
         "notes": "note"
       }
     },
+    "initiative": "Initiative {{value}} (d10) pour le tour {{round}}",
     "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés",
     "prep": "Préparé : {{spells}}",
     "prepNone": "Aucun sort préparé",

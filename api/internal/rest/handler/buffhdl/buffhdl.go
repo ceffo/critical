@@ -31,7 +31,9 @@ type buffSvc interface {
 	Dismiss(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
-	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, err error)
+	GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error)
+	RerollInitiative(ctx context.Context, characterID int64) (buffsvc.Initiative, error)
+	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, initiative buffsvc.Initiative, err error)
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
 	PassTime(ctx context.Context, characterID int64, hours float64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, rounds int, round int, err error)
@@ -55,6 +57,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Get("/api/round", render.Handle(GetRound(charID, svc)))
 	r.Post("/api/round/advance", render.Handle(AdvanceRound(charID, svc)))
 	r.Post("/api/round/reset", render.Handle(ResetRound(charID, svc)))
+	r.Post("/api/round/initiative/reroll", render.Handle(RerollInitiative(charID, svc)))
 	r.Put("/api/round", render.Handle(SetRound(charID, svc)))
 	r.Post("/api/round/pass-time", render.Handle(PassTime(charID, svc)))
 	r.Get("/api/round/pass-time/preview", render.Handle(PreviewPassTime(charID, svc)))
@@ -134,22 +137,48 @@ func Trigger(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	}
 }
 
-// GetRound returns the current round number.
+// InitiativeDTO is the round's initiative: the d10 (lowest acts first) and
+// the log entry that rolled it.
+type InitiativeDTO struct {
+	Value      int   `json:"value"`
+	LogEntryID int64 `json:"logEntryId"`
+}
+
+func toInitiativeDTO(i *buffsvc.Initiative) *InitiativeDTO {
+	if i == nil {
+		return nil
+	}
+	return &InitiativeDTO{Value: i.D10, LogEntryID: i.LogEntryID}
+}
+
+// RoundDTO is GET /api/round: the counter and its initiative (null out of
+// combat).
+type RoundDTO struct {
+	Round      int            `json:"round"`
+	Initiative *InitiativeDTO `json:"initiative"`
+}
+
+// GetRound returns the current round number and its initiative.
 func GetRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		round, err := svc.GetRound(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, map[string]int{"round": round})
+		initiative, err := svc.GetInitiative(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, RoundDTO{Round: round, Initiative: toInitiativeDTO(initiative)})
 		return nil
 	}
 }
 
-// AdvanceRound increments the counter and ages duration buffs.
+// AdvanceRound increments the counter, ages duration buffs and rolls the new
+// round's initiative.
 func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		active, expired, round, err := svc.AdvanceRound(r.Context(), charID(r))
+		active, expired, round, initiative, err := svc.AdvanceRound(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}
@@ -157,7 +186,21 @@ func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 			RoundNumber:  round,
 			ActiveBuffs:  toDTOs(active),
 			ExpiredBuffs: toDTOs(expired),
+			Initiative:   toInitiativeDTO(&initiative),
 		})
+		return nil
+	}
+}
+
+// RerollInitiative pops the round's initiative entry and rolls a new one;
+// 409 when there is none or another entry is newer.
+func RerollInitiative(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		initiative, err := svc.RerollInitiative(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, toInitiativeDTO(&initiative))
 		return nil
 	}
 }
@@ -306,6 +349,8 @@ type RoundAdvanceDTO struct {
 	ExpiredBuffs []BuffEffectDTO `json:"expiredBuffs"`
 	// RoundsPassed is set by pass-time only: the rounds the hours gave.
 	RoundsPassed int `json:"roundsPassed,omitempty"`
+	// Initiative is set by Next Round only: the new round's roll.
+	Initiative *InitiativeDTO `json:"initiative,omitempty"`
 }
 
 func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {

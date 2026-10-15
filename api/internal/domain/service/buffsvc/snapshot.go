@@ -69,7 +69,8 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 	return f(ctx, characterID, state)
 }
 
-// Restorers writes the buff list or the round number back from a snapshot.
+// Restorers writes the buff list, the saved templates, the round number or
+// the initiative back from a snapshot.
 // They run inside the void's transaction (ctx carries it).
 func (s *service) Restorers() map[string]actionlog.Restorer {
 	return map[string]actionlog.Restorer{
@@ -87,6 +88,7 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 			}
 			return s.dal.ReplaceSavedBuffs(ctx, characterID, saved)
 		}),
+		StateKeyInitiative: restoreFunc(s.restoreInitiative),
 		StateKeyRound: restoreFunc(func(ctx context.Context, characterID int64, state json.RawMessage) error {
 			var round int
 			if err := json.Unmarshal(state, &round); err != nil {

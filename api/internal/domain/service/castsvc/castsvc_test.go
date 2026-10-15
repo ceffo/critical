@@ -553,6 +553,16 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}},
 			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 6}, Type: "acid",
 		}},
+		// ADR 0008 step 13: a damage made of parts serves each part, and a
+		// cast rolls each part of each instance.
+		{forceMissiles, spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}, Constant: bardLevel},
+			Instances: formula.Sum{Constant: 3}, Rounds: formula.Sum{Constant: 1}, Type: "force",
+			Parts: []spelleffectsvc.DamagePartAt{
+				{Dice: formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}}, Save: spelleffectsvc.SaveNone},
+				{Dice: formula.Sum{Constant: bardLevel}, Save: spelleffectsvc.SaveNegates},
+			},
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.slot.SpellID, func(t *testing.T) {
@@ -578,6 +588,14 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 			require.Len(t, res.Damage.Rolls, rolls)
 			for _, r := range res.Damage.Rolls {
 				assert.Equal(t, perRoll, r.Total)
+				require.Len(t, r.Parts, len(got.Parts), "one roll per served part")
+				for i, p := range got.Parts {
+					want := p.Dice.Constant
+					for _, g := range p.Dice.Dice {
+						want += g.Count
+					}
+					assert.Equal(t, want, r.Parts[i].Total, "part %d", i)
+				}
 			}
 			assert.Empty(t, f.dice.vals, "every served die is rolled")
 		})

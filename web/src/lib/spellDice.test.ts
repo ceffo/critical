@@ -57,3 +57,26 @@ describe("damageText", () => {
     expect(damageFormula(damage(dice(1, [1, 4]), "force", n(5)))).toBe("1d4+1");
   });
 });
+
+describe("damageText with parts", () => {
+  const missiles: SpellDamage = {
+    ...damage(dice(15, [2, 4]), "force", n(3)),
+    parts: [
+      { dice: dice(0, [2, 4]), save: "none" },
+      { dice: n(15), save: "negates" },
+    ],
+  };
+  it("words each part and what a save does to it, in en and fr", async () => {
+    expect(damageText(await makeT("en"), missiles)).toBe("3 × (2d4 [no save] + 15 [save negates]) force");
+    expect(damageText(await makeT("fr"), missiles)).toBe(
+      "3 × (2d4 [sans sauvegarde] + 15 [annulé par la sauvegarde]) force",
+    );
+  });
+  it("one part, one instance: no parentheses", async () => {
+    const rot: SpellDamage = { ...damage(dice(0, [2, 6]), "negative"), parts: [{ dice: dice(0, [2, 6]), save: "none" }] };
+    expect(damageText(await makeT("en"), rot)).toBe("2d6 [no save] negative energy");
+  });
+  it("the composer gets the whole instance", () => {
+    expect(damageFormula(missiles)).toBe("2d4+15");
+  });
+});

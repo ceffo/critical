@@ -172,3 +172,56 @@ func TestNew_MissingFile(t *testing.T) {
 	_, err := spelleffectsadpt.New(t.TempDir())
 	require.ErrorContains(t, err, "spell_effects.json")
 }
+
+// damageSeed builds a one-entry seed with a damage spell, its save and its
+// damage JSON.
+func damageSeed(save, damage string) string {
+	return `[{"id":"bolt","name":"Bolt","level":3,"kind":"damage","confidence":"high","target":"other",
+	  "duration":{"kind":"instant"}` + save + `,"damage":` + damage + `}]`
+}
+
+// ADR 0008 step 13: the loader maps damage parts, each with its dice (or
+// by-level table) and its save effect.
+func TestParse_DamageParts(t *testing.T) {
+	seed := damageSeed(`,"save":{"type":"spell","effect":"negates"}`, `{"parts":[
+	  {"dice":"2d4","save":"none"},
+	  {"by_level":[{"min_level":1,"dice":"1"},{"min_level":10,"dice":"level"}]}],
+	  "instances":"3","type":"force"}`)
+	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	require.NoError(t, err)
+	e, ok := c.Get("bolt")
+	require.True(t, ok)
+	require.Len(t, e.Damage.Parts, 2)
+	assert.Nil(t, e.Damage.Dice)
+	assert.Equal(t, "2d4", e.Damage.Parts[0].Dice.String())
+	assert.Equal(t, spelleffectsvc.SaveNone, e.PartSave(e.Damage.Parts[0]))
+	assert.Equal(t, "level", e.Damage.Parts[1].DiceAt(12).String())
+	assert.Equal(t, spelleffectsvc.SaveNegates, e.PartSave(e.Damage.Parts[1]), "no save of its own: the entry's")
+}
+
+// ADR 0008 step 13: invalid damage parts are refused at startup.
+func TestParse_DamagePartsRefused(t *testing.T) {
+	special := `,"save":{"type":"spell","effect":"special"}`
+	tests := map[string]struct{ save, damage, want string }{
+		"dice and parts":         {"", `{"dice":"1d6","parts":[{"dice":"1d4"}]}`, "exactly one of dice, by_level and parts"},
+		"by_level and parts":     {"", `{"by_level":[{"min_level":1,"dice":"1d4"}],"parts":[{"dice":"1d4"}]}`, "exactly one of dice, by_level and parts"},
+		"empty list":             {"", `{"parts":[]}`, "damage.parts: the list is empty"},
+		"part without dice":      {"", `{"parts":[{"save":"none"}]}`, "damage.parts[0]: set exactly one of dice and by_level"},
+		"part with both forms":   {"", `{"parts":[{"dice":"1d4","by_level":[{"min_level":1,"dice":"1d4"}]}]}`, "damage.parts[0]: set exactly one"},
+		"part dice multiplied":   {"", `{"parts":[{"dice":"1d4"},{"dice":"2*1d4"}]}`, "damage.parts[1]: expand 2*1d4"},
+		"part dice malformed":    {"", `{"parts":[{"dice":"1d4/0"}]}`, "damage.parts[0].dice"},
+		"part by_level start":    {"", `{"parts":[{"by_level":[{"min_level":3,"dice":"1d4"}]}]}`, "damage.parts[0].by_level must start at min_level 1"},
+		"part save half":         {"", `{"parts":[{"dice":"1d4","save":"half"}]}`, "damage.parts[0]: save effect half"},
+		"part save unknown":      {"", `{"parts":[{"dice":"1d4","save":"luck"}]}`, "damage.parts[0]: save luck"},
+		"entry's special save":   {special, `{"parts":[{"dice":"1d4","save":"none"},{"dice":"level"}]}`, "damage.parts[1]: save effect special"},
+		"part dice count rolled": {"", `{"parts":[{"dice":"1d4"},{"dice":"(1d4)d6"}]}`, "damage.parts[1]: expand (1d4)d6"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := spelleffectsadpt.New(writeSeed(t, damageSeed(tt.save, tt.damage)))
+			require.Error(t, err)
+			assert.ErrorContains(t, err, `spell "bolt"`)
+			assert.ErrorContains(t, err, tt.want)
+		})
+	}
+}

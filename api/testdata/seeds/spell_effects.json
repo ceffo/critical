@@ -248,6 +248,36 @@
   }
  },
  {
+  "id": "mordenkainens_force_missiles",
+  "name": "Mordenkainen’s Force Missiles",
+  "level": 4,
+  "kind": "damage",
+  "confidence": "high",
+  "note": "Each missile 2d4 (no save) plus a burst of 1 per level (a save vs. spell negates the burst only), rolled as two parts; one missile at level 7, +1 per three levels after, max 7 at level 25. Below level 7 (cast from a device) one missile.",
+  "target": "other",
+  "duration": {
+   "kind": "instant"
+  },
+  "save": {
+   "type": "spell",
+   "effect": "special"
+  },
+  "damage": {
+   "parts": [
+    {
+     "dice": "2d4",
+     "save": "none"
+    },
+    {
+     "dice": "level",
+     "save": "negates"
+    }
+   ],
+   "instances": "min(7,max(1,1+(level-7)/3))",
+   "type": "force"
+  }
+ },
+ {
   "id": "haste",
   "name": "Haste",
   "level": 3,

@@ -117,7 +117,10 @@ func (e Entry) Validate() error {
 		if hasBuff || e.Charges != nil {
 			return fmt.Errorf("a damage spell cannot have buff fields")
 		}
-		return e.Damage.validate()
+		if err := e.Damage.validate(); err != nil {
+			return err
+		}
+		return e.validateParts()
 	default: // utility
 		if hasBuff || e.Charges != nil || e.Damage != nil {
 			return fmt.Errorf("a utility spell cannot have buff, charges or damage fields")
@@ -191,23 +194,39 @@ func (g AbilityGain) validate(field string) error {
 	return nil
 }
 
+// validPartSaves are the save effects a damage part may have: a part exists to
+// say exactly what a save does to it (ADR 0008 step 13).
+var validPartSaves = []SaveEffect{SaveNone, SaveNegates}
+
 func (d *Damage) validate() error {
-	if (d.Dice == nil) == (len(d.ByLevel) == 0) {
-		return fmt.Errorf("damage: set exactly one of dice and by_level")
+	single := d.Dice != nil || len(d.ByLevel) > 0
+	switch {
+	case d.Parts != nil && single:
+		return fmt.Errorf("damage: set exactly one of dice, by_level and parts")
+	case d.Parts != nil && len(d.Parts) == 0:
+		return fmt.Errorf("damage.parts: the list is empty")
+	case d.Parts == nil && (d.Dice == nil) == (len(d.ByLevel) == 0):
+		return fmt.Errorf("damage: set exactly one of dice, by_level and parts")
 	}
-	prev := 0
-	for i, row := range d.ByLevel {
-		if row.MinLevel <= prev {
-			return fmt.Errorf("damage.by_level[%d]: min_level %d must be above the previous row", i, row.MinLevel)
+	if err := validateByLevel(d.ByLevel); err != nil {
+		return fmt.Errorf("damage.%w", err)
+	}
+	for i, p := range d.Parts {
+		if (p.Dice == nil) == (len(p.ByLevel) == 0) {
+			return fmt.Errorf("damage.parts[%d]: set exactly one of dice and by_level", i)
 		}
-		prev = row.MinLevel
-	}
-	if len(d.ByLevel) > 0 && d.ByLevel[0].MinLevel != 1 {
-		return fmt.Errorf("damage.by_level must start at min_level 1")
+		if err := validateByLevel(p.ByLevel); err != nil {
+			return fmt.Errorf("damage.parts[%d].%w", i, err)
+		}
 	}
 	// The dice are served evaluated at the caster level (DamageAt): each
 	// formula must reduce to dice plus a constant at every level.
 	for level := 1; level <= MaxCasterLevel; level++ {
+		for i, p := range d.Parts {
+			if _, err := p.DiceAt(level).Expand(level); err != nil {
+				return fmt.Errorf("damage.parts[%d]: %w", i, err)
+			}
+		}
 		for _, f := range []*formula.Formula{d.DiceAt(level), d.Instances, d.Rounds} {
 			if f == nil {
 				continue
@@ -215,6 +234,38 @@ func (d *Damage) validate() error {
 			if _, err := f.Expand(level); err != nil {
 				return fmt.Errorf("damage: %w", err)
 			}
+		}
+	}
+	return nil
+}
+
+// validateByLevel checks a by-level table: ascending rows from min_level 1.
+// The error names the field from by_level on; the caller prefixes its path.
+func validateByLevel(byLevel []LevelDice) error {
+	prev := 0
+	for i, row := range byLevel {
+		if row.MinLevel <= prev {
+			return fmt.Errorf("by_level[%d]: min_level %d must be above the previous row", i, row.MinLevel)
+		}
+		prev = row.MinLevel
+	}
+	if len(byLevel) > 0 && byLevel[0].MinLevel != 1 {
+		return fmt.Errorf("by_level must start at min_level 1")
+	}
+	return nil
+}
+
+// validateParts checks each damage part's save effect, its own or the
+// entry's (ADR 0008 step 13).
+func (e Entry) validateParts() error {
+	for i, p := range e.Damage.Parts {
+		if p.Save != "" {
+			if err := oneOf(p.Save, validSaveEffects, "save"); err != nil {
+				return fmt.Errorf("damage.parts[%d]: %w", i, err)
+			}
+		}
+		if err := oneOf(e.PartSave(p), validPartSaves, "save effect"); err != nil {
+			return fmt.Errorf("damage.parts[%d]: %w", i, err)
 		}
 	}
 	return nil

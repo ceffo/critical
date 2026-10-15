@@ -27,8 +27,17 @@ export interface CastLogPayload {
     dice?: string;
     instances?: number;
     rounds?: number;
-    /** Every instance roll, round by round. */
-    rolls?: { formula: string; dice: { sides: number; value: number }[]; total: number }[];
+    /** Every instance roll, round by round; `parts` are its part rolls (damage made of parts). */
+    rolls?: {
+      formula: string;
+      dice: { sides: number; value: number }[];
+      total: number;
+      parts?: { formula: string; dice: { sides: number; value: number }[]; total: number }[];
+    }[];
+    /** The parts of one instance and what a save does to each; absent without parts and on older casts. */
+    parts?: { formula: string; save: string }[];
+    /** The total without the parts a save negates; absent without parts and on older casts. */
+    totalOnSave?: number;
   };
   /** Levels of the extra slots the cast granted. */
   extraSlots?: number[];

@@ -1,6 +1,7 @@
 package casthdl_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,4 +44,33 @@ func TestToDTO_SpellValuesUseTheCastersLevel(t *testing.T) {
 			assert.Equal(t, tt.wantRange, dto.Spell.Values.Range.Amount)
 		})
 	}
+}
+
+// ADR 0008 step 13: a cast's damage made of parts carries the parts, each
+// instance's part rolls and the total on a save; without parts none of them.
+func TestToDTO_DamageParts(t *testing.T) {
+	onSave := 3
+	dice := []castsvc.DieRoll{{Sides: 4, Value: 1}, {Sides: 4, Value: 2}}
+	dto := casthdl.ToDTO(castsvc.CastResult{Damage: &castsvc.DamageResult{
+		Dice: "2d4+level", Type: "force", Instances: 1, Rounds: 1, Total: 18, TotalOnSave: &onSave,
+		Parts: []castsvc.DamagePart{{Formula: "2d4", Save: "none"}, {Formula: "level", Save: "negates"}},
+		Rolls: []castsvc.Roll{{
+			Formula: "2d4+level", Dice: dice, Total: 18,
+			Parts: []castsvc.Roll{{Formula: "2d4", Dice: dice, Total: 3}, {Formula: "level", Total: 15}},
+		}},
+	}})
+	raw, err := json.Marshal(dto.Damage)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"dice":"2d4+level","type":"force","instances":1,"rounds":1,"total":18,"totalOnSave":3,
+		"parts":[{"formula":"2d4","save":"none"},{"formula":"level","save":"negates"}],
+		"rolls":[{"formula":"2d4+level","dice":[{"sides":4,"value":1},{"sides":4,"value":2}],"total":18,"parts":[
+			{"formula":"2d4","dice":[{"sides":4,"value":1},{"sides":4,"value":2}],"total":3},
+			{"formula":"level","dice":[],"total":15}]}]}`, string(raw))
+
+	raw, err = json.Marshal(casthdl.ToDTO(castsvc.CastResult{Damage: &castsvc.DamageResult{
+		Rolls: []castsvc.Roll{{Formula: "1d4"}},
+	}}).Damage)
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "parts")
+	assert.NotContains(t, string(raw), "totalOnSave")
 }

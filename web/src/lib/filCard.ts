@@ -381,10 +381,18 @@ export function attackDiceChips(r: Pick<RollResult, "damageRolls">): DieChipView
   return r.damageRolls && r.damageRolls.length > 0 ? chips(r.damageRolls) : null;
 }
 
-/** One damage instance of a cast: its dice as chips and its total. */
+/** One damage instance of a cast: its dice as chips and its total; `parts` when the damage has parts. */
 export interface CastInstanceView {
   dice: DieChipView[];
   total: number;
+  parts?: CastPartView[];
+}
+
+/** One part of a damage instance: its dice as chips (none for a flat part), its total and what a save does to it. */
+export interface CastPartView {
+  dice: DieChipView[];
+  total: number;
+  save: string;
 }
 
 /**
@@ -394,7 +402,14 @@ export interface CastInstanceView {
 export function castInstances(c: CastLogPayload): CastInstanceView[] | null {
   const rolls = c.damage?.rolls;
   if (!rolls || rolls.length === 0) return null;
-  return rolls.map((r) => ({ dice: chips(r.dice), total: r.total }));
+  const saves = c.damage?.parts;
+  return rolls.map((r) => {
+    const view: CastInstanceView = { dice: chips(r.dice), total: r.total };
+    if (r.parts && saves && r.parts.length === saves.length) {
+      view.parts = r.parts.map((p, i) => ({ dice: chips(p.dice), total: p.total, save: saves[i].save }));
+    }
+    return view;
+  });
 }
 
 /** A die's emphasis: its maximum in the accent, a 1 dimmed. */

@@ -27,26 +27,21 @@ func (s *service) roll(f *formula.Formula, level int) (Roll, error) {
 }
 
 // rollDamage rolls a damage entry at the caster level: the dice of the
-// level's row, once per instance, every round it repeats.
-func (s *service) rollDamage(d *spelleffectsvc.Damage, level int) (*DamageResult, error) {
+// level's row, once per instance, every round it repeats. A damage made of
+// parts rolls each part of each instance once, in the data's order (ADR 0008
+// step 13).
+func (s *service) rollDamage(e spelleffectsvc.Entry, level int) (*DamageResult, error) {
+	d := e.Damage
+	if len(d.Parts) > 0 {
+		return s.rollDamageParts(e, level)
+	}
 	dice := d.DiceAt(level)
 	if dice == nil {
 		return nil, fmt.Errorf("no damage dice at caster level %d", level)
 	}
 	out := &DamageResult{Dice: dice.String(), Type: d.Type, Instances: 1, Rounds: 1}
-	if d.Instances != nil {
-		n, err := s.roll(d.Instances, level)
-		if err != nil {
-			return nil, err
-		}
-		out.Instances = spelleffectsvc.InstanceCount(n.Total)
-	}
-	if d.Rounds != nil {
-		n, err := s.roll(d.Rounds, level)
-		if err != nil {
-			return nil, err
-		}
-		out.Rounds = spelleffectsvc.RoundCount(n.Total)
+	if err := s.rollRepeats(d, level, out); err != nil {
+		return nil, err
 	}
 	for range out.Rounds {
 		for range out.Instances {
@@ -58,6 +53,68 @@ func (s *service) rollDamage(d *spelleffectsvc.Damage, level int) (*DamageResult
 			out.Total += r.Total
 		}
 	}
+	return out, nil
+}
+
+// rollRepeats rolls the number of instances and of rounds into out.
+func (s *service) rollRepeats(d *spelleffectsvc.Damage, level int, out *DamageResult) error {
+	if d.Instances != nil {
+		n, err := s.roll(d.Instances, level)
+		if err != nil {
+			return err
+		}
+		out.Instances = spelleffectsvc.InstanceCount(n.Total)
+	}
+	if d.Rounds != nil {
+		n, err := s.roll(d.Rounds, level)
+		if err != nil {
+			return err
+		}
+		out.Rounds = spelleffectsvc.RoundCount(n.Total)
+	}
+	return nil
+}
+
+// rollDamageParts rolls a damage made of parts: every instance rolls each
+// part once; the instance roll adds the parts up. TotalOnSave leaves out the
+// parts a save negates.
+func (s *service) rollDamageParts(e spelleffectsvc.Entry, level int) (*DamageResult, error) {
+	d := e.Damage
+	dice := make([]*formula.Formula, len(d.Parts))
+	out := &DamageResult{Type: d.Type, Instances: 1, Rounds: 1, Parts: make([]DamagePart, len(d.Parts))}
+	formulas := make([]string, len(d.Parts))
+	for i, p := range d.Parts {
+		if dice[i] = p.DiceAt(level); dice[i] == nil {
+			return nil, fmt.Errorf("no damage dice for part %d at caster level %d", i, level)
+		}
+		formulas[i] = dice[i].String()
+		out.Parts[i] = DamagePart{Formula: formulas[i], Save: e.PartSave(p)}
+	}
+	out.Dice = strings.Join(formulas, "+")
+	if err := s.rollRepeats(d, level, out); err != nil {
+		return nil, err
+	}
+	onSave := 0
+	for range out.Rounds {
+		for range out.Instances {
+			inst := Roll{Formula: out.Dice}
+			for i, f := range dice {
+				r, err := s.roll(f, level)
+				if err != nil {
+					return nil, err
+				}
+				inst.Parts = append(inst.Parts, r)
+				inst.Dice = append(inst.Dice, r.Dice...)
+				inst.Total += r.Total
+				if out.Parts[i].Save != spelleffectsvc.SaveNegates {
+					onSave += r.Total
+				}
+			}
+			out.Rolls = append(out.Rolls, inst)
+			out.Total += inst.Total
+		}
+	}
+	out.TotalOnSave = &onSave
 	return out, nil
 }
 

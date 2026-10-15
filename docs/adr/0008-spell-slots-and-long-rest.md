@@ -107,6 +107,27 @@ named otherwise.
     Tests: `TestLongRest_ResetsBothInOneLoggedTransaction` (snapshots, payload),
     `TestLongRestBlocksVoidingAnEarlierCast`, `TestLongRest_RefillsSlotsAndDailyItemsOnly` (void),
     `TestGemDispelOncePerDayUntilLongRest` (composition).
+13. **Damage parts with their own save.** A spell whose save negates only part of its damage
+    (Mordenkainen's Force Missiles: per missile 2d4 that no save stops, plus a burst of 1 per
+    level that a save vs. spell negates) writes one instance as `parts` instead of `dice` /
+    `by_level` (exactly one of the three): each part has its dice (`dice` or `by_level`, under the
+    rules of step 8) and its save effect, its own `save` or else the entry's. A part's effect must
+    be `none` or `negates` (a part exists to say exactly what a save does to it; `half` and
+    `special` are refused at startup), as are both `dice` and `parts`, an empty list and a part
+    whose dice do not reduce to dice plus a constant. The damage served (step 8) is the instance
+    as the parts added up (dice groups in the data's order, constants summed), plus each part's
+    dice and save effect. A cast rolls each part of each instance exactly once, in the data's
+    order; the instance roll adds them up, and the result reports the total and the total on a
+    save (the parts a save negates left out, for a target that saves against every instance). The
+    cast entry records each part roll; entries logged before parts existed still render. Rolling
+    the target's save stays the DM's side ([ADR 0006](0006-saving-throws.md) is the Bard's own
+    saves). Spells without parts serve and roll exactly as in step 8. The mechanic is data
+    (`seeds/spell_effects.json`), never a branch on a spell id.
+    Tests: `TestEntry_DamageAt_Parts` (spelleffectsvc), `TestParse_DamageParts`,
+    `TestParse_DamagePartsRefused` (adapters/spelleffectsadpt), `TestDamageAt_ForceMissilesParts`
+    (levels 7, 15 and 25), `TestCast_DamageParts_RollsEachPartOnce`,
+    `TestReceive_DamageParts_AtTheCastersLevel`, `TestDamageAt_IsWhatACastRolls`,
+    `TestDamageToDTO_Parts` (rest/handler/spellhdl), `TestToDTO_DamageParts` (rest/handler/casthdl).
 
 ## Consequences
 
@@ -115,3 +136,7 @@ named otherwise.
   long rest does.
 - Not covered: memorisation time, preparing from scrolls or other books, and spells per day
   beyond the PHB table.
+- Damage parts (step 13) cover a save that negates part of the damage. A part halved by a save is
+  not modelled (it would need a rounding rule) and is refused; a save whose effect is not damage
+  (Mummy Rot's disease) leaves the damage as one part with no save. Force Missiles is not in the
+  PHB of the rulebooks repo: its numbers are the ones of its data entry.

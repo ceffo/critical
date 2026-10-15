@@ -112,3 +112,68 @@ func TestEntry_DamageAt_None(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0008 step 13: a damage made of parts serves each part's dice at the
+// caster level with what a save does to it, and the instance as the parts
+// added up (dice groups in the data's order, constants summed).
+func TestEntry_DamageAt_Parts(t *testing.T) {
+	p := func(src string) *formula.Formula { return must.Do(formula.Parse(src)) }
+	missiles := spelleffectsvc.Damage{
+		Parts: []spelleffectsvc.DamagePart{
+			{Dice: p("2d4"), Save: spelleffectsvc.SaveNone},
+			{Dice: p("level"), Save: spelleffectsvc.SaveNegates},
+		},
+		Instances: p("min(7,max(1,1+(level-7)/3))"), Type: "force",
+	}
+	tests := map[string]struct {
+		damage spelleffectsvc.Damage
+		save   *spelleffectsvc.Save
+		level  int
+		want   spelleffectsvc.DamageAt
+	}{
+		"missile and burst at level 15": {
+			damage: missiles, level: 15,
+			want: spelleffectsvc.DamageAt{
+				CasterLevel: 15, Dice: sum(15, dice(2, 4)), Instances: sum(3), Rounds: sum(1), Type: "force",
+				Parts: []spelleffectsvc.DamagePartAt{
+					{Dice: sum(0, dice(2, 4)), Save: spelleffectsvc.SaveNone},
+					{Dice: sum(15), Save: spelleffectsvc.SaveNegates},
+				},
+			},
+		},
+		"by-level part, save taken from the entry": {
+			damage: spelleffectsvc.Damage{Parts: []spelleffectsvc.DamagePart{
+				{ByLevel: []spelleffectsvc.LevelDice{{MinLevel: 1, Dice: p("1d6")}, {MinLevel: 10, Dice: p("3d8+1")}}},
+				{Dice: p("1d4"), Save: spelleffectsvc.SaveNone},
+			}},
+			save:  &spelleffectsvc.Save{Type: "spell", Effect: spelleffectsvc.SaveNegates},
+			level: 12,
+			want: spelleffectsvc.DamageAt{
+				CasterLevel: 12, Dice: sum(1, dice(3, 8), dice(1, 4)), Instances: sum(1), Rounds: sum(1),
+				Parts: []spelleffectsvc.DamagePartAt{
+					{Dice: sum(1, dice(3, 8)), Save: spelleffectsvc.SaveNegates},
+					{Dice: sum(0, dice(1, 4)), Save: spelleffectsvc.SaveNone},
+				},
+			},
+		},
+		"no save on the entry or the part: none": {
+			damage: spelleffectsvc.Damage{Parts: []spelleffectsvc.DamagePart{{Dice: p("2d6")}}},
+			level:  5,
+			want: spelleffectsvc.DamageAt{
+				CasterLevel: 5, Dice: sum(0, dice(2, 6)), Instances: sum(1), Rounds: sum(1),
+				Parts: []spelleffectsvc.DamagePartAt{{Dice: sum(0, dice(2, 6)), Save: spelleffectsvc.SaveNone}},
+			},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			e := damageEntry(tt.damage)
+			e.Save = tt.save
+			require.NoError(t, e.Validate())
+			got, err := e.DamageAt(tt.level)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			assert.Equal(t, tt.want, *got)
+		})
+	}
+}

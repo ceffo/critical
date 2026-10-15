@@ -20,9 +20,21 @@ export function damageFormula(d: SpellDamage): string {
   return diceText(d.dice);
 }
 
+/**
+ * The dice of one instance: "1d4+1", or its parts with what a save does to each
+ * ("2d4 [no save] + 15 [save negates]"), in parentheses when repeated.
+ */
+function instanceText(t: TFunction, d: SpellDamage): string {
+  if (!d.parts || d.parts.length === 0) return diceText(d.dice);
+  const parts = d.parts
+    .map((p) => t(`spellDice.parts.${p.save}`, { dice: diceText(p.dice), defaultValue: diceText(p.dice) }))
+    .join(" + ");
+  return d.parts.length > 1 && !isOne(d.instances) ? `(${parts})` : parts;
+}
+
 /** "10d6 fire", "5 × 1d4+1 force", "2d4 acid per round, 6 rounds", in the player's language. */
 export function damageText(t: TFunction, d: SpellDamage): string {
-  let dice = diceText(d.dice);
+  let dice = instanceText(t, d);
   if (!isOne(d.instances)) {
     dice = t("spellDice.instances", { instances: diceText(d.instances), dice });
   }

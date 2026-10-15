@@ -75,6 +75,10 @@ type Roll struct {
 	Formula string
 	Dice    []DieRoll
 	Total   int
+	// Parts are the rolls of a damage instance's parts, in the order of
+	// DamageResult.Parts; the instance's Dice and Total add them up (nil: the
+	// damage has no parts).
+	Parts []Roll
 }
 
 // Untracked is an effect the engine does not apply (movement, attacks per
@@ -118,6 +122,19 @@ type DamageResult struct {
 	// Rolls holds every instance roll, round by round.
 	Rolls []Roll
 	Total int
+	// Parts are the parts of one instance with their save effect (nil: the
+	// damage has no parts; ADR 0008 step 13).
+	Parts []DamagePart
+	// TotalOnSave is Total without the parts a save negates, for a target
+	// that saves against every instance (nil: the damage has no parts).
+	TotalOnSave *int
+}
+
+// DamagePart is one part of a damage instance: the formula it rolls and what
+// a successful save does to it (none or negates).
+type DamagePart struct {
+	Formula string
+	Save    spelleffectsvc.SaveEffect
 }
 
 // CastResult is everything a cast or receive did.

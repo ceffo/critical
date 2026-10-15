@@ -92,6 +92,17 @@ export interface SpellDamage {
   rounds: DiceSum;
   /** Damage type key ("fire"), from the spell effects data. */
   type?: string;
+  /** The parts of one instance, rolled separately (`dice` adds them up); absent when it has none. */
+  parts?: SpellDamagePart[];
+}
+
+/** What a successful save does to a damage part. */
+export type DamagePartSave = "none" | "negates";
+
+/** Mirrors spellhdl.SpellDamagePartDTO: one part of a damage instance at caster_level. */
+export interface SpellDamagePart {
+  dice: DiceSum;
+  save: DamagePartSave;
 }
 
 export interface Spell {
@@ -159,6 +170,8 @@ export interface DiceRoll {
   formula: string;
   dice: { sides: number; value: number }[];
   total: number;
+  /** A damage instance's part rolls, in the order of CastDamage.parts; absent when it has none. */
+  parts?: DiceRoll[];
 }
 
 /** Mirrors casthdl AppliedBuffDTO. `applied` is false when the buff went on somebody else. */
@@ -183,6 +196,16 @@ export interface CastDamage {
   rounds: number;
   rolls: DiceRoll[];
   total: number;
+  /** The parts of one instance and what a save does to each; absent when it has none. */
+  parts?: CastDamagePart[];
+  /** The total without the parts a save negates; absent when the damage has no parts. */
+  totalOnSave?: number;
+}
+
+/** Mirrors casthdl DamagePartDTO. */
+export interface CastDamagePart {
+  formula: string;
+  save: DamagePartSave;
 }
 
 /** An effect the engine does not track (seed modifier key, or "<ability>_gain"/"_set"). */

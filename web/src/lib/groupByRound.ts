@@ -7,6 +7,8 @@ export interface RoundGroup {
   entries: LogEntry[];
   /** `entries` cut into transactions (consecutive runs of one transactionId), newest first. */
   transactions: LogEntry[][];
+  /** The one group of the current round: at most one per grouping. */
+  current: boolean;
 }
 
 /** True when the entry is popped: a whole transaction is undone when all its entries are. */
@@ -18,7 +20,7 @@ export function isUndone(tx: LogEntry[]): boolean {
  * Display grouping of the action log: entries arrive newest first (server order) and are cut
  * into consecutive runs of the same round stamp. Rounds restart (End combat, Set round, reset),
  * so a round number can head several groups; order is never re-sorted by number. When the
- * newest entry is not in the current round, an empty group for it is put on top.
+ * newest live entry is not in the current round, an empty group for it is put on top.
  */
 export function groupByRound(
   entries: LogEntry[],
@@ -45,15 +47,23 @@ export function groupByRound(
         round: tx[0].round,
         entries: [...tx],
         transactions: [tx],
+        current: false,
       });
     }
   }
-  if (groups.length === 0 || groups[0].round !== currentRound) {
+  // The current round's group is the newest one with a live entry: entries popped by an undo
+  // (a later round's, say) stay listed above it but do not make it stale. When there is none,
+  // an empty group goes on top, so the round never appears twice.
+  const live = groups.find((g) => g.transactions.some((tx) => !isUndone(tx)));
+  if (live && live.round === currentRound) {
+    live.current = true;
+  } else {
     groups.unshift({
       key: "current",
       round: currentRound,
       entries: [],
       transactions: [],
+      current: true,
     });
   }
   return groups;

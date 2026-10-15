@@ -89,4 +89,17 @@ describe("groupByRound", () => {
     expect(isUndone([a, { ...b, status: "voided" }])).toBe(true);
     expect(isUndone([])).toBe(false);
   });
+
+  it("never lists the current round twice when a later round's entries are all undone", () => {
+    // Next Round undone: its transaction (stamped 2 and 1) is voided and listed above round 1.
+    const voided = (id: number, round: number) => ({
+      ...entry(id, round),
+      transactionId: 5,
+      status: "voided" as const,
+    });
+    const groups = groupByRound([voided(6, 2), voided(5, 1), entry(4, 1)], 1);
+    expect(groups.map((g) => g.round)).toEqual([2, 1]);
+    expect(groups.map((g) => g.current)).toEqual([false, true]);
+    expect(groups[1].entries.map((e) => e.id)).toEqual([4]);
+  });
 });

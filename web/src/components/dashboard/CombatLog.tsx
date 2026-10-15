@@ -149,7 +149,7 @@ export function CombatLog() {
               <span className="text-body font-medium">
                 {turnLabel(t, g.round)}
               </span>
-              {g.round === round && (
+              {g.current && (
                 <span className="rounded-md bg-amb-900 px-1.5 text-label text-amb-300">
                   {t("log.current")}
                 </span>

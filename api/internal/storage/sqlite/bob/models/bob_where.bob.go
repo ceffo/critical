@@ -21,6 +21,7 @@ func Where[Q sqlite.Filterable]() struct {
 	ActionLogs        actionLogWhere[Q]
 	ActionSnapshots   actionSnapshotWhere[Q]
 	ActiveBuffs       activeBuffWhere[Q]
+	AttackForms       attackFormWhere[Q]
 	Characters        characterWhere[Q]
 	CritTableRows     critTableRowWhere[Q]
 	HPEvents          hpEventWhere[Q]
@@ -37,6 +38,7 @@ func Where[Q sqlite.Filterable]() struct {
 		ActionLogs        actionLogWhere[Q]
 		ActionSnapshots   actionSnapshotWhere[Q]
 		ActiveBuffs       activeBuffWhere[Q]
+		AttackForms       attackFormWhere[Q]
 		Characters        characterWhere[Q]
 		CritTableRows     critTableRowWhere[Q]
 		HPEvents          hpEventWhere[Q]
@@ -52,6 +54,7 @@ func Where[Q sqlite.Filterable]() struct {
 		ActionLogs:        buildActionLogWhere[Q](ActionLogs.Columns),
 		ActionSnapshots:   buildActionSnapshotWhere[Q](ActionSnapshots.Columns),
 		ActiveBuffs:       buildActiveBuffWhere[Q](ActiveBuffs.Columns),
+		AttackForms:       buildAttackFormWhere[Q](AttackForms.Columns),
 		Characters:        buildCharacterWhere[Q](Characters.Columns),
 		CritTableRows:     buildCritTableRowWhere[Q](CritTableRows.Columns),
 		HPEvents:          buildHPEventWhere[Q](HPEvents.Columns),

@@ -67,6 +67,15 @@ return a distinct value for each call and expect an exact number of calls.
     spent. The correction is an audited amend; the entry keeps the AC and outcome as rolled.
     Tests: `TestAdjustAttackAC_Recompute`, `TestAdjustAttackAC_SpendsNoAmmo`,
     `TestAdjustAttackAC_Rejections`, and in `actionlogsvc` `TestAmendLatest`.
+12. **Preview.** Before rolling, the attack form's current choices (weapon in hand, ammunition,
+    target AC, situational modifier) give the to-hit modifiers of steps 4 to 9, the effective
+    THAC0 (step 2) and the roll needed against the target AC (`effective THAC0 − target AC`), with
+    the same code as the attack: nothing is rolled and nothing is spent. The chosen ammunition
+    counts even when spent. The preview also sums the flat damage terms (weapon or buff "+N",
+    ammunition, Strength and buff damage, [ADR 0003](0003-damage.md)) as the damage bonus shown
+    beside the dice. Tests: `TestPreviewAttack_Step12_SameModifiersAsAttack` (every case of
+    `TestResolveAttack`, no die rolled), `TestPreviewAttack_Step12_DamageBonus`, and in
+    `api/internal/composition` `TestAttackForm_PersistsAcrossRestartAndMatchesTheAttack`.
 
 ## Consequences
 

@@ -17,6 +17,7 @@ type Factory struct {
 	baseActionLogMods        ActionLogModSlice
 	baseActionSnapshotMods   ActionSnapshotModSlice
 	baseActiveBuffMods       ActiveBuffModSlice
+	baseAttackFormMods       AttackFormModSlice
 	baseCharacterMods        CharacterModSlice
 	baseCritTableRowMods     CritTableRowModSlice
 	baseHPEventMods          HPEventModSlice
@@ -223,6 +224,54 @@ func (f *Factory) fromExistingActiveBuff(ctx context.Context, m *models.ActiveBu
 	return o
 }
 
+func (f *Factory) NewAttackForm(mods ...AttackFormMod) *AttackFormTemplate {
+	return f.NewAttackFormWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewAttackFormWithContext(ctx context.Context, mods ...AttackFormMod) *AttackFormTemplate {
+	o := &AttackFormTemplate{f: f}
+
+	if f != nil {
+		f.baseAttackFormMods.Apply(ctx, o)
+	}
+
+	AttackFormModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingAttackForm(ctx context.Context, m *models.AttackForm) *AttackFormTemplate {
+	visited := make(map[uintptr]struct{})
+	ctx = factoryVisitedCtx.WithValue(ctx, visited)
+	return f.fromExistingAttackForm(ctx, m)
+}
+
+func (f *Factory) fromExistingAttackForm(ctx context.Context, m *models.AttackForm) *AttackFormTemplate {
+	o := &AttackFormTemplate{f: f, alreadyPersisted: true}
+
+	o.CharacterID = func() int64 { return m.CharacterID }
+	o.WeaponID = func() string { return m.WeaponID }
+	o.PreviousWeaponID = func() string { return m.PreviousWeaponID }
+	o.AmmoItemID = func() string { return m.AmmoItemID }
+	o.TargetAc = func() int64 { return m.TargetAc }
+	o.TargetSize = func() string { return m.TargetSize }
+	o.SituationalValue = func() int64 { return m.SituationalValue }
+	o.SituationalLabel = func() string { return m.SituationalLabel }
+
+	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
+		ptr := uintptr(unsafe.Pointer(m))
+		if _, seen := visited[ptr]; seen {
+			return o
+		}
+		visited[ptr] = struct{}{}
+	}
+	if m.R.Character != nil {
+		AttackFormMods.WithExistingCharacter(m.R.Character).Apply(ctx, o)
+	}
+
+	return o
+}
+
 func (f *Factory) NewCharacter(mods ...CharacterMod) *CharacterTemplate {
 	return f.NewCharacterWithContext(context.Background(), mods...)
 }
@@ -278,6 +327,9 @@ func (f *Factory) fromExistingCharacter(ctx context.Context, m *models.Character
 	}
 	if len(m.R.ActiveBuffs) > 0 {
 		CharacterMods.AddExistingActiveBuffs(m.R.ActiveBuffs...).Apply(ctx, o)
+	}
+	if m.R.AttackForm != nil {
+		CharacterMods.WithExistingAttackForm(m.R.AttackForm).Apply(ctx, o)
 	}
 	if len(m.R.HPEvents) > 0 {
 		CharacterMods.AddExistingHPEvents(m.R.HPEvents...).Apply(ctx, o)
@@ -701,6 +753,14 @@ func (f *Factory) ClearBaseActiveBuffMods() {
 
 func (f *Factory) AddBaseActiveBuffMod(mods ...ActiveBuffMod) {
 	f.baseActiveBuffMods = append(f.baseActiveBuffMods, mods...)
+}
+
+func (f *Factory) ClearBaseAttackFormMods() {
+	f.baseAttackFormMods = nil
+}
+
+func (f *Factory) AddBaseAttackFormMod(mods ...AttackFormMod) {
+	f.baseAttackFormMods = append(f.baseAttackFormMods, mods...)
 }
 
 func (f *Factory) ClearBaseCharacterMods() {

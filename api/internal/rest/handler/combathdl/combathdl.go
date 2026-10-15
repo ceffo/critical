@@ -1,6 +1,6 @@
 // Package combathdl exposes /api/roll/attack (and its target AC
-// correction), /api/roll/save (and its adjustment), /api/weapons and
-// /api/crit-table.
+// correction), /api/roll/save (and its adjustment), /api/weapons,
+// /api/attack/form and /api/crit-table.
 package combathdl
 
 import (
@@ -21,6 +21,7 @@ type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
 	Put(pattern string, h http.HandlerFunc)
+	Patch(pattern string, h http.HandlerFunc)
 }
 
 // CharacterIDFunc resolves the active character.
@@ -32,6 +33,8 @@ type combatSvc interface {
 	AdjustSave(ctx context.Context, characterID, entryID int64, adj combatsvc.SaveAdjustment) (*combatsvc.RollResult, error)
 	AdjustAttackAC(ctx context.Context, characterID, entryID int64, targetAC int) (*combatsvc.RollResult, error)
 	ListWeapons(ctx context.Context) ([]combatsvc.Weapon, error)
+	GetAttackForm(ctx context.Context, characterID int64) (*combatsvc.AttackFormView, error)
+	UpdateAttackForm(ctx context.Context, characterID int64, p combatsvc.AttackFormPatch) (*combatsvc.AttackFormView, error)
 	GetCritTable(ctx context.Context) (combatsvc.CritTable, error)
 	SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error)
 }
@@ -43,6 +46,8 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Post("/api/roll/save", render.Handle(RollSave(charID, svc)))
 	r.Post("/api/roll/save/{id}/adjust", render.Handle(AdjustSave(charID, svc)))
 	r.Get("/api/weapons", render.Handle(ListWeapons(svc)))
+	r.Get("/api/attack/form", render.Handle(GetAttackForm(charID, svc)))
+	r.Patch("/api/attack/form", render.Handle(UpdateAttackForm(charID, svc)))
 	r.Get("/api/crit-table", render.Handle(GetCritTable(svc)))
 	r.Put("/api/crit-table", render.Handle(PutCritTable(svc)))
 }

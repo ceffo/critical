@@ -34,6 +34,12 @@ type SVC interface {
 	// thrown spell; it logs nothing, the spell's own cast entry does.
 	RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*ToHitRoll, error)
 	ListWeapons(ctx context.Context) ([]Weapon, error)
+	// GetAttackForm returns the attack form's last choices, resolved
+	// against the catalog, with the preview of the effective THAC0.
+	GetAttackForm(ctx context.Context, characterID int64) (*AttackFormView, error)
+	// UpdateAttackForm saves the set fields of the patch and returns the
+	// form as GetAttackForm does. A *domain.FieldError for invalid input.
+	UpdateAttackForm(ctx context.Context, characterID int64, p AttackFormPatch) (*AttackFormView, error)
 	// GetCritTable returns the house crit table (the placeholder default
 	// until edited); SetCritTable replaces it after validating it.
 	GetCritTable(ctx context.Context) (CritTable, error)
@@ -72,9 +78,18 @@ type CritStore interface {
 	Replace(ctx context.Context, rows []CritRow) error
 }
 
-// Items spends ammunition (itemsvc). Use must join the ctx transaction.
+// Items spends ammunition (itemsvc) and lists the items the attack form
+// offers as ammunition. Use must join the ctx transaction.
 type Items interface {
 	Use(ctx context.Context, itemID string) (itemsvc.Item, error)
+	List(ctx context.Context) ([]itemsvc.Item, error)
+}
+
+// FormStore keeps the attack form of each character. Get's ok is false when
+// none was saved. Both join the ctx transaction.
+type FormStore interface {
+	Get(ctx context.Context, characterID int64) (form AttackForm, ok bool, err error)
+	Put(ctx context.Context, characterID int64, form AttackForm) error
 }
 
 // Rules is the PHB rule-table lookup (ruletablesvc.Lookup).
@@ -98,6 +113,7 @@ type Deps struct {
 	Weapons Weapons
 	Crit    CritStore
 	Items   Items
+	Forms   FormStore
 	Rules   Rules
 	Log     Log
 	Tx      domain.TxRunner
@@ -110,6 +126,7 @@ type service struct {
 	weapons Weapons
 	crit    CritStore
 	items   Items
+	forms   FormStore
 	rules   Rules
 	log     Log
 	tx      domain.TxRunner
@@ -126,12 +143,12 @@ func NewWithConfig(cfg *Config, d Deps) (SVC, error) {
 		return nil, fmt.Errorf("combatsvc: nil config")
 	}
 	if d.Chars == nil || d.Buffs == nil || d.Dice == nil || d.Weapons == nil || d.Crit == nil ||
-		d.Items == nil || d.Rules == nil || d.Log == nil || d.Tx == nil {
+		d.Items == nil || d.Forms == nil || d.Rules == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("combatsvc: nil dependency")
 	}
 	return &service{
 		chars: d.Chars, buffs: d.Buffs, dice: d.Dice, weapons: d.Weapons, crit: d.Crit,
-		items: d.Items, rules: d.Rules, log: d.Log, tx: d.Tx,
+		items: d.Items, forms: d.Forms, rules: d.Rules, log: d.Log, tx: d.Tx,
 	}, nil
 }
 

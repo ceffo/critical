@@ -61,6 +61,7 @@ type CharacterTemplate struct {
 type characterR struct {
 	ActionLogs  []*characterRActionLogsR
 	ActiveBuffs []*characterRActiveBuffsR
+	AttackForm  *characterRAttackFormR
 	HPEvents    []*characterRHPEventsR
 	RoundStates []*characterRRoundStatesR
 	SavedBuffs  []*characterRSavedBuffsR
@@ -75,6 +76,9 @@ type characterRActionLogsR struct {
 type characterRActiveBuffsR struct {
 	number int
 	o      *ActiveBuffTemplate
+}
+type characterRAttackFormR struct {
+	o *AttackFormTemplate
 }
 type characterRHPEventsR struct {
 	number int
@@ -135,6 +139,15 @@ func (t CharacterTemplate) setModelRels(o *models.Character) {
 		}
 		o.R.ActiveBuffs = rel
 		o.R.Loaded.ActiveBuffs = true
+	}
+
+	if t.r.AttackForm != nil {
+		rel := t.r.AttackForm.o.Build()
+		rel.R.Character = o
+		rel.R.Loaded.Character = true
+		rel.CharacterID = o.ID // h2
+		o.R.AttackForm = rel
+		o.R.Loaded.AttackForm = true
 	}
 
 	if t.r.HPEvents != nil {
@@ -463,6 +476,26 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 		}
 	}
 
+	isAttackFormDone, _ := characterRelAttackFormCtx.Value(ctx)
+	if !isAttackFormDone && o.r.AttackForm != nil {
+		ctx = characterRelAttackFormCtx.WithValue(ctx, true)
+		if o.r.AttackForm.o.alreadyPersisted {
+			m.R.AttackForm = o.r.AttackForm.o.Build()
+			m.R.Loaded.AttackForm = true
+		} else {
+			var rel2 *models.AttackForm
+			rel2, err = o.r.AttackForm.o.Create(ctx, exec)
+			if err != nil {
+				return err
+			}
+			err = m.AttachAttackForm(ctx, exec, rel2)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
 	isHPEventsDone, _ := characterRelHPEventsCtx.Value(ctx)
 	if !isHPEventsDone && o.r.HPEvents != nil {
 		ctx = characterRelHPEventsCtx.WithValue(ctx, true)
@@ -470,12 +503,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.HPEvents = append(m.R.HPEvents, r.o.Build())
 			} else {
-				rel2, err := r.o.CreateMany(ctx, exec, r.number)
+				rel3, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachHPEvents(ctx, exec, rel2...)
+				err = m.AttachHPEvents(ctx, exec, rel3...)
 				if err != nil {
 					return err
 				}
@@ -490,12 +523,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.RoundStates = append(m.R.RoundStates, r.o.Build())
 			} else {
-				rel3, err := r.o.CreateMany(ctx, exec, r.number)
+				rel4, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachRoundStates(ctx, exec, rel3...)
+				err = m.AttachRoundStates(ctx, exec, rel4...)
 				if err != nil {
 					return err
 				}
@@ -510,12 +543,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.SavedBuffs = append(m.R.SavedBuffs, r.o.Build())
 			} else {
-				rel4, err := r.o.CreateMany(ctx, exec, r.number)
+				rel5, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachSavedBuffs(ctx, exec, rel4...)
+				err = m.AttachSavedBuffs(ctx, exec, rel5...)
 				if err != nil {
 					return err
 				}
@@ -530,12 +563,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.SpellSlots = append(m.R.SpellSlots, r.o.Build())
 			} else {
-				rel5, err := r.o.CreateMany(ctx, exec, r.number)
+				rel6, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachSpellSlots(ctx, exec, rel5...)
+				err = m.AttachSpellSlots(ctx, exec, rel6...)
 				if err != nil {
 					return err
 				}
@@ -550,12 +583,12 @@ func (o *CharacterTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.XPEvents = append(m.R.XPEvents, r.o.Build())
 			} else {
-				rel6, err := r.o.CreateMany(ctx, exec, r.number)
+				rel7, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachXPEvents(ctx, exec, rel6...)
+				err = m.AttachXPEvents(ctx, exec, rel7...)
 				if err != nil {
 					return err
 				}
@@ -593,6 +626,7 @@ func (o *CharacterTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	}
 	newMInCreation["characters:action_log:fk_action_log_0"] = m
 	newMInCreation["characters:active_buffs:fk_active_buffs_0"] = m
+	newMInCreation["characters:attack_forms:fk_attack_forms_0"] = m
 	newMInCreation["characters:hp_events:fk_hp_events_0"] = m
 	newMInCreation["characters:round_state:fk_round_state_0"] = m
 	newMInCreation["characters:saved_buffs:fk_saved_buffs_0"] = m
@@ -1231,6 +1265,41 @@ func (m characterMods) WithParentsCascading() CharacterMod {
 			return
 		}
 		ctx = characterWithParentsCascadingCtx.WithValue(ctx, true)
+		{
+
+			related := o.f.NewAttackFormWithContext(ctx, AttackFormMods.WithParentsCascading())
+			m.WithAttackForm(related).Apply(ctx, o)
+		}
+	})
+}
+
+func (m characterMods) WithAttackForm(rel *AttackFormTemplate) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.AttackForm = &characterRAttackFormR{
+			o: rel,
+		}
+	})
+}
+
+func (m characterMods) WithNewAttackForm(mods ...AttackFormMod) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		related := o.f.NewAttackFormWithContext(ctx, mods...)
+
+		m.WithAttackForm(related).Apply(ctx, o)
+	})
+}
+
+func (m characterMods) WithExistingAttackForm(em *models.AttackForm) CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.AttackForm = &characterRAttackFormR{
+			o: o.f.fromExistingAttackForm(ctx, em),
+		}
+	})
+}
+
+func (m characterMods) WithoutAttackForm() CharacterMod {
+	return CharacterModFunc(func(ctx context.Context, o *CharacterTemplate) {
+		o.r.AttackForm = nil
 	})
 }
 

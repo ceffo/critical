@@ -67,7 +67,7 @@ func TestAttack_Step1_DiceInOrderOnEveryAttack(t *testing.T) {
 			dice := &seqDice{t: t, want: c.want, vals: c.vals}
 			svc, err := combatsvc.New(combatsvc.Deps{
 				Chars: f.chars, Buffs: f.buffs, Dice: dice, Weapons: f.weapons, Crit: f.crit,
-				Items: f.items, Rules: phb(t), Log: f.log, Tx: noTx{},
+				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 			})
 			require.NoError(t, err)
 			f.weapons.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardSword, nil).Once()

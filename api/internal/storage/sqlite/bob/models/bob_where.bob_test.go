@@ -125,6 +125,27 @@ func TestActiveBuffHasRelationsEmitExists(t *testing.T) {
 	})
 }
 
+// TestAttackFormHasRelationsEmitExists verifies that every generated
+// Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
+// an INNER JOIN, so the parent rows are never multiplied.
+func TestAttackFormHasRelationsEmitExists(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Character", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(AttackForms.NameExpr()),
+			SelectWhere.AttackForms.R.HasCharacter(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasCharacter: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasCharacter: expected EXISTS in query, got: %s", sql)
+		}
+	})
+}
+
 // TestCharacterHasRelationsEmitExists verifies that every generated
 // Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
 // an INNER JOIN, so the parent rows are never multiplied.
@@ -156,6 +177,20 @@ func TestCharacterHasRelationsEmitExists(t *testing.T) {
 		}
 		if !strings.Contains(sql, "EXISTS") {
 			t.Errorf("HasActiveBuffs: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
+	t.Run("AttackForm", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(Characters.NameExpr()),
+			SelectWhere.Characters.R.HasAttackForm(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasAttackForm: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasAttackForm: expected EXISTS in query, got: %s", sql)
 		}
 	})
 

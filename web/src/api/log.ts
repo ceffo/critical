@@ -1,11 +1,16 @@
 import type { LogEntry, LogResponse } from "@/types/log";
 import { post, request } from "./http";
 
-/** Action log entries, newest first (GET /api/log). */
-export async function fetchLog(limit?: number): Promise<LogEntry[]> {
+/** Action log entries, newest first, and the top of the stack (GET /api/log). */
+export async function fetchLog(limit?: number): Promise<LogResponse> {
   const q = limit ? `?limit=${limit}` : "";
   const res = await request<LogResponse>(`/api/log${q}`);
-  return res.entries ?? [];
+  return { entries: res.entries ?? [], topId: res.topId ?? null };
+}
+
+/** Pop the newest non-voided entry, any kind, if it is still `expectedTopId` (409 otherwise). */
+export function undoLogEntry(expectedTopId: number): Promise<LogEntry> {
+  return post<LogEntry>("/api/log/undo", { expectedTopId });
 }
 
 /** Set the note of an entry, any kind ("" clears it). The note is the only

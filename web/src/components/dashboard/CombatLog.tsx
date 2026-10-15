@@ -11,6 +11,7 @@ import { entryText } from "@/lib/logSummary";
 import { cn } from "@/lib/utils";
 import type { HpBreakdown, LogEntry } from "@/types/log";
 import { captionClass, fieldClass } from "./fieldStyles";
+import { UndoButton } from "./UndoButton";
 
 /**
  * The action log (GET /api/log) as a timeline grouped by round. The log is a
@@ -22,17 +23,18 @@ export function CombatLog() {
   const entries = useLogStore((s) => s.entries);
   const round = useBuffsStore((s) => s.round);
   const groups = groupByRound(entries, round);
-  // Entries are newest first: the first non-voided one is the top of the stack.
-  const topId = entries.find((e) => e.status !== "voided")?.id;
+  // The top of the stack, from the server: the only entry that offers Void.
+  const topId = useLogStore((s) => s.topId);
 
   return (
     <section
       className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-card"
       aria-label={t("log.title")}
     >
-      <h2 className="shrink-0 border-b px-4 py-2.5 text-sm font-semibold">
-        {t("log.title")}
-      </h2>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-1.5">
+        <h2 className="text-sm font-semibold">{t("log.title")}</h2>
+        <UndoButton />
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
         {groups.map((g) => (
           <section

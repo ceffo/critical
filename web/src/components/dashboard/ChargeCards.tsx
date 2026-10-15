@@ -30,7 +30,7 @@ export function ChargeCards() {
         >
           <Shield
             aria-hidden
-            className="size-5 shrink-0 text-amb-300"
+            className="size-5 shrink-0 text-highlight"
             weight="duotone"
           />
           <div className="flex min-w-0 flex-1 flex-col leading-tight">

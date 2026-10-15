@@ -95,7 +95,7 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
           </span>
         </div>
         <span
-          className="text-body font-medium text-amb-300 tabular-nums"
+          className="text-body font-medium text-highlight tabular-nums"
           data-testid="xp-to-next"
         >
           {headline}
@@ -385,7 +385,7 @@ function Row({
       <span
         className={cn(
           "text-right",
-          e.bonus ? "text-amb-300" : "text-muted-foreground",
+          e.bonus ? "text-highlight" : "text-muted-foreground",
         )}
       >
         {e.bonus ? `+${f.n(e.bonusAmount)}` : "–"}

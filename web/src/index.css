@@ -2,87 +2,133 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/cinzel";
 
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Nocturne tokens (ADR 0009). The ramps, ground, surface, ink and tint below are the Arcane
- * defaults, painted before the app starts; stores/settings.ts then sets the values of the chosen
- * ambiance and mode inline on <html> (lib/theme.ts `themeVars`, which a unit test keeps in sync
- * with these blocks). Everything else derives from them.
+ * Palette tokens (ADR 0009, ADR 0020). The ramps (primary amb-*, secondary sec-*, tertiary ter-*,
+ * neutral neu-*), the surfaces and the role colours below are the Arcane defaults, painted before
+ * the app starts; stores/settings.ts then sets the values of the chosen ambiance and mode inline
+ * on <html> (lib/theme.ts `themeVars`, which a unit test keeps in sync with these two blocks).
+ * Everything else derives from them.
  */
 :root {
-  --amb-100: oklch(0.27 0.05 289);
-  --amb-200: oklch(0.38 0.075 289);
-  --amb-300: oklch(0.48 0.1 289);
-  --amb-400: oklch(0.58 0.119 289);
-  --amb-500: oklch(0.68 0.125 289);
-  --amb-600: oklch(0.78 0.106 289);
-  --amb-700: oklch(0.87 0.069 289);
-  --amb-800: oklch(0.93 0.037 289);
-  --amb-900: oklch(0.97 0.019 289);
-  --neu-100: oklch(0.28 0.02 289);
-  --neu-200: oklch(0.37 0.02 289);
-  --neu-300: oklch(0.46 0.02 289);
-  --neu-400: oklch(0.56 0.02 289);
-  --neu-500: oklch(0.66 0.02 289);
-  --neu-600: oklch(0.77 0.02 289);
-  --neu-700: oklch(0.87 0.02 289);
-  --neu-800: oklch(0.93 0.02 289);
-  --neu-900: oklch(0.97 0.02 289);
-  --tint: oklch(0.52 0.125 289);
-  --ground: oklch(0.965 0.017 289);
-  --surface: oklch(0.995 0.002 289);
-  --ink: oklch(0.24 0.034 289);
-  --lA: 1.3;
-  --lB: -1;
-  --shadow-alpha: 0.16;
+  --amb-100: oklch(0.26 0.094 285);
+  --amb-200: oklch(0.36 0.128 285);
+  --amb-300: oklch(0.47 0.153 285);
+  --amb-400: oklch(0.58 0.17 285);
+  --amb-500: oklch(0.68 0.17 285);
+  --amb-600: oklch(0.76 0.128 285);
+  --amb-700: oklch(0.84 0.082 285);
+  --amb-800: oklch(0.91 0.045 285);
+  --amb-900: oklch(0.96 0.019 285);
+  --sec-100: oklch(0.26 0.053 88);
+  --sec-200: oklch(0.36 0.073 88);
+  --sec-300: oklch(0.47 0.096 88);
+  --sec-400: oklch(0.58 0.118 88);
+  --sec-500: oklch(0.68 0.138 88);
+  --sec-600: oklch(0.76 0.135 88);
+  --sec-700: oklch(0.84 0.098 88);
+  --sec-800: oklch(0.91 0.06 88);
+  --sec-900: oklch(0.96 0.03 88);
+  --ter-100: oklch(0.26 0.044 200);
+  --ter-200: oklch(0.36 0.061 200);
+  --ter-300: oklch(0.47 0.079 200);
+  --ter-400: oklch(0.58 0.098 200);
+  --ter-500: oklch(0.68 0.115 200);
+  --ter-600: oklch(0.76 0.108 200);
+  --ter-700: oklch(0.84 0.078 200);
+  --ter-800: oklch(0.91 0.048 200);
+  --ter-900: oklch(0.96 0.024 200);
+  --neu-100: oklch(0.27 0.022 285);
+  --neu-200: oklch(0.36 0.022 285);
+  --neu-300: oklch(0.46 0.022 285);
+  --neu-400: oklch(0.56 0.022 285);
+  --neu-500: oklch(0.66 0.022 285);
+  --neu-600: oklch(0.76 0.022 285);
+  --neu-700: oklch(0.85 0.022 285);
+  --neu-800: oklch(0.91 0.022 285);
+  --neu-900: oklch(0.96 0.019 285);
+  --tint: oklch(0.46 0.17 285);
+  --highlight: oklch(0.53 0.108 88);
+  --highlight-fill: oklch(0.8 0.15 88);
+  --magic: oklch(0.48 0.081 200);
+  --danger: oklch(0.52 0.19 25);
+  --success: oklch(0.5 0.13 150);
+  --warning: oklch(0.54 0.133 55);
+  --on-accent: oklch(0.985 0.005 285);
+  --on-highlight: oklch(0.15 0.03 285);
+  --ground: oklch(0.93 0.034 285);
+  --surface: oklch(0.985 0.005 285);
+  --ink: oklch(0.2 0.036 285);
+  --shadow-alpha: 0.18;
 
   color-scheme: light;
 }
 
 .dark {
-  --amb-100: oklch(0.97 0.019 289);
-  --amb-200: oklch(0.93 0.037 289);
-  --amb-300: oklch(0.87 0.069 289);
-  --amb-400: oklch(0.78 0.106 289);
-  --amb-500: oklch(0.68 0.125 289);
-  --amb-600: oklch(0.58 0.119 289);
-  --amb-700: oklch(0.48 0.1 289);
-  --amb-800: oklch(0.38 0.075 289);
-  --amb-900: oklch(0.27 0.05 289);
-  --neu-100: oklch(0.97 0.02 289);
-  --neu-200: oklch(0.93 0.02 289);
-  --neu-300: oklch(0.87 0.02 289);
-  --neu-400: oklch(0.77 0.02 289);
-  --neu-500: oklch(0.66 0.02 289);
-  --neu-600: oklch(0.56 0.02 289);
-  --neu-700: oklch(0.46 0.02 289);
-  --neu-800: oklch(0.37 0.02 289);
-  --neu-900: oklch(0.28 0.02 289);
-  --tint: oklch(0.68 0.125 289);
-  --ground: oklch(0.19 0.045 289);
-  --surface: oklch(0.245 0.042 289);
-  --ink: oklch(0.94 0.006 289);
-  --lA: 0;
-  --lB: 1;
+  --amb-100: oklch(0.96 0.019 285);
+  --amb-200: oklch(0.91 0.045 285);
+  --amb-300: oklch(0.84 0.082 285);
+  --amb-400: oklch(0.76 0.128 285);
+  --amb-500: oklch(0.68 0.17 285);
+  --amb-600: oklch(0.58 0.17 285);
+  --amb-700: oklch(0.47 0.153 285);
+  --amb-800: oklch(0.36 0.128 285);
+  --amb-900: oklch(0.26 0.094 285);
+  --sec-100: oklch(0.96 0.03 88);
+  --sec-200: oklch(0.91 0.06 88);
+  --sec-300: oklch(0.84 0.098 88);
+  --sec-400: oklch(0.76 0.135 88);
+  --sec-500: oklch(0.68 0.138 88);
+  --sec-600: oklch(0.58 0.118 88);
+  --sec-700: oklch(0.47 0.096 88);
+  --sec-800: oklch(0.36 0.073 88);
+  --sec-900: oklch(0.26 0.053 88);
+  --ter-100: oklch(0.96 0.024 200);
+  --ter-200: oklch(0.91 0.048 200);
+  --ter-300: oklch(0.84 0.078 200);
+  --ter-400: oklch(0.76 0.108 200);
+  --ter-500: oklch(0.68 0.115 200);
+  --ter-600: oklch(0.58 0.098 200);
+  --ter-700: oklch(0.47 0.079 200);
+  --ter-800: oklch(0.36 0.061 200);
+  --ter-900: oklch(0.26 0.044 200);
+  --neu-100: oklch(0.96 0.019 285);
+  --neu-200: oklch(0.91 0.022 285);
+  --neu-300: oklch(0.85 0.022 285);
+  --neu-400: oklch(0.76 0.022 285);
+  --neu-500: oklch(0.66 0.022 285);
+  --neu-600: oklch(0.56 0.022 285);
+  --neu-700: oklch(0.46 0.022 285);
+  --neu-800: oklch(0.36 0.022 285);
+  --neu-900: oklch(0.27 0.022 285);
+  --tint: oklch(0.72 0.14 285);
+  --highlight: oklch(0.82 0.15 88);
+  --highlight-fill: oklch(0.82 0.15 88);
+  --magic: oklch(0.78 0.12 200);
+  --danger: oklch(0.72 0.15 25);
+  --success: oklch(0.78 0.15 150);
+  --warning: oklch(0.78 0.14 55);
+  --on-accent: oklch(0.15 0.03 285);
+  --on-highlight: oklch(0.15 0.03 285);
+  --ground: oklch(0.15 0.048 285);
+  --surface: oklch(0.205 0.044 285);
+  --ink: oklch(0.95 0.008 285);
   --shadow-alpha: 0.65;
 
   color-scheme: dark;
 }
 
 :root {
-  /* State colours keep a readable lightness in both modes: L' = lA + lB * L. */
-  --danger: oklch(calc(var(--lA) + var(--lB) * 0.78) 0.12 25);
-  --heal: oklch(calc(var(--lA) + var(--lB) * 0.84) 0.09 165);
-  --warning: oklch(calc(var(--lA) + var(--lB) * 0.84) 0.12 80);
   /* Muted text is the ink at reduced strength, never a separate grey. */
-  --ink-muted: color-mix(in oklab, var(--ink) 64%, transparent);
+  --ink-muted: color-mix(in oklab, var(--ink) 70%, transparent);
   /* Only floating things (popovers, menus) cast a shadow. */
   --float-shadow:
-    0 0 0 1px var(--neu-500), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
+    0 0 0 1px var(--neu-600), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
 
-  /* shadcn variables, derived from the Nocturne tokens. */
+  /* shadcn variables, derived from the palette tokens. */
   --background: var(--ground);
   --foreground: var(--ink);
   --card: var(--surface);
@@ -90,7 +136,7 @@
   --popover: var(--surface);
   --popover-foreground: var(--ink);
   --primary: var(--tint);
-  --primary-foreground: var(--ground);
+  --primary-foreground: var(--on-accent);
   --secondary: var(--neu-900);
   --secondary-foreground: var(--ink);
   --muted: var(--neu-900);
@@ -98,8 +144,8 @@
   --accent: var(--amb-900);
   --accent-foreground: var(--ink);
   --destructive: var(--danger);
-  --border: color-mix(in oklab, var(--ink) 16%, transparent);
-  --input: color-mix(in oklab, var(--ink) 20%, transparent);
+  --border: color-mix(in oklab, var(--ink) 18%, transparent);
+  --input: color-mix(in oklab, var(--ink) 22%, transparent);
   --ring: var(--tint);
   --radius: 0.5rem;
 
@@ -137,6 +183,8 @@
 
 @theme inline {
   --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+  /* The brand face (ADR 0020 step 5): the wordmark only. */
+  --font-display: "Cinzel Variable", "Cinzel", "Inter Variable", serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -160,10 +208,16 @@
   --color-surface: var(--surface);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
+  /* Role colours (ADR 0020 steps 2-3). */
   --color-tint: var(--tint);
+  --color-highlight: var(--highlight);
+  --color-highlight-fill: var(--highlight-fill);
+  --color-on-highlight: var(--on-highlight);
+  --color-magic: var(--magic);
   --color-danger: var(--danger);
-  --color-heal: var(--heal);
+  --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-on-accent: var(--on-accent);
   --color-amb-100: var(--amb-100);
   --color-amb-200: var(--amb-200);
   --color-amb-300: var(--amb-300);
@@ -173,6 +227,24 @@
   --color-amb-700: var(--amb-700);
   --color-amb-800: var(--amb-800);
   --color-amb-900: var(--amb-900);
+  --color-sec-100: var(--sec-100);
+  --color-sec-200: var(--sec-200);
+  --color-sec-300: var(--sec-300);
+  --color-sec-400: var(--sec-400);
+  --color-sec-500: var(--sec-500);
+  --color-sec-600: var(--sec-600);
+  --color-sec-700: var(--sec-700);
+  --color-sec-800: var(--sec-800);
+  --color-sec-900: var(--sec-900);
+  --color-ter-100: var(--ter-100);
+  --color-ter-200: var(--ter-200);
+  --color-ter-300: var(--ter-300);
+  --color-ter-400: var(--ter-400);
+  --color-ter-500: var(--ter-500);
+  --color-ter-600: var(--ter-600);
+  --color-ter-700: var(--ter-700);
+  --color-ter-800: var(--ter-800);
+  --color-ter-900: var(--ter-900);
   --color-neu-100: var(--neu-100);
   --color-neu-200: var(--neu-200);
   --color-neu-300: var(--neu-300);

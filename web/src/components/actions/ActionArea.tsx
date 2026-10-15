@@ -63,7 +63,7 @@ export function ActionArea({
             aria-controls={`panel-${id}`}
             className={cn(
               "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
-              active === id && "border-amb-500 text-foreground",
+              active === id && "border-tint text-foreground",
             )}
             onClick={() => setActive(id)}
           >

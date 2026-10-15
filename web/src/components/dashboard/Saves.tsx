@@ -60,7 +60,7 @@ export function Saves() {
                 <span
                   className={cn(
                     "flex items-center justify-end gap-1 tabular-nums",
-                    roll && (roll.passed ? "text-heal" : "text-danger"),
+                    roll && (roll.passed ? "text-success" : "text-danger"),
                   )}
                   data-testid="save-last"
                 >

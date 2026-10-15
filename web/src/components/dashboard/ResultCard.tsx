@@ -193,7 +193,7 @@ function HexDie({ value, label }: { value: number; label: string }) {
     <span
       role="img"
       aria-label={label}
-      className="flex h-12 w-11 shrink-0 items-center justify-center bg-amb-800 text-key text-amb-100 tabular-nums [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]"
+      className="flex h-12 w-11 shrink-0 items-center justify-center bg-tint text-key text-on-accent tabular-nums [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]"
       data-testid="hex-die"
     >
       {value}
@@ -214,7 +214,7 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
   return (
     <span
       data-testid="verdict"
-      className={cn("shrink-0 text-key", ok ? "text-heal" : "text-danger")}
+      className={cn("shrink-0 text-key", ok ? "text-success" : "text-danger")}
     >
       {ok ? yes : no}
     </span>
@@ -239,7 +239,7 @@ function Total({
       <div
         className={cn(
           "text-headline tabular-nums",
-          dim ? "text-muted-foreground" : "text-amb-300",
+          dim ? "text-muted-foreground" : "text-highlight",
         )}
         data-testid={testId}
       >
@@ -349,7 +349,7 @@ function AttackResult({
       </div>
       {r.isCrit && (
         <p
-          className="rounded-md bg-amb-900 px-3 py-1 text-body font-medium text-amb-300"
+          className="rounded-md bg-highlight-fill px-3 py-1 text-body font-semibold text-on-highlight"
           data-testid="crit-badge"
         >
           {critText(t, r)}
@@ -848,7 +848,7 @@ function DieChip({
     <li
       className={cn(
         "min-w-7 rounded-md px-2 py-0.5 text-center text-body font-semibold tabular-nums",
-        tone === "max" ? "bg-amb-800 text-amb-100" : "bg-neu-900",
+        tone === "max" ? "bg-highlight-fill text-on-highlight" : "bg-neu-900",
         tone === "min" && "text-muted-foreground",
       )}
       data-tone={tone}
@@ -1243,7 +1243,7 @@ function InfoResult({ info }: { info: InfoView }) {
         <span
           className={cn(
             "shrink-0 text-headline tabular-nums",
-            info.value.tone === "damage" ? "text-danger" : "text-heal",
+            info.value.tone === "damage" ? "text-danger" : "text-success",
           )}
           data-testid="info-value"
         >

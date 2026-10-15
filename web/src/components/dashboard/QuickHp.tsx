@@ -64,7 +64,7 @@ export function QuickHp() {
           {t("hp.applyDamage")}
         </Button>
         <Button
-          className="min-w-0 bg-heal text-ground hover:bg-heal/85"
+          className="min-w-0 bg-success text-on-accent hover:bg-success/85"
           disabled={!valid || busy}
           title={t("hp.healHint")}
           onClick={() => void apply(1)}

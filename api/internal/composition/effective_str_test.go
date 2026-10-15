@@ -125,8 +125,7 @@ func (s *strStack) gemOn() bool {
 	return mods.WeaponBuff == 5 && mods.Multipliers == 2
 }
 
-// Effective STR rules (docs/backend.md "Effective STR")
-// on the real stack, from received spells to the attack: two Strength casts
+// ADR 0004 steps 7, 8 and 10 on the real stack, from received spells to the attack: two Strength casts
 // add up to 18 and the Power Gem (min_str 18) gives +5 and x2; Improved
 // Strength then replaces them (19, not 18 + 7) and the gem still applies
 // (STR >= 18).
@@ -134,13 +133,13 @@ func TestEffectiveStr_StrengthStacksThenImprovedReplacesIt(t *testing.T) {
 	s := newStrStack(t)
 	attack := combatsvc.AttackRequest{WeaponID: "mace", TargetAC: 5}
 
-	// Rule 1: Strength 1d6 = 2, then 1d6 = 4: 12 + 2 + 4 = 18.
+	// Step 7: Strength 1d6 = 2, then 1d6 = 4: 12 + 2 + 4 = 18.
 	s.receive("strength", 9, 2)
 	assert.Equal(t, 14, s.effective())
 	s.receive("strength", 9, 4)
 	assert.Equal(t, 18, s.effective())
 
-	// Rule 3 at 18: the gem applies.
+	// Step 10 at 18: the gem applies.
 	s.dice.expect(roll{"d20", 11}, roll{"d100", 37}, roll{"d100", 58}, roll{"d6", 3})
 	at18, err := s.bs.Combat.ResolveAttack(s.ctx, s.id, attack)
 	require.NoError(t, err)
@@ -149,12 +148,12 @@ func TestEffectiveStr_StrengthStacksThenImprovedReplacesIt(t *testing.T) {
 	assert.InDelta(t, 2.0, at18.DiceMultiplier, 1e-9)
 	assert.Equal(t, 3, at18.Rolled.Total)
 
-	// Rule 2: Improved Strength 1d6+4 = 3+4 replaces the two Strength casts:
+	// Step 8: Improved Strength 1d6+4 = 3+4 replaces the two Strength casts:
 	// 12 + 7 = 19 (not 18 + anything).
 	s.receive("improved_strength", 9, 3)
 	assert.Equal(t, 19, s.effective())
 
-	// Rule 3 at 19: the gem still applies (>= 18).
+	// Step 10 at 19: the gem still applies (>= 18).
 	s.dice.expect(roll{"d20", 13}, roll{"d100", 42}, roll{"d100", 71}, roll{"d6", 5})
 	at19, err := s.bs.Combat.ResolveAttack(s.ctx, s.id, attack)
 	require.NoError(t, err)

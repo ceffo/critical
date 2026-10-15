@@ -38,9 +38,7 @@ test("Next turn then void restores the round, the durations and the expired buff
   const advance = `Turn ${r0} → ${r0 + 1} — expired: e2e Haste`;
   // Logged in the round it ends.
   await expect(
-    turnGroup(page, r0)
-      .getByRole("listitem")
-      .filter({ hasText: advance }),
+    turnGroup(page, r0).getByRole("listitem").filter({ hasText: advance }),
   ).toBeVisible();
   await snap(page, "next-round-expired");
 
@@ -97,18 +95,24 @@ test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and th
 
   await addBuff(page, { name: "e2e Stoneskin", charges: 2 });
   const badge = buffBadge(page, "e2e Stoneskin");
-  await expect(badge.getByTestId("buff-charges")).toHaveText("2 / 2 charges · until spent");
+  await expect(badge.getByTestId("buff-charges")).toHaveText(
+    "2 / 2 charges · until spent",
+  );
   // The Moi column shows a card for it, above the damage entry.
   const card = page
     .getByRole("complementary", { name: "Character" })
     .getByRole("group", { name: "e2e Stoneskin" });
-  const absorb = card.getByRole("button", { name: "Absorb a hit with e2e Stoneskin" });
+  const absorb = card.getByRole("button", {
+    name: "Absorb a hit with e2e Stoneskin",
+  });
   await expect(card.getByTestId("charge-count")).toHaveText("2 / 2 charges");
   await expect(badge.getByTestId("pip-left")).toHaveCount(2);
 
   await absorb.click();
   await expect(card.getByTestId("charge-count")).toHaveText("1 / 2 charges");
-  await expect(badge.getByTestId("buff-charges")).toHaveText("1 / 2 charges · until spent");
+  await expect(badge.getByTestId("buff-charges")).toHaveText(
+    "1 / 2 charges · until spent",
+  );
   await expect(badge.getByTestId("pip-left")).toHaveCount(1);
   await expect(badge.getByTestId("pip-used")).toHaveCount(1);
   await expect(
@@ -128,7 +132,9 @@ test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and th
   await snap(page, "stoneskin-ended");
 
   await voidEntry(page, "e2e Stoneskin absorbed a hit, ended");
-  await expect(badge.getByTestId("buff-charges")).toHaveText("1 / 2 charges · until spent");
+  await expect(badge.getByTestId("buff-charges")).toHaveText(
+    "1 / 2 charges · until spent",
+  );
   await expect(card.getByTestId("charge-count")).toHaveText("1 / 2 charges");
 
   await expectNoReload(page);
@@ -168,7 +174,9 @@ test.describe("with the sheet's STR 12", () => {
     await expect.poll(() => effectiveStr(page)).toBe(18);
     await expect(gem).toHaveAttribute("data-applies", "true");
     await expect(gem).not.toContainText("needs STR");
-    await expect(gem.getByTestId("buff-effects")).toHaveText("weapon +5 · dice ×2");
+    await expect(gem.getByTestId("buff-effects")).toHaveText(
+      "weapon +5 · dice ×2",
+    );
     await snap(page, "strength-18-gem-on");
 
     await nextTurn(page);
@@ -179,7 +187,6 @@ test.describe("with the sheet's STR 12", () => {
     await expectNoReload(page);
     await snap(page, "strength-expired-gem-off");
   });
-
 });
 
 test("a buff note shows on its row, edits are logged, void restores it", async ({

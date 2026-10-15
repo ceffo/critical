@@ -42,7 +42,10 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
           >
             {t("app.levelValue", { level: character.level })}
             {xp && (
-              <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-neu-800">
+              <span
+                aria-hidden
+                className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-neu-800"
+              >
                 <span
                   className="absolute inset-y-0 left-0 rounded-full bg-tint"
                   style={{ width: `${xp.progress * 100}%` }}
@@ -66,14 +69,20 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                 className="flex min-w-0 flex-col items-center rounded-md bg-neu-900/60 py-1"
                 title={isStr ? t("app.strTitle", { ...strength }) : undefined}
               >
-                <dt className="text-label text-muted-foreground">{t(`attr.${k}`)}</dt>
+                <dt className="text-label text-muted-foreground">
+                  {t(`attr.${k}`)}
+                </dt>
                 <dd
                   className={cn(
                     "text-key tabular-nums",
                     isStr && strBuffed && "text-heal",
                   )}
                 >
-                  {isStr ? <span data-testid="str-value">{strength.effective}</span> : character[k]}
+                  {isStr ? (
+                    <span data-testid="str-value">{strength.effective}</span>
+                  ) : (
+                    character[k]
+                  )}
                 </dd>
                 {isStr && strBuffed && (
                   <dd className="text-label text-muted-foreground tabular-nums">
@@ -84,7 +93,9 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             );
           })}
           <div className="flex min-w-0 flex-col items-center rounded-md bg-neu-800 py-1">
-            <dt className="text-label text-muted-foreground">{t("app.thac0")}</dt>
+            <dt className="text-label text-muted-foreground">
+              {t("app.thac0")}
+            </dt>
             <dd className="text-key tabular-nums" data-testid="thac0-value">
               {character.thac0Base}
             </dd>

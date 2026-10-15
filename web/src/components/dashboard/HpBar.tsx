@@ -35,11 +35,15 @@ export function HpBar() {
   const entries = useLogStore((s) => s.entries);
   const last = lastHpChange(entries);
   const pct = hpPercent(currentHp, maxHp);
-  const ghost = Math.max(0, hpPercent(currentHp + lastDamage(entries), maxHp) - pct);
+  const ghost = Math.max(
+    0,
+    hpPercent(currentHp + lastDamage(entries), maxHp) - pct,
+  );
   // Width of the dying zone on the floor..max scale, and how deep below 0 HP is within it.
   const span = maxHp - floor;
   const dyingPct = span > 0 && floor < 0 ? (-floor / span) * 100 : 0;
-  const deepPct = currentHp < 0 && floor < 0 ? Math.min(100, (currentHp / floor) * 100) : 0;
+  const deepPct =
+    currentHp < 0 && floor < 0 ? Math.min(100, (currentHp / floor) * 100) : 0;
 
   // A change logged without a source is worded like the journal does: Damage N / Healing N.
   const lastText = last
@@ -49,12 +53,21 @@ export function HpBar() {
           spell: spellName(t, last.exposure.spellId, last.exposure.spell),
         })
       : last.source
-      ? t("hp.lastChange", { delta: formatSigned(last.delta), source: last.source })
-      : t(last.delta < 0 ? "log.hpDamage" : "log.hpHeal", { amount: Math.abs(last.delta) })
+        ? t("hp.lastChange", {
+            delta: formatSigned(last.delta),
+            source: last.source,
+          })
+        : t(last.delta < 0 ? "log.hpDamage" : "log.hpHeal", {
+            amount: Math.abs(last.delta),
+          })
     : "";
 
   return (
-    <div className="flex min-w-0 flex-col gap-1" role="group" aria-label={t("hp.title")}>
+    <div
+      className="flex min-w-0 flex-col gap-1"
+      role="group"
+      aria-label={t("hp.title")}
+    >
       <div className="flex min-w-0 items-baseline justify-between gap-2">
         <h2 className="shrink-0 text-title">{t("hp.title")}</h2>
         {last && (
@@ -71,11 +84,17 @@ export function HpBar() {
         )}
       </div>
       <div className="flex min-w-0 items-baseline justify-between gap-2">
-        <div className="flex items-baseline gap-1 tabular-nums" data-testid="hp-value">
+        <div
+          className="flex items-baseline gap-1 tabular-nums"
+          data-testid="hp-value"
+        >
           {loaded ? (
             <>
               <span className="text-headline">{currentHp}</span>
-              <span className="text-body text-muted-foreground"> / {maxHp}</span>
+              <span className="text-body text-muted-foreground">
+                {" "}
+                / {maxHp}
+              </span>
             </>
           ) : (
             "–"
@@ -118,7 +137,10 @@ export function HpBar() {
           )}
           <div className="flex h-full min-w-0 flex-1">
             <div
-              className={cn("h-full transition-all duration-300", TONE[hpTone(pct)])}
+              className={cn(
+                "h-full transition-all duration-300",
+                TONE[hpTone(pct)],
+              )}
               style={{ width: `${pct}%` }}
               data-testid="hp-fill"
             />
@@ -138,7 +160,10 @@ export function HpBar() {
             aria-hidden
             data-testid="hp-scale"
           >
-            <span className="absolute -translate-x-1/2" style={{ left: `${dyingPct}%` }}>
+            <span
+              className="absolute -translate-x-1/2"
+              style={{ left: `${dyingPct}%` }}
+            >
               0
             </span>
             <span className="absolute right-0">{maxHp}</span>

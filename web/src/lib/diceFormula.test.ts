@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { addDie, dieCount, dieName, removeDie, stepConstant } from "./diceFormula";
+import {
+  addDie,
+  dieCount,
+  dieName,
+  removeDie,
+  stepConstant,
+} from "./diceFormula";
 
 describe("diceFormula (text edits only)", () => {
   it("names the dice", () => {

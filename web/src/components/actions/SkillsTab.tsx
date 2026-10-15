@@ -31,7 +31,12 @@ export function SkillsTab() {
   return (
     <div className="flex flex-col gap-3">
       <section aria-labelledby="skills-proficiencies">
-        <div className={cn(rowClass, "py-1 text-label text-muted-foreground hover:bg-transparent")}>
+        <div
+          className={cn(
+            rowClass,
+            "py-1 text-label text-muted-foreground hover:bg-transparent",
+          )}
+        >
           <h3 id="skills-proficiencies" className="text-title text-foreground">
             {t("skills.proficiencies")}
           </h3>
@@ -39,7 +44,10 @@ export function SkillsTab() {
           <span className="text-right">{t("skills.columns.target")}</span>
           <span className="text-right">{t("skills.columns.last")}</span>
         </div>
-        <ul aria-label={t("skills.proficiencies")} className="flex flex-col gap-1">
+        <ul
+          aria-label={t("skills.proficiencies")}
+          className="flex flex-col gap-1"
+        >
           {skills.proficiencies.map((p) => {
             const name = skillName(t, p.id);
             return (
@@ -56,7 +64,9 @@ export function SkillsTab() {
                   <span className="text-muted-foreground tabular-nums">
                     {abilityText(t, p.ability, p.abilityScore, p.modifier)}
                   </span>
-                  <span className="text-right font-semibold tabular-nums">{p.target}</span>
+                  <span className="text-right font-semibold tabular-nums">
+                    {p.target}
+                  </span>
                   <Last last={p.last} />
                 </button>
               </li>
@@ -65,7 +75,12 @@ export function SkillsTab() {
         </ul>
       </section>
       <section aria-labelledby="skills-bard">
-        <div className={cn(rowClass, "py-1 text-label text-muted-foreground hover:bg-transparent")}>
+        <div
+          className={cn(
+            rowClass,
+            "py-1 text-label text-muted-foreground hover:bg-transparent",
+          )}
+        >
           <h3 id="skills-bard" className="text-title text-foreground">
             {t("skills.bardSkills")}
           </h3>
@@ -107,7 +122,10 @@ function Last({ last }: { last: LastCheck | null }) {
   const { t } = useTranslation();
   if (!last) {
     return (
-      <span className="text-right text-muted-foreground" data-testid="skill-last">
+      <span
+        className="text-right text-muted-foreground"
+        data-testid="skill-last"
+      >
         –
       </span>
     );
@@ -120,10 +138,16 @@ function Last({ last }: { last: LastCheck | null }) {
       )}
       data-testid="skill-last"
       data-success={last.success}
-      title={t(last.success ? "skills.lastSuccess" : "skills.lastFailure", { roll: last.roll })}
+      title={t(last.success ? "skills.lastSuccess" : "skills.lastFailure", {
+        roll: last.roll,
+      })}
     >
       {last.roll}
-      {last.success ? <Check aria-hidden weight="bold" /> : <X aria-hidden weight="bold" />}
+      {last.success ? (
+        <Check aria-hidden weight="bold" />
+      ) : (
+        <X aria-hidden weight="bold" />
+      )}
     </span>
   );
 }

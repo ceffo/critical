@@ -1,4 +1,9 @@
-import type { Initiative, PassTimePreview, RoundAdvanceResponse, RoundResponse } from "../types/buffs";
+import type {
+  Initiative,
+  PassTimePreview,
+  RoundAdvanceResponse,
+  RoundResponse,
+} from "../types/buffs";
 import { post, put, request } from "./http";
 
 export function fetchRound(): Promise<RoundResponse> {
@@ -24,8 +29,14 @@ export function passTime(hours: number): Promise<RoundAdvanceResponse> {
 }
 
 /** What passing `hours` would do (rounds, buffs that would expire); writes nothing. */
-export function previewPassTime(hours: number, init?: RequestInit): Promise<PassTimePreview> {
-  return request<PassTimePreview>(`/api/round/pass-time/preview?hours=${encodeURIComponent(String(hours))}`, init);
+export function previewPassTime(
+  hours: number,
+  init?: RequestInit,
+): Promise<PassTimePreview> {
+  return request<PassTimePreview>(
+    `/api/round/pass-time/preview?hours=${encodeURIComponent(String(hours))}`,
+    init,
+  );
 }
 
 export function setRound(round: number): Promise<RoundAdvanceResponse> {

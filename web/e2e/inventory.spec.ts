@@ -36,7 +36,9 @@ function plus(page: Page, name: string) {
 }
 
 function resultCard(page: Page) {
-  return page.getByRole("region", { name: "Detail", exact: true }).getByTestId("item-result");
+  return page
+    .getByRole("region", { name: "Detail", exact: true })
+    .getByTestId("item-result");
 }
 
 async function longRest(page: Page) {
@@ -62,18 +64,28 @@ test("the Inventory tab lists every item with its type, behaviour and count; + o
   for (const [id, name, type, behaviour, n] of rows) {
     await expect(row(page, id)).toContainText(name);
     await expect(row(page, id).getByTestId("item-type")).toHaveText(type);
-    await expect(row(page, id).getByTestId("item-behaviour")).toHaveText(behaviour);
+    await expect(row(page, id).getByTestId("item-behaviour")).toHaveText(
+      behaviour,
+    );
     await expect(count(page, id)).toHaveText(n);
     await expect(minus(page, name)).toBeEnabled();
     await expect(plus(page, name)).toHaveCount(behaviour === "Stock" ? 1 : 0);
   }
-  await expect(row(page, "arrows_plus2").getByTestId("item-bonus")).toHaveText("+2");
-  await expect(row(page, "arrows_plus2").getByLabel("Magical bonus +2")).toBeVisible();
-  await expect(row(page, "wand_lightning").getByTestId("item-bonus")).toHaveCount(0);
+  await expect(row(page, "arrows_plus2").getByTestId("item-bonus")).toHaveText(
+    "+2",
+  );
+  await expect(
+    row(page, "arrows_plus2").getByLabel("Magical bonus +2"),
+  ).toBeVisible();
+  await expect(
+    row(page, "wand_lightning").getByTestId("item-bonus"),
+  ).toHaveCount(0);
   await snap(page, "inventory-tab");
 });
 
-test("− uses one and + adds one, each logged and popped from the log", async ({ page }) => {
+test("− uses one and + adds one, each logged and popped from the log", async ({
+  page,
+}) => {
   await openInventory(page);
   await minus(page, "Fire flasks").click();
   await expect(count(page, "fire_flask")).toHaveText("4");
@@ -82,8 +94,12 @@ test("− uses one and + adds one, each logged and popped from the log", async (
 
   await plus(page, "Fire flasks").click();
   await expect(count(page, "fire_flask")).toHaveText("5");
-  await expect(logEntry(page, "Restocked Fire flasks: +1 (5 now)")).toContainText("Item");
-  await expect(logEntry(page, "Restocked Fire flasks")).not.toContainText("item_restock");
+  await expect(
+    logEntry(page, "Restocked Fire flasks: +1 (5 now)"),
+  ).toContainText("Item");
+  await expect(logEntry(page, "Restocked Fire flasks")).not.toContainText(
+    "item_restock",
+  );
   await snap(page, "flask-used-and-restocked");
 
   await voidEntry(page, "Restocked Fire flasks");
@@ -92,20 +108,32 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   await expect(count(page, "fire_flask")).toHaveText("5");
 });
 
-test("the wand rolls 6d6 with a breakdown and the save it allows", async ({ page }) => {
+test("the wand rolls 6d6 with a breakdown and the save it allows", async ({
+  page,
+}) => {
   await openInventory(page);
   await minus(page, "Wand of lightning").click();
 
   const card = resultCard(page);
   await expect(card).toContainText("Used Wand of lightning");
-  await expect(card.getByTestId("item-rolls").getByRole("listitem")).toHaveCount(6);
-  await expect(card.getByTestId("item-save")).toHaveText("Save: Rod/Staff/Wand");
-  await expect(card.getByTestId("item-left")).toHaveText("Wand of lightning: 3 left");
-  const rolls = (await card.getByTestId("item-rolls").getByRole("listitem").allTextContents()).map(Number);
+  await expect(
+    card.getByTestId("item-rolls").getByRole("listitem"),
+  ).toHaveCount(6);
+  await expect(card.getByTestId("item-save")).toHaveText(
+    "Save: Rod/Staff/Wand",
+  );
+  await expect(card.getByTestId("item-left")).toHaveText(
+    "Wand of lightning: 3 left",
+  );
+  const rolls = (
+    await card.getByTestId("item-rolls").getByRole("listitem").allTextContents()
+  ).map(Number);
   const total = Number(await card.getByTestId("item-total").textContent());
   expect(total).toBe(rolls.reduce((a, b) => a + b, 0));
   await expect(count(page, "wand_lightning")).toHaveText("3");
-  await expect(logEntry(page, "Used Wand of lightning")).toContainText(`6d6 = ${total} (3 left)`);
+  await expect(logEntry(page, "Used Wand of lightning")).toContainText(
+    `6d6 = ${total} (3 left)`,
+  );
   await snap(page, "wand-used");
 });
 
@@ -134,7 +162,11 @@ test("a wand used down to 0 disappears; popping that use brings it back with 1 c
     .getByRole("list", { name: "Inventory", exact: true })
     .getByRole("listitem")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-testid")));
-  expect(ids.slice(3)).toEqual(["item-fire_flask", "item-wand_lightning", "item-power_gem_dispel"]);
+  expect(ids.slice(3)).toEqual([
+    "item-fire_flask",
+    "item-wand_lightning",
+    "item-power_gem_dispel",
+  ]);
   await snap(page, "wand-back");
 });
 
@@ -156,8 +188,12 @@ test("arrows at 0 stay listed and can be restocked; the attack picker offers onl
   const ammo = ammoChips(page);
   // The spent +3 arrows were never chosen here: not offered.
   await expect(ammo.getByRole("radio")).toHaveCount(2);
-  await expect(ammo.getByRole("radio", { name: "Arrows +1, 18 left" })).toBeVisible();
-  await expect(ammo.getByRole("radio", { name: "Arrows +2, 16 left" })).toBeVisible();
+  await expect(
+    ammo.getByRole("radio", { name: "Arrows +1, 18 left" }),
+  ).toBeVisible();
+  await expect(
+    ammo.getByRole("radio", { name: "Arrows +2, 16 left" }),
+  ).toBeVisible();
 
   await openWorkspace(page, "Inventory");
   await plus(page, "Arrows +3").click();
@@ -165,11 +201,15 @@ test("arrows at 0 stay listed and can be restocked; the attack picker offers onl
   await expect(logEntry(page, "Restocked Arrows +3: +1 (1 now)")).toBeVisible();
 
   await openWorkspace(page, "Act");
-  await expect(ammo.getByRole("radio", { name: "Arrows +3, 1 left" })).toBeVisible();
+  await expect(
+    ammo.getByRole("radio", { name: "Arrows +3, 1 left" }),
+  ).toBeVisible();
   await snap(page, "arrows-restocked-in-picker");
 });
 
-test("a long rest refills the gem (daily) and nothing else", async ({ page }) => {
+test("a long rest refills the gem (daily) and nothing else", async ({
+  page,
+}) => {
   await openInventory(page);
   await minus(page, "Power Gem: Dispel Magic").click();
   await expect(count(page, "power_gem_dispel")).toHaveText("0 / 1");
@@ -202,16 +242,27 @@ async function post(base: string, path: string, body: unknown = {}) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return { status: res.status, body: (await res.json().catch(() => ({}))) as Record<string, unknown> };
+  return {
+    status: res.status,
+    body: (await res.json().catch(() => ({}))) as Record<string, unknown>,
+  };
 }
 
-test("an empty item is refused by the API, and a stale − shows the error", async ({ page, stack }) => {
+test("an empty item is refused by the API, and a stale − shows the error", async ({
+  page,
+  stack,
+}) => {
   await openInventory(page);
   // The gem is emptied behind the UI's back; the stale row still offers −.
-  expect((await post(stack.apiUrl, "/api/items/power_gem_dispel/use")).status).toBe(200);
+  expect(
+    (await post(stack.apiUrl, "/api/items/power_gem_dispel/use")).status,
+  ).toBe(200);
   const refused = await post(stack.apiUrl, "/api/items/power_gem_dispel/use");
   expect(refused.status).toBe(409);
-  expect(refused.body).toEqual({ code: "item_empty", error: expect.stringContaining("empty") });
+  expect(refused.body).toEqual({
+    code: "item_empty",
+    error: expect.stringContaining("empty"),
+  });
 
   await expect(count(page, "power_gem_dispel")).toHaveText("1 / 1");
   await minus(page, "Power Gem: Dispel Magic").click();

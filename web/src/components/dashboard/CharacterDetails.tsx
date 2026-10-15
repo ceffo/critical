@@ -1,9 +1,20 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
-import { TEXT_FIELDS, languageKey, toBody, toDraft, type Draft } from "@/lib/characterDetails";
+import {
+  TEXT_FIELDS,
+  languageKey,
+  toBody,
+  toDraft,
+  type Draft,
+} from "@/lib/characterDetails";
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
@@ -13,7 +24,11 @@ import type { Character } from "@/types/character";
  * as the player entered it, switched to a form by "Edit". The server validates every field and
  * names the rejected one, whose error shows under it.
  */
-export function CharacterDetails({ character }: { character: Character | null }) {
+export function CharacterDetails({
+  character,
+}: {
+  character: Character | null;
+}) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const name = character?.name || t("app.loading");
@@ -36,11 +51,19 @@ export function CharacterDetails({ character }: { character: Character | null })
           aria-label={t("details.title")}
           data-testid="details-popover"
         >
-          <PopoverTitle className="text-title">{t("details.title")}</PopoverTitle>
+          <PopoverTitle className="text-title">
+            {t("details.title")}
+          </PopoverTitle>
           {editing ? (
-            <DetailsForm character={character} onDone={() => setEditing(false)} />
+            <DetailsForm
+              character={character}
+              onDone={() => setEditing(false)}
+            />
           ) : (
-            <DetailsView character={character} onEdit={() => setEditing(true)} />
+            <DetailsView
+              character={character}
+              onEdit={() => setEditing(true)}
+            />
           )}
         </PopoverContent>
       )}
@@ -66,42 +89,74 @@ function useLanguageName() {
   };
 }
 
-function DetailsView({ character: c, onEdit }: { character: Character; onEdit: () => void }) {
+function DetailsView({
+  character: c,
+  onEdit,
+}: {
+  character: Character;
+  onEdit: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const languageName = useLanguageName();
-  const none = <span className="text-muted-foreground">{t("details.none")}</span>;
+  const none = (
+    <span className="text-muted-foreground">{t("details.none")}</span>
+  );
   const classKey = `details.classes.${c.class}`;
   const text = (v: string) => (v === "" ? none : v);
   return (
     <>
       <dl className="flex flex-col gap-2">
-        <Row label={t("details.class")}>{i18n.exists(classKey) ? t(classKey) : c.class}</Row>
+        <Row label={t("details.class")}>
+          {i18n.exists(classKey) ? t(classKey) : c.class}
+        </Row>
         <Row label={t("details.level")}>{c.level}</Row>
         {TEXT_FIELDS.slice(0, 2).map((f) => (
-          <Row key={f} label={t(`details.fields.${f}`)}>{text(c[f])}</Row>
+          <Row key={f} label={t(`details.fields.${f}`)}>
+            {text(c[f])}
+          </Row>
         ))}
-        <Row label={t("details.fields.age")}>{c.age === null ? none : c.age}</Row>
+        <Row label={t("details.fields.age")}>
+          {c.age === null ? none : c.age}
+        </Row>
         {TEXT_FIELDS.slice(2).map((f) => (
-          <Row key={f} label={t(`details.fields.${f}`)}>{text(c[f])}</Row>
+          <Row key={f} label={t(`details.fields.${f}`)}>
+            {text(c[f])}
+          </Row>
         ))}
         <Row label={t("details.fields.languages")}>
-          {c.languages.length === 0 ? none : c.languages.map(languageName).join(", ")}
+          {c.languages.length === 0
+            ? none
+            : c.languages.map(languageName).join(", ")}
         </Row>
       </dl>
-      <Button type="button" variant="secondary" className="self-end" onClick={onEdit}>
+      <Button
+        type="button"
+        variant="secondary"
+        className="self-end"
+        onClick={onEdit}
+      >
         {t("details.edit")}
       </Button>
     </>
   );
 }
 
-function DetailsForm({ character, onDone }: { character: Character; onDone: () => void }) {
+function DetailsForm({
+  character,
+  onDone,
+}: {
+  character: Character;
+  onDone: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const save = useCharacterStore((s) => s.saveDetails);
   const [draft, setDraft] = useState<Draft>(() => toDraft(character));
-  const [error, setError] = useState<{ field: string; code: string } | null>(null);
+  const [error, setError] = useState<{ field: string; code: string } | null>(
+    null,
+  );
   const [busy, setBusy] = useState(false);
-  const set = (k: keyof Draft) => (v: string) => setDraft((d) => ({ ...d, [k]: v }));
+  const set = (k: keyof Draft) => (v: string) =>
+    setDraft((d) => ({ ...d, [k]: v }));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -114,7 +169,8 @@ function DetailsForm({ character, onDone }: { character: Character; onDone: () =
     setBusy(true);
     const rejected: ApiError | null = await save(body);
     setBusy(false);
-    if (rejected) setError({ field: rejected.field ?? "", code: rejected.message });
+    if (rejected)
+      setError({ field: rejected.field ?? "", code: rejected.message });
     else onDone();
   };
 
@@ -127,9 +183,15 @@ function DetailsForm({ character, onDone }: { character: Character; onDone: () =
       </span>
     );
   };
-  const input = (field: keyof Draft, props: { inputMode?: "numeric"; hint?: string } = {}) => (
+  const input = (
+    field: keyof Draft,
+    props: { inputMode?: "numeric"; hint?: string } = {},
+  ) => (
     <div key={field} className="flex min-w-0 flex-col gap-1 text-body">
-      <label htmlFor={`details-${field}`} className="text-label text-muted-foreground">
+      <label
+        htmlFor={`details-${field}`}
+        className="text-label text-muted-foreground"
+      >
         {t(`details.fields.${field}`)}
       </label>
       <input
@@ -140,7 +202,9 @@ function DetailsForm({ character, onDone }: { character: Character; onDone: () =
         aria-invalid={error?.field === field}
         onChange={(e) => set(field)(e.target.value)}
       />
-      {props.hint && <span className="text-label text-muted-foreground">{props.hint}</span>}
+      {props.hint && (
+        <span className="text-label text-muted-foreground">{props.hint}</span>
+      )}
       {message(field)}
     </div>
   );

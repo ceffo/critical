@@ -20,14 +20,22 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
       {items.length === 0 ? (
         <p className="text-body text-muted-foreground">{t("items.none")}</p>
       ) : (
-        <ul aria-label={t("actions.items.list")} className="flex flex-col gap-1">
+        <ul
+          aria-label={t("actions.items.list")}
+          className="flex flex-col gap-1"
+        >
           {items.map((i) => (
             <li
               key={i.id}
               className="flex h-7 items-center gap-3 rounded-lg px-3 hover:bg-neu-900"
             >
-              <span className="min-w-0 flex-1 truncate text-body">{i.name}</span>
-              <span className="shrink-0 text-body text-muted-foreground" data-testid="item-count">
+              <span className="min-w-0 flex-1 truncate text-body">
+                {i.name}
+              </span>
+              <span
+                className="shrink-0 text-body text-muted-foreground"
+                data-testid="item-count"
+              >
                 {i.behaviour === "daily"
                   ? t("actions.items.dailyCount", {
                       behaviour: t(`items.behaviour.${i.behaviour}`),
@@ -47,9 +55,14 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
                 variant="secondary"
                 className="w-20 shrink-0"
                 disabled={rolling || i.count === 0}
-                aria-label={t(i.effectDice ? "actions.items.rollLabel" : "actions.items.useLabel", {
-                  name: i.name,
-                })}
+                aria-label={t(
+                  i.effectDice
+                    ? "actions.items.rollLabel"
+                    : "actions.items.useLabel",
+                  {
+                    name: i.name,
+                  },
+                )}
                 onClick={() => void spendItem(i.id)}
               >
                 {t(i.effectDice ? "actions.items.roll" : "actions.items.use")}

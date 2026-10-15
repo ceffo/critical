@@ -45,7 +45,11 @@ function Pane({
       aria-label={label}
       data-workspace={id}
       hidden={active !== id}
-      className={cn("min-h-0 min-w-0 flex-1", active === id && "flex flex-col", className)}
+      className={cn(
+        "min-h-0 min-w-0 flex-1",
+        active === id && "flex flex-col",
+        className,
+      )}
     >
       {children}
     </section>
@@ -63,7 +67,9 @@ function App() {
   const refresh = useTableStore((s) => s.refresh);
   const fetchXp = useXpStore((s) => s.fetchXp);
   const [workspace, setWorkspace] = useState<Workspace>("act");
-  const [visited, setVisited] = useState<ReadonlySet<Workspace>>(() => new Set(["act"]));
+  const [visited, setVisited] = useState<ReadonlySet<Workspace>>(
+    () => new Set(["act"]),
+  );
   const open = (w: Workspace) => {
     setWorkspace(w);
     setVisited((v) => (v.has(w) ? v : new Set(v).add(w)));
@@ -82,7 +88,12 @@ function App() {
         <Rail active={workspace} onSelect={open} />
 
         <div className="flex min-h-0 min-w-0 flex-col" data-testid="workspace">
-          <Pane id="act" active={workspace} visited={visited} label={t("shell.workspace.act")}>
+          <Pane
+            id="act"
+            active={workspace}
+            visited={visited}
+            label={t("shell.workspace.act")}
+          >
             <ActionArea onOpenInventory={() => open("inventory")} />
           </Pane>
           <Pane
@@ -102,7 +113,12 @@ function App() {
           >
             <LookupPanel />
           </Pane>
-          <Pane id="xp" active={workspace} visited={visited} label={t("shell.workspace.xp")}>
+          <Pane
+            id="xp"
+            active={workspace}
+            visited={visited}
+            label={t("shell.workspace.xp")}
+          >
             <XpPanel />
           </Pane>
         </div>

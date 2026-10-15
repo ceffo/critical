@@ -80,13 +80,18 @@ export function isRollEntry(e: LogEntry): boolean {
   }
 }
 
-export function filterEntries(entries: LogEntry[], filter: LogFilter): LogEntry[] {
+export function filterEntries(
+  entries: LogEntry[],
+  filter: LogFilter,
+): LogEntry[] {
   return filter === "all" ? entries : entries.filter(isRollEntry);
 }
 
 /** The log entry recording a live result. */
 export function liveEntryId(last: LiveResult): number | undefined {
-  return last.kind === "cast" || last.kind === "exposure" ? last.result.entryId : last.result.logEntryId;
+  return last.kind === "cast" || last.kind === "exposure"
+    ? last.result.entryId
+    : last.result.logEntryId;
 }
 
 /**
@@ -109,12 +114,23 @@ export function cardSource(
 ): CardSource {
   const latest = latestResult(entries);
   const liveId = last ? liveEntryId(last) : undefined;
-  if (selectedId !== null && selectedId !== latest?.id && selectedId !== liveId) {
+  if (
+    selectedId !== null &&
+    selectedId !== latest?.id &&
+    selectedId !== liveId
+  ) {
     const selected = entries.find((e) => e.id === selectedId);
     if (selected) return { kind: "entry", entry: selected, latest: false };
   }
-  if (last && (latest === null || liveId === undefined || liveId >= latest.id)) {
-    return { kind: "live", last, entry: entries.find((e) => e.id === liveId) ?? null };
+  if (
+    last &&
+    (latest === null || liveId === undefined || liveId >= latest.id)
+  ) {
+    return {
+      kind: "live",
+      last,
+      entry: entries.find((e) => e.id === liveId) ?? null,
+    };
   }
   if (latest) return { kind: "entry", entry: latest, latest: true };
   return { kind: "empty" };
@@ -192,7 +208,8 @@ function hpValue(e: LogEntry): InfoView["value"] {
 export function cappedHeal(e: LogEntry): HpBreakdown | null {
   if (e.kind !== "hp_change" || e.status === "voided") return null;
   const p = e.effectivePayload as Partial<HpBreakdown> | null;
-  if (typeof p?.hpRequested !== "number" || typeof p.hpApplied !== "number") return null;
+  if (typeof p?.hpRequested !== "number" || typeof p.hpApplied !== "number")
+    return null;
   return p.hpRequested !== p.hpApplied ? (p as HpBreakdown) : null;
 }
 
@@ -207,7 +224,8 @@ function initiativePayload(e: LogEntry): { round: number; d10: number } | null {
 /** The card model of a journal entry, from its (effective) payload. */
 export function cardModel(e: LogEntry, t: TFunction): CardModel {
   const attack = attackPayload(e);
-  if (attack) return { layout: "attack", roll: { ...attack, logEntryId: e.id } };
+  if (attack)
+    return { layout: "attack", roll: { ...attack, logEntryId: e.id } };
   const save = savePayload(e);
   if (save) {
     return {
@@ -229,7 +247,8 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
   const cast = castPayload(e);
   if (cast) return { layout: "cast", cast };
   const exposure = exposurePayload(e);
-  if (exposure) return { layout: "exposure", exposure: exposureFromPayload(e, exposure) };
+  if (exposure)
+    return { layout: "exposure", exposure: exposureFromPayload(e, exposure) };
   const item = itemPayload(e);
   if (item) return { layout: "item", item: { ...item, logEntryId: e.id } };
   const initiative = initiativePayload(e);
@@ -248,7 +267,10 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
  * An exposure entry's payload as the exposure endpoint's result, so one view shows both; the HP
  * applied is the entry's (a voided one keeps its original delta, as an HP change shows it).
  */
-export function exposureFromPayload(e: LogEntry, p: ExposureLogPayload): ExposureResult {
+export function exposureFromPayload(
+  e: LogEntry,
+  p: ExposureLogPayload,
+): ExposureResult {
   return {
     entryId: e.id,
     spellId: p.spellId,
@@ -265,7 +287,10 @@ export function exposureFromPayload(e: LogEntry, p: ExposureLogPayload): Exposur
       rounds: p.damage.rounds ?? 1,
       rolls: p.damage.rolls ?? [],
       total: p.damage.total,
-      parts: p.damage.parts?.map((x) => ({ formula: x.formula, save: x.save as "none" | "negates" })),
+      parts: p.damage.parts?.map((x) => ({
+        formula: x.formula,
+        save: x.save as "none" | "negates",
+      })),
       stepsPer: p.damage.stepsPer,
     },
     exposure: p.exposure,
@@ -327,7 +352,10 @@ export function cardHeader(
   switch (model.layout) {
     case "attack":
       subtitle = model.roll.ammo
-        ? t("log.attack.withAmmo", { weapon: model.roll.weaponName, ammo: model.roll.ammo.name })
+        ? t("log.attack.withAmmo", {
+            weapon: model.roll.weaponName,
+            ammo: model.roll.ammo.name,
+          })
         : (model.roll.weaponName ?? "");
       break;
     case "save":
@@ -385,25 +413,33 @@ export function rowValue(e: LogEntry): RowValue | null {
       : { text: "–", tone: "muted" };
   }
   const save = savePayload(e);
-  if (save) return { text: String(save.d20Roll), tone: save.passed ? "pass" : "fail" };
+  if (save)
+    return { text: String(save.d20Roll), tone: save.passed ? "pass" : "fail" };
   const item = itemPayload(e);
-  if (item) return item.dice ? { text: String(item.total), tone: "accent" } : null;
+  if (item)
+    return item.dice ? { text: String(item.total), tone: "accent" } : null;
   const initiative = initiativePayload(e);
   if (initiative) return { text: String(initiative.d10), tone: "accent" };
   const skill = skillCheckPayload(e);
-  if (skill) return { text: String(skill.roll), tone: skill.success ? "pass" : "fail" };
+  if (skill)
+    return { text: String(skill.roll), tone: skill.success ? "pass" : "fail" };
   const dice = dicePayload(e);
   if (dice) return { text: String(dice.total), tone: "accent" };
   const exposure = exposurePayload(e);
   if (exposure) {
-    if (!exposure.onSelf) return { text: String(exposure.damage.total), tone: "accent" };
+    if (!exposure.onSelf)
+      return { text: String(exposure.damage.total), tone: "accent" };
     // On the Bard: the HP the server applied (the floor may cut it), as an HP change shows it.
     const amount = e.status === "voided" ? e.hpDelta : e.effectiveHpDelta;
     return { text: formatSigned(amount), tone: "damage" };
   }
   const cast = castPayload(e);
   if (cast?.damage) return { text: String(cast.damage.total), tone: "accent" };
-  if (cast?.attack) return { text: String(cast.attack.d20), tone: cast.attack.hit ? "pass" : "fail" };
+  if (cast?.attack)
+    return {
+      text: String(cast.attack.d20),
+      tone: cast.attack.hit ? "pass" : "fail",
+    };
   return null;
 }
 
@@ -422,7 +458,9 @@ export interface DieChipView {
   tone: "max" | "min" | "plain";
 }
 
-function chips(dice: readonly { sides: number; value: number }[]): DieChipView[] {
+function chips(
+  dice: readonly { sides: number; value: number }[],
+): DieChipView[] {
   return dice.map((d) => ({ value: d.value, tone: dieTone(d.value, d.sides) }));
 }
 
@@ -431,8 +469,12 @@ function chips(dice: readonly { sides: number; value: number }[]): DieChipView[]
  * null when it has none (a miss, or an attack logged before they were recorded): the card then
  * shows "dice -> total".
  */
-export function attackDiceChips(r: Pick<RollResult, "damageRolls">): DieChipView[] | null {
-  return r.damageRolls && r.damageRolls.length > 0 ? chips(r.damageRolls) : null;
+export function attackDiceChips(
+  r: Pick<RollResult, "damageRolls">,
+): DieChipView[] | null {
+  return r.damageRolls && r.damageRolls.length > 0
+    ? chips(r.damageRolls)
+    : null;
 }
 
 /** One damage instance of a cast: its dice as chips and its total; `parts` when the damage has parts. */
@@ -463,14 +505,21 @@ export function castInstances(c: CastLogPayload): CastInstanceView[] | null {
     const view: CastInstanceView = { dice: chips(r.dice), total: r.total };
     if (r.step) view.step = r.step;
     if (r.parts && saves && r.parts.length === saves.length) {
-      view.parts = r.parts.map((p, i) => ({ dice: chips(p.dice), total: p.total, save: saves[i].save }));
+      view.parts = r.parts.map((p, i) => ({
+        dice: chips(p.dice),
+        total: p.total,
+        save: saves[i].save,
+      }));
     }
     return view;
   });
 }
 
 /** A die's emphasis: its maximum in the accent, a 1 dimmed. */
-export function dieTone(value: number, faces: number | null): "max" | "min" | "plain" {
+export function dieTone(
+  value: number,
+  faces: number | null,
+): "max" | "min" | "plain" {
   if (faces !== null && value === faces) return "max";
   if (value === 1) return "min";
   return "plain";

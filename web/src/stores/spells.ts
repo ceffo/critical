@@ -13,7 +13,11 @@ interface SpellStore {
   /** Cast from slot `index`; the result goes to the result card. */
   castSpell: (index: number, opts?: api.CastOptions) => Promise<void>;
   /** Apply a spell a party member cast on the Bard; the result goes to the result card. */
-  receiveSpell: (spellId: string, casterLevel: number, mode?: string) => Promise<void>;
+  receiveSpell: (
+    spellId: string,
+    casterLevel: number,
+    mode?: string,
+  ) => Promise<void>;
   resetSlots: () => Promise<void>;
   prepare: (spells: string[]) => Promise<void>;
 }

@@ -3,7 +3,13 @@ import { useTranslation } from "react-i18next";
 import { LockSimple, PencilSimple, Shield, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { formatTurnsLeft } from "@/lib/passTime";
-import { effectSpan, trackSize, windowStart, type ColumnRun, type TrackSize } from "@/lib/timeline";
+import {
+  effectSpan,
+  trackSize,
+  windowStart,
+  type ColumnRun,
+  type TrackSize,
+} from "@/lib/timeline";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
@@ -40,20 +46,35 @@ export function EffectsTimeline() {
   };
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2" role="group" aria-label={t("effects.title")}>
+    <div
+      className="flex min-w-0 flex-1 flex-col gap-2"
+      role="group"
+      aria-label={t("effects.title")}
+    >
       <div ref={trackRef} className="max-h-12 min-w-0 overflow-y-auto">
-        <div className="relative grid items-center" style={grid} data-testid="effects-track" data-columns={size}>
+        <div
+          className="relative grid items-center"
+          style={grid}
+          data-testid="effects-track"
+          data-columns={size}
+        >
           {/* The current turn, highlighted across every row. */}
           <div
             aria-hidden
             className="pointer-events-none self-stretch rounded-md bg-tint/10 ring-1 ring-tint/30 ring-inset"
             style={{ gridColumn: current + 2, gridRow: "1 / -1" }}
           />
-          <div className="sticky top-0 z-10 flex h-full items-center gap-2 bg-card" style={{ gridColumn: 1, gridRow: 1 }}>
+          <div
+            className="sticky top-0 z-10 flex h-full items-center gap-2 bg-card"
+            style={{ gridColumn: 1, gridRow: 1 }}
+          >
             <span className="text-title">{t("effects.title")}</span>
             {/* The track shows about one row; the count says how many there are. */}
             {buffs.length > 0 && (
-              <span className="text-label text-muted-foreground tabular-nums" data-testid="effects-count">
+              <span
+                className="text-label text-muted-foreground tabular-nums"
+                data-testid="effects-count"
+              >
                 {buffs.length}
               </span>
             )}
@@ -66,8 +87,12 @@ export function EffectsTimeline() {
                 "sticky top-0 z-10 flex h-full items-center justify-center text-label tabular-nums",
                 // Opaque, so effect rows scrolled under the sticky turn row stay hidden; the current
                 // column keeps its highlight tint.
-                i === current ? "bg-[color-mix(in_oklab,var(--tint)_10%,var(--card))]" : "bg-card",
-                i === current ? "font-semibold text-amb-300" : "text-muted-foreground",
+                i === current
+                  ? "bg-[color-mix(in_oklab,var(--tint)_10%,var(--card))]"
+                  : "bg-card",
+                i === current
+                  ? "font-semibold text-amb-300"
+                  : "text-muted-foreground",
                 i < current && "text-muted-foreground/40",
               )}
               style={{ gridColumn: i + 2, gridRow: 1 }}
@@ -90,13 +115,22 @@ export function EffectsTimeline() {
             />
           ))}
           {buffs.length === 0 && (
-            <span className="text-body text-muted-foreground italic" style={{ gridColumn: "1 / -1", gridRow: 2 }}>
+            <span
+              className="text-body text-muted-foreground italic"
+              style={{ gridColumn: "1 / -1", gridRow: 2 }}
+            >
               {t("effects.none")}
             </span>
           )}
         </div>
       </div>
-      {edited && <EditBuffForm key={edited.id} buff={edited} onDone={() => setEditing(null)} />}
+      {edited && (
+        <EditBuffForm
+          key={edited.id}
+          buff={edited}
+          onDone={() => setEditing(null)}
+        />
+      )}
     </div>
   );
 }
@@ -108,7 +142,9 @@ function useTrackSize(ref: React.RefObject<HTMLDivElement | null>): TrackSize {
     const el = ref.current;
     if (!el) return;
     const measure = () => {
-      const label = el.querySelector<HTMLElement>("[data-testid=effects-track] > :nth-child(2)");
+      const label = el.querySelector<HTMLElement>(
+        "[data-testid=effects-track] > :nth-child(2)",
+      );
       setSize(trackSize(el.clientWidth - (label?.offsetWidth ?? 0)));
     };
     measure();
@@ -143,16 +179,29 @@ function EffectRow({
   const { run, busy } = useTableStore();
   const inactive = b.applies === false;
   const lastTurn = b.duration === 1;
-  const span = effectSpan({ turn, start, size, duration: b.duration, startRound: b.startRound });
+  const span = effectSpan({
+    turn,
+    start,
+    size,
+    duration: b.duration,
+    startRound: b.startRound,
+  });
   const reason =
-    b.effects.min_str !== undefined ? t("buffs.inactive", { min: b.effects.min_str }) : t("buffs.replaced");
+    b.effects.min_str !== undefined
+      ? t("buffs.inactive", { min: b.effects.min_str })
+      : t("buffs.replaced");
   const reasonHint =
-    b.effects.min_str !== undefined ? t("buffs.inactiveHint", { min: b.effects.min_str }) : t("buffs.replacedHint");
+    b.effects.min_str !== undefined
+      ? t("buffs.inactiveHint", { min: b.effects.min_str })
+      : t("buffs.replacedHint");
   const effectsText =
-    !inactive && (b.effects.weapon_buff !== undefined || b.effects.multiplier !== undefined)
+    !inactive &&
+    (b.effects.weapon_buff !== undefined || b.effects.multiplier !== undefined)
       ? [
-          b.effects.weapon_buff !== undefined && t("buffs.effWeapon", { n: b.effects.weapon_buff }),
-          b.effects.multiplier !== undefined && t("buffs.effDice", { n: b.effects.multiplier }),
+          b.effects.weapon_buff !== undefined &&
+            t("buffs.effWeapon", { n: b.effects.weapon_buff }),
+          b.effects.multiplier !== undefined &&
+            t("buffs.effDice", { n: b.effects.multiplier }),
         ]
           .filter(Boolean)
           .join(" · ")
@@ -168,17 +217,29 @@ function EffectRow({
       data-applies={String(!inactive)}
       data-last-turn={String(lastTurn)}
     >
-      <div className="flex min-w-0 items-center gap-1 pr-2" style={{ gridColumn: 1, gridRow: row }}>
-        <span className="min-w-0 flex-1 truncate" title={[b.name, effectsText, b.note].filter(Boolean).join(" · ")}>
+      <div
+        className="flex min-w-0 items-center gap-1 pr-2"
+        style={{ gridColumn: 1, gridRow: row }}
+      >
+        <span
+          className="min-w-0 flex-1 truncate"
+          title={[b.name, effectsText, b.note].filter(Boolean).join(" · ")}
+        >
           <span
-            className={cn("text-body font-medium", lastTurn && "text-warning", inactive && "text-muted-foreground")}
+            className={cn(
+              "text-body font-medium",
+              lastTurn && "text-warning",
+              inactive && "text-muted-foreground",
+            )}
           >
             {b.name}
           </span>
           {(b.note || effectsText) && (
             <span className="text-label text-muted-foreground">
               {" · "}
-              {effectsText && <span data-testid="buff-effects">{effectsText}</span>}
+              {effectsText && (
+                <span data-testid="buff-effects">{effectsText}</span>
+              )}
               {effectsText && b.note && " · "}
               {b.note && (
                 <span className="italic" data-testid="buff-note">
@@ -221,7 +282,11 @@ function EffectRow({
         </Button>
       </div>
       {span.past && (
-        <div aria-hidden className="h-0.5 self-center rounded-full bg-neu-700" style={place(span.past, row)} />
+        <div
+          aria-hidden
+          className="h-0.5 self-center rounded-full bg-neu-700"
+          style={place(span.past, row)}
+        />
       )}
       {span.remaining && (
         <div
@@ -234,24 +299,38 @@ function EffectRow({
                 : b.duration > 0
                   ? "bg-amb-800 text-amb-200 ring-1 ring-amb-600 ring-inset"
                   : "text-amb-200",
-            span.overflows && "[mask-image:linear-gradient(to_right,black_75%,transparent)]",
+            span.overflows &&
+              "[mask-image:linear-gradient(to_right,black_75%,transparent)]",
           )}
           style={place(span.remaining, row)}
-          title={inactive ? reasonHint : lastTurn ? t("effects.lastTurn") : undefined}
+          title={
+            inactive ? reasonHint : lastTurn ? t("effects.lastTurn") : undefined
+          }
           data-testid="effect-bar"
         >
           {inactive && <LockSimple aria-hidden className="shrink-0" />}
-          {b.duration > 0 && <span data-testid="buff-rounds">{formatTurnsLeft(t, b.duration)}</span>}
-          {b.duration === 0 && b.charges > 0 && <Pips left={b.charges} total={b.chargesTotal} />}
+          {b.duration > 0 && (
+            <span data-testid="buff-rounds">
+              {formatTurnsLeft(t, b.duration)}
+            </span>
+          )}
+          {b.duration === 0 && b.charges > 0 && (
+            <Pips left={b.charges} total={b.chargesTotal} />
+          )}
           {b.charges > 0 && (
             <span data-testid="buff-charges">
               {b.chargesTotal >= b.charges
-                ? t("effects.chargesOf", { count: b.charges, total: b.chargesTotal })
+                ? t("effects.chargesOf", {
+                    count: b.charges,
+                    total: b.chargesTotal,
+                  })
                 : t("effects.charges", { count: b.charges })}
               {b.duration === 0 && ` · ${t("effects.untilSpent")}`}
             </span>
           )}
-          {b.duration === 0 && b.charges === 0 && !inactive && <span>{t("effects.untilDismissed")}</span>}
+          {b.duration === 0 && b.charges === 0 && !inactive && (
+            <span>{t("effects.untilDismissed")}</span>
+          )}
           {inactive && <span className="italic">{reason}</span>}
         </div>
       )}

@@ -28,7 +28,10 @@ export function Saves() {
   const last = lastSaves(useLogStore((s) => s.entries));
 
   return (
-    <section className="flex min-w-0 flex-col gap-1" aria-labelledby="moi-saves-title">
+    <section
+      className="flex min-w-0 flex-col gap-1"
+      aria-labelledby="moi-saves-title"
+    >
       <h2 id="moi-saves-title" className="text-title">
         {t("saves.title")}
       </h2>
@@ -50,7 +53,9 @@ export function Saves() {
               >
                 <span className="truncate">{name}</span>
                 <span className="text-muted-foreground tabular-nums">
-                  {character ? t("saves.target", { value: character[TARGET_FIELD[cat]] }) : ""}
+                  {character
+                    ? t("saves.target", { value: character[TARGET_FIELD[cat]] })
+                    : ""}
                 </span>
                 <span
                   className={cn(
@@ -61,7 +66,11 @@ export function Saves() {
                 >
                   {roll ? (
                     <>
-                      {roll.passed ? <Check aria-hidden weight="bold" /> : <X aria-hidden weight="bold" />}
+                      {roll.passed ? (
+                        <Check aria-hidden weight="bold" />
+                      ) : (
+                        <X aria-hidden weight="bold" />
+                      )}
                       {roll.d20}
                     </>
                   ) : (

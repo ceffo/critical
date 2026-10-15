@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Desktop, GearSix, Moon, Sun } from "@phosphor-icons/react";
-import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { LANGUAGES } from "@/lib/settings";
 import {
   AMBIANCES,
@@ -25,7 +30,11 @@ function Choice({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
       <span className="text-label text-muted-foreground">{label}</span>
-      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1">
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="flex flex-wrap gap-1"
+      >
         {children}
       </div>
     </div>
@@ -62,7 +71,9 @@ export function SettingsPopover() {
         aria-label={t("settings.title")}
         data-testid="settings-popover"
       >
-        <PopoverTitle className="text-title">{t("settings.title")}</PopoverTitle>
+        <PopoverTitle className="text-title">
+          {t("settings.title")}
+        </PopoverTitle>
 
         <Choice label={t("settings.language")}>
           {LANGUAGES.map((l) => (
@@ -73,7 +84,9 @@ export function SettingsPopover() {
               aria-checked={lang === l}
               className={cn(
                 segment,
-                lang === l ? "bg-amb-900 text-amb-200" : "bg-neu-900/60 hover:bg-neu-900",
+                lang === l
+                  ? "bg-amb-900 text-amb-200"
+                  : "bg-neu-900/60 hover:bg-neu-900",
               )}
               onClick={() => update({ lang: l })}
             >
@@ -91,7 +104,9 @@ export function SettingsPopover() {
               aria-checked={mode === m}
               className={cn(
                 segment,
-                mode === m ? "bg-amb-900 text-amb-200" : "bg-neu-900/60 hover:bg-neu-900",
+                mode === m
+                  ? "bg-amb-900 text-amb-200"
+                  : "bg-neu-900/60 hover:bg-neu-900",
               )}
               onClick={() => update({ mode: m })}
             >
@@ -111,7 +126,9 @@ export function SettingsPopover() {
                 aria-checked={amb === a.id}
                 className={cn(
                   "flex h-7 items-center gap-2 rounded-md px-2 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                  amb === a.id ? "bg-amb-900 text-amb-200" : "bg-neu-900/60 hover:bg-neu-900",
+                  amb === a.id
+                    ? "bg-amb-900 text-amb-200"
+                    : "bg-neu-900/60 hover:bg-neu-900",
                 )}
                 onClick={() => update({ amb: a.id })}
               >
@@ -120,7 +137,9 @@ export function SettingsPopover() {
                   className="size-4 shrink-0 rounded-full"
                   style={{ background: themeVars(a.id, light)["--tint"] }}
                 />
-                <span className="truncate">{t(`settings.ambiances.${a.id}`)}</span>
+                <span className="truncate">
+                  {t(`settings.ambiances.${a.id}`)}
+                </span>
               </button>
             ))}
           </div>

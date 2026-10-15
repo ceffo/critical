@@ -12,13 +12,16 @@ function card(page: Page) {
 
 async function rollSpellSave(page: Page) {
   const rolled = page.waitForResponse(
-    (r) => r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
+    (r) =>
+      r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
   );
   await page.getByRole("button", { name: "Roll save vs Spells" }).click();
   expect((await rolled).ok()).toBe(true);
 }
 
-test("a journal entry opens read-only in the card, Latest returns, Rolls filters", async ({ page }) => {
+test("a journal entry opens read-only in the card, Latest returns, Rolls filters", async ({
+  page,
+}) => {
   await openDashboard(page);
   await rollSpellSave(page);
   await recordHp(page, "damage", 3, "e2e fil orc");

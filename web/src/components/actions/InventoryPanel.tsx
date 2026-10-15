@@ -1,6 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { DiceFive, Minus, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import {
+  DiceFive,
+  Minus,
+  PencilSimple,
+  Plus,
+  Trash,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
@@ -77,7 +83,13 @@ export function InventoryPanel() {
         {items.length === 0 ? (
           <p className="text-body text-muted-foreground">{t("items.none")}</p>
         ) : (
-          <div className={cn(ITEM_COLS, "px-2 pb-1 text-label text-muted-foreground")} aria-hidden>
+          <div
+            className={cn(
+              ITEM_COLS,
+              "px-2 pb-1 text-label text-muted-foreground",
+            )}
+            aria-hidden
+          >
             <span>{t("items.columns.name")}</span>
             <span>{t("items.columns.effect")}</span>
             <span className="text-center">{t("items.columns.quantity")}</span>
@@ -141,7 +153,10 @@ function ItemRow({
   const { t } = useTranslation();
   return (
     <li
-      className={cn(ITEM_COLS, "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body")}
+      className={cn(
+        ITEM_COLS,
+        "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body",
+      )}
       data-testid={`item-${i.id}`}
     >
       <div className="flex min-w-0 flex-col">
@@ -165,7 +180,10 @@ function ItemRow({
               {" · "}
             </>
           )}
-          <span title={t(`items.behaviourHint.${i.behaviour}`)} data-testid="item-behaviour">
+          <span
+            title={t(`items.behaviourHint.${i.behaviour}`)}
+            data-testid="item-behaviour"
+          >
             {t(`items.behaviour.${i.behaviour}`)}
           </span>
         </span>

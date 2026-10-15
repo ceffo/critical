@@ -4,7 +4,11 @@ import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
-import type { ExposureResult, SpellDamage, SpellExposure } from "@/types/spells";
+import type {
+  ExposureResult,
+  SpellDamage,
+  SpellExposure,
+} from "@/types/spells";
 import { exposureDamageText } from "./spellDice";
 import { exposureRows, exposureText } from "./spellMode";
 import { entryText } from "./logSummary";
@@ -39,11 +43,22 @@ const damage = (dice: SpellDamage["dice"], type: string): SpellDamage => ({
   rounds: one,
   type,
 });
-const cloud: SpellExposure = { damage: damage({ groups: [{ count: 1, sides: 10 }], modifier: 0 }, "poison") };
+const cloud: SpellExposure = {
+  damage: damage({ groups: [{ count: 1, sides: 10 }], modifier: 0 }, "poison"),
+};
 const wall: SpellExposure = {
   modes: [
-    { key: "within_10_ft", damage: damage({ groups: [{ count: 2, sides: 4 }], modifier: 0 }, "fire") },
-    { key: "passing_through", damage: damage({ groups: [{ count: 2, sides: 6 }], modifier: 15 }, "fire") },
+    {
+      key: "within_10_ft",
+      damage: damage({ groups: [{ count: 2, sides: 4 }], modifier: 0 }, "fire"),
+    },
+    {
+      key: "passing_through",
+      damage: damage(
+        { groups: [{ count: 2, sides: 6 }], modifier: 15 },
+        "fire",
+      ),
+    },
   ],
 };
 const fog: SpellExposure = {
@@ -51,7 +66,10 @@ const fog: SpellExposure = {
     ...damage({ groups: [], modifier: 0 }, "acid"),
     rounds: { groups: [], modifier: 4 },
     steps_per: "round",
-    steps: [1, 2, 4, 8].map((n, i) => ({ step: i + 1, dice: { groups: [], modifier: n } })),
+    steps: [1, 2, 4, 8].map((n, i) => ({
+      step: i + 1,
+      dice: { groups: [], modifier: n },
+    })),
   },
 };
 
@@ -96,17 +114,25 @@ const payload = {
 describe("exposure dice text", () => {
   it("one damage, modes, and dice steps by round of exposure (en)", async () => {
     const t = await makeT("en");
-    expect(exposureText(t, "cloudkill", cloud)).toBe("1d10 poison per round of exposure");
+    expect(exposureText(t, "cloudkill", cloud)).toBe(
+      "1d10 poison per round of exposure",
+    );
     expect(exposureText(t, "wall_of_fire", wall)).toBe(
       "Within 10 ft: 2d4 fire · Passing through: 2d6+15 fire",
     );
-    expect(exposureText(t, "death_fog", fog)).toBe("1, 2, 4, 8 acid by round of exposure, then 8 each round");
-    expect(exposureDamageText(t, fog.damage!)).toBe(exposureText(t, "death_fog", fog));
+    expect(exposureText(t, "death_fog", fog)).toBe(
+      "1, 2, 4, 8 acid by round of exposure, then 8 each round",
+    );
+    expect(exposureDamageText(t, fog.damage!)).toBe(
+      exposureText(t, "death_fog", fog),
+    );
   });
 
   it("is worded in French", async () => {
     const t = await makeT("fr");
-    expect(exposureText(t, "cloudkill", cloud)).toBe("1d10 poison par round d'exposition");
+    expect(exposureText(t, "cloudkill", cloud)).toBe(
+      "1d10 poison par round d'exposition",
+    );
     expect(exposureText(t, "wall_of_fire", wall)).toBe(
       "À 10 pi ou moins : 2d4 feu · En la traversant : 2d6+15 feu",
     );
@@ -117,10 +143,11 @@ describe("exposure dice text", () => {
     expect(exposureRows(t, { id: "cloudkill", exposure: cloud })).toEqual([
       { key: "exposure", label: "Exposure", damage: cloud.damage },
     ]);
-    expect(exposureRows(t, { id: "wall_of_fire", exposure: wall }).map((r) => r.label)).toEqual([
-      "Exposure (Within 10 ft)",
-      "Exposure (Passing through)",
-    ]);
+    expect(
+      exposureRows(t, { id: "wall_of_fire", exposure: wall }).map(
+        (r) => r.label,
+      ),
+    ).toEqual(["Exposure (Within 10 ft)", "Exposure (Passing through)"]);
     expect(exposureRows(t, { id: "fireball" })).toEqual([]);
   });
 });
@@ -134,22 +161,39 @@ describe("exposure entries", () => {
 
   it("word the journal row: on me or for the DM, with the mode", async () => {
     const t = await makeT("en");
-    expect(entryText(entry(payload), t)).toBe("Cloudkill exposure, round 2: 7 poison damage to me");
+    expect(entryText(entry(payload), t)).toBe(
+      "Cloudkill exposure, round 2: 7 poison damage to me",
+    );
     expect(
       entryText(
-        entry({ ...payload, spellId: "wall_of_fire", spell: "Wall of Fire", mode: "within_10_ft", onSelf: false }),
+        entry({
+          ...payload,
+          spellId: "wall_of_fire",
+          spell: "Wall of Fire",
+          mode: "within_10_ft",
+          onSelf: false,
+        }),
         t,
       ),
     ).toBe("Wall of Fire exposure, round 2: 7 poison damage · Within 10 ft");
   });
 
   it("the row value: the HP the server applied on me, the total for the DM", () => {
-    expect(rowValue(entry(payload, { hpDelta: -7, effectiveHpDelta: -7 }))).toEqual({ text: "−7", tone: "damage" });
-    expect(rowValue(entry(payload, { hpDelta: -7, effectiveHpDelta: 0, status: "voided" }))).toEqual({
+    expect(
+      rowValue(entry(payload, { hpDelta: -7, effectiveHpDelta: -7 })),
+    ).toEqual({ text: "−7", tone: "damage" });
+    expect(
+      rowValue(
+        entry(payload, { hpDelta: -7, effectiveHpDelta: 0, status: "voided" }),
+      ),
+    ).toEqual({
       text: "−7",
       tone: "damage",
     });
-    expect(rowValue(entry({ ...payload, onSelf: false }))).toEqual({ text: "7", tone: "accent" });
+    expect(rowValue(entry({ ...payload, onSelf: false }))).toEqual({
+      text: "7",
+      tone: "accent",
+    });
   });
 
   it("the card renders from the payload as the endpoint's result, with the served exposure", async () => {
@@ -179,8 +223,12 @@ describe("exposure entries", () => {
         exposure: cloud,
       },
     });
-    expect(cardHeader("exposure", model, entry(payload), t, "en").tag).toBe("Exposure");
-    expect(cardHeader("exposure", model, entry(payload), t, "en").subtitle).toBe("Cloudkill");
+    expect(cardHeader("exposure", model, entry(payload), t, "en").tag).toBe(
+      "Exposure",
+    );
+    expect(
+      cardHeader("exposure", model, entry(payload), t, "en").subtitle,
+    ).toBe("Cloudkill");
   });
 
   it("a live exposure is the card until the log has caught up", () => {
@@ -192,11 +240,20 @@ describe("exposure entries", () => {
       round: 3,
       onSelf: false,
       hpDelta: 0,
-      damage: { dice: "1d10", type: "poison", instances: 1, rounds: 1, rolls: [], total: 4 },
+      damage: {
+        dice: "1d10",
+        type: "poison",
+        instances: 1,
+        rounds: 1,
+        rolls: [],
+        total: 4,
+      },
     };
     const last = { kind: "exposure" as const, result };
     expect(liveModel(last)).toEqual({ layout: "exposure", exposure: result });
-    expect(cardSource(last, [entry(payload)], null)).toMatchObject({ kind: "live" });
+    expect(cardSource(last, [entry(payload)], null)).toMatchObject({
+      kind: "live",
+    });
   });
 
   it("an exposure on me is the HP bar's last change; one for the DM is not", () => {
@@ -207,13 +264,20 @@ describe("exposure entries", () => {
       exposure: { spellId: "cloudkill", spell: "Cloudkill" },
     });
     expect(lastHpChange([entry({ ...payload, onSelf: false })])).toBeNull();
-    expect(lastHpChange([{ ...onMe, status: "voided", effectiveHpDelta: 0 }])).toBeNull();
+    expect(
+      lastHpChange([{ ...onMe, status: "voided", effectiveHpDelta: 0 }]),
+    ).toBeNull();
   });
 
   it("an exposure cut by the HP floor shows the HP applied, on the card and the journal row", async () => {
     const t = await makeT("en");
     const floored = entry(
-      { ...payload, damage: { ...payload.damage, total: 10 }, hpRequested: -10, hpApplied: -2 },
+      {
+        ...payload,
+        damage: { ...payload.damage, total: 10 },
+        hpRequested: -10,
+        hpApplied: -2,
+      },
       { hpDelta: -2, effectiveHpDelta: -2 },
     );
     const model = cardModel(floored, t);
@@ -246,7 +310,13 @@ describe("exposure entries", () => {
   it("a cast entry from the journal keeps the exposure it served, to roll from after a reload", async () => {
     const t = await makeT("en");
     const cast = {
-      ...entry({ action: "cast", spellId: "cloudkill", spell: "Cloudkill", casterLevel: 15, exposure: cloud }),
+      ...entry({
+        action: "cast",
+        spellId: "cloudkill",
+        spell: "Cloudkill",
+        casterLevel: 15,
+        exposure: cloud,
+      }),
       kind: "cast" as const,
     };
     const model = cardModel(cast, t);

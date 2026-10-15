@@ -22,14 +22,24 @@ interface Props {
  * Pick today's spells from the spellbook. The counts next to each level come
  * from the API's limits; whether a draft is allowed is decided by the server on save.
  */
-export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCancel }: Props) {
+export function PrepareEditor({
+  spellbook,
+  limits,
+  initial,
+  busy,
+  onSave,
+  onCancel,
+}: Props) {
   const { t } = useTranslation();
   // Ids no longer in the spellbook are shown as dropped and never sent (the API refuses them).
   const [{ kept, dropped }] = useState(() => splitPrepared(initial, spellbook));
   const [draft, setDraft] = useState<string[]>(kept);
   const [query, setQuery] = useState("");
 
-  const byId = useMemo(() => new Map(spellbook.map((s) => [s.id, s])), [spellbook]);
+  const byId = useMemo(
+    () => new Map(spellbook.map((s) => [s.id, s])),
+    [spellbook],
+  );
   const label = (s: SpellbookEntry) => spellName(t, s.id, s.name);
 
   const needle = query.trim().toLowerCase();
@@ -40,18 +50,29 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
       label(s).toLowerCase().includes(needle),
   );
 
-  const levels = [...new Set([...limits.map((l) => l.level), ...spellbook.map((s) => s.level)])].sort(
-    (a, b) => a - b,
-  );
-  const maxOf = (level: number) => limits.find((l) => l.level === level)?.max ?? 0;
+  const levels = [
+    ...new Set([
+      ...limits.map((l) => l.level),
+      ...spellbook.map((s) => s.level),
+    ]),
+  ].sort((a, b) => a - b);
+  const maxOf = (level: number) =>
+    limits.find((l) => l.level === level)?.max ?? 0;
   const draftEntries = draft.flatMap((id, index) => {
     const entry = byId.get(id);
     return entry ? [{ entry, index }] : [];
   });
 
   return (
-    <div className="grid grid-cols-2 gap-3" role="form" aria-label={t("spellSlots.prepareTitle")}>
-      <section className="flex min-w-0 flex-col gap-2 rounded-lg border p-2" aria-label={t("spellSlots.spellbook")}>
+    <div
+      className="grid grid-cols-2 gap-3"
+      role="form"
+      aria-label={t("spellSlots.prepareTitle")}
+    >
+      <section
+        className="flex min-w-0 flex-col gap-2 rounded-lg border p-2"
+        aria-label={t("spellSlots.spellbook")}
+      >
         <h3 className="text-title">{t("spellSlots.spellbook")}</h3>
         <Input
           value={query}
@@ -61,7 +82,10 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
         />
         <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto">
           {matches.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60">
+            <li
+              key={s.id}
+              className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
+            >
               <span className="min-w-0 truncate text-body">
                 <span className="mr-2 text-label text-muted-foreground">
                   {t("spellSlots.level", { level: s.level })}
@@ -79,22 +103,35 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
             </li>
           ))}
           {matches.length === 0 && (
-            <li className="px-2 py-1 text-body text-muted-foreground">{t("spellSlots.noMatch")}</li>
+            <li className="px-2 py-1 text-body text-muted-foreground">
+              {t("spellSlots.noMatch")}
+            </li>
           )}
         </ul>
       </section>
 
-      <section className="flex min-w-0 flex-col gap-2 rounded-lg border p-2" aria-label={t("spellSlots.draft")}>
+      <section
+        className="flex min-w-0 flex-col gap-2 rounded-lg border p-2"
+        aria-label={t("spellSlots.draft")}
+      >
         <h3 className="text-title">{t("spellSlots.draft")}</h3>
         {draftEntries.length === 0 && (
-          <p className="text-body text-muted-foreground">{t("spellSlots.draftEmpty")}</p>
+          <p className="text-body text-muted-foreground">
+            {t("spellSlots.draftEmpty")}
+          </p>
         )}
         {dropped.length > 0 && (
-          <div role="status" className="rounded border border-destructive/40 p-2 text-body" data-testid="stale-prepared">
+          <div
+            role="status"
+            className="rounded border border-destructive/40 p-2 text-body"
+            data-testid="stale-prepared"
+          >
             <p className="font-medium">{t("spellSlots.staleTitle")}</p>
             <ul className="list-disc pl-5 text-muted-foreground">
               {dropped.map((id) => (
-                <li key={id}>{id ? spellName(t, id, id) : t("spellSlots.staleUnknown")}</li>
+                <li key={id}>
+                  {id ? spellName(t, id, id) : t("spellSlots.staleUnknown")}
+                </li>
               ))}
             </ul>
           </div>
@@ -108,19 +145,35 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
                 <h4 className="text-label font-semibold text-muted-foreground">
                   {t("spellSlots.level", { level })}
                 </h4>
-                <Badge variant={items.length > maxOf(level) ? "destructive" : "secondary"}>
-                  {t("spellSlots.preparedCount", { count: items.length, max: maxOf(level) })}
+                <Badge
+                  variant={
+                    items.length > maxOf(level) ? "destructive" : "secondary"
+                  }
+                >
+                  {t("spellSlots.preparedCount", {
+                    count: items.length,
+                    max: maxOf(level),
+                  })}
                 </Badge>
               </div>
               <ul className="flex flex-col gap-1">
                 {items.map(({ entry, index }) => (
-                  <li key={index} className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-muted/60">
-                    <span className="min-w-0 truncate text-body">{label(entry)}</span>
+                  <li
+                    key={index}
+                    className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-muted/60"
+                  >
+                    <span className="min-w-0 truncate text-body">
+                      {label(entry)}
+                    </span>
                     <Button
                       size="xs"
                       variant="ghost"
-                      aria-label={t("spellSlots.remove", { name: label(entry) })}
-                      onClick={() => setDraft((d) => d.filter((_, i) => i !== index))}
+                      aria-label={t("spellSlots.remove", {
+                        name: label(entry),
+                      })}
+                      onClick={() =>
+                        setDraft((d) => d.filter((_, i) => i !== index))
+                      }
                     >
                       ×
                     </Button>
@@ -131,7 +184,12 @@ export function PrepareEditor({ spellbook, limits, initial, busy, onSave, onCanc
           );
         })}
         <div className="mt-auto flex justify-end gap-2 pt-2">
-          <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            disabled={busy}
+          >
             {t("spellSlots.cancel")}
           </Button>
           <Button size="sm" onClick={() => onSave(draft)} disabled={busy}>

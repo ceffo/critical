@@ -18,10 +18,16 @@ import { combatItems } from "@/lib/combatItems";
 const TABS = ["weapons", "spells", "items", "skills"] as const;
 type TabId = (typeof TABS)[number];
 
-export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void }) {
+export function ActionArea({
+  onOpenInventory,
+}: {
+  onOpenInventory: () => void;
+}) {
   const { t } = useTranslation();
   const [active, setActive] = useState<TabId>("weapons");
-  const spellsLeft = useSpellStore((s) => s.slots.filter((slot) => !slot.used).length);
+  const spellsLeft = useSpellStore(
+    (s) => s.slots.filter((slot) => !slot.used).length,
+  );
   const itemCount = useItemsStore((s) => combatItems(s.items).length);
   const fetchSlots = useSpellStore((s) => s.fetchSlots);
   const logEntries = useLogStore((s) => s.entries);
@@ -30,7 +36,10 @@ export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void })
   useEffect(() => {
     void fetchSlots().catch(() => undefined);
   }, [fetchSlots, logEntries]);
-  const counts: Partial<Record<TabId, number>> = { spells: spellsLeft, items: itemCount };
+  const counts: Partial<Record<TabId, number>> = {
+    spells: spellsLeft,
+    items: itemCount,
+  };
 
   return (
     <section
@@ -42,7 +51,9 @@ export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void })
         aria-label={t("actions.label")}
         className="flex shrink-0 items-center gap-1 bg-neu-900/50 px-3 pt-2"
       >
-        <span className="mr-3 text-body font-semibold">{t("shell.workspace.act")}</span>
+        <span className="mr-3 text-body font-semibold">
+          {t("shell.workspace.act")}
+        </span>
         {TABS.map((id) => (
           <button
             key={id}

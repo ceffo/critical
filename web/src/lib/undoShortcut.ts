@@ -44,7 +44,9 @@ const NON_TEXT_INPUTS = new Set([
 
 /** True while the focus is in a text-entry field (text-like input, textarea, select,
  * contenteditable): Ctrl/Cmd+Z there is the field's own text undo. */
-export function isTypingTarget(target: FocusTarget | null | undefined): boolean {
+export function isTypingTarget(
+  target: FocusTarget | null | undefined,
+): boolean {
   if (!target) return false;
   if (target.isContentEditable === true) return true;
   switch ((target.tagName ?? "").toUpperCase()) {
@@ -64,6 +66,8 @@ export const OPEN_OVERLAY_SELECTOR =
   '[role="dialog"]:not([data-closed]), [role="alertdialog"], [role="menu"], dialog[open]';
 
 /** True while a popover, dialog or menu is open: the shortcut must not pop the entry behind it. */
-export function hasOpenOverlay(root: { querySelector: (selector: string) => unknown }): boolean {
+export function hasOpenOverlay(root: {
+  querySelector: (selector: string) => unknown;
+}): boolean {
   return root.querySelector(OPEN_OVERLAY_SELECTOR) != null;
 }

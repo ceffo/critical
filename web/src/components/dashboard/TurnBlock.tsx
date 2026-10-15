@@ -2,9 +2,17 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ArrowsClockwise, DotsThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { previewPassTime } from "@/api/round";
-import { hoursToAsk, previewFor, type KeyedAnswer } from "@/lib/passTimePreview";
+import {
+  hoursToAsk,
+  previewFor,
+  type KeyedAnswer,
+} from "@/lib/passTimePreview";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
 import { fieldClass } from "./fieldStyles";
@@ -25,18 +33,33 @@ export function TurnBlock() {
   const [mode, setMode] = useState<Mode>("menu");
 
   return (
-    <div className="flex shrink-0 items-center gap-3 pr-3" role="group" aria-label={t("turn.title")}>
+    <div
+      className="flex shrink-0 items-center gap-3 pr-3"
+      role="group"
+      aria-label={t("turn.title")}
+    >
       <div className="flex items-baseline gap-2">
-        <span className="text-body text-muted-foreground">{t("turn.title")}</span>
-        <span className="min-w-[2ch] text-headline tabular-nums" data-testid="round-value">
+        <span className="text-body text-muted-foreground">
+          {t("turn.title")}
+        </span>
+        <span
+          className="min-w-[2ch] text-headline tabular-nums"
+          data-testid="round-value"
+        >
           {turn}
         </span>
       </div>
-      <div className="line-clamp-2 w-44 text-body text-muted-foreground" data-testid="initiative-row">
+      <div
+        className="line-clamp-2 w-44 text-body text-muted-foreground"
+        data-testid="initiative-row"
+      >
         {turn === 0 ? (
           t("turn.outOfCombatInitiative")
         ) : (
-          <span className="flex items-center gap-2" title={t("turn.initiativeHint")}>
+          <span
+            className="flex items-center gap-2"
+            title={t("turn.initiativeHint")}
+          >
             {t("turn.initiative")}
             {initiative ? (
               <>
@@ -60,7 +83,9 @@ export function TurnBlock() {
                 </button>
               </>
             ) : (
-              <span className="rounded-md bg-neu-900 px-2">{t("turn.initiativeNone")}</span>
+              <span className="rounded-md bg-neu-900 px-2">
+                {t("turn.initiativeNone")}
+              </span>
             )}
           </span>
         )}
@@ -86,9 +111,15 @@ export function TurnBlock() {
           </PopoverTrigger>
           <PopoverContent side="bottom" align="start" className="w-80 p-2">
             {mode === "menu" && <TurnMenu onPick={setMode} />}
-            {mode === "passing" && <PassTimeForm onDone={() => setOpen(false)} />}
-            {mode === "setting" && <SetTurnForm onDone={() => setOpen(false)} />}
-            {mode === "confirmEnd" && <EndCombatConfirm onDone={() => setOpen(false)} />}
+            {mode === "passing" && (
+              <PassTimeForm onDone={() => setOpen(false)} />
+            )}
+            {mode === "setting" && (
+              <SetTurnForm onDone={() => setOpen(false)} />
+            )}
+            {mode === "confirmEnd" && (
+              <EndCombatConfirm onDone={() => setOpen(false)} />
+            )}
           </PopoverContent>
         </Popover>
       </div>
@@ -103,13 +134,28 @@ function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
   const { t } = useTranslation();
   return (
     <div role="menu" aria-label={t("turn.menu")} className="flex flex-col">
-      <button type="button" role="menuitem" className={menuItem} onClick={() => onPick("passing")}>
+      <button
+        type="button"
+        role="menuitem"
+        className={menuItem}
+        onClick={() => onPick("passing")}
+      >
         {t("turn.passTime")}
       </button>
-      <button type="button" role="menuitem" className={menuItem} onClick={() => onPick("setting")}>
+      <button
+        type="button"
+        role="menuitem"
+        className={menuItem}
+        onClick={() => onPick("setting")}
+      >
         {t("turn.setTurn")}
       </button>
-      <button type="button" role="menuitem" className={menuItem} onClick={() => onPick("confirmEnd")}>
+      <button
+        type="button"
+        role="menuitem"
+        className={menuItem}
+        onClick={() => onPick("confirmEnd")}
+      >
         {t("turn.endCombat")}
       </button>
     </div>
@@ -137,7 +183,13 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
         .then((p) => setAnswer({ hours: value, answer: { kind: "ok", ...p } }))
         .catch((e: unknown) => {
           if (!ctl.signal.aborted)
-            setAnswer({ hours: value, answer: { kind: "error", message: e instanceof Error ? e.message : String(e) } });
+            setAnswer({
+              hours: value,
+              answer: {
+                kind: "error",
+                message: e instanceof Error ? e.message : String(e),
+              },
+            });
         });
     }, 150);
     return () => {
@@ -170,7 +222,10 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
           autoFocus
         />
         <span>{t("turn.passTimeHours")}</span>
-        <span className="tabular-nums text-muted-foreground" data-testid="pass-time-preview">
+        <span
+          className="tabular-nums text-muted-foreground"
+          data-testid="pass-time-preview"
+        >
           {preview.kind === "ok"
             ? t("turn.passTimePreview", { count: preview.rounds })
             : preview.kind === "invalid"
@@ -183,16 +238,24 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
       {preview.kind === "ok" && (
         <p className="text-body" data-testid="pass-time-ending">
           {preview.expiring.length > 0
-            ? t("turn.passTimeEnding", { names: preview.expiring.map((b) => b.name).join(", ") })
+            ? t("turn.passTimeEnding", {
+                names: preview.expiring.map((b) => b.name).join(", "),
+              })
             : t("turn.passTimeNothingEnds")}
         </p>
       )}
-      <p className="text-label text-muted-foreground">{t("turn.passTimeHint")}</p>
+      <p className="text-label text-muted-foreground">
+        {t("turn.passTimeHint")}
+      </p>
       <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" type="button" onClick={onDone}>
           {t("turn.cancel")}
         </Button>
-        <Button size="sm" type="submit" disabled={busy || preview.kind !== "ok"}>
+        <Button
+          size="sm"
+          type="submit"
+          disabled={busy || preview.kind !== "ok"}
+        >
           {t("turn.confirm")}
         </Button>
       </div>
@@ -244,7 +307,11 @@ function EndCombatConfirm({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
   const { endCombat, busy } = useTableStore();
   return (
-    <div className="flex flex-col gap-2 p-1" role="alertdialog" aria-label={t("turn.endCombat")}>
+    <div
+      className="flex flex-col gap-2 p-1"
+      role="alertdialog"
+      aria-label={t("turn.endCombat")}
+    >
       <p className="text-body">{t("turn.endCombatConfirm")}</p>
       <div className="flex justify-end gap-1">
         <Button size="sm" variant="ghost" onClick={onDone}>

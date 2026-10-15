@@ -31,7 +31,11 @@ async function errorBody(
 ): Promise<{ message: string; field?: string; code?: string }> {
   const text = await res.text();
   try {
-    const body = JSON.parse(text) as { error?: unknown; field?: unknown; code?: unknown };
+    const body = JSON.parse(text) as {
+      error?: unknown;
+      field?: unknown;
+      code?: unknown;
+    };
     if (typeof body.error === "string" && body.error) {
       const code = typeof body.code === "string" ? body.code : undefined;
       return {

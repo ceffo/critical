@@ -21,7 +21,11 @@ describe("nameMatches", () => {
 
   it("matches nothing for blank text or an unknown name", () => {
     expect(nameMatches("  ")).toEqual({ exact: [], prefix: [], contains: [] });
-    expect(nameMatches("zzzz")).toEqual({ exact: [], prefix: [], contains: [] });
+    expect(nameMatches("zzzz")).toEqual({
+      exact: [],
+      prefix: [],
+      contains: [],
+    });
   });
 });
 

@@ -36,7 +36,11 @@ export interface CastLogPayload {
       formula: string;
       dice: { sides: number; value: number }[];
       total: number;
-      parts?: { formula: string; dice: { sides: number; value: number }[]; total: number }[];
+      parts?: {
+        formula: string;
+        dice: { sides: number; value: number }[];
+        total: number;
+      }[];
       /** The round or instance of a damage made of dice steps; absent without steps and on older casts. */
       step?: number;
     }[];
@@ -80,7 +84,10 @@ export interface ExposureLogPayload {
 export function exposurePayload(e: LogEntry): ExposureLogPayload | null {
   if (e.kind !== "exposure") return null;
   const p = e.payload as Partial<ExposureLogPayload> | null;
-  return p && typeof p.spellId === "string" && typeof p.round === "number" && p.damage
+  return p &&
+    typeof p.spellId === "string" &&
+    typeof p.round === "number" &&
+    p.damage
     ? (p as ExposureLogPayload)
     : null;
 }
@@ -92,12 +99,18 @@ function exposureText(p: ExposureLogPayload, t: TFunction): string {
     spell,
     round: p.round,
     total: p.damage.total,
-    type: p.damage.type ? t(`spellDice.types.${p.damage.type}`, { defaultValue: p.damage.type }) : "",
+    type: p.damage.type
+      ? t(`spellDice.types.${p.damage.type}`, { defaultValue: p.damage.type })
+      : "",
   });
   const parts = [text];
   if (p.mode) parts.push(modeName(t, p.spellId, p.mode));
   // Cut by the HP floor (ADR 0011): the server merged what was asked and applied into the payload.
-  if (typeof p.hpRequested === "number" && typeof p.hpApplied === "number" && p.hpRequested !== p.hpApplied)
+  if (
+    typeof p.hpRequested === "number" &&
+    typeof p.hpApplied === "number" &&
+    p.hpRequested !== p.hpApplied
+  )
     parts.push(t("log.floored", { requested: formatSigned(p.hpRequested) }));
   return parts.join(" · ");
 }
@@ -164,14 +177,17 @@ function restText(e: LogEntry, t: TFunction): string | null {
 function initiativeText(e: LogEntry, t: TFunction): string | null {
   if (e.kind !== "initiative") return null;
   const p = e.payload as { round?: number; d10?: number } | null;
-  if (!p || typeof p.d10 !== "number" || typeof p.round !== "number") return null;
+  if (!p || typeof p.d10 !== "number" || typeof p.round !== "number")
+    return null;
   return t("log.initiative", { value: p.d10, round: p.round });
 }
 
 /** Payload of spell_prep entries (prepsvc prepRecord): each spell once, with its copies. */
 function prepText(e: LogEntry, t: TFunction): string | null {
   if (e.kind !== "spell_prep") return null;
-  const p = e.payload as { spells?: { id: string; name: string; count: number }[] } | null;
+  const p = e.payload as {
+    spells?: { id: string; name: string; count: number }[];
+  } | null;
   if (!p || !Array.isArray(p.spells)) return null;
   if (p.spells.length === 0) return t("log.prepNone");
   const spells = p.spells
@@ -395,7 +411,8 @@ function attackText(p: RollResult, t: TFunction): string {
   // verdict (no crit).
   if (p.targetAc === null) {
     const hits = p.hitsAc ?? p.targetACNeeded;
-    if (p.verdict === undefined) return t("log.attack.unknown", { weapon, hits });
+    if (p.verdict === undefined)
+      return t("log.attack.unknown", { weapon, hits });
     return p.verdict === "hit"
       ? t("log.attack.verdictHit", { weapon, damage: p.totalDamage })
       : t("log.attack.verdictMiss", { weapon });
@@ -474,21 +491,31 @@ export function correctionPayload(e: LogEntry): CorrectionLogPayload | null {
     : null;
 }
 
-function correctionValue(field: string, v: number | string | null, t: TFunction): string {
+function correctionValue(
+  field: string,
+  v: number | string | null,
+  t: TFunction,
+): string {
   switch (field) {
     case "targetAc":
       return typeof v === "number" ? String(v) : t("log.correction.unknown");
     case "saveAdjustment":
       return typeof v === "number" ? formatSigned(v) : t("log.correction.none");
     case "verdict":
-      return v === "hit" || v === "miss" ? t(`result.${v}`) : t("log.correction.none");
+      return v === "hit" || v === "miss"
+        ? t(`result.${v}`)
+        : t("log.correction.none");
     default:
       return v === null ? t("log.correction.none") : String(v);
   }
 }
 
 function correctionText(p: CorrectionLogPayload, t: TFunction): string {
-  if (p.field !== "targetAc" && p.field !== "saveAdjustment" && p.field !== "verdict")
+  if (
+    p.field !== "targetAc" &&
+    p.field !== "saveAdjustment" &&
+    p.field !== "verdict"
+  )
     return t("log.correction.other", { id: p.entryId });
   return t(`log.correction.${p.field}`, {
     from: correctionValue(p.field, p.from, t),
@@ -502,9 +529,16 @@ export function skillName(t: TFunction, id: string): string {
 }
 
 /** "DEX 17 −1" (the modifier left out when 0). */
-export function abilityText(t: TFunction, ability: string, score: number, modifier: number): string {
+export function abilityText(
+  t: TFunction,
+  ability: string,
+  score: number,
+  modifier: number,
+): string {
   const name = t(`attr.${ability}`, { defaultValue: ability });
-  return modifier === 0 ? `${name} ${score}` : `${name} ${score} ${formatSigned(modifier)}`;
+  return modifier === 0
+    ? `${name} ${score}`
+    : `${name} ${score} ${formatSigned(modifier)}`;
 }
 
 function skillText(c: SkillCheck, t: TFunction): string {

@@ -69,7 +69,13 @@ export function WeaponsSection() {
       {weapons.length === 0 ? (
         <p className="text-body text-muted-foreground">{t("weapons.none")}</p>
       ) : (
-        <div className={cn(WEAPON_COLS, "px-2 pb-1 text-label text-muted-foreground")} aria-hidden>
+        <div
+          className={cn(
+            WEAPON_COLS,
+            "px-2 pb-1 text-label text-muted-foreground",
+          )}
+          aria-hidden
+        >
           <span>{t("weapons.columns.name")}</span>
           <span>{t("weapons.columns.damage")}</span>
           <span>{t("weapons.columns.bonus")}</span>
@@ -122,7 +128,10 @@ function WeaponRow({
   const { t } = useTranslation();
   return (
     <li
-      className={cn(WEAPON_COLS, "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body")}
+      className={cn(
+        WEAPON_COLS,
+        "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body",
+      )}
       data-testid={`weapon-${w.id}`}
     >
       <div className="flex min-w-0 flex-col">
@@ -133,7 +142,10 @@ function WeaponRow({
           {w.ammo_kind ? ` · ${w.ammo_kind}` : ""}
         </span>
       </div>
-      <span className="min-w-0 truncate tabular-nums" data-testid="weapon-detail">
+      <span
+        className="min-w-0 truncate tabular-nums"
+        data-testid="weapon-detail"
+      >
         {t("weapons.detail", { sm: w.damage_sm, l: w.damage_l })}
       </span>
       <span className="tabular-nums">

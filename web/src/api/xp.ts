@@ -5,7 +5,10 @@ export function fetchXp(): Promise<XpLedger> {
   return request<XpLedger>("/api/xp");
 }
 
-export function fetchXpPreview(base: number, bonus: boolean): Promise<XpAmount> {
+export function fetchXpPreview(
+  base: number,
+  bonus: boolean,
+): Promise<XpAmount> {
   return request<XpAmount>(`/api/xp/preview?base=${base}&bonus=${bonus}`);
 }
 

@@ -3,7 +3,9 @@ import { cn } from "./utils";
 
 describe("cn with the type scale tokens", () => {
   it("keeps a role size next to a text colour", () => {
-    expect(cn("text-body", "text-muted-foreground")).toBe("text-body text-muted-foreground");
+    expect(cn("text-body", "text-muted-foreground")).toBe(
+      "text-body text-muted-foreground",
+    );
     expect(cn("text-headline text-danger")).toBe("text-headline text-danger");
   });
 

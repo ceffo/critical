@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { fetchAttackForm, patchAttackForm } from "@/api/combat";
-import type { AttackFormPatch, AttackFormView, AttackRequest } from "@/types/combat";
+import type {
+  AttackFormPatch,
+  AttackFormView,
+  AttackRequest,
+} from "@/types/combat";
 import { useRollStore } from "./roll";
 import { useTableStore } from "./table";
 
@@ -38,7 +42,8 @@ export const useAttackStore = create<AttackStore>((set, get) => {
       } catch (e) {
         useTableStore.setState({ error: message(e) });
         // Show what the server kept.
-        if (seq === issued) set({ view: await fetchAttackForm().catch(() => get().view) });
+        if (seq === issued)
+          set({ view: await fetchAttackForm().catch(() => get().view) });
       }
     });
     queue = next;
@@ -77,7 +82,10 @@ export const useAttackStore = create<AttackStore>((set, get) => {
         if (!view?.preview) return false;
       }
       const { form } = view;
-      const req: AttackRequest = { weapon_id: form.weaponId, target_size: form.targetSize };
+      const req: AttackRequest = {
+        weapon_id: form.weaponId,
+        target_size: form.targetSize,
+      };
       // No AC: the attack is against an unknown AC (docs/adr/0012).
       if (form.targetAc !== null) req.target_ac = form.targetAc;
       if (form.ammoItemId) req.ammo_item_id = form.ammoItemId;

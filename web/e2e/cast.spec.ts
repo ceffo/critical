@@ -98,9 +98,16 @@ test("a low-confidence spell shows its text only; Cloudkill rolls an exposure on
   page,
   stack,
 }) => {
-  await prepare(stack.apiUrl, ["tashas_uncontrollable_hideous_laughter", "cloudkill"]);
+  await prepare(stack.apiUrl, [
+    "tashas_uncontrollable_hideous_laughter",
+    "cloudkill",
+  ]);
   await openSpells(page);
-  await page.getByRole("button", { name: "Cast Tasha's Uncontrollable Hideous Laughter" }).click();
+  await page
+    .getByRole("button", {
+      name: "Cast Tasha's Uncontrollable Hideous Laughter",
+    })
+    .click();
   await expect(resultCard(page).getByTestId("cast-text-only")).toContainText(
     "add a buff by hand",
   );
@@ -109,25 +116,37 @@ test("a low-confidence spell shows its text only; Cloudkill rolls an exposure on
 
   // ADR 0008 step 16: the spellbook and the cast card serve the exposure dice; one exposure on me
   // is one journal entry and comes off the HP.
-  await expect(page.getByTestId("slot-exposure")).toHaveText("1d10 poison per round of exposure");
+  await expect(page.getByTestId("slot-exposure")).toHaveText(
+    "1d10 poison per round of exposure",
+  );
   const hpBefore = await currentHp(page);
   await page.getByRole("button", { name: "Cast Cloudkill" }).click();
   const card = resultCard(page);
   const block = card.getByTestId("cast-exposure");
-  await expect(block.getByTestId("exposure-dice")).toHaveText("1d10 poison per round of exposure");
+  await expect(block.getByTestId("exposure-dice")).toHaveText(
+    "1d10 poison per round of exposure",
+  );
   await expect(card.getByTestId("cast-text-only")).toHaveCount(0);
   await block.getByLabel("I am exposed").check();
   await snap(page, "cloudkill-exposure-controls");
   await block.getByRole("button", { name: "Roll exposure" }).click();
 
   const result = card.getByTestId("exposure-result");
-  await expect(result).toContainText("Cloudkill exposure, round 1 (caster level 15)");
-  await expect(result.getByTestId("exposure-target")).toHaveText(/^Taken off your HP: −\d+$/);
-  const total = Number(await result.getByTestId("exposure-total").textContent());
+  await expect(result).toContainText(
+    "Cloudkill exposure, round 1 (caster level 15)",
+  );
+  await expect(result.getByTestId("exposure-target")).toHaveText(
+    /^Taken off your HP: −\d+$/,
+  );
+  const total = Number(
+    await result.getByTestId("exposure-total").textContent(),
+  );
   expect(total).toBeGreaterThanOrEqual(1);
   expect(total).toBeLessThanOrEqual(10);
   await expect.poll(() => currentHp(page)).toBe(hpBefore - total);
-  await expect(logEntry(page, `Cloudkill exposure, round 1: ${total} poison damage to me`)).toBeVisible();
+  await expect(
+    logEntry(page, `Cloudkill exposure, round 1: ${total} poison damage to me`),
+  ).toBeVisible();
   // The next round rolls from the exposure card.
   await expect(result.getByLabel("Round of exposure")).toHaveValue("2");
   await snap(page, "cloudkill-exposure");
@@ -197,7 +216,9 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   // Chain Lightning from a level 15 caster: twelve strikes, 12d6 down to 1d6, at 1280 wide.
   await page.setViewportSize({ width: 1280, height: 900 });
   await receive("Chain Lightning", "15");
-  const strikes = card.getByTestId("cast-damage").getByTestId("cast-damage-roll");
+  const strikes = card
+    .getByTestId("cast-damage")
+    .getByTestId("cast-damage-roll");
   await expect(strikes).toHaveCount(12);
   await expect(strikes.nth(0)).toContainText("#112d6");
   await expect(strikes.nth(11)).toContainText("#121d6");
@@ -207,7 +228,12 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   // The journal card of the earlier Incendiary Cloud shows the same turns.
   await logEntry(page, "Incendiary Cloud").getByTestId("log-select").click();
   const entry = card.getByTestId("cast-entry");
-  await expect(entry.getByTestId("cast-entry-instances").getByRole("listitem").filter({ hasText: /^Turn/ })).toHaveCount(5);
+  await expect(
+    entry
+      .getByTestId("cast-entry-instances")
+      .getByRole("listitem")
+      .filter({ hasText: /^Turn/ }),
+  ).toHaveCount(5);
   await expect(entry).toContainText("Turn 1no damage");
   await expect(entry).toContainText("Turn 5");
   await snap(page, "incendiary-cloud-journal");
@@ -220,12 +246,21 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   await snap(page, "wall-of-fire-exposure-option");
   await block.getByRole("button", { name: "Roll exposure" }).click();
   const fire = card.getByTestId("exposure-result");
-  await expect(fire.getByTestId("exposure-mode")).toHaveText("Option: Passing through");
+  await expect(fire.getByTestId("exposure-mode")).toHaveText(
+    "Option: Passing through",
+  );
   await expect(fire.getByTestId("exposure-roll")).toContainText("2d6+11");
-  await expect(fire.getByTestId("exposure-target")).toHaveText("For the DM: your HP is unchanged");
-  const fireTotal = Number(await fire.getByTestId("exposure-total").textContent());
+  await expect(fire.getByTestId("exposure-target")).toHaveText(
+    "For the DM: your HP is unchanged",
+  );
+  const fireTotal = Number(
+    await fire.getByTestId("exposure-total").textContent(),
+  );
   await expect(
-    logEntry(page, `Wall of Fire exposure, round 1: ${fireTotal} fire damage · Passing through`),
+    logEntry(
+      page,
+      `Wall of Fire exposure, round 1: ${fireTotal} fire damage · Passing through`,
+    ),
   ).toBeVisible();
   await snap(page, "wall-of-fire-exposure");
 });

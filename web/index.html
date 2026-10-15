@@ -8,15 +8,27 @@
       // Paint in the saved appearance before the app starts (keep in sync with src/lib/settings.ts
       // and src/lib/theme.ts): critical.settings.v1, else the older critical.theme key.
       (function () {
-        var mode = null, lang = null;
+        var mode = null,
+          lang = null;
         try {
-          var s = JSON.parse(localStorage.getItem("critical.settings.v1") || "null");
-          if (s && typeof s === "object") { mode = s.mode; lang = s.lang; }
-          else { mode = localStorage.getItem("critical.theme"); lang = localStorage.getItem("critical.language"); }
+          var s = JSON.parse(
+            localStorage.getItem("critical.settings.v1") || "null",
+          );
+          if (s && typeof s === "object") {
+            mode = s.mode;
+            lang = s.lang;
+          } else {
+            mode = localStorage.getItem("critical.theme");
+            lang = localStorage.getItem("critical.language");
+          }
         } catch (e) {}
-        var light = mode === "light" || (mode !== "dark" && !matchMedia("(prefers-color-scheme: dark)").matches);
+        var light =
+          mode === "light" ||
+          (mode !== "dark" &&
+            !matchMedia("(prefers-color-scheme: dark)").matches);
         if (!light) document.documentElement.classList.add("dark");
-        if (lang === "fr" || lang === "en") document.documentElement.lang = lang;
+        if (lang === "fr" || lang === "en")
+          document.documentElement.lang = lang;
       })();
     </script>
     <title>Critical</title>

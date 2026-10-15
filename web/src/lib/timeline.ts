@@ -56,7 +56,10 @@ export function effectSpan(opts: {
   const last = size - 1;
   const current = turn - start;
   const pastFrom = Math.max(startRound - start, 0);
-  const past = startRound < turn && current - 1 >= pastFrom ? { from: pastFrom, to: Math.min(current - 1, last) } : null;
+  const past =
+    startRound < turn && current - 1 >= pastFrom
+      ? { from: pastFrom, to: Math.min(current - 1, last) }
+      : null;
   if (current > last) return { past, remaining: null, overflows: true };
   const end = duration > 0 ? current + duration - 1 : Number.POSITIVE_INFINITY;
   return {

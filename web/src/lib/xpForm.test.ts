@@ -9,6 +9,7 @@ describe("parseXpAmount", () => {
     expect(parseXpAmount("0")).toBe(0);
   });
   it("rejects anything else", () => {
-    for (const s of ["", "  ", "-5", "1.5", "1,5", "12a", "1e3"]) expect(parseXpAmount(s)).toBeNull();
+    for (const s of ["", "  ", "-5", "1.5", "1,5", "12a", "1e3"])
+      expect(parseXpAmount(s)).toBeNull();
   });
 });

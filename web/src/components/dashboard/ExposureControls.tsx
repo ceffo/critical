@@ -35,7 +35,10 @@ export function ExposureControls({
   const roundNumber = Number.parseInt(round, 10);
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-3" data-testid="cast-exposure">
+    <div
+      className="flex flex-col gap-2 rounded-lg border p-3"
+      data-testid="cast-exposure"
+    >
       <div className={labelClass}>{t("exposure.title")}</div>
       <p className="text-body" data-testid="exposure-dice">
         {exposureText(t, spellId, exposure)}
@@ -68,7 +71,11 @@ export function ExposureControls({
           />
         </label>
         <label className="flex h-7 items-center gap-2 text-body">
-          <input type="checkbox" checked={onSelf} onChange={(e) => setOnSelf(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={onSelf}
+            onChange={(e) => setOnSelf(e.target.checked)}
+          />
           {t("exposure.onMe")}
         </label>
         <Button

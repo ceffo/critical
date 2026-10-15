@@ -38,14 +38,18 @@ const NEUTRAL_L = [0.97, 0.93, 0.87, 0.77, 0.66, 0.56, 0.46, 0.37, 0.28];
 const NEAR_NEUTRAL_CHROMA = 0.02;
 
 const n3 = (x: number) => Number(x.toFixed(3)).toString();
-const oklch = (l: number, c: number, h: number) => `oklch(${n3(l)} ${n3(c)} ${h})`;
+const oklch = (l: number, c: number, h: number) =>
+  `oklch(${n3(l)} ${n3(c)} ${h})`;
 
 /**
  * The custom properties for an ambiance in dark or light mode. Light mode reverses both ramps
  * (step 100 becomes the darkest), so a class like `bg-amb-900` stays a quiet tint and
  * `text-amb-300` stays a readable highlight in either mode.
  */
-export function themeVars(ambiance: AmbianceId, light: boolean): Record<string, string> {
+export function themeVars(
+  ambiance: AmbianceId,
+  light: boolean,
+): Record<string, string> {
   const a = AMBIANCES.find((x) => x.id === ambiance) ?? AMBIANCES[0];
   const { h, c } = a;
   const nearNeutral = c < NEAR_NEUTRAL_CHROMA;
@@ -62,7 +66,8 @@ export function themeVars(ambiance: AmbianceId, light: boolean): Record<string, 
     v["--amb-300"] = oklch(0.92, 0.01, h);
   }
 
-  if (nearNeutral) v["--tint"] = light ? oklch(0.3, 0.02, h) : oklch(0.86, 0.02, h);
+  if (nearNeutral)
+    v["--tint"] = light ? oklch(0.3, 0.02, h) : oklch(0.86, 0.02, h);
   else v["--tint"] = light ? oklch(0.52, c, h) : oklch(0.68, c, h);
 
   if (light) {

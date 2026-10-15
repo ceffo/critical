@@ -124,6 +124,7 @@ build-web:
 # Lint the frontend
 lint-web:
     cd web && npm run lint
+    cd web && npx prettier --check .
 
 # Run frontend unit tests (vitest)
 test-web:

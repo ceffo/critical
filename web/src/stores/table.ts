@@ -158,7 +158,8 @@ export const useTableStore = create<TableStore>((set, get) => ({
       const res = await useBuffsStore.getState().advanceRound();
       set({ notice: expiredNotice(res.expiredBuffs) });
     }),
-  rerollInitiative: () => get().run(() => useBuffsStore.getState().rerollInitiative()),
+  rerollInitiative: () =>
+    get().run(() => useBuffsStore.getState().rerollInitiative()),
   passTime: (hours) =>
     get().run(async () => {
       const res = await useBuffsStore.getState().passTime(hours);

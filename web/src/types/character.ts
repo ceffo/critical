@@ -37,5 +37,13 @@ export interface Character {
 /** The editable details, as the server stores them. */
 export type CharacterDetails = Pick<
   Character,
-  "race" | "alignment" | "age" | "sex" | "height" | "weight" | "hair" | "eyes" | "languages"
+  | "race"
+  | "alignment"
+  | "age"
+  | "sex"
+  | "height"
+  | "weight"
+  | "hair"
+  | "eyes"
+  | "languages"
 >;

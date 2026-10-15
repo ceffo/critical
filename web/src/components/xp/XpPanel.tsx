@@ -16,9 +16,18 @@ function useFormats() {
   return useMemo(() => {
     const lang = i18n.language;
     const n = new Intl.NumberFormat(lang);
-    const compact = new Intl.NumberFormat(lang, { notation: "compact", maximumFractionDigits: 2 });
-    const pct = new Intl.NumberFormat(lang, { style: "percent", maximumFractionDigits: 0 });
-    const day = new Intl.DateTimeFormat(lang, { day: "numeric", month: "short" });
+    const compact = new Intl.NumberFormat(lang, {
+      notation: "compact",
+      maximumFractionDigits: 2,
+    });
+    const pct = new Intl.NumberFormat(lang, {
+      style: "percent",
+      maximumFractionDigits: 0,
+    });
+    const day = new Intl.DateTimeFormat(lang, {
+      day: "numeric",
+      month: "short",
+    });
     return {
       n: (v: number) => n.format(v),
       compact: (v: number) => compact.format(v),
@@ -44,7 +53,10 @@ export function XpPanel() {
     void fetchXp();
   }, [fetchXp]);
 
-  if (!ledger) return <p className="text-body text-muted-foreground">{t("app.loading")}</p>;
+  if (!ledger)
+    return (
+      <p className="text-body text-muted-foreground">{t("app.loading")}</p>
+    );
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <ProgressCard ledger={ledger} />
@@ -77,10 +89,15 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
             <span className="text-headline" data-testid="xp-total">
               {f.n(l.total)}
             </span>
-            <span className="text-body text-muted-foreground">{t("xp.unit")}</span>
+            <span className="text-body text-muted-foreground">
+              {t("xp.unit")}
+            </span>
           </span>
         </div>
-        <span className="text-body font-medium text-amb-300 tabular-nums" data-testid="xp-to-next">
+        <span
+          className="text-body font-medium text-amb-300 tabular-nums"
+          data-testid="xp-to-next"
+        >
           {headline}
         </span>
       </div>
@@ -119,7 +136,9 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
       <ol
         aria-label={t("xp.levels")}
         className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${Math.max(1, l.levels.length)}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${Math.max(1, l.levels.length)}, minmax(0, 1fr))`,
+        }}
       >
         {l.levels.map((c) => (
           <LevelCell key={c.level} cell={c} />
@@ -145,12 +164,20 @@ function LevelCell({ cell: c }: { cell: XpLevel }) {
       )}
     >
       <span className="text-body font-semibold">{c.level}</span>
-      <span className="max-w-full truncate text-label text-muted-foreground">{f.compact(c.threshold)}</span>
+      <span className="max-w-full truncate text-label text-muted-foreground">
+        {f.compact(c.threshold)}
+      </span>
     </li>
   );
 }
 
-function FieldMessage({ error, field }: { error: ApiError | null; field: string }) {
+function FieldMessage({
+  error,
+  field,
+}: {
+  error: ApiError | null;
+  field: string;
+}) {
   if (error?.field !== field) return null;
   return (
     <span role="alert" className="text-label text-danger">
@@ -244,10 +271,16 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           />
           {t("xp.bonus")}
         </label>
-        <Button className="h-7" disabled={busy || base === null || base < 1} onClick={() => void submit()}>
+        <Button
+          className="h-7"
+          disabled={busy || base === null || base < 1}
+          onClick={() => void submit()}
+        >
           <Plus />
           <span className="tabular-nums">
-            {preview ? t("xp.add.submitWith", { total: f.n(preview.total) }) : t("xp.add.submit")}
+            {preview
+              ? t("xp.add.submitWith", { total: f.n(preview.total) })
+              : t("xp.add.submit")}
           </span>
         </Button>
       </div>
@@ -258,7 +291,8 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
 function Ledger({ ledger }: { ledger: XpLedger }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState<number | null>(null);
-  const cols = "grid grid-cols-[minmax(0,1fr)_5.5rem_4rem_6rem_4.5rem] items-center gap-2";
+  const cols =
+    "grid grid-cols-[minmax(0,1fr)_5.5rem_4rem_6rem_4.5rem] items-center gap-2";
   return (
     <section
       aria-label={t("xp.ledger.title")}
@@ -270,7 +304,12 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
           {t("xp.ledger.count", { count: ledger.entries.length })}
         </span>
       </div>
-      <div className={cn(cols, "shrink-0 px-3 pt-2 pb-1 text-label text-muted-foreground")}>
+      <div
+        className={cn(
+          cols,
+          "shrink-0 px-3 pt-2 pb-1 text-label text-muted-foreground",
+        )}
+      >
         <span>{t("xp.ledger.reason")}</span>
         <span className="text-right">{t("xp.ledger.base")}</span>
         <span className="text-right">{t("xp.ledger.bonus")}</span>
@@ -279,13 +318,25 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
       </div>
       <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {ledger.entries.length === 0 && (
-          <li className="px-2 py-2 text-body text-muted-foreground">{t("xp.ledger.none")}</li>
+          <li className="px-2 py-2 text-body text-muted-foreground">
+            {t("xp.ledger.none")}
+          </li>
         )}
         {ledger.entries.map((e) =>
           editing === e.id ? (
-            <EditRow key={e.id} entry={e} cols={cols} onDone={() => setEditing(null)} />
+            <EditRow
+              key={e.id}
+              entry={e}
+              cols={cols}
+              onDone={() => setEditing(null)}
+            />
           ) : (
-            <Row key={e.id} entry={e} cols={cols} onEdit={() => setEditing(e.id)} />
+            <Row
+              key={e.id}
+              entry={e}
+              cols={cols}
+              onEdit={() => setEditing(e.id)}
+            />
           ),
         )}
         <OpeningRow opening={ledger.opening} cols={cols} />
@@ -294,7 +345,15 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
   );
 }
 
-function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit: () => void }) {
+function Row({
+  entry: e,
+  cols,
+  onEdit,
+}: {
+  entry: XpEntry;
+  cols: string;
+  onEdit: () => void;
+}) {
   const { t } = useTranslation();
   const f = useFormats();
   const remove = useXpStore((s) => s.remove);
@@ -303,19 +362,32 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
   // Deleting is final (the ledger is outside the undo stack): Delete asks, Confirm deletes.
   const [confirming, setConfirming] = useState(false);
   const reason = e.reason || t("xp.defaultReason");
-  const meta = e.session ? t("xp.ledger.meta", { date: f.day(e.date), session: e.session }) : f.day(e.date);
+  const meta = e.session
+    ? t("xp.ledger.meta", { date: f.day(e.date), session: e.session })
+    : f.day(e.date);
   return (
     <li
       aria-label={reason}
       data-testid="xp-row"
-      className={cn(cols, "rounded-md px-2 py-1.5 text-body tabular-nums", fresh && "bg-amb-900/50")}
+      className={cn(
+        cols,
+        "rounded-md px-2 py-1.5 text-body tabular-nums",
+        fresh && "bg-amb-900/50",
+      )}
     >
       <span className="flex min-w-0 flex-col">
         <span className="truncate">{reason}</span>
-        <span className="truncate text-label text-muted-foreground">{meta}</span>
+        <span className="truncate text-label text-muted-foreground">
+          {meta}
+        </span>
       </span>
       <span className="text-right">{f.n(e.base)}</span>
-      <span className={cn("text-right", e.bonus ? "text-amb-300" : "text-muted-foreground")}>
+      <span
+        className={cn(
+          "text-right",
+          e.bonus ? "text-amb-300" : "text-muted-foreground",
+        )}
+      >
         {e.bonus ? `+${f.n(e.bonusAmount)}` : "–"}
       </span>
       {confirming ? (
@@ -338,7 +410,12 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
           >
             {t("xp.ledger.confirm")}
           </Button>
-          <Button size="icon-sm" variant="ghost" onClick={() => setConfirming(false)} aria-label={t("xp.ledger.cancel")}>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => setConfirming(false)}
+            aria-label={t("xp.ledger.cancel")}
+          >
             <X />
           </Button>
         </span>
@@ -348,7 +425,13 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
             {f.n(e.total)}
           </span>
           <span className="flex justify-end gap-1">
-            <Button size="icon-sm" variant="ghost" disabled={busy} onClick={onEdit} aria-label={t("xp.ledger.edit", { reason })}>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={onEdit}
+              aria-label={t("xp.ledger.edit", { reason })}
+            >
               <PencilSimple />
             </Button>
             <Button
@@ -367,7 +450,15 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
   );
 }
 
-function EditRow({ entry: e, cols, onDone }: { entry: XpEntry; cols: string; onDone: () => void }) {
+function EditRow({
+  entry: e,
+  cols,
+  onDone,
+}: {
+  entry: XpEntry;
+  cols: string;
+  onDone: () => void;
+}) {
   const { t } = useTranslation();
   const f = useFormats();
   const update = useXpStore((s) => s.update);
@@ -397,7 +488,10 @@ function EditRow({ entry: e, cols, onDone }: { entry: XpEntry; cols: string; onD
   return (
     <li
       aria-label={t("xp.ledger.editing")}
-      className={cn(cols, "rounded-md bg-neu-900 px-2 py-1.5 text-body tabular-nums")}
+      className={cn(
+        cols,
+        "rounded-md bg-neu-900 px-2 py-1.5 text-body tabular-nums",
+      )}
     >
       <span className="flex min-w-0 flex-col gap-1">
         <input
@@ -421,7 +515,10 @@ function EditRow({ entry: e, cols, onDone }: { entry: XpEntry; cols: string; onD
         />
         <FieldMessage error={error} field="base" />
       </span>
-      <label className="flex cursor-pointer items-center justify-end gap-1 text-label" title={t("xp.bonusHint")}>
+      <label
+        className="flex cursor-pointer items-center justify-end gap-1 text-label"
+        title={t("xp.bonusHint")}
+      >
         <input
           type="checkbox"
           className="size-4 accent-tint"
@@ -435,10 +532,21 @@ function EditRow({ entry: e, cols, onDone }: { entry: XpEntry; cols: string; onD
         {preview ? f.n(preview.total) : "–"}
       </span>
       <span className="flex justify-end gap-1">
-        <Button size="icon-sm" variant="ghost" disabled={busy || base === null} onClick={() => void save()} aria-label={t("xp.ledger.save")}>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          disabled={busy || base === null}
+          onClick={() => void save()}
+          aria-label={t("xp.ledger.save")}
+        >
           <Check />
         </Button>
-        <Button size="icon-sm" variant="ghost" onClick={onDone} aria-label={t("xp.ledger.cancel")}>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          onClick={onDone}
+          aria-label={t("xp.ledger.cancel")}
+        >
           <X />
         </Button>
       </span>
@@ -451,7 +559,13 @@ function OpeningRow({ opening, cols }: { opening: number; cols: string }) {
   const { t } = useTranslation();
   const f = useFormats();
   return (
-    <li className={cn(cols, "px-2 py-1.5 text-body text-muted-foreground tabular-nums")} data-testid="xp-opening">
+    <li
+      className={cn(
+        cols,
+        "px-2 py-1.5 text-body text-muted-foreground tabular-nums",
+      )}
+      data-testid="xp-opening"
+    >
       <span className="col-span-3 truncate">{t("xp.ledger.opening")}</span>
       <span className="text-right">{f.n(opening)}</span>
       <span />

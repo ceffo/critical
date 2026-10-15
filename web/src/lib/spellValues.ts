@@ -53,7 +53,10 @@ export function statValue(
       }
       if (v.area.dims?.length) {
         parts.push(
-          [v.area.dims.map((d) => formatValue(d, unit)).join(" × "), st.area.shape]
+          [
+            v.area.dims.map((d) => formatValue(d, unit)).join(" × "),
+            st.area.shape,
+          ]
             .filter(Boolean)
             .join(" "),
         );

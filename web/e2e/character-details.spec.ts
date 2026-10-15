@@ -12,7 +12,9 @@ const VIEWPORTS = [
 // field error shows under its field (the rule itself is a Go test in detailssvc), Save shows the
 // stored values, and they survive a reload. Languages are shown translated
 // where the catalogue has the name, as entered otherwise (the seeded names are a Go test).
-test("character details: view, edit with a field error, save, reload", async ({ page }) => {
+test("character details: view, edit with a field error, save, reload", async ({
+  page,
+}) => {
   await openDashboard(page);
   await page.getByTestId("details-trigger").click();
   const pop = page.getByTestId("details-popover");
@@ -31,13 +33,17 @@ test("character details: view, edit with a field error, save, reload", async ({ 
   await pop.getByLabel("Race", { exact: true }).fill("Half-elf");
   await pop.getByLabel("Age", { exact: true }).fill("10001");
   await pop.getByRole("button", { name: "Save" }).click();
-  await expect(pop.getByRole("alert")).toHaveText("Enter a whole age between 0 and 10,000.");
+  await expect(pop.getByRole("alert")).toHaveText(
+    "Enter a whole age between 0 and 10,000.",
+  );
   await expect(pop.getByLabel("Race", { exact: true })).toHaveValue("Half-elf");
   await snap(page, "details-error-1440x900");
 
   await pop.getByLabel("Age", { exact: true }).fill("112");
   await pop.getByLabel("Eyes", { exact: true }).fill("green");
-  await pop.getByLabel("Languages", { exact: true }).fill("Commun, Nain, Sylvain");
+  await pop
+    .getByLabel("Languages", { exact: true })
+    .fill("Commun, Nain, Sylvain");
   await pop.getByRole("button", { name: "Save" }).click();
   await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
   await expect(pop.getByText("Half-elf")).toBeVisible();

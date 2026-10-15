@@ -15,6 +15,8 @@ export function formatTurnsLeft(t: TFunction, turns: number): string {
   const h = Math.floor(turns / TURNS_PER_HOUR);
   const m = turns % TURNS_PER_HOUR;
   const time =
-    m === 0 ? t("buffs.hoursOnly", { h }) : t("buffs.hoursMinutes", { h, mm: String(m).padStart(2, "0") });
+    m === 0
+      ? t("buffs.hoursOnly", { h })
+      : t("buffs.hoursMinutes", { h, mm: String(m).padStart(2, "0") });
   return t("buffs.roundsWithTime", { rounds: short, time });
 }

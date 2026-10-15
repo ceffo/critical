@@ -15,7 +15,12 @@ beforeEach(() => {
 
 describe("searchSpells", () => {
   it("sends the class, levels, school and sphere the lookup chose, empty ones left out", async () => {
-    await searchSpells({ ...NO_QUERY, cls: "wizard", levels: [1, 3], school: "abjuration" });
+    await searchSpells({
+      ...NO_QUERY,
+      cls: "wizard",
+      levels: [1, 3],
+      school: "abjuration",
+    });
     expect(params().get("class")).toBe("wizard");
     expect(params().get("level")).toBe("1,3");
     expect(params().get("school")).toBe("abjuration");
@@ -25,7 +30,11 @@ describe("searchSpells", () => {
   });
 
   it("sends a Priest sphere by its English name", async () => {
-    await searchSpells({ ...NO_QUERY, cls: "priest", sphere: "Elemental Fire" });
+    await searchSpells({
+      ...NO_QUERY,
+      cls: "priest",
+      sphere: "Elemental Fire",
+    });
     expect(params().get("class")).toBe("priest");
     expect(params().get("sphere")).toBe("Elemental Fire");
   });

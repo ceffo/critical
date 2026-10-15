@@ -15,7 +15,9 @@ export const useSkillsStore = create<SkillsStore>((set) => ({
     try {
       set({ skills: await fetchSkills() });
     } catch (e) {
-      useTableStore.setState({ error: e instanceof Error ? e.message : String(e) });
+      useTableStore.setState({
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   },
 }));

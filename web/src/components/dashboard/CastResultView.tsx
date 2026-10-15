@@ -1,7 +1,12 @@
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
-import type { CastResult, DamagePartSave, DiceRoll, ExposureResult } from "@/types/spells";
+import type {
+  CastResult,
+  DamagePartSave,
+  DiceRoll,
+  ExposureResult,
+} from "@/types/spells";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -41,7 +46,9 @@ function RollView({ roll: r }: { roll: DiceRoll }) {
   const mod = r.total - r.dice.reduce((sum, d) => sum + d.value, 0);
   return (
     <span className="inline-flex flex-wrap items-center gap-2 text-body">
-      <span className="break-all text-muted-foreground" title={r.formula}>{resolved(r)}</span>
+      <span className="break-all text-muted-foreground" title={r.formula}>
+        {resolved(r)}
+      </span>
       {r.dice.map((d, i) => (
         <Die key={i} sides={d.sides} value={d.value} />
       ))}
@@ -52,16 +59,33 @@ function RollView({ roll: r }: { roll: DiceRoll }) {
 }
 
 /** A damage instance made of parts: each part's roll and what a save does to it, then the instance total. */
-function PartsView({ parts, saves, total }: { parts: DiceRoll[]; saves: DamagePartSave[]; total: number }) {
+function PartsView({
+  parts,
+  saves,
+  total,
+}: {
+  parts: DiceRoll[];
+  saves: DamagePartSave[];
+  total: number;
+}) {
   const { t } = useTranslation();
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="cast-damage-parts">
+    <span
+      className="inline-flex flex-wrap items-center gap-x-3 gap-y-1"
+      data-testid="cast-damage-parts"
+    >
       {parts.map((p, j) => (
         <span key={j} className="inline-flex flex-wrap items-center gap-2">
-          {p.dice.length > 0 ? <RollView roll={p} /> : <span className="text-body font-semibold">{p.total}</span>}
+          {p.dice.length > 0 ? (
+            <RollView roll={p} />
+          ) : (
+            <span className="text-body font-semibold">{p.total}</span>
+          )}
           {saves[j] && (
             <span className="text-label text-muted-foreground">
-              {t(`result.cast.partSave.${saves[j]}`, { defaultValue: saves[j] })}
+              {t(`result.cast.partSave.${saves[j]}`, {
+                defaultValue: saves[j],
+              })}
             </span>
           )}
         </span>
@@ -73,10 +97,22 @@ function PartsView({ parts, saves, total }: { parts: DiceRoll[]; saves: DamagePa
 
 /** An effect label; unknown keys fall back to "key value". */
 function fxLabel(t: TFunction, key: string, value: number): string {
-  const shown = ["to_hit", "damage", "save", "save_bonus", "initiative", "attackers_to_hit", "attackers_to_hit_first", "ac"].includes(key)
+  const shown = [
+    "to_hit",
+    "damage",
+    "save",
+    "save_bonus",
+    "initiative",
+    "attackers_to_hit",
+    "attackers_to_hit_first",
+    "ac",
+  ].includes(key)
     ? formatSigned(value)
     : String(value);
-  return t(`result.cast.fx.${key}`, { value: shown, defaultValue: `${key} ${shown}` });
+  return t(`result.cast.fx.${key}`, {
+    value: shown,
+    defaultValue: `${key} ${shown}`,
+  });
 }
 
 /** What a cast or a received spell did: buff with its rolls, damage rolls, or the text only. */
@@ -86,7 +122,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
   const heading =
     r.source === "received"
       ? t("result.cast.receivedHeading", { name, casterLevel: r.casterLevel })
-      : t("result.cast.castHeading", { name, level: r.level, casterLevel: r.casterLevel });
+      : t("result.cast.castHeading", {
+          name,
+          level: r.level,
+          casterLevel: r.casterLevel,
+        });
   const b = r.buff;
 
   return (
@@ -98,7 +138,10 @@ export function CastResultView({ result: r }: { result: CastResult }) {
         </p>
       )}
       {r.spell?.class && (
-        <div className="text-label text-muted-foreground" data-testid="cast-spell-ident">
+        <div
+          className="text-label text-muted-foreground"
+          data-testid="cast-spell-ident"
+        >
           {r.spell.class} · {t("lookup.levelShort", { level: r.spell.level })}
         </div>
       )}
@@ -124,7 +167,9 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               <div className="rounded-lg bg-muted/60 px-3 py-2">
                 <dt className={labelClass}>
                   {b.chargeUnit
-                    ? t(`result.cast.units.${b.chargeUnit}`, { defaultValue: t("result.cast.charges") })
+                    ? t(`result.cast.units.${b.chargeUnit}`, {
+                        defaultValue: t("result.cast.charges"),
+                      })
                     : t("result.cast.charges")}
                 </dt>
                 <dd data-testid="cast-charges">
@@ -157,7 +202,10 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
 
       {r.attack && (
-        <div className="flex flex-col gap-2 rounded-lg border p-3" data-testid="cast-attack">
+        <div
+          className="flex flex-col gap-2 rounded-lg border p-3"
+          data-testid="cast-attack"
+        >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span
               data-testid="cast-attack-verdict"
@@ -166,7 +214,9 @@ export function CastResultView({ result: r }: { result: CastResult }) {
                 r.attack.hit ? "text-heal" : "text-danger",
               )}
             >
-              {r.attack.hit ? t("result.cast.attackHit") : t("result.cast.attackMiss")}
+              {r.attack.hit
+                ? t("result.cast.attackHit")
+                : t("result.cast.attackMiss")}
             </span>
             <span className="inline-flex items-center gap-2 text-body">
               <span className={labelClass}>d20</span>
@@ -185,7 +235,10 @@ export function CastResultView({ result: r }: { result: CastResult }) {
 
       {r.consumedItem && (
         <p className="text-body" data-testid="cast-item">
-          {t("result.cast.itemSpent", { name: r.consumedItem.name, left: r.consumedItem.remaining })}
+          {t("result.cast.itemSpent", {
+            name: r.consumedItem.name,
+            left: r.consumedItem.remaining,
+          })}
         </p>
       )}
 
@@ -203,8 +256,20 @@ export function CastResultView({ result: r }: { result: CastResult }) {
                 stepsHeader(t, r.damage.stepsPer, r.damage.rolls.length)
               ) : (
                 <>
-                  {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.rolls[0] ? resolved(r.damage.rolls[0]) : r.damage.dice })}
-                  {r.damage.rounds > 1 && <>, {t("result.cast.damageRounds", { rounds: r.damage.rounds })}</>}
+                  {t("result.cast.damageRoll", {
+                    instances: r.damage.instances,
+                    dice: r.damage.rolls[0]
+                      ? resolved(r.damage.rolls[0])
+                      : r.damage.dice,
+                  })}
+                  {r.damage.rounds > 1 && (
+                    <>
+                      ,{" "}
+                      {t("result.cast.damageRounds", {
+                        rounds: r.damage.rounds,
+                      })}
+                    </>
+                  )}
                 </>
               )}
               {r.damage.type && <> · {r.damage.type}</>}
@@ -218,8 +283,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
                 {r.damage.total}
               </div>
               {r.damage.totalOnSave !== undefined && (
-                <div className="text-body tabular-nums text-muted-foreground" data-testid="cast-damage-on-save">
-                  {t("result.cast.totalOnSave", { total: r.damage.totalOnSave })}
+                <div
+                  className="text-body tabular-nums text-muted-foreground"
+                  data-testid="cast-damage-on-save"
+                >
+                  {t("result.cast.totalOnSave", {
+                    total: r.damage.totalOnSave,
+                  })}
                 </div>
               )}
             </div>
@@ -227,12 +297,26 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           {r.damage.rolls.length > 0 && (
             <ul className="flex flex-col gap-1">
               {r.damage.rolls.map((roll, i) => (
-                <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1" data-testid="cast-damage-roll">
-                  <span className="text-label text-muted-foreground">{rollLabel(t, r.damage?.stepsPer, roll.step, i)}</span>
+                <li
+                  key={i}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                  data-testid="cast-damage-roll"
+                >
+                  <span className="text-label text-muted-foreground">
+                    {rollLabel(t, r.damage?.stepsPer, roll.step, i)}
+                  </span>
                   {roll.parts && r.damage?.parts ? (
-                    <PartsView parts={roll.parts} saves={r.damage.parts.map((p) => p.save)} total={roll.total} />
-                  ) : roll.step && roll.dice.length === 0 && roll.total === 0 ? (
-                    <span className="text-body text-muted-foreground">{t("result.cast.noDamage")}</span>
+                    <PartsView
+                      parts={roll.parts}
+                      saves={r.damage.parts.map((p) => p.save)}
+                      total={roll.total}
+                    />
+                  ) : roll.step &&
+                    roll.dice.length === 0 &&
+                    roll.total === 0 ? (
+                    <span className="text-body text-muted-foreground">
+                      {t("result.cast.noDamage")}
+                    </span>
                   ) : (
                     <RollView roll={roll} />
                   )}
@@ -244,20 +328,29 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
 
       {r.exposure && (
-        <ExposureControls spellId={r.spellId} casterLevel={r.casterLevel} exposure={r.exposure} />
+        <ExposureControls
+          spellId={r.spellId}
+          casterLevel={r.casterLevel}
+          exposure={r.exposure}
+        />
       )}
 
       {r.save && (
         <p className="text-body" data-testid="cast-save">
           {t("result.cast.save", {
             type: r.save.type,
-            effect: t(`result.cast.saveEffects.${r.save.effect}`, { defaultValue: r.save.effect }),
+            effect: t(`result.cast.saveEffects.${r.save.effect}`, {
+              defaultValue: r.save.effect,
+            }),
           })}
         </p>
       )}
 
       {r.textOnly && (
-        <p className="rounded-lg border border-dashed px-3 py-2 text-body" data-testid="cast-text-only">
+        <p
+          className="rounded-lg border border-dashed px-3 py-2 text-body"
+          data-testid="cast-text-only"
+        >
           {t(`result.cast.textOnly.${r.textOnly}`)}
         </p>
       )}
@@ -265,11 +358,19 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       {r.untracked.length > 0 && (
         <div>
           <div className={labelClass}>{t("result.cast.byHand")}</div>
-          <ul className="mt-1 flex flex-col gap-1 text-body" data-testid="cast-untracked">
+          <ul
+            className="mt-1 flex flex-col gap-1 text-body"
+            data-testid="cast-untracked"
+          >
             {r.untracked.map((u, i) => (
               <li key={i}>
                 {fxLabel(t, u.key, u.value)}
-                {u.condition && <span className="text-muted-foreground"> ({u.condition})</span>}
+                {u.condition && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({u.condition})
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -284,8 +385,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
       {r.spell?.description && (
         <details className="group rounded-lg border px-3 py-2">
-          <summary className={cn(labelClass, "cursor-pointer select-none")}>{t("result.cast.text")}</summary>
-          <p className="mt-2 whitespace-pre-line text-body text-muted-foreground" data-testid="cast-text">
+          <summary className={cn(labelClass, "cursor-pointer select-none")}>
+            {t("result.cast.text")}
+          </summary>
+          <p
+            className="mt-2 whitespace-pre-line text-body text-muted-foreground"
+            data-testid="cast-text"
+          >
             {r.spell.description}
           </p>
         </details>
@@ -300,15 +406,27 @@ export function CastResultView({ result: r }: { result: CastResult }) {
  * or is the DM's. While it is the latest result, the next round of exposure rolls from here (the
  * entry records the exposure served, so a journal entry offers it too).
  */
-export function ExposureResultView({ result: r, interactive }: { result: ExposureResult; interactive: boolean }) {
+export function ExposureResultView({
+  result: r,
+  interactive,
+}: {
+  result: ExposureResult;
+  interactive: boolean;
+}) {
   const { t } = useTranslation();
   const name = spellName(t, r.spellId, r.name);
   const roll = r.damage.rolls[0];
-  const type = r.damage.type ? t(`spellDice.types.${r.damage.type}`, { defaultValue: r.damage.type }) : "";
+  const type = r.damage.type
+    ? t(`spellDice.types.${r.damage.type}`, { defaultValue: r.damage.type })
+    : "";
   return (
     <div className="flex flex-col gap-3" data-testid="exposure-result">
       <div className="text-body text-muted-foreground">
-        {t("exposure.heading", { name, round: r.round, casterLevel: r.casterLevel })}
+        {t("exposure.heading", {
+          name,
+          round: r.round,
+          casterLevel: r.casterLevel,
+        })}
       </div>
       {r.mode && (
         <p className="text-body" data-testid="exposure-mode">
@@ -316,10 +434,17 @@ export function ExposureResultView({ result: r, interactive }: { result: Exposur
         </p>
       )}
       <div className="flex flex-wrap items-end justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2 text-body" data-testid="exposure-roll">
+        <div
+          className="flex min-w-0 flex-wrap items-center gap-2 text-body"
+          data-testid="exposure-roll"
+        >
           {roll &&
             (roll.parts && r.damage.parts ? (
-              <PartsView parts={roll.parts} saves={r.damage.parts.map((p) => p.save)} total={roll.total} />
+              <PartsView
+                parts={roll.parts}
+                saves={r.damage.parts.map((p) => p.save)}
+                total={roll.total}
+              />
             ) : roll.dice.length > 0 ? (
               <RollView roll={roll} />
             ) : (
@@ -329,17 +454,28 @@ export function ExposureResultView({ result: r, interactive }: { result: Exposur
         </div>
         <div className="text-right">
           <div className={labelClass}>{t("result.cast.damage")}</div>
-          <div className="text-headline tabular-nums text-danger" data-testid="exposure-total">
+          <div
+            className="text-headline tabular-nums text-danger"
+            data-testid="exposure-total"
+          >
             {r.damage.total}
           </div>
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <p className={cn("text-body tabular-nums", r.onSelf && "text-danger")} data-testid="exposure-target">
-          {r.onSelf ? t("exposure.onYou", { delta: formatSigned(r.hpDelta) }) : t("exposure.forDm")}
+        <p
+          className={cn("text-body tabular-nums", r.onSelf && "text-danger")}
+          data-testid="exposure-target"
+        >
+          {r.onSelf
+            ? t("exposure.onYou", { delta: formatSigned(r.hpDelta) })
+            : t("exposure.forDm")}
         </p>
         {r.onSelf && r.hpDelta !== -r.damage.total && (
-          <p className="text-label text-muted-foreground" data-testid="exposure-floored">
+          <p
+            className="text-label text-muted-foreground"
+            data-testid="exposure-floored"
+          >
             {t("log.floored", { requested: formatSigned(-r.damage.total) })}
           </p>
         )}

@@ -19,7 +19,9 @@ export function QuickHp() {
   const [source, setSource] = useState("");
   // The log is a stack: undo pops the newest entry, so it is
   // only offered when that entry is an HP change (entries are newest first).
-  const top = useLogStore((st) => st.entries.find((e) => e.status !== "voided"));
+  const top = useLogStore((st) =>
+    st.entries.find((e) => e.status !== "voided"),
+  );
   const blockedBy = top && top.kind !== "hp_change" ? entryText(top, t) : null;
 
   const n = Number.parseInt(amount, 10);

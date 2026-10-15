@@ -166,7 +166,11 @@
     "addShort": "Add",
     "savedNone": "No saved effects yet. Tick “Save for reuse” on a new effect.",
     "addSaved": "Add saved effect {{name}}",
-    "tab": {"spell": "Spell cast on me", "saved": "Saved effect", "new": "New effect"},
+    "tab": {
+      "spell": "Spell cast on me",
+      "saved": "Saved effect",
+      "new": "New effect"
+    },
     "deleteSaved": "Delete saved buff {{name}}",
     "roundsWithTime": "{{rounds}} · {{time}}",
     "hoursMinutes": "{{h}} h {{mm}}",

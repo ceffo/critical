@@ -26,8 +26,11 @@ test("experience: add with the bonus, edit, delete", async ({ page }) => {
   await moi.getByRole("button", { name: /^Level \d+$/ }).click();
   const ws = page.getByRole("region", { name: "Experience", exact: true });
   await expect(ws).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Workspaces" }).getByRole("button", { name: "Experience" }))
-    .toHaveAttribute("aria-current", "page");
+  await expect(
+    page
+      .getByRole("navigation", { name: "Workspaces" })
+      .getByRole("button", { name: "Experience" }),
+  ).toHaveAttribute("aria-current", "page");
   await expect(ws.getByTestId("xp-total")).toHaveText(/\d/);
   const before = await xpTotal(page);
 
@@ -49,7 +52,10 @@ test("experience: add with the bonus, edit, delete", async ({ page }) => {
     await expect(row).toBeVisible();
     const scroll = await page.evaluate(() => {
       const el = document.scrollingElement ?? document.documentElement;
-      return { x: el.scrollWidth - el.clientWidth, y: el.scrollHeight - el.clientHeight };
+      return {
+        x: el.scrollWidth - el.clientWidth,
+        y: el.scrollHeight - el.clientHeight,
+      };
     });
     expect(scroll, "no page scroll").toEqual({ x: 0, y: 0 });
     await snap(page, `experience-${vp.width}x${vp.height}`);
@@ -68,12 +74,16 @@ test("experience: add with the bonus, edit, delete", async ({ page }) => {
 
   // Delete is final, so it asks first: Escape keeps the entry, Confirm removes it.
   await row.getByRole("button", { name: "Delete Troll bridge" }).click();
-  await expect(row.getByRole("button", { name: "Confirm deleting Troll bridge" })).toBeFocused();
+  await expect(
+    row.getByRole("button", { name: "Confirm deleting Troll bridge" }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,000");
   expect(await xpTotal(page)).toBe(before + 1000);
   await row.getByRole("button", { name: "Delete Troll bridge" }).click();
-  await row.getByRole("button", { name: "Confirm deleting Troll bridge" }).click();
+  await row
+    .getByRole("button", { name: "Confirm deleting Troll bridge" })
+    .click();
   await expect.poll(() => xpTotal(page)).toBe(before);
   await expect(row).toHaveCount(0);
 });

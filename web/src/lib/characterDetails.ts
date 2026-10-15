@@ -1,7 +1,15 @@
 import type { CharacterDetails } from "@/types/character";
 
 /** The text fields, in display order. */
-export const TEXT_FIELDS = ["race", "alignment", "sex", "height", "weight", "hair", "eyes"] as const;
+export const TEXT_FIELDS = [
+  "race",
+  "alignment",
+  "sex",
+  "height",
+  "weight",
+  "hair",
+  "eyes",
+] as const;
 export type TextField = (typeof TEXT_FIELDS)[number];
 
 /** The form's state: everything as the text typed in the inputs. */
@@ -18,7 +26,11 @@ export interface Draft {
 }
 
 export function toDraft(d: CharacterDetails): Draft {
-  return { ...d, age: d.age === null ? "" : String(d.age), languages: d.languages.join(", ") };
+  return {
+    ...d,
+    age: d.age === null ? "" : String(d.age),
+    languages: d.languages.join(", "),
+  };
 }
 
 /**
@@ -26,10 +38,16 @@ export function toDraft(d: CharacterDetails): Draft {
  * from 1 up is flagged for the caller to report, and an empty age is sent as null, which clears it.
  * Every limit is the server's.
  */
-export function toBody(draft: Draft): { body: CharacterDetails; ageInvalid: boolean } {
+export function toBody(draft: Draft): {
+  body: CharacterDetails;
+  ageInvalid: boolean;
+} {
   const age = draft.age.trim();
   const ageInvalid = age !== "" && !/^0*[1-9]\d*$/.test(age);
-  const languages = draft.languages.trim() === "" ? [] : draft.languages.split(",").map((l) => l.trim());
+  const languages =
+    draft.languages.trim() === ""
+      ? []
+      : draft.languages.split(",").map((l) => l.trim());
   return {
     ageInvalid,
     body: {

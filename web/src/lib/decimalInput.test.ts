@@ -13,7 +13,10 @@ describe("parseDecimal", () => {
     expect(parseDecimal(input)).toBe(want);
   });
 
-  it.each(["", "  ", "abc", "1.5.2", "1,5,2", "1e3", "-2", "×2"])("rejects %j", (input) => {
-    expect(parseDecimal(input)).toBeNaN();
-  });
+  it.each(["", "  ", "abc", "1.5.2", "1,5,2", "1e3", "-2", "×2"])(
+    "rejects %j",
+    (input) => {
+      expect(parseDecimal(input)).toBeNaN();
+    },
+  );
 });

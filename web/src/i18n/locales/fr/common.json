@@ -136,7 +136,7 @@
     "name": "Nom du bonus",
     "roundsLeft": "Tours",
     "chargesLeft": "Charges",
-  "roundsHint": "Tours restants, décomptés à chaque tour suivant (0 : sans durée)",
+    "roundsHint": "Tours restants, décomptés à chaque tour suivant (0 : sans durée)",
     "chargesHint": "Coups qu'il peut absorber, p. ex. couches de Peau de pierre (0 : aucun)",
     "effect": "Effet",
     "effectValue": "Valeur de l'effet",
@@ -166,7 +166,11 @@
     "addShort": "Ajouter",
     "savedNone": "Aucun effet enregistré. Cochez « Enregistrer pour réutiliser » sur un nouvel effet.",
     "addSaved": "Ajouter l'effet enregistré {{name}}",
-    "tab": {"spell": "Sort reçu", "saved": "Effet enregistré", "new": "Nouvel effet"},
+    "tab": {
+      "spell": "Sort reçu",
+      "saved": "Effet enregistré",
+      "new": "Nouvel effet"
+    },
     "deleteSaved": "Supprimer le bonus enregistré {{name}}",
     "roundsWithTime": "{{rounds}} · {{time}}",
     "hoursMinutes": "{{h}} h {{mm}}",

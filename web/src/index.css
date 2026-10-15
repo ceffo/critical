@@ -79,7 +79,8 @@
   /* Muted text is the ink at reduced strength, never a separate grey. */
   --ink-muted: color-mix(in oklab, var(--ink) 64%, transparent);
   /* Only floating things (popovers, menus) cast a shadow. */
-  --float-shadow: 0 0 0 1px var(--neu-500), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
+  --float-shadow:
+    0 0 0 1px var(--neu-500), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
 
   /* shadcn variables, derived from the Nocturne tokens. */
   --background: var(--ground);

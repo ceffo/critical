@@ -28,13 +28,24 @@ export interface CastOptions {
 }
 
 /** Spend slot `index`. */
-export function castSpell(index: number, opts: CastOptions = {}): Promise<CastResult> {
+export function castSpell(
+  index: number,
+  opts: CastOptions = {},
+): Promise<CastResult> {
   return post<CastResult>(`/api/spells/${index}/cast`, opts);
 }
 
 /** Apply a spell a party member cast on the Bard, at their caster level (`mode`: the mode they picked). */
-export function receiveSpell(spellId: string, casterLevel: number, mode?: string): Promise<CastResult> {
-  return post<CastResult>("/api/spells/receive", { spellId, casterLevel, mode });
+export function receiveSpell(
+  spellId: string,
+  casterLevel: number,
+  mode?: string,
+): Promise<CastResult> {
+  return post<CastResult>("/api/spells/receive", {
+    spellId,
+    casterLevel,
+    mode,
+  });
 }
 
 /** Roll one round of exposure to a spell's area (logged; on the Bard, off his HP). */

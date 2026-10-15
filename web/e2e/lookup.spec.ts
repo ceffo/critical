@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard, openWorkspace, receivePicker } from "./helpers";
+import {
+  chooseLanguage,
+  openDashboard,
+  openWorkspace,
+  receivePicker,
+} from "./helpers";
 import type { Locator, Page } from "@playwright/test";
 
 // The frozen fixture catalogue the stack seeds from (never the campaign seeds/).
@@ -80,14 +85,19 @@ async function openLookup(page: Page) {
   await expect(rows(page).first()).toBeVisible();
 }
 
-const search = (page: Page) => page.getByRole("combobox", { name: "Search spells..." });
+const search = (page: Page) =>
+  page.getByRole("combobox", { name: "Search spells..." });
 const count = (page: Page) => page.getByTestId("lookup-count");
 const rows = (page: Page) => page.getByTestId("spell-row");
 const selected = (page: Page) =>
-  page.getByRole("listbox", { name: "Spells" }).getByRole("option", { selected: true });
+  page
+    .getByRole("listbox", { name: "Spells" })
+    .getByRole("option", { selected: true });
 const detail = (page: Page) => page.getByTestId("spell-detail");
 const classButton = (page: Page, name: string) =>
-  page.getByRole("group", { name: /^(Spell list|Liste de sorts)$/ }).getByRole("button", { name, exact: true });
+  page
+    .getByRole("group", { name: /^(Spell list|Liste de sorts)$/ })
+    .getByRole("button", { name, exact: true });
 const levelChip = (page: Page, n: number) =>
   page.getByRole("button", { name: `Level ${n}`, exact: true });
 
@@ -115,9 +125,9 @@ test("lookup: typing 'proj' selects Project Image with no click and shows its st
   const range = detail(page).getByTestId("stat-range");
   await expect(range.getByTestId("stat-value")).toHaveText("150 yd");
   await expect(range.getByTestId("stat-raw")).toContainText("10 yds./level");
-  await expect(detail(page).getByTestId("stat-duration").getByTestId("stat-value")).toHaveText(
-    "15 rd",
-  );
+  await expect(
+    detail(page).getByTestId("stat-duration").getByTestId("stat-value"),
+  ).toHaveText("15 rd");
   await snap(page, "search-selected");
 });
 
@@ -131,7 +141,9 @@ test("lookup: a French name finds the spell; the row shows both names in the UI 
   await expect(first).toContainText("Burning Hands · Mains brûlantes");
   await chooseLanguage(page, "fr");
   await expect(first).toContainText("Mains brûlantes · Burning Hands");
-  await expect(detail(page).getByRole("heading")).toHaveText("Mains brûlantes · Burning Hands");
+  await expect(detail(page).getByRole("heading")).toHaveText(
+    "Mains brûlantes · Burning Hands",
+  );
   await snap(page, "french-name");
 });
 
@@ -139,9 +151,14 @@ test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and A
   page,
 }) => {
   await openLookup(page);
-  await expect(classButton(page, "Wizard")).toHaveAttribute("aria-pressed", "true");
+  await expect(classButton(page, "Wizard")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(rows(page).first()).toBeVisible();
-  expect(new Set(await attr(rows(page), "data-class"))).toEqual(new Set(["Wizard"]));
+  expect(new Set(await attr(rows(page), "data-class"))).toEqual(
+    new Set(["Wizard"]),
+  );
   await expect(page.getByTestId("spell-class")).toHaveCount(0);
 
   await classButton(page, "Mine").click();
@@ -154,16 +171,22 @@ test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and A
 
   await classButton(page, "Priest").click();
   await expect(rows(page).filter({ hasText: "Faerie Fire" })).toHaveCount(1);
-  expect(new Set(await attr(rows(page), "data-class"))).toEqual(new Set(["Priest"]));
+  expect(new Set(await attr(rows(page), "data-class"))).toEqual(
+    new Set(["Priest"]),
+  );
   await expect(page.getByTestId("spell-class")).toHaveCount(0);
 
   await classButton(page, "All").click();
-  await expect(count(page)).toHaveText(`${fixtureSpells.length + named.length} spells`);
+  await expect(count(page)).toHaveText(
+    `${fixtureSpells.length + named.length} spells`,
+  );
   expect(new Set(await attr(rows(page), "data-class"))).toEqual(
     new Set(["Wizard", "Priest"]),
   );
   await expect(page.getByTestId("spell-class").first()).toBeVisible();
-  await expect(page.getByTestId("spell-class")).toHaveCount(await rows(page).count());
+  await expect(page.getByTestId("spell-class")).toHaveCount(
+    await rows(page).count(),
+  );
 });
 
 test("lookup: up/down in the search box moves the selection, a click selects; values at level with raw text; description collapsed then full", async ({
@@ -186,9 +209,13 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   await expect(selected(page)).toHaveAttribute("data-id", "magic_missile");
   const range = detail(page).getByTestId("stat-range");
   await expect(range.getByTestId("stat-value")).toHaveText("210 yd");
-  await expect(range.getByTestId("stat-raw")).toHaveText("60 yds. + 10 yds./level");
+  await expect(range.getByTestId("stat-raw")).toHaveText(
+    "60 yds. + 10 yds./level",
+  );
   await expect(
-    detail(page).getByTestId("spell-dice-damage").getByTestId("spell-dice-formula"),
+    detail(page)
+      .getByTestId("spell-dice-damage")
+      .getByTestId("spell-dice-formula"),
   ).toHaveText("5 × 1d4+1 force");
   await snap(page, "damage-dice");
 
@@ -196,15 +223,23 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   await search(page).fill("chain lightning");
   await rows(page).filter({ hasText: "Chain Lightning" }).click();
   await expect(
-    detail(page).getByTestId("spell-dice-damage").getByTestId("spell-dice-formula"),
-  ).toHaveText("in turn: 12d6, 11d6, 10d6, 9d6, 8d6, 7d6, 6d6, 5d6, 4d6, 3d6, 2d6, 1d6 electricity");
+    detail(page)
+      .getByTestId("spell-dice-damage")
+      .getByTestId("spell-dice-formula"),
+  ).toHaveText(
+    "in turn: 12d6, 11d6, 10d6, 9d6, 8d6, 7d6, 6d6, 5d6, 4d6, 3d6, 2d6, 1d6 electricity",
+  );
   await snap(page, "damage-dice-steps");
   await search(page).fill("incendiary cloud");
   await rows(page).filter({ hasText: "Incendiary Cloud" }).click();
   const cloud = detail(page).getByTestId("spell-dice-damage");
-  await expect(cloud.getByTestId("spell-dice-formula")).toHaveText("by round: —, —, 15d2, 15d4, 15d2 fire");
+  await expect(cloud.getByTestId("spell-dice-formula")).toHaveText(
+    "by round: —, —, 15d2, 15d4, 15d2 fire",
+  );
   await cloud.getByRole("button", { name: "To the dice" }).click();
-  await expect(page.getByRole("form", { name: "Dice" }).getByLabel("Formula")).toHaveValue("15d2");
+  await expect(
+    page.getByRole("form", { name: "Dice" }).getByLabel("Formula"),
+  ).toHaveValue("15d2");
   await snap(page, "damage-dice-steps-round");
   await search(page).fill("magic");
   await rows(page).filter({ hasText: "Magic Missile" }).click();
@@ -231,7 +266,9 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
   await search(page).fill("fire");
   await classButton(page, "All").click();
   await levelChip(page, 4).click();
-  await page.getByRole("combobox", { name: "School" }).selectOption({ label: "Abjuration" });
+  await page
+    .getByRole("combobox", { name: "School" })
+    .selectOption({ label: "Abjuration" });
   await expect(rows(page)).toHaveCount(1);
   await expect(selected(page)).toHaveAttribute("data-id", "fire_trap");
   await expect(reset).toBeVisible();
@@ -240,14 +277,22 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
   await page.getByRole("tab", { name: "Weapons" }).click();
   await openWorkspace(page, "Spells");
   await expect(search(page)).toHaveValue("fire");
-  await expect(classButton(page, "All")).toHaveAttribute("aria-pressed", "true");
+  await expect(classButton(page, "All")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(levelChip(page, 4)).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("combobox", { name: "School" })).toHaveValue("abjuration");
+  await expect(page.getByRole("combobox", { name: "School" })).toHaveValue(
+    "abjuration",
+  );
   await expect(selected(page)).toHaveAttribute("data-id", "fire_trap");
 
   await reset.click();
   await expect(search(page)).toHaveValue("");
-  await expect(classButton(page, "Wizard")).toHaveAttribute("aria-pressed", "true");
+  await expect(classButton(page, "Wizard")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await expect(levelChip(page, 4)).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("combobox", { name: "School" })).toHaveValue("");
   await expect(reset).toHaveCount(0);
@@ -278,17 +323,38 @@ test("lookup: the Receive picker finds spells by French and English names with t
   await expect(picker.getByRole("listitem").first()).toContainText("Fireball");
   const receiveNames = await picker
     .getByRole("listitem")
-    .evaluateAll((els) => els.map((e) => (e.textContent ?? "").split(" · ")[0]));
-  expect(receiveNames).toEqual(["Fireball", "Fire Shield", "Fire Trap", "Faerie Fire", "Wall of Fire"]);
-  expect(lookupOrder).toEqual(["fireball", "fire_shield", "fire_trap", "faerie_fire", "wall_of_fire"]);
+    .evaluateAll((els) =>
+      els.map((e) => (e.textContent ?? "").split(" · ")[0]),
+    );
+  expect(receiveNames).toEqual([
+    "Fireball",
+    "Fire Shield",
+    "Fire Trap",
+    "Faerie Fire",
+    "Wall of Fire",
+  ]);
+  expect(lookupOrder).toEqual([
+    "fireball",
+    "fire_shield",
+    "fire_trap",
+    "faerie_fire",
+    "wall_of_fire",
+  ]);
 
   await box.fill("mains");
-  await expect(picker.getByRole("listitem").first()).toContainText("Burning Hands");
+  await expect(picker.getByRole("listitem").first()).toContainText(
+    "Burning Hands",
+  );
 });
 
 // Enough synthetic Wizard rows that the list needs several 200-row pages.
 const many = Array.from({ length: 450 }, (_, i) =>
-  row(`Scroll Test ${String(i).padStart(3, "0")}`, "Wizard", (i % 9) + 1, "Alteration"),
+  row(
+    `Scroll Test ${String(i).padStart(3, "0")}`,
+    "Wizard",
+    (i % 9) + 1,
+    "Alteration",
+  ),
 );
 
 test.describe("infinite scroll", () => {
@@ -302,7 +368,9 @@ test.describe("infinite scroll", () => {
     const total = fixtureSpells.length + named.length + many.length;
     await expect(count(page)).toHaveText(`${total} spells`);
     await expect(rows(page)).toHaveCount(200);
-    await expect(page.getByRole("button", { name: /^(Next|Previous)$/ })).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /^(Next|Previous)$/ }),
+    ).toHaveCount(0);
 
     const list = page.getByRole("listbox", { name: "Spells" });
     for (let i = 0; i < 10 && (await rows(page).count()) < total; i++) {
@@ -328,12 +396,16 @@ test.describe("infinite scroll", () => {
     await expect(selected(page)).toBeInViewport();
     await snap(page, "deep-selection-after-tab-switch");
   });
-
 });
 
 // "Force" is Strength's French name; the synthetic rows match it in English too.
 const forceRows = Array.from({ length: 260 }, (_, i) =>
-  row(`Force Test ${String(i).padStart(3, "0")}`, "Wizard", (i % 9) + 1, "Alteration"),
+  row(
+    `Force Test ${String(i).padStart(3, "0")}`,
+    "Wizard",
+    (i % 9) + 1,
+    "Alteration",
+  ),
 );
 
 test.describe("keyboard past a page", () => {
@@ -390,7 +462,8 @@ test("lookup: a slow response overtaken by a newer query is not written", async 
   await slowDelivered;
   // Two frames: whatever the page does with that response has been rendered.
   await page.evaluate(
-    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+    () =>
+      new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
   );
   await expect(rows(page)).toHaveCount(1);
   await expect(count(page)).toHaveText("1 spell");
@@ -401,23 +474,33 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
 }) => {
   await openLookup(page);
   // The bare level number everywhere, in the chips and in the rows.
-  for (let n = 0; n <= 9; n++) await expect(levelChip(page, n)).toHaveText(`${n}`);
+  for (let n = 0; n <= 9; n++)
+    await expect(levelChip(page, n)).toHaveText(`${n}`);
   await search(page).fill("quixotic");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first().locator("span").first()).toHaveText("3");
-  await expect(detail(page).getByTestId("spell-meta")).toContainText("Wizard · Level 3");
+  await expect(detail(page).getByTestId("spell-meta")).toContainText(
+    "Wizard · Level 3",
+  );
   await snap(page, "bare-levels-en");
 
   await chooseLanguage(page, "fr");
   for (let n = 0; n <= 9; n++) {
-    await expect(page.getByRole("button", { name: `Niveau ${n}`, exact: true })).toHaveText(`${n}`);
+    await expect(
+      page.getByRole("button", { name: `Niveau ${n}`, exact: true }),
+    ).toHaveText(`${n}`);
   }
-  await expect(detail(page).getByTestId("spell-meta")).toContainText("Magicien · Niveau 3");
+  await expect(detail(page).getByTestId("spell-meta")).toContainText(
+    "Magicien · Niveau 3",
+  );
 
   // All: the class chip is French; the Priest spell shows its values and sphere in French.
   await classButton(page, "Tous").click();
   await expect(rows(page)).toHaveCount(2);
-  await expect(page.getByTestId("spell-class")).toHaveText(["Prêtre", "Magicien"]);
+  await expect(page.getByTestId("spell-class")).toHaveText([
+    "Prêtre",
+    "Magicien",
+  ]);
   await rows(page).filter({ hasText: "Quixotic Probe" }).click();
   const meta = detail(page).getByTestId("spell-meta");
   await expect(meta).toContainText("Prêtre · Niveau 2");
@@ -428,8 +511,12 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
   // The sphere dropdown: French labels, still filtering on the English API value.
   await classButton(page, "Prêtre").click();
   const sphere = page.getByRole("combobox", { name: "Sphère" });
-  await expect(sphere.locator("option", { hasText: "Élémentaire (Feu)" })).toHaveCount(1);
-  await expect(sphere.locator("option", { hasText: "Elemental Fire" })).toHaveCount(0);
+  await expect(
+    sphere.locator("option", { hasText: "Élémentaire (Feu)" }),
+  ).toHaveCount(1);
+  await expect(
+    sphere.locator("option", { hasText: "Elemental Fire" }),
+  ).toHaveCount(0);
   await sphere.selectOption({ label: "Soleil" });
   await expect(sphere).toHaveValue("Sun");
   await expect(rows(page)).toHaveCount(1);

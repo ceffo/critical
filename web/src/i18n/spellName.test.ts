@@ -54,7 +54,12 @@ describe("otherSpellName", () => {
 
   it("resolves a suffixed key through its base", async () => {
     expect(
-      otherSpellName(await makeT("en"), "en", "burning_hands_l2", "Burning Hands"),
+      otherSpellName(
+        await makeT("en"),
+        "en",
+        "burning_hands_l2",
+        "Burning Hands",
+      ),
     ).toBe("Mains brûlantes");
   });
 
@@ -65,7 +70,11 @@ describe("otherSpellName", () => {
   });
 
   it("is null when there is no other name or it is the same", async () => {
-    expect(otherSpellName(await makeT("en"), "en", "shield", "Shield")).toBeNull();
-    expect(otherSpellName(await makeT("fr"), "fr", "shield", "Shield")).toBeNull();
+    expect(
+      otherSpellName(await makeT("en"), "en", "shield", "Shield"),
+    ).toBeNull();
+    expect(
+      otherSpellName(await makeT("fr"), "fr", "shield", "Shield"),
+    ).toBeNull();
   });
 });

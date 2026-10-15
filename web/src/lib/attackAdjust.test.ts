@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { MAX_TARGET_AC, adjustFormKey, attackSettled, hitsAc, parseTargetAc, stepTargetAc, tellGmWithCrit } from "./attackAdjust";
+import {
+  MAX_TARGET_AC,
+  adjustFormKey,
+  attackSettled,
+  hitsAc,
+  parseTargetAc,
+  stepTargetAc,
+  tellGmWithCrit,
+} from "./attackAdjust";
 
 describe("stepTargetAc", () => {
   it.each([
@@ -55,12 +63,20 @@ describe("parseTargetAc", () => {
 
 describe("adjustFormKey", () => {
   it("changes when the AC goes back to unknown, so the form restarts empty", () => {
-    expect(adjustFormKey({ logEntryId: 7, targetAc: null })).not.toBe(adjustFormKey({ logEntryId: 7, targetAc: 4 }));
+    expect(adjustFormKey({ logEntryId: 7, targetAc: null })).not.toBe(
+      adjustFormKey({ logEntryId: 7, targetAc: 4 }),
+    );
   });
   it("changes with the attack and the AC, and is stable otherwise", () => {
-    expect(adjustFormKey({ logEntryId: 7, targetAc: 4 })).toBe(adjustFormKey({ logEntryId: 7, targetAc: 4 }));
-    expect(adjustFormKey({ logEntryId: 8, targetAc: 4 })).not.toBe(adjustFormKey({ logEntryId: 7, targetAc: 4 }));
-    expect(adjustFormKey({ logEntryId: 7, targetAc: 5 })).not.toBe(adjustFormKey({ logEntryId: 7, targetAc: 4 }));
+    expect(adjustFormKey({ logEntryId: 7, targetAc: 4 })).toBe(
+      adjustFormKey({ logEntryId: 7, targetAc: 4 }),
+    );
+    expect(adjustFormKey({ logEntryId: 8, targetAc: 4 })).not.toBe(
+      adjustFormKey({ logEntryId: 7, targetAc: 4 }),
+    );
+    expect(adjustFormKey({ logEntryId: 7, targetAc: 5 })).not.toBe(
+      adjustFormKey({ logEntryId: 7, targetAc: 4 }),
+    );
   });
 });
 

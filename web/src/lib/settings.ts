@@ -89,7 +89,10 @@ export function loadSettings(store: Store | null = storage()): Settings {
 
 export function saveSettings(s: Settings, store: Store | null = storage()) {
   try {
-    store?.setItem(SETTINGS_KEY, JSON.stringify({ lang: s.lang, mode: s.mode, amb: s.amb }));
+    store?.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ lang: s.lang, mode: s.mode, amb: s.amb }),
+    );
   } catch {
     // ignore (quota, privacy mode)
   }

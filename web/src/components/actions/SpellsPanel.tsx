@@ -32,7 +32,9 @@ function groupSlots(
   const rows: SlotRow[] = [];
   const byKey = new Map<string, SlotRow>();
   for (const slot of list) {
-    const blank = Boolean(slot.extra && !slot.prepared_spell_id && !slot.prepared_spell_name);
+    const blank = Boolean(
+      slot.extra && !slot.prepared_spell_id && !slot.prepared_spell_name,
+    );
     if (blank) {
       rows.push({ slot, blank, name: blankName, remaining: slot.used ? 0 : 1 });
       continue;
@@ -40,7 +42,12 @@ function groupSlots(
     const key = slot.prepared_spell_id || slot.prepared_spell_name;
     const row = byKey.get(key);
     if (!row) {
-      const r = { slot, blank, name: nameOf(slot), remaining: slot.used ? 0 : 1 };
+      const r = {
+        slot,
+        blank,
+        name: nameOf(slot),
+        remaining: slot.used ? 0 : 1,
+      };
       byKey.set(key, r);
       rows.push(r);
     } else if (!slot.used) {
@@ -49,7 +56,10 @@ function groupSlots(
     }
   }
   return rows.sort(
-    (a, b) => Number(a.blank) - Number(b.blank) || a.name.localeCompare(b.name) || a.slot.index - b.slot.index,
+    (a, b) =>
+      Number(a.blank) - Number(b.blank) ||
+      a.name.localeCompare(b.name) ||
+      a.slot.index - b.slot.index,
   );
 }
 
@@ -59,8 +69,16 @@ function groupSlots(
  */
 export function SpellsPanel() {
   const { t } = useTranslation();
-  const { slots, info, fetchSlots, fetchInfo, castSpell, resetSlots, prepare, loading } =
-    useSpellStore();
+  const {
+    slots,
+    info,
+    fetchSlots,
+    fetchInfo,
+    castSpell,
+    resetSlots,
+    prepare,
+    loading,
+  } = useSpellStore();
   const [editing, setEditing] = useState(false);
   // Buff spells that can go on someone else land on the Bard unless this is checked.
   const [onAlly, setOnAlly] = useState(false);
@@ -97,18 +115,26 @@ export function SpellsPanel() {
   // Group by level for display, keeping each slot's index (the cast endpoint's id).
   const byLevel = new Map<number, (SpellSlot & { index: number })[]>();
   slots.forEach((slot, index) => {
-    byLevel.set(slot.level, [...(byLevel.get(slot.level) ?? []), { ...slot, index }]);
+    byLevel.set(slot.level, [
+      ...(byLevel.get(slot.level) ?? []),
+      { ...slot, index },
+    ]);
   });
-  const maxOf = (level: number) => info.limits.find((l) => l.level === level)?.max;
-  const levels = [...new Set([...byLevel.keys(), ...info.limits.map((l) => l.level)])].sort(
-    (a, b) => a - b,
-  );
+  const maxOf = (level: number) =>
+    info.limits.find((l) => l.level === level)?.max;
+  const levels = [
+    ...new Set([...byLevel.keys(), ...info.limits.map((l) => l.level)]),
+  ].sort((a, b) => a - b);
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-body">
-          <input type="checkbox" checked={onAlly} onChange={(e) => setOnAlly(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={onAlly}
+            onChange={(e) => setOnAlly(e.target.checked)}
+          />
           {t("spellSlots.onAlly")}
         </label>
         <div className="flex gap-2">
@@ -134,7 +160,9 @@ export function SpellsPanel() {
         <PrepareEditor
           spellbook={info.spellbook}
           limits={info.limits}
-          initial={slots.filter((s) => !s.extra).map((s) => s.prepared_spell_id || spellId(s.prepared_spell_name))}
+          initial={slots
+            .filter((s) => !s.extra)
+            .map((s) => s.prepared_spell_id || spellId(s.prepared_spell_name))}
           busy={busy}
           onCancel={() => setEditing(false)}
           onSave={(ids) =>
@@ -145,7 +173,9 @@ export function SpellsPanel() {
         />
       )}
       {levels.length === 0 && !loading && (
-        <p className="text-body text-muted-foreground">{t("spellSlots.none")}</p>
+        <p className="text-body text-muted-foreground">
+          {t("spellSlots.none")}
+        </p>
       )}
       <div className="grid grid-cols-2 gap-3">
         {levels.map((level) => {
@@ -164,14 +194,20 @@ export function SpellsPanel() {
                 <div className="flex items-center gap-2">
                   {maxOf(level) !== undefined && (
                     <span className="text-label text-muted-foreground">
-                      {t("spellSlots.preparedCount", { count: list.filter((s) => !s.extra).length, max: maxOf(level) })}
+                      {t("spellSlots.preparedCount", {
+                        count: list.filter((s) => !s.extra).length,
+                        max: maxOf(level),
+                      })}
                     </span>
                   )}
                   <span className="flex items-center gap-1" aria-hidden>
                     {list.map((_, i) => (
                       <span
                         key={i}
-                        className={cn("size-2 rounded-full", i < left ? "bg-amb-400" : "bg-neu-700")}
+                        className={cn(
+                          "size-2 rounded-full",
+                          i < left ? "bg-amb-400" : "bg-neu-700",
+                        )}
                       />
                     ))}
                   </span>
@@ -179,7 +215,9 @@ export function SpellsPanel() {
                     data-testid={`remaining-${level}`}
                     className={cn(
                       "text-label",
-                      list.length > 0 && left === 0 ? "text-danger" : "text-muted-foreground",
+                      list.length > 0 && left === 0
+                        ? "text-danger"
+                        : "text-muted-foreground",
                     )}
                   >
                     {t("spellSlots.remaining", { left, total: list.length })}
@@ -187,17 +225,23 @@ export function SpellsPanel() {
                 </div>
               </div>
               <ul className="flex flex-col gap-1 p-1.5">
-                {groupSlots(list, (slot) =>
-                  spellName(
-                    t,
-                    slot.prepared_spell_id || spellId(slot.prepared_spell_name),
-                    slot.prepared_spell_name,
-                  ),
+                {groupSlots(
+                  list,
+                  (slot) =>
+                    spellName(
+                      t,
+                      slot.prepared_spell_id ||
+                        spellId(slot.prepared_spell_name),
+                      slot.prepared_spell_name,
+                    ),
                   t("spellSlots.extraBlank"),
                 ).map(({ slot, blank, name: baseName, remaining }) => {
                   // A spell prepared several times is one row with the copies left; casting uses one.
-                  const name = remaining > 1 ? `${baseName} ×${remaining}` : baseName;
-                  const choices = info.spellbook.filter((s) => s.level === slot.level);
+                  const name =
+                    remaining > 1 ? `${baseName} ×${remaining}` : baseName;
+                  const choices = info.spellbook.filter(
+                    (s) => s.level === slot.level,
+                  );
                   const plan = planCast(slot, blank, info.spellbook, {
                     pick: picks[slot.index],
                     split: splits[slot.index],
@@ -205,16 +249,31 @@ export function SpellsPanel() {
                     itemPick: itemPicks[slot.index],
                     mode: modePicks[slot.index],
                   });
-                  const { needs, slotSplits, split, spendable, itemId, modes, mode } = plan;
+                  const {
+                    needs,
+                    slotSplits,
+                    split,
+                    spendable,
+                    itemId,
+                    modes,
+                    mode,
+                  } = plan;
                   const acText = targetAcs[slot.index] ?? "";
                   // The damage a cast rolls at the Bard's level, as the server serves it: the picked
                   // mode's for a spell with modes.
                   const entry = blank
                     ? undefined
                     : info.spellbook.find(
-                        (s) => s.id === (slot.prepared_spell_id || spellId(slot.prepared_spell_name)),
+                        (s) =>
+                          s.id ===
+                          (slot.prepared_spell_id ||
+                            spellId(slot.prepared_spell_name)),
                       );
-                  const damage = blank ? undefined : mode ? mode.damage : entry?.damage;
+                  const damage = blank
+                    ? undefined
+                    : mode
+                      ? mode.damage
+                      : entry?.damage;
                   // A lasting area's damage per round of exposure (ADR 0008 step 16), rolled from
                   // the cast card.
                   const exposure = entry?.exposure;
@@ -258,7 +317,9 @@ export function SpellsPanel() {
                           aria-label={t("spellSlots.extraPick")}
                           data-testid="extra-pick"
                           value={picks[slot.index] ?? ""}
-                          onChange={(e) => setPicks({ ...picks, [slot.index]: e.target.value })}
+                          onChange={(e) =>
+                            setPicks({ ...picks, [slot.index]: e.target.value })
+                          }
                         >
                           <option value="">{t("spellSlots.extraPick")}</option>
                           {choices.map((s) => (
@@ -276,7 +337,12 @@ export function SpellsPanel() {
                           data-testid="cast-target-ac"
                           inputMode="numeric"
                           value={acText}
-                          onChange={(e) => setTargetAcs({ ...targetAcs, [slot.index]: e.target.value })}
+                          onChange={(e) =>
+                            setTargetAcs({
+                              ...targetAcs,
+                              [slot.index]: e.target.value,
+                            })
+                          }
                         />
                       )}
                       {spendable.length > 1 && !slot.used && (
@@ -285,7 +351,12 @@ export function SpellsPanel() {
                           aria-label={t("spellSlots.itemSpent")}
                           data-testid="cast-item"
                           value={itemId}
-                          onChange={(e) => setItemPicks({ ...itemPicks, [slot.index]: e.target.value })}
+                          onChange={(e) =>
+                            setItemPicks({
+                              ...itemPicks,
+                              [slot.index]: e.target.value,
+                            })
+                          }
                         >
                           {spendable.map((i) => (
                             <option key={i.id} value={i.id}>
@@ -300,7 +371,12 @@ export function SpellsPanel() {
                           aria-label={t("spellSlots.modeChoice")}
                           data-testid="slot-mode"
                           value={mode?.key}
-                          onChange={(e) => setModePicks({ ...modePicks, [slot.index]: e.target.value })}
+                          onChange={(e) =>
+                            setModePicks({
+                              ...modePicks,
+                              [slot.index]: e.target.value,
+                            })
+                          }
                         >
                           {modes.map((m) => (
                             <option key={m.key} value={m.key}>
@@ -315,10 +391,18 @@ export function SpellsPanel() {
                           aria-label={t("spellSlots.splitChoice")}
                           data-testid="slot-split"
                           value={split}
-                          onChange={(e) => setSplits({ ...splits, [slot.index]: e.target.value })}
+                          onChange={(e) =>
+                            setSplits({
+                              ...splits,
+                              [slot.index]: e.target.value,
+                            })
+                          }
                         >
                           {slotSplits.map((levels) => (
-                            <option key={levels.join(",")} value={levels.join(",")}>
+                            <option
+                              key={levels.join(",")}
+                              value={levels.join(",")}
+                            >
                               {splitText(t, levels)}
                             </option>
                           ))}
@@ -328,14 +412,21 @@ export function SpellsPanel() {
                         size="xs"
                         variant={slot.used ? "ghost" : "secondary"}
                         disabled={busy || plan.blocked}
-                        aria-label={t("spellSlots.castLabel", { name: baseName })}
+                        aria-label={t("spellSlots.castLabel", {
+                          name: baseName,
+                        })}
                         onClick={() =>
                           void run(() =>
-                            castSpell(slot.index, { onSelf: onAlly ? false : undefined, ...plan.options }),
+                            castSpell(slot.index, {
+                              onSelf: onAlly ? false : undefined,
+                              ...plan.options,
+                            }),
                           )
                         }
                       >
-                        {slot.used ? t("spellSlots.used") : t("spellSlots.cast")}
+                        {slot.used
+                          ? t("spellSlots.used")
+                          : t("spellSlots.cast")}
                       </Button>
                     </li>
                   );

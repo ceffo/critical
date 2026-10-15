@@ -8,8 +8,8 @@ test("app loads and shows the character's HP", async ({ page }) => {
   );
   expect(await currentHp(page)).toBeGreaterThan(0);
   // The round screen's regions are all there.
-  for (const name of ["Actions", "Last Result", "Combat Log"]) {
-    await expect(page.getByRole("region", { name })).toBeVisible();
+  for (const name of ["Actions", "Detail", "Journal"]) {
+    await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
   }
   await expect(page.getByRole("group", { name: "HP change" })).toBeVisible();
   await snap(page, "dashboard");

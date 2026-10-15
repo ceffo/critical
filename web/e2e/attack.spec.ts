@@ -16,7 +16,7 @@ import {
 
 function resultCard(page: Page) {
   return page
-    .getByRole("region", { name: "Last Result" })
+    .getByRole("region", { name: "Detail", exact: true })
     .getByTestId("attack-result");
 }
 
@@ -45,6 +45,8 @@ test("a melee attack lists every modifier in the result card and the log", async
   await expect(card).toContainText("Long Sword +2 vs AC 5");
   await expect(card).toContainText("large target");
   await expect(card).toContainText(/Hit|Miss/);
+  // The modifiers are in the calculation details, closed by default.
+  await card.getByText("Calculation details").click();
   const mods = card.getByTestId("to-hit-modifiers");
   await expect(mods.getByRole("listitem")).toHaveCount(3);
   await expect(mods).toContainText(/Strength \d+/);
@@ -241,14 +243,14 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
 
   // In French: the form and the log line.
   await chooseLanguage(page, "fr");
-  const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("attack-result");
+  const frCard = page.getByRole("region", { name: "Détail", exact: true }).getByTestId("attack-result");
   const frFix = frCard.getByRole("form", { name: "Corriger la CA de la cible" });
   await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("20");
   await expect(frFix.getByRole("button", { name: "Appliquer" })).toBeDisabled();
   await expect(frFix.getByRole("button", { name: "Monter la CA de la cible" })).toBeVisible();
   await expect(frCard.getByTestId("ac-corrected")).toHaveText("jet contre CA -20");
   const frEntry = page
-    .getByRole("region", { name: "Journal de combat" })
+    .getByRole("region", { name: "Journal", exact: true })
     .getByRole("listitem")
     .filter({ hasText: "Short Bow +2 (Arrows +2)" });
   await expect(frEntry).toContainText(
@@ -389,14 +391,14 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
 
   // In French: the three dice facts and the crit text.
   await chooseLanguage(page, "fr");
-  const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("attack-result");
+  const frCard = page.getByRole("region", { name: "Détail", exact: true }).getByTestId("attack-result");
   await expect(frCard.getByTestId("crit-badge")).toHaveText(
     `Test critique ${check} · multiplicateur ${mult} → ×2 (provisoire)`,
   );
   await expect(frCard.locator("dt", { hasText: "d100 multiplicateur" })).toHaveCount(1);
   await expect(
     page
-      .getByRole("region", { name: "Journal de combat" })
+      .getByRole("region", { name: "Journal", exact: true })
       .getByRole("listitem")
       .filter({ hasText: "Long Sword +2 contre CA 20" }),
   ).toContainText(`(CA -20 → 20 : RATÉ → CRITIQUE)`);

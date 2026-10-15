@@ -2,7 +2,6 @@
 // Architectural Rule"); these functions lay them out, they never compute a game value.
 import type { TFunction } from "i18next";
 import type { RollResult } from "@/types/combat";
-import { formatSigned } from "@/lib/format";
 import type { UseResult } from "@/types/items";
 
 /** A multiplier inside a formula, with at least one decimal: 2.0, 1.5, 1.25 (1,5 in French). */
@@ -59,16 +58,4 @@ export function modLabel(
   }
   if (m.kind === "situational" && !m.detail) return t("result.mods.situationalUnnamed");
   return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
-}
-
-/** A save's breakdown (docs/adr/0006 step 2): d20 + modifiers [+ adjustment] = total vs target. */
-export function saveFormula(t: TFunction, r: RollResult, category: string): string {
-  return t(r.adjustment ? "result.saveFormulaAdjusted" : "result.saveFormula", {
-    d20: r.d20Roll,
-    mod: r.saveBonus ?? 0,
-    adj: formatSigned(r.adjustment ?? 0),
-    total: r.saveTotal,
-    target: r.effectiveThac0,
-    name: t(`saves.categories.${category}`),
-  });
 }

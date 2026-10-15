@@ -38,7 +38,7 @@ test("the table saved in the editor is used by the next crit", async ({
   await forceAttackAc(page, 1000); // so low a roll is needed that every attack crits
   await page.getByRole("button", { name: "Attack", exact: true }).click();
   const card = page
-    .getByRole("region", { name: "Last Result" })
+    .getByRole("region", { name: "Detail", exact: true })
     .getByTestId("attack-result");
   await expect(card.getByTestId("crit-badge")).toHaveText(
     /^Crit check \d+ · multiplier \d+ → ×2 \(placeholder\)$/,
@@ -124,7 +124,7 @@ test("a decimal multiplier typed with a comma is saved and the crit shows the fl
   await forceAttackAc(page, 1000);
   await page.getByRole("button", { name: "Attack", exact: true }).click();
   const card = page
-    .getByRole("region", { name: "Last Result" })
+    .getByRole("region", { name: "Detail", exact: true })
     .getByTestId("attack-result");
   await expect(card.getByTestId("crit-badge")).toHaveText(
     /^Crit check \d+ · multiplier \d+ → ×1\.5 \(1–100\)$/,
@@ -168,7 +168,7 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
   await page.getByRole("tab", { name: "Armes" }).click();
   await page.getByRole("button", { name: "Attaquer", exact: true }).click();
   const card = page
-    .getByRole("region", { name: "Dernier résultat" })
+    .getByRole("region", { name: "Détail", exact: true })
     .getByTestId("attack-result");
   await expect(card.getByTestId("crit-badge")).toHaveText(
     /^Test critique \d+ · multiplicateur \d+ → ×1,5 \(1–100\)$/,
@@ -176,7 +176,7 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
   await expect(card.getByTestId("damage-terms")).toContainText("×1,5");
   await expect(
     page
-      .getByRole("region", { name: "Journal de combat" })
+      .getByRole("region", { name: "Journal", exact: true })
       .getByRole("listitem")
       .filter({ hasText: /critique \(test \d+ · multiplicateur \d+ → ×1,5\)/ })
       .first(),

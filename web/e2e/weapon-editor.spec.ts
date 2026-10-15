@@ -55,7 +55,7 @@ async function rollAttack(page: Page, weapon: string) {
   await f.getByLabel("Target AC").fill("-10");
   await f.getByRole("button", { name: "Attack", exact: true }).click();
   return page
-    .getByRole("region", { name: "Last Result" })
+    .getByRole("region", { name: "Detail", exact: true })
     .getByTestId("attack-result");
 }
 

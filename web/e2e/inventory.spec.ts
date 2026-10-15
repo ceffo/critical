@@ -36,7 +36,7 @@ function plus(page: Page, name: string) {
 }
 
 function resultCard(page: Page) {
-  return page.getByRole("region", { name: "Last Result" }).getByTestId("item-result");
+  return page.getByRole("region", { name: "Detail", exact: true }).getByTestId("item-result");
 }
 
 async function longRest(page: Page) {

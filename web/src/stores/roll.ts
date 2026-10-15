@@ -20,15 +20,23 @@ interface RollStore {
   /** Resolves true when the attack was rolled (and logged). */
   rollAttack: (req: AttackRequest) => Promise<boolean>;
   rollSave: (category: SaveCategory) => Promise<void>;
-  /** Sets the adjustment of the save on the card; resolves true on success. */
-  adjustLastSave: (adjustment: number, reason: string) => Promise<boolean>;
-  /** Corrects the target AC of the attack on the card; resolves true on success. */
-  adjustLastAttack: (targetAc: number) => Promise<boolean>;
+  /**
+   * Sets the adjustment of the latest save (log entry id; the server refuses any other); resolves
+   * true on success. The recomputed save becomes the last roll.
+   */
+  adjustLastSave: (
+    entryId: number,
+    category: SaveCategory,
+    adjustment: number,
+    reason: string,
+  ) => Promise<boolean>;
+  /** Corrects the target AC of the latest attack (log entry id); resolves true on success. */
+  adjustLastAttack: (entryId: number, targetAc: number) => Promise<boolean>;
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
 }
 
-export const useRollStore = create<RollStore>((set, get) => {
+export const useRollStore = create<RollStore>((set) => {
   async function roll(fn: () => Promise<LastRoll>, refresh: boolean): Promise<boolean> {
     set({ rolling: true });
     const table = useTableStore.getState();
@@ -59,24 +67,12 @@ export const useRollStore = create<RollStore>((set, get) => {
         true,
       );
     },
-    adjustLastAttack: async (targetAc) => {
-      const last = get().last;
-      if (last?.kind !== "attack" || last.result.logEntryId === undefined) return false;
-      const id = last.result.logEntryId;
-      return roll(async () => ({ kind: "attack", result: await adjustAttack(id, targetAc) }), true);
-    },
-    adjustLastSave: async (adjustment, reason) => {
-      const last = get().last;
-      if (last?.kind !== "save" || last.result.logEntryId === undefined) return false;
-      const id = last.result.logEntryId;
-      return roll(
-        async () => ({
-          kind: "save",
-          category: last.category,
-          result: await adjustSave(id, adjustment, reason),
-        }),
+    adjustLastAttack: (id, targetAc) =>
+      roll(async () => ({ kind: "attack", result: await adjustAttack(id, targetAc) }), true),
+    adjustLastSave: (id, category, adjustment, reason) =>
+      roll(
+        async () => ({ kind: "save", category, result: await adjustSave(id, adjustment, reason) }),
         true,
-      );
-    },
+      ),
   };
 });

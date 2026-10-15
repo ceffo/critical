@@ -1,6 +1,12 @@
 import { useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, CaretRight, CircleNotch, DiceFive, MagnifyingGlass } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  CaretRight,
+  CircleNotch,
+  DiceFive,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
@@ -12,7 +18,12 @@ import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
 import { damageFormula, damageText } from "@/lib/spellDice";
 import { damageRows, exposureRows } from "@/lib/spellMode";
 import { exposureDamageText } from "@/lib/spellDice";
-import { classLabel, sphereLabel, spheresLabel, translateValue } from "@/lib/lookupLabels";
+import {
+  classLabel,
+  sphereLabel,
+  spheresLabel,
+  translateValue,
+} from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
 const CLASSES: { value: SpellClass; key: string }[] = [
@@ -34,14 +45,23 @@ function same(a: string, b: string): boolean {
 const LOAD_MORE_MARGIN = 400;
 
 /** "Mains brûlantes" + grey "· Burning Hands" (the other language), when it exists. */
-function SpellNames({ spell, className }: { spell: Spell; className?: string }) {
+function SpellNames({
+  spell,
+  className,
+}: {
+  spell: Spell;
+  className?: string;
+}) {
   const { t, i18n } = useTranslation();
   const other = otherSpellName(t, i18n.language, spell.id, spell.name);
   return (
     <span className={cn("min-w-0 truncate", className)}>
       <span data-testid="spell-name">{spellName(t, spell.id, spell.name)}</span>
       {other && (
-        <span className="text-muted-foreground font-normal" data-testid="spell-other-name">
+        <span
+          className="text-muted-foreground font-normal"
+          data-testid="spell-other-name"
+        >
           {" · "}
           {other}
         </span>
@@ -59,7 +79,9 @@ function SpellDetail({ spell }: { spell: Spell }) {
   const value = (key: StatKey): string | null =>
     key === "save"
       ? spell.stats.save.kinds.length
-        ? spell.stats.save.kinds.map((k) => t(`lookup.saveKinds.${k}`)).join(" / ")
+        ? spell.stats.save.kinds
+            .map((k) => t(`lookup.saveKinds.${k}`))
+            .join(" / ")
         : null
       : statValue(spell, key, unit);
   const meta = [
@@ -72,27 +94,28 @@ function SpellDetail({ spell }: { spell: Spell }) {
   // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
   // mode with damage for a spell with modes, then the stats with dice.
   const damages = damageRows(t, spell);
-  const dice: { key: string; label: string; text: string; formula: string }[] = [
-    ...damages.map((d) => ({
-      key: d.key,
-      label: d.label,
-      text: damageText(t, d.damage),
-      formula: damageFormula(d.damage),
-    })),
-    // One round of exposure to the spell's area (ADR 0008 step 16), per mode when it has modes.
-    ...exposureRows(t, spell).map((d) => ({
-      key: d.key,
-      label: d.label,
-      text: exposureDamageText(t, d.damage),
-      formula: damageFormula(d.damage),
-    })),
-    ...statDice(spell, unit).map((d) => ({
-      key: d.key,
-      label: t(`lookup.${d.key}`),
-      text: d.formula,
-      formula: d.formula,
-    })),
-  ];
+  const dice: { key: string; label: string; text: string; formula: string }[] =
+    [
+      ...damages.map((d) => ({
+        key: d.key,
+        label: d.label,
+        text: damageText(t, d.damage),
+        formula: damageFormula(d.damage),
+      })),
+      // One round of exposure to the spell's area (ADR 0008 step 16), per mode when it has modes.
+      ...exposureRows(t, spell).map((d) => ({
+        key: d.key,
+        label: d.label,
+        text: exposureDamageText(t, d.damage),
+        formula: damageFormula(d.damage),
+      })),
+      ...statDice(spell, unit).map((d) => ({
+        key: d.key,
+        label: t(`lookup.${d.key}`),
+        text: d.formula,
+        formula: d.formula,
+      })),
+    ];
 
   return (
     <div className="flex flex-col gap-3">
@@ -100,7 +123,10 @@ function SpellDetail({ spell }: { spell: Spell }) {
         <h3 className="text-title">
           <SpellNames spell={spell} className="whitespace-normal" />
         </h3>
-        <p className="text-label text-muted-foreground" data-testid="spell-meta">
+        <p
+          className="text-label text-muted-foreground"
+          data-testid="spell-meta"
+        >
           {meta.join(" · ")}
         </p>
       </div>
@@ -122,7 +148,10 @@ function SpellDetail({ spell }: { spell: Spell }) {
                       {v}
                     </span>
                     {raw && !same(v, raw) && (
-                      <span className="text-label text-muted-foreground" data-testid="stat-raw">
+                      <span
+                        className="text-label text-muted-foreground"
+                        data-testid="stat-raw"
+                      >
                         {raw}
                       </span>
                     )}
@@ -148,7 +177,10 @@ function SpellDetail({ spell }: { spell: Spell }) {
                   {t("lookup.atLevel", { level: spell.caster_level })}
                   {" · "}
                   {d.label}{" "}
-                  <span className="font-medium text-amb-300 tabular-nums" data-testid="spell-dice-formula">
+                  <span
+                    className="font-medium text-amb-300 tabular-nums"
+                    data-testid="spell-dice-formula"
+                  >
                     {d.text}
                   </span>
                 </span>
@@ -182,7 +214,10 @@ function SpellDetail({ spell }: { spell: Spell }) {
       {spell.description && (
         <details className="group text-body" data-testid="spell-description">
           <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-md py-1 font-medium select-none hover:text-amb-300 [&::-webkit-details-marker]:hidden">
-            <CaretRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" />
+            <CaretRight
+              aria-hidden
+              className="size-3.5 transition-transform group-open:rotate-90"
+            />
             {t("lookup.description")}
           </summary>
           <p className="mt-1 max-w-[65ch] leading-relaxed whitespace-pre-line text-foreground/85">
@@ -267,7 +302,11 @@ export function LookupPanel() {
     });
 
   const levelChips = (
-    <div role="group" aria-label={t("lookup.levelsLabel")} className="flex gap-1">
+    <div
+      role="group"
+      aria-label={t("lookup.levelsLabel")}
+      className="flex gap-1"
+    >
       {LEVELS.map((n) => {
         const on = query.levels.includes(n);
         return (
@@ -306,7 +345,9 @@ export function LookupPanel() {
               role="combobox"
               aria-expanded
               aria-controls="lookup-list"
-              aria-activedescendant={selectedId ? `lookup-row-${selectedId}` : undefined}
+              aria-activedescendant={
+                selectedId ? `lookup-row-${selectedId}` : undefined
+              }
               autoComplete="off"
               value={query.q}
               onChange={(e) => setQuery({ q: e.target.value })}
@@ -318,10 +359,16 @@ export function LookupPanel() {
             aria-label={priest ? t("lookup.sphere") : t("lookup.school")}
             value={priest ? query.sphere : query.school}
             onChange={(e) =>
-              setQuery(priest ? { sphere: e.target.value } : { school: e.target.value })
+              setQuery(
+                priest
+                  ? { sphere: e.target.value }
+                  : { school: e.target.value },
+              )
             }
           >
-            <option value="">{priest ? t("lookup.anySphere") : t("lookup.anySchool")}</option>
+            <option value="">
+              {priest ? t("lookup.anySphere") : t("lookup.anySchool")}
+            </option>
             {priest
               ? options?.spheres.map((s) => (
                   <option key={s} value={s}>
@@ -349,7 +396,8 @@ export function LookupPanel() {
                 aria-pressed={query.cls === value}
                 className={cn(
                   "rounded-md px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:text-foreground",
-                  query.cls === value && "bg-card text-foreground ring-1 ring-amb-600 ring-inset",
+                  query.cls === value &&
+                    "bg-card text-foreground ring-1 ring-amb-600 ring-inset",
                 )}
                 onClick={() => setQuery({ cls: value })}
               >
@@ -359,7 +407,9 @@ export function LookupPanel() {
           </div>
           {levelChips}
           <div className="ml-auto flex items-center gap-2 text-label text-muted-foreground">
-            {loading && <CircleNotch className="h-3 w-3 animate-spin" aria-hidden />}
+            {loading && (
+              <CircleNotch className="h-3 w-3 animate-spin" aria-hidden />
+            )}
             {error && (
               <span role="alert" className="text-destructive">
                 {error}
@@ -393,7 +443,9 @@ export function LookupPanel() {
           onScroll={onScroll}
         >
           {items.length === 0 && !loading && shownKey ? (
-            <p className="p-2 text-body text-muted-foreground">{t("lookup.noMatch")}</p>
+            <p className="p-2 text-body text-muted-foreground">
+              {t("lookup.noMatch")}
+            </p>
           ) : (
             items.map((s) => (
               <div
@@ -408,14 +460,20 @@ export function LookupPanel() {
                 data-level={s.level}
                 className={cn(
                   "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900/50",
-                  s.id === selectedId && "bg-amb-900 ring-1 ring-amb-700 ring-inset hover:bg-amb-900",
+                  s.id === selectedId &&
+                    "bg-amb-900 ring-1 ring-amb-700 ring-inset hover:bg-amb-900",
                 )}
                 onClick={() => select(s.id)}
               >
-                <span className="text-label text-amb-300 tabular-nums">{s.level}</span>
+                <span className="text-label text-amb-300 tabular-nums">
+                  {s.level}
+                </span>
                 <SpellNames spell={s} />
                 {query.cls === "all" ? (
-                  <span className="text-label text-muted-foreground" data-testid="spell-class">
+                  <span
+                    className="text-label text-muted-foreground"
+                    data-testid="spell-class"
+                  >
                     {classLabel(t, s.class)}
                   </span>
                 ) : (
@@ -425,7 +483,9 @@ export function LookupPanel() {
             ))
           )}
           {items.length > 0 && items.length < total && (
-            <p className="p-2 text-center text-label text-muted-foreground">{t("lookup.loadingMore")}</p>
+            <p className="p-2 text-center text-label text-muted-foreground">
+              {t("lookup.loadingMore")}
+            </p>
           )}
         </div>
 
@@ -437,7 +497,9 @@ export function LookupPanel() {
           {selected ? (
             <SpellDetail key={selected.id} spell={selected} />
           ) : (
-            <p className="text-body text-muted-foreground">{t("lookup.noSelection")}</p>
+            <p className="text-body text-muted-foreground">
+              {t("lookup.noSelection")}
+            </p>
           )}
         </section>
       </div>

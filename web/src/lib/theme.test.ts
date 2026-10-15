@@ -42,7 +42,9 @@ describe("themeVars", () => {
   });
 
   it("highlights a near-neutral ambiance in grey, not in colour", () => {
-    expect(themeVars("obsidienne", false)["--tint"]).toBe("oklch(0.86 0.02 265)");
+    expect(themeVars("obsidienne", false)["--tint"]).toBe(
+      "oklch(0.86 0.02 265)",
+    );
     expect(themeVars("obsidienne", true)["--tint"]).toBe("oklch(0.3 0.02 265)");
   });
 

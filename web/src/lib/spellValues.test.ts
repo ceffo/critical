@@ -5,7 +5,10 @@ import type { Spell, SpellStats, SpellValues } from "@/types/spells";
 const unit = (w: string) => ({ round: "rd", yard: "yd" })[w] ?? w;
 const q = { terms: [] };
 
-function spell(values: SpellValues | undefined, area: Partial<SpellStats["area"]> = {}): Spell {
+function spell(
+  values: SpellValues | undefined,
+  area: Partial<SpellStats["area"]> = {},
+): Spell {
   const stats: SpellStats = {
     casting_time: { raw: "1", kind: "timed", time: q },
     range: { raw: "60 yds.", kind: "distance", distance: q },
@@ -36,7 +39,9 @@ function spell(values: SpellValues | undefined, area: Partial<SpellStats["area"]
 
 describe("valueFormula", () => {
   it("puts the served dice first, then the served flat amount", () => {
-    expect(valueFormula({ amount: 8, dice: "1d8", unit: "round" })).toBe("1d8+8");
+    expect(valueFormula({ amount: 8, dice: "1d8", unit: "round" })).toBe(
+      "1d8+8",
+    );
     expect(valueFormula({ amount: -1, dice: "2d4" })).toBe("2d4-1");
     expect(valueFormula({ amount: 0, dice: "1d4 + 1d6" })).toBe("1d4+1d6");
   });

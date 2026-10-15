@@ -19,7 +19,12 @@ test("a note on a heal and on a buff entry changes no value and no HP", async ({
   const res = await fetch(`${stack.apiUrl}/api/buffs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "e2e Haste", duration: 5, charges: 0, effects: {} }),
+    body: JSON.stringify({
+      name: "e2e Haste",
+      duration: 5,
+      charges: 0,
+      effects: {},
+    }),
   });
   expect(res.ok).toBe(true);
   await openDashboard(page);
@@ -44,7 +49,9 @@ test("a note on a heal and on a buff entry changes no value and no HP", async ({
     await expect(entry.getByTestId("log-note")).toHaveText(note);
     await expect(entry).not.toContainText("Amended");
   }
-  await expect(logEntry(page, "e2e cure light").getByTestId("log-delta")).toHaveText("+4");
+  await expect(
+    logEntry(page, "e2e cure light").getByTestId("log-delta"),
+  ).toHaveText("+4");
   await expect.poll(() => currentHp(page)).toBe(max - 2);
   await expect(buffBadge(page, "e2e Haste")).toBeVisible();
 
@@ -132,7 +139,10 @@ test("a server error is shown to the user", async ({ page, stack }) => {
 // Global undo (ADR 0010 step 5). Only a browser proves the button's wiring, the tooltip worded
 // from the payload, the window-level Ctrl/Cmd+Z and its focus guard; the stack rules
 // (expected top, every kind) are Go tests.
-test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({ page, stack }) => {
+test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({
+  page,
+  stack,
+}) => {
   const arrows = async () => {
     const res = await fetch(`${stack.apiUrl}/api/items`);
     const items = (await res.json()) as { id: string; count: number }[];
@@ -142,7 +152,11 @@ test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({ page, stack }) => 
   const shot = await fetch(`${stack.apiUrl}/api/roll/attack`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ weapon_id: "shortbow", ammo_item_id: "arrows_plus3", target_ac: 5 }),
+    body: JSON.stringify({
+      weapon_id: "shortbow",
+      ammo_item_id: "arrows_plus3",
+      target_ac: 5,
+    }),
   });
   expect(shot.ok).toBe(true);
   expect(await arrows()).toBe(before! - 1);
@@ -172,7 +186,9 @@ test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({ page, stack }) => 
   await recordHp(page, "damage", 5, "e2e undo goblin");
   await expect.poll(() => currentHp(page)).toBe(max - 5);
   await expect(undo).toHaveAttribute("title", /e2e undo goblin/);
-  const source = page.getByRole("group", { name: "HP change" }).getByLabel("Source");
+  const source = page
+    .getByRole("group", { name: "HP change" })
+    .getByLabel("Source");
   await source.focus();
   await page.keyboard.press("ControlOrMeta+z");
   await page.keyboard.press("Meta+z");

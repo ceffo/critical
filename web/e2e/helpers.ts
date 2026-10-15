@@ -48,7 +48,10 @@ export async function recordHp(
   await box.getByLabel("Amount").fill(String(amount));
   await box.getByLabel("Source").fill(source);
   await box
-    .getByRole("button", { name: kind === "damage" ? "Damage" : "Healing", exact: true })
+    .getByRole("button", {
+      name: kind === "damage" ? "Damage" : "Healing",
+      exact: true,
+    })
     .click();
 }
 
@@ -94,7 +97,10 @@ export async function openAddEffect(
   const popover = page.getByTestId("add-effect-popover");
   // A popover still animating out of an earlier step must be gone before it is reopened.
   await expect(popover).toHaveCount(0);
-  await page.getByRole("group", { name: "Effects" }).getByRole("button", { name: "Add effect" }).click();
+  await page
+    .getByRole("group", { name: "Effects" })
+    .getByRole("button", { name: "Add effect" })
+    .click();
   await popover.getByRole("tab", { name: tab }).click();
   return popover;
 }
@@ -138,7 +144,10 @@ export async function effectiveStr(page: Page): Promise<number> {
 }
 
 /** Switch the workspace from the rail (English labels). */
-export async function openWorkspace(page: Page, name: "Act" | "Inventory" | "Spells" | "Experience") {
+export async function openWorkspace(
+  page: Page,
+  name: "Act" | "Inventory" | "Spells" | "Experience",
+) {
   await page
     .getByRole("navigation", { name: "Workspaces" })
     .getByRole("button", { name, exact: true })
@@ -174,7 +183,10 @@ export async function nextTurn(page: Page) {
 }
 
 /** Open the turn block's ⋯ menu and pick an action (English UI). */
-export async function turnMenu(page: Page, item: "Time passes…" | "Set turn number…" | "End combat") {
+export async function turnMenu(
+  page: Page,
+  item: "Time passes…" | "Set turn number…" | "End combat",
+) {
   await page.getByRole("button", { name: "More turn actions" }).click();
   await page.getByRole("menuitem", { name: item }).click();
 }
@@ -183,8 +195,13 @@ export async function turnMenu(page: Page, item: "Time passes…" | "Set turn nu
  * Void the turn's initiative entry, the one the turn block shows (Next turn logs it after the
  * advance, so it is popped first). Labels default to the English UI.
  */
-export async function voidInitiative(page: Page, labels = { void: "Void", confirm: "Confirm" }) {
-  const id = await page.getByTestId("initiative-value").getAttribute("data-entry-id");
+export async function voidInitiative(
+  page: Page,
+  labels = { void: "Void", confirm: "Confirm" },
+) {
+  const id = await page
+    .getByTestId("initiative-value")
+    .getAttribute("data-entry-id");
   const entry = page.locator(`li[data-entry-id="${id}"]`);
   await entry.getByRole("button", { name: labels.void, exact: true }).click();
   await entry.getByRole("button", { name: labels.confirm }).click();
@@ -235,7 +252,8 @@ export async function chosenAmmoCount(page: Page): Promise<number> {
     .locator('[aria-checked="true"]')
     .getByTestId("ammo-count")
     .textContent();
-  if (!/^\d+$/.test(text ?? "")) throw new Error(`unexpected ammo count: ${JSON.stringify(text)}`);
+  if (!/^\d+$/.test(text ?? ""))
+    throw new Error(`unexpected ammo count: ${JSON.stringify(text)}`);
   return Number(text);
 }
 
@@ -246,6 +264,8 @@ export async function chosenAmmoCount(page: Page): Promise<number> {
 export async function forceAttackAc(page: Page, ac: number) {
   await page.route("**/api/roll/attack", async (route) => {
     const body = route.request().postDataJSON() as Record<string, unknown>;
-    await route.continue({ postData: JSON.stringify({ ...body, target_ac: ac }) });
+    await route.continue({
+      postData: JSON.stringify({ ...body, target_ac: ac }),
+    });
   });
 }

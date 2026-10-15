@@ -28,7 +28,11 @@ export function ChargeCards() {
           data-testid="charge-card"
           data-buff={b.name}
         >
-          <Shield aria-hidden className="size-5 shrink-0 text-amb-300" weight="duotone" />
+          <Shield
+            aria-hidden
+            className="size-5 shrink-0 text-amb-300"
+            weight="duotone"
+          />
           <div className="flex min-w-0 flex-1 flex-col leading-tight">
             <span className="truncate text-body font-medium" title={b.name}>
               {b.name}
@@ -39,7 +43,10 @@ export function ChargeCards() {
               data-testid="charge-count"
             >
               {b.chargesTotal >= b.charges
-                ? t("effects.chargesOf", { count: b.charges, total: b.chargesTotal })
+                ? t("effects.chargesOf", {
+                    count: b.charges,
+                    total: b.chargesTotal,
+                  })
                 : t("moi.chargesLeft", { count: b.charges })}
             </span>
           </div>

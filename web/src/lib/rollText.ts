@@ -6,7 +6,10 @@ import type { UseResult } from "@/types/items";
 
 /** A multiplier inside a formula, with at least one decimal: 2.0, 1.5, 1.25 (1,5 in French). */
 export function formatMultiplier(n: number, lang?: string): string {
-  return new Intl.NumberFormat(lang, { minimumFractionDigits: 1, maximumFractionDigits: 4 }).format(n);
+  return new Intl.NumberFormat(lang, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 4,
+  }).format(n);
 }
 
 /** "+ 3" / "− 3" for a term added at the end of a formula. */
@@ -22,7 +25,11 @@ function plusTerm(n: number): string {
 export function damageFormula(r: RollResult, lang?: string): string {
   const m = (n: number) => formatMultiplier(n, lang);
   let dice = `${r.baseDamage} × ${m(r.spellsBuff)}`;
-  if (r.diceMultiplier !== undefined && r.diceMultiplier > 0 && r.diceMultiplier !== 1) {
+  if (
+    r.diceMultiplier !== undefined &&
+    r.diceMultiplier > 0 &&
+    r.diceMultiplier !== 1
+  ) {
     dice += ` × ${m(r.diceMultiplier)}`;
   }
   let s = `((${dice}) + ${r.weaponBuff}) × ${m(r.multipliers)} + ${r.strengthBonus}`;
@@ -56,6 +63,7 @@ export function modLabel(
       ? t("result.mods.critRange", { from: roll.critFrom, to: roll.critTo })
       : t("result.mods.critPlaceholder");
   }
-  if (m.kind === "situational" && !m.detail) return t("result.mods.situationalUnnamed");
+  if (m.kind === "situational" && !m.detail)
+    return t("result.mods.situationalUnnamed");
   return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
 }

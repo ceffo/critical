@@ -19,7 +19,9 @@ export interface LastHpChange {
  * Bard took (entries are newest first, as `GET /api/log` returns them). A heal capped to nothing at
  * full HP is skipped: it changed nothing.
  */
-export function lastHpChange(entries: readonly LogEntry[]): LastHpChange | null {
+export function lastHpChange(
+  entries: readonly LogEntry[],
+): LastHpChange | null {
   const e = entries.find(
     (x) =>
       (x.kind === "hp_change" || x.kind === "exposure") &&
@@ -29,7 +31,11 @@ export function lastHpChange(entries: readonly LogEntry[]): LastHpChange | null 
   if (!e) return null;
   const p = exposurePayload(e);
   return p
-    ? { delta: e.effectiveHpDelta, source: "", exposure: { spellId: p.spellId, spell: p.spell } }
+    ? {
+        delta: e.effectiveHpDelta,
+        source: "",
+        exposure: { spellId: p.spellId, spell: p.spell },
+      }
     : { delta: e.effectiveHpDelta, source: e.effectiveSummary };
 }
 
@@ -46,7 +52,9 @@ export interface LastSave {
 }
 
 /** Newest non-voided save per category, from the save entries' effective payload. */
-export function lastSaves(entries: readonly LogEntry[]): Partial<Record<SaveCategory, LastSave>> {
+export function lastSaves(
+  entries: readonly LogEntry[],
+): Partial<Record<SaveCategory, LastSave>> {
   const out: Partial<Record<SaveCategory, LastSave>> = {};
   for (const e of entries) {
     if (e.kind !== "save" || e.status === "voided") continue;
@@ -55,7 +63,8 @@ export function lastSaves(entries: readonly LogEntry[]): Partial<Record<SaveCate
       d20Roll?: unknown;
       passed?: unknown;
     } | null;
-    if (!p || typeof p.category !== "string" || typeof p.passed !== "boolean") continue;
+    if (!p || typeof p.category !== "string" || typeof p.passed !== "boolean")
+      continue;
     if (typeof p.d20Roll !== "number") continue;
     const cat = p.category as SaveCategory;
     if (!(cat in out)) out[cat] = { d20: p.d20Roll, passed: p.passed };

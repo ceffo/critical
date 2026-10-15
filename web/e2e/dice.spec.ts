@@ -12,7 +12,9 @@ const VIEWPORTS = [
 // the server, the card and the journal render the dice entry, Reroll adds a new entry, and a favourite
 // saved on the server comes back after a reload. The grammar and limits are Go tests (dicesvc);
 // the dice are random, so only relations between values are asserted.
-test("dice composer: build, roll, reroll, save a favourite, roll it", async ({ page }) => {
+test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
+  page,
+}) => {
   await openDashboard(page);
   const composer = page.getByRole("form", { name: "Dice" });
   const card = page.getByRole("region", { name: "Detail", exact: true });
@@ -35,17 +37,23 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({ p
   const result = card.getByTestId("dice-result");
   await expect(result).toBeVisible();
   await expect(result.getByTestId("dice-formula")).toHaveText("2d6+1");
-  const total = async () => Number(await result.getByTestId("dice-total").textContent());
+  const total = async () =>
+    Number(await result.getByTestId("dice-total").textContent());
   const first = await total();
   expect(first).toBeGreaterThanOrEqual(3);
   expect(first).toBeLessThanOrEqual(13);
   await expect(result.getByTestId("dice-group")).toHaveCount(1);
-  await expect(journal.locator("[data-selected=true]")).toContainText(`Dice 2d6+1 = ${first}`);
+  await expect(journal.locator("[data-selected=true]")).toContainText(
+    `Dice 2d6+1 = ${first}`,
+  );
 
   // Reroll from the journal row: a new entry, still the same formula.
   const rows = journal.getByText(/^Dice 2d6\+1 = \d+$/);
   await expect(rows).toHaveCount(1);
-  await journal.locator("[data-selected=true]").getByRole("button", { name: "Reroll" }).click();
+  await journal
+    .locator("[data-selected=true]")
+    .getByRole("button", { name: "Reroll" })
+    .click();
   await expect(rows).toHaveCount(2);
 
   // Reroll from the card too.
@@ -78,7 +86,9 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({ p
   // The favourites and their order survive a reload (kept by the server); a chip rolls.
   await page.reload();
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
-  const favReloaded = page.getByRole("form", { name: "Dice" }).getByTestId("dice-favourite");
+  const favReloaded = page
+    .getByRole("form", { name: "Dice" })
+    .getByTestId("dice-favourite");
   await expect(favReloaded).toHaveText([/d6/, /d%\+d4/]);
   await favReloaded.getByRole("button", { name: "Roll d%+d4" }).click();
   await expect(result.getByTestId("dice-formula")).toHaveText("d%+d4");
@@ -90,7 +100,10 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({ p
     await expect(composer).toBeVisible();
     const scroll = await page.evaluate(() => {
       const el = document.scrollingElement ?? document.documentElement;
-      return { x: el.scrollWidth - el.clientWidth, y: el.scrollHeight - el.clientHeight };
+      return {
+        x: el.scrollWidth - el.clientWidth,
+        y: el.scrollHeight - el.clientHeight,
+      };
     });
     expect(scroll, "no page scroll").toEqual({ x: 0, y: 0 });
     await snap(page, `dice-${vp.width}x${vp.height}`);
@@ -100,5 +113,7 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({ p
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByTestId("undo").click();
   await expect(journal.locator('[data-status="voided"]')).toHaveCount(1);
-  await expect(journal.locator('[data-status="voided"]')).toContainText("Dice d%+d4");
+  await expect(journal.locator('[data-status="voided"]')).toContainText(
+    "Dice d%+d4",
+  );
 });

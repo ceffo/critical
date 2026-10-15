@@ -19,14 +19,18 @@ interface XpStore {
 
 /** The XP ledger (ADR 0015): outside the action stack, so it never refreshes the table state. */
 export const useXpStore = create<XpStore>((set, get) => {
-  const write = async (action: () => Promise<XpLedger>): Promise<ApiError | null> => {
+  const write = async (
+    action: () => Promise<XpLedger>,
+  ): Promise<ApiError | null> => {
     set({ busy: true });
     try {
       set({ ledger: await action() });
       return null;
     } catch (e) {
       if (e instanceof ApiError && e.field) return e;
-      useTableStore.setState({ error: e instanceof Error ? e.message : String(e) });
+      useTableStore.setState({
+        error: e instanceof Error ? e.message : String(e),
+      });
       return null;
     } finally {
       set({ busy: false });
@@ -40,7 +44,9 @@ export const useXpStore = create<XpStore>((set, get) => {
       try {
         set({ ledger: await fetchXp() });
       } catch (e) {
-        useTableStore.setState({ error: e instanceof Error ? e.message : String(e) });
+        useTableStore.setState({
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     },
     add: async (body) => {

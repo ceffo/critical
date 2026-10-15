@@ -23,7 +23,9 @@ export function Notices() {
           className="pointer-events-auto flex items-start gap-2 rounded-lg border border-destructive/40 bg-card p-3 text-body shadow-lg"
         >
           <div className="min-w-0 flex-1">
-            <div className="font-semibold text-destructive">{t("app.error")}</div>
+            <div className="font-semibold text-destructive">
+              {t("app.error")}
+            </div>
             <div className="break-words">{error}</div>
           </div>
           <Button

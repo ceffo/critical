@@ -20,7 +20,11 @@ function lookupLabel(t: TFunction, group: string, raw: string): string {
 }
 
 /** A scraped stat value (exact whole-value match only; "210 yd" etc. are left alone). */
-export function translateValue(t: TFunction, stat: StatKey, raw: string): string {
+export function translateValue(
+  t: TFunction,
+  stat: StatKey,
+  raw: string,
+): string {
   return lookupLabel(t, `values.${stat}`, raw);
 }
 

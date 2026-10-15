@@ -36,7 +36,9 @@ describe("isTypingTarget", () => {
   it("fields and editable elements", () => {
     for (const tagName of ["INPUT", "TEXTAREA", "SELECT", "input"])
       expect(isTypingTarget({ tagName })).toBe(true);
-    expect(isTypingTarget({ tagName: "DIV", isContentEditable: true })).toBe(true);
+    expect(isTypingTarget({ tagName: "DIV", isContentEditable: true })).toBe(
+      true,
+    );
   });
   it("text-like inputs, whatever their type", () => {
     for (const type of ["", "text", "number", "search", "email", "TEXT"])
@@ -44,12 +46,21 @@ describe("isTypingTarget", () => {
     expect(isTypingTarget({ tagName: "INPUT" })).toBe(true);
   });
   it("not a checkbox, radio or other input that takes no text", () => {
-    for (const type of ["checkbox", "radio", "button", "submit", "range", "color"])
+    for (const type of [
+      "checkbox",
+      "radio",
+      "button",
+      "submit",
+      "range",
+      "color",
+    ])
       expect(isTypingTarget({ tagName: "INPUT", type })).toBe(false);
   });
   it("not a button, the body or nothing", () => {
     expect(isTypingTarget({ tagName: "BUTTON" })).toBe(false);
-    expect(isTypingTarget({ tagName: "BODY", isContentEditable: false })).toBe(false);
+    expect(isTypingTarget({ tagName: "BODY", isContentEditable: false })).toBe(
+      false,
+    );
     expect(isTypingTarget(null)).toBe(false);
   });
 });
@@ -69,7 +80,12 @@ describe("hasOpenOverlay", () => {
     expect(hasOpenOverlay(root([]))).toBe(false);
   });
   it("the selector covers open popovers, dialogs and menus but not closing ones", () => {
-    for (const part of ['[role="dialog"]:not([data-closed])', '[role="alertdialog"]', '[role="menu"]', "dialog[open]"])
+    for (const part of [
+      '[role="dialog"]:not([data-closed])',
+      '[role="alertdialog"]',
+      '[role="menu"]',
+      "dialog[open]",
+    ])
       expect(OPEN_OVERLAY_SELECTOR).toContain(part);
   });
 });

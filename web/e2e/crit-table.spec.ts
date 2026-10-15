@@ -78,11 +78,15 @@ test("the table saved in the editor is used by the next crit", async ({
   let d100 = 0;
   for (let i = 0; i < 30 && rowOf(check) === rowOf(d100); i++) {
     await page.getByRole("button", { name: "Attack", exact: true }).click();
-    await expect.poll(async () => (await logEntry(page, "vs AC 1000").count())).toBe(i + 2);
+    await expect
+      .poll(async () => await logEntry(page, "vs AC 1000").count())
+      .toBe(i + 2);
     check = await fact("Crit check d100");
     d100 = await fact("Multiplier d100");
   }
-  expect(rowOf(check), "the two d100s never fell in different rows").not.toBe(rowOf(d100));
+  expect(rowOf(check), "the two d100s never fell in different rows").not.toBe(
+    rowOf(d100),
+  );
   const row = TABLE.find((r) => d100 >= r.from && d100 <= r.to);
   if (!row) throw new Error(`d100 ${d100} is in no range`);
   await expect(card.getByTestId("crit-badge")).toHaveText(

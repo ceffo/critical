@@ -33,10 +33,7 @@ function CardTitle({
   return (
     <h3
       data-slot="card-title"
-      className={cn(
-        "text-title",
-        className,
-      )}
+      className={cn("text-title", className)}
       {...props}
     />
   );

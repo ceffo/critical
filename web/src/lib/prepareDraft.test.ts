@@ -6,7 +6,9 @@ const book = [{ id: "alarm" }, { id: "haste" }] as SpellbookEntry[];
 
 describe("splitPrepared", () => {
   it("keeps spellbook ids (duplicates too) and drops the others once", () => {
-    expect(splitPrepared(["alarm", "alarm", "shield", "haste", "shield", ""], book)).toEqual({
+    expect(
+      splitPrepared(["alarm", "alarm", "shield", "haste", "shield", ""], book),
+    ).toEqual({
       kept: ["alarm", "alarm", "haste"],
       dropped: ["shield", ""],
     });

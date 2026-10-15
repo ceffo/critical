@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AttackFormPatch, AttackFormView } from "@/types/combat";
 
-const calls: { patch?: AttackFormPatch; resolve: (v: AttackFormView) => void }[] = [];
+const calls: {
+  patch?: AttackFormPatch;
+  resolve: (v: AttackFormView) => void;
+}[] = [];
 
 function view(targetAc: number | null): AttackFormView {
   return {
     form: {
-      weaponId: "longsword", previousWeaponId: "", ammoItemId: "", targetAc, targetSize: "sm",
+      weaponId: "longsword",
+      previousWeaponId: "",
+      ammoItemId: "",
+      targetAc,
+      targetSize: "sm",
       situational: { value: 0, label: "" },
     },
     ammoFromDefault: false,
@@ -18,7 +25,8 @@ function view(targetAc: number | null): AttackFormView {
 
 vi.mock("@/api/combat", () => ({
   fetchAttackForm: () => new Promise((resolve) => calls.push({ resolve })),
-  patchAttackForm: (patch: AttackFormPatch) => new Promise((resolve) => calls.push({ patch, resolve })),
+  patchAttackForm: (patch: AttackFormPatch) =>
+    new Promise((resolve) => calls.push({ patch, resolve })),
   fetchWeapons: async () => [],
 }));
 
@@ -61,9 +69,20 @@ describe("attack form store", () => {
     useRollStore.setState({ rollAttack });
     const bow = (ammoFromDefault: boolean): AttackFormView => ({
       ...view(5),
-      form: { ...view(5).form, weaponId: "shortbow", ammoItemId: "arrows_plus1" },
+      form: {
+        ...view(5).form,
+        weaponId: "shortbow",
+        ammoItemId: "arrows_plus1",
+      },
       ammoFromDefault,
-      preview: { baseThac0: 13, modifiers: [], effectiveThac0: 9, toHit: 4, rollNeeded: 4, damageBonus: 2 },
+      preview: {
+        baseThac0: 13,
+        modifiers: [],
+        effectiveThac0: 9,
+        toHit: 4,
+        rollNeeded: 4,
+        damageBonus: 2,
+      },
     });
     useAttackStore.setState({ view: bow(true) });
 
@@ -93,12 +112,22 @@ describe("attack form store", () => {
     useAttackStore.setState({
       view: {
         ...view(null),
-        preview: { baseThac0: 13, modifiers: [], effectiveThac0: 11, toHit: 2, rollNeeded: null, damageBonus: 2 },
+        preview: {
+          baseThac0: 13,
+          modifiers: [],
+          effectiveThac0: 11,
+          toHit: 2,
+          rollNeeded: null,
+          damageBonus: 2,
+        },
       },
     });
     const done = useAttackStore.getState().attack();
     await tick();
-    expect(rollAttack).toHaveBeenCalledWith({ weapon_id: "longsword", target_size: "sm" });
+    expect(rollAttack).toHaveBeenCalledWith({
+      weapon_id: "longsword",
+      target_size: "sm",
+    });
     calls[0].resolve(view(null));
     expect(await done).toBe(true);
   });
@@ -112,4 +141,3 @@ describe("attack form store", () => {
     await done;
   });
 });
-

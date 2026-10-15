@@ -32,9 +32,11 @@ async function otherWeapons(page: Page) {
   await attackForm(page).getByRole("button", { name: "Other weapon" }).click();
   const list = page.getByRole("list", { name: "Other weapon" });
   await expect(list).toBeVisible();
-  const names = await list.getByRole("button").evaluateAll((els) =>
-    els.map((e) => e.querySelector("span")?.textContent ?? ""),
-  );
+  const names = await list
+    .getByRole("button")
+    .evaluateAll((els) =>
+      els.map((e) => e.querySelector("span")?.textContent ?? ""),
+    );
   await page.keyboard.press("Escape");
   return names;
 }
@@ -43,7 +45,8 @@ async function otherWeapons(page: Page) {
 async function pickableWeapons(page: Page) {
   await openWorkspace(page, "Act");
   await openWeapons(page);
-  const held = (await attackForm(page).getByTestId("weapon-in-hand").textContent()) ?? "";
+  const held =
+    (await attackForm(page).getByTestId("weapon-in-hand").textContent()) ?? "";
   return [held, ...(await otherWeapons(page))];
 }
 
@@ -122,7 +125,9 @@ test("add a Long Bow (missile, arrow): it is in the attack picker and offered ar
   await openWeapons(page);
   await chooseWeapon(page, "Long Bow");
   await expect(
-    attackForm(page).getByRole("radiogroup", { name: "Ammunition" }).getByRole("radio", { name: /^Arrows \+1,/ }),
+    attackForm(page)
+      .getByRole("radiogroup", { name: "Ammunition" })
+      .getByRole("radio", { name: /^Arrows \+1,/ }),
   ).toHaveCount(1);
   await snap(page, "bow-offered-arrows");
 
@@ -168,7 +173,11 @@ test("a weapon removed behind the Attack panel's back: the attack says so and th
   await chooseWeapon(page, "Darts");
   await f.getByLabel("Target AC").fill("5");
   await expect
-    .poll(async () => (await (await page.request.get("/api/attack/form")).json()).form.targetAc)
+    .poll(
+      async () =>
+        (await (await page.request.get("/api/attack/form")).json()).form
+          .targetAc,
+    )
     .toBe(5);
   // Removed elsewhere (another device): the panel still has the darts in hand.
   const res = await page.request.delete("/api/weapons/darts");

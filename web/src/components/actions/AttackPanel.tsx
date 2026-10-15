@@ -1,8 +1,18 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowsLeftRight, CaretDown, Minus, Plus, Sword } from "@phosphor-icons/react";
+import {
+  ArrowsLeftRight,
+  CaretDown,
+  Minus,
+  Plus,
+  Sword,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useAttackStore } from "@/stores/attack";
 import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
@@ -12,7 +22,12 @@ import { CritTableEditor } from "@/components/actions/CritTableEditor";
 import { formatSigned } from "@/lib/format";
 import { UNKNOWN_AC_STEP_BASE } from "@/lib/attackAdjust";
 import { cn } from "@/lib/utils";
-import type { AmmoChoice, AttackFormView, TargetSize, Weapon } from "@/types/combat";
+import type {
+  AmmoChoice,
+  AttackFormView,
+  TargetSize,
+  Weapon,
+} from "@/types/combat";
 
 const SIZES: TargetSize[] = ["sm", "l"];
 /** Same bound as the server's (combatsvc MaxTargetAC / MaxSituational); the server checks it. */
@@ -40,7 +55,9 @@ export function AttackPanel() {
   }, [load, weapons, items, buffs, strength]);
 
   if (!view || weapons.length === 0) {
-    return <p className="text-body text-muted-foreground">{t("attack.loading")}</p>;
+    return (
+      <p className="text-body text-muted-foreground">{t("attack.loading")}</p>
+    );
   }
   const { form, preview } = view;
   const weapon = weapons.find((w) => w.id === form.weaponId);
@@ -48,7 +65,10 @@ export function AttackPanel() {
   const needsAmmo = Boolean(weapon?.ammo_kind);
   const ammo = view.ammoChoices.find((a) => a.itemId === form.ammoItemId);
   const ammoSpent = ammo !== undefined && ammo.count === 0;
-  const ready = preview !== null && weapon !== undefined && (!needsAmmo || (ammo && !ammoSpent));
+  const ready =
+    preview !== null &&
+    weapon !== undefined &&
+    (!needsAmmo || (ammo && !ammoSpent));
 
   return (
     <div className="flex flex-col gap-3">
@@ -68,7 +88,9 @@ export function AttackPanel() {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-body text-muted-foreground">{t("attack.inHand")}</p>
+                <p className="text-body text-muted-foreground">
+                  {t("attack.inHand")}
+                </p>
                 <h3 className="truncate text-key" data-testid="weapon-in-hand">
                   {weapon.name}
                 </h3>
@@ -88,7 +110,9 @@ export function AttackPanel() {
               </Button>
             </div>
             {preview && <Tiles weapon={weapon} view={view} />}
-            {needsAmmo && <AmmoChips choices={view.ammoChoices} chosen={form.ammoItemId} />}
+            {needsAmmo && (
+              <AmmoChips choices={view.ammoChoices} chosen={form.ammoItemId} />
+            )}
             {ammoSpent && (
               <p className="text-body text-danger" data-testid="ammo-spent">
                 {t("attack.ammoSpent", { name: ammo.name })}
@@ -187,18 +211,24 @@ function TargetBar({ view }: { view: AttackFormView }) {
         raise={t("attack.raiseSituational")}
         value={situational.value}
         signed
-        onChange={(v) => void update({ situational: { ...situational, value: v } })}
+        onChange={(v) =>
+          void update({ situational: { ...situational, value: v } })
+        }
       />
       {situational.value !== 0 && (
         <label className="flex min-w-40 flex-1 flex-col gap-1">
-          <span className="text-label text-muted-foreground">{t("attack.situationalLabel")}</span>
+          <span className="text-label text-muted-foreground">
+            {t("attack.situationalLabel")}
+          </span>
           <input
             className={fieldClass}
             type="text"
             placeholder={t("attack.situationalPlaceholder")}
             value={situational.label}
             onChange={(e) =>
-              void update({ situational: { ...situational, label: e.target.value } })
+              void update({
+                situational: { ...situational, label: e.target.value },
+              })
             }
           />
         </label>
@@ -240,7 +270,12 @@ function Stepper({
   const [draft, setDraft] = useState<string | null>(null);
   const value = current ?? emptyBase;
   const shown =
-    draft ?? (current === null ? "" : signed && current > 0 ? `+${current}` : String(current));
+    draft ??
+    (current === null
+      ? ""
+      : signed && current > 0
+        ? `+${current}`
+        : String(current));
   const set = (v: number) => {
     setDraft(null);
     onChange(Math.max(-BOUND, Math.min(max, v)));
@@ -271,7 +306,8 @@ function Stepper({
             const text = e.target.value;
             setDraft(text);
             const n = Number(text.trim());
-            if (/^[+-]?\d+$/.test(text.trim()) && n >= -BOUND && n <= max) onChange(n);
+            if (/^[+-]?\d+$/.test(text.trim()) && n >= -BOUND && n <= max)
+              onChange(n);
             else if (text.trim() === "" && onClear) onClear();
           }}
           onBlur={() => setDraft(null)}
@@ -299,10 +335,20 @@ function Tiles({ weapon, view }: { weapon: Weapon; view: AttackFormView }) {
   const size = view.form.targetSize;
   return (
     <dl className="grid grid-cols-2 gap-2 @xl:grid-cols-4">
-      <Tile label={t("attack.tiles.damageSm")} testId="tile-damage-sm" dim={size !== "sm"} current={size === "sm"}>
+      <Tile
+        label={t("attack.tiles.damageSm")}
+        testId="tile-damage-sm"
+        dim={size !== "sm"}
+        current={size === "sm"}
+      >
         {weapon.damage_sm}
       </Tile>
-      <Tile label={t("attack.tiles.damageL")} testId="tile-damage-l" dim={size !== "l"} current={size === "l"}>
+      <Tile
+        label={t("attack.tiles.damageL")}
+        testId="tile-damage-l"
+        dim={size !== "l"}
+        current={size === "l"}
+      >
         {weapon.damage_l || weapon.damage_sm}
       </Tile>
       <Tile label={t("attack.tiles.bonus")} testId="tile-bonus">
@@ -314,7 +360,10 @@ function Tiles({ weapon, view }: { weapon: Weapon; view: AttackFormView }) {
         hint={
           preview.rollNeeded === null || view.form.targetAc === null
             ? t("attack.tiles.rollNeededUnknown")
-            : t("attack.tiles.rollNeeded", { ac: view.form.targetAc, n: preview.rollNeeded })
+            : t("attack.tiles.rollNeeded", {
+                ac: view.form.targetAc,
+                n: preview.rollNeeded,
+              })
         }
       >
         {preview.effectiveThac0}
@@ -350,20 +399,32 @@ function Tile({
       <dd className="text-key" data-testid={testId}>
         {children}
       </dd>
-      {hint && <dd className="truncate text-label text-muted-foreground">{hint}</dd>}
+      {hint && (
+        <dd className="truncate text-label text-muted-foreground">{hint}</dd>
+      )}
     </div>
   );
 }
 
 /** The weapon's ammunition as chips with their counts; the chosen one is checked. */
-function AmmoChips({ choices, chosen }: { choices: AmmoChoice[]; chosen: string }) {
+function AmmoChips({
+  choices,
+  chosen,
+}: {
+  choices: AmmoChoice[];
+  chosen: string;
+}) {
   const { t } = useTranslation();
   const update = useAttackStore((s) => s.update);
   if (choices.length === 0) {
     return <p className="text-body text-danger">{t("attack.noAmmo")}</p>;
   }
   return (
-    <div role="radiogroup" aria-label={t("attack.ammo")} className="flex flex-wrap gap-2">
+    <div
+      role="radiogroup"
+      aria-label={t("attack.ammo")}
+      className="flex flex-wrap gap-2"
+    >
       {choices.map((a) => (
         <button
           key={a.itemId}
@@ -383,7 +444,9 @@ function AmmoChips({ choices, chosen }: { choices: AmmoChoice[]; chosen: string 
             data-testid="ammo-count"
             className={cn(
               "font-medium",
-              a.count === 0 ? "text-danger" : a.count <= LOW_AMMO && "text-warning",
+              a.count === 0
+                ? "text-danger"
+                : a.count <= LOW_AMMO && "text-warning",
             )}
           >
             {a.count}
@@ -395,7 +458,13 @@ function AmmoChips({ choices, chosen }: { choices: AmmoChoice[]; chosen: string 
 }
 
 /** "Other weapon": a popover listing the weapons not in hand; picking one switches, never attacks. */
-function OtherWeapon({ weapons, onPick }: { weapons: Weapon[]; onPick: (id: string) => void }) {
+function OtherWeapon({
+  weapons,
+  onPick,
+}: {
+  weapons: Weapon[];
+  onPick: (id: string) => void;
+}) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   if (weapons.length === 0) return null;
@@ -423,7 +492,10 @@ function OtherWeapon({ weapons, onPick }: { weapons: Weapon[]; onPick: (id: stri
               >
                 <span className="truncate">{w.name}</span>
                 <span className="shrink-0 text-muted-foreground">
-                  {t("attack.weaponDice", { sm: w.damage_sm, l: w.damage_l || w.damage_sm })}
+                  {t("attack.weaponDice", {
+                    sm: w.damage_sm,
+                    l: w.damage_l || w.damage_sm,
+                  })}
                 </span>
               </button>
             </li>

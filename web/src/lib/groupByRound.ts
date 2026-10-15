@@ -13,7 +13,10 @@ export interface RoundGroup {
  * so a round number can head several groups; order is never re-sorted by number. When the
  * newest entry is not in the current round, an empty group for it is put on top.
  */
-export function groupByRound(entries: LogEntry[], currentRound: number): RoundGroup[] {
+export function groupByRound(
+  entries: LogEntry[],
+  currentRound: number,
+): RoundGroup[] {
   const groups: RoundGroup[] = [];
   for (const e of entries) {
     const last = groups[groups.length - 1];

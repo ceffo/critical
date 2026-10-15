@@ -22,15 +22,31 @@ const entry = (id: number, round: number): LogEntry => ({
 
 describe("groupByRound", () => {
   it("keeps server order across round resets (rounds 1,2,3, reset, 1,2)", () => {
-    const entries = [entry(6, 2), entry(5, 1), entry(4, 3), entry(3, 2), entry(2, 1), entry(1, 1)];
+    const entries = [
+      entry(6, 2),
+      entry(5, 1),
+      entry(4, 3),
+      entry(3, 2),
+      entry(2, 1),
+      entry(1, 1),
+    ];
     const groups = groupByRound(entries, 2);
     expect(groups.map((g) => g.round)).toEqual([2, 1, 3, 2, 1]);
-    expect(groups.map((g) => g.entries.map((e) => e.id))).toEqual([[6], [5], [4], [3], [2, 1]]);
+    expect(groups.map((g) => g.entries.map((e) => e.id))).toEqual([
+      [6],
+      [5],
+      [4],
+      [3],
+      [2, 1],
+    ]);
     expect(new Set(groups.map((g) => g.key)).size).toBe(groups.length);
   });
 
   it("separates out-of-combat round 0 between combats", () => {
-    const groups = groupByRound([entry(4, 1), entry(3, 0), entry(2, 0), entry(1, 1)], 1);
+    const groups = groupByRound(
+      [entry(4, 1), entry(3, 0), entry(2, 0), entry(1, 1)],
+      1,
+    );
     expect(groups.map((g) => g.round)).toEqual([1, 0, 1]);
   });
 
@@ -45,6 +61,8 @@ describe("groupByRound", () => {
       [3, 1],
       [0, 1],
     ]);
-    expect(groupByRound([], 2).map((g) => [g.round, g.entries.length])).toEqual([[2, 0]]);
+    expect(groupByRound([], 2).map((g) => [g.round, g.entries.length])).toEqual(
+      [[2, 0]],
+    );
   });
 });

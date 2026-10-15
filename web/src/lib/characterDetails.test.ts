@@ -2,13 +2,23 @@ import { describe, expect, it } from "vitest";
 import { languageKey, toBody, toDraft } from "./characterDetails";
 
 const details = {
-  race: "Elf", alignment: "", age: 112, sex: "", height: "", weight: "", hair: "", eyes: "",
+  race: "Elf",
+  alignment: "",
+  age: 112,
+  sex: "",
+  height: "",
+  weight: "",
+  hair: "",
+  eyes: "",
   languages: ["Elfique", "Commun"],
 };
 
 describe("character details draft", () => {
   it("round-trips the details", () => {
-    expect(toBody(toDraft(details))).toEqual({ ageInvalid: false, body: details });
+    expect(toBody(toDraft(details))).toEqual({
+      ageInvalid: false,
+      body: details,
+    });
   });
   it("an empty age clears it and no languages is an empty list", () => {
     const { body } = toBody({ ...toDraft(details), age: " ", languages: "  " });
@@ -21,7 +31,10 @@ describe("character details draft", () => {
     expect(toBody({ ...toDraft(details), age: "0" }).ageInvalid).toBe(true);
   });
   it("keeps blank entries so the server can reject them", () => {
-    expect(toBody({ ...toDraft(details), languages: "Commun, ,Nain" }).body.languages).toEqual(["Commun", "", "Nain"]);
+    expect(
+      toBody({ ...toDraft(details), languages: "Commun, ,Nain" }).body
+        .languages,
+    ).toEqual(["Commun", "", "Nain"]);
   });
 });
 

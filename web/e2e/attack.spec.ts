@@ -57,11 +57,15 @@ test("a melee attack lists every modifier in the result card and the log", async
     /Rear attack\s*\+2/,
   );
   const log = (await (await page.request.get("/api/log")).json()) as {
-    entries: { kind: string; payload: { modifiers: { kind: string; detail?: string }[] } }[];
+    entries: {
+      kind: string;
+      payload: { modifiers: { kind: string; detail?: string }[] };
+    }[];
   };
   expect(
-    log.entries.find((e) => e.kind === "attack")!.payload.modifiers.find((m) => m.kind === "situational")
-      ?.detail,
+    log.entries
+      .find((e) => e.kind === "attack")!
+      .payload.modifiers.find((m) => m.kind === "situational")?.detail,
   ).toBe("Rear attack");
 
   // The attack is in the combat log, in the player's language, rendered from its payload.
@@ -125,7 +129,9 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
   }
 
   // The +3 arrows are spent: still the choice, no silent switch to other arrows.
-  await expect(ammoChips(page).locator('[aria-checked="true"]')).toHaveAttribute("data-item", "arrows_plus3");
+  await expect(
+    ammoChips(page).locator('[aria-checked="true"]'),
+  ).toHaveAttribute("data-item", "arrows_plus3");
   await expect(form.getByTestId("ammo-spent")).toHaveText(
     "No Arrows +3 left: pick other ammunition",
   );
@@ -136,7 +142,9 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
   await expect(form.getByTestId("ammo-spent")).toHaveCount(0);
   await expect(roll).toBeEnabled();
   // Once another pick replaces it, the spent arrows are no longer offered.
-  await expect(ammoChips(page).locator('[data-item="arrows_plus3"]')).toHaveCount(0);
+  await expect(
+    ammoChips(page).locator('[data-item="arrows_plus3"]'),
+  ).toHaveCount(0);
 });
 
 test("an earlier shot can only be voided once the later shot is popped", async ({
@@ -194,7 +202,11 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(acField).toHaveValue("-20");
   await expect(apply).toBeDisabled();
   await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
-  const d20 = await card.getByText("d20", { exact: true }).locator("xpath=..").locator("dd").textContent();
+  const d20 = await card
+    .getByText("d20", { exact: true })
+    .locator("xpath=..")
+    .locator("dd")
+    .textContent();
 
   // − / + step the field; nothing is sent until Apply.
   await fix.getByRole("button", { name: "Raise target AC" }).click();
@@ -210,10 +222,18 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(card.getByTestId("ac-corrected")).toHaveText("rolled vs AC -20");
   await expect(card.getByTestId("total-damage")).toHaveText(/^\d+$/);
   const damage = await card.getByTestId("total-damage").textContent();
-  expect(await card.getByText("d20", { exact: true }).locator("xpath=..").locator("dd").textContent()).toBe(d20);
+  expect(
+    await card
+      .getByText("d20", { exact: true })
+      .locator("xpath=..")
+      .locator("dd")
+      .textContent(),
+  ).toBe(d20);
   await expect(entry).toContainText(/\(AC -20 → 10: MISS → (HIT|CRIT)\)/);
   await expect(entry).toContainText("Amended");
-  await expect(card.getByTestId("ammo-left")).toHaveText(`Arrows +2: ${before - 1} left`);
+  await expect(card.getByTestId("ammo-left")).toHaveText(
+    `Arrows +2: ${before - 1} left`,
+  );
   await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
   await snap(page, "attack-ac-corrected");
 
@@ -243,12 +263,20 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
 
   // In French: the form and the log line.
   await chooseLanguage(page, "fr");
-  const frCard = page.getByRole("region", { name: "Détail", exact: true }).getByTestId("attack-result");
-  const frFix = frCard.getByRole("form", { name: "Corriger la CA de la cible" });
+  const frCard = page
+    .getByRole("region", { name: "Détail", exact: true })
+    .getByTestId("attack-result");
+  const frFix = frCard.getByRole("form", {
+    name: "Corriger la CA de la cible",
+  });
   await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("10");
   await expect(frFix.getByRole("button", { name: "Appliquer" })).toBeDisabled();
-  await expect(frFix.getByRole("button", { name: "Monter la CA de la cible" })).toBeVisible();
-  await expect(frCard.getByTestId("ac-corrected")).toHaveText("jet contre CA -20");
+  await expect(
+    frFix.getByRole("button", { name: "Monter la CA de la cible" }),
+  ).toBeVisible();
+  await expect(frCard.getByTestId("ac-corrected")).toHaveText(
+    "jet contre CA -20",
+  );
   const frEntry = page
     .getByRole("region", { name: "Journal", exact: true })
     .getByRole("listitem")
@@ -262,7 +290,10 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   // Each correction is its own step (ADR 0010 step 6): Annuler names the newest one and pops it,
   // and the card reads the attack as it was before it, here the rolled AC again (no arrow back).
   const undo = page.getByTestId("undo");
-  await expect(undo).toHaveAttribute("title", "Undo: Correction AC -20 → 10 (Ctrl+Z / ⌘Z)");
+  await expect(undo).toHaveAttribute(
+    "title",
+    "Undo: Correction AC -20 → 10 (Ctrl+Z / ⌘Z)",
+  );
   await undo.click();
   await expect(card).toContainText("vs AC -20");
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
@@ -273,10 +304,16 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await snap(page, "attack-ac-correction-undone");
   // The two corrections before it, then the first one: the attack is as rolled, still logged.
   for (const step of ["9 → -20", "10 → 9", "-20 → 10"]) {
-    await expect(undo).toHaveAttribute("title", `Undo: Correction AC ${step} (Ctrl+Z / ⌘Z)`);
+    await expect(undo).toHaveAttribute(
+      "title",
+      `Undo: Correction AC ${step} (Ctrl+Z / ⌘Z)`,
+    );
     await undo.click();
   }
-  await expect(undo).toHaveAttribute("title", /^Undo: Short Bow \+2 \(Arrows \+2\) vs AC -20: miss/);
+  await expect(undo).toHaveAttribute(
+    "title",
+    /^Undo: Short Bow \+2 \(Arrows \+2\) vs AC -20: miss/,
+  );
   await expect(entry).not.toContainText("Amended");
 
   // Voiding the attack then gives the arrow back and removes the correction form.
@@ -294,22 +331,41 @@ test("only the latest roll's target AC can be corrected", async ({ page }) => {
   await form.getByRole("button", { name: "Attack", exact: true }).click();
   await expect(resultCard(page)).toContainText("vs AC 5");
   await form.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect.poll(async () => (await logEntry(page, "Long Sword +2 vs AC 5").count())).toBe(2);
+  await expect
+    .poll(async () => await logEntry(page, "Long Sword +2 vs AC 5").count())
+    .toBe(2);
 
   const log = (await (await page.request.get("/api/log")).json()) as {
     entries: { id: number; kind: string }[];
   };
-  const [, older] = log.entries.filter((e) => e.kind === "attack").map((e) => e.id);
-  const res = await page.request.post(`/api/roll/attack/${older}/adjust`, { data: { targetAc: 7 } });
+  const [, older] = log.entries
+    .filter((e) => e.kind === "attack")
+    .map((e) => e.id);
+  const res = await page.request.post(`/api/roll/attack/${older}/adjust`, {
+    data: { targetAc: 7 },
+  });
   expect(res.status()).toBe(409);
-  expect((await res.json()).error).toContain("only the latest roll can be adjusted");
+  expect((await res.json()).error).toContain(
+    "only the latest roll can be adjusted",
+  );
 
   // A save rolled after the attack replaces the card: the attack is no longer the latest roll.
-  const [latest] = log.entries.filter((e) => e.kind === "attack").map((e) => e.id);
-  expect((await page.request.post("/api/roll/save", { data: { category: "spell" } })).ok()).toBe(true);
-  const afterSave = await page.request.post(`/api/roll/attack/${latest}/adjust`, { data: { targetAc: 7 } });
+  const [latest] = log.entries
+    .filter((e) => e.kind === "attack")
+    .map((e) => e.id);
+  expect(
+    (
+      await page.request.post("/api/roll/save", { data: { category: "spell" } })
+    ).ok(),
+  ).toBe(true);
+  const afterSave = await page.request.post(
+    `/api/roll/attack/${latest}/adjust`,
+    { data: { targetAc: 7 } },
+  );
   expect(afterSave.status()).toBe(409);
-  expect((await afterSave.json()).error).toContain("only the latest roll can be adjusted");
+  expect((await afterSave.json()).error).toContain(
+    "only the latest roll can be adjusted",
+  );
 });
 
 test("an attack logged before the multiplier d100 keeps the old crit text and can't be corrected", async ({
@@ -323,16 +379,24 @@ test("an attack logged before the multiplier d100 keeps the old crit text and ca
   // attack is sent at AC 1000 (beyond the form's ±20): so low a roll is needed that it crits.
   await page.route("**/api/roll/attack", async (route) => {
     const sent = route.request().postDataJSON() as Record<string, unknown>;
-    const res = await route.fetch({ postData: JSON.stringify({ ...sent, target_ac: 1000 }) });
+    const res = await route.fetch({
+      postData: JSON.stringify({ ...sent, target_ac: 1000 }),
+    });
     const body = (await res.json()) as Record<string, unknown>;
     delete body.d100MultiplierRoll;
     await route.fulfill({ response: res, json: body });
   });
   await form.getByRole("button", { name: "Attack", exact: true }).click();
   const card = resultCard(page);
-  await expect(card.getByTestId("crit-badge")).toHaveText("Critical ×2 (placeholder)");
-  await expect(card.locator("dt", { hasText: "Crit check d100" })).toHaveCount(1);
-  await expect(card.locator("dt", { hasText: "Multiplier d100" })).toHaveCount(0);
+  await expect(card.getByTestId("crit-badge")).toHaveText(
+    "Critical ×2 (placeholder)",
+  );
+  await expect(card.locator("dt", { hasText: "Crit check d100" })).toHaveCount(
+    1,
+  );
+  await expect(card.locator("dt", { hasText: "Multiplier d100" })).toHaveCount(
+    0,
+  );
   await snap(page, "legacy-crit-card");
   await page.unroute("**/api/roll/attack");
 
@@ -357,9 +421,13 @@ test("an attack logged before the multiplier d100 keeps the old crit text and ca
   await expect(logEntry(page, "Long Sword +2 vs AC 1000")).toContainText(
     /Long Sword \+2 vs AC 1000: critical ×2, \d+ damage/,
   );
-  await expect(logEntry(page, "Long Sword +2 vs AC 1000")).not.toContainText("multiplier");
+  await expect(logEntry(page, "Long Sword +2 vs AC 1000")).not.toContainText(
+    "multiplier",
+  );
 
-  const res = await page.request.post(`/api/roll/attack/${id}/adjust`, { data: { targetAc: 5 } });
+  const res = await page.request.post(`/api/roll/attack/${id}/adjust`, {
+    data: { targetAc: 5 },
+  });
   expect(res.status()).toBe(400);
   expect((await res.json()).error).toContain("void it and roll again");
 });
@@ -385,11 +453,16 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   let check = 100;
   for (let i = 0; i < 100 && d20 - check < 1; i++) {
     await form.getByRole("button", { name: "Attack", exact: true }).click();
-    await expect.poll(async () => (await logEntry(page, "Long Sword +2 vs AC -20").count())).toBe(i + 1);
+    await expect
+      .poll(async () => await logEntry(page, "Long Sword +2 vs AC -20").count())
+      .toBe(i + 1);
     d20 = await fact("d20");
     check = await fact("Crit check d100");
   }
-  expect(d20 - check, "no roll in 100 makes AC 10 a crit").toBeGreaterThanOrEqual(1);
+  expect(
+    d20 - check,
+    "no roll in 100 makes AC 10 a crit",
+  ).toBeGreaterThanOrEqual(1);
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
   const mult = await fact("Multiplier d100");
 
@@ -406,16 +479,22 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText(
     `critical (check ${check} · multiplier ${mult} → ×2)`,
   );
-  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText("(AC -20 → 10: MISS → CRIT)");
+  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText(
+    "(AC -20 → 10: MISS → CRIT)",
+  );
   await snap(page, "miss-to-crit");
 
   // In French: the three dice facts and the crit text.
   await chooseLanguage(page, "fr");
-  const frCard = page.getByRole("region", { name: "Détail", exact: true }).getByTestId("attack-result");
+  const frCard = page
+    .getByRole("region", { name: "Détail", exact: true })
+    .getByTestId("attack-result");
   await expect(frCard.getByTestId("crit-badge")).toHaveText(
     `Test critique ${check} · multiplicateur ${mult} → ×2 (provisoire)`,
   );
-  await expect(frCard.locator("dt", { hasText: "d100 multiplicateur" })).toHaveCount(1);
+  await expect(
+    frCard.locator("dt", { hasText: "d100 multiplicateur" }),
+  ).toHaveCount(1);
   await expect(
     page
       .getByRole("region", { name: "Journal", exact: true })
@@ -435,7 +514,9 @@ test("the attack form is kept on the server across a reload; switching weapons n
   const held = form.getByTestId("weapon-in-hand");
   await chooseWeapon(page, "Long Sword +2");
   await chooseWeapon(page, "Short Bow +2");
-  await expect(form.getByRole("button", { name: "Switch to Long Sword +2" })).toBeVisible();
+  await expect(
+    form.getByRole("button", { name: "Switch to Long Sword +2" }),
+  ).toBeVisible();
   await chooseAmmo(page, "Arrows +2");
   await form.getByLabel("Target AC").fill("-3");
   await form.getByRole("radio", { name: "Large" }).click();
@@ -446,20 +527,34 @@ test("the attack form is kept on the server across a reload; switching weapons n
   await expect(form.getByTestId("tile-damage-l")).toHaveText("1d6");
   // Wait until the server has every change (the THAC0 tile is its preview).
   await expect
-    .poll(async () => (await (await page.request.get("/api/attack/form")).json()).form)
+    .poll(
+      async () =>
+        (await (await page.request.get("/api/attack/form")).json()).form,
+    )
     .toEqual({
-      weaponId: "shortbow", previousWeaponId: "longsword", ammoItemId: "arrows_plus2", targetAc: -3,
-      targetSize: "l", situational: { value: 2, label: "cover" },
+      weaponId: "shortbow",
+      previousWeaponId: "longsword",
+      ammoItemId: "arrows_plus2",
+      targetAc: -3,
+      targetSize: "l",
+      situational: { value: 2, label: "cover" },
     });
   const shown = await thac0.textContent();
   await expect(logEntry(page, "vs AC")).toHaveCount(0);
 
   await page.reload();
   await expect(held).toHaveText("Short Bow +2");
-  await expect(ammoChips(page).locator('[aria-checked="true"]')).toHaveAttribute("data-item", "arrows_plus2");
+  await expect(
+    ammoChips(page).locator('[aria-checked="true"]'),
+  ).toHaveAttribute("data-item", "arrows_plus2");
   await expect(form.getByLabel("Target AC")).toHaveValue("-3");
-  await expect(form.getByRole("radio", { name: "Large" })).toHaveAttribute("aria-checked", "true");
-  await expect(form.getByLabel("Situational", { exact: true })).toHaveValue("+2");
+  await expect(form.getByRole("radio", { name: "Large" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await expect(form.getByLabel("Situational", { exact: true })).toHaveValue(
+    "+2",
+  );
   await expect(form.getByLabel("Reason")).toHaveValue("cover");
   await expect(thac0).toHaveText(shown!);
   await snap(page, "form-restored");
@@ -467,7 +562,9 @@ test("the attack form is kept on the server across a reload; switching weapons n
   // One click back to the sword: it is in hand, the bow is now the previous weapon, no attack.
   await form.getByRole("button", { name: "Switch to Long Sword +2" }).click();
   await expect(held).toHaveText("Long Sword +2");
-  await expect(form.getByRole("button", { name: "Switch to Short Bow +2" })).toBeVisible();
+  await expect(
+    form.getByRole("button", { name: "Switch to Short Bow +2" }),
+  ).toBeVisible();
   await expect(ammoChips(page)).toHaveCount(0);
   await expect(logEntry(page, "vs AC")).toHaveCount(0);
   await expect(resultCard(page)).toHaveCount(0);
@@ -477,7 +574,9 @@ test("the attack form is kept on the server across a reload; switching weapons n
 // docs/adr/0012: the target AC is unknown by default; the card says which AC the roll hits and what
 // to tell the GM, the GM's Hit settles it without a crit. Screenshots of the unsettled card at the
 // four desktop sizes.
-test("an attack against an unknown AC is settled by the GM's Hit", async ({ page }) => {
+test("an attack against an unknown AC is settled by the GM's Hit", async ({
+  page,
+}) => {
   await openAttack(page);
   const form = attackForm(page);
   await chooseWeapon(page, "Long Sword +2");
@@ -491,7 +590,9 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({ page
   await expect(ac).toHaveValue("");
   await expect(form.getByText("AC unknown")).toBeVisible();
 
-  const rolled = page.waitForResponse((r) => r.url().endsWith("/api/roll/attack"));
+  const rolled = page.waitForResponse((r) =>
+    r.url().endsWith("/api/roll/attack"),
+  );
   await form.getByRole("button", { name: "Attack", exact: true }).click();
   const r = (await (await rolled).json()) as {
     hitsAc: number;
@@ -510,7 +611,9 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({ page
   );
   await expect(card.getByTestId("verdict")).toHaveText("?");
   await expect(card.getByText("Damage if it hits")).toBeVisible();
-  await expect(logEntry(page, `Long Sword +2 vs unknown AC: hits AC ${r.hitsAc}`)).toBeVisible();
+  await expect(
+    logEntry(page, `Long Sword +2 vs unknown AC: hits AC ${r.hitsAc}`),
+  ).toBeVisible();
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 1440, height: 900 },
@@ -530,9 +633,14 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({ page
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
   await expect(card.getByTestId("verdict-by-gm")).toBeVisible();
   await expect(card.getByTestId("crit-badge")).toHaveCount(0);
-  await expect(card.getByTestId("total-damage")).toHaveText(String(r.totalDamage));
+  await expect(card.getByTestId("total-damage")).toHaveText(
+    String(r.totalDamage),
+  );
   await expect(
-    logEntry(page, `Long Sword +2 vs unknown AC: hit (GM), ${r.totalDamage} damage`),
+    logEntry(
+      page,
+      `Long Sword +2 vs unknown AC: hit (GM), ${r.totalDamage} damage`,
+    ),
   ).toBeVisible();
   await snap(page, "unknown-ac-gm-hit");
 });
@@ -543,11 +651,15 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({ page
 test.describe("with a THAC0 low enough that AC 10 always crits", () => {
   test.use({ character: { thac0_base: -100 } });
 
-  test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({ page }) => {
+  test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({
+    page,
+  }) => {
     await openAttack(page);
     const form = attackForm(page);
     await chooseWeapon(page, "Long Sword +2");
-    const rolled = page.waitForResponse((res) => res.url().endsWith("/api/roll/attack"));
+    const rolled = page.waitForResponse((res) =>
+      res.url().endsWith("/api/roll/attack"),
+    );
     await form.getByRole("button", { name: "Attack", exact: true }).click();
     const r = (await (await rolled).json()) as { critsFromAc: number };
     expect(r.critsFromAc).toBeLessThanOrEqual(10);
@@ -560,10 +672,14 @@ test.describe("with a THAC0 low enough that AC 10 always crits", () => {
     await expect(card).toContainText("Long Sword +2 vs AC 10");
     await expect(card.getByTestId("ac-given")).toBeVisible();
     await expect(card.getByTestId("tell-gm")).toHaveCount(0);
-    await expect(card.getByRole("group", { name: "The GM’s hit or miss" })).toHaveCount(0);
+    await expect(
+      card.getByRole("group", { name: "The GM’s hit or miss" }),
+    ).toHaveCount(0);
     await expect(card.getByTestId("verdict")).toHaveText("Hit");
     await expect(card.getByTestId("crit-badge")).toBeVisible();
-    await expect(logEntry(page, "Long Sword +2 vs AC 10: critical")).toBeVisible();
+    await expect(
+      logEntry(page, "Long Sword +2 vs AC 10: critical"),
+    ).toBeVisible();
     await snap(page, "unknown-ac-given-crit");
   });
 });

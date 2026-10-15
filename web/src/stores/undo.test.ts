@@ -19,7 +19,10 @@ const server = vi.hoisted(() => {
     pop(expected: number) {
       const top = s.top();
       if (!top) throw new Error("nothing to undo: expected #" + expected);
-      if (top.id !== expected) throw new Error(`the newest entry changed: #${top.id}, not #${expected}`);
+      if (top.id !== expected)
+        throw new Error(
+          `the newest entry changed: #${top.id}, not #${expected}`,
+        );
       top.voided = true;
     },
   };
@@ -151,13 +154,17 @@ describe("global undo against the server stack", () => {
     server.push("attack");
     server.push("correction");
     await useTableStore.getState().refresh();
-    useRollStore.setState({ last: { kind: "attack", result: { logEntryId: 1 } as RollResult } });
+    useRollStore.setState({
+      last: { kind: "attack", result: { logEntryId: 1 } as RollResult },
+    });
 
     expect(await useTableStore.getState().undo()).toBe(true);
     expect(useRollStore.getState().last).toBeNull();
     expect(topId()).toBe(1);
 
-    useRollStore.setState({ last: { kind: "attack", result: { logEntryId: 1 } as RollResult } });
+    useRollStore.setState({
+      last: { kind: "attack", result: { logEntryId: 1 } as RollResult },
+    });
     expect(await useTableStore.getState().voidEntry(1)).toBe(true);
     expect(useRollStore.getState().last).toBeNull();
   });

@@ -5,7 +5,9 @@ export function fetchActiveBuffs(): Promise<BuffEffect[]> {
   return request<BuffEffect[]>("/api/buffs");
 }
 
-export function activateBuff(buff: Omit<Partial<BuffEffect>, "startRound">): Promise<BuffEffect[]> {
+export function activateBuff(
+  buff: Omit<Partial<BuffEffect>, "startRound">,
+): Promise<BuffEffect[]> {
   return post<BuffEffect[]>("/api/buffs", buff);
 }
 

@@ -93,7 +93,8 @@ export function changedFields(item: Item, body: ItemBody): ItemBody {
     if ((item as unknown as Record<string, unknown>)[k] !== v) out[k] = v;
   }
   // Becoming daily always sends the daily number (the old max of a stock item is not one).
-  if (out.behaviour === "daily" && body.maxCount !== undefined) out.maxCount = body.maxCount;
+  if (out.behaviour === "daily" && body.maxCount !== undefined)
+    out.maxCount = body.maxCount;
   return out as ItemBody;
 }
 

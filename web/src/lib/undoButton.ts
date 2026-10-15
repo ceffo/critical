@@ -14,6 +14,8 @@ export function undoButtonState(
   const top = entries.find((e) => e.id === topId);
   return {
     disabled: busy,
-    label: t("log.undo.tooltip", { action: top ? entryText(top, t) : `#${topId}` }),
+    label: t("log.undo.tooltip", {
+      action: top ? entryText(top, t) : `#${topId}`,
+    }),
   };
 }

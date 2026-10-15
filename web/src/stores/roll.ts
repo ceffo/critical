@@ -1,9 +1,19 @@
 import { create } from "zustand";
 import type { AttackRequest, RollResult, SaveCategory } from "@/types/combat";
-import type { CastResult, ExposureRequest, ExposureResult } from "@/types/spells";
+import type {
+  CastResult,
+  ExposureRequest,
+  ExposureResult,
+} from "@/types/spells";
 import { rollExposure as postExposure } from "@/api/spells";
 import { resolveAttack } from "@/api/combat";
-import { adjustAttack, adjustSave, attackVerdict, clearAttackAc, rollSavingThrow } from "@/api/roll";
+import {
+  adjustAttack,
+  adjustSave,
+  attackVerdict,
+  clearAttackAc,
+  rollSavingThrow,
+} from "@/api/roll";
 import { postUseItem } from "@/api/items";
 import type { UseResult } from "@/types/items";
 import type { SkillCheck } from "@/types/skills";
@@ -50,7 +60,10 @@ interface RollStore {
 }
 
 export const useRollStore = create<RollStore>((set) => {
-  async function roll(fn: () => Promise<LastRoll>, refresh: boolean): Promise<boolean> {
+  async function roll(
+    fn: () => Promise<LastRoll>,
+    refresh: boolean,
+  ): Promise<boolean> {
     set({ rolling: true });
     const table = useTableStore.getState();
     table.clearError();
@@ -59,7 +72,9 @@ export const useRollStore = create<RollStore>((set) => {
       set({ last: await fn() });
     } catch (e) {
       ok = false;
-      useTableStore.setState({ error: e instanceof Error ? e.message : String(e) });
+      useTableStore.setState({
+        error: e instanceof Error ? e.message : String(e),
+      });
     } finally {
       set({ rolling: false });
     }
@@ -71,27 +86,55 @@ export const useRollStore = create<RollStore>((set) => {
     last: null,
     rolling: false,
     rollAttack: (req) =>
-      roll(async () => ({ kind: "attack", result: await resolveAttack(req) }), true),
-    spendItem: (id) => roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
-    rollSkill: (id) => roll(async () => ({ kind: "skill", result: await rollSkill(id) }), true),
+      roll(
+        async () => ({ kind: "attack", result: await resolveAttack(req) }),
+        true,
+      ),
+    spendItem: (id) =>
+      roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
+    rollSkill: (id) =>
+      roll(async () => ({ kind: "skill", result: await rollSkill(id) }), true),
     rollExposure: (req) =>
-      roll(async () => ({ kind: "exposure", result: await postExposure(req) }), true),
+      roll(
+        async () => ({ kind: "exposure", result: await postExposure(req) }),
+        true,
+      ),
     // A save is logged: refresh to show its entry.
     rollSave: async (category) => {
       await roll(
-        async () => ({ kind: "save", category, result: await rollSavingThrow(category) }),
+        async () => ({
+          kind: "save",
+          category,
+          result: await rollSavingThrow(category),
+        }),
         true,
       );
     },
     adjustLastAttack: (id, targetAc) =>
-      roll(async () => ({ kind: "attack", result: await adjustAttack(id, targetAc) }), true),
+      roll(
+        async () => ({
+          kind: "attack",
+          result: await adjustAttack(id, targetAc),
+        }),
+        true,
+      ),
     clearLastAttackAc: (id) =>
-      roll(async () => ({ kind: "attack", result: await clearAttackAc(id) }), true),
+      roll(
+        async () => ({ kind: "attack", result: await clearAttackAc(id) }),
+        true,
+      ),
     verdictLastAttack: (id, hit) =>
-      roll(async () => ({ kind: "attack", result: await attackVerdict(id, hit) }), true),
+      roll(
+        async () => ({ kind: "attack", result: await attackVerdict(id, hit) }),
+        true,
+      ),
     adjustLastSave: (id, category, adjustment, reason) =>
       roll(
-        async () => ({ kind: "save", category, result: await adjustSave(id, adjustment, reason) }),
+        async () => ({
+          kind: "save",
+          category,
+          result: await adjustSave(id, adjustment, reason),
+        }),
         true,
       ),
   };

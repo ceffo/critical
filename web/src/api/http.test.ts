@@ -5,9 +5,11 @@ import { ApiError, request } from "./http";
 function respond(status: number, body: unknown) {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(body), { status, statusText: "x" }),
-    ),
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify(body), { status, statusText: "x" }),
+      ),
   );
 }
 
@@ -22,7 +24,10 @@ describe("request errors", () => {
     ["fr", "Il n'y a pas d'initiative à relancer : lancez d'abord un combat."],
   ])("words a known error code in %s", async (lng, want) => {
     await i18n.changeLanguage(lng);
-    respond(409, { code: "no_initiative", error: "conflict: no initiative to reroll" });
+    respond(409, {
+      code: "no_initiative",
+      error: "conflict: no initiative to reroll",
+    });
     const err = await request("/api/x").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).message).toBe(want);

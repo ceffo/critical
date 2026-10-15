@@ -32,10 +32,13 @@ function terms(formula: string): Term[] | null {
 }
 
 function write(ts: Term[]): string {
-  return ts.map((t, i) => (i === 0 && t.sign === "+" ? "" : t.sign) + t.body).join("");
+  return ts
+    .map((t, i) => (i === 0 && t.sign === "+" ? "" : t.sign) + t.body)
+    .join("");
 }
 
-const dieTerm = (sides: number) => new RegExp(`^(\\d*)d(${sides === 100 ? "%|100" : sides})$`);
+const dieTerm = (sides: number) =>
+  new RegExp(`^(\\d*)d(${sides === 100 ? "%|100" : sides})$`);
 
 function countOfTerm(t: Term, sides: number): number | null {
   if (t.sign !== "+") return null;
@@ -50,17 +53,25 @@ export function dieCount(formula: string, sides: number): number {
   return ts.reduce((n, t) => n + (countOfTerm(t, sides) ?? 0), 0);
 }
 
-const termBody = (count: number, sides: number) => `${count > 1 ? count : ""}${dieName(sides)}`;
+const termBody = (count: number, sides: number) =>
+  `${count > 1 ? count : ""}${dieName(sides)}`;
 
 /** One more die of this size. */
 export function addDie(formula: string, sides: number): string {
   const ts = terms(formula);
   if (!ts) return `${formula.trim()}+${dieName(sides)}`;
   const i = ts.findIndex((t) => countOfTerm(t, sides) !== null);
-  if (i >= 0) ts[i] = { sign: "+", body: termBody((countOfTerm(ts[i], sides) ?? 0) + 1, sides) };
+  if (i >= 0)
+    ts[i] = {
+      sign: "+",
+      body: termBody((countOfTerm(ts[i], sides) ?? 0) + 1, sides),
+    };
   else {
     // Dice go before the trailing constant.
-    const at = ts.length > 0 && /^\d+$/.test(ts[ts.length - 1].body) ? ts.length - 1 : ts.length;
+    const at =
+      ts.length > 0 && /^\d+$/.test(ts[ts.length - 1].body)
+        ? ts.length - 1
+        : ts.length;
     ts.splice(at, 0, { sign: "+", body: dieName(sides) });
   }
   return write(ts);
@@ -85,7 +96,8 @@ export function stepConstant(formula: string, delta: number): string {
   if (last && /^\d+$/.test(last.body)) {
     const value = (last.sign === "-" ? -1 : 1) * Number(last.body) + delta;
     ts.pop();
-    if (value !== 0) ts.push({ sign: value < 0 ? "-" : "+", body: String(Math.abs(value)) });
+    if (value !== 0)
+      ts.push({ sign: value < 0 ? "-" : "+", body: String(Math.abs(value)) });
   } else {
     ts.push({ sign: delta < 0 ? "-" : "+", body: String(Math.abs(delta)) });
   }

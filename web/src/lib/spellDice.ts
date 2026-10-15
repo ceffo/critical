@@ -30,19 +30,31 @@ export function damageFormula(d: SpellDamage): string {
 }
 
 /** The label of one damage roll of a cast: "Turn 3" for a step per round, else "#n". */
-export function rollLabel(t: TFunction, stepsPer: StepPer | undefined, step: number | undefined, index: number): string {
-  if (stepsPer === "round") return t("result.cast.round", { n: step ?? index + 1 });
+export function rollLabel(
+  t: TFunction,
+  stepsPer: StepPer | undefined,
+  step: number | undefined,
+  index: number,
+): string {
+  if (stepsPer === "round")
+    return t("result.cast.round", { n: step ?? index + 1 });
   return t("result.cast.instance", { n: step ?? index + 1 });
 }
 
 /** The header of a cast's damage made of dice steps: "5 turns, one roll each", "1 roll". */
-export function stepsHeader(t: TFunction, stepsPer: StepPer, count: number): string {
+export function stepsHeader(
+  t: TFunction,
+  stepsPer: StepPer,
+  count: number,
+): string {
   return t(`result.cast.damageSteps.${stepsPer}`, { count });
 }
 
 /** Each dice step in order, "—" for one without damage: "by round: —, —, 20d2, 20d4, 20d2". */
 function stepsText(t: TFunction, d: SpellDamage): string {
-  const steps = (d.steps ?? []).map((s) => (isNone(s.dice) ? "—" : diceText(s.dice))).join(", ");
+  const steps = (d.steps ?? [])
+    .map((s) => (isNone(s.dice) ? "—" : diceText(s.dice)))
+    .join(", ");
   return t(`spellDice.steps.${d.steps_per ?? "instance"}`, { steps });
 }
 
@@ -53,7 +65,12 @@ function stepsText(t: TFunction, d: SpellDamage): string {
 function instanceText(t: TFunction, d: SpellDamage): string {
   if (!d.parts || d.parts.length === 0) return diceText(d.dice);
   const parts = d.parts
-    .map((p) => t(`spellDice.parts.${p.save}`, { dice: diceText(p.dice), defaultValue: diceText(p.dice) }))
+    .map((p) =>
+      t(`spellDice.parts.${p.save}`, {
+        dice: diceText(p.dice),
+        defaultValue: diceText(p.dice),
+      }),
+    )
     .join(" + ");
   return d.parts.length > 1 && !isOne(d.instances) ? `(${parts})` : parts;
 }
@@ -63,7 +80,9 @@ function instanceText(t: TFunction, d: SpellDamage): string {
  * (each dice step), in the player's language.
  */
 export function damageText(t: TFunction, d: SpellDamage): string {
-  const type = d.type ? t(`spellDice.types.${d.type}`, { defaultValue: d.type }) : "";
+  const type = d.type
+    ? t(`spellDice.types.${d.type}`, { defaultValue: d.type })
+    : "";
   if (d.steps && d.steps.length > 0) {
     const steps = stepsText(t, d);
     return type ? t("spellDice.typed", { dice: steps, type }) : steps;
@@ -86,8 +105,15 @@ export function damageText(t: TFunction, d: SpellDamage): string {
  */
 export function exposureDamageText(t: TFunction, d: SpellDamage): string {
   if (!d.steps || d.steps.length === 0) return damageText(t, d);
-  let steps = d.steps.map((s) => (isNone(s.dice) ? "—" : diceText(s.dice))).join(", ");
-  const type = d.type ? t(`spellDice.types.${d.type}`, { defaultValue: d.type }) : "";
+  let steps = d.steps
+    .map((s) => (isNone(s.dice) ? "—" : diceText(s.dice)))
+    .join(", ");
+  const type = d.type
+    ? t(`spellDice.types.${d.type}`, { defaultValue: d.type })
+    : "";
   if (type) steps = t("spellDice.typed", { dice: steps, type });
-  return t("spellDice.exposureSteps", { steps, last: diceText(d.steps[d.steps.length - 1].dice) });
+  return t("spellDice.exposureSteps", {
+    steps,
+    last: diceText(d.steps[d.steps.length - 1].dice),
+  });
 }

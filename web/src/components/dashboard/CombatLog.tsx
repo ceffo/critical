@@ -120,7 +120,9 @@ export function CombatLog() {
               onClick={() => setFilter(f)}
               className={cn(
                 "h-6 rounded-md px-3 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                filter === f ? "bg-card font-medium" : "text-muted-foreground hover:text-foreground",
+                filter === f
+                  ? "bg-card font-medium"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {t(`fil.filter.${f}`)}
@@ -133,9 +135,15 @@ export function CombatLog() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {groups.map((g) => (
-          <section key={g.key} className="mb-2" aria-label={turnLabel(t, g.round)}>
+          <section
+            key={g.key}
+            className="mb-2"
+            aria-label={turnLabel(t, g.round)}
+          >
             <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-card px-2 py-1">
-              <span className="text-body font-medium">{turnLabel(t, g.round)}</span>
+              <span className="text-body font-medium">
+                {turnLabel(t, g.round)}
+              </span>
               {g.round === round && (
                 <span className="rounded-md bg-amb-900 px-1.5 text-label text-amb-300">
                   {t("log.current")}
@@ -229,7 +237,10 @@ function LogRow({
           <span className="sr-only">{kindLabel}</span>
         </span>
         <span
-          className={cn("min-w-0 truncate text-body", voided && "text-muted-foreground line-through")}
+          className={cn(
+            "min-w-0 truncate text-body",
+            voided && "text-muted-foreground line-through",
+          )}
           title={text}
         >
           {text}
@@ -238,7 +249,9 @@ function LogRow({
           <span
             className={cn(
               "text-body font-semibold tabular-nums",
-              voided ? "text-muted-foreground line-through" : VALUE_TONES[value.tone],
+              voided
+                ? "text-muted-foreground line-through"
+                : VALUE_TONES[value.tone],
             )}
             data-testid={isHp ? "log-delta" : "log-value"}
           >
@@ -247,11 +260,17 @@ function LogRow({
         )}
       </button>
       <div className="flex min-h-6 flex-wrap items-center gap-x-2 pl-[1.625rem] text-label text-muted-foreground">
-        <span className="tabular-nums">{formatTime(e.createdAt, i18n.language)}</span>
+        <span className="tabular-nums">
+          {formatTime(e.createdAt, i18n.language)}
+        </span>
         {amended && (
           <>
-            <span className="rounded-md bg-neu-900 px-1.5">{t("log.status.amended")}</span>
-            {isHp && <span>{t("log.was", { delta: formatSigned(e.hpDelta) })}</span>}
+            <span className="rounded-md bg-neu-900 px-1.5">
+              {t("log.status.amended")}
+            </span>
+            {isHp && (
+              <span>{t("log.was", { delta: formatSigned(e.hpDelta) })}</span>
+            )}
           </>
         )}
         {capped && (
@@ -261,7 +280,9 @@ function LogRow({
             })}
           </span>
         )}
-        {voided && <span className="text-danger">{t("log.status.voided")}</span>}
+        {voided && (
+          <span className="text-danger">{t("log.status.voided")}</span>
+        )}
         {!voided && mode === "view" && (
           <span className="ml-auto flex gap-1">
             {diceFormula !== undefined && (
@@ -292,7 +313,10 @@ function LogRow({
         )}
       </div>
       {e.note && (
-        <p className="mt-1 pl-[1.625rem] text-label italic text-muted-foreground" data-testid="log-note">
+        <p
+          className="mt-1 pl-[1.625rem] text-label italic text-muted-foreground"
+          data-testid="log-note"
+        >
           {e.note}
         </p>
       )}
@@ -322,7 +346,13 @@ function LogRow({
   );
 }
 
-function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }) {
+function AmendForm({
+  entry: e,
+  onDone,
+}: {
+  entry: LogEntry;
+  onDone: () => void;
+}) {
   const { t } = useTranslation();
   const { amendEntry, busy } = useTableStore();
   const [note, setNote] = useState(e.note);
@@ -337,7 +367,9 @@ function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }
       }}
     >
       <label className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-label text-muted-foreground">{t("log.note")}</span>
+        <span className="text-label text-muted-foreground">
+          {t("log.note")}
+        </span>
         <input
           className={fieldClass}
           type="text"

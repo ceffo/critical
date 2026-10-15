@@ -20,7 +20,9 @@ export function fetchAttackForm(): Promise<AttackFormView> {
 }
 
 /** Only the fields present in `body` change; returns the whole form with its preview. */
-export function patchAttackForm(body: AttackFormPatch): Promise<AttackFormView> {
+export function patchAttackForm(
+  body: AttackFormPatch,
+): Promise<AttackFormView> {
   return patch<AttackFormView>("/api/attack/form", body);
 }
 

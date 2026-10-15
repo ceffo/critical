@@ -1,6 +1,12 @@
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
-import { Backpack, BookOpenText, HandFist, TrendUp, type IconProps } from "@phosphor-icons/react";
+import {
+  Backpack,
+  BookOpenText,
+  HandFist,
+  TrendUp,
+  type IconProps,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { WORKSPACES, type Workspace } from "@/lib/workspaces";
 import { SettingsPopover } from "./SettingsPopover";
@@ -43,7 +49,9 @@ export function Rail({
             onClick={() => onSelect(w)}
           >
             <Icon weight={on ? "fill" : "regular"} aria-hidden />
-            <span className="max-w-full truncate">{t(`shell.workspace.${w}`)}</span>
+            <span className="max-w-full truncate">
+              {t(`shell.workspace.${w}`)}
+            </span>
           </button>
         );
       })}

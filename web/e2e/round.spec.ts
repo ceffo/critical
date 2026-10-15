@@ -35,7 +35,9 @@ test("Next turn advances the counter and starts a new log group", async ({
   // their round.
   const newGroup = turnGroup(page, r0 + 1);
   await expect(newGroup).toContainText("current");
-  await expect(newGroup.getByRole("listitem")).toHaveText([/Initiative \d+ \(d10\) for turn/]);
+  await expect(newGroup.getByRole("listitem")).toHaveText([
+    /Initiative \d+ \(d10\) for turn/,
+  ]);
   const oldGroup = turnGroup(page, r0);
   await expect(
     oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" }),
@@ -122,9 +124,9 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await addBuff(page, { name: "e2e Short", rounds: 60 });
   await addBuff(page, { name: "e2e Layers", charges: 3 });
   // From 60 turns up the pill also shows hours.
-  await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
-    "150 turns · 2 h 30",
-  );
+  await expect(
+    buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
+  ).toHaveText("150 turns · 2 h 30");
   // One round at a time: two clicks in flight race their refreshes (an older one can land last).
   const r0 = await currentRound(page);
   await nextTurn(page);
@@ -132,9 +134,9 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(r0 + 2);
   const before = r0 + 2;
-  await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
-    "148 turns · 2 h 28",
-  );
+  await expect(
+    buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
+  ).toHaveText("148 turns · 2 h 28");
   await markNoReload(page);
 
   const form = page.getByRole("form", { name: "Time passes…" });
@@ -143,18 +145,22 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   // 1.5 h = 90 turns: the server's preview says so and names the effects that would end.
   await form.getByLabel("Hours that pass").fill("1.5");
   await expect(form.getByTestId("pass-time-preview")).toHaveText("= 90 turns");
-  await expect(form.getByTestId("pass-time-ending")).toHaveText("Ends: e2e Short");
+  await expect(form.getByTestId("pass-time-ending")).toHaveText(
+    "Ends: e2e Short",
+  );
   await snap(page, "pass-time-form");
   await form.getByRole("button", { name: "Confirm" }).click();
   await expect.poll(() => currentRound(page)).toBe(0);
-  await expect(page.getByRole("status")).toContainText("Expired buffs: e2e Short");
+  await expect(page.getByRole("status")).toContainText(
+    "Expired buffs: e2e Short",
+  );
   await expect(buffBadge(page, "e2e Short")).toHaveCount(0);
-  await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
-    "58 turns",
-  );
-  await expect(buffBadge(page, "e2e Layers").getByTestId("buff-charges")).toHaveText(
-    "3 / 3 charges · until spent",
-  );
+  await expect(
+    buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
+  ).toHaveText("58 turns");
+  await expect(
+    buffBadge(page, "e2e Layers").getByTestId("buff-charges"),
+  ).toHaveText("3 / 3 charges · until spent");
   const text = `Time passed: 1.5 h (90 rd), turn ${before} → 0`;
   await expect(logEntry(page, text)).toContainText("expired: e2e Short");
   await snap(page, "pass-time-done");
@@ -162,12 +168,12 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   // Voiding it brings back the buffs and the round.
   await voidEntry(page, text);
   await expect.poll(() => currentRound(page)).toBe(before);
-  await expect(buffBadge(page, "e2e Short").getByTestId("buff-rounds")).toHaveText(
-    "58 turns",
-  );
-  await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
-    "148 turns · 2 h 28",
-  );
+  await expect(
+    buffBadge(page, "e2e Short").getByTestId("buff-rounds"),
+  ).toHaveText("58 turns");
+  await expect(
+    buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
+  ).toHaveText("148 turns · 2 h 28");
   await expectNoReload(page);
 });
 
@@ -193,7 +199,12 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   const res = await fetch(`${stack.apiUrl}/api/buffs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "e2e Long", duration: 100, charges: 0, effects: {} }),
+    body: JSON.stringify({
+      name: "e2e Long",
+      duration: 100,
+      charges: 0,
+      effects: {},
+    }),
   });
   expect(res.ok).toBe(true);
   await page.addInitScript(() =>
@@ -205,9 +216,9 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   await openDashboard(page);
   await page.getByRole("button", { name: "Tour suivant" }).click();
   await expect.poll(() => currentRound(page)).toBe(1);
-  await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
-    "99 tours · 1 h 39",
-  );
+  await expect(
+    buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
+  ).toHaveText("99 tours · 1 h 39");
 
   // Not a positive number: the hint, and Confirm is off.
   const form = page.getByRole("form", { name: "Le temps passe…" });
@@ -226,13 +237,18 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   await expect.poll(() => currentRound(page)).toBe(0);
   const text = "Temps écoulé : 1,5 h (90 rd.), tour 1 → 0";
   await expect(logEntryFr(page, text)).toBeVisible();
-  await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText("9 tours");
+  await expect(
+    buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
+  ).toHaveText("9 tours");
 
   // The log is a stack: under a later Next Round the fast-forward offers no void.
   await page.getByRole("button", { name: "Tour suivant" }).click();
   await expect.poll(() => currentRound(page)).toBe(1);
   await expect(
-    logEntryFr(page, text).getByRole("button", { name: "Annuler", exact: true }),
+    logEntryFr(page, text).getByRole("button", {
+      name: "Annuler",
+      exact: true,
+    }),
   ).toHaveCount(0);
   await snap(page, "pass-time-void-not-offered-fr");
 
@@ -244,9 +260,9 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   await voidFr(page, text);
   await expect(logEntryFr(page, text)).toHaveAttribute("data-status", "voided");
   await expect.poll(() => currentRound(page)).toBe(1);
-  await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
-    "99 tours · 1 h 39",
-  );
+  await expect(
+    buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
+  ).toHaveText("99 tours · 1 h 39");
 });
 
 const HEADER_VIEWPORTS = [
@@ -270,7 +286,9 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   for (let i = 0; i < 5; i++) {
     const turn = await currentRound(page);
     await expect(current).toHaveText(`T${turn}`);
-    await expect(track.getByText(/^T\d+$/).first()).toHaveText(`T${turn === 0 ? 0 : Math.max(1, turn - 2)}`);
+    await expect(track.getByText(/^T\d+$/).first()).toHaveText(
+      `T${turn === 0 ? 0 : Math.max(1, turn - 2)}`,
+    );
     await nextTurn(page);
     await expect.poll(() => currentRound(page)).toBe(turn + 1);
   }
@@ -287,7 +305,9 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   let columns = 0;
   for (const vp of HEADER_VIEWPORTS) {
     await page.setViewportSize(vp);
-    await expect.poll(async () => Number(await track.getAttribute("data-columns"))).toBeGreaterThanOrEqual(columns);
+    await expect
+      .poll(async () => Number(await track.getAttribute("data-columns")))
+      .toBeGreaterThanOrEqual(columns);
     columns = Number(await track.getAttribute("data-columns"));
     await snap(page, `turn-header-${vp.width}x${vp.height}`);
   }
@@ -298,10 +318,14 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
 
   await nextTurn(page);
   await expect(blink).toHaveCount(0);
-  await expect(page.getByRole("status")).toContainText("Expired buffs: e2e Blink");
+  await expect(page.getByRole("status")).toContainText(
+    "Expired buffs: e2e Blink",
+  );
 });
 
-test("Next turn rolls the initiative; reroll replaces its log entry", async ({ page }) => {
+test("Next turn rolls the initiative; reroll replaces its log entry", async ({
+  page,
+}) => {
   await openDashboard(page);
   const row = page.getByTestId("initiative-row");
   await expect(row).toHaveText("Out of combat · initiative will be rolled");
@@ -312,15 +336,21 @@ test("Next turn rolls the initiative; reroll replaces its log entry", async ({ p
   await expect(value).toHaveText(/^([1-9]|10)$/);
   const firstId = await value.getAttribute("data-entry-id");
   const first = combatLog(page).locator(`[data-entry-id="${firstId}"]`);
-  await expect(first).toContainText(`Initiative ${await value.textContent()} (d10) for turn 1`);
+  await expect(first).toContainText(
+    `Initiative ${await value.textContent()} (d10) for turn 1`,
+  );
 
   // The reroll pops that entry and logs a new roll (the d10 may show the same face).
   await page.getByRole("button", { name: "Reroll initiative" }).click();
   await expect(value).not.toHaveAttribute("data-entry-id", firstId ?? "");
   await expect(first).toHaveAttribute("data-status", "voided");
-  const rerolled = combatLog(page).locator(`[data-entry-id="${await value.getAttribute("data-entry-id")}"]`);
+  const rerolled = combatLog(page).locator(
+    `[data-entry-id="${await value.getAttribute("data-entry-id")}"]`,
+  );
   await expect(rerolled).toHaveAttribute("data-status", "active");
-  await expect(rerolled).toContainText(`Initiative ${await value.textContent()} (d10) for turn 1`);
+  await expect(rerolled).toContainText(
+    `Initiative ${await value.textContent()} (d10) for turn 1`,
+  );
 
   for (const vp of HEADER_VIEWPORTS) {
     await page.setViewportSize(vp);

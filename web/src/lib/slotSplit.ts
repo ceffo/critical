@@ -6,7 +6,9 @@ export function splitText(t: TFunction, levels: number[]): string {
   for (const l of levels) counts.set(l, (counts.get(l) ?? 0) + 1);
   return [...counts]
     .map(([level, count]) =>
-      count > 1 ? t("spellSlots.splitCount", { count, level }) : t("spellSlots.splitLevel", { level }),
+      count > 1
+        ? t("spellSlots.splitCount", { count, level })
+        : t("spellSlots.splitLevel", { level }),
     )
     .join(" + ");
 }

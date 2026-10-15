@@ -3,7 +3,8 @@
 import type { PassTimePreview } from "@/types/buffs";
 import { parseDecimal } from "./decimalInput";
 
-export type PreviewAnswer = { kind: "error"; message: string } | ({ kind: "ok" } & PassTimePreview);
+export type PreviewAnswer =
+  { kind: "error"; message: string } | ({ kind: "ok" } & PassTimePreview);
 
 /** The server's answer and the hours it was asked for. */
 export interface KeyedAnswer {
@@ -11,7 +12,8 @@ export interface KeyedAnswer {
   answer: PreviewAnswer;
 }
 
-export type Preview = { kind: "empty" } | { kind: "invalid" } | { kind: "pending" } | PreviewAnswer;
+export type Preview =
+  { kind: "empty" } | { kind: "invalid" } | { kind: "pending" } | PreviewAnswer;
 
 /** The hours to ask the server about for `text`, or null when it is not a positive number. */
 export function hoursToAsk(text: string): number | null {

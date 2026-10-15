@@ -2,7 +2,12 @@
 // data: slot_splits, consume_item_type, attack_roll, modes). No game rule is decided here: the server
 // validates every cast; this only picks which inputs to show and what to send.
 import type { CastOptions } from "@/api/spells";
-import type { SpellbookEntry, SpellMode, SpellSlot, SpendableItem } from "@/types/spells";
+import type {
+  SpellbookEntry,
+  SpellMode,
+  SpellSlot,
+  SpendableItem,
+} from "@/types/spells";
 
 /** The player's inputs for one slot, as typed. */
 export interface CastForm {
@@ -50,7 +55,9 @@ export function planCast(
   const modes = needs?.modes ?? [];
   const mode = modes.find((m) => m.key === form.mode) ?? modes[0];
   const blocked =
-    slot.used || (blank && !form.pick) || (needs?.attack_roll === true && targetAc === undefined);
+    slot.used ||
+    (blank && !form.pick) ||
+    (needs?.attack_roll === true && targetAc === undefined);
   return {
     needs,
     slotSplits,
@@ -63,7 +70,10 @@ export function planCast(
     blocked,
     options: {
       spellId: blank ? form.pick : undefined,
-      extraSlots: slotSplits.length > 0 && split ? split.split(",").map(Number) : undefined,
+      extraSlots:
+        slotSplits.length > 0 && split
+          ? split.split(",").map(Number)
+          : undefined,
       targetAc: needs?.attack_roll ? targetAc : undefined,
       // One item left: the server takes it; none: the server refuses with its message.
       itemId: spendable.length > 1 ? itemId : undefined,

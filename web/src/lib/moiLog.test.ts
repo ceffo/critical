@@ -34,18 +34,35 @@ const hp = (delta: number, source: string, status: LogStatus = "active") =>
     status,
   });
 
-const save = (category: string, d20: number, passed: boolean, status: LogStatus = "active") =>
-  entry("save", { payload: { category, d20Roll: d20, passed }, effectivePayload: { category, d20Roll: d20, passed }, status });
+const save = (
+  category: string,
+  d20: number,
+  passed: boolean,
+  status: LogStatus = "active",
+) =>
+  entry("save", {
+    payload: { category, d20Roll: d20, passed },
+    effectivePayload: { category, d20Roll: d20, passed },
+    status,
+  });
 
 describe("lastHpChange", () => {
   it("is the newest HP change still in force, skipping voided ones and other kinds", () => {
-    const log = [save("spell", 12, true), hp(-4, "goblin", "voided"), hp(3, "potion"), hp(-9, "orc axe")];
+    const log = [
+      save("spell", 12, true),
+      hp(-4, "goblin", "voided"),
+      hp(3, "potion"),
+      hp(-9, "orc axe"),
+    ];
     expect(lastHpChange(log)).toEqual({ delta: 3, source: "potion" });
   });
 
   it("skips a heal capped to nothing (applied 0)", () => {
     const capped = { ...hp(5, "potion at full"), effectiveHpDelta: 0 };
-    expect(lastHpChange([capped, hp(-2, "rat")])).toEqual({ delta: -2, source: "rat" });
+    expect(lastHpChange([capped, hp(-2, "rat")])).toEqual({
+      delta: -2,
+      source: "rat",
+    });
   });
 
   it("uses the amended source", () => {
@@ -70,7 +87,12 @@ describe("lastSaves", () => {
   it("keeps the newest non-voided save per category, adjusted payload first", () => {
     const adjusted = {
       ...save("breath", 9, false),
-      effectivePayload: { category: "breath", d20Roll: 9, passed: true, adjustment: 4 },
+      effectivePayload: {
+        category: "breath",
+        d20Roll: 9,
+        passed: true,
+        adjustment: 4,
+      },
     };
     const log = [
       save("spell", 3, false, "voided"),
@@ -85,6 +107,8 @@ describe("lastSaves", () => {
   });
 
   it("ignores entries without a usable payload", () => {
-    expect(lastSaves([entry("save", { payload: null, effectivePayload: null })])).toEqual({});
+    expect(
+      lastSaves([entry("save", { payload: null, effectivePayload: null })]),
+    ).toEqual({});
   });
 });

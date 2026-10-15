@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { RollResult } from "@/types/combat";
-import { adjustmentChanged, MAX_ADJUSTMENT, stepAdjustment } from "./saveAdjust";
+import {
+  adjustmentChanged,
+  MAX_ADJUSTMENT,
+  stepAdjustment,
+} from "./saveAdjust";
 
 describe("stepAdjustment", () => {
   it.each([
@@ -22,7 +26,13 @@ describe("adjustmentChanged", () => {
     ["untouched card", save(0), 0, "", false],
     ["a reason alone changes nothing", save(0), 0, "Gaia fire", false],
     ["new adjustment", save(0), 4, "", true],
-    ["same adjustment and reason", save(4, "Gaia fire"), 4, " Gaia fire ", false],
+    [
+      "same adjustment and reason",
+      save(4, "Gaia fire"),
+      4,
+      " Gaia fire ",
+      false,
+    ],
     ["new reason", save(4, "Gaia fire"), 4, "Gaia lightning", true],
     ["back to 0", save(4, "Gaia fire"), 0, "Gaia fire", true],
   ])("%s", (_name, r, value, reason, want) => {

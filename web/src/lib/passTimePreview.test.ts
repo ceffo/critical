@@ -9,11 +9,17 @@ const ok = (hours: number, rounds: number): KeyedAnswer => ({
 describe("previewFor", () => {
   it("typing 1, then 1, then 1,5: the answer for 1 never shows for 1,5", () => {
     expect(previewFor("1", null)).toEqual({ kind: "pending" });
-    expect(previewFor("1", ok(1, 60))).toMatchObject({ kind: "ok", rounds: 60 });
+    expect(previewFor("1", ok(1, 60))).toMatchObject({
+      kind: "ok",
+      rounds: 60,
+    });
     // "1," is not a number yet: the hint, not the answer for 1.
     expect(previewFor("1,", ok(1, 60))).toEqual({ kind: "invalid" });
     expect(previewFor("1,5", ok(1, 60))).toEqual({ kind: "pending" });
-    expect(previewFor("1,5", ok(1.5, 90))).toMatchObject({ kind: "ok", rounds: 90 });
+    expect(previewFor("1,5", ok(1.5, 90))).toMatchObject({
+      kind: "ok",
+      rounds: 90,
+    });
   });
 
   it("an answer for older input arriving last is ignored", () => {
@@ -22,8 +28,14 @@ describe("previewFor", () => {
   });
 
   it("the server's refusal is shown for the hours it was about", () => {
-    const refused: KeyedAnswer = { hours: 0.01, answer: { kind: "error", message: "less than one round" } };
-    expect(previewFor("0.01", refused)).toEqual({ kind: "error", message: "less than one round" });
+    const refused: KeyedAnswer = {
+      hours: 0.01,
+      answer: { kind: "error", message: "less than one round" },
+    };
+    expect(previewFor("0.01", refused)).toEqual({
+      kind: "error",
+      message: "less than one round",
+    });
   });
 
   it("empty and non-numbers never ask the server", () => {

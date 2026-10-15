@@ -8,7 +8,10 @@ import { TurnBlock } from "./TurnBlock";
  */
 export function Header() {
   return (
-    <header className="flex min-w-0 shrink-0 items-center gap-3 bg-card px-3 py-2" data-screen="turn-header">
+    <header
+      className="flex min-w-0 shrink-0 items-center gap-3 bg-card px-3 py-2"
+      data-screen="turn-header"
+    >
       <TurnBlock />
       <EffectsTimeline />
     </header>

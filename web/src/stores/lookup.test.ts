@@ -40,7 +40,11 @@ describe("lookup query", () => {
     setQuery({ school: "abjuration", cls: "all" });
     expect(useLookupStore.getState().query.school).toBe("abjuration");
     setQuery({ cls: "priest" });
-    expect(useLookupStore.getState().query).toMatchObject({ cls: "priest", school: "", sphere: "" });
+    expect(useLookupStore.getState().query).toMatchObject({
+      cls: "priest",
+      school: "",
+      sphere: "",
+    });
     setQuery({ sphere: "Elemental Fire" });
     setQuery({ cls: "wizard" });
     expect(useLookupStore.getState().query.sphere).toBe("");
@@ -56,40 +60,69 @@ describe("lookup query", () => {
   });
 
   it("queryKey ignores surrounding spaces in the text", () => {
-    expect(queryKey({ ...LOOKUP_DEFAULT, q: " fire " })).toBe(queryKey({ ...LOOKUP_DEFAULT, q: "fire" }));
+    expect(queryKey({ ...LOOKUP_DEFAULT, q: " fire " })).toBe(
+      queryKey({ ...LOOKUP_DEFAULT, q: "fire" }),
+    );
   });
 });
 
 describe("lookup search", () => {
   it("selects the first row of a search, and skips the request when its rows are on screen", async () => {
-    searchSpells.mockResolvedValue({ items: [spell("a"), spell("b")], total: 2 });
+    searchSpells.mockResolvedValue({
+      items: [spell("a"), spell("b")],
+      total: 2,
+    });
     await useLookupStore.getState().search();
-    expect(useLookupStore.getState()).toMatchObject({ selectedId: "a", total: 2, pages: 1 });
+    expect(useLookupStore.getState()).toMatchObject({
+      selectedId: "a",
+      total: 2,
+      pages: 1,
+    });
     await useLookupStore.getState().search();
     expect(searchSpells).toHaveBeenCalledTimes(1);
   });
 
   it("a slow response overtaken by a newer query is not written", async () => {
     let release!: (v: unknown) => void;
-    searchSpells.mockImplementationOnce(() => new Promise((r) => (release = r)));
-    searchSpells.mockResolvedValueOnce({ items: [spell("fireball")], total: 1 });
+    searchSpells.mockImplementationOnce(
+      () => new Promise((r) => (release = r)),
+    );
+    searchSpells.mockResolvedValueOnce({
+      items: [spell("fireball")],
+      total: 1,
+    });
     useLookupStore.getState().setQuery({ q: "fir" });
     const slow = useLookupStore.getState().search();
     useLookupStore.getState().setQuery({ q: "fireball" });
     await useLookupStore.getState().search();
     release({ items: [spell("x"), spell("y")], total: 2 });
     await slow;
-    expect(useLookupStore.getState().items.map((s) => s.id)).toEqual(["fireball"]);
+    expect(useLookupStore.getState().items.map((s) => s.id)).toEqual([
+      "fireball",
+    ]);
     expect(useLookupStore.getState().total).toBe(1);
   });
 
   it("loadMore appends the next page without duplicates and keeps the true total", async () => {
-    searchSpells.mockResolvedValueOnce({ items: [spell("a"), spell("b")], total: 3 });
+    searchSpells.mockResolvedValueOnce({
+      items: [spell("a"), spell("b")],
+      total: 3,
+    });
     await useLookupStore.getState().search();
-    searchSpells.mockResolvedValueOnce({ items: [spell("b"), spell("c")], total: 3 });
+    searchSpells.mockResolvedValueOnce({
+      items: [spell("b"), spell("c")],
+      total: 3,
+    });
     await useLookupStore.getState().loadMore();
-    expect(searchSpells).toHaveBeenLastCalledWith(expect.objectContaining({ cls: "wizard" }), 2);
-    expect(useLookupStore.getState().items.map((s) => s.id)).toEqual(["a", "b", "c"]);
+    expect(searchSpells).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cls: "wizard" }),
+      2,
+    );
+    expect(useLookupStore.getState().items.map((s) => s.id)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
     await useLookupStore.getState().loadMore(); // everything is loaded
     expect(searchSpells).toHaveBeenCalledTimes(2);
   });
@@ -100,11 +133,16 @@ describe("lookup search", () => {
     await useLookupStore.getState().search();
     useLookupStore.getState().move(-1);
     expect(useLookupStore.getState().selectedId).toBe("s0"); // clamped at the top
-    searchSpells.mockResolvedValueOnce({ items: [spell("s10"), spell("s11")], total: 12 });
+    searchSpells.mockResolvedValueOnce({
+      items: [spell("s10"), spell("s11")],
+      total: 12,
+    });
     useLookupStore.getState().move(6); // within 5 of the end of the loaded rows
     expect(useLookupStore.getState().selectedId).toBe("s6");
     await vi.waitFor(() => expect(searchSpells).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() => expect(useLookupStore.getState().items).toHaveLength(12));
+    await vi.waitFor(() =>
+      expect(useLookupStore.getState().items).toHaveLength(12),
+    );
     useLookupStore.getState().move(99);
     expect(useLookupStore.getState().selectedId).toBe("s11");
   });

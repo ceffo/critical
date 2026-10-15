@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { NO_QUERY, searchSpells } from "@/api/spells_db";
 import { spellName } from "@/i18n/spellName";
 import { modeText } from "@/lib/spellMode";
@@ -31,7 +36,9 @@ export function AddEffect() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        render={<Button size="xs" variant="ghost" aria-label={t("buffs.add")} />}
+        render={
+          <Button size="xs" variant="ghost" aria-label={t("buffs.add")} />
+        }
         data-testid="add-effect"
       >
         <Plus />
@@ -45,7 +52,11 @@ export function AddEffect() {
         data-testid="add-effect-popover"
       >
         <PopoverTitle className="sr-only">{t("buffs.add")}</PopoverTitle>
-        <div role="tablist" aria-label={t("buffs.add")} className="flex gap-1 rounded-lg bg-neu-900 p-1">
+        <div
+          role="tablist"
+          aria-label={t("buffs.add")}
+          className="flex gap-1 rounded-lg bg-neu-900 p-1"
+        >
           {TABS.map((id) => (
             <button
               key={id}
@@ -54,7 +65,9 @@ export function AddEffect() {
               aria-selected={tab === id}
               className={cn(
                 "flex-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                tab === id ? "bg-tint/15 font-medium text-amb-200" : "text-muted-foreground hover:text-foreground",
+                tab === id
+                  ? "bg-tint/15 font-medium text-amb-200"
+                  : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => setTab(id)}
             >
@@ -84,7 +97,8 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
   const [modes, setModes] = useState<Record<string, string>>({});
 
   const casterLevel = Number(level);
-  const levelOk = Number.isInteger(casterLevel) && casterLevel >= 1 && casterLevel <= 40;
+  const levelOk =
+    Number.isInteger(casterLevel) && casterLevel >= 1 && casterLevel <= 40;
   // The modes' dice are served at the caster level typed, the one the receive rolls at.
   const searchLevel = levelOk ? casterLevel : undefined;
 
@@ -116,10 +130,15 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <section className="flex flex-col gap-2" aria-label={t("spellSlots.receiveTitle")}>
+    <section
+      className="flex flex-col gap-2"
+      aria-label={t("spellSlots.receiveTitle")}
+    >
       <div className="grid grid-cols-[1fr_8rem] gap-2">
         <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-label text-muted-foreground">{t("spellSlots.receiveSearchLabel")}</span>
+          <span className="text-label text-muted-foreground">
+            {t("spellSlots.receiveSearchLabel")}
+          </span>
           <input
             className={fieldClass}
             type="search"
@@ -130,7 +149,9 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
           />
         </label>
         <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-label text-muted-foreground">{t("spellSlots.casterLevel")}</span>
+          <span className="text-label text-muted-foreground">
+            {t("spellSlots.casterLevel")}
+          </span>
           <input
             className={`${fieldClass} tabular-nums`}
             type="number"
@@ -142,15 +163,22 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
         </label>
       </div>
       {!searching ? (
-        <p className="text-body text-muted-foreground">{t("spellSlots.receiveHint")}</p>
+        <p className="text-body text-muted-foreground">
+          {t("spellSlots.receiveHint")}
+        </p>
       ) : found.length === 0 ? (
-        <p className="text-body text-muted-foreground">{t("spellSlots.noMatch")}</p>
+        <p className="text-body text-muted-foreground">
+          {t("spellSlots.noMatch")}
+        </p>
       ) : (
         <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
           {found.map((c) => {
             const name = spellName(t, c.id, c.name);
             return (
-              <li key={c.id} className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60">
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
+              >
                 <span className="min-w-0 truncate text-body">
                   {name}
                   <span className="text-muted-foreground tabular-nums">
@@ -164,7 +192,9 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
                     aria-label={t("spellSlots.modeChoiceFor", { name })}
                     data-testid="receive-mode"
                     value={modes[c.id] ?? c.modes[0].key}
-                    onChange={(e) => setModes({ ...modes, [c.id]: e.target.value })}
+                    onChange={(e) =>
+                      setModes({ ...modes, [c.id]: e.target.value })
+                    }
                   >
                     {c.modes.map((m) => (
                       <option key={m.key} value={m.key}>
@@ -188,7 +218,10 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
         </ul>
       )}
       {searching && more > 0 && (
-        <p className="text-body text-muted-foreground tabular-nums" data-testid="receive-more">
+        <p
+          className="text-body text-muted-foreground tabular-nums"
+          data-testid="receive-more"
+        >
           {t("spellSlots.receiveMore", { count: more })}
         </p>
       )}
@@ -203,10 +236,15 @@ function SavedEffects({ onDone }: { onDone: () => void }) {
   const { run, busy } = useTableStore();
 
   if (saved.length === 0) {
-    return <p className="text-body text-muted-foreground">{t("buffs.savedNone")}</p>;
+    return (
+      <p className="text-body text-muted-foreground">{t("buffs.savedNone")}</p>
+    );
   }
   return (
-    <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto" aria-label={t("buffs.saved")}>
+    <ul
+      className="flex max-h-64 flex-col gap-1 overflow-y-auto"
+      aria-label={t("buffs.saved")}
+    >
       {saved.map((s) => (
         <li
           key={s.id}
@@ -215,7 +253,11 @@ function SavedEffects({ onDone }: { onDone: () => void }) {
         >
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-body">{s.name}</span>
-            {s.note && <span className="truncate text-label text-muted-foreground">{s.note}</span>}
+            {s.note && (
+              <span className="truncate text-label text-muted-foreground">
+                {s.note}
+              </span>
+            )}
           </span>
           <span className="flex shrink-0 items-center gap-1">
             <Button

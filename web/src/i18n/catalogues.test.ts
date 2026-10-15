@@ -21,27 +21,40 @@ describe("catalogues", () => {
 
   it("every skill id of seeds/skills.json has an en and a fr name", () => {
     const seed = JSON.parse(
-      readFileSync(join(__dirname, "..", "..", "..", "seeds", "skills.json"), "utf8"),
+      readFileSync(
+        join(__dirname, "..", "..", "..", "seeds", "skills.json"),
+        "utf8",
+      ),
     ) as { proficiencies: { id: string }[]; bard_skills: { id: string }[] };
     const ids = [...seed.proficiencies, ...seed.bard_skills].map((s) => s.id);
     expect(ids.length).toBeGreaterThan(0);
     for (const lang of ["en", "fr"] as const) {
-      const names = (resources[lang].common as { skills: { names: Record<string, string> } }).skills
-        .names;
+      const names = (
+        resources[lang].common as { skills: { names: Record<string, string> } }
+      ).skills.names;
       for (const id of ids) expect(names[id], `${lang} ${id}`).toBeTruthy();
     }
   });
 
   it("every damage type of seeds/spell_effects.json has an en and a fr word", () => {
     const seed = JSON.parse(
-      readFileSync(join(__dirname, "..", "..", "..", "seeds", "spell_effects.json"), "utf8"),
+      readFileSync(
+        join(__dirname, "..", "..", "..", "seeds", "spell_effects.json"),
+        "utf8",
+      ),
     ) as { damage?: { type?: string } }[];
-    const types = [...new Set(seed.flatMap((e) => (e.damage?.type ? [e.damage.type] : [])))];
+    const types = [
+      ...new Set(seed.flatMap((e) => (e.damage?.type ? [e.damage.type] : []))),
+    ];
     expect(types.length).toBeGreaterThan(0);
     for (const lang of ["en", "fr"] as const) {
-      const words = (resources[lang].common as { spellDice: { types: Record<string, string> } })
-        .spellDice.types;
-      for (const type of types) expect(words[type], `${lang} ${type}`).toBeTruthy();
+      const words = (
+        resources[lang].common as {
+          spellDice: { types: Record<string, string> };
+        }
+      ).spellDice.types;
+      for (const type of types)
+        expect(words[type], `${lang} ${type}`).toBeTruthy();
     }
   });
 

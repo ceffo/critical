@@ -41,7 +41,14 @@ describe("undoButtonState", () => {
       disabled: true,
       label: "Nothing to undo",
     });
-    expect(undoButtonState(null, [{ ...initiative, status: "voided" }], false, await makeT("fr"))).toEqual({
+    expect(
+      undoButtonState(
+        null,
+        [{ ...initiative, status: "voided" }],
+        false,
+        await makeT("fr"),
+      ),
+    ).toEqual({
       disabled: true,
       label: "Rien à annuler",
     });
@@ -59,13 +66,15 @@ describe("undoButtonState", () => {
   });
 
   it("disabled while an action runs", async () => {
-    expect(undoButtonState(7, [initiative], true, await makeT("en")).disabled).toBe(true);
+    expect(
+      undoButtonState(7, [initiative], true, await makeT("en")).disabled,
+    ).toBe(true);
   });
 
   it("a top older than the listed entries is named by its id", async () => {
-    expect(undoButtonState(3, [initiative], false, await makeT("en")).label).toBe(
-      "Undo: #3 (Ctrl+Z / ⌘Z)",
-    );
+    expect(
+      undoButtonState(3, [initiative], false, await makeT("en")).label,
+    ).toBe("Undo: #3 (Ctrl+Z / ⌘Z)");
   });
 
   // ADR 0010 step 6: a correction on top is named from its payload (the change, before → after).
@@ -79,22 +88,33 @@ describe("undoButtonState", () => {
     const label = async (lng: string, payload: object) =>
       undoButtonState(9, [correction(payload)], false, await makeT(lng)).label;
     const ac = { field: "targetAc", from: 5, to: 7 };
-    expect(await label("fr", ac)).toBe("Annuler : Correction CA 5 → 7 (Ctrl+Z / ⌘Z)");
-    expect(await label("en", ac)).toBe("Undo: Correction AC 5 → 7 (Ctrl+Z / ⌘Z)");
+    expect(await label("fr", ac)).toBe(
+      "Annuler : Correction CA 5 → 7 (Ctrl+Z / ⌘Z)",
+    );
+    expect(await label("en", ac)).toBe(
+      "Undo: Correction AC 5 → 7 (Ctrl+Z / ⌘Z)",
+    );
     expect(await label("fr", { field: "targetAc", from: null, to: 4 })).toBe(
       "Annuler : Correction CA ? → 4 (Ctrl+Z / ⌘Z)",
     );
-    const save = { entryKind: "save", field: "saveAdjustment", from: 0, to: -3 };
+    const save = {
+      entryKind: "save",
+      field: "saveAdjustment",
+      from: 0,
+      to: -3,
+    };
     expect(await label("fr", save)).toBe(
       "Annuler : Correction ajustement de sauvegarde 0 → −3 (Ctrl+Z / ⌘Z)",
     );
-    expect(await label("en", save)).toBe("Undo: Correction save adjustment 0 → −3 (Ctrl+Z / ⌘Z)");
+    expect(await label("en", save)).toBe(
+      "Undo: Correction save adjustment 0 → −3 (Ctrl+Z / ⌘Z)",
+    );
     const verdict = { field: "verdict", from: null, to: "hit" };
     expect(await label("fr", verdict)).toBe(
       "Annuler : Correction verdict du MJ aucun → Touché (Ctrl+Z / ⌘Z)",
     );
-    expect(await label("en", { field: "verdict", from: "hit", to: "miss" })).toBe(
-      "Undo: Correction GM verdict Hit → Miss (Ctrl+Z / ⌘Z)",
-    );
+    expect(
+      await label("en", { field: "verdict", from: "hit", to: "miss" }),
+    ).toBe("Undo: Correction GM verdict Hit → Miss (Ctrl+Z / ⌘Z)");
   });
 });

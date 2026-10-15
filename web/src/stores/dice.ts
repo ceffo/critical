@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { ApiError } from "@/api/http";
-import { addFavourite, deleteFavourite, fetchFavourites, reorderFavourites, rollDice } from "@/api/dice";
+import {
+  addFavourite,
+  deleteFavourite,
+  fetchFavourites,
+  reorderFavourites,
+  rollDice,
+} from "@/api/dice";
 import { addDie, removeDie, stepConstant } from "@/lib/diceFormula";
 import type { DiceFavourite } from "@/types/dice";
 import { useFilStore } from "./fil";
@@ -32,8 +38,12 @@ interface DiceStore {
 export const useDiceStore = create<DiceStore>((set, get) => {
   const edit = (formula: string) => set({ formula, error: null });
   const fail = (e: unknown) => {
-    if (e instanceof ApiError && e.field === "formula") set({ error: e.message });
-    else useTableStore.setState({ error: e instanceof Error ? e.message : String(e) });
+    if (e instanceof ApiError && e.field === "formula")
+      set({ error: e.message });
+    else
+      useTableStore.setState({
+        error: e instanceof Error ? e.message : String(e),
+      });
   };
   return {
     formula: "",
@@ -55,7 +65,8 @@ export const useDiceStore = create<DiceStore>((set, get) => {
         // The composer shows the server's normal form, ready to roll again.
         set({ formula: res.formula });
         await useTableStore.getState().refresh();
-        if (res.logEntryId !== undefined) useFilStore.getState().select(res.logEntryId);
+        if (res.logEntryId !== undefined)
+          useFilStore.getState().select(res.logEntryId);
         return true;
       } catch (e) {
         fail(e);
@@ -78,7 +89,9 @@ export const useDiceStore = create<DiceStore>((set, get) => {
         const fav = await addFavourite(text);
         set((s) => ({
           error: null,
-          favourites: s.favourites.some((f) => f.id === fav.id) ? s.favourites : [...s.favourites, fav],
+          favourites: s.favourites.some((f) => f.id === fav.id)
+            ? s.favourites
+            : [...s.favourites, fav],
         }));
         return true;
       } catch (e) {

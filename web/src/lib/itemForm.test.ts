@@ -100,8 +100,15 @@ describe("changedFields", () => {
 
   it("sends the daily number when an item becomes daily, even if equal to its old max", () => {
     const stock: Item = { ...wand, behaviour: "stock", count: 4, maxCount: 4 };
-    const { body } = draftToBody({ ...draftFromItem(stock), behaviour: "daily", maxCount: "4" });
-    expect(changedFields(stock, body)).toEqual({ behaviour: "daily", maxCount: 4 });
+    const { body } = draftToBody({
+      ...draftFromItem(stock),
+      behaviour: "daily",
+      maxCount: "4",
+    });
+    expect(changedFields(stock, body)).toEqual({
+      behaviour: "daily",
+      maxCount: 4,
+    });
   });
 
   it("is empty when nothing changed", () => {

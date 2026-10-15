@@ -30,11 +30,15 @@ export const useCharacterStore = create<CharacterStore>((set) => ({
   saveDetails: async (body) => {
     try {
       const details = await patchCharacterDetails(body);
-      set((s) => ({ character: s.character ? { ...s.character, ...details } : s.character }));
+      set((s) => ({
+        character: s.character ? { ...s.character, ...details } : s.character,
+      }));
       return null;
     } catch (e) {
       if (e instanceof ApiError && e.field) return e;
-      useTableStore.setState({ error: e instanceof Error ? e.message : String(e) });
+      useTableStore.setState({
+        error: e instanceof Error ? e.message : String(e),
+      });
       return null;
     }
   },

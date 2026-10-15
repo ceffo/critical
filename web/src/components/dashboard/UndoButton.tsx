@@ -2,7 +2,11 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { undoButtonState } from "@/lib/undoButton";
-import { hasOpenOverlay, isTypingTarget, isUndoShortcut } from "@/lib/undoShortcut";
+import {
+  hasOpenOverlay,
+  isTypingTarget,
+  isUndoShortcut,
+} from "@/lib/undoShortcut";
 import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
 

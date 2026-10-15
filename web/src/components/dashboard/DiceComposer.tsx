@@ -1,6 +1,13 @@
 import { useEffect, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { CaretLeft, CaretRight, Minus, Plus, Star, X } from "@phosphor-icons/react";
+import {
+  CaretLeft,
+  CaretRight,
+  Minus,
+  Plus,
+  Star,
+  X,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useDiceStore } from "@/stores/dice";
 import { DICE_SIDES, dieCount, dieName } from "@/lib/diceFormula";
@@ -36,15 +43,23 @@ export function DiceComposer() {
         data-testid="dice-favourites"
       >
         {s.favourites.length === 0 && (
-          <li className="text-body text-muted-foreground">{t("dice.noFavourites")}</li>
+          <li className="text-body text-muted-foreground">
+            {t("dice.noFavourites")}
+          </li>
         )}
         {s.favourites.map((f, i) => (
-          <li key={f.id} className="flex shrink-0 items-center rounded-md bg-card" data-testid="dice-favourite">
+          <li
+            key={f.id}
+            className="flex shrink-0 items-center rounded-md bg-card"
+            data-testid="dice-favourite"
+          >
             {s.favourites.length > 1 && (
               <button
                 type="button"
                 className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
-                aria-label={t("dice.moveFavouriteEarlier", { formula: f.formula })}
+                aria-label={t("dice.moveFavouriteEarlier", {
+                  formula: f.formula,
+                })}
                 disabled={i === 0}
                 onClick={() => void s.moveFavourite(f.id, -1)}
               >
@@ -65,7 +80,9 @@ export function DiceComposer() {
               <button
                 type="button"
                 className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
-                aria-label={t("dice.moveFavouriteLater", { formula: f.formula })}
+                aria-label={t("dice.moveFavouriteLater", {
+                  formula: f.formula,
+                })}
                 disabled={i === s.favourites.length - 1}
                 onClick={() => void s.moveFavourite(f.id, 1)}
               >
@@ -121,7 +138,11 @@ export function DiceComposer() {
 
       <div className="flex min-w-0 items-center gap-2">
         <input
-          className={cn(fieldClass, "min-w-0 flex-1 tabular-nums", s.error && "border-danger text-danger")}
+          className={cn(
+            fieldClass,
+            "min-w-0 flex-1 tabular-nums",
+            s.error && "border-danger text-danger",
+          )}
           type="text"
           aria-label={t("dice.formula")}
           placeholder={t("dice.placeholder")}
@@ -133,13 +154,31 @@ export function DiceComposer() {
           value={s.formula}
           onChange={(ev) => s.setFormula(ev.target.value)}
         />
-        <Button type="button" size="icon-sm" variant="ghost" aria-label={t("dice.minus")} onClick={() => s.step(-1)}>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          aria-label={t("dice.minus")}
+          onClick={() => s.step(-1)}
+        >
           <Minus aria-hidden />
         </Button>
-        <Button type="button" size="icon-sm" variant="ghost" aria-label={t("dice.plus")} onClick={() => s.step(1)}>
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          aria-label={t("dice.plus")}
+          onClick={() => s.step(1)}
+        >
           <Plus aria-hidden />
         </Button>
-        <Button type="button" size="sm" variant="ghost" disabled={empty} onClick={s.clear}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={empty}
+          onClick={s.clear}
+        >
           {t("dice.clear")}
         </Button>
         <Button
@@ -158,7 +197,11 @@ export function DiceComposer() {
         </Button>
       </div>
       {s.error && (
-        <p className="text-body text-danger" role="alert" data-testid="dice-error">
+        <p
+          className="text-body text-danger"
+          role="alert"
+          data-testid="dice-error"
+        >
           {t("dice.invalid")}
         </p>
       )}

@@ -45,6 +45,9 @@ type AttackFormViewDTO struct {
 	AmmoFromDefault bool              `json:"ammoFromDefault"`
 	AmmoChoices     []AmmoChoiceDTO   `json:"ammoChoices"`
 	Preview         *AttackPreviewDTO `json:"preview"`
+	// MaxRealAC is the highest armor class the rules allow; the UI stops
+	// the target AC stepper there (docs/adr/0012 step 7).
+	MaxRealAC int `json:"maxRealAc"`
 }
 
 // AttackFormPatchDTO is the body of PATCH /api/attack/form: only the fields
@@ -116,6 +119,7 @@ func toFormViewDTO(v *combatsvc.AttackFormView) AttackFormViewDTO {
 		},
 		AmmoFromDefault: v.AmmoFromDefault,
 		AmmoChoices:     make([]AmmoChoiceDTO, 0, len(v.AmmoChoices)),
+		MaxRealAC:       combatsvc.MaxRealAC,
 	}
 	for _, a := range v.AmmoChoices {
 		out.AmmoChoices = append(out.AmmoChoices, AmmoChoiceDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Count: a.Count})

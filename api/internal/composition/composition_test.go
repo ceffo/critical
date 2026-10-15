@@ -107,7 +107,7 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 
 	// One pop of Next Round (its initiative on top): the round, the
 	// durations and the expired buff come back (ADR 0018 step 2).
-	popped, err := bs.Log.Void(ctx, id, entries[0].ID)
+	popped, err := bs.Log.Undo(ctx, id, entries[0].ID)
 	require.NoError(t, err)
 	assert.Equal(t, entries[1].ID, popped.ID, "answers with the transaction's first entry, the advance")
 	r, err := bs.Buffs.GetRound(ctx, id)
@@ -123,7 +123,7 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 
 	// Void the rest newest first (edit, both absorbs, three activations).
 	for _, e := range entries[2:] {
-		_, err := bs.Log.Void(ctx, id, e.ID)
+		_, err := bs.Log.Undo(ctx, id, e.ID)
 		require.NoError(t, err, "void #%d %s", e.ID, e.Payload)
 		p := string(e.Payload)
 		if strings.Contains(p, `"action":"edit"`) && strings.Contains(p, `"buff":"Strength"`) {
@@ -157,7 +157,7 @@ func TestVoidingAnOlderBuffChangeIsBlocked(t *testing.T) {
 	entries, err := bs.Log.List(ctx, id, 10)
 	require.NoError(t, err)
 	require.Len(t, entries, 3, "activate, Next Round, its initiative")
-	_, err = bs.Log.Void(ctx, id, entries[2].ID)
+	_, err = bs.Log.Undo(ctx, id, entries[2].ID)
 	assert.Error(t, err)
 }
 
@@ -202,13 +202,13 @@ func TestMissileAttackSpendsAmmoAndVoidRestoresIt(t *testing.T) {
 	assert.Equal(t, actionlog.KindAttack, entries[0].Kind)
 	assert.Equal(t, second.LogEntryID, entries[0].ID)
 
-	_, err = bs.Log.Void(ctx, id, first.LogEntryID)
-	assert.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "a later arrow of the same kind changed the count since")
+	_, err = bs.Log.Undo(ctx, id, first.LogEntryID)
+	assert.ErrorIs(t, err, actionlogsvc.ErrTopChanged, "a later arrow of the same kind changed the count since")
 
-	_, err = bs.Log.Void(ctx, id, second.LogEntryID)
+	_, err = bs.Log.Undo(ctx, id, second.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, before-1, arrowCount(t, bs, "arrows_plus3"))
-	_, err = bs.Log.Void(ctx, id, first.LogEntryID)
+	_, err = bs.Log.Undo(ctx, id, first.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, before, arrowCount(t, bs, "arrows_plus3"))
 }
@@ -264,15 +264,15 @@ func TestVoidingAnOlderShotIsRefused(t *testing.T) {
 	shot1, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: new(5)})
 	require.NoError(t, err)
 
-	_, err = bs.Log.Void(ctx, id, shot3.LogEntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+	_, err = bs.Log.Undo(ctx, id, shot3.LogEntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
 	assert.Equal(t, plus3-1, arrowCount(t, bs, "arrows_plus3"))
 
-	_, err = bs.Log.Void(ctx, id, shot1.LogEntryID)
+	_, err = bs.Log.Undo(ctx, id, shot1.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, plus1, arrowCount(t, bs, "arrows_plus1"))
 	assert.Equal(t, plus3-1, arrowCount(t, bs, "arrows_plus3"), "only the +1 came back")
-	_, err = bs.Log.Void(ctx, id, shot3.LogEntryID)
+	_, err = bs.Log.Undo(ctx, id, shot3.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, plus3, arrowCount(t, bs, "arrows_plus3"))
 }
@@ -285,7 +285,7 @@ func TestVoidingAMeleeAttackLeavesItems(t *testing.T) {
 	require.NoError(t, err)
 	res, err := bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)})
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	after, err := bs.Items.List(ctx)
 	require.NoError(t, err)
@@ -316,7 +316,7 @@ func TestUsingTheWandRollsLogsAndVoidRestoresTheCharge(t *testing.T) {
 	assert.LessOrEqual(t, res.Total, 36)
 	assert.Equal(t, "rod_staff_wand", res.Save)
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 4, itemCount(t, bs, "wand_lightning"))
 }

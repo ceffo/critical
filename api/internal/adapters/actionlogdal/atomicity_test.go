@@ -159,7 +159,7 @@ func TestVoid_RestoresBeforeState(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, round(t, db, charID))
 
-	e, err := log.Void(ctx, charID, id)
+	e, err := log.Undo(ctx, charID, id)
 	require.NoError(t, err)
 	assert.Equal(t, actionlog.StatusVoided, e.Status())
 	assert.Equal(t, 0, round(t, db, charID))
@@ -183,19 +183,19 @@ func TestVoid_OnlyTheLatestEntry(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, older := range []int64{first, second} {
-		_, err = log.Void(ctx, charID, older)
-		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-		assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (hp_change, round 4) first", scratch))
+		_, err = log.Undo(ctx, charID, older)
+		require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+		assert.Contains(t, err.Error(), fmt.Sprintf("the newest entry is #%d (hp_change, round 4)", scratch))
 	}
 	assert.Equal(t, 2, round(t, db, charID), "nothing restored")
 
 	for i, id := range []int64{scratch, second, first} {
-		_, err = log.Void(ctx, charID, id)
+		_, err = log.Undo(ctx, charID, id)
 		require.NoError(t, err, "pop %d", i)
 	}
 	assert.Equal(t, 0, round(t, db, charID))
-	_, err = log.Void(ctx, charID, first)
-	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
+	_, err = log.Undo(ctx, charID, first)
+	require.ErrorIs(t, err, actionlogsvc.ErrNothingToUndo)
 }
 
 func TestVoid_AtomicWithRestore(t *testing.T) {
@@ -220,7 +220,7 @@ func TestVoid_AtomicWithRestore(t *testing.T) {
 			log := newLog(t, db, failingDAL{DAL: base, failCorrection: c.failCorrection})
 			log.RegisterRestorer("round", roundState{db: db, fail: c.failRestore})
 
-			_, err = log.Void(context.Background(), charID, id)
+			_, err = log.Undo(context.Background(), charID, id)
 			require.ErrorIs(t, err, errBoom)
 
 			assert.Equal(t, 1, round(t, db, charID), "restored state rolled back")
@@ -260,21 +260,21 @@ func TestAmendNoteAndPop_HPTotal(t *testing.T) {
 	assert.Equal(t, actionlog.StatusActive, e.Status())
 	assert.Equal(t, -5, total(), "a note changes no HP")
 
-	_, err = log.Void(ctx, charID, orc)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the potion is on top")
+	_, err = log.Undo(ctx, charID, orc)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged, "the potion is on top")
 	assert.Equal(t, -5, total())
 	topID, _, err := log.TopID(ctx, charID)
 	require.NoError(t, err)
-	_, err = log.Void(ctx, charID, topID)
+	_, err = log.Undo(ctx, charID, topID)
 	require.NoError(t, err)
 	assert.Equal(t, -8, total(), "potion popped")
 
-	_, err = log.Void(ctx, charID, orc)
+	_, err = log.Undo(ctx, charID, orc)
 	require.NoError(t, err)
 	assert.Equal(t, 0, total())
 
-	_, err = log.Void(ctx, charID, orc)
-	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
+	_, err = log.Undo(ctx, charID, orc)
+	require.ErrorIs(t, err, actionlogsvc.ErrNothingToUndo)
 	_, err = log.Amend(ctx, charID, orc, actionlogsvc.Amendment{Note: "late"})
 	require.ErrorIs(t, err, actionlogsvc.ErrAlreadyVoided)
 }

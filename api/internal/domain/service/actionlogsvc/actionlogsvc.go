@@ -23,10 +23,6 @@ type SVC interface {
 	List(ctx context.Context, characterID int64, limit int) ([]actionlog.Entry, error)
 	Amend(ctx context.Context, characterID, id int64, a Amendment) (*actionlog.Entry, error)
 	actionlog.LatestAmender
-	// Void pops the transaction of entry id, which must be the newest
-	// non-voided entry (ErrNotLatest otherwise), like Undo without the
-	// client's expected top. Returns the transaction's first entry, voided.
-	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
 	// Undo pops the transaction of the newest non-voided entry, whole, when
 	// that entry's id is expectedTopID (ADR 0010, ADR 0018 step 2):
 	// ErrTopChanged when another entry is on top, ErrNothingToUndo when the

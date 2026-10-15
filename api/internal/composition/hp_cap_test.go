@@ -139,14 +139,14 @@ func TestHPCap_PopHealThenDamage(t *testing.T) {
 	require.Equal(t, r.max-6, hp)
 	require.Equal(t, 4, heal.HPDelta)
 
-	_, err := r.bs.Log.Void(ctx, r.bs.CharacterID, dmg.ID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the damage is not the top of the stack")
+	_, err := r.bs.Log.Undo(ctx, r.bs.CharacterID, dmg.ID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged, "the damage is not the top of the stack")
 	assert.Equal(t, r.max-6, r.current())
 
-	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, heal.ID)
+	_, err = r.bs.Log.Undo(ctx, r.bs.CharacterID, heal.ID)
 	require.NoError(t, err)
 	assert.Equal(t, r.max-10, r.current())
-	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, dmg.ID)
+	_, err = r.bs.Log.Undo(ctx, r.bs.CharacterID, dmg.ID)
 	require.NoError(t, err)
 	assert.Equal(t, r.max, r.current())
 }
@@ -205,14 +205,14 @@ func TestHPFloor_VoidClampedEntryBelowTheTop(t *testing.T) {
 	hp, heal := r.change(4, "cure light wounds")
 	require.Equal(t, -6, hp)
 
-	_, err := r.bs.Log.Void(ctx, r.bs.CharacterID, clamped.ID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+	_, err := r.bs.Log.Undo(ctx, r.bs.CharacterID, clamped.ID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
 	assert.Equal(t, -6, r.current(), "a refused void changes nothing")
 
-	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, heal.ID)
+	_, err = r.bs.Log.Undo(ctx, r.bs.CharacterID, heal.ID)
 	require.NoError(t, err)
 	assert.Equal(t, -10, r.current())
-	_, err = r.bs.Log.Void(ctx, r.bs.CharacterID, clamped.ID)
+	_, err = r.bs.Log.Undo(ctx, r.bs.CharacterID, clamped.ID)
 	require.NoError(t, err)
 	assert.Equal(t, before, r.current())
 	total, err := r.bs.Log.HPTotal(ctx, r.bs.CharacterID)
@@ -288,7 +288,7 @@ func TestHP_AmendThenVoidSourceLessChange(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, st.Events[0].Source)
 
-	_, err = r.bs.Log.Void(ctx, id, e.ID)
+	_, err = r.bs.Log.Undo(ctx, id, e.ID)
 	require.NoError(t, err)
 	assert.Equal(t, r.max, r.current())
 	entries, err := r.bs.Log.List(ctx, id, 1)

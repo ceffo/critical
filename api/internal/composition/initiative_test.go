@@ -191,7 +191,7 @@ func TestInitiative_OutOfCombatOnTheRealLog(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrConflict)
 	assert.ErrorIs(t, err, buffsvc.ErrNoInitiative)
 
-	_, err = bs.Log.Void(ctx, id, latest(t, bs).ID)
+	_, err = bs.Log.Undo(ctx, id, latest(t, bs).ID)
 	require.NoError(t, err)
 	assert.Equal(t, before, initiativeOf(t, bs))
 
@@ -199,7 +199,7 @@ func TestInitiative_OutOfCombatOnTheRealLog(t *testing.T) {
 	_, _, _, _, err = bs.Buffs.PassTime(ctx, id, 1)
 	require.NoError(t, err)
 	assert.Nil(t, initiativeOf(t, bs))
-	_, err = bs.Log.Void(ctx, id, latest(t, bs).ID)
+	_, err = bs.Log.Undo(ctx, id, latest(t, bs).ID)
 	require.NoError(t, err)
 	assert.Equal(t, before, initiativeOf(t, bs))
 

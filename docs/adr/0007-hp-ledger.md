@@ -74,8 +74,8 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    before that entry, so a pop can never leave HP above max (step 4). (*Amended by
    [ADR 0018](0018-transactions-and-undo.md) steps 2 and 3:* the unit popped is the newest transaction, whole, and the row's
    Void is the global undo.)
-   Tests: `TestVoid` (actionlogsvc: "hp change, no snapshots", "already voided", "an older entry
-   is refused"), `TestAmendNoteAndPop_HPTotal`, `TestHPCap_PopHealThenDamage`,
+   Tests: `TestUndo_RestoresThroughRestorers` (actionlogsvc: "hp change, no snapshots"), `TestUndo`
+   ("stale expected top is refused and nothing changes"), `TestAmendNoteAndPop_HPTotal`, `TestHPCap_PopHealThenDamage`,
    `TestLogStack_PopInOrderRestoresEachStep`, `TestLogStack_VoidOlderEntryIsRefused`.
 9. **Undo.** `POST /api/hp/undo` pops the newest entry when it is an HP change; when another kind
    is on top it is refused (409, naming it) and nothing changes; on an empty log it does nothing.

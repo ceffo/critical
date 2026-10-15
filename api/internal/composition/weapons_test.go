@@ -88,11 +88,11 @@ func TestWeapons_EditBastardSwordIsUsedByNextAttackAndPopRestores(t *testing.T) 
 	assert.Equal(t, "Bastard Sword +2", at.WeaponName, "the name did not change")
 
 	// The attack is newer: the edit cannot be popped before it.
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, at.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, at.LogEntryID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 
 	dice.expect(roll{"d20", 12}, roll{"d100", 41}, roll{"d100", 59}, roll{"d4", 1}, roll{"d4", 4})
@@ -158,7 +158,7 @@ func TestWeapons_AddThenPopDeletesIt(t *testing.T) {
 	add, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{Name: "Spear", DamageSM: "1d6", DamageL: "1d8", Kind: "melee"})
 	require.NoError(t, err)
 	assert.Equal(t, append(append([]string{}, orig...), "spear"), weaponIDs(t, bs), "last in the list")
-	_, err = bs.Log.Void(ctx, bs.CharacterID, add.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, add.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, weaponIDs(t, bs))
 }
@@ -193,9 +193,9 @@ func TestWeapons_RemoveDartsKeepsOldLogLinesAndPopRestores(t *testing.T) {
 	assert.Contains(t, payload, `"weaponName":"Darts"`, "the earlier attack still reads Darts")
 
 	// The remove is the newest entry: the attack before it cannot be popped.
-	_, err = bs.Log.Void(ctx, bs.CharacterID, atk.LogEntryID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, rm.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, atk.LogEntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrTopChanged)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, rm.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, order, weaponIDs(t, bs), "back in its place")
 	assert.Equal(t, orig, weaponList(t, bs)["darts"])
@@ -212,7 +212,7 @@ func TestWeapons_EditAllFieldsAndPopRestoresThem(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Axe", weaponList(t, bs)["longsword"].Name)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, weaponList(t, bs)["longsword"])
 }

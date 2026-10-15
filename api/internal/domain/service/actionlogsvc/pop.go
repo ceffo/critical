@@ -13,38 +13,6 @@ import (
 // entry, whole; its snapshots are restored, so popping in order walks the
 // state back gesture by gesture.
 
-// Void pops the transaction of entry id: for each of its entries, newest
-// first, it restores each snapshotted state to its "before" value through the
-// Restorer registered for its key and records a void correction, in one DB
-// transaction. Refused with ErrNotLatest unless id is the newest non-voided
-// entry. Returns the transaction's first entry.
-func (s *service) Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error) {
-	var out *actionlog.Entry
-	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		e, err := s.dal.GetEntry(ctx, characterID, id)
-		if err != nil {
-			return fmt.Errorf("get entry %d: %w", id, err)
-		}
-		if e.Status() == actionlog.StatusVoided {
-			return fmt.Errorf("%w: #%d", ErrAlreadyVoided, id)
-		}
-		top, err := s.top(ctx, characterID)
-		if err != nil {
-			return err
-		}
-		if top.ID != id {
-			return fmt.Errorf("%w: only the latest entry can be undone, undo #%d (%s, round %d) first",
-				ErrNotLatest, top.ID, top.Kind, top.Round)
-		}
-		out, err = s.popTransaction(ctx, characterID, e.TransactionID)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // top returns the newest non-voided entry, nil when there is none.
 func (s *service) top(ctx context.Context, characterID int64) (*actionlog.Entry, error) {
 	id, found, err := s.dal.LatestActiveID(ctx, characterID)

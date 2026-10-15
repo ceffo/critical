@@ -298,7 +298,10 @@ func TestAmend(t *testing.T) {
 
 // Pop-only void: only the newest non-voided entry, any
 // kind; its snapshots are restored through their family's restorer.
-func TestVoid(t *testing.T) {
+// Undo restores each snapshot of the popped entry through the Restorer
+// registered for its key (or its family) and records the void; a missing or
+// failing restorer, or a failing void insert, fails the undo (ADR 0010 step 2).
+func TestUndo_RestoresThroughRestorers(t *testing.T) {
 	withSnaps := func(keys ...string) *actionlog.Entry {
 		e := &actionlog.Entry{ID: 5, TransactionID: 5, CharacterID: 1, Kind: actionlog.KindRoundAdvance, Summary: "next"}
 		for _, k := range keys {
@@ -311,7 +314,6 @@ func TestVoid(t *testing.T) {
 	cases := []struct {
 		name        string
 		entry       *actionlog.Entry
-		topID       int64 // newest non-voided entry; 0 = this one
 		restorers   []string
 		restoreErr  error
 		insertErr   error
@@ -320,14 +322,9 @@ func TestVoid(t *testing.T) {
 		wantRestore []string
 	}{
 		{name: "hp change, no snapshots", entry: hpEntry(5)},
-		{name: "already voided", entry: hpEntry(5, voidRow), wantErr: actionlogsvc.ErrAlreadyVoided},
 		{
 			name: "restores every snapshot", entry: withSnaps("round", "buffs"), restorers: []string{"round", "buffs"},
 			wantRestore: []string{`"before-round"`, `"before-buffs"`},
-		},
-		{
-			name: "an older entry is refused", entry: withSnaps("round"), topID: 9, restorers: []string{"round"},
-			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be undone, undo #9 (round_advance, round 3) first`,
 		},
 		{
 			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},
@@ -349,21 +346,10 @@ func TestVoid(t *testing.T) {
 					return c.restoreErr
 				}))
 			}
+			dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(5, true, nil).Once()
 			dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
-			active := c.entry.Status() != actionlog.StatusVoided
-			if active {
-				if c.topID != 0 {
-					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(c.topID, true, nil).Once()
-					dal.EXPECT().GetEntry(mock.Anything, int64(1), c.topID).
-						Return(&actionlog.Entry{ID: c.topID, Round: 3, Kind: actionlog.KindRoundAdvance}, nil).Once()
-				} else {
-					dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(5, true, nil).Once()
-					dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(c.entry, nil).Once()
-					dal.EXPECT().ListTransaction(mock.Anything, int64(1), int64(5)).Return([]actionlog.Entry{*c.entry}, nil).Once()
-				}
-			}
-			reachesInsert := active && c.topID == 0 && c.restoreErr == nil &&
-				(len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""
+			dal.EXPECT().ListTransaction(mock.Anything, int64(1), int64(5)).Return([]actionlog.Entry{*c.entry}, nil).Once()
+			reachesInsert := c.restoreErr == nil && (len(c.entry.Snapshots) == 0 || len(c.restorers) > 0) && c.wantErrText == ""
 			if reachesInsert {
 				dal.EXPECT().InsertCorrection(mock.Anything, voidRow).Return(c.insertErr).Once()
 			}
@@ -373,7 +359,7 @@ func TestVoid(t *testing.T) {
 				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(&done, nil).Once()
 			}
 
-			got, err := svc.Void(context.Background(), 1, 5)
+			got, err := svc.Undo(context.Background(), 1, 5)
 			assert.Equal(t, 1, tx.calls)
 			if c.wantErr != nil || c.wantErrText != "" {
 				require.Error(t, err)
@@ -381,9 +367,6 @@ func TestVoid(t *testing.T) {
 					assert.ErrorIs(t, err, c.wantErr)
 				}
 				assert.Contains(t, err.Error(), c.wantErrText)
-				if errors.Is(c.wantErr, actionlogsvc.ErrNotLatest) {
-					assert.Empty(t, restored, "nothing restored when refused")
-				}
 				return
 			}
 			require.NoError(t, err)

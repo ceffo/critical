@@ -86,15 +86,6 @@ func TestConcurrentPops_OneWinsTheOtherConflicts(t *testing.T) {
 			// The loser sees an empty stack or another entry on top.
 			want: []error{actionlogsvc.ErrTopChanged, actionlogsvc.ErrNothingToUndo},
 		},
-		"void": {
-			pop: func(bs *composition.BackingServices, top int64) func() error {
-				return func() error {
-					_, err := bs.Log.Void(context.Background(), bs.CharacterID, top)
-					return err
-				}
-			},
-			want: []error{actionlogsvc.ErrAlreadyVoided, actionlogsvc.ErrNotLatest},
-		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			bs := newBacking(t)

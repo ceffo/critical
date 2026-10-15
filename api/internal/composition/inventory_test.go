@@ -59,7 +59,7 @@ func TestInventory_UseSpendsStockAndLogs(t *testing.T) {
 	assert.False(t, res.Removed)
 	assert.Equal(t, 17, itemCount(t, bs, "arrows_plus1"))
 
-	_, err = bs.Log.Void(context.Background(), bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(context.Background(), bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 18, itemCount(t, bs, "arrows_plus1"))
 }
@@ -84,7 +84,7 @@ func TestInventory_WandAtZeroIsRemovedAndPopBringsItBack(t *testing.T) {
 	_, err := bs.Items.UseItem(ctx, bs.CharacterID, "wand_lightning")
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, last.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, last.LogEntryID)
 	require.NoError(t, err)
 	back, ok := listed(t, bs)["wand_lightning"]
 	require.True(t, ok, "popping the use restores the wand")
@@ -119,7 +119,7 @@ func TestInventory_ArrowsAtZeroStayAndRestock(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemRestock, entries[0].Kind)
 	assert.Equal(t, res.LogEntryID, entries[0].ID)
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Zero(t, itemCount(t, bs, "arrows_plus3"))
 }
@@ -187,7 +187,7 @@ func TestInventory_AddItemAppearsAndPopRemovesIt(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 5, itemCount(t, bs, res.Item.ID))
 	// The attack is newer: the add cannot be popped before it is.
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.Error(t, err)
 }
 
@@ -196,7 +196,7 @@ func TestInventory_AddThenPopDeletesTheItem(t *testing.T) {
 	ctx := context.Background()
 	res, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Rope", Behaviour: itemsvc.BehaviourStock, Count: 1})
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	_, still := listed(t, bs)[res.Item.ID]
 	assert.False(t, still)
@@ -210,7 +210,7 @@ func TestInventory_EditWandChargesFourToThreeAndPopRestoresFour(t *testing.T) {
 	assert.Equal(t, 3, itemCount(t, bs, "wand_lightning"))
 	assert.Equal(t, actionlog.KindItemEdit, newestEntry(t, bs).Kind)
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, 4, itemCount(t, bs, "wand_lightning"))
 }
@@ -226,7 +226,7 @@ func TestInventory_EditAllFieldsAndPopRestoresThem(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Staff", listed(t, bs)["wand_lightning"].Name)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, listed(t, bs)["wand_lightning"])
 }
@@ -241,7 +241,7 @@ func TestInventory_RemoveItemAndPopBringsItBackWithItsCount(t *testing.T) {
 	assert.False(t, gone)
 	assert.Equal(t, actionlog.KindItemRemove, newestEntry(t, bs).Kind)
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, listed(t, bs)["arrows_plus2"], "same id, position, fields and count")
 	items, err := bs.Items.List(ctx)
@@ -284,9 +284,9 @@ func TestInventory_PopAddAfterItsUseWasPopped(t *testing.T) {
 	require.NoError(t, err)
 	use, err := bs.Items.UseItem(ctx, bs.CharacterID, add.Item.ID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, use.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, use.LogEntryID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, add.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, add.LogEntryID)
 	require.NoError(t, err)
 	assert.NotContains(t, itemIDs(t, bs), add.Item.ID)
 	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: add.Item.ID, TargetAC: new(10)})
@@ -300,7 +300,7 @@ func TestInventory_RemoveChargesItemAndPopKeepsOrder(t *testing.T) {
 	order, orig := itemIDs(t, bs), listed(t, bs)["wand_lightning"]
 	res, err := bs.Items.Delete(ctx, bs.CharacterID, "wand_lightning")
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, listed(t, bs)["wand_lightning"])
 	assert.Equal(t, order, itemIDs(t, bs))
@@ -326,10 +326,10 @@ func TestInventory_EditBehavioursAndPopEach(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, itemsvc.BehaviourCharges, listed(t, bs)["fire_flask"].Behaviour)
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, toCharges.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, toCharges.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, daily, listed(t, bs)["fire_flask"])
-	_, err = bs.Log.Void(ctx, bs.CharacterID, toDaily.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, toDaily.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, listed(t, bs)["fire_flask"], "maxCount included")
 }
@@ -361,9 +361,9 @@ func TestInventory_RemoveAddSameNamePopBoth(t *testing.T) {
 	add, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Fire flasks", Type: "other", Behaviour: itemsvc.BehaviourStock, Count: 1})
 	require.NoError(t, err)
 	assert.Equal(t, "fire_flasks", add.Item.ID)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, add.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, add.LogEntryID)
 	require.NoError(t, err)
-	_, err = bs.Log.Void(ctx, bs.CharacterID, rm.LogEntryID)
+	_, err = bs.Log.Undo(ctx, bs.CharacterID, rm.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, listed(t, bs)["fire_flask"])
 	assert.Equal(t, order, itemIDs(t, bs))

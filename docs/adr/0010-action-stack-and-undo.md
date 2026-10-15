@@ -52,9 +52,12 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
 5. **Annuler and Ctrl/Cmd+Z.** The journal header has an Annuler button whose tooltip names the
    action on top, worded in the frontend from the entry's payload (`lib/logSummary.ts`); it is
    disabled when `topId` is null. Ctrl+Z (Cmd+Z on macOS) does the same, except while the focus
-   is in a text input, textarea, select or editable element. Both send the `topId` the client
-   holds and then refresh the table state.
-   Tests: `web/e2e/log.spec.ts` "Annuler and Ctrl/Cmd+Z pop the newest action".
+   is in a text-entry field (text-like input, textarea, select, editable element; a checkbox or
+   radio does not count) and while a popover, dialog or menu is open. Both send the `topId` the
+   client holds and then refresh the table state; with no `topId` nothing is sent.
+   Tests: `web/src/lib/undoShortcut.test.ts`, `web/src/lib/undoButton.test.ts` (empty log, en/fr
+   tooltip), `web/src/stores/undo.test.ts` (empty log, stale top from another client, reroll and
+   row Void in step), `web/e2e/log.spec.ts` "Annuler and Ctrl/Cmd+Z pop the newest action".
 
 ## Consequences
 

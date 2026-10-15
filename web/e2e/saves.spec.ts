@@ -22,7 +22,13 @@ async function facts(card: Locator) {
 }
 
 async function rollSpellSave(page: Page) {
+  // The card is already visible after an earlier roll, so wait for this roll's own response: once it
+  // returns, the new save is recorded and a following read of /api/log sees it.
+  const rolled = page.waitForResponse(
+    (r) => r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "Roll save vs Spells" }).click();
+  expect((await rolled).ok()).toBe(true);
   await expect(saveCard(page)).toBeVisible();
 }
 

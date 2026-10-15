@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { appendHpEvent, undoLastEvent } from "@/api/hp";
 import { ApiError } from "@/api/http";
-import { amendLogEntry, voidLogEntry } from "@/api/log";
+import { amendLogEntry, undoLogEntry, voidLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
@@ -34,6 +34,9 @@ interface TableStore {
   /** Set an entry's note (the only amendable field). */
   amendEntry: (id: number, note: string) => Promise<boolean>;
   voidEntry: (id: number) => Promise<boolean>;
+  /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
+   * refused (another action landed first) or there was nothing to pop. */
+  undo: () => Promise<boolean>;
   nextRound: () => Promise<boolean>;
   /** Pop the round's initiative entry and roll a new one (refused when another entry is newer). */
   rerollInitiative: () => Promise<boolean>;
@@ -126,6 +129,14 @@ export const useTableStore = create<TableStore>((set, get) => ({
       await voidLogEntry(id);
       set({ notice: null });
     }),
+  undo: () => {
+    const expected = useLogStore.getState().topId;
+    if (expected === null) return Promise.resolve(false);
+    return get().run(async () => {
+      await undoLogEntry(expected);
+      set({ notice: null });
+    });
+  },
   // A round change leaves buffs alone, but an "expired" notice is stale after either.
   endCombat: () =>
     get().run(async () => {

@@ -26,6 +26,13 @@ type SVC interface {
 	// VoidLatest pops the newest non-voided entry when it is of kind; ok is
 	// false when the log has none, ErrNotLatest when it is another kind.
 	VoidLatest(ctx context.Context, characterID int64, kind actionlog.Kind) (ok bool, err error)
+	// Undo pops the newest non-voided entry, any kind, when its id is
+	// expectedTopID (ADR 0010): ErrTopChanged when another entry is on top,
+	// ErrNothingToUndo when the log has none. Returns the voided entry.
+	Undo(ctx context.Context, characterID, expectedTopID int64) (*actionlog.Entry, error)
+	// TopID is the newest non-voided entry, the one Undo pops; ok is false
+	// when there is none.
+	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
 	// HPTotal is the SUM of effective HP deltas, computed in storage.
 	HPTotal(ctx context.Context, characterID int64) (int, error)
 	// ActiveEntries returns the newest non-voided entries of kind.

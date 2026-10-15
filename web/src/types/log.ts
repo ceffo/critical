@@ -75,4 +75,7 @@ export interface HpBreakdown {
 
 export interface LogResponse {
   entries: LogEntry[];
+  /** The newest non-voided entry, the one POST /api/log/undo pops; null when nothing can be popped.
+   * It may be older than every listed entry. */
+  topId: number | null;
 }

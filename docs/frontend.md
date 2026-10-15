@@ -49,7 +49,7 @@ flowchart TD
     end
     subgraph FIL["Fil (aside 'Results and journal')"]
       RCARD["ResultCard: full breakdown of the last roll"]
-      CL["CombatLog: GET /api/log grouped by round, Note / Void"]
+      CL["CombatLog: GET /api/log grouped by round, Note / Void, Undo in its header"]
     end
     subgraph MOI["Moi (aside 'Character')"]
       ID["Identity: name, level, abilities, THAC0"]
@@ -94,7 +94,9 @@ flowchart TD
   edit and remove; "Add effect" opens the add form under the track.
 - Buffs: every change (add, edit rounds/charges, absorb for charge buffs, dismiss, Next
   turn) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
-  stack: only the newest non-voided entry shows Void; every entry has Note
+  stack: only the newest non-voided entry (`topId` from `GET /api/log`) shows Void; the CombatLog
+  header's Undo button and Ctrl/Cmd+Z (not while typing in a field) pop it from anywhere with
+  `POST /api/log/undo` and that `topId` ([ADR 0010](adr/0010-action-stack-and-undo.md)); every entry has Note
   (the only amend, shown in italics under the line); values are never edited in the log. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The Moi column's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
@@ -166,7 +168,7 @@ flowchart TD
   (`stores/roll.ts` `adjustLastAttack`); the server returns the recomputed attack (same dice, no ammo
   spent). Hidden once the entry is voided. Attack log lines render `effectivePayload`, with
   "AC 5 → 7: MISS → HIT" once corrected.
-- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`,
+- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`, `undo`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).
 - The log groups entries by the round the server stamped (`lib/groupByRound.ts`); the current round

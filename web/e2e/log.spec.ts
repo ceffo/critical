@@ -128,3 +128,63 @@ test("a server error is shown to the user", async ({ page, stack }) => {
   // The refresh after the failed call shows the server's truth.
   await expect(entry).toHaveAttribute("data-status", "voided");
 });
+
+// Global undo (ADR 0010 step 5). Only a browser proves the button's wiring, the tooltip worded
+// from the payload, the window-level Ctrl/Cmd+Z and its focus guard; the stack rules
+// (expected top, every kind) are Go tests.
+test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({ page, stack }) => {
+  const arrows = async () => {
+    const res = await fetch(`${stack.apiUrl}/api/items`);
+    const items = (await res.json()) as { id: string; count: number }[];
+    return items.find((i) => i.id === "arrows_plus3")?.count;
+  };
+  const before = await arrows();
+  const shot = await fetch(`${stack.apiUrl}/api/roll/attack`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ weapon_id: "shortbow", ammo_item_id: "arrows_plus3", target_ac: 5 }),
+  });
+  expect(shot.ok).toBe(true);
+  expect(await arrows()).toBe(before! - 1);
+
+  await openDashboard(page);
+  const undo = page.getByTestId("undo");
+  await expect(undo).toHaveText("Undo");
+  await expect(undo).toHaveAttribute("title", /^Undo: .*Short Bow \+2/);
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await snap(page, `undo-${vp.width}x${vp.height}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  // Annuler: the shot is popped and its arrow is back.
+  await undo.click();
+  await expect(logEntry(page, "Short Bow +2")).toContainText("Voided");
+  await expect.poll(arrows).toBe(before);
+
+  // Ctrl/Cmd+Z while typing in a field is the field's own undo: nothing is popped.
+  const max = await currentHp(page);
+  await recordHp(page, "damage", 5, "e2e undo goblin");
+  await expect.poll(() => currentHp(page)).toBe(max - 5);
+  await expect(undo).toHaveAttribute("title", /e2e undo goblin/);
+  const source = page.getByRole("group", { name: "HP change" }).getByLabel("Source");
+  await source.focus();
+  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("Meta+z");
+  // A refresh would have landed by now; the damage is still on top.
+  await page.waitForTimeout(300);
+  await expect(logEntry(page, "e2e undo goblin")).not.toContainText("Voided");
+  expect(await currentHp(page)).toBe(max - 5);
+
+  // Outside a field the shortcut pops the damage.
+  await source.blur();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(logEntry(page, "e2e undo goblin")).toContainText("Voided");
+  await expect.poll(() => currentHp(page)).toBe(max);
+  await snap(page, "undo-popped");
+});

@@ -125,7 +125,6 @@ export function HpBar() {
             aria-hidden
             data-testid="hp-scale"
           >
-            <span className="absolute left-0">{formatSigned(floor)}</span>
             <span className="absolute -translate-x-1/2" style={{ left: `${dyingPct}%` }}>
               0
             </span>

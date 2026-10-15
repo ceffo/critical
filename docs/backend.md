@@ -136,9 +136,7 @@ new preparation, and **removed by the next long rest** (the spell's 24 h duratio
 to confirm). The same `spell_slots` snapshot undoes the cast.
 Chromatic Orb (critical-qki.42): casting it needs `targetAc` and spends one inventory gem (type `gem`, not
 the daily Power Gem; `gemItemId` when several are left, an error naming the problem when none), then
-`combatsvc.RollSpellToHit` rolls one d20 (THAC0, Strength and Dexterity missile adjustments, buff to-hit; nothing
-logged on its own). It follows the combat rules ("Attack Modifiers": a natural 1 or 20 is plain arithmetic, user
-2026-10-14: "same rules as combat") but never crits: no crit check, no crit table, no damage multiplier. The result
+`combatsvc.RollSpellToHit` rolls one d20 (nothing logged on its own; to-hit rules: ADR 0002, Consequences). The result
 shows hit or miss, the gem used and how many are left; the app models no gem effect and no damage (user: "i just
 need the selected gem type to be consumed"; the DM rules what a hit does). The level damage table of the seed is not
 used. The gem count rides the cast entry as an `items:<id>` snapshot, so voiding the cast gives the gem back.
@@ -156,11 +154,11 @@ that replace the result card; voided ones included; ±20 max): combatsvc recompu
 the stored d20 and modifiers (the d20 never changes) and `actionlogsvc.AmendLatest` records an
 audited amend carrying the new summary and payload (plus `previousPassed`/`previousAdjustment`).
 Not a save → 400, voided or not the latest → 409. The log exposes `effectivePayload`.
-`POST /api/roll/attack/{id}/adjust` `{targetAc}` corrects the target AC of the attack when it is the
-latest roll (same rules, AC within ±20). Every attack rolls its damage dice, even a miss, and its
-payload keeps them with every damage term (`rolled`), the multiplier d100 (`d100MultiplierRoll`)
-and the crit-table row it fell in (`critRow`); combatsvc `settle` recomputes hit, margin, crit and damage from those and the new AC
-(no die rolled, no ammo spent, a later crit-table edit changes nothing) and the amend carries
+`POST /api/roll/attack/{id}/adjust` `{targetAc}` corrects the target AC of the latest attack (rule:
+ADR 0002 step 11; same error mapping as the save adjustment). The attack's payload keeps its damage
+dice with every damage term (`rolled`), the multiplier d100 (`d100MultiplierRoll`) and the
+crit-table row it fell in (`critRow`); combatsvc `settle` recomputes hit, margin, crit and damage
+from those and the new AC, and the amend carries
 `rolledTargetAc`/`rolledHit`/`rolledCrit` (the AC and outcome as rolled, kept across corrections, so the line
 reads rolled → now; dropped when the AC is back to the rolled one, which reads as rolled). Voiding still restores the ammo (snapshots are the
 original entry's). An attack logged without `rolled` (before this existed) → 400, void and reroll.
@@ -262,25 +260,19 @@ type HpEvent struct {
 type BuffEffect struct {
     ID       string // uuid
     Name     string
-    Charges  int    // left to absorb (Stoneskin layers, Mirror Images); 0 = none; ends at 0
-    Duration int    // rounds left, counted down by Next Round; 0 = not timed; expires at 0
+    Charges  int    // charges left (Stoneskin layers, Mirror Images); 0 = none
+    Duration int    // rounds left; 0 = not timed
     Effects  BuffEffects // min_str, spells_buff, weapon_buff, multiplier, save_bonus,
                          // str_bonus + str_max, ac, to_hit, damage
                          // (pointers: nil = no contribution)
 }
-// weapon_buff makes the weapon count as +N (Power Gem: "the weapon becomes +5"), to hit and
-// damage; it replaces the weapon's own magic when higher and does not add to it. to_hit adds
-// to attack rolls; damage adds to damage after the crit multiplier.
-// A buff may have both counters (Mirror Image) or neither (until dismissed).
-// Effective STR: see "Effective STR" under Attack Modifiers. min_str gates the buff's
-// other effects: they apply while effective STR >= min_str.
 
 type RollResult struct {
     D20Roll         int
     D100CritRoll    int
     IsCrit          bool
     CritMultiplier  float64 // decimal allowed (x1.5)
-    CritPlaceholder bool       // x2 until the crit table lands (critical-qki.12)
+    CritPlaceholder bool       // multiplier from the default (unedited) crit table
     BaseThac0       int
     Modifiers       []Modifier // {kind, source, detail, value}: every to-hit modifier
     EffectiveThac0  int
@@ -291,9 +283,9 @@ type RollResult struct {
     BaseDamage      int
     DamageDice      string       // dice rolled for the target size
     SpellsBuff      float64
-    WeaponBuff      int          // weapon (or buff "+N") magic + ammo magic
-    Multipliers     float64      // crit multiplier (1 without a crit)
-    DiceMultiplier  float64      // buffs' multiplier on the raw dice only (Power Gem x2)
+    WeaponBuff      int
+    Multipliers     float64      // crit multiplier
+    DiceMultiplier  float64      // product of the buffs' multipliers
     StrengthBonus   int
     BonusDamage     int          // buff damage
     DamageTerms     []DamageTerm // {term, kind, source, detail, value}: every damage contribution
@@ -303,23 +295,16 @@ type RollResult struct {
 }
 ```
 
-## Attack Modifiers
+## Buff rules (move to ADR 0004)
 
-Hit when `d20 + modifiers ≥ THAC0 − target AC`. A natural 1 or 20 is plain arithmetic: no
-auto-miss, no auto-hit. To-hit modifiers, each listed in `Modifiers`:
-
-- Strength hit adjustment, PHB Table 1, from the **effective** STR (buffs) — melee and hurled
-  weapons; never for bows (PHB "Ability Modifiers in Missile Combat": only with a strength bow).
-- Dexterity missile adjustment, PHB Table 2 — every missile weapon (bow or hurled).
-- Weapon magic, or a buff's "weapon becomes +N" when higher (Power Gem, at effective STR 18 or
-  more: rule 3 below).
-- Ammo magic: DMG 2e "Bow +1": with magic arrows, total the bow's and the arrow's bonuses (to hit
-  and damage).
-- Buff `to_hit` effects, one per buff; the situational modifier entered at the table.
+Counters: `Charges` are spent one per absorb and the buff ends at 0; `Duration` counts down on Next
+Round and the buff expires at 0. A buff may have both counters (Mirror Image) or neither (until
+dismissed). `min_str` gates the buff's other effects (rule 3 below).
 
 ### Effective STR
 
-The STR score used for the Strength adjustments and for buff gates (critical-qki.33). STR
+The STR score used for the Strength adjustments (ADR 0002
+step 4, ADR 0003 step 7) and for buff gates (critical-qki.33). STR
 effects themselves are never gated, and no rule lowers the score below the sheet's.
 
 User rulings, 2026-10-13: "strength level 2 says WItH OTHER. it's find with ITSELF"; "improved
@@ -343,31 +328,6 @@ to 23."
 Exceptional Strength (18/xx) is not modelled: PHB, warriors only; Kelsen is a Bard. There is no
 "set STR to X" effect (user, 2026-10-13: "remove that buff type"); a `str_set` key in a stored
 buff is ignored when read, and in a request body it is ignored like any unknown key.
-
-A weapon that fires ammunition (`ammo_kind`) needs an ammo item of that kind; the attack spends one.
-Dice order: d20, crit-check d100, multiplier d100, then the damage dice, all rolled on **every** attack (a miss shows no
-damage, but the target AC may be corrected after the roll).
-
-## Damage Formula
-
-```
-Damage = floor(((BaseDamage × SpellsBuff × DiceMultiplier) + WeaponBuff) × Crit) + StrengthBonus + BuffDamage
-```
-
-Never below 0. Every contribution is listed in `DamageTerms`.
-
-- `BaseDamage`: weapon die roll, selected by target size (S/M vs Large)
-- `SpellsBuff`: multiplier from spells like Enlarge (default 1.0)
-- `WeaponBuff`: weapon magic damage (or the buff's "+N", Power Gem +5) plus ammo magic damage
-- `DiceMultiplier`: **multiplicative** product of the buffs'' `multiplier` effects (Power Gem ×2). It
-  multiplies **only the raw dice result**: the +5, the Strength bonus and other flat adds are never
-  doubled (user, 2026-10-14: "x2 multiplier on raw dice result"). With the gem, 1d8 = 6 gives
-  6 × 2 + 5 + STR, not (6 + 5) × 2 + STR.
-- `Crit`: the crit-table multiplier (ADR 0001), 1 without a crit. It still multiplies dice and
-  weapon bonus together, after the gem: a crit with the gem is ((dice × 2) + 5) × crit
-- `StrengthBonus`: PHB Table 1 damage adjustment for the effective STR (+2 at 18); melee and
-  hurled weapons only, none for bows
-- `BuffDamage`: buff `damage` effects, flat
 
 ## Seed Loader Pattern
 

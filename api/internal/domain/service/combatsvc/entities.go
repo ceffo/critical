@@ -26,7 +26,8 @@ type Modifier struct {
 }
 
 // DamageTermKind is the place of a contribution in the damage formula
-// ((Base × Spells × DiceMultiplier) + Weapon) × Crit + Strength + Bonus.
+// ((Base × Spells × DiceMultiplier) + Weapon) × Crit + Strength + Bonus
+// (ADR 0003 step 2).
 type DamageTermKind string
 
 // Damage formula terms.

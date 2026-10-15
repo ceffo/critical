@@ -125,7 +125,7 @@ func (s *strStack) gemOn() bool {
 	return mods.WeaponBuff == 5 && mods.Multipliers == 2
 }
 
-// Effective STR rules (docs/backend.md "Attack Modifiers" > "Effective STR")
+// Effective STR rules (docs/backend.md "Effective STR")
 // on the real stack, from received spells to the attack: two Strength casts
 // add up to 18 and the Power Gem (min_str 18) gives +5 and x2; Improved
 // Strength then replaces them (19, not 18 + 7) and the gem still applies

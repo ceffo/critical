@@ -552,7 +552,7 @@ func TestGetEffectiveStr(t *testing.T) {
 	})
 }
 
-// Effective STR rule 1 (docs/backend.md "Attack Modifiers"): with no
+// Effective STR rule 1 (docs/backend.md "Effective STR"): with no
 // Improved Strength, base + the sum of every Strength bonus, capped at 18
 // (user: "all str spells stack up to 18").
 func TestEffectiveStr_Rule1_StrengthStacksUpTo18(t *testing.T) {
@@ -617,7 +617,7 @@ func TestEffectiveStr_Rule2_ImprovedReplacesStrength(t *testing.T) {
 	})
 }
 
-// Effective STR rule 3 (Power Gem, docs/backend.md "Attack Modifiers"): a
+// Effective STR rule 3 (Power Gem, docs/backend.md "Effective STR"): a
 // buff with min_str 18 applies at effective STR 18 or more (user: "not
 // exactly 18 >= 18"): on at 18, 19 and 23, off at 17.
 func TestEffectiveStr_Rule3_PowerGemFrom18Up(t *testing.T) {

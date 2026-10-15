@@ -7,7 +7,7 @@ import (
 )
 
 // ToHitRoll is a to-hit roll with no weapon and no damage: a spell attack
-// (Chromatic Orb, critical-qki.42). There is no crit check, no crit table
+// (Chromatic Orb; ADR 0002, Consequences). There is no crit check, no crit table
 // and no natural 1 or 20 rule: a 20 is just a hit if the sum reaches the
 // number needed, like any other roll (ADR 0001 does not apply).
 type ToHitRoll struct {

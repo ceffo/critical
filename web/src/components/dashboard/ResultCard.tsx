@@ -17,6 +17,7 @@ import {
   hitsAc,
   parseTargetAc,
   stepTargetAc,
+  tellGmWithCrit,
 } from "@/lib/attackAdjust";
 import { damageFormula, itemRollText, modLabel } from "@/lib/rollText";
 import {
@@ -276,7 +277,9 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
         <p className="rounded-md bg-neu-900/60 px-2.5 py-1.5 text-sm tabular-nums" data-testid="tell-gm">
           {r.verdict
             ? t("result.unknownAc.noCrit")
-            : t("result.unknownAc.tellGm", { hits: hitsAc(r), crits: r.critsFromAc })}
+            : tellGmWithCrit(r)
+              ? t("result.unknownAc.tellGm", { hits: hitsAc(r), crits: r.critsFromAc })
+              : t("result.unknownAc.tellGmNoCrit", { hits: hitsAc(r) })}
         </p>
       )}
 
@@ -423,6 +426,7 @@ function GmVerdict({ result: r, entryId }: { result: RollResult; entryId: number
 function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: number }) {
   const { t } = useTranslation();
   const adjustLastAttack = useRollStore((s) => s.adjustLastAttack);
+  const clearLastAttackAc = useRollStore((s) => s.clearLastAttackAc);
   const rolling = useRollStore((s) => s.rolling);
   const [text, setText] = useState(r.targetAc === null ? "" : String(r.targetAc));
   const unknown = r.targetAc === null;
@@ -480,6 +484,18 @@ function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: n
       <Button type="submit" size="sm" disabled={rolling || !changed}>
         {unknown ? t("result.adjustAc.give") : t("result.adjustAc.apply")}
       </Button>
+      {!unknown && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={rolling}
+          data-testid="ac-unknown"
+          onClick={() => void clearLastAttackAc(entryId)}
+        >
+          {t("result.adjustAc.backToUnknown")}
+        </Button>
+      )}
       {r.rolledTargetAc !== undefined && (
         <span className="text-sm text-muted-foreground" data-testid="ac-corrected">
           {t("result.adjustAc.was", { ac: r.rolledTargetAc })}

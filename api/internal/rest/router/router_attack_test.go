@@ -28,7 +28,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/roll/attack/7/adjust", `{"targetAc":7}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
-		"d20Roll":11,"d100CritRoll":50,"d100MultiplierRoll":63,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critFrom":0,"critTo":0,
+		"d20Roll":11,"d100CritRoll":50,"d100MultiplierRoll":63,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critPossible":false,"critFrom":0,"critTo":0,
 		"baseThac0":13,"modifiers":[],"effectiveThac0":11,"targetACNeeded":0,"hitsAc":0,"critsFromAc":50,"hit":true,"hitMargin":7,
 		"baseDamage":5,"damageDice":"1d8","spellsBuff":1,"weaponBuff":2,"multipliers":1,"diceMultiplier":0,"strengthBonus":0,"bonusDamage":0,
 		"damageTerms":[],"totalDamage":7,"unroundedDamage":7,
@@ -53,7 +53,7 @@ func TestAttackVerdict_WireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/roll/attack/7/verdict", `{"hit":true}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
-		"d20Roll":11,"d100CritRoll":50,"d100MultiplierRoll":63,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critFrom":0,"critTo":0,
+		"d20Roll":11,"d100CritRoll":50,"d100MultiplierRoll":63,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critPossible":false,"critFrom":0,"critTo":0,
 		"baseThac0":13,"modifiers":[],"effectiveThac0":11,"targetACNeeded":0,"hitsAc":0,"critsFromAc":50,"hit":true,"hitMargin":0,
 		"baseDamage":5,"damageDice":"1d8","spellsBuff":1,"weaponBuff":2,"multipliers":1,"diceMultiplier":0,"strengthBonus":0,"bonusDamage":0,
 		"damageTerms":[],"totalDamage":7,"unroundedDamage":7,
@@ -112,4 +112,30 @@ func TestAdjustAttack_BadRequests(t *testing.T) {
 			assert.JSONEq(t, `{"error":"`+tt.want+`","code":"bad_request"}`, rec.Body.String())
 		})
 	}
+}
+
+// POST /api/roll/attack/{id}/unknown-ac makes the AC unknown again (ADR 0012
+// step 8); the result says whether any real AC can crit (step 7).
+func TestClearAttackAC_WireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.cmb.EXPECT().ClearAttackAC(mock.Anything, int64(1), int64(7)).
+		Return(&combatsvc.RollResult{
+			Modifiers: []combatsvc.Modifier{}, DamageTerms: []combatsvc.DamageTerm{}, WeaponID: "longsword",
+			HitsAC: 0, CritsFromAC: 10, LogEntryID: 7,
+		}, nil)
+	rec := do(h, "POST", "/api/roll/attack/7/unknown-ac", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"acKnown":false`)
+	assert.Contains(t, rec.Body.String(), `"targetAc":null`)
+	assert.Contains(t, rec.Body.String(), `"critPossible":true`)
+
+	h, m = newRouter(t)
+	m.cmb.EXPECT().ClearAttackAC(mock.Anything, int64(1), int64(8)).
+		Return(&combatsvc.RollResult{Modifiers: []combatsvc.Modifier{}, DamageTerms: []combatsvc.DamageTerm{}, CritsFromAC: 11}, nil)
+	rec = do(h, "POST", "/api/roll/attack/8/unknown-ac", "")
+	assert.Contains(t, rec.Body.String(), `"critPossible":false`)
+
+	h, _ = newRouter(t)
+	rec = do(h, "POST", "/api/roll/attack/0/unknown-ac", "")
+	require.Equal(t, http.StatusBadRequest, rec.Code)
 }

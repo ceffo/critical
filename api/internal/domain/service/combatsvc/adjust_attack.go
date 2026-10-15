@@ -94,6 +94,38 @@ func (s *service) SetAttackVerdict(ctx context.Context, characterID, entryID int
 	return res, nil
 }
 
+// ClearAttackAC makes the target AC of the latest attack (log entry entryID)
+// unknown again after it was given (ADR 0012 step 8): no hit, no crit, no
+// verdict, the damage dimmed as "if it hits". Nothing is rolled and no
+// ammunition is spent; it is an audited amend like a correction, refused like
+// AdjustAttackAC and for an attack whose AC is already unknown.
+func (s *service) ClearAttackAC(ctx context.Context, characterID, entryID int64) (*RollResult, error) {
+	var res *RollResult
+	_, err := s.log.AmendLatest(ctx, characterID, entryID, actionlog.KindAttack, func(e actionlog.Entry) (actionlog.PayloadAmendment, error) {
+		r, err := decodeCorrectable(e)
+		if err != nil {
+			return actionlog.PayloadAmendment{}, err
+		}
+		if !r.ACKnown {
+			return actionlog.PayloadAmendment{}, fmt.Errorf("%w: the target AC of attack #%d is already unknown", domain.ErrInvalidInput, e.ID)
+		}
+		change := actionlog.Change{Field: ChangeTargetAC, From: r.TargetAC, To: nil}
+		// Keep the AC and outcome as rolled, like the first correction does.
+		if !r.RolledACUnknown && (r.RolledTargetAC == nil || r.RolledHit == nil || r.RolledCrit == nil) {
+			ac, hit, crit := r.TargetAC, r.Hit, r.IsCrit
+			r.RolledTargetAC, r.RolledHit, r.RolledCrit = &ac, &hit, &crit
+		}
+		r.TargetAC, r.ACKnown, r.Verdict = 0, false, VerdictNone
+		settle(r)
+		res = r
+		return encodeAmendment(r, change)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // decodeCorrectable decodes an attack entry that stored every die its
 // outcome depends on; older entries are refused.
 func decodeCorrectable(e actionlog.Entry) (*RollResult, error) {

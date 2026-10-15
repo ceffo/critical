@@ -70,6 +70,8 @@ export interface RollResult {
   hitsAc?: number;
   /** The lowest target AC the attack crits (docs/adr/0012 step 3); absent on saves and older entries. */
   critsFromAc?: number;
+  /** Some real AC can crit (critsFromAc within the highest AC the rules allow, docs/adr/0012 step 7). */
+  critPossible?: boolean;
   /**
    * Final only when the AC is known or the GM gave a verdict (attackSettled); until then false, with
    * the damage of a hit at ×1 ("if it hits").

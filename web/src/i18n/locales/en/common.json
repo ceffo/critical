@@ -618,6 +618,7 @@
       "decrease": "Lower target AC",
       "increase": "Raise target AC",
       "value": "Corrected target AC",
+      "backToUnknown": "AC unknown again",
       "apply": "Apply",
       "was": "rolled vs AC {{ac}}",
       "giveLabel": "Give the real AC",
@@ -641,6 +642,7 @@
     "critsFromAc": "Crits from AC",
     "unknownAc": {
       "tellGm": "Tell the GM: “hits AC {{hits}}”. A crit from AC {{crits}}.",
+      "tellGmNoCrit": "Tell the GM: “hits AC {{hits}}”.",
       "noCrit": "No crit without the AC: give it to settle a crit.",
       "unsettled": "Waiting for the GM: give the AC, or Hit / Miss",
       "byGm": "GM’s call",

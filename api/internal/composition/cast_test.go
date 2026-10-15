@@ -228,3 +228,37 @@ func TestReceivedBuffStartsInTheCurrentRoundAndVoidRestoresTheList(t *testing.T)
 	require.NoError(t, err)
 	assert.Equal(t, before, restored)
 }
+
+// ADR 0004 step 16: a cast charge buff starts with its total, spending a charge
+// keeps it, and voiding the spend brings back both the charges and the total.
+func TestCastChargeBuff_SpendThenVoidRestoresChargesAndTotal(t *testing.T) {
+	bs := bootMaxDice(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	_, err := bs.Prep.Prepare(ctx, id, []string{"stoneskin"})
+	require.NoError(t, err)
+	_, err = bs.Cast.Cast(ctx, id, 0, castsvc.CastRequest{})
+	require.NoError(t, err)
+
+	buffs, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, buffs, 1)
+	assert.Equal(t, 11, buffs[0].Charges)
+	assert.Equal(t, 11, buffs[0].ChargesTotal)
+
+	_, err = bs.Buffs.Trigger(ctx, id, buffs[0].ID)
+	require.NoError(t, err)
+	buffs, err = bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 10, buffs[0].Charges)
+	assert.Equal(t, 11, buffs[0].ChargesTotal, "spending keeps the total")
+
+	entries, err := bs.Log.List(ctx, id, 1)
+	require.NoError(t, err)
+	_, err = bs.Log.Void(ctx, id, entries[0].ID)
+	require.NoError(t, err)
+	buffs, err = bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 11, buffs[0].Charges)
+	assert.Equal(t, 11, buffs[0].ChargesTotal)
+}

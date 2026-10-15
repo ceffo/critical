@@ -38,8 +38,9 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    strictly increasing). With `L` the sheet's level and `T(n)` the XP that reaches level `n`:
    `currentFloor = T(L)`, `nextThreshold = T(L + 1)`, `toNext = max(0, T(L + 1) - total)`,
    `progress = clamp((total - T(L)) / (T(L + 1) - T(L)), 0, 1)` and `progressPercent` the same in
-   whole percent rounded down. At level 20 there is no next level: `nextLevel` and
-   `nextThreshold` are null, `toNext` 0 and the progress full. Reaching the threshold changes
+   whole percent rounded down. At level 20, or above it (a level override), there is no next level: `nextLevel` and
+   `nextThreshold` are null, `toNext` 0 and the progress full; above 20 the floor stays level 20's
+   and every listed level is `past`. Reaching the threshold changes
    nothing but `toNext` (0) and the progress (full): no level-up. `levels` lists 8 consecutive
    levels from `L - 2`, kept inside 1 to 20, each with its threshold and a status (`past`,
    `current`, `next`, `ahead`).

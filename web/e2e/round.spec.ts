@@ -57,10 +57,13 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   await expect(buffBadge(page, "e2e Haste")).toBeVisible();
   await markNoReload(page);
 
+  // One round at a time: two clicks in flight race their refreshes (an older one can land last).
+  const r0 = await currentRound(page);
   await page.getByRole("button", { name: "Next Round" }).click();
+  await expect.poll(() => currentRound(page)).toBe(r0 + 1);
   await page.getByRole("button", { name: "Next Round" }).click();
-  await expect.poll(() => currentRound(page)).toBeGreaterThanOrEqual(2);
-  const before = await currentRound(page);
+  await expect.poll(() => currentRound(page)).toBe(r0 + 2);
+  const before = r0 + 2;
 
   // Set round: a number >= 0 through a small form.
   await page.getByRole("button", { name: "Set round" }).click();
@@ -114,10 +117,13 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
     "150 rd · 2 h 30",
   );
+  // One round at a time: two clicks in flight race their refreshes (an older one can land last).
+  const r0 = await currentRound(page);
   await page.getByRole("button", { name: "Next Round" }).click();
+  await expect.poll(() => currentRound(page)).toBe(r0 + 1);
   await page.getByRole("button", { name: "Next Round" }).click();
-  await expect.poll(() => currentRound(page)).toBeGreaterThanOrEqual(2);
-  const before = await currentRound(page);
+  await expect.poll(() => currentRound(page)).toBe(r0 + 2);
+  const before = r0 + 2;
   await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText(
     "148 rd · 2 h 28",
   );

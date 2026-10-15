@@ -335,6 +335,22 @@
     "receiveHint": "Tapez une partie du nom du sort (anglais ou français).",
     "receiveMore": "{{count}} de plus, affinez la recherche"
   },
+  "spellDice": {
+    "typed": "{{dice}} {{type}}",
+    "instances": "{{count}} × {{dice}}",
+    "perRound": "{{text}} par round, {{rounds}} rounds",
+    "types": {
+      "acid": "acide",
+      "cold": "froid",
+      "crushing": "écrasement",
+      "electricity": "électricité",
+      "fire": "feu",
+      "force": "force",
+      "necromantic": "nécromantique",
+      "negative": "énergie négative",
+      "sound": "son"
+    }
+  },
   "lookup": {
     "search": "Rechercher des sorts...",
     "classLabel": "Liste de sorts",

@@ -40,6 +40,9 @@ type SpellbookEntry struct {
 	// Cast is what casting the spell asks of the player, from the spell
 	// effects catalog (Info fills it).
 	Cast CastInputs
+	// Damage is the damage a cast rolls at the character's level, from the
+	// spell effects catalog (Info fills it; nil: the cast rolls none).
+	Damage *spelleffectsvc.DamageAt
 }
 
 // CastInputs are the choices a spell's cast mechanics need from the player
@@ -128,25 +131,36 @@ func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
 func (s *service) limits(ctx context.Context, characterID int64) (map[int]int, error) {
+	_, limits, err := s.levelLimits(ctx, characterID)
+	return limits, err
+}
+
+// levelLimits returns the character's level and its preparation limits.
+func (s *service) levelLimits(ctx context.Context, characterID int64) (int, map[int]int, error) {
 	c, err := s.Characters.GetCharacter(ctx, characterID)
 	if err != nil {
-		return nil, fmt.Errorf("get character: %w", err)
+		return 0, nil, fmt.Errorf("get character: %w", err)
 	}
 	limits, err := s.Limits.BardSpellsPerDay(c.Level)
 	if err != nil {
-		return nil, fmt.Errorf("spells per day: %w", err)
+		return 0, nil, fmt.Errorf("spells per day: %w", err)
 	}
-	return limits, nil
+	return c.Level, limits, nil
 }
 
 func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
-	limits, err := s.limits(ctx, characterID)
+	level, limits, err := s.levelLimits(ctx, characterID)
 	if err != nil {
 		return Info{}, err
 	}
 	out := Info{Spellbook: append([]SpellbookEntry(nil), s.Spellbook.All()...)}
 	for i, e := range out.Spellbook {
 		out.Spellbook[i].Cast = s.castInputs(e.ID)
+		if fx, ok := s.Effects.Get(e.ID); ok {
+			if out.Spellbook[i].Damage, err = fx.DamageAt(level); err != nil {
+				return Info{}, err
+			}
+		}
 	}
 	for level, max := range limits {
 		out.Limits = append(out.Limits, LevelLimit{Level: level, Max: max})

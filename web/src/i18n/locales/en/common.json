@@ -335,6 +335,22 @@
     "receiveHint": "Type part of a spell name (English or French).",
     "receiveMore": "{{count}} more, refine your search"
   },
+  "spellDice": {
+    "typed": "{{dice}} {{type}}",
+    "instances": "{{count}} × {{dice}}",
+    "perRound": "{{text}} per round, {{rounds}} rounds",
+    "types": {
+      "acid": "acid",
+      "cold": "cold",
+      "crushing": "crushing",
+      "electricity": "electricity",
+      "fire": "fire",
+      "force": "force",
+      "necromantic": "necromantic",
+      "negative": "negative energy",
+      "sound": "sound"
+    }
+  },
   "lookup": {
     "search": "Search spells...",
     "classLabel": "Spell list",

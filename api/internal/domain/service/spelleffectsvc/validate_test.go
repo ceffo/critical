@@ -71,6 +71,14 @@ func TestValidate(t *testing.T) {
 			e.Kind = spelleffectsvc.KindDamage
 			e.Damage = &spelleffectsvc.Damage{ByLevel: []spelleffectsvc.LevelDice{{MinLevel: 3, Dice: f}}}
 		}, "min_level 1"},
+		"damage dice not a sum": {func(e *spelleffectsvc.Entry) {
+			e.Kind = spelleffectsvc.KindDamage
+			e.Damage = &spelleffectsvc.Damage{Dice: must.Do(formula.Parse("2*1d4"))}
+		}, "not a sum of dice"},
+		"instances dice not a sum": {func(e *spelleffectsvc.Entry) {
+			e.Kind = spelleffectsvc.KindDamage
+			e.Damage = &spelleffectsvc.Damage{Dice: f, Instances: must.Do(formula.Parse("1d4/2"))}
+		}, "not a sum of dice"},
 		"bad save": {func(e *spelleffectsvc.Entry) { e.Save = &spelleffectsvc.Save{Type: "luck", Effect: "half"} }, "save.type"},
 		"charges no unit": {func(e *spelleffectsvc.Entry) {
 			e.Kind = spelleffectsvc.KindBuff

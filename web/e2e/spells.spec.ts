@@ -199,8 +199,9 @@ test("a repeated spell shows once with a count that drops as copies are cast; ro
   await expect(level1.getByRole("listitem")).toHaveCount(2);
   await expect(level1.getByRole("listitem").nth(0)).toContainText("Alarm");
   await expect(level1.getByRole("listitem").nth(1)).toContainText("Magic Missile ×2");
+  await expect(level1.getByRole("listitem").nth(1).getByTestId("slot-dice")).toHaveText("5 × 1d4+1 force");
   await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
-  await expect(level1.getByRole("listitem").nth(1)).not.toContainText("×");
+  await expect(level1.getByRole("listitem").nth(1)).not.toContainText("Magic Missile ×");
   await expect(level1.getByTestId("remaining-1")).toHaveText("2 / 3");
   await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
   await expect(level1.getByTestId("remaining-1")).toHaveText("1 / 3");

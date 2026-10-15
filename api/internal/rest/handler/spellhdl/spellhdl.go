@@ -10,9 +10,11 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/pkg/formula"
 )
 
 // Router is the chi subset we need.
@@ -265,6 +267,51 @@ type SpellDTO struct {
 	Stats       spellstats.Stats   `json:"stats"`
 	CasterLevel int                `json:"caster_level,omitempty"`
 	Values      *spellstats.Values `json:"values,omitempty"`
+}
+
+// DiceGroupDTO is Count dice of Sides sides.
+type DiceGroupDTO struct {
+	Count int `json:"count"`
+	Sides int `json:"sides"`
+}
+
+// DiceSumDTO is a formula evaluated at a caster level down to what is left
+// to roll: dice groups, in the order the spell's data writes them, plus a
+// constant. No groups: a plain number.
+type DiceSumDTO struct {
+	Groups   []DiceGroupDTO `json:"groups"`
+	Modifier int            `json:"modifier"`
+}
+
+// SpellDamageDTO is the damage a cast of a spell rolls at CasterLevel: Dice
+// for one instance, Instances separate instances every round, for Rounds
+// rounds; Type is the damage type key ("fire"). The spell lookup and the
+// spellbook serve this same shape; the client words it.
+type SpellDamageDTO struct {
+	CasterLevel int        `json:"caster_level"`
+	Dice        DiceSumDTO `json:"dice"`
+	Instances   DiceSumDTO `json:"instances"`
+	Rounds      DiceSumDTO `json:"rounds"`
+	Type        string     `json:"type,omitempty"`
+}
+
+// DamageToDTO maps the damage at a caster level to its wire shape (nil: none).
+func DamageToDTO(d *spelleffectsvc.DamageAt) *SpellDamageDTO {
+	if d == nil {
+		return nil
+	}
+	return &SpellDamageDTO{
+		CasterLevel: d.CasterLevel, Dice: sumToDTO(d.Dice), Instances: sumToDTO(d.Instances),
+		Rounds: sumToDTO(d.Rounds), Type: d.Type,
+	}
+}
+
+func sumToDTO(s formula.Sum) DiceSumDTO {
+	out := DiceSumDTO{Groups: make([]DiceGroupDTO, 0, len(s.Dice)), Modifier: s.Constant}
+	for _, g := range s.Dice {
+		out.Groups = append(out.Groups, DiceGroupDTO{Count: g.Count, Sides: g.Sides})
+	}
+	return out
 }
 
 // SpellPageDTO is one page of GET /api/spells; Total counts every match.

@@ -33,6 +33,10 @@ type SVC interface {
 	// Receive applies a spell someone else cast on the character, at their
 	// caster level. No slot is used.
 	Receive(ctx context.Context, characterID int64, req ReceiveRequest) (CastResult, error)
+	// DamageAt is the damage a cast of spellID rolls at casterLevel (1 to
+	// MaxCasterLevel), evaluated down to the dice left to roll; nil when a
+	// cast rolls none (no effect entry, not a damage spell, low confidence).
+	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
 }
 
 // Slots is the spell slot store (spellsvc's DAL satisfies it).

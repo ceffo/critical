@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/pkg/formula"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -97,6 +98,21 @@ func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true}, info.Spellbook[2].Cast)
 	assert.Equal(t, prepsvc.CastInputs{SlotSplits: [][]int{{1, 1, 1}, {1, 2}, {3}}}, info.Spellbook[3].Cast)
+}
+
+// A spellbook entry carries the damage a cast rolls at the character's level
+// (15: fireball caps at 10d6), from the spell effects data; none for a spell
+// that rolls no damage.
+func TestInfo_DamageAtTheCharacterLevel(t *testing.T) {
+	f := newFixture(t)
+	info, err := f.svc.Info(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Nil(t, info.Spellbook[0].Damage, "alarm rolls no damage")
+	require.NotNil(t, info.Spellbook[1].Damage)
+	assert.Equal(t, spelleffectsvc.DamageAt{
+		CasterLevel: 15, Dice: formula.Sum{Dice: []formula.Dice{{Count: 10, Sides: 6}}},
+		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
+	}, *info.Spellbook[1].Damage)
 }
 
 // catalog is the test seed of spell effects.

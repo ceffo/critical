@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/ceffo/critical/api/pkg/formula"
 )
 
 var (
@@ -202,6 +204,18 @@ func (d *Damage) validate() error {
 	}
 	if len(d.ByLevel) > 0 && d.ByLevel[0].MinLevel != 1 {
 		return fmt.Errorf("damage.by_level must start at min_level 1")
+	}
+	// The dice are served evaluated at the caster level (DamageAt): each
+	// formula must reduce to dice plus a constant at every level.
+	for level := 1; level <= MaxCasterLevel; level++ {
+		for _, f := range []*formula.Formula{d.DiceAt(level), d.Instances, d.Rounds} {
+			if f == nil {
+				continue
+			}
+			if _, err := f.Expand(level); err != nil {
+				return fmt.Errorf("damage: %w", err)
+			}
+		}
 	}
 	return nil
 }

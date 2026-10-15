@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/pkg/formula"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -471,4 +472,68 @@ func TestCast_BuffErrorAborts(t *testing.T) {
 	f.prepared(slot("haste", "Haste", 3))
 	_, err = svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
 	assert.ErrorIs(t, err, boom, "the transaction rolls the slot back")
+}
+
+// The damage served for a spell is what a cast of it rolls: the same number
+// of rolls (instances x rounds), each of the same dice, and the same constant.
+func TestDamageAt_IsWhatACastRolls(t *testing.T) {
+	tests := []struct {
+		slot spellsvc.SpellSlot
+		want spelleffectsvc.DamageAt
+	}{
+		{slot("fireball", "Fireball", 3), spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 10, Sides: 6}}},
+			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
+		}},
+		{slot("magic_missile", "Magic Missile", 1), spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 1, Sides: 4}}, Constant: 1},
+			Instances: formula.Sum{Constant: 5}, Rounds: formula.Sum{Constant: 1}, Type: "force",
+		}},
+		{slot("melfs_acid_arrow", "Melf's Acid Arrow", 2), spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}},
+			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 6}, Type: "acid",
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.slot.SpellID, func(t *testing.T) {
+			f := newFixture(t)
+			got, err := f.svc.DamageAt(context.Background(), tt.slot.SpellID, bardLevel)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+			assert.Equal(t, tt.want, *got)
+
+			// Every die shows 1: each roll totals its dice count plus the constant.
+			perRoll := got.Dice.Constant
+			for _, g := range got.Dice.Dice {
+				perRoll += g.Count
+			}
+			rolls := got.Instances.Constant * got.Rounds.Constant
+			f.dice.vals = make([]int, rolls*(perRoll-got.Dice.Constant))
+			for i := range f.dice.vals {
+				f.dice.vals[i] = 1
+			}
+			f.prepared(tt.slot)
+			res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
+			require.NoError(t, err)
+			require.Len(t, res.Damage.Rolls, rolls)
+			for _, r := range res.Damage.Rolls {
+				assert.Equal(t, perRoll, r.Total)
+			}
+			assert.Empty(t, f.dice.vals, "every served die is rolled")
+		})
+	}
+}
+
+func TestDamageAt_NoneAndBounds(t *testing.T) {
+	f := newFixture(t)
+	got, err := f.svc.DamageAt(context.Background(), "alarm", bardLevel)
+	require.NoError(t, err)
+	assert.Nil(t, got, "a utility spell rolls no damage")
+	got, err = f.svc.DamageAt(context.Background(), "no_such_spell", bardLevel)
+	require.NoError(t, err)
+	assert.Nil(t, got, "no effect entry")
+	for _, level := range []int{0, castsvc.MaxCasterLevel + 1} {
+		_, err = f.svc.DamageAt(context.Background(), "fireball", level)
+		require.ErrorIs(t, err, domain.ErrInvalidInput, "level %d", level)
+	}
 }

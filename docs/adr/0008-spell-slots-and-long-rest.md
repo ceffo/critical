@@ -55,8 +55,14 @@ named otherwise.
 8. **Effects come from the data.** A spell's effect is read from `seeds/spell_effects.json` at the
    caster's level: the Bard's for a cast, the caster's for a spell received (by-group dice use the
    Bard's group, rogue). A spell that is low-confidence, a utility or not in the catalogue is
-   shown as text only and changes nothing.
-   Tests: `TestCast_PerSeedEntry`, `TestReceive`.
+   shown as text only and changes nothing. The damage a cast rolls is also served unrolled, from
+   the same data and level row, with the spellbook at the Bard's level. It is the dice of one instance (dice groups in the data's order
+   plus a constant), the number of instances and the number of rounds; none for a spell a cast
+   rolls no damage for. A damage formula of the data must reduce to dice plus a constant at every
+   level (a die that is multiplied, divided, capped or subtracted is a startup error).
+   Tests: `TestCast_PerSeedEntry`, `TestReceive`, `TestExpand`, `TestExpandRejectsDiceNotAdded`,
+   `TestEntry_DamageAt`, `TestEntry_DamageAt_None`, `TestDamageAt_IsWhatACastRolls`,
+   `TestInfo_DamageAtTheCharacterLevel`.
 9. **A spell can grant extra slots.** A spell whose effect data has `grant_slots` (Rary's
    Mnemonic Enhancer: 3 levels) adds that many spell levels of extra slots, split by the caster at
    cast time into slots of level 1 or more (3 levels: three level-1 slots, the default, a level-1

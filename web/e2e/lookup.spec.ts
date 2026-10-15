@@ -247,7 +247,7 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   await rows(page).filter({ hasText: "Magic Missile" }).click();
 
   const description = detail(page).getByTestId("spell-description");
-  const text = description.locator("p").nth(1);
+  const text = description.getByTestId("spell-description-text");
   await expect(text).toBeVisible();
   await expect(description.locator("summary")).toHaveCount(0);
   const full = (await text.textContent()) ?? "";

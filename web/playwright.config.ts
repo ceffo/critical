@@ -21,6 +21,9 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     viewport: { width: 1440, height: 900 },
     trace: "retain-on-failure",
+    // Headless Chromium hides scrollbars by default; show them so the screenshots carry the app's
+    // styled scrollbars and scrollers lay out as on a desktop browser.
+    launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] },
   },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
 });

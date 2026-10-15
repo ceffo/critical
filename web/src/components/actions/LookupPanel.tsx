@@ -117,7 +117,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
     ];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h3 className="text-title">
           <SpellNames spell={spell} className="whitespace-normal" />
@@ -210,15 +210,22 @@ function SpellDetail({ spell }: { spell: Spell }) {
           </p>
         )
       ) : null}
+      {/* The description takes the panel's width and the height left below the stats, and
+          scrolls inside it; a block container, so the text can hold any flow content. When the
+          panel is too short for its floor, the whole detail scrolls instead. */}
       {spell.description && (
-        <section className="text-body" data-testid="spell-description">
-          <p className="py-1 font-medium">{t("lookup.description")}</p>
-          <p
-            className="mt-1 max-h-48 max-w-[65ch] overflow-y-auto leading-relaxed whitespace-pre-line text-foreground/85"
+        <section
+          className="flex min-h-40 flex-1 flex-col text-body"
+          data-testid="spell-description"
+        >
+          <p className="shrink-0 py-1 font-medium">{t("lookup.description")}</p>
+          <div
+            className="mt-1 min-h-0 flex-1 overflow-y-auto pr-2 leading-relaxed whitespace-pre-line text-foreground/85"
+            data-testid="spell-description-text"
             tabIndex={0}
           >
             {spell.description}
-          </p>
+          </div>
         </section>
       )}
     </div>
@@ -488,7 +495,7 @@ export function LookupPanel() {
         <section
           aria-label={t("lookup.detail")}
           data-testid="spell-detail"
-          className="min-h-0 overflow-y-auto rounded-xl bg-card px-3 py-3"
+          className="flex min-h-0 flex-col overflow-y-auto rounded-xl bg-card px-3 py-3"
         >
           {selected ? (
             <SpellDetail key={selected.id} spell={selected} />

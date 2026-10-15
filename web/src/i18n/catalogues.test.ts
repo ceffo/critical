@@ -19,6 +19,34 @@ describe("catalogues", () => {
     );
   });
 
+  it("every PHB spell id has a fr name, bar the known gaps", () => {
+    // Ids the French Manuel des Joueurs gives no name for.
+    const knownGaps: string[] = [];
+    const phbIds = JSON.parse(
+      readFileSync(join(__dirname, "phbSpellIds.json"), "utf8"),
+    ) as string[];
+    const seed = JSON.parse(
+      readFileSync(
+        join(__dirname, "..", "..", "..", "seeds", "spells.json"),
+        "utf8",
+      ),
+    ) as { name: string }[];
+    const slug = (n: string) =>
+      n
+        .toLowerCase()
+        .replace(/['’*]/g, "")
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    const known = new Set(seed.map((s) => slug(s.name)));
+    const fr = resources.fr.spells as Record<string, string>;
+    expect(phbIds.length).toBeGreaterThan(400);
+    for (const id of phbIds) {
+      expect(known.has(id), `${id} is not a catalogue spell`).toBe(true);
+      if (knownGaps.includes(id)) continue;
+      expect(fr[id], `fr name of ${id}`).toBeTruthy();
+    }
+  });
+
   it("every skill id of seeds/skills.json has an en and a fr name", () => {
     const seed = JSON.parse(
       readFileSync(

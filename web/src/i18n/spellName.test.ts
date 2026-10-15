@@ -71,10 +71,10 @@ describe("otherSpellName", () => {
 
   it("is null when there is no other name or it is the same", async () => {
     expect(
-      otherSpellName(await makeT("en"), "en", "shield", "Shield"),
+      otherSpellName(await makeT("en"), "en", "unknown_spell", "Unknown Spell"),
     ).toBeNull();
     expect(
-      otherSpellName(await makeT("fr"), "fr", "shield", "Shield"),
+      otherSpellName(await makeT("fr"), "fr", "unknown_spell", "Unknown Spell"),
     ).toBeNull();
   });
 });

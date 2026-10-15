@@ -22,10 +22,12 @@ func Where[Q sqlite.Filterable]() struct {
 	ActionSnapshots   actionSnapshotWhere[Q]
 	ActiveBuffs       activeBuffWhere[Q]
 	AttackForms       attackFormWhere[Q]
+	BardSkills        bardSkillWhere[Q]
 	Characters        characterWhere[Q]
 	CritTableRows     critTableRowWhere[Q]
 	HPEvents          hpEventWhere[Q]
 	Items             itemWhere[Q]
+	Proficiencies     proficiencyWhere[Q]
 	RoundStates       roundStateWhere[Q]
 	SavedBuffs        savedBuffWhere[Q]
 	SpellSlots        spellSlotWhere[Q]
@@ -39,10 +41,12 @@ func Where[Q sqlite.Filterable]() struct {
 		ActionSnapshots   actionSnapshotWhere[Q]
 		ActiveBuffs       activeBuffWhere[Q]
 		AttackForms       attackFormWhere[Q]
+		BardSkills        bardSkillWhere[Q]
 		Characters        characterWhere[Q]
 		CritTableRows     critTableRowWhere[Q]
 		HPEvents          hpEventWhere[Q]
 		Items             itemWhere[Q]
+		Proficiencies     proficiencyWhere[Q]
 		RoundStates       roundStateWhere[Q]
 		SavedBuffs        savedBuffWhere[Q]
 		SpellSlots        spellSlotWhere[Q]
@@ -55,10 +59,12 @@ func Where[Q sqlite.Filterable]() struct {
 		ActionSnapshots:   buildActionSnapshotWhere[Q](ActionSnapshots.Columns),
 		ActiveBuffs:       buildActiveBuffWhere[Q](ActiveBuffs.Columns),
 		AttackForms:       buildAttackFormWhere[Q](AttackForms.Columns),
+		BardSkills:        buildBardSkillWhere[Q](BardSkills.Columns),
 		Characters:        buildCharacterWhere[Q](Characters.Columns),
 		CritTableRows:     buildCritTableRowWhere[Q](CritTableRows.Columns),
 		HPEvents:          buildHPEventWhere[Q](HPEvents.Columns),
 		Items:             buildItemWhere[Q](Items.Columns),
+		Proficiencies:     buildProficiencyWhere[Q](Proficiencies.Columns),
 		RoundStates:       buildRoundStateWhere[Q](RoundStates.Columns),
 		SavedBuffs:        buildSavedBuffWhere[Q](SavedBuffs.Columns),
 		SpellSlots:        buildSpellSlotWhere[Q](SpellSlots.Columns),

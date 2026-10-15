@@ -48,6 +48,10 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({ p
   await journal.locator("[data-selected=true]").getByRole("button", { name: "Reroll" }).click();
   await expect(rows).toHaveCount(2);
 
+  // Reroll from the card too.
+  await result.getByRole("button", { name: "Reroll" }).click();
+  await expect(rows).toHaveCount(3);
+
   // A formula the server refuses turns the field red; editing clears it.
   await formula.fill("2d6*3");
   await composer.getByRole("button", { name: "Roll", exact: true }).click();

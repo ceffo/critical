@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { ArrowUp } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { useDiceStore } from "@/stores/dice";
 import { useFilStore } from "@/stores/fil";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
@@ -762,6 +763,8 @@ function SkillResult({ check: c }: { check: SkillCheck }) {
 /** A free dice roll: the formula, the dice per kind as chips with their subtotal, the constant and the big total. */
 function DiceResult({ roll: r }: { roll: DiceRoll }) {
   const { t } = useTranslation();
+  const reroll = useDiceStore((s) => s.roll);
+  const rolling = useDiceStore((s) => s.rolling);
   return (
     <div className="flex flex-col gap-3" data-testid="dice-result">
       <div className="flex items-end justify-between gap-3">
@@ -793,6 +796,17 @@ function DiceResult({ roll: r }: { roll: DiceRoll }) {
           )}
         </div>
         <Total label={t("dice.total")} value={r.total} testId="dice-total" />
+      </div>
+      <div>
+        <Button
+          size="xs"
+          variant="ghost"
+          disabled={rolling}
+          title={t("dice.rerollTitle", { formula: r.formula })}
+          onClick={() => void reroll(r.formula)}
+        >
+          {t("dice.reroll")}
+        </Button>
       </div>
     </div>
   );

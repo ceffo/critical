@@ -757,7 +757,14 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
               </ul>
             )}
           </div>
-          <Total label={t("result.cast.damage")} value={c.damage.total} testId="cast-entry-damage" />
+          <div className="flex flex-col items-end gap-1">
+            <Total label={t("result.cast.damage")} value={c.damage.total} testId="cast-entry-damage" />
+            {c.damage.totalOnSave !== undefined && (
+              <span className="text-sm tabular-nums text-muted-foreground" data-testid="cast-entry-damage-on-save">
+                {t("result.cast.totalOnSave", { total: c.damage.totalOnSave })}
+              </span>
+            )}
+          </div>
         </div>
       )}
       {c.save && (

@@ -350,6 +350,10 @@
       "necromantic": "necromantic",
       "negative": "negative energy",
       "sound": "sound"
+    },
+    "parts": {
+      "none": "{{dice}} [no save]",
+      "negates": "{{dice}} [save negates]"
     }
   },
   "lookup": {
@@ -592,6 +596,11 @@
         "dex_gain": "DEX +{{value}}",
         "cha_gain": "CHA +{{value}}",
         "charges_hp_damage_taken": "Absorbs {{value}} HP of damage"
+      },
+      "totalOnSave": "On a save: {{total}}",
+      "partSave": {
+        "none": "no save",
+        "negates": "save negates"
       }
     },
     "itemHeading": "Used {{name}}",

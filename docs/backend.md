@@ -111,14 +111,11 @@ can only pop elements"*, for every entry kind:
 action log's `Record` inside the same `domain.TxRunner.InTx` as its state write, with
 `Snapshots` of the state it changed. It registers an `actionlog.Restorer` for its state key on the
 action log in the composition root, so voiding (popping) the entry restores the "before" state.
-buffsvc records every
-buff change (activate, edit, absorb, dismiss) under the `buffs` key and Next Round under `buffs`
-+ `round`, stamped with the round it ends; `buffSvc.Restorers()` is registered in composition.
-Time passes (`POST /api/round/pass-time {hours}`, `buffsvc.PassTime`) is one `time_passed` entry
-under `buffs` + `round`: `buffsvc.RoundsForHours` converts hours to rounds (1 round = 1 minute,
-rounded down; rejects ≤ 0, > 720 h and under one round), timed buffs lose that many rounds and
-expire at ≤ 0, charge-only and untimed buffs are untouched, the counter goes to 0. Daily items are
-not refilled (long rest only).
+buffsvc records every buff change (activate, edit, absorb, dismiss) under the `buffs` key and
+Next Round under `buffs` + `round`, stamped with the round it ends; `buffSvc.Restorers()` is
+registered in composition. Time passes (`POST /api/round/pass-time {hours}`, `buffsvc.PassTime`) is
+one `time_passed` entry under `buffs` + `round`. Rules: [ADR 0004](adr/0004-buffs.md),
+[ADR 0005](adr/0005-rounds-and-time.md).
 combatsvc records every attack (kind `attack`, payload = the full roll breakdown, camelCase like the
 `/api/roll/attack` response); a missile attack spends one ammo item through `itemsvc.Use` in the same
 transaction and snapshots it under the per-item key `items:<id>` (`itemsvc.UseSnapshot`); the
@@ -142,10 +139,10 @@ need the selected gem type to be consumed"; the DM rules what a hit does). The l
 used. The gem count rides the cast entry as an `items:<id>` snapshot, so voiding the cast gives the gem back.
 Buffs carry a free-text `Note` (in the active-buffs JSON and the `buffs` snapshot, so void restores it;
 editable through `BuffEdit.Note`). Saved buff templates (`saved_buffs` table, migration 013, nothing seeded)
-are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST` replaces a same-name template,
-`DELETE /{id}`); each save/delete is a `buff_change` entry (`save_template` / `delete_template`) with a
-`saved_buffs` snapshot of the whole list (the restorer writes it back with the same ids). Activating from
-a template is the normal `POST /api/buffs` with the filled values; a delete never touches active buffs.
+are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST`, `DELETE /{id}`); each save/delete is a
+`buff_change` entry (`save_template` / `delete_template`) with a `saved_buffs` snapshot of the whole list
+(the restorer writes it back with the same ids). Activating from a template is the normal `POST /api/buffs`
+with the filled values.
 combatsvc records every saving throw (kind `save`, no snapshots: it changes no state; payload =
 category, d20, buff modifiers (one per buff, `SaveBonusFrom`), target, adjustment + reason, total, passed, margin, `rolledPassed`).
 `POST /api/roll/save/{id}/adjust` `{adjustment, reason?}` sets the adjustment of the save when it is
@@ -294,40 +291,6 @@ type RollResult struct {
     // Attack context: weapon, target AC/size, ammo spent + remaining, log entry id
 }
 ```
-
-## Buff rules (move to ADR 0004)
-
-Counters: `Charges` are spent one per absorb and the buff ends at 0; `Duration` counts down on Next
-Round and the buff expires at 0. A buff may have both counters (Mirror Image) or neither (until
-dismissed). `min_str` gates the buff's other effects (rule 3 below).
-
-### Effective STR
-
-The STR score used for the Strength adjustments (ADR 0002
-step 4, ADR 0003 step 7) and for buff gates (critical-qki.33). STR
-effects themselves are never gated, and no rule lowers the score below the sheet's.
-
-User rulings, 2026-10-13: "strength level 2 says WItH OTHER. it's find with ITSELF"; "improved
-replaces. level 2 can stack with itself. this is why kelsen often equips 2 str lvl 2 to be sure
-to get to 18"; "simple: all str spells stack up to 18. unless it's improved strength that can go
-to 23."
-
-1. **Strength bonuses stack, up to 18.** With no Improved Strength active, effective STR = base +
-   the **sum** of every active `str_bonus` (Strength cast or received, or entered by hand, with
-   or without a `str_max`), total capped at 18 (PHB: Strength "cannot confer a Strength of 19 or
-   more"). A buff's own `str_max` of 18 or less is not used. Casting or receiving Strength again
-   adds a second buff instead of renewing the first.
-2. **Improved Strength replaces them.** A `str_bonus` whose `str_max` is above 18 is Improved
-   Strength (seeded 1d6+4, cap 23, for a bard). While one is active, every other Strength bonus
-   contributes nothing (its badge shows "replaced"), and the best single Improved wins: base +
-   bonus capped at its `str_max`. Casting it again renews it.
-3. **Gate.** A buff's other effects apply while effective STR ≥ its `min_str`. The Power Gem
-   forms set `min_str` 18: +5 and ×2 at effective STR 18 **or more** (19-23 with Improved
-   Strength included). User, 2026-10-13: "not exactly 18 >= 18".
-
-Exceptional Strength (18/xx) is not modelled: PHB, warriors only; Kelsen is a Bard. There is no
-"set STR to X" effect (user, 2026-10-13: "remove that buff type"); a `str_set` key in a stored
-buff is ignored when read, and in a request body it is ignored like any unknown key.
 
 ## Seed Loader Pattern
 

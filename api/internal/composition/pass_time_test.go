@@ -59,3 +59,18 @@ func TestPassTimeIsLoggedAndVoidRestoresBuffsAndRound(t *testing.T) {
 	assert.Equal(t, 100, buffs[0].Duration)
 	assert.Equal(t, 60, buffs[1].Duration)
 }
+
+// Time passing touches buffs and the round only: a spent daily item and a
+// used spell slot stay as they are (only a long rest refills them).
+func TestPassTimeDoesNotRefillDailyItemsOrSlots(t *testing.T) {
+	bs := boot(t)
+	spend(t, bs)
+	require.Zero(t, gemCount(t, bs))
+	require.Equal(t, 1, usedSlots(t, bs))
+
+	_, _, _, _, err := bs.Buffs.PassTime(context.Background(), bs.CharacterID, 8)
+	require.NoError(t, err)
+
+	assert.Zero(t, gemCount(t, bs), "the daily gem stays spent")
+	assert.Equal(t, 1, usedSlots(t, bs), "the used slot stays used")
+}

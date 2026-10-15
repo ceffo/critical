@@ -337,6 +337,13 @@ func TestTrigger(t *testing.T) {
 			want:        []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 9, Charges: 1}},
 			wantSummary: "Mirror Image absorbed a hit (1 left)",
 		},
+		{
+			name:        "the last image ends Mirror Image though rounds are left",
+			start:       []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 9, Charges: 1}, {ID: "d", Name: "Haste", Duration: 2}},
+			id:          "m",
+			want:        []buffsvc.BuffEffect{{ID: "d", Name: "Haste", Duration: 2}},
+			wantSummary: "Mirror Image absorbed a hit, ended",
+		},
 		{name: "a buff without charges cannot absorb", start: []buffsvc.BuffEffect{{ID: "d", Name: "Haste", Duration: 2}}, id: "d", wantErr: domain.ErrInvalidInput},
 		{name: "unknown id", start: []buffsvc.BuffEffect{{ID: "c", Charges: 3}}, id: "nope", wantErr: domain.ErrNotFound},
 	}
@@ -552,10 +559,9 @@ func TestGetEffectiveStr(t *testing.T) {
 	})
 }
 
-// Effective STR rule 1 (docs/backend.md "Effective STR"): with no
-// Improved Strength, base + the sum of every Strength bonus, capped at 18
-// (user: "all str spells stack up to 18").
-func TestEffectiveStr_Rule1_StrengthStacksUpTo18(t *testing.T) {
+// ADR 0004 step 7: with no Improved Strength, base + the sum of every
+// Strength bonus, capped at 18 (user: "all str spells stack up to 18").
+func TestStrength_Step7_StrengthStacksUpTo18(t *testing.T) {
 	runEffectiveStr(t, []strCase{
 		{"one cast: 12 + 4 = 16", 12, []buffsvc.BuffEffect{strength(4)}, 16},
 		{"one cast reaching 18: 12 + 6", 12, []buffsvc.BuffEffect{strength(6)}, 18},
@@ -587,10 +593,10 @@ func TestEffectiveStr_Rule1_StrengthStacksUpTo18(t *testing.T) {
 	})
 }
 
-// Effective STR rule 2: Improved Strength (a bonus with str_max above 18)
+// ADR 0004 step 8: Improved Strength (a bonus with str_max above 18)
 // replaces every other Strength bonus and can reach 23; it is not
 // cumulative with itself (best single one).
-func TestEffectiveStr_Rule2_ImprovedReplacesStrength(t *testing.T) {
+func TestStrength_Step8_ImprovedReplacesStrength(t *testing.T) {
 	runEffectiveStr(t, []strCase{
 		{"Improved 1d6+4 alone: 12 + 10 = 22", 12, []buffsvc.BuffEffect{improvedStrength(10)}, 22},
 		{"Improved caps at 23", 16, []buffsvc.BuffEffect{improvedStrength(9)}, 23},
@@ -617,10 +623,10 @@ func TestEffectiveStr_Rule2_ImprovedReplacesStrength(t *testing.T) {
 	})
 }
 
-// Effective STR rule 3 (Power Gem, docs/backend.md "Effective STR"): a
-// buff with min_str 18 applies at effective STR 18 or more (user: "not
-// exactly 18 >= 18"): on at 18, 19 and 23, off at 17.
-func TestEffectiveStr_Rule3_PowerGemFrom18Up(t *testing.T) {
+// ADR 0004 step 10 (Power Gem): a buff with min_str 18 applies at
+// effective STR 18 or more (user: "not exactly 18 >= 18"): on at 18, 19 and
+// 23, off at 17.
+func TestStrength_Step10_PowerGemFrom18Up(t *testing.T) {
 	on := func(str int) buffsvc.BuffModifiers {
 		return buffsvc.BuffModifiers{
 			SpellsBuff: 1.0, WeaponBuff: 5, WeaponBuffFrom: "Power Gem", Multipliers: 2.0, EffectiveStr: str,
@@ -654,6 +660,21 @@ func TestEffectiveStr_Rule3_PowerGemFrom18Up(t *testing.T) {
 	}
 }
 
+// ADR 0004 step 9: Strength effects are never gated by min_str: a Strength bonus that names a
+// min_str far above the score still counts toward the effective STR, while
+// the buff's other effects stay gated on that effective STR.
+func TestStrength_Step9_StrengthEffectsAreNotGated(t *testing.T) {
+	gated := func(id string, bonus int, strMax int) buffsvc.BuffEffect {
+		return buffsvc.BuffEffect{ID: id, Name: "Gated " + id, Effects: buffsvc.BuffEffects{
+			StrBonus: intPtr(bonus), StrMax: intPtr(strMax), MinStr: intPtr(25),
+		}}
+	}
+	runEffectiveStr(t, []strCase{
+		{"a gated Strength bonus still adds: 12 + 3", 12, []buffsvc.BuffEffect{gated("a", 3, 18)}, 15},
+		{"a gated Improved Strength still replaces: 12 + 7", 12, []buffsvc.BuffEffect{strength(2), gated("b", 7, 23)}, 19},
+	})
+}
+
 func TestListStatus(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -663,7 +684,7 @@ func TestListStatus(t *testing.T) {
 		{"Power Gem alone at STR 12 does not apply", []buffsvc.BuffEffect{powerGem}, []bool{false}},
 		{"Strength to 18 makes the Power Gem apply", []buffsvc.BuffEffect{strength(6), powerGem}, []bool{true, true}},
 		{"Strength to 17 is not enough", []buffsvc.BuffEffect{strength(5), powerGem}, []bool{true, false}},
-		// Rule 2: while Improved Strength replaces them, Strength bonuses do not apply.
+		// ADR 0004 step 8: while Improved Strength replaces them, Strength bonuses do not apply.
 		{
 			"Improved active: the Strength bonuses show as not applying",
 			[]buffsvc.BuffEffect{strength(3), handMade(2, nil), improvedStrength(6), powerGem},

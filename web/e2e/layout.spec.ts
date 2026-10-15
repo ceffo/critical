@@ -291,6 +291,23 @@ test("theme: the main screens and every ambiance in dark and light", async ({
       page.getByTestId("spell-detail").getByRole("heading"),
     ).toBeVisible();
     await snap(page, `${m}-spells`);
+    // A long description fills the detail to its bottom edge at full width and scrolls inside.
+    await page
+      .getByRole("combobox", { name: "Search spells..." })
+      .fill("magic jar");
+    const detail = page.getByTestId("spell-detail");
+    await expect(detail.getByRole("heading")).toContainText("Magic Jar");
+    const text = detail.getByTestId("spell-description-text");
+    const [box, panel] = [await text.boundingBox(), await detail.boundingBox()];
+    expect(panel!.y + panel!.height - (box!.y + box!.height)).toBeLessThan(16);
+    expect(panel!.width - box!.width).toBeLessThan(32);
+    // The text scrolls, not the whole detail.
+    expect(
+      await detail.evaluate((el) => el.scrollHeight - el.clientHeight),
+    ).toBeLessThanOrEqual(1);
+    await snap(page, `${m}-spells-long`);
+    await text.evaluate((el) => el.scrollTo({ top: el.scrollHeight / 3 }));
+    await snap(page, `${m}-spells-scrolled`);
     await openWorkspace(page, "Inventory");
     await snap(page, `${m}-inventory`);
     await openWorkspace(page, "Experience");
@@ -398,6 +415,7 @@ test.describe("workspaces to the dice composer", () => {
       .fill("quixotic still");
     const detail = page.getByTestId("spell-detail");
     await expect(detail.getByRole("heading")).toHaveText("Quixotic Stillness");
+    await snap(page, "spells-short");
     const dice = detail.getByTestId("spell-dice-duration");
     await expect(dice.getByTestId("spell-dice-formula")).toHaveText("1d8+8");
     await dice.getByRole("button", { name: "Send 1d8+8 to the dice" }).click();

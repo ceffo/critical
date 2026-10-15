@@ -276,3 +276,59 @@
     margin: 0;
   }
 }
+
+/*
+ * Scrollbars, app-wide (ADR 0020 roles): a thin pill on a clear track. In WebKit/Blink the thumb is
+ * a primary-to-magic gradient (tint -> magic), half strength at rest, full on hover and the
+ * secondary gold while dragged. Firefox has only solid colours: tint at rest, full tint on hover.
+ * Blink drops the ::-webkit-scrollbar styling once scrollbar-color is set, so the standard
+ * properties are given only to browsers without the pseudo-elements.
+ */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--tint) 55%, transparent),
+      color-mix(in oklab, var(--magic) 55%, transparent)
+    );
+  }
+  ::-webkit-scrollbar-thumb:horizontal {
+    background-image: linear-gradient(
+      to right,
+      color-mix(in oklab, var(--tint) 55%, transparent),
+      color-mix(in oklab, var(--magic) 55%, transparent)
+    );
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    border-width: 1px;
+    background-image: linear-gradient(to bottom, var(--tint), var(--magic));
+  }
+  ::-webkit-scrollbar-thumb:horizontal:hover {
+    background-image: linear-gradient(to right, var(--tint), var(--magic));
+  }
+  ::-webkit-scrollbar-thumb:active {
+    background-image: none;
+    background-color: var(--highlight-fill);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--tint) 60%, transparent)
+        transparent;
+    }
+    *:hover {
+      scrollbar-color: var(--tint) transparent;
+    }
+  }
+}

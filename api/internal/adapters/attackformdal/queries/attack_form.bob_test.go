@@ -97,8 +97,8 @@ func TestGetAttackForm(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 7 {
-			t.Fatalf("expected %d columns, got %d", 7, len(columns))
+		if len(columns) != 8 {
+			t.Fatalf("expected %d columns, got %d", 8, len(columns))
 		}
 
 		if columns[0] != "weapon_id" {
@@ -117,16 +117,20 @@ func TestGetAttackForm(t *testing.T) {
 			t.Fatalf("expected column %d to be %s, got %s", 3, "target_ac", columns[3])
 		}
 
-		if columns[4] != "target_size" {
-			t.Fatalf("expected column %d to be %s, got %s", 4, "target_size", columns[4])
+		if columns[4] != "target_ac_known" {
+			t.Fatalf("expected column %d to be %s, got %s", 4, "target_ac_known", columns[4])
 		}
 
-		if columns[5] != "situational_value" {
-			t.Fatalf("expected column %d to be %s, got %s", 5, "situational_value", columns[5])
+		if columns[5] != "target_size" {
+			t.Fatalf("expected column %d to be %s, got %s", 5, "target_size", columns[5])
 		}
 
-		if columns[6] != "situational_label" {
-			t.Fatalf("expected column %d to be %s, got %s", 6, "situational_label", columns[6])
+		if columns[6] != "situational_value" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "situational_value", columns[6])
+		}
+
+		if columns[7] != "situational_label" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "situational_label", columns[7])
 		}
 	})
 }
@@ -138,6 +142,7 @@ var beforeTestingUpsertAttackForm = func(context.Context, bob.Tx) ([]UpsertAttac
 		PreviousWeaponID string
 		AmmoItemID       string
 		TargetAc         int64
+		TargetAcKnown    int64
 		TargetSize       string
 		SituationalValue int64
 		SituationalLabel string
@@ -147,6 +152,7 @@ var beforeTestingUpsertAttackForm = func(context.Context, bob.Tx) ([]UpsertAttac
 		PreviousWeaponID: random_string(nil),
 		AmmoItemID:       random_string(nil),
 		TargetAc:         random_int64(nil),
+		TargetAcKnown:    random_int64(nil),
 		TargetSize:       random_string(nil),
 		SituationalValue: random_int64(nil),
 		SituationalLabel: random_string(nil),
@@ -163,6 +169,7 @@ func TestUpsertAttackForm(t *testing.T) {
 			PreviousWeaponID string
 			AmmoItemID       string
 			TargetAc         int64
+			TargetAcKnown    int64
 			TargetSize       string
 			SituationalValue int64
 			SituationalLabel string
@@ -172,6 +179,7 @@ func TestUpsertAttackForm(t *testing.T) {
 			PreviousWeaponID: random_string(nil),
 			AmmoItemID:       random_string(nil),
 			TargetAc:         random_int64(nil),
+			TargetAcKnown:    random_int64(nil),
 			TargetSize:       random_string(nil),
 			SituationalValue: random_int64(nil),
 			SituationalLabel: random_string(nil),
@@ -195,6 +203,7 @@ func TestUpsertAttackForm(t *testing.T) {
 			PreviousWeaponID string
 			AmmoItemID       string
 			TargetAc         int64
+			TargetAcKnown    int64
 			TargetSize       string
 			SituationalValue int64
 			SituationalLabel string
@@ -204,6 +213,7 @@ func TestUpsertAttackForm(t *testing.T) {
 			PreviousWeaponID: random_string(nil),
 			AmmoItemID:       random_string(nil),
 			TargetAc:         random_int64(nil),
+			TargetAcKnown:    random_int64(nil),
 			TargetSize:       random_string(nil),
 			SituationalValue: random_int64(nil),
 			SituationalLabel: random_string(nil),

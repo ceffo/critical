@@ -405,6 +405,12 @@ describe("journal: rolls filter and row values", () => {
     [entry("hp_change", null, { hpDelta: 4, effectiveHpDelta: 4 }), { text: "+4", tone: "heal" }],
     [entry("attack", attackPayload), { text: "8", tone: "accent" }],
     [entry("attack", { ...attackPayload, hit: false }), { text: "–", tone: "muted" }],
+    // Against an unknown AC: "?" until the GM settles it, then the verdict's outcome.
+    [entry("attack", { ...attackPayload, hit: false, targetAc: null, acKnown: false }), { text: "?", tone: "muted" }],
+    [
+      entry("attack", { ...attackPayload, targetAc: null, acKnown: false, verdict: "hit" }),
+      { text: "8", tone: "accent" },
+    ],
     [entry("save", savePayload), { text: "12", tone: "pass" }],
     [entry("item_use", usePayload), { text: "21", tone: "accent" }],
     [entry("item_use", { ...usePayload, dice: "", rolls: [], total: 0 }), null],

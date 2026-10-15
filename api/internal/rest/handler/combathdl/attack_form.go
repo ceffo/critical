@@ -10,12 +10,13 @@ import (
 
 // AttackFormDTO is the attack form's last choices.
 type AttackFormDTO struct {
-	WeaponID         string         `json:"weaponId"`
-	PreviousWeaponID string         `json:"previousWeaponId"`
-	AmmoItemID       string         `json:"ammoItemId"`
-	TargetAC         int            `json:"targetAc"`
-	TargetSize       string         `json:"targetSize"`
-	Situational      SituationalDTO `json:"situational"`
+	WeaponID         string `json:"weaponId"`
+	PreviousWeaponID string `json:"previousWeaponId"`
+	AmmoItemID       string `json:"ammoItemId"`
+	// TargetAC is null while the target's AC is unknown.
+	TargetAC    *int           `json:"targetAc"`
+	TargetSize  string         `json:"targetSize"`
+	Situational SituationalDTO `json:"situational"`
 }
 
 // AmmoChoiceDTO is one ammunition the weapon in hand can fire.
@@ -33,8 +34,9 @@ type AttackPreviewDTO struct {
 	Modifiers      []ModifierDTO `json:"modifiers"`
 	EffectiveThac0 int           `json:"effectiveThac0"`
 	ToHit          int           `json:"toHit"`
-	RollNeeded     int           `json:"rollNeeded"`
-	DamageBonus    int           `json:"damageBonus"`
+	// RollNeeded is null while the target AC is unknown.
+	RollNeeded  *int `json:"rollNeeded"`
+	DamageBonus int  `json:"damageBonus"`
 }
 
 // AttackFormViewDTO is the body of GET and PATCH /api/attack/form.
@@ -46,11 +48,11 @@ type AttackFormViewDTO struct {
 }
 
 // AttackFormPatchDTO is the body of PATCH /api/attack/form: only the fields
-// sent change.
+// sent change. "targetAc": null makes the target AC unknown.
 type AttackFormPatchDTO struct {
 	WeaponID    *string         `json:"weaponId"`
 	AmmoItemID  *string         `json:"ammoItemId"`
-	TargetAC    *int            `json:"targetAc"`
+	TargetAC    json.RawMessage `json:"targetAc"`
 	TargetSize  *string         `json:"targetSize"`
 	Situational *SituationalDTO `json:"situational"`
 }
@@ -76,7 +78,18 @@ func UpdateAttackForm(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		p := combatsvc.AttackFormPatch{WeaponID: req.WeaponID, AmmoItemID: req.AmmoItemID, TargetAC: req.TargetAC}
+		p := combatsvc.AttackFormPatch{WeaponID: req.WeaponID, AmmoItemID: req.AmmoItemID}
+		switch {
+		case len(req.TargetAC) == 0:
+		case string(req.TargetAC) == "null":
+			p.UnknownTargetAC = true
+		default:
+			var ac int
+			if err := json.Unmarshal(req.TargetAC, &ac); err != nil {
+				return render.BadRequestError("targetAc must be a whole number or null")
+			}
+			p.TargetAC = &ac
+		}
 		if req.TargetSize != nil {
 			size := combatsvc.TargetSize(*req.TargetSize)
 			p.TargetSize = &size

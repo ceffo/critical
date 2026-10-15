@@ -34,24 +34,34 @@ func (d *DAL) Get(ctx context.Context, characterID int64) (combatsvc.AttackForm,
 	if err != nil {
 		return combatsvc.AttackForm{}, false, fmt.Errorf("query attack_forms: %w", err)
 	}
-	return combatsvc.AttackForm{
+	f := combatsvc.AttackForm{
 		WeaponID:         row.WeaponID,
 		PreviousWeaponID: row.PreviousWeaponID,
 		AmmoItemID:       row.AmmoItemID,
-		TargetAC:         int(row.TargetAc),
 		TargetSize:       combatsvc.TargetSize(row.TargetSize),
 		Situational:      combatsvc.Situational{Value: int(row.SituationalValue), Label: row.SituationalLabel},
-	}, true, nil
+	}
+	if row.TargetAcKnown != 0 {
+		ac := int(row.TargetAc)
+		f.TargetAC = &ac
+	}
+	return f, true, nil
 }
 
-// Put upserts the character's form.
+// Put upserts the character's form. An unknown target AC is stored as
+// target_ac_known = 0 (target_ac 0, ignored).
 func (d *DAL) Put(ctx context.Context, characterID int64, f combatsvc.AttackForm) error {
+	var ac, known int64
+	if f.TargetAC != nil {
+		ac, known = int64(*f.TargetAC), 1
+	}
 	_, err := queries.UpsertAttackForm([]queries.UpsertAttackForm_AttackForms{{
 		CharacterID:      characterID,
 		WeaponID:         f.WeaponID,
 		PreviousWeaponID: f.PreviousWeaponID,
 		AmmoItemID:       f.AmmoItemID,
-		TargetAc:         int64(f.TargetAC),
+		TargetAc:         ac,
+		TargetAcKnown:    known,
 		TargetSize:       string(f.TargetSize),
 		SituationalValue: int64(f.Situational.Value),
 		SituationalLabel: f.Situational.Label,

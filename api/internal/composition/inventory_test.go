@@ -142,7 +142,7 @@ func TestInventory_RestockRefusedForChargesAndDaily(t *testing.T) {
 func TestInventory_BowWithArrowsStillAddsBothBonusesAndSpendsOne(t *testing.T) {
 	bs := newBacking(t)
 	res, err := bs.Combat.ResolveAttack(context.Background(), bs.CharacterID, combatsvc.AttackRequest{
-		WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: 1000, // always hits, so damage is filled
+		WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetAC: new(1000), // always hits, so damage is filled
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 17, itemCount(t, bs, "arrows_plus1"))
@@ -182,7 +182,7 @@ func TestInventory_AddItemAppearsAndPopRemovesIt(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemAdd, newestEntry(t, bs).Kind)
 
 	// It feeds a Short Bow like any ammo.
-	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: res.Item.ID, TargetAC: 1000})
+	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: res.Item.ID, TargetAC: new(1000)})
 	require.NoError(t, err)
 	assert.Equal(t, 5, itemCount(t, bs, res.Item.ID))
 	// The attack is newer: the add cannot be popped before it is.
@@ -288,7 +288,7 @@ func TestInventory_PopAddAfterItsUseWasPopped(t *testing.T) {
 	_, err = bs.Log.Void(ctx, bs.CharacterID, add.LogEntryID)
 	require.NoError(t, err)
 	assert.NotContains(t, itemIDs(t, bs), add.Item.ID)
-	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: add.Item.ID, TargetAC: 10})
+	_, err = bs.Combat.ResolveAttack(ctx, bs.CharacterID, combatsvc.AttackRequest{WeaponID: "shortbow", AmmoItemID: add.Item.ID, TargetAC: new(10)})
 	require.Error(t, err, "the popped item is no longer ammo")
 }
 

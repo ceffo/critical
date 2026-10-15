@@ -8,6 +8,7 @@ import type { UseResult } from "@/types/items";
 import type { CastResult } from "@/types/spells";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned, formatTime } from "./format";
+import { attackSettled } from "./attackAdjust";
 import {
   attackPayload,
   castPayload,
@@ -300,6 +301,7 @@ export function rowValue(e: LogEntry): RowValue | null {
   if (hp) return { text: formatSigned(hp.amount), tone: hp.tone };
   const attack = attackPayload(e);
   if (attack) {
+    if (!attackSettled(attack)) return { text: "?", tone: "muted" };
     return attack.hit
       ? { text: String(attack.totalDamage), tone: "accent" }
       : { text: "–", tone: "muted" };

@@ -50,7 +50,7 @@ func TestReceivedStrengthActivatesThePowerGem(t *testing.T) {
 		Effects: buffsvc.BuffEffects{MinStr: intPtr(18), WeaponBuff: intPtr(5), Multiplier: floatPtr(2)},
 	})
 	require.NoError(t, err)
-	attack := combatsvc.AttackRequest{WeaponID: "mace", TargetAC: 5}
+	attack := combatsvc.AttackRequest{WeaponID: "mace", TargetAC: new(5)}
 
 	before, err := bs.Combat.ResolveAttack(ctx, id, attack)
 	require.NoError(t, err)

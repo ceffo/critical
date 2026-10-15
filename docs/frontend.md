@@ -195,6 +195,12 @@ flowchart TD
   (`stores/roll.ts` `adjustLastAttack`); the server returns the recomputed attack (same dice, no ammo
   spent). Hidden once the entry is voided. Attack log lines render `effectivePayload`, with
   "AC 5 → 7: MISS → HIT" once corrected.
+- Unknown AC ([ADR 0012](adr/0012-attack-against-unknown-ac.md)): the target bar's AC is empty
+  (placeholder "?") by default, Unknown sends `targetAc: null`. Until settled
+  (`lib/attackAdjust.ts` `attackSettled`) the card shows `hitsAc`, the tell-the-GM line worded from
+  `hitsAc` and `critsFromAc`, a "?" verdict, the damage dimmed "if it hits", the GM's Hit / Miss
+  (`POST /api/roll/attack/{logEntryId}/verdict`, `verdictLastAttack`) and a "Real AC" form (the
+  adjust endpoint) that replaces any verdict.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`, `undo`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).

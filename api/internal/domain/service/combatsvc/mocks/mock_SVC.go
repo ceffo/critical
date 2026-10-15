@@ -590,6 +590,67 @@ func (_c *MockSVC_RollSpellToHit_Call) RunAndReturn(run func(context.Context, in
 	return _c
 }
 
+// SetAttackVerdict provides a mock function with given fields: ctx, characterID, entryID, hit
+func (_m *MockSVC) SetAttackVerdict(ctx context.Context, characterID int64, entryID int64, hit bool) (*combatsvc.RollResult, error) {
+	ret := _m.Called(ctx, characterID, entryID, hit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetAttackVerdict")
+	}
+
+	var r0 *combatsvc.RollResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, bool) (*combatsvc.RollResult, error)); ok {
+		return rf(ctx, characterID, entryID, hit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, bool) *combatsvc.RollResult); ok {
+		r0 = rf(ctx, characterID, entryID, hit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*combatsvc.RollResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64, bool) error); ok {
+		r1 = rf(ctx, characterID, entryID, hit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_SetAttackVerdict_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAttackVerdict'
+type MockSVC_SetAttackVerdict_Call struct {
+	*mock.Call
+}
+
+// SetAttackVerdict is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - entryID int64
+//   - hit bool
+func (_e *MockSVC_Expecter) SetAttackVerdict(ctx interface{}, characterID interface{}, entryID interface{}, hit interface{}) *MockSVC_SetAttackVerdict_Call {
+	return &MockSVC_SetAttackVerdict_Call{Call: _e.mock.On("SetAttackVerdict", ctx, characterID, entryID, hit)}
+}
+
+func (_c *MockSVC_SetAttackVerdict_Call) Run(run func(ctx context.Context, characterID int64, entryID int64, hit bool)) *MockSVC_SetAttackVerdict_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64), args[3].(bool))
+	})
+	return _c
+}
+
+func (_c *MockSVC_SetAttackVerdict_Call) Return(_a0 *combatsvc.RollResult, _a1 error) *MockSVC_SetAttackVerdict_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_SetAttackVerdict_Call) RunAndReturn(run func(context.Context, int64, int64, bool) (*combatsvc.RollResult, error)) *MockSVC_SetAttackVerdict_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetCritTable provides a mock function with given fields: ctx, rows
 func (_m *MockSVC) SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error) {
 	ret := _m.Called(ctx, rows)

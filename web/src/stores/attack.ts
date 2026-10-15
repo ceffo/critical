@@ -77,11 +77,9 @@ export const useAttackStore = create<AttackStore>((set, get) => {
         if (!view?.preview) return false;
       }
       const { form } = view;
-      const req: AttackRequest = {
-        weapon_id: form.weaponId,
-        target_ac: form.targetAc,
-        target_size: form.targetSize,
-      };
+      const req: AttackRequest = { weapon_id: form.weaponId, target_size: form.targetSize };
+      // No AC: the attack is against an unknown AC (docs/adr/0012).
+      if (form.targetAc !== null) req.target_ac = form.targetAc;
       if (form.ammoItemId) req.ammo_item_id = form.ammoItemId;
       if (form.situational.value !== 0) req.situational = form.situational;
       const ok = await useRollStore.getState().rollAttack(req);

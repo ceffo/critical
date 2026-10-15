@@ -136,8 +136,14 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		CritMultiplier: 1,
 		WeaponID:       weapon.ID,
 		WeaponName:     weapon.Name,
-		TargetAC:       req.TargetAC,
 		TargetSize:     req.TargetSize,
+	}
+	// ADR 0012 step 1: an attack may omit the target AC. The dice are the
+	// same either way (step 6).
+	if req.TargetAC != nil {
+		res.TargetAC, res.ACKnown = *req.TargetAC, true
+	} else {
+		res.RolledACUnknown = true
 	}
 	if ammo != nil {
 		res.Ammo = &AmmoUse{ItemID: ammo.ID, Name: ammo.Name, Magic: ammo.MagicBonus, Remaining: ammo.Count}
@@ -198,38 +204,62 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 }
 
 // settle computes the outcome of a rolled attack from its d20, crit-check
-// and multiplier d100s, effective THAC0, target AC, crit row and rolled
-// damage, all already set:
+// and multiplier d100s, effective THAC0, target AC (or the GM's verdict),
+// crit row and rolled damage, all already set:
 //
-//   - hit when d20 >= effective THAC0 - target AC; a natural 1 or 20 is plain
-//     arithmetic (ADR 0002 steps 2 and 3);
-//   - crit when d20 - crit-check d100 >= that same number; the multiplier
-//     is the one of the crit row of the multiplier d100 (ADR 0001 steps 2
-//     and 4);
-//   - on a hit, damage = ((dice × SpellsBuff × DiceMultiplier) +
-//     WeaponBuff) × crit + StrengthBonus + BonusDamage, full precision,
-//     floored once at the end, never below 0 (ADR 0003 steps 2 to 10). A
-//     miss has no damage.
+//   - HitsAC = effective THAC0 - d20, the lowest AC the d20 hits, and
+//     CritsFromAC = HitsAC + crit-check d100, the lowest AC it crits, on
+//     every attack (ADR 0012 steps 2 and 3);
+//   - with a known AC: hit when d20 >= effective THAC0 - target AC, that is
+//     target AC >= HitsAC; a natural 1 or 20 is plain arithmetic (ADR 0002
+//     steps 2 and 3); crit when d20 - crit-check d100 >= that same number,
+//     that is target AC >= CritsFromAC; the multiplier is the one of the
+//     crit row of the multiplier d100 (ADR 0001 steps 2 and 4);
+//   - with an unknown AC: the GM's verdict decides hit or miss, never a crit
+//     (ADR 0012 step 4); without a verdict the attack is not settled: no
+//     hit, no crit, and the damage is the one a hit would do at x1;
+//   - on a hit (or unsettled), damage = ((dice × SpellsBuff ×
+//     DiceMultiplier) + WeaponBuff) × crit + StrengthBonus + BonusDamage,
+//     full precision, floored once at the end, never below 0 (ADR 0003
+//     steps 2 to 10). A miss has no damage.
 //
-// ResolveAttack and AdjustAttackAC share it so a corrected attack is exactly
-// the attack rolled against the new AC.
+// ResolveAttack, AdjustAttackAC and SetAttackVerdict share it so a corrected
+// attack is exactly the attack rolled against the new AC.
 func settle(res *RollResult) {
-	needed := res.EffectiveThac0 - res.TargetAC
-	res.TargetACNeeded = res.EffectiveThac0 - res.D20Roll
-	res.Hit = res.D20Roll >= needed
-	res.HitMargin = res.D20Roll - needed
+	res.HitsAC = res.EffectiveThac0 - res.D20Roll
+	res.CritsFromAC = res.HitsAC + res.D100CritRoll
+	res.TargetACNeeded = res.HitsAC
 
 	res.IsCrit = false
 	res.CritMultiplier = 1
 	res.CritFrom, res.CritTo = 0, 0
 	res.CritPlaceholder = false
-	// ADR 0001 step 2: crit when d20 - crit-check d100 >= the roll needed;
-	// step 4: the multiplier is the row of the multiplier d100.
-	if row := res.RollCritRow; row != nil && res.D20Roll-res.D100CritRoll >= needed {
-		res.IsCrit = true
-		res.CritMultiplier = row.Multiplier
-		res.CritFrom, res.CritTo = row.From, row.To
-		res.CritPlaceholder = res.RollCritPlaceholder
+	withDamage := false
+	switch {
+	case res.ACKnown:
+		res.Verdict = VerdictNone
+		needed := res.EffectiveThac0 - res.TargetAC
+		res.Hit = res.D20Roll >= needed
+		res.HitMargin = res.D20Roll - needed
+		// ADR 0001 step 2: crit when d20 - crit-check d100 >= the roll needed;
+		// step 4: the multiplier is the row of the multiplier d100.
+		if row := res.RollCritRow; row != nil && res.D20Roll-res.D100CritRoll >= needed {
+			res.IsCrit = true
+			res.CritMultiplier = row.Multiplier
+			res.CritFrom, res.CritTo = row.From, row.To
+			res.CritPlaceholder = res.RollCritPlaceholder
+		}
+		withDamage = res.Hit
+	case res.Verdict != VerdictNone:
+		// ADR 0012 step 4: the GM's word, no margin, no crit (x1).
+		res.Hit = res.Verdict == VerdictHit
+		res.HitMargin = 0
+		withDamage = res.Hit
+	default:
+		// Not settled: the damage shown is the one of a hit at x1.
+		res.Hit = false
+		res.HitMargin = 0
+		withDamage = true
 	}
 
 	res.BaseDamage, res.DamageDice = 0, ""
@@ -238,7 +268,7 @@ func settle(res *RollResult) {
 	res.DamageTerms = []DamageTerm{}
 	res.UnroundedDamage, res.TotalDamage = 0, 0
 	d := res.Rolled
-	if !res.Hit || d == nil {
+	if !withDamage || d == nil {
 		return
 	}
 

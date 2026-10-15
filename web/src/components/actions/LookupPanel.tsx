@@ -9,6 +9,7 @@ import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellName } from "@/i18n/spellName";
 import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
+import { damageFormula, damageText } from "@/lib/spellDice";
 import { classLabel, sphereLabel, spheresLabel, translateValue } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -66,7 +67,25 @@ function SpellDetail({ spell }: { spell: Spell }) {
     spheresLabel(t, spell.sphere),
     spell.components,
   ].filter(Boolean);
-  const dice = statDice(spell, unit);
+  // The dice row: the damage a cast rolls (one instance to the composer), then the stats with dice.
+  const dice: { key: string; label: string; text: string; formula: string }[] = [
+    ...(spell.damage
+      ? [
+          {
+            key: "damage",
+            label: t("lookup.damage"),
+            text: damageText(t, spell.damage),
+            formula: damageFormula(spell.damage),
+          },
+        ]
+      : []),
+    ...statDice(spell, unit).map((d) => ({
+      key: d.key,
+      label: t(`lookup.${d.key}`),
+      text: d.formula,
+      formula: d.formula,
+    })),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -121,9 +140,9 @@ function SpellDetail({ spell }: { spell: Spell }) {
                 <span className="min-w-36 flex-1">
                   {t("lookup.atLevel", { level: spell.caster_level })}
                   {" · "}
-                  {t(`lookup.${d.key}`)}{" "}
+                  {d.label}{" "}
                   <span className="font-medium text-amb-300 tabular-nums" data-testid="spell-dice-formula">
-                    {d.formula}
+                    {d.text}
                   </span>
                 </span>
                 <span className="flex shrink-0 gap-2">

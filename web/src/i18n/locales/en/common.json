@@ -385,6 +385,7 @@
     "detail": "Spell details",
     "noSelection": "Select a spell to see it here.",
     "atLevel": "At level {{level}}",
+    "damage": "Damage",
     "castingTime": "Casting time",
     "range": "Range",
     "duration": "Duration",

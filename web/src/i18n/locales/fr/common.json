@@ -385,6 +385,7 @@
     "detail": "Détail du sort",
     "noSelection": "Choisissez un sort pour l'afficher ici.",
     "atLevel": "Au niveau {{level}}",
+    "damage": "Dégâts",
     "castingTime": "Temps d'incantation",
     "range": "Portée",
     "duration": "Durée",

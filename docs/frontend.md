@@ -167,11 +167,13 @@ flowchart TD
   multi-select; the true "N spells" total and Reset), then a list beside a detail pane. The list is
   `clamp(13.75rem, 30%, 26rem)` wide (level and name, the class on All, the school as a tooltip;
   infinite scroll by 200-row pages). The detail pane: name, meta line, one row per stat (label |
-  value at the Bard's level with the raw text dimmed under it), then one dice row per value the
+  value at the Bard's level with the raw text dimmed under it), then the dice rows: the damage a
+  cast rolls when the spell DTO serves one (`damage`, same shape as the spellbook's: "At level 15 ·
+  Damage 5 × 1d4+1 force", one instance goes to the composer), then one per value the
   server computed with dice still to roll (`lib/spellValues.ts` `statDice`: "At level 15 ·
-  Duration 1d8+8", the served dice then the served flat amount) with "To the dice" (fills the
+  Duration 1d8+8", the served dice then the served flat amount), each with "To the dice" (fills the
   composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and the Description
-  toggle. The spell DTO serves no damage dice, so damage has no dice row.
+  toggle.
 - Spell name search (one module for Lookup and Receive): `api/spells_db.ts` `searchSpells` sends
   `q` (the server matches English names) plus `match_exact` / `match_prefix` / `match_contains`,
   the catalogue keys whose French name matched (`lib/spellSearch.ts`); the server ORs both and

@@ -36,10 +36,16 @@ type characterGetter interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
+// damageReader serves the damage a cast rolls at a caster level (castsvc
+// satisfies it).
+type damageReader interface {
+	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
+}
+
 // RegisterRoutes wires spell endpoints onto r.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars characterGetter) {
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars characterGetter, damage damageReader) {
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
-	r.Get("/api/spells", render.Handle(Search(charID, svc, chars)))
+	r.Get("/api/spells", render.Handle(Search(charID, svc, chars, damage)))
 	r.Get("/api/spells/filters", render.Handle(FilterOptions()))
 }
 
@@ -72,8 +78,9 @@ func GetSlots(charID CharacterIDFunc, svc spellSvc) render.HandlerFunc {
 }
 
 // Search runs the catalog query. The optional caster_level query parameter
-// sets the level the computed values are for; it defaults to the character's.
-func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.HandlerFunc {
+// (1 to spelleffectsvc.MaxCasterLevel) sets the level the computed values and
+// the damage dice are for; it defaults to the character's.
+func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage damageReader) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		f, err := parseFilter(r.URL.Query())
 		if err != nil {
@@ -91,8 +98,18 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter) render.
 		if err != nil {
 			return err
 		}
+		items := spellsToDTO(page.Items, level)
+		if level > 0 {
+			for i := range items {
+				d, err := damage.DamageAt(r.Context(), items[i].ID, level)
+				if err != nil {
+					return err
+				}
+				items[i].Damage = DamageToDTO(d)
+			}
+		}
 		render.OK(r.Context(), w, SpellPageDTO{
-			Items: spellsToDTO(page.Items, level), Total: page.Total, Page: page.Page, PageSize: page.PageSize,
+			Items: items, Total: page.Total, Page: page.Page, PageSize: page.PageSize,
 		})
 		return nil
 	}
@@ -221,8 +238,8 @@ var castingTimes = []string{"segment", "round", "turn", "hour", "day", "week", "
 func casterLevel(r *http.Request, charID CharacterIDFunc, chars characterGetter) (int, error) {
 	if raw := r.URL.Query().Get("caster_level"); raw != "" {
 		n, err := strconv.Atoi(raw)
-		if err != nil || n < 1 {
-			return 0, render.BadRequestError("caster_level must be a positive integer")
+		if err != nil || n < 1 || n > spelleffectsvc.MaxCasterLevel {
+			return 0, render.BadRequestError("caster_level must be an integer from 1 to " + strconv.Itoa(spelleffectsvc.MaxCasterLevel))
 		}
 		return n, nil
 	}
@@ -267,6 +284,9 @@ type SpellDTO struct {
 	Stats       spellstats.Stats   `json:"stats"`
 	CasterLevel int                `json:"caster_level,omitempty"`
 	Values      *spellstats.Values `json:"values,omitempty"`
+	// Damage is what a cast rolls at CasterLevel (absent: no caster level,
+	// or a cast rolls no damage).
+	Damage *SpellDamageDTO `json:"damage,omitempty"`
 }
 
 // DiceGroupDTO is Count dice of Sides sides.

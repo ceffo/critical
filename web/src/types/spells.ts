@@ -115,6 +115,8 @@ export interface Spell {
   caster_level?: number;
   /** Absent when no caster level is known (no character and no ?caster_level=). */
   values?: SpellValues;
+  /** The damage a cast rolls at caster_level; absent when it rolls none or no level is known. */
+  damage?: SpellDamage;
 }
 
 /** Mirrors spellprephdl.SpellbookEntryDTO. The cast fields come from the spell effects data. */

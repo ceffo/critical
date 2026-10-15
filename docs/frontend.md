@@ -379,3 +379,7 @@ outside `ui/`).
   test per UI acceptance flow, and call `snap(page, "<name>")` at the end of each flow.
 - **Artifacts** (gitignored, `web/e2e-results/`): `screens/<spec>/<name>.png` (1440x900),
   `artifacts/<test>/trace.zip` on failure (`npx playwright show-trace <zip>`), `report/` (HTML).
+
+## Formatting
+
+`web/` is prettier-clean: `just lint-web` (so `just validate`) runs `prettier --check .`; fix with `just fmt-web`. The one-off reformat commit is listed in `.git-blame-ignore-revs`.

@@ -98,7 +98,6 @@ export interface Spell {
   values?: SpellValues;
 }
 
-/** Mirrors api/internal/rest/handler/spellprephdl (InfoDTO). */
 /** Mirrors spellprephdl.SpellbookEntryDTO. The cast fields come from the spell effects data. */
 export interface SpellbookEntry {
   id: string;
@@ -117,6 +116,7 @@ export interface LevelLimit {
   max: number;
 }
 
+/** Mirrors api/internal/rest/handler/spellprephdl (InfoDTO). */
 export interface PreparationInfo {
   spellbook: SpellbookEntry[];
   limits: LevelLimit[];

@@ -37,7 +37,8 @@ test("a melee attack lists every modifier in the result card and the log", async
   await form.getByLabel("Target AC").fill("5");
   await form.getByRole("radio", { name: "Large" }).click();
   await form.getByLabel("Situational", { exact: true }).fill("2");
-  await form.getByLabel("Reason").fill("Rear attack");
+  // Typed key by key: every keystroke is saved on the server, spaces included.
+  await form.getByLabel("Reason").pressSequentially("Rear attack");
   await form.getByRole("button", { name: "Attack", exact: true }).click();
 
   const card = resultCard(page);
@@ -53,6 +54,13 @@ test("a melee attack lists every modifier in the result card and the log", async
   await expect(mods.getByRole("listitem").nth(2)).toHaveText(
     /Rear attack\s*\+2/,
   );
+  const log = (await (await page.request.get("/api/log")).json()) as {
+    entries: { kind: string; payload: { modifiers: { kind: string; detail?: string }[] } }[];
+  };
+  expect(
+    log.entries.find((e) => e.kind === "attack")!.payload.modifiers.find((m) => m.kind === "situational")
+      ?.detail,
+  ).toBe("Rear attack");
 
   // The attack is in the combat log, in the player's language, rendered from its payload.
   await expect(logEntry(page, "Long Sword +2 vs AC 5")).toBeVisible();

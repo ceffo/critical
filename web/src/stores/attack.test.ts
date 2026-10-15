@@ -22,6 +22,7 @@ vi.mock("@/api/combat", () => ({
 }));
 
 import { useAttackStore } from "./attack";
+import { useRollStore } from "./roll";
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
@@ -49,4 +50,40 @@ describe("attack form store", () => {
     await Promise.all([first, second]);
     expect(useAttackStore.getState().view?.form.targetAc).toBe(7);
   });
+
+  it("an attack with the offered first arrow makes it the choice before rolling with it", async () => {
+    const order: string[] = [];
+    const rollAttack = vi.fn(async () => {
+      order.push("attack");
+      return true;
+    });
+    useRollStore.setState({ rollAttack });
+    const bow = (ammoFromDefault: boolean): AttackFormView => ({
+      ...view(5),
+      form: { ...view(5).form, weaponId: "shortbow", ammoItemId: "arrows_plus1" },
+      ammoFromDefault,
+      preview: { baseThac0: 13, modifiers: [], effectiveThac0: 9, toHit: 4, rollNeeded: 4, damageBonus: 2 },
+    });
+    useAttackStore.setState({ view: bow(true) });
+
+    const done = useAttackStore.getState().attack();
+    await tick();
+    expect(calls).toHaveLength(1);
+    expect(calls[0].patch).toEqual({ ammoItemId: "arrows_plus1" });
+    expect(rollAttack).not.toHaveBeenCalled();
+    order.push("patch");
+    calls[0].resolve(bow(false));
+    await tick();
+    expect(rollAttack).toHaveBeenCalledWith({
+      weapon_id: "shortbow",
+      ammo_item_id: "arrows_plus1",
+      target_ac: 5,
+      target_size: "sm",
+    });
+    expect(order).toEqual(["patch", "attack"]);
+    await tick();
+    calls[1].resolve(bow(false)); // the reload after the attack
+    expect(await done).toBe(true);
+  });
 });
+

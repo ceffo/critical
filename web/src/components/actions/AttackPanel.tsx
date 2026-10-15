@@ -63,7 +63,7 @@ export function AttackPanel() {
         {weapon && (
           <section
             aria-label={t("attack.inHand")}
-            className="flex flex-col gap-4 rounded-xl bg-amb-900/40 p-4 ring-1 ring-amb-700"
+            className="@container flex flex-col gap-4 rounded-xl bg-amb-900/40 p-4 ring-1 ring-amb-700"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
@@ -263,7 +263,7 @@ function Tiles({ weapon, view }: { weapon: Weapon; view: AttackFormView }) {
   if (!preview) return null;
   const size = view.form.targetSize;
   return (
-    <dl className="grid grid-cols-4 gap-2">
+    <dl className="grid grid-cols-2 gap-2 @xl:grid-cols-4">
       <Tile label={t("attack.tiles.damageSm")} testId="tile-damage-sm" dim={size !== "sm"} current={size === "sm"}>
         {weapon.damage_sm}
       </Tile>

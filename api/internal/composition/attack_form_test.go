@@ -37,6 +37,10 @@ func TestAttackForm_PersistsAcrossRestartAndMatchesTheAttack(t *testing.T) {
 		AmmoItemID: &ammo, TargetAC: &ac, TargetSize: &size, Situational: &combatsvc.Situational{Value: -2, Label: "cover"},
 	})
 	require.NoError(t, err)
+	// Form changes are not table actions: nothing in the log for undo to pop.
+	_, hasTop, err := bs.Log.TopID(ctx, bs.CharacterID)
+	require.NoError(t, err)
+	assert.False(t, hasTop, "form changes log nothing")
 	require.NoError(t, bs.Close(ctx))
 
 	dice := newScriptedDice(t)
@@ -67,4 +71,44 @@ func TestAttackForm_PersistsAcrossRestartAndMatchesTheAttack(t *testing.T) {
 			assert.Equal(t, res.Ammo.Remaining, c.Count)
 		}
 	}
+}
+
+// Removing the weapon in hand, the previous weapon or the chosen ammunition
+// in the Inventory leaves a form that still reads: the first weapon, no
+// previous weapon, the first arrow left.
+func TestAttackForm_FallsBackWhenWeaponOrAmmoIsRemoved(t *testing.T) {
+	ctx := context.Background()
+	bs, _ := newWeaponStack(t)
+	bow, sword, ammo := "shortbow", "longsword", "arrows_plus3"
+	_, err := bs.Combat.UpdateAttackForm(ctx, bs.CharacterID, combatsvc.AttackFormPatch{WeaponID: &sword})
+	require.NoError(t, err)
+	_, err = bs.Combat.UpdateAttackForm(ctx, bs.CharacterID, combatsvc.AttackFormPatch{WeaponID: &bow})
+	require.NoError(t, err)
+	_, err = bs.Combat.UpdateAttackForm(ctx, bs.CharacterID, combatsvc.AttackFormPatch{AmmoItemID: &ammo})
+	require.NoError(t, err)
+
+	_, err = bs.Items.Delete(ctx, bs.CharacterID, ammo)
+	require.NoError(t, err)
+	v, err := bs.Combat.GetAttackForm(ctx, bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, "shortbow", v.Form.WeaponID)
+	assert.True(t, v.AmmoFromDefault, "the removed arrows fall back to the first left")
+	assert.NotEqual(t, ammo, v.Form.AmmoItemID)
+
+	_, err = bs.Weapons.Delete(ctx, bs.CharacterID, sword)
+	require.NoError(t, err)
+	v, err = bs.Combat.GetAttackForm(ctx, bs.CharacterID)
+	require.NoError(t, err)
+	assert.Empty(t, v.Form.PreviousWeaponID, "the removed previous weapon is not offered")
+
+	_, err = bs.Weapons.Delete(ctx, bs.CharacterID, bow)
+	require.NoError(t, err)
+	v, err = bs.Combat.GetAttackForm(ctx, bs.CharacterID)
+	require.NoError(t, err)
+	ws, err := bs.Combat.ListWeapons(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, ws[0].ID, v.Form.WeaponID, "the removed bow falls back to the first weapon")
+	assert.Empty(t, v.Form.PreviousWeaponID)
+	assert.Empty(t, v.Form.AmmoItemID)
+	assert.NotNil(t, v.Preview)
 }

@@ -130,7 +130,7 @@ var endpoints = []endpoint{
 		m.buffs.On("GetRound", anyArgs(2)...).Return(0, err)
 	}},
 	{"POST round/advance", "POST", "/api/round/advance", "", func(m *mocksSet, err error) {
-		m.buffs.On("AdvanceRound", anyArgs(2)...).Return(nil, nil, 0, err)
+		m.buffs.On("AdvanceRound", anyArgs(2)...).Return(nil, nil, 0, buffsvc.Initiative{}, err)
 	}},
 	{"POST round/initiative/reroll", "POST", "/api/round/initiative/reroll", "", func(m *mocksSet, err error) {
 		m.buffs.On("RerollInitiative", anyArgs(2)...).Return(buffsvc.Initiative{}, err)

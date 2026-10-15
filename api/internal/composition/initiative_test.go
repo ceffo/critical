@@ -57,12 +57,12 @@ func TestInitiative_UndoPopsTheInitiativeThenTheAdvance(t *testing.T) {
 	ctx, id := context.Background(), bs.CharacterID
 
 	dice.expect(roll{"d10", 3}, roll{"d10", 8})
-	_, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
+	_, _, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	first := initiativeOf(t, bs)
 	require.NotNil(t, first)
 	assert.Equal(t, 3, first.D10)
-	_, _, round, err := bs.Buffs.AdvanceRound(ctx, id)
+	_, _, round, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	require.Equal(t, 2, round)
 	second := initiativeOf(t, bs)
@@ -99,7 +99,7 @@ func TestInitiative_RerollOnTheRealLog(t *testing.T) {
 	ctx, id := context.Background(), bs.CharacterID
 
 	dice.expect(roll{"d10", 6}, roll{"d10", 2})
-	_, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
+	_, _, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	old := initiativeOf(t, bs)
 
@@ -120,7 +120,7 @@ func TestInitiative_RerollOnTheRealLog(t *testing.T) {
 	assert.Nil(t, initiativeOf(t, bs))
 
 	dice.expect(roll{"d10", 5})
-	_, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+	_, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	_, err = bs.HP.AppendEvent(ctx, id, -3, "orc")
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestInitiative_EndCombat(t *testing.T) {
 	ctx, id := context.Background(), bs.CharacterID
 
 	dice.expect(roll{"d10", 4})
-	_, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
+	_, _, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	before := initiativeOf(t, bs)
 

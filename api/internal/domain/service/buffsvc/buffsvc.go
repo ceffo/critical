@@ -36,7 +36,9 @@ type SVC interface {
 	// hit); the buff ends at 0.
 	Trigger(ctx context.Context, characterID int64, buffID string) ([]BuffEffect, error)
 	GetRound(ctx context.Context, characterID int64) (int, error)
-	AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, err error)
+	// AdvanceRound is Next Round; it returns the new round's initiative
+	// (ADR 0013 steps 1 and 2).
+	AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, initiative Initiative, err error)
 	// ResetRound ends combat: the counter goes back to 0 (Next Round then
 	// gives 1). Active buffs are untouched. Logged, voidable.
 	ResetRound(ctx context.Context, characterID int64) (active []BuffEffect, round int, err error)

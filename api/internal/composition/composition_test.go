@@ -82,7 +82,7 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 	_, err = bs.Buffs.Edit(ctx, id, strID, buffsvc.BuffEdit{Duration: intPtr(1)})
 	require.NoError(t, err)
 
-	active, expired, round, err := bs.Buffs.AdvanceRound(ctx, id)
+	active, expired, round, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, 1, round)
 	assert.Equal(t, []string{"Power Gem"}, names(active))
@@ -149,7 +149,7 @@ func TestVoidingAnOlderBuffChangeIsBlocked(t *testing.T) {
 
 	_, err := bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Haste", Duration: 3})
 	require.NoError(t, err)
-	_, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+	_, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 
 	entries, err := bs.Log.List(ctx, id, 10)

@@ -40,9 +40,10 @@ func TestInitiative_Step1_NextRoundRollsOneD10(t *testing.T) {
 	f := newFixture(t)
 	nextRound(f, nil, 7) // the dice mock fails on any other roll or a second one
 
-	_, _, round, err := f.svc.AdvanceRound(context.Background(), charID)
+	_, _, round, initiative, err := f.svc.AdvanceRound(context.Background(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, 6, round)
+	assert.Equal(t, buffsvc.Initiative{D10: 7, LogEntryID: 2}, initiative, "Next Round returns the roll it made")
 	f.dice.AssertNumberOfCalls(t, "RollDie", 1)
 	require.Len(t, f.entries, 2)
 	assert.Equal(t, map[string]any{"round": 6.0, "d10": 7.0}, initiativePayload(t, f.entries[1]))
@@ -60,7 +61,7 @@ func TestInitiative_Step2_OwnEntryAfterTheAdvance(t *testing.T) {
 	f := newFixture(t)
 	nextRound(f, prev, 8)
 
-	_, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
+	_, _, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
 	require.NoError(t, err)
 
 	require.Len(t, f.entries, 2)
@@ -95,7 +96,7 @@ func TestInitiative_Step3_PlainD10NoModifier(t *testing.T) {
 		f.initiativeIs(nil)
 		f.rollsInitiative(d10)
 
-		_, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
+		_, _, _, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		require.NoError(t, err)
 		assert.Equal(t, float64(d10), initiativePayload(t, f.entries[1])["d10"])
 		assert.Equal(t, d10, f.initiatives[0].D10)

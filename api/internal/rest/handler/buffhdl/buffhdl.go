@@ -33,7 +33,7 @@ type buffSvc interface {
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error)
 	RerollInitiative(ctx context.Context, characterID int64) (buffsvc.Initiative, error)
-	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, err error)
+	AdvanceRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, round int, initiative buffsvc.Initiative, err error)
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
 	PassTime(ctx context.Context, characterID int64, hours float64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, rounds int, round int, err error)
@@ -178,11 +178,7 @@ func GetRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 // round's initiative.
 func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		active, expired, round, err := svc.AdvanceRound(r.Context(), charID(r))
-		if err != nil {
-			return err
-		}
-		initiative, err := svc.GetInitiative(r.Context(), charID(r))
+		active, expired, round, initiative, err := svc.AdvanceRound(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}
@@ -190,7 +186,7 @@ func AdvanceRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 			RoundNumber:  round,
 			ActiveBuffs:  toDTOs(active),
 			ExpiredBuffs: toDTOs(expired),
-			Initiative:   toInitiativeDTO(initiative),
+			Initiative:   toInitiativeDTO(&initiative),
 		})
 		return nil
 	}

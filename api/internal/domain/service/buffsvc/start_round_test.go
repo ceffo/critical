@@ -69,7 +69,7 @@ func TestBuffs_Step15_StartRound(t *testing.T) {
 			f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 6).Return(nil).Once()
 			f.initiativeIs(nil)
 			f.rollsInitiative(2)
-			_, _, _, err := f.svc.AdvanceRound(ctx, charID)
+			_, _, _, _, err := f.svc.AdvanceRound(ctx, charID)
 			return err
 		}, []buffsvc.BuffEffect{{ID: "h", Name: "Haste", Duration: 4, StartRound: 2}, {ID: "m", Name: "Mirror Image", Duration: 8, Charges: 3, StartRound: 1}}},
 		{"passing time keeps it", func(f *fixture) error {

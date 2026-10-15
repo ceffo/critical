@@ -490,7 +490,7 @@ func TestAdvanceRound(t *testing.T) {
 			f.initiativeIs(nil) // no initiative to end
 			f.rollsInitiative(7)
 
-			active, expired, round, err := f.svc.AdvanceRound(context.Background(), charID)
+			active, expired, round, _, err := f.svc.AdvanceRound(context.Background(), charID)
 			require.NoError(t, err)
 			assert.Equal(t, tt.round+1, round)
 			assert.Equal(t, tt.wantActive, active)
@@ -518,7 +518,7 @@ func TestAdvanceRound(t *testing.T) {
 		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(nil, nil)
 		f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(0, boom)
 
-		active, expired, round, err := f.svc.AdvanceRound(context.Background(), charID)
+		active, expired, round, _, err := f.svc.AdvanceRound(context.Background(), charID)
 		assert.ErrorIs(t, err, boom)
 		assert.Nil(t, active)
 		assert.Nil(t, expired)
@@ -879,7 +879,7 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 	require.NoError(t, err)
 	_, err = f.svc.Dismiss(ctx, charID, "c")
 	require.NoError(t, err)
-	_, _, _, err = f.svc.AdvanceRound(ctx, charID)
+	_, _, _, _, err = f.svc.AdvanceRound(ctx, charID)
 	require.NoError(t, err)
 	_, err = f.svc.RerollInitiative(ctx, charID)
 	require.NoError(t, err)

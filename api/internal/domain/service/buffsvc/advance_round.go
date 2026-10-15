@@ -12,7 +12,7 @@ import (
 // transaction it rolls the new round's initiative, logged as its own entry
 // after the advance (ADR 0013 steps 1 and 2): undo pops the initiative first,
 // then the advance.
-func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, err error) {
+func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active []BuffEffect, expired []BuffEffect, round int, initiative Initiative, err error) {
 	var ch change
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		var err error
@@ -36,11 +36,11 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active [
 		if err != nil {
 			return err
 		}
-		_, err = s.rollInitiative(ctx, characterID, *ch.round)
+		initiative, err = s.rollInitiative(ctx, characterID, *ch.round)
 		return err
 	})
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, 0, Initiative{}, err
 	}
-	return active, expired, *ch.round, nil
+	return active, expired, *ch.round, initiative, nil
 }

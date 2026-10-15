@@ -194,8 +194,9 @@ func TestRoundInitiative_WireShape(t *testing.T) {
 
 	t.Run("Next Round returns the new round's initiative", func(t *testing.T) {
 		h, m := newRouter(t)
-		m.buffs.EXPECT().AdvanceRound(mock.Anything, int64(1)).Return([]buffsvc.BuffEffect{}, []buffsvc.BuffEffect{}, 1, nil)
-		m.buffs.EXPECT().GetInitiative(mock.Anything, int64(1)).Return(&buffsvc.Initiative{D10: 9, LogEntryID: 2}, nil)
+		m.buffs.EXPECT().AdvanceRound(mock.Anything, int64(1)).
+			Return([]buffsvc.BuffEffect{}, []buffsvc.BuffEffect{}, 1, buffsvc.Initiative{D10: 9, LogEntryID: 2}, nil)
+		// No GetInitiative: the advance returns the roll it made.
 		rec := do(h, "POST", "/api/round/advance", "")
 		require.Equal(t, http.StatusOK, rec.Code)
 		assert.JSONEq(t, `{"roundNumber":1,"activeBuffs":[],"expiredBuffs":[],"initiative":{"value":9,"logEntryId":2}}`, rec.Body.String())

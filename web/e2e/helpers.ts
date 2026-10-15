@@ -53,7 +53,16 @@ export async function recordHp(
 }
 
 export function combatLog(page: Page): Locator {
-  return page.getByRole("region", { name: "Combat Log" });
+  return page.getByRole("region", { name: "Journal", exact: true });
+}
+
+/** The journal's group of turn n ("Turn 3"; turn 0 is "Out of combat"). */
+export function turnGroup(page: Page, n: number | string): Locator {
+  const turn = Number(n);
+  return combatLog(page).getByRole("region", {
+    name: turn > 0 ? `Turn ${turn}` : "Out of combat",
+    exact: true,
+  });
 }
 
 /** The log entry whose summary contains `source` (use unique sources per test). */

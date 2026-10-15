@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
-import type { RollResult, WeaponChangeRecord } from "@/types/combat";
+import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
@@ -27,7 +27,7 @@ export interface CastLogPayload {
   attack?: { d20: number; targetAc: number; hit: boolean };
 }
 
-function castPayload(e: LogEntry): CastLogPayload | null {
+export function castPayload(e: LogEntry): CastLogPayload | null {
   if (e.kind !== "cast") return null;
   const p = e.payload as Partial<CastLogPayload> | null;
   return p && typeof p.action === "string" && typeof p.spellId === "string"
@@ -151,7 +151,7 @@ function buffPayload(e: LogEntry): BuffLogPayload | null {
 }
 
 /** "5 rd, 3 ch", or "until dismissed" when the buff has neither counter. */
-function counters(t: TFunction, rounds = 0, charges = 0): string {
+export function counters(t: TFunction, rounds = 0, charges = 0): string {
   const parts = [
     rounds > 0 ? t("buffs.rounds", { count: rounds }) : null,
     charges > 0 ? t("buffs.charges", { count: charges }) : null,
@@ -163,7 +163,7 @@ function counters(t: TFunction, rounds = 0, charges = 0): string {
  * Payload of attack entries: the roll breakdown (combatsvc attackRecord, same shape as RollResult); a
  * corrected attack's is the latest amend's.
  */
-function attackPayload(e: LogEntry): RollResult | null {
+export function attackPayload(e: LogEntry): RollResult | null {
   if (e.kind !== "attack") return null;
   const p = (e.effectivePayload ?? e.payload) as Partial<RollResult> | null;
   return p && typeof p.hit === "boolean" && typeof p.weaponName === "string"
@@ -181,9 +181,14 @@ export interface SaveLogPayload {
   adjustmentReason?: string;
   /** Verdict before the latest adjustment; set once the save was adjusted. */
   previousPassed?: boolean;
+  /** The modifiers applied when rolling (buffs), not the adjustment. */
+  modifiers?: Modifier[];
+  /** d20 + modifiers + adjustment, and its margin over the target (as computed by the server). */
+  total?: number;
+  margin?: number;
 }
 
-function savePayload(e: LogEntry): SaveLogPayload | null {
+export function savePayload(e: LogEntry): SaveLogPayload | null {
   if (e.kind !== "save") return null;
   const p = (e.effectivePayload ?? e.payload) as Partial<SaveLogPayload> | null;
   return p &&
@@ -218,7 +223,7 @@ function saveText(p: SaveLogPayload, t: TFunction): string {
 }
 
 /** Payload of item_use entries (itemsvc useRecord, same shape as UseResult). */
-function itemPayload(e: LogEntry): UseResult | null {
+export function itemPayload(e: LogEntry): UseResult | null {
   if (e.kind !== "item_use") return null;
   const p = e.payload as Partial<UseResult> | null;
   return p && typeof p.name === "string" && typeof p.remaining === "number"

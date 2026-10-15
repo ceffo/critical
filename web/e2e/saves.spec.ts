@@ -8,7 +8,7 @@ function signed(text: string | null): number {
 }
 
 function saveCard(page: Page): Locator {
-  return page.getByRole("region", { name: "Last Result" }).getByTestId("save-result");
+  return page.getByRole("region", { name: "Detail", exact: true }).getByTestId("save-result");
 }
 
 /** d20, target and margin as shown on the save card (its three facts, in that order). */
@@ -127,7 +127,7 @@ test("a save is no longer adjustable once another roll (an attack) follows it", 
   await page.getByRole("tab", { name: "Weapons" }).click();
   await page.getByRole("form", { name: "Attack" }).getByLabel("Target AC").fill("4");
   await page.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Last Result" }).getByTestId("attack-result")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Detail", exact: true }).getByTestId("attack-result")).toBeVisible();
 
   const res = await page.request.post(`/api/roll/save/${save}/adjust`, { data: { adjustment: 4 } });
   expect(res.status()).toBe(409);
@@ -144,7 +144,7 @@ test("a save-bonus buff is labelled by its name on the save card (en and fr)", a
   await expect(logEntry(page, "Save vs Spells")).toBeVisible();
 
   await chooseLanguage(page, "fr");
-  const frCard = page.getByRole("region", { name: "Dernier résultat" }).getByTestId("save-result");
+  const frCard = page.getByRole("region", { name: "Détail", exact: true }).getByTestId("save-result");
   await expect(frCard).toContainText("Sauvegarde contre Sorts");
   await expect(frCard.getByTestId("save-modifiers").getByRole("listitem").first()).toHaveText(
     /^e2e Gaia ward\s*\+2$/,

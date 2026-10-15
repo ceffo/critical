@@ -449,7 +449,6 @@
     }
   },
   "result": {
-    "title": "Dernier résultat",
     "empty": "Lancez une attaque, une sauvegarde ou un sort : le détail complet s'affiche ici.",
     "attackHeading": "{{weapon}} contre CA {{ac}}",
     "saveHeading": "Sauvegarde contre {{name}}",
@@ -459,7 +458,6 @@
     "passed": "Réussie",
     "failed": "Échouée",
     "totalDamage": "Dégâts totaux",
-    "noDamage": "Aucun dégât",
     "d20": "d20",
     "critRoll": "d100 test critique",
     "baseThac0": "TAC0 de base",
@@ -470,15 +468,6 @@
     "modifiers": "Modificateurs",
     "noModifiers": "Aucun modificateur",
     "damage": "Dégâts",
-    "damageBase": "Dés de l'arme",
-    "damageSpells": "Sorts ×",
-    "damageWeapon": "Arme +",
-    "damageDiceMultiplier": "Multiplicateur des dés ×",
-    "damageMultiplier": "Multiplicateur ×",
-    "damageStrength": "Force +",
-    "breakdown": "Détail",
-    "saveFormula": "Jet : {{d20}} + Mod : {{mod}} = {{total}} contre Cible : {{target}} ({{name}})",
-    "saveFormulaAdjusted": "Jet : {{d20}} + Mod : {{mod}} + Ajust : {{adj}} = {{total}} contre Cible : {{target}} ({{name}})",
     "attackHeadingAmmo": "{{weapon}} avec {{ammo}} contre CA {{ac}}",
     "sizes": {
       "sm": "cible P/M",
@@ -486,8 +475,6 @@
     },
     "critPlaceholder": "Test critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} (provisoire)",
     "ammoLeft": "{{name}} : {{count}} restantes",
-    "damageDice": "Dés",
-    "damageBonus": "Bonus +",
     "damageTerms": "Modificateurs de dégâts",
     "mods": {
       "strength": "Force {{detail}}",
@@ -602,9 +589,8 @@
     "multRoll": "d100 multiplicateur"
   },
   "log": {
-    "title": "Journal de combat",
+    "title": "Journal",
     "empty": "Rien d'enregistré pour l'instant.",
-    "round": "Round {{round}}",
     "current": "en cours",
     "nothingThisRound": "Rien d'enregistré ce round.",
     "kinds": {
@@ -624,7 +610,10 @@
       "weapon_add": "Arme",
       "weapon_edit": "Arme",
       "weapon_remove": "Arme",
-      "initiative": "Initiative"
+      "initiative": "Initiative",
+      "item_add": "Objet",
+      "item_edit": "Objet",
+      "item_remove": "Objet"
     },
     "status": {
       "active": "Actif",
@@ -783,5 +772,26 @@
     "absorb": "Absorber",
     "absorbLabel": "Absorber un coup avec {{name}}",
     "chargesHint": "Un coup reçu en consomme une"
+  },
+  "fil": {
+    "card": "Détail",
+    "latest": "Dernier",
+    "turn": "Tour {{round}}",
+    "outOfCombat": "Hors combat",
+    "when": "T{{round}} · {{time}}",
+    "whenOutOfCombat": "Hors combat · {{time}}",
+    "d20": "d20 : {{value}}",
+    "hitsAc": "Touche CA {{ac}}",
+    "diceRolled": "{{dice}} → {{total}}",
+    "details": "Détail du calcul",
+    "saveVs": "{{total}} contre {{target}}+",
+    "castVsAc": "Jet pour toucher contre CA {{ac}}",
+    "castBuff": "{{buff}} : {{counters}}",
+    "noRollsThisTurn": "Aucun jet ce tour-ci.",
+    "filter": {
+      "label": "Filtre du journal",
+      "all": "Tout",
+      "rolls": "Jets"
+    }
   }
 }

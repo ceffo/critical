@@ -35,6 +35,7 @@ type buffSvc interface {
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
 	PassTime(ctx context.Context, characterID int64, hours float64) (active []buffsvc.BuffEffect, expired []buffsvc.BuffEffect, rounds int, round int, err error)
+	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []buffsvc.BuffEffect, err error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 	ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error)
 	SaveBuff(ctx context.Context, characterID int64, saved buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)
@@ -56,6 +57,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Post("/api/round/reset", render.Handle(ResetRound(charID, svc)))
 	r.Put("/api/round", render.Handle(SetRound(charID, svc)))
 	r.Post("/api/round/pass-time", render.Handle(PassTime(charID, svc)))
+	r.Get("/api/round/pass-time/preview", render.Handle(PreviewPassTime(charID, svc)))
 	r.Get("/api/stats/str", render.Handle(GetEffectiveStr(charID, svc)))
 }
 
@@ -222,6 +224,31 @@ func PassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 	}
 }
 
+// PassTimePreviewDTO is GET /api/round/pass-time/preview: the rounds the
+// hours give and the buffs that would expire (nothing is written).
+type PassTimePreviewDTO struct {
+	Rounds   int             `json:"rounds"`
+	Expiring []BuffEffectDTO `json:"expiring"`
+}
+
+// PreviewPassTime answers what Time passes would do for ?hours= (decimal,
+// "." separator): invalid hours are a 400 with the same message as the
+// POST.
+func PreviewPassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		hours, err := strconv.ParseFloat(r.URL.Query().Get("hours"), 64)
+		if err != nil {
+			return render.BadRequestError("invalid hours")
+		}
+		rounds, expiring, err := svc.PreviewPassTime(r.Context(), charID(r), hours)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, PassTimePreviewDTO{Rounds: rounds, Expiring: toDTOs(expiring)})
+		return nil
+	}
+}
+
 // StrengthDTO is GET /api/stats/str.
 type StrengthDTO struct {
 	Base      int `json:"base"`
@@ -251,7 +278,11 @@ type BuffEffectDTO struct {
 	Duration int            `json:"duration"`
 	Effects  BuffEffectsDTO `json:"effects"`
 	Note     string         `json:"note"`
-	Applies  *bool          `json:"applies,omitempty"`
+	// StartRound is the round the buff was added in (0: out of combat or
+	// unknown). Response only: a request's value is ignored, the server
+	// stamps it.
+	StartRound int   `json:"startRound"`
+	Applies    *bool `json:"applies,omitempty"`
 }
 
 // BuffEffectsDTO is the modifier payload.
@@ -287,7 +318,7 @@ func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {
 func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-		Effects: BuffEffectsDTO(b.Effects), Note: b.Note,
+		Effects: BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound,
 	}
 }
 

@@ -159,3 +159,40 @@ func TestPassTime(t *testing.T) {
 		assert.Zero(t, f.tx.calls)
 	})
 }
+
+// ADR 0005 step 8: the preview is PassTime's outcome (the rounds, the buffs
+// that would expire) with nothing written or logged.
+func TestRounds_Step8_PreviewPassTime(t *testing.T) {
+	ctx := context.Background()
+	long := buffsvc.BuffEffect{ID: "a", Name: "Long", Duration: 100}
+	short := buffsvc.BuffEffect{ID: "b", Name: "Short", Duration: 90}
+	mirror := buffsvc.BuffEffect{ID: "m", Name: "Mirror Image", Duration: 20, Charges: 3}
+	stone := buffsvc.BuffEffect{ID: "c", Name: "Stoneskin", Charges: 5}
+
+	t.Run("1.5 h: 90 rounds, the buffs at 90 or less would expire, nothing is written", func(t *testing.T) {
+		f := newFixture(t) // mocks fail on any Record or Save
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{long, short, mirror, stone}, nil).Once()
+
+		rounds, expiring, err := f.svc.PreviewPassTime(ctx, charID, 1.5)
+		require.NoError(t, err)
+		assert.Equal(t, 90, rounds)
+		assert.Equal(t, []string{"b", "m"}, ids(expiring))
+		assert.Zero(t, f.tx.calls, "no transaction")
+	})
+
+	for _, hours := range []float64{0, -1, 0.001, buffsvc.MaxPassHours + 1} {
+		t.Run("invalid hours read nothing", func(t *testing.T) {
+			f := newFixture(t)
+			_, _, err := f.svc.PreviewPassTime(ctx, charID, hours)
+			assert.ErrorIs(t, err, domain.ErrInvalidInput)
+		})
+	}
+}
+
+func ids(buffs []buffsvc.BuffEffect) []string {
+	out := make([]string, len(buffs))
+	for i, b := range buffs {
+		out[i] = b.ID
+	}
+	return out
+}

@@ -75,8 +75,8 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    types is final (ADR 0007 step 3); damage the app rolls itself (today: an exposure the Bard
    takes, [ADR 0008](0008-spell-slots-and-long-rest.md) step 16) is logged as rolled. Popping the
    transaction gives the HP back.
-   Tests: existing `domain/service/actionlogsvc` `TestRecord_CapsHeal`, `TestRecord_FloorsDamage`,
-   `composition` `TestExposureOnTheBard_VoidGivesTheHPBack`; to add:
+   Tests: `domain/service/actionlogsvc` `TestRecord_CapsHeal`, `TestRecord_FloorsDamage`,
+   `composition` `TestExposureOnTheBard_VoidGivesTheHPBack`,
    `domain/service/actionlogsvc` `TestRecord_HPDeltaOnAnyKind` (a heal capped and a damage
    floored on an entry that is not an `hp_change`), `adapters/actionlogdal` `TestHPTotal` ("every
    kind counts").

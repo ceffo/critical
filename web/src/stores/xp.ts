@@ -26,7 +26,8 @@ export const useXpStore = create<XpStore>((set, get) => {
     set({ busy: true });
     try {
       set({ ledger: await action() });
-      await useTableStore.getState().refresh();
+      // The answer is the ledger: refresh the rest of the table (the journal), not the ledger.
+      await useTableStore.getState().refresh({ skipXp: true });
       return null;
     } catch (e) {
       if (e instanceof ApiError && e.field) return e;

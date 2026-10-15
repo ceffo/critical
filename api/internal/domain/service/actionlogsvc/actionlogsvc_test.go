@@ -690,6 +690,44 @@ func TestRecord_CapsHeal(t *testing.T) {
 // ADR 0011 step 1: damage that would take HP below -10 is logged clamped, in
 // the recording transaction, with the requested vs applied breakdown. Max HP
 // is 40, so current HP is 40+total.
+// ADR 0018 step 4: any entry may carry an HP delta, and the heal cap and the
+// floor apply in the recording path whatever its kind: a capped heal and a
+// floored damage on entries that are not hp_change carry hpRequested and
+// hpApplied like an hp_change.
+func TestRecord_HPDeltaOnAnyKind(t *testing.T) {
+	cases := []struct {
+		name        string
+		kind        actionlog.Kind
+		total       int
+		delta       int
+		wantDelta   int
+		wantPayload string
+	}{
+		{"heal capped on a cast", actionlog.KindCast, -4, 10, 4, `{"spell":"x","hpRequested":10,"hpApplied":4}`},
+		{"damage floored on an exposure", actionlog.KindExposure, -45, -9, -5, `{"spell":"x","hpRequested":-9,"hpApplied":-5}`},
+		{"damage above the floor on an item use is stored as is", actionlog.KindItemUse, 0, -6, -6, `{"spell":"x"}`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			svc, dal, _, _, maxHP := newSvcMaxHP(t)
+			if c.delta < 0 {
+				maxHP.EXPECT().GetMaxHP(mock.Anything, int64(1)).Return(40, nil).Once()
+			}
+			dal.EXPECT().HPTotal(mock.Anything, int64(1)).Return(c.total, nil).Once()
+			var stored actionlog.NewEntry
+			dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).
+				Run(func(_ context.Context, e actionlog.NewEntry, _ int64) { stored = e }).Return(42, nil).Once()
+			_, err := svc.Record(context.Background(), actionlog.NewEntry{
+				CharacterID: 1, Round: 2, Kind: c.kind, HPDelta: c.delta, Payload: json.RawMessage(`{"spell":"x"}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, c.kind, stored.Kind)
+			assert.Equal(t, c.wantDelta, stored.HPDelta)
+			assert.JSONEq(t, c.wantPayload, string(stored.Payload))
+		})
+	}
+}
+
 func TestRecord_FloorsDamage(t *testing.T) {
 	cases := []struct {
 		name        string

@@ -655,3 +655,15 @@ describe("entries logged before the change", () => {
     expect(entryText(orb, t)).toBe("Cast Chromatic Orb");
   });
 });
+
+describe("initiative entries", () => {
+  it("words the d10 and its round in English and French", async () => {
+    const e = entry("initiative", { round: 3, d10: 7 }, "");
+    expect(entryText(e, await makeT("en"))).toBe("Initiative 7 (d10) for round 3");
+    expect(entryText(e, await makeT("fr"))).toBe("Initiative 7 (d10) pour le tour 3");
+  });
+
+  it("falls back to the summary without a payload", async () => {
+    expect(entryText(entry("initiative", null, "old"), await makeT("en"))).toBe("old");
+  });
+});

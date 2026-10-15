@@ -409,7 +409,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dal := buffmocks.NewMockDAL(t)
 			dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{strength(tt.bonus), gem}, nil)
-			realBuffs, err := buffsvc.New(dal, noTx{}, buffmocks.NewMockLog(t), buffmocks.NewMockCharacters(t))
+			realBuffs, err := buffsvc.New(dal, noTx{}, buffmocks.NewMockLog(t), buffmocks.NewMockCharacters(t), buffmocks.NewMockDice(t))
 			require.NoError(t, err)
 
 			f := newFixture(t)

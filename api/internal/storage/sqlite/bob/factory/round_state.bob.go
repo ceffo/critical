@@ -7,7 +7,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	models "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
 	"github.com/jaswdr/faker/v2"
 	"github.com/stephenafamo/bob"
@@ -34,9 +36,11 @@ func (mods RoundStateModSlice) Apply(ctx context.Context, n *RoundStateTemplate)
 // RoundStateTemplate is an object representing the database table.
 // all columns are optional and should be set by mods
 type RoundStateTemplate struct {
-	ID          func() int64
-	CharacterID func() int64
-	RoundNumber func() int64
+	ID                func() int64
+	CharacterID       func() int64
+	RoundNumber       func() int64
+	InitiativeD10     func() null.Val[int64]
+	InitiativeEntryID func() null.Val[int64]
 
 	r roundStateR
 	f *Factory
@@ -88,6 +92,14 @@ func (o RoundStateTemplate) BuildSetter() *models.RoundStateSetter {
 		val := o.RoundNumber()
 		m.RoundNumber = omit.From(val)
 	}
+	if o.InitiativeD10 != nil {
+		val := o.InitiativeD10()
+		m.InitiativeD10 = omitnull.FromNull(val)
+	}
+	if o.InitiativeEntryID != nil {
+		val := o.InitiativeEntryID()
+		m.InitiativeEntryID = omitnull.FromNull(val)
+	}
 
 	return m
 }
@@ -118,6 +130,12 @@ func (o RoundStateTemplate) Build() *models.RoundState {
 	}
 	if o.RoundNumber != nil {
 		m.RoundNumber = o.RoundNumber()
+	}
+	if o.InitiativeD10 != nil {
+		m.InitiativeD10 = o.InitiativeD10()
+	}
+	if o.InitiativeEntryID != nil {
+		m.InitiativeEntryID = o.InitiativeEntryID()
 	}
 
 	o.setModelRels(m)
@@ -292,6 +310,8 @@ func (m roundStateMods) RandomizeAllColumns(f *faker.Faker) RoundStateMod {
 		RoundStateMods.RandomID(f),
 		RoundStateMods.RandomCharacterID(f),
 		RoundStateMods.RandomRoundNumber(f),
+		RoundStateMods.RandomInitiativeD10(f),
+		RoundStateMods.RandomInitiativeEntryID(f),
 	}
 }
 
@@ -384,6 +404,112 @@ func (m roundStateMods) RandomRoundNumber(f *faker.Faker) RoundStateMod {
 	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
 		o.RoundNumber = func() int64 {
 			return random_int64(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m roundStateMods) InitiativeD10(val null.Val[int64]) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeD10 = func() null.Val[int64] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m roundStateMods) InitiativeD10Func(f func() null.Val[int64]) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeD10 = f
+	})
+}
+
+// Clear any values for the column
+func (m roundStateMods) UnsetInitiativeD10() RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeD10 = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m roundStateMods) RandomInitiativeD10(f *faker.Faker) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeD10 = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m roundStateMods) RandomInitiativeD10NotNull(f *faker.Faker) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeD10 = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m roundStateMods) InitiativeEntryID(val null.Val[int64]) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeEntryID = func() null.Val[int64] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m roundStateMods) InitiativeEntryIDFunc(f func() null.Val[int64]) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeEntryID = f
+	})
+}
+
+// Clear any values for the column
+func (m roundStateMods) UnsetInitiativeEntryID() RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeEntryID = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m roundStateMods) RandomInitiativeEntryID(f *faker.Faker) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeEntryID = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m roundStateMods) RandomInitiativeEntryIDNotNull(f *faker.Faker) RoundStateMod {
+	return RoundStateModFunc(func(_ context.Context, o *RoundStateTemplate) {
+		o.InitiativeEntryID = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
 		}
 	})
 }

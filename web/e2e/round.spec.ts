@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
+  combatLog,
   currentRound,
   expectNoReload,
   logEntry,
@@ -13,6 +14,7 @@ import {
   openDashboard,
   recordHp,
   voidEntry,
+  voidInitiative,
 } from "./helpers";
 
 test("Next turn advances the counter and starts a new log group", async ({
@@ -28,10 +30,11 @@ test("Next turn advances the counter and starts a new log group", async ({
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(r0 + 1);
 
-  // The new round is the current group and is empty; the old entries stay in their round.
+  // The new round is the current group and holds only its initiative; the old entries stay in
+  // their round.
   const newGroup = page.getByRole("region", { name: `Round ${r0 + 1}` });
   await expect(newGroup).toContainText("current");
-  await expect(newGroup).toContainText("Nothing recorded this round yet.");
+  await expect(newGroup.getByRole("listitem")).toHaveText([/Initiative \d+ \(d10\) for round/]);
   const oldGroup = page.getByRole("region", { name: `Round ${r0}` });
   await expect(
     oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" }),
@@ -44,9 +47,9 @@ test("Next turn advances the counter and starts a new log group", async ({
   ).toBeVisible();
 
   await recordHp(page, "damage", 1, "e2e second round hit");
-  await expect(newGroup.getByRole("listitem")).toContainText(
-    "e2e second round hit",
-  );
+  await expect(
+    newGroup.getByRole("listitem").filter({ hasText: "e2e second round hit" }),
+  ).toBeVisible();
 
   await expectNoReload(page);
   await snap(page, "next-round");
@@ -98,6 +101,7 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(1);
   // The newest "Round 0 → 1" entry (the earlier Next Rounds also went through 0 → 1).
+  await voidInitiative(page);
   const advance = logEntry(page, "Round 0 → 1").first();
   await advance.getByRole("button", { name: "Void" }).click();
   await advance.getByRole("button", { name: "Confirm" }).click();
@@ -231,7 +235,9 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   ).toHaveCount(0);
   await snap(page, "pass-time-void-not-offered-fr");
 
-  // Void Next Round first, then the fast-forward: the buff and round 1 come back.
+  // Void Next Round first (its initiative, then the advance), then the fast-forward: the buff
+  // and round 1 come back.
+  await voidInitiative(page, { void: "Annuler", confirm: "Confirmer" });
   await voidFr(page, "Round 0 → 1");
   await expect.poll(() => currentRound(page)).toBe(0);
   await voidFr(page, text);
@@ -292,4 +298,32 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   await nextTurn(page);
   await expect(blink).toHaveCount(0);
   await expect(page.getByRole("status")).toContainText("Expired buffs: e2e Blink");
+});
+
+test("Next turn rolls the initiative; reroll replaces its log entry", async ({ page }) => {
+  await openDashboard(page);
+  const row = page.getByTestId("initiative-row");
+  await expect(row).toHaveText("Out of combat · initiative will be rolled");
+
+  await nextTurn(page);
+  await expect.poll(() => currentRound(page)).toBe(1);
+  const value = page.getByTestId("initiative-value");
+  await expect(value).toHaveText(/^([1-9]|10)$/);
+  const firstId = await value.getAttribute("data-entry-id");
+  const first = combatLog(page).locator(`[data-entry-id="${firstId}"]`);
+  await expect(first).toContainText(`Initiative ${await value.textContent()} (d10) for round 1`);
+
+  // The reroll pops that entry and logs a new roll (the d10 may show the same face).
+  await page.getByRole("button", { name: "Reroll initiative" }).click();
+  await expect(value).not.toHaveAttribute("data-entry-id", firstId ?? "");
+  await expect(first).toHaveAttribute("data-status", "voided");
+  const rerolled = combatLog(page).locator(`[data-entry-id="${await value.getAttribute("data-entry-id")}"]`);
+  await expect(rerolled).toHaveAttribute("data-status", "active");
+  await expect(rerolled).toContainText(`Initiative ${await value.textContent()} (d10) for round 1`);
+
+  for (const vp of HEADER_VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expect(value).toBeVisible();
+    await snap(page, `initiative-${vp.width}x${vp.height}`);
+  }
 });

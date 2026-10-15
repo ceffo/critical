@@ -63,5 +63,7 @@ Tests live in `api/internal/domain/service/buffsvc/` unless named otherwise.
 - The round counter has no meaning for a buff's age beyond Next Round and passing time: a Set
   round or End combat never expires anything, a deliberate choice so a miskeyed round is harmless.
 - The conversion is whole rounds, rounded down: a fraction of a minute is not tracked.
-- Not covered: the long rest (daily items, spell slots; see the slots ADR), initiative and turn
-  order inside a round.
+- Next Round is followed by the new round's initiative, its own entry; End combat, Set round to
+  0 and passing time end the initiative ([ADR 0013](0013-initiative.md)).
+- Not covered: the long rest (daily items, spell slots; see the slots ADR), turn order inside a
+  round.

@@ -8,6 +8,7 @@ export type LogKind =
   | "round_reset"
   | "round_set"
   | "time_passed"
+  | "initiative"
   | "attack"
   | "item_use"
   | "item_restock"

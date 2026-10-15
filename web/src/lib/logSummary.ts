@@ -84,6 +84,14 @@ function restText(e: LogEntry, t: TFunction): string | null {
   });
 }
 
+/** Payload of initiative entries (buffsvc initiativePayload): the round and its d10. */
+function initiativeText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "initiative") return null;
+  const p = e.payload as { round?: number; d10?: number } | null;
+  if (!p || typeof p.d10 !== "number" || typeof p.round !== "number") return null;
+  return t("log.initiative", { value: p.d10, round: p.round });
+}
+
 /** Payload of spell_prep entries (prepsvc prepRecord): each spell once, with its copies. */
 function prepText(e: LogEntry, t: TFunction): string | null {
   if (e.kind !== "spell_prep") return null;
@@ -346,6 +354,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (rest) return rest;
   const prep = prepText(e, t);
   if (prep) return prep;
+  const initiative = initiativeText(e, t);
+  if (initiative) return initiative;
   const item = itemPayload(e);
   if (item) return itemText(item, t);
   const restock = restockText(e, t);

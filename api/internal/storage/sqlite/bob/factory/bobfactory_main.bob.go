@@ -440,6 +440,8 @@ func (f *Factory) fromExistingRoundState(ctx context.Context, m *models.RoundSta
 	o.ID = func() int64 { return m.ID }
 	o.CharacterID = func() int64 { return m.CharacterID }
 	o.RoundNumber = func() int64 { return m.RoundNumber }
+	o.InitiativeD10 = func() null.Val[int64] { return m.InitiativeD10 }
+	o.InitiativeEntryID = func() null.Val[int64] { return m.InitiativeEntryID }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))

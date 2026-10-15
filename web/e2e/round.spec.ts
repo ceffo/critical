@@ -224,7 +224,7 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   await snap(page, "pass-time-form-fr");
   await form.getByRole("button", { name: "Confirmer" }).click();
   await expect.poll(() => currentRound(page)).toBe(0);
-  const text = "Temps écoulé : 1,5 h (90 rd.), round 1 → 0";
+  const text = "Temps écoulé : 1,5 h (90 rd.), tour 1 → 0";
   await expect(logEntryFr(page, text)).toBeVisible();
   await expect(buffBadge(page, "e2e Long").getByTestId("buff-rounds")).toHaveText("9 tours");
 
@@ -239,7 +239,7 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   // Void Next Round first (its initiative, then the advance), then the fast-forward: the buff
   // and round 1 come back.
   await voidInitiative(page, { void: "Annuler", confirm: "Confirmer" });
-  await voidFr(page, "Round 0 → 1");
+  await voidFr(page, "Tour 0 → 1");
   await expect.poll(() => currentRound(page)).toBe(0);
   await voidFr(page, text);
   await expect(logEntryFr(page, text)).toHaveAttribute("data-status", "voided");

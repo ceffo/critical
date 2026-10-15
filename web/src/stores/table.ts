@@ -7,6 +7,7 @@ import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
 import { useItemsStore } from "./items";
 import { useRollStore } from "./roll";
+import { useXpStore } from "./xp";
 
 /** Something to tell the player after an action (rendered with i18n by the Notices component). */
 export type Notice = { kind: "expired"; names: string[] };
@@ -18,7 +19,8 @@ interface TableStore {
   busy: boolean;
   clearError: () => void;
   clearNotice: () => void;
-  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item counts, weapons. */
+  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item
+   * counts, weapons, the XP ledger once loaded. */
   refresh: () => Promise<void>;
   /**
    * Run a mutation, then refresh the table state. Errors are caught into `error`.
@@ -78,6 +80,8 @@ export const useTableStore = create<TableStore>((set, get) => ({
           useBuffsStore.getState().fetchStrength(),
           useItemsStore.getState().fetchItems(),
           useItemsStore.getState().fetchWeapons(),
+          // An undo can pop an XP award (ADR 0015 step 4): re-read the ledger once it is shown.
+          useXpStore.getState().ledger ? useXpStore.getState().fetchXp() : null,
         ]);
       } catch (e) {
         set({ error: message(e) });

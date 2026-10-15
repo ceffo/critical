@@ -3,6 +3,7 @@ import type { LogEntry, LogKind } from "@/types/log";
 import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
+import type { XpChangeRecord } from "@/types/xp";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
@@ -403,6 +404,24 @@ function weaponChangeText(e: LogEntry, t: TFunction): string | null {
   return t("log.weapon.edited", { name: p.name, changes });
 }
 
+/** Payload of xp_add, xp_edit and xp_remove entries (xpsvc changeRecord, ADR 0015 step 4). */
+function xpChangeText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "xp_add" && e.kind !== "xp_edit" && e.kind !== "xp_remove")
+    return null;
+  const p = e.payload as Partial<XpChangeRecord> | null;
+  const now = p?.entry;
+  if (!now || typeof now.total !== "number") return null;
+  const reason = now.reason || t("xp.defaultReason");
+  if (e.kind === "xp_add")
+    return t("log.xp.added", { total: now.total, reason });
+  if (e.kind === "xp_remove")
+    return t("log.xp.removed", { total: now.total, reason });
+  const was = p.before;
+  if (!was || was.total === now.total)
+    return t("log.xp.editedSame", { total: now.total, reason });
+  return t("log.xp.edited", { from: was.total, to: now.total, reason });
+}
+
 function attackText(p: RollResult, t: TFunction): string {
   const weapon = p.ammo
     ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
@@ -592,6 +611,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (itemChange) return itemChange;
   const weaponChange = weaponChangeText(e, t);
   if (weaponChange) return weaponChange;
+  const xpChange = xpChangeText(e, t);
+  if (xpChange) return xpChange;
   const hp = hpChangeText(e, t);
   if (hp) return hp;
   const p = buffPayload(e);

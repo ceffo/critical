@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { openDashboard } from "./helpers";
+import { openDashboard, undoEntry } from "./helpers";
 import type { Page } from "@playwright/test";
 
 const VIEWPORTS = [
@@ -18,9 +18,12 @@ async function xpTotal(page: Page): Promise<number> {
 }
 
 // What only a browser proves: the Moi level link opens the workspace, the add form's preview,
-// Enter submits, in-row edit (Enter saves) and delete re-render the server's totals. The rules
-// (rounding, eligibility, Table 25) and CRUD edge cases are Go tests (xpsvc, xpdal, composition).
-test("experience: add with the bonus, edit, delete", async ({ page }) => {
+// Enter submits, in-row edit (Enter saves) and delete re-render the server's totals, and the
+// journal's Undo pops each write and the ledger re-renders. The rules (rounding, eligibility,
+// Table 25, what each undo restores) and CRUD edge cases are Go tests (xpsvc, xpdal, composition).
+test("experience: add with the bonus, edit, delete, then undo each", async ({
+  page,
+}) => {
   await openDashboard(page);
   const moi = page.getByRole("complementary", { name: "Character" });
   await moi.getByRole("button", { name: /^Level \d+$/ }).click();
@@ -72,7 +75,7 @@ test("experience: add with the bonus, edit, delete", async ({ page }) => {
   await expect.poll(() => xpTotal(page)).toBe(before + 1000);
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,000");
 
-  // Delete is final, so it asks first: Escape keeps the entry, Confirm removes it.
+  // Delete asks first: Escape keeps the entry, Confirm removes it.
   await row.getByRole("button", { name: "Delete Troll bridge" }).click();
   await expect(
     row.getByRole("button", { name: "Confirm deleting Troll bridge" }),
@@ -84,6 +87,18 @@ test("experience: add with the bonus, edit, delete", async ({ page }) => {
   await row
     .getByRole("button", { name: "Confirm deleting Troll bridge" })
     .click();
+  await expect.poll(() => xpTotal(page)).toBe(before);
+  await expect(row).toHaveCount(0);
+
+  // Each write is a transaction (ADR 0015 step 4): the journal's Undo pops the delete, the edit,
+  // then the add, and the ledger follows.
+  await snap(page, "experience-journal");
+  await undoEntry(page, "XP removed: Troll bridge (1,000 XP)");
+  await expect(row.getByTestId("xp-row-total")).toHaveText("1,000");
+  expect(await xpTotal(page)).toBe(before + 1000);
+  await undoEntry(page, "XP edited: Troll bridge, 1,326 → 1,000 XP");
+  await expect(row.getByTestId("xp-row-total")).toHaveText("1,326");
+  await undoEntry(page, "XP +1,326: Troll bridge");
   await expect.poll(() => xpTotal(page)).toBe(before);
   await expect(row).toHaveCount(0);
 });

@@ -54,3 +54,11 @@ export interface XpEntryBody {
   reason?: string;
   session?: string;
 }
+
+/** Payload of xp_add, xp_edit and xp_remove log entries (xpsvc changeRecord): the award as it is
+ * now (as it was, for a remove) and, for an edit, the award before it. */
+export interface XpChangeRecord {
+  entry: XpEntry;
+  /** Only in xp_edit. */
+  before?: XpEntry;
+}

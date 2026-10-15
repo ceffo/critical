@@ -744,7 +744,10 @@
       "skill_check": "Compétence",
       "dice": "Dés",
       "correction": "Correction",
-      "exposure": "Exposition"
+      "exposure": "Exposition",
+      "xp_add": "XP",
+      "xp_edit": "XP",
+      "xp_remove": "XP"
     },
     "status": {
       "active": "Actif",
@@ -868,6 +871,12 @@
       "other": "Correction de #{{id}}",
       "unknown": "?",
       "none": "aucun"
+    },
+    "xp": {
+      "added": "XP +{{total, number}} : {{reason}}",
+      "removed": "XP retirés : {{reason}} ({{total, number}} XP)",
+      "edited": "XP modifiés : {{reason}}, {{from, number}} → {{to, number}} XP",
+      "editedSame": "XP modifiés : {{reason}} ({{total, number}} XP)"
     }
   },
   "critTable": {

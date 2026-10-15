@@ -18,6 +18,10 @@ export type LogKind =
   | "weapon_add"
   | "weapon_edit"
   | "weapon_remove"
+  /** An XP award added, edited or removed (ADR 0015 step 4); popping it gives the XP total back. */
+  | "xp_add"
+  | "xp_edit"
+  | "xp_remove"
   | "spell_prep"
   | "long_rest"
   | "save"

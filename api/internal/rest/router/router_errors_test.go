@@ -108,6 +108,13 @@ var endpoints = []endpoint{
 	{"POST log/{id}/void", "POST", "/api/log/4/void", "", func(m *mocksSet, err error) {
 		m.log.On("Void", anyArgs(3)...).Return(nil, err)
 	}},
+	{"GET log top", "GET", "/api/log", "", func(m *mocksSet, err error) {
+		m.log.On("List", anyArgs(3)...).Return(nil, nil)
+		m.log.On("TopID", anyArgs(2)...).Return(int64(0), false, err)
+	}},
+	{"POST log/undo", "POST", "/api/log/undo", `{"expectedTopId":4}`, func(m *mocksSet, err error) {
+		m.log.On("Undo", anyArgs(3)...).Return(nil, err)
+	}},
 	{"GET buffs", "GET", "/api/buffs", "", func(m *mocksSet, err error) {
 		m.buffs.On("ListStatus", anyArgs(2)...).Return(nil, err)
 	}},
@@ -232,6 +239,8 @@ func TestSpecialSentinels(t *testing.T) {
 		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"error":"invalid slot index: 2"}`},
 		{"void not the latest", "POST log/{id}/void", fmt.Errorf("%w: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first"}`},
 		{"hp undo not the latest", "POST hp/undo", fmt.Errorf("%w: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first"}`},
+		{"undo stale top", "POST log/undo", fmt.Errorf("%w: the newest entry is #5 (attack, round 2), not #4", actionlogsvc.ErrTopChanged), 409, `{"error":"the newest entry changed: the newest entry is #5 (attack, round 2), not #4"}`},
+		{"undo empty log", "POST log/undo", fmt.Errorf("%w: expected #4 on top", actionlogsvc.ErrNothingToUndo), 409, `{"error":"nothing to undo: expected #4 on top"}`},
 		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"error":"entry already voided: #4"}`},
 		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
@@ -282,6 +291,11 @@ func TestRequestParsingErrors(t *testing.T) {
 		{"amend value with note", "POST", "/api/log/4/amend", `{"note":"x","source":"orc axe"}`, `only the note of an entry can be amended (got \"source\"): void the entry and log it again`},
 		{"amend payload", "POST", "/api/log/4/amend", `{"payload":{}}`, `only the note of an entry can be amended (got \"payload\"): void the entry and log it again`},
 		{"void bad id", "POST", "/api/log/0/void", "", "invalid log entry id"},
+		{"undo bad json", "POST", "/api/log/undo", "{", "invalid request body"},
+		{"undo no body", "POST", "/api/log/undo", "", "invalid request body"},
+		{"undo missing expected top", "POST", "/api/log/undo", `{}`, "expectedTopId is required (a positive entry id)"},
+		{"undo zero expected top", "POST", "/api/log/undo", `{"expectedTopId":0}`, "expectedTopId is required (a positive entry id)"},
+		{"undo expected top not a number", "POST", "/api/log/undo", `{"expectedTopId":"4"}`, "invalid request body"},
 		{"adjust bad id", "POST", "/api/roll/save/x/adjust", `{"adjustment":1}`, "invalid log entry id"},
 		{"adjust bad json", "POST", "/api/roll/save/7/adjust", "{", "invalid request body"},
 		{"adjust missing adjustment", "POST", "/api/roll/save/7/adjust", `{"reason":"x"}`, "adjustment is required"},

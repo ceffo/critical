@@ -24,9 +24,10 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 	}
 	h, m := newRouter(t)
 	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{amended}, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(4, true, nil)
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"entries":[{
+	assert.JSONEq(t, `{"topId":4,"entries":[{
 		"id":4,"characterId":1,"round":2,"kind":"hp_change","summary":"orc","hpDelta":-8,
 		"effectiveHpDelta":-12,"effectiveSummary":"orc axe","note":"","status":"amended","payload":{},"effectivePayload":{},
 		"snapshots":[],
@@ -67,6 +68,26 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
 }
 
+// POST /api/log/undo sends the expected top to the service and answers with
+// the voided entry, shaped as GET /api/log entries (ADR 0010 step 1).
+func TestLogUndo_WireShape(t *testing.T) {
+	voided := actionlog.Entry{
+		ID: 9, CharacterID: 1, Round: 3, Kind: actionlog.KindAttack, Payload: json.RawMessage(`{"hit":true}`),
+		Snapshots:   []actionlog.Snapshot{{Key: "items:arrows_plus3", Before: json.RawMessage(`{"count":20}`), After: json.RawMessage(`{"count":19}`)}},
+		Corrections: []actionlog.Correction{{ID: 2, ActionID: 9, Kind: actionlog.CorrectionVoid, CreatedAt: at}}, CreatedAt: at,
+	}
+	h, m := newRouter(t)
+	m.log.EXPECT().Undo(mock.Anything, int64(1), int64(9)).Return(&voided, nil).Once()
+	rec := do(h, "POST", "/api/log/undo", `{"expectedTopId":9}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{
+		"id":9,"characterId":1,"round":3,"kind":"attack","summary":"","hpDelta":0,
+		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"voided","payload":{"hit":true},"effectivePayload":{"hit":true},
+		"snapshots":[{"key":"items:arrows_plus3","before":{"count":20},"after":{"count":19}}],
+		"corrections":[{"id":2,"kind":"void","createdAt":"2026-10-17T20:00:00Z"}],
+		"createdAt":"2026-10-17T20:00:00Z"}`, rec.Body.String())
+}
+
 // GET /api/hp events use the camelCase keys of web/src/types/hp.ts.
 func TestHPEndpoint_WireShape(t *testing.T) {
 	h, m := newRouter(t)
@@ -93,9 +114,10 @@ func TestLogEndpoints_AdjustedSaveShape(t *testing.T) {
 	}
 	h, m := newRouter(t)
 	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{save}, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(0, false, nil)
 	rec := do(h, "GET", "/api/log", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"entries":[{
+	assert.JSONEq(t, `{"topId":null,"entries":[{
 		"id":7,"characterId":1,"round":1,"kind":"save","summary":"Save vs Spells: d20 12 vs 14, FAILED","hpDelta":0,
 		"effectiveHpDelta":0,"effectiveSummary":"Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
 		"note":"","status":"amended","payload":{"passed":false},"effectivePayload":{"passed":true},

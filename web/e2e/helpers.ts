@@ -110,7 +110,7 @@ export async function addBuff(page: Page, buff: NewBuff) {
   const popover = await openAddEffect(page, "New effect");
   const form = popover.getByRole("form", { name: "Add effect" });
   await form.getByLabel("Buff name").fill(buff.name);
-  await form.getByLabel("Rounds").fill(String(buff.rounds ?? 0));
+  await form.getByLabel("Turns").fill(String(buff.rounds ?? 0));
   await form.getByLabel("Charges").fill(String(buff.charges ?? 0));
   for (const [i, [key, value]] of (buff.effects ?? []).entries()) {
     await form.getByRole("button", { name: "Effect", exact: true }).click();

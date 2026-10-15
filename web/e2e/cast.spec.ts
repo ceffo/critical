@@ -151,7 +151,7 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   await snap(page, "strength-received");
 });
 
-test("after Next Round the cast offers no void until Next Round is popped", async ({
+test("after Next turn the cast offers no void until Next turn is popped", async ({
   page,
   stack,
 }) => {
@@ -160,14 +160,14 @@ test("after Next Round the cast offers no void until Next Round is popped", asyn
   await page.getByRole("button", { name: "Cast Stoneskin" }).click();
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await nextTurn(page);
-  await expect(logEntry(page, "Round 0 → 1")).toBeVisible();
+  await expect(logEntry(page, "Turn 0 → 1")).toBeVisible();
 
   const entry = logEntry(page, "Cast Stoneskin");
   await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
   await snap(page, "void-not-offered-after-next-round");
 
   await voidInitiative(page);
-  await voidEntry(page, "Round 0 → 1");
+  await voidEntry(page, "Turn 0 → 1");
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await voidEntry(page, "Cast Stoneskin");
   await expect(buffBadge(page, "Stoneskin")).toHaveCount(0);

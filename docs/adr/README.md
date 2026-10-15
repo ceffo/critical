@@ -26,7 +26,7 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0006 | [Saving throws](0006-saving-throws.md) | accepted |
 | 0007 | [HP ledger](0007-hp-ledger.md) | accepted |
 | 0008 | [Spell slots and long rest](0008-spell-slots-and-long-rest.md) | accepted |
-| 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted |
+| 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted, steps 3 and 5 amended by 0017 |
 | 0010 | [Action stack and undo](0010-action-stack-and-undo.md) | accepted |
 | 0011 | [HP below zero](0011-hp-below-zero.md) | accepted |
 | 0012 | [Attack against an unknown AC](0012-attack-against-unknown-ac.md) | accepted |
@@ -34,3 +34,4 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0014 | [Skill checks](0014-skill-checks.md) | accepted |
 | 0015 | [Experience](0015-experience.md) | accepted |
 | 0016 | [Inventory and editors](0016-inventory.md) | accepted |
+| 0017 | [Type scale and density](0017-type-scale-and-density.md) | accepted |

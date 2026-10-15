@@ -1,6 +1,6 @@
 # ADR 0009: Dashboard layout and theme system
 
-**Status**: accepted, 2026-10-15
+**Status**: accepted, 2026-10-15; steps 3 and 5 amended by [ADR 0017](0017-type-scale-and-density.md)
 
 ## Context
 
@@ -24,9 +24,10 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
    result, journal) and Moi (identity, HP) stay beside every workspace. A workspace mounts on its
    first visit and stays mounted while hidden, so its state (tab, forms, scroll) survives switching.
 3. **Viewport range.** The layout holds from 1280 to 2560 CSS px wide at full width (no max-width
-   centring) and has no horizontal scroll down to 1024. Type and spacing scale with the screen:
-   the root font size is `clamp(16px, 0.3125vw + 12px, 20px)` (16 px up to 1280, 20 px at 2560) and
-   Tailwind's spacing and type are in rem. Below 1024 and mobile layouts are out of scope.
+   centring) and has no horizontal scroll down to 1024. Below 1024 and mobile layouts are out of
+   scope. *Amended by [ADR 0017](0017-type-scale-and-density.md) step 1:* the root font size is a
+   fixed 16 px (it was `clamp(16px, 0.3125vw + 12px, 20px)`); extra width goes to columns and
+   content, not to bigger type.
 4. **Tokens.** The theme is an appearance mode (`dark | light | system`) and an ambiance (hue H,
    chroma C): Arcane 289 / 0.125 (default), Sylve 152 / 0.11, Sang 22 / 0.15, Ocean 240 / 0.11,
    Ambre 72 / 0.12, Obsidienne 265 / 0.014. `web/src/lib/theme.ts` `themeVars` computes:
@@ -45,7 +46,9 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
    component follows. `index.css` holds the Arcane values as the first-paint default (a unit test
    keeps them equal to `themeVars`).
 5. **House rules (design-taste-frontend, adapted to Nocturne).** No gradients (a flat accent tint
-   instead). No tiny uppercase letter-spaced labels: sentence case, at least 12 px. Surfaces are
+   instead). No tiny uppercase letter-spaced labels: sentence case (*amended by
+   [ADR 0017](0017-type-scale-and-density.md) step 2:* labels are 11 px, the 12 px minimum is gone;
+   sizes come from its five role tokens). Surfaces are
    separated by a tone step (ground → surface → `neu-900`), not hairlines. Shadows only on what
    floats (popovers, menus: `shadow-float`). Tabular figures on every number (set on `<html>`). At
    most 3-4 type sizes per panel. One family (Inter) and one icon set (Phosphor). Existing panels

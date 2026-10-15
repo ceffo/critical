@@ -1,6 +1,6 @@
 # ADR 0010: Action stack and undo
 
-**Status**: accepted, 2026-10-15
+**Status**: accepted, 2026-10-15; amended 2026-10-15 (step 6, corrections as their own steps)
 
 ## Context
 
@@ -14,7 +14,9 @@ pop an action its sender did not see.
 
 User ruling, 2026-10-14: *"no amending values. just the note.. can only pop elements"*, for every
 entry kind. Triage, 2026-10-15: undo is the server's action stack, not a client snapshot, and
-there is no redo.
+there is no redo. Triage, 2026-10-15 (option B): the corrections made after a roll (target AC,
+save adjustment, GM verdict) become their own undoable steps, still with no redo; before that they
+were amends of their roll, undone only by popping the roll.
 
 ## Decision
 
@@ -58,6 +60,38 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    Tests: `web/src/lib/undoShortcut.test.ts`, `web/src/lib/undoButton.test.ts` (empty log, en/fr
    tooltip), `web/src/stores/undo.test.ts` (empty log, stale top from another client, reroll and
    row Void in step), `web/e2e/log.spec.ts` "Annuler and Ctrl/Cmd+Z pop the newest action".
+6. **A correction is its own step.** A correction after the roll (target AC, ADR 0002 step 11
+   and ADR 0012 step 5; save adjustment, ADR 0006 step 5; GM verdict, ADR 0012 step 4) records,
+   in the transaction that checks it may be made (ADR 0006 step 6), two rows: a `correction`
+   entry on the stack (stamped with the current round, no snapshot), whose payload names the
+   change (`{entryId, entryKind, field, from, to}`; `field` is `targetAc`, `saveAdjustment` or
+   `verdict`; `from` is the value before this correction, null for an unknown AC or no
+   verdict), and the amend carrying the corrected entry's new payload, linked to it (`stepId`).
+   It is one generic step for every kind of correction: the correcting service only computes
+   the payload and names the field. A `correction` entry is not one of the roll kinds.
+   - **Popping it** (undo, or the row's Void) is an ordinary pop (steps 2 to 4): it voids the
+     correction entry, which puts its amend out of effect (`undone` on the wire). The corrected
+     entry then reads the payload, status and HP delta of the newest amend still in effect, or
+     its original ones: correcting twice and undoing twice gives the roll as rolled, still on
+     the log. A correction changes no other state, so there is nothing else to restore.
+   - **Order.** A correction is newer than its roll, so undo pops the newest correction first,
+     then the one before, then the roll; the expected top (step 3) is the correction when it is
+     the newest entry. The roll is still the latest roll after its corrections are popped, so it
+     can be corrected again.
+   - **Older amends.** Payload amends written before this step have no `stepId`: they stay in
+     effect and are undone only by popping their roll, as before.
+   - **Tooltip.** The Annuler tooltip names the correction from its payload, worded in the
+     frontend ("Annuler : Correction CA 5 → 7").
+
+   Tests: `actionlogsvc` `TestAmendLatest_RecordsTheCorrectionStep` (step then amend, one
+   transaction, nothing written when a write fails), `TestEntry_PoppedStepAmendIsOutOfEffect`;
+   `actionlogdal` `TestCorrectionStep_PoppedStepPutsItsAmendOutOfEffect`; `sqlite`
+   `TestMigrate023_KeepsCorrectionsWithoutStep`; `composition`
+   `TestCorrectionStep_TargetACTwiceUndoneTwice`, `TestCorrectionStep_SaveAdjustmentTwiceUndoneTwice`,
+   `TestCorrectionStep_VerdictTwiceUndoneTwice`, `TestCorrectionStep_IsTheExpectedTop`,
+   `TestUnknownAC_AmmoSpentOnceAndUndoPopsTheAttack`; `router`
+   `TestLogEndpoints_CorrectionStepShape`; `web/src/lib/undoButton.test.ts` (the correction
+   tooltip, en/fr); `web/e2e/log.spec.ts` "Annuler pops an AC correction, then the attack".
 
 ## Consequences
 
@@ -67,6 +101,8 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
   everything above it and replays.
 - A refused undo is shown as the server's error; the table refreshes, so the next undo targets the
   new top.
-- Not covered: redo (a popped entry stays voided; the action is replayed instead), and
-  corrections (attack AC, save adjustment, GM verdict) as their own undoable steps: today they are
-  amends of their roll, undone only by popping the roll.
+- A correction shows in the journal as its own line ("Correction CA 5 → 7"); the roll's line
+  reads its corrected payload. Popping the correction brings the previous reading back.
+- Migration 023 adds `action_corrections.step_id`; rows written before keep NULL (step 6, older
+  amends).
+- Not covered: redo (a popped entry stays voided; the action is replayed instead).

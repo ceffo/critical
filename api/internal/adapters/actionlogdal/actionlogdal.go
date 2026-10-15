@@ -77,6 +77,9 @@ func (d *DAL) InsertCorrection(ctx context.Context, c actionlog.Correction) erro
 	if c.Note != nil {
 		row.Note = null.From(*c.Note)
 	}
+	if c.StepID != nil {
+		row.StepID = null.From(*c.StepID)
+	}
 	if _, err := queries.InsertCorrection([]queries.InsertCorrection_ActionCorrections{row}).Exec(ctx, d.exec(ctx)); err != nil {
 		return fmt.Errorf("insert action_corrections: %w", err)
 	}
@@ -158,8 +161,9 @@ func (d *DAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Ki
 }
 
 // hpTotalSQL sums effective HP deltas: a voided entry counts 0, an amended one
-// counts its latest amend's delta. Raw SQL because bob's parser does not
-// support aggregates.
+// counts its latest amend's delta, leaving out an amend whose correction step
+// was popped (actionlog.Correction.InEffect). Raw SQL because bob's parser
+// does not support aggregates.
 const hpTotalSQL = `
 SELECT COALESCE(SUM(
   CASE
@@ -167,6 +171,8 @@ SELECT COALESCE(SUM(
     ELSE COALESCE(
       (SELECT m.hp_delta FROM action_corrections m
         WHERE m.action_id = a.id AND m.kind = 'amend' AND m.hp_delta IS NOT NULL
+          AND (m.step_id IS NULL OR NOT EXISTS (
+            SELECT 1 FROM action_corrections sv WHERE sv.action_id = m.step_id AND sv.kind = 'void'))
         ORDER BY m.id DESC LIMIT 1),
       a.hp_delta)
   END), 0)
@@ -211,6 +217,14 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 	if err != nil {
 		return fmt.Errorf("list action_corrections: %w", err)
 	}
+	// A correction step is newer than the entry it corrects, so its void (if
+	// popped) is among the corrections listed from minID.
+	voided := map[int64]bool{}
+	for _, c := range corrs {
+		if c.Kind == string(actionlog.CorrectionVoid) {
+			voided[c.ActionID] = true
+		}
+	}
 	for _, c := range corrs {
 		e, ok := byID[c.ActionID]
 		if !ok {
@@ -229,6 +243,9 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 		}
 		if v, ok := c.Note.Get(); ok {
 			corr.Note = &v
+		}
+		if v, ok := c.StepID.Get(); ok {
+			corr.StepID, corr.StepUndone = &v, voided[v]
 		}
 		e.Corrections = append(e.Corrections, corr)
 	}

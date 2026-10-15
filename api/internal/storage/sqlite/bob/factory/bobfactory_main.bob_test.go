@@ -58,6 +58,44 @@ func TestCreateActionLog(t *testing.T) {
 	}
 }
 
+func TestCreateActionLogWithStepActionCorrectionsDoesNotDuplicateParent(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	before, err := models.ActionLogs.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting ActionLogs: %v", err)
+	}
+
+	if _, err := New().NewActionLogWithContext(ctx, ActionLogMods.WithNewStepActionCorrections(2)).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating ActionLog with StepActionCorrections: %v", err)
+	}
+
+	after, err := models.ActionLogs.Query().Count(ctx, tx)
+	if err != nil {
+		t.Fatalf("Error counting ActionLogs: %v", err)
+	}
+
+	if got := after - before; got != 1 {
+		t.Fatalf("Expected ActionLogs to increase by 1, got %d", got)
+	}
+}
+
 func TestCreateActionLogWithActionActionCorrectionsDoesNotDuplicateParent(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")

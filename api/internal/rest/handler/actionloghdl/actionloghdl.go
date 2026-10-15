@@ -181,8 +181,8 @@ type EntryDTO struct {
 	Note    string          `json:"note"`
 	Status  string          `json:"status"`
 	Payload json.RawMessage `json:"payload"`
-	// EffectivePayload is the latest amend's payload when one set it (an
-	// adjusted save), the original payload otherwise.
+	// EffectivePayload is the payload of the latest amend in effect when one
+	// set it (a corrected save or attack), the original payload otherwise.
 	EffectivePayload json.RawMessage `json:"effectivePayload"`
 	Snapshots        []SnapshotDTO   `json:"snapshots"`
 	Corrections      []CorrectionDTO `json:"corrections"`
@@ -198,7 +198,9 @@ type SnapshotDTO struct {
 
 // CorrectionDTO is one amend or void. note is set on note amends; hpDelta,
 // source and payload on value amends (post-roll adjustments, and hp_change
-// amends logged before amends became note-only).
+// amends logged before amends became note-only). stepId is the correction
+// entry a post-roll correction belongs to; undone is true once that entry was
+// popped (the amend no longer counts).
 type CorrectionDTO struct {
 	ID        int64           `json:"id"`
 	Kind      string          `json:"kind"`
@@ -206,6 +208,8 @@ type CorrectionDTO struct {
 	Source    string          `json:"source,omitempty"`
 	Payload   json.RawMessage `json:"payload,omitempty"`
 	Note      *string         `json:"note,omitempty"`
+	StepID    *int64          `json:"stepId,omitempty"`
+	Undone    bool            `json:"undone,omitempty"`
 	CreatedAt time.Time       `json:"createdAt"`
 }
 
@@ -231,7 +235,8 @@ func toDTO(e actionlog.Entry) EntryDTO {
 	}
 	for _, c := range e.Corrections {
 		out.Corrections = append(out.Corrections, CorrectionDTO{
-			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, Payload: c.Payload, Note: c.Note, CreatedAt: c.CreatedAt,
+			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, Payload: c.Payload, Note: c.Note,
+			StepID: c.StepID, Undone: c.StepUndone, CreatedAt: c.CreatedAt,
 		})
 	}
 	return out

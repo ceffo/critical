@@ -13,6 +13,9 @@ func TestActionLogCountStruct(t *testing.T) {
 	var m ActionLog
 	_ = m.C // Verify C field exists
 
+	// Verify StepActionCorrections count field exists and is *int64
+	var _ *int64 = m.C.StepActionCorrections
+
 	// Verify ActionActionCorrections count field exists and is *int64
 	var _ *int64 = m.C.ActionActionCorrections
 
@@ -25,6 +28,12 @@ func TestActionLogLoadCountMethods(t *testing.T) {
 	var m *ActionLog
 	var ms ActionLogSlice
 	ctx := context.Background()
+
+	// Verify LoadCountStepActionCorrections method exists on single model
+	_ = m.LoadCountStepActionCorrections(ctx, nil)
+
+	// Verify LoadCountStepActionCorrections method exists on slice
+	_ = ms.LoadCountStepActionCorrections(ctx, nil)
 
 	// Verify LoadCountActionActionCorrections method exists on single model
 	_ = m.LoadCountActionActionCorrections(ctx, nil)
@@ -43,6 +52,9 @@ func TestActionLogLoadCountMethods(t *testing.T) {
 func TestSelectThenLoadCountActionLog(t *testing.T) {
 	_ = SelectThenLoadCount.ActionLog
 
+	// Verify StepActionCorrections loader exists
+	_ = SelectThenLoadCount.ActionLog.StepActionCorrections
+
 	// Verify ActionActionCorrections loader exists
 	_ = SelectThenLoadCount.ActionLog.ActionActionCorrections
 
@@ -54,6 +66,9 @@ func TestSelectThenLoadCountActionLog(t *testing.T) {
 func TestPreloadCountActionLog(t *testing.T) {
 	_ = PreloadCount.ActionLog
 
+	// Verify StepActionCorrections preloader exists and returns a Preloader
+	_ = PreloadCount.ActionLog.StepActionCorrections()
+
 	// Verify ActionActionCorrections preloader exists and returns a Preloader
 	_ = PreloadCount.ActionLog.ActionActionCorrections()
 
@@ -64,6 +79,8 @@ func TestPreloadCountActionLog(t *testing.T) {
 // Test that ActionLog has PreloadCount method
 func TestActionLogPreloadCountMethod(t *testing.T) {
 	var m *ActionLog
+
+	_ = m.PreloadCount("StepActionCorrections", 0)
 
 	_ = m.PreloadCount("ActionActionCorrections", 0)
 

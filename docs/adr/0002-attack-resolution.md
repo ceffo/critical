@@ -64,7 +64,8 @@ return a distinct value for each call and expect an exact number of calls.
 11. **Target AC correction.** The target AC of the **latest roll**, when it is an attack that is
     not voided, can be corrected after the roll (within ±20). Hit, margin, crit and damage are
     worked out again from the stored dice (ADR 0001 step 6): no die is rolled, no ammunition is
-    spent. The correction is an audited amend; the entry keeps the AC and outcome as rolled.
+    spent. The correction is an audited amend; the entry keeps the AC and outcome as rolled. Each
+    correction is its own undoable step ([ADR 0010](0010-action-stack-and-undo.md) step 6).
     Tests: `TestAdjustAttackAC_Recompute`, `TestAdjustAttackAC_SpendsNoAmmo`,
     `TestAdjustAttackAC_Rejections`, and in `actionlogsvc` `TestAmendLatest`.
 12. **Preview.** Before rolling, the attack form's current choices (weapon in hand, ammunition,

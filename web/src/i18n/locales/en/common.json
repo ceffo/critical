@@ -57,11 +57,17 @@
     "change": "HP change",
     "amount": "Amount",
     "source": "Source",
-    "sourcePlaceholder": "Orc axe, potion...",
-    "applyDamage": "Apply Damage",
-    "applyHeal": "Apply Heal",
+    "sourcePlaceholder": "Source: orc axe, potion...",
+    "applyDamage": "Damage",
+    "applyHeal": "Healing",
     "undoLast": "Undo last HP change",
-    "undoBlocked": "Latest entry: “{{entry}}”. Undo it from the log first."
+    "undoBlocked": "Latest entry: “{{entry}}”. Undo it from the log first.",
+    "amountPlaceholder": "HP",
+    "damageHint": "Apply as damage (Enter)",
+    "healHint": "Apply as healing (Shift+Enter)",
+    "keysHint": "Enter: damage · Shift+Enter: healing",
+    "lastChange": "{{delta}} {{source}}",
+    "lastDamage": "Last damage taken: {{amount}}"
   },
   "turn": {
     "title": "Turn",
@@ -155,8 +161,7 @@
     "label": "Actions",
     "tabs": {
       "attack": "Attack",
-      "spells": "Spells",
-      "saves": "Saves"
+      "spells": "Spells"
     }
   },
   "attack": {
@@ -183,8 +188,6 @@
   },
   "saves": {
     "title": "Saving Throws",
-    "need": "Need {{value}}+",
-    "roll": "Roll",
     "rollLabel": "Roll save vs {{name}}",
     "categories": {
       "para_poison": "Paralyze/Poison",
@@ -192,7 +195,8 @@
       "petri_poly": "Petrify/Polymorph",
       "breath": "Breath Weapon",
       "spell": "Spells"
-    }
+    },
+    "target": "{{value}}+"
   },
   "items": {
     "title": "Inventory",
@@ -723,5 +727,12 @@
       "ammoKind": "Ammo kind",
       "ammoNone": "none (hurled)"
     }
+  },
+  "moi": {
+    "chargesLeft_one": "{{count}} charge left",
+    "chargesLeft_other": "{{count}} charges left",
+    "absorb": "Absorb",
+    "absorbLabel": "Absorb a hit with {{name}}",
+    "chargesHint": "A hit taken uses one"
   }
 }

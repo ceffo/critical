@@ -1,5 +1,6 @@
 import { test, expect, snap } from "./fixtures";
 import {
+  addBuff,
   currentHp,
   expectNoReload,
   logEntry,
@@ -17,7 +18,7 @@ test("damage then heal change current HP by the amounts entered, without reload"
 
   // The buttons stay disabled until amount and source are both filled.
   const box = page.getByRole("group", { name: "HP change" });
-  const apply = box.getByRole("button", { name: "Apply Damage" });
+  const apply = box.getByRole("button", { name: "Damage", exact: true });
   await expect(apply).toBeDisabled();
   await box.getByLabel("Amount").fill("3");
   await expect(apply).toBeDisabled();
@@ -62,4 +63,48 @@ test("a heal never takes HP above max: the excess is dropped and shown", async (
   );
 
   await snap(page, "heal-capped-at-max");
+});
+
+test("Moi column: Enter applies damage, Shift+Enter healing; last change, ghost and last save follow", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const moi = page.getByRole("complementary", { name: "Character" });
+  const box = moi.getByRole("group", { name: "HP change" });
+  const before = await currentHp(page);
+  await addBuff(page, { name: "e2e kbd Stoneskin", charges: 3 });
+
+  // Enter in the source field: damage.
+  await box.getByLabel("Amount").fill("6");
+  await box.getByLabel("Source").fill("e2e kbd orc");
+  await box.getByLabel("Source").press("Enter");
+  await expect.poll(() => currentHp(page)).toBe(before - 6);
+  await expect(moi.getByTestId("hp-last-change")).toHaveText("−6 e2e kbd orc");
+  await expect(moi.getByTestId("hp-ghost")).toBeVisible();
+  await expect(box.getByLabel("Amount")).toHaveValue("");
+
+  // Shift+Enter in the amount field: healing.
+  await box.getByLabel("Amount").fill("4");
+  await box.getByLabel("Source").fill("e2e kbd potion");
+  await box.getByLabel("Amount").press("Shift+Enter");
+  await expect.poll(() => currentHp(page)).toBe(before - 2);
+  await expect(moi.getByTestId("hp-last-change")).toHaveText("+4 e2e kbd potion");
+  await expect(moi.getByTestId("hp-ghost")).toHaveCount(0);
+
+  // A save rolled from its row shows its last roll there and its card in the Fil.
+  const spells = moi.getByRole("button", { name: "Roll save vs Spells" });
+  await spells.click();
+  await expect(page.getByRole("region", { name: "Last Result" }).getByTestId("save-result")).toBeVisible();
+  await expect(spells.getByTestId("save-last")).toHaveText(/^\d+$/);
+
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(moi.getByRole("group", { name: "e2e kbd Stoneskin" })).toBeVisible();
+    await snap(page, `moi-${vp.width}x${vp.height}`);
+  }
 });

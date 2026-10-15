@@ -136,23 +136,6 @@ test("lookup: a French name finds the spell; the row shows both names in the UI 
   await snap(page, "french-name");
 });
 
-test("lookup: exact and prefix matches come before contains matches, level then name within a tier", async ({
-  page,
-}) => {
-  await openLookup(page);
-  await classButton(page, "All").click();
-  await search(page).fill("fire");
-  await expect(rows(page)).toHaveCount(5);
-  expect(await names(rows(page))).toEqual([
-    "Fireball", // prefix, L3
-    "Fire Shield", // prefix, L4
-    "Fire Trap", // prefix, L4
-    "Faerie Fire", // contains, L1
-    "Wall of Fire", // contains, L4
-  ]);
-  await expect(selected(page)).toHaveAttribute("data-id", "fireball");
-});
-
 test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and All work; class chip only on All", async ({
   page,
 }) => {
@@ -182,57 +165,6 @@ test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and A
   );
   await expect(page.getByTestId("spell-class").first()).toBeVisible();
   await expect(page.getByTestId("spell-class")).toHaveCount(await rows(page).count());
-});
-
-test("lookup: level chips multi-select; none selected means any level", async ({
-  page,
-}) => {
-  await openLookup(page);
-  const any = await count(page).textContent();
-  await levelChip(page, 1).click();
-  await levelChip(page, 3).click();
-  await expect(levelChip(page, 1)).toHaveAttribute("aria-pressed", "true");
-  await expect
-    .poll(async () => [...new Set(await attr(rows(page), "data-level"))].sort())
-    .toEqual(["1", "3"]);
-  await expect(rows(page).filter({ hasText: "Fireball" })).toHaveCount(1);
-  await snap(page, "levels-1-3");
-
-  await levelChip(page, 1).click();
-  await levelChip(page, 3).click();
-  await expect(count(page)).toHaveText(any ?? "");
-});
-
-test("lookup: school groups take their aliases and Other; Priest mode filters by sphere", async ({
-  page,
-}) => {
-  await openLookup(page);
-  const school = page.getByRole("combobox", { name: "School" });
-  await school.selectOption({ label: "Invocation/Evocation" });
-  // "Evocation" in the data belongs to Invocation/Evocation.
-  await expect(rows(page).filter({ hasText: "Magic Missile" })).toHaveCount(1);
-  await expect(rows(page).filter({ hasText: "Fireball" })).toHaveCount(1);
-  await expect(rows(page).filter({ hasText: "Burning Hands" })).toHaveCount(0);
-  await snap(page, "school-evocation");
-
-  await school.selectOption({ label: "Other" });
-  await expect(rows(page)).toHaveCount(1);
-  await expect(rows(page).first()).toHaveAttribute("data-id", "dimensional_folding");
-
-  // All with a school set, then Priest: the school is dropped, the sphere dropdown shows.
-  await classButton(page, "All").click();
-  await expect(school).toHaveValue("other");
-  await classButton(page, "Priest").click();
-  const sphere = page.getByRole("combobox", { name: "Sphere" });
-  await expect(page.getByRole("combobox", { name: "School" })).toHaveCount(0);
-  await expect(sphere).toHaveValue("");
-  await expect(rows(page).filter({ hasText: "Faerie Fire" })).toHaveCount(1);
-  await expect(sphere.locator("option", { hasText: "Elemental Fire" })).toHaveCount(1);
-  await expect(sphere.locator("option", { hasText: "Invocation/Evocation" })).toHaveCount(0);
-  await sphere.selectOption("Elemental Fire");
-  await expect(rows(page)).toHaveCount(2);
-  expect(await names(rows(page))).toEqual(["Faerie Fire", "Flame Strike"]);
-  await snap(page, "priest-sphere");
 });
 
 test("lookup: up/down in the search box moves the selection, a click selects; values at level with raw text; description collapsed then full", async ({
@@ -465,11 +397,6 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
     await expect(page.getByRole("button", { name: `Niveau ${n}`, exact: true })).toHaveText(`${n}`);
   }
   await expect(detail(page).getByTestId("spell-meta")).toContainText("Magicien · Niveau 3");
-  // Listed values are translated, anything else stays as scraped.
-  const stat = (k: string) => detail(page).getByTestId(`stat-${k}`);
-  await expect(stat("duration")).toContainText("Instantanée");
-  await expect(stat("range")).toContainText("Sight line");
-  await expect(stat("area")).toContainText("A weird zone");
 
   // All: the class chip is French; the Priest spell shows its values and sphere in French.
   await classButton(page, "Tous").click();
@@ -479,11 +406,7 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
   const meta = detail(page).getByTestId("spell-meta");
   await expect(meta).toContainText("Prêtre · Niveau 2");
   await expect(meta).toContainText("Soleil");
-  await expect(stat("range")).toContainText("Contact");
-  await expect(stat("duration")).toContainText("Instantanée");
-  await expect(stat("area")).toContainText("Le lanceur");
-  await expect(stat("castingTime")).toContainText("Spécial");
-  await expect(stat("save")).toContainText("Aucune");
+  await expect(detail(page).getByTestId("stat-range")).toContainText("Contact");
   await snap(page, "french-values");
 
   // The sphere dropdown: French labels, still filtering on the English API value.

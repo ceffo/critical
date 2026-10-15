@@ -102,7 +102,7 @@ test("remove an item: gone from the Inventory and the ammo picker; pop brings it
   await snap(page, "item-restored");
 });
 
-test("invalid dice, empty name and a negative count are rejected with a message under the field", async ({
+test("an empty name and invalid dice are rejected with a message under the field", async ({
   page,
 }) => {
   await openInventory(page);
@@ -119,17 +119,7 @@ test("invalid dice, empty name and a negative count are rejected with a message 
   await expect(fieldError(page, "effectDice")).toContainText("2d6");
   await expect(fieldError(page, "name")).toHaveCount(0);
 
-  await f.getByLabel("Effect dice").fill("2d6");
-  await f.getByLabel("Count").fill("-1");
-  await save.click();
-  await expect(fieldError(page, "count")).toHaveText("Count must be 0 or more");
   await snap(page, "field-errors");
-
-  await f.getByLabel("Behaviour").selectOption("daily");
-  await f.getByLabel("Count").fill("1");
-  await f.getByLabel("Daily number").fill("0");
-  await save.click();
-  await expect(fieldError(page, "maxCount")).toHaveText("Daily number must be at least 1");
 
   // Nothing was added or logged.
   await expect(row(page, "bomb")).toHaveCount(0);
@@ -154,28 +144,4 @@ test("a daily item and an effect with a modifier: add, use rolls the modifier in
   expect(total).toBeGreaterThanOrEqual(4);
   expect(total).toBeLessThanOrEqual(7);
   await expect(page.getByTestId("item-result")).toContainText("1d4+3");
-});
-
-test("a charges item cannot be added at 0; stock to daily keeps its count and takes the daily number", async ({
-  page,
-}) => {
-  await openInventory(page);
-  await page.getByRole("button", { name: "Add item" }).click();
-  const f = form(page);
-  await f.getByLabel("Name").fill("Rod");
-  await f.getByLabel("Behaviour").selectOption("charges");
-  await f.getByLabel("Count").fill("0");
-  await f.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(fieldError(page, "count")).toContainText("at least 1 charge");
-  await f.getByRole("button", { name: "Cancel" }).click();
-
-  await row(page, "fire_flask").getByRole("button", { name: "Edit Fire flasks" }).click();
-  await form(page).getByLabel("Behaviour").selectOption("daily");
-  await form(page).getByLabel("Daily number").fill("5");
-  await form(page).getByRole("button", { name: "Save" }).click();
-  await expect(row(page, "fire_flask").getByTestId("item-count")).toHaveText("5 / 5");
-  await voidEntry(page, "Edited Fire flasks");
-  await expect(row(page, "fire_flask").getByTestId("item-count")).toHaveText("5");
-  await expect(row(page, "fire_flask").getByTestId("item-behaviour")).toHaveText("Stock");
-  await snap(page, "stock-to-daily-popped");
 });

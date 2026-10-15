@@ -51,3 +51,19 @@ describe("lookupLabels", () => {
     expect(sphereLabel(t, "Elemental Fire")).toBe("Elemental Fire");
   });
 });
+
+describe("lookupLabels in French, as the lookup shows them", () => {
+  it("translates the Priest values and the sphere a spell lists", async () => {
+    const t = await tFor("fr");
+    expect(translateValue(t, "castingTime", "Special")).toBe("Spécial");
+    expect(translateValue(t, "range", "Touch")).toBe("Contact");
+    expect(spheresLabel(t, "Sun")).toBe("Soleil");
+    expect(classLabel(t, "Wizard")).toBe("Magicien");
+  });
+
+  it("leaves text with no entry as scraped", async () => {
+    const t = await tFor("fr");
+    expect(translateValue(t, "range", "Sight line")).toBe("Sight line");
+    expect(translateValue(t, "area", "A weird zone")).toBe("A weird zone");
+  });
+});

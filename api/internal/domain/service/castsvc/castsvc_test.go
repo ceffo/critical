@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -254,7 +255,7 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		},
 		{
 			name: "low-confidence spell shows its text only",
-			slot: slot("wall_of_ice", "Wall of Ice", 4), textOnly: castsvc.TextOnlyLowConfidence,
+			slot: slot("cloudkill", "Cloudkill", 5), textOnly: castsvc.TextOnlyLowConfidence,
 		},
 		{
 			name: "slot saved before preparation: id from the name",
@@ -539,23 +540,24 @@ func TestCast_BuffErrorAborts(t *testing.T) {
 func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 	tests := []struct {
 		slot spellsvc.SpellSlot
+		mode string // the cast-time mode cast and served (ADR 0008 step 14)
 		want spelleffectsvc.DamageAt
 	}{
-		{slot("fireball", "Fireball", 3), spelleffectsvc.DamageAt{
+		{slot("fireball", "Fireball", 3), "", spelleffectsvc.DamageAt{
 			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 10, Sides: 6}}},
 			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
 		}},
-		{slot("magic_missile", "Magic Missile", 1), spelleffectsvc.DamageAt{
+		{slot("magic_missile", "Magic Missile", 1), "", spelleffectsvc.DamageAt{
 			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 1, Sides: 4}}, Constant: 1},
 			Instances: formula.Sum{Constant: 5}, Rounds: formula.Sum{Constant: 1}, Type: "force",
 		}},
-		{slot("melfs_acid_arrow", "Melf's Acid Arrow", 2), spelleffectsvc.DamageAt{
+		{slot("melfs_acid_arrow", "Melf's Acid Arrow", 2), "", spelleffectsvc.DamageAt{
 			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}},
 			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 6}, Type: "acid",
 		}},
 		// ADR 0008 step 13: a damage made of parts serves each part, and a
 		// cast rolls each part of each instance.
-		{forceMissiles, spelleffectsvc.DamageAt{
+		{forceMissiles, "", spelleffectsvc.DamageAt{
 			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 2, Sides: 4}}, Constant: bardLevel},
 			Instances: formula.Sum{Constant: 3}, Rounds: formula.Sum{Constant: 1}, Type: "force",
 			Parts: []spelleffectsvc.DamagePartAt{
@@ -563,12 +565,33 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 				{Dice: formula.Sum{Constant: bardLevel}, Save: spelleffectsvc.SaveNegates},
 			},
 		}},
+		// ADR 0008 step 14: each mode serves the damage a cast in it rolls;
+		// the spell's own served damage is the default mode's.
+		{meteorSwarm, "", spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 10, Sides: 4}}},
+			Instances: formula.Sum{Constant: 4}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
+		}},
+		{meteorSwarm, "small_spheres", spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 5, Sides: 4}}},
+			Instances: formula.Sum{Constant: 8}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
+		}},
+		{wallOfIce, "ice_sheet", spelleffectsvc.DamageAt{
+			CasterLevel: bardLevel, Dice: formula.Sum{Dice: []formula.Dice{{Count: 3, Sides: 10}}},
+			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "cold",
+		}},
 	}
 	for _, tt := range tests {
-		t.Run(tt.slot.SpellID, func(t *testing.T) {
+		t.Run(tt.slot.SpellID+" "+tt.mode, func(t *testing.T) {
 			f := newFixture(t)
 			got, err := f.svc.DamageAt(context.Background(), tt.slot.SpellID, bardLevel)
 			require.NoError(t, err)
+			if tt.mode != "" {
+				modes, err := f.svc.ModesAt(context.Background(), tt.slot.SpellID, bardLevel)
+				require.NoError(t, err)
+				i := slices.IndexFunc(modes, func(m spelleffectsvc.ModeAt) bool { return m.Key == tt.mode })
+				require.GreaterOrEqual(t, i, 0, "mode %s served", tt.mode)
+				got = modes[i].Damage
+			}
 			require.NotNil(t, got)
 			assert.Equal(t, tt.want, *got)
 
@@ -583,7 +606,7 @@ func TestDamageAt_IsWhatACastRolls(t *testing.T) {
 				f.dice.vals[i] = 1
 			}
 			f.prepared(tt.slot)
-			res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
+			res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{Mode: tt.mode})
 			require.NoError(t, err)
 			require.Len(t, res.Damage.Rolls, rolls)
 			for _, r := range res.Damage.Rolls {
@@ -607,14 +630,19 @@ func TestDamageAt_NoneAndBounds(t *testing.T) {
 	got, err := f.svc.DamageAt(context.Background(), "alarm", bardLevel)
 	require.NoError(t, err)
 	assert.Nil(t, got, "a utility spell rolls no damage")
-	got, err = f.svc.DamageAt(context.Background(), "wall_of_ice", bardLevel)
+	got, err = f.svc.DamageAt(context.Background(), "cloudkill", bardLevel)
 	require.NoError(t, err)
-	assert.Nil(t, got, "a low-confidence spell rolls no damage (like cloudkill in the campaign seeds)")
+	assert.Nil(t, got, "a low-confidence spell rolls no damage")
 	got, err = f.svc.DamageAt(context.Background(), "no_such_spell", bardLevel)
 	require.NoError(t, err)
 	assert.Nil(t, got, "no effect entry")
+	modes, err := f.svc.ModesAt(context.Background(), "fireball", bardLevel)
+	require.NoError(t, err)
+	assert.Nil(t, modes, "a spell without modes")
 	for _, level := range []int{0, castsvc.MaxCasterLevel + 1} {
 		_, err = f.svc.DamageAt(context.Background(), "fireball", level)
+		require.ErrorIs(t, err, domain.ErrInvalidInput, "level %d", level)
+		_, err = f.svc.ModesAt(context.Background(), "wall_of_ice", level)
 		require.ErrorIs(t, err, domain.ErrInvalidInput, "level %d", level)
 	}
 }

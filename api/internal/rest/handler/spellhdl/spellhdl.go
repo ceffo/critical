@@ -40,6 +40,7 @@ type characterGetter interface {
 // satisfies it).
 type damageReader interface {
 	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
+	ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error)
 }
 
 // RegisterRoutes wires spell endpoints onto r.
@@ -109,6 +110,11 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 					return err
 				}
 				items[i].Damage = DamageToDTO(d)
+				modes, err := damage.ModesAt(r.Context(), items[i].ID, level)
+				if err != nil {
+					return err
+				}
+				items[i].Modes = ModesToDTO(modes)
 			}
 		}
 		render.OK(r.Context(), w, SpellPageDTO{
@@ -290,6 +296,26 @@ type SpellDTO struct {
 	// Damage is what a cast rolls at CasterLevel (absent: no caster level,
 	// or a cast rolls no damage).
 	Damage *SpellDamageDTO `json:"damage,omitempty"`
+	// Modes are the cast-time modes a cast or a receive picks from, each with
+	// the damage a cast in it rolls at CasterLevel (the first is the default;
+	// Damage is its damage). Absent: the spell has none.
+	Modes []SpellModeDTO `json:"modes,omitempty"`
+}
+
+// SpellModeDTO is one cast-time mode: its key (the client words it) and the
+// damage a cast in it rolls (absent: none).
+type SpellModeDTO struct {
+	Key    string          `json:"key"`
+	Damage *SpellDamageDTO `json:"damage,omitempty"`
+}
+
+// ModesToDTO maps cast-time modes to their wire shape (nil: none).
+func ModesToDTO(modes []spelleffectsvc.ModeAt) []SpellModeDTO {
+	var out []SpellModeDTO
+	for _, m := range modes {
+		out = append(out, SpellModeDTO{Key: m.Key, Damage: DamageToDTO(m.Damage)})
+	}
+	return out
 }
 
 // DiceGroupDTO is Count dice of Sides sides.

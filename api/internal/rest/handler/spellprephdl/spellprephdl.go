@@ -39,6 +39,9 @@ type SpellbookEntryDTO struct {
 	SlotSplits      [][]int `json:"slot_splits,omitempty"`
 	ConsumeItemType string  `json:"consume_item_type,omitempty"`
 	AttackRoll      bool    `json:"attack_roll,omitempty"`
+	// Modes are the cast-time modes the cast picks from, with the damage a
+	// cast in each rolls (the first is the default; absent: none).
+	Modes []spellhdl.SpellModeDTO `json:"modes,omitempty"`
 	// Damage is what a cast rolls at the character's level, in the shape
 	// of the spell lookup's (absent: the cast rolls no damage).
 	Damage *spellhdl.SpellDamageDTO `json:"damage,omitempty"`
@@ -83,7 +86,7 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 			dto := SpellbookEntryDTO{
 				ID: e.ID, Name: e.Name, Level: e.Level,
 				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
-				Damage: spellhdl.DamageToDTO(e.Damage),
+				Damage: spellhdl.DamageToDTO(e.Damage), Modes: spellhdl.ModesToDTO(e.Cast.Modes),
 			}
 			for _, it := range e.Items {
 				dto.Items = append(dto.Items, SpendableItemDTO{ID: it.ID, Name: it.Name, Count: it.Count})

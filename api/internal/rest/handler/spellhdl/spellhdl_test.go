@@ -52,8 +52,22 @@ func (f fakeChars) GetCharacter(context.Context, int64) (*charactersvc.Character
 }
 
 // fakeDamage serves 10d6+2 fire, once per round, at any level for
-// "fireball" and nothing for other spells; it records the levels asked.
+// "fireball" and nothing for other spells; it records the levels asked. Its
+// modes are ice_storm's: hail (3d10 cold) and sleet (no damage).
 type fakeDamage struct{ levels *[]int }
+
+func (f fakeDamage) ModesAt(_ context.Context, id string, level int) ([]spelleffectsvc.ModeAt, error) {
+	if id != "ice_storm" {
+		return nil, nil
+	}
+	return []spelleffectsvc.ModeAt{
+		{Key: "hail", Damage: &spelleffectsvc.DamageAt{
+			CasterLevel: level, Dice: formula.Sum{Dice: []formula.Dice{{Count: 3, Sides: 10}}},
+			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "cold",
+		}},
+		{Key: "sleet"},
+	}, nil
+}
 
 func (f fakeDamage) DamageAt(_ context.Context, id string, level int) (*spelleffectsvc.DamageAt, error) {
 	if f.levels != nil {
@@ -322,4 +336,29 @@ func TestDamageToDTO_Parts(t *testing.T) {
 	raw, err = json.Marshal(spellhdl.DamageToDTO(&spelleffectsvc.DamageAt{CasterLevel: 1}))
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "parts")
+}
+
+// ADR 0008 step 14: the lookup serves every cast-time mode with the damage a
+// cast in it rolls at the caster level (none for a mode without damage); a
+// spell without modes serves none.
+func TestSearch_ServesModesAtTheCasterLevel(t *testing.T) {
+	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 },
+		fakeSvc{spells: []spellsvc.Spell{{ID: "ice_storm", Name: "Ice Storm"}, {ID: "fireball", Name: "Fireball"}}},
+		fakeChars{level: 15}, fakeDamage{}))
+	rec := httptest.NewRecorder()
+	h(rec, httptest.NewRequest(http.MethodGet, "/api/spells?caster_level=9", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var page struct {
+		Items []struct {
+			ID    string          `json:"id"`
+			Modes json.RawMessage `json:"modes"`
+		} `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+	require.Len(t, page.Items, 2)
+	assert.JSONEq(t, `[
+		{"key":"hail","damage":{"caster_level":9,"type":"cold","dice":{"groups":[{"count":3,"sides":10}],"modifier":0},
+			"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":1}}},
+		{"key":"sleet"}]`, string(page.Items[0].Modes))
+	assert.Nil(t, page.Items[1].Modes, "fireball has no modes")
 }

@@ -51,12 +51,17 @@ type CastRequestDTO struct {
 	ItemID string `json:"itemId,omitempty"`
 	// TargetAC: the target's AC, required for a spell with an attack roll.
 	TargetAC *int `json:"targetAc,omitempty"`
+	// Mode: the key of the cast-time mode of a spell with modes (omitted:
+	// the first).
+	Mode string `json:"mode,omitempty"`
 }
 
 // ReceiveRequestDTO is the body of POST /api/spells/receive.
 type ReceiveRequestDTO struct {
 	SpellID     string `json:"spellId"`
 	CasterLevel int    `json:"casterLevel"`
+	// Mode: the cast-time mode the caster picked (omitted: the first).
+	Mode string `json:"mode,omitempty"`
 }
 
 // Cast spends slot {id} and applies its spell.
@@ -70,7 +75,7 @@ func Cast(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
 			return render.BadRequestError("invalid JSON body")
 		}
-		res, err := svc.Cast(r.Context(), charID(r), idx, castsvc.CastRequest{OnSelf: body.OnSelf, SpellID: body.SpellID, ExtraSlots: body.ExtraSlots, ItemID: body.ItemID, TargetAC: body.TargetAC})
+		res, err := svc.Cast(r.Context(), charID(r), idx, castsvc.CastRequest{OnSelf: body.OnSelf, SpellID: body.SpellID, ExtraSlots: body.ExtraSlots, ItemID: body.ItemID, TargetAC: body.TargetAC, Mode: body.Mode})
 		if err != nil {
 			return err
 		}
@@ -86,7 +91,7 @@ func Receive(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			return render.BadRequestError("invalid JSON body")
 		}
-		res, err := svc.Receive(r.Context(), charID(r), castsvc.ReceiveRequest{SpellID: body.SpellID, CasterLevel: body.CasterLevel})
+		res, err := svc.Receive(r.Context(), charID(r), castsvc.ReceiveRequest{SpellID: body.SpellID, CasterLevel: body.CasterLevel, Mode: body.Mode})
 		if err != nil {
 			return err
 		}
@@ -97,24 +102,27 @@ func Receive(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 
 // CastResultDTO is the wire shape of castsvc.CastResult.
 type CastResultDTO struct {
-	EntryID     int64                   `json:"entryId"`
-	Source      string                  `json:"source"`
-	SpellID     string                  `json:"spellId"`
-	Name        string                  `json:"name"`
-	Level       int                     `json:"level"`
-	CasterLevel int                     `json:"casterLevel"`
-	SlotIndex   *int                    `json:"slotIndex,omitempty"`
-	Kind        string                  `json:"kind,omitempty"`
-	Confidence  string                  `json:"confidence,omitempty"`
-	Target      string                  `json:"target,omitempty"`
-	Note        string                  `json:"note,omitempty"`
-	Spell       *spellhdl.SpellDTO      `json:"spell,omitempty"`
-	Save        *SaveDTO                `json:"save,omitempty"`
-	TextOnly    string                  `json:"textOnly,omitempty"`
-	Buff        *AppliedBuffDTO         `json:"buff,omitempty"`
-	Damage      *DamageDTO              `json:"damage,omitempty"`
-	Untracked   []UntrackedDTO          `json:"untracked"`
-	Slots       []spellhdl.SpellSlotDTO `json:"slots,omitempty"`
+	EntryID     int64  `json:"entryId"`
+	Source      string `json:"source"`
+	SpellID     string `json:"spellId"`
+	Name        string `json:"name"`
+	Level       int    `json:"level"`
+	CasterLevel int    `json:"casterLevel"`
+	SlotIndex   *int   `json:"slotIndex,omitempty"`
+	// Mode: the key of the cast-time mode the spell was cast in (absent: the
+	// spell has no modes).
+	Mode       string                  `json:"mode,omitempty"`
+	Kind       string                  `json:"kind,omitempty"`
+	Confidence string                  `json:"confidence,omitempty"`
+	Target     string                  `json:"target,omitempty"`
+	Note       string                  `json:"note,omitempty"`
+	Spell      *spellhdl.SpellDTO      `json:"spell,omitempty"`
+	Save       *SaveDTO                `json:"save,omitempty"`
+	TextOnly   string                  `json:"textOnly,omitempty"`
+	Buff       *AppliedBuffDTO         `json:"buff,omitempty"`
+	Damage     *DamageDTO              `json:"damage,omitempty"`
+	Untracked  []UntrackedDTO          `json:"untracked"`
+	Slots      []spellhdl.SpellSlotDTO `json:"slots,omitempty"`
 	// ExtraSlots: levels of the extra slots this cast added.
 	ExtraSlots []int `json:"extraSlots,omitempty"`
 	// ConsumedItem: the inventory item the cast spent.
@@ -221,7 +229,7 @@ type UntrackedDTO struct {
 func ToDTO(res castsvc.CastResult) CastResultDTO {
 	out := CastResultDTO{
 		EntryID: res.EntryID, Source: string(res.Source), SpellID: res.SpellID, Name: res.Name,
-		Level: res.Level, CasterLevel: res.CasterLevel, SlotIndex: res.SlotIndex,
+		Level: res.Level, CasterLevel: res.CasterLevel, SlotIndex: res.SlotIndex, Mode: res.Mode,
 		Kind: string(res.Kind), Confidence: string(res.Confidence), Target: string(res.Target),
 		Note: res.Note, TextOnly: string(res.TextOnly), Untracked: []UntrackedDTO{},
 	}

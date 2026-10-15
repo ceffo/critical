@@ -29,11 +29,11 @@ func (s *service) roll(f *formula.Formula, level int) (Roll, error) {
 // rollDamage rolls a damage entry at the caster level: the dice of the
 // level's row, once per instance, every round it repeats. A damage made of
 // parts rolls each part of each instance once, in the data's order (ADR 0008
-// step 13).
-func (s *service) rollDamage(e spelleffectsvc.Entry, level int) (*DamageResult, error) {
-	d := e.Damage
+// step 13). d is the entry's damage, or the damage of the cast-time mode
+// picked (ADR 0008 step 14).
+func (s *service) rollDamage(e spelleffectsvc.Entry, d *spelleffectsvc.Damage, level int) (*DamageResult, error) {
 	if len(d.Parts) > 0 {
-		return s.rollDamageParts(e, level)
+		return s.rollDamageParts(e, d, level)
 	}
 	dice := d.DiceAt(level)
 	if dice == nil {
@@ -78,8 +78,7 @@ func (s *service) rollRepeats(d *spelleffectsvc.Damage, level int, out *DamageRe
 // rollDamageParts rolls a damage made of parts: every instance rolls each
 // part once; the instance roll adds the parts up. TotalOnSave leaves out the
 // parts a save negates.
-func (s *service) rollDamageParts(e spelleffectsvc.Entry, level int) (*DamageResult, error) {
-	d := e.Damage
+func (s *service) rollDamageParts(e spelleffectsvc.Entry, d *spelleffectsvc.Damage, level int) (*DamageResult, error) {
 	dice := make([]*formula.Formula, len(d.Parts))
 	out := &DamageResult{Type: d.Type, Instances: 1, Rounds: 1, Parts: make([]DamagePart, len(d.Parts))}
 	formulas := make([]string, len(d.Parts))

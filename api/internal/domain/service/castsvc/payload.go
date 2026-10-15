@@ -5,12 +5,15 @@ package castsvc
 // the log must stay decodable: add fields, never rename them.
 type castRecord struct {
 	// Action is "cast" or "received".
-	Action      string        `json:"action"`
-	SpellID     string        `json:"spellId"`
-	Spell       string        `json:"spell"`
-	CasterLevel int           `json:"casterLevel"`
-	Buff        *buffRecord   `json:"buff,omitempty"`
-	Damage      *damageRecord `json:"damage,omitempty"`
+	Action      string `json:"action"`
+	SpellID     string `json:"spellId"`
+	Spell       string `json:"spell"`
+	CasterLevel int    `json:"casterLevel"`
+	// Mode is the key of the cast-time mode the spell was cast in; absent for
+	// a spell without modes and on casts logged before modes existed.
+	Mode   string        `json:"mode,omitempty"`
+	Buff   *buffRecord   `json:"buff,omitempty"`
+	Damage *damageRecord `json:"damage,omitempty"`
 	// ExtraSlots are the levels of the extra slots the cast granted.
 	ExtraSlots []int `json:"extraSlots,omitempty"`
 	// Item is the inventory item the cast spent.
@@ -89,7 +92,7 @@ type partRecord struct {
 }
 
 func toRecord(res CastResult) castRecord {
-	r := castRecord{Action: string(res.Source), SpellID: res.SpellID, Spell: res.Name, CasterLevel: res.CasterLevel}
+	r := castRecord{Action: string(res.Source), SpellID: res.SpellID, Spell: res.Name, CasterLevel: res.CasterLevel, Mode: res.Mode}
 	if b := res.Buff; b != nil {
 		r.Buff = &buffRecord{Name: b.Buff.Name, Rounds: b.Buff.Duration, Charges: b.Buff.Charges, Applied: b.Applied}
 		if b.StrGain != nil {

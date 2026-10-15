@@ -128,6 +128,32 @@ named otherwise.
     (levels 7, 15 and 25), `TestCast_DamageParts_RollsEachPartOnce`,
     `TestReceive_DamageParts_AtTheCastersLevel`, `TestDamageAt_IsWhatACastRolls`,
     `TestDamageToDTO_Parts` (rest/handler/spellhdl), `TestToDTO_DamageParts` (rest/handler/casthdl).
+14. **Cast-time modes.** A spell whose damage depends on an option the caster picks when casting
+    (Wall of Ice: an ice plane, a hemisphere or a falling ice sheet; Meteor Swarm: four large
+    spheres or eight small ones; Ice Storm: hail or sleet) lists `modes` in its data instead of a
+    `damage`: each mode has a key (snake_case, unique in the spell) and its own damage, or none. A
+    mode's damage has the shape of step 8, may be made of parts (step 13) and uses the entry's
+    save. Only a `damage` spell has modes, at least two, at least one of them with damage, and no
+    `damage` of its own; any other list is a startup error. The cast request names the mode by key;
+    none named is the first mode listed (the default, as for the slot split of step 9); a key the
+    spell does not list, or any key for a spell without modes, is refused (400,
+    `unknown_spell_mode`) before anything is written, spent, rolled or logged. The cast rolls
+    exactly the chosen mode's damage, under steps 8 and 13; a mode without damage rolls nothing and
+    the slot is still spent. A spell received from someone else picks its mode the same way and
+    rolls it at the caster's level. Served unrolled (step 8): every mode with the damage a cast in
+    it rolls, in the spellbook at the Bard's level and in the spell lookup at its caster level; the
+    damage served for the spell itself is the default mode's (none when the default rolls none).
+    The cast result and its entry record the mode's key (absent for a spell without modes and on
+    entries logged before modes existed); the UI words the key. Spells without modes cast exactly
+    as before. The mechanic is data (`seeds/spell_effects.json`), never a branch on a spell id.
+    Tests: `TestEntry_ModeFor`, `TestEntry_ModesAt` (spelleffectsvc), `TestParse_Modes`,
+    `TestParse_ModesRefused` (adapters/spelleffectsadpt), `TestCast_Mode_RollsTheChosenModesDamage`,
+    `TestCast_Mode_DefaultIsTheFirst`, `TestCast_Mode_WithoutDamageSpendsTheSlot`,
+    `TestCast_Mode_UnknownIsRefused`, `TestReceive_Mode_AtTheCastersLevel`,
+    `TestDamageAt_IsWhatACastRolls`, `TestInfo_ServesTheModes` (prepsvc),
+    `TestSearch_ServesModesAtTheCasterLevel` (rest/handler/spellhdl), `TestGetInfo_ServesTheModes`
+    (rest/handler/spellprephdl), `TestCastAndReceive_CarryTheMode` (rest/handler/casthdl),
+    `TestSpecialSentinels` (rest/router).
 
 ## Consequences
 
@@ -140,3 +166,6 @@ named otherwise.
   not modelled (it would need a rounding rule) and is refused; a save whose effect is not damage
   (Mummy Rot's disease) leaves the damage as one part with no save. Force Missiles is not in the
   PHB of the rulebooks repo: its numbers are the ones of its data entry.
+- Cast-time modes (step 14) choose the damage only. What a mode does besides (Ice Storm's sleet
+  blinds and slows; the ice plane's damage to whoever breaks through it later) is not rolled or
+  tracked: the spell's note says it.

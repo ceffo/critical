@@ -2,6 +2,7 @@ package spelleffectsvc
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -100,6 +101,9 @@ func (e Entry) Validate() error {
 	if e.ConsumeItem != nil && strings.TrimSpace(e.ConsumeItem.Type) == "" {
 		return fmt.Errorf("consume_item.type is required")
 	}
+	if e.Modes != nil && e.Kind != KindDamage {
+		return fmt.Errorf("only a damage spell can have modes")
+	}
 	hasBuff := e.Buff != nil && (len(e.Buff.Modifiers) > 0 || len(e.Buff.AbilityGain) > 0 || len(e.Buff.AbilitySet) > 0)
 	switch e.Kind {
 	case KindBuff:
@@ -111,16 +115,22 @@ func (e Entry) Validate() error {
 		}
 		return e.Buff.validate()
 	case KindDamage:
-		if e.Damage == nil {
-			return fmt.Errorf("a damage spell needs damage")
-		}
 		if hasBuff || e.Charges != nil {
 			return fmt.Errorf("a damage spell cannot have buff fields")
 		}
-		if err := e.Damage.validate(); err != nil {
-			return err
+		if e.Modes != nil {
+			return e.validateModes()
 		}
-		return e.validateParts()
+		if e.Damage == nil {
+			return fmt.Errorf("a damage spell needs damage or modes")
+		}
+		if err := e.Damage.validate(); err != nil {
+			return fmt.Errorf("damage%w", err)
+		}
+		if err := e.validateParts(e.Damage); err != nil {
+			return fmt.Errorf("damage%w", err)
+		}
+		return nil
 	default: // utility
 		if hasBuff || e.Charges != nil || e.Damage != nil {
 			return fmt.Errorf("a utility spell cannot have buff, charges or damage fields")
@@ -198,25 +208,27 @@ func (g AbilityGain) validate(field string) error {
 // say exactly what a save does to it (ADR 0008 step 13).
 var validPartSaves = []SaveEffect{SaveNone, SaveNegates}
 
+// validate checks a damage: its error starts after the field path (": ..."
+// or ".parts[0]..."), which the caller prefixes ("damage", "modes[1].damage").
 func (d *Damage) validate() error {
 	single := d.Dice != nil || len(d.ByLevel) > 0
 	switch {
 	case d.Parts != nil && single:
-		return fmt.Errorf("damage: set exactly one of dice, by_level and parts")
+		return fmt.Errorf(": set exactly one of dice, by_level and parts")
 	case d.Parts != nil && len(d.Parts) == 0:
-		return fmt.Errorf("damage.parts: the list is empty")
+		return fmt.Errorf(".parts: the list is empty")
 	case d.Parts == nil && (d.Dice == nil) == (len(d.ByLevel) == 0):
-		return fmt.Errorf("damage: set exactly one of dice, by_level and parts")
+		return fmt.Errorf(": set exactly one of dice, by_level and parts")
 	}
 	if err := validateByLevel(d.ByLevel); err != nil {
-		return fmt.Errorf("damage.%w", err)
+		return fmt.Errorf(".%w", err)
 	}
 	for i, p := range d.Parts {
 		if (p.Dice == nil) == (len(p.ByLevel) == 0) {
-			return fmt.Errorf("damage.parts[%d]: set exactly one of dice and by_level", i)
+			return fmt.Errorf(".parts[%d]: set exactly one of dice and by_level", i)
 		}
 		if err := validateByLevel(p.ByLevel); err != nil {
-			return fmt.Errorf("damage.parts[%d].%w", i, err)
+			return fmt.Errorf(".parts[%d].%w", i, err)
 		}
 	}
 	// The dice are served evaluated at the caster level (DamageAt): each
@@ -224,7 +236,7 @@ func (d *Damage) validate() error {
 	for level := 1; level <= MaxCasterLevel; level++ {
 		for i, p := range d.Parts {
 			if _, err := p.DiceAt(level).Expand(level); err != nil {
-				return fmt.Errorf("damage.parts[%d]: %w", i, err)
+				return fmt.Errorf(".parts[%d]: %w", i, err)
 			}
 		}
 		for _, f := range []*formula.Formula{d.DiceAt(level), d.Instances, d.Rounds} {
@@ -232,7 +244,7 @@ func (d *Damage) validate() error {
 				continue
 			}
 			if _, err := f.Expand(level); err != nil {
-				return fmt.Errorf("damage: %w", err)
+				return fmt.Errorf(": %w", err)
 			}
 		}
 	}
@@ -256,17 +268,59 @@ func validateByLevel(byLevel []LevelDice) error {
 }
 
 // validateParts checks each damage part's save effect, its own or the
-// entry's (ADR 0008 step 13).
-func (e Entry) validateParts() error {
-	for i, p := range e.Damage.Parts {
+// entry's (ADR 0008 step 13). Its error starts after the damage's path, as
+// Damage.validate's.
+func (e Entry) validateParts(d *Damage) error {
+	for i, p := range d.Parts {
 		if p.Save != "" {
 			if err := oneOf(p.Save, validSaveEffects, "save"); err != nil {
-				return fmt.Errorf("damage.parts[%d]: %w", i, err)
+				return fmt.Errorf(".parts[%d]: %w", i, err)
 			}
 		}
 		if err := oneOf(e.PartSave(p), validPartSaves, "save effect"); err != nil {
-			return fmt.Errorf("damage.parts[%d]: %w", i, err)
+			return fmt.Errorf(".parts[%d]: %w", i, err)
 		}
+	}
+	return nil
+}
+
+// modeKey is the shape of a mode key: snake_case, as spell ids.
+var modeKey = regexp.MustCompile(`^[a-z0-9]+(_[a-z0-9]+)*$`)
+
+// validateModes checks a spell's cast-time modes (ADR 0008 step 14): at
+// least two, keys snake_case and unique, no damage of the spell's own, each
+// mode's damage valid (step 8, parts step 13) and at least one mode with
+// damage.
+func (e Entry) validateModes() error {
+	if e.Damage != nil {
+		return fmt.Errorf("set damage or modes, not both")
+	}
+	if len(e.Modes) < 2 {
+		return fmt.Errorf("modes: at least two are needed, got %d", len(e.Modes))
+	}
+	seen := map[string]bool{}
+	withDamage := false
+	for i, m := range e.Modes {
+		if !modeKey.MatchString(m.Key) {
+			return fmt.Errorf("modes[%d]: key %q is not snake_case", i, m.Key)
+		}
+		if seen[m.Key] {
+			return fmt.Errorf("modes[%d]: duplicate key %q", i, m.Key)
+		}
+		seen[m.Key] = true
+		if m.Damage == nil {
+			continue
+		}
+		withDamage = true
+		if err := m.Damage.validate(); err != nil {
+			return fmt.Errorf("modes[%d].damage%w", i, err)
+		}
+		if err := e.validateParts(m.Damage); err != nil {
+			return fmt.Errorf("modes[%d].damage%w", i, err)
+		}
+	}
+	if !withDamage {
+		return fmt.Errorf("modes: no mode has damage (a utility spell)")
 	}
 	return nil
 }

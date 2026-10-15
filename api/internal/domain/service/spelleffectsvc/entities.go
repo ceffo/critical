@@ -110,6 +110,14 @@ type DamagePart struct {
 	Save    SaveEffect
 }
 
+// Mode is one cast-time option of a spell: a key unique in the spell
+// (snake_case, worded by the UI) and the damage a cast in this mode rolls
+// (nil: none). The damage uses the entry's save (ADR 0008 step 14).
+type Mode struct {
+	Key    string
+	Damage *Damage
+}
+
 // AbilityGain raises an ability score. Gain applies to everybody; ByGroup picks
 // the die by class group (warrior, priest, rogue, wizard; a bard is a rogue).
 type AbilityGain struct {
@@ -156,7 +164,11 @@ type Entry struct {
 	Charges    *Charges
 	Save       *Save
 	Damage     *Damage
-	Buff       *Buff
+	// Modes are the options the caster picks from when casting, each with its
+	// own damage (or none); the first is the default (ADR 0008 step 14). A
+	// spell with modes has no Damage of its own.
+	Modes []Mode
+	Buff  *Buff
 	// Cast mechanics, applied when the Bard casts the spell (not when it is
 	// received from someone else): GrantSlots adds extra slots, ConsumeItem
 	// spends an inventory item and AttackRoll rolls a spell to-hit (one d20,

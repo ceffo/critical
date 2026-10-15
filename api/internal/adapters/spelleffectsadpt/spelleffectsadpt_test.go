@@ -225,3 +225,67 @@ func TestParse_DamagePartsRefused(t *testing.T) {
 		})
 	}
 }
+
+// modesSeed builds a one-entry seed of kind kind with its save and the rest
+// of its fields (modes, damage) as JSON.
+func modesSeed(kind, save, rest string) string {
+	return `[{"id":"bolt","name":"Bolt","level":3,"kind":"` + kind + `","confidence":"high","target":"area",
+	  "duration":{"kind":"instant"}` + save + `,` + rest + `}]`
+}
+
+// ADR 0008 step 14: the loader maps cast-time modes in the data's order, each
+// with its damage (parts allowed) or none.
+func TestParse_Modes(t *testing.T) {
+	seed := modesSeed("damage", `,"save":{"type":"spell","effect":"negates"}`, `"modes":[
+	  {"key":"plane"},
+	  {"key":"sheet","damage":{"dice":"3d10","instances":"2","type":"cold"}},
+	  {"key":"burst","damage":{"parts":[{"dice":"2d4","save":"none"},{"dice":"level"}]}}]`)
+	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	require.NoError(t, err)
+	e, ok := c.Get("bolt")
+	require.True(t, ok)
+	assert.Nil(t, e.Damage)
+	require.Len(t, e.Modes, 3)
+	assert.Equal(t, "plane", e.Modes[0].Key)
+	assert.Nil(t, e.Modes[0].Damage)
+	assert.Equal(t, "sheet", e.Modes[1].Key)
+	assert.Equal(t, "3d10", e.Modes[1].Damage.Dice.String())
+	assert.Equal(t, "2", e.Modes[1].Damage.Instances.String())
+	assert.Equal(t, "cold", e.Modes[1].Damage.Type)
+	require.Len(t, e.Modes[2].Damage.Parts, 2)
+	assert.Equal(t, spelleffectsvc.SaveNegates, e.PartSave(e.Modes[2].Damage.Parts[1]), "the entry's save")
+}
+
+// ADR 0008 step 14: an invalid mode list is refused at startup.
+func TestParse_ModesRefused(t *testing.T) {
+	sheet := `{"key":"sheet","damage":{"dice":"3d10"}}`
+	special := `,"save":{"type":"spell","effect":"special"}`
+	tests := map[string]struct{ kind, save, rest, want string }{
+		"empty list":          {"damage", "", `"modes":[]`, "modes: at least two are needed, got 0"},
+		"one mode":            {"damage", "", `"modes":[` + sheet + `]`, "modes: at least two are needed, got 1"},
+		"duplicate key":       {"damage", "", `"modes":[` + sheet + `,` + sheet + `]`, `modes[1]: duplicate key "sheet"`},
+		"key not snake_case":  {"damage", "", `"modes":[{"key":"Ice Plane"},` + sheet + `]`, `modes[0]: key "Ice Plane" is not snake_case`},
+		"empty key":           {"damage", "", `"modes":[{"key":""},` + sheet + `]`, `modes[0]: key "" is not snake_case`},
+		"no mode with damage": {"damage", "", `"modes":[{"key":"a"},{"key":"b"}]`, "modes: no mode has damage"},
+		"damage and modes":    {"damage", "", `"damage":{"dice":"1d6"},"modes":[{"key":"a"},` + sheet + `]`, "set damage or modes, not both"},
+		"not a damage spell":  {"utility", "", `"modes":[{"key":"a"},` + sheet + `]`, "only a damage spell can have modes"},
+		"mode dice multiplied": {
+			"damage", "", `"modes":[{"key":"a"},{"key":"b","damage":{"dice":"2*1d4"}}]`,
+			"modes[1].damage: expand 2*1d4",
+		},
+		"mode dice malformed": {"damage", "", `"modes":[{"key":"a"},{"key":"b","damage":{"dice":"1d4/0"}}]`, "modes[1].damage.dice"},
+		"mode without dice":   {"damage", "", `"modes":[{"key":"a"},{"key":"b","damage":{"type":"fire"}}]`, "modes[1].damage: set exactly one of dice, by_level and parts"},
+		"mode part save":      {"damage", special, `"modes":[{"key":"a"},{"key":"b","damage":{"parts":[{"dice":"1d4"}]}}]`, "modes[1].damage.parts[0]: save effect special"},
+		"mode unknown field":  {"damage", "", `"modes":[{"key":"a","dice":"1d4"},` + sheet + `]`, "unknown field"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, err := spelleffectsadpt.New(writeSeed(t, modesSeed(tt.kind, tt.save, tt.rest)))
+			require.Error(t, err)
+			if name != "mode unknown field" {
+				assert.ErrorContains(t, err, `spell "bolt"`)
+			}
+			assert.ErrorContains(t, err, tt.want)
+		})
+	}
+}

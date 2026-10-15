@@ -19,7 +19,7 @@ web/
     api/              ← typed fetch wrappers (hp.ts, combat.ts, buffs.ts, spells.ts)
     components/
       ui/             ← shadcn/ui primitives (Button, Card, Badge, etc.)
-      dashboard/      ← Header, HpBar, RoundControl, BuffStrip, ResultCard, QuickHp, CombatLog, Notices
+      dashboard/      ← Header (TurnBlock, EffectsTimeline, BuffForms), HpBar, ResultCard, QuickHp, CombatLog, Notices
       actions/        ← ActionArea tabs and one panel per tab
     stores/           ← Zustand stores (hp.ts, combat.ts, buffs.ts, spells.ts)
     types/            ← TypeScript types mirroring Go response structs
@@ -37,8 +37,8 @@ clamps, tokens and house rules are decided in
 ```mermaid
 flowchart TD
   subgraph H["Header region, full width (components/dashboard/Header.tsx)"]
-    RC["RoundControl: round + Next Round, end combat, set round, time passes"]
-    BS["BuffStrip: active buffs + Add buff"]
+    RC["TurnBlock: turn number, initiative row, Next turn, ⋯ menu (time passes, set turn, end combat)"]
+    BS["EffectsTimeline: one row per buff over a window of 8 / 12 / 16 turns, add / edit forms"]
   end
   subgraph G["Columns: rail | workspace 1fr | Fil clamp(340px, 26vw, 520px) | Moi clamp(300px, 22vw, 440px)"]
     RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts; gear opens SettingsPopover"]
@@ -75,13 +75,26 @@ flowchart TD
   onto them, never raw colours.
 - Plug-in slots: each Agir tab is one panel component in `components/actions/ActionArea.tsx`
   (`TABS`); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
-- Buffs: every change (add, edit rounds/charges, "Absorbed" for charge buffs, dismiss, Next
-  Round) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
+- Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): the turn
+  block shows the turn (the round counter), the initiative row ("Out of combat" at turn 0, a
+  placeholder otherwise), Next turn and a ⋯ popover menu (Time passes…, Set turn number…, End combat,
+  each a small form or confirm inside the popover). The effects track has a label column and N turn
+  columns, N = 8 / 12 / 16, the most that stay at least 60 CSS px wide; the window starts at
+  `max(1, turn − 2)` (at turn 0 it starts at 0). The current column is highlighted across every row,
+  past column headers are dimmed. Per buff: a thin line from its `startRound` (server-stamped, ADR
+  0004 step 15) to the previous turn, then a pill over the current turn and the `duration − 1` after
+  it, labelled with the turns left (from 60 also in hours), fading out past the window and in the
+  warning colour on its last turn (`duration` 1); a charge-only buff shows pips and "6 charges · until
+  spent" (the server keeps no starting count, so no "6 / 9"); an untimed one "until dismissed"; a buff
+  with `applies: false` is dashed with a lock and the reason. Each row has absorb (charge buffs),
+  edit and remove; "Add effect" opens the add form under the track.
+- Buffs: every change (add, edit rounds/charges, absorb for charge buffs, dismiss, Next
+  turn) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
   stack (critical-qki.38): only the newest non-voided entry shows Void; every entry has Note
   (the only amend, shown in italics under the line); values are never edited in the log. Buff/round entries are rendered from their
-  payload in the player's language (`lib/logSummary.ts`). The header's STR is the effective STR
+  payload in the player's language (`lib/logSummary.ts`). The Moi column's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
-  (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect on the badge ("weapon +5 · dice ×2"); a Strength
+  (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect under its name ("weapon +5 · dice ×2"); a Strength
   bonus that an active Improved Strength replaces (`applies: false`, no `min_str`) shows dashed
   with "replaced by Improved Strength".
 - Attack tab (`components/actions/AttackPanel.tsx`): weapon (`GET /api/weapons`), ammunition for
@@ -211,11 +224,12 @@ export const useHpStore = create<HpStore>((set) => ({
 ## Display Conventions
 
 - HP bar: colored progress bar (green > 50%, yellow 25-50%, red < 25%)
-- Buff list: each buff shows name + remaining charges/rounds as a Badge; from 60 rounds up the
-  rounds also show as hours ("150 rd · 2 h 30", `lib/passTime.ts`)
-- Time passes (RoundControl, "⏩ Time passes"): decimal hours ("1.5" or "1,5") with a "= 90
-  rounds" preview before Confirm; `POST /api/round/pass-time` converts and validates, the preview
-  is display only
+- Effects timeline: from 60 turns up the pill also shows hours ("150 turns · 2 h 30",
+  `lib/passTime.ts`)
+- Time passes (turn menu, "Time passes…"): decimal hours ("1.5" or "1,5"); the server previews
+  them (`GET /api/round/pass-time/preview`, ADR 0005 step 8): "= 90 turns" and the effects that
+  would end, or its refusal message; Confirm is enabled only on a valid preview and posts
+  `POST /api/round/pass-time`
 - Roll results: show the full breakdown in a readable format — never just the final number
 - Expiry alerts: use a toast notification (shadcn Toast) when a buff expires
 

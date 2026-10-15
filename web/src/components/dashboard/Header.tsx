@@ -1,14 +1,15 @@
-import { BuffStrip } from "./BuffStrip";
-import { RoundControl } from "./RoundControl";
+import { EffectsTimeline } from "./EffectsTimeline";
+import { TurnBlock } from "./TurnBlock";
 
-/** Header region, full width above the rail and columns: the round and the active buffs. */
+/**
+ * Header region, full width above the rail and columns: the turn block and the effects timeline
+ * (turns and effects are one concept: time).
+ */
 export function Header() {
   return (
-    <header className="flex min-w-0 shrink-0 items-center gap-6 bg-card px-4 py-2">
-      <RoundControl />
-      <div className="min-w-0 flex-1">
-        <BuffStrip />
-      </div>
+    <header className="flex min-w-0 shrink-0 items-stretch gap-4 bg-card px-4 py-3" data-screen="turn-header">
+      <TurnBlock />
+      <EffectsTimeline />
     </header>
   );
 }

@@ -21,7 +21,7 @@ interface BuffsStore {
   fetchRound: () => Promise<void>;
   fetchStrength: () => Promise<void>;
   /** Mutations throw on failure; call them through useTableStore.run to surface errors. */
-  activateBuff: (buff: Partial<BuffEffect>) => Promise<void>;
+  activateBuff: (buff: Omit<Partial<BuffEffect>, "startRound">) => Promise<void>;
   editBuff: (id: string, edit: BuffEdit) => Promise<void>;
   dismissBuff: (id: string) => Promise<void>;
   triggerBuff: (id: string) => Promise<void>;

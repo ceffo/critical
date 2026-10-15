@@ -122,7 +122,7 @@ func TestUpdate_ChangesFieldsAndLogsBeforeAfter(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, after, res.Weapon)
 	assert.Equal(t, actionlog.KindWeaponEdit, got.Kind)
-	assert.Equal(t, "Edited weapon Bastard Sword +2: magic_to_hit 2 → 3, magic_damage 2 → 3", got.Summary)
+	assert.Empty(t, got.Summary, "the UI words the change from its payload")
 	assert.Contains(t, string(got.Snapshots[0].Before), `"magicToHit":2`)
 	assert.Contains(t, string(got.Snapshots[0].After), `"magicToHit":3`)
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"magic_to_hit","before":"2","after":"3"},{"field":"magic_damage","before":"2","after":"3"}]`)
@@ -200,7 +200,7 @@ func TestDelete_RemovesAndLogsWholeWeapon(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, bastard, res.Weapon)
 	assert.Equal(t, actionlog.KindWeaponRemove, got.Kind)
-	assert.Equal(t, "Removed weapon Bastard Sword +2", got.Summary)
+	assert.Contains(t, string(got.Payload), `"name":"Bastard Sword +2"`)
 	assert.Contains(t, string(got.Snapshots[0].Before), `"name":"Bastard Sword +2"`)
 	assert.Contains(t, string(got.Snapshots[0].After), `"absent":true`)
 }

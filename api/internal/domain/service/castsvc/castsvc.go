@@ -53,8 +53,8 @@ type Buffs interface {
 	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
 }
 
-// Items is the inventory (itemsvc): Chromatic Orb lists the gems and spends
-// one. Use joins the caller's transaction.
+// Items is the inventory (itemsvc): a spell that consumes an item lists the
+// items and spends one. Use joins the caller's transaction.
 type Items interface {
 	List(ctx context.Context) ([]itemsvc.Item, error)
 	Use(ctx context.Context, itemID string) (itemsvc.Item, error)

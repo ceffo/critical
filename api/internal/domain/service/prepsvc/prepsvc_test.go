@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"path/filepath"
 	"testing"
 
+	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -35,12 +38,14 @@ type fixture struct {
 var bardTable = map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2}
 
 var book = map[string]prepsvc.SpellbookEntry{
-	"magic_missile": {ID: "magic_missile", Name: "Magic Missile", Level: 1},
-	"alarm":         {ID: "alarm", Name: "Alarm", Level: 1},
-	"identify":      {ID: "identify", Name: "Identify", Level: 1},
-	"enlarge":       {ID: "enlarge", Name: "Enlarge", Level: 1},
-	"mirror_image":  {ID: "mirror_image", Name: "Mirror Image", Level: 2},
-	"fireball":      {ID: "fireball", Name: "Fireball", Level: 3},
+	"magic_missile":           {ID: "magic_missile", Name: "Magic Missile", Level: 1},
+	"alarm":                   {ID: "alarm", Name: "Alarm", Level: 1},
+	"identify":                {ID: "identify", Name: "Identify", Level: 1},
+	"enlarge":                 {ID: "enlarge", Name: "Enlarge", Level: 1},
+	"mirror_image":            {ID: "mirror_image", Name: "Mirror Image", Level: 2},
+	"fireball":                {ID: "fireball", Name: "Fireball", Level: 3},
+	"chromatic_orb":           {ID: "chromatic_orb", Name: "Chromatic Orb", Level: 1},
+	"rarys_mnemonic_enhancer": {ID: "rarys_mnemonic_enhancer", Name: "Rary's Mnemonic Enhancer", Level: 4},
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -52,7 +57,9 @@ func newFixture(t *testing.T) *fixture {
 		e, ok := book[id]
 		return e, ok
 	}).Maybe()
-	b.EXPECT().All().Return([]prepsvc.SpellbookEntry{book["alarm"], book["fireball"]}).Maybe()
+	b.EXPECT().All().RunAndReturn(func() []prepsvc.SpellbookEntry {
+		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"]}
+	}).Maybe()
 
 	limits := mocks.NewMockLimits(t)
 	limits.EXPECT().BardSpellsPerDay(15).Return(bardTable, nil).Maybe()
@@ -61,7 +68,7 @@ func newFixture(t *testing.T) *fixture {
 	chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{Level: 15}, nil).Maybe()
 
 	svc, err := prepsvc.New(prepsvc.Deps{
-		Slots: f.slots, Spellbook: b, Limits: limits, Characters: chars, Log: f.log, Tx: f.tx,
+		Slots: f.slots, Spellbook: b, Effects: catalog(t), Limits: limits, Characters: chars, Log: f.log, Tx: f.tx,
 	})
 	require.NoError(t, err)
 	f.svc = svc
@@ -78,7 +85,26 @@ func TestInfo(t *testing.T) {
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 2}}, info.Limits)
-	assert.Len(t, info.Spellbook, 2)
+	require.Len(t, info.Spellbook, 4)
+	assert.Equal(t, prepsvc.CastInputs{}, info.Spellbook[0].Cast, "alarm asks nothing")
+}
+
+// ADR 0008 steps 9 and 10: what a cast asks of the player comes from the
+// spell effects data, never from the spell's id.
+func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
+	f := newFixture(t)
+	info, err := f.svc.Info(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true}, info.Spellbook[2].Cast)
+	assert.Equal(t, prepsvc.CastInputs{SlotSplits: [][]int{{1, 1, 1}, {1, 2}, {3}}}, info.Spellbook[3].Cast)
+}
+
+// catalog is the test seed of spell effects.
+func catalog(t *testing.T) spelleffectsvc.Catalog {
+	t.Helper()
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
+	require.NoError(t, err)
+	return c
 }
 
 func TestPrepare_Refused(t *testing.T) {
@@ -130,7 +156,9 @@ func TestPrepare_AcceptsTheLimit_KeepsOrderAndDuplicates(t *testing.T) {
 	// Recorded in the same transaction, with a snapshot under the state key.
 	assert.Equal(t, 1, f.tx.calls)
 	assert.Equal(t, actionlog.KindSpellPrep, rec.Kind)
-	assert.Equal(t, "Prepared: Magic Missile, Alarm, Identify, Mirror Image ×2, Fireball", rec.Summary)
+	assert.JSONEq(t, `{"spells":[{"id":"magic_missile","name":"Magic Missile","count":1},{"id":"alarm","name":"Alarm","count":1},
+		{"id":"identify","name":"Identify","count":1},{"id":"mirror_image","name":"Mirror Image","count":2},{"id":"fireball","name":"Fireball","count":1}]}`,
+		string(rec.Payload))
 	require.Len(t, rec.Snapshots, 1)
 	assert.Equal(t, prepsvc.StateKey, rec.Snapshots[0].Key)
 	assert.JSONEq(t, `[]`, string(rec.Snapshots[0].Before))
@@ -191,9 +219,9 @@ func TestRestore_WritesTheSnapshotBack(t *testing.T) {
 	require.Error(t, f.svc.Restore(context.Background(), 1, json.RawMessage(`{`)))
 }
 
-// critical-qki.41: Rary's extra slots are not part of the preparation, so
+// ADR 0008 step 9: extra slots are not part of the preparation, so
 // preparing again keeps them as they are.
-func TestPrepare_KeepsRarysExtraSlots(t *testing.T) {
+func TestPrepare_KeepsExtraSlots(t *testing.T) {
 	f := newFixture(t)
 	extra := spellsvc.SpellSlot{Level: 2, SpellID: "mirror_image", PreparedSpellName: "Mirror Image", Used: true, Extra: true}
 	f.slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{
@@ -207,4 +235,18 @@ func TestPrepare_KeepsRarysExtraSlots(t *testing.T) {
 	require.Len(t, got, 2)
 	assert.False(t, got[0].Used, "a fresh mirror_image: the extra slot's cast does not count against it")
 	assert.Equal(t, extra, got[1])
+}
+
+// Preparing nothing is logged with an empty spell list, worded by the UI.
+func TestPrepare_NothingLogsAnEmptyList(t *testing.T) {
+	f := newFixture(t)
+	f.slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{}, nil)
+	f.slots.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).Return(nil)
+	var rec actionlog.NewEntry
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, e actionlog.NewEntry) { rec = e }).Return(int64(7), nil)
+	_, err := f.svc.Prepare(context.Background(), 1, nil)
+	require.NoError(t, err)
+	assert.Empty(t, rec.Summary)
+	assert.JSONEq(t, `{"spells":[]}`, string(rec.Payload))
 }

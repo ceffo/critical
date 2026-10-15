@@ -103,35 +103,31 @@ func TestCrit_Step3_MultiplierD100RolledOnEveryAttack(t *testing.T) {
 func TestCrit_Step4_MultiplierUsesSecondD100(t *testing.T) {
 	table := rows([3]int{1, 50, 2}, [3]int{51, 90, 3}, [3]int{91, 100, 4})
 	cases := []struct {
-		name         string
-		table        []combatsvc.CritRow
-		d20, check   int
-		mult         int
-		wantCrit     bool
-		wantMult     float64
-		wantFrom     int
-		wantTo       int
-		wantPlaceh   bool
-		wantTotal    int
-		wantTermFrom string
+		name       string
+		table      []combatsvc.CritRow
+		d20, check int
+		mult       int
+		wantCrit   bool
+		wantMult   float64
+		wantFrom   int
+		wantTo     int
+		wantPlaceh bool
+		wantTotal  int
 	}{
 		// Check 7 would pick x2 (1-50); the multiplier d100 63 picks x3 (51-90).
 		// ((5 × 1) + 2) × 3 = 21.
 		{
 			name: "crit: row of the multiplier d100", table: table, d20: 18, check: 7, mult: 63,
 			wantCrit: true, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
-			wantTermFrom: "Critical hit (check d100 7, multiplier d100 63 in 51-90)",
 		},
 		// Check 60 (no crit at 18 - 60) would have picked x3; the multiplier d100 95 picks x4.
 		{
 			name: "crit on a big roll: x4 from 95", table: table, d20: 20, check: 12, mult: 95,
 			wantCrit: true, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
-			wantTermFrom: "Critical hit (check d100 12, multiplier d100 95 in 91-100)",
 		},
 		{
 			name: "default table: x2 placeholder", table: nil, d20: 18, check: 7, mult: 63,
 			wantCrit: true, wantMult: 2, wantFrom: 1, wantTo: 100, wantPlaceh: true, wantTotal: 14,
-			wantTermFrom: "Critical hit (check d100 7, multiplier d100 63, placeholder)",
 		},
 		{
 			name: "no crit: x1 whatever the multiplier d100", table: table, d20: 12, check: 40, mult: 95,
@@ -150,13 +146,16 @@ func TestCrit_Step4_MultiplierUsesSecondD100(t *testing.T) {
 			assert.Equal(t, c.wantPlaceh, res.CritPlaceholder)
 			assert.Equal(t, c.wantTotal, res.TotalDamage)
 			if c.wantCrit {
-				var src string
+				// The crit term carries the multiplier; the UI labels it from
+				// the roll's crit range (CritFrom..CritTo, CritPlaceholder).
+				var crit []combatsvc.DamageTerm
 				for _, d := range res.DamageTerms {
 					if d.Kind == combatsvc.ModCrit {
-						src = d.Source
+						crit = append(crit, d)
 					}
 				}
-				assert.Equal(t, c.wantTermFrom, src)
+				require.Len(t, crit, 1)
+				assert.Equal(t, combatsvc.DamageTerm{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Value: c.wantMult}, crit[0])
 			}
 		})
 	}
@@ -171,7 +170,7 @@ func TestCrit_Step5_MultipliersStackFlooredOnce(t *testing.T) {
 		name      string
 		mods      buffsvc.BuffModifiers
 		wantTotal int
-		wantBreak string
+		wantBreak float64
 	}{
 		{
 			// ((5 × 3 dice buff) + 2) × 1.5 crit = 25.5 → 25, floored once at the end.
@@ -180,7 +179,7 @@ func TestCrit_Step5_MultipliersStackFlooredOnce(t *testing.T) {
 				SpellsBuff: 1, Multipliers: 3, EffectiveStr: 12,
 				MultipliersFrom: []buffsvc.Factor{{Buff: "Gem", Value: 3}},
 			},
-			wantTotal: 25, wantBreak: "((5 × 1.0 × 3.0) + 2) × 1.5 + 0 = 25.5 → 25",
+			wantTotal: 25, wantBreak: 25.5,
 		},
 		{
 			// 7 × 1.5 - 20 = -9.5 → 0.
@@ -189,7 +188,7 @@ func TestCrit_Step5_MultipliersStackFlooredOnce(t *testing.T) {
 				SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, Damage: -20,
 				DamageFrom: []buffsvc.Contribution{{Buff: "Curse", Value: -20}},
 			},
-			wantTotal: 0, wantBreak: "((5 × 1.0) + 2) × 1.5 + 0 - 20 = -9.5 → 0",
+			wantTotal: 0, wantBreak: -9.5,
 		},
 	}
 	for _, c := range cases {
@@ -200,7 +199,7 @@ func TestCrit_Step5_MultipliersStackFlooredOnce(t *testing.T) {
 			res := stepAttack(t, f, 5, 18, 3, 60, &c.mods)
 			require.True(t, res.IsCrit)
 			assert.Equal(t, c.wantTotal, res.TotalDamage)
-			assert.Equal(t, c.wantBreak, res.DamageBreakdown)
+			assert.InDelta(t, c.wantBreak, res.UnroundedDamage, 1e-9)
 		})
 	}
 }

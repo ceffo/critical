@@ -46,8 +46,7 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 	return out, nil
 }
 
-// AmendLatest records an amend carrying a new summary and payload on entry
-// id. It is refused when the entry is another kind or kind is not a roll
+// AmendLatest records an amend carrying a new payload on entry id. It is refused when the entry is another kind or kind is not a roll
 // (ErrNotAmendable), voided (ErrAlreadyVoided) or not the latest roll: a newer
 // entry of any of actionlog.RollKinds exists, voided ones included
 // (ErrNotLatest). The check and the write share one transaction.
@@ -75,14 +74,12 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 		if err != nil {
 			return err
 		}
-		a.Summary = strings.TrimSpace(a.Summary)
-		if a.Summary == "" || len(a.Payload) == 0 {
-			return fmt.Errorf("%w: amendment needs a summary and a payload", domain.ErrInvalidInput)
+		if len(a.Payload) == 0 {
+			return fmt.Errorf("%w: amendment needs a payload", domain.ErrInvalidInput)
 		}
 		if err := s.dal.InsertCorrection(ctx, actionlog.Correction{
 			ActionID: id,
 			Kind:     actionlog.CorrectionAmend,
-			Summary:  a.Summary,
 			Payload:  a.Payload,
 		}); err != nil {
 			return fmt.Errorf("insert amend: %w", err)

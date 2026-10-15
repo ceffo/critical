@@ -1,12 +1,13 @@
 package composition_test
 
-// The action log is a stack with note-only amends (critical-qki.38). User,
+// The action log is a stack with note-only amends. User,
 // 2026-10-14: "no amending values. just the note.. can only pop elements",
 // for every entry kind. Exercised on a cast (spell slot + Stoneskin), a buff
 // (Haste), a bow shot (one +3 arrow) and damage.
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -99,7 +100,7 @@ func TestLogStack_VoidOlderEntryIsRefused(t *testing.T) {
 	for i, id := range ids[:len(ids)-1] {
 		_, err := bs.Log.Void(ctx, bs.CharacterID, id)
 		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "entry %d", i)
-		assert.Contains(t, err.Error(), `void "troll claw"`)
+		assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (hp_change", ids[len(ids)-1]))
 	}
 	assert.Equal(t, states[len(states)-1], stateOf(t, bs), "nothing restored")
 	entries, err := bs.Log.List(ctx, bs.CharacterID, 10)
@@ -152,7 +153,7 @@ func TestLogStack_AmendNoteOnly(t *testing.T) {
 	}
 }
 
-// Checklist 4 (critical-qki.38): a note on a voided entry is refused
+// Checklist 4: a note on a voided entry is refused
 // (ErrAlreadyVoided, 409) and a note over 500 characters too (ErrInvalidInput,
 // 400); exactly 500 is fine. Status mapping: router_errors_test.
 func TestLogStack_NoteRefusals(t *testing.T) {

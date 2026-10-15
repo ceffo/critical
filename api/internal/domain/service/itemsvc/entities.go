@@ -1,6 +1,6 @@
 package itemsvc
 
-// Behaviour is how an item's count behaves at the table (critical-qki.13).
+// Behaviour is how an item's count behaves at the table.
 // It is the only real difference between items: arrows, flasks, wands and
 // gems are all one model with a free-text Type label.
 type Behaviour string

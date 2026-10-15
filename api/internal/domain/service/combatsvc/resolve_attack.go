@@ -33,14 +33,10 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		return nil, fmt.Errorf("%w: target size must be %q or %q", domain.ErrInvalidInput, SizeSmallMedium, SizeLarge)
 	}
 	if sit := req.Situational; sit != nil {
-		label := strings.TrimSpace(sit.Label)
-		switch {
-		case sit.Value == 0:
+		// An empty label stays empty: the UI names it.
+		req.Situational = &Situational{Value: sit.Value, Label: strings.TrimSpace(sit.Label)}
+		if sit.Value == 0 {
 			req.Situational = nil
-		case label == "":
-			req.Situational = &Situational{Value: sit.Value, Label: "Situational"}
-		default:
-			req.Situational = &Situational{Value: sit.Value, Label: label}
 		}
 	}
 
@@ -87,7 +83,6 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		id, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindAttack,
-			Summary:     summary(r),
 			Payload:     payload,
 			Snapshots:   snaps,
 		})
@@ -164,9 +159,9 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 			return nil, fmt.Errorf("strength table: %w", err)
 		}
 		detail := strconv.Itoa(str)
-		add(Modifier{Kind: ModStrength, Source: "Strength " + detail, Detail: detail, Value: hit})
+		add(Modifier{Kind: ModStrength, Detail: detail, Value: hit})
 		strDmg = dmg
-		strTerms = append(strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Source: "Strength " + detail, Detail: detail, Value: float64(dmg)})
+		strTerms = append(strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, Value: float64(dmg)})
 	}
 	// ADR 0002 step 5: Dexterity missile attack adjustment (PHB Table 2) for
 	// every missile attack with a hand-held weapon, bow or hurled.
@@ -176,7 +171,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 			return nil, fmt.Errorf("dexterity table: %w", err)
 		}
 		detail := strconv.Itoa(char.Dex)
-		add(Modifier{Kind: ModDexterity, Source: "Dexterity " + detail, Detail: detail, Value: missile})
+		add(Modifier{Kind: ModDexterity, Detail: detail, Value: missile})
 	}
 
 	// ADR 0002 step 6: weapon magic, the weapon's own +N, or a buff that
@@ -188,23 +183,23 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	}
 	if m, ok := weaponMagic(weapon.Name, weapon.MagicDamage, mods); ok {
 		weaponDmg = m.Value
-		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: m.Kind, Source: m.Source, Detail: m.Detail, Value: float64(m.Value)})
+		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: m.Kind, Detail: m.Detail, Value: float64(m.Value)})
 	}
 	// ADR 0002 step 7: magic ammunition adds to hit and damage, on top of
 	// the weapon's (DMG 2e, "Bow +1").
 	ammoDmg := 0
 	if ammo != nil && ammo.MagicBonus != 0 {
-		add(Modifier{Kind: ModAmmoMagic, Source: ammo.Name, Detail: ammo.Name, Value: ammo.MagicBonus})
+		add(Modifier{Kind: ModAmmoMagic, Detail: ammo.Name, Value: ammo.MagicBonus})
 		ammoDmg = ammo.MagicBonus
-		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: ModAmmoMagic, Source: ammo.Name, Detail: ammo.Name, Value: float64(ammo.MagicBonus)})
+		weaponTerms = append(weaponTerms, DamageTerm{Term: TermWeapon, Kind: ModAmmoMagic, Detail: ammo.Name, Value: float64(ammo.MagicBonus)})
 	}
 
 	// ADR 0002 step 8: one modifier per buff; step 9: the situational one.
 	for _, c := range mods.ToHitFrom {
-		add(Modifier{Kind: ModBuff, Source: c.Buff, Detail: c.Buff, Value: c.Value})
+		add(Modifier{Kind: ModBuff, Detail: c.Buff, Value: c.Value})
 	}
 	if sit := req.Situational; sit != nil {
-		add(Modifier{Kind: ModSituational, Source: sit.Label, Detail: sit.Label, Value: sit.Value})
+		add(Modifier{Kind: ModSituational, Detail: sit.Label, Value: sit.Value})
 	}
 
 	sum := 0
@@ -242,15 +237,15 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		Terms: []DamageTerm{},
 	}
 	for _, f := range mods.SpellsBuffFrom {
-		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermSpells, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermSpells, Kind: ModBuff, Detail: f.Buff, Value: f.Value})
 	}
 	for _, f := range mods.MultipliersFrom {
-		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBuff, Source: f.Buff, Detail: f.Buff, Value: f.Value})
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBuff, Detail: f.Buff, Value: f.Value})
 	}
 	rolled.Terms = append(rolled.Terms, weaponTerms...)
 	rolled.Terms = append(rolled.Terms, strTerms...)
 	for _, c := range mods.DamageFrom {
-		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermBonus, Kind: ModBuff, Source: c.Buff, Detail: c.Buff, Value: float64(c.Value)})
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermBonus, Kind: ModBuff, Detail: c.Buff, Value: float64(c.Value)})
 	}
 	res.Rolled = rolled
 
@@ -297,7 +292,7 @@ func settle(res *RollResult) {
 	res.SpellsBuff, res.WeaponBuff, res.Multipliers, res.DiceMultiplier = 0, 0, 0, 0
 	res.StrengthBonus, res.BonusDamage = 0, 0
 	res.DamageTerms = []DamageTerm{}
-	res.UnroundedDamage, res.TotalDamage, res.DamageBreakdown = 0, 0, ""
+	res.UnroundedDamage, res.TotalDamage = 0, 0
 	d := res.Rolled
 	if !res.Hit || d == nil {
 		return
@@ -316,7 +311,7 @@ func settle(res *RollResult) {
 	}
 	res.DamageTerms = append(res.DamageTerms, d.Terms[:critAt]...)
 	if res.IsCrit {
-		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModCrit, Source: critSource(res), Detail: critDetail(res), Value: res.CritMultiplier})
+		res.DamageTerms = append(res.DamageTerms, DamageTerm{Term: TermMultiplier, Kind: ModCrit, Value: res.CritMultiplier})
 	}
 	res.DamageTerms = append(res.DamageTerms, d.Terms[critAt:]...)
 
@@ -332,23 +327,6 @@ func settle(res *RollResult) {
 	res.UnroundedDamage = (float64(res.BaseDamage)*res.SpellsBuff*res.DiceMultiplier+float64(res.WeaponBuff))*res.Multipliers +
 		float64(res.StrengthBonus) + float64(res.BonusDamage)
 	res.TotalDamage = max(int(math.Floor(res.UnroundedDamage+floorEpsilon)), 0)
-	res.DamageBreakdown = explainDamage(res)
-}
-
-// critSource is the English label of the crit damage term.
-func critSource(r *RollResult) string {
-	if r.CritPlaceholder {
-		return fmt.Sprintf("Critical hit (check d100 %d, multiplier d100 %d, placeholder)", r.D100CritRoll, r.D100MultiplierRoll)
-	}
-	return fmt.Sprintf("Critical hit (check d100 %d, multiplier d100 %d in %d-%d)", r.D100CritRoll, r.D100MultiplierRoll, r.CritFrom, r.CritTo)
-}
-
-// critDetail is the matched range, "51-90", or "placeholder" for the default.
-func critDetail(r *RollResult) string {
-	if r.CritPlaceholder {
-		return "placeholder"
-	}
-	return fmt.Sprintf("%d-%d", r.CritFrom, r.CritTo)
 }
 
 // weaponMagic is the better of the weapon's own bonus and a buff's "weapon
@@ -357,7 +335,6 @@ func weaponMagic(weaponName string, own int, mods buffsvc.BuffModifiers) (Modifi
 	if mods.WeaponBuff > 0 && mods.WeaponBuff >= own {
 		return Modifier{
 			Kind:   ModWeaponBuff,
-			Source: fmt.Sprintf("%s (weapon +%d)", mods.WeaponBuffFrom, mods.WeaponBuff),
 			Detail: mods.WeaponBuffFrom,
 			Value:  mods.WeaponBuff,
 		}, true
@@ -365,46 +342,12 @@ func weaponMagic(weaponName string, own int, mods buffsvc.BuffModifiers) (Modifi
 	if own == 0 {
 		return Modifier{}, false
 	}
-	return Modifier{Kind: ModWeaponMagic, Source: weaponName, Detail: weaponName, Value: own}, true
-}
-
-// explainDamage is the formula with the numbers filled in.
-func explainDamage(r *RollResult) string {
-	dice := fmt.Sprintf("%d × %s", r.BaseDamage, factor(r.SpellsBuff))
-	if r.DiceMultiplier != 1 { // buff multiplier on the raw dice only (Power Gem ×2)
-		dice += " × " + factor(r.DiceMultiplier)
-	}
-	s := fmt.Sprintf("((%s) + %d) × %s + %d", dice, r.WeaponBuff, factor(r.Multipliers), r.StrengthBonus)
-	switch {
-	case r.BonusDamage > 0:
-		s += fmt.Sprintf(" + %d", r.BonusDamage)
-	case r.BonusDamage < 0:
-		s += fmt.Sprintf(" - %d", -r.BonusDamage)
-	}
-	// A fractional result (or one clamped up to 0) shows the unrounded value and the final step.
-	if u := math.Floor(r.UnroundedDamage + floorEpsilon); math.Abs(r.UnroundedDamage-u) > floorEpsilon || int(u) != r.TotalDamage {
-		return fmt.Sprintf("%s = %s → %d", s, trimNum(r.UnroundedDamage), r.TotalDamage)
-	}
-	return fmt.Sprintf("%s = %d", s, r.TotalDamage)
+	return Modifier{Kind: ModWeaponMagic, Detail: weaponName, Value: own}, true
 }
 
 // floorEpsilon absorbs float noise (3 × 1.1 = 3.3000000000000003, 1.1 × 10 =
 // 11.000000000000002 but 0.1 sums can land just under) before the final floor.
 const floorEpsilon = 1e-9
-
-// trimNum prints f without trailing zeros and without float noise: 1.5, 2, 3.25.
-func trimNum(f float64) string {
-	return strconv.FormatFloat(math.Round(f*1e6)/1e6, 'f', -1, 64)
-}
-
-// factor prints a multiplier as entered, with at least one decimal: 2.0, 1.5, 1.25.
-func factor(f float64) string {
-	s := trimNum(f)
-	if !strings.Contains(s, ".") {
-		s += ".0"
-	}
-	return s
-}
 
 // rollDice rolls "NdM" (case-insensitive) through the dice port.
 func rollDice(d Dice, dice string) (int, error) {
@@ -419,43 +362,6 @@ func rollDice(d Dice, dice string) (int, error) {
 		total += d.RollDie(sides)
 	}
 	return total, nil
-}
-
-// summary is the English log line (the UI renders the payload instead). A
-// corrected attack ends with the correction from the rolled AC and outcome:
-// "(AC 5 → 7: MISS → HIT)".
-func summary(r *RollResult) string {
-	weapon := r.WeaponName
-	if r.Ammo != nil {
-		weapon = fmt.Sprintf("%s (%s)", weapon, r.Ammo.Name)
-	}
-	var out string
-	switch {
-	case !r.Hit:
-		out = fmt.Sprintf("%s vs AC %d: miss", weapon, r.TargetAC)
-	case r.IsCrit:
-		out = fmt.Sprintf("%s vs AC %d: crit (check %d · multiplier %d → ×%s), %d damage",
-			weapon, r.TargetAC, r.D100CritRoll, r.D100MultiplierRoll, trimNum(r.CritMultiplier), r.TotalDamage)
-	default:
-		out = fmt.Sprintf("%s vs AC %d: hit, %d damage", weapon, r.TargetAC, r.TotalDamage)
-	}
-	if r.RolledTargetAC != nil && r.RolledHit != nil && r.RolledCrit != nil {
-		out += fmt.Sprintf(" (AC %d → %d: %s → %s)", *r.RolledTargetAC, r.TargetAC,
-			outcome(*r.RolledHit, *r.RolledCrit), outcome(r.Hit, r.IsCrit))
-	}
-	return out
-}
-
-// outcome is MISS, HIT or CRIT.
-func outcome(hit, crit bool) string {
-	switch {
-	case crit:
-		return "CRIT"
-	case hit:
-		return "HIT"
-	default:
-		return "MISS"
-	}
 }
 
 // ListWeapons returns the weapons catalog in sheet order.

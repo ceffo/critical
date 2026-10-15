@@ -9,7 +9,7 @@ export async function fetchLog(limit?: number): Promise<LogEntry[]> {
 }
 
 /** Set the note of an entry, any kind ("" clears it). The note is the only
- * thing an amend may change (critical-qki.38). */
+ * thing an amend may change. */
 export function amendLogEntry(id: number, note: string): Promise<LogEntry> {
   return post<LogEntry>(`/api/log/${id}/amend`, { note });
 }

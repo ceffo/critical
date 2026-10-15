@@ -24,7 +24,7 @@ func (s *service) SaveBuff(ctx context.Context, characterID int64, saved SavedBu
 	if err := validateBuff(BuffEffect{Name: saved.Name, Charges: saved.Charges, Duration: saved.Duration, Effects: saved.Effects}); err != nil {
 		return nil, err
 	}
-	return s.changeSaved(ctx, characterID, func(before []SavedBuff) ([]SavedBuff, logPayload, string, error) {
+	return s.changeSaved(ctx, characterID, func(before []SavedBuff) ([]SavedBuff, logPayload, error) {
 		after := make([]SavedBuff, 0, len(before)+1)
 		for _, b := range before {
 			if !strings.EqualFold(b.Name, saved.Name) {
@@ -32,14 +32,13 @@ func (s *service) SaveBuff(ctx context.Context, characterID int64, saved SavedBu
 			}
 		}
 		after = append(after, saved)
-		return after, logPayload{Action: "save_template", Buff: saved.Name, Rounds: saved.Duration, Charges: saved.Charges, Note: saved.Note},
-			fmt.Sprintf("Saved buff %s (%s)", saved.Name, counters(saved.Duration, saved.Charges)), nil
+		return after, logPayload{Action: "save_template", Buff: saved.Name, Rounds: saved.Duration, Charges: saved.Charges, Note: saved.Note}, nil
 	})
 }
 
 // DeleteSaved removes the template with id.
 func (s *service) DeleteSaved(ctx context.Context, characterID int64, id int64) ([]SavedBuff, error) {
-	return s.changeSaved(ctx, characterID, func(before []SavedBuff) ([]SavedBuff, logPayload, string, error) {
+	return s.changeSaved(ctx, characterID, func(before []SavedBuff) ([]SavedBuff, logPayload, error) {
 		after := make([]SavedBuff, 0, len(before))
 		var gone *SavedBuff
 		for i, b := range before {
@@ -50,17 +49,16 @@ func (s *service) DeleteSaved(ctx context.Context, characterID int64, id int64) 
 			after = append(after, b)
 		}
 		if gone == nil {
-			return nil, logPayload{}, "", fmt.Errorf("%w: saved buff %d", domain.ErrNotFound, id)
+			return nil, logPayload{}, fmt.Errorf("%w: saved buff %d", domain.ErrNotFound, id)
 		}
-		return after, logPayload{Action: "delete_template", Buff: gone.Name},
-			fmt.Sprintf("Deleted saved buff %s", gone.Name), nil
+		return after, logPayload{Action: "delete_template", Buff: gone.Name}, nil
 	})
 }
 
 // changeSaved runs decide on the stored list, writes the result and records
 // the entry with before/after snapshots in one transaction.
 func (s *service) changeSaved(ctx context.Context, characterID int64,
-	decide func(before []SavedBuff) ([]SavedBuff, logPayload, string, error),
+	decide func(before []SavedBuff) ([]SavedBuff, logPayload, error),
 ) ([]SavedBuff, error) {
 	var out []SavedBuff
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -68,7 +66,7 @@ func (s *service) changeSaved(ctx context.Context, characterID int64,
 		if err != nil {
 			return fmt.Errorf("list saved buffs: %w", err)
 		}
-		next, payload, summary, err := decide(append([]SavedBuff(nil), before...))
+		next, payload, err := decide(append([]SavedBuff(nil), before...))
 		if err != nil {
 			return err
 		}
@@ -96,7 +94,6 @@ func (s *service) changeSaved(ctx context.Context, characterID int64,
 		if _, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindBuffChange,
-			Summary:     summary,
 			Payload:     raw,
 			Snapshots:   []actionlog.Snapshot{{Key: StateKeySavedBuffs, Before: b, After: a}},
 		}); err != nil {

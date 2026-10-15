@@ -49,10 +49,10 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 		res.Modifiers = append(res.Modifiers, m)
 		sum += m.Value
 	}
-	add(Modifier{Kind: ModStrength, Source: "Strength " + strconv.Itoa(str), Detail: strconv.Itoa(str), Value: strHit})
-	add(Modifier{Kind: ModDexterity, Source: "Dexterity " + strconv.Itoa(char.Dex), Detail: strconv.Itoa(char.Dex), Value: dexMissile})
+	add(Modifier{Kind: ModStrength, Detail: strconv.Itoa(str), Value: strHit})
+	add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: dexMissile})
 	for _, c := range mods.ToHitFrom {
-		add(Modifier{Kind: ModBuff, Source: c.Buff, Detail: c.Buff, Value: c.Value})
+		add(Modifier{Kind: ModBuff, Detail: c.Buff, Value: c.Value})
 	}
 	res.EffectiveThac0 = res.BaseThac0 - sum
 	res.D20Roll = s.dice.RollD20()

@@ -121,37 +121,35 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 		wantTo      int
 		wantPlaceh  bool
 		wantTotal   int
-		wantTermSrc string
-		wantTermDet string
 		wantTermVal float64
 	}{
 		{
 			name: "first value of the first range", table: table, d100: 1, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
-			wantTermSrc: "Critical hit (check d100 99, multiplier d100 1 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
+			wantTermVal: 2,
 		},
 		{
 			name: "last value of the first range", table: table, d100: 50, wantMult: 2, wantFrom: 1, wantTo: 50, wantTotal: 14,
-			wantTermSrc: "Critical hit (check d100 99, multiplier d100 50 in 1-50)", wantTermDet: "1-50", wantTermVal: 2,
+			wantTermVal: 2,
 		},
 		{
 			name: "first value of the second range", table: table, d100: 51, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
-			wantTermSrc: "Critical hit (check d100 99, multiplier d100 51 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+			wantTermVal: 3,
 		},
 		{
 			name: "last value of the second range", table: table, d100: 90, wantMult: 3, wantFrom: 51, wantTo: 90, wantTotal: 21,
-			wantTermSrc: "Critical hit (check d100 99, multiplier d100 90 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+			wantTermVal: 3,
 		},
 		{
 			name: "first value of the last range", table: table, d100: 91, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
-			wantTermSrc: "Critical hit (check d100 99, multiplier d100 91 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
+			wantTermVal: 4,
 		},
 		{
 			name: "100 is in the last range", table: table, d100: 100, wantMult: 4, wantFrom: 91, wantTo: 100, wantTotal: 28,
-			wantTermSrc: "Critical hit (check d100 99, multiplier d100 100 in 91-100)", wantTermDet: "91-100", wantTermVal: 4,
+			wantTermVal: 4,
 		},
 		{
 			name: "the default table is a x2 placeholder", table: nil, d100: 77, wantMult: 2, wantFrom: 1, wantTo: 100, wantPlaceh: true,
-			wantTotal: 14, wantTermSrc: "Critical hit (check d100 99, multiplier d100 77, placeholder)", wantTermDet: "placeholder", wantTermVal: 2,
+			wantTotal: 14, wantTermVal: 2,
 		},
 		{
 			// x3 from the table times x2 from a buff: ((5 × 2) + 2) × 3 = 36.
@@ -160,7 +158,7 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 				SpellsBuff: 1, Multipliers: 2, EffectiveStr: 12,
 				MultipliersFrom: []buffsvc.Factor{{Buff: "Gem", Value: 2}},
 			},
-			wantTermSrc: "Critical hit (check d100 99, multiplier d100 60 in 51-90)", wantTermDet: "51-90", wantTermVal: 3,
+			wantTermVal: 3,
 		},
 	}
 	for _, tt := range tests {
@@ -198,7 +196,7 @@ func TestResolveAttack_CritLooksUpTheTable(t *testing.T) {
 			require.NotNil(t, term)
 			assert.Equal(t, combatsvc.DamageTerm{
 				Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit,
-				Source: tt.wantTermSrc, Detail: tt.wantTermDet, Value: tt.wantTermVal,
+				Value: tt.wantTermVal,
 			}, *term)
 
 			// The log entry keeps the multiplier and range it was resolved with.
@@ -219,15 +217,15 @@ func TestResolveAttack_DecimalCritMultiplier(t *testing.T) {
 		buff      float64 // 0: no buff multiplier
 		wantTotal int
 		wantMult  float64
-		wantBreak string
+		wantBreak float64
 	}{
-		{name: "x1.5 on odd damage floors", mult: 1.5, wantTotal: 10, wantMult: 1.5, wantBreak: "((5 × 1.0) + 2) × 1.5 + 0 = 10.5 → 10"},
-		{name: "x2.5 floors", mult: 2.5, wantTotal: 17, wantMult: 2.5, wantBreak: "((5 × 1.0) + 2) × 2.5 + 0 = 17.5 → 17"},
-		{name: "x1.5 crit on a x2 dice buff doubles only the dice: (10 + 2) × 1.5 = 18", mult: 1.5, buff: 2, wantTotal: 18, wantMult: 1.5, wantBreak: "((5 × 1.0 × 2.0) + 2) × 1.5 + 0 = 18"},
-		{name: "x1.5 stacked with a x1.5 buff floors once at the end", mult: 1.5, buff: 1.5, wantTotal: 14, wantMult: 1.5, wantBreak: "((5 × 1.0 × 1.5) + 2) × 1.5 + 0 = 14.25 → 14"},
-		{name: "x1.1 float noise does not lose a point", mult: 1.1, wantTotal: 7, wantMult: 1.1, wantBreak: "((5 × 1.0) + 2) × 1.1 + 0 = 7.7 → 7"},
-		{name: "x1 boundary", mult: 1, wantTotal: 7, wantMult: 1, wantBreak: "((5 × 1.0) + 2) × 1.0 + 0 = 7"},
-		{name: "integer x3 is unchanged", mult: 3, wantTotal: 21, wantMult: 3, wantBreak: "((5 × 1.0) + 2) × 3.0 + 0 = 21"},
+		{name: "x1.5 on odd damage floors", mult: 1.5, wantTotal: 10, wantMult: 1.5, wantBreak: 10.5},
+		{name: "x2.5 floors", mult: 2.5, wantTotal: 17, wantMult: 2.5, wantBreak: 17.5},
+		{name: "x1.5 crit on a x2 dice buff doubles only the dice: (10 + 2) × 1.5 = 18", mult: 1.5, buff: 2, wantTotal: 18, wantMult: 1.5, wantBreak: 18},
+		{name: "x1.5 stacked with a x1.5 buff floors once at the end", mult: 1.5, buff: 1.5, wantTotal: 14, wantMult: 1.5, wantBreak: 14.25},
+		{name: "x1.1 float noise does not lose a point", mult: 1.1, wantTotal: 7, wantMult: 1.1, wantBreak: 7.7},
+		{name: "x1 boundary", mult: 1, wantTotal: 7, wantMult: 1, wantBreak: 7},
+		{name: "integer x3 is unchanged", mult: 3, wantTotal: 21, wantMult: 3, wantBreak: 21},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -251,7 +249,7 @@ func TestResolveAttack_DecimalCritMultiplier(t *testing.T) {
 			assert.True(t, res.IsCrit)
 			assert.Equal(t, tt.wantMult, res.CritMultiplier)
 			assert.Equal(t, tt.wantTotal, res.TotalDamage)
-			assert.Equal(t, tt.wantBreak, res.DamageBreakdown)
+			assert.InDelta(t, tt.wantBreak, res.UnroundedDamage, 1e-9)
 			assert.Contains(t, string(f.entries[0].Payload), fmt.Sprintf(`"critMultiplier":%v`, tt.wantMult))
 		})
 	}
@@ -275,7 +273,7 @@ func TestResolveAttack_DecimalFloorsAfterBonusDamage(t *testing.T) {
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
 	require.NoError(t, err)
 	assert.Equal(t, 13, res.TotalDamage) // floor(7 × 1.5 + 3) = floor(13.5)
-	assert.Equal(t, "((5 × 1.0) + 2) × 1.5 + 0 + 3 = 13.5 → 13", res.DamageBreakdown)
+	assert.InDelta(t, 13.5, res.UnroundedDamage, 1e-9, "((5 × 1.0) + 2) × 1.5 + 0 + 3")
 }
 
 // A hit that is not a crit never consults the table row (no lookup, x1).
@@ -303,10 +301,10 @@ func TestResolveAttack_DecimalFloatNoiseKeepsThePoint(t *testing.T) {
 		name   string
 		magic  int // dice 5 + magic = points before the multiplier
 		want   int
-		wantBr string
+		wantBr float64
 	}{
-		{name: "x1.15 on 20", magic: 15, want: 23, wantBr: "((5 × 1.0) + 15) × 1.15 + 0 = 23"},
-		{name: "x1.15 on 100 (floats give 114.99999999999999)", magic: 95, want: 115, wantBr: "((5 × 1.0) + 95) × 1.15 + 0 = 115"},
+		{name: "x1.15 on 20", magic: 15, want: 23, wantBr: 23},
+		{name: "x1.15 on 100 (floats give 114.99999999999999)", magic: 95, want: 115, wantBr: 115},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -324,7 +322,7 @@ func TestResolveAttack_DecimalFloatNoiseKeepsThePoint(t *testing.T) {
 			res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, res.TotalDamage)
-			assert.Equal(t, tt.wantBr, res.DamageBreakdown)
+			assert.InDelta(t, tt.wantBr, res.UnroundedDamage, 1e-9)
 		})
 	}
 }
@@ -347,5 +345,5 @@ func TestResolveAttack_DecimalCritWithNegativeBonusClampsToZero(t *testing.T) {
 	res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: 100})
 	require.NoError(t, err)
 	assert.Zero(t, res.TotalDamage)
-	assert.Equal(t, "((5 × 1.0) + 2) × 1.5 + 0 - 20 = -9.5 → 0", res.DamageBreakdown)
+	assert.InDelta(t, -9.5, res.UnroundedDamage, 1e-9, "((5 × 1.0) + 2) × 1.5 + 0 - 20")
 }

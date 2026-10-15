@@ -13,7 +13,7 @@ export function QuickHp() {
   const { recordHp, undoHp, busy } = useTableStore();
   const [amount, setAmount] = useState("");
   const [source, setSource] = useState("");
-  // The log is a stack (critical-qki.38): undo pops the newest entry, so it is
+  // The log is a stack: undo pops the newest entry, so it is
   // only offered when that entry is an HP change (entries are newest first).
   const top = useLogStore((st) => st.entries.find((e) => e.status !== "voided"));
   const blockedBy = top && top.kind !== "hp_change" ? entryText(top, t) : null;

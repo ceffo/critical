@@ -92,6 +92,12 @@ func (e Entry) Validate() error {
 	if e.Charges != nil && strings.TrimSpace(e.Charges.Unit) == "" {
 		return fmt.Errorf("charges.unit is required")
 	}
+	if e.GrantSlots != nil && (e.GrantSlots.Levels < 1 || e.GrantSlots.Levels > 9) {
+		return fmt.Errorf("grant_slots.levels %d out of range 1..9", e.GrantSlots.Levels)
+	}
+	if e.ConsumeItem != nil && strings.TrimSpace(e.ConsumeItem.Type) == "" {
+		return fmt.Errorf("consume_item.type is required")
+	}
 	hasBuff := e.Buff != nil && (len(e.Buff.Modifiers) > 0 || len(e.Buff.AbilityGain) > 0 || len(e.Buff.AbilitySet) > 0)
 	switch e.Kind {
 	case KindBuff:

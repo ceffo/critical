@@ -16,9 +16,7 @@ export type ModifierKind =
 
 export interface Modifier {
   kind: ModifierKind;
-  /** English label from the server. */
-  source: string;
-  /** Score, weapon, ammo, buff name or situational label. */
+  /** Score, weapon, ammo, buff name or situational label (empty: an unnamed situational modifier). */
   detail?: string;
   value: number;
 }
@@ -30,7 +28,7 @@ export type DamageTermKind =
 export interface DamageTerm {
   term: DamageTermKind;
   kind: ModifierKind;
-  source: string;
+  /** As on Modifier; the crit term has none (its range is the roll's critFrom–critTo). */
   detail?: string;
   value: number;
 }
@@ -77,7 +75,8 @@ export interface RollResult {
   bonusDamage: number;
   damageTerms: DamageTerm[];
   totalDamage: number;
-  damageBreakdown: string;
+  /** The damage formula's result before the final floor; absent on attacks logged before it was recorded. */
+  unroundedDamage?: number;
   // Attack context (absent on saving throws).
   weaponId?: string;
   weaponName?: string;
@@ -93,6 +92,9 @@ export interface RollResult {
   /** Adjustment set after the roll (0: none); always present on saves. */
   adjustment?: number;
   adjustmentReason?: string;
+  /** A save's modifiers summed (not the adjustment), and d20 + modifiers + adjustment. */
+  saveBonus?: number;
+  saveTotal?: number;
   /** The action-log entry recording the attack or save. */
   logEntryId?: number;
 }

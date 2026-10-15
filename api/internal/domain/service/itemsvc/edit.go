@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -100,7 +101,7 @@ func slug(name string) string {
 }
 
 // logChange records one entry with the item's snapshot.
-func (s *service) logChange(ctx context.Context, characterID int64, kind actionlog.Kind, summary string, rec changeRecord, before, after *Item) (int64, error) {
+func (s *service) logChange(ctx context.Context, characterID int64, kind actionlog.Kind, rec changeRecord, before, after *Item) (int64, error) {
 	snap, err := itemSnapshot(rec.ItemID, before, after)
 	if err != nil {
 		return 0, err
@@ -110,7 +111,7 @@ func (s *service) logChange(ctx context.Context, characterID int64, kind actionl
 		return 0, fmt.Errorf("encode %s payload: %w", kind, err)
 	}
 	id, err := s.log.Record(ctx, actionlog.NewEntry{
-		CharacterID: characterID, Kind: kind, Summary: summary, Payload: payload,
+		CharacterID: characterID, Kind: kind, Payload: payload,
 		Snapshots: []actionlog.Snapshot{snap},
 	})
 	if err != nil {
@@ -148,14 +149,13 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 		base := slug(item.Name)
 		item.ID = base
 		for n := 2; taken[item.ID]; n++ {
-			item.ID = fmt.Sprintf("%s_%d", base, n)
+			item.ID = base + "_" + strconv.Itoa(n)
 		}
 		item.Position = pos
 		if err := s.dal.Insert(ctx, item); err != nil {
 			return err
 		}
-		logID, err := s.logChange(ctx, characterID, actionlog.KindItemAdd,
-			fmt.Sprintf("Added %s (%d)", item.Name, item.Count), record(item, nil), nil, &item)
+		logID, err := s.logChange(ctx, characterID, actionlog.KindItemAdd, record(item, nil), nil, &item)
 		if err != nil {
 			return err
 		}
@@ -220,8 +220,7 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		if err := s.dal.Update(ctx, item); err != nil {
 			return err
 		}
-		logID, err := s.logChange(ctx, characterID, actionlog.KindItemEdit,
-			fmt.Sprintf("Edited %s: %s", item.Name, describe(changes)), record(item, changes), &old, &item)
+		logID, err := s.logChange(ctx, characterID, actionlog.KindItemEdit, record(item, changes), &old, &item)
 		if err != nil {
 			return err
 		}
@@ -244,8 +243,7 @@ func (s *service) Delete(ctx context.Context, characterID int64, itemID string) 
 		if err := s.dal.Delete(ctx, itemID); err != nil {
 			return err
 		}
-		logID, err := s.logChange(ctx, characterID, actionlog.KindItemRemove,
-			fmt.Sprintf("Removed %s (%d)", old.Name, old.Count), record(old, nil), &old, nil)
+		logID, err := s.logChange(ctx, characterID, actionlog.KindItemRemove, record(old, nil), &old, nil)
 		if err != nil {
 			return err
 		}
@@ -269,20 +267,12 @@ func diff(a, b Item) []FieldChange {
 	add("name", a.Name, b.Name)
 	add("type", a.Type, b.Type)
 	add("behaviour", string(a.Behaviour), string(b.Behaviour))
-	add("count", fmt.Sprint(a.Count), fmt.Sprint(b.Count))
-	add("maxCount", fmt.Sprint(a.MaxCount), fmt.Sprint(b.MaxCount))
-	add("magicalBonus", fmt.Sprint(a.MagicBonus), fmt.Sprint(b.MagicBonus))
+	add("count", strconv.Itoa(a.Count), strconv.Itoa(b.Count))
+	add("maxCount", strconv.Itoa(a.MaxCount), strconv.Itoa(b.MaxCount))
+	add("magicalBonus", strconv.Itoa(a.MagicBonus), strconv.Itoa(b.MagicBonus))
 	add("ammoKind", a.AmmoKind, b.AmmoKind)
 	add("effectDice", a.EffectDice, b.EffectDice)
 	add("effectSave", a.EffectSave, b.EffectSave)
 	add("notes", a.Notes, b.Notes)
 	return out
-}
-
-func describe(changes []FieldChange) string {
-	parts := make([]string, len(changes))
-	for i, c := range changes {
-		parts[i] = fmt.Sprintf("%s %s → %s", c.Field, c.Before, c.After)
-	}
-	return strings.Join(parts, ", ")
 }

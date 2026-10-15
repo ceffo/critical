@@ -1,4 +1,4 @@
-// Package weaponsvc adds, edits and removes weapons by hand (critical-qki.32),
+// Package weaponsvc adds, edits and removes weapons by hand,
 // instead of editing seeds/weapons.json. Each change is one action-log entry
 // carrying the weapon's "weapons:<id>" snapshot, so popping the newest entry
 // undoes it (an add is deleted, an edit restored, a remove re-inserted with

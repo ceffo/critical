@@ -137,8 +137,8 @@ test("the spell names follow the language", async ({ page, stack }) => {
   );
   await openDashboard(page);
   await page.getByRole("tab", { name: "Sorts", exact: true }).click();
-  await expect(page.getByText("Images miroir")).toBeVisible();
-  await expect(page.getByText("Boule de feu")).toBeVisible();
+  await expect(page.getByText("Images miroir", { exact: true })).toBeVisible();
+  await expect(page.getByText("Boule de feu", { exact: true })).toBeVisible();
   await snap(page, "french");
 });
 
@@ -188,7 +188,7 @@ test("a prepared spell outside the spellbook is listed as removed and not sent",
   await snap(page, "stale-saved");
 });
 
-// qki.43: a spell prepared several times is one row with a count; rows are sorted by name.
+// a spell prepared several times is one row with a count; rows are sorted by name.
 test("a repeated spell shows once with a count that drops as copies are cast; rows are alphabetical", async ({
   page,
   stack,

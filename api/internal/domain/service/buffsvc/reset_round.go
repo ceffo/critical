@@ -31,13 +31,8 @@ func (s *service) moveRound(ctx context.Context, characterID int64, kind actionl
 			return change{}, err
 		}
 		active = buffs
-		label := "Round set"
-		if kind == actionlog.KindRoundReset {
-			label = "Combat ended"
-		}
 		return change{
 			kind:      kind,
-			summary:   fmt.Sprintf("%s: round %d → %d", label, from, to),
 			payload:   logPayload{Action: action, FromRound: &from, ToRound: &to},
 			round:     &to,
 			roundOnly: true,

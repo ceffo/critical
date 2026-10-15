@@ -42,7 +42,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC) {
 }
 
 // UseResultDTO is the wire shape of POST /api/items/{id}/use: the dice
-// rolled with their breakdown and the count left. Same camelCase names as
+// rolled (each die, the flat modifier, the total) and the count left. Same camelCase names as
 // the item_use log payload.
 type UseResultDTO struct {
 	ItemID     string `json:"itemId"`
@@ -54,10 +54,10 @@ type UseResultDTO struct {
 	MaxCount   int    `json:"maxCount"`
 	Dice       string `json:"dice"`
 	Rolls      []int  `json:"rolls"`
+	Modifier   int    `json:"modifier"`
 	Total      int    `json:"total"`
 	Save       string `json:"save"`
 	Notes      string `json:"notes"`
-	Breakdown  string `json:"breakdown"`
 	LogEntryID int64  `json:"logEntryId"`
 }
 
@@ -72,7 +72,7 @@ func Use(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			ItemID: res.ItemID, Name: res.Name, Type: res.Type, Behaviour: string(res.Behaviour),
 			Removed: res.Removed, Remaining: res.Remaining,
 			MaxCount: res.MaxCount, Dice: res.Dice, Rolls: res.Rolls, Total: res.Total,
-			Save: res.Save, Notes: res.Notes, Breakdown: res.Breakdown, LogEntryID: res.LogEntryID,
+			Modifier: res.Modifier, Save: res.Save, Notes: res.Notes, LogEntryID: res.LogEntryID,
 		})
 		return nil
 	}
@@ -131,7 +131,7 @@ func List(svc itemSvc) render.HandlerFunc {
 	}
 }
 
-// ItemDTO is the wire shape of an item (critical-qki.13): behaviour is
+// ItemDTO is the wire shape of an item: behaviour is
 // stock, charges or daily, type the free-text label.
 type ItemDTO struct {
 	ID           string `json:"id"`

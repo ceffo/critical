@@ -55,6 +55,13 @@ func TestValidate(t *testing.T) {
 			e.Kind = spelleffectsvc.KindBuff
 			e.Buff = &spelleffectsvc.Buff{Modifiers: map[string]*formula.Formula{"luck": f}}
 		}, "modifiers key"},
+		"grant_slots zero":     {func(e *spelleffectsvc.Entry) { e.GrantSlots = &spelleffectsvc.GrantSlots{} }, "grant_slots.levels"},
+		"consume_item no type": {func(e *spelleffectsvc.Entry) { e.ConsumeItem = &spelleffectsvc.ConsumeItem{Type: " "} }, "consume_item.type"},
+		"cast mechanics on a utility": {func(e *spelleffectsvc.Entry) {
+			e.GrantSlots = &spelleffectsvc.GrantSlots{Levels: 3}
+			e.ConsumeItem = &spelleffectsvc.ConsumeItem{Type: "gem"}
+			e.AttackRoll = true
+		}, ""},
 		"damage missing": {func(e *spelleffectsvc.Entry) { e.Kind = spelleffectsvc.KindDamage }, "needs damage"},
 		"damage both forms": {func(e *spelleffectsvc.Entry) {
 			e.Kind = spelleffectsvc.KindDamage
@@ -89,5 +96,17 @@ func TestValidate(t *testing.T) {
 			}
 			require.ErrorContains(t, err, tt.want)
 		})
+	}
+}
+
+// ADR 0008 step 9: the splits of the granted spell levels, all level 1 first.
+func TestGrantSlots_SlotSplits(t *testing.T) {
+	tests := map[int][][]int{
+		1: {{1}},
+		3: {{1, 1, 1}, {1, 2}, {3}},
+		4: {{1, 1, 1, 1}, {1, 1, 2}, {1, 3}, {2, 2}, {4}},
+	}
+	for levels, want := range tests {
+		assert.Equal(t, want, spelleffectsvc.GrantSlots{Levels: levels}.SlotSplits(), "%d levels", levels)
 	}
 }

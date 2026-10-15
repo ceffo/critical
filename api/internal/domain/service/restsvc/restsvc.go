@@ -105,7 +105,6 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 		id, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindLongRest,
-			Summary:     fmt.Sprintf("Long rest: %d spell slots and %d items refilled", rec.SlotsReset, len(rec.ItemsRefilled)),
 			Payload:     payload,
 			Snapshots:   snaps,
 		})

@@ -2,6 +2,8 @@ package composition_test
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
@@ -12,7 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// putSlots writes the slot list (the test spellbook has no Rary's to prepare).
+// putSlots writes the slot list (the test spellbook has no spell that grants
+// slots to prepare).
 func putSlots(t *testing.T, bs *composition.BackingServices, json string) {
 	t.Helper()
 	_, err := bs.DB.ExecContext(context.Background(),
@@ -28,31 +31,41 @@ func slotList(t *testing.T, bs *composition.BackingServices) []spellsvc.SpellSlo
 	return s
 }
 
-// qki.41: voiding a Rary's cast drops the extra slots and frees the base slot.
-func TestRary_VoidRemovesExtrasAndRestoresTheBaseSlot(t *testing.T) {
-	bs := bootMaxDice(t)
-	ctx := context.Background()
-	putSlots(t, bs, `[{"level":4,"prepared_spell_id":"rarys_mnemonic_enhancer","prepared_spell_name":"Rary's Mnemonic Enhancer","used":false}]`)
+// ADR 0008 step 9: voiding the cast of a spell that grants slots (Rary's
+// Mnemonic Enhancer) drops the extra slots and frees its own slot.
+func TestGrantedSlots_VoidRemovesExtrasAndRestoresTheBaseSlot(t *testing.T) {
+	for _, split := range [][]int{{1, 1, 1}, {1, 2}, {3}} {
+		t.Run(fmt.Sprint(split), func(t *testing.T) {
+			bs := bootMaxDice(t)
+			ctx := context.Background()
+			putSlots(t, bs, `[{"level":4,"prepared_spell_id":"rarys_mnemonic_enhancer","prepared_spell_name":"Rary's Mnemonic Enhancer","used":false}]`)
 
-	res, err := bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{ExtraSlots: []int{1, 2}})
-	require.NoError(t, err)
-	got := slotList(t, bs)
-	require.Len(t, got, 3)
-	assert.True(t, got[0].Used)
-	assert.Equal(t, spellsvc.SpellSlot{Level: 1, Extra: true}, got[1])
-	assert.Equal(t, spellsvc.SpellSlot{Level: 2, Extra: true}, got[2])
+			res, err := bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{ExtraSlots: split})
+			require.NoError(t, err)
+			assert.Equal(t, split, res.ExtraSlots)
+			got := slotList(t, bs)
+			require.Len(t, got, 1+len(split))
+			assert.True(t, got[0].Used)
+			for i, l := range split {
+				assert.Equal(t, spellsvc.SpellSlot{Level: l, Extra: true}, got[1+i], "blank extra slot")
+			}
+			entries, err := bs.Log.List(ctx, bs.CharacterID, 1)
+			require.NoError(t, err)
+			assert.Contains(t, string(entries[0].Payload), `"extraSlots":`+strings.ReplaceAll(fmt.Sprint(split), " ", ","))
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)
-	require.NoError(t, err)
-	got = slotList(t, bs)
-	require.Len(t, got, 1)
-	assert.False(t, got[0].Used)
-	assert.False(t, got[0].Extra)
+			_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)
+			require.NoError(t, err)
+			got = slotList(t, bs)
+			require.Len(t, got, 1)
+			assert.False(t, got[0].Used)
+			assert.False(t, got[0].Extra)
+		})
+	}
 }
 
-// qki.41: a long rest removes the extra slots, a new preparation keeps them
-// at the same indices.
-func TestRary_PrepareKeepsExtrasLongRestRemovesThem(t *testing.T) {
+// ADR 0008 step 9: a long rest removes the extra slots, a new preparation
+// keeps them at the same indices.
+func TestGrantedSlots_PrepareKeepsExtrasLongRestRemovesThem(t *testing.T) {
 	bs := bootMaxDice(t)
 	ctx := context.Background()
 	putSlots(t, bs, `[{"level":1,"prepared_spell_id":"alarm","prepared_spell_name":"Alarm","used":false},{"level":2,"extra":true,"used":false}]`)
@@ -69,8 +82,9 @@ func TestRary_PrepareKeepsExtrasLongRestRemovesThem(t *testing.T) {
 	assert.Len(t, slotList(t, bs), 1)
 }
 
-// qki.42: voiding an orb cast gives the gem back.
-func TestOrb_VoidRestoresTheGem(t *testing.T) {
+// ADR 0008 step 10: voiding the cast of a spell that consumes an item
+// (Chromatic Orb, a gem) gives the item back.
+func TestConsumedItem_VoidRestoresTheItem(t *testing.T) {
 	bs := bootMaxDice(t)
 	ctx := context.Background()
 	item, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Diamond", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 3})
@@ -91,8 +105,9 @@ func TestOrb_VoidRestoresTheGem(t *testing.T) {
 	ac := 5
 	res, err := bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{TargetAC: &ac})
 	require.NoError(t, err)
-	require.NotNil(t, res.Orb)
-	assert.True(t, res.Orb.Attack.Hit, "d20 20 vs AC 5")
+	require.NotNil(t, res.Consumed)
+	require.NotNil(t, res.Attack)
+	assert.True(t, res.Attack.Hit, "d20 20 vs AC 5")
 	assert.Equal(t, 2, count())
 
 	_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)

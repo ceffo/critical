@@ -2,7 +2,6 @@ package buffsvc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
@@ -21,22 +20,8 @@ func (s *service) Edit(ctx context.Context, characterID int64, buffID string, e 
 			return change{}, err
 		}
 		noteChanged := e.Note != nil && after.Note != before.Note
-		summary := fmt.Sprintf("Edited %s: %s → %s", before.Name,
-			counters(before.Duration, before.Charges), counters(after.Duration, after.Charges))
-		switch {
-		case ended:
-			summary = fmt.Sprintf("Edited %s: %s → ended", before.Name, counters(before.Duration, before.Charges))
-		case noteChanged && before.Duration == after.Duration && before.Charges == after.Charges:
-			summary = fmt.Sprintf("Edited %s: note", before.Name)
-			if after.Note == "" {
-				summary = fmt.Sprintf("Edited %s: note cleared", before.Name)
-			}
-		case noteChanged:
-			summary += " and note"
-		}
 		return change{
-			kind:    actionlog.KindBuffChange,
-			summary: summary,
+			kind: actionlog.KindBuffChange,
 			payload: logPayload{
 				Action: "edit", Buff: before.Name,
 				FromRounds: before.Duration, FromCharges: before.Charges,

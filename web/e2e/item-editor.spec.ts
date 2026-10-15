@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import { logEntry, openDashboard, openWorkspace, voidEntry } from "./helpers";
 
-// Inventory editor (critical-qki.31): add, edit and remove items; each is one log entry and the
+// Inventory editor: add, edit and remove items; each is one log entry and the
 // newest can be popped.
 
 async function openInventory(page: Page) {

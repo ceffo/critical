@@ -45,10 +45,10 @@ func (w Weapon) Validate() error {
 		return fieldErr("damage_l", "Damage must look like 1d8 or 2d4")
 	}
 	if w.MagicToHit < -MaxBonus || w.MagicToHit > MaxBonus {
-		return fieldErr("magic_to_hit", fmt.Sprintf("To-hit bonus must be between -%d and %d", MaxBonus, MaxBonus))
+		return domain.FieldErrorf("magic_to_hit", "To-hit bonus must be between -%d and %d", MaxBonus, MaxBonus)
 	}
 	if w.MagicDamage < -MaxBonus || w.MagicDamage > MaxBonus {
-		return fieldErr("magic_damage", fmt.Sprintf("Damage bonus must be between -%d and %d", MaxBonus, MaxBonus))
+		return domain.FieldErrorf("magic_damage", "Damage bonus must be between -%d and %d", MaxBonus, MaxBonus)
 	}
 	if w.Kind != KindMelee && w.Kind != KindMissile {
 		return fieldErr("kind", "Kind must be melee or missile")

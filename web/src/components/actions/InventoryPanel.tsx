@@ -19,7 +19,7 @@ import { formatSigned } from "@/lib/format";
 import type { Item } from "@/types/items";
 
 /**
- * Inventory tab (critical-qki.13, .31): every item in one list with its type, behaviour and count.
+ * Inventory tab: every item in one list with its type, behaviour and count.
  * − uses one (the API rolls the effect, logs it, and removes a charges item at 0); + adds one,
  * and exists only on stock items. ✎ edits any field in place, 🗑 removes the item, "+ Add item"
  * opens a form. Every change is a log entry the Combat Log can pop.

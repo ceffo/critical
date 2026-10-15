@@ -130,7 +130,7 @@ test("spent ammunition stays selected and must be replaced by an explicit pick",
   await ammo.selectOption("arrows_plus1");
   await expect(form.getByTestId("ammo-spent")).toHaveCount(0);
   await expect(roll).toBeEnabled();
-  // Once another pick replaces it, the spent arrows are no longer offered (critical-qki.13).
+  // Once another pick replaces it, the spent arrows are no longer offered.
   await expect(ammo.locator('option[value="arrows_plus3"]')).toHaveCount(0);
 });
 
@@ -153,7 +153,7 @@ test("an earlier shot can only be voided once the later shot is popped", async (
   await form.getByRole("button", { name: "Roll Attack" }).click();
   await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
 
-  // The log is a stack (critical-qki.38): only the newest entry offers Void.
+  // The log is a stack: only the newest entry offers Void.
   const earlier = logEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
   await expect(earlier.getByRole("button", { name: "Void" })).toHaveCount(0);
   await snap(page, "void-earlier-shot-not-offered");
@@ -402,7 +402,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   await snap(page, "miss-to-crit-fr");
 });
 
-// qki.40: the form keeps the last choices when the user changes tab and comes back.
+// the form keeps the last choices when the user changes tab and comes back.
 test("the attack form keeps its values across a tab switch", async ({ page }) => {
   await openAttack(page);
   const form = attackForm(page);

@@ -101,23 +101,25 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 		wantCrit      bool
 		wantMult      float64
 		wantTotal     int
-		wantBreakdown string
+		wantBreakdown float64
 		wantTerms     int
-		wantSummary   string
+		// wantRolled is the outcome as rolled (MISS, HIT, CRIT), kept while
+		// a correction differs from the rolled AC.
+		wantRolled string
 	}{
 		{
 			// Rolled: d20 11 vs AC 5 needs 13, a miss. AC 7 needs 11: a hit
 			// with the 1d8 = 5 rolled with the attack: ((5 × 1) + 2) × 1 + 0 = 7.
 			name: "miss to hit shows the damage rolled with the attack", attack: swordMinus7(11, 50), acs: []int{7},
 			wantHit: true, wantMargin: 0, wantMult: 1, wantTotal: 7, wantTerms: 2,
-			wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
-			wantSummary:   "Long Sword +2 vs AC 7: hit, 7 damage (AC 5 → 7: MISS → HIT)",
+			wantBreakdown: 7,
+			wantRolled:    "MISS",
 		},
 		{
 			// Rolled: d20 13 vs AC 5 needs 13, a hit. AC 3 needs 15: a miss, no damage.
 			name: "hit to miss hides the damage", attack: swordMinus7(13, 50), acs: []int{3},
 			wantHit: false, wantMargin: -2, wantMult: 1, wantTotal: 0, wantTerms: 0,
-			wantSummary: "Long Sword +2 vs AC 3: miss (AC 5 → 3: HIT → MISS)",
+			wantRolled: "HIT",
 		},
 		{
 			// Rolled: d20 15, d100 10 vs AC 5 (needs 6): 15 - 10 = 5 < 6, a
@@ -126,16 +128,16 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			// ((5 × 1) + 2) × 3 = 21.
 			name: "a crit appears from the stored d100", attack: withMult(sword(5, 15, 10), 4), critRows: critRows, acs: []int{6},
 			wantHit: true, wantMargin: 10, wantCrit: true, wantMult: 3, wantTotal: 21, wantTerms: 3,
-			wantBreakdown: "((5 × 1.0) + 2) × 3.0 + 0 = 21",
-			wantSummary:   "Long Sword +2 vs AC 6: crit (check 10 · multiplier 4 → ×3), 21 damage (AC 5 → 6: HIT → CRIT)",
+			wantBreakdown: 21,
+			wantRolled:    "HIT",
 		},
 		{
 			// Rolled: d20 15, d100 10 vs AC 6 (needs 5): a x3 crit. AC 5 needs
 			// 6: 15 - 10 = 5 < 6, a plain hit: 7.
 			name: "a crit disappears", attack: withMult(sword(6, 15, 10), 4), critRows: critRows, acs: []int{5},
 			wantHit: true, wantMargin: 9, wantMult: 1, wantTotal: 7, wantTerms: 2,
-			wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
-			wantSummary:   "Long Sword +2 vs AC 5: hit, 7 damage (AC 6 → 5: CRIT → HIT)",
+			wantBreakdown: 7,
+			wantRolled:    "CRIT",
 		},
 		{
 			// Rolled: d20 15 vs AC -10 needs 21, a miss. AC 10 needs 1:
@@ -143,37 +145,37 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			// ((5 × 1) + 2) × 1.5 = 10.5, floored once: 10.
 			name: "miss to decimal crit floors once", attack: sword(-10, 15, 12), critRows: critRows, acs: []int{10},
 			wantHit: true, wantMargin: 14, wantCrit: true, wantMult: 1.5, wantTotal: 10, wantTerms: 3,
-			wantBreakdown: "((5 × 1.0) + 2) × 1.5 + 0 = 10.5 → 10",
-			wantSummary:   "Long Sword +2 vs AC 10: crit (check 12 · multiplier 77 → ×1.5), 10 damage (AC -10 → 10: MISS → CRIT)",
+			wantBreakdown: 10.5,
+			wantRolled:    "MISS",
 		},
 		{
 			// A natural 20 is plain arithmetic: vs AC -10 (needs 21) it misses,
 			// vs AC -9 (needs 20) it hits.
 			name: "natural 20 stays plain arithmetic", attack: sword(-10, 20, 50), acs: []int{-9},
 			wantHit: true, wantMargin: 0, wantMult: 1, wantTotal: 7, wantTerms: 2,
-			wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
-			wantSummary:   "Long Sword +2 vs AC -9: hit, 7 damage (AC -10 → -9: MISS → HIT)",
+			wantBreakdown: 7,
+			wantRolled:    "MISS",
 		},
 		{
 			// A natural 1 is plain arithmetic: vs AC 10 (needs 1) it hits.
 			name: "natural 1 stays plain arithmetic", attack: sword(5, 1, 50), acs: []int{10},
 			wantHit: true, wantMargin: 0, wantMult: 1, wantTotal: 7, wantTerms: 2,
-			wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
-			wantSummary:   "Long Sword +2 vs AC 10: hit, 7 damage (AC 5 → 10: MISS → HIT)",
+			wantBreakdown: 7,
+			wantRolled:    "MISS",
 		},
 		{
 			// AC 5 → 7 → 9: the line reads from the rolled AC and outcome.
 			// AC 9 needs 9: 11 hits by 2.
 			name: "a second correction keeps the rolled AC and outcome", attack: swordMinus7(11, 50), acs: []int{7, 9},
 			wantHit: true, wantMargin: 2, wantMult: 1, wantTotal: 7, wantTerms: 2,
-			wantBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
-			wantSummary:   "Long Sword +2 vs AC 9: hit, 7 damage (AC 5 → 9: MISS → HIT)",
+			wantBreakdown: 7,
+			wantRolled:    "MISS",
 		},
 		{
 			// AC 5 → 7 → 5: back to the rolled AC reads as rolled (still amended).
 			name: "back to the rolled AC reads as rolled", attack: swordMinus7(11, 50), acs: []int{7, 5},
 			wantHit: false, wantMargin: -2, wantMult: 1, wantTotal: 0, wantTerms: 0,
-			wantSummary: "Long Sword +2 vs AC 5: miss",
+			wantRolled: "",
 		},
 	}
 	for _, c := range cases {
@@ -201,7 +203,7 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			assert.Equal(t, c.wantCrit, res.IsCrit)
 			assert.InDelta(t, c.wantMult, res.CritMultiplier, 0)
 			assert.Equal(t, c.wantTotal, res.TotalDamage)
-			assert.Equal(t, c.wantBreakdown, res.DamageBreakdown)
+			assert.InDelta(t, c.wantBreakdown, res.UnroundedDamage, 1e-9)
 			assert.Len(t, res.DamageTerms, c.wantTerms)
 			if c.wantHit {
 				assert.Equal(t, 5, res.BaseDamage, "damage dice rolled with the attack")
@@ -219,7 +221,6 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 			assert.Equal(t, int64(42), res.LogEntryID)
 
 			require.Len(t, e.Corrections, len(c.acs), "one audited amend per correction")
-			assert.Equal(t, c.wantSummary, e.EffectiveSummary())
 			p := payloadOf(t, e.EffectivePayload())
 			assert.Equal(t, float64(last), p["targetAc"])
 			assert.Equal(t, c.wantHit, p["hit"])
@@ -228,6 +229,8 @@ func TestAdjustAttackAC_Recompute(t *testing.T) {
 				assert.NotContains(t, p, "rolledTargetAc")
 			} else {
 				assert.Equal(t, float64(c.attack.req.TargetAC), p["rolledTargetAc"])
+				assert.Equal(t, c.wantRolled != "MISS", p["rolledHit"])
+				assert.Equal(t, c.wantRolled == "CRIT", p["rolledCrit"])
 			}
 			assert.Contains(t, p, "rolled", "the next correction can recompute again")
 			assert.Equal(t, float64(c.attack.req.TargetAC), payloadOf(t, e.Payload)["targetAc"], "the original entry is untouched")
@@ -252,7 +255,8 @@ func TestAdjustAttackAC_SpendsNoAmmo(t *testing.T) {
 	// ((4 × 1) + (2 + 3)) × 1 + 0 = 9.
 	assert.Equal(t, 9, res.TotalDamage)
 	assert.Equal(t, &combatsvc.AmmoUse{ItemID: "arrows_plus3", Name: "Arrows +3", Magic: 3, Remaining: 1}, res.Ammo)
-	assert.Equal(t, "Short Bow +2 (Arrows +3) vs AC 3: hit, 9 damage (AC 2 → 3: MISS → HIT)", e.EffectiveSummary())
+	require.NotNil(t, res.RolledHit)
+	assert.False(t, *res.RolledHit, "rolled as a miss vs AC 2")
 	require.Len(t, e.Snapshots, 1, "the amend keeps the attack's items snapshot for void")
 }
 
@@ -276,12 +280,12 @@ func TestAdjustAttackAC_DamageTermsInFormulaOrder(t *testing.T) {
 	res, err := f.svc.AdjustAttackAC(context.Background(), charID, 42, 5)
 	require.NoError(t, err)
 	assert.Equal(t, []combatsvc.DamageTerm{
-		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Source: "Enlarge", Detail: "Enlarge", Value: 1.5},
-		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Source: "Haste blade", Detail: "Haste blade", Value: 2},
-		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Source: "Long Sword +2", Detail: "Long Sword +2", Value: 2},
-		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Source: "Critical hit (check d100 5, multiplier d100 77, placeholder)", Detail: "placeholder", Value: 2},
-		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 2},
-		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Source: "Rage", Detail: "Rage", Value: 1},
+		{Term: combatsvc.TermSpells, Kind: combatsvc.ModBuff, Detail: "Enlarge", Value: 1.5},
+		{Term: combatsvc.TermDiceMult, Kind: combatsvc.ModBuff, Detail: "Haste blade", Value: 2},
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponMagic, Detail: "Long Sword +2", Value: 2},
+		{Term: combatsvc.TermMultiplier, Kind: combatsvc.ModCrit, Value: 2},
+		{Term: combatsvc.TermStrength, Kind: combatsvc.ModStrength, Detail: "18", Value: 2},
+		{Term: combatsvc.TermBonus, Kind: combatsvc.ModBuff, Detail: "Rage", Value: 1},
 	}, res.DamageTerms)
 	// Same as rolling a crit directly: floor(((5 × 1.5 × 2 buff) + 2) × 2 crit) + 2 + 1 = 37.
 	assert.Equal(t, 37, res.TotalDamage)

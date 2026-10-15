@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// HP-1/HP-2 (critical-qki.38): total is SUM(effective hp_delta); HP is at max
+// HP-1/HP-2: total is SUM(effective hp_delta); HP is at max
 // when it is 0.
 func TestCapHeal(t *testing.T) {
 	cases := []struct {

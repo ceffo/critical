@@ -10,7 +10,7 @@ import {
   recordHp,
 } from "./helpers";
 
-// The log is a stack with note-only amends (critical-qki.38). User,
+// The log is a stack with note-only amends. User,
 // 2026-10-14: "no amending values. just the note.. can only pop elements".
 test("a note on a heal and on a buff entry changes no value and no HP", async ({
   page,

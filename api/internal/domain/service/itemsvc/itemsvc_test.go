@@ -168,7 +168,7 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snap.Before))
 }
 
-// A snapshot written before qki.13 (count only) cannot recreate a missing item.
+// A snapshot written before the one item model (count only) cannot recreate a missing item.
 func TestRestorers_MissingItemWithoutDataFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
@@ -224,7 +224,7 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, res.Rolls)
 	assert.Equal(t, 21, res.Total)
 	assert.Equal(t, "rod_staff_wand", res.Save)
-	assert.Equal(t, "6d6: 1 + 2 + 3 + 4 + 5 + 6 = 21", res.Breakdown)
+	assert.Zero(t, res.Modifier)
 	assert.Equal(t, int64(9), res.LogEntryID)
 
 	assert.Equal(t, actionlog.KindItemUse, got.Kind)
@@ -233,7 +233,7 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	assert.JSONEq(t, `[{"id":"wand_lightning","count":4}]`, string(got.Snapshots[0].Before))
 	assert.JSONEq(t, `[{"id":"wand_lightning","count":3}]`, string(got.Snapshots[0].After))
 	assert.JSONEq(t, `{"itemId":"wand_lightning","name":"Wand of lightning","type":"wand","behaviour":"charges","removed":false,"remaining":3,"maxCount":4,
-		"dice":"6d6","rolls":[1,2,3,4,5,6],"total":21,"save":"rod_staff_wand","breakdown":"6d6: 1 + 2 + 3 + 4 + 5 + 6 = 21"}`, string(got.Payload))
+		"dice":"6d6","rolls":[1,2,3,4,5,6],"total":21,"save":"rod_staff_wand"}`, string(got.Payload))
 }
 
 func TestUseItem_NoDiceRollsNothing(t *testing.T) {
@@ -291,7 +291,7 @@ func TestUseItem_LastChargeRemovesTheItem(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.Removed)
 	assert.Equal(t, 0, res.Remaining)
-	assert.Equal(t, "Used Wand of lightning: 6d6 = 21 (last charge, removed)", got.Summary)
+	assert.Empty(t, got.Summary, "the UI words the use from its payload")
 	require.Len(t, got.Snapshots, 1)
 	assert.JSONEq(t, wandBefore, string(got.Snapshots[0].Before))
 	assert.JSONEq(t, `[{"id":"wand_lightning","count":0,"removed":true}]`, string(got.Snapshots[0].After))
@@ -313,7 +313,7 @@ func TestRestock_AddsToStockAndLogs(t *testing.T) {
 	assert.Equal(t, &itemsvc.RestockResult{ItemID: "arrows_plus3", Name: "Arrows +3", Type: "arrow", Added: 1, Count: 1, LogEntryID: 7}, res)
 	assert.Equal(t, actionlog.KindItemRestock, got.Kind)
 	assert.False(t, actionlog.IsRoll(got.Kind), "a restock leaves the result card alone")
-	assert.Equal(t, "Restocked Arrows +3: +1 (1 now)", got.Summary)
+	assert.JSONEq(t, `{"itemId":"arrows_plus3","name":"Arrows +3","type":"arrow","added":1,"count":1}`, string(got.Payload))
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:arrows_plus3", got.Snapshots[0].Key)
 	assert.JSONEq(t, `[{"id":"arrows_plus3","count":0}]`, string(got.Snapshots[0].Before))

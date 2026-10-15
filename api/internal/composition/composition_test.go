@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
@@ -116,13 +117,14 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 	// Void the rest newest first (edit, both absorbs, three activations).
 	for _, e := range entries[1:] {
 		_, err := bs.Log.Void(ctx, id, e.ID)
-		require.NoError(t, err, "void #%d %s", e.ID, e.Summary)
-		if e.Summary == "Edited Strength: 2 rd → 1 rd" {
+		require.NoError(t, err, "void #%d %s", e.ID, e.Payload)
+		p := string(e.Payload)
+		if strings.Contains(p, `"action":"edit"`) && strings.Contains(p, `"buff":"Strength"`) {
 			buffs, err := bs.Buffs.ListActive(ctx, id)
 			require.NoError(t, err)
 			assert.Equal(t, 2, buffs[0].Duration, "voiding the edit restores the rounds")
 		}
-		if e.Summary == "Stoneskin absorbed a hit, ended" {
+		if strings.Contains(p, `"action":"absorb"`) && strings.Contains(p, `"ended":true`) {
 			buffs, err := bs.Buffs.ListActive(ctx, id)
 			require.NoError(t, err)
 			require.Len(t, buffs, 3)
@@ -231,7 +233,7 @@ func TestAttackUsesEffectiveStr(t *testing.T) {
 
 	res, err := bs.Combat.ResolveAttack(ctx, id, sword)
 	require.NoError(t, err)
-	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Source: "Strength 12", Detail: "12", Value: 0}, res.Modifiers[0])
+	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Detail: "12", Value: 0}, res.Modifiers[0])
 
 	_, err = bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{
 		Name: "Strength", Duration: 2, Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(18)},
@@ -239,10 +241,10 @@ func TestAttackUsesEffectiveStr(t *testing.T) {
 	require.NoError(t, err)
 	res, err = bs.Combat.ResolveAttack(ctx, id, sword)
 	require.NoError(t, err)
-	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Source: "Strength 18", Detail: "18", Value: 1}, res.Modifiers[0])
+	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Detail: "18", Value: 1}, res.Modifiers[0])
 }
 
-// Pop-only (critical-qki.38): a later +1 shot blocks voiding an earlier +3
+// Pop-only: a later +1 shot blocks voiding an earlier +3
 // shot; popping the +1 then the +3 restores each item's own count.
 func TestVoidingAnOlderShotIsRefused(t *testing.T) {
 	bs := newBacking(t)

@@ -1,7 +1,7 @@
 // Mirrors api/internal/rest/handler/itemhdl (ItemDTO, UseResultDTO, RestockResultDTO, ChangeDTO, ItemBody).
 
 /**
- * How an item's count behaves (critical-qki.13): stock is used and restocked (stays at 0),
+ * How an item's count behaves: stock is used and restocked (stays at 0),
  * charges is used only (gone at 0), daily is used only and refilled by a long rest.
  */
 export type ItemBehaviour = "stock" | "charges" | "daily";
@@ -28,7 +28,7 @@ export interface Item {
 export interface UseResult {
   itemId: string;
   name: string;
-  /** Absent in entries logged before qki.13. */
+  /** Absent in entries logged before the item type was recorded. */
   type?: string;
   behaviour?: ItemBehaviour;
   /** The use spent a charges item's last charge: the item is gone until the use is popped. */
@@ -38,11 +38,12 @@ export interface UseResult {
   /** Effect dice ("6d6"); empty when the item rolls nothing. */
   dice: string;
   rolls: number[];
+  /** The flat "+K" of the dice ("1d8+2"); absent on uses logged before it was recorded. */
+  modifier?: number;
   total: number;
   /** Save category the effect allows; empty when none. */
   save: string;
   notes: string;
-  breakdown: string;
   logEntryId?: number;
 }
 

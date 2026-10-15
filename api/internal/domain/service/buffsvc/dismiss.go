@@ -2,7 +2,6 @@ package buffsvc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
@@ -17,7 +16,6 @@ func (s *service) Dismiss(ctx context.Context, characterID int64, buffID string)
 		name := buffs[i].Name
 		return change{
 			kind:    actionlog.KindBuffChange,
-			summary: fmt.Sprintf("Dismissed %s", name),
 			payload: logPayload{Action: "dismiss", Buff: name},
 			buffs:   without(buffs, i),
 		}, nil

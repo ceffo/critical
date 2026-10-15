@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Inventory behaviours on the real stack (critical-qki.13): stock, charges and
+// Inventory behaviours on the real stack: stock, charges and
 // daily items, each count change one log entry that a pop reverses.
 
 func listed(t *testing.T, bs *composition.BackingServices) map[string]itemsvc.Item {
@@ -138,7 +138,7 @@ func TestInventory_RestockRefusedForChargesAndDaily(t *testing.T) {
 }
 
 // Short Bow +2 with Arrows +1: both bonuses to hit and damage, one arrow
-// spent per attack (critical-qki.7 behaviour, unchanged by the new model).
+// spent per attack (unchanged by the one item model).
 func TestInventory_BowWithArrowsStillAddsBothBonusesAndSpendsOne(t *testing.T) {
 	bs := newBacking(t)
 	res, err := bs.Combat.ResolveAttack(context.Background(), bs.CharacterID, combatsvc.AttackRequest{
@@ -156,7 +156,7 @@ func TestInventory_BowWithArrowsStillAddsBothBonusesAndSpendsOne(t *testing.T) {
 	assert.Equal(t, 3, toHit, "bow +2 and arrow +1 to hit")
 }
 
-// Add / edit / remove by hand (critical-qki.31): each is one log entry, and
+// Add / edit / remove by hand: each is one log entry, and
 // popping it (it is the newest) undoes it.
 
 func newestEntry(t *testing.T, bs *composition.BackingServices) actionlog.Entry {

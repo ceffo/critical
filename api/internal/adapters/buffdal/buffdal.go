@@ -30,7 +30,7 @@ func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
 }
 
 // jsonBuff mirrors buffsvc.BuffEffect with JSON tags so we can preserve the
-// existing on-disk format. Rows written before qki.8 also carry a "type"
+// existing on-disk format. Older rows also carry a "type"
 // (charge|duration) key; it is ignored: the counters say how a buff ends.
 type jsonBuff struct {
 	ID       string      `json:"id"`

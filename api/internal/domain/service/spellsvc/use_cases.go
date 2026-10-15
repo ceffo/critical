@@ -19,7 +19,7 @@ func (s *service) ResetSlots(ctx context.Context, characterID int64) ([]SpellSlo
 	if err != nil {
 		return nil, fmt.Errorf("get slots: %w", err)
 	}
-	// A long rest ends Rary's extra slots (ADR 0008 step 9).
+	// A long rest ends the extra slots (ADR 0008 step 9).
 	updated := make([]SpellSlot, 0, len(slots))
 	for _, s := range slots {
 		if s.Extra {

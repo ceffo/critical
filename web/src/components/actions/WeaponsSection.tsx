@@ -16,7 +16,7 @@ import { WeaponForm } from "./WeaponForm";
 import type { Weapon } from "@/types/combat";
 
 /**
- * Weapons list of the Inventory tab (critical-qki.32): ✎ edits a weapon in place, 🗑 removes it,
+ * Weapons list of the Inventory tab: ✎ edits a weapon in place, 🗑 removes it,
  * "Add weapon" opens a form. Every change is a log entry the Combat Log can pop (the newest only).
  */
 export function WeaponsSection() {

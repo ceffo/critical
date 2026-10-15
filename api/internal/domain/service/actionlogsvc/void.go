@@ -31,8 +31,8 @@ func (s *service) Void(ctx context.Context, characterID, id int64) (*actionlog.E
 			return err
 		}
 		if top.ID != id {
-			return fmt.Errorf("%w: only the latest entry can be voided, void %q (round %d) first",
-				ErrNotLatest, top.EffectiveSummary(), top.Round)
+			return fmt.Errorf("%w: only the latest entry can be voided, void #%d (%s, round %d) first",
+				ErrNotLatest, top.ID, top.Kind, top.Round)
 		}
 		if err := s.pop(ctx, characterID, e); err != nil {
 			return err
@@ -57,8 +57,8 @@ func (s *service) VoidLatest(ctx context.Context, characterID int64, kind action
 			return err
 		}
 		if top.Kind != kind {
-			return fmt.Errorf("%w: the latest entry is not a %s, void %q (round %d) first",
-				ErrNotLatest, kind, top.EffectiveSummary(), top.Round)
+			return fmt.Errorf("%w: the latest entry is not a %s, void #%d (%s, round %d) first",
+				ErrNotLatest, kind, top.ID, top.Kind, top.Round)
 		}
 		ok = true
 		return s.pop(ctx, characterID, top)

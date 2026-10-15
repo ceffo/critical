@@ -228,17 +228,19 @@ type RollResultDTO struct {
 	Hit                bool          `json:"hit"`
 	HitMargin          int           `json:"hitMargin"`
 
-	BaseDamage      int             `json:"baseDamage"`
-	DamageDice      string          `json:"damageDice"`
-	SpellsBuff      float64         `json:"spellsBuff"`
-	WeaponBuff      int             `json:"weaponBuff"`
-	Multipliers     float64         `json:"multipliers"`
-	DiceMultiplier  float64         `json:"diceMultiplier"`
-	StrengthBonus   int             `json:"strengthBonus"`
-	BonusDamage     int             `json:"bonusDamage"`
-	DamageTerms     []DamageTermDTO `json:"damageTerms"`
-	TotalDamage     int             `json:"totalDamage"`
-	DamageBreakdown string          `json:"damageBreakdown"`
+	BaseDamage     int             `json:"baseDamage"`
+	DamageDice     string          `json:"damageDice"`
+	SpellsBuff     float64         `json:"spellsBuff"`
+	WeaponBuff     int             `json:"weaponBuff"`
+	Multipliers    float64         `json:"multipliers"`
+	DiceMultiplier float64         `json:"diceMultiplier"`
+	StrengthBonus  int             `json:"strengthBonus"`
+	BonusDamage    int             `json:"bonusDamage"`
+	DamageTerms    []DamageTermDTO `json:"damageTerms"`
+	TotalDamage    int             `json:"totalDamage"`
+	// UnroundedDamage is the damage formula's result before the final
+	// floor (ADR 0003 step 9); the UI shows the formula from these fields.
+	UnroundedDamage float64 `json:"unroundedDamage"`
 
 	// Attack context; empty on saving throws.
 	WeaponID   string   `json:"weaponId,omitempty"`
@@ -257,15 +259,18 @@ type RollResultDTO struct {
 	SaveCategory     string `json:"saveCategory,omitempty"`
 	Adjustment       *int   `json:"adjustment,omitempty"`
 	AdjustmentReason string `json:"adjustmentReason,omitempty"`
+	// SaveBonus is the sum of the save's modifiers (not the adjustment),
+	// SaveTotal d20 + bonus + adjustment; sent on saves only.
+	SaveBonus *int `json:"saveBonus,omitempty"`
+	SaveTotal *int `json:"saveTotal,omitempty"`
 
 	LogEntryID int64 `json:"logEntryId,omitempty"`
 }
 
-// ModifierDTO is one to-hit (or save) modifier. Kind lets the UI label it
-// in the player's language; Source is the English label.
+// ModifierDTO is one to-hit (or save) modifier. The UI labels it in the
+// player's language from Kind and Detail.
 type ModifierDTO struct {
 	Kind   string `json:"kind"`
-	Source string `json:"source"`
 	Detail string `json:"detail,omitempty"`
 	Value  int    `json:"value"`
 }
@@ -274,7 +279,6 @@ type ModifierDTO struct {
 type DamageTermDTO struct {
 	Term   string  `json:"term"`
 	Kind   string  `json:"kind"`
-	Source string  `json:"source"`
 	Detail string  `json:"detail,omitempty"`
 	Value  float64 `json:"value"`
 }
@@ -293,11 +297,11 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 	}
 	mods := make([]ModifierDTO, 0, len(r.Modifiers))
 	for _, m := range r.Modifiers {
-		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Source: m.Source, Detail: m.Detail, Value: m.Value})
+		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, Value: m.Value})
 	}
 	terms := make([]DamageTermDTO, 0, len(r.DamageTerms))
 	for _, t := range r.DamageTerms {
-		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Source: t.Source, Detail: t.Detail, Value: t.Value})
+		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, Value: t.Value})
 	}
 	out := RollResultDTO{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,
@@ -306,15 +310,15 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage, DamageTerms: terms,
-		TotalDamage: r.TotalDamage, DamageBreakdown: r.DamageBreakdown,
+		TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetAC: r.TargetAC, TargetSize: string(r.TargetSize),
 		RolledTargetAC: r.RolledTargetAC, RolledHit: r.RolledHit, RolledCrit: r.RolledCrit,
 		SaveCategory: string(r.SaveCategory), AdjustmentReason: r.AdjustmentReason,
 		LogEntryID: r.LogEntryID,
 	}
 	if r.SaveCategory != "" {
-		adj := r.Adjustment
-		out.Adjustment = &adj
+		adj, bonus, total := r.Adjustment, r.SaveBonus, r.SaveTotal
+		out.Adjustment, out.SaveBonus, out.SaveTotal = &adj, &bonus, &total
 	}
 	if a := r.Ammo; a != nil {
 		out.Ammo = &AmmoDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}

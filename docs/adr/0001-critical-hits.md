@@ -1,7 +1,8 @@
 # ADR 0001: Critical hits (house rule)
 
 **Status**: accepted, 2026-10-13 (critical-qki.28; supersedes the one-d100 implementation from
-critical-qki.7 / critical-qki.12)
+critical-qki.7 / critical-qki.12); step 5 amended 2026-10-15 (critical-qki.35) to the buff
+multipliers on the raw dice, as ruled 2026-10-14 and shipped in critical-qki.39
 
 ## Context
 
@@ -29,11 +30,14 @@ number of calls (d20 once, d100 twice per attack).
    (`crit_table_rows`, edited in the app) that holds the multiplier d100, in the table as it is at
    the roll. Until the table is edited it is the default 1–100 → ×2, flagged `CritPlaceholder`.
    Table multipliers may be decimals (×1.5). An attack that is not a crit has ×1.
-5. **Damage.** The crit multiplier multiplies with the buff multipliers:
-   `((dice × spells) + weapon) × (crit × buffs) + strength + buff damage`. It is computed at full
+5. **Damage.** The crit multiplier multiplies the dice part and the weapon bonus together, after
+   the buff multipliers, which apply to the raw dice only (user, 2026-10-14: "x2 multiplier on raw
+   dice result"; [ADR 0003](0003-damage.md) steps 4 and 6):
+   `((dice × spells × buffs) + weapon) × crit + strength + buff damage`. It is computed at full
    precision and floored **once**, on the final value after the strength and buff damage terms
    (`RollResult.UnroundedDamage` → `TotalDamage`), never below 0. The breakdown shows
-   `… = 10.5 → 10` when the result is fractional.
+   `… = 10.5 → 10` when the result is fractional. Test: `TestCrit_Step5_MultipliersStackFlooredOnce`
+   (`((5 × 1 × 3) + 2) × 1.5 = 25.5 → 25`; with the buff next to the crit it would be 31).
 6. **Correction.** A target AC correction runs steps 2, 4 and 5 again with the stored d20,
    crit-check d100, multiplier d100 and its crit-table row, and the stored damage dice. Nothing is
    rolled again.

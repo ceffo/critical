@@ -17,8 +17,7 @@ import (
 // An active buff with the same name is replaced: spell effects are not
 // cumulative with themselves, so casting one again renews it. A Strength
 // bonus (not Improved) is the exception: it stacks with itself, so a second
-// cast is a second buff (effective STR rule 1, docs/backend.md "Attack Modifiers",
-// critical-qki.33).
+// cast is a second buff (ADR 0004 steps 6 and 7).
 func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (BuffEffect, actionlog.Snapshot, error) {
 	buff.Name = strings.TrimSpace(buff.Name)
 	buff.Note = strings.TrimSpace(buff.Note)

@@ -121,7 +121,7 @@ test("Strength cast on me by a party wizard, found by its French name", async ({
   await snap(page, "strength-received");
 });
 
-// Effective STR rule 1 (docs/backend.md "Effective STR"): every Strength bonus stacks, total
+// ADR 0004 step 7: every Strength bonus stacks, total
 // capped at 18; a second receive is a second buff, not a renewal.
 test.describe("Strength received twice on the sheet's STR 12", () => {
   test.use({ character: { str: 12 } });

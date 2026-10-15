@@ -58,8 +58,9 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, cre
 
 -- hp_events: legacy HP ledger, carried into action_log by migration 007; no longer written
 
--- xp_events: append-only ledger (same pattern as hp_events)
-id, character_id, delta INTEGER, source TEXT, session_date
+-- xp_entries: the XP ledger, outside the action log (edited and deleted in place, ADR 0015);
+-- the total is characters.xp_total plus every entry (base + 10% when bonus)
+id, character_id, entry_date TEXT, session TEXT, reason TEXT, base INTEGER, bonus INTEGER (0/1)
 ```
 
 ### JSON column tables (complex state)
@@ -195,11 +196,13 @@ if count == 0 {
 
 `seeds/rule_tables.json` holds the AD&D 2e Player's Handbook lookup tables: Table 1 (Strength: hit and
 damage adjustments, including 18/01-18/00), Table 2 (Dexterity: reaction, missile attack and defensive
-adjustments) and Table 32 (Bard spells per day by level 1-20). It is not loaded into SQLite: the
+adjustments), Table 32 (Bard spells per day by level 1-20) and Table 25 (`bard_experience`: the XP
+that reaches each level 1-20, Thief/Bard column). It is not loaded into SQLite: the
 `ruletablesadpt` adapter parses it at startup (a gap or overlap in a table is a startup error) into
 `ruletablesvc.Tables`, which implements `ruletablesvc.Lookup`:
 `StrengthMods(str, exceptional) (hit, dmg)`, `DexMods(dex) (missile, ac)` and
-`BardSpellsPerDay(level) map[spellLevel]count`. `exceptional` is the 18/xx percentile (1-99, 100 for
+`BardSpellsPerDay(level) map[spellLevel]count`; `Tables` also has `BardXPThreshold(level)` (the
+XP ledger's port). `exceptional` is the 18/xx percentile (1-99, 100 for
 18/00). Values are returned as printed in the tables. The tests check
 values against the PHB pages, not against the seed.
 

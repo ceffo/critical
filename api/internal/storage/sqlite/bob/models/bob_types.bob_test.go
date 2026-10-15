@@ -50,5 +50,5 @@ var _ bob.HookableType = &Spell{}
 // Make sure the type Weapon runs hooks after queries
 var _ bob.HookableType = &Weapon{}
 
-// Make sure the type XPEvent runs hooks after queries
-var _ bob.HookableType = &XPEvent{}
+// Make sure the type XPEntry runs hooks after queries
+var _ bob.HookableType = &XPEntry{}

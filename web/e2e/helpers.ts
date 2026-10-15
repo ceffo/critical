@@ -120,7 +120,7 @@ export async function effectiveStr(page: Page): Promise<number> {
 }
 
 /** Switch the workspace from the rail (English labels). */
-export async function openWorkspace(page: Page, name: "Act" | "Inventory" | "Spells") {
+export async function openWorkspace(page: Page, name: "Act" | "Inventory" | "Spells" | "Experience") {
   await page
     .getByRole("navigation", { name: "Workspaces" })
     .getByRole("button", { name, exact: true })

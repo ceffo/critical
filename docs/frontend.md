@@ -41,11 +41,12 @@ flowchart TD
     BS["EffectsTimeline: one row per buff over a window of 8 / 12 / 16 turns, add / edit forms"]
   end
   subgraph G["Columns: rail | workspace 1fr | Fil clamp(340px, 26vw, 520px) | Moi clamp(300px, 22vw, 440px)"]
-    RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts; gear opens SettingsPopover"]
+    RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts, Expérience; gear opens SettingsPopover"]
     subgraph WS["Workspace (one shown, each mounted on first visit, then kept)"]
       ACT["Agir: ActionArea tabs Weapons, Spells, Items"]
       INV["Inventaire: InventoryPanel + WeaponsSection"]
       SP["Sorts: LookupPanel"]
+      XP["Expérience: XpPanel"]
     end
     subgraph FIL["Fil (aside 'Results and journal')"]
       RCARD["ResultCard: detail card, the latest result or a selected journal entry"]
@@ -164,6 +165,15 @@ flowchart TD
   `q` (the server matches English names) plus `match_exact` / `match_prefix` / `match_contains`,
   the catalogue keys whose French name matched (`lib/spellSearch.ts`); the server ORs both and
   ranks exact > prefix > contains, then level, name.
+- Expérience workspace (`components/xp/XpPanel.tsx`, `stores/xp.ts`, ADR 0015): a progress card
+  (total, "Before level N · X XP", a bar with 10% ticks between the server's floor and ceiling, the
+  server's 8 level cells with their thresholds, current and next ringed), "Add XP" (amount, reason,
+  session, +10% defaulting to the server's `bonusEligible`; the button shows the server's preview,
+  `GET /api/xp/preview`; Enter submits) and the ledger (reason with date · session, base, bonus,
+  total; in-row edit, Enter saves, Escape cancels; delete; entries added this session tinted; the
+  sheet's starting XP as the last, read-only row). The ledger is outside the action stack: its
+  writes answer with the whole ledger and refresh nothing else. The Moi column's level line opens
+  it and is underlined with the server's `progress`.
 - Moi column (`Identity`, `HpBar`, `ChargeCards`, `QuickHp`, `Saves` in `components/dashboard/`),
   beside every workspace: identity (name, level, abilities in seven cells, effective STR, THAC0);
   HP (the newest HP change still in force on the right, current over max, the bar coloured by
@@ -320,7 +330,7 @@ outside `ui/`).
   (e.g. `hp-value`).
 - **Relative assertions:** never hard-code seeded character values (reseeds change them). Read the value
   before, act, assert the delta (HP drops by exactly the damage entered).
-- **Shell:** switch workspaces with `openWorkspace(page, "Act" | "Inventory" | "Spells")` and settings
+- **Shell:** switch workspaces with `openWorkspace(page, "Act" | "Inventory" | "Spells" | "Experience")` and settings
   with `chooseSetting` / `chooseLanguage` (`e2e/helpers.ts`). A visited workspace stays in the DOM
   while hidden, so scope `getByLabel` / `getByText` to the visible region (role locators skip
   hidden elements). `layout.spec.ts` covers 1024, 1280x800, 1440x900, 1920x1080 and 2560x1440;

@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
-import { Backpack, BookOpenText, HandFist, type IconProps } from "@phosphor-icons/react";
+import { Backpack, BookOpenText, HandFist, TrendUp, type IconProps } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { WORKSPACES, type Workspace } from "@/lib/workspaces";
 import { SettingsPopover } from "./SettingsPopover";
@@ -9,6 +9,7 @@ const ICONS: Record<Workspace, ComponentType<IconProps>> = {
   act: HandFist,
   inventory: Backpack,
   spells: BookOpenText,
+  xp: TrendUp,
 };
 
 /** Left rail: switches the workspace; the gear at the bottom opens the settings. */

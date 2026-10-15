@@ -22,6 +22,12 @@ type fileDTO struct {
 	Strength  []strengthDTO `json:"strength"`
 	Dexterity []dexDTO      `json:"dexterity"`
 	Bard      []bardDTO     `json:"bard_spells"`
+	XP        []xpDTO       `json:"bard_experience"`
+}
+
+type xpDTO struct {
+	Level int `json:"level"`
+	XP    int `json:"xp"`
 }
 
 type strengthDTO struct {
@@ -90,5 +96,9 @@ func Parse(raw []byte) (*ruletablesvc.Tables, error) {
 		bard[i].Level = d.Level
 		copy(bard[i].PerSpellLevel[:], d.PerSpellLevel)
 	}
-	return ruletablesvc.New(str, dex, bard)
+	xp := make([]ruletablesvc.XPRow, len(f.XP))
+	for i, d := range f.XP {
+		xp[i] = ruletablesvc.XPRow{Level: d.Level, XP: d.XP}
+	}
+	return ruletablesvc.New(str, dex, bard, xp)
 }

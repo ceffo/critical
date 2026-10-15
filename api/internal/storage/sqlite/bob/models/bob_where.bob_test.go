@@ -250,17 +250,17 @@ func TestCharacterHasRelationsEmitExists(t *testing.T) {
 		}
 	})
 
-	t.Run("XPEvents", func(t *testing.T) {
+	t.Run("XPEntries", func(t *testing.T) {
 		q := sqlite.Select(
 			sm.From(Characters.NameExpr()),
-			SelectWhere.Characters.R.HasXPEvents(),
+			SelectWhere.Characters.R.HasXPEntries(),
 		)
 		sql, _, err := bob.Build(ctx, q)
 		if err != nil {
-			t.Fatalf("HasXPEvents: build error: %v", err)
+			t.Fatalf("HasXPEntries: build error: %v", err)
 		}
 		if !strings.Contains(sql, "EXISTS") {
-			t.Errorf("HasXPEvents: expected EXISTS in query, got: %s", sql)
+			t.Errorf("HasXPEntries: expected EXISTS in query, got: %s", sql)
 		}
 	})
 }
@@ -349,16 +349,16 @@ func TestSpellSlotHasRelationsEmitExists(t *testing.T) {
 	})
 }
 
-// TestXPEventHasRelationsEmitExists verifies that every generated
+// TestXPEntryHasRelationsEmitExists verifies that every generated
 // Has{Rel} helper produces a correlated EXISTS subquery (semi-join) rather than
 // an INNER JOIN, so the parent rows are never multiplied.
-func TestXPEventHasRelationsEmitExists(t *testing.T) {
+func TestXPEntryHasRelationsEmitExists(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Character", func(t *testing.T) {
 		q := sqlite.Select(
-			sm.From(XPEvents.NameExpr()),
-			SelectWhere.XPEvents.R.HasCharacter(),
+			sm.From(XPEntries.NameExpr()),
+			SelectWhere.XPEntries.R.HasCharacter(),
 		)
 		sql, _, err := bob.Build(ctx, q)
 		if err != nil {

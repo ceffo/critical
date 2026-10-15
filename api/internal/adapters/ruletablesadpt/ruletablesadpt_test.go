@@ -120,6 +120,34 @@ func TestBardSpellsPerDay(t *testing.T) {
 	}
 }
 
+// The Thief/Bard column of PHB Table 25 (p.38), as printed.
+func TestBardXPThreshold(t *testing.T) {
+	tbl := must.Do(ruletablesadpt.New(seedsDir))
+	tests := []struct{ level, want int }{
+		{1, 0},
+		{2, 1250},
+		{5, 10000},
+		{10, 160000},
+		{11, 220000},
+		{12, 440000},
+		{13, 660000},
+		{14, 880000},
+		{15, 1100000},
+		{16, 1320000},
+		{19, 1980000},
+		{20, 2200000},
+	}
+	for _, tt := range tests {
+		got, err := tbl.BardXPThreshold(tt.level)
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, got, "level %d", tt.level)
+	}
+	for _, bad := range []int{0, 21} {
+		_, err := tbl.BardXPThreshold(bad)
+		require.Error(t, err, "level %d", bad)
+	}
+}
+
 func TestNew_MissingFile(t *testing.T) {
 	_, err := ruletablesadpt.New(t.TempDir())
 	require.ErrorContains(t, err, ruletablesadpt.FileName)
@@ -135,6 +163,9 @@ func TestParse_RejectsBrokenTables(t *testing.T) {
 		"bard row short":     {`"per_spell_level": [0, 0, 0, 0, 0, 0]`, `"per_spell_level": [0, 0]`},
 		"unknown field":      {`"_source"`, `"extra": 1, "_source"`},
 		"duplicate bard lvl": {`"level": 2,`, `"level": 1,`},
+		"xp level skipped":   {`{"level": 3, "xp": 2500}`, `{"level": 4, "xp": 2500}`},
+		"xp not increasing":  {`{"level": 3, "xp": 2500}`, `{"level": 3, "xp": 1250}`},
+		"xp level 1 above 0": {`{"level": 1, "xp": 0}`, `{"level": 1, "xp": 5}`},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

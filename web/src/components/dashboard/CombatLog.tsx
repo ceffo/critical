@@ -26,7 +26,7 @@ import { useFilStore } from "@/stores/fil";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
-import { groupByRound } from "@/lib/groupByRound";
+import { groupByRound, isUndone } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
 import {
@@ -164,16 +164,46 @@ export function CombatLog() {
                     : t("log.nothingThisRound")}
               </p>
             ) : (
-              <ul className="flex flex-col gap-1">
-                {g.entries.map((e) => (
-                  <LogRow
-                    key={e.id}
-                    entry={e}
-                    selected={e.id === shownId}
-                    onSelect={() => select(e.id)}
-                  />
-                ))}
-              </ul>
+              <div className="flex flex-col gap-1">
+                {g.transactions.map((tx) => {
+                  const rows = (
+                    <ul className="flex flex-col gap-1">
+                      {tx.map((e) => (
+                        <LogRow
+                          key={e.id}
+                          entry={e}
+                          selected={e.id === shownId}
+                          onSelect={() => select(e.id)}
+                          grouped={tx.length > 1}
+                          undoneGroup={isUndone(tx)}
+                        />
+                      ))}
+                    </ul>
+                  );
+                  if (tx.length === 1) return <div key={tx[0].id}>{rows}</div>;
+                  // One request recorded several entries (ADR 0018): framed as one unit, and
+                  // undone as one.
+                  const undone = isUndone(tx);
+                  return (
+                    <div
+                      key={tx[0].id}
+                      className={cn(
+                        "rounded-lg border-l-2 bg-neu-900/30 py-0.5 pl-1",
+                        undone ? "border-neu-700" : "border-amb-500",
+                      )}
+                      data-testid="log-transaction"
+                      data-undone={undone}
+                    >
+                      {undone && (
+                        <p className="px-2 text-label text-danger">
+                          {t("log.status.voided")}
+                        </p>
+                      )}
+                      {rows}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </section>
         ))}
@@ -189,10 +219,15 @@ function LogRow({
   entry: e,
   selected,
   onSelect,
+  grouped,
+  undoneGroup,
 }: {
   entry: LogEntry;
   selected: boolean;
   onSelect: () => void;
+  /** In a multi-entry transaction: an undone one says so once on its frame, not on each row. */
+  grouped: boolean;
+  undoneGroup: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const reroll = useDiceStore((s) => s.roll);
@@ -281,7 +316,7 @@ function LogRow({
             })}
           </span>
         )}
-        {voided && (
+        {voided && !(grouped && undoneGroup) && (
           <span className="text-danger">{t("log.status.voided")}</span>
         )}
         {!voided && mode === "view" && (

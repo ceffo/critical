@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LogEntry } from "@/types/log";
-import { groupByRound } from "./groupByRound";
+import { groupByRound, isUndone } from "./groupByRound";
 
 const entry = (id: number, round: number): LogEntry => ({
   id,
@@ -65,5 +65,28 @@ describe("groupByRound", () => {
     expect(groupByRound([], 2).map((g) => [g.round, g.entries.length])).toEqual(
       [[2, 0]],
     );
+  });
+
+  it("groups entries sharing a transactionId and keeps a transaction in the round of its newest entry", () => {
+    // Next Round: initiative stamped 3 (newest), advance stamped 2, both in transaction 10.
+    const init = { ...entry(11, 3), transactionId: 10 };
+    const advance = { ...entry(10, 2), transactionId: 10 };
+    const groups = groupByRound([init, advance, entry(9, 2)], 3);
+    expect(groups.map((g) => g.round)).toEqual([3, 2]);
+    expect(groups[0].transactions.map((t) => t.map((e) => e.id))).toEqual([
+      [11, 10],
+    ]);
+    expect(groups[0].entries.map((e) => e.id)).toEqual([11, 10]);
+    expect(groups[1].transactions.map((t) => t.map((e) => e.id))).toEqual([
+      [9],
+    ]);
+  });
+
+  it("is undone only when every entry of the transaction is voided", () => {
+    const a = { ...entry(2, 1), transactionId: 1, status: "voided" as const };
+    const b = { ...entry(1, 1), transactionId: 1 };
+    expect(isUndone([a, b])).toBe(false);
+    expect(isUndone([a, { ...b, status: "voided" }])).toBe(true);
+    expect(isUndone([])).toBe(false);
   });
 });

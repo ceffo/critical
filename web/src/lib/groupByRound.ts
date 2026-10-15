@@ -5,6 +5,13 @@ export interface RoundGroup {
   key: string;
   round: number;
   entries: LogEntry[];
+  /** `entries` cut into transactions (consecutive runs of one transactionId), newest first. */
+  transactions: LogEntry[][];
+}
+
+/** True when the entry is popped: a whole transaction is undone when all its entries are. */
+export function isUndone(tx: LogEntry[]): boolean {
+  return tx.length > 0 && tx.every((e) => e.status === "voided");
 }
 
 /**
@@ -17,14 +24,37 @@ export function groupByRound(
   entries: LogEntry[],
   currentRound: number,
 ): RoundGroup[] {
-  const groups: RoundGroup[] = [];
+  // A transaction is one unit (ADR 0018) and never splits across groups. Its entries can carry
+  // different round stamps (Next Round logs the advance in the round it ends and the initiative in
+  // the round it opens), so the transaction goes in the round of its newest entry.
+  const transactions: LogEntry[][] = [];
   for (const e of entries) {
+    const last = transactions[transactions.length - 1];
+    if (last && last[0].transactionId === e.transactionId) last.push(e);
+    else transactions.push([e]);
+  }
+  const groups: RoundGroup[] = [];
+  for (const tx of transactions) {
     const last = groups[groups.length - 1];
-    if (last && last.round === e.round) last.entries.push(e);
-    else groups.push({ key: `e${e.id}`, round: e.round, entries: [e] });
+    if (last && last.round === tx[0].round) {
+      last.entries.push(...tx);
+      last.transactions.push(tx);
+    } else {
+      groups.push({
+        key: `e${tx[0].id}`,
+        round: tx[0].round,
+        entries: [...tx],
+        transactions: [tx],
+      });
+    }
   }
   if (groups.length === 0 || groups[0].round !== currentRound) {
-    groups.unshift({ key: "current", round: currentRound, entries: [] });
+    groups.unshift({
+      key: "current",
+      round: currentRound,
+      entries: [],
+      transactions: [],
+    });
   }
   return groups;
 }

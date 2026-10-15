@@ -44,6 +44,9 @@ func TestDice_RequestParsing(t *testing.T) {
 		{"roll no formula", "POST", "/api/roll/dice", "{}", "formula is required"},
 		{"roll unknown field", "POST", "/api/roll/dice", `{"formula":"d6","x":1}`, "invalid request body"},
 		{"favourite no formula", "POST", "/api/dice/favourites", "{}", "formula is required"},
+		{"reorder no ids", "PUT", "/api/dice/favourites/order", "{}", "ids is required"},
+		{"reorder bad json", "PUT", "/api/dice/favourites/order", "{", "invalid request body"},
+		{"reorder not numbers", "PUT", "/api/dice/favourites/order", `{"ids":["a"]}`, "invalid request body"},
 		{"delete bad id", "DELETE", "/api/dice/favourites/abc", "", "invalid favourite id"},
 		{"delete zero id", "DELETE", "/api/dice/favourites/0", "", "invalid favourite id"},
 	} {
@@ -81,4 +84,23 @@ func TestDice_FavouritesWireShape(t *testing.T) {
 	m.dice.EXPECT().DeleteFavourite(mock.Anything, int64(1), int64(9)).Return(fmt.Errorf("%w: favourite 9", domain.ErrNotFound))
 	rec = do(h, "DELETE", "/api/dice/favourites/9", "")
 	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestDice_ReorderReturnsTheNewOrder(t *testing.T) {
+	h, m := newRouter(t)
+	m.dice.EXPECT().ReorderFavourites(mock.Anything, int64(1), []int64{2, 1}).Return(nil).Once()
+	m.dice.EXPECT().Favourites(mock.Anything, int64(1)).Return([]dicesvc.Favourite{{ID: 2, Formula: "d4"}, {ID: 1, Formula: "d6"}}, nil).Once()
+	rec := do(h, "PUT", "/api/dice/favourites/order", `{"ids":[2,1]}`)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"favourites":[{"id":2,"formula":"d4"},{"id":1,"formula":"d6"}]}`, rec.Body.String())
+}
+
+// An id the service refuses is a 400 on the ids field, through the central
+// error mapping.
+func TestDice_ReorderRefusalIs400WithTheField(t *testing.T) {
+	h, m := newRouter(t)
+	m.dice.EXPECT().ReorderFavourites(mock.Anything, int64(1), []int64{9}).Return(domain.FieldErrorf("ids", "unknown or repeated favourite 9")).Once()
+	rec := do(h, "PUT", "/api/dice/favourites/order", `{"ids":[9]}`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.JSONEq(t, `{"error":"unknown or repeated favourite 9","field":"ids","code":"invalid_input"}`, rec.Body.String())
 }

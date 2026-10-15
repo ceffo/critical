@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { ApiError } from "@/api/http";
-import { addFavourite, deleteFavourite, fetchFavourites, rollDice } from "@/api/dice";
+import { addFavourite, deleteFavourite, fetchFavourites, reorderFavourites, rollDice } from "@/api/dice";
 import { addDie, removeDie, stepConstant } from "@/lib/diceFormula";
 import type { DiceFavourite } from "@/types/dice";
 import { useFilStore } from "./fil";
@@ -24,6 +24,8 @@ interface DiceStore {
   /** Saves the composer's text on the server; resolves true when saved. */
   saveFavourite: () => Promise<boolean>;
   removeFavourite: (id: number) => Promise<void>;
+  /** Moves a favourite one place earlier (delta -1) or later (+1); the server keeps the order. */
+  moveFavourite: (id: number, delta: -1 | 1) => Promise<void>;
 }
 
 /** The dice composer (free rolls and favourites), all rolled and stored by the server. */
@@ -87,6 +89,18 @@ export const useDiceStore = create<DiceStore>((set, get) => {
     removeFavourite: async (id) => {
       try {
         set({ favourites: (await deleteFavourite(id)).favourites });
+      } catch (e) {
+        fail(e);
+      }
+    },
+    moveFavourite: async (id, delta) => {
+      const ids = get().favourites.map((f) => f.id);
+      const from = ids.indexOf(id);
+      const to = from + delta;
+      if (from < 0 || to < 0 || to >= ids.length) return;
+      [ids[from], ids[to]] = [ids[to], ids[from]];
+      try {
+        set({ favourites: (await reorderFavourites(ids)).favourites });
       } catch (e) {
         fail(e);
       }

@@ -1,6 +1,6 @@
 import { useEffect, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Minus, Plus, Star, X } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Minus, Plus, Star, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useDiceStore } from "@/stores/dice";
 import { DICE_SIDES, dieCount, dieName } from "@/lib/diceFormula";
@@ -38,11 +38,22 @@ export function DiceComposer() {
         {s.favourites.length === 0 && (
           <li className="text-sm text-muted-foreground">{t("dice.noFavourites")}</li>
         )}
-        {s.favourites.map((f) => (
+        {s.favourites.map((f, i) => (
           <li key={f.id} className="flex shrink-0 items-center rounded-md bg-card" data-testid="dice-favourite">
+            {s.favourites.length > 1 && (
+              <button
+                type="button"
+                className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+                aria-label={t("dice.moveFavouriteEarlier", { formula: f.formula })}
+                disabled={i === 0}
+                onClick={() => void s.moveFavourite(f.id, -1)}
+              >
+                <CaretLeft aria-hidden className="size-3" />
+              </button>
+            )}
             <button
               type="button"
-              className="rounded-l-md px-2 py-0.5 text-sm tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="px-2 py-0.5 text-sm tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
               title={t("dice.rollFavourite", { formula: f.formula })}
               aria-label={t("dice.rollFavourite", { formula: f.formula })}
               disabled={s.rolling}
@@ -50,6 +61,17 @@ export function DiceComposer() {
             >
               {f.formula}
             </button>
+            {s.favourites.length > 1 && (
+              <button
+                type="button"
+                className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+                aria-label={t("dice.moveFavouriteLater", { formula: f.formula })}
+                disabled={i === s.favourites.length - 1}
+                onClick={() => void s.moveFavourite(f.id, 1)}
+              >
+                <CaretRight aria-hidden className="size-3" />
+              </button>
+            )}
             <button
               type="button"
               className="rounded-r-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"

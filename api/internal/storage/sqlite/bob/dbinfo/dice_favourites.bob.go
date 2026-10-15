@@ -42,6 +42,15 @@ var DiceFavourites = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		Position: column{
+			Name:      "position",
+			DBType:    "INTEGER",
+			Default:   "0",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: diceFavouriteIndexes{
 		PKMainDiceFavourites: index{
@@ -109,11 +118,12 @@ type diceFavouriteColumns struct {
 	ID          column
 	CharacterID column
 	Formula     column
+	Position    column
 }
 
 func (c diceFavouriteColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.CharacterID, c.Formula,
+		c.ID, c.CharacterID, c.Formula, c.Position,
 	}
 }
 

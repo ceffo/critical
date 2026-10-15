@@ -121,6 +121,9 @@ var endpoints = []endpoint{
 	{"POST dice/favourites", "POST", "/api/dice/favourites", `{"formula":"d6"}`, func(m *mocksSet, err error) {
 		m.dice.On("AddFavourite", anyArgs(3)...).Return(nil, err)
 	}},
+	{"PUT dice/favourites/order", "PUT", "/api/dice/favourites/order", `{"ids":[1]}`, func(m *mocksSet, err error) {
+		m.dice.On("ReorderFavourites", anyArgs(3)...).Return(err)
+	}},
 	{"DELETE dice/favourites/{id}", "DELETE", "/api/dice/favourites/3", "", func(m *mocksSet, err error) {
 		m.dice.On("DeleteFavourite", anyArgs(3)...).Return(err)
 	}},

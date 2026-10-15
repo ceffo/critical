@@ -77,3 +77,26 @@ func TestDiceFavourites_PersistPerCharacter(t *testing.T) {
 	require.Len(t, favs, 1)
 	assert.Equal(t, "d%", favs[0].Formula)
 }
+
+func TestDiceFavourites_ReorderPersistsAndNewOnesGoLast(t *testing.T) {
+	bs, _ := newDiceBacking(t)
+	ctx, id := context.Background(), bs.CharacterID
+	a, err := bs.Dice.AddFavourite(ctx, id, "d4")
+	require.NoError(t, err)
+	b, err := bs.Dice.AddFavourite(ctx, id, "d6")
+	require.NoError(t, err)
+
+	require.NoError(t, bs.Dice.ReorderFavourites(ctx, id, []int64{b.ID, a.ID}))
+	c, err := bs.Dice.AddFavourite(ctx, id, "d8")
+	require.NoError(t, err)
+	favs, err := bs.Dice.Favourites(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, favs, 3)
+	assert.Equal(t, []int64{b.ID, a.ID, c.ID}, []int64{favs[0].ID, favs[1].ID, favs[2].ID})
+
+	// A refused order changes nothing.
+	require.ErrorIs(t, bs.Dice.ReorderFavourites(ctx, id, []int64{a.ID, a.ID, c.ID}), domain.ErrInvalidInput)
+	favs, err = bs.Dice.Favourites(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{b.ID, a.ID, c.ID}, []int64{favs[0].ID, favs[1].ID, favs[2].ID})
+}

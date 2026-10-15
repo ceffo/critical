@@ -28,6 +28,9 @@ import {
   cardSource,
   dieFaces,
   dieTone,
+  attackDiceChips,
+  castInstances,
+  type DieChipView,
   liveKind,
   liveModel,
   type CardModel,
@@ -234,6 +237,7 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
   const detailOpen = useFilStore((s) => s.detailOpen);
   const setDetailOpen = useFilStore((s) => s.setDetailOpen);
   const settled = attackSettled(r);
+  const diceChips = attackDiceChips(r);
   const voided = useLogStore((s) =>
     s.entries.some((e) => e.id === r.logEntryId && e.status === "voided"),
   );
@@ -288,9 +292,21 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
       <div className="flex items-end justify-between gap-3">
         <div className={cn("flex min-w-0 flex-col gap-1.5", !r.hit && "opacity-50")}>
           <span className={labelClass}>{t("result.damage")}</span>
-          <span className="w-fit rounded-md bg-neu-900 px-2 py-0.5 text-sm font-semibold tabular-nums" data-testid="damage-dice">
-            {t("fil.diceRolled", { dice: r.damageDice, total: r.baseDamage })}
-          </span>
+          {diceChips ? (
+            <div className="flex flex-wrap items-center gap-1.5" data-testid="damage-dice">
+              <span className="text-sm tabular-nums text-muted-foreground">{r.damageDice}</span>
+              <ul className="flex flex-wrap gap-1.5" data-testid="damage-dice-chips">
+                {diceChips.map((c, i) => (
+                  <DieChip key={i} value={c.value} tone={c.tone} />
+                ))}
+              </ul>
+              <span className="text-sm font-semibold tabular-nums">= {r.baseDamage}</span>
+            </div>
+          ) : (
+            <span className="w-fit rounded-md bg-neu-900 px-2 py-0.5 text-sm font-semibold tabular-nums" data-testid="damage-dice">
+              {t("fil.diceRolled", { dice: r.damageDice, total: r.baseDamage })}
+            </span>
+          )}
           {(r.hit || !settled) && (
             <span className="text-xs break-words text-muted-foreground tabular-nums" data-testid="damage-formula">
               {damageFormula(r, i18n.language)}
@@ -638,8 +654,8 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
 }
 
 /** One die as a chip: its maximum in the accent, a 1 dimmed. */
-function DieChip({ value, faces }: { value: number; faces: number | null }) {
-  const tone = dieTone(value, faces);
+function DieChip({ value, faces, tone: given }: { value: number; faces?: number | null; tone?: DieChipView["tone"] }) {
+  const tone = given ?? dieTone(value, faces ?? null);
   return (
     <li
       className={cn(
@@ -697,6 +713,7 @@ function ItemResult({ r }: { r: UseResult }) {
 function CastEntry({ cast: c }: { cast: CastLogPayload }) {
   const { t } = useTranslation();
   const spell = spellName(t, c.spellId, c.spell);
+  const instances = castInstances(c);
   return (
     <div className="flex flex-col gap-3" data-testid="cast-entry">
       <div className="text-sm text-muted-foreground">
@@ -722,9 +739,34 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
       )}
       {c.damage && (
         <div className="flex items-end justify-between gap-3">
-          <span className="text-sm text-muted-foreground">{c.damage.type}</span>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <span className="text-sm text-muted-foreground">{c.damage.type}</span>
+            {instances && (
+              <ul className="flex flex-col gap-1" data-testid="cast-entry-instances">
+                {instances.map((inst, i) => (
+                  <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-xs text-muted-foreground">{t("result.cast.instance", { n: i + 1 })}</span>
+                    <ul className="flex flex-wrap gap-1.5">
+                      {inst.dice.map((d, j) => (
+                        <DieChip key={j} value={d.value} tone={d.tone} />
+                      ))}
+                    </ul>
+                    <span className="text-sm font-semibold tabular-nums">= {inst.total}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <Total label={t("result.cast.damage")} value={c.damage.total} testId="cast-entry-damage" />
         </div>
+      )}
+      {c.save && (
+        <p className="text-sm" data-testid="cast-entry-save">
+          {t("result.cast.save", {
+            type: c.save.type,
+            effect: t(`result.cast.saveEffects.${c.save.effect}`, { defaultValue: c.save.effect }),
+          })}
+        </p>
       )}
       {c.item && (
         <p className="text-sm">{t("result.cast.itemSpent", { name: c.item.name, left: c.item.remaining })}</p>

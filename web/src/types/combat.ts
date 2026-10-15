@@ -88,6 +88,8 @@ export interface RollResult {
   strengthBonus: number;
   bonusDamage: number;
   damageTerms: DamageTerm[];
+  /** The damage dice as thrown; absent on attacks logged before they were recorded and on a miss. */
+  damageRolls?: { sides: number; value: number }[];
   totalDamage: number;
   /** The damage formula's result before the final floor; absent on attacks logged before it was recorded. */
   unroundedDamage?: number;

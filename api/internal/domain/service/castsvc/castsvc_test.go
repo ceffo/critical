@@ -459,8 +459,61 @@ func TestReceive_LogPayload(t *testing.T) {
 	require.NoError(t, err)
 	e := f.entries[0]
 	assert.Empty(t, e.Summary, "the UI words the cast from its payload")
-	assert.JSONEq(t, `{"action":"received","spellId":"strength","spell":"Strength","casterLevel":9,
-		"buff":{"name":"Strength","rounds":540,"strGain":4,"applied":true}}`, string(e.Payload))
+	var p map[string]any
+	require.NoError(t, json.Unmarshal(e.Payload, &p))
+	assert.NotContains(t, p, "note", "the catalog's English note stays out of the ledger")
+	assert.Equal(t, map[string]any{
+		"action": "received", "spellId": "strength", "spell": "Strength", "casterLevel": float64(9),
+		"buff": map[string]any{"name": "Strength", "rounds": float64(540), "strGain": float64(4), "applied": true},
+	}, p)
+}
+
+// The payload records the dice each damage instance threw and the save, so an older cast shows them after a reload.
+func TestCast_LogPayloadHoldsTheDiceUsed(t *testing.T) {
+	t.Run("fireball: ten d6 and the save", func(t *testing.T) {
+		f := newFixture(t, 6, 5, 4, 3, 2, 1, 6, 5, 4, 3)
+		f.prepared(slot("fireball", "Fireball", 3))
+		_, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
+		require.NoError(t, err)
+		assert.Empty(t, f.dice.vals, "no die beyond the ten queued")
+		var p map[string]any
+		require.NoError(t, json.Unmarshal(f.entries[0].Payload, &p))
+		assert.Equal(t, map[string]any{"type": "spell", "effect": "half"}, p["save"])
+		dmg := p["damage"].(map[string]any)
+		assert.Equal(t, "(min(level,10))d6", dmg["dice"])
+		rolls := dmg["rolls"].([]any)
+		require.Len(t, rolls, 1)
+		roll := rolls[0].(map[string]any)
+		assert.Equal(t, float64(39), roll["total"])
+		var got []float64
+		for _, d := range roll["dice"].([]any) {
+			dm := d.(map[string]any)
+			assert.Equal(t, float64(6), dm["sides"])
+			got = append(got, dm["value"].(float64))
+		}
+		assert.Equal(t, []float64{6, 5, 4, 3, 2, 1, 6, 5, 4, 3}, got, "the values the roll threw, in order")
+	})
+	t.Run("magic missile: one roll per missile", func(t *testing.T) {
+		f := newFixture(t, 1, 2, 3, 4, 1)
+		f.prepared(slot("magic_missile", "Magic Missile", 1))
+		_, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"total":16,"type":"force","dice":"1d4+1","instances":5,"rounds":1,"rolls":[
+			{"formula":"1d4+1","dice":[{"sides":4,"value":1}],"total":2},
+			{"formula":"1d4+1","dice":[{"sides":4,"value":2}],"total":3},
+			{"formula":"1d4+1","dice":[{"sides":4,"value":3}],"total":4},
+			{"formula":"1d4+1","dice":[{"sides":4,"value":4}],"total":5},
+			{"formula":"1d4+1","dice":[{"sides":4,"value":1}],"total":2}]}`,
+			string(payloadField(t, f.entries[0].Payload, "damage")))
+	})
+}
+
+func payloadField(t *testing.T, raw json.RawMessage, key string) json.RawMessage {
+	t.Helper()
+	var m map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(raw, &m))
+	require.Contains(t, m, key)
+	return m[key]
 }
 
 func TestCast_BuffErrorAborts(t *testing.T) {

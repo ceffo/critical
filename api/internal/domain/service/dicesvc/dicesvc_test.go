@@ -176,3 +176,34 @@ func TestDeleteFavourite(t *testing.T) {
 	require.NoError(t, f.svc.DeleteFavourite(context.Background(), charID, 3))
 	require.ErrorIs(t, f.svc.DeleteFavourite(context.Background(), charID, 4), domain.ErrNotFound)
 }
+
+func TestReorderFavourites_WritesEachPositionInOneTransaction(t *testing.T) {
+	f := newFixture(t)
+	f.dal.EXPECT().List(mock.Anything, charID).Return([]dicesvc.Favourite{{ID: 1}, {ID: 2}, {ID: 3}}, nil).Once()
+	f.dal.EXPECT().SetPosition(mock.Anything, charID, int64(3), int64(1)).Return(true, nil).Once()
+	f.dal.EXPECT().SetPosition(mock.Anything, charID, int64(1), int64(2)).Return(true, nil).Once()
+	f.dal.EXPECT().SetPosition(mock.Anything, charID, int64(2), int64(3)).Return(true, nil).Once()
+	require.NoError(t, f.svc.ReorderFavourites(context.Background(), charID, []int64{3, 1, 2}))
+	assert.Equal(t, 1, f.tx.calls)
+}
+
+func TestReorderFavourites_RefusesAnythingButTheFullSet(t *testing.T) {
+	for name, ids := range map[string][]int64{
+		"unknown id":   {1, 2, 9},
+		"repeated id":  {1, 2, 2},
+		"missing one":  {1, 2},
+		"extra one":    {1, 2, 3, 4},
+		"empty":        {},
+		"out of range": {0, -1, 3},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newFixture(t)
+			f.dal.EXPECT().List(mock.Anything, charID).Return([]dicesvc.Favourite{{ID: 1}, {ID: 2}, {ID: 3}}, nil).Once()
+			err := f.svc.ReorderFavourites(context.Background(), charID, ids)
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "ids", fe.Field)
+			require.ErrorIs(t, err, domain.ErrInvalidInput)
+		})
+	}
+}

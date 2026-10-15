@@ -79,7 +79,7 @@ id, character_id, formula TEXT
 log entry (payload `{formula, groups, modifier, total}`, no snapshot: undo only pops it). `dice` is
 deliberately not a roll kind (`actionlog.RollKinds`): a stray composer roll neither replaces the result
 card nor ends the correction window of the latest save or attack (ADR 0006 step 6). Favourites:
-`GET|POST /api/dice/favourites`, `DELETE /api/dice/favourites/{id}` (answers the remaining list).
+`GET|POST /api/dice/favourites`, `PUT /api/dice/favourites/order` (body `{"ids":[…]}`, the full order: every favourite id once, else 400 on `ids`; answers the list), `DELETE /api/dice/favourites/{id}` (answers the remaining list).
 
 Grammar (`dicesvc.Parse`, not `pkg/formula`, which serves spell effects): terms joined by `+` or `-`, each
 `NdM`, `dM`, `d%` (a d100) or an integer constant; spaces ignored, `d` case-insensitive. At least one

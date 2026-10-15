@@ -5,6 +5,8 @@ import type { LogEntry, LogKind } from "@/types/log";
 import type { RollResult } from "@/types/combat";
 import type { CastResult } from "@/types/spells";
 import {
+  attackDiceChips,
+  castInstances,
   cardEntryId,
   cardHeader,
   cardModel,
@@ -508,5 +510,74 @@ describe("a popped correction under the Rolls filter", () => {
     expect(m.layout === "attack" && m.roll.targetAc).toBe(5);
     expect(m.layout === "attack" && m.roll.rolledTargetAc).toBeUndefined();
     expect(undoButtonState(2, after, false, fr).label).toMatch(/^Annuler : .*CA 5/);
+  });
+});
+
+describe("die chips from the payload", () => {
+  const castBase = { action: "cast", spellId: "fireball", spell: "Fireball", casterLevel: 5 };
+
+  it("attack, new entry: one chip per recorded die, max and 1 marked", async () => {
+    const t = await makeT("en");
+    const m = cardModel(
+      entry("attack", {
+        ...attackPayload,
+        damageDice: "2d6",
+        damageRolls: [
+          { sides: 6, value: 6 },
+          { sides: 6, value: 1 },
+        ],
+      }),
+      t,
+    );
+    if (m.layout !== "attack") throw new Error("not an attack card");
+    expect(attackDiceChips(m.roll)).toEqual([
+      { value: 6, tone: "max" },
+      { value: 1, tone: "min" },
+    ]);
+  });
+
+  it("attack, old entry without the dice: no chips, the card falls back to the total", async () => {
+    const t = await makeT("en");
+    const m = cardModel(entry("attack", attackPayload), t);
+    if (m.layout !== "attack") throw new Error("not an attack card");
+    expect(attackDiceChips(m.roll)).toBeNull();
+  });
+
+  it("cast, new entry: the instances with their dice, plus the save", async () => {
+    const t = await makeT("en");
+    const m = cardModel(
+      entry("cast", {
+        ...castBase,
+        damage: {
+          total: 11,
+          type: "force",
+          dice: "1d6+1",
+          instances: 2,
+          rounds: 1,
+          rolls: [
+            { formula: "1d6+1", dice: [{ sides: 6, value: 6 }], total: 7 },
+            { formula: "1d6+1", dice: [{ sides: 6, value: 3 }], total: 4 },
+          ],
+        },
+        save: { type: "spell", effect: "half" },
+      }),
+      t,
+    );
+    if (m.layout !== "cast") throw new Error("not a cast card");
+    expect(castInstances(m.cast)).toEqual([
+      { dice: [{ value: 6, tone: "max" }], total: 7 },
+      { dice: [{ value: 3, tone: "plain" }], total: 4 },
+    ]);
+    const sum = castInstances(m.cast)?.reduce((n, i) => n + i.total, 0);
+    expect(sum).toBe(m.cast.damage?.total);
+    expect(m.cast.save).toEqual({ type: "spell", effect: "half" });
+  });
+
+  it("cast, old entry without the dice: no instances, still a cast card", async () => {
+    const t = await makeT("en");
+    const m = cardModel(entry("cast", { ...castBase, damage: { total: 24, type: "fire" } }), t);
+    if (m.layout !== "cast") throw new Error("not a cast card");
+    expect(castInstances(m.cast)).toBeNull();
+    expect(m.cast.damage?.total).toBe(24);
   });
 });

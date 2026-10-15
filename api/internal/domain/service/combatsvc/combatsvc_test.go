@@ -125,16 +125,15 @@ func TestResolveSavingThrow(t *testing.T) {
 		wantTarget int
 		wantHit    bool
 		wantMargin int
-		wantText   string
 	}{
-		{"para/poison pass", combatsvc.SaveParaPoison, 11, 0, 11, true, 0, "Roll: 11 + Mod: 0 = 11 vs Target: 11 (Paralyze/Poison)"},
-		{"para/poison fail", combatsvc.SaveParaPoison, 10, 0, 11, false, -1, "Roll: 10 + Mod: 0 = 10 vs Target: 11 (Paralyze/Poison)"},
-		{"rod/staff/wand", combatsvc.SaveRodStaffWand, 13, 0, 13, true, 0, "(Rod/Staff/Wand)"},
-		{"petrify/poly", combatsvc.SavePetriPoly, 5, 0, 12, false, -7, "(Petrify/Polymorph)"},
-		{"breath", combatsvc.SaveBreath, 20, 0, 15, true, 5, "(Breath Weapon)"},
-		{"spell", combatsvc.SaveSpell, 14, 0, 14, true, 0, "(Spells)"},
-		{"buff bonus turns a fail into a pass", combatsvc.SaveSpell, 12, 2, 14, true, 0, "Roll: 12 + Mod: 2 = 14 vs Target: 14 (Spells)"},
-		{"negative buff bonus", combatsvc.SaveSpell, 14, -1, 14, false, -1, "Roll: 14 + Mod: -1 = 13 vs Target: 14 (Spells)"},
+		{"para/poison pass", combatsvc.SaveParaPoison, 11, 0, 11, true, 0},
+		{"para/poison fail", combatsvc.SaveParaPoison, 10, 0, 11, false, -1},
+		{"rod/staff/wand", combatsvc.SaveRodStaffWand, 13, 0, 13, true, 0},
+		{"petrify/poly", combatsvc.SavePetriPoly, 5, 0, 12, false, -7},
+		{"breath", combatsvc.SaveBreath, 20, 0, 15, true, 5},
+		{"spell", combatsvc.SaveSpell, 14, 0, 14, true, 0},
+		{"buff bonus turns a fail into a pass", combatsvc.SaveSpell, 12, 2, 14, true, 0},
+		{"negative buff bonus", combatsvc.SaveSpell, 14, -1, 14, false, -1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -162,9 +161,11 @@ func TestResolveSavingThrow(t *testing.T) {
 			assert.Equal(t, tt.wantTarget, res.EffectiveThac0)
 			assert.Equal(t, tt.wantHit, res.Hit)
 			assert.Equal(t, tt.wantMargin, res.HitMargin)
-			assert.Contains(t, res.DamageBreakdown, tt.wantText)
+			// ADR 0006 step 2: d20 + modifiers, compared with the target.
+			assert.Equal(t, tt.saveBonus, res.SaveBonus)
+			assert.Equal(t, tt.d20+tt.saveBonus, res.SaveTotal)
 			if tt.saveBonus != 0 {
-				assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Source: "Prayer", Detail: "Prayer", Value: tt.saveBonus}}, res.Modifiers)
+				assert.Equal(t, []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Detail: "Prayer", Value: tt.saveBonus}}, res.Modifiers)
 			} else {
 				assert.Empty(t, res.Modifiers)
 			}
@@ -180,12 +181,12 @@ func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
 		d20       int
 		saveBonus int
 		wantHit   bool
-		wantTotal string
+		wantTotal int
 	}{
-		{"natural 1 passes with +13", 1, 13, true, "Roll: 1 + Mod: 13 = 14 vs Target: 14"},
-		{"natural 1 fails with +12", 1, 12, false, "Roll: 1 + Mod: 12 = 13 vs Target: 14"},
-		{"natural 20 fails with -7", 20, -7, false, "Roll: 20 + Mod: -7 = 13 vs Target: 14"},
-		{"natural 20 passes with -6", 20, -6, true, "Roll: 20 + Mod: -6 = 14 vs Target: 14"},
+		{"natural 1 passes with +13", 1, 13, true, 14},
+		{"natural 1 fails with +12", 1, 12, false, 13},
+		{"natural 20 fails with -7", 20, -7, false, 13},
+		{"natural 20 passes with -6", 20, -6, true, 14},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -201,7 +202,7 @@ func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantHit, res.Hit)
-			assert.Contains(t, res.DamageBreakdown, tt.wantTotal)
+			assert.Equal(t, tt.wantTotal, res.SaveTotal, "against target 14")
 		})
 	}
 }

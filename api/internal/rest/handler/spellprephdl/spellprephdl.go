@@ -32,6 +32,13 @@ type SpellbookEntryDTO struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Level int    `json:"level"`
+	// What casting the spell asks of the player (from the spell effects
+	// data): the splits of the extra slots it grants (the first is the
+	// default), the type of the inventory item it spends, and whether it
+	// rolls a to-hit (then a target AC is required).
+	SlotSplits      [][]int `json:"slot_splits,omitempty"`
+	ConsumeItemType string  `json:"consume_item_type,omitempty"`
+	AttackRoll      bool    `json:"attack_roll,omitempty"`
 }
 
 // LevelLimitDTO is the preparation limit of one spell level.
@@ -60,7 +67,10 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 		}
 		out := InfoDTO{Spellbook: []SpellbookEntryDTO{}, Limits: []LevelLimitDTO{}}
 		for _, e := range info.Spellbook {
-			out.Spellbook = append(out.Spellbook, SpellbookEntryDTO{ID: e.ID, Name: e.Name, Level: e.Level})
+			out.Spellbook = append(out.Spellbook, SpellbookEntryDTO{
+				ID: e.ID, Name: e.Name, Level: e.Level,
+				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
+			})
 		}
 		for _, l := range info.Limits {
 			out.Limits = append(out.Limits, LevelLimitDTO{Level: l.Level, Max: l.Max})

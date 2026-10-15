@@ -195,7 +195,7 @@ func TestActiveBuffs_ReadsStoredJSON(t *testing.T) {
 	}}, got)
 }
 
-// str_set ("set Strength to X") was removed (critical-qki.33): a row written
+// str_set ("set Strength to X") was removed: a row written
 // before still reads, and the effect is ignored.
 func TestActiveBuffs_IgnoresRemovedStrSet(t *testing.T) {
 	db := openDB(t)

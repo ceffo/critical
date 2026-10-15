@@ -21,7 +21,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 			D20Roll: 11, D100CritRoll: 50, D100MultiplierRoll: 63, CritMultiplier: 1, BaseThac0: 13, EffectiveThac0: 11,
 			TargetACNeeded: 0, Hit: true, HitMargin: 7, Modifiers: []combatsvc.Modifier{},
 			BaseDamage: 5, DamageDice: "1d8", SpellsBuff: 1, WeaponBuff: 2, Multipliers: 1,
-			DamageTerms: []combatsvc.DamageTerm{}, TotalDamage: 7, DamageBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+			DamageTerms: []combatsvc.DamageTerm{}, TotalDamage: 7, UnroundedDamage: 7,
 			WeaponID: "longsword", WeaponName: "Long Sword +2", TargetAC: 7, TargetSize: combatsvc.SizeSmallMedium,
 			RolledTargetAC: &prevAC, RolledHit: &prevHit, RolledCrit: &prevCrit, LogEntryID: 7,
 		}, nil)
@@ -31,7 +31,7 @@ func TestAdjustAttack_WireShape(t *testing.T) {
 		"d20Roll":11,"d100CritRoll":50,"d100MultiplierRoll":63,"isCrit":false,"critMultiplier":1,"critPlaceholder":false,"critFrom":0,"critTo":0,
 		"baseThac0":13,"modifiers":[],"effectiveThac0":11,"targetACNeeded":0,"hit":true,"hitMargin":7,
 		"baseDamage":5,"damageDice":"1d8","spellsBuff":1,"weaponBuff":2,"multipliers":1,"diceMultiplier":0,"strengthBonus":0,"bonusDamage":0,
-		"damageTerms":[],"totalDamage":7,"damageBreakdown":"((5 × 1.0) + 2) × 1.0 + 0 = 7",
+		"damageTerms":[],"totalDamage":7,"unroundedDamage":7,
 		"weaponId":"longsword","weaponName":"Long Sword +2","targetAc":7,"targetSize":"sm",
 		"rolledTargetAc":5,"rolledHit":false,"rolledCrit":false,"logEntryId":7}`, rec.Body.String())
 }

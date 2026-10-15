@@ -65,7 +65,7 @@ func TestPassTime(t *testing.T) {
 		wantRounds  int
 		wantActive  []buffsvc.BuffEffect
 		wantExpired []buffsvc.BuffEffect
-		wantSummary string
+		wantPayload string
 	}{
 		{
 			name:  "1.5 h: 100 rounds keeps 10, 60 expires, charge-only and untimed untouched",
@@ -82,7 +82,7 @@ func TestPassTime(t *testing.T) {
 			wantExpired: []buffsvc.BuffEffect{
 				{ID: "b", Name: "Short", Duration: 0},
 			},
-			wantSummary: "Time passed: 1.5 h (90 rd), round 4 → 0 (expired: Short)",
+			wantPayload: `{"action":"pass_time","hours":1.5,"rounds":90,"fromRound":4,"toRound":0,"expired":["Short"]}`,
 		},
 		{
 			name:        "exactly the rounds left expires (edge at 0)",
@@ -92,7 +92,7 @@ func TestPassTime(t *testing.T) {
 			wantRounds:  30,
 			wantActive:  []buffsvc.BuffEffect{{ID: "b", Name: "Haste", Duration: 1}},
 			wantExpired: []buffsvc.BuffEffect{{ID: "a", Name: "Bless", Duration: 0}},
-			wantSummary: "Time passed: 0.5 h (30 rd), round 2 → 0 (expired: Bless)",
+			wantPayload: `{"action":"pass_time","hours":0.5,"rounds":30,"fromRound":2,"toRound":0,"expired":["Bless"]}`,
 		},
 		{
 			name:        "a timed buff with charges (Mirror Image) expires with its rounds",
@@ -102,7 +102,7 @@ func TestPassTime(t *testing.T) {
 			wantRounds:  1,
 			wantActive:  []buffsvc.BuffEffect{},
 			wantExpired: []buffsvc.BuffEffect{{ID: "m", Name: "Mirror Image", Duration: 0, Charges: 3}},
-			wantSummary: "Time passed: 0.02 h (1 rd), round 0 → 0 (expired: Mirror Image)",
+			wantPayload: `{"action":"pass_time","hours":0.02,"rounds":1,"fromRound":0,"toRound":0,"expired":["Mirror Image"]}`,
 		},
 		{
 			name:        "no buffs",
@@ -111,7 +111,7 @@ func TestPassTime(t *testing.T) {
 			wantRounds:  480,
 			wantActive:  []buffsvc.BuffEffect{},
 			wantExpired: []buffsvc.BuffEffect{},
-			wantSummary: "Time passed: 8 h (480 rd), round 7 → 0",
+			wantPayload: `{"action":"pass_time","hours":8,"rounds":480,"fromRound":7,"toRound":0}`,
 		},
 	}
 	for _, tt := range tests {
@@ -133,7 +133,8 @@ func TestPassTime(t *testing.T) {
 			require.Len(t, f.entries, 1)
 			e := f.entries[0]
 			assert.Equal(t, actionlog.KindTimePassed, e.Kind)
-			assert.Equal(t, tt.wantSummary, e.Summary)
+			assert.Empty(t, e.Summary, "the UI words the entry")
+			assert.JSONEq(t, tt.wantPayload, string(e.Payload))
 			assert.Equal(t, []string{buffsvc.StateKeyBuffs, buffsvc.StateKeyRound}, snapKeys(e),
 				"void restores both the buffs and the round")
 			assert.JSONEq(t, jsonInt(tt.round), string(e.Snapshots[1].Before))

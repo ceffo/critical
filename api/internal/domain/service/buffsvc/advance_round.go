@@ -2,8 +2,6 @@ package buffsvc
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
@@ -25,13 +23,8 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active [
 			for i, b := range expired {
 				names[i] = b.Name
 			}
-			summary := fmt.Sprintf("Round %d → %d", r, next)
-			if len(names) > 0 {
-				summary += " (expired: " + strings.Join(names, ", ") + ")"
-			}
 			return change{
 				kind:    actionlog.KindRoundAdvance,
-				summary: summary,
 				payload: logPayload{Action: "next_round", FromRound: &r, ToRound: &next, Expired: names},
 				buffs:   active,
 				round:   &next,

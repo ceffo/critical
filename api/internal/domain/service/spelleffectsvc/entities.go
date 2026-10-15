@@ -114,6 +114,21 @@ type Buff struct {
 	Condition   string
 }
 
+// GrantSlots is a cast mechanic: casting the spell adds blank extra spell
+// slots worth Levels spell levels in all, split by the caster at cast time
+// (ADR 0008 step 9). An extra slot is blank until cast and goes at the long
+// rest.
+type GrantSlots struct {
+	Levels int
+}
+
+// ConsumeItem is a cast mechanic: casting the spell spends one unit of an
+// inventory item of type Type, chosen by the caster when several are left
+// (ADR 0008 step 10). Daily items are never spent.
+type ConsumeItem struct {
+	Type string
+}
+
 // Entry is one spell's effect.
 type Entry struct {
 	ID         string
@@ -128,6 +143,32 @@ type Entry struct {
 	Save       *Save
 	Damage     *Damage
 	Buff       *Buff
+	// Cast mechanics, applied when the Bard casts the spell (not when it is
+	// received from someone else): GrantSlots adds extra slots, ConsumeItem
+	// spends an inventory item and AttackRoll rolls a spell to-hit (one d20,
+	// never a crit, ADR 0002 Consequences) against a target AC given at cast.
+	GrantSlots  *GrantSlots
+	ConsumeItem *ConsumeItem
+	AttackRoll  bool
+}
+
+// SlotSplits lists every way the caster may split g.Levels spell levels into
+// extra slots: each split is ascending, and the first is all level 1 slots
+// (the default). 3 levels: [1 1 1], [1 2], [3].
+func (g GrantSlots) SlotSplits() [][]int {
+	var out [][]int
+	var walk func(left, lowest int, acc []int)
+	walk = func(left, lowest int, acc []int) {
+		if left == 0 {
+			out = append(out, append([]int(nil), acc...))
+			return
+		}
+		for l := lowest; l <= left; l++ {
+			walk(left-l, l, append(acc, l))
+		}
+	}
+	walk(g.Levels, 1, nil)
+	return out
 }
 
 // String describes the duration for error messages and logs.

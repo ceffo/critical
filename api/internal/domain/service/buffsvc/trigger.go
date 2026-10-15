@@ -2,7 +2,6 @@ package buffsvc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
@@ -20,13 +19,8 @@ func (s *service) Trigger(ctx context.Context, characterID int64, buffID string)
 		if err != nil {
 			return change{}, err
 		}
-		summary := fmt.Sprintf("%s absorbed a hit (%d left)", after.Name, after.Charges)
-		if ended {
-			summary = fmt.Sprintf("%s absorbed a hit, ended", after.Name)
-		}
 		return change{
 			kind:    actionlog.KindBuffChange,
-			summary: summary,
 			payload: logPayload{Action: "absorb", Buff: after.Name, Charges: after.Charges, Ended: ended},
 			buffs:   next,
 		}, nil

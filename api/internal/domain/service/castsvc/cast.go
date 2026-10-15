@@ -41,7 +41,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		}
 		name := slot.PreparedSpellName
 		if slot.Extra && id == "" {
-			// A blank Rary's slot: the player picks the spell now.
+			// A blank extra slot: the player picks the spell now.
 			var err error
 			id, name, err = s.pickForExtra(ctx, slot.Level, req.SpellID)
 			if err != nil {
@@ -50,9 +50,10 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			after[slotIndex].SpellID, after[slotIndex].PreparedSpellName = id, name
 		}
 		var extra []int
-		if id == RaryID {
+		// ADR 0008 step 9: a spell that grants slots adds them, blank.
+		if entry, ok := s.Effects.Get(id); ok && entry.GrantSlots != nil {
 			var err error
-			if extra, err = raryLevels(req.ExtraSlots); err != nil {
+			if extra, err = grantedLevels(entry, req.ExtraSlots); err != nil {
 				return err
 			}
 			for _, l := range extra {
@@ -69,7 +70,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Level, source: SourceCast, onSelf: req.OnSelf, req: req,
+			casterLevel: c.Level, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra,
 		})
 		if err != nil {
 			return err
@@ -121,7 +122,8 @@ type effectReq struct {
 	casterLevel int
 	source      Source
 	onSelf      *bool
-	req         CastRequest // the cast request (Chromatic Orb: gem, target AC)
+	req         CastRequest // the cast request (item to spend, target AC)
+	extraSlots  []int       // the extra slots this cast granted
 }
 
 // resolve looks the spell up and applies its effect; it returns the buffs
@@ -158,27 +160,26 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		res.TextOnly = TextOnlyLowConfidence
 		return res, nil, nil
 	}
-	// Chromatic Orb (critical-qki.42): a gem is spent, an attack is rolled
-	// and the gem decides the effect; the level damage table is not used.
-	if r.spellID == OrbID && r.source == SourceCast {
-		orb, snap, err := s.throwOrb(ctx, characterID, r.req)
-		if err != nil {
+	// The caster's own mechanics (spend an item, roll to hit) apply only to
+	// a cast, not to a spell received from someone else.
+	var snaps []actionlog.Snapshot
+	if r.source == SourceCast {
+		if snaps, err = s.castMechanics(ctx, characterID, entry, r.req, &res); err != nil {
 			return CastResult{}, nil, err
 		}
-		res.Orb = orb
-		return res, []actionlog.Snapshot{snap}, nil
 	}
+	mechanics := len(r.extraSlots) > 0 || res.Consumed != nil || res.Attack != nil
 	switch entry.Kind {
 	case spelleffectsvc.KindDamage:
 		if entry.Damage == nil {
 			res.TextOnly = TextOnlyUtility
-			return res, nil, nil
+			return res, snaps, nil
 		}
 		res.Damage, err = s.rollDamage(entry.Damage, r.casterLevel)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}
-		return res, nil, nil
+		return res, snaps, nil
 	case spelleffectsvc.KindBuff:
 		buff, untracked, err := s.rollBuff(entry, r.casterLevel)
 		if err != nil {
@@ -187,22 +188,26 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		res.Buff, res.Untracked = buff, untracked
 		if entry.Buff != nil && len(entry.Buff.AbilitySet) > 0 {
 			res.TextOnly = TextOnlyByHand
-			return res, nil, nil
+			return res, snaps, nil
 		}
 		// A spell someone casts on the Bard is on him by definition.
 		if r.source == SourceCast && !appliesToSelf(entry.Target, r.onSelf, hostile(buff, untracked)) {
 			res.TextOnly = TextOnlyNotOnSelf
-			return res, nil, nil
+			return res, snaps, nil
 		}
 		added, snap, err := s.Buffs.Add(ctx, characterID, buff.Buff)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("add buff: %w", err)
 		}
 		buff.Buff, buff.Applied = added, true
-		return res, []actionlog.Snapshot{snap}, nil
+		return res, append(snaps, snap), nil
 	default:
-		res.TextOnly = TextOnlyUtility
-		return res, nil, nil
+		// A utility spell tracks nothing, unless casting it did something
+		// (slots granted, an item spent, a to-hit rolled).
+		if !mechanics {
+			res.TextOnly = TextOnlyUtility
+		}
+		return res, snaps, nil
 	}
 }
 
@@ -214,7 +219,6 @@ func (s *service) record(ctx context.Context, characterID int64, res CastResult,
 	id, err := s.Log.Record(ctx, actionlog.NewEntry{
 		CharacterID: characterID,
 		Kind:        actionlog.KindCast,
-		Summary:     summary(res),
 		Payload:     payload,
 		Snapshots:   snaps,
 	})
@@ -222,47 +226,6 @@ func (s *service) record(ctx context.Context, characterID int64, res CastResult,
 		return 0, fmt.Errorf("record cast: %w", err)
 	}
 	return id, nil
-}
-
-// summary is the English log text (the UI renders the payload instead).
-func summary(res CastResult) string {
-	var b strings.Builder
-	if res.Source == SourceReceived {
-		fmt.Fprintf(&b, "Received %s (caster level %d)", res.Name, res.CasterLevel)
-	} else {
-		fmt.Fprintf(&b, "Cast %s", res.Name)
-	}
-	switch {
-	case res.Buff != nil && res.Buff.Applied:
-		b.WriteString(": " + counters(res.Buff.Buff.Duration, res.Buff.Buff.Charges))
-		if res.Buff.StrGain != nil {
-			fmt.Fprintf(&b, ", STR +%d", res.Buff.StrGain.Total)
-		}
-	case res.Damage != nil:
-		fmt.Fprintf(&b, ": %d %s damage", res.Damage.Total, res.Damage.Type)
-	case res.Orb != nil:
-		verdict := "missed"
-		if res.Orb.Attack.Hit {
-			verdict = "hit"
-		}
-		fmt.Fprintf(&b, ": %s, %s (d20 %d vs AC %d)", res.Orb.Gem, verdict, res.Orb.Attack.D20Roll, res.Orb.Attack.TargetAC)
-	case len(res.ExtraSlots) > 0:
-		fmt.Fprintf(&b, ": extra slots, levels %v", res.ExtraSlots)
-	}
-	return b.String()
-}
-
-func counters(duration, charges int) string {
-	switch {
-	case duration > 0 && charges > 0:
-		return fmt.Sprintf("%d rd, %d ch", duration, charges)
-	case duration > 0:
-		return fmt.Sprintf("%d rd", duration)
-	case charges > 0:
-		return fmt.Sprintf("%d ch", charges)
-	default:
-		return "until dismissed"
-	}
 }
 
 func firstNonEmpty(v ...string) string {

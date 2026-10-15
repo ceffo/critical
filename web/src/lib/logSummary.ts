@@ -3,6 +3,7 @@ import type { LogEntry } from "@/types/log";
 import type { RollResult, WeaponChangeRecord } from "@/types/combat";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
+import { splitText } from "@/lib/slotSplit";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
@@ -18,6 +19,12 @@ export interface CastLogPayload {
     applied: boolean;
   };
   damage?: { total: number; type: string };
+  /** Levels of the extra slots the cast granted. */
+  extraSlots?: number[];
+  /** The inventory item the cast spent. */
+  item?: { itemId: string; name: string; remaining: number };
+  /** The spell's to-hit roll. */
+  attack?: { d20: number; targetAc: number; hit: boolean };
 }
 
 function castPayload(e: LogEntry): CastLogPayload | null {
@@ -44,6 +51,21 @@ function castText(p: CastLogPayload, t: TFunction): string {
     details.push(
       t("log.cast.damage", { total: p.damage.total, type: p.damage.type }),
     );
+  if (p.extraSlots && p.extraSlots.length > 0)
+    details.push(
+      t("log.cast.extraSlots", { slots: splitText(t, p.extraSlots) }),
+    );
+  if (p.item)
+    details.push(
+      t("log.cast.item", { name: p.item.name, left: p.item.remaining }),
+    );
+  if (p.attack)
+    details.push(
+      t(p.attack.hit ? "log.cast.attackHit" : "log.cast.attackMiss", {
+        d20: p.attack.d20,
+        ac: p.attack.targetAc,
+      }),
+    );
   return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
 }
 import type { ItemChangeRecord, RestockResult, UseResult } from "@/types/items";
@@ -60,6 +82,21 @@ function restText(e: LogEntry, t: TFunction): string | null {
     slots: p.slotsReset,
     items: p.itemsRefilled?.length ?? 0,
   });
+}
+
+/** Payload of spell_prep entries (prepsvc prepRecord): each spell once, with its copies. */
+function prepText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "spell_prep") return null;
+  const p = e.payload as { spells?: { id: string; name: string; count: number }[] } | null;
+  if (!p || !Array.isArray(p.spells)) return null;
+  if (p.spells.length === 0) return t("log.prepNone");
+  const spells = p.spells
+    .map((s) => {
+      const name = spellName(t, s.id, s.name);
+      return s.count > 1 ? `${name} ×${s.count}` : name;
+    })
+    .join(", ");
+  return t("log.prep", { spells });
 }
 
 /** Payload of buff_change / round_* / time_passed entries (buffsvc logPayload). */
@@ -294,8 +331,9 @@ function attackText(p: RollResult, t: TFunction): string {
 }
 
 /**
- * The entry's text in the player's language: buff, round, attack, save and cast entries are rendered from
- * their structured payload; everything else (and unknown payloads) uses the server's summary.
+ * The entry's text in the player's language, worded from its structured payload. The server's summary
+ * is only the player's own text (an HP change's source) or, on entries logged before the payloads
+ * existed, an older English line.
  */
 export function entryText(e: LogEntry, t: TFunction): string {
   const attack = attackPayload(e);
@@ -306,6 +344,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (cast) return castText(cast, t);
   const rest = restText(e, t);
   if (rest) return rest;
+  const prep = prepText(e, t);
+  if (prep) return prep;
   const item = itemPayload(e);
   if (item) return itemText(item, t);
   const restock = restockText(e, t);

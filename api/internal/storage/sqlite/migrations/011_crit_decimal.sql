@@ -1,4 +1,4 @@
--- Crit table multipliers may be decimals (critical-qki.12): x1.5, x2.5. The
+-- Crit table multipliers may be decimals: x1.5, x2.5. The
 -- column becomes REAL and keeps CHECK multiplier >= 1. SQLite cannot alter a
 -- column type, so the table is rebuilt and the rows copied (integers become
 -- 2.0, 3.0 and so on, same values). (The migrator splits on semicolons: none in comments.)

@@ -1,4 +1,4 @@
--- One item model (critical-qki.13). The item kinds ammo, charged and consumable
+-- One item model. The item kinds ammo, charged and consumable
 -- and the per_day flag give way to a free-text type label and a count behaviour:
 --   stock   = used and restocked at the table, stays listed at 0 (arrows, flasks)
 --   charges = used only, removed at 0 (a wand)

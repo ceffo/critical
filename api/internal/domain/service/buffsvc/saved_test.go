@@ -66,8 +66,7 @@ func TestDeleteSaved(t *testing.T) {
 		f.records()
 		_, err := f.svc.DeleteSaved(context.Background(), charID, 1)
 		require.NoError(t, err)
-		assert.Equal(t, "Deleted saved buff Ward", f.entries[0].Summary)
-		assert.Equal(t, "delete_template", payload(t, f.entries[0])["action"])
+		assert.JSONEq(t, `{"action":"delete_template","buff":"Ward"}`, string(f.entries[0].Payload))
 		assert.Contains(t, string(f.entries[0].Snapshots[0].Before), `"name":"Ward"`)
 	})
 	t.Run("unknown id", func(t *testing.T) {

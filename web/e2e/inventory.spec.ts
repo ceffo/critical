@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import { logEntry, openDashboard, openWorkspace, voidEntry } from "./helpers";
 
-// Inventory tab (critical-qki.13): one item model, the count behaves as stock (− and +, stays
+// Inventory tab: one item model, the count behaves as stock (− and +, stays
 // at 0), charges (− only, gone at 0) or daily (− only, refilled by a long rest).
 
 async function openInventory(page: Page) {

@@ -452,7 +452,7 @@ describe("time_passed entries", () => {
   });
 });
 
-describe("inventory entries (critical-qki.13)", () => {
+describe("inventory entries", () => {
   const use = {
     itemId: "wand_lightning",
     name: "Wand of lightning",
@@ -568,5 +568,90 @@ describe("inventory entries (critical-qki.13)", () => {
         await makeT("en"),
       ),
     ).toBe("srv");
+  });
+});
+
+describe("cast entries", () => {
+  const cast = (extra: object) =>
+    entry("cast", { action: "cast", spellId: "x_spell", spell: "X Spell", casterLevel: 15, ...extra });
+
+  it("renders the extra slots a cast granted (en/fr)", async () => {
+    const e = cast({ extraSlots: [1, 1, 1] });
+    expect(entryText(e, await makeT("en"))).toBe("Cast X Spell: extra slots 3 × level 1");
+    expect(entryText(cast({ extraSlots: [3] }), await makeT("en"))).toBe("Cast X Spell: extra slots level 3");
+    expect(entryText(cast({ extraSlots: [1, 2] }), await makeT("fr"))).toBe(
+      "Lancé : X Spell: emplacements supplémentaires niveau 1 + niveau 2",
+    );
+  });
+
+  it("renders the item spent and the to-hit roll (en/fr)", async () => {
+    const e = cast({
+      item: { itemId: "ruby", name: "Ruby", remaining: 1 },
+      attack: { d20: 14, targetAc: 4, hit: true },
+    });
+    expect(entryText(e, await makeT("en"))).toBe(
+      "Cast X Spell: Ruby spent (1 left), hit (d20 14 vs AC 4)",
+    );
+    expect(entryText(cast({ attack: { d20: 3, targetAc: 4, hit: false } }), await makeT("fr"))).toBe(
+      "Lancé : X Spell: raté (d20 3 contre CA 4)",
+    );
+  });
+});
+
+describe("spell_prep entries", () => {
+  it("lists the spells with their copies (en/fr)", async () => {
+    const e = entry("spell_prep", {
+      spells: [
+        { id: "magic_missile", name: "Magic Missile", count: 1 },
+        { id: "mirror_image", name: "Mirror Image", count: 2 },
+      ],
+    });
+    expect(entryText(e, await makeT("en"))).toBe("Prepared: Magic Missile, Mirror Image ×2");
+    expect(entryText(e, await makeT("fr"))).toMatch(/^Préparé : .+ ×2$/);
+    expect(entryText(entry("spell_prep", { spells: [] }), await makeT("en"))).toBe("Prepared no spells");
+  });
+
+  it("falls back to the summary of an entry logged before the payload", async () => {
+    expect(entryText(entry("spell_prep", {}, "Prepared: Alarm"), await makeT("en"))).toBe("Prepared: Alarm");
+  });
+});
+
+// Entries logged before the payloads carried every field (English summary, "label", "source",
+// "damageBreakdown", "breakdown", the cast's "orb") still render, worded from what they have.
+describe("entries logged before the change", () => {
+  it("an old save, attack, item use and orb cast render as before", async () => {
+    const t = await makeT("en");
+    const save = entry(
+      "save",
+      {
+        category: "spell", label: "Spells", d20Roll: 12, target: 14, total: 13, passed: false, margin: -1,
+        rolledPassed: false, adjustment: 0,
+        modifiers: [{ kind: "buff", source: "Luck", detail: "Luck", value: 1 }],
+      },
+      "Save vs Spells: d20 12 vs 14, FAILED",
+    );
+    expect(entryText(save, t)).toBe("Save vs Spells: d20 12 vs 14, FAILED");
+    const attack = entry(
+      "attack",
+      {
+        hit: true, isCrit: false, weaponName: "Long Sword +2", targetAc: 5, totalDamage: 7,
+        damageBreakdown: "((5 × 1.0) + 2) × 1.0 + 0 = 7",
+        modifiers: [{ kind: "strength", source: "Strength 12", detail: "12", value: 0 }],
+      },
+      "Long Sword +2 vs AC 5: hit, 7 damage",
+    );
+    expect(entryText(attack, t)).toBe("Long Sword +2 vs AC 5: hit, 7 damage");
+    const use = entry(
+      "item_use",
+      { name: "Wand of lightning", dice: "6d6", total: 21, remaining: 3, rolls: [1, 2, 3, 4, 5, 6], breakdown: "6d6: 1 + 2 + 3 + 4 + 5 + 6 = 21" },
+      "Used Wand of lightning: 6d6 = 21 (3 left)",
+    );
+    expect(entryText(use, t)).toBe("Used Wand of lightning: 6d6 = 21 (3 left)");
+    const orb = entry(
+      "cast",
+      { action: "cast", spellId: "chromatic_orb", spell: "Chromatic Orb", casterLevel: 15, orb: { gem: "Diamond", d20: 20, targetAc: 4, hit: true } },
+      "Cast Chromatic Orb: Diamond, hit (d20 20 vs AC 4)",
+    );
+    expect(entryText(orb, t)).toBe("Cast Chromatic Orb");
   });
 });

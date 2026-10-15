@@ -62,7 +62,6 @@ func (s *service) Restock(ctx context.Context, characterID int64, itemID string,
 		id, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindItemRestock,
-			Summary:     fmt.Sprintf("Restocked %s: +%d (%d now)", r.Name, r.Added, r.Count),
 			Payload:     payload,
 			Snapshots:   []actionlog.Snapshot{snap},
 		})

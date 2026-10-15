@@ -1,5 +1,5 @@
-// Package itemsvc owns the counted items (and, critical-qki.31, adding,
-// editing and removing them by hand). One model (critical-qki.13): an
+// Package itemsvc owns the counted items (and adding,
+// editing and removing them by hand). One model: an
 // item's Behaviour says how its count moves. Use spends one of any item (a
 // charges item is removed at 0), Restock adds to a stock item, ResetDaily
 // refills the daily items on a long rest. Every change at the table is one

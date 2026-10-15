@@ -280,7 +280,7 @@ func TestRequestParsingErrors(t *testing.T) {
 		{"amend null body", "POST", "/api/log/4/amend", "null", "invalid request body"},
 		{"amend missing note", "POST", "/api/log/4/amend", `{}`, "note is required (a string)"},
 		{"amend note not a string", "POST", "/api/log/4/amend", `{"note":3}`, "note is required (a string)"},
-		// Note-only amend (critical-qki.38): any value field is refused.
+		// Note-only amend: any value field is refused.
 		{"amend value delta", "POST", "/api/log/4/amend", `{"delta":-3}`, `only the note of an entry can be amended (got \"delta\"): void the entry and log it again`},
 		{"amend value with note", "POST", "/api/log/4/amend", `{"note":"x","source":"orc axe"}`, `only the note of an entry can be amended (got \"source\"): void the entry and log it again`},
 		{"amend payload", "POST", "/api/log/4/amend", `{"payload":{}}`, `only the note of an entry can be amended (got \"payload\"): void the entry and log it again`},

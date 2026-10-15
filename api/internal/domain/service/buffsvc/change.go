@@ -9,8 +9,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// logPayload is the structured summary of a buff entry, rendered by the UI
-// in the player's language (the Summary string is the English fallback).
+// logPayload is the structured record of a buff entry, worded by the UI in
+// the player's language.
 type logPayload struct {
 	// Action is activate, edit, absorb, dismiss, next_round, end_combat,
 	// set_round, pass_time, save_template or delete_template. For pass_time,
@@ -37,7 +37,6 @@ type logPayload struct {
 // it changes, and the log entry describing it.
 type change struct {
 	kind    actionlog.Kind
-	summary string
 	payload logPayload
 	buffs   []BuffEffect
 	round   *int
@@ -107,7 +106,6 @@ func (s *service) applyIn(ctx context.Context, characterID int64, decide func(bu
 		if _, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        ch.kind,
-			Summary:     ch.summary,
 			Payload:     payload,
 			Snapshots:   snaps,
 		}); err != nil {
@@ -166,18 +164,4 @@ func find(buffs []BuffEffect, buffID string) (int, error) {
 		return -1, fmt.Errorf("%w: buff %q", domain.ErrNotFound, buffID)
 	}
 	return i, nil
-}
-
-// counters renders "5 rd, 3 ch" for summaries.
-func counters(duration, charges int) string {
-	switch {
-	case duration > 0 && charges > 0:
-		return fmt.Sprintf("%d rd, %d ch", duration, charges)
-	case duration > 0:
-		return fmt.Sprintf("%d rd", duration)
-	case charges > 0:
-		return fmt.Sprintf("%d ch", charges)
-	default:
-		return "until dismissed"
-	}
 }

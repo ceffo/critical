@@ -163,7 +163,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	prepSvc, err := prepsvc.New(prepsvc.Deps{
-		Slots: spellDAL, Spellbook: spellbook, Limits: ruleTables,
+		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Limits: ruleTables,
 		Characters: charSvc, Log: logSvc, Tx: db,
 	})
 	if err != nil {

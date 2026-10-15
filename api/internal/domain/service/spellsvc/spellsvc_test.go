@@ -217,8 +217,8 @@ func TestSearch_TotalAndPagesCountOnlyStatMatches(t *testing.T) {
 	assert.Equal(t, 10, last.Total)
 }
 
-// critical-qki.41: a long rest ends Rary's extra slots.
-func TestResetSlots_DropsRarysExtraSlots(t *testing.T) {
+// ADR 0008 step 9: a long rest ends the extra slots.
+func TestResetSlots_DropsExtraSlots(t *testing.T) {
 	svc, dal, _ := newSvc(t)
 	dal.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{
 		{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true},

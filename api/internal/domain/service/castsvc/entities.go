@@ -21,17 +21,17 @@ type CastRequest struct {
 	// default from the spell's target (see appliesToSelf). Ignored for
 	// self-only spells, which always affect the caster.
 	OnSelf *bool
-	// SpellID names the spell to cast from a blank Rary's extra slot (the
-	// player picks it at cast time). Ignored for a prepared slot.
+	// SpellID names the spell to cast from a blank extra slot (the player
+	// picks it at cast time). Ignored for a prepared slot.
 	SpellID string
-	// ExtraSlots is the split chosen when casting Rary's Mnemonic Enhancer:
-	// the levels of the slots granted (3 levels in all: [1 1 1], [1 2] or
-	// [3]). Empty: three level 1 slots.
+	// ExtraSlots is the split chosen when casting a spell that grants extra
+	// slots: the levels of the slots granted, adding up to the spell's
+	// levels (3 levels: [1 1 1], [1 2] or [3]). Empty: all level 1 slots.
 	ExtraSlots []int
-	// GemItemID is the inventory gem Chromatic Orb spends. Empty: the only
-	// gem in the inventory, if there is exactly one.
-	GemItemID string
-	// TargetAC is the orb's target AC (required for Chromatic Orb).
+	// ItemID is the inventory item a spell that consumes an item spends.
+	// Empty: the only one of the item type left, if there is exactly one.
+	ItemID string
+	// TargetAC is the target's AC, required for a spell with an attack roll.
 	TargetAC *int
 }
 
@@ -144,19 +144,20 @@ type CastResult struct {
 	Untracked []Untracked
 	// Slots is the slot list after a cast.
 	Slots []spellsvc.SpellSlot
-	// ExtraSlots are the levels of the Rary's extra slots this cast added.
+	// ExtraSlots are the levels of the extra slots this cast added (a spell
+	// that grants slots).
 	ExtraSlots []int
-	// Orb is a Chromatic Orb's gem, attack roll and effect (nil otherwise).
-	Orb *OrbResult
+	// Consumed is the inventory item the cast spent (nil: none).
+	Consumed *ConsumedItem
+	// Attack is the spell's to-hit roll (nil: the spell has no attack roll).
+	// The app shows hit or miss; what a hit does is the DM's call.
+	Attack *combatsvc.ToHitRoll
 }
 
-// OrbResult is what a Chromatic Orb did (critical-qki.42): it spent a gem
-// and threw an attack roll. The app shows hit or miss and the gem used; what a
-// hit does is the DM's call (no gem effect is modelled).
-type OrbResult struct {
-	GemItemID string
-	Gem       string
-	// Remaining is the count of that gem left.
+// ConsumedItem is one unit of an inventory item a cast spent.
+type ConsumedItem struct {
+	ItemID string
+	Name   string
+	// Remaining is the count of that item left.
 	Remaining int
-	Attack    combatsvc.ToHitRoll
 }

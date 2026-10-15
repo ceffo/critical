@@ -117,7 +117,7 @@ func TestAppendEvent(t *testing.T) {
 	}
 }
 
-// HP-5 (critical-qki.38): a total above 0 (rows logged before the cap) is
+// HP-5: a total above 0 (rows logged before the cap) is
 // never shown above max.
 func TestGetState_NeverAboveMax(t *testing.T) {
 	for _, c := range []struct{ total, want int }{{-1, 19}, {0, 20}, {7, 20}} {

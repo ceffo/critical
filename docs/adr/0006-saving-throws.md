@@ -49,7 +49,7 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    attack exists", "a later cast exists", "a later item use exists"), `TestAdjustSave_Rejections`
    ("not the latest", "voided", "not a save"), router `TestSpecialSentinels` ("adjust voided", "adjust not latest",
    "adjust not a save").
-7. **Audited.** The adjustment is an `amend` correction on the entry carrying the new summary and
+7. **Audited.** The adjustment is an `amend` correction on the entry carrying the new
    payload (with `previousPassed` and `previousAdjustment`); the entry is never edited, the log
    reads the latest payload (`effectivePayload`).
    Tests: `TestAdjustSave_Recompute` (one amend per adjustment, `rolledPassed` kept),

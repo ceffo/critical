@@ -1,0 +1,72 @@
+// What casting one slot asks of the player, from the spellbook's cast fields (the spell effects
+// data: slot_splits, consume_item_type, attack_roll). No game rule is decided here: the server
+// validates every cast; this only picks which inputs to show and what to send.
+import type { CastOptions } from "@/api/spells";
+import type { Item } from "@/types/items";
+import type { SpellbookEntry, SpellSlot } from "@/types/spells";
+
+/** The player's inputs for one slot, as typed. */
+export interface CastForm {
+  /** Blank extra slot: the spell picked. */
+  pick?: string;
+  /** "1,2": the chosen split of the extra slots granted. */
+  split?: string;
+  acText?: string;
+  itemPick?: string;
+}
+
+export interface CastPlan {
+  /** The spellbook entry of the spell cast (the pick for a blank slot). */
+  needs?: SpellbookEntry;
+  slotSplits: number[][];
+  split?: string;
+  targetAc?: number;
+  /** Items the spell can spend; a select is shown when there are several. */
+  spendable: Item[];
+  itemId?: string;
+  /** Cast is disabled: slot used, no spell picked for a blank slot, or no target AC when needed. */
+  blocked: boolean;
+  options: Omit<CastOptions, "onSelf">;
+}
+
+/** Items a spell can spend: of its type, not a daily item (never spent by a spell), some left. */
+export function spendableItems(items: Item[], type?: string): Item[] {
+  if (!type) return [];
+  const want = type.toLowerCase();
+  return items.filter((i) => i.type.toLowerCase() === want && i.behaviour !== "daily" && i.count > 0);
+}
+
+export function planCast(
+  slot: SpellSlot,
+  blank: boolean,
+  spellbook: SpellbookEntry[],
+  items: Item[],
+  form: CastForm,
+): CastPlan {
+  const castId = blank ? form.pick : slot.prepared_spell_id;
+  const needs = castId ? spellbook.find((s) => s.id === castId) : undefined;
+  const slotSplits = needs?.slot_splits ?? [];
+  const split = form.split ?? slotSplits[0]?.join(",");
+  const acText = (form.acText ?? "").trim();
+  const targetAc = /^-?\d+$/.test(acText) ? Number(acText) : undefined;
+  const spendable = spendableItems(items, needs?.consume_item_type);
+  const itemId = form.itemPick ?? spendable[0]?.id;
+  const blocked =
+    slot.used || (blank && !form.pick) || (needs?.attack_roll === true && targetAc === undefined);
+  return {
+    needs,
+    slotSplits,
+    split,
+    targetAc,
+    spendable,
+    itemId,
+    blocked,
+    options: {
+      spellId: blank ? form.pick : undefined,
+      extraSlots: slotSplits.length > 0 && split ? split.split(",").map(Number) : undefined,
+      targetAc: needs?.attack_roll ? targetAc : undefined,
+      // One item left: the server takes it; none: the server refuses with its message.
+      itemId: spendable.length > 1 ? itemId : undefined,
+    },
+  };
+}

@@ -26,7 +26,7 @@ interface Props {
 }
 
 /**
- * Add / edit form of a weapon (critical-qki.32). Validation is the server's: its message is shown
+ * Add / edit form of a weapon. Validation is the server's: its message is shown
  * under the field it names. Only number parsing happens here.
  */
 export function WeaponForm({

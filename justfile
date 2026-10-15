@@ -5,9 +5,25 @@ _default:
 
 # --- Global Commands ---
 
-# Run full project validation (backend + frontend)
-validate: check-api check-web
+# Run full project validation (tracker ids, backend, frontend)
+validate: check-no-tracker-ids check-api check-web
     @echo "--- Project Validation Successful ---"
+
+# Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
+# says what it does and why; the link to the work item lives in commits and PRs only
+# (docs/agent-workflow.md, "Hard rules for implementers"). The ids come from .beads/issues.jsonl;
+# docs (ADR history, workflow examples) and lock files are not scanned.
+check-no-tracker-ids:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ids=$(grep -o '"id":"critical-[a-z0-9]*' .beads/issues.jsonl | sed 's/.*"critical-//' | sort -u | paste -sd'|')
+    if [ -z "$ids" ]; then echo "no tracker ids in .beads/issues.jsonl, cannot check"; exit 1; fi
+    pattern="\bcritical-($ids)\b|\bcritical-[a-z0-9]{3}\.[0-9]+\b|\b($ids)\.[0-9]+\b"
+    if git grep -nIE "$pattern" -- . ':!.beads' ':!docs' ':!api/go.sum' ':!web/package-lock.json'; then
+        echo "error: tracker ids above. Say what the code does; the work item goes in the commit message."
+        exit 1
+    fi
+    echo "--- No tracker ids ---"
 
 # Install all dependencies
 install:

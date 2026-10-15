@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// critical-qki.42: a spell's to-hit is one d20 against THAC0 - AC with the
+// a spell's to-hit is one d20 against THAC0 - AC with the
 // Dex missile adjustment, no crit (no d100 is rolled); a natural 1 or 20 is plain arithmetic, as in combat.
 func TestRollSpellToHit(t *testing.T) {
 	tests := []struct {
@@ -37,8 +37,8 @@ func TestRollSpellToHit(t *testing.T) {
 			assert.Equal(t, 11, res.EffectiveThac0)
 			assert.Equal(t, tt.wantNeed, res.TargetACNeeded)
 			assert.Equal(t, []combatsvc.Modifier{
-				{Kind: combatsvc.ModStrength, Source: "Strength 12", Detail: "12", Value: 0},
-				{Kind: combatsvc.ModDexterity, Source: "Dexterity 17", Detail: "17", Value: 2},
+				{Kind: combatsvc.ModStrength, Detail: "12", Value: 0},
+				{Kind: combatsvc.ModDexterity, Detail: "17", Value: 2},
 			}, res.Modifiers)
 		})
 	}

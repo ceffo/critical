@@ -62,7 +62,7 @@ func spend(t *testing.T, bs *composition.BackingServices) {
 }
 
 // A long rest refills the daily gem and nothing else: wand charges, arrows
-// and flasks (stock) stay spent (critical-qki.13).
+// and flasks (stock) stay spent.
 func TestLongRest_RefillsSlotsAndDailyItemsOnly(t *testing.T) {
 	bs := boot(t)
 	spend(t, bs)

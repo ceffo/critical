@@ -2,7 +2,6 @@ package buffsvc
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -25,7 +24,6 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 		buff.StartRound = round
 		return change{
 			kind:    actionlog.KindBuffChange,
-			summary: fmt.Sprintf("Activated %s (%s)", buff.Name, counters(buff.Duration, buff.Charges)),
 			payload: logPayload{Action: "activate", Buff: buff.Name, Rounds: buff.Duration, Charges: buff.Charges, Note: buff.Note},
 			buffs:   append(buffs, buff),
 		}, nil

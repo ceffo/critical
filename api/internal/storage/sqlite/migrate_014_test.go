@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// 014 adds action_corrections.note (critical-qki.38). A value amend stored
+// 014 adds action_corrections.note. A value amend stored
 // before it (hp_delta + summary on an hp_change) and a void keep every column,
 // with a NULL note; the effective delta and the HP total read as before
 // (actionlogdal's TestLegacyValueAmend_ReadsAfterMigration014 reads them

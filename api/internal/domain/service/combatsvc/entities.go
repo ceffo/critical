@@ -1,7 +1,7 @@
 package combatsvc
 
 // ModifierKind says where a modifier comes from, so the UI can label it in
-// the player's language. Source is the English label.
+// the player's language from the kind and the detail.
 type ModifierKind string
 
 // Modifier kinds.
@@ -13,14 +13,13 @@ const (
 	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name
 	ModBuff        ModifierKind = "buff"         // a buff's to-hit/damage/save bonus, Detail = buff name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
-	ModCrit        ModifierKind = "crit"         // house crit multiplier; Detail = matched range or "placeholder"
+	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
 	ModAdjustment  ModifierKind = "adjustment"   // save adjustment set after the roll, Detail = reason
 )
 
 // Modifier is a labeled bonus or penalty applied to a roll.
 type Modifier struct {
 	Kind   ModifierKind
-	Source string
 	Detail string
 	Value  int
 }
@@ -44,7 +43,6 @@ const (
 type DamageTerm struct {
 	Term   DamageTermKind
 	Kind   ModifierKind
-	Source string
 	Detail string
 	Value  float64
 }
@@ -127,7 +125,6 @@ type RollResult struct {
 	// zero clamp; TotalDamage is its floor.
 	UnroundedDamage float64
 	TotalDamage     int
-	DamageBreakdown string
 
 	// Attack context (empty for saving throws).
 	WeaponID   string
@@ -155,6 +152,11 @@ type RollResult struct {
 	SaveCategory     SaveCategory
 	Adjustment       int
 	AdjustmentReason string
+	// SaveBonus is the sum of a save's modifiers (buffs, not the
+	// adjustment) and SaveTotal is d20 + SaveBonus + Adjustment, compared
+	// with the target (ADR 0006).
+	SaveBonus int
+	SaveTotal int
 
 	// LogEntryID is the action-log entry recording the attack or save.
 	LogEntryID int64

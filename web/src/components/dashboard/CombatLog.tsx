@@ -131,7 +131,7 @@ export function CombatLog() {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {groups.map((g) => (
-          <section key={g.round} className="mb-2" aria-label={turnLabel(t, g.round)}>
+          <section key={g.key} className="mb-2" aria-label={turnLabel(t, g.round)}>
             <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-card px-2 py-1.5">
               <span className="text-sm font-medium">{turnLabel(t, g.round)}</span>
               {g.round === round && (

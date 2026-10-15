@@ -141,6 +141,8 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   the commit message and the PR only. (User rule, 2026-10-14.) Enforced by `just check-no-tracker-ids`
   (part of `just validate`), which reads the ids from `.beads/issues.jsonl` and scans everything but
   `.beads/`, `docs/` and lock files.
+- **No throwaway code.** Data processing and verification are done by committed, deterministic, rerunnable
+  scripts or tests; never by throwaway code whose result we rely on. (User rule, 2026-10-15.)
 - **No special case per spell, item or buff.** Model the mechanic generically and drive it from the
   data (`seeds/spell_effects.json`, item behaviour): no `if id == "<some_spell>"` branches and no
   per-entity constants in services. If a mechanic is missing, add it as a general effect kind.

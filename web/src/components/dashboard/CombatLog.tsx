@@ -122,7 +122,9 @@ function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
         )}
         {capped && (
           <span data-testid="log-capped">
-            {t("log.capped", { requested: formatSigned(capped.hpRequested) })}
+            {t(capped.hpRequested < 0 ? "log.floored" : "log.capped", {
+              requested: formatSigned(capped.hpRequested),
+            })}
           </span>
         )}
         {voided && <Badge variant="destructive">{t("log.status.voided")}</Badge>}
@@ -175,7 +177,7 @@ function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
   );
 }
 
-/** The server's breakdown when the heal was cut by the max-HP cap, else null. */
+/** The server's breakdown when the change was cut (a heal by max HP, damage by the floor), else null. */
 function cappedHeal(e: LogEntry): HpBreakdown | null {
   const p = e.effectivePayload as Partial<HpBreakdown> | null;
   if (typeof p?.hpRequested !== "number" || typeof p.hpApplied !== "number") return null;

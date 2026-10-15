@@ -136,7 +136,9 @@ flowchart TD
   beside every workspace: identity (name, level, abilities in seven cells, effective STR, THAC0);
   HP (the newest HP change still in force on the right, current over max, the bar coloured by
   threshold with the last damage taken as a faint segment after the fill when the newest change is
-  damage, `lib/moiLog.ts`); one card per applying buff with charges left (Stoneskin layers…) above
+  damage, `lib/moiLog.ts`; the scale runs from the server's `floor` (-10) to max, with a flat-tinted
+  dying zone below 0 filled from 0 down to current HP, and the server's `condition` labelled next
+  to the value when not ok, ADR 0011); one card per applying buff with charges left (Stoneskin layers…) above
   the damage entry, Absorb = the buff trigger endpoint; damage / healing entry (amount, Damage,
   Healing, source, which the server requires): Enter in either field applies damage, Shift+Enter
   healing; the five saving throws, one button row each: name, target (the sheet's), the newest

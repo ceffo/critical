@@ -12,6 +12,8 @@ interface HpStore extends HpState {
 export const useHpStore = create<HpStore>((set) => ({
   currentHp: 0,
   maxHp: 0,
+  floor: 0,
+  condition: "ok",
   events: [],
   loaded: false,
   fetchHp: async () => {

@@ -67,7 +67,13 @@
     "healHint": "Apply as healing (Shift+Enter)",
     "keysHint": "Enter: damage · Shift+Enter: healing",
     "lastChange": "{{delta}} {{source}}",
-    "lastDamage": "Last damage taken: {{amount}}"
+    "lastDamage": "Last damage taken: {{amount}}",
+    "condition": {
+      "badlyWounded": "Badly wounded",
+      "unconscious": "Unconscious",
+      "dead": "Dead"
+    },
+    "dyingZone": "Dying, down to {{floor}}"
   },
   "turn": {
     "title": "Turn",
@@ -595,6 +601,7 @@
     },
     "was": "was {{delta}}",
     "capped": "{{requested}} requested, capped at max HP",
+    "floored": "{{requested}} requested, stopped at the HP floor",
     "amend": "Note",
     "void": "Void",
     "confirmVoid": "Void this entry?",

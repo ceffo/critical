@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { planCast } from "@/lib/castInputs";
 import { PrepareEditor } from "./PrepareEditor";
-import { ReceivePanel } from "./ReceivePanel";
 
 interface SlotRow {
   /** The copy a cast uses: the first unused one (the first when all are used). */
@@ -290,7 +289,6 @@ export function SpellsPanel() {
           );
         })}
       </div>
-      <ReceivePanel />
     </div>
   );
 }

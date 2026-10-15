@@ -206,7 +206,7 @@ export function SpellsPanel() {
                         key={i}
                         className={cn(
                           "size-2 rounded-full",
-                          i < left ? "bg-amb-400" : "bg-neu-700",
+                          i < left ? "bg-magic" : "bg-neu-700",
                         )}
                       />
                     ))}

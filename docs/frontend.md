@@ -92,10 +92,15 @@ flowchart TD
   (English / Français), appearance (Dark / Light / System, System follows the OS live), six
   ambiance swatches. Applied live, stored per device in `localStorage['critical.settings.v1']`
   (`lib/settings.ts`, which migrates the older `critical.theme` / `critical.language` keys once).
-- Theme: `lib/theme.ts` `themeVars(ambiance, light)` computes the ramps and surfaces set on
-  `<html>`; use the tokens (`bg-surface`, `bg-neu-900`, `text-amb-300`, `text-ink-muted`,
-  `bg-danger` / `heal` / `warning`, `shadow-float` for popovers only) or the shadcn names mapped
-  onto them, never raw colours.
+- Theme (ADR 0020): `lib/theme.ts` `themeVars(ambiance, light)` computes the three palette ramps
+  (`amb-*` primary, `sec-*`, `ter-*`), the neutrals and the role colours set on `<html>`; use the
+  roles (`tint` for primary accents, `text-highlight` / `bg-highlight-fill text-on-highlight` for
+  the secondary, `text-magic` for spells, `danger` / `success` / `warning`, `on-accent` as text on
+  any fill, `bg-surface`, `bg-neu-900`, `text-ink-muted`, `shadow-float` for popovers only) or the
+  shadcn names mapped onto them, never raw colours and never a ramp step for meaningful text. The
+  contrast unit test (`lib/theme.test.ts`) keeps every ambiance at WCAG AA in both modes.
+- Brand: `components/shell/BrandMark.tsx` (mark + Cinzel wordmark, `font-display`) at the left of
+  the header; `public/favicon.svg` is the same drawing in static Arcane colours.
 - Plug-in slots: each Agir tab is one panel component in `components/actions/ActionArea.tsx`
   (`TABS`, the tab label shows a count where it has one: spells left, combat items); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
 - Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): turn row
@@ -376,7 +381,7 @@ outside `ui/`).
   with `chooseSetting` / `chooseLanguage` (`e2e/helpers.ts`). A visited workspace stays in the DOM
   while hidden, so scope `getByLabel` / `getByText` to the visible region (role locators skip
   hidden elements). `layout.spec.ts` covers 1024, 1280x800, 1440x900, 1920x1080 and 2560x1440;
-  `theme.spec.ts` screenshots every ambiance in dark and light.
+  its "theme" test screenshots the main screens in dark and light, then every ambiance.
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
   are visible. Don't add per-flow fr specs.
 - **Add a spec:** create `web/e2e/<name>.spec.ts`, `import { test, expect, snap } from "./fixtures"`, one

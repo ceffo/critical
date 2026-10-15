@@ -80,10 +80,10 @@ const KIND_ICONS: Record<LogKind, Icon> = {
 
 const VALUE_TONES: Record<RowValue["tone"], string> = {
   damage: "text-danger",
-  heal: "text-heal",
-  pass: "text-heal",
+  heal: "text-success",
+  pass: "text-success",
   fail: "text-danger",
-  accent: "text-amb-300",
+  accent: "text-highlight",
   muted: "text-muted-foreground",
 };
 

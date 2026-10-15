@@ -121,7 +121,7 @@ export function EffectsTimeline() {
                   ? "bg-[color-mix(in_oklab,var(--tint)_10%,var(--card))]"
                   : "bg-card",
                 i === current
-                  ? "font-semibold text-amb-300"
+                  ? "font-semibold text-tint"
                   : "text-muted-foreground",
                 i < current && "text-muted-foreground/40",
               )}

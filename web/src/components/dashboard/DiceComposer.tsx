@@ -123,7 +123,7 @@ export function DiceComposer() {
               {count > 0 && (
                 <button
                   type="button"
-                  className="absolute -top-1.5 right-0 rounded-md bg-amb-800 px-1 text-label font-semibold tabular-nums text-amb-100 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="absolute -top-1.5 right-0 rounded-md bg-tint px-1 text-label font-semibold tabular-nums text-on-accent outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                   aria-label={t("dice.count", { count, die: name })}
                   data-testid={`die-badge-${sides}`}
                   onClick={() => s.remove(sides)}

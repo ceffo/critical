@@ -75,7 +75,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                 <dd
                   className={cn(
                     "text-key tabular-nums",
-                    isStr && strBuffed && "text-heal",
+                    isStr && strBuffed && "text-success",
                   )}
                 >
                   {isStr ? (

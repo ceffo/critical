@@ -211,7 +211,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               data-testid="cast-attack-verdict"
               className={cn(
                 "text-key",
-                r.attack.hit ? "text-heal" : "text-danger",
+                r.attack.hit ? "text-success" : "text-danger",
               )}
             >
               {r.attack.hit

@@ -177,7 +177,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
                   {" · "}
                   {d.label}{" "}
                   <span
-                    className="font-medium text-amb-300 tabular-nums"
+                    className="font-medium text-magic tabular-nums"
                     data-testid="spell-dice-formula"
                   >
                     {d.text}
@@ -461,7 +461,7 @@ export function LookupPanel() {
                 )}
                 onClick={() => select(s.id)}
               >
-                <span className="text-label text-amb-300 tabular-nums">
+                <span className="text-label text-magic tabular-nums">
                   {s.level}
                 </span>
                 <SpellNames spell={s} />

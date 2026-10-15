@@ -134,7 +134,7 @@ function Last({ last }: { last: LastCheck | null }) {
     <span
       className={cn(
         "flex items-center justify-end gap-1 font-semibold tabular-nums",
-        last.success ? "text-heal" : "text-danger",
+        last.success ? "text-success" : "text-danger",
       )}
       data-testid="skill-last"
       data-success={last.success}

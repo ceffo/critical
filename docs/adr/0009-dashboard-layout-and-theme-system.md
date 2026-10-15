@@ -1,6 +1,7 @@
 # ADR 0009: Dashboard layout and theme system
 
-**Status**: accepted, 2026-10-15; steps 3 and 5 amended by [ADR 0017](0017-type-scale-and-density.md)
+**Status**: accepted, 2026-10-15; steps 3 and 5 amended by [ADR 0017](0017-type-scale-and-density.md);
+step 4 replaced and step 5 amended by [ADR 0020](0020-visual-identity.md)
 
 ## Context
 
@@ -28,7 +29,9 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
    scope. *Amended by [ADR 0017](0017-type-scale-and-density.md) step 1:* the root font size is a
    fixed 16 px (it was `clamp(16px, 0.3125vw + 12px, 20px)`); extra width goes to columns and
    content, not to bigger type.
-4. **Tokens.** The theme is an appearance mode (`dark | light | system`) and an ambiance (hue H,
+4. **Tokens.** *Replaced by [ADR 0020](0020-visual-identity.md) steps 1-4 (three palettes per
+   ambiance, role tokens, semantic colours, contrast); the ambiance ids, the light-mode ramp
+   reversal and the near-neutral rule stand.* The theme is an appearance mode (`dark | light | system`) and an ambiance (hue H,
    chroma C): Arcane 289 / 0.125 (default), Sylve 152 / 0.11, Sang 22 / 0.15, Ocean 240 / 0.11,
    Ambre 72 / 0.12, Obsidienne 265 / 0.014. `web/src/lib/theme.ts` `themeVars` computes:
    - accent ramp `--amb-100..900` = `oklch(L C*F H)` with L

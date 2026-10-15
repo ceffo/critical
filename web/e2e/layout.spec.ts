@@ -2,6 +2,7 @@ import { test, expect, snap } from "./fixtures";
 import {
   addBuff,
   ammoChips,
+  attackForm,
   chooseLanguage,
   chooseSetting,
   chooseWeapon,
@@ -10,6 +11,7 @@ import {
   openSettings,
   openWeapons,
   openWorkspace,
+  recordHp,
 } from "./helpers";
 import type { Locator, Page } from "@playwright/test";
 
@@ -232,7 +234,7 @@ test("settings: language, appearance and ambiance apply live and persist across 
   await chooseSetting(page, "Dark");
   expect(await isDark(page)).toBe(true);
   await chooseSetting(page, "Blood");
-  await expect.poll(() => rootVar(page, "--tint")).toBe("oklch(0.68 0.15 22)");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(/ 15\)$/); // Blood's hue
   await chooseLanguage(page, "fr");
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),
@@ -243,7 +245,7 @@ test("settings: language, appearance and ambiance apply live and persist across 
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
-  expect(await rootVar(page, "--tint")).toBe("oklch(0.68 0.15 22)");
+  expect(await rootVar(page, "--tint")).toMatch(/ 15\)$/);
   const popover = await openSettings(page);
   for (const name of ["Français", "Sombre", "Sang"])
     await expect(
@@ -258,11 +260,43 @@ test("settings: language, appearance and ambiance apply live and persist across 
   await expect.poll(() => isDark(page)).toBe(true);
 });
 
-test("theme: every ambiance in dark and light", async ({ page }) => {
-  test.setTimeout(60_000);
+// The visual identity (ADR 0020): the main screens in dark and light with content in the result
+// card and the journal (Act/Weapons after an attack, Spells, Inventory, Experience), then every
+// ambiance on the dashboard. Screenshots only: the colours themselves are unit-tested (theme.test).
+test("theme: the main screens and every ambiance in dark and light", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
   await openDashboard(page);
+  await expect(page.getByTestId("brand")).toHaveText("Critical!");
+  await expect(page).toHaveTitle("Critical!");
+  await openWeapons(page);
+  await chooseWeapon(page, "Long Sword +2");
+  const form = attackForm(page);
+  await form.getByLabel("Target AC").fill("5");
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
+  await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
+  await recordHp(page, "damage", 7, "Orc axe");
+  await addBuff(page, { name: "Bless", rounds: 6 });
+  await page.keyboard.press("Escape");
   for (const mode of ["Dark", "Light"]) {
+    const m = mode.toLowerCase();
     await chooseSetting(page, mode);
+    await page.keyboard.press("Escape");
+    await openWorkspace(page, "Act");
+    await snap(page, `${m}-act-weapons`);
+    await openWorkspace(page, "Spells");
+    await page.getByRole("combobox", { name: "Search spells..." }).fill("fire");
+    await expect(
+      page.getByTestId("spell-detail").getByRole("heading"),
+    ).toBeVisible();
+    await snap(page, `${m}-spells`);
+    await openWorkspace(page, "Inventory");
+    await snap(page, `${m}-inventory`);
+    await openWorkspace(page, "Experience");
+    await expect(page.getByTestId("xp-total")).toHaveText(/\d/);
+    await snap(page, `${m}-experience`);
+    await openWorkspace(page, "Act");
     for (const amb of [
       "Arcane",
       "Grove",
@@ -273,8 +307,9 @@ test("theme: every ambiance in dark and light", async ({ page }) => {
     ]) {
       await chooseSetting(page, amb);
       await page.waitForTimeout(150); // let colour transitions settle
-      await snap(page, `${mode.toLowerCase()}-${amb.toLowerCase()}`);
+      await snap(page, `${m}-${amb.toLowerCase()}`);
     }
+    await chooseSetting(page, "Arcane");
   }
 });
 

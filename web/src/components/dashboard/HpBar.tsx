@@ -74,7 +74,7 @@ export function HpBar() {
           <span
             className={cn(
               "min-w-0 truncate text-body tabular-nums",
-              last.delta < 0 ? "text-danger" : "text-heal",
+              last.delta < 0 ? "text-danger" : "text-success",
             )}
             title={lastText}
             data-testid="hp-last-change"

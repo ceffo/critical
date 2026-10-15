@@ -164,7 +164,7 @@ function ItemRow({
           <span className="min-w-0 truncate font-medium">{i.name}</span>
           {i.magicalBonus !== 0 && (
             <span
-              className="shrink-0 rounded-md bg-amb-900 px-1.5 text-label font-medium text-amb-300 tabular-nums"
+              className="shrink-0 rounded-md bg-amb-900 px-1.5 text-label font-medium text-highlight tabular-nums"
               title={t("items.magicalBonus")}
               aria-label={`${t("items.magicalBonus")} ${formatSigned(i.magicalBonus)}`}
               data-testid="item-bonus"

@@ -85,7 +85,7 @@ return a distinct value for each call and expect an exact number of calls.
 - The Power Gem's "+5" (step 6) and its ×2 (ADR 0003 step 4) apply only while the buff's
   `min_str` gate is met: effective STR 18 or more (user, 2026-10-13: "not exactly 18 >= 18").
   The gate is a buff rule ([ADR 0004](0004-buffs.md)).
-  Tests: `buffsvc` `TestEffectiveStr_Rule3_PowerGemFrom18Up` (STR 17 off; 18, 19, 23 on),
+  Tests: `buffsvc` `TestStrength_Step10_PowerGemFrom18Up` (STR 17 off; 18, 19, 23 on),
   `TestResolveAttack_PowerGem` ("ignored at effective STR 17").
 - A tie between the weapon's own magic and a buff "+N" shows the buff in the breakdown; the value
   is the same.

@@ -40,11 +40,11 @@ critical/
 ## Key Domain Vocabulary
 
 - **Bard**: the single character this app manages in Phase 1
-- **HP Ledger**: append-only event log of all damage/healing. Current HP = SUM(delta).
-- **Buff**: an active effect with a charge count (decremented when it absorbs a hit, ends at 0), a duration in rounds (decremented on Next Round, expires at 0), both (Mirror Image) or neither (until dismissed). Every buff change is in the action log and can be popped (voided) while it is the newest entry
-- **Round Counter**: manually advanced by the player; one tap = Next Round = decrement all duration buffs
-- **THAC0**: "To Hit Armor Class 0" — lower is better. Attack hits if `roll + modifiers ≥ THAC0 - target_AC`
-- **Spell Slot**: a prepared spell instance consumable once per day; reset on long rest
+- **HP Ledger**: the append-only action log of damage and healing; current HP is derived from it ([ADR 0007](adr/0007-hp-ledger.md))
+- **Buff**: an active effect with a charge count, a duration in rounds, both or neither; every buff change is in the action log ([ADR 0004](adr/0004-buffs.md))
+- **Round Counter**: manually advanced by the player; Next Round, End combat and passing time are in [ADR 0005](adr/0005-rounds-and-time.md)
+- **THAC0**: "To Hit Armor Class 0"; lower is better. The attack math is in [ADR 0002](adr/0002-attack-resolution.md)
+- **Spell Slot**: a prepared spell instance, cast once per day; reset on long rest ([ADR 0008](adr/0008-spell-slots-and-long-rest.md))
 - **Vertical Slice**: one bead covers schema + Go engine + REST endpoint + React panel for one feature
 
 ## Phase 1 Scope (MVP for the 2026-10-17 game)
@@ -73,9 +73,7 @@ labelled `mvp-saturday` are the must-haves.
 8. i18n: en/fr string keys for the UI and spell names (spell descriptions stay English)
 9. A round-centric dashboard; Playwright e2e harness behind `just e2e`
 
-**After Saturday (not to be built now):** the real crit multiplier table (house crit stays x2 as a
-placeholder), editing weapons/items in the app, Gaia fire/lightning protections, Power Gem weapon
-forms, hosting/deployment (`critical-8g1`), other devices/layouts, multiple characters, XP ledger,
-skill checks.
+**After Saturday (not to be built now):** Gaia fire/lightning protections, hosting/deployment
+(`critical-8g1`), other devices/layouts, multiple characters, XP ledger, skill checks.
 
 Do not implement anything from the "after" list even if it seems related.

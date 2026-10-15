@@ -31,7 +31,7 @@ api/
       round.go          ← HTTP handler for /api/round/advance
     engine/
       dice.go           ← All dice rolling (seeded RNG for tests)
-      combat.go         ← THAC0 resolution, crit check, damage formula
+      combat.go         ← attack and damage resolution
       buffs.go          ← Buff application, expiry detection
 ```
 
@@ -72,134 +72,17 @@ id, character_id, slots JSON
 id, character_id, round_number INTEGER
 ```
 
-**Never derive current HP in the application layer.** Current HP = `hp_max` + the SQL SUM of
-effective `hp_delta` over `action_log` (latest amend wins, voided entries count 0), see
-`actionlogdal.HPTotal`.
-
-**HP cap (critical-qki.38).** User, 2026-10-13: *"a player cannot go above its max hp. period. max hp
-grows when leveling up only"*. There are no temporary HP. Current HP ≤ `hp_max` means the ledger
-total (SUM of effective `hp_delta`) is ≤ 0. The rule is enforced when an entry is written, never
-by rewriting the ledger (`actionlog.CapHeal`):
-- HP-1: `actionlogsvc.Record` caps every positive `hp_delta`, whatever the service, at the gap to
-  max inside the recording transaction. The entry stores `min(heal, -total)`, and its payload gets
-  `hpRequested` / `hpApplied`. The Combat Log shows "+12 requested, capped at max HP".
-- HP-2: at full HP the heal is still logged, as 0, with the same breakdown.
-- HP-5: `hpsvc.GetState` shows `min(hp_max, hp_max + total)`, a guard for rows logged before the cap.
-
-Damage is unchanged. Today the only positive deltas come from `POST /api/hp/event` (manual heal:
-cure spells and potions are entered there); casts, item uses and rests change no HP. No amend or
-void can push HP over max either: amends change only the note, and a pop removes the newest entry,
-which returns the total to what it was before that entry (≤ 0). ADR 0007 (HP ledger,
-critical-qki.37) will take this rule over.
-
-**The log is a stack (critical-qki.38).** User, 2026-10-14: *"no amending values. just the note..
-can only pop elements"*, for every entry kind:
-- `POST /api/log/{id}/amend {"note"}` sets the entry's note (any kind, trimmed, ≤ 500 characters,
-  `""` clears it). It is an `amend` correction with only `note` set (migration 014); a body with any
-  other field (`delta`, `source`, …) is a 400. A note changes no value, and the entry stays
-  `active` (only a value amend makes it `amended`). The log exposes `note`.
-- `POST /api/log/{id}/void` pops: only the newest non-voided entry, any kind, else 409
-  `ErrNotLatest` naming the entry on top. Its snapshots are restored as before, so popping in order
-  walks the state back one step at a time. `POST /api/hp/undo` pops the top when it is an HP change
-  (409 when another kind is on top, a no-op on an empty log).
-- Value amends written before qki.38 (`hp_delta`/`summary` on an `hp_change`) stay valid and still
-  count. Each effective value (HP delta, summary, payload) comes from the latest amend that set it.
-  The post-roll adjustments (save adjustment, attack target AC, below) are value amends on the
-  latest roll and are unchanged.
-
 **Recording actions.** A service that changes state records an `actionlog.NewEntry` through the
 action log's `Record` inside the same `domain.TxRunner.InTx` as its state write, with
-`Snapshots` of the state it changed. It registers an `actionlog.Restorer` for its state key on the
-action log in the composition root, so voiding (popping) the entry restores the "before" state.
-buffsvc records every buff change (activate, edit, absorb, dismiss) under the `buffs` key and
-Next Round under `buffs` + `round`, stamped with the round it ends; `buffSvc.Restorers()` is
-registered in composition. Time passes (`POST /api/round/pass-time {hours}`, `buffsvc.PassTime`) is
-one `time_passed` entry under `buffs` + `round`. Rules: [ADR 0004](adr/0004-buffs.md),
-[ADR 0005](adr/0005-rounds-and-time.md).
-combatsvc records every attack (kind `attack`, payload = the full roll breakdown, camelCase like the
-`/api/roll/attack` response); a missile attack spends one ammo item through `itemsvc.Use` in the same
-transaction and snapshots it under the per-item key `items:<id>` (`itemsvc.UseSnapshot`); the
-Restorer registered for the `items` family (`itemSvc.Restorers()`) writes the count back on void.
-castsvc records every cast and received spell (kind `cast`) as one entry with the `spell_slots`
-snapshot (`prepsvc.SlotsSnapshot`, a cast only) and the `buffs` snapshot (`buffsvc.Add`, which
-writes the buff inside the caller's transaction and replaces a same-name buff), so voiding gives the
-slot back and removes the buff. Effects come from `seeds/spell_effects.json` at the caster level (the
-Bard's level for a cast, the caster's for a received spell; by-group dice use the Bard's group,
-rogue); low-confidence, utility and uncatalogued spells return their text only.
-Rary's Mnemonic Enhancer (critical-qki.41, the only spell that adds slots) grants 3 spell levels as extra
-slots, split by the caster at cast time (`extraSlots`: `[1,1,1]` by default, `[1,2]` or `[3]`). They are
-`Extra` slots in the same list, blank until cast (`spellId` picks a spell of the slot's level then), kept by a
-new preparation, and **removed by the next long rest** (the spell's 24 h duration is not tracked; user
-to confirm). The same `spell_slots` snapshot undoes the cast.
-Chromatic Orb (critical-qki.42): casting it needs `targetAc` and spends one inventory gem (type `gem`, not
-the daily Power Gem; `gemItemId` when several are left, an error naming the problem when none), then
-`combatsvc.RollSpellToHit` rolls one d20 (nothing logged on its own; to-hit rules: ADR 0002, Consequences). The result
-shows hit or miss, the gem used and how many are left; the app models no gem effect and no damage (user: "i just
-need the selected gem type to be consumed"; the DM rules what a hit does). The level damage table of the seed is not
-used. The gem count rides the cast entry as an `items:<id>` snapshot, so voiding the cast gives the gem back.
-Buffs carry a free-text `Note` (in the active-buffs JSON and the `buffs` snapshot, so void restores it;
-editable through `BuffEdit.Note`). Saved buff templates (`saved_buffs` table, migration 013, nothing seeded)
-are listed/saved/deleted through `/api/buffs/saved` (`GET`, `POST`, `DELETE /{id}`); each save/delete is a
-`buff_change` entry (`save_template` / `delete_template`) with a `saved_buffs` snapshot of the whole list
-(the restorer writes it back with the same ids). Activating from a template is the normal `POST /api/buffs`
-with the filled values.
-combatsvc records every saving throw (kind `save`, no snapshots: it changes no state; payload =
-category, d20, buff modifiers (one per buff, `SaveBonusFrom`), target, adjustment + reason, total, passed, margin, `rolledPassed`).
-`POST /api/roll/save/{id}/adjust` `{adjustment, reason?}` sets the adjustment of the save when it is
-the **latest roll** (newest entry of `actionlog.RollKinds`: attack, save, cast, item use, the ones
-that replace the result card; voided ones included; ±20 max): combatsvc recomputes verdict and margin from
-the stored d20 and modifiers (the d20 never changes) and `actionlogsvc.AmendLatest` records an
-audited amend carrying the new summary and payload (plus `previousPassed`/`previousAdjustment`).
-Not a save → 400, voided or not the latest → 409. The log exposes `effectivePayload`.
-`POST /api/roll/attack/{id}/adjust` `{targetAc}` corrects the target AC of the latest attack (rule:
-ADR 0002 step 11; same error mapping as the save adjustment). The attack's payload keeps its damage
-dice with every damage term (`rolled`), the multiplier d100 (`d100MultiplierRoll`) and the
-crit-table row it fell in (`critRow`); combatsvc `settle` recomputes hit, margin, crit and damage
-from those and the new AC, and the amend carries
-`rolledTargetAc`/`rolledHit`/`rolledCrit` (the AC and outcome as rolled, kept across corrections, so the line
-reads rolled → now; dropped when the AC is back to the rolled one, which reads as rolled). Voiding still restores the ammo (snapshots are the
-original entry's). An attack logged without `rolled` (before this existed) → 400, void and reroll.
-A state key `family:id` (for example `items:arrows_plus3`) is restored by the Restorer of its family.
+`Snapshots` of the state it changed (a `before` and an `after` JSON per state key). It registers an
+`actionlog.Restorer` for its state key on the action log in the composition root, so voiding
+(popping) the entry restores the "before" state; a service exposes its restorers (for example
+`buffSvc.Restorers()`) for the composition root to register. A state key `family:id` (for example
+`items:arrows_plus3`) is restored by the Restorer of its family. A snapshot of state that other
+services also write (the slot list, the buffs) is produced by one helper of the owning service
+(`prepsvc.SlotsSnapshot`, `buffsvc.Add`) so every writer encodes it the same way.
 
-**Items: one model, three count behaviours (critical-qki.13).** User, 2026-10-13: *"these are all
-consumables... it's just their type"*. An item is a name, a free-text `type` label (arrow, flask,
-wand, gem…), a count, a note and optional mechanics: effect dice and save, `magic_bonus` (the
-"Magical bonus" +N), `ammo_kind`. Only `behaviour` (migration 015, replacing `kind`/`per_day`)
-changes how the count moves:
-
-| Behaviour | Example | − (use) | + (restock) | At 0 | Long rest |
-|---|---|---|---|---|---|
-| `stock` | arrows, fire flasks | yes | yes | stays listed | no |
-| `charges` | wand of lightning | yes | no (409 `ErrNotRestockable`) | removed | no |
-| `daily` | Power Gem dispel 1/day | yes | no (409) | stays listed | refilled to `max_count` |
-
-- `itemsvc.Use` spends one of any item (the attack's arrow, the inventory's −); the use that takes
-  a `charges` item to 0 deletes it in the same transaction and entry. `UseItem` (`POST
-  /api/items/{id}/use`) adds the effect roll and the `item_use` entry (payload `removed`).
-- `itemsvc.Restock` (`POST /api/items/{id}/restock {count}`, 1-999) adds to a `stock` item: one
-  `item_restock` entry (not a roll kind).
-- Every count change is one entry with the `items:<id>` snapshot. A use that removed the item
-  carries the whole item in its "before" (`snapCount.item`), so popping it re-inserts the item, in
-  its list position, with 1 charge. A long rest refills `daily` items only; time fast-forward none.
-- Editor (critical-qki.31): `POST /api/items`, `PATCH /api/items/{id}` (only the fields sent),
-  `DELETE /api/items/{id}`; each is one entry (`item_add` / `item_edit` / `item_remove`, not roll
-  kinds) with the `items:<id>` snapshot and answers `{item, logEntryId}`. The log is pop-only: popping
-  the newest entry deletes a created item (snapshot `absent`), overwrites an edited one with every
-  "before" field, or re-inserts a removed one with its id, position and count (`replace`).
-  Validation (`Item.Validate`) fails with a `domain.FieldError`, rendered `400 {error, field}` so the
-  UI shows the message under that field; effect dice are `NdM` or `NdM+K`. A new item's id is the slug
-  of its name (suffix `_2`, `_3` when taken) and goes last in the list.
-- Weapon editor (critical-qki.32, `weaponsvc`): `POST /api/weapons`, `PATCH /api/weapons/{id}`,
-  `DELETE /api/weapons/{id}` (the list stays `GET /api/weapons`, combatsvc), same mechanics as the
-  item editor: one entry each (`weapon_add` / `weapon_edit` / `weapon_remove`) with the
-  `weapons:<id>` snapshot, pop-only, `{weapon, logEntryId}`, `400 {error, field}` with snake_case
-  field names (`damage_sm`, `magic_to_hit`...). A remove is a hard delete: attack entries store the
-  weapon's name and id in their payload, so old log lines still read right, and popping the remove
-  re-inserts the same id, position and fields. Damage dice are `NdM` only (the attack rolls NdM and
-  the weapon's magic is its own field); to-hit and damage magic are separate, -10..10; a melee weapon
-  has no ammo kind. The next attack reads the table, so an edit applies at once.
-- Ammo is any item whose `ammo_kind` matches the weapon's; the attack picker offers those with
-  count > 0.
+What each service records, and the rules it follows, are in the ADRs ([index](adr/README.md)).
 
 ## DAL code generation (bob)
 
@@ -249,7 +132,7 @@ This recipe (defined in `justfile`):
 type HpEvent struct {
     ID          int64
     CharacterID int64
-    Delta       int    // negative for damage, positive for healing
+    Delta       int
     Source      string // "goblin arrow", "cure light wounds", etc.
     CreatedAt   time.Time
 }
@@ -257,19 +140,17 @@ type HpEvent struct {
 type BuffEffect struct {
     ID       string // uuid
     Name     string
-    Charges  int    // charges left (Stoneskin layers, Mirror Images); 0 = none
-    Duration int    // rounds left; 0 = not timed
-    Effects  BuffEffects // min_str, spells_buff, weapon_buff, multiplier, save_bonus,
-                         // str_bonus + str_max, ac, to_hit, damage
-                         // (pointers: nil = no contribution)
+    Charges  int
+    Duration int
+    Effects  BuffEffects // pointers: nil = no contribution
 }
 
 type RollResult struct {
     D20Roll         int
     D100CritRoll    int
     IsCrit          bool
-    CritMultiplier  float64 // decimal allowed (x1.5)
-    CritPlaceholder bool       // multiplier from the default (unedited) crit table
+    CritMultiplier  float64
+    CritPlaceholder bool
     BaseThac0       int
     Modifiers       []Modifier // {kind, source, detail, value}: every to-hit modifier
     EffectiveThac0  int
@@ -278,16 +159,16 @@ type RollResult struct {
     HitMargin       int
     // Damage breakdown (populated if hit)
     BaseDamage      int
-    DamageDice      string       // dice rolled for the target size
+    DamageDice      string
     SpellsBuff      float64
     WeaponBuff      int
-    Multipliers     float64      // crit multiplier
-    DiceMultiplier  float64      // product of the buffs' multipliers
+    Multipliers     float64
+    DiceMultiplier  float64
     StrengthBonus   int
-    BonusDamage     int          // buff damage
+    BonusDamage     int
     DamageTerms     []DamageTerm // {term, kind, source, detail, value}: every damage contribution
     TotalDamage     int
-    DamageBreakdown string       // human-readable formula trace
+    DamageBreakdown string
     // Attack context: weapon, target AC/size, ammo spent + remaining, log entry id
 }
 ```
@@ -313,7 +194,7 @@ adjustments) and Table 32 (Bard spells per day by level 1-20). It is not loaded 
 `ruletablesvc.Tables`, which implements `ruletablesvc.Lookup`:
 `StrengthMods(str, exceptional) (hit, dmg)`, `DexMods(dex) (missile, ac)` and
 `BardSpellsPerDay(level) map[spellLevel]count`. `exceptional` is the 18/xx percentile (1-99, 100 for
-18/00). The defensive adjustment is added to AC as printed (-3 improves AC by 3). The tests check
+18/00). Values are returned as printed in the tables. The tests check
 values against the PHB pages, not against the seed.
 
 ## Seeding the character

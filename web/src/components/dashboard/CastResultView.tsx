@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
-import type { CastResult, DiceRoll } from "@/types/spells";
+import type { CastResult, DamagePartSave, DiceRoll } from "@/types/spells";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,26 @@ function RollView({ roll: r }: { roll: DiceRoll }) {
       ))}
       {mod !== 0 && r.dice.length > 0 && <span>{formatSigned(mod)}</span>}
       <span className="font-bold">= {r.total}</span>
+    </span>
+  );
+}
+
+/** A damage instance made of parts: each part's roll and what a save does to it, then the instance total. */
+function PartsView({ parts, saves, total }: { parts: DiceRoll[]; saves: DamagePartSave[]; total: number }) {
+  const { t } = useTranslation();
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="cast-damage-parts">
+      {parts.map((p, j) => (
+        <span key={j} className="inline-flex flex-wrap items-center gap-1.5">
+          {p.dice.length > 0 ? <RollView roll={p} /> : <span className="font-mono text-sm font-bold">{p.total}</span>}
+          {saves[j] && (
+            <span className="text-xs text-muted-foreground">
+              {t(`result.cast.partSave.${saves[j]}`, { defaultValue: saves[j] })}
+            </span>
+          )}
+        </span>
+      ))}
+      <span className="font-mono text-sm font-bold">Σ {total}</span>
     </span>
   );
 }
@@ -183,6 +203,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               >
                 {r.damage.total}
               </div>
+              {r.damage.totalOnSave !== undefined && (
+                <div className="text-sm tabular-nums text-muted-foreground" data-testid="cast-damage-on-save">
+                  {t("result.cast.totalOnSave", { total: r.damage.totalOnSave })}
+                </div>
+              )}
             </div>
           </div>
           {r.damage.rolls.length > 0 && (
@@ -190,7 +215,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               {r.damage.rolls.map((roll, i) => (
                 <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="text-xs text-muted-foreground">{t("result.cast.instance", { n: i + 1 })}</span>
-                  <RollView roll={roll} />
+                  {roll.parts && r.damage?.parts ? (
+                    <PartsView parts={roll.parts} saves={r.damage.parts.map((p) => p.save)} total={roll.total} />
+                  ) : (
+                    <RollView roll={roll} />
+                  )}
                 </li>
               ))}
             </ul>

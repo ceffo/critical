@@ -36,11 +36,14 @@ type dieRecord struct {
 	Value int `json:"value"`
 }
 
-// rollRecord is one evaluated damage formula (one instance).
+// rollRecord is one evaluated damage formula (one instance). Parts are the
+// rolls of the instance's damage parts (absent: no parts, or logged before
+// parts existed).
 type rollRecord struct {
-	Formula string      `json:"formula"`
-	Dice    []dieRecord `json:"dice"`
-	Total   int         `json:"total"`
+	Formula string       `json:"formula"`
+	Dice    []dieRecord  `json:"dice"`
+	Total   int          `json:"total"`
+	Parts   []rollRecord `json:"parts,omitempty"`
 }
 
 // itemRecord is the item a cast spent and how many are left.
@@ -67,14 +70,22 @@ type buffRecord struct {
 
 // damageRecord: Dice, Instances, Rounds and Rolls (every instance roll, round
 // by round, with its dice) are absent on casts logged before they were
-// recorded.
+// recorded. Parts and TotalOnSave are set only for a damage made of parts.
 type damageRecord struct {
-	Total     int          `json:"total"`
-	Type      string       `json:"type"`
-	Dice      string       `json:"dice,omitempty"`
-	Instances int          `json:"instances,omitempty"`
-	Rounds    int          `json:"rounds,omitempty"`
-	Rolls     []rollRecord `json:"rolls,omitempty"`
+	Total       int          `json:"total"`
+	Type        string       `json:"type"`
+	Dice        string       `json:"dice,omitempty"`
+	Instances   int          `json:"instances,omitempty"`
+	Rounds      int          `json:"rounds,omitempty"`
+	Rolls       []rollRecord `json:"rolls,omitempty"`
+	Parts       []partRecord `json:"parts,omitempty"`
+	TotalOnSave *int         `json:"totalOnSave,omitempty"`
+}
+
+// partRecord is one damage part: its formula and what a save does to it.
+type partRecord struct {
+	Formula string `json:"formula"`
+	Save    string `json:"save"`
 }
 
 func toRecord(res CastResult) castRecord {
@@ -86,13 +97,15 @@ func toRecord(res CastResult) castRecord {
 		}
 	}
 	if d := res.Damage; d != nil {
-		r.Damage = &damageRecord{Total: d.Total, Type: d.Type, Dice: d.Dice, Instances: d.Instances, Rounds: d.Rounds}
+		r.Damage = &damageRecord{
+			Total: d.Total, Type: d.Type, Dice: d.Dice, Instances: d.Instances, Rounds: d.Rounds,
+			TotalOnSave: d.TotalOnSave,
+		}
 		for _, roll := range d.Rolls {
-			dice := make([]dieRecord, len(roll.Dice))
-			for i, die := range roll.Dice {
-				dice[i] = dieRecord(die)
-			}
-			r.Damage.Rolls = append(r.Damage.Rolls, rollRecord{Formula: roll.Formula, Dice: dice, Total: roll.Total})
+			r.Damage.Rolls = append(r.Damage.Rolls, toRollRecord(roll))
+		}
+		for _, p := range d.Parts {
+			r.Damage.Parts = append(r.Damage.Parts, partRecord{Formula: p.Formula, Save: string(p.Save)})
 		}
 	}
 	if s := res.Save; s != nil {
@@ -106,4 +119,16 @@ func toRecord(res CastResult) castRecord {
 		r.Attack = &attackRecord{D20: a.D20Roll, TargetAC: a.TargetAC, Hit: a.Hit}
 	}
 	return r
+}
+
+func toRollRecord(roll Roll) rollRecord {
+	dice := make([]dieRecord, len(roll.Dice))
+	for i, die := range roll.Dice {
+		dice[i] = dieRecord(die)
+	}
+	out := rollRecord{Formula: roll.Formula, Dice: dice, Total: roll.Total}
+	for _, p := range roll.Parts {
+		out.Parts = append(out.Parts, toRollRecord(p))
+	}
+	return out
 }

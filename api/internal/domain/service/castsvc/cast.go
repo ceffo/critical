@@ -175,7 +175,7 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 			res.TextOnly = TextOnlyUtility
 			return res, snaps, nil
 		}
-		res.Damage, err = s.rollDamage(entry.Damage, r.casterLevel)
+		res.Damage, err = s.rollDamage(entry, r.casterLevel)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}

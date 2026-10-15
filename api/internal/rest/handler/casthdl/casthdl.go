@@ -167,6 +167,9 @@ type RollDTO struct {
 	Formula string   `json:"formula"`
 	Dice    []DieDTO `json:"dice"`
 	Total   int      `json:"total"`
+	// Parts are the rolls of a damage instance's parts, in the order of
+	// DamageDTO.Parts (absent: no parts).
+	Parts []RollDTO `json:"parts,omitempty"`
 }
 
 // AppliedBuffDTO is the buff and its rolls.
@@ -193,6 +196,18 @@ type DamageDTO struct {
 	Rounds    int       `json:"rounds"`
 	Rolls     []RollDTO `json:"rolls"`
 	Total     int       `json:"total"`
+	// Parts are the parts of one instance and what a save does to each;
+	// TotalOnSave is Total without the parts a save negates. Both are absent
+	// when the damage has no parts.
+	Parts       []DamagePartDTO `json:"parts,omitempty"`
+	TotalOnSave *int            `json:"totalOnSave,omitempty"`
+}
+
+// DamagePartDTO is one damage part: its formula and its save effect key
+// (none, negates).
+type DamagePartDTO struct {
+	Formula string `json:"formula"`
+	Save    string `json:"save"`
 }
 
 // UntrackedDTO is an effect to apply by hand.
@@ -225,7 +240,13 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 		}
 	}
 	if d := res.Damage; d != nil {
-		out.Damage = &DamageDTO{Dice: d.Dice, Type: d.Type, Instances: d.Instances, Rounds: d.Rounds, Total: d.Total, Rolls: []RollDTO{}}
+		out.Damage = &DamageDTO{
+			Dice: d.Dice, Type: d.Type, Instances: d.Instances, Rounds: d.Rounds, Total: d.Total,
+			Rolls: []RollDTO{}, TotalOnSave: d.TotalOnSave,
+		}
+		for _, p := range d.Parts {
+			out.Damage.Parts = append(out.Damage.Parts, DamagePartDTO{Formula: p.Formula, Save: string(p.Save)})
+		}
 		for i := range d.Rolls {
 			out.Damage.Rolls = append(out.Damage.Rolls, *rollDTO(&d.Rolls[i]))
 		}
@@ -259,6 +280,9 @@ func rollDTO(r *castsvc.Roll) *RollDTO {
 	out := &RollDTO{Formula: r.Formula, Total: r.Total, Dice: []DieDTO{}}
 	for _, d := range r.Dice {
 		out.Dice = append(out.Dice, DieDTO{Sides: d.Sides, Value: d.Value})
+	}
+	for i := range r.Parts {
+		out.Parts = append(out.Parts, *rollDTO(&r.Parts[i]))
 	}
 	return out
 }

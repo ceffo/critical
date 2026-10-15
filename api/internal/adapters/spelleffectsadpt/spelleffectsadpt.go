@@ -167,9 +167,17 @@ type levelDiceDTO struct {
 type damageDTO struct {
 	Dice      flexString     `json:"dice"`
 	ByLevel   []levelDiceDTO `json:"by_level"`
+	Parts     []partDTO      `json:"parts"`
 	Instances flexString     `json:"instances"`
 	Rounds    flexString     `json:"rounds"`
 	Type      string         `json:"type"`
+}
+
+// partDTO is one damage part; Save is a save effect ("" takes the entry's).
+type partDTO struct {
+	Dice    flexString     `json:"dice"`
+	ByLevel []levelDiceDTO `json:"by_level"`
+	Save    string         `json:"save"`
 }
 
 type abilityGainDTO struct {
@@ -299,15 +307,19 @@ func (g abilityGainDTO) toDomain(field string) (spelleffectsvc.AbilityGain, erro
 func (d damageDTO) toDomain() (*spelleffectsvc.Damage, error) {
 	out := &spelleffectsvc.Damage{Type: d.Type}
 	var err error
-	if out.Dice, err = optFormula("damage.dice", d.Dice); err != nil {
+	if out.Dice, out.ByLevel, err = diceToDomain("damage", d.Dice, d.ByLevel); err != nil {
 		return nil, err
 	}
-	for i, row := range d.ByLevel {
-		f, err := parseFormula(fmt.Sprintf("damage.by_level[%d].dice", i), row.Dice)
-		if err != nil {
+	// An empty "parts": [] stays an empty, non-nil list: validation refuses it.
+	if d.Parts != nil {
+		out.Parts = make([]spelleffectsvc.DamagePart, 0, len(d.Parts))
+	}
+	for i, p := range d.Parts {
+		part := spelleffectsvc.DamagePart{Save: spelleffectsvc.SaveEffect(p.Save)}
+		if part.Dice, part.ByLevel, err = diceToDomain(fmt.Sprintf("damage.parts[%d]", i), p.Dice, p.ByLevel); err != nil {
 			return nil, err
 		}
-		out.ByLevel = append(out.ByLevel, spelleffectsvc.LevelDice{MinLevel: row.MinLevel, Dice: f})
+		out.Parts = append(out.Parts, part)
 	}
 	if out.Instances, err = optFormula("damage.instances", d.Instances); err != nil {
 		return nil, err
@@ -316,6 +328,24 @@ func (d damageDTO) toDomain() (*spelleffectsvc.Damage, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// diceToDomain parses an optional dice formula and a by-level table; field
+// names the JSON path in errors.
+func diceToDomain(field string, dice flexString, byLevel []levelDiceDTO) (*formula.Formula, []spelleffectsvc.LevelDice, error) {
+	f, err := optFormula(field+".dice", dice)
+	if err != nil {
+		return nil, nil, err
+	}
+	var rows []spelleffectsvc.LevelDice
+	for i, row := range byLevel {
+		rf, err := parseFormula(fmt.Sprintf("%s.by_level[%d].dice", field, i), row.Dice)
+		if err != nil {
+			return nil, nil, err
+		}
+		rows = append(rows, spelleffectsvc.LevelDice{MinLevel: row.MinLevel, Dice: rf})
+	}
+	return f, rows, nil
 }
 
 func sortedKeys[V any](m map[string]V) []string {

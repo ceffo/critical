@@ -350,6 +350,10 @@
       "necromantic": "nécromantique",
       "negative": "énergie négative",
       "sound": "son"
+    },
+    "parts": {
+      "none": "{{dice}} [sans sauvegarde]",
+      "negates": "{{dice}} [annulé par la sauvegarde]"
     }
   },
   "lookup": {
@@ -592,6 +596,11 @@
         "dex_gain": "DEX +{{value}}",
         "cha_gain": "CHA +{{value}}",
         "charges_hp_damage_taken": "Absorbe {{value}} PV de dégâts"
+      },
+      "totalOnSave": "Si la cible sauvegarde : {{total}}",
+      "partSave": {
+        "none": "sans sauvegarde",
+        "negates": "annulé par la sauvegarde"
       }
     },
     "itemHeading": "{{name}} utilisé",

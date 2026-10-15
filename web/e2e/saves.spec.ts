@@ -118,9 +118,9 @@ test("a save is no longer adjustable once another roll (an attack) follows it", 
     (await (await page.request.get("/api/log")).json()) as { entries: { id: number; kind: string }[] }
   ).entries.find((e) => e.kind === "save")!.id;
 
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await page.getByLabel("Target AC").fill("4");
-  await page.getByRole("button", { name: "Roll Attack" }).click();
+  await page.getByRole("tab", { name: "Weapons" }).click();
+  await page.getByRole("form", { name: "Attack" }).getByLabel("Target AC").fill("4");
+  await page.getByRole("button", { name: "Attack", exact: true }).click();
   await expect(page.getByRole("region", { name: "Last Result" }).getByTestId("attack-result")).toBeVisible();
 
   const res = await page.request.post(`/api/roll/save/${save}/adjust`, { data: { adjustment: 4 } });

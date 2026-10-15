@@ -1,36 +1,48 @@
-import { useState, type ComponentType } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useItemsStore } from "@/stores/items";
+import { useSpellStore } from "@/stores/spells";
+import { useLogStore } from "@/stores/log";
 import { AttackPanel } from "./AttackPanel";
 import { SpellsPanel } from "./SpellsPanel";
+import { ItemsTab } from "./ItemsTab";
+import { combatItems } from "@/lib/combatItems";
 
 /**
- * Tabs of the Agir (act) workspace, one panel component each. Inventory and spell lookup are
- * workspaces of their own in the rail (App.tsx); saving throws live in the Moi column.
+ * Tabs of the Agir (act) workspace: Weapons, Spells (with the spells left), Items (with how many
+ * there are). Inventory and spell lookup are workspaces of their own in the rail (App.tsx); saving
+ * throws live in the Moi column.
  */
-const TABS = [
-  { id: "attack", Panel: AttackPanel },
-  { id: "spells", Panel: SpellsPanel },
-] as const satisfies readonly { id: string; Panel: ComponentType }[];
+const TABS = ["weapons", "spells", "items"] as const;
+type TabId = (typeof TABS)[number];
 
-type TabId = (typeof TABS)[number]["id"];
-
-export function ActionArea() {
+export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void }) {
   const { t } = useTranslation();
-  const [active, setActive] = useState<TabId>("attack");
-  const { Panel } = TABS.find((tab) => tab.id === active) ?? TABS[0];
+  const [active, setActive] = useState<TabId>("weapons");
+  const spellsLeft = useSpellStore((s) => s.slots.filter((slot) => !slot.used).length);
+  const itemCount = useItemsStore((s) => combatItems(s.items).length);
+  const fetchSlots = useSpellStore((s) => s.fetchSlots);
+  const logEntries = useLogStore((s) => s.entries);
+  // The Spells tab shows the spells left before it is opened; a cast, a long rest or a void
+  // (any new log state) can change them.
+  useEffect(() => {
+    void fetchSlots().catch(() => undefined);
+  }, [fetchSlots, logEntries]);
+  const counts: Partial<Record<TabId, number>> = { spells: spellsLeft, items: itemCount };
 
   return (
     <section
-      className="flex min-h-0 min-w-0 flex-col rounded-xl border bg-card"
+      className="flex min-h-0 min-w-0 flex-col rounded-xl bg-card"
       aria-label={t("actions.label")}
     >
       <div
         role="tablist"
         aria-label={t("actions.label")}
-        className="flex shrink-0 gap-1 border-b px-2 pt-2"
+        className="flex shrink-0 items-center gap-1 bg-neu-900/50 px-4 pt-2"
       >
-        {TABS.map(({ id }) => (
+        <span className="mr-3 text-sm font-semibold">{t("shell.workspace.act")}</span>
+        {TABS.map((id) => (
           <button
             key={id}
             role="tab"
@@ -38,12 +50,21 @@ export function ActionArea() {
             aria-selected={active === id}
             aria-controls={`panel-${id}`}
             className={cn(
-              "-mb-px rounded-t-lg border border-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
-              active === id && "border-border border-b-card bg-card text-foreground",
+              "flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+              active === id && "border-amb-500 text-foreground",
             )}
             onClick={() => setActive(id)}
           >
             {t(`actions.tabs.${id}`)}
+            {counts[id] !== undefined && (
+              <span
+                aria-hidden
+                className="text-xs text-muted-foreground"
+                data-testid={`tab-count-${id}`}
+              >
+                {counts[id]}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -53,7 +74,9 @@ export function ActionArea() {
         aria-labelledby={`tab-${active}`}
         className="min-h-0 flex-1 overflow-y-auto p-4"
       >
-        <Panel />
+        {active === "weapons" && <AttackPanel />}
+        {active === "spells" && <SpellsPanel />}
+        {active === "items" && <ItemsTab onManage={onOpenInventory} />}
       </div>
     </section>
   );

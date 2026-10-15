@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSpellStore } from "@/stores/spells";
 import { useLogStore } from "@/stores/log";
@@ -97,8 +96,11 @@ export function SpellsPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold">{t("spellSlots.title")}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={onAlly} onChange={(e) => setOnAlly(e.target.checked)} />
+          {t("spellSlots.onAlly")}
+        </label>
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -132,10 +134,6 @@ export function SpellsPanel() {
           }
         />
       )}
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={onAlly} onChange={(e) => setOnAlly(e.target.checked)} />
-        {t("spellSlots.onAlly")}
-      </label>
       {levels.length === 0 && !loading && (
         <p className="text-sm text-muted-foreground">{t("spellSlots.none")}</p>
       )}
@@ -146,10 +144,10 @@ export function SpellsPanel() {
           return (
             <section
               key={level}
-              className="min-w-0 rounded-lg border"
+              className="min-w-0 rounded-lg bg-neu-900/40"
               aria-label={t("spellSlots.level", { level })}
             >
-              <div className="flex items-center justify-between border-b px-3 py-1.5">
+              <div className="flex items-center justify-between px-3 pt-2 pb-1">
                 <h3 className="text-sm font-semibold">
                   {t("spellSlots.level", { level })}
                 </h3>
@@ -159,12 +157,23 @@ export function SpellsPanel() {
                       {t("spellSlots.preparedCount", { count: list.filter((s) => !s.extra).length, max: maxOf(level) })}
                     </span>
                   )}
-                  <Badge
+                  <span className="flex items-center gap-1" aria-hidden>
+                    {list.map((_, i) => (
+                      <span
+                        key={i}
+                        className={cn("size-2 rounded-full", i < left ? "bg-amb-400" : "bg-neu-700")}
+                      />
+                    ))}
+                  </span>
+                  <span
                     data-testid={`remaining-${level}`}
-                    variant={list.length > 0 && left === 0 ? "destructive" : "secondary"}
+                    className={cn(
+                      "text-xs",
+                      list.length > 0 && left === 0 ? "text-danger" : "text-muted-foreground",
+                    )}
                   >
                     {t("spellSlots.remaining", { left, total: list.length })}
-                  </Badge>
+                  </span>
                 </div>
               </div>
               <ul className="flex flex-col gap-1 p-1.5">
@@ -191,7 +200,7 @@ export function SpellsPanel() {
                     <li
                       key={slot.index}
                       className={cn(
-                        "flex items-center justify-between gap-2 rounded px-2 py-1",
+                        "flex min-h-10 items-center justify-between gap-2 rounded px-2 py-1",
                         slot.used ? "opacity-60" : "hover:bg-muted/60",
                       )}
                     >

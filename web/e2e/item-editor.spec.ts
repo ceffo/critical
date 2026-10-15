@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, openWorkspace, voidEntry } from "./helpers";
+import {
+  ammoChips,
+  chooseWeapon,
+  logEntry,
+  openDashboard,
+  openWeapons,
+  openWorkspace,
+  voidEntry,
+} from "./helpers";
 
 // Inventory editor: add, edit and remove items; each is one log entry and the
 // newest can be popped.
@@ -46,19 +54,16 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   await snap(page, "item-added");
 
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  const attack = page.getByRole("form", { name: /attack/i }).or(page.getByRole("tabpanel"));
-  await attack.getByLabel("Weapon").selectOption("shortbow");
-  await expect(attack.getByLabel("Ammunition").locator("option", { hasText: "Arrows +3 (blessed) (6 left)" })).toHaveCount(1);
+  await openWeapons(page);
+  await chooseWeapon(page, "Short Bow +2");
+  await expect(ammoChips(page).getByRole("radio", { name: "Arrows +3 (blessed), 6 left" })).toHaveCount(1);
   await snap(page, "ammo-picker-with-new-arrows");
 
   await openWorkspace(page, "Inventory");
   await voidEntry(page, "Added Arrows +3 (blessed)");
   await expect(added).toHaveCount(0);
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await attack.getByLabel("Weapon").selectOption("shortbow");
-  await expect(attack.getByLabel("Ammunition").locator("option", { hasText: "blessed" })).toHaveCount(0);
+  await expect(ammoChips(page).getByRole("radio", { name: /blessed/ })).toHaveCount(0);
 });
 
 test("edit the wand's charges 4 to 3: logged; pop restores 4", async ({ page }) => {
@@ -86,9 +91,10 @@ test("remove an item: gone from the Inventory and the ammo picker; pop brings it
   await snap(page, "item-removed");
 
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await page.getByRole("form", { name: "Attack" }).getByLabel("Weapon").selectOption("shortbow");
-  await expect(page.getByRole("form", { name: "Attack" }).getByLabel("Ammunition").locator("option", { hasText: "Arrows +2" })).toHaveCount(0);
+  await openWeapons(page);
+  await chooseWeapon(page, "Short Bow +2");
+  await expect(ammoChips(page).getByRole("radio", { name: /^Arrows \+1,/ })).toHaveCount(1);
+  await expect(ammoChips(page).getByRole("radio", { name: /^Arrows \+2,/ })).toHaveCount(0);
 
   await openWorkspace(page, "Inventory");
   await voidEntry(page, "Removed Arrows +2");

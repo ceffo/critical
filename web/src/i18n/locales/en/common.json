@@ -163,19 +163,26 @@
   "actions": {
     "label": "Actions",
     "tabs": {
-      "attack": "Attack",
-      "spells": "Spells"
+      "weapons": "Weapons",
+      "spells": "Spells",
+      "items": "Items"
+    },
+    "items": {
+      "list": "Combat items",
+      "count": "{{behaviour}} · {{count}}",
+      "dailyCount": "{{behaviour}} · {{count}} / {{max}}",
+      "roll": "Roll",
+      "use": "Use",
+      "rollLabel": "Roll {{name}}",
+      "useLabel": "Use {{name}}",
+      "manage": "Manage the inventory"
     }
   },
   "attack": {
-    "weapon": "Weapon",
-    "selectWeapon": "Select weapon",
-    "weaponOption": "{{name}} ({{sm}}, large {{l}})",
     "ammo": "Ammunition",
-    "ammoOption": "{{name}} ({{count}} left)",
+    "ammoOption": "{{name}}, {{count}} left",
     "noAmmo": "No ammunition for this weapon",
     "ammoSpent": "No {{name}} left: pick other ammunition",
-    "pickAmmo": "Pick ammunition",
     "targetAc": "Target AC",
     "targetSize": "Target size",
     "sizes": {
@@ -186,8 +193,34 @@
     "situationalLabel": "Reason",
     "situationalPlaceholder": "e.g. rear attack",
     "loading": "Loading weapons…",
-    "roll": "Roll Attack",
-    "rolling": "Rolling..."
+    "roll": "Attack",
+    "rolling": "Rolling...",
+    "form": "Attack",
+    "target": "Target",
+    "inHand": "Weapon in hand",
+    "kinds": {
+      "melee": "Melee",
+      "missile": "Missile"
+    },
+    "twoHanded": "two-handed",
+    "sizesShort": {
+      "sm": "S / M",
+      "l": "L"
+    },
+    "lowerAc": "Lower AC",
+    "raiseAc": "Raise AC",
+    "lowerSituational": "Lower the modifier",
+    "raiseSituational": "Raise the modifier",
+    "switchTo": "Switch to {{name}}",
+    "otherWeapon": "Other weapon",
+    "weaponDice": "{{sm}} · L {{l}}",
+    "tiles": {
+      "damageSm": "Damage S/M",
+      "damageL": "Damage L",
+      "bonus": "To hit / dmg",
+      "thac0": "Effective THAC0",
+      "rollNeeded": "needs {{n}} vs AC {{ac}}"
+    }
   },
   "saves": {
     "title": "Saving Throws",
@@ -241,7 +274,6 @@
     }
   },
   "spellSlots": {
-    "title": "Spell Slots",
     "longRest": "Long Rest (Reset)",
     "none": "No spell slots available.",
     "level": "Level {{level}}",

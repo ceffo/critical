@@ -131,7 +131,7 @@ func List(svc itemSvc) render.HandlerFunc {
 	}
 }
 
-// ItemDTO is the wire shape of an item (critical-qki.13): behaviour is
+// ItemDTO is the wire shape of an item: behaviour is
 // stock, charges or daily, type the free-text label.
 type ItemDTO struct {
 	ID           string `json:"id"`

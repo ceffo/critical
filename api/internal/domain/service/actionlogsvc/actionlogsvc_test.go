@@ -159,7 +159,7 @@ func hpEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
 	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindHPChange, Summary: "orc", HPDelta: -8, Corrections: corrections}
 }
 
-// Note-only amend (critical-qki.38): any kind, the correction carries only
+// Note-only amend: any kind, the correction carries only
 // the trimmed note.
 func TestAmend(t *testing.T) {
 	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
@@ -221,7 +221,7 @@ func TestAmend(t *testing.T) {
 	})
 }
 
-// Pop-only void (critical-qki.38): only the newest non-voided entry, any
+// Pop-only void: only the newest non-voided entry, any
 // kind; its snapshots are restored through their family's restorer.
 func TestVoid(t *testing.T) {
 	withSnaps := func(keys ...string) *actionlog.Entry {
@@ -507,7 +507,7 @@ func TestEntryEffectivePayload(t *testing.T) {
 	}
 }
 
-// HP-1/HP-2 (critical-qki.38): Record caps a heal at the gap to max HP, reading
+// HP-1/HP-2: Record caps a heal at the gap to max HP, reading
 // the total exactly once inside its transaction, and stores the breakdown.
 // Damage never reads the total.
 func TestRecord_CapsHeal(t *testing.T) {

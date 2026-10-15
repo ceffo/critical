@@ -37,7 +37,7 @@ interface Props {
 }
 
 /**
- * Add / edit form of an inventory item (critical-qki.31). Validation is the server's: its message
+ * Add / edit form of an inventory item. Validation is the server's: its message
  * is shown under the field it names. Only number parsing happens here.
  */
 export function ItemForm({

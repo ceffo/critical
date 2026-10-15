@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// critical-qki.42: a spell's to-hit is one d20 against THAC0 - AC with the
+// a spell's to-hit is one d20 against THAC0 - AC with the
 // Dex missile adjustment, no crit (no d100 is rolled); a natural 1 or 20 is plain arithmetic, as in combat.
 func TestRollSpellToHit(t *testing.T) {
 	tests := []struct {

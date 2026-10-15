@@ -1,4 +1,4 @@
--- Saved buff templates (critical-qki.29): a buff the player re-adds with one
+-- Saved buff templates: a buff the player re-adds with one
 -- click. Nothing is seeded, the list starts empty. New table only, so an
 -- existing DB needs no data migration. The buff note needs no schema change:
 -- active buffs are a JSON list, and a missing note reads as empty.

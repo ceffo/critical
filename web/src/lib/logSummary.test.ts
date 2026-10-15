@@ -452,7 +452,7 @@ describe("time_passed entries", () => {
   });
 });
 
-describe("inventory entries (critical-qki.13)", () => {
+describe("inventory entries", () => {
   const use = {
     itemId: "wand_lightning",
     name: "Wand of lightning",

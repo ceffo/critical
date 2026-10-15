@@ -14,7 +14,7 @@ import { captionClass, fieldClass } from "./fieldStyles";
 
 /**
  * The action log (GET /api/log) as a timeline grouped by round. The log is a
- * stack (critical-qki.38): only the newest non-voided entry offers Void (pop);
+ * stack: only the newest non-voided entry offers Void (pop);
  * any entry can get a note, values are never edited.
  */
 export function CombatLog() {

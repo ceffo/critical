@@ -60,7 +60,7 @@ type weaponSeed struct {
 	AmmoKind    string `json:"ammo_kind"`
 }
 
-// itemSeed is one seeds/items.json entry (critical-qki.13): behaviour is
+// itemSeed is one seeds/items.json entry: behaviour is
 // stock, charges or daily, type a free-text label, max_count defaults to
 // count (a daily item's refill value).
 type itemSeed struct {

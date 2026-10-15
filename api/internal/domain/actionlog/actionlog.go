@@ -58,10 +58,10 @@ func IsRoll(k Kind) bool {
 const KindTimePassed Kind = "time_passed"
 
 // KindItemRestock is a stock item's count going up at the table (itemsvc
-// Restock, critical-qki.13). Not a roll: it leaves the result card alone.
+// Restock). Not a roll: it leaves the result card alone.
 const KindItemRestock Kind = "item_restock"
 
-// Item editor entries (itemsvc Create, Update, Delete, critical-qki.31): an
+// Item editor entries (itemsvc Create, Update, Delete): an
 // item added, edited or removed by hand. Not rolls. Each carries the item's
 // "items:<id>" snapshot, so popping it undoes the change.
 const (
@@ -70,7 +70,7 @@ const (
 	KindItemRemove Kind = "item_remove"
 )
 
-// Weapon editor entries (weaponsvc Create, Update, Delete, critical-qki.32): a
+// Weapon editor entries (weaponsvc Create, Update, Delete): a
 // weapon added, edited or removed by hand. Not rolls. Each carries the
 // weapon's "weapons:<id>" snapshot, so popping it undoes the change.
 const (
@@ -159,11 +159,11 @@ const (
 )
 
 // Correction is an audited change to an entry. A note amend (the only kind
-// the log's amend writes since critical-qki.38) carries Note and nothing else.
+// the log's amend writes now) carries Note and nothing else.
 // A value amend carries the new HP delta (nil: unchanged), summary (empty:
 // unchanged) and payload (empty: unchanged): written by AmendLatest (post-roll
-// adjustments) and by hp_change amends logged before qki.38. A void carries
-// none of them.
+// adjustments, payload only) and, with an HP delta or a summary, by hp_change
+// amends logged before amends became note-only. A void carries none of them.
 type Correction struct {
 	ID        int64
 	ActionID  int64

@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// 015 replaces items.kind and items.per_day with behaviour and type
-// (critical-qki.13). Every old row is kept with its count, max, bonus, ammo
+// 015 replaces items.kind and items.per_day with behaviour and type.
+// Every old row is kept with its count, max, bonus, ammo
 // kind, effect, note and position: ammo and consumable become stock, charged
 // with per_day daily, other charged charges, and the type comes from the ammo
 // kind, else the name, else the old kind.

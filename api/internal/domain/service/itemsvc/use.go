@@ -36,7 +36,7 @@ type UseResult struct {
 // useRecord is itemsvc's JSON encoding of a use inside its action-log entry
 // (payload), the same camelCase names as the /api/items/{id}/use response.
 // Entries already in the log must stay decodable: add fields, never rename.
-// Kind is the pre-qki.13 item kind, only in old entries.
+// Kind is the item kind of entries logged before the one item model.
 type useRecord struct {
 	ItemID    string `json:"itemId"`
 	Name      string `json:"name"`

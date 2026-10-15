@@ -244,7 +244,7 @@ func TestAttackUsesEffectiveStr(t *testing.T) {
 	assert.Equal(t, combatsvc.Modifier{Kind: combatsvc.ModStrength, Detail: "18", Value: 1}, res.Modifiers[0])
 }
 
-// Pop-only (critical-qki.38): a later +1 shot blocks voiding an earlier +3
+// Pop-only: a later +1 shot blocks voiding an earlier +3
 // shot; popping the +1 then the +3 restores each item's own count.
 func TestVoidingAnOlderShotIsRefused(t *testing.T) {
 	bs := newBacking(t)

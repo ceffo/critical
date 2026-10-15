@@ -67,7 +67,7 @@ func List(charID CharacterIDFunc, svc lister) render.HandlerFunc {
 }
 
 // Amend sets the note of an entry, any kind. Body: {"note": "the DM's ruling"}
-// ("" clears it). The note is the only amendable field (critical-qki.38): a
+// ("" clears it). The note is the only amendable field: a
 // body with any other field (delta, source, ...) is a 400.
 func Amend(charID CharacterIDFunc, svc amender) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -159,7 +159,7 @@ type SnapshotDTO struct {
 
 // CorrectionDTO is one amend or void. note is set on note amends; hpDelta,
 // source and payload on value amends (post-roll adjustments, and hp_change
-// amends logged before critical-qki.38).
+// amends logged before amends became note-only).
 type CorrectionDTO struct {
 	ID        int64           `json:"id"`
 	Kind      string          `json:"kind"`

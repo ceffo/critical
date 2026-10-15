@@ -1,4 +1,4 @@
--- House crit table (critical-qki.12): the second D100 of a crit looks up its
+-- House crit table: the second D100 of a crit looks up its
 -- multiplier here. Rows are inclusive D100 ranges covering 1-100 exactly, the
 -- app validates that on save. New table only. An empty table means the
 -- default (one range 1-100 -> x2, shown as "placeholder"), so an existing DB

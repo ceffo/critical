@@ -118,7 +118,7 @@ func TestSavedBuffs_DeleteIsLoggedAndVoidable(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"Hammer form"}, names(active))
 
-	// Pop-only (critical-qki.38): the save sits under the activation, so it
+	// Pop-only: the save sits under the activation, so it
 	// is refused until the activation is popped; then the template goes.
 	_, err = bs.Log.Void(ctx, id, entries[2].ID)
 	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)

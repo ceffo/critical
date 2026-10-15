@@ -184,9 +184,9 @@ func TestListEntries(t *testing.T) {
 	assert.False(t, ok, "another character's log is empty")
 }
 
-// A note amend (critical-qki.38) round-trips its note, leaves HP, summary,
+// A note amend round-trips its note, leaves HP, summary,
 // payload and status alone, and does not hide an earlier value amend (an
-// hp_change amended before qki.38).
+// hp_change amended before amends became note-only).
 func TestNoteAmend_RoundTrip(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)
@@ -285,7 +285,7 @@ func TestLatestID(t *testing.T) {
 	assert.False(t, ok)
 }
 
-// Checklist 3 (critical-qki.38): a value amend stored before migration 014
+// Checklist 3: a value amend stored before migration 014
 // (raw row, no note column written) still gives the amended delta and HP
 // total through the DAL, and a note added afterwards changes neither.
 func TestLegacyValueAmend_ReadsAfterMigration014(t *testing.T) {

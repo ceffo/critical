@@ -1,6 +1,6 @@
 package composition_test
 
-// HP cap on the real stack (critical-qki.38). User, 2026-10-13: "a player
+// HP cap on the real stack. User, 2026-10-13: "a player
 // cannot go above its max hp. period. max hp grows when leveling up only".
 
 import (

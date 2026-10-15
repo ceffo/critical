@@ -333,7 +333,7 @@ test("a cast buff expired by Time passes: pop the fast-forward, then the cast", 
   await expect(buffBadge(page, "Haste")).toHaveCount(0);
 });
 
-// The log is a stack (critical-qki.38): cast, HP change, cast. Only the last
+// The log is a stack: cast, HP change, cast. Only the last
 // cast offers Void and the HP panel's undo is off (with a hint) while it is on
 // top; popping it, then the heal, walks HP and slots back one step each.
 test("cast, heal, cast: pop the last cast, then the heal; HP undo is off under a cast", async ({

@@ -198,7 +198,7 @@ test("a prepared spell outside the spellbook is listed as removed and not sent",
   await snap(page, "stale-saved");
 });
 
-// qki.43: a spell prepared several times is one row with a count; rows are sorted by name.
+// a spell prepared several times is one row with a count; rows are sorted by name.
 test("a repeated spell shows once with a count that drops as copies are cast; rows are alphabetical", async ({
   page,
   stack,

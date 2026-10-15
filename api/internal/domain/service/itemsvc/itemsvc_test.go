@@ -168,7 +168,7 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, snap.Before))
 }
 
-// A snapshot written before qki.13 (count only) cannot recreate a missing item.
+// A snapshot written before the one item model (count only) cannot recreate a missing item.
 func TestRestorers_MissingItemWithoutDataFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)

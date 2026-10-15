@@ -160,7 +160,7 @@ func TestVoid_RestoresBeforeState(t *testing.T) {
 	assert.Equal(t, 0, round(t, db, charID))
 }
 
-// Pop-only (critical-qki.38): any older entry is refused, even when the newer
+// Pop-only: any older entry is refused, even when the newer
 // one touches other state; popping newest first unwinds the state in order.
 func TestVoid_OnlyTheLatestEntry(t *testing.T) {
 	db := openDB(t)
@@ -227,7 +227,7 @@ func TestVoid_AtomicWithRestore(t *testing.T) {
 	}
 }
 
-// Note-only amend and pop-only void on real SQLite (critical-qki.38).
+// Note-only amend and pop-only void on real SQLite.
 func TestAmendNoteAndPop_HPTotal(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)

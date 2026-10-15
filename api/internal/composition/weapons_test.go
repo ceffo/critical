@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The weapon editor on the real stack (critical-qki.32): each add / edit /
+// The weapon editor on the real stack: each add / edit /
 // remove is one log entry, only the newest entry can be popped, and the
 // attack math reads the edited weapon on the next attack.
 

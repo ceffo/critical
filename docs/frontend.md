@@ -77,7 +77,7 @@ flowchart TD
   (`TABS`); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
 - Buffs: every change (add, edit rounds/charges, "Absorbed" for charge buffs, dismiss, Next
   Round) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
-  stack (critical-qki.38): only the newest non-voided entry shows Void; every entry has Note
+  stack: only the newest non-voided entry shows Void; every entry has Note
   (the only amend, shown in italics under the line); values are never edited in the log. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The header's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
@@ -90,15 +90,15 @@ flowchart TD
   situational modifier. The result card labels each modifier and damage term by its `kind`
   (`result.mods.*`); attack log entries are rendered from their payload (`lib/logSummary.ts`).
   An attack refreshes the table state (log, item counts), so voiding it shows the arrow back.
-- Inventaire workspace (`InventoryPanel.tsx`, critical-qki.13): one list, each row name, magical bonus
+- Inventaire workspace (`InventoryPanel.tsx`): one list, each row name, magical bonus
   ("+2"), effect dice, type, behaviour badge (Stock / Charges / Daily), − (uses one through
   `stores/roll.ts` `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and +
   on stock items only (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`). A charges
   item spent to 0 is gone from the list until its use is popped. ✎ edits a row in place and
-  "Add item" opens the same form (`ItemForm.tsx`, critical-qki.31); 🗑 removes. The form only parses
+  "Add item" opens the same form (`ItemForm.tsx`); 🗑 removes. The form only parses
   numbers (`lib/itemForm.ts`); the server validates and the message it returns for a field is shown
   under that field (`stores/table.ts` `submit`, `ApiError.field`). Edits send only the changed fields.
-- The Inventaire workspace also lists the weapons (`WeaponsSection.tsx`, critical-qki.32): name, dice,
+- The Inventaire workspace also lists the weapons (`WeaponsSection.tsx`): name, dice,
   to-hit and damage bonus, melee / missile, ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
   `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
   refreshes the weapons store, so the Attack picker follows.

@@ -1,7 +1,7 @@
 // Mirrors api/internal/rest/handler/itemhdl (ItemDTO, UseResultDTO, RestockResultDTO, ChangeDTO, ItemBody).
 
 /**
- * How an item's count behaves (critical-qki.13): stock is used and restocked (stays at 0),
+ * How an item's count behaves: stock is used and restocked (stays at 0),
  * charges is used only (gone at 0), daily is used only and refilled by a long rest.
  */
 export type ItemBehaviour = "stock" | "charges" | "daily";

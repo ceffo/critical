@@ -33,7 +33,7 @@ func TestLogEndpoints_WireShape(t *testing.T) {
 		"corrections":[{"id":1,"kind":"amend","hpDelta":-12,"source":"orc axe","createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
 
-	// Note-only amend (critical-qki.38): the note is the only field read.
+	// Note-only amend: the note is the only field read.
 	note := "DM: axe, not club"
 	noted := actionlog.Entry{
 		ID: 5, CharacterID: 1, Round: 2, Kind: actionlog.KindBuffChange, Summary: "Activated Haste", CreatedAt: at,

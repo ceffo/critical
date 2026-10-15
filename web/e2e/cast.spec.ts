@@ -95,14 +95,45 @@ test("casting Fireball rolls 10d6 and notes the save for the DM", async ({
 });
 
 test("a low-confidence spell shows its text only", async ({ page, stack }) => {
-  await prepare(stack.apiUrl, ["wall_of_ice"]);
+  await prepare(stack.apiUrl, ["cloudkill"]);
   await openSpells(page);
-  await page.getByRole("button", { name: "Cast Wall of Ice" }).click();
+  await page.getByRole("button", { name: "Cast Cloudkill" }).click();
   await expect(resultCard(page).getByTestId("cast-text-only")).toContainText(
     "add a buff by hand",
   );
   await expect(page.locator('[data-testid="buff"]')).toHaveCount(0);
   await snap(page, "low-confidence");
+});
+
+test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the option", async ({
+  page,
+  stack,
+}) => {
+  await prepare(stack.apiUrl, ["wall_of_ice"]);
+  await openSpells(page);
+  const level4 = page.getByRole("region", { name: "Level 4" });
+  const option = level4.getByLabel("Cast-time option");
+  await expect(option).toHaveValue("ice_plane"); // the first is the default
+  await option.selectOption("ice_sheet");
+  await expect(level4.getByTestId("slot-dice")).toHaveText("3d10 cold");
+  await snap(page, "wall-of-ice-option");
+  await level4.getByRole("button", { name: "Cast Wall of Ice" }).click();
+
+  const card = resultCard(page);
+  await expect(card.getByTestId("cast-mode")).toHaveText(
+    "Option: Ice sheet",
+  );
+  const damage = card.getByTestId("cast-damage");
+  await expect(damage).toContainText("1 × 3d10");
+  const total = Number(
+    await damage.getByTestId("cast-damage-total").textContent(),
+  );
+  expect(total).toBeGreaterThanOrEqual(3);
+  expect(total).toBeLessThanOrEqual(30);
+  await expect(
+    logEntry(page, `Cast Wall of Ice: Ice sheet, ${total} cold damage`),
+  ).toBeVisible();
+  await snap(page, "wall-of-ice-sheet");
 });
 
 test("Strength cast on me by a party wizard, found by its French name; a saved effect joins it", async ({
@@ -133,7 +164,9 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   // A saved effect from the same popover.
   await addBuff(page, { name: "e2e Ward", rounds: 5, save: true });
   const saved = await openAddEffect(page, "Saved effect");
-  await saved.getByRole("button", { name: "Add saved effect e2e Ward" }).click();
+  await saved
+    .getByRole("button", { name: "Add saved effect e2e Ward" })
+    .click();
   await expect(buffBadge(page, "e2e Ward")).toHaveCount(2);
 
   for (const vp of [
@@ -186,7 +219,9 @@ test("a long rest is logged; popping it, then the cast, walks the slots back", a
   await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
   await expect(logEntry(page, "Long rest: 1 spell slots")).toBeVisible();
 
-  await expect(logEntry(page, "Cast Haste").getByRole("button", { name: "Void" })).toHaveCount(0);
+  await expect(
+    logEntry(page, "Cast Haste").getByRole("button", { name: "Void" }),
+  ).toHaveCount(0);
   await snap(page, "void-not-offered-after-long-rest");
   await voidEntry(page, "Long rest: 1 spell slots");
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
@@ -319,9 +354,13 @@ test("cast, heal, cast: pop the last cast, then the heal; HP undo is off under a
 
   // Only the newest entry (the Stoneskin cast) offers Void.
   for (const text of ["Cast Haste", "e2e cure light", "e2e troll"]) {
-    await expect(logEntry(page, text).getByRole("button", { name: "Void" })).toHaveCount(0);
+    await expect(
+      logEntry(page, text).getByRole("button", { name: "Void" }),
+    ).toHaveCount(0);
   }
-  await expect(logEntry(page, "Cast Stoneskin").getByRole("button", { name: "Void" })).toHaveCount(1);
+  await expect(
+    logEntry(page, "Cast Stoneskin").getByRole("button", { name: "Void" }),
+  ).toHaveCount(1);
   await expect(undo).toBeDisabled();
   await expect(hint).toContainText("Latest entry: “Cast Stoneskin");
   await expect(hint).toContainText("Undo it from the log first.");
@@ -336,7 +375,9 @@ test("cast, heal, cast: pop the last cast, then the heal; HP undo is off under a
   await voidEntry(page, "e2e cure light");
   await expect.poll(() => currentHp(page)).toBe(max - 9);
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
-  await expect(logEntry(page, "Cast Haste").getByRole("button", { name: "Void" })).toHaveCount(1);
+  await expect(
+    logEntry(page, "Cast Haste").getByRole("button", { name: "Void" }),
+  ).toHaveCount(1);
   await expect(undo).toBeDisabled();
   await snap(page, "popped-cast-then-heal");
 });

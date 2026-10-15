@@ -6,6 +6,7 @@ import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
+import { modeName } from "@/lib/spellMode";
 import { labelClass } from "./fieldStyles";
 
 /** One die, as a small tile. */
@@ -89,6 +90,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
   return (
     <div className="flex flex-col gap-3" data-testid="cast-result">
       <div className="text-sm text-muted-foreground">{heading}</div>
+      {r.mode && (
+        <p className="text-sm" data-testid="cast-mode">
+          {t("result.cast.mode", { mode: modeName(t, r.spellId, r.mode) })}
+        </p>
+      )}
       {r.spell?.class && (
         <div className="text-xs text-muted-foreground" data-testid="cast-spell-ident">
           {r.spell.class} · {t("lookup.levelShort", { level: r.spell.level })}

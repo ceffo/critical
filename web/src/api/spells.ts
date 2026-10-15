@@ -17,6 +17,8 @@ export interface CastOptions {
   itemId?: string;
   /** A spell with an attack roll: the target's AC. */
   targetAc?: number;
+  /** A spell with cast-time modes: the mode's key (omitted: the first). */
+  mode?: string;
 }
 
 /** Spend slot `index`. */
@@ -24,9 +26,9 @@ export function castSpell(index: number, opts: CastOptions = {}): Promise<CastRe
   return post<CastResult>(`/api/spells/${index}/cast`, opts);
 }
 
-/** Apply a spell a party member cast on the Bard, at their caster level. */
-export function receiveSpell(spellId: string, casterLevel: number): Promise<CastResult> {
-  return post<CastResult>("/api/spells/receive", { spellId, casterLevel });
+/** Apply a spell a party member cast on the Bard, at their caster level (`mode`: the mode they picked). */
+export function receiveSpell(spellId: string, casterLevel: number, mode?: string): Promise<CastResult> {
+  return post<CastResult>("/api/spells/receive", { spellId, casterLevel, mode });
 }
 
 export function resetSpellSlots(): Promise<SpellSlot[]> {

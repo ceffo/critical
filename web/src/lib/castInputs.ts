@@ -1,8 +1,8 @@
 // What casting one slot asks of the player, from the spellbook's cast fields (the spell effects
-// data: slot_splits, consume_item_type, attack_roll). No game rule is decided here: the server
+// data: slot_splits, consume_item_type, attack_roll, modes). No game rule is decided here: the server
 // validates every cast; this only picks which inputs to show and what to send.
 import type { CastOptions } from "@/api/spells";
-import type { SpellbookEntry, SpellSlot, SpendableItem } from "@/types/spells";
+import type { SpellbookEntry, SpellMode, SpellSlot, SpendableItem } from "@/types/spells";
 
 /** The player's inputs for one slot, as typed. */
 export interface CastForm {
@@ -12,6 +12,8 @@ export interface CastForm {
   split?: string;
   acText?: string;
   itemPick?: string;
+  /** The key of the cast-time mode picked. */
+  mode?: string;
 }
 
 export interface CastPlan {
@@ -23,6 +25,9 @@ export interface CastPlan {
   /** Items the spell can spend; a select is shown when there are several. */
   spendable: SpendableItem[];
   itemId?: string;
+  /** Cast-time modes to pick from (the first is the default) and the one picked. */
+  modes: SpellMode[];
+  mode?: SpellMode;
   /** Cast is disabled: slot used, no spell picked for a blank slot, or no target AC when needed. */
   blocked: boolean;
   options: Omit<CastOptions, "onSelf">;
@@ -42,6 +47,8 @@ export function planCast(
   const targetAc = /^-?\d+$/.test(acText) ? Number(acText) : undefined;
   const spendable = needs?.items ?? [];
   const itemId = form.itemPick ?? spendable[0]?.id;
+  const modes = needs?.modes ?? [];
+  const mode = modes.find((m) => m.key === form.mode) ?? modes[0];
   const blocked =
     slot.used || (blank && !form.pick) || (needs?.attack_roll === true && targetAc === undefined);
   return {
@@ -51,6 +58,8 @@ export function planCast(
     targetAc,
     spendable,
     itemId,
+    modes,
+    mode,
     blocked,
     options: {
       spellId: blank ? form.pick : undefined,
@@ -58,6 +67,7 @@ export function planCast(
       targetAc: needs?.attack_roll ? targetAc : undefined,
       // One item left: the server takes it; none: the server refuses with its message.
       itemId: spendable.length > 1 ? itemId : undefined,
+      mode: mode?.key,
     },
   };
 }

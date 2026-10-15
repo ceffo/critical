@@ -305,6 +305,8 @@
     "extraBlank": "Extra slot (pick a spell)",
     "extraPick": "Pick a spell",
     "splitChoice": "Extra slots granted",
+    "modeChoice": "Cast-time option",
+    "modeChoiceFor": "Option of {{name}}",
     "splitLevel": "level {{level}}",
     "splitCount": "{{count}} × level {{level}}",
     "targetAc": "Target AC",
@@ -335,6 +337,23 @@
     "receiveLabel": "Apply {{name}}",
     "receiveHint": "Type part of a spell name (English or French).",
     "receiveMore": "{{count}} more, refine your search"
+  },
+  "spellMode": {
+    "withDamage": "{{mode}}: {{damage}}",
+    "noDamage": "no damage",
+    "wall_of_ice": {
+      "ice_plane": "Ice plane",
+      "hemisphere": "Hemisphere",
+      "ice_sheet": "Ice sheet"
+    },
+    "meteor_swarm": {
+      "large_spheres": "4 large spheres",
+      "small_spheres": "8 small spheres"
+    },
+    "ice_storm": {
+      "hail": "Hail",
+      "sleet": "Sleet"
+    }
   },
   "spellDice": {
     "typed": "{{dice}} {{type}}",
@@ -391,6 +410,7 @@
     "noSelection": "Select a spell to see it here.",
     "atLevel": "At level {{level}}",
     "damage": "Damage",
+    "damageMode": "Damage ({{mode}})",
     "castingTime": "Casting time",
     "range": "Range",
     "duration": "Duration",
@@ -532,6 +552,7 @@
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
+      "mode": "Option: {{mode}}",
       "receivedHeading": "{{name}} cast on you, caster level {{casterLevel}}",
       "attackNeeds": "Needs {{needed}} or more against AC {{ac}} (THAC0 {{thac0}}), no critical.",
       "itemSpent": "Spent: {{name}} ({{left}} left)",
@@ -1042,6 +1063,7 @@
     "item_not_restockable": "That item cannot be restocked.",
     "slot_already_used": "That spell slot is already used.",
     "invalid_slot_index": "That spell slot does not exist.",
+    "unknown_spell_mode": "That spell has no such option.",
     "not_in_spellbook": "That spell is not in the spellbook.",
     "entry_already_voided": "That entry is already voided.",
     "entry_not_amendable": "That entry cannot be amended.",

@@ -100,5 +100,11 @@
   "name": "Detect Magic",
   "level": 1,
   "sheet": "Détection de la magie"
+ },
+ {
+  "id": "cloudkill",
+  "name": "Cloudkill",
+  "level": 5,
+  "sheet": "Nuage tueur"
  }
 ]

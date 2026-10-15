@@ -38,6 +38,7 @@ import {
   type SaveView,
 } from "@/lib/filCard";
 import { spellName } from "@/i18n/spellName";
+import { modeName } from "@/lib/spellMode";
 import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
 import type { RollResult, SaveCategory } from "@/types/combat";
 import type { UseResult } from "@/types/items";
@@ -721,6 +722,11 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
           ? t("log.cast.received", { spell, level: c.casterLevel })
           : t("log.cast.cast", { spell })}
       </div>
+      {c.mode && (
+        <p className="text-sm" data-testid="cast-entry-mode">
+          {t("result.cast.mode", { mode: modeName(t, c.spellId, c.mode) })}
+        </p>
+      )}
       {c.attack && (
         <div className="flex items-center gap-3">
           <HexDie value={c.attack.d20} label={t("fil.d20", { value: c.attack.d20 })} />

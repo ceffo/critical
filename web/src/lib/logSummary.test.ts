@@ -598,6 +598,16 @@ describe("cast entries", () => {
   const cast = (extra: object) =>
     entry("cast", { action: "cast", spellId: "x_spell", spell: "X Spell", casterLevel: 15, ...extra });
 
+  it("names the cast-time mode (en/fr); an unknown key reads as its words", async () => {
+    const e = entry("cast", {
+      action: "cast", spellId: "wall_of_ice", spell: "Wall of Ice", casterLevel: 15, mode: "ice_sheet",
+      damage: { total: 19, type: "cold" },
+    });
+    expect(entryText(e, await makeT("en"))).toBe("Cast Wall of Ice: Ice sheet, 19 cold damage");
+    expect(entryText(e, await makeT("fr"))).toContain("Plaque de glace");
+    expect(entryText(cast({ mode: "some_mode" }), await makeT("en"))).toBe("Cast X Spell: some mode");
+  });
+
   it("renders the extra slots a cast granted (en/fr)", async () => {
     const e = cast({ extraSlots: [1, 1, 1] });
     expect(entryText(e, await makeT("en"))).toBe("Cast X Spell: extra slots 3 × level 1");

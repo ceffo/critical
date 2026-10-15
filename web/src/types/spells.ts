@@ -105,6 +105,15 @@ export interface SpellDamagePart {
   save: DamagePartSave;
 }
 
+/**
+ * Mirrors spellhdl.SpellModeDTO: a cast-time mode the caster picks (ADR 0008 step 14), worded by
+ * its key, and the damage a cast in it rolls (absent: none).
+ */
+export interface SpellMode {
+  key: string;
+  damage?: SpellDamage;
+}
+
 export interface Spell {
   /** Unique key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
   id: string;
@@ -128,6 +137,8 @@ export interface Spell {
   values?: SpellValues;
   /** The damage a cast rolls at caster_level; absent when it rolls none or no level is known. */
   damage?: SpellDamage;
+  /** Cast-time modes, each with its damage at caster_level (the first is the default; `damage` is its). */
+  modes?: SpellMode[];
 }
 
 /** Mirrors spellprephdl.SpellbookEntryDTO. The cast fields come from the spell effects data. */
@@ -143,6 +154,8 @@ export interface SpellbookEntry {
   attack_roll?: boolean;
   /** The damage a cast rolls at the Bard's level; absent when it rolls none. */
   damage?: SpellDamage;
+  /** Cast-time modes to pick from, each with its damage (the first is the default); absent: none. */
+  modes?: SpellMode[];
   /** Inventory items the spell can spend now, as the server decides; absent when none. */
   items?: SpendableItem[];
 }
@@ -226,6 +239,8 @@ export interface CastResult {
   level: number;
   casterLevel: number;
   slotIndex?: number;
+  /** The key of the cast-time mode the spell was cast in; absent for a spell without modes. */
+  mode?: string;
   kind?: "buff" | "damage" | "utility";
   confidence?: "high" | "low";
   target?: string;

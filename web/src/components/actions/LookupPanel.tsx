@@ -10,6 +10,7 @@ import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellName } from "@/i18n/spellName";
 import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
 import { damageFormula, damageText } from "@/lib/spellDice";
+import { modeName } from "@/lib/spellMode";
 import { classLabel, sphereLabel, spheresLabel, translateValue } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -67,18 +68,24 @@ function SpellDetail({ spell }: { spell: Spell }) {
     spheresLabel(t, spell.sphere),
     spell.components,
   ].filter(Boolean);
-  // The dice row: the damage a cast rolls (one instance to the composer), then the stats with dice.
+  // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
+  // mode with damage for a spell with modes, then the stats with dice.
+  const damages = spell.modes
+    ? spell.modes.flatMap((m) =>
+        m.damage
+          ? [{ key: `damage-${m.key}`, label: t("lookup.damageMode", { mode: modeName(t, spell.id, m.key) }), damage: m.damage }]
+          : [],
+      )
+    : spell.damage
+      ? [{ key: "damage", label: t("lookup.damage"), damage: spell.damage }]
+      : [];
   const dice: { key: string; label: string; text: string; formula: string }[] = [
-    ...(spell.damage
-      ? [
-          {
-            key: "damage",
-            label: t("lookup.damage"),
-            text: damageText(t, spell.damage),
-            formula: damageFormula(spell.damage),
-          },
-        ]
-      : []),
+    ...damages.map((d) => ({
+      key: d.key,
+      label: d.label,
+      text: damageText(t, d.damage),
+      formula: damageFormula(d.damage),
+    })),
     ...statDice(spell, unit).map((d) => ({
       key: d.key,
       label: t(`lookup.${d.key}`),

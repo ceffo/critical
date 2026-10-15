@@ -214,7 +214,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(entry).toContainText(/\(AC -20 → 10: MISS → (HIT|CRIT)\)/);
   await expect(entry).toContainText("Amended");
   await expect(card.getByTestId("ammo-left")).toHaveText(`Arrows +2: ${before - 1} left`);
-  expect(await selectedAmmoCount(page)).toBe(before - 1);
+  await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
   await snap(page, "attack-ac-corrected");
 
   // A second correction still reads from the rolled AC and outcome.
@@ -239,7 +239,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(card.getByTestId("verdict")).toHaveText("Hit");
   await expect(card.getByTestId("total-damage")).toHaveText(damage!);
   await expect(entry).toContainText(/\(AC -20 → 10: MISS → (HIT|CRIT)\)/);
-  expect(await selectedAmmoCount(page)).toBe(before - 1);
+  await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
 
   // In French: the form and the log line.
   await chooseLanguage(page, "fr");
@@ -269,7 +269,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(card.getByTestId("ac-corrected")).toHaveCount(0);
   await expect(acField).toHaveValue("-20");
   await expect(entry).toContainText("Short Bow +2 (Arrows +2) vs AC -20: miss");
-  expect(await selectedAmmoCount(page)).toBe(before - 1);
+  await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
   await snap(page, "attack-ac-correction-undone");
   // The two corrections before it, then the first one: the attack is as rolled, still logged.
   for (const step of ["9 → -20", "10 → 9", "-20 → 10"]) {

@@ -15,6 +15,7 @@ import (
 	"github.com/stephenafamo/bob/dialect/sqlite/sm"
 
 	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -150,14 +151,19 @@ func toSpell(r *bobmodels.Spell) spellsvc.Spell {
 func toSpellText(r *bobmodels.Spell) spellsvc.Spell {
 	return spellsvc.Spell{
 		ID: r.Key.GetOrZero(), Name: r.Name, NameFR: r.NameFR.GetOrZero(), Class: r.Class, Level: int(r.Level),
-		School:        r.School.GetOrZero(),
-		Sphere:        r.Sphere.GetOrZero(),
-		CastingTime:   r.CastingTime.GetOrZero(),
-		Range:         r.Range.GetOrZero(),
-		Duration:      r.Duration.GetOrZero(),
-		AreaOfEffect:  r.AreaOfEffect.GetOrZero(),
-		Components:    r.Components.GetOrZero(),
-		SavingThrow:   r.SavingThrow.GetOrZero(),
+		School:       r.School.GetOrZero(),
+		Sphere:       r.Sphere.GetOrZero(),
+		CastingTime:  r.CastingTime.GetOrZero(),
+		Range:        r.Range.GetOrZero(),
+		Duration:     r.Duration.GetOrZero(),
+		AreaOfEffect: r.AreaOfEffect.GetOrZero(),
+		Components:   r.Components.GetOrZero(),
+		SavingThrow:  r.SavingThrow.GetOrZero(),
+		StatsFR: catalogue.StatsFR{
+			CastingTime: r.CastingTimeFR.GetOrZero(), Range: r.RangeFR.GetOrZero(),
+			Duration: r.DurationFR.GetOrZero(), AreaOfEffect: r.AreaOfEffectFR.GetOrZero(),
+			Components: r.ComponentsFR.GetOrZero(), SavingThrow: r.SavingThrowFR.GetOrZero(),
+		},
 		Description:   r.Description.GetOrZero(),
 		DescriptionFR: r.DescriptionFR.GetOrZero(),
 		Source:        r.Source.GetOrZero(),

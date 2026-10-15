@@ -23,14 +23,15 @@ is only ever appended to by play.
 
 ## Decision
 
-1. **The catalogue is one JSON artifact, format 1.** Shape, enforced by the committed JSON Schema
+1. **The catalogue is one JSON artifact, format 2** (format 1 until the amendment below). Shape,
+   enforced by the committed JSON Schema
    [`schemas/catalogue.schema.json`](../../schemas/catalogue.schema.json) (shape only, no book text):
 
    ```json
-   { "format": 1, "version": "2026-10-15", "spells": [ { "...": "spell" } ] }
+   { "format": 2, "version": "2026-10-15", "spells": [ { "...": "spell" } ] }
    ```
 
-   - `format` (required, integer): `1`. An importer accepts only the formats it knows and refuses
+   - `format` (required, integer): `2`. An importer accepts only the formats it knows and refuses
      any other with an error that names the format it found.
    - `version` (required, string): the UTC build date `YYYY-MM-DD`, with `.N` appended when several
      builds happen the same day (`2026-10-15.2`). It is compared for equality only, never ordered:
@@ -45,7 +46,7 @@ is only ever appended to by play.
      | `level` | yes | integer 1 to 9 |
      | `school` | yes | raw book text, may hold several (`"Alteration, Evocation"`) |
      | `sphere` | no | Priest spells only, raw text; omitted for Wizard spells |
-     | `casting_time`, `range`, `duration`, `area_of_effect`, `components`, `saving_throw` | yes | the six raw stat texts, exactly the fields `spellstats.Raw` / the current `seeds/spells.json` loader read; non-empty (use the book's own `"None"`/`"Special"`); the typed form is parsed by the API at import, never shipped |
+     | `casting_time`, `range`, `duration`, `area_of_effect`, `components`, `saving_throw` | yes | the six raw stat texts, `{ "en": "…", "fr": "…" }` since format 2 (a plain English string in format 1); `en` is exactly what `spellstats.Raw` reads, non-empty (use the book's own `"None"`/`"Special"`); `fr` optional; the typed form is parsed by the API at import from `en` only, never shipped |
      | `name` | yes | `{ "en": "…", "fr": "…" }`, `en` required, `fr` optional |
      | `description` | yes | `{ "en": "…", "fr": "…" }`, `en` required, `fr` optional |
      | `source` | yes | book of the English text, 2 to 8 upper-case characters (`PHB`, `TOM`, …) |
@@ -240,3 +241,39 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 - **Descriptions** are rendered by a small parser of exactly the step 1 subset
   (`web/src/lib/spellMarkdown.ts`) into React text, never HTML; a block that does not fit the subset
   is shown as text rather than dropped.
+
+## Amendment: format 2, French stat texts (2026-10-15, critical-y9e0.11)
+
+The French UI showed the six stat values in English ("1 creature") although the French books print
+them. Two ways were weighed: French text from the catalogue, or a UI formatter of the typed stats.
+The typed stats do not cover every value (special, conditional and free text), so the French
+book's text is shipped, as for names and descriptions, and the UI keeps no rules of its own.
+
+- **Format 2.** Each of the six stat fields is a localized object `{ "en": "…", "fr": "…" }`,
+  like `name` (`$defs/stat` in the schema). The shape is the same as name and description, so the
+  rule is the same: the reader shows `fr` when present and falls back to `en`, per field. A sibling
+  `stats_fr` object was rejected: it would put one field in two places.
+- **Format 1 is still read.** The importer maps a format 1 artifact to format 2 (each stat string
+  `s` read as `{ "en": s }`) and validates it against the one schema, so an API with this change
+  runs on the artifact published before it and on the new one; `catalogue_meta` records the format
+  of the file read. Format 1 support can go once every deployment has a format 2 artifact.
+- **Broken French text is omitted, not shipped.** The builder (`critical-rulebooks`) leaves `fr`
+  out of a stat when the French book lacks it or the OCR broke it, by generic rules it checks
+  and reports (empty value; a die roll the OCR read as digits, such as `2412` for `2d12`, or the
+  English value has a die roll the French one lacks; a stray `°`, `$`, `©`, `?` or `"`, which the
+  OCR prints for the foot mark, `S` or an unreadable character; a digit in the components). A
+  French value that differs from the English one in substance (another range in the French book)
+  is the French book's and is kept.
+- **Storage and API.** Six nullable columns `casting_time_fr` … `saving_throw_fr` (migration 028),
+  NULL when the artifact has no French text. Spell payloads add `casting_time_fr`, `range_fr`,
+  `duration_fr`, `area_of_effect_fr`, `components_fr`, `saving_throw_fr`, each omitted when absent
+  (`TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback`).
+- **UI.** The lookup's stat grid and the components of its meta line show the French text in the
+  French UI; a stat without one shows the English text, with the common English values labelled
+  in French as before (`lookup.values`: Touch, None, Instantaneous…) (`statText`,
+  `componentsText` in `web/src/lib/lookupLabels.ts`). The value computed at the caster level is
+  still worded by the client from the typed stats. Text is wrapped, never cut.
+- Tests: format 2 parse and format 1 upgrade `TestParse_ReadsFormat1`, refusals
+  `TestParse_Step2_Refusals`; schema `TestSchema_Shape`; storage `TestImportCatalogue_FreshDatabase`,
+  `TestImportCatalogue_Step4_NewVersionUpserts` (French stat added, dropped), typed stats from
+  English only `TestImportCatalogue_Step6_TypedStatsParsedAtImport`.

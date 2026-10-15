@@ -289,12 +289,12 @@ type SpellSlotDTO struct {
 }
 
 // SpellDTO is the wire shape of a spell. The six stat fields keep their raw
-// PHB text; Stats is their typed form and Values the computed values at
-// CasterLevel (domain types carry the JSON tags). Name and Description are
-// English; NameFR and DescriptionFR are the catalogue's French texts, absent
-// when it has none (the client falls back to English per field, ADR 0021).
-// Descriptions are in the catalogue's Markdown subset (paragraphs, bullet
-// lists, pipe tables).
+// PHB text; Stats is their typed form (parsed from the English text) and
+// Values the computed values at CasterLevel (domain types carry the JSON
+// tags). Name, Description and the six stat fields are English; their *FR
+// siblings are the catalogue's French texts, absent when it has none (the
+// client falls back to English per field, ADR 0021). Descriptions are in
+// the catalogue's Markdown subset (paragraphs, bullet lists, pipe tables).
 type SpellDTO struct {
 	// ID is the spell's catalogue key; cast and receive take it.
 	ID           string `json:"id"`
@@ -310,7 +310,15 @@ type SpellDTO struct {
 	AreaOfEffect string `json:"area_of_effect"`
 	Components   string `json:"components"`
 	SavingThrow  string `json:"saving_throw"`
-	Description  string `json:"description"`
+	// The French texts of the six stats, each absent when the catalogue has
+	// none (the client falls back to the English field).
+	CastingTimeFR  string `json:"casting_time_fr,omitempty"`
+	RangeFR        string `json:"range_fr,omitempty"`
+	DurationFR     string `json:"duration_fr,omitempty"`
+	AreaOfEffectFR string `json:"area_of_effect_fr,omitempty"`
+	ComponentsFR   string `json:"components_fr,omitempty"`
+	SavingThrowFR  string `json:"saving_throw_fr,omitempty"`
+	Description    string `json:"description"`
 	// DescriptionFR is absent when the catalogue has no French text.
 	DescriptionFR string `json:"description_fr,omitempty"`
 	// Source is the book code of the English text (PHB, TOM, ...; WEB when
@@ -469,6 +477,8 @@ func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
 		ID: s.ID, Name: s.Name, NameFR: s.NameFR, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
 		CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
 		AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
+		CastingTimeFR: s.StatsFR.CastingTime, RangeFR: s.StatsFR.Range, DurationFR: s.StatsFR.Duration,
+		AreaOfEffectFR: s.StatsFR.AreaOfEffect, ComponentsFR: s.StatsFR.Components, SavingThrowFR: s.StatsFR.SavingThrow,
 		Description: s.Description, DescriptionFR: s.DescriptionFR, Source: s.Source,
 		Stats: s.Stats, CasterLevel: casterLevel,
 	}

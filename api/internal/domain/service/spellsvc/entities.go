@@ -1,10 +1,13 @@
 package spellsvc
 
-import "github.com/ceffo/critical/api/internal/domain/spellstats"
+import (
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/spellstats"
+)
 
-// Spell is a catalogue spell (ADR 0021): English texts, with the French name
-// and description when the catalogue has them (empty otherwise: the reader
-// falls back to English).
+// Spell is a catalogue spell (ADR 0021): English texts, with the French name,
+// description and stat texts when the catalogue has them (empty otherwise:
+// the reader falls back to English, per field).
 type Spell struct {
 	// ID is the spell's catalogue key, stable across catalogue versions.
 	ID           string
@@ -20,7 +23,10 @@ type Spell struct {
 	AreaOfEffect string
 	Components   string
 	SavingThrow  string
-	Description  string
+	// StatsFR are the French texts of the six stats above, each empty when
+	// the catalogue has none.
+	StatsFR     catalogue.StatsFR
+	Description string
 	// DescriptionFR is in the catalogue's description subset, like Description.
 	DescriptionFR string
 	// Source is the book code of the English text (PHB, TOM, ...; WEB for

@@ -82,9 +82,8 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    A heal that was logged as 0 at full HP is undone like any other. (*Amended by
    [ADR 0018](0018-transactions-and-undo.md) step 3:* `POST /api/hp/undo` is retired; the HP panel's undo is the global undo
    and pops whatever transaction is on top.)
-   Tests: `TestUndoLast`, `TestVoidLatest` (actionlogsvc: "empty log", "pops the newest", "newest
-   is another kind"), `TestHPUndo_NothingToUndoIsNoop` (actionlogdal),
-   `TestLogStack_HPUndoOnlyPopsTheTop`, `TestHPCap_UndoHealLoggedAtFullHP`.
+   Tests: `TestOneUndo_HPPanelPopsWhateverIsOnTop` (composition),
+   `TestRetiredUndoEndpointsAreGone` (rest/router), `TestHPCap_UndoHealLoggedAtFullHP`.
 
 ## Consequences
 

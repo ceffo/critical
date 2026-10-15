@@ -30,9 +30,6 @@ type stateGetter interface {
 type eventAppender interface {
 	AppendEvent(ctx context.Context, characterID int64, delta int, source string) (*hpsvc.HPState, error)
 }
-type undoer interface {
-	UndoLast(ctx context.Context, characterID int64) (*hpsvc.HPState, error)
-}
 
 // CharacterIDFunc resolves the active character ID from the request context.
 // In single-character mode this is just a constant; future routes can derive
@@ -43,7 +40,6 @@ type CharacterIDFunc func(r *http.Request) int64
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc hpsvc.SVC) {
 	r.Get("/api/hp", render.Handle(GetHP(charID, svc)))
 	r.Post("/api/hp/event", render.Handle(AppendEvent(charID, svc)))
-	r.Post("/api/hp/undo", render.Handle(UndoLast(charID, svc)))
 }
 
 // GetHP returns the current HP state.
@@ -71,18 +67,6 @@ func AppendEvent(charID CharacterIDFunc, svc eventAppender) render.HandlerFunc {
 			return render.BadRequestError("invalid request body")
 		}
 		state, err := svc.AppendEvent(r.Context(), charID(r), body.Delta, body.Source)
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, toDTO(state))
-		return nil
-	}
-}
-
-// UndoLast voids the newest non-voided HP change in the action log.
-func UndoLast(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		state, err := svc.UndoLast(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}

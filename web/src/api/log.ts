@@ -18,8 +18,3 @@ export function undoLogEntry(expectedTopId: number): Promise<LogEntry> {
 export function amendLogEntry(id: number, note: string): Promise<LogEntry> {
   return post<LogEntry>(`/api/log/${id}/amend`, { note });
 }
-
-/** Pop an entry: only the newest non-voided one (restores any state it changed). */
-export function voidLogEntry(id: number): Promise<LogEntry> {
-  return post<LogEntry>(`/api/log/${id}/void`);
-}

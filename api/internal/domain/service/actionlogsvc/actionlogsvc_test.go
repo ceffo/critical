@@ -334,36 +334,6 @@ func TestVoid(t *testing.T) {
 	}
 }
 
-// VoidLatest pops the top of the stack only when it is of the asked kind.
-func TestVoidLatest(t *testing.T) {
-	t.Run("empty log", func(t *testing.T) {
-		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(0, false, nil).Once()
-		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
-		require.NoError(t, err)
-		assert.False(t, ok)
-	})
-	t.Run("pops the newest", func(t *testing.T) {
-		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(7, true, nil).Once()
-		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(7)).Return(hpEntry(7), nil).Once()
-		dal.EXPECT().InsertCorrection(mock.Anything, actionlog.Correction{ActionID: 7, Kind: actionlog.CorrectionVoid}).Return(nil).Once()
-		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
-		require.NoError(t, err)
-		assert.True(t, ok)
-	})
-	t.Run("newest is another kind", func(t *testing.T) {
-		svc, dal, _, _ := newSvc(t)
-		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(8, true, nil).Once()
-		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(8)).
-			Return(&actionlog.Entry{ID: 8, Round: 2, Kind: actionlog.KindBuffChange}, nil).Once()
-		ok, err := svc.VoidLatest(context.Background(), 1, actionlog.KindHPChange)
-		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-		assert.Contains(t, err.Error(), `the latest entry is not a hp_change, void #8 (buff_change, round 2) first`)
-		assert.False(t, ok)
-	})
-}
-
 func TestList_ClampsLimit(t *testing.T) {
 	cases := []struct{ in, want int }{{0, 50}, {-3, 50}, {10, 10}, {9999, 500}}
 	for _, c := range cases {

@@ -121,14 +121,20 @@ test("a server error is shown to the user", async ({ page, stack }) => {
   };
   const id = entries.find((e) => e.summary === "e2e stale entry")!.id;
   expect(
-    (await fetch(`${stack.apiUrl}/api/log/${id}/void`, { method: "POST" })).ok,
+    (
+      await fetch(`${stack.apiUrl}/api/log/undo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedTopId: id }),
+      })
+    ).ok,
   ).toBe(true);
 
   await entry.getByRole("button", { name: "Void" }).click();
   await entry.getByRole("button", { name: "Confirm" }).click();
 
   const alert = page.getByRole("alert");
-  await expect(alert).toContainText("already voided");
+  await expect(alert).toContainText(/nothing to undo|changed in the meantime/);
   await snap(page, "server-error");
   await alert.getByRole("button", { name: "Dismiss" }).click();
   await expect(alert).toHaveCount(0);

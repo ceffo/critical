@@ -111,25 +111,6 @@ func TestLogStack_VoidOlderEntryIsRefused(t *testing.T) {
 	}
 }
 
-// Undo last HP change pops like a void: refused while a newer entry of
-// another kind is on top.
-func TestLogStack_HPUndoOnlyPopsTheTop(t *testing.T) {
-	bs, ids, states := buildStack(t)
-	ctx := context.Background()
-	st, err := bs.HP.UndoLast(ctx, bs.CharacterID)
-	require.NoError(t, err)
-	assert.Equal(t, states[3].HP, st.CurrentHp)
-
-	_, err = bs.HP.UndoLast(ctx, bs.CharacterID)
-	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest, "the bow shot is on top now")
-	assert.Equal(t, states[3], stateOf(t, bs))
-	entries, err := bs.Log.List(ctx, bs.CharacterID, 2)
-	require.NoError(t, err)
-	assert.Equal(t, actionlog.StatusVoided, entries[0].Status(), "the damage, popped")
-	assert.Equal(t, ids[2], entries[1].ID)
-	assert.Equal(t, actionlog.StatusActive, entries[1].Status(), "the shot stays")
-}
-
 // Amend note OK, for every kind: the note changes, values and state don't.
 func TestLogStack_AmendNoteOnly(t *testing.T) {
 	bs, ids, states := buildStack(t)

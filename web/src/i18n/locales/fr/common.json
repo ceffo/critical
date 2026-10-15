@@ -61,8 +61,6 @@
     "sourcePlaceholder": "Source (facultative) : hache d'orque, potion...",
     "applyDamage": "Dégâts",
     "applyHeal": "Soins",
-    "undoLast": "Annuler la dernière modification de PV",
-    "undoBlocked": "Dernière entrée : « {{entry}} ». Annulez-la d’abord dans le journal.",
     "amountPlaceholder": "PV",
     "damageHint": "Appliquer en dégâts (Entrée)",
     "healHint": "Appliquer en soins (Maj+Entrée)",

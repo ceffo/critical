@@ -9,8 +9,3 @@ export function getHpState(): Promise<HpState> {
 export function appendHpEvent(delta: number, source: string): Promise<HpState> {
   return post<HpState>("/api/hp/event", { delta, source });
 }
-
-/** Void the newest non-voided HP change. */
-export function undoLastEvent(): Promise<HpState> {
-  return post<HpState>("/api/hp/undo");
-}

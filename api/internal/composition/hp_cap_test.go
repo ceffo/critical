@@ -120,8 +120,7 @@ func TestHPCap_UndoHealLoggedAtFullHP(t *testing.T) {
 	r := newHPRig(t)
 	_, e := r.change(8, "e2e potion at full")
 	require.Equal(t, 0, e.HPDelta)
-	st, err := r.bs.HP.UndoLast(context.Background(), r.bs.CharacterID)
-	require.NoError(t, err)
+	st := hpPanelUndo(t, r.bs)
 	assert.Equal(t, r.max, st.CurrentHp)
 	got, err := r.bs.Log.List(context.Background(), r.bs.CharacterID, 1)
 	require.NoError(t, err)
@@ -221,7 +220,7 @@ func TestHPFloor_VoidClampedEntryBelowTheTop(t *testing.T) {
 	assert.Equal(t, before-r.max, total, "HP is the ledger SUM")
 }
 
-// Undo of a clamped damage (global undo or HP undo) restores the exact HP
+// Undo of a clamped damage (global undo, which is also the HP panel's) restores the exact HP
 // before it, and undoing in order walks back each step.
 func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
 	r := newHPRig(t)
@@ -244,12 +243,10 @@ func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
 	// Clamped again, then popped by the HP block's undo.
 	hp, _ = r.change(-40, "ogre club again")
 	require.Equal(t, -10, hp)
-	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
-	require.NoError(t, err)
+	st = hpPanelUndo(t, r.bs)
 	assert.Equal(t, before, st.CurrentHp)
 
-	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
-	require.NoError(t, err)
+	st = hpPanelUndo(t, r.bs)
 	assert.Equal(t, r.max, st.CurrentHp)
 	assert.Equal(t, hpsvc.ConditionOK, st.Condition)
 }
@@ -271,8 +268,7 @@ func TestHP_NoSourceOnTheRealStack(t *testing.T) {
 	require.NotEmpty(t, st.Events)
 	assert.Empty(t, st.Events[0].Source)
 
-	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
-	require.NoError(t, err)
+	st = hpPanelUndo(t, r.bs)
 	assert.Equal(t, r.max, st.CurrentHp)
 }
 

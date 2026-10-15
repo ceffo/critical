@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { LogEntry, LogKind } from "@/types/log";
 
-// A fake server action stack: what GET /api/log, POST /api/log/undo, POST /api/log/{id}/void and
+// A fake server action stack: what GET /api/log, POST /api/log/undo and
 // the initiative reroll do to it (the rules themselves are Go tests). It lets the store be driven
 // through its real refresh path, as two clients would see the server.
 const server = vi.hoisted(() => {
@@ -46,10 +46,6 @@ vi.mock("@/api/log", () => ({
   undoLogEntry: async (expected: number) => {
     server.calls.push(`undo ${expected}`);
     server.pop(expected);
-  },
-  voidLogEntry: async (id: number) => {
-    server.calls.push(`void ${id}`);
-    server.pop(id);
   },
   amendLogEntry: async () => undefined,
 }));
@@ -143,9 +139,40 @@ describe("global undo against the server stack", () => {
     expect(await useTableStore.getState().voidEntry(topId()!)).toBe(true);
     expect(topId()).toBe(1);
     expect(await useTableStore.getState().undo()).toBe(true);
-    expect(server.calls).toEqual(["undo 3", "reroll", "void 4", "undo 1"]);
+    expect(server.calls).toEqual(["undo 3", "reroll", "undo 4", "undo 1"]);
     expect(topId()).toBeNull();
     expect(useTableStore.getState().error).toBeNull();
+  });
+
+  // ADR 0018 step 3: the HP panel's undo is the global undo, so an exposure or a cast on top is
+  // popped from it too (the HP panel and Annuler both call the store's undo).
+  it.each(["exposure", "cast"])(
+    "HP panel undo with %s on top",
+    async (kind) => {
+      server.push("hp_change");
+      server.push(kind);
+      await useTableStore.getState().refresh();
+
+      expect(await useTableStore.getState().undo()).toBe(true);
+      expect(server.calls).toEqual(["undo 2"]);
+      expect(server.rows[1].voided).toBe(true);
+      expect(topId()).toBe(1);
+    },
+  );
+
+  // ADR 0018 step 3: the row's Void sends its own id as the expected top; when another client
+  // acted since, the server refuses and nothing changes.
+  it("row Void with a stale top", async () => {
+    server.push("attack");
+    server.push("hp_change");
+    await useTableStore.getState().refresh();
+
+    server.push("cast"); // client A, after this client's last read
+    expect(await useTableStore.getState().voidEntry(2)).toBe(false);
+    expect(server.calls).toEqual(["undo 2"]);
+    expect(useTableStore.getState().error).toMatch(/newest entry changed/);
+    expect(server.rows.every((r) => !r.voided)).toBe(true);
+    expect(topId()).toBe(3); // refreshed: the next Void targets the new top
   });
 
   // ADR 0010 step 6: popping a correction gives the attack its previous payload; the card must

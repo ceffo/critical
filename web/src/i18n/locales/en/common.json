@@ -61,8 +61,6 @@
     "sourcePlaceholder": "Source (optional): orc axe, potion...",
     "applyDamage": "Damage",
     "applyHeal": "Healing",
-    "undoLast": "Undo last HP change",
-    "undoBlocked": "Latest entry: “{{entry}}”. Undo it from the log first.",
     "amountPlaceholder": "HP",
     "damageHint": "Apply as damage (Enter)",
     "healHint": "Apply as healing (Shift+Enter)",

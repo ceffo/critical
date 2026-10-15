@@ -153,17 +153,11 @@ var endpoints = []endpoint{
 	{"POST hp/event", "POST", "/api/hp/event", `{"delta":-1,"source":"x"}`, func(m *mocksSet, err error) {
 		m.hp.On("AppendEvent", anyArgs(4)...).Return(nil, err)
 	}},
-	{"POST hp/undo", "POST", "/api/hp/undo", "", func(m *mocksSet, err error) {
-		m.hp.On("UndoLast", anyArgs(2)...).Return(nil, err)
-	}},
 	{"GET log", "GET", "/api/log?limit=10", "", func(m *mocksSet, err error) {
 		m.log.On("List", anyArgs(3)...).Return(nil, err)
 	}},
 	{"POST log/{id}/amend", "POST", "/api/log/4/amend", `{"note":"x"}`, func(m *mocksSet, err error) {
 		m.log.On("Amend", anyArgs(4)...).Return(nil, err)
-	}},
-	{"POST log/{id}/void", "POST", "/api/log/4/void", "", func(m *mocksSet, err error) {
-		m.log.On("Void", anyArgs(3)...).Return(nil, err)
 	}},
 	{"GET log top", "GET", "/api/log", "", func(m *mocksSet, err error) {
 		m.log.On("List", anyArgs(3)...).Return(nil, nil)
@@ -305,11 +299,8 @@ func TestSpecialSentinels(t *testing.T) {
 		{"unknown spell mode", "POST spells/{id}/cast", fmt.Errorf("%w: Ice Storm has no mode \"fog\"", spelleffectsvc.ErrUnknownMode), 400, `{"code":"unknown_spell_mode","error":"unknown spell mode: Ice Storm has no mode \"fog\""}`},
 		{"no exposure", "POST spells/exposure", fmt.Errorf("%w: fireball", spelleffectsvc.ErrNoExposure), 400, `{"code":"no_exposure","error":"spell has no exposure damage: fireball"}`},
 		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"code":"invalid_slot_index","error":"invalid slot index: 2"}`},
-		{"void not the latest", "POST log/{id}/void", fmt.Errorf("%w: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest entry can be voided, void \"Round 2 → 3\" (round 2) first"}`},
-		{"hp undo not the latest", "POST hp/undo", fmt.Errorf("%w: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: the latest entry is not a hp_change, void \"Activated Haste\" (round 2) first"}`},
 		{"undo stale top", "POST log/undo", fmt.Errorf("%w: the newest entry is #5 (attack, round 2), not #4", actionlogsvc.ErrTopChanged), 409, `{"code":"log_top_changed","error":"the newest entry changed: the newest entry is #5 (attack, round 2), not #4"}`},
 		{"undo empty log", "POST log/undo", fmt.Errorf("%w: expected #4 on top", actionlogsvc.ErrNothingToUndo), 409, `{"code":"nothing_to_undo","error":"nothing to undo: expected #4 on top"}`},
-		{"void already voided", "POST log/{id}/void", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already voided: #4"}`},
 		{"amend already voided", "POST log/{id}/amend", fmt.Errorf("%w: #4", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already voided: #4"}`},
 		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, void this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, void this save and roll again"}`},
 		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already voided: #7"}`},
@@ -360,7 +351,6 @@ func TestRequestParsingErrors(t *testing.T) {
 		{"amend value delta", "POST", "/api/log/4/amend", `{"delta":-3}`, `only the note of an entry can be amended (got \"delta\"): void the entry and log it again`},
 		{"amend value with note", "POST", "/api/log/4/amend", `{"note":"x","source":"orc axe"}`, `only the note of an entry can be amended (got \"source\"): void the entry and log it again`},
 		{"amend payload", "POST", "/api/log/4/amend", `{"payload":{}}`, `only the note of an entry can be amended (got \"payload\"): void the entry and log it again`},
-		{"void bad id", "POST", "/api/log/0/void", "", "invalid log entry id"},
 		{"undo bad json", "POST", "/api/log/undo", "{", "invalid request body"},
 		{"undo no body", "POST", "/api/log/undo", "", "invalid request body"},
 		{"undo missing expected top", "POST", "/api/log/undo", `{}`, "expectedTopId is required (a positive entry id)"},

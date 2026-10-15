@@ -4,7 +4,7 @@ import { ArrowUUpLeft, Heart, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
-import { entryText } from "@/lib/logSummary";
+import { undoButtonState } from "@/lib/undoButton";
 import { fieldClass } from "./fieldStyles";
 
 /**
@@ -14,15 +14,14 @@ import { fieldClass } from "./fieldStyles";
  */
 export function QuickHp() {
   const { t } = useTranslation();
-  const { recordHp, undoHp, busy } = useTableStore();
+  const { recordHp, undo, busy } = useTableStore();
   const [amount, setAmount] = useState("");
   const [source, setSource] = useState("");
-  // The log is a stack: undo pops the newest entry, so it is
-  // only offered when that entry is an HP change (entries are newest first).
-  const top = useLogStore((st) =>
-    st.entries.find((e) => e.status !== "voided"),
-  );
-  const blockedBy = top && top.kind !== "hp_change" ? entryText(top, t) : null;
+  // One undo system (ADR 0018 step 3): this is the global undo, so it pops whatever is on top
+  // (an HP change, an exposure, a cast...) and its tooltip names it, like Annuler.
+  const topId = useLogStore((st) => st.topId);
+  const entries = useLogStore((st) => st.entries);
+  const undoState = undoButtonState(topId, entries, busy, t);
 
   const n = Number.parseInt(amount, 10);
   const valid = n > 0;
@@ -52,25 +51,15 @@ export function QuickHp() {
         <Button
           size="icon-xs"
           variant="ghost"
-          disabled={busy || blockedBy !== null}
-          aria-label={t("hp.undoLast")}
-          title={t("hp.undoLast")}
-          aria-describedby={blockedBy ? "hp-undo-hint" : undefined}
-          onClick={() => void undoHp()}
+          disabled={undoState.disabled}
+          aria-label={undoState.label}
+          title={undoState.label}
+          data-testid="hp-undo"
+          onClick={() => void undo()}
         >
           <ArrowUUpLeft />
         </Button>
       </div>
-      {blockedBy && (
-        <p
-          id="hp-undo-hint"
-          className="-mt-1 truncate text-label text-muted-foreground"
-          data-testid="hp-undo-hint"
-          title={t("hp.undoBlocked", { entry: blockedBy })}
-        >
-          {t("hp.undoBlocked", { entry: blockedBy })}
-        </p>
-      )}
       <div className="grid grid-cols-[minmax(3.5rem,5rem)_minmax(0,1fr)_minmax(0,1fr)] gap-1">
         <input
           className={`${fieldClass} tabular-nums`}

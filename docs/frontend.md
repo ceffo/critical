@@ -228,7 +228,7 @@ flowchart TD
   (`POST /api/roll/attack/{logEntryId}/verdict`, `verdictLastAttack`) and a "Real AC" form (the
   adjust endpoint) that replaces any verdict.
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`, `undo`,
-  `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
+  `nextRound`; the HP panel's undo, Annuler and the row's Void are all the one global undo, ADR 0018 step 3): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …, "code": …}`, parsed by `api/http.ts`) are shown in `Notices` (`role="alert"`): a known code in the
   player's language (`apiError.*`), else the server text verbatim.
 - The journal groups entries by the turn the server stamped (`lib/groupByRound.ts`); the current

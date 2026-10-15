@@ -33,9 +33,6 @@ type lister interface {
 type amender interface {
 	Amend(ctx context.Context, characterID, id int64, a actionlogsvc.Amendment) (*actionlog.Entry, error)
 }
-type voider interface {
-	Void(ctx context.Context, characterID, id int64) (*actionlog.Entry, error)
-}
 type undoer interface {
 	Undo(ctx context.Context, characterID, expectedTopID int64) (*actionlog.Entry, error)
 }
@@ -45,7 +42,6 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc actionlogsvc.SVC) {
 	r.Get("/api/log", render.Handle(List(charID, svc)))
 	r.Post("/api/log/undo", render.Handle(Undo(charID, svc)))
 	r.Post("/api/log/{id}/amend", render.Handle(Amend(charID, svc)))
-	r.Post("/api/log/{id}/void", render.Handle(Void(charID, svc)))
 }
 
 // List returns entries newest first. Optional ?limit=N (default and maximum
@@ -104,22 +100,6 @@ func Amend(charID CharacterIDFunc, svc amender) render.HandlerFunc {
 			return render.BadRequestError("note is required (a string)")
 		}
 		e, err := svc.Amend(r.Context(), charID(r), id, actionlogsvc.Amendment{Note: note})
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, toDTO(*e))
-		return nil
-	}
-}
-
-// Void pops an entry (only the latest non-voided one), restoring snapshotted state.
-func Void(charID CharacterIDFunc, svc voider) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		id, err := entryID(r)
-		if err != nil {
-			return err
-		}
-		e, err := svc.Void(r.Context(), charID(r), id)
 		if err != nil {
 			return err
 		}

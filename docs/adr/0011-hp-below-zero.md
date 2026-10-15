@@ -27,7 +27,7 @@ Tests live in `api/internal/domain/` unless named otherwise.
    `hpApplied` in its payload, like a capped heal, and the Combat Log shows both. It is the mirror
    of the heal cap (ADR 0007 step 4): applied when writing, the ledger never rewritten, so
    `SUM(delta)` stays the truth, a later heal counts from -10 and popping a clamped entry (the global undo of
-   [ADR 0010](0010-action-stack-and-undo.md), the HP undo or the row's Void) puts the total back
+   [ADR 0010](0010-action-stack-and-undo.md), from the HP panel or the row's Void) puts the total back
    exactly where it was. As in ADR 0007 step 6, the HP shown is never below -10
    either (`max(-10, min(hp_max, hp_max + total))`), a guard for rows logged before the floor.
    `GET /api/hp` returns the floor as `floor: -10`.

@@ -94,15 +94,6 @@ func TestConcurrentPops_OneWinsTheOtherConflicts(t *testing.T) {
 			},
 			want: []error{actionlogsvc.ErrAlreadyVoided, actionlogsvc.ErrNotLatest},
 		},
-		"void latest": {
-			pop: func(bs *composition.BackingServices, _ int64) func() error {
-				return func() error {
-					_, err := bs.Log.VoidLatest(context.Background(), bs.CharacterID, actionlog.KindHPChange)
-					return err
-				}
-			},
-			// Both succeed when two entries are on the stack; see below.
-		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			bs := newBacking(t)
@@ -115,15 +106,7 @@ func TestConcurrentPops_OneWinsTheOtherConflicts(t *testing.T) {
 
 				errs := race(tc.pop(bs, top), tc.pop(bs, top))
 
-				if tc.want != nil {
-					exactlyOne(t, errs, tc.want...)
-					assert.Equal(t, before+1, voidedCount(t, bs), "popped once")
-					continue
-				}
-				// VoidLatest pops whatever HP entry is on top: with one entry the
-				// loser finds nothing to pop (no error); it must never fail.
-				assert.NoError(t, errs[0])
-				assert.NoError(t, errs[1])
+				exactlyOne(t, errs, tc.want...)
 				assert.Equal(t, before+1, voidedCount(t, bs), "popped once")
 			}
 		})

@@ -234,65 +234,6 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
-// UndoLast provides a mock function with given fields: ctx, characterID
-func (_m *MockSVC) UndoLast(ctx context.Context, characterID int64) (*hpsvc.HPState, error) {
-	ret := _m.Called(ctx, characterID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UndoLast")
-	}
-
-	var r0 *hpsvc.HPState
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (*hpsvc.HPState, error)); ok {
-		return rf(ctx, characterID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) *hpsvc.HPState); ok {
-		r0 = rf(ctx, characterID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*hpsvc.HPState)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, characterID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockSVC_UndoLast_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UndoLast'
-type MockSVC_UndoLast_Call struct {
-	*mock.Call
-}
-
-// UndoLast is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-func (_e *MockSVC_Expecter) UndoLast(ctx interface{}, characterID interface{}) *MockSVC_UndoLast_Call {
-	return &MockSVC_UndoLast_Call{Call: _e.mock.On("UndoLast", ctx, characterID)}
-}
-
-func (_c *MockSVC_UndoLast_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_UndoLast_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64))
-	})
-	return _c
-}
-
-func (_c *MockSVC_UndoLast_Call) Return(_a0 *hpsvc.HPState, _a1 error) *MockSVC_UndoLast_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockSVC_UndoLast_Call) RunAndReturn(run func(context.Context, int64) (*hpsvc.HPState, error)) *MockSVC_UndoLast_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // NewMockSVC creates a new instance of MockSVC. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSVC(t interface {

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aarondl/opt/null"
 	"github.com/aarondl/opt/omit"
 	models "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
 	"github.com/jaswdr/faker/v2"
@@ -51,11 +52,16 @@ type ActionLogTemplate struct {
 }
 
 type actionLogR struct {
+	StepActionCorrections   []*actionLogRStepActionCorrectionsR
 	ActionActionCorrections []*actionLogRActionActionCorrectionsR
 	Character               *actionLogRCharacterR
 	ActionActionSnapshots   []*actionLogRActionActionSnapshotsR
 }
 
+type actionLogRStepActionCorrectionsR struct {
+	number int
+	o      *ActionCorrectionTemplate
+}
 type actionLogRActionActionCorrectionsR struct {
 	number int
 	o      *ActionCorrectionTemplate
@@ -78,6 +84,21 @@ func (o *ActionLogTemplate) Apply(ctx context.Context, mods ...ActionLogMod) {
 // setModelRels creates and sets the relationships on *models.ActionLog
 // according to the relationships in the template. Nothing is inserted into the db
 func (t ActionLogTemplate) setModelRels(o *models.ActionLog) {
+	if t.r.StepActionCorrections != nil {
+		rel := models.ActionCorrectionSlice{}
+		for _, r := range t.r.StepActionCorrections {
+			related := r.o.BuildMany(r.number)
+			for _, rel := range related {
+				rel.StepID = null.From(o.ID) // h2
+				rel.R.StepActionLog = o
+				rel.R.Loaded.StepActionLog = true
+			}
+			rel = append(rel, related...)
+		}
+		o.R.StepActionCorrections = rel
+		o.R.Loaded.StepActionCorrections = true
+	}
+
 	if t.r.ActionActionCorrections != nil {
 		rel := models.ActionCorrectionSlice{}
 		for _, r := range t.r.ActionActionCorrections {
@@ -240,6 +261,26 @@ func ensureCreatableActionLog(m *models.ActionLogSetter) {
 func (o *ActionLogTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.ActionLog) error {
 	var err error
 
+	isStepActionCorrectionsDone, _ := actionLogRelStepActionCorrectionsCtx.Value(ctx)
+	if !isStepActionCorrectionsDone && o.r.StepActionCorrections != nil {
+		ctx = actionLogRelStepActionCorrectionsCtx.WithValue(ctx, true)
+		for _, r := range o.r.StepActionCorrections {
+			if r.o.alreadyPersisted {
+				m.R.StepActionCorrections = append(m.R.StepActionCorrections, r.o.Build())
+			} else {
+				rel0, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
+
+				err = m.AttachStepActionCorrections(ctx, exec, rel0...)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	isActionActionCorrectionsDone, _ := actionLogRelActionActionCorrectionsCtx.Value(ctx)
 	if !isActionActionCorrectionsDone && o.r.ActionActionCorrections != nil {
 		ctx = actionLogRelActionActionCorrectionsCtx.WithValue(ctx, true)
@@ -247,12 +288,12 @@ func (o *ActionLogTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.ActionActionCorrections = append(m.R.ActionActionCorrections, r.o.Build())
 			} else {
-				rel0, err := r.o.CreateMany(ctx, exec, r.number)
+				rel1, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachActionActionCorrections(ctx, exec, rel0...)
+				err = m.AttachActionActionCorrections(ctx, exec, rel1...)
 				if err != nil {
 					return err
 				}
@@ -267,12 +308,12 @@ func (o *ActionLogTemplate) insertOptRels(ctx context.Context, exec bob.Executor
 			if r.o.alreadyPersisted {
 				m.R.ActionActionSnapshots = append(m.R.ActionActionSnapshots, r.o.Build())
 			} else {
-				rel2, err := r.o.CreateMany(ctx, exec, r.number)
+				rel3, err := r.o.CreateMany(ctx, exec, r.number)
 				if err != nil {
 					return err
 				}
 
-				err = m.AttachActionActionSnapshots(ctx, exec, rel2...)
+				err = m.AttachActionActionSnapshots(ctx, exec, rel3...)
 				if err != nil {
 					return err
 				}
@@ -295,32 +336,32 @@ func (o *ActionLogTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 	// This works regardless of NoBackReferencing since it only uses child-side metadata.
 	mInCreation, _ := modelsInCreationCtx.Value(ctx)
 
-	var rel1 *models.Character
+	var rel2 *models.Character
 
 	if o.r.Character == nil {
 		if parentModel, found := mInCreation["characters:action_log:fk_action_log_0"]; found {
 			if pModel, ok := parentModel.(*models.Character); ok {
-				rel1 = pModel
+				rel2 = pModel
 			}
 		}
 	}
 
-	if rel1 == nil {
+	if rel2 == nil {
 		if o.r.Character == nil {
 			ActionLogMods.WithNewCharacter().Apply(ctx, o)
 		}
 
 		if o.r.Character.o.alreadyPersisted {
-			rel1 = o.r.Character.o.Build()
+			rel2 = o.r.Character.o.Build()
 		} else {
-			rel1, err = o.r.Character.o.Create(ctx, exec)
+			rel2, err = o.r.Character.o.Create(ctx, exec)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	opt.CharacterID = omit.From(rel1.ID)
+	opt.CharacterID = omit.From(rel2.ID)
 
 	m, err := models.ActionLogs.Insert(opt).One(ctx, exec)
 	if err != nil {
@@ -336,11 +377,12 @@ func (o *ActionLogTemplate) Create(ctx context.Context, exec bob.Executor) (*mod
 		newMInCreation[k] = v
 	}
 	newMInCreation["action_log:action_corrections:fk_action_corrections_0"] = m
+	newMInCreation["action_log:action_corrections:fk_action_corrections_1"] = m
 	newMInCreation["action_log:action_snapshots:fk_action_snapshots_0"] = m
 
 	ctx = modelsInCreationCtx.WithValue(ctx, newMInCreation)
 
-	m.R.Character = rel1
+	m.R.Character = rel2
 	m.R.Loaded.Character = true
 
 	if err := o.insertOptRels(ctx, exec, m); err != nil {
@@ -720,6 +762,54 @@ func (m actionLogMods) WithExistingCharacter(em *models.Character) ActionLogMod 
 func (m actionLogMods) WithoutCharacter() ActionLogMod {
 	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
 		o.r.Character = nil
+	})
+}
+
+func (m actionLogMods) WithStepActionCorrections(number int, related *ActionCorrectionTemplate) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.StepActionCorrections = []*actionLogRStepActionCorrectionsR{{
+			number: number,
+			o:      related,
+		}}
+	})
+}
+
+func (m actionLogMods) WithNewStepActionCorrections(number int, mods ...ActionCorrectionMod) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		related := o.f.NewActionCorrectionWithContext(ctx, mods...)
+		m.WithStepActionCorrections(number, related).Apply(ctx, o)
+	})
+}
+
+func (m actionLogMods) AddStepActionCorrections(number int, related *ActionCorrectionTemplate) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.StepActionCorrections = append(o.r.StepActionCorrections, &actionLogRStepActionCorrectionsR{
+			number: number,
+			o:      related,
+		})
+	})
+}
+
+func (m actionLogMods) AddNewStepActionCorrections(number int, mods ...ActionCorrectionMod) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		related := o.f.NewActionCorrectionWithContext(ctx, mods...)
+		m.AddStepActionCorrections(number, related).Apply(ctx, o)
+	})
+}
+
+func (m actionLogMods) AddExistingStepActionCorrections(existingModels ...*models.ActionCorrection) ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		for _, em := range existingModels {
+			o.r.StepActionCorrections = append(o.r.StepActionCorrections, &actionLogRStepActionCorrectionsR{
+				o: o.f.fromExistingActionCorrection(ctx, em),
+			})
+		}
+	})
+}
+
+func (m actionLogMods) WithoutStepActionCorrections() ActionLogMod {
+	return ActionLogModFunc(func(ctx context.Context, o *ActionLogTemplate) {
+		o.r.StepActionCorrections = nil
 	})
 }
 

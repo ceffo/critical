@@ -2,6 +2,7 @@ package actionlogsvc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -46,10 +47,15 @@ func (s *service) Amend(ctx context.Context, characterID, id int64, a Amendment)
 	return out, nil
 }
 
-// AmendLatest records an amend carrying a new payload on entry id. It is refused when the entry is another kind or kind is not a roll
-// (ErrNotAmendable), voided (ErrAlreadyVoided) or not the latest roll: a newer
-// entry of any of actionlog.RollKinds exists, voided ones included
-// (ErrNotLatest). The check and the write share one transaction.
+// AmendLatest corrects entry id after the roll as its own step on the action
+// stack (ADR 0010 step 6): it records a KindCorrection entry naming the change
+// (actionlog.CorrectionStep, stamped with the current round) and an amend on
+// entry id carrying the new payload, linked to that step. Popping the step
+// puts the amend out of effect. It is refused when the entry is another kind
+// or kind is not a roll (ErrNotAmendable), voided (ErrAlreadyVoided) or not
+// the latest roll: a newer entry of any of actionlog.RollKinds exists, voided
+// ones included (ErrNotLatest). The checks and both writes share one
+// transaction.
 func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind actionlog.Kind, fn actionlog.AmendFunc) (*actionlog.Entry, error) {
 	var out *actionlog.Entry
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -74,13 +80,18 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 		if err != nil {
 			return err
 		}
-		if len(a.Payload) == 0 {
-			return fmt.Errorf("%w: amendment needs a payload", domain.ErrInvalidInput)
+		if len(a.Payload) == 0 || a.Change.Field == "" {
+			return fmt.Errorf("%w: amendment needs a payload and the field it changes", domain.ErrInvalidInput)
+		}
+		stepID, err := s.recordStep(ctx, characterID, e, a.Change)
+		if err != nil {
+			return err
 		}
 		if err := s.dal.InsertCorrection(ctx, actionlog.Correction{
 			ActionID: id,
 			Kind:     actionlog.CorrectionAmend,
 			Payload:  a.Payload,
+			StepID:   &stepID,
 		}); err != nil {
 			return fmt.Errorf("insert amend: %w", err)
 		}
@@ -106,4 +117,24 @@ func (s *service) latestRoll(ctx context.Context, characterID int64) (int64, err
 		}
 	}
 	return latest, nil
+}
+
+// recordStep inserts the KindCorrection entry of a correction on e; it runs
+// inside AmendLatest's transaction.
+func (s *service) recordStep(ctx context.Context, characterID int64, e *actionlog.Entry, c actionlog.Change) (int64, error) {
+	payload, err := json.Marshal(actionlog.CorrectionStep{EntryID: e.ID, EntryKind: e.Kind, Field: c.Field, From: c.From, To: c.To})
+	if err != nil {
+		return 0, fmt.Errorf("encode correction step: %w", err)
+	}
+	round, err := s.rounds.GetRound(ctx, characterID)
+	if err != nil {
+		return 0, fmt.Errorf("current round: %w", err)
+	}
+	id, err := s.dal.InsertEntry(ctx, actionlog.NewEntry{
+		CharacterID: characterID, Round: round, Kind: actionlog.KindCorrection, Payload: payload,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("insert correction step: %w", err)
+	}
+	return id, nil
 }

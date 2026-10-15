@@ -117,7 +117,9 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 		if err != nil {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("encode save payload: %w", err)
 		}
-		return actionlog.PayloadAmendment{Payload: payload}, nil
+		return actionlog.PayloadAmendment{Payload: payload, Change: actionlog.Change{
+			Field: ChangeSaveAdjustment, From: prevAdj, To: rec.Adjustment,
+		}}, nil
 	})
 	if err != nil {
 		return nil, err

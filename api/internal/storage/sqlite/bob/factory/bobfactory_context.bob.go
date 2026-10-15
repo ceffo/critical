@@ -12,11 +12,13 @@ var (
 
 	// Relationship Contexts for action_corrections
 	actionCorrectionWithParentsCascadingCtx = newContextual[bool]("actionCorrectionWithParentsCascading")
-	actionCorrectionRelActionActionLogCtx   = newContextual[bool]("action_corrections.action_log.fk_action_corrections_0")
+	actionCorrectionRelStepActionLogCtx     = newContextual[bool]("action_corrections.action_log.fk_action_corrections_0")
+	actionCorrectionRelActionActionLogCtx   = newContextual[bool]("action_corrections.action_log.fk_action_corrections_1")
 
 	// Relationship Contexts for action_log
 	actionLogWithParentsCascadingCtx       = newContextual[bool]("actionLogWithParentsCascading")
-	actionLogRelActionActionCorrectionsCtx = newContextual[bool]("action_corrections.action_log.fk_action_corrections_0")
+	actionLogRelStepActionCorrectionsCtx   = newContextual[bool]("action_corrections.action_log.fk_action_corrections_0")
+	actionLogRelActionActionCorrectionsCtx = newContextual[bool]("action_corrections.action_log.fk_action_corrections_1")
 	actionLogRelCharacterCtx               = newContextual[bool]("action_log.characters.fk_action_log_0")
 	actionLogRelActionActionSnapshotsCtx   = newContextual[bool]("action_log.action_snapshots.fk_action_snapshots_0")
 

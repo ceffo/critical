@@ -52,7 +52,8 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    "adjust not a save").
 7. **Audited.** The adjustment is an `amend` correction on the entry carrying the new
    payload (with `previousPassed` and `previousAdjustment`); the entry is never edited, the log
-   reads the latest payload (`effectivePayload`).
+   reads the latest payload in effect (`effectivePayload`). Each adjustment is its own undoable
+   step ([ADR 0010](0010-action-stack-and-undo.md) step 6).
    Tests: `TestAdjustSave_Recompute` (one amend per adjustment, `rolledPassed` kept),
    `TestAmendLatest` ("latest roll amended, older attack ignored", "amended again"),
    `TestEntryEffectivePayload`.

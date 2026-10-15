@@ -87,6 +87,15 @@ var ActionCorrections = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		StepID: column{
+			Name:      "step_id",
+			DBType:    "INTEGER",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: actionCorrectionIndexes{
 		PKMainActionCorrections: index{
@@ -146,6 +155,15 @@ var ActionCorrections = Table[
 		FKActionCorrections0: foreignKey{
 			constraint: constraint{
 				Name:    "fk_action_corrections_0",
+				Columns: []string{"step_id"},
+				Comment: "",
+			},
+			ForeignTable:   "action_log",
+			ForeignColumns: []string{"id"},
+		},
+		FKActionCorrections1: foreignKey{
+			constraint: constraint{
+				Name:    "fk_action_corrections_1",
 				Columns: []string{"action_id"},
 				Comment: "",
 			},
@@ -166,11 +184,12 @@ type actionCorrectionColumns struct {
 	CreatedAt column
 	Payload   column
 	Note      column
+	StepID    column
 }
 
 func (c actionCorrectionColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.ActionID, c.Kind, c.HPDelta, c.Summary, c.CreatedAt, c.Payload, c.Note,
+		c.ID, c.ActionID, c.Kind, c.HPDelta, c.Summary, c.CreatedAt, c.Payload, c.Note, c.StepID,
 	}
 }
 
@@ -188,11 +207,12 @@ func (i actionCorrectionIndexes) AsSlice() []index {
 
 type actionCorrectionForeignKeys struct {
 	FKActionCorrections0 foreignKey
+	FKActionCorrections1 foreignKey
 }
 
 func (f actionCorrectionForeignKeys) AsSlice() []foreignKey {
 	return []foreignKey{
-		f.FKActionCorrections0,
+		f.FKActionCorrections0, f.FKActionCorrections1,
 	}
 }
 

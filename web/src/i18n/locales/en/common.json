@@ -658,7 +658,8 @@
       "item_edit": "Item",
       "item_remove": "Item",
       "skill_check": "Skill",
-      "dice": "Dice"
+      "dice": "Dice",
+      "correction": "Correction"
     },
     "status": {
       "active": "Active",
@@ -777,7 +778,15 @@
       "success": "{{name}}: d{{die}} {{roll}} vs {{target}}, success",
       "failure": "{{name}}: d{{die}} {{roll}} vs {{target}}, failure"
     },
-    "dice": "Dice {{formula}} = {{total}}"
+    "dice": "Dice {{formula}} = {{total}}",
+    "correction": {
+      "targetAc": "Correction AC {{from}} → {{to}}",
+      "saveAdjustment": "Correction save adjustment {{from}} → {{to}}",
+      "verdict": "Correction GM verdict {{from}} → {{to}}",
+      "other": "Correction of #{{id}}",
+      "unknown": "?",
+      "none": "none"
+    }
   },
   "critTable": {
     "title": "Crit table (house rule)",

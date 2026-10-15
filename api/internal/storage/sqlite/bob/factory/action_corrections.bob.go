@@ -45,6 +45,7 @@ type ActionCorrectionTemplate struct {
 	CreatedAt func() time.Time
 	Payload   func() null.Val[string]
 	Note      func() null.Val[string]
+	StepID    func() null.Val[int64]
 
 	r actionCorrectionR
 	f *Factory
@@ -53,9 +54,13 @@ type ActionCorrectionTemplate struct {
 }
 
 type actionCorrectionR struct {
+	StepActionLog   *actionCorrectionRStepActionLogR
 	ActionActionLog *actionCorrectionRActionActionLogR
 }
 
+type actionCorrectionRStepActionLogR struct {
+	o *ActionLogTemplate
+}
 type actionCorrectionRActionActionLogR struct {
 	o *ActionLogTemplate
 }
@@ -70,6 +75,14 @@ func (o *ActionCorrectionTemplate) Apply(ctx context.Context, mods ...ActionCorr
 // setModelRels creates and sets the relationships on *models.ActionCorrection
 // according to the relationships in the template. Nothing is inserted into the db
 func (t ActionCorrectionTemplate) setModelRels(o *models.ActionCorrection) {
+	if t.r.StepActionLog != nil {
+		rel := t.r.StepActionLog.o.Build()
+		rel.R.StepActionCorrections = append(rel.R.StepActionCorrections, o)
+		o.StepID = null.From(rel.ID) // h2
+		o.R.StepActionLog = rel
+		o.R.Loaded.StepActionLog = true
+	}
+
 	if t.r.ActionActionLog != nil {
 		rel := t.r.ActionActionLog.o.Build()
 		rel.R.ActionActionCorrections = append(rel.R.ActionActionCorrections, o)
@@ -115,6 +128,10 @@ func (o ActionCorrectionTemplate) BuildSetter() *models.ActionCorrectionSetter {
 	if o.Note != nil {
 		val := o.Note()
 		m.Note = omitnull.FromNull(val)
+	}
+	if o.StepID != nil {
+		val := o.StepID()
+		m.StepID = omitnull.FromNull(val)
 	}
 
 	return m
@@ -162,6 +179,9 @@ func (o ActionCorrectionTemplate) Build() *models.ActionCorrection {
 	if o.Note != nil {
 		m.Note = o.Note()
 	}
+	if o.StepID != nil {
+		m.StepID = o.StepID()
+	}
 
 	o.setModelRels(m)
 
@@ -198,6 +218,26 @@ func ensureCreatableActionCorrection(m *models.ActionCorrectionSetter) {
 func (o *ActionCorrectionTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.ActionCorrection) error {
 	var err error
 
+	isStepActionLogDone, _ := actionCorrectionRelStepActionLogCtx.Value(ctx)
+	if !isStepActionLogDone && o.r.StepActionLog != nil {
+		ctx = actionCorrectionRelStepActionLogCtx.WithValue(ctx, true)
+		if o.r.StepActionLog.o.alreadyPersisted {
+			m.R.StepActionLog = o.r.StepActionLog.o.Build()
+			m.R.Loaded.StepActionLog = true
+		} else {
+			var rel0 *models.ActionLog
+			rel0, err = o.r.StepActionLog.o.Create(ctx, exec)
+			if err != nil {
+				return err
+			}
+			err = m.AttachStepActionLog(ctx, exec, rel0)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+
 	return err
 }
 
@@ -213,32 +253,32 @@ func (o *ActionCorrectionTemplate) Create(ctx context.Context, exec bob.Executor
 	// This works regardless of NoBackReferencing since it only uses child-side metadata.
 	mInCreation, _ := modelsInCreationCtx.Value(ctx)
 
-	var rel0 *models.ActionLog
+	var rel1 *models.ActionLog
 
 	if o.r.ActionActionLog == nil {
-		if parentModel, found := mInCreation["action_log:action_corrections:fk_action_corrections_0"]; found {
+		if parentModel, found := mInCreation["action_log:action_corrections:fk_action_corrections_1"]; found {
 			if pModel, ok := parentModel.(*models.ActionLog); ok {
-				rel0 = pModel
+				rel1 = pModel
 			}
 		}
 	}
 
-	if rel0 == nil {
+	if rel1 == nil {
 		if o.r.ActionActionLog == nil {
 			ActionCorrectionMods.WithNewActionActionLog().Apply(ctx, o)
 		}
 
 		if o.r.ActionActionLog.o.alreadyPersisted {
-			rel0 = o.r.ActionActionLog.o.Build()
+			rel1 = o.r.ActionActionLog.o.Build()
 		} else {
-			rel0, err = o.r.ActionActionLog.o.Create(ctx, exec)
+			rel1, err = o.r.ActionActionLog.o.Create(ctx, exec)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	opt.ActionID = omit.From(rel0.ID)
+	opt.ActionID = omit.From(rel1.ID)
 
 	m, err := models.ActionCorrections.Insert(opt).One(ctx, exec)
 	if err != nil {
@@ -256,7 +296,7 @@ func (o *ActionCorrectionTemplate) Create(ctx context.Context, exec bob.Executor
 
 	ctx = modelsInCreationCtx.WithValue(ctx, newMInCreation)
 
-	m.R.ActionActionLog = rel0
+	m.R.ActionActionLog = rel1
 	m.R.Loaded.ActionActionLog = true
 
 	if err := o.insertOptRels(ctx, exec, m); err != nil {
@@ -344,6 +384,7 @@ func (m actionCorrectionMods) RandomizeAllColumns(f *faker.Faker) ActionCorrecti
 		ActionCorrectionMods.RandomCreatedAt(f),
 		ActionCorrectionMods.RandomPayload(f),
 		ActionCorrectionMods.RandomNote(f),
+		ActionCorrectionMods.RandomStepID(f),
 	}
 }
 
@@ -683,6 +724,59 @@ func (m actionCorrectionMods) RandomNoteNotNull(f *faker.Faker) ActionCorrection
 	})
 }
 
+// Set the model columns to this value
+func (m actionCorrectionMods) StepID(val null.Val[int64]) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.StepID = func() null.Val[int64] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m actionCorrectionMods) StepIDFunc(f func() null.Val[int64]) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.StepID = f
+	})
+}
+
+// Clear any values for the column
+func (m actionCorrectionMods) UnsetStepID() ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.StepID = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m actionCorrectionMods) RandomStepID(f *faker.Faker) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.StepID = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m actionCorrectionMods) RandomStepIDNotNull(f *faker.Faker) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(_ context.Context, o *ActionCorrectionTemplate) {
+		o.StepID = func() null.Val[int64] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_int64(f)
+			return null.From(val)
+		}
+	})
+}
+
 func (m actionCorrectionMods) WithParentsCascading() ActionCorrectionMod {
 	return ActionCorrectionModFunc(func(ctx context.Context, o *ActionCorrectionTemplate) {
 		if isDone, _ := actionCorrectionWithParentsCascadingCtx.Value(ctx); isDone {
@@ -692,8 +786,43 @@ func (m actionCorrectionMods) WithParentsCascading() ActionCorrectionMod {
 		{
 
 			related := o.f.NewActionLogWithContext(ctx, ActionLogMods.WithParentsCascading())
+			m.WithStepActionLog(related).Apply(ctx, o)
+		}
+		{
+
+			related := o.f.NewActionLogWithContext(ctx, ActionLogMods.WithParentsCascading())
 			m.WithActionActionLog(related).Apply(ctx, o)
 		}
+	})
+}
+
+func (m actionCorrectionMods) WithStepActionLog(rel *ActionLogTemplate) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(ctx context.Context, o *ActionCorrectionTemplate) {
+		o.r.StepActionLog = &actionCorrectionRStepActionLogR{
+			o: rel,
+		}
+	})
+}
+
+func (m actionCorrectionMods) WithNewStepActionLog(mods ...ActionLogMod) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(ctx context.Context, o *ActionCorrectionTemplate) {
+		related := o.f.NewActionLogWithContext(ctx, mods...)
+
+		m.WithStepActionLog(related).Apply(ctx, o)
+	})
+}
+
+func (m actionCorrectionMods) WithExistingStepActionLog(em *models.ActionLog) ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(ctx context.Context, o *ActionCorrectionTemplate) {
+		o.r.StepActionLog = &actionCorrectionRStepActionLogR{
+			o: o.f.fromExistingActionLog(ctx, em),
+		}
+	})
+}
+
+func (m actionCorrectionMods) WithoutStepActionLog() ActionCorrectionMod {
+	return ActionCorrectionModFunc(func(ctx context.Context, o *ActionCorrectionTemplate) {
+		o.r.StepActionLog = nil
 	})
 }
 

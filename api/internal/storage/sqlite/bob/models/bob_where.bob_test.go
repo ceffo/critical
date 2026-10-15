@@ -19,6 +19,20 @@ import (
 func TestActionCorrectionHasRelationsEmitExists(t *testing.T) {
 	ctx := context.Background()
 
+	t.Run("StepActionLog", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionCorrections.NameExpr()),
+			SelectWhere.ActionCorrections.R.HasStepActionLog(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasStepActionLog: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasStepActionLog: expected EXISTS in query, got: %s", sql)
+		}
+	})
+
 	t.Run("ActionActionLog", func(t *testing.T) {
 		q := sqlite.Select(
 			sm.From(ActionCorrections.NameExpr()),
@@ -39,6 +53,20 @@ func TestActionCorrectionHasRelationsEmitExists(t *testing.T) {
 // an INNER JOIN, so the parent rows are never multiplied.
 func TestActionLogHasRelationsEmitExists(t *testing.T) {
 	ctx := context.Background()
+
+	t.Run("StepActionCorrections", func(t *testing.T) {
+		q := sqlite.Select(
+			sm.From(ActionLogs.NameExpr()),
+			SelectWhere.ActionLogs.R.HasStepActionCorrections(),
+		)
+		sql, _, err := bob.Build(ctx, q)
+		if err != nil {
+			t.Fatalf("HasStepActionCorrections: build error: %v", err)
+		}
+		if !strings.Contains(sql, "EXISTS") {
+			t.Errorf("HasStepActionCorrections: expected EXISTS in query, got: %s", sql)
+		}
+	})
 
 	t.Run("ActionActionCorrections", func(t *testing.T) {
 		q := sqlite.Select(

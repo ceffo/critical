@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { LogEntry } from "@/types/log";
+import type { LogEntry, LogKind } from "@/types/log";
 import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
@@ -381,6 +381,47 @@ export function dicePayload(e: LogEntry): DiceRoll | null {
     : null;
 }
 
+/** Payload of correction entries (actionlog.CorrectionStep, ADR 0010 step 6): a correction made
+ * after a roll, its own step on the action stack. from/to are the field's value before and after
+ * (null: an unknown AC, no verdict). */
+export interface CorrectionLogPayload {
+  entryId: number;
+  entryKind: LogKind;
+  field: "targetAc" | "saveAdjustment" | "verdict" | string;
+  from: number | string | null;
+  to: number | string | null;
+}
+
+export function correctionPayload(e: LogEntry): CorrectionLogPayload | null {
+  if (e.kind !== "correction") return null;
+  const p = e.payload as Partial<CorrectionLogPayload> | null;
+  return p && typeof p.entryId === "number" && typeof p.field === "string"
+    ? (p as CorrectionLogPayload)
+    : null;
+}
+
+function correctionValue(field: string, v: number | string | null, t: TFunction): string {
+  switch (field) {
+    case "targetAc":
+      return typeof v === "number" ? String(v) : t("log.correction.unknown");
+    case "saveAdjustment":
+      return typeof v === "number" ? formatSigned(v) : t("log.correction.none");
+    case "verdict":
+      return v === "hit" || v === "miss" ? t(`result.${v}`) : t("log.correction.none");
+    default:
+      return v === null ? t("log.correction.none") : String(v);
+  }
+}
+
+function correctionText(p: CorrectionLogPayload, t: TFunction): string {
+  if (p.field !== "targetAc" && p.field !== "saveAdjustment" && p.field !== "verdict")
+    return t("log.correction.other", { id: p.entryId });
+  return t(`log.correction.${p.field}`, {
+    from: correctionValue(p.field, p.from, t),
+    to: correctionValue(p.field, p.to, t),
+  });
+}
+
 /** A skill's display name; an id without a translation shows as is. */
 export function skillName(t: TFunction, id: string): string {
   return t(`skills.names.${id}`, { defaultValue: id });
@@ -415,6 +456,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (dice) return t("log.dice", { formula: dice.formula, total: dice.total });
   const save = savePayload(e);
   if (save) return saveText(save, t);
+  const correction = correctionPayload(e);
+  if (correction) return correctionText(correction, t);
   const cast = castPayload(e);
   if (cast) return castText(cast, t);
   const rest = restText(e, t);

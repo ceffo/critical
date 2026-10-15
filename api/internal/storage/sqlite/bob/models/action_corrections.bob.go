@@ -34,6 +34,7 @@ type ActionCorrection struct {
 	CreatedAt time.Time        `db:"created_at" `
 	Payload   null.Val[string] `db:"payload" `
 	Note      null.Val[string] `db:"note" `
+	StepID    null.Val[int64]  `db:"step_id" `
 
 	R actionCorrectionR `db:"-" `
 }
@@ -50,7 +51,8 @@ type ActionCorrectionsQuery = *sqlite.ViewQuery[*ActionCorrection, ActionCorrect
 
 // actionCorrectionR is where relationships are stored.
 type actionCorrectionR struct {
-	ActionActionLog *ActionLog // fk_action_corrections_0
+	StepActionLog   *ActionLog // fk_action_corrections_0
+	ActionActionLog *ActionLog // fk_action_corrections_1
 	// Loaded reports whether each relationship has been loaded.
 	// A relationship's bool is set by Load*, Preload, ThenLoad, factory builds,
 	// and to-one Attach/Insert operations. To-many Attach/Insert operations leave it unchanged.
@@ -59,12 +61,13 @@ type actionCorrectionR struct {
 
 // actionCorrectionRLoaded tracks which relationships on ActionCorrection have been loaded.
 type actionCorrectionRLoaded struct {
-	ActionActionLog bool // fk_action_corrections_0
+	StepActionLog   bool // fk_action_corrections_0
+	ActionActionLog bool // fk_action_corrections_1
 }
 
 func buildActionCorrectionColumns(tableName string) actionCorrectionColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "action_id", "kind", "hp_delta", "summary", "created_at", "payload", "note",
+		"id", "action_id", "kind", "hp_delta", "summary", "created_at", "payload", "note", "step_id",
 	)
 
 	if tableName != "" {
@@ -82,6 +85,7 @@ func buildActionCorrectionColumns(tableName string) actionCorrectionColumns {
 		CreatedAt:   buildActionCorrectionColumn(tableName, "created_at"),
 		Payload:     buildActionCorrectionColumn(tableName, "payload"),
 		Note:        buildActionCorrectionColumn(tableName, "note"),
+		StepID:      buildActionCorrectionColumn(tableName, "step_id"),
 	}
 }
 
@@ -96,6 +100,7 @@ type actionCorrectionColumns struct {
 	CreatedAt  actionCorrectionColumn
 	Payload    actionCorrectionColumn
 	Note       actionCorrectionColumn
+	StepID     actionCorrectionColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -149,10 +154,11 @@ type ActionCorrectionSetter struct {
 	CreatedAt omit.Val[time.Time]  `db:"created_at" `
 	Payload   omitnull.Val[string] `db:"payload" `
 	Note      omitnull.Val[string] `db:"note" `
+	StepID    omitnull.Val[int64]  `db:"step_id" `
 }
 
 func (s ActionCorrectionSetter) SetColumns() []string {
-	vals := make([]string, 0, 8)
+	vals := make([]string, 0, 9)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -176,6 +182,9 @@ func (s ActionCorrectionSetter) SetColumns() []string {
 	}
 	if s.Note.IsValue() || s.Note.IsNull() {
 		vals = append(vals, "note")
+	}
+	if s.StepID.IsValue() || s.StepID.IsNull() {
+		vals = append(vals, "step_id")
 	}
 	return vals
 }
@@ -204,6 +213,9 @@ func (s ActionCorrectionSetter) Overwrite(t *ActionCorrection) {
 	}
 	if s.Note.IsValue() || s.Note.IsNull() {
 		t.Note = s.Note.MustGetNull()
+	}
+	if s.StepID.IsValue() || s.StepID.IsNull() {
+		t.StepID = s.StepID.MustGetNull()
 	}
 }
 
@@ -279,6 +291,13 @@ func (s *ActionCorrectionSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.Note.MustGetNull()).WriteSQL(ctx, w, d, start)
 			}))
+		case "step_id":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.StepID.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.StepID.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -290,7 +309,7 @@ func (s ActionCorrectionSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s ActionCorrectionSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 8)
+	exprs := make([]bob.Expression, 0, 9)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -348,6 +367,13 @@ func (s ActionCorrectionSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.StepID.IsValue() || s.StepID.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "step_id")...),
+			sqlite.Arg(s.StepID),
+		}})
+	}
+
 	return exprs
 }
 
@@ -358,7 +384,7 @@ func actionCorrectionScanMapper(ctx context.Context, cols []string) (scan.Before
 		idx int
 		dst func(o *ActionCorrection) any
 	}
-	targets := make([]target, 0, 8)
+	targets := make([]target, 0, 9)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -377,6 +403,8 @@ func actionCorrectionScanMapper(ctx context.Context, cols []string) (scan.Before
 			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.Payload }})
 		case "note":
 			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.Note }})
+		case "step_id":
+			targets = append(targets, target{i, func(o *ActionCorrection) any { return &o.StepID }})
 		}
 	}
 
@@ -622,6 +650,25 @@ func (o ActionCorrectionSlice) ReloadAll(ctx context.Context, exec bob.Executor)
 	return nil
 }
 
+// StepActionLog starts a query for related objects on action_log
+func (o *ActionCorrection) StepActionLog(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	return ActionLogs.Query(append(mods,
+		sm.Where(ActionLogs.Columns.ID.EQ(sqlite.Arg(o.StepID))),
+	)...)
+}
+
+func (os ActionCorrectionSlice) StepActionLog(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
+	PKArgSlice := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgSlice[i] = sqlite.ArgGroup(o.StepID)
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	return ActionLogs.Query(append(mods,
+		sm.Where(sqlite.Group(ActionLogs.Columns.ID).OP("IN", PKArgExpr)),
+	)...)
+}
+
 // ActionActionLog starts a query for related objects on action_log
 func (o *ActionCorrection) ActionActionLog(mods ...bob.Mod[*dialect.SelectQuery]) ActionLogsQuery {
 	return ActionLogs.Query(append(mods,
@@ -639,6 +686,56 @@ func (os ActionCorrectionSlice) ActionActionLog(mods ...bob.Mod[*dialect.SelectQ
 	return ActionLogs.Query(append(mods,
 		sm.Where(sqlite.Group(ActionLogs.Columns.ID).OP("IN", PKArgExpr)),
 	)...)
+}
+
+func attachActionCorrectionStepActionLog0(ctx context.Context, exec bob.Executor, count int, actionCorrection0 *ActionCorrection, actionLog1 *ActionLog) (*ActionCorrection, error) {
+	setter := &ActionCorrectionSetter{
+		StepID: omitnull.From(actionLog1.ID),
+	}
+
+	err := actionCorrection0.Update(ctx, exec, setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachActionCorrectionStepActionLog0: %w", err)
+	}
+
+	return actionCorrection0, nil
+}
+
+func (actionCorrection0 *ActionCorrection) InsertStepActionLog(ctx context.Context, exec bob.Executor, related *ActionLogSetter) error {
+	var err error
+
+	actionLog1, err := ActionLogs.Insert(related).One(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachActionCorrectionStepActionLog0(ctx, exec, 1, actionCorrection0, actionLog1)
+	if err != nil {
+		return err
+	}
+
+	actionCorrection0.R.StepActionLog = actionLog1
+	actionCorrection0.R.Loaded.StepActionLog = true
+
+	actionLog1.R.StepActionCorrections = append(actionLog1.R.StepActionCorrections, actionCorrection0)
+
+	return nil
+}
+
+func (actionCorrection0 *ActionCorrection) AttachStepActionLog(ctx context.Context, exec bob.Executor, actionLog1 *ActionLog) error {
+	var err error
+
+	_, err = attachActionCorrectionStepActionLog0(ctx, exec, 1, actionCorrection0, actionLog1)
+	if err != nil {
+		return err
+	}
+
+	actionCorrection0.R.StepActionLog = actionLog1
+	actionCorrection0.R.Loaded.StepActionLog = true
+
+	actionLog1.R.StepActionCorrections = append(actionLog1.R.StepActionCorrections, actionCorrection0)
+
+	return nil
 }
 
 func attachActionCorrectionActionActionLog0(ctx context.Context, exec bob.Executor, count int, actionCorrection0 *ActionCorrection, actionLog1 *ActionLog) (*ActionCorrection, error) {
@@ -701,6 +798,7 @@ type actionCorrectionWhere[Q sqlite.Filterable] struct {
 	CreatedAt sqlite.WhereMod[Q, time.Time]
 	Payload   sqlite.WhereNullMod[Q, string]
 	Note      sqlite.WhereNullMod[Q, string]
+	StepID    sqlite.WhereNullMod[Q, int64]
 	R         actionCorrectionWhereR[Q]
 }
 
@@ -719,6 +817,7 @@ func buildActionCorrectionWhere[Q sqlite.Filterable](cols actionCorrectionColumn
 		CreatedAt: sqlite.Where[Q, time.Time](cols.CreatedAt.Expression),
 		Payload:   sqlite.WhereNull[Q, string](cols.Payload.Expression),
 		Note:      sqlite.WhereNull[Q, string](cols.Note.Expression),
+		StepID:    sqlite.WhereNull[Q, int64](cols.StepID.Expression),
 		R:         actionCorrectionWhereR[Q]{cols: cols},
 	}
 }
@@ -728,6 +827,20 @@ func buildActionCorrectionWhere[Q sqlite.Filterable](cols actionCorrectionColumn
 // R struct — so they cannot collide with column-based filter fields.
 type actionCorrectionWhereR[Q sqlite.Filterable] struct {
 	cols actionCorrectionColumns
+}
+
+// HasStepActionLog filters parents that have a matching StepActionLog using a
+// correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
+// multiply parent rows, so no DISTINCT is needed. The optional filters are
+// applied to the subquery (i.e. to ActionLogs).
+func (w actionCorrectionWhereR[Q]) HasStepActionLog(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+	q := sqlite.Select(
+		sm.Columns(sqlite.Raw("1")),
+		sm.From(ActionLogs.NameExpr()),
+		sm.Where(ActionLogs.Columns.ID.EQ(w.cols.StepID)),
+	)
+	q.Apply(filters...)
+	return mods.Where[Q]{E: sqlite.Exists(q)}
 }
 
 // HasActionActionLog filters parents that have a matching ActionActionLog using a
@@ -750,6 +863,19 @@ func (o *ActionCorrection) Preload(name string, retrieved any) error {
 	}
 
 	switch name {
+	case "StepActionLog":
+		rel, ok := retrieved.(*ActionLog)
+		if !ok {
+			return fmt.Errorf("actionCorrection cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.StepActionLog = rel
+		o.R.Loaded.StepActionLog = true
+
+		if rel != nil {
+			rel.R.StepActionCorrections = ActionCorrectionSlice{o}
+		}
+		return nil
 	case "ActionActionLog":
 		rel, ok := retrieved.(*ActionLog)
 		if !ok {
@@ -769,11 +895,25 @@ func (o *ActionCorrection) Preload(name string, retrieved any) error {
 }
 
 type actionCorrectionPreloader struct {
+	StepActionLog   func(...sqlite.PreloadOption) sqlite.Preloader
 	ActionActionLog func(...sqlite.PreloadOption) sqlite.Preloader
 }
 
 func buildActionCorrectionPreloader() actionCorrectionPreloader {
 	return actionCorrectionPreloader{
+		StepActionLog: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
+			return sqlite.Preload[*ActionLog, ActionLogSlice](sqlite.PreloadRel{
+				Name: "StepActionLog",
+				Sides: []sqlite.PreloadSide{
+					{
+						From:        ActionCorrections,
+						To:          ActionLogs,
+						FromColumns: []string{"step_id"},
+						ToColumns:   []string{"id"},
+					},
+				},
+			}, ActionLogs.Columns.Names(), actionLogScanMapperNullable, opts...)
+		},
 		ActionActionLog: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
 			return sqlite.Preload[*ActionLog, ActionLogSlice](sqlite.PreloadRel{
 				Name: "ActionActionLog",
@@ -791,15 +931,25 @@ func buildActionCorrectionPreloader() actionCorrectionPreloader {
 }
 
 type actionCorrectionThenLoader[Q orm.Loadable] struct {
+	StepActionLog   func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActionActionLog func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 }
 
 func buildActionCorrectionThenLoader[Q orm.Loadable]() actionCorrectionThenLoader[Q] {
+	type StepActionLogLoadInterface interface {
+		LoadStepActionLog(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
 	type ActionActionLogLoadInterface interface {
 		LoadActionActionLog(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 
 	return actionCorrectionThenLoader[Q]{
+		StepActionLog: thenLoadBuilder[Q](
+			"StepActionLog",
+			func(ctx context.Context, exec bob.Executor, retrieved StepActionLogLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadStepActionLog(ctx, exec, mods...)
+			},
+		),
 		ActionActionLog: thenLoadBuilder[Q](
 			"ActionActionLog",
 			func(ctx context.Context, exec bob.Executor, retrieved ActionActionLogLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
@@ -807,6 +957,86 @@ func buildActionCorrectionThenLoader[Q orm.Loadable]() actionCorrectionThenLoade
 			},
 		),
 	}
+}
+
+// LoadStepActionLog loads the actionCorrection's StepActionLog into the .R struct
+func (o *ActionCorrection) LoadStepActionLog(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.StepActionLog = nil
+	o.R.Loaded.StepActionLog = false
+
+	related, err := o.StepActionLog(mods...).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	related.R.StepActionCorrections = ActionCorrectionSlice{o}
+
+	o.R.StepActionLog = related
+	o.R.Loaded.StepActionLog = true
+	return nil
+}
+
+// LoadStepActionLog loads the actionCorrection's StepActionLog into the .R struct
+func (os ActionCorrectionSlice) LoadStepActionLog(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	actionLogs, err := os.StepActionLog(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		o.R.StepActionLog = nil
+		o.R.Loaded.StepActionLog = true
+	}
+	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
+	actionCorrectionByKey := make(map[int64][]*ActionCorrection, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		// NULL never matches any row in SQL, so don't add it to the map
+		if !o.StepID.IsValue() {
+			continue
+		}
+
+		actionCorrectionByKey[o.StepID.MustGet()] = append(actionCorrectionByKey[o.StepID.MustGet()], o)
+	}
+
+	for _, rel := range actionLogs {
+
+		owners, ok := actionCorrectionByKey[rel.ID]
+		if !ok {
+			continue
+		}
+
+		for _, o := range owners {
+
+			// to-one: keep only the first matching child (matches the previous break)
+			if o.R.StepActionLog != nil {
+				continue
+			}
+
+			rel.R.StepActionCorrections = append(rel.R.StepActionCorrections, o)
+
+			o.R.StepActionLog = rel
+
+		}
+	}
+
+	return nil
 }
 
 // LoadActionActionLog loads the actionCorrection's ActionActionLog into the .R struct
@@ -886,6 +1116,7 @@ func (os ActionCorrectionSlice) LoadActionActionLog(ctx context.Context, exec bo
 
 type actionCorrectionJoins[Q dialect.Joinable] struct {
 	typ             string
+	StepActionLog   modAs[Q, actionLogColumns]
 	ActionActionLog modAs[Q, actionLogColumns]
 }
 
@@ -896,6 +1127,20 @@ func (j actionCorrectionJoins[Q]) aliasedAs(alias string) actionCorrectionJoins[
 func buildActionCorrectionJoins[Q dialect.Joinable](cols actionCorrectionColumns, typ string) actionCorrectionJoins[Q] {
 	return actionCorrectionJoins[Q]{
 		typ: typ,
+		StepActionLog: modAs[Q, actionLogColumns]{
+			c: ActionLogs.Columns,
+			f: func(to actionLogColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, ActionLogs.NameExpr().As(to.Alias())).On(
+						to.ID.EQ(cols.StepID),
+					))
+				}
+
+				return mods
+			},
+		},
 		ActionActionLog: modAs[Q, actionLogColumns]{
 			c: ActionLogs.Columns,
 			f: func(to actionLogColumns) bob.Mod[Q] {

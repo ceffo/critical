@@ -320,3 +320,51 @@ func TestLegacyValueAmend_ReadsAfterMigration014(t *testing.T) {
 	correct(t, dal, actionlog.Correction{ActionID: orc, Kind: actionlog.CorrectionAmend, Note: &note})
 	check(note)
 }
+
+// ADR 0010 step 6: an amend linked to a correction step reads StepID, and
+// StepUndone once the step is voided (popped); the entry then reads the
+// payload before it, while an amend without a step (written before steps
+// existed) stays in effect. The HP total leaves out a popped step's delta.
+func TestCorrectionStep_PoppedStepPutsItsAmendOutOfEffect(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := actionlogdal.New(db)
+	ctx := context.Background()
+
+	save := insert(t, dal, actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindSave, Payload: json.RawMessage(`{"a":0}`)})
+	correct(t, dal, actionlog.Correction{ActionID: save, Kind: actionlog.CorrectionAmend, Payload: json.RawMessage(`{"a":1}`)})
+	step := insert(t, dal, actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindCorrection, Payload: json.RawMessage(`{"entryId":1}`)})
+	correct(t, dal, actionlog.Correction{ActionID: save, Kind: actionlog.CorrectionAmend, Payload: json.RawMessage(`{"a":2}`), StepID: &step})
+
+	e, err := dal.GetEntry(ctx, charID, save)
+	require.NoError(t, err)
+	require.Len(t, e.Corrections, 2)
+	assert.Nil(t, e.Corrections[0].StepID, "legacy amend")
+	require.NotNil(t, e.Corrections[1].StepID)
+	assert.Equal(t, step, *e.Corrections[1].StepID)
+	assert.False(t, e.Corrections[1].StepUndone)
+	assert.JSONEq(t, `{"a":2}`, string(e.EffectivePayload()))
+
+	correct(t, dal, actionlog.Correction{ActionID: step, Kind: actionlog.CorrectionVoid})
+	e, err = dal.GetEntry(ctx, charID, save)
+	require.NoError(t, err)
+	assert.True(t, e.Corrections[1].StepUndone)
+	assert.JSONEq(t, `{"a":1}`, string(e.EffectivePayload()), "the legacy amend is in effect again")
+	listed, err := dal.ListEntries(ctx, charID, 10)
+	require.NoError(t, err)
+	require.Len(t, listed, 2)
+	assert.True(t, listed[1].Corrections[1].StepUndone)
+
+	// HP: a popped step's delta no longer counts (corrections carry none
+	// today; the SQL mirrors EffectiveHPDelta).
+	hit := insert(t, dal, hp(charID, -5, "orc"))
+	hpStep := insert(t, dal, actionlog.NewEntry{CharacterID: charID, Kind: actionlog.KindCorrection, Payload: json.RawMessage(`{}`)})
+	correct(t, dal, actionlog.Correction{ActionID: hit, Kind: actionlog.CorrectionAmend, HPDelta: intp(-9), StepID: &hpStep})
+	total, err := dal.HPTotal(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, -9, total)
+	correct(t, dal, actionlog.Correction{ActionID: hpStep, Kind: actionlog.CorrectionVoid})
+	total, err = dal.HPTotal(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, -5, total)
+}

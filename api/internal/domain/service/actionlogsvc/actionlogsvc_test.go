@@ -416,7 +416,8 @@ func saveEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
 
 func TestAmendLatest(t *testing.T) {
 	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
-	good := actionlog.PayloadAmendment{Payload: json.RawMessage(`{"passed":true}`)}
+	good := actionlog.PayloadAmendment{Payload: json.RawMessage(`{"passed":true}`), Change: actionlog.Change{Field: "saveAdjustment", From: 0, To: 2}}
+	step := int64(9)
 	onlySave := map[actionlog.Kind]int64{actionlog.KindSave: 5}
 	cases := []struct {
 		name    string
@@ -440,20 +441,21 @@ func TestAmendLatest(t *testing.T) {
 		{name: "a later skill check exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindSkillCheck: 7}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "no roll at all", entry: saveEntry(5), latest: map[actionlog.Kind]int64{}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "fn fails", entry: saveEntry(5), latest: onlySave, fnErr: errBoom, wantErr: errBoom},
-		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{}, wantErr: domain.ErrInvalidInput},
+		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Change: good.Change}, wantErr: domain.ErrInvalidInput},
+		{name: "no changed field", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Payload: good.Payload}, wantErr: domain.ErrInvalidInput},
 		{
 			name: "latest roll amended, older attack ignored", entry: saveEntry(5),
 			latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindAttack: 3}, fnOut: good,
-			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload},
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload, StepID: &step},
 		},
 		{
 			name: "amended again", entry: saveEntry(5, actionlog.Correction{Kind: actionlog.CorrectionAmend, Summary: "a", Payload: json.RawMessage(`{}`)}), latest: onlySave, fnOut: good,
-			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload},
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload, StepID: &step},
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			svc, dal, _, tx := newSvc(t)
+			svc, dal, rounds, tx := newSvc(t)
 			kind := c.kind
 			if kind == "" {
 				kind = actionlog.KindSave
@@ -466,6 +468,8 @@ func TestAmendLatest(t *testing.T) {
 				}
 			}
 			if c.want != nil {
+				rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
+				dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).Return(step, nil).Once()
 				dal.EXPECT().InsertCorrection(mock.Anything, *c.want).Return(nil)
 				dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(saveEntry(5, *c.want), nil).Once()
 			}
@@ -497,6 +501,94 @@ func TestAmendLatest(t *testing.T) {
 		_, err := svc.AmendLatest(context.Background(), 1, 5, actionlog.KindSave, nil)
 		require.ErrorIs(t, err, errBoom)
 	})
+}
+
+// ADR 0010 step 6: a correction is its own step. AmendLatest records a
+// correction entry (stamped with the current round, no snapshot, its payload
+// naming the corrected entry and the change) before the amend, which points
+// at it; when either write fails nothing else is written.
+func TestAmendLatest_RecordsTheCorrectionStep(t *testing.T) {
+	change := actionlog.PayloadAmendment{Payload: json.RawMessage(`{"passed":true}`), Change: actionlog.Change{Field: "targetAc", From: nil, To: 4}}
+	expect := func(dal *mocks.MockDAL) {
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(saveEntry(5), nil).Once()
+		for _, k := range actionlog.RollKinds {
+			dal.EXPECT().LatestID(mock.Anything, int64(1), k).Return(5, k == actionlog.KindSave, nil)
+		}
+	}
+	amend := func(svc actionlogsvc.SVC) (*actionlog.Entry, error) {
+		return svc.AmendLatest(context.Background(), 1, 5, actionlog.KindSave, func(actionlog.Entry) (actionlog.PayloadAmendment, error) {
+			return change, nil
+		})
+	}
+
+	t.Run("step then amend", func(t *testing.T) {
+		svc, dal, rounds, tx := newSvc(t)
+		expect(dal)
+		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
+		var calls []string
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, e actionlog.NewEntry) (int64, error) {
+			calls = append(calls, "step")
+			assert.Equal(t, actionlog.NewEntry{CharacterID: 1, Round: 3, Kind: actionlog.KindCorrection, Payload: e.Payload}, e)
+			assert.JSONEq(t, `{"entryId":5,"entryKind":"save","field":"targetAc","from":null,"to":4}`, string(e.Payload))
+			return 12, nil
+		}).Once()
+		dal.EXPECT().InsertCorrection(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, c actionlog.Correction) error {
+			calls = append(calls, "amend")
+			require.NotNil(t, c.StepID)
+			assert.Equal(t, int64(12), *c.StepID)
+			return nil
+		}).Once()
+		dal.EXPECT().GetEntry(mock.Anything, int64(1), int64(5)).Return(saveEntry(5), nil).Once()
+		_, err := amend(svc)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"step", "amend"}, calls)
+		assert.Equal(t, 1, tx.calls, "the checks and both writes share one transaction")
+	})
+	t.Run("round fails: nothing written", func(t *testing.T) {
+		svc, dal, rounds, _ := newSvc(t)
+		expect(dal)
+		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(0, errBoom).Once()
+		_, err := amend(svc)
+		require.ErrorIs(t, err, errBoom)
+	})
+	t.Run("step insert fails: no amend", func(t *testing.T) {
+		svc, dal, rounds, _ := newSvc(t)
+		expect(dal)
+		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything).Return(0, errBoom).Once()
+		_, err := amend(svc)
+		require.ErrorIs(t, err, errBoom)
+	})
+}
+
+// ADR 0010 step 6: an amend whose correction step was popped is out of
+// effect: the payload, the status and the HP delta read as before it. An
+// amend without a step (written before steps existed) stays in effect.
+func TestEntry_PoppedStepAmendIsOutOfEffect(t *testing.T) {
+	step := func(id int64, undone bool, p string) actionlog.Correction {
+		return actionlog.Correction{Kind: actionlog.CorrectionAmend, Payload: json.RawMessage(p), StepID: &id, StepUndone: undone}
+	}
+	legacy := actionlog.Correction{Kind: actionlog.CorrectionAmend, Payload: json.RawMessage(`{"a":0}`)}
+	cases := []struct {
+		name        string
+		corrections []actionlog.Correction
+		payload     string
+		status      actionlog.Status
+	}{
+		{"step in effect", []actionlog.Correction{step(6, false, `{"a":1}`)}, `{"a":1}`, actionlog.StatusAmended},
+		{"newest step popped", []actionlog.Correction{step(6, false, `{"a":1}`), step(7, true, `{"a":2}`)}, `{"a":1}`, actionlog.StatusAmended},
+		{"every step popped", []actionlog.Correction{step(6, true, `{"a":1}`), step(7, true, `{"a":2}`)}, `{"passed":false}`, actionlog.StatusActive},
+		{"legacy amend under a popped step", []actionlog.Correction{legacy, step(7, true, `{"a":2}`)}, `{"a":0}`, actionlog.StatusAmended},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := saveEntry(5, c.corrections...)
+			assert.JSONEq(t, c.payload, string(e.EffectivePayload()))
+			assert.Equal(t, c.status, e.Status())
+		})
+	}
+	popped := hpEntry(1, actionlog.Correction{Kind: actionlog.CorrectionAmend, HPDelta: intp(-3), StepID: new(int64(4)), StepUndone: true})
+	assert.Equal(t, -8, popped.EffectiveHPDelta())
 }
 
 func TestEntryEffectivePayload(t *testing.T) {

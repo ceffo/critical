@@ -75,6 +75,8 @@ vi.mock("../api/buffs", () => ({
 
 import { useLogStore } from "./log";
 import { useTableStore } from "./table";
+import { useRollStore } from "./roll";
+import type { RollResult } from "@/types/combat";
 
 const topId = () => useLogStore.getState().topId;
 
@@ -141,5 +143,22 @@ describe("global undo against the server stack", () => {
     expect(server.calls).toEqual(["undo 3", "reroll", "void 4", "undo 1"]);
     expect(topId()).toBeNull();
     expect(useTableStore.getState().error).toBeNull();
+  });
+
+  // ADR 0010 step 6: popping a correction gives the attack its previous payload; the card must
+  // read it from the refreshed log, not keep this session's corrected roll response.
+  it("a pop drops this session's live roll so the card reads the log", async () => {
+    server.push("attack");
+    server.push("correction");
+    await useTableStore.getState().refresh();
+    useRollStore.setState({ last: { kind: "attack", result: { logEntryId: 1 } as RollResult } });
+
+    expect(await useTableStore.getState().undo()).toBe(true);
+    expect(useRollStore.getState().last).toBeNull();
+    expect(topId()).toBe(1);
+
+    useRollStore.setState({ last: { kind: "attack", result: { logEntryId: 1 } as RollResult } });
+    expect(await useTableStore.getState().voidEntry(1)).toBe(true);
+    expect(useRollStore.getState().last).toBeNull();
   });
 });

@@ -126,3 +126,41 @@ func TestLogEndpoints_AdjustedSaveShape(t *testing.T) {
 			"payload":{"passed":true},"createdAt":"2026-10-17T20:00:00Z"}],
 		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
 }
+
+// ADR 0010 step 6: a correction step is an entry of kind correction whose
+// payload names the corrected entry and the change; the corrected entry's
+// amend carries stepId, and undone once the step was popped (its payload no
+// longer counts).
+func TestLogEndpoints_CorrectionStepShape(t *testing.T) {
+	stepID, popped := int64(9), int64(8)
+	attack := actionlog.Entry{
+		ID: 7, CharacterID: 1, Round: 1, Kind: actionlog.KindAttack, Payload: json.RawMessage(`{"targetAc":5}`), CreatedAt: at,
+		Corrections: []actionlog.Correction{
+			{ID: 3, ActionID: 7, Kind: actionlog.CorrectionAmend, Payload: json.RawMessage(`{"targetAc":7}`), StepID: &popped, StepUndone: true, CreatedAt: at},
+			{ID: 5, ActionID: 7, Kind: actionlog.CorrectionAmend, Payload: json.RawMessage(`{"targetAc":2}`), StepID: &stepID, CreatedAt: at},
+		},
+	}
+	step := actionlog.Entry{
+		ID: 9, CharacterID: 1, Round: 1, Kind: actionlog.KindCorrection, CreatedAt: at,
+		Payload: json.RawMessage(`{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2}`),
+	}
+	h, m := newRouter(t)
+	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{step, attack}, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(9, true, nil)
+	rec := do(h, "GET", "/api/log", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"topId":9,"entries":[{
+		"id":9,"characterId":1,"round":1,"kind":"correction","summary":"","hpDelta":0,
+		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"active",
+		"payload":{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2},
+		"effectivePayload":{"entryId":7,"entryKind":"attack","field":"targetAc","from":5,"to":2},
+		"snapshots":[],"corrections":[],"createdAt":"2026-10-17T20:00:00Z"
+	},{
+		"id":7,"characterId":1,"round":1,"kind":"attack","summary":"","hpDelta":0,
+		"effectiveHpDelta":0,"effectiveSummary":"","note":"","status":"amended",
+		"payload":{"targetAc":5},"effectivePayload":{"targetAc":2},"snapshots":[],
+		"corrections":[
+			{"id":3,"kind":"amend","payload":{"targetAc":7},"stepId":8,"undone":true,"createdAt":"2026-10-17T20:00:00Z"},
+			{"id":5,"kind":"amend","payload":{"targetAc":2},"stepId":9,"createdAt":"2026-10-17T20:00:00Z"}],
+		"createdAt":"2026-10-17T20:00:00Z"}]}`, rec.Body.String())
+}

@@ -6,6 +6,7 @@ import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
 import { useItemsStore } from "./items";
+import { useRollStore } from "./roll";
 
 /** Something to tell the player after an action (rendered with i18n by the Notices component). */
 export type Notice = { kind: "expired"; names: string[] };
@@ -123,11 +124,14 @@ export const useTableStore = create<TableStore>((set, get) => ({
   undoHp: () =>
     get().run(async () => useHpStore.getState().setHp(await undoLastEvent())),
   amendEntry: (id, note) => get().run(() => amendLogEntry(id, note)),
-  // A void can bring expired buffs back: an "expired" notice would now be stale.
+  // A void can bring expired buffs back: an "expired" notice would now be stale. A pop can also
+  // take back a correction (ADR 0010 step 6): the card then shows the latest roll from the
+  // refreshed log, not this session's (corrected) roll response.
   voidEntry: (id) =>
     get().run(async () => {
       await voidLogEntry(id);
       set({ notice: null });
+      useRollStore.setState({ last: null });
     }),
   undo: () => {
     const expected = useLogStore.getState().topId;
@@ -135,6 +139,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
     return get().run(async () => {
       await undoLogEntry(expected);
       set({ notice: null });
+      useRollStore.setState({ last: null });
     });
   },
   // A round change leaves buffs alone, but an "expired" notice is stale after either.

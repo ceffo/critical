@@ -257,6 +257,7 @@ var beforeTestingInsertCorrection = func(context.Context, bob.Tx) ([]InsertCorre
 		Summary  null.Val[string]
 		Payload  null.Val[string]
 		Note     null.Val[string]
+		StepID   null.Val[int64]
 	}{{
 		ActionID: random_int64(nil),
 		Kind:     random_string(nil),
@@ -264,6 +265,7 @@ var beforeTestingInsertCorrection = func(context.Context, bob.Tx) ([]InsertCorre
 		Summary:  null.From(random_string(nil)),
 		Payload:  null.From(random_string(nil)),
 		Note:     null.From(random_string(nil)),
+		StepID:   null.From(random_int64(nil)),
 	}}, nil
 }
 
@@ -278,6 +280,7 @@ func TestInsertCorrection(t *testing.T) {
 			Summary  null.Val[string]
 			Payload  null.Val[string]
 			Note     null.Val[string]
+			StepID   null.Val[int64]
 		}{{
 			ActionID: random_int64(nil),
 			Kind:     random_string(nil),
@@ -285,6 +288,7 @@ func TestInsertCorrection(t *testing.T) {
 			Summary:  null.From(random_string(nil)),
 			Payload:  null.From(random_string(nil)),
 			Note:     null.From(random_string(nil)),
+			StepID:   null.From(random_int64(nil)),
 		}})
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -306,6 +310,7 @@ func TestInsertCorrection(t *testing.T) {
 			Summary  null.Val[string]
 			Payload  null.Val[string]
 			Note     null.Val[string]
+			StepID   null.Val[int64]
 		}{{
 			ActionID: random_int64(nil),
 			Kind:     random_string(nil),
@@ -313,6 +318,7 @@ func TestInsertCorrection(t *testing.T) {
 			Summary:  null.From(random_string(nil)),
 			Payload:  null.From(random_string(nil)),
 			Note:     null.From(random_string(nil)),
+			StepID:   null.From(random_int64(nil)),
 		}})
 
 		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -802,8 +808,8 @@ func TestListCorrectionsFrom(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 8 {
-			t.Fatalf("expected %d columns, got %d", 8, len(columns))
+		if len(columns) != 9 {
+			t.Fatalf("expected %d columns, got %d", 9, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -834,8 +840,12 @@ func TestListCorrectionsFrom(t *testing.T) {
 			t.Fatalf("expected column %d to be %s, got %s", 6, "note", columns[6])
 		}
 
-		if columns[7] != "created_at" {
-			t.Fatalf("expected column %d to be %s, got %s", 7, "created_at", columns[7])
+		if columns[7] != "step_id" {
+			t.Fatalf("expected column %d to be %s, got %s", 7, "step_id", columns[7])
+		}
+
+		if columns[8] != "created_at" {
+			t.Fatalf("expected column %d to be %s, got %s", 8, "created_at", columns[8])
 		}
 	})
 }

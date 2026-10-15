@@ -1,27 +1,43 @@
-/** An API error carrying the server's message ({"error": "..."}) and HTTP status. */
+import i18n from "@/i18n";
+
+/**
+ * An API error carrying the HTTP status and a message: the player's language when the server sent a
+ * known error code ({"code": "..."}), else the server's own text ({"error": "..."}).
+ */
 export class ApiError extends Error {
   readonly status: number;
+  /** The server's stable error code (e.g. "no_initiative"), when it sent one. */
+  readonly code?: string;
   /** Request field the message is about (a validation error), when the server names one. */
   readonly field?: string;
-  constructor(message: string, status: number, field?: string) {
+  constructor(message: string, status: number, field?: string, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.field = field;
+    this.code = code;
   }
 }
 
-/** Server message (and the field it is about, if any) from an error response: the JSON body, else the raw text. */
+/** The localized message of an error code, or null when the web has no wording for it (the server text then stands). */
+export function codeMessage(code: string | undefined): string | null {
+  const key = `apiError.${code}`;
+  return code && i18n.exists(key) ? i18n.t(key) : null;
+}
+
+/** Message (and the field and code it comes with, if any) from an error response: the JSON body, else the raw text. */
 async function errorBody(
   res: Response,
-): Promise<{ message: string; field?: string }> {
+): Promise<{ message: string; field?: string; code?: string }> {
   const text = await res.text();
   try {
-    const body = JSON.parse(text) as { error?: unknown; field?: unknown };
+    const body = JSON.parse(text) as { error?: unknown; field?: unknown; code?: unknown };
     if (typeof body.error === "string" && body.error) {
+      const code = typeof body.code === "string" ? body.code : undefined;
       return {
-        message: body.error,
+        message: codeMessage(code) ?? body.error,
         field: typeof body.field === "string" ? body.field : undefined,
+        code,
       };
     }
   } catch {
@@ -30,12 +46,12 @@ async function errorBody(
   return { message: text.trim() || `${res.status} ${res.statusText}` };
 }
 
-/** fetch + JSON decode; throws ApiError with the server's message on a non-2xx status. */
+/** fetch + JSON decode; throws ApiError with the localized or server message on a non-2xx status. */
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   if (!res.ok) {
-    const { message, field } = await errorBody(res);
-    throw new ApiError(message, res.status, field);
+    const { message, field, code } = await errorBody(res);
+    throw new ApiError(message, res.status, field, code);
   }
   return res.json() as Promise<T>;
 }

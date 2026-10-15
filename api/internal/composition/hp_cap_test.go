@@ -252,3 +252,50 @@ func TestHPFloor_UndoClampedDamageRestoresExactHP(t *testing.T) {
 	assert.Equal(t, r.max, st.CurrentHp)
 	assert.Equal(t, hpsvc.ConditionOK, st.Condition)
 }
+
+// A damage or healing entry without a source is stored with no player text,
+// still counts against the HP ledger and can be undone.
+func TestHP_NoSourceOnTheRealStack(t *testing.T) {
+	r := newHPRig(t)
+	ctx := context.Background()
+
+	cur, e := r.change(-7, "")
+	assert.Equal(t, r.max-7, cur)
+	assert.Equal(t, actionlog.KindHPChange, e.Kind)
+	assert.Empty(t, e.Summary)
+	assert.Equal(t, -7, e.HPDelta)
+
+	st, err := r.bs.HP.GetState(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	require.NotEmpty(t, st.Events)
+	assert.Empty(t, st.Events[0].Source)
+
+	st, err = r.bs.HP.UndoLast(ctx, r.bs.CharacterID)
+	require.NoError(t, err)
+	assert.Equal(t, r.max, st.CurrentHp)
+}
+
+// A source-less HP change can be given a note, then voided: the journal keeps
+// the note beside an empty source, the voided entry stops counting and HP is back at max.
+func TestHP_AmendThenVoidSourceLessChange(t *testing.T) {
+	r := newHPRig(t)
+	ctx, id := context.Background(), r.bs.CharacterID
+
+	_, e := r.change(-7, "")
+	amended, err := r.bs.Log.Amend(ctx, id, e.ID, actionlogsvc.Amendment{Note: "trap"})
+	require.NoError(t, err)
+	assert.Equal(t, "trap", amended.Note())
+	assert.Empty(t, amended.EffectiveSummary(), "an amend sets the note, never the source")
+	assert.Equal(t, r.max-7, r.current(), "an amend never changes the delta")
+	st, err := r.bs.HP.GetState(ctx, id)
+	require.NoError(t, err)
+	assert.Empty(t, st.Events[0].Source)
+
+	_, err = r.bs.Log.Void(ctx, id, e.ID)
+	require.NoError(t, err)
+	assert.Equal(t, r.max, r.current())
+	entries, err := r.bs.Log.List(ctx, id, 1)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, actionlog.StatusVoided, entries[0].Status())
+}

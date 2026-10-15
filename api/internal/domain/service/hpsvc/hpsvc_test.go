@@ -2,6 +2,7 @@ package hpsvc_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"testing"
@@ -94,8 +95,8 @@ func TestAppendEvent(t *testing.T) {
 		wantErr error
 		want    *actionlog.NewEntry
 	}{
-		{"source required", -5, "", domain.ErrInvalidInput, nil},
-		{"blank source", -5, "   ", domain.ErrInvalidInput, nil},
+		{"no source", -5, "", nil, &actionlog.NewEntry{CharacterID: 7, Kind: actionlog.KindHPChange, HPDelta: -5, Payload: json.RawMessage(`{}`)}},
+		{"blank source", 4, "   ", nil, &actionlog.NewEntry{CharacterID: 7, Kind: actionlog.KindHPChange, HPDelta: 4, Payload: json.RawMessage(`{}`)}},
 		{"damage", -5, " sword ", nil, &actionlog.NewEntry{CharacterID: 7, Kind: actionlog.KindHPChange, Summary: "sword", HPDelta: -5}},
 		{"heal", 4, "potion", nil, &actionlog.NewEntry{CharacterID: 7, Kind: actionlog.KindHPChange, Summary: "potion", HPDelta: 4}},
 	}

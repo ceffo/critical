@@ -50,7 +50,7 @@ describe("undoButtonState", () => {
   it("names the action on top, worded from its payload, en and fr", async () => {
     expect(undoButtonState(7, [initiative], false, await makeT("en"))).toEqual({
       disabled: false,
-      label: "Undo: Initiative 4 (d10) for round 2 (Ctrl+Z / ⌘Z)",
+      label: "Undo: Initiative 4 (d10) for turn 2 (Ctrl+Z / ⌘Z)",
     });
     expect(undoButtonState(7, [initiative], false, await makeT("fr"))).toEqual({
       disabled: false,

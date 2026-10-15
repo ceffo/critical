@@ -442,6 +442,14 @@ function skillText(c: SkillCheck, t: TFunction): string {
   });
 }
 
+/** An HP change logged without a source has no player text: word the kind from its delta. */
+function hpChangeText(e: LogEntry, t: TFunction): string | null {
+  if (e.kind !== "hp_change" || e.effectiveSummary) return null;
+  return t(e.hpDelta < 0 ? "log.hpDamage" : "log.hpHeal", {
+    amount: Math.abs(e.hpDelta),
+  });
+}
+
 /**
  * The entry's text in the player's language, worded from its structured payload. The server's summary
  * is only the player's own text (an HP change's source) or, on entries logged before the payloads
@@ -474,6 +482,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (itemChange) return itemChange;
   const weaponChange = weaponChangeText(e, t);
   if (weaponChange) return weaponChange;
+  const hp = hpChangeText(e, t);
+  if (hp) return hp;
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
   const buff = p.buff ?? "";

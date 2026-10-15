@@ -26,7 +26,7 @@ critical/
 
 - Base path: `/api/`
 - JSON request/response bodies
-- Errors: `{"error": "message"}` with appropriate HTTP status code
+- Errors: `{"error": "message", "code": "stable_code"}` (plus `"field"` for a field error) with appropriate HTTP status code. The code comes from the domain error through the one mapping table in `internal/render`; the web words known codes in en + fr (`apiError.*` i18n keys) and shows `error` as the fallback.
 - All roll results return a complete breakdown struct (never just hit/miss or a bare number)
 - Endpoints follow resource/action naming: `POST /api/hp/event`, `POST /api/roll/attack`, `POST /api/round/advance`
 

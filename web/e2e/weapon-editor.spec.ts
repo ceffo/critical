@@ -176,7 +176,7 @@ test("a weapon removed behind the Attack panel's back: the attack says so and th
   await f.getByRole("button", { name: "Attack", exact: true }).click();
 
   await expect(
-    page.getByRole("alert").filter({ hasText: "weapon not found" }),
+    page.getByRole("alert").filter({ hasText: "no longer exists" }),
   ).toBeVisible();
   // No stale weapon in hand: the server's form falls back to an existing weapon.
   await expect(f.getByTestId("weapon-in-hand")).not.toHaveText("Darts");

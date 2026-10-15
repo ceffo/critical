@@ -114,7 +114,7 @@ describe("entryText", () => {
       { action: "delete_template", buff: "Hammer form" },
       "Deleted saved buff Hammer form",
     ],
-    [{ action: "next_round", fromRound: 0, toRound: 1 }, "Round 0 → 1"],
+    [{ action: "next_round", fromRound: 0, toRound: 1 }, "Turn 0 → 1"],
     [
       {
         action: "next_round",
@@ -122,7 +122,7 @@ describe("entryText", () => {
         toRound: 5,
         expired: ["Strength", "Haste"],
       },
-      "Round 4 → 5 — expired: Strength, Haste",
+      "Turn 4 → 5 — expired: Strength, Haste",
     ],
   ])("renders %j", async (payload, want) => {
     const t = await makeT("en");
@@ -454,7 +454,7 @@ describe("time_passed entries", () => {
   };
   it("renders hours, rounds, the round reset and what expired (en/fr)", async () => {
     expect(entryText(entry("time_passed", payload), await makeT("en"))).toBe(
-      "Time passed: 1.5 h (90 rd), round 4 → 0 — expired: Bless",
+      "Time passed: 1.5 h (90 rd), turn 4 → 0 — expired: Bless",
     );
     expect(entryText(entry("time_passed", payload), await makeT("fr"))).toBe(
       "Temps écoulé : 1,5 h (90 rd.), round 4 → 0 — expirés : Bless",
@@ -471,7 +471,7 @@ describe("time_passed entries", () => {
         }),
         await makeT("en"),
       ),
-    ).toBe("Time passed: 8 h (480 rd), round 4 → 0");
+    ).toBe("Time passed: 8 h (480 rd), turn 4 → 0");
   });
 });
 
@@ -682,7 +682,7 @@ describe("entries logged before the change", () => {
 describe("initiative entries", () => {
   it("words the d10 and its round in English and French", async () => {
     const e = entry("initiative", { round: 3, d10: 7 }, "");
-    expect(entryText(e, await makeT("en"))).toBe("Initiative 7 (d10) for round 3");
+    expect(entryText(e, await makeT("en"))).toBe("Initiative 7 (d10) for turn 3");
     expect(entryText(e, await makeT("fr"))).toBe("Initiative 7 (d10) pour le tour 3");
   });
 
@@ -732,5 +732,26 @@ describe("entryText for dice rolls", () => {
     expect(entryText(entry("dice", roll, ""), await makeT("en"))).toBe("Dice 2d6+3 = 10");
     expect(entryText(entry("dice", roll, ""), await makeT("fr"))).toBe("Dés 2d6+3 = 10");
     expect(entryText(entry("dice", { formula: "x" }), await makeT("en"))).toBe("server summary");
+  });
+});
+
+describe("hp_change entries without a source", () => {
+  const hp = (delta: number, summary: string): LogEntry => ({
+    ...entry("hp_change", {}, summary),
+    hpDelta: delta,
+    effectiveHpDelta: delta,
+  });
+
+  it.each([
+    ["en", -5, "Damage 5"],
+    ["en", 4, "Healing 4"],
+    ["fr", -5, "Dégâts 5"],
+    ["fr", 4, "Soins 4"],
+  ])("%s, delta %i: %s", async (lng, delta, want) => {
+    expect(entryText(hp(delta, ""), await makeT(lng))).toBe(want);
+  });
+
+  it("keeps the player's own text when there is one", async () => {
+    expect(entryText(hp(-5, "orc axe"), await makeT("en"))).toBe("orc axe");
   });
 });

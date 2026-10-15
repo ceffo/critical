@@ -35,7 +35,7 @@ test("Next turn advances the counter and starts a new log group", async ({
   // their round.
   const newGroup = turnGroup(page, r0 + 1);
   await expect(newGroup).toContainText("current");
-  await expect(newGroup.getByRole("listitem")).toHaveText([/Initiative \d+ \(d10\) for round/]);
+  await expect(newGroup.getByRole("listitem")).toHaveText([/Initiative \d+ \(d10\) for turn/]);
   const oldGroup = turnGroup(page, r0);
   await expect(
     oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" }),
@@ -44,7 +44,7 @@ test("Next turn advances the counter and starts a new log group", async ({
   await expect(
     oldGroup
       .getByRole("listitem")
-      .filter({ hasText: `Round ${r0} → ${r0 + 1}` }),
+      .filter({ hasText: `Turn ${r0} → ${r0 + 1}` }),
   ).toBeVisible();
 
   await recordHp(page, "damage", 1, "e2e second round hit");
@@ -78,7 +78,7 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   await snap(page, "set-round-form");
   await page.getByRole("button", { name: "Set", exact: true }).click();
   await expect.poll(() => currentRound(page)).toBe(7);
-  const setEntry = logEntry(page, `Round set: ${before} → 7`);
+  const setEntry = logEntry(page, `Turn set: ${before} → 7`);
   await expect(setEntry).toBeVisible();
   await expect(buffBadge(page, "e2e Haste")).toBeVisible();
 
@@ -94,22 +94,22 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
     .getByRole("button", { name: "Confirm" })
     .click();
   await expect.poll(() => currentRound(page)).toBe(0);
-  await expect(logEntry(page, "Combat ended: round 7 → 0")).toBeVisible();
+  await expect(logEntry(page, "Combat ended: turn 7 → 0")).toBeVisible();
   await expect(buffBadge(page, "e2e Haste")).toBeVisible();
   await snap(page, "end-combat");
 
   // Next Round then gives 1.
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(1);
-  // The newest "Round 0 → 1" entry (the earlier Next Rounds also went through 0 → 1).
+  // The newest "Turn 0 → 1" entry (the earlier Next Rounds also went through 0 → 1).
   await voidInitiative(page);
-  const advance = logEntry(page, "Round 0 → 1").first();
+  const advance = logEntry(page, "Turn 0 → 1").first();
   await advance.getByRole("button", { name: "Void" }).click();
   await advance.getByRole("button", { name: "Confirm" }).click();
   await expect.poll(() => currentRound(page)).toBe(0);
 
   // Voiding End combat brings round 7 back.
-  await voidEntry(page, "Combat ended: round 7 → 0");
+  await voidEntry(page, "Combat ended: turn 7 → 0");
   await expect.poll(() => currentRound(page)).toBe(7);
   await expectNoReload(page);
 });
@@ -155,7 +155,7 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await expect(buffBadge(page, "e2e Layers").getByTestId("buff-charges")).toHaveText(
     "3 / 3 charges · until spent",
   );
-  const text = `Time passed: 1.5 h (90 rd), round ${before} → 0`;
+  const text = `Time passed: 1.5 h (90 rd), turn ${before} → 0`;
   await expect(logEntry(page, text)).toContainText("expired: e2e Short");
   await snap(page, "pass-time-done");
 
@@ -312,7 +312,7 @@ test("Next turn rolls the initiative; reroll replaces its log entry", async ({ p
   await expect(value).toHaveText(/^([1-9]|10)$/);
   const firstId = await value.getAttribute("data-entry-id");
   const first = combatLog(page).locator(`[data-entry-id="${firstId}"]`);
-  await expect(first).toContainText(`Initiative ${await value.textContent()} (d10) for round 1`);
+  await expect(first).toContainText(`Initiative ${await value.textContent()} (d10) for turn 1`);
 
   // The reroll pops that entry and logs a new roll (the d10 may show the same face).
   await page.getByRole("button", { name: "Reroll initiative" }).click();
@@ -320,7 +320,7 @@ test("Next turn rolls the initiative; reroll replaces its log entry", async ({ p
   await expect(first).toHaveAttribute("data-status", "voided");
   const rerolled = combatLog(page).locator(`[data-entry-id="${await value.getAttribute("data-entry-id")}"]`);
   await expect(rerolled).toHaveAttribute("data-status", "active");
-  await expect(rerolled).toContainText(`Initiative ${await value.textContent()} (d10) for round 1`);
+  await expect(rerolled).toContainText(`Initiative ${await value.textContent()} (d10) for turn 1`);
 
   for (const vp of HEADER_VIEWPORTS) {
     await page.setViewportSize(vp);

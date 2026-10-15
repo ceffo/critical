@@ -127,6 +127,12 @@ export async function addBuff(page: Page, buff: NewBuff) {
   if (buff.note) await form.getByLabel("Note").fill(buff.note);
   if (buff.save) await form.getByLabel("Save for reuse").check();
   await form.getByRole("button", { name: "Activate" }).click();
+  // Past three effects the new row sits behind the timeline's expander: open it (left open).
+  const closed = page.locator(
+    "[data-testid=effects-expander][aria-expanded=false]",
+  );
+  await expect(buffBadge(page, buff.name).or(closed)).toBeVisible();
+  if (await closed.isVisible()) await closed.click();
   await expect(buffBadge(page, buff.name)).toBeVisible();
 }
 

@@ -116,7 +116,10 @@
     "chargesOf": "{{count}} / {{total}} charges",
     "untilSpent": "jusqu'à épuisement",
     "untilDismissed": "jusqu'à retrait",
-    "lastTurn": "Dernier tour"
+    "lastTurn": "Dernier tour",
+    "showMore_one": "Afficher {{count}} effet de plus",
+    "showMore_other": "Afficher {{count}} effets de plus",
+    "showLess": "Afficher moins d'effets"
   },
   "buffs": {
     "charges": "{{count}} ch.",

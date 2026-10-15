@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard } from "./helpers";
+import { combatLog, logEntry, openDashboard } from "./helpers";
 import type { Page } from "@playwright/test";
 
 async function openSpells(page: Page) {
@@ -160,6 +160,19 @@ test("the spell names follow the language: the catalogue's French name, English 
     expect(await el.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
   }
   await snap(page, "french");
+
+  // A buff from a spell is named from the catalogue too, in the timeline and in the journal.
+  await page
+    .getByRole("button", { name: "Lancer Image miroir" })
+    .first()
+    .click();
+  const buff = page.locator('[data-testid="buff"][data-buff="Mirror Image"]');
+  await expect(buff).toContainText("Image miroir");
+  await expect(page.getByTestId("cast-buff")).toContainText("Image miroir");
+  await snap(page, "french-buff");
+  await buff.getByRole("button", { name: "Retirer Image miroir" }).click();
+  await expect(buff).toHaveCount(0);
+  await expect(combatLog(page).getByText("Image miroir retiré")).toBeVisible();
 });
 
 test("a prepared spell outside the spellbook is listed as removed and not sent", async ({

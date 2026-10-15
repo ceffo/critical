@@ -26,6 +26,17 @@ export function spellNamer(lang: string, names: SpellNames): SpellNamer {
   };
 }
 
+/**
+ * A buff's name in the player's language: the catalogue's name of the spell it comes from, or its
+ * stored name when it is not from a spell (hand-made, or stored before buffs kept their spell).
+ */
+export function buffName(
+  spellName: SpellNamer,
+  buff: { name: string; spellId?: string },
+): string {
+  return buff.spellId ? spellName(buff.spellId, buff.name) : buff.name;
+}
+
 /** Names from what the caller holds only: the English name, else the id (tests, no catalogue). */
 export const englishSpellName: SpellNamer = (id, englishName) =>
   englishName ?? id;

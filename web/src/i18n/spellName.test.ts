@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buffName,
   englishSpellName,
   otherSpellName,
   spellId,
@@ -94,5 +95,25 @@ describe("spellId", () => {
   it("slugifies English names", () => {
     expect(spellId("Magic Missile")).toBe("magic_missile");
     expect(spellId("Tenser's Floating Disc")).toBe("tensers_floating_disc");
+  });
+});
+
+describe("buffName", () => {
+  const fr = spellNamer("fr", names);
+  it("names a buff from a spell from the catalogue", () => {
+    expect(
+      buffName(fr, { name: "Magic Missile", spellId: "magic_missile" }),
+    ).toBe("Projectile magique");
+  });
+
+  it("keeps the stored name of a buff not from a spell", () => {
+    expect(buffName(fr, { name: "Magic Missile" })).toBe("Magic Missile");
+    expect(buffName(fr, { name: "Power Gem", spellId: "" })).toBe("Power Gem");
+  });
+
+  it("falls back to the stored name for a spell the catalogue does not know", () => {
+    expect(buffName(fr, { name: "Old Spell", spellId: "gone" })).toBe(
+      "Old Spell",
+    );
   });
 });

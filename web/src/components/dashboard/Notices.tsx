@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { buffName, useSpellName } from "@/i18n/spellName";
 import { useTableStore } from "@/stores/table";
 
 /** Server errors (verbatim, role=alert) and round notices (role=status), bottom-left. */
 export function Notices() {
   const { t } = useTranslation();
+  const spellName = useSpellName();
   const { error, notice, clearError, clearNotice } = useTableStore();
 
   useEffect(() => {
@@ -44,7 +46,9 @@ export function Notices() {
           className="pointer-events-auto flex items-start gap-2 rounded-lg border bg-card p-3 text-body shadow-lg"
         >
           <div className="min-w-0 flex-1">
-            {t("buffs.expired", { names: notice.names.join(", ") })}
+            {t("buffs.expired", {
+              names: notice.buffs.map((b) => buffName(spellName, b)).join(", "),
+            })}
           </div>
           <Button
             size="icon-xs"

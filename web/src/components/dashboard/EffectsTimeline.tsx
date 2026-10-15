@@ -9,6 +9,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { buffName, useSpellName } from "@/i18n/spellName";
 import { formatTurnsLeft } from "@/lib/passTime";
 import {
   effectSpan,
@@ -205,6 +206,7 @@ function EffectRow({
   onEdit: () => void;
 }) {
   const { t } = useTranslation();
+  const name = buffName(useSpellName(), b);
   const { triggerBuff, dismissBuff } = useBuffsStore();
   const { run, busy } = useTableStore();
   const inactive = b.applies === false;
@@ -253,7 +255,7 @@ function EffectRow({
       >
         <span
           className="min-w-0 flex-1 truncate"
-          title={[b.name, effectsText, b.note].filter(Boolean).join(" · ")}
+          title={[name, effectsText, b.note].filter(Boolean).join(" · ")}
         >
           <span
             className={cn(
@@ -262,7 +264,7 @@ function EffectRow({
               inactive && "text-muted-foreground",
             )}
           >
-            {b.name}
+            {name}
           </span>
           {(b.note || effectsText) && (
             <span className="text-label text-muted-foreground">
@@ -284,8 +286,8 @@ function EffectRow({
             size="icon-xs"
             variant="ghost"
             disabled={busy}
-            aria-label={t("buffs.absorb", { name: b.name })}
-            title={t("buffs.absorb", { name: b.name })}
+            aria-label={t("buffs.absorb", { name })}
+            title={t("buffs.absorb", { name })}
             onClick={() => void run(() => triggerBuff(b.id))}
           >
             <Shield />
@@ -294,8 +296,8 @@ function EffectRow({
         <Button
           size="icon-xs"
           variant="ghost"
-          aria-label={t("buffs.edit", { name: b.name })}
-          title={t("buffs.edit", { name: b.name })}
+          aria-label={t("buffs.edit", { name })}
+          title={t("buffs.edit", { name })}
           onClick={onEdit}
         >
           <PencilSimple />
@@ -304,8 +306,8 @@ function EffectRow({
           size="icon-xs"
           variant="ghost"
           disabled={busy}
-          aria-label={t("buffs.dismiss", { name: b.name })}
-          title={t("buffs.dismiss", { name: b.name })}
+          aria-label={t("buffs.dismiss", { name })}
+          title={t("buffs.dismiss", { name })}
           onClick={() => void run(() => dismissBuff(b.id))}
         >
           <X />

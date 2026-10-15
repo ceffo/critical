@@ -4,7 +4,7 @@ import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
-import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
+import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
@@ -228,6 +228,8 @@ export interface BuffLogPayload {
   /** pass_time: the hours typed (rounds = the rounds that passed). */
   hours?: number;
   buff?: string;
+  /** The buff's spell when it comes from one (catalogue id); `buff` is the stored name. */
+  spellId?: string;
   rounds?: number;
   charges?: number;
   fromRounds?: number;
@@ -236,6 +238,8 @@ export interface BuffLogPayload {
   fromRound?: number;
   toRound?: number;
   expired?: string[];
+  /** Parallel to `expired`: each expired buff's spell, "" when not from one; absent when none is. */
+  expiredSpellIds?: string[];
   note?: string;
   fromNote?: string;
   noteChanged?: boolean;
@@ -633,7 +637,10 @@ export function entryText(
   if (hp) return hp;
   const p = buffPayload(e);
   if (!p) return e.effectiveSummary;
-  const buff = p.buff ?? "";
+  const buff = buffName(spellName, { name: p.buff ?? "", spellId: p.spellId });
+  const expired = (p.expired ?? []).map((name, i) =>
+    buffName(spellName, { name, spellId: p.expiredSpellIds?.[i] }),
+  );
   switch (p.action) {
     case "activate":
       return t("log.buff.activate", {
@@ -676,8 +683,8 @@ export function entryText(
         from: p.fromRound ?? 0,
         to: p.toRound ?? 0,
       });
-      return p.expired && p.expired.length > 0
-        ? `${text} ${t("log.buff.expired", { names: p.expired.join(", ") })}`
+      return expired.length > 0
+        ? `${text} ${t("log.buff.expired", { names: expired.join(", ") })}`
         : text;
     }
     case "pass_time": {
@@ -687,8 +694,8 @@ export function entryText(
         from: p.fromRound ?? 0,
         to: p.toRound ?? 0,
       });
-      return p.expired && p.expired.length > 0
-        ? `${text} ${t("log.buff.expired", { names: p.expired.join(", ") })}`
+      return expired.length > 0
+        ? `${text} ${t("log.buff.expired", { names: expired.join(", ") })}`
         : text;
     }
     case "end_combat":

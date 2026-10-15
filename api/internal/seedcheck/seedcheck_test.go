@@ -201,32 +201,38 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 	}
 }
 
-// specialAllowed lists the raw PHB stat texts that legitimately parse to a
-// special kind although they do not literally say "Special": prose the book
-// gives instead of a measurable value. Keyed by field, then raw text. Any
-// other fallback to special in seeds/spells.json fails the test, so a new
-// stat form must get a parser (or an entry here, on purpose).
+// specialAllowed lists the raw PHB stat texts that parse to a special kind
+// although they are not the literal word "Special". Keyed by field, then raw
+// text. Two groups: prose the book gives instead of a measurable value, and
+// "Special (...)" texts that keep their number in the parsed Time but stay
+// special because the book says so. Any other non-literal fallback to
+// special in seeds/spells.json fails the test, so a new stat form must get a
+// parser (or an entry here, on purpose).
 var specialAllowed = map[string]map[string]bool{
-	"casting_time": {},
-	// "1": the bare "1" of Speak With Dead (1" indoors). `1"`: Life Force Transfer, same unit.
-	// "Change": a scrape glitch on Death Pact (nothing in the scrape repairs it).
-	"range":    {"1": true, `1"`: true, "Change": true},
-	"duration": {"Time of chanting": true, "Variable": true},
-	// Area prose the book gives instead of a measurable value (counts, "variable", or a
-	// shape the area parser does not model); shown as written.
+	"casting_time": {"Special (8 turns)": true, "Special + 1": true},
+	// "Change": a scrape glitch on Death Pact, which is not in the PHB text we hold.
+	"range": {"Change": true, "Infinite + special": true},
+	"duration": {
+		"Time of chanting": true, "Variable": true,
+		"Special (up to three rounds)": true, "Special (2 rounds/level maximum)": true, "Special; max. 10 rounds": true,
+	},
 	"area_of_effect": {
 		"Circle of priests": true, "Hearing range": true, "Line of sight": true, "Script reader": true,
-		"Varies": true, "Variable": true, "1d6 creatures/level": true, `3" diameter circle`: true,
-		"30' long + 5'/level": true, "1–7 targets": true, "The wizard's staff": true, "Creates 1d4+1": true,
-		"Two or more creatures": true, "Create 7 eyes": true, "Creates a sphere": true,
+		"Varies": true, "Variable": true, "The wizard's staff": true, "Two or more creatures": true,
+		"Creates a sphere": true,
 	},
-	"components":   {},
-	"saving_throw": {"Variable": true}, // Wildfire: the effect decides
+	"components":   {"V, S, special": true},
+	"saving_throw": {"Variable": true, "None (special)": true},
 }
 
+// specialAllowedCount pins how many spell fields are allow-listed: adding a
+// spell whose stat falls back to special makes this fail until it is looked at.
+const specialAllowedCount = 22
+
 // TestRepoSeeds_EverySpellStatParses checks parseability only: no spell
-// field may fall back to special unless the PHB text says so ("Special",
-// "... special") or it is in the allow-list above. It asserts no values.
+// field may fall back to special unless the PHB text is the literal word
+// "Special" or it is in the allow-list above, whose size is pinned. It
+// asserts no values.
 func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 	var spells []struct {
 		Name         string `json:"name"`
@@ -240,6 +246,7 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 	readJSON(t, "spells.json", &spells)
 	require.NotEmpty(t, spells)
 
+	allowedSeen := 0
 	for _, sp := range spells {
 		raws := map[string]string{
 			"casting_time": sp.CastingTime, "range": sp.Range, "duration": sp.Duration,
@@ -251,7 +258,11 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 		})
 		for _, field := range stats.Special() {
 			raw := raws[field]
-			if strings.Contains(strings.ToLower(raw), "special") || specialAllowed[field][raw] {
+			if strings.EqualFold(strings.TrimRight(strings.TrimSpace(raw), "."), "special") {
+				continue
+			}
+			if specialAllowed[field][raw] {
+				allowedSeen++
 				continue
 			}
 			t.Errorf("%s: %s %q falls back to special (add a parser, or allow-list it)", sp.Name, field, raw)
@@ -259,4 +270,5 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 		assert.NotEmpty(t, stats.Components.Raw, sp.Name)
 		assert.True(t, stats.Components.V || stats.Components.S || stats.Components.M, "%s: components %q", sp.Name, sp.Components)
 	}
+	assert.Equal(t, specialAllowedCount, allowedSeen, "allow-listed special fields in the seed")
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
-// All inputs are literal PHB strings written here; nothing reads seeds/.
+// All inputs are literal PHB strings written here; the seed-wide check is in seedcheck.
 
 func TestCastingTime(t *testing.T) {
 	tests := []struct {
@@ -77,6 +77,8 @@ func TestRange(t *testing.T) {
 		{"Special", 3, "special", false, spellstats.Value{}},
 		{"Infinite + special", 3, "special", false, spellstats.Value{}},
 		{"1", 3, "special", false, spellstats.Value{}},
+		{"1\"", 3, "distance", false, spellstats.Value{Amount: 10, Unit: "yard"}},
+		{"3\"/level", 2, "distance", false, spellstats.Value{Amount: 60, Unit: "yard"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.raw, func(t *testing.T) {
@@ -238,6 +240,17 @@ func TestAreaOfEffect(t *testing.T) {
 		{"Person touched", 15, "touch", "", nil, nil, ""},
 		{"Special", 15, "special", "", nil, nil, ""},
 		{"Line of sight", 15, "special", "", nil, nil, ""},
+		{"1–7 targets", 15, "targets", "", nil, &spellstats.Value{Amount: 1, Upper: 7}, "targets"},
+		{"1d6 creatures/level", 3, "targets", "", nil, &spellstats.Value{Dice: "3d6"}, "creatures"},
+		{"1d6 creatures/2 levels", 5, "targets", "", nil, &spellstats.Value{Dice: "2d6"}, "creatures"},
+		{"30' long + 5'/level", 4, "area", "", []spellstats.Value{dim("foot", 50)}, nil, ""},
+		{"3\" diameter circle", 15, "area", "diameter", []spellstats.Value{dim("yard", 30)}, nil, ""},
+		{"One 10'-wide path, 60 feet long", 15, "area", "", []spellstats.Value{dim("foot", 10), dim("foot", 60)}, nil, ""},
+		{"Creates 1d4+1", 15, "targets", "", nil, &spellstats.Value{Amount: 1, Dice: "1d4"}, ""},
+		{"Create 7 eyes", 15, "targets", "", nil, &spellstats.Value{Amount: 7}, "eyes"},
+		{"Creates a sphere", 15, "special", "", nil, nil, ""},
+		{"Two or more creatures", 15, "special", "", nil, nil, ""},
+		{"1d4 sticks + 1 stick/level in a 10-ft. cube", 5, "area", "cube", []spellstats.Value{dim("foot", 10)}, nil, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.raw, func(t *testing.T) {
@@ -251,6 +264,34 @@ func TestAreaOfEffect(t *testing.T) {
 			assert.Equal(t, tt.targets, at.Targets)
 		})
 	}
+}
+
+// A "Special (...)" text stays special but keeps the number the book gives.
+func TestSpecialKeepsItsNumber(t *testing.T) {
+	ct := spellstats.ParseCastingTime("Special (8 turns)")
+	assert.Equal(t, "special", ct.Kind)
+	assert.Equal(t, spellstats.Value{}, ct.At(10))
+	assert.Equal(t, []spellstats.Term{{Count: 8, Unit: "turn"}}, ct.Time.Terms)
+
+	tests := []struct {
+		raw   string
+		terms []spellstats.Term
+		upTo  bool
+	}{
+		{"Special (up to three rounds)", []spellstats.Term{{Count: 3, Unit: "round"}}, true},
+		{"Special (2 rounds/level maximum)", []spellstats.Term{{Count: 2, Unit: "round", PerLevel: true, Step: 1}}, true},
+		{"Special; max. 10 rounds", []spellstats.Term{{Count: 10, Unit: "round"}}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			d := spellstats.ParseDuration(tt.raw)
+			assert.Equal(t, "special", d.Kind)
+			assert.Equal(t, tt.terms, d.Time.Terms)
+			assert.Equal(t, tt.upTo, d.Time.UpTo)
+		})
+	}
+	assert.Empty(t, spellstats.ParseDuration("Variable").Time.Terms)
+	assert.Empty(t, spellstats.ParseCastingTime("Special + 1").Time.Terms)
 }
 
 func TestParse_PicksTheAcceptanceExamples(t *testing.T) {

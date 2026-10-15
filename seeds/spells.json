@@ -2162,7 +2162,7 @@
     "school": "Necromancy",
     "sphere": "Divination",
     "casting_time": "1 turn",
-    "range": "1",
+    "range": "1\"",
     "duration": "Special",
     "area_of_effect": "1 creature",
     "components": "V, S, M",

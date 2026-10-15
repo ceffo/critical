@@ -14,7 +14,8 @@ const (
 // CastingTime kinds.
 // (KindTimed: Time holds the quantity, bare numbers are segments.)
 
-// CastingTime is "3" (segments), "1 rd.", "1 turn", "2d12 hours".
+// CastingTime is "3" (segments), "1 rd.", "1 turn", "2d12 hours". Kind
+// special may still carry Time: "Special (8 turns)" keeps its 8 turns.
 type CastingTime struct {
 	Raw  string   `json:"raw"`
 	Kind string   `json:"kind"` // timed | special
@@ -24,8 +25,10 @@ type CastingTime struct {
 // ParseCastingTime reads a PHB casting time. Bare numbers are segments.
 func ParseCastingTime(raw string) CastingTime {
 	c := CastingTime{Raw: raw, Kind: KindSpecial}
-	if q, err := parseQuantity(raw, "segment"); err == nil {
+	if q, err := parseQuantity(normText(raw), "segment"); err == nil {
 		c.Kind, c.Time = KindTimed, q
+	} else if q, ok := specialDetail(raw, "segment"); ok {
+		c.Time = q // stays special: the book gives a number but says "Special"
 	}
 	return c
 }
@@ -60,7 +63,7 @@ var radiusRe = regexp.MustCompile(`(?i)[\s-]*radius$`)
 // ParseRange reads a PHB range. "0" is self.
 func ParseRange(raw string) Range {
 	r := Range{Raw: raw, Kind: KindSpecial}
-	s := strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". "))
+	s := normText(strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". ")))
 	switch strings.ToLower(s) {
 	case "0", "self", "the caster":
 		r.Kind = RangeSelf
@@ -104,7 +107,7 @@ const (
 type Duration struct {
 	Raw  string `json:"raw"`
 	Kind string `json:"kind"` // instantaneous | permanent | concentration | until | timed | special
-	// Time is set for timed.
+	// Time is set for timed, and kept for "Special (8 turns)" (still special).
 	Time Quantity `json:"time"`
 	// Condition is the text after "Until" / "Permanent until".
 	Condition string `json:"condition,omitempty"`
@@ -115,7 +118,7 @@ var untilRe = regexp.MustCompile(`(?i)^(?:permanent\s+)?until\s+(.+)$`)
 // ParseDuration reads a PHB duration.
 func ParseDuration(raw string) Duration {
 	d := Duration{Raw: raw, Kind: KindSpecial}
-	s := strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". "))
+	s := normText(strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". ")))
 	switch strings.ToLower(s) {
 	case "instantaneous":
 		d.Kind = DurationInstantaneous
@@ -139,6 +142,8 @@ func ParseDuration(raw string) Duration {
 	}
 	if q, err := parseQuantity(s, ""); err == nil && q.Terms[0].Unit != "" {
 		d.Kind, d.Time = KindTimed, q
+	} else if q, ok := specialDetail(raw, ""); ok {
+		d.Time = q // stays special: the book gives a number but says "Special"
 	}
 	return d
 }

@@ -40,6 +40,8 @@ var (
 	levelXRe  = regexp.MustCompile(`(?i)(?:\(|caster'?s )level\s*x\s*(\d+)\)?[\s-]*(sq\.?|cu\.?)?\s*(ft|yds?)?`)
 	shapeRe   = regexp.MustCompile(`(?i)(?:\b(radius|diameter|cone|cube|square|sphere|globe|cloud|column|spray|hemisphere|volume|wall)\b|(\bsq\b))`)
 	targetRe  = regexp.MustCompile(`(?i)^(?:up to\s+|one\s+|two\s+)?(\d+(?:d\d+)?)(?:\s*(?:-|to)\s*(\d+))?(?:\s+or more)?\s+(.*?)\s*$`)
+	createsRe = regexp.MustCompile(`(?i)^creates?\s+`)
+	bareCount = regexp.MustCompile(`^\d+(?:d\d+)?(?:\+\d+(?:d\d+)?)*$`)
 	lengthRe  = regexp.MustCompile(`(?i)\b(ft|feet|foot|yds?|yards?|mi|miles?|sq|cu)\b|-ft\b`)
 )
 
@@ -49,7 +51,9 @@ var wordCounts = map[string]string{"one": "1", "two": "2"}
 // an extent nor a count ("Line of sight") is special.
 func ParseArea(raw string) AreaOfEffect {
 	a := AreaOfEffect{Raw: raw, Kind: KindSpecial}
-	s := strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". "))
+	s := normText(strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". ")))
+	created := createsRe.MatchString(s)
+	s = createsRe.ReplaceAllString(s, "")
 	low := strings.ToLower(s)
 	switch {
 	case low == "special" || low == "":
@@ -60,6 +64,12 @@ func ParseArea(raw string) AreaOfEffect {
 	case strings.Contains(low, "touched"):
 		a.Kind = AreaTouch
 		return a
+	}
+	if created && bareCount.MatchString(s) { // "Creates 1d4+1": a count with no noun
+		if count, dice, err := parseExpr(s); err == nil {
+			a.Kind, a.Targets = AreaTargets, &Quantity{Terms: []Term{{Count: count, Dice: dice}}}
+			return a
+		}
 	}
 	if m := levelXRe.FindStringSubmatch(s); m != nil {
 		n, _ := strconv.ParseFloat(m[1], 64)
@@ -72,17 +82,31 @@ func ParseArea(raw string) AreaOfEffect {
 		a.Shape = shapeOf(s)
 		return a
 	}
-	for _, part := range areaSplit.Split(s, -1) {
-		part = strings.TrimSpace(part)
+	cuts := areaSplit.FindAllStringIndex(s, -1)
+	start := 0
+	for i := 0; i <= len(cuts); i++ {
+		end, next := len(s), len(s)
+		if i < len(cuts) {
+			end, next = cuts[i][0], cuts[i][1]
+		}
+		part := strings.TrimSpace(s[start:end])
+		prevSep := ""
+		if i > 0 {
+			prevSep = strings.TrimSpace(s[cuts[i-1][0]:cuts[i-1][1]])
+		}
+		start = next
 		if part == "" {
 			continue
 		}
 		if lengthRe.MatchString(part) {
-			if a.Dims == nil {
+			switch {
+			case a.Dims == nil:
 				a.Dims = parseDims(part)
 				if a.Shape == "" {
 					a.Shape = shapeOf(part)
 				}
+			case prevSep == ",": // "10 ft.-wide path, 60 feet long": more extents
+				a.Dims = append(a.Dims, parseDims(part)...)
 			}
 		} else if a.Targets == nil {
 			if q, noun, ok := parseTargets(part); ok {
@@ -205,8 +229,8 @@ func parseTargets(part string) (Quantity, string, bool) {
 			}
 		}
 	}
-	if t.PerLevel && t.Dice != "" {
-		return Quantity{}, "", false
+	if t.PerLevel && t.Dice != "" && strings.Contains(noun, "+") {
+		return Quantity{}, "", false // "1d4 sticks + 1 stick/level": the level term is not the dice's
 	}
 	return Quantity{Terms: []Term{t}}, noun, true
 }

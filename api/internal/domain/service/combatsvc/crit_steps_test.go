@@ -163,7 +163,8 @@ func TestCrit_Step4_MultiplierUsesSecondD100(t *testing.T) {
 }
 
 // Step 5: the crit multiplier (from the multiplier d100's row) multiplies
-// with the buff multipliers at full precision, floored once at the end,
+// the dice part and the weapon bonus, after the buff multipliers, which
+// apply to the raw dice only; full precision, floored once at the end,
 // never below 0.
 func TestCrit_Step5_MultipliersStackFlooredOnce(t *testing.T) {
 	cases := []struct {

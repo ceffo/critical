@@ -81,8 +81,6 @@ return a distinct value for each call and expect an exact number of calls.
 
 - Strength and buff damage are whole numbers, so flooring before or after adding them gives the
   same result; the formula is still written and computed as the floor of the whole.
-- ADR 0001 step 5 predates the 2026-10-14 ruling and writes the buff multipliers next to the crit
-  (`× (crit × buffs)`); steps 4 and 6 here are the formula the code runs.
 - A target AC correction (ADR 0002 step 11) recomputes the damage from the stored dice and terms:
   the buffs as they were at the roll, not as they are at the correction.
 - Not covered: damage resistance, damage reduction by the target, Stoneskin absorbing (a buff

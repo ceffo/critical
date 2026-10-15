@@ -32,22 +32,20 @@ test("Next turn advances the counter and starts a new log group", async ({
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(r0 + 1);
 
-  // The new round is the current group and holds only its initiative; the old entries stay in
-  // their round.
+  // Next Round is one transaction (ADR 0018): the advance and the initiative it rolls sit together
+  // in the round they open, framed as one unit; the old entries stay in their round.
   const newGroup = turnGroup(page, r0 + 1);
   await expect(newGroup).toContainText("current");
   await expect(newGroup.getByRole("listitem")).toHaveText([
     /Initiative \d+ \(d10\) for turn/,
+    new RegExp(`Turn ${r0} → ${r0 + 1}`),
   ]);
+  const transaction = newGroup.getByTestId("log-transaction");
+  await expect(transaction).toHaveCount(1);
+  await expect(transaction.getByRole("listitem")).toHaveCount(2);
   const oldGroup = turnGroup(page, r0);
   await expect(
     oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" }),
-  ).toBeVisible();
-  // Next Round itself is logged in the round it ends (voidable, see buffs.spec.ts).
-  await expect(
-    oldGroup
-      .getByRole("listitem")
-      .filter({ hasText: `Turn ${r0} → ${r0 + 1}` }),
   ).toBeVisible();
 
   await recordHp(page, "damage", 1, "e2e second round hit");
@@ -347,6 +345,11 @@ test("Next turn rolls the initiative; one Undo pops a turn with its initiative; 
   await snap(page, "undo-names-next-turn");
   await undoNextTurn(page, logEntry(page, "Turn 1 → 2"));
   await expect.poll(() => currentRound(page)).toBe(1);
+  // The popped transaction reads as undone once, on its frame.
+  await expect(
+    combatLog(page).getByTestId("log-transaction").first(),
+  ).toHaveAttribute("data-undone", "true");
+  await snap(page, "next-round-undone-group");
   await expect(value).toHaveAttribute("data-entry-id", firstId ?? "");
   await expect(value).toHaveText(firstValue ?? "");
 

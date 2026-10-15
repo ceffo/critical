@@ -58,7 +58,7 @@ function Pane({
 
 /**
  * Dashboard v3 shell (ADR 0009, docs/frontend.md "Dashboard Layout"): a full-width header region,
- * then rail | workspace | Fil (result + journal) | Moi (identity, HP, absorb, damage entry,
+ * then rail | workspace | Fil (result + journal, starting about mid-screen, a separator on its left edge) | Moi (identity, HP, absorb, damage entry,
  * saves). Columns have clamped widths and scroll on their own; the page itself never scrolls.
  */
 function App() {
@@ -84,7 +84,7 @@ function App() {
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background">
       <Header />
-      <div className="grid min-h-0 grid-cols-[clamp(68px,5vw,96px)_minmax(0,1fr)_clamp(340px,26vw,520px)_clamp(300px,22vw,440px)] gap-3 py-3 pr-3 pl-2">
+      <div className="grid min-h-0 grid-cols-[clamp(68px,5vw,96px)_minmax(0,1fr)_minmax(340px,calc(50vw_-_clamp(300px,22vw,440px)_-_1.5rem))_clamp(300px,22vw,440px)] gap-3 py-3 pr-3 pl-2">
         <Rail active={workspace} onSelect={open} />
 
         <div className="flex min-h-0 min-w-0 flex-col" data-testid="workspace">
@@ -125,7 +125,8 @@ function App() {
 
         <aside
           aria-label={t("shell.fil")}
-          className="flex min-h-0 min-w-0 flex-col gap-3"
+          className="flex min-h-0 min-w-0 flex-col gap-3 border-l border-border pl-3"
+          data-testid="fil"
         >
           <div className="flex max-h-[60%] min-h-0 shrink-0 flex-col">
             <ResultCard />

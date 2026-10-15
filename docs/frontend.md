@@ -43,7 +43,7 @@ flowchart TD
     RC["TurnBlock: turn number, initiative row, Next turn, ⋯ menu (time passes, set turn, end combat)"]
     BS["EffectsTimeline: one row per buff over a window of 8 / 12 / 16 turns, add / edit forms"]
   end
-  subgraph G["Columns: rail | workspace 1fr | Fil clamp(340px, 26vw, 520px) | Moi clamp(300px, 22vw, 440px)"]
+  subgraph G["Columns: rail | workspace 1fr | Fil minmax(340px, 50vw - Moi - 1.5rem) (starts about mid-screen, border-l separator) | Moi clamp(300px, 22vw, 440px)"]
     RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts, Expérience; gear opens SettingsPopover"]
     subgraph WS["Workspace (one shown, each mounted on first visit, then kept)"]
       ACT["Agir: ActionArea tabs Weapons, Spells, Items"]

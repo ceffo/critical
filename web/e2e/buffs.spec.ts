@@ -36,9 +36,11 @@ test("Next turn then void restores the round, the durations and the expired buff
     buffBadge(page, "e2e Bless").getByTestId("buff-rounds"),
   ).toHaveText("2 turns");
   const advance = `Turn ${r0} → ${r0 + 1} — expired: e2e Haste`;
-  // Logged in the round it ends.
+  // Logged with its initiative as one transaction, in the round it opens.
   await expect(
-    turnGroup(page, r0).getByRole("listitem").filter({ hasText: advance }),
+    turnGroup(page, r0 + 1)
+      .getByRole("listitem")
+      .filter({ hasText: advance }),
   ).toBeVisible();
   await snap(page, "next-round-expired");
 

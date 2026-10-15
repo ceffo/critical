@@ -8,7 +8,7 @@ import { CharacterDetails } from "./CharacterDetails";
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 
 /**
- * Who: name, level (a button opening the Expérience workspace, underlined with the server's
+ * Who: name with the level right-aligned on the same line (a button opening the Expérience workspace, underlined with the server's
  * progress to the next level, ADR 0015), then the abilities in one row of seven cells, STR as the server's effective
  * value (sheet value in brackets when buffed) and THAC0 last, set apart by a tone step.
  */
@@ -21,8 +21,8 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <div className="min-w-0">
-        <h1 className="min-w-0">
+      <div className="flex min-w-0 items-baseline justify-between gap-2">
+        <h1 className="min-w-0 flex-1">
           <CharacterDetails character={character} />
         </h1>
         {character && (
@@ -38,7 +38,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                   })
                 : undefined
             }
-            className="relative pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {t("app.levelValue", { level: character.level })}
             {xp && (

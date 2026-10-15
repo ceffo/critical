@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
 import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { SkillCheck } from "@/types/skills";
+import type { DiceRoll } from "@/types/dice";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
@@ -367,6 +368,19 @@ export function skillCheckPayload(e: LogEntry): SkillCheck | null {
     : null;
 }
 
+/** Payload of dice entries (dicesvc rollRecord): the free roll as recorded. */
+export function dicePayload(e: LogEntry): DiceRoll | null {
+  if (e.kind !== "dice") return null;
+  const p = (e.effectivePayload ?? e.payload) as Partial<DiceRoll> | null;
+  return p &&
+    typeof p.formula === "string" &&
+    typeof p.total === "number" &&
+    typeof p.modifier === "number" &&
+    Array.isArray(p.groups)
+    ? (p as DiceRoll)
+    : null;
+}
+
 /** A skill's display name; an id without a translation shows as is. */
 export function skillName(t: TFunction, id: string): string {
   return t(`skills.names.${id}`, { defaultValue: id });
@@ -397,6 +411,8 @@ export function entryText(e: LogEntry, t: TFunction): string {
   if (attack) return attackText(attack, t);
   const skill = skillCheckPayload(e);
   if (skill) return skillText(skill, t);
+  const dice = dicePayload(e);
+  if (dice) return t("log.dice", { formula: dice.formula, total: dice.total });
   const save = savePayload(e);
   if (save) return saveText(save, t);
   const cast = castPayload(e);

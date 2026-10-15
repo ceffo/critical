@@ -21,7 +21,8 @@ export type LogKind =
   | "spell_prep"
   | "long_rest"
   | "save"
-  | "skill_check";
+  | "skill_check"
+  | "dice";
 
 export type LogStatus = "active" | "amended" | "voided";
 

@@ -644,7 +644,8 @@
       "item_add": "Item",
       "item_edit": "Item",
       "item_remove": "Item",
-      "skill_check": "Skill"
+      "skill_check": "Skill",
+      "dice": "Dice"
     },
     "status": {
       "active": "Active",
@@ -762,7 +763,8 @@
     "skill": {
       "success": "{{name}}: d{{die}} {{roll}} vs {{target}}, success",
       "failure": "{{name}}: d{{die}} {{roll}} vs {{target}}, failure"
-    }
+    },
+    "dice": "Dice {{formula}} = {{total}}"
   },
   "critTable": {
     "title": "Crit table (house rule)",
@@ -905,5 +907,30 @@
       "pick_pockets": "Pick pockets",
       "read_languages": "Read languages"
     }
+  },
+  "dice": {
+    "title": "Dice",
+    "formula": "Formula",
+    "placeholder": "2d6+1",
+    "roll": "Roll",
+    "reroll": "Reroll",
+    "rerollTitle": "Roll {{formula}} again",
+    "clear": "Clear",
+    "plus": "Add 1",
+    "minus": "Subtract 1",
+    "add": "Add a {{die}}",
+    "remove": "Remove a {{die}}",
+    "count": "{{count}} × {{die}}, remove one",
+    "invalid": "Invalid formula",
+    "saveFavourite": "Save as a favourite",
+    "favourites": "Favourites",
+    "noFavourites": "No favourite yet",
+    "rollFavourite": "Roll {{formula}}",
+    "removeFavourite": "Remove {{formula}} from the favourites",
+    "result": "Dice roll",
+    "modifier": "Modifier",
+    "total": "Total",
+    "group": "{{count}}d{{sides}}",
+    "groupPercent": "{{count}}d%"
   }
 }

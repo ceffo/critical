@@ -35,6 +35,8 @@ import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
 import type { RollResult, SaveCategory } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import type { SkillCheck } from "@/types/skills";
+import type { DiceRoll } from "@/types/dice";
+import { dieName } from "@/lib/diceFormula";
 import { fieldClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
 
@@ -132,6 +134,8 @@ function CardBody({ model, interactive }: { model: CardModel; interactive: boole
       return <InitiativeResult d10={model.d10} />;
     case "skill":
       return <SkillResult check={model.check} />;
+    case "dice":
+      return <DiceResult roll={model.roll} />;
     case "info":
       return <InfoResult info={model.info} />;
   }
@@ -742,6 +746,45 @@ function SkillResult({ check: c }: { check: SkillCheck }) {
         <Fact label={t("result.skill.die", { die: c.die })}>{c.roll}</Fact>
         <Fact label={t("result.target")}>{proficiency ? c.target : t("skills.percent", { value: c.target })}</Fact>
       </dl>
+    </div>
+  );
+}
+
+/** A free dice roll: the formula, the dice per kind as chips with their subtotal, the constant and the big total. */
+function DiceResult({ roll: r }: { roll: DiceRoll }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-3" data-testid="dice-result">
+      <div className="flex items-end justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <span className="text-base font-medium tabular-nums" data-testid="dice-formula">
+            {r.formula}
+          </span>
+          {r.groups.map((g, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-1.5" data-testid="dice-group">
+              <span className={cn(labelClass, "tabular-nums")}>
+                {g.negative ? "−" : ""}
+                {dieName(g.sides)}
+              </span>
+              <ul className="flex flex-wrap gap-1.5">
+                {g.rolls.map((v, j) => (
+                  <DieChip key={j} value={v} faces={g.negative ? null : g.sides} />
+                ))}
+              </ul>
+              <span className="text-sm font-semibold tabular-nums" data-testid="dice-subtotal">
+                = {formatSigned(g.subtotal)}
+              </span>
+            </div>
+          ))}
+          {r.modifier !== 0 && (
+            <div className="text-sm tabular-nums" data-testid="dice-modifier">
+              <span className={labelClass}>{t("dice.modifier")} </span>
+              {formatSigned(r.modifier)}
+            </div>
+          )}
+        </div>
+        <Total label={t("dice.total")} value={r.total} testId="dice-total" />
+      </div>
     </div>
   );
 }

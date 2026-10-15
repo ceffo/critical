@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
@@ -43,6 +44,9 @@ type SpellbookEntry struct {
 	// Damage is the damage a cast rolls at the character's level, from the
 	// spell effects catalog (Info fills it; nil: the cast rolls none).
 	Damage *spelleffectsvc.DamageAt
+	// Items are the inventory items the spell can spend right now (Info
+	// fills it; empty: the spell consumes none, or none is left).
+	Items []itemsvc.Item
 }
 
 // CastInputs are the choices a spell's cast mechanics need from the player
@@ -95,6 +99,11 @@ type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
+// Items is the inventory (itemsvc.SVC satisfies it).
+type Items interface {
+	List(ctx context.Context) ([]itemsvc.Item, error)
+}
+
 // Slots is the spell slot store (spellsvc's DAL satisfies it).
 type Slots interface {
 	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
@@ -112,6 +121,7 @@ type Deps struct {
 	Spellbook  Spellbook
 	Effects    spelleffectsvc.Catalog
 	Limits     Limits
+	Items      Items
 	Characters Characters
 	Log        Log
 	Tx         domain.TxRunner
@@ -121,7 +131,7 @@ type service struct{ Deps }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Slots == nil || d.Spellbook == nil || d.Effects == nil || d.Limits == nil || d.Characters == nil || d.Log == nil || d.Tx == nil {
+	if d.Slots == nil || d.Spellbook == nil || d.Effects == nil || d.Limits == nil || d.Items == nil || d.Characters == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("prepsvc: nil dependency")
 	}
 	return &service{d}, nil
@@ -154,8 +164,19 @@ func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
 		return Info{}, err
 	}
 	out := Info{Spellbook: append([]SpellbookEntry(nil), s.Spellbook.All()...)}
+	inventory, err := s.Items.List(ctx)
+	if err != nil {
+		return Info{}, fmt.Errorf("list items: %w", err)
+	}
 	for i, e := range out.Spellbook {
 		out.Spellbook[i].Cast = s.castInputs(e.ID)
+		if t := out.Spellbook[i].Cast.ConsumeItemType; t != "" {
+			for _, it := range inventory {
+				if it.Spendable(t) {
+					out.Spellbook[i].Items = append(out.Spellbook[i].Items, it)
+				}
+			}
+		}
 		if fx, ok := s.Effects.Get(e.ID); ok {
 			if out.Spellbook[i].Damage, err = fx.DamageAt(level); err != nil {
 				return Info{}, err

@@ -94,6 +94,7 @@ packages:
       Spellbook:
       Limits:
       Characters:
+      Items:
       Slots:
       Log:
   github.com/ceffo/critical/api/internal/domain/service/castsvc:

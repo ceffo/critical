@@ -1,5 +1,7 @@
 package itemsvc
 
+import "strings"
+
 // Behaviour is how an item's count behaves at the table.
 // It is the only real difference between items: arrows, flasks, wands and
 // gems are all one model with a free-text Type label.
@@ -46,6 +48,14 @@ type Item struct {
 	EffectDice string // damage dice, e.g. "6d6"
 	EffectSave string // save category for the effect, e.g. "rod_staff_wand"
 	Notes      string
+}
+
+// Spendable tells whether a spell that consumes an item of itemType can spend
+// it: of that type (case-insensitive), not a daily item (it recharges and is
+// never spent by a spell), some left. The one rule behind both the cast and
+// the list of items offered for a spell.
+func (i Item) Spendable(itemType string) bool {
+	return strings.EqualFold(i.Type, itemType) && i.Behaviour != BehaviourDaily && i.Count > 0
 }
 
 // Removed reports whether this item, as returned by a use, is gone: a

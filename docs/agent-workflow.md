@@ -132,13 +132,18 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   or missing roll fails the test. If code and design disagree, stop and report; don't pick one.
 - **No tracker ids in the code.** No bead/ticket id (`critical-…`, `qki.…`) in source, comments, test
   names, strings, config or seeds. Code says what it does and why; the link to the work item lives in
-  the commit message and the PR only. (User rule, 2026-10-14.)
+  the commit message and the PR only. (User rule, 2026-10-14.) Enforced by `just check-no-tracker-ids`
+  (part of `just validate`), which reads the ids from `.beads/issues.jsonl` and scans everything but
+  `.beads/`, `docs/` and lock files.
 - **No special case per spell, item or buff.** Model the mechanic generically and drive it from the
   data (`seeds/spell_effects.json`, item behaviour): no `if id == "<some_spell>"` branches and no
   per-entity constants in services. If a mechanic is missing, add it as a general effect kind.
 - **No presentation text from the backend.** The API returns structured data; wording, formatting and
   formulas for display are built in the frontend (i18n). No `fmt.Sprintf`/`Fprintf` to compose
-  user-facing text in Go (error messages excepted).
+  user-facing text in Go (error messages excepted). Enforced by golangci `forbidigo` on
+  `api/internal/domain/` (production code): the `fmt.Sprint*`/`Fprint*` family is refused, errors
+  use `fmt.Errorf` or `domain.FieldErrorf`. The action log's `summary` is only text the player typed;
+  every other entry is a structured payload the UI words (`web/src/lib/logSummary.ts`).
 - Rules items end the report with a `RULES TRACE` block: `ADR step -> code location -> test name`.
   A step with no test is not done.
 

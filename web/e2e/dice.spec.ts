@@ -68,11 +68,18 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({ p
   await expect(fav).toHaveCount(1);
   await expect(fav).toContainText("d%+d4");
 
-  // The favourite survives a reload (kept by the server) and rolls from its chip.
+  // A second favourite goes last; moving it earlier is kept by the server.
+  await formula.fill("d6");
+  await composer.getByRole("button", { name: "Save as a favourite" }).click();
+  await expect(fav).toHaveText([/d%\+d4/, /d6/]);
+  await composer.getByRole("button", { name: "Move d6 earlier" }).click();
+  await expect(fav).toHaveText([/d6/, /d%\+d4/]);
+
+  // The favourites and their order survive a reload (kept by the server); a chip rolls.
   await page.reload();
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
   const favReloaded = page.getByRole("form", { name: "Dice" }).getByTestId("dice-favourite");
-  await expect(favReloaded).toHaveCount(1);
+  await expect(favReloaded).toHaveText([/d6/, /d%\+d4/]);
   await favReloaded.getByRole("button", { name: "Roll d%+d4" }).click();
   await expect(result.getByTestId("dice-formula")).toHaveText("d%+d4");
   await expect(result.getByTestId("dice-group")).toHaveCount(2);

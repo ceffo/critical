@@ -462,6 +462,7 @@ func (f *Factory) fromExistingDiceFavourite(ctx context.Context, m *models.DiceF
 	o.ID = func() int64 { return m.ID }
 	o.CharacterID = func() int64 { return m.CharacterID }
 	o.Formula = func() string { return m.Formula }
+	o.Position = func() int64 { return m.Position }
 
 	if visited, ok := factoryVisitedCtx.Value(ctx); ok {
 		ptr := uintptr(unsafe.Pointer(m))

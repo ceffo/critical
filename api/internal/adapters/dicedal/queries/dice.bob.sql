@@ -2,13 +2,20 @@
 -- This file is meant to be re-generated in place and/or deleted at any time.
 
 -- ListDiceFavourites
-SELECT "id", "formula" FROM "dice_favourites" WHERE "character_id" = ?1 ORDER BY "id";
+SELECT "id", "formula" FROM "dice_favourites" WHERE "character_id" = ?1 ORDER BY "position", "id";
 
 -- InsertDiceFavourite
-INSERT INTO "dice_favourites" ("character_id", "formula")
-VALUES (?1, ?2)
+INSERT INTO "dice_favourites" ("character_id", "formula", "position")
+VALUES (?1, ?2, ?3)
 RETURNING "id";
+
+-- LastDiceFavouritePosition
+SELECT "position" FROM "dice_favourites" WHERE "character_id" = ?1 ORDER BY "position" DESC LIMIT 1;
 
 -- DeleteDiceFavourite
 DELETE FROM "dice_favourites" WHERE "character_id" = ?1 AND "id" = ?2
+RETURNING "id";
+
+-- SetDiceFavouritePosition
+UPDATE "dice_favourites" SET "position" = ?1 WHERE "character_id" = ?2 AND "id" = ?3
 RETURNING "id";

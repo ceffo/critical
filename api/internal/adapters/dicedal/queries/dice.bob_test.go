@@ -115,9 +115,11 @@ var beforeTestingInsertDiceFavourite = func(context.Context, bob.Tx) ([]InsertDi
 	return []struct {
 		CharacterID int64
 		Formula     string
+		Position    int64
 	}{{
 		CharacterID: random_int64(nil),
 		Formula:     random_string(nil),
+		Position:    random_int64(nil),
 	}}, nil
 }
 
@@ -128,9 +130,11 @@ func TestInsertDiceFavourite(t *testing.T) {
 		query := InsertDiceFavourite([]struct {
 			CharacterID int64
 			Formula     string
+			Position    int64
 		}{{
 			CharacterID: random_int64(nil),
 			Formula:     random_string(nil),
+			Position:    random_int64(nil),
 		}})
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -148,9 +152,11 @@ func TestInsertDiceFavourite(t *testing.T) {
 		query := InsertDiceFavourite([]struct {
 			CharacterID int64
 			Formula     string
+			Position    int64
 		}{{
 			CharacterID: random_int64(nil),
 			Formula:     random_string(nil),
+			Position:    random_int64(nil),
 		}})
 
 		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -221,6 +227,98 @@ func TestInsertDiceFavourite(t *testing.T) {
 	})
 }
 
+var beforeTestingLastDiceFavouritePosition = func(context.Context, bob.Tx) (int64, error) {
+	return random_int64(nil), nil
+}
+
+func TestLastDiceFavouritePosition(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := LastDiceFavouritePosition(random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(lastDiceFavouritePositionSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := LastDiceFavouritePosition(random_int64(nil))
+
+		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(lastDiceFavouritePositionSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingLastDiceFavouritePosition(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Select(LastDiceFavouritePosition(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "position" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "position", columns[0])
+		}
+	})
+}
+
 var beforeTestingDeleteDiceFavourite = func(context.Context, bob.Tx) (int64, int64, error) {
 	return random_int64(nil), random_int64(nil), nil
 }
@@ -284,6 +382,98 @@ func TestDeleteDiceFavourite(t *testing.T) {
 		}
 
 		query, args, err := bob.Build(ctxTx, sqlite.Delete(DeleteDiceFavourite(arg0, arg1)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 1 {
+			t.Fatalf("expected %d columns, got %d", 1, len(columns))
+		}
+
+		if columns[0] != "id" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "id", columns[0])
+		}
+	})
+}
+
+var beforeTestingSetDiceFavouritePosition = func(context.Context, bob.Tx) (int64, int64, int64, error) {
+	return random_int64(nil), random_int64(nil), random_int64(nil), nil
+}
+
+func TestSetDiceFavouritePosition(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := SetDiceFavouritePosition(random_int64(nil), random_int64(nil), random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(setDiceFavouritePositionSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := SetDiceFavouritePosition(random_int64(nil), random_int64(nil), random_int64(nil))
+
+		if _, err := sqlite.Update(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(setDiceFavouritePositionSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, arg1, arg2, beforeHookErr := beforeTestingSetDiceFavouritePosition(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Update(SetDiceFavouritePosition(arg0, arg1, arg2)))
 		if err != nil {
 			t.Fatal(err)
 		}

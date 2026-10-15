@@ -281,6 +281,54 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
+// ReorderFavourites provides a mock function with given fields: ctx, characterID, ids
+func (_m *MockSVC) ReorderFavourites(ctx context.Context, characterID int64, ids []int64) error {
+	ret := _m.Called(ctx, characterID, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReorderFavourites")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, []int64) error); ok {
+		r0 = rf(ctx, characterID, ids)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSVC_ReorderFavourites_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReorderFavourites'
+type MockSVC_ReorderFavourites_Call struct {
+	*mock.Call
+}
+
+// ReorderFavourites is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - ids []int64
+func (_e *MockSVC_Expecter) ReorderFavourites(ctx interface{}, characterID interface{}, ids interface{}) *MockSVC_ReorderFavourites_Call {
+	return &MockSVC_ReorderFavourites_Call{Call: _e.mock.On("ReorderFavourites", ctx, characterID, ids)}
+}
+
+func (_c *MockSVC_ReorderFavourites_Call) Run(run func(ctx context.Context, characterID int64, ids []int64)) *MockSVC_ReorderFavourites_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].([]int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ReorderFavourites_Call) Return(_a0 error) *MockSVC_ReorderFavourites_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_ReorderFavourites_Call) RunAndReturn(run func(context.Context, int64, []int64) error) *MockSVC_ReorderFavourites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Roll provides a mock function with given fields: ctx, characterID, formula
 func (_m *MockSVC) Roll(ctx context.Context, characterID int64, formula string) (*dicesvc.Result, error) {
 	ret := _m.Called(ctx, characterID, formula)

@@ -18,6 +18,7 @@ import (
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
+	Put(pattern string, h http.HandlerFunc)
 	Delete(pattern string, h http.HandlerFunc)
 }
 
@@ -31,6 +32,7 @@ type diceSvc interface {
 	Favourites(ctx context.Context, characterID int64) ([]dicesvc.Favourite, error)
 	AddFavourite(ctx context.Context, characterID int64, formula string) (*dicesvc.Favourite, error)
 	DeleteFavourite(ctx context.Context, characterID, id int64) error
+	ReorderFavourites(ctx context.Context, characterID int64, ids []int64) error
 }
 
 // RegisterRoutes wires the dice endpoints onto r.
@@ -38,6 +40,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc dicesvc.SVC) {
 	r.Post("/api/roll/dice", render.Handle(Roll(charID, svc)))
 	r.Get("/api/dice/favourites", render.Handle(List(charID, svc)))
 	r.Post("/api/dice/favourites", render.Handle(Add(charID, svc)))
+	r.Put("/api/dice/favourites/order", render.Handle(Reorder(charID, svc)))
 	r.Delete("/api/dice/favourites/{id}", render.Handle(Delete(charID, svc)))
 }
 
@@ -165,6 +168,30 @@ func Delete(charID CharacterIDFunc, svc diceSvc) render.HandlerFunc {
 			return render.BadRequestError("invalid favourite id")
 		}
 		if err := svc.DeleteFavourite(r.Context(), charID(r), id); err != nil {
+			return err
+		}
+		return renderList(w, r, charID, svc)
+	}
+}
+
+type orderBody struct {
+	IDs *[]int64 `json:"ids"`
+}
+
+// Reorder sets the order of the favourites from the full list of their ids
+// and returns the favourites in that order.
+func Reorder(charID CharacterIDFunc, svc diceSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var b orderBody
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&b); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if b.IDs == nil {
+			return render.BadRequestError("ids is required")
+		}
+		if err := svc.ReorderFavourites(r.Context(), charID(r), *b.IDs); err != nil {
 			return err
 		}
 		return renderList(w, r, charID, svc)

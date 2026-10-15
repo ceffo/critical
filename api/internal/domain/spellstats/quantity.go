@@ -121,6 +121,62 @@ var (
 
 var errUnparsed = errors.New("unparseable")
 
+var (
+	dashRe    = regexp.MustCompile(`[\x{2012}-\x{2015}\x{2212}]`)
+	feetMark  = regexp.MustCompile(`(\d)'`)
+	inchMark  = regexp.MustCompile(`(\d+(?:\.\d+)?)"`)
+	trailMax  = regexp.MustCompile(`(?i)\s+max(?:imum|\.)?$`)
+	leadMax   = regexp.MustCompile(`(?i)^max(?:imum|\.)?\s+`)
+	numWordRe = regexp.MustCompile(`(?i)\b(one|two|three|four|five|six|seven|eight|nine|ten)\b`)
+	specialRe = regexp.MustCompile(`(?i)^special\s*(?:\((.+)\)|[;:,]\s*(.+))$`)
+)
+
+var numWords = map[string]string{
+	"one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+	"six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+}
+
+// yardsPerInch is the PHB scale for spell text in inches: 1" is 10 yards.
+const yardsPerInch = 10
+
+// normText folds the typographic variants of PHB stat text into the plain
+// forms the parsers read: dashes become "-", 30' becomes "30 ft." and the
+// inch mark 3" becomes yards at the PHB scale (1" = 10 yds.).
+func normText(s string) string {
+	s = dashRe.ReplaceAllString(s, "-")
+	s = feetMark.ReplaceAllString(s, "$1 ft.")
+	return inchMark.ReplaceAllStringFunc(s, func(m string) string {
+		n, _ := strconv.ParseFloat(strings.TrimSuffix(m, `"`), 64)
+		return strconv.FormatFloat(n*yardsPerInch, 'f', -1, 64) + " yds."
+	})
+}
+
+// specialDetail reads the number a "Special (8 turns)" style text keeps:
+// "Special (up to three rounds)", "Special (2 rounds/level maximum)",
+// "Special; max. 10 rounds". The field stays special; the quantity only
+// preserves what the book says. ok is false for text with no such number.
+func specialDetail(raw, defUnit string) (Quantity, bool) {
+	m := specialRe.FindStringSubmatch(strings.TrimSpace(raw))
+	if m == nil {
+		return Quantity{}, false
+	}
+	inner := normText(strings.TrimSpace(m[1] + m[2]))
+	inner = numWordRe.ReplaceAllStringFunc(inner, func(w string) string { return numWords[strings.ToLower(w)] })
+	upTo := false
+	if trailMax.MatchString(inner) {
+		inner, upTo = trailMax.ReplaceAllString(inner, ""), true
+	}
+	if leadMax.MatchString(inner) {
+		inner, upTo = leadMax.ReplaceAllString(inner, ""), true
+	}
+	q, err := parseQuantity(inner, defUnit)
+	if err != nil || q.Terms[0].Unit == "" {
+		return Quantity{}, false
+	}
+	q.UpTo = q.UpTo || upTo
+	return q, true
+}
+
 func parseNumber(s string) (float64, error) {
 	s = strings.TrimSpace(s)
 	if i := strings.Index(s, " "); i > 0 { // mixed fraction "1 1/2"
@@ -214,9 +270,6 @@ func parseQuantity(s, defUnit string) (Quantity, error) {
 				t.Per = per
 			}
 		}
-		if t.Dice != "" && t.PerLevel {
-			return q, errUnparsed
-		}
 		if t.Unit == "" {
 			switch {
 			case len(q.Terms) > 0:
@@ -262,6 +315,20 @@ func (q Quantity) unit() (string, error) {
 	return best, nil
 }
 
+// scaledDice is the dice of t at casterLevel: "1d6" per level at level 5 is
+// "5d6". Dice that do not scale are returned as is.
+func (t Term) scaledDice(casterLevel int) string {
+	if !t.PerLevel {
+		return t.Dice
+	}
+	m := diceRe.FindStringSubmatch(t.Dice)
+	if m == nil {
+		return t.Dice
+	}
+	n, _ := strconv.Atoi(m[1])
+	return strconv.Itoa(n*(casterLevel/t.Step)) + "d" + m[2]
+}
+
 // At computes the quantity for casterLevel. Max caps the amount only (not
 // Upper or the dice); no PHB form in the seed needs more.
 func (q Quantity) At(casterLevel int) Value {
@@ -284,7 +351,7 @@ func (q Quantity) At(casterLevel int) Value {
 			v.Upper += t.Upper * scale
 		}
 		if t.Dice != "" {
-			dice = append(dice, t.Dice)
+			dice = append(dice, t.scaledDice(casterLevel))
 		}
 	}
 	if v.Upper != 0 && v.Upper < v.Amount {

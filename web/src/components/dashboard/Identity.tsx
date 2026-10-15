@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useXpStore } from "@/stores/xp";
+import { CharacterDetails } from "./CharacterDetails";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 
@@ -21,8 +22,8 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="min-w-0">
-        <h1 className="truncate text-xl leading-tight font-semibold tracking-tight">
-          {character?.name || t("app.loading")}
+        <h1 className="min-w-0">
+          <CharacterDetails character={character} />
         </h1>
         {character && (
           <button

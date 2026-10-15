@@ -313,6 +313,11 @@ outside `ui/`).
   preferences (`localStorage['critical.settings.v1']`, ADR 0009); presentation only, never sent to
   the API.
 - Not translated: server error messages and user-entered text (buff names, HP sources).
+- Exception, the character details (`PATCH /api/character/details`): the server's field-error message is
+  a code (`too_long`, `out_of_range`, `too_many`, `empty`, `duplicate`) and the web words it with
+  `details.errors.<code>`, falling back to the code. Free-text values (race, languages...) are shown as
+  entered, except a language whose name has a `details.language.<key>` entry (key: lower case, no accents or
+  spaces), which is shown translated; the class key is read-only and translated by `details.classes.<key>`.
 
 ## Testing
 

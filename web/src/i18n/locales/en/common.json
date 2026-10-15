@@ -795,6 +795,45 @@
       "rolls": "Rolls"
     }
   },
+  "details": {
+    "open": "Character details",
+    "title": "Character details",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "none": "Not set",
+    "class": "Class",
+    "level": "Level",
+    "fields": {
+      "race": "Race",
+      "alignment": "Alignment",
+      "age": "Age",
+      "sex": "Sex",
+      "height": "Height",
+      "weight": "Weight",
+      "hair": "Hair",
+      "eyes": "Eyes",
+      "languages": "Languages"
+    },
+    "languagesHint": "Separate languages with commas",
+    "classes": {
+      "bard": "Bard"
+    },
+    "language": {
+      "elfique": "Elvish",
+      "commun": "Common",
+      "orque": "Orc",
+      "nain": "Dwarvish"
+    },
+    "errors": {
+      "too_long": "Too long.",
+      "out_of_range": "Enter a whole age between 0 and 10,000.",
+      "too_many": "Too many languages.",
+      "empty": "A language is blank.",
+      "duplicate": "A language is listed twice."
+    }
+  },
   "xp": {
     "heading": "Experience · level {{level}}",
     "unit": "XP",

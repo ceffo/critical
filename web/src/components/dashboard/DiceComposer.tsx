@@ -23,7 +23,7 @@ export function DiceComposer() {
   const empty = s.formula.trim() === "";
   return (
     <form
-      className="flex min-w-0 shrink-0 flex-col gap-2 bg-neu-900/40 px-3 py-2.5"
+      className="flex min-w-0 shrink-0 flex-col gap-2 bg-neu-900/40 px-3 py-3"
       aria-label={t("dice.title")}
       onSubmit={(ev) => {
         ev.preventDefault();
@@ -31,12 +31,12 @@ export function DiceComposer() {
       }}
     >
       <ul
-        className="flex min-h-7 items-center gap-1.5 overflow-x-auto"
+        className="flex min-h-7 items-center gap-2 overflow-x-auto"
         aria-label={t("dice.favourites")}
         data-testid="dice-favourites"
       >
         {s.favourites.length === 0 && (
-          <li className="text-sm text-muted-foreground">{t("dice.noFavourites")}</li>
+          <li className="text-body text-muted-foreground">{t("dice.noFavourites")}</li>
         )}
         {s.favourites.map((f, i) => (
           <li key={f.id} className="flex shrink-0 items-center rounded-md bg-card" data-testid="dice-favourite">
@@ -53,7 +53,7 @@ export function DiceComposer() {
             )}
             <button
               type="button"
-              className="px-2 py-0.5 text-sm tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-7 px-2 text-body tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
               title={t("dice.rollFavourite", { formula: f.formula })}
               aria-label={t("dice.rollFavourite", { formula: f.formula })}
               disabled={s.rolling}
@@ -84,7 +84,7 @@ export function DiceComposer() {
         ))}
       </ul>
 
-      <div className="grid min-w-0 grid-cols-7 gap-1.5">
+      <div className="grid min-w-0 grid-cols-7 gap-2">
         {DICE_SIDES.map((sides) => {
           const count = dieCount(s.formula, sides);
           const name = dieName(sides);
@@ -92,7 +92,7 @@ export function DiceComposer() {
             <div key={sides} className="relative min-w-0">
               <button
                 type="button"
-                className="h-8 w-full rounded-lg bg-card text-sm font-medium tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-7 w-full rounded-lg bg-card text-body font-medium tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
                 aria-label={t("dice.add", { die: name })}
                 data-testid={`die-${sides}`}
                 onClick={() => s.add(sides)}
@@ -106,7 +106,7 @@ export function DiceComposer() {
               {count > 0 && (
                 <button
                   type="button"
-                  className="absolute -top-1.5 right-0 rounded-md bg-amb-800 px-1 text-xs font-semibold tabular-nums text-amb-100 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="absolute -top-1.5 right-0 rounded-md bg-amb-800 px-1 text-label font-semibold tabular-nums text-amb-100 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                   aria-label={t("dice.count", { count, die: name })}
                   data-testid={`die-badge-${sides}`}
                   onClick={() => s.remove(sides)}
@@ -119,7 +119,7 @@ export function DiceComposer() {
         })}
       </div>
 
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-2">
         <input
           className={cn(fieldClass, "min-w-0 flex-1 tabular-nums", s.error && "border-danger text-danger")}
           type="text"
@@ -158,7 +158,7 @@ export function DiceComposer() {
         </Button>
       </div>
       {s.error && (
-        <p className="text-sm text-danger" role="alert" data-testid="dice-error">
+        <p className="text-body text-danger" role="alert" data-testid="dice-error">
           {t("dice.invalid")}
         </p>
       )}

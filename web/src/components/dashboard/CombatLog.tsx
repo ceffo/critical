@@ -102,8 +102,8 @@ export function CombatLog() {
       className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-card"
       aria-label={t("log.title")}
     >
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-3 pb-2">
-        <h2 className="text-sm font-medium">{t("log.title")}</h2>
+      <div className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2">
+        <h2 className="text-title">{t("log.title")}</h2>
         <div
           role="radiogroup"
           aria-label={t("fil.filter.label")}
@@ -117,7 +117,7 @@ export function CombatLog() {
               aria-checked={filter === f}
               onClick={() => setFilter(f)}
               className={cn(
-                "rounded-md px-2.5 py-0.5 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "h-6 rounded-md px-3 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 filter === f ? "bg-card font-medium" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -129,19 +129,19 @@ export function CombatLog() {
           <UndoButton />
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {groups.map((g) => (
           <section key={g.key} className="mb-2" aria-label={turnLabel(t, g.round)}>
-            <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-card px-2 py-1.5">
-              <span className="text-sm font-medium">{turnLabel(t, g.round)}</span>
+            <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-card px-2 py-1">
+              <span className="text-body font-medium">{turnLabel(t, g.round)}</span>
               {g.round === round && (
-                <span className="rounded-md bg-amb-900 px-1.5 text-xs text-amb-300">
+                <span className="rounded-md bg-amb-900 px-1.5 text-label text-amb-300">
                   {t("log.current")}
                 </span>
               )}
             </h3>
             {g.entries.length === 0 ? (
-              <p className="px-2 text-sm text-muted-foreground">
+              <p className="px-2 text-body text-muted-foreground">
                 {entries.length === 0
                   ? t("log.empty")
                   : filter === "rolls"
@@ -149,7 +149,7 @@ export function CombatLog() {
                     : t("log.nothingThisRound")}
               </p>
             ) : (
-              <ul className="flex flex-col gap-0.5">
+              <ul className="flex flex-col gap-1">
                 {g.entries.map((e) => (
                   <LogRow
                     key={e.id}
@@ -205,7 +205,7 @@ function LogRow({
   return (
     <li
       className={cn(
-        "relative cursor-pointer rounded-lg px-2 py-1.5",
+        "relative cursor-pointer rounded-lg px-2 py-1",
         selected
           ? "bg-amb-900 before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-amb-500"
           : "hover:bg-neu-900/60",
@@ -227,7 +227,7 @@ function LogRow({
           <span className="sr-only">{kindLabel}</span>
         </span>
         <span
-          className={cn("min-w-0 truncate text-sm", voided && "text-muted-foreground line-through")}
+          className={cn("min-w-0 truncate text-body", voided && "text-muted-foreground line-through")}
           title={text}
         >
           {text}
@@ -235,7 +235,7 @@ function LogRow({
         {value && (
           <span
             className={cn(
-              "text-sm font-semibold tabular-nums",
+              "text-body font-semibold tabular-nums",
               voided ? "text-muted-foreground line-through" : VALUE_TONES[value.tone],
             )}
             data-testid={isHp ? "log-delta" : "log-value"}
@@ -244,7 +244,7 @@ function LogRow({
           </span>
         )}
       </button>
-      <div className="flex min-h-6 flex-wrap items-center gap-x-2 pl-[1.625rem] text-xs text-muted-foreground">
+      <div className="flex min-h-6 flex-wrap items-center gap-x-2 pl-[1.625rem] text-label text-muted-foreground">
         <span className="tabular-nums">{formatTime(e.createdAt, i18n.language)}</span>
         {amended && (
           <>
@@ -290,12 +290,12 @@ function LogRow({
         )}
       </div>
       {e.note && (
-        <p className="mt-0.5 pl-[1.625rem] text-xs italic text-muted-foreground" data-testid="log-note">
+        <p className="mt-1 pl-[1.625rem] text-label italic text-muted-foreground" data-testid="log-note">
           {e.note}
         </p>
       )}
       {mode === "confirmVoid" && !voided && (
-        <div className="mt-1.5 flex items-center gap-2 rounded-md bg-destructive/10 px-2 py-1 text-sm">
+        <div className="mt-2 flex items-center gap-2 rounded-md bg-destructive/10 px-2 py-1 text-body">
           <span className="flex-1">{t("log.confirmVoid")}</span>
           <Button
             size="xs"
@@ -327,7 +327,7 @@ function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }
 
   return (
     <form
-      className="mt-1.5 flex items-end gap-2 rounded-md bg-neu-900/60 p-2"
+      className="mt-2 flex items-end gap-2 rounded-md bg-neu-900/60 p-2"
       aria-label={t("log.amendLabel")}
       onSubmit={async (ev) => {
         ev.preventDefault();
@@ -335,7 +335,7 @@ function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }
       }}
     >
       <label className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-xs text-muted-foreground">{t("log.note")}</span>
+        <span className="text-label text-muted-foreground">{t("log.note")}</span>
         <input
           className={fieldClass}
           type="text"

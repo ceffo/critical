@@ -16,11 +16,11 @@ export function Notices() {
   }, [notice, clearNotice]);
 
   return (
-    <div className="pointer-events-none fixed bottom-4 left-4 z-50 flex w-[420px] flex-col gap-2">
+    <div className="pointer-events-none fixed bottom-3 left-3 z-50 flex w-[420px] flex-col gap-2">
       {error && (
         <div
           role="alert"
-          className="pointer-events-auto flex items-start gap-2 rounded-lg border border-destructive/40 bg-card p-3 text-sm shadow-lg"
+          className="pointer-events-auto flex items-start gap-2 rounded-lg border border-destructive/40 bg-card p-3 text-body shadow-lg"
         >
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-destructive">{t("app.error")}</div>
@@ -39,7 +39,7 @@ export function Notices() {
       {notice && (
         <div
           role="status"
-          className="pointer-events-auto flex items-start gap-2 rounded-lg border bg-card p-3 text-sm shadow-lg"
+          className="pointer-events-auto flex items-start gap-2 rounded-lg border bg-card p-3 text-body shadow-lg"
         >
           <div className="min-w-0 flex-1">
             {t("buffs.expired", { names: notice.names.join(", ") })}

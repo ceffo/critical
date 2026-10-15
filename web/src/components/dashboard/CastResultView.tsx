@@ -15,7 +15,7 @@ function Die({ sides, value }: { sides: number; value: number }) {
   return (
     <span
       title={`d${sides}`}
-      className="inline-flex min-w-7 items-center justify-center rounded-md border bg-muted/60 px-1.5 py-0.5 font-mono text-sm font-semibold tabular-nums"
+      className="inline-flex min-w-7 items-center justify-center rounded-md border bg-muted/60 px-1.5 py-0.5 text-body font-semibold tabular-nums"
     >
       {value}
     </span>
@@ -39,13 +39,13 @@ function resolved(r: DiceRoll): string {
 function RollView({ roll: r }: { roll: DiceRoll }) {
   const mod = r.total - r.dice.reduce((sum, d) => sum + d.value, 0);
   return (
-    <span className="inline-flex flex-wrap items-center gap-1.5 font-mono text-sm">
+    <span className="inline-flex flex-wrap items-center gap-2 text-body">
       <span className="break-all text-muted-foreground" title={r.formula}>{resolved(r)}</span>
       {r.dice.map((d, i) => (
         <Die key={i} sides={d.sides} value={d.value} />
       ))}
       {mod !== 0 && r.dice.length > 0 && <span>{formatSigned(mod)}</span>}
-      <span className="font-bold">= {r.total}</span>
+      <span className="font-semibold">= {r.total}</span>
     </span>
   );
 }
@@ -56,16 +56,16 @@ function PartsView({ parts, saves, total }: { parts: DiceRoll[]; saves: DamagePa
   return (
     <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="cast-damage-parts">
       {parts.map((p, j) => (
-        <span key={j} className="inline-flex flex-wrap items-center gap-1.5">
-          {p.dice.length > 0 ? <RollView roll={p} /> : <span className="font-mono text-sm font-bold">{p.total}</span>}
+        <span key={j} className="inline-flex flex-wrap items-center gap-2">
+          {p.dice.length > 0 ? <RollView roll={p} /> : <span className="text-body font-semibold">{p.total}</span>}
           {saves[j] && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-label text-muted-foreground">
               {t(`result.cast.partSave.${saves[j]}`, { defaultValue: saves[j] })}
             </span>
           )}
         </span>
       ))}
-      <span className="font-mono text-sm font-bold">Σ {total}</span>
+      <span className="text-body font-semibold">Σ {total}</span>
     </span>
   );
 }
@@ -90,14 +90,14 @@ export function CastResultView({ result: r }: { result: CastResult }) {
 
   return (
     <div className="flex flex-col gap-3" data-testid="cast-result">
-      <div className="text-sm text-muted-foreground">{heading}</div>
+      <div className="text-body text-muted-foreground">{heading}</div>
       {r.mode && (
-        <p className="text-sm" data-testid="cast-mode">
+        <p className="text-body" data-testid="cast-mode">
           {t("result.cast.mode", { mode: modeName(t, r.spellId, r.mode) })}
         </p>
       )}
       {r.spell?.class && (
-        <div className="text-xs text-muted-foreground" data-testid="cast-spell-ident">
+        <div className="text-label text-muted-foreground" data-testid="cast-spell-ident">
           {r.spell.class} · {t("lookup.levelShort", { level: r.spell.level })}
         </div>
       )}
@@ -105,36 +105,36 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       {b && (
         <div className="flex flex-col gap-2" data-testid="cast-buff">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-black">{b.name}</span>
+            <span className="text-title">{b.name}</span>
             <Badge variant={b.applied ? "default" : "secondary"}>
               {b.applied ? t("result.cast.onYou") : t("result.cast.notOnYou")}
             </Badge>
           </div>
-          <dl className="grid grid-cols-2 gap-1.5 text-sm">
+          <dl className="grid grid-cols-2 gap-2 text-body">
             {b.durationRoll && (
-              <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
+              <div className="rounded-lg bg-muted/60 px-3 py-2">
                 <dt className={labelClass}>{t("result.cast.rounds")}</dt>
-                <dd className="font-mono" data-testid="cast-rounds">
+                <dd data-testid="cast-rounds">
                   <RollView roll={b.durationRoll} />
                 </dd>
               </div>
             )}
             {b.chargesRoll && (
-              <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
+              <div className="rounded-lg bg-muted/60 px-3 py-2">
                 <dt className={labelClass}>
                   {b.chargeUnit
                     ? t(`result.cast.units.${b.chargeUnit}`, { defaultValue: t("result.cast.charges") })
                     : t("result.cast.charges")}
                 </dt>
-                <dd className="font-mono" data-testid="cast-charges">
+                <dd data-testid="cast-charges">
                   <RollView roll={b.chargesRoll} />
                 </dd>
               </div>
             )}
             {b.strGainRoll && (
-              <div className="rounded-lg bg-muted/60 px-2.5 py-1.5">
+              <div className="rounded-lg bg-muted/60 px-3 py-2">
                 <dt className={labelClass}>{t("result.cast.strGain")}</dt>
-                <dd className="font-mono" data-testid="cast-str-gain">
+                <dd data-testid="cast-str-gain">
                   <RollView roll={b.strGainRoll} />
                 </dd>
               </div>
@@ -156,23 +156,23 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
 
       {r.attack && (
-        <div className="flex flex-col gap-2 rounded-lg border p-2.5" data-testid="cast-attack">
+        <div className="flex flex-col gap-2 rounded-lg border p-3" data-testid="cast-attack">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span
               data-testid="cast-attack-verdict"
               className={cn(
-                "text-3xl font-black uppercase",
-                r.attack.hit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400",
+                "text-key",
+                r.attack.hit ? "text-heal" : "text-danger",
               )}
             >
               {r.attack.hit ? t("result.cast.attackHit") : t("result.cast.attackMiss")}
             </span>
-            <span className="inline-flex items-center gap-1.5 text-sm">
+            <span className="inline-flex items-center gap-2 text-body">
               <span className={labelClass}>d20</span>
               <Die sides={20} value={r.attack.d20Roll} />
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body text-muted-foreground">
             {t("result.cast.attackNeeds", {
               needed: r.attack.targetACNeeded,
               ac: r.attack.targetAc,
@@ -183,13 +183,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
 
       {r.consumedItem && (
-        <p className="text-sm" data-testid="cast-item">
+        <p className="text-body" data-testid="cast-item">
           {t("result.cast.itemSpent", { name: r.consumedItem.name, left: r.consumedItem.remaining })}
         </p>
       )}
 
       {r.extraSlots && r.extraSlots.length > 0 && (
-        <p className="text-sm" data-testid="cast-extra-slots">
+        <p className="text-body" data-testid="cast-extra-slots">
           {t("result.cast.extraSlots", { slots: splitText(t, r.extraSlots) })}
         </p>
       )}
@@ -197,7 +197,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       {r.damage && (
         <div className="flex flex-col gap-2" data-testid="cast-damage">
           <div className="flex flex-wrap items-end justify-between gap-2">
-            <div className="min-w-0 text-sm">
+            <div className="min-w-0 text-body">
               {r.damage.stepsPer ? (
                 stepsHeader(t, r.damage.stepsPer, r.damage.rolls.length)
               ) : (
@@ -211,13 +211,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             <div className="text-right">
               <div className={labelClass}>{t("result.cast.damage")}</div>
               <div
-                className="font-mono text-5xl font-black tabular-nums leading-none text-red-600 dark:text-red-400"
+                className="text-headline tabular-nums text-danger"
                 data-testid="cast-damage-total"
               >
                 {r.damage.total}
               </div>
               {r.damage.totalOnSave !== undefined && (
-                <div className="text-sm tabular-nums text-muted-foreground" data-testid="cast-damage-on-save">
+                <div className="text-body tabular-nums text-muted-foreground" data-testid="cast-damage-on-save">
                   {t("result.cast.totalOnSave", { total: r.damage.totalOnSave })}
                 </div>
               )}
@@ -227,11 +227,11 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             <ul className="flex flex-col gap-1">
               {r.damage.rolls.map((roll, i) => (
                 <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1" data-testid="cast-damage-roll">
-                  <span className="text-xs text-muted-foreground">{rollLabel(t, r.damage?.stepsPer, roll.step, i)}</span>
+                  <span className="text-label text-muted-foreground">{rollLabel(t, r.damage?.stepsPer, roll.step, i)}</span>
                   {roll.parts && r.damage?.parts ? (
                     <PartsView parts={roll.parts} saves={r.damage.parts.map((p) => p.save)} total={roll.total} />
                   ) : roll.step && roll.dice.length === 0 && roll.total === 0 ? (
-                    <span className="text-sm text-muted-foreground">{t("result.cast.noDamage")}</span>
+                    <span className="text-body text-muted-foreground">{t("result.cast.noDamage")}</span>
                   ) : (
                     <RollView roll={roll} />
                   )}
@@ -243,7 +243,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
 
       {r.save && (
-        <p className="text-sm" data-testid="cast-save">
+        <p className="text-body" data-testid="cast-save">
           {t("result.cast.save", {
             type: r.save.type,
             effect: t(`result.cast.saveEffects.${r.save.effect}`, { defaultValue: r.save.effect }),
@@ -252,7 +252,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       )}
 
       {r.textOnly && (
-        <p className="rounded-lg border border-dashed px-2.5 py-1.5 text-sm" data-testid="cast-text-only">
+        <p className="rounded-lg border border-dashed px-3 py-2 text-body" data-testid="cast-text-only">
           {t(`result.cast.textOnly.${r.textOnly}`)}
         </p>
       )}
@@ -260,7 +260,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       {r.untracked.length > 0 && (
         <div>
           <div className={labelClass}>{t("result.cast.byHand")}</div>
-          <ul className="mt-1 flex flex-col gap-0.5 text-sm" data-testid="cast-untracked">
+          <ul className="mt-1 flex flex-col gap-1 text-body" data-testid="cast-untracked">
             {r.untracked.map((u, i) => (
               <li key={i}>
                 {fxLabel(t, u.key, u.value)}
@@ -274,13 +274,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       {r.note && (
         <div>
           <div className={labelClass}>{t("result.cast.note")}</div>
-          <p className="text-sm">{r.note}</p>
+          <p className="text-body">{r.note}</p>
         </div>
       )}
       {r.spell?.description && (
-        <details className="group rounded-lg border px-2.5 py-1.5">
+        <details className="group rounded-lg border px-3 py-2">
           <summary className={cn(labelClass, "cursor-pointer select-none")}>{t("result.cast.text")}</summary>
-          <p className="mt-1.5 whitespace-pre-line text-sm text-muted-foreground" data-testid="cast-text">
+          <p className="mt-2 whitespace-pre-line text-body text-muted-foreground" data-testid="cast-text">
             {r.spell.description}
           </p>
         </details>

@@ -49,7 +49,7 @@ import { dieName } from "@/lib/diceFormula";
 import { fieldClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
 
-const labelClass = "text-xs text-muted-foreground";
+const labelClass = "text-label text-muted-foreground";
 
 /**
  * The Fil column's detail card: the latest result by default, or the journal entry the player
@@ -65,7 +65,7 @@ export function ResultCard() {
   const source = cardSource(last, entries, selectedId);
 
   let body: ReactNode = (
-    <p className="py-8 text-center text-sm text-muted-foreground">{t("result.empty")}</p>
+    <p className="py-8 text-center text-body text-muted-foreground">{t("result.empty")}</p>
   );
   let header: ReactNode = null;
   const readOnly = source.kind === "entry" && !source.latest;
@@ -76,17 +76,17 @@ export function ResultCard() {
     const h = cardHeader(kind, model, entry, t, i18n.language);
     header = (
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1" data-testid="card-header">
-        <span className="shrink-0 rounded-md bg-neu-900 px-1.5 py-0.5 text-xs font-medium">
+        <span className="shrink-0 rounded-md bg-neu-900 px-1.5 py-0.5 text-label font-medium">
           {h.tag}
         </span>
-        <span className="min-w-0 flex-1 basis-24 truncate text-sm font-medium" title={h.subtitle}>
+        <span className="min-w-0 flex-1 basis-24 truncate text-body font-medium" title={h.subtitle}>
           {h.subtitle}
         </span>
         {entry?.status === "voided" && (
-          <span className="shrink-0 text-xs text-danger">{t("log.status.voided")}</span>
+          <span className="shrink-0 text-label text-danger">{t("log.status.voided")}</span>
         )}
         {h.when && (
-          <span className="shrink-0 text-xs text-muted-foreground tabular-nums" data-testid="card-when">
+          <span className="shrink-0 text-label text-muted-foreground tabular-nums" data-testid="card-when">
             {h.when}
           </span>
         )}
@@ -102,7 +102,7 @@ export function ResultCard() {
       <>
         <CardBody model={model} interactive={!readOnly} />
         {entry?.note && (
-          <p className="mt-3 text-sm italic text-muted-foreground" data-testid="card-note">
+          <p className="mt-3 text-body italic text-muted-foreground" data-testid="card-note">
             {entry.note}
           </p>
         )}
@@ -119,10 +119,10 @@ export function ResultCard() {
       aria-label={t("fil.card")}
       data-readonly={readOnly}
     >
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-3 pb-2">
-        {header ?? <h2 className="text-sm font-medium">{t("fil.card")}</h2>}
+      <div className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2">
+        {header ?? <h2 className="text-title">{t("fil.card")}</h2>}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">{body}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">{body}</div>
     </section>
   );
 }
@@ -156,7 +156,7 @@ function HexDie({ value, label }: { value: number; label: string }) {
     <span
       role="img"
       aria-label={label}
-      className="flex h-[3.75rem] w-[3.375rem] shrink-0 items-center justify-center bg-amb-800 text-2xl font-semibold text-amb-100 tabular-nums [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]"
+      className="flex h-12 w-11 shrink-0 items-center justify-center bg-amb-800 text-key text-amb-100 tabular-nums [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)]"
       data-testid="hex-die"
     >
       {value}
@@ -166,9 +166,9 @@ function HexDie({ value, label }: { value: number; label: string }) {
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-neu-900/60 px-2.5 py-1.5">
+    <div className="rounded-lg bg-neu-900/60 px-3 py-2">
       <dt className={labelClass}>{label}</dt>
-      <dd className="text-base font-semibold tabular-nums">{children}</dd>
+      <dd className="text-body font-semibold tabular-nums">{children}</dd>
     </div>
   );
 }
@@ -177,7 +177,7 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
   return (
     <span
       data-testid="verdict"
-      className={cn("shrink-0 text-2xl font-semibold", ok ? "text-heal" : "text-danger")}
+      className={cn("shrink-0 text-key", ok ? "text-heal" : "text-danger")}
     >
       {ok ? yes : no}
     </span>
@@ -191,7 +191,7 @@ function Total({ label, value, testId, dim }: { label: string; value: ReactNode;
       <div className={labelClass}>{label}</div>
       <div
         className={cn(
-          "text-4xl font-semibold leading-none tabular-nums",
+          "text-headline tabular-nums",
           dim ? "text-muted-foreground" : "text-amb-300",
         )}
         data-testid={testId}
@@ -249,10 +249,10 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
       <div className="flex items-center gap-3">
         <HexDie value={r.d20Roll} label={t("fil.d20", { value: r.d20Roll })} />
         <div className="min-w-0 flex-1">
-          <div className="text-2xl font-medium tabular-nums" data-testid="hits-ac">
+          <div className="text-key tabular-nums" data-testid="hits-ac">
             {t("fil.hitsAc", { ac: hitsAc(r) })}
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-body text-muted-foreground">
             {attackHeading(t, r)}
             {r.targetSize && <> · {t(`result.sizes.${r.targetSize}`)}</>}
           </div>
@@ -261,7 +261,7 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
           <span className="flex shrink-0 flex-col items-end">
             <Verdict ok={r.hit} yes={t("result.hit")} no={t("result.miss")} />
             {r.verdict && (
-              <span className="text-xs text-muted-foreground" data-testid="verdict-by-gm">
+              <span className="text-label text-muted-foreground" data-testid="verdict-by-gm">
                 {t("result.unknownAc.byGm")}
               </span>
             )}
@@ -269,7 +269,7 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
         ) : (
           <span
             data-testid="verdict"
-            className="shrink-0 text-2xl font-semibold text-muted-foreground"
+            className="shrink-0 text-key text-muted-foreground"
             title={t("result.unknownAc.unsettled")}
           >
             ?
@@ -277,12 +277,12 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
         )}
       </div>
       {r.isCrit && (
-        <p className="rounded-md bg-amb-900 px-2.5 py-1 text-sm font-medium text-amb-300" data-testid="crit-badge">
+        <p className="rounded-md bg-amb-900 px-3 py-1 text-body font-medium text-amb-300" data-testid="crit-badge">
           {critText(t, r)}
         </p>
       )}
       {r.acKnown === false && r.critsFromAc !== undefined && (
-        <p className="rounded-md bg-neu-900/60 px-2.5 py-1.5 text-sm tabular-nums" data-testid="tell-gm">
+        <p className="rounded-md bg-neu-900/60 px-3 py-2 text-body tabular-nums" data-testid="tell-gm">
           {r.verdict
             ? t("result.unknownAc.noCrit")
             : tellGmWithCrit(r)
@@ -292,25 +292,25 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
       )}
 
       <div className="flex items-end justify-between gap-3">
-        <div className={cn("flex min-w-0 flex-col gap-1.5", !r.hit && "opacity-50")}>
+        <div className={cn("flex min-w-0 flex-col gap-2", !r.hit && "opacity-50")}>
           <span className={labelClass}>{t("result.damage")}</span>
           {diceChips ? (
-            <div className="flex flex-wrap items-center gap-1.5" data-testid="damage-dice">
-              <span className="text-sm tabular-nums text-muted-foreground">{r.damageDice}</span>
-              <ul className="flex flex-wrap gap-1.5" data-testid="damage-dice-chips">
+            <div className="flex flex-wrap items-center gap-2" data-testid="damage-dice">
+              <span className="text-body tabular-nums text-muted-foreground">{r.damageDice}</span>
+              <ul className="flex flex-wrap gap-2" data-testid="damage-dice-chips">
                 {diceChips.map((c, i) => (
                   <DieChip key={i} value={c.value} tone={c.tone} />
                 ))}
               </ul>
-              <span className="text-sm font-semibold tabular-nums">= {r.baseDamage}</span>
+              <span className="text-body font-semibold tabular-nums">= {r.baseDamage}</span>
             </div>
           ) : (
-            <span className="w-fit rounded-md bg-neu-900 px-2 py-0.5 text-sm font-semibold tabular-nums" data-testid="damage-dice">
+            <span className="w-fit rounded-md bg-neu-900 px-2 py-0.5 text-body font-semibold tabular-nums" data-testid="damage-dice">
               {t("fil.diceRolled", { dice: r.damageDice, total: r.baseDamage })}
             </span>
           )}
           {(r.hit || !settled) && (
-            <span className="text-xs break-words text-muted-foreground tabular-nums" data-testid="damage-formula">
+            <span className="text-label break-words text-muted-foreground tabular-nums" data-testid="damage-formula">
               {damageFormula(r, i18n.language)}
             </span>
           )}
@@ -336,7 +336,7 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
       )}
 
       {r.ammo && (
-        <p className="text-sm text-muted-foreground" data-testid="ammo-left">
+        <p className="text-body text-muted-foreground" data-testid="ammo-left">
           {t("result.ammoLeft", { name: r.ammo.name, count: r.ammo.remaining })}
         </p>
       )}
@@ -344,9 +344,9 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
       <details
         open={detailOpen}
         onToggle={(ev) => setDetailOpen(ev.currentTarget.open)}
-        className="rounded-lg bg-neu-900/40 px-2.5 py-1.5"
+        className="rounded-lg bg-neu-900/40 px-3 py-2"
       >
-        <summary className="cursor-pointer text-sm font-medium">{t("fil.details")}</summary>
+        <summary className="cursor-pointer text-body font-medium">{t("fil.details")}</summary>
         <div className="mt-2 flex flex-col gap-3">
           <dl className="grid grid-cols-3 gap-2">
             <Fact label={t("result.d20")}>{r.d20Roll}</Fact>
@@ -367,9 +367,9 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
           <div>
             <div className={labelClass}>{t("result.modifiers")}</div>
             {r.modifiers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("result.noModifiers")}</p>
+              <p className="text-body text-muted-foreground">{t("result.noModifiers")}</p>
             ) : (
-              <ul className="mt-1 flex flex-col gap-0.5 text-sm" data-testid="to-hit-modifiers">
+              <ul className="mt-1 flex flex-col gap-1 text-body" data-testid="to-hit-modifiers">
                 {r.modifiers.map((m, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="min-w-0 truncate">{modLabel(t, m)}</span>
@@ -382,7 +382,7 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
           {(r.hit || !settled) && r.damageTerms.length > 0 && (
             <div>
               <div className={labelClass}>{t("result.damageTerms")}</div>
-              <ul className="mt-1 flex flex-col gap-0.5 text-sm" data-testid="damage-terms">
+              <ul className="mt-1 flex flex-col gap-1 text-body" data-testid="damage-terms">
                 {r.damageTerms.map((d, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="min-w-0 truncate">{modLabel(t, d, r)}</span>
@@ -411,9 +411,9 @@ function GmVerdict({ result: r, entryId }: { result: RollResult; entryId: number
     <div
       role="group"
       aria-label={t("result.unknownAc.verdictLabel")}
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-2.5"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-3"
     >
-      <span className="text-sm font-medium">{t("result.unknownAc.verdictTitle")}</span>
+      <span className="text-body font-medium">{t("result.unknownAc.verdictTitle")}</span>
       <Button
         type="button"
         size="sm"
@@ -460,14 +460,14 @@ function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: n
 
   return (
     <form
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-2.5"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-3"
       aria-label={unknown ? t("result.adjustAc.giveLabel") : t("result.adjustAc.label")}
       onSubmit={(ev) => {
         ev.preventDefault();
         if (changed) void adjustLastAttack(entryId, ac);
       }}
     >
-      <span className="text-sm font-medium">
+      <span className="text-body font-medium">
         {unknown ? t("result.adjustAc.realTitle") : t("result.adjustAc.title")}
       </span>
       <div className="flex items-center gap-1">
@@ -518,12 +518,12 @@ function AdjustAttackAc({ result: r, entryId }: { result: RollResult; entryId: n
         </Button>
       )}
       {r.rolledTargetAc !== undefined && (
-        <span className="text-sm text-muted-foreground" data-testid="ac-corrected">
+        <span className="text-body text-muted-foreground" data-testid="ac-corrected">
           {t("result.adjustAc.was", { ac: r.rolledTargetAc })}
         </span>
       )}
       {r.rolledAcUnknown && !unknown && (
-        <span className="text-sm text-muted-foreground" data-testid="ac-given">
+        <span className="text-body text-muted-foreground" data-testid="ac-given">
           {t("result.adjustAc.given")}
         </span>
       )}
@@ -543,10 +543,10 @@ function SaveResult({ save: s, interactive }: { save: SaveView; interactive: boo
       <div className="flex items-center gap-3">
         <HexDie value={s.d20} label={t("fil.d20", { value: s.d20 })} />
         <div className="min-w-0 flex-1">
-          <div className="text-2xl font-medium tabular-nums" data-testid="save-vs">
+          <div className="text-key tabular-nums" data-testid="save-vs">
             {t("fil.saveVs", { total: s.total ?? s.d20, target: s.target })}
           </div>
-          <div className="text-sm text-muted-foreground">{t("result.saveHeading", { name })}</div>
+          <div className="text-body text-muted-foreground">{t("result.saveHeading", { name })}</div>
         </div>
         <Verdict ok={s.passed} yes={t("result.passed")} no={t("result.failed")} />
       </div>
@@ -556,7 +556,7 @@ function SaveResult({ save: s, interactive }: { save: SaveView; interactive: boo
         <Fact label={t("result.margin")}>{s.margin === undefined ? "–" : formatSigned(s.margin)}</Fact>
       </dl>
       {mods.length > 0 && (
-        <ul className="flex flex-col gap-0.5 text-sm" data-testid="save-modifiers">
+        <ul className="flex flex-col gap-1 text-body" data-testid="save-modifiers">
           {mods.map((m, i) => (
             <li key={i} className="flex justify-between gap-2">
               <span className="min-w-0 truncate">{modLabel(t, m)}</span>
@@ -596,7 +596,7 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-lg bg-neu-900/60 p-2.5"
+      className="flex flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
       aria-label={t("result.adjust.label")}
       onSubmit={(ev) => {
         ev.preventDefault();
@@ -609,7 +609,7 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
           );
       }}
     >
-      <div className="text-sm font-medium">{t("result.adjust.title")}</div>
+      <div className="text-body font-medium">{t("result.adjust.title")}</div>
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
         <div className="flex items-center gap-1">
           <Button
@@ -622,7 +622,7 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
             −
           </Button>
           <output
-            className="w-10 text-center text-lg font-semibold tabular-nums"
+            className="w-10 text-center text-key tabular-nums"
             aria-label={t("result.adjust.value")}
             data-testid="save-adjustment"
           >
@@ -661,7 +661,7 @@ function DieChip({ value, faces, tone: given }: { value: number; faces?: number 
   return (
     <li
       className={cn(
-        "min-w-7 rounded-md px-2 py-0.5 text-center text-sm font-semibold tabular-nums",
+        "min-w-7 rounded-md px-2 py-0.5 text-center text-body font-semibold tabular-nums",
         tone === "max" ? "bg-amb-800 text-amb-100" : "bg-neu-900",
         tone === "min" && "text-muted-foreground",
       )}
@@ -677,13 +677,13 @@ function ItemResult({ r }: { r: UseResult }) {
   const faces = r.dice ? dieFaces(r.dice) : null;
   return (
     <div className="flex flex-col gap-3" data-testid="item-result">
-      <div className="text-sm text-muted-foreground">{t("result.itemHeading", { name: r.name })}</div>
+      <div className="text-body text-muted-foreground">{t("result.itemHeading", { name: r.name })}</div>
       {r.dice ? (
         <>
           <div className="flex items-end justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-col gap-2">
               <span className={labelClass}>{r.dice}</span>
-              <ul className="flex flex-wrap gap-1.5" data-testid="item-rolls">
+              <ul className="flex flex-wrap gap-2" data-testid="item-rolls">
                 {r.rolls.map((v, i) => (
                   <DieChip key={i} value={v} faces={faces} />
                 ))}
@@ -691,18 +691,18 @@ function ItemResult({ r }: { r: UseResult }) {
             </div>
             <Total label={t("result.total")} value={r.total} testId="item-total" />
           </div>
-          <div className="text-xs text-muted-foreground tabular-nums">{itemRollText(r)}</div>
+          <div className="text-label text-muted-foreground tabular-nums">{itemRollText(r)}</div>
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">{t("result.noRoll")}</p>
+        <p className="text-body text-muted-foreground">{t("result.noRoll")}</p>
       )}
       {r.save && (
-        <p className="text-sm font-medium" data-testid="item-save">
+        <p className="text-body font-medium" data-testid="item-save">
           {t("result.save", { name: t(`saves.categories.${r.save}`, { defaultValue: r.save }) })}
         </p>
       )}
-      {r.notes && <p className="text-sm text-muted-foreground">{r.notes}</p>}
-      <p className="text-sm text-muted-foreground" data-testid="item-left">
+      {r.notes && <p className="text-body text-muted-foreground">{r.notes}</p>}
+      <p className="text-body text-muted-foreground" data-testid="item-left">
         {r.removed
           ? t("result.leftRemoved", { name: r.name })
           : t("result.left", { name: r.name, count: r.remaining })}
@@ -718,25 +718,25 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
   const instances = castInstances(c);
   return (
     <div className="flex flex-col gap-3" data-testid="cast-entry">
-      <div className="text-sm text-muted-foreground">
+      <div className="text-body text-muted-foreground">
         {c.action === "received"
           ? t("log.cast.received", { spell, level: c.casterLevel })
           : t("log.cast.cast", { spell })}
       </div>
       {c.mode && (
-        <p className="text-sm" data-testid="cast-entry-mode">
+        <p className="text-body" data-testid="cast-entry-mode">
           {t("result.cast.mode", { mode: modeName(t, c.spellId, c.mode) })}
         </p>
       )}
       {c.attack && (
         <div className="flex items-center gap-3">
           <HexDie value={c.attack.d20} label={t("fil.d20", { value: c.attack.d20 })} />
-          <span className="min-w-0 flex-1 text-sm">{t("fil.castVsAc", { ac: c.attack.targetAc })}</span>
+          <span className="min-w-0 flex-1 text-body">{t("fil.castVsAc", { ac: c.attack.targetAc })}</span>
           <Verdict ok={c.attack.hit} yes={t("result.cast.attackHit")} no={t("result.cast.attackMiss")} />
         </div>
       )}
       {c.buff?.applied && (
-        <p className="text-sm" data-testid="cast-entry-buff">
+        <p className="text-body" data-testid="cast-entry-buff">
           {t("fil.castBuff", {
             buff: c.buff.name,
             counters: counters(t, c.buff.rounds, c.buff.charges),
@@ -746,46 +746,46 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
       )}
       {c.damage && (
         <div className="flex items-end justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">{c.damage.type}</span>
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="text-body text-muted-foreground">{c.damage.type}</span>
             {instances && (
               <ul className="flex flex-col gap-1" data-testid="cast-entry-instances">
                 {instances.map((inst, i) => (
                   <li key={i} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-xs text-muted-foreground">{rollLabel(t, c.damage?.stepsPer, inst.step, i)}</span>
+                    <span className="text-label text-muted-foreground">{rollLabel(t, c.damage?.stepsPer, inst.step, i)}</span>
                     {inst.parts ? (
                       <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="cast-entry-parts">
                         {inst.parts.map((p, j) => (
-                          <span key={j} className="inline-flex flex-wrap items-center gap-1.5">
+                          <span key={j} className="inline-flex flex-wrap items-center gap-2">
                             {p.dice.length > 0 ? (
                               <>
-                                <ul className="flex flex-wrap gap-1.5">
+                                <ul className="flex flex-wrap gap-2">
                                   {p.dice.map((d, k) => (
                                     <DieChip key={k} value={d.value} tone={d.tone} />
                                   ))}
                                 </ul>
-                                <span className="text-sm font-semibold tabular-nums">= {p.total}</span>
+                                <span className="text-body font-semibold tabular-nums">= {p.total}</span>
                               </>
                             ) : (
-                              <span className="text-sm font-semibold tabular-nums">{p.total}</span>
+                              <span className="text-body font-semibold tabular-nums">{p.total}</span>
                             )}
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-label text-muted-foreground">
                               {t(`result.cast.partSave.${p.save}`, { defaultValue: p.save })}
                             </span>
                           </span>
                         ))}
-                        <span className="text-sm font-semibold tabular-nums">Σ {inst.total}</span>
+                        <span className="text-body font-semibold tabular-nums">Σ {inst.total}</span>
                       </span>
                     ) : inst.step && inst.dice.length === 0 && inst.total === 0 ? (
-                      <span className="text-sm text-muted-foreground">{t("result.cast.noDamage")}</span>
+                      <span className="text-body text-muted-foreground">{t("result.cast.noDamage")}</span>
                     ) : (
                       <>
-                        <ul className="flex flex-wrap gap-1.5">
+                        <ul className="flex flex-wrap gap-2">
                           {inst.dice.map((d, j) => (
                             <DieChip key={j} value={d.value} tone={d.tone} />
                           ))}
                         </ul>
-                        <span className="text-sm font-semibold tabular-nums">= {inst.total}</span>
+                        <span className="text-body font-semibold tabular-nums">= {inst.total}</span>
                       </>
                     )}
                   </li>
@@ -796,7 +796,7 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
           <div className="flex flex-col items-end gap-1">
             <Total label={t("result.cast.damage")} value={c.damage.total} testId="cast-entry-damage" />
             {c.damage.totalOnSave !== undefined && (
-              <span className="text-sm tabular-nums text-muted-foreground" data-testid="cast-entry-damage-on-save">
+              <span className="text-body tabular-nums text-muted-foreground" data-testid="cast-entry-damage-on-save">
                 {t("result.cast.totalOnSave", { total: c.damage.totalOnSave })}
               </span>
             )}
@@ -804,7 +804,7 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
         </div>
       )}
       {c.save && (
-        <p className="text-sm" data-testid="cast-entry-save">
+        <p className="text-body" data-testid="cast-entry-save">
           {t("result.cast.save", {
             type: c.save.type,
             effect: t(`result.cast.saveEffects.${c.save.effect}`, { defaultValue: c.save.effect }),
@@ -812,7 +812,7 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
         </p>
       )}
       {c.item && (
-        <p className="text-sm">{t("result.cast.itemSpent", { name: c.item.name, left: c.item.remaining })}</p>
+        <p className="text-body">{t("result.cast.itemSpent", { name: c.item.name, left: c.item.remaining })}</p>
       )}
     </div>
   );
@@ -822,9 +822,9 @@ function InitiativeResult({ d10 }: { d10: number }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-end justify-between gap-3" data-testid="initiative-result">
-      <div className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-col gap-2">
         <span className={labelClass}>{t("turn.initiativeHint")}</span>
-        <ul className="flex gap-1.5">
+        <ul className="flex gap-2">
           <DieChip value={d10} faces={10} />
         </ul>
       </div>
@@ -842,10 +842,10 @@ function SkillResult({ check: c }: { check: SkillCheck }) {
       <div className="flex items-center gap-3">
         <HexDie value={c.roll} label={t("fil.die", { faces: c.die, value: c.roll })} />
         <div className="min-w-0 flex-1">
-          <div className="text-2xl font-medium tabular-nums" data-testid="skill-vs">
+          <div className="text-key tabular-nums" data-testid="skill-vs">
             {t(proficiency ? "fil.skillVs" : "fil.skillVsPercent", { roll: c.roll, target: c.target })}
           </div>
-          <div className="text-sm text-muted-foreground tabular-nums">
+          <div className="text-body text-muted-foreground tabular-nums">
             {proficiency
               ? t("result.skill.proficiency", {
                   die: c.die,
@@ -873,27 +873,27 @@ function DiceResult({ roll: r }: { roll: DiceRoll }) {
     <div className="flex flex-col gap-3" data-testid="dice-result">
       <div className="flex items-end justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <span className="text-base font-medium tabular-nums" data-testid="dice-formula">
+          <span className="text-body font-medium tabular-nums" data-testid="dice-formula">
             {r.formula}
           </span>
           {r.groups.map((g, i) => (
-            <div key={i} className="flex flex-wrap items-center gap-1.5" data-testid="dice-group">
+            <div key={i} className="flex flex-wrap items-center gap-2" data-testid="dice-group">
               <span className={cn(labelClass, "tabular-nums")}>
                 {g.negative ? "−" : ""}
                 {dieName(g.sides)}
               </span>
-              <ul className="flex flex-wrap gap-1.5">
+              <ul className="flex flex-wrap gap-2">
                 {g.rolls.map((v, j) => (
                   <DieChip key={j} value={v} faces={g.negative ? null : g.sides} />
                 ))}
               </ul>
-              <span className="text-sm font-semibold tabular-nums" data-testid="dice-subtotal">
+              <span className="text-body font-semibold tabular-nums" data-testid="dice-subtotal">
                 = {formatSigned(g.subtotal)}
               </span>
             </div>
           ))}
           {r.modifier !== 0 && (
-            <div className="text-sm tabular-nums" data-testid="dice-modifier">
+            <div className="text-body tabular-nums" data-testid="dice-modifier">
               <span className={labelClass}>{t("dice.modifier")} </span>
               {formatSigned(r.modifier)}
             </div>
@@ -921,9 +921,9 @@ function InfoResult({ info }: { info: InfoView }) {
   return (
     <div className="flex items-start justify-between gap-3" data-testid="info-result">
       <div className="flex min-w-0 flex-col gap-1">
-        <p className="text-sm break-words">{info.text}</p>
+        <p className="text-body break-words">{info.text}</p>
         {info.capped && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-label text-muted-foreground">
             {t(info.capped.hpRequested < 0 ? "log.floored" : "log.capped", {
               requested: formatSigned(info.capped.hpRequested),
             })}
@@ -933,7 +933,7 @@ function InfoResult({ info }: { info: InfoView }) {
       {info.value && (
         <span
           className={cn(
-            "shrink-0 text-4xl font-semibold leading-none tabular-nums",
+            "shrink-0 text-headline tabular-nums",
             info.value.tone === "damage" ? "text-danger" : "text-heal",
           )}
           data-testid="info-value"

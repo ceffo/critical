@@ -29,14 +29,7 @@ func (s *service) roll(f *formula.Formula, level int) (Roll, error) {
 // rollDamage rolls a damage entry at the caster level: the dice of the
 // level's row, once per instance, every round it repeats.
 func (s *service) rollDamage(d *spelleffectsvc.Damage, level int) (*DamageResult, error) {
-	dice := d.Dice
-	if dice == nil {
-		for _, row := range d.ByLevel {
-			if row.MinLevel <= level {
-				dice = row.Dice
-			}
-		}
-	}
+	dice := d.DiceAt(level)
 	if dice == nil {
 		return nil, fmt.Errorf("no damage dice at caster level %d", level)
 	}
@@ -46,14 +39,14 @@ func (s *service) rollDamage(d *spelleffectsvc.Damage, level int) (*DamageResult
 		if err != nil {
 			return nil, err
 		}
-		out.Instances = max(n.Total, 0)
+		out.Instances = spelleffectsvc.InstanceCount(n.Total)
 	}
 	if d.Rounds != nil {
 		n, err := s.roll(d.Rounds, level)
 		if err != nil {
 			return nil, err
 		}
-		out.Rounds = max(n.Total, 1)
+		out.Rounds = spelleffectsvc.RoundCount(n.Total)
 	}
 	for range out.Rounds {
 		for range out.Instances {

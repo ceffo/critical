@@ -39,6 +39,9 @@ type SpellbookEntryDTO struct {
 	SlotSplits      [][]int `json:"slot_splits,omitempty"`
 	ConsumeItemType string  `json:"consume_item_type,omitempty"`
 	AttackRoll      bool    `json:"attack_roll,omitempty"`
+	// Damage is what a cast rolls at the character's level, in the shape
+	// of the spell lookup's (absent: the cast rolls no damage).
+	Damage *spellhdl.SpellDamageDTO `json:"damage,omitempty"`
 }
 
 // LevelLimitDTO is the preparation limit of one spell level.
@@ -70,6 +73,7 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 			out.Spellbook = append(out.Spellbook, SpellbookEntryDTO{
 				ID: e.ID, Name: e.Name, Level: e.Level,
 				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
+				Damage: spellhdl.DamageToDTO(e.Damage),
 			})
 		}
 		for _, l := range info.Limits {

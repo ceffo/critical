@@ -20,6 +20,7 @@ package formula
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -83,6 +84,101 @@ func (f *Formula) Min(level int) (int, error) {
 // Max returns the largest value the formula can take at the level.
 func (f *Formula) Max(level int) (int, error) {
 	return f.Eval(level, func(s int) int { return s })
+}
+
+// ErrNotDiceSum is returned by Expand when a formula's dice are not simply
+// added: a die that is multiplied, divided, negated, subtracted, capped by
+// min/max, or whose count is itself rolled.
+var ErrNotDiceSum = errors.New("not a sum of dice plus a constant")
+
+// Dice is Count dice of Sides sides.
+type Dice struct {
+	Count int
+	Sides int
+}
+
+// Sum is a formula evaluated at a caster level down to what is left to roll:
+// dice groups, in the order the formula writes them, plus a constant.
+type Sum struct {
+	Dice     []Dice
+	Constant int
+}
+
+// Expand evaluates every part of the formula that does not roll at the level
+// and returns the dice still to roll plus the constant: "(min(level,10))d6"
+// at level 12 is 10d6, "1d3+2*min(level,10)" is 1d3 plus 20, "1d6+4d6" keeps
+// its two groups. Groups of zero dice are dropped. A formula whose dice are
+// not simply added (see ErrNotDiceSum) returns that error.
+func (f *Formula) Expand(level int) (Sum, error) {
+	s, err := expand(f.root, level)
+	if err != nil {
+		return Sum{}, fmt.Errorf("expand %s at level %d: %w", f, level, err)
+	}
+	return s, nil
+}
+
+// noRoll is the roller of a subtree without dice: it is never called.
+func noRoll(int) int { return 0 }
+
+func expand(n node, level int) (Sum, error) {
+	if !hasDice(n) {
+		v, err := n.eval(level, noRoll)
+		return Sum{Constant: v}, err
+	}
+	switch n := n.(type) {
+	case diceNode:
+		if hasDice(n.count) {
+			return Sum{}, ErrNotDiceSum
+		}
+		c, err := n.count.eval(level, noRoll)
+		if err != nil {
+			return Sum{}, err
+		}
+		if c < 0 {
+			return Sum{}, fmt.Errorf("negative number of dice (%d)", c)
+		}
+		if c > maxDice {
+			return Sum{}, fmt.Errorf("too many dice (%d)", c)
+		}
+		if c == 0 {
+			return Sum{}, nil
+		}
+		return Sum{Dice: []Dice{{Count: c, Sides: n.sides}}}, nil
+	case binNode:
+		if n.op != '+' && n.op != '-' || n.op == '-' && hasDice(n.r) {
+			return Sum{}, ErrNotDiceSum
+		}
+		a, err := expand(n.l, level)
+		if err != nil {
+			return Sum{}, err
+		}
+		b, err := expand(n.r, level)
+		if err != nil {
+			return Sum{}, err
+		}
+		if n.op == '-' {
+			return Sum{Dice: a.Dice, Constant: a.Constant - b.Constant}, nil
+		}
+		return Sum{Dice: slices.Concat(a.Dice, b.Dice), Constant: a.Constant + b.Constant}, nil
+	default: // negNode, minMaxNode
+		return Sum{}, ErrNotDiceSum
+	}
+}
+
+// hasDice reports whether a subtree rolls any die.
+func hasDice(n node) bool {
+	switch n := n.(type) {
+	case diceNode:
+		return true
+	case negNode:
+		return hasDice(n.x)
+	case binNode:
+		return hasDice(n.l) || hasDice(n.r)
+	case minMaxNode:
+		return hasDice(n.l) || hasDice(n.r)
+	default: // numNode, levelNode
+		return false
+	}
 }
 
 // ---- AST ----

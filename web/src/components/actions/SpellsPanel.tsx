@@ -10,6 +10,7 @@ import type { SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { planCast } from "@/lib/castInputs";
+import { damageText } from "@/lib/spellDice";
 import { PrepareEditor } from "./PrepareEditor";
 
 interface SlotRow {
@@ -195,6 +196,12 @@ export function SpellsPanel() {
                   });
                   const { needs, slotSplits, split, spendable, itemId } = plan;
                   const acText = targetAcs[slot.index] ?? "";
+                  // The damage a cast rolls at the Bard's level, as the server serves it.
+                  const damage = blank
+                    ? undefined
+                    : info.spellbook.find(
+                        (s) => s.id === (slot.prepared_spell_id || spellId(slot.prepared_spell_name)),
+                      )?.damage;
                   return (
                     <li
                       key={slot.index}
@@ -203,13 +210,23 @@ export function SpellsPanel() {
                         slot.used ? "opacity-60" : "hover:bg-muted/60",
                       )}
                     >
-                      <span
-                        className={cn(
-                          "min-w-0 truncate text-sm",
-                          slot.used && "text-muted-foreground line-through",
+                      <span className="flex min-w-0 flex-col leading-tight">
+                        <span
+                          className={cn(
+                            "min-w-0 truncate text-sm",
+                            slot.used && "text-muted-foreground line-through",
+                          )}
+                        >
+                          {name}
+                        </span>
+                        {damage && (
+                          <span
+                            className="min-w-0 truncate text-xs text-muted-foreground tabular-nums"
+                            data-testid="slot-dice"
+                          >
+                            {damageText(t, damage)}
+                          </span>
                         )}
-                      >
-                        {name}
                       </span>
                       {blank && !slot.used && (
                         <select

@@ -248,6 +248,19 @@ test.describe("workspaces to the dice composer", () => {
     await expect(combatLog(page).locator("[data-selected=true]")).toContainText(`Dice d8+8 = ${total}`);
     await expect(formula).toHaveValue("d8+8");
 
+    // The damage row: Fireball at the Bard's level, to the composer and rolled on the server.
+    await page.getByRole("combobox", { name: "Search spells..." }).fill("fireball");
+    await expect(detail.getByRole("heading")).toContainText("Fireball");
+    const damage = detail.getByTestId("spell-dice-damage");
+    await expect(damage.getByTestId("spell-dice-formula")).toHaveText("10d6 fire");
+    await damage.getByRole("button", { name: "Send 10d6 to the dice" }).click();
+    await expect(formula).toHaveValue("10d6");
+    await damage.getByRole("button", { name: "Roll 10d6" }).click();
+    await expect(result.getByTestId("dice-formula")).toHaveText("10d6");
+    const fire = Number(await result.getByTestId("dice-total").textContent());
+    expect(fire).toBeGreaterThanOrEqual(10);
+    expect(fire).toBeLessThanOrEqual(60);
+
     for (const vp of VIEWPORTS) {
       await page.setViewportSize(vp);
       await expectNoPageScroll(page);

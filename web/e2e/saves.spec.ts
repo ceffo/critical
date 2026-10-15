@@ -130,13 +130,12 @@ test("a voided save can no longer be adjusted; older saves and other entries are
   const form = saveCard(page).getByRole("form", { name: "Adjust this save" });
   await expect(form).toBeVisible();
   const newest = logEntry(page, "Save vs Spells").first();
-  await newest.getByRole("button", { name: "Void" }).click();
-  await newest.getByRole("button", { name: "Confirm" }).click();
+  await page.getByTestId("undo").click();
   await expect(newest).toHaveAttribute("data-status", "voided");
   await expect(form).toHaveCount(0);
   const voided = await adjustById(latest);
   expect(voided.status()).toBe(409);
-  expect((await voided.json()).error).toContain("already voided");
+  expect((await voided.json()).error).toContain("already undone");
   // Voiding the newer save does not make the older one adjustable again.
   const stillOlder = await adjustById(older);
   expect(stillOlder.status()).toBe(409);

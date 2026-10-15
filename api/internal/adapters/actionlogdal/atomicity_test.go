@@ -185,7 +185,7 @@ func TestVoid_OnlyTheLatestEntry(t *testing.T) {
 	for _, older := range []int64{first, second} {
 		_, err = log.Void(ctx, charID, older)
 		require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
-		assert.Contains(t, err.Error(), fmt.Sprintf("void #%d (hp_change, round 4) first", scratch))
+		assert.Contains(t, err.Error(), fmt.Sprintf("undo #%d (hp_change, round 4) first", scratch))
 	}
 	assert.Equal(t, 2, round(t, db, charID), "nothing restored")
 

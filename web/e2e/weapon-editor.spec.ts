@@ -7,7 +7,7 @@ import {
   openDashboard,
   openWeapons,
   openWorkspace,
-  voidEntry,
+  undoEntry,
 } from "./helpers";
 
 // Weapon editor: add, edit and remove weapons in the Inventory tab; each is one
@@ -90,9 +90,9 @@ test("edit Bastard Sword +2 to +3 to hit and damage: the next attack uses +3; po
   await snap(page, "attack-uses-plus-3");
 
   // The attack is newer than the edit: pop the attack, then the edit.
-  await voidEntry(page, "Bastard Sword +2 vs AC");
+  await undoEntry(page, "Bastard Sword +2 vs AC");
   await openWorkspace(page, "Inventory");
-  await voidEntry(page, "Edited weapon Bastard Sword +2");
+  await undoEntry(page, "Edited weapon Bastard Sword +2");
   await expect(r.getByTestId("weapon-to-hit")).toHaveText("+2");
   await expect(r.getByTestId("weapon-damage")).toHaveText("+2");
   await snap(page, "edit-popped");
@@ -132,7 +132,7 @@ test("add a Long Bow (missile, arrow): it is in the attack picker and offered ar
   await snap(page, "bow-offered-arrows");
 
   await openWorkspace(page, "Inventory");
-  await voidEntry(page, "Added weapon Long Bow");
+  await undoEntry(page, "Added weapon Long Bow");
   await expect(row(page, "long_bow")).toHaveCount(0);
   // The bow was in hand: the Weapons tab falls back to the first weapon.
   expect(await pickableWeapons(page)).not.toContain("Long Bow");
@@ -157,7 +157,7 @@ test("remove the darts: gone from the picker, an earlier attack line still reads
   expect(await pickableWeapons(page)).not.toContain("Darts");
 
   await openWorkspace(page, "Inventory");
-  await voidEntry(page, "Removed weapon Darts");
+  await undoEntry(page, "Removed weapon Darts");
   await expect(row(page, "darts")).toBeVisible();
   expect(await pickableWeapons(page)).toContain("Darts");
   await snap(page, "darts-restored");

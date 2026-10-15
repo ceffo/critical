@@ -91,7 +91,7 @@ func Amend(charID CharacterIDFunc, svc amender) render.HandlerFunc {
 		}
 		for k := range body {
 			if k != "note" {
-				return render.BadRequestError("only the note of an entry can be amended (got " + strconv.Quote(k) + "): void the entry and log it again")
+				return render.BadRequestError("only the note of an entry can be amended (got " + strconv.Quote(k) + "): undo the entry and log it again")
 			}
 		}
 		raw, ok := body["note"]

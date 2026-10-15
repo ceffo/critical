@@ -33,13 +33,9 @@ interface TableStore {
   recordHp: (delta: number, source: string) => Promise<boolean>;
   /** Set an entry's note (the only amendable field). */
   amendEntry: (id: number, note: string) => Promise<boolean>;
-  /** The journal row's Void: the global undo with this row's id as the expected top, so a stale
-   * top (another client acted since) is refused and nothing changes (ADR 0018 step 3). */
-  voidEntry: (id: number) => Promise<boolean>;
   /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
    * refused (another action landed first) or there was nothing to pop. */
   undo: () => Promise<boolean>;
-  popTop: (expectedTopId: number) => Promise<boolean>;
   nextRound: () => Promise<boolean>;
   /** Pop the round's initiative entry and roll a new one (refused when another entry is newer). */
   rerollInitiative: () => Promise<boolean>;
@@ -124,23 +120,20 @@ export const useTableStore = create<TableStore>((set, get) => ({
       useHpStore.getState().setHp(await appendHpEvent(delta, source)),
     ),
   amendEntry: (id, note) => get().run(() => amendLogEntry(id, note)),
-  // One undo system (ADR 0018 step 3): the HP panel, the Annuler button and the row's Void all
-  // send the global undo with the top they last read. A pop can bring expired buffs back (an
-  // "expired" notice would now be stale) and can take back a correction (ADR 0010 step 6): the
-  // card then shows the latest roll from the refreshed log, not this session's (corrected)
-  // roll response.
-  voidEntry: (id) => get().popTop(id),
+  // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
+  // with the top this client last read, so a stale top (another client acted since) is refused
+  // and nothing changes. A pop can bring expired buffs back (an "expired" notice would now be
+  // stale) and can take back a correction (ADR 0010 step 6): the card then shows the latest roll
+  // from the refreshed log, not this session's (corrected) roll response.
   undo: () => {
     const expected = useLogStore.getState().topId;
     if (expected === null) return Promise.resolve(false);
-    return get().popTop(expected);
-  },
-  popTop: (expected) =>
-    get().run(async () => {
+    return get().run(async () => {
       await undoLogEntry(expected);
       set({ notice: null });
       useRollStore.setState({ last: null });
-    }),
+    });
+  },
   // A round change leaves buffs alone, but an "expired" notice is stale after either.
   endCombat: () =>
     get().run(async () => {

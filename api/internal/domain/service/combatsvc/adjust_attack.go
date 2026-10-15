@@ -134,7 +134,7 @@ func decodeCorrectable(e actionlog.Entry) (*RollResult, error) {
 		return nil, fmt.Errorf("decode attack #%d: %w", e.ID, err)
 	}
 	if rec.Rolled == nil || rec.CritRow == nil || rec.D100MultiplierRoll == 0 {
-		return nil, fmt.Errorf("%w: attack #%d was logged without its damage dice, void it and roll again", domain.ErrInvalidInput, e.ID)
+		return nil, fmt.Errorf("%w: attack #%d was logged without its damage dice, undo it and roll again", domain.ErrInvalidInput, e.ID)
 	}
 	return rec.result(e.ID), nil
 }

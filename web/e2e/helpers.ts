@@ -136,12 +136,20 @@ export async function addBuff(page: Page, buff: NewBuff) {
   await expect(buffBadge(page, buff.name)).toBeVisible();
 }
 
-/** Void the log entry whose text contains `text` (two clicks: Void, Confirm). */
-export async function voidEntry(page: Page, text: string) {
+/** Undo the log entry whose text contains `text`: it must be the one on top; the journal's one
+ * Undo button pops it. */
+export async function undoEntry(page: Page, text: string) {
   const entry = logEntry(page, text);
-  await entry.getByRole("button", { name: "Void" }).click();
-  await entry.getByRole("button", { name: "Confirm" }).click();
+  await page.getByTestId("undo").click();
   await expect(entry).toHaveAttribute("data-status", "voided");
+}
+
+/** The journal's Undo tooltip names `text` (the entry on top), or, with `not`, does not. */
+export async function expectUndoOn(page: Page, text: string, not = false) {
+  const undo = page.getByTestId("undo");
+  const re = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if (not) await expect(undo).not.toHaveAttribute("title", re);
+  else await expect(undo).toHaveAttribute("title", re);
 }
 
 /** Effective STR as shown in the header. */
@@ -198,19 +206,15 @@ export async function turnMenu(
 }
 
 /**
- * Void the turn's initiative entry, the one the turn block shows (Next turn logs it after the
- * advance, so it is popped first). Labels default to the English UI.
+ * Undo the turn's initiative entry, the one the turn block shows (Next turn logs it after the
+ * advance, so it is popped first).
  */
-export async function voidInitiative(
-  page: Page,
-  labels = { void: "Void", confirm: "Confirm" },
-) {
+export async function undoInitiative(page: Page) {
   const id = await page
     .getByTestId("initiative-value")
     .getAttribute("data-entry-id");
   const entry = page.locator(`li[data-entry-id="${id}"]`);
-  await entry.getByRole("button", { name: labels.void, exact: true }).click();
-  await entry.getByRole("button", { name: labels.confirm }).click();
+  await page.getByTestId("undo").click();
   await expect(entry).toHaveAttribute("data-status", "voided");
   await expect(page.getByTestId("initiative-value")).toHaveCount(0);
 }

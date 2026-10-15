@@ -1,10 +1,8 @@
 import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowUUpLeft, Heart, Sword } from "@phosphor-icons/react";
+import { Heart, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
-import { undoButtonState } from "@/lib/undoButton";
 import { fieldClass } from "./fieldStyles";
 
 /**
@@ -14,15 +12,9 @@ import { fieldClass } from "./fieldStyles";
  */
 export function QuickHp() {
   const { t } = useTranslation();
-  const { recordHp, undo, busy } = useTableStore();
+  const { recordHp, busy } = useTableStore();
   const [amount, setAmount] = useState("");
   const [source, setSource] = useState("");
-  // One undo system (ADR 0018 step 3): this is the global undo, so it pops whatever is on top
-  // (an HP change, an exposure, a cast...) and its tooltip names it, like Annuler.
-  const topId = useLogStore((st) => st.topId);
-  const entries = useLogStore((st) => st.entries);
-  const undoState = undoButtonState(topId, entries, busy, t);
-
   const n = Number.parseInt(amount, 10);
   const valid = n > 0;
 
@@ -48,17 +40,6 @@ export function QuickHp() {
     >
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-title">{t("hp.change")}</h2>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          disabled={undoState.disabled}
-          aria-label={undoState.label}
-          title={undoState.label}
-          data-testid="hp-undo"
-          onClick={() => void undo()}
-        >
-          <ArrowUUpLeft />
-        </Button>
       </div>
       <div className="grid grid-cols-[minmax(3.5rem,5rem)_minmax(0,1fr)_minmax(0,1fr)] gap-1">
         <input

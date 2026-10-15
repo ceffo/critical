@@ -74,7 +74,7 @@ func (s *service) AmendLatest(ctx context.Context, characterID, id int64, kind a
 			return err
 		}
 		if latest != id {
-			return fmt.Errorf("%w: only the latest roll can be adjusted, void this %s and roll again", ErrNotLatest, kind)
+			return fmt.Errorf("%w: only the latest roll can be adjusted, undo this %s and roll again", ErrNotLatest, kind)
 		}
 		a, err := fn(*e)
 		if err != nil {

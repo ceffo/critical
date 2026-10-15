@@ -269,7 +269,7 @@ func TestVoid(t *testing.T) {
 		},
 		{
 			name: "an older entry is refused", entry: withSnaps("round"), topID: 9, restorers: []string{"round"},
-			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be voided, void #9 (round_advance, round 3) first`,
+			wantErr: actionlogsvc.ErrNotLatest, wantErrText: `only the latest entry can be undone, undo #9 (round_advance, round 3) first`,
 		},
 		{
 			name: "a scoped key uses its family's restorer", entry: withSnaps("items:arrows_plus3"), restorers: []string{"items"},

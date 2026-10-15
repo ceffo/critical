@@ -329,7 +329,7 @@ func TestAdjustAttackAC_Rejections(t *testing.T) {
 		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 9, 7)
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, domain.ErrInvalidInput)
-		assert.ErrorContains(t, err, "void it and roll again")
+		assert.ErrorContains(t, err, "undo it and roll again")
 		assert.Empty(t, e.Corrections)
 	})
 
@@ -346,7 +346,7 @@ func TestAdjustAttackAC_Rejections(t *testing.T) {
 		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 9, 5)
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, domain.ErrInvalidInput)
-		assert.ErrorContains(t, err, "void it and roll again")
+		assert.ErrorContains(t, err, "undo it and roll again")
 		assert.Empty(t, e.Corrections)
 	})
 

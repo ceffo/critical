@@ -47,7 +47,7 @@ number of calls (d20 once, d100 twice per attack).
 - The card, the damage term and the log line show both d100s ("crit check 7 · multiplier 63 →
   ×3").
 - Attack entries logged before this decision are not rewritten. They still decode and display,
-  but a target AC correction refuses them (400 "void it and roll again") because they have no
+  but a target AC correction refuses them (400 "undo it and roll again") because they have no
   multiplier d100.
 - Editing the crit table never changes a logged attack, and doesn't change a correction of one
   either, because the row is stored at the roll.

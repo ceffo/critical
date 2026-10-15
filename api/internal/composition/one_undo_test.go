@@ -12,10 +12,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/hpsvc"
 )
 
-// hpPanelUndo is what the HP panel's undo button does: the global undo, with
+// journalUndo is what the journal's Undo button does: the global undo, with
 // the top the panel last read as expectedTopId (ADR 0018 step 3). It returns
 // the HP state the panel then shows.
-func hpPanelUndo(t *testing.T, bs *composition.BackingServices) *hpsvc.HPState {
+func journalUndo(t *testing.T, bs *composition.BackingServices) *hpsvc.HPState {
 	t.Helper()
 	ctx := context.Background()
 	top, ok, err := bs.Log.TopID(ctx, bs.CharacterID)
@@ -28,9 +28,9 @@ func hpPanelUndo(t *testing.T, bs *composition.BackingServices) *hpsvc.HPState {
 	return st
 }
 
-// ADR 0018 step 3: the HP panel's undo pops whatever is on top, not only an
+// ADR 0018 step 3: the journal's Undo pops whatever is on top, not only an
 // HP change.
-func TestOneUndo_HPPanelPopsWhateverIsOnTop(t *testing.T) {
+func TestOneUndo_JournalPopsWhateverIsOnTop(t *testing.T) {
 	t.Run("an exposure on top: HP comes back", func(t *testing.T) {
 		bs := bootMaxDice(t)
 		ctx, id := context.Background(), bs.CharacterID
@@ -45,7 +45,7 @@ func TestOneUndo_HPPanelPopsWhateverIsOnTop(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, start-4, st.CurrentHp)
 
-		assert.Equal(t, start, hpPanelUndo(t, bs).CurrentHp)
+		assert.Equal(t, start, journalUndo(t, bs).CurrentHp)
 	})
 	t.Run("a cast on top: the slot comes back", func(t *testing.T) {
 		bs := bootMaxDice(t)
@@ -56,7 +56,7 @@ func TestOneUndo_HPPanelPopsWhateverIsOnTop(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, usedSlots(t, bs))
 
-		hpPanelUndo(t, bs)
+		journalUndo(t, bs)
 		assert.Equal(t, 0, usedSlots(t, bs))
 	})
 }

@@ -31,7 +31,7 @@ func (s *service) Void(ctx context.Context, characterID, id int64) (*actionlog.E
 			return err
 		}
 		if top.ID != id {
-			return fmt.Errorf("%w: only the latest entry can be voided, void #%d (%s, round %d) first",
+			return fmt.Errorf("%w: only the latest entry can be undone, undo #%d (%s, round %d) first",
 				ErrNotLatest, top.ID, top.Kind, top.Round)
 		}
 		if err := s.pop(ctx, characterID, e); err != nil {

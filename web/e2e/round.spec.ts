@@ -14,8 +14,8 @@ import {
   buffBadge,
   openDashboard,
   recordHp,
-  voidEntry,
-  voidInitiative,
+  undoEntry,
+  undoInitiative,
 } from "./helpers";
 
 test("Next turn advances the counter and starts a new log group", async ({
@@ -104,14 +104,12 @@ test("End combat resets to round 0 and Set round corrects it; both are voidable 
   await nextTurn(page);
   await expect.poll(() => currentRound(page)).toBe(1);
   // The newest "Turn 0 → 1" entry (the earlier Next Rounds also went through 0 → 1).
-  await voidInitiative(page);
-  const advance = logEntry(page, "Turn 0 → 1").first();
-  await advance.getByRole("button", { name: "Void" }).click();
-  await advance.getByRole("button", { name: "Confirm" }).click();
+  await undoInitiative(page);
+  await page.getByTestId("undo").click();
   await expect.poll(() => currentRound(page)).toBe(0);
 
   // Voiding End combat brings round 7 back.
-  await voidEntry(page, "Combat ended: turn 7 → 0");
+  await undoEntry(page, "Combat ended: turn 7 → 0");
   await expect.poll(() => currentRound(page)).toBe(7);
   await expectNoReload(page);
 });
@@ -166,7 +164,7 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
   await snap(page, "pass-time-done");
 
   // Voiding it brings back the buffs and the round.
-  await voidEntry(page, text);
+  await undoEntry(page, text);
   await expect.poll(() => currentRound(page)).toBe(before);
   await expect(
     buffBadge(page, "e2e Short").getByTestId("buff-rounds"),
@@ -185,11 +183,11 @@ function logEntryFr(page: Page, text: string) {
     .filter({ hasText: text });
 }
 
-/** Void the newest entry whose text contains `text` in the French UI (Annuler, then Confirmer). */
+/** Undo the newest entry (the journal's one button, "Annuler" in the French UI). */
 async function voidFr(page: Page, text: string) {
   const entry = logEntryFr(page, text).first();
-  await entry.getByRole("button", { name: "Annuler", exact: true }).click();
-  await entry.getByRole("button", { name: "Confirmer" }).click();
+  await page.getByTestId("undo").click();
+  await expect(entry).toHaveAttribute("data-status", "voided");
 }
 
 test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be popped first", async ({
@@ -254,7 +252,7 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
 
   // Void Next Round first (its initiative, then the advance), then the fast-forward: the buff
   // and round 1 come back.
-  await voidInitiative(page, { void: "Annuler", confirm: "Confirmer" });
+  await undoInitiative(page);
   await voidFr(page, "Tour 0 → 1");
   await expect.poll(() => currentRound(page)).toBe(0);
   await voidFr(page, text);

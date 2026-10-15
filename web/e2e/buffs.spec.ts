@@ -10,8 +10,8 @@ import {
   nextTurn,
   openAddEffect,
   openDashboard,
-  voidEntry,
-  voidInitiative,
+  undoEntry,
+  undoInitiative,
   turnGroup,
 } from "./helpers";
 
@@ -42,8 +42,8 @@ test("Next turn then void restores the round, the durations and the expired buff
   ).toBeVisible();
   await snap(page, "next-round-expired");
 
-  await voidInitiative(page);
-  await voidEntry(page, advance);
+  await undoInitiative(page);
+  await undoEntry(page, advance);
   await expect.poll(() => currentRound(page)).toBe(r0);
   await expect(page.getByRole("status")).toHaveCount(0);
   await expect(
@@ -78,7 +78,7 @@ test("editing a buff's remaining rounds is logged and voidable", async ({
   await expect(edit).toBeVisible();
   await snap(page, "edit-rounds");
 
-  await voidEntry(page, "e2e Strength: 10 rd → 4 rd");
+  await undoEntry(page, "e2e Strength: 10 rd → 4 rd");
   await expect(
     buffBadge(page, "e2e Strength").getByTestId("buff-rounds"),
   ).toHaveText("10 turns");
@@ -131,7 +131,7 @@ test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and th
   ).toBeVisible();
   await snap(page, "stoneskin-ended");
 
-  await voidEntry(page, "e2e Stoneskin absorbed a hit, ended");
+  await undoEntry(page, "e2e Stoneskin absorbed a hit, ended");
   await expect(badge.getByTestId("buff-charges")).toHaveText(
     "1 / 2 charges · until spent",
   );
@@ -213,7 +213,7 @@ test("a buff note shows on its row, edits are logged, void restores it", async (
   ).toBeVisible();
   await snap(page, "note-edited");
 
-  await voidEntry(page, "e2e Ward: note “fire damage −50%”");
+  await undoEntry(page, "e2e Ward: note “fire damage −50%”");
   await expect(badge.getByTestId("buff-note")).toHaveText("+4 saves vs fire");
 
   await expectNoReload(page);
@@ -265,7 +265,7 @@ test("a saved buff is added from the Saved effect tab, deleting it leaves active
   ).toBeVisible();
   await snap(page, "saved-deleted");
 
-  await voidEntry(page, "Deleted saved buff e2e Hammer form");
+  await undoEntry(page, "Deleted saved buff e2e Hammer form");
   await openAddEffect(page, "Saved effect");
   await expect(again.getByTestId("saved-buff")).toHaveCount(1);
 

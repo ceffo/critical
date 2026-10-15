@@ -49,16 +49,18 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    `TestUndo_PopsEveryKindInOrder` (existing, updated: Next Round pops in one step), a table test
    over every table-state mutation (ADR 0010 Context) asserting one undo walks the state fully
    back; `web/src/lib/undoButton.test.ts` (the tooltip names the transaction, en/fr).
-3. **One undo system.** There is one way to pop: `POST /api/log/undo` with `expectedTopId`.
-   `POST /api/hp/undo` and `POST /api/log/{id}/void` are retired. The HP panel's undo button sends
-   the global undo, with the Annuler tooltip (it names whatever is on top, an exposure or a cast
-   as well as an HP change). The journal row's Void shows on the top row only and sends the
-   global undo with that row's id as `expectedTopId`; a stale top is refused (409) and nothing
-   changes.
-   Tests: `composition` `TestOneUndo_HPPanelPopsWhateverIsOnTop` (an exposure on top: HP comes
-   back; a cast on top: the slot comes back); `rest/router` test that the two retired endpoints
-   answer 404 or 405; `web/src/stores/undo.test.ts` ("HP panel undo with an exposure on top",
-   "row Void with a stale top").
+3. **One undo system, on the journal.** There is one way to pop: `POST /api/log/undo` with
+   `expectedTopId`. `POST /api/hp/undo` and `POST /api/log/{id}/void` are retired. The one undo
+   control lives in the journal (its header: the Undo button, "Annuler" in French, and Ctrl/Cmd+Z);
+   the HP panel has none and the journal rows have no per-row button. Its tooltip names whatever is
+   on top, an exposure or a cast as well as an HP change. It sends the top it last read as
+   `expectedTopId`; a stale top is refused (409) and nothing changes. Users see "Undo" /
+   "Annuler" and "Undone" / "Annulé", never "void"; void stays the storage word (step 6).
+   Tests: `composition` `TestOneUndo_JournalPopsWhateverIsOnTop` (an exposure on top: HP comes
+   back; a cast on top: the slot comes back); `rest/router` `TestRetiredUndoEndpointsAreGone` (the
+   two retired endpoints answer 404 or 405); `web/src/stores/undo.test.ts` ("journal Undo with
+   exposure on top", "journal Undo with cast on top", "journal Undo with a stale top");
+   `web/e2e/cast.spec.ts` "cast, heal, cast: the journal Undo pops the cast on top, then the heal".
 4. **Any transaction may change HP.** Any entry, of any kind, may carry an HP delta; current HP is
    `hp_max` plus the SUM of the effective delta of every entry, whatever its kind (ADR 0007
    step 2). The heal cap (ADR 0007 steps 4 and 5) and the floor ([ADR 0011](0011-hp-below-zero.md)

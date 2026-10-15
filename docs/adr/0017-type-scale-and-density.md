@@ -84,11 +84,9 @@ letters.
   stand.
 - A large screen now shows more content at the same size instead of the same content bigger. On
   the 5120x1440 ultrawide third (1707x1300) the type is the same as on a laptop.
-- The shell, the shared ui components, the header and the Moi column follow this ADR now. The
-  workspace panels (Agir, Inventaire, Sorts, Experience) and the Fil column keep their old classes
-  until their sweep; Tailwind's default `text-*` sizes stay available until both sweeps are done,
-  after which they can be removed from the theme (`--text-*: initial`) so an old size fails the
-  build.
+- The whole app follows this ADR. Tailwind's default `text-*` sizes are removed from the theme
+  (`--text-*: initial` in `web/src/index.css`), so `text-xs`..`text-9xl` build to no CSS and an old
+  size is visibly missing instead of silently allowed.
 - A transient inline form in the header (editing an effect) may make it taller while it is open;
   the 64 px limit is for the header at rest.
 - With more than one active effect, the timeline shows about one and a half rows and scrolls.

@@ -115,8 +115,10 @@
 
 /*
  * Type scale by role (ADR 0017 step 2): text uses only these five sizes. 1rem = 16px (fixed root).
+ * Tailwind's default text-xs..text-9xl are dropped, so an old size builds to nothing.
  */
 @theme {
+  --text-*: initial;
   --text-label: 0.6875rem;
   --text-label--line-height: 1rem;
   --text-body: 0.8125rem;

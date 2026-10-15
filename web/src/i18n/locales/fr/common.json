@@ -600,7 +600,7 @@
     "multRoll": "d100 multiplicateur",
     "skill": {
       "proficiency": "Compétence · d{{die}} sous {{stat}}",
-      "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
+      "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
       "success": "Réussi",
       "failure": "Échec",
       "die": "d{{die}}"
@@ -833,7 +833,7 @@
     },
     "die": "d{{faces}} : {{value}}",
     "skillVs": "{{roll}} contre {{target}}",
-    "skillVsPercent": "{{roll}} contre {{target}} %"
+    "skillVsPercent": "{{roll}} contre {{target}} %"
   },
   "xp": {
     "heading": "Expérience · niveau {{level}}",
@@ -887,7 +887,7 @@
       "percent": "Chance",
       "last": "Dernier"
     },
-    "percent": "{{value}} %",
+    "percent": "{{value}} %",
     "rollLabel": "Lancer {{name}}",
     "lastSuccess": "Dernier jet : {{roll}}, réussi",
     "lastFailure": "Dernier jet : {{roll}}, échec",

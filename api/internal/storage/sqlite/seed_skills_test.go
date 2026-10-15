@@ -27,7 +27,7 @@ func seedsWithSkills(t *testing.T, content string) string {
 }
 
 // The sheet's proficiencies (PHB Table 37 abilities and modifiers) and bard
-// skills load once; a restart keeps what the tables hold.
+// skills load, and a restart with the same seed changes nothing.
 func TestSeed_SkillsMatchSheetAndAreIdempotent(t *testing.T) {
 	ctx := context.Background()
 	db := openMigrated(t)
@@ -51,13 +51,38 @@ func TestSeed_SkillsMatchSheetAndAreIdempotent(t *testing.T) {
 	}
 	assert.Zero(t, scalar(t, db, "SELECT position FROM proficiencies WHERE id = 'musical_instrument'"), "seed order kept")
 
-	_, err := db.Exec("UPDATE bard_skills SET percent = 60 WHERE id = 'pick_pockets'")
-	require.NoError(t, err)
 	require.NoError(t, db.Seed(ctx, repoSeeds()))
 	assert.Equal(t, 8, scalar(t, db, "SELECT COUNT(*) FROM proficiencies"))
 	assert.Equal(t, 4, scalar(t, db, "SELECT COUNT(*) FROM bard_skills"))
-	assert.Equal(t, 60, scalar(t, db, "SELECT percent FROM bard_skills WHERE id = 'pick_pockets'"), "a restart keeps the table")
+	assert.Equal(t, 50, scalar(t, db, "SELECT percent FROM bard_skills WHERE id = 'pick_pockets'"))
+	assert.Equal(t, 7, scalar(t, db, "SELECT position FROM proficiencies WHERE id = 'local_history'"), "order kept")
 	require.NoError(t, db.Seed(ctx, t.TempDir()), "a missing file is fine once the tables are filled")
+}
+
+// An edited seed reaches an existing database: changed values and order are
+// applied by id, a new row is added, nothing is duplicated, and a row the seed
+// no longer lists is kept.
+func TestSeed_SkillsReconcileByID(t *testing.T) {
+	ctx := context.Background()
+	db := openMigrated(t)
+	require.NoError(t, db.Seed(ctx, seedsWithSkills(t, `{
+		"proficiencies":[{"id":"tumbling","ability":"dex","modifier":0},{"id":"singing","ability":"cha","modifier":0}],
+		"bard_skills":[{"id":"climb_walls","percent":85},{"id":"pick_pockets","percent":50}]}`)))
+
+	edited := seedsWithSkills(t, `{
+		"proficiencies":[{"id":"singing","ability":"cha","modifier":1},{"id":"tumbling","ability":"dex","modifier":0},
+			{"id":"ventriloquism","ability":"int","modifier":-2}],
+		"bard_skills":[{"id":"climb_walls","percent":90}]}`)
+	for range 2 {
+		require.NoError(t, db.Seed(ctx, edited))
+		assert.Equal(t, 3, scalar(t, db, "SELECT COUNT(*) FROM proficiencies"), "new row added once")
+		assert.Equal(t, 1, scalar(t, db, "SELECT modifier FROM proficiencies WHERE id = 'singing'"), "corrected modifier")
+		assert.Zero(t, scalar(t, db, "SELECT position FROM proficiencies WHERE id = 'singing'"), "new order")
+		assert.Equal(t, 2, scalar(t, db, "SELECT position FROM proficiencies WHERE id = 'ventriloquism'"))
+		assert.Equal(t, -2, scalar(t, db, "SELECT modifier FROM proficiencies WHERE id = 'ventriloquism'"))
+		assert.Equal(t, 90, scalar(t, db, "SELECT percent FROM bard_skills WHERE id = 'climb_walls'"), "raised percentage")
+		assert.Equal(t, 2, scalar(t, db, "SELECT COUNT(*) FROM bard_skills"), "a row the seed dropped is kept")
+	}
 }
 
 func TestSeed_InvalidSkillsFailWithoutPartialRows(t *testing.T) {

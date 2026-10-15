@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { combatLog, openDashboard } from "./helpers";
+import { chooseLanguage, combatLog, openDashboard } from "./helpers";
 
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -67,4 +67,31 @@ test("skills: roll a proficiency and a bard skill, the card and journal show the
   await undo.click();
   await expect(climb.getByTestId("skill-last")).toHaveText("–");
   await expect(instrument.getByTestId("skill-last")).toHaveText(String(d20));
+
+  // Another skill after the undo: its own row follows, the others keep theirs.
+  const noise = panel.getByTestId("skill-detect_noise");
+  await noise.click();
+  await expect(card.getByTestId("card-header")).toContainText("Detect noise");
+  const heard = (await result.getByTestId("hex-die").textContent()) ?? "";
+  await expect(noise.getByTestId("skill-last")).toHaveText(heard);
+  await expect(climb.getByTestId("skill-last")).toHaveText("–");
+  await expect(instrument.getByTestId("skill-last")).toHaveText(String(d20));
+
+  // The journal's Rolls filter keeps the skill checks.
+  const journal = combatLog(page);
+  await journal.getByRole("radio", { name: "Rolls" }).click();
+  await expect(journal).toContainText(`Detect noise: d100 ${heard} vs 90`);
+  await expect(journal).toContainText(`Musical instrument: d20 ${d20} vs 16`);
+
+  // French, dark: names, "DEX 17 −1", the card's "contre" and verdict, for the eye.
+  await page.emulateMedia({ colorScheme: "dark" });
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const instrumentFr = page.getByTestId("skill-musical_instrument");
+  await expect(instrumentFr).toContainText("Instrument de musique");
+  await expect(instrumentFr).toContainText("DEX 17 −1");
+  const resultFr = page.getByTestId("skill-result");
+  await expect(resultFr.getByTestId("skill-vs")).toHaveText(/^\d+ contre 90\u00a0%$/);
+  await expect(resultFr.getByTestId("verdict")).toHaveText(/^(Réussi|Échec)$/);
+  await snap(page, "skills-fr-dark-1440x900");
 });

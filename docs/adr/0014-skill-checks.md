@@ -40,10 +40,11 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
 
 ## Consequences
 
-- The catalog is data: `seeds/skills.json` fills the `proficiencies` (id, ability key, modifier)
-  and `bard_skills` (id, percentage) tables when they are empty; ids are stable keys the UI names
-  in en and fr. A new proficiency is a seed row, never code. Editing them in the app is not
-  covered.
+- The catalog is data: `seeds/skills.json` is reconciled at every start with the
+  `proficiencies` (id, ability key, modifier) and `bard_skills` (id, percentage) tables by id: a
+  new id is added, an existing one takes the seed's values and order, a row the seed no longer
+  lists is kept. Ids are stable keys the UI names in en and fr. A new proficiency or a raised
+  percentage is a seed change, never code. Editing them in the app is not covered.
 - The ability score is the sheet's. Spells that raise an ability (Strength) do not change a
   proficiency's target.
 - A skill check is one of the roll kinds (`actionlog.RollKinds`): it replaces the result card,

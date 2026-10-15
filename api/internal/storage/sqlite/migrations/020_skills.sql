@@ -2,7 +2,7 @@
 -- checked on a d20 against an ability score plus a modifier, and the bard
 -- skills, each checked on a d100 against a percentage. Ids are stable keys
 -- the UI names through i18n. Position keeps the order of the seed. Both
--- tables are seeded from seeds/skills.json when empty. A check is an entry
+-- tables are seeded from seeds/skills.json. A check is an entry
 -- of the action log, so no roll is stored here.
 CREATE TABLE IF NOT EXISTS proficiencies (
     id       TEXT    PRIMARY KEY,

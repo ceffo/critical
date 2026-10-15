@@ -353,11 +353,6 @@ function attackText(p: RollResult, t: TFunction): string {
   });
 }
 
-/**
- * The entry's text in the player's language, worded from its structured payload. The server's summary
- * is only the player's own text (an HP change's source) or, on entries logged before the payloads
- * existed, an older English line.
- */
 /** Payload of skill_check entries (skillsvc checkRecord, ADR 0014): the check as rolled. */
 export function skillCheckPayload(e: LogEntry): SkillCheck | null {
   if (e.kind !== "skill_check") return null;
@@ -392,6 +387,11 @@ function skillText(c: SkillCheck, t: TFunction): string {
   });
 }
 
+/**
+ * The entry's text in the player's language, worded from its structured payload. The server's summary
+ * is only the player's own text (an HP change's source) or, on entries logged before the payloads
+ * existed, an older English line.
+ */
 export function entryText(e: LogEntry, t: TFunction): string {
   const attack = attackPayload(e);
   if (attack) return attackText(attack, t);

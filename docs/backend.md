@@ -62,8 +62,8 @@ id, action_id, kind ('amend'|'void'), hp_delta, summary, payload JSON, note, cre
 -- the total is characters.xp_total plus every entry (base + 10% when bonus)
 id, character_id, entry_date TEXT, session TEXT, reason TEXT, base INTEGER, bonus INTEGER (0/1)
 
--- proficiencies, bard_skills: the skill catalog (ADR 0014), seeded from seeds/skills.json when
--- empty; a check is an action_log entry (skill_check), nothing is stored here
+-- proficiencies, bard_skills: the skill catalog (ADR 0014), reconciled by id with seeds/skills.json
+-- at startup; a check is an action_log entry (skill_check), nothing is stored here
 id TEXT, position, ability TEXT ('str'..'cha'), modifier INTEGER
 id TEXT, position, percent INTEGER (0-100)
 ```

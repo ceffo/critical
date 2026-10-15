@@ -78,11 +78,11 @@ type itemSeed struct {
 }
 
 // Seed loads character.json, spells.json, weapons.json, items.json and
-// skills.json from seedsDir into their tables: character, weapons, items and
-// skills only if their table is empty, spells reconciled by (name, class).
-// Missing character and spell files are ignored. A missing weapons, items or
-// skills file while its table is empty is an error: the catalog would be
-// empty.
+// skills.json from seedsDir into their tables: character, weapons and items
+// only if their table is empty, spells reconciled by (name, class), skills
+// reconciled by id. Missing character and spell files are ignored. A missing
+// weapons, items or skills file while its table is empty is an error: the
+// catalog would be empty.
 func (d *DB) Seed(ctx context.Context, seedsDir string) error {
 	if err := d.seedCharacter(ctx, filepath.Join(filepath.Clean(seedsDir), "character.json")); err != nil {
 		return fmt.Errorf("seed character: %w", err)
@@ -430,19 +430,22 @@ func (s skillsSeed) validate() error {
 	return nil
 }
 
-// seedSkills fills the proficiencies and bard_skills tables from skills.json
-// when both are empty, in one transaction. Rows already there are never
-// touched, so a second run (a restart) changes nothing.
+// seedSkills reconciles the proficiencies and bard_skills tables with
+// skills.json by id, in one transaction: a new id is inserted, an existing one
+// takes the seed's ability, modifier, percentage and position (a corrected
+// modifier, a percentage raised at level-up). Rows the seed no longer lists are
+// kept, nothing is deleted, and a second run changes nothing. A missing file is
+// an error only while both tables are empty.
 func (d *DB) seedSkills(ctx context.Context, seedPath string) error {
-	var count int
-	if err := d.QueryRowContext(ctx, "SELECT (SELECT COUNT(*) FROM proficiencies) + (SELECT COUNT(*) FROM bard_skills)").Scan(&count); err != nil {
-		return fmt.Errorf("count skills: %w", err)
-	}
-	if count > 0 {
-		return nil
-	}
 	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
+		var count int
+		if cerr := d.QueryRowContext(ctx, "SELECT (SELECT COUNT(*) FROM proficiencies) + (SELECT COUNT(*) FROM bard_skills)").Scan(&count); cerr != nil {
+			return fmt.Errorf("count skills: %w", cerr)
+		}
+		if count > 0 {
+			return nil
+		}
 		return fmt.Errorf("skill tables are empty and their seed file is unreadable: %w", err)
 	}
 	var seed skillsSeed
@@ -454,19 +457,21 @@ func (d *DB) seedSkills(ctx context.Context, seedPath string) error {
 	}
 	return d.WrapTx(ctx, func(q Querier) error {
 		for i, p := range seed.Proficiencies {
-			if _, err := q.ExecContext(ctx,
-				"INSERT INTO proficiencies (id, position, ability, modifier) VALUES (?, ?, ?, ?)",
+			if _, err := q.ExecContext(ctx, `
+				INSERT INTO proficiencies (id, position, ability, modifier) VALUES (?, ?, ?, ?)
+				ON CONFLICT (id) DO UPDATE SET position = excluded.position, ability = excluded.ability, modifier = excluded.modifier`,
 				p.ID, i, p.Ability, p.Modifier,
 			); err != nil {
-				return fmt.Errorf("insert proficiency %q: %w", p.ID, err)
+				return fmt.Errorf("upsert proficiency %q: %w", p.ID, err)
 			}
 		}
 		for i, b := range seed.BardSkills {
-			if _, err := q.ExecContext(ctx,
-				"INSERT INTO bard_skills (id, position, percent) VALUES (?, ?, ?)",
+			if _, err := q.ExecContext(ctx, `
+				INSERT INTO bard_skills (id, position, percent) VALUES (?, ?, ?)
+				ON CONFLICT (id) DO UPDATE SET position = excluded.position, percent = excluded.percent`,
 				b.ID, i, b.Percent,
 			); err != nil {
-				return fmt.Errorf("insert bard skill %q: %w", b.ID, err)
+				return fmt.Errorf("upsert bard skill %q: %w", b.ID, err)
 			}
 		}
 		return nil

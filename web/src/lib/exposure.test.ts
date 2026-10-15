@@ -289,7 +289,7 @@ describe("exposure entries", () => {
     );
   });
 
-  it("Wall of Fire passing through names its mode in the journal, in French too (spell names outside the spellbook stay English)", async () => {
+  it("Wall of Fire passing through names its mode in the journal, in French too", async () => {
     const wall = entry({
       ...payload,
       spellId: "wall_of_fire",
@@ -304,7 +304,7 @@ describe("exposure entries", () => {
       "Wall of Fire exposure, round 1: 19 fire damage · Passing through",
     );
     expect(entryText(wall, await makeT("fr"))).toBe(
-      "Wall of Fire, exposition au round 1 : 19 dégâts (feu) · En la traversant",
+      "Mur de feu, exposition au round 1 : 19 dégâts (feu) · En la traversant",
     );
   });
 

@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
@@ -30,6 +31,7 @@ func (p *passTx) InTx(ctx context.Context, fn func(context.Context) error) error
 
 type fixture struct {
 	svc   prepsvc.SVC
+	items *mocks.MockItems
 	slots *mocks.MockSlots
 	log   *mocks.MockLog
 	tx    *passTx
@@ -51,7 +53,7 @@ var book = map[string]prepsvc.SpellbookEntry{
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	f := &fixture{slots: mocks.NewMockSlots(t), log: mocks.NewMockLog(t), tx: &passTx{}}
+	f := &fixture{slots: mocks.NewMockSlots(t), log: mocks.NewMockLog(t), items: mocks.NewMockItems(t), tx: &passTx{}}
 
 	b := mocks.NewMockSpellbook(t)
 	b.EXPECT().Get(mock.Anything).RunAndReturn(func(id string) (prepsvc.SpellbookEntry, bool) {
@@ -69,7 +71,7 @@ func newFixture(t *testing.T) *fixture {
 	chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{Level: 15}, nil).Maybe()
 
 	svc, err := prepsvc.New(prepsvc.Deps{
-		Slots: f.slots, Spellbook: b, Effects: catalog(t), Limits: limits, Characters: chars, Log: f.log, Tx: f.tx,
+		Slots: f.slots, Spellbook: b, Effects: catalog(t), Limits: limits, Items: f.items, Characters: chars, Log: f.log, Tx: f.tx,
 	})
 	require.NoError(t, err)
 	f.svc = svc
@@ -83,6 +85,7 @@ func TestNew_NilDeps(t *testing.T) {
 
 func TestInfo(t *testing.T) {
 	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 2}}, info.Limits)
@@ -94,6 +97,7 @@ func TestInfo(t *testing.T) {
 // spell effects data, never from the spell's id.
 func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
 	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true}, info.Spellbook[2].Cast)
@@ -105,6 +109,7 @@ func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
 // that rolls no damage.
 func TestInfo_DamageAtTheCharacterLevel(t *testing.T) {
 	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Nil(t, info.Spellbook[0].Damage, "alarm rolls no damage")
@@ -113,6 +118,35 @@ func TestInfo_DamageAtTheCharacterLevel(t *testing.T) {
 		CasterLevel: 15, Dice: formula.Sum{Dice: []formula.Dice{{Count: 10, Sides: 6}}},
 		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "fire",
 	}, *info.Spellbook[1].Damage)
+}
+
+// A spell that consumes an item lists the inventory items it can spend now:
+// of its type, not daily, some left (itemsvc.Item.Spendable). A spell that
+// consumes nothing lists none, whatever the inventory holds.
+func TestInfo_ServesTheItemsTheSpellCanSpend(t *testing.T) {
+	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{
+		{ID: "ruby", Name: "Ruby", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
+		{ID: "opal", Name: "Opal", Type: "Gem", Behaviour: itemsvc.BehaviourCharges, Count: 1},
+		{ID: "spent", Name: "Spent", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 0},
+		{ID: "daily", Name: "Daily", Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 3},
+		{ID: "arrow", Name: "Arrow", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 20},
+	}, nil)
+	info, err := f.svc.Info(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Empty(t, info.Spellbook[0].Items, "alarm consumes nothing")
+	var ids []string
+	for _, it := range info.Spellbook[2].Items {
+		ids = append(ids, it.ID)
+	}
+	assert.Equal(t, []string{"ruby", "opal"}, ids)
+}
+
+func TestInfo_ItemsListFailure(t *testing.T) {
+	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return(nil, errors.New("boom"))
+	_, err := f.svc.Info(context.Background(), 1)
+	require.Error(t, err)
 }
 
 // catalog is the test seed of spell effects.

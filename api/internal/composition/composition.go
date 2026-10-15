@@ -174,8 +174,14 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: db})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	registerRestorers(logSvc, itemSvc.Restorers())
 	prepSvc, err := prepsvc.New(prepsvc.Deps{
-		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Limits: ruleTables,
+		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Limits: ruleTables, Items: itemSvc,
 		Characters: charSvc, Log: logSvc, Tx: db,
 	})
 	if err != nil {
@@ -183,12 +189,6 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	logSvc.RegisterRestorer(prepsvc.StateKey, prepSvc)
-	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: db})
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	registerRestorers(logSvc, itemSvc.Restorers())
 	weaponSvc, err := weaponsvc.New(weaponEditor, weaponsvc.Deps{Log: logSvc, Tx: db})
 	if err != nil {
 		_ = db.Close()

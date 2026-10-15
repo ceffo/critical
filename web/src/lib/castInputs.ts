@@ -2,8 +2,7 @@
 // data: slot_splits, consume_item_type, attack_roll). No game rule is decided here: the server
 // validates every cast; this only picks which inputs to show and what to send.
 import type { CastOptions } from "@/api/spells";
-import type { Item } from "@/types/items";
-import type { SpellbookEntry, SpellSlot } from "@/types/spells";
+import type { SpellbookEntry, SpellSlot, SpendableItem } from "@/types/spells";
 
 /** The player's inputs for one slot, as typed. */
 export interface CastForm {
@@ -22,25 +21,17 @@ export interface CastPlan {
   split?: string;
   targetAc?: number;
   /** Items the spell can spend; a select is shown when there are several. */
-  spendable: Item[];
+  spendable: SpendableItem[];
   itemId?: string;
   /** Cast is disabled: slot used, no spell picked for a blank slot, or no target AC when needed. */
   blocked: boolean;
   options: Omit<CastOptions, "onSelf">;
 }
 
-/** Items a spell can spend: of its type, not a daily item (never spent by a spell), some left. */
-export function spendableItems(items: Item[], type?: string): Item[] {
-  if (!type) return [];
-  const want = type.toLowerCase();
-  return items.filter((i) => i.type.toLowerCase() === want && i.behaviour !== "daily" && i.count > 0);
-}
-
 export function planCast(
   slot: SpellSlot,
   blank: boolean,
   spellbook: SpellbookEntry[],
-  items: Item[],
   form: CastForm,
 ): CastPlan {
   const castId = blank ? form.pick : slot.prepared_spell_id;
@@ -49,7 +40,7 @@ export function planCast(
   const split = form.split ?? slotSplits[0]?.join(",");
   const acText = (form.acText ?? "").trim();
   const targetAc = /^-?\d+$/.test(acText) ? Number(acText) : undefined;
-  const spendable = spendableItems(items, needs?.consume_item_type);
+  const spendable = needs?.items ?? [];
   const itemId = form.itemPick ?? spendable[0]?.id;
   const blocked =
     slot.used || (blank && !form.pick) || (needs?.attack_roll === true && targetAc === undefined);

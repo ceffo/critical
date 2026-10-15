@@ -3,7 +3,6 @@ package castsvc
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -39,12 +38,6 @@ func (s *service) castMechanics(ctx context.Context, characterID int64, entry sp
 	return snaps, nil
 }
 
-// consumable tells the items a spell can spend: of its type, not a daily
-// item (a daily item recharges and is never spent by a spell), some left.
-func consumable(it itemsvc.Item, itemType string) bool {
-	return strings.EqualFold(it.Type, itemType) && it.Behaviour != itemsvc.BehaviourDaily && it.Count > 0
-}
-
 // consume spends one unit of the chosen item of the entry's type. Refuses with
 // a clear message when none is left, or when several are and none was chosen.
 func (s *service) consume(ctx context.Context, entry spelleffectsvc.Entry, itemID string) (*ConsumedItem, actionlog.Snapshot, error) {
@@ -55,7 +48,7 @@ func (s *service) consume(ctx context.Context, entry spelleffectsvc.Entry, itemI
 	}
 	var left []itemsvc.Item
 	for _, it := range items {
-		if consumable(it, itemType) {
+		if it.Spendable(itemType) {
 			left = append(left, it)
 		}
 	}

@@ -52,33 +52,54 @@ is only ever appended to by play.
 
    - A language that is missing is **omitted**, never an empty string. A reader shows `fr` when
      present and falls back to `en`, per field, so a spell with no French source is complete.
-   - A description is paragraphs separated by exactly one blank line (`\n\n`), no hard line wraps
-     inside a paragraph, no leading or trailing whitespace. The schema checks this.
+   - `source` is the provenance of the English text: a book code (`PHB`, `TOM`, …), or `WEB` for a
+     spell whose text comes from the original web scrape and that no book has been matched to
+     (the scrape holds 885 spells, the two ingested books fewer; no spell is dropped for lack
+     of a book). The French text is tied to no code: `fr` present means a French source exists.
+   - A description is a **small Markdown subset**: blocks separated by exactly one blank line
+     (`\n\n`); a block is a **paragraph** (one line, no hard wrap, not starting with `- `, `|` or
+     `#`), a **bullet list** (consecutive lines starting with `- `) or a **pipe table** (consecutive
+     lines starting and ending with `|`, the second one the `| --- |` delimiter row). No headings,
+     no HTML, no emphasis markers, no leading or trailing whitespace. Tables stay tables (Prismatic
+     Spray's colour table is not flattened into prose). The schema checks the block structure with an
+     RE2-safe pattern (Go's default regex engine); the builder additionally checks that each table
+     has a delimiter row and a constant column count. The UI renders exactly this subset.
    - Adding or renaming a field is a new `format`, with an amendment of this ADR; importers refuse
      a format they do not know rather than guess.
 2. **Reference data and game state are separate.** The importer owns the catalogue tables and nothing
    else; play never writes to them. Game state refers to a spell by `id` only, and keeps working
    across catalogue versions as long as step 5 holds.
-3. **Ids are stable and computed once.** `id` is the key `spellsvc.Keys` assigns today: the snake_case
-   slug of the English name (`spelleffectsvc.Slug`), `_l<level>` for a higher-level spell of the same
-   name and class, `_priest` for a Priest spell sharing a Wizard spell's name. The builder reproduces
-   that rule so that every id in `spellbook.json`, `spell_effects.json` and saved slots stays valid.
-   Once an id has been published it never changes, even if the English name is later corrected, and
-   it is never reused for a different spell. Ids are unique in the artifact.
+3. **Ids are stable, kept in a ledger, and assigned once.** `id` starts as the key `spellsvc.Keys`
+   assigns: the snake_case slug of the English name (`spelleffectsvc.Slug`), `_l<level>` for a
+   higher-level spell of the same name and class, `_priest` for a Priest spell sharing a Wizard
+   spell's name. But `Keys` depends on the whole set (adding a Wizard "X" would turn Priest `x` into
+   `x_priest`), so the **builder never recomputes published ids**:
+   - the builder keeps a committed **published-id ledger** in `critical-rulebooks`, one entry per
+     spell, `(class, level, English name) -> id`, seeded from the 885 ids in use today (so every id in
+     `spellbook.json`, `spell_effects.json` and saved slots stays valid);
+   - a spell found in the ledger takes its id from it; a **new** spell takes the `Keys` candidate,
+     which is then added to the ledger; if the candidate equals any published or other id, or a
+     published spell cannot be found in the ledger (an English name or level was corrected), the
+     **build fails** and a human resolves it by editing the ledger (a renamed spell keeps its id);
+   - an id is never changed and never reused for a different spell; ids are unique in the artifact;
+   - the API **stores and serves the artifact's id** and stops calling `Keys` (the catalogue DAL's
+     `catalogKeys`); `Keys` lives on only in the builder.
 4. **Where it lives and how it ships.** The builder (`critical-rulebooks`, private) writes
    `dist/catalogue.json` and commits it there. The artifact is **never committed to the public repo**.
    - `just catalogue` (like `just rulebooks`, and never part of `just validate`) fetches it into
      the gitignored `.catalogue/catalogue.json`, from `CATALOGUE_REMOTE` (default: the rulebooks
      remote) at `CATALOGUE_REF` (default: the default branch), by a shallow git fetch of that one
      file, and says plainly if the repo is not accessible.
-   - The API reads the file at the path in `CRITICAL_CATALOGUE` (default `.catalogue/catalogue.json`
-     next to the working directory). The seeds directory no longer holds spells.
+   - The API reads the file at the path in `CRITICAL_CATALOGUE` (default `.catalogue/catalogue.json`,
+     relative to the repo root; a relative value is resolved against the repo root too). The seeds directory no longer holds spells.
    - The deployment fetches the same file with a deploy key (read-only, scoped to the rulebooks
      repo) at build or deploy time and sets `CRITICAL_CATALOGUE`; hosting details belong to the
      hosting item.
    - CI and contributors without access run on the small fixture `api/testdata/catalogue.json`, in
-     the same format and valid against the schema, with a few spells (some with `fr`, some without)
-     and **invented placeholder text, never book text**. `just dev` and the e2e suite point
+     the same format and valid against the schema, holding
+     **every spell id that the `api/testdata/seeds` spellbook and spell effects reference** (so the
+     e2e suite and service tests keep resolving them), some with `fr` and some without, one with a
+     list and one with a table, and **invented placeholder text, never book text**. `just dev` and the e2e suite point
      `CRITICAL_CATALOGUE` at the real file when present and at the fixture otherwise. A Go test
      validates the fixture against the schema, and the builder validates its output against the same
      schema before writing it.
@@ -87,12 +108,24 @@ is only ever appended to by play.
    2. Parse and validate against the format-1 rules above (unknown `format`, schema violation,
       duplicate `id`): refuse to start, listing the first offences.
    3. If `version` equals the version recorded in the database, do nothing.
-   4. Otherwise, in **one transaction**: upsert every spell by `id` (insert if new, overwrite every
-      catalogue field if present), then delete the catalogue spells whose `id` is no longer in the
-      artifact **only if no game state references them**. References are the spellbook, spell
-      effects and prepared-spell slots (in the database and in the seeds). If any removed spell
-      is referenced, roll back and refuse to start, listing every such `id` and where it is used.
-      No spell is silently lost.
+   4. Otherwise, in **one transaction**:
+      1. **First import on an existing database.** The `spells` table already has an integer primary
+         key `id`, so the artifact id goes in a new nullable, unique column **`key`**. Rows with a
+         NULL `key` are backfilled before anything else: `Keys` is run over the existing rows,
+         which reproduces the ids in use today, and each row is matched to its key by
+         `(name, class, level)`. A database can hold the same `(name, class, level)` twice (an older,
+         uncleaned catalogue): only the **oldest row** (lowest `id`) takes the key; the others keep a
+         NULL `key`, are never updated, never served and never referenced (state refers to keys),
+         and are left in place. This is the last use of `Keys` in the API and is removed with the
+         old seed loader. Without it the first import would insert all spells a second time.
+      2. Upsert every artifact spell by `key` (insert if new, overwrite every catalogue field if
+         present).
+      3. Delete the spells whose `key` is no longer in the artifact, **only if nothing references
+         them**; the importer scans all of: the spellbook and spell-effect seeds, the
+         `spell_slots` table, the `before_state` and `after_state` JSON of `action_snapshots` (they
+         hold `spell_slots`, which undo and redo restore) and the `spellId` of cast payloads in
+         `action_log`. If any removed spell is referenced, roll back and refuse to start, listing
+         every such `key` and where it is used. No spell is silently lost.
    5. Record the imported `format` and `version` in the same transaction; a failed import changes
       nothing, and a second run of the same artifact changes nothing.
    6. The typed stats are parsed from the six raw texts at import (as `seedSpells` does today).
@@ -115,8 +148,13 @@ is only ever appended to by play.
   refusal for a referenced one with the listing, unknown format, missing file, duplicate id).
 - A deployment without the artifact cannot start. That is deliberate: a silently empty spell list
   is worse than a clear error.
-- The importer needs a migration (French name and description columns, a catalogue metadata
-  row, and an `id` column on `spells`); that is that item's work, not this ADR's.
+- The importer needs a migration (French name and description columns, the `key` column of step 5.4.1,
+  a catalogue metadata row); that is that item's work, not this ADR's.
+- French names come from the catalogue's `name.fr`, the single source of truth. The web i18n `spells`
+  namespace (French names, #138) and the spellbook seed's `sheet` names are retired when the UI item
+  (y9e0.7) lands.
+- The description subset is part of the format: the UI renders paragraphs, bullet lists and pipe
+  tables; anything richer is a new `format`.
 - Other reference tables (weapons, items, rule tables, crit table, skills) keep loading from
   `seeds/` until they move to the catalogue in a later format or artifact; this ADR covers spells.
 - Only English and French exist. A third language is a new `format`.

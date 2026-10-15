@@ -2,6 +2,8 @@ package composition_test
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/composition"
@@ -32,24 +34,33 @@ func slotList(t *testing.T, bs *composition.BackingServices) []spellsvc.SpellSlo
 // ADR 0008 step 9: voiding the cast of a spell that grants slots (Rary's
 // Mnemonic Enhancer) drops the extra slots and frees its own slot.
 func TestGrantedSlots_VoidRemovesExtrasAndRestoresTheBaseSlot(t *testing.T) {
-	bs := bootMaxDice(t)
-	ctx := context.Background()
-	putSlots(t, bs, `[{"level":4,"prepared_spell_id":"rarys_mnemonic_enhancer","prepared_spell_name":"Rary's Mnemonic Enhancer","used":false}]`)
+	for _, split := range [][]int{{1, 1, 1}, {1, 2}, {3}} {
+		t.Run(fmt.Sprint(split), func(t *testing.T) {
+			bs := bootMaxDice(t)
+			ctx := context.Background()
+			putSlots(t, bs, `[{"level":4,"prepared_spell_id":"rarys_mnemonic_enhancer","prepared_spell_name":"Rary's Mnemonic Enhancer","used":false}]`)
 
-	res, err := bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{ExtraSlots: []int{1, 2}})
-	require.NoError(t, err)
-	got := slotList(t, bs)
-	require.Len(t, got, 3)
-	assert.True(t, got[0].Used)
-	assert.Equal(t, spellsvc.SpellSlot{Level: 1, Extra: true}, got[1])
-	assert.Equal(t, spellsvc.SpellSlot{Level: 2, Extra: true}, got[2])
+			res, err := bs.Cast.Cast(ctx, bs.CharacterID, 0, castsvc.CastRequest{ExtraSlots: split})
+			require.NoError(t, err)
+			assert.Equal(t, split, res.ExtraSlots)
+			got := slotList(t, bs)
+			require.Len(t, got, 1+len(split))
+			assert.True(t, got[0].Used)
+			for i, l := range split {
+				assert.Equal(t, spellsvc.SpellSlot{Level: l, Extra: true}, got[1+i], "blank extra slot")
+			}
+			entries, err := bs.Log.List(ctx, bs.CharacterID, 1)
+			require.NoError(t, err)
+			assert.Contains(t, string(entries[0].Payload), `"extraSlots":`+strings.ReplaceAll(fmt.Sprint(split), " ", ","))
 
-	_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)
-	require.NoError(t, err)
-	got = slotList(t, bs)
-	require.Len(t, got, 1)
-	assert.False(t, got[0].Used)
-	assert.False(t, got[0].Extra)
+			_, err = bs.Log.Void(ctx, bs.CharacterID, res.EntryID)
+			require.NoError(t, err)
+			got = slotList(t, bs)
+			require.Len(t, got, 1)
+			assert.False(t, got[0].Used)
+			assert.False(t, got[0].Extra)
+		})
+	}
 }
 
 // ADR 0008 step 9: a long rest removes the extra slots, a new preparation

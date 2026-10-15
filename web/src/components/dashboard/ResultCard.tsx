@@ -9,7 +9,7 @@ import { formatFactor, formatNumber, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
 import { MAX_TARGET_AC, parseTargetAc, stepTargetAc } from "@/lib/attackAdjust";
-import { damageFormula, itemRollText } from "@/lib/rollText";
+import { damageFormula, itemRollText, modLabel, saveFormula } from "@/lib/rollText";
 import { captionClass, fieldClass } from "./fieldStyles";
 import { CastResultView } from "./CastResultView";
 
@@ -74,24 +74,6 @@ function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
       {ok ? yes : no}
     </span>
   );
-}
-
-/**
- * A modifier's label in the player's language (detail = score, weapon, ammo or buff name). The crit
- * term is labelled with the roll's crit-table range (none: the default placeholder table).
- */
-function modLabel(
-  t: TFunction,
-  m: { kind: string; detail?: string; value: number },
-  roll?: { critPlaceholder?: boolean; critFrom?: number; critTo?: number },
-): string {
-  if (m.kind === "crit") {
-    return roll && !roll.critPlaceholder && roll.critFrom
-      ? t("result.mods.critRange", { from: roll.critFrom, to: roll.critTo })
-      : t("result.mods.critPlaceholder");
-  }
-  if (m.kind === "situational" && !m.detail) return t("result.mods.situationalUnnamed");
-  return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
 }
 
 /** "Crit check 7 · multiplier 63 → ×3 (51–90)"; entries without the multiplier d100 show the old text. */
@@ -329,14 +311,7 @@ function SaveResult({ roll }: { roll: Extract<LastRoll, { kind: "save" }> }) {
         <div>
           <div className={captionClass}>{t("result.breakdown")}</div>
           <div className="mt-1 rounded-lg border bg-background px-2.5 py-1.5 font-mono text-sm">
-            {t(r.adjustment ? "result.saveFormulaAdjusted" : "result.saveFormula", {
-              d20: r.d20Roll,
-              mod: r.saveBonus ?? 0,
-              adj: formatSigned(r.adjustment ?? 0),
-              total: r.saveTotal,
-              target: r.effectiveThac0,
-              name: t(`saves.categories.${roll.category}`),
-            })}
+            {saveFormula(t, r, roll.category)}
           </div>
         </div>
       )}

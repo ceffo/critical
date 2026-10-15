@@ -236,3 +236,17 @@ func TestPrepare_KeepsExtraSlots(t *testing.T) {
 	assert.False(t, got[0].Used, "a fresh mirror_image: the extra slot's cast does not count against it")
 	assert.Equal(t, extra, got[1])
 }
+
+// Preparing nothing is logged with an empty spell list, worded by the UI.
+func TestPrepare_NothingLogsAnEmptyList(t *testing.T) {
+	f := newFixture(t)
+	f.slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{}, nil)
+	f.slots.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).Return(nil)
+	var rec actionlog.NewEntry
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, e actionlog.NewEntry) { rec = e }).Return(int64(7), nil)
+	_, err := f.svc.Prepare(context.Background(), 1, nil)
+	require.NoError(t, err)
+	assert.Empty(t, rec.Summary)
+	assert.JSONEq(t, `{"spells":[]}`, string(rec.Payload))
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -124,4 +125,32 @@ func field(t *testing.T, payload []byte, key string) string {
 	require.NoError(t, json.Unmarshal(payload, &m))
 	require.Contains(t, m, key)
 	return string(m[key])
+}
+
+// A blank extra slot cast as a spell with an attack roll (Chromatic Orb in a
+// level 1 extra slot) applies its cast mechanics like a prepared one; without
+// a target AC it is refused and nothing is spent or saved.
+func TestCast_ExtraSlot_AttackRollSpell(t *testing.T) {
+	extra := spellsvc.SpellSlot{Level: 1, Extra: true}
+	ac := 6
+
+	f := newFixture(t)
+	f.prepared(extra)
+	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{powerGem, diamonds}, nil)
+	f.spend(diamonds)
+	f.attacks.EXPECT().RollSpellToHit(mock.Anything, charID, 6).Return(&combatsvc.ToHitRoll{D20Roll: 14, TargetAC: 6, Hit: true}, nil)
+	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{SpellID: "chromatic_orb", TargetAC: &ac})
+	require.NoError(t, err)
+	assert.Equal(t, "chromatic_orb", res.SpellID)
+	require.NotNil(t, res.Consumed)
+	assert.Equal(t, "diamond", res.Consumed.ItemID, "the Power Gem is never spent")
+	require.NotNil(t, res.Attack)
+	assert.True(t, res.Attack.Hit)
+	assert.Equal(t, spellsvc.SpellSlot{Level: 1, SpellID: "chromatic_orb", PreparedSpellName: "Chromatic Orb", Used: true, Extra: true}, f.saved[0][0])
+
+	f = newFixture(t) // no item or attack call expected
+	f.prepared(extra)
+	_, err = f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{SpellID: "chromatic_orb"})
+	assert.ErrorIs(t, err, domain.ErrInvalidInput)
+	assert.Empty(t, f.entries)
 }

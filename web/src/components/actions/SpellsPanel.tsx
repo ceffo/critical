@@ -10,6 +10,7 @@ import { spellId, spellName } from "@/i18n/spellName";
 import type { SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
+import { planCast } from "@/lib/castInputs";
 import { PrepareEditor } from "./PrepareEditor";
 import { ReceivePanel } from "./ReceivePanel";
 
@@ -178,22 +179,14 @@ export function SpellsPanel() {
                   // A spell prepared several times is one row with the copies left; casting uses one.
                   const name = remaining > 1 ? `${baseName} ×${remaining}` : baseName;
                   const choices = info.spellbook.filter((s) => s.level === slot.level);
-                  const castId = blank ? picks[slot.index] : slot.prepared_spell_id;
-                  const needs = info.spellbook.find((s) => s.id === castId);
-                  const slotSplits = needs?.slot_splits ?? [];
-                  const split = splits[slot.index] ?? slotSplits[0]?.join(",");
+                  const plan = planCast(slot, blank, info.spellbook, items, {
+                    pick: picks[slot.index],
+                    split: splits[slot.index],
+                    acText: targetAcs[slot.index],
+                    itemPick: itemPicks[slot.index],
+                  });
+                  const { needs, slotSplits, split, spendable, itemId } = plan;
                   const acText = targetAcs[slot.index] ?? "";
-                  const targetAc = /^-?\d+$/.test(acText.trim()) ? Number(acText) : undefined;
-                  // Items a spell can spend: of its type, not a daily item (never spent by a spell), some left.
-                  const spendable = needs?.consume_item_type
-                    ? items.filter(
-                        (i) =>
-                          i.type.toLowerCase() === needs.consume_item_type!.toLowerCase() &&
-                          i.behaviour !== "daily" &&
-                          i.count > 0,
-                      )
-                    : [];
-                  const itemId = itemPicks[slot.index] ?? spendable[0]?.id;
                   return (
                     <li
                       key={slot.index}
@@ -270,22 +263,11 @@ export function SpellsPanel() {
                       <Button
                         size="xs"
                         variant={slot.used ? "ghost" : "secondary"}
-                        disabled={
-                          slot.used ||
-                          busy ||
-                          (blank && !picks[slot.index]) ||
-                          (needs?.attack_roll === true && targetAc === undefined)
-                        }
+                        disabled={busy || plan.blocked}
                         aria-label={t("spellSlots.castLabel", { name: baseName })}
                         onClick={() =>
                           void run(() =>
-                            castSpell(slot.index, {
-                              onSelf: onAlly ? false : undefined,
-                              spellId: blank ? picks[slot.index] : undefined,
-                              extraSlots: split ? split.split(",").map(Number) : undefined,
-                              targetAc: needs?.attack_roll ? targetAc : undefined,
-                              itemId: spendable.length > 1 ? itemId : undefined,
-                            }),
+                            castSpell(slot.index, { onSelf: onAlly ? false : undefined, ...plan.options }),
                           )
                         }
                       >

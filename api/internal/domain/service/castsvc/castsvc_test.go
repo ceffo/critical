@@ -461,16 +461,14 @@ func TestReceive_LogPayload(t *testing.T) {
 	assert.Empty(t, e.Summary, "the UI words the cast from its payload")
 	var p map[string]any
 	require.NoError(t, json.Unmarshal(e.Payload, &p))
-	assert.Contains(t, p["note"], "Strength gain by class group", "the catalog note is recorded")
-	delete(p, "note")
+	assert.NotContains(t, p, "note", "the catalog's English note stays out of the ledger")
 	assert.Equal(t, map[string]any{
 		"action": "received", "spellId": "strength", "spell": "Strength", "casterLevel": float64(9),
 		"buff": map[string]any{"name": "Strength", "rounds": float64(540), "strGain": float64(4), "applied": true},
 	}, p)
 }
 
-// The payload records the dice each damage instance threw, the save and the
-// note, so an older cast shows them after a reload.
+// The payload records the dice each damage instance threw and the save, so an older cast shows them after a reload.
 func TestCast_LogPayloadHoldsTheDiceUsed(t *testing.T) {
 	t.Run("fireball: ten d6 and the save", func(t *testing.T) {
 		f := newFixture(t, 6, 5, 4, 3, 2, 1, 6, 5, 4, 3)
@@ -507,13 +505,6 @@ func TestCast_LogPayloadHoldsTheDiceUsed(t *testing.T) {
 			{"formula":"1d4+1","dice":[{"sides":4,"value":4}],"total":5},
 			{"formula":"1d4+1","dice":[{"sides":4,"value":1}],"total":2}]}`,
 			string(payloadField(t, f.entries[0].Payload, "damage")))
-	})
-	t.Run("the catalog note", func(t *testing.T) {
-		f := newFixture(t, 1, 1, 2, 2, 3, 3, 4, 4, 1, 2, 1, 1)
-		f.prepared(slot("melfs_acid_arrow", "Melf's Acid Arrow", 2))
-		_, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
-		require.NoError(t, err)
-		assert.Contains(t, string(payloadField(t, f.entries[0].Payload, "note")), "2d4 acid per round")
 	})
 }
 

@@ -36,9 +36,8 @@ export interface CastLogPayload {
   item?: { itemId: string; name: string; remaining: number };
   /** The spell's to-hit roll. */
   attack?: { d20: number; targetAc: number; hit: boolean };
-  /** The target's saving throw (the DM's side) and the catalog's note; absent on older casts. */
+  /** The target's saving throw (the DM's side); absent on older casts. */
   save?: { type: string; effect: string };
-  note?: string;
 }
 
 export function castPayload(e: LogEntry): CastLogPayload | null {

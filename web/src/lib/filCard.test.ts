@@ -543,15 +543,15 @@ describe("die chips from the payload", () => {
     expect(attackDiceChips(m.roll)).toBeNull();
   });
 
-  it("cast, new entry: the instances with their dice, plus the save and note", async () => {
+  it("cast, new entry: the instances with their dice, plus the save", async () => {
     const t = await makeT("en");
     const m = cardModel(
       entry("cast", {
         ...castBase,
         damage: {
-          total: 7,
-          type: "fire",
-          dice: "2d6",
+          total: 11,
+          type: "force",
+          dice: "1d6+1",
           instances: 2,
           rounds: 1,
           rolls: [
@@ -560,7 +560,6 @@ describe("die chips from the payload", () => {
           ],
         },
         save: { type: "spell", effect: "half" },
-        note: "a note",
       }),
       t,
     );
@@ -569,8 +568,9 @@ describe("die chips from the payload", () => {
       { dice: [{ value: 6, tone: "max" }], total: 7 },
       { dice: [{ value: 3, tone: "plain" }], total: 4 },
     ]);
+    const sum = castInstances(m.cast)?.reduce((n, i) => n + i.total, 0);
+    expect(sum).toBe(m.cast.damage?.total);
     expect(m.cast.save).toEqual({ type: "spell", effect: "half" });
-    expect(m.cast.note).toBe("a note");
   });
 
   it("cast, old entry without the dice: no instances, still a cast card", async () => {

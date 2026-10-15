@@ -19,10 +19,9 @@ type castRecord struct {
 	// mechanics were general carry it as "orb" (with the gem name), which the
 	// UI no longer reads.
 	Attack *attackRecord `json:"attack,omitempty"`
-	// Save is the target's saving throw and Note the catalog's note; both
-	// are absent on casts logged before they were recorded.
+	// Save is the target's saving throw; absent on casts logged before it
+	// was recorded.
 	Save *saveRecord `json:"save,omitempty"`
-	Note string      `json:"note,omitempty"`
 }
 
 // saveRecord is the target's saving throw (the DM's side).
@@ -99,7 +98,6 @@ func toRecord(res CastResult) castRecord {
 	if s := res.Save; s != nil {
 		r.Save = &saveRecord{Type: string(s.Type), Effect: string(s.Effect)}
 	}
-	r.Note = res.Note
 	r.ExtraSlots = res.ExtraSlots
 	if c := res.Consumed; c != nil {
 		r.Item = &itemRecord{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}

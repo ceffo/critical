@@ -765,12 +765,6 @@ function CastEntry({ cast: c }: { cast: CastLogPayload }) {
           })}
         </p>
       )}
-      {c.note && (
-        <div>
-          <div className={labelClass}>{t("result.cast.note")}</div>
-          <p className="text-sm">{c.note}</p>
-        </div>
-      )}
       {c.item && (
         <p className="text-sm">{t("result.cast.itemSpent", { name: c.item.name, left: c.item.remaining })}</p>
       )}

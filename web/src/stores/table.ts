@@ -7,6 +7,7 @@ import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
 import { useItemsStore } from "./items";
 import { useRollStore } from "./roll";
+import { useXpStore } from "./xp";
 
 /** Something to tell the player after an action (rendered with i18n by the Notices component). */
 export type Notice = { kind: "expired"; names: string[] };
@@ -18,8 +19,10 @@ interface TableStore {
   busy: boolean;
   clearError: () => void;
   clearNotice: () => void;
-  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item counts, weapons. */
-  refresh: () => Promise<void>;
+  /** Reload everything an action can change: HP, action log, buffs, round, effective STR, item
+   * counts, weapons, the XP ledger once loaded (`skipXp`: the caller just set it from a write's
+   * answer). */
+  refresh: (opts?: { skipXp?: boolean }) => Promise<void>;
   /**
    * Run a mutation, then refresh the table state. Errors are caught into `error`.
    * Resolves true on success.
@@ -66,7 +69,7 @@ export const useTableStore = create<TableStore>((set, get) => ({
 
   // Refreshes run one after the other: when two actions overlap, an older refresh response
   // can no longer land after (and overwrite) the newer one.
-  refresh: () => {
+  refresh: (opts) => {
     const next = refreshQueue.then(async () => {
       try {
         await Promise.all([
@@ -78,6 +81,10 @@ export const useTableStore = create<TableStore>((set, get) => ({
           useBuffsStore.getState().fetchStrength(),
           useItemsStore.getState().fetchItems(),
           useItemsStore.getState().fetchWeapons(),
+          // An undo can pop an XP award (ADR 0015 step 4): re-read the ledger once it is shown.
+          useXpStore.getState().ledger && !opts?.skipXp
+            ? useXpStore.getState().fetchXp()
+            : null,
         ]);
       } catch (e) {
         set({ error: message(e) });

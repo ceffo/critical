@@ -1,6 +1,7 @@
 # ADR 0015: Experience
 
-**Status**: accepted, 2026-10-15 (critical-kiv.13)
+**Status**: accepted, 2026-10-15 (critical-kiv.13). Step 4 amended by
+[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15.
 
 ## Context
 
@@ -46,20 +47,29 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    `current`, `next`, `ahead`).
    Tests: `TestComputeProgress_FromTable25`, `TestBardXPThreshold` (ruletablesadpt, against the
    PHB page), `TestParse_RejectsBrokenTables` (ruletablesadpt).
-4. **The ledger is outside the action stack.** Adding, editing (base, bonus, reason, session) and
-   deleting an entry write the `xp_entries` table directly and record no action-log entry, so
-   undo (ADR 0010) never pops one. An entry is dated by the server (its local day) when it is
-   added. Every write answers with the whole ledger.
-   Tests: `TestXPLedger_AddEditDeleteOnTheRealStack` (composition),
-   `TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction`, `TestCRUD_RoundTripsNewestFirstPerCharacter`
-   (xpdal).
+4. **The ledger is on the action stack.** Adding, editing (base, bonus, reason, session) and
+   deleting an entry each write the `xp_entries` table and record one action-log entry in the same
+   transaction ([ADR 0018](0018-transactions-and-undo.md) steps 1 and 7): `xp_add`, `xp_edit`,
+   `xp_remove`, each with the entry's `xp:<id>` snapshot. An edit keeps the entry before and after
+   (snapshot and payload); a delete keeps the removed entry as the "before". The journal's Undo
+   pops it like any other entry: the ledger, its total and the progress derived from it come back,
+   a deleted entry under its own id and date. An edit that changes nothing writes nothing. An entry
+   is dated by the server (its local day) when it is added. Every write answers with the whole
+   ledger. The payload is the entry as stored with its `bonusAmount` and `total` (and `before` for
+   an edit); the web words it.
+   Tests: `TestXPLedger_AddEditDeleteOnTheRealStack`, `TestXPUndo_EachVerbGivesTheLedgerBack`,
+   `TestXPUndo_SequencesOnOneAward`
+   (composition), `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
+   `TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction`, `TestUpdate_NothingChangedRecordsNothing`,
+   `TestDelete_RecordsTheRemovedAwardOrReportsNotFound`, `TestRestorer_WritesTheSnapshotBack`,
+   `TestCRUD_RoundTripsNewestFirstPerCharacter`, `TestReinsert_KeepsIDAndDate` (xpdal).
 
 ## Consequences
 
 - Correcting the starting XP means editing the sheet (`seeds/character.json` and a dev reset), not
   the ledger.
-- A deleted or edited entry leaves no trace: the ledger is the player's notebook, not the table's
-  history.
+- A deleted or edited entry stays in the journal (until undone), like every other gameplay change
+  (step 4 as amended by ADR 0018; the ledger was first outside the stack).
 - Migration 018 drops the never-written `xp_events` table from migration 002.
 - Not covered: levelling up (HP, THAC0, saves, slots and the level itself), multi-class and dual-class
   XP, XP for other classes, negative awards (level drain is out of scope).

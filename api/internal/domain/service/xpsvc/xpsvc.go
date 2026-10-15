@@ -1,8 +1,9 @@
 // Package xpsvc owns the experience ledger (ADR 0015): the awards the
 // player records, the total they add up to with the sheet's starting XP, the
 // +10 percent prime-requisite bonus and the progress towards the next level
-// from PHB Table 25. The ledger sits outside the action log: an entry is
-// edited or deleted in place. Levelling up is not modelled, the level stays
+// from PHB Table 25. Every add, edit and delete is one action-log
+// transaction with the entry's snapshot, so the journal's Undo pops it (ADR
+// 0015 step 4, ADR 0018 scope). Levelling up is not modelled, the level stays
 // the sheet's.
 package xpsvc
 
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
@@ -31,6 +33,9 @@ type SVC interface {
 	Update(ctx context.Context, characterID, entryID int64, p EntryPatch) (*Ledger, error)
 	// Delete removes an entry. ErrEntryNotFound.
 	Delete(ctx context.Context, characterID, entryID int64) (*Ledger, error)
+	// Restorers writes an entry's "before" back when its log entry is
+	// popped, keyed by state-key family. Registered by the composition root.
+	Restorers() map[string]actionlog.Restorer
 }
 
 // DAL is the driven port over the stored entries. Entries come back with
@@ -43,6 +48,9 @@ type DAL interface {
 	Get(ctx context.Context, characterID, entryID int64) (Entry, error)
 	// Insert writes a new entry and returns its id.
 	Insert(ctx context.Context, characterID int64, e Entry) (int64, error)
+	// Reinsert writes an entry back under its own id and date (the undo of
+	// a delete).
+	Reinsert(ctx context.Context, characterID int64, e Entry) error
 	// Update overwrites the session, reason, base and bonus of an entry;
 	// ErrEntryNotFound for an unknown id.
 	Update(ctx context.Context, characterID int64, e Entry) error
@@ -56,6 +64,11 @@ type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
+// Log is the slice of the action log XP changes are recorded into.
+type Log interface {
+	actionlog.Recorder
+}
+
 // Thresholds is PHB Table 25 (Thief/Bard column): the XP that reaches a
 // level, an error outside the table.
 type Thresholds interface {
@@ -67,6 +80,7 @@ type Deps struct {
 	DAL        DAL
 	Characters Characters
 	Thresholds Thresholds
+	Log        Log
 	Tx         domain.TxRunner
 	Now        func() time.Time
 }
@@ -75,20 +89,21 @@ type service struct {
 	dal   DAL
 	chars Characters
 	table Thresholds
+	log   Log
 	tx    domain.TxRunner
 	now   func() time.Time
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.DAL == nil || d.Characters == nil || d.Thresholds == nil || d.Tx == nil {
+	if d.DAL == nil || d.Characters == nil || d.Thresholds == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("xpsvc: nil dependency")
 	}
 	now := d.Now
 	if now == nil {
 		now = time.Now
 	}
-	return &service{dal: d.DAL, chars: d.Characters, table: d.Thresholds, tx: d.Tx, now: now}, nil
+	return &service{dal: d.DAL, chars: d.Characters, table: d.Thresholds, log: d.Log, tx: d.Tx, now: now}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

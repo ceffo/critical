@@ -32,7 +32,7 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0012 | [Attack against an unknown AC](0012-attack-against-unknown-ac.md) | accepted |
 | 0013 | [Initiative](0013-initiative.md) | accepted, steps 2 and 4 amended by 0018 |
 | 0014 | [Skill checks](0014-skill-checks.md) | accepted |
-| 0015 | [Experience](0015-experience.md) | accepted |
+| 0015 | [Experience](0015-experience.md) | accepted, step 4 amended by 0018 |
 | 0016 | [Inventory and editors](0016-inventory.md) | accepted |
 | 0017 | [Type scale and density](0017-type-scale-and-density.md) | accepted |
 | 0018 | [Every mutation is a transaction; undo pops the last one](0018-transactions-and-undo.md) | accepted |

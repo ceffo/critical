@@ -80,3 +80,23 @@ func TestSchema_RejectsNonPositiveBase(t *testing.T) {
 	_, err := dal.Insert(context.Background(), 1, xpsvc.Entry{Date: "2026-10-17", Base: 0})
 	require.Error(t, err)
 }
+
+// Undoing a delete writes the entry back with its own id and date, so a later
+// undo of the add before it finds it again.
+func TestReinsert_KeepsIDAndDate(t *testing.T) {
+	dal, _ := open(t)
+	ctx := context.Background()
+	e := xpsvc.Entry{Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: true}
+	id, err := dal.Insert(ctx, 1, e)
+	require.NoError(t, err)
+	_, err = dal.Insert(ctx, 1, xpsvc.Entry{Date: "2026-10-17", Base: 5})
+	require.NoError(t, err)
+	e.ID = id
+	require.NoError(t, dal.Delete(ctx, 1, id))
+
+	require.NoError(t, dal.Reinsert(ctx, 1, e))
+	got, err := dal.Get(ctx, 1, id)
+	require.NoError(t, err)
+	assert.Equal(t, e, got)
+	require.Error(t, dal.Reinsert(ctx, 1, e), "an id still present is refused")
+}

@@ -227,12 +227,13 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	xpSvc, err := xpsvc.New(xpsvc.Deps{
-		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Tx: tx,
+		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
+	registerRestorers(logSvc, xpSvc.Restorers())
 	// Skill checks change no state: their entries carry no snapshot, so
 	// there is no restorer to register.
 	skillSvc, err := skillsvc.New(skillsvc.Deps{

@@ -245,6 +245,54 @@ func (_c *MockDAL_List_Call) RunAndReturn(run func(context.Context, int64) ([]xp
 	return _c
 }
 
+// Reinsert provides a mock function with given fields: ctx, characterID, e
+func (_m *MockDAL) Reinsert(ctx context.Context, characterID int64, e xpsvc.Entry) error {
+	ret := _m.Called(ctx, characterID, e)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Reinsert")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, xpsvc.Entry) error); ok {
+		r0 = rf(ctx, characterID, e)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockDAL_Reinsert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Reinsert'
+type MockDAL_Reinsert_Call struct {
+	*mock.Call
+}
+
+// Reinsert is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - e xpsvc.Entry
+func (_e *MockDAL_Expecter) Reinsert(ctx interface{}, characterID interface{}, e interface{}) *MockDAL_Reinsert_Call {
+	return &MockDAL_Reinsert_Call{Call: _e.mock.On("Reinsert", ctx, characterID, e)}
+}
+
+func (_c *MockDAL_Reinsert_Call) Run(run func(ctx context.Context, characterID int64, e xpsvc.Entry)) *MockDAL_Reinsert_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(xpsvc.Entry))
+	})
+	return _c
+}
+
+func (_c *MockDAL_Reinsert_Call) Return(_a0 error) *MockDAL_Reinsert_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockDAL_Reinsert_Call) RunAndReturn(run func(context.Context, int64, xpsvc.Entry) error) *MockDAL_Reinsert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Update provides a mock function with given fields: ctx, characterID, e
 func (_m *MockDAL) Update(ctx context.Context, characterID int64, e xpsvc.Entry) error {
 	ret := _m.Called(ctx, characterID, e)

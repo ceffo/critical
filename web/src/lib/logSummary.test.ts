@@ -600,6 +600,46 @@ describe("inventory entries", () => {
       ),
     ).toBe("srv");
   });
+
+  it("renders XP add, edit and remove entries in both languages", async () => {
+    const award = (base: number, bonus: boolean, reason: string) => ({
+      id: 3,
+      date: "2026-10-15",
+      session: "",
+      reason,
+      base,
+      bonus,
+      bonusAmount: bonus ? Math.round(base / 10) : 0,
+      total: bonus ? base + Math.round(base / 10) : base,
+    });
+    const troll = award(1205, true, "troll");
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    expect(entryText(entry("xp_add", { entry: troll }), en)).toBe(
+      "XP +1,326: troll",
+    );
+    expect(
+      entryText(entry("xp_add", { entry: award(400, false, "") }), fr),
+    ).toBe("XP +400 : XP gagnés");
+    expect(entryText(entry("xp_remove", { entry: troll }), en)).toBe(
+      "XP removed: troll (1,326 XP)",
+    );
+    const edit = {
+      entry: award(500, false, "ogre"),
+      before: award(400, false, "troll"),
+    };
+    expect(entryText(entry("xp_edit", edit), en)).toBe(
+      "XP edited: ogre, 400 → 500 XP",
+    );
+    expect(entryText(entry("xp_edit", edit), fr)).toBe(
+      "XP modifiés : ogre, 400 → 500 XP",
+    );
+    const renamed = { entry: award(400, false, "ogre"), before: edit.before };
+    expect(entryText(entry("xp_edit", renamed), en)).toBe(
+      "XP edited: ogre (400 XP)",
+    );
+    expect(entryText(entry("xp_remove", {}, "srv"), en)).toBe("srv");
+  });
 });
 
 describe("cast entries", () => {

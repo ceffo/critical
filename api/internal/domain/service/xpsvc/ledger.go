@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
 // Input bounds.
@@ -57,7 +58,15 @@ func (s *service) Add(ctx context.Context, characterID int64, in EntryInput) (*L
 	if err := validate(e); err != nil {
 		return nil, err
 	}
-	if _, err := s.dal.Insert(ctx, characterID, e); err != nil {
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		id, err := s.dal.Insert(ctx, characterID, e)
+		if err != nil {
+			return err
+		}
+		e.ID = id
+		return s.logChange(ctx, characterID, actionlog.KindXPAdd, id, nil, &e)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return s.Get(ctx, characterID)
@@ -65,10 +74,11 @@ func (s *service) Add(ctx context.Context, characterID int64, in EntryInput) (*L
 
 func (s *service) Update(ctx context.Context, characterID, entryID int64, p EntryPatch) (*Ledger, error) {
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		e, err := s.dal.Get(ctx, characterID, entryID)
+		old, err := s.dal.Get(ctx, characterID, entryID)
 		if err != nil {
 			return err
 		}
+		e := old
 		if p.Base != nil {
 			e.Base = *p.Base
 		}
@@ -84,7 +94,13 @@ func (s *service) Update(ctx context.Context, characterID, entryID int64, p Entr
 		if err := validate(e); err != nil {
 			return err
 		}
-		return s.dal.Update(ctx, characterID, e)
+		if e == old {
+			return nil // nothing changed: no write, no transaction (ADR 0018 step 1)
+		}
+		if err := s.dal.Update(ctx, characterID, e); err != nil {
+			return err
+		}
+		return s.logChange(ctx, characterID, actionlog.KindXPEdit, entryID, &old, &e)
 	})
 	if err != nil {
 		return nil, err
@@ -93,7 +109,17 @@ func (s *service) Update(ctx context.Context, characterID, entryID int64, p Entr
 }
 
 func (s *service) Delete(ctx context.Context, characterID, entryID int64) (*Ledger, error) {
-	if err := s.dal.Delete(ctx, characterID, entryID); err != nil {
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		old, err := s.dal.Get(ctx, characterID, entryID)
+		if err != nil {
+			return err
+		}
+		if err := s.dal.Delete(ctx, characterID, entryID); err != nil {
+			return err
+		}
+		return s.logChange(ctx, characterID, actionlog.KindXPRemove, entryID, &old, nil)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return s.Get(ctx, characterID)

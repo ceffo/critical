@@ -17,6 +17,7 @@ import {
   Shield,
   Sparkle,
   Sword,
+  TrendUp,
   type Icon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,9 @@ const KIND_ICONS: Record<LogKind, Icon> = {
   weapon_add: Sword,
   weapon_edit: Sword,
   weapon_remove: Sword,
+  xp_add: TrendUp,
+  xp_edit: TrendUp,
+  xp_remove: TrendUp,
   spell_prep: BookOpen,
   long_rest: Moon,
   save: Shield,

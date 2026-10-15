@@ -17,7 +17,8 @@ interface XpStore {
   remove: (id: number) => Promise<ApiError | null>;
 }
 
-/** The XP ledger (ADR 0015): outside the action stack, so it never refreshes the table state. */
+/** The XP ledger (ADR 0015). Each write is a transaction on the action stack (step 4), so it
+ * refreshes the table state: the journal shows the entry and its Undo targets it. */
 export const useXpStore = create<XpStore>((set, get) => {
   const write = async (
     action: () => Promise<XpLedger>,
@@ -25,6 +26,8 @@ export const useXpStore = create<XpStore>((set, get) => {
     set({ busy: true });
     try {
       set({ ledger: await action() });
+      // The answer is the ledger: refresh the rest of the table (the journal), not the ledger.
+      await useTableStore.getState().refresh({ skipXp: true });
       return null;
     } catch (e) {
       if (e instanceof ApiError && e.field) return e;

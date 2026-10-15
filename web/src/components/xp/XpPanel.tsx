@@ -359,7 +359,7 @@ function Row({
   const remove = useXpStore((s) => s.remove);
   const busy = useXpStore((s) => s.busy);
   const fresh = useXpStore((s) => s.freshIds.has(e.id));
-  // Deleting is final (the ledger is outside the undo stack): Delete asks, Confirm deletes.
+  // Delete asks, Confirm deletes (the journal's Undo brings the entry back, ADR 0015 step 4).
   const [confirming, setConfirming] = useState(false);
   const reason = e.reason || t("xp.defaultReason");
   const meta = e.session

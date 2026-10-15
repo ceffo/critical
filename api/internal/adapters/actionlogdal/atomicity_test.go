@@ -338,3 +338,62 @@ func TestUndo_RestorerFailsMidTransaction_RollsBackEverything(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, ok, "both entries popped in one undo")
 }
+
+// ADR 0018 step 6: a pop keeps what a replay needs. After the undo, every
+// entry of the transaction reads back with its kind, payload and both
+// snapshots unchanged, each voided by a correction row (nothing deleted or
+// rewritten).
+func TestPop_KeepsEntriesAndSnapshots(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	log := newLog(t, db, actionlogdal.New(db))
+	rs := roundState{db: db}
+	log.RegisterRestorer("round", rs)
+	ctx := context.Background()
+	tx := actionlogsvc.Transactions(db)
+
+	var newer int64
+	require.NoError(t, tx.InTx(ctx, func(ctx context.Context) error {
+		if err := rs.set(ctx, charID, 1); err != nil {
+			return err
+		}
+		if _, err := log.Record(ctx, actionlog.NewEntry{
+			CharacterID: charID, Kind: actionlog.KindRoundAdvance, Payload: json.RawMessage(`{"from":0,"to":1}`),
+			Snapshots: []actionlog.Snapshot{{Key: "round", Before: json.RawMessage(`0`), After: json.RawMessage(`1`)}},
+		}); err != nil {
+			return err
+		}
+		var err error
+		newer, err = log.Record(ctx, actionlog.NewEntry{
+			CharacterID: charID, Kind: actionlog.KindInitiative, Payload: json.RawMessage(`{"round":1,"d10":7}`),
+			Snapshots: []actionlog.Snapshot{{Key: "round", Before: json.RawMessage(`1`), After: json.RawMessage(`1`)}},
+		})
+		return err
+	}))
+	before, err := log.List(ctx, charID, 0)
+	require.NoError(t, err)
+	require.Len(t, before, 2)
+
+	_, err = log.Undo(ctx, charID, newer)
+	require.NoError(t, err)
+	after, err := log.List(ctx, charID, 0)
+	require.NoError(t, err)
+	require.Len(t, after, 2, "no entry deleted")
+	for i := range before {
+		b, a := before[i], after[i]
+		assert.Equal(t, actionlog.StatusVoided, a.Status())
+		assert.Equal(t, b.ID, a.ID)
+		assert.Equal(t, b.TransactionID, a.TransactionID)
+		assert.Equal(t, b.Kind, a.Kind)
+		assert.JSONEq(t, string(b.Payload), string(a.Payload))
+		assert.JSONEq(t, string(b.Payload), string(a.EffectivePayload()), "the void rewrites no payload")
+		require.Len(t, a.Snapshots, len(b.Snapshots))
+		for j := range b.Snapshots {
+			assert.Equal(t, b.Snapshots[j].Key, a.Snapshots[j].Key)
+			assert.JSONEq(t, string(b.Snapshots[j].Before), string(a.Snapshots[j].Before))
+			assert.JSONEq(t, string(b.Snapshots[j].After), string(a.Snapshots[j].After))
+		}
+		require.Len(t, a.Corrections, 1)
+		assert.Equal(t, actionlog.CorrectionVoid, a.Corrections[0].Kind)
+	}
+}

@@ -744,7 +744,10 @@
       "skill_check": "Skill",
       "dice": "Dice",
       "correction": "Correction",
-      "exposure": "Exposure"
+      "exposure": "Exposure",
+      "xp_add": "XP",
+      "xp_edit": "XP",
+      "xp_remove": "XP"
     },
     "status": {
       "active": "Active",
@@ -868,6 +871,12 @@
       "other": "Correction of #{{id}}",
       "unknown": "?",
       "none": "none"
+    },
+    "xp": {
+      "added": "XP +{{total, number}}: {{reason}}",
+      "removed": "XP removed: {{reason}} ({{total, number}} XP)",
+      "edited": "XP edited: {{reason}}, {{from, number}} → {{to, number}} XP",
+      "editedSame": "XP edited: {{reason}} ({{total, number}} XP)"
     }
   },
   "critTable": {

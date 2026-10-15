@@ -22,3 +22,8 @@ RETURNING "id";
 -- DeleteXPEntry
 DELETE FROM "xp_entries" WHERE "character_id" = ?1 AND "id" = ?2
 RETURNING "id";
+
+-- RestoreXPEntry
+INSERT INTO "xp_entries" ("id", "character_id", "entry_date", "session", "reason", "base", "bonus")
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+RETURNING "id";

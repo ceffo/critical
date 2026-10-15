@@ -197,8 +197,10 @@ flowchart TD
   session, +10% defaulting to the server's `bonusEligible`; the button shows the server's preview,
   `GET /api/xp/preview`; Enter submits) and the ledger (reason with date · session, base, bonus,
   total; in-row edit, Enter saves, Escape cancels; delete; entries added this session tinted; the
-  sheet's starting XP as the last, read-only row). The ledger is outside the action stack: its
-  writes answer with the whole ledger and refresh nothing else. The Moi column's level line opens
+  sheet's starting XP as the last, read-only row). Each write is a transaction on the action
+  stack (ADR 0015 step 4): it answers with the whole ledger, then refreshes the table state so the
+  journal shows the entry; the table refresh re-reads the ledger, so the journal's Undo shows the
+  total back. The Moi column's level line opens
   it and is underlined with the server's `progress`.
 - Moi column (`Identity`, `HpBar`, `ChargeCards`, `QuickHp`, `Saves` in `components/dashboard/`),
   beside every workspace: identity (name, level, abilities in seven cells, effective STR, THAC0);

@@ -24,3 +24,9 @@ RETURNING id
 DELETE FROM xp_entries WHERE character_id = ? AND id = ?
 RETURNING id
 ;
+
+-- RestoreXPEntry
+INSERT INTO xp_entries (id, character_id, entry_date, session, reason, base, bonus)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+RETURNING id
+;

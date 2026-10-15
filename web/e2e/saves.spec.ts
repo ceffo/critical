@@ -22,7 +22,6 @@ async function facts(card: Locator) {
 }
 
 async function rollSpellSave(page: Page) {
-  await page.getByRole("tab", { name: "Saves" }).click();
   await page.getByRole("button", { name: "Roll save vs Spells" }).click();
   await expect(saveCard(page)).toBeVisible();
 }

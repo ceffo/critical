@@ -63,9 +63,9 @@ test("rail: switches workspaces and each keeps its state", async ({ page }) => {
   const rail = page.getByRole("navigation", { name: "Workspaces" });
   await expect(rail.getByRole("button", { name: "Act" })).toHaveAttribute("aria-current", "page");
 
-  // Act: pick the Saves tab.
-  await page.getByRole("tab", { name: "Saves" }).click();
-  await expect(page.getByRole("tab", { name: "Saves" })).toHaveAttribute("aria-selected", "true");
+  // Act: pick the Spells tab.
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await expect(page.getByRole("tab", { name: "Spells" })).toHaveAttribute("aria-selected", "true");
 
   // Inventory: items and weapons; open the add-item form.
   await openWorkspace(page, "Inventory");
@@ -89,7 +89,7 @@ test("rail: switches workspaces and each keeps its state", async ({ page }) => {
 
   // Back: every workspace is as it was left. The Fil and Moi columns never moved.
   await openWorkspace(page, "Act");
-  await expect(page.getByRole("tab", { name: "Saves" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Spells" })).toHaveAttribute("aria-selected", "true");
   await openWorkspace(page, "Inventory");
   await expect(inventory.getByTestId("item-form")).toBeVisible();
   await openWorkspace(page, "Spells");

@@ -3,16 +3,14 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { AttackPanel } from "./AttackPanel";
 import { SpellsPanel } from "./SpellsPanel";
-import { SavesPanel } from "./SavesPanel";
 
 /**
  * Tabs of the Agir (act) workspace, one panel component each. Inventory and spell lookup are
- * workspaces of their own in the rail (App.tsx).
+ * workspaces of their own in the rail (App.tsx); saving throws live in the Moi column.
  */
 const TABS = [
   { id: "attack", Panel: AttackPanel },
   { id: "spells", Panel: SpellsPanel },
-  { id: "saves", Panel: SavesPanel },
 ] as const satisfies readonly { id: string; Panel: ComponentType }[];
 
 type TabId = (typeof TABS)[number]["id"];

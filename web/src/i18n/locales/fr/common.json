@@ -57,11 +57,17 @@
     "change": "Modifier les PV",
     "amount": "Montant",
     "source": "Source",
-    "sourcePlaceholder": "Hache d'orque, potion...",
-    "applyDamage": "Infliger les dégâts",
-    "applyHeal": "Appliquer les soins",
+    "sourcePlaceholder": "Source : hache d'orque, potion...",
+    "applyDamage": "Dégâts",
+    "applyHeal": "Soins",
     "undoLast": "Annuler la dernière modification de PV",
-    "undoBlocked": "Dernière entrée : « {{entry}} ». Annulez-la d’abord dans le journal."
+    "undoBlocked": "Dernière entrée : « {{entry}} ». Annulez-la d’abord dans le journal.",
+    "amountPlaceholder": "PV",
+    "damageHint": "Appliquer en dégâts (Entrée)",
+    "healHint": "Appliquer en soins (Maj+Entrée)",
+    "keysHint": "Entrée : dégâts · Maj+Entrée : soins",
+    "lastChange": "{{delta}} {{source}}",
+    "lastDamage": "Derniers dégâts subis : {{amount}}"
   },
   "turn": {
     "title": "Tour",
@@ -158,8 +164,7 @@
     "label": "Actions",
     "tabs": {
       "attack": "Attaque",
-      "spells": "Sorts",
-      "saves": "Sauvegardes"
+      "spells": "Sorts"
     }
   },
   "attack": {
@@ -186,8 +191,6 @@
   },
   "saves": {
     "title": "Jets de sauvegarde",
-    "need": "Il faut {{value}}+",
-    "roll": "Lancer",
     "rollLabel": "Jet de sauvegarde contre {{name}}",
     "categories": {
       "para_poison": "Paralysie/Poison",
@@ -195,7 +198,8 @@
       "petri_poly": "Pétrification/Métamorphose",
       "breath": "Souffle",
       "spell": "Sorts"
-    }
+    },
+    "target": "{{value}}+"
   },
   "items": {
     "title": "Inventaire",
@@ -733,5 +737,12 @@
       "ammoKind": "Type de munition",
       "ammoNone": "aucune (lancée)"
     }
+  },
+  "moi": {
+    "chargesLeft_one": "{{count}} charge restante",
+    "chargesLeft_other": "{{count}} charges restantes",
+    "absorb": "Absorber",
+    "absorbLabel": "Absorber un coup avec {{name}}",
+    "chargesHint": "Un coup reçu en consomme une"
   }
 }

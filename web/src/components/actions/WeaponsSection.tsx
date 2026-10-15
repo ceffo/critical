@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useItemsStore } from "@/stores/items";
 import { useTableStore } from "@/stores/table";
 import { deleteWeapon, patchWeapon, postCreateWeapon } from "@/api/combat";
@@ -12,11 +11,16 @@ import {
   emptyWeaponDraft,
 } from "@/lib/weaponForm";
 import { formatSigned } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { WeaponForm } from "./WeaponForm";
 import type { Weapon } from "@/types/combat";
 
+/** Armes grid: name (kind · two-handed · ammo) | damage S-M · L | to-hit / damage | edit / delete. */
+const WEAPON_COLS =
+  "grid grid-cols-[minmax(0,1fr)_minmax(8.5rem,auto)_5.5rem_4rem] items-center gap-x-3";
+
 /**
- * Weapons list of the Inventory tab: ✎ edits a weapon in place, 🗑 removes it,
+ * Armes card of the Inventaire workspace: ✎ edits a weapon in place, 🗑 removes it,
  * "Add weapon" opens a form. Every change is a log entry the Combat Log can pop (the newest only).
  */
 export function WeaponsSection() {
@@ -36,36 +40,41 @@ export function WeaponsSection() {
 
   return (
     <section
-      className="flex max-w-2xl flex-col gap-2"
+      className="flex flex-col gap-1 rounded-xl bg-card px-4 py-3.5"
       aria-label={t("weapons.title")}
     >
-      <h3 className="text-sm font-semibold">{t("weapons.title")}</h3>
-      {form === "add" ? (
-        <WeaponForm
-          initial={emptyWeaponDraft}
-          ammoKinds={ammoKinds}
-          busy={busy}
-          onCancel={close}
-          onSave={async (body) => {
-            const rejected = await submit(() => postCreateWeapon(body));
-            if (!rejected) close();
-            return rejected;
-          }}
-        />
-      ) : (
-        <div>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => setForm("add")}
-          >
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-medium">{t("weapons.title")}</h2>
+        {form !== "add" && (
+          <Button size="sm" disabled={busy} onClick={() => setForm("add")}>
             <Plus /> {t("weapons.form.openAdd")}
           </Button>
+        )}
+      </div>
+      {form === "add" && (
+        <div className="mb-2">
+          <WeaponForm
+            initial={emptyWeaponDraft}
+            ammoKinds={ammoKinds}
+            busy={busy}
+            onCancel={close}
+            onSave={async (body) => {
+              const rejected = await submit(() => postCreateWeapon(body));
+              if (!rejected) close();
+              return rejected;
+            }}
+          />
         </div>
       )}
-      {weapons.length === 0 && (
+      {weapons.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("weapons.none")}</p>
+      ) : (
+        <div className={cn(WEAPON_COLS, "px-2 pb-1 text-xs text-muted-foreground")} aria-hidden>
+          <span>{t("weapons.columns.name")}</span>
+          <span>{t("weapons.columns.damage")}</span>
+          <span>{t("weapons.columns.bonus")}</span>
+          <span />
+        </div>
       )}
       <ul className="flex flex-col gap-1" aria-label={t("weapons.list")}>
         {weapons.map((w) =>
@@ -113,55 +122,51 @@ function WeaponRow({
   const { t } = useTranslation();
   return (
     <li
-      className="flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm"
+      className={cn(WEAPON_COLS, "min-h-12 rounded-lg bg-neu-900/40 px-2 py-1.5 text-sm")}
       data-testid={`weapon-${w.id}`}
     >
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-col">
         <span className="min-w-0 truncate font-medium">{w.name}</span>
-        <span
-          className="text-xs text-muted-foreground"
-          data-testid="weapon-detail"
-        >
-          {t("weapons.detail", { sm: w.damage_sm, l: w.damage_l })}
+        <span className="min-w-0 truncate text-xs text-muted-foreground">
+          <span data-testid="weapon-kind">{t(`weapons.kind.${w.kind}`)}</span>
           {w.two_handed ? ` · ${t("weapons.twoHanded")}` : ""}
           {w.ammo_kind ? ` · ${w.ammo_kind}` : ""}
         </span>
       </div>
-      <Badge
-        variant="outline"
-        title={t("weapons.form.magicToHit")}
-        data-testid="weapon-to-hit"
-      >
-        {formatSigned(w.magic_to_hit)}
-      </Badge>
-      <Badge
-        variant="outline"
-        title={t("weapons.form.magicDamage")}
-        data-testid="weapon-damage"
-      >
-        {formatSigned(w.magic_damage)}
-      </Badge>
-      <Badge variant="secondary" data-testid="weapon-kind">
-        {t(`weapons.kind.${w.kind}`)}
-      </Badge>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        disabled={busy}
-        onClick={onEdit}
-        aria-label={t("weapons.form.edit", { name: w.name })}
-      >
-        <PencilSimple />
-      </Button>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        disabled={busy}
-        onClick={onRemove}
-        aria-label={t("weapons.form.remove", { name: w.name })}
-      >
-        <Trash />
-      </Button>
+      <span className="min-w-0 truncate tabular-nums" data-testid="weapon-detail">
+        {t("weapons.detail", { sm: w.damage_sm, l: w.damage_l })}
+      </span>
+      <span className="tabular-nums">
+        <span title={t("weapons.form.magicToHit")} data-testid="weapon-to-hit">
+          {formatSigned(w.magic_to_hit)}
+        </span>
+        <span className="text-muted-foreground"> / </span>
+        <span title={t("weapons.form.magicDamage")} data-testid="weapon-damage">
+          {formatSigned(w.magic_damage)}
+        </span>
+      </span>
+      <div className="flex justify-end">
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          disabled={busy}
+          onClick={onEdit}
+          aria-label={t("weapons.form.edit", { name: w.name })}
+        >
+          <PencilSimple />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          disabled={busy}
+          onClick={onRemove}
+          aria-label={t("weapons.form.remove", { name: w.name })}
+        >
+          <Trash />
+        </Button>
+      </div>
     </li>
   );
 }

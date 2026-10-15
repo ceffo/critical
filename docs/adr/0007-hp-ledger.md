@@ -1,7 +1,8 @@
 # ADR 0007: HP ledger
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.7 and
-critical-qki.38, until then in `docs/backend.md`)
+critical-qki.38, until then in `docs/backend.md`); steps 2, 3, 8 and 9 amended by
+[ADR 0018](0018-transactions-and-undo.md)
 
 ## Context
 
@@ -27,7 +28,8 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    original delta, replaced by the latest correction that set one, and 0 once voided. Other
    characters' entries do not count; entries of other kinds have delta 0, except an `exposure`
    the Bard takes himself ([ADR 0008](0008-spell-slots-and-long-rest.md) step 16, user ruling
-   2026-10-15), whose delta is the damage rolled.
+   2026-10-15), whose delta is the damage rolled. (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 4:* an entry of any
+   kind may carry a delta, and every entry's effective delta counts.)
    Tests: `TestHPTotal` (actionlogdal: plain sum, "latest amend wins", "void counts zero", "void
    after amend counts zero", "summary-only amend keeps delta"), `TestGetState`,
    `TestExposureOnTheBard_VoidGivesTheHPBack` (composition).
@@ -36,7 +38,8 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    capped (HP may go below 0) down to the floor of -10, where it is clamped
    ([ADR 0011](0011-hp-below-zero.md) step 1). The one damage the app rolls itself is a spell's
    exposure the player says the Bard takes ([ADR 0008](0008-spell-slots-and-long-rest.md)
-   step 16): it is logged as rolled, under the same floor.
+   step 16): it is logged as rolled, under the same floor. (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 4:* any
+   damage the app rolls itself, whatever the entry's kind, is logged as rolled under the floor.)
    Tests: `TestAppendEvent` ("damage"), `TestRecord_CapsHeal` (actionlogsvc: "damage does not go
    through the cap"), `TestRecord_FloorsDamage` (actionlogsvc: "damage below 0 but above the
    floor is stored as is").
@@ -68,13 +71,17 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    voided; an older one is refused (409, naming the entry on top). Popping restores the state
    the entry changed (its snapshots), so popping in order walks the state back one step at a time.
    A popped HP change counts 0. Popping the newest entry puts the total back to what it was
-   before that entry, so a pop can never leave HP above max (step 4).
+   before that entry, so a pop can never leave HP above max (step 4). (*Amended by
+   [ADR 0018](0018-transactions-and-undo.md) steps 2 and 3:* the unit popped is the newest transaction, whole, and the row's
+   Void is the global undo.)
    Tests: `TestVoid` (actionlogsvc: "hp change, no snapshots", "already voided", "an older entry
    is refused"), `TestAmendNoteAndPop_HPTotal`, `TestHPCap_PopHealThenDamage`,
    `TestLogStack_PopInOrderRestoresEachStep`, `TestLogStack_VoidOlderEntryIsRefused`.
 9. **Undo.** `POST /api/hp/undo` pops the newest entry when it is an HP change; when another kind
    is on top it is refused (409, naming it) and nothing changes; on an empty log it does nothing.
-   A heal that was logged as 0 at full HP is undone like any other.
+   A heal that was logged as 0 at full HP is undone like any other. (*Amended by
+   [ADR 0018](0018-transactions-and-undo.md) step 3:* `POST /api/hp/undo` is retired; the HP panel's undo is the global undo
+   and pops whatever transaction is on top.)
    Tests: `TestUndoLast`, `TestVoidLatest` (actionlogsvc: "empty log", "pops the newest", "newest
    is another kind"), `TestHPUndo_NothingToUndoIsNoop` (actionlogdal),
    `TestLogStack_HPUndoOnlyPopsTheTop`, `TestHPCap_UndoHealLoggedAtFullHP`.

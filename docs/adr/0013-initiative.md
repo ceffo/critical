@@ -1,6 +1,6 @@
 # ADR 0013: Initiative
 
-**Status**: accepted, 2026-10-15 (critical-kiv.4)
+**Status**: accepted, 2026-10-15 (critical-kiv.4); steps 2 and 4 amended by [ADR 0018](0018-transactions-and-undo.md)
 
 ## Context
 
@@ -23,7 +23,9 @@ Tests live in `api/internal/domain/service/buffsvc/initiative_test.go` unless na
    UI words it (no summary). Its snapshot (`initiative`, before `null`) restores "no initiative".
    The advance ends the previous round's initiative and snapshots it. So undo after Next Round
    pops the initiative first (the turn has none), a second undo pops the advance (the previous
-   round and its initiative come back).
+   round and its initiative come back). (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 2:* the advance and its
+   initiative are one transaction, so one undo after Next Round brings back the previous round
+   and its initiative.)
    Tests: `TestInitiative_Step2_OwnEntryAfterTheAdvance` (order of the entries and writes, the
    snapshots, one transaction); `composition` `TestInitiative_UndoPopsTheInitiativeThenTheAdvance`.
 3. **Lowest acts first, display only.** The initiative is the plain die: no modifier from buffs,
@@ -35,6 +37,8 @@ Tests live in `api/internal/domain/service/buffsvc/initiative_test.go` unless na
    one server call and one transaction: it pops the round's initiative entry, which must be the
    newest non-voided entry, and records a new roll as in steps 1 and 2. When another entry is
    newer it is refused (409) and nothing is rolled; with no initiative it is refused (409) too.
+   (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 5:* the reroll voids nothing; it is its own transaction whose
+   snapshot keeps the replaced roll, so undo after a reroll gives that roll back.)
    Tests: `TestInitiative_Step4_RerollReplacesTheNewestInitiative` (pop, then exactly one d10;
    the refusals); `composition` `TestInitiative_RerollOnTheRealLog`; `router`
    `TestRoundInitiative_WireShape`.
@@ -49,9 +53,11 @@ Tests live in `api/internal/domain/service/buffsvc/initiative_test.go` unless na
 
 - The initiative is stored next to the round (`round_state.initiative_d10`,
   `initiative_entry_id`) and restored through the `initiative` snapshot like the round itself; the
-  entry id lets the reroll pop exactly that entry.
+  entry id lets the reroll pop exactly that entry. (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 5:* the reroll
+  pops nothing; the entry id tells which transaction recorded the current initiative.)
 - A reroll followed by an undo leaves the turn without an initiative (the first roll was popped
-  by the reroll); Next Round rolls a new one.
+  by the reroll); Next Round rolls a new one. (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 5:* undo after a
+  reroll gives back the roll it replaced.)
 - The initiative entry is not a roll kind (`actionlog.RollKinds`): it does not replace the
   result card and does not block adjusting the latest attack or save.
 - Not covered: weapon speed, casting time, Dexterity or reaction modifiers, group versus

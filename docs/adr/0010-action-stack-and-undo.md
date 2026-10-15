@@ -1,6 +1,7 @@
 # ADR 0010: Action stack and undo
 
-**Status**: accepted, 2026-10-15; amended 2026-10-15 (step 6, corrections as their own steps)
+**Status**: accepted, 2026-10-15; amended 2026-10-15 (step 6, corrections as their own steps);
+steps 1 and 2 and the Consequences amended by [ADR 0018](0018-transactions-and-undo.md)
 
 ## Context
 
@@ -26,7 +27,9 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    note, and only the newest non-voided entry (the top) can be popped. `GET /api/log` returns
    `topId`, the id of the top (`null` when nothing can be popped). It may be older than every
    listed entry. `POST /api/log/undo` answers with the popped entry, shaped as a `GET /api/log`
-   entry (structured payload; the UI words it).
+   entry (structured payload; the UI words it). (*Amended by [ADR 0018](0018-transactions-and-undo.md) steps 1 and 2:* the
+   unit popped is the transaction of the top entry, whole; `topId` still names the newest entry
+   and the undo answers with the transaction's first entry.)
    Tests: `TestTopID`; `router` `TestLogEndpoints_WireShape` (`topId`),
    `TestLogEndpoints_AdjustedSaveShape` (`topId: null`), `TestLogUndo_WireShape`.
 2. **Undo pops the top, any kind, and reverts its whole effect.** The pop records a void
@@ -34,7 +37,8 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    state key (or the key's family). No kind is special-cased in the undo: what each kind reverts
    is decided by its restorer and its own ADR (HP: ADR 0007; buffs: 0004; round: 0005;
    initiative: 0013; slots and preparation: 0008; inventory and weapons: 0016). A missing restorer
-   fails the undo.
+   fails the undo. (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 2:* every non-voided entry of the top
+   transaction is popped this way, newest first, in the one transaction of step 4.)
    Tests: `TestUndo` ("matching expected top pops it and restores its snapshots", "restorer fails:
    no void written"); `composition` `TestUndo_PopsEveryKindInOrder` (preparation, cast, buff, bow
    shot, damage, wand charge, round advance, initiative, each popped back to the state before it,
@@ -100,7 +104,9 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
 ## Consequences
 
 - `POST /api/log/{id}/void` (the journal row's Void) and `POST /api/hp/undo` stay: both pop the
-  top too, and both already check what is on top inside their transaction.
+  top too, and both already check what is on top inside their transaction. (*Amended by
+  [ADR 0018](0018-transactions-and-undo.md) step 3:* both are retired; the row's Void and the HP panel's undo send the
+  global undo with `expectedTopId`.)
 - Popping in order walks the state back one step at a time; to fix an old mistake the player pops
   everything above it and replays.
 - A refused undo is shown as the server's error; the table refreshes, so the next undo targets the
@@ -109,4 +115,5 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
   reads its corrected payload. Popping the correction brings the previous reading back.
 - Migration 023 adds `action_corrections.step_id`; rows written before keep NULL (step 6, older
   amends).
-- Not covered: redo (a popped entry stays voided; the action is replayed instead).
+- Not covered: redo (a popped entry stays voided; the action is replayed instead). (*Amended by
+  [ADR 0018](0018-transactions-and-undo.md) step 6:* redo is reserved for a later ADR, which replays a popped transaction.)

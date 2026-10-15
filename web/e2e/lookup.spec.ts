@@ -129,7 +129,7 @@ test("lookup: typing 'project im' selects Project Image with no click and shows 
   await snap(page, "search-selected");
 });
 
-test("lookup in French: a French name finds the spell, its French text shows with its table; a spell without French shows English", async ({
+test("lookup in French: a French name finds the spell, its French text shows with its table, its stats in French and metres; a spell without French shows English", async ({
   page,
 }) => {
   await openLookup(page);
@@ -158,9 +158,28 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await chooseSetting(page, "Sombre");
   await snap(page, "french-table-dark");
 
+  // The stats are worded in French from their typed values, lengths in metres (ADR 0021 step 8).
+  await searchFr.fill("projectile magique");
+  await expect(detail(page).getByRole("heading")).toContainText(
+    "Projectile magique",
+  );
+  const stat = (key: string) => detail(page).getByTestId(`stat-${key}`);
+  await expect(stat("range").getByTestId("stat-value")).toHaveText("189 m");
+  await expect(stat("range").getByTestId("stat-raw")).toHaveText(
+    "54 m + 9 m/niveau",
+  );
+  await expect(stat("duration")).toContainText("Instantanée");
+  await expect(stat("area")).toContainText("1-5 cibles");
+  await expect(stat("castingTime")).toContainText("1 segment");
+  await expect(stat("save")).toContainText("Aucune");
+  await expect(detail(page).getByTestId("spell-meta")).toContainText("V, S");
+  await snap(page, "french-stats");
+
   await searchFr.fill("armor");
   await expect(detail(page).getByRole("heading")).toHaveText("Armor");
   await expect(text).toContainText("Fixture text for Armor");
+  await expect(stat("castingTime")).toContainText("1 round");
+  await expect(stat("range")).toContainText("Contact");
   await snap(page, "french-english-fallback");
 });
 

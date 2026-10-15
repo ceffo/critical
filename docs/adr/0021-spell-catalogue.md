@@ -152,6 +152,28 @@ is only ever appended to by play.
    `CLAUDE.md` is unchanged, this step is the mechanism that makes it hold. French and English
    text, OCR and the scripts stay in `critical-rulebooks`.
 
+8. **Stats are typed values; wording, units and language are the UI's.** The catalogue, the database
+   and the API carry the six stats as the book's English text plus their typed form (step 5.6), and
+   never a translated or reworded stat text (no `*_fr` stat field, column or format). The client
+   words the typed values in the UI language:
+   - **In the books' language (English)** the stat line is the book's text, as before (its common
+     values labelled), and the value at the caster level keeps the book's units.
+   - **In another language (French)** every stat is worded from its typed value through i18n keys
+     (`lookup.unitWords`, `nouns`, `shapes`, `conditions`, `stat.*`): units and nouns agree in
+     number by the language's plural rules, per-level terms read "/niveau", "/2 niveaux", shapes
+     and the components and save kinds are translated, and so is the value at the caster level.
+   - **Lengths are converted where the language uses metres** (`lookup.lengths`, French: metric):
+     1 ft = 0.3 m, the French catalogue names' own rounding ("rayon 4,5 m" for 15'), so 1 yd =
+     0.9 m and 1 in = 2.5 cm, squares and cubes for areas and volumes; 1 mile = 1.5 km. Numbers use
+     the language's decimal mark ("4,5"), at most two decimals. Dice are never converted (a length
+     with dice keeps its unit); times are never converted.
+   - **The book's text is the fallback, only for what is not typed**: a field the parser left
+     special (other than the book's own "Special", which is a label), a word the language has no
+     key for (an unlisted noun, unit or condition, a non-level divisor such as "/recipient"), and
+     an area reading the parser marks **partial** (`partial`: the text has an alternative, a
+     number, die or word its typed form does not hold, such as "1 creature or item" or "One
+     creature/two levels"). Its common values are labelled as before. Text is wrapped, never cut.
+
 ## Consequences
 
 - The builder item and the importer item can proceed in parallel against this ADR and the schema:
@@ -240,3 +262,24 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 - **Descriptions** are rendered by a small parser of exactly the step 1 subset
   (`web/src/lib/spellMarkdown.ts`) into React text, never HTML; a block that does not fit the subset
   is shown as text rather than dropped.
+
+## Implementation notes (typed stats in the UI language, 2026-10-15)
+
+- **History.** A first take (catalogue format 2, migration 029) shipped the French books' stat
+  texts as `{en, fr}` and served them as `*_fr` fields. It broke the rule of step 8 (data holds typed
+  values; conversion and translation happen at render) and was undone: the catalogue is format 1
+  again, the reader never knew format 2, and migration 030 drops the six `*_fr` columns on a
+  database that has 029 (`TestMigrate030_DropsFrenchStatColumnsKeepingTheRows`,
+  `TestMigrate030_FreshDatabaseHasNoFrenchStatColumns`).
+- **Re-typing.** Migration 030 also forgets the recorded artifact (`catalogue_meta`), so the next
+  startup imports it again and re-parses every spell's stats with the current parser (step 5.6).
+- **Partial area readings** are marked by the parser: the text's numbers and dice must all be the
+  typed form's, and its words a length unit, a shape, a word of the noun or a connector ("x", "in
+  a", "level") (`spellstats.AreaOfEffect.Partial`,
+  `TestAreaOfEffect_PartialWhenTheTextSaysMore`).
+- **The wording** is `web/src/lib/statText.ts` (unit tests for every unit, noun, shape and
+  condition key, the conversion and each fallback in `statText.test.ts`); the lookup's grid and meta
+  line use it, and the French lookup e2e checks one spell's stats ("189 m", "54 m + 9 m/niveau").
+- **Coverage** over a catalogue: `just stat-coverage [path]` prints, per field, how many stats the
+  French UI words from the typed value, shows as a label, or shows as the English text, with the
+  most common English texts left (`api/cmd/spellstats` prints the typed stats it reads).

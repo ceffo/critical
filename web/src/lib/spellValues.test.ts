@@ -1,8 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import i18next from "i18next";
+import { resources } from "@/i18n";
 import { statDice, valueFormula } from "./spellValues";
+import { statLocale, type StatLocale } from "./statText";
 import type { Spell, SpellStats, SpellValues } from "@/types/spells";
 
-const unit = (w: string) => ({ round: "rd", yard: "yd" })[w] ?? w;
+let unit: StatLocale;
+beforeAll(async () => {
+  const i = i18next.createInstance();
+  await i.init({
+    lng: "en",
+    resources,
+    defaultNS: "common",
+    interpolation: { escapeValue: false },
+  });
+  unit = statLocale(i.t, "en");
+});
 const q = { terms: [] };
 
 function spell(

@@ -26,6 +26,12 @@ type AreaOfEffect struct {
 	// Targets is the creature/object count; Noun is what is counted.
 	Targets *Quantity `json:"targets,omitempty"`
 	Noun    string    `json:"noun,omitempty"`
+	// Partial is set on an area or targets kind whose text says more than
+	// the typed form holds: an alternative ("1 creature or item"), a number
+	// it dropped ("One creature/two levels") or a word it does not read
+	// ("Line of sight, max. 60 ft."). The typed form still computes what it
+	// read; a reader that words the stat shows the raw text instead.
+	Partial bool `json:"partial,omitempty"`
 }
 
 // AreaValue is an AreaOfEffect computed for a caster level.
@@ -120,7 +126,85 @@ func ParseArea(raw string) AreaOfEffect {
 	case a.Targets != nil:
 		a.Kind = AreaTargets
 	}
+	if a.Kind != KindSpecial {
+		a.Partial = !a.covers(s)
+	}
 	return a
+}
+
+var (
+	coverTokRe  = regexp.MustCompile(`\d+d\d+|\d[\d,]*(?:\.\d+)?|[a-z]+`)
+	numRangeRe  = regexp.MustCompile(`(\d)\s+to\s+(\d)`)
+	leadCountRe = regexp.MustCompile(`\b(one|two)\b`)
+	// coverWords are the words an area's typed form accounts for: the
+	// length units, the "sq"/"cu" prefixes, the shapes and the connectors.
+	coverWords = func() map[string]bool {
+		out := map[string]bool{}
+		for w, u := range unitAliases {
+			if _, fam := unitFactor(u); fam == "length" {
+				out[w] = true
+			}
+		}
+		for _, w := range []string{
+			"sq", "square", "cu", "cubic", "radius", "diameter", "cone", "cube", "sphere",
+			"globe", "cloud", "column", "spray", "hemisphere", "volume", "wall", "x", "in", "a", "an", "level",
+			"levels", "area",
+		} {
+			out[w] = true
+		}
+		return out
+	}()
+)
+
+// covers reports whether the typed form accounts for all of s (the
+// normalized text): every number and die in s is one of the form's, and
+// every word is a length unit, a shape, a word of the noun or a connector
+// ("x", "in a", "level"). "One"/"two" count as numbers, "1 to 4" as a range.
+func (a AreaOfEffect) covers(s string) bool {
+	nums, dice := map[float64]bool{}, map[string]bool{}
+	addQ := func(q Quantity) {
+		for _, t := range q.Terms {
+			nums[t.Count], nums[t.Upper] = true, true
+			if t.Step > 1 {
+				nums[float64(t.Step)] = true
+			}
+			if t.Dice != "" {
+				dice[t.Dice] = true
+			}
+		}
+		if q.Max != 0 {
+			nums[q.Max] = true
+		}
+	}
+	for _, d := range a.Dims {
+		addQ(d)
+	}
+	words := map[string]bool{}
+	if a.Targets != nil {
+		addQ(*a.Targets)
+		for _, w := range coverTokRe.FindAllString(strings.ToLower(a.Noun), -1) {
+			words[w] = true
+		}
+	}
+	low := strings.ToLower(s)
+	low = leadCountRe.ReplaceAllStringFunc(low, func(w string) string { return wordCounts[w] })
+	low = numRangeRe.ReplaceAllString(low, "$1-$2")
+	for _, tok := range coverTokRe.FindAllString(low, -1) {
+		switch {
+		case diceRe.MatchString(tok):
+			if !dice[tok] {
+				return false
+			}
+		case tok[0] >= '0' && tok[0] <= '9':
+			n, err := strconv.ParseFloat(strings.ReplaceAll(tok, ",", ""), 64)
+			if err != nil || !nums[n] {
+				return false
+			}
+		case !coverWords[tok] && !words[tok]:
+			return false
+		}
+	}
+	return true
 }
 
 func shapeOf(s string) string {

@@ -61,6 +61,8 @@ export interface SpellStats {
     dims?: SpellQuantity[];
     targets?: SpellQuantity;
     noun?: string;
+    /** The text says more than this typed form holds: a reader shows the raw text. */
+    partial?: boolean;
   };
   components: {
     raw: string;

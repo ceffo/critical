@@ -316,3 +316,45 @@ func TestSpecial_ListsFallbackFields(t *testing.T) {
 	}).Special()
 	assert.Equal(t, []string{"casting_time", "duration", "area_of_effect", "components", "saving_throw"}, got)
 }
+
+// ADR 0021 step 8: an area or targets reading is partial when the text says
+// more than the typed form holds, so a reader shows the raw text; a text the
+// form covers whole (numbers, dice, units, shape, noun, "x", "in a",
+// "level") is not. Other kinds are never partial.
+func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
+	tests := []struct {
+		raw     string
+		partial bool
+	}{
+		{"20-ft. radius", false},
+		{"10 x 60 ft.", false},
+		{"40-ft. cube, 1 creature/level", false},
+		{"2-8 creatures in a 10-ft. cube", false},
+		{"2d4 creatures in 10-ft. radius", false},
+		{"1 creature/3 levels", false},
+		{"One creature", false},
+		{"Two creatures", false},
+		{"1 to 6 insects", false},
+		{"(level x 10)-ft.-sq.", false},
+		{"10 sq. ft./level", false},
+		{"1 creature or item", true},             // an alternative
+		{"20 or 40 ft. radius", true},            // an alternative extent
+		{"One creature/two levels", true},        // a number it dropped
+		{"10 ft. cube/2 levels", true},           // a step it dropped
+		{"1,000 square feet/level", true},        // a number split on its comma
+		{"4d4 sq. mi.", true},                    // dice it dropped
+		{"5 yds./level (90 yds. maximum)", true}, // a cap it dropped
+		{"Line of sight, max. 60 ft.", true},     // words it does not read
+		{"Up to 6 creatures", true},              // "up to"
+		{"20-foot-radius circle", true},          // a shape word it does not read
+		{"1 or more creatures in a 10-ft. radius", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			assert.Equal(t, tt.partial, spellstats.ParseArea(tt.raw).Partial)
+		})
+	}
+	for _, raw := range []string{"The caster's hand", "Creature touched", "Special", "Variable"} {
+		assert.False(t, spellstats.ParseArea(raw).Partial, raw)
+	}
+}

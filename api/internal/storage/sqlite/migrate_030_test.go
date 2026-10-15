@@ -30,10 +30,11 @@ func spellColumns(t *testing.T, db *DB) map[string]bool {
 	return out
 }
 
-// 030 (ADR 0021 step 9): on a database with 029 applied and French stat
+// 030 (ADR 0021 step 8): on a database with 029 applied and French stat
 // texts stored, the six *_fr columns are dropped and every other column of
 // every row is kept (the English texts, the typed stats, the French name and
-// description, the key).
+// description, the key); the recorded artifact is forgotten, so the next
+// import re-types the stats.
 func TestMigrate030_DropsFrenchStatColumnsKeepingTheRows(t *testing.T) {
 	ctx := context.Background()
 	db := migratedTo027(t)
@@ -49,6 +50,8 @@ func TestMigrate030_DropsFrenchStatColumnsKeepingTheRows(t *testing.T) {
 		'Instantaneous', '1-5 targets', 'V, S', 'None', 'Text', 'Texte', 'PHB', '{"range":{}}',
 		'1', '60 mètres', 'Instantanée', '1 à 5 cibles', 'V, S', 'Aucun')`)
 	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `INSERT INTO catalogue_meta (id, format, version) VALUES (1, 2, '2026-10-15.4')`)
+	require.NoError(t, err)
 
 	require.NoError(t, db.Migrate(ctx))
 
@@ -61,6 +64,9 @@ func TestMigrate030_DropsFrenchStatColumnsKeepingTheRows(t *testing.T) {
 		Scan(&key, &name, &nameFR, &rng, &descFR, &stats))
 	assert.Equal(t, []string{"magic_missile", "Magic Missile", "Projectile magique", "60 yds. + 10 yds./level", "Texte", `{"range":{}}`},
 		[]string{key, name, nameFR, rng, descFR, stats})
+	var recorded int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM catalogue_meta`).Scan(&recorded))
+	assert.Zero(t, recorded, "the recorded artifact is forgotten: the next startup imports it again and re-types the stats")
 }
 
 // A fresh database ends with no French stat column either.

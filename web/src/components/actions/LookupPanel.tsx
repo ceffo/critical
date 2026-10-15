@@ -14,7 +14,8 @@ import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellTexts } from "@/i18n/spellName";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
-import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
+import { statDice, statValue, type StatKey } from "@/lib/spellValues";
+import { statLocale, statText, type StatField } from "@/lib/statText";
 import { damageFormula, damageText } from "@/lib/spellDice";
 import { damageRows, exposureRows } from "@/lib/spellMode";
 import { exposureDamageText } from "@/lib/spellDice";
@@ -23,7 +24,6 @@ import {
   sphereLabel,
   schoolLabel,
   spheresLabel,
-  translateValue,
 } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -35,6 +35,15 @@ const CLASSES: { value: SpellClass; key: string }[] = [
 ];
 const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const STATS: StatKey[] = ["range", "duration", "area", "castingTime", "save"];
+
+/** The catalogue field of a stat of the detail grid. */
+const FIELD: Record<StatKey, StatField> = {
+  range: "range",
+  duration: "duration",
+  area: "area_of_effect",
+  castingTime: "casting_time",
+  save: "saving_throw",
+};
 
 /** "1 rd" and "1 rd." say the same: the raw text is not repeated after its value. */
 function same(a: string, b: string): boolean {
@@ -79,7 +88,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
   const toComposer = useDiceStore((s) => s.setFormula);
   const roll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
-  const unit = (w: string) => t(`lookup.units.${w}`, { defaultValue: w });
+  const loc = statLocale(t, i18n.language);
   const value = (key: StatKey): string | null =>
     key === "save"
       ? spell.stats.save.kinds.length
@@ -87,13 +96,13 @@ function SpellDetail({ spell }: { spell: Spell }) {
             .map((k) => t(`lookup.saveKinds.${k}`))
             .join(" / ")
         : null
-      : statValue(spell, key, unit);
+      : statValue(spell, key, loc);
   const meta = [
     classLabel(t, spell.class),
     t("lookup.levelLabel", { level: spell.level }),
     schoolLabel(t, spell.school),
     spheresLabel(t, spell.sphere),
-    spell.components,
+    statText(loc, spell, "components").text,
   ].filter(Boolean);
   // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
   // mode with damage for a spell with modes, then the stats with dice.
@@ -113,7 +122,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
         text: exposureDamageText(t, d.damage),
         formula: damageFormula(d.damage),
       })),
-      ...statDice(spell, unit).map((d) => ({
+      ...statDice(spell, loc).map((d) => ({
         key: d.key,
         label: t(`lookup.${d.key}`),
         text: d.formula,
@@ -137,7 +146,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
       <dl className="flex flex-col text-body">
         {STATS.map((key) => {
           const v = value(key);
-          const raw = translateValue(t, key, statRaw(spell, key));
+          const raw = statText(loc, spell, FIELD[key]).text;
           return (
             <div
               key={key}

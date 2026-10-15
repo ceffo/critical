@@ -139,6 +139,23 @@ func TestRedo_ReplaysTheNewestPoppedTransaction(t *testing.T) {
 		assert.Nil(t, got)
 	})
 
+	// A transaction voided only in part (an entry voided on its own before
+	// transactions were popped whole): its first entry is still the live top,
+	// so it is not above it and is not redoable.
+	t.Run("the live top is the popped entry's transaction: nothing to redo", func(t *testing.T) {
+		svc, dal, _, _ := newSvc(t)
+		dal.EXPECT().LatestPopped(mock.Anything, int64(1)).Return(11, 10, true, nil).Once()
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(10, true, nil).Once()
+		got, err := svc.RedoTarget(context.Background(), 1)
+		require.NoError(t, err)
+		assert.Nil(t, got)
+
+		dal.EXPECT().LatestPopped(mock.Anything, int64(1)).Return(11, 10, true, nil).Once()
+		dal.EXPECT().LatestActiveID(mock.Anything, int64(1)).Return(10, true, nil).Once()
+		_, err = svc.Redo(context.Background(), 1, 10)
+		require.ErrorIs(t, err, actionlogsvc.ErrNothingToRedo)
+	})
+
 	t.Run("redo target with an empty live stack", func(t *testing.T) {
 		svc, dal, _, _ := newSvc(t)
 		dal.EXPECT().LatestPopped(mock.Anything, int64(1)).Return(11, 10, true, nil).Once()

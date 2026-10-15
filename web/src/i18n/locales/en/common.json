@@ -39,7 +39,8 @@
     "workspace": {
       "act": "Act",
       "inventory": "Inventory",
-      "spells": "Spells"
+      "spells": "Spells",
+      "xp": "Experience"
     },
     "fil": "Results and journal",
     "moi": "Character"
@@ -792,6 +793,47 @@
       "label": "Journal filter",
       "all": "All",
       "rolls": "Rolls"
+    }
+  },
+  "xp": {
+    "heading": "Experience · level {{level}}",
+    "unit": "XP",
+    "toNext": "Before level {{level}} · {{xp}} XP",
+    "reached": "Enough XP for level {{level}}",
+    "maxLevel": "Highest level of the table",
+    "progressTitle": "Progress",
+    "progressLabel": "Progress to level {{level}}",
+    "levels": "Levels and their thresholds",
+    "levelTitle": "Level {{level}}: {{xp}} XP",
+    "levelLinkTitle": "{{xp}} XP · {{percent}}% toward level {{level}}",
+    "bonus": "+10%",
+    "bonusHint": "+10% on XP earned when Dexterity and Charisma are both 16 or more",
+    "defaultReason": "XP earned",
+    "add": {
+      "title": "Add XP",
+      "amount": "Amount",
+      "reason": "Reason",
+      "reasonPlaceholder": "Monster, quest, performance…",
+      "session": "Session",
+      "submit": "Add",
+      "submitWith": "Add {{total}}"
+    },
+    "ledger": {
+      "title": "Ledger",
+      "count_one": "{{count}} entry",
+      "count_other": "{{count}} entries",
+      "reason": "Reason",
+      "base": "Base",
+      "bonus": "Bonus",
+      "total": "Total",
+      "none": "No XP recorded yet.",
+      "meta": "{{date}} · {{session}}",
+      "edit": "Edit {{reason}}",
+      "delete": "Delete {{reason}}",
+      "editing": "Editing an entry",
+      "save": "Save",
+      "cancel": "Cancel",
+      "opening": "Starting XP (character sheet)"
     }
   }
 }

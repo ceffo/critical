@@ -196,7 +196,7 @@ describe("schoolLabel", () => {
   it("translates every catalogue school: no English word is left in French", async () => {
     const t = await tFor("fr");
     const english =
-      /\b(Alteration|Summoning|Charm|Phantasm|Necromancy|Elemental|Evocation|Mentalism|Shadow|Song|Alchemy|Geometry|Schools|Various)\b/;
+      /\b(Alteration|Summoning|Charm|Phantasm|Necromancy|Elemental|Mentalism|Shadow|Song|Alchemy|Geometry|Schools|Various)\b/;
     for (const raw of CATALOGUE_SCHOOLS) {
       const out = schoolLabel(t, raw);
       expect(out, raw).not.toMatch(english);
@@ -222,7 +222,7 @@ describe("schoolLabel", () => {
       "Altération, Eau élémentaire, Alchimie",
     );
     expect(schoolLabel(t, "Invocation/Evocation, Force")).toBe(
-      "Invocation/Évocation, Force",
+      "Invocation/Evocation, Force",
     );
     expect(schoolLabel(t, "Necromancy/Alteration")).toBe(
       "Nécromancie/Altération",

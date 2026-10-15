@@ -15,7 +15,10 @@ type Ref struct {
 }
 
 // Keys returns the unique key of every spell of the catalog, in refs order.
-// This is the one place the rule lives:
+// The catalogue artifact now carries every spell's id (ADR 0021 step 3, kept
+// in the builder's ledger); the API calls Keys only to key the rows of a
+// database seeded before the catalogue, on its first import (step 5.4.1),
+// which reproduces the ids in use then. The rule:
 //
 //   - a Wizard spell is Slug(name) ("magic_missile"), so every id in
 //     spellbook.json, spell_effects.json and the fr catalogue stays valid;

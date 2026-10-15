@@ -53,11 +53,13 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   State is in the gitignored `.dev/`; `just dev-reset` deletes the dev database. Use it only
   from the main checkout or a worktree you own; it binds fixed ports, so run one at a time.
 - Backend alone, throwaway data: `just build-api`, then run `bin/critical-srv` with
-  `CRITICAL_DSN`, `CRITICAL_SEEDS_DIR` and `CRITICAL_ADDR` pointing at the scratchpad and a free
+  `CRITICAL_DSN`, `CRITICAL_SEEDS_DIR`, `CRITICAL_CATALOGUE` (the real `.catalogue/catalogue.json` with
+  `seeds/`, or the fixture `api/testdata/catalogue.json` with `api/testdata/seeds`) and `CRITICAL_ADDR`
+  pointing at the scratchpad and a free
   port (never the user's data). Exercise endpoints with `curl`.
 - UI: `just e2e [spec args]` builds the API and runs the Playwright suite headlessly (Chromium,
-  1440x900). Every test gets its own API + Vite on free ports with a fresh temp DB and the real
-  `seeds/`, so parallel worktrees don't collide. Artifacts, gitignored, in `web/e2e-results/`:
+  1440x900). Every test gets its own API + Vite on free ports with a fresh temp DB and the
+  `api/testdata` fixture (seeds and spell catalogue), so parallel worktrees don't collide. Artifacts, gitignored, in `web/e2e-results/`:
   `screens/<spec>/<name>.png` (screenshots), `artifacts/` (trace.zip on failure), `report/` (HTML;
   `cd web && npx playwright show-report e2e-results/report`).
 - Type check and build are covered by `just validate` and don't prove a panel looks right.

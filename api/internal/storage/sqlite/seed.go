@@ -2,11 +2,8 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -32,21 +29,6 @@ type characterSeed struct {
 	SaveSpell        int      `json:"save_spell"`
 	Slots            []any    `json:"slots"`
 	Languages        []string `json:"languages"`
-}
-
-type spellSeed struct {
-	Name         string `json:"name"`
-	Class        string `json:"class"`
-	Level        int    `json:"level"`
-	School       string `json:"school"`
-	Sphere       string `json:"sphere"`
-	CastingTime  string `json:"casting_time"`
-	Range        string `json:"range"`
-	Duration     string `json:"duration"`
-	AreaOfEffect string `json:"area_of_effect"`
-	Components   string `json:"components"`
-	SavingThrow  string `json:"saving_throw"`
-	Description  string `json:"description"`
 }
 
 type weaponSeed struct {
@@ -78,18 +60,15 @@ type itemSeed struct {
 	Notes      string `json:"notes"`
 }
 
-// Seed loads character.json, spells.json, weapons.json, items.json and
-// skills.json from seedsDir into their tables: character, weapons and items
-// only if their table is empty, spells reconciled by (name, class), skills
-// reconciled by id. Missing character and spell files are ignored. A missing
-// weapons, items or skills file while its table is empty is an error: the
-// catalog would be empty.
+// Seed loads character.json, weapons.json, items.json and skills.json from
+// seedsDir into their tables: character, weapons and items only if their
+// table is empty, skills reconciled by id. A missing character file is
+// ignored. A missing weapons, items or skills file while its table is empty
+// is an error: the catalog would be empty. Spells are not seeds: they come
+// from the catalogue artifact (ImportCatalogue).
 func (d *DB) Seed(ctx context.Context, seedsDir string) error {
 	if err := d.seedCharacter(ctx, filepath.Join(filepath.Clean(seedsDir), "character.json")); err != nil {
 		return fmt.Errorf("seed character: %w", err)
-	}
-	if err := d.seedSpells(ctx, filepath.Join(filepath.Clean(seedsDir), "spells.json")); err != nil {
-		return fmt.Errorf("seed spells: %w", err)
 	}
 	if err := d.seedWeapons(ctx, filepath.Join(filepath.Clean(seedsDir), "weapons.json")); err != nil {
 		return fmt.Errorf("seed weapons: %w", err)
@@ -162,79 +141,6 @@ func (d *DB) seedCharacter(ctx context.Context, seedPath string) error {
 	return nil
 }
 
-// seedSpells reconciles the spells table with spells.json: rows are keyed by
-// (name, class, level) (two Priest "Fortify" spells differ by level).
-// Missing ones are inserted, existing ones get the seed's values and typed
-// stats, nothing is ever deleted and ids never change. It runs in one
-// transaction and a second run changes nothing. A missing seed file leaves
-// the table alone (only untyped rows get their stats).
-func (d *DB) seedSpells(ctx context.Context, seedPath string) error {
-	data, err := os.ReadFile(filepath.Clean(seedPath))
-	if err != nil {
-		return d.backfillSpellStats(ctx)
-	}
-	var spells []spellSeed
-	if err := json.Unmarshal(data, &spells); err != nil {
-		return fmt.Errorf("parse spells.json: %w", err)
-	}
-
-	tx, err := d.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if rbErr := tx.Rollback(); rbErr != nil && !errors.Is(rbErr, sql.ErrTxDone) {
-			slog.Default().Warn("seed spells rollback", "error", rbErr)
-		}
-	}()
-
-	// A database may hold a (name, class, level) twice (an older, uncleaned
-	// catalog): only the oldest row is kept in step with the seed, the others
-	// are left alone.
-	update, err := tx.PrepareContext(ctx, `
-		UPDATE spells SET school = ?, sphere = ?, casting_time = ?, range = ?,
-			duration = ?, area_of_effect = ?, components = ?, saving_throw = ?, description = ?, stats = ?
-		WHERE id = (SELECT MIN(id) FROM spells WHERE name = ? AND class = ? AND level = ?)`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = update.Close() }()
-	insert, err := tx.PrepareContext(ctx, `
-		INSERT INTO spells (
-			name, class, level, school, sphere, casting_time, range,
-			duration, area_of_effect, components, saving_throw, description, stats
-		) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-		WHERE NOT EXISTS (SELECT 1 FROM spells WHERE name = ? AND class = ? AND level = ?)`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = insert.Close() }()
-
-	for _, s := range spells {
-		stats, err := spellStatsJSON(s.CastingTime, s.Range, s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow)
-		if err != nil {
-			return fmt.Errorf("spell %q: %w", s.Name, err)
-		}
-		if _, err := update.ExecContext(ctx,
-			s.School, s.Sphere, s.CastingTime, s.Range, s.Duration, s.AreaOfEffect,
-			s.Components, s.SavingThrow, s.Description, stats, s.Name, s.Class, s.Level,
-		); err != nil {
-			return fmt.Errorf("update spell %q: %w", s.Name, err)
-		}
-		if _, err := insert.ExecContext(ctx,
-			s.Name, s.Class, s.Level, s.School, s.Sphere, s.CastingTime, s.Range,
-			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow, s.Description, stats,
-			s.Name, s.Class, s.Level,
-		); err != nil {
-			return fmt.Errorf("insert spell %q: %w", s.Name, err)
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	return d.backfillSpellStats(ctx)
-}
-
 // spellStatsJSON parses the raw PHB stat texts into the typed stats JSON.
 func spellStatsJSON(castingTime, rng, duration, area, components, save string) (string, error) {
 	b, err := json.Marshal(spellstats.Parse(spellstats.Raw{
@@ -245,51 +151,6 @@ func spellStatsJSON(castingTime, rng, duration, area, components, save string) (
 		return "", fmt.Errorf("marshal spell stats: %w", err)
 	}
 	return string(b), nil
-}
-
-// backfillSpellStats types the spells that predate the stats column (a
-// database seeded before migration 009). Cheap and a no-op once filled.
-func (d *DB) backfillSpellStats(ctx context.Context) error {
-	type row struct {
-		id                                                   int64
-		castingTime, rng, duration, area, components, saving string
-	}
-	rows, err := d.QueryContext(ctx, `SELECT id, COALESCE(casting_time,''), COALESCE(range,''), COALESCE(duration,''),
-		COALESCE(area_of_effect,''), COALESCE(components,''), COALESCE(saving_throw,'') FROM spells WHERE stats IS NULL`)
-	if err != nil {
-		return fmt.Errorf("select spells without stats: %w", err)
-	}
-	var todo []row
-	for rows.Next() {
-		var r row
-		if err := rows.Scan(&r.id, &r.castingTime, &r.rng, &r.duration, &r.area, &r.components, &r.saving); err != nil {
-			_ = rows.Close()
-			return fmt.Errorf("scan spell: %w", err)
-		}
-		todo = append(todo, r)
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return err
-	}
-	if err := rows.Close(); err != nil {
-		return err
-	}
-	if len(todo) == 0 {
-		return nil
-	}
-	return d.WrapTx(ctx, func(q Querier) error {
-		for _, r := range todo {
-			stats, err := spellStatsJSON(r.castingTime, r.rng, r.duration, r.area, r.components, r.saving)
-			if err != nil {
-				return err
-			}
-			if _, err := q.ExecContext(ctx, "UPDATE spells SET stats = ? WHERE id = ?", stats, r.id); err != nil {
-				return fmt.Errorf("update spell stats: %w", err)
-			}
-		}
-		return nil
-	})
 }
 
 func (d *DB) seedWeapons(ctx context.Context, seedPath string) error {

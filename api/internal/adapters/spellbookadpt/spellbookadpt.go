@@ -1,7 +1,8 @@
 // Package spellbookadpt loads the Bard's spellbook (seeds/spellbook.json) and
 // serves it to prepsvc. Each entry is cross-checked against the Wizard spells
-// of seeds/spells.json (name and level), so a typo or a wrong level is a
-// startup error. Entities live in prepsvc; this package only maps files.
+// of the spell catalogue (id, English name and level), so a typo, a wrong
+// level or an id the catalogue does not hold is a startup error. Entities
+// live in prepsvc; this package only maps files.
 package spellbookadpt
 
 import (
@@ -11,27 +12,18 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
-// FileName and CatalogFileName are the seed files under the seeds dir.
-const (
-	FileName        = "spellbook.json"
-	CatalogFileName = "spells.json"
-)
+// FileName is the seed file under the seeds dir.
+const FileName = "spellbook.json"
 
 type entryDTO struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Level int    `json:"level"`
 	Sheet string `json:"sheet"` // the sheet's own (French) name, kept for review
-}
-
-type catalogDTO struct {
-	Name  string `json:"name"`
-	Class string `json:"class"`
-	Level int    `json:"level"`
 }
 
 // Book implements prepsvc.Spellbook.
@@ -42,50 +34,36 @@ type Book struct {
 
 var _ prepsvc.Spellbook = (*Book)(nil)
 
-// New loads <seedsDir>/spellbook.json and validates it against spells.json.
-func New(seedsDir string) (*Book, error) {
-	dir := filepath.Clean(seedsDir)
-	book, err := os.ReadFile(filepath.Join(dir, FileName)) //nolint:gosec // operator-configured seeds dir
+// New loads <seedsDir>/spellbook.json and validates it against the catalogue.
+func New(seedsDir string, cat catalogue.Catalogue) (*Book, error) {
+	book, err := os.ReadFile(filepath.Join(filepath.Clean(seedsDir), FileName)) //nolint:gosec // operator-configured seeds dir
 	if err != nil {
 		return nil, fmt.Errorf("spellbook: read: %w", err)
 	}
-	catalog, err := os.ReadFile(filepath.Join(dir, CatalogFileName)) //nolint:gosec // operator-configured seeds dir
-	if err != nil {
-		return nil, fmt.Errorf("spellbook: read catalog: %w", err)
-	}
-	return Parse(book, catalog)
+	return Parse(book, cat)
 }
 
-// Parse maps and validates the two seed files.
-func Parse(book, catalog []byte) (*Book, error) {
+// Parse maps the spellbook file and validates it against the catalogue.
+func Parse(book []byte, cat catalogue.Catalogue) (*Book, error) {
 	var entries []entryDTO
 	dec := json.NewDecoder(bytes.NewReader(book))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&entries); err != nil {
 		return nil, fmt.Errorf("spellbook: parse: %w", err)
 	}
-	var spells []catalogDTO
-	if err := json.Unmarshal(catalog, &spells); err != nil {
-		return nil, fmt.Errorf("spellbook: parse catalog: %w", err)
-	}
-	levels := map[string]int{}
-	for _, s := range spells {
-		if s.Class == "Wizard" {
-			levels[s.Name] = s.Level
-		}
-	}
+	spells := cat.ByID()
 
 	b := &Book{byID: map[string]prepsvc.SpellbookEntry{}}
 	for _, e := range entries {
-		if e.ID != spelleffectsvc.Slug(e.Name) {
-			return nil, fmt.Errorf("spellbook: id %q is not the slug of %q", e.ID, e.Name)
+		s, ok := spells[e.ID]
+		if !ok || s.Class != "Wizard" {
+			return nil, fmt.Errorf("spellbook: %q is not a Wizard spell of the catalogue", e.ID)
 		}
-		level, ok := levels[e.Name]
-		if !ok {
-			return nil, fmt.Errorf("spellbook: %q is not a Wizard spell in %s", e.Name, CatalogFileName)
+		if s.Name != e.Name {
+			return nil, fmt.Errorf("spellbook: %q is named %q in the catalogue, not %q", e.ID, s.Name, e.Name)
 		}
-		if level != e.Level {
-			return nil, fmt.Errorf("spellbook: %q is level %d in %s, not %d", e.Name, level, CatalogFileName, e.Level)
+		if s.Level != e.Level {
+			return nil, fmt.Errorf("spellbook: %q is level %d in the catalogue, not %d", e.ID, s.Level, e.Level)
 		}
 		if _, dup := b.byID[e.ID]; dup {
 			return nil, fmt.Errorf("spellbook: duplicate spell %q", e.ID)
@@ -102,9 +80,8 @@ func (b *Book) All() []prepsvc.SpellbookEntry {
 	return append([]prepsvc.SpellbookEntry(nil), b.entries...)
 }
 
-// Contains reports whether the spell with unique key id is in the book
-// (spellsvc.Spellbook). The book's ids are slugs of Wizard names, which are
-// the Wizard spells' unique keys.
+// Contains reports whether the spell with catalogue key id is in the book
+// (spellsvc.Spellbook).
 func (b *Book) Contains(id string) bool {
 	_, ok := b.byID[id]
 	return ok

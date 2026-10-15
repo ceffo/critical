@@ -13,6 +13,9 @@ const repoRoot = path.resolve(webDir, "..");
 const apiBinary = path.join(repoRoot, "bin", "critical-srv"); // `just build-api`
 // The frozen test fixture, never the campaign seeds/ (editing those must not break e2e).
 const seedsDir = path.join(repoRoot, "api", "testdata", "seeds");
+// The fixture spell catalogue (ADR 0021), always: counts and results stay deterministic, and CI has
+// no access to the real artifact.
+const catalogueFile = path.join(repoRoot, "api", "testdata", "catalogue.json");
 // Built once per run by e2e/global-setup.ts (the production bundle, not a dev server).
 export const distDir = path.join(webDir, "e2e-results", "dist");
 const screensDir = path.join(webDir, "e2e-results", "screens");
@@ -64,32 +67,40 @@ export interface Stack {
 async function seedsWith(
   dir: string,
   character: Record<string, unknown>,
-  extraSpells: unknown[],
 ): Promise<string> {
-  if (Object.keys(character).length === 0 && extraSpells.length === 0)
-    return seedsDir;
+  if (Object.keys(character).length === 0) return seedsDir;
   const out = path.join(dir, "seeds");
   await cp(seedsDir, out, { recursive: true });
-  if (Object.keys(character).length > 0) {
-    const file = path.join(out, "character.json");
-    const sheet = JSON.parse(await readFile(file, "utf8")) as Record<
-      string,
-      unknown
-    >;
-    await writeFile(file, JSON.stringify({ ...sheet, ...character }));
-  }
-  if (extraSpells.length > 0) {
-    const file = path.join(out, "spells.json");
-    const spells = JSON.parse(await readFile(file, "utf8")) as unknown[];
-    await writeFile(file, JSON.stringify([...spells, ...extraSpells]));
-  }
+  const file = path.join(out, "character.json");
+  const sheet = JSON.parse(await readFile(file, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  await writeFile(file, JSON.stringify({ ...sheet, ...character }));
+  return out;
+}
+
+/** The fixture catalogue with extra spells (artifact format, each with its id) appended. */
+async function catalogueWith(
+  dir: string,
+  extraSpells: unknown[],
+): Promise<string> {
+  if (extraSpells.length === 0) return catalogueFile;
+  const doc = JSON.parse(await readFile(catalogueFile, "utf8")) as {
+    spells: unknown[];
+  };
+  const out = path.join(dir, "catalogue.json");
+  await writeFile(
+    out,
+    JSON.stringify({ ...doc, spells: [...doc.spells, ...extraSpells] }),
+  );
   return out;
 }
 
 export interface StackOptions {
   /** Fields overriding the fixture character.json for this test, e.g. `test.use({ character: { str: 12 } })`. */
   character: Record<string, unknown>;
-  /** Spell rows appended to the fixture spells.json (e.g. enough of them to need several lookup pages); wrapped because Playwright mangles array-valued options. */
+  /** Spells appended to the fixture catalogue, in artifact format with an id (e.g. enough of them to need several lookup pages; see `catalogueSpell`); wrapped because Playwright mangles array-valued options. */
   extraSpells: { rows: unknown[] };
 }
 
@@ -206,7 +217,8 @@ export const test = base.extend<
       env: {
         ...process.env,
         CRITICAL_DSN: dbPath,
-        CRITICAL_SEEDS_DIR: await seedsWith(tmp, character, extraSpells.rows),
+        CRITICAL_SEEDS_DIR: await seedsWith(tmp, character),
+        CRITICAL_CATALOGUE: await catalogueWith(tmp, extraSpells.rows),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,
       },
       stdio: ["ignore", "pipe", "pipe"],
@@ -230,6 +242,41 @@ export const test = base.extend<
 });
 
 export { expect };
+
+/** Fields of a spell appended to the fixture catalogue; the stats default to plain values. */
+export interface ExtraSpell {
+  id: string;
+  name: string;
+  class: "Wizard" | "Priest";
+  level: number;
+  school: string;
+  sphere?: string;
+  casting_time?: string;
+  range?: string;
+  duration?: string;
+  area_of_effect?: string;
+  components?: string;
+  saving_throw?: string;
+}
+
+/** A catalogue spell (ADR 0021 format) with invented text, for `extraSpells`. */
+export function catalogueSpell(s: ExtraSpell) {
+  const { id, name, sphere, ...rest } = s;
+  return {
+    id,
+    casting_time: "1",
+    range: "10 yds.",
+    duration: "1 rd.",
+    area_of_effect: "1 creature",
+    components: "V, S",
+    saving_throw: "None",
+    ...rest,
+    ...(sphere ? { sphere } : {}),
+    name: { en: name },
+    description: { en: `${name} fixture text.` },
+    source: "WEB",
+  };
+}
 
 /** Save a full-page PNG to web/e2e-results/screens/<spec>/<name>.png. */
 export async function snap(page: Page, name: string): Promise<string> {

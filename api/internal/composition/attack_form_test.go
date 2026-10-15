@@ -20,7 +20,7 @@ func TestAttackForm_PersistsAcrossRestartAndMatchesTheAttack(t *testing.T) {
 	dsn := filepath.Join(t.TempDir(), "critical.db")
 	seeds := filepath.Join("..", "..", "testdata", "seeds")
 	open := func(dice composition.Dice) *composition.BackingServices {
-		bs, err := composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seeds, Dice: dice})
+		bs, err := composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seeds, Catalogue: filepath.Join("..", "..", "testdata", "catalogue.json"), Dice: dice})
 		require.NoError(t, err)
 		return bs
 	}

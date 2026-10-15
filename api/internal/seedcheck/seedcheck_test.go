@@ -1,8 +1,13 @@
 // Package seedcheck holds the integrity tests for the repo's real seeds/
-// directory. They check only that the data is well formed (it loads, it
-// matches the formats the adapters parse, references resolve). They assert no
-// campaign values: editing a name, a stat, a spell number or a table entry
-// must never break them. Every other test uses api/testdata/seeds.
+// directory and the real spell catalogue artifact (.catalogue/catalogue.json,
+// fetched by `just catalogue`). They check only that the data is well formed
+// (it loads, it matches the formats the adapters parse, references resolve).
+// They assert no campaign values: editing a name, a stat, a spell number or a
+// table entry must never break them. Every other test uses api/testdata.
+//
+// The real seeds refer to spells only the real catalogue holds, so every test
+// that needs spells is skipped when the artifact is absent (CI has no access
+// to the private rulebooks repo; it runs on the fixture elsewhere).
 package seedcheck_test
 
 import (
@@ -19,15 +24,31 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/composition"
-	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
+	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-var seedsDir = filepath.Join("..", "..", "..", "seeds")
+var (
+	seedsDir      = filepath.Join("..", "..", "..", "seeds")
+	catalogueFile = filepath.Join("..", "..", "..", ".catalogue", "catalogue.json")
+)
+
+// realCatalogue loads the real artifact, or skips the test without it.
+func realCatalogue(t *testing.T) catalogue.Catalogue {
+	t.Helper()
+	if _, err := os.Stat(catalogueFile); err != nil {
+		t.Skipf("no real spell catalogue at %s (run `just catalogue`): %v", catalogueFile, err)
+	}
+	c, err := catalogueadpt.Load(catalogueFile)
+	require.NoError(t, err)
+	return c
+}
 
 func readJSON(t *testing.T, name string, into any) {
 	t.Helper()
@@ -37,10 +58,12 @@ func readJSON(t *testing.T, name string, into any) {
 }
 
 func TestRepoSeeds_BootTheWholeStack(t *testing.T) {
+	realCatalogue(t)
 	ctx := context.Background()
 	bs, err := composition.New(ctx, composition.Config{
-		DSN:      filepath.Join(t.TempDir(), "critical.db"),
-		SeedsDir: seedsDir,
+		DSN:       filepath.Join(t.TempDir(), "critical.db"),
+		SeedsDir:  seedsDir,
+		Catalogue: catalogueFile,
 	})
 	require.NoError(t, err, "seeds load, migrate and parse")
 	t.Cleanup(func() { _ = bs.Close(ctx) })
@@ -48,27 +71,23 @@ func TestRepoSeeds_BootTheWholeStack(t *testing.T) {
 	char, err := bs.Character.GetCharacter(ctx, bs.CharacterID)
 	require.NoError(t, err)
 	assert.NotEmpty(t, char.Name)
+	page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
+	require.NoError(t, err)
+	assert.Equal(t, len(realCatalogue(t).Spells), page.Total, "every catalogue spell is served")
 	weapons, err := bs.Combat.ListWeapons(ctx)
 	require.NoError(t, err)
 	assert.NotEmpty(t, weapons)
 }
 
-type spell struct {
-	Name  string `json:"name"`
-	Class string `json:"class"`
-	Level int    `json:"level"`
-}
-
 func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
-	var spells []spell
-	readJSON(t, "spells.json", &spells)
+	cat := realCatalogue(t)
 	effects, err := spelleffectsadpt.New(seedsDir)
 	require.NoError(t, err)
 
 	wizard := map[string]int{}
-	for _, s := range spells {
+	for _, s := range cat.Spells {
 		if s.Class == "Wizard" {
-			wizard[spelleffectsvc.Slug(s.Name)] = s.Level
+			wizard[s.ID] = s.Level
 		}
 	}
 	require.NotEmpty(t, wizard)
@@ -80,12 +99,12 @@ func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
 	}
 	for _, e := range effects.All() {
 		_, ok := wizard[e.ID]
-		assert.True(t, ok, "effect %s is not a Wizard spell in spells.json", e.ID)
+		assert.True(t, ok, "effect %s is not a Wizard spell of the catalogue", e.ID)
 	}
 }
 
 func TestRepoSeeds_SpellbookSpellsResolve(t *testing.T) {
-	book, err := spellbookadpt.New(seedsDir)
+	book, err := spellbookadpt.New(seedsDir, realCatalogue(t))
 	require.NoError(t, err, "spellbook ids/levels match the catalog")
 	effects, err := spelleffectsadpt.New(seedsDir)
 	require.NoError(t, err)
@@ -119,42 +138,11 @@ func TestRepoSeeds_ItemsReferenceRealWeapons(t *testing.T) {
 	}
 }
 
-// catalogSpell is the full seeds/spells.json row; every stat is a string.
-type catalogSpell struct {
-	Name         string `json:"name"`
-	Class        string `json:"class"`
-	Level        int    `json:"level"`
-	School       string `json:"school"`
-	Sphere       string `json:"sphere"`
-	CastingTime  string `json:"casting_time"`
-	Range        string `json:"range"`
-	Duration     string `json:"duration"`
-	AreaOfEffect string `json:"area_of_effect"`
-	Components   string `json:"components"`
-	SavingThrow  string `json:"saving_throw"`
-	Description  string `json:"description"`
-}
-
-// TestRepoSeeds_SpellKeysAreUnique applies the catalog key rule
-// (spellsvc.Keys): no two spells of the catalog may share a key.
-func TestRepoSeeds_SpellKeysAreUnique(t *testing.T) {
-	var spells []catalogSpell
-	readJSON(t, "spells.json", &spells)
-	refs := make([]spellsvc.Ref, len(spells))
-	for i, s := range spells {
-		refs[i] = spellsvc.Ref{Name: s.Name, Class: s.Class, Level: s.Level}
-	}
-	seen := map[string]string{}
-	for i, k := range spellsvc.Keys(refs) {
-		s := spells[i]
-		assert.NotContains(t, seen, k, "%s %s (level %d) collides with %s", s.Class, s.Name, s.Level, seen[k])
-		seen[k] = s.Class + " " + s.Name
-	}
-}
-
+// TestRepoSeeds_SpellCatalogInvariants checks what the schema cannot: the
+// raw stat texts hold no glued field labels or leaked prose, Priest spells
+// have a sphere, and no (name, class, level) appears twice.
 func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
-	var spells []catalogSpell
-	readJSON(t, "spells.json", &spells)
+	spells := realCatalogue(t).Spells
 	require.NotEmpty(t, spells)
 
 	// A field label ("Range:", "Component: V"), a half-decoded fraction ("_")
@@ -206,7 +194,7 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 // text. Two groups: prose the book gives instead of a measurable value, and
 // "Special (...)" texts that keep their number in the parsed Time but stay
 // special because the book says so. Any other non-literal fallback to
-// special in seeds/spells.json fails the test, so a new stat form must get a
+// special in the catalogue fails the test, so a new stat form must get a
 // parser (or an entry here, on purpose).
 var specialAllowed = map[string]map[string]bool{
 	"casting_time": {"Special (8 turns)": true, "Special + 1": true},
@@ -234,16 +222,7 @@ const specialAllowedCount = 22
 // "Special" or it is in the allow-list above, whose size is pinned. It
 // asserts no values.
 func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
-	var spells []struct {
-		Name         string `json:"name"`
-		CastingTime  string `json:"casting_time"`
-		Range        string `json:"range"`
-		Duration     string `json:"duration"`
-		AreaOfEffect string `json:"area_of_effect"`
-		Components   string `json:"components"`
-		SavingThrow  string `json:"saving_throw"`
-	}
-	readJSON(t, "spells.json", &spells)
+	spells := realCatalogue(t).Spells
 	require.NotEmpty(t, spells)
 
 	allowedSeen := 0
@@ -270,5 +249,71 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 		assert.NotEmpty(t, stats.Components.Raw, sp.Name)
 		assert.True(t, stats.Components.V || stats.Components.S || stats.Components.M, "%s: components %q", sp.Name, sp.Components)
 	}
-	assert.Equal(t, specialAllowedCount, allowedSeen, "allow-listed special fields in the seed")
+	assert.Equal(t, specialAllowedCount, allowedSeen, "allow-listed special fields in the catalogue")
+}
+
+// TestRealCatalogue_UpgradesACopyOfALiveDatabase imports the real catalogue
+// into a copy of the database named by CRITICAL_UPGRADE_CHECK_DB (e.g. the
+// dev database, .dev/critical.db), the way a restart of that database would:
+// migrations, then ADR 0021 step 5 with the real seeds. The import must pass
+// (the backfilled keys match the artifact, nothing referenced is removed)
+// and afterwards every spell id the seeds and the game state hold resolves.
+// The database itself is only read. Skipped unless the variable is set.
+func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
+	src := os.Getenv("CRITICAL_UPGRADE_CHECK_DB")
+	if src == "" {
+		t.Skip("set CRITICAL_UPGRADE_CHECK_DB to a database file to check its upgrade")
+	}
+	cat := realCatalogue(t)
+	dst := filepath.Join(t.TempDir(), "copy.db")
+	for _, suffix := range []string{"", "-wal"} {
+		raw, err := os.ReadFile(filepath.Clean(src + suffix))
+		if suffix != "" && os.IsNotExist(err) {
+			continue
+		}
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(dst+suffix, raw, 0o600))
+	}
+
+	ctx := context.Background()
+	bs, err := composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
+	require.NoError(t, err, "the live database upgrades")
+	page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
+	require.NoError(t, err)
+	assert.Equal(t, len(cat.Spells), page.Total, "every catalogue spell is served")
+	require.NoError(t, bs.Close(ctx))
+
+	db, err := sqlite.Open(dst)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	refs, err := sqlite.StateSpellRefs(ctx, db)
+	require.NoError(t, err)
+	book, err := spellbookadpt.New(seedsDir, cat)
+	require.NoError(t, err)
+	for _, e := range book.All() {
+		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spellbook seed"})
+	}
+	ids := cat.ByID()
+	for _, r := range refs {
+		var n int
+		require.NoError(t, db.QueryRowContext(ctx, "SELECT COUNT(*) FROM spells WHERE key = ?", r.ID).Scan(&n))
+		_, inArtifact := ids[r.ID]
+		assert.True(t, n == 1 && inArtifact, "%s (%s) resolves", r.ID, r.Where)
+	}
+	t.Logf("%d spell references in the seeds and the game state, all resolved", len(refs))
+}
+
+// The web's list of PHB spell ids (web/src/i18n/phbSpellIds.json, the ids
+// the fr spell names cover) names catalogue spells only.
+func TestRealCatalogue_WebPHBSpellIdsAreCatalogueSpells(t *testing.T) {
+	ids := realCatalogue(t).ByID()
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "i18n", "phbSpellIds.json"))
+	require.NoError(t, err)
+	var phb []string
+	require.NoError(t, json.Unmarshal(raw, &phb))
+	require.NotEmpty(t, phb)
+	for _, id := range phb {
+		_, ok := ids[id]
+		assert.True(t, ok, "%s is not a catalogue spell", id)
+	}
 }

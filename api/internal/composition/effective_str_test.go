@@ -71,9 +71,10 @@ func newStrStack(t *testing.T) *strStack {
 	dice := newScriptedDice(t)
 	ctx := context.Background()
 	bs, err := composition.New(ctx, composition.Config{
-		DSN:      filepath.Join(t.TempDir(), "critical.db"),
-		SeedsDir: filepath.Join("..", "..", "testdata", "seeds"),
-		Dice:     dice,
+		DSN:       filepath.Join(t.TempDir(), "critical.db"),
+		SeedsDir:  filepath.Join("..", "..", "testdata", "seeds"),
+		Catalogue: filepath.Join("..", "..", "testdata", "catalogue.json"),
+		Dice:      dice,
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = bs.Close(ctx) })

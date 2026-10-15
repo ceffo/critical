@@ -36,20 +36,24 @@ func (mods SpellModSlice) Apply(ctx context.Context, n *SpellTemplate) {
 // SpellTemplate is an object representing the database table.
 // all columns are optional and should be set by mods
 type SpellTemplate struct {
-	ID           func() int64
-	Name         func() string
-	Class        func() string
-	Level        func() int64
-	School       func() null.Val[string]
-	Sphere       func() null.Val[string]
-	CastingTime  func() null.Val[string]
-	Range        func() null.Val[string]
-	Duration     func() null.Val[string]
-	AreaOfEffect func() null.Val[string]
-	Components   func() null.Val[string]
-	SavingThrow  func() null.Val[string]
-	Description  func() null.Val[string]
-	Stats        func() null.Val[string]
+	ID            func() int64
+	Name          func() string
+	Class         func() string
+	Level         func() int64
+	School        func() null.Val[string]
+	Sphere        func() null.Val[string]
+	CastingTime   func() null.Val[string]
+	Range         func() null.Val[string]
+	Duration      func() null.Val[string]
+	AreaOfEffect  func() null.Val[string]
+	Components    func() null.Val[string]
+	SavingThrow   func() null.Val[string]
+	Description   func() null.Val[string]
+	Stats         func() null.Val[string]
+	Key           func() null.Val[string]
+	NameFR        func() null.Val[string]
+	DescriptionFR func() null.Val[string]
+	Source        func() null.Val[string]
 
 	f *Factory
 
@@ -128,6 +132,22 @@ func (o SpellTemplate) BuildSetter() *models.SpellSetter {
 		val := o.Stats()
 		m.Stats = omitnull.FromNull(val)
 	}
+	if o.Key != nil {
+		val := o.Key()
+		m.Key = omitnull.FromNull(val)
+	}
+	if o.NameFR != nil {
+		val := o.NameFR()
+		m.NameFR = omitnull.FromNull(val)
+	}
+	if o.DescriptionFR != nil {
+		val := o.DescriptionFR()
+		m.DescriptionFR = omitnull.FromNull(val)
+	}
+	if o.Source != nil {
+		val := o.Source()
+		m.Source = omitnull.FromNull(val)
+	}
 
 	return m
 }
@@ -191,6 +211,18 @@ func (o SpellTemplate) Build() *models.Spell {
 	}
 	if o.Stats != nil {
 		m.Stats = o.Stats()
+	}
+	if o.Key != nil {
+		m.Key = o.Key()
+	}
+	if o.NameFR != nil {
+		m.NameFR = o.NameFR()
+	}
+	if o.DescriptionFR != nil {
+		m.DescriptionFR = o.DescriptionFR()
+	}
+	if o.Source != nil {
+		m.Source = o.Source()
 	}
 
 	o.setModelRels(m)
@@ -354,6 +386,10 @@ func (m spellMods) RandomizeAllColumns(f *faker.Faker) SpellMod {
 		SpellMods.RandomSavingThrow(f),
 		SpellMods.RandomDescription(f),
 		SpellMods.RandomStats(f),
+		SpellMods.RandomKey(f),
+		SpellMods.RandomNameFR(f),
+		SpellMods.RandomDescriptionFR(f),
+		SpellMods.RandomSource(f),
 	}
 }
 
@@ -1001,6 +1037,218 @@ func (m spellMods) RandomStats(f *faker.Faker) SpellMod {
 func (m spellMods) RandomStatsNotNull(f *faker.Faker) SpellMod {
 	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
 		o.Stats = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m spellMods) Key(val null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Key = func() null.Val[string] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m spellMods) KeyFunc(f func() null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Key = f
+	})
+}
+
+// Clear any values for the column
+func (m spellMods) UnsetKey() SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Key = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m spellMods) RandomKey(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Key = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m spellMods) RandomKeyNotNull(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Key = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m spellMods) NameFR(val null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.NameFR = func() null.Val[string] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m spellMods) NameFRFunc(f func() null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.NameFR = f
+	})
+}
+
+// Clear any values for the column
+func (m spellMods) UnsetNameFR() SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.NameFR = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m spellMods) RandomNameFR(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.NameFR = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m spellMods) RandomNameFRNotNull(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.NameFR = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m spellMods) DescriptionFR(val null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.DescriptionFR = func() null.Val[string] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m spellMods) DescriptionFRFunc(f func() null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.DescriptionFR = f
+	})
+}
+
+// Clear any values for the column
+func (m spellMods) UnsetDescriptionFR() SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.DescriptionFR = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m spellMods) RandomDescriptionFR(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.DescriptionFR = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m spellMods) RandomDescriptionFRNotNull(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.DescriptionFR = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m spellMods) Source(val null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Source = func() null.Val[string] { return val }
+	})
+}
+
+// Set the Column from the function
+func (m spellMods) SourceFunc(f func() null.Val[string]) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Source = f
+	})
+}
+
+// Clear any values for the column
+func (m spellMods) UnsetSource() SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Source = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is sometimes null
+func (m spellMods) RandomSource(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Source = func() null.Val[string] {
+			if f == nil {
+				f = &defaultFaker
+			}
+
+			val := random_string(f)
+			return null.From(val)
+		}
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+// The generated value is never null
+func (m spellMods) RandomSourceNotNull(f *faker.Faker) SpellMod {
+	return SpellModFunc(func(_ context.Context, o *SpellTemplate) {
+		o.Source = func() null.Val[string] {
 			if f == nil {
 				f = &defaultFaker
 			}

@@ -7,8 +7,12 @@ services:
       - "8888:8080"
     environment:
       CRITICAL_DSN: /data/critical.db
+      # The spell catalogue artifact (ADR 0021), fetched by `just catalogue`; the API refuses to start
+      # without it.
+      CRITICAL_CATALOGUE: /app/.catalogue/catalogue.json
     volumes:
       - ./seeds:/app/seeds:ro
+      - ./.catalogue:/app/.catalogue:ro
       - critical-data:/data
     restart: unless-stopped
 

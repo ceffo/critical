@@ -26,6 +26,9 @@ var _ bob.HookableType = &AttackForm{}
 // Make sure the type BardSkill runs hooks after queries
 var _ bob.HookableType = &BardSkill{}
 
+// Make sure the type CatalogueMetum runs hooks after queries
+var _ bob.HookableType = &CatalogueMetum{}
+
 // Make sure the type Character runs hooks after queries
 var _ bob.HookableType = &Character{}
 

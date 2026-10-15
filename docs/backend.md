@@ -6,7 +6,8 @@
 - **HTTP**: standard `net/http` or `chi` router
 - **Database**: SQLite via `modernc.org/sqlite` (pure Go, no CGO). `sqlite.Open` sets `busy_timeout=5000` on every pooled connection and `journal_mode=WAL` for file-backed DBs (WAL adds `-wal`/`-shm` files beside the DB). It also sets `_txlock=immediate`: every transaction (`WrapTx`/`InTx`) begins with `BEGIN IMMEDIATE` and takes the write lock up front. A deferred read-then-write transaction (the action stack's expected-top check, then its pop) would otherwise fail at once with `SQLITE_BUSY_SNAPSHOT` (a 500) when another writer commits in between; with the lock taken first the second writer waits, then sees the first one's result and is refused as a normal 409. Write paths must go through a transaction, never read-then-write on the bare pool.
 - **Migrations**: simple sequential SQL files, applied at startup
-- **Seed loader**: reads `seeds/*.json` at startup if corresponding table is empty
+- **Seed loader**: reads `seeds/*.json` at startup if corresponding table is empty; spells come from the
+  catalogue artifact instead ("Spell catalogue" below)
 
 ## Project Structure (api/)
 
@@ -213,19 +214,51 @@ type RollResult struct {
 
 ## Seed Loader Pattern
 
-Spells are leaving `seeds/`: they move to the versioned catalogue artifact, fetched with `just catalogue` and
-imported at startup ([ADR 0021](adr/0021-spell-catalogue.md)). `seeds/spells.json` is retired when the importer
-lands; the other seed files below still load as described.
-
-At startup, for each seed file:
+At startup, for each seed file (character, weapons, items: only into an empty table; skills: reconciled
+by id):
 ```go
 // Check if table is empty, if so load from seeds/
 var count int
-db.QueryRow("SELECT COUNT(*) FROM spells").Scan(&count)
+db.QueryRow("SELECT COUNT(*) FROM weapons").Scan(&count)
 if count == 0 {
-    loadSeedsFromFile("seeds/spells.json", db)
+    loadSeedsFromFile("seeds/weapons.json", db)
 }
 ```
+
+## Spell catalogue
+
+Spells are not seeds: they come from the versioned catalogue artifact built in the private rulebooks repo
+([ADR 0021](adr/0021-spell-catalogue.md)). The public repo never holds it.
+
+- **Getting it**: `just catalogue` clones or fast-forwards the rulebooks repo (`just rulebooks`) and copies
+  its `dist/catalogue.json` (at `CATALOGUE_REF`, default the checked-out branch) to the gitignored
+  `.catalogue/catalogue.json`. Never part of `just validate`.
+- **Config**: `CRITICAL_CATALOGUE`, default `.catalogue/catalogue.json`; a relative path is resolved against
+  the repo root (the nearest directory above the working directory with a `.git` entry; outside a checkout,
+  against the working directory). A missing file stops the API with a message naming the path and
+  `just catalogue`.
+- **Without access**: `api/testdata/catalogue.json` is a small fixture in the same format with invented text
+  (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
+  table). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds`, when
+  `.catalogue/catalogue.json` is absent (the campaign seeds refer to spells only the real artifact holds).
+- **Import** (`catalogueadpt` reads and validates against the embedded copy of
+  `schemas/catalogue.schema.json`, kept identical by a test; `sqlite.ImportCatalogue` imports): same
+  version as recorded in `catalogue_meta` → no writes; otherwise one transaction keys old rows (first
+  import on a database seeded before the catalogue: `spellsvc.Keys`, verified against the artifact),
+  upserts every spell by `spells.key`, deletes the spells the artifact dropped unless the seeds or the game
+  state (slots, undo snapshots, log payloads) refer to them, and records the version. Each step and its test
+  are in ADR 0021 step 5.
+- **Columns**: `spells.key` (the artifact id, unique; NULL on older duplicate rows, never served),
+  `name`/`description` (English), `name_fr`/`description_fr` (NULL without a French text), `source`, the six
+  raw stat texts and their typed `stats` JSON.
+- **REST**: spell payloads carry `name`, `description`, `name_fr` and `description_fr` (both omitted when
+  the catalogue has no French text: the client shows French when present and falls back to English per
+  field) and `source`. Descriptions are in the catalogue's Markdown subset (paragraphs, `- ` lists, pipe
+  tables).
+- **Checking a live database**: `CRITICAL_UPGRADE_CHECK_DB=<path to .db> go test -count=1 -run
+  TestRealCatalogue_UpgradesACopyOfALiveDatabase ./internal/seedcheck` (from `api/`, with the real
+  artifact fetched) imports the catalogue into a copy of that database and checks every reference resolves.
+  The database is only read.
 
 ## Rule-table seeds
 

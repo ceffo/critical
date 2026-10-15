@@ -92,7 +92,10 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 // Uses bob's model query builder because the WHERE conditions are dynamic.
 func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
 	where := bobmodels.SelectWhere.Spells
-	mods := make([]bob.Mod[*dialect.SelectQuery], 0, 5)
+	// Rows without a key are older duplicates the catalogue import left in
+	// place (ADR 0021 step 5.4.1): never served.
+	mods := make([]bob.Mod[*dialect.SelectQuery], 0, 6)
+	mods = append(mods, where.Key.IsNotNull())
 	if f.Class != "" {
 		mods = append(mods, where.Class.Like(f.Class)) // LIKE without wildcards: case-insensitive equality
 	}
@@ -113,62 +116,28 @@ func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, 
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}
-	keys, err := d.catalogKeys(ctx)
-	if err != nil {
-		return nil, err
-	}
 	spells := make([]spellsvc.Spell, 0, len(rows))
 	for _, r := range rows {
-		sp := toSpell(r)
-		sp.ID = keys[r.ID]
-		spells = append(spells, sp)
+		spells = append(spells, toSpell(r))
 	}
 	return spells, nil
 }
 
-// catalogKeys maps every row id to the spell's unique key (spellsvc.Keys).
-// The table holds under a thousand static rows, so it reads them all.
-func (d *DAL) catalogKeys(ctx context.Context) (map[int64]string, error) {
-	rows, err := bobmodels.Spells.Query(sm.OrderBy(bobmodels.Spells.Columns.ID)).All(ctx, d.exec(ctx))
-	if err != nil {
-		return nil, fmt.Errorf("query spell keys: %w", err)
-	}
-	refs := make([]spellsvc.Ref, len(rows))
-	for i, r := range rows {
-		refs[i] = spellsvc.Ref{Name: r.Name, Class: r.Class, Level: int(r.Level)}
-	}
-	keys := spellsvc.Keys(refs)
-	out := make(map[int64]string, len(rows))
-	for i, r := range rows {
-		out[r.ID] = keys[i]
-	}
-	return out, nil
-}
-
-// Describe finds the spell whose unique key (spellsvc.Keys) is spellID.
+// Describe finds the spell whose catalogue key is spellID.
 func (d *DAL) Describe(ctx context.Context, spellID string) (spellsvc.Spell, bool, error) {
-	keys, err := d.catalogKeys(ctx)
+	r, err := bobmodels.Spells.Query(bobmodels.SelectWhere.Spells.Key.EQ(spellID)).One(ctx, d.exec(ctx))
+	if errors.Is(err, sql.ErrNoRows) {
+		return spellsvc.Spell{}, false, nil
+	}
 	if err != nil {
-		return spellsvc.Spell{}, false, err
+		return spellsvc.Spell{}, false, fmt.Errorf("query spell: %w", err)
 	}
-	rows, err := bobmodels.Spells.Query().All(ctx, d.exec(ctx))
-	if err != nil {
-		return spellsvc.Spell{}, false, fmt.Errorf("query spells: %w", err)
-	}
-	for _, r := range rows {
-		if keys[r.ID] == spellID {
-			sp := toSpell(r)
-			sp.ID = spellID
-			return sp, true, nil
-		}
-	}
-	return spellsvc.Spell{}, false, nil
+	return toSpell(r), true, nil
 }
 
 func toSpell(r *bobmodels.Spell) spellsvc.Spell {
 	sp := toSpellText(r)
-	// stats is filled at seed time (and backfilled for older databases); a row
-	// without it, or with unreadable JSON, is parsed again from its raw text.
+	// stats is filled at import; a row without it, or with unreadable JSON, is parsed again from its raw text.
 	if blob := r.Stats.GetOrZero(); blob == "" || json.Unmarshal([]byte(blob), &sp.Stats) != nil {
 		sp.Stats = spellstats.Parse(spellstats.Raw{
 			CastingTime: sp.CastingTime, Range: sp.Range, Duration: sp.Duration,
@@ -180,15 +149,17 @@ func toSpell(r *bobmodels.Spell) spellsvc.Spell {
 
 func toSpellText(r *bobmodels.Spell) spellsvc.Spell {
 	return spellsvc.Spell{
-		Name: r.Name, Class: r.Class, Level: int(r.Level),
-		School:       r.School.GetOrZero(),
-		Sphere:       r.Sphere.GetOrZero(),
-		CastingTime:  r.CastingTime.GetOrZero(),
-		Range:        r.Range.GetOrZero(),
-		Duration:     r.Duration.GetOrZero(),
-		AreaOfEffect: r.AreaOfEffect.GetOrZero(),
-		Components:   r.Components.GetOrZero(),
-		SavingThrow:  r.SavingThrow.GetOrZero(),
-		Description:  r.Description.GetOrZero(),
+		ID: r.Key.GetOrZero(), Name: r.Name, NameFR: r.NameFR.GetOrZero(), Class: r.Class, Level: int(r.Level),
+		School:        r.School.GetOrZero(),
+		Sphere:        r.Sphere.GetOrZero(),
+		CastingTime:   r.CastingTime.GetOrZero(),
+		Range:         r.Range.GetOrZero(),
+		Duration:      r.Duration.GetOrZero(),
+		AreaOfEffect:  r.AreaOfEffect.GetOrZero(),
+		Components:    r.Components.GetOrZero(),
+		SavingThrow:   r.SavingThrow.GetOrZero(),
+		Description:   r.Description.GetOrZero(),
+		DescriptionFR: r.DescriptionFR.GetOrZero(),
+		Source:        r.Source.GetOrZero(),
 	}
 }

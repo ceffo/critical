@@ -1,13 +1,12 @@
 // Package cataloguecheck holds the tests of the spell catalogue artifact's
 // JSON Schema (ADR 0021): the schema compiles with the Go engine the importer
-// uses, accepts the testdata spells converted to the artifact shape, and
-// enforces the description subset.
+// uses, accepts the fixture api/testdata/catalogue.json, and enforces the
+// description subset; the fixture covers what CI and e2e need.
 package cataloguecheck_test
 
 import (
 	"encoding/json"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -47,37 +46,84 @@ func withDesc(en string) map[string]any {
 	return artifact(spell("a", map[string]any{"en": en}))
 }
 
-// TestSchema_TestdataSpellsConvertedToArtifact: every spell of the testdata
-// seed, converted to the artifact shape, is valid.
-func TestSchema_TestdataSpellsConvertedToArtifact(t *testing.T) {
+// TestSchema_FixtureIsValid: the fixture CI and e2e run on is a valid artifact.
+func TestSchema_FixtureIsValid(t *testing.T) {
 	sch := compile(t)
-	raw, err := os.ReadFile("../../testdata/seeds/spells.json")
+	f, err := os.Open("../../testdata/catalogue.json")
 	require.NoError(t, err)
-	var seeds []map[string]any
-	require.NoError(t, json.Unmarshal(raw, &seeds))
-	require.NotEmpty(t, seeds)
+	defer func() { _ = f.Close() }()
+	doc, err := jsonschema.UnmarshalJSON(f)
+	require.NoError(t, err)
+	assert.NoError(t, sch.Validate(doc))
+}
 
-	ws := regexp.MustCompile(`\s+`)
-	var spells []any
-	for i, s := range seeds {
-		str := func(k string) string { v, _ := s[k].(string); return v }
-		class, _ := s["class"].(string)
-		level, _ := s["level"].(float64)
-		school := str("school")
-		if school == "" { // one fixture spell has no school; the artifact requires one
-			school = "Unknown"
-		}
-		m := spell("id_"+strings.Repeat("a", i+1), map[string]any{"en": strings.TrimSpace(ws.ReplaceAllString(str("description"), " "))})
-		m["class"], m["level"], m["school"], m["name"] = class, int(level), school, map[string]any{"en": str("name")}
-		for _, k := range []string{"casting_time", "range", "duration", "area_of_effect", "components", "saving_throw"} {
-			m[k] = str(k)
-		}
-		if sp := str("sphere"); sp != "" {
-			m["sphere"] = sp
-		}
-		spells = append(spells, m)
+type fixtureSpell struct {
+	ID          string            `json:"id"`
+	Name        map[string]string `json:"name"`
+	Description map[string]string `json:"description"`
+}
+
+func readFixture(t *testing.T) []fixtureSpell {
+	t.Helper()
+	raw, err := os.ReadFile("../../testdata/catalogue.json")
+	require.NoError(t, err)
+	var a struct {
+		Spells []fixtureSpell `json:"spells"`
 	}
-	assert.NoError(t, sch.Validate(artifact(spells...)))
+	require.NoError(t, json.Unmarshal(raw, &a))
+	require.NotEmpty(t, a.Spells)
+	return a.Spells
+}
+
+// TestFixture_HoldsEveryReferencedSpell (ADR 0021 step 4): every spell id the
+// testdata spellbook and spell effects refer to is in the fixture, so the
+// e2e suite and the service tests resolve them without the private artifact.
+func TestFixture_HoldsEveryReferencedSpell(t *testing.T) {
+	ids := map[string]bool{}
+	for _, s := range readFixture(t) {
+		ids[s.ID] = true
+	}
+	for _, file := range []string{"spellbook.json", "spell_effects.json"} {
+		raw, err := os.ReadFile("../../testdata/seeds/" + file) //nolint:gosec // fixed test paths
+		require.NoError(t, err)
+		var refs []struct {
+			ID string `json:"id"`
+		}
+		require.NoError(t, json.Unmarshal(raw, &refs))
+		require.NotEmpty(t, refs, file)
+		for _, r := range refs {
+			assert.True(t, ids[r.ID], "%s refers to %s, which the fixture lacks", file, r.ID)
+		}
+	}
+}
+
+// TestFixture_CoversTheFormat: some spells have French texts and some do not,
+// one description has a bullet list and one a table; every description is
+// invented placeholder text, never book text.
+func TestFixture_CoversTheFormat(t *testing.T) {
+	var withFR, withoutFR, lists, tables int
+	for _, s := range readFixture(t) {
+		if s.Name["fr"] != "" {
+			withFR++
+			assert.NotEmpty(t, s.Description["fr"], "%s: a French name comes with a French description", s.ID)
+		} else {
+			withoutFR++
+		}
+		if strings.Contains(s.Description["en"], "\n- ") {
+			lists++
+		}
+		if strings.Contains(s.Description["en"], "\n| --- |") {
+			tables++
+		}
+		assert.True(t, strings.HasPrefix(s.Description["en"], "Fixture text for "), "%s: invented text only", s.ID)
+		if fr := s.Description["fr"]; fr != "" {
+			assert.True(t, strings.HasPrefix(fr, "Texte de test pour "), "%s: invented French text only", s.ID)
+		}
+	}
+	assert.Positive(t, withFR)
+	assert.Positive(t, withoutFR)
+	assert.Positive(t, lists, "one description with a bullet list")
+	assert.Positive(t, tables, "one description with a table")
 }
 
 func TestSchema_DescriptionSubset(t *testing.T) {

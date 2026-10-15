@@ -37,6 +37,7 @@ type DiceFavouriteTemplate struct {
 	ID          func() int64
 	CharacterID func() int64
 	Formula     func() string
+	Position    func() int64
 
 	r diceFavouriteR
 	f *Factory
@@ -88,6 +89,10 @@ func (o DiceFavouriteTemplate) BuildSetter() *models.DiceFavouriteSetter {
 		val := o.Formula()
 		m.Formula = omit.From(val)
 	}
+	if o.Position != nil {
+		val := o.Position()
+		m.Position = omit.From(val)
+	}
 
 	return m
 }
@@ -118,6 +123,9 @@ func (o DiceFavouriteTemplate) Build() *models.DiceFavourite {
 	}
 	if o.Formula != nil {
 		m.Formula = o.Formula()
+	}
+	if o.Position != nil {
+		m.Position = o.Position()
 	}
 
 	o.setModelRels(m)
@@ -296,6 +304,7 @@ func (m diceFavouriteMods) RandomizeAllColumns(f *faker.Faker) DiceFavouriteMod 
 		DiceFavouriteMods.RandomID(f),
 		DiceFavouriteMods.RandomCharacterID(f),
 		DiceFavouriteMods.RandomFormula(f),
+		DiceFavouriteMods.RandomPosition(f),
 	}
 }
 
@@ -388,6 +397,37 @@ func (m diceFavouriteMods) RandomFormula(f *faker.Faker) DiceFavouriteMod {
 	return DiceFavouriteModFunc(func(_ context.Context, o *DiceFavouriteTemplate) {
 		o.Formula = func() string {
 			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m diceFavouriteMods) Position(val int64) DiceFavouriteMod {
+	return DiceFavouriteModFunc(func(_ context.Context, o *DiceFavouriteTemplate) {
+		o.Position = func() int64 { return val }
+	})
+}
+
+// Set the Column from the function
+func (m diceFavouriteMods) PositionFunc(f func() int64) DiceFavouriteMod {
+	return DiceFavouriteModFunc(func(_ context.Context, o *DiceFavouriteTemplate) {
+		o.Position = f
+	})
+}
+
+// Clear any values for the column
+func (m diceFavouriteMods) UnsetPosition() DiceFavouriteMod {
+	return DiceFavouriteModFunc(func(_ context.Context, o *DiceFavouriteTemplate) {
+		o.Position = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m diceFavouriteMods) RandomPosition(f *faker.Faker) DiceFavouriteMod {
+	return DiceFavouriteModFunc(func(_ context.Context, o *DiceFavouriteTemplate) {
+		o.Position = func() int64 {
+			return random_int64(f)
 		}
 	})
 }

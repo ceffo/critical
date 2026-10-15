@@ -68,3 +68,36 @@ func TestInsert_RefusesTheSameFormulaTwice(t *testing.T) {
 	_, err = dal.Insert(ctx, 2, "d20")
 	require.NoError(t, err, "another character may save it")
 }
+
+func TestFavourites_NewOnesGoLastAndSetPositionReorders(t *testing.T) {
+	dal := open(t)
+	ctx := context.Background()
+	a, err := dal.Insert(ctx, 1, "d4")
+	require.NoError(t, err)
+	b, err := dal.Insert(ctx, 1, "d6")
+	require.NoError(t, err)
+	c, err := dal.Insert(ctx, 1, "d8")
+	require.NoError(t, err)
+
+	// Deleting the first leaves a gap in the positions: a new one is still last.
+	_, err = dal.Delete(ctx, 1, a)
+	require.NoError(t, err)
+	d, err := dal.Insert(ctx, 1, "d10")
+	require.NoError(t, err)
+	got, err := dal.List(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, []dicesvc.Favourite{{ID: b, Formula: "d6"}, {ID: c, Formula: "d8"}, {ID: d, Formula: "d10"}}, got)
+
+	for i, id := range []int64{d, b, c} {
+		ok, err := dal.SetPosition(ctx, 1, id, int64(i+1))
+		require.NoError(t, err)
+		assert.True(t, ok)
+	}
+	got, err = dal.List(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, []dicesvc.Favourite{{ID: d, Formula: "d10"}, {ID: b, Formula: "d6"}, {ID: c, Formula: "d8"}}, got)
+
+	ok, err := dal.SetPosition(ctx, 2, b, 1)
+	require.NoError(t, err)
+	assert.False(t, ok, "another character's favourite is out of reach")
+}

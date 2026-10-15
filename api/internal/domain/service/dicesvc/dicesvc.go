@@ -30,8 +30,8 @@ type SVC interface {
 	// log, in one transaction. An invalid formula is a domain.FieldError on
 	// "formula" and nothing is rolled.
 	Roll(ctx context.Context, characterID int64, formula string) (*Result, error)
-	// Favourites returns the character's favourites in the order they were
-	// saved.
+	// Favourites returns the character's favourites in the user's order: the
+	// order they were saved in until ReorderFavourites sets another.
 	Favourites(ctx context.Context, characterID int64) ([]Favourite, error)
 	// AddFavourite saves the formula in its normal form. Saving a formula
 	// already saved returns the existing favourite. Beyond MaxFavourites it
@@ -40,6 +40,10 @@ type SVC interface {
 	// DeleteFavourite removes a favourite; an unknown id wraps
 	// domain.ErrNotFound.
 	DeleteFavourite(ctx context.Context, characterID, id int64) error
+	// ReorderFavourites sets the full order, in one transaction. ids must be
+	// exactly the character's favourite ids, each once: anything else is a
+	// domain.FieldError on "ids" and the order is unchanged.
+	ReorderFavourites(ctx context.Context, characterID int64, ids []int64) error
 }
 
 // DAL is the driven port over the favourites. Every method joins the ctx
@@ -49,6 +53,9 @@ type DAL interface {
 	Insert(ctx context.Context, characterID int64, formula string) (int64, error)
 	// Delete reports whether a row was removed.
 	Delete(ctx context.Context, characterID, id int64) (bool, error)
+	// SetPosition places a favourite in the order; it reports whether the row
+	// existed. Insert puts a new favourite after the last one.
+	SetPosition(ctx context.Context, characterID, id, position int64) (bool, error)
 }
 
 // Dice is the dice port.
@@ -214,4 +221,32 @@ func (s *service) DeleteFavourite(ctx context.Context, characterID, id int64) er
 		return fmt.Errorf("%w: favourite %d", domain.ErrNotFound, id)
 	}
 	return nil
+}
+
+func (s *service) ReorderFavourites(ctx context.Context, characterID int64, ids []int64) error {
+	return s.tx.InTx(ctx, func(ctx context.Context) error {
+		all, err := s.dal.List(ctx, characterID)
+		if err != nil {
+			return err
+		}
+		known := make(map[int64]bool, len(all))
+		for _, f := range all {
+			known[f.ID] = true
+		}
+		if len(ids) != len(all) {
+			return domain.FieldErrorf("ids", "must list each of the %d favourites once", len(all))
+		}
+		for _, id := range ids {
+			if !known[id] {
+				return domain.FieldErrorf("ids", "unknown or repeated favourite %d", id)
+			}
+			delete(known, id)
+		}
+		for i, id := range ids {
+			if _, err := s.dal.SetPosition(ctx, characterID, id, int64(i+1)); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

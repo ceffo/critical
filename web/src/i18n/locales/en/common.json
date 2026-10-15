@@ -1015,6 +1015,8 @@
     "noFavourites": "No favourite yet",
     "rollFavourite": "Roll {{formula}}",
     "removeFavourite": "Remove {{formula}} from the favourites",
+    "moveFavouriteEarlier": "Move {{formula}} earlier",
+    "moveFavouriteLater": "Move {{formula}} later",
     "result": "Dice roll",
     "modifier": "Modifier",
     "total": "Total",

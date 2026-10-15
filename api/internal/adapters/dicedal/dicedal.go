@@ -25,7 +25,7 @@ func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
 	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
 }
 
-// List returns the character's favourites, oldest first.
+// List returns the character's favourites, in the user's order.
 func (d *DAL) List(ctx context.Context, characterID int64) ([]dicesvc.Favourite, error) {
 	rows, err := queries.ListDiceFavourites(characterID).All(ctx, d.exec(ctx))
 	if err != nil {
@@ -38,10 +38,18 @@ func (d *DAL) List(ctx context.Context, characterID int64) ([]dicesvc.Favourite,
 	return out, nil
 }
 
-// Insert saves a formula and returns its id.
+// Insert saves a formula after the last favourite and returns its id.
 func (d *DAL) Insert(ctx context.Context, characterID int64, formula string) (int64, error) {
+	last, err := queries.LastDiceFavouritePosition(characterID).All(ctx, d.exec(ctx))
+	if err != nil {
+		return 0, fmt.Errorf("last dice_favourites position: %w", err)
+	}
+	var position int64 = 1
+	if len(last) > 0 {
+		position = last[0] + 1
+	}
 	id, err := queries.InsertDiceFavourite([]queries.InsertDiceFavourite_DiceFavourites{{
-		CharacterID: characterID, Formula: formula,
+		CharacterID: characterID, Formula: formula, Position: position,
 	}}).One(ctx, d.exec(ctx))
 	if err != nil {
 		return 0, fmt.Errorf("insert dice_favourites: %w", err)
@@ -54,6 +62,16 @@ func (d *DAL) Delete(ctx context.Context, characterID, id int64) (bool, error) {
 	ids, err := queries.DeleteDiceFavourite(characterID, id).All(ctx, d.exec(ctx))
 	if err != nil {
 		return false, fmt.Errorf("delete dice_favourites %d: %w", id, err)
+	}
+	return len(ids) > 0, nil
+}
+
+// SetPosition moves a favourite to the given position and reports whether it
+// existed.
+func (d *DAL) SetPosition(ctx context.Context, characterID, id, position int64) (bool, error) {
+	ids, err := queries.SetDiceFavouritePosition(position, characterID, id).All(ctx, d.exec(ctx))
+	if err != nil {
+		return false, fmt.Errorf("set dice_favourites %d position: %w", id, err)
 	}
 	return len(ids) > 0, nil
 }

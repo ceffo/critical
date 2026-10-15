@@ -26,20 +26,20 @@ export function SkillsTab() {
 
   if (!skills) return null;
   const rowClass =
-    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-neu-900 disabled:opacity-60";
+    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-2 text-left text-body hover:bg-neu-900 disabled:opacity-60";
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3">
       <section aria-labelledby="skills-proficiencies">
-        <div className={cn(rowClass, "py-1 text-xs text-muted-foreground hover:bg-transparent")}>
-          <h3 id="skills-proficiencies" className="text-sm font-medium text-foreground">
+        <div className={cn(rowClass, "py-1 text-label text-muted-foreground hover:bg-transparent")}>
+          <h3 id="skills-proficiencies" className="text-title text-foreground">
             {t("skills.proficiencies")}
           </h3>
           <span>{t("skills.columns.ability")}</span>
           <span className="text-right">{t("skills.columns.target")}</span>
           <span className="text-right">{t("skills.columns.last")}</span>
         </div>
-        <ul aria-label={t("skills.proficiencies")} className="flex flex-col gap-0.5">
+        <ul aria-label={t("skills.proficiencies")} className="flex flex-col gap-1">
           {skills.proficiencies.map((p) => {
             const name = skillName(t, p.id);
             return (
@@ -65,15 +65,15 @@ export function SkillsTab() {
         </ul>
       </section>
       <section aria-labelledby="skills-bard">
-        <div className={cn(rowClass, "py-1 text-xs text-muted-foreground hover:bg-transparent")}>
-          <h3 id="skills-bard" className="text-sm font-medium text-foreground">
+        <div className={cn(rowClass, "py-1 text-label text-muted-foreground hover:bg-transparent")}>
+          <h3 id="skills-bard" className="text-title text-foreground">
             {t("skills.bardSkills")}
           </h3>
           <span />
           <span className="text-right">{t("skills.columns.percent")}</span>
           <span className="text-right">{t("skills.columns.last")}</span>
         </div>
-        <ul aria-label={t("skills.bardSkills")} className="flex flex-col gap-0.5">
+        <ul aria-label={t("skills.bardSkills")} className="flex flex-col gap-1">
           {skills.bardSkills.map((b) => {
             const name = skillName(t, b.id);
             return (

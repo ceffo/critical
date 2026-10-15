@@ -92,7 +92,7 @@ export function ItemForm({
         className={cn("flex min-w-0 flex-col gap-1", className)}
         data-field={name}
       >
-        <label htmlFor={inputId} className="text-xs text-muted-foreground">
+        <label htmlFor={inputId} className="text-label text-muted-foreground">
           {label}
         </label>
         {input({
@@ -104,7 +104,7 @@ export function ItemForm({
           <p
             id={`${inputId}-error`}
             role="alert"
-            className="text-xs text-destructive"
+            className="text-label text-destructive"
             data-testid="field-error"
           >
             {err}

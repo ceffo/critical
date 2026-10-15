@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, DotsThree } from "@phosphor-icons/react";
+import { ArrowRight, ArrowsClockwise, DotsThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { previewPassTime } from "@/api/round";
@@ -12,14 +12,15 @@ import { fieldClass } from "./fieldStyles";
 type Mode = "menu" | "passing" | "setting" | "confirmEnd";
 
 /**
- * The turn block of the header: the turn number, the initiative row (a placeholder until
- * initiative is rolled), Next turn, and a menu with Time passes, Set turn number and End combat.
+ * The turn block of the header: the turn number, the initiative row (the server's d10 for the
+ * turn, with a reroll), Next turn, and a menu with Time passes, Set turn number and End combat.
  * Every action goes through the round endpoints and is logged server-side.
  */
 export function TurnBlock() {
   const { t } = useTranslation();
   const turn = useBuffsStore((s) => s.round);
-  const { nextRound, busy } = useTableStore();
+  const initiative = useBuffsStore((s) => s.initiative);
+  const { nextRound, rerollInitiative, busy } = useTableStore();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("menu");
 
@@ -40,11 +41,34 @@ export function TurnBlock() {
       </div>
       <div className="text-sm text-muted-foreground" data-testid="initiative-row">
         {turn === 0 ? (
-          t("turn.outOfCombat")
+          t("turn.outOfCombatInitiative")
         ) : (
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2" title={t("turn.initiativeHint")}>
             {t("turn.initiative")}
-            <span className="rounded-md bg-neu-900 px-2 tabular-nums">{t("turn.initiativeNone")}</span>
+            {initiative ? (
+              <>
+                <span
+                  className="rounded-md bg-neu-900 px-2 font-medium text-foreground tabular-nums"
+                  data-testid="initiative-value"
+                  data-entry-id={initiative.logEntryId}
+                >
+                  {initiative.value}
+                </span>
+                <span>{t("turn.initiativeDie")}</span>
+                <button
+                  type="button"
+                  aria-label={t("turn.initiativeReroll")}
+                  title={t("turn.initiativeReroll")}
+                  disabled={busy}
+                  onClick={() => void rerollInitiative()}
+                  className="flex size-7 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 [&_svg]:size-4"
+                >
+                  <ArrowsClockwise />
+                </button>
+              </>
+            ) : (
+              <span className="rounded-md bg-neu-900 px-2">{t("turn.initiativeNone")}</span>
+            )}
           </span>
         )}
       </div>

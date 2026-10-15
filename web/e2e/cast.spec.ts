@@ -9,6 +9,7 @@ import {
   voidEntry,
   nextTurn,
   turnMenu,
+  voidInitiative,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -138,6 +139,7 @@ test("after Next Round the cast offers no void until Next Round is popped", asyn
   await expect(entry.getByRole("button", { name: "Void" })).toHaveCount(0);
   await snap(page, "void-not-offered-after-next-round");
 
+  await voidInitiative(page);
   await voidEntry(page, "Round 0 → 1");
   await expect(buffBadge(page, "Stoneskin")).toBeVisible();
   await voidEntry(page, "Cast Stoneskin");

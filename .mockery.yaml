@@ -28,6 +28,7 @@ packages:
       DAL:
       Log:
       Characters:
+      Dice:
   github.com/ceffo/critical/api/internal/domain/service/spellsvc:
     config:
       dir: "internal/domain/service/spellsvc/mocks"

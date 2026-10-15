@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type {
   BuffEdit,
   BuffEffect,
+  Initiative,
   RoundAdvanceResponse,
   SavedBuff,
   Strength,
@@ -12,6 +13,8 @@ import * as roundApi from "../api/round";
 interface BuffsStore {
   buffs: BuffEffect[];
   round: number;
+  /** The round's initiative, from the server; null out of combat or until rolled. */
+  initiative: Initiative | null;
   /** Saved buff templates, oldest first. */
   saved: SavedBuff[];
   /** Sheet STR and STR with buffs (null until loaded). */
@@ -31,11 +34,13 @@ interface BuffsStore {
   resetRound: () => Promise<RoundAdvanceResponse>;
   setRound: (round: number) => Promise<RoundAdvanceResponse>;
   passTime: (hours: number) => Promise<RoundAdvanceResponse>;
+  rerollInitiative: () => Promise<void>;
 }
 
 export const useBuffsStore = create<BuffsStore>((set) => ({
   buffs: [],
   round: 0,
+  initiative: null,
   saved: [],
   strength: null,
   fetchBuffs: async () => {
@@ -46,8 +51,8 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
     set({ saved: (await api.fetchSavedBuffs()) ?? [] });
   },
   fetchRound: async () => {
-    const { round } = await roundApi.fetchRound();
-    set({ round });
+    const { round, initiative } = await roundApi.fetchRound();
+    set({ round, initiative: initiative ?? null });
   },
   fetchStrength: async () => {
     set({ strength: await api.fetchStrength() });
@@ -72,7 +77,7 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
   },
   advanceRound: async () => {
     const res = await roundApi.advanceRound();
-    set({ round: res.roundNumber });
+    set({ round: res.roundNumber, initiative: res.initiative ?? null });
     return res;
   },
   resetRound: async () => {
@@ -89,5 +94,8 @@ export const useBuffsStore = create<BuffsStore>((set) => ({
     const res = await roundApi.passTime(hours);
     set({ round: res.roundNumber, buffs: res.activeBuffs ?? [] });
     return res;
+  },
+  rerollInitiative: async () => {
+    set({ initiative: await roundApi.rerollInitiative() });
   },
 }));

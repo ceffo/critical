@@ -42,6 +42,24 @@ var RoundStates = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		InitiativeD10: column{
+			Name:      "initiative_d10",
+			DBType:    "INTEGER",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		InitiativeEntryID: column{
+			Name:      "initiative_entry_id",
+			DBType:    "INTEGER",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: roundStateIndexes{
 		PKMainRoundState: index{
@@ -94,14 +112,16 @@ var RoundStates = Table[
 }
 
 type roundStateColumns struct {
-	ID          column
-	CharacterID column
-	RoundNumber column
+	ID                column
+	CharacterID       column
+	RoundNumber       column
+	InitiativeD10     column
+	InitiativeEntryID column
 }
 
 func (c roundStateColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.CharacterID, c.RoundNumber,
+		c.ID, c.CharacterID, c.RoundNumber, c.InitiativeD10, c.InitiativeEntryID,
 	}
 }
 

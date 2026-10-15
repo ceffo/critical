@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aarondl/opt/null"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
@@ -799,6 +800,195 @@ func TestDeleteSavedBuffs(t *testing.T) {
 		}
 
 		query := sqlite.Delete(DeleteSavedBuffs(arg0))
+		if _, err := bob.Exec(ctxTx, tx, query); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+var beforeTestingGetInitiative = func(context.Context, bob.Tx) (int64, error) {
+	return random_int64(nil), nil
+}
+
+func TestGetInitiative(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := GetInitiative(random_int64(nil))
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(getInitiativeSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := GetInitiative(random_int64(nil))
+
+		if _, err := sqlite.Select(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(getInitiativeSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Scanning", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingGetInitiative(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query, args, err := bob.Build(ctxTx, sqlite.Select(GetInitiative(arg0)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rows, err := tx.QueryContext(ctxTx, query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := rows.Close(); err != nil {
+				t.Fatalf("Error closing rows: %v", err)
+			}
+		}()
+
+		columns, err := rows.Columns()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(columns) != 2 {
+			t.Fatalf("expected %d columns, got %d", 2, len(columns))
+		}
+
+		if columns[0] != "initiative_d10" {
+			t.Fatalf("expected column %d to be %s, got %s", 0, "initiative_d10", columns[0])
+		}
+
+		if columns[1] != "initiative_entry_id" {
+			t.Fatalf("expected column %d to be %s, got %s", 1, "initiative_entry_id", columns[1])
+		}
+	})
+}
+
+var beforeTestingUpsertInitiative = func(context.Context, bob.Tx) ([]UpsertInitiative_RoundState, error) {
+	return []struct {
+		CharacterID       int64
+		InitiativeD10     null.Val[int64]
+		InitiativeEntryID null.Val[int64]
+	}{{
+		CharacterID:       random_int64(nil),
+		InitiativeD10:     null.From(random_int64(nil)),
+		InitiativeEntryID: null.From(random_int64(nil)),
+	}}, nil
+}
+
+func TestUpsertInitiative(t *testing.T) {
+	t.Run("Base", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := UpsertInitiative([]struct {
+			CharacterID       int64
+			InitiativeD10     null.Val[int64]
+			InitiativeEntryID null.Val[int64]
+		}{{
+			CharacterID:       random_int64(nil),
+			InitiativeD10:     null.From(random_int64(nil)),
+			InitiativeEntryID: null.From(random_int64(nil)),
+		}})
+
+		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if diff := cmp.Diff(upsertInitiativeSQL, sb.String()); diff != "" {
+			t.Fatalf("unexpected result (-got +want):\n%s", diff)
+		}
+	})
+
+	t.Run("Mod", func(t *testing.T) {
+		var sb strings.Builder
+
+		query := UpsertInitiative([]struct {
+			CharacterID       int64
+			InitiativeD10     null.Val[int64]
+			InitiativeEntryID null.Val[int64]
+		}{{
+			CharacterID:       random_int64(nil),
+			InitiativeD10:     null.From(random_int64(nil)),
+			InitiativeEntryID: null.From(random_int64(nil)),
+		}})
+
+		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		queryDiff, err := testutils.QueryDiff(upsertInitiativeSQL, sb.String(), formatQuery)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queryDiff != "" {
+			fmt.Println(sb.String())
+			t.Fatalf("unexpected result (-got +want):\n%s", queryDiff)
+		}
+	})
+
+	t.Run("Exec", func(t *testing.T) {
+		if testDB == nil {
+			t.Skip("skipping test, no DSN provided")
+		}
+
+		ctxTx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		tx, err := testDB.Begin(ctxTx)
+		if err != nil {
+			t.Fatalf("Error starting transaction: %v", err)
+		}
+
+		defer func() {
+			if err := tx.Rollback(ctxTx); err != nil {
+				t.Fatalf("Error rolling back transaction: %v", err)
+			}
+		}()
+
+		arg0, beforeHookErr := beforeTestingUpsertInitiative(ctxTx, tx)
+		if beforeHookErr != nil {
+			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
+		}
+
+		query := sqlite.Insert(UpsertInitiative(arg0))
 		if _, err := bob.Exec(ctxTx, tx, query); err != nil {
 			t.Fatal(err)
 		}

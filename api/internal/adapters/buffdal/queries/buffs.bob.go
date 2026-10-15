@@ -9,6 +9,7 @@ import (
 	"io"
 	"iter"
 
+	"github.com/aarondl/opt/null"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -719,4 +720,175 @@ func (o deleteSavedBuffs) subExpr(from, to int) bob.Expression {
 
 func (o deleteSavedBuffs) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(deleteSavedBuffsSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var getInitiativeSQL = formattedQueries_buffs[1205:1296]
+
+type GetInitiativeQuery = orm.ModQuery[*dialect.SelectQuery, getInitiative, GetInitiativeRow, []GetInitiativeRow, getInitiativeTransformer]
+
+func GetInitiative(CharacterID int64) *GetInitiativeQuery {
+	var expressionTypArgs getInitiative
+
+	expressionTypArgs.CharacterID = sqlite.Arg(CharacterID)
+
+	return &GetInitiativeQuery{
+		Query: orm.Query[getInitiative, GetInitiativeRow, []GetInitiativeRow, getInitiativeTransformer]{
+			ExecQuery: orm.ExecQuery[getInitiative]{
+				BaseQuery: bob.BaseQuery[getInitiative]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeSelect,
+				},
+			},
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (GetInitiativeRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t GetInitiativeRow
+						row.ScheduleScanByIndex(0, &t.InitiativeD10)
+						row.ScheduleScanByIndex(1, &t.InitiativeEntryID)
+						return &t, nil
+					}, func(v any) (GetInitiativeRow, error) {
+						return *v.(*GetInitiativeRow), nil
+					}
+			},
+		},
+		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
+			q.AppendSelect(expressionTypArgs.subExpr(7, 46))
+			q.SetTable(expressionTypArgs.subExpr(52, 65))
+			q.AppendWhere(expressionTypArgs.subExpr(71, 91))
+		}),
+		Build: sqlite.Select,
+	}
+}
+
+type GetInitiativeRow = struct {
+	InitiativeD10     null.Val[int64] `db:"initiative_d10"`
+	InitiativeEntryID null.Val[int64] `db:"initiative_entry_id"`
+}
+
+type getInitiativeTransformer = bob.SliceTransformer[GetInitiativeRow, []GetInitiativeRow]
+
+type getInitiative struct {
+	CharacterID bob.Expression
+}
+
+func (o getInitiative) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "characterID",
+			Start:      89,
+			Stop:       91,
+			Expression: o.CharacterID,
+		}) {
+			return
+		}
+	}
+}
+
+func (o getInitiative) raw(from, to int) string {
+	return getInitiativeSQL[from:to]
+}
+
+func (o getInitiative) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(getInitiativeSQL, from, to, o.args())
+}
+
+func (o getInitiative) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(getInitiativeSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var upsertInitiativeSQL = formattedQueries_buffs[1319:1569]
+
+type UpsertInitiative_RoundState = struct {
+	CharacterID       int64
+	InitiativeD10     null.Val[int64]
+	InitiativeEntryID null.Val[int64]
+}
+
+type UpsertInitiativeQuery = orm.ModExecQuery[*dialect.InsertQuery, upsertInitiative]
+
+func UpsertInitiative(RoundState []UpsertInitiative_RoundState) *UpsertInitiativeQuery {
+	var expressionTypArgs upsertInitiative
+
+	expressionTypArgs.RoundState = func() bob.Expression {
+		expressions := make([]bob.Expression, len(RoundState))
+		for i, child := range RoundState {
+			expressions[i] = bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				args := make([]any, 0, 3)
+				w.WriteString(upsertInitiativeSQL[91:92])
+				CharacterIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.CharacterID))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, CharacterIDArgs...)
+
+				w.WriteString(upsertInitiativeSQL[94:96])
+				InitiativeD10Args, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.InitiativeD10))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, InitiativeD10Args...)
+
+				w.WriteString(upsertInitiativeSQL[98:100])
+				InitiativeEntryIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.InitiativeEntryID))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, InitiativeEntryIDArgs...)
+
+				w.WriteString(upsertInitiativeSQL[102:103])
+				return args, nil
+			})
+		}
+		return expr.Join{Exprs: expressions, Sep: ", "}
+	}()
+
+	return &UpsertInitiativeQuery{
+		ExecQuery: orm.ExecQuery[upsertInitiative]{
+			BaseQuery: bob.BaseQuery[upsertInitiative]{
+				Expression: expressionTypArgs,
+				Dialect:    dialect.Dialect,
+				QueryType:  bob.QueryTypeInsert,
+			},
+		},
+		Mod: bob.ModFunc[*dialect.InsertQuery](func(q *dialect.InsertQuery) {
+			q.TableRef.Columns = []string{"character_id", "initiative_d10", "initiative_entry_id"}
+			q.TableRef.Expression = expressionTypArgs.raw(12, 25)
+			q.Query = bob.BaseQuery[bob.Expression]{
+				Expression: expressionTypArgs.subExpr(84, 103),
+				Dialect:    dialect.Dialect,
+				QueryType:  bob.QueryTypeSelect,
+			}
+			q.SetConflict(expressionTypArgs.subExpr(104, 250))
+		}),
+		Build: sqlite.Insert,
+	}
+}
+
+type upsertInitiative struct {
+	RoundState bob.Expression
+}
+
+func (o upsertInitiative) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+		if !yield(orm.ArgWithPosition{
+			Name:       "roundState",
+			Start:      91,
+			Stop:       103,
+			Expression: o.RoundState,
+		}) {
+			return
+		}
+	}
+}
+
+func (o upsertInitiative) raw(from, to int) string {
+	return upsertInitiativeSQL[from:to]
+}
+
+func (o upsertInitiative) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(upsertInitiativeSQL, from, to, o.args())
+}
+
+func (o upsertInitiative) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(upsertInitiativeSQL)).WriteSQL(ctx, w, d, start)
 }

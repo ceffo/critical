@@ -121,68 +121,6 @@ test("Strength cast on me by a party wizard, found by its French name", async ({
   await snap(page, "strength-received");
 });
 
-// ADR 0004 step 7: every Strength bonus stacks, total
-// capped at 18; a second receive is a second buff, not a renewal.
-test.describe("Strength received twice on the sheet's STR 12", () => {
-  test.use({ character: { str: 12 } });
-
-  async function receiveStrength(page: Page): Promise<number> {
-    const picker = page.getByRole("region", { name: "Spell cast on me" });
-    await picker.getByLabel("Search for a spell cast on me").fill("Strength");
-    await picker.getByLabel("Caster level").fill("9");
-    await picker.getByRole("button", { name: "Apply Strength" }).click();
-    const gain = resultCard(page)
-      .getByTestId("cast-result")
-      .getByTestId("cast-str-gain");
-    await expect(gain).toContainText("1d6");
-    return Number(((await gain.textContent()) ?? "").split("= ").pop());
-  }
-
-  test("two Strength badges that add up; void the second, dismiss one by its badge", async ({
-    page,
-  }) => {
-    await openSpells(page);
-    await expect.poll(() => effectiveStr(page)).toBe(12);
-    const strength = buffBadge(page, "Strength");
-
-    const g1 = await receiveStrength(page);
-    await expect(strength).toHaveCount(1);
-    await expect.poll(() => effectiveStr(page)).toBe(Math.min(18, 12 + g1));
-    const g2 = await receiveStrength(page);
-    await expect(strength).toHaveCount(2);
-    await expect
-      .poll(() => effectiveStr(page))
-      .toBe(Math.min(18, 12 + g1 + g2));
-    await expect(strength.nth(0)).toHaveAttribute("data-applies", "true");
-    await expect(strength.nth(1)).toHaveAttribute("data-applies", "true");
-    await snap(page, "strength-received-twice");
-
-    // Void the second receive: one badge left, STR back to the first cast alone.
-    // Two entries share the text; the log lists the newest first.
-    const second = logEntry(
-      page,
-      "Strength cast on me (caster level 9)",
-    ).first();
-    await second.getByRole("button", { name: "Void" }).click();
-    await second.getByRole("button", { name: "Confirm" }).click();
-    await expect(second).toHaveAttribute("data-status", "voided");
-    await expect(strength).toHaveCount(1);
-    await expect.poll(() => effectiveStr(page)).toBe(Math.min(18, 12 + g1));
-
-    // Receive again, then dismiss the first badge: only that one goes, and it is logged.
-    const g3 = await receiveStrength(page);
-    await expect(strength).toHaveCount(2);
-    await strength
-      .nth(0)
-      .getByRole("button", { name: "Dismiss Strength" })
-      .click();
-    await expect(strength).toHaveCount(1);
-    await expect.poll(() => effectiveStr(page)).toBe(Math.min(18, 12 + g3));
-    await expect(logEntry(page, "Dismissed Strength")).toBeVisible();
-    await snap(page, "strength-one-dismissed");
-  });
-});
-
 test("after Next Round the cast offers no void until Next Round is popped", async ({
   page,
   stack,

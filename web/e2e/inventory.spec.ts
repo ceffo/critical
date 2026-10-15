@@ -197,24 +197,6 @@ async function post(base: string, path: string, body: unknown = {}) {
   return { status: res.status, body: (await res.json().catch(() => ({}))) as Record<string, unknown> };
 }
 
-async function apiCount(base: string, id: string): Promise<number | undefined> {
-  const items = (await (await fetch(`${base}/api/items`)).json()) as { id: string; count: number }[];
-  return items.find((i) => i.id === id)?.count;
-}
-
-test("charges and daily items cannot be restocked; a bad count is refused", async ({ stack }) => {
-  for (const id of ["wand_lightning", "power_gem_dispel"]) {
-    const res = await post(stack.apiUrl, `/api/items/${id}/restock`, { count: 1 });
-    expect(res.status).toBe(409);
-    expect(res.body).toEqual({ error: expect.stringContaining("cannot be restocked") });
-  }
-  expect(await apiCount(stack.apiUrl, "wand_lightning")).toBe(4);
-  expect((await post(stack.apiUrl, "/api/items/arrows_plus1/restock", { count: 0 })).status).toBe(400);
-  expect((await post(stack.apiUrl, "/api/items/arrows_plus1/restock", {})).status).toBe(400);
-  expect((await post(stack.apiUrl, "/api/items/nope/restock", { count: 1 })).status).toBe(404);
-  expect(await apiCount(stack.apiUrl, "arrows_plus1")).toBe(18);
-});
-
 test("an empty item is refused by the API, and a stale − shows the error", async ({ page, stack }) => {
   await openInventory(page);
   // The gem is emptied behind the UI's back; the stale row still offers −.

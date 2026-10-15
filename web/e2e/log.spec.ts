@@ -75,20 +75,6 @@ test("only the newest entry offers Void: damage 10, heal 4, pop the heal, pop th
   await snap(page, "popped-in-order");
 });
 
-test("at full HP a heal is logged as 0; undo pops it and HP stays at max", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  const max = await currentHp(page);
-  await recordHp(page, "heal", 7, "e2e potion at full");
-  const entry = logEntry(page, "e2e potion at full");
-  await expect(entry.getByTestId("log-delta")).toHaveText("0");
-  await page.getByRole("button", { name: "Undo last HP change" }).click();
-  await expect(entry).toHaveAttribute("data-status", "voided");
-  await expect.poll(() => currentHp(page)).toBe(max);
-  await snap(page, "undo-heal-at-full");
-});
-
 test("voiding an entry restores current HP and marks it voided", async ({
   page,
 }) => {

@@ -14,6 +14,9 @@ const root = join(homedir(), "code", "critical-rulebooks");
 const catalogue = join(root, "dist", "catalogue.json");
 const present = existsSync(catalogue);
 
+// The books drop the accent of capitals ("Evocation"); compare without accents.
+const plain = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 function mdFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((e) => {
     const p = join(dir, e);
@@ -73,7 +76,7 @@ describe.skipIf(!present)("French school names vs the French books", () => {
       // A name no book spells (Tome of Magic's extra schools) has no vote; a name the
       // books spell by halves is held by halves.
       if (held === undefined) continue;
-      expect(held, e).toBe(winner);
+      expect(plain(held), e).toBe(plain(winner));
     }
   });
 });

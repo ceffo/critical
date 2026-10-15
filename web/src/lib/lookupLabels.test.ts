@@ -222,7 +222,7 @@ describe("schoolLabel", () => {
       "Altération, Eau élémentaire, Alchimie",
     );
     expect(schoolLabel(t, "Invocation/Evocation, Force")).toBe(
-      "Invocation/Evocation, Force",
+      "Invocation/Évocation, Force",
     );
     expect(schoolLabel(t, "Necromancy/Alteration")).toBe(
       "Nécromancie/Altération",

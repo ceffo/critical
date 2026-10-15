@@ -421,8 +421,8 @@
       "phantasm": "Fantasme",
       "illusion_phantasm": "Illusion/Fantasme",
       "invocation": "Invocation",
-      "evocation": "Evocation",
-      "invocation_evocation": "Invocation/Evocation",
+      "evocation": "Évocation",
+      "invocation_evocation": "Invocation/Évocation",
       "necromancy": "Nécromancie",
       "necromantic": "Nécromancie",
       "dimension": "Dimension",
@@ -438,7 +438,7 @@
       "shadow": "Ombre",
       "song": "Chant",
       "artifice": "Artifice",
-      "all_schools": "Toutes les Ecoles",
+      "all_schools": "Toutes les Écoles",
       "various_schools": "Écoles diverses"
     },
     "schools": {
@@ -448,7 +448,7 @@
       "divination": "Divination",
       "enchantment": "Enchantement/Charme",
       "illusion": "Illusion/Fantasme",
-      "evocation": "Invocation/Evocation",
+      "evocation": "Invocation/Évocation",
       "necromancy": "Nécromancie",
       "other": "Autre"
     },

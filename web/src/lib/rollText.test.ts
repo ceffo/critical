@@ -3,7 +3,7 @@ import type { RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import i18next from "i18next";
 import { resources } from "@/i18n";
-import { damageFormula, itemRollText, modLabel, saveFormula } from "./rollText";
+import { damageFormula, itemRollText, modLabel } from "./rollText";
 
 const hit = (over: Partial<RollResult>): RollResult =>
   ({
@@ -80,17 +80,5 @@ describe("modLabel", () => {
     expect(modLabel(en, { kind: "weapon_buff", detail: "Power Gem", value: 5 })).toBe("Power Gem: weapon +5");
     expect(modLabel(en, { kind: "situational", detail: "", value: -4 })).toBe("Situational");
     expect(modLabel(await makeT("fr"), { kind: "situational", value: -4 })).toBe("Situationnel");
-  });
-});
-
-describe("saveFormula", () => {
-  const save = { d20Roll: 12, saveBonus: 1, effectiveThac0: 14 } as RollResult;
-  it.each([
-    ["en", { ...save, adjustment: 0, saveTotal: 13 }, "Roll: 12 + Mod: 1 = 13 vs Target: 14 (Spells)"],
-    ["en", { ...save, adjustment: 4, saveTotal: 17 }, "Roll: 12 + Mod: 1 + Adj: +4 = 17 vs Target: 14 (Spells)"],
-    ["fr", { ...save, adjustment: -2, saveTotal: 11 }, "Jet : 12 + Mod : 1 + Ajust : −2 = 11 contre Cible : 14 (Sorts)"],
-    ["fr", { ...save, adjustment: 0, saveTotal: 13 }, "Jet : 12 + Mod : 1 = 13 contre Cible : 14 (Sorts)"],
-  ])("%s %o", async (lng, r, want) => {
-    expect(saveFormula(await makeT(lng), r as RollResult, "spell")).toBe(want);
   });
 });

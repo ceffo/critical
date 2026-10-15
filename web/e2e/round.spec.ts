@@ -7,6 +7,7 @@ import {
   logEntry,
   markNoReload,
   addBuff,
+  turnGroup,
   chooseSetting,
   nextTurn,
   turnMenu,
@@ -32,10 +33,10 @@ test("Next turn advances the counter and starts a new log group", async ({
 
   // The new round is the current group and holds only its initiative; the old entries stay in
   // their round.
-  const newGroup = page.getByRole("region", { name: `Round ${r0 + 1}` });
+  const newGroup = turnGroup(page, r0 + 1);
   await expect(newGroup).toContainText("current");
   await expect(newGroup.getByRole("listitem")).toHaveText([/Initiative \d+ \(d10\) for round/]);
-  const oldGroup = page.getByRole("region", { name: `Round ${r0}` });
+  const oldGroup = turnGroup(page, r0);
   await expect(
     oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" }),
   ).toBeVisible();
@@ -173,7 +174,7 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
 /** The log entry containing `text` in the French UI. */
 function logEntryFr(page: Page, text: string) {
   return page
-    .getByRole("region", { name: "Journal de combat" })
+    .getByRole("region", { name: "Journal", exact: true })
     .getByRole("listitem")
     .filter({ hasText: text });
 }

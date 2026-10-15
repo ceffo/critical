@@ -7,6 +7,7 @@ import {
   markNoReload,
   openDashboard,
   recordHp,
+  turnGroup,
 } from "./helpers";
 
 test("damage then heal change current HP by the amounts entered, without reload", async ({
@@ -35,7 +36,7 @@ test("damage then heal change current HP by the amounts entered, without reload"
 
   // Both land in the current round's group of the combat log.
   const round = (await page.getByTestId("round-value").textContent())!.trim();
-  const group = page.getByRole("region", { name: `Round ${round}` });
+  const group = turnGroup(page, round);
   await expect(group.getByRole("listitem")).toHaveCount(2);
 
   await expectNoReload(page);
@@ -94,7 +95,7 @@ test("Moi column: Enter applies damage, Shift+Enter healing; last change, ghost 
   // A save rolled from its row shows its last roll there and its card in the Fil.
   const spells = moi.getByRole("button", { name: "Roll save vs Spells" });
   await spells.click();
-  await expect(page.getByRole("region", { name: "Last Result" }).getByTestId("save-result")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Detail", exact: true }).getByTestId("save-result")).toBeVisible();
   await expect(spells.getByTestId("save-last")).toHaveText(/^\d+$/);
 
   for (const vp of [

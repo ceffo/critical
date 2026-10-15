@@ -11,6 +11,7 @@ import {
   openDashboard,
   voidEntry,
   voidInitiative,
+  turnGroup,
 } from "./helpers";
 
 test("Next turn then void restores the round, the durations and the expired buff", async ({
@@ -36,8 +37,7 @@ test("Next turn then void restores the round, the durations and the expired buff
   const advance = `Round ${r0} → ${r0 + 1} — expired: e2e Haste`;
   // Logged in the round it ends.
   await expect(
-    page
-      .getByRole("region", { name: `Round ${r0}` })
+    turnGroup(page, r0)
       .getByRole("listitem")
       .filter({ hasText: advance }),
   ).toBeVisible();

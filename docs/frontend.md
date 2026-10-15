@@ -48,8 +48,8 @@ flowchart TD
       SP["Sorts: LookupPanel"]
     end
     subgraph FIL["Fil (aside 'Results and journal')"]
-      RCARD["ResultCard: full breakdown of the last roll"]
-      CL["CombatLog: GET /api/log grouped by round, Note / Void, Undo in its header"]
+      RCARD["ResultCard: detail card, the latest result or a selected journal entry"]
+      CL["CombatLog: journal, All / Rolls filter, grouped by turn, Note / Void, Undo in its header"]
     end
     subgraph MOI["Moi (aside 'Character')"]
       ID["Identity: name, level, abilities, THAC0"]
@@ -67,8 +67,23 @@ flowchart TD
   RC -->|POST /api/round/advance| CL
 ```
 
-- Each column scrolls on its own; the result card takes at most 60% of the Fil column, the log
-  the rest.
+- Each column scrolls on its own; the detail card takes at most 60% of the Fil column, the
+  journal the rest.
+- Fil column (`ResultCard.tsx`, `CombatLog.tsx`, logic in `lib/filCard.ts`, UI state in
+  `stores/fil.ts`): the detail card shows the latest result by default: this session's last roll
+  response while it is the newest attack / save / cast / item use entry (the server's
+  `actionlog.RollKinds`), else that entry rendered from its payload (after a reload). A click on a
+  journal row shows that entry instead, read-only, with an accent ring and "Latest" to return; a
+  new roll returns to the latest too. Only the latest result offers corrections (target AC, save
+  adjustment), by entry id. One layout per kind, from the payload (`cardModel`): attack (hexagon
+  d20, "Hits AC X", verdict, damage dice and total, "Calculation details" closed by default),
+  save (d20, "total vs target+", verdict, modifiers, adjustment), cast, item (dice chips, the
+  maximum in the accent, a 1 dimmed), initiative, and info for every other kind (text, HP value
+  red / green). Header: kind tag, subtitle, "T3 · 21:31". The journal: All / Rolls filter (attacks,
+  saves, item uses, initiative, casts that rolled damage or a to-hit d20), turn groups newest first
+  with a sticky "Turn 3" / "Out of combat" header and a "current" tag, rows icon | text | value with
+  the time, Note and Void under it; the row shown in the card is highlighted. Attack damage dice
+  show as "1d8 → 6": the attack payload has no per-die values.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`): language
   (English / Français), appearance (Dark / Light / System, System follows the OS live), six
   ambiance swatches. Applied live, stored per device in `localStorage['critical.settings.v1']`
@@ -171,8 +186,8 @@ flowchart TD
 - Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `voidEntry`, `undo`,
   `nextRound`): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …}`, parsed by `api/http.ts`) are shown verbatim in `Notices` (`role="alert"`).
-- The log groups entries by the round the server stamped (`lib/groupByRound.ts`); the current round
-  always has a group. Display helpers live in `lib/format.ts` (no game rules).
+- The journal groups entries by the turn the server stamped (`lib/groupByRound.ts`); the current
+  turn always has a group. Display helpers live in `lib/format.ts` (no game rules).
 - Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`) and sit in
   `min-w-0` grid cells so they never overflow their card.
 

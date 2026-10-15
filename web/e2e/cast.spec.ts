@@ -34,7 +34,7 @@ async function openSpells(page: Page) {
 }
 
 function resultCard(page: Page) {
-  return page.getByRole("region", { name: "Last Result" });
+  return page.getByRole("region", { name: "Detail", exact: true });
 }
 
 test("casting Stoneskin shows the result card, adds the buff; voiding gives the slot back", async ({

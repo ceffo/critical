@@ -443,7 +443,6 @@
     }
   },
   "result": {
-    "title": "Last Result",
     "empty": "Roll an attack or a save, or cast a spell: the full breakdown shows here.",
     "attackHeading": "{{weapon}} vs AC {{ac}}",
     "saveHeading": "Save vs {{name}}",
@@ -453,7 +452,6 @@
     "passed": "Passed",
     "failed": "Failed",
     "totalDamage": "Total damage",
-    "noDamage": "No damage",
     "d20": "d20",
     "critRoll": "Crit check d100",
     "baseThac0": "Base THAC0",
@@ -464,15 +462,6 @@
     "modifiers": "Modifiers",
     "noModifiers": "No modifiers",
     "damage": "Damage",
-    "damageBase": "Weapon dice",
-    "damageSpells": "Spells ×",
-    "damageWeapon": "Weapon +",
-    "damageDiceMultiplier": "Dice multiplier ×",
-    "damageMultiplier": "Multiplier ×",
-    "damageStrength": "Strength +",
-    "breakdown": "Breakdown",
-    "saveFormula": "Roll: {{d20}} + Mod: {{mod}} = {{total}} vs Target: {{target}} ({{name}})",
-    "saveFormulaAdjusted": "Roll: {{d20}} + Mod: {{mod}} + Adj: {{adj}} = {{total}} vs Target: {{target}} ({{name}})",
     "attackHeadingAmmo": "{{weapon}} with {{ammo}} vs AC {{ac}}",
     "sizes": {
       "sm": "S/M target",
@@ -480,8 +469,6 @@
     },
     "critPlaceholder": "Crit check {{check}} · multiplier {{roll}} → ×{{mult, number}} (placeholder)",
     "ammoLeft": "{{name}}: {{count}} left",
-    "damageDice": "Dice",
-    "damageBonus": "Bonus +",
     "damageTerms": "Damage modifiers",
     "mods": {
       "strength": "Strength {{detail}}",
@@ -596,9 +583,8 @@
     "multRoll": "Multiplier d100"
   },
   "log": {
-    "title": "Combat Log",
+    "title": "Journal",
     "empty": "Nothing recorded yet.",
-    "round": "Round {{round}}",
     "current": "current",
     "nothingThisRound": "Nothing recorded this round yet.",
     "kinds": {
@@ -618,7 +604,10 @@
       "weapon_add": "Weapon",
       "weapon_edit": "Weapon",
       "weapon_remove": "Weapon",
-      "initiative": "Initiative"
+      "initiative": "Initiative",
+      "item_add": "Item",
+      "item_edit": "Item",
+      "item_remove": "Item"
     },
     "status": {
       "active": "Active",
@@ -776,5 +765,26 @@
     "absorb": "Absorb",
     "absorbLabel": "Absorb a hit with {{name}}",
     "chargesHint": "A hit taken uses one"
+  },
+  "fil": {
+    "card": "Detail",
+    "latest": "Latest",
+    "turn": "Turn {{round}}",
+    "outOfCombat": "Out of combat",
+    "when": "T{{round}} · {{time}}",
+    "whenOutOfCombat": "Out of combat · {{time}}",
+    "d20": "d20: {{value}}",
+    "hitsAc": "Hits AC {{ac}}",
+    "diceRolled": "{{dice}} → {{total}}",
+    "details": "Calculation details",
+    "saveVs": "{{total}} vs {{target}}+",
+    "castVsAc": "To-hit roll against AC {{ac}}",
+    "castBuff": "{{buff}}: {{counters}}",
+    "noRollsThisTurn": "No rolls this turn.",
+    "filter": {
+      "label": "Journal filter",
+      "all": "All",
+      "rolls": "Rolls"
+    }
   }
 }

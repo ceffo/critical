@@ -32,8 +32,8 @@ async function expectRegions(page: Page) {
   await expect(page.getByRole("group", { name: "Effects" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Actions" })).toBeVisible();
   const fil = page.getByRole("complementary", { name: "Results and journal" });
-  await expect(fil.getByRole("region", { name: "Last Result" })).toBeVisible();
-  await expect(fil.getByRole("region", { name: "Combat Log" })).toBeVisible();
+  await expect(fil.getByRole("region", { name: "Detail", exact: true })).toBeVisible();
+  await expect(fil.getByRole("region", { name: "Journal", exact: true })).toBeVisible();
   const moi = page.getByRole("complementary", { name: "Character" });
   await expect(moi.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(moi.getByTestId("hp-value")).toBeVisible();
@@ -103,7 +103,7 @@ test("rail: switches workspaces and each keeps its state", async ({ page }) => {
   await expect(inventory.getByTestId("item-form")).toBeVisible();
   await openWorkspace(page, "Spells");
   await expect(search).toHaveValue("fire");
-  await expect(page.getByRole("region", { name: "Combat Log" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Journal", exact: true })).toBeVisible();
   await expect(page.getByTestId("hp-value")).toBeVisible();
 });
 

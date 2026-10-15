@@ -1,59 +1,154 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge } from "@/components/ui/badge";
+import {
+  BookOpen,
+  Clock,
+  Flask,
+  Heart,
+  Hourglass,
+  Lightning,
+  MagicWand,
+  Moon,
+  Package,
+  Shield,
+  Sparkle,
+  Sword,
+  type Icon,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
+import { useFilStore } from "@/stores/fil";
 import { useLogStore } from "@/stores/log";
+import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
 import { groupByRound } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
+import {
+  cappedHeal,
+  cardEntryId,
+  cardSource,
+  filterEntries,
+  rowValue,
+  turnLabel,
+  type LogFilter,
+  type RowValue,
+} from "@/lib/filCard";
 import { cn } from "@/lib/utils";
-import type { HpBreakdown, LogEntry } from "@/types/log";
-import { captionClass, fieldClass } from "./fieldStyles";
+import type { LogEntry, LogKind } from "@/types/log";
+import { fieldClass } from "./fieldStyles";
 import { UndoButton } from "./UndoButton";
 
+const KIND_ICONS: Record<LogKind, Icon> = {
+  hp_change: Heart,
+  cast: MagicWand,
+  buff_change: Sparkle,
+  round_advance: Hourglass,
+  round_reset: Hourglass,
+  round_set: Hourglass,
+  time_passed: Clock,
+  initiative: Lightning,
+  attack: Sword,
+  item_use: Flask,
+  item_restock: Package,
+  item_add: Package,
+  item_edit: Package,
+  item_remove: Package,
+  weapon_add: Sword,
+  weapon_edit: Sword,
+  weapon_remove: Sword,
+  spell_prep: BookOpen,
+  long_rest: Moon,
+  save: Shield,
+};
+
+const VALUE_TONES: Record<RowValue["tone"], string> = {
+  damage: "text-danger",
+  heal: "text-heal",
+  pass: "text-heal",
+  fail: "text-danger",
+  accent: "text-amb-300",
+  muted: "text-muted-foreground",
+};
+
+const FILTERS: LogFilter[] = ["all", "rolls"];
+
 /**
- * The action log (GET /api/log) as a timeline grouped by round. The log is a
- * stack: only the newest non-voided entry offers Void (pop);
- * any entry can get a note, values are never edited.
+ * The journal (GET /api/log): a filter (all / rolls), Undo, and the entries grouped by turn, newest
+ * first. A click on an entry shows it in the detail card. The log is a stack: only the newest
+ * non-voided entry offers Void (pop); any entry can get a note, values are never edited.
  */
 export function CombatLog() {
   const { t } = useTranslation();
   const entries = useLogStore((s) => s.entries);
-  const round = useBuffsStore((s) => s.round);
-  const groups = groupByRound(entries, round);
-  // The top of the stack, from the server: the only entry that offers Void.
   const topId = useLogStore((s) => s.topId);
+  const round = useBuffsStore((s) => s.round);
+  const last = useRollStore((s) => s.last);
+  const { selectedId, filter, setFilter, select } = useFilStore();
+  const shownId = cardEntryId(cardSource(last, entries, selectedId));
+  const groups = groupByRound(filterEntries(entries, filter), round);
 
   return (
     <section
-      className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border bg-card"
+      className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-card"
       aria-label={t("log.title")}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-1.5">
-        <h2 className="text-sm font-semibold">{t("log.title")}</h2>
-        <UndoButton />
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-3 pb-2">
+        <h2 className="text-sm font-medium">{t("log.title")}</h2>
+        <div
+          role="radiogroup"
+          aria-label={t("fil.filter.label")}
+          className="flex rounded-lg bg-neu-900 p-0.5"
+        >
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              role="radio"
+              aria-checked={filter === f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "rounded-md px-2.5 py-0.5 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                filter === f ? "bg-card font-medium" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {t(`fil.filter.${f}`)}
+            </button>
+          ))}
+        </div>
+        <span className="ml-auto">
+          <UndoButton />
+        </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {groups.map((g) => (
-          <section
-            key={g.round}
-            className="mb-3"
-            aria-label={t("log.round", { round: g.round })}
-          >
-            <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-card py-1">
-              <span className={captionClass}>{t("log.round", { round: g.round })}</span>
-              {g.round === round && <Badge variant="secondary">{t("log.current")}</Badge>}
+          <section key={g.round} className="mb-2" aria-label={turnLabel(t, g.round)}>
+            <h3 className="sticky top-0 z-10 flex items-center gap-2 bg-card px-2 py-1.5">
+              <span className="text-sm font-medium">{turnLabel(t, g.round)}</span>
+              {g.round === round && (
+                <span className="rounded-md bg-amb-900 px-1.5 text-xs text-amb-300">
+                  {t("log.current")}
+                </span>
+              )}
             </h3>
             {g.entries.length === 0 ? (
-              <p className="px-1 text-xs italic text-muted-foreground">
-                {entries.length === 0 ? t("log.empty") : t("log.nothingThisRound")}
+              <p className="px-2 text-sm text-muted-foreground">
+                {entries.length === 0
+                  ? t("log.empty")
+                  : filter === "rolls"
+                    ? t("fil.noRollsThisTurn")
+                    : t("log.nothingThisRound")}
               </p>
             ) : (
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-0.5">
                 {g.entries.map((e) => (
-                  <LogRow key={e.id} entry={e} isTop={e.id === topId} />
+                  <LogRow
+                    key={e.id}
+                    entry={e}
+                    isTop={e.id === topId}
+                    selected={e.id === shownId}
+                    onSelect={() => select(e.id)}
+                  />
                 ))}
               </ul>
             )}
@@ -66,7 +161,17 @@ export function CombatLog() {
 
 type Mode = "view" | "amend" | "confirmVoid";
 
-function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
+function LogRow({
+  entry: e,
+  isTop,
+  selected,
+  onSelect,
+}: {
+  entry: LogEntry;
+  isTop: boolean;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { voidEntry, busy } = useTableStore();
   const [mode, setMode] = useState<Mode>("view");
@@ -74,51 +179,63 @@ function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
   const amended = e.status === "amended";
   const isHp = e.kind === "hp_change";
   const text = entryText(e, t);
-  const capped = isHp && !voided ? cappedHeal(e) : null;
+  const capped = cappedHeal(e);
+  const value = rowValue(e);
+  const KindIcon = KIND_ICONS[e.kind] ?? Sparkle;
+  const kindLabel = t(`log.kinds.${e.kind}`, { defaultValue: e.kind });
+  // A click anywhere on the row but its own controls shows the entry in the card.
+  const onRowClick = (ev: MouseEvent<HTMLLIElement>) => {
+    if ((ev.target as HTMLElement).closest("button, input, form, a")) return;
+    onSelect();
+  };
 
   return (
     <li
       className={cn(
-        "rounded-lg border px-2.5 py-1.5",
-        voided && "bg-muted/50",
+        "relative cursor-pointer rounded-lg px-2 py-1.5",
+        selected
+          ? "bg-amb-900 before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-amb-500"
+          : "hover:bg-neu-900/60",
       )}
       data-status={e.status}
       data-entry-id={e.id}
+      data-selected={selected}
+      onClick={onRowClick}
     >
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="shrink-0">
-          {t(`log.kinds.${e.kind}`, { defaultValue: e.kind })}
-        </Badge>
+      <button
+        type="button"
+        className="grid w-full grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-x-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        aria-pressed={selected}
+        data-testid="log-select"
+        onClick={onSelect}
+      >
+        <span className="flex text-muted-foreground" title={kindLabel}>
+          <KindIcon aria-hidden className="size-[1.125rem]" />
+          <span className="sr-only">{kindLabel}</span>
+        </span>
         <span
-          className={cn(
-            "min-w-0 flex-1 truncate text-sm",
-            voided && "text-muted-foreground line-through",
-          )}
+          className={cn("min-w-0 truncate text-sm", voided && "text-muted-foreground line-through")}
           title={text}
         >
           {text}
         </span>
-        {isHp && (
+        {value && (
           <span
             className={cn(
-              "shrink-0 font-mono text-sm font-semibold tabular-nums",
-              voided
-                ? "text-muted-foreground line-through"
-                : e.effectiveHpDelta < 0
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-green-600 dark:text-green-400",
+              "text-sm font-semibold tabular-nums",
+              voided ? "text-muted-foreground line-through" : VALUE_TONES[value.tone],
             )}
-            data-testid="log-delta"
+            data-testid={isHp ? "log-delta" : "log-value"}
           >
-            {formatSigned(voided ? e.hpDelta : e.effectiveHpDelta)}
+            {value.text}
           </span>
         )}
-      </div>
-      <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-        <span>{formatTime(e.createdAt, i18n.language)}</span>
+      </button>
+      <div className="flex min-h-6 flex-wrap items-center gap-x-2 pl-[1.625rem] text-xs text-muted-foreground">
+        <span className="tabular-nums">{formatTime(e.createdAt, i18n.language)}</span>
         {amended && (
           <>
-            <Badge variant="secondary">{t("log.status.amended")}</Badge>
+            <span className="rounded-md bg-neu-900 px-1.5">{t("log.status.amended")}</span>
             {isHp && <span>{t("log.was", { delta: formatSigned(e.hpDelta) })}</span>}
           </>
         )}
@@ -127,7 +244,7 @@ function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
             {t("log.capped", { requested: formatSigned(capped.hpRequested) })}
           </span>
         )}
-        {voided && <Badge variant="destructive">{t("log.status.voided")}</Badge>}
+        {voided && <span className="text-danger">{t("log.status.voided")}</span>}
         {!voided && mode === "view" && (
           <span className="ml-auto flex gap-1">
             <Button size="xs" variant="ghost" onClick={() => setMode("amend")}>
@@ -147,12 +264,12 @@ function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
         )}
       </div>
       {e.note && (
-        <p className="mt-0.5 text-xs italic text-muted-foreground" data-testid="log-note">
+        <p className="mt-0.5 pl-[1.625rem] text-xs italic text-muted-foreground" data-testid="log-note">
           {e.note}
         </p>
       )}
       {mode === "confirmVoid" && !voided && (
-        <div className="mt-1.5 flex items-center gap-2 rounded-md bg-destructive/5 px-2 py-1 text-sm">
+        <div className="mt-1.5 flex items-center gap-2 rounded-md bg-destructive/10 px-2 py-1 text-sm">
           <span className="flex-1">{t("log.confirmVoid")}</span>
           <Button
             size="xs"
@@ -177,13 +294,6 @@ function LogRow({ entry: e, isTop }: { entry: LogEntry; isTop: boolean }) {
   );
 }
 
-/** The server's breakdown when the heal was cut by the max-HP cap, else null. */
-function cappedHeal(e: LogEntry): HpBreakdown | null {
-  const p = e.effectivePayload as Partial<HpBreakdown> | null;
-  if (typeof p?.hpRequested !== "number" || typeof p.hpApplied !== "number") return null;
-  return p.hpRequested !== p.hpApplied ? (p as HpBreakdown) : null;
-}
-
 function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }) {
   const { t } = useTranslation();
   const { amendEntry, busy } = useTableStore();
@@ -191,7 +301,7 @@ function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }
 
   return (
     <form
-      className="mt-1.5 flex items-end gap-2 rounded-md bg-muted/50 p-2"
+      className="mt-1.5 flex items-end gap-2 rounded-md bg-neu-900/60 p-2"
       aria-label={t("log.amendLabel")}
       onSubmit={async (ev) => {
         ev.preventDefault();
@@ -199,7 +309,7 @@ function AmendForm({ entry: e, onDone }: { entry: LogEntry; onDone: () => void }
       }}
     >
       <label className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className={captionClass}>{t("log.note")}</span>
+        <span className="text-xs text-muted-foreground">{t("log.note")}</span>
         <input
           className={fieldClass}
           type="text"

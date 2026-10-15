@@ -32,14 +32,16 @@ func compile(t *testing.T) *jsonschema.Schema {
 func spell(id string, desc map[string]any) map[string]any {
 	return map[string]any{
 		"id": id, "class": "Wizard", "level": 1, "school": "Evocation",
-		"casting_time": "1", "range": "10 yards", "duration": "1 round",
-		"area_of_effect": "One creature", "components": "V, S", "saving_throw": "None",
+		"casting_time": en("1"), "range": map[string]any{"en": "10 yards", "fr": "10 mètres"}, "duration": en("1 round"),
+		"area_of_effect": en("One creature"), "components": en("V, S"), "saving_throw": en("None"),
 		"name": map[string]any{"en": "Spell"}, "description": desc, "source": "PHB",
 	}
 }
 
+func en(text string) map[string]any { return map[string]any{"en": text} }
+
 func artifact(spells ...any) map[string]any {
-	return map[string]any{"format": 1, "version": "2026-10-15", "spells": spells}
+	return map[string]any{"format": 2, "version": "2026-10-15", "spells": spells}
 }
 
 func withDesc(en string) map[string]any {
@@ -61,6 +63,8 @@ type fixtureSpell struct {
 	ID          string            `json:"id"`
 	Name        map[string]string `json:"name"`
 	Description map[string]string `json:"description"`
+	Range       map[string]string `json:"range"`
+	CastingTime map[string]string `json:"casting_time"`
 }
 
 func readFixture(t *testing.T) []fixtureSpell {
@@ -98,11 +102,15 @@ func TestFixture_HoldsEveryReferencedSpell(t *testing.T) {
 }
 
 // TestFixture_CoversTheFormat: some spells have French texts and some do not,
-// one description has a bullet list and one a table; every description is
-// invented placeholder text, never book text.
+// one has a French stat text next to an English-only one (the per-field
+// fallback), one description has a bullet list and one a table; every
+// description is invented placeholder text, never book text.
 func TestFixture_CoversTheFormat(t *testing.T) {
-	var withFR, withoutFR, lists, tables int
+	var withFR, withoutFR, lists, tables, partialStatsFR int
 	for _, s := range readFixture(t) {
+		if s.Range["fr"] != "" && s.CastingTime["fr"] == "" {
+			partialStatsFR++
+		}
 		if s.Name["fr"] != "" {
 			withFR++
 			assert.NotEmpty(t, s.Description["fr"], "%s: a French name comes with a French description", s.ID)
@@ -124,6 +132,7 @@ func TestFixture_CoversTheFormat(t *testing.T) {
 	assert.Positive(t, withoutFR)
 	assert.Positive(t, lists, "one description with a bullet list")
 	assert.Positive(t, tables, "one description with a table")
+	assert.Positive(t, partialStatsFR, "one spell with a French range and an English-only casting time")
 }
 
 func TestSchema_DescriptionSubset(t *testing.T) {
@@ -147,9 +156,23 @@ func TestSchema_DescriptionSubset(t *testing.T) {
 func TestSchema_Shape(t *testing.T) {
 	sch := compile(t)
 	assert.NoError(t, sch.Validate(artifact(spell("a", map[string]any{"en": "x", "fr": "y"}))))
-	assert.Error(t, sch.Validate(map[string]any{"format": 2, "version": "2026-10-15", "spells": []any{spell("a", map[string]any{"en": "x"})}}), "unknown format")
+	for _, f := range []int{1, 3} {
+		assert.Error(t, sch.Validate(map[string]any{"format": f, "version": "2026-10-15", "spells": []any{spell("a", map[string]any{"en": "x"})}}), "format %d", f)
+	}
 	assert.Error(t, sch.Validate(artifact(spell("a", map[string]any{"en": "x", "fr": ""}))), "empty fr")
 	assert.Error(t, sch.Validate(artifact(spell("A-b", map[string]any{"en": "x"}))), "bad id")
+	// The six stats are localized since format 2: English required, French optional and never empty.
+	for name, v := range map[string]any{
+		"a format 1 string": "10 yards",
+		"no en":             map[string]any{"fr": "10 mètres"},
+		"empty fr":          map[string]any{"en": "10 yards", "fr": ""},
+		"empty en":          map[string]any{"en": ""},
+		"a third language":  map[string]any{"en": "10 yards", "de": "10 Meter"},
+	} {
+		sp := spell("a", map[string]any{"en": "x"})
+		sp["range"] = v
+		assert.Error(t, sch.Validate(artifact(sp)), "stat: %s", name)
+	}
 	extra := spell("a", map[string]any{"en": "x"})
 	extra["extra"] = 1
 	assert.Error(t, sch.Validate(artifact(extra)), "unknown property")

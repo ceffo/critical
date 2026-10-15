@@ -14,7 +14,7 @@ import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellTexts } from "@/i18n/spellName";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
-import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
+import { statDice, statValue, type StatKey } from "@/lib/spellValues";
 import { damageFormula, damageText } from "@/lib/spellDice";
 import { damageRows, exposureRows } from "@/lib/spellMode";
 import { exposureDamageText } from "@/lib/spellDice";
@@ -23,7 +23,8 @@ import {
   sphereLabel,
   schoolLabel,
   spheresLabel,
-  translateValue,
+  componentsText,
+  statCell,
 } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -35,12 +36,6 @@ const CLASSES: { value: SpellClass; key: string }[] = [
 ];
 const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const STATS: StatKey[] = ["range", "duration", "area", "castingTime", "save"];
-
-/** "1 rd" and "1 rd." say the same: the raw text is not repeated after its value. */
-function same(a: string, b: string): boolean {
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9½/-]/g, "");
-  return norm(a) === norm(b);
-}
 
 /** Load the next page when the list is this close (px) to its bottom. */
 const LOAD_MORE_MARGIN = 400;
@@ -93,7 +88,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
     t("lookup.levelLabel", { level: spell.level }),
     schoolLabel(t, spell.school),
     spheresLabel(t, spell.sphere),
-    spell.components,
+    componentsText(i18n.language, spell),
   ].filter(Boolean);
   // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
   // mode with damage for a spell with modes, then the stats with dice.
@@ -136,8 +131,13 @@ function SpellDetail({ spell }: { spell: Spell }) {
       </div>
       <dl className="flex flex-col text-body">
         {STATS.map((key) => {
-          const v = value(key);
-          const raw = translateValue(t, key, statRaw(spell, key));
+          const { value: v, text: raw } = statCell(
+            t,
+            i18n.language,
+            spell,
+            key,
+            value(key),
+          );
           return (
             <div
               key={key}
@@ -151,7 +151,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
                     <span className="font-medium" data-testid="stat-value">
                       {v}
                     </span>
-                    {raw && !same(v, raw) && (
+                    {raw && (
                       <span
                         className="text-label text-muted-foreground"
                         data-testid="stat-raw"

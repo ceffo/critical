@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buffName,
   englishSpellName,
+  frenchStat,
   otherSpellName,
   spellId,
   spellNamer,
@@ -73,6 +74,21 @@ describe("spellTexts", () => {
     expect(
       spellTexts("en", { ...spell, description_fr: "Texte français." }),
     ).toEqual({ name: "Magic Missile", description: "English text." });
+  });
+});
+
+describe("frenchStat", () => {
+  const spell = { range_fr: "10 mètres", duration_fr: "" };
+
+  it("gives the French text in French, null when the catalogue has none", () => {
+    expect(frenchStat("fr", spell, "range")).toBe("10 mètres");
+    expect(frenchStat("fr-FR", spell, "range")).toBe("10 mètres");
+    expect(frenchStat("fr", spell, "casting_time")).toBeNull();
+    expect(frenchStat("fr", spell, "duration")).toBeNull();
+  });
+
+  it("is null in English", () => {
+    expect(frenchStat("en", spell, "range")).toBeNull();
   });
 });
 

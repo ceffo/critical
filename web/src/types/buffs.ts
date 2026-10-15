@@ -35,6 +35,11 @@ export interface BuffEffect {
    */
   startRound: number;
   /**
+   * Charges the buff started with, kept by the server (0: unknown, a buff stored before it was kept,
+   * or no charges). Never sent. The timeline shows "left / total" and the used pips from it.
+   */
+  chargesTotal: number;
+  /**
    * On list responses: false while min_str is not met by the effective STR, or (a Strength bonus)
    * while an Improved Strength replaces it.
    */

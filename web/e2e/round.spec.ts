@@ -153,7 +153,7 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
     "58 turns",
   );
   await expect(buffBadge(page, "e2e Layers").getByTestId("buff-charges")).toHaveText(
-    "3 charges · until spent",
+    "3 / 3 charges · until spent",
   );
   const text = `Time passed: 1.5 h (90 rd), round ${before} → 0`;
   await expect(logEntry(page, text)).toContainText("expired: e2e Short");

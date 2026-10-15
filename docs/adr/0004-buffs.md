@@ -122,6 +122,19 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     renewal starts again, edit / absorb / Next Round / passing time keep it, the void restores it,
     an old entry restores 0); `TestActiveBuffs_StartRoundRoundTripsAndOldRowsReadZero`
     (`api/internal/adapters/buffdal/`).
+16. **Starting charges.** A buff carries the charge count it started with (`ChargesTotal`, served
+    as `chargesTotal`): the server stamps it from the buff's charges when it is activated, cast,
+    received or added from a saved template (a value sent by the client is ignored), so the
+    timeline shows "N / M". Absorbing and the other steps leave it as it is. Editing the charges
+    keeps it, except that raising the charges above a known total raises the total with them (used
+    never goes negative). Voiding restores it with the list. A buff stored before the field
+    existed, or an entry recorded before it, reads as 0: the total is unknown and the timeline
+    shows just "N charges". It has no rules meaning. No SQL migration: the active buffs are a JSON
+    list (step 15 did the same).
+    Tests: `TestBuffs_Step16_ChargesTotal` (activate and add stamp it and ignore the caller's,
+    absorb keeps it, edit keeps it and raises it with the charges, the void restores it, an old
+    entry restores 0, no charges means 0); `TestActiveBuffs_ChargesTotalRoundTripsAndOldRowsReadZero`
+    (`api/internal/adapters/buffdal/`).
 
 ## Consequences
 

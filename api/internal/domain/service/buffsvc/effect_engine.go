@@ -247,6 +247,11 @@ func edit(buffs []BuffEffect, i int, e BuffEdit) (next []BuffEffect, after BuffE
 			return nil, b, false, fmt.Errorf("%w: charges cannot be negative", domain.ErrInvalidInput)
 		}
 		b.Charges = *e.Charges
+		// ADR 0004 step 16: a known total is kept, but never falls below
+		// the charges left.
+		if b.ChargesTotal > 0 && b.Charges > b.ChargesTotal {
+			b.ChargesTotal = b.Charges
+		}
 	}
 	if e.Note != nil {
 		b.Note = strings.TrimSpace(*e.Note)

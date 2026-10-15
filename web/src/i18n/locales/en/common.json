@@ -833,7 +833,9 @@
       "editing": "Editing an entry",
       "save": "Save",
       "cancel": "Cancel",
-      "opening": "Starting XP (character sheet)"
+      "opening": "Starting XP (character sheet)",
+      "confirm": "Confirm",
+      "confirmDelete": "Confirm deleting {{reason}}"
     }
   }
 }

@@ -300,6 +300,8 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
   const remove = useXpStore((s) => s.remove);
   const busy = useXpStore((s) => s.busy);
   const fresh = useXpStore((s) => s.freshIds.has(e.id));
+  // Deleting is final (the ledger is outside the undo stack): Delete asks, Confirm deletes.
+  const [confirming, setConfirming] = useState(false);
   const reason = e.reason || t("xp.defaultReason");
   const meta = e.session ? t("xp.ledger.meta", { date: f.day(e.date), session: e.session }) : f.day(e.date);
   return (
@@ -316,23 +318,51 @@ function Row({ entry: e, cols, onEdit }: { entry: XpEntry; cols: string; onEdit:
       <span className={cn("text-right", e.bonus ? "text-amb-300" : "text-muted-foreground")}>
         {e.bonus ? `+${f.n(e.bonusAmount)}` : "–"}
       </span>
-      <span className="text-right font-semibold" data-testid="xp-row-total">
-        {f.n(e.total)}
-      </span>
-      <span className="flex justify-end gap-0.5">
-        <Button size="icon-sm" variant="ghost" disabled={busy} onClick={onEdit} aria-label={t("xp.ledger.edit", { reason })}>
-          <PencilSimple />
-        </Button>
-        <Button
-          size="icon-sm"
-          variant="ghost"
-          disabled={busy}
-          onClick={() => void remove(e.id)}
-          aria-label={t("xp.ledger.delete", { reason })}
+      {confirming ? (
+        <span
+          className="col-span-2 flex items-center justify-end gap-1"
+          onKeyDown={(ev) => {
+            if (ev.key === "Escape") {
+              ev.preventDefault();
+              setConfirming(false);
+            }
+          }}
         >
-          <Trash />
-        </Button>
-      </span>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={busy}
+            autoFocus
+            onClick={() => void remove(e.id)}
+            aria-label={t("xp.ledger.confirmDelete", { reason })}
+          >
+            {t("xp.ledger.confirm")}
+          </Button>
+          <Button size="icon-sm" variant="ghost" onClick={() => setConfirming(false)} aria-label={t("xp.ledger.cancel")}>
+            <X />
+          </Button>
+        </span>
+      ) : (
+        <>
+          <span className="text-right font-semibold" data-testid="xp-row-total">
+            {f.n(e.total)}
+          </span>
+          <span className="flex justify-end gap-0.5">
+            <Button size="icon-sm" variant="ghost" disabled={busy} onClick={onEdit} aria-label={t("xp.ledger.edit", { reason })}>
+              <PencilSimple />
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setConfirming(true)}
+              aria-label={t("xp.ledger.delete", { reason })}
+            >
+              <Trash />
+            </Button>
+          </span>
+        </>
+      )}
     </li>
   );
 }

@@ -66,8 +66,14 @@ test("experience: add with the bonus, edit, delete", async ({ page }) => {
   await expect.poll(() => xpTotal(page)).toBe(before + 1000);
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,000");
 
-  // Delete: back to the starting total.
+  // Delete is final, so it asks first: Escape keeps the entry, Confirm removes it.
   await row.getByRole("button", { name: "Delete Troll bridge" }).click();
+  await expect(row.getByRole("button", { name: "Confirm deleting Troll bridge" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(row.getByTestId("xp-row-total")).toHaveText("1,000");
+  expect(await xpTotal(page)).toBe(before + 1000);
+  await row.getByRole("button", { name: "Delete Troll bridge" }).click();
+  await row.getByRole("button", { name: "Confirm deleting Troll bridge" }).click();
   await expect.poll(() => xpTotal(page)).toBe(before);
   await expect(row).toHaveCount(0);
 });

@@ -833,7 +833,9 @@
       "editing": "Modification d'une entrée",
       "save": "Enregistrer",
       "cancel": "Annuler",
-      "opening": "XP de départ (fiche de personnage)"
+      "opening": "XP de départ (fiche de personnage)",
+      "confirm": "Confirmer",
+      "confirmDelete": "Confirmer la suppression de {{reason}}"
     }
   }
 }

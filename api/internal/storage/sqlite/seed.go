@@ -78,11 +78,12 @@ type itemSeed struct {
 	Notes      string `json:"notes"`
 }
 
-// Seed loads character.json, spells.json, weapons.json and items.json from
-// seedsDir into their tables: character, weapons and items only if their table
-// is empty, spells reconciled by (name, class). Missing character and spell
-// files are ignored. A missing weapons or items file while its table is empty
-// is an error: attacks would 404 on an empty catalog.
+// Seed loads character.json, spells.json, weapons.json, items.json and
+// skills.json from seedsDir into their tables: character, weapons and items
+// only if their table is empty, spells reconciled by (name, class), skills
+// reconciled by id. Missing character and spell files are ignored. A missing
+// weapons, items or skills file while its table is empty is an error: the
+// catalog would be empty.
 func (d *DB) Seed(ctx context.Context, seedsDir string) error {
 	if err := d.seedCharacter(ctx, filepath.Join(filepath.Clean(seedsDir), "character.json")); err != nil {
 		return fmt.Errorf("seed character: %w", err)
@@ -95,6 +96,9 @@ func (d *DB) Seed(ctx context.Context, seedsDir string) error {
 	}
 	if err := d.seedItems(ctx, filepath.Join(filepath.Clean(seedsDir), "items.json")); err != nil {
 		return fmt.Errorf("seed items: %w", err)
+	}
+	if err := d.seedSkills(ctx, filepath.Join(filepath.Clean(seedsDir), "skills.json")); err != nil {
+		return fmt.Errorf("seed skills: %w", err)
 	}
 	return nil
 }
@@ -377,6 +381,102 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 				it.ID, i, it.Name, it.Type, it.Behaviour, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.EffectDice, it.EffectSave, it.Notes,
 			); err != nil {
 				return fmt.Errorf("insert item %q: %w", it.ID, err)
+			}
+		}
+		return nil
+	})
+}
+
+// skillsSeed is seeds/skills.json: the non-weapon proficiencies (ability key
+// and modifier) and the bard skills (percentage) of ADR 0014. Ids are shared
+// by both lists (a check is rolled by id) and named by the UI.
+type skillsSeed struct {
+	Proficiencies []struct {
+		ID       string `json:"id"`
+		Ability  string `json:"ability"`
+		Modifier int    `json:"modifier"`
+	} `json:"proficiencies"`
+	BardSkills []struct {
+		ID      string `json:"id"`
+		Percent int    `json:"percent"`
+	} `json:"bard_skills"`
+}
+
+var abilityKeys = map[string]bool{"str": true, "dex": true, "con": true, "int": true, "wis": true, "cha": true}
+
+func (s skillsSeed) validate() error {
+	seen := map[string]bool{}
+	id := func(where string, i int, id string) error {
+		if id == "" {
+			return fmt.Errorf("skills.json %s %d: id is required", where, i)
+		}
+		if seen[id] {
+			return fmt.Errorf("skills.json %s %d: duplicate id %q", where, i, id)
+		}
+		seen[id] = true
+		return nil
+	}
+	for i, p := range s.Proficiencies {
+		if err := id("proficiency", i, p.ID); err != nil {
+			return err
+		}
+		if !abilityKeys[p.Ability] {
+			return fmt.Errorf("skills.json proficiency %q: unknown ability %q", p.ID, p.Ability)
+		}
+	}
+	for i, b := range s.BardSkills {
+		if err := id("bard skill", i, b.ID); err != nil {
+			return err
+		}
+		if b.Percent < 0 || b.Percent > 100 {
+			return fmt.Errorf("skills.json bard skill %q: percent %d is outside 0-100", b.ID, b.Percent)
+		}
+	}
+	return nil
+}
+
+// seedSkills reconciles the proficiencies and bard_skills tables with
+// skills.json by id, in one transaction: a new id is inserted, an existing one
+// takes the seed's ability, modifier, percentage and position (a corrected
+// modifier, a percentage raised at level-up). Rows the seed no longer lists are
+// kept, nothing is deleted, and a second run changes nothing. A missing file is
+// an error only while both tables are empty.
+func (d *DB) seedSkills(ctx context.Context, seedPath string) error {
+	data, err := os.ReadFile(filepath.Clean(seedPath))
+	if err != nil {
+		var count int
+		if cerr := d.QueryRowContext(ctx, "SELECT (SELECT COUNT(*) FROM proficiencies) + (SELECT COUNT(*) FROM bard_skills)").Scan(&count); cerr != nil {
+			return fmt.Errorf("count skills: %w", cerr)
+		}
+		if count > 0 {
+			return nil
+		}
+		return fmt.Errorf("skill tables are empty and their seed file is unreadable: %w", err)
+	}
+	var seed skillsSeed
+	if err := json.Unmarshal(data, &seed); err != nil {
+		return fmt.Errorf("parse skills.json: %w", err)
+	}
+	if err := seed.validate(); err != nil {
+		return err
+	}
+	return d.WrapTx(ctx, func(q Querier) error {
+		for i, p := range seed.Proficiencies {
+			if _, err := q.ExecContext(ctx, `
+				INSERT INTO proficiencies (id, position, ability, modifier) VALUES (?, ?, ?, ?)
+				ON CONFLICT (id) DO UPDATE SET position = excluded.position, ability = excluded.ability, modifier = excluded.modifier`,
+				p.ID, i, p.Ability, p.Modifier,
+			); err != nil {
+				return fmt.Errorf("upsert proficiency %q: %w", p.ID, err)
+			}
+		}
+		for i, b := range seed.BardSkills {
+			if _, err := q.ExecContext(ctx, `
+				INSERT INTO bard_skills (id, position, percent) VALUES (?, ?, ?)
+				ON CONFLICT (id) DO UPDATE SET position = excluded.position, percent = excluded.percent`,
+				b.ID, i, b.Percent,
+			); err != nil {
+				return fmt.Errorf("upsert bard skill %q: %w", b.ID, err)
 			}
 		}
 		return nil

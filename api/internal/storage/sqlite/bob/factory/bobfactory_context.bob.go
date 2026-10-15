@@ -32,6 +32,9 @@ var (
 	attackFormWithParentsCascadingCtx = newContextual[bool]("attackFormWithParentsCascading")
 	attackFormRelCharacterCtx         = newContextual[bool]("attack_forms.characters.fk_attack_forms_0")
 
+	// Relationship Contexts for bard_skills
+	bardSkillWithParentsCascadingCtx = newContextual[bool]("bardSkillWithParentsCascading")
+
 	// Relationship Contexts for characters
 	characterWithParentsCascadingCtx = newContextual[bool]("characterWithParentsCascading")
 	characterRelActionLogsCtx        = newContextual[bool]("action_log.characters.fk_action_log_0")
@@ -52,6 +55,9 @@ var (
 
 	// Relationship Contexts for items
 	itemWithParentsCascadingCtx = newContextual[bool]("itemWithParentsCascading")
+
+	// Relationship Contexts for proficiencies
+	proficiencyWithParentsCascadingCtx = newContextual[bool]("proficiencyWithParentsCascading")
 
 	// Relationship Contexts for round_state
 	roundStateWithParentsCascadingCtx = newContextual[bool]("roundStateWithParentsCascading")

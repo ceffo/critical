@@ -134,3 +134,13 @@ packages:
     interfaces:
       SVC:
       DAL:
+  github.com/ceffo/critical/api/internal/domain/service/skillsvc:
+    config:
+      dir: "internal/domain/service/skillsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Characters:
+      Dice:
+      Log:

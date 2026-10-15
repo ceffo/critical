@@ -206,6 +206,30 @@ func TestCreateAttackForm(t *testing.T) {
 	}
 }
 
+func TestCreateBardSkill(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewBardSkillWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating BardSkill: %v", err)
+	}
+}
+
 func TestCreateCharacter(t *testing.T) {
 	if testDB == nil {
 		t.Skip("skipping test, no DSN provided")
@@ -565,6 +589,30 @@ func TestCreateItem(t *testing.T) {
 
 	if _, err := New().NewItemWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating Item: %v", err)
+	}
+}
+
+func TestCreateProficiency(t *testing.T) {
+	if testDB == nil {
+		t.Skip("skipping test, no DSN provided")
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	t.Cleanup(cancel)
+
+	tx, err := testDB.Begin(ctx)
+	if err != nil {
+		t.Fatalf("Error starting transaction: %v", err)
+	}
+
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatalf("Error rolling back transaction: %v", err)
+		}
+	}()
+
+	if _, err := New().NewProficiencyWithContext(ctx).Create(ctx, tx); err != nil {
+		t.Fatalf("Error creating Proficiency: %v", err)
 	}
 }
 

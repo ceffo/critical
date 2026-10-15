@@ -7,14 +7,15 @@ import { useLogStore } from "@/stores/log";
 import { AttackPanel } from "./AttackPanel";
 import { SpellsPanel } from "./SpellsPanel";
 import { ItemsTab } from "./ItemsTab";
+import { SkillsTab } from "./SkillsTab";
 import { combatItems } from "@/lib/combatItems";
 
 /**
  * Tabs of the Agir (act) workspace: Weapons, Spells (with the spells left), Items (with how many
- * there are). Inventory and spell lookup are workspaces of their own in the rail (App.tsx); saving
+ * there are), Skills (proficiency and bard skill checks). Inventory and spell lookup are workspaces of their own in the rail (App.tsx); saving
  * throws live in the Moi column.
  */
-const TABS = ["weapons", "spells", "items"] as const;
+const TABS = ["weapons", "spells", "items", "skills"] as const;
 type TabId = (typeof TABS)[number];
 
 export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void }) {
@@ -77,6 +78,7 @@ export function ActionArea({ onOpenInventory }: { onOpenInventory: () => void })
         {active === "weapons" && <AttackPanel />}
         {active === "spells" && <SpellsPanel />}
         {active === "items" && <ItemsTab onManage={onOpenInventory} />}
+        {active === "skills" && <SkillsTab />}
       </div>
     </section>
   );

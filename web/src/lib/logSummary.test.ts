@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
-import { entryText } from "./logSummary";
+import { abilityText, entryText } from "./logSummary";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -688,5 +688,40 @@ describe("initiative entries", () => {
 
   it("falls back to the summary without a payload", async () => {
     expect(entryText(entry("initiative", null, "old"), await makeT("en"))).toBe("old");
+  });
+});
+
+describe("entryText for skill checks", () => {
+  const prof = {
+    id: "riding_land",
+    kind: "proficiency",
+    die: 20,
+    roll: 11,
+    target: 11,
+    success: true,
+    ability: "wis",
+    abilityScore: 8,
+    modifier: 3,
+  };
+  const bard = { id: "pick_pockets", kind: "bardSkill", die: 100, roll: 51, target: 50, success: false };
+
+  it("words the check from its payload (en, fr), never the server summary", async () => {
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    expect(entryText(entry("skill_check", prof, ""), en)).toBe("Riding, land-based: d20 11 vs 11, success");
+    expect(entryText(entry("skill_check", bard, ""), en)).toBe("Pick pockets: d100 51 vs 50, failure");
+    expect(entryText(entry("skill_check", bard, ""), fr)).toBe("Vol à la tire : d100 51 contre 50, échec");
+  });
+
+  it("falls back to the summary on an unknown payload", async () => {
+    expect(entryText(entry("skill_check", { id: "x" }), await makeT("en"))).toBe("server summary");
+  });
+
+  it("shows the ability as DEX 17 −1, leaving out a 0 modifier", async () => {
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    expect(abilityText(en, "dex", 17, -1)).toBe("DEX 17 −1");
+    expect(abilityText(en, "wis", 8, 3)).toBe("WIS 8 +3");
+    expect(abilityText(fr, "wis", 8, 0)).toBe("SAG 8");
   });
 });

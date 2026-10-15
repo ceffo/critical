@@ -23,6 +23,9 @@ var _ bob.HookableType = &ActiveBuff{}
 // Make sure the type AttackForm runs hooks after queries
 var _ bob.HookableType = &AttackForm{}
 
+// Make sure the type BardSkill runs hooks after queries
+var _ bob.HookableType = &BardSkill{}
+
 // Make sure the type Character runs hooks after queries
 var _ bob.HookableType = &Character{}
 
@@ -34,6 +37,9 @@ var _ bob.HookableType = &HPEvent{}
 
 // Make sure the type Item runs hooks after queries
 var _ bob.HookableType = &Item{}
+
+// Make sure the type Proficiency runs hooks after queries
+var _ bob.HookableType = &Proficiency{}
 
 // Make sure the type RoundState runs hooks after queries
 var _ bob.HookableType = &RoundState{}

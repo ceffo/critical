@@ -29,6 +29,7 @@ import { useTableStore } from "@/stores/table";
 import { groupByRound, isUndone } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
+import { useSpellName } from "@/i18n/spellName";
 import {
   cappedHeal,
   cardEntryId,
@@ -230,6 +231,7 @@ function LogRow({
   undoneGroup: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const spellName = useSpellName();
   const reroll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
   const diceFormula = dicePayload(e)?.formula;
@@ -237,7 +239,7 @@ function LogRow({
   const voided = e.status === "voided";
   const amended = e.status === "amended";
   const isHp = e.kind === "hp_change";
-  const text = entryText(e, t);
+  const text = entryText(e, t, spellName);
   const capped = cappedHeal(e);
   const value = rowValue(e);
   const KindIcon = KIND_ICONS[e.kind] ?? Sparkle;

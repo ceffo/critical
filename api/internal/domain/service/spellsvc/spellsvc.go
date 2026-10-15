@@ -16,6 +16,8 @@ type SVC interface {
 	GetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	Search(ctx context.Context, f Filter, p PageRequest) (Page, error)
+	// Names lists every catalogue spell's id and names, in the Reader's order.
+	Names(ctx context.Context) ([]SpellName, error)
 }
 
 // DAL is the write-side driven port (slot ledger).

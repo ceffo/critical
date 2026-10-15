@@ -19,21 +19,6 @@ describe("catalogues", () => {
     );
   });
 
-  it("every PHB spell id has a fr name, bar the known gaps", () => {
-    // Ids the French Manuel des Joueurs gives no name for. That every id is a
-    // catalogue spell is checked in Go against the real catalogue (seedcheck).
-    const knownGaps: string[] = [];
-    const phbIds = JSON.parse(
-      readFileSync(join(__dirname, "phbSpellIds.json"), "utf8"),
-    ) as string[];
-    const fr = resources.fr.spells as Record<string, string>;
-    expect(phbIds.length).toBeGreaterThan(400);
-    for (const id of phbIds) {
-      if (knownGaps.includes(id)) continue;
-      expect(fr[id], `fr name of ${id}`).toBeTruthy();
-    }
-  });
-
   it("every skill id of seeds/skills.json has an en and a fr name", () => {
     const seed = JSON.parse(
       readFileSync(
@@ -71,11 +56,6 @@ describe("catalogues", () => {
       for (const type of types)
         expect(words[type], `${lang} ${type}`).toBeTruthy();
     }
-  });
-
-  it("every fr spell key exists in en (en is the fallback)", () => {
-    const en = new Set(flatten(resources.en.spells));
-    for (const k of flatten(resources.fr.spells)) expect(en.has(k)).toBe(true);
   });
 });
 

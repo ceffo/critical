@@ -388,18 +388,3 @@ func TestRealCatalogue_SwitchingADatabaseBetweenTheFixtureAndTheRealCatalogue(t 
 	assert.Equal(t, len(fixture.Spells), served(bs))
 	require.NoError(t, bs.Close(ctx))
 }
-
-// The web's list of PHB spell ids (web/src/i18n/phbSpellIds.json, the ids
-// the fr spell names cover) names catalogue spells only.
-func TestRealCatalogue_WebPHBSpellIdsAreCatalogueSpells(t *testing.T) {
-	ids := realCatalogue(t).ByID()
-	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "web", "src", "i18n", "phbSpellIds.json"))
-	require.NoError(t, err)
-	var phb []string
-	require.NoError(t, json.Unmarshal(raw, &phb))
-	require.NotEmpty(t, phb)
-	for _, id := range phb {
-		_, ok := ids[id]
-		assert.True(t, ok, "%s is not a catalogue spell", id)
-	}
-}

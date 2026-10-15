@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { undoButtonState } from "@/lib/undoButton";
+import { useSpellName } from "@/i18n/spellName";
 import {
   hasOpenOverlay,
   isTypingTarget,
@@ -18,11 +19,18 @@ import { useTableStore } from "@/stores/table";
  */
 export function UndoButton() {
   const { t } = useTranslation();
+  const spellName = useSpellName();
   const topId = useLogStore((s) => s.topId);
   const entries = useLogStore((s) => s.entries);
   const busy = useTableStore((s) => s.busy);
   const undo = useTableStore((s) => s.undo);
-  const { disabled, label } = undoButtonState(topId, entries, busy, t);
+  const { disabled, label } = undoButtonState(
+    topId,
+    entries,
+    busy,
+    t,
+    spellName,
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -15,19 +15,19 @@ import (
 // catalogue is a fixture in the Reader's order (level, name, class).
 func catalogue() []spellsvc.Spell {
 	return []spellsvc.Spell{
-		{ID: "burning_hands", Name: "Burning Hands", Class: "Wizard", Level: 1, School: "Alteration"},
-		{ID: "detect_magic_priest", Name: "Detect Magic", Class: "Priest", Level: 1, School: "Divination", Sphere: "Divination"},
-		{ID: "detect_magic", Name: "Detect Magic", Class: "Wizard", Level: 1, School: "Divination"},
+		{ID: "burning_hands", Name: "Burning Hands", NameFR: "Mains brûlantes", Class: "Wizard", Level: 1, School: "Alteration"},
+		{ID: "detect_magic_priest", Name: "Detect Magic", NameFR: "Détection de la magie", Class: "Priest", Level: 1, School: "Divination", Sphere: "Divination"},
+		{ID: "detect_magic", Name: "Detect Magic", NameFR: "Détection de la magie", Class: "Wizard", Level: 1, School: "Divination"},
 		{ID: "faerie_fire", Name: "Faerie Fire", Class: "Priest", Level: 1, School: "Alteration", Sphere: "Elemental Fire"},
-		{ID: "fire", Name: "Fire", Class: "Wizard", Level: 2, School: "Evocation"},
-		{ID: "fire_trap", Name: "Fire Trap", Class: "Wizard", Level: 2, School: "Abjuration, Evocation"},
+		{ID: "fire", Name: "Fire", NameFR: "Feu", Class: "Wizard", Level: 2, School: "Evocation"},
+		{ID: "fire_trap", Name: "Fire Trap", NameFR: "Piège de feu", Class: "Wizard", Level: 2, School: "Abjuration, Evocation"},
 		{ID: "hold_person_priest", Name: "Hold Person", Class: "Priest", Level: 2, School: "Enchantment/Charm", Sphere: "Charm"},
-		{ID: "fireball", Name: "Fireball", Class: "Wizard", Level: 3, School: "Invocation/Evocation"},
+		{ID: "fireball", Name: "Fireball", NameFR: "Boule de feu", Class: "Wizard", Level: 3, School: "Invocation/Evocation"},
 		{ID: "fire_shield", Name: "Fire Shield", Class: "Wizard", Level: 4, School: "Evocation, Alteration"},
 		{ID: "fortify_l4", Name: "Fortify", Class: "Priest", Level: 4, School: "Necromantic", Sphere: "Wards Elemental Air"},
-		{ID: "wall_of_fire", Name: "Wall of Fire", Class: "Wizard", Level: 4, School: "Evocation"},
+		{ID: "wall_of_fire", Name: "Wall of Fire", NameFR: "Mur de feu en boule", Class: "Wizard", Level: 4, School: "Evocation"},
 		{ID: "tensers_brawl", Name: "Tenser's Brawl", Class: "Wizard", Level: 5, School: "Alteration, Geometry"},
-		{ID: "sands_of_time", Name: "Sands of Time", Class: "Wizard", Level: 6, School: "Dimension"},
+		{ID: "sands_of_time", Name: "Sands of Time", NameFR: "Sables du temps et Œil", Class: "Wizard", Level: 6, School: "Dimension"},
 	}
 }
 
@@ -81,35 +81,34 @@ func TestSearch_RankingTiers(t *testing.T) {
 			[]string{"fireball"},
 		},
 		{
-			"a client match alone finds a spell the English text does not",
-			spellsvc.Filter{Query: "mains", Names: []spellsvc.NameMatch{{Key: "burning_hands", Tier: spellsvc.TierPrefix}}},
+			"the French name matches, accents and case ignored",
+			spellsvc.Filter{Query: "MAINS"},
 			[]string{"burning_hands"},
 		},
 		{
-			"client tiers rank with the English ones",
-			spellsvc.Filter{Query: "fire", Names: []spellsvc.NameMatch{
-				{Key: "wall_of_fire", Tier: spellsvc.TierExact},
-				{Key: "burning_hands", Tier: spellsvc.TierContains},
-			}},
-			[]string{"fire", "wall_of_fire", "fire_trap", "fireball", "fire_shield", "burning_hands", "faerie_fire"},
+			"an exact French name ranks before French substrings",
+			spellsvc.Filter{Query: "feu"},
+			[]string{"fire", "fire_trap", "fireball", "wall_of_fire"},
 		},
 		{
-			"the best tier wins: an English prefix beats a client contains",
-			spellsvc.Filter{Query: "fire", Names: []spellsvc.NameMatch{{Key: "fireball", Tier: spellsvc.TierContains}}},
-			[]string{"fire", "fire_trap", "fireball", "fire_shield", "faerie_fire", "wall_of_fire"},
+			"typed without accents, a French name with accents matches",
+			spellsvc.Filter{Query: "detection"},
+			[]string{"detect_magic_priest", "detect_magic"},
 		},
 		{
-			"a catalogue key names the _priest and _l<n> spells of that name",
-			spellsvc.Filter{Query: "détection", Names: []spellsvc.NameMatch{
-				{Key: "detect_magic", Tier: spellsvc.TierPrefix},
-				{Key: "fortify", Tier: spellsvc.TierContains},
-			}},
-			[]string{"detect_magic_priest", "detect_magic", "fortify_l4"},
+			"typed with accents, too",
+			spellsvc.Filter{Query: "Détection de la"},
+			[]string{"detect_magic_priest", "detect_magic"},
 		},
 		{
-			"an unknown tier is ignored",
-			spellsvc.Filter{Names: []spellsvc.NameMatch{{Key: "fireball", Tier: spellsvc.Tier(9)}}},
-			[]string{},
+			"the best tier of the two names wins",
+			spellsvc.Filter{Query: "boule"},
+			[]string{"fireball", "wall_of_fire"},
+		},
+		{
+			"a ligature matches its letters",
+			spellsvc.Filter{Query: "oeil"},
+			[]string{"sands_of_time"},
 		},
 		{
 			"no match",
@@ -245,13 +244,16 @@ func TestSpellSpheres(t *testing.T) {
 	}
 }
 
-func TestBaseKey(t *testing.T) {
-	for in, want := range map[string]string{
-		"hold_person_priest":    "hold_person",
-		"fortify_l4":            "fortify",
-		"cure_wounds_priest_l4": "cure_wounds",
-		"fireball":              "fireball",
-	} {
-		assert.Equal(t, want, spellsvc.BaseKey(in), in)
-	}
+func TestNames_ListsEveryCatalogueSpellWithItsNames(t *testing.T) {
+	reader := mocks.NewMockReader(t)
+	svc, err := spellsvc.New(mocks.NewMockDAL(t), reader, mocks.NewMockSpellbook(t))
+	require.NoError(t, err)
+	reader.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(catalogue()[:3], nil)
+	got, err := svc.Names(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []spellsvc.SpellName{
+		{ID: "burning_hands", Name: "Burning Hands", NameFR: "Mains brûlantes"},
+		{ID: "detect_magic_priest", Name: "Detect Magic", NameFR: "Détection de la magie"},
+		{ID: "detect_magic", Name: "Detect Magic", NameFR: "Détection de la magie"},
+	}, got)
 }

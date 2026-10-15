@@ -1,5 +1,4 @@
-import type { SpellFilterOptions, SpellPage } from "@/types/spells";
-import { nameMatches } from "@/lib/spellSearch";
+import type { SpellFilterOptions, SpellName, SpellPage } from "@/types/spells";
 import { request } from "./http";
 
 /** Class toggle of the lookup: "mine" is the Bard's spellbook. */
@@ -7,7 +6,7 @@ export type SpellClass = "mine" | "wizard" | "priest" | "all";
 
 /** A spell search (GET /api/spells); empty fields do not filter. */
 export interface SpellQuery {
-  /** Name text, matched against English names (server) and the other catalogues (client). */
+  /** Name text, matched by the server against the English and French names. */
   q: string;
   cls: SpellClass;
   /** Spell levels to keep; empty means any. */
@@ -30,9 +29,8 @@ export const NO_QUERY: SpellQuery = {
 export const MAX_PAGE_SIZE = 200;
 
 /**
- * One page (1-based) of the ranked search; `total` counts every match. The query is
- * matched against English names by the server and against the French catalogue here
- * (lib/spellSearch), sent as catalogue keys with their tier.
+ * One page (1-based) of the ranked search; `total` counts every match. The server matches the
+ * query against the English and French names (case and accents ignored).
  */
 export function searchSpells(
   query: SpellQuery,
@@ -43,14 +41,7 @@ export function searchSpells(
 ): Promise<SpellPage> {
   const url = new URL("/api/spells", window.location.origin);
   const set = (k: string, v: string) => v && url.searchParams.set(k, v);
-  const q = query.q.trim();
-  set("q", q);
-  if (q) {
-    const m = nameMatches(q);
-    set("match_exact", m.exact.join(","));
-    set("match_prefix", m.prefix.join(","));
-    set("match_contains", m.contains.join(","));
-  }
+  set("q", query.q.trim());
   set("class", query.cls);
   set("level", query.levels.join(","));
   set("school", query.school);
@@ -64,4 +55,9 @@ export function searchSpells(
 /** Choices of the school / sphere dropdown. */
 export function getSpellFilterOptions(): Promise<SpellFilterOptions> {
   return request<SpellFilterOptions>("/api/spells/filters");
+}
+
+/** Every catalogue spell's id and names. */
+export function getSpellNames(): Promise<SpellName[]> {
+  return request<SpellName[]>("/api/spells/names");
 }

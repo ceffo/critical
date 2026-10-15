@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { redoButtonState } from "@/lib/undoButton";
+import { useSpellName } from "@/i18n/spellName";
 import {
   hasOpenOverlay,
   isRedoShortcut,
@@ -17,10 +18,11 @@ import { useTableStore } from "@/stores/table";
  */
 export function RedoButton() {
   const { t } = useTranslation();
+  const spellName = useSpellName();
   const redoTarget = useLogStore((s) => s.redo);
   const busy = useTableStore((s) => s.busy);
   const redo = useTableStore((s) => s.redo);
-  const { disabled, label } = redoButtonState(redoTarget, busy, t);
+  const { disabled, label } = redoButtonState(redoTarget, busy, t, spellName);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

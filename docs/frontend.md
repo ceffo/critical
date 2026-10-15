@@ -195,9 +195,21 @@ flowchart TD
   composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and the Description
   toggle.
 - Spell name search (one module for Lookup and Receive): `api/spells_db.ts` `searchSpells` sends
-  `q` (the server matches English names) plus `match_exact` / `match_prefix` / `match_contains`,
-  the catalogue keys whose French name matched (`lib/spellSearch.ts`); the server ORs both and
-  ranks exact > prefix > contains, then level, name.
+  `q`; the server matches it against the English and the French catalogue names (case, accents and
+  ligatures ignored) and ranks exact > prefix > contains over the better of the two, then level, name.
+- Spell names and descriptions (ADR 0021): the catalogue is the only source. A spell DTO carries
+  `name` / `description` (English) and `name_fr` / `description_fr` (absent without French);
+  `spellTexts(lang, spell)` (`i18n/spellName.ts`) picks French per field in the French UI. A spell
+  known only by id (spellbook, slots, journal, cast and exposure cards, the add-effect form, HP bar) is named by
+  `useSpellName()`, over every spell's names loaded once at start (`GET /api/spells/names`,
+  `stores/spellNames.ts`); lib functions that word spells (`entryText`, `cardModel`, `cardHeader`,
+  the undo/redo labels) take that namer as a parameter (English names by default). The lookup row
+  and heading add the other language's name in grey. Descriptions are the catalogue's Markdown
+  subset, parsed by `lib/spellMarkdown.ts` and rendered as React text by
+  `components/dashboard/SpellDescription.tsx` (paragraphs, bullet lists, tables with role-token
+  borders and a muted header, a wide table scrolling sideways in its own box) in the lookup and the
+  cast result. No Markdown library: the subset is fixed by the format, and plain React text cannot
+  carry HTML.
 - Expérience workspace (`components/xp/XpPanel.tsx`, `stores/xp.ts`, ADR 0015): a progress card
   (total, "Before level N · X XP", a bar with 10% ticks between the server's floor and ceiling, the
   server's 8 level cells with their thresholds, current and next ringed), "Add XP" (amount, reason,
@@ -342,14 +354,11 @@ fails on JSX text and on `placeholder`/`title`/`aria-label`/`alt` literals in `A
 outside `ui/`).
 
 - Catalogues: `web/src/i18n/locales/<lng>/<namespace>.json`, languages `en` (fallback) and `fr`.
-- Namespaces: `common` (all UI strings, default namespace) and `spells` (spell names only).
+- Namespace: `common` (all UI strings, the default namespace). Spell names and descriptions are not
+  UI strings: they come from the catalogue (see "Spell names and descriptions" above).
 - `common` keys: `area.thing`, camelCase leaves, grouped by panel/feature (`hp.applyDamage`,
   `buffs.none`, `combat.weapons.longsword`). Interpolation uses `{{name}}`: `t("spellSlots.level", { level })`.
   Add the key to **both** `en` and `fr`; a test requires identical key sets.
-- `spells` keys: the spell's stable id (snake_case of the English name, e.g. `magic_missile`), value is the
-  name. Render with `spellName(t, id, englishName)` from `@/i18n/spellName`; a missing `fr` key falls back
-  to `en`, then to the supplied English name. `spellId(name)` derives the id until the spell database
-  carries an explicit one. Spell descriptions stay English.
 - Use `const { t } = useTranslation()` in components. Dynamic keys are fine, e.g. a template literal per tab id.
 - Language: chosen in the settings popover, switches live and persists with the other display
   preferences (`localStorage['critical.settings.v1']`, ADR 0009); presentation only, never sent to

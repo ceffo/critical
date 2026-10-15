@@ -8,7 +8,7 @@ import type { UseResult } from "@/types/items";
 import type { CastResult, ExposureResult } from "@/types/spells";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
-import { spellName } from "@/i18n/spellName";
+import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { formatSigned, formatTime } from "./format";
 import { attackSettled } from "./attackAdjust";
 import {
@@ -222,7 +222,11 @@ function initiativePayload(e: LogEntry): { round: number; d10: number } | null {
 }
 
 /** The card model of a journal entry, from its (effective) payload. */
-export function cardModel(e: LogEntry, t: TFunction): CardModel {
+export function cardModel(
+  e: LogEntry,
+  t: TFunction,
+  spellName: SpellNamer = englishSpellName,
+): CardModel {
   const attack = attackPayload(e);
   if (attack)
     return { layout: "attack", roll: { ...attack, logEntryId: e.id } };
@@ -259,7 +263,11 @@ export function cardModel(e: LogEntry, t: TFunction): CardModel {
   if (dice) return { layout: "dice", roll: { ...dice, logEntryId: e.id } };
   return {
     layout: "info",
-    info: { text: entryText(e, t), value: hpValue(e), capped: cappedHeal(e) },
+    info: {
+      text: entryText(e, t, spellName),
+      value: hpValue(e),
+      capped: cappedHeal(e),
+    },
   };
 }
 
@@ -346,6 +354,7 @@ export function cardHeader(
   entry: LogEntry | null,
   t: TFunction,
   lang: string,
+  spellName: SpellNamer = englishSpellName,
 ): CardHeader {
   const tag = t(`log.kinds.${kind}`, { defaultValue: kind });
   let subtitle = "";
@@ -364,13 +373,13 @@ export function cardHeader(
       });
       break;
     case "cast":
-      subtitle = spellName(t, model.cast.spellId, model.cast.spell);
+      subtitle = spellName(model.cast.spellId, model.cast.spell);
       break;
     case "castLive":
-      subtitle = spellName(t, model.result.spellId, model.result.name);
+      subtitle = spellName(model.result.spellId, model.result.name);
       break;
     case "exposure":
-      subtitle = spellName(t, model.exposure.spellId, model.exposure.name);
+      subtitle = spellName(model.exposure.spellId, model.exposure.name);
       break;
     case "item":
       subtitle = model.item.name;

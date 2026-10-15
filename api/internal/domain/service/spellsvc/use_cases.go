@@ -59,8 +59,8 @@ type Page struct {
 // Search reads the catalog rows matching the filter's stored columns, keeps
 // those matching the rest of it, ranks them, then cuts the requested page.
 // Rows come ordered by level, name, class; a search text ranks exact name
-// matches first, then prefix, then substring matches (over the English name
-// and the client's Names), keeping that order within a tier, so pages are
+// matches first, then prefix, then substring matches (over the English and
+// the French name), keeping that order within a tier, so pages are
 // stable. Filtering runs before paging: Total and the pages are exact.
 func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, error) {
 	rows, err := s.reader.Search(ctx, f)
@@ -94,4 +94,18 @@ func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, er
 	start := min((p.Page-1)*p.PageSize, len(matches))
 	end := min(start+p.PageSize, len(matches))
 	return Page{Items: matches[start:end:end], Total: len(matches), Page: p.Page, PageSize: p.PageSize}, nil
+}
+
+// Names lists every catalogue spell's id, English and French name: the client
+// names a spell it knows only by id (spellbook, slots, journal) from it.
+func (s *service) Names(ctx context.Context) ([]SpellName, error) {
+	rows, err := s.reader.Search(ctx, Filter{})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]SpellName, 0, len(rows))
+	for _, sp := range rows {
+		out = append(out, SpellName{ID: sp.ID, Name: sp.Name, NameFR: sp.NameFR})
+	}
+	return out, nil
 }

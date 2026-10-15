@@ -3,6 +3,7 @@ import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
 import { abilityText, entryText } from "./logSummary";
+import { spellNamer } from "@/i18n/spellName";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -736,6 +737,31 @@ describe("cast entries", () => {
   });
 });
 
+// The catalogue's names (GET /api/spells/names): Mirror Image has no French name here.
+const frNames = spellNamer("fr", {
+  magic_missile: {
+    id: "magic_missile",
+    name: "Magic Missile",
+    name_fr: "Projectile magique",
+  },
+  mirror_image: { id: "mirror_image", name: "Mirror Image" },
+});
+
+describe("cast entries name the spell from the catalogue", () => {
+  it("in French, falling back to the payload's English name", async () => {
+    const cast = (spellId: string, spell: string) =>
+      entry("cast", { action: "cast", spellId, spell, casterLevel: 5 });
+    const fr = await makeT("fr");
+    expect(
+      entryText(cast("magic_missile", "Magic Missile"), fr, frNames),
+    ).toContain("Projectile magique");
+    expect(entryText(cast("armor", "Armor"), fr, frNames)).toContain("Armor");
+    expect(
+      entryText(cast("magic_missile", "Magic Missile"), await makeT("en")),
+    ).toBe("Cast Magic Missile");
+  });
+});
+
 describe("spell_prep entries", () => {
   it("lists the spells with their copies (en/fr)", async () => {
     const e = entry("spell_prep", {
@@ -747,7 +773,9 @@ describe("spell_prep entries", () => {
     expect(entryText(e, await makeT("en"))).toBe(
       "Prepared: Magic Missile, Mirror Image ×2",
     );
-    expect(entryText(e, await makeT("fr"))).toMatch(/^Préparé : .+ ×2$/);
+    expect(entryText(e, await makeT("fr"), frNames)).toBe(
+      "Préparé : Projectile magique, Mirror Image ×2",
+    );
     expect(
       entryText(entry("spell_prep", { spells: [] }), await makeT("en")),
     ).toBe("Prepared no spells");

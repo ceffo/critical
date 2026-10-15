@@ -23,7 +23,6 @@ type entryDTO struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Level int    `json:"level"`
-	Sheet string `json:"sheet"` // the sheet's own (French) name, kept for review
 }
 
 // Book implements prepsvc.Spellbook.

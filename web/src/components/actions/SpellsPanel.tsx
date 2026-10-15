@@ -5,7 +5,7 @@ import { useSpellStore } from "@/stores/spells";
 import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
 import { useItemsStore } from "@/stores/items";
-import { spellId, spellName } from "@/i18n/spellName";
+import { spellId, useSpellName } from "@/i18n/spellName";
 import type { SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
@@ -69,6 +69,7 @@ function groupSlots(
  */
 export function SpellsPanel() {
   const { t } = useTranslation();
+  const spellName = useSpellName();
   const {
     slots,
     info,
@@ -229,7 +230,6 @@ export function SpellsPanel() {
                   list,
                   (slot) =>
                     spellName(
-                      t,
                       slot.prepared_spell_id ||
                         spellId(slot.prepared_spell_name),
                       slot.prepared_spell_name,
@@ -324,7 +324,7 @@ export function SpellsPanel() {
                           <option value="">{t("spellSlots.extraPick")}</option>
                           {choices.map((s) => (
                             <option key={s.id} value={s.id}>
-                              {spellName(t, s.id, s.name)}
+                              {spellName(s.id, s.name)}
                             </option>
                           ))}
                         </select>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
-import { damageFormula, damageText, diceText, rollLabel } from "./spellDice";
+import { damageFormula, damageText, diceText, rollLabel, stepsHeader } from "./spellDice";
 import type { DiceSum, SpellDamage } from "@/types/spells";
 
 async function makeT(lng: string) {
@@ -115,5 +115,15 @@ describe("dice steps", () => {
     expect(rollLabel(t, "instance", 2, 0)).toBe("#2");
     expect(rollLabel(t, undefined, undefined, 4)).toBe("#5");
     expect(rollLabel(await makeT("fr"), "round", 3, 0)).toBe("Tour 3");
+  });
+
+  it.each([
+    ["round", 5, "5 turns, one roll each", "5 tours, un jet chacun"],
+    ["round", 1, "1 turn, one roll", "1 tour, un jet"],
+    ["instance", 12, "12 rolls in turn", "12 jets successifs"],
+    ["instance", 1, "1 roll", "1 jet"],
+  ] as const)("header of %s steps, %d", async (per, count, en, fr) => {
+    expect(stepsHeader(await makeT("en"), per, count)).toBe(en);
+    expect(stepsHeader(await makeT("fr"), per, count)).toBe(fr);
   });
 });

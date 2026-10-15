@@ -578,8 +578,10 @@
       "instance": "n°{{n}}",
       "round": "Tour {{n}}",
       "damageSteps": {
-        "round": "{{count}} tours, un jet chacun",
-        "instance": "{{count}} jets successifs"
+        "round_one": "{{count}} tour, un jet",
+        "round_other": "{{count}} tours, un jet chacun",
+        "instance_one": "{{count}} jet",
+        "instance_other": "{{count}} jets successifs"
       },
       "noDamage": "pas de dégâts",
       "save": "Sauvegarde de la cible : {{type}}, {{effect}}",

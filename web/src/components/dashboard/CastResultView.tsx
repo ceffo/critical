@@ -7,7 +7,7 @@ import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
-import { rollLabel } from "@/lib/spellDice";
+import { rollLabel, stepsHeader } from "@/lib/spellDice";
 import { labelClass } from "./fieldStyles";
 
 /** One die, as a small tile. */
@@ -199,7 +199,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0 text-sm">
               {r.damage.stepsPer ? (
-                t(`result.cast.damageSteps.${r.damage.stepsPer}`, { count: r.damage.rolls.length })
+                stepsHeader(t, r.damage.stepsPer, r.damage.rolls.length)
               ) : (
                 <>
                   {t("result.cast.damageRoll", { instances: r.damage.instances, dice: r.damage.rolls[0] ? resolved(r.damage.rolls[0]) : r.damage.dice })}

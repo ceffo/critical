@@ -144,6 +144,45 @@ test("Wall of Ice cast as the falling ice sheet rolls its 3d10 and names the opt
   await expect(card.getByTestId("cast-damage")).toHaveCount(0);
   await expect(card.getByTestId("cast-text-only")).toHaveCount(0);
   await snap(page, "ice-storm-sleet-received");
+
+  // Dice steps (ADR 0008 step 15): Incendiary Cloud from a level 12 caster rolls each turn on its
+  // own, the two smoke turns without dice.
+  const receive = async (name: string, level: string) => {
+    const p = await receivePicker(page);
+    await p.getByLabel("Search for a spell cast on me").fill(name);
+    await p.getByLabel("Caster level").fill(level);
+    await p.getByRole("button", { name: `Apply ${name}` }).click();
+    await expect(page.getByTestId("add-effect-popover")).toBeHidden();
+  };
+  await receive("Incendiary Cloud", "12");
+  const cloud = card.getByTestId("cast-damage");
+  await expect(cloud).toContainText("5 turns, one roll each");
+  const turns = cloud.getByTestId("cast-damage-roll");
+  await expect(turns).toHaveCount(5);
+  await expect(turns.nth(0)).toHaveText("Turn 1no damage");
+  await expect(turns.nth(1)).toHaveText("Turn 2no damage");
+  await expect(turns.nth(2)).toContainText("Turn 312d2");
+  await expect(turns.nth(3)).toContainText("Turn 412d4");
+  await expect(turns.nth(4)).toContainText("Turn 512d2");
+  await snap(page, "incendiary-cloud-received");
+
+  // Chain Lightning from a level 15 caster: twelve strikes, 12d6 down to 1d6, at 1280 wide.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await receive("Chain Lightning", "15");
+  const strikes = card.getByTestId("cast-damage").getByTestId("cast-damage-roll");
+  await expect(strikes).toHaveCount(12);
+  await expect(strikes.nth(0)).toContainText("#112d6");
+  await expect(strikes.nth(11)).toContainText("#121d6");
+  await snap(page, "chain-lightning-received-1280");
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  // The journal card of the earlier Incendiary Cloud shows the same turns.
+  await logEntry(page, "Incendiary Cloud").getByTestId("log-select").click();
+  const entry = card.getByTestId("cast-entry");
+  await expect(entry.getByTestId("cast-entry-instances").getByRole("listitem").filter({ hasText: /^Turn/ })).toHaveCount(5);
+  await expect(entry).toContainText("Turn 1no damage");
+  await expect(entry).toContainText("Turn 5");
+  await snap(page, "incendiary-cloud-journal");
 });
 
 test("Strength cast on me by a party wizard, found by its French name; a saved effect joins it", async ({

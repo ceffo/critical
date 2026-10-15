@@ -35,6 +35,11 @@ export function rollLabel(t: TFunction, stepsPer: StepPer | undefined, step: num
   return t("result.cast.instance", { n: step ?? index + 1 });
 }
 
+/** The header of a cast's damage made of dice steps: "5 turns, one roll each", "1 roll". */
+export function stepsHeader(t: TFunction, stepsPer: StepPer, count: number): string {
+  return t(`result.cast.damageSteps.${stepsPer}`, { count });
+}
+
 /** Each dice step in order, "—" for one without damage: "by round: —, —, 20d2, 20d4, 20d2". */
 function stepsText(t: TFunction, d: SpellDamage): string {
   const steps = (d.steps ?? []).map((s) => (isNone(s.dice) ? "—" : diceText(s.dice))).join(", ");

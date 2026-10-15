@@ -578,8 +578,10 @@
       "instance": "#{{n}}",
       "round": "Turn {{n}}",
       "damageSteps": {
-        "round": "{{count}} turns, one roll each",
-        "instance": "{{count}} rolls in turn"
+        "round_one": "{{count}} turn, one roll",
+        "round_other": "{{count}} turns, one roll each",
+        "instance_one": "{{count}} roll",
+        "instance_other": "{{count}} rolls in turn"
       },
       "noDamage": "no damage",
       "save": "Target's save: {{type}}, {{effect}}",

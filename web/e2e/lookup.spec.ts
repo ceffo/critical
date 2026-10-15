@@ -58,7 +58,6 @@ const named = [
   row("Flame Strike", "Priest", 5, "Evocation", "Elemental Fire"),
   row("Cure Light Wounds", "Priest", 1, "Necromancy", "Healing"),
   row("Dimensional Folding", "Wizard", 7, "Dimension"),
-  row("Chain Lightning", "Wizard", 6, "Evocation"),
   row("Quixotic Probe", "Priest", 2, "Divination", "Sun", {
     casting_time: "Special",
     range: "Touch",
@@ -201,6 +200,13 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
     detail(page).getByTestId("spell-dice-damage").getByTestId("spell-dice-formula"),
   ).toHaveText("in turn: 12d6, 11d6, 10d6, 9d6, 8d6, 7d6, 6d6, 5d6, 4d6, 3d6, 2d6, 1d6 electricity");
   await snap(page, "damage-dice-steps");
+  await search(page).fill("incendiary cloud");
+  await rows(page).filter({ hasText: "Incendiary Cloud" }).click();
+  const cloud = detail(page).getByTestId("spell-dice-damage");
+  await expect(cloud.getByTestId("spell-dice-formula")).toHaveText("by round: —, —, 15d2, 15d4, 15d2 fire");
+  await cloud.getByRole("button", { name: "To the dice" }).click();
+  await expect(page.getByRole("form", { name: "Dice" }).getByLabel("Formula")).toHaveValue("15d2");
+  await snap(page, "damage-dice-steps-round");
   await search(page).fill("magic");
   await rows(page).filter({ hasText: "Magic Missile" }).click();
 

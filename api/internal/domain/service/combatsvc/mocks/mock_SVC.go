@@ -191,6 +191,65 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// GetAttackForm provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) GetAttackForm(ctx context.Context, characterID int64) (*combatsvc.AttackFormView, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAttackForm")
+	}
+
+	var r0 *combatsvc.AttackFormView
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (*combatsvc.AttackFormView, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *combatsvc.AttackFormView); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*combatsvc.AttackFormView)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_GetAttackForm_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAttackForm'
+type MockSVC_GetAttackForm_Call struct {
+	*mock.Call
+}
+
+// GetAttackForm is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) GetAttackForm(ctx interface{}, characterID interface{}) *MockSVC_GetAttackForm_Call {
+	return &MockSVC_GetAttackForm_Call{Call: _e.mock.On("GetAttackForm", ctx, characterID)}
+}
+
+func (_c *MockSVC_GetAttackForm_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_GetAttackForm_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_GetAttackForm_Call) Return(_a0 *combatsvc.AttackFormView, _a1 error) *MockSVC_GetAttackForm_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_GetAttackForm_Call) RunAndReturn(run func(context.Context, int64) (*combatsvc.AttackFormView, error)) *MockSVC_GetAttackForm_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCritTable provides a mock function with given fields: ctx
 func (_m *MockSVC) GetCritTable(ctx context.Context) (combatsvc.CritTable, error) {
 	ret := _m.Called(ctx)
@@ -584,6 +643,66 @@ func (_c *MockSVC_SetCritTable_Call) Return(_a0 combatsvc.CritTable, _a1 error) 
 }
 
 func (_c *MockSVC_SetCritTable_Call) RunAndReturn(run func(context.Context, []combatsvc.CritRow) (combatsvc.CritTable, error)) *MockSVC_SetCritTable_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateAttackForm provides a mock function with given fields: ctx, characterID, p
+func (_m *MockSVC) UpdateAttackForm(ctx context.Context, characterID int64, p combatsvc.AttackFormPatch) (*combatsvc.AttackFormView, error) {
+	ret := _m.Called(ctx, characterID, p)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateAttackForm")
+	}
+
+	var r0 *combatsvc.AttackFormView
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.AttackFormPatch) (*combatsvc.AttackFormView, error)); ok {
+		return rf(ctx, characterID, p)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, combatsvc.AttackFormPatch) *combatsvc.AttackFormView); ok {
+		r0 = rf(ctx, characterID, p)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*combatsvc.AttackFormView)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, combatsvc.AttackFormPatch) error); ok {
+		r1 = rf(ctx, characterID, p)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_UpdateAttackForm_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateAttackForm'
+type MockSVC_UpdateAttackForm_Call struct {
+	*mock.Call
+}
+
+// UpdateAttackForm is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - p combatsvc.AttackFormPatch
+func (_e *MockSVC_Expecter) UpdateAttackForm(ctx interface{}, characterID interface{}, p interface{}) *MockSVC_UpdateAttackForm_Call {
+	return &MockSVC_UpdateAttackForm_Call{Call: _e.mock.On("UpdateAttackForm", ctx, characterID, p)}
+}
+
+func (_c *MockSVC_UpdateAttackForm_Call) Run(run func(ctx context.Context, characterID int64, p combatsvc.AttackFormPatch)) *MockSVC_UpdateAttackForm_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(combatsvc.AttackFormPatch))
+	})
+	return _c
+}
+
+func (_c *MockSVC_UpdateAttackForm_Call) Return(_a0 *combatsvc.AttackFormView, _a1 error) *MockSVC_UpdateAttackForm_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_UpdateAttackForm_Call) RunAndReturn(run func(context.Context, int64, combatsvc.AttackFormPatch) (*combatsvc.AttackFormView, error)) *MockSVC_UpdateAttackForm_Call {
 	_c.Call.Return(run)
 	return _c
 }

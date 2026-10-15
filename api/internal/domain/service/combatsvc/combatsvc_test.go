@@ -53,6 +53,7 @@ type fixture struct {
 	dice    *mocks.MockDice
 	weapons *mocks.MockWeapons
 	items   *mocks.MockItems
+	forms   *mocks.MockFormStore
 	crit    *mocks.MockCritStore
 	// critRows is what the crit store returns (none: the placeholder default).
 	critRows []combatsvc.CritRow
@@ -69,6 +70,7 @@ func newFixture(t *testing.T) *fixture {
 		dice:    mocks.NewMockDice(t),
 		weapons: mocks.NewMockWeapons(t),
 		items:   mocks.NewMockItems(t),
+		forms:   mocks.NewMockFormStore(t),
 		crit:    mocks.NewMockCritStore(t),
 		log:     mocks.NewMockLog(t),
 	}
@@ -76,7 +78,7 @@ func newFixture(t *testing.T) *fixture {
 		func(context.Context) ([]combatsvc.CritRow, error) { return f.critRows, nil }).Maybe()
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
 		Chars: f.chars, Buffs: f.buffs, Dice: f.dice, Weapons: f.weapons, Crit: f.crit,
-		Items: f.items, Rules: phb(t), Log: f.log, Tx: noTx{},
+		Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 	})
 	require.NoError(t, err)
 	f.svc = svc

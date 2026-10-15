@@ -164,3 +164,61 @@ export async function voidInitiative(page: Page, labels = { void: "Void", confir
   await expect(entry).toHaveAttribute("data-status", "voided");
   await expect(page.getByTestId("initiative-value")).toHaveCount(0);
 }
+
+/** The Weapons tab's attack form (target bar, weapon in hand, switching). */
+export function attackForm(page: Page): Locator {
+  return page.getByRole("form", { name: "Attack" });
+}
+
+/** Open the Agir Weapons tab and wait for the weapon in hand (English UI). */
+export async function openWeapons(page: Page) {
+  await page.getByRole("tab", { name: "Weapons" }).click();
+  await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
+}
+
+/** Put a weapon in hand through "Other weapon" unless it already is; never attacks. */
+export async function chooseWeapon(page: Page, name: string) {
+  const held = attackForm(page).getByTestId("weapon-in-hand");
+  await expect(held).not.toBeEmpty();
+  if ((await held.textContent()) === name) return;
+  await attackForm(page).getByRole("button", { name: "Other weapon" }).click();
+  await page
+    .getByRole("list", { name: "Other weapon" })
+    .getByRole("button")
+    .filter({ has: page.getByText(name, { exact: true }) })
+    .click();
+  await expect(held).toHaveText(name);
+}
+
+/** The ammunition chips of the weapon in hand. */
+export function ammoChips(page: Page): Locator {
+  return attackForm(page).getByRole("radiogroup", { name: "Ammunition" });
+}
+
+/** Choose the ammunition called `name` ("Arrows +3") and wait until it is the choice. */
+export async function chooseAmmo(page: Page, name: string) {
+  const chip = ammoChips(page).getByRole("radio", { name: `${name},` });
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-checked", "true");
+}
+
+/** Count left of the chosen ammunition, as its chip shows it. */
+export async function chosenAmmoCount(page: Page): Promise<number> {
+  const text = await ammoChips(page)
+    .locator('[aria-checked="true"]')
+    .getByTestId("ammo-count")
+    .textContent();
+  if (!/^\d+$/.test(text ?? "")) throw new Error(`unexpected ammo count: ${JSON.stringify(text)}`);
+  return Number(text);
+}
+
+/**
+ * Send every attack with target AC `ac`, beyond the form's ±20 (AC 1000 needs so low a roll that
+ * every attack crits). The form still shows its own AC.
+ */
+export async function forceAttackAc(page: Page, ac: number) {
+  await page.route("**/api/roll/attack", async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    await route.continue({ postData: JSON.stringify({ ...body, target_ac: ac }) });
+  });
+}

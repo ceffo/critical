@@ -9,6 +9,7 @@ sqlite:
     - internal/adapters/weapondal/queries
     - internal/adapters/itemdal/queries
     - internal/adapters/critdal/queries
+    - internal/adapters/attackformdal/queries
 
 plugins:
   models:

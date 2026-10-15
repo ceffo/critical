@@ -20,6 +20,9 @@ var _ bob.HookableType = &ActionSnapshot{}
 // Make sure the type ActiveBuff runs hooks after queries
 var _ bob.HookableType = &ActiveBuff{}
 
+// Make sure the type AttackForm runs hooks after queries
+var _ bob.HookableType = &AttackForm{}
+
 // Make sure the type Character runs hooks after queries
 var _ bob.HookableType = &Character{}
 

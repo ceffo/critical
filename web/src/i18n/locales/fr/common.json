@@ -163,19 +163,26 @@
   "actions": {
     "label": "Actions",
     "tabs": {
-      "attack": "Attaque",
-      "spells": "Sorts"
+      "weapons": "Armes",
+      "spells": "Sorts",
+      "items": "Objets"
+    },
+    "items": {
+      "list": "Objets de combat",
+      "count": "{{behaviour}} · {{count}}",
+      "dailyCount": "{{behaviour}} · {{count}} / {{max}}",
+      "roll": "Lancer",
+      "use": "Utiliser",
+      "rollLabel": "Lancer {{name}}",
+      "useLabel": "Utiliser {{name}}",
+      "manage": "Gérer l'inventaire"
     }
   },
   "attack": {
-    "weapon": "Arme",
-    "selectWeapon": "Choisir une arme",
-    "weaponOption": "{{name}} ({{sm}}, grande {{l}})",
     "ammo": "Munitions",
-    "ammoOption": "{{name}} ({{count}} restantes)",
+    "ammoOption": "{{name}}, {{count}} restantes",
     "noAmmo": "Aucune munition pour cette arme",
     "ammoSpent": "Plus de {{name}} : choisissez d'autres munitions",
-    "pickAmmo": "Choisir des munitions",
     "targetAc": "CA de la cible",
     "targetSize": "Taille de la cible",
     "sizes": {
@@ -186,8 +193,34 @@
     "situationalLabel": "Raison",
     "situationalPlaceholder": "ex. attaque de dos",
     "loading": "Chargement des armes…",
-    "roll": "Jet d'attaque",
-    "rolling": "Lancer en cours..."
+    "roll": "Attaquer",
+    "rolling": "Lancer en cours...",
+    "form": "Attaque",
+    "target": "Cible",
+    "inHand": "Arme en main",
+    "kinds": {
+      "melee": "Mêlée",
+      "missile": "Tir"
+    },
+    "twoHanded": "à deux mains",
+    "sizesShort": {
+      "sm": "P / M",
+      "l": "G"
+    },
+    "lowerAc": "Baisser la CA",
+    "raiseAc": "Monter la CA",
+    "lowerSituational": "Baisser le modificateur",
+    "raiseSituational": "Monter le modificateur",
+    "switchTo": "Passer à {{name}}",
+    "otherWeapon": "Autre arme",
+    "weaponDice": "{{sm}} · G {{l}}",
+    "tiles": {
+      "damageSm": "Dégâts P/M",
+      "damageL": "Dégâts G",
+      "bonus": "Tou. / Dég.",
+      "thac0": "TAC0 effectif",
+      "rollNeeded": "{{n}} contre CA {{ac}}"
+    }
   },
   "saves": {
     "title": "Jets de sauvegarde",
@@ -241,7 +274,6 @@
     }
   },
   "spellSlots": {
-    "title": "Emplacements de sorts",
     "longRest": "Repos long (réinitialiser)",
     "none": "Aucun emplacement de sort disponible.",
     "level": "Niveau {{level}}",

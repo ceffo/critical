@@ -415,7 +415,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 			f := newFixture(t)
 			svc, err := combatsvc.New(combatsvc.Deps{
 				Chars: f.chars, Buffs: realBuffs, Dice: f.dice, Weapons: f.weapons, Crit: f.crit,
-				Items: f.items, Rules: phb(t), Log: f.log, Tx: noTx{},
+				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 			})
 			require.NoError(t, err)
 			f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil)

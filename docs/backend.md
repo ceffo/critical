@@ -72,6 +72,10 @@ id, character_id, slots JSON
 
 -- round_state: current round counter and its initiative (d10, the log entry that rolled it; NULL: none)
 id, character_id, round_number INTEGER
+
+-- attack_forms: the attack form's last choices, one row per character (no row: the defaults)
+character_id, weapon_id, previous_weapon_id, ammo_item_id, target_ac, target_size,
+situational_value, situational_label
 ```
 
 **Recording actions.** A service that changes state records an `actionlog.NewEntry` through the

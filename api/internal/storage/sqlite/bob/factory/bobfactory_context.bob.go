@@ -28,10 +28,15 @@ var (
 	activeBuffWithParentsCascadingCtx = newContextual[bool]("activeBuffWithParentsCascading")
 	activeBuffRelCharacterCtx         = newContextual[bool]("active_buffs.characters.fk_active_buffs_0")
 
+	// Relationship Contexts for attack_forms
+	attackFormWithParentsCascadingCtx = newContextual[bool]("attackFormWithParentsCascading")
+	attackFormRelCharacterCtx         = newContextual[bool]("attack_forms.characters.fk_attack_forms_0")
+
 	// Relationship Contexts for characters
 	characterWithParentsCascadingCtx = newContextual[bool]("characterWithParentsCascading")
 	characterRelActionLogsCtx        = newContextual[bool]("action_log.characters.fk_action_log_0")
 	characterRelActiveBuffsCtx       = newContextual[bool]("active_buffs.characters.fk_active_buffs_0")
+	characterRelAttackFormCtx        = newContextual[bool]("attack_forms.characters.fk_attack_forms_0")
 	characterRelHPEventsCtx          = newContextual[bool]("characters.hp_events.fk_hp_events_0")
 	characterRelRoundStatesCtx       = newContextual[bool]("characters.round_state.fk_round_state_0")
 	characterRelSavedBuffsCtx        = newContextual[bool]("characters.saved_buffs.fk_saved_buffs_0")

@@ -1,5 +1,14 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, chooseSetting, openDashboard, openSettings, openWorkspace } from "./helpers";
+import {
+  ammoChips,
+  chooseLanguage,
+  chooseSetting,
+  chooseWeapon,
+  openDashboard,
+  openSettings,
+  openWeapons,
+  openWorkspace,
+} from "./helpers";
 import type { Page } from "@playwright/test";
 
 /** The page itself never scrolls: each column scrolls on its own. */
@@ -150,4 +159,28 @@ test("theme: every ambiance in dark and light", async ({ page }) => {
       await snap(page, `${mode.toLowerCase()}-${amb.toLowerCase()}`);
     }
   }
+});
+
+// The Agir workspace (weapon in hand with a bow's ammunition, then the Spells and Items tabs)
+// holds at every viewport without a page scroll.
+test("agir: weapons, spells and items tabs from 1280 to 2560", async ({ page }) => {
+  await openDashboard(page);
+  await openWeapons(page);
+  await chooseWeapon(page, "Short Bow +2");
+  await expect(ammoChips(page)).toBeVisible();
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expect(page.getByTestId("tile-thac0")).toBeVisible();
+    await expectNoPageScroll(page);
+    await snap(page, `agir-weapons-${vp.width}x${vp.height}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await expect(page.getByRole("button", { name: "Prepare spells" })).toBeVisible();
+  await snap(page, "agir-spells");
+  await page.getByRole("tab", { name: "Items" }).click();
+  await page.getByRole("button", { name: "Manage the inventory" }).click();
+  await expect(page.getByRole("navigation", { name: "Workspaces" }).getByRole("button", { name: "Inventory" })).toHaveAttribute("aria-current", "page");
+  await openWorkspace(page, "Act");
+  await snap(page, "agir-items");
 });

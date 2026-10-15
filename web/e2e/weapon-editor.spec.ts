@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, openWorkspace, voidEntry } from "./helpers";
+import {
+  attackForm,
+  chooseWeapon,
+  logEntry,
+  openDashboard,
+  openWeapons,
+  openWorkspace,
+  voidEntry,
+} from "./helpers";
 
 // Weapon editor: add, edit and remove weapons in the Inventory tab; each is one
 // log entry and the newest can be popped.
@@ -19,18 +27,33 @@ function form(page: Page) {
   return page.getByTestId("weapon-form");
 }
 
-function attackForm(page: Page) {
-  return page.getByRole("form", { name: "Attack" });
+/** The weapons "Other weapon" offers (every weapon not in hand). */
+async function otherWeapons(page: Page) {
+  await attackForm(page).getByRole("button", { name: "Other weapon" }).click();
+  const list = page.getByRole("list", { name: "Other weapon" });
+  await expect(list).toBeVisible();
+  const names = await list.getByRole("button").evaluateAll((els) =>
+    els.map((e) => e.querySelector("span")?.textContent ?? ""),
+  );
+  await page.keyboard.press("Escape");
+  return names;
 }
 
-async function rollAttack(page: Page, weapon: string, ammo?: string) {
+/** Every weapon the Weapons tab can put in hand: the one held and the others. */
+async function pickableWeapons(page: Page) {
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
+  await openWeapons(page);
+  const held = (await attackForm(page).getByTestId("weapon-in-hand").textContent()) ?? "";
+  return [held, ...(await otherWeapons(page))];
+}
+
+async function rollAttack(page: Page, weapon: string) {
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  await chooseWeapon(page, weapon);
   const f = attackForm(page);
-  await f.getByLabel("Weapon").selectOption(weapon);
-  if (ammo) await f.getByLabel("Ammunition").selectOption(ammo);
   await f.getByLabel("Target AC").fill("-10");
-  await f.getByRole("button", { name: "Roll Attack" }).click();
+  await f.getByRole("button", { name: "Attack", exact: true }).click();
   return page
     .getByRole("region", { name: "Last Result" })
     .getByTestId("attack-result");
@@ -57,7 +80,7 @@ test("edit Bastard Sword +2 to +3 to hit and damage: the next attack uses +3; po
   );
   await snap(page, "weapon-edited");
 
-  const card = await rollAttack(page, "bastard_sword");
+  const card = await rollAttack(page, "Bastard Sword +2");
   await expect(card.getByTestId("to-hit-modifiers")).toContainText(
     /Bastard Sword \+2\s*\+3/,
   );
@@ -96,32 +119,25 @@ test("add a Long Bow (missile, arrow): it is in the attack picker and offered ar
   await snap(page, "weapon-added");
 
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await attackForm(page).getByLabel("Weapon").selectOption("long_bow");
+  await openWeapons(page);
+  await chooseWeapon(page, "Long Bow");
   await expect(
-    attackForm(page).getByLabel("Ammunition").locator("option", {
-      hasText: "Arrows +1",
-    }),
+    attackForm(page).getByRole("radiogroup", { name: "Ammunition" }).getByRole("radio", { name: /^Arrows \+1,/ }),
   ).toHaveCount(1);
   await snap(page, "bow-offered-arrows");
 
   await openWorkspace(page, "Inventory");
   await voidEntry(page, "Added weapon Long Bow");
   await expect(row(page, "long_bow")).toHaveCount(0);
-  await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await expect(
-    attackForm(page).getByLabel("Weapon").locator("option", {
-      hasText: "Long Bow",
-    }),
-  ).toHaveCount(0);
+  // The bow was in hand: the Weapons tab falls back to the first weapon.
+  expect(await pickableWeapons(page)).not.toContain("Long Bow");
 });
 
 test("remove the darts: gone from the picker, an earlier attack line still reads Darts; pop restores them", async ({
   page,
 }) => {
   await openInventory(page);
-  await rollAttack(page, "darts");
+  await rollAttack(page, "Darts");
   await expect(logEntry(page, "Darts vs AC -10")).toBeVisible();
 
   await openWorkspace(page, "Inventory");
@@ -133,24 +149,12 @@ test("remove the darts: gone from the picker, an earlier attack line still reads
   await expect(logEntry(page, "Darts vs AC -10")).toBeVisible();
   await snap(page, "darts-removed");
 
-  await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await expect(
-    attackForm(page).getByLabel("Weapon").locator("option", {
-      hasText: "Darts",
-    }),
-  ).toHaveCount(0);
+  expect(await pickableWeapons(page)).not.toContain("Darts");
 
   await openWorkspace(page, "Inventory");
   await voidEntry(page, "Removed weapon Darts");
   await expect(row(page, "darts")).toBeVisible();
-  await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
-  await expect(
-    attackForm(page).getByLabel("Weapon").locator("option", {
-      hasText: "Darts",
-    }),
-  ).toHaveCount(1);
+  expect(await pickableWeapons(page)).toContain("Darts");
   await snap(page, "darts-restored");
 });
 
@@ -159,24 +163,23 @@ test("a weapon removed behind the Attack panel's back: the attack says so and th
 }) => {
   await openDashboard(page);
   await openWorkspace(page, "Act");
-  await page.getByRole("tab", { name: "Attack" }).click();
+  await openWeapons(page);
   const f = attackForm(page);
-  await f.getByLabel("Weapon").selectOption("darts");
-  // Removed elsewhere (another device): the panel still has the darts selected.
+  await chooseWeapon(page, "Darts");
+  await f.getByLabel("Target AC").fill("5");
+  await expect
+    .poll(async () => (await (await page.request.get("/api/attack/form")).json()).form.targetAc)
+    .toBe(5);
+  // Removed elsewhere (another device): the panel still has the darts in hand.
   const res = await page.request.delete("/api/weapons/darts");
   expect(res.ok()).toBe(true);
-  await f.getByLabel("Target AC").fill("5");
-  await f.getByRole("button", { name: "Roll Attack" }).click();
+  await f.getByRole("button", { name: "Attack", exact: true }).click();
 
   await expect(
     page.getByRole("alert").filter({ hasText: "weapon not found" }),
   ).toBeVisible();
-  await expect(
-    f.getByLabel("Weapon").locator("option", { hasText: "Darts" }),
-  ).toHaveCount(0);
-  // No stale selection: the picker shows an existing weapon.
-  await expect(f.getByLabel("Weapon").locator("option:checked")).not.toHaveText(
-    /Darts/,
-  );
+  // No stale weapon in hand: the server's form falls back to an existing weapon.
+  await expect(f.getByTestId("weapon-in-hand")).not.toHaveText("Darts");
+  expect(await otherWeapons(page)).not.toContain("Darts");
   await snap(page, "attack-weapon-gone");
 });

@@ -62,6 +62,7 @@ type CharactersQuery = *sqlite.ViewQuery[*Character, CharacterSlice]
 type characterR struct {
 	ActionLogs  ActionLogSlice  // fk_action_log_0
 	ActiveBuffs ActiveBuffSlice // fk_active_buffs_0
+	AttackForm  *AttackForm     // fk_attack_forms_0
 	HPEvents    HPEventSlice    // fk_hp_events_0
 	RoundStates RoundStateSlice // fk_round_state_0
 	SavedBuffs  SavedBuffSlice  // fk_saved_buffs_0
@@ -77,6 +78,7 @@ type characterR struct {
 type characterRLoaded struct {
 	ActionLogs  bool // fk_action_log_0
 	ActiveBuffs bool // fk_active_buffs_0
+	AttackForm  bool // fk_attack_forms_0
 	HPEvents    bool // fk_hp_events_0
 	RoundStates bool // fk_round_state_0
 	SavedBuffs  bool // fk_saved_buffs_0
@@ -907,6 +909,25 @@ func (os CharacterSlice) ActiveBuffs(mods ...bob.Mod[*dialect.SelectQuery]) Acti
 	)...)
 }
 
+// AttackForm starts a query for related objects on attack_forms
+func (o *Character) AttackForm(mods ...bob.Mod[*dialect.SelectQuery]) AttackFormsQuery {
+	return AttackForms.Query(append(mods,
+		sm.Where(AttackForms.Columns.CharacterID.EQ(sqlite.Arg(o.ID))),
+	)...)
+}
+
+func (os CharacterSlice) AttackForm(mods ...bob.Mod[*dialect.SelectQuery]) AttackFormsQuery {
+	PKArgSlice := make([]bob.Expression, len(os))
+	for i, o := range os {
+		PKArgSlice[i] = sqlite.ArgGroup(o.ID)
+	}
+	PKArgExpr := sqlite.Group(PKArgSlice...)
+
+	return AttackForms.Query(append(mods,
+		sm.Where(sqlite.Group(AttackForms.Columns.CharacterID).OP("IN", PKArgExpr)),
+	)...)
+}
+
 // HPEvents starts a query for related objects on hp_events
 func (o *Character) HPEvents(mods ...bob.Mod[*dialect.SelectQuery]) HPEventsQuery {
 	return HPEvents.Query(append(mods,
@@ -1138,6 +1159,64 @@ func (character0 *Character) AttachActiveBuffs(ctx context.Context, exec bob.Exe
 		rel.R.Character = character0
 		rel.R.Loaded.Character = true
 	}
+
+	return nil
+}
+
+func insertCharacterAttackForm0(ctx context.Context, exec bob.Executor, attackForm1 *AttackFormSetter, character0 *Character) (*AttackForm, error) {
+	attackForm1.CharacterID = omit.From(character0.ID)
+
+	ret, err := AttackForms.Insert(attackForm1).One(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertCharacterAttackForm0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachCharacterAttackForm0(ctx context.Context, exec bob.Executor, count int, attackForm1 *AttackForm, character0 *Character) (*AttackForm, error) {
+	setter := &AttackFormSetter{
+		CharacterID: omit.From(character0.ID),
+	}
+
+	err := attackForm1.Update(ctx, exec, setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachCharacterAttackForm0: %w", err)
+	}
+
+	return attackForm1, nil
+}
+
+func (character0 *Character) InsertAttackForm(ctx context.Context, exec bob.Executor, related *AttackFormSetter) error {
+	var err error
+
+	attackForm1, err := insertCharacterAttackForm0(ctx, exec, related, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.AttackForm = attackForm1
+	character0.R.Loaded.AttackForm = true
+
+	attackForm1.R.Character = character0
+	attackForm1.R.Loaded.Character = true
+
+	return nil
+}
+
+func (character0 *Character) AttachAttackForm(ctx context.Context, exec bob.Executor, attackForm1 *AttackForm) error {
+	var err error
+
+	_, err = attachCharacterAttackForm0(ctx, exec, 1, attackForm1, character0)
+	if err != nil {
+		return err
+	}
+
+	character0.R.AttackForm = attackForm1
+	character0.R.Loaded.AttackForm = true
+
+	attackForm1.R.Character = character0
+	attackForm1.R.Loaded.Character = true
 
 	return nil
 }
@@ -1577,6 +1656,20 @@ func (w characterWhereR[Q]) HasActiveBuffs(filters ...bob.Mod[*dialect.SelectQue
 	return mods.Where[Q]{E: sqlite.Exists(q)}
 }
 
+// HasAttackForm filters parents that have a matching AttackForm using a
+// correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
+// multiply parent rows, so no DISTINCT is needed. The optional filters are
+// applied to the subquery (i.e. to AttackForms).
+func (w characterWhereR[Q]) HasAttackForm(filters ...bob.Mod[*dialect.SelectQuery]) mods.Where[Q] {
+	q := sqlite.Select(
+		sm.Columns(sqlite.Raw("1")),
+		sm.From(AttackForms.NameExpr()),
+		sm.Where(AttackForms.Columns.CharacterID.EQ(w.cols.ID)),
+	)
+	q.Apply(filters...)
+	return mods.Where[Q]{E: sqlite.Exists(q)}
+}
+
 // HasHPEvents filters parents that have a matching HPEvents using a
 // correlated EXISTS subquery (semi-join). Unlike an INNER JOIN it does not
 // multiply parent rows, so no DISTINCT is needed. The optional filters are
@@ -1860,6 +1953,20 @@ func (o *Character) Preload(name string, retrieved any) error {
 			}
 		}
 		return nil
+	case "AttackForm":
+		rel, ok := retrieved.(*AttackForm)
+		if !ok {
+			return fmt.Errorf("character cannot load %T as %q", retrieved, name)
+		}
+
+		o.R.AttackForm = rel
+		o.R.Loaded.AttackForm = true
+
+		if rel != nil {
+			rel.R.Character = o
+			rel.R.Loaded.Character = true
+		}
+		return nil
 	case "HPEvents":
 		rels, ok := retrieved.(HPEventSlice)
 		if !ok {
@@ -1945,15 +2052,32 @@ func (o *Character) Preload(name string, retrieved any) error {
 	}
 }
 
-type characterPreloader struct{}
+type characterPreloader struct {
+	AttackForm func(...sqlite.PreloadOption) sqlite.Preloader
+}
 
 func buildCharacterPreloader() characterPreloader {
-	return characterPreloader{}
+	return characterPreloader{
+		AttackForm: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
+			return sqlite.Preload[*AttackForm, AttackFormSlice](sqlite.PreloadRel{
+				Name: "AttackForm",
+				Sides: []sqlite.PreloadSide{
+					{
+						From:        Characters,
+						To:          AttackForms,
+						FromColumns: []string{"id"},
+						ToColumns:   []string{"character_id"},
+					},
+				},
+			}, AttackForms.Columns.Names(), attackFormScanMapperNullable, opts...)
+		},
+	}
 }
 
 type characterThenLoader[Q orm.Loadable] struct {
 	ActionLogs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	ActiveBuffs func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
+	AttackForm  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	HPEvents    func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	RoundStates func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
 	SavedBuffs  func(...bob.Mod[*dialect.SelectQuery]) orm.Loader[Q]
@@ -1967,6 +2091,9 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 	}
 	type ActiveBuffsLoadInterface interface {
 		LoadActiveBuffs(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
+	}
+	type AttackFormLoadInterface interface {
+		LoadAttackForm(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
 	}
 	type HPEventsLoadInterface interface {
 		LoadHPEvents(context.Context, bob.Executor, ...bob.Mod[*dialect.SelectQuery]) error
@@ -1995,6 +2122,12 @@ func buildCharacterThenLoader[Q orm.Loadable]() characterThenLoader[Q] {
 			"ActiveBuffs",
 			func(ctx context.Context, exec bob.Executor, retrieved ActiveBuffsLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
 				return retrieved.LoadActiveBuffs(ctx, exec, mods...)
+			},
+		),
+		AttackForm: thenLoadBuilder[Q](
+			"AttackForm",
+			func(ctx context.Context, exec bob.Executor, retrieved AttackFormLoadInterface, mods ...bob.Mod[*dialect.SelectQuery]) error {
+				return retrieved.LoadAttackForm(ctx, exec, mods...)
 			},
 		),
 		HPEvents: thenLoadBuilder[Q](
@@ -2171,6 +2304,83 @@ func (os CharacterSlice) LoadActiveBuffs(ctx context.Context, exec bob.Executor,
 			rel.R.Loaded.Character = true
 
 			o.R.ActiveBuffs = append(o.R.ActiveBuffs, rel)
+
+		}
+	}
+
+	return nil
+}
+
+// LoadAttackForm loads the character's AttackForm into the .R struct
+func (o *Character) LoadAttackForm(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if o == nil {
+		return nil
+	}
+
+	// Reset the relationship
+	o.R.AttackForm = nil
+	o.R.Loaded.AttackForm = false
+
+	related, err := o.AttackForm(mods...).One(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	related.R.Character = o
+	related.R.Loaded.Character = true
+
+	o.R.AttackForm = related
+	o.R.Loaded.AttackForm = true
+	return nil
+}
+
+// LoadAttackForm loads the character's AttackForm into the .R struct
+func (os CharacterSlice) LoadAttackForm(ctx context.Context, exec bob.Executor, mods ...bob.Mod[*dialect.SelectQuery]) error {
+	if len(os) == 0 {
+		return nil
+	}
+
+	attackForms, err := os.AttackForm(mods...).All(ctx, exec)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		o.R.AttackForm = nil
+		o.R.Loaded.AttackForm = true
+	}
+	// O(N+M) stitch via a map keyed by the join column (key -> []parent; was O(N*M)).
+	characterByKey := make(map[int64][]*Character, len(os))
+	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
+		characterByKey[o.ID] = append(characterByKey[o.ID], o)
+	}
+
+	for _, rel := range attackForms {
+
+		owners, ok := characterByKey[rel.CharacterID]
+		if !ok {
+			continue
+		}
+
+		for _, o := range owners {
+
+			// to-one: keep only the first matching child (matches the previous break)
+			if o.R.AttackForm != nil {
+				continue
+			}
+
+			rel.R.Character = o
+			rel.R.Loaded.Character = true
+
+			o.R.AttackForm = rel
 
 		}
 	}
@@ -3347,6 +3557,7 @@ type characterJoins[Q dialect.Joinable] struct {
 	typ         string
 	ActionLogs  modAs[Q, actionLogColumns]
 	ActiveBuffs modAs[Q, activeBuffColumns]
+	AttackForm  modAs[Q, attackFormColumns]
 	HPEvents    modAs[Q, hpEventColumns]
 	RoundStates modAs[Q, roundStateColumns]
 	SavedBuffs  modAs[Q, savedBuffColumns]
@@ -3382,6 +3593,20 @@ func buildCharacterJoins[Q dialect.Joinable](cols characterColumns, typ string) 
 
 				{
 					mods = append(mods, dialect.Join[Q](typ, ActiveBuffs.NameExpr().As(to.Alias())).On(
+						to.CharacterID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
+		AttackForm: modAs[Q, attackFormColumns]{
+			c: AttackForms.Columns,
+			f: func(to attackFormColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, AttackForms.NameExpr().As(to.Alias())).On(
 						to.CharacterID.EQ(cols.ID),
 					))
 				}

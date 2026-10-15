@@ -1,212 +1,396 @@
-import { useEffect } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Sword } from "@phosphor-icons/react";
+import { ArrowsLeftRight, CaretDown, Minus, Plus, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { useRollStore } from "@/stores/roll";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAttackStore } from "@/stores/attack";
+import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
-import { useAttackFormStore } from "@/stores/attackForm";
-import { useTableStore } from "@/stores/table";
-import { captionClass, fieldClass } from "@/components/dashboard/fieldStyles";
+import { useRollStore } from "@/stores/roll";
+import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { CritTableEditor } from "@/components/actions/CritTableEditor";
-import type { AttackRequest, TargetSize } from "@/types/combat";
+import { formatSigned } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { AmmoChoice, AttackFormView, TargetSize, Weapon } from "@/types/combat";
 
 const SIZES: TargetSize[] = ["sm", "l"];
+/** Same bound as the server's (combatsvc MaxTargetAC / MaxSituational); the server checks it. */
+const BOUND = 20;
+/** From this count down, an ammunition chip turns amber. */
+const LOW_AMMO = 3;
 
 /**
- * Attack tab: pick a weapon (and the ammunition a bow fires), the target's AC and size, and an
- * optional situational modifier. The API resolves everything; the result card shows the breakdown.
+ * Weapons tab of the Agir workspace: the target bar (AC, size, situational modifier), the weapon in
+ * hand with its numbers and ammunition, and quick weapon switching. Every choice is saved on the
+ * server (`/api/attack/form`) and every number shown comes from it; switching never attacks.
  */
 export function AttackPanel() {
   const { t } = useTranslation();
-  const { rollAttack, rolling } = useRollStore();
-  const { weapons, items, fetchWeapons } = useItemsStore();
-  const { form, set } = useAttackFormStore();
-  const { weaponId, ammoId, targetAc, size, sitValue, sitLabel } = form;
-  const setWeaponId = (weaponId: string) => set({ weaponId });
-  const setAmmoId = (ammoId: string) => set({ ammoId });
-  const setTargetAc = (targetAc: string) => set({ targetAc });
-  const setSize = (size: TargetSize) => set({ size });
-  const setSitValue = (sitValue: string) => set({ sitValue });
-  const setSitLabel = (sitLabel: string) => set({ sitLabel });
+  const { view, load, update, attack } = useAttackStore();
+  const rolling = useRollStore((s) => s.rolling);
+  const weapons = useItemsStore((s) => s.weapons);
+  const items = useItemsStore((s) => s.items);
+  const buffs = useBuffsStore((s) => s.buffs);
+  const strength = useBuffsStore((s) => s.strength);
 
+  // The preview depends on buffs, effective STR, item counts and the weapons: reload with them.
   useEffect(() => {
-    fetchWeapons().catch((e: unknown) =>
-      useTableStore.setState({
-        error: e instanceof Error ? e.message : String(e),
-      }),
-    );
-  }, [fetchWeapons]);
+    void load();
+  }, [load, weapons, items, buffs, strength]);
 
-  const weapon = weapons.find((w) => w.id === weaponId) ?? weapons[0];
-  // Ammo the weapon can fire: every item of its ammo kind with anything left. Before the player
-  // picks, the first is preselected; once picked (or fired), the choice is never switched behind
-  // their back: when it runs out it stays shown (disabled), the panel says so and waits for an
-  // explicit pick.
-  const ammoChoices = weapon?.ammo_kind
-    ? items.filter(
-        (i) => i.ammoKind === weapon.ammo_kind && (i.count > 0 || i.id === ammoId),
-      )
-    : [];
-  const ammo =
-    ammoChoices.find((i) => i.id === ammoId) ??
-    (ammoId === "" ? ammoChoices.find((i) => i.count > 0) : undefined);
-  const ammoSpent = ammo !== undefined && ammo.count === 0;
+  if (!view || weapons.length === 0) {
+    return <p className="text-sm text-muted-foreground">{t("attack.loading")}</p>;
+  }
+  const { form, preview } = view;
+  const weapon = weapons.find((w) => w.id === form.weaponId);
+  const previous = weapons.find((w) => w.id === form.previousWeaponId);
   const needsAmmo = Boolean(weapon?.ammo_kind);
-
-  const ac = Number.parseInt(targetAc, 10);
-  const sit = sitValue.trim() === "" ? 0 : Number.parseInt(sitValue, 10);
-  const valid =
-    weapon !== undefined &&
-    !Number.isNaN(ac) &&
-    !Number.isNaN(sit) &&
-    (!needsAmmo || (ammo && !ammoSpent));
-
-  function submit() {
-    if (!valid || !weapon) return;
-    const req: AttackRequest = {
-      weapon_id: weapon.id,
-      target_ac: ac,
-      target_size: size,
-    };
-    if (needsAmmo && ammo) {
-      req.ammo_item_id = ammo.id;
-      setAmmoId(ammo.id); // a fired default becomes the player's choice
-    }
-    if (sit !== 0) req.situational = { value: sit, label: sitLabel.trim() };
-    void rollAttack(req);
-  }
-
-  if (weapons.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">{t("attack.loading")}</p>
-    );
-  }
+  const ammo = view.ammoChoices.find((a) => a.itemId === form.ammoItemId);
+  const ammoSpent = ammo !== undefined && ammo.count === 0;
+  const ready = preview !== null && weapon !== undefined && (!needsAmmo || (ammo && !ammoSpent));
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <form
-        className="grid max-w-xl grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-end gap-3"
-        aria-label={t("actions.tabs.attack")}
+        className="flex flex-col gap-4"
+        aria-label={t("attack.form")}
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          if (ready) void attack();
         }}
       >
-        <label className="col-span-2 flex min-w-0 flex-col gap-1">
-          <span className={captionClass}>{t("attack.weapon")}</span>
-          <select
-            className={fieldClass}
-            value={weapon?.id}
-            onChange={(e) => setWeaponId(e.target.value)}
+        <TargetBar view={view} />
+        {weapon && (
+          <section
+            aria-label={t("attack.inHand")}
+            className="@container flex flex-col gap-4 rounded-xl bg-amb-900/40 p-4 ring-1 ring-amb-700"
           >
-            {weapons.map((w) => (
-              <option key={w.id} value={w.id}>
-                {t("attack.weaponOption", {
-                  name: w.name,
-                  sm: w.damage_sm,
-                  l: w.damage_l,
-                })}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {needsAmmo && (
-          <label className="col-span-2 flex min-w-0 flex-col gap-1">
-            <span className={captionClass}>{t("attack.ammo")}</span>
-            {ammoChoices.length === 0 ? (
-              <span className="text-sm text-destructive">
-                {t("attack.noAmmo")}
-              </span>
-            ) : (
-              <select
-                className={fieldClass}
-                value={ammo?.id ?? ""}
-                aria-invalid={ammoSpent || ammo === undefined}
-                onChange={(e) => setAmmoId(e.target.value)}
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm text-muted-foreground">{t("attack.inHand")}</p>
+                <h3 className="truncate text-xl font-medium" data-testid="weapon-in-hand">
+                  {weapon.name}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {t(`attack.kinds.${weapon.kind}`)}
+                  {weapon.two_handed && ` · ${t("attack.twoHanded")}`}
+                </p>
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="h-12 shrink-0 px-6 text-base"
+                disabled={rolling || !ready}
               >
-                {ammo === undefined && (
-                  <option value="" disabled>
-                    {t("attack.pickAmmo")}
-                  </option>
-                )}
-                {ammoChoices.map((i) => (
-                  <option
-                    key={i.id}
-                    value={i.id}
-                    disabled={i.count === 0}
-                  >
-                    {t("attack.ammoOption", { name: i.name, count: i.count })}
-                  </option>
-                ))}
-              </select>
-            )}
+                <Sword />
+                {rolling ? t("attack.rolling") : t("attack.roll")}
+              </Button>
+            </div>
+            {preview && <Tiles weapon={weapon} view={view} />}
+            {needsAmmo && <AmmoChips choices={view.ammoChoices} chosen={form.ammoItemId} />}
             {ammoSpent && (
-              <span
-                className="text-sm text-destructive"
-                data-testid="ammo-spent"
-              >
+              <p className="text-sm text-danger" data-testid="ammo-spent">
                 {t("attack.ammoSpent", { name: ammo.name })}
-              </span>
+              </p>
             )}
-          </label>
+          </section>
         )}
-
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={captionClass}>{t("attack.targetAc")}</span>
-          <input
-            className={fieldClass}
-            type="number"
-            value={targetAc}
-            onChange={(e) => setTargetAc(e.target.value)}
+        <div className="flex flex-wrap items-center gap-2">
+          {previous && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void update({ weaponId: previous.id })}
+            >
+              <ArrowsLeftRight />
+              {t("attack.switchTo", { name: previous.name })}
+            </Button>
+          )}
+          <OtherWeapon
+            weapons={weapons.filter((w) => w.id !== form.weaponId)}
+            onPick={(id) => void update({ weaponId: id })}
           />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={captionClass}>{t("attack.targetSize")}</span>
-          <select
-            className={fieldClass}
-            value={size}
-            onChange={(e) => setSize(e.target.value as TargetSize)}
-          >
-            {SIZES.map((s) => (
-              <option key={s} value={s}>
-                {t(`attack.sizes.${s}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+        </div>
+      </form>
+      <CritTableEditor />
+    </div>
+  );
+}
 
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={captionClass}>{t("attack.situational")}</span>
-          <input
-            className={fieldClass}
-            type="number"
-            value={sitValue}
-            onChange={(e) => setSitValue(e.target.value)}
-          />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={captionClass}>{t("attack.situationalLabel")}</span>
+/** Target AC, size and the situational modifier with its reason (shown when not 0). */
+function TargetBar({ view }: { view: AttackFormView }) {
+  const { t } = useTranslation();
+  const update = useAttackStore((s) => s.update);
+  const { targetAc, targetSize, situational } = view.form;
+  const sizeLabel = useId();
+  return (
+    <div
+      role="group"
+      aria-label={t("attack.target")}
+      className="flex flex-wrap items-end gap-x-6 gap-y-3 rounded-lg bg-neu-900 px-4 py-3"
+    >
+      <Stepper
+        label={t("attack.targetAc")}
+        lower={t("attack.lowerAc")}
+        raise={t("attack.raiseAc")}
+        value={targetAc}
+        onChange={(v) => void update({ targetAc: v })}
+      />
+      <div className="flex flex-col gap-1">
+        <span id={sizeLabel} className="text-xs text-muted-foreground">
+          {t("attack.targetSize")}
+        </span>
+        <div
+          role="radiogroup"
+          aria-labelledby={sizeLabel}
+          className="flex rounded-lg bg-background p-0.5"
+        >
+          {SIZES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              role="radio"
+              aria-checked={targetSize === s}
+              aria-label={t(`attack.sizes.${s}`)}
+              className={cn(
+                "h-7 rounded-md px-3 text-sm text-muted-foreground",
+                targetSize === s && "bg-amb-800 text-foreground",
+              )}
+              onClick={() => void update({ targetSize: s })}
+            >
+              {t(`attack.sizesShort.${s}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Stepper
+        label={t("attack.situational")}
+        lower={t("attack.lowerSituational")}
+        raise={t("attack.raiseSituational")}
+        value={situational.value}
+        signed
+        onChange={(v) => void update({ situational: { ...situational, value: v } })}
+      />
+      {situational.value !== 0 && (
+        <label className="flex min-w-40 flex-1 flex-col gap-1">
+          <span className="text-xs text-muted-foreground">{t("attack.situationalLabel")}</span>
           <input
             className={fieldClass}
             type="text"
             placeholder={t("attack.situationalPlaceholder")}
-            value={sitLabel}
-            onChange={(e) => setSitLabel(e.target.value)}
+            value={situational.label}
+            onChange={(e) =>
+              void update({ situational: { ...situational, label: e.target.value } })
+            }
           />
         </label>
+      )}
+    </div>
+  );
+}
 
+/** − / + around a whole number in ±BOUND; typing is kept as text until it is a number. */
+function Stepper({
+  label,
+  lower,
+  raise,
+  value,
+  signed = false,
+  onChange,
+}: {
+  label: string;
+  lower: string;
+  raise: string;
+  value: number;
+  signed?: boolean;
+  onChange: (v: number) => void;
+}) {
+  const id = useId();
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? (signed && value > 0 ? `+${value}` : String(value));
+  const set = (v: number) => {
+    setDraft(null);
+    onChange(Math.max(-BOUND, Math.min(BOUND, v)));
+  };
+  return (
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="text-xs text-muted-foreground">
+        {label}
+      </label>
+      <span className="flex items-center gap-1">
         <Button
-          type="submit"
-          size="lg"
-          className="col-span-2 h-10 text-base"
-          disabled={rolling || !valid}
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={lower}
+          disabled={value <= -BOUND}
+          onClick={() => set(value - 1)}
         >
-          <Sword />
-          {rolling ? t("attack.rolling") : t("attack.roll")}
+          <Minus />
         </Button>
-      </form>
-      <CritTableEditor />
-    </>
+        <input
+          id={id}
+          className={cn(fieldClass, "w-14 text-center")}
+          inputMode="numeric"
+          value={shown}
+          onChange={(e) => {
+            const text = e.target.value;
+            setDraft(text);
+            const n = Number(text.trim());
+            if (/^[+-]?\d+$/.test(text.trim()) && Math.abs(n) <= BOUND) onChange(n);
+          }}
+          onBlur={() => setDraft(null)}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={raise}
+          disabled={value >= BOUND}
+          onClick={() => set(value + 1)}
+        >
+          <Plus />
+        </Button>
+      </span>
+    </div>
+  );
+}
+
+/** Damage dice per size (the current one highlighted), to-hit / damage bonus, effective THAC0. */
+function Tiles({ weapon, view }: { weapon: Weapon; view: AttackFormView }) {
+  const { t } = useTranslation();
+  const preview = view.preview;
+  if (!preview) return null;
+  const size = view.form.targetSize;
+  return (
+    <dl className="grid grid-cols-2 gap-2 @xl:grid-cols-4">
+      <Tile label={t("attack.tiles.damageSm")} testId="tile-damage-sm" dim={size !== "sm"} current={size === "sm"}>
+        {weapon.damage_sm}
+      </Tile>
+      <Tile label={t("attack.tiles.damageL")} testId="tile-damage-l" dim={size !== "l"} current={size === "l"}>
+        {weapon.damage_l || weapon.damage_sm}
+      </Tile>
+      <Tile label={t("attack.tiles.bonus")} testId="tile-bonus">
+        {`${formatSigned(preview.toHit)} / ${formatSigned(preview.damageBonus)}`}
+      </Tile>
+      <Tile
+        label={t("attack.tiles.thac0")}
+        testId="tile-thac0"
+        hint={t("attack.tiles.rollNeeded", { ac: view.form.targetAc, n: preview.rollNeeded })}
+      >
+        {preview.effectiveThac0}
+      </Tile>
+    </dl>
+  );
+}
+
+function Tile({
+  label,
+  testId,
+  hint,
+  dim = false,
+  current = false,
+  children,
+}: {
+  label: string;
+  testId: string;
+  hint?: string;
+  dim?: boolean;
+  current?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col gap-0.5 rounded-lg bg-background/60 px-3 py-2",
+        current && "ring-1 ring-amb-600",
+        dim && "opacity-60",
+      )}
+    >
+      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
+      <dd className="text-lg font-medium" data-testid={testId}>
+        {children}
+      </dd>
+      {hint && <dd className="truncate text-xs text-muted-foreground">{hint}</dd>}
+    </div>
+  );
+}
+
+/** The weapon's ammunition as chips with their counts; the chosen one is checked. */
+function AmmoChips({ choices, chosen }: { choices: AmmoChoice[]; chosen: string }) {
+  const { t } = useTranslation();
+  const update = useAttackStore((s) => s.update);
+  if (choices.length === 0) {
+    return <p className="text-sm text-danger">{t("attack.noAmmo")}</p>;
+  }
+  return (
+    <div role="radiogroup" aria-label={t("attack.ammo")} className="flex flex-wrap gap-2">
+      {choices.map((a) => (
+        <button
+          key={a.itemId}
+          type="button"
+          role="radio"
+          aria-checked={a.itemId === chosen}
+          aria-label={t("attack.ammoOption", { name: a.name, count: a.count })}
+          data-item={a.itemId}
+          className={cn(
+            "flex h-8 items-center gap-2 rounded-full bg-background/60 px-3 text-sm",
+            a.itemId === chosen && "bg-amb-800 ring-1 ring-amb-500",
+          )}
+          onClick={() => void update({ ammoItemId: a.itemId })}
+        >
+          <span>{a.name}</span>
+          <span
+            data-testid="ammo-count"
+            className={cn(
+              "font-medium",
+              a.count === 0 ? "text-danger" : a.count <= LOW_AMMO && "text-warning",
+            )}
+          >
+            {a.count}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** "Other weapon": a popover listing the weapons not in hand; picking one switches, never attacks. */
+function OtherWeapon({ weapons, onPick }: { weapons: Weapon[]; onPick: (id: string) => void }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  if (weapons.length === 0) return null;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button type="button" variant="ghost">
+            {t("attack.otherWeapon")}
+            <CaretDown />
+          </Button>
+        }
+      />
+      <PopoverContent align="start" className="w-72 p-1.5">
+        <ul aria-label={t("attack.otherWeapon")} className="flex flex-col">
+          {weapons.map((w) => (
+            <li key={w.id}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm hover:bg-neu-900"
+                onClick={() => {
+                  setOpen(false);
+                  onPick(w.id);
+                }}
+              >
+                <span className="truncate">{w.name}</span>
+                <span className="shrink-0 text-muted-foreground">
+                  {t("attack.weaponDice", { sm: w.damage_sm, l: w.damage_l || w.damage_sm })}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }

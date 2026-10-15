@@ -21,6 +21,7 @@ type preloaders struct {
 	ActionLog        actionLogPreloader
 	ActionSnapshot   actionSnapshotPreloader
 	ActiveBuff       activeBuffPreloader
+	AttackForm       attackFormPreloader
 	Character        characterPreloader
 	HPEvent          hpEventPreloader
 	RoundState       roundStatePreloader
@@ -35,6 +36,7 @@ func getPreloaders() preloaders {
 		ActionLog:        buildActionLogPreloader(),
 		ActionSnapshot:   buildActionSnapshotPreloader(),
 		ActiveBuff:       buildActiveBuffPreloader(),
+		AttackForm:       buildAttackFormPreloader(),
 		Character:        buildCharacterPreloader(),
 		HPEvent:          buildHPEventPreloader(),
 		RoundState:       buildRoundStatePreloader(),
@@ -55,6 +57,7 @@ type thenLoaders[Q orm.Loadable] struct {
 	ActionLog        actionLogThenLoader[Q]
 	ActionSnapshot   actionSnapshotThenLoader[Q]
 	ActiveBuff       activeBuffThenLoader[Q]
+	AttackForm       attackFormThenLoader[Q]
 	Character        characterThenLoader[Q]
 	HPEvent          hpEventThenLoader[Q]
 	RoundState       roundStateThenLoader[Q]
@@ -69,6 +72,7 @@ func getThenLoaders[Q orm.Loadable]() thenLoaders[Q] {
 		ActionLog:        buildActionLogThenLoader[Q](),
 		ActionSnapshot:   buildActionSnapshotThenLoader[Q](),
 		ActiveBuff:       buildActiveBuffThenLoader[Q](),
+		AttackForm:       buildAttackFormThenLoader[Q](),
 		Character:        buildCharacterThenLoader[Q](),
 		HPEvent:          buildHPEventThenLoader[Q](),
 		RoundState:       buildRoundStateThenLoader[Q](),

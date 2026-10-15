@@ -114,8 +114,22 @@ const usePayload = {
 };
 
 /** Every log kind with a payload as its service records it, and the card layout it gets. */
+const profCheck = {
+  id: "musical_instrument",
+  kind: "proficiency",
+  die: 20,
+  roll: 17,
+  target: 16,
+  success: false,
+  ability: "dex",
+  abilityScore: 17,
+  modifier: -1,
+};
+const bardCheck = { id: "climb_walls", kind: "bardSkill", die: 100, roll: 42, target: 85, success: true, modifier: 0 };
+
 const KINDS: [LogKind, unknown, CardModel["layout"], Partial<LogEntry>?][] = [
   ["attack", attackPayload, "attack"],
+  ["skill_check", profCheck, "skill"],
   ["save", savePayload, "save"],
   ["cast", castPayload, "cast"],
   ["item_use", usePayload, "item"],
@@ -141,8 +155,8 @@ describe("cardModel: every log kind renders from its payload", () => {
   it("covers every kind", () => {
     const kinds = new Set(KINDS.map(([k]) => k));
     expect(kinds.size).toBe(KINDS.length);
-    // LogKind has 20 members (types/log.ts); a new kind must be added here.
-    expect(kinds.size).toBe(20);
+    // LogKind has 21 members (types/log.ts); a new kind must be added here.
+    expect(kinds.size).toBe(21);
   });
 
   it.each(KINDS)("%s → %s", async (kind, payload, layout, over) => {
@@ -153,6 +167,17 @@ describe("cardModel: every log kind renders from its payload", () => {
       // Worded from the payload, never an empty line.
       expect(m.info.text).not.toBe("");
     }
+  });
+
+  it("skill check: the payload as recorded, header names the skill (en, fr)", async () => {
+    const e = entry("skill_check", profCheck, { id: 9 });
+    const m = cardModel(e, await makeT("en"));
+    expect(m).toEqual({ layout: "skill", check: { ...profCheck, logEntryId: 9 } });
+    expect(cardHeader("skill_check", m, e, await makeT("en"), "en").subtitle).toBe("Musical instrument");
+    const fr = cardHeader("skill_check", m, e, await makeT("fr"), "fr");
+    expect(fr.tag).toBe("Compétence");
+    expect(fr.subtitle).toBe("Instrument de musique");
+    expect(cardModel(entry("skill_check", { id: "x" }), await makeT("en")).layout).toBe("info");
   });
 
   it("attack: the payload as recorded, with its entry id for the correction", async () => {
@@ -376,6 +401,7 @@ describe("liveModel", () => {
     expect(liveModel({ kind: "cast", result: cast })).toEqual({ layout: "castLive", result: cast });
     expect(liveModel({ kind: "attack", result: attackPayload }).layout).toBe("attack");
     expect(liveModel({ kind: "item", result: { ...usePayload } as never }).layout).toBe("item");
+    expect(liveModel({ kind: "skill", result: bardCheck as never })).toEqual({ layout: "skill", check: bardCheck });
   });
 });
 
@@ -385,6 +411,7 @@ describe("journal: rolls filter and row values", () => {
     expect(isRollEntry(entry("save", savePayload))).toBe(true);
     expect(isRollEntry(entry("item_use", usePayload))).toBe(true);
     expect(isRollEntry(entry("initiative", { round: 1, d10: 3 }))).toBe(true);
+    expect(isRollEntry(entry("skill_check", bardCheck))).toBe(true);
     expect(isRollEntry(entry("cast", castPayload))).toBe(true);
     expect(
       isRollEntry(entry("cast", { ...castPayload, damage: undefined, attack: { d20: 9, targetAc: 4, hit: true } })),
@@ -409,6 +436,8 @@ describe("journal: rolls filter and row values", () => {
     [entry("item_use", usePayload), { text: "21", tone: "accent" }],
     [entry("item_use", { ...usePayload, dice: "", rolls: [], total: 0 }), null],
     [entry("initiative", { round: 3, d10: 7 }), { text: "7", tone: "accent" }],
+    [entry("skill_check", profCheck), { text: "17", tone: "fail" }],
+    [entry("skill_check", bardCheck), { text: "42", tone: "pass" }],
     [entry("cast", castPayload), { text: "17", tone: "accent" }],
     [entry("buff_change", { action: "dismiss", buff: "Haste" }), null],
   ])("row value %#", (e, want) => {

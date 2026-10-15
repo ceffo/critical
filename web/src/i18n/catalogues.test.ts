@@ -19,6 +19,19 @@ describe("catalogues", () => {
     );
   });
 
+  it("every skill id of seeds/skills.json has an en and a fr name", () => {
+    const seed = JSON.parse(
+      readFileSync(join(__dirname, "..", "..", "..", "seeds", "skills.json"), "utf8"),
+    ) as { proficiencies: { id: string }[]; bard_skills: { id: string }[] };
+    const ids = [...seed.proficiencies, ...seed.bard_skills].map((s) => s.id);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const lang of ["en", "fr"] as const) {
+      const names = (resources[lang].common as { skills: { names: Record<string, string> } }).skills
+        .names;
+      for (const id of ids) expect(names[id], `${lang} ${id}`).toBeTruthy();
+    }
+  });
+
   it("every fr spell key exists in en (en is the fallback)", () => {
     const en = new Set(flatten(resources.en.spells));
     for (const k of flatten(resources.fr.spells)) expect(en.has(k)).toBe(true);

@@ -20,7 +20,8 @@ export type LogKind =
   | "weapon_remove"
   | "spell_prep"
   | "long_rest"
-  | "save";
+  | "save"
+  | "skill_check";
 
 export type LogStatus = "active" | "amended" | "voided";
 

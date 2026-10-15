@@ -172,7 +172,8 @@
     "tabs": {
       "weapons": "Weapons",
       "spells": "Spells",
-      "items": "Items"
+      "items": "Items",
+      "skills": "Skills"
     },
     "items": {
       "list": "Combat items",
@@ -587,7 +588,14 @@
     },
     "critLegacy": "Critical ×{{mult, number}} (d100 in {{from}}–{{to}})",
     "critPlaceholderLegacy": "Critical ×{{mult, number}} (placeholder)",
-    "multRoll": "Multiplier d100"
+    "multRoll": "Multiplier d100",
+    "skill": {
+      "proficiency": "Proficiency · d{{die}} under {{stat}}",
+      "bardSkill": "Bard skill · d{{die}} under {{percent}}%",
+      "success": "Success",
+      "failure": "Failure",
+      "die": "d{{die}}"
+    }
   },
   "log": {
     "title": "Journal",
@@ -614,7 +622,8 @@
       "initiative": "Initiative",
       "item_add": "Item",
       "item_edit": "Item",
-      "item_remove": "Item"
+      "item_remove": "Item",
+      "skill_check": "Skill"
     },
     "status": {
       "active": "Active",
@@ -725,6 +734,10 @@
       "label": "Undo",
       "tooltip": "Undo: {{action}} (Ctrl+Z / ⌘Z)",
       "nothing": "Nothing to undo"
+    },
+    "skill": {
+      "success": "{{name}}: d{{die}} {{roll}} vs {{target}}, success",
+      "failure": "{{name}}: d{{die}} {{roll}} vs {{target}}, failure"
     }
   },
   "critTable": {
@@ -793,7 +806,10 @@
       "label": "Journal filter",
       "all": "All",
       "rolls": "Rolls"
-    }
+    },
+    "die": "d{{faces}}: {{value}}",
+    "skillVs": "{{roll}} vs {{target}}",
+    "skillVsPercent": "{{roll}} vs {{target}}%"
   },
   "xp": {
     "heading": "Experience · level {{level}}",
@@ -836,6 +852,34 @@
       "opening": "Starting XP (character sheet)",
       "confirm": "Confirm",
       "confirmDelete": "Confirm deleting {{reason}}"
+    }
+  },
+  "skills": {
+    "proficiencies": "Proficiencies",
+    "bardSkills": "Bard skills",
+    "columns": {
+      "ability": "Ability",
+      "target": "Target",
+      "percent": "Chance",
+      "last": "Last"
+    },
+    "percent": "{{value}}%",
+    "rollLabel": "Roll {{name}}",
+    "lastSuccess": "Last check: {{roll}}, success",
+    "lastFailure": "Last check: {{roll}}, failure",
+    "names": {
+      "musical_instrument": "Musical instrument",
+      "tumbling": "Tumbling",
+      "ventriloquism": "Ventriloquism",
+      "riding_land": "Riding, land-based",
+      "appraising": "Appraising",
+      "singing": "Singing",
+      "reading_writing": "Reading/writing",
+      "local_history": "Local history",
+      "climb_walls": "Climb walls",
+      "detect_noise": "Detect noise",
+      "pick_pockets": "Pick pockets",
+      "read_languages": "Read languages"
     }
   }
 }

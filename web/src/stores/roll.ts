@@ -5,6 +5,8 @@ import { resolveAttack } from "@/api/combat";
 import { adjustAttack, adjustSave, rollSavingThrow } from "@/api/roll";
 import { postUseItem } from "@/api/items";
 import type { UseResult } from "@/types/items";
+import type { SkillCheck } from "@/types/skills";
+import { rollSkill } from "@/api/skills";
 import { useTableStore } from "./table";
 
 /** The last roll and what was asked for, so the result card can show its context. */
@@ -12,7 +14,8 @@ export type LastRoll =
   | { kind: "attack"; result: RollResult }
   | { kind: "save"; category: SaveCategory; result: RollResult }
   | { kind: "cast"; result: CastResult }
-  | { kind: "item"; result: UseResult };
+  | { kind: "item"; result: UseResult }
+  | { kind: "skill"; result: SkillCheck };
 
 interface RollStore {
   last: LastRoll | null;
@@ -34,6 +37,8 @@ interface RollStore {
   adjustLastAttack: (entryId: number, targetAc: number) => Promise<boolean>;
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
+  /** Rolls a proficiency or bard skill check (the server rolls and logs it). */
+  rollSkill: (id: string) => Promise<boolean>;
 }
 
 export const useRollStore = create<RollStore>((set) => {
@@ -60,6 +65,7 @@ export const useRollStore = create<RollStore>((set) => {
     rollAttack: (req) =>
       roll(async () => ({ kind: "attack", result: await resolveAttack(req) }), true),
     spendItem: (id) => roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
+    rollSkill: (id) => roll(async () => ({ kind: "skill", result: await rollSkill(id) }), true),
     // A save is logged: refresh to show its entry.
     rollSave: async (category) => {
       await roll(

@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
 import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
+import type { SkillCheck } from "@/types/skills";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
@@ -348,9 +349,45 @@ function attackText(p: RollResult, t: TFunction): string {
  * is only the player's own text (an HP change's source) or, on entries logged before the payloads
  * existed, an older English line.
  */
+/** Payload of skill_check entries (skillsvc checkRecord, ADR 0014): the check as rolled. */
+export function skillCheckPayload(e: LogEntry): SkillCheck | null {
+  if (e.kind !== "skill_check") return null;
+  const p = (e.effectivePayload ?? e.payload) as Partial<SkillCheck> | null;
+  return p &&
+    typeof p.id === "string" &&
+    typeof p.roll === "number" &&
+    typeof p.target === "number" &&
+    typeof p.success === "boolean" &&
+    (p.kind === "proficiency" || p.kind === "bardSkill")
+    ? (p as SkillCheck)
+    : null;
+}
+
+/** A skill's display name; an id without a translation shows as is. */
+export function skillName(t: TFunction, id: string): string {
+  return t(`skills.names.${id}`, { defaultValue: id });
+}
+
+/** "DEX 17 −1" (the modifier left out when 0). */
+export function abilityText(t: TFunction, ability: string, score: number, modifier: number): string {
+  const name = t(`attr.${ability}`, { defaultValue: ability });
+  return modifier === 0 ? `${name} ${score}` : `${name} ${score} ${formatSigned(modifier)}`;
+}
+
+function skillText(c: SkillCheck, t: TFunction): string {
+  return t(c.success ? "log.skill.success" : "log.skill.failure", {
+    name: skillName(t, c.id),
+    die: c.die,
+    roll: c.roll,
+    target: c.target,
+  });
+}
+
 export function entryText(e: LogEntry, t: TFunction): string {
   const attack = attackPayload(e);
   if (attack) return attackText(attack, t);
+  const skill = skillCheckPayload(e);
+  if (skill) return skillText(skill, t);
   const save = savePayload(e);
   if (save) return saveText(save, t);
   const cast = castPayload(e);

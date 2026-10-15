@@ -255,7 +255,7 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
   await expect(selected(page)).toHaveAttribute("data-id", "magic_missile");
   const range = detail(page).getByTestId("stat-range");
   await expect(range.getByTestId("stat-value")).toHaveText("210 yd");
-  await expect(range.getByTestId("stat-raw")).toHaveText("· 60 yds. + 10 yds./level");
+  await expect(range.getByTestId("stat-raw")).toHaveText("60 yds. + 10 yds./level");
 
   const description = detail(page).getByTestId("spell-description");
   const text = description.locator("p");

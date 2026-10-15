@@ -1,13 +1,14 @@
 import { useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { MagnifyingGlass, CircleNotch } from "@phosphor-icons/react";
+import { ArrowRight, CaretRight, CircleNotch, DiceFive, MagnifyingGlass } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { fieldClass, captionClass } from "@/components/dashboard/fieldStyles";
+import { Button } from "@/components/ui/button";
+import { fieldClass } from "@/components/dashboard/fieldStyles";
+import { useDiceStore } from "@/stores/dice";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellName } from "@/i18n/spellName";
-import { statRaw, statValue, type StatKey } from "@/lib/spellValues";
+import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
 import { classLabel, sphereLabel, spheresLabel, translateValue } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -48,6 +49,9 @@ function SpellNames({ spell, className }: { spell: Spell; className?: string }) 
 
 function SpellDetail({ spell }: { spell: Spell }) {
   const { t } = useTranslation();
+  const toComposer = useDiceStore((s) => s.setFormula);
+  const roll = useDiceStore((s) => s.roll);
+  const rolling = useDiceStore((s) => s.rolling);
   const unit = (w: string) => t(`lookup.units.${w}`, { defaultValue: w });
   const value = (key: StatKey): string | null =>
     key === "save"
@@ -62,33 +66,37 @@ function SpellDetail({ spell }: { spell: Spell }) {
     spheresLabel(t, spell.sphere),
     spell.components,
   ].filter(Boolean);
+  const dice = statDice(spell, unit);
 
   return (
-    <div className="space-y-3">
-      <div>
-        <h3 className="text-base font-semibold leading-tight">
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-xl leading-tight font-medium">
           <SpellNames spell={spell} className="whitespace-normal" />
         </h3>
         <p className="text-xs text-muted-foreground" data-testid="spell-meta">
           {meta.join(" · ")}
         </p>
       </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+      <dl className="flex flex-col text-sm">
         {STATS.map((key) => {
           const v = value(key);
           const raw = translateValue(t, key, statRaw(spell, key));
           return (
-            <div key={key} className="min-w-0" data-testid={`stat-${key}`}>
-              <dt className={captionClass}>{t(`lookup.${key}`)}</dt>
-              <dd className="min-w-0">
+            <div
+              key={key}
+              className="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] gap-x-3 rounded-md px-2 py-1.5 even:bg-neu-900/40"
+              data-testid={`stat-${key}`}
+            >
+              <dt className="text-muted-foreground">{t(`lookup.${key}`)}</dt>
+              <dd className="flex min-w-0 flex-col">
                 {v ? (
                   <>
                     <span className="font-medium" data-testid="stat-value">
                       {v}
                     </span>
                     {raw && !same(v, raw) && (
-                      <span className="text-muted-foreground" data-testid="stat-raw">
-                        {" · "}
+                      <span className="text-xs text-muted-foreground" data-testid="stat-raw">
                         {raw}
                       </span>
                     )}
@@ -102,16 +110,56 @@ function SpellDetail({ spell }: { spell: Spell }) {
         })}
       </dl>
       {spell.caster_level ? (
-        <p className="text-[11px] text-muted-foreground">
-          {t("lookup.atLevel", { level: spell.caster_level })}
-        </p>
+        dice.length > 0 ? (
+          <ul className="flex flex-col gap-1.5" aria-label={t("lookup.diceRow")}>
+            {dice.map((d) => (
+              <li
+                key={d.key}
+                className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-lg bg-neu-900/60 px-3 py-2 text-sm"
+                data-testid={`spell-dice-${d.key}`}
+              >
+                <span className="min-w-36 flex-1">
+                  {t("lookup.atLevel", { level: spell.caster_level })}
+                  {" · "}
+                  {t(`lookup.${d.key}`)}{" "}
+                  <span className="font-medium text-amb-300 tabular-nums" data-testid="spell-dice-formula">
+                    {d.formula}
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    aria-label={t("dice.send", { formula: d.formula })}
+                    onClick={() => toComposer(d.formula)}
+                  >
+                    <ArrowRight aria-hidden /> {t("lookup.toDice")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={rolling}
+                    aria-label={t("dice.rollFormula", { formula: d.formula })}
+                    onClick={() => void roll(d.formula)}
+                  >
+                    <DiceFive aria-hidden /> {t("lookup.rollDice")}
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            {t("lookup.atLevel", { level: spell.caster_level })}
+          </p>
+        )
       ) : null}
       {spell.description && (
-        <details className="text-sm" data-testid="spell-description">
-          <summary className={cn(captionClass, "cursor-pointer select-none")}>
+        <details className="group text-sm" data-testid="spell-description">
+          <summary className="flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-md py-1 font-medium select-none hover:text-amb-300 [&::-webkit-details-marker]:hidden">
+            <CaretRight aria-hidden className="size-3.5 transition-transform group-open:rotate-90" />
             {t("lookup.description")}
           </summary>
-          <p className="mt-1 whitespace-pre-line leading-relaxed">
+          <p className="mt-1 max-w-[65ch] leading-relaxed whitespace-pre-line text-foreground/85">
             {spell.description}
           </p>
         </details>
@@ -192,172 +240,181 @@ export function LookupPanel() {
         : [...query.levels, n].sort((a, b) => a - b),
     });
 
-  return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
-      <div className="relative shrink-0">
-        <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
-        <input
-          type="search"
-          className={cn(fieldClass, "pl-8")}
-          placeholder={t("lookup.search")}
-          aria-label={t("lookup.search")}
-          role="combobox"
-          aria-expanded
-          aria-controls="lookup-list"
-          aria-activedescendant={selectedId ? `lookup-row-${selectedId}` : undefined}
-          autoComplete="off"
-          value={query.q}
-          onChange={(e) => setQuery({ q: e.target.value })}
-          onKeyDown={onKeyDown}
-        />
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2">
-        <div
-          role="group"
-          aria-label={t("lookup.classLabel")}
-          className="inline-flex rounded-lg border p-0.5"
-        >
-          {CLASSES.map(({ value, key }) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={query.cls === value}
-              className={cn(
-                "rounded-md px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
-                query.cls === value && "bg-primary text-primary-foreground hover:text-primary-foreground",
-              )}
-              onClick={() => setQuery({ cls: value })}
-            >
-              {t(`lookup.${key}`)}
-            </button>
-          ))}
-        </div>
-        {isQuerySet(query) && (
+  const levelChips = (
+    <div role="group" aria-label={t("lookup.levelsLabel")} className="flex gap-1">
+      {LEVELS.map((n) => {
+        const on = query.levels.includes(n);
+        return (
           <button
+            key={n}
             type="button"
-            className="ml-auto text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-            onClick={reset}
+            aria-pressed={on}
+            aria-label={t("lookup.levelLabel", { level: n })}
+            className={cn(
+              "h-7 w-7 rounded-md bg-neu-900/60 text-xs font-medium text-muted-foreground tabular-nums transition-colors hover:text-foreground",
+              on && "bg-amb-800 text-amb-100 hover:text-amb-100",
+            )}
+            onClick={() => toggleLevel(n)}
           >
-            {t("lookup.reset")}
+            {n}
           </button>
-        )}
-      </div>
+        );
+      })}
+    </div>
+  );
 
-      <div className="flex shrink-0 items-center gap-2">
-        <div role="group" aria-label={t("lookup.levelsLabel")} className="flex gap-1">
-          {LEVELS.map((n) => {
-            const on = query.levels.includes(n);
-            return (
-              <button
-                key={n}
-                type="button"
-                aria-pressed={on}
-                aria-label={t("lookup.levelLabel", { level: n })}
-                className={cn(
-                  "h-7 w-8 rounded-md border text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
-                  on && "border-primary bg-primary text-primary-foreground hover:text-primary-foreground",
-                )}
-                onClick={() => toggleLevel(n)}
-              >
-                {n}
-              </button>
-            );
-          })}
-        </div>
-        <select
-          className={cn(fieldClass, "ml-auto h-7 w-44 text-xs")}
-          aria-label={priest ? t("lookup.sphere") : t("lookup.school")}
-          value={priest ? query.sphere : query.school}
-          onChange={(e) =>
-            setQuery(priest ? { sphere: e.target.value } : { school: e.target.value })
-          }
-        >
-          <option value="">{priest ? t("lookup.anySphere") : t("lookup.anySchool")}</option>
-          {priest
-            ? options?.spheres.map((s) => (
-                <option key={s} value={s}>
-                  {sphereLabel(t, s)}
-                </option>
-              ))
-            : options?.schools.map((s) => (
-                <option key={s} value={s}>
-                  {t(`lookup.schools.${s}`, { defaultValue: s })}
-                </option>
-              ))}
-        </select>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-        {shownKey && (
-          <span data-testid="lookup-count">{t("lookup.count", { count: total })}</span>
-        )}
-        {loading && <CircleNotch className="h-3 w-3 animate-spin" aria-hidden />}
-        {error && (
-          <span role="alert" className="text-destructive">
-            {error}
-          </span>
-        )}
-      </div>
-
-      <div
-        ref={listRef}
-        id="lookup-list"
-        role="listbox"
-        aria-label={t("lookup.results")}
-        className="h-[45%] shrink-0 overflow-y-auto rounded-lg border"
-        onScroll={onScroll}
-      >
-        {items.length === 0 && !loading && shownKey ? (
-          <p className="p-3 text-sm italic text-muted-foreground">{t("lookup.noMatch")}</p>
-        ) : (
-          items.map((s) => (
-            <div
-              key={s.id}
-              id={`lookup-row-${s.id}`}
-              role="option"
-              aria-selected={s.id === selectedId}
-              data-testid="spell-row"
-              data-id={s.id}
-              data-class={s.class}
-              data-level={s.level}
-              className={cn(
-                "flex cursor-pointer items-center gap-2 border-b px-2 py-1 text-sm last:border-b-0 hover:bg-muted/60",
-                s.id === selectedId && "bg-muted",
-              )}
-              onClick={() => select(s.id)}
-            >
-              <span className="w-6 shrink-0 text-xs font-semibold text-muted-foreground tabular-nums">
-                {s.level}
-              </span>
-              <SpellNames spell={s} className="flex-1" />
-              {query.cls === "all" && (
-                <Badge variant="secondary" className="h-4 text-[10px]" data-testid="spell-class">
-                  {classLabel(t, s.class)}
-                </Badge>
-              )}
-              <span className="ml-auto max-w-[35%] shrink-0 truncate text-[11px] text-muted-foreground">
-                {s.school}
-              </span>
-            </div>
-          ))
-        )}
-        {items.length > 0 && items.length < total && (
-          <p className="p-2 text-center text-xs text-muted-foreground">{t("lookup.loadingMore")}</p>
-        )}
-      </div>
-
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <section
-        aria-label={t("lookup.detail")}
-        data-testid="spell-detail"
-        className="min-h-0 flex-1 overflow-y-auto rounded-lg border p-3"
+        aria-label={t("lookup.filters")}
+        className="flex shrink-0 flex-col gap-2.5 rounded-xl bg-card px-3.5 py-3"
       >
-        {selected ? (
-          <SpellDetail key={selected.id} spell={selected} />
-        ) : (
-          <p className="text-sm italic text-muted-foreground">{t("lookup.noSelection")}</p>
-        )}
+        <div className="flex min-w-0 gap-2">
+          <div className="relative min-w-0 flex-1">
+            <MagnifyingGlass className="pointer-events-none absolute top-2 left-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="search"
+              className={cn(fieldClass, "pl-8")}
+              placeholder={t("lookup.search")}
+              aria-label={t("lookup.search")}
+              role="combobox"
+              aria-expanded
+              aria-controls="lookup-list"
+              aria-activedescendant={selectedId ? `lookup-row-${selectedId}` : undefined}
+              autoComplete="off"
+              value={query.q}
+              onChange={(e) => setQuery({ q: e.target.value })}
+              onKeyDown={onKeyDown}
+            />
+          </div>
+          <select
+            className={cn(fieldClass, "w-[clamp(9rem,30%,14rem)] shrink-0")}
+            aria-label={priest ? t("lookup.sphere") : t("lookup.school")}
+            value={priest ? query.sphere : query.school}
+            onChange={(e) =>
+              setQuery(priest ? { sphere: e.target.value } : { school: e.target.value })
+            }
+          >
+            <option value="">{priest ? t("lookup.anySphere") : t("lookup.anySchool")}</option>
+            {priest
+              ? options?.spheres.map((s) => (
+                  <option key={s} value={s}>
+                    {sphereLabel(t, s)}
+                  </option>
+                ))
+              : options?.schools.map((s) => (
+                  <option key={s} value={s}>
+                    {t(`lookup.schools.${s}`, { defaultValue: s })}
+                  </option>
+                ))}
+          </select>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div
+            role="group"
+            aria-label={t("lookup.classLabel")}
+            className="inline-flex rounded-lg bg-neu-900/60 p-0.5"
+          >
+            {CLASSES.map(({ value, key }) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={query.cls === value}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
+                  query.cls === value && "bg-card text-foreground ring-1 ring-amb-600 ring-inset",
+                )}
+                onClick={() => setQuery({ cls: value })}
+              >
+                {t(`lookup.${key}`)}
+              </button>
+            ))}
+          </div>
+          {levelChips}
+          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+            {loading && <CircleNotch className="h-3 w-3 animate-spin" aria-hidden />}
+            {error && (
+              <span role="alert" className="text-destructive">
+                {error}
+              </span>
+            )}
+            {shownKey && (
+              <span className="tabular-nums" data-testid="lookup-count">
+                {t("lookup.count", { count: total })}
+              </span>
+            )}
+            {isQuerySet(query) && (
+              <button
+                type="button"
+                className="underline underline-offset-2 hover:text-foreground"
+                onClick={reset}
+              >
+                {t("lookup.reset")}
+              </button>
+            )}
+          </div>
+        </div>
       </section>
+
+      <div className="grid min-h-0 flex-1 grid-cols-[clamp(13.75rem,30%,26rem)_minmax(0,1fr)] gap-3">
+        <div
+          ref={listRef}
+          id="lookup-list"
+          role="listbox"
+          aria-label={t("lookup.results")}
+          className="flex min-h-0 flex-col gap-px overflow-y-auto rounded-xl bg-card p-1.5"
+          onScroll={onScroll}
+        >
+          {items.length === 0 && !loading && shownKey ? (
+            <p className="p-2 text-sm text-muted-foreground">{t("lookup.noMatch")}</p>
+          ) : (
+            items.map((s) => (
+              <div
+                key={s.id}
+                id={`lookup-row-${s.id}`}
+                role="option"
+                aria-selected={s.id === selectedId}
+                title={s.school}
+                data-testid="spell-row"
+                data-id={s.id}
+                data-class={s.class}
+                data-level={s.level}
+                className={cn(
+                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-1.5 rounded-md px-2 py-1.5 text-sm hover:bg-neu-900/50",
+                  s.id === selectedId && "bg-amb-900 ring-1 ring-amb-700 ring-inset hover:bg-amb-900",
+                )}
+                onClick={() => select(s.id)}
+              >
+                <span className="text-xs text-amb-300 tabular-nums">{s.level}</span>
+                <SpellNames spell={s} />
+                {query.cls === "all" ? (
+                  <span className="text-xs text-muted-foreground" data-testid="spell-class">
+                    {classLabel(t, s.class)}
+                  </span>
+                ) : (
+                  <span />
+                )}
+              </div>
+            ))
+          )}
+          {items.length > 0 && items.length < total && (
+            <p className="p-2 text-center text-xs text-muted-foreground">{t("lookup.loadingMore")}</p>
+          )}
+        </div>
+
+        <section
+          aria-label={t("lookup.detail")}
+          data-testid="spell-detail"
+          className="min-h-0 overflow-y-auto rounded-xl bg-card px-4 py-4"
+        >
+          {selected ? (
+            <SpellDetail key={selected.id} spell={selected} />
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("lookup.noSelection")}</p>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

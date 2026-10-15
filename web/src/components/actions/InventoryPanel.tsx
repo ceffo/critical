@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { Minus, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import { DiceFive, Minus, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
+import { useDiceStore } from "@/stores/dice";
 import {
   deleteItem,
   patchItem,
@@ -13,16 +13,22 @@ import {
   postRestockItem,
 } from "@/api/items";
 import { draftFromItem, emptyDraft, typeSuggestions } from "@/lib/itemForm";
+import { cn } from "@/lib/utils";
 import { ItemForm } from "./ItemForm";
 import { WeaponsSection } from "./WeaponsSection";
 import { formatSigned } from "@/lib/format";
 import type { Item } from "@/types/items";
 
+/** Objets grid: name (type · behaviour) | dice chip | quantity stepper | edit / delete. */
+const ITEM_COLS =
+  "grid grid-cols-[minmax(0,1fr)_minmax(6rem,auto)_8.5rem_4rem] items-center gap-x-3";
+
 /**
- * Inventory tab: every item in one list with its type, behaviour and count.
+ * Inventaire workspace: the Objets card and the Armes card.
  * − uses one (the API rolls the effect, logs it, and removes a charges item at 0); + adds one,
- * and exists only on stock items. ✎ edits any field in place, 🗑 removes the item, "+ Add item"
- * opens a form. Every change is a log entry the Combat Log can pop.
+ * and exists only on stock items. The dice chip puts the item's effect dice in the dice composer.
+ * ✎ edits any field in place, 🗑 removes the item, "Add item" opens a form. Every change is a log
+ * entry the journal can pop.
  */
 export function InventoryPanel() {
   const { t } = useTranslation();
@@ -31,40 +37,52 @@ export function InventoryPanel() {
   const run = useTableStore((s) => s.run);
   const submit = useTableStore((s) => s.submit);
   const busy = useTableStore((s) => s.busy) || rolling;
+  const toComposer = useDiceStore((s) => s.setFormula);
   // "add", an item id being edited, or nothing.
   const [form, setForm] = useState<"add" | string | null>(null);
   const types = typeSuggestions(items);
   const close = () => setForm(null);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex max-w-2xl flex-col gap-2">
-        {form === "add" ? (
-          <ItemForm
-            initial={emptyDraft}
-            types={types}
-            busy={busy}
-            onCancel={close}
-            onSave={async (body) => {
-              const rejected = await submit(() => postCreateItem(body));
-              if (!rejected) close();
-              return rejected;
-            }}
-          />
-        ) : (
-          <div>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => setForm("add")}
-            >
+    <div className="flex flex-col gap-3">
+      <section
+        aria-labelledby="inventory-items-title"
+        className="flex flex-col gap-1 rounded-xl bg-card px-4 py-3.5"
+      >
+        <div className="mb-1.5 flex items-center justify-between gap-3">
+          <h2 id="inventory-items-title" className="text-lg font-medium">
+            {t("items.heading")}
+          </h2>
+          {form !== "add" && (
+            <Button size="sm" disabled={busy} onClick={() => setForm("add")}>
               <Plus /> {t("items.form.openAdd")}
             </Button>
+          )}
+        </div>
+        {form === "add" && (
+          <div className="mb-2">
+            <ItemForm
+              initial={emptyDraft}
+              types={types}
+              busy={busy}
+              onCancel={close}
+              onSave={async (body) => {
+                const rejected = await submit(() => postCreateItem(body));
+                if (!rejected) close();
+                return rejected;
+              }}
+            />
           </div>
         )}
-        {items.length === 0 && (
+        {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("items.none")}</p>
+        ) : (
+          <div className={cn(ITEM_COLS, "px-2 pb-1 text-xs text-muted-foreground")} aria-hidden>
+            <span>{t("items.columns.name")}</span>
+            <span>{t("items.columns.effect")}</span>
+            <span className="text-center">{t("items.columns.quantity")}</span>
+            <span />
+          </div>
         )}
         <ul className="flex flex-col gap-1" aria-label={t("items.title")}>
           {items.map((i) =>
@@ -88,6 +106,7 @@ export function InventoryPanel() {
                 key={i.id}
                 item={i}
                 busy={busy}
+                onDice={() => i.effectDice && toComposer(i.effectDice)}
                 onUse={() => void spendItem(i.id)}
                 onRestock={() => void run(() => postRestockItem(i.id, 1))}
                 onEdit={() => setForm(i.id)}
@@ -96,7 +115,7 @@ export function InventoryPanel() {
             ),
           )}
         </ul>
-      </div>
+      </section>
       <WeaponsSection />
     </div>
   );
@@ -105,6 +124,7 @@ export function InventoryPanel() {
 function ItemRow({
   item: i,
   busy,
+  onDice,
   onUse,
   onRestock,
   onEdit,
@@ -112,6 +132,7 @@ function ItemRow({
 }: {
   item: Item;
   busy: boolean;
+  onDice: () => void;
   onUse: () => void;
   onRestock: () => void;
   onEdit: () => void;
@@ -120,89 +141,109 @@ function ItemRow({
   const { t } = useTranslation();
   return (
     <li
-      className="flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm"
+      className={cn(ITEM_COLS, "min-h-12 rounded-lg bg-neu-900/40 px-2 py-1.5 text-sm")}
       data-testid={`item-${i.id}`}
     >
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-col">
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="min-w-0 truncate font-medium">{i.name}</span>
           {i.magicalBonus !== 0 && (
-            <Badge
-              variant="outline"
+            <span
+              className="shrink-0 rounded-md bg-amb-900 px-1.5 text-xs font-medium text-amb-300 tabular-nums"
               title={t("items.magicalBonus")}
               aria-label={`${t("items.magicalBonus")} ${formatSigned(i.magicalBonus)}`}
               data-testid="item-bonus"
             >
               {formatSigned(i.magicalBonus)}
-            </Badge>
+            </span>
           )}
-          {i.effectDice && <Badge variant="outline">{i.effectDice}</Badge>}
         </span>
-        {i.type && (
-          <span
-            className="text-xs text-muted-foreground"
-            data-testid="item-type"
+        <span className="min-w-0 truncate text-xs text-muted-foreground">
+          {i.type && (
+            <>
+              <span data-testid="item-type">{i.type}</span>
+              {" · "}
+            </>
+          )}
+          <span title={t(`items.behaviourHint.${i.behaviour}`)} data-testid="item-behaviour">
+            {t(`items.behaviour.${i.behaviour}`)}
+          </span>
+        </span>
+      </div>
+      <div className="min-w-0">
+        {i.effectDice ? (
+          <button
+            type="button"
+            className="inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-sm font-medium text-amb-300 tabular-nums outline-none ring-1 ring-amb-700 ring-inset hover:bg-amb-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+            title={t("dice.send", { formula: i.effectDice })}
+            aria-label={t("dice.send", { formula: i.effectDice })}
+            data-testid="item-dice"
+            onClick={onDice}
           >
-            {i.type}
+            <DiceFive aria-hidden className="size-4 shrink-0" />
+            <span className="truncate">{i.effectDice}</span>
+          </button>
+        ) : (
+          <span className="text-muted-foreground" aria-hidden>
+            —
           </span>
         )}
       </div>
-      <Badge
-        variant="secondary"
-        title={t(`items.behaviourHint.${i.behaviour}`)}
-        data-testid="item-behaviour"
-      >
-        {t(`items.behaviour.${i.behaviour}`)}
-      </Badge>
-      <Button
-        size="icon-sm"
-        variant="outline"
-        disabled={busy || i.count === 0}
-        onClick={onUse}
-        aria-label={t("items.useOne", { name: i.name })}
-      >
-        <Minus />
-      </Button>
-      <span
-        className="min-w-14 text-center font-mono font-semibold tabular-nums"
-        data-testid="item-count"
-      >
-        {i.behaviour === "daily"
-          ? t("items.count", { count: i.count, max: i.maxCount })
-          : i.count}
-      </span>
-      {i.behaviour === "stock" ? (
+      <div className="flex items-center justify-center gap-1">
         <Button
           size="icon-sm"
-          variant="outline"
-          disabled={busy}
-          onClick={onRestock}
-          aria-label={t("items.addOne", { name: i.name })}
+          variant="secondary"
+          disabled={busy || i.count === 0}
+          onClick={onUse}
+          aria-label={t("items.useOne", { name: i.name })}
         >
-          <Plus />
+          <Minus />
         </Button>
-      ) : (
-        // Keeps the counts aligned: charges and daily items have no +.
-        <span className="size-7" aria-hidden />
-      )}
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        disabled={busy}
-        onClick={onEdit}
-        aria-label={t("items.form.edit", { name: i.name })}
-      >
-        <PencilSimple />
-      </Button>
-      <Button
-        size="icon-sm"
-        variant="ghost"
-        disabled={busy}
-        onClick={onRemove}
-        aria-label={t("items.form.remove", { name: i.name })}
-      >
-        <Trash />
-      </Button>
+        <span
+          className="min-w-11 text-center font-semibold tabular-nums"
+          data-testid="item-count"
+        >
+          {i.behaviour === "daily"
+            ? t("items.count", { count: i.count, max: i.maxCount })
+            : i.count}
+        </span>
+        {i.behaviour === "stock" ? (
+          <Button
+            size="icon-sm"
+            variant="secondary"
+            disabled={busy}
+            onClick={onRestock}
+            aria-label={t("items.addOne", { name: i.name })}
+          >
+            <Plus />
+          </Button>
+        ) : (
+          // Keeps the counts aligned: charges and daily items have no +.
+          <span className="size-7" aria-hidden />
+        )}
+      </div>
+      <div className="flex justify-end">
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          disabled={busy}
+          onClick={onEdit}
+          aria-label={t("items.form.edit", { name: i.name })}
+        >
+          <PencilSimple />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          disabled={busy}
+          onClick={onRemove}
+          aria-label={t("items.form.remove", { name: i.name })}
+        >
+          <Trash />
+        </Button>
+      </div>
     </li>
   );
 }

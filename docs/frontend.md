@@ -138,16 +138,19 @@ flowchart TD
 - Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a 40px row:
   name, behaviour and count, dice, Roll (it has dice) or Use, through `stores/roll.ts`
   `spendItem`; "Manage the inventory" opens the Inventaire workspace.
-- Inventaire workspace (`InventoryPanel.tsx`): one list, each row name, magical bonus
-  ("+2"), effect dice, type, behaviour badge (Stock / Charges / Daily), − (uses one through
-  `stores/roll.ts` `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and +
-  on stock items only (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`). A charges
-  item spent to 0 is gone from the list until its use is popped. ✎ edits a row in place and
+- Inventaire workspace (`InventoryPanel.tsx`): the Objets card, one grid row per item: name with
+  its magical bonus ("+2") and "type · behaviour" (Stock / Charges / Daily) under it | the effect
+  dice as a chip that puts the formula in the dice composer (`stores/dice.ts` `setFormula`, nothing
+  rolled) | the quantity stepper: − (uses one through `stores/roll.ts` `spendItem`, result card
+  shows the roll), the count ("1 / 1" for daily) and + on stock items only
+  (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`) | ✎ / 🗑. Columns are rem
+  widths beside a `1fr` name, rows are separated by a tone step. A charges item spent to 0 is gone
+  from the list until its use is popped. ✎ edits a row in place and
   "Add item" opens the same form (`ItemForm.tsx`); 🗑 removes. The form only parses
   numbers (`lib/itemForm.ts`); the server validates and the message it returns for a field is shown
   under that field (`stores/table.ts` `submit`, `ApiError.field`). Edits send only the changed fields.
-- The Inventaire workspace also lists the weapons (`WeaponsSection.tsx`): name, dice,
-  to-hit and damage bonus, melee / missile, ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
+- The Inventaire workspace also has the Armes card (`WeaponsSection.tsx`), the same grid: name
+  with "melee / missile · two-handed · ammo" | damage "1d8 · L 1d12" | to-hit / damage bonus | ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
   `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
   refreshes the weapons store, so the Weapons tab follows.
 - Spells tab (`SpellsPanel.tsx`): "Buff spells go on an ally", Prepare spells and Long rest on
@@ -157,10 +160,16 @@ flowchart TD
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
   the shared name search (below) and posts `/api/spells/receive`.
 - Sorts workspace, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives tab switches):
-  search box, `Mine | Wizard | Priest | All` toggle (default Wizard; Mine = the Bard's spellbook),
-  level chips 0-9 (multi-select), a school-group dropdown (spheres in Priest mode); a list (45% of
-  the tab, one line per spell, infinite scroll by 200-row pages under a true "N spells" total) and a
-  detail pane (values at the Bard's level next to the raw text, description collapsed).
+  a filter card (search box and school-group dropdown, spheres in Priest mode; `Mine | Wizard |
+  Priest | All` segmented control, default Wizard, Mine = the Bard's spellbook; level chips 0-9,
+  multi-select; the true "N spells" total and Reset), then a list beside a detail pane. The list is
+  `clamp(13.75rem, 30%, 26rem)` wide (level and name, the class on All, the school as a tooltip;
+  infinite scroll by 200-row pages). The detail pane: name, meta line, one row per stat (label |
+  value at the Bard's level with the raw text dimmed under it), then one dice row per value the
+  server computed with dice still to roll (`lib/spellValues.ts` `statDice`: "At level 15 ·
+  Duration 1d8+8", the served dice then the served flat amount) with "To the dice" (fills the
+  composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and the Description
+  toggle. The spell DTO serves no damage dice, so damage has no dice row.
 - Spell name search (one module for Lookup and Receive): `api/spells_db.ts` `searchSpells` sends
   `q` (the server matches English names) plus `match_exact` / `match_prefix` / `match_contains`,
   the catalogue keys whose French name matched (`lib/spellSearch.ts`); the server ORs both and

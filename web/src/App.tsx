@@ -90,7 +90,7 @@ function App() {
             active={workspace}
             visited={visited}
             label={t("shell.workspace.inventory")}
-            className="overflow-y-auto rounded-xl bg-card p-4"
+            className="overflow-y-auto"
           >
             <InventoryPanel />
           </Pane>
@@ -99,7 +99,6 @@ function App() {
             active={workspace}
             visited={visited}
             label={t("shell.workspace.spells")}
-            className="rounded-xl bg-card p-4"
           >
             <LookupPanel />
           </Pane>

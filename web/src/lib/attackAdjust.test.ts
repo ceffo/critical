@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_TARGET_AC, attackSettled, hitsAc, parseTargetAc, stepTargetAc } from "./attackAdjust";
+import { MAX_TARGET_AC, attackSettled, hitsAc, parseTargetAc, stepTargetAc, tellGmWithCrit } from "./attackAdjust";
 
 describe("stepTargetAc", () => {
   it.each([
@@ -45,5 +45,15 @@ describe("hitsAc", () => {
   it("reads hitsAc, else the older targetACNeeded", () => {
     expect(hitsAc({ hitsAc: -3, targetACNeeded: -3 })).toBe(-3);
     expect(hitsAc({ targetACNeeded: 4 })).toBe(4);
+  });
+});
+
+describe("tellGmWithCrit", () => {
+  it.each([
+    [true, true],
+    [false, false],
+    [undefined, true],
+  ])("critPossible %s shows the crit part: %s", (critPossible, want) => {
+    expect(tellGmWithCrit({ critPossible })).toBe(want);
   });
 });

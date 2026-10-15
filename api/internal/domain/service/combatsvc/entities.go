@@ -92,6 +92,15 @@ const (
 // target AC is known or the GM gave a verdict (ADR 0012).
 func (r *RollResult) Settled() bool { return r.ACKnown || r.Verdict != VerdictNone }
 
+// MaxRealAC is the highest armor class the rules allow (AC 10, no armor).
+// An attack whose CritsFromAC is above it cannot crit any real target (ADR
+// 0012 step 7).
+const MaxRealAC = 10
+
+// CritPossible reports whether some real target AC (at most MaxRealAC) is
+// crit by the attack: CritsFromAC <= MaxRealAC.
+func (r *RollResult) CritPossible() bool { return r.CritsFromAC <= MaxRealAC }
+
 // AmmoUse is the ammunition an attack spent.
 type AmmoUse struct {
 	ItemID    string

@@ -293,3 +293,82 @@ func TestUnknownAC_EntryWithoutACKnownReadsAsKnown(t *testing.T) {
 	require.NotNil(t, res.RolledHit)
 	assert.True(t, *res.RolledHit)
 }
+
+// Step 7: an attack can crit a real target only when critsFromAc is at most
+// the highest AC the rules allow (10).
+func TestUnknownAC_Step7_CritPossibleOnlyWithinRealACs(t *testing.T) {
+	cases := []struct {
+		name       string
+		d20, check int
+		crits      int
+		possible   bool
+	}{
+		{"exactly the highest AC", 15, 14, 11 - 15 + 14, true},
+		{"one beyond it", 14, 14, 11 - 14 + 14, false},
+		{"far beyond", 2, 59, 11 - 2 + 59, false},
+		{"negative", 20, 3, 11 - 20 + 3, true},
+	}
+	for i, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			e := rollAttack(t, f, unknownSword(c.d20, c.check, 50+i))
+			amends(f, e)
+			res, err := f.svc.SetAttackVerdict(context.Background(), charID, 42, true)
+			require.NoError(t, err)
+			assert.Equal(t, c.crits, res.CritsFromAC)
+			assert.Equal(t, c.possible, res.CritPossible())
+		})
+	}
+}
+
+// Step 8: after the AC was given (or a verdict), the latest attack can go
+// back to unknown: not settled again, the dice kept, nothing rolled.
+func TestUnknownAC_Step8_BackToUnknownAfterTheACWasGiven(t *testing.T) {
+	f := newFixture(t)
+	e := rollAttack(t, f, unknownSword(15, 10, 64))
+	amends(f, e)
+
+	// Already unknown: refused.
+	_, err := f.svc.ClearAttackAC(context.Background(), charID, 42)
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
+
+	_, err = f.svc.AdjustAttackAC(context.Background(), charID, 42, 6)
+	require.NoError(t, err)
+	res, err := f.svc.ClearAttackAC(context.Background(), charID, 42)
+	require.NoError(t, err)
+	assert.False(t, res.ACKnown)
+	assert.False(t, res.Settled())
+	assert.False(t, res.Hit)
+	assert.False(t, res.IsCrit)
+	assert.Equal(t, 7, res.TotalDamage, "the damage of a hit at x1")
+	assert.Equal(t, -4, res.HitsAC)
+	assert.True(t, res.RolledACUnknown)
+	last := e.Corrections[len(e.Corrections)-1]
+	p := payloadOf(t, last.Payload)
+	assert.Nil(t, p["targetAc"])
+	assert.Equal(t, false, p["acKnown"])
+
+	// The verdict is available again, and the AC can be given again.
+	_, err = f.svc.SetAttackVerdict(context.Background(), charID, 42, true)
+	require.NoError(t, err)
+	res, err = f.svc.AdjustAttackAC(context.Background(), charID, 42, 3)
+	require.NoError(t, err)
+	assert.True(t, res.ACKnown)
+}
+
+// Step 8: an attack rolled against a known AC can go unknown too; the AC
+// and outcome as rolled stay for the "was" line.
+func TestUnknownAC_Step8_KnownAtRollGoesUnknown(t *testing.T) {
+	f := newFixture(t)
+	r := unknownSword(15, 10, 64)
+	r.req.TargetAC = new(4)
+	e := rollAttack(t, f, r)
+	amends(f, e)
+
+	res, err := f.svc.ClearAttackAC(context.Background(), charID, 42)
+	require.NoError(t, err)
+	assert.False(t, res.ACKnown)
+	require.NotNil(t, res.RolledTargetAC)
+	assert.Equal(t, 4, *res.RolledTargetAC)
+	assert.False(t, res.RolledACUnknown)
+}

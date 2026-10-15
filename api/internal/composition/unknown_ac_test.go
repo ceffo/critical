@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -108,4 +109,33 @@ func TestAttackForm_UnknownTargetACPersists(t *testing.T) {
 	v, err = bs.Combat.GetAttackForm(ctx, id)
 	require.NoError(t, err)
 	assert.Nil(t, v.Form.TargetAC, "forgotten, not AC 0")
+}
+
+// Back to unknown (docs/adr/0012 step 8) is only for the latest attack, is
+// its own undoable step, and undo restores the AC given.
+func TestUnknownAC_BackToUnknownOnlyOnTheLatestAttackAndUndoable(t *testing.T) {
+	bs := newBacking(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	sword := combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(5)}
+
+	first, err := bs.Combat.ResolveAttack(ctx, id, sword)
+	require.NoError(t, err)
+	second, err := bs.Combat.ResolveAttack(ctx, id, sword)
+	require.NoError(t, err)
+
+	_, err = bs.Combat.ClearAttackAC(ctx, id, first.LogEntryID)
+	require.ErrorIs(t, err, actionlogsvc.ErrNotLatest)
+
+	res, err := bs.Combat.ClearAttackAC(ctx, id, second.LogEntryID)
+	require.NoError(t, err)
+	assert.False(t, res.ACKnown)
+	_, err = bs.Combat.ClearAttackAC(ctx, id, second.LogEntryID)
+	require.Error(t, err, "already unknown")
+
+	// Undo pops the clear step: the AC is known again, so a verdict is refused.
+	_, err = bs.Log.Undo(ctx, id, topID(t, bs))
+	require.NoError(t, err)
+	_, err = bs.Combat.SetAttackVerdict(ctx, id, second.LogEntryID, true)
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
 }

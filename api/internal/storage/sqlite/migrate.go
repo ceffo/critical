@@ -83,12 +83,12 @@ func (d *DB) execStatements(ctx context.Context, migration, sql string) error {
 	return execStatementsOn(ctx, d.DB, migration, sql)
 }
 
-// execStatements splits sql on semicolons and executes each statement
-// individually. Statements that fail with "duplicate column name" are logged
+// execStatements splits sql on semicolons (outside comments and string
+// literals) and executes each statement individually. Statements that fail with "duplicate column name" are logged
 // and skipped — this makes ALTER TABLE ADD COLUMN idempotent when a migration
 // was partially applied by an older runner that lacked tracking.
 func execStatementsOn(ctx context.Context, d execer, migration, sql string) error {
-	for _, stmt := range strings.Split(sql, ";") {
+	for _, stmt := range splitStatements(sql) {
 		stmt = strings.TrimSpace(stmt)
 		if stmt == "" {
 			continue
@@ -102,4 +102,41 @@ func execStatementsOn(ctx context.Context, d execer, migration, sql string) erro
 		}
 	}
 	return nil
+}
+
+// splitStatements splits sql on ';', ignoring any ';' inside a "--" line
+// comment, a "/* */" block comment or a '...' string literal (” escapes a
+// quote). Comments stay in the returned statements; blank ones are dropped.
+func splitStatements(sql string) []string {
+	var out []string
+	start := 0
+	flush := func(end int) {
+		if stmt := strings.TrimSpace(sql[start:end]); stmt != "" {
+			out = append(out, stmt)
+		}
+	}
+	for i := 0; i < len(sql); i++ {
+		switch {
+		case sql[i] == '\'':
+			// A doubled quote closes and reopens the literal, so plain
+			// toggling handles the '' escape.
+			for i++; i < len(sql) && sql[i] != '\''; i++ {
+			}
+		case strings.HasPrefix(sql[i:], "--"):
+			for i < len(sql) && sql[i] != '\n' {
+				i++
+			}
+		case strings.HasPrefix(sql[i:], "/*"):
+			if end := strings.Index(sql[i+2:], "*/"); end >= 0 {
+				i += 2 + end + 1
+			} else {
+				i = len(sql)
+			}
+		case sql[i] == ';':
+			flush(i)
+			start = i + 1
+		}
+	}
+	flush(len(sql))
+	return out
 }

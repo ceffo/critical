@@ -3,6 +3,7 @@ package buffdal_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -355,4 +356,32 @@ func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 	require.Len(t, list, 2)
 	assert.Equal(t, int64(42), list[0].ID)
 	assert.Equal(t, "New", list[1].Name)
+}
+
+// ADR 0004 step 17: the spell id round-trips; a row stored before the field
+// (and a buff not from a spell) reads "" and is written without the key.
+func TestActiveBuffs_SpellIDRoundTripsAndOldRowsReadEmpty(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	_, err := db.ExecContext(ctx, `INSERT INTO active_buffs (character_id, buffs) VALUES (?, '[{"id":"o","name":"Old","charges":0,"duration":3,"effects":{}}]')`, charID)
+	require.NoError(t, err)
+	got, err := dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Empty(t, got[0].SpellID, "a buff stored before the field has no spell")
+
+	got = append(got, buffsvc.BuffEffect{ID: "h", Name: "Haste", Duration: 5, SpellID: "haste"})
+	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, got))
+	got, err = dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Empty(t, got[0].SpellID)
+	assert.Equal(t, "haste", got[1].SpellID)
+	var blob string
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT buffs FROM active_buffs WHERE character_id = ?`, charID).Scan(&blob))
+	assert.Contains(t, blob, `"spell_id":"haste"`)
+	assert.Equal(t, 1, strings.Count(blob, "spell_id"), "omitted for a buff not from a spell")
 }

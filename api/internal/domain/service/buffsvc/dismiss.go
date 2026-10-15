@@ -13,10 +13,9 @@ func (s *service) Dismiss(ctx context.Context, characterID int64, buffID string)
 		if err != nil {
 			return change{}, err
 		}
-		name := buffs[i].Name
 		return change{
 			kind:    actionlog.KindBuffChange,
-			payload: logPayload{Action: "dismiss", Buff: name},
+			payload: logPayload{Action: "dismiss", Buff: buffs[i].Name, SpellID: buffs[i].SpellID},
 			buffs:   without(buffs, i),
 		}, nil
 	})

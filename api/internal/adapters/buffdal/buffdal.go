@@ -47,6 +47,10 @@ type jsonBuff struct {
 	// ChargesTotal is absent from rows written before it existed: they read
 	// as 0, the total is unknown.
 	ChargesTotal int `json:"charges_total,omitempty"`
+	// SpellID is absent from rows of buffs not from a spell and from rows
+	// written before it existed that migration 028 could not match to one
+	// spell: they read as "" (ADR 0004 step 17).
+	SpellID string `json:"spell_id,omitempty"`
 }
 
 type jsonEffects struct {
@@ -66,6 +70,7 @@ func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
 		ID: j.ID, Name: j.Name, Charges: j.Charges, Duration: j.Duration,
 		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note, StartRound: j.StartRound, ChargesTotal: j.ChargesTotal,
+		SpellID: j.SpellID,
 	}
 }
 
@@ -73,6 +78,7 @@ func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 	return jsonBuff{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: jsonEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
+		SpellID: b.SpellID,
 	}
 }
 

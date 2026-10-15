@@ -159,7 +159,9 @@ var trackedCharges = map[string]bool{"attacks": true, "images": true}
 // rollBuff turns a buff entry into a buff on the Bard at the caster level,
 // plus the effects the engine does not track.
 func (s *service) rollBuff(e spelleffectsvc.Entry, level int) (*AppliedBuff, []Untracked, error) {
-	out := &AppliedBuff{Buff: buffsvc.BuffEffect{Name: e.Name}}
+	// ADR 0004 step 17: the buff carries the spell's catalogue id so the
+	// client names it in the player's language.
+	out := &AppliedBuff{Buff: buffsvc.BuffEffect{Name: e.Name, SpellID: e.ID}}
 	var untracked []Untracked
 
 	if e.Duration.Kind == spelleffectsvc.DurationRounds && e.Duration.Rounds != nil {

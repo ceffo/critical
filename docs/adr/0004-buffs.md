@@ -135,6 +135,34 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     absorb keeps it, edit keeps it and raises it with the charges, the void restores it, an old
     entry restores 0, no charges means 0); `TestActiveBuffs_ChargesTotalRoundTripsAndOldRowsReadZero`
     (`api/internal/adapters/buffdal/`).
+17. **Spell id.** A buff from a spell carries the spell's catalogue id (`SpellID`, served as
+    `spellId`, stored and snapshotted as `spell_id`; [ADR 0021](0021-spell-catalogue.md) step 2:
+    state refers to a spell by id). Only the spell cast (cast or received, castsvc) stamps it, from
+    the spell's effect entry; a buff activated by hand or from a saved template has none (a value
+    sent by the client is ignored). A renewal (step 6) takes the new buff's. Editing, absorbing, Next
+    Round and passing time keep it; voiding restores it with the list. It has no rules meaning: the
+    client names the buff from the catalogue in the player's language (the French name in the
+    French UI), and shows the stored `Name` when there is no id or the catalogue does not know it.
+    The buff entries of the log carry it too: `spellId` next to `buff` (activate never has one,
+    edit, absorb, dismiss), and `expiredSpellIds` parallel to `expired` (Next Round, passing time;
+    `""` for a buff not from a spell, omitted when no expired buff has one). An entry recorded
+    before keeps its stored name; payloads are never rewritten.
+    **Backfill** (migration 028): a stored buff without an id, in `active_buffs` and in the buff
+    snapshots of `action_snapshots`, takes the `key` of the one catalogue spell whose English
+    `name` equals its name exactly (case included). A name no keyed spell has (a hand-made buff, a
+    Power Gem form), one that several spells share (a Wizard and a Priest spell of the same name),
+    a different case, a buff that already has an id and a list holding anything but buff objects
+    are left alone. A database whose spells are not keyed yet when 028 runs (its catalogue never
+    imported) matches nothing: its buffs keep showing their stored names, as do the buffs of a
+    database migrated with no catalogue.
+    The catalogue importer counts these ids as references (ADR 0021 step 5.4.3).
+    Tests: `TestBuffs_Step17_SpellID` (add keeps it and a renewal takes the new one, activate drops
+    a caller's, edit / absorb / Next Round keep it, the payloads, the void restores it, an old
+    entry restores none); `TestCast_PerSeedEntry`, `TestReceive` (castsvc: the buff a cast or a received spell puts on carries the spell's id);
+    `TestActiveBuffs_SpellIDRoundTripsAndOldRowsReadEmpty` (`buffdal`);
+    `TestBuffs_SpellIDOnTheWire` (`router`); `TestMigrate028_BackfillsBuffSpellIDsWhereTheNameIsUnambiguous`,
+    `TestMigrate028_NothingKeyedNothingChanges` (`api/internal/storage/sqlite/`); the client's
+    `buffName` and log tests (`web/src/i18n/spellName.test.ts`, `web/src/lib/logSummary.test.ts`).
 
 ## Consequences
 

@@ -178,7 +178,7 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		{
 			name: "stoneskin: 1d4 + level/2 layers, until discharged",
 			slot: slot("stoneskin", "Stoneskin", 4), dice: []int{3},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Stoneskin", Charges: 3 + 7},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Stoneskin", SpellID: "stoneskin", Charges: 3 + 7},
 			check: func(t *testing.T, r castsvc.CastResult) {
 				assert.Nil(t, r.Buff.Duration)
 				assert.Equal(t, "attacks", r.Buff.ChargeUnit)
@@ -188,17 +188,17 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		{
 			name: "mirror image: 3 rd/level and 1d4 + level/3 images",
 			slot: slot("mirror_image", "Mirror Image", 2), dice: []int{2},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", Duration: 45, Charges: 2 + 5},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", SpellID: "mirror_image", Duration: 45, Charges: 2 + 5},
 		},
 		{
 			name: "mirror image caps at 8 images",
 			slot: slot("mirror_image", "Mirror Image", 2), dice: []int{4},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", Duration: 45, Charges: 8},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", SpellID: "mirror_image", Duration: 45, Charges: 8},
 		},
 		{
 			name:     "haste: 3 + level rounds; extra attacks, movement and initiative are shown, not tracked",
 			slot:     slot("haste", "Haste", 3),
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", Duration: 18},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", SpellID: "haste", Duration: 18},
 			check: func(t *testing.T, r castsvc.CastResult) {
 				assert.Equal(t, []castsvc.Untracked{
 					{Key: "attacks_pct", Value: 200}, {Key: "initiative", Value: -2}, {Key: "move_pct", Value: 200},
@@ -222,13 +222,13 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		{
 			name: "mirror image is self-only: on-self false is ignored",
 			slot: slot("mirror_image", "Mirror Image", 2), onSelf: boolPtr(false), dice: []int{1},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", Duration: 45, Charges: 6},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Mirror Image", SpellID: "mirror_image", Duration: 45, Charges: 6},
 		},
 		{
 			name: "enlarge: damage multiplier 100% + 10%/level",
 			slot: slot("enlarge", "Enlarge", 1),
 			wantBuff: &buffsvc.BuffEffect{
-				ID: buffsAdded, Name: "Enlarge", Duration: 75,
+				ID: buffsAdded, Name: "Enlarge", SpellID: "enlarge", Duration: 75,
 				Effects: buffsvc.BuffEffects{SpellsBuff: floatPtr(2.5)},
 			},
 		},
@@ -276,7 +276,7 @@ func TestCast_PerSeedEntry(t *testing.T) {
 		{
 			name: "slot saved before preparation: id from the name",
 			slot: spellsvc.SpellSlot{Level: 4, PreparedSpellName: "Stoneskin"}, dice: []int{4},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Stoneskin", Charges: 11},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Stoneskin", SpellID: "stoneskin", Charges: 11},
 		},
 	}
 	for _, tt := range tests {
@@ -404,7 +404,7 @@ func TestReceive(t *testing.T) {
 			name: "strength from a level 9 wizard",
 			req:  castsvc.ReceiveRequest{SpellID: "strength", CasterLevel: 9}, dice: []int{6},
 			wantBuff: &buffsvc.BuffEffect{
-				ID: buffsAdded, Name: "Strength", Duration: 540,
+				ID: buffsAdded, Name: "Strength", SpellID: "strength", Duration: 540,
 				Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(18)},
 			},
 		},
@@ -412,19 +412,19 @@ func TestReceive(t *testing.T) {
 			name: "improved strength: rogue 1d6+4, max 23",
 			req:  castsvc.ReceiveRequest{SpellID: "improved_strength", CasterLevel: 12}, dice: []int{2},
 			wantBuff: &buffsvc.BuffEffect{
-				ID: buffsAdded, Name: "Improved Strength", Duration: 12,
+				ID: buffsAdded, Name: "Improved Strength", SpellID: "improved_strength", Duration: 12,
 				Effects: buffsvc.BuffEffects{StrBonus: intPtr(6), StrMax: intPtr(23)},
 			},
 		},
 		{
 			name:     "haste received (area) lands on the Bard",
 			req:      castsvc.ReceiveRequest{SpellID: "haste", CasterLevel: 7},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", Duration: 10},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Haste", SpellID: "haste", Duration: 10},
 		},
 		{
 			name: "stoneskin received at the caster's level",
 			req:  castsvc.ReceiveRequest{SpellID: "stoneskin", CasterLevel: 10}, dice: []int{2},
-			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Stoneskin", Charges: 7},
+			wantBuff: &buffsvc.BuffEffect{ID: buffsAdded, Name: "Stoneskin", SpellID: "stoneskin", Charges: 7},
 		},
 		{
 			name: "a spell outside the effects seed (priest) is text only",

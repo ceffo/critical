@@ -239,7 +239,7 @@ func TestEffectiveStr_DismissOneStrength(t *testing.T) {
 
 	entries, err := s.bs.Log.List(s.ctx, s.id, 1)
 	require.NoError(t, err)
-	assert.JSONEq(t, `{"action":"dismiss","buff":"Strength"}`, string(entries[0].Payload))
+	assert.JSONEq(t, `{"action":"dismiss","buff":"Strength","spellId":"strength"}`, string(entries[0].Payload))
 }
 
 // Checklist 6: two Strengths with different rounds left expire independently

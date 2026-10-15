@@ -285,11 +285,17 @@ func plantState(t *testing.T, db *DB) {
 			(2, 1, 0, 'exposure', '', 0, '{"spellId":"cloudkill","spell":"Cloudkill","casterLevel":9,"round":1,"onSelf":true}', 2),
 			(3, 1, 0, 'spell_prep', '', 0, '{"spells":[{"id":"armor","name":"Armor","count":1}]}', 3),
 			(4, 1, 0, 'hp_change', 'orc', -3, '{}', 4),
-			(5, 1, 0, 'cast', '', 0, '{"action":"cast","spellId":"haste","spell":"Haste","casterLevel":5}', 5)`,
+			(5, 1, 0, 'cast', '', 0, '{"action":"cast","spellId":"haste","spell":"Haste","casterLevel":5}', 5),
+			(6, 1, 0, 'buff_change', '', 0, '{"action":"dismiss","buff":"Detect Magic","spellId":"detect_magic"}', 6),
+			(7, 1, 0, 'round_advance', '', 0, '{"action":"next_round","expired":["Wall of Ice","Gem"],"expiredSpellIds":["wall_of_ice",""]}', 7),
+			(8, 1, 0, 'time_passed', '', 0, '{"action":"pass_time","expired":["Chromatic Orb"],"expiredSpellIds":["chromatic_orb"]}', 8),
+			(9, 1, 0, 'hp_change', 'x', -1, '{"spellId":"not_a_spell_entry"}', 9)`,
+		`INSERT INTO active_buffs (character_id, buffs) VALUES (1, '[{"id":"a","name":"Stoneskin","spell_id":"stoneskin"},{"id":"b","name":"Gem"}]')`,
 		`INSERT INTO action_snapshots (action_id, state_key, before_state, after_state) VALUES
 			(3, 'spell_slots', '[{"Level":1,"SpellID":"identify","PreparedSpellName":"Identify","Used":false,"Extra":false}]',
 				'[{"Level":1,"SpellID":"light","PreparedSpellName":"Light","Used":false,"Extra":false}]'),
-			(4, 'buffs', '[{"SpellID":"not_a_slot"}]', '[]')`,
+			(4, 'buffs', '[{"SpellID":"not_a_slot","spell_id":"improved_strength"}]', '[{"spell_id":"mirror_image"}]'),
+			(5, 'round', '[{"spell_id":"not_a_buff_list"}]', '[]')`,
 		`INSERT INTO action_corrections (action_id, kind, payload) VALUES (5, 'amend', '{"spellId":"enlarge","casterLevel":5}')`,
 	} {
 		_, err := db.Exec(q)
@@ -317,6 +323,13 @@ func TestStateSpellRefs_ScansEveryPlace(t *testing.T) {
 		"armor":         "action_log 3",
 		"haste":         "action_log 5",
 		"enlarge":       "action_corrections 1",
+		// Buffs from a spell (ADR 0004 step 17).
+		"stoneskin":         "active_buffs of character 1",
+		"improved_strength": "action_snapshots 2",
+		"mirror_image":      "action_snapshots 2",
+		"detect_magic":      "action_log 6",
+		"wall_of_ice":       "action_log 7",
+		"chromatic_orb":     "action_log 8",
 	}, got)
 }
 
@@ -412,7 +425,7 @@ func TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue(t *testing.T)
 	sort.Strings(unresolved)
 	assert.Empty(t, unresolved, "every reference resolves")
 	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) FROM spell_slots"), "game state untouched")
-	assert.Equal(t, 5, scalar(t, db, "SELECT COUNT(*) FROM action_log"))
+	assert.Equal(t, 9, scalar(t, db, "SELECT COUNT(*) FROM action_log"))
 
 	before := catalogueRows(t, db)
 	require.NoError(t, db.ImportCatalogue(ctx, cat, seeds))

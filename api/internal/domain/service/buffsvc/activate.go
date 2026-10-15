@@ -17,6 +17,9 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 	if err := validateBuff(buff); err != nil {
 		return nil, err
 	}
+	// Step 17: only a spell cast stamps the spell id; a buff entered by hand
+	// is not from a spell.
+	buff.SpellID = ""
 	if buff.ID == "" {
 		buff.ID = uuid.New().String()
 	}

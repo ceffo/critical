@@ -7,6 +7,7 @@ package combatsvc_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -260,4 +261,35 @@ func TestUnknownAC_Step6_SameDiceAsKnownAC(t *testing.T) {
 			assert.Equal(t, 58, res.CritsFromAC)
 		})
 	}
+}
+
+// An attack logged before unknown ACs existed has no acKnown: it reads as
+// known (ADR 0012 consequences), so a verdict is refused and a correction
+// keeps its AC as rolled.
+func TestUnknownAC_EntryWithoutACKnownReadsAsKnown(t *testing.T) {
+	f := newFixture(t)
+	e := rollAttack(t, f, sword(5, 15, 30)) // AC 5 needs 6: a hit, 15 - 30 < 6 no crit
+	var p map[string]any
+	require.NoError(t, json.Unmarshal(e.Payload, &p))
+	delete(p, "acKnown")
+	delete(p, "hitsAc")
+	delete(p, "critsFromAc")
+	var err error
+	e.Payload, err = json.Marshal(p)
+	require.NoError(t, err)
+	amends(f, e)
+
+	res, err := f.svc.SetAttackVerdict(context.Background(), charID, 42, false)
+	assert.Nil(t, res)
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
+	assert.Empty(t, e.Corrections)
+
+	res, err = f.svc.AdjustAttackAC(context.Background(), charID, 42, -10)
+	require.NoError(t, err)
+	assert.True(t, res.ACKnown)
+	assert.False(t, res.Hit, "AC -10 needs 21")
+	require.NotNil(t, res.RolledTargetAC, "the AC as rolled is kept")
+	assert.Equal(t, 5, *res.RolledTargetAC)
+	require.NotNil(t, res.RolledHit)
+	assert.True(t, *res.RolledHit)
 }

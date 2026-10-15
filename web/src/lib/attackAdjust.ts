@@ -18,7 +18,7 @@ export function parseTargetAc(text: string): number | null {
   return Math.abs(n) <= MAX_TARGET_AC ? n : null;
 }
 
-/** Where the − / + of an empty (unknown) AC field start from: AC 10, no armour. */
+/** Where the − / + of an empty (unknown) AC field start from: a UI default, not a rule. */
 export const UNKNOWN_AC_STEP_BASE = 10;
 
 /**

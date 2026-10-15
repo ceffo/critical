@@ -509,37 +509,33 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({ page
   await snap(page, "unknown-ac-gm-hit");
 });
 
-// docs/adr/0012 step 5: the GM gives the AC after the roll; at the AC the card names as the crit
-// threshold, the stored dice make a crit. Dice are random: a +20 situational keeps the threshold
-// within ±20 most of the time, a few rolls make one sure enough, else AC 20 shows no crit.
-test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({ page }) => {
-  await openAttack(page);
-  const form = attackForm(page);
-  await chooseWeapon(page, "Long Sword +2");
-  await form.getByLabel("Situational", { exact: true }).fill("20");
-  let r = { critsFromAc: 999 };
-  for (let i = 0; i < 6 && r.critsFromAc > 20; i++) {
+// docs/adr/0012 step 5: the GM gives the AC after the roll; at AC 20 the stored dice make a crit.
+// A THAC0 of -100 keeps critsFromAc (effective THAC0 − d20 + crit-check d100) at most about -3, so
+// every roll crits AC 20 whatever the dice.
+test.describe("with a THAC0 low enough that AC 20 always crits", () => {
+  test.use({ character: { thac0_base: -100 } });
+
+  test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({ page }) => {
+    await openAttack(page);
+    const form = attackForm(page);
+    await chooseWeapon(page, "Long Sword +2");
     const rolled = page.waitForResponse((res) => res.url().endsWith("/api/roll/attack"));
     await form.getByRole("button", { name: "Attack", exact: true }).click();
-    r = (await (await rolled).json()) as { critsFromAc: number };
-  }
-  const crit = r.critsFromAc <= 20;
-  const given = Math.max(-20, Math.min(20, r.critsFromAc));
+    const r = (await (await rolled).json()) as { critsFromAc: number };
+    expect(r.critsFromAc).toBeLessThanOrEqual(20);
 
-  const card = resultCard(page);
-  await expect(card.getByTestId("verdict")).toHaveText("?");
-  const give = card.getByRole("form", { name: "Give the real AC" });
-  await give.getByLabel("Real target AC").fill(String(given));
-  await give.getByRole("button", { name: "Correct" }).click();
-  await expect(card).toContainText(`Long Sword +2 vs AC ${given}`);
-  await expect(card.getByTestId("ac-given")).toBeVisible();
-  await expect(card.getByTestId("tell-gm")).toHaveCount(0);
-  await expect(card.getByRole("group", { name: "The GM’s hit or miss" })).toHaveCount(0);
-  if (crit) {
+    const card = resultCard(page);
+    await expect(card.getByTestId("verdict")).toHaveText("?");
+    const give = card.getByRole("form", { name: "Give the real AC" });
+    await give.getByLabel("Real target AC").fill("20");
+    await give.getByRole("button", { name: "Correct" }).click();
+    await expect(card).toContainText("Long Sword +2 vs AC 20");
+    await expect(card.getByTestId("ac-given")).toBeVisible();
+    await expect(card.getByTestId("tell-gm")).toHaveCount(0);
+    await expect(card.getByRole("group", { name: "The GM’s hit or miss" })).toHaveCount(0);
     await expect(card.getByTestId("verdict")).toHaveText("Hit");
     await expect(card.getByTestId("crit-badge")).toBeVisible();
+    await expect(logEntry(page, "Long Sword +2 vs AC 20: critical")).toBeVisible();
     await snap(page, "unknown-ac-given-crit");
-  } else {
-    await expect(card.getByTestId("crit-badge")).toHaveCount(0);
-  }
+  });
 });

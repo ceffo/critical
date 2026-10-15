@@ -22,7 +22,9 @@ export type LogKind =
   | "long_rest"
   | "save"
   | "skill_check"
-  | "dice";
+  | "dice"
+  /** A correction after a roll (target AC, save adjustment, GM verdict), its own undoable step. */
+  | "correction";
 
 export type LogStatus = "active" | "amended" | "voided";
 
@@ -43,6 +45,10 @@ export interface LogCorrection {
   payload?: unknown;
   /** Set on note amends. */
   note?: string;
+  /** The correction entry a post-roll correction belongs to (ADR 0010 step 6). */
+  stepId?: number;
+  /** True once that correction entry was popped: the amend no longer counts. */
+  undone?: boolean;
   createdAt: string;
 }
 
@@ -61,7 +67,8 @@ export interface LogEntry {
   note: string;
   status: LogStatus;
   payload: unknown;
-  /** The latest amend's payload when one set it (an adjusted save), else `payload`. */
+  /** The payload of the latest amend in effect when one set it (a corrected save or attack), else
+   * `payload`. */
   effectivePayload: unknown;
   snapshots: LogSnapshot[];
   corrections: LogCorrection[];

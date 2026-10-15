@@ -645,7 +645,8 @@
       "item_edit": "Objet",
       "item_remove": "Objet",
       "skill_check": "Compétence",
-      "dice": "Dés"
+      "dice": "Dés",
+      "correction": "Correction"
     },
     "status": {
       "active": "Actif",
@@ -764,7 +765,15 @@
       "success": "{{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
       "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec"
     },
-    "dice": "Dés {{formula}} = {{total}}"
+    "dice": "Dés {{formula}} = {{total}}",
+    "correction": {
+      "targetAc": "Correction CA {{from}} → {{to}}",
+      "saveAdjustment": "Correction ajustement de sauvegarde {{from}} → {{to}}",
+      "verdict": "Correction verdict du MJ {{from}} → {{to}}",
+      "other": "Correction de #{{id}}",
+      "unknown": "?",
+      "none": "aucun"
+    }
   },
   "critTable": {
     "title": "Table des critiques (règle maison)",

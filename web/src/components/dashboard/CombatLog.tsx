@@ -12,6 +12,7 @@ import {
   MagicWand,
   Moon,
   Package,
+  PencilSimple,
   Shield,
   Sparkle,
   Sword,
@@ -67,6 +68,7 @@ const KIND_ICONS: Record<LogKind, Icon> = {
   save: Shield,
   skill_check: MusicNotes,
   dice: DiceFive,
+  correction: PencilSimple,
 };
 
 const VALUE_TONES: Record<RowValue["tone"], string> = {

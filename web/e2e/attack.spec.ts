@@ -259,7 +259,27 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await snap(page, "attack-ac-corrected-fr");
   await chooseLanguage(page, "en");
 
-  // Voiding the corrected attack still gives the arrow back and removes the correction form.
+  // Each correction is its own step (ADR 0010 step 6): Annuler names the newest one and pops it,
+  // and the card reads the attack as it was before it, here the rolled AC again (no arrow back).
+  const undo = page.getByTestId("undo");
+  await expect(undo).toHaveAttribute("title", "Undo: Correction AC -20 → 20 (Ctrl+Z / ⌘Z)");
+  await undo.click();
+  await expect(card).toContainText("vs AC -20");
+  await expect(card.getByTestId("verdict")).toHaveText("Miss");
+  await expect(card.getByTestId("ac-corrected")).toHaveCount(0);
+  await expect(acField).toHaveValue("-20");
+  await expect(entry).toContainText("Short Bow +2 (Arrows +2) vs AC -20: miss");
+  expect(await selectedAmmoCount(page)).toBe(before - 1);
+  await snap(page, "attack-ac-correction-undone");
+  // The two corrections before it, then the first one: the attack is as rolled, still logged.
+  for (const step of ["19 → -20", "20 → 19", "-20 → 20"]) {
+    await expect(undo).toHaveAttribute("title", `Undo: Correction AC ${step} (Ctrl+Z / ⌘Z)`);
+    await undo.click();
+  }
+  await expect(undo).toHaveAttribute("title", /^Undo: Short Bow \+2 \(Arrows \+2\) vs AC -20: miss/);
+  await expect(entry).not.toContainText("Amended");
+
+  // Voiding the attack then gives the arrow back and removes the correction form.
   await voidEntry(page, "Short Bow +2 (Arrows +2)");
   await expect.poll(() => selectedAmmoCount(page)).toBe(before);
   await expect(fix).toHaveCount(0);

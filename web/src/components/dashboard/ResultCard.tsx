@@ -303,8 +303,12 @@ function AttackResult({ r, interactive }: { r: RollResult; interactive: boolean 
         <GmVerdict result={r} entryId={r.logEntryId as number} />
       )}
       {correctable && (
-        // Keyed by entry so a new attack starts from its own AC.
-        <AdjustAttackAc key={r.logEntryId} result={r} entryId={r.logEntryId as number} />
+        // Keyed by entry and AC so a new attack, or a popped correction, starts from the AC shown.
+        <AdjustAttackAc
+          key={`${r.logEntryId}:${r.targetAc}`}
+          result={r}
+          entryId={r.logEntryId as number}
+        />
       )}
 
       {r.ammo && (
@@ -524,8 +528,13 @@ function SaveResult({ save: s, interactive }: { save: SaveView; interactive: boo
         </ul>
       )}
       {interactive && s.logEntryId !== undefined && (
-        // Keyed by entry so a new save starts from its own adjustment.
-        <AdjustSave key={s.logEntryId} save={s} entryId={s.logEntryId} />
+        // Keyed by entry and adjustment so a new save, or a popped correction, starts from the
+        // adjustment shown.
+        <AdjustSave
+          key={`${s.logEntryId}:${s.adjustment}:${s.adjustmentReason ?? ""}`}
+          save={s}
+          entryId={s.logEntryId}
+        />
       )}
     </div>
   );

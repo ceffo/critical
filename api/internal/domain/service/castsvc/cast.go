@@ -49,10 +49,15 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			}
 			after[slotIndex].SpellID, after[slotIndex].PreparedSpellName = id, name
 		}
+		// ADR 0008 step 14: an unknown mode is refused before anything is
+		// written.
+		mode, err := s.modeFor(id, req.Mode)
+		if err != nil {
+			return err
+		}
 		var extra []int
 		// ADR 0008 step 9: a spell that grants slots adds them, blank.
 		if entry, ok := s.Effects.Get(id); ok && entry.GrantSlots != nil {
-			var err error
 			if extra, err = grantedLevels(entry, req.ExtraSlots); err != nil {
 				return err
 			}
@@ -70,7 +75,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Level, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra,
+			casterLevel: c.Level, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -96,12 +101,16 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 	if req.CasterLevel < 1 || req.CasterLevel > MaxCasterLevel {
 		return CastResult{}, fmt.Errorf("%w: caster level must be between 1 and %d", domain.ErrInvalidInput, MaxCasterLevel)
 	}
+	mode, err := s.modeFor(id, req.Mode)
+	if err != nil {
+		return CastResult{}, err
+	}
 	var res CastResult
-	err := s.Tx.InTx(ctx, func(ctx context.Context) error {
+	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: req.CasterLevel, source: SourceReceived,
+			spellID: id, casterLevel: req.CasterLevel, source: SourceReceived, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -122,8 +131,21 @@ type effectReq struct {
 	casterLevel int
 	source      Source
 	onSelf      *bool
-	req         CastRequest // the cast request (item to spend, target AC)
-	extraSlots  []int       // the extra slots this cast granted
+	req         CastRequest          // the cast request (item to spend, target AC)
+	extraSlots  []int                // the extra slots this cast granted
+	mode        *spelleffectsvc.Mode // the cast-time mode picked (nil: the spell has none)
+}
+
+// modeFor resolves the cast-time mode a cast of spell id names (ADR 0008
+// step 14): the mode with that key, the first when none is named, nil for a
+// spell without modes (or not in the catalogue) cast without one. A key the
+// spell does not list is refused.
+func (s *service) modeFor(id, key string) (*spelleffectsvc.Mode, error) {
+	entry, ok := s.Effects.Get(id)
+	if !ok {
+		entry = spelleffectsvc.Entry{ID: id, Name: id}
+	}
+	return entry.ModeFor(key)
 }
 
 // resolve looks the spell up and applies its effect; it returns the buffs
@@ -152,6 +174,9 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		return CastResult{}, nil, fmt.Errorf("%w: %s affects only its caster and cannot be cast on you", domain.ErrInvalidInput, entry.Name)
 	}
 	res.Kind, res.Confidence, res.Target, res.Note = entry.Kind, entry.Confidence, entry.Target, entry.Note
+	if r.mode != nil {
+		res.Mode = r.mode.Key
+	}
 	if entry.Save != nil && entry.Save.Type != "none" {
 		save := *entry.Save
 		res.Save = &save
@@ -171,11 +196,17 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 	mechanics := len(r.extraSlots) > 0 || res.Consumed != nil || res.Attack != nil
 	switch entry.Kind {
 	case spelleffectsvc.KindDamage:
-		if entry.Damage == nil {
+		damage := entry.CastDamage(r.mode)
+		switch {
+		case damage == nil && r.mode != nil:
+			// ADR 0008 step 14: a mode without damage rolls nothing; the
+			// slot is still spent.
+			return res, snaps, nil
+		case damage == nil:
 			res.TextOnly = TextOnlyUtility
 			return res, snaps, nil
 		}
-		res.Damage, err = s.rollDamage(entry, r.casterLevel)
+		res.Damage, err = s.rollDamage(entry, damage, r.casterLevel)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}
@@ -237,15 +268,36 @@ func firstNonEmpty(v ...string) string {
 	return ""
 }
 
-// DamageAt reads the damage a cast of spellID rolls at casterLevel from the
-// effect entry: the same dice rollDamage rolls, left unrolled.
+// DamageAt reads the damage a cast of spellID without a mode rolls at
+// casterLevel from the effect entry: the same dice rollDamage rolls, left
+// unrolled.
 func (s *service) DamageAt(_ context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error) {
-	if casterLevel < 1 || casterLevel > MaxCasterLevel {
-		return nil, fmt.Errorf("%w: caster level must be between 1 and %d", domain.ErrInvalidInput, MaxCasterLevel)
+	if err := checkCasterLevel(casterLevel); err != nil {
+		return nil, err
 	}
 	e, ok := s.Effects.Get(spellID)
 	if !ok {
 		return nil, nil
 	}
 	return e.DamageAt(casterLevel)
+}
+
+// ModesAt reads the cast-time modes of spellID and the damage a cast in each
+// rolls at casterLevel (ADR 0008 step 14).
+func (s *service) ModesAt(_ context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error) {
+	if err := checkCasterLevel(casterLevel); err != nil {
+		return nil, err
+	}
+	e, ok := s.Effects.Get(spellID)
+	if !ok {
+		return nil, nil
+	}
+	return e.ModesAt(casterLevel)
+}
+
+func checkCasterLevel(level int) error {
+	if level < 1 || level > MaxCasterLevel {
+		return fmt.Errorf("%w: caster level must be between 1 and %d", domain.ErrInvalidInput, MaxCasterLevel)
+	}
+	return nil
 }

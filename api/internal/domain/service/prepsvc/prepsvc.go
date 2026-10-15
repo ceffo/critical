@@ -52,11 +52,14 @@ type SpellbookEntry struct {
 // CastInputs are the choices a spell's cast mechanics need from the player
 // (spelleffectsvc.Entry): how to split the extra slots it grants (SlotSplits,
 // the first is the default), the type of the inventory item it spends, and
-// whether it rolls a to-hit (a target AC is then required).
+// whether it rolls a to-hit (a target AC is then required), and the
+// cast-time modes to pick from, each with the damage a cast in it rolls at the
+// character's level (the first is the default; ADR 0008 step 14).
 type CastInputs struct {
 	SlotSplits      [][]int
 	ConsumeItemType string
 	AttackRoll      bool
+	Modes           []spelleffectsvc.ModeAt
 }
 
 // LevelLimit is the number of spells of one level that may be prepared.
@@ -179,6 +182,9 @@ func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
 		}
 		if fx, ok := s.Effects.Get(e.ID); ok {
 			if out.Spellbook[i].Damage, err = fx.DamageAt(level); err != nil {
+				return Info{}, err
+			}
+			if out.Spellbook[i].Cast.Modes, err = fx.ModesAt(level); err != nil {
 				return Info{}, err
 			}
 		}

@@ -50,6 +50,7 @@ var book = map[string]prepsvc.SpellbookEntry{
 	"fireball":                {ID: "fireball", Name: "Fireball", Level: 3},
 	"chromatic_orb":           {ID: "chromatic_orb", Name: "Chromatic Orb", Level: 1},
 	"rarys_mnemonic_enhancer": {ID: "rarys_mnemonic_enhancer", Name: "Rary's Mnemonic Enhancer", Level: 4},
+	"wall_of_ice":             {ID: "wall_of_ice", Name: "Wall of Ice", Level: 4},
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -62,7 +63,7 @@ func newFixture(t *testing.T) *fixture {
 		return e, ok
 	}).Maybe()
 	b.EXPECT().All().RunAndReturn(func() []prepsvc.SpellbookEntry {
-		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"]}
+		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"]}
 	}).Maybe()
 
 	limits := mocks.NewMockLimits(t)
@@ -90,8 +91,30 @@ func TestInfo(t *testing.T) {
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 2}}, info.Limits)
-	require.Len(t, info.Spellbook, 4)
+	require.Len(t, info.Spellbook, 5)
 	assert.Equal(t, prepsvc.CastInputs{}, info.Spellbook[0].Cast, "alarm asks nothing")
+}
+
+// ADR 0008 step 14: a spell with cast-time modes offers them in the data's
+// order (the first is the default), each with the damage a cast in it rolls
+// at the character's level; the spell's own damage is the default mode's
+// (Wall of Ice's ice plane: none).
+func TestInfo_ServesTheModes(t *testing.T) {
+	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	info, err := f.svc.Info(context.Background(), 1)
+	require.NoError(t, err)
+	wall := info.Spellbook[4]
+	assert.Nil(t, wall.Damage, "the ice plane rolls no damage")
+	assert.Equal(t, []spelleffectsvc.ModeAt{
+		{Key: "ice_plane"},
+		{Key: "hemisphere"},
+		{Key: "ice_sheet", Damage: &spelleffectsvc.DamageAt{
+			CasterLevel: 15, Dice: formula.Sum{Dice: []formula.Dice{{Count: 3, Sides: 10}}},
+			Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1}, Type: "cold",
+		}},
+	}, wall.Cast.Modes)
+	assert.Nil(t, info.Spellbook[1].Cast.Modes, "fireball has no modes")
 }
 
 // ADR 0008 steps 9 and 10: what a cast asks of the player comes from the

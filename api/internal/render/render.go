@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 )
@@ -113,6 +114,7 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 var mappings = []mapping{
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
+	{target: spelleffectsvc.ErrUnknownMode, status: http.StatusBadRequest, code: "unknown_spell_mode"},
 	{target: domain.ErrInvalidInput, status: http.StatusBadRequest, code: "invalid_input"},
 	{target: domain.ErrConflict, status: http.StatusConflict, code: "conflict"},
 	{target: domain.ErrCharacterNotFound, status: http.StatusNotFound, code: "character_not_found"},

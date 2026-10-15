@@ -127,6 +127,7 @@ type entryDTO struct {
 	Charges     *chargesDTO               `json:"charges"`
 	Save        *saveDTO                  `json:"save"`
 	Damage      *damageDTO                `json:"damage"`
+	Modes       []modeDTO                 `json:"modes"`
 	Modifiers   map[string]flexString     `json:"modifiers"`
 	AbilityGain map[string]abilityGainDTO `json:"ability_gain"`
 	AbilitySet  map[string]flexString     `json:"ability_set"`
@@ -171,6 +172,12 @@ type damageDTO struct {
 	Instances flexString     `json:"instances"`
 	Rounds    flexString     `json:"rounds"`
 	Type      string         `json:"type"`
+}
+
+// modeDTO is one cast-time mode: its key and its damage (absent: none).
+type modeDTO struct {
+	Key    string     `json:"key"`
+	Damage *damageDTO `json:"damage"`
 }
 
 // partDTO is one damage part; Save is a save effect ("" takes the entry's).
@@ -243,9 +250,22 @@ func (d entryDTO) toDomain() (spelleffectsvc.Entry, error) {
 		e.Charges = &spelleffectsvc.Charges{Count: count, Unit: d.Charges.Unit}
 	}
 	if d.Damage != nil {
-		if e.Damage, err = d.Damage.toDomain(); err != nil {
+		if e.Damage, err = d.Damage.toDomain("damage"); err != nil {
 			return e, err
 		}
+	}
+	// An empty "modes": [] stays an empty, non-nil list: validation refuses it.
+	if d.Modes != nil {
+		e.Modes = make([]spelleffectsvc.Mode, 0, len(d.Modes))
+	}
+	for i, m := range d.Modes {
+		mode := spelleffectsvc.Mode{Key: m.Key}
+		if m.Damage != nil {
+			if mode.Damage, err = m.Damage.toDomain(fmt.Sprintf("modes[%d].damage", i)); err != nil {
+				return e, err
+			}
+		}
+		e.Modes = append(e.Modes, mode)
 	}
 	if e.Buff, err = d.buffToDomain(); err != nil {
 		return e, err
@@ -304,10 +324,12 @@ func (g abilityGainDTO) toDomain(field string) (spelleffectsvc.AbilityGain, erro
 	return out, nil
 }
 
-func (d damageDTO) toDomain() (*spelleffectsvc.Damage, error) {
+// toDomain maps a damage; field is its JSON path in errors ("damage",
+// "modes[1].damage").
+func (d damageDTO) toDomain(field string) (*spelleffectsvc.Damage, error) {
 	out := &spelleffectsvc.Damage{Type: d.Type}
 	var err error
-	if out.Dice, out.ByLevel, err = diceToDomain("damage", d.Dice, d.ByLevel); err != nil {
+	if out.Dice, out.ByLevel, err = diceToDomain(field, d.Dice, d.ByLevel); err != nil {
 		return nil, err
 	}
 	// An empty "parts": [] stays an empty, non-nil list: validation refuses it.
@@ -316,15 +338,15 @@ func (d damageDTO) toDomain() (*spelleffectsvc.Damage, error) {
 	}
 	for i, p := range d.Parts {
 		part := spelleffectsvc.DamagePart{Save: spelleffectsvc.SaveEffect(p.Save)}
-		if part.Dice, part.ByLevel, err = diceToDomain(fmt.Sprintf("damage.parts[%d]", i), p.Dice, p.ByLevel); err != nil {
+		if part.Dice, part.ByLevel, err = diceToDomain(fmt.Sprintf("%s.parts[%d]", field, i), p.Dice, p.ByLevel); err != nil {
 			return nil, err
 		}
 		out.Parts = append(out.Parts, part)
 	}
-	if out.Instances, err = optFormula("damage.instances", d.Instances); err != nil {
+	if out.Instances, err = optFormula(field+".instances", d.Instances); err != nil {
 		return nil, err
 	}
-	if out.Rounds, err = optFormula("damage.rounds", d.Rounds); err != nil {
+	if out.Rounds, err = optFormula(field+".rounds", d.Rounds); err != nil {
 		return nil, err
 	}
 	return out, nil

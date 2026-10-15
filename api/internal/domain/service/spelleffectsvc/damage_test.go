@@ -177,3 +177,77 @@ func TestEntry_DamageAt_Parts(t *testing.T) {
 		})
 	}
 }
+
+func modesEntry(modes ...spelleffectsvc.Mode) spelleffectsvc.Entry {
+	e := damageEntry(spelleffectsvc.Damage{})
+	e.Damage, e.Modes = nil, modes
+	return e
+}
+
+// ADR 0008 step 14: a cast names its mode by key; none named is the first
+// (the default); a key the spell does not list, or any key for a spell
+// without modes, is ErrUnknownMode.
+func TestEntry_ModeFor(t *testing.T) {
+	p := func(src string) *formula.Formula { return must.Do(formula.Parse(src)) }
+	e := modesEntry(
+		spelleffectsvc.Mode{Key: "plane"},
+		spelleffectsvc.Mode{Key: "sheet", Damage: &spelleffectsvc.Damage{Dice: p("3d10")}},
+	)
+	m, err := e.ModeFor("")
+	require.NoError(t, err)
+	assert.Equal(t, "plane", m.Key, "the first is the default")
+	m, err = e.ModeFor("sheet")
+	require.NoError(t, err)
+	assert.Equal(t, "sheet", m.Key)
+	assert.Equal(t, "3d10", e.CastDamage(m).Dice.String(), "the mode's damage")
+	_, err = e.ModeFor("fog")
+	require.ErrorIs(t, err, spelleffectsvc.ErrUnknownMode)
+
+	plain := damageEntry(spelleffectsvc.Damage{Dice: p("1d6")})
+	m, err = plain.ModeFor("")
+	require.NoError(t, err)
+	assert.Nil(t, m, "a spell without modes cast without one")
+	assert.Equal(t, plain.Damage, plain.CastDamage(nil))
+	_, err = plain.ModeFor("sheet")
+	require.ErrorIs(t, err, spelleffectsvc.ErrUnknownMode)
+}
+
+// ADR 0008 step 14: every mode is served with the damage a cast in it rolls
+// at the level (a mode's damage may have parts, step 13); the damage served
+// for the spell itself is the default mode's, none when the default has none.
+func TestEntry_ModesAt(t *testing.T) {
+	p := func(src string) *formula.Formula { return must.Do(formula.Parse(src)) }
+	e := modesEntry(
+		spelleffectsvc.Mode{Key: "large", Damage: &spelleffectsvc.Damage{Dice: p("10d4"), Instances: p("4"), Type: "fire"}},
+		spelleffectsvc.Mode{Key: "parted", Damage: &spelleffectsvc.Damage{Parts: []spelleffectsvc.DamagePart{
+			{Dice: p("2d4"), Save: spelleffectsvc.SaveNone}, {Dice: p("level"), Save: spelleffectsvc.SaveNegates},
+		}}},
+		spelleffectsvc.Mode{Key: "none"},
+	)
+	got, err := e.ModesAt(12)
+	require.NoError(t, err)
+	large := &spelleffectsvc.DamageAt{CasterLevel: 12, Dice: sum(0, dice(10, 4)), Instances: sum(4), Rounds: sum(1), Type: "fire"}
+	assert.Equal(t, []spelleffectsvc.ModeAt{
+		{Key: "large", Damage: large},
+		{Key: "parted", Damage: &spelleffectsvc.DamageAt{
+			CasterLevel: 12, Dice: sum(12, dice(2, 4)), Instances: sum(1), Rounds: sum(1),
+			Parts: []spelleffectsvc.DamagePartAt{
+				{Dice: sum(0, dice(2, 4)), Save: spelleffectsvc.SaveNone},
+				{Dice: sum(12), Save: spelleffectsvc.SaveNegates},
+			},
+		}},
+		{Key: "none"},
+	}, got)
+	def, err := e.DamageAt(12)
+	require.NoError(t, err)
+	assert.Equal(t, large, def, "the default mode's damage")
+
+	e.Modes[0], e.Modes[2] = e.Modes[2], e.Modes[0]
+	def, err = e.DamageAt(12)
+	require.NoError(t, err)
+	assert.Nil(t, def, "the default mode rolls none")
+
+	plain, err := damageEntry(spelleffectsvc.Damage{Dice: p("1d6")}).ModesAt(12)
+	require.NoError(t, err)
+	assert.Nil(t, plain, "no modes")
+}

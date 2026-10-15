@@ -37,6 +37,9 @@ type SVC interface {
 	// MaxCasterLevel), evaluated down to the dice left to roll; nil when a
 	// cast rolls none (no effect entry, not a damage spell, low confidence).
 	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
+	// ModesAt is the cast-time modes of spellID, each with the damage a cast
+	// in it rolls at casterLevel; nil when the spell has none.
+	ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error)
 }
 
 // Slots is the spell slot store (spellsvc's DAL satisfies it).

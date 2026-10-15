@@ -38,6 +38,8 @@ export function searchSpells(
   query: SpellQuery,
   page = 1,
   pageSize = MAX_PAGE_SIZE,
+  /** The caster level the values, damage and modes are served at (omitted: the character's). */
+  casterLevel?: number,
 ): Promise<SpellPage> {
   const url = new URL("/api/spells", window.location.origin);
   const set = (k: string, v: string) => v && url.searchParams.set(k, v);
@@ -55,6 +57,7 @@ export function searchSpells(
   set("sphere", query.sphere);
   set("page", String(page));
   set("page_size", String(pageSize));
+  if (casterLevel !== undefined) set("caster_level", String(casterLevel));
   return request<SpellPage>(url.toString());
 }
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { NO_QUERY, searchSpells } from "@/api/spells_db";
 import { spellName } from "@/i18n/spellName";
+import { modeText } from "@/lib/spellMode";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useSpellStore } from "@/stores/spells";
@@ -79,6 +80,13 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
   const [found, setFound] = useState<Spell[]>([]);
   /** Matches the API has beyond the page shown. */
   const [more, setMore] = useState(0);
+  /** Spells with cast-time modes: the mode the caster picked, per spell id (none: the first). */
+  const [modes, setModes] = useState<Record<string, string>>({});
+
+  const casterLevel = Number(level);
+  const levelOk = Number.isInteger(casterLevel) && casterLevel >= 1 && casterLevel <= 40;
+  // The modes' dice are served at the caster level typed, the one the receive rolls at.
+  const searchLevel = levelOk ? casterLevel : undefined;
 
   useEffect(() => {
     const q = query.trim();
@@ -87,7 +95,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
     let live = true;
     const timer = setTimeout(() => {
       // The lookup's ranked search: English and French names, exact > prefix > contains.
-      searchSpells({ ...NO_QUERY, q }, 1, SEARCH_PAGE_SIZE)
+      searchSpells({ ...NO_QUERY, q }, 1, SEARCH_PAGE_SIZE, searchLevel)
         .catch(() => ({ items: [] as Spell[], total: 0 }))
         .then(({ items, total }) => {
           if (!live) return;
@@ -99,14 +107,12 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
       live = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, searchLevel]);
 
-  const casterLevel = Number(level);
-  const levelOk = Number.isInteger(casterLevel) && casterLevel >= 1 && casterLevel <= 40;
   const searching = query.trim().length >= 2;
 
   async function apply(id: string) {
-    if (await run(() => receiveSpell(id, casterLevel))) onDone();
+    if (await run(() => receiveSpell(id, casterLevel, modes[id]))) onDone();
   }
 
   return (
@@ -152,6 +158,21 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
                     · {c.class} {c.level}
                   </span>
                 </span>
+                {c.modes && c.modes.length > 0 && (
+                  <select
+                    className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
+                    aria-label={t("spellSlots.modeChoiceFor", { name })}
+                    data-testid="receive-mode"
+                    value={modes[c.id] ?? c.modes[0].key}
+                    onChange={(e) => setModes({ ...modes, [c.id]: e.target.value })}
+                  >
+                    {c.modes.map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {modeText(t, c.id, m)}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <Button
                   size="xs"
                   variant="secondary"

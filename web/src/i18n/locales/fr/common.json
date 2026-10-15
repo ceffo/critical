@@ -305,6 +305,8 @@
     "extraBlank": "Emplacement supplémentaire (choisir un sort)",
     "extraPick": "Choisir un sort",
     "splitChoice": "Emplacements accordés",
+    "modeChoice": "Option au lancement",
+    "modeChoiceFor": "Option de {{name}}",
     "splitLevel": "niveau {{level}}",
     "splitCount": "{{count}} × niveau {{level}}",
     "targetAc": "CA de la cible",
@@ -335,6 +337,23 @@
     "receiveLabel": "Appliquer {{name}}",
     "receiveHint": "Tapez une partie du nom du sort (anglais ou français).",
     "receiveMore": "{{count}} de plus, affinez la recherche"
+  },
+  "spellMode": {
+    "withDamage": "{{mode}} : {{damage}}",
+    "noDamage": "aucun dégât",
+    "wall_of_ice": {
+      "ice_plane": "Plan de glace",
+      "hemisphere": "Hémisphère",
+      "ice_sheet": "Plaque de glace"
+    },
+    "meteor_swarm": {
+      "large_spheres": "4 grandes sphères",
+      "small_spheres": "8 petites sphères"
+    },
+    "ice_storm": {
+      "hail": "Grêle",
+      "sleet": "Grésil"
+    }
   },
   "spellDice": {
     "typed": "{{dice}} {{type}}",
@@ -391,6 +410,7 @@
     "noSelection": "Choisissez un sort pour l'afficher ici.",
     "atLevel": "Au niveau {{level}}",
     "damage": "Dégâts",
+    "damageMode": "Dégâts ({{mode}})",
     "castingTime": "Temps d'incantation",
     "range": "Portée",
     "duration": "Durée",
@@ -532,6 +552,7 @@
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), lancé au niveau {{casterLevel}}",
+      "mode": "Option : {{mode}}",
       "receivedHeading": "{{name}} lancé sur vous, niveau du lanceur {{casterLevel}}",
       "attackNeeds": "Il faut {{needed}} ou plus contre CA {{ac}} (TAC0 {{thac0}}), pas de critique.",
       "itemSpent": "Dépensé : {{name}} ({{left}} restant(s))",
@@ -1042,6 +1063,7 @@
     "item_not_restockable": "Cet objet ne peut pas être réapprovisionné.",
     "slot_already_used": "Cet emplacement de sort est déjà utilisé.",
     "invalid_slot_index": "Cet emplacement de sort n'existe pas.",
+    "unknown_spell_mode": "Ce sort n'a pas cette option.",
     "not_in_spellbook": "Ce sort n'est pas dans le grimoire.",
     "entry_already_voided": "Cette entrée est déjà annulée.",
     "entry_not_amendable": "Cette entrée ne peut pas être modifiée.",

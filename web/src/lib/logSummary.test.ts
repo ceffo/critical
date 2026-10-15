@@ -598,6 +598,35 @@ describe("cast entries", () => {
   const cast = (extra: object) =>
     entry("cast", { action: "cast", spellId: "x_spell", spell: "X Spell", casterLevel: 15, ...extra });
 
+  it("names the mode of a received Meteor Swarm and of a default Wall of Ice", async () => {
+    const t = await makeT("en");
+    const swarm = entry("cast", {
+      action: "received", spellId: "meteor_swarm", spell: "Meteor Swarm", casterLevel: 18, mode: "small_spheres",
+      damage: { total: 50, type: "fire", dice: "5d4", instances: 8 },
+    });
+    expect(entryText(swarm, t)).toBe("Meteor Swarm cast on me (caster level 18): 8 small spheres, 50 fire damage");
+    const wall = entry("cast", { action: "cast", spellId: "wall_of_ice", spell: "Wall of Ice", casterLevel: 15, mode: "ice_plane" });
+    expect(entryText(wall, t)).toBe("Cast Wall of Ice: Ice plane");
+  });
+
+  it("a cast logged before modes existed renders as before, no option named", async () => {
+    const old = entry("cast", {
+      action: "cast", spellId: "meteor_swarm", spell: "Meteor Swarm", casterLevel: 15,
+      damage: { total: 99, type: "fire" },
+    });
+    expect(entryText(old, await makeT("en"))).toBe("Cast Meteor Swarm: 99 fire damage");
+  });
+
+  it("names the cast-time mode (en/fr); an unknown key reads as its words", async () => {
+    const e = entry("cast", {
+      action: "cast", spellId: "wall_of_ice", spell: "Wall of Ice", casterLevel: 15, mode: "ice_sheet",
+      damage: { total: 19, type: "cold" },
+    });
+    expect(entryText(e, await makeT("en"))).toBe("Cast Wall of Ice: Ice sheet, 19 cold damage");
+    expect(entryText(e, await makeT("fr"))).toContain("Plaque de glace");
+    expect(entryText(cast({ mode: "some_mode" }), await makeT("en"))).toBe("Cast X Spell: some mode");
+  });
+
   it("renders the extra slots a cast granted (en/fr)", async () => {
     const e = cast({ extraSlots: [1, 1, 1] });
     expect(entryText(e, await makeT("en"))).toBe("Cast X Spell: extra slots 3 × level 1");

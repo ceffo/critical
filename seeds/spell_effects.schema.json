@@ -46,7 +46,7 @@
       "damage": {
         "type": "object",
         "additionalProperties": false,
-        "description": "Exactly one of dice, by_level and parts.",
+        "description": "Exactly one of dice, by_level and parts. A spell with modes has no damage of its own: each mode carries its own.",
         "properties": {
           "dice": { "$ref": "#/definitions/formula", "description": "Damage of one instance, e.g. (min(level,10))d6 for Fireball" },
           "by_level": {
@@ -77,6 +77,20 @@
           "instances": { "$ref": "#/definitions/formula", "description": "Separate damage rolls per casting (missiles, bolts). Default 1." },
           "rounds": { "$ref": "#/definitions/formula", "description": "Rounds over which the damage repeats (Melf's Acid Arrow). Default 1." },
           "type": { "type": "string", "description": "Damage type: fire, cold, acid, force..." }
+        }
+      },
+      "modes": {
+        "type": "array",
+        "minItems": 2,
+        "description": "Cast-time options, picked by the caster when casting (the first is the default), each with its own damage or none (docs/adr/0008 step 14). Only on a damage spell, instead of its damage; keys are unique; at least one mode has damage. Each mode's damage uses the entry's save.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key"],
+          "properties": {
+            "key": { "type": "string", "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$", "description": "snake_case, unique in the spell; the UI words it (spellMode.<spell id>.<key>)" },
+            "damage": { "$ref": "#/items/properties/damage", "description": "The damage a cast in this mode rolls; absent: none." }
+          }
         }
       },
       "modifiers": {

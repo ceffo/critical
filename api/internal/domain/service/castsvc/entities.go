@@ -33,12 +33,17 @@ type CastRequest struct {
 	ItemID string
 	// TargetAC is the target's AC, required for a spell with an attack roll.
 	TargetAC *int
+	// Mode is the key of the cast-time mode picked for a spell with modes.
+	// Empty: the first (ADR 0008 step 14).
+	Mode string
 }
 
 // ReceiveRequest is a spell a party member cast on the Bard.
 type ReceiveRequest struct {
 	SpellID     string
 	CasterLevel int
+	// Mode is the cast-time mode the caster picked (empty: the first).
+	Mode string
 }
 
 // Source says how the spell reached the Bard.
@@ -147,6 +152,9 @@ type CastResult struct {
 	CasterLevel int
 	// SlotIndex is the slot spent (cast only).
 	SlotIndex *int
+	// Mode is the key of the cast-time mode the spell was cast in (empty:
+	// the spell has no modes; ADR 0008 step 14).
+	Mode string
 	// Effect describes the catalog entry (nil: not in the catalog).
 	Kind       spelleffectsvc.Kind
 	Confidence spelleffectsvc.Confidence

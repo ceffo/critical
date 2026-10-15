@@ -2991,7 +2991,7 @@
     "level": 4,
     "kind": "damage",
     "confidence": "high",
-    "note": "Hail version: 3d10 in a 40-ft-diameter area for one round. The alternative sleet version blinds and slows instead of dealing damage.",
+    "note": "Picked when casting. Hail: 3d10 in a 40-ft-diameter area for one round. Sleet: no damage; it blinds, makes the ground icy (half movement, a chance to slip) and puts out small fires in an 80-ft-diameter area for one round per level (not tracked).",
     "target": "area",
     "duration": {
       "kind": "instant"
@@ -3000,10 +3000,18 @@
       "type": "none",
       "effect": "none"
     },
-    "damage": {
-      "dice": "3d10",
-      "type": "cold"
-    }
+    "modes": [
+      {
+        "key": "hail",
+        "damage": {
+          "dice": "3d10",
+          "type": "cold"
+        }
+      },
+      {
+        "key": "sleet"
+      }
+    ]
   },
   {
     "id": "illusionary_wall",
@@ -3539,14 +3547,33 @@
     "id": "wall_of_ice",
     "name": "Wall of Ice",
     "level": 4,
-    "kind": "utility",
-    "confidence": "low",
-    "note": "Three castings: an ice plane (anything breaking through takes 2 per inch of thickness, 1 inch per level; 3 for fire users, 1 for cold users), a hemisphere (no damage) or a falling ice sheet (3d10, as Ice Storm hail). Not modelled: the cast cannot choose the mode, and two of the three deal no damage on casting.",
-    "target": "none",
+    "kind": "damage",
+    "confidence": "high",
+    "note": "Three castings, picked when casting. Ice plane: a creature breaking through takes 2 damage per inch of thickness (1 inch per caster level; 3 per inch for fire users, 1 for cold users), not rolled at casting. Hemisphere: no damage. Ice sheet: falls on the creatures beneath for 3d10, as Ice Storm hail.",
+    "target": "area",
     "duration": {
       "kind": "rounds",
       "rounds": "10*level"
-    }
+    },
+    "save": {
+      "type": "none",
+      "effect": "none"
+    },
+    "modes": [
+      {
+        "key": "ice_plane"
+      },
+      {
+        "key": "hemisphere"
+      },
+      {
+        "key": "ice_sheet",
+        "damage": {
+          "dice": "3d10",
+          "type": "cold"
+        }
+      }
+    ]
   },
   {
     "id": "wind_breath",
@@ -6212,7 +6239,7 @@
     "level": 9,
     "kind": "damage",
     "confidence": "high",
-    "note": "Either 4 spheres of 10d4 or 8 spheres of 5d4, each bursting as a fireball (one save per area for half); a creature in the straight-line path takes the full effect without a save. Only the large-sphere option is served; a creature takes the spheres whose areas it is in.",
+    "note": "Four large spheres of 10d4 or eight small ones of 5d4, picked when casting, each bursting as a fireball (one save per area for half); a creature in the straight-line path takes the full effect without a save. A creature takes the spheres whose areas it is in.",
     "target": "area",
     "duration": {
       "kind": "instant"
@@ -6221,11 +6248,24 @@
       "type": "spell",
       "effect": "half"
     },
-    "damage": {
-      "dice": "10d4",
-      "instances": "4",
-      "type": "fire"
-    }
+    "modes": [
+      {
+        "key": "large_spheres",
+        "damage": {
+          "dice": "10d4",
+          "instances": "4",
+          "type": "fire"
+        }
+      },
+      {
+        "key": "small_spheres",
+        "damage": {
+          "dice": "5d4",
+          "instances": "8",
+          "type": "fire"
+        }
+      }
+    ]
   },
   {
     "id": "monster_summoning_vii",

@@ -1,15 +1,21 @@
 package casthdl_test
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
+	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
 )
 
@@ -73,4 +79,47 @@ func TestToDTO_DamageParts(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "parts")
 	assert.NotContains(t, string(raw), "totalOnSave")
+}
+
+// fakeCast records the requests and answers with the mode it was given.
+type fakeCast struct {
+	cast    *castsvc.CastRequest
+	receive *castsvc.ReceiveRequest
+}
+
+func (f fakeCast) Cast(_ context.Context, _ int64, _ int, req castsvc.CastRequest) (castsvc.CastResult, error) {
+	*f.cast = req
+	return castsvc.CastResult{Source: castsvc.SourceCast, Mode: req.Mode}, nil
+}
+
+func (f fakeCast) Receive(_ context.Context, _ int64, req castsvc.ReceiveRequest) (castsvc.CastResult, error) {
+	*f.receive = req
+	return castsvc.CastResult{Source: castsvc.SourceReceived, Mode: req.Mode}, nil
+}
+
+// ADR 0008 step 14: the cast and receive bodies carry the mode key to the
+// service, and the result names the mode the spell was cast in; a spell
+// without modes serves none.
+func TestCastAndReceive_CarryTheMode(t *testing.T) {
+	svc := fakeCast{cast: &castsvc.CastRequest{}, receive: &castsvc.ReceiveRequest{}}
+	charID := func(*http.Request) int64 { return 1 }
+	r := chi.NewRouter()
+	r.Post("/api/spells/{id}/cast", render.Handle(casthdl.Cast(charID, svc)))
+	r.Post("/api/spells/receive", render.Handle(casthdl.Receive(charID, svc)))
+
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/spells/0/cast", strings.NewReader(`{"mode":"ice_sheet"}`)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, "ice_sheet", svc.cast.Mode)
+	assert.Contains(t, rec.Body.String(), `"mode":"ice_sheet"`)
+
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/spells/receive", strings.NewReader(`{"spellId":"ice_storm","casterLevel":9,"mode":"sleet"}`)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, castsvc.ReceiveRequest{SpellID: "ice_storm", CasterLevel: 9, Mode: "sleet"}, *svc.receive)
+	assert.Contains(t, rec.Body.String(), `"mode":"sleet"`)
+
+	raw, err := json.Marshal(casthdl.ToDTO(castsvc.CastResult{}))
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), `"mode"`)
 }

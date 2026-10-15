@@ -1,6 +1,7 @@
 package spelleffectsvc
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/pkg/formula"
@@ -78,14 +79,81 @@ type DamagePartAt struct {
 	Save SaveEffect
 }
 
-// DamageAt returns what a cast of e rolls for damage at level, or nil when a
-// cast rolls none: not a damage spell, no damage data, or a low-confidence
-// entry (a cast shows its text only).
-func (e Entry) DamageAt(level int) (*DamageAt, error) {
-	if e.Kind != KindDamage || e.Damage == nil || e.Confidence == ConfidenceLow {
+// ErrUnknownMode is a cast naming a mode its spell does not list (ADR 0008
+// step 14).
+var ErrUnknownMode = errors.New("unknown spell mode")
+
+// ModeFor is the mode a cast naming key uses: the mode with that key, or the
+// first (the default) when key is empty; nil for a spell without modes cast
+// without one. A key the spell does not list, or any key for a spell without
+// modes, is ErrUnknownMode (ADR 0008 step 14).
+func (e Entry) ModeFor(key string) (*Mode, error) {
+	if len(e.Modes) == 0 {
+		if key != "" {
+			return nil, fmt.Errorf("%w: %s has no modes, not %q", ErrUnknownMode, e.Name, key)
+		}
 		return nil, nil
 	}
-	d := e.Damage
+	if key == "" {
+		return &e.Modes[0], nil
+	}
+	for i := range e.Modes {
+		if e.Modes[i].Key == key {
+			return &e.Modes[i], nil
+		}
+	}
+	return nil, fmt.Errorf("%w: %s has no mode %q", ErrUnknownMode, e.Name, key)
+}
+
+// CastDamage is the damage data a cast in mode m rolls: the mode's (nil: the
+// mode rolls none), or the entry's for a spell without modes (m nil).
+func (e Entry) CastDamage(m *Mode) *Damage {
+	if m != nil {
+		return m.Damage
+	}
+	return e.Damage
+}
+
+// ModeAt is one cast-time mode at a caster level: its key and the damage a
+// cast in this mode rolls (nil: none).
+type ModeAt struct {
+	Key    string
+	Damage *DamageAt
+}
+
+// DamageAt returns what a cast of e without a mode rolls for damage at level
+// (for a spell with modes, the default mode's), or nil when a cast rolls
+// none: not a damage spell, no damage data, or a low-confidence entry (a cast
+// shows its text only).
+func (e Entry) DamageAt(level int) (*DamageAt, error) {
+	m, err := e.ModeFor("")
+	if err != nil {
+		return nil, err
+	}
+	return e.ModeDamageAt(m, level)
+}
+
+// ModesAt is every cast-time mode of e with the damage a cast in it rolls at
+// level, in the data's order (nil: the spell has no modes; ADR 0008 step 14).
+func (e Entry) ModesAt(level int) ([]ModeAt, error) {
+	var out []ModeAt
+	for i := range e.Modes {
+		d, err := e.ModeDamageAt(&e.Modes[i], level)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ModeAt{Key: e.Modes[i].Key, Damage: d})
+	}
+	return out, nil
+}
+
+// ModeDamageAt is the damage a cast of e in mode m (nil: a spell without
+// modes) rolls at level; nil when it rolls none.
+func (e Entry) ModeDamageAt(m *Mode, level int) (*DamageAt, error) {
+	d := e.CastDamage(m)
+	if e.Kind != KindDamage || d == nil || e.Confidence == ConfidenceLow {
+		return nil, nil
+	}
 	out := &DamageAt{
 		CasterLevel: level, Type: d.Type,
 		Instances: formula.Sum{Constant: 1}, Rounds: formula.Sum{Constant: 1},

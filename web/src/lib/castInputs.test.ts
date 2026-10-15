@@ -63,4 +63,24 @@ describe("planCast", () => {
     expect(p.blocked).toBe(false);
     expect(p.options).toEqual({ spellId: undefined, extraSlots: undefined, targetAc: undefined, itemId: undefined });
   });
+
+  it("a spell with cast-time modes offers them, the first by default, and sends the one picked", () => {
+    const sheet = {
+      caster_level: 15,
+      dice: { groups: [{ count: 3, sides: 10 }], modifier: 0 },
+      instances: { groups: [], modifier: 1 },
+      rounds: { groups: [], modifier: 1 },
+      type: "cold",
+    };
+    const modes = [{ key: "ice_plane" }, { key: "hemisphere" }, { key: "ice_sheet", damage: sheet }];
+    const withModes: SpellbookEntry[] = [...book, { id: "wall_of_ice", name: "Wall of Ice", level: 4, modes }];
+    const p = planCast(slot("wall_of_ice", 4), false, withModes, {});
+    expect(p.modes).toEqual(modes);
+    expect(p.mode?.key).toBe("ice_plane");
+    expect(p.options.mode).toBe("ice_plane");
+    const picked = planCast(slot("wall_of_ice", 4), false, withModes, { mode: "ice_sheet" });
+    expect(picked.mode?.damage).toEqual(sheet);
+    expect(picked.options.mode).toBe("ice_sheet");
+    expect(planCast(slot("alarm"), false, withModes, {}).options.mode).toBeUndefined();
+  });
 });

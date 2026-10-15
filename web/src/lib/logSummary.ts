@@ -6,6 +6,7 @@ import type { DiceRoll } from "@/types/dice";
 import { spellName } from "@/i18n/spellName";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
+import { modeName } from "@/lib/spellMode";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
@@ -13,6 +14,8 @@ export interface CastLogPayload {
   spellId: string;
   spell: string;
   casterLevel: number;
+  /** The key of the cast-time mode; absent for a spell without modes and on older casts. */
+  mode?: string;
   buff?: {
     name: string;
     rounds?: number;
@@ -64,6 +67,7 @@ function castText(p: CastLogPayload, t: TFunction): string {
       ? t("log.cast.received", { spell, level: p.casterLevel })
       : t("log.cast.cast", { spell });
   const details: string[] = [];
+  if (p.mode) details.push(modeName(t, p.spellId, p.mode));
   if (p.buff?.applied) {
     details.push(counters(t, p.buff.rounds, p.buff.charges));
     if (p.buff.strGain)

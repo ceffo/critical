@@ -13,7 +13,7 @@ interface SpellStore {
   /** Cast from slot `index`; the result goes to the result card. */
   castSpell: (index: number, opts?: api.CastOptions) => Promise<void>;
   /** Apply a spell a party member cast on the Bard; the result goes to the result card. */
-  receiveSpell: (spellId: string, casterLevel: number) => Promise<void>;
+  receiveSpell: (spellId: string, casterLevel: number, mode?: string) => Promise<void>;
   resetSlots: () => Promise<void>;
   prepare: (spells: string[]) => Promise<void>;
 }
@@ -38,8 +38,8 @@ export const useSpellStore = create<SpellStore>((set) => ({
     set({ slots: result.slots ?? [] });
     useRollStore.setState({ last: { kind: "cast", result } });
   },
-  receiveSpell: async (spellId, casterLevel) => {
-    const result = await api.receiveSpell(spellId, casterLevel);
+  receiveSpell: async (spellId, casterLevel, mode) => {
+    const result = await api.receiveSpell(spellId, casterLevel, mode);
     useRollStore.setState({ last: { kind: "cast", result } });
   },
   resetSlots: async () => {

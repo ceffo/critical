@@ -35,4 +35,12 @@ describe("searchSpells", () => {
     expect(params().get("q")).toBe("mains brûlantes");
     expect(params().get("match_exact")).toBe("burning_hands");
   });
+
+  it("sends the caster level the receive rolls at, none when not given", async () => {
+    await searchSpells({ ...NO_QUERY, q: "meteor" }, 1, 20, 18);
+    expect(params().get("caster_level")).toBe("18");
+    request.mockClear();
+    await searchSpells({ ...NO_QUERY, q: "meteor" }, 1, 20);
+    expect(params().has("caster_level")).toBe(false);
+  });
 });

@@ -9,6 +9,7 @@ import { spellId, spellName } from "@/i18n/spellName";
 import type { SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
+import { modeName } from "@/lib/spellMode";
 import { planCast } from "@/lib/castInputs";
 import { damageText } from "@/lib/spellDice";
 import { PrepareEditor } from "./PrepareEditor";
@@ -67,6 +68,8 @@ export function SpellsPanel() {
   const [splits, setSplits] = useState<Record<number, string>>({});
   const [targetAcs, setTargetAcs] = useState<Record<number, string>>({});
   const [itemPicks, setItemPicks] = useState<Record<number, string>>({});
+  // Spells with cast-time modes: the mode key picked per slot index (none: the first).
+  const [modePicks, setModePicks] = useState<Record<number, string>>({});
   // Blank extra slots: the spell picked per slot index.
   const [picks, setPicks] = useState<Record<number, string>>({});
   const logEntries = useLogStore((s) => s.entries);
@@ -199,15 +202,19 @@ export function SpellsPanel() {
                     split: splits[slot.index],
                     acText: targetAcs[slot.index],
                     itemPick: itemPicks[slot.index],
+                    mode: modePicks[slot.index],
                   });
-                  const { needs, slotSplits, split, spendable, itemId } = plan;
+                  const { needs, slotSplits, split, spendable, itemId, modes, mode } = plan;
                   const acText = targetAcs[slot.index] ?? "";
-                  // The damage a cast rolls at the Bard's level, as the server serves it.
+                  // The damage a cast rolls at the Bard's level, as the server serves it: the picked
+                  // mode's for a spell with modes.
                   const damage = blank
                     ? undefined
-                    : info.spellbook.find(
-                        (s) => s.id === (slot.prepared_spell_id || spellId(slot.prepared_spell_name)),
-                      )?.damage;
+                    : mode
+                      ? mode.damage
+                      : info.spellbook.find(
+                          (s) => s.id === (slot.prepared_spell_id || spellId(slot.prepared_spell_name)),
+                        )?.damage;
                   return (
                     <li
                       key={slot.index}
@@ -272,6 +279,21 @@ export function SpellsPanel() {
                           {spendable.map((i) => (
                             <option key={i.id} value={i.id}>
                               {i.name} ({i.count})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {modes.length > 0 && needs && !slot.used && (
+                        <select
+                          className="h-7 min-w-0 rounded border bg-background px-1 text-sm"
+                          aria-label={t("spellSlots.modeChoice")}
+                          data-testid="slot-mode"
+                          value={mode?.key}
+                          onChange={(e) => setModePicks({ ...modePicks, [slot.index]: e.target.value })}
+                        >
+                          {modes.map((m) => (
+                            <option key={m.key} value={m.key}>
+                              {modeName(t, needs.id, m.key)}
                             </option>
                           ))}
                         </select>

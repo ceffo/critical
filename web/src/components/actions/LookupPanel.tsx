@@ -10,6 +10,7 @@ import type { SpellClass } from "@/api/spells_db";
 import { otherSpellName, spellName } from "@/i18n/spellName";
 import { statDice, statRaw, statValue, type StatKey } from "@/lib/spellValues";
 import { damageFormula, damageText } from "@/lib/spellDice";
+import { damageRows } from "@/lib/spellMode";
 import { classLabel, sphereLabel, spheresLabel, translateValue } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -67,18 +68,16 @@ function SpellDetail({ spell }: { spell: Spell }) {
     spheresLabel(t, spell.sphere),
     spell.components,
   ].filter(Boolean);
-  // The dice row: the damage a cast rolls (one instance to the composer), then the stats with dice.
+  // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
+  // mode with damage for a spell with modes, then the stats with dice.
+  const damages = damageRows(t, spell);
   const dice: { key: string; label: string; text: string; formula: string }[] = [
-    ...(spell.damage
-      ? [
-          {
-            key: "damage",
-            label: t("lookup.damage"),
-            text: damageText(t, spell.damage),
-            formula: damageFormula(spell.damage),
-          },
-        ]
-      : []),
+    ...damages.map((d) => ({
+      key: d.key,
+      label: d.label,
+      text: damageText(t, d.damage),
+      formula: damageFormula(d.damage),
+    })),
     ...statDice(spell, unit).map((d) => ({
       key: d.key,
       label: t(`lookup.${d.key}`),

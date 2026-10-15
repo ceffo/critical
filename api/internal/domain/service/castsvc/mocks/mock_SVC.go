@@ -236,6 +236,66 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
+// ModesAt provides a mock function with given fields: ctx, spellID, casterLevel
+func (_m *MockSVC) ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error) {
+	ret := _m.Called(ctx, spellID, casterLevel)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ModesAt")
+	}
+
+	var r0 []spelleffectsvc.ModeAt
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]spelleffectsvc.ModeAt, error)); ok {
+		return rf(ctx, spellID, casterLevel)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []spelleffectsvc.ModeAt); ok {
+		r0 = rf(ctx, spellID, casterLevel)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spelleffectsvc.ModeAt)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, spellID, casterLevel)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ModesAt_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ModesAt'
+type MockSVC_ModesAt_Call struct {
+	*mock.Call
+}
+
+// ModesAt is a helper method to define mock.On call
+//   - ctx context.Context
+//   - spellID string
+//   - casterLevel int
+func (_e *MockSVC_Expecter) ModesAt(ctx interface{}, spellID interface{}, casterLevel interface{}) *MockSVC_ModesAt_Call {
+	return &MockSVC_ModesAt_Call{Call: _e.mock.On("ModesAt", ctx, spellID, casterLevel)}
+}
+
+func (_c *MockSVC_ModesAt_Call) Run(run func(ctx context.Context, spellID string, casterLevel int)) *MockSVC_ModesAt_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ModesAt_Call) Return(_a0 []spelleffectsvc.ModeAt, _a1 error) *MockSVC_ModesAt_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ModesAt_Call) RunAndReturn(run func(context.Context, string, int) ([]spelleffectsvc.ModeAt, error)) *MockSVC_ModesAt_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Receive provides a mock function with given fields: ctx, characterID, req
 func (_m *MockSVC) Receive(ctx context.Context, characterID int64, req castsvc.ReceiveRequest) (castsvc.CastResult, error) {
 	ret := _m.Called(ctx, characterID, req)

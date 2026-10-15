@@ -231,10 +231,12 @@ function EffectRow({
         >
           {inactive && <LockSimple aria-hidden className="shrink-0" />}
           {b.duration > 0 && <span data-testid="buff-rounds">{formatTurnsLeft(t, b.duration)}</span>}
-          {b.duration === 0 && b.charges > 0 && <Pips count={b.charges} />}
+          {b.duration === 0 && b.charges > 0 && <Pips left={b.charges} total={b.chargesTotal} />}
           {b.charges > 0 && (
             <span data-testid="buff-charges">
-              {t("effects.charges", { count: b.charges })}
+              {b.chargesTotal >= b.charges
+                ? t("effects.chargesOf", { count: b.charges, total: b.chargesTotal })
+                : t("effects.charges", { count: b.charges })}
               {b.duration === 0 && ` · ${t("effects.untilSpent")}`}
             </span>
           )}
@@ -246,12 +248,23 @@ function EffectRow({
   );
 }
 
-/** One diamond per charge left (at most 12 drawn). */
-function Pips({ count }: { count: number }) {
+/**
+ * One diamond per charge (at most 12 drawn): filled while left, hollow once used. `total` is what the
+ * server kept from the start (0: unknown, only the ones left are drawn).
+ */
+function Pips({ left, total }: { left: number; total: number }) {
+  const size = Math.min(Math.max(total, left), 12);
   return (
     <span aria-hidden className="flex shrink-0 items-center gap-1">
-      {Array.from({ length: Math.min(count, 12) }, (_, i) => (
-        <span key={i} className="size-2 rotate-45 rounded-[1px] bg-amb-400" />
+      {Array.from({ length: size }, (_, i) => (
+        <span
+          key={i}
+          data-testid={i < left ? "pip-left" : "pip-used"}
+          className={cn(
+            "size-2 rotate-45 rounded-[1px]",
+            i < left ? "bg-amb-400" : "border border-amb-600",
+          )}
+        />
       ))}
     </span>
   );

@@ -324,8 +324,11 @@ type BuffEffectDTO struct {
 	// StartRound is the round the buff was added in (0: out of combat or
 	// unknown). Response only: a request's value is ignored, the server
 	// stamps it.
-	StartRound int   `json:"startRound"`
-	Applies    *bool `json:"applies,omitempty"`
+	StartRound int `json:"startRound"`
+	// ChargesTotal is the charge count the buff started with (0: unknown, or
+	// no charges). Response only, like startRound.
+	ChargesTotal int   `json:"chargesTotal"`
+	Applies      *bool `json:"applies,omitempty"`
 }
 
 // BuffEffectsDTO is the modifier payload.
@@ -363,7 +366,7 @@ func (d BuffEffectDTO) toDomain() buffsvc.BuffEffect {
 func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 	return BuffEffectDTO{
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-		Effects: BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound,
+		Effects: BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 	}
 }
 

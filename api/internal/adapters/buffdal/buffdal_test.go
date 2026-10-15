@@ -304,6 +304,27 @@ func TestActiveBuffs_StartRoundRoundTripsAndOldRowsReadZero(t *testing.T) {
 	assert.Equal(t, 4, got[0].StartRound)
 }
 
+func TestActiveBuffs_ChargesTotalRoundTripsAndOldRowsReadZero(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	_, err := db.ExecContext(ctx, `INSERT INTO active_buffs (character_id, buffs) VALUES (?, '[{"id":"o","name":"Old","charges":2,"duration":0,"effects":{}}]')`, charID)
+	require.NoError(t, err)
+	got, err := dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, 2, got[0].Charges)
+	assert.Zero(t, got[0].ChargesTotal, "a buff stored before the field has an unknown total")
+
+	got[0].ChargesTotal = 9
+	require.NoError(t, dal.SaveActiveBuffs(ctx, charID, got))
+	got, err = dal.GetActiveBuffs(ctx, charID)
+	require.NoError(t, err)
+	assert.Equal(t, 9, got[0].ChargesTotal)
+}
+
 func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 	db := openDB(t)
 	charID := seedCharacter(t, db)

@@ -20,7 +20,7 @@ func TestRoundReset_WireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/round/reset", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"roundNumber":0,"expiredBuffs":[],"activeBuffs":[
-		{"id":"h","name":"Haste","charges":0,"duration":4,"effects":{},"note":"","startRound":0}]}`, rec.Body.String())
+		{"id":"h","name":"Haste","charges":0,"duration":4,"effects":{},"note":"","startRound":0,"chargesTotal":0}]}`, rec.Body.String())
 }
 
 func TestRoundSet(t *testing.T) {
@@ -106,8 +106,8 @@ func TestRoundPassTime(t *testing.T) {
 		rec := do(h, "POST", "/api/round/pass-time", `{"hours":1.5}`)
 		require.Equal(t, http.StatusOK, rec.Code)
 		assert.JSONEq(t, `{"roundNumber":0,"roundsPassed":90,
-			"activeBuffs":[{"id":"a","name":"Long","charges":0,"duration":10,"effects":{},"note":"","startRound":3}],
-			"expiredBuffs":[{"id":"b","name":"Short","charges":0,"duration":0,"effects":{},"note":"","startRound":0}]}`,
+			"activeBuffs":[{"id":"a","name":"Long","charges":0,"duration":10,"effects":{},"note":"","startRound":3,"chargesTotal":0}],
+			"expiredBuffs":[{"id":"b","name":"Short","charges":0,"duration":0,"effects":{},"note":"","startRound":0,"chargesTotal":0}]}`,
 			rec.Body.String())
 	})
 
@@ -142,7 +142,7 @@ func TestRoundPassTimePreview(t *testing.T) {
 		rec := do(h, "GET", "/api/round/pass-time/preview?hours=1.5", "")
 		require.Equal(t, http.StatusOK, rec.Code)
 		assert.JSONEq(t, `{"rounds":90,
-			"expiring":[{"id":"b","name":"Short","charges":0,"duration":60,"effects":{},"note":"","startRound":2}]}`,
+			"expiring":[{"id":"b","name":"Short","charges":0,"duration":60,"effects":{},"note":"","startRound":2,"chargesTotal":0}]}`,
 			rec.Body.String())
 	})
 

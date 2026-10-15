@@ -21,6 +21,9 @@ type snapBuff struct {
 	// StartRound is absent from entries recorded before it existed: they
 	// restore it as 0.
 	StartRound int `json:"start_round,omitempty"`
+	// ChargesTotal is absent from entries recorded before it existed: they
+	// restore it as 0 (unknown).
+	ChargesTotal int `json:"charges_total,omitempty"`
 }
 
 type snapEffects struct {
@@ -41,7 +44,7 @@ func encodeBuffs(buffs []BuffEffect) (json.RawMessage, error) {
 	for i, b := range buffs {
 		out[i] = snapBuff{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound,
+			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		}
 	}
 	return json.Marshal(out)
@@ -56,7 +59,7 @@ func decodeBuffs(raw json.RawMessage) ([]BuffEffect, error) {
 	for i, b := range in {
 		out[i] = BuffEffect{
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
-			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound,
+			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		}
 	}
 	return out, nil

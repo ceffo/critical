@@ -77,6 +77,11 @@ type BuffEffect struct {
 	// by the caller; nothing changes it afterwards (ADR 0004 step 15). It
 	// has no rules meaning: the turn header draws the elapsed part from it.
 	StartRound int
+	// ChargesTotal is the charge count the buff started with (the "M" of
+	// "N / M"), stamped from Charges by Add and Activate, never by the
+	// caller (ADR 0004 step 16). 0: unknown (a buff stored before the field
+	// existed) or no charges.
+	ChargesTotal int
 }
 
 // Timed reports whether Next Round counts this buff down.

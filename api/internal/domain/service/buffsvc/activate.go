@@ -22,6 +22,7 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 	ch, err := s.apply(ctx, characterID, func(buffs []BuffEffect, round int) (change, error) {
 		// ADR 0004 step 15: a buff starts in the round it is activated.
 		buff.StartRound = round
+		buff.ChargesTotal = buff.Charges // step 16
 		return change{
 			kind:    actionlog.KindBuffChange,
 			payload: logPayload{Action: "activate", Buff: buff.Name, Rounds: buff.Duration, Charges: buff.Charges, Note: buff.Note},

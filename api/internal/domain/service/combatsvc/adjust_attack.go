@@ -14,7 +14,8 @@ import (
 const MaxTargetAC = 20
 
 // AdjustAttackAC corrects the target AC of the latest attack (log entry
-// entryID) after the roll, when the DM gives or changes it. Hit, margin and
+// entryID) after the roll, when the DM gives or changes it (ADR 0002 step
+// 11). Hit, margin and
 // crit are recomputed with the same d20, crit-check d100 and multiplier
 // d100 (ADR 0001 step 6; the multiplier is the crit row the multiplier d100
 // fell in when rolling), and the damage from the dice rolled with the

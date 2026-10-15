@@ -213,6 +213,10 @@ type RollResult struct {
 
 ## Seed Loader Pattern
 
+Spells are leaving `seeds/`: they move to the versioned catalogue artifact, fetched with `just catalogue` and
+imported at startup ([ADR 0021](adr/0021-spell-catalogue.md)). `seeds/spells.json` is retired when the importer
+lands; the other seed files below still load as described.
+
 At startup, for each seed file:
 ```go
 // Check if table is empty, if so load from seeds/

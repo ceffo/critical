@@ -24,7 +24,7 @@ import {
   schoolLabel,
   spheresLabel,
   componentsText,
-  statText,
+  statCell,
 } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -36,12 +36,6 @@ const CLASSES: { value: SpellClass; key: string }[] = [
 ];
 const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const STATS: StatKey[] = ["range", "duration", "area", "castingTime", "save"];
-
-/** "1 rd" and "1 rd." say the same: the raw text is not repeated after its value. */
-function same(a: string, b: string): boolean {
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9½/-]/g, "");
-  return norm(a) === norm(b);
-}
 
 /** Load the next page when the list is this close (px) to its bottom. */
 const LOAD_MORE_MARGIN = 400;
@@ -137,8 +131,13 @@ function SpellDetail({ spell }: { spell: Spell }) {
       </div>
       <dl className="flex flex-col text-body">
         {STATS.map((key) => {
-          const v = value(key);
-          const raw = statText(t, i18n.language, spell, key);
+          const { value: v, text: raw } = statCell(
+            t,
+            i18n.language,
+            spell,
+            key,
+            value(key),
+          );
           return (
             <div
               key={key}
@@ -152,7 +151,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
                     <span className="font-medium" data-testid="stat-value">
                       {v}
                     </span>
-                    {raw && !same(v, raw) && (
+                    {raw && (
                       <span
                         className="text-label text-muted-foreground"
                         data-testid="stat-raw"

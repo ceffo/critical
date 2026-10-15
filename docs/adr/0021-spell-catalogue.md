@@ -270,9 +270,12 @@ book's text is shipped, as for names and descriptions, and the UI keeps no rules
   (`TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback`).
 - **UI.** The lookup's stat grid and the components of its meta line show the French text in the
   French UI; a stat without one shows the English text, with the common English values labelled
-  in French as before (`lookup.values`: Touch, None, Instantaneous…) (`statText`,
-  `componentsText` in `web/src/lib/lookupLabels.ts`). The value computed at the caster level is
-  still worded by the client from the typed stats. Text is wrapped, never cut.
+  in French as before (`lookup.values`: Touch, None, Instantaneous…). The value computed at the
+  caster level is worded by the client from the typed stats, which are English ("1 creature"):
+  with a French text, a value that only repeats the English text (nothing depends on the level) is
+  not shown, so the line reads in French; a value that depends on the level ("210 yd") is shown
+  with the French text under it (`statText`, `statCell`, `componentsText` in
+  `web/src/lib/lookupLabels.ts`). Text is wrapped, never cut.
 - Tests: format 2 parse and format 1 upgrade `TestParse_ReadsFormat1`, refusals
   `TestParse_Step2_Refusals`; schema `TestSchema_Shape`; storage `TestImportCatalogue_FreshDatabase`,
   `TestImportCatalogue_Step4_NewVersionUpserts` (French stat added, dropped), typed stats from

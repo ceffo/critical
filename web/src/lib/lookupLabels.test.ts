@@ -8,6 +8,7 @@ import {
   sphereLabel,
   spheresLabel,
   componentsText,
+  statCell,
   statText,
   translateValue,
 } from "./lookupLabels";
@@ -282,5 +283,61 @@ describe("statText", () => {
     expect(statText(t, "en", mm, "range")).toBe("60 yds. + 10 yds./level");
     expect(statText(t, "en", mm, "duration")).toBe("Instantaneous");
     expect(componentsText("en", mm)).toBe("V, S");
+  });
+});
+
+describe("statCell", () => {
+  const spell = {
+    casting_time: "1",
+    range: "60 yds. + 10 yds./level",
+    duration: "Instantaneous",
+    area_of_effect: "1 creature",
+    components: "V, S",
+    saving_throw: "None",
+    range_fr: "60 pas + 10 pas/niveau",
+    area_of_effect_fr: "1 créature",
+    saving_throw_fr: "Aucun",
+  } as Spell;
+
+  it("drops a value that only repeats the English text when the French text is there", async () => {
+    const t = await tFor("fr");
+    expect(statCell(t, "fr", spell, "area", "1 creature")).toEqual({
+      value: null,
+      text: "1 créature",
+    });
+    // the save's value is its kinds, labelled: "Aucune" is the French label of "None"
+    expect(statCell(t, "fr", spell, "save", "Aucune")).toEqual({
+      value: null,
+      text: "Aucun",
+    });
+  });
+
+  it("keeps a value that depends on the level, the French text under it", async () => {
+    const t = await tFor("fr");
+    expect(statCell(t, "fr", spell, "range", "210 yd")).toEqual({
+      value: "210 yd",
+      text: "60 pas + 10 pas/niveau",
+    });
+  });
+
+  it("without a French text: the value, and the English text unless it says the same", async () => {
+    const t = await tFor("fr");
+    expect(statCell(t, "fr", spell, "castingTime", "1 seg")).toEqual({
+      value: "1 seg",
+      text: "1",
+    });
+    expect(statCell(t, "fr", spell, "duration", null)).toEqual({
+      value: null,
+      text: "Instantanée",
+    });
+    const en = await tFor("en");
+    expect(statCell(en, "en", spell, "area", "1 creature")).toEqual({
+      value: "1 creature",
+      text: "",
+    });
+    expect(statCell(en, "en", spell, "range", "210 yd")).toEqual({
+      value: "210 yd",
+      text: "60 yds. + 10 yds./level",
+    });
   });
 });

@@ -7,9 +7,11 @@ package combatsvc_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/stretchr/testify/assert"
@@ -158,4 +160,103 @@ func TestDamage_Step1_DiceByTargetSize(t *testing.T) {
 			assert.Equal(t, c.wantTotal, res.TotalDamage)
 		})
 	}
+}
+
+// The log payload keeps the damage dice as thrown (value per die), so an older
+// attack shows them after a reload; a miss deals none, and an AC correction
+// keeps the same dice without rolling again.
+func TestAttack_LogPayloadHoldsTheDamageDice(t *testing.T) {
+	cases := []struct {
+		name string
+		ac   int
+		want []any
+	}{
+		{"hit", 5, []any{map[string]any{"sides": float64(4), "value": float64(3)}, map[string]any{"sides": float64(4), "value": float64(2)}}},
+		{"miss", -10, nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			dice := &seqDice{t: t, want: []string{"d20", "d100", "d100", "d4", "d4"}, vals: []int{14, 61, 37, 3, 2}}
+			svc, err := combatsvc.New(combatsvc.Deps{
+				Chars: f.chars, Buffs: f.buffs, Dice: dice, Weapons: f.weapons, Crit: f.crit,
+				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
+			})
+			require.NoError(t, err)
+			f.weapons.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardSword, nil).Once()
+			f.withChar(bard())
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil).Once()
+			f.records()
+
+			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
+				WeaponID: "bastard_sword", TargetAC: new(c.ac), TargetSize: combatsvc.SizeSmallMedium,
+			})
+			require.NoError(t, err)
+			p := payloadOf(t, f.entries[0].Payload)
+			if c.want == nil {
+				assert.NotContains(t, p, "damageRolls")
+				assert.Empty(t, res.DamageRolls)
+			} else {
+				assert.Equal(t, c.want, p["damageRolls"])
+				assert.Equal(t, []combatsvc.DieRoll{{Sides: 4, Value: 3}, {Sides: 4, Value: 2}}, res.DamageRolls)
+			}
+			assert.Equal(t, []any{
+				map[string]any{"sides": float64(4), "value": float64(3)}, map[string]any{"sides": float64(4), "value": float64(2)},
+			}, p["rolled"].(map[string]any)["rolls"], "rolled damage keeps its dice even on a miss")
+		})
+	}
+}
+
+// A miss corrected to a hit (AC, then verdict) reads the damage dice rolled
+// with the attack: same values, no die drawn (the mocks expect each once).
+func TestAttack_CorrectionKeepsTheRolledDamageDice(t *testing.T) {
+	dice := []combatsvc.DieRoll{{Sides: 8, Value: 5}}
+	wantRolls := []any{map[string]any{"sides": float64(8), "value": float64(5)}}
+
+	t.Run("AC corrected from a miss to a hit", func(t *testing.T) {
+		f := newFixture(t)
+		// Long sword at STR 12: effective THAC0 11; AC 5 needs 6, d20 3 misses; AC 9 needs 2 and hits.
+		e := rollAttack(t, f, sword(5, 3, 50))
+		assert.NotContains(t, payloadOf(t, e.Payload), "damageRolls", "a miss shows no damage dice")
+		amends(f, e)
+
+		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 42, 9)
+		require.NoError(t, err)
+		require.True(t, res.Hit)
+		assert.Equal(t, dice, res.DamageRolls)
+		assert.Equal(t, wantRolls, payloadOf(t, e.EffectivePayload())["damageRolls"])
+	})
+
+	t.Run("verdict on an unknown AC", func(t *testing.T) {
+		f := newFixture(t)
+		e := rollAttack(t, f, unknownSword(3, 50, 64))
+		amends(f, e)
+
+		res, err := f.svc.SetAttackVerdict(context.Background(), charID, 42, true)
+		require.NoError(t, err)
+		require.True(t, res.Hit)
+		assert.Equal(t, dice, res.DamageRolls)
+		assert.Equal(t, wantRolls, payloadOf(t, e.EffectivePayload())["damageRolls"])
+		res, err = f.svc.SetAttackVerdict(context.Background(), charID, 42, false)
+		require.NoError(t, err)
+		assert.Empty(t, res.DamageRolls, "a miss verdict hides the dice again")
+	})
+
+	t.Run("entry logged before the dice were recorded", func(t *testing.T) {
+		f := newFixture(t)
+		// Rolled damage without per-die values: a correction decodes, recomputes
+		// from the total and records no dice.
+		e := &actionlog.Entry{ID: 42, Kind: actionlog.KindAttack, Summary: "x", Payload: json.RawMessage(
+			`{"d20Roll":3,"d100CritRoll":50,"d100MultiplierRoll":64,"hit":false,"effectiveThac0":11,"targetAc":5,` +
+				`"weaponName":"Long Sword +2","modifiers":[],"damageTerms":[],` +
+				`"rolled":{"dice":"1d8","total":5,"spellsBuff":1,"weaponBuff":2,"buffMultipliers":1,"strengthBonus":0,"bonusDamage":0,"terms":[]},` +
+				`"critRow":{"from":1,"to":100,"multiplier":1.5,"placeholder":false}}`)}
+		amends(f, e)
+		res, err := f.svc.AdjustAttackAC(context.Background(), charID, 42, 9)
+		require.NoError(t, err)
+		require.True(t, res.Hit)
+		assert.Equal(t, 5, res.BaseDamage)
+		assert.Empty(t, res.DamageRolls)
+		assert.NotContains(t, payloadOf(t, e.EffectivePayload()), "damageRolls")
+	})
 }

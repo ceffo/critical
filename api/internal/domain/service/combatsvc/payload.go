@@ -33,7 +33,10 @@ type attackRecord struct {
 	StrengthBonus  int          `json:"strengthBonus"`
 	BonusDamage    int          `json:"bonusDamage"`
 	DamageTerms    []termRecord `json:"damageTerms"`
-	TotalDamage    int          `json:"totalDamage"`
+	// DamageRolls are the damage dice as thrown (absent on attacks logged
+	// before they were recorded, and when the attack deals no damage).
+	DamageRolls []dieRecord `json:"damageRolls,omitempty"`
+	TotalDamage int         `json:"totalDamage"`
 	// UnroundedDamage is the formula result before the final floor (absent
 	// on attacks logged before it was recorded).
 	UnroundedDamage float64 `json:"unroundedDamage,omitempty"`
@@ -70,6 +73,30 @@ type rolledRecord struct {
 	StrengthBonus   int          `json:"strengthBonus"`
 	BonusDamage     int          `json:"bonusDamage"`
 	Terms           []termRecord `json:"terms"`
+	// Rolls are the dice thrown for Total, in order.
+	Rolls []dieRecord `json:"rolls,omitempty"`
+}
+
+// dieRecord is one die thrown: its sides and the value it showed.
+type dieRecord struct {
+	Sides int `json:"sides"`
+	Value int `json:"value"`
+}
+
+func toDieRecords(in []DieRoll) []dieRecord {
+	var out []dieRecord
+	for _, d := range in {
+		out = append(out, dieRecord(d))
+	}
+	return out
+}
+
+func fromDieRecords(in []dieRecord) []DieRoll {
+	var out []DieRoll
+	for _, d := range in {
+		out = append(out, DieRoll(d))
+	}
+	return out
 }
 
 // critRowRecord is the crit-table row of the multiplier d100 when rolling.
@@ -131,7 +158,7 @@ func toRecord(r *RollResult) attackRecord {
 		Hit: r.Hit, HitMargin: r.HitMargin,
 		BaseDamage: r.BaseDamage, DamageDice: r.DamageDice, SpellsBuff: r.SpellsBuff, WeaponBuff: r.WeaponBuff,
 		Multipliers: r.Multipliers, DiceMultiplier: r.DiceMultiplier, StrengthBonus: r.StrengthBonus, BonusDamage: r.BonusDamage,
-		DamageTerms: terms, TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
+		DamageTerms: terms, DamageRolls: toDieRecords(r.DamageRolls), TotalDamage: r.TotalDamage, UnroundedDamage: r.UnroundedDamage,
 		WeaponID: r.WeaponID, WeaponName: r.WeaponName, TargetSize: string(r.TargetSize),
 		ACKnown: &r.ACKnown, RolledACUnknown: r.RolledACUnknown, Verdict: string(r.Verdict),
 	}
@@ -146,7 +173,7 @@ func toRecord(r *RollResult) attackRecord {
 		out.Rolled = &rolledRecord{
 			Dice: d.Dice, Total: d.Total, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
 			BuffMultipliers: d.BuffMultipliers, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
-			Terms: toTermRecords(d.Terms),
+			Terms: toTermRecords(d.Terms), Rolls: toDieRecords(d.Rolls),
 		}
 	}
 	if c := r.RollCritRow; c != nil {
@@ -171,7 +198,7 @@ func (a attackRecord) result(entryID int64) *RollResult {
 		Hit: a.Hit, HitMargin: a.HitMargin,
 		BaseDamage: a.BaseDamage, DamageDice: a.DamageDice, SpellsBuff: a.SpellsBuff, WeaponBuff: a.WeaponBuff,
 		Multipliers: a.Multipliers, DiceMultiplier: a.DiceMultiplier, StrengthBonus: a.StrengthBonus, BonusDamage: a.BonusDamage,
-		DamageTerms: fromTermRecords(a.DamageTerms), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
+		DamageTerms: fromTermRecords(a.DamageTerms), DamageRolls: fromDieRecords(a.DamageRolls), TotalDamage: a.TotalDamage, UnroundedDamage: a.UnroundedDamage,
 		WeaponID: a.WeaponID, WeaponName: a.WeaponName, TargetSize: TargetSize(a.TargetSize),
 		ACKnown: a.ACKnown == nil || *a.ACKnown, RolledACUnknown: a.RolledACUnknown, Verdict: Verdict(a.Verdict),
 		RolledTargetAC: a.RolledTargetAC, RolledHit: a.RolledHit, RolledCrit: a.RolledCrit,
@@ -187,7 +214,7 @@ func (a attackRecord) result(entryID int64) *RollResult {
 		r.Rolled = &RolledDamage{
 			Dice: d.Dice, Total: d.Total, SpellsBuff: d.SpellsBuff, WeaponBuff: d.WeaponBuff,
 			BuffMultipliers: d.BuffMultipliers, StrengthBonus: d.StrengthBonus, BonusDamage: d.BonusDamage,
-			Terms: fromTermRecords(d.Terms),
+			Terms: fromTermRecords(d.Terms), Rolls: fromDieRecords(d.Rolls),
 		}
 	}
 	if c := a.CritRow; c != nil {

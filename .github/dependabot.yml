@@ -1,0 +1,38 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /api
+    schedule:
+      interval: weekly
+    groups:
+      go-minor-patch:
+        update-types: [minor, patch]
+        # bob (v0) minor bumps change the generated DAL: it gets its own PR,
+        # never grouped, never auto-merged (docs/backend.md, "Dependency bumps").
+        exclude-patterns:
+          - github.com/stephenafamo/bob*
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+
+  # Add the root Dockerfile as a second directory here when it lands.
+  - package-ecosystem: docker
+    directory: /api
+    schedule:
+      interval: weekly
+    groups:
+      docker-minor-patch:
+        update-types: [minor, patch]

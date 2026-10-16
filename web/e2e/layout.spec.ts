@@ -785,6 +785,11 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await page.getByRole("option", { name: FR_SPELL }).click();
     await expectNoClippedText(stage, `lookup, ${where}`);
     await expectWholeWords(stage, `lookup, ${where}`);
+    // A spell that adds a buff: the cast box's "Ajouter comme effet" (ADR 0004 step 19).
+    await page.getByRole("option", { name: "Image miroir" }).click();
+    await expect(stage.getByTestId("spell-add-effect")).toBeVisible();
+    await expectNoClippedText(stage, `lookup, effect, ${where}`);
+    await expectWholeWords(stage, `lookup, effect, ${where}`);
     await rail.nth(3).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);

@@ -65,7 +65,16 @@ describe("cast entry actions", () => {
   it("words an effect in French", async () => {
     const t = await makeT("fr");
     expect(entryText(castEntry(payload("effect")), t)).toMatch(
-      /^Strength ajouté comme effet \(niveau 15\)/,
+      /^Effet ajouté : Strength \(niveau 15\)/,
+    );
+    // The keys the cast box, the result heading and the refusal use (LookupPanel,
+    // CastResultView, the API error).
+    expect(t("lookup.addEffect")).toBe("Ajouter comme effet");
+    expect(
+      t("result.cast.effectHeading", { name: "Image miroir", casterLevel: 15 }),
+    ).toBe("Effet ajouté : Image miroir, niveau 15");
+    expect(t("apiError.spell_not_an_effect")).toBe(
+      "Ce sort n'ajoute aucun effet à suivre.",
     );
   });
 });

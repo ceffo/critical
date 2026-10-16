@@ -41,7 +41,7 @@ type SVC interface {
 	AddEffect(ctx context.Context, characterID int64, req AddEffectRequest) (CastResult, error)
 	// AddsEffect reports whether AddEffect takes spellID (false for a spell
 	// the effects catalogue does not know).
-	AddsEffect(ctx context.Context, spellID string) (bool, error)
+	AddsEffect(ctx context.Context, spellID string) bool
 	// DamageAt is the damage a cast of spellID rolls at casterLevel (1 to
 	// MaxCasterLevel), evaluated down to the dice left to roll; nil when a
 	// cast rolls none (no effect entry, not a damage spell, low confidence).

@@ -41,7 +41,7 @@ type characterGetter interface {
 // damageReader serves the damage a cast rolls at a caster level and whether
 // a spell can be added as an effect (castsvc satisfies it).
 type damageReader interface {
-	AddsEffect(ctx context.Context, spellID string) (bool, error)
+	AddsEffect(ctx context.Context, spellID string) bool
 	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
 	ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error)
 	ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error)
@@ -145,9 +145,7 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 		}
 		items := spellsToDTO(page.Items, level)
 		for i := range items {
-			if items[i].Effect, err = damage.AddsEffect(r.Context(), items[i].ID); err != nil {
-				return err
-			}
+			items[i].Effect = damage.AddsEffect(r.Context(), items[i].ID)
 		}
 		// An explicit caster_level is bounded above; the character's level
 		// is not, and a level the formulas are not checked at gets no damage

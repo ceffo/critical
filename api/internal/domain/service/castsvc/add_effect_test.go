@@ -137,9 +137,7 @@ func TestBuffs_Step19_AddAsEffectRefusals(t *testing.T) {
 			assert.Empty(t, f.added, "no buff")
 			assert.Empty(t, f.entries, "nothing logged")
 			assert.Zero(t, f.tx.calls, "refused before the transaction")
-			ok, err := f.svc.AddsEffect(context.Background(), tt.spellID)
-			require.NoError(t, err)
-			assert.False(t, ok, "not offered")
+			assert.False(t, f.svc.AddsEffect(context.Background(), tt.spellID), "not offered")
 		})
 	}
 }
@@ -151,8 +149,7 @@ func TestBuffs_Step19_FlagMatchesTheAction(t *testing.T) {
 	offered := 0
 	for _, e := range catalog(t).All() {
 		f := newFixture(t, ones(20)...)
-		ok, err := f.svc.AddsEffect(context.Background(), e.ID)
-		require.NoError(t, err)
+		ok := f.svc.AddsEffect(context.Background(), e.ID)
 		res, err := f.svc.AddEffect(context.Background(), charID, castsvc.AddEffectRequest{SpellID: e.ID})
 		if !ok {
 			require.ErrorIs(t, err, spelleffectsvc.ErrNotAnEffect, e.ID)

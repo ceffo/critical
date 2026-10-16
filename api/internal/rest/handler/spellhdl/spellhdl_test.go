@@ -66,8 +66,8 @@ func (f fakeChars) GetCharacter(context.Context, int64) (*charactersvc.Character
 type fakeDamage struct{ levels *[]int }
 
 // AddsEffect: only "strength" adds a buff.
-func (f fakeDamage) AddsEffect(_ context.Context, id string) (bool, error) {
-	return id == "strength", nil
+func (f fakeDamage) AddsEffect(_ context.Context, id string) bool {
+	return id == "strength"
 }
 
 func (f fakeDamage) ModesAt(_ context.Context, id string, level int) ([]spelleffectsvc.ModeAt, error) {

@@ -180,9 +180,9 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 
 // AddsEffect reports whether AddEffect takes spellID: its effect entry adds
 // a buff (ADR 0004 step 19).
-func (s *service) AddsEffect(_ context.Context, spellID string) (bool, error) {
+func (s *service) AddsEffect(_ context.Context, spellID string) bool {
 	e, ok := s.Effects.Get(spellID)
-	return ok && e.AddsBuff(), nil
+	return ok && e.AddsBuff()
 }
 
 type effectReq struct {

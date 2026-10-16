@@ -165,7 +165,8 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     power field and sends none, an edit or create body's `powers` key is accepted and ignored (an
     item served back as is still decodes; any other unknown key stays refused), and a created item
     has none. An item is served with its powers, read only. A snapshot recorded before powers
-    existed has no `powers` key: popping it leaves the item's stored powers as they are.
+    existed has no `powers` key: popping it leaves the item's stored powers as they are, and an item
+    it puts back while it is gone comes back without powers (see Consequences).
     Tests: `domain/service/itemsvc` `TestItemPowers_Step15_SnapshotCarriesThePowers`,
     `TestItemPowers_Step15_EditBodyCannotSetPowers`, `TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers`;
     `rest/router` `TestItems_PowersInABodyAreIgnored`; `composition`
@@ -203,6 +204,14 @@ Tests live under `api/internal/` unless their path starts with `web/`.
   player dismisses it once (with the item's power on, its ×2 would multiply with the power's into
   ×4).
 - Powers have no editor fields; changing one is a data migration.
+- A snapshot from before step 16 has no powers, and with the item gone there are no stored powers to
+  keep: popping it puts the item back without its powers. Only a remove (by hand, or a use that
+  took a `charges` item to 0) recorded before migration 032 and popped after it does that, and
+  the gem is `daily`, so only a gem removed by hand before 032 could come back powerless. Restoring
+  from the seed instead would make the item service read the seed, which storage loads once into
+  an empty table, for entries that no database has: the live log holds no remove of the gem (its
+  entries are uses, long rests and one edit, all with the row present). Such an item gets its
+  powers back from a new data migration.
 - Not covered: weight and encumbrance, item costs, magic item identification, an item that raises
   Strength (a power has no Strength effect, step 9), triggers other than `min_str`, the Power Gem's
   other forms and the thunder hammer's stun.

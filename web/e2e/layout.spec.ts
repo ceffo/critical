@@ -326,6 +326,52 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
   }
 });
 
+// ADR 0016 step 13 and ADR 0022 step 1: an item power that is on (the Power Gem's hammer at STR 18)
+// is a row of the effects header; its name, its effects and its bar caption are shown whole, never
+// cut, at the smallest and the largest layout viewport.
+test.describe("with the sheet's STR 12", () => {
+  test.use({ character: { str: 12 } });
+
+  test("item power row: name, effects and bar caption uncut, 1280 to 2560", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openDashboard(page);
+    await addBuff(page, {
+      name: "e2e Strength",
+      rounds: 6,
+      effects: [
+        ["str_bonus", 6],
+        ["str_max", 18],
+      ],
+    });
+    const header = page.locator("[data-screen=turn-header]");
+    const hammer = page.locator(
+      '[data-testid="item-power"][data-item="power_gem_dispel"]',
+    );
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const size = `${vp.width}x${vp.height}`;
+      await expect(hammer).toContainText("Power Gem");
+      await expectOnScreen(
+        page,
+        hammer.getByTestId("power-effects"),
+        `power effects, ${size}`,
+      );
+      const caption = hammer
+        .getByTestId("effect-bar")
+        .getByText("while STR ≥ 18");
+      await expectOnScreen(page, caption, `power bar caption, ${size}`);
+      await expectNoClippedText(header, `header with the power, ${size}`);
+      await expectWholeWords(header, `header with the power, ${size}`);
+      await snap(page, `power-row-${size}`);
+    }
+  });
+});
+
 // ADR 0022 step 5.4: the handle between the now band and the journal resizes the journal by drag
 // (mouse) and arrows (keyboard); Collapse folds it into a one-line bar; both are kept per device
 // across a reload. What only a browser proves: pointer drag, layout heights and localStorage.

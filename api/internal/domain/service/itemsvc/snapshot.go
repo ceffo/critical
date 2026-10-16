@@ -78,7 +78,8 @@ func (c snapCount) item() Item {
 
 // keepPowers is the item a Replace snapshot writes back: when the snapshot
 // predates powers (no "powers" key), the item keeps the powers it has now,
-// so popping an old edit never strips the ones a migration gave it.
+// so popping an old edit never strips the ones a migration gave it. An item
+// that is gone has none to keep (ADR 0016 Consequences).
 func (s *service) keepPowers(ctx context.Context, c snapCount) (Item, error) {
 	item := c.item()
 	if c.Item.Powers != nil {
@@ -183,6 +184,10 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 						err = s.dal.Insert(ctx, item)
 					}
 				default:
+					// The item is inserted only when it is gone, so there
+					// are no stored powers to keep: a snapshot from before
+					// powers brings it back without them (ADR 0016
+					// Consequences).
 					err = s.dal.SetCount(ctx, c.ID, c.Count)
 					if errors.Is(err, ErrItemNotFound) && c.Item != nil {
 						err = s.dal.Insert(ctx, c.item())

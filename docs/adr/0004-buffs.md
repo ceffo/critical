@@ -2,12 +2,14 @@
 
 **Status**: accepted, 2026-10-15 (critical-qki.36; collects the buff rules shipped in
 critical-qki.8, critical-qki.20, critical-qki.29 and critical-qki.33, until then in
-`docs/backend.md` "Buff rules")
+`docs/backend.md` "Buff rules"); steps 10 and 11 and the Consequences amended and step 18 added
+2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
 
 ## Context
 
 A buff is an active effect on the character: a spell received or cast (Strength, Stoneskin, Mirror
-Image), a Power Gem form, or something the player enters by hand. Its lifetime, its effect on
+Image), or something the player enters by hand. An item's own powers (the Power Gem's) are not buffs:
+they join the same aggregate ([ADR 0016](0016-inventory.md) steps 9 to 16). Its lifetime, its effect on
 Strength and the way several buffs combine feed the attack ([ADR 0002](0002-attack-resolution.md)),
 the damage ([ADR 0003](0003-damage.md)) and the saves. Strength magic needs particular care:
 the PHB lets Strength stack with itself but caps it at 18, and Improved Strength goes higher.
@@ -78,17 +80,20 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
    ("never lowers a score above 18"), `TestGetEffectiveStr`; `TestActiveBuffs_IgnoresRemovedStrSet` (the ignored
    stored key, `api/internal/adapters/buffdal/`).
 10. **Gate.** A buff's other effects apply while the effective STR is at least its `min_str`
-    (no `min_str`: always). The Power Gem forms set `min_str` 18: +5 and ×2 at effective STR 18 **or
-    more** (19 to 23 with Improved Strength included), off at 17. User, 2026-10-13: "not exactly
-    18 >= 18". A gated buff stays on the list and shows as not applying.
+    (no `min_str`: always): with `min_str` 18, at effective STR 18 **or more** (19 to 23 with
+    Improved Strength included), off at 17. User, 2026-10-13: "not exactly 18 >= 18". A gated buff
+    stays on the list and shows as not applying ("needs STR N"). The Power Gem is no longer a gated
+    buff: its thunder hammer is an item power whose `min_str` is a trigger (ADR 0016 steps 10 and
+    16); the gate stays for hand-made buffs.
     Tests: `TestStrength_Step10_PowerGemFrom18Up`, `TestAggregate` ("MinStr gates the buff when
     STR is too low", "MinStr met exactly applies", "to-hit and damage are gated…", the Power Gem
     cases), `TestListStatus`, `TestEffectiveStr_StrengthStacksThenImprovedReplacesIt`.
 11. **Combining effects.** Of the buffs that apply: `spells_buff` and `multiplier` factors
     multiply (1 without any); `to_hit`, `damage`, `save_bonus` and `ac` add; a `weapon_buff`
     ("the weapon becomes +N") does not add up, the highest N wins. Each contribution is listed
-    with its buff's name for the breakdowns. How the attack and the damage use them is ADR 0002
-    and ADR 0003.
+    with its buff's name for the breakdowns. The carried items' powers that are on join the same
+    totals by the same rules, each contribution named by its item (ADR 0016 steps 11 and 14). How
+    the attack and the damage use them is ADR 0002 and ADR 0003.
     Tests: `TestAggregate` ("no buffs gives neutral modifiers", "multipliers stack
     multiplicatively, flat bonuses additively, weapon +N: best wins").
 12. **Saving throws.** A buff's `save_bonus` is one modifier per buff, labelled with the buff's
@@ -163,6 +168,18 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     `TestBuffs_SpellIDOnTheWire` (`router`); `TestMigrate028_BackfillsBuffSpellIDsWhereTheNameIsUnambiguous`,
     `TestMigrate028_NothingKeyedNothingChanges` (`api/internal/storage/sqlite/`); the client's
     `buffName` and log tests (`web/src/i18n/spellName.test.ts`, `web/src/lib/logSummary.test.ts`).
+18. **Weapon-kind condition.** A buff's effects, or an item power's (ADR 0016 step 12), may carry
+    a `weapon_kind` condition, `melee` or `missile` (the weapon kinds of ADR 0016 step 8). With one,
+    the effects count only for an attack, or its preview, made with a weapon of that kind; a hurled
+    weapon is `missile`; a save or a spell's to-hit has no weapon, so they never count there.
+    Without one they count for every roll, as before. The aggregate is asked for the weapon kind
+    of the roll it serves (none for a save or a spell's to-hit). It is generic: no buff or item is
+    special-cased. It does not change whether a buff applies on the list (step 10) nor whether a
+    power is on (ADR 0016 step 10). A buff takes it in the API and in saved templates; the buff form
+    has no field for it yet. Planned tests (named without their `Test` prefix until they exist):
+    `Buffs_Step18_WeaponKindFiltersTheEffects` (melee-only effects count for a melee attack,
+    not for a missile one, a save or a spell to-hit; without the condition: everywhere),
+    `Buffs_Step18_RejectsAnUnknownWeaponKind`.
 
 ## Consequences
 
@@ -171,7 +188,8 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
 - Strength bonuses that Improved Strength replaces are not removed: if the Improved Strength
   expires or is dismissed, they count again.
 - Exceptional Strength (18/xx) is not modelled: PHB, warriors only; Kelsen is a Bard.
-- The Power Gem forms are buffs like the others (a `min_str` gate, `weapon_buff` and `multiplier`
-  effects); the daily gem item that activates them is inventory, not covered here.
+- The Power Gem is an item, not a buff: its daily Dispel Magic and its thunder hammer (`min_str`
+  18 trigger, melee only, +5 and ×2) are [ADR 0016](0016-inventory.md) steps 9 to 16. Its powers
+  join the aggregate of step 11; they are never on the buff list.
 - Not covered: how long a received spell lasts (the caster's level and the spell table give the
   rounds at cast time), resistances, dispelling.

@@ -3,9 +3,10 @@
 // no database, no SQL text (ADR 0025 step 6.2). The mock fails on any call a
 // test does not expect, so a write test also proves the log is append-only:
 // no other statement than the inserts it names. What only the SQL decides
-// (the HP sum over the corrections, which entries are popped, the newest-first
-// order, the rollback of a transaction) is checked by sqlc at generate time
-// and by running the app (step 7); the services' flows on mocked DALs.
+// (the HP sum over the corrections, the newest-first order, the rollback of
+// a transaction) is checked by sqlc at generate time and by running the app
+// (step 7); the services' flows on mocked DALs. Which entries are popped is
+// the domain's rule (actionlog.StandingVoids), applied here.
 package actionlogdal_test
 
 import (
@@ -296,16 +297,6 @@ func TestListEntries(t *testing.T) {
 		assert.Equal(t, -8, got[1].HPDelta, "the original stays visible")
 		assert.Equal(t, -6, got[1].EffectiveHPDelta())
 	})
-	t.Run("active of a kind", func(t *testing.T) {
-		dal, q := mocked(t)
-		q.EXPECT().ListActiveActionsByKind(ctx, queries.ListActiveActionsByKindParams{CharacterID: charID, Kind: "hp_change", Limit: 4}).
-			Return([]queries.ListActiveActionsByKindRow{queries.ListActiveActionsByKindRow(older)}, nil).Once()
-		expectAttach(q, 2, nil, nil)
-		got, err := dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 4)
-		require.NoError(t, err)
-		require.Len(t, got, 1)
-		assert.Equal(t, int64(2), got[0].ID)
-	})
 	t.Run("one transaction", func(t *testing.T) {
 		dal, q := mocked(t)
 		q.EXPECT().ListTransactionActions(ctx, queries.ListTransactionActionsParams{CharacterID: charID, TransactionID: some(2)}).
@@ -328,10 +319,6 @@ func TestListEntries(t *testing.T) {
 		_, err := dal.ListEntries(ctx, charID, 10)
 		require.ErrorIs(t, err, errBoom)
 
-		q.EXPECT().ListActiveActionsByKind(ctx, mock.Anything).Return(nil, errBoom).Once()
-		_, err = dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 1)
-		require.ErrorIs(t, err, errBoom)
-
 		q.EXPECT().ListTransactionActions(ctx, mock.Anything).Return(nil, errBoom).Once()
 		_, err = dal.ListTransaction(ctx, charID, 2)
 		require.ErrorIs(t, err, errBoom)
@@ -349,39 +336,164 @@ func TestListEntries(t *testing.T) {
 	})
 }
 
-// The stack lookups: no row means none (ok false, no error); a popped entry
-// without a transaction id is its own transaction (ADR 0019 step 2).
-func TestLatestLookups(t *testing.T) {
+func pop(id, actionID int64, kind string) queries.ListPopCorrectionsRow {
+	return queries.ListPopCorrectionsRow{ID: id, ActionID: actionID, Kind: kind}
+}
+
+// expectPops expects the read of the character's voids and redos.
+func expectPops(q *mocks.MockQuerier, pops ...queries.ListPopCorrectionsRow) {
+	q.EXPECT().ListPopCorrections(mock.Anything, charID).Return(pops, nil).Once()
+}
+
+// ADR 0019 step 1 for the active entries of a kind: an entry whose newest
+// void or redo is a void is skipped, a redone one is kept. At most one row
+// per popped entry is skipped, so the adapter asks for limit plus that many
+// and keeps limit.
+func TestListActiveEntries_SkipsThePoppedEntries(t *testing.T) {
 	ctx := context.Background()
-	dal, q := mocked(t)
+	kindRow := func(id int64) queries.ListActionsByKindRow {
+		return queries.ListActionsByKindRow(row(id, actionlog.KindHPChange, -1, "{}"))
+	}
+	ids := func(es []actionlog.Entry) []int64 {
+		out := []int64{}
+		for _, e := range es {
+			out = append(out, e.ID)
+		}
+		return out
+	}
 
-	q.EXPECT().LatestActiveActionID(ctx, charID).Return(int64(12), nil).Once()
-	id, ok, err := dal.LatestActiveID(ctx, charID)
-	require.NoError(t, err)
-	assert.Equal(t, []any{int64(12), true}, []any{id, ok})
-	q.EXPECT().LatestActiveActionID(ctx, charID).Return(0, sql.ErrNoRows).Once()
-	_, ok, err = dal.LatestActiveID(ctx, charID)
-	require.NoError(t, err)
-	assert.False(t, ok)
-	q.EXPECT().LatestActiveActionID(ctx, charID).Return(0, errBoom).Once()
-	_, _, err = dal.LatestActiveID(ctx, charID)
-	require.ErrorIs(t, err, errBoom)
+	t.Run("popped skipped, redone kept", func(t *testing.T) {
+		dal, q := mocked(t)
+		expectPops(q, pop(8, 5, "void"), pop(9, 6, "void"), pop(10, 6, "redo"))
+		q.EXPECT().ListActionsByKind(ctx, queries.ListActionsByKindParams{CharacterID: charID, Kind: "hp_change", Limit: 3}).
+			Return([]queries.ListActionsByKindRow{kindRow(6), kindRow(5), kindRow(2)}, nil).Once()
+		expectAttach(q, 2, nil, nil)
+		got, err := dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 2)
+		require.NoError(t, err)
+		assert.Equal(t, []int64{6, 2}, ids(got))
+	})
+	t.Run("nothing popped: limit rows, limit kept", func(t *testing.T) {
+		dal, q := mocked(t)
+		expectPops(q)
+		q.EXPECT().ListActionsByKind(ctx, queries.ListActionsByKindParams{CharacterID: charID, Kind: "hp_change", Limit: 2}).
+			Return([]queries.ListActionsByKindRow{kindRow(6), kindRow(5)}, nil).Once()
+		expectAttach(q, 5, nil, nil)
+		got, err := dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 2)
+		require.NoError(t, err)
+		assert.Equal(t, []int64{6, 5}, ids(got))
+	})
+	t.Run("popped entry of another kind: one row too many read, limit kept", func(t *testing.T) {
+		dal, q := mocked(t)
+		expectPops(q, pop(8, 7, "void"))
+		q.EXPECT().ListActionsByKind(ctx, queries.ListActionsByKindParams{CharacterID: charID, Kind: "hp_change", Limit: 2}).
+			Return([]queries.ListActionsByKindRow{kindRow(6), kindRow(5)}, nil).Once()
+		expectAttach(q, 6, nil, nil)
+		got, err := dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 1)
+		require.NoError(t, err)
+		assert.Equal(t, []int64{6}, ids(got))
+	})
+	t.Run("errors", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListPopCorrections(ctx, charID).Return(nil, errBoom).Once()
+		_, err := dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 1)
+		require.ErrorIs(t, err, errBoom)
 
-	q.EXPECT().LatestPoppedAction(ctx, charID).Return(queries.LatestPoppedActionRow{ID: 11, TransactionID: some(10)}, nil).Once()
-	id, tx, ok, err := dal.LatestPopped(ctx, charID)
-	require.NoError(t, err)
-	assert.Equal(t, []any{int64(11), int64(10), true}, []any{id, tx, ok})
-	q.EXPECT().LatestPoppedAction(ctx, charID).Return(queries.LatestPoppedActionRow{ID: 4}, nil).Once()
-	id, tx, ok, err = dal.LatestPopped(ctx, charID)
-	require.NoError(t, err)
-	assert.Equal(t, []any{int64(4), int64(4), true}, []any{id, tx, ok})
-	q.EXPECT().LatestPoppedAction(ctx, charID).Return(queries.LatestPoppedActionRow{}, sql.ErrNoRows).Once()
-	_, _, ok, err = dal.LatestPopped(ctx, charID)
-	require.NoError(t, err)
-	assert.False(t, ok)
-	q.EXPECT().LatestPoppedAction(ctx, charID).Return(queries.LatestPoppedActionRow{}, errBoom).Once()
-	_, _, _, err = dal.LatestPopped(ctx, charID)
-	require.ErrorIs(t, err, errBoom)
+		expectPops(q)
+		q.EXPECT().ListActionsByKind(ctx, mock.Anything).Return(nil, errBoom).Once()
+		_, err = dal.ListActiveEntries(ctx, charID, actionlog.KindHPChange, 1)
+		require.ErrorIs(t, err, errBoom)
+	})
+}
+
+// ADR 0018 step 3, ADR 0019 step 1: the top of the stack is the newest entry
+// not popped, any kind; a redone entry is on the stack again. Among the
+// newest (popped + 1) ids one is not popped when the log has one.
+func TestLatestActiveID_NewestEntryNotPopped(t *testing.T) {
+	ctx := context.Background()
+	idsParams := func(limit int64) queries.ListActionIDsParams {
+		return queries.ListActionIDsParams{CharacterID: charID, Limit: limit}
+	}
+	cases := []struct {
+		name  string
+		pops  []queries.ListPopCorrectionsRow
+		limit int64
+		ids   []int64
+		want  int64
+		found bool
+	}{
+		{"empty log", nil, 1, []int64{}, 0, false},
+		{"top not popped", nil, 1, []int64{12}, 12, true},
+		{"popped top skipped", []queries.ListPopCorrectionsRow{pop(20, 12, "void"), pop(21, 11, "void")}, 3, []int64{12, 11, 9}, 9, true},
+		{"redone top is the top again", []queries.ListPopCorrectionsRow{pop(20, 12, "void"), pop(21, 12, "redo")}, 1, []int64{12}, 12, true},
+		{"every entry popped", []queries.ListPopCorrectionsRow{pop(20, 12, "void"), pop(21, 11, "void")}, 3, []int64{12, 11}, 0, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dal, q := mocked(t)
+			expectPops(q, c.pops...)
+			q.EXPECT().ListActionIDs(ctx, idsParams(c.limit)).Return(c.ids, nil).Once()
+			id, ok, err := dal.LatestActiveID(ctx, charID)
+			require.NoError(t, err)
+			assert.Equal(t, []any{c.want, c.found}, []any{id, ok})
+		})
+	}
+	t.Run("errors", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListPopCorrections(ctx, charID).Return(nil, errBoom).Once()
+		_, _, err := dal.LatestActiveID(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+
+		expectPops(q)
+		q.EXPECT().ListActionIDs(ctx, idsParams(1)).Return(nil, errBoom).Once()
+		_, _, err = dal.LatestActiveID(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+	})
+}
+
+// ADR 0019 step 2: the redo target is the entry whose standing void is the
+// newest, read back for its transaction; an entry without a transaction id
+// is its own transaction; nothing popped reads nothing more.
+func TestLatestPopped_EntryOfTheNewestStandingVoid(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("newest standing void", func(t *testing.T) {
+		dal, q := mocked(t)
+		expectPops(q, pop(15, 9, "void"), pop(20, 7, "void"), pop(21, 8, "void"), pop(22, 8, "redo"))
+		r := row(7, actionlog.KindHPChange, 0, "{}")
+		r.TransactionID = some(6)
+		q.EXPECT().GetAction(ctx, queries.GetActionParams{CharacterID: charID, ID: 7}).Return(r, nil).Once()
+		id, tx, ok, err := dal.LatestPopped(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, []any{int64(7), int64(6), true}, []any{id, tx, ok})
+	})
+	t.Run("own transaction", func(t *testing.T) {
+		dal, q := mocked(t)
+		expectPops(q, pop(15, 4, "void"))
+		r := row(4, actionlog.KindHPChange, 0, "{}")
+		r.TransactionID = sql.NullInt64{}
+		q.EXPECT().GetAction(ctx, queries.GetActionParams{CharacterID: charID, ID: 4}).Return(r, nil).Once()
+		id, tx, ok, err := dal.LatestPopped(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, []any{int64(4), int64(4), true}, []any{id, tx, ok})
+	})
+	t.Run("nothing popped", func(t *testing.T) {
+		dal, q := mocked(t)
+		expectPops(q, pop(15, 4, "void"), pop(16, 4, "redo"))
+		_, _, ok, err := dal.LatestPopped(ctx, charID)
+		require.NoError(t, err)
+		assert.False(t, ok)
+	})
+	t.Run("errors", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListPopCorrections(ctx, charID).Return(nil, errBoom).Once()
+		_, _, _, err := dal.LatestPopped(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+
+		expectPops(q, pop(15, 4, "void"))
+		q.EXPECT().GetAction(ctx, mock.Anything).Return(queries.GetActionRow{}, errBoom).Once()
+		_, _, _, err = dal.LatestPopped(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+	})
 }
 
 // LatestID asks for the newest entry of the kind, voided or not, so an older

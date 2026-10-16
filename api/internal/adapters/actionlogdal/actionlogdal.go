@@ -145,17 +145,26 @@ func (d *DAL) ListTransaction(ctx context.Context, characterID, transactionID in
 	return entries, nil
 }
 
-// ListActiveEntries returns the newest limit non-voided entries of kind.
+// ListActiveEntries returns the newest limit non-voided entries of kind. At
+// most len(popped) of the newest rows of kind are popped, so reading
+// limit+len(popped) of them is enough to keep limit (ADR 0019 step 1 decides
+// which, in Go).
 func (d *DAL) ListActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error) {
-	rows, err := d.q.ListActiveActionsByKind(ctx, queries.ListActiveActionsByKindParams{
-		CharacterID: characterID, Kind: string(kind), Limit: int64(limit),
+	popped, err := d.standingVoids(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := d.q.ListActionsByKind(ctx, queries.ListActionsByKindParams{
+		CharacterID: characterID, Kind: string(kind), Limit: int64(limit + len(popped)),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("list active action_log: %w", err)
+		return nil, fmt.Errorf("list action_log of kind %s: %w", kind, err)
 	}
-	entries := make([]actionlog.Entry, len(rows))
-	for i, r := range rows {
-		entries[i] = toEntry(queries.GetActionRow(r))
+	entries := make([]actionlog.Entry, 0, min(limit, len(rows)))
+	for _, r := range rows {
+		if _, gone := popped[r.ID]; !gone && len(entries) < limit {
+			entries = append(entries, toEntry(queries.GetActionRow(r)))
+		}
 	}
 	if err := d.attach(ctx, characterID, entries); err != nil {
 		return nil, err
@@ -164,30 +173,56 @@ func (d *DAL) ListActiveEntries(ctx context.Context, characterID int64, kind act
 }
 
 // LatestActiveID returns the newest non-voided entry, any kind (the top of
-// the stack).
+// the stack). Among the newest len(popped)+1 entries one at least is not
+// popped, when the log has one.
 func (d *DAL) LatestActiveID(ctx context.Context, characterID int64) (int64, bool, error) {
-	id, err := d.q.LatestActiveActionID(ctx, characterID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return 0, false, nil
+	popped, err := d.standingVoids(ctx, characterID)
+	if err != nil {
+		return 0, false, err
 	}
+	ids, err := d.q.ListActionIDs(ctx, queries.ListActionIDsParams{CharacterID: characterID, Limit: int64(len(popped) + 1)})
 	if err != nil {
 		return 0, false, fmt.Errorf("latest action_log: %w", err)
 	}
-	return id, true, nil
+	for _, id := range ids {
+		if _, gone := popped[id]; !gone {
+			return id, true, nil
+		}
+	}
+	return 0, false, nil
 }
 
 // LatestPopped returns the entry whose standing void is the newest (popped
 // last and not redone since) and its transaction; ok is false when no entry
 // is popped (ADR 0019 step 2).
 func (d *DAL) LatestPopped(ctx context.Context, characterID int64) (id, transactionID int64, ok bool, err error) {
-	row, err := d.q.LatestPoppedAction(ctx, characterID)
-	if errors.Is(err, sql.ErrNoRows) {
+	popped, err := d.standingVoids(ctx, characterID)
+	if err != nil {
+		return 0, 0, false, err
+	}
+	id, ok = actionlog.LatestPopped(popped)
+	if !ok {
 		return 0, 0, false, nil
 	}
+	row, err := d.q.GetAction(ctx, queries.GetActionParams{CharacterID: characterID, ID: id})
 	if err != nil {
-		return 0, 0, false, fmt.Errorf("latest popped action_log: %w", err)
+		return 0, 0, false, fmt.Errorf("latest popped action_log %d: %w", id, err)
 	}
-	return row.ID, ownTransaction(row.ID, row.TransactionID), true, nil
+	return id, ownTransaction(row.ID, row.TransactionID), true, nil
+}
+
+// standingVoids reads the character's voids and redos and maps every popped
+// entry to its standing void (actionlog.StandingVoids, ADR 0019 step 1).
+func (d *DAL) standingVoids(ctx context.Context, characterID int64) (map[int64]int64, error) {
+	rows, err := d.q.ListPopCorrections(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("list action_corrections voids: %w", err)
+	}
+	cs := make([]actionlog.Correction, len(rows))
+	for i, r := range rows {
+		cs[i] = actionlog.Correction{ID: r.ID, ActionID: r.ActionID, Kind: actionlog.CorrectionKind(r.Kind)}
+	}
+	return actionlog.StandingVoids(cs), nil
 }
 
 // LatestID returns the newest entry of kind, voided or not.
@@ -242,17 +277,14 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 		return fmt.Errorf("list action_corrections: %w", err)
 	}
 	// A correction step is newer than the entry it corrects, so its voids
-	// and redos are among the corrections listed from minID, in id order: the
-	// newest one says whether the step is popped (ADR 0019 step 1).
-	voided := map[int64]bool{}
-	for _, c := range corrs {
-		switch actionlog.CorrectionKind(c.Kind) {
-		case actionlog.CorrectionVoid:
-			voided[c.ActionID] = true
-		case actionlog.CorrectionRedo:
-			voided[c.ActionID] = false
-		}
+	// and redos are among the corrections listed from minID: the newest one
+	// says whether the step is popped (actionlog.StandingVoids, ADR 0019
+	// step 1).
+	all := make([]actionlog.Correction, len(corrs))
+	for i, c := range corrs {
+		all[i] = actionlog.Correction{ID: c.ID, ActionID: c.ActionID, Kind: actionlog.CorrectionKind(c.Kind)}
 	}
+	popped := actionlog.StandingVoids(all)
 	for _, c := range corrs {
 		e, ok := byID[c.ActionID]
 		if !ok {
@@ -275,14 +307,15 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 		}
 		if c.StepID.Valid {
 			step := c.StepID.Int64
-			corr.StepID, corr.StepUndone = &step, voided[step]
+			_, undone := popped[step]
+			corr.StepID, corr.StepUndone = &step, undone
 		}
 		e.Corrections = append(e.Corrections, corr)
 	}
 	return nil
 }
 
-// toEntry maps an action_log row. ListActionsRow, ListActiveActionsByKindRow
+// toEntry maps an action_log row. ListActionsRow, ListActionsByKindRow
 // and ListTransactionActionsRow have the fields of GetActionRow and convert
 // to it.
 func toEntry(f queries.GetActionRow) actionlog.Entry {

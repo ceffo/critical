@@ -186,50 +186,40 @@ func (q *Queries) LatestActionID(ctx context.Context, arg LatestActionIDParams) 
 	return id, err
 }
 
-const latestActiveActionID = `-- name: LatestActiveActionID :one
-SELECT action_log.id
+const listActionIDs = `-- name: ListActionIDs :many
+SELECT id
 FROM action_log
-WHERE action_log.character_id = ?
-  AND NOT EXISTS (
-    SELECT 1 FROM action_corrections v
-    WHERE v.action_id = action_log.id AND v.kind = 'void'
-      AND NOT EXISTS (
-        SELECT 1 FROM action_corrections r WHERE r.action_id = v.action_id AND r.kind = 'redo' AND r.id > v.id
-      )
-  )
-ORDER BY action_log.id DESC
-LIMIT 1
+WHERE character_id = ?
+ORDER BY id DESC
+LIMIT ?
 `
 
-func (q *Queries) LatestActiveActionID(ctx context.Context, characterID int64) (int64, error) {
-	row := q.db.QueryRowContext(ctx, latestActiveActionID, characterID)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+type ListActionIDsParams struct {
+	CharacterID int64
+	Limit       int64
 }
 
-const latestPoppedAction = `-- name: LatestPoppedAction :one
-SELECT action_log.id, action_log.transaction_id
-FROM action_corrections v
-JOIN action_log ON action_log.id = v.action_id
-WHERE action_log.character_id = ? AND v.kind = 'void'
-  AND NOT EXISTS (
-    SELECT 1 FROM action_corrections r WHERE r.action_id = v.action_id AND r.kind = 'redo' AND r.id > v.id
-  )
-ORDER BY v.id DESC
-LIMIT 1
-`
-
-type LatestPoppedActionRow struct {
-	ID            int64
-	TransactionID sql.NullInt64
-}
-
-func (q *Queries) LatestPoppedAction(ctx context.Context, characterID int64) (LatestPoppedActionRow, error) {
-	row := q.db.QueryRowContext(ctx, latestPoppedAction, characterID)
-	var i LatestPoppedActionRow
-	err := row.Scan(&i.ID, &i.TransactionID)
-	return i, err
+func (q *Queries) ListActionIDs(ctx context.Context, arg ListActionIDsParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, listActionIDs, arg.CharacterID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listActions = `-- name: ListActions :many
@@ -290,30 +280,22 @@ func (q *Queries) ListActions(ctx context.Context, arg ListActionsParams) ([]Lis
 	return items, nil
 }
 
-const listActiveActionsByKind = `-- name: ListActiveActionsByKind :many
+const listActionsByKind = `-- name: ListActionsByKind :many
 
-SELECT action_log.id, action_log.character_id, action_log.round, action_log.kind, action_log.summary,
-       action_log.hp_delta, action_log.payload, action_log.transaction_id, action_log.created_at
+SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE action_log.character_id = ? AND action_log.kind = ?
-  AND NOT EXISTS (
-    SELECT 1 FROM action_corrections v
-    WHERE v.action_id = action_log.id AND v.kind = 'void'
-      AND NOT EXISTS (
-        SELECT 1 FROM action_corrections r WHERE r.action_id = v.action_id AND r.kind = 'redo' AND r.id > v.id
-      )
-  )
-ORDER BY action_log.id DESC
+WHERE character_id = ? AND kind = ?
+ORDER BY id DESC
 LIMIT ?
 `
 
-type ListActiveActionsByKindParams struct {
+type ListActionsByKindParams struct {
 	CharacterID int64
 	Kind        string
 	Limit       int64
 }
 
-type ListActiveActionsByKindRow struct {
+type ListActionsByKindRow struct {
 	ID            int64
 	CharacterID   int64
 	Round         int64
@@ -325,17 +307,18 @@ type ListActiveActionsByKindRow struct {
 	CreatedAt     time.Time
 }
 
-// An entry is popped when it has a void with no redo after it (ADR 0019
-// step 1: the newest void or redo decides).
-func (q *Queries) ListActiveActionsByKind(ctx context.Context, arg ListActiveActionsByKindParams) ([]ListActiveActionsByKindRow, error) {
-	rows, err := q.db.QueryContext(ctx, listActiveActionsByKind, arg.CharacterID, arg.Kind, arg.Limit)
+// Which entries are popped is decided in Go (actionlog.StandingVoids, ADR
+// 0019 step 1) from ListPopCorrections; the queries below read the newest
+// rows, as many as the adapter needs to skip the popped ones.
+func (q *Queries) ListActionsByKind(ctx context.Context, arg ListActionsByKindParams) ([]ListActionsByKindRow, error) {
+	rows, err := q.db.QueryContext(ctx, listActionsByKind, arg.CharacterID, arg.Kind, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListActiveActionsByKindRow{}
+	items := []ListActionsByKindRow{}
 	for rows.Next() {
-		var i ListActiveActionsByKindRow
+		var i ListActionsByKindRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CharacterID,
@@ -407,6 +390,43 @@ func (q *Queries) ListCorrectionsFrom(ctx context.Context, arg ListCorrectionsFr
 			&i.StepID,
 			&i.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPopCorrections = `-- name: ListPopCorrections :many
+SELECT action_corrections.id, action_corrections.action_id, action_corrections.kind
+FROM action_corrections
+JOIN action_log ON action_log.id = action_corrections.action_id
+WHERE action_log.character_id = ? AND action_corrections.kind IN ('void', 'redo')
+ORDER BY action_corrections.id
+`
+
+type ListPopCorrectionsRow struct {
+	ID       int64
+	ActionID int64
+	Kind     string
+}
+
+func (q *Queries) ListPopCorrections(ctx context.Context, characterID int64) ([]ListPopCorrectionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPopCorrections, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPopCorrectionsRow{}
+	for rows.Next() {
+		var i ListPopCorrectionsRow
+		if err := rows.Scan(&i.ID, &i.ActionID, &i.Kind); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

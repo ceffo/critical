@@ -344,27 +344,29 @@ func (_c *MockQuerier_LatestActionID_Call) RunAndReturn(run func(context.Context
 	return _c
 }
 
-// LatestActiveActionID provides a mock function with given fields: ctx, characterID
-func (_m *MockQuerier) LatestActiveActionID(ctx context.Context, characterID int64) (int64, error) {
-	ret := _m.Called(ctx, characterID)
+// ListActionIDs provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) ListActionIDs(ctx context.Context, arg queries.ListActionIDsParams) ([]int64, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for LatestActiveActionID")
+		panic("no return value specified for ListActionIDs")
 	}
 
-	var r0 int64
+	var r0 []int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (int64, error)); ok {
-		return rf(ctx, characterID)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListActionIDsParams) ([]int64, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) int64); ok {
-		r0 = rf(ctx, characterID)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListActionIDsParams) []int64); ok {
+		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(int64)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int64)
+		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, characterID)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.ListActionIDsParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -372,88 +374,31 @@ func (_m *MockQuerier) LatestActiveActionID(ctx context.Context, characterID int
 	return r0, r1
 }
 
-// MockQuerier_LatestActiveActionID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LatestActiveActionID'
-type MockQuerier_LatestActiveActionID_Call struct {
+// MockQuerier_ListActionIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListActionIDs'
+type MockQuerier_ListActionIDs_Call struct {
 	*mock.Call
 }
 
-// LatestActiveActionID is a helper method to define mock.On call
+// ListActionIDs is a helper method to define mock.On call
 //   - ctx context.Context
-//   - characterID int64
-func (_e *MockQuerier_Expecter) LatestActiveActionID(ctx interface{}, characterID interface{}) *MockQuerier_LatestActiveActionID_Call {
-	return &MockQuerier_LatestActiveActionID_Call{Call: _e.mock.On("LatestActiveActionID", ctx, characterID)}
+//   - arg queries.ListActionIDsParams
+func (_e *MockQuerier_Expecter) ListActionIDs(ctx interface{}, arg interface{}) *MockQuerier_ListActionIDs_Call {
+	return &MockQuerier_ListActionIDs_Call{Call: _e.mock.On("ListActionIDs", ctx, arg)}
 }
 
-func (_c *MockQuerier_LatestActiveActionID_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_LatestActiveActionID_Call {
+func (_c *MockQuerier_ListActionIDs_Call) Run(run func(ctx context.Context, arg queries.ListActionIDsParams)) *MockQuerier_ListActionIDs_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64))
+		run(args[0].(context.Context), args[1].(queries.ListActionIDsParams))
 	})
 	return _c
 }
 
-func (_c *MockQuerier_LatestActiveActionID_Call) Return(_a0 int64, _a1 error) *MockQuerier_LatestActiveActionID_Call {
+func (_c *MockQuerier_ListActionIDs_Call) Return(_a0 []int64, _a1 error) *MockQuerier_ListActionIDs_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_LatestActiveActionID_Call) RunAndReturn(run func(context.Context, int64) (int64, error)) *MockQuerier_LatestActiveActionID_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// LatestPoppedAction provides a mock function with given fields: ctx, characterID
-func (_m *MockQuerier) LatestPoppedAction(ctx context.Context, characterID int64) (queries.LatestPoppedActionRow, error) {
-	ret := _m.Called(ctx, characterID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for LatestPoppedAction")
-	}
-
-	var r0 queries.LatestPoppedActionRow
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.LatestPoppedActionRow, error)); ok {
-		return rf(ctx, characterID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.LatestPoppedActionRow); ok {
-		r0 = rf(ctx, characterID)
-	} else {
-		r0 = ret.Get(0).(queries.LatestPoppedActionRow)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, characterID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockQuerier_LatestPoppedAction_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LatestPoppedAction'
-type MockQuerier_LatestPoppedAction_Call struct {
-	*mock.Call
-}
-
-// LatestPoppedAction is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-func (_e *MockQuerier_Expecter) LatestPoppedAction(ctx interface{}, characterID interface{}) *MockQuerier_LatestPoppedAction_Call {
-	return &MockQuerier_LatestPoppedAction_Call{Call: _e.mock.On("LatestPoppedAction", ctx, characterID)}
-}
-
-func (_c *MockQuerier_LatestPoppedAction_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_LatestPoppedAction_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64))
-	})
-	return _c
-}
-
-func (_c *MockQuerier_LatestPoppedAction_Call) Return(_a0 queries.LatestPoppedActionRow, _a1 error) *MockQuerier_LatestPoppedAction_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockQuerier_LatestPoppedAction_Call) RunAndReturn(run func(context.Context, int64) (queries.LatestPoppedActionRow, error)) *MockQuerier_LatestPoppedAction_Call {
+func (_c *MockQuerier_ListActionIDs_Call) RunAndReturn(run func(context.Context, queries.ListActionIDsParams) ([]int64, error)) *MockQuerier_ListActionIDs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -517,28 +462,28 @@ func (_c *MockQuerier_ListActions_Call) RunAndReturn(run func(context.Context, q
 	return _c
 }
 
-// ListActiveActionsByKind provides a mock function with given fields: ctx, arg
-func (_m *MockQuerier) ListActiveActionsByKind(ctx context.Context, arg queries.ListActiveActionsByKindParams) ([]queries.ListActiveActionsByKindRow, error) {
+// ListActionsByKind provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) ListActionsByKind(ctx context.Context, arg queries.ListActionsByKindParams) ([]queries.ListActionsByKindRow, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListActiveActionsByKind")
+		panic("no return value specified for ListActionsByKind")
 	}
 
-	var r0 []queries.ListActiveActionsByKindRow
+	var r0 []queries.ListActionsByKindRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListActiveActionsByKindParams) ([]queries.ListActiveActionsByKindRow, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListActionsByKindParams) ([]queries.ListActionsByKindRow, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.ListActiveActionsByKindParams) []queries.ListActiveActionsByKindRow); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListActionsByKindParams) []queries.ListActionsByKindRow); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ListActiveActionsByKindRow)
+			r0 = ret.Get(0).([]queries.ListActionsByKindRow)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.ListActiveActionsByKindParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, queries.ListActionsByKindParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
@@ -547,31 +492,31 @@ func (_m *MockQuerier) ListActiveActionsByKind(ctx context.Context, arg queries.
 	return r0, r1
 }
 
-// MockQuerier_ListActiveActionsByKind_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListActiveActionsByKind'
-type MockQuerier_ListActiveActionsByKind_Call struct {
+// MockQuerier_ListActionsByKind_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListActionsByKind'
+type MockQuerier_ListActionsByKind_Call struct {
 	*mock.Call
 }
 
-// ListActiveActionsByKind is a helper method to define mock.On call
+// ListActionsByKind is a helper method to define mock.On call
 //   - ctx context.Context
-//   - arg queries.ListActiveActionsByKindParams
-func (_e *MockQuerier_Expecter) ListActiveActionsByKind(ctx interface{}, arg interface{}) *MockQuerier_ListActiveActionsByKind_Call {
-	return &MockQuerier_ListActiveActionsByKind_Call{Call: _e.mock.On("ListActiveActionsByKind", ctx, arg)}
+//   - arg queries.ListActionsByKindParams
+func (_e *MockQuerier_Expecter) ListActionsByKind(ctx interface{}, arg interface{}) *MockQuerier_ListActionsByKind_Call {
+	return &MockQuerier_ListActionsByKind_Call{Call: _e.mock.On("ListActionsByKind", ctx, arg)}
 }
 
-func (_c *MockQuerier_ListActiveActionsByKind_Call) Run(run func(ctx context.Context, arg queries.ListActiveActionsByKindParams)) *MockQuerier_ListActiveActionsByKind_Call {
+func (_c *MockQuerier_ListActionsByKind_Call) Run(run func(ctx context.Context, arg queries.ListActionsByKindParams)) *MockQuerier_ListActionsByKind_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(queries.ListActiveActionsByKindParams))
+		run(args[0].(context.Context), args[1].(queries.ListActionsByKindParams))
 	})
 	return _c
 }
 
-func (_c *MockQuerier_ListActiveActionsByKind_Call) Return(_a0 []queries.ListActiveActionsByKindRow, _a1 error) *MockQuerier_ListActiveActionsByKind_Call {
+func (_c *MockQuerier_ListActionsByKind_Call) Return(_a0 []queries.ListActionsByKindRow, _a1 error) *MockQuerier_ListActionsByKind_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockQuerier_ListActiveActionsByKind_Call) RunAndReturn(run func(context.Context, queries.ListActiveActionsByKindParams) ([]queries.ListActiveActionsByKindRow, error)) *MockQuerier_ListActiveActionsByKind_Call {
+func (_c *MockQuerier_ListActionsByKind_Call) RunAndReturn(run func(context.Context, queries.ListActionsByKindParams) ([]queries.ListActionsByKindRow, error)) *MockQuerier_ListActionsByKind_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -631,6 +576,65 @@ func (_c *MockQuerier_ListCorrectionsFrom_Call) Return(_a0 []queries.ListCorrect
 }
 
 func (_c *MockQuerier_ListCorrectionsFrom_Call) RunAndReturn(run func(context.Context, queries.ListCorrectionsFromParams) ([]queries.ListCorrectionsFromRow, error)) *MockQuerier_ListCorrectionsFrom_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPopCorrections provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListPopCorrections(ctx context.Context, characterID int64) ([]queries.ListPopCorrectionsRow, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPopCorrections")
+	}
+
+	var r0 []queries.ListPopCorrectionsRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListPopCorrectionsRow, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListPopCorrectionsRow); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.ListPopCorrectionsRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_ListPopCorrections_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPopCorrections'
+type MockQuerier_ListPopCorrections_Call struct {
+	*mock.Call
+}
+
+// ListPopCorrections is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListPopCorrections(ctx interface{}, characterID interface{}) *MockQuerier_ListPopCorrections_Call {
+	return &MockQuerier_ListPopCorrections_Call{Call: _e.mock.On("ListPopCorrections", ctx, characterID)}
+}
+
+func (_c *MockQuerier_ListPopCorrections_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListPopCorrections_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ListPopCorrections_Call) Return(_a0 []queries.ListPopCorrectionsRow, _a1 error) *MockQuerier_ListPopCorrections_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_ListPopCorrections_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListPopCorrectionsRow, error)) *MockQuerier_ListPopCorrections_Call {
 	_c.Call.Return(run)
 	return _c
 }

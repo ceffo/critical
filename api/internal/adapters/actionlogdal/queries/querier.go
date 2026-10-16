@@ -22,13 +22,14 @@ type Querier interface {
 	InsertCorrection(ctx context.Context, arg InsertCorrectionParams) error
 	InsertSnapshot(ctx context.Context, arg InsertSnapshotParams) error
 	LatestActionID(ctx context.Context, arg LatestActionIDParams) (int64, error)
-	LatestActiveActionID(ctx context.Context, characterID int64) (int64, error)
-	LatestPoppedAction(ctx context.Context, characterID int64) (LatestPoppedActionRow, error)
+	ListActionIDs(ctx context.Context, arg ListActionIDsParams) ([]int64, error)
 	ListActions(ctx context.Context, arg ListActionsParams) ([]ListActionsRow, error)
-	// An entry is popped when it has a void with no redo after it (ADR 0019
-	// step 1: the newest void or redo decides).
-	ListActiveActionsByKind(ctx context.Context, arg ListActiveActionsByKindParams) ([]ListActiveActionsByKindRow, error)
+	// Which entries are popped is decided in Go (actionlog.StandingVoids, ADR
+	// 0019 step 1) from ListPopCorrections; the queries below read the newest
+	// rows, as many as the adapter needs to skip the popped ones.
+	ListActionsByKind(ctx context.Context, arg ListActionsByKindParams) ([]ListActionsByKindRow, error)
 	ListCorrectionsFrom(ctx context.Context, arg ListCorrectionsFromParams) ([]ListCorrectionsFromRow, error)
+	ListPopCorrections(ctx context.Context, characterID int64) ([]ListPopCorrectionsRow, error)
 	ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ActionSnapshot, error)
 	ListTransactionActions(ctx context.Context, arg ListTransactionActionsParams) ([]ListTransactionActionsRow, error)
 	StartActionTransaction(ctx context.Context, id int64) error

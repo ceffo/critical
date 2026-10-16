@@ -658,6 +658,10 @@
       "fresh_berries_other": "fresh berries",
       "component_one": "component",
       "component_other": "components",
+      "pebble_one": "pebble",
+      "pebble_other": "pebbles",
+      "eye_one": "eye",
+      "eye_other": "eyes",
       "unit_one": "unit",
       "unit_other": "units"
     },
@@ -665,6 +669,13 @@
       "priest": "priest",
       "meteor": "meteor",
       "round": "round"
+    },
+    "axes": {
+      "wide": "wide",
+      "long": "long",
+      "high": "high",
+      "thick": "thick",
+      "deep": "deep"
     },
     "shapes": {
       "radius": "radius",
@@ -705,6 +716,11 @@
       "specialDetail": "{{special}} ({{detail}})",
       "shaped": "{{dims}} {{shape}}",
       "shapedFigure": "{{dims}} {{shape}} {{figure}}",
+      "axis": "{{value}} {{axis}}",
+      "axisJoin": " and ",
+      "ofMembers": "{{targets}} of {{members}}",
+      "within": "{{targets}} within {{value}}",
+      "aroundTouched": "{{value}} around the creature touched",
       "or": " or ",
       "range": {
         "self": "0",
@@ -774,6 +790,18 @@
       },
       "area": {
         "special": "Special",
+        "hearing_range": "Hearing range",
+        "line_of_sight": "Line of sight",
+        "script_reader": "Script reader",
+        "circle_of_priests": "Circle of priests",
+        "variable": "Variable",
+        "varies": "Varies",
+        "the_caster_s_hand": "The caster's hand",
+        "the_caster_s_shadow": "The caster's shadow",
+        "the_caster_s_staff": "The caster's staff",
+        "the_wizard_s_staff": "The wizard's staff",
+        "caster_s_weapon": "Caster's weapon",
+        "the_casters": "The casters",
         "the_caster": "The caster",
         "caster": "Caster",
         "one_creature": "One creature",

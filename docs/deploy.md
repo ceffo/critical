@@ -63,7 +63,9 @@ checks that each user connects to its own database and may create in its schema,
 connection is refused (`permission denied for database`). Only then does it pipe
 `CRITICAL_DSN=postgres://critical_<env>:…@tournesol-db.flycast:5432/critical_<env>?sslmode=prefer`
 into `fly secrets import --stage` on `critical-<env>` (no restart, never printed), and set the volume's
-snapshot retention. `fly secrets list -a critical-<env>` shows the name and a digest, never the value.
+snapshot retention. `fly secrets list -a critical-<env>` shows the name and a digest, never the value;
+its status stays `Staged` until the app's next `fly deploy`, which applies it (an app with machines can
+also take it with `fly secrets deploy`).
 
 Rerunnable: a rerun rotates the named environments' passwords (`just fly-db-provision tournesol-db
 staging` rotates staging only); restart or redeploy that app afterwards, its old DSN stops working.

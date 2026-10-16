@@ -914,8 +914,7 @@
       "situational": "{{detail}}",
       "situationalUnnamed": "Situationnel",
       "critRange": "Coup critique ({{from}}–{{to}})",
-      "critPlaceholder": "Coup critique (provisoire)",
-      "adjustment": "Ajustement {{detail}}"
+      "critPlaceholder": "Coup critique (provisoire)"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
@@ -1016,7 +1015,8 @@
       "increase": "Augmenter l'ajustement",
       "value": "Ajustement",
       "reason": "Raison (facultatif)",
-      "apply": "Appliquer"
+      "apply": "Appliquer",
+      "adjustedTarget": "Seuil ajusté"
     },
     "adjustAc": {
       "title": "CA de la cible",
@@ -1181,9 +1181,9 @@
     "prep": "Préparé : {{spells}}",
     "prepNone": "Aucun sort préparé",
     "saveThrow": {
-      "rolled": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, {{verdict}}",
-      "adjusted": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustée {{adjustment}}{{reason}} : {{from}} → {{to}}",
-      "removed": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustement retiré : {{from}} → {{to}}"
+      "rolled": "Sauvegarde contre {{name}} : {{roll}} contre {{target}}, {{verdict}}",
+      "adjusted": "Sauvegarde contre {{name}} : {{roll}} contre {{adjustedTarget}} (seuil {{target}}, ajusté {{adjustment}}{{reason}}) : {{from}} → {{to}}",
+      "removed": "Sauvegarde contre {{name}} : {{roll}} contre {{target}}, ajustement retiré : {{from}} → {{to}}"
     },
     "weapon": {
       "added": "Arme {{name}} ajoutée",

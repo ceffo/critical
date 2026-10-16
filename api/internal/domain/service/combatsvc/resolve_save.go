@@ -13,16 +13,17 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
-// Adjustment limits: an adjustment is a bonus learnt after the roll (+4 vs
+// Adjustment limits: an adjustment is a ruling learnt after the roll (+4 vs
 // fire), so anything beyond a d20's range is a typo.
 const (
 	MaxSaveAdjustment      = 20
 	MaxAdjustmentReasonLen = 80
 )
 
-// SaveAdjustment is a signed bonus or penalty applied to the latest save
-// after the roll, with an optional reason ("Gaia fire"). It changes the
-// verdict and the margin, never the d20.
+// SaveAdjustment is a signed adjustment set on the latest save after the
+// roll, with an optional reason ("Gaia fire"). It moves the target, + easier
+// and - harder (ADR 0006 step 5): it changes the verdict and the margin,
+// never the roll.
 type SaveAdjustment struct {
 	Value  int
 	Reason string
@@ -90,8 +91,8 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 }
 
 // AdjustSave sets the adjustment of the latest save entry (replacing any
-// earlier one, 0 removes it) and recomputes its verdict and margin from the
-// stored d20, modifiers and target. The change is an audited amend on the
+// earlier one, 0 removes it) and recomputes its adjusted target, verdict and
+// margin from the stored d20, modifiers and target (ADR 0006 step 5). The change is an audited amend on the
 // entry. Refused for an entry that is not a save, is voided or is not the
 // newest save.
 func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, adj SaveAdjustment) (*RollResult, error) {
@@ -139,27 +140,40 @@ type saveRecord struct {
 	D20Roll  int    `json:"d20Roll"`
 	// Modifiers are the ones applied when rolling (buffs), not the adjustment.
 	Modifiers []modifierRecord `json:"modifiers"`
-	Target    int              `json:"target"`
+	// Target is the category's target on the sheet, never adjusted.
+	Target int `json:"target"`
 	// RolledPassed is the verdict as rolled, before any adjustment.
-	RolledPassed     bool   `json:"rolledPassed"`
+	RolledPassed bool `json:"rolledPassed"`
+	// Adjustment moves the target, + easier, - harder (ADR 0006 step 5).
 	Adjustment       int    `json:"adjustment"`
 	AdjustmentReason string `json:"adjustmentReason,omitempty"`
-	Total            int    `json:"total"`
-	Passed           bool   `json:"passed"`
-	Margin           int    `json:"margin"`
+	// RollTotal is d20 + modifiers, the adjustment left out; AdjustedTarget
+	// is target - adjustment. Saves logged before the adjustment moved the
+	// target lack both: savePayloadView fills them on read.
+	RollTotal      int `json:"rollTotal"`
+	AdjustedTarget int `json:"adjustedTarget"`
+	// Total is RollTotal + Adjustment, the roll side of the verdict before
+	// the adjustment moved the target; kept so every entry has the same
+	// fields. Margin is RollTotal - AdjustedTarget (= Total - Target).
+	Total  int  `json:"total"`
+	Passed bool `json:"passed"`
+	Margin int  `json:"margin"`
 	// PreviousPassed and PreviousAdjustment are the verdict and adjustment
 	// before the latest adjustment; set on adjustment amends only.
 	PreviousPassed     *bool `json:"previousPassed,omitempty"`
 	PreviousAdjustment *int  `json:"previousAdjustment,omitempty"`
 }
 
-// settle computes total, verdict and margin: the save passes when
-// d20 + modifiers + adjustment >= target, a natural 1 or 20 included (ADR 0006
-// steps 2 and 3).
+// settle computes the roll total, the adjusted target, the verdict and the
+// margin: the adjustment moves the target (ADR 0006 step 5), and the save
+// passes when d20 + modifiers >= target - adjustment, a natural 1 or 20
+// included (steps 2 and 3).
 func (r *saveRecord) settle() {
-	r.Total = r.D20Roll + r.modTotal() + r.Adjustment
-	r.Passed = r.Total >= r.Target
-	r.Margin = r.Total - r.Target
+	r.RollTotal = r.D20Roll + r.modTotal()
+	r.AdjustedTarget = r.Target - r.Adjustment
+	r.Passed = r.RollTotal >= r.AdjustedTarget
+	r.Margin = r.RollTotal - r.AdjustedTarget
+	r.Total = r.RollTotal + r.Adjustment
 }
 
 func (r *saveRecord) modTotal() int {
@@ -170,21 +184,53 @@ func (r *saveRecord) modTotal() int {
 	return sum
 }
 
-// result is the RollResult of the save: the target is BaseThac0 and
-// EffectiveThac0, the verdict Hit, the margin HitMargin; the adjustment is
-// listed among the modifiers.
+// result is the RollResult of the save: the sheet's target is BaseThac0,
+// the adjusted target EffectiveThac0 and SaveAdjustedTarget, the verdict Hit,
+// the margin HitMargin. The modifiers are the roll's (buffs): the adjustment
+// moves the target, so it is not one of them.
 func (r *saveRecord) result(entryID int64) *RollResult {
-	mods := make([]Modifier, 0, len(r.Modifiers)+1)
+	mods := make([]Modifier, 0, len(r.Modifiers))
 	for _, m := range r.Modifiers {
 		mods = append(mods, Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
 	}
-	if r.Adjustment != 0 {
-		mods = append(mods, Modifier{Kind: ModAdjustment, Detail: r.AdjustmentReason, Value: r.Adjustment})
-	}
 	return &RollResult{
-		D20Roll: r.D20Roll, BaseThac0: r.Target, EffectiveThac0: r.Target, Modifiers: mods,
+		D20Roll: r.D20Roll, BaseThac0: r.Target, EffectiveThac0: r.AdjustedTarget, Modifiers: mods,
 		Hit: r.Passed, HitMargin: r.Margin, SaveBonus: r.modTotal(), SaveTotal: r.Total,
+		SaveRollTotal: r.RollTotal, SaveAdjustedTarget: r.AdjustedTarget,
 		SaveCategory: SaveCategory(r.Category), Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason,
 		LogEntryID: entryID,
 	}
+}
+
+// SavePayloadView is the actionlog.PayloadView of save entries (ADR 0006
+// step 8): a save logged before the adjustment moved the target is served
+// with its roll total (d20 + modifiers) and adjusted target (target -
+// adjustment) computed from its stored numbers. Every other field, the
+// verdict and the margin included, is served as stored.
+func SavePayloadView(payload json.RawMessage) (json.RawMessage, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		return nil, fmt.Errorf("decode save payload: %w", err)
+	}
+	_, hasRoll := fields["rollTotal"]
+	_, hasTarget := fields["adjustedTarget"]
+	if hasRoll && hasTarget {
+		return payload, nil
+	}
+	var rec saveRecord
+	if err := json.Unmarshal(payload, &rec); err != nil {
+		return nil, fmt.Errorf("decode save payload: %w", err)
+	}
+	for key, v := range map[string]int{"rollTotal": rec.D20Roll + rec.modTotal(), "adjustedTarget": rec.Target - rec.Adjustment} {
+		raw, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("encode %s: %w", key, err)
+		}
+		fields[key] = raw
+	}
+	out, err := json.Marshal(fields)
+	if err != nil {
+		return nil, fmt.Errorf("encode save payload: %w", err)
+	}
+	return out, nil
 }

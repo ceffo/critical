@@ -68,6 +68,10 @@ type BackingServices struct {
 	Skills    skillsvc.SVC
 	Dice      dicesvc.SVC
 
+	// LogPayloadViews fill, when the log is served, the payload fields an
+	// entry's kind gained after the entry was logged.
+	LogPayloadViews actionlog.PayloadViews
+
 	services []domain.Service
 }
 
@@ -289,6 +293,9 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Details:     detailsSvc,
 		Skills:      skillSvc,
 		Dice:        diceSvc,
+		LogPayloadViews: actionlog.PayloadViews{
+			actionlog.KindSave: combatsvc.SavePayloadView,
+		},
 		services: []domain.Service{
 			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, detailsSvc, diceSvc,
 		},

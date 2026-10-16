@@ -320,6 +320,51 @@ export function shapedText(
   return loc.t("lookup.stat.shapedFigure", { dims, shape: word, figure: fig });
 }
 
+/** The word for the way an extent runs ("de large"), or null when the language has none. */
+function axisText(loc: StatLocale, value: string, axis: string): string | null {
+  const word = loc.t(`lookup.axes.${axis}`, { defaultValue: "" });
+  return word ? loc.t("lookup.stat.axis", { value, axis: word }) : null;
+}
+
+/**
+ * The extents of an area: with their shape ("cube de 6 m"), or, where the text names the way they
+ * run, each with its axis ("chemin de 3 m de large et de 18 m de long"). "Up to" bounds the
+ * figure, not the length inside it ("cube de 6 m maximum"). Null where a word has no translation.
+ */
+function dimsText(loc: StatLocale, s: SpellStats["area"]): string | null {
+  const dims = s.dims ?? [];
+  const texts = dims.map((d) => quantityText(loc, { ...d, up_to: false }));
+  if (texts.some((x) => x === null)) return null;
+  let shaped: string | null;
+  if (dims.some((d) => d.axis)) {
+    if (s.figure) return null;
+    const plain = dims.flatMap((d, i) => (d.axis ? [] : [texts[i]!]));
+    const axed = dims.flatMap((d, i) =>
+      d.axis ? [axisText(loc, texts[i]!, d.axis)] : [],
+    );
+    if (axed.some((x) => x === null)) return null;
+    const list = [...(plain.length ? [plain.join(" × ")] : []), ...axed];
+    const all = list.join(loc.t("lookup.stat.axisJoin"));
+    if (!s.shape) shaped = all;
+    else {
+      const word = loc.t(`lookup.shapes.${s.shape}`, { defaultValue: "" });
+      shaped = word && loc.t("lookup.stat.shaped", { dims: all, shape: word });
+    }
+  } else {
+    shaped = shapedText(
+      loc,
+      texts.join(" × "),
+      s.shape,
+      dims.map((d) => d.terms[0]?.unit),
+      s.figure,
+    );
+  }
+  if (!shaped) return null;
+  return dims.some((d) => d.up_to)
+    ? loc.t("lookup.stat.upToShaped", { value: shaped })
+    : shaped;
+}
+
 export function areaText(
   loc: StatLocale,
   s: SpellStats["area"],
@@ -329,34 +374,42 @@ export function areaText(
     case "targets": {
       if (s.partial) return null;
       const parts: string[] = [];
+      let within: string | null = null;
       if (s.dims?.length) {
-        // "Up to" bounds the figure, not the length inside it ("cube de 6 m maximum").
-        const dims = s.dims.map((d) =>
-          quantityText(loc, { ...d, up_to: false }),
-        );
-        if (dims.some((x) => x === null)) return null;
-        const units = s.dims.map((d) => d.terms[0]?.unit);
-        const shaped = shapedText(
-          loc,
-          dims.join(" × "),
-          s.shape,
-          units,
-          s.figure,
-        );
+        const shaped = dimsText(loc, s);
         if (!shaped) return null;
-        parts.push(
-          s.dims.some((d) => d.up_to)
-            ? loc.t("lookup.stat.upToShaped", { value: shaped })
-            : shaped,
-        );
+        // Extents that bound where the targets are ("1 animal within 30 ft.") follow the count.
+        if (s.within && s.targets && !s.shape) within = shaped;
+        else if (s.within) return null;
+        else parts.push(shaped);
       }
       if (s.targets) {
         if (!s.noun) return null; // a bare count ("Creates 1d4+1"): what it counts is the book's
-        const n = quantityText(loc, s.targets, s.noun);
+        let n = quantityText(loc, s.targets, s.noun);
         if (!n) return null;
+        if (s.members) {
+          // "1 unité de 200 individus maximum"
+          const m = quantityText(
+            loc,
+            { ...s.members, up_to: false },
+            s.members_noun,
+          );
+          if (!m) return null;
+          n = loc.t("lookup.stat.ofMembers", {
+            targets: n,
+            members: s.members.up_to
+              ? loc.t("lookup.stat.upToShaped", { value: m })
+              : m,
+          });
+        }
+        if (within)
+          n = loc.t("lookup.stat.within", { targets: n, value: within });
         parts.push(n);
       }
-      return parts.length ? parts.join(", ") : null;
+      const text = parts.length ? parts.join(", ") : null;
+      return text && s.around_touched
+        ? loc.t("lookup.stat.aroundTouched", { value: text })
+        : text;
     }
     case "alternatives": {
       // "1 créature ou 1 objet": every reading worded, or the book's text.

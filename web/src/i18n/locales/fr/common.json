@@ -663,6 +663,10 @@
       "fresh_berries_other": "baies fraîches",
       "component_one": "élément",
       "component_other": "éléments",
+      "pebble_one": "galet",
+      "pebble_other": "galets",
+      "eye_one": "œil",
+      "eye_other": "yeux",
       "unit_one": "unité",
       "unit_other": "unités"
     },
@@ -670,6 +674,13 @@
       "priest": "prêtre",
       "meteor": "météore",
       "round": "round"
+    },
+    "axes": {
+      "wide": "de large",
+      "long": "de long",
+      "high": "de haut",
+      "thick": "d'épaisseur",
+      "deep": "de profondeur"
     },
     "shapes": {
       "radius": "rayon",
@@ -710,6 +721,11 @@
       "specialDetail": "{{special}} ({{detail}})",
       "shaped": "{{shape}} de {{dims}}",
       "shapedFigure": "{{figure}} de {{dims}} de {{shape}}",
+      "axis": "{{value}} {{axis}}",
+      "axisJoin": " et de ",
+      "ofMembers": "{{targets}} de {{members}}",
+      "within": "{{targets}} dans un rayon de {{value}}",
+      "aroundTouched": "{{value}} autour de la créature touchée",
       "or": " ou ",
       "range": {
         "self": "0",
@@ -779,6 +795,18 @@
       },
       "area": {
         "special": "Spéciale",
+        "hearing_range": "Portée de l'ouïe",
+        "line_of_sight": "Champ de vision",
+        "script_reader": "Créature lisant la calligraphie",
+        "circle_of_priests": "Cercle de prêtres",
+        "variable": "Variable",
+        "varies": "Variable",
+        "the_caster_s_hand": "La main du lanceur",
+        "the_caster_s_shadow": "L'ombre du lanceur",
+        "the_caster_s_staff": "Le bâton du lanceur",
+        "the_wizard_s_staff": "Le bâton du magicien",
+        "caster_s_weapon": "L'arme du lanceur",
+        "the_casters": "Les lanceurs",
         "the_caster": "Le lanceur",
         "caster": "Le lanceur",
         "one_creature": "Une créature",

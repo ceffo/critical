@@ -6,9 +6,9 @@ import { useRollStore } from "@/stores/roll";
 import { combatItems } from "@/lib/combatItems";
 
 /**
- * Objets tab of the Agir workspace: combat consumables with their behaviour, count and dice, used
+ * Items tab of the Act panel (ADR 0022 step 2.5): combat consumables with their behaviour, count and dice, used
  * in one click (the server rolls and logs; the result card shows it). Editing and restocking are in
- * the Inventaire workspace.
+ * the Inventory activity. Names wrap, never cut (step 1).
  */
 export function ItemsTab({ onManage }: { onManage: () => void }) {
   const { t } = useTranslation();
@@ -27,13 +27,11 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
           {items.map((i) => (
             <li
               key={i.id}
-              className="flex h-7 items-center gap-3 rounded-lg px-3 hover:bg-neu-900"
+              className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto_4rem_5rem] items-center gap-3 rounded-lg px-3 py-1 hover:bg-neu-900"
             >
-              <span className="min-w-0 flex-1 truncate text-body">
-                {i.name}
-              </span>
+              <span className="text-body break-words">{i.name}</span>
               <span
-                className="shrink-0 text-body text-muted-foreground"
+                className="text-right text-body whitespace-nowrap text-muted-foreground tabular-nums"
                 data-testid="item-count"
               >
                 {i.behaviour === "daily"
@@ -47,13 +45,13 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
                       count: i.count,
                     })}
               </span>
-              <span className="w-16 shrink-0 text-right text-body text-muted-foreground">
+              <span className="text-right text-body text-muted-foreground tabular-nums">
                 {i.effectDice}
               </span>
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-20 shrink-0"
+                className="w-full"
                 disabled={rolling || i.count === 0}
                 aria-label={t(
                   i.effectDice

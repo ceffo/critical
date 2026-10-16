@@ -104,7 +104,7 @@ export function ActionArea({
         role="tabpanel"
         id={`panel-${active}`}
         aria-labelledby={`tab-${active}`}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-3"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5"
       >
         {active === "weapons" && <AttackPanel />}
         {active === "spells" && <SpellsPanel />}

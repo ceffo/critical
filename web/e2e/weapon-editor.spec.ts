@@ -27,18 +27,12 @@ function form(page: Page) {
   return page.getByTestId("weapon-form");
 }
 
-/** The weapons "Other weapon" offers (every weapon not in hand). */
+/** The other weapons' chips (every weapon not in hand). */
 async function otherWeapons(page: Page) {
-  await attackForm(page).getByRole("button", { name: "Other weapon" }).click();
-  const list = page.getByRole("list", { name: "Other weapon" });
-  await expect(list).toBeVisible();
-  const names = await list
+  return attackForm(page)
+    .getByRole("group", { name: "Other weapons" })
     .getByRole("button")
-    .evaluateAll((els) =>
-      els.map((e) => e.querySelector("span")?.textContent ?? ""),
-    );
-  await page.keyboard.press("Escape");
-  return names;
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-weapon") ?? ""));
 }
 
 /** Every weapon the Weapons tab can put in hand: the one held and the others. */

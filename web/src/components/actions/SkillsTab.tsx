@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { LastCheck } from "@/types/skills";
 
 /**
- * Compétences tab of the Agir workspace (ADR 0014): the non-weapon proficiencies (d20 at or under
+ * Skills tab of the Act panel (ADR 0014; layout ADR 0022 step 2.5): the non-weapon proficiencies (d20 at or under
  * the target) and the bard skills (d100 at or under the percentage). Each row is one button that
  * rolls the check on the server; targets, verdicts and the last check are the server's.
  */
@@ -26,23 +26,24 @@ export function SkillsTab() {
 
   if (!skills) return null;
   const rowClass =
-    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-2 text-left text-body hover:bg-neu-900 disabled:opacity-60";
+    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-1.5 text-left text-body hover:bg-neu-900 disabled:opacity-60";
+  // Column headers are section labels (ADR 0022 step 4.2).
+  const headClass = cn(rowClass, "py-1 hover:bg-transparent");
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       <section aria-labelledby="skills-proficiencies">
-        <div
-          className={cn(
-            rowClass,
-            "py-1 text-label text-muted-foreground hover:bg-transparent",
-          )}
-        >
-          <h3 id="skills-proficiencies" className="text-title text-foreground">
+        <div className={headClass}>
+          <h3 id="skills-proficiencies" className="section-label">
             {t("skills.proficiencies")}
           </h3>
-          <span>{t("skills.columns.ability")}</span>
-          <span className="text-right">{t("skills.columns.target")}</span>
-          <span className="text-right">{t("skills.columns.last")}</span>
+          <span className="section-label">{t("skills.columns.ability")}</span>
+          <span className="section-label text-right">
+            {t("skills.columns.target")}
+          </span>
+          <span className="section-label text-right">
+            {t("skills.columns.last")}
+          </span>
         </div>
         <ul
           aria-label={t("skills.proficiencies")}
@@ -60,7 +61,7 @@ export function SkillsTab() {
                   data-testid={`skill-${p.id}`}
                   onClick={() => void rollSkill(p.id)}
                 >
-                  <span className="truncate">{name}</span>
+                  <span className="break-words">{name}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {abilityText(t, p.ability, p.abilityScore, p.modifier)}
                   </span>
@@ -75,18 +76,17 @@ export function SkillsTab() {
         </ul>
       </section>
       <section aria-labelledby="skills-bard">
-        <div
-          className={cn(
-            rowClass,
-            "py-1 text-label text-muted-foreground hover:bg-transparent",
-          )}
-        >
-          <h3 id="skills-bard" className="text-title text-foreground">
+        <div className={headClass}>
+          <h3 id="skills-bard" className="section-label">
             {t("skills.bardSkills")}
           </h3>
           <span />
-          <span className="text-right">{t("skills.columns.percent")}</span>
-          <span className="text-right">{t("skills.columns.last")}</span>
+          <span className="section-label text-right">
+            {t("skills.columns.percent")}
+          </span>
+          <span className="section-label text-right">
+            {t("skills.columns.last")}
+          </span>
         </div>
         <ul aria-label={t("skills.bardSkills")} className="flex flex-col gap-1">
           {skills.bardSkills.map((b) => {
@@ -101,7 +101,7 @@ export function SkillsTab() {
                   data-testid={`skill-${b.id}`}
                   onClick={() => void rollSkill(b.id)}
                 >
-                  <span className="truncate">{name}</span>
+                  <span className="break-words">{name}</span>
                   <span />
                   <span className="text-right font-semibold tabular-nums">
                     {t("skills.percent", { value: b.percent })}

@@ -529,36 +529,108 @@ test("theme: the main screens and every ambiance in dark and light", async ({
   }
 });
 
-// The Agir workspace (weapon in hand with a bow's ammunition, then the Spells and Items tabs)
-// holds at every viewport without a page scroll.
-test("agir: weapons, spells and items tabs from 1280 to 2560", async ({
+/** A long weapon and a long item name: the act panel wraps them, never cuts (ADR 0022 step 1). */
+const LONG_WEAPON = "Two-Handed Flamberge of the Seventh Drowned Kingdom +3";
+const LONG_ITEM = "Potion of Extra-Healing brewed by the Hermit of Grey Hollow";
+const ACT_TABS = ["Weapons", "Spells", "Items", "Skills"] as const;
+
+// ADR 0022 steps 1, 2.5, 3.3 and 4: each tab of the act panel at every layout viewport, with long
+// weapon, item and spell names and a bow's ammunition, shows no cut text and no page scroll; the
+// weapon in hand is one row whose Attack is the 44 px control with its icon centred in a 44 x 44
+// cell, and the act panel is as tall as its content (no empty band under the weapon). Screenshots
+// of every tab at 1440x900 and 1707x1300.
+test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
   page,
+  stack,
 }) => {
+  test.setTimeout(60_000);
+  const api = (method: string, url: string, data: unknown) =>
+    fetch(`${stack.apiUrl}${url}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
+  await api("PATCH", "/api/weapons/darts", { name: LONG_WEAPON });
+  await api("PATCH", "/api/items/power_gem_dispel", { name: LONG_ITEM });
+  await api("PUT", "/api/spells/prepared", {
+    spells: [
+      "magic_missile",
+      "burning_hands",
+      "chromatic_orb",
+      "tashas_uncontrollable_hideous_laughter",
+      "mirror_image",
+      "fireball",
+      "haste",
+      "stoneskin",
+      "cloudkill",
+    ],
+  });
   await openDashboard(page);
   await openWeapons(page);
+  await chooseWeapon(page, "Long Sword +2");
   await chooseWeapon(page, "Short Bow +2");
   await expect(ammoChips(page)).toBeVisible();
+  const actions = page.getByRole("region", { name: "Actions" });
+  const panel = actions.getByRole("tabpanel");
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
-    await expect(page.getByTestId("tile-thac0")).toBeVisible();
-    await expectNoPageScroll(page);
-    await snap(page, `agir-weapons-${vp.width}x${vp.height}`);
+    const size = `${vp.width}x${vp.height}`;
+    for (const tab of ACT_TABS) {
+      await actions.getByRole("tab", { name: tab }).click();
+      await expect(panel).toHaveAttribute("id", `panel-${tab.toLowerCase()}`);
+      await expect(panel).not.toBeEmpty();
+      if (tab === "Spells")
+        await expect(panel).toContainText("Hideous Laughter");
+      await expectNoPageScroll(page);
+      await expectNoClippedText(actions, `${tab} tab, ${size}`);
+      if (SHOTS.has(size)) await snap(page, `act-${tab.toLowerCase()}-${size}`);
+    }
+    await actions.getByRole("tab", { name: "Weapons" }).click();
+    // The weapon row: Attack is 44 px tall, its sword centred in its own 44 x 44 cell (step 3.3).
+    const attack = attackForm(page).getByRole("button", {
+      name: "Attack",
+      exact: true,
+    });
+    const btn = (await attack.boundingBox())!;
+    expect(Math.round(btn.height), `Attack height, ${size}`).toBe(44);
+    const icon = (await attack.locator("svg").boundingBox())!;
+    expect(
+      Math.abs(icon.y + icon.height / 2 - (btn.y + btn.height / 2)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(icon.x + icon.width / 2 - (btn.x + 22)),
+    ).toBeLessThanOrEqual(1);
+    // No empty band: the act panel ends under its content (the crit table line) plus its padding,
+    // unless the result panel beside it is taller.
+    const content = (await page.getByTestId("crit-table").boundingBox())!;
+    const box = (await actions.boundingBox())!;
+    const result = (await page
+      .getByRole("region", { name: "Detail", exact: true })
+      .boundingBox())!;
+    if (result.height < box.height - 1)
+      expect(
+        box.y + box.height - (content.y + content.height),
+        `space under the weapons, ${size}`,
+      ).toBeLessThanOrEqual(24);
   }
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole("tab", { name: "Spells" }).click();
-  await expect(
-    page.getByRole("button", { name: "Prepare spells" }),
-  ).toBeVisible();
-  await snap(page, "agir-spells");
-  await page.getByRole("tab", { name: "Items" }).click();
+  // The long weapon in hand wraps inside its row at the narrowest viewport.
+  await page.setViewportSize(VIEWPORTS[0]);
+  await chooseWeapon(page, LONG_WEAPON);
+  await expectNoClippedText(actions, "long weapon in hand, 1280x800");
+  await expectInside(
+    page.getByRole("region", { name: "Weapon in hand" }),
+    actions,
+    "long weapon in hand",
+  );
+  await snap(page, "act-weapons-long-1280x800");
+  // Items: "Manage the inventory" focuses the Inventory activity.
+  await actions.getByRole("tab", { name: "Items" }).click();
   await page.getByRole("button", { name: "Manage the inventory" }).click();
   await expect(
     page
       .getByRole("navigation", { name: "Activities" })
       .getByRole("button", { name: "Inventory" }),
   ).toHaveAttribute("aria-current", "page");
-  await openWorkspace(page, "Act");
-  await snap(page, "agir-items");
 });
 
 // What only a browser proves: the Inventaire dice chip and the Sorts "To the dice" fill the composer

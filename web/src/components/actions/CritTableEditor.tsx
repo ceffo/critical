@@ -89,10 +89,10 @@ export function CritTableEditor() {
 
   return (
     <details
-      className="mt-4 max-w-xl rounded-lg border px-3 py-2"
+      className="max-w-xl rounded-lg px-3 py-2 open:bg-neu-900"
       data-testid="crit-table"
     >
-      <summary className="cursor-pointer text-body font-medium">
+      <summary className="cursor-pointer text-body text-muted-foreground hover:text-foreground">
         {t("critTable.title")}
       </summary>
       <div className="mt-3 flex flex-col gap-2">

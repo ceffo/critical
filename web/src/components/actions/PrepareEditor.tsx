@@ -71,10 +71,10 @@ export function PrepareEditor({
       aria-label={t("spellSlots.prepareTitle")}
     >
       <section
-        className="flex min-w-0 flex-col gap-2 rounded-lg border p-2"
+        className="flex min-w-0 flex-col gap-2 rounded-lg bg-neu-900 p-3"
         aria-label={t("spellSlots.spellbook")}
       >
-        <h3 className="text-title">{t("spellSlots.spellbook")}</h3>
+        <h3 className="section-label">{t("spellSlots.spellbook")}</h3>
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -85,9 +85,9 @@ export function PrepareEditor({
           {matches.map((s) => (
             <li
               key={s.id}
-              className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
+              className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-background"
             >
-              <span className="min-w-0 truncate text-body">
+              <span className="min-w-0 text-body break-words">
                 <span className="mr-2 text-label text-muted-foreground">
                   {t("spellSlots.level", { level: s.level })}
                 </span>
@@ -112,10 +112,10 @@ export function PrepareEditor({
       </section>
 
       <section
-        className="flex min-w-0 flex-col gap-2 rounded-lg border p-2"
+        className="flex min-w-0 flex-col gap-2 rounded-lg bg-neu-900 p-3"
         aria-label={t("spellSlots.draft")}
       >
-        <h3 className="text-title">{t("spellSlots.draft")}</h3>
+        <h3 className="section-label">{t("spellSlots.draft")}</h3>
         {draftEntries.length === 0 && (
           <p className="text-body text-muted-foreground">
             {t("spellSlots.draftEmpty")}
@@ -143,7 +143,7 @@ export function PrepareEditor({
           return (
             <div key={level} data-testid={`draft-level-${level}`}>
               <div className="flex items-center justify-between">
-                <h4 className="text-label font-semibold text-muted-foreground">
+                <h4 className="section-label">
                   {t("spellSlots.level", { level })}
                 </h4>
                 <Badge
@@ -161,9 +161,9 @@ export function PrepareEditor({
                 {items.map(({ entry, index }) => (
                   <li
                     key={index}
-                    className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-muted/60"
+                    className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-background"
                   >
-                    <span className="min-w-0 truncate text-body">
+                    <span className="min-w-0 text-body break-words">
                       {label(entry)}
                     </span>
                     <Button

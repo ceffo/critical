@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Critical! mark option "Facet · Spine (round 2)": Outline d20: the hexagon and its front face at one stroke weight; the gold "!" runs down the face's axis and its dot sits on the apex. The user's pick, minus the triangle. Colours: --tint / --highlight with Arcane dark fallbacks. -->
+<polygon points="16,2.5 27.7,9.25 27.7,22.75 16,29.5 4.3,22.75 4.3,9.25" fill="none" stroke="var(--tint, #a99bf5)" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="4.3,9.25 27.7,9.25 16,29.5" fill="none" stroke="var(--tint, #a99bf5)" stroke-width="2" stroke-linejoin="round"/>
+<rect x="14.50" y="11.5" width="3" height="9" rx="1.50" fill="var(--highlight, #f0c437)"/>
+<circle cx="16" cy="24.3" r="1.80" fill="var(--highlight, #f0c437)"/>
+</svg>

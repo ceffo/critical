@@ -35,7 +35,8 @@ clamps, tokens and house rules are decided in
 [ADR 0009](adr/0009-dashboard-layout-and-theme-system.md); type sizes, spacing, control heights,
 the header (112px at rest) and the content target in [ADR 0017](adr/0017-type-scale-and-density.md): text
 uses only `text-label` / `text-body` / `text-title` / `text-key` / `text-headline`. `App.tsx`
-composes it.
+composes it. Whole-screen design directions under review (static pages, screenshots and the
+brand-mark options) live in [docs/design/ui-directions/README.md](design/ui-directions/README.md).
 
 ```mermaid
 flowchart TD

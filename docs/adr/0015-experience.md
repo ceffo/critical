@@ -34,9 +34,10 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    counts: the server accepts it either way, so a DM ruling can be recorded.
    Tests: `TestBonusEligible_DexAndChaBothAtLeast16`, `TestGet_NotEligibleBelow16`,
    `TestGet_TotalsEntriesOverTheSheetAndReportsEligibility`.
-3. **Progress to the next level from PHB Table 25.** The thresholds are rules data in
-   `seeds/rule_tables.json` (`bard_experience`, levels 1 to 20, validated at startup: from 0,
-   strictly increasing). With `L` the sheet's level and `T(n)` the XP that reaches level `n`:
+3. **Progress to the next level from PHB Table 25.** The thresholds are rules data in the
+   catalogue artifact's `rule_tables` ([ADR 0021](0021-spell-catalogue.md) step 9;
+   `bard_experience`, levels 1 to 20, validated at startup: from 0, strictly increasing). With
+   `L` the sheet's level and `T(n)` the XP that reaches level `n`:
    `currentFloor = T(L)`, `nextThreshold = T(L + 1)`, `toNext = max(0, T(L + 1) - total)`,
    `progress = clamp((total - T(L)) / (T(L + 1) - T(L)), 0, 1)` and `progressPercent` the same in
    whole percent rounded down. At level 20, or above it (a level override), there is no next level: `nextLevel` and

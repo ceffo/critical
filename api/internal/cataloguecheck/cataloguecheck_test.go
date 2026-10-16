@@ -155,8 +155,8 @@ func TestSchema_Shape(t *testing.T) {
 	assert.Error(t, sch.Validate(artifact(extra)), "unknown property")
 }
 
-// ruleTables reads the fixture's rule_tables (format 3, the shape the seed
-// adapter reads, ADR 0021 step 9.7).
+// ruleTables reads the fixture's rule_tables (format 3, the shape
+// ruletablesadpt reads, ADR 0021 step 9.7).
 func ruleTables(t *testing.T) map[string]any {
 	t.Helper()
 	f, err := os.Open("../../testdata/catalogue.json")

@@ -3,6 +3,7 @@ package catalogueadpt
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -74,7 +75,7 @@ func TestParse_Step2_Refusals(t *testing.T) {
 		mutate func(map[string]any)
 		want   []string
 	}{
-		{"unknown format names it", func(d map[string]any) { d["format"] = 4 }, []string{"unknown format 4", "formats 1 and 3"}},
+		{"unknown format names it", func(d map[string]any) { d["format"] = 4 }, []string{"unknown format 4", "format 3", "just catalogue"}},
 		{"missing format", func(d map[string]any) { delete(d, "format") }, []string{"unknown format none"}},
 		{"schema violation lists the offence", func(d map[string]any) {
 			spells(d)[0].(map[string]any)["level"] = 12
@@ -104,36 +105,35 @@ func TestParse_NotJSON(t *testing.T) {
 	require.Error(t, err)
 }
 
-// format1 is the fixture as a format-1 artifact: the same spells, no tables.
-func format1(d map[string]any) {
-	d["format"] = 1
-	delete(d, "rule_tables")
-}
-
-// ADR 0021 step 9.1: this API reads formats 1 and 3. Format 3 hands on its
-// rule tables as written (ruletablesadpt parses them); format 1 has none (its
-// tables are the seeds', step 9.6.1); format 2, the retracted stat shape, is
-// refused naming it.
-func TestParse_Step9_1_ReadsFormats1And3(t *testing.T) {
+// ADR 0021 step 9.1: format 3 hands on its rule tables as written
+// (ruletablesadpt parses them).
+func TestParse_Step9_1_ReadsFormat3(t *testing.T) {
 	three, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
 	assert.Equal(t, catalogue.FormatRuleTables, three.Catalogue.Format)
+	assert.NotEmpty(t, three.Catalogue.Spells)
 	var tables map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(three.RuleTables, &tables))
 	assert.ElementsMatch(t, []string{"strength", "dexterity", "bard_spells", "bard_experience"}, keys(tables))
-
-	one, err := ParseArtifact(artifact(t, format1))
-	require.NoError(t, err)
-	assert.Equal(t, catalogue.FormatSpells, one.Catalogue.Format)
-	assert.Nil(t, one.RuleTables)
-	assert.Len(t, one.Catalogue.Spells, len(three.Catalogue.Spells), "the same spells in either format")
-
-	_, err = Parse(artifact(t, func(d map[string]any) { d["format"] = 2 }))
-	require.ErrorContains(t, err, "unknown format 2: this API reads formats 1 and 3")
 }
 
-// ADR 0021 steps 9.1 and 9.2: format 3 requires the four tables, format 1
-// carries none; both are schema refusals naming the format found.
+// ADR 0021 step 9.6.3: format 1 is retired. A format-1 artifact (spells
+// only, its tables in the seeds) is refused like format 2, the retracted stat
+// shape, and any other unknown format: the refusal names the format found,
+// the one this API reads and `just catalogue`, before the schema is checked.
+func TestParse_Step9_6_3_RefusesTheRetiredFormat1(t *testing.T) {
+	for _, format := range []int{1, 2} {
+		_, err := Parse(artifact(t, func(d map[string]any) {
+			d["format"] = format
+			delete(d, "rule_tables")
+		}))
+		require.ErrorContains(t, err, fmt.Sprintf(
+			"unknown format %d: this API reads format 3; run `just catalogue` to fetch a current artifact", format))
+	}
+}
+
+// ADR 0021 steps 9.1 and 9.2: format 3 requires the four tables and nothing
+// else in them; a schema refusal names the format found.
 func TestParse_Step9_2_TablesBelongToFormat3Only(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -147,7 +147,6 @@ func TestParse_Step9_2_TablesBelongToFormat3Only(t *testing.T) {
 		{"format 3 with a text in the tables", func(d map[string]any) {
 			d["rule_tables"].(map[string]any)["_source"] = "PHB"
 		}, []string{"format 3 schema", "_source"}},
-		{"format 1 with tables", func(d map[string]any) { d["format"] = 1 }, []string{"format 1 schema", "rule_tables"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

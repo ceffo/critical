@@ -557,14 +557,38 @@ Step 9.6.1, the API side of the rollout (formats 1 and 3 read; format 1 still ta
 - **The fixture** kept its version `1970-01-01` when it moved to format 3. The recorded catalogue is
   compared on format and version (step 5.3), so a database last started on the format-1 fixture imports
   it once more (the same spells; nothing removed) and then writes nothing.
-- **Tests per step**: 9.1 `TestParse_Step9_1_ReadsFormats1And3` and the schema's
-  `TestSchema_Step9_Format3RuleTables`; 9.2 `TestParse_Step9_2_TablesBelongToFormat3Only`; 9.3
+- **Tests per step** (as shipped by 9.6.1; the format-1 tests went with step 9.6.3, see below): 9.1
+  `TestParse_Step9_1_ReadsFormat3` and the schema's `TestSchema_Step9_Format3RuleTables`; 9.2
+  `TestParse_Step9_2_TablesBelongToFormat3Only`; 9.3
   `TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable` and
   `TestParse_Step9_3_RejectsBrokenTables`; 9.4 and 9.5 `TestStartup_Step9_5_TheTablesAreReadAtEveryStart`
-  (a corrected table on the same version applies, a broken one refuses the start); 9.6.1
-  `TestStartup_Step9_6_1_TheRuleTablesSourceFollowsTheFormat` and `TestNew_Step9_6_1_Format1ReadsTheSeedFile`;
-  9.6.2, readiness on the real artifact recast as format 3 (skipped without it)
-  `TestRealCatalogue_Step9_6_2_TheRealArtifactInFormat3BootsWithoutTheSeedTables`; 9.7
-  `TestRuleTables_Step9_7_TheFixtureCarriesTheSeedsNumbers` (the fixture's tables equal the seed's, and
-  every lookup gives the same result from either). The PHB-page value tests (Strength, Dexterity, bard
-  spells per day, XP thresholds, attack resolution) run on the fixture's tables.
+  (a corrected table on the same version applies, a broken one refuses the start). The PHB-page value
+  tests (Strength, Dexterity, bard spells per day, XP thresholds, attack resolution) run on the fixture's
+  tables.
+
+## Implementation notes (format 1 retired, 2026-10-16)
+
+Step 9.6.3, once the rulebooks builder published format 3 (`2026-10-16.5`) and the dev checkout's
+`.catalogue/catalogue.json` was format 3 (no staging or production existed yet; [ADR 0024](0024-deployment.md)
+builds them from the published artifact):
+
+- **Format 1 is refused like any unknown format** (step 5.2), before the schema: `unknown format 1: this
+  API reads format 3`, followed by the advice to run `just catalogue`. The domain lists one format,
+  `catalogue.FormatRuleTables`; the tables always come from the artifact, and `ruletablesadpt` has only
+  `Parse` (no seed reader). `seeds/rule_tables.json` is deleted; a `rule_tables.json` left in a seeds
+  directory is never read.
+- **The schema still describes formats 1 and 3** (step 9.1's wording): it is a shape document shared with
+  the builder, and the API refuses format 1 before checking it.
+- **Step 9.7 without the seed**: the fixture's numbers were checked against the seed's by 9.6.1; they are
+  now checked against the real artifact's, lookup by lookup (every Strength score and percentile, every
+  Dexterity score, every bard level), since the builder keeps one row per book line where the fixture
+  merges equal rows (same numbers, different rows). Skipped without the real artifact; on CI the
+  PHB-page value tests carry 9.7.
+- **The live database**: nothing it stores refers to the format, so a database started on a format-1
+  artifact starts on the format-3 one; the recorded catalogue is compared on format and version (step
+  5.3), so the first start imports once (same spells) and the next writes nothing.
+- **Tests**: 9.6.3 `TestParse_Step9_6_3_RefusesTheRetiredFormat1` and
+  `TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused` (a format-1 artifact refuses the
+  start even with a valid seed file beside it; a broken seed file is ignored under format 3); 9.7
+  `TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables`; the real seeds booting without
+  any rule-table seed `TestRepoSeeds_BootTheWholeStack`.

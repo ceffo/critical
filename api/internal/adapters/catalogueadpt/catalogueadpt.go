@@ -1,9 +1,9 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
-// file must exist, carry a format this API knows (1 or 3, step 9.1), match
-// the committed JSON Schema and hold no duplicate id. It maps the spells to
-// catalogue.Catalogue and hands a format-3 artifact's PHB rule tables on as
-// the schema-checked JSON (Artifact.RuleTables): their table rules (step 9.3)
+// file must exist, carry the format this API knows (3, step 9.1; format 1 is
+// retired, step 9.6.3), match the committed JSON Schema and hold no duplicate
+// id. It maps the spells to catalogue.Catalogue and hands the artifact's PHB
+// rule tables on as the schema-checked JSON (Artifact.RuleTables): their table rules (step 9.3)
 // are ruletablesadpt's, the one reader of rule-table JSON. The import into
 // the database is the storage layer's.
 package catalogueadpt
@@ -59,9 +59,8 @@ func compiled() (*jsonschema.Schema, error) {
 	return schema, errSchema
 }
 
-// Artifact is one parsed artifact: its spells and, in format 3, its
-// rule_tables object as written (shape checked by the schema, step 9.2; nil
-// in format 1). The caller parses the tables with ruletablesadpt.Parse, which
+// Artifact is one parsed artifact: its spells and its rule_tables object as
+// written (shape checked by the schema, step 9.2). The caller parses the tables with ruletablesadpt.Parse, which
 // applies the rules of step 9.3.
 type Artifact struct {
 	Catalogue  catalogue.Catalogue
@@ -113,8 +112,7 @@ type artifactDTO struct {
 	Format  int        `json:"format"`
 	Version string     `json:"version"`
 	Spells  []spellDTO `json:"spells"`
-	// RuleTables (format 3 only, step 9.2) has exactly the keys and rows of
-	// the seeds' rule_tables.json, so the seed adapter's parser reads it.
+	// RuleTables (step 9.2) has the keys and rows ruletablesadpt.Parse reads.
 	RuleTables json.RawMessage `json:"rule_tables"`
 }
 
@@ -124,8 +122,9 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 	return a.Catalogue, err
 }
 
-// ParseArtifact validates artifact bytes (step 5.2): an unknown format is
-// refused naming it, then the schema of formats 1 and 3 is checked (the
+// ParseArtifact validates artifact bytes (step 5.2): an unknown format (a
+// retired format 1 included, step 9.6.3) is refused naming it and `just
+// catalogue`, then the schema is checked (the
 // first offences are listed, a format-3 artifact's tables included), then
 // ids must be unique.
 func ParseArtifact(raw []byte) (Artifact, error) {
@@ -137,7 +136,8 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	}
 	format, known := knownFormat(strings.TrimSpace(string(head.Format)))
 	if !known {
-		return Artifact{}, fmt.Errorf("unknown format %s: this API reads formats %s", format, formatList())
+		return Artifact{}, fmt.Errorf(
+			"unknown format %s: this API reads %s; run `just catalogue` to fetch a current artifact", format, formatList())
 	}
 
 	sch, err := compiled()
@@ -166,7 +166,7 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 		}
 		seen[s.ID] = true
 		out.Spells = append(out.Spells, catalogue.Spell{
-			// The artifact's plain texts are the English books' (format 1):
+			// The artifact's plain texts are the English books' (step 1):
 			// texts in the fallback language. Its name and description are
 			// already language maps (ADR 0023).
 			ID: s.ID, Class: s.Class, Level: s.Level, School: localized.Of(s.School), Sphere: localized.Of(s.Sphere),
@@ -179,11 +179,7 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	if len(dups) > 0 {
 		return Artifact{}, fmt.Errorf("duplicate spell ids: %s", strings.Join(first(dups), ", "))
 	}
-	art := Artifact{Catalogue: out}
-	if a.Format == catalogue.FormatRuleTables {
-		art.RuleTables = a.RuleTables
-	}
-	return art, nil
+	return Artifact{Catalogue: out, RuleTables: a.RuleTables}, nil
 }
 
 // knownFormat reports whether the raw format value is one this API reads,
@@ -200,16 +196,17 @@ func knownFormat(raw string) (string, bool) {
 	return raw, false
 }
 
-// formatList names the formats this API reads: "1 and 3".
+// formatList names the formats this API reads: "format 3", or "formats 1
+// and 3" when it reads several.
 func formatList() string {
 	names := make([]string, len(catalogue.Formats))
 	for i, f := range catalogue.Formats {
 		names[i] = strconv.Itoa(f)
 	}
 	if len(names) == 1 {
-		return names[0]
+		return "format " + names[0]
 	}
-	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+	return "formats " + strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
 // schemaError lists the first leaf violations of a schema validation error.

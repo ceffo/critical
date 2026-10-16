@@ -1,27 +1,18 @@
 // Package ruletablesadpt reads the PHB rule tables into a
-// ruletablesvc.Tables: from the catalogue artifact's rule_tables (format 3,
-// ADR 0021 step 9, through Parse) or, for a format-1 artifact, from
-// <seedsDir>/rule_tables.json (New, step 9.6.1). Both have the same keys and
-// rows; only the seed may carry its "_source" comment, which the artifact's
-// schema forbids. It only holds the private JSON DTOs and the mapping; the
-// entities and their validation live in ruletablesvc.
+// ruletablesvc.Tables from the catalogue artifact's rule_tables (ADR 0021
+// step 9, through Parse). It only holds the private JSON DTOs and the
+// mapping; the entities and their validation live in ruletablesvc.
 package ruletablesadpt
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
-// FileName is the seed file looked up inside the seeds directory.
-const FileName = "rule_tables.json"
-
 type fileDTO struct {
-	Source    string        `json:"_source"`
 	Strength  []strengthDTO `json:"strength"`
 	Dexterity []dexDTO      `json:"dexterity"`
 	Bard      []bardDTO     `json:"bard_spells"`
@@ -55,23 +46,8 @@ type bardDTO struct {
 	PerSpellLevel []int `json:"per_spell_level"`
 }
 
-// New loads and validates <seedsDir>/rule_tables.json. A missing file, a gap
-// or overlap in a table or a malformed row is an error.
-func New(seedsDir string) (*ruletablesvc.Tables, error) {
-	path := filepath.Join(seedsDir, FileName)
-	raw, err := os.ReadFile(path) //nolint:gosec // path is built from the operator-configured seeds dir
-	if err != nil {
-		return nil, fmt.Errorf("rule tables: read %s: %w", path, err)
-	}
-	t, err := Parse(raw)
-	if err != nil {
-		return nil, fmt.Errorf("rule tables: %s: %w", path, err)
-	}
-	return t, nil
-}
-
-// Parse maps rule-table JSON bytes (the seed file, or the artifact's
-// rule_tables object) to validated Tables. A violation names the table.
+// Parse maps the artifact's rule_tables JSON to validated Tables. A
+// violation names the table.
 func Parse(raw []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))

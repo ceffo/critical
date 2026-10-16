@@ -1,8 +1,12 @@
 # ADR 0024: Deployment on fly.io: environments, release flow, image and data
 
-**Status**: proposed, 2026-10-16. Steps 5 and 8 and the defaults listed under "Proposed defaults
-awaiting the user" are proposals: each one becomes accepted when the user confirms it or picks
-another option, and the answer is recorded here with its date.
+**Status**: proposed, 2026-10-16. Step 8 and the defaults still listed as open under "Proposed
+defaults awaiting the user" are proposals: each one becomes accepted when the user confirms it or
+picks another option, and the answer is recorded here with its date. Amended 2026-10-16 by
+[ADR 0025](0025-postgresql-storage.md) (see "Amendment (PostgreSQL on one fly cluster, 2026-10-16)"):
+step 5 is answered (option (b), PostgreSQL first), steps 2, 4.2, 5, 6.1, 7 and 9 are rewritten for
+volume-less apps on one fly PostgreSQL cluster, and the region, production data and PostgreSQL
+defaults are answered.
 
 ## Context
 
@@ -24,9 +28,13 @@ every PR. The only packaging is docker-compose: the API image plus nginx serving
 - **Storage is SQLite** ([ADR 0021](0021-spell-catalogue.md) step 6). On fly a volume belongs to one
   machine, so a SQLite database cannot be shared by two machines. The move to PostgreSQL is a
   separate design (the multi-user model), not started.
+  _Amended 2026-10-16: the user's free allowance cannot hold a 1 GB volume per app, so storage moves
+  to PostgreSQL before the first deployment ([ADR 0025](0025-postgresql-storage.md)); the multi-user
+  model stays a separate design._
 
 The requested shape (staging from main, production from version tags) is kept. The one change to it
-is that production runs one machine until storage moves to PostgreSQL (step 5).
+is that production runs one machine until storage moves to PostgreSQL (step 5). _Amended 2026-10-16:
+no change remains; production runs two machines from the first deployment (step 5)._
 
 ## Decision
 
@@ -40,14 +48,20 @@ flowchart LR
     end
     subgraph fly["fly.io (org personal, private registry)"]
         IMG[("image tagged with the commit sha")]
-        STG["staging app: 1 machine, own volume, may auto-stop"]
-        PROD["production app: 1 machine always on, own volume"]
-        SNAP[("pre-promotion volume snapshot")]
+        STG["staging app: 1 machine, no volume, auto-stops"]
+        PROD["production app: 2 machines, no volume, rolling deploy"]
+        subgraph pgc["PostgreSQL cluster critical-db (1 node, 1 GB volume, private)"]
+            SDB[("critical_staging")]
+            PDB[("critical_prod")]
+        end
     end
+    DUMP[("pre-promotion pg_dump of critical_prod")]
     BUILD -->|push| IMG
     IMG -->|deploy + smoke check| STG
+    STG --> SDB
+    PROD --> PDB
     STG -.->|"same commit passed staging"| TAG
-    TAG -->|"first: snapshot"| SNAP
+    TAG -->|"first: dump"| DUMP
     TAG -->|"then: promote the same image, no rebuild"| PROD
     PROD -->|"smoke check, then GitHub Release"| REL["release vX.Y.Z"]
 ```
@@ -72,11 +86,21 @@ flowchart LR
    (`scripts/image-smoke.sh`); the image and its inputs are described in `docs/backend.md`,
    "Production image".
 
-2. **Environments.** Two fly apps in one fly org: **staging** and **production**. Each has its own
-   volume holding its own SQLite database; they share nothing but the image.
-   1. Staging is disposable: its data may be wiped at any time, and its machine may stop when idle
-      and start on the next request.
-   2. Production keeps one machine always running (no auto-stop).
+2. **Environments.** _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: each app
+   has its own volume holding its own SQLite database, and production keeps one machine._ Two fly
+   apps in one fly org: **staging** and **production**. Neither app has a volume: their data lives in
+   one fly legacy PostgreSQL cluster, `critical-db`, created for this app alone (no other app uses
+   it). They share the image and the cluster, nothing else.
+   1. Staging is disposable: its data may be wiped at any time. It runs one machine, which stops
+      when idle and starts on the next request.
+   2. Production runs two machines, always running (no auto-stop), updated by a rolling deploy.
+   3. The cluster: one node, the smallest shared VM, one 1 GB volume, region `yyz`, no public IP.
+      It holds two databases, `critical_staging` and `critical_prod`, each owned by its own login
+      user; neither user can connect to the other's database.
+   4. Each app's DSN (its own user, its own database, the cluster's private address) is the fly
+      secret `CRITICAL_DSN`; it is never in the fly config, the repo or a log.
+   5. Nothing is paid without the user: if fly refuses a legacy cluster, or asks for payment or a
+      card, the provisioning stops and reports.
 
 3. **Staging on main.** On a push to main, once the CI jobs for that commit are green:
    1. the release build fetches the catalogue with the read-only deploy key, builds the image of
@@ -90,8 +114,9 @@ flowchart LR
 4. **Production on a tag.** Pushing a tag `vMAJOR.MINOR.PATCH` promotes a commit to production:
    1. the promotion refuses a tag whose commit is not on main, or whose image did not pass the
       staging smoke check of step 3;
-   2. it takes an on-demand snapshot of the production volume and waits for it to be confirmed;
-      no snapshot, no deploy;
+   2. it takes a `pg_dump` of `critical_prod` and waits for it to complete; no dump, no deploy.
+      _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: an on-demand snapshot of
+      the production volume._ The dump is private data (step 7) and is kept where step 9.2 says;
    3. it deploys **the same image** (same digest as staging, no rebuild) to production;
    4. it runs the smoke check of step 3.3 against production;
    5. it creates a GitHub Release for the tag.
@@ -99,23 +124,31 @@ flowchart LR
    Rollback is running the promotion again for an older tag (step 6 says when that is not enough).
    Production deployments never run concurrently and are never cancelled midway.
 
-5. **Storage now: SQLite, one machine per environment** (proposed default, awaiting the user).
-   SQLite on a fly volume cannot be shared by two machines, so production runs one machine until
-   storage moves to PostgreSQL. Options:
-   - **(a) Default, recommended:** ship on SQLite now; the second production machine and a
-     PostgreSQL instance come with the storage move, whose multi-user model is the user's to design.
-   - **(b) PostgreSQL first:** no deployment at all until the whole storage port is done.
-   - **(c) LiteFS replication of SQLite: rejected.** Pre-1.0, its cloud backup service is gone, and
-     write forwarding adds moving parts to a single-user tool.
+5. **Storage: PostgreSQL first, two production machines** (_accepted 2026-10-16, option (b); was
+   the proposed default (a), SQLite on a volume with one machine per environment_). User,
+   2026-10-16: _"can't request 1gb"_; _"if we need a volume, we can't go with fly.io. unless it's
+   just a legacy postgres db"_. Options as proposed:
+   - (a) ship on SQLite now, one machine per environment, PostgreSQL with the storage move:
+     **not taken** (it needs a 1 GB volume per app);
+   - **(b) PostgreSQL first: taken.** No deployment until the storage port of
+     [ADR 0025](0025-postgresql-storage.md) is done;
+   - (c) LiteFS replication of SQLite: rejected (pre-1.0, its cloud backup service is gone, and
+     write forwarding adds moving parts to a single-user tool).
 
-   Consequence: a production deploy has a few seconds of downtime (the machine stops, then starts
-   on the new image), because fly's blue-green strategy is not available to machines with volumes.
-   Accepted.
+   1. The apps are stateless: no volume, no file the app writes outside the database.
+   2. Production runs two machines from the first deployment and is deployed with fly's rolling
+      strategy, one machine at a time, so a deploy has no planned downtime.
+   3. Staging runs one machine with auto-stop and auto-start.
+
+   Check: the fly config test (no `[[mounts]]`, no DSN in `[env]`, two production machines with
+   the rolling strategy and no auto-stop, staging auto-stop).
 
 6. **Migrations run at boot**, as today, before the server listens.
    1. An older binary does not undo a newer schema. Rolling back across a migration means
-      redeploying the older tag **and** restoring the pre-promotion snapshot of step 4.2 (step 9.3).
-      Data written since that snapshot is lost; the runbook says so before the restore.
+      redeploying the older tag **and** restoring `critical_prod` from the pre-promotion dump of
+      step 4.2 (step 9.3). Data written since that dump is lost; the runbook says so before the
+      restore. _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: restoring the
+      pre-promotion volume snapshot._
    2. The server refuses to start when the database records a migration that its binary does not
       embed, so a rollback across a migration without the restore fails its smoke check instead of
       running on a schema it does not know. Tests:
@@ -125,8 +158,9 @@ flowchart LR
 
 7. **Private book data stays private.** The catalogue, and any database copy (it holds catalogue
    rows), never enters the public repo, a PR build, a workflow artifact, a shared build cache or a
-   log. It lives only in the private fly registry image and on the fly volumes (and on the operator's
-   machine for a downloaded copy, step 9.4).
+   log. It lives only in the private fly registry image and in the fly PostgreSQL cluster with its
+   volume snapshots (and on the operator's machine for a downloaded dump, step 9.4). _Amended
+   2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: on the fly volumes._
    1. PR builds and the CI image check use the fixture catalogue `api/testdata/catalogue.json`.
    2. The release build never echoes the catalogue, the deploy key or a token (no shell tracing), and
       does not export the layer that holds the catalogue to a build cache that other workflows can
@@ -147,14 +181,21 @@ flowchart LR
         the user's own devices need the app.
       - **(c) Real login**, which belongs to the multi-user storage design.
 
-9. **Backups.**
-   1. Both volumes have fly's daily snapshots with a set retention (proposed: 30 days production,
-      7 days staging).
-   2. Every promotion adds the pre-promotion snapshot of step 4.2.
-   3. Restore = a new volume created from a snapshot, attached in place of the current one.
-   4. An on-demand consistent copy of the database (taken by SQLite itself, not by copying a live
-      file) can be downloaded by an operator. It is private data (step 7).
-   5. Litestream is rejected for now; continuous replication is reconsidered with the storage move.
+9. **Backups.** _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: daily
+   snapshots of both app volumes (proposed retention 30 days production, 7 days staging), the
+   pre-promotion volume snapshot, restore by attaching a volume made from a snapshot, a SQLite copy
+   for download, Litestream rejected for now._
+   1. The cluster's volume has fly's daily snapshots, with a set retention (30 days, answered
+      2026-10-16; the runbook records the value set).
+      A snapshot holds both databases.
+   2. Every promotion adds the pre-promotion `pg_dump` of `critical_prod` of step 4.2. Where that
+      dump is kept is open (see "Proposed defaults awaiting the user"); it must obey step 7, so
+      never a workflow artifact or a build cache.
+   3. Restore: `critical_prod` is restored from a `pg_dump` (the pre-promotion one, or one taken by
+      step 9.4) without touching `critical_staging`. Restoring a cluster volume snapshot rolls back
+      both databases; it is the fallback when no usable dump exists.
+   4. `just db-backup <env>` downloads a `pg_dump` of that environment's database into a gitignored
+      folder on the operator's machine. It is private data (step 7).
 
 10. **Secrets and permissions.**
     1. Each app has its own app-scoped fly deploy token, stored in the GitHub environment of the same
@@ -169,15 +210,18 @@ flowchart LR
 ## Proposed defaults awaiting the user
 
 Applied until the user answers; each answer is recorded here with its date and flips the matching
-part of this ADR to accepted.
+part of this ADR to accepted. Answered rows keep their original default and say what was chosen.
 
 | Question | Default | Options |
 |---|---|---|
 | Access for a public URL (step 8) | private, no public IP | (a) basic auth + public IPs, (b) stay private, devices join WireGuard / Tailscale, (c) real login |
-| PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | PostgreSQL first, no deploy until then |
-| Production data | fresh database | import the local `.dev/critical.db` once, through the runbook (the copy stays private) |
+| PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | **Answered 2026-10-16: PostgreSQL first**, no deploy until then; two production machines from the first deploy ([ADR 0025](0025-postgresql-storage.md)) |
+| Production data | fresh database | **Answered 2026-10-16: seeded once with the user's data**: the local `.dev/critical.db` copied into `critical_prod` through the runbook by the copy tool ([ADR 0025](0025-postgresql-storage.md) step 9; the copy stays private). Staging starts empty |
 | Production approval | none: pushing the tag is the act | a required reviewer on the `production` environment |
-| Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | any; app names are global on fly and set in one place |
+| Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the cluster `critical-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
+| Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | on the cluster's own volume (shares its 1 GB); a private store the user provides; taken by the operator with `just db-backup prod` before tagging, the promotion checking that it exists |
+| Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
+| A migration during a rolling production deploy (step 5.2) | a release's migrations are additive, so the previous release keeps working on the new schema while its machines are replaced | **Answered 2026-10-16: additive migrations** (the default); the `immediate` strategy is not used |
 | Custom domain | none | a domain, only once public access is chosen |
 
 ## Consequences
@@ -186,9 +230,12 @@ part of this ADR to accepted.
   handler, migration runner). Steps 1.3 and 7.1 are checked by the CI image job, which builds the
   image with the fixture and smoke-checks it. Steps 3, 4, 8.3 and 10 are workflow behaviour: their
   check is a failing run on the broken case (a smoke check against the wrong commit, a missing
-  snapshot, a public IP, a missing secret), exercised once by hand and noted in the PR that adds
-  the workflow. Steps 2, 5 and 9.1 are fly configuration, checked by a parse and required-keys test
-  of the fly config files.
+  dump, a public IP, a missing secret), exercised once by hand and noted in the PR that adds
+  the workflow. Steps 2.1, 2.2 and 5 are fly configuration, checked by a parse and required-keys
+  test of the fly config files. _Amended 2026-10-16: steps 2.3 to 2.5 and 9.1 are the cluster's
+  configuration, made with flyctl and not in the repo; their evidence (`fly status`, `fly ips list`,
+  a refused cross-database connection, `fly secrets list` showing names only) is noted in the PR that
+  provisions it, and the runbook holds the commands._
 - **The release flow is driven by GitHub Actions**, with the fly CLI. The deploy runbook
   (`docs/deploy.md`, written with the fly configuration) holds the commands: one-time setup, release,
   rollback, restore, catalogue update.
@@ -201,16 +248,43 @@ part of this ADR to accepted.
   production app's repository; it never rebuilds. The digest check of step 1.5 holds either way.
 - **The release name is not in the image.** The image is built before the tag exists; `/api/health`
   reports the commit, and the GitHub Release maps the tag to it.
-- **Downtime and machine count.** One production machine means no redundancy: a host failure means
-  downtime until fly restarts the machine elsewhere with the volume, or a restore. Accepted for a
-  single-user tool. The target topology the user described (two production machines and a
-  PostgreSQL instance, within the 10 free VMs) comes with the storage move.
+- **Downtime and machine count.** _Amended 2026-10-16; was: one production machine, no redundancy,
+  until the storage move._ Production runs two machines on a one-node cluster: a machine failure
+  leaves the other serving, a cluster failure stops staging and production until fly restarts the
+  node, or a restore (step 9.3). Accepted for a single-user tool on a free allowance.
 - **Staging auto-stop.** A stopped staging machine starts on the next request through fly's proxy;
   the deploy starts it anyway, so the smoke check right after a deploy reaches it.
-- **Production starts empty** by default: the server imports the catalogue and the campaign seeds at
-  first boot. Importing the user's local database is a one-time runbook step if the user wants it.
-- **Not covered**: the multi-user model and login, PostgreSQL, a custom domain, preview environments
+- **Production is seeded once with the user's data** (_amended 2026-10-16; was: production starts
+  empty by default_): the copy tool of [ADR 0025](0025-postgresql-storage.md) step 9 copies the
+  user's `.dev/critical.db` into `critical_prod` through the runbook, before the first production
+  boot imports the catalogue and the seeds. Staging starts empty: its first boot imports them.
+- **Not covered**: the multi-user model and login, a custom domain, preview environments
   per PR (a PR build never sees the catalogue, so a preview would only show the fixture), and
   dependency update automation.
 - **docker-compose** remains for running the production image locally, rebuilt on the single image
   of step 1.
+
+## Amendment (PostgreSQL on one fly cluster, 2026-10-16)
+
+User, 2026-10-16, on the fly free allowance: _"can't request 1gb"_; _"if we need a volume, we can't go
+with fly.io. unless it's just a legacy postgres db"_; _"I need free hosting for this app."_ The same
+triage decided the storage port ([ADR 0025](0025-postgresql-storage.md)) and the fly topology below.
+What changed in this ADR, each change marked in place with its date and the text it replaces:
+
+- **Step 2**: the apps have no volume. One new fly legacy PostgreSQL cluster, `critical-db` (one node,
+  smallest shared VM, 1 GB volume, region `yyz`, private), holds the databases `critical_staging` and
+  `critical_prod`, one login user each, neither able to reach the other's; each app's DSN is the fly
+  secret `CRITICAL_DSN`. Staging runs one auto-stopping machine, production two.
+- **Step 4.2**: a `pg_dump` of `critical_prod` before every promotion replaces the volume snapshot;
+  no dump, no deploy.
+- **Step 5**: answered, option (b), PostgreSQL first; production runs two machines from the first
+  deploy with a rolling deploy.
+- **Step 6.1**: a rollback across a migration restores `critical_prod` from the pre-promotion dump.
+- **Step 7**: the private data lives in the cluster and its snapshots instead of the app volumes.
+- **Step 9**: daily snapshots of the cluster volume; the pre-promotion dump; restore from a dump;
+  `just db-backup <env>` downloads a `pg_dump`; the Litestream line is removed (nothing to replicate
+  on the app side).
+- **Defaults**: PostgreSQL timing, production data (seeded once with the user's data) and region
+  (`yyz`) answered; three new open questions (where the pre-promotion dump is kept, the cluster
+  snapshot retention, a migration during a rolling deploy).
+- **Context and Consequences**: the SQLite and one-machine statements are marked as superseded.

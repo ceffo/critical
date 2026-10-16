@@ -56,8 +56,6 @@ export interface Stack {
   webUrl: string;
   /** Base URL of this stack's own Go API. */
   apiUrl: string;
-  /** This stack's SQLite database, for tests that must plant data the API can't create (old rows). */
-  dbPath: string;
 }
 
 /**
@@ -183,9 +181,9 @@ async function startWebServer(): Promise<{
 }
 
 /**
- * A throwaway stack: Go API on a free port with a fresh temp SQLite DB seeded from
- * api/testdata/seeds, behind the worker's web server (built bundle, /api proxied to this API).
- * Never touches .dev/ or fixed ports.
+ * A throwaway stack: Go API on a free port with its in-memory storage (ADR 0025 step 8: no database,
+ * file or server) seeded from api/testdata/seeds, behind the worker's web server (built bundle, /api
+ * proxied to this API). Never touches .dev/ or fixed ports.
  */
 export const test = base.extend<
   { stack: Stack } & StackOptions,
@@ -208,15 +206,18 @@ export const test = base.extend<
   ],
 
   stack: async ({ character, extraSpells, webServer }, provide) => {
+    // Holds only the seeds and catalogue a test overrides.
     const tmp = await mkdtemp(path.join(os.tmpdir(), "critical-e2e-"));
-    const dbPath = path.join(tmp, "critical.db");
     const apiPort = await freePort();
     const apiUrl = `http://127.0.0.1:${apiPort}`;
     let output = "";
+    // No CRITICAL_DSN: the in-memory storage opens no database.
+    const env = { ...process.env };
+    delete env.CRITICAL_DSN;
     const api = spawn(apiBinary, [], {
       env: {
-        ...process.env,
-        CRITICAL_DSN: dbPath,
+        ...env,
+        CRITICAL_STORAGE: "memory",
         CRITICAL_SEEDS_DIR: await seedsWith(tmp, character),
         CRITICAL_CATALOGUE: await catalogueWith(tmp, extraSpells.rows),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,
@@ -230,7 +231,7 @@ export const test = base.extend<
     try {
       await waitForApi(apiUrl, api, () => output);
       webServer.setApi(apiUrl);
-      await provide({ webUrl: webServer.url, apiUrl, dbPath });
+      await provide({ webUrl: webServer.url, apiUrl });
     } finally {
       api.kill("SIGTERM");
       await rm(tmp, { recursive: true, force: true });

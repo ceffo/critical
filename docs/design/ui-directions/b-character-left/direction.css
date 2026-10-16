@@ -1,0 +1,80 @@
+/* Direction B: every zone a card on the ground, one gutter, no rules. One header card (brand, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
+.app { height: 100vh; display: flex; flex-direction: column; padding: .75rem; gap: .75rem; background: var(--ground); }
+.vitals, .moi, .dice-foot { background: var(--surface); border: 1px solid var(--border); border-radius: .625rem; }
+.vitals { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; align-items: stretch; }
+.vitals > div { padding: .5rem 1.25rem; min-width: 0; display: flex; align-items: center; gap: .75rem; }
+.vitals > div:first-child { padding-left: 1rem; }
+@media (max-width: 1500px) { .vitals > div { padding: .5rem .875rem; } .v-brand .wordmark { display: none; } }
+.v-turn { gap: .5rem !important; }
+.v-turn .hero { font-size: 2rem; line-height: 2.25rem; }
+.v-init { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: .25rem !important; }
+.v-timeline { padding: .375rem 1rem .5rem !important; }
+.v-result { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: .25rem !important; }
+.effects-track { width: 100%; display: grid; row-gap: .125rem; }
+.moi .hp-block .headline { font-size: 1.5rem; line-height: 1.75rem; }
+.moi .hp-change .btn { padding: 0 .5rem; }
+.trow { display: grid; grid-template-columns: 11rem 1fr; align-items: center; min-height: 1.5rem; }
+.ttrack { display: grid; align-items: center; min-height: 1.5rem; }
+.tcol { text-align: center; font-size: .6875rem; color: var(--ink-muted); }
+.tcol.now { color: var(--tint); font-weight: 600; background: var(--amb-900); border-radius: .25rem; }
+.tcol.past { opacity: .4; }
+.tline { height: 2px; background: var(--neu-700); align-self: center; }
+.pill.fade { mask-image: linear-gradient(90deg, #000 70%, transparent); }
+.below { flex: 1; display: flex; gap: .75rem; min-height: 0; }
+.moi { width: 17.5rem; flex-shrink: 0; padding: .875rem 1rem; overflow-y: auto; }
+.rail { width: 4.25rem; flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; }
+.rail-item { display: flex; flex-direction: column; align-items: center; gap: .25rem; margin: 0 .25rem; padding: .625rem 0; border-radius: .5rem; font-size: .6875rem; color: var(--ink-muted); }
+.rail-item.on { color: var(--tint); background: var(--amb-900); }
+.saves-btns { display: grid; gap: .25rem; }
+.save-btn { display: flex; align-items: center; gap: .5rem; height: 2rem; padding: 0 .625rem; border: 1px solid var(--border); border-radius: .375rem; }
+.stage { flex: 1; min-width: 0; min-height: 0; display: grid; gap: .75rem; }
+.dice-foot { padding: .5rem .75rem; }
+/* Act: a column; the "now" band takes its content's height up to 60 % of the stage, the journal at least 14rem and the rest. */
+.stage-act { display: flex; flex-direction: column; gap: 0; }
+.now-band { flex: 0 1 auto; max-height: 60%; display: grid; grid-template-columns: minmax(28rem, 1.35fr) minmax(24rem, 1fr); gap: .75rem; min-height: 0; }
+.history { flex: 1 0 14rem; min-height: 0; }
+.stage-act.collapsed .now-band { flex: 1 1 auto; max-height: none; }
+.stage-act.collapsed .history { flex: 0 0 auto; }
+.panel.act { display: flex; flex-direction: column; }
+.result-panel { border-color: var(--amb-700); }
+.split-handle { position: relative; display: flex; align-items: center; justify-content: center; height: 1.5rem; margin: .125rem 0; cursor: row-resize; }
+.split-handle .grip { width: 4rem; height: .25rem; border-radius: 999px; background: var(--neu-600); }
+.split-handle .collapse-btn { position: absolute; right: .25rem; top: 0; height: 1.5rem; color: var(--ink-muted); }
+.history.collapsed { padding: .5rem 1rem; }
+.weapon-row { margin-top: .75rem; display: flex; align-items: center; gap: 1rem; padding: .75rem 1rem; border: 1px solid var(--amb-700); border-radius: .625rem; background: linear-gradient(135deg, color-mix(in oklab, var(--tint) 10%, transparent), transparent 60%); }
+.weapon-row .w-main { flex: 1; min-width: 0; }
+.weapon-row .w-stats { margin-top: .25rem; }
+.weapon-row .w-stats b { color: var(--ink); font-weight: 600; }
+.weapon-row .w-stats .dim { opacity: .6; }
+.btn.primary.attack { height: 2.75rem; padding: 0 1.25rem 0 0; gap: 0; border-radius: .5rem; font-size: .9375rem; }
+.btn.primary.attack .attack-ico { width: 2.75rem; height: 2.75rem; display: grid; place-items: center; }
+.btn.primary.attack .ico { width: 1.25rem; height: 1.25rem; }
+.btn.primary.attack > span { display: flex; flex-direction: column; align-items: flex-start; line-height: 1rem; }
+.btn.primary.attack .attack-verb { font-weight: 600; }
+.btn.primary.attack .attack-needs { font-size: .6875rem; font-weight: 500; opacity: .8; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; }
+.jt { display: grid; }
+.jt-row { display: grid; grid-template-columns: 9rem 3rem 1.125rem 1fr 4rem; align-items: center; gap: .75rem; min-height: 1.75rem; padding: .125rem .5rem; border-left: 2px solid transparent; }
+.jt-row.first { border-top: 1px solid var(--border); }
+.jt-row.first:first-child { border-top: 0; }
+.jt-row.current { background: var(--amb-900); border-left-color: var(--tint); }
+.jt-row .ico { color: var(--ink-muted); }
+.jt-row .time { font-size: .6875rem; text-align: right; }
+.jt-row.first .val { font-weight: 600; }
+.jt-row .val { font-weight: 600; text-align: right; }
+.jt-row .reroll { opacity: 0; margin-left: .5rem; color: var(--tint); font-size: .6875rem; display: inline-flex; align-items: center; gap: .25rem; vertical-align: middle; }
+.jt-row:hover .reroll, .jt-row.show-hover .reroll { opacity: 1; }
+.jt-row.show-hover { background: var(--neu-900); }
+.history.collapsed .val { font-weight: 600; }
+/* Lookup and XP: A2's stages. */
+.stage-spells { grid-template-columns: minmax(18rem, 22rem) 1fr; }
+.tiles { display: grid; gap: .5rem; margin-top: .75rem; }
+.tile { display: flex; flex-direction: column; gap: .125rem; padding: .5rem .625rem; border-radius: .375rem; background: var(--surface); border: 1px solid var(--border); }
+.stat-tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.prose-cols .prose { columns: 2; column-gap: 2rem; max-width: 140ch; }
+.prose-cols .prose p { break-inside: avoid; }
+.row28.sel { background: var(--amb-900); box-shadow: inset 2px 0 0 var(--tint); }
+.stage-xp { grid-template-rows: auto minmax(0, 1fr); }
+.xp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 2rem; }
+.xp-grid > div { min-width: 0; }
+.list-row.fresh { background: color-mix(in oklab, var(--tint) 8%, transparent); }

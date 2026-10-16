@@ -10,6 +10,7 @@ contract; keep them stable.
 | Always | `AGENTS.md`, `docs/all.md` (scope, vocabulary, core architectural rule, REST conventions) |
 |---|---|
 | Backend work | `docs/backend.md` (infrastructure), `docs/clean_architecture.md` |
+| Deployment work | `docs/deploy.md` (fly.io runbook), ADR 0024 |
 | Rules / game math | `docs/adr/README.md` (index), the relevant ADRs |
 | Frontend work | `docs/frontend.md` |
 

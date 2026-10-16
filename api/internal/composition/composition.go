@@ -7,23 +7,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
-	"github.com/ceffo/critical/api/internal/adapters/attackformdal"
-	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
-	"github.com/ceffo/critical/api/internal/adapters/characterdal"
-	"github.com/ceffo/critical/api/internal/adapters/critdal"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
-	"github.com/ceffo/critical/api/internal/adapters/dicedal"
-	"github.com/ceffo/critical/api/internal/adapters/hpdal"
-	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
-	"github.com/ceffo/critical/api/internal/adapters/skilldal"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
-	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
-	"github.com/ceffo/critical/api/internal/adapters/weapondal"
-	"github.com/ceffo/critical/api/internal/adapters/xpdal"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
@@ -50,6 +38,7 @@ import (
 // resolved character id (single-character mode). Routers select which slices
 // to mount.
 type BackingServices struct {
+	// DB is the SQLite handle, set by New only (nil when built over mocks).
 	DB          *sqlite.DB
 	CharacterID int64
 
@@ -70,6 +59,7 @@ type BackingServices struct {
 	Dice      dicesvc.SVC
 
 	services []domain.Service
+	store    Store
 }
 
 // Config is what cmd/api passes to New. Each field is set from env in
@@ -92,13 +82,28 @@ type Dice interface {
 	RollD100() int
 }
 
-// New opens storage, runs migrations + seeding, builds adapters, then services.
-// Returns an initialized BackingServices ready to be mounted on a router.
+// New opens the SQLite database and wires the real adapters over it, then
+// builds the services (Build). Returns an initialized BackingServices ready to
+// be mounted on a router.
 func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	db, err := sqlite.Open(cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
+	bs, err := Build(ctx, sqliteStorage(db), cfg)
+	if err != nil {
+		return nil, err
+	}
+	bs.DB = db
+	return bs, nil
+}
+
+// Build runs the startup steps (migrate, seed, validate the catalogue and the
+// seeds, import the catalogue), then builds the adapters that need no storage
+// and the services over st. On an error it closes st. It touches storage only
+// through the ports of st, so tests drive it with mocks.
+func Build(ctx context.Context, st Storage, cfg Config) (*BackingServices, error) {
+	db := st.Store
 	if err := db.Migrate(ctx); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
@@ -108,19 +113,12 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
 
-	characterDAL := characterdal.New(db)
-	hpDAL := hpdal.New(db)
-	logDAL := actionlogdal.New(db)
-	buffDAL := buffdal.New(db)
-	spellDAL := spelldal.New(db)
+	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
 	var dice Dice = diceadpt.New()
 	if cfg.Dice != nil {
 		dice = cfg.Dice
 	}
-	weaponDAL := weapondal.New(db)
-	weaponEditor := weapondal.NewEditor(db)
-	critDAL := critdal.New(db)
-	itemDAL := itemdal.New(db)
+	weaponDAL, weaponEditor, critDAL, itemDAL := st.Weapons, st.WeaponEditor, st.Crit, st.Items
 
 	// The spell effects casting applies; a malformed formula is a startup
 	// error.
@@ -230,7 +228,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	registerRestorers(logSvc, weaponSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL, Crit: critDAL,
-		Items: itemSvc, Forms: attackformdal.New(db), Rules: ruleTables, Log: logSvc, Tx: tx,
+		Items: itemSvc, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -255,7 +253,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	xpSvc, err := xpsvc.New(xpsvc.Deps{
-		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Log: logSvc, Tx: tx,
+		DAL: st.XP, Characters: charSvc, Thresholds: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -265,21 +263,20 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// Skill checks change no state: their entries carry no snapshot, so
 	// there is no restorer to register.
 	skillSvc, err := skillsvc.New(skillsvc.Deps{
-		DAL: skilldal.New(db), Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
+		DAL: st.Skill, Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	// Free dice rolls change no state: no snapshot, no restorer.
-	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: dicedal.New(db), Dice: dice, Log: logSvc, Tx: tx})
+	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: st.Dice, Dice: dice, Log: logSvc, Tx: tx})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 
 	return &BackingServices{
-		DB:          db,
 		CharacterID: charID,
 		Character:   charSvc,
 		HP:          hpSvc,
@@ -296,6 +293,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Details:     detailsSvc,
 		Skills:      skillSvc,
 		Dice:        diceSvc,
+		store:       db,
 		services: []domain.Service{
 			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, detailsSvc, diceSvc,
 		},
@@ -310,8 +308,8 @@ func (b *BackingServices) Close(ctx context.Context) error {
 			firstErr = err
 		}
 	}
-	if b.DB != nil {
-		if err := b.DB.Close(); err != nil && firstErr == nil {
+	if b.store != nil {
+		if err := b.store.Close(); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
@@ -320,7 +318,7 @@ func (b *BackingServices) Close(ctx context.Context) error {
 
 // roundReader satisfies actionlogsvc.Rounds from buffdal. It runs inside the
 // recording transaction (buffdal follows the ctx transaction).
-type roundReader struct{ dal *buffdal.DAL }
+type roundReader struct{ dal BuffStore }
 
 func (r roundReader) GetRound(ctx context.Context, characterID int64) (int, error) {
 	return r.dal.GetRoundNumber(ctx, characterID)

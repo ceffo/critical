@@ -156,3 +156,12 @@ packages:
       DAL:
       Dice:
       Log:
+  github.com/ceffo/critical/api/internal/composition:
+    config:
+      dir: "internal/composition/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Store:
+      CharacterStore:
+      BuffStore:
+      SpellStore:

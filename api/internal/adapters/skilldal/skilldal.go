@@ -1,6 +1,6 @@
 // Package skilldal is the storage adapter for the skill catalog
 // (skillsvc.DAL): the proficiencies and bard_skills tables. It delegates to
-// bob-generated typed queries.
+// sqlc-generated queries.
 package skilldal
 
 import (
@@ -9,26 +9,22 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// DAL is the SQLite-backed implementation of skillsvc.DAL.
+// DAL is the implementation of skillsvc.DAL over the sqlc-generated queries.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
 var _ skillsvc.DAL = (*DAL)(nil)
 
-// New returns a DAL bound to q.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
-
-func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
+// New returns a DAL running its queries on q. The composition root builds q
+// over the pool, routed to the caller's transaction (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 // ListProficiencies returns the proficiencies in sheet order.
 func (d *DAL) ListProficiencies(ctx context.Context) ([]skillsvc.ProficiencyDef, error) {
-	rows, err := queries.ListProficiencies().All(ctx, d.exec(ctx))
+	rows, err := d.q.ListProficiencies(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list proficiencies: %w", err)
 	}
@@ -41,7 +37,7 @@ func (d *DAL) ListProficiencies(ctx context.Context) ([]skillsvc.ProficiencyDef,
 
 // ListBardSkills returns the bard skills in sheet order.
 func (d *DAL) ListBardSkills(ctx context.Context) ([]skillsvc.BardSkillDef, error) {
-	rows, err := queries.ListBardSkills().All(ctx, d.exec(ctx))
+	rows, err := d.q.ListBardSkills(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list bard skills: %w", err)
 	}

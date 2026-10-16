@@ -1,104 +1,129 @@
+// The adapter runs on a mocked Querier: the tests assert the operations called,
+// their arguments and how results map to domain values; no database, no SQL
+// text (ADR 0025 step 6.2).
 package dicedal_test
 
 import (
 	"context"
-	"path/filepath"
+	"database/sql"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/dicedal"
+	"github.com/ceffo/critical/api/internal/adapters/dicedal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/dicedal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-func open(t *testing.T) *dicedal.DAL {
-	t.Helper()
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
+func TestList_MapsTheCharactersFavouritesInTheirOrder(t *testing.T) {
 	ctx := context.Background()
-	require.NoError(t, db.Migrate(ctx))
-	for _, name := range []string{"A", "B"} {
-		_, err := db.ExecContext(ctx,
-			`INSERT INTO characters (name, str, dex, con, int, wis, cha, hp_max, thac0_base) VALUES (?, 10, 10, 10, 10, 10, 10, 10, 20)`,
-			name)
-		require.NoError(t, err)
-	}
-	return dicedal.New(db)
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().ListDiceFavourites(ctx, int64(1)).Return([]queries.ListDiceFavouritesRow{
+		{ID: 4, Formula: "d10"}, {ID: 2, Formula: "d6"},
+	}, nil).Once()
+
+	got, err := dicedal.New(q).List(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, []dicesvc.Favourite{{ID: 4, Formula: "d10"}, {ID: 2, Formula: "d6"}}, got)
 }
 
-func TestFavourites_RoundTripPerCharacter(t *testing.T) {
-	dal := open(t)
+// A new favourite goes after the character's last position, gaps left by
+// deletes included; the first one takes position 1.
+func TestInsert_GoesAfterTheLastPosition(t *testing.T) {
+	cases := []struct {
+		name     string
+		last     int64
+		lastErr  error
+		position int64
+	}{
+		{"first favourite", 0, sql.ErrNoRows, 1},
+		{"after a gap", 3, nil, 4},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			q := mocks.NewMockQuerier(t)
+			mock.InOrder(
+				q.EXPECT().LastDiceFavouritePosition(ctx, int64(1)).Return(c.last, c.lastErr).Once(),
+				q.EXPECT().InsertDiceFavourite(ctx, queries.InsertDiceFavouriteParams{
+					CharacterID: 1, Formula: "2d6+1", Position: c.position,
+				}).Return(9, nil).Once(),
+			)
+
+			id, err := dicedal.New(q).Insert(ctx, 1, "2d6+1")
+			require.NoError(t, err)
+			assert.Equal(t, int64(9), id)
+		})
+	}
+}
+
+// The store refuses the same formula twice for one character (its unique
+// key); the error is returned.
+func TestInsert_RefusesTheSameFormulaTwice(t *testing.T) {
 	ctx := context.Background()
+	taken := errors.New("UNIQUE constraint failed")
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().LastDiceFavouritePosition(ctx, int64(1)).Return(1, nil).Once()
+	q.EXPECT().InsertDiceFavourite(ctx, queries.InsertDiceFavouriteParams{CharacterID: 1, Formula: "d20", Position: 2}).
+		Return(0, taken).Once()
 
-	id1, err := dal.Insert(ctx, 1, "2d6+1")
-	require.NoError(t, err)
-	id2, err := dal.Insert(ctx, 1, "d%")
-	require.NoError(t, err)
-	_, err = dal.Insert(ctx, 2, "d4")
-	require.NoError(t, err)
+	_, err := dicedal.New(q).Insert(ctx, 1, "d20")
+	require.ErrorIs(t, err, taken)
+}
 
-	got, err := dal.List(ctx, 1)
-	require.NoError(t, err)
-	assert.Equal(t, []dicesvc.Favourite{{ID: id1, Formula: "2d6+1"}, {ID: id2, Formula: "d%"}}, got)
+func TestInsert_PositionLookupFailureInsertsNothing(t *testing.T) {
+	ctx := context.Background()
+	boom := errors.New("boom")
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().LastDiceFavouritePosition(ctx, int64(1)).Return(0, boom).Once()
 
-	removed, err := dal.Delete(ctx, 2, id1)
-	require.NoError(t, err)
-	assert.False(t, removed, "another character's favourite is out of reach")
-	removed, err = dal.Delete(ctx, 1, id1)
+	_, err := dicedal.New(q).Insert(ctx, 1, "d20")
+	require.ErrorIs(t, err, boom)
+}
+
+// Delete and SetPosition are scoped to the character and report whether a row
+// was touched: another character's favourite is out of reach.
+func TestDeleteAndSetPosition_ReportWhetherTheFavouriteExisted(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	dal := dicedal.New(q)
+
+	q.EXPECT().DeleteDiceFavourite(ctx, queries.DeleteDiceFavouriteParams{CharacterID: 1, ID: 5}).Return(1, nil).Once()
+	q.EXPECT().DeleteDiceFavourite(ctx, queries.DeleteDiceFavouriteParams{CharacterID: 2, ID: 5}).Return(0, nil).Once()
+	q.EXPECT().SetDiceFavouritePosition(ctx, queries.SetDiceFavouritePositionParams{Position: 3, CharacterID: 1, ID: 6}).Return(1, nil).Once()
+	q.EXPECT().SetDiceFavouritePosition(ctx, queries.SetDiceFavouritePositionParams{Position: 1, CharacterID: 2, ID: 6}).Return(0, nil).Once()
+
+	removed, err := dal.Delete(ctx, 1, 5)
 	require.NoError(t, err)
 	assert.True(t, removed)
-	removed, err = dal.Delete(ctx, 1, id1)
+	removed, err = dal.Delete(ctx, 2, 5)
 	require.NoError(t, err)
-	assert.False(t, removed)
-
-	got, err = dal.List(ctx, 1)
+	assert.False(t, removed, "another character's favourite is out of reach")
+	moved, err := dal.SetPosition(ctx, 1, 6, 3)
 	require.NoError(t, err)
-	assert.Equal(t, []dicesvc.Favourite{{ID: id2, Formula: "d%"}}, got)
+	assert.True(t, moved)
+	moved, err = dal.SetPosition(ctx, 2, 6, 1)
+	require.NoError(t, err)
+	assert.False(t, moved, "another character's favourite is out of reach")
 }
 
-func TestInsert_RefusesTheSameFormulaTwice(t *testing.T) {
-	dal := open(t)
+func TestStorageErrors_AreReturned(t *testing.T) {
 	ctx := context.Background()
-	_, err := dal.Insert(ctx, 1, "d20")
-	require.NoError(t, err)
-	_, err = dal.Insert(ctx, 1, "d20")
-	require.Error(t, err)
-	_, err = dal.Insert(ctx, 2, "d20")
-	require.NoError(t, err, "another character may save it")
-}
+	boom := errors.New("boom")
+	q := mocks.NewMockQuerier(t)
+	dal := dicedal.New(q)
+	q.EXPECT().ListDiceFavourites(ctx, int64(1)).Return(nil, boom).Once()
+	q.EXPECT().DeleteDiceFavourite(ctx, queries.DeleteDiceFavouriteParams{CharacterID: 1, ID: 5}).Return(0, boom).Once()
+	q.EXPECT().SetDiceFavouritePosition(ctx, queries.SetDiceFavouritePositionParams{Position: 1, CharacterID: 1, ID: 5}).Return(0, boom).Once()
 
-func TestFavourites_NewOnesGoLastAndSetPositionReorders(t *testing.T) {
-	dal := open(t)
-	ctx := context.Background()
-	a, err := dal.Insert(ctx, 1, "d4")
-	require.NoError(t, err)
-	b, err := dal.Insert(ctx, 1, "d6")
-	require.NoError(t, err)
-	c, err := dal.Insert(ctx, 1, "d8")
-	require.NoError(t, err)
-
-	// Deleting the first leaves a gap in the positions: a new one is still last.
-	_, err = dal.Delete(ctx, 1, a)
-	require.NoError(t, err)
-	d, err := dal.Insert(ctx, 1, "d10")
-	require.NoError(t, err)
-	got, err := dal.List(ctx, 1)
-	require.NoError(t, err)
-	assert.Equal(t, []dicesvc.Favourite{{ID: b, Formula: "d6"}, {ID: c, Formula: "d8"}, {ID: d, Formula: "d10"}}, got)
-
-	for i, id := range []int64{d, b, c} {
-		ok, err := dal.SetPosition(ctx, 1, id, int64(i+1))
-		require.NoError(t, err)
-		assert.True(t, ok)
-	}
-	got, err = dal.List(ctx, 1)
-	require.NoError(t, err)
-	assert.Equal(t, []dicesvc.Favourite{{ID: d, Formula: "d10"}, {ID: b, Formula: "d6"}, {ID: c, Formula: "d8"}}, got)
-
-	ok, err := dal.SetPosition(ctx, 2, b, 1)
-	require.NoError(t, err)
-	assert.False(t, ok, "another character's favourite is out of reach")
+	_, err := dal.List(ctx, 1)
+	require.ErrorIs(t, err, boom)
+	_, err = dal.Delete(ctx, 1, 5)
+	require.ErrorIs(t, err, boom)
+	_, err = dal.SetPosition(ctx, 1, 5, 1)
+	require.ErrorIs(t, err, boom)
 }

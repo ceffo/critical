@@ -1,78 +1,85 @@
+// The adapter runs on a mocked Querier: the tests assert the operations called,
+// their arguments and how results map to domain values; no database, no SQL
+// text (ADR 0025 step 6.2).
 package critdal_test
 
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
+	"github.com/ceffo/critical/api/internal/adapters/critdal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/critdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-func open(t *testing.T) (*critdal.DAL, *sqlite.DB) {
-	t.Helper()
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	require.NoError(t, db.Migrate(context.Background()))
-	return critdal.New(db), db
-}
-
 func TestList_EmptyUntilSaved(t *testing.T) {
-	dal, _ := open(t)
-	got, err := dal.List(context.Background())
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().ListCritRows(ctx).Return([]queries.CritTableRow{}, nil).Once()
+
+	got, err := critdal.New(q).List(ctx)
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }
 
+// Decimal multipliers (x1.5) come back as stored.
+func TestList_MapsRowsWithDecimalMultipliers(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().ListCritRows(ctx).Return([]queries.CritTableRow{
+		{RollFrom: 1, RollTo: 50, Multiplier: 1.5},
+		{RollFrom: 51, RollTo: 100, Multiplier: 2.25},
+	}, nil).Once()
+
+	got, err := critdal.New(q).List(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []combatsvc.CritRow{{From: 1, To: 50, Multiplier: 1.5}, {From: 51, To: 100, Multiplier: 2.25}}, got)
+}
+
+// Replace clears the table first, then inserts every row in order.
 func TestReplace_SwapsTheWholeTable(t *testing.T) {
-	dal, _ := open(t)
 	ctx := context.Background()
-	first := []combatsvc.CritRow{{From: 1, To: 50, Multiplier: 2}, {From: 51, To: 100, Multiplier: 3}}
-	require.NoError(t, dal.Replace(ctx, first))
-	got, err := dal.List(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, first, got)
+	q := mocks.NewMockQuerier(t)
+	mock.InOrder(
+		q.EXPECT().DeleteCritRows(ctx).Return(nil).Once(),
+		q.EXPECT().InsertCritRow(ctx, queries.InsertCritRowParams{RollFrom: 1, RollTo: 50, Multiplier: 2}).Return(nil).Once(),
+		q.EXPECT().InsertCritRow(ctx, queries.InsertCritRowParams{RollFrom: 51, RollTo: 100, Multiplier: 2.5}).Return(nil).Once(),
+	)
 
-	second := []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 5}}
-	require.NoError(t, dal.Replace(ctx, second))
-	got, err = dal.List(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, second, got)
+	require.NoError(t, critdal.New(q).Replace(ctx, []combatsvc.CritRow{
+		{From: 1, To: 50, Multiplier: 2}, {From: 51, To: 100, Multiplier: 2.5},
+	}))
 }
 
-// A failing write inside the transaction leaves the previous table.
-func TestReplace_RolledBackWithItsTransaction(t *testing.T) {
-	dal, db := open(t)
+// A failing insert stops the swap and returns its error, so the caller's
+// transaction rolls back to the previous table.
+func TestReplace_StopsAtTheFirstFailingWrite(t *testing.T) {
 	ctx := context.Background()
-	old := []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 2}}
-	require.NoError(t, dal.Replace(ctx, old))
+	boom := errors.New("check constraint")
+	q := mocks.NewMockQuerier(t)
+	mock.InOrder(
+		q.EXPECT().DeleteCritRows(ctx).Return(nil).Once(),
+		q.EXPECT().InsertCritRow(ctx, queries.InsertCritRowParams{RollFrom: 1, RollTo: 50, Multiplier: 3}).Return(boom).Once(),
+	)
 
-	err := db.InTx(ctx, func(ctx context.Context) error {
-		// The second row breaks the table CHECK, after the old rows are gone.
-		if err := dal.Replace(ctx, []combatsvc.CritRow{{From: 1, To: 50, Multiplier: 3}, {From: 51, To: 100, Multiplier: 0}}); err != nil {
-			return err
-		}
-		return nil
+	err := critdal.New(q).Replace(ctx, []combatsvc.CritRow{
+		{From: 1, To: 50, Multiplier: 3}, {From: 51, To: 100, Multiplier: 0},
 	})
-	require.Error(t, err)
-	assert.False(t, errors.Is(err, nil))
-	got, err := dal.List(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, old, got)
+	require.ErrorIs(t, err, boom)
 }
 
-func TestReplace_KeepsDecimalMultipliers(t *testing.T) {
-	dal, _ := open(t)
+func TestReplace_ClearFailureWritesNothing(t *testing.T) {
 	ctx := context.Background()
-	rows := []combatsvc.CritRow{{From: 1, To: 50, Multiplier: 1.5}, {From: 51, To: 100, Multiplier: 2.25}}
-	require.NoError(t, dal.Replace(ctx, rows))
-	got, err := dal.List(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, rows, got)
+	boom := errors.New("boom")
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().DeleteCritRows(ctx).Return(boom).Once()
+
+	err := critdal.New(q).Replace(ctx, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 2}})
+	require.ErrorIs(t, err, boom)
 }

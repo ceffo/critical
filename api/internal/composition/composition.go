@@ -13,17 +13,22 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
+	critq "github.com/ceffo/critical/api/internal/adapters/critdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
 	"github.com/ceffo/critical/api/internal/adapters/dicedal"
+	diceq "github.com/ceffo/critical/api/internal/adapters/dicedal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
+	hpq "github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/skilldal"
+	skillq "github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
 	"github.com/ceffo/critical/api/internal/adapters/xpdal"
+	xpq "github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
@@ -108,8 +113,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
 
+	// The sqlc-generated queries run on the transaction the context carries,
+	// else on the pool (ADR 0025 step 5.2).
+	routed := sqlite.Routed(db)
 	characterDAL := characterdal.New(db)
-	hpDAL := hpdal.New(db)
+	hpDAL := hpdal.New(hpq.New(routed))
 	logDAL := actionlogdal.New(db)
 	buffDAL := buffdal.New(db)
 	spellDAL := spelldal.New(db)
@@ -119,7 +127,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	}
 	weaponDAL := weapondal.New(db)
 	weaponEditor := weapondal.NewEditor(db)
-	critDAL := critdal.New(db)
+	critDAL := critdal.New(critq.New(routed))
 	itemDAL := itemdal.New(db)
 
 	// The spell effects casting applies; a malformed formula is a startup
@@ -255,7 +263,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		return nil, err
 	}
 	xpSvc, err := xpsvc.New(xpsvc.Deps{
-		DAL: xpdal.New(db), Characters: charSvc, Thresholds: ruleTables, Log: logSvc, Tx: tx,
+		DAL: xpdal.New(xpq.New(routed)), Characters: charSvc, Thresholds: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
@@ -265,14 +273,14 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// Skill checks change no state: their entries carry no snapshot, so
 	// there is no restorer to register.
 	skillSvc, err := skillsvc.New(skillsvc.Deps{
-		DAL: skilldal.New(db), Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
+		DAL: skilldal.New(skillq.New(routed)), Characters: charSvc, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	// Free dice rolls change no state: no snapshot, no restorer.
-	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: dicedal.New(db), Dice: dice, Log: logSvc, Tx: tx})
+	diceSvc, err := dicesvc.New(dicesvc.Deps{DAL: dicedal.New(diceq.New(routed)), Dice: dice, Log: logSvc, Tx: tx})
 	if err != nil {
 		_ = db.Close()
 		return nil, err

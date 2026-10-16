@@ -1,5 +1,5 @@
 // Package critdal is the storage adapter for the house crit table consumed by
-// combatsvc (combatsvc.CritTable). It delegates to bob-generated typed queries.
+// combatsvc (combatsvc.CritTable). It delegates to sqlc-generated queries.
 package critdal
 
 import (
@@ -8,25 +8,22 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/critdal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// DAL is the SQLite-backed implementation of combatsvc.CritTable.
+// DAL is the implementation of combatsvc.CritTable over the sqlc-generated
+// queries.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
-// New returns a DAL bound to q.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
-
-func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
+// New returns a DAL running its queries on q. The composition root builds q
+// over the pool, routed to the caller's transaction (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 // List returns the stored rows by ascending range start; none means the
 // table was never edited.
 func (d *DAL) List(ctx context.Context) ([]combatsvc.CritRow, error) {
-	rows, err := queries.ListCritRows().All(ctx, d.exec(ctx))
+	rows, err := d.q.ListCritRows(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list crit table: %w", err)
 	}
@@ -37,16 +34,17 @@ func (d *DAL) List(ctx context.Context) ([]combatsvc.CritRow, error) {
 	return out, nil
 }
 
-// Replace swaps the whole table. The caller runs it in a transaction so a
-// failed insert leaves the previous table in place.
+// Replace swaps the whole table: it clears it, then inserts the rows in order.
+// The caller runs it in a transaction so a failed insert leaves the previous
+// table in place.
 func (d *DAL) Replace(ctx context.Context, rows []combatsvc.CritRow) error {
-	if _, err := queries.DeleteCritRows().Exec(ctx, d.exec(ctx)); err != nil {
+	if err := d.q.DeleteCritRows(ctx); err != nil {
 		return fmt.Errorf("clear crit table: %w", err)
 	}
 	for _, r := range rows {
-		_, err := queries.InsertCritRow([]queries.InsertCritRow_CritTableRows{{
+		err := d.q.InsertCritRow(ctx, queries.InsertCritRowParams{
 			RollFrom: int64(r.From), RollTo: int64(r.To), Multiplier: r.Multiplier,
-		}}).Exec(ctx, d.exec(ctx))
+		})
 		if err != nil {
 			return fmt.Errorf("insert crit row %d-%d: %w", r.From, r.To, err)
 		}

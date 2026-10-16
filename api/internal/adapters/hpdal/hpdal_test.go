@@ -1,50 +1,45 @@
+// The adapter runs on a mocked Querier: the tests assert the operations called,
+// their arguments and how results map to domain values; no database, no SQL
+// text (ADR 0025 step 6.2).
 package hpdal_test
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
+	"github.com/ceffo/critical/api/internal/adapters/hpdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-func openDB(t *testing.T) *sqlite.DB {
-	t.Helper()
-	db, err := sqlite.Open("file::memory:?cache=shared&mode=memory")
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	require.NoError(t, db.Migrate(context.Background()))
-	return db
-}
-
-func seedCharacter(t *testing.T, db *sqlite.DB) int64 {
-	t.Helper()
-	res, err := db.ExecContext(context.Background(),
-		`INSERT INTO characters (name, str, dex, con, int, wis, cha, hp_max, thac0_base) VALUES ('Test', 10, 10, 10, 10, 10, 10, 30, 19)`)
-	require.NoError(t, err)
-	id, err := res.LastInsertId()
-	require.NoError(t, err)
-	return id
-}
-
 func TestGetMaxHP(t *testing.T) {
-	db := openDB(t)
-	charID := seedCharacter(t, db)
-	dal := hpdal.New(db)
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().GetCharacterMaxHP(context.Background(), int64(7)).Return(30, nil).Once()
 
-	maxHP, err := dal.GetMaxHP(context.Background(), charID)
+	maxHP, err := hpdal.New(q).GetMaxHP(context.Background(), 7)
 	require.NoError(t, err)
 	assert.Equal(t, 30, maxHP)
 }
 
 func TestGetMaxHP_NotFound(t *testing.T) {
-	db := openDB(t)
-	dal := hpdal.New(db)
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().GetCharacterMaxHP(context.Background(), int64(999)).Return(0, sql.ErrNoRows).Once()
 
-	_, err := dal.GetMaxHP(context.Background(), 999)
+	_, err := hpdal.New(q).GetMaxHP(context.Background(), 999)
 	assert.ErrorIs(t, err, domain.ErrCharacterNotFound)
+}
+
+func TestGetMaxHP_StorageErrorIsWrapped(t *testing.T) {
+	boom := errors.New("boom")
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().GetCharacterMaxHP(context.Background(), int64(7)).Return(0, boom).Once()
+
+	_, err := hpdal.New(q).GetMaxHP(context.Background(), 7)
+	require.ErrorIs(t, err, boom)
+	assert.NotErrorIs(t, err, domain.ErrCharacterNotFound)
 }

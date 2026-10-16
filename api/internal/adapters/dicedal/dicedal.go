@@ -1,33 +1,31 @@
 // Package dicedal is the storage adapter for the dice composer's favourites
-// (dicesvc.DAL). It delegates to bob-generated typed queries.
+// (dicesvc.DAL). It delegates to sqlc-generated queries.
 package dicedal
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/dicedal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// DAL is the SQLite-backed implementation of dicesvc.DAL.
+// DAL is the implementation of dicesvc.DAL over the sqlc-generated queries.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
 var _ dicesvc.DAL = (*DAL)(nil)
 
-// New returns a DAL bound to q.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
-
-func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
+// New returns a DAL running its queries on q. The composition root builds q
+// over the pool, routed to the caller's transaction (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 // List returns the character's favourites, in the user's order.
 func (d *DAL) List(ctx context.Context, characterID int64) ([]dicesvc.Favourite, error) {
-	rows, err := queries.ListDiceFavourites(characterID).All(ctx, d.exec(ctx))
+	rows, err := d.q.ListDiceFavourites(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("list dice_favourites: %w", err)
 	}
@@ -38,19 +36,21 @@ func (d *DAL) List(ctx context.Context, characterID int64) ([]dicesvc.Favourite,
 	return out, nil
 }
 
-// Insert saves a formula after the last favourite and returns its id.
+// Insert saves a formula after the last favourite (position 1 for the first
+// one) and returns its id.
 func (d *DAL) Insert(ctx context.Context, characterID int64, formula string) (int64, error) {
-	last, err := queries.LastDiceFavouritePosition(characterID).All(ctx, d.exec(ctx))
-	if err != nil {
-		return 0, fmt.Errorf("last dice_favourites position: %w", err)
-	}
 	var position int64 = 1
-	if len(last) > 0 {
-		position = last[0] + 1
+	last, err := d.q.LastDiceFavouritePosition(ctx, characterID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+	case err != nil:
+		return 0, fmt.Errorf("last dice_favourites position: %w", err)
+	default:
+		position = last + 1
 	}
-	id, err := queries.InsertDiceFavourite([]queries.InsertDiceFavourite_DiceFavourites{{
+	id, err := d.q.InsertDiceFavourite(ctx, queries.InsertDiceFavouriteParams{
 		CharacterID: characterID, Formula: formula, Position: position,
-	}}).One(ctx, d.exec(ctx))
+	})
 	if err != nil {
 		return 0, fmt.Errorf("insert dice_favourites: %w", err)
 	}
@@ -59,19 +59,21 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, formula string) (in
 
 // Delete removes a favourite and reports whether it existed.
 func (d *DAL) Delete(ctx context.Context, characterID, id int64) (bool, error) {
-	ids, err := queries.DeleteDiceFavourite(characterID, id).All(ctx, d.exec(ctx))
+	n, err := d.q.DeleteDiceFavourite(ctx, queries.DeleteDiceFavouriteParams{CharacterID: characterID, ID: id})
 	if err != nil {
 		return false, fmt.Errorf("delete dice_favourites %d: %w", id, err)
 	}
-	return len(ids) > 0, nil
+	return n > 0, nil
 }
 
 // SetPosition moves a favourite to the given position and reports whether it
 // existed.
 func (d *DAL) SetPosition(ctx context.Context, characterID, id, position int64) (bool, error) {
-	ids, err := queries.SetDiceFavouritePosition(position, characterID, id).All(ctx, d.exec(ctx))
+	n, err := d.q.SetDiceFavouritePosition(ctx, queries.SetDiceFavouritePositionParams{
+		Position: position, CharacterID: characterID, ID: id,
+	})
 	if err != nil {
 		return false, fmt.Errorf("set dice_favourites %d position: %w", id, err)
 	}
-	return len(ids) > 0, nil
+	return n > 0, nil
 }

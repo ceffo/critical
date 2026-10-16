@@ -36,7 +36,17 @@ type Config struct {
 	// step 1). Unset, as in `just dev` where Vite serves it, it serves
 	// nothing there.
 	WebDir string `env:"CRITICAL_WEB_DIR"`
+	// Storage selects where the data lives: empty, the database at DSN;
+	// StorageMemory, the in-memory storage of the e2e runs (ADR 0025 step 8),
+	// which opens no database and keeps nothing after the process exits.
+	Storage string `env:"CRITICAL_STORAGE"`
+	// FlyApp is set by fly.io on every machine it runs (FLY_APP_NAME): the
+	// in-memory storage is refused there (ADR 0025 step 8.3).
+	FlyApp string `env:"FLY_APP_NAME"`
 }
+
+// StorageMemory is the CRITICAL_STORAGE value of the in-memory storage.
+const StorageMemory = "memory"
 
 // commit is the commit the binary was built from, reported by /api/health
 // (ADR 0024 step 1.4). The image build sets it with
@@ -54,6 +64,28 @@ func (c Config) Validate() error {
 		return errors.New("CRITICAL_ADDR must not be empty")
 	case c.Catalogue == "":
 		return errors.New("CRITICAL_CATALOGUE must not be empty")
+	}
+	return c.validateStorage()
+}
+
+// validateStorage accepts the database (CRITICAL_STORAGE unset) or the
+// in-memory storage, and refuses the in-memory storage where real data lives
+// (ADR 0025 step 8.3): on a fly.io machine (staging and production run
+// nowhere else) and in the production image (the only one serving the built
+// web app, CRITICAL_WEB_DIR). Its data would vanish at the next restart.
+func (c Config) validateStorage() error {
+	switch c.Storage {
+	case "":
+		return nil
+	case StorageMemory:
+	default:
+		return fmt.Errorf("CRITICAL_STORAGE must be unset or %q, got %q", StorageMemory, c.Storage)
+	}
+	switch {
+	case c.FlyApp != "":
+		return fmt.Errorf("CRITICAL_STORAGE=%s is for e2e runs only, refused on fly.io (app %s)", StorageMemory, c.FlyApp)
+	case c.WebDir != "":
+		return fmt.Errorf("CRITICAL_STORAGE=%s is for e2e runs only, refused in the production image (CRITICAL_WEB_DIR is set)", StorageMemory)
 	}
 	return nil
 }
@@ -115,7 +147,8 @@ func Start() error {
 		return fmt.Errorf("working directory: %w", err)
 	}
 	bs, err := composition.New(ctx, composition.Config{
-		DSN: cfg.DSN, SeedsDir: cfg.SeedsDir, Catalogue: resolveFromRepoRoot(cfg.Catalogue, cwd),
+		DSN: cfg.DSN, InMemory: cfg.Storage == StorageMemory,
+		SeedsDir: cfg.SeedsDir, Catalogue: resolveFromRepoRoot(cfg.Catalogue, cwd),
 	})
 	if err != nil {
 		return err

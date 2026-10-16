@@ -119,3 +119,24 @@ func TestFly_Step9_1_SnapshotRetention(t *testing.T) {
 	assert.Equal(t, 7, load(t, "fly.staging.toml").Mounts[0].SnapshotRetention)
 	assert.Equal(t, 30, load(t, "fly.prod.toml").Mounts[0].SnapshotRetention)
 }
+
+// ADR 0025 step 8.3: the in-memory storage of the e2e runs (CRITICAL_STORAGE)
+// can never be enabled in staging or production: no fly configuration and no
+// line of the production image names it, so a deployment always runs on the
+// database. (The boot also refuses it on a fly machine and in the image:
+// TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage.)
+func TestFly_Step8_3_InMemoryStorageNeverEnabled(t *testing.T) {
+	for file := range files {
+		t.Run(file, func(t *testing.T) {
+			c := load(t, file)
+			assert.NotContains(t, c.Env, "CRITICAL_STORAGE")
+			raw, err := os.ReadFile("../../../deploy/" + file)
+			require.NoError(t, err)
+			assert.NotContains(t, string(raw), "CRITICAL_STORAGE", "%s must not name the storage mode", file)
+		})
+	}
+	assert.NotContains(t, dockerfileEnv(t), "CRITICAL_STORAGE")
+	raw, err := os.ReadFile("../../../Dockerfile")
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "CRITICAL_STORAGE", "the production image must not name the storage mode")
+}

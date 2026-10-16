@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
@@ -73,4 +74,26 @@ func TestSQLiteStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
 		require.True(t, ok, "storage port %s has no wiring check", name)
 		assert.True(t, reaches(call), "%s does not run on the caller's transaction", name)
 	}
+}
+
+// ADR 0025 step 8.1: memoryStorage wires an in-memory implementation of
+// every storage port, all over the store that runs the transactions: a port
+// written inside a failed transaction of the store is rolled back with it.
+func TestMemoryStorage_EveryPortOnTheOneStore(t *testing.T) {
+	m := memory.New()
+	s := memoryStorage(m)
+	v := reflect.ValueOf(s)
+	for i := range v.NumField() {
+		assert.False(t, v.Field(i).IsNil(), "storage port %s is not wired", v.Type().Field(i).Name)
+	}
+	assert.Same(t, m, s.Store)
+
+	ctx := context.Background()
+	_ = s.Store.InTx(ctx, func(ctx context.Context) error {
+		require.NoError(t, s.Buff.SaveRoundNumber(ctx, 1, 4))
+		return assert.AnError
+	})
+	round, err := s.Buff.GetRoundNumber(ctx, 1)
+	require.NoError(t, err)
+	assert.Zero(t, round)
 }

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/domain/localized"
@@ -87,9 +88,10 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 // rest of the filter (names, school groups, spheres, typed stats) and ranks
 // the matches. Only the name, school and sphere texts are read (one batched
 // lookup by key, ADR 0023): never the descriptions. An empty class or no
-// level means any.
+// level means any. The class is matched case-insensitively: the adapter
+// lowers it and the query compares it with the lowered column.
 func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
-	params := queries.SearchSpellsParams{Class: f.Class, Levels: make([]int64, len(f.Levels))}
+	params := queries.SearchSpellsParams{Class: strings.ToLower(f.Class), Levels: make([]int64, len(f.Levels))}
 	if len(f.Levels) == 0 {
 		params.AnyLevel = 1
 	}

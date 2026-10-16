@@ -157,7 +157,8 @@ func TestSearch_PassesTheColumnFilters(t *testing.T) {
 		want queries.SearchSpellsParams
 	}{
 		{"no filter", spellsvc.Filter{}, queries.SearchSpellsParams{AnyLevel: 1, Levels: []int64{}}},
-		{"class", spellsvc.Filter{Class: "WIZARD"}, queries.SearchSpellsParams{Class: "WIZARD", AnyLevel: 1, Levels: []int64{}}},
+		{"class is lowered (case-insensitive match on every engine)", spellsvc.Filter{Class: "WIZARD"}, queries.SearchSpellsParams{Class: "wizard", AnyLevel: 1, Levels: []int64{}}},
+		{"mixed-case class is lowered", spellsvc.Filter{Class: "Priest"}, queries.SearchSpellsParams{Class: "priest", AnyLevel: 1, Levels: []int64{}}},
 		{"several levels", spellsvc.Filter{Levels: []int{3, 1}}, queries.SearchSpellsParams{Levels: []int64{3, 1}}},
 		{"level 0 is a level, not 'any'", spellsvc.Filter{Levels: []int{0}}, queries.SearchSpellsParams{Levels: []int64{0}}},
 		{"class and levels combined", spellsvc.Filter{Class: "wizard", Levels: []int{1, 2}}, queries.SearchSpellsParams{Class: "wizard", Levels: []int64{1, 2}}},

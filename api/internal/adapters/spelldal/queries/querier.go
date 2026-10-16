@@ -13,9 +13,10 @@ type Querier interface {
 	GetSpellSlots(ctx context.Context, characterID int64) (string, error)
 	// SearchSpells reads the served rows (a row without a key is an older
 	// duplicate the catalogue import left in place, ADR 0021 step 5.4.1) of a
-	// class (LIKE without wildcards: case-insensitive equality; '' is any class)
-	// and of the levels given (any level when any_level is 1). The adapter sorts
-	// the result.
+	// class (lower(class) equal to the class the adapter lowered: case-insensitive
+	// on every engine, never LIKE, whose case rule differs between SQLite and
+	// PostgreSQL; '' is any class) and of the levels given (any level when
+	// any_level is 1). The adapter sorts the result.
 	SearchSpells(ctx context.Context, arg SearchSpellsParams) ([]Spell, error)
 	SpellsByKey(ctx context.Context, keys []sql.NullString) ([]Spell, error)
 	// TextsByID reads the localized_texts rows of the keys through the primary

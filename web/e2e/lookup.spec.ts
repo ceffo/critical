@@ -1,7 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { test, expect, snap, catalogueSpell } from "./fixtures";
+import {
+  test,
+  expect,
+  snap,
+  catalogueSpell,
+  type ExtraSpell,
+} from "./fixtures";
 import {
   chooseLanguage,
   chooseSetting,
@@ -32,7 +38,7 @@ function row(
   level: number,
   school: string,
   sphere = "",
-  extra: Record<string, string> = {},
+  extra: Partial<ExtraSpell> = {},
 ) {
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
   return catalogueSpell({
@@ -74,8 +80,9 @@ const named = [
     "Divination",
     "",
     {
-      nameFr:
-        "Nom de sortilège invraisemblablement long des anciens archimages",
+      names: {
+        fr: "Nom de sortilège invraisemblablement long des anciens archimages",
+      },
     },
   ),
   row("Quixotic Oddity", "Wizard", 3, "Divination", "", {

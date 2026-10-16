@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
 )
@@ -15,19 +16,19 @@ import (
 // catalogue is a fixture in the Reader's order (level, name, class).
 func catalogue() []spellsvc.Spell {
 	return []spellsvc.Spell{
-		{ID: "burning_hands", Name: "Burning Hands", NameFR: "Mains brûlantes", Class: "Wizard", Level: 1, School: "Alteration"},
-		{ID: "detect_magic_priest", Name: "Detect Magic", NameFR: "Détection de la magie", Class: "Priest", Level: 1, School: "Divination", Sphere: "Divination"},
-		{ID: "detect_magic", Name: "Detect Magic", NameFR: "Détection de la magie", Class: "Wizard", Level: 1, School: "Divination"},
-		{ID: "faerie_fire", Name: "Faerie Fire", Class: "Priest", Level: 1, School: "Alteration", Sphere: "Elemental Fire"},
-		{ID: "fire", Name: "Fire", NameFR: "Feu", Class: "Wizard", Level: 2, School: "Evocation"},
-		{ID: "fire_trap", Name: "Fire Trap", NameFR: "Piège de feu", Class: "Wizard", Level: 2, School: "Abjuration, Evocation"},
-		{ID: "hold_person_priest", Name: "Hold Person", Class: "Priest", Level: 2, School: "Enchantment/Charm", Sphere: "Charm"},
-		{ID: "fireball", Name: "Fireball", NameFR: "Boule de feu", Class: "Wizard", Level: 3, School: "Invocation/Evocation"},
-		{ID: "fire_shield", Name: "Fire Shield", Class: "Wizard", Level: 4, School: "Evocation, Alteration"},
-		{ID: "fortify_l4", Name: "Fortify", Class: "Priest", Level: 4, School: "Necromantic", Sphere: "Wards Elemental Air"},
-		{ID: "wall_of_fire", Name: "Wall of Fire", NameFR: "Mur de feu en boule", Class: "Wizard", Level: 4, School: "Evocation"},
-		{ID: "tensers_brawl", Name: "Tenser's Brawl", Class: "Wizard", Level: 5, School: "Alteration, Geometry"},
-		{ID: "sands_of_time", Name: "Sands of Time", NameFR: "Sables du temps et Œil", Class: "Wizard", Level: 6, School: "Dimension"},
+		{ID: "burning_hands", Name: localized.Text{"en": "Burning Hands", "fr": "Mains brûlantes"}, Class: "Wizard", Level: 1, School: localized.Of("Alteration")},
+		{ID: "detect_magic_priest", Name: localized.Text{"en": "Detect Magic", "fr": "Détection de la magie"}, Class: "Priest", Level: 1, School: localized.Of("Divination"), Sphere: localized.Of("Divination")},
+		{ID: "detect_magic", Name: localized.Text{"en": "Detect Magic", "fr": "Détection de la magie"}, Class: "Wizard", Level: 1, School: localized.Of("Divination")},
+		{ID: "faerie_fire", Name: localized.Of("Faerie Fire"), Class: "Priest", Level: 1, School: localized.Of("Alteration"), Sphere: localized.Of("Elemental Fire")},
+		{ID: "fire", Name: localized.Text{"en": "Fire", "fr": "Feu"}, Class: "Wizard", Level: 2, School: localized.Of("Evocation")},
+		{ID: "fire_trap", Name: localized.Text{"en": "Fire Trap", "fr": "Piège de feu"}, Class: "Wizard", Level: 2, School: localized.Of("Abjuration, Evocation")},
+		{ID: "hold_person_priest", Name: localized.Of("Hold Person"), Class: "Priest", Level: 2, School: localized.Of("Enchantment/Charm"), Sphere: localized.Of("Charm")},
+		{ID: "fireball", Name: localized.Text{"en": "Fireball", "fr": "Boule de feu"}, Class: "Wizard", Level: 3, School: localized.Of("Invocation/Evocation")},
+		{ID: "fire_shield", Name: localized.Of("Fire Shield"), Class: "Wizard", Level: 4, School: localized.Of("Evocation, Alteration")},
+		{ID: "fortify_l4", Name: localized.Of("Fortify"), Class: "Priest", Level: 4, School: localized.Of("Necromantic"), Sphere: localized.Of("Wards Elemental Air")},
+		{ID: "wall_of_fire", Name: localized.Text{"en": "Wall of Fire", "fr": "Mur de feu en boule"}, Class: "Wizard", Level: 4, School: localized.Of("Evocation")},
+		{ID: "tensers_brawl", Name: localized.Of("Tenser's Brawl"), Class: "Wizard", Level: 5, School: localized.Of("Alteration, Geometry")},
+		{ID: "sands_of_time", Name: localized.Text{"en": "Sands of Time", "fr": "Sables du temps et Œil"}, Class: "Wizard", Level: 6, School: localized.Of("Dimension")},
 	}
 }
 
@@ -49,6 +50,7 @@ func ids(t *testing.T, f spellsvc.Filter, book []string, spells []spellsvc.Spell
 	svc, err := spellsvc.New(dal, reader, b)
 	require.NoError(t, err)
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
+	expectDetails(reader, spells)
 	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize})
 	require.NoError(t, err)
 	out := []string{}
@@ -252,8 +254,8 @@ func TestNames_ListsEveryCatalogueSpellWithItsNames(t *testing.T) {
 	got, err := svc.Names(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, []spellsvc.SpellName{
-		{ID: "burning_hands", Name: "Burning Hands", NameFR: "Mains brûlantes"},
-		{ID: "detect_magic_priest", Name: "Detect Magic", NameFR: "Détection de la magie"},
-		{ID: "detect_magic", Name: "Detect Magic", NameFR: "Détection de la magie"},
+		{ID: "burning_hands", Name: localized.Text{"en": "Burning Hands", "fr": "Mains brûlantes"}},
+		{ID: "detect_magic_priest", Name: localized.Text{"en": "Detect Magic", "fr": "Détection de la magie"}},
+		{ID: "detect_magic", Name: localized.Text{"en": "Detect Magic", "fr": "Détection de la magie"}},
 	}, got)
 }

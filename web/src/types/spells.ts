@@ -1,3 +1,5 @@
+import type { LocalizedText } from "@/types/localized";
+
 export interface SpellSlot {
   level: number;
   /** Slug of the English name; empty on slots saved before preparation existed. */
@@ -148,42 +150,39 @@ export interface SpellExposure {
   modes?: SpellMode[];
 }
 
-/** Mirrors spellhdl.SpellNameDTO: a spell's id and names; `name_fr` absent when it has none. */
+/** Mirrors spellhdl.SpellNameDTO: a spell's id and its name in every language the catalogue has. */
 export interface SpellName {
   id: string;
-  name: string;
-  name_fr?: string;
+  name: LocalizedText;
 }
 
 /** The catalogue's spell names by id. */
 export type SpellNames = Readonly<Record<string, SpellName>>;
 
 /**
- * Mirrors spellhdl.SpellDTO. `name` and `description` are English; `name_fr` and `description_fr`
- * are the spell catalogue's French texts, absent when it has none: show French when present and
- * fall back to English per field (ADR 0021). Descriptions are in the catalogue's Markdown subset
+ * Mirrors spellhdl.SpellDTO. Every human-language text is a language map (ADR 0023): pick the UI
+ * language with `localized`, which falls back to English per field. The six stat texts, the school
+ * and the sphere are the English books' only. Descriptions are in the catalogue's Markdown subset
  * (paragraphs, `- ` bullet lists, pipe tables, blocks separated by a blank line).
  */
 export interface Spell {
   /** Catalogue key of the spell ("fortify_l4", "hold_person_priest"); cast and receive take it. */
   id: string;
-  name: string;
-  name_fr?: string;
+  name: LocalizedText;
   class: string;
   level: number;
-  school: string;
-  sphere: string;
-  casting_time: string;
-  range: string;
-  duration: string;
-  area_of_effect: string;
-  components: string;
-  saving_throw: string;
-  description: string;
-  description_fr?: string;
+  school: LocalizedText;
+  sphere: LocalizedText;
+  casting_time: LocalizedText;
+  range: LocalizedText;
+  duration: LocalizedText;
+  area_of_effect: LocalizedText;
+  components: LocalizedText;
+  saving_throw: LocalizedText;
+  description: LocalizedText;
   /** Book code of the English text (PHB, TOM, ...; WEB when no book was matched). */
   source: string;
-  /** The six stat fields above, typed. Raw text stays in the string fields. */
+  /** The six stat fields above, typed. Raw text stays in the text fields. */
   stats: SpellStats;
   /** Level `values` are computed for: ?caster_level=, default the character's. */
   caster_level?: number;

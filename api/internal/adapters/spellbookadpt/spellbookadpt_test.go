@@ -7,12 +7,13 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 var cat = catalogue.Catalogue{Spells: []catalogue.Spell{
-	{ID: "mirror_image", Name: "Mirror Image", Class: "Wizard", Level: 2},
-	{ID: "fireball", Name: "Fireball", Class: "Wizard", Level: 3},
-	{ID: "cure_light_wounds", Name: "Cure Light Wounds", Class: "Priest", Level: 1},
+	{ID: "mirror_image", Name: localized.Of("Mirror Image"), Class: "Wizard", Level: 2},
+	{ID: "fireball", Name: localized.Of("Fireball"), Class: "Wizard", Level: 3},
+	{ID: "cure_light_wounds", Name: localized.Of("Cure Light Wounds"), Class: "Priest", Level: 1},
 }}
 
 func TestParse(t *testing.T) {

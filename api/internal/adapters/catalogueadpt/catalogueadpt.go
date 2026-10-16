@@ -21,6 +21,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // schemaJSON is a copy of schemas/catalogue.schema.json (a test keeps the
@@ -73,26 +74,21 @@ func Load(path string) (catalogue.Catalogue, error) {
 	return c, nil
 }
 
-type localized struct {
-	EN string `json:"en"`
-	FR string `json:"fr"`
-}
-
 type spellDTO struct {
-	ID           string    `json:"id"`
-	Class        string    `json:"class"`
-	Level        int       `json:"level"`
-	School       string    `json:"school"`
-	Sphere       string    `json:"sphere"`
-	CastingTime  string    `json:"casting_time"`
-	Range        string    `json:"range"`
-	Duration     string    `json:"duration"`
-	AreaOfEffect string    `json:"area_of_effect"`
-	Components   string    `json:"components"`
-	SavingThrow  string    `json:"saving_throw"`
-	Name         localized `json:"name"`
-	Description  localized `json:"description"`
-	Source       string    `json:"source"`
+	ID           string         `json:"id"`
+	Class        string         `json:"class"`
+	Level        int            `json:"level"`
+	School       string         `json:"school"`
+	Sphere       string         `json:"sphere"`
+	CastingTime  string         `json:"casting_time"`
+	Range        string         `json:"range"`
+	Duration     string         `json:"duration"`
+	AreaOfEffect string         `json:"area_of_effect"`
+	Components   string         `json:"components"`
+	SavingThrow  string         `json:"saving_throw"`
+	Name         localized.Text `json:"name"`
+	Description  localized.Text `json:"description"`
+	Source       string         `json:"source"`
 }
 
 type artifactDTO struct {
@@ -144,11 +140,14 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 		}
 		seen[s.ID] = true
 		out.Spells = append(out.Spells, catalogue.Spell{
-			ID: s.ID, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
-			CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
-			AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
-			Name: s.Name.EN, NameFR: s.Name.FR, Description: s.Description.EN, DescriptionFR: s.Description.FR,
-			Source: s.Source,
+			// The artifact's plain texts are the English books' (format 1):
+			// texts in the fallback language. Its name and description are
+			// already language maps (ADR 0023).
+			ID: s.ID, Class: s.Class, Level: s.Level, School: localized.Of(s.School), Sphere: localized.Of(s.Sphere),
+			CastingTime: localized.Of(s.CastingTime), Range: localized.Of(s.Range), Duration: localized.Of(s.Duration),
+			AreaOfEffect: localized.Of(s.AreaOfEffect), Components: localized.Of(s.Components),
+			SavingThrow: localized.Of(s.SavingThrow),
+			Name:        s.Name.Clean(), Description: s.Description.Clean(), Source: s.Source,
 		})
 	}
 	if len(dups) > 0 {

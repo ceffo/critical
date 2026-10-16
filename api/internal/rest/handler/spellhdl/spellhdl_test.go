@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -32,7 +33,7 @@ func (fakeSvc) ResetSlots(context.Context, int64) ([]spellsvc.SpellSlot, error) 
 func (f fakeSvc) Names(context.Context) ([]spellsvc.SpellName, error) {
 	out := []spellsvc.SpellName{}
 	for _, s := range f.spells {
-		out = append(out, spellsvc.SpellName{ID: s.ID, Name: s.Name, NameFR: s.NameFR})
+		out = append(out, spellsvc.SpellName{ID: s.ID, Name: s.Name})
 	}
 	return out, nil
 }
@@ -113,8 +114,9 @@ func searchAs(t *testing.T, url string, chars fakeChars) (int, []spellhdl.SpellD
 	t.Helper()
 	raw := spellstats.Raw{CastingTime: "1", Range: "60 yds. + 10 yds./level", Duration: "3 rds./level", SavingThrow: "None"}
 	svc := fakeSvc{spells: []spellsvc.Spell{{
-		ID: "magic_missile", Name: "Magic Missile", Range: raw.Range, Duration: raw.Duration, Stats: spellstats.Parse(raw),
-	}, {ID: "fireball", Name: "Fireball", Stats: spellstats.Parse(spellstats.Raw{})}}}
+		ID: "magic_missile", Name: localized.Text{"en": "Magic Missile", "fr": "Projectile magique"},
+		Range: localized.Of(raw.Range), Duration: localized.Of(raw.Duration), Stats: spellstats.Parse(raw),
+	}, {ID: "fireball", Name: localized.Of("Fireball"), Stats: spellstats.Parse(spellstats.Raw{})}}}
 	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, svc, chars, fakeDamage{}))
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest(http.MethodGet, url, nil))
@@ -129,7 +131,7 @@ func TestSearch_ReturnsRawTextTypedStatsAndValuesAtCharacterLevel(t *testing.T) 
 	code, out := search(t, "/api/spells")
 	require.Equal(t, http.StatusOK, code)
 	require.Len(t, out, 2)
-	assert.Equal(t, "60 yds. + 10 yds./level", out[0].Range, "raw text kept for existing callers")
+	assert.Equal(t, spellhdl.TextDTO{"en": "60 yds. + 10 yds./level"}, out[0].Range, "raw text kept for existing callers")
 	assert.Equal(t, spellstats.RangeDistance, out[0].Stats.Range.Kind)
 	assert.Equal(t, 15, out[0].CasterLevel)
 	require.NotNil(t, out[0].Values)
@@ -157,7 +159,7 @@ func TestSearch_CharacterLookupFailureStillReturnsSpellsWithoutValues(t *testing
 	code, out := searchAs(t, "/api/spells", fakeChars{err: errors.New("no character")})
 	require.Equal(t, http.StatusOK, code)
 	require.Len(t, out, 2)
-	assert.Equal(t, "Magic Missile", out[0].Name)
+	assert.Equal(t, spellhdl.TextDTO{"en": "Magic Missile", "fr": "Projectile magique"}, out[0].Name)
 	assert.Nil(t, out[0].Values)
 	assert.Equal(t, spellstats.RangeDistance, out[0].Stats.Range.Kind, "typed stats still returned")
 
@@ -287,17 +289,43 @@ func TestFilterOptions_ListsSchoolGroupsAndSpheres(t *testing.T) {
 	assert.Contains(t, out.Spheres, "Charm")
 }
 
-// Every spell's id and names; the French name is absent when the catalogue
-// has none.
-func TestNames_ServesIDsWithTheEnglishAndFrenchNames(t *testing.T) {
+// Every spell's id and its name as a language map (ADR 0023 step 6): only
+// the languages the catalogue has, so a spell without French has no "fr" key.
+func TestNames_ServesIDsWithNameLanguageMaps(t *testing.T) {
 	svc := fakeSvc{spells: []spellsvc.Spell{
-		{ID: "fireball", Name: "Fireball", NameFR: "Boule de feu"},
-		{ID: "armor", Name: "Armor"},
+		{ID: "fireball", Name: localized.Text{"en": "Fireball", "fr": "Boule de feu"}},
+		{ID: "armor", Name: localized.Of("Armor")},
 	}}
 	rec := httptest.NewRecorder()
 	render.Handle(spellhdl.Names(svc))(rec, httptest.NewRequest(http.MethodGet, "/api/spells/names", nil))
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `[{"id":"fireball","name":"Fireball","name_fr":"Boule de feu"},{"id":"armor","name":"Armor"}]`, rec.Body.String())
+	assert.JSONEq(t, `[{"id":"fireball","name":{"en":"Fireball","fr":"Boule de feu"}},{"id":"armor","name":{"en":"Armor"}}]`,
+		rec.Body.String())
+}
+
+// Every text field of a spell payload is a language map; a text in no
+// language (no sphere) is an empty map, never null or a string.
+func TestSearch_ServesTextFieldsAsLanguageMaps(t *testing.T) {
+	svc := fakeSvc{spells: []spellsvc.Spell{{
+		ID: "armor", Name: localized.Of("Armor"), School: localized.Of("Conjuration"),
+		Description: localized.Text{"en": "Text.", "fr": "Texte."}, Range: localized.Of("Touch"),
+	}}}
+	rec := httptest.NewRecorder()
+	render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, svc, fakeChars{level: 15}, fakeDamage{}))(
+		rec, httptest.NewRequest(http.MethodGet, "/api/spells", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var page struct {
+		Items []map[string]json.RawMessage `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+	require.Len(t, page.Items, 1)
+	got := page.Items[0]
+	assert.JSONEq(t, `{"en":"Armor"}`, string(got["name"]), "no French name: no fr key")
+	assert.JSONEq(t, `{"en":"Text.","fr":"Texte."}`, string(got["description"]))
+	assert.JSONEq(t, `{"en":"Conjuration"}`, string(got["school"]))
+	assert.JSONEq(t, `{"en":"Touch"}`, string(got["range"]))
+	assert.JSONEq(t, `{}`, string(got["sphere"]), "a text in no language is an empty map")
+	assert.JSONEq(t, `{}`, string(got["casting_time"]))
 }
 
 // The damage a cast rolls is served at the level the values are for, as dice
@@ -323,7 +351,7 @@ func TestSearch_ServesDamageAtTheCasterLevel(t *testing.T) {
 func TestSearch_NoCasterLevelNoDamage(t *testing.T) {
 	var levels []int
 	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 },
-		fakeSvc{spells: []spellsvc.Spell{{ID: "fireball", Name: "Fireball"}}},
+		fakeSvc{spells: []spellsvc.Spell{{ID: "fireball", Name: localized.Of("Fireball")}}},
 		fakeChars{err: errors.New("no character")}, fakeDamage{levels: &levels}))
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest(http.MethodGet, "/api/spells", nil))
@@ -399,7 +427,7 @@ func TestDamageToDTO_Steps(t *testing.T) {
 // spell without modes serves none.
 func TestSearch_ServesModesAtTheCasterLevel(t *testing.T) {
 	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 },
-		fakeSvc{spells: []spellsvc.Spell{{ID: "ice_storm", Name: "Ice Storm"}, {ID: "fireball", Name: "Fireball"}}},
+		fakeSvc{spells: []spellsvc.Spell{{ID: "ice_storm", Name: localized.Of("Ice Storm")}, {ID: "fireball", Name: localized.Of("Fireball")}}},
 		fakeChars{level: 15}, fakeDamage{}))
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest(http.MethodGet, "/api/spells?caster_level=9", nil))
@@ -423,7 +451,7 @@ func TestSearch_ServesModesAtTheCasterLevel(t *testing.T) {
 // level, next to the spell's damage; none for a spell without one.
 func TestSearch_ServesExposureAtTheCasterLevel(t *testing.T) {
 	h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 },
-		fakeSvc{spells: []spellsvc.Spell{{ID: "cloudkill", Name: "Cloudkill"}, {ID: "fireball", Name: "Fireball"}}},
+		fakeSvc{spells: []spellsvc.Spell{{ID: "cloudkill", Name: localized.Of("Cloudkill")}, {ID: "fireball", Name: localized.Of("Fireball")}}},
 		fakeChars{level: 15}, fakeDamage{}))
 	rec := httptest.NewRecorder()
 	h(rec, httptest.NewRequest(http.MethodGet, "/api/spells?caster_level=9", nil))

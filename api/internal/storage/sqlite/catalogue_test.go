@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
@@ -45,28 +48,88 @@ func without(id string) func([]catalogue.Spell) []catalogue.Spell {
 	}
 }
 
+// catalogueRow is a spells row with its texts read through their keys.
 type catalogueRow struct {
-	ID                                      int64
-	Key, NameFR, DescriptionFR, Source      sql.NullString
-	Name, Class, Description, Stats, Sphere string
-	Level                                   int
+	ID           int64
+	Key, Source  sql.NullString
+	Class, Stats string
+	Level        int
+	// Texts are the row's texts by column; a NULL key has no entry.
+	Texts map[string]localized.Text
+	// TextKeys are the row's text keys by column (NULL: no entry).
+	TextKeys map[string]int64
+}
+
+// textColumns are the spells columns that key a localized text.
+var textColumns = []string{
+	"name", "description", "school", "sphere", "casting_time", "range", "duration", "area_of_effect",
+	"components", "saving_throw",
+}
+
+// storedTexts reads every localized text by key.
+func storedTexts(t *testing.T, db *DB) map[int64]localized.Text {
+	t.Helper()
+	rows, err := db.Query(`SELECT text_id, lang, body FROM localized_texts`)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	out := map[int64]localized.Text{}
+	for rows.Next() {
+		var id int64
+		var lang, body string
+		require.NoError(t, rows.Scan(&id, &lang, &body))
+		if out[id] == nil {
+			out[id] = localized.Text{}
+		}
+		out[id][lang] = body
+	}
+	require.NoError(t, rows.Err())
+	return out
 }
 
 func catalogueRows(t *testing.T, db *DB) []catalogueRow {
 	t.Helper()
-	rows, err := db.Query(`SELECT id, key, name, name_fr, class, level, COALESCE(sphere, ''), COALESCE(description, ''),
-		description_fr, source, COALESCE(stats, '') FROM spells ORDER BY id`)
+	texts := storedTexts(t, db)
+	rows, err := db.Query(`SELECT id, key, class, level, source, COALESCE(stats, ''), ` +
+		strings.Join(textColumns, ", ") + ` FROM spells ORDER BY id`)
 	require.NoError(t, err)
 	defer func() { _ = rows.Close() }()
 	var out []catalogueRow
 	for rows.Next() {
-		var r catalogueRow
-		require.NoError(t, rows.Scan(&r.ID, &r.Key, &r.Name, &r.NameFR, &r.Class, &r.Level, &r.Sphere, &r.Description,
-			&r.DescriptionFR, &r.Source, &r.Stats))
+		r := catalogueRow{Texts: map[string]localized.Text{}, TextKeys: map[string]int64{}}
+		keys := make([]sql.NullInt64, len(textColumns))
+		dest := []any{&r.ID, &r.Key, &r.Class, &r.Level, &r.Source, &r.Stats}
+		for i := range keys {
+			dest = append(dest, &keys[i])
+		}
+		require.NoError(t, rows.Scan(dest...))
+		for i, c := range textColumns {
+			if keys[i].Valid {
+				r.Texts[c] = texts[keys[i].Int64]
+				r.TextKeys[c] = keys[i].Int64
+			}
+		}
 		out = append(out, r)
 	}
 	require.NoError(t, rows.Err())
 	return out
+}
+
+// assertTextIntegrity checks ADR 0023's storage invariants: every text key a
+// spells column holds has at least one row, no row is unreachable from a
+// column, and no body is empty.
+func assertTextIntegrity(t *testing.T, db *DB) {
+	t.Helper()
+	used := map[int64]bool{}
+	for _, r := range catalogueRows(t, db) {
+		for c, k := range r.TextKeys {
+			used[k] = true
+			assert.NotEmpty(t, r.Texts[c], "row %d %s: key %d has no row", r.ID, c, k)
+		}
+	}
+	for id := range storedTexts(t, db) {
+		assert.True(t, used[id], "text %d is keyed by no column", id)
+	}
+	assert.Zero(t, scalar(t, db, `SELECT COUNT(*) FROM localized_texts WHERE body = ''`))
 }
 
 func byKey(rows []catalogueRow) map[string]catalogueRow {
@@ -90,9 +153,10 @@ func recordedVersion(t *testing.T, db *DB) string {
 	return v
 }
 
-// A fresh database gets every artifact spell under its id, with the French
-// texts when present (NULL otherwise), the source and the typed stats (step
-// 5.6), and the version is recorded (step 5.5).
+// A fresh database gets every artifact spell under its id, each text as one
+// localized_texts row per language present (ADR 0023: no "fr" row for a
+// spell without French, no key for a text in no language), the source and
+// the typed stats (step 5.6), and the version is recorded (step 5.5).
 func TestImportCatalogue_FreshDatabase(t *testing.T) {
 	db := openMigrated(t)
 	cat := fixtureCatalogue(t)
@@ -107,16 +171,27 @@ func TestImportCatalogue_FreshDatabase(t *testing.T) {
 		if !assert.True(t, ok, s.ID) {
 			continue
 		}
-		assert.Equal(t, s.Name, r.Name, s.ID)
 		assert.Equal(t, s.Class, r.Class, s.ID)
 		assert.Equal(t, s.Level, r.Level, s.ID)
-		assert.Equal(t, s.Description, r.Description, s.ID)
-		assert.Equal(t, s.NameFR, r.NameFR.String, s.ID)
-		assert.Equal(t, s.NameFR != "", r.NameFR.Valid, "%s: an absent French name is NULL", s.ID)
-		assert.Equal(t, s.DescriptionFR != "", r.DescriptionFR.Valid, s.ID)
 		assert.Equal(t, s.Source, r.Source.String, s.ID)
+		want := map[string]localized.Text{}
+		for c, txt := range map[string]localized.Text{
+			"name": s.Name, "description": s.Description, "school": s.School, "sphere": s.Sphere,
+			"casting_time": s.CastingTime, "range": s.Range, "duration": s.Duration,
+			"area_of_effect": s.AreaOfEffect, "components": s.Components, "saving_throw": s.SavingThrow,
+		} {
+			if len(txt) > 0 {
+				want[c] = txt
+			}
+		}
+		assert.Equal(t, want, r.Texts, "%s: every text, in exactly its languages", s.ID)
 	}
+	mm, armor := keyed["magic_missile"], keyed["armor"]
+	assert.Equal(t, "Projectile magique", mm.Texts["name"]["fr"])
+	assert.Equal(t, localized.Text{"en": "Armor"}, armor.Texts["name"], "no French name: no fr row")
+	assert.NotContains(t, armor.Texts, "sphere", "no sphere: a NULL key")
 	assert.Equal(t, cat.Version, recordedVersion(t, db))
+	assertTextIntegrity(t, db)
 }
 
 func TestImportCatalogue_Step6_TypedStatsParsedAtImport(t *testing.T) {
@@ -139,13 +214,14 @@ func TestImportCatalogue_Step3_SameVersionWritesNothing(t *testing.T) {
 	db := openMigrated(t)
 	cat := fixtureCatalogue(t)
 	require.NoError(t, db.ImportCatalogue(ctx, cat, nil))
-	_, err := db.Exec(`UPDATE spells SET description = 'edited' WHERE key = 'fireball'`)
+	_, err := db.Exec(`UPDATE localized_texts SET body = 'edited'
+		WHERE text_id = (SELECT description FROM spells WHERE key = 'fireball') AND lang = 'en'`)
 	require.NoError(t, err)
 	before := catalogueRows(t, db)
 
 	require.NoError(t, db.ImportCatalogue(ctx, cat, nil))
 	assert.Equal(t, before, catalogueRows(t, db))
-	assert.Equal(t, "edited", byKey(catalogueRows(t, db))["fireball"].Description)
+	assert.Equal(t, "edited", byKey(catalogueRows(t, db))["fireball"].Texts["description"].Default())
 }
 
 // Step 5.4.2: a new version overwrites every catalogue field by key and
@@ -156,47 +232,110 @@ func TestImportCatalogue_Step4_NewVersionUpserts(t *testing.T) {
 	db := openMigrated(t)
 	cat := fixtureCatalogue(t)
 	require.NoError(t, db.ImportCatalogue(ctx, cat, nil))
-	fireballID := byKey(catalogueRows(t, db))["fireball"].ID
+	first := byKey(catalogueRows(t, db))["fireball"]
 
 	next := withVersion(cat, "1970-01-02", func(in []catalogue.Spell) []catalogue.Spell {
 		for i := range in {
-			if in[i].ID == "fireball" {
-				in[i].Description = "Fixture text, corrected."
-				in[i].NameFR = ""
-				in[i].Range = "20 yds."
+			if in[i].ID == "fireball" { // new maps: the slice copy shares the old ones
+				in[i].Description = localized.Of("Fixture text, corrected.")
+				in[i].Name = localized.Of(in[i].Name.Default())
+				in[i].Range = localized.Of("20 yds.")
 			}
 		}
 		return append(in, catalogue.Spell{
-			ID: "new_spell", Class: "Priest", Level: 2, School: "Alteration", Sphere: "All",
-			CastingTime: "1", Range: "0", Duration: "1 rd.", AreaOfEffect: "The caster", Components: "V",
-			SavingThrow: "None", Name: "New Spell", NameFR: "Nouveau sort", Description: "Fixture text.", Source: "TOM",
+			ID: "new_spell", Class: "Priest", Level: 2, School: localized.Of("Alteration"), Sphere: localized.Of("All"),
+			CastingTime: localized.Of("1"), Range: localized.Of("0"), Duration: localized.Of("1 rd."),
+			AreaOfEffect: localized.Of("The caster"), Components: localized.Of("V"), SavingThrow: localized.Of("None"),
+			Name: localized.Text{"en": "New Spell", "fr": "Nouveau sort"}, Description: localized.Of("Fixture text."),
+			Source: "TOM",
 		})
 	})
 	require.NoError(t, db.ImportCatalogue(ctx, next, nil))
 	rows := byKey(catalogueRows(t, db))
 	assert.Len(t, rows, len(cat.Spells)+1)
 	fb := rows["fireball"]
-	assert.Equal(t, fireballID, fb.ID, "the row keeps its id")
-	assert.Equal(t, "Fixture text, corrected.", fb.Description)
-	assert.False(t, fb.NameFR.Valid, "a French name the artifact dropped is cleared")
+	assert.Equal(t, first.ID, fb.ID, "the row keeps its id")
+	assert.Equal(t, first.TextKeys, fb.TextKeys, "and its text keys")
+	assert.Equal(t, localized.Text{"en": "Fixture text, corrected."}, fb.Texts["description"])
+	assert.Equal(t, localized.Text{"en": "Fireball"}, fb.Texts["name"], "a French name the artifact dropped is cleared")
+	assert.Zero(t, scalar(t, db, `SELECT COUNT(*) FROM localized_texts
+		WHERE text_id = (SELECT name FROM spells WHERE key = 'fireball') AND lang = 'fr'`), "its row is deleted")
 	assert.Contains(t, fb.Stats, "20 yds.", "stats parsed again")
-	assert.Equal(t, "Nouveau sort", rows["new_spell"].NameFR.String)
-	assert.Equal(t, "All", rows["new_spell"].Sphere)
+	assert.Equal(t, "Nouveau sort", rows["new_spell"].Texts["name"]["fr"])
+	assert.Equal(t, localized.Text{"en": "All"}, rows["new_spell"].Texts["sphere"])
 	assert.Equal(t, "1970-01-02", recordedVersion(t, db))
+	assertTextIntegrity(t, db)
 
 	require.NoError(t, db.ImportCatalogue(ctx, cat, nil), "an older version is an import like any other")
-	assert.Equal(t, cat.ByID()["fireball"].Description, byKey(catalogueRows(t, db))["fireball"].Description)
+	assert.Equal(t, cat.ByID()["fireball"].Description, byKey(catalogueRows(t, db))["fireball"].Texts["description"])
 	assert.NotContains(t, byKey(catalogueRows(t, db)), "new_spell", "unreferenced, so deleted")
+	assertTextIntegrity(t, db)
 }
 
-// insertOldRow writes a spells row as the retired seed loader did: no key,
-// no French texts.
-func insertOldRow(t *testing.T, db *DB, id int64, s catalogue.Spell, description string) {
+// ADR 0023 at re-import: a text the artifact drops whole (a sphere) loses
+// its key and every row; one it adds gets a new key; the texts of a deleted
+// spell go with it.
+func TestImportCatalogue_ReimportDropsAndAddsWholeTexts(t *testing.T) {
+	ctx := context.Background()
+	db := openMigrated(t)
+	cat := fixtureCatalogue(t)
+	require.NoError(t, db.ImportCatalogue(ctx, cat, nil))
+	priest := byKey(catalogueRows(t, db))["detect_magic_priest"]
+	require.Contains(t, priest.TextKeys, "sphere")
+
+	next := withVersion(cat, "1970-01-02", func(in []catalogue.Spell) []catalogue.Spell {
+		for i := range in {
+			switch in[i].ID {
+			case "detect_magic_priest":
+				in[i].Sphere = nil
+			case "armor":
+				in[i].Sphere = localized.Of("Protection")
+			}
+		}
+		return without("slow")(in)
+	})
+	require.NoError(t, db.ImportCatalogue(ctx, next, nil))
+	rows := byKey(catalogueRows(t, db))
+	assert.NotContains(t, rows["detect_magic_priest"].TextKeys, "sphere")
+	assert.Zero(t, scalar(t, db, `SELECT COUNT(*) FROM localized_texts WHERE text_id = `+
+		strconv.FormatInt(priest.TextKeys["sphere"], 10)), "the dropped text's rows are deleted")
+	assert.Equal(t, localized.Text{"en": "Protection"}, rows["armor"].Texts["sphere"])
+	assert.NotContains(t, rows, "slow")
+	assertTextIntegrity(t, db)
+}
+
+// insertLegacyRow writes a spells row as the retired seed loader did, on a
+// database before 031 (texts in the columns): no key, no French texts.
+func insertLegacyRow(t *testing.T, db *DB, id int64, s catalogue.Spell, description string) {
 	t.Helper()
 	_, err := db.Exec(`INSERT INTO spells (id, name, class, level, school, sphere, casting_time, range, duration,
 		area_of_effect, components, saving_throw, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, s.Name, s.Class, s.Level, s.School, s.Sphere, s.CastingTime, s.Range, s.Duration, s.AreaOfEffect,
-		s.Components, s.SavingThrow, description)
+		id, s.Name.Default(), s.Class, s.Level, s.School.Default(), s.Sphere.Default(), s.CastingTime.Default(),
+		s.Range.Default(), s.Duration.Default(), s.AreaOfEffect.Default(), s.Components.Default(),
+		s.SavingThrow.Default(), description)
+	require.NoError(t, err)
+}
+
+// insertOldRow is such a row as migration 031 leaves it: its English texts
+// as localized_texts rows under the keys 031 gives them.
+func insertOldRow(t *testing.T, db *DB, id int64, s catalogue.Spell, description string) {
+	t.Helper()
+	texts := []string{
+		s.Name.Default(), description, s.School.Default(), s.Sphere.Default(), s.CastingTime.Default(),
+		s.Range.Default(), s.Duration.Default(), s.AreaOfEffect.Default(), s.Components.Default(), s.SavingThrow.Default(),
+	}
+	keys := make([]any, len(texts))
+	for i, body := range texts {
+		if body == "" {
+			continue
+		}
+		k := (id-1)*10 + int64(i) + 1
+		keys[i] = k
+		_, err := db.Exec(`INSERT INTO localized_texts (text_id, lang, body) VALUES (?, 'en', ?)`, k, body)
+		require.NoError(t, err)
+	}
+	_, err := db.Exec(`INSERT INTO spells (id, class, level, `+strings.Join(textColumns, ", ")+`)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, append([]any{id, s.Class, s.Level}, keys...)...)
 	require.NoError(t, err)
 }
 
@@ -220,12 +359,12 @@ func TestImportCatalogue_Step4_1_BackfillsKeysOfAnExistingDatabase(t *testing.T)
 	keyed := byKey(rows)
 	for i, s := range cat.Spells {
 		assert.Equal(t, int64(100+i), keyed[s.ID].ID, "%s keeps its row", s.ID)
-		assert.Equal(t, s.Description, keyed[s.ID].Description, "%s overwritten by the artifact", s.ID)
+		assert.Equal(t, s.Description, keyed[s.ID].Texts["description"], "%s overwritten by the artifact", s.ID)
 	}
 	for _, r := range rows {
 		if r.ID == 900 {
 			assert.False(t, r.Key.Valid, "the younger duplicate keeps a NULL key")
-			assert.Equal(t, "younger duplicate", r.Description, "and is never updated")
+			assert.Equal(t, localized.Text{"en": "younger duplicate"}, r.Texts["description"], "and is never updated")
 		}
 	}
 }
@@ -240,9 +379,10 @@ func TestImportCatalogue_Step4_1_RefusesKeysThatDoNotMatchTheArtifact(t *testing
 	db := openMigrated(t)
 	cat := withVersion(fixtureCatalogue(t), "1970-01-03", func(in []catalogue.Spell) []catalogue.Spell {
 		return append(in, catalogue.Spell{
-			ID: "fortify", Class: "Priest", Level: 3, School: "Alteration", Sphere: "War",
-			CastingTime: "1", Range: "0", Duration: "1 rd.", AreaOfEffect: "The caster", Components: "V",
-			SavingThrow: "None", Name: "Fortify", Description: "Fixture text.", Source: "TOM",
+			ID: "fortify", Class: "Priest", Level: 3, School: localized.Of("Alteration"), Sphere: localized.Of("War"),
+			CastingTime: localized.Of("1"), Range: localized.Of("0"), Duration: localized.Of("1 rd."),
+			AreaOfEffect: localized.Of("The caster"), Components: localized.Of("V"), SavingThrow: localized.Of("None"),
+			Name: localized.Of("Fortify"), Description: localized.Of("Fixture text."), Source: "TOM",
 		})
 	})
 	priest := cat.ByID()["fortify"]
@@ -360,7 +500,7 @@ func TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells(t *testing.T) {
 			in = without(id)(in)
 		}
 		for i := range in {
-			in[i].Description = "Fixture text, changed."
+			in[i].Description = localized.Of("Fixture text, changed.")
 		}
 		return in
 	})
@@ -398,7 +538,7 @@ func TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue(t *testing.T)
 		"025_action_transaction.sql", "026_redo_correction.sql")
 	cat := fixtureCatalogue(t)
 	for i, s := range cat.Spells {
-		insertOldRow(t, db, int64(i+1), s, "old scraped text")
+		insertLegacyRow(t, db, int64(i+1), s, "old scraped text")
 	}
 	plantState(t, db)
 

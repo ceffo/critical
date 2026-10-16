@@ -741,10 +741,9 @@ describe("cast entries", () => {
 const frNames = spellNamer("fr", {
   magic_missile: {
     id: "magic_missile",
-    name: "Magic Missile",
-    name_fr: "Projectile magique",
+    name: { en: "Magic Missile", fr: "Projectile magique" },
   },
-  mirror_image: { id: "mirror_image", name: "Mirror Image" },
+  mirror_image: { id: "mirror_image", name: { en: "Mirror Image" } },
 });
 
 describe("cast entries name the spell from the catalogue", () => {
@@ -768,10 +767,9 @@ describe("buff entries name a spell's buff from the catalogue", () => {
   const frBuffNames = spellNamer("fr", {
     stoneskin: {
       id: "stoneskin",
-      name: "Stoneskin",
-      name_fr: "Peau de pierre",
+      name: { en: "Stoneskin", fr: "Peau de pierre" },
     },
-    haste: { id: "haste", name: "Haste", name_fr: "Hâte" },
+    haste: { id: "haste", name: { en: "Haste", fr: "Hâte" } },
   });
 
   it("dismiss, absorb and edit in French; the stored name without a spell id", async () => {

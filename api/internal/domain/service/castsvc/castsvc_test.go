@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc/mocks"
@@ -124,7 +125,7 @@ func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *
 			if id == "no_such_spell" {
 				return spellsvc.Spell{}, false, nil
 			}
-			return spellsvc.Spell{Name: "Text of " + id, Description: "desc " + id}, true, nil
+			return spellsvc.Spell{Name: localized.Of("Text of " + id), Description: localized.Of("desc " + id)}, true, nil
 		}).Maybe()
 	f.buffs.EXPECT().Add(mock.Anything, charID, mock.Anything).RunAndReturn(
 		func(_ context.Context, _ int64, b buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {

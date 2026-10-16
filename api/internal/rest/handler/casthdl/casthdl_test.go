@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -26,7 +27,7 @@ import (
 // member's for a received spell.
 func TestToDTO_SpellValuesUseTheCastersLevel(t *testing.T) {
 	spell := spellsvc.Spell{
-		Name: "Mirror Image",
+		Name: localized.Of("Mirror Image"),
 		Stats: spellstats.Parse(spellstats.Raw{
 			Range: "60 yds. + 10 yds./level", Duration: "3 rds./level", SavingThrow: "None",
 		}),

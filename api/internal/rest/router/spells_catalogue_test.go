@@ -36,10 +36,11 @@ func spellsJSON(t *testing.T, srv *httptest.Server, query string) map[string]map
 	return out
 }
 
-// The spell payloads carry the catalogue's French name and description when
-// it has them (Magic Missile in the fixture), and omit both when it has none
-// (Armor), so the client falls back to the English name and description.
-func TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback(t *testing.T) {
+// Every text of a spell payload is a language map (ADR 0023 step 6) holding
+// exactly the languages the catalogue has: French and English for Magic
+// Missile's name and description in the fixture, English only for Armor's
+// (no "fr" key: the client falls back to English) and for the stat texts.
+func TestSpells_TextsAreLanguageMapsFromTheCatalogue(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.New(ctx, composition.Config{
 		DSN:       filepath.Join(t.TempDir(), "critical.db"),
@@ -53,16 +54,37 @@ func TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback(t *testing.T) {
 
 	mm := spellsJSON(t, srv, "q=Magic+Missile")["magic_missile"]
 	require.NotNil(t, mm)
-	assert.Equal(t, "Magic Missile", mm["name"])
-	assert.Equal(t, "Projectile magique", mm["name_fr"])
-	assert.Contains(t, mm["description"], "Fixture text for Magic Missile")
-	assert.Contains(t, mm["description_fr"], "Texte de test pour Projectile magique")
+	assert.Equal(t, map[string]any{"en": "Magic Missile", "fr": "Projectile magique"}, mm["name"])
+	desc, ok := mm["description"].(map[string]any)
+	require.True(t, ok, "description is a language map")
+	assert.Contains(t, desc["en"], "Fixture text for Magic Missile")
+	assert.Contains(t, desc["fr"], "Texte de test pour Projectile magique")
+	assert.Equal(t, map[string]any{"en": "60 yds. + 10 yds./level"}, mm["range"])
 	assert.Equal(t, "PHB", mm["source"])
 
 	armor := spellsJSON(t, srv, "q=Armor")["armor"]
 	require.NotNil(t, armor)
-	assert.Equal(t, "Armor", armor["name"])
-	assert.NotEmpty(t, armor["description"])
-	assert.NotContains(t, armor, "name_fr", "no French name: absent, the client shows the English one")
-	assert.NotContains(t, armor, "description_fr")
+	assert.Equal(t, map[string]any{"en": "Armor"}, armor["name"], "no French name: no fr key")
+	adesc, ok := armor["description"].(map[string]any)
+	require.True(t, ok)
+	assert.NotEmpty(t, adesc["en"])
+	assert.NotContains(t, adesc, "fr")
+	assert.Equal(t, map[string]any{}, armor["sphere"], "no sphere: an empty map")
+
+	// French search through the real stack (ADR 0023 step 7).
+	assert.Contains(t, spellsJSON(t, srv, "q=projectile"), "magic_missile")
+
+	res, err := http.Get(srv.URL + "/api/spells/names")
+	require.NoError(t, err)
+	defer func() { _ = res.Body.Close() }()
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	var names []map[string]any
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&names))
+	byID := map[string]any{}
+	for _, n := range names {
+		assert.Len(t, n, 2, "id and name only")
+		byID[n["id"].(string)] = n["name"]
+	}
+	assert.Equal(t, map[string]any{"en": "Magic Missile", "fr": "Projectile magique"}, byID["magic_missile"])
+	assert.Equal(t, map[string]any{"en": "Armor"}, byID["armor"])
 }

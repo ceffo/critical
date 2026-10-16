@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 const fixture = "../../../testdata/catalogue.json"
@@ -29,14 +30,15 @@ func TestLoad_Fixture(t *testing.T) {
 	assert.Equal(t, "1970-01-01", c.Version)
 	mm, ok := c.ByID()["magic_missile"]
 	require.True(t, ok)
-	assert.Equal(t, "Magic Missile", mm.Name)
-	assert.Equal(t, "Projectile magique", mm.NameFR)
-	assert.NotEmpty(t, mm.DescriptionFR)
+	assert.Equal(t, localized.Text{"en": "Magic Missile", "fr": "Projectile magique"}, mm.Name)
+	assert.NotEmpty(t, mm.Description["fr"])
 	assert.Equal(t, "PHB", mm.Source)
+	assert.Equal(t, localized.Text{"en": "60 yds. + 10 yds./level"}, mm.Range, "the plain texts are the English books'")
 	armor := c.ByID()["armor"]
-	assert.Empty(t, armor.NameFR, "an omitted language is empty")
-	assert.Empty(t, armor.DescriptionFR)
-	assert.Equal(t, "Divination", c.ByID()["detect_magic_priest"].Sphere)
+	assert.Equal(t, localized.Text{"en": "Armor"}, armor.Name, "an omitted language has no entry")
+	assert.NotContains(t, armor.Description, "fr")
+	assert.Equal(t, localized.Text{"en": "Divination"}, c.ByID()["detect_magic_priest"].Sphere)
+	assert.Empty(t, armor.Sphere, "no sphere: an empty text")
 }
 
 // Step 5.1: no file -> an error naming the path and `just catalogue`.

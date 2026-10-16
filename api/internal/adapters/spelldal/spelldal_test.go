@@ -3,6 +3,7 @@ package spelldal_test
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -80,6 +82,28 @@ func TestSlots_PerCharacter(t *testing.T) {
 	assert.Empty(t, got)
 }
 
+// insertSpell writes a spells row with its texts as localized_texts rows
+// (ADR 0023), under fresh keys; a column without a text stays NULL.
+func insertSpell(t *testing.T, db *sqlite.DB, key any, class string, level int, stats any, texts map[string]localized.Text) {
+	t.Helper()
+	ctx := context.Background()
+	cols := []string{"key", "class", "level", "stats"}
+	args := []any{key, class, level, stats}
+	for col, txt := range texts {
+		var id int64
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT COALESCE(MAX(text_id), 0) + 1 FROM localized_texts`).Scan(&id))
+		for lang, body := range txt {
+			_, err := db.ExecContext(ctx, `INSERT INTO localized_texts (text_id, lang, body) VALUES (?, ?, ?)`, id, lang, body)
+			require.NoError(t, err)
+		}
+		cols = append(cols, col)
+		args = append(args, id)
+	}
+	_, err := db.ExecContext(ctx, `INSERT INTO spells (`+strings.Join(cols, ", ")+`) VALUES (?`+
+		strings.Repeat(", ?", len(cols)-1)+`)`, args...)
+	require.NoError(t, err)
+}
+
 func seedSpells(t *testing.T, db *sqlite.DB) {
 	t.Helper()
 	rows := []struct {
@@ -93,17 +117,16 @@ func seedSpells(t *testing.T, db *sqlite.DB) {
 		{"fireball", "Fireball", "wizard", 3},
 	}
 	for _, r := range rows {
-		_, err := db.ExecContext(context.Background(),
-			`INSERT INTO spells (key, name, class, level, school, description) VALUES (?, ?, ?, ?, 'Enchantment', 'desc')`,
-			r.key, r.name, r.class, r.level)
-		require.NoError(t, err)
+		insertSpell(t, db, r.key, r.class, r.level, nil, map[string]localized.Text{
+			"name": localized.Of(r.name), "school": localized.Of("Enchantment"), "description": localized.Of("desc"),
+		})
 	}
 }
 
 func names(spells []spellsvc.Spell) []string {
 	out := make([]string, len(spells))
 	for i, s := range spells {
-		out[i] = s.Class + ":" + s.Name
+		out[i] = s.Class + ":" + s.Name.Default()
 	}
 	return out
 }
@@ -112,7 +135,6 @@ func TestSearch(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
 	dal := spelldal.New(db)
-
 	tests := []struct {
 		name  string
 		class string
@@ -131,23 +153,78 @@ func TestSearch(t *testing.T) {
 	}
 }
 
-func TestSearch_MapsFields(t *testing.T) {
+// Search reads the texts it filters and ranks on (every language's name, the
+// school, the sphere), never the description or the stat texts; Details and
+// Describe read every text, in every language stored.
+func TestSearchAndDetails_MapFields(t *testing.T) {
+	ctx := context.Background()
 	db := openDB(t)
-	seedSpells(t, db)
-
-	_, err := db.ExecContext(context.Background(),
-		`UPDATE spells SET name_fr = 'Boule de feu', description_fr = 'texte', source = 'PHB' WHERE key = 'fireball'`)
+	insertSpell(t, db, "fireball", "wizard", 3, `{}`, map[string]localized.Text{
+		"name": {"en": "Fireball", "fr": "Boule de feu"}, "school": localized.Of("Evocation"),
+		"description": {"en": "desc", "fr": "texte"}, "range": localized.Of("10 yds."),
+	})
+	_, err := db.ExecContext(ctx, `UPDATE spells SET source = 'PHB'`)
 	require.NoError(t, err)
+	dal := spelldal.New(db)
 
-	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Levels: []int{3}})
+	got, err := dal.Search(ctx, spellsvc.Filter{Levels: []int{3}})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
-	want := spellsvc.Spell{
-		ID: "fireball", Name: "Fireball", NameFR: "Boule de feu", Class: "wizard", Level: 3, School: "Enchantment",
-		Description: "desc", DescriptionFR: "texte", Source: "PHB",
+	assert.Equal(t, spellsvc.Spell{
+		ID: "fireball", Name: localized.Text{"en": "Fireball", "fr": "Boule de feu"}, Class: "wizard", Level: 3,
+		School: localized.Of("Evocation"), Source: "PHB",
+	}, got[0])
+
+	full := spellsvc.Spell{
+		ID: "fireball", Name: localized.Text{"en": "Fireball", "fr": "Boule de feu"}, Class: "wizard", Level: 3,
+		School: localized.Of("Evocation"), Range: localized.Of("10 yds."),
+		Description: localized.Text{"en": "desc", "fr": "texte"}, Source: "PHB",
 	}
-	got[0].Stats = spellstats.Stats{}
-	assert.Equal(t, want, got[0])
+	details, err := dal.Details(ctx, []string{"nope", "fireball"})
+	require.NoError(t, err)
+	assert.Equal(t, []spellsvc.Spell{full}, details, "an unknown id is skipped")
+	fb, ok, err := dal.Describe(ctx, "fireball")
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, full, fb)
+}
+
+// Details answers in the order of the ids asked, whatever the storage order.
+func TestDetails_KeepsTheOrderOfIDs(t *testing.T) {
+	db := openDB(t)
+	seedSpells(t, db)
+	got, err := spelldal.New(db).Details(context.Background(), []string{"fireball", "sleep_bard", "charm_person"})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"wizard:Fireball", "bard:Sleep", "bard:Charm Person"}, names(got))
+	none, err := spelldal.New(db).Details(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Empty(t, none)
+}
+
+// ADR 0023 search cost: the text lookup reaches localized_texts through its
+// primary key (text_id, lang), never by scanning the table, so loading the
+// names never reads the descriptions.
+func TestTextsQuery_SearchesThePrimaryKey(t *testing.T) {
+	ctx := context.Background()
+	db := openDB(t)
+	importFixture(t, db)
+	query, args, err := spelldal.TextsQuery([]int64{1, 2, 3}).Build(ctx)
+	require.NoError(t, err)
+	rows, err := db.QueryContext(ctx, "EXPLAIN QUERY PLAN "+query, args...)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	var plan []string
+	for rows.Next() {
+		var id, parent, unused int
+		var detail string
+		require.NoError(t, rows.Scan(&id, &parent, &unused, &detail))
+		plan = append(plan, detail)
+	}
+	require.NoError(t, rows.Err())
+	require.NotEmpty(t, plan)
+	joined := strings.Join(plan, "; ")
+	assert.Contains(t, joined, "SEARCH localized_texts USING PRIMARY KEY (text_id=?)", joined)
+	assert.NotContains(t, joined, "SCAN localized_texts", joined)
 }
 
 // Rows without a key (older duplicates the catalogue import left in place)
@@ -156,32 +233,38 @@ func TestSearchAndDescribe_RowsWithoutAKeyAreNotServed(t *testing.T) {
 	ctx := context.Background()
 	db := openDB(t)
 	seedSpells(t, db)
-	_, err := db.ExecContext(ctx, `INSERT INTO spells (name, class, level, description) VALUES ('Fireball', 'wizard', 3, 'older duplicate')`)
-	require.NoError(t, err)
-
+	insertSpell(t, db, nil, "wizard", 3, nil, map[string]localized.Text{
+		"name": localized.Of("Fireball"), "description": localized.Of("older duplicate"),
+	})
 	got, err := spelldal.New(db).Search(ctx, spellsvc.Filter{Levels: []int{3}})
 	require.NoError(t, err)
 	require.Len(t, got, 1)
-	assert.Equal(t, "desc", got[0].Description)
+	assert.Equal(t, "fireball", got[0].ID)
 	fb, ok, err := spelldal.New(db).Describe(ctx, "fireball")
 	require.NoError(t, err)
 	require.True(t, ok)
-	assert.Equal(t, "desc", fb.Description)
+	assert.Equal(t, localized.Of("desc"), fb.Description)
 }
 
-// A row without stats JSON (or with garbage) is typed from its raw columns.
+// A row without stats JSON (or with garbage) is typed from its
+// fallback-language stat texts, by Search and by Details.
 func TestSearch_RowWithoutStatsIsParsedFromRawText(t *testing.T) {
 	db := openDB(t)
-	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (key, name, class, level, range, saving_throw, stats)
-		VALUES ('a', 'A', 'wizard', 1, '10 yds./level', '1/2', NULL), ('b', 'B', 'wizard', 2, '20 yds.', 'Neg.', '{not json')`)
-	require.NoError(t, err)
-
+	insertSpell(t, db, "a", "wizard", 1, nil, map[string]localized.Text{
+		"name": localized.Of("A"), "range": localized.Of("10 yds./level"), "saving_throw": localized.Of("1/2"),
+	})
+	insertSpell(t, db, "b", "wizard", 2, "{not json", map[string]localized.Text{
+		"name": localized.Of("B"), "range": localized.Of("20 yds."), "saving_throw": localized.Of("Neg."),
+	})
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{})
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	assert.Equal(t, 150.0, got[0].Stats.At(15).Range.Amount)
 	assert.Equal(t, []string{"half"}, got[0].Stats.Save.Kinds)
 	assert.Equal(t, []string{"negates"}, got[1].Stats.Save.Kinds)
+	details, err := spelldal.New(db).Details(context.Background(), []string{"a"})
+	require.NoError(t, err)
+	assert.Equal(t, got[0].Stats, details[0].Stats)
 }
 
 func importFixture(t *testing.T, db *sqlite.DB) catalogue.Catalogue {
@@ -203,15 +286,18 @@ func TestSearch_ImportedSpellsCarryTypedStatsAndFrench(t *testing.T) {
 	require.NoError(t, err)
 	var mm spellsvc.Spell
 	for _, s := range got {
-		if s.Name == "Magic Missile" {
+		if s.Name.Default() == "Magic Missile" {
 			mm = s
 		}
 	}
 	require.Equal(t, "magic_missile", mm.ID)
-	assert.Equal(t, "Projectile magique", mm.NameFR)
-	assert.NotEmpty(t, mm.DescriptionFR)
-	assert.Equal(t, "60 yds. + 10 yds./level", mm.Range)
+	assert.Equal(t, localized.Text{"en": "Magic Missile", "fr": "Projectile magique"}, mm.Name)
 	assert.Equal(t, "60 yds. + 10 yds./level", mm.Stats.Range.Raw)
+	full, ok, err := spelldal.New(db).Describe(ctx, "magic_missile")
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.NotEmpty(t, full.Description["fr"])
+	assert.Equal(t, localized.Of("60 yds. + 10 yds./level"), full.Range)
 	assert.Equal(t, spellstats.RangeDistance, mm.Stats.Range.Kind)
 	assert.Equal(t, 210.0, mm.Stats.At(15).Range.Amount)
 
@@ -223,8 +309,8 @@ func TestSearch_ImportedSpellsCarryTypedStatsAndFrench(t *testing.T) {
 	armor, ok, err := spelldal.New(db).Describe(ctx, "armor")
 	require.NoError(t, err)
 	require.True(t, ok)
-	assert.Empty(t, armor.NameFR, "no French source: empty, the reader falls back to English")
-	assert.Empty(t, armor.DescriptionFR)
+	assert.Equal(t, localized.Of("Armor"), armor.Name, "no French source: no fr entry, the reader falls back to English")
+	assert.NotContains(t, armor.Description, "fr")
 }
 
 func TestSlots_ReadsStoredJSON(t *testing.T) {
@@ -260,9 +346,9 @@ func TestDescribe(t *testing.T) {
 		{"twin", "Twin", "Priest", 3},
 		{"renamed_spell", "A New Name", "Wizard", 2},
 	} {
-		_, err := db.ExecContext(ctx, `INSERT INTO spells (key, name, class, level, description) VALUES (?, ?, ?, ?, ?)`,
-			r.key, r.name, r.class, r.level, r.class+" text")
-		require.NoError(t, err)
+		insertSpell(t, db, r.key, r.class, r.level, nil, map[string]localized.Text{
+			"name": localized.Of(r.name), "description": localized.Of(r.class + " text"),
+		})
 	}
 	d := spelldal.New(db)
 	tests := []struct {
@@ -285,7 +371,7 @@ func TestDescribe(t *testing.T) {
 			got, ok, err := d.Describe(ctx, tt.id)
 			require.NoError(t, err)
 			assert.Equal(t, tt.found, ok)
-			assert.Equal(t, tt.wantName, got.Name)
+			assert.Equal(t, tt.wantName, got.Name.Default())
 			assert.Equal(t, tt.wantClass, got.Class)
 			assert.Equal(t, tt.wantLevel, got.Level)
 		})
@@ -295,7 +381,8 @@ func TestDescribe(t *testing.T) {
 func TestSearch_ColumnFilters(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
-	_, err := db.ExecContext(context.Background(), `UPDATE spells SET school = 'Evocation' WHERE name = 'Fireball'`)
+	_, err := db.ExecContext(context.Background(), `UPDATE localized_texts SET body = 'Evocation'
+		WHERE text_id = (SELECT school FROM spells WHERE key = 'fireball')`)
 	require.NoError(t, err)
 	dal := spelldal.New(db)
 
@@ -324,8 +411,7 @@ func TestSearch_ColumnFilters(t *testing.T) {
 func TestSearch_SameNameInBothClassesComesBackAsTwoRows(t *testing.T) {
 	db := openDB(t)
 	seedSpells(t, db)
-	_, err := db.ExecContext(context.Background(), `INSERT INTO spells (key, name, class, level) VALUES ('sleep_priest', 'Sleep', 'priest', 1)`)
-	require.NoError(t, err)
+	insertSpell(t, db, "sleep_priest", "priest", 1, nil, map[string]localized.Text{"name": localized.Of("Sleep")})
 
 	got, err := spelldal.New(db).Search(context.Background(), spellsvc.Filter{Levels: []int{1}})
 	require.NoError(t, err)
@@ -360,11 +446,20 @@ func TestSearch_FiltersCombineOverTheFixtureCatalogue(t *testing.T) {
 	require.NoError(t, err)
 	got := []string{}
 	for _, s := range half.Items {
-		got = append(got, s.Name)
+		got = append(got, s.Name.Default())
 	}
 	assert.Contains(t, got, "Fireball")
 	assert.Contains(t, got, "Lightning Bolt")
 	assert.NotContains(t, got, "Haste", "Haste has no save")
+
+	// The French name matches like the English one (ADR 0023 step 7), and the
+	// page carries every text of its spells.
+	fr, err := svc.Search(ctx, spellsvc.Filter{Query: "projectile"}, all)
+	require.NoError(t, err)
+	require.Len(t, fr.Items, 1)
+	assert.Equal(t, "magic_missile", fr.Items[0].ID)
+	assert.NotEmpty(t, fr.Items[0].Description["fr"])
+	assert.NotEmpty(t, fr.Items[0].Range.Default())
 
 	// Mine is exactly the fixture spellbook (all Wizard), in level-then-name order.
 	mine, err := svc.Search(ctx, spellsvc.Filter{Class: "wizard", Mine: true}, all)

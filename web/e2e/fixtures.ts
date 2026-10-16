@@ -246,9 +246,10 @@ export { expect };
 /** Fields of a spell appended to the fixture catalogue; the stats default to plain values. */
 export interface ExtraSpell {
   id: string;
+  /** The English name (the books'). */
   name: string;
-  /** The French name, when the spell has one. */
-  nameFr?: string;
+  /** Its name in other languages, by language code (ADR 0023: a language map, as the artifact). */
+  names?: Readonly<Record<string, string>>;
   class: "Wizard" | "Priest";
   level: number;
   school: string;
@@ -263,7 +264,7 @@ export interface ExtraSpell {
 
 /** A catalogue spell (ADR 0021 format) with invented text, for `extraSpells`. */
 export function catalogueSpell(s: ExtraSpell) {
-  const { id, name, nameFr, sphere, ...rest } = s;
+  const { id, name, names, sphere, ...rest } = s;
   return {
     id,
     casting_time: "1",
@@ -274,7 +275,7 @@ export function catalogueSpell(s: ExtraSpell) {
     saving_throw: "None",
     ...rest,
     ...(sphere ? { sphere } : {}),
-    name: nameFr ? { en: name, fr: nameFr } : { en: name },
+    name: { ...names, en: name },
     description: { en: `${name} fixture text.` },
     source: "WEB",
   };

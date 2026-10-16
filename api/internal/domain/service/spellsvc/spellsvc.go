@@ -26,11 +26,16 @@ type DAL interface {
 	SaveSlots(ctx context.Context, characterID int64, slots []SpellSlot) error
 }
 
-// Reader is the read-side driven port (catalog search). It applies the
+// Reader is the read-side driven port (catalog search). Search applies the
 // stored columns of the filter (Class, Levels) and returns the rows ordered
-// by level, name, class.
+// by level, fallback-language name, class, with only the texts a search
+// filters and ranks on (Name, School, Sphere) besides the typed stats;
+// Details returns the full spells of ids (every text), in the order of ids,
+// skipping an id it does not hold. A page's texts are read by one Details
+// call, never per spell or per field.
 type Reader interface {
 	Search(ctx context.Context, f Filter) ([]Spell, error)
+	Details(ctx context.Context, ids []string) ([]Spell, error)
 }
 
 // Spellbook is the Bard's spellbook (the "Mine" filter).

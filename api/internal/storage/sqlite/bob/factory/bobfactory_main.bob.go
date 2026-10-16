@@ -25,6 +25,7 @@ type Factory struct {
 	baseDiceFavouriteMods    DiceFavouriteModSlice
 	baseHPEventMods          HPEventModSlice
 	baseItemMods             ItemModSlice
+	baseLocalizedTextMods    LocalizedTextModSlice
 	baseProficiencyMods      ProficiencyModSlice
 	baseRoundStateMods       RoundStateModSlice
 	baseSavedBuffMods        SavedBuffModSlice
@@ -600,6 +601,36 @@ func (f *Factory) fromExistingItem(ctx context.Context, m *models.Item) *ItemTem
 	return o
 }
 
+func (f *Factory) NewLocalizedText(mods ...LocalizedTextMod) *LocalizedTextTemplate {
+	return f.NewLocalizedTextWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewLocalizedTextWithContext(ctx context.Context, mods ...LocalizedTextMod) *LocalizedTextTemplate {
+	o := &LocalizedTextTemplate{f: f}
+
+	if f != nil {
+		f.baseLocalizedTextMods.Apply(ctx, o)
+	}
+
+	LocalizedTextModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingLocalizedText(ctx context.Context, m *models.LocalizedText) *LocalizedTextTemplate {
+	return f.fromExistingLocalizedText(ctx, m)
+}
+
+func (f *Factory) fromExistingLocalizedText(ctx context.Context, m *models.LocalizedText) *LocalizedTextTemplate {
+	o := &LocalizedTextTemplate{f: f, alreadyPersisted: true}
+
+	o.TextID = func() int64 { return m.TextID }
+	o.Lang = func() string { return m.Lang }
+	o.Body = func() string { return m.Body }
+
+	return o
+}
+
 func (f *Factory) NewProficiency(mods ...ProficiencyMod) *ProficiencyTemplate {
 	return f.NewProficiencyWithContext(context.Background(), mods...)
 }
@@ -791,23 +822,21 @@ func (f *Factory) fromExistingSpell(ctx context.Context, m *models.Spell) *Spell
 	o := &SpellTemplate{f: f, alreadyPersisted: true}
 
 	o.ID = func() int64 { return m.ID }
-	o.Name = func() string { return m.Name }
+	o.Key = func() null.Val[string] { return m.Key }
+	o.Name = func() null.Val[int64] { return m.Name }
 	o.Class = func() string { return m.Class }
 	o.Level = func() int64 { return m.Level }
-	o.School = func() null.Val[string] { return m.School }
-	o.Sphere = func() null.Val[string] { return m.Sphere }
-	o.CastingTime = func() null.Val[string] { return m.CastingTime }
-	o.Range = func() null.Val[string] { return m.Range }
-	o.Duration = func() null.Val[string] { return m.Duration }
-	o.AreaOfEffect = func() null.Val[string] { return m.AreaOfEffect }
-	o.Components = func() null.Val[string] { return m.Components }
-	o.SavingThrow = func() null.Val[string] { return m.SavingThrow }
-	o.Description = func() null.Val[string] { return m.Description }
-	o.Stats = func() null.Val[string] { return m.Stats }
-	o.Key = func() null.Val[string] { return m.Key }
-	o.NameFR = func() null.Val[string] { return m.NameFR }
-	o.DescriptionFR = func() null.Val[string] { return m.DescriptionFR }
+	o.School = func() null.Val[int64] { return m.School }
+	o.Sphere = func() null.Val[int64] { return m.Sphere }
+	o.CastingTime = func() null.Val[int64] { return m.CastingTime }
+	o.Range = func() null.Val[int64] { return m.Range }
+	o.Duration = func() null.Val[int64] { return m.Duration }
+	o.AreaOfEffect = func() null.Val[int64] { return m.AreaOfEffect }
+	o.Components = func() null.Val[int64] { return m.Components }
+	o.SavingThrow = func() null.Val[int64] { return m.SavingThrow }
+	o.Description = func() null.Val[int64] { return m.Description }
 	o.Source = func() null.Val[string] { return m.Source }
+	o.Stats = func() null.Val[string] { return m.Stats }
 
 	return o
 }
@@ -990,6 +1019,14 @@ func (f *Factory) ClearBaseItemMods() {
 
 func (f *Factory) AddBaseItemMod(mods ...ItemMod) {
 	f.baseItemMods = append(f.baseItemMods, mods...)
+}
+
+func (f *Factory) ClearBaseLocalizedTextMods() {
+	f.baseLocalizedTextMods = nil
+}
+
+func (f *Factory) AddBaseLocalizedTextMod(mods ...LocalizedTextMod) {
+	f.baseLocalizedTextMods = append(f.baseLocalizedTextMods, mods...)
 }
 
 func (f *Factory) ClearBaseProficiencyMods() {

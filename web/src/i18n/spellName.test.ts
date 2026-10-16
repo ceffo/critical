@@ -12,10 +12,9 @@ import type { SpellNames } from "@/types/spells";
 const names: SpellNames = {
   magic_missile: {
     id: "magic_missile",
-    name: "Magic Missile",
-    name_fr: "Projectile magique",
+    name: { en: "Magic Missile", fr: "Projectile magique" },
   },
-  armor: { id: "armor", name: "Armor" },
+  armor: { id: "armor", name: { en: "Armor" } },
 };
 
 describe("spellNamer", () => {
@@ -54,9 +53,12 @@ describe("spellNamer", () => {
 
 describe("spellTexts", () => {
   const spell = {
-    name: "Magic Missile",
-    name_fr: "Projectile magique",
-    description: "English text.",
+    name: { en: "Magic Missile", fr: "Projectile magique" },
+    description: { en: "English text." },
+  };
+  const both = {
+    ...spell,
+    description: { en: "English text.", fr: "Texte français." },
   };
 
   it("picks French per field and falls back to English for the missing one", () => {
@@ -64,20 +66,22 @@ describe("spellTexts", () => {
       name: "Projectile magique",
       description: "English text.",
     });
-    expect(
-      spellTexts("fr", { ...spell, description_fr: "Texte français." }),
-    ).toEqual({ name: "Projectile magique", description: "Texte français." });
+    expect(spellTexts("fr", both)).toEqual({
+      name: "Projectile magique",
+      description: "Texte français.",
+    });
   });
 
   it("is English in English", () => {
-    expect(
-      spellTexts("en", { ...spell, description_fr: "Texte français." }),
-    ).toEqual({ name: "Magic Missile", description: "English text." });
+    expect(spellTexts("en", both)).toEqual({
+      name: "Magic Missile",
+      description: "English text.",
+    });
   });
 });
 
 describe("spellName", () => {
-  const mm = { name: "Magic Missile", name_fr: "Projectile magique" };
+  const mm = { name: { en: "Magic Missile", fr: "Projectile magique" } };
 
   it("gives the name in the UI language only", () => {
     expect(spellName("en", mm)).toBe("Magic Missile");
@@ -86,9 +90,9 @@ describe("spellName", () => {
   });
 
   it("falls back to English when the catalogue has no French name", () => {
-    expect(spellName("fr", { name: "Armor" })).toBe("Armor");
-    expect(spellName("fr", { name: "Armor", name_fr: "" })).toBe("Armor");
-    expect(spellName("en", { name: "Armor" })).toBe("Armor");
+    expect(spellName("fr", { name: { en: "Armor" } })).toBe("Armor");
+    expect(spellName("fr", { name: { en: "Armor", fr: "" } })).toBe("Armor");
+    expect(spellName("en", { name: { en: "Armor" } })).toBe("Armor");
   });
 });
 

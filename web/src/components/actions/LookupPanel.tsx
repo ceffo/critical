@@ -12,6 +12,7 @@ import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { useDiceStore } from "@/stores/dice";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
+import { localized } from "@/i18n/localized";
 import { spellName, spellTexts } from "@/i18n/spellName";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
 import { statDice, statValue, type StatKey } from "@/lib/spellValues";
@@ -86,8 +87,8 @@ function SpellDetail({ spell }: { spell: Spell }) {
   const meta = [
     classLabel(t, spell.class),
     t("lookup.levelLabel", { level: spell.level }),
-    schoolLabel(t, spell.school),
-    spheresLabel(t, spell.sphere),
+    schoolLabel(t, localized(i18n.language, spell.school)),
+    spheresLabel(t, localized(i18n.language, spell.sphere)),
     statText(loc, spell, "components").text,
   ].filter(Boolean);
   // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
@@ -233,7 +234,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
 }
 
 export function LookupPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     query,
     items,
@@ -456,7 +457,7 @@ export function LookupPanel() {
                 id={`lookup-row-${s.id}`}
                 role="option"
                 aria-selected={s.id === selectedId}
-                title={schoolLabel(t, s.school)}
+                title={schoolLabel(t, localized(i18n.language, s.school))}
                 data-testid="spell-row"
                 data-id={s.id}
                 data-class={s.class}

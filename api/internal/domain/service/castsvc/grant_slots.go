@@ -43,7 +43,7 @@ func (s *service) pickForExtra(ctx context.Context, level int, spellID string) (
 		return "", "", fmt.Errorf("%w: spell %q", domain.ErrNotFound, id)
 	}
 	if got := max(entry.Level, spell.Level); got != level {
-		return "", "", fmt.Errorf("%w: %s is level %d, this slot is level %d", domain.ErrInvalidInput, firstNonEmpty(entry.Name, spell.Name, id), got, level)
+		return "", "", fmt.Errorf("%w: %s is level %d, this slot is level %d", domain.ErrInvalidInput, firstNonEmpty(entry.Name, spell.Name.Default(), id), got, level)
 	}
-	return id, firstNonEmpty(entry.Name, spell.Name, id), nil
+	return id, firstNonEmpty(entry.Name, spell.Name.Default(), id), nil
 }

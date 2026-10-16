@@ -58,8 +58,8 @@ func Parse(book []byte, cat catalogue.Catalogue) (*Book, error) {
 		if !ok || s.Class != "Wizard" {
 			return nil, fmt.Errorf("spellbook: %q is not a Wizard spell of the catalogue", e.ID)
 		}
-		if s.Name != e.Name {
-			return nil, fmt.Errorf("spellbook: %q is named %q in the catalogue, not %q", e.ID, s.Name, e.Name)
+		if s.Name.Default() != e.Name { // the seed holds the English name
+			return nil, fmt.Errorf("spellbook: %q is named %q in the catalogue, not %q", e.ID, s.Name.Default(), e.Name)
 		}
 		if s.Level != e.Level {
 			return nil, fmt.Errorf("spellbook: %q is level %d in the catalogue, not %d", e.ID, s.Level, e.Level)

@@ -213,7 +213,7 @@ is only ever appended to by play.
 - A deployment without the artifact cannot start. That is deliberate: a silently empty spell list
   is worse than a clear error.
 - _Amended by ADR 0023: the next two bullets describe `name_fr` / `description_fr` columns, which
-  become `localized_texts` rows._
+  migration 031 turned into `localized_texts` rows (see "Storage" in `docs/backend.md`)._
 - The importer needs a migration (French name and description columns, the `key` column of step 5.4.1,
   a catalogue metadata row); that is that item's work, not this ADR's.
 - French names come from the catalogue's `name.fr`, the single source of truth. The web i18n `spells`
@@ -262,8 +262,11 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   all listed (`TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold`,
   `TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup`).
 - _Amended by [ADR 0023](0023-localized-text.md): the Storage, REST and UI notes below name
-  `name_fr` / `description_fr` and `/api/spells/names` with `name_fr`; they become `localized_texts`
-  rows and language maps. Kept as the record of what shipped._
+  `name_fr` / `description_fr` and `/api/spells/names` with `name_fr`. Since migration 031 the ten
+  text columns key `localized_texts` rows, every text field of a spell payload is a language map
+  (`{"en", "fr"?}`) and `/api/spells/names` is `[{id, name: {en, fr?}}]`; the current shape is in
+  `docs/backend.md` ("Spell catalogue") and ADR 0023 "Implementation". Kept as the record of what
+  shipped._
 - **Storage**: `spells.key` (unique, NULL allowed), `name_fr`, `description_fr`, `source` (migration 027)
   and the one-row `catalogue_meta (format, version)`. The fixture's version is `1970-01-01`, so switching
   between the fixture and a real artifact always imports
@@ -285,7 +288,9 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 
 ## Implementation notes (the UI, 2026-10-15)
 
-- _Amended by ADR 0023: no `name_fr` / `description_fr` field; the client reads a language map._
+- _Amended by ADR 0023: no `name_fr` / `description_fr` field; the client reads a language map with
+  `localized(lang, text)` (`web/src/i18n/localized.ts`), see `docs/frontend.md`. Search matches the
+  names in every language._
 - **French names have one source.** The web i18n `spells` namespace, `web/src/i18n/phbSpellIds.json`
   (and its Go check) and the spellbook seed's `sheet` names are gone. The client shows `name_fr` /
   `description_fr` in the French UI, English per missing field.

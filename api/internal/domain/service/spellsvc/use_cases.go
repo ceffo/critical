@@ -57,10 +57,11 @@ type Page struct {
 }
 
 // Search reads the catalog rows matching the filter's stored columns, keeps
-// those matching the rest of it, ranks them, then cuts the requested page.
+// those matching the rest of it, ranks them, cuts the requested page, then
+// reads that page's full texts in one Details call.
 // Rows come ordered by level, name, class; a search text ranks exact name
-// matches first, then prefix, then substring matches (over the English and
-// the French name), keeping that order within a tier, so pages are
+// matches first, then prefix, then substring matches (over the names in
+// every language), keeping that order within a tier, so pages are
 // stable. Filtering runs before paging: Total and the pages are exact.
 func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, error) {
 	rows, err := s.reader.Search(ctx, f)
@@ -93,10 +94,18 @@ func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, er
 	p.PageSize = min(p.PageSize, MaxPageSize)
 	start := min((p.Page-1)*p.PageSize, len(matches))
 	end := min(start+p.PageSize, len(matches))
-	return Page{Items: matches[start:end:end], Total: len(matches), Page: p.Page, PageSize: p.PageSize}, nil
+	ids := make([]string, 0, end-start)
+	for _, sp := range matches[start:end] {
+		ids = append(ids, sp.ID)
+	}
+	items, err := s.reader.Details(ctx, ids)
+	if err != nil {
+		return Page{}, err
+	}
+	return Page{Items: items, Total: len(matches), Page: p.Page, PageSize: p.PageSize}, nil
 }
 
-// Names lists every catalogue spell's id, English and French name: the client
+// Names lists every catalogue spell's id and names in every language: the client
 // names a spell it knows only by id (spellbook, slots, journal) from it.
 func (s *service) Names(ctx context.Context) ([]SpellName, error) {
 	rows, err := s.reader.Search(ctx, Filter{})
@@ -105,7 +114,7 @@ func (s *service) Names(ctx context.Context) ([]SpellName, error) {
 	}
 	out := make([]SpellName, 0, len(rows))
 	for _, sp := range rows {
-		out = append(out, SpellName{ID: sp.ID, Name: sp.Name, NameFR: sp.NameFR})
+		out = append(out, SpellName{ID: sp.ID, Name: sp.Name})
 	}
 	return out, nil
 }

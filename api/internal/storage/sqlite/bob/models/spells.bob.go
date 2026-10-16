@@ -22,24 +22,22 @@ import (
 
 // Spell is an object representing the database table.
 type Spell struct {
-	ID            int64            `db:"id,pk" `
-	Name          string           `db:"name" `
-	Class         string           `db:"class" `
-	Level         int64            `db:"level" `
-	School        null.Val[string] `db:"school" `
-	Sphere        null.Val[string] `db:"sphere" `
-	CastingTime   null.Val[string] `db:"casting_time" `
-	Range         null.Val[string] `db:"range" `
-	Duration      null.Val[string] `db:"duration" `
-	AreaOfEffect  null.Val[string] `db:"area_of_effect" `
-	Components    null.Val[string] `db:"components" `
-	SavingThrow   null.Val[string] `db:"saving_throw" `
-	Description   null.Val[string] `db:"description" `
-	Stats         null.Val[string] `db:"stats" `
-	Key           null.Val[string] `db:"key" `
-	NameFR        null.Val[string] `db:"name_fr" `
-	DescriptionFR null.Val[string] `db:"description_fr" `
-	Source        null.Val[string] `db:"source" `
+	ID           int64            `db:"id,pk" `
+	Key          null.Val[string] `db:"key" `
+	Name         null.Val[int64]  `db:"name" `
+	Class        string           `db:"class" `
+	Level        int64            `db:"level" `
+	School       null.Val[int64]  `db:"school" `
+	Sphere       null.Val[int64]  `db:"sphere" `
+	CastingTime  null.Val[int64]  `db:"casting_time" `
+	Range        null.Val[int64]  `db:"range" `
+	Duration     null.Val[int64]  `db:"duration" `
+	AreaOfEffect null.Val[int64]  `db:"area_of_effect" `
+	Components   null.Val[int64]  `db:"components" `
+	SavingThrow  null.Val[int64]  `db:"saving_throw" `
+	Description  null.Val[int64]  `db:"description" `
+	Source       null.Val[string] `db:"source" `
+	Stats        null.Val[string] `db:"stats" `
 }
 
 // SpellSlice is an alias for a slice of pointers to Spell.
@@ -54,7 +52,7 @@ type SpellsQuery = *sqlite.ViewQuery[*Spell, SpellSlice]
 
 func buildSpellColumns(tableName string) spellColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "name", "class", "level", "school", "sphere", "casting_time", "range", "duration", "area_of_effect", "components", "saving_throw", "description", "stats", "key", "name_fr", "description_fr", "source",
+		"id", "key", "name", "class", "level", "school", "sphere", "casting_time", "range", "duration", "area_of_effect", "components", "saving_throw", "description", "source", "stats",
 	)
 
 	if tableName != "" {
@@ -62,50 +60,46 @@ func buildSpellColumns(tableName string) spellColumns {
 	}
 
 	return spellColumns{
-		ColumnsExpr:   columnsExpr,
-		tableAlias:    tableName,
-		ID:            buildSpellColumn(tableName, "id"),
-		Name:          buildSpellColumn(tableName, "name"),
-		Class:         buildSpellColumn(tableName, "class"),
-		Level:         buildSpellColumn(tableName, "level"),
-		School:        buildSpellColumn(tableName, "school"),
-		Sphere:        buildSpellColumn(tableName, "sphere"),
-		CastingTime:   buildSpellColumn(tableName, "casting_time"),
-		Range:         buildSpellColumn(tableName, "range"),
-		Duration:      buildSpellColumn(tableName, "duration"),
-		AreaOfEffect:  buildSpellColumn(tableName, "area_of_effect"),
-		Components:    buildSpellColumn(tableName, "components"),
-		SavingThrow:   buildSpellColumn(tableName, "saving_throw"),
-		Description:   buildSpellColumn(tableName, "description"),
-		Stats:         buildSpellColumn(tableName, "stats"),
-		Key:           buildSpellColumn(tableName, "key"),
-		NameFR:        buildSpellColumn(tableName, "name_fr"),
-		DescriptionFR: buildSpellColumn(tableName, "description_fr"),
-		Source:        buildSpellColumn(tableName, "source"),
+		ColumnsExpr:  columnsExpr,
+		tableAlias:   tableName,
+		ID:           buildSpellColumn(tableName, "id"),
+		Key:          buildSpellColumn(tableName, "key"),
+		Name:         buildSpellColumn(tableName, "name"),
+		Class:        buildSpellColumn(tableName, "class"),
+		Level:        buildSpellColumn(tableName, "level"),
+		School:       buildSpellColumn(tableName, "school"),
+		Sphere:       buildSpellColumn(tableName, "sphere"),
+		CastingTime:  buildSpellColumn(tableName, "casting_time"),
+		Range:        buildSpellColumn(tableName, "range"),
+		Duration:     buildSpellColumn(tableName, "duration"),
+		AreaOfEffect: buildSpellColumn(tableName, "area_of_effect"),
+		Components:   buildSpellColumn(tableName, "components"),
+		SavingThrow:  buildSpellColumn(tableName, "saving_throw"),
+		Description:  buildSpellColumn(tableName, "description"),
+		Source:       buildSpellColumn(tableName, "source"),
+		Stats:        buildSpellColumn(tableName, "stats"),
 	}
 }
 
 type spellColumns struct {
 	expr.ColumnsExpr
-	tableAlias    string
-	ID            spellColumn
-	Name          spellColumn
-	Class         spellColumn
-	Level         spellColumn
-	School        spellColumn
-	Sphere        spellColumn
-	CastingTime   spellColumn
-	Range         spellColumn
-	Duration      spellColumn
-	AreaOfEffect  spellColumn
-	Components    spellColumn
-	SavingThrow   spellColumn
-	Description   spellColumn
-	Stats         spellColumn
-	Key           spellColumn
-	NameFR        spellColumn
-	DescriptionFR spellColumn
-	Source        spellColumn
+	tableAlias   string
+	ID           spellColumn
+	Key          spellColumn
+	Name         spellColumn
+	Class        spellColumn
+	Level        spellColumn
+	School       spellColumn
+	Sphere       spellColumn
+	CastingTime  spellColumn
+	Range        spellColumn
+	Duration     spellColumn
+	AreaOfEffect spellColumn
+	Components   spellColumn
+	SavingThrow  spellColumn
+	Description  spellColumn
+	Source       spellColumn
+	Stats        spellColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -151,32 +145,33 @@ func (c spellColumn) ShouldOmitParens() bool {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type SpellSetter struct {
-	ID            omit.Val[int64]      `db:"id,pk" `
-	Name          omit.Val[string]     `db:"name" `
-	Class         omit.Val[string]     `db:"class" `
-	Level         omit.Val[int64]      `db:"level" `
-	School        omitnull.Val[string] `db:"school" `
-	Sphere        omitnull.Val[string] `db:"sphere" `
-	CastingTime   omitnull.Val[string] `db:"casting_time" `
-	Range         omitnull.Val[string] `db:"range" `
-	Duration      omitnull.Val[string] `db:"duration" `
-	AreaOfEffect  omitnull.Val[string] `db:"area_of_effect" `
-	Components    omitnull.Val[string] `db:"components" `
-	SavingThrow   omitnull.Val[string] `db:"saving_throw" `
-	Description   omitnull.Val[string] `db:"description" `
-	Stats         omitnull.Val[string] `db:"stats" `
-	Key           omitnull.Val[string] `db:"key" `
-	NameFR        omitnull.Val[string] `db:"name_fr" `
-	DescriptionFR omitnull.Val[string] `db:"description_fr" `
-	Source        omitnull.Val[string] `db:"source" `
+	ID           omit.Val[int64]      `db:"id,pk" `
+	Key          omitnull.Val[string] `db:"key" `
+	Name         omitnull.Val[int64]  `db:"name" `
+	Class        omit.Val[string]     `db:"class" `
+	Level        omit.Val[int64]      `db:"level" `
+	School       omitnull.Val[int64]  `db:"school" `
+	Sphere       omitnull.Val[int64]  `db:"sphere" `
+	CastingTime  omitnull.Val[int64]  `db:"casting_time" `
+	Range        omitnull.Val[int64]  `db:"range" `
+	Duration     omitnull.Val[int64]  `db:"duration" `
+	AreaOfEffect omitnull.Val[int64]  `db:"area_of_effect" `
+	Components   omitnull.Val[int64]  `db:"components" `
+	SavingThrow  omitnull.Val[int64]  `db:"saving_throw" `
+	Description  omitnull.Val[int64]  `db:"description" `
+	Source       omitnull.Val[string] `db:"source" `
+	Stats        omitnull.Val[string] `db:"stats" `
 }
 
 func (s SpellSetter) SetColumns() []string {
-	vals := make([]string, 0, 18)
+	vals := make([]string, 0, 16)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
-	if s.Name.IsValue() {
+	if s.Key.IsValue() || s.Key.IsNull() {
+		vals = append(vals, "key")
+	}
+	if s.Name.IsValue() || s.Name.IsNull() {
 		vals = append(vals, "name")
 	}
 	if s.Class.IsValue() {
@@ -212,20 +207,11 @@ func (s SpellSetter) SetColumns() []string {
 	if s.Description.IsValue() || s.Description.IsNull() {
 		vals = append(vals, "description")
 	}
-	if s.Stats.IsValue() || s.Stats.IsNull() {
-		vals = append(vals, "stats")
-	}
-	if s.Key.IsValue() || s.Key.IsNull() {
-		vals = append(vals, "key")
-	}
-	if s.NameFR.IsValue() || s.NameFR.IsNull() {
-		vals = append(vals, "name_fr")
-	}
-	if s.DescriptionFR.IsValue() || s.DescriptionFR.IsNull() {
-		vals = append(vals, "description_fr")
-	}
 	if s.Source.IsValue() || s.Source.IsNull() {
 		vals = append(vals, "source")
+	}
+	if s.Stats.IsValue() || s.Stats.IsNull() {
+		vals = append(vals, "stats")
 	}
 	return vals
 }
@@ -234,8 +220,11 @@ func (s SpellSetter) Overwrite(t *Spell) {
 	if s.ID.IsValue() {
 		t.ID = s.ID.MustGet()
 	}
-	if s.Name.IsValue() {
-		t.Name = s.Name.MustGet()
+	if s.Key.IsValue() || s.Key.IsNull() {
+		t.Key = s.Key.MustGetNull()
+	}
+	if s.Name.IsValue() || s.Name.IsNull() {
+		t.Name = s.Name.MustGetNull()
 	}
 	if s.Class.IsValue() {
 		t.Class = s.Class.MustGet()
@@ -270,20 +259,11 @@ func (s SpellSetter) Overwrite(t *Spell) {
 	if s.Description.IsValue() || s.Description.IsNull() {
 		t.Description = s.Description.MustGetNull()
 	}
-	if s.Stats.IsValue() || s.Stats.IsNull() {
-		t.Stats = s.Stats.MustGetNull()
-	}
-	if s.Key.IsValue() || s.Key.IsNull() {
-		t.Key = s.Key.MustGetNull()
-	}
-	if s.NameFR.IsValue() || s.NameFR.IsNull() {
-		t.NameFR = s.NameFR.MustGetNull()
-	}
-	if s.DescriptionFR.IsValue() || s.DescriptionFR.IsNull() {
-		t.DescriptionFR = s.DescriptionFR.MustGetNull()
-	}
 	if s.Source.IsValue() || s.Source.IsNull() {
 		t.Source = s.Source.MustGetNull()
+	}
+	if s.Stats.IsValue() || s.Stats.IsNull() {
+		t.Stats = s.Stats.MustGetNull()
 	}
 }
 
@@ -310,12 +290,19 @@ func (s *SpellSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.ID.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "key":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Key.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Key.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
 		case "name":
 			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 				if s.Name.IsUnset() {
 					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
 				}
-				return sqlite.Arg(s.Name.MustGet()).WriteSQL(ctx, w, d, start)
+				return sqlite.Arg(s.Name.MustGetNull()).WriteSQL(ctx, w, d, start)
 			}))
 		case "class":
 			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
@@ -394,40 +381,19 @@ func (s *SpellSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.Description.MustGetNull()).WriteSQL(ctx, w, d, start)
 			}))
-		case "stats":
-			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				if s.Stats.IsUnset() {
-					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
-				}
-				return sqlite.Arg(s.Stats.MustGetNull()).WriteSQL(ctx, w, d, start)
-			}))
-		case "key":
-			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				if s.Key.IsUnset() {
-					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
-				}
-				return sqlite.Arg(s.Key.MustGetNull()).WriteSQL(ctx, w, d, start)
-			}))
-		case "name_fr":
-			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				if s.NameFR.IsUnset() {
-					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
-				}
-				return sqlite.Arg(s.NameFR.MustGetNull()).WriteSQL(ctx, w, d, start)
-			}))
-		case "description_fr":
-			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				if s.DescriptionFR.IsUnset() {
-					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
-				}
-				return sqlite.Arg(s.DescriptionFR.MustGetNull()).WriteSQL(ctx, w, d, start)
-			}))
 		case "source":
 			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 				if s.Source.IsUnset() {
 					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
 				}
 				return sqlite.Arg(s.Source.MustGetNull()).WriteSQL(ctx, w, d, start)
+			}))
+		case "stats":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Stats.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Stats.MustGetNull()).WriteSQL(ctx, w, d, start)
 			}))
 		}
 	}
@@ -440,7 +406,7 @@ func (s SpellSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s SpellSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 18)
+	exprs := make([]bob.Expression, 0, 16)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -449,7 +415,14 @@ func (s SpellSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if s.Name.IsValue() {
+	if s.Key.IsValue() || s.Key.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "key")...),
+			sqlite.Arg(s.Key),
+		}})
+	}
+
+	if s.Name.IsValue() || s.Name.IsNull() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "name")...),
 			sqlite.Arg(s.Name),
@@ -533,38 +506,17 @@ func (s SpellSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
-	if s.Stats.IsValue() || s.Stats.IsNull() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			sqlite.Quote(append(prefix, "stats")...),
-			sqlite.Arg(s.Stats),
-		}})
-	}
-
-	if s.Key.IsValue() || s.Key.IsNull() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			sqlite.Quote(append(prefix, "key")...),
-			sqlite.Arg(s.Key),
-		}})
-	}
-
-	if s.NameFR.IsValue() || s.NameFR.IsNull() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			sqlite.Quote(append(prefix, "name_fr")...),
-			sqlite.Arg(s.NameFR),
-		}})
-	}
-
-	if s.DescriptionFR.IsValue() || s.DescriptionFR.IsNull() {
-		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
-			sqlite.Quote(append(prefix, "description_fr")...),
-			sqlite.Arg(s.DescriptionFR),
-		}})
-	}
-
 	if s.Source.IsValue() || s.Source.IsNull() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "source")...),
 			sqlite.Arg(s.Source),
+		}})
+	}
+
+	if s.Stats.IsValue() || s.Stats.IsNull() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "stats")...),
+			sqlite.Arg(s.Stats),
 		}})
 	}
 
@@ -578,11 +530,13 @@ func spellScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(
 		idx int
 		dst func(o *Spell) any
 	}
-	targets := make([]target, 0, 18)
+	targets := make([]target, 0, 16)
 	for i, col := range cols {
 		switch col {
 		case "id":
 			targets = append(targets, target{i, func(o *Spell) any { return &o.ID }})
+		case "key":
+			targets = append(targets, target{i, func(o *Spell) any { return &o.Key }})
 		case "name":
 			targets = append(targets, target{i, func(o *Spell) any { return &o.Name }})
 		case "class":
@@ -607,16 +561,10 @@ func spellScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(
 			targets = append(targets, target{i, func(o *Spell) any { return &o.SavingThrow }})
 		case "description":
 			targets = append(targets, target{i, func(o *Spell) any { return &o.Description }})
-		case "stats":
-			targets = append(targets, target{i, func(o *Spell) any { return &o.Stats }})
-		case "key":
-			targets = append(targets, target{i, func(o *Spell) any { return &o.Key }})
-		case "name_fr":
-			targets = append(targets, target{i, func(o *Spell) any { return &o.NameFR }})
-		case "description_fr":
-			targets = append(targets, target{i, func(o *Spell) any { return &o.DescriptionFR }})
 		case "source":
 			targets = append(targets, target{i, func(o *Spell) any { return &o.Source }})
+		case "stats":
+			targets = append(targets, target{i, func(o *Spell) any { return &o.Stats }})
 		}
 	}
 
@@ -862,25 +810,23 @@ func (o SpellSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 }
 
 type spellWhere[Q sqlite.Filterable] struct {
-	cols          spellColumns
-	ID            sqlite.WhereMod[Q, int64]
-	Name          sqlite.WhereMod[Q, string]
-	Class         sqlite.WhereMod[Q, string]
-	Level         sqlite.WhereMod[Q, int64]
-	School        sqlite.WhereNullMod[Q, string]
-	Sphere        sqlite.WhereNullMod[Q, string]
-	CastingTime   sqlite.WhereNullMod[Q, string]
-	Range         sqlite.WhereNullMod[Q, string]
-	Duration      sqlite.WhereNullMod[Q, string]
-	AreaOfEffect  sqlite.WhereNullMod[Q, string]
-	Components    sqlite.WhereNullMod[Q, string]
-	SavingThrow   sqlite.WhereNullMod[Q, string]
-	Description   sqlite.WhereNullMod[Q, string]
-	Stats         sqlite.WhereNullMod[Q, string]
-	Key           sqlite.WhereNullMod[Q, string]
-	NameFR        sqlite.WhereNullMod[Q, string]
-	DescriptionFR sqlite.WhereNullMod[Q, string]
-	Source        sqlite.WhereNullMod[Q, string]
+	cols         spellColumns
+	ID           sqlite.WhereMod[Q, int64]
+	Key          sqlite.WhereNullMod[Q, string]
+	Name         sqlite.WhereNullMod[Q, int64]
+	Class        sqlite.WhereMod[Q, string]
+	Level        sqlite.WhereMod[Q, int64]
+	School       sqlite.WhereNullMod[Q, int64]
+	Sphere       sqlite.WhereNullMod[Q, int64]
+	CastingTime  sqlite.WhereNullMod[Q, int64]
+	Range        sqlite.WhereNullMod[Q, int64]
+	Duration     sqlite.WhereNullMod[Q, int64]
+	AreaOfEffect sqlite.WhereNullMod[Q, int64]
+	Components   sqlite.WhereNullMod[Q, int64]
+	SavingThrow  sqlite.WhereNullMod[Q, int64]
+	Description  sqlite.WhereNullMod[Q, int64]
+	Source       sqlite.WhereNullMod[Q, string]
+	Stats        sqlite.WhereNullMod[Q, string]
 }
 
 func (spellWhere[Q]) AliasedAs(alias string) spellWhere[Q] {
@@ -889,24 +835,22 @@ func (spellWhere[Q]) AliasedAs(alias string) spellWhere[Q] {
 
 func buildSpellWhere[Q sqlite.Filterable](cols spellColumns) spellWhere[Q] {
 	return spellWhere[Q]{
-		cols:          cols,
-		ID:            sqlite.Where[Q, int64](cols.ID.Expression),
-		Name:          sqlite.Where[Q, string](cols.Name.Expression),
-		Class:         sqlite.Where[Q, string](cols.Class.Expression),
-		Level:         sqlite.Where[Q, int64](cols.Level.Expression),
-		School:        sqlite.WhereNull[Q, string](cols.School.Expression),
-		Sphere:        sqlite.WhereNull[Q, string](cols.Sphere.Expression),
-		CastingTime:   sqlite.WhereNull[Q, string](cols.CastingTime.Expression),
-		Range:         sqlite.WhereNull[Q, string](cols.Range.Expression),
-		Duration:      sqlite.WhereNull[Q, string](cols.Duration.Expression),
-		AreaOfEffect:  sqlite.WhereNull[Q, string](cols.AreaOfEffect.Expression),
-		Components:    sqlite.WhereNull[Q, string](cols.Components.Expression),
-		SavingThrow:   sqlite.WhereNull[Q, string](cols.SavingThrow.Expression),
-		Description:   sqlite.WhereNull[Q, string](cols.Description.Expression),
-		Stats:         sqlite.WhereNull[Q, string](cols.Stats.Expression),
-		Key:           sqlite.WhereNull[Q, string](cols.Key.Expression),
-		NameFR:        sqlite.WhereNull[Q, string](cols.NameFR.Expression),
-		DescriptionFR: sqlite.WhereNull[Q, string](cols.DescriptionFR.Expression),
-		Source:        sqlite.WhereNull[Q, string](cols.Source.Expression),
+		cols:         cols,
+		ID:           sqlite.Where[Q, int64](cols.ID.Expression),
+		Key:          sqlite.WhereNull[Q, string](cols.Key.Expression),
+		Name:         sqlite.WhereNull[Q, int64](cols.Name.Expression),
+		Class:        sqlite.Where[Q, string](cols.Class.Expression),
+		Level:        sqlite.Where[Q, int64](cols.Level.Expression),
+		School:       sqlite.WhereNull[Q, int64](cols.School.Expression),
+		Sphere:       sqlite.WhereNull[Q, int64](cols.Sphere.Expression),
+		CastingTime:  sqlite.WhereNull[Q, int64](cols.CastingTime.Expression),
+		Range:        sqlite.WhereNull[Q, int64](cols.Range.Expression),
+		Duration:     sqlite.WhereNull[Q, int64](cols.Duration.Expression),
+		AreaOfEffect: sqlite.WhereNull[Q, int64](cols.AreaOfEffect.Expression),
+		Components:   sqlite.WhereNull[Q, int64](cols.Components.Expression),
+		SavingThrow:  sqlite.WhereNull[Q, int64](cols.SavingThrow.Expression),
+		Description:  sqlite.WhereNull[Q, int64](cols.Description.Expression),
+		Source:       sqlite.WhereNull[Q, string](cols.Source.Expression),
+		Stats:        sqlite.WhereNull[Q, string](cols.Stats.Expression),
 	}
 }

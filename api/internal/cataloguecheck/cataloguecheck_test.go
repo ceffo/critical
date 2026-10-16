@@ -101,13 +101,13 @@ func TestFixture_HoldsEveryReferencedSpell(t *testing.T) {
 // one description has a bullet list and one a table; every description is
 // invented placeholder text, never book text.
 func TestFixture_CoversTheFormat(t *testing.T) {
-	var withFR, withoutFR, lists, tables int
+	var translated, untranslated, lists, tables int
 	for _, s := range readFixture(t) {
 		if s.Name["fr"] != "" {
-			withFR++
+			translated++
 			assert.NotEmpty(t, s.Description["fr"], "%s: a French name comes with a French description", s.ID)
 		} else {
-			withoutFR++
+			untranslated++
 		}
 		if strings.Contains(s.Description["en"], "\n- ") {
 			lists++
@@ -120,8 +120,8 @@ func TestFixture_CoversTheFormat(t *testing.T) {
 			assert.True(t, strings.HasPrefix(fr, "Texte de test pour "), "%s: invented French text only", s.ID)
 		}
 	}
-	assert.Positive(t, withFR)
-	assert.Positive(t, withoutFR)
+	assert.Positive(t, translated)
+	assert.Positive(t, untranslated)
 	assert.Positive(t, lists, "one description with a bullet list")
 	assert.Positive(t, tables, "one description with a table")
 }

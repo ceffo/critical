@@ -3,6 +3,7 @@
 // language's. No game rule here: the values at a caster level are the server's, only converted to
 // metres for display.
 import type { TFunction } from "i18next";
+import { localized } from "@/i18n/localized";
 import { labelKey, translateValue } from "@/lib/lookupLabels";
 import type { StatKey } from "@/lib/spellValues";
 import type {
@@ -432,7 +433,7 @@ export function statText(
     const typed = typedStatText(loc, spell.stats, field);
     if (typed !== null) return { text: typed, source: "typed" };
   }
-  const raw = spell[field];
+  const raw = localized(loc.lang, spell[field]);
   const group = LABEL_GROUP[field];
   const text = group ? translateValue(loc.t, group, raw) : raw;
   return { text, source: text === raw ? "book" : "label" };

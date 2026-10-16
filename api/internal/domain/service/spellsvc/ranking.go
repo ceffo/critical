@@ -53,17 +53,19 @@ func nameTier(name, q string) Tier {
 	return TierNone
 }
 
-// tier is the best tier of a spell over its English and French names (case,
-// accents and ligatures ignored). With no search text every spell matches
-// with TierExact (no ranking).
+// tier is the best tier of a spell over its names in every language (case,
+// accents and ligatures ignored; ADR 0023 step 7: no language is singled
+// out). With no search text every spell matches with TierExact (no ranking).
 func (f Filter) tier(sp Spell) Tier {
 	q := Fold(strings.TrimSpace(f.Query))
 	if q == "" {
 		return TierExact
 	}
-	best := nameTier(sp.Name, q)
-	if fr := nameTier(sp.NameFR, q); fr != TierNone && (best == TierNone || fr < best) {
-		best = fr
+	best := TierNone
+	for _, name := range sp.Name {
+		if t := nameTier(name, q); t != TierNone && (best == TierNone || t < best) {
+			best = t
+		}
 	}
 	return best
 }

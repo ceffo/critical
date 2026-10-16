@@ -127,6 +127,9 @@ func (s *service) logChange(ctx context.Context, characterID int64, kind actionl
 }
 
 func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (*ChangeResult, error) {
+	if err := nameLanguages(in.Name); err != nil {
+		return nil, err
+	}
 	item := Item{
 		Name: in.Name.Trimmed(), Type: strings.TrimSpace(in.Type), Behaviour: in.Behaviour,
 		Count: in.Count, MaxCount: in.MaxCount, MagicBonus: in.MagicBonus,
@@ -175,6 +178,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 }
 
 func (s *service) Update(ctx context.Context, characterID int64, itemID string, p ItemPatch) (*ChangeResult, error) {
+	if err := nameLanguages(p.Name); err != nil {
+		return nil, err
+	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		old, err := s.dal.Get(ctx, itemID)

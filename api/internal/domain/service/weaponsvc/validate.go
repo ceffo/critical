@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // Limits on what the weapon editor accepts.
@@ -30,6 +31,15 @@ func validDice(dice string) bool {
 }
 
 func fieldErr(field, msg string) error { return &domain.FieldError{Field: field, Message: msg} }
+
+// nameLanguages refuses a name typed in a code that is not a UI language
+// (ADR 0023 step 11), blank bodies included.
+func nameLanguages(name localized.Text) error {
+	if lang, ok := name.UnknownLanguage(); ok {
+		return domain.FieldErrorf("name", "Unknown language %q", lang)
+	}
+	return nil
+}
 
 // Validate checks a whole weapon as it would be stored, returning a
 // *domain.FieldError naming the first bad field (wire names).

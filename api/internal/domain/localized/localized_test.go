@@ -2,6 +2,8 @@ package localized
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,4 +61,23 @@ func TestSnap_ReadsAMapOrAPlainString(t *testing.T) {
 	b, err := json.Marshal(m)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"en":"Rope","fr":"Corde"}`, string(b))
+}
+
+// UILanguages are the web client's locales, so a name the player types in
+// the UI language is accepted and no other code is (ADR 0023 step 11).
+func TestUILanguages_AreTheWebLocales(t *testing.T) {
+	entries, err := os.ReadDir(filepath.Join("..", "..", "..", "..", "web", "src", "i18n", "locales"))
+	require.NoError(t, err)
+	var locales []string
+	for _, e := range entries {
+		if e.IsDir() {
+			locales = append(locales, e.Name())
+		}
+	}
+	assert.Equal(t, locales, UILanguages)
+	_, unknown := Text{"fr": "Corde", "en": ""}.UnknownLanguage()
+	assert.False(t, unknown)
+	lang, unknown := Text{"fr": "Corde", "de": "Seil", "es": "Cuerda"}.UnknownLanguage()
+	assert.True(t, unknown)
+	assert.Equal(t, "de", lang, "the first unknown code in code order")
 }

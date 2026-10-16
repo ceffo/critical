@@ -30,6 +30,7 @@ var wandBoth = func() itemsvc.Item {
 // string (the English body); a name left with no language is refused.
 func TestUpdate_Step11_NameEditKeepsTheOtherLanguages(t *testing.T) {
 	tests := map[string]struct {
+		from    localized.Text // the stored name (default: English and French)
 		patch   localized.Text
 		want    localized.Text
 		changes string
@@ -40,8 +41,9 @@ func TestUpdate_Step11_NameEditKeepsTheOtherLanguages(t *testing.T) {
 			changes: `[{"field":"name","before":"Baguette de foudre","after":"Baguette d'éclairs"}]`, logged: "Wand of lightning",
 		},
 		"new language": {
-			patch: localized.Text{"de": "Blitzstab"}, want: localized.Text{"en": "Wand of lightning", "fr": "Baguette de foudre", "de": "Blitzstab"},
-			changes: `[{"field":"name","before":"","after":"Blitzstab"}]`, logged: "Wand of lightning",
+			from:  localized.Text{"en": "Wand of lightning"},
+			patch: localized.Text{"fr": "Baguette de foudre"}, want: localized.Text{"en": "Wand of lightning", "fr": "Baguette de foudre"},
+			changes: `[{"field":"name","before":"","after":"Baguette de foudre"}]`, logged: "Wand of lightning",
 		},
 		"English removed": {
 			patch: localized.Text{"en": " "}, want: localized.Text{"fr": "Baguette de foudre"},
@@ -53,8 +55,12 @@ func TestUpdate_Step11_NameEditKeepsTheOtherLanguages(t *testing.T) {
 			dal := mocks.NewMockDAL(t)
 			f := deps(t)
 			svc, _ := itemsvc.New(dal, f.Deps)
-			dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wandBoth, nil)
-			after := wandBoth
+			before := wandBoth
+			if tt.from != nil {
+				before.Name = tt.from
+			}
+			dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(before, nil)
+			after := before
 			after.Name = tt.want
 			dal.EXPECT().Update(mock.Anything, after).Return(nil).Once()
 			var got actionlog.NewEntry
@@ -134,4 +140,39 @@ func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) 
 		dal.EXPECT().Insert(mock.Anything, want).Return(nil).Once()
 		require.NoError(t, restore(dal, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Old wand",`+tail))
 	})
+}
+
+// unknownLanguages are names in a code that is not a UI language.
+var unknownLanguages = map[string]localized.Text{
+	"unknown code": {"zz": "Corde"},
+	"empty code":   {"": "Corde"},
+	"blank body":   {"en": "Corde", "de": ""},
+	"region":       {"fr-FR": "Corde"},
+}
+
+// ADR 0023 step 11: a create whose name holds a code that is not a UI
+// language is refused with a name field error and stores nothing.
+func TestCreate_Step11_RefusesAnUnknownLanguage(t *testing.T) {
+	for name, text := range unknownLanguages {
+		t.Run(name, func(t *testing.T) {
+			svc, _ := itemsvc.New(mocks.NewMockDAL(t), deps(t).Deps)
+			_, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{Name: text, Behaviour: itemsvc.BehaviourStock, Count: 1})
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "name", fe.Field)
+		})
+	}
+}
+
+// ADR 0023 step 11: so is an edit's, before anything is read or written.
+func TestUpdate_Step11_RefusesAnUnknownLanguage(t *testing.T) {
+	for name, text := range unknownLanguages {
+		t.Run(name, func(t *testing.T) {
+			svc, _ := itemsvc.New(mocks.NewMockDAL(t), deps(t).Deps)
+			_, err := svc.Update(context.Background(), 1, "wand_lightning", itemsvc.ItemPatch{Name: text})
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "name", fe.Field)
+		})
+	}
 }

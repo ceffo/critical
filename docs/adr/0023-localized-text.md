@@ -96,26 +96,35 @@ Tests live under `api/internal/` unless their path starts with `web/`.
    a live database: `TestRealCatalogue_UpgradesACopyOfALiveDatabase`.
 10. **The seeds hold every language; a restart adds what a name lacks.** In `seeds/items.json` and
     `seeds/weapons.json`, `name` is a language map (`en` and `fr`). An empty table is filled from the
-    seed. Once filled, the seed only reconciles names: an item or weapon the seed lists gains the
-    seed's languages its name lacks, while every language it has still reads as the seed's (a name
-    the player changed in any language is kept as is). An id the table no longer has is not added
-    back (the player removed it); no count, position or other field moves; a second start writes
-    nothing. A seed name without a language is refused.
+    seed. Once filled, the seed only reconciles names, and offers each of its languages to a name
+    once: an item or weapon the seed lists gains a seed language its name lacks and was never
+    offered, while every language it has still reads as the seed's (a name the player changed in
+    any language is kept as is). Each offer is recorded by item or weapon id and language
+    (`seeded_name_languages`, whatever its outcome), so a language the player removes later (a
+    blank body, step 11) is not put back on the next start, even once the row was removed and put
+    back under a new key; a language added to the seed later is offered once too. An id the table
+    no longer has is not added back (the player removed it); no count, position or other field
+    moves; a second start writes nothing. A seed name without a language is refused.
     Tests: `TestSeed_Step10_FreshDatabaseGetsEveryLanguage`,
     `TestSeed_Step10_ReconcileAddsLanguagesKeepingPlayerNamesAndRows`,
+    `TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved`,
     `TestSeed_Step10_RejectsANameWithoutLanguage` (storage/sqlite).
 11. **The editors write the player's language.** The item and weapon bodies take `name` as a language
     map. The web form shows the name in the UI language (with the client fallback) and sends that one
     language (`editLang`: the UI language without its region), only when the player changed what it
     showed, so an untouched form never copies a fallback name into another language. A create stores
     the languages sent; an edit replaces the bodies of the languages sent and keeps the others; a
-    blank body removes its language; a name left with no language is refused (`name` field error).
+    blank body removes its language, for good (step 10 does not offer it again); a name left with no
+    language, or a language code that is not a UI language (`localized.UILanguages`, the
+    `web/src/i18n/locales` folders), is refused (`name` field error).
     The `item_edit` / `weapon_edit` changes list one `name` change per language whose body differs.
     A pop restores the snapshot's whole name; a snapshot written before 033 holds a plain string,
     which restores the English body only and keeps the other languages the row has now.
     Tests: `TestUpdate_Step11_NameEditKeepsTheOtherLanguages`, `TestCreate_Step11_NameInThePlayersLanguage`,
+    `TestCreate_Step11_RefusesAnUnknownLanguage`, `TestUpdate_Step11_RefusesAnUnknownLanguage`,
     `TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages` (itemsvc, weaponsvc),
-    `TestWith_EditsOnlyTheLanguagesSent`, `TestSnap_ReadsAMapOrAPlainString` (domain/localized),
+    `TestWith_EditsOnlyTheLanguagesSent`, `TestSnap_ReadsAMapOrAPlainString`,
+    `TestUILanguages_AreTheWebLocales` (domain/localized),
     `TestInventory_EditAllFieldsAndPopRestoresThem`, `TestWeapons_EditAllFieldsAndPopRestoresThem`,
     `TestUndo_OneUndoWalksEveryMutationFullyBack` (composition); `web/src/lib/itemForm.test.ts`,
     `web/src/lib/weaponForm.test.ts`.

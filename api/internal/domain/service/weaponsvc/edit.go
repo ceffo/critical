@@ -94,6 +94,9 @@ func clean(w Weapon) Weapon {
 }
 
 func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput) (*ChangeResult, error) {
+	if err := nameLanguages(in.Name); err != nil {
+		return nil, err
+	}
 	w := clean(Weapon{
 		Name: in.Name, DamageSM: in.DamageSM, DamageL: in.DamageL, MagicToHit: in.MagicToHit,
 		MagicDamage: in.MagicDamage, Kind: in.Kind, TwoHanded: in.TwoHanded, AmmoKind: in.AmmoKind,
@@ -137,6 +140,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 }
 
 func (s *service) Update(ctx context.Context, characterID int64, id string, p WeaponPatch) (*ChangeResult, error) {
+	if err := nameLanguages(p.Name); err != nil {
+		return nil, err
+	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		old, err := s.dal.Get(ctx, id)

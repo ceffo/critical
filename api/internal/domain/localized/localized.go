@@ -16,6 +16,11 @@ import (
 // books' language, which every catalogue text has.
 const Fallback = "en"
 
+// UILanguages are the language codes the player can read and write texts in:
+// the web client's locales (web/src/i18n/locales), in code order. A text the
+// player sends is refused in any other code (ADR 0023 step 11).
+var UILanguages = []string{"en", "fr"}
+
 // Text is a text's body by language code. An absent language has no entry,
 // never an empty body; a text in no language is empty (nil or no entries).
 type Text map[string]string
@@ -71,6 +76,18 @@ func (t Text) Any() string {
 		return t[langs[0]]
 	}
 	return ""
+}
+
+// UnknownLanguage is the first code in t, in code order, that is not one of
+// UILanguages, blank bodies included; ok is false when every code is known.
+func (t Text) UnknownLanguage() (lang string, ok bool) {
+	codes := slices.Sorted(maps.Keys(t))
+	for _, c := range codes {
+		if !slices.Contains(UILanguages, c) {
+			return c, true
+		}
+	}
+	return "", false
 }
 
 // Trimmed is the text with every body trimmed and the empty ones dropped.

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
@@ -65,4 +66,39 @@ func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) 
 		dal.EXPECT().Update(mock.Anything, want).Return(nil).Once()
 		require.NoError(t, restore(dal, `{"id":"bastard_sword","position":0,"name":{"en":"Old sword"},`+tail))
 	})
+}
+
+// unknownLanguages are names in a code that is not a UI language.
+var unknownLanguages = map[string]localized.Text{
+	"unknown code": {"zz": "Hache"},
+	"empty code":   {"": "Hache"},
+	"blank body":   {"en": "Axe", "de": ""},
+	"region":       {"fr-FR": "Hache"},
+}
+
+// ADR 0023 step 11: a create whose name holds a code that is not a UI
+// language is refused with a name field error and stores nothing.
+func TestCreate_Step11_RefusesAnUnknownLanguage(t *testing.T) {
+	for name, text := range unknownLanguages {
+		t.Run(name, func(t *testing.T) {
+			svc, _ := weaponsvc.New(mocks.NewMockDAL(t), deps(t).Deps)
+			_, err := svc.Create(context.Background(), 1, weaponsvc.WeaponInput{Name: text, DamageSM: "1d6", DamageL: "1d4", Kind: "melee"})
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "name", fe.Field)
+		})
+	}
+}
+
+// ADR 0023 step 11: so is an edit's, before anything is read or written.
+func TestUpdate_Step11_RefusesAnUnknownLanguage(t *testing.T) {
+	for name, text := range unknownLanguages {
+		t.Run(name, func(t *testing.T) {
+			svc, _ := weaponsvc.New(mocks.NewMockDAL(t), deps(t).Deps)
+			_, err := svc.Update(context.Background(), 1, "bastard_sword", weaponsvc.WeaponPatch{Name: text})
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "name", fe.Field)
+		})
+	}
 }

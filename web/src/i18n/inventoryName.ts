@@ -13,13 +13,13 @@ export interface InventoryNamer {
   weapon: (id: string | undefined, recorded: string) => string;
 }
 
-/** The namer over the current item and weapon lists, in the UI language `lang`. */
 /** What the namer reads of an item or a weapon. */
 interface Named {
   id: string;
   name: LocalizedText;
 }
 
+/** The namer over the current item and weapon lists, in the UI language `lang`. */
 export function inventoryNamer(
   items: readonly Named[],
   weapons: readonly Named[],

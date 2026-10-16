@@ -39,14 +39,15 @@ export async function expectNoClippedText(region: Locator, what: string) {
 /**
  * Words split across two lines (ADR 0022 step 1: a word broken mid-word is cut too, e.g. by
  * `overflow-wrap: anywhere` or `word-break: break-all` in a box too narrow for it). Every word of
- * every visible text node under `root` must lie on one line.
+ * every visible text node under `root` must lie on one line. A slash separates words (a name like
+ * "Bâton/Sceptre/Baguette" wraps after the slash).
  */
 export function brokenWords(root: Element): string[] {
   const broken: string[] = [];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     const text = n.textContent ?? "";
-    for (const m of text.matchAll(/\S+/g)) {
+    for (const m of text.matchAll(/[^\s/]+/g)) {
       const range = document.createRange();
       range.setStart(n, m.index);
       range.setEnd(n, m.index + m[0].length);

@@ -161,7 +161,7 @@ function ItemRow({
     >
       <div className="flex min-w-0 flex-col">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 truncate font-medium">{i.name}</span>
+          <span className="min-w-0 break-words font-medium">{i.name}</span>
           {i.magicalBonus !== 0 && (
             <span
               className="shrink-0 rounded-md bg-amb-900 px-1.5 text-label font-medium text-highlight tabular-nums"
@@ -173,7 +173,7 @@ function ItemRow({
             </span>
           )}
         </span>
-        <span className="min-w-0 truncate text-label text-muted-foreground">
+        <span className="min-w-0 break-words text-label text-muted-foreground">
           {i.type && (
             <>
               <span data-testid="item-type">{i.type}</span>
@@ -199,7 +199,7 @@ function ItemRow({
             onClick={onDice}
           >
             <DiceFive aria-hidden className="size-4 shrink-0" />
-            <span className="truncate">{i.effectDice}</span>
+            <span className="break-words">{i.effectDice}</span>
           </button>
         ) : (
           <span className="text-muted-foreground" aria-hidden>

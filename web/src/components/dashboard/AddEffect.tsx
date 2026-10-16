@@ -179,7 +179,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
                 key={c.id}
                 className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
               >
-                <span className="min-w-0 truncate text-body">
+                <span className="min-w-0 break-words text-body">
                   {name}
                   <span className="text-muted-foreground tabular-nums">
                     {" "}
@@ -252,9 +252,9 @@ function SavedEffects({ onDone }: { onDone: () => void }) {
           className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
         >
           <span className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-body">{s.name}</span>
+            <span className="break-words text-body">{s.name}</span>
             {s.note && (
-              <span className="truncate text-label text-muted-foreground">
+              <span className="break-words text-label text-muted-foreground">
                 {s.note}
               </span>
             )}

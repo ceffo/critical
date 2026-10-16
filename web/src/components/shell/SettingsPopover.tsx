@@ -137,7 +137,7 @@ export function SettingsPopover() {
                   className="size-4 shrink-0 rounded-full"
                   style={{ background: themeVars(a.id, light)["--tint"] }}
                 />
-                <span className="truncate">
+                <span className="break-words">
                   {t(`settings.ambiances.${a.id}`)}
                 </span>
               </button>

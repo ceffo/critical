@@ -54,10 +54,10 @@ flowchart TD
   subgraph B["Below the header: character card 280 px | rail 68 px | stage 1fr"]
     subgraph C["Character card (aside 'Character'), scrolls on its own"]
       ID["Identity, abilities, THAC0"]
-      HP["HpBar"]
+      HP["HpBar: HIT POINTS"]
+      QH["QuickHp: HP CHANGE on one line"]
       CC["ChargeCards"]
-      QH["QuickHp"]
-      SV["Saves"]
+      SV["Saves: SAVING THROWS · CLICK TO ROLL"]
     end
     RAIL["Rail (components/shell/Rail.tsx), on the ground: Act, Spells, Experience, Inventory"]
     subgraph S["Stage: the focused activity (one shown, each mounted on first visit, then kept)"]
@@ -260,17 +260,21 @@ flowchart TD
   journal shows the entry; the table refresh re-reads the ledger, so the journal's Undo shows the
   total back. The character card's level line opens
   it and is underlined with the server's `progress`.
-- Character card (`Identity`, `HpBar`, `ChargeCards`, `QuickHp`, `Saves` in `components/dashboard/`),
-  beside every activity: identity (name, level, abilities in seven cells, effective STR, THAC0);
-  HP (the newest HP change still in force on the right, current over max, the bar coloured by
-  threshold with the last damage taken as a faint segment after the fill when the newest change is
-  damage, `lib/moiLog.ts`; the scale runs from the server's `floor` (-10) to max, with a flat-tinted
-  dying zone below 0 filled from 0 down to current HP, and the server's `condition` labelled next
-  to the value when not ok, ADR 0011); one card per applying buff with charges left (Stoneskin layers…) above
-  the damage entry, Absorb = the buff trigger endpoint; damage / healing entry (amount, Damage,
-  Healing, source, which the server requires): Enter in either field applies damage, Shift+Enter
-  healing; the five saving throws, one button row each: name, target (the sheet's), the newest
-  logged roll in that category (server verdict ✓ / ✗ and the d20), a click rolls it.
+- Character card (`Identity`, `HpBar`, `QuickHp`, `ChargeCards`, `Saves` in `components/dashboard/`,
+  ADR 0022 step 2.3), beside every activity, in this order, grouped by spacing and section labels
+  (no rules): identity (name, level, abilities in seven cells, effective STR, THAC0); "HIT POINTS"
+  with the newest HP change still in force on the right (a long one drops under the label and
+  wraps, never cut), current over max, and the bar (`lib/hpBar.ts` `hpBarModel`): the scale runs
+  from the server's `floor` (-10) to max, a hatched dying zone (`hatch-danger`) below 0 filled from
+  0 down to current HP, the fill from 0 coloured by threshold band, the last damage taken as a
+  faint segment after the fill when the newest change is damage (`lib/moiLog.ts`), and the server's
+  `condition` labelled next to the value when not ok (ADR 0011); "HP CHANGE" on one line: amount,
+  Damage (`Drop`), Healing (`Heart`), the source under it (Enter in either field applies damage,
+  Shift+Enter healing); one card per applying buff with charges left (Stoneskin layers…), outlined
+  in the accent, Absorb = the buff trigger endpoint; "SAVING THROWS · CLICK TO ROLL", one outlined
+  button row each: name (wraps), target (the sheet's), the newest logged roll in that category
+  (server verdict ✓ / ✗ and the d20), a click rolls it. The card has the full height (ADR 0022
+  step 2.3), so on a tall screen the space under the saves stays empty.
 - Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` in
   `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
   − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
@@ -373,7 +377,9 @@ export const useHpStore = create<HpStore>((set) => ({
 
 ## Display Conventions
 
-- HP bar: accent fill > 50%, warning 25-50%, danger < 25% (display only, `lib/format.ts` `hpTone`)
+- HP bar: accent fill > 50%, warning 25-50%, danger < 25% of max (display only on the served
+  current / max, `lib/format.ts` `hpTone`, through `lib/hpBar.ts`); the dying zone floor..0 is
+  hatched in danger
 - Effects timeline: from 60 turns up the pill also shows hours ("150 turns · 2 h 30",
   `lib/passTime.ts`)
 - Time passes (turn menu, "Time passes…"): decimal hours ("1.5" or "1,5"); the server previews

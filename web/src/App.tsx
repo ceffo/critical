@@ -99,8 +99,8 @@ function App() {
         >
           <Identity onOpenXp={() => focus("xp")} />
           <HpBar />
-          <ChargeCards />
           <QuickHp />
+          <ChargeCards />
           <Saves />
         </aside>
 

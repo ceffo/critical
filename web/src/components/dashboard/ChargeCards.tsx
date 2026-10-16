@@ -6,8 +6,8 @@ import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
 
 /**
- * One card per active buff that absorbs hits (charges left, e.g. Stoneskin layers), above the
- * damage entry: its name, the charges left and Absorb, which spends one through the buff trigger
+ * One card per active buff that absorbs hits (charges left, e.g. Stoneskin layers), under the HP
+ * change (ADR 0022 step 2.3), a tint step outlined in the accent: its name, the charges left and Absorb, which spends one through the buff trigger
  * endpoint (logged, voidable). Nothing shows while no such buff is active.
  */
 export function ChargeCards() {
@@ -26,7 +26,7 @@ export function ChargeCards() {
         return (
           <div
             key={b.id}
-            className="flex min-w-0 items-center gap-3 rounded-lg bg-amb-900 px-3 py-2"
+            className="flex min-w-0 items-center gap-3 rounded-lg border border-amb-700 bg-amb-900 px-3 py-2"
             role="group"
             aria-label={name}
             data-testid="charge-card"

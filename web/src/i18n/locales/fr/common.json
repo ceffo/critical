@@ -255,6 +255,7 @@
   },
   "saves": {
     "title": "Jets de sauvegarde",
+    "sectionLabel": "Jets de sauvegarde · cliquer pour lancer",
     "rollLabel": "Jet de sauvegarde contre {{name}}",
     "categories": {
       "para_poison": "Paralysie/Poison",

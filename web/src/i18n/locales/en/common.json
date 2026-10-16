@@ -255,6 +255,7 @@
   },
   "saves": {
     "title": "Saving Throws",
+    "sectionLabel": "Saving throws · click to roll",
     "rollLabel": "Roll save vs {{name}}",
     "categories": {
       "para_poison": "Paralyze/Poison",

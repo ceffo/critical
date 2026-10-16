@@ -668,7 +668,13 @@
       "eye_one": "eye",
       "eye_other": "eyes",
       "unit_one": "unit",
-      "unit_other": "units"
+      "unit_other": "units",
+      "speaking_creature_one": "speaking creature",
+      "speaking_creature_other": "speaking creatures",
+      "written_text_one": "written text",
+      "written_text_other": "written texts",
+      "extradimensional_space_one": "extradimensional space",
+      "extradimensional_space_other": "extradimensional spaces"
     },
     "perWords": {
       "priest": "priest",
@@ -705,6 +711,7 @@
       "wall": "walls",
       "circle": "circles",
       "path": "paths",
+      "wave": "waves",
       "line": "lines",
       "line_of_sight": "lines of sight"
     },
@@ -725,6 +732,7 @@
       "wall": "wall",
       "circle": "circle",
       "path": "path",
+      "wave": "wave",
       "line": "line"
     },
     "conditions": {
@@ -750,6 +758,7 @@
       "shapedFigure": "{{dims}} {{shape}} {{figure}}",
       "axis": "{{value}} {{axis}}",
       "site": "{{value}} {{site}}",
+      "radiusBy": "{{radius}} radius x {{length}} {{figure}}",
       "areaCount": "{{count}} {{value}}",
       "areaSelf": "The caster",
       "plus": " + ",
@@ -762,6 +771,7 @@
       "axisJoin": " and ",
       "ofMembers": "{{targets}} of {{members}}",
       "within": "{{targets}} within {{value}}",
+      "sized": "{{targets}}, {{value}}",
       "aroundTouched": "{{value}} around the creature touched",
       "or": " or ",
       "range": {

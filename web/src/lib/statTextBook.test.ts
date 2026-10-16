@@ -32,6 +32,14 @@ const SLIPS: Record<string, string> = {
   // A cube of feet read as a volume, a cubic foot as a side.
   "metamorphose_liquids area_of_effect": "1-foot cube/level as 27 litres/level",
   "age_object area_of_effect": "1 cubic foot/level as a 30 cm side/level",
+  // The Manuel Complet du Magicien (mc-fr) gives a square's side in square metres ("20-foot square" as
+  // "6 mètres carrés"), a thickness of 96 inches as 15 cm, and rounds 4.5 m to 5 m (the convention
+  // keeps the side and does not round, ADR 0021 step 8).
+  "otilukes_dispelling_screen area_of_effect": "20-foot square as 6 m²",
+  "wall_of_bones area_of_effect":
+    "10-foot square/level as 3 m²/level, 96 inches as 15 cm",
+  "defoliate area_of_effect": "50-foot square/level as 15 m²/level",
+  "blackmantle area_of_effect": "15-foot radius as 5 m",
 };
 
 function mdFiles(dir: string): string[] {
@@ -131,7 +139,7 @@ describe.skipIf(!present)("French metric lengths vs the French books", () => {
     let reproduced = 0;
     const skipped: string[] = [];
     const differ: Record<string, string> = {};
-    for (const dir of ["phb-fr", "tom-fr"]) {
+    for (const dir of ["phb-fr", "tom-fr", "mc-fr"]) {
       const base = join(root, dir, "spells");
       if (!existsSync(base)) continue;
       for (const file of mdFiles(base)) {

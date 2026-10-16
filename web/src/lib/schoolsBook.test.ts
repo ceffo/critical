@@ -44,7 +44,7 @@ describe.skipIf(!present)("French school names vs the French books", () => {
     englishSchools(JSON.parse(readFileSync(catalogue, "utf8")), en);
     const votes = new Map<string, Map<string, number>>();
     let paired = 0;
-    for (const dir of ["phb-fr", "tom-fr"]) {
+    for (const dir of ["phb-fr", "tom-fr", "mc-fr"]) {
       const spells = join(root, dir, "spells");
       if (!existsSync(spells)) continue;
       for (const file of mdFiles(spells)) {

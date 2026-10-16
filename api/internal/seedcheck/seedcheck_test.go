@@ -285,7 +285,7 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 // "circle", per-level steps and thousands separators were read). Like
 // specialAllowedCount, a new artifact or a parser change that moves them
 // fails here until it is looked at.
-var areaReadingCounts = map[string]int{"alternatives": 25, "partial": 19}
+var areaReadingCounts = map[string]int{"alternatives": 26, "partial": 14}
 
 // TestRealCatalogue_AreaReadingsAndPerLevelDurations checks how the parser
 // reads the real catalogue's areas (the pinned counts above) and that no

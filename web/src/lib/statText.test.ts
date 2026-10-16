@@ -85,6 +85,7 @@ const SHAPES = [
   "circle",
   "path",
   "line",
+  "wave",
 ];
 
 describe("statLocale", () => {
@@ -577,14 +578,14 @@ describe("areaText", () => {
         }),
       ),
     ).toBe("sphère de 3 m de rayon ou hémisphère de 4,5 m de rayon");
-    // Several extents with a figure ("5 ft. radius x 30 ft. column"): the book's text.
+    // More than the radius and one more extent with a figure: the book's text.
     expect(
       areaText(
         fr,
         a("area", "", {
           shape: "radius",
           figure: "column",
-          dims: [qty(5, "foot"), qty(30, "foot")],
+          dims: [qty(5, "foot"), qty(30, "foot"), qty(2, "foot")],
         }),
       ),
     ).toBeNull();
@@ -824,6 +825,85 @@ describe("areaText", () => {
         }),
       ),
     ).toBe("ligne de vue de 18 m maximum");
+  });
+
+  it("words the size of a target, a level times an area, a wave and a radius with a column", () => {
+    // ADR 0021 step 8, areas 18-20
+    const sized = a("targets", "1 object up to 10 ft. long", {
+      size: true,
+      targets: qty(1),
+      noun: "object",
+      dims: [{ ...qty(10, "foot"), axis: "long", up_to: true }],
+    });
+    expect(areaText(fr, sized)).toBe("1 objet, 3 m de long maximum");
+    // Without the flag the extent is an area of its own, not the target's size.
+    expect(areaText(fr, { ...sized, size: false })).toBe(
+      "3 m de long maximum, 1 objet",
+    );
+    expect(
+      areaText(
+        fr,
+        a("targets", "1 page, up to 2 ft. square", {
+          size: true,
+          shape: "square",
+          targets: qty(1),
+          noun: "page",
+          dims: [{ ...qty(2, "foot"), up_to: true }],
+        }),
+      ),
+    ).toBe("1 page, carré de 60 cm maximum");
+    expect(
+      areaText(
+        fr,
+        a("area", "caster's level x 100 sq. ft.", {
+          shape: "square",
+          dims: [qty(100, "sq foot", { per_level: true, step: 1 })],
+        }),
+      ),
+    ).toBe("9 m²/niveau");
+    expect(
+      areaText(
+        fr,
+        a("area", "Wave 2 ft. high and 10 ft. long per level", {
+          shape: "wave",
+          dims: [
+            { ...qty(2, "foot"), axis: "high" },
+            { ...qty(10, "foot", { per_level: true, step: 1 }), axis: "long" },
+          ],
+        }),
+      ),
+    ).toBe("vague de 60 cm de haut et de 3 m/niveau de long");
+    expect(
+      areaText(
+        fr,
+        a("area", "5 ft. radius x 30 ft. column", {
+          shape: "radius",
+          figure: "column",
+          dims: [qty(5, "foot"), qty(30, "foot")],
+        }),
+      ),
+    ).toBe("colonne de 1,5 m de rayon sur 9 m");
+    // Two extents with a figure but no radius are not read.
+    expect(
+      areaText(
+        fr,
+        a("area", "", {
+          shape: "cone",
+          figure: "column",
+          dims: [qty(5, "foot"), qty(30, "foot")],
+        }),
+      ),
+    ).toBeNull();
+    const alts = a("alternatives", "1 speaking creature or written text", {
+      alternatives: [
+        a("targets", "1 speaking creature", {
+          targets: qty(1),
+          noun: "speaking creature",
+        }),
+        a("targets", "written text", { targets: qty(1), noun: "written text" }),
+      ],
+    });
+    expect(areaText(fr, alts)).toBe("1 créature parlante ou 1 objet écrit");
   });
 
   it('words "1 or more" after the noun', () => {

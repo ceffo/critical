@@ -57,6 +57,8 @@ export interface SpellArea {
   members_noun?: string;
   /** The extents bound where the targets are ("1 animal within 30 ft."). */
   within?: boolean;
+  /** The extents are the size of each target ("1 object up to 10 ft. long"), not an area. */
+  size?: boolean;
   /** The area is centred on the creature or object touched. */
   around_touched?: boolean;
   /** The text says more than this typed form holds: a reader shows the raw text. */

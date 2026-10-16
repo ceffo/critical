@@ -164,9 +164,9 @@ test("lookup in French: a French name finds the spell, its French text shows wit
     "Projectile magique",
   );
   const stat = (key: string) => detail(page).getByTestId(`stat-${key}`);
-  await expect(stat("range").getByTestId("stat-value")).toHaveText("189 m");
+  await expect(stat("range").getByTestId("stat-value")).toHaveText("210 m");
   await expect(stat("range").getByTestId("stat-raw")).toHaveText(
-    "54 m + 9 m/niveau",
+    "60 m + 10 m/niveau",
   );
   await expect(stat("duration")).toContainText("Instantanée");
   await expect(stat("area")).toContainText("1-5 cibles");
@@ -174,6 +174,24 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await expect(stat("save")).toContainText("Aucune");
   await expect(detail(page).getByTestId("spell-meta")).toContainText("V, S");
   await snap(page, "french-stats");
+
+  // A long French area wraps in the detail grid at the narrowest width, never cut.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await searchFr.fill("rapidit");
+  await expect(detail(page).getByRole("heading")).toContainText("Rapidité");
+  const area = stat("area");
+  await expect(area.getByTestId("stat-raw")).toHaveText(
+    "cube de 12 m, 1 créature/niveau",
+  );
+  for (const el of await area.locator("*").all()) {
+    const [scroll, client] = await el.evaluate((e) => [
+      e.scrollWidth,
+      e.clientWidth,
+    ]);
+    expect(scroll).toBeLessThanOrEqual(client);
+  }
+  await snap(page, "french-long-area");
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await searchFr.fill("armor");
   await expect(detail(page).getByRole("heading")).toHaveText("Armor");

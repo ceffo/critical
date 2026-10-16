@@ -26,31 +26,51 @@ export function statLocale(t: TFunction, lang: string): StatLocale {
 }
 
 /**
- * The book's units in the metric system: the factor to multiply by and the metric unit. A foot is
- * 0.3 m, the French books' and catalogue's own rounding ("Ténèbres (rayon 4,5 m)" for 15'), and
- * every other unit follows from it: 1 yd = 3 ft = 0.9 m, 1 in = 2.5 cm, areas and volumes are the
- * squares and cubes. A mile is 1.5 km (the usual French rounding of 1.6 km).
+ * The book's units in the metric system: the factor to multiply by and the metric unit, the French
+ * books' own convention (ADR 0021 step 8). A yard is a metre and a foot 0.3 m ("10 yards" is
+ * "10 mètres", "30 feet" is "9 mètres"), a mile 1.5 km; an inch is 2.5 cm. Areas are the squares
+ * (a square yard is a square metre); a cubic foot is 27 litres and a cubic yard a cubic metre.
  */
 export const METRIC: Readonly<Record<string, [number, string]>> = {
   inch: [2.5, "cm"],
   foot: [0.3, "m"],
-  yard: [0.9, "m"],
+  yard: [1, "m"],
   mile: [1.5, "km"],
   "sq inch": [6.25, "sq cm"],
   "sq foot": [0.09, "sq m"],
-  "sq yard": [0.81, "sq m"],
+  "sq yard": [1, "sq m"],
   "sq mile": [2.25, "sq km"],
   "cu inch": [15.625, "cu cm"],
-  "cu foot": [0.027, "cu m"],
-  "cu yard": [0.729, "cu m"],
+  "cu foot": [27, "litre"],
+  "cu yard": [1, "cu m"],
 };
 
-/** A number in the language's format: "4,5" in French, no grouping ("1000"), at most 2 decimals. */
-export function formatNumber(loc: StatLocale, n: number): string {
-  return new Intl.NumberFormat(loc.lang, {
-    maximumFractionDigits: 2,
-    useGrouping: false,
-  }).format(n);
+/** A volume unit, book or metric: its numbers keep significant digits, not a fixed decimal count. */
+function isVolume(unit: string | undefined): boolean {
+  return !!unit && (unit.startsWith("cu ") || unit === "litre");
+}
+
+/**
+ * A number in the language's format: "4,5" in French, no grouping ("1000"). Lengths and areas
+ * keep at most 2 decimals; a volume (`unit`) keeps 3 significant digits and every integer digit
+ * ("156" cm³, "0,0156" m³, "1234" litres), so a small volume is not rounded away.
+ */
+export function formatNumber(
+  loc: StatLocale,
+  n: number,
+  unit?: string,
+): string {
+  return new Intl.NumberFormat(
+    loc.lang,
+    isVolume(unit)
+      ? {
+          maximumSignificantDigits: 3,
+          maximumFractionDigits: 0,
+          roundingPriority: "morePrecision",
+          useGrouping: false,
+        }
+      : { maximumFractionDigits: 2, useGrouping: false },
+  ).format(n);
 }
 
 /** Factor and unit a value in `unit` is shown in: converted to metric where the language is. */
@@ -91,7 +111,7 @@ function withUnit(loc: StatLocale, value: string, unit: string | null): string {
 }
 
 /**
- * A value at the caster level ("210 yd", "189 m", "3 rounds + 1d4"). A length with dice is not
+ * A value at the caster level ("210 yd", "210 m", "3 rounds + 1d4"). A length with dice is not
  * converted (dice cannot be scaled), and a unit the language has no word for is printed as is.
  */
 export function formatValue(
@@ -102,12 +122,12 @@ export function formatValue(
   const [f, unit] = v.dice ? [1, v.unit ?? ""] : shownUnit(loc, v.unit ?? "");
   const parts: string[] = [];
   if (v.amount !== 0 || !v.dice) {
-    const a = formatNumber(loc, v.amount * f);
-    parts.push(v.upper ? `${a}-${formatNumber(loc, v.upper * f)}` : a);
+    const a = formatNumber(loc, v.amount * f, unit);
+    parts.push(v.upper ? `${a}-${formatNumber(loc, v.upper * f, unit)}` : a);
   }
   if (v.dice) parts.push(v.dice);
   // Dice make it several; "1,5" is singular in French, as Intl.PluralRules says.
-  const count = v.dice ? 2 : v.upper || v.amount;
+  const count = v.dice ? 2 : (v.upper || v.amount) * f;
   const word = noun
     ? (nounText(loc, noun, count) ?? noun)
     : unit
@@ -128,12 +148,12 @@ function termText(
   if (term.per) return null; // "/recipient": a divisor the language has no word for
   const unit = term.unit ?? "";
   const [f, shown] = term.dice ? [1, unit] : shownUnit(loc, unit);
-  const n = (x: number) => formatNumber(loc, x * f);
+  const n = (x: number) => formatNumber(loc, x * f, shown);
   let value: string;
   if (term.dice)
     value = term.count ? `${term.dice}+${n(term.count)}` : term.dice;
   else value = term.upper ? `${n(term.count)}-${n(term.upper)}` : n(term.count);
-  const count = term.dice ? 2 : term.upper || term.count;
+  const count = term.dice ? 2 : (term.upper || term.count) * f;
   let word: string | null = null;
   if (noun) {
     word = nounText(loc, noun, count);
@@ -164,7 +184,7 @@ export function quantityText(
     const [f, shown] = shownUnit(loc, q.max_unit ?? "");
     const word = shown ? unitText(loc, shown, q.max * f) : null;
     if (shown && !word) return null;
-    const max = withUnit(loc, formatNumber(loc, q.max * f), word);
+    const max = withUnit(loc, formatNumber(loc, q.max * f, shown), word);
     text = loc.t("lookup.stat.max", { value: text, max });
   }
   return text;

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
@@ -259,7 +260,11 @@ func TestAreaOfEffect(t *testing.T) {
 			assert.Equal(t, tt.kind, got.Kind)
 			assert.Equal(t, tt.shape, got.Shape)
 			assert.Equal(t, tt.noun, got.Noun)
-			at := got.At(tt.level)
+			// What the parser read, evaluated; a partial reading serves no value
+			// (TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel).
+			read := got
+			read.Partial = false
+			at := read.At(tt.level)
 			assert.Equal(t, tt.dims, at.Dims)
 			assert.Equal(t, tt.targets, at.Targets)
 		})
@@ -357,4 +362,21 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 	for _, raw := range []string{"The caster's hand", "Creature touched", "Special", "Variable"} {
 		assert.False(t, spellstats.ParseArea(raw).Partial, raw)
 	}
+}
+
+// ADR 0021 step 8: a partial area reading has no value at a caster level (the
+// lossy reading would give "10 creatures" for "One creature/two levels" at
+// level 10, and 0 for "1,000 square feet/level"); a whole reading has one.
+func TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel(t *testing.T) {
+	for _, raw := range []string{"One creature/two levels", "1,000 square feet/level", "1 creature or item"} {
+		t.Run(raw, func(t *testing.T) {
+			a := spellstats.ParseArea(raw)
+			require.True(t, a.Partial)
+			assert.Equal(t, spellstats.AreaValue{}, a.At(10))
+		})
+	}
+	whole := spellstats.ParseArea("1 creature/3 levels")
+	require.False(t, whole.Partial)
+	require.NotNil(t, whole.At(9).Targets)
+	assert.Equal(t, 3.0, whole.At(9).Targets.Amount)
 }

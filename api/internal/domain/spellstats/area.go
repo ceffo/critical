@@ -29,8 +29,8 @@ type AreaOfEffect struct {
 	// Partial is set on an area or targets kind whose text says more than
 	// the typed form holds: an alternative ("1 creature or item"), a number
 	// it dropped ("One creature/two levels") or a word it does not read
-	// ("Line of sight, max. 60 ft."). The typed form still computes what it
-	// read; a reader that words the stat shows the raw text instead.
+	// ("Line of sight, max. 60 ft."). A reader that words the stat shows the
+	// raw text instead, and At computes nothing from it (ADR 0021 step 8).
 	Partial bool `json:"partial,omitempty"`
 }
 
@@ -319,9 +319,15 @@ func parseTargets(part string) (Quantity, string, bool) {
 	return Quantity{Terms: []Term{t}}, noun, true
 }
 
-// At computes the area for casterLevel.
+// At computes the area for casterLevel. A partial reading computes nothing:
+// a value from what the parser kept would be wrong ("One creature/two
+// levels" is not one creature per level), so there is no value to show or
+// roll (ADR 0021 step 8).
 func (a AreaOfEffect) At(casterLevel int) AreaValue {
 	var v AreaValue
+	if a.Partial {
+		return v
+	}
 	for _, d := range a.Dims {
 		v.Dims = append(v.Dims, d.At(casterLevel))
 	}

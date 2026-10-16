@@ -528,7 +528,9 @@
       "cu_cm_one": "cm³",
       "cu_cm_other": "cm³",
       "cu_m_one": "m³",
-      "cu_m_other": "m³"
+      "cu_m_other": "m³",
+      "litre_one": "litre",
+      "litre_other": "litres"
     },
     "nouns": {
       "creature_one": "créature",

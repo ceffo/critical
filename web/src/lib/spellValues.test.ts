@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";
-import { statDice, valueFormula } from "./spellValues";
+import { statDice, statValue, valueFormula } from "./spellValues";
 import { statLocale, type StatLocale } from "./statText";
 import type { Spell, SpellStats, SpellValues } from "@/types/spells";
 
@@ -84,5 +84,33 @@ describe("statDice", () => {
 
   it("is empty when the server computed no values", () => {
     expect(statDice(spell(undefined), unit)).toEqual([]);
+  });
+});
+
+// ADR 0021 step 8: a partial area reading has no value at the caster level, so nothing is shown
+// or rolled from it, even from a value an older server still sends.
+describe("a partial area reading", () => {
+  const values: SpellValues = {
+    caster_level: 10,
+    casting_time: { amount: 1 },
+    range: { amount: 0 },
+    duration: { amount: 0 },
+    area: { targets: { amount: 0, dice: "1d4" } },
+  };
+
+  it("has no value and no dice", () => {
+    const s = spell(values, { partial: true });
+    expect(statValue(s, "area", unit)).toBeNull();
+    expect(statDice(s, unit).map((d) => d.key)).not.toContain("area");
+  });
+
+  it("has neither when the server serves none (what it does)", () => {
+    const s = spell({ ...values, area: {} }, { partial: true });
+    expect(statValue(s, "area", unit)).toBeNull();
+    expect(statDice(s, unit)).toEqual([]);
+  });
+
+  it("a whole reading keeps its value", () => {
+    expect(statValue(spell(values), "area", unit)).toBe("1d4 persons");
   });
 });

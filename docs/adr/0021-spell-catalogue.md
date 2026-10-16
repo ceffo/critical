@@ -162,17 +162,26 @@ is only ever appended to by play.
      (`lookup.unitWords`, `nouns`, `shapes`, `conditions`, `stat.*`): units and nouns agree in
      number by the language's plural rules, per-level terms read "/niveau", "/2 niveaux", shapes
      and the components and save kinds are translated, and so is the value at the caster level.
-   - **Lengths are converted where the language uses metres** (`lookup.lengths`, French: metric):
-     1 ft = 0.3 m, the French catalogue names' own rounding ("rayon 4,5 m" for 15'), so 1 yd =
-     0.9 m and 1 in = 2.5 cm, squares and cubes for areas and volumes; 1 mile = 1.5 km. Numbers use
-     the language's decimal mark ("4,5"), at most two decimals. Dice are never converted (a length
-     with dice keeps its unit); times are never converted.
+   - **Lengths are converted where the language uses metres** (`lookup.lengths`, French: metric),
+     by the French books' convention, not the exact factors: **1 yd = 1 m**, **1 ft = 0.3 m**,
+     1 mi = 1.5 km, 1 in = 2.5 cm. The French Tome of Magic's stat lines turn yards into metres one
+     for one and feet into 0.3 m in every range and area, a square yard into a square metre, a mile
+     into 1.5 km (all three of its miles; the French PHB keeps paces and feet, and gives one mile as
+     1.5 km once and as a fraction of a league once), and a square mile into 2.25 km². Areas
+     are the squares of the lengths; a **cubic foot is 27 litres** (the books' own figure) and a
+     cubic yard 1 m³, a cubic inch 15.625 cm³. Numbers use the language's decimal mark ("4,5");
+     lengths and areas keep at most two decimals, volumes three significant digits and every
+     integer digit ("156 cm³", "540 litres"), so a small volume is not rounded away. A word agrees
+     with the converted number ("27 litres"). Dice are never converted (a length with dice keeps its
+     unit); times are never converted.
    - **The book's text is the fallback, only for what is not typed**: a field the parser left
      special (other than the book's own "Special", which is a label), a word the language has no
      key for (an unlisted noun, unit or condition, a non-level divisor such as "/recipient"), and
      an area reading the parser marks **partial** (`partial`: the text has an alternative, a
      number, die or word its typed form does not hold, such as "1 creature or item" or "One
-     creature/two levels"). Its common values are labelled as before. Text is wrapped, never cut.
+     creature/two levels"). Its common values are labelled as before. A partial area has no value
+     at the caster level either: the server computes and serves none, so nothing from the lossy
+     reading is shown or rolled. Text is wrapped, never cut.
 
 ## Consequences
 
@@ -276,10 +285,14 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 - **Partial area readings** are marked by the parser: the text's numbers and dice must all be the
   typed form's, and its words a length unit, a shape, a word of the noun or a connector ("x", "in
   a", "level") (`spellstats.AreaOfEffect.Partial`,
-  `TestAreaOfEffect_PartialWhenTheTextSaysMore`).
+  `TestAreaOfEffect_PartialWhenTheTextSaysMore`), and serve no value at a caster level
+  (`TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel`; the client's `spellValues.test.ts`
+  "a partial area reading").
 - **The wording** is `web/src/lib/statText.ts` (unit tests for every unit, noun, shape and
   condition key, the conversion and each fallback in `statText.test.ts`); the lookup's grid and meta
-  line use it, and the French lookup e2e checks one spell's stats ("189 m", "54 m + 9 m/niveau").
+  line use it, and the French lookup e2e checks one spell's stats ("210 m", "60 m + 10 m/niveau").
+  The conversion and the volume digits are in `statText.test.ts` ("converts lengths to metres in
+  French as the French books do", "keeps a volume's significant digits").
 - **Coverage** over a catalogue: `just stat-coverage [path]` prints, per field, how many stats the
   French UI words from the typed value, shows as a label, or shows as the English text, with the
   most common English texts left (`api/cmd/spellstats` prints the typed stats it reads).

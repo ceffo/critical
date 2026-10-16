@@ -7,6 +7,7 @@ import {
   castingTimeText,
   componentsText,
   durationText,
+  formatNumber,
   formatValue,
   nounText,
   quantityText,
@@ -142,15 +143,36 @@ describe("nounText", () => {
 });
 
 describe("formatValue (the value at the caster level)", () => {
-  it("converts lengths to metres in French: 1 ft = 0.3 m, 1 yd = 0.9 m", () => {
-    expect(formatValue(fr, { amount: 210, unit: "yard" })).toBe("189 m");
+  it("converts lengths to metres in French as the French books do: 1 yd = 1 m, 1 ft = 0.3 m", () => {
+    expect(formatValue(fr, { amount: 210, unit: "yard" })).toBe("210 m");
+    expect(formatValue(fr, { amount: 30, unit: "foot" })).toBe("9 m");
     expect(formatValue(fr, { amount: 15, unit: "foot" })).toBe("4,5 m");
     expect(formatValue(fr, { amount: 6, unit: "inch" })).toBe("15 cm");
-    expect(formatValue(fr, { amount: 2, unit: "mile" })).toBe("3 km");
+    expect(formatValue(fr, { amount: 1, unit: "mile" })).toBe("1,5 km");
     expect(formatValue(fr, { amount: 100, unit: "sq foot" })).toBe("9 m²");
-    expect(formatValue(fr, { amount: 1000, unit: "cu foot" })).toBe("27 m³");
-    expect(formatValue(fr, { amount: 10, unit: "sq yard" })).toBe("8,1 m²");
-    expect(formatValue(fr, { amount: 1, unit: "cu yard" })).toBe("0,73 m³");
+    expect(formatValue(fr, { amount: 10, unit: "sq yard" })).toBe("10 m²");
+    expect(formatValue(fr, { amount: 4, unit: "sq mile" })).toBe("9 km²");
+    expect(formatValue(fr, { amount: 1, unit: "cu yard" })).toBe("1 m³");
+    expect(formatValue(fr, { amount: 1, unit: "cu foot" })).toBe("27 litres");
+    expect(formatValue(fr, { amount: 1000, unit: "cu foot" })).toBe(
+      "27000 litres",
+    );
+  });
+
+  it("keeps a volume's significant digits, not a fixed number of decimals", () => {
+    // "1 cu. ft./level" at level 20: 20 cu ft is 566 litres; the books' 27 litres a foot gives 540.
+    const at20 = formatValue(fr, { amount: 20, unit: "cu foot" });
+    expect(at20).toBe("540 litres");
+    expect(Math.abs(540 / (20 * 28.3168) - 1)).toBeLessThan(0.05);
+    // "10 cu. in./level" at level 1: 156 cm³, not "156,25".
+    expect(formatValue(fr, { amount: 10, unit: "cu inch" })).toBe("156 cm³");
+    expect(formatValue(fr, { amount: 1234, unit: "cu foot" })).toBe(
+      "33318 litres",
+    );
+    expect(formatNumber(fr, 0.015625, "cu m")).toBe("0,0156");
+    expect(
+      quantityText(fr, qty(1, "cu foot", { per_level: true, step: 1 })),
+    ).toBe("27 litres/niveau");
   });
 
   it("keeps times, words their units in French, and leaves dice alone", () => {
@@ -196,7 +218,7 @@ describe("quantityText (the book's formula)", () => {
         { count: 10, unit: "yard", per_level: true, step: 1 },
       ],
     };
-    expect(quantityText(fr, mm)).toBe("54 m + 9 m/niveau");
+    expect(quantityText(fr, mm)).toBe("60 m + 10 m/niveau");
     expect(quantityText(en, mm)).toBe("60 yd + 10 yd/level");
     expect(
       quantityText(fr, qty(1, "round", { per_level: true, step: 2 })),
@@ -223,7 +245,7 @@ describe("quantityText (the book's formula)", () => {
         max: 100,
         max_unit: "yard",
       }),
-    ).toBe("9 m/niveau, max. 90 m");
+    ).toBe("10 m/niveau, max. 100 m");
   });
 
   it("counts a noun", () => {
@@ -293,7 +315,7 @@ describe("rangeText", () => {
     expect(rangeText(fr, r("touch", "Touch"))).toBe("Contact");
     expect(rangeText(fr, r("unlimited", "Unlimited"))).toBe("Illimitée");
     expect(rangeText(fr, r("distance", "30 yds.", qty(30, "yard")))).toBe(
-      "27 m",
+      "30 m",
     );
     expect(
       rangeText(fr, r("distance", "10-ft. radius", qty(10, "foot"), true)),
@@ -580,7 +602,7 @@ describe("statText", () => {
 
   it("words the typed value in French", () => {
     expect(statText(fr, spell as Spell, "range")).toEqual({
-      text: "54 m + 9 m/niveau",
+      text: "60 m + 10 m/niveau",
       source: "typed",
     });
     expect(statText(fr, spell as Spell, "casting_time").text).toBe("1 segment");

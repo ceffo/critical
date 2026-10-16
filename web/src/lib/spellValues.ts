@@ -28,6 +28,8 @@ export function statValue(
         ? formatValue(loc, v.casting_time)
         : null;
     case "area": {
+      // A partial reading has no value (the server sends none; ADR 0021 step 8).
+      if (st.area.partial) return null;
       const parts: string[] = [];
       if (v.area.targets) {
         parts.push(formatValue(loc, v.area.targets, st.area.noun || undefined));

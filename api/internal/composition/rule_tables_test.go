@@ -39,14 +39,7 @@ func writeArtifact(t *testing.T, mutate func(map[string]any)) string {
 	return path
 }
 
-// asFormat1 turns the artifact into format 1: the same spells, no tables.
-func asFormat1(d map[string]any) {
-	d["format"] = 1
-	delete(d, "rule_tables")
-}
-
-// setLevel16XP sets the level-16 XP of the rule tables doc (the artifact's
-// rule_tables or the seed file).
+// setLevel16XP sets the level-16 XP of the artifact's rule_tables.
 func setLevel16XP(tables map[string]any, xp int) {
 	rows := tables["bard_experience"].([]any)
 	row := rows[15].(map[string]any)
@@ -54,26 +47,6 @@ func setLevel16XP(tables map[string]any, xp int) {
 		panic("bard_experience row 15 is not level 16")
 	}
 	row["xp"] = xp
-}
-
-// seedsWithRuleTables copies the testdata seeds into a temp dir and adds a
-// rule_tables.json: the fixture's tables, changed by mutate, with a _source
-// comment as the campaign seed has.
-func seedsWithRuleTables(t *testing.T, mutate func(map[string]any)) string {
-	t.Helper()
-	dir := t.TempDir()
-	require.NoError(t, os.CopyFS(dir, os.DirFS(fixtureSeeds)))
-	raw, err := os.ReadFile(fixtureCatalogue)
-	require.NoError(t, err)
-	var doc map[string]any
-	require.NoError(t, json.Unmarshal(raw, &doc))
-	tables := doc["rule_tables"].(map[string]any)
-	mutate(tables)
-	tables["_source"] = "test copy"
-	out, err := json.Marshal(tables)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "rule_tables.json"), out, 0o600))
-	return dir
 }
 
 func nextThreshold(t *testing.T, cfg composition.Config) int {
@@ -88,14 +61,14 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 	return *l.NextThreshold
 }
 
-// ADR 0021 step 9.6.1: the rule tables' source follows the artifact's format.
-// Format 3 takes them from its rule_tables and never reads the seeds' file
-// (a broken one is ignored); format 1 takes them from <seeds>/rule_tables.json
-// as before, and refuses to start without it, naming the file.
-func TestStartup_Step9_6_1_TheRuleTablesSourceFollowsTheFormat(t *testing.T) {
+// ADR 0021 step 9.6.3: format 1 is retired. The tables are the artifact's
+// and a rule_tables.json left in the seeds is never read (a broken one is
+// ignored). A format-1 artifact, which has no tables, refuses the start even
+// with a valid seed file beside it, naming the format and `just catalogue`.
+func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testing.T) {
 	db := func() string { return filepath.Join(t.TempDir(), "critical.db") }
 
-	t.Run("format 3: the artifact's tables", func(t *testing.T) {
+	t.Run("format 3: the artifact's tables, a seed file ignored", func(t *testing.T) {
 		broken := t.TempDir()
 		require.NoError(t, os.CopyFS(broken, os.DirFS(fixtureSeeds)))
 		require.NoError(t, os.WriteFile(filepath.Join(broken, "rule_tables.json"), []byte("not json"), 0o600))
@@ -105,17 +78,24 @@ func TestStartup_Step9_6_1_TheRuleTablesSourceFollowsTheFormat(t *testing.T) {
 		assert.Equal(t, level16XP+3, nextThreshold(t, composition.Config{DSN: db(), SeedsDir: broken, Catalogue: artifact}))
 	})
 
-	t.Run("format 1: the seed's tables", func(t *testing.T) {
-		seeds := seedsWithRuleTables(t, func(m map[string]any) { setLevel16XP(m, level16XP+5) })
-		artifact := writeArtifact(t, asFormat1)
-		assert.Equal(t, level16XP+5, nextThreshold(t, composition.Config{DSN: db(), SeedsDir: seeds, Catalogue: artifact}))
-	})
-
-	t.Run("format 1 without the seed file refuses", func(t *testing.T) {
-		_, err := composition.New(context.Background(), composition.Config{
-			DSN: db(), SeedsDir: fixtureSeeds, Catalogue: writeArtifact(t, asFormat1),
+	t.Run("format 1 refuses, even with the seed file", func(t *testing.T) {
+		raw, err := os.ReadFile(fixtureCatalogue)
+		require.NoError(t, err)
+		var doc map[string]any
+		require.NoError(t, json.Unmarshal(raw, &doc))
+		tables, err := json.Marshal(doc["rule_tables"])
+		require.NoError(t, err)
+		seeds := t.TempDir()
+		require.NoError(t, os.CopyFS(seeds, os.DirFS(fixtureSeeds)))
+		require.NoError(t, os.WriteFile(filepath.Join(seeds, "rule_tables.json"), tables, 0o600))
+		artifact := writeArtifact(t, func(d map[string]any) {
+			d["format"] = 1
+			delete(d, "rule_tables")
 		})
-		require.ErrorContains(t, err, "rule_tables.json")
+
+		_, err = composition.New(context.Background(), composition.Config{DSN: db(), SeedsDir: seeds, Catalogue: artifact})
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 3")
+		require.ErrorContains(t, err, "just catalogue")
 	})
 }
 

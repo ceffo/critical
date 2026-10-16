@@ -334,21 +334,16 @@ func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Rest
 	}
 }
 
-// loadRuleTables picks the PHB rule tables' source by the artifact's format
-// (ADR 0021 step 9.6.1): a format-3 artifact carries them and the seeds'
-// rule_tables.json is not read; a format-1 artifact has none, so they come
-// from the seeds as before. Either way ruletablesadpt parses them with the
-// table rules of step 9.3 (a refusal names the table), at every start,
-// whatever catalogue version the database recorded (step 9.5).
+// loadRuleTables parses the PHB rule tables the artifact carries (ADR 0021
+// step 9.4) with the table rules of step 9.3 (a refusal names the table), at
+// every start, whatever catalogue version the database recorded (step 9.5).
+// The seeds hold no rule tables (step 9.6.3).
 func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.Tables, error) {
-	if artifact.Catalogue.Format == catalogue.FormatRuleTables {
-		t, err := ruletablesadpt.Parse(artifact.RuleTables)
-		if err != nil {
-			return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
-		}
-		return t, nil
+	t, err := ruletablesadpt.Parse(artifact.RuleTables)
+	if err != nil {
+		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
 	}
-	return ruletablesadpt.New(cfg.SeedsDir)
+	return t, nil
 }
 
 // seedSpellRefs are the spell ids the seeds refer to: a catalogue import may

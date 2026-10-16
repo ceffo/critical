@@ -15,14 +15,9 @@ import (
 	"github.com/ceffo/critical/api/pkg/must"
 )
 
-var (
-	// fixture is the catalogue artifact CI runs on: format 3, carrying the
-	// rule tables (ADR 0021 step 9.7).
-	fixture = filepath.Join("..", "..", "..", "testdata", "catalogue.json")
-	// campaignSeeds holds the seed a format-1 artifact takes its tables
-	// from (step 9.6.1).
-	campaignSeeds = filepath.Join("..", "..", "..", "..", "seeds")
-)
+// fixture is the catalogue artifact CI runs on, carrying the rule tables
+// (ADR 0021 step 9.7).
+var fixture = filepath.Join("..", "..", "..", "testdata", "catalogue.json")
 
 // fixtureRuleTables is the fixture's rule_tables object, as written.
 func fixtureRuleTables(t *testing.T) []byte {
@@ -37,15 +32,15 @@ func fixtureRuleTables(t *testing.T) []byte {
 	return a.RuleTables
 }
 
-// phb parses the fixture's rule tables, as the catalogue adapter does for a
-// format-3 artifact.
+// phb parses the fixture's rule tables, as the composition root does for the
+// artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
 	return must.Do(ruletablesadpt.Parse(fixtureRuleTables(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
-// p.14, Table 32 on p.42), not derived from the artifact or the seed file.
+// p.14, Table 32 on p.42), not derived from the artifact.
 
 func TestStrengthMods(t *testing.T) {
 	tbl := phb(t)
@@ -176,52 +171,6 @@ func TestBardXPThreshold(t *testing.T) {
 		_, err := tbl.BardXPThreshold(bad)
 		require.Error(t, err, "level %d", bad)
 	}
-}
-
-// ADR 0021 step 9.7: the fixture's rule tables hold the same numbers as the
-// campaign seed a format-1 artifact still reads (step 9.6.1), so every lookup
-// (attack adjustments, bard spells per day, XP thresholds) gives the same
-// result from either source.
-func TestRuleTables_Step9_7_TheFixtureCarriesTheSeedsNumbers(t *testing.T) {
-	seedRaw, err := os.ReadFile(filepath.Join(campaignSeeds, ruletablesadpt.FileName)) //nolint:gosec // test path
-	require.NoError(t, err)
-	var seed, artifact map[string]any
-	require.NoError(t, json.Unmarshal(seedRaw, &seed))
-	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &artifact))
-	delete(seed, "_source")
-	assert.Equal(t, seed, artifact, "the artifact's tables are the seed's, without its _source comment")
-
-	fromSeed := must.Do(ruletablesadpt.New(campaignSeeds))
-	fromArtifact := phb(t)
-	for str := 1; str <= 25; str++ {
-		for exc := 0; exc <= ruletablesvc.ExceptionalMax; exc++ {
-			sh, sd, serr := fromSeed.StrengthMods(str, exc)
-			ah, ad, aerr := fromArtifact.StrengthMods(str, exc)
-			require.NoError(t, serr)
-			require.NoError(t, aerr)
-			assert.Equal(t, [2]int{sh, sd}, [2]int{ah, ad}, "STR %d/%d", str, exc)
-		}
-	}
-	for dex := 1; dex <= 25; dex++ {
-		sm, sa, serr := fromSeed.DexMods(dex)
-		am, aa, aerr := fromArtifact.DexMods(dex)
-		require.NoError(t, serr)
-		require.NoError(t, aerr)
-		assert.Equal(t, [2]int{sm, sa}, [2]int{am, aa}, "DEX %d", dex)
-	}
-	for level := 1; level <= ruletablesvc.MaxBardLevel; level++ {
-		assert.Equal(t, must.Do(fromSeed.BardSpellsPerDay(level)), must.Do(fromArtifact.BardSpellsPerDay(level)), "bard level %d", level)
-		assert.Equal(t, must.Do(fromSeed.BardXPThreshold(level)), must.Do(fromArtifact.BardXPThreshold(level)), "XP level %d", level)
-	}
-}
-
-// ADR 0021 step 9.6.1: a format-1 artifact takes its tables from the seeds
-// directory, and a seeds directory without the file refuses, naming it.
-func TestNew_Step9_6_1_Format1ReadsTheSeedFile(t *testing.T) {
-	_, err := ruletablesadpt.New(campaignSeeds)
-	require.NoError(t, err)
-	_, err = ruletablesadpt.New(t.TempDir())
-	require.ErrorContains(t, err, ruletablesadpt.FileName)
 }
 
 // ADR 0021 step 9.3: a gap, an overlap or a malformed row refuses the

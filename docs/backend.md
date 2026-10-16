@@ -266,8 +266,8 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   the repo root (the nearest directory above the working directory with a `.git` entry; outside a checkout,
   against the working directory). A missing file stops the API with a message naming the path and
   `just catalogue`.
-- **Formats**: the API reads format 1 (spells) and format 3 (spells and the PHB rule tables, ADR 0021
-  step 9); any other is refused, naming it. See "Rule tables" below.
+- **Formats**: the API reads format 3 only (spells and the PHB rule tables, ADR 0021 step 9); any other,
+  the retired format 1 included, is refused, naming it and `just catalogue`. See "Rule tables" below.
 - **Without access**: `api/testdata/catalogue.json` is a small fixture, format 3, with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
   table) and the PHB's real rule-table numbers (ADR 0021 step 9.7). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
@@ -352,11 +352,10 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
 The AD&D 2e Player's Handbook lookup tables: Table 1 (Strength: hit and damage adjustments, including
 18/01-18/00), Table 2 (Dexterity: reaction, missile attack and defensive adjustments), Table 32 (Bard
 spells per day by level 1-20) and Table 25 (`bard_experience`: the XP that reaches each level 1-20,
-Thief/Bard column). They come from the catalogue artifact ([ADR 0021](adr/0021-spell-catalogue.md)
-step 9): a format-3 artifact carries them as `rule_tables`, and `seeds/rule_tables.json` is not read; a
-format-1 artifact has none, so they come from `seeds/rule_tables.json` (same keys and rows, plus a
-`_source` comment) until format 1 is retired (step 9.6). The fixture `api/testdata/catalogue.json` is
-format 3; `api/testdata/seeds` has no `rule_tables.json`.
+Thief/Bard column). They come from the catalogue artifact's `rule_tables`
+([ADR 0021](adr/0021-spell-catalogue.md) step 9); `seeds/` holds none (format 1, which took them from
+`seeds/rule_tables.json`, is retired, step 9.6.3). The fixture `api/testdata/catalogue.json` carries the
+same numbers.
 
 They are not loaded into SQLite: at every start (whatever catalogue version the database recorded) the
 `ruletablesadpt` parser reads them (a gap or overlap in a table is a startup error naming the table) into
@@ -365,7 +364,8 @@ They are not loaded into SQLite: at every start (whatever catalogue version the 
 `BardSpellsPerDay(level) map[spellLevel]count`; `Tables` also has `BardXPThreshold(level)` (the
 XP ledger's port). `exceptional` is the 18/xx percentile (1-99, 100 for
 18/00). Values are returned as printed in the tables. The tests check
-values against the PHB pages, not against the data; a test keeps the fixture's numbers equal to the seed's.
+values against the PHB pages, not against the data; a test keeps the fixture's numbers equal to the real
+artifact's (by lookup; skipped without `.catalogue/catalogue.json`).
 
 ## Seeding the character
 

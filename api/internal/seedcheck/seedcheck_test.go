@@ -13,9 +13,11 @@ package seedcheck_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +33,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -81,47 +84,52 @@ func TestRepoSeeds_BootTheWholeStack(t *testing.T) {
 	assert.NotEmpty(t, weapons)
 }
 
-// ADR 0021 step 9.6.2: the real artifact in format 3 (as the builder will
-// publish it: the same spells plus the seeds' rule tables, without the
-// seed's _source comment) parses, carries the same tables as the seed, and
-// boots the whole stack on the real seeds without their rule_tables.json.
-// A real artifact already in format 3 is checked as it is.
-func TestRealCatalogue_Step9_6_2_TheRealArtifactInFormat3BootsWithoutTheSeedTables(t *testing.T) {
+// ADR 0021 step 9.7: the fixture CI runs on carries the PHB's real numbers,
+// those of the real artifact's rule tables (which TestRepoSeeds_BootTheWholeStack
+// boots on, the seeds holding none since step 9.6.3), so the PHB-page value
+// tests on the fixture check the tables the app uses.
+func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testing.T) {
 	realCatalogue(t)
-	raw, err := os.ReadFile(catalogueFile)
+	real, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
-	var doc map[string]any
-	require.NoError(t, json.Unmarshal(raw, &doc))
-	if doc["format"] == float64(catalogue.FormatSpells) {
-		var tables map[string]any
-		readJSON(t, ruletablesadpt.FileName, &tables)
-		delete(tables, "_source")
-		doc["format"] = catalogue.FormatRuleTables
-		doc["rule_tables"] = tables
+	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
+	require.NoError(t, err)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables)
+	require.NoError(t, err)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables)
+	require.NoError(t, err)
+	// Compared by lookup, not row by row: the builder may group equal rows
+	// differently (one row per book line) for the same numbers.
+	for str := 1; str <= 25; str++ {
+		for exc := 0; exc <= ruletablesvc.ExceptionalMax; exc++ {
+			rh, rd, rerr := fromReal.StrengthMods(str, exc)
+			fh, fd, ferr := fromFixture.StrengthMods(str, exc)
+			require.NoError(t, rerr)
+			require.NoError(t, ferr)
+			assert.Equal(t, [2]int{rh, rd}, [2]int{fh, fd}, "STR %d/%d", str, exc)
+		}
 	}
-	raw, err = json.Marshal(doc)
-	require.NoError(t, err)
-	file := filepath.Join(t.TempDir(), "catalogue.json")
-	require.NoError(t, os.WriteFile(file, raw, 0o600))
-
-	artifact, err := catalogueadpt.LoadArtifact(file)
-	require.NoError(t, err)
-	require.Equal(t, catalogue.FormatRuleTables, artifact.Catalogue.Format)
-	fromArtifact, err := ruletablesadpt.Parse(artifact.RuleTables)
-	require.NoError(t, err)
-	fromSeed, err := ruletablesadpt.New(seedsDir)
-	require.NoError(t, err)
-	assert.Equal(t, fromSeed, fromArtifact, "the artifact's tables are the seed's")
-
-	seeds := t.TempDir()
-	require.NoError(t, os.CopyFS(seeds, os.DirFS(seedsDir)))
-	require.NoError(t, os.Remove(filepath.Join(seeds, ruletablesadpt.FileName)))
-	ctx := context.Background()
-	bs, err := composition.New(ctx, composition.Config{
-		DSN: filepath.Join(t.TempDir(), "critical.db"), SeedsDir: seeds, Catalogue: file,
-	})
-	require.NoError(t, err, "format 3 starts without the seeds' rule tables")
-	require.NoError(t, bs.Close(ctx))
+	for dex := 1; dex <= 25; dex++ {
+		rm, ra, rerr := fromReal.DexMods(dex)
+		fm, fa, ferr := fromFixture.DexMods(dex)
+		require.NoError(t, rerr)
+		require.NoError(t, ferr)
+		assert.Equal(t, [2]int{rm, ra}, [2]int{fm, fa}, "DEX %d", dex)
+	}
+	for level := 1; level <= ruletablesvc.MaxBardLevel; level++ {
+		rs, err := fromReal.BardSpellsPerDay(level)
+		require.NoError(t, err)
+		fs, err := fromFixture.BardSpellsPerDay(level)
+		require.NoError(t, err)
+		assert.Equal(t, rs, fs, "bard spells, level %d", level)
+		rx, err := fromReal.BardXPThreshold(level)
+		require.NoError(t, err)
+		fx, err := fromFixture.BardXPThreshold(level)
+		require.NoError(t, err)
+		assert.Equal(t, rx, fx, "XP, level %d", level)
+	}
+	_, err = os.Stat(filepath.Join(seedsDir, "rule_tables.json"))
+	assert.ErrorIs(t, err, os.ErrNotExist, "the seeds hold no rule tables")
 }
 
 func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
@@ -432,6 +440,9 @@ func TestRealCatalogue_ARestartReTypesStaleStats(t *testing.T) {
 // migrations, then ADR 0021 step 5 with the real seeds. The import must pass
 // (the backfilled keys match the artifact, nothing referenced is removed)
 // and afterwards every spell id the seeds and the game state hold resolves.
+// The start changes no game state when no migration is pending (every table
+// but the catalogue's, row for row), every keyed spell keeps its key, and
+// the second start writes nothing at all (every table, row for row).
 // The database itself is only read. Skipped unless the variable is set.
 func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 	src := os.Getenv("CRITICAL_UPGRADE_CHECK_DB")
@@ -458,8 +469,23 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 		writes = countStatsWrites(t, db)
 	}
 	inventory := inventoryRows(t, db)
+	migrations, state, keys := migrationNames(t, db), gameState(t, db), spellKeys(t, db)
+	require.NotEmpty(t, state, "the copy holds game-state tables")
 	bs, err := composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
 	require.NoError(t, err, "the live database upgrades")
+	if slices.Equal(migrations, migrationNames(t, db)) {
+		assert.Equal(t, state, gameState(t, db), "no migration pending: the start changes no game state")
+	} else {
+		t.Logf("migrations ran on the copy: game state not compared across the first start")
+	}
+	ids := cat.ByID()
+	after := spellKeys(t, db)
+	for id, key := range keys {
+		if _, kept := ids[key]; kept {
+			assert.Equal(t, key, after[id], "spell row %d keeps its key", id)
+		}
+	}
+	t.Logf("%d keyed spells before the start, %d after", len(keys), len(after))
 	if inventory != nil {
 		// ADR 0023 steps 9 and 10: every item and weapon keeps its id,
 		// position and counts, and has a name.
@@ -488,10 +514,12 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 	writes = countStatsWrites(t, db) // again: a migration that rebuilt spells dropped the trigger
 	first = max(first, writes())
 	t.Logf("first start wrote the stats of %d spells", first)
+	whole := tableRows(t, db, nil)
 	bs, err = composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
 	require.NoError(t, err, "the second start")
 	require.NoError(t, bs.Close(ctx))
 	assert.Equal(t, first, writes(), "the second start writes no stats")
+	assert.Equal(t, whole, tableRows(t, db, nil), "the second start writes nothing")
 	refs, err := sqlite.StateSpellRefs(ctx, db)
 	require.NoError(t, err)
 	book, err := spellbookadpt.New(seedsDir, cat)
@@ -499,7 +527,6 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 	for _, e := range book.All() {
 		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spellbook seed"})
 	}
-	ids := cat.ByID()
 	for _, r := range refs {
 		var n int
 		require.NoError(t, db.QueryRowContext(ctx, "SELECT COUNT(*) FROM spells WHERE key = ?", r.ID).Scan(&n))
@@ -507,6 +534,138 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 		assert.True(t, n == 1 && inArtifact, "%s (%s) resolves", r.ID, r.Where)
 	}
 	t.Logf("%d spell references in the seeds and the game state, all resolved", len(refs))
+}
+
+// catalogueTables are the tables the catalogue import owns (ADR 0021 step
+// 2), with the migrations' bookkeeping and the tests' trigger table: every
+// other table is game state.
+var catalogueTables = map[string]bool{
+	"spells": true, "catalogue_meta": true, "localized_texts": true,
+	"schema_migrations": true, "test_stats_writes": true,
+}
+
+// spellTextColumns are the spells' columns that key localized_texts rows
+// (migration 031): those rows are the catalogue's, the others (item and
+// weapon names) game state.
+var spellTextColumns = []string{
+	"name", "description", "school", "sphere", "casting_time", "range", "duration",
+	"area_of_effect", "components", "saving_throw",
+}
+
+// tableRows is every row of every table but those skip names, by table: each
+// row printed in column order, the rows sorted.
+func tableRows(t *testing.T, db *sqlite.DB, skip map[string]bool) map[string][]string {
+	t.Helper()
+	ctx := context.Background()
+	rows, err := db.QueryContext(ctx, `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
+	require.NoError(t, err)
+	var tables []string
+	for rows.Next() {
+		var name string
+		require.NoError(t, rows.Scan(&name))
+		if !skip[name] {
+			tables = append(tables, name)
+		}
+	}
+	require.NoError(t, rows.Err())
+	require.NoError(t, rows.Close())
+	out := make(map[string][]string, len(tables))
+	for _, table := range tables {
+		out[table] = queryRows(t, db, `SELECT * FROM "`+table+`"`)
+	}
+	return out
+}
+
+// queryRows runs query and prints each row's columns in order, sorted.
+func queryRows(t *testing.T, db *sqlite.DB, query string) []string {
+	t.Helper()
+	rows, err := db.QueryContext(context.Background(), query)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	cols, err := rows.Columns()
+	require.NoError(t, err)
+	out := []string{}
+	for rows.Next() {
+		vals := make([]any, len(cols))
+		ptrs := make([]any, len(cols))
+		for i := range vals {
+			ptrs[i] = &vals[i]
+		}
+		require.NoError(t, rows.Scan(ptrs...))
+		cells := make([]string, len(vals))
+		for i, v := range vals {
+			if b, ok := v.([]byte); ok {
+				v = string(b)
+			}
+			cells[i] = fmt.Sprintf("%#v", v)
+		}
+		out = append(out, strings.Join(cells, "|"))
+	}
+	require.NoError(t, rows.Err())
+	slices.Sort(out)
+	return out
+}
+
+// gameState is every game-state row: every table the catalogue import does
+// not own, and the localized texts no spell keys.
+func gameState(t *testing.T, db *sqlite.DB) map[string][]string {
+	t.Helper()
+	state := tableRows(t, db, catalogueTables)
+	if hasTable(t, db, "localized_texts") {
+		owned := make([]string, len(spellTextColumns))
+		for i, c := range spellTextColumns {
+			owned[i] = `SELECT "` + c + `" FROM spells WHERE "` + c + `" IS NOT NULL`
+		}
+		state["localized_texts"] = queryRows(t, db,
+			`SELECT * FROM localized_texts WHERE text_id NOT IN (`+strings.Join(owned, " UNION ")+`)`)
+	}
+	return state
+}
+
+// migrationNames are the migrations the database recorded (none before the
+// first one).
+func migrationNames(t *testing.T, db *sqlite.DB) []string {
+	t.Helper()
+	if !hasTable(t, db, "schema_migrations") {
+		return nil
+	}
+	return queryRows(t, db, `SELECT name FROM schema_migrations`)
+}
+
+// spellKeys maps each keyed spell row to its key (none before the catalogue
+// added the column).
+func spellKeys(t *testing.T, db *sqlite.DB) map[int64]string {
+	t.Helper()
+	out := map[int64]string{}
+	if !hasTable(t, db, "spells") {
+		return out
+	}
+	var n int
+	require.NoError(t, db.QueryRowContext(context.Background(),
+		`SELECT COUNT(*) FROM pragma_table_info('spells') WHERE name = 'key'`).Scan(&n))
+	if n == 0 {
+		return out
+	}
+	rows, err := db.QueryContext(context.Background(), `SELECT id, key FROM spells WHERE key IS NOT NULL`)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var id int64
+		var key string
+		require.NoError(t, rows.Scan(&id, &key))
+		out[id] = key
+	}
+	require.NoError(t, rows.Err())
+	return out
+}
+
+// hasTable reports whether db has the table name.
+func hasTable(t *testing.T, db *sqlite.DB, name string) bool {
+	t.Helper()
+	var n int
+	require.NoError(t, db.QueryRowContext(context.Background(),
+		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, name).Scan(&n))
+	return n > 0
 }
 
 // inventoryRows are the items' and weapons' ids, positions and counts (nil

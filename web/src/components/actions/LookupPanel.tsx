@@ -120,31 +120,30 @@ function SpellDetail({ spell }: { spell: Spell }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h3 className="text-title">
+        <h3 className="text-headline">
           <SpellName spell={spell} />
         </h3>
-        <p
-          className="text-label text-muted-foreground"
-          data-testid="spell-meta"
-        >
+        <p className="text-body text-muted-foreground" data-testid="spell-meta">
           {meta.join(" · ")}
         </p>
       </div>
-      <dl className="flex flex-col text-body">
+      {/* The stats as tiles on a raised tone (ADR 0022 steps 2.5 and 4.1): as many per row as fit
+          at 7.5rem, so a long value wraps inside its tile instead of being cut. */}
+      <dl className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-2">
         {STATS.map((key) => {
           const v = value(key);
           const raw = statText(loc, spell, FIELD[key]).text;
           return (
             <div
               key={key}
-              className="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] gap-x-3 rounded-md px-2 py-1.5 even:bg-neu-900/40"
+              className="flex min-w-0 flex-col gap-0.5 rounded-md bg-neu-900 px-2.5 py-2"
               data-testid={`stat-${key}`}
             >
-              <dt className="text-muted-foreground">{t(`lookup.${key}`)}</dt>
-              <dd className="flex min-w-0 flex-col">
+              <dt className="section-label">{t(`lookup.${key}`)}</dt>
+              <dd className="flex min-w-0 flex-col gap-0.5 break-words">
                 {v ? (
                   <>
-                    <span className="font-medium" data-testid="stat-value">
+                    <span className="text-key" data-testid="stat-value">
                       {v}
                     </span>
                     {raw && !same(v, raw) && (
@@ -157,75 +156,86 @@ function SpellDetail({ spell }: { spell: Spell }) {
                     )}
                   </>
                 ) : (
-                  <span data-testid="stat-raw">{raw || "—"}</span>
+                  <span
+                    className="text-body font-medium"
+                    data-testid="stat-raw"
+                  >
+                    {raw || "—"}
+                  </span>
                 )}
               </dd>
             </div>
           );
         })}
       </dl>
+      {/* The cast box: what the spell rolls at the Bard's level, each to the composer or rolled. */}
       {spell.caster_level ? (
-        dice.length > 0 ? (
-          <ul className="flex flex-col gap-2" aria-label={t("lookup.diceRow")}>
-            {dice.map((d) => (
-              <li
-                key={d.key}
-                className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-lg bg-neu-900/60 px-3 py-2 text-body"
-                data-testid={`spell-dice-${d.key}`}
-              >
-                <span className="min-w-36 flex-1">
-                  {t("lookup.atLevel", { level: spell.caster_level })}
-                  {" · "}
-                  {d.label}{" "}
-                  <span
-                    className="font-medium text-magic tabular-nums"
-                    data-testid="spell-dice-formula"
-                  >
-                    {d.text}
-                  </span>
-                </span>
-                <span className="flex shrink-0 gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    aria-label={t("dice.send", { formula: d.formula })}
-                    onClick={() => toComposer(d.formula)}
-                  >
-                    <ArrowRight aria-hidden /> {t("lookup.toDice")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={rolling}
-                    aria-label={t("dice.rollFormula", { formula: d.formula })}
-                    onClick={() => void roll(d.formula)}
-                  >
-                    <DiceFive aria-hidden /> {t("lookup.rollDice")}
-                  </Button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-label text-muted-foreground">
+        <section
+          aria-label={t("lookup.diceRow")}
+          className="flex shrink-0 flex-col gap-1.5 rounded-md bg-neu-900 px-3 py-2.5"
+          data-testid="spell-cast-box"
+        >
+          <p className="section-label">
             {t("lookup.atLevel", { level: spell.caster_level })}
           </p>
-        )
+          {dice.length > 0 ? (
+            <ul className="flex flex-col gap-1.5">
+              {dice.map((d) => (
+                <li
+                  key={d.key}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-body"
+                  data-testid={`spell-dice-${d.key}`}
+                >
+                  <span className="min-w-40 flex-1">
+                    {d.label}{" "}
+                    <span
+                      className="font-medium text-magic tabular-nums"
+                      data-testid="spell-dice-formula"
+                    >
+                      {d.text}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      aria-label={t("dice.send", { formula: d.formula })}
+                      onClick={() => toComposer(d.formula)}
+                    >
+                      <ArrowRight aria-hidden /> {t("lookup.toDice")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={rolling}
+                      aria-label={t("dice.rollFormula", { formula: d.formula })}
+                      onClick={() => void roll(d.formula)}
+                    >
+                      <DiceFive aria-hidden /> {t("lookup.rollDice")}
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-body">{t("lookup.noDice")}</p>
+          )}
+        </section>
       ) : null}
-      {/* The description takes the panel's width and the height left below the stats, and
-          scrolls inside it; a block container, so the text can hold any flow content. When the
-          panel is too short for its floor, the whole detail scrolls instead. */}
+      {/* The description takes the pane's width and the height left below the stats, in two text
+          columns when wide enough, and scrolls inside it. When the pane is too short for its
+          floor, the whole detail scrolls instead. */}
       {description && (
         <section
-          className="flex min-h-40 flex-1 flex-col text-body"
+          className="flex min-h-40 flex-1 flex-col gap-1.5"
           data-testid="spell-description"
         >
-          <p className="shrink-0 py-1 font-medium">{t("lookup.description")}</p>
+          <p className="section-label shrink-0">{t("lookup.description")}</p>
           <div
-            className="mt-1 min-h-0 flex-1 overflow-y-auto pr-2 leading-relaxed text-foreground/85"
+            className="min-h-0 flex-1 overflow-y-auto pr-2 text-body leading-relaxed text-foreground/85"
             data-testid="spell-description-text"
             tabIndex={0}
           >
-            <SpellDescription text={description} />
+            <SpellDescription text={description} columns />
           </div>
         </section>
       )}
@@ -309,7 +319,7 @@ export function LookupPanel() {
     <div
       role="group"
       aria-label={t("lookup.levelsLabel")}
-      className="flex gap-1"
+      className="flex flex-wrap gap-1"
     >
       {LEVELS.map((n) => {
         const on = query.levels.includes(n);
@@ -320,7 +330,7 @@ export function LookupPanel() {
             aria-pressed={on}
             aria-label={t("lookup.levelLabel", { level: n })}
             className={cn(
-              "h-7 w-7 rounded-md bg-neu-900/60 text-label font-medium text-muted-foreground tabular-nums transition-colors hover:text-foreground",
+              "h-7 w-7 rounded-md bg-neu-900 text-body font-medium text-muted-foreground tabular-nums transition-colors hover:text-foreground",
               on && "bg-amb-800 text-amb-100 hover:text-amb-100",
             )}
             onClick={() => toggleLevel(n)}
@@ -332,15 +342,18 @@ export function LookupPanel() {
     </div>
   );
 
+  // ADR 0022 step 2.5 (A2's pane): filter and list in one card on the left, the detail on the
+  // right; the cards follow step 4 (outlined, 14 / 16 px padding, no rules).
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <section
-        aria-label={t("lookup.filters")}
-        className="flex shrink-0 flex-col gap-2 rounded-xl bg-card px-3 py-3"
-      >
-        <div className="flex min-w-0 gap-2">
-          <div className="relative min-w-0 flex-1">
-            <MagnifyingGlass className="pointer-events-none absolute top-2 left-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="grid min-h-0 flex-1 grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] gap-3">
+      <section className="zone-card flex min-h-0 min-w-0 flex-col gap-3 py-3.5">
+        <div
+          role="group"
+          aria-label={t("lookup.filters")}
+          className="flex shrink-0 flex-col gap-2 px-4"
+        >
+          <div className="relative min-w-0">
+            <MagnifyingGlass className="pointer-events-none absolute top-1.5 left-2.5 h-4 w-4 text-muted-foreground" />
             <input
               type="search"
               className={cn(fieldClass, "pl-8")}
@@ -359,7 +372,7 @@ export function LookupPanel() {
             />
           </div>
           <select
-            className={cn(fieldClass, "w-[clamp(9rem,30%,14rem)] shrink-0")}
+            className={fieldClass}
             aria-label={priest ? t("lookup.sphere") : t("lookup.school")}
             value={priest ? query.sphere : query.school}
             onChange={(e) =>
@@ -385,13 +398,10 @@ export function LookupPanel() {
                   </option>
                 ))}
           </select>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <div
             role="group"
             aria-label={t("lookup.classLabel")}
-            className="inline-flex rounded-lg bg-neu-900/60 p-0.5"
+            className="flex flex-wrap self-start rounded-lg bg-neu-900 p-0.5"
           >
             {CLASSES.map(({ value, key }) => (
               <button
@@ -399,9 +409,9 @@ export function LookupPanel() {
                 type="button"
                 aria-pressed={query.cls === value}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-label font-medium text-muted-foreground transition-colors hover:text-foreground",
+                  "rounded-md px-2.5 py-1 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
                   query.cls === value &&
-                    "bg-card text-foreground ring-1 ring-amb-600 ring-inset",
+                    "bg-amb-900 text-foreground ring-1 ring-amb-700 ring-inset",
                 )}
                 onClick={() => setQuery({ cls: value })}
               >
@@ -410,7 +420,7 @@ export function LookupPanel() {
             ))}
           </div>
           {levelChips}
-          <div className="ml-auto flex items-center gap-2 text-label text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-end gap-x-2 text-body text-muted-foreground">
             {loading && (
               <CircleNotch className="h-3 w-3 animate-spin" aria-hidden />
             )}
@@ -427,7 +437,7 @@ export function LookupPanel() {
             {isQuerySet(query) && (
               <button
                 type="button"
-                className="underline underline-offset-2 hover:text-foreground"
+                className="text-tint hover:underline"
                 onClick={reset}
               >
                 {t("lookup.reset")}
@@ -435,15 +445,13 @@ export function LookupPanel() {
             )}
           </div>
         </div>
-      </section>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[clamp(13.75rem,30%,26rem)_minmax(0,1fr)] gap-3">
         <div
           ref={listRef}
           id="lookup-list"
           role="listbox"
           aria-label={t("lookup.results")}
-          className="flex min-h-0 flex-col gap-px overflow-y-auto rounded-xl bg-card p-1.5"
+          className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-4"
           onScroll={onScroll}
         >
           {items.length === 0 && !loading && shownKey ? (
@@ -463,13 +471,13 @@ export function LookupPanel() {
                 data-class={s.class}
                 data-level={s.level}
                 className={cn(
-                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900/50",
+                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-x-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900",
                   s.id === selectedId &&
-                    "bg-amb-900 ring-1 ring-amb-700 ring-inset hover:bg-amb-900",
+                    "bg-amb-900 shadow-[inset_2px_0_0_var(--tint)] hover:bg-amb-900",
                 )}
                 onClick={() => select(s.id)}
               >
-                <span className="text-label text-magic tabular-nums">
+                <span className="text-body font-medium text-magic tabular-nums">
                   {s.level}
                 </span>
                 <SpellName spell={s} />
@@ -490,21 +498,21 @@ export function LookupPanel() {
             </p>
           )}
         </div>
+      </section>
 
-        <section
-          aria-label={t("lookup.detail")}
-          data-testid="spell-detail"
-          className="flex min-h-0 flex-col overflow-y-auto rounded-xl bg-card px-3 py-3"
-        >
-          {selected ? (
-            <SpellDetail key={selected.id} spell={selected} />
-          ) : (
-            <p className="text-body text-muted-foreground">
-              {t("lookup.noSelection")}
-            </p>
-          )}
-        </section>
-      </div>
+      <section
+        aria-label={t("lookup.detail")}
+        data-testid="spell-detail"
+        className="zone-card flex min-h-0 min-w-0 flex-col overflow-y-auto px-4 py-3.5"
+      >
+        {selected ? (
+          <SpellDetail key={selected.id} spell={selected} />
+        ) : (
+          <p className="text-body text-muted-foreground">
+            {t("lookup.noSelection")}
+          </p>
+        )}
+      </section>
     </div>
   );
 }

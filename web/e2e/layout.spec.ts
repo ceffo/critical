@@ -96,6 +96,29 @@ const LONG_EFFECT = "Protection From Evil, 10' Radius (from the temple priest)";
 const LONG_SOURCE =
   "Fire breath of the young red dragon perched on the ruined bell tower, half damage behind the shield wall";
 
+/** A long spell name and stat text: the lookup's list and detail wrap them, never cut (step 1). */
+const LONG_SPELL =
+  "Comprehensively Unreasonably Long Spell Name Of The Ancient Archmages";
+test.use({
+  extraSpells: {
+    rows: [
+      catalogueSpell({
+        id: "long_spell",
+        name: LONG_SPELL,
+        names: {
+          fr: "Nom de sortilège invraisemblablement long des anciens archimages",
+        },
+        class: "Wizard",
+        level: 1,
+        school: "Divination",
+        range: "Special, see the description of the ritual circle",
+        area_of_effect:
+          "10-ft. cube per level, up to one creature/level of the caster",
+      }),
+    ],
+  },
+});
+
 // ADR 0022 steps 2.1, 2.2, 2.8 and 3.1: in every activity at every layout viewport, the header card
 // (at most 120 px at rest with 3 effect rows), the character card and the dice footer stay put and
 // show the last result, HP and the turn with its effects; the page never scrolls and no text in the
@@ -149,6 +172,13 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
     combatLog(page).getByRole("listitem").filter({ hasText: LONG_SOURCE }),
   ).toBeVisible();
 
+  // The lookup with the long spell selected in a full list.
+  await openWorkspace(page, "Spells");
+  const lookupList = page.getByRole("listbox", { name: "Spells" });
+  const spellDetail = page.getByTestId("spell-detail");
+  await lookupList.getByRole("option", { name: LONG_SPELL }).click();
+  await expect(spellDetail.getByRole("heading").first()).toHaveText(LONG_SPELL);
+
   const rail = page.getByRole("navigation", { name: "Activities" });
   const character = page.getByRole("complementary", { name: "Character" });
   for (const vp of VIEWPORTS) {
@@ -192,6 +222,11 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       );
       if (activity === "Act")
         await expectNoClippedText(combatLog(page), `journal, ${where}`);
+      if (activity === "Spells") {
+        // The spell lookup (ADR 0022 step 2.5): the list and the detail, the long name selected.
+        await expectNoClippedText(lookupList, `spell list, ${where}`);
+        await expectNoClippedText(spellDetail, `spell detail, ${where}`);
+      }
       if (SHOTS.has(size))
         await snap(page, `${activity.toLowerCase()}-${size}`);
     }
@@ -454,11 +489,21 @@ test("theme: the main screens and every ambiance in dark and light", async ({
     const text = detail.getByTestId("spell-description-text");
     const [box, panel] = [await text.boundingBox(), await detail.boundingBox()];
     expect(panel!.y + panel!.height - (box!.y + box!.height)).toBeLessThan(16);
-    expect(panel!.width - box!.width).toBeLessThan(32);
+    // The card's 16 px padding each side and its outline (ADR 0022 step 3.2).
+    expect(panel!.width - box!.width).toBeLessThanOrEqual(36);
     // The text scrolls, not the whole detail.
     expect(
       await detail.evaluate((el) => el.scrollHeight - el.clientHeight),
     ).toBeLessThanOrEqual(1);
+    // In two text columns at 1440 (ADR 0022 step 2.5): a paragraph starts in the right half.
+    expect(
+      await text.evaluate((el) => {
+        const mid = el.getBoundingClientRect().left + el.clientWidth / 2;
+        return [...el.querySelectorAll("p")].some(
+          (p) => p.getBoundingClientRect().left > mid,
+        );
+      }),
+    ).toBe(true);
     await snap(page, `${m}-spells-long`);
     await text.evaluate((el) => el.scrollTo({ top: el.scrollHeight / 3 }));
     await snap(page, `${m}-spells-scrolled`);

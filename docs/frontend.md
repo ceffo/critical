@@ -216,21 +216,29 @@ flowchart TD
   dice, the total, "Taken off your HP" or "For the DM", and the same block set to the next round); "Buff spells
   go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
   the shared name search (below) and posts `/api/spells/receive`.
-- Sorts workspace, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives tab switches):
-  a filter card (search box and school-group dropdown, spheres in Priest mode; `Mine | Wizard |
-  Priest | All` segmented control, default Wizard, Mine = the Bard's spellbook; level chips 0-9,
-  multi-select; the true "N spells" total and Reset), then a list beside a detail pane. The list is
-  `clamp(13.75rem, 30%, 26rem)` wide (level and name, the class on All, the school as a tooltip;
-  infinite scroll by 200-row pages). The detail pane: name, meta line, one row per stat (label |
-  value at the Bard's level with the raw text dimmed under it), then the dice rows: the damage a
-  cast rolls when the spell DTO serves one (`damage`, same shape as the spellbook's: "At level 15 ·
-  Damage 5 × 1d4+1 force", one instance goes to the composer), then its exposure (`exposure`, one
-  row per exposure mode: "Exposure (Within 10 ft) 2d4 fire"; rolled as an exposure from a cast or
-  received spell's card, here only to the composer), then one per value the
-  server computed with dice still to roll (`lib/spellValues.ts` `statDice`: "At level 15 ·
-  Duration 1d8+8", the served dice then the served flat amount), each with "To the dice" (fills the
-  composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and the Description
-  toggle.
+- Spells activity, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives
+  switching activities), A2's pane per [ADR 0022](adr/0022-activity-focus-layout.md) step 2.5: two
+  cards, `minmax(18rem, 22rem) | 1fr`. The left card holds the filters (search box; school-group
+  dropdown, spheres in Priest mode; `Mine | Wizard | Priest | All` segmented control, default
+  Wizard, Mine = the Bard's spellbook; level chips 0-9, multi-select, wrapping when narrow; the true
+  "N spells" total and Reset) over the list, which scrolls on its own (level and name, the class on
+  All, the school as a tooltip; infinite scroll by 200-row pages; the selected row tinted with a
+  tint bar on its left). The right card is the detail, scrolling on its own when too short: the name
+  (`text-headline`, wrapping, never cut) and meta line; the stats as tiles on the raised tone
+  (`bg-neu-900`, as many per row as fit at 7.5rem: section label, value at the Bard's level, the raw
+  text dimmed under it); the cast box ("AT LEVEL 15", then one row per dice: the damage a cast rolls
+  when the spell DTO serves one (`damage`, "Damage 5 × 1d4+1 force", one instance goes to the
+  composer), its exposure (`exposure`, one row per exposure mode: "Exposure (Within 10 ft) 2d4
+  fire"; rolled as an exposure from a cast or received spell's card, here only to the composer),
+  then one per value the server computed with dice still to roll (`lib/spellValues.ts` `statDice`:
+  "Duration 1d8+8", the served dice then the served flat amount), each with "To the dice" (fills the
+  composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`); "No dice to roll"
+  when none); then the description, which takes the rest of the height, scrolls inside its own box
+  and flows in two text columns (24 px apart) once the card is wide enough for two of 16rem
+  (`SpellDescription` `columns`; a table spans both). Inside the cards grouping is by spacing,
+  section labels and the raised tone, never a rule (step 4.1). `layout.spec` runs
+  `expectNoClippedText` on the list and the detail at every layout viewport with a long spell name
+  and long stat text selected.
 - Spell name search (one module for Lookup and Receive): `api/spells_db.ts` `searchSpells` sends
   `q`; the server matches it against the catalogue names in every language (case, accents and
   ligatures ignored) and ranks exact > prefix > contains over the best of them, then level, name.

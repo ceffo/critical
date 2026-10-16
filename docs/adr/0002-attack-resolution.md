@@ -2,7 +2,8 @@
 
 **Status**: accepted, 2026-10-15 (critical-qki.35; collects the rules shipped in critical-qki.7,
 critical-qki.13, critical-qki.28, critical-qki.33 and critical-qki.34, until then in
-`docs/backend.md` "Attack Modifiers")
+`docs/backend.md` "Attack Modifiers"); step 6 and the Consequences amended 2026-10-16 by
+[ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
 
 ## Context
 
@@ -37,12 +38,18 @@ return a distinct value for each call and expect an exact number of calls.
    +2 with a +3 arrow at DEX 17 hits on 4" at effective STR 18, "hurled darts take STR and DEX").
 5. **Dexterity.** The PHB Table 2 missile attack adjustment for every missile weapon, bow or
    hurled; none in melee. Tests: `TestResolveAttack` (same three cases as step 4).
-6. **Weapon magic.** The weapon's own magic, or a buff's "the weapon becomes +N" (Power Gem +5)
-   when that is at least as high: the higher one, never both. To hit and to damage alike. Several
-   "+N" buffs do not add up either: the best one counts.
+6. **Weapon magic.** The weapon's own magic, or a "the weapon becomes +N" from a buff or from an
+   item power that is on (the Power Gem's thunder hammer, +5) when that is at least as high: the
+   higher one, never both. To hit and to damage alike. Several "+N" do not add up either, buffs
+   and powers together: the best one counts. A "+N" with a `weapon_kind` condition counts only
+   with a weapon of that kind (the hammer: melee only, [ADR 0004](0004-buffs.md) step 18). The
+   modifier names its source: the buff's name, or the item's id and stored name for a power
+   (ADR 0016 step 14).
    Tests: `TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff`, `TestResolveAttack_PowerGem`
    ("active at effective STR 18": the gem's +5 replaces the sword's +2), and in `buffsvc`
-   `TestAggregate` ("… weapon +N: best wins").
+   `TestAggregate` ("… weapon +N: best wins"). Planned (named without their `Test` prefix until
+   they exist): `ItemPowers_Step12_HammerOnMeleeOnly`, `ItemPowers_Step14_BreakdownCarriesTheItemID`
+   (`combatsvc`), `ItemPowers_Step11_PowerJoinsTheAggregate` (`buffsvc`).
 7. **Ammunition magic.** A magic arrow's bonus is added to hit and to damage, on top of step 6
    (DMG "Bow +1": with magic arrows, total the bonuses of bow and arrow).
    Tests: `TestResolveAttack` ("short bow +2 with a +3 arrow at DEX 17 hits on 4"),
@@ -82,11 +89,13 @@ return a distinct value for each call and expect an exact number of calls.
 
 - Every to-hit modifier is listed in the roll's `Modifiers`, in the order of the steps above
   (Strength, Dexterity, weapon or buff "+N", ammunition, buffs, situational).
-- The Power Gem's "+5" (step 6) and its ×2 (ADR 0003 step 4) apply only while the buff's
-  `min_str` gate is met: effective STR 18 or more (user, 2026-10-13: "not exactly 18 >= 18").
-  The gate is a buff rule ([ADR 0004](0004-buffs.md)).
-  Tests: `buffsvc` `TestStrength_Step10_PowerGemFrom18Up` (STR 17 off; 18, 19, 23 on),
-  `TestResolveAttack_PowerGem` ("ignored at effective STR 17").
+- The Power Gem's "+5" (step 6) and its ×2 (ADR 0003 step 4) are its thunder hammer, an item
+  power on while the effective STR is 18 or more (user, 2026-10-13: "not exactly 18 >= 18"), with
+  a melee weapon only ([ADR 0016](0016-inventory.md) steps 10, 12 and 16). A hand-made buff with
+  the same effects and a `min_str` gate still works as before ([ADR 0004](0004-buffs.md) step 10).
+  Tests: `buffsvc` `TestStrength_Step10_PowerGemFrom18Up` (the gate: STR 17 off; 18, 19, 23 on),
+  `TestResolveAttack_PowerGem` ("ignored at effective STR 17"); planned: `buffsvc`
+  `ItemPowers_Step10_TriggerAtEffectiveStr`.
 - A tie between the weapon's own magic and a buff "+N" shows the buff in the breakdown; the value
   is the same.
 - Exceptional Strength (18/xx) is not used: Kelsen is a Bard (warriors only, PHB).

@@ -45,7 +45,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
+	"github.com/ceffo/critical/api/internal/storage/postgres"
 )
 
 // Store is the database handle as the startup sequence uses it: it runs the
@@ -103,15 +103,15 @@ type Storage struct {
 	Dice         dicesvc.DAL
 }
 
-// sqliteStorage wires the SQLite adapters over db. The sqlc-generated queries
-// run on the transaction the context carries, else on the pool (ADR 0025
-// step 5.2).
-func sqliteStorage(db *sqlite.DB) Storage { return storageOn(db, sqlite.Routed(db)) }
+// postgresStorage wires the PostgreSQL adapters over db. The sqlc-generated
+// queries run on the transaction the context carries, else on the pool (ADR
+// 0025 step 5.2).
+func postgresStorage(db *postgres.DB) Storage { return storageOn(db, postgres.Routed(db.Pool())) }
 
 // storageOn builds every adapter's queries over conn, the one connection the
 // root routes: a query package built over anything else would escape the
 // caller's transaction.
-func storageOn(store Store, conn sqlite.DBTX) Storage {
+func storageOn(store Store, conn postgres.DBTX) Storage {
 	// Item and weapon names are localized texts (ADR 0023 step 9).
 	texts := textdal.New(textq.New(conn))
 	return Storage{

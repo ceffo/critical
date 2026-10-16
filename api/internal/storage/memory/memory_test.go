@@ -146,7 +146,7 @@ func TestStore_Step8_2_PanicRollsBack(t *testing.T) {
 }
 
 // A nested InTx joins the outer transaction: its writes roll back with the
-// outer one, as a nested sqlite.InTx joins the outer transaction.
+// outer one, as a nested postgres InTx joins the outer transaction.
 func TestStore_Step8_2_NestedTransactionJoinsTheOuter(t *testing.T) {
 	s, id := seeded(t)
 	ctx := context.Background()
@@ -331,6 +331,38 @@ func TestStore_Step8_2_StaleTopRefused(t *testing.T) {
 
 	_, err := svc.Redo(ctx, id, top+100)
 	require.ErrorIs(t, err, actionlogsvc.ErrRedoChanged)
+}
+
+// ADR 0025 step 4.1 (ADR 0019): of two redos expecting the same popped transaction, the second
+// waits for the first, then finds nothing left to redo: a stack conflict (409), never an error of
+// the store, and the transaction is replayed once.
+func TestStore_Step8_2_ConcurrentRedosOneWins(t *testing.T) {
+	s, id := seeded(t)
+	ctx := context.Background()
+	svc := logService(t, s)
+	top := record(t, s, svc, entry(id, actionlog.KindHPChange))
+	_, err := svc.Undo(ctx, id, top)
+	require.NoError(t, err)
+
+	errs := make(chan error, 2)
+	for range 2 {
+		go func() {
+			_, err := svc.Redo(ctx, id, top)
+			errs <- err
+		}()
+	}
+	first, second := <-errs, <-errs
+	if first != nil {
+		first, second = second, first
+	}
+	require.NoError(t, first)
+	require.Error(t, second)
+	assert.True(t, errors.Is(second, actionlogsvc.ErrNothingToRedo) || errors.Is(second, actionlogsvc.ErrRedoChanged),
+		"a stack conflict, not a store error: %v", second)
+	now, ok, err := svc.TopID(ctx, id)
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, top, now, "replayed once")
 }
 
 // A restore that fails during an undo leaves no void and no partial state

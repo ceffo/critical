@@ -18,7 +18,7 @@ import (
 
 // DAL is the implementation of buffsvc.DAL over the sqlc-generated queries.
 // The composition root routes them to the transaction the context carries
-// (sqlite.Routed), so buff writes commit together with their action-log entry.
+// (postgres.Routed), so buff writes commit together with their action-log entry.
 type DAL struct {
 	q queries.Querier
 }

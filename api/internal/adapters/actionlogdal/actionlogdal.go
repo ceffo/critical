@@ -1,6 +1,6 @@
 // Package actionlogdal is the storage adapter for actionlogsvc, over the
 // sqlc-generated queries in the queries/ subpackage. The composition root
-// routes them to the transaction the context carries (sqlite.Routed), so
+// routes them to the transaction the context carries (postgres.Routed), so
 // entries and corrections commit together with the caller's state write.
 package actionlogdal
 

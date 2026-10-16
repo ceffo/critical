@@ -86,3 +86,9 @@ sql:
       go:
         <<: *go
         out: internal/adapters/spelldal/queries
+  - <<: *adapter
+    queries: internal/storage/postgres/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/storage/postgres/queries

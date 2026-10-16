@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Critical! mark option "Facet · Crit": The front face lit in gold (the crit face, from round 1) with the "!" cut out of it in the dark: the mark is the lit face itself, the die outline around it. One gold triangle with a notch reads from across the table. Colours: --tint / --highlight with Arcane dark fallbacks. -->
+<polygon points="16,2.5 27.7,9.25 27.7,22.75 16,29.5 4.3,22.75 4.3,9.25" fill="none" stroke="var(--tint, #a99bf5)" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="4.3,9.25 27.7,9.25 16,29.5" fill="var(--highlight, #f0c437)" stroke="var(--highlight, #f0c437)" stroke-width="1.5" stroke-linejoin="round"/>
+<rect x="14.50" y="11.5" width="3" height="9" rx="1.50" fill="var(--on-highlight, #1a1630)"/>
+<circle cx="16" cy="24.3" r="1.74" fill="var(--on-highlight, #1a1630)"/>
+</svg>

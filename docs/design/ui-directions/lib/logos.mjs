@@ -1,10 +1,25 @@
-// The Critical! mark options (ADR 0020 step 5 names the current one). Every mark is drawn in the
-// role colours (`--tint` for the primary, `--highlight` for the "!" / the lit face) with static
-// Arcane dark-mode fallbacks, so the same SVG works inline on a themed page and as a standalone
-// file at favicon size.
+// The Critical! mark options: the current mark (ADR 0020 step 5) for reference and four
+// developments of "Facet" (round 1), where the die and the "!" are one mark. Every variant shares
+// one geometry: a hexagon of radius 13.5 (the d20 seen from a vertex) and its front face, the
+// triangle on the alternate vertices with the apex down. The "!" sits on the die's vertical axis,
+// inside the face, and its dot lands on the apex vertex, so the die's edges, the stem and the dot
+// line up. The die is `--tint`, the "!" `--highlight`, with static Arcane dark-mode fallbacks, so
+// the same SVG works inline on a themed page and as a standalone favicon.
 const T = "var(--tint, #a99bf5)";
 const H = "var(--highlight, #f0c437)";
 const ON = "var(--on-accent, #1a1630)";
+const OH = "var(--on-highlight, #1a1630)";
+
+// Hexagon of radius 13.5 centred on (16,16); the front face joins the two upper-side vertices
+// and the bottom one; the two remaining faces are the sides.
+const HEX = "16,2.5 27.7,9.25 27.7,22.75 16,29.5 4.3,22.75 4.3,9.25";
+const FACE = "4.3,9.25 27.7,9.25 16,29.5";
+const SIDES = "M4.3 9.25L16 2.5L27.7 9.25";
+
+// The "!" as a stem (a rounded bar) and a dot on the apex side; `w` is the stem width.
+const bang = (fill, w = 3) =>
+  `<rect x="${(16 - w / 2).toFixed(2)}" y="11.5" width="${w}" height="9" rx="${(w / 2).toFixed(2)}" fill="${fill}"/>
+<circle cx="16" cy="24.3" r="${(w * 0.58).toFixed(2)}" fill="${fill}"/>`;
 
 export const logos = {
   current: {
@@ -15,38 +30,38 @@ export const logos = {
 <rect x="14.3" y="9.5" width="3.4" height="9" rx="1.7" fill="${H}"/>
 <circle cx="16" cy="22.6" r="2" fill="${H}"/>`,
   },
-  facet: {
-    name: "Facet",
+  "facet-spine": {
+    name: "Facet · Spine",
     concept:
-      "A line-drawn icosahedron (the d20 seen from a vertex) in the primary; its front face lights up in gold: the crit face.",
-    body: `<polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
-<polygon points="16,8.5 23,20.5 9,20.5" fill="${H}" stroke="${H}" stroke-width="1" stroke-linejoin="round"/>
-<path d="M16 8.5L4 9M16 8.5L28 9M23 20.5L28 23M23 20.5L16 30M9 20.5L4 23M9 20.5L16 30" fill="none" stroke="${T}" stroke-width="1.5" stroke-linecap="round"/>`,
+      "Outline d20: the hexagon and its front face at one stroke weight; the gold \"!\" runs down the face's axis and its dot sits on the apex. Two shapes and a mark, nothing to decipher at 16 px.",
+    body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="${FACE}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
+${bang(H, 3)}`,
   },
-  blade: {
-    name: "Blade",
+  "facet-v": {
+    name: "Facet · V",
     concept:
-      "The \"!\" itself is the mark: a sword point-down in the primary, its dot the gold spark where the blade lands.",
-    body: `<rect x="14.4" y="1.5" width="3.2" height="4" rx="1" fill="${T}"/>
-<rect x="8.5" y="5" width="15" height="2.8" rx="1.4" fill="${T}"/>
-<path d="M12.6 8.2h6.8L17 21.5h-2z" fill="${T}"/>
-<path d="M16 23.2l2.3 1.7-.9 2.7h-2.8l-.9-2.7z" fill="${H}"/>`,
+      "The front face is open at the top: only its two slanted edges are drawn, a V that frames the \"!\". The stem is a tapered wedge, parallel to the V, and the dot is a small facet: the \"!\" is cut from the die's own geometry.",
+    body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
+<path d="M4.3 9.25L16 29.5L27.7 9.25" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M13.4 9.5h5.2L16.9 20.2h-1.8z" fill="${H}" stroke="${H}" stroke-width="1" stroke-linejoin="round"/>
+<path d="M14.1 22.6h3.8L16 25.9z" fill="${H}" stroke="${H}" stroke-width="1" stroke-linejoin="round"/>`,
   },
-  impact: {
-    name: "Impact",
+  "facet-solid": {
+    name: "Facet · Solid",
     concept:
-      "An eight-point burst in the primary (the hit landing) carrying a bold gold \"!\": loud, unmistakable at 16 px.",
-    body: `<path d="M16 1.5l3 6.1 6.1-3-3 6.1 6.1 3-6.1 3 3 6.1-6.1-3-3 6.1-3-6.1-6.1 3 3-6.1-6.1-3 6.1-3-3-6.1 6.1 3z" fill="${T}" stroke="${T}" stroke-width="1" stroke-linejoin="round"/>
-<rect x="14.4" y="8" width="3.2" height="10.5" rx="1.6" fill="${H}"/>
-<circle cx="16" cy="22.4" r="2.1" fill="${H}"/>`,
+      "The die filled in the primary, its front face cut out as two dark edges, and the gold \"!\" inside that face, stem on the axis, dot on the apex. The solid shape carries the mark at 16 px; the face and the \"!\" share one centre line.",
+    body: `<polygon points="${HEX}" fill="${T}"/>
+<path d="M4.3 9.25L16 29.5L27.7 9.25M4.3 9.25h23.4" fill="none" stroke="${ON}" stroke-opacity=".55" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+${bang(H, 3)}`,
   },
-  monogram: {
-    name: "Monogram",
+  "facet-crit": {
+    name: "Facet · Crit",
     concept:
-      "A heavy \"C\" in the primary opening onto a gold \"!\": the name reduced to C!, calm and typographic; the wordmark can drop its mark.",
-    body: `<path d="M23.5 7.5A11 11 0 1 0 23.5 24.5" fill="none" stroke="${T}" stroke-width="5.5" stroke-linecap="round"/>
-<rect x="21.8" y="8.5" width="3.6" height="11" rx="1.8" fill="${H}"/>
-<circle cx="23.6" cy="23.6" r="2.2" fill="${H}"/>`,
+      "The front face lit in gold (the crit face, from round 1) with the \"!\" cut out of it in the dark: the mark is the lit face itself, the die outline around it. One gold triangle with a notch reads from across the table.",
+    body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
+<polygon points="${FACE}" fill="${H}" stroke="${H}" stroke-width="1.5" stroke-linejoin="round"/>
+${bang(OH, 3)}`,
   },
 };
 

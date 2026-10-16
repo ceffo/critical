@@ -34,7 +34,7 @@ ${block(".dark")}}
 }
 
 export const directions = await Promise.all(
-  ["a", "b", "c"].map((x) => import(`./lib/direction-${x}.mjs`)),
+  ["a", "a1", "a2", "a3"].map((x) => import(`./lib/direction-${x}.mjs`)),
 );
 
 export function build() {

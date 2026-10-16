@@ -194,10 +194,11 @@ e2e *args: build-api
 
 # Build the design-direction pages (docs/design/ui-directions, static HTML on the real theme tokens)
 # and screenshot every one at 1707x1300 and 1440x900 into <direction>/shots/ with Playwright's
-# Chromium; fails when any text is clipped or a page scrolls. Needs web/node_modules and `just e2e-install`.
-design-shots:
+# Chromium; fails when any text is clipped (wide or tall) or a page overflows. Needs web/node_modules and
+# `just e2e-install`. `just design-shots --self-test` checks the audit itself on a page with known clipping.
+design-shots *args:
     cd web && node e2e/check-browser.mjs
-    node docs/design/ui-directions/shots.mjs
+    node docs/design/ui-directions/shots.mjs {{args}}
 
 # Clone (or fast-forward) the private rulebooks repo used as a rules reference. Not part of validate/dev.
 # Override the target dir with RULEBOOKS_DIR and the remote with RULEBOOKS_REMOTE.

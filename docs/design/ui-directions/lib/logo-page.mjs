@@ -4,7 +4,7 @@ import { logos, logoSvg } from "./logos.mjs";
 import { esc } from "./ui.mjs";
 
 const cell = (id, theme) => `<div class="${theme} theme-cell">
-  <div class="brand">${logoSvg(id)}<span class="wordmark">Critical<em>!</em></span></div>
+  <div class="hstack" style="gap:1.25rem;align-items:flex-start"><span class="fav">${logoSvg(id, 'width="64" height="64"')}<span class="label">64</span></span><div class="brand" style="margin-top:1rem">${logoSvg(id)}<span class="wordmark">Critical<em>!</em></span></div></div>
   <div class="hstack" style="gap:1rem;margin-top:.75rem;align-items:flex-end">
     <span class="fav">${logoSvg(id, 'width="32" height="32"')}<span class="label">32</span></span>
     <span class="fav">${logoSvg(id, 'width="16" height="16"')}<span class="label">16</span></span>
@@ -20,7 +20,8 @@ export const logoPage = () => `<!doctype html>
 <link rel="stylesheet" href="../shared/tokens.css">
 <link rel="stylesheet" href="../shared/base.css">
 <style>
-body { padding: 1.5rem; overflow: auto; }
+html, body { height: auto; overflow: visible; }
+body { padding: 1.5rem; }
 .grid { display: grid; grid-template-columns: 14rem 1fr 1fr; gap: .75rem; align-items: stretch; }
 .grid > div { min-width: 0; }
 .theme-cell { background: var(--ground); color: var(--ink); border: 1px solid var(--border); border-radius: .5rem; padding: 1rem; }
@@ -33,7 +34,7 @@ body { padding: 1.5rem; overflow: auto; }
 </style>
 </head>
 <body>
-<div class="hstack" style="margin-bottom:1rem"><span class="title" style="font-size:1.125rem">Critical! mark options</span><span class="muted">header size · favicon 32 and 16 px · a browser tab · dark and light (Arcane)</span></div>
+<div class="hstack" style="margin-bottom:1rem"><span class="title" style="font-size:1.125rem">Critical! mark options</span><span class="muted">at 64 px · header size · favicon 32 and 16 px · a browser tab · dark and light (Arcane)</span></div>
 <div class="head"><span class="label">Option</span><span class="label">Dark</span><span class="label">Light</span></div>
 <div class="grid">
 ${Object.entries(logos)

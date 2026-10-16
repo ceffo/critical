@@ -6,9 +6,9 @@ import * as ui from "./ui.mjs";
 
 export const id = "a-vitals-bar";
 export const name = "A · Vitals bar + stages";
-export const logo = "facet";
+export const logo = "facet-crit";
 // The fourth mark option is shown on this direction's lookup and XP pages.
-const altLogo = "impact";
+const altLogo = "facet-crit";
 export const css = "direction.css";
 
 const RAIL = [
@@ -99,7 +99,7 @@ export const stylesheet = `/* Direction A: a vitals bar on top, a rail, and one 
 .rail { width: 4.25rem; display: flex; flex-direction: column; align-items: stretch; padding: .5rem 0; border-right: 1px solid var(--border); background: var(--surface); }
 .rail-item { display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: .625rem 0; font-size: .6875rem; color: var(--ink-muted); border-left: 2px solid transparent; }
 .rail-item.on { color: var(--tint); border-left-color: var(--tint); background: var(--amb-900); }
-.stage { flex: 1; min-width: 0; display: grid; gap: .75rem; padding: .75rem; }
+.stage { flex: 1; min-width: 0; min-height: 0; display: grid; grid-auto-rows: minmax(0, 1fr); gap: .75rem; padding: .75rem; }
 .stage-act { grid-template-columns: minmax(28rem, 1.1fr) minmax(24rem, 1fr) 20rem; }
 .panel.act { display: flex; flex-direction: column; }
 .weapon-card { margin-top: .75rem; border: 1px solid var(--amb-700); border-radius: .625rem; padding: 1rem; background: linear-gradient(135deg, color-mix(in oklab, var(--tint) 10%, transparent), transparent 60%); }

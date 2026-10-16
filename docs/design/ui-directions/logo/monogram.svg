@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Critical! mark option "Monogram": A heavy "C" in the primary opening onto a gold "!": the name reduced to C!, calm and typographic; the wordmark can drop its mark. Colours: --tint / --highlight with Arcane dark fallbacks. -->
-<path d="M23.5 7.5A11 11 0 1 0 23.5 24.5" fill="none" stroke="var(--tint, #a99bf5)" stroke-width="5.5" stroke-linecap="round"/>
-<rect x="21.8" y="8.5" width="3.6" height="11" rx="1.8" fill="var(--highlight, #f0c437)"/>
-<circle cx="23.6" cy="23.6" r="2.2" fill="var(--highlight, #f0c437)"/>
-</svg>

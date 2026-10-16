@@ -343,6 +343,96 @@ svg {
   margin-top: 0.25rem;
 }
 
+/* A die value in its die's silhouette: the shape names the die, so no "(1d10)" label. */
+.die {
+  --die: 1.75rem;
+  display: inline-grid;
+  place-items: center;
+  width: var(--die);
+  height: var(--die);
+  background: var(--amb-800);
+  color: var(--ink);
+  flex-shrink: 0;
+  font-size: calc(var(--die) * 0.42);
+  line-height: 1;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.die b {
+  font-weight: 600;
+}
+.die-4 {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  height: calc(var(--die) * 0.95);
+}
+.die-4 b {
+  margin-top: calc(var(--die) * 0.3);
+}
+.die-6 {
+  border-radius: calc(var(--die) * 0.12);
+}
+.die-8 {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  width: calc(var(--die) * 0.9);
+  height: calc(var(--die) * 1.15);
+}
+.die-10 {
+  clip-path: polygon(50% 0, 100% 38%, 50% 100%, 0 38%);
+  width: calc(var(--die) * 0.9);
+  height: calc(var(--die) * 1.15);
+}
+.die-10 b {
+  margin-top: calc(var(--die) * -0.1);
+}
+.die-12 {
+  clip-path: polygon(50% 0, 100% 38%, 81% 100%, 19% 100%, 0 38%);
+  height: calc(var(--die) * 1.05);
+}
+.die-12 b {
+  margin-top: calc(var(--die) * 0.08);
+}
+.die-20 {
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  height: calc(var(--die) * 1.12);
+}
+.die.big {
+  background: var(--amb-900);
+}
+.die.gold {
+  background: var(--highlight-fill);
+  color: var(--on-highlight);
+}
+.val .die {
+  font-weight: 600;
+}
+.val.highlight .die {
+  color: var(--highlight);
+}
+.val.danger .die {
+  color: var(--danger);
+}
+.val.success .die {
+  color: var(--success);
+}
+.val.muted .die {
+  color: var(--ink-muted);
+}
+.dchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+}
+.dchip.on {
+  border-color: var(--tint);
+}
+.dchip .n {
+  color: var(--tint);
+  font-size: 0.6875rem;
+}
+
 /* The d20 of a result: a hexagon with the natural roll. */
 .hex {
   width: 3.25rem;

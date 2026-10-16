@@ -1,0 +1,48 @@
+/* Direction A2: a thin command row, the effects timeline at full width, act + result in the centre. */
+.app { height: 100vh; display: flex; flex-direction: column; }
+.vitals { border-bottom: 1px solid var(--border); background: var(--surface); }
+.cmd { display: grid; grid-template-columns: auto auto auto 16rem 1fr; align-items: stretch; }
+.cmd > div { padding: .5rem 1rem; border-right: 1px solid var(--border); min-width: 0; display: flex; align-items: center; gap: .75rem; }
+.cmd > div:last-child { border-right: 0; }
+@media (max-width: 1500px) { .cmd > div { padding: .5rem .75rem; } .v-brand .wordmark { display: none; } }
+.v-turn { gap: .5rem !important; }
+.v-turn .hero { font-size: 2rem; line-height: 2.25rem; }
+.v-init { flex-direction: column; align-items: flex-start !important; gap: .25rem !important; }
+.v-hp { flex-direction: column; align-items: stretch !important; justify-content: center; }
+.v-hp .hp-block .headline { font-size: 1.25rem; line-height: 1.5rem; }
+.v-result { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: .25rem !important; }
+.timeline { padding: .375rem 1rem .5rem; border-top: 1px solid var(--border); }
+.effects-track { width: 100%; display: grid; row-gap: .125rem; }
+.trow { display: grid; grid-template-columns: 11rem 1fr; align-items: center; min-height: 1.5rem; }
+.ttrack { display: grid; align-items: center; min-height: 1.5rem; }
+.tcol { text-align: center; font-size: .6875rem; color: var(--ink-muted); }
+.tcol.now { color: var(--tint); font-weight: 600; background: var(--amb-900); border-radius: .25rem; }
+.tcol.past { opacity: .4; }
+.tline { height: 2px; background: var(--neu-700); align-self: center; }
+.pill.fade { mask-image: linear-gradient(90deg, #000 70%, transparent); }
+.below { flex: 1; display: flex; min-height: 0; }
+.rail { width: 4.25rem; display: flex; flex-direction: column; align-items: stretch; padding: .5rem 0; border-right: 1px solid var(--border); background: var(--surface); }
+.rail-item { display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: .625rem 0; font-size: .6875rem; color: var(--ink-muted); border-left: 2px solid transparent; }
+.rail-item.on { color: var(--tint); border-left-color: var(--tint); background: var(--amb-900); }
+.stage { flex: 1; min-width: 0; min-height: 0; display: grid; grid-auto-rows: minmax(0, 1fr); gap: .75rem; padding: .75rem; }
+.stage-act { grid-template-columns: 17.5rem minmax(30rem, 1fr) minmax(22rem, 26rem); }
+.centre { min-height: 0; }
+.centre .panel.act { flex: 0 1 auto; }
+.panel.act { display: flex; flex-direction: column; }
+.result-panel { border-color: var(--amb-700); flex-shrink: 0; }
+.weapon-card { margin-top: .75rem; border: 1px solid var(--amb-700); border-radius: .625rem; padding: 1rem; background: linear-gradient(135deg, color-mix(in oklab, var(--tint) 10%, transparent), transparent 60%); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; margin-top: .75rem; }
+.tile { display: flex; flex-direction: column; gap: .125rem; padding: .5rem .625rem; border-radius: .375rem; background: var(--surface); border: 1px solid var(--border); }
+.tile.on { border-color: var(--tint); }
+.tile.dim { opacity: .55; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; }
+.saves-btns { display: grid; gap: .25rem; }
+.save-btn { display: flex; align-items: center; gap: .5rem; height: 2rem; padding: 0 .625rem; border: 1px solid var(--border); border-radius: .375rem; }
+.stage-spells { grid-template-columns: minmax(18rem, 22rem) 1fr; }
+.stat-tiles { grid-template-columns: repeat(5, 1fr); }
+.prose-cols .prose { columns: 2; column-gap: 2rem; max-width: 140ch; }
+.prose-cols .prose p { break-inside: avoid; }
+.row28.sel { background: var(--amb-900); box-shadow: inset 2px 0 0 var(--tint); }
+.stage-xp { grid-template-rows: auto minmax(0, 1fr); }
+.xp-grid { display: grid; grid-template-columns: 1fr 24rem; gap: 2rem; }
+.list-row.fresh { background: color-mix(in oklab, var(--tint) 8%, transparent); }

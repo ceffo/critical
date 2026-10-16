@@ -21,22 +21,47 @@ const VIEWPORTS = [
 /** Elements whose text is wider than the box that shows it, and whether the page scrolls. */
 const audit = () => {
   const clipped = [];
+  const describe = (el, how) =>
+    `<${el.tagName.toLowerCase()} class="${el.className}"> ${how}: ${el.textContent.trim().slice(0, 60)}`;
   for (const el of document.querySelectorAll("body *")) {
-    if (el.closest("[data-scroll-x]")) continue;
-    if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1 && el.textContent.trim())
-      clipped.push(
-        `<${el.tagName.toLowerCase()} class="${el.className}"> ${el.scrollWidth}>${el.clientWidth}: ${el.textContent.trim().slice(0, 60)}`,
-      );
+    if (el.closest("[data-scroll-x]") || !el.textContent.trim()) continue;
+    if (el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1)
+      clipped.push(describe(el, `${el.scrollWidth}>${el.clientWidth} wide`));
+    // Vertical: only boxes that hide their overflow (a scrolling box is fine, it scrolls).
+    const oy = getComputedStyle(el).overflowY;
+    if ((oy === "hidden" || oy === "clip") && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 1)
+      clipped.push(describe(el, `${el.scrollHeight}>${el.clientHeight} tall`));
   }
-  const root = document.documentElement;
-  return {
-    clipped,
-    pageScroll: root.scrollWidth > root.clientWidth || root.scrollHeight > root.clientHeight,
-  };
+  // body hides its overflow, so html's scroll size never grows: check both boxes.
+  const over = (el) => el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
+  return { clipped, pageScroll: over(document.documentElement) || over(document.body) };
 };
 
-const files = build().filter((f) => f.endsWith(".html"));
 const browser = await chromium.launch();
+
+// `--self-test`: prove the audit catches what it must (a cut line, a box hiding tall content,
+// a page taller than the viewport) before trusting the green run.
+if (process.argv.includes("--self-test")) {
+  const page = await browser.newPage({ viewport: { width: 800, height: 400 } });
+  await page.setContent(
+    `<style>html,body{height:100%;overflow:hidden;margin:0}</style>
+<div style="width:50px;overflow:hidden;white-space:nowrap">a very long line of text</div>
+<div style="height:100px;overflow:hidden"><p style="height:300px">tall text</p></div>
+<div style="height:600px">spills past the viewport</div>`,
+  );
+  const r = await page.evaluate(audit);
+  const wide = r.clipped.some((c) => c.includes("wide"));
+  const tall = r.clipped.some((c) => c.includes("tall"));
+  if (!wide || !tall || !r.pageScroll) {
+    console.error("self-test failed:", JSON.stringify(r));
+    process.exit(1);
+  }
+  console.log("self-test ok: cut line, hidden tall content and page overflow are all reported");
+  await browser.close();
+  process.exit(0);
+}
+
+const files = build().filter((f) => f.endsWith(".html"));
 let failed = 0;
 for (const file of files) {
   const dir = path.dirname(file);

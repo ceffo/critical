@@ -38,12 +38,15 @@ func spell(id string, desc map[string]any) map[string]any {
 	}
 }
 
-func artifact(spells ...any) map[string]any {
-	return map[string]any{"format": 1, "version": "2026-10-15", "spells": spells}
+// artifact is a valid format 3 document around the given spells: the fixture's
+// rule tables stand in for the required ones.
+func artifact(t *testing.T, spells ...any) map[string]any {
+	t.Helper()
+	return map[string]any{"format": 3, "version": "2026-10-15", "spells": spells, "rule_tables": ruleTables(t)}
 }
 
-func withDesc(en string) map[string]any {
-	return artifact(spell("a", map[string]any{"en": en}))
+func withDesc(t *testing.T, en string) map[string]any {
+	return artifact(t, spell("a", map[string]any{"en": en}))
 }
 
 // TestSchema_FixtureIsValid: the fixture CI and e2e run on is a valid artifact.
@@ -137,22 +140,22 @@ func TestSchema_DescriptionSubset(t *testing.T) {
 		"- a\nplain", "| a |\ntext", "# H", "A.\n\n# H", "A.\n\n## H\n\nB",
 	}
 	for _, d := range good {
-		assert.NoError(t, sch.Validate(withDesc(d)), "good %q", d)
+		assert.NoError(t, sch.Validate(withDesc(t, d)), "good %q", d)
 	}
 	for _, d := range bad {
-		assert.Error(t, sch.Validate(withDesc(d)), "bad %q", d)
+		assert.Error(t, sch.Validate(withDesc(t, d)), "bad %q", d)
 	}
 }
 
 func TestSchema_Shape(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(artifact(spell("a", map[string]any{"en": "x", "fr": "y"}))))
+	assert.NoError(t, sch.Validate(artifact(t, spell("a", map[string]any{"en": "x", "fr": "y"}))))
 	assert.Error(t, sch.Validate(map[string]any{"format": 2, "version": "2026-10-15", "spells": []any{spell("a", map[string]any{"en": "x"})}}), "unknown format")
-	assert.Error(t, sch.Validate(artifact(spell("a", map[string]any{"en": "x", "fr": ""}))), "empty fr")
-	assert.Error(t, sch.Validate(artifact(spell("A-b", map[string]any{"en": "x"}))), "bad id")
+	assert.Error(t, sch.Validate(artifact(t, spell("a", map[string]any{"en": "x", "fr": ""}))), "empty fr")
+	assert.Error(t, sch.Validate(artifact(t, spell("A-b", map[string]any{"en": "x"}))), "bad id")
 	extra := spell("a", map[string]any{"en": "x"})
 	extra["extra"] = 1
-	assert.Error(t, sch.Validate(artifact(extra)), "unknown property")
+	assert.Error(t, sch.Validate(artifact(t, extra)), "unknown property")
 }
 
 // ruleTables reads the fixture's rule_tables (format 3, the shape
@@ -171,9 +174,8 @@ func ruleTables(t *testing.T) map[string]any {
 	return tables
 }
 
-func format3(tables any) map[string]any {
-	a := artifact(spell("a", map[string]any{"en": "x"}))
-	a["format"] = 3
+func format3(t *testing.T, tables any) map[string]any {
+	a := artifact(t, spell("a", map[string]any{"en": "x"}))
 	a["rule_tables"] = tables
 	return a
 }
@@ -198,22 +200,27 @@ func row(tables map[string]any, table string, i int) map[string]any {
 }
 
 // TestSchema_Step9_Format3RuleTables (ADR 0021 steps 9.1 to 9.3): format 3 is
-// format 1 plus the four PHB rule tables, numbers only, in the shape the seed
-// adapter reads today; format 1 carries no tables and format 2 is never valid.
+// the spells plus the four PHB rule tables, numbers only; format 1 is retired
+// (step 9.6.3) and format 2 is never valid.
 func TestSchema_Step9_Format3RuleTables(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(format3(ruleTables(t))), "format 3 with the four tables")
-	assert.NoError(t, sch.Validate(format3(mutate(t, func(map[string]any) {}))), "an unchanged copy")
+	assert.NoError(t, sch.Validate(format3(t, ruleTables(t))), "format 3 with the four tables")
+	assert.NoError(t, sch.Validate(format3(t, mutate(t, func(map[string]any) {}))), "an unchanged copy")
 
-	withTables := artifact(spell("a", map[string]any{"en": "x"}))
-	withTables["rule_tables"] = ruleTables(t)
-	assert.Error(t, sch.Validate(withTables), "format 1 carries no rule tables")
+	format1 := format3(t, ruleTables(t))
+	format1["format"] = 1
+	assert.Error(t, sch.Validate(format1), "format 1 is retired")
 
-	noTables := artifact(spell("a", map[string]any{"en": "x"}))
-	noTables["format"] = 3
+	format1NoTables := artifact(t, spell("a", map[string]any{"en": "x"}))
+	format1NoTables["format"] = 1
+	delete(format1NoTables, "rule_tables")
+	assert.Error(t, sch.Validate(format1NoTables), "format 1 without tables, the retired shape")
+
+	noTables := artifact(t, spell("a", map[string]any{"en": "x"}))
+	delete(noTables, "rule_tables")
 	assert.Error(t, sch.Validate(noTables), "format 3 requires the rule tables")
 
-	format2 := format3(ruleTables(t))
+	format2 := format3(t, ruleTables(t))
 	format2["format"] = 2
 	assert.Error(t, sch.Validate(format2), "format 2 is never valid")
 
@@ -245,6 +252,6 @@ func TestSchema_Step9_Format3RuleTables(t *testing.T) {
 		},
 	}
 	for name, change := range refused {
-		assert.Error(t, sch.Validate(format3(mutate(t, change))), name)
+		assert.Error(t, sch.Validate(format3(t, mutate(t, change))), name)
 	}
 }

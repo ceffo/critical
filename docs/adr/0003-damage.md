@@ -1,7 +1,8 @@
 # ADR 0003: Damage
 
 **Status**: accepted, 2026-10-15 (critical-qki.35; collects the rules shipped in critical-qki.7,
-critical-qki.12 and critical-qki.39, until then in `docs/backend.md` "Damage Formula")
+critical-qki.12 and critical-qki.39, until then in `docs/backend.md` "Damage Formula"); steps 4, 5
+and 11 amended 2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
 
 ## Context
 
@@ -38,15 +39,20 @@ return a distinct value for each call and expect an exact number of calls.
 3. **SpellsBuff.** The product of the buffs' `spells_buff` factors (Enlarge), 1 without any. It
    multiplies the dice. Tests: `buffsvc` `TestAggregate` ("multipliers stack multiplicatively…"),
    `TestResolveAttack_DamageTermsListEveryModifier`.
-4. **DiceMultiplier.** The product of the buffs' `multiplier` effects (Power Gem ×2), 1 without
-   any. It multiplies **only the raw dice**: the weapon's "+N", Strength and buff damage are never
+4. **DiceMultiplier.** The product of the `multiplier` effects of the buffs that apply and of the
+   item powers that are on (the Power Gem's thunder hammer ×2, melee only:
+   [ADR 0016](0016-inventory.md) steps 12 and 16), 1 without any. The weapon keeps its own dice:
+   the hammer doubles what they roll, it does not replace them. It multiplies **only the raw dice**: the weapon's "+N", Strength and buff damage are never
    multiplied by it (user, 2026-10-14: "x2 multiplier on raw dice result"). With the gem, 1d8 = 6
    gives `6 × 2 + 5 + STR`, not `(6 + 5) × 2 + STR`.
    Tests: `TestResolveAttack_PowerGem` ("x2 on the raw dice only, not on the +5"),
    `TestResolveAttack_DecimalCritMultiplier` ("x1.5 crit on a x2 dice buff doubles only the
-   dice"), `buffsvc` `TestAggregate`.
-5. **WeaponBuff.** The weapon's damage magic, or the buff's "+N" when that wins (ADR 0002 step 6),
-   plus the ammunition's magic (ADR 0002 step 7). Added after the dice factors, before the crit.
+   dice"), `buffsvc` `TestAggregate`. Planned (named without their `Test` prefix until they
+   exist): `ItemPowers_Step12_HammerOnMeleeOnly` (×1 with a bow or darts),
+   `composition` `ItemPowers_Step16_HammerAt18WithTheLongSword`.
+5. **WeaponBuff.** The weapon's damage magic, or the "+N" of a buff or of an item power that is on
+   when that wins (ADR 0002 step 6, the higher one, never both), plus the ammunition's magic
+   (ADR 0002 step 7). Added after the dice factors, before the crit.
    Tests: `TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff`,
    `TestResolveAttack_WeaponBuffPlusMagicAmmo`.
 6. **Crit.** The crit multiplier of ADR 0001 step 4 (1 without a crit). It multiplies the dice
@@ -73,9 +79,13 @@ return a distinct value for each call and expect an exact number of calls.
     `TestCrit_Step5_MultipliersStackFlooredOnce` ("never below 0").
 11. **Breakdown.** Every contribution is listed in `DamageTerms`, in formula order: spells, dice
     multipliers, weapon and ammunition, crit, Strength, buff damage. The breakdown shows the
-    unrounded value and the floor (`… = 10.5 → 10`) when they differ.
+    unrounded value and the floor (`… = 10.5 → 10`) when they differ. A term from an item power
+    carries the item's id next to its stored name, and the client names it from the item
+    (ADR 0016 step 14); an item power that is off lists no term.
     Tests: `TestResolveAttack_DamageTermsListEveryModifier`,
     `TestAdjustAttackAC_DamageTermsInFormulaOrder`, `TestResolveAttack_DecimalCritMultiplier`.
+    Planned (named without their `Test` prefix until they exist):
+    `ItemPowers_Step14_BreakdownCarriesTheItemID`, `buffsvc` `ItemPowers_Step11_PowerOffContributesNothing`.
 
 ## Consequences
 

@@ -16,6 +16,7 @@ import {
   receivePicker,
 } from "./helpers";
 import type { Locator, Page } from "@playwright/test";
+import { expectWholeWords } from "./noClip";
 
 // The frozen fixture catalogue and spellbook the stack runs on (never the campaign seeds/).
 const testdata = path.resolve(
@@ -250,11 +251,12 @@ for (const size of [
         ]);
         expect(scroll).toBeLessThanOrEqual(client);
         await expect(el).toHaveText(expected);
-        // A word is only ever broken by hyphenation at a syllable, never chopped: the name is
-        // hyphenated in its own language, and with hyphenation off and no emergency break every
+        // No word is broken at all, by hyphenation or otherwise (ADR 0022 step 1: a word split
+        // mid-word reads as cut): the name wraps between words, and with no emergency break every
         // word still fits the box (so break-words is never what splits one).
         await expect(el).toHaveAttribute("lang", lang);
-        await expect(el).toHaveCSS("hyphens", "auto");
+        await expect(el).toHaveCSS("hyphens", "manual");
+        await expectWholeWords(el, "spell name");
         const overflows = await el.evaluate((e) => {
           const box = e as HTMLElement;
           const [h, w] = [box.style.hyphens, box.style.overflowWrap];

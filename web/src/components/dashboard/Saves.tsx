@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "@phosphor-icons/react";
 import { lastSaves } from "@/lib/moiLog";
@@ -48,9 +49,21 @@ export function Saves() {
                 data-testid="save-row"
                 data-save={cat}
                 onClick={() => void rollSave(cat)}
-                className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto_3.25rem] items-center gap-2 rounded-md border border-border px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                className="grid min-h-7 w-full grid-cols-[minmax(min-content,1fr)_auto_3.25rem] items-center gap-2 rounded-md border border-border px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
               >
-                <span className="min-w-0 break-words">{name}</span>
+                <span>
+                  {/* A slash is a place to wrap, so a long name breaks between its words. */}
+                  {name.split("/").map((part, i) => (
+                    <Fragment key={i}>
+                      {i > 0 && (
+                        <>
+                          /<wbr />
+                        </>
+                      )}
+                      {part}
+                    </Fragment>
+                  ))}
+                </span>
                 <span className="text-muted-foreground tabular-nums">
                   {character
                     ? t("saves.target", { value: character[TARGET_FIELD[cat]] })

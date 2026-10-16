@@ -135,15 +135,15 @@ function WeaponRow({
       data-testid={`weapon-${w.id}`}
     >
       <div className="flex min-w-0 flex-col">
-        <span className="min-w-0 truncate font-medium">{w.name}</span>
-        <span className="min-w-0 truncate text-label text-muted-foreground">
+        <span className="min-w-0 break-words font-medium">{w.name}</span>
+        <span className="min-w-0 break-words text-label text-muted-foreground">
           <span data-testid="weapon-kind">{t(`weapons.kind.${w.kind}`)}</span>
           {w.two_handed ? ` · ${t("weapons.twoHanded")}` : ""}
           {w.ammo_kind ? ` · ${w.ammo_kind}` : ""}
         </span>
       </div>
       <span
-        className="min-w-0 truncate tabular-nums"
+        className="min-w-0 break-words tabular-nums"
         data-testid="weapon-detail"
       >
         {t("weapons.detail", { sm: w.damage_sm, l: w.damage_l })}

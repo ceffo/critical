@@ -61,7 +61,7 @@ function SpellName({ spell, className }: { spell: Spell; className?: string }) {
   return (
     <span
       lang={i18n.language}
-      className={cn("min-w-0 break-words hyphens-auto", className)}
+      className={cn("min-w-0 break-words", className)}
       data-testid="spell-name"
     >
       {spellName(i18n.language, spell)}

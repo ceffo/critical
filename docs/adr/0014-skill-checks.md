@@ -43,7 +43,7 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    ([ADR 0010](0010-action-stack-and-undo.md)); popping restores nothing. A skill's last check
    (`GET /api/skills`) is its newest non-voided entry.
    Tests: `TestSkillCheck_Step4_OneLoggedEntryPerCheck`, `TestList_TargetsAndLastCheckPerSkill`;
-   `composition` `TestSkillCheck_UndoPopsTheCheck`; `router` `TestSkills_RollWireShape`.
+   `router` `TestSkills_RollWireShape`.
 5. **Adjustment before the roll.** `POST /api/roll/skill/{id}` takes an optional
    `{adjustment, reason}` (no body: none). The adjustment moves the target, **+ easier, - harder**
    (the sign of every adjustment in the app): a proficiency is judged against ability score +
@@ -70,8 +70,7 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    to fail, a new adjustment replaces the previous one, 0 removes the pre-roll adjustment and
    drops the reason, natural 20, an entry logged before adjustments),
    `TestSkillCheck_Step6_LatestCheckOnly`; `actionlogsvc` `TestAmendLatest` ("not a skill check",
-   "skill check, a later save exists", "latest skill check amended"); `composition`
-   `TestSkillCheck_Step6_OnlyTheLatestRollIsAdjusted`; `router` `TestSkills_AdjustWireShape`,
+   "skill check, a later save exists", "latest skill check amended"); `router` `TestSkills_AdjustWireShape`,
    `TestSpecialSentinels` ("skill adjust not latest", "skill adjust voided", "skill adjust not a
    skill check").
 7. **Audited and undoable.** Each adjustment after the roll is an `amend` correction on the entry
@@ -79,8 +78,8 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    never edited. It is its own step on the action stack ([ADR 0010](0010-action-stack-and-undo.md)
    step 6, field `skillAdjustment`, from and to the adjustment): undo pops the newest adjustment
    and the check reads the one before it, down to the check as rolled.
-   Tests: `TestSkillCheck_Step7_AdjustmentIsAnAmendCorrection`; `composition`
-   `TestSkillCheck_Step7_UndoRestoresThePreviousAdjustment`.
+   Tests: `TestSkillCheck_Step7_AdjustmentIsAnAmendCorrection`; `actionlogsvc`
+   `TestEntry_PoppedStepAmendIsOutOfEffect` (a popped step leaves the previous adjustment in effect).
 8. **Ranges.** A proficiency's adjustment is -20 to +20, a bard skill's -100 to +100 (percentage
    points); the reason is optional, trimmed, at most 80 characters. Anything else is refused (400)
    before a die is rolled or the log is amended.

@@ -68,7 +68,7 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    entry must be a save. Voided entries count when looking for the newest roll. Another kind is
    refused (400), a voided save or one that is not the latest roll is refused (409).
    Tests: `TestAmendLatest` (actionlogsvc: "not a save", "voided", "a later save exists", "a later
-   attack exists", "a later cast exists", "a later item use exists", "a later skill check exists"), `TestExposure_ClosesTheSaveAdjustmentUntilPopped` (composition), `TestAdjustSave_Rejections`
+   attack exists", "a later cast exists", "a later item use exists", "a later skill check exists"), `TestAdjustSave_Rejections`
    ("not the latest", "voided", "not a save"), router `TestSpecialSentinels` ("adjust voided", "adjust not latest",
    "adjust not a save").
 7. **Audited.** The adjustment is an `amend` correction on the entry carrying the new
@@ -87,9 +87,9 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    is served as stored.
    Tests: `TestSavePayloadView_Step8_OldEntryServedInTheNewShape`; `router`
    `TestLog_ASaveIsServedWithRollTotalAndAdjustedTarget` and
-   `TestLog_ASaveIsServedWithItsFieldsByEveryEndpoint` (the wire, on a mocked log service); `actionlogsvc` `TestListReads_ServeEntriesThroughThePayloadViews`; `composition`
-   `TestCorrectionStep_AdjustASaveLoggedBeforeTheTargetMoved` (adjusting such a save stores both
-   fields in the amend; undo goes back to the save as logged).
+   `TestLog_ASaveIsServedWithItsFieldsByEveryEndpoint` (the wire, on a mocked log service); `actionlogsvc`
+   `TestListReads_ServeEntriesThroughThePayloadViews`; `combatsvc`
+   `TestAdjustSave_Step8_SaveLoggedBeforeTheTargetMovedStoresBothFieldsInTheAmend`.
 
 ## Consequences
 

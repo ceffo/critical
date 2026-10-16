@@ -214,6 +214,10 @@ updated in that ADR (`just check-adr-tests`).
 The remaining adapters use [bob](https://github.com/stephenafamo/bob) for typed SQL queries. This
 section goes away when the last of them is ported (ADR 0025 step 5.4).
 
+> **Being replaced** ([ADR 0025](adr/0025-postgresql-storage.md) step 5): the adapters move to sqlc
+> (`emit_interface`, a mocked `Querier` per package), then the engine moves to PostgreSQL. This section
+> describes bob until the port removes it.
+
 ### When to regenerate
 
 Regenerate whenever:
@@ -372,10 +376,10 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   a text in none); `GET /api/spells/names` is `[{id, name: {en, fr?}}]`. The client picks its language and
   falls back to English per field; there is no `lang` parameter. Descriptions are in the catalogue's Markdown
   subset (paragraphs, `- ` lists, pipe tables).
-- **Checking a live database**: `CRITICAL_UPGRADE_CHECK_DB=<path to .db> go test -count=1 -run
-  TestRealCatalogue_UpgradesACopyOfALiveDatabase ./internal/seedcheck` (from `api/`, with the real
-  artifact fetched) imports the catalogue into a copy of that database and checks every reference resolves.
-  The database is only read.
+- **Checking a live database**: the Go check on a copy of a live SQLite file (`CRITICAL_UPGRADE_CHECK_DB`)
+  is gone, since no Go test opens a database ([ADR 0025](adr/0025-postgresql-storage.md) step 6 and its
+  Consequences). The seed check (`internal/seedcheck`) still validates the real seeds and artifact through
+  the server's adapters, without a database.
 
 ## Production image
 

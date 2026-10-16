@@ -17,7 +17,7 @@ ON CONFLICT(character_id) DO UPDATE SET round_number = excluded.round_number
 ;
 
 -- ListSavedBuffs
-SELECT id, name, duration, charges, effects, note FROM saved_buffs WHERE character_id = ? ORDER BY id
+SELECT id, name, duration, charges, effects, note, created_at /*:time.Time:notnull*/ FROM saved_buffs WHERE character_id = ? ORDER BY id
 ;
 
 -- InsertSavedBuff
@@ -26,7 +26,7 @@ RETURNING id
 ;
 
 -- InsertSavedBuffWithID
-INSERT INTO saved_buffs (id, character_id, name, duration, charges, effects, note) VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO saved_buffs (id, character_id, name, duration, charges, effects, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ? /*:string:notnull*/)
 ;
 
 -- DeleteSavedBuffs

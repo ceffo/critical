@@ -1,5 +1,7 @@
 package buffsvc
 
+import "time"
+
 // State keys under which buffsvc snapshots its state in the action log. Each
 // has a Restorer (see Restorers) that the composition root registers.
 const (
@@ -158,6 +160,8 @@ type BuffEdit struct {
 // SavedBuff is a buff template the player re-adds with one click: the
 // starting rounds, charges, effects and note of a buff. Activating one is the
 // normal Activate with these values (editable first). ID is 0 until stored.
+// CreatedAt is when it was first stored (zero until then); a restore from a
+// snapshot writes it back unchanged.
 type SavedBuff struct {
 	ID       int64
 	Name     string
@@ -165,6 +169,8 @@ type SavedBuff struct {
 	Charges  int
 	Effects  BuffEffects
 	Note     string
+
+	CreatedAt time.Time
 }
 
 // Strength is the base STR score from the character sheet and the effective

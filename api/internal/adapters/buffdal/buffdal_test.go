@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -347,14 +348,21 @@ func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 	require.Len(t, list, 1)
 	form.ID = list[0].ID
 	assert.NotZero(t, form.ID)
+	assert.False(t, list[0].CreatedAt.IsZero(), "the database stamps a new template")
+	form.CreatedAt = list[0].CreatedAt
 	assert.Equal(t, form, list[0])
 
 	// A restore writes explicit ids back; a new entry gets the next one.
-	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 42, Name: "Old"}, {Name: "New"}}))
+	longAgo := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 42, Name: "Old", CreatedAt: longAgo}, {Name: "New"}}))
 	list, err = dal.ListSavedBuffs(ctx, charID)
 	require.NoError(t, err)
 	require.Len(t, list, 2)
 	assert.Equal(t, int64(42), list[0].ID)
+	assert.Equal(t, longAgo, list[0].CreatedAt, "a restore keeps the creation time")
+	var raw string
+	require.NoError(t, db.QueryRow(`SELECT CAST(created_at AS TEXT) FROM saved_buffs WHERE id = 42`).Scan(&raw))
+	assert.Equal(t, "2001-02-03 04:05:06", raw, "stored in the same format as the column default")
 	assert.Equal(t, "New", list[1].Name)
 }
 

@@ -456,8 +456,8 @@ func TestListSavedBuffs(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 6 {
-			t.Fatalf("expected %d columns, got %d", 6, len(columns))
+		if len(columns) != 7 {
+			t.Fatalf("expected %d columns, got %d", 7, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -482,6 +482,10 @@ func TestListSavedBuffs(t *testing.T) {
 
 		if columns[5] != "note" {
 			t.Fatalf("expected column %d to be %s, got %s", 5, "note", columns[5])
+		}
+
+		if columns[6] != "created_at" {
+			t.Fatalf("expected column %d to be %s, got %s", 6, "created_at", columns[6])
 		}
 	})
 }
@@ -629,6 +633,7 @@ var beforeTestingInsertSavedBuffWithID = func(context.Context, bob.Tx) ([]Insert
 		Charges     int64
 		Effects     string
 		Note        string
+		CreatedAt   string
 	}{{
 		ID:          random_int64(nil),
 		CharacterID: random_int64(nil),
@@ -637,6 +642,7 @@ var beforeTestingInsertSavedBuffWithID = func(context.Context, bob.Tx) ([]Insert
 		Charges:     random_int64(nil),
 		Effects:     random_string(nil),
 		Note:        random_string(nil),
+		CreatedAt:   random_string(nil),
 	}}, nil
 }
 
@@ -652,6 +658,7 @@ func TestInsertSavedBuffWithID(t *testing.T) {
 			Charges     int64
 			Effects     string
 			Note        string
+			CreatedAt   string
 		}{{
 			ID:          random_int64(nil),
 			CharacterID: random_int64(nil),
@@ -660,6 +667,7 @@ func TestInsertSavedBuffWithID(t *testing.T) {
 			Charges:     random_int64(nil),
 			Effects:     random_string(nil),
 			Note:        random_string(nil),
+			CreatedAt:   random_string(nil),
 		}})
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -682,6 +690,7 @@ func TestInsertSavedBuffWithID(t *testing.T) {
 			Charges     int64
 			Effects     string
 			Note        string
+			CreatedAt   string
 		}{{
 			ID:          random_int64(nil),
 			CharacterID: random_int64(nil),
@@ -690,6 +699,7 @@ func TestInsertSavedBuffWithID(t *testing.T) {
 			Charges:     random_int64(nil),
 			Effects:     random_string(nil),
 			Note:        random_string(nil),
+			CreatedAt:   random_string(nil),
 		}})
 
 		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {

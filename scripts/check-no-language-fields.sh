@@ -7,7 +7,7 @@ set -euo pipefail
 # snake_case suffix _fr/_en, or camelCase/PascalCase suffix Fr/FR/En/EN glued to a lowercase letter.
 pattern='(_(fr|en)|[a-z](FR|Fr|EN|En))\b'
 
-# Not scanned: docs (ADRs narrate the old names), the tracker, and the applied migrations that
+# Not scanned: this script and its test (they spell the patterns), docs (ADRs narrate the old names), the tracker, and the applied migrations that
 # created and dropped the per-language columns (an applied migration never changes) with the
 # tests that replay them.
 excludes=(
@@ -15,7 +15,7 @@ excludes=(
     ':!api/internal/storage/sqlite/migrations/027*' ':!api/internal/storage/sqlite/migrations/029*'
     ':!api/internal/storage/sqlite/migrations/030*' ':!api/internal/storage/sqlite/migrations/031*'
     ':!api/internal/storage/sqlite/migrate_030_test.go' ':!api/internal/storage/sqlite/migrate_031_test.go'
-    ':!scripts/test-check-no-language-fields.sh'
+    ':!scripts/check-no-language-fields.sh' ':!scripts/test-check-no-language-fields.sh'
 )
 
 if [ $# -ge 1 ]; then

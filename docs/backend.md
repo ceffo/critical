@@ -342,6 +342,7 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   catalogue knows only their spells) and checks health with the commit, `/` and a deep link returning
   `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. The CI `image` job builds
   the image with the fixture and runs it on every PR and on main; nothing is pushed.
+- **On fly.io**: configuration in `deploy/fly.*.toml`, operator commands in [deploy.md](deploy.md).
 - **Locally**: `docker compose up --build` builds the image with the real `.catalogue/` (fetch it with
   `just catalogue` first) and serves the app on http://localhost:8888, the database in the `critical-data`
   volume.

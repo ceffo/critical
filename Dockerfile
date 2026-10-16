@@ -10,7 +10,7 @@
 # (ADR 0024 step 7). Without the `catalogue` context the build stops at the stage below.
 
 # Overridden by `--build-context catalogue=<dir>`; reached only when that input is missing.
-FROM alpine:3.22 AS catalogue
+FROM alpine:3.24 AS catalogue
 RUN echo "error: no spell catalogue given. Pass --build-context catalogue=<dir holding catalogue.json>" \
          "(api/testdata for the fixture, .catalogue for the real one)." >&2 && exit 1
 
@@ -34,7 +34,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
       -ldflags "-s -w -X github.com/ceffo/critical/api/internal/cmd/api.commit=${COMMIT}" \
       -o /out/critical-srv ./cmd/api
 
-FROM alpine:3.22
+FROM alpine:3.24
 RUN addgroup -S critical && adduser -S -G critical -H -h /app critical \
     && mkdir -p /data && chown critical:critical /data
 WORKDIR /app

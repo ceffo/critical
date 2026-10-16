@@ -180,9 +180,9 @@ describe("formatValue (the value at the caster level)", () => {
     expect(formatValue(fr, { amount: 2, upper: 5, unit: "foot" })).toBe(
       "0,6-1,5 m",
     );
-    expect(
-      quantityText(fr, qty(1, "foot", { per_level: true, step: 1 })),
-    ).toBe("30 cm/niveau");
+    expect(quantityText(fr, qty(1, "foot", { per_level: true, step: 1 }))).toBe(
+      "30 cm/niveau",
+    );
     expect(
       quantityText(fr, {
         terms: [{ count: 1, unit: "foot", per_level: true, step: 1 }],

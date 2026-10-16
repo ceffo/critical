@@ -157,7 +157,8 @@ describe.skipIf(!present)("French metric lengths vs the French books", () => {
           });
           if (ok) reproduced++;
           else
-            differ[key] = `${english} -> ${got.map((g) => shown(fr, g).join(" ")).join(", ")}`;
+            differ[key] =
+              `${english} -> ${got.map((g) => shown(fr, g).join(" ")).join(", ")}`;
         }
       }
     }

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"testing"
 
@@ -191,4 +192,23 @@ func TestRouted_NilTransactionMeansThePool(t *testing.T) {
 	assert.Equal(t, []string{"pool exec", "pool prepare", "pool query", "pool queryrow"}, ran)
 	_, ok := txFrom(WithTx(context.Background(), (*sql.Tx)(nil)))
 	assert.False(t, ok)
+}
+
+// noConnector is a driver.Connector that never connects: sql.OpenDB over it builds a pool without
+// touching a database, and nothing in the test asks it for a connection.
+type noConnector struct{}
+
+func (noConnector) Connect(context.Context) (driver.Conn, error) {
+	return nil, errors.New("no database in tests")
+}
+
+func (noConnector) Driver() driver.Driver { return nil }
+
+// Every waiting writer holds a connection: the pool is capped so a burst of writes cannot use up
+// the cluster's connections.
+func TestNewDB_CapsThePool(t *testing.T) {
+	pool := sql.OpenDB(noConnector{})
+	t.Cleanup(func() { _ = pool.Close() })
+	newDB(pool)
+	assert.Equal(t, maxOpenConns, pool.Stats().MaxOpenConnections)
 }

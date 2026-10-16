@@ -140,6 +140,15 @@ flowchart TD
    4. What a database-backed test proved about a rule or a flow is kept, on mocks; an assertion
       that only made sense against SQL moves to the matching adapter's mock test or is dropped with
       the reason given in its change.
+   5. The storage package's seed and catalogue import tests (`storage/postgres` `TestSeed_*`,
+      `TestImportCatalogue_*`, `TestStateSpellRefs_*`, `TestRecordedCatalogue_*`) run on a
+      stateful fake of its `Querier` (`fakeStore`), not on a mockery mock. Those flows are rules
+      over many rows (a second seed is idempotent, the same catalogue version writes nothing, a new
+      one upserts and keeps what is referenced, a failure leaves no partial rows), which a test
+      proves by reading what is stored after one or two runs; a call-by-call mock would restate
+      the code. The fake holds only the tables those flows touch and refuses what
+      the baseline schema refuses there (a duplicate key, a row whose character does not exist,
+      an empty text body, the CHECKs of weapons and items); it runs no SQL.
 
    Check: CI provides no database service and `just validate` passes; no `_test.go` file imports a
    database driver or opens a DSN (review checklist).

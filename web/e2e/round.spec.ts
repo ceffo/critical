@@ -253,7 +253,10 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   await undoNextTurn(page, logEntryFrench(page, "Tour 0 → 1").first());
   await expect.poll(() => currentRound(page)).toBe(0);
   await voidFrench(page, text);
-  await expect(logEntryFrench(page, text)).toHaveAttribute("data-status", "voided");
+  await expect(logEntryFrench(page, text)).toHaveAttribute(
+    "data-status",
+    "voided",
+  );
   await expect.poll(() => currentRound(page)).toBe(1);
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),

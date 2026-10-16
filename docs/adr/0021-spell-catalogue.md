@@ -3,8 +3,9 @@
 **Status**: accepted, 2026-10-15 (critical-y9e0.1; the contract between the catalogue builder in the
 private `critical-rulebooks` repo and the API importer). Amended by [ADR 0023](0023-localized-text.md):
 no per-language column or field; the `name_fr` / `description_fr` wording below is superseded.
-Step 9 (the PHB rule tables in the artifact, format 3) is **proposed**, 2026-10-16 (critical-y9e0.9.1),
-awaiting the user; steps 1 to 8 stay accepted and unchanged by it until it is accepted.
+Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
+critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
+format 1).
 
 ## Context
 
@@ -71,7 +72,7 @@ is only ever appended to by play.
      has a delimiter row and a constant column count. The UI renders exactly this subset.
    - Adding or renaming a field is a new `format`, with an amendment of this ADR; importers refuse
      a format they do not know rather than guess.
-   - _Proposed by step 9: format 3 is format 1 plus the PHB rule tables; format 2 is never reused._
+   - _Amended by step 9: format 3 is format 1 plus the PHB rule tables; format 2 is never reused._
 2. **Reference data and game state are separate.** The importer owns the catalogue tables and nothing
    else; play never writes to them. Game state refers to a spell by `id` only, and keeps working
    across catalogue versions as long as step 5 holds.
@@ -119,7 +120,7 @@ is only ever appended to by play.
    1. No catalogue file at `CRITICAL_CATALOGUE`: refuse to start, naming the path and `just catalogue`.
    2. Parse and validate against the format-1 rules above (unknown `format`, schema violation,
       duplicate `id`): refuse to start, listing the first offences.
-      _Proposed by step 9: against the rules of the artifact's format (1 or 3), including step 9.3's
+      _Amended by step 9: against the rules of the artifact's format (1 or 3), including step 9.3's
       table rules for format 3._
    3. If `version` equals the version recorded in the database, do nothing.
    4. Otherwise, in **one transaction**:
@@ -295,7 +296,7 @@ is only ever appended to by play.
          ft."), what is created unnamed ("Creates 1d4+1", "Creates a sphere"), "10 or 100 (TS)
          fire", and "5 x 20 x" (truncated in the book text: fixed in the rulebooks repo).
 
-9. **The PHB rule tables are reference data, carried by the artifact from format 3** (_proposed,
+9. **The PHB rule tables are reference data, carried by the artifact from format 3** (_accepted,
    2026-10-16_). User, 2026-10-15, on moving the other `seeds/` tables: _"ADR 0021 covers all
    reference data; the epic migrates spells only."_ Of the families still in `seeds/`, only the rule
    tables (`seeds/rule_tables.json`) are reference data as this ADR defines it, read-only at runtime
@@ -404,7 +405,7 @@ is only ever appended to by play.
   tables; anything richer is a new `format`.
 - Other reference tables (weapons, items, rule tables, crit table, skills) keep loading from
   `seeds/` until they move to the catalogue in a later format or artifact; this ADR covers spells.
-  _Proposed by step 9: the rule tables move in format 3; the crit table, items, weapons and skills are
+  _Amended by step 9: the rule tables move in format 3; the crit table, items, weapons and skills are
   not reference data (step 9's classification) and stay in `seeds/` for now._
 - Only English and French exist. A third language is a new `format`.
 - Corrections to book text are a new artifact version; nothing in the app edits catalogue rows.

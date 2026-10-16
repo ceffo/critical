@@ -46,7 +46,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    levels from `L - 2`, kept inside 1 to 20, each with its threshold and a status (`past`,
    `current`, `next`, `ahead`).
    Tests: `TestComputeProgress_FromTable25`, `TestBardXPThreshold` (ruletablesadpt, against the
-   PHB page), `TestParse_RejectsBrokenTables` (ruletablesadpt).
+   PHB page), `TestParse_Step9_3_RejectsBrokenTables` (ruletablesadpt).
 4. **The ledger is on the action stack.** Adding, editing (base, bonus, reason, session) and
    deleting an entry each write the `xp_entries` table and record one action-log entry in the same
    transaction ([ADR 0018](0018-transactions-and-undo.md) steps 1 and 7): `xp_add`, `xp_edit`,

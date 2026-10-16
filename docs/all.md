@@ -14,8 +14,8 @@ critical/
   web/              ← React frontend (presentation only)
   seeds/            ← JSON seed data (spell_effects.json, spellbook.json, character.json, crit_table.json, weapons.json, skills.json); spells come from the catalogue artifact (ADR 0021, `just catalogue`)
   docs/             ← Agent context files (this folder)
+  Dockerfile        ← production image: the API serving the web app (docs/backend.md, "Production image")
   docker-compose.yml
-  nginx.conf
 ```
 
 ## Core Architectural Rule

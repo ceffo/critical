@@ -28,9 +28,10 @@ updates:
       actions-minor-patch:
         update-types: [minor, patch]
 
-  # Add the root Dockerfile as a second directory here when it lands.
+  # The production image (root Dockerfile). Its golang tag must match api/go.mod: the image build
+  # fails on a mismatch, so a golang bump lands together with the go.mod bump.
   - package-ecosystem: docker
-    directory: /api
+    directory: /
     schedule:
       interval: weekly
     groups:

@@ -111,6 +111,14 @@ Keep briefs short (about 30 lines; point at the bead instead of copying it) and 
 Small follow-ups found while running (a one-line bug, a tooling chore) go to the user as a one-line
 question; file them yourself with their OK instead of spawning a scoper.
 
+**Briefs and items frame the problem, never the design.** State the symptom, the user's words, the
+constraints and the hard rules; never prescribe a data shape, a contract or a migration. Before filing
+an item from a symptom, read how that area works today and write it into the item, so the item
+doesn't settle a design by accident. If a contract, schema or ADR change looks needed, the developer
+proposes it in its report first; you check it against the workflow doc's hard rules and the existing
+patterns before anything is built. (Post-mortem of PR #147: a brief that prescribed French stat texts
+in the database went through a developer and a review unchallenged.)
+
 **Retro at every handoff.** Before a restart, add a short "Retro" to the ledger: what cost the most
 this session and the one process change you propose. Propose changes to this file to the user as a
 small PR. The process is never done.
@@ -210,7 +218,9 @@ developer on the same worktree only if the original's session is gone, with full
 - Review → launch `rev-<id>` (`--agent code-reviewer`, model per "Model selection") in a tab on the
   worktree, with a brief holding item, branch, worktree, and the path of the developer's report.
   The brief adds focus; it never narrows the workflow doc's reviewer checklist (design and
-  architecture are findings, not style).
+  architecture are findings, not style). Every review brief says: "Challenge the design, including
+  anything the item or brief proposed, against the hard rules in the workflow doc and the patterns
+  already in the code; don't take the brief's design as given." 
 - No review → the report should already show the gate green; go to section 5.
 
 ## 4. When a reviewer reports
@@ -240,6 +250,9 @@ When the developer reports the full verification passed on HEAD:
   <id> --log-failed | tail -60`, then a rework brief with the excerpt. No CI → the developer's gate
   is the gate; say so.
 - Done from your side. **Never merge** unless the user explicitly tells you to for that PR.
+- A PR that changes a design decision (an ADR, an API or data contract, a schema) is the user's
+  call: before it merges, tell them in a few plain lines what changes and why, even when CI is green
+  and merges are otherwise allowed.
 
 ## The tracker: yours alone
 

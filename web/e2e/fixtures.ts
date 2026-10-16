@@ -247,6 +247,8 @@ export { expect };
 export interface ExtraSpell {
   id: string;
   name: string;
+  /** The French name, when the spell has one. */
+  nameFr?: string;
   class: "Wizard" | "Priest";
   level: number;
   school: string;
@@ -259,19 +261,11 @@ export interface ExtraSpell {
   saving_throw?: string;
 }
 
-const STAT_FIELDS = [
-  "casting_time",
-  "range",
-  "duration",
-  "area_of_effect",
-  "components",
-  "saving_throw",
-] as const;
-
-/** A catalogue spell (ADR 0021 format 2: stats in English only) with invented text, for `extraSpells`. */
+/** A catalogue spell (ADR 0021 format) with invented text, for `extraSpells`. */
 export function catalogueSpell(s: ExtraSpell) {
-  const { id, name, sphere, ...rest } = s;
-  const plain = {
+  const { id, name, nameFr, sphere, ...rest } = s;
+  return {
+    id,
     casting_time: "1",
     range: "10 yds.",
     duration: "1 rd.",
@@ -279,18 +273,8 @@ export function catalogueSpell(s: ExtraSpell) {
     components: "V, S",
     saving_throw: "None",
     ...rest,
-  };
-  const stats = Object.fromEntries(
-    STAT_FIELDS.map((k) => [k, { en: plain[k] }]),
-  );
-  return {
-    id,
-    class: plain.class,
-    level: plain.level,
-    school: plain.school,
-    ...stats,
     ...(sphere ? { sphere } : {}),
-    name: { en: name },
+    name: nameFr ? { en: name, fr: nameFr } : { en: name },
     description: { en: `${name} fixture text.` },
     source: "WEB",
   };

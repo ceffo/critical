@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { useSpellNamesStore } from "@/stores/spellNames";
-import type { StatField } from "@/lib/spellValues";
 import type { Spell, SpellNames } from "@/types/spells";
 
 /**
@@ -61,30 +60,12 @@ export function spellTexts(
   };
 }
 
-/**
- * A stat's catalogue text in `lang`: the French text in French when the catalogue has one, else
- * null, and the caller shows the English text (ADR 0021, per field).
- */
-export function frenchStat(
-  lang: string,
-  spell: Pick<Spell, `${StatField}_fr`>,
-  field: StatField,
-): string | null {
-  return (isFrench(lang) && spell[`${field}_fr`]) || null;
-}
-
-/**
- * The spell's name in the language the UI is not in, when it has one and it differs: English in
- * the French UI, the French name in the English UI. Shown in grey after the name
- * ("Mains brûlantes · Burning Hands").
- */
-export function otherSpellName(
+/** The spell's name in the UI language only: French when the UI is French and the catalogue has it, else English. */
+export function spellName(
   lang: string,
   spell: Pick<Spell, "name" | "name_fr">,
-): string | null {
-  const shown = spellTexts(lang, { ...spell, description: "" }).name;
-  const other = isFrench(lang) ? spell.name : spell.name_fr;
-  return other && other !== shown ? other : null;
+): string {
+  return (isFrench(lang) && spell.name_fr) || spell.name;
 }
 
 /**

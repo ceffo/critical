@@ -12,9 +12,10 @@ import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { useDiceStore } from "@/stores/dice";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
-import { otherSpellName, spellTexts } from "@/i18n/spellName";
+import { spellName, spellTexts } from "@/i18n/spellName";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
 import { statDice, statValue, type StatKey } from "@/lib/spellValues";
+import { statLocale, statText, type StatField } from "@/lib/statText";
 import { damageFormula, damageText } from "@/lib/spellDice";
 import { damageRows, exposureRows } from "@/lib/spellMode";
 import { exposureDamageText } from "@/lib/spellDice";
@@ -23,8 +24,6 @@ import {
   sphereLabel,
   schoolLabel,
   spheresLabel,
-  componentsText,
-  statCell,
 } from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
@@ -37,33 +36,34 @@ const CLASSES: { value: SpellClass; key: string }[] = [
 const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const STATS: StatKey[] = ["range", "duration", "area", "castingTime", "save"];
 
+/** The catalogue field of a stat of the detail grid. */
+const FIELD: Record<StatKey, StatField> = {
+  range: "range",
+  duration: "duration",
+  area: "area_of_effect",
+  castingTime: "casting_time",
+  save: "saving_throw",
+};
+
+/** "1 rd" and "1 rd." say the same: the raw text is not repeated after its value. */
+function same(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9½/-]/g, "");
+  return norm(a) === norm(b);
+}
+
 /** Load the next page when the list is this close (px) to its bottom. */
 const LOAD_MORE_MARGIN = 400;
 
-/** "Mains brûlantes" + grey "· Burning Hands" (the other language), when it exists. */
-function SpellNames({
-  spell,
-  className,
-}: {
-  spell: Spell;
-  className?: string;
-}) {
+/** The spell's name in the UI language; it wraps onto more lines, never cut. */
+function SpellName({ spell, className }: { spell: Spell; className?: string }) {
   const { i18n } = useTranslation();
-  const other = otherSpellName(i18n.language, spell);
   return (
-    <span className={cn("min-w-0 truncate", className)}>
-      <span data-testid="spell-name">
-        {spellTexts(i18n.language, spell).name}
-      </span>
-      {other && (
-        <span
-          className="text-muted-foreground font-normal"
-          data-testid="spell-other-name"
-        >
-          {" · "}
-          {other}
-        </span>
-      )}
+    <span
+      lang={i18n.language}
+      className={cn("min-w-0 break-words hyphens-auto", className)}
+      data-testid="spell-name"
+    >
+      {spellName(i18n.language, spell)}
     </span>
   );
 }
@@ -74,7 +74,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
   const toComposer = useDiceStore((s) => s.setFormula);
   const roll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
-  const unit = (w: string) => t(`lookup.units.${w}`, { defaultValue: w });
+  const loc = statLocale(t, i18n.language);
   const value = (key: StatKey): string | null =>
     key === "save"
       ? spell.stats.save.kinds.length
@@ -82,13 +82,13 @@ function SpellDetail({ spell }: { spell: Spell }) {
             .map((k) => t(`lookup.saveKinds.${k}`))
             .join(" / ")
         : null
-      : statValue(spell, key, unit);
+      : statValue(spell, key, loc);
   const meta = [
     classLabel(t, spell.class),
     t("lookup.levelLabel", { level: spell.level }),
     schoolLabel(t, spell.school),
     spheresLabel(t, spell.sphere),
-    componentsText(i18n.language, spell),
+    statText(loc, spell, "components").text,
   ].filter(Boolean);
   // The dice row: the damage a cast rolls (one instance to the composer), one row per cast-time
   // mode with damage for a spell with modes, then the stats with dice.
@@ -108,7 +108,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
         text: exposureDamageText(t, d.damage),
         formula: damageFormula(d.damage),
       })),
-      ...statDice(spell, unit).map((d) => ({
+      ...statDice(spell, loc).map((d) => ({
         key: d.key,
         label: t(`lookup.${d.key}`),
         text: d.formula,
@@ -120,7 +120,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h3 className="text-title">
-          <SpellNames spell={spell} className="whitespace-normal" />
+          <SpellName spell={spell} />
         </h3>
         <p
           className="text-label text-muted-foreground"
@@ -131,13 +131,8 @@ function SpellDetail({ spell }: { spell: Spell }) {
       </div>
       <dl className="flex flex-col text-body">
         {STATS.map((key) => {
-          const { value: v, text: raw } = statCell(
-            t,
-            i18n.language,
-            spell,
-            key,
-            value(key),
-          );
+          const v = value(key);
+          const raw = statText(loc, spell, FIELD[key]).text;
           return (
             <div
               key={key}
@@ -151,7 +146,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
                     <span className="font-medium" data-testid="stat-value">
                       {v}
                     </span>
-                    {raw && (
+                    {raw && !same(v, raw) && (
                       <span
                         className="text-label text-muted-foreground"
                         data-testid="stat-raw"
@@ -467,7 +462,7 @@ export function LookupPanel() {
                 data-class={s.class}
                 data-level={s.level}
                 className={cn(
-                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900/50",
+                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900/50",
                   s.id === selectedId &&
                     "bg-amb-900 ring-1 ring-amb-700 ring-inset hover:bg-amb-900",
                 )}
@@ -476,16 +471,14 @@ export function LookupPanel() {
                 <span className="text-label text-magic tabular-nums">
                   {s.level}
                 </span>
-                <SpellNames spell={s} />
-                {query.cls === "all" ? (
+                <SpellName spell={s} />
+                {query.cls === "all" && (
                   <span
-                    className="text-label text-muted-foreground"
+                    className="col-start-2 text-label text-muted-foreground"
                     data-testid="spell-class"
                   >
                     {classLabel(t, s.class)}
                   </span>
-                ) : (
-                  <span />
                 )}
               </div>
             ))

@@ -808,12 +808,6 @@ func (f *Factory) fromExistingSpell(ctx context.Context, m *models.Spell) *Spell
 	o.NameFR = func() null.Val[string] { return m.NameFR }
 	o.DescriptionFR = func() null.Val[string] { return m.DescriptionFR }
 	o.Source = func() null.Val[string] { return m.Source }
-	o.CastingTimeFR = func() null.Val[string] { return m.CastingTimeFR }
-	o.RangeFR = func() null.Val[string] { return m.RangeFR }
-	o.DurationFR = func() null.Val[string] { return m.DurationFR }
-	o.AreaOfEffectFR = func() null.Val[string] { return m.AreaOfEffectFR }
-	o.ComponentsFR = func() null.Val[string] { return m.ComponentsFR }
-	o.SavingThrowFR = func() null.Val[string] { return m.SavingThrowFR }
 
 	return o
 }

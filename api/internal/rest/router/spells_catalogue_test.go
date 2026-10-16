@@ -36,10 +36,9 @@ func spellsJSON(t *testing.T, srv *httptest.Server, query string) map[string]map
 	return out
 }
 
-// The spell payloads carry the catalogue's French name, description and stat
-// texts when it has them (Magic Missile in the fixture, which has French text
-// for four of its six stats), and omit each one it lacks (all of them for
-// Armor), so the client falls back to the English field.
+// The spell payloads carry the catalogue's French name and description when
+// it has them (Magic Missile in the fixture), and omit both when it has none
+// (Armor), so the client falls back to the English name and description.
 func TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback(t *testing.T) {
 	ctx := context.Background()
 	bs, err := composition.New(ctx, composition.Config{
@@ -59,13 +58,6 @@ func TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback(t *testing.T) {
 	assert.Contains(t, mm["description"], "Fixture text for Magic Missile")
 	assert.Contains(t, mm["description_fr"], "Texte de test pour Projectile magique")
 	assert.Equal(t, "PHB", mm["source"])
-	assert.Equal(t, "60 yds. + 10 yds./level", mm["range"])
-	assert.Equal(t, "60 mètres + 10 mètres par niveau", mm["range_fr"])
-	assert.Equal(t, "Instantanée", mm["duration_fr"])
-	assert.Equal(t, "1 à 5 cibles", mm["area_of_effect_fr"])
-	assert.Equal(t, "Aucun", mm["saving_throw_fr"])
-	assert.NotContains(t, mm, "casting_time_fr", "no French casting time: absent, per field")
-	assert.NotContains(t, mm, "components_fr")
 
 	armor := spellsJSON(t, srv, "q=Armor")["armor"]
 	require.NotNil(t, armor)
@@ -73,7 +65,4 @@ func TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback(t *testing.T) {
 	assert.NotEmpty(t, armor["description"])
 	assert.NotContains(t, armor, "name_fr", "no French name: absent, the client shows the English one")
 	assert.NotContains(t, armor, "description_fr")
-	for _, k := range []string{"casting_time_fr", "range_fr", "duration_fr", "area_of_effect_fr", "components_fr", "saving_throw_fr"} {
-		assert.NotContains(t, armor, k)
-	}
 }

@@ -157,9 +157,9 @@ func backfillKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) error
 	return nil
 }
 
-// upsertSpells is step 5.4.2 (with the typed stats of 5.6, from the English
-// stat texts): insert a new key, overwrite every catalogue field of an
-// existing one. An absent French text is stored as NULL.
+// upsertSpells is step 5.4.2 (with the typed stats of 5.6): insert a new key,
+// overwrite every catalogue field of an existing one. An absent French text
+// is stored as NULL.
 func upsertSpells(ctx context.Context, q Querier, cat catalogue.Catalogue) error {
 	for _, s := range cat.Spells {
 		stats, err := spellStatsJSON(s.CastingTime, s.Range, s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow)
@@ -169,24 +169,18 @@ func upsertSpells(ctx context.Context, q Querier, cat catalogue.Catalogue) error
 		if _, err := q.ExecContext(ctx, `
 			INSERT INTO spells (
 				key, name, name_fr, class, level, school, sphere, casting_time, range, duration,
-				area_of_effect, components, saving_throw, casting_time_fr, range_fr, duration_fr,
-				area_of_effect_fr, components_fr, saving_throw_fr, description, description_fr, source, stats
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				area_of_effect, components, saving_throw, description, description_fr, source, stats
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (key) DO UPDATE SET
 				name = excluded.name, name_fr = excluded.name_fr, class = excluded.class, level = excluded.level,
 				school = excluded.school, sphere = excluded.sphere, casting_time = excluded.casting_time,
 				range = excluded.range, duration = excluded.duration, area_of_effect = excluded.area_of_effect,
 				components = excluded.components, saving_throw = excluded.saving_throw,
-				casting_time_fr = excluded.casting_time_fr, range_fr = excluded.range_fr,
-				duration_fr = excluded.duration_fr, area_of_effect_fr = excluded.area_of_effect_fr,
-				components_fr = excluded.components_fr, saving_throw_fr = excluded.saving_throw_fr,
 				description = excluded.description, description_fr = excluded.description_fr,
 				source = excluded.source, stats = excluded.stats`,
 			s.ID, s.Name, nullable(s.NameFR), s.Class, s.Level, s.School, nullable(s.Sphere), s.CastingTime, s.Range,
-			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow,
-			nullable(s.StatsFR.CastingTime), nullable(s.StatsFR.Range), nullable(s.StatsFR.Duration),
-			nullable(s.StatsFR.AreaOfEffect), nullable(s.StatsFR.Components), nullable(s.StatsFR.SavingThrow),
-			s.Description, nullable(s.DescriptionFR), s.Source, stats,
+			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow, s.Description, nullable(s.DescriptionFR),
+			s.Source, stats,
 		); err != nil {
 			return fmt.Errorf("upsert spell %q: %w", s.ID, err)
 		}

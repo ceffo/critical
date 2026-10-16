@@ -148,6 +148,10 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
 - **No special case per spell, item or buff.** Model the mechanic generically and drive it from the
   data (`seeds/spell_effects.json`, item behaviour): no `if id == "<some_spell>"` branches and no
   per-entity constants in services. If a mechanic is missing, add it as a general effect kind.
+- **No per-language columns or fields.** A text in a human language is a key into the generic
+  `localized_texts` table (one row per language); never a `name_fr`-style column, DTO field, TS property
+  or catalogue key. The API serves a language map. [ADR 0023](adr/0023-localized-text.md); the check
+  recipe is to come (a critical item filed alongside), and runs in `just validate`.
 - **No presentation text from the backend.** The API returns structured data; wording, formatting and
   formulas for display are built in the frontend (i18n). No `fmt.Sprintf`/`Fprintf` to compose
   user-facing text in Go (error messages excepted). Enforced by golangci `forbidigo` on
@@ -184,8 +188,8 @@ Reviewer checklist, in priority order:
    report; rules, edge cases and API-only checks are in Go/unit tests, not e2e (suite < 5 min on CI).
 9. **Hard rules for implementers** above, incl. no tracker ids in code, no per-entity special
    cases, and no presentation text in the backend: the API carries structured data only; display
-   text is never built, stored or served by the backend (stored book text in a language is still
-   presentation text). Challenge the item's or brief's own design against these rules. Each violation is at least medium; design is not style.
+   text is never built by the backend, and a text in a human language is never a per-language column
+   or field (one `localized_texts` row per language, [ADR 0023](adr/0023-localized-text.md)). Challenge the item's or brief's own design against these rules. Each violation is at least medium; design is not style.
 
 Severity examples: critical = wrong game math in a main flow, ledger/state corruption, broken
 migration on existing data; high = game logic in the frontend; medium = architecture-layer

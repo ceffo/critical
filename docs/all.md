@@ -70,7 +70,7 @@ dashboard v3 redesign `critical-kiv`; items labelled `mvp-saturday` are the must
    kind: an amend only sets the entry's note, and only the newest non-voided entry can be voided
    (popped, restoring what it changed); both are audited corrections
 7. Weapons and items in DB tables seeded from JSON; charged items and consumables
-8. i18n: en/fr string keys for the UI and spell names (spell descriptions stay English)
+8. i18n: en/fr string keys for the UI; spell and item texts are localized-text rows served as language maps (ADR 0023)
 9. A round-centric dashboard; Playwright e2e harness behind `just e2e`
 10. Dashboard v3 (ADR 0009): responsive desktop layout from 1280 to 2560 CSS px (rail, workspaces,
     Fil and Moi columns), Nocturne themes with six ambiances, light / dark / system, and the per-device

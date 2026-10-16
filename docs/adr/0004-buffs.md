@@ -142,7 +142,7 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     sent by the client is ignored). A renewal (step 6) takes the new buff's. Editing, absorbing, Next
     Round and passing time keep it; voiding restores it with the list. It has no rules meaning: the
     client names the buff from the catalogue in the player's language (the French name in the
-    French UI), and shows the stored `Name` when there is no id or the catalogue does not know it.
+    French UI; text in a language is a localized-text row, [ADR 0023](0023-localized-text.md)), and shows the stored `Name` when there is no id or the catalogue does not know it.
     The buff entries of the log carry it too: `spellId` next to `buff` (activate never has one,
     edit, absorb, dismiss), and `expiredSpellIds` parallel to `expired` (Next Round, passing time;
     `""` for a buff not from a spell, omitted when no expired buff has one). An entry recorded

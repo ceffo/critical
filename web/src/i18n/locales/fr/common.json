@@ -806,6 +806,8 @@
     "toDice": "Aux dés",
     "rollDice": "Lancer",
     "noDice": "Aucun dé à lancer",
+    "addEffect": "Ajouter comme effet",
+    "addEffectLabel": "Ajouter {{name}} comme effet au niveau {{level}}",
     "exposure": "Exposition",
     "exposureMode": "Exposition ({{mode}})"
   },
@@ -854,6 +856,7 @@
       "castHeading": "{{name}} (niveau {{level}}), lancé au niveau {{casterLevel}}",
       "mode": "Option : {{mode}}",
       "receivedHeading": "{{name}} lancé sur vous, niveau du lanceur {{casterLevel}}",
+      "effectHeading": "{{name}} ajouté comme effet, niveau {{casterLevel}}",
       "attackNeeds": "Il faut {{needed}} ou plus contre CA {{ac}} (TAC0 {{thac0}}), pas de critique.",
       "itemSpent": "Dépensé : {{name}} ({{left}} restant(s))",
       "extraSlots": "Emplacements supplémentaires : {{slots}}",
@@ -1074,6 +1077,7 @@
     "cast": {
       "cast": "Lancé : {{spell}}",
       "received": "{{spell}} lancé sur moi (niveau du lanceur {{level}})",
+      "effect": "{{spell}} ajouté comme effet (niveau {{level}})",
       "damage": "{{total}} dégâts ({{type}})",
       "strGain": "FOR +{{gain}}",
       "extraSlots": "emplacements supplémentaires {{slots}}",
@@ -1403,6 +1407,7 @@
     "no_initiative": "Il n'y a pas d'initiative à relancer : lancez d'abord un combat.",
     "initiative_not_on_top": "L'initiative n'est plus la dernière action : annulez ce qui a suivi, ou relancez au prochain tour.",
     "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord.",
-    "no_exposure": "Ce sort n'inflige aucun dégât d'exposition."
+    "no_exposure": "Ce sort n'inflige aucun dégât d'exposition.",
+    "spell_not_an_effect": "Ce sort n'ajoute aucun effet à suivre."
   }
 }

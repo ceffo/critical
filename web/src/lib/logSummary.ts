@@ -12,7 +12,7 @@ import type { SpellExposure } from "@/types/spells";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
-  action: "cast" | "received";
+  action: "cast" | "received" | "effect";
   spellId: string;
   spell: string;
   casterLevel: number;
@@ -134,10 +134,7 @@ function castText(
   spellName: SpellNamer,
 ): string {
   const spell = spellName(p.spellId, p.spell);
-  const head =
-    p.action === "received"
-      ? t("log.cast.received", { spell, level: p.casterLevel })
-      : t("log.cast.cast", { spell });
+  const head = t(`log.cast.${p.action}`, { spell, level: p.casterLevel });
   const details: string[] = [];
   if (p.mode) details.push(modeName(t, p.spellId, p.mode));
   if (p.buff?.applied) {

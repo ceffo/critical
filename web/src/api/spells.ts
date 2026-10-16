@@ -48,6 +48,11 @@ export function receiveSpell(
   });
 }
 
+/** Add a spell that adds a buff as an effect on the Bard, at his level (no slot, no damage). */
+export function addSpellEffect(spellId: string): Promise<CastResult> {
+  return post<CastResult>("/api/spells/effect", { spellId });
+}
+
 /** Roll one round of exposure to a spell's area (logged; on the Bard, off his HP). */
 export function rollExposure(req: ExposureRequest): Promise<ExposureResult> {
   return post<ExposureResult>("/api/spells/exposure", req);

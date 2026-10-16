@@ -127,11 +127,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
   const heading =
     r.source === "received"
       ? t("result.cast.receivedHeading", { name, casterLevel: r.casterLevel })
-      : t("result.cast.castHeading", {
-          name,
-          level: r.level,
-          casterLevel: r.casterLevel,
-        });
+      : r.source === "effect"
+        ? t("result.cast.effectHeading", { name, casterLevel: r.casterLevel })
+        : t("result.cast.castHeading", {
+            name,
+            level: r.level,
+            casterLevel: r.casterLevel,
+          });
   const b = r.buff;
 
   return (

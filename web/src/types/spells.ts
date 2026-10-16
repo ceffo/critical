@@ -202,6 +202,8 @@ export interface Spell {
   modes?: SpellMode[];
   /** The exposure damage at caster_level; absent when the spell has none. */
   exposure?: SpellExposure;
+  /** POST /api/spells/effect takes the spell: it adds a buff (ADR 0004 step 19); absent: it adds none. */
+  effect?: boolean;
 }
 
 /** Mirrors spellprephdl.SpellbookEntryDTO. The cast fields come from the spell effects data. */
@@ -303,7 +305,7 @@ export type CastTextOnly =
 /** Mirrors casthdl CastResultDTO: what POST /api/spells/{slot}/cast and /api/spells/receive did. */
 export interface CastResult {
   entryId: number;
-  source: "cast" | "received";
+  source: "cast" | "received" | "effect";
   spellId: string;
   name: string;
   level: number;

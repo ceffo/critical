@@ -806,6 +806,8 @@
     "toDice": "To the dice",
     "rollDice": "Roll",
     "noDice": "No dice to roll",
+    "addEffect": "Add as effect",
+    "addEffectLabel": "Add {{name}} as an effect at level {{level}}",
     "exposure": "Exposure",
     "exposureMode": "Exposure ({{mode}})"
   },
@@ -854,6 +856,7 @@
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
       "mode": "Option: {{mode}}",
       "receivedHeading": "{{name}} cast on you, caster level {{casterLevel}}",
+      "effectHeading": "{{name}} added as an effect, level {{casterLevel}}",
       "attackNeeds": "Needs {{needed}} or more against AC {{ac}} (THAC0 {{thac0}}), no critical.",
       "itemSpent": "Spent: {{name}} ({{left}} left)",
       "extraSlots": "Extra slots: {{slots}}",
@@ -1074,6 +1077,7 @@
     "cast": {
       "cast": "Cast {{spell}}",
       "received": "{{spell}} cast on me (caster level {{level}})",
+      "effect": "{{spell}} added as an effect (level {{level}})",
       "damage": "{{total}} {{type}} damage",
       "strGain": "STR +{{gain}}",
       "extraSlots": "extra slots {{slots}}",
@@ -1403,6 +1407,7 @@
     "no_initiative": "There is no initiative to reroll: start a combat first.",
     "initiative_not_on_top": "The initiative is no longer the newest action: undo what came after it, or roll again at the next round.",
     "too_many_favourites": "Too many favourite rolls: remove one first.",
-    "no_exposure": "That spell deals no exposure damage."
+    "no_exposure": "That spell deals no exposure damage.",
+    "spell_not_an_effect": "That spell adds no effect to track."
   }
 }

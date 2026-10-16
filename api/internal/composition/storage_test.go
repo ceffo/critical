@@ -6,9 +6,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
 // errReached is what conn panics with: the statement reached the connection

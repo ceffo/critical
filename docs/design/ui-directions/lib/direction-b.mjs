@@ -1,8 +1,9 @@
 // Direction B, "Character left, history below": the round-3 combination of the user's picks,
-// reworked in round 4 with the user. The header is one band without separators: the brand, the
-// turn, initiative + Next turn, then the effects timeline beside them and the last result docked
-// at the right. Hit points live in the character column, between the abilities and HP change.
-// The settings cog is at the left of the dice footer.
+// reworked in round 4 with the user. Every zone is a card on the ground with one 12 px gutter
+// and no rule anywhere: the header card (brand, turn, initiative + Next turn, the effects
+// timeline beside them, the last result docked right), the character card (with hit points
+// between the abilities and HP change), the stage cards and the dice footer card (settings cog
+// at its left). The rail is bare icons on the ground between the character card and the stage.
 // Below the header the character is a column on the left screen edge, the activity rail right of
 // it, then the stage. In Act the stage is A3's two bands: "now" (the act panel and the result side by side) and
 // the journal as a full-width table, with a drag handle between them that resizes or collapses the
@@ -35,7 +36,7 @@ const header = () => `<header class="vitals">
 const character = () =>
   `<aside class="moi stack"><div><div class="title">${ui.esc(d.character.name)}</div><div class="muted">${d.character.klass} · Level ${d.character.level}</div></div>${ui.abilities()}${ui.hpBlock("headline")}<div><div class="label" style="margin-bottom:.375rem">HP change</div>${ui.hpChange()}</div>${ui.chargeCard()}<div><div class="label" style="margin-bottom:.375rem">Saving throws · click to roll</div>${ui.savesButtons()}</div></aside>`;
 
-const shell = (active, stage, cls = "", look = "") => `<div class="app ${look}">
+const shell = (active, stage, cls = "") => `<div class="app">
 ${header()}
 <div class="below">
   ${character()}
@@ -48,7 +49,7 @@ ${header()}
 const journalHead = () =>
   `<div class="hstack"><span class="title">Journal</span><span class="seg" style="height:1.5rem"><span class="on">All</span><span>Rolls</span></span><span class="muted">${d.journal.length} entries</span><span class="right btn xs">Undo</span><span class="btn xs ghost">Redo</span></div>`;
 
-const act = (tab, { collapsed = false, look = "" } = {}) =>
+const act = (tab, { collapsed = false } = {}) =>
   shell(
     "act",
     `<div class="now-band">
@@ -58,7 +59,6 @@ const act = (tab, { collapsed = false, look = "" } = {}) =>
 ${ui.splitHandle({ collapsed })}
 ${collapsed ? ui.journalBar() : `<section class="panel history stack" style="gap:.5rem">${journalHead()}<div class="scroll-y grow">${ui.journalTable()}</div></section>`}`,
     collapsed ? "collapsed" : "",
-    look,
   );
 
 const lookup = () =>
@@ -77,17 +77,16 @@ const xp = () =>
 
 export const pages = {
   "act-weapons": () => act("weapons"),
-  "act-weapons-cards": () => act("weapons", { look: "look-cards" }),
-  "act-weapons-flat": () => act("weapons", { look: "look-flat" }),
   "act-spells": () => act("spells"),
   "act-spells-collapsed": () => act("spells", { collapsed: true }),
   lookup,
   xp,
 };
 
-export const stylesheet = `/* Direction B: zones set apart by their surface, no rules between them. One header band (brand, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
-.app { height: 100vh; display: flex; flex-direction: column; }
-.vitals { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; align-items: stretch; background: var(--surface); }
+export const stylesheet = `/* Direction B: every zone a card on the ground, one gutter, no rules. One header card (brand, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
+.app { height: 100vh; display: flex; flex-direction: column; padding: .75rem; gap: .75rem; background: var(--ground); }
+.vitals, .moi, .dice-foot { background: var(--surface); border: 1px solid var(--border); border-radius: .625rem; }
+.vitals { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; align-items: stretch; }
 .vitals > div { padding: .5rem 1.25rem; min-width: 0; display: flex; align-items: center; gap: .75rem; }
 .vitals > div:first-child { padding-left: 1rem; }
 @media (max-width: 1500px) { .vitals > div { padding: .5rem .875rem; } .v-brand .wordmark { display: none; } }
@@ -106,15 +105,15 @@ export const stylesheet = `/* Direction B: zones set apart by their surface, no 
 .tcol.past { opacity: .4; }
 .tline { height: 2px; background: var(--neu-700); align-self: center; }
 .pill.fade { mask-image: linear-gradient(90deg, #000 70%, transparent); }
-.below { flex: 1; display: flex; min-height: 0; }
-.moi { width: 17.5rem; flex-shrink: 0; padding: .875rem 1rem; background: var(--surface); overflow-y: auto; }
-.rail { width: 4.25rem; flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; padding: .5rem 0; background: var(--surface); }
-.rail-item { display: flex; flex-direction: column; align-items: center; gap: .25rem; padding: .625rem 0; font-size: .6875rem; color: var(--ink-muted); border-left: 2px solid transparent; }
-.rail-item.on { color: var(--tint); border-left-color: var(--tint); background: var(--amb-900); }
+.below { flex: 1; display: flex; gap: .75rem; min-height: 0; }
+.moi { width: 17.5rem; flex-shrink: 0; padding: .875rem 1rem; overflow-y: auto; }
+.rail { width: 4.25rem; flex-shrink: 0; display: flex; flex-direction: column; align-items: stretch; }
+.rail-item { display: flex; flex-direction: column; align-items: center; gap: .25rem; margin: 0 .25rem; padding: .625rem 0; border-radius: .5rem; font-size: .6875rem; color: var(--ink-muted); }
+.rail-item.on { color: var(--tint); background: var(--amb-900); }
 .saves-btns { display: grid; gap: .25rem; }
 .save-btn { display: flex; align-items: center; gap: .5rem; height: 2rem; padding: 0 .625rem; border: 1px solid var(--border); border-radius: .375rem; }
-.stage { flex: 1; min-width: 0; min-height: 0; display: grid; gap: .75rem; padding: .75rem; }
-.dice-foot { background: var(--surface); padding: .5rem .75rem; }
+.stage { flex: 1; min-width: 0; min-height: 0; display: grid; gap: .75rem; }
+.dice-foot { padding: .5rem .75rem; }
 /* Act: a column; the "now" band takes its content's height up to 60 % of the stage, the journal at least 14rem and the rest. */
 .stage-act { display: flex; flex-direction: column; gap: 0; }
 .now-band { flex: 0 1 auto; max-height: 60%; display: grid; grid-template-columns: minmax(28rem, 1.35fr) minmax(24rem, 1fr); gap: .75rem; min-height: 0; }
@@ -164,19 +163,4 @@ export const stylesheet = `/* Direction B: zones set apart by their surface, no 
 .xp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 2rem; }
 .xp-grid > div { min-width: 0; }
 .list-row.fresh { background: color-mix(in oklab, var(--tint) 8%, transparent); }
-/* Round 4 looks, to pick from. Cards: every zone is a card on the ground with one gutter; the rail is bare icons. */
-.look-cards { padding: .75rem; gap: .75rem; background: var(--ground); }
-.look-cards .vitals, .look-cards .moi, .look-cards .dice-foot { border: 1px solid var(--border); border-radius: .625rem; }
-.look-cards .below { gap: .75rem; }
-.look-cards .rail { background: none; width: 4.25rem; padding: 0; }
-.look-cards .rail-item { border-left: 0; border-radius: .5rem; margin: 0 .25rem; }
-.look-cards .rail-item.on { background: var(--amb-900); }
-.look-cards .stage { padding: 0; }
-.look-cards .vitals > div:first-child { padding-left: 1rem; }
-/* Flat: zones and cards are tones only, no outline anywhere; the result card keeps a tint wash instead of its border. */
-.look-flat .panel { border-color: transparent; }
-.look-flat .result-panel { background: color-mix(in oklab, var(--tint) 7%, var(--surface)); }
-.look-flat .rail { background: var(--ground); }
-.look-flat .rail-item { border-left: 0; border-radius: .5rem; margin: 0 .25rem; }
-.look-flat .moi { border-radius: 0 .625rem .625rem 0; }
 `;

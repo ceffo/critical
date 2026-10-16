@@ -682,7 +682,34 @@
       "thick": "d'épaisseur",
       "deep": "de profondeur"
     },
+    "sites": {
+      "base": "à la base",
+      "end": "à l'extrémité"
+    },
+    "usually": {
+      "caster": "le lanceur"
+    },
+    "shapesPlural": {
+      "radius": "rayons",
+      "diameter": "diamètres",
+      "cone": "cônes",
+      "cube": "cubes",
+      "square": "carrés",
+      "sphere": "sphères",
+      "globe": "globes",
+      "cloud": "nuages",
+      "column": "colonnes",
+      "spray": "gerbes",
+      "hemisphere": "hémisphères",
+      "volume": "volumes",
+      "wall": "murs",
+      "circle": "cercles",
+      "path": "chemins",
+      "line": "lignes",
+      "line_of_sight": "lignes de vue"
+    },
     "shapes": {
+      "line_of_sight": "ligne de vue",
       "radius": "rayon",
       "diameter": "diamètre",
       "cone": "cône",
@@ -722,6 +749,16 @@
       "shaped": "{{shape}} de {{dims}}",
       "shapedFigure": "{{figure}} de {{dims}} de {{shape}}",
       "axis": "{{value}} {{axis}}",
+      "site": "{{value}} {{site}}",
+      "areaCount": "{{count}} {{value}}",
+      "areaSelf": "Le lanceur",
+      "plus": " + ",
+      "special": {
+        "plus": "{{value}} + spéciale",
+        "or": "{{value}} ou spéciale",
+        "note": "{{value}} (spéciale)"
+      },
+      "usually": "{{value}} (généralement {{who}})",
       "axisJoin": " et de ",
       "ofMembers": "{{targets}} de {{members}}",
       "within": "{{targets}} dans un rayon de {{value}}",

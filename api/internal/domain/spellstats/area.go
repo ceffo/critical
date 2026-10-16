@@ -16,13 +16,17 @@ const (
 	// "10-ft. cube or one item"): Alternatives holds each, every one an area
 	// or targets reading the text covers whole.
 	AreaAlternatives = "alternatives"
+	// AreaTogether is a sum of readings ("One 40-ft. cube + one 10-ft.
+	// cube/level", "Caster + 1 creature/level"): Parts holds each, every one a
+	// whole reading.
+	AreaTogether = "together"
 )
 
 // AreaOfEffect is "20-ft. radius", "10 x 60 ft.", "1 creature/level", "40-ft.
 // cube, 1 creature/level", "Creature touched".
 type AreaOfEffect struct {
 	Raw  string `json:"raw"`
-	Kind string `json:"kind"` // area | targets | self | touch | alternatives | special
+	Kind string `json:"kind"` // area | targets | self | touch | alternatives | together | special
 	// Shape is radius, cube, square, cone, sphere, ... ("" when only extents).
 	Shape string `json:"shape,omitempty"`
 	// Figure is the solid or figure a radius or diameter measures
@@ -31,6 +35,9 @@ type AreaOfEffect struct {
 	Figure string `json:"figure,omitempty"`
 	// Dims are the extents: one for a radius/cube, several for "10 x 60 ft.".
 	Dims []Quantity `json:"dims,omitempty"`
+	// Count is the number of such areas when it is more than one ("Two 10-ft.
+	// cubes/level": Count 2, one 10-ft./level cube); 0 for one.
+	Count int `json:"count,omitempty"`
 	// Targets is the creature/object count; Noun is what is counted.
 	Targets *Quantity `json:"targets,omitempty"`
 	Noun    string    `json:"noun,omitempty"`
@@ -53,6 +60,15 @@ type AreaOfEffect struct {
 	// Alternatives are the readings of an alternatives kind, in the text's
 	// order; each keeps its own part of the text as Raw.
 	Alternatives []AreaOfEffect `json:"alternatives,omitempty"`
+	// Parts are the readings of a together kind, in the text's order.
+	Parts []AreaOfEffect `json:"parts,omitempty"`
+	// Special says the book adds that the area is special: "plus" ("5 ft.
+	// radius + special"), "or" ("15 sq. ft./level or special") or "note" ("5-ft.
+	// radius (special)"). The typed form is the rest of the text.
+	Special string `json:"special,omitempty"`
+	// Usually is who the text says it usually is ("One individual (usually
+	// caster)": caster).
+	Usually string `json:"usually,omitempty"`
 }
 
 // AreaValue is an AreaOfEffect computed for a caster level.
@@ -65,7 +81,7 @@ var (
 	areaSplit = regexp.MustCompile(`(?i),\s*| in (?:an? )?| within | around |\s+or\s+| with `)
 	dimTok    = regexp.MustCompile(`(?i)(\d+d\d+|\d[\d,]*)(?:\s*(?:-|to)\s*(\d+))?(?:\s*-?\s*((?:sq\.?|cu\.?|cubic|square)\s*)?(ft|feet|foot|yds?|yards?|mi|miles?|in)\b\.?)?`)
 	levelXRe  = regexp.MustCompile(`(?i)(?:\(|caster'?s )level\s*x\s*(\d+)\)?[\s-]*(sq\.?|cu\.?)?\s*(ft|yds?)?`)
-	shapeRe   = regexp.MustCompile(`(?i)(?:\b(radius|diameter|cone|cube|square|sphere|globe|cloud|column|spray|hemisphere|volume|wall|circle|path|line)\b|(\bsq\b))`)
+	shapeRe   = regexp.MustCompile(`(?i)(?:\b(radius|diameter|cone|cube|square|sphere|globe|cloud|column|spray|hemisphere|volume|wall|circle|path|line of sight|line)\b|(\bsq\b))`)
 	targetRe  = regexp.MustCompile(`(?i)^(?:up to\s+|one\s+|two\s+)?(\d+(?:d\d+)?)(?:\s*(?:-|to)\s*(\d+)|(\+))?\s+(.*?)\s*$`)
 	// orMoreRe is "1 or more", "two or more": an open-ended count, read as
 	// "1+" so that areaSplit does not take the "or" for a choice.
@@ -98,6 +114,27 @@ var (
 	bareNoun  = regexp.MustCompile(`(?i)^[a-z][a-z -]*$`)
 	bareNum   = regexp.MustCompile(`^\d[\d,]*$`)
 	leadNumRe = regexp.MustCompile(`^\d[\d,]*`)
+	// specialRes are the ways the book adds "special" to an area.
+	specialRes = []struct {
+		re   *regexp.Regexp
+		kind string
+	}{
+		{regexp.MustCompile(`(?i)\s*\+\s*special$`), "plus"},
+		{regexp.MustCompile(`(?i)\s+or\s+special$`), "or"},
+		{regexp.MustCompile(`(?i)\s*\(special\)$`), "note"},
+	}
+	usuallyRe = regexp.MustCompile(`(?i)\s*\(usually\s+(caster)\)$`)
+	// plusRe separates the readings of a sum.
+	plusRe = regexp.MustCompile(`\s*\+\s*`)
+	// glueRe is a count glued to its noun ("1creature").
+	glueRe = regexp.MustCompile(`^(\d+)([a-z]{3,})`)
+	// manyAreasRe is "Two 10-ft. cubes/level": a number word, then an extent
+	// and a plural shape.
+	manyAreasRe = regexp.MustCompile(`(?i)^(two|three|four|five|six|seven|eight|nine|ten)\s+(\d.*?\b(?:cube|square|sphere|cone|circle|globe|hemisphere|wall|cloud|column))s\b(.*)$`)
+	// maxLeadRe is a leading "max." that bounds the extent after it.
+	maxLeadRe = regexp.MustCompile(`(?i)^max(?:imum|\.)?\s*`)
+	// siteRe is where on a figure an extent is measured ("wide at base").
+	siteRe = regexp.MustCompile(`(?i)\bat (?:the )?(base|end)\b`)
 )
 
 var wordCounts = map[string]string{"one": "1", "two": "2"}
@@ -107,14 +144,72 @@ var wordCounts = map[string]string{"one": "1", "two": "2"}
 // reading holds only in part is read as alternatives when it is a choice
 // ("1 creature or object") whose every reading is whole.
 func ParseArea(raw string) AreaOfEffect {
-	a := parseAreaReading(raw)
-	if !a.Partial {
+	if a, ok := parseAnnotated(raw); ok {
 		return a
+	}
+	a := parseAreaReading(raw)
+	if !a.Partial && (a.Kind != AreaSelf || !strings.Contains(raw, "+")) {
+		return a
+	}
+	if parts, ok := parseParts(raw); ok {
+		return AreaOfEffect{Raw: raw, Kind: AreaTogether, Parts: parts}
 	}
 	if alts, ok := parseAlternatives(raw); ok {
 		return AreaOfEffect{Raw: raw, Kind: AreaAlternatives, Alternatives: alts}
 	}
 	return a
+}
+
+// parseAnnotated reads an area that ends in a note the typed form keeps
+// beside it: "+ special", "or special", "(special)", "(usually caster)". ok is
+// false unless the text before the note is a whole area or targets reading.
+func parseAnnotated(raw string) (AreaOfEffect, bool) {
+	s := strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". "))
+	var special, usually string
+	rest := ""
+	for _, sp := range specialRes {
+		if loc := sp.re.FindStringIndex(s); loc != nil {
+			special, rest = sp.kind, s[:loc[0]]
+		}
+	}
+	if m := usuallyRe.FindStringSubmatchIndex(s); m != nil {
+		usually, rest = strings.ToLower(s[m[2]:m[3]]), s[:m[0]]
+	}
+	if rest == "" {
+		return AreaOfEffect{}, false
+	}
+	a := parseAreaReading(rest)
+	if (a.Kind != AreaArea && a.Kind != AreaTargets) || a.Partial {
+		return AreaOfEffect{}, false
+	}
+	a.Raw, a.Special, a.Usually = raw, special, usually
+	return a, true
+}
+
+// parseParts reads "A + B" as one reading per part. ok is false unless there
+// are several parts and every one is an area, targets or self reading the
+// text covers whole (ADR 0021 step 8, areas 15).
+func parseParts(raw string) ([]AreaOfEffect, bool) {
+	s := normText(strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". ")))
+	texts := plusRe.Split(s, -1)
+	if len(texts) < 2 {
+		return nil, false
+	}
+	parts := make([]AreaOfEffect, 0, len(texts))
+	for _, p := range texts {
+		p = glueRe.ReplaceAllString(strings.TrimSpace(p), "$1 $2")
+		a := parseAreaReading(p)
+		if (a.Kind != AreaArea && a.Kind != AreaTargets && a.Kind != AreaSelf) || a.Partial {
+			return nil, false
+		}
+		// A part with an extent and a count ("1 stick/level in a 10-ft. cube")
+		// may bound the other parts too: not read.
+		if len(a.Dims) > 0 && a.Targets != nil {
+			return nil, false
+		}
+		parts = append(parts, a)
+	}
+	return parts, true
 }
 
 // parseAlternatives reads "A or B" and "A, B, or C" as one reading per
@@ -184,6 +279,11 @@ func parseAreaReading(raw string) AreaOfEffect {
 	s = thousandsRe.ReplaceAllString(s, "$1$2")
 	created := createsRe.MatchString(s)
 	s = createsRe.ReplaceAllString(s, "")
+	count := 0
+	if m := manyAreasRe.FindStringSubmatch(s); m != nil { // "Two 10-ft. cubes/level"
+		count, _ = strconv.Atoi(numWords[strings.ToLower(m[1])])
+		s = m[2] + m[3]
+	}
 	s = orMoreRe.ReplaceAllStringFunc(s, func(m string) string {
 		n := strings.ToLower(orMoreRe.FindStringSubmatch(m)[1])
 		if d := wordCounts[n]; d != "" {
@@ -255,6 +355,10 @@ func parseAreaReading(raw string) AreaOfEffect {
 				continue
 			}
 		}
+		// "Line of sight, max. 60 ft.": a leading "max." bounds the extent.
+		if len(a.Dims) == 0 && maxLeadRe.MatchString(part) && lengthRe.MatchString(part) {
+			part, upTo = maxLeadRe.ReplaceAllString(part, ""), true
+		}
 		if part == "" {
 			continue
 		}
@@ -303,8 +407,15 @@ func parseAreaReading(raw string) AreaOfEffect {
 	if a.Kind != KindSpecial {
 		a.Partial = !a.covers(s)
 	}
+	// "One creature + 1creature/2 levels": a sum swallowed into the noun.
+	if a.Targets != nil && strings.Contains(a.Noun, "+") {
+		a.Partial = true
+	}
 	if a.Kind != AreaArea && a.Kind != AreaTargets {
 		a.AroundTouched = false
+	}
+	if a.Kind == AreaArea && len(a.Dims) == 1 {
+		a.Count = count
 	}
 	if a.Dims == nil || a.Targets == nil {
 		a.Within = false
@@ -389,10 +500,22 @@ func (a AreaOfEffect) covers(s string) bool {
 			words["max"], words["maximum"] = true, true
 		}
 	}
+	for _, w := range strings.Fields(a.Shape) { // "line of sight"
+		words[w] = true
+	}
 	for _, d := range a.Dims {
 		addQ(d)
 		for _, w := range axisWords[d.Axis] {
 			words[w] = true
+		}
+		if d.Site != "" { // "wide at base"
+			words["at"], words["the"], words[d.Site] = true, true, true
+		}
+		if len(a.Dims) > 1 {
+			words["and"] = true
+		}
+		if d.UpTo {
+			words["max"], words["maximum"] = true, true
 		}
 	}
 	if a.Within {
@@ -453,7 +576,7 @@ func shapeOf(s string) string {
 // "10 ft. + 5 ft./level". Chunks split on " x "; a chunk without a unit
 // takes the unit of the next chunk that has one.
 func parseDims(part string) []Quantity {
-	chunks := regexp.MustCompile(`\s+x\s+`).Split(part, -1)
+	chunks := dimSplit.Split(part, -1)
 	var dims []Quantity
 	for _, ch := range chunks {
 		q := parseDimChunk(ch)
@@ -471,6 +594,10 @@ func parseDims(part string) []Quantity {
 	}
 	return dims
 }
+
+// dimSplit separates the extents of one part: "10 x 60 ft.", "60 yards long
+// and 30 yards wide".
+var dimSplit = regexp.MustCompile(`\s+x\s+|\s+and\s+`)
 
 // axisWords are the words that name each axis of an extent.
 var axisWords = map[string][]string{
@@ -522,6 +649,9 @@ func parseDimChunk(ch string) Quantity {
 	}
 	if len(q.Terms) > 0 {
 		q.Axis = axisOf(ch)
+		if m := siteRe.FindStringSubmatch(ch); m != nil {
+			q.Site = strings.ToLower(m[1])
+		}
 	}
 	return q
 }

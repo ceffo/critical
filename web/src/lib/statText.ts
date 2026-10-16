@@ -8,6 +8,7 @@ import { labelKey, translateValue } from "@/lib/lookupLabels";
 import type { StatKey } from "@/lib/spellValues";
 import type {
   Spell,
+  SpellArea,
   SpellQuantity,
   SpellStats,
   SpellTerm,
@@ -306,24 +307,41 @@ export function shapedText(
   shape: string | undefined,
   units: (string | undefined)[],
   figure?: string,
+  many = false,
 ): string | null {
-  if (
-    !shape ||
-    (shape === "square" && units.every((u) => u?.startsWith("sq ")))
-  )
-    return dims;
-  const word = loc.t(`lookup.shapes.${shape}`, { defaultValue: "" });
+  const squareUnits =
+    shape === "square" && units.every((u) => u?.startsWith("sq "));
+  if (many && (!shape || squareUnits || figure)) return null; // several: the figure is said in the plural
+  if (!shape || squareUnits) return dims;
+  const word = loc.t(
+    `lookup.${many ? "shapesPlural" : "shapes"}.${labelKey(shape)}`,
+    {
+      defaultValue: "",
+    },
+  );
   if (!word) return null;
   if (!figure) return loc.t("lookup.stat.shaped", { dims, shape: word });
-  const fig = loc.t(`lookup.shapes.${figure}`, { defaultValue: "" });
+  const fig = loc.t(`lookup.shapes.${labelKey(figure)}`, { defaultValue: "" });
   if (!fig || units.length > 1) return null;
   return loc.t("lookup.stat.shapedFigure", { dims, shape: word, figure: fig });
 }
 
-/** The word for the way an extent runs ("de large"), or null when the language has none. */
-function axisText(loc: StatLocale, value: string, axis: string): string | null {
+/**
+ * The word for the way an extent runs ("de large"), and for where on the figure it is measured
+ * ("à la base"), or null when the language has none.
+ */
+function axisText(
+  loc: StatLocale,
+  value: string,
+  axis: string,
+  site?: string,
+): string | null {
   const word = loc.t(`lookup.axes.${axis}`, { defaultValue: "" });
-  return word ? loc.t("lookup.stat.axis", { value, axis: word }) : null;
+  if (!word) return null;
+  const text = loc.t("lookup.stat.axis", { value, axis: word });
+  if (!site) return text;
+  const where = loc.t(`lookup.sites.${site}`, { defaultValue: "" });
+  return where ? loc.t("lookup.stat.site", { value: text, site: where }) : null;
 }
 
 /**
@@ -335,12 +353,13 @@ function dimsText(loc: StatLocale, s: SpellStats["area"]): string | null {
   const dims = s.dims ?? [];
   const texts = dims.map((d) => quantityText(loc, { ...d, up_to: false }));
   if (texts.some((x) => x === null)) return null;
+  const many = (s.count ?? 0) > 1;
   let shaped: string | null;
   if (dims.some((d) => d.axis)) {
-    if (s.figure) return null;
+    if (s.figure || many) return null;
     const plain = dims.flatMap((d, i) => (d.axis ? [] : [texts[i]!]));
     const axed = dims.flatMap((d, i) =>
-      d.axis ? [axisText(loc, texts[i]!, d.axis)] : [],
+      d.axis ? [axisText(loc, texts[i]!, d.axis, d.site)] : [],
     );
     if (axed.some((x) => x === null)) return null;
     const list = [...(plain.length ? [plain.join(" × ")] : []), ...axed];
@@ -351,18 +370,40 @@ function dimsText(loc: StatLocale, s: SpellStats["area"]): string | null {
       shaped = word && loc.t("lookup.stat.shaped", { dims: all, shape: word });
     }
   } else {
+    if (dims.some((d) => d.site)) return null; // "at base" with no axis to say it of
     shaped = shapedText(
       loc,
       texts.join(" × "),
       s.shape,
       dims.map((d) => d.terms[0]?.unit),
       s.figure,
+      many,
     );
+    if (shaped && many)
+      shaped = loc.t("lookup.stat.areaCount", {
+        count: s.count,
+        value: shaped,
+      });
   }
   if (!shaped) return null;
   return dims.some((d) => d.up_to)
     ? loc.t("lookup.stat.upToShaped", { value: shaped })
     : shaped;
+}
+
+/** An area's text with the note the book adds: "+ special", "or special", "(special)", "(usually caster)". */
+function annotated(loc: StatLocale, s: SpellArea, text: string): string | null {
+  let out = text;
+  if (s.special) {
+    if (!["plus", "or", "note"].includes(s.special)) return null;
+    out = loc.t(`lookup.stat.special.${s.special}`, { value: out });
+  }
+  if (s.usually) {
+    const who = loc.t(`lookup.usually.${s.usually}`, { defaultValue: "" });
+    if (!who) return null;
+    out = loc.t("lookup.stat.usually", { value: out, who });
+  }
+  return out;
 }
 
 export function areaText(
@@ -406,10 +447,18 @@ export function areaText(
           n = loc.t("lookup.stat.within", { targets: n, value: within });
         parts.push(n);
       }
-      const text = parts.length ? parts.join(", ") : null;
-      return text && s.around_touched
-        ? loc.t("lookup.stat.aroundTouched", { value: text })
-        : text;
+      let text = parts.length ? parts.join(", ") : null;
+      if (text && s.around_touched)
+        text = loc.t("lookup.stat.aroundTouched", { value: text });
+      return text && annotated(loc, s, text);
+    }
+    case "together": {
+      // "1 cube de 12 m + 1 cube de 3 m/niveau": every part worded, or the book's text.
+      const texts = (s.parts ?? []).map((p) =>
+        p.kind === "self" ? loc.t("lookup.stat.areaSelf") : areaText(loc, p),
+      );
+      if (texts.length < 2 || texts.some((x) => x === null)) return null;
+      return texts.join(loc.t("lookup.stat.plus"));
     }
     case "alternatives": {
       // "1 créature ou 1 objet": every reading worded, or the book's text.

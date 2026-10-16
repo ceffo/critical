@@ -682,7 +682,34 @@
       "thick": "thick",
       "deep": "deep"
     },
+    "sites": {
+      "base": "at the base",
+      "end": "at the end"
+    },
+    "usually": {
+      "caster": "the caster"
+    },
+    "shapesPlural": {
+      "radius": "radii",
+      "diameter": "diameters",
+      "cone": "cones",
+      "cube": "cubes",
+      "square": "squares",
+      "sphere": "spheres",
+      "globe": "globes",
+      "cloud": "clouds",
+      "column": "columns",
+      "spray": "sprays",
+      "hemisphere": "hemispheres",
+      "volume": "volumes",
+      "wall": "walls",
+      "circle": "circles",
+      "path": "paths",
+      "line": "lines",
+      "line_of_sight": "lines of sight"
+    },
     "shapes": {
+      "line_of_sight": "line of sight",
       "radius": "radius",
       "diameter": "diameter",
       "cone": "cone",
@@ -722,6 +749,16 @@
       "shaped": "{{dims}} {{shape}}",
       "shapedFigure": "{{dims}} {{shape}} {{figure}}",
       "axis": "{{value}} {{axis}}",
+      "site": "{{value}} {{site}}",
+      "areaCount": "{{count}} {{value}}",
+      "areaSelf": "The caster",
+      "plus": " + ",
+      "special": {
+        "plus": "{{value}} + special",
+        "or": "{{value}} or special",
+        "note": "{{value}} (special)"
+      },
+      "usually": "{{value}} (usually {{who}})",
       "axisJoin": " and ",
       "ofMembers": "{{targets}} of {{members}}",
       "within": "{{targets}} within {{value}}",

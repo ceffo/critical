@@ -60,8 +60,8 @@ func compiled() (*jsonschema.Schema, error) {
 }
 
 // Artifact is one parsed artifact: its spells and its rule_tables object as
-// written (shape checked by the schema, step 9.2). The caller parses the tables with ruletablesadpt.Parse, which
-// applies the rules of step 9.3.
+// written (shape checked by the schema, step 9.2). The caller parses the
+// tables with ruletablesadpt.Parse, which applies the rules of step 9.3.
 type Artifact struct {
 	Catalogue  catalogue.Catalogue
 	RuleTables json.RawMessage

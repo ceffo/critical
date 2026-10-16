@@ -25,7 +25,6 @@ vi.mock("@/api/log", () => ({
   undoLogEntry: async () => {
     calls.undo++;
   },
-  amendLogEntry: async () => undefined,
 }));
 vi.mock("../api/round", () => ({ fetchRound: async () => ({ round: 1 }) }));
 vi.mock("@/api/hp", () => ({

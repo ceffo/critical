@@ -987,11 +987,6 @@
     "was": "était {{delta}}",
     "capped": "{{requested}} demandés, plafonnés aux PV max",
     "floored": "{{requested}} demandés, arrêtés au plancher de PV",
-    "amend": "Note",
-    "cancel": "Retour",
-    "save": "Enregistrer",
-    "amendLabel": "Note de l’entrée",
-    "note": "Note",
     "buff": {
       "activate": "{{buff}} activé ({{counters}})",
       "edit": "{{buff}} : {{from}} → {{to}}",

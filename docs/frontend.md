@@ -111,9 +111,16 @@ flowchart TD
   save (d20, "total vs target+", verdict, modifiers, adjustment), cast, item (dice chips, the
   maximum in the accent, a 1 dimmed), initiative, and info for every other kind (text, HP value
   red / green). Header: kind tag, subtitle, "T3 · 21:31". The journal: All / Rolls filter (attacks,
-  saves, item uses, initiative, casts that rolled damage or a to-hit d20), turn groups newest first
-  with a sticky "Turn 3" / "Out of combat" header and a "current" tag, rows icon | text | value with
-  the time, Note and Void under it; the row shown in the card is highlighted. Attack damage dice
+  saves, item uses, initiative, casts that rolled damage or a to-hit d20), the entry count, Undo and
+  Redo in its head; turn groups newest first, each **one line per entry** in the columns
+  turn · value · icon · entry · time ([ADR 0022](adr/0022-activity-focus-layout.md) step 5.1): the
+  section label "TURN 3" / "OUT OF COMBAT" beside the group's first entry, a "current" tag and a
+  tint on the current turn, the value right-aligned before the kind icon, the entry text (with
+  Amended / capped / Undone inline after it) wrapping inside its row when long, never cut, and the
+  time last. Nothing is drawn under an entry and there is **no Note** (step 5.2; the amend endpoint
+  stays in the API, the UI neither calls it nor shows notes). Reroll, on an entry that rolled free
+  dice, shows in the line on hover, on keyboard focus in the row and on the selected row (step
+  5.3). The row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
   left of the dice footer (ADR 0022 step 2.6): language
@@ -155,8 +162,7 @@ flowchart TD
   header's Undo button and Ctrl/Cmd+Z (not while typing in a field) pop it from anywhere with
   `POST /api/log/undo` and that `topId` ([ADR 0010](adr/0010-action-stack-and-undo.md)); the Redo button next to it
   and Ctrl/Cmd+Shift+Z replay the `redo` target of `GET /api/log` with `POST /api/log/redo`
-  ([ADR 0019](adr/0019-redo.md)); every entry has Note
-  (the only amend, shown in italics under the line); values are never edited in the log. Buff/round entries are rendered from their
+  ([ADR 0019](adr/0019-redo.md)); values are never edited in the log. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The character card's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect under its name ("weapon +5 · dice ×2"); a Strength
@@ -281,7 +287,7 @@ flowchart TD
   `hitsAc` and `critsFromAc`, a "?" verdict, the damage dimmed "if it hits", the GM's Hit / Miss
   (`POST /api/roll/attack/{logEntryId}/verdict`, `verdictLastAttack`) and a "Real AC" form (the
   adjust endpoint) that replaces any verdict.
-- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `amendEntry`, `undo`,
+- Every mutation goes through `stores/table.ts` (`run`, `recordHp`, `undo`,
   `nextRound`; the journal's Undo button and Ctrl+Z are the one global undo, ADR 0018 step 3): call the API, then refresh HP, log, buffs and round. Server errors
   (`{"error": …, "code": …}`, parsed by `api/http.ts`) are shown in `Notices` (`role="alert"`): a known code in the
   player's language (`apiError.*`), else the server text verbatim.

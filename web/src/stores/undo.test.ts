@@ -71,7 +71,6 @@ vi.mock("@/api/log", () => ({
     server.calls.push(`redo ${expected}`);
     server.redo(expected);
   },
-  amendLogEntry: async () => undefined,
 }));
 vi.mock("../api/round", () => ({
   fetchRound: async () => ({ round: 1 }),

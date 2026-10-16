@@ -1,6 +1,6 @@
 import { test, expect, snap } from "./fixtures";
 import {
-  buffBadge,
+  combatLog,
   expectUndoOn,
   currentHp,
   undoEntry,
@@ -11,55 +11,8 @@ import {
   recordHp,
 } from "./helpers";
 
-// The log is a stack with note-only amends. User,
-// 2026-10-14: "no amending values. just the note.. can only pop elements".
-test("a note on a heal and on a buff entry changes no value and no HP", async ({
-  page,
-  stack,
-}) => {
-  const res = await fetch(`${stack.apiUrl}/api/buffs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: "e2e Haste",
-      duration: 5,
-      charges: 0,
-      effects: {},
-    }),
-  });
-  expect(res.ok).toBe(true);
-  await openDashboard(page);
-  const max = await currentHp(page);
-  await markNoReload(page);
-  // Wait for each change to land: the HP form resets after a success.
-  await recordHp(page, "damage", 6, "e2e orc axe");
-  await expect.poll(() => currentHp(page)).toBe(max - 6);
-  await recordHp(page, "heal", 4, "e2e cure light");
-  await expect.poll(() => currentHp(page)).toBe(max - 2);
-
-  for (const [text, note] of [
-    ["e2e cure light", "e2e DM: rolled 4 on the d8"],
-    ["Activated e2e Haste", "e2e DM: from the scroll"],
-  ]) {
-    const entry = logEntry(page, text);
-    await entry.getByRole("button", { name: "Note" }).click();
-    const form = entry.getByRole("form", { name: "Entry note" });
-    await expect(form.getByRole("spinbutton")).toHaveCount(0); // no value field
-    await form.getByLabel("Note").fill(note);
-    await form.getByRole("button", { name: "Save" }).click();
-    await expect(entry.getByTestId("log-note")).toHaveText(note);
-    await expect(entry).not.toContainText("Amended");
-  }
-  await expect(
-    logEntry(page, "e2e cure light").getByTestId("log-delta"),
-  ).toHaveText("+4");
-  await expect.poll(() => currentHp(page)).toBe(max - 2);
-  await expect(buffBadge(page, "e2e Haste")).toBeVisible();
-
-  await expectNoReload(page);
-  await snap(page, "notes");
-});
-
+// The log is a stack: entries are popped, never edited, and the journal offers no note
+// (ADR 0022 step 5.2).
 test("the journal Undo names only the newest entry: damage 10, heal 4, pop the heal, pop the damage", async ({
   page,
 }) => {
@@ -97,8 +50,12 @@ test("undoing an entry restores current HP and marks it undone", async ({
   await expect.poll(() => currentHp(page)).toBe(before);
   await expect(entry).toHaveAttribute("data-status", "voided");
   await expect(entry).toContainText("Undone");
-  await expect(entry.getByRole("button", { name: "Undo" })).toHaveCount(0);
-  await expect(entry.getByRole("button", { name: "Note" })).toHaveCount(0);
+  await expect(
+    entry.getByRole("button", { name: "Undo", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    combatLog(page).getByRole("button", { name: "Note" }),
+  ).toHaveCount(0);
 
   await expectNoReload(page);
   await snap(page, "undone");

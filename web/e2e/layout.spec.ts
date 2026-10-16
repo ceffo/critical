@@ -7,6 +7,7 @@ import {
   chooseSetting,
   chooseWeapon,
   combatLog,
+  nextTurn,
   openDashboard,
   openSettings,
   openWeapons,
@@ -91,6 +92,9 @@ const ACTIVITIES = ["Act", "Spells", "Experience", "Inventory"] as const;
 const SHOTS = new Set(["1440x900", "1707x1300"]);
 /** A long effect name: it wraps in the expanded header, never cut. */
 const LONG_EFFECT = "Protection From Evil, 10' Radius (from the temple priest)";
+/** A long journal entry: it wraps inside its row, never cut (ADR 0022 step 5.1). */
+const LONG_SOURCE =
+  "Fire breath of the young red dragon perched on the ruined bell tower, half damage behind the shield wall";
 
 // ADR 0022 steps 2.1, 2.2, 2.8 and 3.1: in every activity at every layout viewport, the header card
 // (at most 120 px at rest with 3 effect rows), the character card and the dice footer stay put and
@@ -138,6 +142,12 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
   await expect(last.getByTestId("last-result-text")).toContainText(
     "Long Sword +2 vs AC 5",
   );
+  // The journal: a long entry, and a second turn so a past turn sits under the current one.
+  await nextTurn(page);
+  await recordHp(page, "damage", 3, LONG_SOURCE);
+  await expect(
+    combatLog(page).getByRole("listitem").filter({ hasText: LONG_SOURCE }),
+  ).toBeVisible();
 
   const rail = page.getByRole("navigation", { name: "Activities" });
   const character = page.getByRole("complementary", { name: "Character" });
@@ -178,6 +188,8 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
         page.getByTestId("dice-footer"),
         `dice footer, ${where}`,
       );
+      if (activity === "Act")
+        await expectNoClippedText(combatLog(page), `journal, ${where}`);
       if (SHOTS.has(size))
         await snap(page, `${activity.toLowerCase()}-${size}`);
     }
@@ -197,6 +209,15 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       ] as const)
         await expectInside(el, character, what);
       await openWorkspace(page, "Act");
+      // ADR 0022 step 5.1: an entry is one line (a 28 px row); only a long one wraps.
+      const row = (text: string) =>
+        combatLog(page).getByRole("listitem").filter({ hasText: text });
+      for (const text of ["Long Sword +2 vs AC 5", "Initiative"])
+        expect(
+          (await row(text).first().boundingBox())!.height,
+          `one line: ${text}`,
+        ).toBeLessThanOrEqual(32);
+      await expectNoClippedText(row(LONG_SOURCE), "long journal entry");
       await expectInside(
         page.getByRole("region", { name: "Weapon in hand" }),
         page.getByRole("region", { name: "Actions" }),

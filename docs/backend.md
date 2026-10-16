@@ -4,7 +4,7 @@
 
 - **Language**: Go (latest stable)
 - **HTTP**: standard `net/http` or `chi` router
-- **Database**: PostgreSQL ([ADR 0025](adr/0025-postgresql-storage.md)) through `database/sql` and the `github.com/lib/pq` driver (sqlc's `database/sql` output binds arrays with `pq.Array`). `storage/postgres.Open` opens the pool from `CRITICAL_DSN` (a PostgreSQL URL or connection string); in development it is the docker compose service `postgres` ("Development database" below), on fly the cluster of [ADR 0024](adr/0024-deployment.md) step 2. The server module has no SQLite dependency (`just check-no-sqlite`, part of `just validate`).
+- **Database**: PostgreSQL ([ADR 0025](adr/0025-postgresql-storage.md)) through `database/sql` and the `github.com/lib/pq` driver (sqlc's `database/sql` output binds arrays with `pq.Array`). `storage/postgres.Open` opens the pool from `CRITICAL_DSN` (a PostgreSQL URL or connection string); in development it is the docker compose service `postgres` ("Development database" below), on fly the cluster of [ADR 0024](adr/0024-deployment.md) step 2. The server binary links no SQLite driver (`just check-no-sqlite`, part of `just validate`); only the SQLite copy tool's own binary does ("Moving a SQLite database into PostgreSQL").
 - **Writer lock**: every write transaction (`InTx`) runs at READ COMMITTED and takes one transaction-level advisory lock (`pg_advisory_xact_lock`, one fixed key; the sqlc query `LockWriters`) as its first statement ([ADR 0025](adr/0025-postgresql-storage.md) step 4). A second writer waits until the first commits or rolls back, then reads its result, so the action stack's stale expected top is refused as a normal 409, never a 500. The commit or the rollback releases the lock; nothing else does. A stricter isolation level would break this (the snapshot would predate the lock). Write paths must go through a transaction, never read-then-write on the bare pool; reads outside a transaction take no lock.
 - **Migrations**: simple sequential SQL files, applied at startup and recorded in `schema_migrations`
   ("Migrations at startup" below)
@@ -155,20 +155,90 @@ and you then run a branch that does not have it (e.g. `main` before that PR merg
 Never delete the rows from `schema_migrations` to get past the check: the schema would still be the
 newer one.
 
-## Development database
+## Local development
 
-`just dev` (through `just dev-db`) starts the docker compose service `postgres` (`docker compose up
---detach --wait postgres`; it keeps running after `just dev` stops) and runs the API on it:
+The loop, from the checkout root (each worktree is its own compose project, with its own volume):
+
+| Command | What it does |
+|---|---|
+| `just dev` | Starts PostgreSQL (docker compose), the API (air, :8080) and Vite (:5173, proxies `/api`). Ctrl-C stops them. |
+| `just stop` | Stops what `just dev` started for this checkout, the database included, from any terminal, also after a crashed `just dev`. Data kept. Safe when nothing runs. |
+| `just status` | API, web dev server and database: running, stopped, port. |
+| `just dev-db` | Starts the database only (e.g. for the SQLite import below). |
+| `just dev-reset` | `just stop`, then deletes the databases (compose volume `critical-pg`). The next start migrates, seeds and imports the catalogue again. |
+| `just dev-smoke` | Proof of the above on free ports and a throwaway compose project (needs docker, ~1 min). Run it after changing the justfile, `docker-compose.yml`, `api/.air.toml`, `scripts/dev.sh` or the start-up of the storage. CI job `dev-smoke`. |
+
+First run after a clone: `cd web && npm ci`, optionally `just catalogue` (real spells, database
+`critical`; without it the fixture catalogue and database `critical_fixture` are used and the start
+says so), then `just dev`. Open http://localhost:5173.
+
+Ports: `CRITICAL_API_PORT` (8080), `CRITICAL_WEB_PORT` (5173), `CRITICAL_PG_PORT` (5432, the service
+listens on 127.0.0.1 only). A taken port, or a docker daemon that is not running, stops `just dev`
+before anything starts, with a message saying what to do.
+
+What `scripts/dev.sh` guarantees:
+- **Ctrl-C.** Each process runs in its own session, so the terminal's SIGINT reaches only the script,
+  which stops Vite, then the API, then the database if this run started it (a database that already
+  ran stays up until `just stop`). Exit is clean, no process left, ports free. `just` itself prints
+  one line `error: interrupted by SIGINT` (its own exit message for a Ctrl-C, exit status 130); it
+  cannot be silenced.
+- **Graceful API.** `api/.air.toml` sets `send_interrupt` and `kill_delay = "10s"`: on every rebuild
+  and on exit the server gets SIGINT, finishes in-flight requests, closes its pool, and is killed
+  only after 10 s (air's default is an immediate SIGKILL).
+- **Only this checkout's processes.** Processes are recorded in `.dev/run/` (pid and start time) and
+  stopped by that record, the API binary by its exact path; never by name. Two checkouts do not
+  interfere except on ports (move them with the variables above).
+- **Database.** Data lives in the volume `critical-pg`; stopping keeps it. After `just stop` the
+  container stays stopped (`restart: unless-stopped`), also across a reboot, until `just dev` or
+  `just dev-db`.
 
 - database `critical` with the real catalogue (`.catalogue/catalogue.json`) and the campaign seeds;
   `critical_fixture` with the fixture catalogue and seeds of `api/testdata` when there is no real
   catalogue (the init script `deploy/postgres-init/` creates it with the volume);
 - DSN `postgres://critical:critical@localhost:5432/<database>?sslmode=disable`, also the default
-  `CRITICAL_DSN`; `CRITICAL_PG_PORT` moves the host port (the service listens on 127.0.0.1 only);
-- the data lives in the compose volume `critical-pg` of the checkout's compose project (a worktree
-  has its own); `just dev-reset` deletes it (`docker compose down --volumes`), and the next start
-  migrates, seeds and imports the catalogue again. Files in `.dev/` are never touched: the copy of a
-  SQLite `.dev/critical.db` into PostgreSQL is the copy tool's ([ADR 0025](adr/0025-postgresql-storage.md) step 9).
+  `CRITICAL_DSN`;
+- files in `.dev/` (apart from `run/` and `tmp/`) are never touched: the copy of a SQLite
+  `.dev/critical.db` into PostgreSQL is the copy tool's (below).
+
+### Moving a SQLite database into PostgreSQL
+
+The SQLite copy tool ([ADR 0025](adr/0025-postgresql-storage.md) step 9) copies a SQLite database of
+the app into an empty PostgreSQL database: `just db-import-sqlite <file> <dsn>`. It is used twice, for
+the developer's `.dev/critical.db` and to seed production (`docs/deploy.md`), then deleted from the
+repository (step 9.5).
+
+To move the development data, from the main checkout:
+
+```bash
+# 1. Stop the SQLite server (`just dev` of a build before the engine switch; `just stop` stops
+#    this build's): what it writes after the copy is not copied.
+# 2. The database `critical` must be new. If `just dev` already ran on PostgreSQL with the real
+#    catalogue, it holds the seeds: delete the compose volume first (`just dev-reset`).
+just dev-db
+just db-import-sqlite .dev/critical.db "postgres://critical:critical@localhost:5432/critical?sslmode=disable"
+just dev                      # the character, the log and the buffs as they were
+```
+
+What it does (`api/internal/sqlitecopy`, binary `api/cmd/sqlite-copy`):
+- **Source, only read.** It opens the file read-only and copies it, with the committed rows of its WAL,
+  into a private temporary directory (`VACUUM INTO`), deleted at the end; a server running on the file
+  meanwhile is not disturbed. It brings that copy to the last SQLite schema by applying the 33 SQLite
+  migrations it embeds (`sqlitesource/migrations`, the files the server ran until the engine switch,
+  unchanged) that the file does not record, and refuses a file recording one it does not know.
+- **Target, new or empty.** A database without any table gets the server's migrations (without its
+  seeds); one with tables must record exactly the server's migrations and hold no row in any app table.
+  Anything else is refused before it is written.
+- **Copy.** The tables and columns are the target's (its catalog); every table and column must exist on
+  both sides, or it stops. Tables are copied in foreign-key order (ties by name), each with one `COPY`,
+  in one write transaction holding the server's writer lock, with the session time zone UTC (SQLite
+  stored UTC text). Each identity sequence is then set one past both the highest id copied and the
+  highest id SQLite ever handed out (`sqlite_sequence`): an undo restores a deleted saved buff or XP
+  entry under its old id, which a new row must not have taken. Last, the rows of every table are
+  counted on both sides; any difference fails the transaction, so nothing is kept.
+- It prints the row count of each table, never row content. The SQLite driver
+  (`github.com/ncruces/go-sqlite3`, pure Go) is linked into this binary only; `just check-no-sqlite`
+  keeps it out of the server.
+- Its logic is tested on mocks of its two ports (`Source`, `Target`), without a database.
 
 ## DAL code generation
 

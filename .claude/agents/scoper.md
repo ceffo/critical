@@ -66,6 +66,11 @@ An item has:
 - a description: the problem / desired behaviour, then **Decided in triage** (the user's answers,
   dated), **Current behaviour**, **Key interfaces** (types, endpoint or function shapes, contracts;
   not file paths or line numbers), **Acceptance criteria** as testable checkboxes, **Out of scope**;
+- for an item that changes an engine, a tool or the dev setup (database, live reload, containers,
+  build, recipes): acceptance criteria for the **whole lifecycle**, not "it runs": start, stop,
+  Ctrl-C, restart, reset, first run after a clone, and the switch-over for the user's existing local
+  data (what they run once, and when). If the switch-over needs another item (an import tool), the
+  dependency or the order says so, so the user's local dev is never left broken between merges;
 - which tests prove it, whether generated code will need regenerating, and anything that makes it
   **risky** per the workflow doc's review triggers (label it as the doc says);
 - a type and a priority in the tracker's scale. Priority is the user's call: propose one with a

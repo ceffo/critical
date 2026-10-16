@@ -197,7 +197,14 @@ flowchart TD
    5. Retired (deleted) once production is seeded.
 
    Tests: the tool's logic without a database (table order, sequence values, count comparison,
-   refusals) on mocked ports.
+   refusals) on mocked ports. Implemented as `api/internal/sqlitecopy` (binary `api/cmd/sqlite-copy`, `just
+   db-import-sqlite`): `TestDependencyOrder_Step9_1_ReferencedTablesFirst`,
+   `TestNextID_Step9_1_PastTheHighestCopiedAndHandedOutID`, `TestResetIdentities_Step9_1_SetsEveryIdentityColumn`,
+   `TestCompareCounts_Step9_1_FailsOnAnyDifference`, `TestUpgradeSource_Step9_1_AppliesThePendingInOrder`,
+   `TestRun_Step9_1_CopiesEveryTableInOrderInOneTransaction`, `TestRun_Step9_1_ACountDifferenceFailsTheTransaction`,
+   `TestRefuseNonEmpty_Step9_2_RefusesARowInAnyTable`, `TestPrepareTarget_Step9_2_OnlyANewOrBaselineDatabase`,
+   `TestRun_Step9_2_ANonEmptyTargetCopiesNothing`. The sequence goes past SQLite's `sqlite_sequence` too,
+   not only past the highest id copied: an undo restores a deleted row under its old id.
 
 ## Consequences
 

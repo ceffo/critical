@@ -1,4 +1,5 @@
-# Live reload for `just dev-api` (run from api/). Rebuilds and restarts on .go changes.
+# Live reload for `just dev` (scripts/dev.sh runs air from api/ and sets tmp_dir, cmd and entrypoint
+# itself so each checkout keeps its binary under its own .dev/). Rebuilds and restarts on .go changes.
 root = "."
 tmp_dir = "../.dev/tmp"
 
@@ -10,6 +11,11 @@ tmp_dir = "../.dev/tmp"
   exclude_regex = ["_test\\.go"]
   delay = 300
   stop_on_error = true
+  # On every restart and on exit the server gets SIGINT, which makes it finish in-flight requests and
+  # close its database pool; air waits for it and kills only after kill_delay (air's default is an
+  # immediate SIGKILL, no graceful shutdown).
+  send_interrupt = true
+  kill_delay = "10s"
 
 [log]
   time = false

@@ -427,6 +427,10 @@ func saveEntry(id int64, corrections ...actionlog.Correction) *actionlog.Entry {
 	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindSave, Summary: "save", Payload: json.RawMessage(`{"passed":false}`), Corrections: corrections}
 }
 
+func skillCheckEntry(id int64) *actionlog.Entry {
+	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindSkillCheck, Payload: json.RawMessage(`{"success":false}`)}
+}
+
 func TestAmendLatest(t *testing.T) {
 	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
 	good := actionlog.PayloadAmendment{Payload: json.RawMessage(`{"passed":true}`), Change: actionlog.Change{Field: "saveAdjustment", From: 0, To: 2}}
@@ -452,6 +456,8 @@ func TestAmendLatest(t *testing.T) {
 		{name: "a later cast exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindCast: 9}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "a later item use exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindItemUse: 7}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "a later skill check exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindSkillCheck: 7}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "not a skill check", entry: saveEntry(5), kind: actionlog.KindSkillCheck, wantErr: actionlogsvc.ErrNotAmendable},
+		{name: "skill check, a later save exists", entry: skillCheckEntry(5), kind: actionlog.KindSkillCheck, latest: map[actionlog.Kind]int64{actionlog.KindSkillCheck: 5, actionlog.KindSave: 6}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "no roll at all", entry: saveEntry(5), latest: map[actionlog.Kind]int64{}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "fn fails", entry: saveEntry(5), latest: onlySave, fnErr: errBoom, wantErr: errBoom},
 		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Change: good.Change}, wantErr: domain.ErrInvalidInput},
@@ -459,6 +465,11 @@ func TestAmendLatest(t *testing.T) {
 		{
 			name: "latest roll amended, older attack ignored", entry: saveEntry(5),
 			latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindAttack: 3}, fnOut: good,
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload, StepID: &step},
+		},
+		{
+			name: "latest skill check amended", entry: skillCheckEntry(5), kind: actionlog.KindSkillCheck,
+			latest: map[actionlog.Kind]int64{actionlog.KindSkillCheck: 5, actionlog.KindSave: 4}, fnOut: good,
 			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload, StepID: &step},
 		},
 		{

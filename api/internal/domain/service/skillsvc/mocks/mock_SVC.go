@@ -22,6 +22,67 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// Adjust provides a mock function with given fields: ctx, characterID, entryID, adj
+func (_m *MockSVC) Adjust(ctx context.Context, characterID int64, entryID int64, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error) {
+	ret := _m.Called(ctx, characterID, entryID, adj)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Adjust")
+	}
+
+	var r0 *skillsvc.CheckResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, skillsvc.Adjustment) (*skillsvc.CheckResult, error)); ok {
+		return rf(ctx, characterID, entryID, adj)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, skillsvc.Adjustment) *skillsvc.CheckResult); ok {
+		r0 = rf(ctx, characterID, entryID, adj)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*skillsvc.CheckResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64, skillsvc.Adjustment) error); ok {
+		r1 = rf(ctx, characterID, entryID, adj)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Adjust_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Adjust'
+type MockSVC_Adjust_Call struct {
+	*mock.Call
+}
+
+// Adjust is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - entryID int64
+//   - adj skillsvc.Adjustment
+func (_e *MockSVC_Expecter) Adjust(ctx interface{}, characterID interface{}, entryID interface{}, adj interface{}) *MockSVC_Adjust_Call {
+	return &MockSVC_Adjust_Call{Call: _e.mock.On("Adjust", ctx, characterID, entryID, adj)}
+}
+
+func (_c *MockSVC_Adjust_Call) Run(run func(ctx context.Context, characterID int64, entryID int64, adj skillsvc.Adjustment)) *MockSVC_Adjust_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64), args[3].(skillsvc.Adjustment))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Adjust_Call) Return(_a0 *skillsvc.CheckResult, _a1 error) *MockSVC_Adjust_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Adjust_Call) RunAndReturn(run func(context.Context, int64, int64, skillsvc.Adjustment) (*skillsvc.CheckResult, error)) *MockSVC_Adjust_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -173,9 +234,9 @@ func (_c *MockSVC_List_Call) RunAndReturn(run func(context.Context, int64) (*ski
 	return _c
 }
 
-// Roll provides a mock function with given fields: ctx, characterID, id
-func (_m *MockSVC) Roll(ctx context.Context, characterID int64, id string) (*skillsvc.CheckResult, error) {
-	ret := _m.Called(ctx, characterID, id)
+// Roll provides a mock function with given fields: ctx, characterID, id, adj
+func (_m *MockSVC) Roll(ctx context.Context, characterID int64, id string, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error) {
+	ret := _m.Called(ctx, characterID, id, adj)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Roll")
@@ -183,19 +244,19 @@ func (_m *MockSVC) Roll(ctx context.Context, characterID int64, id string) (*ski
 
 	var r0 *skillsvc.CheckResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (*skillsvc.CheckResult, error)); ok {
-		return rf(ctx, characterID, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, skillsvc.Adjustment) (*skillsvc.CheckResult, error)); ok {
+		return rf(ctx, characterID, id, adj)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string) *skillsvc.CheckResult); ok {
-		r0 = rf(ctx, characterID, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, skillsvc.Adjustment) *skillsvc.CheckResult); ok {
+		r0 = rf(ctx, characterID, id, adj)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*skillsvc.CheckResult)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
-		r1 = rf(ctx, characterID, id)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, skillsvc.Adjustment) error); ok {
+		r1 = rf(ctx, characterID, id, adj)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -212,13 +273,14 @@ type MockSVC_Roll_Call struct {
 //   - ctx context.Context
 //   - characterID int64
 //   - id string
-func (_e *MockSVC_Expecter) Roll(ctx interface{}, characterID interface{}, id interface{}) *MockSVC_Roll_Call {
-	return &MockSVC_Roll_Call{Call: _e.mock.On("Roll", ctx, characterID, id)}
+//   - adj skillsvc.Adjustment
+func (_e *MockSVC_Expecter) Roll(ctx interface{}, characterID interface{}, id interface{}, adj interface{}) *MockSVC_Roll_Call {
+	return &MockSVC_Roll_Call{Call: _e.mock.On("Roll", ctx, characterID, id, adj)}
 }
 
-func (_c *MockSVC_Roll_Call) Run(run func(ctx context.Context, characterID int64, id string)) *MockSVC_Roll_Call {
+func (_c *MockSVC_Roll_Call) Run(run func(ctx context.Context, characterID int64, id string, adj skillsvc.Adjustment)) *MockSVC_Roll_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(skillsvc.Adjustment))
 	})
 	return _c
 }
@@ -228,7 +290,7 @@ func (_c *MockSVC_Roll_Call) Return(_a0 *skillsvc.CheckResult, _a1 error) *MockS
 	return _c
 }
 
-func (_c *MockSVC_Roll_Call) RunAndReturn(run func(context.Context, int64, string) (*skillsvc.CheckResult, error)) *MockSVC_Roll_Call {
+func (_c *MockSVC_Roll_Call) RunAndReturn(run func(context.Context, int64, string, skillsvc.Adjustment) (*skillsvc.CheckResult, error)) *MockSVC_Roll_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
@@ -236,7 +237,7 @@ func stackMutations() []mutation {
 			return err
 		}},
 		{name: "skill check", run: func(ctx context.Context, bs *composition.BackingServices) error {
-			_, err := bs.Skills.Roll(ctx, bs.CharacterID, "climb_walls")
+			_, err := bs.Skills.Roll(ctx, bs.CharacterID, "climb_walls", skillsvc.Adjustment{})
 			return err
 		}},
 		{name: "dice roll", run: func(ctx context.Context, bs *composition.BackingServices) error {

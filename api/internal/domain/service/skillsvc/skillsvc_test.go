@@ -75,7 +75,7 @@ func (f *fixture) records() {
 
 func (f *fixture) roll(t *testing.T, id string) *skillsvc.CheckResult {
 	t.Helper()
-	r, err := f.svc.Roll(context.Background(), charID, id)
+	r, err := f.svc.Roll(context.Background(), charID, id, skillsvc.Adjustment{})
 	require.NoError(t, err)
 	return r
 }
@@ -106,8 +106,8 @@ func TestSkillCheck_Step1_ProficiencyD20AtOrUnderTarget(t *testing.T) {
 			r := f.roll(t, c.id)
 			f.dice.AssertNumberOfCalls(t, "RollDie", 1)
 			assert.Equal(t, &skillsvc.CheckResult{
-				ID: c.id, Kind: skillsvc.KindProficiency, Die: 20, Roll: c.d20, Target: c.target, Success: c.success,
-				Ability: catalogAbility(c.id), AbilityScore: c.score, Modifier: c.mod, LogEntryID: 100,
+				ID: c.id, Kind: skillsvc.KindProficiency, Die: 20, Roll: c.d20, Target: c.target, AdjustedTarget: c.target,
+				Success: c.success, RolledSuccess: c.success, Ability: catalogAbility(c.id), AbilityScore: c.score, Modifier: c.mod, LogEntryID: 100,
 			}, r)
 		})
 	}
@@ -165,8 +165,8 @@ func TestSkillCheck_Step3_BardSkillD100AtOrUnderPercent(t *testing.T) {
 			r := f.roll(t, c.id)
 			f.dice.AssertNumberOfCalls(t, "RollDie", 1)
 			assert.Equal(t, &skillsvc.CheckResult{
-				ID: c.id, Kind: skillsvc.KindBardSkill, Die: 100, Roll: c.d100, Target: c.percent,
-				Success: c.success, LogEntryID: 100,
+				ID: c.id, Kind: skillsvc.KindBardSkill, Die: 100, Roll: c.d100, Target: c.percent, AdjustedTarget: c.percent,
+				Success: c.success, RolledSuccess: c.success, LogEntryID: 100,
 			}, r)
 		})
 	}
@@ -196,16 +196,18 @@ func TestSkillCheck_Step4_OneLoggedEntryPerCheck(t *testing.T) {
 		assert.Zero(t, e.HPDelta)
 		assert.Equal(t, charID, e.CharacterID)
 	}
-	assert.JSONEq(t, `{"id":"musical_instrument","kind":"proficiency","die":20,"roll":7,"target":16,"success":true,
+	assert.JSONEq(t, `{"id":"musical_instrument","kind":"proficiency","die":20,"roll":7,"target":16,
+		"adjustment":0,"adjustedTarget":16,"success":true,"rolledSuccess":true,
 		"ability":"dex","abilityScore":17,"modifier":-1}`, string(f.entries[0].Payload))
-	assert.JSONEq(t, `{"id":"climb_walls","kind":"bardSkill","die":100,"roll":93,"target":85,"success":false,"modifier":0}`,
+	assert.JSONEq(t, `{"id":"climb_walls","kind":"bardSkill","die":100,"roll":93,"target":85,
+		"adjustment":0,"adjustedTarget":85,"success":false,"rolledSuccess":false,"modifier":0}`,
 		string(f.entries[1].Payload))
 	assert.True(t, actionlog.IsRoll(actionlog.KindSkillCheck), "a check replaces the result card")
 }
 
 func TestSkillCheck_UnknownIDRollsNothing(t *testing.T) {
 	f := newFixture(t)
-	_, err := f.svc.Roll(context.Background(), charID, "juggling")
+	_, err := f.svc.Roll(context.Background(), charID, "juggling", skillsvc.Adjustment{})
 	require.ErrorIs(t, err, domain.ErrNotFound)
 	f.dice.AssertNotCalled(t, "RollDie", mock.Anything)
 	f.log.AssertNotCalled(t, "Record", mock.Anything, mock.Anything)
@@ -216,7 +218,7 @@ func TestSkillCheck_RecordFailureFailsTheCheck(t *testing.T) {
 	f.dice.EXPECT().RollDie(20).Return(3).Once()
 	boom := errors.New("boom")
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
-	_, err := f.svc.Roll(context.Background(), charID, "musical_instrument")
+	_, err := f.svc.Roll(context.Background(), charID, "musical_instrument", skillsvc.Adjustment{})
 	require.ErrorIs(t, err, boom)
 }
 
@@ -227,7 +229,8 @@ func checkEntry(t *testing.T, id int64, payload string) actionlog.Entry {
 }
 
 // List: each proficiency's target is computed on the server; the last check
-// of each skill is its newest non-voided entry.
+// of each skill is its newest non-voided entry. These entries were logged
+// before adjustments: they read as unadjusted.
 func TestList_TargetsAndLastCheckPerSkill(t *testing.T) {
 	f := newFixture(t)
 	f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, skillsvc.LastLookup).Return([]actionlog.Entry{
@@ -242,13 +245,13 @@ func TestList_TargetsAndLastCheckPerSkill(t *testing.T) {
 		Proficiencies: []skillsvc.Proficiency{
 			{
 				ID: "musical_instrument", Ability: skillsvc.AbilityDex, AbilityScore: 17, Modifier: -1, Target: 16,
-				Last: &skillsvc.LastCheck{EntryID: 20, Roll: 18, Target: 16, Success: false},
+				Last: &skillsvc.LastCheck{EntryID: 20, Roll: 18, Target: 16, AdjustedTarget: 16, Success: false},
 			},
 			{ID: "riding_land", Ability: skillsvc.AbilityWis, AbilityScore: 8, Modifier: 3, Target: 11},
 			{ID: "acrobatics", Ability: skillsvc.AbilityDex, AbilityScore: 17, Modifier: 5, Target: 22},
 		},
 		BardSkills: []skillsvc.BardSkill{
-			{ID: "climb_walls", Percent: 85, Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, Success: true}},
+			{ID: "climb_walls", Percent: 85, Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, AdjustedTarget: 85, Success: true}},
 			{ID: "pick_pockets", Percent: 50},
 		},
 	}, got)

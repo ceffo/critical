@@ -146,6 +146,12 @@ This recipe (defined in `justfile`):
 3. Deletes the temp DB
 4. Runs `go mod tidy`
 
+### Dependency bumps
+
+Dependabot (`.github/dependabot.yml`) opens one grouped minor/patch PR per week for each of Go modules (`api/go.mod`, including the `tool` directives: golangci-lint, mockery, bobgen-sqlite, air), npm, GitHub Actions and Docker base images. bob (v0) is excluded from the Go group: its bumps arrive as their own PR, are never auto-merged, and usually change the generated output.
+
+When a bump's `generated code is up to date` CI job fails (bob or mockery changed their output), check out the Dependabot branch, run `just generate` and `just mocks`, and commit the regenerated files on it; then `just validate`. Never hand-edit generated files.
+
 ### Layout
 
 | Path | Contents |

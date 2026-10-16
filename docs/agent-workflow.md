@@ -73,11 +73,12 @@ Generated files are committed and never hand-edited.
 
 | Trigger | Command |
 |---|---|
-| Migration added or changed under `api/internal/storage/sqlite/migrations/`; `.sql` changed under `api/internal/adapters/*/queries/`; bob version bumped | `just generate` |
-| New or changed service port (mockery) | `just mocks` |
+| Migration added or changed under `api/internal/storage/sqlite/migrations/`; `.sql` changed under `api/internal/adapters/*/queries/`; bob or sqlc version bumped, `api/sqlc.yaml` or `api/bobgen.yaml` changed | `just generate` |
+| New or changed service port, or a sqlc `Querier` changed (mockery) | `just mocks` |
 
 Generated paths: `api/internal/adapters/*/queries/*.bob.go`, `api/internal/storage/sqlite/bob/**`,
-mockery output. bob constraints are in `AGENTS.md` ("DAL Code Generation"). Migrations are new
+sqlc output (`api/internal/adapters/*/queries/{db,models,querier}.go`, `*.sql.go`), mockery output.
+The generators' constraints are in `docs/backend.md` ("DAL code generation"). Migrations are new
 files only, never an edited applied one. When two branches both regenerate, regenerate after the
 merge instead of hand-merging.
 
@@ -225,7 +226,7 @@ contract or domain struct.
 
 ## CI and PRs
 
-CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (bob/mockery output is up to date). PR body ends with
+CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/bob/mockery output is up to date). PR body ends with
 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Only the user merges PRs. Agents and the supervisor never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more.
 
 ## Commits

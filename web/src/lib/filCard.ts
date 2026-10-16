@@ -159,8 +159,8 @@ export interface SaveView {
   /** The target the save was judged against: target − adjustment (the server's). */
   adjustedTarget: number;
   passed: boolean;
-  /** rollTotal − adjustedTarget; absent on saves logged before it was recorded. */
-  margin?: number;
+  /** rollTotal − adjustedTarget, as computed by the server. */
+  margin: number;
   logEntryId?: number;
 }
 

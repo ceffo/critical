@@ -725,9 +725,7 @@ function SaveResult({
             <span data-testid="save-adjusted-target">{s.adjustedTarget}</span>
           </Fact>
         )}
-        <Fact label={t("result.margin")}>
-          {s.margin === undefined ? "–" : formatSigned(s.margin)}
-        </Fact>
+        <Fact label={t("result.margin")}>{formatSigned(s.margin)}</Fact>
       </dl>
       {s.adjustment !== 0 && (
         <div

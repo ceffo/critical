@@ -297,7 +297,7 @@ export interface SaveLogPayload {
   /** target − adjustment: the adjustment moves the target, + easier, − harder. */
   adjustedTarget: number;
   /** rollTotal − adjustedTarget, as computed by the server. */
-  margin?: number;
+  margin: number;
 }
 
 export function savePayload(e: LogEntry): SaveLogPayload | null {
@@ -308,6 +308,7 @@ export function savePayload(e: LogEntry): SaveLogPayload | null {
     typeof p.d20Roll === "number" &&
     typeof p.rollTotal === "number" &&
     typeof p.adjustedTarget === "number" &&
+    typeof p.margin === "number" &&
     typeof p.category === "string"
     ? (p as SaveLogPayload)
     : null;

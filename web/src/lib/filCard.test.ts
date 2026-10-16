@@ -313,7 +313,7 @@ describe("cardModel: every log kind renders from its payload", () => {
     });
   });
 
-  it("save: a payload without modifiers or margin still renders", async () => {
+  it("save: a payload without modifiers still renders", async () => {
     const m = cardModel(
       entry("save", {
         category: "breath",
@@ -323,11 +323,11 @@ describe("cardModel: every log kind renders from its payload", () => {
         adjustment: 0,
         rollTotal: 4,
         adjustedTarget: 12,
+        margin: -8,
       }),
       await makeT("en"),
     );
     expect(m.layout === "save" && m.save.modifiers).toEqual([]);
-    expect(m.layout === "save" && m.save.margin).toBeUndefined();
   });
 
   it("save: without the roll total and adjusted target the server fills (ADR 0006 step 8), it is not read as a save", async () => {

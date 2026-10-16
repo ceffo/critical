@@ -877,8 +877,7 @@
       "situational": "{{detail}}",
       "situationalUnnamed": "Situationnel",
       "critRange": "Coup critique ({{from}}–{{to}})",
-      "critPlaceholder": "Coup critique (provisoire)",
-      "adjustment": "Ajustement {{detail}}"
+      "critPlaceholder": "Coup critique (provisoire)"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",

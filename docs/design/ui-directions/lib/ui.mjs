@@ -3,6 +3,8 @@
 // direction composes and styles them differently; the content is identical on purpose.
 import * as d from "./data.mjs";
 import { logoSvg } from "./logos.mjs";
+import { ph } from "./phosphor.mjs";
+export { ph };
 
 export const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -82,7 +84,7 @@ export const saves = () =>
     .join("")}</div>`;
 
 export const hpChange = () =>
-  `<div class="hstack" style="flex-wrap:wrap;gap:.5rem"><span class="field placeholder" style="width:4.5rem">HP</span><span class="btn danger">${icon("sword")} Damage</span><span class="btn success">${icon("heart")} Healing</span></div>
+  `<div class="hp-change hstack" style="flex-wrap:nowrap;gap:.5rem"><span class="field placeholder" style="width:3.75rem;flex-shrink:0">HP</span><span class="btn danger grow">${ph("Drop")} Damage</span><span class="btn success grow">${ph("Heart")} Healing</span></div>
 <div class="field placeholder" style="margin-top:.5rem;display:flex">Source (optional): orc axe, potion…</div>`;
 
 export const chargeCard = () =>
@@ -197,7 +199,7 @@ export const diceComposer = ({ favourites = true } = {}) =>
 
 /** The act tab bar with the chosen tab. */
 export const actTabs = (active) =>
-  `<div class="tabs"><span class="tab ${active === "weapons" ? "on" : ""}">Weapons</span><span class="tab ${active === "spells" ? "on" : ""}">Spells <span class="count">12</span></span><span class="tab ${active === "items" ? "on" : ""}">Items <span class="count">3</span></span><span class="tab ${active === "skills" ? "on" : ""}">Skills</span></div>`;
+  `<div class="tabs"><span class="tab ${active === "weapons" ? "on" : ""}">${ph("Sword")} Weapons</span><span class="tab ${active === "spells" ? "on" : ""}">${ph("Sparkle")} Spells <span class="count">12</span></span><span class="tab ${active === "items" ? "on" : ""}">${ph("Backpack")} Items <span class="count">3</span></span><span class="tab ${active === "skills" ? "on" : ""}">${ph("ListChecks")} Skills</span></div>`;
 
 /** The Weapons tab: target bar and the weapon in hand. */
 export function weaponsTab() {
@@ -362,7 +364,7 @@ export const lookupHead = () =>
 export const lookupProse = () =>
   `<div class="label" style="margin-bottom:.375rem">Description</div><div class="prose">${d.lookup.selected.description.map((p) => `<p>${esc(p)}</p>`).join("")}</div>`;
 
-/** The journal as a full-width table: turn | entry | time | value. */
+/** The journal as a full-width table: turn | value | icon | entry | time. */
 export function journalTable() {
   let last = null;
   return `<div class="jt">${d.journal
@@ -372,7 +374,7 @@ export function journalTable() {
       const turn = first
         ? `<span class="label">${e.turn === 0 ? "Out of combat" : `Turn ${e.turn}`}${e.turn === d.turn.number ? ' <span class="tag">current</span>' : ""}</span>`
         : "";
-      return `<div class="jt-row ${e.current ? "current" : ""} ${e.reroll ? "show-hover" : ""} ${first ? "first" : ""}"><span class="jt-turn">${turn}</span>${icon(e.icon)}<span class="txt">${esc(e.text)}${e.reroll ? `<span class="reroll">${icon("reroll", "")} Reroll</span>` : ""}</span><span class="time muted">${e.time}</span><span class="val ${e.tone ?? ""}">${e.value ?? ""}</span></div>`;
+      return `<div class="jt-row ${e.current ? "current" : ""} ${e.reroll ? "show-hover" : ""} ${first ? "first" : ""}"><span class="jt-turn">${turn}</span><span class="val ${e.tone ?? ""}">${e.value ?? ""}</span>${icon(e.icon)}<span class="txt">${esc(e.text)}${e.reroll ? `<span class="reroll">${icon("reroll", "")} Reroll</span>` : ""}</span><span class="time muted">${e.time}</span></div>`;
     })
     .join("")}</div>`;
 }
@@ -413,7 +415,7 @@ export function weaponsTabCompact() {
     <div class="key" style="font-size:1.25rem;line-height:1.5rem">${esc(w.name)}</div>
     <div class="w-stats muted">${w.kind} · <b>${w.damageSm}</b> S/M · <span class="dim">${w.damageL} L</span> · <b>${w.bonus}</b> to hit / dmg · THAC0 <b>${w.effectiveThac0}</b></div>
   </div>
-  <span class="btn primary attack">${icon("sword")}<span><span class="attack-verb">Attack</span><span class="attack-needs">${w.needs}</span></span></span>
+  <span class="btn primary attack"><span class="attack-ico">${ph("Sword")}</span><span><span class="attack-verb">Attack</span><span class="attack-needs">${w.needs}</span></span></span>
 </div>
 <div class="hstack others" style="gap:.375rem;flex-wrap:wrap;margin-top:.625rem"><span class="label" style="margin-right:.25rem">Switch to</span><span class="chip">${icon("swap")} ${esc(d.weapons.previous.name)} <span class="muted">${d.weapons.previous.dice}</span></span>${d.weapons.others.map((n) => `<span class="chip">${esc(n)}</span>`).join("")}<span class="right muted body nowrap">▸ Crit table (house rule)</span></div>`;
 }
@@ -428,5 +430,5 @@ export const splitHandle = ({ collapsed = false } = {}) =>
 /** The journal collapsed to one bar: its last entry and the count, the band above keeps the room. */
 export function journalBar() {
   const e = d.journal[0];
-  return `<section class="panel history collapsed hstack" style="gap:.75rem"><span class="title">Journal</span><span class="tag">Turn ${e.turn}</span>${icon(e.icon)}<span class="txt grow">${esc(e.text)}<span class="time muted" style="margin-left:.5rem;font-size:.6875rem">${e.time}</span></span><span class="val ${e.tone ?? ""}">${e.value ?? ""}</span><span class="hair" style="height:1.25rem;border-left:1px solid var(--border)"></span><span class="muted nowrap">${d.journal.length} entries</span><span class="btn xs">Undo</span><span class="btn xs ghost">Redo</span></section>`;
+  return `<section class="panel history collapsed hstack" style="gap:.75rem"><span class="title">Journal</span><span class="tag">Turn ${e.turn}</span><span class="val ${e.tone ?? ""}" style="min-width:2rem;text-align:right">${e.value ?? ""}</span>${icon(e.icon)}<span class="txt grow">${esc(e.text)}<span class="time muted" style="margin-left:.5rem;font-size:.6875rem">${e.time}</span></span><span class="hair" style="height:1.25rem;border-left:1px solid var(--border)"></span><span class="muted nowrap">${d.journal.length} entries</span><span class="btn xs">Undo</span><span class="btn xs ghost">Redo</span></section>`;
 }

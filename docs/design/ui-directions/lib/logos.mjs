@@ -1,6 +1,6 @@
 // The Critical! mark options: the current mark (ADR 0020 step 5) for reference, Facet · Spine
-// (round 2) and the user's pick from round 2, "the first one but drop the triangle": Spine without
-// its front face, in two takes. Every mark shares one geometry: a hexagon of radius 13.5 (the d20
+// (round 2) and the pick, Facet · Bare: Spine without its front face, "the first one but drop the
+// triangle" (round 2), chosen over a heavier take in round 4 ("bare everywhere"). Every mark shares one geometry: a hexagon of radius 13.5 (the d20
 // seen from a vertex) with the "!" on the die's vertical axis. The die is `--tint`, the "!"
 // `--highlight`, with static Arcane dark-mode fallbacks, so the same SVG works inline on a themed
 // page and as a standalone favicon.
@@ -38,16 +38,9 @@ ${bang(H)}`,
   "facet-bare": {
     name: "Facet · Bare",
     concept:
-      "Spine without the front face: the hexagon outline alone, the gold \"!\" centred on its axis, the same stroke and stem weights as Spine. Two shapes, one axis.",
+      "The pick (round 4). Spine without the front face: the hexagon outline alone, the gold \"!\" centred on its axis, the same stroke and stem weights as Spine. Two shapes, one axis; one file for the header and the favicon.",
     body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
 ${bang(H, { w: 3, y: 8.5, h: 9.5, dot: 21.9 })}`,
-  },
-  "facet-bare-heavy": {
-    name: "Facet · Bare, heavy",
-    concept:
-      "The same mark with a heavier edge (2.6) and a wider stem (3.8), tuned for the favicon: at 16 px the hexagon stays a closed shape and the \"!\" keeps its dot.",
-    body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2.6" stroke-linejoin="round"/>
-${bang(H, { w: 3.8, y: 8, h: 10, dot: 22.3 })}`,
   },
 };
 

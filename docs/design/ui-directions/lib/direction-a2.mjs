@@ -9,7 +9,7 @@ import * as ui from "./ui.mjs";
 
 export const id = "a2-centre-stage";
 export const name = "A2 · Timeline + centre stage";
-export const logo = "facet-spine";
+export const logo = "facet-bare";
 export const css = "direction.css";
 
 const RAIL = [
@@ -46,7 +46,7 @@ const act = (tab) =>
     "act",
     `${character()}
 <div class="centre stack">
-  <section class="panel act"><div class="panel-head"><span class="title">Act</span>${ui.actTabs(tab)}</div><div class="scroll-y grow">${ui.actBody(tab, { columns: 2 })}</div></section>
+  <section class="panel act"><div class="panel-head">${ui.actTabs(tab)}</div><div class="scroll-y grow">${ui.actBody(tab, { columns: 2 })}</div></section>
   <section class="panel result-panel"><div class="panel-head"><span class="label">Result</span><span class="right tag outline">Latest</span></div>${ui.resultCard()}</section>
 </div>
 <section class="panel fil stack">${ui.journalHead()}<div class="scroll-y grow">${ui.journalList()}</div><div class="hair"></div>${ui.diceComposer()}</section>`,

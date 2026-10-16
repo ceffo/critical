@@ -25,7 +25,7 @@
 .two-col { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; }
 .saves .row28 { background: none; border-top: 1px solid var(--border); border-radius: 0; }
 .jt { display: grid; }
-.jt-row { display: grid; grid-template-columns: 9rem 1.125rem 1fr 4rem 4rem; align-items: center; gap: .75rem; min-height: 1.75rem; padding: .125rem .5rem; border-left: 2px solid transparent; }
+.jt-row { display: grid; grid-template-columns: 9rem 3rem 1.125rem 1fr 4rem; align-items: center; gap: .75rem; min-height: 1.75rem; padding: .125rem .5rem; border-left: 2px solid transparent; }
 .jt-row.first { border-top: 1px solid var(--border); }
 .jt-row.first:first-child { border-top: 0; }
 .jt-row.current { background: var(--amb-900); border-left-color: var(--tint); }

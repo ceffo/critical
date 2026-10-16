@@ -1,8 +1,9 @@
-// Direction B, "Character left, history below": the round-3 combination of the user's picks.
-// The header is A2's command row (brand, turn, initiative + Next turn, HP with its bar, the last
-// result) with the settings cog at its right end, over A2's effects timeline at full width. Below
-// it the character is a column on the left screen edge, the activity rail right of it, then the
-// stage. In Act the stage is A3's two bands: "now" (the act panel and the result side by side) and
+// Direction B, "Character left, history below": the round-3 combination of the user's picks,
+// reworked in round 4 with the user. The header is one band: the brand (which is the menu), the
+// turn, initiative + Next turn, then the effects timeline beside them and the last result docked
+// at the right. Hit points live in the character column, between the abilities and HP change.
+// Below the header the character is a column on the left screen edge, the activity rail right of
+// it, then the stage. In Act the stage is A3's two bands: "now" (the act panel and the result side by side) and
 // the journal as a full-width table, with a drag handle between them that resizes or collapses the
 // journal; the dice composer is a footer across the whole width. The Weapons tab is rebuilt: the
 // weapon in hand is one row whose Attack button carries the weight. The lookup and XP stages are
@@ -22,20 +23,20 @@ const RAIL = [
   ["inventory", "Inventory", "bag"],
 ];
 
+// The brand is the menu: mark + wordmark with a caret, hover/focus ring, no cog anywhere.
+const brandMenu = () =>
+  `<span class="brand-menu" role="button" tabindex="0" title="Menu">${ui.brand(logo)}${ui.ph("CaretDown", "ico caret")}</span>`;
+
 const header = () => `<header class="vitals">
-  <div class="cmd">
-    <div class="v-brand">${ui.brand(logo)}</div>
-    <div class="v-turn"><span class="label">Turn</span><span class="hero">${d.turn.number}</span></div>
-    <div class="v-init"><span class="hstack"><span class="muted">Initiative</span><span class="tag">${d.turn.initiative}</span><span class="btn ghost xs icon">${ui.icon("reroll")}</span></span><span class="hstack"><span class="btn primary">Next turn ${ui.icon("arrow")}</span><span class="btn icon">${ui.icon("dots")}</span></span></div>
-    <div class="v-hp">${ui.hpBlock("headline")}</div>
-    <div class="v-result"><span class="label">Last result · ${d.lastResult.when}</span>${ui.resultLine()}</div>
-    <div class="v-settings"><span class="btn ghost icon" title="Settings">${ui.icon("gear")}</span></div>
-  </div>
-  <div class="timeline">${ui.effectsTrack(12)}</div>
+  <div class="v-brand">${brandMenu()}</div>
+  <div class="v-turn"><span class="label">Turn</span><span class="hero">${d.turn.number}</span></div>
+  <div class="v-init"><span class="hstack"><span class="muted">Initiative</span><span class="tag">${d.turn.initiative}</span><span class="btn ghost xs icon">${ui.icon("reroll")}</span></span><span class="hstack"><span class="btn primary">Next turn ${ui.icon("arrow")}</span><span class="btn icon">${ui.icon("dots")}</span></span></div>
+  <div class="v-timeline">${ui.effectsTrack(12)}</div>
+  <div class="v-result"><span class="label">Last result · ${d.lastResult.when}</span>${ui.resultLine()}</div>
 </header>`;
 
 const character = () =>
-  `<aside class="moi stack"><div><div class="title">${ui.esc(d.character.name)}</div><div class="muted">${d.character.klass} · Level ${d.character.level}</div></div>${ui.abilities()}<div><div class="label" style="margin-bottom:.375rem">HP change</div>${ui.hpChange()}</div>${ui.chargeCard()}<div><div class="label" style="margin-bottom:.375rem">Saving throws · click to roll</div>${ui.savesButtons()}</div></aside>`;
+  `<aside class="moi stack"><div><div class="title">${ui.esc(d.character.name)}</div><div class="muted">${d.character.klass} · Level ${d.character.level}</div></div>${ui.abilities()}${ui.hpBlock("headline")}<div><div class="label" style="margin-bottom:.375rem">HP change</div>${ui.hpChange()}</div>${ui.chargeCard()}<div><div class="label" style="margin-bottom:.375rem">Saving throws · click to roll</div>${ui.savesButtons()}</div></aside>`;
 
 const shell = (active, stage, cls = "") => `<div class="app">
 ${header()}
@@ -54,7 +55,7 @@ const act = (tab, { collapsed = false } = {}) =>
   shell(
     "act",
     `<div class="now-band">
-  <section class="panel act"><div class="panel-head"><span class="title">Act</span>${ui.actTabs(tab)}</div><div class="scroll-y grow">${ui.actBodyB(tab, { columns: 2 })}</div></section>
+  <section class="panel act"><div class="panel-head">${ui.actTabs(tab)}</div><div class="scroll-y grow">${ui.actBodyB(tab, { columns: 2 })}</div></section>
   <section class="panel result-panel scroll-y"><div class="panel-head"><span class="label">Result</span><span class="right tag outline">Latest</span></div>${ui.resultCard({ details: true })}</section>
 </div>
 ${ui.splitHandle({ collapsed })}
@@ -84,22 +85,23 @@ export const pages = {
   xp,
 };
 
-export const stylesheet = `/* Direction B: A2's header and timeline, the character on the left edge, the rail beside it, A3's journal below with a handle, the dice as a footer. */
+export const stylesheet = `/* Direction B: one header band (brand = menu, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
 .app { height: 100vh; display: flex; flex-direction: column; }
-.vitals { border-bottom: 1px solid var(--border); background: var(--surface); }
-.cmd { display: grid; grid-template-columns: auto auto auto 16rem 1fr auto; align-items: stretch; }
-.cmd > div { padding: .5rem 1rem; border-right: 1px solid var(--border); min-width: 0; display: flex; align-items: center; gap: .75rem; }
-.cmd > div:last-child { border-right: 0; }
-@media (max-width: 1500px) { .cmd > div { padding: .5rem .75rem; } .v-brand .wordmark { display: none; } }
+.vitals { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; align-items: stretch; border-bottom: 1px solid var(--border); background: var(--surface); }
+.vitals > div { padding: .5rem 1rem; border-right: 1px solid var(--border); min-width: 0; display: flex; align-items: center; gap: .75rem; }
+.vitals > div:last-child { border-right: 0; }
+@media (max-width: 1500px) { .vitals > div { padding: .5rem .75rem; } .v-brand .wordmark { display: none; } }
+.brand-menu { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .5rem .25rem .375rem; border: 1px solid var(--border); border-radius: .5rem; cursor: pointer; }
+.brand-menu:hover, .brand-menu:focus-visible { border-color: var(--tint); background: var(--amb-900); outline: none; }
+.brand-menu .caret { width: .75rem; height: .75rem; color: var(--ink-muted); }
 .v-turn { gap: .5rem !important; }
 .v-turn .hero { font-size: 2rem; line-height: 2.25rem; }
-.v-init { flex-direction: column; align-items: flex-start !important; gap: .25rem !important; }
-.v-hp { flex-direction: column; align-items: stretch !important; justify-content: center; }
-.v-hp .hp-block .headline { font-size: 1.25rem; line-height: 1.5rem; }
+.v-init { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: .25rem !important; }
+.v-timeline { padding: .375rem 1rem .5rem !important; }
 .v-result { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: .25rem !important; }
-.v-settings { align-items: flex-start !important; }
-.timeline { padding: .375rem 1rem .5rem; border-top: 1px solid var(--border); }
 .effects-track { width: 100%; display: grid; row-gap: .125rem; }
+.moi .hp-block .headline { font-size: 1.5rem; line-height: 1.75rem; }
+.moi .hp-change .btn { padding: 0 .5rem; }
 .trow { display: grid; grid-template-columns: 11rem 1fr; align-items: center; min-height: 1.5rem; }
 .ttrack { display: grid; align-items: center; min-height: 1.5rem; }
 .tcol { text-align: center; font-size: .6875rem; color: var(--ink-muted); }
@@ -133,19 +135,21 @@ export const stylesheet = `/* Direction B: A2's header and timeline, the charact
 .weapon-row .w-stats { margin-top: .25rem; }
 .weapon-row .w-stats b { color: var(--ink); font-weight: 600; }
 .weapon-row .w-stats .dim { opacity: .6; }
-.btn.primary.attack { height: 2.75rem; padding: 0 1.25rem; gap: .625rem; border-radius: .5rem; font-size: .9375rem; }
-.btn.primary.attack .ico { width: 1.125rem; height: 1.125rem; }
+.btn.primary.attack { height: 2.75rem; padding: 0 1.25rem 0 0; gap: 0; border-radius: .5rem; font-size: .9375rem; }
+.btn.primary.attack .attack-ico { width: 2.75rem; height: 2.75rem; display: grid; place-items: center; }
+.btn.primary.attack .ico { width: 1.25rem; height: 1.25rem; }
 .btn.primary.attack > span { display: flex; flex-direction: column; align-items: flex-start; line-height: 1rem; }
 .btn.primary.attack .attack-verb { font-weight: 600; }
 .btn.primary.attack .attack-needs { font-size: .6875rem; font-weight: 500; opacity: .8; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; }
 .jt { display: grid; }
-.jt-row { display: grid; grid-template-columns: 9rem 1.125rem 1fr 4rem 3rem; align-items: center; gap: .75rem; min-height: 1.75rem; padding: .125rem .5rem; border-left: 2px solid transparent; }
+.jt-row { display: grid; grid-template-columns: 9rem 3rem 1.125rem 1fr 4rem; align-items: center; gap: .75rem; min-height: 1.75rem; padding: .125rem .5rem; border-left: 2px solid transparent; }
 .jt-row.first { border-top: 1px solid var(--border); }
 .jt-row.first:first-child { border-top: 0; }
 .jt-row.current { background: var(--amb-900); border-left-color: var(--tint); }
 .jt-row .ico { color: var(--ink-muted); }
 .jt-row .time { font-size: .6875rem; text-align: right; }
+.jt-row.first .val { font-weight: 600; }
 .jt-row .val { font-weight: 600; text-align: right; }
 .jt-row .reroll { opacity: 0; margin-left: .5rem; color: var(--tint); font-size: .6875rem; display: inline-flex; align-items: center; gap: .25rem; vertical-align: middle; }
 .jt-row:hover .reroll, .jt-row.show-hover .reroll { opacity: 1; }

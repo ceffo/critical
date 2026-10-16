@@ -9,7 +9,7 @@ import * as ui from "./ui.mjs";
 
 export const id = "a3-now-history";
 export const name = "A3 · Now and history";
-export const logo = "facet-bare-heavy";
+export const logo = "facet-bare";
 export const css = "direction.css";
 
 const TABS = [
@@ -38,7 +38,7 @@ const act = (tab) =>
   shell(
     "act",
     `<div class="now">
-  <section class="panel act"><div class="panel-head"><span class="title">Act</span>${ui.actTabs(tab)}</div><div class="scroll-y grow">${ui.actBody(tab, { columns: 2 })}</div></section>
+  <section class="panel act"><div class="panel-head">${ui.actTabs(tab)}</div><div class="scroll-y grow">${ui.actBody(tab, { columns: 2 })}</div></section>
   <section class="panel result-panel scroll-y"><div class="panel-head"><span class="label">Result</span><span class="right tag outline">Latest</span></div>${ui.resultCard({ details: true })}</section>
   <aside class="panel moi stack scroll-y" style="gap:.625rem"><div class="hstack"><span class="title">${ui.esc(d.character.name)}</span><span class="right muted">${d.character.klass} · ${d.character.level}</span></div>${ui.abilities()}${ui.hpChange()}${ui.chargeCard()}<div><div class="label" style="margin-bottom:.25rem">Saving throws</div>${ui.saves()}</div></aside>
 </div>
@@ -97,7 +97,7 @@ export const stylesheet = `/* Direction A3: one strip on top with the activities
 .two-col { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.5rem; }
 .saves .row28 { background: none; border-top: 1px solid var(--border); border-radius: 0; }
 .jt { display: grid; }
-.jt-row { display: grid; grid-template-columns: 9rem 1.125rem 1fr 4rem 4rem; align-items: center; gap: .75rem; min-height: 1.75rem; padding: .125rem .5rem; border-left: 2px solid transparent; }
+.jt-row { display: grid; grid-template-columns: 9rem 3rem 1.125rem 1fr 4rem; align-items: center; gap: .75rem; min-height: 1.75rem; padding: .125rem .5rem; border-left: 2px solid transparent; }
 .jt-row.first { border-top: 1px solid var(--border); }
 .jt-row.first:first-child { border-top: 0; }
 .jt-row.current { background: var(--amb-900); border-left-color: var(--tint); }

@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { useState } from "react";
 import {
   DiceFive,
@@ -37,7 +38,7 @@ const ITEM_COLS =
  * entry the journal can pop.
  */
 export function InventoryPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const items = useItemsStore((s) => s.items);
   const { spendItem, rolling } = useRollStore();
   const run = useTableStore((s) => s.run);
@@ -101,7 +102,7 @@ export function InventoryPanel() {
             form === i.id ? (
               <li key={i.id}>
                 <ItemForm
-                  initial={draftFromItem(i)}
+                  initial={draftFromItem(i, i18n.language)}
                   editing={i}
                   types={types}
                   busy={busy}
@@ -150,7 +151,7 @@ function ItemRow({
   onEdit: () => void;
   onRemove: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <li
       className={cn(
@@ -161,7 +162,9 @@ function ItemRow({
     >
       <div className="flex min-w-0 flex-col">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 break-words font-medium">{i.name}</span>
+          <span className="min-w-0 break-words font-medium">
+            {localized(i18n.language, i.name)}
+          </span>
           {i.magicalBonus !== 0 && (
             <span
               className="shrink-0 rounded-md bg-amb-900 px-1.5 text-label font-medium text-highlight tabular-nums"
@@ -213,7 +216,9 @@ function ItemRow({
           variant="secondary"
           disabled={busy || i.count === 0}
           onClick={onUse}
-          aria-label={t("items.useOne", { name: i.name })}
+          aria-label={t("items.useOne", {
+            name: localized(i18n.language, i.name),
+          })}
         >
           <Minus />
         </Button>
@@ -231,7 +236,9 @@ function ItemRow({
             variant="secondary"
             disabled={busy}
             onClick={onRestock}
-            aria-label={t("items.addOne", { name: i.name })}
+            aria-label={t("items.addOne", {
+              name: localized(i18n.language, i.name),
+            })}
           >
             <Plus />
           </Button>
@@ -247,7 +254,9 @@ function ItemRow({
           className="text-muted-foreground"
           disabled={busy}
           onClick={onEdit}
-          aria-label={t("items.form.edit", { name: i.name })}
+          aria-label={t("items.form.edit", {
+            name: localized(i18n.language, i.name),
+          })}
         >
           <PencilSimple />
         </Button>
@@ -257,7 +266,9 @@ function ItemRow({
           className="text-muted-foreground"
           disabled={busy}
           onClick={onRemove}
-          aria-label={t("items.form.remove", { name: i.name })}
+          aria-label={t("items.form.remove", {
+            name: localized(i18n.language, i.name),
+          })}
         >
           <Trash />
         </Button>

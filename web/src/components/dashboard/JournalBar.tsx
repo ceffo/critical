@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Sparkle } from "@phosphor-icons/react";
 import { useSpellName } from "@/i18n/spellName";
+import { useInventoryName } from "@/i18n/inventoryName";
 import { rowValue, turnLabel } from "@/lib/filCard";
 import { formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
@@ -18,6 +19,7 @@ import { UndoButton } from "./UndoButton";
 export function JournalBar() {
   const { t, i18n } = useTranslation();
   const spellName = useSpellName();
+  const names = useInventoryName();
   const entries = useLogStore((s) => s.entries);
   const last = entries[0];
   const value = last ? rowValue(last) : null;
@@ -59,7 +61,7 @@ export function JournalBar() {
               voided && "text-muted-foreground line-through",
             )}
           >
-            {entryText(last, t, spellName)}
+            {entryText(last, t, spellName, names)}
           </span>
           <span className="shrink-0 text-label text-muted-foreground tabular-nums">
             {formatTime(last.createdAt, i18n.language)}

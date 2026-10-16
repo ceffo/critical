@@ -280,7 +280,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   const frEntry = page
     .getByRole("region", { name: "Journal", exact: true })
     .getByRole("listitem")
-    .filter({ hasText: "Short Bow +2 (Arrows +2)" });
+    .filter({ hasText: "Arc court +2 (Flèches +2)" });
   await expect(frEntry).toContainText(
     /contre CA 10 : (touché|critique).*\(CA -20 → 10 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
   );
@@ -499,7 +499,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
     page
       .getByRole("region", { name: "Journal", exact: true })
       .getByRole("listitem")
-      .filter({ hasText: "Long Sword +2 contre CA 10" }),
+      .filter({ hasText: "Épée longue +2 contre CA 10" }),
   ).toContainText(`(CA -20 → 10 : RATÉ → CRITIQUE)`);
   await snap(page, "miss-to-crit-fr");
 });

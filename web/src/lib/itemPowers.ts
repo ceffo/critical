@@ -4,14 +4,18 @@
 import type { TFunction } from "i18next";
 import type { BuffEffects, ItemPower } from "@/types/buffs";
 import type { Item } from "@/types/items";
+import { localized } from "@/i18n/localized";
 import { formatSigned } from "./format";
 
 /** The current name of the item with an id, undefined when no item has it (removed since). */
 export type ItemNamer = (itemId: string) => string | undefined;
 
-/** Names items by id from the item list. */
-export function itemNamer(items: readonly Item[]): ItemNamer {
-  return (itemId) => items.find((i) => i.id === itemId)?.name;
+/** Names items by id from the item list, in the UI language `lang` (ADR 0023 step 12). */
+export function itemNamer(items: readonly Item[], lang: string): ItemNamer {
+  return (itemId) => {
+    const item = items.find((i) => i.id === itemId);
+    return item ? localized(lang, item.name) : undefined;
+  };
 }
 
 /**
@@ -31,7 +35,7 @@ export interface PowerRow {
   /** Stable React key: item and power id. */
   key: string;
   itemId: string;
-  /** The item's current name (its id when no item has it). */
+  /** The item's current name in the UI language (its id when no item has it). */
   name: string;
   /** The power's trigger (effective STR it needs), when the item list says it has one. */
   minStr?: number;
@@ -45,13 +49,14 @@ export interface PowerRow {
 export function powerRows(
   powers: readonly ItemPower[],
   items: readonly Item[],
+  lang: string,
 ): PowerRow[] {
   return powers.map((p) => {
     const item = items.find((i) => i.id === p.itemId);
     return {
       key: `${p.itemId}/${p.powerId}`,
       itemId: p.itemId,
-      name: item?.name ?? p.itemId,
+      name: item ? localized(lang, item.name) : p.itemId,
       minStr: item?.powers?.find((d) => d.id === p.powerId)?.minStr,
       effects: p.effects,
     };

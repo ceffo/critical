@@ -1,5 +1,5 @@
--- Item and weapon names as localized texts (ADR 0023 step 5, ADR 0016 step
--- 17): items.name and weapons.name hold a key into localized_texts instead
+-- Item and weapon names as localized texts (ADR 0023 steps 5 and 9):
+-- items.name and weapons.name hold a key into localized_texts instead
 -- of the text. Every existing name becomes the 'en' row of a new key (the
 -- names so far were the sheet's English ones, or what the player typed,
 -- which had no language either); the seed loader adds the other languages of

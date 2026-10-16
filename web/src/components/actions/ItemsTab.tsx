@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { ArrowRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useItemsStore } from "@/stores/items";
@@ -11,7 +12,7 @@ import { combatItems } from "@/lib/combatItems";
  * the Inventory activity. Names wrap, never cut (step 1).
  */
 export function ItemsTab({ onManage }: { onManage: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const items = combatItems(useItemsStore((s) => s.items));
   const { spendItem, rolling } = useRollStore();
 
@@ -29,7 +30,9 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
               key={i.id}
               className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto_4rem_5rem] items-center gap-3 rounded-lg px-3 py-1 hover:bg-neu-900"
             >
-              <span className="text-body break-words">{i.name}</span>
+              <span className="text-body break-words">
+                {localized(i18n.language, i.name)}
+              </span>
               <span
                 className="text-right text-body whitespace-nowrap text-muted-foreground tabular-nums"
                 data-testid="item-count"
@@ -58,7 +61,7 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
                     ? "actions.items.rollLabel"
                     : "actions.items.useLabel",
                   {
-                    name: i.name,
+                    name: localized(i18n.language, i.name),
                   },
                 )}
                 onClick={() => void spendItem(i.id)}

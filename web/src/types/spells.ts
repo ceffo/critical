@@ -228,7 +228,8 @@ export interface SpellbookEntry {
 /** Mirrors spellprephdl.SpendableItemDTO. */
 export interface SpendableItem {
   id: string;
-  name: string;
+  /** A language map (ADR 0023 step 9): pick with `localized`. */
+  name: LocalizedText;
   count: number;
 }
 

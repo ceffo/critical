@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { localized } from "./localized";
+import { editLang, localized } from "./localized";
 
 describe("localized", () => {
   const name = { en: "Magic Missile", fr: "Projectile magique" };
@@ -19,5 +19,18 @@ describe("localized", () => {
     expect(localized("fr", {})).toBe("");
     expect(localized("fr", undefined)).toBe("");
     expect(localized("fr", { fr: "" })).toBe("");
+  });
+
+  // ADR 0023 step 12: a name the player typed in another language only is still shown.
+  it("falls back to the first language when it has neither the UI language nor English", () => {
+    expect(localized("en", { fr: "Corde" })).toBe("Corde");
+    expect(localized("en", { fr: "Corde", de: "Seil" })).toBe("Seil");
+  });
+});
+
+describe("editLang", () => {
+  it("is the UI language without its region (ADR 0023 step 11)", () => {
+    expect(editLang("fr-CA")).toBe("fr");
+    expect(editLang("en")).toBe("en");
   });
 });

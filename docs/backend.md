@@ -430,8 +430,7 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   can be overridden at `docker run`. The image holds no data, has no volume and names no database: the
   database is PostgreSQL at `CRITICAL_DSN`, given at run time (on fly a secret). `deploy/fly.*.toml` still
   set the SQLite DSN and the `/data` volume until the fly PostgreSQL configuration replaces them
-  (`internal/flycheck` compares every other `[env]` value with the image's). `scripts/image-smoke.sh` runs
-  the image on a throwaway PostgreSQL container of its own (the image refuses the in-memory storage).
+  (`internal/flycheck` compares every other `[env]` value with the image's).
 - **`CRITICAL_WEB_DIR`** (optional): the web build to serve. Set, every path outside `/api` is the file of
   that path, or `index.html` when there is none (SPA fallback, so a deep link reloads into the app); files
   under `assets/` (content-hashed by Vite) are sent with `Cache-Control: public, max-age=31536000,
@@ -443,7 +442,9 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   `-ldflags -X …/internal/cmd/api.commit=$COMMIT`; any other build reports `unknown`. The release name is not
   in the image (ADR 0024, consequences): the GitHub Release maps a tag to its commit.
 - **Smoke check**: `scripts/image-smoke.sh <image> <commit>` runs the image on the fixture seeds (the fixture
-  catalogue knows only their spells) and checks health with the commit, `/` and a deep link returning
+  catalogue knows only their spells) and a throwaway PostgreSQL container of its own (`postgres:17-alpine` on a
+  private network, no volume; the image refuses the in-memory storage), so the boot migrates, seeds and imports
+  into an empty database. It checks health with the commit, `/` and a deep link returning
   `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. The CI `image` job builds
   the image with the fixture and runs it on every PR and on main; nothing is pushed.
 - **On fly.io**: configuration in `deploy/fly.*.toml`, operator commands in [deploy.md](deploy.md).

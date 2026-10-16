@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -13,38 +15,114 @@ import (
 // last check of each skill (the action log's maximum page).
 const LastLookup = 500
 
+// ChangeSkillAdjustment names a post-roll adjustment of a check in its
+// correction step (actionlog.CorrectionStep.Field): from the adjustment in
+// effect to the new one.
+const ChangeSkillAdjustment = "skillAdjustment"
+
 // checkRecord is skillsvc's JSON encoding of a check inside its skill_check
-// entry (payload). Entries already in the log must stay decodable: add
-// fields, never rename them.
+// entry (payload); an adjustment amend carries the recomputed record.
+// Entries already in the log must stay decodable: add fields, never rename
+// them (decodeCheck fills the ones older entries lack).
 type checkRecord struct {
-	ID      string `json:"id"`
-	Kind    Kind   `json:"kind"`
-	Die     int    `json:"die"`
-	Roll    int    `json:"roll"`
-	Target  int    `json:"target"`
-	Success bool   `json:"success"`
+	ID     string `json:"id"`
+	Kind   Kind   `json:"kind"`
+	Die    int    `json:"die"`
+	Roll   int    `json:"roll"`
+	Target int    `json:"target"`
+	// Adjustment moves Target to AdjustedTarget; Success is the verdict
+	// against AdjustedTarget.
+	Adjustment       int    `json:"adjustment"`
+	AdjustmentReason string `json:"adjustmentReason,omitempty"`
+	AdjustedTarget   int    `json:"adjustedTarget"`
+	Success          bool   `json:"success"`
+	// RolledSuccess is the verdict as rolled, with the adjustment set before
+	// the roll, kept through any later adjustment. Nil only in entries logged
+	// before adjustments existed, whose verdict never changed.
+	RolledSuccess *bool `json:"rolledSuccess,omitempty"`
 	// Set for a proficiency only.
 	Ability      Ability `json:"ability,omitempty"`
 	AbilityScore int     `json:"abilityScore,omitempty"`
 	Modifier     int     `json:"modifier"`
+	// PreviousSuccess and PreviousAdjustment are the verdict and adjustment
+	// before the latest post-roll adjustment; set on adjustment amends only.
+	PreviousSuccess    *bool `json:"previousSuccess,omitempty"`
+	PreviousAdjustment *int  `json:"previousAdjustment,omitempty"`
+}
+
+// decodeCheck reads a check payload. An entry logged before adjustments has
+// none: its adjusted target is its target and its verdict the rolled one.
+func decodeCheck(raw []byte) (checkRecord, error) {
+	var r checkRecord
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return checkRecord{}, err
+	}
+	r.AdjustedTarget = AdjustedTarget(r.Target, r.Adjustment)
+	if r.RolledSuccess == nil {
+		rolled := r.Success
+		r.RolledSuccess = &rolled
+	}
+	return r, nil
+}
+
+// settle moves the target by the adjustment and judges the stored roll
+// against it (ADR 0014 steps 5 and 6): the roll never changes.
+func (r *checkRecord) settle() {
+	r.AdjustedTarget = AdjustedTarget(r.Target, r.Adjustment)
+	r.Success = Success(r.Kind, r.Roll, r.AdjustedTarget)
 }
 
 func (r checkRecord) result(entryID int64) *CheckResult {
+	rolled := r.Success
+	if r.RolledSuccess != nil {
+		rolled = *r.RolledSuccess
+	}
 	return &CheckResult{
-		ID: r.ID, Kind: r.Kind, Die: r.Die, Roll: r.Roll, Target: r.Target, Success: r.Success,
+		ID: r.ID, Kind: r.Kind, Die: r.Die, Roll: r.Roll, Target: r.Target,
+		Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason, AdjustedTarget: r.AdjustedTarget,
+		Success: r.Success, RolledSuccess: rolled,
 		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, LogEntryID: entryID,
 	}
 }
 
+// normalize trims the reason, refuses a too long one and drops it with a 0
+// adjustment (nothing to explain). The range depends on the check's kind
+// (checkRange).
+func normalize(adj Adjustment) (Adjustment, error) {
+	adj.Reason = strings.TrimSpace(adj.Reason)
+	if utf8.RuneCountInString(adj.Reason) > MaxAdjustmentReasonLen {
+		return Adjustment{}, fmt.Errorf("%w: reason must be at most %d characters", domain.ErrInvalidInput, MaxAdjustmentReasonLen)
+	}
+	if adj.Value == 0 {
+		adj.Reason = ""
+	}
+	return adj, nil
+}
+
+// checkRange refuses an adjustment beyond the range of kind (ADR 0014 step
+// 7).
+func checkRange(k Kind, value int) error {
+	limit := MaxAdjustment(k)
+	if value < -limit || value > limit {
+		return fmt.Errorf("%w: adjustment must be between -%d and +%d", domain.ErrInvalidInput, limit, limit)
+	}
+	return nil
+}
+
 // Roll rolls one check of skill id: a proficiency is one d20 against the
 // ability score plus the modifier (ADR 0014 steps 1 and 2), a bard skill one
-// d100 against its percentage (step 3). The check is a skill_check entry with
-// no snapshots, recorded in the same transaction (step 4). An unknown id is
-// refused before anything is rolled.
-func (s *service) Roll(ctx context.Context, characterID int64, id string) (*CheckResult, error) {
+// d100 against its percentage (step 3), the target moved by the pre-roll
+// adjustment (step 5). The check is a skill_check entry with no snapshots,
+// recorded in the same transaction (step 4). An unknown id or an invalid
+// adjustment is refused before anything is rolled.
+func (s *service) Roll(ctx context.Context, characterID int64, id string, adj Adjustment) (*CheckResult, error) {
+	adj, err := normalize(adj)
+	if err != nil {
+		return nil, err
+	}
 	var res *CheckResult
-	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		rec, err := s.check(ctx, characterID, id)
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		rec, err := s.check(ctx, characterID, id, adj)
 		if err != nil {
 			return err
 		}
@@ -69,8 +147,65 @@ func (s *service) Roll(ctx context.Context, characterID int64, id string) (*Chec
 	return res, nil
 }
 
-// check finds the skill and rolls its die.
-func (s *service) check(ctx context.Context, characterID int64, id string) (checkRecord, error) {
+// Adjust sets the adjustment of the latest check entryID after the roll
+// (ADR 0014 step 6): it replaces the one in effect, 0 removes it and drops
+// the reason, and the verdict is recomputed from the stored roll and target;
+// the verdict as rolled is kept. The change is an amend correction, its own
+// undoable step (step 7, ADR 0010 step 6); AmendLatest refuses an entry that
+// is not a skill check, is voided or is not the latest roll.
+func (s *service) Adjust(ctx context.Context, characterID, entryID int64, adj Adjustment) (*CheckResult, error) {
+	adj, err := normalize(adj)
+	if err != nil {
+		return nil, err
+	}
+	var rec checkRecord
+	e, err := s.log.AmendLatest(ctx, characterID, entryID, actionlog.KindSkillCheck, func(e actionlog.Entry) (actionlog.PayloadAmendment, error) {
+		r, err := decodeCheck(e.EffectivePayload())
+		if err != nil {
+			return actionlog.PayloadAmendment{}, fmt.Errorf("decode skill check #%d: %w", e.ID, err)
+		}
+		rec = r
+		if err := checkRange(rec.Kind, adj.Value); err != nil {
+			return actionlog.PayloadAmendment{}, err
+		}
+		prevSuccess, prevAdj := rec.Success, rec.Adjustment
+		rec.Adjustment, rec.AdjustmentReason = adj.Value, adj.Reason
+		rec.settle()
+		rec.PreviousSuccess, rec.PreviousAdjustment = &prevSuccess, &prevAdj
+		payload, err := json.Marshal(rec)
+		if err != nil {
+			return actionlog.PayloadAmendment{}, fmt.Errorf("encode skill check payload: %w", err)
+		}
+		return actionlog.PayloadAmendment{Payload: payload, Change: actionlog.Change{
+			Field: ChangeSkillAdjustment, From: prevAdj, To: rec.Adjustment,
+		}}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return rec.result(e.ID), nil
+}
+
+// check finds the skill, checks the adjustment's range for its kind and
+// rolls its die.
+func (s *service) check(ctx context.Context, characterID int64, id string, adj Adjustment) (checkRecord, error) {
+	rec, err := s.find(ctx, characterID, id)
+	if err != nil {
+		return checkRecord{}, err
+	}
+	if err := checkRange(rec.Kind, adj.Value); err != nil {
+		return checkRecord{}, err
+	}
+	rec.Roll = s.dice.RollDie(rec.Die)
+	rec.Adjustment, rec.AdjustmentReason = adj.Value, adj.Reason
+	rec.settle()
+	rolled := rec.Success
+	rec.RolledSuccess = &rolled
+	return rec, nil
+}
+
+// find is the unrolled check of skill id: its kind, die and target.
+func (s *service) find(ctx context.Context, characterID int64, id string) (checkRecord, error) {
 	profs, err := s.dal.ListProficiencies(ctx)
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("list proficiencies: %w", err)
@@ -87,11 +222,8 @@ func (s *service) check(ctx context.Context, characterID int64, id string) (chec
 		if err != nil {
 			return checkRecord{}, fmt.Errorf("proficiency %q: %w", p.ID, err)
 		}
-		target := ProficiencyTarget(score, p.Modifier)
-		roll := s.dice.RollDie(ProficiencyDie)
 		return checkRecord{
-			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Roll: roll, Target: target,
-			Success: ProficiencySuccess(roll, target),
+			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: ProficiencyTarget(score, p.Modifier),
 			Ability: p.Ability, AbilityScore: score, Modifier: p.Modifier,
 		}, nil
 	}
@@ -100,20 +232,16 @@ func (s *service) check(ctx context.Context, characterID int64, id string) (chec
 		return checkRecord{}, fmt.Errorf("list bard skills: %w", err)
 	}
 	for _, b := range skills {
-		if b.ID != id {
-			continue
+		if b.ID == id {
+			return checkRecord{ID: b.ID, Kind: KindBardSkill, Die: BardSkillDie, Target: b.Percent}, nil
 		}
-		roll := s.dice.RollDie(BardSkillDie)
-		return checkRecord{
-			ID: b.ID, Kind: KindBardSkill, Die: BardSkillDie, Roll: roll, Target: b.Percent,
-			Success: BardSkillSuccess(roll, b.Percent),
-		}, nil
 	}
 	return checkRecord{}, fmt.Errorf("%w: unknown skill %q", domain.ErrNotFound, id)
 }
 
 // List returns the catalog with each proficiency's target and the last check
-// of every skill, read from the newest LastLookup non-voided checks.
+// of every skill (its adjustment and verdict in effect), read from the newest
+// LastLookup non-voided checks.
 func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) {
 	var out *Skills
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -163,14 +291,17 @@ func (s *service) lastChecks(ctx context.Context, characterID int64) (map[string
 	}
 	last := map[string]*LastCheck{}
 	for _, e := range entries { // newest first
-		var rec checkRecord
-		if err := json.Unmarshal(e.EffectivePayload(), &rec); err != nil {
+		rec, err := decodeCheck(e.EffectivePayload())
+		if err != nil {
 			return nil, fmt.Errorf("decode skill check #%d: %w", e.ID, err)
 		}
 		if _, seen := last[rec.ID]; seen || rec.ID == "" {
 			continue
 		}
-		last[rec.ID] = &LastCheck{EntryID: e.ID, Roll: rec.Roll, Target: rec.Target, Success: rec.Success}
+		last[rec.ID] = &LastCheck{
+			EntryID: e.ID, Roll: rec.Roll, Target: rec.Target,
+			Adjustment: rec.Adjustment, AdjustedTarget: rec.AdjustedTarget, Success: rec.Success,
+		}
 	}
 	return last, nil
 }

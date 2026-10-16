@@ -43,12 +43,15 @@ type BardSkillDef struct {
 	Percent int
 }
 
-// LastCheck is the newest non-voided check of a skill.
+// LastCheck is the newest non-voided check of a skill, with the adjustment
+// and verdict in effect. Target is the unadjusted target.
 type LastCheck struct {
-	EntryID int64
-	Roll    int
-	Target  int
-	Success bool
+	EntryID        int64
+	Roll           int
+	Target         int
+	Adjustment     int
+	AdjustedTarget int
+	Success        bool
 }
 
 // Proficiency is a proficiency with its target (ability score + modifier).
@@ -74,17 +77,32 @@ type Skills struct {
 	BardSkills    []BardSkill
 }
 
-// CheckResult is one check as rolled. Ability, AbilityScore and Modifier
-// are set for a proficiency only.
+// Adjustment is the DM's adjustment of one check (ADR 0014 steps 5 to 7):
+// it moves the target, + easier, - harder; the roll never changes. Reason is
+// optional ("slippery rope").
+type Adjustment struct {
+	Value  int
+	Reason string
+}
+
+// CheckResult is one check with the adjustment in effect. Target is the
+// unadjusted target, AdjustedTarget = Target + Adjustment the one the roll is
+// judged against; Success is the verdict in effect, RolledSuccess the verdict
+// as rolled (with the adjustment set before the roll). Ability, AbilityScore
+// and Modifier are set for a proficiency only.
 type CheckResult struct {
-	ID           string
-	Kind         Kind
-	Die          int
-	Roll         int
-	Target       int
-	Success      bool
-	Ability      Ability
-	AbilityScore int
-	Modifier     int
-	LogEntryID   int64
+	ID               string
+	Kind             Kind
+	Die              int
+	Roll             int
+	Target           int
+	Adjustment       int
+	AdjustmentReason string
+	AdjustedTarget   int
+	Success          bool
+	RolledSuccess    bool
+	Ability          Ability
+	AbilityScore     int
+	Modifier         int
+	LogEntryID       int64
 }

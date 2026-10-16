@@ -65,11 +65,12 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    tooltip), `web/src/stores/undo.test.ts` (empty log, stale top from another client, reroll and
    row Void in step), `web/e2e/log.spec.ts` "Annuler and Ctrl/Cmd+Z pop the newest action".
 6. **A correction is its own step.** A correction after the roll (target AC, ADR 0002 step 11
-   and ADR 0012 step 5; save adjustment, ADR 0006 step 5; GM verdict, ADR 0012 step 4) records,
+   and ADR 0012 step 5; save adjustment, ADR 0006 step 5; GM verdict, ADR 0012 step 4; skill check
+   adjustment, ADR 0014 step 7) records,
    in the transaction that checks it may be made (ADR 0006 step 6), two rows: a `correction`
    entry on the stack (stamped with the current round, no snapshot), whose payload names the
-   change (`{entryId, entryKind, field, from, to}`; `field` is `targetAc`, `saveAdjustment` or
-   `verdict`; `from` is the value before this correction, null for an unknown AC or no
+   change (`{entryId, entryKind, field, from, to}`; `field` is `targetAc`, `saveAdjustment`,
+   `skillAdjustment` or `verdict`; `from` is the value before this correction, null for an unknown AC or no
    verdict), and the amend carrying the corrected entry's new payload, linked to it (`stepId`).
    It is one generic step for every kind of correction: the correcting service only computes
    the payload and names the field. A `correction` entry is not one of the roll kinds.

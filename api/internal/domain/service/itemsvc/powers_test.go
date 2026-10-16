@@ -65,8 +65,10 @@ func TestItemPowers_Step9_StrengthEffectsRefused(t *testing.T) {
 func TestItemPowers_Step9_CountDoesNotGateThePowers(t *testing.T) {
 	spent := gem
 	spent.Count = 0
-	ring := itemsvc.Item{ID: "ring", Name: "Ring", Behaviour: itemsvc.BehaviourStock, Count: 1,
-		Powers: []itemsvc.Power{{ID: "luck", Effects: buffsvc.BuffEffects{ToHit: ptr(1)}}}}
+	ring := itemsvc.Item{
+		ID: "ring", Name: "Ring", Behaviour: itemsvc.BehaviourStock, Count: 1,
+		Powers: []itemsvc.Power{{ID: "luck", Effects: buffsvc.BuffEffects{ToHit: ptr(1)}}},
+	}
 	arrows := itemsvc.Item{ID: "arrows", Name: "Arrows", Behaviour: itemsvc.BehaviourStock, Count: 0}
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)

@@ -51,14 +51,17 @@ func TestItemPowers_Step10_TriggerAtEffectiveStr(t *testing.T) {
 		want   buffsvc.BuffModifiers
 	}{
 		{
-			"17 (12 + Strength 5): off", 12, []buffsvc.BuffEffect{strength(5)}, []buffsvc.ItemPower{hammerPower},
+			"17 (12 + Strength 5): off", 12,
+			[]buffsvc.BuffEffect{strength(5)},
+			[]buffsvc.ItemPower{hammerPower},
 			buffsvc.BuffModifiers{SpellsBuff: 1, Multipliers: 1, EffectiveStr: 17},
 		},
 		{"18 (12 + Strength 2 + 4): on", 12, []buffsvc.BuffEffect{strength(2), strength(4)}, []buffsvc.ItemPower{hammerPower}, on(18)},
 		{"19 (12 + Improved 7): on", 12, []buffsvc.BuffEffect{improvedStrength(7)}, []buffsvc.ItemPower{hammerPower}, on(19)},
 		{"23 (14 + Improved 10, capped): on", 14, []buffsvc.BuffEffect{improvedStrength(10)}, []buffsvc.ItemPower{hammerPower}, on(23)},
 		{
-			"no trigger: on at the sheet's 12", 12, nil, []buffsvc.ItemPower{always},
+			"no trigger: on at the sheet's 12", 12, nil,
+			[]buffsvc.ItemPower{always},
 			buffsvc.BuffModifiers{
 				SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, ToHit: 1,
 				ToHitFrom: []buffsvc.Contribution{{Buff: "Ring", ItemID: "ring", Value: 1}},

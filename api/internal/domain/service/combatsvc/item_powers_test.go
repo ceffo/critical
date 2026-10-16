@@ -124,12 +124,16 @@ func TestItemPowers_Step12_PreviewFollowsTheWeaponInHand(t *testing.T) {
 		wantDmg  int
 	}{
 		{
-			"long sword", combatsvc.AttackForm{WeaponID: "longsword", TargetSize: combatsvc.SizeSmallMedium},
-			[]combatsvc.Modifier{modStr(18, 1), gemMod}, 5 + 2,
+			"long sword",
+			combatsvc.AttackForm{WeaponID: "longsword", TargetSize: combatsvc.SizeSmallMedium},
+			[]combatsvc.Modifier{modStr(18, 1), gemMod},
+			5 + 2,
 		},
 		{
-			"short bow", combatsvc.AttackForm{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetSize: combatsvc.SizeSmallMedium},
-			[]combatsvc.Modifier{modDex(17, 2), modWeapon(shortbow), modAmmo(arrows)}, 2 + 1,
+			"short bow",
+			combatsvc.AttackForm{WeaponID: "shortbow", AmmoItemID: "arrows_plus1", TargetSize: combatsvc.SizeSmallMedium},
+			[]combatsvc.Modifier{modDex(17, 2), modWeapon(shortbow), modAmmo(arrows)},
+			2 + 1,
 		},
 	}
 	for _, tt := range tests {

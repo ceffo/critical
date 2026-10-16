@@ -117,7 +117,8 @@ an item from a symptom, read how that area works today and write it into the ite
 doesn't settle a design by accident. If a contract, schema or ADR change looks needed, the developer
 proposes it in its report first; you check it against the workflow doc's hard rules and the existing
 patterns before anything is built. (Post-mortem of PR #147: a brief that prescribed French stat texts
-in the database went through a developer and a review unchallenged.)
+in the database went through a developer and a review unchallenged; the rule is now ADR 0023, no
+per-language column or field, and a brief that contradicts it is wrong.)
 
 **Retro at every handoff.** Before a restart, add a short "Retro" to the ledger: what cost the most
 this session and the one process change you propose. Propose changes to this file to the user as a

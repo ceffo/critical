@@ -1,7 +1,8 @@
 # ADR 0021: Reference data: the spell catalogue artifact, storage and deployment
 
 **Status**: accepted, 2026-10-15 (critical-y9e0.1; the contract between the catalogue builder in the
-private `critical-rulebooks` repo and the API importer)
+private `critical-rulebooks` repo and the API importer). Amended by [ADR 0023](0023-localized-text.md):
+no per-language column or field; the `name_fr` / `description_fr` wording below is superseded
 
 ## Context
 
@@ -50,6 +51,8 @@ is only ever appended to by play.
      | `description` | yes | `{ "en": "…", "fr": "…" }`, `en` required, `fr` optional |
      | `source` | yes | book of the English text, 2 to 8 upper-case characters (`PHB`, `TOM`, …) |
 
+   - _Amended by [ADR 0023](0023-localized-text.md): in the database and the API these language maps
+     are `localized_texts` rows and language maps, never per-language fields._
    - A language that is missing is **omitted**, never an empty string. A reader shows `fr` when
      present and falls back to `en`, per field, so a spell with no French source is complete.
    - `source` is the provenance of the English text: a book code (`PHB`, `TOM`, …), or `WEB` for a
@@ -209,6 +212,8 @@ is only ever appended to by play.
   refusal for a referenced one with the listing, unknown format, missing file, duplicate id).
 - A deployment without the artifact cannot start. That is deliberate: a silently empty spell list
   is worse than a clear error.
+- _Amended by ADR 0023: the next two bullets describe `name_fr` / `description_fr` columns, which
+  become `localized_texts` rows._
 - The importer needs a migration (French name and description columns, the `key` column of step 5.4.1,
   a catalogue metadata row); that is that item's work, not this ADR's.
 - French names come from the catalogue's `name.fr`, the single source of truth. The web i18n `spells`
@@ -256,6 +261,9 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   the spellbook is (an id the catalogue does not hold would never apply); unknown ids refuse the start,
   all listed (`TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold`,
   `TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup`).
+- _Amended by [ADR 0023](0023-localized-text.md): the Storage, REST and UI notes below name
+  `name_fr` / `description_fr` and `/api/spells/names` with `name_fr`; they become `localized_texts`
+  rows and language maps. Kept as the record of what shipped._
 - **Storage**: `spells.key` (unique, NULL allowed), `name_fr`, `description_fr`, `source` (migration 027)
   and the one-row `catalogue_meta (format, version)`. The fixture's version is `1970-01-01`, so switching
   between the fixture and a real artifact always imports
@@ -277,6 +285,7 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 
 ## Implementation notes (the UI, 2026-10-15)
 
+- _Amended by ADR 0023: no `name_fr` / `description_fr` field; the client reads a language map._
 - **French names have one source.** The web i18n `spells` namespace, `web/src/i18n/phbSpellIds.json`
   (and its Go check) and the spellbook seed's `sheet` names are gone. The client shows `name_fr` /
   `description_fr` in the French UI, English per missing field.

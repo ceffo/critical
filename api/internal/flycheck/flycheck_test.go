@@ -1,6 +1,6 @@
-// Package flycheck holds the tests of the fly.io configuration files in deploy/ (ADR 0024 steps 2, 5,
-// 8 and 9.1): they parse, carry the required keys, and match the production image's layout
-// (Dockerfile ENV) and the per-environment differences the ADR sets.
+// Package flycheck holds the tests of the fly.io configuration files in deploy/ (ADR 0024 steps 2, 5
+// and 8): they parse, carry the required keys, match the production image's layout (Dockerfile ENV),
+// name no volume and no database, and set the per-environment differences the ADR sets.
 package flycheck_test
 
 import (
@@ -74,17 +74,6 @@ func dockerfileEnv(t *testing.T) map[string]string {
 	return env
 }
 
-// withoutDSN returns env without CRITICAL_DSN.
-func withoutDSN(env map[string]string) map[string]string {
-	out := map[string]string{}
-	for k, v := range env {
-		if k != "CRITICAL_DSN" {
-			out[k] = v
-		}
-	}
-	return out
-}
-
 var files = map[string]string{"fly.staging.toml": "staging", "fly.prod.toml": "prod"}
 
 func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
@@ -96,16 +85,7 @@ func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
 			assert.Equal(t, "critical-"+env, c.App)
 			assert.Equal(t, "yyz", c.PrimaryRegion)
 			assert.Empty(t, c.Build, "the image is passed by the workflow (--image), never named here")
-			// The image names no database (ADR 0025 step 1): the DSN is given at run time. The fly
-			// configuration still sets the SQLite one of its volume until the fly PostgreSQL
-			// configuration replaces both; every other value equals the image's.
-			assert.NotContains(t, image, "CRITICAL_DSN", "the production image names no database")
-			assert.Equal(t, image, withoutDSN(c.Env), "[env] must equal the image's ENV (Dockerfile), CRITICAL_DSN aside")
-			assert.Equal(t, "immediate", c.Deploy.Strategy, "a volume-bound single machine has no blue-green")
-			require.Len(t, c.Mounts, 1)
-			assert.Equal(t, "data", c.Mounts[0].Source)
-			assert.Equal(t, "/data", c.Mounts[0].Destination)
-			assert.Equal(t, "/data/critical.db", c.Env["CRITICAL_DSN"], "the database lives on the volume")
+			assert.Equal(t, image, c.Env, "[env] must equal the image's ENV (Dockerfile)")
 			assert.Equal(t, ":8080", c.Env["CRITICAL_ADDR"])
 			assert.Equal(t, 8080, c.HTTPService.InternalPort)
 			require.Len(t, c.HTTPService.Checks, 1)
@@ -118,21 +98,41 @@ func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
 	}
 }
 
-func TestFly_Step2_EnvironmentsDiffer(t *testing.T) {
+// Steps 2.4 and 5.1: the apps are stateless. No volume, and no database in the configuration or the
+// image: the DSN is the fly secret CRITICAL_DSN, set on each app and never in a file.
+func TestFly_Step5_1_NoVolumeAndNoDSN(t *testing.T) {
+	assert.NotContains(t, dockerfileEnv(t), "CRITICAL_DSN", "the production image names no database")
+	for file := range files {
+		t.Run(file, func(t *testing.T) {
+			c := load(t, file)
+			assert.Empty(t, c.Mounts, "the apps have no volume: their data lives in the PostgreSQL cluster")
+			assert.NotContains(t, c.Env, "CRITICAL_DSN", "the DSN is a fly secret, never in [env]")
+			raw, err := os.ReadFile("../../../deploy/" + file)
+			require.NoError(t, err)
+			assert.NotContains(t, string(raw), "postgres://", "%s must not hold a connection string", file)
+			assert.NotContains(t, string(raw), "postgresql://", "%s must not hold a connection string", file)
+		})
+	}
+}
+
+// Steps 2.2 and 5.2: production runs two machines, always running, deployed one at a time.
+func TestFly_Step5_2_ProductionTwoMachinesRolling(t *testing.T) {
+	prod := load(t, "fly.prod.toml")
+	assert.Equal(t, "rolling", prod.Deploy.Strategy)
+	assert.Equal(t, "off", prod.HTTPService.AutoStopMachines)
+	assert.Equal(t, 2, prod.HTTPService.MinMachinesRunning)
+}
+
+// Steps 2.1 and 5.3: staging runs one machine that stops when idle and starts on the next request;
+// it is never deployed with the immediate strategy either (ADR 0024, "A migration during a rolling
+// production deploy": the immediate strategy is not used).
+func TestFly_Step5_3_StagingAutoStops(t *testing.T) {
 	staging, prod := load(t, "fly.staging.toml"), load(t, "fly.prod.toml")
 	assert.NotEqual(t, staging.App, prod.App)
-	// Step 2.1: staging may stop when idle and starts on the next request.
 	assert.Equal(t, "stop", staging.HTTPService.AutoStopMachines)
 	assert.True(t, staging.HTTPService.AutoStartMachines)
 	assert.Zero(t, staging.HTTPService.MinMachinesRunning)
-	// Step 2.2: production keeps one machine always running.
-	assert.Equal(t, "off", prod.HTTPService.AutoStopMachines)
-	assert.Equal(t, 1, prod.HTTPService.MinMachinesRunning)
-}
-
-func TestFly_Step9_1_SnapshotRetention(t *testing.T) {
-	assert.Equal(t, 7, load(t, "fly.staging.toml").Mounts[0].SnapshotRetention)
-	assert.Equal(t, 30, load(t, "fly.prod.toml").Mounts[0].SnapshotRetention)
+	assert.Equal(t, "rolling", staging.Deploy.Strategy)
 }
 
 // ADR 0025 step 8.3: the in-memory storage of the e2e runs (CRITICAL_STORAGE)

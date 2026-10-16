@@ -329,13 +329,15 @@ func insertText(ctx context.Context, q Querier, key int64, lang, body string) er
 }
 
 // reconcileName is the seed reconcile of an existing weapon's or item's name
-// (ADR 0023 step 10). The seed offers each of its languages to a name once:
-// a language not offered yet is recorded, and the name gains it when it lacks
-// it while every language it has still reads as the seed's. A name the player
-// changed in any language is kept as is, a language the player removed after
-// its offer is not put back, a row the seed does not list is untouched, an id
-// the table no longer has is not added back (the player removed it), and no
-// other field changes. A second run writes nothing.
+// (ADR 0023 step 10). The seed gives each of its languages to a name once:
+// while every language the name has still reads as the seed's, it gains the
+// seed languages it lacks that were never given, and those it has or gains
+// are recorded as given. A name the player changed in any language is kept as
+// is (and recorded nothing, so it is offered again once it reads as the
+// seed's), a language the player removed after it was given is not put back,
+// a row the seed does not list is untouched, an id the table no longer has is
+// not added back (the player removed it), and no other field changes. A
+// second run writes nothing.
 func reconcileName(ctx context.Context, q Querier, n seededName, id string, seed localized.Text) error {
 	var key int64
 	err := q.QueryRowContext(ctx, n.keyQuery, id).Scan(&key)
@@ -362,13 +364,13 @@ func reconcileName(ctx context.Context, q Querier, n seededName, id string, seed
 	if err != nil {
 		return fmt.Errorf("read name %d: %w", key, err)
 	}
-	if err := recordOffers(ctx, q, n, id, fresh); err != nil {
-		return err
-	}
 	for lang, body := range stored {
 		if seed[lang] != body {
 			return nil
 		}
+	}
+	if err := recordOffers(ctx, q, n, id, fresh); err != nil {
+		return err
 	}
 	for _, lang := range fresh {
 		if _, ok := stored[lang]; ok {
@@ -399,7 +401,7 @@ func langSet(ctx context.Context, q Querier, query string, args ...any) (localiz
 	return out, errors.Join(rows.Err(), rows.Close())
 }
 
-// recordOffers records that the seed has offered a name these languages.
+// recordOffers records that the seed has given a name these languages.
 func recordOffers(ctx context.Context, q Querier, n seededName, id string, langs []string) error {
 	for _, lang := range langs {
 		if _, err := q.ExecContext(ctx,

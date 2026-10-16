@@ -225,10 +225,11 @@ func TestSeed_Step10_RejectsANameWithoutLanguage(t *testing.T) {
 	}
 }
 
-// The seed offers each language to a name once: a language added to the
-// seed later reaches a filled table on the next start, but a language the
-// player removed from a name (a blank body, step 11) is not put back, even
-// once the row was removed and put back under a new key (an undo).
+// The seed gives each language to a name once: a language added to the seed
+// later reaches a filled table on the next start (a name the player changed
+// gets it once it reads as the seed's again), but a language the player
+// removed from a name (a blank body, step 11) is not put back, even once the
+// row was removed and put back under a new key (an undo).
 func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -250,7 +251,18 @@ func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
 	writeSeeds(`{"en":"Gem"}`, `{"en":"Axe"}`)
 	require.NoError(t, db.Seed(ctx, dir))
 
+	setAxe := func(body string) {
+		t.Helper()
+		_, err := db.ExecContext(ctx, `UPDATE localized_texts SET body = ? WHERE lang = 'en' AND text_id = (SELECT name FROM weapons)`, body)
+		require.NoError(t, err)
+	}
+	// The player renamed the axe: the French seed name is not given...
+	setAxe("Big axe")
 	writeSeeds(`{"en":"Gem","fr":"Gemme"}`, `{"en":"Axe","fr":"Hache"}`)
+	require.NoError(t, db.Seed(ctx, dir))
+	require.Equal(t, map[string]localized.Text{"axe": {"en": "Big axe"}}, names(t, db, "weapons"))
+	// ...until the name reads as the seed's again (an undo).
+	setAxe("Axe")
 	require.NoError(t, db.Seed(ctx, dir))
 	require.Equal(t, map[string]localized.Text{"gem": {"en": "Gem", "fr": "Gemme"}}, names(t, db, "items"),
 		"a language added to the seed later is offered")

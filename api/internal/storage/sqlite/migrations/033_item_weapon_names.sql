@@ -68,12 +68,12 @@ FROM weapons_v33 n JOIN weapons o ON o.id = n.id;
 DROP TABLE weapons;
 ALTER TABLE weapons_v33 RENAME TO weapons;
 
--- The languages the seed has offered an item's or a weapon's name, by id
--- (ADR 0023 step 10): the seed offers each of its languages once, so a
+-- The languages the seed has given an item's or a weapon's name, by id
+-- (ADR 0023 step 10): the seed gives each of its languages once, so a
 -- language the player removed from a name (step 11) is not put back on the
 -- next start. Keyed by id, not by text key: a name keeps its record when the
 -- row is removed and put back under a new key (undo). Empty here; the first
--- start after 033 offers the seed's languages and records them.
+-- start after 033 gives the seed's languages and records them.
 CREATE TABLE seeded_name_languages (
     kind  TEXT NOT NULL CHECK (kind IN ('item', 'weapon')),
     id    TEXT NOT NULL,

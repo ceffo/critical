@@ -96,13 +96,14 @@ Tests live under `api/internal/` unless their path starts with `web/`.
    a live database: `TestRealCatalogue_UpgradesACopyOfALiveDatabase`.
 10. **The seeds hold every language; a restart adds what a name lacks.** In `seeds/items.json` and
     `seeds/weapons.json`, `name` is a language map (`en` and `fr`). An empty table is filled from the
-    seed. Once filled, the seed only reconciles names, and offers each of its languages to a name
-    once: an item or weapon the seed lists gains a seed language its name lacks and was never
-    offered, while every language it has still reads as the seed's (a name the player changed in
-    any language is kept as is). Each offer is recorded by item or weapon id and language
-    (`seeded_name_languages`, whatever its outcome), so a language the player removes later (a
-    blank body, step 11) is not put back on the next start, even once the row was removed and put
-    back under a new key; a language added to the seed later is offered once too. An id the table
+    seed. Once filled, the seed only reconciles names, and gives each of its languages to a name
+    once: while every language an item's or weapon's name has still reads as the seed's, the name
+    gains the seed languages it lacks that were never given, and the languages it has or gains are
+    recorded as given by id and language (`seeded_name_languages`). A name the player changed in
+    any language is kept as is and records nothing (it is offered again once it reads as the
+    seed's, e.g. after an undo). A language the player removes after it was given (a blank body,
+    step 11) is not put back on the next start, even once the row was removed and put back under a
+    new key; a language added to the seed later is given once too. An id the table
     no longer has is not added back (the player removed it); no count, position or other field
     moves; a second start writes nothing. A seed name without a language is refused.
     Tests: `TestSeed_Step10_FreshDatabaseGetsEveryLanguage`,

@@ -35,7 +35,9 @@ type Term struct {
 type Quantity struct {
 	Terms []Term `json:"terms"`
 	// UpTo marks "up to N" phrasing.
-	UpTo    bool    `json:"up_to,omitempty"`
+	UpTo bool `json:"up_to,omitempty"`
+	// OrMore marks "1 or more creatures": the count is a floor, not a value.
+	OrMore  bool    `json:"or_more,omitempty"`
 	Max     float64 `json:"max,omitempty"`
 	MaxUnit string  `json:"max_unit,omitempty"`
 }

@@ -203,6 +203,23 @@ is only ever appended to by play.
      creature/two levels"). Its common values are labelled as before. A partial area has no value
      at the caster level either: the server computes and serves none, so nothing from the lossy
      reading is shown or rolled. Text is wrapped, never cut.
+   - **Area wording (2026-10-16)**, generic rules, never per spell; the French term of an unlisted
+     noun is the one the French books print for it (`lookup.nouns`):
+     1. An extent in dice ("4d4 sq. mi.") and the cap of an extent ("5 yds./level (90 yds.
+        maximum)", "30 ft. radius, max. 60 ft.") are read whole: the dice and the `max` stay typed
+        (`TestAreaOfEffect_DiceAndCapOfAnExtent`; French `words dice and a cap in an extent`).
+     2. "1 or more creatures" is a count that is a floor (`or_more`), worded "1 créature ou plus"
+        and with no count at a caster level (`TestAreaOfEffect_OrMoreIsAFloor`; French `words "1 or
+        more" after the noun`).
+     3. A non-level divisor of an extent or a count ("square/priest", "creature/rd.") is kept as
+        the term's `per`; a language that lists it (`lookup.perWords`) words it "/prêtre", any other
+        stays the book's text (`TestAreaOfEffect_KeepsANonLevelDivisor`; French `words a
+        non-level divisor the language lists, and no other`).
+     4. A path and a line are shapes (`TestAreaOfEffect_PathAndLineAreShapes`; the shapes test
+        of `areaText`).
+     5. "Up to" on an extent bounds the figure, not the length inside it: "cube de 6 m maximum",
+        not "cube de jusqu'à 6 m"; on a count it stays "jusqu'à 6 créatures" (French `words "up to"
+        on the figure, not on the length inside it`).
 
 ## Consequences
 

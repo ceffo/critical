@@ -82,6 +82,8 @@ const SHAPES = [
   "volume",
   "wall",
   "circle",
+  "path",
+  "line",
 ];
 
 describe("statLocale", () => {
@@ -145,6 +147,14 @@ describe("nounText", () => {
 
   it("is null for an unlisted noun", () => {
     expect(nounText(fr, "x 20 x", 1)).toBeNull();
+  });
+
+  it("words the nouns the areas count with the French books' terms", () => {
+    expect(nounText(fr, "oak club", 1)).toBe("gourdin en chêne");
+    expect(nounText(fr, "sigil", 1)).toBe("sceau");
+    expect(nounText(fr, "insects", 3)).toBe("insectes");
+    expect(nounText(fr, "fresh berries", 2)).toBe("baies fraîches");
+    expect(nounText(fr, "components", 3)).toBe("éléments");
   });
 });
 
@@ -601,6 +611,82 @@ describe("areaText", () => {
     );
     // One reading the language cannot word: the book's text for the whole choice.
     expect(areaText(fr, alts(one("creature"), one("wyvern")))).toBeNull();
+  });
+
+  it('words "up to" on the figure, not on the length inside it', () => {
+    const cube = a("area", "Up to 20-ft. cube", {
+      shape: "cube",
+      dims: [{ ...qty(20, "foot"), up_to: true }],
+    });
+    expect(areaText(fr, cube)).toBe("cube de 6 m maximum");
+    expect(areaText(en, cube)).toBe("up to 20 ft cube");
+    expect(
+      areaText(
+        fr,
+        a("targets", "Up to 6 creatures", {
+          targets: { ...qty(6), up_to: true },
+          noun: "creatures",
+        }),
+      ),
+    ).toBe("jusqu'à 6 créatures");
+  });
+
+  it('words "1 or more" after the noun', () => {
+    expect(
+      areaText(
+        fr,
+        a("area", "1 or more creatures in a 10-ft. radius", {
+          shape: "radius",
+          dims: [qty(10, "foot")],
+          targets: { ...qty(1), or_more: true },
+          noun: "creatures",
+        }),
+      ),
+    ).toBe("rayon de 3 m, 1 créature ou plus");
+  });
+
+  it("words a non-level divisor the language lists, and no other", () => {
+    const sq = (per: string) =>
+      a("area", "", {
+        shape: "square",
+        dims: [{ terms: [{ count: 10, unit: "yard", per }] }],
+      });
+    expect(areaText(fr, sq("priest"))).toBe("carré de 10 m/prêtre");
+    expect(areaText(fr, sq("wyvern"))).toBeNull();
+    expect(
+      areaText(
+        fr,
+        a("targets", "1 creature/rd.", {
+          targets: { terms: [{ count: 1, per: "round" }] },
+          noun: "creature",
+        }),
+      ),
+    ).toBe("1 créature/round");
+  });
+
+  it("words dice and a cap in an extent", () => {
+    expect(
+      areaText(
+        fr,
+        a("area", "4d4 sq. mi.", {
+          dims: [{ terms: [{ count: 0, dice: "4d4", unit: "sq mile" }] }],
+        }),
+      ),
+    ).toBe("4d4 milles carrés");
+    expect(
+      areaText(
+        fr,
+        a("area", "5 yds./level (90 yds. maximum)", {
+          dims: [
+            {
+              terms: [{ count: 5, unit: "yard", per_level: true, step: 1 }],
+              max: 90,
+              max_unit: "yard",
+            },
+          ],
+        }),
+      ),
+    ).toBe("5 m/niveau, max. 90 m");
   });
 
   it("is null where the typed value drops what the book says", () => {

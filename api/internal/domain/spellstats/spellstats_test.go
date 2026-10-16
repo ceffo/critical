@@ -250,11 +250,11 @@ func TestAreaOfEffect(t *testing.T) {
 		{"1d6 creatures/2 levels", 5, "targets", "", nil, &spellstats.Value{Dice: "2d6"}, "creatures"},
 		{"30' long + 5'/level", 4, "area", "", []spellstats.Value{dim("foot", 50)}, nil, ""},
 		{"3\" diameter circle", 15, "area", "diameter", []spellstats.Value{dim("yard", 30)}, nil, ""},
-		{"One 10'-wide path, 60 feet long", 15, "area", "", []spellstats.Value{dim("foot", 10), dim("foot", 60)}, nil, ""},
+		{"One 10'-wide path, 60 feet long", 15, "area", "path", []spellstats.Value{dim("foot", 10), dim("foot", 60)}, nil, ""},
 		{"Creates 1d4+1", 15, "targets", "", nil, &spellstats.Value{Amount: 1, Dice: "1d4"}, ""},
 		{"Create 7 eyes", 15, "targets", "", nil, &spellstats.Value{Amount: 7}, "eyes"},
 		{"Creates a sphere", 15, "special", "", nil, nil, ""},
-		{"Two or more creatures", 15, "special", "", nil, nil, ""},
+		{"Two or more creatures", 15, "targets", "", nil, nil, "creatures"},
 		{"1d4 sticks + 1 stick/level in a 10-ft. cube", 5, "area", "cube", []spellstats.Value{dim("foot", 10)}, nil, ""},
 		{"10-foot circle", 15, "area", "circle", []spellstats.Value{dim("foot", 10)}, nil, ""},
 		{"20-foot-radius circle", 15, "area", "radius", []spellstats.Value{dim("foot", 20)}, nil, ""},
@@ -367,11 +367,14 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 		{"One 10-ft. cube/level", false},                        // "One" is the article of an extent
 		{"Two 10-ft. cubes/level", true},                        // "Two" counts cubes
 		{"1 creature or 1 cu. ft. of substance/2 levels", true}, // an alternative it does not read whole
-		{"4d4 sq. mi.", true},                                   // dice it dropped
-		{"5 yds./level (90 yds. maximum)", true},                // a cap it dropped
+		{"4d4 sq. mi.", false},                                  // dice in the extent
+		{"5 yds./level (90 yds. maximum)", false},               // a cap on the extent
 		{"Line of sight, max. 60 ft.", true},                    // words it does not read
 		{"1 object up to 10 ft. long", true},                    // "long"
-		{"1 or more creatures in a 10-ft. radius", true},
+		{"1 or more creatures in a 10-ft. radius", false},
+		{"10-yard square/priest", false},
+		{"1 creature/rd.", false},
+		{"10 ft. sq./level, 1 spike/sq. ft.", true}, // a second divisor it does not carry
 	}
 	for _, tt := range tests {
 		t.Run(tt.raw, func(t *testing.T) {
@@ -387,7 +390,7 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 // lossy reading would give "10 creatures" for "One creature/two levels" at
 // level 10, and 0 for "1,000 square feet/level"); a whole reading has one.
 func TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel(t *testing.T) {
-	for _, raw := range []string{"4d4 sq. mi.", "5 yds./level (90 yds. maximum)", "1 creature or 1 cu. ft. of substance/2 levels"} {
+	for _, raw := range []string{"Line of sight, max. 60 ft.", "1 object up to 10 ft. long", "1 creature or 1 cu. ft. of substance/2 levels"} {
 		t.Run(raw, func(t *testing.T) {
 			a := spellstats.ParseArea(raw)
 			require.True(t, a.Partial)
@@ -492,4 +495,72 @@ func TestAreaOfEffect_RadiusCarriesItsFigure(t *testing.T) {
 			assert.False(t, a.Partial)
 		})
 	}
+}
+
+// ADR 0021 step 8 (areas, 2): an extent in dice ("4d4 sq. mi.") is read whole
+// and keeps its dice, and so does the cap of an extent ("5 yds./level (90
+// yds. maximum)", "30 ft. radius, max. 60 ft.").
+func TestAreaOfEffect_DiceAndCapOfAnExtent(t *testing.T) {
+	miles := spellstats.ParseArea("4d4 sq. mi.")
+	require.False(t, miles.Partial)
+	require.Len(t, miles.Dims, 1)
+	assert.Equal(t, "4d4", miles.Dims[0].Terms[0].Dice)
+	assert.Equal(t, "sq mile", miles.Dims[0].Terms[0].Unit)
+	assert.Equal(t, "4d4", miles.At(10).Dims[0].Dice)
+
+	capped := spellstats.ParseArea("5 yds./level (90 yds. maximum)")
+	require.False(t, capped.Partial)
+	assert.Equal(t, 90.0, capped.Dims[0].Max)
+	assert.Equal(t, "yard", capped.Dims[0].MaxUnit)
+	assert.Equal(t, 50.0, capped.At(10).Dims[0].Amount)
+	assert.Equal(t, 90.0, capped.At(30).Dims[0].Amount, "the cap bounds the extent")
+
+	after := spellstats.ParseArea("30 ft. radius, max. 60 ft.")
+	require.False(t, after.Partial)
+	require.Len(t, after.Dims, 1)
+	assert.Equal(t, 60.0, after.Dims[0].Max)
+}
+
+// ADR 0021 step 8 (areas, 3): "1 or more creatures" is a count that is a
+// floor: read whole, flagged or_more, and with no count to compute.
+func TestAreaOfEffect_OrMoreIsAFloor(t *testing.T) {
+	a := spellstats.ParseArea("1 or more creatures in a 10-ft. radius")
+	require.False(t, a.Partial)
+	assert.Equal(t, "area", a.Kind)
+	assert.Equal(t, "creatures", a.Noun)
+	require.NotNil(t, a.Targets)
+	assert.True(t, a.Targets.OrMore)
+	assert.Equal(t, 1.0, a.Targets.Terms[0].Count)
+	assert.Nil(t, a.At(10).Targets)
+	require.Len(t, a.At(10).Dims, 1)
+
+	assert.False(t, spellstats.ParseArea("1 to 4 creatures").Targets.OrMore)
+}
+
+// ADR 0021 step 8 (areas, 4): a non-level divisor of an extent or a count
+// ("square/priest", "creature/rd.") is kept as the term's per, so a reader
+// that has a word for it words the line; the line is still whole.
+func TestAreaOfEffect_KeepsANonLevelDivisor(t *testing.T) {
+	sq := spellstats.ParseArea("10-yard square/priest")
+	require.False(t, sq.Partial)
+	assert.Equal(t, "square", sq.Shape)
+	assert.Equal(t, "priest", sq.Dims[0].Terms[0].Per)
+	assert.False(t, sq.Dims[0].Terms[0].PerLevel)
+
+	rd := spellstats.ParseArea("1 creature/rd.")
+	require.False(t, rd.Partial)
+	assert.Equal(t, "creature", rd.Noun)
+	assert.Equal(t, "round", rd.Targets.Terms[0].Per)
+
+	lvl := spellstats.ParseArea("1 creature/level")
+	assert.Empty(t, lvl.Targets.Terms[0].Per)
+	assert.True(t, lvl.Targets.Terms[0].PerLevel)
+}
+
+// ADR 0021 step 8 (areas, 5): a path and a line are shapes.
+func TestAreaOfEffect_PathAndLineAreShapes(t *testing.T) {
+	assert.Equal(t, "path", spellstats.ParseArea("10 x 60 ft. path").Shape)
+	assert.False(t, spellstats.ParseArea("10 x 60 ft. path").Partial)
+	assert.Equal(t, "line", spellstats.ParseArea("30-yard line").Shape)
+	assert.False(t, spellstats.ParseArea("30-yard line").Partial)
 }

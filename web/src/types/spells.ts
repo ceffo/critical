@@ -24,6 +24,7 @@ export interface SpellTerm {
 export interface SpellQuantity {
   terms: SpellTerm[];
   up_to?: boolean;
+  or_more?: boolean;
   max?: number;
   max_unit?: string;
 }

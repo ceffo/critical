@@ -53,10 +53,15 @@ type AreaValue struct {
 
 var (
 	areaSplit = regexp.MustCompile(`(?i),\s*| in (?:an? )?| within | around |\s+or\s+| with `)
-	dimTok    = regexp.MustCompile(`(?i)(\d[\d,]*)(?:\s*(?:-|to)\s*(\d+))?(?:\s*-?\s*((?:sq\.?|cu\.?|cubic|square)\s*)?(ft|feet|foot|yds?|yards?|mi|miles?|in)\b\.?)?`)
+	dimTok    = regexp.MustCompile(`(?i)(\d+d\d+|\d[\d,]*)(?:\s*(?:-|to)\s*(\d+))?(?:\s*-?\s*((?:sq\.?|cu\.?|cubic|square)\s*)?(ft|feet|foot|yds?|yards?|mi|miles?|in)\b\.?)?`)
 	levelXRe  = regexp.MustCompile(`(?i)(?:\(|caster'?s )level\s*x\s*(\d+)\)?[\s-]*(sq\.?|cu\.?)?\s*(ft|yds?)?`)
-	shapeRe   = regexp.MustCompile(`(?i)(?:\b(radius|diameter|cone|cube|square|sphere|globe|cloud|column|spray|hemisphere|volume|wall|circle)\b|(\bsq\b))`)
-	targetRe  = regexp.MustCompile(`(?i)^(?:up to\s+|one\s+|two\s+)?(\d+(?:d\d+)?)(?:\s*(?:-|to)\s*(\d+))?(?:\s+or more)?\s+(.*?)\s*$`)
+	shapeRe   = regexp.MustCompile(`(?i)(?:\b(radius|diameter|cone|cube|square|sphere|globe|cloud|column|spray|hemisphere|volume|wall|circle|path|line)\b|(\bsq\b))`)
+	targetRe  = regexp.MustCompile(`(?i)^(?:up to\s+|one\s+|two\s+)?(\d+(?:d\d+)?)(?:\s*(?:-|to)\s*(\d+)|(\+))?\s+(.*?)\s*$`)
+	// orMoreRe is "1 or more", "two or more": an open-ended count, read as
+	// "1+" so that areaSplit does not take the "or" for a choice.
+	orMoreRe = regexp.MustCompile(`(?i)\b(\d+(?:d\d+)?|one|two)\s+or more\b`)
+	// perWordRe is a non-level divisor after an extent: "square/priest".
+	perWordRe = regexp.MustCompile(`(?i)^[a-z.\s-]*?/\s*([a-z]+)\b`)
 	createsRe = regexp.MustCompile(`(?i)^creates?\s+`)
 	bareCount = regexp.MustCompile(`^\d+(?:d\d+)?(?:\+\d+(?:d\d+)?)*$`)
 	lengthRe  = regexp.MustCompile(`(?i)\b(ft|feet|foot|yds?|yards?|mi|miles?|sq|cu)\b|-ft\b`)
@@ -158,6 +163,13 @@ func parseAreaReading(raw string) AreaOfEffect {
 	s = thousandsRe.ReplaceAllString(s, "$1$2")
 	created := createsRe.MatchString(s)
 	s = createsRe.ReplaceAllString(s, "")
+	s = orMoreRe.ReplaceAllStringFunc(s, func(m string) string {
+		n := strings.ToLower(orMoreRe.FindStringSubmatch(m)[1])
+		if d := wordCounts[n]; d != "" {
+			n = d
+		}
+		return n + "+"
+	})
 	low := strings.ToLower(s)
 	switch {
 	case low == "special" || low == "":
@@ -201,6 +213,17 @@ func parseAreaReading(raw string) AreaOfEffect {
 		start = next
 		upTo := upToRe.MatchString(part) // "Up to 20-ft. cube", "Up to 6 creatures"
 		part = upToRe.ReplaceAllString(part, "")
+		// A cap: "5 yds./level (90 yds. maximum)", or its own part after a
+		// comma ("30 ft. radius, max. 60 ft."), which caps the extent before it.
+		var capM []string
+		if m := maxRe.FindStringSubmatch(part); m != nil && lengthRe.MatchString(part) {
+			if rest := strings.TrimSpace(maxRe.ReplaceAllString(part, "")); rest != "" {
+				part, capM = rest, m
+			} else if len(a.Dims) > 0 && prevSep == "," {
+				setCap(&a.Dims[len(a.Dims)-1], m)
+				continue
+			}
+		}
 		if part == "" {
 			continue
 		}
@@ -217,6 +240,9 @@ func parseAreaReading(raw string) AreaOfEffect {
 			}
 			if upTo && first < len(a.Dims) {
 				a.Dims[first].UpTo = true
+			}
+			if capM != nil && len(a.Dims)-first == 1 {
+				setCap(&a.Dims[first], capM)
 			}
 		} else if a.Targets == nil {
 			if q, noun, ok := parseTargets(part); ok {
@@ -238,6 +264,16 @@ func parseAreaReading(raw string) AreaOfEffect {
 		a.Partial = !a.covers(s)
 	}
 	return a
+}
+
+// setCap sets the cap of q from a maxRe match.
+func setCap(q *Quantity, m []string) {
+	num, unit := m[1], m[2]
+	if num == "" {
+		num, unit = m[3], m[4]
+	}
+	q.Max, _ = strconv.ParseFloat(num, 64)
+	q.MaxUnit = normUnit(unit)
 }
 
 // figureOf is the first shape word of s other than shape and the square
@@ -285,11 +321,16 @@ var (
 // quantity holds it.
 func (a AreaOfEffect) covers(s string) bool {
 	nums, dice := map[float64]bool{}, map[string]bool{}
+	pers := map[string]bool{} // non-level divisors, as normalized
+	words := map[string]bool{a.Shape: a.Shape != "", a.Figure: a.Figure != ""}
 	upTo := false
 	addQ := func(q Quantity) {
 		upTo = upTo || q.UpTo
 		for _, t := range q.Terms {
 			nums[t.Count], nums[t.Upper] = true, true
+			if t.Per != "" {
+				pers[t.Per] = true
+			}
 			if t.Step > 1 {
 				nums[float64(t.Step)] = true
 			}
@@ -299,12 +340,12 @@ func (a AreaOfEffect) covers(s string) bool {
 		}
 		if q.Max != 0 {
 			nums[q.Max] = true
+			words["max"], words["maximum"] = true, true
 		}
 	}
 	for _, d := range a.Dims {
 		addQ(d)
 	}
-	words := map[string]bool{a.Shape: a.Shape != "", a.Figure: a.Figure != ""}
 	if a.Targets != nil {
 		addQ(*a.Targets)
 		for _, w := range coverTokRe.FindAllString(strings.ToLower(a.Noun), -1) {
@@ -333,7 +374,7 @@ func (a AreaOfEffect) covers(s string) bool {
 			if err != nil || !nums[n] {
 				return false
 			}
-		case !coverWords[tok] && !words[tok]:
+		case !coverWords[tok] && !words[tok] && !pers[normUnit(tok)]:
 			return false
 		}
 	}
@@ -385,13 +426,20 @@ func parseDimChunk(ch string) Quantity {
 				break
 			}
 		}
-		count, _ := strconv.ParseFloat(strings.ReplaceAll(m[1], ",", ""), 64)
-		t := Term{Count: count, Unit: areaUnit(m[3], m[4])}
+		t := Term{Unit: areaUnit(m[3], m[4])}
+		if diceRe.MatchString(m[1]) {
+			t.Dice = m[1]
+		} else {
+			t.Count, _ = strconv.ParseFloat(strings.ReplaceAll(m[1], ",", ""), 64)
+		}
 		if m[2] != "" {
 			t.Upper, _ = strconv.ParseFloat(m[2], 64)
 		}
 		if t.PerLevel, t.Step = perLevelStep(ch[loc[1]:]); !t.PerLevel {
 			t.Step = 0
+			if pm := perWordRe.FindStringSubmatch(ch[loc[1]:]); pm != nil {
+				t.Per = normUnit(pm[1])
+			}
 		}
 		q.Terms = append(q.Terms, t)
 	}
@@ -448,18 +496,20 @@ func parseTargets(part string) (Quantity, string, bool) {
 	if m[2] != "" {
 		t.Upper, _ = strconv.ParseFloat(m[2], 64)
 	}
-	noun := m[3]
-	if i := strings.Index(noun, "/"); i >= 0 { // "creature/level", "person/3 levels"
+	noun := m[4]
+	if i := strings.Index(noun, "/"); i >= 0 { // "creature/level", "person/3 levels", "target/meteor"
 		rest := strings.TrimSpace(noun[i+1:])
 		noun = strings.TrimSpace(noun[:i])
 		if ok, step := perLevelStep("/" + rest); ok {
 			t.PerLevel, t.Step = true, step
+		} else if bareNoun.MatchString(strings.TrimRight(rest, ".")) && !strings.Contains(rest, " ") {
+			t.Per = normUnit(rest)
 		}
 	}
 	if t.PerLevel && t.Dice != "" && strings.Contains(noun, "+") {
 		return Quantity{}, "", false // "1d4 sticks + 1 stick/level": the level term is not the dice's
 	}
-	return Quantity{Terms: []Term{t}}, noun, true
+	return Quantity{Terms: []Term{t}, OrMore: m[3] != ""}, noun, true
 }
 
 // At computes the area for casterLevel. A partial reading computes nothing:
@@ -477,7 +527,7 @@ func (a AreaOfEffect) At(casterLevel int) AreaValue {
 	for _, d := range a.Dims {
 		v.Dims = append(v.Dims, d.At(casterLevel))
 	}
-	if a.Targets != nil {
+	if a.Targets != nil && !a.Targets.OrMore { // "1 or more": no count to compute
 		t := a.Targets.At(casterLevel)
 		v.Targets = &t
 	}

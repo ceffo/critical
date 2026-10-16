@@ -4,7 +4,7 @@
 
 - **Language**: Go (latest stable)
 - **HTTP**: standard `net/http` or `chi` router
-- **Database**: PostgreSQL ([ADR 0025](adr/0025-postgresql-storage.md)) through `database/sql` and the `github.com/lib/pq` driver (sqlc's `database/sql` output binds arrays with `pq.Array`). `storage/postgres.Open` opens the pool from `CRITICAL_DSN` (a PostgreSQL URL or connection string); in development it is the docker compose service `postgres` ("Development database" below), on fly the cluster of [ADR 0024](adr/0024-deployment.md) step 2. The server module has no SQLite dependency (`just check-no-sqlite`, part of `just validate`).
+- **Database**: PostgreSQL ([ADR 0025](adr/0025-postgresql-storage.md)) through `database/sql` and the `github.com/lib/pq` driver (sqlc's `database/sql` output binds arrays with `pq.Array`). `storage/postgres.Open` opens the pool from `CRITICAL_DSN` (a PostgreSQL URL or connection string); in development it is the docker compose service `postgres` ("Development database" below), on fly the cluster of [ADR 0024](adr/0024-deployment.md) step 2. The server binary links no SQLite driver (`just check-no-sqlite`, part of `just validate`); only the SQLite copy tool's own binary does ("Moving a SQLite database into PostgreSQL").
 - **Writer lock**: every write transaction (`InTx`) runs at READ COMMITTED and takes one transaction-level advisory lock (`pg_advisory_xact_lock`, one fixed key; the sqlc query `LockWriters`) as its first statement ([ADR 0025](adr/0025-postgresql-storage.md) step 4). A second writer waits until the first commits or rolls back, then reads its result, so the action stack's stale expected top is refused as a normal 409, never a 500. The commit or the rollback releases the lock; nothing else does. A stricter isolation level would break this (the snapshot would predate the lock). Write paths must go through a transaction, never read-then-write on the bare pool; reads outside a transaction take no lock.
 - **Migrations**: simple sequential SQL files, applied at startup and recorded in `schema_migrations`
   ("Migrations at startup" below)
@@ -168,7 +168,47 @@ newer one.
 - the data lives in the compose volume `critical-pg` of the checkout's compose project (a worktree
   has its own); `just dev-reset` deletes it (`docker compose down --volumes`), and the next start
   migrates, seeds and imports the catalogue again. Files in `.dev/` are never touched: the copy of a
-  SQLite `.dev/critical.db` into PostgreSQL is the copy tool's ([ADR 0025](adr/0025-postgresql-storage.md) step 9).
+  SQLite `.dev/critical.db` into PostgreSQL is the copy tool's (below).
+
+### Moving a SQLite database into PostgreSQL
+
+The SQLite copy tool ([ADR 0025](adr/0025-postgresql-storage.md) step 9) copies a SQLite database of
+the app into an empty PostgreSQL database: `just db-import-sqlite <file> <dsn>`. It is used twice, for
+the developer's `.dev/critical.db` and to seed production (`docs/deploy.md`), then deleted from the
+repository (step 9.5).
+
+To move the development data, from the main checkout:
+
+```bash
+# 1. Stop the SQLite server (`just dev` of a build before the engine switch): what it writes after
+#    the copy is not copied.
+# 2. The database `critical` must be new. If `just dev` already ran on PostgreSQL with the real
+#    catalogue, it holds the seeds: delete the compose volume first (`just dev-reset`).
+just dev-db
+just db-import-sqlite .dev/critical.db "postgres://critical:critical@localhost:5432/critical?sslmode=disable"
+just dev                      # the character, the log and the buffs as they were
+```
+
+What it does (`api/internal/sqlitecopy`, binary `api/cmd/sqlite-copy`):
+- **Source, only read.** It opens the file read-only and copies it, with the committed rows of its WAL,
+  into a private temporary directory (`VACUUM INTO`), deleted at the end; a server running on the file
+  meanwhile is not disturbed. It brings that copy to the last SQLite schema by applying the 33 SQLite
+  migrations it embeds (`sqlitesource/migrations`, the files the server ran until the engine switch,
+  unchanged) that the file does not record, and refuses a file recording one it does not know.
+- **Target, new or empty.** A database without any table gets the server's migrations (without its
+  seeds); one with tables must record exactly the server's migrations and hold no row in any app table.
+  Anything else is refused before it is written.
+- **Copy.** The tables and columns are the target's (its catalog); every table and column must exist on
+  both sides, or it stops. Tables are copied in foreign-key order (ties by name), each with one `COPY`,
+  in one write transaction holding the server's writer lock, with the session time zone UTC (SQLite
+  stored UTC text). Each identity sequence is then set one past both the highest id copied and the
+  highest id SQLite ever handed out (`sqlite_sequence`): an undo restores a deleted saved buff or XP
+  entry under its old id, which a new row must not have taken. Last, the rows of every table are
+  counted on both sides; any difference fails the transaction, so nothing is kept.
+- It prints the row count of each table, never row content. The SQLite driver
+  (`github.com/ncruces/go-sqlite3`, pure Go) is linked into this binary only; `just check-no-sqlite`
+  keeps it out of the server.
+- Its logic is tested on mocks of its two ports (`Source`, `Target`), without a database.
 
 ## DAL code generation
 

@@ -45,6 +45,21 @@ func (d *DB) Migrate(ctx context.Context) error {
 	return d.migrations(ctx, func(tx migrationTx) error { return runMigrations(ctx, tx, embedded) })
 }
 
+// MigrationNames lists the embedded migrations in the order they apply: the schema a database
+// this binary migrated records. The SQLite copy tool refuses a target recording anything else.
+func MigrationNames() ([]string, error) {
+	embedded, err := embeddedMigrations()
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, len(embedded))
+	for i, m := range embedded {
+		names[i] = m.name
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 func embeddedMigrations() ([]migration, error) {
 	entries, err := migrationFiles.ReadDir("migrations")
 	if err != nil {

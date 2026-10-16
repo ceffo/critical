@@ -357,9 +357,14 @@ must lose nothing, so state lives outside the conversation:
   items. **Rewrite it (don't append) at every transition**: dispatch, report read, rework sent, PR
   opened, CI result, merge, user decision. Keep it under ~60 lines. Git, the tracker, GitHub and
   herdr already hold the rest.
+- **The user log**, `<wt>/supervisor/user-log.md`: every user message that decides, prefers or
+  corrects, **verbatim**, with its date and what it settled. Append-only, never summarised: the
+  ledger's compressed questions lost the user's own words at each handoff, and successors re-asked
+  settled points. Feedback the user gave a design round or a scoper session is a decision: record
+  it, act on it, never ask for it again. **Grep the log before asking the user anything.**
 
 **At session start (or after compaction)**, before planning anything new:
-1. Read the ledger, then reconcile with live state: `git worktree list`, `gh pr list`, the tracker's
+1. Read the ledger and the whole user log, then reconcile with live state: `git worktree list`, `gh pr list`, the tracker's
    in-progress items, `herdr agent list` (if herdr), the freshness of report files. The live state
    wins. Read fresh reports you haven't acted on.
 2. **Re-arm every wait** (agent waits, PR watchers) with `run_in_background`; background waits die

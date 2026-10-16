@@ -139,7 +139,8 @@ migration without the snapshot restore (ADR 0024 steps 6.1 and 9.3).
 In development it happens when `.dev/critical.db` was migrated by a branch that added a migration
 and you then run a branch that does not have it (e.g. `main` before that PR merged). To get past it:
 - go back to (or merge `main` into) a branch that embeds the named migrations; or
-- if the data is throwaway, `just dev-reset` and restart `just dev` (deletes `.dev/*.db`); or
+- in a worktree, or for fixture data only, `just dev-reset` and restart `just dev` (deletes
+  `.dev/*.db`). Never in the main checkout: its `.dev/critical.db` is the user's real campaign data; or
 - keep a copy of the database before trying a migration branch and restore it afterwards.
 
 Never delete the rows from `schema_migrations` to get past the check: the schema would still be the

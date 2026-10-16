@@ -247,7 +247,9 @@ updated in that ADR (`just check-adr-tests`).
   empty list matches nothing, so an optional list filter takes a flag too (`spelldal`'s
   `SearchSpells`: `any_level`). A parameter used twice is named with `sqlc.arg(name)`.
 - A `LIMIT` parameter is typed `int32` unless named and cast: `LIMIT sqlc.arg('limit')::bigint`.
-- A `TIMESTAMPTZ` column reads and writes as `time.Time`.
+- A `TIMESTAMPTZ` column reads and writes as `time.Time`, with microseconds and in the session's time
+  zone. The API's `createdAt` keeps its format, UTC in whole seconds (`2026-10-16T12:00:00Z`): the
+  adapter reading a `created_at` passes it through its `storedTime` (the in-memory store stamps the same).
 - sqlc may refuse an unqualified column in a query with a correlated subquery over another table
   ("column reference is ambiguous"): qualify it (`action_log.kind`).
 - Case-insensitive text matching is `lower(column) = ?` with the adapter lowering the parameter
@@ -425,9 +427,11 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   build or a shared cache (step 7). `just image` also smoke-checks the result.
 - **In the image**: `/app/critical-srv`, the web build in `/app/web`, the campaign `seeds/` in `/app/seeds`,
   and the catalogue at `/app/catalogue.json`. The `CRITICAL_*` variables point at those paths; any of them
-  can be overridden at `docker run`. The database is PostgreSQL at `CRITICAL_DSN` (on fly a secret). The
-  image still sets `CRITICAL_DSN=/data/critical.db` and a `/data` volume, the SQLite settings of its fly
-  configuration: the item that provisions the fly cluster replaces both with the configuration.
+  can be overridden at `docker run`. The image holds no data, has no volume and names no database: the
+  database is PostgreSQL at `CRITICAL_DSN`, given at run time (on fly a secret). `deploy/fly.*.toml` still
+  set the SQLite DSN and the `/data` volume until the fly PostgreSQL configuration replaces them
+  (`internal/flycheck` compares every other `[env]` value with the image's). `scripts/image-smoke.sh` runs
+  the image on a throwaway PostgreSQL container of its own (the image refuses the in-memory storage).
 - **`CRITICAL_WEB_DIR`** (optional): the web build to serve. Set, every path outside `/api` is the file of
   that path, or `index.html` when there is none (SPA fallback, so a deep link reloads into the app); files
   under `assets/` (content-hashed by Vite) are sent with `Cache-Control: public, max-age=31536000,

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
@@ -314,7 +315,7 @@ func (d *DAL) attachCorrections(ctx context.Context, characterID int64, entries 
 		}
 		corr := actionlog.Correction{
 			ID: c.ID, ActionID: c.ActionID, Kind: actionlog.CorrectionKind(c.Kind),
-			Summary: c.Summary.String, CreatedAt: c.CreatedAt,
+			Summary: c.Summary.String, CreatedAt: storedTime(c.CreatedAt),
 		}
 		if c.HpDelta.Valid {
 			delta := int(c.HpDelta.Int64)
@@ -343,9 +344,15 @@ func (d *DAL) attachCorrections(ctx context.Context, characterID int64, entries 
 func toEntry(f queries.GetActionRow) actionlog.Entry {
 	return actionlog.Entry{
 		ID: f.ID, TransactionID: ownTransaction(f.ID, f.TransactionID), CharacterID: f.CharacterID, Round: int(f.Round), Kind: actionlog.Kind(f.Kind),
-		Summary: f.Summary, HPDelta: int(f.HpDelta), Payload: json.RawMessage(f.Payload), CreatedAt: f.CreatedAt,
+		Summary: f.Summary, HPDelta: int(f.HpDelta), Payload: json.RawMessage(f.Payload), CreatedAt: storedTime(f.CreatedAt),
 	}
 }
+
+// storedTime is a created_at as the API has always served it: UTC, whole
+// seconds (e.g. 2026-10-16T12:00:00Z). PostgreSQL keeps microseconds and
+// lib/pq returns the session's time zone; neither reaches the API's
+// createdAt, which the web app reads.
+func storedTime(t time.Time) time.Time { return t.UTC().Truncate(time.Second) }
 
 // ownTransaction is the entry's transaction id; a row without one (none is
 // left after the migration that added it) is its own transaction.

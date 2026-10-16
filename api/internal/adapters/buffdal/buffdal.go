@@ -184,11 +184,17 @@ func (d *DAL) ListSavedBuffs(ctx context.Context, characterID int64) ([]buffsvc.
 		}
 		out = append(out, buffsvc.SavedBuff{
 			ID: r.ID, Name: r.Name, Duration: int(r.Duration), Charges: int(r.Charges),
-			Effects: buffsvc.BuffEffects(eff), Note: r.Note, CreatedAt: r.CreatedAt,
+			Effects: buffsvc.BuffEffects(eff), Note: r.Note, CreatedAt: storedTime(r.CreatedAt),
 		})
 	}
 	return out, nil
 }
+
+// storedTime is a created_at as the API has always served it: UTC, whole
+// seconds (e.g. 2026-10-16T12:00:00Z). PostgreSQL keeps microseconds and
+// lib/pq returns the session's time zone; neither reaches the API's
+// createdAt, which the web app reads.
+func storedTime(t time.Time) time.Time { return t.UTC().Truncate(time.Second) }
 
 // ReplaceSavedBuffs makes the stored list equal to saved.
 func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []buffsvc.SavedBuff) error {

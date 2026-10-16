@@ -686,3 +686,28 @@ func TestRedo_NewestVoidOrRedoDecidesInStorage(t *testing.T) {
 		})
 	}
 }
+
+// The API's createdAt keeps the format it always had, UTC in whole seconds:
+// PostgreSQL's microseconds and the session's time zone are dropped when an
+// entry and its corrections are read.
+func TestGetEntry_CreatedAtReadsAsUTCWholeSeconds(t *testing.T) {
+	ctx := context.Background()
+	dal, q := mocked(t)
+	stored := time.Date(2026, 10, 16, 14, 0, 0, 123456000, time.FixedZone("CEST", 2*3600))
+	r := row(4, actionlog.KindHPChange, -3, "{}")
+	r.CreatedAt = stored
+	q.EXPECT().GetAction(ctx, queries.GetActionParams{CharacterID: charID, ID: 4}).Return(r, nil).Once()
+	expectAttach(q, 4, nil, []queries.ListCorrectionsFromRow{
+		{ID: 8, ActionID: 4, Kind: "amend", Note: text("n"), CreatedAt: stored},
+	})
+
+	e, err := dal.GetEntry(ctx, charID, 4)
+	require.NoError(t, err)
+	want := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	assert.Equal(t, want, e.CreatedAt)
+	require.Len(t, e.Corrections, 1)
+	assert.Equal(t, want, e.Corrections[0].CreatedAt)
+	out, err := json.Marshal(e.CreatedAt)
+	require.NoError(t, err)
+	assert.JSONEq(t, `"2026-10-16T12:00:00Z"`, string(out))
+}

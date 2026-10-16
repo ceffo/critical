@@ -267,6 +267,19 @@ func TestSavedBuffs_List(t *testing.T) {
 	require.ErrorIs(t, err, errBoom)
 }
 
+// A template's creation time reads as the API has always served it, UTC in
+// whole seconds, whatever precision and time zone PostgreSQL returns.
+func TestSavedBuffs_ListCreatedAtReadsAsUTCWholeSeconds(t *testing.T) {
+	ctx := context.Background()
+	dal, q := mocked(t)
+	stored := time.Date(2026, 10, 1, 11, 30, 0, 987654000, time.FixedZone("CEST", 2*3600))
+	q.EXPECT().ListSavedBuffs(ctx, charID).Return([]queries.ListSavedBuffsRow{{ID: 4, Name: "Form", Effects: `{}`, CreatedAt: stored}}, nil).Once()
+	got, err := dal.ListSavedBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, time.Date(2026, 10, 1, 9, 30, 0, 0, time.UTC), got[0].CreatedAt)
+}
+
 // Replace deletes the character's templates, then inserts the list in order:
 // a template with an id (a restore) keeps its id and creation time (in UTC);
 // a new one is inserted without, for the database to

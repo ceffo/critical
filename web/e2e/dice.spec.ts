@@ -55,6 +55,18 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
     .getByRole("button", { name: "Reroll" })
     .click();
   await expect(rows).toHaveCount(2);
+  // On a row that is not selected, Reroll shows on hover or keyboard focus (ADR 0022 step 5.3).
+  const older = journal
+    .locator("[data-selected=false]")
+    .filter({ has: page.getByTestId("log-reroll") })
+    .first();
+  await expect(older.getByTestId("log-reroll")).toBeHidden();
+  await older.hover();
+  await expect(older.getByTestId("log-reroll")).toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(older.getByTestId("log-reroll")).toBeHidden();
+  await older.getByTestId("log-select").focus();
+  await expect(older.getByTestId("log-reroll")).toBeVisible();
 
   // Reroll from the card too.
   await result.getByRole("button", { name: "Reroll" }).click();

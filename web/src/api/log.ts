@@ -21,9 +21,3 @@ export function undoLogEntry(expectedTopId: number): Promise<LogEntry> {
 export function redoLogEntry(expectedRedoId: number): Promise<LogEntry> {
   return post<LogEntry>("/api/log/redo", { expectedRedoId });
 }
-
-/** Set the note of an entry, any kind ("" clears it). The note is the only
- * thing an amend may change. */
-export function amendLogEntry(id: number, note: string): Promise<LogEntry> {
-  return post<LogEntry>(`/api/log/${id}/amend`, { note });
-}

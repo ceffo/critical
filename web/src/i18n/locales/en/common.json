@@ -987,11 +987,6 @@
     "was": "was {{delta}}",
     "capped": "{{requested}} requested, capped at max HP",
     "floored": "{{requested}} requested, stopped at the HP floor",
-    "amend": "Note",
-    "cancel": "Cancel",
-    "save": "Save",
-    "amendLabel": "Entry note",
-    "note": "Note",
     "buff": {
       "activate": "Activated {{buff}} ({{counters}})",
       "edit": "{{buff}}: {{from}} → {{to}}",

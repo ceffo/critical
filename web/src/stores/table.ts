@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { appendHpEvent } from "@/api/hp";
 import { ApiError } from "@/api/http";
-import { amendLogEntry, redoLogEntry, undoLogEntry } from "@/api/log";
+import { redoLogEntry, undoLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
@@ -38,8 +38,6 @@ interface TableStore {
    */
   submit: (action: () => Promise<unknown>) => Promise<ApiError | null>;
   recordHp: (delta: number, source: string) => Promise<boolean>;
-  /** Set an entry's note (the only amendable field). */
-  amendEntry: (id: number, note: string) => Promise<boolean>;
   /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
    * refused (another action landed first) or there was nothing to pop. */
   undo: () => Promise<boolean>;
@@ -138,7 +136,6 @@ export const useTableStore = create<TableStore>((set, get) => ({
     get().run(async () =>
       useHpStore.getState().setHp(await appendHpEvent(delta, source)),
     ),
-  amendEntry: (id, note) => get().run(() => amendLogEntry(id, note)),
   // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
   // with the top this client last read, so a stale top (another client acted since) is refused
   // and nothing changes. A pop can bring expired buffs back (an "expired" notice would now be

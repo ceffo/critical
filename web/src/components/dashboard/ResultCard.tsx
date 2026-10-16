@@ -123,19 +123,7 @@ export function ResultCard() {
         )}
       </div>
     );
-    body = (
-      <>
-        <CardBody model={model} interactive={!readOnly} />
-        {entry?.note && (
-          <p
-            className="mt-3 text-body italic text-muted-foreground"
-            data-testid="card-note"
-          >
-            {entry.note}
-          </p>
-        )}
-      </>
-    );
+    body = <CardBody model={model} interactive={!readOnly} />;
   }
 
   return (

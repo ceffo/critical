@@ -1,7 +1,7 @@
 # ADR 0017: Type scale and density
 
 **Status**: accepted, 2026-10-15 (critical-kiv.21; amends [ADR 0009](0009-dashboard-layout-and-theme-system.md)
-steps 3 and 5)
+steps 3 and 5); steps 2, 4, 5, 6 and 7 amended by [ADR 0022](0022-activity-focus-layout.md)
 
 ## Context
 
@@ -34,7 +34,8 @@ letters.
    - `cn()` (`web/src/lib/utils.ts`) knows the five tokens as font sizes, so `cn("text-body",
 "text-muted-foreground")` keeps both.
    - Hierarchy comes from the role, weight and tone (`text-muted-foreground` for secondary text),
-     never from a sixth size.
+     never from a sixth size. *Amended by [ADR 0022](0022-activity-focus-layout.md) step 3.4:* a sixth role, `text-hero`
+     (32 / 36 px), for the number a whole zone is about.
 
 3. **Mapping old classes (for the sweeps).** Apply mechanically, then check the one-headline rule:
 
@@ -51,7 +52,8 @@ letters.
    Drop `font-black`, `tracking-*` and `uppercase` that came with large sizes (ADR 0009 step 5);
    keep `font-medium` where it marks a name.
 
-4. **Spacing.** Panel and card padding is `p-3` (12 px). Gaps and stacks use only 4, 8 or 12 px
+4. **Spacing.** Panel and card padding is `p-3` (12 px) (*amended by [ADR 0022](0022-activity-focus-layout.md) step 3.2:* 14 px
+   vertical, 16 px horizontal; 24 px between two text columns). Gaps and stacks use only 4, 8 or 12 px
    (`gap-1`, `gap-2`, `gap-3`; the same for `space-*`, `gap-x-*`, `gap-y-*`). Inner padding of a
    control or chip follows its height (step 5), not this rule.
 5. **Control heights**, by component (`web/src/components/ui/`, `fieldStyles.ts`):
@@ -66,9 +68,11 @@ letters.
    | Clickable chips, segmented choices, menu items, list rows that are buttons (a save row) | 28 px                   |                                                        |
    | `Badge` (a non-clickable tag)                                                           | 20 px (`h-5`)           | text `text-label`                                      |
 
-   No `h-9`, `h-10` or larger on a control, and no per-use height overrides above 32 px.
+   No `h-9`, `h-10` or larger on a control, and no per-use height overrides above 32 px
+   (*amended by [ADR 0022](0022-activity-focus-layout.md) step 3.3:* the Attack button, 44 px, is the one exception).
 
-6. **Header.** The header region holds the turn block (turn number as the headline, status
+6. **Header.** *Amended by [ADR 0022](0022-activity-focus-layout.md) step 3.1:* the header is a card holding the brand, turn,
+   initiative, timeline and last result, at most 120 px at rest. The header region holds the turn block (turn number as the headline, status
    line, Next turn, ⋯ menu) and the effects timeline side by side. The timeline is its turn row
    (24 px) plus one 24 px row per effect, and it shows at most 3 effect rows at rest, with no
    scrollbar. With the header's 8 px vertical padding that makes the header at most
@@ -77,7 +81,7 @@ letters.
    cell (`aria-expanded`, shows the hidden count as "+N") grows the track in place, pushing the
    content down, to show all of them; collapsing returns to 3. The expanded track is capped at
    40% of the viewport height and scrolls only past that.
-7. **Content target.** Checked in `web/e2e/layout.spec.ts` ("layout" test) with bounding boxes, at
+7. **Content target.** *Replaced by [ADR 0022](0022-activity-focus-layout.md) step 2.8 (the Moi column is gone).* Checked in `web/e2e/layout.spec.ts` ("layout" test) with bounding boxes, at
    the layout viewports 1280x800, 1440x900, 1707x1300, 1920x1080 and 2560x1440:
    - the header at rest (5 effects, collapsed) is at most 112 px tall at every viewport, the track
      has no scrollbar, and with 0, 1 and 3 effects the header grows with the rows;

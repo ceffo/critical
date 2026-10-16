@@ -1,7 +1,8 @@
 // Direction B, "Character left, history below": the round-3 combination of the user's picks,
-// reworked in round 4 with the user. The header is one band: the brand (which is the menu), the
+// reworked in round 4 with the user. The header is one band without separators: the brand, the
 // turn, initiative + Next turn, then the effects timeline beside them and the last result docked
 // at the right. Hit points live in the character column, between the abilities and HP change.
+// The settings cog is at the left of the dice footer.
 // Below the header the character is a column on the left screen edge, the activity rail right of
 // it, then the stage. In Act the stage is A3's two bands: "now" (the act panel and the result side by side) and
 // the journal as a full-width table, with a drag handle between them that resizes or collapses the
@@ -23,12 +24,8 @@ const RAIL = [
   ["inventory", "Inventory", "bag"],
 ];
 
-// The brand is the menu: mark + wordmark with a caret, hover/focus ring, no cog anywhere.
-const brandMenu = () =>
-  `<span class="brand-menu" role="button" tabindex="0" title="Menu">${ui.brand(logo)}${ui.ph("CaretDown", "ico caret")}</span>`;
-
 const header = () => `<header class="vitals">
-  <div class="v-brand">${brandMenu()}</div>
+  <div class="v-brand">${ui.brand(logo)}</div>
   <div class="v-turn"><span class="label">Turn</span><span class="hero">${d.turn.number}</span></div>
   <div class="v-init"><span class="hstack"><span class="muted">Initiative</span><span class="tag">${d.turn.initiative}</span><span class="btn ghost xs icon">${ui.icon("reroll")}</span></span><span class="hstack"><span class="btn primary">Next turn ${ui.icon("arrow")}</span><span class="btn icon">${ui.icon("dots")}</span></span></div>
   <div class="v-timeline">${ui.effectsTrack(12)}</div>
@@ -45,7 +42,7 @@ ${header()}
   ${ui.rail(active, RAIL, { gear: false })}
   <main class="stage stage-${active} ${cls}">${stage}</main>
 </div>
-<footer class="dice-foot">${ui.diceLine()}</footer>
+<footer class="dice-foot hstack" style="gap:.75rem"><span class="btn ghost icon" title="Settings">${ui.icon("gear")}</span>${ui.diceLine()}</footer>
 </div>`;
 
 const journalHead = () =>
@@ -85,15 +82,12 @@ export const pages = {
   xp,
 };
 
-export const stylesheet = `/* Direction B: one header band (brand = menu, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
+export const stylesheet = `/* Direction B: one header band without separators (brand, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
 .app { height: 100vh; display: flex; flex-direction: column; }
 .vitals { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; align-items: stretch; border-bottom: 1px solid var(--border); background: var(--surface); }
-.vitals > div { padding: .5rem 1rem; border-right: 1px solid var(--border); min-width: 0; display: flex; align-items: center; gap: .75rem; }
-.vitals > div:last-child { border-right: 0; }
-@media (max-width: 1500px) { .vitals > div { padding: .5rem .75rem; } .v-brand .wordmark { display: none; } }
-.brand-menu { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .5rem .25rem .375rem; border: 1px solid var(--border); border-radius: .5rem; cursor: pointer; }
-.brand-menu:hover, .brand-menu:focus-visible { border-color: var(--tint); background: var(--amb-900); outline: none; }
-.brand-menu .caret { width: .75rem; height: .75rem; color: var(--ink-muted); }
+.vitals > div { padding: .5rem 1.25rem; min-width: 0; display: flex; align-items: center; gap: .75rem; }
+.vitals > div:first-child { padding-left: 1rem; }
+@media (max-width: 1500px) { .vitals > div { padding: .5rem .875rem; } .v-brand .wordmark { display: none; } }
 .v-turn { gap: .5rem !important; }
 .v-turn .hero { font-size: 2rem; line-height: 2.25rem; }
 .v-init { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: .25rem !important; }

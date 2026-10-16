@@ -1,12 +1,9 @@
-/* Direction B: one header band (brand = menu, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
+/* Direction B: one header band without separators (brand, turn, initiative, the effects timeline, the last result docked right), the character on the left edge with HP, the rail beside it, A3's journal below with a handle, the dice as a footer. */
 .app { height: 100vh; display: flex; flex-direction: column; }
 .vitals { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto; align-items: stretch; border-bottom: 1px solid var(--border); background: var(--surface); }
-.vitals > div { padding: .5rem 1rem; border-right: 1px solid var(--border); min-width: 0; display: flex; align-items: center; gap: .75rem; }
-.vitals > div:last-child { border-right: 0; }
-@media (max-width: 1500px) { .vitals > div { padding: .5rem .75rem; } .v-brand .wordmark { display: none; } }
-.brand-menu { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .5rem .25rem .375rem; border: 1px solid var(--border); border-radius: .5rem; cursor: pointer; }
-.brand-menu:hover, .brand-menu:focus-visible { border-color: var(--tint); background: var(--amb-900); outline: none; }
-.brand-menu .caret { width: .75rem; height: .75rem; color: var(--ink-muted); }
+.vitals > div { padding: .5rem 1.25rem; min-width: 0; display: flex; align-items: center; gap: .75rem; }
+.vitals > div:first-child { padding-left: 1rem; }
+@media (max-width: 1500px) { .vitals > div { padding: .5rem .875rem; } .v-brand .wordmark { display: none; } }
 .v-turn { gap: .5rem !important; }
 .v-turn .hero { font-size: 2rem; line-height: 2.25rem; }
 .v-init { flex-direction: column; align-items: flex-start !important; justify-content: center; gap: .25rem !important; }

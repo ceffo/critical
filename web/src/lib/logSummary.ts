@@ -6,6 +6,7 @@ import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
+import { checkAdjustedTarget } from "./skillAdjust";
 import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
@@ -13,7 +14,7 @@ import type { SpellExposure } from "@/types/spells";
 
 /** Payload of cast entries (castsvc castRecord). */
 export interface CastLogPayload {
-  action: "cast" | "received";
+  action: "cast" | "received" | "effect";
   spellId: string;
   spell: string;
   casterLevel: number;
@@ -136,10 +137,7 @@ function castText(
   names: InventoryNamer,
 ): string {
   const spell = spellName(p.spellId, p.spell);
-  const head =
-    p.action === "received"
-      ? t("log.cast.received", { spell, level: p.casterLevel })
-      : t("log.cast.cast", { spell });
+  const head = t(`log.cast.${p.action}`, { spell, level: p.casterLevel });
   const details: string[] = [];
   if (p.mode) details.push(modeName(t, p.spellId, p.mode));
   if (p.buff?.applied) {
@@ -533,7 +531,7 @@ export function dicePayload(e: LogEntry): DiceRoll | null {
 export interface CorrectionLogPayload {
   entryId: number;
   entryKind: LogKind;
-  field: "targetAc" | "saveAdjustment" | "verdict" | string;
+  field: "targetAc" | "saveAdjustment" | "skillAdjustment" | "verdict" | string;
   from: number | string | null;
   to: number | string | null;
 }
@@ -555,6 +553,7 @@ function correctionValue(
     case "targetAc":
       return typeof v === "number" ? String(v) : t("log.correction.unknown");
     case "saveAdjustment":
+    case "skillAdjustment":
       return typeof v === "number" ? formatSigned(v) : t("log.correction.none");
     case "verdict":
       return v === "hit" || v === "miss"
@@ -569,6 +568,7 @@ function correctionText(p: CorrectionLogPayload, t: TFunction): string {
   if (
     p.field !== "targetAc" &&
     p.field !== "saveAdjustment" &&
+    p.field !== "skillAdjustment" &&
     p.field !== "verdict"
   )
     return t("log.correction.other", { id: p.entryId });
@@ -597,6 +597,20 @@ export function abilityText(
 }
 
 function skillText(c: SkillCheck, t: TFunction): string {
+  if (c.adjustment) {
+    return t(
+      c.success ? "log.skill.successAdjusted" : "log.skill.failureAdjusted",
+      {
+        name: skillName(t, c.id),
+        die: c.die,
+        roll: c.roll,
+        target: c.target,
+        adjustedTarget: checkAdjustedTarget(c),
+        adjustment: formatSigned(c.adjustment),
+        reason: c.adjustmentReason ? ` ${c.adjustmentReason}` : "",
+      },
+    );
+  }
   return t(c.success ? "log.skill.success" : "log.skill.failure", {
     name: skillName(t, c.id),
     die: c.die,

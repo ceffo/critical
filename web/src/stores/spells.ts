@@ -18,6 +18,8 @@ interface SpellStore {
     casterLevel: number,
     mode?: string,
   ) => Promise<void>;
+  /** Add a spell as an effect at the Bard's level (ADR 0004 step 19). */
+  addSpellEffect: (spellId: string) => Promise<void>;
   resetSlots: () => Promise<void>;
   prepare: (spells: string[]) => Promise<void>;
 }
@@ -44,6 +46,10 @@ export const useSpellStore = create<SpellStore>((set) => ({
   },
   receiveSpell: async (spellId, casterLevel, mode) => {
     const result = await api.receiveSpell(spellId, casterLevel, mode);
+    useRollStore.setState({ last: { kind: "cast", result } });
+  },
+  addSpellEffect: async (spellId) => {
+    const result = await api.addSpellEffect(spellId);
     useRollStore.setState({ last: { kind: "cast", result } });
   },
   resetSlots: async () => {

@@ -9,7 +9,8 @@ import (
 // (payload), rendered by the UI in the player's language. Entries already in
 // the log must stay decodable: add fields, never rename them.
 type castRecord struct {
-	// Action is "cast" or "received".
+	// Action is "cast", "received" or "effect" (added from the lookup, ADR
+	// 0004 step 19).
 	Action      string `json:"action"`
 	SpellID     string `json:"spellId"`
 	Spell       string `json:"spell"`

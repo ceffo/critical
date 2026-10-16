@@ -3,6 +3,8 @@
 // Bard's level: a buff on the Bard (rolled rounds, charges and ability gain),
 // a damage roll for the DM, or only the spell text. Receive applies a spell a
 // party member cast on the Bard, at that caster's level, and spends no slot.
+// AddEffect puts a buff spell on the Bard at his level from the spell lookup:
+// no slot, no damage.
 //
 // Each cast or receive is one action-log entry with before/after snapshots of
 // the slot list (prepsvc.StateKey) and the buff list (buffsvc.StateKeyBuffs),
@@ -33,6 +35,13 @@ type SVC interface {
 	// Receive applies a spell someone else cast on the character, at their
 	// caster level. No slot is used.
 	Receive(ctx context.Context, characterID int64, req ReceiveRequest) (CastResult, error)
+	// AddEffect puts a spell that adds a buff on the character as an
+	// effect, at the character's level, with no slot spent and no damage
+	// rolled (ADR 0004 step 19). A spell that adds no buff is refused.
+	AddEffect(ctx context.Context, characterID int64, req AddEffectRequest) (CastResult, error)
+	// AddsEffect reports whether AddEffect takes spellID (false for a spell
+	// the effects catalogue does not know).
+	AddsEffect(ctx context.Context, spellID string) bool
 	// DamageAt is the damage a cast of spellID rolls at casterLevel (1 to
 	// MaxCasterLevel), evaluated down to the dice left to roll; nil when a
 	// cast rolls none (no effect entry, not a damage spell, low confidence).

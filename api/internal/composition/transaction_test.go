@@ -129,6 +129,21 @@ func attackOn(ac *int) func(ctx context.Context, bs *composition.BackingServices
 	}
 }
 
+// storedLongAgo saves a template and backdates its created_at, so a restore
+// that re-stamps the row shows as a different value whatever the clock reads
+// (no reliance on the replay crossing a second).
+func storedLongAgo(name string) func(ctx context.Context, bs *composition.BackingServices) error {
+	return func(ctx context.Context, bs *composition.BackingServices) error {
+		saved := hammer()
+		saved.Name = name
+		if _, err := bs.Buffs.SaveBuff(ctx, bs.CharacterID, saved); err != nil {
+			return err
+		}
+		_, err := bs.DB.ExecContext(ctx, `UPDATE saved_buffs SET created_at = '2001-02-03 04:05:06' WHERE name = ?`, name)
+		return err
+	}
+}
+
 // stackMutations is every request that writes table state through the action
 // stack (the epic's audit list). A new state-changing service belongs here.
 func stackMutations() []mutation {
@@ -219,12 +234,15 @@ func stackMutations() []mutation {
 			_, err := bs.Buffs.Dismiss(ctx, bs.CharacterID, buffID)
 			return err
 		}},
-		{name: "saved buff save", run: func(ctx context.Context, bs *composition.BackingServices) error {
+		{name: "saved buff save", setup: storedLongAgo("Older form"), run: func(ctx context.Context, bs *composition.BackingServices) error {
 			_, err := bs.Buffs.SaveBuff(ctx, bs.CharacterID, hammer())
 			return err
 		}},
 		{name: "saved buff delete", setup: func(ctx context.Context, bs *composition.BackingServices) error {
-			list, err := bs.Buffs.SaveBuff(ctx, bs.CharacterID, hammer())
+			if err := storedLongAgo(hammer().Name)(ctx, bs); err != nil {
+				return err
+			}
+			list, err := bs.Buffs.ListSaved(ctx, bs.CharacterID)
 			if err == nil {
 				savedID = list[0].ID
 			}

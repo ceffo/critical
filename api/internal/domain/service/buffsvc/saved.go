@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -116,12 +117,14 @@ type snapSaved struct {
 	Charges  int         `json:"charges"`
 	Effects  snapEffects `json:"effects"`
 	Note     string      `json:"note,omitempty"`
+	// CreatedAt is absent in snapshots taken before it was recorded.
+	CreatedAt time.Time `json:"createdAt,omitzero"`
 }
 
 func encodeSaved(list []SavedBuff) (json.RawMessage, error) {
 	out := make([]snapSaved, len(list))
 	for i, b := range list {
-		out[i] = snapSaved{ID: b.ID, Name: b.Name, Duration: b.Duration, Charges: b.Charges, Effects: snapEffects(b.Effects), Note: b.Note}
+		out[i] = snapSaved{ID: b.ID, Name: b.Name, Duration: b.Duration, Charges: b.Charges, Effects: snapEffects(b.Effects), Note: b.Note, CreatedAt: b.CreatedAt}
 	}
 	raw, err := json.Marshal(out)
 	if err != nil {
@@ -137,7 +140,7 @@ func decodeSaved(raw json.RawMessage) ([]SavedBuff, error) {
 	}
 	out := make([]SavedBuff, len(in))
 	for i, b := range in {
-		out[i] = SavedBuff{ID: b.ID, Name: b.Name, Duration: b.Duration, Charges: b.Charges, Effects: BuffEffects(b.Effects), Note: b.Note}
+		out[i] = SavedBuff{ID: b.ID, Name: b.Name, Duration: b.Duration, Charges: b.Charges, Effects: BuffEffects(b.Effects), Note: b.Note, CreatedAt: b.CreatedAt}
 	}
 	return out, nil
 }

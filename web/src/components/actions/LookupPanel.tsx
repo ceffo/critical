@@ -5,11 +5,14 @@ import {
   CircleNotch,
   DiceFive,
   MagnifyingGlass,
+  Plus,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { useDiceStore } from "@/stores/dice";
+import { useSpellStore } from "@/stores/spells";
+import { useTableStore } from "@/stores/table";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { localized } from "@/i18n/localized";
@@ -75,6 +78,9 @@ function SpellDetail({ spell }: { spell: Spell }) {
   const toComposer = useDiceStore((s) => s.setFormula);
   const roll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
+  const addSpellEffect = useSpellStore((s) => s.addSpellEffect);
+  const run = useTableStore((s) => s.run);
+  const busy = useTableStore((s) => s.busy);
   const loc = statLocale(t, i18n.language);
   const value = (key: StatKey): string | null =>
     key === "save"
@@ -218,6 +224,24 @@ function SpellDetail({ spell }: { spell: Spell }) {
             </ul>
           ) : (
             <p className="text-body">{t("lookup.noDice")}</p>
+          )}
+          {/* A spell that adds a buff goes on the Bard at his level, no slot, no damage (ADR 0004
+              step 19); the server says which spells do. */}
+          {spell.effect && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="self-start"
+              disabled={busy}
+              aria-label={t("lookup.addEffectLabel", {
+                name: spellName(i18n.language, spell),
+                level: spell.caster_level,
+              })}
+              data-testid="spell-add-effect"
+              onClick={() => void run(() => addSpellEffect(spell.id))}
+            >
+              <Plus aria-hidden /> {t("lookup.addEffect")}
+            </Button>
           )}
         </section>
       ) : null}

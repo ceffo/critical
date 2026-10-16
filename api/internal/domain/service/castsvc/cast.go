@@ -124,6 +124,67 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 	return res, nil
 }
 
+// AddEffect puts a spell on the character as an effect from the spell
+// lookup, at the character's level (ADR 0004 step 19): the buff a cast would
+// put on him, rolled the same way, with no slot spent, no cast mechanics and
+// no damage. A spell that adds no buff is refused before anything is rolled
+// or written. It is one cast entry (action "effect") with the buff list's
+// snapshots, so voiding it removes the buff.
+func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffectRequest) (CastResult, error) {
+	id := strings.TrimSpace(req.SpellID)
+	if id == "" {
+		return CastResult{}, fmt.Errorf("%w: spell id is required", domain.ErrInvalidInput)
+	}
+	entry, ok := s.Effects.Get(id)
+	if !ok {
+		_, found, err := s.Texts.Describe(ctx, id)
+		if err != nil {
+			return CastResult{}, fmt.Errorf("describe %s: %w", id, err)
+		}
+		if !found {
+			return CastResult{}, fmt.Errorf("%w: spell %q", domain.ErrNotFound, id)
+		}
+	}
+	if !entry.AddsBuff() {
+		return CastResult{}, fmt.Errorf("%w: %s", spelleffectsvc.ErrNotAnEffect, id)
+	}
+	c, err := s.Characters.GetCharacter(ctx, characterID)
+	if err != nil {
+		return CastResult{}, fmt.Errorf("get character: %w", err)
+	}
+	if err := checkCasterLevel(c.Level); err != nil {
+		return CastResult{}, err
+	}
+	mode, err := s.modeFor(id, "")
+	if err != nil {
+		return CastResult{}, err
+	}
+	var res CastResult
+	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
+		var snaps []actionlog.Snapshot
+		var err error
+		res, snaps, err = s.resolve(ctx, characterID, effectReq{
+			spellID: id, casterLevel: c.Level, source: SourceEffect, mode: mode,
+		})
+		if err != nil {
+			return err
+		}
+		res.EntryID, err = s.record(ctx, characterID, res, snaps)
+		return err
+	})
+	if err != nil {
+		return CastResult{}, err
+	}
+	return res, nil
+}
+
+// AddsEffect reports whether AddEffect takes spellID: its effect entry adds
+// a buff (ADR 0004 step 19).
+func (s *service) AddsEffect(_ context.Context, spellID string) bool {
+	e, ok := s.Effects.Get(spellID)
+	return ok && e.AddsBuff()
+}
+
 type effectReq struct {
 	spellID     string
 	name        string // the slot's name, used when neither source knows the spell
@@ -191,7 +252,8 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 	}
 	// The caster's own mechanics (spend an item, roll to hit) apply only to
-	// a cast, not to a spell received from someone else.
+	// a cast, not to a spell received from someone else nor to one added as
+	// an effect.
 	var snaps []actionlog.Snapshot
 	if r.source == SourceCast {
 		if snaps, err = s.castMechanics(ctx, characterID, entry, r.req, &res); err != nil {
@@ -225,11 +287,14 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}
 		res.Buff, res.Untracked = buff, untracked
-		if entry.Buff != nil && len(entry.Buff.AbilitySet) > 0 {
+		// Low confidence returned above: what is left of a buff that adds
+		// none is an ability set, applied by hand.
+		if !entry.AddsBuff() {
 			res.TextOnly = TextOnlyByHand
 			return res, snaps, nil
 		}
-		// A spell someone casts on the Bard is on him by definition.
+		// A spell someone casts on the Bard, or one added as an effect, is on
+		// him by definition.
 		if r.source == SourceCast && !appliesToSelf(entry.Target, r.onSelf, hostile(buff, untracked)) {
 			res.TextOnly = TextOnlyNotOnSelf
 			return res, snaps, nil

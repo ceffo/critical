@@ -178,7 +178,7 @@
     "notePlaceholder": "Note (p. ex. +4 aux JS contre le feu)",
     "saveForReuse": "Enregistrer pour réutiliser",
     "saved": "Bonus enregistrés",
-    "saveFailedAfterAdd": "{{name}} est activé mais n'a pas été enregistré pour réutilisation",
+    "saveFailedAfterAdd": "Effet activé : {{name}}, mais il n'a pas été enregistré pour réutilisation",
     "addShort": "Ajouter",
     "savedNone": "Aucun effet enregistré. Cochez « Enregistrer pour réutiliser » sur un nouvel effet.",
     "addSaved": "Ajouter l'effet enregistré {{name}}",
@@ -663,6 +663,10 @@
       "fresh_berries_other": "baies fraîches",
       "component_one": "élément",
       "component_other": "éléments",
+      "pebble_one": "galet",
+      "pebble_other": "galets",
+      "eye_one": "œil",
+      "eye_other": "yeux",
       "unit_one": "unité",
       "unit_other": "unités"
     },
@@ -670,6 +674,13 @@
       "priest": "prêtre",
       "meteor": "météore",
       "round": "round"
+    },
+    "axes": {
+      "wide": "de large",
+      "long": "de long",
+      "high": "de haut",
+      "thick": "d'épaisseur",
+      "deep": "de profondeur"
     },
     "shapes": {
       "radius": "rayon",
@@ -710,6 +721,11 @@
       "specialDetail": "{{special}} ({{detail}})",
       "shaped": "{{shape}} de {{dims}}",
       "shapedFigure": "{{figure}} de {{dims}} de {{shape}}",
+      "axis": "{{value}} {{axis}}",
+      "axisJoin": " et de ",
+      "ofMembers": "{{targets}} de {{members}}",
+      "within": "{{targets}} dans un rayon de {{value}}",
+      "aroundTouched": "{{value}} autour de la créature touchée",
       "or": " ou ",
       "range": {
         "self": "0",
@@ -779,6 +795,18 @@
       },
       "area": {
         "special": "Spéciale",
+        "hearing_range": "Portée de l'ouïe",
+        "line_of_sight": "Champ de vision",
+        "script_reader": "Créature lisant la calligraphie",
+        "circle_of_priests": "Cercle de prêtres",
+        "variable": "Variable",
+        "varies": "Variable",
+        "the_caster_s_hand": "La main du lanceur",
+        "the_caster_s_shadow": "L'ombre du lanceur",
+        "the_caster_s_staff": "Le bâton du lanceur",
+        "the_wizard_s_staff": "Le bâton du magicien",
+        "caster_s_weapon": "L'arme du lanceur",
+        "the_casters": "Les lanceurs",
         "the_caster": "Le lanceur",
         "caster": "Le lanceur",
         "one_creature": "Une créature",
@@ -806,6 +834,8 @@
     "toDice": "Aux dés",
     "rollDice": "Lancer",
     "noDice": "Aucun dé à lancer",
+    "addEffect": "Ajouter comme effet",
+    "addEffectLabel": "Ajouter {{name}} comme effet au niveau {{level}}",
     "exposure": "Exposition",
     "exposureMode": "Exposition ({{mode}})"
   },
@@ -851,9 +881,10 @@
       "adjustment": "Ajustement {{detail}}"
     },
     "cast": {
-      "castHeading": "{{name}} (niveau {{level}}), lancé au niveau {{casterLevel}}",
+      "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
       "mode": "Option : {{mode}}",
-      "receivedHeading": "{{name}} lancé sur vous, niveau du lanceur {{casterLevel}}",
+      "receivedHeading": "Sort reçu : {{name}}, niveau du lanceur {{casterLevel}}",
+      "effectHeading": "Effet ajouté : {{name}}, niveau {{casterLevel}}",
       "attackNeeds": "Il faut {{needed}} ou plus contre CA {{ac}} (TAC0 {{thac0}}), pas de critique.",
       "itemSpent": "Dépensé : {{name}} ({{left}} restant(s))",
       "extraSlots": "Emplacements supplémentaires : {{slots}}",
@@ -932,14 +963,14 @@
         "negates": "annulé par la sauvegarde"
       }
     },
-    "itemHeading": "{{name}} utilisé",
+    "itemHeading": "Objet utilisé : {{name}}",
     "effect": "Effet",
     "dice": "Dés",
     "rolls": "Jets",
     "total": "Total",
     "save": "Sauvegarde : {{name}}",
     "left": "{{name}} : {{count}} restant(s)",
-    "leftRemoved": "{{name}} : dernière charge utilisée, retiré de l'inventaire",
+    "leftRemoved": "{{name}} : dernière charge utilisée, objet retiré de l'inventaire",
     "noRoll": "Rien à lancer : l'effet se résout à la table.",
     "adjust": {
       "title": "Ajuster après le jet",
@@ -973,7 +1004,10 @@
       "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
       "success": "Réussi",
       "failure": "Échec",
-      "die": "d{{die}}"
+      "die": "d{{die}}",
+      "adjustment": "Ajustement",
+      "adjustedTarget": "Seuil ajusté",
+      "adjustLabel": "Ajuster ce jet"
     },
     "attackHeadingUnknown": "{{weapon}} contre CA inconnue",
     "attackHeadingAmmoUnknown": "{{weapon}} avec {{ammo}} contre CA inconnue",
@@ -1038,12 +1072,12 @@
     "capped": "{{requested}} demandés, plafonnés aux PV max",
     "floored": "{{requested}} demandés, arrêtés au plancher de PV",
     "buff": {
-      "activate": "{{buff}} activé ({{counters}})",
+      "activate": "Effet activé : {{buff}} ({{counters}})",
       "edit": "{{buff}} : {{from}} → {{to}}",
       "editEnded": "{{buff}} : {{from}} → terminé",
       "absorb": "{{buff}} a absorbé un coup (reste {{count}})",
       "absorbEnded": "{{buff}} a absorbé un coup, terminé",
-      "dismiss": "{{buff}} retiré",
+      "dismiss": "Effet retiré : {{buff}}",
       "editNote": "{{buff}} : note « {{note}} »",
       "editNoteCleared": "{{buff}} : note retirée",
       "noteAlso": "(note modifiée)",
@@ -1056,8 +1090,8 @@
       "passTime": "Temps écoulé : {{hours, number}} h ({{rounds}}), tour {{from}} → {{to}}"
     },
     "attack": {
-      "miss": "{{weapon}} contre CA {{ac}} : raté",
-      "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
+      "miss": "{{weapon}} contre CA {{ac}} : attaque ratée",
+      "hit": "{{weapon}} contre CA {{ac}} : attaque réussie, {{damage}} dégâts",
       "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult, number}}, {{damage}} dégâts",
       "critRolls": "{{weapon}} contre CA {{ac}} : critique (test {{check}} · multiplicateur {{roll}} → ×{{mult, number}}), {{damage}} dégâts",
       "withAmmo": "{{weapon}} ({{ammo}})",
@@ -1068,28 +1102,29 @@
         "crit": "CRITIQUE"
       },
       "unknown": "{{weapon}} contre CA inconnue : touche CA {{hits}}",
-      "verdictHit": "{{weapon}} contre CA inconnue : touché (MJ), {{damage}} dégâts",
-      "verdictMiss": "{{weapon}} contre CA inconnue : raté (MJ)"
+      "verdictHit": "{{weapon}} contre CA inconnue : attaque réussie (MJ), {{damage}} dégâts",
+      "verdictMiss": "{{weapon}} contre CA inconnue : attaque ratée (MJ)"
     },
     "cast": {
       "cast": "Lancé : {{spell}}",
-      "received": "{{spell}} lancé sur moi (niveau du lanceur {{level}})",
+      "received": "Sort reçu : {{spell}} (niveau du lanceur {{level}})",
+      "effect": "Effet ajouté : {{spell}} (niveau {{level}})",
       "damage": "{{total}} dégâts ({{type}})",
       "strGain": "FOR +{{gain}}",
       "extraSlots": "emplacements supplémentaires {{slots}}",
-      "item": "{{name}} dépensé ({{left}} restant(s))",
-      "attackHit": "touché (d20 {{d20}} contre CA {{ac}})",
-      "attackMiss": "raté (d20 {{d20}} contre CA {{ac}})"
+      "item": "Objet dépensé : {{name}} ({{left}} restant(s))",
+      "attackHit": "attaque réussie (d20 {{d20}} contre CA {{ac}})",
+      "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})"
     },
     "item": {
-      "rolled": "{{name}} utilisé : {{dice}} = {{total}} ({{left}} restant)",
-      "used": "{{name}} utilisé ({{left}} restant)",
-      "rolledRemoved": "{{name}} utilisé : {{dice}} = {{total}} (dernière charge, retiré)",
-      "usedRemoved": "{{name}} utilisé (dernière charge, retiré)",
-      "restocked": "{{name}} réapprovisionné : +{{added}} ({{count}} maintenant)",
-      "added": "{{name}} ajouté ({{count}})",
-      "removedItem": "{{name}} retiré ({{count}})",
-      "edited": "{{name}} modifié : {{changes}}",
+      "rolled": "Objet utilisé : {{name}}, {{dice}} = {{total}} ({{left}} restant)",
+      "used": "Objet utilisé : {{name}} ({{left}} restant)",
+      "rolledRemoved": "Objet utilisé : {{name}}, {{dice}} = {{total}} (dernière charge, retiré)",
+      "usedRemoved": "Objet utilisé : {{name}} (dernière charge, retiré)",
+      "restocked": "Objet réapprovisionné : {{name}}, +{{added}} ({{count}} maintenant)",
+      "added": "Objet ajouté : {{name}} ({{count}})",
+      "removedItem": "Objet retiré : {{name}} ({{count}})",
+      "edited": "Objet modifié : {{name}}, {{changes}}",
       "change": "{{field}} {{before}} → {{after}}",
       "fields": {
         "name": "nom",
@@ -1141,12 +1176,15 @@
     },
     "skill": {
       "success": "{{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
-      "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec"
+      "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec",
+      "successAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), réussi",
+      "failureAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec"
     },
     "dice": "Dés {{formula}} = {{total}}",
     "correction": {
       "targetAc": "Correction CA {{from}} → {{to}}",
       "saveAdjustment": "Correction ajustement de sauvegarde {{from}} → {{to}}",
+      "skillAdjustment": "Correction ajustement de jet de compétence {{from}} → {{to}}",
       "verdict": "Correction verdict du MJ {{from}} → {{to}}",
       "other": "Correction de #{{id}}",
       "unknown": "?",
@@ -1327,6 +1365,12 @@
       "last": "Dernier"
     },
     "percent": "{{value}} %",
+    "adjust": {
+      "label": "Ajustement du prochain jet de {{section}}",
+      "decrease": "Rendre le prochain jet de {{section}} plus difficile",
+      "increase": "Rendre le prochain jet de {{section}} plus facile",
+      "value": "Ajustement du prochain jet de {{section}}"
+    },
     "rollLabel": "Lancer {{name}}",
     "lastSuccess": "Dernier jet : {{roll}}, réussi",
     "lastFailure": "Dernier jet : {{roll}}, échec",
@@ -1403,6 +1447,7 @@
     "no_initiative": "Il n'y a pas d'initiative à relancer : lancez d'abord un combat.",
     "initiative_not_on_top": "L'initiative n'est plus la dernière action : annulez ce qui a suivi, ou relancez au prochain tour.",
     "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord.",
-    "no_exposure": "Ce sort n'inflige aucun dégât d'exposition."
+    "no_exposure": "Ce sort n'inflige aucun dégât d'exposition.",
+    "spell_not_an_effect": "Ce sort n'ajoute aucun effet à suivre."
   }
 }

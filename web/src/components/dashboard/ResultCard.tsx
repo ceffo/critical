@@ -13,6 +13,11 @@ import { formatFactor, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
 import {
+  checkAdjustedTarget,
+  maxSkillAdjustment,
+  stepSkillAdjustment,
+} from "@/lib/skillAdjust";
+import {
   MAX_TARGET_AC,
   UNKNOWN_AC_STEP_BASE,
   adjustFormKey,
@@ -181,7 +186,7 @@ function CardBody({
     case "initiative":
       return <InitiativeResult d10={model.d10} />;
     case "skill":
-      return <SkillResult check={model.check} />;
+      return <SkillResult check={model.check} interactive={interactive} />;
     case "dice":
       return <DiceResult roll={model.roll} />;
     case "info":
@@ -858,6 +863,92 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
   );
 }
 
+/**
+ * The adjustment of the latest skill check: − / + around a signed value starting at the current
+ * adjustment (1 on a proficiency, 5 points on a bard skill), an optional reason, Apply. The
+ * server recomputes the verdict; the roll never changes.
+ */
+function AdjustSkill({
+  check: c,
+  entryId,
+}: {
+  check: SkillCheck;
+  entryId: number;
+}) {
+  const { t } = useTranslation();
+  const adjustLastSkill = useRollStore((s) => s.adjustLastSkill);
+  const rolling = useRollStore((s) => s.rolling);
+  const voided = useLogStore((st) =>
+    st.entries.some((e) => e.id === entryId && e.status === "voided"),
+  );
+  const [value, setValue] = useState(c.adjustment ?? 0);
+  const [reason, setReason] = useState(c.adjustmentReason ?? "");
+  if (voided) return null;
+  const max = maxSkillAdjustment(c.kind);
+  const changed = adjustmentChanged(c, value, reason);
+
+  return (
+    <form
+      className="flex flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
+      aria-label={t("result.skill.adjustLabel")}
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        if (changed)
+          void adjustLastSkill(
+            entryId,
+            value,
+            value === 0 ? "" : reason.trim(),
+          );
+      }}
+    >
+      <div className="text-body font-medium">{t("result.adjust.title")}</div>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-label={t("result.adjust.decrease")}
+            disabled={value <= -max}
+            onClick={() => setValue((v) => stepSkillAdjustment(c.kind, v, -1))}
+          >
+            −
+          </Button>
+          <output
+            className="w-12 text-center text-key tabular-nums"
+            aria-label={t("result.adjust.value")}
+            data-testid="skill-adjustment"
+          >
+            {formatSigned(value)}
+          </output>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-label={t("result.adjust.increase")}
+            disabled={value >= max}
+            onClick={() => setValue((v) => stepSkillAdjustment(c.kind, v, 1))}
+          >
+            +
+          </Button>
+        </div>
+        <input
+          className={fieldClass}
+          type="text"
+          maxLength={80}
+          value={reason}
+          aria-label={t("result.adjust.reason")}
+          placeholder={t("result.adjust.reason")}
+          onChange={(ev) => setReason(ev.target.value)}
+        />
+        <Button type="submit" size="sm" disabled={rolling || !changed}>
+          {t("result.adjust.apply")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 /** One die as a chip: its maximum in the accent, a 1 dimmed. */
 function DieChip({
   value,
@@ -1136,10 +1227,23 @@ function InitiativeResult({ d10 }: { d10: number }) {
   );
 }
 
-/** Skill check: the die, "roll vs target", the verdict, and what the target is made of. */
-function SkillResult({ check: c }: { check: SkillCheck }) {
+/**
+ * Skill check: the die, "roll vs adjusted target", the verdict, what the target is made of, the
+ * DM's adjustment (with its reason) and, on the latest check only, the control to change it.
+ */
+function SkillResult({
+  check: c,
+  interactive,
+}: {
+  check: SkillCheck;
+  interactive: boolean;
+}) {
   const { t } = useTranslation();
   const proficiency = c.kind === "proficiency";
+  const adjustment = c.adjustment ?? 0;
+  const adjusted = checkAdjustedTarget(c);
+  const show = (n: number) =>
+    proficiency ? n : t("skills.percent", { value: n });
   return (
     <div className="flex flex-col gap-3" data-testid="skill-result">
       <div className="flex items-center gap-3">
@@ -1151,7 +1255,7 @@ function SkillResult({ check: c }: { check: SkillCheck }) {
           <div className="text-key tabular-nums" data-testid="skill-vs">
             {t(proficiency ? "fil.skillVs" : "fil.skillVsPercent", {
               roll: c.roll,
-              target: c.target,
+              target: adjusted,
             })}
           </div>
           <div className="text-body text-muted-foreground tabular-nums">
@@ -1176,10 +1280,33 @@ function SkillResult({ check: c }: { check: SkillCheck }) {
       </div>
       <dl className="grid grid-cols-3 gap-2">
         <Fact label={t("result.skill.die", { die: c.die })}>{c.roll}</Fact>
-        <Fact label={t("result.target")}>
-          {proficiency ? c.target : t("skills.percent", { value: c.target })}
-        </Fact>
+        <Fact label={t("result.target")}>{show(c.target)}</Fact>
+        {adjustment !== 0 && (
+          <Fact label={t("result.skill.adjustedTarget")}>
+            <span data-testid="skill-adjusted-target">{show(adjusted)}</span>
+          </Fact>
+        )}
       </dl>
+      {adjustment !== 0 && (
+        <div
+          className="flex justify-between gap-2 text-body"
+          data-testid="skill-adjustment-line"
+        >
+          <span className="min-w-0 break-words">
+            {c.adjustmentReason ?? t("result.skill.adjustment")}
+          </span>
+          <span className="tabular-nums">{formatSigned(adjustment)}</span>
+        </div>
+      )}
+      {interactive && c.logEntryId !== undefined && (
+        // Keyed by entry and adjustment so a new check, or a popped correction, starts from the
+        // adjustment shown.
+        <AdjustSkill
+          key={`${c.logEntryId}:${adjustment}:${c.adjustmentReason ?? ""}`}
+          check={c}
+          entryId={c.logEntryId}
+        />
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -347,14 +348,21 @@ func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 	require.Len(t, list, 1)
 	form.ID = list[0].ID
 	assert.NotZero(t, form.ID)
+	assert.False(t, list[0].CreatedAt.IsZero(), "the database stamps a new template")
+	form.CreatedAt = list[0].CreatedAt
 	assert.Equal(t, form, list[0])
 
 	// A restore writes explicit ids back; a new entry gets the next one.
-	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 42, Name: "Old"}, {Name: "New"}}))
+	longAgo := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 42, Name: "Old", CreatedAt: longAgo}, {Name: "New"}}))
 	list, err = dal.ListSavedBuffs(ctx, charID)
 	require.NoError(t, err)
 	require.Len(t, list, 2)
 	assert.Equal(t, int64(42), list[0].ID)
+	assert.Equal(t, longAgo, list[0].CreatedAt, "a restore keeps the creation time")
+	var raw string
+	require.NoError(t, db.QueryRow(`SELECT CAST(created_at AS TEXT) FROM saved_buffs WHERE id = 42`).Scan(&raw))
+	assert.Equal(t, "2001-02-03 04:05:06", raw, "stored in the same format as the column default")
 	assert.Equal(t, "New", list[1].Name)
 }
 
@@ -384,4 +392,20 @@ func TestActiveBuffs_SpellIDRoundTripsAndOldRowsReadEmpty(t *testing.T) {
 	require.NoError(t, db.QueryRowContext(ctx, `SELECT buffs FROM active_buffs WHERE character_id = ?`, charID).Scan(&blob))
 	assert.Contains(t, blob, `"spell_id":"haste"`)
 	assert.Equal(t, 1, strings.Count(blob, "spell_id"), "omitted for a buff not from a spell")
+}
+
+// A template restored from a snapshot taken before created_at was recorded has
+// no creation time: it is stamped now, never stored as the zero time.
+func TestSavedBuffs_ReplaceStampsARowRestoredWithoutCreatedAt(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	before := time.Now().UTC().Add(-time.Minute)
+	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 5, Name: "Legacy"}}))
+	list, err := dal.ListSavedBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.True(t, list[0].CreatedAt.After(before), "stamped now, got %s", list[0].CreatedAt)
 }

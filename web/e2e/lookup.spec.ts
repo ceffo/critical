@@ -9,6 +9,7 @@ import {
   type ExtraSpell,
 } from "./fixtures";
 import {
+  buffBadge,
   chooseLanguage,
   chooseSetting,
   openDashboard,
@@ -146,6 +147,17 @@ test("lookup: typing 'project im' selects Project Image with no click and shows 
     detail(page).getByTestId("stat-duration").getByTestId("stat-value"),
   ).toHaveText("15 rd");
   await snap(page, "search-selected");
+
+  // Add as effect (ADR 0004 step 19): offered only for a spell that adds a buff; Mirror Image
+  // goes on the Bard at his level and shows in the header's effects timeline.
+  await expect(detail(page).getByTestId("spell-add-effect")).toHaveCount(0);
+  await search(page).fill("mirror image");
+  await expect(selected(page)).toHaveAttribute("data-id", "mirror_image");
+  await detail(page)
+    .getByRole("button", { name: "Add Mirror Image as an effect at level 15" })
+    .click();
+  await expect(buffBadge(page, "Mirror Image")).toBeVisible();
+  await snap(page, "add-as-effect");
 });
 
 test("lookup in French: a French name finds the spell, its French text shows with its table, its stats in French and metres; a spell without French shows English", async ({

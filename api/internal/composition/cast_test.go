@@ -292,3 +292,36 @@ func TestExposureOnTheBard_VoidGivesTheHPBack(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, before.CurrentHp, st.CurrentHp, "popping it gives the HP back")
 }
+
+// ADR 0004 step 19 on the real stack: Mirror Image (self only) added as an
+// effect from the lookup goes on the list at the Bard's level with no slot
+// spent, as one cast entry; voiding it leaves the list as it was.
+func TestAddAsEffect_OneEntryAndVoidRestoresTheList(t *testing.T) {
+	bs := bootMaxDice(t)
+	ctx := context.Background()
+	id := bs.CharacterID
+	_, err := bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{Name: "Haste", Duration: 20})
+	require.NoError(t, err)
+	before, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+
+	res, err := bs.Cast.AddEffect(ctx, id, castsvc.AddEffectRequest{SpellID: "mirror_image"})
+	require.NoError(t, err)
+	assert.Equal(t, castsvc.SourceEffect, res.Source)
+	assert.Equal(t, 15, res.CasterLevel, "the Bard's level")
+	after, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Haste", "Mirror Image"}, names(after))
+	assert.Equal(t, 8, after[1].Charges, "min(8, 1d4 + 15/3) images")
+	assert.Equal(t, 45, after[1].Duration)
+	assert.Equal(t, 0, usedSlots(t, bs), "no slot spent")
+	entries, err := bs.Log.List(ctx, id, 1)
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.KindCast, entries[0].Kind)
+
+	_, err = bs.Log.Undo(ctx, id, res.EntryID)
+	require.NoError(t, err)
+	restored, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, before, restored)
+}

@@ -3,7 +3,8 @@
 **Status**: accepted, 2026-10-15 (critical-qki.36; collects the buff rules shipped in
 critical-qki.8, critical-qki.20, critical-qki.29 and critical-qki.33, until then in
 `docs/backend.md` "Buff rules"); steps 10 and 11 and the Consequences amended and step 18 added
-2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers)
+2026-10-16 by [ADR 0016](0016-inventory.md) steps 9 to 16 (an item's own powers); step 19 (add a
+spell as an effect from the lookup) added 2026-10-16
 
 ## Context
 
@@ -112,9 +113,14 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
 14. **Saved templates.** A saved buff template (name, rounds, charges, effects, note) is a
     shortcut for filling the buff form; it is not a buff. Saving (a same name replaces) and
     deleting a template are logged and voidable, and they never read or change the active buffs;
-    activating from a template is a normal activation (step 13).
+    activating from a template is a normal activation (step 13). The snapshot carries each
+    template's creation time (`createdAt`) and a restore (undo or redo) writes it back unchanged;
+    a snapshot from before the field has none, and the restored row is stamped then.
     Tests: `TestSaveBuff`, `TestDeleteSaved` ("removes and logs, active buffs not read": the
-    mock fails on any read of the active buffs), `TestSavedRestorer_WritesTheSnapshotBack`.
+    mock fails on any read of the active buffs), `TestSavedRestorer_WritesTheSnapshotBack`,
+    `TestSavedRestorer_KeepsCreatedAtAndReadsOldSnapshots`,
+    `TestSavedBuffs_ReplaceStampsARowRestoredWithoutCreatedAt`,
+    `TestRedo_UndoThenRedoGivesEveryMutationBack` (saved buff save and delete).
 15. **Start round.** A buff carries the round it was put on the list in (`StartRound`): the round
     counter when it is activated, cast or received, stamped by the server (a value sent by the
     client is ignored). A renewed buff (step 6) starts again. Nothing else changes it: editing,
@@ -181,6 +187,27 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     `TestBuffs_Step18_WeaponKindFiltersTheEffects` (melee-only effects count for a melee attack,
     not for a missile one, a save or a spell to-hit; without the condition: everywhere),
     `TestBuffs_Step18_RejectsAnUnknownWeaponKind`.
+
+19. **Add as effect.** From the spell lookup's cast box ([ADR 0022](0022-activity-focus-layout.md)
+    step 2.5), a spell that adds a buff can be put on the Bard as an effect at **his** level, with no
+    slot spent: `POST /api/spells/effect {"spellId"}`; the client sends no level. A spell adds a buff
+    when its effect entry is a `buff`, not low confidence, and sets no ability (an ability set is
+    applied by hand); the same rule decides whether a cast or a received spell puts a buff on, so the
+    offer and the action cannot drift. The lookup's spells say so (`effect: true`, absent otherwise);
+    the rule is generic, hostile buffs (Slow, Malison) and self-only spells (Shield, Mirror Image)
+    included. The buff is rolled as a cast rolls it (rounds, charges, ability gain at the Bard's
+    level); nothing else is: no damage, no to-hit, no item spent, no slots granted. It always lands
+    on the Bard. Any other spell (damage, utility, low confidence, ability set, no effect entry) is
+    refused with `spell_not_an_effect` before anything is rolled or written; an unknown spell is
+    `not_found`. Like a receive, it is one cast entry (step 13), its payload's `action` being
+    `"effect"`, with the buff list's snapshots, so voiding it removes the buff; renewal (step 6),
+    start round (15), starting charges (16) and spell id (17) apply as for a cast.
+    Tests: `castsvc` `TestBuffs_Step19_AddAsEffect` (the buffs at level 15, the exact dice, self-only
+    and hostile accepted, one entry with only the buff snapshot), `TestBuffs_Step19_AddAsEffectLogPayload`,
+    `TestBuffs_Step19_AddAsEffectRefusals` (nothing rolled, written or logged, not offered),
+    `TestBuffs_Step19_FlagMatchesTheAction` (every seed entry: offered exactly when a buff goes on);
+    `spelleffectsvc` `TestEntry_AddsBuff`; `TestSearch_EffectFlag` (`spellhdl`), `TestAddEffect_Handler`
+    (`casthdl`); `TestAddAsEffect_OneEntryAndVoidRestoresTheList` (`composition`).
 
 ## Consequences
 

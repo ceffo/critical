@@ -98,6 +98,8 @@ const savePayload = {
   rolledPassed: false,
   adjustment: 2,
   adjustmentReason: "Gaia",
+  rollTotal: 13,
+  adjustedTarget: 12,
   total: 15,
   passed: true,
   margin: 1,
@@ -288,7 +290,7 @@ describe("cardModel: every log kind renders from its payload", () => {
     expect(m.layout === "attack" && m.roll.hit).toBe(false);
   });
 
-  it("save: d20, target, modifiers, adjustment and the server's total and verdict", async () => {
+  it("save: d20, target, modifiers, adjustment and the server's roll total, adjusted target and verdict", async () => {
     const m = cardModel(
       entry("save", savePayload, { id: 9 }),
       await makeT("en"),
@@ -302,7 +304,8 @@ describe("cardModel: every log kind renders from its payload", () => {
         modifiers: [{ kind: "buff", detail: "Prayer", value: 1 }],
         adjustment: 2,
         adjustmentReason: "Gaia",
-        total: 15,
+        rollTotal: 13,
+        adjustedTarget: 12,
         passed: true,
         margin: 1,
         logEntryId: 9,
@@ -310,7 +313,24 @@ describe("cardModel: every log kind renders from its payload", () => {
     });
   });
 
-  it("save: an old payload without total or modifiers still renders", async () => {
+  it("save: a payload without modifiers still renders", async () => {
+    const m = cardModel(
+      entry("save", {
+        category: "breath",
+        d20Roll: 4,
+        target: 12,
+        passed: false,
+        adjustment: 0,
+        rollTotal: 4,
+        adjustedTarget: 12,
+        margin: -8,
+      }),
+      await makeT("en"),
+    );
+    expect(m.layout === "save" && m.save.modifiers).toEqual([]);
+  });
+
+  it("save: without the roll total and adjusted target the server fills (ADR 0006 step 8), it is not read as a save", async () => {
     const m = cardModel(
       entry("save", {
         category: "breath",
@@ -321,8 +341,7 @@ describe("cardModel: every log kind renders from its payload", () => {
       }),
       await makeT("en"),
     );
-    expect(m.layout === "save" && m.save.modifiers).toEqual([]);
-    expect(m.layout === "save" && m.save.total).toBeUndefined();
+    expect(m.layout).toBe("info");
   });
 
   it("cast and item: the payloads as recorded", async () => {
@@ -561,20 +580,20 @@ describe("cardSource: latest result by default, a selected entry read-only", () 
 });
 
 describe("liveModel", () => {
-  it("a save response shows its adjustment on its own, not among the modifiers", () => {
+  it("a save response reads like its log entry: the sheet's target, the roll total and the adjusted target", () => {
     const r = {
       ...attackPayload,
       d20Roll: 12,
-      effectiveThac0: 14,
-      modifiers: [
-        { kind: "buff", detail: "Prayer", value: 1 },
-        { kind: "adjustment", detail: "Gaia", value: 2 },
-      ],
+      baseThac0: 14,
+      effectiveThac0: 12,
+      modifiers: [{ kind: "buff", detail: "Prayer", value: 1 }],
       hit: true,
       hitMargin: 1,
       adjustment: 2,
       adjustmentReason: "Gaia",
       saveTotal: 15,
+      rollTotal: 13,
+      adjustedTarget: 12,
       logEntryId: 9,
     } as RollResult;
     expect(saveFromRoll("spell", r)).toEqual(

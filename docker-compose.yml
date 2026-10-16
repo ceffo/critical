@@ -1,37 +1,19 @@
+# Runs the production image locally (ADR 0024 step 1): one container, the API serving the web app.
+# Needs the real catalogue in .catalogue/ (`just catalogue`): `docker compose up --build`, then
+# http://localhost:8888. The database lives in the `critical-data` volume.
 services:
-  api:
+  critical:
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      additional_contexts:
+        # Private book data (ADR 0021): passed explicitly, never part of the default build context.
+        catalogue: ./.catalogue
+      args:
+        COMMIT: ${COMMIT:-unknown}
     ports:
       - "8888:8080"
-    environment:
-      CRITICAL_DSN: /data/critical.db
-      # The spell catalogue artifact (ADR 0021), fetched by `just catalogue`; the API refuses to start
-      # without it.
-      CRITICAL_CATALOGUE: /app/.catalogue/catalogue.json
     volumes:
-      - ./seeds:/app/seeds:ro
-      # Long syntax so a missing ./.catalogue stops `up` instead of docker creating it empty and
-      # root-owned (which `just catalogue` could not write into).
-      - type: bind
-        source: ./.catalogue
-        target: /app/.catalogue
-        read_only: true
-        bind:
-          create_host_path: false
       - critical-data:/data
-    restart: unless-stopped
-
-  web:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./web/dist:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - api
     restart: unless-stopped
 
 volumes:

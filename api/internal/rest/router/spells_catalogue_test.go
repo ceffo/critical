@@ -49,7 +49,7 @@ func TestSpells_TextsAreLanguageMapsFromTheCatalogue(t *testing.T) {
 	})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = bs.Close(ctx) })
-	srv := httptest.NewServer(router.New(slog.New(slog.NewTextHandler(io.Discard, nil)), bs))
+	srv := httptest.NewServer(router.New(slog.New(slog.NewTextHandler(io.Discard, nil)), bs, router.Options{}))
 	t.Cleanup(srv.Close)
 
 	mm := spellsJSON(t, srv, "q=Magic+Missile")["magic_missile"]

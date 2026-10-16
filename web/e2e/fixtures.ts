@@ -122,8 +122,8 @@ interface WebServer {
 }
 
 /**
- * Serves the built bundle (SPA fallback) and forwards /api to the current test's API, like nginx
- * does in compose. One per worker: a worker runs one test at a time, so a mutable target is enough.
+ * Serves the built bundle (SPA fallback) and forwards /api to the current test's API, as the
+ * production image's server does. One per worker: a worker runs one test at a time, so a mutable target is enough.
  */
 async function startWebServer(): Promise<{
   server: WebServer;

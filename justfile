@@ -199,6 +199,17 @@ e2e *args: build-api
     cd web && node e2e/check-browser.mjs
     cd web && npx playwright test "$@"
 
+# --- Production image (ADR 0024 step 1) ---
+
+# Build the production image with the FIXTURE catalogue (api/testdata), tagged critical:local, and
+# smoke-check it (scripts/image-smoke.sh). The real catalogue only enters the release build.
+image tag="critical:local":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    commit="$(git rev-parse HEAD)"
+    docker build -t "{{tag}}" --build-context catalogue=api/testdata --build-arg COMMIT="$commit" .
+    scripts/image-smoke.sh "{{tag}}" "$commit"
+
 # Build the design-direction pages (docs/design/ui-directions, static HTML on the real theme tokens)
 # and screenshot every one at 1707x1300 and 1440x900 into <direction>/shots/ with Playwright's
 # Chromium; fails when any text is clipped (wide or tall) or a page overflows. Needs web/node_modules and

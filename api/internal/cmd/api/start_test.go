@@ -9,7 +9,7 @@ import (
 // clearEnv unsets the vars for the test and restores them afterwards.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE"} {
+	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR"} {
 		t.Setenv(k, "") // registers restore of the original value
 		_ = os.Unsetenv(k)
 	}
@@ -32,11 +32,13 @@ func TestLoadConfig_Overrides(t *testing.T) {
 	t.Setenv("CRITICAL_SEEDS_DIR", "/tmp/seeds")
 	t.Setenv("CRITICAL_ADDR", ":9999")
 	t.Setenv("CRITICAL_CATALOGUE", "/srv/catalogue.json")
+	t.Setenv("CRITICAL_WEB_DIR", "/app/web")
 	cfg, err := loadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg != (Config{DSN: "/tmp/x.db", SeedsDir: "/tmp/seeds", Addr: ":9999", Catalogue: "/srv/catalogue.json"}) {
+	want := Config{DSN: "/tmp/x.db", SeedsDir: "/tmp/seeds", Addr: ":9999", Catalogue: "/srv/catalogue.json", WebDir: "/app/web"}
+	if cfg != want {
 		t.Fatalf("overrides not applied: %+v", cfg)
 	}
 }
@@ -52,7 +54,12 @@ func TestLoadConfig_EmptyUsesDefault(t *testing.T) {
 }
 
 func TestConfigValidate_RejectsEmpty(t *testing.T) {
-	for _, c := range []Config{{"", "s", ":1", "c"}, {"d", "", ":1", "c"}, {"d", "s", "", "c"}, {"d", "s", ":1", ""}} {
+	for _, c := range []Config{
+		{DSN: "", SeedsDir: "s", Addr: ":1", Catalogue: "c"},
+		{DSN: "d", SeedsDir: "", Addr: ":1", Catalogue: "c"},
+		{DSN: "d", SeedsDir: "s", Addr: "", Catalogue: "c"},
+		{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: ""},
+	} {
 		if c.Validate() == nil {
 			t.Fatalf("expected error for %+v", c)
 		}

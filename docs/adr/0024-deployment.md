@@ -66,6 +66,12 @@ flowchart LR
    5. A main commit is built once; every later deployment of that commit (staging, production,
       rollback) runs that image, identified by its digest.
 
+   Tests: `TestWeb_Step1_1_` (router: files, SPA fallback, JSON 404 under `/api`, no escape from the
+   web dir, a dir without `index.html` refused), `TestWeb_Step1_2_NoWebDirServesNothingOutsideAPI`,
+   `TestHealth_Step1_4_ReportsTheBuildCommit`. Step 1.3 is checked by the CI `image` job
+   (`scripts/image-smoke.sh`); the image and its inputs are described in `docs/backend.md`,
+   "Production image".
+
 2. **Environments.** Two fly apps in one fly org: **staging** and **production**. Each has its own
    volume holding its own SQLite database; they share nothing but the image.
    1. Staging is disposable: its data may be wiped at any time, and its machine may stop when idle

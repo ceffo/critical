@@ -5,12 +5,15 @@
 package router
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/actionloghdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
@@ -30,15 +33,30 @@ import (
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 )
 
+// Options are the binary-level settings the router needs besides the services.
+type Options struct {
+	// Web serves every path outside /api (the built web app, ADR 0024 step
+	// 1.1). Nil serves nothing there: such paths get the JSON 404, as in
+	// `just dev` where Vite serves the app (step 1.2).
+	Web http.Handler
+	// Commit is the commit the binary was built from, reported by
+	// /api/health (ADR 0024 step 1.4).
+	Commit string
+}
+
+// apiPrefix is the path every endpoint lives under.
+const apiPrefix = "/api"
+
 // New builds the router and mounts each handler package against bs.
-func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
+func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.Handler {
 	r := chi.NewRouter()
 	r.Use(mw.Logger(log))
 	r.Use(mw.Recoverer)
 
 	r.Get("/api/health", func(w http.ResponseWriter, req *http.Request) {
-		render.OK(req.Context(), w, map[string]string{"status": "ok"})
+		render.OK(req.Context(), w, map[string]string{"status": "ok", "commit": opts.Commit})
 	})
+	r.NotFound(notFound(opts.Web))
 
 	charID := func(_ *http.Request) int64 { return bs.CharacterID }
 
@@ -59,4 +77,19 @@ func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
 	dicehdl.RegisterRoutes(r, charID, bs.Dice)
 
 	return r
+}
+
+// notFound handles every path no route matches: outside /api it is the web
+// app's when one is configured; anything else is the JSON 404 of the error
+// table.
+func notFound(web http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		p := req.URL.Path
+		isAPI := p == apiPrefix || strings.HasPrefix(p, apiPrefix+"/")
+		if web != nil && !isAPI {
+			web.ServeHTTP(w, req)
+			return
+		}
+		render.Error(req.Context(), w, fmt.Errorf("%w: %s", domain.ErrNotFound, p))
+	}
 }

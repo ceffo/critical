@@ -16,7 +16,7 @@ export default defineConfig({
     // All interfaces (IPv4 too: a tunnel to 127.0.0.1:5173 must work); browsable by tailnet name.
     host: true,
     allowedHosts: [".ts.net"],
-    // `just dev` runs the API on :8080; forward /api like nginx does in compose.
+    // `just dev` runs the API on :8080; forward /api to it (in the image the API serves the app itself).
     proxy: { "/api": process.env.CRITICAL_API_URL ?? "http://localhost:8080" },
   },
 });

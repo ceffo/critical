@@ -307,6 +307,43 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   artifact fetched) imports the catalogue into a copy of that database and checks every reference resolves.
   The database is only read.
 
+## Production image
+
+One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the Go binary answers
+`/api/*` and serves the built web app. There is no nginx.
+
+- **Build**: the root `Dockerfile`, from the repo root, in stages: the web build (`npm ci`, `npm run build`),
+  the Go build (`CGO_ENABLED=0`, on the `golang` tag of the Go version in `api/go.mod`: the build fails when
+  they differ), and an Alpine runtime running as the non-root user `critical`, with a `HEALTHCHECK` on
+  `/api/health`. `.dockerignore` keeps `.catalogue/`, `.dev/`, databases and any `catalogue.json` (at any
+  depth), `.git`, `.beads`, `docs/`, `node_modules`, test results and `api/testdata` out of the default
+  build context.
+- **Build inputs**: the named build context `catalogue` (a directory holding `catalogue.json`) and the build
+  argument `COMMIT`. Without the `catalogue` context the build stops with a message naming the flag. PR and CI
+  builds and `just image` pass the fixture (`--build-context catalogue=api/testdata`); only the release
+  build and the local `docker compose` pass the real catalogue, and it never enters the public repo, a PR
+  build or a shared cache (step 7). `just image` also smoke-checks the result.
+- **In the image**: `/app/critical-srv`, the web build in `/app/web`, the campaign `seeds/` in `/app/seeds`,
+  the catalogue at `/app/catalogue.json`, and the database at `/data/critical.db` (a volume). The `CRITICAL_*`
+  variables point at those paths; any of them can be overridden at `docker run`.
+- **`CRITICAL_WEB_DIR`** (optional): the web build to serve. Set, every path outside `/api` is the file of
+  that path, or `index.html` when there is none (SPA fallback, so a deep link reloads into the app); files
+  under `assets/` (content-hashed by Vite) are sent with `Cache-Control: public, max-age=31536000,
+  immutable`, everything else with `no-cache`; only GET and HEAD are served. A directory without
+  `index.html` stops the server at boot. Unset (as in `just dev`, where Vite serves the app), nothing is
+  served outside `/api`. Either way an unknown path that is not served is the JSON 404
+  (`{"error": "not found: /api/nope", "code": "not_found"}`).
+- **`/api/health`**: `{"status": "ok", "commit": "<sha>"}`. The image build sets the commit with
+  `-ldflags -X …/internal/cmd/api.commit=$COMMIT`; any other build reports `unknown`. The release name is not
+  in the image (ADR 0024, consequences): the GitHub Release maps a tag to its commit.
+- **Smoke check**: `scripts/image-smoke.sh <image> <commit>` runs the image on the fixture seeds (the fixture
+  catalogue knows only their spells) and checks health with the commit, `/` and a deep link returning
+  `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. The CI `image` job builds
+  the image with the fixture and runs it on every PR and on main; nothing is pushed.
+- **Locally**: `docker compose up --build` builds the image with the real `.catalogue/` (fetch it with
+  `just catalogue` first) and serves the app on http://localhost:8888, the database in the `critical-data`
+  volume.
+
 ## Rule-table seeds
 
 `seeds/rule_tables.json` holds the AD&D 2e Player's Handbook lookup tables: Table 1 (Strength: hit and

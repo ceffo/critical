@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
+	logq "github.com/ceffo/critical/api/internal/adapters/actionlogdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/attackformdal"
 	formq "github.com/ceffo/critical/api/internal/adapters/attackformdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
+	buffq "github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	charq "github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
@@ -20,6 +22,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/skilldal"
 	skillq "github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
+	spellq "github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/textdal"
 	textq "github.com/ceffo/critical/api/internal/adapters/textdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
@@ -102,24 +105,28 @@ type Storage struct {
 // sqliteStorage wires the SQLite adapters over db. The sqlc-generated queries
 // run on the transaction the context carries, else on the pool (ADR 0025
 // step 5.2).
-func sqliteStorage(db *sqlite.DB) Storage {
-	routed := sqlite.Routed(db)
+func sqliteStorage(db *sqlite.DB) Storage { return storageOn(db, sqlite.Routed(db)) }
+
+// storageOn builds every adapter's queries over conn, the one connection the
+// root routes: a query package built over anything else would escape the
+// caller's transaction.
+func storageOn(store Store, conn sqlite.DBTX) Storage {
 	// Item and weapon names are localized texts (ADR 0023 step 9).
-	texts := textdal.New(textq.New(routed))
+	texts := textdal.New(textq.New(conn))
 	return Storage{
-		Store:        db,
-		Character:    characterdal.New(charq.New(routed)),
-		HP:           hpdal.New(hpq.New(routed)),
-		Log:          actionlogdal.New(db),
-		Buff:         buffdal.New(db),
-		Spell:        spelldal.New(db),
-		Weapons:      weapondal.New(weaponq.New(routed), texts),
-		WeaponEditor: weapondal.NewEditor(weaponq.New(routed), texts),
-		Crit:         critdal.New(critq.New(routed)),
-		Items:        itemdal.New(itemq.New(routed), texts),
-		Forms:        attackformdal.New(formq.New(routed)),
-		XP:           xpdal.New(xpq.New(routed)),
-		Skill:        skilldal.New(skillq.New(routed)),
-		Dice:         dicedal.New(diceq.New(routed)),
+		Store:        store,
+		Character:    characterdal.New(charq.New(conn)),
+		HP:           hpdal.New(hpq.New(conn)),
+		Log:          actionlogdal.New(logq.New(conn)),
+		Buff:         buffdal.New(buffq.New(conn)),
+		Spell:        spelldal.New(spellq.New(conn)),
+		Weapons:      weapondal.New(weaponq.New(conn), texts),
+		WeaponEditor: weapondal.NewEditor(weaponq.New(conn), texts),
+		Crit:         critdal.New(critq.New(conn)),
+		Items:        itemdal.New(itemq.New(conn), texts),
+		Forms:        attackformdal.New(formq.New(conn)),
+		XP:           xpdal.New(xpq.New(conn)),
+		Skill:        skilldal.New(skillq.New(conn)),
+		Dice:         dicedal.New(diceq.New(conn)),
 	}
 }

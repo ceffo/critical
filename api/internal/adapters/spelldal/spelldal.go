@@ -1,6 +1,6 @@
-// Package spelldal is the storage adapter for spellsvc. It delegates to
-// bob-generated typed queries for slot operations and uses the bob query
-// builder for the dynamic spell catalog search.
+// Package spelldal is the storage adapter for spellsvc: the spell slots, the
+// catalogue reads and the spell texts. It delegates to the sqlc-generated
+// queries in the queries/ subpackage.
 package spelldal
 
 import (
@@ -12,31 +12,26 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/aarondl/opt/null"
-	"github.com/stephenafamo/bob"
-	sqlitebob "github.com/stephenafamo/bob/dialect/sqlite"
-	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
-
 	"github.com/ceffo/critical/api/internal/adapters/spelldal/queries"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
-	bobmodels "github.com/ceffo/critical/api/internal/storage/sqlite/bob/models"
 )
 
-// DAL is the SQLite-backed implementation.
+// DAL is the implementation of spellsvc.DAL and spellsvc.Reader over the
+// sqlc-generated queries.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
-// New returns a DAL bound to q.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
+var (
+	_ spellsvc.DAL    = (*DAL)(nil)
+	_ spellsvc.Reader = (*DAL)(nil)
+)
 
-// exec joins the transaction carried by ctx (sqlite.InTx), if any.
-func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
+// New returns a DAL running its queries on q; the composition root routes
+// them to the transaction the context carries (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 type jsonSlot struct {
 	Level             int    `json:"level"`
@@ -48,7 +43,7 @@ type jsonSlot struct {
 
 // GetSlots returns the slot list. An absent row is treated as an empty list.
 func (d *DAL) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error) {
-	blob, err := queries.GetSpellSlots(characterID).One(ctx, d.exec(ctx))
+	blob, err := d.q.GetSpellSlots(ctx, characterID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return []spellsvc.SpellSlot{}, nil
 	}
@@ -81,10 +76,7 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 	if err != nil {
 		return fmt.Errorf("marshal spell_slots: %w", err)
 	}
-	_, err = queries.UpsertSpellSlots([]queries.UpsertSpellSlots_SpellSlots{
-		{CharacterID: characterID, Slots: string(blob)},
-	}).Exec(ctx, d.exec(ctx))
-	if err != nil {
+	if err := d.q.UpsertSpellSlots(ctx, queries.UpsertSpellSlotsParams{CharacterID: characterID, Slots: string(blob)}); err != nil {
 		return fmt.Errorf("upsert spell_slots: %w", err)
 	}
 	return nil
@@ -94,25 +86,17 @@ func (d *DAL) SaveSlots(ctx context.Context, characterID int64, slots []spellsvc
 // ordered by level, fallback-language name, class; the service applies the
 // rest of the filter (names, school groups, spheres, typed stats) and ranks
 // the matches. Only the name, school and sphere texts are read (one batched
-// lookup by key, ADR 0023): never the descriptions. Uses bob's model query
-// builder because the WHERE conditions are dynamic.
+// lookup by key, ADR 0023): never the descriptions. An empty class or no
+// level means any.
 func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
-	where := bobmodels.SelectWhere.Spells
-	// Rows without a key are older duplicates the catalogue import left in
-	// place (ADR 0021 step 5.4.1): never served.
-	mods := make([]bob.Mod[*dialect.SelectQuery], 0, 3)
-	mods = append(mods, where.Key.IsNotNull())
-	if f.Class != "" {
-		mods = append(mods, where.Class.Like(f.Class)) // LIKE without wildcards: case-insensitive equality
+	params := queries.SearchSpellsParams{Class: f.Class, Levels: make([]int64, len(f.Levels))}
+	if len(f.Levels) == 0 {
+		params.AnyLevel = 1
 	}
-	if len(f.Levels) > 0 {
-		levels := make([]int64, len(f.Levels))
-		for i, l := range f.Levels {
-			levels[i] = int64(l)
-		}
-		mods = append(mods, where.Level.In(levels...))
+	for i, l := range f.Levels {
+		params.Levels[i] = int64(l)
 	}
-	rows, err := bobmodels.Spells.Query(mods...).All(ctx, d.exec(ctx))
+	rows, err := d.q.SearchSpells(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}
@@ -130,7 +114,7 @@ func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, 
 	spells := make([]spellsvc.Spell, 0, len(rows))
 	for _, r := range rows {
 		sp := spellsvc.Spell{
-			ID: r.Key.GetOrZero(), Class: r.Class, Level: int(r.Level), Source: r.Source.GetOrZero(),
+			ID: r.Key.String, Class: r.Class, Level: int(r.Level), Source: r.Source.String,
 			Name: texts.of(r.Name), School: texts.of(r.School), Sphere: texts.of(r.Sphere),
 		}
 		sp.Stats = stats(r, texts)
@@ -150,14 +134,18 @@ func (d *DAL) Details(ctx context.Context, ids []string) ([]spellsvc.Spell, erro
 	if len(ids) == 0 {
 		return []spellsvc.Spell{}, nil
 	}
-	rows, err := bobmodels.Spells.Query(bobmodels.SelectWhere.Spells.Key.In(ids...)).All(ctx, d.exec(ctx))
+	keys := make([]sql.NullString, len(ids))
+	for i, id := range ids {
+		keys[i] = sql.NullString{String: id, Valid: true}
+	}
+	rows, err := d.q.SpellsByKey(ctx, keys)
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}
 	textIDs := make([]int64, 0, 10*len(rows))
-	byKey := make(map[string]*bobmodels.Spell, len(rows))
+	byKey := make(map[string]queries.Spell, len(rows))
 	for _, r := range rows {
-		byKey[r.Key.GetOrZero()] = r
+		byKey[r.Key.String] = r
 		textIDs = appendIDs(textIDs, append(statColumns(r), r.Name, r.School, r.Sphere, r.Description)...)
 	}
 	texts, err := d.texts(ctx, textIDs)
@@ -193,9 +181,9 @@ const textBatch = 5000
 type textsByID map[int64]localized.Text
 
 // of is the text a column keys (empty for NULL).
-func (t textsByID) of(id null.Val[int64]) localized.Text {
-	if v, ok := id.Get(); ok {
-		return t[v]
+func (t textsByID) of(id sql.NullInt64) localized.Text {
+	if id.Valid {
+		return t[id.Int64]
 	}
 	return nil
 }
@@ -206,7 +194,7 @@ func (d *DAL) texts(ctx context.Context, ids []int64) (textsByID, error) {
 	out := make(textsByID, len(ids))
 	for start := 0; start < len(ids); start += textBatch {
 		chunk := ids[start:min(start+textBatch, len(ids))]
-		rows, err := TextsQuery(chunk).All(ctx, d.exec(ctx))
+		rows, err := d.q.TextsByID(ctx, chunk)
 		if err != nil {
 			return nil, fmt.Errorf("query localized texts: %w", err)
 		}
@@ -220,38 +208,32 @@ func (d *DAL) texts(ctx context.Context, ids []int64) (textsByID, error) {
 	return out, nil
 }
 
-// TextsQuery is the lookup of the localized_texts rows of ids (exported for
-// the query-plan test: it must search the primary key, never scan the table).
-func TextsQuery(ids []int64) *sqlitebob.ViewQuery[*bobmodels.LocalizedText, bobmodels.LocalizedTextSlice] {
-	return bobmodels.LocalizedTexts.Query(bobmodels.SelectWhere.LocalizedTexts.TextID.In(ids...))
-}
-
 // appendIDs appends the keys of the non-NULL columns.
-func appendIDs(ids []int64, cols ...null.Val[int64]) []int64 {
+func appendIDs(ids []int64, cols ...sql.NullInt64) []int64 {
 	for _, c := range cols {
-		if v, ok := c.Get(); ok {
-			ids = append(ids, v)
+		if c.Valid {
+			ids = append(ids, c.Int64)
 		}
 	}
 	return ids
 }
 
 // statColumns are the keys of the six stat texts.
-func statColumns(r *bobmodels.Spell) []null.Val[int64] {
-	return []null.Val[int64]{r.CastingTime, r.Range, r.Duration, r.AreaOfEffect, r.Components, r.SavingThrow}
+func statColumns(r queries.Spell) []sql.NullInt64 {
+	return []sql.NullInt64{r.CastingTime, r.Range, r.Duration, r.AreaOfEffect, r.Components, r.SavingThrow}
 }
 
 // storedStats decodes the stats filled at import.
-func storedStats(r *bobmodels.Spell) (spellstats.Stats, bool) {
+func storedStats(r queries.Spell) (spellstats.Stats, bool) {
 	var st spellstats.Stats
-	blob := r.Stats.GetOrZero()
+	blob := r.Stats.String
 	return st, blob != "" && json.Unmarshal([]byte(blob), &st) == nil
 }
 
 // stats is the stored typed stats; a row without them, or with unreadable
 // JSON, is parsed again from its fallback-language stat texts (texts must
 // hold them).
-func stats(r *bobmodels.Spell, texts textsByID) spellstats.Stats {
+func stats(r queries.Spell, texts textsByID) spellstats.Stats {
 	if st, ok := storedStats(r); ok {
 		return st
 	}
@@ -262,9 +244,9 @@ func stats(r *bobmodels.Spell, texts textsByID) spellstats.Stats {
 	})
 }
 
-func toSpell(r *bobmodels.Spell, texts textsByID) spellsvc.Spell {
+func toSpell(r queries.Spell, texts textsByID) spellsvc.Spell {
 	return spellsvc.Spell{
-		ID: r.Key.GetOrZero(), Class: r.Class, Level: int(r.Level), Source: r.Source.GetOrZero(),
+		ID: r.Key.String, Class: r.Class, Level: int(r.Level), Source: r.Source.String,
 		Name:         texts.of(r.Name),
 		School:       texts.of(r.School),
 		Sphere:       texts.of(r.Sphere),

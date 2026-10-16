@@ -225,3 +225,21 @@ packages:
       outpkg: "mocks"
     interfaces:
       Querier:
+  github.com/ceffo/critical/api/internal/adapters/actionlogdal/queries:
+    config:
+      dir: "internal/adapters/actionlogdal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/buffdal/queries:
+    config:
+      dir: "internal/adapters/buffdal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/spelldal/queries:
+    config:
+      dir: "internal/adapters/spelldal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:

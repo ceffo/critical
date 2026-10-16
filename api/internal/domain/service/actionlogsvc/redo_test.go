@@ -18,8 +18,8 @@ import (
 // ADR 0019 steps 1 to 3: redo replays the newest popped transaction, oldest
 // entry first, writing each snapshot's "after" back through its restorer and
 // recording a redo correction, all inside the one DB transaction of the
-// expected-target check. The rollback itself is checked on SQLite in
-// actionlogdal (TestRedo_RestorerFailsMidReplay_RollsBackEverything).
+// expected-target check. A failure leaves the transaction body, for the
+// database to roll back.
 func TestRedo_ReplaysTheNewestPoppedTransaction(t *testing.T) {
 	void := func(id int64) actionlog.Correction {
 		return actionlog.Correction{ActionID: id, Kind: actionlog.CorrectionVoid}

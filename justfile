@@ -116,8 +116,8 @@ dev-reset:
 mocks:
     cd api && go tool mockery --config ../.mockery.yaml
 
-# Regenerate the DAL code (sqlc, and bob for the adapters not yet ported) from the migrations and
-# the query files. Offline: the schema comes from applying the migrations to a temp SQLite file.
+# Regenerate the DAL code (sqlc) from the migrations and the query files. Offline: the schema
+# comes from applying the migrations to a temp SQLite file.
 generate:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -133,8 +133,6 @@ generate:
     # dotfile: sqlc skips hidden schema files.
     sqlite3 .tmp_schema.db .schema | grep -v '^CREATE TABLE sqlite_sequence' > tmp_schema.sql
     go tool sqlc generate -f sqlc.yaml
-    # Run the bob code generator
-    go tool bobgen-sqlite -c bobgen.yaml
     go mod tidy
 
 # --- Backend (API) Commands ---

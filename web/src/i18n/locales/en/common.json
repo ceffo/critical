@@ -47,9 +47,10 @@
     "noResult": "No roll yet.",
     "footer": "Dice and settings",
     "journal": {
-      "collapse": "Collapse",
-      "expand": "Expand journal",
       "resize": "Resize the journal",
+      "handleHint": "Click to collapse or expand the journal, drag to resize it",
+      "stateCollapsed": "Collapsed",
+      "stateExpanded": "Expanded",
       "count_one": "{{count}} entry",
       "count_other": "{{count}} entries"
     }

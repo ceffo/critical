@@ -26,13 +26,16 @@ export function SkillsTab() {
 
   if (!skills) return null;
   const rowClass =
-    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-1.5 text-left text-body hover:bg-neu-900 disabled:opacity-60";
+    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-1.5 text-left text-body hover:bg-neu-800 disabled:opacity-60";
   // Column headers are section labels (ADR 0022 step 4.2).
   const headClass = cn(rowClass, "py-1 hover:bg-transparent");
 
   return (
-    <div className="flex flex-col gap-4">
-      <section aria-labelledby="skills-proficiencies">
+    <div className="flex flex-col gap-6">
+      <section
+        aria-labelledby="skills-proficiencies"
+        className="rounded-lg bg-neu-900 p-2"
+      >
         <div className={headClass}>
           <h3 id="skills-proficiencies" className="section-label">
             {t("skills.proficiencies")}
@@ -75,7 +78,10 @@ export function SkillsTab() {
           })}
         </ul>
       </section>
-      <section aria-labelledby="skills-bard">
+      <section
+        aria-labelledby="skills-bard"
+        className="rounded-lg bg-neu-900 p-2"
+      >
         <div className={headClass}>
           <h3 id="skills-bard" className="section-label">
             {t("skills.bardSkills")}

@@ -327,9 +327,10 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
 });
 
 // ADR 0022 step 5.4: the handle between the now band and the journal resizes the journal by drag
-// (mouse) and arrows (keyboard); Collapse folds it into a one-line bar; both are kept per device
+// (mouse) and arrows (keyboard); a click (or Enter) on it folds the journal into a one-line bar and
+// back, a drag of 4 px or more only resizes; both are kept per device
 // across a reload. What only a browser proves: pointer drag, layout heights and localStorage.
-test("journal split: drag, collapse and expand, kept across reload", async ({
+test("journal split: drag resizes, click toggles, kept across reload", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -363,8 +364,15 @@ test("journal split: drag, collapse and expand, kept across reload", async ({
   await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
   await snap(page, "act-journal-dragged");
 
-  // Collapse: one line with the newest entry, the count, Undo / Redo.
-  await page.getByRole("button", { name: "Collapse" }).click();
+  // A drag never toggles: still expanded, handle states it.
+  await expect(handle).toHaveAttribute("aria-valuetext", "Expanded");
+  await expect(
+    page.getByRole("button", { name: /Collapse|Expand/ }),
+  ).toHaveCount(0);
+
+  // A click on the handle collapses: one line with the newest entry, the count, Undo / Redo.
+  await handle.click();
+  await expect(handle).toHaveAttribute("aria-valuetext", "Collapsed");
   const bar = page.getByTestId("journal-bar");
   await expect(bar).toContainText("Split goblin");
   await expect(bar.getByTestId("undo")).toBeVisible();
@@ -372,10 +380,10 @@ test("journal split: drag, collapse and expand, kept across reload", async ({
   expect(await heightOf(slot)).toBeLessThan(80);
   await snap(page, "act-journal-collapsed");
 
-  // Kept across a reload; Expand brings back the dragged height.
+  // Kept across a reload; A click brings back the dragged height.
   await page.reload();
   await expect(page.getByTestId("journal-bar")).toContainText("Split goblin");
-  await page.getByRole("button", { name: "Expand journal" }).click();
+  await page.getByTestId("journal-handle").click();
   await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
   await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
 });

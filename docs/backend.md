@@ -358,6 +358,12 @@ XP ledger's port). `exceptional` is the 18/xx percentile (1-99, 100 for
 18/00). Values are returned as printed in the tables. The tests check
 values against the PHB pages, not against the seed.
 
+The plan (proposed, [ADR 0021](adr/0021-spell-catalogue.md) step 9) moves these tables into the
+catalogue artifact, format 3, as `rule_tables` with the same keys and rows, read into memory at every
+start like today and never imported into SQLite; consumers keep `ruletablesvc.Lookup`. Until the
+importer reads format 3, this section is the current behaviour; during the rollout (step 9.6) a
+format-1 artifact still takes the tables from this seed.
+
 ## Seeding the character
 
 `seeds/character.json` (the campaign Bard) only loads into an empty `characters` table. To pick up

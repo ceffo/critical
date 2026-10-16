@@ -38,7 +38,7 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0018 | [Every mutation is a transaction; undo pops the last one](0018-transactions-and-undo.md) | accepted, step 6 and Consequences amended by 0019 |
 | 0019 | [Redo replays the newest popped transaction](0019-redo.md) | accepted |
 | 0020 | [Visual identity: Critical! palettes, roles and brand mark](0020-visual-identity.md) | accepted, step 5 amended by 0022 |
-| 0021 | [Reference data: the spell catalogue artifact, storage and deployment](0021-spell-catalogue.md) | accepted, per-language fields amended by 0023 |
+| 0021 | [Reference data: the spell catalogue artifact, storage and deployment](0021-spell-catalogue.md) | accepted, per-language fields amended by 0023; step 9 (rule tables, format 3) proposed 2026-10-16 |
 | 0022 | [The screen around the focused activity: cards, no cut text and the Facet mark](0022-activity-focus-layout.md) | accepted |
 | 0023 | [Localized text: one row per language, no per-language field](0023-localized-text.md) | accepted; steps 9 to 12 (item and weapon names) added 2026-10-16 |
 | 0024 | [Deployment on fly.io: environments, release flow, image and data](0024-deployment.md) | proposed |

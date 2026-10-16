@@ -154,3 +154,96 @@ func TestSchema_Shape(t *testing.T) {
 	extra["extra"] = 1
 	assert.Error(t, sch.Validate(artifact(extra)), "unknown property")
 }
+
+// ruleTables reads the testdata rule tables (the shape the seed adapter reads
+// today) without the seed's "_source" comment: the rule_tables of format 3.
+func ruleTables(t *testing.T) map[string]any {
+	t.Helper()
+	f, err := os.Open("../../testdata/seeds/rule_tables.json")
+	require.NoError(t, err)
+	defer func() { _ = f.Close() }()
+	doc, err := jsonschema.UnmarshalJSON(f)
+	require.NoError(t, err)
+	tables, ok := doc.(map[string]any)
+	require.True(t, ok)
+	delete(tables, "_source")
+	return tables
+}
+
+func format3(tables any) map[string]any {
+	a := artifact(spell("a", map[string]any{"en": "x"}))
+	a["format"] = 3
+	a["rule_tables"] = tables
+	return a
+}
+
+// mutate returns a copy of the tables with one change made to a deep copy.
+func mutate(t *testing.T, change func(map[string]any)) map[string]any {
+	t.Helper()
+	raw, err := json.Marshal(ruleTables(t))
+	require.NoError(t, err)
+	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(raw)))
+	require.NoError(t, err)
+	tables, ok := doc.(map[string]any)
+	require.True(t, ok)
+	change(tables)
+	return tables
+}
+
+func row(tables map[string]any, table string, i int) map[string]any {
+	rows, _ := tables[table].([]any)
+	r, _ := rows[i].(map[string]any)
+	return r
+}
+
+// TestSchema_Step9_Format3RuleTables (ADR 0021 steps 9.1 to 9.3): format 3 is
+// format 1 plus the four PHB rule tables, numbers only, in the shape the seed
+// adapter reads today; format 1 carries no tables and format 2 is never valid.
+func TestSchema_Step9_Format3RuleTables(t *testing.T) {
+	sch := compile(t)
+	assert.NoError(t, sch.Validate(format3(ruleTables(t))), "format 3 with the four tables")
+	assert.NoError(t, sch.Validate(format3(mutate(t, func(map[string]any) {}))), "an unchanged copy")
+
+	withTables := artifact(spell("a", map[string]any{"en": "x"}))
+	withTables["rule_tables"] = ruleTables(t)
+	assert.Error(t, sch.Validate(withTables), "format 1 carries no rule tables")
+
+	noTables := artifact(spell("a", map[string]any{"en": "x"}))
+	noTables["format"] = 3
+	assert.Error(t, sch.Validate(noTables), "format 3 requires the rule tables")
+
+	format2 := format3(ruleTables(t))
+	format2["format"] = 2
+	assert.Error(t, sch.Validate(format2), "format 2 is never valid")
+
+	refused := map[string]func(map[string]any){
+		"a missing table":       func(m map[string]any) { delete(m, "bard_experience") },
+		"an unknown table":      func(m map[string]any) { m["crit"] = []any{} },
+		"a text in the tables":  func(m map[string]any) { m["_source"] = "PHB" },
+		"an unknown row field":  func(m map[string]any) { row(m, "strength", 0)["note"] = "x" },
+		"a missing row field":   func(m map[string]any) { delete(row(m, "dexterity", 0), "missile") },
+		"a text value":          func(m map[string]any) { row(m, "strength", 0)["hit"] = "-5" },
+		"a fractional value":    func(m map[string]any) { row(m, "dexterity", 0)["reaction"] = 0.5 },
+		"a score above 25":      func(m map[string]any) { row(m, "strength", 0)["str_max"] = 26 },
+		"a percentile over 100": func(m map[string]any) { row(m, "strength", 13)["exc_max"] = 101 },
+		"a bard level over 20":  func(m map[string]any) { row(m, "bard_spells", 0)["level"] = 21 },
+		"five spell levels": func(m map[string]any) {
+			row(m, "bard_spells", 0)["per_spell_level"] = []any{0, 0, 0, 0, 0}
+		},
+		"a negative spell count": func(m map[string]any) {
+			row(m, "bard_spells", 0)["per_spell_level"] = []any{-1, 0, 0, 0, 0, 0}
+		},
+		"negative XP": func(m map[string]any) { row(m, "bard_experience", 0)["xp"] = -1 },
+		"21 bard levels": func(m map[string]any) {
+			rows, _ := m["bard_spells"].([]any)
+			m["bard_spells"] = append(rows, rows[0])
+		},
+		"19 experience levels": func(m map[string]any) {
+			rows, _ := m["bard_experience"].([]any)
+			m["bard_experience"] = rows[:19]
+		},
+	}
+	for name, change := range refused {
+		assert.Error(t, sch.Validate(format3(mutate(t, change))), name)
+	}
+}

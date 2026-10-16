@@ -2,7 +2,9 @@
 
 **Status**: accepted, 2026-10-15 (critical-y9e0.1; the contract between the catalogue builder in the
 private `critical-rulebooks` repo and the API importer). Amended by [ADR 0023](0023-localized-text.md):
-no per-language column or field; the `name_fr` / `description_fr` wording below is superseded
+no per-language column or field; the `name_fr` / `description_fr` wording below is superseded.
+Step 9 (the PHB rule tables in the artifact, format 3) is **proposed**, 2026-10-16 (critical-y9e0.9.1),
+awaiting the user; steps 1 to 8 stay accepted and unchanged by it until it is accepted.
 
 ## Context
 
@@ -69,6 +71,7 @@ is only ever appended to by play.
      has a delimiter row and a constant column count. The UI renders exactly this subset.
    - Adding or renaming a field is a new `format`, with an amendment of this ADR; importers refuse
      a format they do not know rather than guess.
+   - _Proposed by step 9: format 3 is format 1 plus the PHB rule tables; format 2 is never reused._
 2. **Reference data and game state are separate.** The importer owns the catalogue tables and nothing
    else; play never writes to them. Game state refers to a spell by `id` only, and keeps working
    across catalogue versions as long as step 5 holds.
@@ -116,6 +119,8 @@ is only ever appended to by play.
    1. No catalogue file at `CRITICAL_CATALOGUE`: refuse to start, naming the path and `just catalogue`.
    2. Parse and validate against the format-1 rules above (unknown `format`, schema violation,
       duplicate `id`): refuse to start, listing the first offences.
+      _Proposed by step 9: against the rules of the artifact's format (1 or 3), including step 9.3's
+      table rules for format 3._
    3. If `version` equals the version recorded in the database, do nothing.
    4. Otherwise, in **one transaction**:
       1. **First import on an existing database.** The `spells` table already has an integer primary
@@ -290,6 +295,95 @@ is only ever appended to by play.
          ft."), what is created unnamed ("Creates 1d4+1", "Creates a sphere"), "10 or 100 (TS)
          fire", and "5 x 20 x" (truncated in the book text: fixed in the rulebooks repo).
 
+9. **The PHB rule tables are reference data, carried by the artifact from format 3** (_proposed,
+   2026-10-16_). User, 2026-10-15, on moving the other `seeds/` tables: _"ADR 0021 covers all
+   reference data; the epic migrates spells only."_ Of the families still in `seeds/`, only the rule
+   tables (`seeds/rule_tables.json`) are reference data as this ADR defines it, read-only at runtime
+   and rebuilt offline (scoper, 2026-10-16, from the code): the crit table is a house table edited
+   in the app ([ADR 0001](0001-critical-hits.md) step 4) and its seed is an unread `[]`; items,
+   weapons and skills are the campaign character's possessions and scores, edited at the table
+   ([ADR 0016](0016-inventory.md), [ADR 0023](0023-localized-text.md) steps 10 and 11), which step 2
+   forbids for catalogue data. This step does not move them; whether they get a reference catalogue
+   is a separate question.
+   1. **Format 3 is format 1 plus `rule_tables`.** Every rule of steps 1 to 8 on `format`, `version`
+      and `spells` is unchanged; the artifact gains one required top-level object:
+
+      ```json
+      { "format": 3, "version": "2026-10-20", "spells": [ "…" ],
+        "rule_tables": { "strength": [ "…" ], "dexterity": [ "…" ], "bard_spells": [ "…" ], "bard_experience": [ "…" ] } }
+      ```
+
+      Format 2 is **not reused**: it named the retracted `{en, fr}` stat shape (see "Implementation
+      notes (typed stats in the UI language)", History). A format number names one shape forever, so
+      a stray format-2 file is refused (step 5.2), never misread. A format-1 artifact carries no
+      `rule_tables`. The schema describes both formats: `format` is 1 or 3, `rule_tables` is
+      forbidden in format 1 and required in format 3 (`TestSchema_Step9_Format3RuleTables`).
+   2. **Four tables, all required, numbers only.** The keys and rows are exactly those of
+      `seeds/rule_tables.json` today, so the seed adapter's parser reads them unchanged:
+
+      | Key | PHB table | Row fields (every one required, integers) |
+      |---|---|---|
+      | `strength` | Table 1 | `str_min`, `str_max` (1 to 25); `exc_min`, `exc_max` (0 to 100, the 18/xx percentile, 100 = 18/00, 0 and 0 = no exceptional part); `hit`, `dmg` |
+      | `dexterity` | Table 2 | `dex_min`, `dex_max` (1 to 25); `reaction`, `missile`, `defensive` |
+      | `bard_spells` | Table 32 | `level` (1 to 20); `per_spell_level`, exactly 6 counts of 0 or more (spell levels 1 to 6); exactly 20 rows |
+      | `bard_experience` | Table 25, Thief/Bard column | `level` (1 to 20); `xp` (0 or more, the XP that reaches the level); exactly 20 rows |
+
+      No other property anywhere in `rule_tables`: no table title, column header, note or
+      `_source` comment (the seed's `_source` is dropped). Only the columns the engine reads are
+      shipped; the book's other columns (weight allowance, open doors, the giants' names) stay in
+      `critical-rulebooks` (`tables/phb-001`, `-002`, `-025`, `-032`). Rows are in ascending order. A
+      new table, column or field is a new format (step 1).
+   3. **Validation, where each rule can be checked.** The schema checks the shape, the integer
+      types, the bounds and row counts above. JSON Schema cannot express the rest, which the builder
+      checks before it writes (a violation fails the build) and the importer checks at start with
+      the rules `ruletablesvc.New` applies to the seed today (a violation refuses the start, naming
+      the table, like step 5.2): Strength and Dexterity rows cover scores 1 to 25 in
+      order, contiguously and without overlap; score 18 is split into contiguous percentile ranges
+      from the plain 18 (0) to 18/00 (100); `bard_spells` holds each level 1 to 20 once;
+      `bard_experience` holds levels 1 to 20 in order, starting at 0 XP and strictly increasing.
+   4. **Read into memory at every start, not imported into the database.** The API parses
+      `rule_tables` into `ruletablesvc.Tables` at each start, as the seed adapter does today, before
+      serving. Consumers keep the port `ruletablesvc.Lookup` (and `Tables.BardXPThreshold`); only its
+      source changes. No migration, no table, nothing added to step 5.4's transaction or to
+      `catalogue_meta`. Nothing in game state refers to a table row (no id, no join, so step 5.4.3's
+      removal check has nothing to protect), the reasons of step 6 for SQLite (relational data joined
+      to state) do not apply, and its 79 rows parse in well under a millisecond. Step 2 holds: play
+      never writes them.
+   5. **A table change takes effect at the next start.** A corrected number is a new artifact
+      `version` (the builder never reuses one). Since the tables are read at every start, step 5.3's
+      "same version, do nothing" governs only the spells' import: every start uses the artifact's
+      tables, whatever the recorded version. This is how an edit of the seed applies today.
+   6. **Rollout: no start on the live database ever fails.** In this order:
+      1. **The API reads formats 1 and 3.** Format 3 takes the tables from `rule_tables` and does
+         not read `<seeds>/rule_tables.json`; format 1 takes them from `<seeds>/rule_tables.json`
+         as today. Any other format is refused (step 5.2). The fixture moves to format 3 (step 9.7)
+         and `api/testdata/seeds/rule_tables.json` is deleted; the campaign `seeds/rule_tables.json`
+         stays. This lands on `main` first, so the format-1 `.catalogue/catalogue.json` and
+         `.dev/critical.db` keep starting with no action.
+      2. **The builder publishes format 3** (`dist/catalogue.json` on the rulebooks default branch)
+         only once 9.6.1 is on `main`. It may be built earlier on a branch, which the API item tests
+         against with `CATALOGUE_REF`. From then `just catalogue` and the release build
+         ([ADR 0024](0024-deployment.md)) fetch format 3, which the API of 9.6.1 reads.
+      3. **Format 1 is retired**, in a later item, once the dev checkout's
+         `.catalogue/catalogue.json` and the production image are format 3: the API then reads
+         format 3 only (a format-1 file is refused by step 5.2, naming `just catalogue`) and
+         `seeds/rule_tables.json` is deleted.
+
+      Rejected: the API refusing format 1 as soon as it reads format 3, after the builder. The live
+      `.catalogue/catalogue.json` stays format 1 until someone runs `just catalogue`, so `just dev`
+      would refuse to start after a pull; and while the builder is ahead, the format-1-only API
+      refuses any format-3 artifact fetched by `just catalogue` or a release build.
+   7. **The fixture carries the PHB's real numbers.** `api/testdata/catalogue.json` (format 3 from
+      9.6.1) holds the four tables with the same numbers as `seeds/rule_tables.json` today; its
+      spells keep invented text (step 4). The numbers are game mechanics, not book text (step 7
+      keeps names, descriptions, notes and headers out of this repo, and 9.2 ships none); they are
+      public in `seeds/` already; and the service tests and the e2e suite assert values derived from
+      them (attack adjustments, spells per day, XP thresholds), checked against the PHB pages
+      (`docs/backend.md`, "Rule-table seeds"). Invented numbers would make those tests check nothing.
+   8. **`seeds/` then holds only campaign bootstrap.** After 9.6.3 it holds the character, its
+      inventory (items, weapons), its skills, its spellbook and the spell effects, pending the
+      question on items, weapons and skills; the unread crit-table seed is deleted separately.
+
 
 ## Consequences
 
@@ -310,6 +404,8 @@ is only ever appended to by play.
   tables; anything richer is a new `format`.
 - Other reference tables (weapons, items, rule tables, crit table, skills) keep loading from
   `seeds/` until they move to the catalogue in a later format or artifact; this ADR covers spells.
+  _Proposed by step 9: the rule tables move in format 3; the crit table, items, weapons and skills are
+  not reference data (step 9's classification) and stay in `seeds/` for now._
 - Only English and French exist. A third language is a new `format`.
 - Corrections to book text are a new artifact version; nothing in the app edits catalogue rows.
 

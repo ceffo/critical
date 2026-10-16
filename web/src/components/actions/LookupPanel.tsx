@@ -59,7 +59,8 @@ function SpellName({ spell, className }: { spell: Spell; className?: string }) {
   const { i18n } = useTranslation();
   return (
     <span
-      className={cn("min-w-0 break-words", className)}
+      lang={i18n.language}
+      className={cn("min-w-0 break-words hyphens-auto", className)}
       data-testid="spell-name"
     >
       {spellName(i18n.language, spell)}
@@ -461,7 +462,7 @@ export function LookupPanel() {
                 data-class={s.class}
                 data-level={s.level}
                 className={cn(
-                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900/50",
+                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900/50",
                   s.id === selectedId &&
                     "bg-amb-900 ring-1 ring-amb-700 ring-inset hover:bg-amb-900",
                 )}
@@ -471,15 +472,13 @@ export function LookupPanel() {
                   {s.level}
                 </span>
                 <SpellName spell={s} />
-                {query.cls === "all" ? (
+                {query.cls === "all" && (
                   <span
-                    className="text-label text-muted-foreground"
+                    className="col-start-2 text-label text-muted-foreground"
                     data-testid="spell-class"
                   >
                     {classLabel(t, s.class)}
                   </span>
-                ) : (
-                  <span />
                 )}
               </div>
             ))

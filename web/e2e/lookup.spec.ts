@@ -233,7 +233,7 @@ for (const size of [
     await expect(detail(page).getByRole("heading")).toHaveText(LONG);
 
     // Every visible name (list rows and detail title) is whole: not wider than its box, full text.
-    const whole = async (expected: string) => {
+    const whole = async (expected: string, lang: string) => {
       const els = page.getByTestId("spell-name");
       await expect(els.first()).toBeVisible();
       for (const el of await els.all()) {
@@ -243,15 +243,32 @@ for (const size of [
         ]);
         expect(scroll).toBeLessThanOrEqual(client);
         await expect(el).toHaveText(expected);
+        // A word is only ever broken by hyphenation at a syllable, never chopped: the name is
+        // hyphenated in its own language, and with hyphenation off and no emergency break every
+        // word still fits the box (so break-words is never what splits one).
+        await expect(el).toHaveAttribute("lang", lang);
+        await expect(el).toHaveCSS("hyphens", "auto");
+        const overflows = await el.evaluate((e) => {
+          const box = e as HTMLElement;
+          const [h, w] = [box.style.hyphens, box.style.overflowWrap];
+          box.style.hyphens = "manual";
+          box.style.overflowWrap = "normal";
+          const over = box.scrollWidth > box.clientWidth;
+          box.style.hyphens = h;
+          box.style.overflowWrap = w;
+          return over;
+        });
+        expect(overflows).toBe(false);
       }
       await expect(page.getByTestId("spell-other-name")).toHaveCount(0);
     };
-    await whole(LONG);
+    await whole(LONG, "en");
     await snap(page, `long-name-en-${size.width}`);
 
     await chooseLanguage(page, "fr");
     await expect(detail(page).getByRole("heading")).toHaveText(LONG_FR);
-    await whole(LONG_FR);
+    await snap(page, `long-name-fr-${size.width}`);
+    await whole(LONG_FR, "fr");
     await snap(page, `long-name-fr-${size.width}`);
   });
 }

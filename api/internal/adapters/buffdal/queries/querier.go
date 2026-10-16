@@ -14,8 +14,7 @@ type Querier interface {
 	GetInitiative(ctx context.Context, characterID int64) (GetInitiativeRow, error)
 	GetRoundNumber(ctx context.Context, characterID int64) (int64, error)
 	InsertSavedBuff(ctx context.Context, arg InsertSavedBuffParams) error
-	// created_at is written as text in the layout of the column's default, so a
-	// restored row reads and sorts like the others.
+	// A restored row keeps its creation time.
 	InsertSavedBuffWithID(ctx context.Context, arg InsertSavedBuffWithIDParams) error
 	ListSavedBuffs(ctx context.Context, characterID int64) ([]ListSavedBuffsRow, error)
 	UpsertActiveBuffs(ctx context.Context, arg UpsertActiveBuffsParams) error

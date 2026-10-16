@@ -12,7 +12,7 @@ import (
 )
 
 const deleteSavedBuffs = `-- name: DeleteSavedBuffs :exec
-DELETE FROM saved_buffs WHERE character_id = ?
+DELETE FROM saved_buffs WHERE character_id = $1
 `
 
 func (q *Queries) DeleteSavedBuffs(ctx context.Context, characterID int64) error {
@@ -21,7 +21,7 @@ func (q *Queries) DeleteSavedBuffs(ctx context.Context, characterID int64) error
 }
 
 const getActiveBuffs = `-- name: GetActiveBuffs :one
-SELECT buffs FROM active_buffs WHERE character_id = ?
+SELECT buffs FROM active_buffs WHERE character_id = $1
 `
 
 func (q *Queries) GetActiveBuffs(ctx context.Context, characterID int64) (string, error) {
@@ -32,7 +32,7 @@ func (q *Queries) GetActiveBuffs(ctx context.Context, characterID int64) (string
 }
 
 const getInitiative = `-- name: GetInitiative :one
-SELECT initiative_d10, initiative_entry_id FROM round_state WHERE character_id = ?
+SELECT initiative_d10, initiative_entry_id FROM round_state WHERE character_id = $1
 `
 
 type GetInitiativeRow struct {
@@ -48,7 +48,7 @@ func (q *Queries) GetInitiative(ctx context.Context, characterID int64) (GetInit
 }
 
 const getRoundNumber = `-- name: GetRoundNumber :one
-SELECT round_number FROM round_state WHERE character_id = ?
+SELECT round_number FROM round_state WHERE character_id = $1
 `
 
 func (q *Queries) GetRoundNumber(ctx context.Context, characterID int64) (int64, error) {
@@ -59,7 +59,7 @@ func (q *Queries) GetRoundNumber(ctx context.Context, characterID int64) (int64,
 }
 
 const insertSavedBuff = `-- name: InsertSavedBuff :exec
-INSERT INTO saved_buffs (character_id, name, duration, charges, effects, note) VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO saved_buffs (character_id, name, duration, charges, effects, note) VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type InsertSavedBuffParams struct {
@@ -86,7 +86,7 @@ func (q *Queries) InsertSavedBuff(ctx context.Context, arg InsertSavedBuffParams
 const insertSavedBuffWithID = `-- name: InsertSavedBuffWithID :exec
 
 INSERT INTO saved_buffs (id, character_id, name, duration, charges, effects, note, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, CAST(?8 AS TEXT))
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type InsertSavedBuffWithIDParams struct {
@@ -97,11 +97,10 @@ type InsertSavedBuffWithIDParams struct {
 	Charges     int64
 	Effects     string
 	Note        string
-	CreatedAt   string
+	CreatedAt   time.Time
 }
 
-// created_at is written as text in the layout of the column's default, so a
-// restored row reads and sorts like the others.
+// A restored row keeps its creation time.
 func (q *Queries) InsertSavedBuffWithID(ctx context.Context, arg InsertSavedBuffWithIDParams) error {
 	_, err := q.db.ExecContext(ctx, insertSavedBuffWithID,
 		arg.ID,
@@ -117,7 +116,7 @@ func (q *Queries) InsertSavedBuffWithID(ctx context.Context, arg InsertSavedBuff
 }
 
 const listSavedBuffs = `-- name: ListSavedBuffs :many
-SELECT id, name, duration, charges, effects, note, created_at FROM saved_buffs WHERE character_id = ? ORDER BY id
+SELECT id, name, duration, charges, effects, note, created_at FROM saved_buffs WHERE character_id = $1 ORDER BY id
 `
 
 type ListSavedBuffsRow struct {
@@ -162,7 +161,7 @@ func (q *Queries) ListSavedBuffs(ctx context.Context, characterID int64) ([]List
 }
 
 const upsertActiveBuffs = `-- name: UpsertActiveBuffs :exec
-INSERT INTO active_buffs (character_id, buffs) VALUES (?, ?)
+INSERT INTO active_buffs (character_id, buffs) VALUES ($1, $2)
 ON CONFLICT(character_id) DO UPDATE SET buffs = excluded.buffs
 `
 
@@ -177,7 +176,7 @@ func (q *Queries) UpsertActiveBuffs(ctx context.Context, arg UpsertActiveBuffsPa
 }
 
 const upsertInitiative = `-- name: UpsertInitiative :exec
-INSERT INTO round_state (character_id, initiative_d10, initiative_entry_id) VALUES (?, ?, ?)
+INSERT INTO round_state (character_id, initiative_d10, initiative_entry_id) VALUES ($1, $2, $3)
 ON CONFLICT(character_id) DO UPDATE SET initiative_d10 = excluded.initiative_d10, initiative_entry_id = excluded.initiative_entry_id
 `
 
@@ -193,7 +192,7 @@ func (q *Queries) UpsertInitiative(ctx context.Context, arg UpsertInitiativePara
 }
 
 const upsertRoundNumber = `-- name: UpsertRoundNumber :exec
-INSERT INTO round_state (character_id, round_number) VALUES (?, ?)
+INSERT INTO round_state (character_id, round_number) VALUES ($1, $2)
 ON CONFLICT(character_id) DO UPDATE SET round_number = excluded.round_number
 `
 

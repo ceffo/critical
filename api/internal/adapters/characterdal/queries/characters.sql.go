@@ -13,7 +13,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race, alignment, age, sex, height, weight, hair, eyes, languages
-FROM characters WHERE id = ?
+FROM characters WHERE id = $1
 `
 
 func (q *Queries) GetCharacter(ctx context.Context, id int64) (Character, error) {
@@ -53,7 +53,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (Character, error)
 
 const getCharacterDetails = `-- name: GetCharacterDetails :one
 SELECT race, alignment, age, sex, height, weight, hair, eyes, languages
-FROM characters WHERE id = ?
+FROM characters WHERE id = $1
 `
 
 type GetCharacterDetailsRow struct {
@@ -98,8 +98,8 @@ func (q *Queries) GetFirstCharacterID(ctx context.Context) (int64, error) {
 
 const updateCharacterDetails = `-- name: UpdateCharacterDetails :execrows
 UPDATE characters
-SET race = ?, alignment = ?, age = ?, sex = ?, height = ?, weight = ?, hair = ?, eyes = ?, languages = ?
-WHERE id = ?
+SET race = $1, alignment = $2, age = $3, sex = $4, height = $5, weight = $6, hair = $7, eyes = $8, languages = $9
+WHERE id = $10
 `
 
 type UpdateCharacterDetailsParams struct {

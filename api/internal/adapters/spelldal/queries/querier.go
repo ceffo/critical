@@ -6,7 +6,6 @@ package queries
 
 import (
 	"context"
-	"database/sql"
 )
 
 type Querier interface {
@@ -18,7 +17,7 @@ type Querier interface {
 	// PostgreSQL; '' is any class) and of the levels given (any level when
 	// any_level is 1). The adapter sorts the result.
 	SearchSpells(ctx context.Context, arg SearchSpellsParams) ([]Spell, error)
-	SpellsByKey(ctx context.Context, keys []sql.NullString) ([]Spell, error)
+	SpellsByKey(ctx context.Context, keys []string) ([]Spell, error)
 	// TextsByID reads the localized_texts rows of the keys through the primary
 	// key (text_id, lang), never a scan of the table (ADR 0023).
 	TextsByID(ctx context.Context, ids []int64) ([]LocalizedText, error)

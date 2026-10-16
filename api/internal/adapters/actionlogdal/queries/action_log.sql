@@ -4,32 +4,32 @@
 
 -- name: InsertAction :one
 INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id;
 
 -- name: StartActionTransaction :exec
 UPDATE action_log SET transaction_id = id
-WHERE id = ?;
+WHERE id = $1;
 
 -- name: InsertSnapshot :exec
 INSERT INTO action_snapshots (action_id, state_key, before_state, after_state)
-VALUES (?, ?, ?, ?);
+VALUES ($1, $2, $3, $4);
 
 -- name: InsertCorrection :exec
 INSERT INTO action_corrections (action_id, kind, hp_delta, summary, payload, note, step_id)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+VALUES ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: GetAction :one
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ? AND id = ?;
+WHERE character_id = $1 AND id = $2;
 
 -- name: ListActions :many
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ?
+WHERE character_id = sqlc.arg(character_id)
 ORDER BY id DESC
-LIMIT ?;
+LIMIT sqlc.arg('limit')::bigint;
 
 -- Which entries are popped is decided in Go (actionlog.StandingVoids, ADR
 -- 0019 step 1) from ListPopCorrections; the queries below read the newest
@@ -38,22 +38,22 @@ LIMIT ?;
 -- name: ListActionsByKind :many
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ? AND kind = ?
+WHERE character_id = sqlc.arg(character_id) AND kind = sqlc.arg(kind)
 ORDER BY id DESC
-LIMIT ?;
+LIMIT sqlc.arg('limit')::bigint;
 
 -- name: ListActionIDs :many
 SELECT id
 FROM action_log
-WHERE character_id = ?
+WHERE character_id = sqlc.arg(character_id)
 ORDER BY id DESC
-LIMIT ?;
+LIMIT sqlc.arg('limit')::bigint;
 
 -- name: ListPopCorrections :many
 SELECT action_corrections.id, action_corrections.action_id, action_corrections.kind
 FROM action_corrections
 JOIN action_log ON action_log.id = action_corrections.action_id
-WHERE action_log.character_id = ? AND action_corrections.kind IN ('void', 'redo')
+WHERE action_log.character_id = $1 AND action_corrections.kind IN ('void', 'redo')
 ORDER BY action_corrections.id;
 
 -- name: ListCorrectionsFrom :many
@@ -62,7 +62,7 @@ SELECT action_corrections.id, action_corrections.action_id, action_corrections.k
        action_corrections.note, action_corrections.step_id, action_corrections.created_at
 FROM action_corrections
 JOIN action_log ON action_log.id = action_corrections.action_id
-WHERE action_log.character_id = ? AND action_corrections.action_id >= ?
+WHERE action_log.character_id = $1 AND action_corrections.action_id >= $2
 ORDER BY action_corrections.id;
 
 -- name: ListSnapshotsFrom :many
@@ -70,20 +70,20 @@ SELECT action_snapshots.id, action_snapshots.action_id, action_snapshots.state_k
        action_snapshots.before_state, action_snapshots.after_state
 FROM action_snapshots
 JOIN action_log ON action_log.id = action_snapshots.action_id
-WHERE action_log.character_id = ? AND action_snapshots.action_id >= ?
+WHERE action_log.character_id = $1 AND action_snapshots.action_id >= $2
 ORDER BY action_snapshots.id;
 
 -- name: LatestActionID :one
 SELECT id
 FROM action_log
-WHERE character_id = ? AND kind = ?
+WHERE character_id = $1 AND kind = $2
 ORDER BY id DESC
 LIMIT 1;
 
 -- name: ListTransactionActions :many
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ? AND transaction_id = ?
+WHERE character_id = $1 AND transaction_id = $2
 ORDER BY id DESC;
 
 -- ListHPDeltas reads every entry's own HP delta; the adapter adds the
@@ -93,5 +93,5 @@ ORDER BY id DESC;
 -- name: ListHPDeltas :many
 SELECT id, hp_delta
 FROM action_log
-WHERE character_id = ?
+WHERE character_id = $1
 ORDER BY id;

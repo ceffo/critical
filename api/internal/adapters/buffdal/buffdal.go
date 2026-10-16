@@ -190,10 +190,6 @@ func (d *DAL) ListSavedBuffs(ctx context.Context, characterID int64) ([]buffsvc.
 	return out, nil
 }
 
-// sqliteDatetime is the layout of a DATETIME column's default, so restored
-// rows read and sort like the rest.
-const sqliteDatetime = "2006-01-02 15:04:05"
-
 // ReplaceSavedBuffs makes the stored list equal to saved.
 func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []buffsvc.SavedBuff) error {
 	if err := d.q.DeleteSavedBuffs(ctx, characterID); err != nil {
@@ -214,7 +210,7 @@ func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []
 			err = d.q.InsertSavedBuffWithID(ctx, queries.InsertSavedBuffWithIDParams{
 				ID: s.ID, CharacterID: characterID, Name: s.Name, Duration: int64(s.Duration),
 				Charges: int64(s.Charges), Effects: string(eff), Note: s.Note,
-				CreatedAt: createdAt.UTC().Format(sqliteDatetime),
+				CreatedAt: createdAt.UTC(),
 			})
 		} else {
 			err = d.q.InsertSavedBuff(ctx, queries.InsertSavedBuffParams{

@@ -10,7 +10,7 @@ import (
 )
 
 const getCharacterMaxHP = `-- name: GetCharacterMaxHP :one
-SELECT hp_max FROM characters WHERE id = ?
+SELECT hp_max FROM characters WHERE id = $1
 `
 
 func (q *Queries) GetCharacterMaxHP(ctx context.Context, id int64) (int64, error) {

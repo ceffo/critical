@@ -268,8 +268,8 @@ func TestSavedBuffs_List(t *testing.T) {
 }
 
 // Replace deletes the character's templates, then inserts the list in order:
-// a template with an id (a restore) keeps its id and creation time, in the
-// column default's layout; a new one is inserted without, for the database to
+// a template with an id (a restore) keeps its id and creation time (in UTC);
+// a new one is inserted without, for the database to
 // number and stamp it.
 func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 	ctx := context.Background()
@@ -279,7 +279,7 @@ func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 		q.EXPECT().DeleteSavedBuffs(ctx, charID).Return(nil).Once(),
 		q.EXPECT().InsertSavedBuffWithID(ctx, queries.InsertSavedBuffWithIDParams{
 			ID: 42, CharacterID: charID, Name: "Old", Duration: 3, Charges: 1, Effects: `{"ac":-1}`, Note: "n",
-			CreatedAt: "2001-02-03 03:05:06",
+			CreatedAt: longAgo.UTC(),
 		}).Return(nil).Once(),
 		q.EXPECT().InsertSavedBuff(ctx, queries.InsertSavedBuffParams{
 			CharacterID: charID, Name: "New", Effects: `{}`,
@@ -299,19 +299,18 @@ func TestSavedBuffs_ReplaceKeepsGivenIDsAndAssignsNew(t *testing.T) {
 func TestSavedBuffs_ReplaceStampsARowRestoredWithoutCreatedAt(t *testing.T) {
 	ctx := context.Background()
 	dal, q := mocked(t)
-	var stamp string
+	var stamp time.Time
 	q.EXPECT().DeleteSavedBuffs(ctx, charID).Return(nil).Once()
 	q.EXPECT().InsertSavedBuffWithID(ctx, mock.Anything).RunAndReturn(func(_ context.Context, p queries.InsertSavedBuffWithIDParams) error {
 		stamp = p.CreatedAt
 		return nil
 	}).Once()
-	before := time.Now().UTC().Truncate(time.Second)
+	before := time.Now()
 	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 5, Name: "Legacy"}}))
-	after := time.Now().UTC()
+	after := time.Now()
 
-	got, err := time.Parse("2006-01-02 15:04:05", stamp)
-	require.NoError(t, err, "stored in the column default's layout")
-	assert.False(t, got.Before(before) || got.After(after), "stamped now, got %s", stamp)
+	assert.False(t, stamp.Before(before) || stamp.After(after), "stamped now, got %s", stamp)
+	assert.Equal(t, time.UTC, stamp.Location(), "stored in UTC")
 }
 
 // A failing write stops the replace; the caller's transaction rolls it back.

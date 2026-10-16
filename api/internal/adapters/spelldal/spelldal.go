@@ -136,11 +136,7 @@ func (d *DAL) Details(ctx context.Context, ids []string) ([]spellsvc.Spell, erro
 	if len(ids) == 0 {
 		return []spellsvc.Spell{}, nil
 	}
-	keys := make([]sql.NullString, len(ids))
-	for i, id := range ids {
-		keys[i] = sql.NullString{String: id, Valid: true}
-	}
-	rows, err := d.q.SpellsByKey(ctx, keys)
+	rows, err := d.q.SpellsByKey(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}

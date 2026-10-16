@@ -116,24 +116,10 @@ dev-reset:
 mocks:
     cd api && go tool mockery --config ../.mockery.yaml
 
-# Regenerate the DAL code (sqlc) from the migrations and the query files. Offline: the schema
-# comes from applying the migrations to a temp SQLite file.
+# Regenerate the DAL code (sqlc) from the PostgreSQL migrations and the query files. Offline:
+# sqlc parses the migration files itself, no database server is involved.
 generate:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd api
-    trap 'rm -f .tmp_schema.db tmp_schema.sql' EXIT
-    # Build a temp DB by applying all migrations via sqlite3
-    rm -f .tmp_schema.db
-    for f in internal/storage/sqlite/migrations/*.sql; do
-        sqlite3 .tmp_schema.db < "$f"
-    done
-    # sqlc reads the resulting schema as plain DDL: its SQLite parser rejects some data-copy
-    # statements of the old migrations, and only the final schema matters to the queries. Not a
-    # dotfile: sqlc skips hidden schema files.
-    sqlite3 .tmp_schema.db .schema | grep -v '^CREATE TABLE sqlite_sequence' > tmp_schema.sql
-    go tool sqlc generate -f sqlc.yaml
-    go mod tidy
+    cd api && go tool sqlc generate -f sqlc.yaml && go mod tidy
 
 # --- Backend (API) Commands ---
 

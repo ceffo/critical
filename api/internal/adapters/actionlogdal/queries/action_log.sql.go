@@ -14,7 +14,7 @@ import (
 const getAction = `-- name: GetAction :one
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ? AND id = ?
+WHERE character_id = $1 AND id = $2
 `
 
 type GetActionParams struct {
@@ -54,7 +54,7 @@ func (q *Queries) GetAction(ctx context.Context, arg GetActionParams) (GetAction
 const insertAction = `-- name: InsertAction :one
 
 INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id
 `
 
@@ -88,7 +88,7 @@ func (q *Queries) InsertAction(ctx context.Context, arg InsertActionParams) (int
 
 const insertCorrection = `-- name: InsertCorrection :exec
 INSERT INTO action_corrections (action_id, kind, hp_delta, summary, payload, note, step_id)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertCorrectionParams struct {
@@ -116,7 +116,7 @@ func (q *Queries) InsertCorrection(ctx context.Context, arg InsertCorrectionPara
 
 const insertSnapshot = `-- name: InsertSnapshot :exec
 INSERT INTO action_snapshots (action_id, state_key, before_state, after_state)
-VALUES (?, ?, ?, ?)
+VALUES ($1, $2, $3, $4)
 `
 
 type InsertSnapshotParams struct {
@@ -139,7 +139,7 @@ func (q *Queries) InsertSnapshot(ctx context.Context, arg InsertSnapshotParams) 
 const latestActionID = `-- name: LatestActionID :one
 SELECT id
 FROM action_log
-WHERE character_id = ? AND kind = ?
+WHERE character_id = $1 AND kind = $2
 ORDER BY id DESC
 LIMIT 1
 `
@@ -159,9 +159,9 @@ func (q *Queries) LatestActionID(ctx context.Context, arg LatestActionIDParams) 
 const listActionIDs = `-- name: ListActionIDs :many
 SELECT id
 FROM action_log
-WHERE character_id = ?
+WHERE character_id = $1
 ORDER BY id DESC
-LIMIT ?
+LIMIT $2::bigint
 `
 
 type ListActionIDsParams struct {
@@ -195,9 +195,9 @@ func (q *Queries) ListActionIDs(ctx context.Context, arg ListActionIDsParams) ([
 const listActions = `-- name: ListActions :many
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ?
+WHERE character_id = $1
 ORDER BY id DESC
-LIMIT ?
+LIMIT $2::bigint
 `
 
 type ListActionsParams struct {
@@ -254,9 +254,9 @@ const listActionsByKind = `-- name: ListActionsByKind :many
 
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ? AND kind = ?
+WHERE character_id = $1 AND kind = $2
 ORDER BY id DESC
-LIMIT ?
+LIMIT $3::bigint
 `
 
 type ListActionsByKindParams struct {
@@ -319,7 +319,7 @@ SELECT action_corrections.id, action_corrections.action_id, action_corrections.k
        action_corrections.note, action_corrections.step_id, action_corrections.created_at
 FROM action_corrections
 JOIN action_log ON action_log.id = action_corrections.action_id
-WHERE action_log.character_id = ? AND action_corrections.action_id >= ?
+WHERE action_log.character_id = $1 AND action_corrections.action_id >= $2
 ORDER BY action_corrections.id
 `
 
@@ -377,7 +377,7 @@ const listHPDeltas = `-- name: ListHPDeltas :many
 
 SELECT id, hp_delta
 FROM action_log
-WHERE character_id = ?
+WHERE character_id = $1
 ORDER BY id
 `
 
@@ -416,7 +416,7 @@ const listPopCorrections = `-- name: ListPopCorrections :many
 SELECT action_corrections.id, action_corrections.action_id, action_corrections.kind
 FROM action_corrections
 JOIN action_log ON action_log.id = action_corrections.action_id
-WHERE action_log.character_id = ? AND action_corrections.kind IN ('void', 'redo')
+WHERE action_log.character_id = $1 AND action_corrections.kind IN ('void', 'redo')
 ORDER BY action_corrections.id
 `
 
@@ -454,7 +454,7 @@ SELECT action_snapshots.id, action_snapshots.action_id, action_snapshots.state_k
        action_snapshots.before_state, action_snapshots.after_state
 FROM action_snapshots
 JOIN action_log ON action_log.id = action_snapshots.action_id
-WHERE action_log.character_id = ? AND action_snapshots.action_id >= ?
+WHERE action_log.character_id = $1 AND action_snapshots.action_id >= $2
 ORDER BY action_snapshots.id
 `
 
@@ -495,7 +495,7 @@ func (q *Queries) ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromPa
 const listTransactionActions = `-- name: ListTransactionActions :many
 SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
 FROM action_log
-WHERE character_id = ? AND transaction_id = ?
+WHERE character_id = $1 AND transaction_id = $2
 ORDER BY id DESC
 `
 
@@ -551,7 +551,7 @@ func (q *Queries) ListTransactionActions(ctx context.Context, arg ListTransactio
 
 const startActionTransaction = `-- name: StartActionTransaction :exec
 UPDATE action_log SET transaction_id = id
-WHERE id = ?
+WHERE id = $1
 `
 
 func (q *Queries) StartActionTransaction(ctx context.Context, id int64) error {

@@ -7,12 +7,12 @@ package queries
 
 import (
 	"context"
-	"database/sql"
-	"strings"
+
+	"github.com/lib/pq"
 )
 
 const getSpellSlots = `-- name: GetSpellSlots :one
-SELECT slots FROM spell_slots WHERE character_id = ?
+SELECT slots FROM spell_slots WHERE character_id = $1
 `
 
 func (q *Queries) GetSpellSlots(ctx context.Context, characterID int64) (string, error) {
@@ -24,10 +24,10 @@ func (q *Queries) GetSpellSlots(ctx context.Context, characterID int64) (string,
 
 const searchSpells = `-- name: SearchSpells :many
 
-SELECT id, "key", name, class, level, school, sphere, casting_time, "range", duration, area_of_effect, components, saving_throw, description, source, stats FROM spells
+SELECT id, key, name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description, source, stats FROM spells
 WHERE key IS NOT NULL
-  AND (CAST(?1 AS TEXT) = '' OR lower(class) = ?1)
-  AND (CAST(?2 AS INTEGER) = 1 OR level IN (/*SLICE:levels*/?))
+  AND ($1::text = '' OR lower(class) = $1::text)
+  AND ($2::bigint = 1 OR level = ANY($3::bigint[]))
 `
 
 type SearchSpellsParams struct {
@@ -43,19 +43,7 @@ type SearchSpellsParams struct {
 // PostgreSQL; ” is any class) and of the levels given (any level when
 // any_level is 1). The adapter sorts the result.
 func (q *Queries) SearchSpells(ctx context.Context, arg SearchSpellsParams) ([]Spell, error) {
-	query := searchSpells
-	var queryParams []interface{}
-	queryParams = append(queryParams, arg.Class)
-	queryParams = append(queryParams, arg.AnyLevel)
-	if len(arg.Levels) > 0 {
-		for _, v := range arg.Levels {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:levels*/?", strings.Repeat(",?", len(arg.Levels))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:levels*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, searchSpells, arg.Class, arg.AnyLevel, pq.Array(arg.Levels))
 	if err != nil {
 		return nil, err
 	}
@@ -95,21 +83,11 @@ func (q *Queries) SearchSpells(ctx context.Context, arg SearchSpellsParams) ([]S
 }
 
 const spellsByKey = `-- name: SpellsByKey :many
-SELECT id, "key", name, class, level, school, sphere, casting_time, "range", duration, area_of_effect, components, saving_throw, description, source, stats FROM spells WHERE key IN (/*SLICE:keys*/?)
+SELECT id, key, name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description, source, stats FROM spells WHERE key = ANY($1::text[])
 `
 
-func (q *Queries) SpellsByKey(ctx context.Context, keys []sql.NullString) ([]Spell, error) {
-	query := spellsByKey
-	var queryParams []interface{}
-	if len(keys) > 0 {
-		for _, v := range keys {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:keys*/?", strings.Repeat(",?", len(keys))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:keys*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+func (q *Queries) SpellsByKey(ctx context.Context, keys []string) ([]Spell, error) {
+	rows, err := q.db.QueryContext(ctx, spellsByKey, pq.Array(keys))
 	if err != nil {
 		return nil, err
 	}
@@ -150,23 +128,13 @@ func (q *Queries) SpellsByKey(ctx context.Context, keys []sql.NullString) ([]Spe
 
 const textsByID = `-- name: TextsByID :many
 
-SELECT text_id, lang, body FROM localized_texts WHERE text_id IN (/*SLICE:ids*/?)
+SELECT text_id, lang, body FROM localized_texts WHERE text_id = ANY($1::bigint[])
 `
 
 // TextsByID reads the localized_texts rows of the keys through the primary
 // key (text_id, lang), never a scan of the table (ADR 0023).
 func (q *Queries) TextsByID(ctx context.Context, ids []int64) ([]LocalizedText, error) {
-	query := textsByID
-	var queryParams []interface{}
-	if len(ids) > 0 {
-		for _, v := range ids {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
-	}
-	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	rows, err := q.db.QueryContext(ctx, textsByID, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +157,7 @@ func (q *Queries) TextsByID(ctx context.Context, ids []int64) ([]LocalizedText, 
 }
 
 const upsertSpellSlots = `-- name: UpsertSpellSlots :exec
-INSERT INTO spell_slots (character_id, slots) VALUES (?, ?)
+INSERT INTO spell_slots (character_id, slots) VALUES ($1, $2)
 ON CONFLICT(character_id) DO UPDATE SET slots = excluded.slots
 `
 

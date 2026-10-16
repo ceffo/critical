@@ -20,7 +20,7 @@ func (q *Queries) DeleteCritRows(ctx context.Context) error {
 
 const insertCritRow = `-- name: InsertCritRow :exec
 INSERT INTO crit_table_rows (roll_from, roll_to, multiplier)
-VALUES (?, ?, ?)
+VALUES ($1, $2, $3)
 `
 
 type InsertCritRowParams struct {

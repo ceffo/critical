@@ -11,16 +11,12 @@
 package seedcheck_test
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 	"testing"
-	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -31,12 +27,9 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
-	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
-	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
 var (
@@ -62,26 +55,33 @@ func readJSON(t *testing.T, name string, into any) {
 	require.NoError(t, json.Unmarshal(raw, into), name)
 }
 
-func TestRepoSeeds_BootTheWholeStack(t *testing.T) {
-	realCatalogue(t)
-	ctx := context.Background()
-	bs, err := composition.New(ctx, composition.Config{
-		DSN:       filepath.Join(t.TempDir(), "critical.db"),
-		SeedsDir:  seedsDir,
-		Catalogue: catalogueFile,
-	})
-	require.NoError(t, err, "seeds load, migrate and parse")
-	t.Cleanup(func() { _ = bs.Close(ctx) })
+// The real seeds and the real artifact load through the adapters the server
+// starts with, without a database: the spell effects and the spellbook parse
+// and every spell they name is in the catalogue (ADR 0021 step 5.4.3), the
+// artifact's rule tables parse, and the seed files the storage reads are
+// well-formed JSON. What the storage does with them (inserting, importing
+// the catalogue) is checked at boot, by `just dev` and on staging, not in a
+// Go test (ADR 0025 steps 6 and 7).
+func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
+	cat := realCatalogue(t)
+	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	assert.NotEmpty(t, artifact.Catalogue.Spells)
+	_, err = ruletablesadpt.Parse(artifact.RuleTables)
+	require.NoError(t, err, "the artifact's rule tables")
 
-	char, err := bs.Character.GetCharacter(ctx, bs.CharacterID)
+	effects, err := spelleffectsadpt.New(seedsDir)
 	require.NoError(t, err)
-	assert.NotEmpty(t, char.Name)
-	page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
+	require.NoError(t, effects.CheckAgainst(cat), "every spell effect is a catalogue spell")
+	book, err := spellbookadpt.New(seedsDir, cat)
 	require.NoError(t, err)
-	assert.Equal(t, len(realCatalogue(t).Spells), page.Total, "every catalogue spell is served")
-	weapons, err := bs.Combat.ListWeapons(ctx)
-	require.NoError(t, err)
-	assert.NotEmpty(t, weapons)
+	assert.NotEmpty(t, book.All())
+
+	for _, name := range []string{"character.json", "weapons.json", "items.json", "skills.json"} {
+		var doc json.RawMessage
+		readJSON(t, name, &doc)
+		assert.NotEmpty(t, doc, name)
+	}
 }
 
 // ADR 0021 step 9.7: the fixture CI runs on carries the PHB's real numbers,
@@ -157,9 +157,9 @@ func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
 }
 
 // The real seeds with one spell effect the real catalogue does not hold do
-// not start: startup names the unknown id.
-func TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup(t *testing.T) {
-	realCatalogue(t)
+// not pass the startup cross-check: it names the unknown id.
+func TestRealCatalogue_AnUnknownSpellEffectIDIsRefused(t *testing.T) {
+	cat := realCatalogue(t)
 	seeds := t.TempDir()
 	require.NoError(t, os.CopyFS(seeds, os.DirFS(seedsDir)))
 	path := filepath.Join(seeds, spelleffectsadpt.FileName)
@@ -173,9 +173,9 @@ func TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, raw, 0o600))
 
-	_, err = composition.New(context.Background(), composition.Config{
-		DSN: filepath.Join(t.TempDir(), "critical.db"), SeedsDir: seeds, Catalogue: catalogueFile,
-	})
+	effects, err := spelleffectsadpt.New(seeds)
+	require.NoError(t, err)
+	err = effects.CheckAgainst(cat)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "spell effects: ids not in the spell catalogue: magic_rocket")
 }
@@ -360,407 +360,4 @@ func TestRealCatalogue_AreaReadingsAndPerLevelDurations(t *testing.T) {
 	}
 	t.Logf("area readings over %d spells: %v", len(spells), got)
 	assert.Equal(t, areaReadingCounts, got)
-}
-
-// countStatsWrites installs, in db, a trigger counting the
-// rows whose stats an UPDATE writes, and returns the count so far.
-func countStatsWrites(t *testing.T, db *sqlite.DB) func() int {
-	t.Helper()
-	ctx := context.Background()
-	for _, q := range []string{
-		`CREATE TABLE IF NOT EXISTS test_stats_writes (n INTEGER)`,
-		`CREATE TRIGGER IF NOT EXISTS test_count_stats_writes AFTER UPDATE OF stats ON spells
-			BEGIN INSERT INTO test_stats_writes VALUES (1); END`,
-	} {
-		_, err := db.ExecContext(ctx, q)
-		require.NoError(t, err)
-	}
-	return func() int {
-		var n int
-		require.NoError(t, db.QueryRowContext(ctx, `SELECT COUNT(*) FROM test_stats_writes`).Scan(&n))
-		return n
-	}
-}
-
-// A restart on the same artifact version re-types stats an older parser
-// stored (ADR 0021 step 5.6): every spell's stats are its stored texts
-// parsed by the current parser, and a restart with nothing stale writes no
-// row (counted by a trigger). The re-parse runs on every start; its time is
-// logged.
-func TestRealCatalogue_ARestartReTypesStaleStats(t *testing.T) {
-	cat := realCatalogue(t)
-	ctx := context.Background()
-	dsn := filepath.Join(t.TempDir(), "retype.db")
-	start := func() {
-		t.Helper()
-		bs, err := composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seedsDir, Catalogue: catalogueFile})
-		require.NoError(t, err)
-		require.NoError(t, bs.Close(ctx))
-	}
-	start()
-	db, err := sqlite.Open(dsn)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	_, err = db.ExecContext(ctx, `UPDATE spells SET stats = '{}'`)
-	require.NoError(t, err)
-	writes := countStatsWrites(t, db)
-
-	began := time.Now()
-	start()
-	assert.Equal(t, len(cat.Spells), writes(), "every stale row rewritten")
-	t.Logf("restart re-typing %d spells: %s", len(cat.Spells), time.Since(began))
-	stats := map[string]string{}
-	rows, err := db.QueryContext(ctx, `SELECT key, stats FROM spells WHERE key IS NOT NULL`)
-	require.NoError(t, err)
-	for rows.Next() {
-		var k, v string
-		require.NoError(t, rows.Scan(&k, &v))
-		stats[k] = v
-	}
-	require.NoError(t, rows.Err())
-	require.NoError(t, rows.Close())
-	for _, sp := range cat.Spells {
-		want, err := json.Marshal(spellstats.Parse(spellstats.Raw{
-			CastingTime: sp.CastingTime.Default(), Range: sp.Range.Default(), Duration: sp.Duration.Default(),
-			AreaOfEffect: sp.AreaOfEffect.Default(), Components: sp.Components.Default(), SavingThrow: sp.SavingThrow.Default(),
-		}))
-		require.NoError(t, err)
-		assert.JSONEq(t, string(want), stats[sp.ID], sp.ID)
-	}
-
-	began = time.Now()
-	start()
-	t.Logf("restart with nothing stale: %s", time.Since(began))
-	assert.Equal(t, len(cat.Spells), writes(), "a restart with nothing stale writes no row")
-}
-
-// TestRealCatalogue_UpgradesACopyOfALiveDatabase imports the real catalogue
-// into a copy of the database named by CRITICAL_UPGRADE_CHECK_DB (e.g. the
-// dev database, .dev/critical.db), the way a restart of that database would:
-// migrations, then ADR 0021 step 5 with the real seeds. The import must pass
-// (the backfilled keys match the artifact, nothing referenced is removed)
-// and afterwards every spell id the seeds and the game state hold resolves.
-// The start changes no game state when no migration is pending (every table
-// but the catalogue's, row for row), every keyed spell keeps its key, and
-// the second start writes nothing at all (every table, row for row).
-// The database itself is only read. Skipped unless the variable is set.
-func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
-	src := os.Getenv("CRITICAL_UPGRADE_CHECK_DB")
-	if src == "" {
-		t.Skip("set CRITICAL_UPGRADE_CHECK_DB to a database file to check its upgrade")
-	}
-	cat := realCatalogue(t)
-	dst := filepath.Join(t.TempDir(), "copy.db")
-	for _, suffix := range []string{"", "-wal"} {
-		raw, err := os.ReadFile(filepath.Clean(src + suffix))
-		if suffix != "" && os.IsNotExist(err) {
-			continue
-		}
-		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(dst+suffix, raw, 0o600))
-	}
-
-	ctx := context.Background()
-	db, err := sqlite.Open(dst)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	var writes func() int
-	if hasSpells(t, db) {
-		writes = countStatsWrites(t, db)
-	}
-	inventory := inventoryRows(t, db)
-	migrations, state, keys := migrationNames(t, db), gameState(t, db), spellKeys(t, db)
-	require.NotEmpty(t, state, "the copy holds game-state tables")
-	bs, err := composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
-	require.NoError(t, err, "the live database upgrades")
-	if slices.Equal(migrations, migrationNames(t, db)) {
-		assert.Equal(t, state, gameState(t, db), "no migration pending: the start changes no game state")
-	} else {
-		t.Logf("migrations ran on the copy: game state not compared across the first start")
-	}
-	ids := cat.ByID()
-	after := spellKeys(t, db)
-	for id, key := range keys {
-		if _, kept := ids[key]; kept {
-			assert.Equal(t, key, after[id], "spell row %d keeps its key", id)
-		}
-	}
-	t.Logf("%d keyed spells before the start, %d after", len(keys), len(after))
-	if inventory != nil {
-		// ADR 0023 steps 9 and 10: every item and weapon keeps its id,
-		// position and counts, and has a name.
-		assert.Equal(t, inventory, inventoryRows(t, db), "items and weapons keep their ids, positions and counts")
-		items, err := bs.Items.List(ctx)
-		require.NoError(t, err)
-		for _, it := range items {
-			assert.NotEmpty(t, it.Name.Any(), "item %s has a name", it.ID)
-			t.Logf("item %s: %v", it.ID, it.Name)
-		}
-		weapons, err := bs.Combat.ListWeapons(ctx)
-		require.NoError(t, err)
-		for _, w := range weapons {
-			assert.NotEmpty(t, w.Name.Any(), "weapon %s has a name", w.ID)
-			t.Logf("weapon %s: %v", w.ID, w.Name)
-		}
-	}
-	page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
-	require.NoError(t, err)
-	assert.Equal(t, len(cat.Spells), page.Total, "every catalogue spell is served")
-	require.NoError(t, bs.Close(ctx))
-	first := 0
-	if writes != nil {
-		first = writes()
-	}
-	writes = countStatsWrites(t, db) // again: a migration that rebuilt spells dropped the trigger
-	first = max(first, writes())
-	t.Logf("first start wrote the stats of %d spells", first)
-	whole := tableRows(t, db, nil)
-	bs, err = composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
-	require.NoError(t, err, "the second start")
-	require.NoError(t, bs.Close(ctx))
-	assert.Equal(t, first, writes(), "the second start writes no stats")
-	assert.Equal(t, whole, tableRows(t, db, nil), "the second start writes nothing")
-	refs, err := sqlite.StateSpellRefs(ctx, db)
-	require.NoError(t, err)
-	book, err := spellbookadpt.New(seedsDir, cat)
-	require.NoError(t, err)
-	for _, e := range book.All() {
-		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spellbook seed"})
-	}
-	for _, r := range refs {
-		var n int
-		require.NoError(t, db.QueryRowContext(ctx, "SELECT COUNT(*) FROM spells WHERE key = ?", r.ID).Scan(&n))
-		_, inArtifact := ids[r.ID]
-		assert.True(t, n == 1 && inArtifact, "%s (%s) resolves", r.ID, r.Where)
-	}
-	t.Logf("%d spell references in the seeds and the game state, all resolved", len(refs))
-}
-
-// catalogueTables are the tables the catalogue import owns (ADR 0021 step
-// 2), with the migrations' bookkeeping and the tests' trigger table: every
-// other table is game state.
-var catalogueTables = map[string]bool{
-	"spells": true, "catalogue_meta": true, "localized_texts": true,
-	"schema_migrations": true, "test_stats_writes": true,
-}
-
-// spellTextColumns are the spells' columns that key localized_texts rows
-// (migration 031): those rows are the catalogue's, the others (item and
-// weapon names) game state.
-var spellTextColumns = []string{
-	"name", "description", "school", "sphere", "casting_time", "range", "duration",
-	"area_of_effect", "components", "saving_throw",
-}
-
-// tableRows is every row of every table but those skip names, by table: each
-// row printed in column order, the rows sorted.
-func tableRows(t *testing.T, db *sqlite.DB, skip map[string]bool) map[string][]string {
-	t.Helper()
-	ctx := context.Background()
-	rows, err := db.QueryContext(ctx, `SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
-	require.NoError(t, err)
-	var tables []string
-	for rows.Next() {
-		var name string
-		require.NoError(t, rows.Scan(&name))
-		if !skip[name] {
-			tables = append(tables, name)
-		}
-	}
-	require.NoError(t, rows.Err())
-	require.NoError(t, rows.Close())
-	out := make(map[string][]string, len(tables))
-	for _, table := range tables {
-		out[table] = queryRows(t, db, `SELECT * FROM "`+table+`"`)
-	}
-	return out
-}
-
-// queryRows runs query and prints each row's columns in order, sorted.
-func queryRows(t *testing.T, db *sqlite.DB, query string) []string {
-	t.Helper()
-	rows, err := db.QueryContext(context.Background(), query)
-	require.NoError(t, err)
-	defer func() { _ = rows.Close() }()
-	cols, err := rows.Columns()
-	require.NoError(t, err)
-	out := []string{}
-	for rows.Next() {
-		vals := make([]any, len(cols))
-		ptrs := make([]any, len(cols))
-		for i := range vals {
-			ptrs[i] = &vals[i]
-		}
-		require.NoError(t, rows.Scan(ptrs...))
-		cells := make([]string, len(vals))
-		for i, v := range vals {
-			if b, ok := v.([]byte); ok {
-				v = string(b)
-			}
-			cells[i] = fmt.Sprintf("%#v", v)
-		}
-		out = append(out, strings.Join(cells, "|"))
-	}
-	require.NoError(t, rows.Err())
-	slices.Sort(out)
-	return out
-}
-
-// gameState is every game-state row: every table the catalogue import does
-// not own, and the localized texts no spell keys.
-func gameState(t *testing.T, db *sqlite.DB) map[string][]string {
-	t.Helper()
-	state := tableRows(t, db, catalogueTables)
-	if hasTable(t, db, "localized_texts") {
-		owned := make([]string, len(spellTextColumns))
-		for i, c := range spellTextColumns {
-			owned[i] = `SELECT "` + c + `" FROM spells WHERE "` + c + `" IS NOT NULL`
-		}
-		state["localized_texts"] = queryRows(t, db,
-			`SELECT * FROM localized_texts WHERE text_id NOT IN (`+strings.Join(owned, " UNION ")+`)`)
-	}
-	return state
-}
-
-// migrationNames are the migrations the database recorded (none before the
-// first one).
-func migrationNames(t *testing.T, db *sqlite.DB) []string {
-	t.Helper()
-	if !hasTable(t, db, "schema_migrations") {
-		return nil
-	}
-	return queryRows(t, db, `SELECT name FROM schema_migrations`)
-}
-
-// spellKeys maps each keyed spell row to its key (none before the catalogue
-// added the column).
-func spellKeys(t *testing.T, db *sqlite.DB) map[int64]string {
-	t.Helper()
-	out := map[int64]string{}
-	if !hasTable(t, db, "spells") {
-		return out
-	}
-	var n int
-	require.NoError(t, db.QueryRowContext(context.Background(),
-		`SELECT COUNT(*) FROM pragma_table_info('spells') WHERE name = 'key'`).Scan(&n))
-	if n == 0 {
-		return out
-	}
-	rows, err := db.QueryContext(context.Background(), `SELECT id, key FROM spells WHERE key IS NOT NULL`)
-	require.NoError(t, err)
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id int64
-		var key string
-		require.NoError(t, rows.Scan(&id, &key))
-		out[id] = key
-	}
-	require.NoError(t, rows.Err())
-	return out
-}
-
-// hasTable reports whether db has the table name.
-func hasTable(t *testing.T, db *sqlite.DB, name string) bool {
-	t.Helper()
-	var n int
-	require.NoError(t, db.QueryRowContext(context.Background(),
-		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, name).Scan(&n))
-	return n > 0
-}
-
-// inventoryRows are the items' and weapons' ids, positions and counts (nil
-// for a database older than those tables).
-func inventoryRows(t *testing.T, db *sqlite.DB) []string {
-	t.Helper()
-	var n int
-	require.NoError(t, db.QueryRowContext(context.Background(),
-		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('items', 'weapons')`).Scan(&n))
-	if n < 2 {
-		return nil
-	}
-	rows, err := db.QueryContext(context.Background(), `
-		SELECT 'item ' || id || ' ' || position || ' ' || count || '/' || max_count FROM items
-		UNION ALL SELECT 'weapon ' || id || ' ' || position FROM weapons ORDER BY 1`)
-	require.NoError(t, err)
-	defer func() { _ = rows.Close() }()
-	out := []string{}
-	for rows.Next() {
-		var r string
-		require.NoError(t, rows.Scan(&r))
-		out = append(out, r)
-	}
-	require.NoError(t, rows.Err())
-	return out
-}
-
-// hasSpells reports whether db already has the spells table (a database
-// older than every migration does not).
-func hasSpells(t *testing.T, db *sqlite.DB) bool {
-	t.Helper()
-	var n int
-	require.NoError(t, db.QueryRowContext(context.Background(),
-		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'spells'`).Scan(&n))
-	return n > 0
-}
-
-// One database switched between the fixture catalogue (with the fixture
-// seeds) and the real one: every switch imports, and a spell only the real
-// catalogue holds that game state refers to blocks the switch back to the
-// fixture, with a message naming the catalogue the database was built from
-// and `just catalogue`, and leaves the database as it was.
-func TestRealCatalogue_SwitchingADatabaseBetweenTheFixtureAndTheRealCatalogue(t *testing.T) {
-	realCat := realCatalogue(t)
-	fixtureFile := filepath.Join("..", "..", "testdata", "catalogue.json")
-	fixtureSeeds := filepath.Join("..", "..", "testdata", "seeds")
-	fixture, err := catalogueadpt.Load(fixtureFile)
-	require.NoError(t, err)
-	ctx := context.Background()
-	dsn := filepath.Join(t.TempDir(), "scratch.db")
-	start := func(seeds, file string) (*composition.BackingServices, error) {
-		return composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seeds, Catalogue: file})
-	}
-	served := func(bs *composition.BackingServices) int {
-		page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
-		require.NoError(t, err)
-		return page.Total
-	}
-
-	bs, err := start(fixtureSeeds, fixtureFile)
-	require.NoError(t, err, "fixture")
-	assert.Equal(t, len(fixture.Spells), served(bs))
-	require.NoError(t, bs.Close(ctx))
-
-	bs, err = start(seedsDir, catalogueFile)
-	require.NoError(t, err, "fixture -> real")
-	assert.Equal(t, len(realCat.Spells), served(bs))
-	inFixture := fixture.ByID()
-	var realOnly string
-	for _, s := range realCat.Spells {
-		if _, ok := inFixture[s.ID]; !ok {
-			realOnly = s.ID
-			break
-		}
-	}
-	require.NotEmpty(t, realOnly)
-	_, err = bs.DB.ExecContext(ctx, `INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
-		VALUES (?, 0, 'cast', '', 0, ?, 999999)`, bs.CharacterID, `{"action":"cast","spellId":"`+realOnly+`","casterLevel":5}`)
-	require.NoError(t, err)
-	require.NoError(t, bs.Close(ctx))
-
-	_, err = start(fixtureSeeds, fixtureFile)
-	require.Error(t, err, "real -> fixture with a real-only spell in the log")
-	assert.ErrorContains(t, err, realOnly+" (action_log ")
-	assert.ErrorContains(t, err, "This database was built from catalogue version "+realCat.Version)
-	assert.ErrorContains(t, err, "`just catalogue`")
-	bs, err = start(seedsDir, catalogueFile)
-	require.NoError(t, err, "the refused switch left the real catalogue in place")
-	assert.Equal(t, len(realCat.Spells), served(bs))
-	_, err = bs.DB.ExecContext(ctx, `DELETE FROM action_log WHERE transaction_id = 999999`)
-	require.NoError(t, err)
-	require.NoError(t, bs.Close(ctx))
-
-	bs, err = start(fixtureSeeds, fixtureFile)
-	require.NoError(t, err, "real -> fixture once nothing refers to the real-only spells")
-	assert.Equal(t, len(fixture.Spells), served(bs))
-	require.NoError(t, bs.Close(ctx))
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -39,13 +39,15 @@ func strMods(str int) buffsvc.BuffModifiers {
 	return buffsvc.BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: str}
 }
 
-// phb is the real PHB Table 1/2 lookup from the testdata fixture, so the
-// expected numbers below are checked against the printed tables.
+// phb is the real PHB Table 1/2 lookup from the testdata catalogue fixture
+// (format 3, ADR 0021 step 9.7), so the expected numbers below are checked
+// against the printed tables.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	tables, err := ruletablesadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
+	cat, err := catalogueadpt.Load(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	return tables
+	require.NotNil(t, cat.RuleTables)
+	return cat.RuleTables
 }
 
 type fixture struct {

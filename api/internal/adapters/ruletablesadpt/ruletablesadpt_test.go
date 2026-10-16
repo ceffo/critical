@@ -1,6 +1,7 @@
 package ruletablesadpt_test
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,16 +11,44 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/pkg/must"
 )
 
-var seedsDir = filepath.Join("..", "..", "..", "testdata", "seeds")
+var (
+	// fixture is the catalogue artifact CI runs on: format 3, carrying the
+	// rule tables (ADR 0021 step 9.7).
+	fixture = filepath.Join("..", "..", "..", "testdata", "catalogue.json")
+	// campaignSeeds holds the seed a format-1 artifact takes its tables
+	// from (step 9.6.1).
+	campaignSeeds = filepath.Join("..", "..", "..", "..", "seeds")
+)
+
+// fixtureRuleTables is the fixture's rule_tables object, as written.
+func fixtureRuleTables(t *testing.T) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(fixture) //nolint:gosec // test path
+	require.NoError(t, err)
+	var a struct {
+		RuleTables json.RawMessage `json:"rule_tables"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &a))
+	require.NotEmpty(t, a.RuleTables)
+	return a.RuleTables
+}
+
+// phb parses the fixture's rule tables, as the catalogue adapter does for a
+// format-3 artifact.
+func phb(t *testing.T) *ruletablesvc.Tables {
+	t.Helper()
+	return must.Do(ruletablesadpt.Parse(fixtureRuleTables(t)))
+}
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
-// p.14, Table 32 on p.42), not derived from the seed file.
+// p.14, Table 32 on p.42), not derived from the artifact or the seed file.
 
 func TestStrengthMods(t *testing.T) {
-	tbl := must.Do(ruletablesadpt.New(seedsDir))
+	tbl := phb(t)
 	tests := []struct {
 		name      string
 		str, exc  int
@@ -61,7 +90,7 @@ func TestStrengthMods(t *testing.T) {
 }
 
 func TestDexMods(t *testing.T) {
-	tbl := must.Do(ruletablesadpt.New(seedsDir))
+	tbl := phb(t)
 	tests := []struct {
 		name        string
 		dex         int
@@ -96,7 +125,7 @@ func TestDexMods(t *testing.T) {
 }
 
 func TestBardSpellsPerDay(t *testing.T) {
-	tbl := must.Do(ruletablesadpt.New(seedsDir))
+	tbl := phb(t)
 	tests := []struct {
 		level int
 		want  map[int]int
@@ -123,7 +152,7 @@ func TestBardSpellsPerDay(t *testing.T) {
 
 // The Thief/Bard column of PHB Table 25 (p.38), as printed.
 func TestBardXPThreshold(t *testing.T) {
-	tbl := must.Do(ruletablesadpt.New(seedsDir))
+	tbl := phb(t)
 	tests := []struct{ level, want int }{
 		{1, 0},
 		{2, 1250},
@@ -149,32 +178,74 @@ func TestBardXPThreshold(t *testing.T) {
 	}
 }
 
-func TestNew_MissingFile(t *testing.T) {
-	_, err := ruletablesadpt.New(t.TempDir())
+// ADR 0021 step 9.7: the fixture's rule tables hold the same numbers as the
+// campaign seed a format-1 artifact still reads (step 9.6.1), so every lookup
+// (attack adjustments, bard spells per day, XP thresholds) gives the same
+// result from either source.
+func TestRuleTables_Step9_7_TheFixtureCarriesTheSeedsNumbers(t *testing.T) {
+	seedRaw, err := os.ReadFile(filepath.Join(campaignSeeds, ruletablesadpt.FileName)) //nolint:gosec // test path
+	require.NoError(t, err)
+	var seed, artifact map[string]any
+	require.NoError(t, json.Unmarshal(seedRaw, &seed))
+	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &artifact))
+	delete(seed, "_source")
+	assert.Equal(t, seed, artifact, "the artifact's tables are the seed's, without its _source comment")
+
+	fromSeed := must.Do(ruletablesadpt.New(campaignSeeds))
+	fromArtifact := phb(t)
+	for str := 1; str <= 25; str++ {
+		for exc := 0; exc <= ruletablesvc.ExceptionalMax; exc++ {
+			sh, sd, serr := fromSeed.StrengthMods(str, exc)
+			ah, ad, aerr := fromArtifact.StrengthMods(str, exc)
+			require.NoError(t, serr)
+			require.NoError(t, aerr)
+			assert.Equal(t, [2]int{sh, sd}, [2]int{ah, ad}, "STR %d/%d", str, exc)
+		}
+	}
+	for dex := 1; dex <= 25; dex++ {
+		sm, sa, serr := fromSeed.DexMods(dex)
+		am, aa, aerr := fromArtifact.DexMods(dex)
+		require.NoError(t, serr)
+		require.NoError(t, aerr)
+		assert.Equal(t, [2]int{sm, sa}, [2]int{am, aa}, "DEX %d", dex)
+	}
+	for level := 1; level <= ruletablesvc.MaxBardLevel; level++ {
+		assert.Equal(t, must.Do(fromSeed.BardSpellsPerDay(level)), must.Do(fromArtifact.BardSpellsPerDay(level)), "bard level %d", level)
+		assert.Equal(t, must.Do(fromSeed.BardXPThreshold(level)), must.Do(fromArtifact.BardXPThreshold(level)), "XP level %d", level)
+	}
+}
+
+// ADR 0021 step 9.6.1: a format-1 artifact takes its tables from the seeds
+// directory, and a seeds directory without the file refuses, naming it.
+func TestNew_Step9_6_1_Format1ReadsTheSeedFile(t *testing.T) {
+	_, err := ruletablesadpt.New(campaignSeeds)
+	require.NoError(t, err)
+	_, err = ruletablesadpt.New(t.TempDir())
 	require.ErrorContains(t, err, ruletablesadpt.FileName)
 }
 
-func TestParse_RejectsBrokenTables(t *testing.T) {
-	good, err := os.ReadFile(filepath.Join(seedsDir, ruletablesadpt.FileName)) //nolint:gosec // test path
-	require.NoError(t, err)
-	tests := map[string]struct{ from, to string }{
-		"gap in strength":    {`{"str_min": 8, "str_max": 15,`, `{"str_min": 9, "str_max": 15,`},
-		"gap in 18/xx":       {`"exc_min": 51, "exc_max": 75`, `"exc_min": 52, "exc_max": 75`},
-		"dex overlap":        {`"dex_min": 16, "dex_max": 16`, `"dex_min": 15, "dex_max": 16`},
-		"bard row short":     {`"per_spell_level": [0, 0, 0, 0, 0, 0]`, `"per_spell_level": [0, 0]`},
-		"unknown field":      {`"_source"`, `"extra": 1, "_source"`},
-		"duplicate bard lvl": {`"level": 2,`, `"level": 1,`},
-		"xp level skipped":   {`{"level": 3, "xp": 2500}`, `{"level": 4, "xp": 2500}`},
-		"xp not increasing":  {`{"level": 3, "xp": 2500}`, `{"level": 3, "xp": 1250}`},
-		"xp level 1 above 0": {`{"level": 1, "xp": 0}`, `{"level": 1, "xp": 5}`},
+// ADR 0021 step 9.3: a gap, an overlap or a malformed row refuses the
+// tables, naming the table.
+func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
+	good := fixtureRuleTables(t)
+	tests := map[string]struct{ from, to, table string }{
+		"gap in strength":    {`{"str_min": 8, "str_max": 15,`, `{"str_min": 9, "str_max": 15,`, "strength table"},
+		"gap in 18/xx":       {`"exc_min": 51, "exc_max": 75`, `"exc_min": 52, "exc_max": 75`, "strength table"},
+		"dex overlap":        {`"dex_min": 16, "dex_max": 16`, `"dex_min": 15, "dex_max": 16`, "dexterity table"},
+		"bard row short":     {`"per_spell_level": [0, 0, 0, 0, 0, 0]`, `"per_spell_level": [0, 0]`, "bard level 1"},
+		"unknown field":      {`"strength": [`, `"extra": 1, "strength": [`, "extra"},
+		"duplicate bard lvl": {`"level": 2,`, `"level": 1,`, "bard table"},
+		"xp level skipped":   {`{"level": 3, "xp": 2500}`, `{"level": 4, "xp": 2500}`, "experience table"},
+		"xp not increasing":  {`{"level": 3, "xp": 2500}`, `{"level": 3, "xp": 1250}`, "experience table"},
+		"xp level 1 above 0": {`{"level": 1, "xp": 0}`, `{"level": 1, "xp": 5}`, "experience table"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
 			_, err := ruletablesadpt.Parse([]byte(strings.Replace(string(good), tt.from, tt.to, 1)))
-			require.Error(t, err)
+			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err = ruletablesadpt.Parse(good)
+	_, err := ruletablesadpt.Parse(good)
 	require.NoError(t, err)
 }

@@ -379,7 +379,7 @@ is only ever appended to by play.
       keeps names, descriptions, notes and headers out of this repo, and 9.2 ships none); they are
       public in `seeds/` already; and the service tests and the e2e suite assert values derived from
       them (attack adjustments, spells per day, XP thresholds), checked against the PHB pages
-      (`docs/backend.md`, "Rule-table seeds"). Invented numbers would make those tests check nothing.
+      (`docs/backend.md`, "Rule tables"). Invented numbers would make those tests check nothing.
    8. **`seeds/` then holds only campaign bootstrap.** After 9.6.3 it holds the character, its
       inventory (items, weapons), its skills, its spellbook and the spell effects, pending the
       question on items, weapons and skills; the unread crit-table seed is deleted separately.

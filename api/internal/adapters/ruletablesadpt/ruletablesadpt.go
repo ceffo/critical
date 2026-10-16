@@ -1,7 +1,10 @@
-// Package ruletablesadpt loads the PHB rule tables from
-// <seedsDir>/rule_tables.json into a ruletablesvc.Tables. It only holds the
-// private JSON DTOs and the mapping; the entities and their validation live
-// in ruletablesvc.
+// Package ruletablesadpt reads the PHB rule tables into a
+// ruletablesvc.Tables: from the catalogue artifact's rule_tables (format 3,
+// ADR 0021 step 9, through Parse) or, for a format-1 artifact, from
+// <seedsDir>/rule_tables.json (New, step 9.6.1). Both have the same keys and
+// rows; only the seed may carry its "_source" comment, which the artifact's
+// schema forbids. It only holds the private JSON DTOs and the mapping; the
+// entities and their validation live in ruletablesvc.
 package ruletablesadpt
 
 import (
@@ -67,7 +70,8 @@ func New(seedsDir string) (*ruletablesvc.Tables, error) {
 	return t, nil
 }
 
-// Parse maps seed JSON bytes to validated Tables.
+// Parse maps rule-table JSON bytes (the seed file, or the artifact's
+// rule_tables object) to validated Tables. A violation names the table.
 func Parse(raw []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))

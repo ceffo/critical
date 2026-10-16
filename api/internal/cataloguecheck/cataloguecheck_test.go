@@ -155,18 +155,19 @@ func TestSchema_Shape(t *testing.T) {
 	assert.Error(t, sch.Validate(artifact(extra)), "unknown property")
 }
 
-// ruleTables reads the testdata rule tables (the shape the seed adapter reads
-// today) without the seed's "_source" comment: the rule_tables of format 3.
+// ruleTables reads the fixture's rule_tables (format 3, the shape the seed
+// adapter reads, ADR 0021 step 9.7).
 func ruleTables(t *testing.T) map[string]any {
 	t.Helper()
-	f, err := os.Open("../../testdata/seeds/rule_tables.json")
+	f, err := os.Open("../../testdata/catalogue.json")
 	require.NoError(t, err)
 	defer func() { _ = f.Close() }()
 	doc, err := jsonschema.UnmarshalJSON(f)
 	require.NoError(t, err)
-	tables, ok := doc.(map[string]any)
+	artifact, ok := doc.(map[string]any)
 	require.True(t, ok)
-	delete(tables, "_source")
+	tables, ok := artifact["rule_tables"].(map[string]any)
+	require.True(t, ok, "the fixture is format 3: it carries rule_tables")
 	return tables
 }
 

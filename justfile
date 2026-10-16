@@ -225,6 +225,21 @@ catalogue: rulebooks
     mv "$tmp" .catalogue/catalogue.json
     echo "catalogue: .catalogue/catalogue.json from $dir at $(git -C "$dir" rev-parse --short "$ref")"
 
+# How the French UI words the six spell stats over a catalogue (ADR 0021 step 8): per field, how many
+# are worded from the typed value, shown as a listed label, or shown as the book's English text,
+# with the most common English texts left. Default: the real .catalogue/catalogue.json (`just
+# catalogue`); pass api/testdata/catalogue.json for the fixture. STAT_COVERAGE_LIST=<field> (e.g.
+# area_of_effect) also lists every distinct English text of that field with its wording. Never part
+# of validate.
+stat-coverage catalogue=".catalogue/catalogue.json":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out="$(mktemp)"
+    trap 'rm -f "$out"' EXIT
+    cat="$(realpath "{{catalogue}}")"
+    (cd api && go run ./cmd/spellstats "$cat") > "$out"
+    cd web && STAT_COVERAGE_JSON="$out" npx vitest run src/lib/statCoverage.test.ts
+
 # The tracker DB is the truth: it is exported again after the pull and every changed status is printed.
 # Never `br sync --merge` here: it lets the pulled JSONL overwrite local tracker changes.
 # Supervisor: pull main in the main checkout while .beads/issues.jsonl is dirty

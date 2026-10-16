@@ -129,7 +129,7 @@ test("lookup: typing 'project im' selects Project Image with no click and shows 
   await snap(page, "search-selected");
 });
 
-test("lookup in French: a French name finds the spell, its French text shows with its table; a spell without French shows English", async ({
+test("lookup in French: a French name finds the spell, its French text shows with its table, its stats in French and metres; a spell without French shows English", async ({
   page,
 }) => {
   await openLookup(page);
@@ -158,9 +158,46 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await chooseSetting(page, "Sombre");
   await snap(page, "french-table-dark");
 
+  // The stats are worded in French from their typed values, lengths in metres (ADR 0021 step 8).
+  await searchFr.fill("projectile magique");
+  await expect(detail(page).getByRole("heading")).toContainText(
+    "Projectile magique",
+  );
+  const stat = (key: string) => detail(page).getByTestId(`stat-${key}`);
+  await expect(stat("range").getByTestId("stat-value")).toHaveText("210 m");
+  await expect(stat("range").getByTestId("stat-raw")).toHaveText(
+    "60 m + 10 m/niveau",
+  );
+  await expect(stat("duration")).toContainText("Instantanée");
+  await expect(stat("area")).toContainText("1-5 cibles");
+  await expect(stat("castingTime")).toContainText("1 segment");
+  await expect(stat("save")).toContainText("Aucune");
+  await expect(detail(page).getByTestId("spell-meta")).toContainText("V, S");
+  await snap(page, "french-stats");
+
+  // A long French area wraps in the detail grid at the narrowest width, never cut.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await searchFr.fill("rapidit");
+  await expect(detail(page).getByRole("heading")).toContainText("Rapidité");
+  const area = stat("area");
+  await expect(area.getByTestId("stat-raw")).toHaveText(
+    "cube de 12 m, 1 créature/niveau",
+  );
+  for (const el of await area.locator("*").all()) {
+    const [scroll, client] = await el.evaluate((e) => [
+      e.scrollWidth,
+      e.clientWidth,
+    ]);
+    expect(scroll).toBeLessThanOrEqual(client);
+  }
+  await snap(page, "french-long-area");
+  await page.setViewportSize({ width: 1440, height: 900 });
+
   await searchFr.fill("armor");
   await expect(detail(page).getByRole("heading")).toHaveText("Armor");
   await expect(text).toContainText("Fixture text for Armor");
+  await expect(stat("castingTime")).toContainText("1 round");
+  await expect(stat("range")).toContainText("Contact");
   await snap(page, "french-english-fallback");
 });
 
@@ -491,7 +528,7 @@ test("lookup: a slow response overtaken by a newer query is not written", async 
   await expect(count(page)).toHaveText("1 spell");
 });
 
-test("lookup: level chips and rows show the bare number; French labels classes, spheres and common values; French stat texts", async ({
+test("lookup: level chips and rows show the bare number; French labels classes, spheres and common values", async ({
   page,
 }) => {
   await openLookup(page);
@@ -529,23 +566,6 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
   await expect(meta).toContainText("Soleil");
   await expect(detail(page).getByTestId("stat-range")).toContainText("Contact");
   await snap(page, "french-values");
-
-  // A spell with French stat texts in the catalogue shows them (the fixture's Magic Missile).
-  const searchFr = page.getByRole("combobox", {
-    name: "Rechercher des sorts...",
-  });
-  await searchFr.fill("Projectile magique");
-  await rows(page).first().click();
-  await expect(detail(page).getByTestId("stat-range")).toContainText(
-    "60 mètres + 10 mètres par niveau",
-  );
-  // the area's value repeats the English text ("1-5 targets"): the French text stands alone
-  await expect(detail(page).getByTestId("stat-area")).toHaveText(
-    /Zone\s*1 à 5 cibles$/,
-  );
-  await snap(page, "french-stats");
-  await searchFr.fill("quixotic");
-  await expect(rows(page)).toHaveCount(2);
 
   // The sphere dropdown: French labels, still filtering on the English API value.
   await classButton(page, "Prêtre").click();

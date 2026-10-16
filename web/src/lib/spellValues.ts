@@ -1,19 +1,6 @@
 // Display formatting of the values the server computed at a caster level; no game rules here.
 import type { Spell, SpellValue } from "@/types/spells";
-
-/** Short label of a unit ("yard" -> "yd", "cu foot" -> "cu ft"). */
-export type UnitLabel = (word: string) => string;
-
-/** "210 yd", "3 rd + 1d4", "1-5". */
-export function formatValue(v: SpellValue, unit: UnitLabel): string {
-  const parts: string[] = [];
-  if (v.amount !== 0 || !v.dice) {
-    parts.push(v.upper ? `${v.amount}-${v.upper}` : `${v.amount}`);
-  }
-  if (v.dice) parts.push(v.dice);
-  const u = v.unit ? v.unit.split(" ").map(unit).join(" ") : "";
-  return parts.join(" + ") + (u ? ` ${u}` : "");
-}
+import { formatValue, shapedText, type StatLocale } from "@/lib/statText";
 
 /** The five stats of the lookup's detail grid. */
 export type StatKey = "range" | "duration" | "area" | "castingTime" | "save";
@@ -26,74 +13,35 @@ export type StatKey = "range" | "duration" | "area" | "castingTime" | "save";
 export function statValue(
   spell: Spell,
   key: Exclude<StatKey, "save">,
-  unit: UnitLabel,
+  loc: StatLocale,
 ): string | null {
   const v = spell.values;
   if (!v) return null;
   const st = spell.stats;
   switch (key) {
     case "range":
-      return st.range.kind === "distance" ? formatValue(v.range, unit) : null;
+      return st.range.kind === "distance" ? formatValue(loc, v.range) : null;
     case "duration":
-      return st.duration.kind === "timed"
-        ? formatValue(v.duration, unit)
-        : null;
+      return st.duration.kind === "timed" ? formatValue(loc, v.duration) : null;
     case "castingTime":
       return st.casting_time.kind === "timed"
-        ? formatValue(v.casting_time, unit)
+        ? formatValue(loc, v.casting_time)
         : null;
     case "area": {
+      // A partial reading has no value (the server sends none; ADR 0021 step 8).
+      if (st.area.partial) return null;
       const parts: string[] = [];
       if (v.area.targets) {
-        parts.push(
-          [formatValue(v.area.targets, unit), st.area.noun]
-            .filter(Boolean)
-            .join(" "),
-        );
+        parts.push(formatValue(loc, v.area.targets, st.area.noun || undefined));
       }
       if (v.area.dims?.length) {
-        parts.push(
-          [
-            v.area.dims.map((d) => formatValue(d, unit)).join(" × "),
-            st.area.shape,
-          ]
-            .filter(Boolean)
-            .join(" "),
-        );
+        const dims = v.area.dims.map((d) => formatValue(loc, d)).join(" × ");
+        const units = v.area.dims.map((d) => d.unit);
+        parts.push(shapedText(loc, dims, st.area.shape, units) ?? dims);
       }
       return parts.length ? parts.join(" · ") : null;
     }
   }
-}
-
-/** The six raw stat fields of a spell, by their wire names. */
-export type StatField =
-  | "casting_time"
-  | "range"
-  | "duration"
-  | "area_of_effect"
-  | "components"
-  | "saving_throw";
-
-/** The wire field of a stat of the detail grid. */
-export function statField(key: StatKey): StatField {
-  switch (key) {
-    case "range":
-      return "range";
-    case "duration":
-      return "duration";
-    case "area":
-      return "area_of_effect";
-    case "castingTime":
-      return "casting_time";
-    case "save":
-      return "saving_throw";
-  }
-}
-
-/** Raw English book text of a stat. */
-export function statRaw(spell: Spell, key: StatKey): string {
-  return spell[statField(key)];
 }
 
 /** A stat whose value at the caster level has dice to roll, and that roll as a composer formula. */
@@ -116,13 +64,13 @@ export function valueFormula(v: SpellValue | undefined): string | null {
  * The values at the caster level that still have dice to roll (a duration of "8 + 1d8 rd", an
  * area of "15d6 creatures"), in the order of the detail grid. Only what the server computed.
  */
-export function statDice(spell: Spell, unit: UnitLabel): StatDice[] {
+export function statDice(spell: Spell, loc: StatLocale): StatDice[] {
   const v = spell.values;
   if (!v) return [];
   const out: StatDice[] = [];
   const keys = ["range", "duration", "area", "castingTime"] as const;
   for (const key of keys) {
-    const value = statValue(spell, key, unit);
+    const value = statValue(spell, key, loc);
     if (!value) continue;
     const served =
       key === "range"

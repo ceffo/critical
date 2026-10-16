@@ -23,15 +23,14 @@ is only ever appended to by play.
 
 ## Decision
 
-1. **The catalogue is one JSON artifact, format 2** (format 1 until the amendment below). Shape,
-   enforced by the committed JSON Schema
+1. **The catalogue is one JSON artifact, format 1.** Shape, enforced by the committed JSON Schema
    [`schemas/catalogue.schema.json`](../../schemas/catalogue.schema.json) (shape only, no book text):
 
    ```json
-   { "format": 2, "version": "2026-10-15", "spells": [ { "...": "spell" } ] }
+   { "format": 1, "version": "2026-10-15", "spells": [ { "...": "spell" } ] }
    ```
 
-   - `format` (required, integer): `2`. An importer accepts only the formats it knows and refuses
+   - `format` (required, integer): `1`. An importer accepts only the formats it knows and refuses
      any other with an error that names the format it found.
    - `version` (required, string): the UTC build date `YYYY-MM-DD`, with `.N` appended when several
      builds happen the same day (`2026-10-15.2`). It is compared for equality only, never ordered:
@@ -46,7 +45,7 @@ is only ever appended to by play.
      | `level` | yes | integer 1 to 9 |
      | `school` | yes | raw book text, may hold several (`"Alteration, Evocation"`) |
      | `sphere` | no | Priest spells only, raw text; omitted for Wizard spells |
-     | `casting_time`, `range`, `duration`, `area_of_effect`, `components`, `saving_throw` | yes | the six raw stat texts, `{ "en": "…", "fr": "…" }` since format 2 (a plain English string in format 1); `en` is exactly what `spellstats.Raw` reads, non-empty (use the book's own `"None"`/`"Special"`); `fr` optional; the typed form is parsed by the API at import from `en` only, never shipped |
+     | `casting_time`, `range`, `duration`, `area_of_effect`, `components`, `saving_throw` | yes | the six raw stat texts, exactly the fields `spellstats.Raw` / the current `seeds/spells.json` loader read; non-empty (use the book's own `"None"`/`"Special"`); the typed form is parsed by the API at import, never shipped |
      | `name` | yes | `{ "en": "…", "fr": "…" }`, `en` required, `fr` optional |
      | `description` | yes | `{ "en": "…", "fr": "…" }`, `en` required, `fr` optional |
      | `source` | yes | book of the English text, 2 to 8 upper-case characters (`PHB`, `TOM`, …) |
@@ -153,6 +152,37 @@ is only ever appended to by play.
    `CLAUDE.md` is unchanged, this step is the mechanism that makes it hold. French and English
    text, OCR and the scripts stay in `critical-rulebooks`.
 
+8. **Stats are typed values; wording, units and language are the UI's.** The catalogue, the database
+   and the API carry the six stats as the book's English text plus their typed form (step 5.6), and
+   never a translated or reworded stat text (no `*_fr` stat field, column or format). The client
+   words the typed values in the UI language:
+   - **In the books' language (English)** the stat line is the book's text, as before (its common
+     values labelled), and the value at the caster level keeps the book's units.
+   - **In another language (French)** every stat is worded from its typed value through i18n keys
+     (`lookup.unitWords`, `nouns`, `shapes`, `conditions`, `stat.*`): units and nouns agree in
+     number by the language's plural rules, per-level terms read "/niveau", "/2 niveaux", shapes
+     and the components and save kinds are translated, and so is the value at the caster level.
+   - **Lengths are converted where the language uses metres** (`lookup.lengths`, French: metric),
+     by the French books' convention, not the exact factors: **1 yd = 1 m**, **1 ft = 0.3 m**,
+     1 mi = 1.5 km, 1 in = 2.5 cm. The French Tome of Magic's stat lines turn yards into metres one
+     for one and feet into 0.3 m in every range and area, a square yard into a square metre, a mile
+     into 1.5 km (all three of its miles; the French PHB keeps paces and feet, and gives one mile as
+     1.5 km once and as a fraction of a league once), and a square mile into 2.25 km². Areas
+     are the squares of the lengths; a **cubic foot is 27 litres** (the books' own figure) and a
+     cubic yard 1 m³, a cubic inch 15.625 cm³. Numbers use the language's decimal mark ("4,5");
+     lengths and areas keep at most two decimals, volumes three significant digits and every
+     integer digit ("156 cm³", "540 litres"), so a small volume is not rounded away. A word agrees
+     with the converted number ("27 litres"). Dice are never converted (a length with dice keeps its
+     unit); times are never converted.
+   - **The book's text is the fallback, only for what is not typed**: a field the parser left
+     special (other than the book's own "Special", which is a label), a word the language has no
+     key for (an unlisted noun, unit or condition, a non-level divisor such as "/recipient"), and
+     an area reading the parser marks **partial** (`partial`: the text has an alternative, a
+     number, die or word its typed form does not hold, such as "1 creature or item" or "One
+     creature/two levels"). Its common values are labelled as before. A partial area has no value
+     at the caster level either: the server computes and serves none, so nothing from the lossy
+     reading is shown or rolled. Text is wrapped, never cut.
+
 ## Consequences
 
 - The builder item and the importer item can proceed in parallel against this ADR and the schema:
@@ -242,41 +272,27 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   (`web/src/lib/spellMarkdown.ts`) into React text, never HTML; a block that does not fit the subset
   is shown as text rather than dropped.
 
-## Amendment: format 2, French stat texts (2026-10-15, critical-y9e0.11)
+## Implementation notes (typed stats in the UI language, 2026-10-15)
 
-The French UI showed the six stat values in English ("1 creature") although the French books print
-them. Two ways were weighed: French text from the catalogue, or a UI formatter of the typed stats.
-The typed stats do not cover every value (special, conditional and free text), so the French
-book's text is shipped, as for names and descriptions, and the UI keeps no rules of its own.
-
-- **Format 2.** Each of the six stat fields is a localized object `{ "en": "…", "fr": "…" }`,
-  like `name` (`$defs/stat` in the schema). The shape is the same as name and description, so the
-  rule is the same: the reader shows `fr` when present and falls back to `en`, per field. A sibling
-  `stats_fr` object was rejected: it would put one field in two places.
-- **Format 1 is still read.** The importer maps a format 1 artifact to format 2 (each stat string
-  `s` read as `{ "en": s }`) and validates it against the one schema, so an API with this change
-  runs on the artifact published before it and on the new one; `catalogue_meta` records the format
-  of the file read. Format 1 support can go once every deployment has a format 2 artifact.
-- **Broken French text is omitted, not shipped.** The builder (`critical-rulebooks`) leaves `fr`
-  out of a stat when the French book lacks it or the OCR broke it, by generic rules it checks
-  and reports (empty value; a die roll the OCR read as digits, such as `2412` for `2d12`, or the
-  English value has a die roll the French one lacks; a stray `°`, `$`, `©`, `?` or `"`, which the
-  OCR prints for the foot mark, `S` or an unreadable character; a digit in the components). A
-  French value that differs from the English one in substance (another range in the French book)
-  is the French book's and is kept.
-- **Storage and API.** Six nullable columns `casting_time_fr` … `saving_throw_fr` (migration 029),
-  NULL when the artifact has no French text. Spell payloads add `casting_time_fr`, `range_fr`,
-  `duration_fr`, `area_of_effect_fr`, `components_fr`, `saving_throw_fr`, each omitted when absent
-  (`TestSpells_FrenchTextsFromTheCatalogueWithEnglishFallback`).
-- **UI.** The lookup's stat grid and the components of its meta line show the French text in the
-  French UI; a stat without one shows the English text, with the common English values labelled
-  in French as before (`lookup.values`: Touch, None, Instantaneous…). The value computed at the
-  caster level is worded by the client from the typed stats, which are English ("1 creature"):
-  with a French text, a value that only repeats the English text (nothing depends on the level) is
-  not shown, so the line reads in French; a value that depends on the level ("210 yd") is shown
-  with the French text under it (`statText`, `statCell`, `componentsText` in
-  `web/src/lib/lookupLabels.ts`). Text is wrapped, never cut.
-- Tests: format 2 parse and format 1 upgrade `TestParse_ReadsFormat1`, refusals
-  `TestParse_Step2_Refusals`; schema `TestSchema_Shape`; storage `TestImportCatalogue_FreshDatabase`,
-  `TestImportCatalogue_Step4_NewVersionUpserts` (French stat added, dropped), typed stats from
-  English only `TestImportCatalogue_Step6_TypedStatsParsedAtImport`.
+- **History.** A first take (catalogue format 2, migration 029) shipped the French books' stat
+  texts as `{en, fr}` and served them as `*_fr` fields. It broke the rule of step 8 (data holds typed
+  values; conversion and translation happen at render) and was undone: the catalogue is format 1
+  again, the reader never knew format 2, and migration 030 drops the six `*_fr` columns on a
+  database that has 029 (`TestMigrate030_DropsFrenchStatColumnsKeepingTheRows`,
+  `TestMigrate030_FreshDatabaseHasNoFrenchStatColumns`).
+- **Re-typing.** Migration 030 also forgets the recorded artifact (`catalogue_meta`), so the next
+  startup imports it again and re-parses every spell's stats with the current parser (step 5.6).
+- **Partial area readings** are marked by the parser: the text's numbers and dice must all be the
+  typed form's, and its words a length unit, a shape, a word of the noun or a connector ("x", "in
+  a", "level") (`spellstats.AreaOfEffect.Partial`,
+  `TestAreaOfEffect_PartialWhenTheTextSaysMore`), and serve no value at a caster level
+  (`TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel`; the client's `spellValues.test.ts`
+  "a partial area reading").
+- **The wording** is `web/src/lib/statText.ts` (unit tests for every unit, noun, shape and
+  condition key, the conversion and each fallback in `statText.test.ts`); the lookup's grid and meta
+  line use it, and the French lookup e2e checks one spell's stats ("210 m", "60 m + 10 m/niveau").
+  The conversion and the volume digits are in `statText.test.ts` ("converts lengths to metres in
+  French as the French books do", "keeps a volume's significant digits").
+- **Coverage** over a catalogue: `just stat-coverage [path]` prints, per field, how many stats the
+  French UI words from the typed value, shows as a label, or shows as the English text, with the
+  most common English texts left (`api/cmd/spellstats` prints the typed stats it reads).

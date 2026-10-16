@@ -155,20 +155,50 @@ and you then run a branch that does not have it (e.g. `main` before that PR merg
 Never delete the rows from `schema_migrations` to get past the check: the schema would still be the
 newer one.
 
-## Development database
+## Local development
 
-`just dev` (through `just dev-db`) starts the docker compose service `postgres` (`docker compose up
---detach --wait postgres`; it keeps running after `just dev` stops) and runs the API on it:
+The loop, from the checkout root (each worktree is its own compose project, with its own volume):
+
+| Command | What it does |
+|---|---|
+| `just dev` | Starts PostgreSQL (docker compose), the API (air, :8080) and Vite (:5173, proxies `/api`). Ctrl-C stops them. |
+| `just stop` | Stops what `just dev` started for this checkout, the database included, from any terminal, also after a crashed `just dev`. Data kept. Safe when nothing runs. |
+| `just status` | API, web dev server and database: running, stopped, port. |
+| `just dev-db` | Starts the database only (e.g. for the SQLite import below). |
+| `just dev-reset` | `just stop`, then deletes the databases (compose volume `critical-pg`). The next start migrates, seeds and imports the catalogue again. |
+| `just dev-smoke` | Proof of the above on free ports and a throwaway compose project (needs docker, ~1 min). Run it after changing the justfile, `docker-compose.yml`, `api/.air.toml`, `scripts/dev.sh` or the start-up of the storage. CI job `dev-smoke`. |
+
+First run after a clone: `cd web && npm ci`, optionally `just catalogue` (real spells, database
+`critical`; without it the fixture catalogue and database `critical_fixture` are used and the start
+says so), then `just dev`. Open http://localhost:5173.
+
+Ports: `CRITICAL_API_PORT` (8080), `CRITICAL_WEB_PORT` (5173), `CRITICAL_PG_PORT` (5432, the service
+listens on 127.0.0.1 only). A taken port, or a docker daemon that is not running, stops `just dev`
+before anything starts, with a message saying what to do.
+
+What `scripts/dev.sh` guarantees:
+- **Ctrl-C.** Each process runs in its own session, so the terminal's SIGINT reaches only the script,
+  which stops Vite, then the API, then the database if this run started it (a database that already
+  ran stays up until `just stop`). Exit is clean, no process left, ports free. `just` itself prints
+  one line `error: interrupted by SIGINT` (its own exit message for a Ctrl-C, exit status 130); it
+  cannot be silenced.
+- **Graceful API.** `api/.air.toml` sets `send_interrupt` and `kill_delay = "10s"`: on every rebuild
+  and on exit the server gets SIGINT, finishes in-flight requests, closes its pool, and is killed
+  only after 10 s (air's default is an immediate SIGKILL).
+- **Only this checkout's processes.** Processes are recorded in `.dev/run/` (pid and start time) and
+  stopped by that record, the API binary by its exact path; never by name. Two checkouts do not
+  interfere except on ports (move them with the variables above).
+- **Database.** Data lives in the volume `critical-pg`; stopping keeps it. After `just stop` the
+  container stays stopped (`restart: unless-stopped`), also across a reboot, until `just dev` or
+  `just dev-db`.
 
 - database `critical` with the real catalogue (`.catalogue/catalogue.json`) and the campaign seeds;
   `critical_fixture` with the fixture catalogue and seeds of `api/testdata` when there is no real
   catalogue (the init script `deploy/postgres-init/` creates it with the volume);
 - DSN `postgres://critical:critical@localhost:5432/<database>?sslmode=disable`, also the default
-  `CRITICAL_DSN`; `CRITICAL_PG_PORT` moves the host port (the service listens on 127.0.0.1 only);
-- the data lives in the compose volume `critical-pg` of the checkout's compose project (a worktree
-  has its own); `just dev-reset` deletes it (`docker compose down --volumes`), and the next start
-  migrates, seeds and imports the catalogue again. Files in `.dev/` are never touched: the copy of a
-  SQLite `.dev/critical.db` into PostgreSQL is the copy tool's (below).
+  `CRITICAL_DSN`;
+- files in `.dev/` (apart from `run/` and `tmp/`) are never touched: the copy of a SQLite
+  `.dev/critical.db` into PostgreSQL is the copy tool's (below).
 
 ### Moving a SQLite database into PostgreSQL
 
@@ -180,8 +210,8 @@ repository (step 9.5).
 To move the development data, from the main checkout:
 
 ```bash
-# 1. Stop the SQLite server (`just dev` of a build before the engine switch): what it writes after
-#    the copy is not copied.
+# 1. Stop the SQLite server (`just dev` of a build before the engine switch; `just stop` stops
+#    this build's): what it writes after the copy is not copied.
 # 2. The database `critical` must be new. If `just dev` already ran on PostgreSQL with the real
 #    catalogue, it holds the seeds: delete the compose volume first (`just dev-reset`).
 just dev-db

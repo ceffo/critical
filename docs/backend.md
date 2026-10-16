@@ -5,7 +5,8 @@
 - **Language**: Go (latest stable)
 - **HTTP**: standard `net/http` or `chi` router
 - **Database**: SQLite via `modernc.org/sqlite` (pure Go, no CGO). `sqlite.Open` sets `busy_timeout=5000` on every pooled connection and `journal_mode=WAL` for file-backed DBs (WAL adds `-wal`/`-shm` files beside the DB). It also sets `_txlock=immediate`: every transaction (`WrapTx`/`InTx`) begins with `BEGIN IMMEDIATE` and takes the write lock up front. A deferred read-then-write transaction (the action stack's expected-top check, then its pop) would otherwise fail at once with `SQLITE_BUSY_SNAPSHOT` (a 500) when another writer commits in between; with the lock taken first the second writer waits, then sees the first one's result and is refused as a normal 409. Write paths must go through a transaction, never read-then-write on the bare pool.
-- **Migrations**: simple sequential SQL files, applied at startup
+- **Migrations**: simple sequential SQL files, applied at startup and recorded in `schema_migrations`
+  ("Migrations at startup" below)
 - **Seed loader**: reads `seeds/*.json` at startup if corresponding table is empty; spells come from the
   catalogue artifact instead ("Spell catalogue" below)
 
@@ -122,6 +123,27 @@ services also write (the slot list, the buffs) is produced by one helper of the 
 (`prepsvc.SlotsSnapshot`, `buffsvc.Add`) so every writer encodes it the same way.
 
 What each service records, and the rules it follows, are in the ADRs ([index](adr/README.md)).
+
+## Migrations at startup
+
+`sqlite.Migrate` (run by the composition root before the server listens) applies every embedded
+`api/internal/storage/sqlite/migrations/*.sql` file not yet recorded in `schema_migrations`, each in
+its own transaction. Migrations are new files only: never rename, edit or delete an applied one.
+
+Before applying anything it refuses a database that records a migration the binary does not embed
+([ADR 0024](adr/0024-deployment.md) step 6.2): the server exits with
+`migrate: database records migrations this binary does not embed: <names>; …`. An older binary
+does not undo a newer schema, so it must not run on one. In production this is a rollback across a
+migration without the snapshot restore (ADR 0024 steps 6.1 and 9.3).
+
+In development it happens when `.dev/critical.db` was migrated by a branch that added a migration
+and you then run a branch that does not have it (e.g. `main` before that PR merged). To get past it:
+- go back to (or merge `main` into) a branch that embeds the named migrations; or
+- if the data is throwaway, `just dev-reset` and restart `just dev` (deletes `.dev/*.db`); or
+- keep a copy of the database before trying a migration branch and restore it afterwards.
+
+Never delete the rows from `schema_migrations` to get past the check: the schema would still be the
+newer one.
 
 ## DAL code generation (bob)
 

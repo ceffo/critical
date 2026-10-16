@@ -112,7 +112,10 @@ flowchart LR
       Data written since that snapshot is lost; the runbook says so before the restore.
    2. The server refuses to start when the database records a migration that its binary does not
       embed, so a rollback across a migration without the restore fails its smoke check instead of
-      running on a schema it does not know.
+      running on a schema it does not know. Tests:
+      `TestMigrate_Step6_2_RefusesMigrationsTheBinaryDoesNotEmbed`,
+      `TestMigrate_Step6_2_AcceptsADatabaseItsBinaryMigrated`,
+      `TestStartup_Step6_2_RefusesADatabaseWithAnUnknownMigration`.
 
 7. **Private book data stays private.** The catalogue, and any database copy (it holds catalogue
    rows), never enters the public repo, a PR build, a workflow artifact, a shared build cache or a

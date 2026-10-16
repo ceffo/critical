@@ -113,7 +113,7 @@ set_secret() {
     fi
 }
 
-declare -A password
+declare -A password=()
 for env in "$@"; do
     role="critical_$env"
     app="critical-$env"

@@ -50,19 +50,48 @@ type catalogueRow struct {
 	Key, NameFR, DescriptionFR, Source      sql.NullString
 	Name, Class, Description, Stats, Sphere string
 	Level                                   int
+	StatsFR                                 statsFRRow
+}
+
+// statsFRRow is the six French stat columns, in catalogue.StatsFR's order.
+type statsFRRow struct {
+	CastingTime, Range, Duration, AreaOfEffect, Components, SavingThrow sql.NullString
+}
+
+func (r statsFRRow) texts() catalogue.StatsFR {
+	return catalogue.StatsFR{
+		CastingTime: r.CastingTime.String, Range: r.Range.String, Duration: r.Duration.String,
+		AreaOfEffect: r.AreaOfEffect.String, Components: r.Components.String, SavingThrow: r.SavingThrow.String,
+	}
+}
+
+func (r statsFRRow) nulls() []bool {
+	return []bool{
+		!r.CastingTime.Valid, !r.Range.Valid, !r.Duration.Valid,
+		!r.AreaOfEffect.Valid, !r.Components.Valid, !r.SavingThrow.Valid,
+	}
+}
+
+func emptyFR(s catalogue.StatsFR) []bool {
+	return []bool{
+		s.CastingTime == "", s.Range == "", s.Duration == "",
+		s.AreaOfEffect == "", s.Components == "", s.SavingThrow == "",
+	}
 }
 
 func catalogueRows(t *testing.T, db *DB) []catalogueRow {
 	t.Helper()
 	rows, err := db.Query(`SELECT id, key, name, name_fr, class, level, COALESCE(sphere, ''), COALESCE(description, ''),
-		description_fr, source, COALESCE(stats, '') FROM spells ORDER BY id`)
+		description_fr, source, COALESCE(stats, ''), casting_time_fr, range_fr, duration_fr, area_of_effect_fr,
+		components_fr, saving_throw_fr FROM spells ORDER BY id`)
 	require.NoError(t, err)
 	defer func() { _ = rows.Close() }()
 	var out []catalogueRow
 	for rows.Next() {
 		var r catalogueRow
 		require.NoError(t, rows.Scan(&r.ID, &r.Key, &r.Name, &r.NameFR, &r.Class, &r.Level, &r.Sphere, &r.Description,
-			&r.DescriptionFR, &r.Source, &r.Stats))
+			&r.DescriptionFR, &r.Source, &r.Stats, &r.StatsFR.CastingTime, &r.StatsFR.Range, &r.StatsFR.Duration,
+			&r.StatsFR.AreaOfEffect, &r.StatsFR.Components, &r.StatsFR.SavingThrow))
 		out = append(out, r)
 	}
 	require.NoError(t, rows.Err())
@@ -115,13 +144,20 @@ func TestImportCatalogue_FreshDatabase(t *testing.T) {
 		assert.Equal(t, s.NameFR != "", r.NameFR.Valid, "%s: an absent French name is NULL", s.ID)
 		assert.Equal(t, s.DescriptionFR != "", r.DescriptionFR.Valid, s.ID)
 		assert.Equal(t, s.Source, r.Source.String, s.ID)
+		assert.Equal(t, s.StatsFR, r.StatsFR.texts(), s.ID)
+		assert.Equal(t, emptyFR(s.StatsFR), r.StatsFR.nulls(), "%s: an absent French stat is NULL, per field", s.ID)
 	}
 	assert.Equal(t, cat.Version, recordedVersion(t, db))
+	assert.Equal(t, "60 mètres + 10 mètres par niveau", keyed["magic_missile"].StatsFR.Range.String)
+	assert.False(t, keyed["magic_missile"].StatsFR.CastingTime.Valid)
 }
 
+// Step 5.6: the typed stats are parsed from the English texts only; magic_missile
+// has French stat texts, which must not change them.
 func TestImportCatalogue_Step6_TypedStatsParsedAtImport(t *testing.T) {
 	db := openMigrated(t)
 	cat := fixtureCatalogue(t)
+	require.NotEmpty(t, cat.ByID()["magic_missile"].StatsFR.Range)
 	require.NoError(t, db.ImportCatalogue(context.Background(), cat, nil))
 	r := byKey(catalogueRows(t, db))["magic_missile"]
 	var stats spellstats.Stats
@@ -164,6 +200,10 @@ func TestImportCatalogue_Step4_NewVersionUpserts(t *testing.T) {
 				in[i].Description = "Fixture text, corrected."
 				in[i].NameFR = ""
 				in[i].Range = "20 yds."
+				in[i].StatsFR.Duration = "Instantanée"
+			}
+			if in[i].ID == "magic_missile" {
+				in[i].StatsFR.Range = ""
 			}
 		}
 		return append(in, catalogue.Spell{
@@ -180,6 +220,9 @@ func TestImportCatalogue_Step4_NewVersionUpserts(t *testing.T) {
 	assert.Equal(t, "Fixture text, corrected.", fb.Description)
 	assert.False(t, fb.NameFR.Valid, "a French name the artifact dropped is cleared")
 	assert.Contains(t, fb.Stats, "20 yds.", "stats parsed again")
+	assert.Equal(t, "Instantanée", fb.StatsFR.Duration.String, "a French stat the artifact added is stored")
+	assert.False(t, rows["magic_missile"].StatsFR.Range.Valid, "a French stat the artifact dropped is cleared")
+	assert.Equal(t, "Instantanée", rows["magic_missile"].StatsFR.Duration.String, "the other French stats stay")
 	assert.Equal(t, "Nouveau sort", rows["new_spell"].NameFR.String)
 	assert.Equal(t, "All", rows["new_spell"].Sphere)
 	assert.Equal(t, "1970-01-02", recordedVersion(t, db))
@@ -285,11 +328,17 @@ func plantState(t *testing.T, db *DB) {
 			(2, 1, 0, 'exposure', '', 0, '{"spellId":"cloudkill","spell":"Cloudkill","casterLevel":9,"round":1,"onSelf":true}', 2),
 			(3, 1, 0, 'spell_prep', '', 0, '{"spells":[{"id":"armor","name":"Armor","count":1}]}', 3),
 			(4, 1, 0, 'hp_change', 'orc', -3, '{}', 4),
-			(5, 1, 0, 'cast', '', 0, '{"action":"cast","spellId":"haste","spell":"Haste","casterLevel":5}', 5)`,
+			(5, 1, 0, 'cast', '', 0, '{"action":"cast","spellId":"haste","spell":"Haste","casterLevel":5}', 5),
+			(6, 1, 0, 'buff_change', '', 0, '{"action":"dismiss","buff":"Detect Magic","spellId":"detect_magic"}', 6),
+			(7, 1, 0, 'round_advance', '', 0, '{"action":"next_round","expired":["Wall of Ice","Gem"],"expiredSpellIds":["wall_of_ice",""]}', 7),
+			(8, 1, 0, 'time_passed', '', 0, '{"action":"pass_time","expired":["Chromatic Orb"],"expiredSpellIds":["chromatic_orb"]}', 8),
+			(9, 1, 0, 'hp_change', 'x', -1, '{"spellId":"not_a_spell_entry"}', 9)`,
+		`INSERT INTO active_buffs (character_id, buffs) VALUES (1, '[{"id":"a","name":"Stoneskin","spell_id":"stoneskin"},{"id":"b","name":"Gem"}]')`,
 		`INSERT INTO action_snapshots (action_id, state_key, before_state, after_state) VALUES
 			(3, 'spell_slots', '[{"Level":1,"SpellID":"identify","PreparedSpellName":"Identify","Used":false,"Extra":false}]',
 				'[{"Level":1,"SpellID":"light","PreparedSpellName":"Light","Used":false,"Extra":false}]'),
-			(4, 'buffs', '[{"SpellID":"not_a_slot"}]', '[]')`,
+			(4, 'buffs', '[{"SpellID":"not_a_slot","spell_id":"improved_strength"}]', '[{"spell_id":"mirror_image"}]'),
+			(5, 'round', '[{"spell_id":"not_a_buff_list"}]', '[]')`,
 		`INSERT INTO action_corrections (action_id, kind, payload) VALUES (5, 'amend', '{"spellId":"enlarge","casterLevel":5}')`,
 	} {
 		_, err := db.Exec(q)
@@ -317,6 +366,13 @@ func TestStateSpellRefs_ScansEveryPlace(t *testing.T) {
 		"armor":         "action_log 3",
 		"haste":         "action_log 5",
 		"enlarge":       "action_corrections 1",
+		// Buffs from a spell (ADR 0004 step 17).
+		"stoneskin":         "active_buffs of character 1",
+		"improved_strength": "action_snapshots 2",
+		"mirror_image":      "action_snapshots 2",
+		"detect_magic":      "action_log 6",
+		"wall_of_ice":       "action_log 7",
+		"chromatic_orb":     "action_log 8",
 	}, got)
 }
 
@@ -412,7 +468,7 @@ func TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue(t *testing.T)
 	sort.Strings(unresolved)
 	assert.Empty(t, unresolved, "every reference resolves")
 	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) FROM spell_slots"), "game state untouched")
-	assert.Equal(t, 5, scalar(t, db, "SELECT COUNT(*) FROM action_log"))
+	assert.Equal(t, 9, scalar(t, db, "SELECT COUNT(*) FROM action_log"))
 
 	before := catalogueRows(t, db)
 	require.NoError(t, db.ImportCatalogue(ctx, cat, seeds))

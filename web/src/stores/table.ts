@@ -10,7 +10,11 @@ import { useRollStore } from "./roll";
 import { useXpStore } from "./xp";
 
 /** Something to tell the player after an action (rendered with i18n by the Notices component). */
-export type Notice = { kind: "expired"; names: string[] };
+/** Buffs that just expired, named at render time in the player's language (buffName). */
+export type Notice = {
+  kind: "expired";
+  buffs: { name: string; spellId?: string }[];
+};
 
 interface TableStore {
   /** Last server (or network) error message; shown verbatim, never translated. */
@@ -51,9 +55,14 @@ interface TableStore {
   passTime: (hours: number) => Promise<boolean>;
 }
 
-function expiredNotice(expired: { name: string }[] | undefined): Notice | null {
+function expiredNotice(
+  expired: { name: string; spellId?: string }[] | undefined,
+): Notice | null {
   return expired && expired.length > 0
-    ? { kind: "expired", names: expired.map((b) => b.name) }
+    ? {
+        kind: "expired",
+        buffs: expired.map((b) => ({ name: b.name, spellId: b.spellId })),
+      }
     : null;
 }
 

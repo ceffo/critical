@@ -82,6 +82,13 @@ type BuffEffect struct {
 	// caller (ADR 0004 step 16). 0: unknown (a buff stored before the field
 	// existed) or no charges.
 	ChargesTotal int
+	// SpellID is the catalogue id of the spell the buff comes from (cast or
+	// received), stamped by the spell cast; empty for a buff entered by hand
+	// and for one stored before the field existed whose spell could not be
+	// identified (ADR 0004 step 17). It only names the buff: the client shows
+	// the catalogue's name in the player's language, Name otherwise. No rules
+	// meaning.
+	SpellID string
 }
 
 // Timed reports whether Next Round counts this buff down.

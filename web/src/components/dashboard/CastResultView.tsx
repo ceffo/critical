@@ -154,7 +154,10 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       {b && (
         <div className="flex flex-col gap-2" data-testid="cast-buff">
           <div className="flex items-center gap-2">
-            <span className="text-title">{b.name}</span>
+            <span className="text-title">
+              {/* The buff a cast puts on is the spell's: named from the catalogue. */}
+              {spellName(r.spellId, b.name)}
+            </span>
             <Badge variant={b.applied ? "default" : "secondary"}>
               {b.applied ? t("result.cast.onYou") : t("result.cast.notOnYou")}
             </Badge>

@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard } from "./helpers";
+import { combatLog, logEntry, openDashboard } from "./helpers";
 import type { Page } from "@playwright/test";
 
 async function openSpells(page: Page) {
@@ -160,6 +160,93 @@ test("the spell names follow the language: the catalogue's French name, English 
     expect(await el.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
   }
   await snap(page, "french");
+
+  // A buff from a spell is named from the catalogue too, in the timeline and in the journal.
+  await page
+    .getByRole("button", { name: "Lancer Image miroir" })
+    .first()
+    .click();
+  const buff = page.locator('[data-testid="buff"][data-buff="Mirror Image"]');
+  await expect(buff).toContainText("Image miroir");
+  await expect(page.getByTestId("cast-buff")).toContainText("Image miroir");
+  await snap(page, "french-buff");
+  await buff.getByRole("button", { name: "Retirer Image miroir" }).click();
+  await expect(buff).toHaveCount(0);
+  const dismissed = combatLog(page)
+    .getByRole("listitem")
+    .filter({ hasText: "Image miroir retiré" });
+  await expect(dismissed).toBeVisible();
+
+  // Undo and redo restore the buff with its spell: still named from the catalogue.
+  await page.getByTestId("undo").click();
+  await expect(dismissed).toHaveAttribute("data-status", "voided");
+  await expect(buff).toContainText("Image miroir");
+  await page.getByTestId("redo").click();
+  await expect(buff).toHaveCount(0);
+  await expect(dismissed).toHaveAttribute("data-status", "active");
+  await expect(dismissed).toContainText("Image miroir retiré");
+  await page.getByTestId("undo").click();
+  await expect(buff).toContainText("Image miroir");
+
+  // Next turn expires the spell's buff and a hand-made one together: each named its own way.
+  const buffs = (await (await fetch(`${stack.apiUrl}/api/buffs`)).json()) as {
+    id: string;
+    spellId?: string;
+  }[];
+  const mirror = buffs.find((b) => b.spellId === "mirror_image");
+  expect(mirror).toBeDefined();
+  for (const [url, method, body] of [
+    [`/api/buffs/${mirror!.id}`, "PATCH", { duration: 1 }],
+    ["/api/buffs", "POST", { name: "Rage", duration: 1, effects: {} }],
+  ] as const) {
+    const res = await fetch(`${stack.apiUrl}${url}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    expect(res.ok).toBe(true);
+  }
+  await page.reload();
+  await page.getByRole("button", { name: "Tour suivant" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Bonus expirés : Image miroir, Rage",
+  );
+  await expect(
+    combatLog(page).getByText("— expirés : Image miroir, Rage"),
+  ).toBeVisible();
+
+  // Names are never truncated: a long name wraps in the timeline and on its charge card.
+  const long = "Protection contre le mal sur trois mètres de rayon";
+  expect(
+    (
+      await fetch(`${stack.apiUrl}/api/buffs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: long, charges: 3, effects: {} }),
+      })
+    ).ok,
+  ).toBe(true);
+  await page.reload();
+  const row = page.locator(`[data-testid="buff"][data-buff="${long}"]`);
+  const card = page.locator(`[data-testid="charge-card"][data-buff="${long}"]`);
+  for (const width of [1440, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const el of [row, card]) {
+      await expect(el.getByText(long, { exact: true })).toBeVisible();
+      expect(
+        await el.evaluate(
+          (root) =>
+            [root, ...root.querySelectorAll("*")].filter(
+              (e) =>
+                getComputedStyle(e).textOverflow === "ellipsis" ||
+                (e.textContent?.includes("Protection") &&
+                  e.scrollWidth > e.clientWidth),
+            ).length,
+        ),
+      ).toBe(0);
+    }
+    await snap(page, `french-long-buff-${width}`);
+  }
 });
 
 test("a prepared spell outside the spellbook is listed as removed and not sent", async ({

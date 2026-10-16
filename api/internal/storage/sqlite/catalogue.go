@@ -157,9 +157,9 @@ func backfillKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) error
 	return nil
 }
 
-// upsertSpells is step 5.4.2 (with the typed stats of 5.6): insert a new key,
-// overwrite every catalogue field of an existing one. An absent French text
-// is stored as NULL.
+// upsertSpells is step 5.4.2 (with the typed stats of 5.6, from the English
+// stat texts): insert a new key, overwrite every catalogue field of an
+// existing one. An absent French text is stored as NULL.
 func upsertSpells(ctx context.Context, q Querier, cat catalogue.Catalogue) error {
 	for _, s := range cat.Spells {
 		stats, err := spellStatsJSON(s.CastingTime, s.Range, s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow)
@@ -169,18 +169,24 @@ func upsertSpells(ctx context.Context, q Querier, cat catalogue.Catalogue) error
 		if _, err := q.ExecContext(ctx, `
 			INSERT INTO spells (
 				key, name, name_fr, class, level, school, sphere, casting_time, range, duration,
-				area_of_effect, components, saving_throw, description, description_fr, source, stats
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				area_of_effect, components, saving_throw, casting_time_fr, range_fr, duration_fr,
+				area_of_effect_fr, components_fr, saving_throw_fr, description, description_fr, source, stats
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (key) DO UPDATE SET
 				name = excluded.name, name_fr = excluded.name_fr, class = excluded.class, level = excluded.level,
 				school = excluded.school, sphere = excluded.sphere, casting_time = excluded.casting_time,
 				range = excluded.range, duration = excluded.duration, area_of_effect = excluded.area_of_effect,
 				components = excluded.components, saving_throw = excluded.saving_throw,
+				casting_time_fr = excluded.casting_time_fr, range_fr = excluded.range_fr,
+				duration_fr = excluded.duration_fr, area_of_effect_fr = excluded.area_of_effect_fr,
+				components_fr = excluded.components_fr, saving_throw_fr = excluded.saving_throw_fr,
 				description = excluded.description, description_fr = excluded.description_fr,
 				source = excluded.source, stats = excluded.stats`,
 			s.ID, s.Name, nullable(s.NameFR), s.Class, s.Level, s.School, nullable(s.Sphere), s.CastingTime, s.Range,
-			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow, s.Description, nullable(s.DescriptionFR),
-			s.Source, stats,
+			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow,
+			nullable(s.StatsFR.CastingTime), nullable(s.StatsFR.Range), nullable(s.StatsFR.Duration),
+			nullable(s.StatsFR.AreaOfEffect), nullable(s.StatsFR.Components), nullable(s.StatsFR.SavingThrow),
+			s.Description, nullable(s.DescriptionFR), s.Source, stats,
 		); err != nil {
 			return fmt.Errorf("upsert spell %q: %w", s.ID, err)
 		}
@@ -271,10 +277,12 @@ func removedKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) (map[s
 }
 
 // StateSpellRefs returns every spell id game state holds (ADR 0021 step
-// 5.4.3): the prepared spells of spell_slots, the slot lists in the
-// before/after state of action_snapshots (undo and redo restore them), the
-// spellId of cast and exposure entries in action_log and of the payloads of
-// their corrections, and spells[].id of spell_prep entries. A JSON value that
+// 5.4.3): the prepared spells of spell_slots, the spell_id of the active
+// buffs (ADR 0004 step 17), the slot and buff lists in the before/after
+// state of action_snapshots (undo and redo restore them), the spellId of
+// cast, exposure and buff entries in action_log and of the payloads of their
+// corrections, expiredSpellIds of round_advance and time_passed entries, and
+// spells[].id of spell_prep entries. A JSON value that
 // does not decode is an error: an unreadable reference is not a missing one.
 func StateSpellRefs(ctx context.Context, q Querier) ([]catalogue.Ref, error) {
 	var out []catalogue.Ref
@@ -300,6 +308,24 @@ func StateSpellRefs(ctx context.Context, q Querier) ([]catalogue.Ref, error) {
 		return nil, err
 	}
 
+	// Buffs are stored and snapshotted with the same spell_id key (buffdal,
+	// buffsvc snapBuff).
+	type buff struct {
+		SpellID string `json:"spell_id"`
+	}
+	if err := eachRow(ctx, q, `SELECT character_id, COALESCE(buffs, '') FROM active_buffs`, func(id int64, blob string) error {
+		var buffs []buff
+		if err := decode(blob, &buffs); err != nil {
+			return fmt.Errorf("active_buffs of character %d: %w", id, err)
+		}
+		for _, b := range buffs {
+			add(b.SpellID, fmt.Sprintf("active_buffs of character %d", id))
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
 	// Snapshot slots are spellsvc.SpellSlot encoded without JSON tags
 	// (prepsvc.SlotsSnapshot).
 	type snapSlot struct {
@@ -319,6 +345,19 @@ func StateSpellRefs(ctx context.Context, q Querier) ([]catalogue.Ref, error) {
 		}); err != nil {
 			return nil, err
 		}
+		query = `SELECT id, COALESCE(` + col + `, '') FROM action_snapshots WHERE state_key = 'buffs'`
+		if err := eachRow(ctx, q, query, func(id int64, blob string) error {
+			var buffs []buff
+			if err := decode(blob, &buffs); err != nil {
+				return fmt.Errorf("action_snapshots %d %s: %w", id, col, err)
+			}
+			for _, b := range buffs {
+				add(b.SpellID, fmt.Sprintf("action_snapshots %d", id))
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	type payload struct {
@@ -326,6 +365,7 @@ func StateSpellRefs(ctx context.Context, q Querier) ([]catalogue.Ref, error) {
 		Spells  []struct {
 			ID string `json:"id"`
 		} `json:"spells"`
+		ExpiredSpellIDs []string `json:"expiredSpellIds"`
 	}
 	scan := func(table, query string) error {
 		return eachRow(ctx, q, query, func(id int64, blob string) error {
@@ -338,18 +378,24 @@ func StateSpellRefs(ctx context.Context, q Querier) ([]catalogue.Ref, error) {
 			for _, s := range p.Spells {
 				add(s.ID, where)
 			}
+			for _, id := range p.ExpiredSpellIDs {
+				add(id, where)
+			}
 			return nil
 		})
 	}
-	if err := scan("action_log", `SELECT id, COALESCE(payload, '') FROM action_log WHERE kind IN ('cast', 'exposure', 'spell_prep')`); err != nil {
+	if err := scan("action_log", `SELECT id, COALESCE(payload, '') FROM action_log WHERE kind IN `+spellRefKinds); err != nil {
 		return nil, err
 	}
 	if err := scan("action_corrections", `SELECT c.id, COALESCE(c.payload, '') FROM action_corrections c
-		JOIN action_log l ON l.id = c.action_id WHERE l.kind IN ('cast', 'exposure', 'spell_prep')`); err != nil {
+		JOIN action_log l ON l.id = c.action_id WHERE l.kind IN `+spellRefKinds); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
+
+// spellRefKinds are the action-log kinds whose payload may hold a spell id.
+const spellRefKinds = `('cast', 'exposure', 'spell_prep', 'buff_change', 'round_advance', 'time_passed')`
 
 // decode reads a JSON column; an empty or null value holds nothing.
 func decode(blob string, into any) error {

@@ -157,9 +157,9 @@ export interface SpellName {
 export type SpellNames = Readonly<Record<string, SpellName>>;
 
 /**
- * Mirrors spellhdl.SpellDTO. `name` and `description` are English; `name_fr` and `description_fr`
- * are the spell catalogue's French texts, absent when it has none: show French when present and
- * fall back to English per field (ADR 0021). Descriptions are in the catalogue's Markdown subset
+ * Mirrors spellhdl.SpellDTO. `name`, `description` and the six stat texts are English; their
+ * `_fr` siblings are the spell catalogue's French texts, absent when it has none: show French when
+ * present and fall back to English per field (ADR 0021). Descriptions are in the catalogue's Markdown subset
  * (paragraphs, `- ` bullet lists, pipe tables, blocks separated by a blank line).
  */
 export interface Spell {
@@ -177,6 +177,13 @@ export interface Spell {
   area_of_effect: string;
   components: string;
   saving_throw: string;
+  /** The French texts of the six stats above, each absent when the catalogue has none. */
+  casting_time_fr?: string;
+  range_fr?: string;
+  duration_fr?: string;
+  area_of_effect_fr?: string;
+  components_fr?: string;
+  saving_throw_fr?: string;
   description: string;
   description_fr?: string;
   /** Book code of the English text (PHB, TOM, ...; WEB when no book was matched). */

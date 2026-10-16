@@ -3,6 +3,10 @@
 // file must exist, carry a format this API knows, match the committed JSON
 // Schema and hold no duplicate id. It only maps the JSON to
 // catalogue.Catalogue; the import into the database is the storage layer's.
+//
+// The schema is format 2's. A format 1 artifact is still read: it is the
+// same but for its six stat texts, plain English strings, which are read as
+// format 2 stats with no French text ({"en": text}) before validation.
 package catalogueadpt
 
 import (
@@ -84,19 +88,22 @@ type spellDTO struct {
 	Level        int       `json:"level"`
 	School       string    `json:"school"`
 	Sphere       string    `json:"sphere"`
-	CastingTime  string    `json:"casting_time"`
-	Range        string    `json:"range"`
-	Duration     string    `json:"duration"`
-	AreaOfEffect string    `json:"area_of_effect"`
-	Components   string    `json:"components"`
-	SavingThrow  string    `json:"saving_throw"`
+	CastingTime  localized `json:"casting_time"`
+	Range        localized `json:"range"`
+	Duration     localized `json:"duration"`
+	AreaOfEffect localized `json:"area_of_effect"`
+	Components   localized `json:"components"`
+	SavingThrow  localized `json:"saving_throw"`
 	Name         localized `json:"name"`
 	Description  localized `json:"description"`
 	Source       string    `json:"source"`
 }
 
+// statFields are the six stat texts: plain strings in format 1, localized
+// objects since format 2.
+var statFields = []string{"casting_time", "range", "duration", "area_of_effect", "components", "saving_throw"}
+
 type artifactDTO struct {
-	Format  int        `json:"format"`
 	Version string     `json:"version"`
 	Spells  []spellDTO `json:"spells"`
 }
@@ -111,11 +118,22 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 	if err := json.Unmarshal(raw, &head); err != nil {
 		return catalogue.Catalogue{}, fmt.Errorf("not a JSON object: %w", err)
 	}
-	if f := strings.TrimSpace(string(head.Format)); f != strconv.Itoa(catalogue.Format) {
+	format := catalogue.Format
+	switch f := strings.TrimSpace(string(head.Format)); f {
+	case strconv.Itoa(catalogue.Format):
+	case strconv.Itoa(catalogue.Format1):
+		format = catalogue.Format1
+		up, err := upgradeFormat1(raw)
+		if err != nil {
+			return catalogue.Catalogue{}, err
+		}
+		raw = up
+	default:
 		if f == "" {
 			f = "none"
 		}
-		return catalogue.Catalogue{}, fmt.Errorf("unknown format %s: this API reads format %d", f, catalogue.Format)
+		return catalogue.Catalogue{}, fmt.Errorf("unknown format %s: this API reads formats %d and %d", f,
+			catalogue.Format1, catalogue.Format)
 	}
 
 	sch, err := compiled()
@@ -134,7 +152,7 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 	if err := json.Unmarshal(raw, &a); err != nil {
 		return catalogue.Catalogue{}, fmt.Errorf("parse: %w", err)
 	}
-	out := catalogue.Catalogue{Format: a.Format, Version: a.Version, Spells: make([]catalogue.Spell, 0, len(a.Spells))}
+	out := catalogue.Catalogue{Format: format, Version: a.Version, Spells: make([]catalogue.Spell, 0, len(a.Spells))}
 	seen := make(map[string]bool, len(a.Spells))
 	var dups []string
 	for _, s := range a.Spells {
@@ -145,8 +163,12 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 		seen[s.ID] = true
 		out.Spells = append(out.Spells, catalogue.Spell{
 			ID: s.ID, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
-			CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
-			AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
+			CastingTime: s.CastingTime.EN, Range: s.Range.EN, Duration: s.Duration.EN,
+			AreaOfEffect: s.AreaOfEffect.EN, Components: s.Components.EN, SavingThrow: s.SavingThrow.EN,
+			StatsFR: catalogue.StatsFR{
+				CastingTime: s.CastingTime.FR, Range: s.Range.FR, Duration: s.Duration.FR,
+				AreaOfEffect: s.AreaOfEffect.FR, Components: s.Components.FR, SavingThrow: s.SavingThrow.FR,
+			},
 			Name: s.Name.EN, NameFR: s.Name.FR, Description: s.Description.EN, DescriptionFR: s.Description.FR,
 			Source: s.Source,
 		})
@@ -155,6 +177,35 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 		return catalogue.Catalogue{}, fmt.Errorf("duplicate spell ids: %s", strings.Join(first(dups), ", "))
 	}
 	return out, nil
+}
+
+// upgradeFormat1 rewrites a format 1 artifact as format 2: every stat value
+// v of every spell becomes {"en": v}, and the format 2. Anything else is
+// left as it is, for the schema to judge; a value that was not a string
+// fails it there.
+func upgradeFormat1(raw []byte) ([]byte, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("not a JSON object: %w", err)
+	}
+	var spells []map[string]json.RawMessage
+	if json.Unmarshal(doc["spells"], &spells) != nil {
+		return raw, nil // not a list of objects: the schema names the offence
+	}
+	for _, sp := range spells {
+		for _, k := range statFields {
+			if v, ok := sp[k]; ok {
+				sp[k] = json.RawMessage(`{"en":` + string(v) + `}`)
+			}
+		}
+	}
+	list, err := json.Marshal(spells)
+	if err != nil {
+		return nil, fmt.Errorf("parse: %w", err)
+	}
+	doc["spells"] = list
+	doc["format"] = json.RawMessage(strconv.Itoa(catalogue.Format))
+	return json.Marshal(doc)
 }
 
 // schemaError lists the first leaf violations of a schema validation error.

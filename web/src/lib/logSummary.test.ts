@@ -762,6 +762,78 @@ describe("cast entries name the spell from the catalogue", () => {
   });
 });
 
+// Buff entries of a buff from a spell carry its id (spellId, expiredSpellIds parallel to expired):
+// named from the catalogue; a buff not from a spell, and an entry recorded before, keep the name.
+describe("buff entries name a spell's buff from the catalogue", () => {
+  const frBuffNames = spellNamer("fr", {
+    stoneskin: {
+      id: "stoneskin",
+      name: "Stoneskin",
+      name_fr: "Peau de pierre",
+    },
+    haste: { id: "haste", name: "Haste", name_fr: "Hâte" },
+  });
+
+  it("dismiss, absorb and edit in French; the stored name without a spell id", async () => {
+    const fr = await makeT("fr");
+    const text = (p: object) =>
+      entryText(entry("buff_change", p), fr, frBuffNames);
+    expect(
+      text({ action: "dismiss", buff: "Stoneskin", spellId: "stoneskin" }),
+    ).toContain("Peau de pierre");
+    expect(
+      text({
+        action: "absorb",
+        buff: "Stoneskin",
+        spellId: "stoneskin",
+        charges: 2,
+      }),
+    ).toContain("Peau de pierre");
+    expect(
+      text({
+        action: "edit",
+        buff: "Haste",
+        spellId: "haste",
+        fromRounds: 4,
+        rounds: 2,
+      }),
+    ).toContain("Hâte");
+    const old = text({ action: "dismiss", buff: "Stoneskin" });
+    expect(old).toContain("Stoneskin");
+    expect(old).not.toContain("Peau de pierre");
+  });
+
+  it("names the expired buffs in order, each by its own spell id", async () => {
+    const fr = await makeT("fr");
+    const got = entryText(
+      entry("round_advance", {
+        action: "next_round",
+        fromRound: 4,
+        toRound: 5,
+        expired: ["Haste", "Rage", "Stoneskin"],
+        expiredSpellIds: ["haste", "", "stoneskin"],
+      }),
+      fr,
+      frBuffNames,
+    );
+    expect(got).toContain("Hâte, Rage, Peau de pierre");
+    const passTime = entryText(
+      entry("time_passed", {
+        action: "pass_time",
+        hours: 1,
+        rounds: 60,
+        fromRound: 0,
+        toRound: 0,
+        expired: ["Haste"],
+      }),
+      fr,
+      frBuffNames,
+    );
+    expect(passTime).toContain("Haste");
+    expect(passTime).not.toContain("Hâte");
+  });
+});
+
 describe("spell_prep entries", () => {
   it("lists the spells with their copies (en/fr)", async () => {
     const e = entry("spell_prep", {

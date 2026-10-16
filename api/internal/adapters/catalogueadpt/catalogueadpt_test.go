@@ -33,9 +33,14 @@ func TestLoad_Fixture(t *testing.T) {
 	assert.Equal(t, "Projectile magique", mm.NameFR)
 	assert.NotEmpty(t, mm.DescriptionFR)
 	assert.Equal(t, "PHB", mm.Source)
+	assert.Equal(t, "60 yds. + 10 yds./level", mm.Range)
+	assert.Equal(t, "60 mètres + 10 mètres par niveau", mm.StatsFR.Range)
+	assert.Equal(t, "1", mm.CastingTime)
+	assert.Empty(t, mm.StatsFR.CastingTime, "a stat without French text is empty, per field")
 	armor := c.ByID()["armor"]
 	assert.Empty(t, armor.NameFR, "an omitted language is empty")
 	assert.Empty(t, armor.DescriptionFR)
+	assert.Equal(t, catalogue.StatsFR{}, armor.StatsFR)
 	assert.Equal(t, "Divination", c.ByID()["detect_magic_priest"].Sphere)
 }
 
@@ -70,7 +75,14 @@ func TestParse_Step2_Refusals(t *testing.T) {
 		mutate func(map[string]any)
 		want   []string
 	}{
-		{"unknown format names it", func(d map[string]any) { d["format"] = 2 }, []string{"unknown format 2", "format 1"}},
+		{"unknown format names it", func(d map[string]any) { d["format"] = 3 }, []string{"unknown format 3", "formats 1 and 2"}},
+		{"format 1 with a format 2 stat", func(d map[string]any) {
+			toFormat1(d)
+			spells(d)[0].(map[string]any)["range"] = map[string]any{"en": "10 yds."}
+		}, []string{"schema", "/spells/0/range/en"}},
+		{"format 2 with a format 1 stat", func(d map[string]any) {
+			spells(d)[0].(map[string]any)["range"] = "10 yds."
+		}, []string{"schema", "/spells/0/range"}},
 		{"missing format", func(d map[string]any) { delete(d, "format") }, []string{"unknown format none"}},
 		{"schema violation lists the offence", func(d map[string]any) {
 			spells(d)[0].(map[string]any)["level"] = 12
@@ -93,6 +105,35 @@ func TestParse_Step2_Refusals(t *testing.T) {
 			}
 		})
 	}
+}
+
+// toFormat1 rewrites a format 2 artifact as the builder wrote format 1: the
+// six stats are their English strings.
+func toFormat1(d map[string]any) {
+	d["format"] = 1
+	for _, sp := range spells(d) {
+		m := sp.(map[string]any)
+		for _, k := range statFields {
+			m[k] = m[k].(map[string]any)["en"]
+		}
+	}
+}
+
+// A format 1 artifact (stats as English strings) is still read: same
+// spells, the English stats, no French stat text, and its format recorded as 1.
+func TestParse_ReadsFormat1(t *testing.T) {
+	two, err := Parse(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	one, err := Parse(artifact(t, toFormat1))
+	require.NoError(t, err)
+	assert.Equal(t, catalogue.Format1, one.Format)
+	assert.Equal(t, catalogue.Format, two.Format)
+	require.Len(t, one.Spells, len(two.Spells))
+	for i, s := range two.Spells {
+		s.StatsFR = catalogue.StatsFR{}
+		assert.Equal(t, s, one.Spells[i])
+	}
+	assert.NotEmpty(t, two.ByID()["magic_missile"].StatsFR.Range, "the fixture has French stats to lose")
 }
 
 func TestParse_NotJSON(t *testing.T) {

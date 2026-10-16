@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ArrowsClockwise, DotsThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { buffName, useSpellName } from "@/i18n/spellName";
 import {
   Popover,
   PopoverContent,
@@ -169,6 +170,7 @@ function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
  */
 function PassTimeForm({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
+  const spellName = useSpellName();
   const { passTime, busy } = useTableStore();
   const [hours, setHours] = useState("");
   const [answer, setAnswer] = useState<KeyedAnswer | null>(null);
@@ -239,7 +241,9 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
         <p className="text-body" data-testid="pass-time-ending">
           {preview.expiring.length > 0
             ? t("turn.passTimeEnding", {
-                names: preview.expiring.map((b) => b.name).join(", "),
+                names: preview.expiring
+                  .map((b) => buffName(spellName, b))
+                  .join(", "),
               })
             : t("turn.passTimeNothingEnds")}
         </p>

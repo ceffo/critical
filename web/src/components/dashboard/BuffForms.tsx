@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { buffName, useSpellName } from "@/i18n/spellName";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
 import {
@@ -31,6 +32,7 @@ export function EditBuffForm({
   onDone: () => void;
 }) {
   const { t } = useTranslation();
+  const name = buffName(useSpellName(), buff);
   const editBuff = useBuffsStore((s) => s.editBuff);
   const { run, busy } = useTableStore();
   const [rounds, setRounds] = useState(String(buff.duration));
@@ -51,13 +53,13 @@ export function EditBuffForm({
   return (
     <form
       className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900 p-2"
-      aria-label={t("buffs.editLabel", { name: buff.name })}
+      aria-label={t("buffs.editLabel", { name })}
       onSubmit={(e) => {
         e.preventDefault();
         void submit();
       }}
     >
-      <span className="px-1 text-body font-medium">{buff.name}</span>
+      <span className="px-1 text-body font-medium">{name}</span>
       <label className="flex items-center gap-1">
         <span className={labelClass}>{t("buffs.roundsLeft")}</span>
         <input

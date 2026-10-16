@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useSpellNamesStore } from "@/stores/spellNames";
+import type { StatField } from "@/lib/spellValues";
 import type { Spell, SpellNames } from "@/types/spells";
 
 /**
@@ -26,6 +27,17 @@ export function spellNamer(lang: string, names: SpellNames): SpellNamer {
   };
 }
 
+/**
+ * A buff's name in the player's language: the catalogue's name of the spell it comes from, or its
+ * stored name when it is not from a spell (hand-made, or stored before buffs kept their spell).
+ */
+export function buffName(
+  spellName: SpellNamer,
+  buff: { name: string; spellId?: string },
+): string {
+  return buff.spellId ? spellName(buff.spellId, buff.name) : buff.name;
+}
+
 /** Names from what the caller holds only: the English name, else the id (tests, no catalogue). */
 export const englishSpellName: SpellNamer = (id, englishName) =>
   englishName ?? id;
@@ -47,6 +59,18 @@ export function spellTexts(
     name: (fr && spell.name_fr) || spell.name,
     description: (fr && spell.description_fr) || spell.description,
   };
+}
+
+/**
+ * A stat's catalogue text in `lang`: the French text in French when the catalogue has one, else
+ * null, and the caller shows the English text (ADR 0021, per field).
+ */
+export function frenchStat(
+  lang: string,
+  spell: Pick<Spell, `${StatField}_fr`>,
+  field: StatField,
+): string | null {
+  return (isFrench(lang) && spell[`${field}_fr`]) || null;
 }
 
 /**

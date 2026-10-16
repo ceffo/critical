@@ -16,8 +16,13 @@ export type ModifierKind =
 
 export interface Modifier {
   kind: ModifierKind;
-  /** Score, weapon, ammo, buff name or situational label (empty: an unnamed situational modifier). */
+  /**
+   * Score, weapon, ammo, buff name or situational label (empty: an unnamed situational modifier);
+   * an item power's: the item's name as stored, shown when no item has `itemId` any more.
+   */
   detail?: string;
+  /** Set on an item power's contribution: the UI names it from the item (ADR 0016 step 14). */
+  itemId?: string;
   value: number;
 }
 
@@ -30,6 +35,8 @@ export interface DamageTerm {
   kind: ModifierKind;
   /** As on Modifier; the crit term has none (its range is the roll's critFrom–critTo). */
   detail?: string;
+  /** As on Modifier. */
+  itemId?: string;
   value: number;
 }
 

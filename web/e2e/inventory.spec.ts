@@ -64,7 +64,7 @@ test("the Inventory tab lists every item with its type, behaviour and count; + o
     ["arrows_plus3", "Arrows +3", "arrow", "Stock", "2"],
     ["fire_flask", "Fire flasks", "flask", "Stock", "5"],
     ["wand_lightning", "Wand of lightning", "wand", "Charges", "4"],
-    ["power_gem_dispel", "Power Gem: Dispel Magic", "gem", "Daily", "1 / 1"],
+    ["power_gem_dispel", "Power Gem", "gem", "Daily", "1 / 1"],
   ];
   for (const [id, name, type, behaviour, n] of rows) {
     await expect(row(page, id)).toContainText(name);
@@ -226,9 +226,9 @@ test("a long rest refills the gem (daily) and nothing else", async ({
   page,
 }) => {
   await openInventory(page);
-  await minus(page, "Power Gem: Dispel Magic").click();
+  await minus(page, "Power Gem").click();
   await expect(count(page, "power_gem_dispel")).toHaveText("0 / 1");
-  await expect(minus(page, "Power Gem: Dispel Magic")).toBeDisabled();
+  await expect(minus(page, "Power Gem")).toBeDisabled();
   await expect(row(page, "power_gem_dispel")).toBeVisible();
   for (const [name, id, left] of [
     ["Wand of lightning", "wand_lightning", "3"],
@@ -281,7 +281,7 @@ test("an empty item is refused by the API, and a stale − shows the error", asy
   });
 
   await expect(count(page, "power_gem_dispel")).toHaveText("1 / 1");
-  await minus(page, "Power Gem: Dispel Magic").click();
+  await minus(page, "Power Gem").click();
   await expect(page.getByRole("alert")).toContainText("empty");
   await expect(count(page, "power_gem_dispel")).toHaveText("0 / 1");
   await snap(page, "use-at-zero-error");

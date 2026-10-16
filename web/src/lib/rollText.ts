@@ -3,6 +3,7 @@
 import type { TFunction } from "i18next";
 import type { RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
+import { namedDetail, type ItemNamer } from "./itemPowers";
 
 /** A multiplier inside a formula, with at least one decimal: 2.0, 1.5, 1.25 (1,5 in French). */
 export function formatMultiplier(n: number, lang?: string): string {
@@ -50,13 +51,14 @@ export function itemRollText(r: UseResult): string {
 
 /**
  * A modifier's or damage term's label in the player's language (detail = score, weapon, ammo or
- * buff name). The crit term is labelled with the roll's crit-table range (none: the default
+ * buff name; an item power's is named from its item by id, ADR 0016 step 14). The crit term is labelled with the roll's crit-table range (none: the default
  * placeholder table); an unnamed situational modifier gets the generic word.
  */
 export function modLabel(
   t: TFunction,
-  m: { kind: string; detail?: string; value: number },
+  m: { kind: string; detail?: string; itemId?: string; value: number },
   roll?: { critPlaceholder?: boolean; critFrom?: number; critTo?: number },
+  itemName?: ItemNamer,
 ): string {
   if (m.kind === "crit") {
     return roll && !roll.critPlaceholder && roll.critFrom
@@ -65,5 +67,8 @@ export function modLabel(
   }
   if (m.kind === "situational" && !m.detail)
     return t("result.mods.situationalUnnamed");
-  return t(`result.mods.${m.kind}`, { detail: m.detail ?? "", value: m.value });
+  return t(`result.mods.${m.kind}`, {
+    detail: namedDetail(m, itemName) ?? "",
+    value: m.value,
+  });
 }

@@ -7,6 +7,7 @@ import { useDiceStore } from "@/stores/dice";
 import { useAttackStore } from "@/stores/attack";
 import { useFilStore } from "@/stores/fil";
 import { useLogStore } from "@/stores/log";
+import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
 import { formatFactor, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ import {
   tellGmWithCrit,
 } from "@/lib/attackAdjust";
 import { damageFormula, itemRollText, modLabel } from "@/lib/rollText";
+import { itemNamer } from "@/lib/itemPowers";
 import {
   cardHeader,
   cardModel,
@@ -294,6 +296,7 @@ function AttackResult({
   interactive: boolean;
 }) {
   const { t, i18n } = useTranslation();
+  const itemName = itemNamer(useItemsStore((st) => st.items));
   const detailOpen = useFilStore((s) => s.detailOpen);
   const setDetailOpen = useFilStore((s) => s.setDetailOpen);
   const settled = attackSettled(r);
@@ -472,7 +475,7 @@ function AttackResult({
                 {r.modifiers.map((m, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="min-w-0 break-words">
-                      {modLabel(t, m)}
+                      {modLabel(t, m, undefined, itemName)}
                     </span>
                     <span className="tabular-nums">
                       {formatSigned(m.value)}
@@ -492,7 +495,7 @@ function AttackResult({
                 {r.damageTerms.map((d, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="min-w-0 break-words">
-                      {modLabel(t, d, r)}
+                      {modLabel(t, d, r, itemName)}
                     </span>
                     <span className="tabular-nums">
                       {d.term === "spells" ||
@@ -684,6 +687,7 @@ function SaveResult({
   interactive: boolean;
 }) {
   const { t } = useTranslation();
+  const itemName = itemNamer(useItemsStore((st) => st.items));
   const name = t(`saves.categories.${s.category}`, {
     defaultValue: s.category,
   });
@@ -729,7 +733,9 @@ function SaveResult({
         >
           {mods.map((m, i) => (
             <li key={i} className="flex justify-between gap-2">
-              <span className="min-w-0 break-words">{modLabel(t, m)}</span>
+              <span className="min-w-0 break-words">
+                {modLabel(t, m, undefined, itemName)}
+              </span>
               <span className="tabular-nums">{formatSigned(m.value)}</span>
             </li>
           ))}

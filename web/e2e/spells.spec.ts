@@ -189,10 +189,11 @@ test("the spell names follow the language: the catalogue's French name, English 
   await expect(buff).toContainText("Image miroir");
 
   // Next turn expires the spell's buff and a hand-made one together: each named its own way.
-  const buffs = (await (await fetch(`${stack.apiUrl}/api/buffs`)).json()) as {
-    id: string;
-    spellId?: string;
-  }[];
+  const { buffs } = (await (
+    await fetch(`${stack.apiUrl}/api/buffs`)
+  ).json()) as {
+    buffs: { id: string; spellId?: string }[];
+  };
   const mirror = buffs.find((b) => b.spellId === "mirror_image");
   expect(mirror).toBeDefined();
   for (const [url, method, body] of [

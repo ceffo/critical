@@ -1,33 +1,40 @@
-import type { BuffEdit, BuffEffect, SavedBuff, Strength } from "../types/buffs";
+import type {
+  BuffEdit,
+  BuffEffect,
+  BuffList,
+  SavedBuff,
+  Strength,
+} from "../types/buffs";
 import { post, request } from "./http";
 
-export function fetchActiveBuffs(): Promise<BuffEffect[]> {
-  return request<BuffEffect[]>("/api/buffs");
+/** The effects list: the active buffs and the item powers that are on (ADR 0016 step 13). */
+export function fetchActiveBuffs(): Promise<BuffList> {
+  return request<BuffList>("/api/buffs");
 }
 
 export function activateBuff(
   buff: Omit<Partial<BuffEffect>, "startRound">,
-): Promise<BuffEffect[]> {
-  return post<BuffEffect[]>("/api/buffs", buff);
+): Promise<BuffList> {
+  return post<BuffList>("/api/buffs", buff);
 }
 
-export function editBuff(id: string, edit: BuffEdit): Promise<BuffEffect[]> {
-  return request<BuffEffect[]>(`/api/buffs/${encodeURIComponent(id)}`, {
+export function editBuff(id: string, edit: BuffEdit): Promise<BuffList> {
+  return request<BuffList>(`/api/buffs/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(edit),
   });
 }
 
-export function dismissBuff(id: string): Promise<BuffEffect[]> {
-  return request<BuffEffect[]>(`/api/buffs/${encodeURIComponent(id)}`, {
+export function dismissBuff(id: string): Promise<BuffList> {
+  return request<BuffList>(`/api/buffs/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
 
 /** One charge absorbed a hit (Stoneskin layer, Mirror Image). */
-export function triggerBuff(id: string): Promise<BuffEffect[]> {
-  return post<BuffEffect[]>(`/api/buffs/${encodeURIComponent(id)}/trigger`);
+export function triggerBuff(id: string): Promise<BuffList> {
+  return post<BuffList>(`/api/buffs/${encodeURIComponent(id)}/trigger`);
 }
 
 export function fetchStrength(): Promise<Strength> {

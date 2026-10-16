@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RollResult } from "@/types/combat";
+import type { DamageTerm, RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import i18next from "i18next";
 import { resources } from "@/i18n";
@@ -156,5 +156,47 @@ describe("modLabel", () => {
     expect(
       modLabel(await makeT("fr"), { kind: "situational", value: -4 }),
     ).toBe("Situationnel");
+  });
+
+  // ADR 0016 step 14: an item power's contribution is named from its item by id (its current
+  // name); without an item id, or when no item has it any more, the stored detail.
+  it("names an item power's term from the item, the stored name otherwise", async () => {
+    const en = await makeT("en");
+    const names: Record<string, string> = {
+      power_gem_dispel: "Gemme de puissance",
+    };
+    const itemName = (id: string) => names[id];
+    const gem = {
+      kind: "weapon_buff",
+      detail: "Power Gem",
+      itemId: "power_gem_dispel",
+      value: 5,
+    };
+    expect(modLabel(en, gem, undefined, itemName)).toBe(
+      "Gemme de puissance: weapon +5",
+    );
+    // The dice-multiplier damage term (a DamageTerm is labelled the same way).
+    const diceTerm: DamageTerm = {
+      term: "dice_multiplier",
+      kind: "buff",
+      detail: "Power Gem",
+      itemId: "power_gem_dispel",
+      value: 2,
+    };
+    expect(modLabel(en, diceTerm, undefined, itemName)).toBe(
+      "Gemme de puissance",
+    );
+    expect(
+      modLabel(en, { ...gem, itemId: "sold_gem" }, undefined, itemName),
+    ).toBe("Power Gem: weapon +5");
+    expect(
+      modLabel(
+        en,
+        { kind: "buff", detail: "power_gem_dispel", value: 1 },
+        undefined,
+        itemName,
+      ),
+    ).toBe("power_gem_dispel");
+    expect(modLabel(en, gem)).toBe("Power Gem: weapon +5");
   });
 });

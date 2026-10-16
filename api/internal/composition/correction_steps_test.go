@@ -303,3 +303,35 @@ func TestCorrectionStep_SaveThenAttackCorrection(t *testing.T) {
 	v, _ = attackOf(t, bs, shot.LogEntryID)
 	assert.Equal(t, 5, *v.TargetAC)
 }
+
+// ADR 0006 steps 5 and 8: a save logged before the adjustment moved the
+// target (no rollTotal, no adjustedTarget stored) can still be adjusted; the
+// amend carries both, computed from the stored numbers, and undoing it goes
+// back to the save as logged.
+func TestCorrectionStep_AdjustASaveLoggedBeforeTheTargetMoved(t *testing.T) {
+	bs := newBacking(t)
+	ctx, id := context.Background(), bs.CharacterID
+	old := `{"category":"spell","d20Roll":13,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
+		`"rolledPassed":true,"adjustment":0,"total":14,"passed":true,"margin":0}`
+	saveID, err := bs.Log.Record(ctx, actionlog.NewEntry{CharacterID: id, Kind: actionlog.KindSave, Payload: json.RawMessage(old)})
+	require.NoError(t, err)
+
+	res, err := bs.Combat.AdjustSave(ctx, id, saveID, combatsvc.SaveAdjustment{Value: -2})
+	require.NoError(t, err)
+	assert.Equal(t, 14, res.SaveRollTotal)
+	assert.Equal(t, 16, res.SaveAdjustedTarget)
+	assert.False(t, res.Hit)
+	assert.Equal(t, -2, res.HitMargin)
+
+	var p map[string]any
+	require.NoError(t, json.Unmarshal(entryByID(t, bs, saveID).EffectivePayload(), &p))
+	assert.Equal(t, 14.0, p["rollTotal"], "stored in the amend")
+	assert.Equal(t, 16.0, p["adjustedTarget"], "stored in the amend")
+	assert.Equal(t, true, p["rolledPassed"])
+	assert.Equal(t, true, p["previousPassed"])
+
+	undoCorrection(t, bs, saveID)
+	e := entryByID(t, bs, saveID)
+	assert.JSONEq(t, old, string(e.EffectivePayload()), "back to the save as logged")
+	assert.Equal(t, saveID, topID(t, bs))
+}

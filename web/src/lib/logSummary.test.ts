@@ -468,6 +468,15 @@ describe("entryText for saves", () => {
     );
   });
 
+  it("renders a removed adjustment in French", async () => {
+    const t = await makeT("fr");
+    expect(
+      entryText(entry("save", { ...rolled, previousPassed: true }), t),
+    ).toBe(
+      "Sauvegarde contre Sorts : d20 12 contre 14, ajustement retiré : RÉUSSIE → ÉCHOUÉE",
+    );
+  });
+
   it("falls back to the server summary on an unknown payload", async () => {
     const t = await makeT("en");
     expect(entryText(entry("save", {}), t)).toBe("server summary");

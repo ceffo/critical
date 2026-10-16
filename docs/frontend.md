@@ -195,16 +195,18 @@ flowchart TD
   composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and the Description
   toggle.
 - Spell name search (one module for Lookup and Receive): `api/spells_db.ts` `searchSpells` sends
-  `q`; the server matches it against the English and the French catalogue names (case, accents and
-  ligatures ignored) and ranks exact > prefix > contains over the better of the two, then level, name.
-- Spell names and descriptions (ADR 0021): the catalogue is the only source. A spell DTO carries
-  `name` / `description` (English) and `name_fr` / `description_fr` (absent without French);
-  `spellTexts(lang, spell)` (`i18n/spellName.ts`) picks French per field in the French UI. A spell
+  `q`; the server matches it against the catalogue names in every language (case, accents and
+  ligatures ignored) and ranks exact > prefix > contains over the best of them, then level, name.
+- Spell names and descriptions (ADR 0021, ADR 0023): the catalogue is the only source. Every text of a
+  spell DTO (`name`, `description`, `school`, `sphere`, the six stat texts) is a language map
+  (`LocalizedText`, `types/localized.ts`); `localized(lang, text)` (`i18n/localized.ts`) picks the UI
+  language and falls back to English per field, and `spellTexts` / `spellName` (`i18n/spellName.ts`)
+  and `statText` use it. No type has a property per language. A spell
   known only by id (spellbook, slots, journal, cast and exposure cards, the add-effect form, HP bar) is named by
   `useSpellName()`, over every spell's names loaded once at start (`GET /api/spells/names`,
   `stores/spellNames.ts`); lib functions that word spells (`entryText`, `cardModel`, `cardHeader`,
-  the undo/redo labels) take that namer as a parameter (English names by default). The lookup row
-  and heading add the other language's name in grey. Descriptions are the catalogue's Markdown
+  the undo/redo labels) take that namer as a parameter (English names by default). The lookup shows
+  a spell's name in the UI language only. Descriptions are the catalogue's Markdown
   subset, parsed by `lib/spellMarkdown.ts` and rendered as React text by
   `components/dashboard/SpellDescription.tsx` (paragraphs, bullet lists, tables with role-token
   borders and a muted header, a wide table scrolling sideways in its own box) in the lookup and the

@@ -251,13 +251,27 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   upserts every spell by `spells.key`, deletes the spells the artifact dropped unless the seeds or the game
   state (slots, undo snapshots, log payloads) refer to them, and records the version. Each step and its test
   are in ADR 0021 step 5.
-- **Columns**: `spells.key` (the artifact id, unique; NULL on older duplicate rows, never served),
-  `name`/`description` (English), `name_fr`/`description_fr` (NULL without a French text), `source`, the six
-  raw stat texts and their typed `stats` JSON.
-- **REST**: spell payloads carry `name`, `description`, `name_fr` and `description_fr` (both omitted when
-  the catalogue has no French text: the client shows French when present and falls back to English per
-  field) and `source`. Descriptions are in the catalogue's Markdown subset (paragraphs, `- ` lists, pipe
-  tables).
+- **Columns**: `spells.key` (the artifact id, unique; NULL on older duplicate rows, never served), `class`,
+  `level`, `source`, the typed `stats` JSON, and ten text columns (`name`, `description`, `school`, `sphere`,
+  the six raw stat texts) that hold a **key into `localized_texts`**, not text
+  ([ADR 0023](adr/0023-localized-text.md), migration 031).
+- **Localized text**: `localized_texts (text_id, lang, body)`, primary key `(text_id, lang)`, one row per
+  language present; English is the `en` row and the fallback. A text column is NULL (a text in no language,
+  such as a Wizard spell's sphere) or keys at least one row; an absent language has no row, never an empty
+  body. The importer keeps a spell's text keys across imports, writes only the rows that changed, deletes the
+  row of a language the artifact dropped (and the key of a text it dropped), deletes a removed spell's texts
+  with it, and gives a new text one more than the highest key. In Go a text is `localized.Text` (a map from
+  language code to body, `domain/localized`); the rules code and the stats parser read `Default()`, the
+  books' English. No column, field, JSON key or TS property is ever named for a language.
+- **Reading**: `spelldal.Search` reads only the texts a search filters and ranks on (name, school, sphere) in
+  one batched lookup by key through the primary key (`TestTextsQuery_SearchesThePrimaryKey` asserts the plan
+  never scans `localized_texts`); the service ranks the query against the names in every language, cuts the
+  page, then reads the page's full texts with one `Details` call.
+- **REST**: every text field of a spell payload (`name`, `description`, `school`, `sphere`, the six stat
+  texts) is a language map, `{"en": "…", "fr": "…"}`, holding only the languages the catalogue has (`{}` for
+  a text in none); `GET /api/spells/names` is `[{id, name: {en, fr?}}]`. The client picks its language and
+  falls back to English per field; there is no `lang` parameter. Descriptions are in the catalogue's Markdown
+  subset (paragraphs, `- ` lists, pipe tables).
 - **Checking a live database**: `CRITICAL_UPGRADE_CHECK_DB=<path to .db> go test -count=1 -run
   TestRealCatalogue_UpgradesACopyOfALiveDatabase ./internal/seedcheck` (from `api/`, with the real
   artifact fetched) imports the catalogue into a copy of that database and checks every reference resolves.

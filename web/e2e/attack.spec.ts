@@ -1,4 +1,3 @@
-import { DatabaseSync } from "node:sqlite";
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
@@ -368,9 +367,8 @@ test("only the latest roll's target AC can be corrected", async ({ page }) => {
   );
 });
 
-test("an attack logged before the multiplier d100 keeps the old crit text and can't be corrected", async ({
+test("an attack logged before the multiplier d100 keeps the old crit text", async ({
   page,
-  stack,
 }) => {
   await openAttack(page);
   const form = attackForm(page);
@@ -400,22 +398,23 @@ test("an attack logged before the multiplier d100 keeps the old crit text and ca
   await snap(page, "legacy-crit-card");
   await page.unroute("**/api/roll/attack");
 
-  // Make the stored entry an old one, as logged before the multiplier d100 existed.
-  const db = new DatabaseSync(stack.dbPath);
-  try {
-    const changed = db
-      .prepare(
-        "UPDATE action_log SET payload = json_remove(payload, '$.d100MultiplierRoll') WHERE kind = 'attack'",
-      )
-      .run();
-    expect(changed.changes).toBe(1);
-  } finally {
-    db.close();
-  }
-  const log = (await (await page.request.get("/api/log")).json()) as {
-    entries: { id: number; kind: string }[];
+  // Serve the stored entry as an old one, as logged before the multiplier d100 existed (the API's
+  // refusal to correct such an entry is a Go test: combatsvc adjust_attack_test).
+  const asLogged = (p: unknown) => {
+    if (p && typeof p === "object")
+      delete (p as Record<string, unknown>).d100MultiplierRoll;
   };
-  const id = log.entries.find((e) => e.kind === "attack")!.id;
+  await page.route(/\/api\/log(\?.*)?$/, async (route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as {
+      entries: { kind: string; payload: unknown; effectivePayload: unknown }[];
+    };
+    for (const e of body.entries.filter((e) => e.kind === "attack")) {
+      asLogged(e.payload);
+      asLogged(e.effectivePayload);
+    }
+    await route.fulfill({ response: res, json: body });
+  });
 
   await page.reload();
   await expect(logEntry(page, "Long Sword +2 vs AC 1000")).toContainText(
@@ -424,12 +423,6 @@ test("an attack logged before the multiplier d100 keeps the old crit text and ca
   await expect(logEntry(page, "Long Sword +2 vs AC 1000")).not.toContainText(
     "multiplier",
   );
-
-  const res = await page.request.post(`/api/roll/attack/${id}/adjust`, {
-    data: { targetAc: 5 },
-  });
-  expect(res.status()).toBe(400);
-  expect((await res.json()).error).toContain("undo it and roll again");
 });
 
 test("a miss corrected into a crit shows both d100s on the card and in the log", async ({

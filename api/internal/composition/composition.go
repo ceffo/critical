@@ -31,6 +31,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
@@ -38,7 +39,8 @@ import (
 // resolved character id (single-character mode). Routers select which slices
 // to mount.
 type BackingServices struct {
-	// DB is the SQLite handle, set by New only (nil when built over mocks).
+	// DB is the SQLite handle, set by New on a database only (nil when built
+	// over mocks or in memory).
 	DB          *sqlite.DB
 	CharacterID int64
 
@@ -65,7 +67,12 @@ type BackingServices struct {
 // Config is what cmd/api passes to New. Each field is set from env in
 // internal/cmd/api/start.go.
 type Config struct {
-	DSN      string
+	// DSN is the database New opens, unless InMemory.
+	DSN string
+	// InMemory makes New wire the in-memory storage instead of opening DSN
+	// (ADR 0025 step 8: the e2e mode; the boot refuses it in staging and
+	// production).
+	InMemory bool
 	SeedsDir string
 	// Catalogue is the path of the spell catalogue artifact (ADR 0021),
 	// imported into the database at startup.
@@ -82,10 +89,14 @@ type Dice interface {
 	RollD100() int
 }
 
-// New opens the SQLite database and wires the real adapters over it, then
-// builds the services (Build). Returns an initialized BackingServices ready to
-// be mounted on a router.
+// New opens the SQLite database and wires the real adapters over it (or, with
+// cfg.InMemory, wires the in-memory storage and opens nothing), then builds
+// the services (Build). Returns an initialized BackingServices ready to be
+// mounted on a router.
 func New(ctx context.Context, cfg Config) (*BackingServices, error) {
+	if cfg.InMemory {
+		return Build(ctx, memoryStorage(memory.New()), cfg)
+	}
 	db, err := sqlite.Open(cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)

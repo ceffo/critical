@@ -9,7 +9,7 @@ import (
 // clearEnv unsets the vars for the test and restores them afterwards.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR"} {
+	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR", "CRITICAL_STORAGE", "FLY_APP_NAME"} {
 		t.Setenv(k, "") // registers restore of the original value
 		_ = os.Unsetenv(k)
 	}
@@ -63,6 +63,53 @@ func TestConfigValidate_RejectsEmpty(t *testing.T) {
 		if c.Validate() == nil {
 			t.Fatalf("expected error for %+v", c)
 		}
+	}
+}
+
+// ADR 0025 step 8: CRITICAL_STORAGE=memory selects the in-memory storage;
+// step 8.3: it is refused on a fly.io machine (FLY_APP_NAME, set by fly on
+// every machine of staging and production) and in the production image
+// (CRITICAL_WEB_DIR), and any other value is refused.
+func TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage(t *testing.T) {
+	base := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c"}
+	with := func(f func(*Config)) Config {
+		c := base
+		f(&c)
+		return c
+	}
+	cases := []struct {
+		name string
+		cfg  Config
+		ok   bool
+	}{
+		{"database by default", base, true},
+		{"memory for e2e", with(func(c *Config) { c.Storage = StorageMemory }), true},
+		{"memory on fly", with(func(c *Config) { c.Storage, c.FlyApp = StorageMemory, "critical-prod" }), false},
+		{"memory in the production image", with(func(c *Config) { c.Storage, c.WebDir = StorageMemory, "/app/web" }), false},
+		{"unknown storage", with(func(c *Config) { c.Storage = "sqlite" }), false},
+		{"database on fly", with(func(c *Config) { c.FlyApp, c.WebDir = "critical-prod", "/app/web" }), true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if err := c.cfg.Validate(); (err == nil) != c.ok {
+				t.Fatalf("Validate(%+v) = %v, want ok=%v", c.cfg, err, c.ok)
+			}
+		})
+	}
+}
+
+// The storage and the fly marker are read from the environment, and the
+// refusal is loadConfig's, before anything is opened.
+func TestLoadConfig_InMemoryStorage(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("CRITICAL_STORAGE", "memory")
+	cfg, err := loadConfig()
+	if err != nil || cfg.Storage != StorageMemory {
+		t.Fatalf("got %+v, %v", cfg, err)
+	}
+	t.Setenv("FLY_APP_NAME", "critical-staging")
+	if _, err := loadConfig(); err == nil {
+		t.Fatal("CRITICAL_STORAGE=memory on a fly machine must be refused")
 	}
 }
 

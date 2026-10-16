@@ -1,6 +1,10 @@
 package spelleffectsvc
 
-import "github.com/ceffo/critical/api/pkg/formula"
+import (
+	"errors"
+
+	"github.com/ceffo/critical/api/pkg/formula"
+)
 
 // Kind classifies what a spell does to the combat/buff engine.
 type Kind string
@@ -216,6 +220,20 @@ type Entry struct {
 	GrantSlots  *GrantSlots
 	ConsumeItem *ConsumeItem
 	AttackRoll  bool
+}
+
+// ErrNotAnEffect is a spell added as an effect that adds no buff (ADR 0004
+// step 19): a damage or utility spell, a low-confidence entry, an ability set
+// applied by hand, or no entry at all.
+var ErrNotAnEffect = errors.New("spell is not an effect")
+
+// AddsBuff reports whether the spell puts a buff on the character when it
+// lands on him: a buff entry the extraction trusts that sets no ability (an
+// ability set is for one body part only and is applied by hand). It is what
+// the lookup offers as an effect (ADR 0004 step 19) and what a cast or a
+// receive puts on the buff list.
+func (e Entry) AddsBuff() bool {
+	return e.Kind == KindBuff && e.Confidence != ConfidenceLow && (e.Buff == nil || len(e.Buff.AbilitySet) == 0)
 }
 
 // SlotSplits lists every way the caster may split g.Levels spell levels into

@@ -1,5 +1,6 @@
 // Package casthdl exposes POST /api/spells/{id}/cast,
-// POST /api/spells/receive and POST /api/spells/exposure.
+// POST /api/spells/receive, POST /api/spells/effect and
+// POST /api/spells/exposure.
 package casthdl
 
 import (
@@ -28,6 +29,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type castSvc interface {
 	Cast(ctx context.Context, characterID int64, slotIndex int, req castsvc.CastRequest) (castsvc.CastResult, error)
 	Receive(ctx context.Context, characterID int64, req castsvc.ReceiveRequest) (castsvc.CastResult, error)
+	AddEffect(ctx context.Context, characterID int64, req castsvc.AddEffectRequest) (castsvc.CastResult, error)
 	Expose(ctx context.Context, characterID int64, req castsvc.ExposureRequest) (castsvc.ExposureResult, error)
 }
 
@@ -35,6 +37,7 @@ type castSvc interface {
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc castsvc.SVC) {
 	r.Post("/api/spells/{id}/cast", render.Handle(Cast(charID, svc)))
 	r.Post("/api/spells/receive", render.Handle(Receive(charID, svc)))
+	r.Post("/api/spells/effect", render.Handle(AddEffect(charID, svc)))
 	r.Post("/api/spells/exposure", render.Handle(Expose(charID, svc)))
 }
 
@@ -153,6 +156,29 @@ func Receive(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
 			return render.BadRequestError("invalid JSON body")
 		}
 		res, err := svc.Receive(r.Context(), charID(r), castsvc.ReceiveRequest{SpellID: body.SpellID, CasterLevel: body.CasterLevel, Mode: body.Mode})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, ToDTO(res))
+		return nil
+	}
+}
+
+// AddEffectRequestDTO is the body of POST /api/spells/effect: a spell added
+// as an effect on the Bard at his level (ADR 0004 step 19).
+type AddEffectRequestDTO struct {
+	SpellID string `json:"spellId"`
+}
+
+// AddEffect puts a spell that adds a buff on the Bard at his level: no slot,
+// no damage.
+func AddEffect(charID CharacterIDFunc, svc castSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body AddEffectRequestDTO
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid JSON body")
+		}
+		res, err := svc.AddEffect(r.Context(), charID(r), castsvc.AddEffectRequest{SpellID: body.SpellID})
 		if err != nil {
 			return err
 		}

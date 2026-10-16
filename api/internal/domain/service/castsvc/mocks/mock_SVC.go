@@ -25,6 +25,121 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// AddEffect provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) AddEffect(ctx context.Context, characterID int64, req castsvc.AddEffectRequest) (castsvc.CastResult, error) {
+	ret := _m.Called(ctx, characterID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddEffect")
+	}
+
+	var r0 castsvc.CastResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, castsvc.AddEffectRequest) (castsvc.CastResult, error)); ok {
+		return rf(ctx, characterID, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, castsvc.AddEffectRequest) castsvc.CastResult); ok {
+		r0 = rf(ctx, characterID, req)
+	} else {
+		r0 = ret.Get(0).(castsvc.CastResult)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, castsvc.AddEffectRequest) error); ok {
+		r1 = rf(ctx, characterID, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AddEffect_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddEffect'
+type MockSVC_AddEffect_Call struct {
+	*mock.Call
+}
+
+// AddEffect is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - req castsvc.AddEffectRequest
+func (_e *MockSVC_Expecter) AddEffect(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_AddEffect_Call {
+	return &MockSVC_AddEffect_Call{Call: _e.mock.On("AddEffect", ctx, characterID, req)}
+}
+
+func (_c *MockSVC_AddEffect_Call) Run(run func(ctx context.Context, characterID int64, req castsvc.AddEffectRequest)) *MockSVC_AddEffect_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(castsvc.AddEffectRequest))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AddEffect_Call) Return(_a0 castsvc.CastResult, _a1 error) *MockSVC_AddEffect_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AddEffect_Call) RunAndReturn(run func(context.Context, int64, castsvc.AddEffectRequest) (castsvc.CastResult, error)) *MockSVC_AddEffect_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// AddsEffect provides a mock function with given fields: ctx, spellID
+func (_m *MockSVC) AddsEffect(ctx context.Context, spellID string) (bool, error) {
+	ret := _m.Called(ctx, spellID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddsEffect")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (bool, error)); ok {
+		return rf(ctx, spellID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) bool); ok {
+		r0 = rf(ctx, spellID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, spellID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AddsEffect_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddsEffect'
+type MockSVC_AddsEffect_Call struct {
+	*mock.Call
+}
+
+// AddsEffect is a helper method to define mock.On call
+//   - ctx context.Context
+//   - spellID string
+func (_e *MockSVC_Expecter) AddsEffect(ctx interface{}, spellID interface{}) *MockSVC_AddsEffect_Call {
+	return &MockSVC_AddsEffect_Call{Call: _e.mock.On("AddsEffect", ctx, spellID)}
+}
+
+func (_c *MockSVC_AddsEffect_Call) Run(run func(ctx context.Context, spellID string)) *MockSVC_AddsEffect_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AddsEffect_Call) Return(_a0 bool, _a1 error) *MockSVC_AddsEffect_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AddsEffect_Call) RunAndReturn(run func(context.Context, string) (bool, error)) *MockSVC_AddsEffect_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Cast provides a mock function with given fields: ctx, characterID, slotIndex, req
 func (_m *MockSVC) Cast(ctx context.Context, characterID int64, slotIndex int, req castsvc.CastRequest) (castsvc.CastResult, error) {
 	ret := _m.Called(ctx, characterID, slotIndex, req)

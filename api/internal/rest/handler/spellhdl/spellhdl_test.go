@@ -65,6 +65,11 @@ func (f fakeChars) GetCharacter(context.Context, int64) (*charactersvc.Character
 // modes are ice_storm's: hail (3d10 cold) and sleet (no damage).
 type fakeDamage struct{ levels *[]int }
 
+// AddsEffect: only "strength" adds a buff.
+func (f fakeDamage) AddsEffect(_ context.Context, id string) (bool, error) {
+	return id == "strength", nil
+}
+
 func (f fakeDamage) ModesAt(_ context.Context, id string, level int) ([]spelleffectsvc.ModeAt, error) {
 	if id != "ice_storm" {
 		return nil, nil
@@ -467,4 +472,26 @@ func TestSearch_ServesExposureAtTheCasterLevel(t *testing.T) {
 	assert.JSONEq(t, `{"damage":{"caster_level":9,"type":"poison","dice":{"groups":[{"count":1,"sides":10}],"modifier":0},
 		"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":1}}}`, string(page.Items[0].Exposure))
 	assert.Nil(t, page.Items[1].Exposure, "fireball has no exposure")
+}
+
+// ADR 0004 step 19: each spell of the page says whether it can be added as
+// an effect (absent when not), whatever the caster level.
+func TestSearch_EffectFlag(t *testing.T) {
+	svc := fakeSvc{spells: []spellsvc.Spell{
+		{ID: "strength", Name: localized.Of("Strength")},
+		{ID: "fireball", Name: localized.Of("Fireball")},
+	}}
+	for _, url := range []string{"/api/spells", "/api/spells?caster_level=3"} {
+		h := render.Handle(spellhdl.Search(func(*http.Request) int64 { return 1 }, svc, fakeChars{err: errors.New("no character")}, fakeDamage{}))
+		rec := httptest.NewRecorder()
+		h(rec, httptest.NewRequest(http.MethodGet, url, nil))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var page struct {
+			Items []map[string]any `json:"items"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+		require.Len(t, page.Items, 2)
+		assert.Equal(t, true, page.Items[0]["effect"], url)
+		assert.NotContains(t, page.Items[1], "effect", url)
+	}
 }

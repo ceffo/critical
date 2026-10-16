@@ -5,8 +5,10 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
 	"github.com/ceffo/critical/api/internal/adapters/attackformdal"
+	formq "github.com/ceffo/critical/api/internal/adapters/attackformdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
+	charq "github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
 	critq "github.com/ceffo/critical/api/internal/adapters/critdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/dicedal"
@@ -14,10 +16,14 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	hpq "github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
+	itemq "github.com/ceffo/critical/api/internal/adapters/itemdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/skilldal"
 	skillq "github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
+	"github.com/ceffo/critical/api/internal/adapters/textdal"
+	textq "github.com/ceffo/critical/api/internal/adapters/textdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
+	weaponq "github.com/ceffo/critical/api/internal/adapters/weapondal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/xpdal"
 	xpq "github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
@@ -98,18 +104,20 @@ type Storage struct {
 // step 5.2).
 func sqliteStorage(db *sqlite.DB) Storage {
 	routed := sqlite.Routed(db)
+	// Item and weapon names are localized texts (ADR 0023 step 9).
+	texts := textdal.New(textq.New(routed))
 	return Storage{
 		Store:        db,
-		Character:    characterdal.New(db),
+		Character:    characterdal.New(charq.New(routed)),
 		HP:           hpdal.New(hpq.New(routed)),
 		Log:          actionlogdal.New(db),
 		Buff:         buffdal.New(db),
 		Spell:        spelldal.New(db),
-		Weapons:      weapondal.New(db),
-		WeaponEditor: weapondal.NewEditor(db),
+		Weapons:      weapondal.New(weaponq.New(routed), texts),
+		WeaponEditor: weapondal.NewEditor(weaponq.New(routed), texts),
 		Crit:         critdal.New(critq.New(routed)),
-		Items:        itemdal.New(db),
-		Forms:        attackformdal.New(db),
+		Items:        itemdal.New(itemq.New(routed), texts),
+		Forms:        attackformdal.New(formq.New(routed)),
 		XP:           xpdal.New(xpq.New(routed)),
 		Skill:        skilldal.New(skillq.New(routed)),
 		Dice:         dicedal.New(diceq.New(routed)),

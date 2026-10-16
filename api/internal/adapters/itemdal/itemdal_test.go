@@ -1,259 +1,269 @@
+// The adapter runs on mocked Queriers (its own and the localized texts'): the
+// tests assert the operations called, their arguments and how rows map to
+// items; no database, no SQL text (ADR 0025 step 6.2). What only the SQL
+// decides (sheet order, the count never below 0, which behaviour a daily
+// reset refills) is checked by sqlc at generate time and by running the app
+// (step 7).
 package itemdal_test
 
 import (
 	"context"
-	"path/filepath"
-	"sync"
+	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
+	"github.com/ceffo/critical/api/internal/adapters/itemdal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/itemdal/queries/mocks"
+	"github.com/ceffo/critical/api/internal/adapters/textdal"
+	textq "github.com/ceffo/critical/api/internal/adapters/textdal/queries"
+	textmocks "github.com/ceffo/critical/api/internal/adapters/textdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-func openDB(t *testing.T) *sqlite.DB {
+func mocked(t *testing.T) (*itemdal.DAL, *mocks.MockQuerier, *textmocks.MockQuerier) {
 	t.Helper()
-	return openDSN(t, filepath.Join(t.TempDir(), "t.db"))
+	q, tq := mocks.NewMockQuerier(t), textmocks.NewMockQuerier(t)
+	return itemdal.New(q, textdal.New(tq)), q, tq
 }
 
-func openDSN(t *testing.T, dsn string) *sqlite.DB {
+func powers(t *testing.T) ([]itemsvc.Power, string) {
 	t.Helper()
-	db, err := sqlite.Open(dsn)
+	p := []itemsvc.Power{{ID: "glow", MinStr: new(18)}}
+	raw, err := itemsvc.EncodePowers(p)
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	require.NoError(t, db.Migrate(context.Background()))
-	return db
+	return p, raw
 }
 
-func insert(t *testing.T, db *sqlite.DB, id string, pos, count, maxCount int, b itemsvc.Behaviour) {
-	t.Helper()
-	// The name is a localized_texts key (ADR 0023 step 9): one per position.
-	_, err := db.Exec(`INSERT INTO localized_texts (text_id, lang, body) VALUES (?, 'en', ?)`, 100+pos, "Name "+id)
-	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO items (id, position, name, type, behaviour, count, max_count, effect_dice)
-		VALUES (?, ?, ?, 'wand', ?, ?, ?, '6d6')`, id, pos, 100+pos, string(b), count, maxCount)
-	require.NoError(t, err)
+var wandRow = queries.Item{
+	ID: "wand_lightning", Position: 3, Name: 13, Type: "wand", Behaviour: "charges",
+	Count: 4, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand", Notes: "hum",
 }
 
-func count(t *testing.T, db *sqlite.DB, id string) int {
-	t.Helper()
-	var n int
-	require.NoError(t, db.QueryRow(`SELECT count FROM items WHERE id = ?`, id).Scan(&n))
-	return n
+var wandItem = itemsvc.Item{
+	ID: "wand_lightning", Position: 3, Name: localized.Text{"en": "Wand"}, Type: "wand", Behaviour: itemsvc.BehaviourCharges,
+	Count: 4, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand", Notes: "hum",
 }
 
-func TestListAndMapping(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "b", 1, 4, 4, itemsvc.BehaviourCharges)
-	insert(t, db, "a", 0, 1, 1, itemsvc.BehaviourDaily)
+func wandName() []textq.GetTextRow { return []textq.GetTextRow{{Lang: "en", Body: "Wand"}} }
 
-	got, err := itemdal.New(db).List(context.Background())
-	require.NoError(t, err)
-	require.Len(t, got, 2)
-	assert.Equal(t, "a", got[0].ID, "ordered by position, not id")
-	assert.Equal(t, itemsvc.Item{
-		ID: "a", Name: localized.Of("Name a"), Type: "wand", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1, EffectDice: "6d6",
-	}, got[0])
-}
-
-func TestDecrement_StopsAtZero(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "wand", 0, 2, 4, itemsvc.BehaviourCharges)
-	dal := itemdal.New(db)
+// The three behaviours with their type labels, the magic bonus, ammo kind
+// and powers map from the rows, in the query's order, each with the name
+// under its key.
+func TestList_MapsBehavioursFieldsAndNames(t *testing.T) {
 	ctx := context.Background()
+	dal, q, _ := mocked(t)
+	p, raw := powers(t)
 
-	got, err := dal.Decrement(ctx, "wand")
+	q.EXPECT().ListItems(ctx).Return([]queries.Item{
+		{ID: "arrows_plus1", Position: 0, Name: 10, Type: "arrow", Behaviour: "stock", MagicBonus: 1, AmmoKind: "arrow", Count: 18, MaxCount: 18},
+		{ID: "power_gem_dispel", Position: 1, Name: 11, Type: "gem", Behaviour: "daily", Count: 1, MaxCount: 1, Powers: raw},
+		wandRow,
+	}, nil).Once()
+	q.EXPECT().ItemNames(ctx).Return([]queries.LocalizedText{
+		{TextID: 13, Lang: "en", Body: "Wand"},
+		{TextID: 10, Lang: "en", Body: "Arrows +1"},
+		{TextID: 10, Lang: "fr", Body: "Flèches +1"},
+		{TextID: 11, Lang: "en", Body: "Power Gem"},
+	}, nil).Once()
+	got, err := dal.List(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, 1, got.Count)
-	got, err = dal.Decrement(ctx, "wand")
-	require.NoError(t, err)
-	assert.Equal(t, 0, got.Count)
-
-	_, err = dal.Decrement(ctx, "wand")
-	require.ErrorIs(t, err, itemsvc.ErrItemEmpty)
-	assert.Equal(t, 0, count(t, db, "wand"), "never below 0")
+	assert.Equal(t, []itemsvc.Item{
+		{
+			ID: "arrows_plus1", Position: 0, Name: localized.Text{"en": "Arrows +1", "fr": "Flèches +1"}, Type: "arrow",
+			Behaviour: itemsvc.BehaviourStock, MagicBonus: 1, AmmoKind: "arrow", Count: 18, MaxCount: 18,
+		},
+		{
+			ID: "power_gem_dispel", Position: 1, Name: localized.Text{"en": "Power Gem"}, Type: "gem",
+			Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1, Powers: p,
+		},
+		wandItem,
+	}, got)
 }
 
-func TestDecrement_UnknownItem(t *testing.T) {
-	db := openDB(t)
-	_, err := itemdal.New(db).Decrement(context.Background(), "nope")
+// A stored power list that does not decode is an error, not an item without
+// powers.
+func TestList_UndecodablePowersAreAnError(t *testing.T) {
+	ctx := context.Background()
+	dal, q, _ := mocked(t)
+
+	q.EXPECT().ListItems(ctx).Return([]queries.Item{{ID: "gem", Powers: `[{"oops":1}]`}}, nil).Once()
+	q.EXPECT().ItemNames(ctx).Return([]queries.LocalizedText{}, nil).Once()
+	_, err := dal.List(ctx)
+	require.Error(t, err)
+}
+
+// A spent count returns the updated row with its name; no row updated is
+// ErrItemEmpty when the item exists, ErrItemNotFound when it does not.
+func TestDecrement_UpdatedItemElseEmptyOrNotFound(t *testing.T) {
+	ctx := context.Background()
+	dal, q, tq := mocked(t)
+
+	spent := wandRow
+	spent.Count = 3
+	q.EXPECT().DecrementItem(ctx, "wand_lightning").Return(spent, nil).Once()
+	tq.EXPECT().GetText(ctx, int64(13)).Return(wandName(), nil).Once()
+	got, err := dal.Decrement(ctx, "wand_lightning")
+	require.NoError(t, err)
+	want := wandItem
+	want.Count = 3
+	assert.Equal(t, want, got)
+
+	mock.InOrder(
+		q.EXPECT().DecrementItem(ctx, "wand_lightning").Return(queries.Item{}, sql.ErrNoRows).Once(),
+		q.EXPECT().GetItem(ctx, "wand_lightning").Return(wandRow, nil).Once(),
+	)
+	_, err = dal.Decrement(ctx, "wand_lightning")
+	require.ErrorIs(t, err, itemsvc.ErrItemEmpty)
+
+	mock.InOrder(
+		q.EXPECT().DecrementItem(ctx, "nope").Return(queries.Item{}, sql.ErrNoRows).Once(),
+		q.EXPECT().GetItem(ctx, "nope").Return(queries.Item{}, sql.ErrNoRows).Once(),
+	)
+	_, err = dal.Decrement(ctx, "nope")
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
-func TestDecrement_ConcurrentUsesNeverOverspend(t *testing.T) {
-	// busy_timeout makes writers queue instead of failing with SQLITE_BUSY.
-	db := openDSN(t, "file:"+filepath.Join(t.TempDir(), "t.db")+"?_pragma=busy_timeout(5000)")
-	insert(t, db, "arrows", 0, 5, 5, itemsvc.BehaviourStock)
-	dal := itemdal.New(db)
-
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	ok, empty := 0, 0
-	for i := 0; i < 12; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_, err := dal.Decrement(context.Background(), "arrows")
-			mu.Lock()
-			defer mu.Unlock()
-			switch {
-			case err == nil:
-				ok++
-			case assert.ErrorIs(t, err, itemsvc.ErrItemEmpty):
-				empty++
-			}
-		}()
-	}
-	wg.Wait()
-	assert.Equal(t, 5, ok)
-	assert.Equal(t, 7, empty)
-}
-
-func TestDecrement_JoinsCtxTransaction(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "wand", 0, 2, 2, itemsvc.BehaviourCharges)
-	dal := itemdal.New(db)
-
-	err := db.InTx(context.Background(), func(ctx context.Context) error {
-		_, err := dal.Decrement(ctx, "wand")
-		require.NoError(t, err)
-		return assert.AnError
-	})
-	require.ErrorIs(t, err, assert.AnError)
-	assert.Equal(t, 2, count(t, db, "wand"), "rolled back with the surrounding transaction")
-}
-
-func TestResetDaily_OnlyRefillsDailyItems(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "gem", 0, 0, 1, itemsvc.BehaviourDaily)
-	insert(t, db, "wand", 1, 1, 4, itemsvc.BehaviourCharges)
-	insert(t, db, "arrows", 2, 3, 18, itemsvc.BehaviourStock)
-	dal := itemdal.New(db)
-
-	require.NoError(t, dal.ResetDaily(context.Background()))
-	assert.Equal(t, 1, count(t, db, "gem"), "daily gem refilled")
-	assert.Equal(t, 1, count(t, db, "wand"), "charges untouched")
-	assert.Equal(t, 3, count(t, db, "arrows"), "stock untouched")
-}
-
-func TestIncrement(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "arrows", 0, 0, 18, itemsvc.BehaviourStock)
-	dal := itemdal.New(db)
+func TestIncrement_AddsNAndReturnsTheUpdatedItem(t *testing.T) {
 	ctx := context.Background()
+	dal, q, tq := mocked(t)
 
-	got, err := dal.Increment(ctx, "arrows", 3)
+	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 3, ID: "wand_lightning"}).Return(wandRow, nil).Once()
+	tq.EXPECT().GetText(ctx, int64(13)).Return(wandName(), nil).Once()
+	got, err := dal.Increment(ctx, "wand_lightning", 3)
 	require.NoError(t, err)
-	assert.Equal(t, 3, got.Count)
-	assert.Equal(t, itemsvc.BehaviourStock, got.Behaviour)
-	assert.Equal(t, 3, count(t, db, "arrows"))
+	assert.Equal(t, wandItem, got)
 
+	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 1, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once()
 	_, err = dal.Increment(ctx, "nope", 1)
-	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
+	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
-func TestDeleteThenInsertRestoresTheItem(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "a", 0, 1, 1, itemsvc.BehaviourDaily)
-	insert(t, db, "wand", 1, 0, 4, itemsvc.BehaviourCharges)
-	insert(t, db, "z", 2, 1, 1, itemsvc.BehaviourStock)
-	dal := itemdal.New(db)
+func TestResetDaily_RunsTheDailyRefill(t *testing.T) {
 	ctx := context.Background()
-	before, err := dal.List(ctx)
-	require.NoError(t, err)
+	dal, q, _ := mocked(t)
 
-	require.NoError(t, dal.Delete(ctx, "wand"))
-	got, err := dal.List(ctx)
-	require.NoError(t, err)
-	assert.Len(t, got, 2)
-	assert.ErrorIs(t, dal.Delete(ctx, "wand"), itemsvc.ErrItemNotFound)
-
-	require.NoError(t, dal.Insert(ctx, before[1]))
-	got, err = dal.List(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, before, got, "same fields and list position")
+	q.EXPECT().ResetDailyItems(ctx).Return(nil).Once()
+	require.NoError(t, dal.ResetDaily(ctx))
 }
 
-func TestSetCount(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "arrows", 0, 2, 0, itemsvc.BehaviourStock)
-	dal := itemdal.New(db)
+// SetCount writes the count given; no row updated is ErrItemNotFound.
+func TestSetCount_WritesTheCountElseNotFound(t *testing.T) {
 	ctx := context.Background()
+	dal, q, _ := mocked(t)
 
+	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 3, ID: "arrows"}).Return(1, nil).Once()
 	require.NoError(t, dal.SetCount(ctx, "arrows", 3))
-	got, err := dal.List(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, 3, got[0].Count)
-
-	assert.ErrorIs(t, dal.SetCount(ctx, "nope", 1), itemsvc.ErrItemNotFound)
+	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 1, ID: "nope"}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.SetCount(ctx, "nope", 1), itemsvc.ErrItemNotFound)
 }
 
-func TestGetAndUpdate_WholeItem(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "w", 2, 4, 4, itemsvc.BehaviourCharges)
-	dal := itemdal.New(db)
+func TestGet_MapsTheRowAndItsNameElseNotFound(t *testing.T) {
 	ctx := context.Background()
+	dal, q, tq := mocked(t)
 
-	got, err := dal.Get(ctx, "w")
+	q.EXPECT().GetItem(ctx, "wand_lightning").Return(wandRow, nil).Once()
+	tq.EXPECT().GetText(ctx, int64(13)).Return(wandName(), nil).Once()
+	got, err := dal.Get(ctx, "wand_lightning")
 	require.NoError(t, err)
-	got.Name, got.Count, got.Behaviour, got.MaxCount, got.MagicBonus, got.AmmoKind = localized.Of("Staff"), 2, itemsvc.BehaviourDaily, 3, 1, "bolt"
-	got.EffectDice, got.EffectSave, got.Notes, got.Type, got.Position = "1d4+1", "spell", "hum", "staff", 9
-	require.NoError(t, dal.Update(ctx, got))
-	back, err := dal.Get(ctx, "w")
-	require.NoError(t, err)
-	assert.Equal(t, got, back)
+	assert.Equal(t, wandItem, got)
 
+	q.EXPECT().GetItem(ctx, "nope").Return(queries.Item{}, sql.ErrNoRows).Once()
 	_, err = dal.Get(ctx, "nope")
-	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
-	got.ID = "nope"
-	assert.ErrorIs(t, dal.Update(ctx, got), itemsvc.ErrItemNotFound)
+	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
 // ADR 0023 step 9: an item's name is its localized_texts rows, one per
-// language. Update replaces them under the same key, Insert stores them
-// under a new key after the highest stored, Delete removes them with the
-// item: no row is left without its item.
+// language. Update writes every field (powers encoded) and replaces the rows
+// under the key the row holds, Insert stores them under a new key and the row
+// with that key, Delete removes them with the item; an unknown id touches no
+// name.
 func TestName_Step9_WrittenAsLocalizedTextRows(t *testing.T) {
-	db := openDB(t)
-	insert(t, db, "w", 0, 4, 4, itemsvc.BehaviourCharges)
-	dal := itemdal.New(db)
 	ctx := context.Background()
-	rows := func() map[int64]localized.Text {
-		t.Helper()
-		r, err := db.Query(`SELECT text_id, lang, body FROM localized_texts`)
-		require.NoError(t, err)
-		defer func() { _ = r.Close() }()
-		out := map[int64]localized.Text{}
-		for r.Next() {
-			var id int64
-			var lang, body string
-			require.NoError(t, r.Scan(&id, &lang, &body))
-			if out[id] == nil {
-				out[id] = localized.Text{}
-			}
-			out[id][lang] = body
-		}
-		require.NoError(t, r.Err())
-		return out
+	dal, q, tq := mocked(t)
+	p, raw := powers(t)
+	it := itemsvc.Item{
+		ID: "w", Position: 9, Name: localized.Text{"fr": "Baguette", "de": "Stab"}, Type: "staff",
+		Behaviour: itemsvc.BehaviourDaily, MagicBonus: 1, AmmoKind: "bolt", Count: 2, MaxCount: 3,
+		EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: p,
 	}
 
-	it, err := dal.Get(ctx, "w")
-	require.NoError(t, err)
-	it.Name = localized.Text{"fr": "Baguette", "de": "Stab"}
+	mock.InOrder(
+		q.EXPECT().UpdateItem(ctx, queries.UpdateItemParams{
+			Position: 9, Type: "staff", Behaviour: "daily", MagicBonus: 1, AmmoKind: "bolt", Count: 2, MaxCount: 3,
+			EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw, ID: "w",
+		}).Return(100, nil).Once(),
+		tq.EXPECT().DeleteText(ctx, int64(100)).Return(nil).Once(),
+		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 100, Lang: "de", Body: "Stab"}).Return(nil).Once(),
+		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 100, Lang: "fr", Body: "Baguette"}).Return(nil).Once(),
+	)
 	require.NoError(t, dal.Update(ctx, it))
-	assert.Equal(t, map[int64]localized.Text{100: {"fr": "Baguette", "de": "Stab"}}, rows(), "same key, the English row gone")
 
 	it.ID, it.Name = "x", localized.Text{"en": "Rope"}
+	mock.InOrder(
+		tq.EXPECT().NextTextKey(ctx).Return(101, nil).Once(),
+		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 101, Lang: "en", Body: "Rope"}).Return(nil).Once(),
+		q.EXPECT().InsertItem(ctx, queries.InsertItemParams{
+			ID: "x", Position: 9, Name: 101, Type: "staff", Behaviour: "daily", MagicBonus: 1, AmmoKind: "bolt",
+			Count: 2, MaxCount: 3, EffectDice: "1d4+1", EffectSave: "spell", Notes: "hum", Powers: raw,
+		}).Return(nil).Once(),
+	)
 	require.NoError(t, dal.Insert(ctx, it))
-	assert.Equal(t, localized.Text{"en": "Rope"}, rows()[101], "a new key after the highest")
-	got, err := dal.Get(ctx, "x")
-	require.NoError(t, err)
-	assert.Equal(t, localized.Text{"en": "Rope"}, got.Name)
 
+	mock.InOrder(
+		q.EXPECT().DeleteItem(ctx, "w").Return(100, nil).Once(),
+		tq.EXPECT().DeleteText(ctx, int64(100)).Return(nil).Once(),
+	)
 	require.NoError(t, dal.Delete(ctx, "w"))
-	assert.Equal(t, map[int64]localized.Text{101: {"en": "Rope"}}, rows(), "the removed item's rows go with it")
+
+	q.EXPECT().DeleteItem(ctx, "w").Return(0, sql.ErrNoRows).Once()
+	require.ErrorIs(t, dal.Delete(ctx, "w"), itemsvc.ErrItemNotFound)
+	q.EXPECT().UpdateItem(ctx, mock.Anything).Return(0, sql.ErrNoRows).Once()
+	require.ErrorIs(t, dal.Update(ctx, it), itemsvc.ErrItemNotFound)
+}
+
+// Storage errors are returned, never taken for not found or empty, and stop
+// the write: no item row without its name, no name written after a failed
+// update.
+func TestStorageErrors_AreReturnedAndStopTheWrite(t *testing.T) {
+	ctx := context.Background()
+	dal, q, tq := mocked(t)
+
+	q.EXPECT().ListItems(ctx).Return(nil, assert.AnError).Once()
+	_, err := dal.List(ctx)
+	require.ErrorIs(t, err, assert.AnError)
+
+	q.EXPECT().DecrementItem(ctx, "w").Return(queries.Item{}, assert.AnError).Once()
+	_, err = dal.Decrement(ctx, "w")
+	require.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, itemsvc.ErrItemEmpty)
+
+	q.EXPECT().DecrementItem(ctx, "v").Return(queries.Item{}, sql.ErrNoRows).Once()
+	q.EXPECT().GetItem(ctx, "v").Return(queries.Item{}, assert.AnError).Once()
+	_, err = dal.Decrement(ctx, "v")
+	require.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, itemsvc.ErrItemEmpty)
+
+	q.EXPECT().GetItem(ctx, "w").Return(wandRow, nil).Once()
+	tq.EXPECT().GetText(ctx, int64(13)).Return(nil, assert.AnError).Once()
+	_, err = dal.Get(ctx, "w")
+	require.ErrorIs(t, err, assert.AnError)
+
+	tq.EXPECT().NextTextKey(ctx).Return(0, assert.AnError).Once()
+	require.ErrorIs(t, dal.Insert(ctx, wandItem), assert.AnError)
+
+	q.EXPECT().UpdateItem(ctx, mock.Anything).Return(0, assert.AnError).Once()
+	err = dal.Update(ctx, wandItem)
+	require.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, itemsvc.ErrItemNotFound)
+
+	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 1, ID: "w"}).Return(0, assert.AnError).Once()
+	require.ErrorIs(t, dal.SetCount(ctx, "w", 1), assert.AnError)
+
+	q.EXPECT().ResetDailyItems(ctx).Return(assert.AnError).Once()
+	require.ErrorIs(t, dal.ResetDaily(ctx), assert.AnError)
 }

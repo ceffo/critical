@@ -195,3 +195,33 @@ packages:
       outpkg: "mocks"
     interfaces:
       Querier:
+  github.com/ceffo/critical/api/internal/adapters/attackformdal/queries:
+    config:
+      dir: "internal/adapters/attackformdal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/characterdal/queries:
+    config:
+      dir: "internal/adapters/characterdal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/itemdal/queries:
+    config:
+      dir: "internal/adapters/itemdal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/textdal/queries:
+    config:
+      dir: "internal/adapters/textdal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/weapondal/queries:
+    config:
+      dir: "internal/adapters/weapondal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:

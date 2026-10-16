@@ -1,9 +1,8 @@
--- GetAttackForm
+-- name: GetAttackForm :one
 SELECT weapon_id, previous_weapon_id, ammo_item_id, target_ac, target_ac_known, target_size, situational_value, situational_label
-FROM attack_forms WHERE character_id = ?
-;
+FROM attack_forms WHERE character_id = ?;
 
--- UpsertAttackForm
+-- name: UpsertAttackForm :exec
 INSERT INTO attack_forms (character_id, weapon_id, previous_weapon_id, ammo_item_id, target_ac, target_ac_known, target_size, situational_value, situational_label)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(character_id) DO UPDATE SET
@@ -14,5 +13,4 @@ ON CONFLICT(character_id) DO UPDATE SET
     target_ac_known = excluded.target_ac_known,
     target_size = excluded.target_size,
     situational_value = excluded.situational_value,
-    situational_label = excluded.situational_label
-;
+    situational_label = excluded.situational_label;

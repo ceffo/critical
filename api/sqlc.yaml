@@ -39,3 +39,33 @@ sql:
       go:
         <<: *go
         out: internal/adapters/xpdal/queries
+  - <<: *adapter
+    queries: internal/adapters/attackformdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/attackformdal/queries
+  - <<: *adapter
+    queries: internal/adapters/characterdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/characterdal/queries
+  - <<: *adapter
+    queries: internal/adapters/itemdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/itemdal/queries
+  - <<: *adapter
+    queries: internal/adapters/textdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/textdal/queries
+  - <<: *adapter
+    queries: internal/adapters/weapondal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/weapondal/queries

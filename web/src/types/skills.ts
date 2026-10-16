@@ -13,6 +13,8 @@ export interface LastCheck {
   roll: number;
   target: number;
   adjustment: number;
+  /** Set when the adjustment in effect has a reason. */
+  adjustmentReason?: string;
   adjustedTarget: number;
   success: boolean;
 }

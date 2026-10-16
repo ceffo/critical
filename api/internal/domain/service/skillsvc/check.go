@@ -300,7 +300,8 @@ func (s *service) lastChecks(ctx context.Context, characterID int64) (map[string
 		}
 		last[rec.ID] = &LastCheck{
 			EntryID: e.ID, Roll: rec.Roll, Target: rec.Target,
-			Adjustment: rec.Adjustment, AdjustedTarget: rec.AdjustedTarget, Success: rec.Success,
+			Adjustment: rec.Adjustment, AdjustmentReason: rec.AdjustmentReason, AdjustedTarget: rec.AdjustedTarget,
+			Success: rec.Success,
 		}
 	}
 	return last, nil

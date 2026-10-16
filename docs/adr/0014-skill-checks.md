@@ -65,7 +65,7 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    Only the latest roll can be adjusted (`actionlog.RollKinds`, voided entries included, as in
    [ADR 0006](0006-saving-throws.md) step 6), and it must be a skill check: another kind is
    refused (400), a voided check or one that is not the latest roll (409). `GET /api/skills` shows
-   a skill's last check with the adjustment, adjusted target and verdict in effect.
+   a skill's last check with the adjustment (and its reason), adjusted target and verdict in effect.
    Tests: `TestSkillCheck_Step6_PostRollAdjustmentRecomputesTheVerdict` (fail to success, success
    to fail, a new adjustment replaces the previous one, 0 removes the pre-roll adjustment and
    drops the reason, natural 20, an entry logged before adjustments),

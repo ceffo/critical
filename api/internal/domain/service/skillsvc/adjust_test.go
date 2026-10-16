@@ -204,6 +204,8 @@ func TestSkillCheck_Step6_PostRollAdjustmentRecomputesTheVerdict(t *testing.T) {
 			assert.Equal(t, c.success, p["success"])
 			assert.Equal(t, c.rolledSuccess, p["rolledSuccess"], "rolled verdict kept")
 			assert.Equal(t, payloadOf(t, e.Payload)["success"], p["rolledSuccess"])
+			assert.Equal(t, c.prevSuccess, p["previousSuccess"], "verdict before the last adjustment")
+			assert.Equal(t, float64(c.prevAdj), p["previousAdjustment"], "adjustment before the last adjustment")
 			if c.reason == "" {
 				assert.NotContains(t, p, "adjustmentReason")
 			}

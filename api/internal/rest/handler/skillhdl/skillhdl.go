@@ -53,14 +53,16 @@ type AdjustmentDTO struct {
 }
 
 // LastDTO is the newest non-voided check of a skill: target is unadjusted,
-// adjustedTarget and success are the ones in effect.
+// adjustment (with its reason, when set), adjustedTarget and success are the
+// ones in effect.
 type LastDTO struct {
-	EntryID        int64 `json:"entryId"`
-	Roll           int   `json:"roll"`
-	Target         int   `json:"target"`
-	Adjustment     int   `json:"adjustment"`
-	AdjustedTarget int   `json:"adjustedTarget"`
-	Success        bool  `json:"success"`
+	EntryID          int64  `json:"entryId"`
+	Roll             int    `json:"roll"`
+	Target           int    `json:"target"`
+	Adjustment       int    `json:"adjustment"`
+	AdjustmentReason string `json:"adjustmentReason,omitempty"`
+	AdjustedTarget   int    `json:"adjustedTarget"`
+	Success          bool   `json:"success"`
 }
 
 // ProficiencyDTO is one proficiency; target = abilityScore + modifier,
@@ -114,7 +116,8 @@ func lastDTO(l *skillsvc.LastCheck) *LastDTO {
 	}
 	return &LastDTO{
 		EntryID: l.EntryID, Roll: l.Roll, Target: l.Target,
-		Adjustment: l.Adjustment, AdjustedTarget: l.AdjustedTarget, Success: l.Success,
+		Adjustment: l.Adjustment, AdjustmentReason: l.AdjustmentReason, AdjustedTarget: l.AdjustedTarget,
+		Success: l.Success,
 	}
 }
 

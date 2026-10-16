@@ -139,7 +139,7 @@ func TestSkillCheck_Step7_UndoRestoresThePreviousAdjustment(t *testing.T) {
 		require.NoError(t, err)
 		return lastOf(t, skills, "musical_instrument")
 	}
-	assert.Equal(t, &skillsvc.LastCheck{EntryID: check.LogEntryID, Roll: 15, Target: 16, Adjustment: -5, AdjustedTarget: 11},
+	assert.Equal(t, &skillsvc.LastCheck{EntryID: check.LogEntryID, Roll: 15, Target: 16, Adjustment: -5, AdjustmentReason: "storm", AdjustedTarget: 11},
 		lastCheck())
 
 	top := latest(t, bs)
@@ -153,7 +153,7 @@ func TestSkillCheck_Step7_UndoRestoresThePreviousAdjustment(t *testing.T) {
 	require.Equal(t, actionlog.KindCorrection, top.Kind)
 	_, err = bs.Log.Undo(ctx, id, top.ID)
 	require.NoError(t, err)
-	assert.Equal(t, &skillsvc.LastCheck{EntryID: check.LogEntryID, Roll: 15, Target: 16, Adjustment: -2, AdjustedTarget: 14},
+	assert.Equal(t, &skillsvc.LastCheck{EntryID: check.LogEntryID, Roll: 15, Target: 16, Adjustment: -2, AdjustmentReason: "slippery", AdjustedTarget: 14},
 		lastCheck(), "the check as rolled, pre-roll adjustment included")
 	assert.Equal(t, check.LogEntryID, latest(t, bs).ID)
 

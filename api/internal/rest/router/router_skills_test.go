@@ -19,7 +19,7 @@ func TestSkills_ListWireShape(t *testing.T) {
 		Proficiencies: []skillsvc.Proficiency{
 			{
 				ID: "musical_instrument", Ability: skillsvc.AbilityDex, AbilityScore: 17, Modifier: -1, Target: 16,
-				Last: &skillsvc.LastCheck{EntryID: 7, Roll: 18, Target: 16, Adjustment: 3, AdjustedTarget: 19, Success: true},
+				Last: &skillsvc.LastCheck{EntryID: 7, Roll: 18, Target: 16, Adjustment: 3, AdjustmentReason: "rope", AdjustedTarget: 19, Success: true},
 			},
 		},
 		BardSkills: []skillsvc.BardSkill{{ID: "climb_walls", Percent: 85}},
@@ -28,7 +28,7 @@ func TestSkills_ListWireShape(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
 		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"target":16,
-			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustedTarget":19,"success":true}}],
+			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
 		"bardSkills":[{"id":"climb_walls","percent":85,"last":null}]}`, rec.Body.String())
 }
 

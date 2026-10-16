@@ -46,12 +46,13 @@ type BardSkillDef struct {
 // LastCheck is the newest non-voided check of a skill, with the adjustment
 // and verdict in effect. Target is the unadjusted target.
 type LastCheck struct {
-	EntryID        int64
-	Roll           int
-	Target         int
-	Adjustment     int
-	AdjustedTarget int
-	Success        bool
+	EntryID          int64
+	Roll             int
+	Target           int
+	Adjustment       int
+	AdjustmentReason string
+	AdjustedTarget   int
+	Success          bool
 }
 
 // Proficiency is a proficiency with its target (ability score + modifier).

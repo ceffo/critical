@@ -1,12 +1,13 @@
 import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Heart, Sword } from "@phosphor-icons/react";
+import { Drop, Heart } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useTableStore } from "@/stores/table";
 import { fieldClass } from "./fieldStyles";
 
 /**
- * Damage / healing entry: an amount, Damage and Healing, and the source. Enter in either field
+ * HP change (ADR 0022 step 2.3), on one line: the amount, Damage (`Drop`) and Healing (`Heart`),
+ * then the source under it. Enter in either field
  * applies damage, Shift+Enter healing. The source is optional; the server records the change in
  * the action log.
  */
@@ -34,14 +35,12 @@ export function QuickHp() {
 
   return (
     <section
-      className="flex shrink-0 flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
+      className="flex shrink-0 flex-col gap-2"
       role="group"
       aria-label={t("hp.change")}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-title">{t("hp.change")}</h2>
-      </div>
-      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] gap-1">
+      <h2 className="section-label">{t("hp.change")}</h2>
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
         <input
           className={`${fieldClass} tabular-nums`}
           type="number"
@@ -55,21 +54,22 @@ export function QuickHp() {
         />
         <Button
           variant="outline"
-          className="min-w-0 border-danger/60 text-danger hover:bg-danger/10 hover:text-danger"
+          className="min-w-0 gap-1 px-2 border-danger/70 text-danger hover:bg-danger/10 hover:text-danger dark:border-danger/70 dark:hover:bg-danger/15"
           disabled={!valid || busy}
           title={t("hp.damageHint")}
           onClick={() => void apply(-1)}
         >
-          <Sword className="max-[1440px]:hidden" />
+          <Drop aria-hidden />
           {t("hp.applyDamage")}
         </Button>
         <Button
-          className="min-w-0 bg-success text-on-accent hover:bg-success/85"
+          variant="outline"
+          className="min-w-0 gap-1 px-2 border-success/70 text-success hover:bg-success/10 hover:text-success dark:border-success/70 dark:hover:bg-success/15"
           disabled={!valid || busy}
           title={t("hp.healHint")}
           onClick={() => void apply(1)}
         >
-          <Heart className="max-[1440px]:hidden" />
+          <Heart aria-hidden />
           {t("hp.applyHeal")}
         </Button>
       </div>

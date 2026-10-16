@@ -200,6 +200,18 @@
 }
 
 /*
+ * The HP bar's dying zone (ADR 0022 step 2.3): hatched in the danger role, a pattern, not a shading
+ * gradient (step 4.3's flat tint stands for fills).
+ */
+@utility hatch-danger {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--danger) 55%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+/*
  * A zone of the screen (ADR 0022 step 4.1): a card on the ground, outlined, never a rule between
  * zones. Padding is the card's own (14 / 16 px by default, step 3.2).
  */

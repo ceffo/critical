@@ -17,7 +17,8 @@ const TARGET_FIELD: Record<SaveCategory, keyof Character> = {
 };
 
 /**
- * The five saving throws, always visible: one row each, name | target (the sheet's) | last roll
+ * The five saving throws under their section label (ADR 0022 steps 2.3 and 4.2), always visible:
+ * one outlined row each, name | target (the sheet's) | last roll
  * (the newest logged save in that category, with the server's verdict). A click rolls it through
  * the save endpoint; the result card shows the breakdown.
  */
@@ -29,12 +30,10 @@ export function Saves() {
 
   return (
     <section
-      className="flex min-w-0 flex-col gap-1"
-      aria-labelledby="moi-saves-title"
+      className="flex min-w-0 flex-col gap-2"
+      aria-label={t("saves.title")}
     >
-      <h2 id="moi-saves-title" className="text-title">
-        {t("saves.title")}
-      </h2>
+      <h2 className="section-label">{t("saves.sectionLabel")}</h2>
       <ul className="flex flex-col gap-1">
         {SAVE_CATEGORIES.map((cat) => {
           const name = t(`saves.categories.${cat}`);
@@ -49,9 +48,9 @@ export function Saves() {
                 data-testid="save-row"
                 data-save={cat}
                 onClick={() => void rollSave(cat)}
-                className="grid h-7 w-full grid-cols-[minmax(0,1fr)_auto_3.25rem] items-center gap-2 rounded-md bg-neu-900/60 px-2 text-left text-body transition-colors outline-none hover:bg-neu-800 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto_3.25rem] items-center gap-2 rounded-md border border-border px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
               >
-                <span className="truncate">{name}</span>
+                <span className="min-w-0 break-words">{name}</span>
                 <span className="text-muted-foreground tabular-nums">
                   {character
                     ? t("saves.target", { value: character[TARGET_FIELD[cat]] })

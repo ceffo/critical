@@ -184,6 +184,8 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       await expectInside(page.getByTestId("hp-value"), character, where);
       await expectNoClippedText(header, `header, ${where}`);
       await expectNoClippedText(rail, `rail, ${where}`);
+      // The character card (ADR 0022 step 2.3), with the long source as the newest HP change.
+      await expectNoClippedText(character, `character card, ${where}`);
       await expectNoClippedText(
         page.getByTestId("dice-footer"),
         `dice footer, ${where}`,

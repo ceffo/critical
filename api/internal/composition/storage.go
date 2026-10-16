@@ -44,6 +44,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
+	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
@@ -128,5 +129,26 @@ func storageOn(store Store, conn sqlite.DBTX) Storage {
 		XP:           xpdal.New(xpq.New(conn)),
 		Skill:        skilldal.New(skillq.New(conn)),
 		Dice:         dicedal.New(diceq.New(conn)),
+	}
+}
+
+// memoryStorage wires the in-memory implementation of every storage port, all
+// over the one store m, which runs the transactions (ADR 0025 step 8.1).
+func memoryStorage(m *memory.Store) Storage {
+	return Storage{
+		Store:        m,
+		Character:    m.Characters(),
+		HP:           m.Characters(),
+		Log:          m.ActionLog(),
+		Buff:         m.Buffs(),
+		Spell:        m.Spells(),
+		Weapons:      m.Weapons(),
+		WeaponEditor: m.WeaponEditor(),
+		Crit:         m.Crit(),
+		Items:        m.Items(),
+		Forms:        m.Forms(),
+		XP:           m.XP(),
+		Skill:        m.Skills(),
+		Dice:         m.Dice(),
 	}
 }

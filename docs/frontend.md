@@ -447,9 +447,11 @@ outside `ui/`).
 - **First run:** `just e2e-install` once (downloads Playwright Chromium); `just e2e` says so if it's missing.
   `just e2e smoke.spec.ts` passes args through to `playwright test`.
 - **Stack per test:** the `test` fixture from `web/e2e/fixtures.ts` starts the API binary (`just build-api`
-  output) on a free port with a fresh temp SQLite DB and the `api/testdata` fixture (seeds and the spell
-  catalogue `catalogue.json`; extra spells via `extraSpells` + `catalogueSpell`), plus a Vite server on a
-  free port proxying `/api` to it; both and the DB are removed afterwards. No fixed ports, `.dev/` is never
+  output) on a free port in its in-memory storage mode (`CRITICAL_STORAGE=memory`: no database, file or
+  server, [ADR 0025](adr/0025-postgresql-storage.md) step 8) with the `api/testdata` fixture (seeds and the
+  spell catalogue `catalogue.json`; extra spells via `extraSpells` + `catalogueSpell`), plus a Vite server on a
+  free port proxying `/api` to it; both are stopped afterwards. A test cannot plant rows behind the API:
+  an old stored shape is served by intercepting the response (`page.route`). No fixed ports, `.dev/` is never
   touched, so parallel runs/worktrees don't collide. `page.goto("/")` opens that test's dashboard.
 - **Selectors:** `getByRole` / `getByLabel` with the English accessible name first (give panels
   `role="group"` + `aria-label` from an i18n key if needed); `data-testid` only for non-semantic regions

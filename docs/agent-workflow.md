@@ -46,9 +46,9 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 - After creating a worktree: `cd web && npm ci` (`web/node_modules` is gitignored). Go needs nothing.
 - After pulling `main` in the main checkout: `just dev` reinstalls web deps (`npm install`) when
   `web/package-lock.json` changed since the last install. Restart `just dev` after a dependency change.
-- Shared resources: none locked. Tests use temporary SQLite databases today; per
-  [ADR 0025](adr/0025-postgresql-storage.md) they move to mocks and an in-memory e2e mode, with no
-  database at all.
+- Shared resources: none locked. The e2e suite runs on the API's in-memory storage; per
+  [ADR 0025](adr/0025-postgresql-storage.md) the Go tests that still use temporary SQLite databases
+  move to mocks, with no database at all.
 
 ## Running the app for acceptance checks
 
@@ -61,7 +61,7 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   pointing at the scratchpad and a free
   port (never the user's data). Exercise endpoints with `curl`.
 - UI: `just e2e [spec args]` builds the API and runs the Playwright suite headlessly (Chromium,
-  1440x900). Every test gets its own API + Vite on free ports with a fresh temp DB and the
+  1440x900). Every test gets its own API (in-memory storage, no database) + Vite on free ports with the
   `api/testdata` fixture (seeds and spell catalogue), so parallel worktrees don't collide. Artifacts, gitignored, in `web/e2e-results/`:
   `screens/<spec>/<name>.png` (screenshots), `artifacts/` (trace.zip on failure), `report/` (HTML;
   `cd web && npx playwright show-report e2e-results/report`).

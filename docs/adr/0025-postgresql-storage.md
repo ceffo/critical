@@ -159,7 +159,13 @@ flowchart TD
    4. The e2e fixtures start every API in that mode.
 
    Tests: Go tests of the fakes for each contract of step 8.2; a test that the fly configuration
-   never enables the mode (step 8.3).
+   never enables the mode (step 8.3). Implemented as `CRITICAL_STORAGE=memory`
+   (`api/internal/storage/memory`, `docs/backend.md` "In-memory storage"): `TestStore_Step8_2_` (all
+   or nothing, panic, nested and lone writes, writers serialised, append-only log, undo and redo, a
+   stale top refused, a failed undo leaving nothing, keys), `TestStore_Step8_1_SeededLikeTheDatabase`,
+   `TestNew_Step8_1_InMemoryOpensNoDatabase`, `TestMemoryStorage_EveryPortOnTheOneStore`;
+   `TestFly_Step8_3_InMemoryStorageNeverEnabled`, and the boot's refusal on fly.io or in the
+   production image, `TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage`.
 
 9. **A committed copy tool moves a SQLite database of the app into PostgreSQL.** It replaces no
    migration (step 2.1): it moves existing data once.

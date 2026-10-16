@@ -159,7 +159,11 @@ function termText(
   term: SpellTerm,
   noun?: string,
 ): string | null {
-  if (term.per) return null; // "/recipient": a divisor the language has no word for
+  // "/recipient": a divisor the language has no word for is the book's text.
+  const per = term.per
+    ? loc.t(`lookup.perWords.${labelKey(term.per)}`, { defaultValue: "" })
+    : "";
+  if (term.per && !per) return null;
   const unit = term.unit ?? "";
   const [f, shown] = term.dice
     ? [1, unit]
@@ -179,6 +183,7 @@ function termText(
     if (!word) return null;
   }
   const text = withUnit(loc, value, word);
+  if (per) return loc.t("lookup.stat.perWord", { value: text, per });
   if (!term.per_level) return text;
   return (term.step ?? 1) > 1
     ? loc.t("lookup.stat.perLevels", { value: text, step: term.step })
@@ -196,6 +201,7 @@ export function quantityText(
   if (terms.some((x) => x === null)) return null;
   let text = terms.join(" + ");
   if (q.up_to) text = loc.t("lookup.stat.upTo", { value: text });
+  if (q.or_more) text = loc.t("lookup.stat.orMore", { value: text });
   if (q.max) {
     const [f, shown] = shownUnit(loc, q.max_unit ?? "", q.max);
     const word = shown ? unitText(loc, shown, q.max * f) : null;
@@ -324,7 +330,10 @@ export function areaText(
       if (s.partial) return null;
       const parts: string[] = [];
       if (s.dims?.length) {
-        const dims = s.dims.map((d) => quantityText(loc, d));
+        // "Up to" bounds the figure, not the length inside it ("cube de 6 m maximum").
+        const dims = s.dims.map((d) =>
+          quantityText(loc, { ...d, up_to: false }),
+        );
         if (dims.some((x) => x === null)) return null;
         const units = s.dims.map((d) => d.terms[0]?.unit);
         const shaped = shapedText(
@@ -335,7 +344,11 @@ export function areaText(
           s.figure,
         );
         if (!shaped) return null;
-        parts.push(shaped);
+        parts.push(
+          s.dims.some((d) => d.up_to)
+            ? loc.t("lookup.stat.upToShaped", { value: shaped })
+            : shaped,
+        );
       }
       if (s.targets) {
         if (!s.noun) return null; // a bare count ("Creates 1d4+1"): what it counts is the book's

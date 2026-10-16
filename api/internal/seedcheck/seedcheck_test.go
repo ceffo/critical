@@ -233,7 +233,7 @@ var specialAllowed = map[string]map[string]bool{
 	},
 	"area_of_effect": {
 		"Circle of priests": true, "Hearing range": true, "Line of sight": true, "Script reader": true,
-		"Varies": true, "Variable": true, "The wizard's staff": true, "Two or more creatures": true,
+		"Varies": true, "Variable": true, "The wizard's staff": true,
 		"Creates a sphere": true,
 	},
 	"components":   {"V, S, special": true},
@@ -242,7 +242,7 @@ var specialAllowed = map[string]map[string]bool{
 
 // specialAllowedCount pins how many spell fields are allow-listed: adding a
 // spell whose stat falls back to special makes this fail until it is looked at.
-const specialAllowedCount = 22
+const specialAllowedCount = 21
 
 // TestRepoSeeds_EverySpellStatParses checks parseability only: no spell
 // field may fall back to special unless the PHB text is the literal word
@@ -285,7 +285,7 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 // "circle", per-level steps and thousands separators were read). Like
 // specialAllowedCount, a new artifact or a parser change that moves them
 // fails here until it is looked at.
-var areaReadingCounts = map[string]int{"alternatives": 25, "partial": 55}
+var areaReadingCounts = map[string]int{"alternatives": 25, "partial": 40}
 
 // TestRealCatalogue_AreaReadingsAndPerLevelDurations checks how the parser
 // reads the real catalogue's areas (the pinned counts above) and that no

@@ -238,6 +238,11 @@ way.
 ## 5. Push, PR, CI (you, with Bash; no agent)
 
 When the developer reports the full verification passed on HEAD:
+- **Design rounds** (layouts, visual identity, logo: anything whose acceptance is the user's taste) go
+  to a `designer` in its own tab, interactive with the user, like the scoper: tell the user which tab,
+  wait on its report file's mtime. Never relay design feedback yourself, never read approval into a
+  message, never choose a design default for the user: the designer's `APPROVED: yes` report is the
+  only approval, and the ADR is written from it.
 - UI change: the developer can't prove it looks right. A UI-heavy item may get a `code-reviewer` in
   visual review mode on screenshots the developer or user supplies; otherwise tell the user what to
   look at when they run the app.

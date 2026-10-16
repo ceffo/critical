@@ -46,7 +46,9 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 - After creating a worktree: `cd web && npm ci` (`web/node_modules` is gitignored). Go needs nothing.
 - After pulling `main` in the main checkout: `just dev` reinstalls web deps (`npm install`) when
   `web/package-lock.json` changed since the last install. Restart `just dev` after a dependency change.
-- Shared resources: none locked. Tests use temporary SQLite databases.
+- Shared resources: none locked. Tests use temporary SQLite databases today; per
+  [ADR 0025](adr/0025-postgresql-storage.md) they move to mocks and an in-memory e2e mode, with no
+  database at all.
 
 ## Running the app for acceptance checks
 
@@ -187,7 +189,8 @@ Reviewer checklist, in priority order:
 6. **Migrations and DAL**: new files only; safe on existing data; generated code regenerated and
    committed; bob constraints respected.
 7. **Seeds**: `seeds/*.json` and the loader stay valid and idempotent.
-8. **Tests** prove the criteria and would fail on the old code; table-driven rules, mocks for ports.
+8. **Tests** prove the criteria and would fail on the old code; table-driven rules, mocks for ports;
+   no test opens a database or asserts SQL text ([ADR 0025](adr/0025-postgresql-storage.md) step 6).
    **e2e budget**: a new or extended Playwright spec is one happy path per flow, justified in the
    report; rules, edge cases and API-only checks are in Go/unit tests, not e2e (suite < 5 min on CI).
 9. **Hard rules for implementers** above, incl. no tracker ids in code, no per-entity special

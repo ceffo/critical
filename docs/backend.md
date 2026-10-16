@@ -150,6 +150,10 @@ newer one.
 
 The DAL adapters in `api/internal/adapters/*/` use [bob](https://github.com/stephenafamo/bob) for typed SQL queries. Generated files are committed and should not be edited by hand.
 
+> **Being replaced** ([ADR 0025](adr/0025-postgresql-storage.md) step 5): the adapters move to sqlc
+> (`emit_interface`, a mocked `Querier` per package), then the engine moves to PostgreSQL. This section
+> describes bob until the port removes it.
+
 ### When to regenerate
 
 Regenerate whenever:
@@ -375,6 +379,9 @@ and start `just dev` again. This discards all dev state (HP ledger, buffs, actio
 
 ## Testing Conventions
 
+- Go tests never open a database: ports and sqlc `Querier`s are mocked, and tests assert the
+  operations called and their arguments, never SQL text ([ADR 0025](adr/0025-postgresql-storage.md)
+  steps 6 and 7). Tests that still build a temporary SQLite database are being rewritten.
 - Use table-driven tests
 - Dice engine accepts a seeded `rand.Source` for deterministic tests
 - Test the domain/engine layer directly — do not test HTTP handlers for game logic

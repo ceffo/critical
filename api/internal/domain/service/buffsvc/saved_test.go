@@ -3,6 +3,7 @@ package buffsvc_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -86,4 +87,24 @@ func TestSavedRestorer_WritesTheSnapshotBack(t *testing.T) {
 	require.True(t, ok)
 	require.NoError(t, r.Restore(context.Background(), charID,
 		[]byte(`[{"id":7,"name":"Form","duration":2,"charges":0,"effects":{"weapon_buff":5},"note":"n"}]`)))
+}
+
+func TestSavedRestorer_KeepsCreatedAtAndReadsOldSnapshots(t *testing.T) {
+	longAgo := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+	tests := []struct {
+		name string
+		raw  string
+		want time.Time
+	}{
+		{"a snapshot with createdAt restores it", `[{"id":7,"name":"Form","duration":2,"charges":0,"effects":{},"createdAt":"2001-02-03T04:05:06Z"}]`, longAgo},
+		{"a snapshot from before the field decodes to the zero time", `[{"id":7,"name":"Form","duration":2,"charges":0,"effects":{}}]`, time.Time{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			want := []buffsvc.SavedBuff{{ID: 7, Name: "Form", Duration: 2, CreatedAt: tt.want}}
+			f.dal.EXPECT().ReplaceSavedBuffs(mock.Anything, charID, want).Return(nil).Once()
+			require.NoError(t, f.svc.Restorers()[buffsvc.StateKeySavedBuffs].Restore(context.Background(), charID, []byte(tt.raw)))
+		})
+	}
 }

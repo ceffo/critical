@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/aarondl/opt/null"
 
@@ -195,11 +196,15 @@ func (d *DAL) ListSavedBuffs(ctx context.Context, characterID int64) ([]buffsvc.
 		}
 		out = append(out, buffsvc.SavedBuff{
 			ID: r.ID, Name: r.Name, Duration: int(r.Duration), Charges: int(r.Charges),
-			Effects: buffsvc.BuffEffects(eff), Note: r.Note,
+			Effects: buffsvc.BuffEffects(eff), Note: r.Note, CreatedAt: r.CreatedAt,
 		})
 	}
 	return out, nil
 }
+
+// sqliteDatetime is the layout of a DATETIME column's default, so restored
+// rows read and sort like the rest.
+const sqliteDatetime = "2006-01-02 15:04:05"
 
 // ReplaceSavedBuffs makes the stored list equal to saved.
 func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []buffsvc.SavedBuff) error {
@@ -212,9 +217,16 @@ func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []
 			return fmt.Errorf("marshal saved buff effects: %w", err)
 		}
 		if s.ID != 0 {
+			// A restore keeps the original creation time; a snapshot from before
+			// it was recorded has none, so the row is stamped now.
+			createdAt := s.CreatedAt
+			if createdAt.IsZero() {
+				createdAt = time.Now().UTC()
+			}
 			_, err = queries.InsertSavedBuffWithID([]queries.InsertSavedBuffWithID_SavedBuffs{{
 				ID: s.ID, CharacterID: characterID, Name: s.Name, Duration: int64(s.Duration),
 				Charges: int64(s.Charges), Effects: string(eff), Note: s.Note,
+				CreatedAt: createdAt.UTC().Format(sqliteDatetime),
 			}}).Exec(ctx, d.exec(ctx))
 		} else {
 			_, err = queries.InsertSavedBuff([]queries.InsertSavedBuff_SavedBuffs{{

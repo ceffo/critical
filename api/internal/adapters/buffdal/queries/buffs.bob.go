@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"io"
 	"iter"
+	"time"
 
 	"github.com/aarondl/opt/null"
 	"github.com/stephenafamo/bob"
@@ -327,7 +328,7 @@ func (o upsertRoundNumber) WriteSQL(ctx context.Context, w io.StringWriter, d bo
 	return o.subExpr(0, len(upsertRoundNumberSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var listSavedBuffsSQL = formattedQueries_buffs[668:788]
+var listSavedBuffsSQL = formattedQueries_buffs[668:803]
 
 type ListSavedBuffsQuery = orm.ModQuery[*dialect.SelectQuery, listSavedBuffs, ListSavedBuffsRow, []ListSavedBuffsRow, listSavedBuffsTransformer]
 
@@ -354,6 +355,7 @@ func ListSavedBuffs(CharacterID int64) *ListSavedBuffsQuery {
 						row.ScheduleScanByIndex(3, &t.Charges)
 						row.ScheduleScanByIndex(4, &t.Effects)
 						row.ScheduleScanByIndex(5, &t.Note)
+						row.ScheduleScanByIndex(6, &t.CreatedAt)
 						return &t, nil
 					}, func(v any) (ListSavedBuffsRow, error) {
 						return *v.(*ListSavedBuffsRow), nil
@@ -361,22 +363,23 @@ func ListSavedBuffs(CharacterID int64) *ListSavedBuffsQuery {
 			},
 		},
 		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
-			q.AppendSelect(expressionTypArgs.subExpr(7, 61))
-			q.SetTable(expressionTypArgs.subExpr(67, 80))
-			q.AppendWhere(expressionTypArgs.subExpr(86, 106))
-			q.AppendOrder(expressionTypArgs.subExpr(115, 120))
+			q.AppendSelect(expressionTypArgs.subExpr(7, 75))
+			q.SetTable(expressionTypArgs.subExpr(82, 95))
+			q.AppendWhere(expressionTypArgs.subExpr(101, 121))
+			q.AppendOrder(expressionTypArgs.subExpr(130, 135))
 		}),
 		Build: sqlite.Select,
 	}
 }
 
 type ListSavedBuffsRow = struct {
-	ID       int64  `db:"id"`
-	Name     string `db:"name"`
-	Duration int64  `db:"duration"`
-	Charges  int64  `db:"charges"`
-	Effects  string `db:"effects"`
-	Note     string `db:"note"`
+	ID        int64     `db:"id"`
+	Name      string    `db:"name"`
+	Duration  int64     `db:"duration"`
+	Charges   int64     `db:"charges"`
+	Effects   string    `db:"effects"`
+	Note      string    `db:"note"`
+	CreatedAt time.Time `db:"created_at"`
 }
 
 type listSavedBuffsTransformer = bob.SliceTransformer[ListSavedBuffsRow, []ListSavedBuffsRow]
@@ -389,8 +392,8 @@ func (o listSavedBuffs) args() iter.Seq[orm.ArgWithPosition] {
 	return func(yield func(arg orm.ArgWithPosition) bool) {
 		if !yield(orm.ArgWithPosition{
 			Name:       "characterID",
-			Start:      104,
-			Stop:       106,
+			Start:      119,
+			Stop:       121,
 			Expression: o.CharacterID,
 		}) {
 			return
@@ -410,7 +413,7 @@ func (o listSavedBuffs) WriteSQL(ctx context.Context, w io.StringWriter, d bob.D
 	return o.subExpr(0, len(listSavedBuffsSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var insertSavedBuffSQL = formattedQueries_buffs[810:949]
+var insertSavedBuffSQL = formattedQueries_buffs[825:964]
 
 type InsertSavedBuff_SavedBuffs = struct {
 	CharacterID int64
@@ -540,7 +543,7 @@ func (o insertSavedBuff) WriteSQL(ctx context.Context, w io.StringWriter, d bob.
 	return o.subExpr(0, len(insertSavedBuffSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var insertSavedBuffWithIDSQL = formattedQueries_buffs[977:1111]
+var insertSavedBuffWithIDSQL = formattedQueries_buffs[992:1145]
 
 type InsertSavedBuffWithID_SavedBuffs = struct {
 	ID          int64
@@ -550,6 +553,7 @@ type InsertSavedBuffWithID_SavedBuffs = struct {
 	Charges     int64
 	Effects     string
 	Note        string
+	CreatedAt   string
 }
 
 type InsertSavedBuffWithIDQuery = orm.ModExecQuery[*dialect.InsertQuery, insertSavedBuffWithID]
@@ -561,57 +565,64 @@ func InsertSavedBuffWithID(SavedBuffs []InsertSavedBuffWithID_SavedBuffs) *Inser
 		expressions := make([]bob.Expression, len(SavedBuffs))
 		for i, child := range SavedBuffs {
 			expressions[i] = bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
-				args := make([]any, 0, 7)
-				w.WriteString(insertSavedBuffWithIDSQL[106:107])
+				args := make([]any, 0, 8)
+				w.WriteString(insertSavedBuffWithIDSQL[120:121])
 				IDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.ID))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, IDArgs...)
 
-				w.WriteString(insertSavedBuffWithIDSQL[109:111])
+				w.WriteString(insertSavedBuffWithIDSQL[123:125])
 				CharacterIDArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.CharacterID))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, CharacterIDArgs...)
 
-				w.WriteString(insertSavedBuffWithIDSQL[113:115])
+				w.WriteString(insertSavedBuffWithIDSQL[127:129])
 				NameArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Name))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, NameArgs...)
 
-				w.WriteString(insertSavedBuffWithIDSQL[117:119])
+				w.WriteString(insertSavedBuffWithIDSQL[131:133])
 				DurationArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Duration))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, DurationArgs...)
 
-				w.WriteString(insertSavedBuffWithIDSQL[121:123])
+				w.WriteString(insertSavedBuffWithIDSQL[135:137])
 				ChargesArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Charges))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, ChargesArgs...)
 
-				w.WriteString(insertSavedBuffWithIDSQL[125:127])
+				w.WriteString(insertSavedBuffWithIDSQL[139:141])
 				EffectsArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Effects))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, EffectsArgs...)
 
-				w.WriteString(insertSavedBuffWithIDSQL[129:131])
+				w.WriteString(insertSavedBuffWithIDSQL[143:145])
 				NoteArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.Note))
 				if err != nil {
 					return nil, err
 				}
 				args = append(args, NoteArgs...)
 
-				w.WriteString(insertSavedBuffWithIDSQL[133:134])
+				w.WriteString(insertSavedBuffWithIDSQL[147:149])
+				CreatedAtArgs, err := bob.Express(ctx, w, d, start+len(args), sqlite.Arg(child.CreatedAt))
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, CreatedAtArgs...)
+
+				w.WriteString(insertSavedBuffWithIDSQL[151:153])
 				return args, nil
 			})
 		}
@@ -627,10 +638,10 @@ func InsertSavedBuffWithID(SavedBuffs []InsertSavedBuffWithID_SavedBuffs) *Inser
 			},
 		},
 		Mod: bob.ModFunc[*dialect.InsertQuery](func(q *dialect.InsertQuery) {
-			q.TableRef.Columns = []string{"id", "character_id", "name", "duration", "charges", "effects", "note"}
+			q.TableRef.Columns = []string{"id", "character_id", "name", "duration", "charges", "effects", "note", "created_at"}
 			q.TableRef.Expression = expressionTypArgs.raw(12, 25)
 			q.Query = bob.BaseQuery[bob.Expression]{
-				Expression: expressionTypArgs.subExpr(99, 134),
+				Expression: expressionTypArgs.subExpr(113, 153),
 				Dialect:    dialect.Dialect,
 				QueryType:  bob.QueryTypeSelect,
 			}
@@ -647,8 +658,8 @@ func (o insertSavedBuffWithID) args() iter.Seq[orm.ArgWithPosition] {
 	return func(yield func(arg orm.ArgWithPosition) bool) {
 		if !yield(orm.ArgWithPosition{
 			Name:       "savedBuffs",
-			Start:      106,
-			Stop:       134,
+			Start:      120,
+			Stop:       153,
 			Expression: o.SavedBuffs,
 		}) {
 			return
@@ -668,7 +679,7 @@ func (o insertSavedBuffWithID) WriteSQL(ctx context.Context, w io.StringWriter, 
 	return o.subExpr(0, len(insertSavedBuffWithIDSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var deleteSavedBuffsSQL = formattedQueries_buffs[1134:1185]
+var deleteSavedBuffsSQL = formattedQueries_buffs[1168:1219]
 
 type DeleteSavedBuffsQuery = orm.ModExecQuery[*dialect.DeleteQuery, deleteSavedBuffs]
 
@@ -722,7 +733,7 @@ func (o deleteSavedBuffs) WriteSQL(ctx context.Context, w io.StringWriter, d bob
 	return o.subExpr(0, len(deleteSavedBuffsSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var getInitiativeSQL = formattedQueries_buffs[1205:1296]
+var getInitiativeSQL = formattedQueries_buffs[1239:1330]
 
 type GetInitiativeQuery = orm.ModQuery[*dialect.SelectQuery, getInitiative, GetInitiativeRow, []GetInitiativeRow, getInitiativeTransformer]
 
@@ -796,7 +807,7 @@ func (o getInitiative) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Di
 	return o.subExpr(0, len(getInitiativeSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var upsertInitiativeSQL = formattedQueries_buffs[1319:1569]
+var upsertInitiativeSQL = formattedQueries_buffs[1353:1603]
 
 type UpsertInitiative_RoundState = struct {
 	CharacterID       int64

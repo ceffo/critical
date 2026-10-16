@@ -41,3 +41,4 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0021 | [Reference data: the spell catalogue artifact, storage and deployment](0021-spell-catalogue.md) | accepted, per-language fields amended by 0023 |
 | 0022 | [The screen around the focused activity: cards, no cut text and the Facet mark](0022-activity-focus-layout.md) | accepted |
 | 0023 | [Localized text: one row per language, no per-language field](0023-localized-text.md) | accepted |
+| 0024 | [Deployment on fly.io: environments, release flow, image and data](0024-deployment.md) | proposed |

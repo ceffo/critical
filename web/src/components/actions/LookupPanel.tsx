@@ -12,7 +12,7 @@ import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { useDiceStore } from "@/stores/dice";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
-import { otherSpellName, spellTexts } from "@/i18n/spellName";
+import { spellName, spellTexts } from "@/i18n/spellName";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
 import { statDice, statValue, type StatKey } from "@/lib/spellValues";
 import { statLocale, statText, type StatField } from "@/lib/statText";
@@ -54,30 +54,15 @@ function same(a: string, b: string): boolean {
 /** Load the next page when the list is this close (px) to its bottom. */
 const LOAD_MORE_MARGIN = 400;
 
-/** "Mains brûlantes" + grey "· Burning Hands" (the other language), when it exists. */
-function SpellNames({
-  spell,
-  className,
-}: {
-  spell: Spell;
-  className?: string;
-}) {
+/** The spell's name in the UI language; it wraps onto more lines, never cut. */
+function SpellName({ spell, className }: { spell: Spell; className?: string }) {
   const { i18n } = useTranslation();
-  const other = otherSpellName(i18n.language, spell);
   return (
-    <span className={cn("min-w-0 truncate", className)}>
-      <span data-testid="spell-name">
-        {spellTexts(i18n.language, spell).name}
-      </span>
-      {other && (
-        <span
-          className="text-muted-foreground font-normal"
-          data-testid="spell-other-name"
-        >
-          {" · "}
-          {other}
-        </span>
-      )}
+    <span
+      className={cn("min-w-0 break-words", className)}
+      data-testid="spell-name"
+    >
+      {spellName(i18n.language, spell)}
     </span>
   );
 }
@@ -134,7 +119,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h3 className="text-title">
-          <SpellNames spell={spell} className="whitespace-normal" />
+          <SpellName spell={spell} />
         </h3>
         <p
           className="text-label text-muted-foreground"
@@ -485,7 +470,7 @@ export function LookupPanel() {
                 <span className="text-label text-magic tabular-nums">
                   {s.level}
                 </span>
-                <SpellNames spell={s} />
+                <SpellName spell={s} />
                 {query.cls === "all" ? (
                   <span
                     className="text-label text-muted-foreground"

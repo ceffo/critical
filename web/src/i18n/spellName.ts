@@ -60,18 +60,12 @@ export function spellTexts(
   };
 }
 
-/**
- * The spell's name in the language the UI is not in, when it has one and it differs: English in
- * the French UI, the French name in the English UI. Shown in grey after the name
- * ("Mains brûlantes · Burning Hands").
- */
-export function otherSpellName(
+/** The spell's name in the UI language only: French when the UI is French and the catalogue has it, else English. */
+export function spellName(
   lang: string,
   spell: Pick<Spell, "name" | "name_fr">,
-): string | null {
-  const shown = spellTexts(lang, { ...spell, description: "" }).name;
-  const other = isFrench(lang) ? spell.name : spell.name_fr;
-  return other && other !== shown ? other : null;
+): string {
+  return (isFrench(lang) && spell.name_fr) || spell.name;
 }
 
 /**

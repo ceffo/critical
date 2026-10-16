@@ -247,6 +247,8 @@ export { expect };
 export interface ExtraSpell {
   id: string;
   name: string;
+  /** The French name, when the spell has one. */
+  nameFr?: string;
   class: "Wizard" | "Priest";
   level: number;
   school: string;
@@ -261,7 +263,7 @@ export interface ExtraSpell {
 
 /** A catalogue spell (ADR 0021 format) with invented text, for `extraSpells`. */
 export function catalogueSpell(s: ExtraSpell) {
-  const { id, name, sphere, ...rest } = s;
+  const { id, name, nameFr, sphere, ...rest } = s;
   return {
     id,
     casting_time: "1",
@@ -272,7 +274,7 @@ export function catalogueSpell(s: ExtraSpell) {
     saving_throw: "None",
     ...rest,
     ...(sphere ? { sphere } : {}),
-    name: { en: name },
+    name: nameFr ? { en: name, fr: nameFr } : { en: name },
     description: { en: `${name} fixture text.` },
     source: "WEB",
   };

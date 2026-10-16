@@ -92,11 +92,12 @@ main checkout, pull with `just sync-main`, never `br sync --merge`.
   supervisor's or scoper's, run from the main checkout; developers, reviewers and testers never
   write to `.beads/`.
 - Claim: `br update <id> --claim`.
-- Tracker changes ship in the PR they relate to, never in a tracker-only PR. The supervisor exports
-  (`br sync --flush-only`) and commits `.beads/issues.jsonl` on the item's branch: the claim at
-  dispatch, and the close (`br close`, reason "PR #n") as the last commit before the PR is reported
-  ready, so merging the PR closes the item. Items filed by a scoper ride in the PR of the work that
-  produced them (or the next related PR). If a PR is closed unmerged, reopen its item.
+- Tracker changes do not ride on feature branches (user decision 2026-10-16: parallel PRs kept
+  conflicting on `.beads/issues.jsonl` after every merge). The tracker DB is the truth: the supervisor
+  claims at dispatch and closes at PR time (`br close`, reason "PR #n") in the main checkout only,
+  and commits the export (`br sync --flush-only`, `.beads/issues.jsonl`) in one `chore: tracker
+  export` PR per batch of work (end of a session or a night, or when an export is needed on `main`,
+  e.g. for `check-no-tracker-ids` to know a new id). If a PR is closed unmerged, reopen its item.
 - Priorities are numbers 0-4. Types: task, bug, feature, epic, chore, docs, question.
 - Labels in use: `needs-info` (cannot start, questions listed), `risky` (needs review).
 - Queue: `bv --robot-triage`, `br ready --json`.

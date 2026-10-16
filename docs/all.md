@@ -79,8 +79,10 @@ dashboard v3 redesign `critical-kiv`; items labelled `mvp-saturday` are the must
     server
 12. XP ledger: total, progress to the next level and the ledger (no level-up)
 
-**After Saturday (not to be built now):** Gaia fire/lightning protections, hosting/deployment
-(`critical-8g1`), mobile and other device layouts (below 1024 CSS px), level-up mechanics, multiple
-characters.
+**After Saturday (not to be built now):** Gaia fire/lightning protections, mobile and other device
+layouts (below 1024 CSS px), level-up mechanics, multiple characters.
+
+**Hosting and deployment** (`critical-8g1`) is no longer deferred (user, 2026-10-16): fly.io, staging
+from main and production from version tags, designed in [ADR 0024](adr/0024-deployment.md).
 
 Do not implement anything from the "after" list even if it seems related.

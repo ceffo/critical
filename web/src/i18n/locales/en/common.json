@@ -914,8 +914,7 @@
       "situational": "{{detail}}",
       "situationalUnnamed": "Situational",
       "critRange": "Critical hit ({{from}}–{{to}})",
-      "critPlaceholder": "Critical hit (placeholder)",
-      "adjustment": "Adjustment {{detail}}"
+      "critPlaceholder": "Critical hit (placeholder)"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1016,7 +1015,8 @@
       "increase": "Increase adjustment",
       "value": "Adjustment",
       "reason": "Reason (optional)",
-      "apply": "Apply"
+      "apply": "Apply",
+      "adjustedTarget": "Adjusted target"
     },
     "adjustAc": {
       "title": "Target AC",
@@ -1181,9 +1181,9 @@
     "prep": "Prepared: {{spells}}",
     "prepNone": "Prepared no spells",
     "saveThrow": {
-      "rolled": "Save vs {{name}}: d20 {{d20}} vs {{target}}, {{verdict}}",
-      "adjusted": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjusted {{adjustment}}{{reason}}: {{from}} → {{to}}",
-      "removed": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjustment removed: {{from}} → {{to}}"
+      "rolled": "Save vs {{name}}: {{roll}} vs {{target}}, {{verdict}}",
+      "adjusted": "Save vs {{name}}: {{roll}} vs {{adjustedTarget}} (target {{target}}, adjusted {{adjustment}}{{reason}}): {{from}} → {{to}}",
+      "removed": "Save vs {{name}}: {{roll}} vs {{target}}, adjustment removed: {{from}} → {{to}}"
     },
     "weapon": {
       "added": "Added weapon {{name}}",

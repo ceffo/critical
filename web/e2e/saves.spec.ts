@@ -20,13 +20,13 @@ function saveCard(page: Page): Locator {
     .getByTestId("save-result");
 }
 
-/** d20, target and margin as shown on the save card (its three facts, in that order). */
+/** d20, the sheet's target and margin as shown on the save card (first, second and last facts). */
 async function facts(card: Locator) {
   const dd = card.locator("dd");
   return {
     d20: Number(await dd.nth(0).textContent()),
     target: Number(await dd.nth(1).textContent()),
-    margin: signed(await dd.nth(2).textContent()),
+    margin: signed(await dd.last().textContent()),
   };
 }
 
@@ -55,7 +55,7 @@ async function adjust(page: Page, steps: number, reason?: string) {
 
 const verdict = (margin: number) => (margin >= 0 ? "PASSED" : "FAILED");
 
-test("a save is logged and its adjustment flips the verdict, never the d20", async ({
+test("a save is logged and its adjustment moves the target, never the roll", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -77,11 +77,21 @@ test("a save is logged and its adjustment flips the verdict, never the d20", asy
   await expect(card).toContainText(
     rolled.margin + 4 >= 0 ? "Passed" : "Failed",
   );
-  await expect(card.getByTestId("save-modifiers")).toContainText(
-    "Adjustment Gaia fire",
+  // ADR 0006 step 5: +4 (easier) lowers the target by 4; the roll side is unchanged.
+  const adjusted = rolled.target - 4;
+  expect((await facts(card)).target).toBe(rolled.target);
+  await expect(card.getByTestId("save-adjusted-target")).toHaveText(
+    String(adjusted),
   );
+  await expect(card.getByTestId("save-vs")).toHaveText(
+    `${rolled.d20} vs ${adjusted}+`,
+  );
+  await expect(card.getByTestId("save-adjustment-line")).toHaveText(
+    /^Gaia fire\s*\+4$/,
+  );
+  await expect(card.getByTestId("save-modifiers")).toHaveCount(0);
   await expect(entry).toContainText(
-    `adjusted +4 Gaia fire: ${verdict(rolled.margin)} → ${verdict(rolled.margin + 4)}`,
+    `d20 ${rolled.d20} vs ${adjusted} (target ${rolled.target}, adjusted +4 Gaia fire): ${verdict(rolled.margin)} → ${verdict(rolled.margin + 4)}`,
   );
   await expect(entry).toContainText("Amended");
   await snap(page, "save-adjusted");
@@ -90,6 +100,10 @@ test("a save is logged and its adjustment flips the verdict, never the d20", asy
   await expect.poll(async () => (await facts(card)).margin).toBe(rolled.margin);
   expect((await facts(card)).d20).toBe(rolled.d20);
   await expect(card).toContainText(rolled.margin >= 0 ? "Passed" : "Failed");
+  await expect(card.getByTestId("save-adjusted-target")).toHaveCount(0);
+  await expect(card.getByTestId("save-vs")).toHaveText(
+    `${rolled.d20} vs ${rolled.target}+`,
+  );
   await expect(entry).toContainText(
     `adjustment removed: ${verdict(rolled.margin + 4)} → ${verdict(rolled.margin)}`,
   );

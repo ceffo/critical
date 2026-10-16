@@ -914,3 +914,46 @@ test.describe("workspaces to the dice composer", () => {
     }
   });
 });
+
+// ADR 0006 step 5 on the save card: with an adjustment it shows four facts (d20, target, adjusted
+// target, margin) and the adjustment line; nothing is cut from 1280x800 to 2560x1440, en and fr.
+test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to 2560", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await page.getByRole("button", { name: "Roll save vs Spells" }).click();
+  const card = page.getByTestId("save-result");
+  await expect(card).toBeVisible();
+  const form = card.getByRole("form", { name: "Adjust this save" });
+  const harder = form.getByRole("button", { name: "Decrease adjustment" });
+  await harder.click();
+  await harder.click();
+  await form
+    .getByLabel("Reason (optional)")
+    .fill("Cursed by the lich's lingering aura");
+  await form.getByRole("button", { name: "Apply" }).click();
+  await expect(card.getByTestId("save-adjustment-line")).toContainText("−2");
+
+  for (const lang of ["en", "fr"] as const) {
+    if (lang === "fr") await chooseLanguage(page, "fr");
+    await expect(card).toContainText(
+      lang === "fr" ? "Seuil ajusté" : "Adjusted target",
+    );
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(card, `adjusted save card, ${where}`);
+      await expectWholeWords(card, `adjusted save card, ${where}`);
+      await snap(page, `save-adjusted-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+  await expect(
+    combatLog(page)
+      .getByRole("listitem")
+      .filter({ hasText: "Sauvegarde contre Sorts" }),
+  ).toContainText("(seuil ");
+});

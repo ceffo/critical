@@ -295,9 +295,14 @@ export interface SaveLogPayload {
   previousPassed?: boolean;
   /** The modifiers applied when rolling (buffs), not the adjustment. */
   modifiers?: Modifier[];
-  /** d20 + modifiers + adjustment, and its margin over the target (as computed by the server). */
+  /** rollTotal + adjustment (kept by the server; not displayed). */
   total?: number;
-  margin?: number;
+  /** d20 + modifiers, the adjustment left out (ADR 0006 step 5). */
+  rollTotal: number;
+  /** target − adjustment: the adjustment moves the target, + easier, − harder. */
+  adjustedTarget: number;
+  /** rollTotal − adjustedTarget, as computed by the server. */
+  margin: number;
 }
 
 export function savePayload(e: LogEntry): SaveLogPayload | null {
@@ -306,9 +311,19 @@ export function savePayload(e: LogEntry): SaveLogPayload | null {
   return p &&
     typeof p.passed === "boolean" &&
     typeof p.d20Roll === "number" &&
+    typeof p.rollTotal === "number" &&
+    typeof p.adjustedTarget === "number" &&
+    typeof p.margin === "number" &&
     typeof p.category === "string"
     ? (p as SaveLogPayload)
     : null;
+}
+
+/** The roll side of a save as the journal words it: "d20 12", or "d20 12 +2 = 14" with buffs. */
+function saveRollText(p: SaveLogPayload): string {
+  return p.rollTotal === p.d20Roll
+    ? `d20 ${p.d20Roll}`
+    : `d20 ${p.d20Roll} ${formatSigned(p.rollTotal - p.d20Roll)} = ${p.rollTotal}`;
 }
 
 function saveText(p: SaveLogPayload, t: TFunction): string {
@@ -316,7 +331,7 @@ function saveText(p: SaveLogPayload, t: TFunction): string {
     t(passed ? "result.passed" : "result.failed").toUpperCase();
   const args = {
     name: t(`saves.categories.${p.category}`, { defaultValue: p.category }),
-    d20: p.d20Roll,
+    roll: saveRollText(p),
     target: p.target,
   };
   if (p.previousPassed === undefined)
@@ -329,6 +344,7 @@ function saveText(p: SaveLogPayload, t: TFunction): string {
   if (p.adjustment === 0) return t("log.saveThrow.removed", change);
   return t("log.saveThrow.adjusted", {
     ...change,
+    adjustedTarget: p.adjustedTarget,
     adjustment: formatSigned(p.adjustment),
     reason: p.adjustmentReason ? ` ${p.adjustmentReason}` : "",
   });

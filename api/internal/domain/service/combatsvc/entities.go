@@ -16,7 +16,6 @@ const (
 	ModBuff        ModifierKind = "buff"         // a buff's or item power's to-hit/damage/save bonus, Detail = buff (or item) name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
 	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
-	ModAdjustment  ModifierKind = "adjustment"   // save adjustment set after the roll, Detail = reason
 )
 
 // Modifier is a labeled bonus or penalty applied to a roll. ItemID is set
@@ -204,11 +203,14 @@ type RollResult struct {
 	SaveCategory     SaveCategory
 	Adjustment       int
 	AdjustmentReason string
-	// SaveBonus is the sum of a save's modifiers (buffs, not the
-	// adjustment) and SaveTotal is d20 + SaveBonus + Adjustment, compared
-	// with the target (ADR 0006).
-	SaveBonus int
-	SaveTotal int
+	// SaveBonus is the sum of a save's modifiers (buffs). The adjustment
+	// moves the target (ADR 0006 step 5): SaveRollTotal (d20 + SaveBonus) is
+	// compared with SaveAdjustedTarget (target - Adjustment). SaveTotal is
+	// SaveRollTotal + Adjustment, kept for the clients that read it.
+	SaveBonus          int
+	SaveTotal          int
+	SaveRollTotal      int
+	SaveAdjustedTarget int
 
 	// LogEntryID is the action-log entry recording the attack or save.
 	LogEntryID int64

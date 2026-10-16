@@ -12,9 +12,7 @@ export type ModifierKind =
   | "ammo_magic"
   | "buff"
   | "situational"
-  | "crit"
-  /** A save adjustment set after the roll; detail = its reason. */
-  | "adjustment";
+  | "crit";
 
 export interface Modifier {
   kind: ModifierKind;
@@ -121,12 +119,17 @@ export interface RollResult {
   rolledCrit?: boolean;
   // Saving-throw context (absent on attacks).
   saveCategory?: SaveCategory;
-  /** Adjustment set after the roll (0: none); always present on saves. */
+  /** Adjustment set after the roll (0: none); always present on saves. It moves the target (+ easier, − harder). */
   adjustment?: number;
   adjustmentReason?: string;
-  /** A save's modifiers summed (not the adjustment), and d20 + modifiers + adjustment. */
+  /** A save's modifiers summed (the buffs, not the adjustment). */
   saveBonus?: number;
+  /** rollTotal + adjustment, kept for older clients; the card reads rollTotal and adjustedTarget. */
   saveTotal?: number;
+  /** A save's d20 + saveBonus, the adjustment left out (ADR 0006 step 5). */
+  rollTotal?: number;
+  /** A save's target moved by the adjustment: target − adjustment (baseThac0 is the sheet's target). */
+  adjustedTarget?: number;
   /** The action-log entry recording the attack or save. */
   logEntryId?: number;
 }

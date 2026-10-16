@@ -94,7 +94,7 @@ func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
 		t.Run(file, func(t *testing.T) {
 			c := load(t, file)
 			assert.Equal(t, "critical-"+env, c.App)
-			assert.Equal(t, "cdg", c.PrimaryRegion)
+			assert.Equal(t, "yyz", c.PrimaryRegion)
 			assert.Empty(t, c.Build, "the image is passed by the workflow (--image), never named here")
 			// The image names no database (ADR 0025 step 1): the DSN is given at run time. The fly
 			// configuration still sets the SQLite one of its volume until the fly PostgreSQL

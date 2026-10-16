@@ -6,8 +6,8 @@ and `deploy/fly.prod.toml` (checked by `just check-fly`, and by `just validate` 
 config never names it. Steps marked **(user)** need fly credentials or GitHub admin rights; an agent
 never runs them. Nothing here is public: the apps have no public IP (ADR 0024 step 8).
 
-Defaults (ADR 0024, "Proposed defaults"): apps `critical-staging` and `critical-prod`, region `cdg`,
-one machine and one 1 GB volume per app, `shared-cpu-1x` with 512 MB. App names are global on fly. To
+Defaults (ADR 0024, "Proposed defaults"): apps `critical-staging` and `critical-prod`, region `yyz`
+(Toronto: fly has no Montreal region; user, 2026-10-16), one machine and one 1 GB volume per app, `shared-cpu-1x` with 512 MB. App names are global on fly. To
 rename an app or change the region, edit `app` / `primary_region` in the two toml files and the
 `FLY_APP` values below; the Go test checks the app names against the file names.
 
@@ -22,7 +22,7 @@ Repeat for `staging` and `prod` (`<env>` = `staging` or `prod`, app = `critical-
 ```bash
 $fly auth login
 $fly apps create critical-<env> --org personal
-$fly volumes create data -a critical-<env> --region cdg --size 1 --snapshot-retention 7   # 30 for prod
+$fly volumes create data -a critical-<env> --region yyz --size 1 --snapshot-retention 7   # 30 for prod
 $fly tokens create deploy -a critical-<env>        # app-scoped token: store it in GitHub, nowhere else
 ```
 
@@ -114,7 +114,7 @@ since that snapshot is lost: say so to the user before restoring.
 ```bash
 $fly volumes list -a critical-prod                     # note the id of the current volume
 $fly volumes snapshots list <volume id>                # daily snapshots and the pre-promotion one
-$fly volumes create data -a critical-prod --region cdg --snapshot-id <snapshot id> --snapshot-retention 30
+$fly volumes create data -a critical-prod --region yyz --snapshot-id <snapshot id> --snapshot-retention 30
 $fly machine list -a critical-prod                     # note the machine id
 $fly machine stop <machine id> -a critical-prod         # nothing writes the old volume from here
 $fly machine clone <machine id> -a critical-prod --attach-volume <new volume id>:/data   # same image and config

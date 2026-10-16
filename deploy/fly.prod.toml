@@ -2,7 +2,7 @@
 # the image is never named here, the release workflow passes it. No public IP is allocated (step 8.2):
 # the first deploy uses --no-public-ips. Runbook: docs/deploy.md. Checked by `just check-fly`.
 app = "critical-prod"
-primary_region = "cdg"
+primary_region = "yyz"
 
 # Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ; CRITICAL_DSN aside:
 # the image names no database, this SQLite one goes with the volume when the fly PostgreSQL config lands.

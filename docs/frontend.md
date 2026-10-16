@@ -40,7 +40,7 @@ letter-spaced, muted) or a `bg-neu-900` tone step. Type uses only `text-label` /
 `text-title` / `text-key` / `text-headline` / `text-hero` (ADR 0017 step 2, `text-hero` from ADR
 0022 step 3.4: the turn number, a result total, the XP total). **No cut text** (ADR 0022 step 1):
 no `truncate` / `text-ellipsis` / `line-clamp` on important text; `layout.spec` checks the shell's
-zones with `expectNoClippedText` (`e2e/noClip.ts`) at every layout viewport; the area items add
+zones and each Act tab with `expectNoClippedText` (`e2e/noClip.ts`) at every layout viewport; the area items add
 their regions as they drop their remaining `truncate`s. `App.tsx` composes it.
 
 ```mermaid
@@ -170,23 +170,32 @@ flowchart TD
   with "replaced by Improved Strength".
 - Weapons tab (`components/actions/AttackPanel.tsx`, `stores/attack.ts`): the attack form's
   choices are server state (`GET` / `PATCH /api/attack/form`, ADR 0009 step 6), restored on load and
-  in every tab or device. The target bar has the AC stepper, the size (S / M | L) and the
-  situational stepper with its reason (shown when not 0), both bounded to ±20 like the server. The
-  weapon-in-hand card shows the name, melee / missile, two-handed, Attack, and four tiles from the
-  server's preview (ADR 0002 step 12): damage dice S/M and L (the current size ringed, the other
-  dimmed), to-hit / damage bonus and the effective THAC0 with the roll needed against the target AC.
-  A bow shows its ammunition as chips (`ammoChoices`, counts amber at 3 or less; the chosen one
-  stays chosen when spent and the panel says so). "Switch to {previous}" and the "Other weapon"
-  popover change the weapon in hand and never attack. Changes are sent one after the other and
+  in every tab or device. The target bar is one line on the raised tone (it wraps when narrow): the
+  TARGET section label, AC (the stepper's accessible name stays "Target AC") with Unknown, the size
+  (S / M | L) and the situational stepper with its reason (shown when not 0), both bounded to ±20
+  like the server. The weapon in hand is **one row** ([ADR 0022](adr/0022-activity-focus-layout.md)
+  step 2.5), on a tint with the accent outline: the WEAPON IN HAND label, the name (wrapping, never
+  cut), its stats as one line of text from the server's preview (ADR 0002 step 12, `StatsLine`:
+  "Missile · two-handed · 1d6 S/M · 1d6 L · +5 / +3 to hit / dmg · THAC0 8", the size not in use
+  dimmed, breaking only between segments), and **Attack**, the only control in the row: 44 px, two
+  lines ("Attack" / "needs 6 vs AC 5" or "AC unknown"), the Phosphor `Sword` centred in its own
+  44 x 44 cell (step 3.3; the accessible name stays "Attack", the second line describes it). Under
+  the row: a bow's AMMUNITION chips (`ammoChoices`, counts amber at 3 or less; the chosen one stays
+  chosen when spent and the panel says so), then SWITCH TO, every other weapon as a chip with its
+  S/M dice, the previous weapon first with the swap icon ("Switch to {name}"); one click puts it in
+  hand and never attacks. Then the crit table (house rule), a closed `details` line. Changes are
+  sent one after the other and
   only the newest answer is shown; target and situational changes show at once. The preview is
   reloaded when buffs, effective STR, items or weapons change. An attack sends the saved choices
   (an offered first arrow becomes the choice first, so it stays chosen once spent); the result
   card labels each modifier and damage term by its `kind` (`result.mods.*`); attack log entries
   are rendered from their payload (`lib/logSummary.ts`). An attack refreshes the table state (log,
   item counts), so voiding it shows the arrow back.
-- Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a 40px row:
-  name, behaviour and count, dice, Roll (it has dice) or Use, through `stores/roll.ts`
-  `spendItem`; "Manage the inventory" opens the Inventaire workspace.
+- Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a grid row: the
+  name (wrapping, never cut), behaviour and count, dice, Roll (it has dice) or Use, through
+  `stores/roll.ts` `spendItem`; "Manage the inventory" focuses the Inventory activity.
+- Skills tab (`SkillsTab.tsx`): PROFICIENCIES and BARD SKILLS with their column headers as section
+  labels (ADR 0022 step 4.2); one row-button per skill, the name wrapping, never cut.
 - Inventaire workspace (`InventoryPanel.tsx`): the Objets card, one grid row per item: name with
   its magical bonus ("+2") and "type · behaviour" (Stock / Charges / Daily) under it | the effect
   dice as a chip that puts the formula in the dice composer (`stores/dice.ts` `setFormula`, nothing
@@ -203,8 +212,10 @@ flowchart TD
   `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
   refreshes the weapons store, so the Weapons tab follows.
 - Spells tab (`SpellsPanel.tsx`): "Buff spells go on an ally", Prepare spells and Long rest on
-  top; one group per level with a pip per slot (filled while unused) and "left / total"; 40px rows
-  with the name, under it the damage a cast rolls at the Bard's level when the spellbook entry serves one
+  top; one group per level (the LEVEL N section label, a pip per slot, filled while unused, and
+  "left / total"), the groups flowing in two text columns 24 px apart once the panel is 32rem wide
+  (a group never splits; no card or rule around a group, ADR 0022 steps 3.2 and 4.1); rows with the
+  name (wrapping, never cut; a row's pickers wrap under it when narrow), under it the damage a cast rolls at the Bard's level when the spellbook entry serves one
   (`lib/spellDice.ts` `damageText`: "10d6 fire", "5 × 1d4+1 force", "2d4 acid per round, 6
   rounds", type words in `spellDice.types`) and, for a spell that leaves a damaging area, its
   exposure dice (`lib/spellMode.ts` `exposureText`: "1d10 poison per round of exposure", ADR 0008
@@ -446,7 +457,8 @@ outside `ui/`).
   hidden elements). The journal and the result panel are the Act activity's: focus Act before
   reading them (the header's `last-result` shows the newest roll from anywhere). `layout.spec.ts`
   covers 1024, 1280x800, 1440x900, 1707x1300, 1920x1080 and 2560x1440 and runs
-  `expectNoClippedText` (`e2e/noClip.ts`) on the shell's zones; its "theme" test screenshots the
+  `expectNoClippedText` (`e2e/noClip.ts`) on the shell's zones and, in its "act panel" test, on each
+  Act tab with long weapon, item and spell names (`act-<tab>-<size>.png`); its "theme" test screenshots the
   main screens in dark and light, then every ambiance.
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
   are visible. Don't add per-flow fr specs.

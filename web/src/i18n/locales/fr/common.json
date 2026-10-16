@@ -239,19 +239,21 @@
     "lowerSituational": "Baisser le modificateur",
     "raiseSituational": "Monter le modificateur",
     "switchTo": "Passer à {{name}}",
-    "otherWeapon": "Autre arme",
-    "weaponDice": "{{sm}} · G {{l}}",
-    "tiles": {
-      "damageSm": "Dégâts P/M",
-      "damageL": "Dégâts G",
-      "bonus": "Tou. / Dég.",
-      "thac0": "TAC0 effectif",
-      "rollNeeded": "{{n}} contre CA {{ac}}",
-      "rollNeededUnknown": "CA inconnue"
-    },
     "unknownAc": "Inconnue",
     "unknownAcHint": "Oublier la CA de la cible : l’attaque dit quelle CA elle touche",
-    "unknownAcPlaceholder": "?"
+    "unknownAcPlaceholder": "?",
+    "needs": "{{n}} contre CA {{ac}}",
+    "needsUnknown": "CA inconnue",
+    "acShort": "CA",
+    "sizeShort": "Taille",
+    "switchLabel": "Passer à",
+    "otherWeapons": "Autres armes",
+    "line": {
+      "sm": "P/M",
+      "l": "G",
+      "bonus": "toucher / dégâts",
+      "thac0": "TAC0"
+    }
   },
   "saves": {
     "title": "Jets de sauvegarde",

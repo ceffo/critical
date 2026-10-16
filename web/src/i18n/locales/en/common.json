@@ -239,19 +239,21 @@
     "lowerSituational": "Lower the modifier",
     "raiseSituational": "Raise the modifier",
     "switchTo": "Switch to {{name}}",
-    "otherWeapon": "Other weapon",
-    "weaponDice": "{{sm}} · L {{l}}",
-    "tiles": {
-      "damageSm": "Damage S/M",
-      "damageL": "Damage L",
-      "bonus": "To hit / dmg",
-      "thac0": "Effective THAC0",
-      "rollNeeded": "needs {{n}} vs AC {{ac}}",
-      "rollNeededUnknown": "AC unknown"
-    },
     "unknownAc": "Unknown",
     "unknownAcHint": "Forget the target AC: the attack says which AC it hits",
-    "unknownAcPlaceholder": "?"
+    "unknownAcPlaceholder": "?",
+    "needs": "needs {{n}} vs AC {{ac}}",
+    "needsUnknown": "AC unknown",
+    "acShort": "AC",
+    "sizeShort": "Size",
+    "switchLabel": "Switch to",
+    "otherWeapons": "Other weapons",
+    "line": {
+      "sm": "S/M",
+      "l": "L",
+      "bonus": "to hit / dmg",
+      "thac0": "THAC0"
+    }
   },
   "saves": {
     "title": "Saving Throws",

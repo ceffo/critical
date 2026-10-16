@@ -230,16 +230,14 @@ export async function openWeapons(page: Page) {
   await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
 }
 
-/** Put a weapon in hand through "Other weapon" unless it already is; never attacks. */
+/** Put a weapon in hand with its chip under the weapon in hand unless it already is; never attacks. */
 export async function chooseWeapon(page: Page, name: string) {
   const held = attackForm(page).getByTestId("weapon-in-hand");
   await expect(held).not.toBeEmpty();
   if ((await held.textContent()) === name) return;
-  await attackForm(page).getByRole("button", { name: "Other weapon" }).click();
-  await page
-    .getByRole("list", { name: "Other weapon" })
-    .getByRole("button")
-    .filter({ has: page.getByText(name, { exact: true }) })
+  await attackForm(page)
+    .getByRole("group", { name: "Other weapons" })
+    .getByRole("button", { name: `Switch to ${name}`, exact: true })
     .click();
   await expect(held).toHaveText(name);
 }

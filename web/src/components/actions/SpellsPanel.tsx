@@ -64,7 +64,8 @@ function groupSlots(
 }
 
 /**
- * Today's prepared spells per level: cast (result in the result card), long rest, the preparation
+ * Spells tab of the Act panel (ADR 0022 step 2.5). Today's prepared spells per level, the levels in
+ * two text columns when the panel is wide enough: cast (result in the result card), long rest, the preparation
  * editor, and spells cast on the Bard by the party.
  */
 export function SpellsPanel() {
@@ -178,263 +179,272 @@ export function SpellsPanel() {
           {t("spellSlots.none")}
         </p>
       )}
-      <div className="grid grid-cols-2 gap-3">
-        {levels.map((level) => {
-          const list = byLevel.get(level) ?? [];
-          const left = list.filter((s) => !s.used).length;
-          return (
-            <section
-              key={level}
-              className="min-w-0 rounded-lg bg-neu-900/40"
-              aria-label={t("spellSlots.level", { level })}
-            >
-              <div className="flex items-center justify-between px-3 pt-2 pb-1">
-                <h3 className="text-title">
-                  {t("spellSlots.level", { level })}
-                </h3>
-                <div className="flex items-center gap-2">
-                  {maxOf(level) !== undefined && (
-                    <span className="text-label text-muted-foreground">
-                      {t("spellSlots.preparedCount", {
-                        count: list.filter((s) => !s.extra).length,
-                        max: maxOf(level),
-                      })}
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1" aria-hidden>
-                    {list.map((_, i) => (
-                      <span
-                        key={i}
-                        className={cn(
-                          "size-2 rounded-full",
-                          i < left ? "bg-magic" : "bg-neu-700",
-                        )}
-                      />
-                    ))}
-                  </span>
-                  <span
-                    data-testid={`remaining-${level}`}
-                    className={cn(
-                      "text-label",
-                      list.length > 0 && left === 0
-                        ? "text-danger"
-                        : "text-muted-foreground",
+      {/* The levels flow in two text columns, 24 px apart, once the panel is wide enough (ADR 0022
+          step 3.2); a level never splits across them. */}
+      <div className="@container">
+        <div className="gap-x-6 @lg:columns-2">
+          {levels.map((level) => {
+            const list = byLevel.get(level) ?? [];
+            const left = list.filter((s) => !s.used).length;
+            return (
+              <section
+                key={level}
+                className="mb-3 min-w-0 break-inside-avoid"
+                aria-label={t("spellSlots.level", { level })}
+              >
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 pb-1">
+                  <h3 className="section-label">
+                    {t("spellSlots.level", { level })}
+                  </h3>
+                  <div className="ml-auto flex flex-wrap items-center justify-end gap-x-2">
+                    {maxOf(level) !== undefined && (
+                      <span className="text-label text-muted-foreground">
+                        {t("spellSlots.preparedCount", {
+                          count: list.filter((s) => !s.extra).length,
+                          max: maxOf(level),
+                        })}
+                      </span>
                     )}
-                  >
-                    {t("spellSlots.remaining", { left, total: list.length })}
-                  </span>
-                </div>
-              </div>
-              <ul className="flex flex-col gap-1 p-1.5">
-                {groupSlots(
-                  list,
-                  (slot) =>
-                    spellName(
-                      slot.prepared_spell_id ||
-                        spellId(slot.prepared_spell_name),
-                      slot.prepared_spell_name,
-                    ),
-                  t("spellSlots.extraBlank"),
-                ).map(({ slot, blank, name: baseName, remaining }) => {
-                  // A spell prepared several times is one row with the copies left; casting uses one.
-                  const name =
-                    remaining > 1 ? `${baseName} ×${remaining}` : baseName;
-                  const choices = info.spellbook.filter(
-                    (s) => s.level === slot.level,
-                  );
-                  const plan = planCast(slot, blank, info.spellbook, {
-                    pick: picks[slot.index],
-                    split: splits[slot.index],
-                    acText: targetAcs[slot.index],
-                    itemPick: itemPicks[slot.index],
-                    mode: modePicks[slot.index],
-                  });
-                  const {
-                    needs,
-                    slotSplits,
-                    split,
-                    spendable,
-                    itemId,
-                    modes,
-                    mode,
-                  } = plan;
-                  const acText = targetAcs[slot.index] ?? "";
-                  // The damage a cast rolls at the Bard's level, as the server serves it: the picked
-                  // mode's for a spell with modes.
-                  const entry = blank
-                    ? undefined
-                    : info.spellbook.find(
-                        (s) =>
-                          s.id ===
-                          (slot.prepared_spell_id ||
-                            spellId(slot.prepared_spell_name)),
-                      );
-                  const damage = blank
-                    ? undefined
-                    : mode
-                      ? mode.damage
-                      : entry?.damage;
-                  // A lasting area's damage per round of exposure (ADR 0008 step 16), rolled from
-                  // the cast card.
-                  const exposure = entry?.exposure;
-                  return (
-                    <li
-                      key={slot.index}
+                    <span className="flex items-center gap-1" aria-hidden>
+                      {list.map((_, i) => (
+                        <span
+                          key={i}
+                          className={cn(
+                            "size-2 rounded-full",
+                            i < left ? "bg-magic" : "bg-neu-700",
+                          )}
+                        />
+                      ))}
+                    </span>
+                    <span
+                      data-testid={`remaining-${level}`}
                       className={cn(
-                        "flex min-h-7 items-center justify-between gap-2 rounded px-2 py-1",
-                        slot.used ? "opacity-60" : "hover:bg-muted/60",
+                        "text-label",
+                        list.length > 0 && left === 0
+                          ? "text-danger"
+                          : "text-muted-foreground",
                       )}
                     >
-                      <span className="flex min-w-0 flex-col leading-tight">
-                        <span
-                          className={cn(
-                            "min-w-0 truncate text-body",
-                            slot.used && "text-muted-foreground line-through",
-                          )}
-                        >
-                          {name}
-                        </span>
-                        {damage && (
-                          <span
-                            className="min-w-0 truncate text-label text-muted-foreground tabular-nums"
-                            data-testid="slot-dice"
-                          >
-                            {damageText(t, damage)}
-                          </span>
+                      {t("spellSlots.remaining", { left, total: list.length })}
+                    </span>
+                  </div>
+                </div>
+                <ul className="flex flex-col gap-0.5">
+                  {groupSlots(
+                    list,
+                    (slot) =>
+                      spellName(
+                        slot.prepared_spell_id ||
+                          spellId(slot.prepared_spell_name),
+                        slot.prepared_spell_name,
+                      ),
+                    t("spellSlots.extraBlank"),
+                  ).map(({ slot, blank, name: baseName, remaining }) => {
+                    // A spell prepared several times is one row with the copies left; casting uses one.
+                    const name =
+                      remaining > 1 ? `${baseName} ×${remaining}` : baseName;
+                    const choices = info.spellbook.filter(
+                      (s) => s.level === slot.level,
+                    );
+                    const plan = planCast(slot, blank, info.spellbook, {
+                      pick: picks[slot.index],
+                      split: splits[slot.index],
+                      acText: targetAcs[slot.index],
+                      itemPick: itemPicks[slot.index],
+                      mode: modePicks[slot.index],
+                    });
+                    const {
+                      needs,
+                      slotSplits,
+                      split,
+                      spendable,
+                      itemId,
+                      modes,
+                      mode,
+                    } = plan;
+                    const acText = targetAcs[slot.index] ?? "";
+                    // The damage a cast rolls at the Bard's level, as the server serves it: the picked
+                    // mode's for a spell with modes.
+                    const entry = blank
+                      ? undefined
+                      : info.spellbook.find(
+                          (s) =>
+                            s.id ===
+                            (slot.prepared_spell_id ||
+                              spellId(slot.prepared_spell_name)),
+                        );
+                    const damage = blank
+                      ? undefined
+                      : mode
+                        ? mode.damage
+                        : entry?.damage;
+                    // A lasting area's damage per round of exposure (ADR 0008 step 16), rolled from
+                    // the cast card.
+                    const exposure = entry?.exposure;
+                    return (
+                      <li
+                        key={slot.index}
+                        className={cn(
+                          "flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1",
+                          slot.used ? "opacity-60" : "hover:bg-neu-900",
                         )}
-                        {exposure && entry && (
-                          <span
-                            className="min-w-0 truncate text-label text-muted-foreground tabular-nums"
-                            data-testid="slot-exposure"
-                          >
-                            {exposureText(t, entry.id, exposure)}
-                          </span>
-                        )}
-                      </span>
-                      {blank && !slot.used && (
-                        <select
-                          className="h-7 min-w-0 flex-1 rounded border bg-background px-1 text-body"
-                          aria-label={t("spellSlots.extraPick")}
-                          data-testid="extra-pick"
-                          value={picks[slot.index] ?? ""}
-                          onChange={(e) =>
-                            setPicks({ ...picks, [slot.index]: e.target.value })
-                          }
-                        >
-                          <option value="">{t("spellSlots.extraPick")}</option>
-                          {choices.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {spellName(s.id, s.name)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {needs?.attack_roll && !slot.used && (
-                        <input
-                          className="h-7 w-16 rounded border bg-background px-1 text-body"
-                          aria-label={t("spellSlots.targetAc")}
-                          placeholder={t("spellSlots.targetAc")}
-                          data-testid="cast-target-ac"
-                          inputMode="numeric"
-                          value={acText}
-                          onChange={(e) =>
-                            setTargetAcs({
-                              ...targetAcs,
-                              [slot.index]: e.target.value,
-                            })
-                          }
-                        />
-                      )}
-                      {spendable.length > 1 && !slot.used && (
-                        <select
-                          className="h-7 min-w-0 rounded border bg-background px-1 text-body"
-                          aria-label={t("spellSlots.itemSpent")}
-                          data-testid="cast-item"
-                          value={itemId}
-                          onChange={(e) =>
-                            setItemPicks({
-                              ...itemPicks,
-                              [slot.index]: e.target.value,
-                            })
-                          }
-                        >
-                          {spendable.map((i) => (
-                            <option key={i.id} value={i.id}>
-                              {i.name} ({i.count})
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {modes.length > 0 && needs && !slot.used && (
-                        <select
-                          className="h-7 min-w-0 rounded border bg-background px-1 text-body"
-                          aria-label={t("spellSlots.modeChoice")}
-                          data-testid="slot-mode"
-                          value={mode?.key}
-                          onChange={(e) =>
-                            setModePicks({
-                              ...modePicks,
-                              [slot.index]: e.target.value,
-                            })
-                          }
-                        >
-                          {modes.map((m) => (
-                            <option key={m.key} value={m.key}>
-                              {modeName(t, needs.id, m.key)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {slotSplits.length > 0 && !slot.used && (
-                        <select
-                          className="h-7 rounded border bg-background px-1 text-body"
-                          aria-label={t("spellSlots.splitChoice")}
-                          data-testid="slot-split"
-                          value={split}
-                          onChange={(e) =>
-                            setSplits({
-                              ...splits,
-                              [slot.index]: e.target.value,
-                            })
-                          }
-                        >
-                          {slotSplits.map((levels) => (
-                            <option
-                              key={levels.join(",")}
-                              value={levels.join(",")}
-                            >
-                              {splitText(t, levels)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      <Button
-                        size="xs"
-                        variant={slot.used ? "ghost" : "secondary"}
-                        disabled={busy || plan.blocked}
-                        aria-label={t("spellSlots.castLabel", {
-                          name: baseName,
-                        })}
-                        onClick={() =>
-                          void run(() =>
-                            castSpell(slot.index, {
-                              onSelf: onAlly ? false : undefined,
-                              ...plan.options,
-                            }),
-                          )
-                        }
                       >
-                        {slot.used
-                          ? t("spellSlots.used")
-                          : t("spellSlots.cast")}
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          );
-        })}
+                        <span className="flex min-w-32 flex-1 flex-col">
+                          <span
+                            className={cn(
+                              "text-body break-words",
+                              slot.used && "text-muted-foreground line-through",
+                            )}
+                          >
+                            {name}
+                          </span>
+                          {damage && (
+                            <span
+                              className="text-label break-words text-muted-foreground tabular-nums"
+                              data-testid="slot-dice"
+                            >
+                              {damageText(t, damage)}
+                            </span>
+                          )}
+                          {exposure && entry && (
+                            <span
+                              className="text-label break-words text-muted-foreground tabular-nums"
+                              data-testid="slot-exposure"
+                            >
+                              {exposureText(t, entry.id, exposure)}
+                            </span>
+                          )}
+                        </span>
+                        {blank && !slot.used && (
+                          <select
+                            className="h-7 min-w-0 flex-1 rounded border bg-background px-1 text-body"
+                            aria-label={t("spellSlots.extraPick")}
+                            data-testid="extra-pick"
+                            value={picks[slot.index] ?? ""}
+                            onChange={(e) =>
+                              setPicks({
+                                ...picks,
+                                [slot.index]: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="">
+                              {t("spellSlots.extraPick")}
+                            </option>
+                            {choices.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {spellName(s.id, s.name)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {needs?.attack_roll && !slot.used && (
+                          <input
+                            className="h-7 w-16 rounded border bg-background px-1 text-body"
+                            aria-label={t("spellSlots.targetAc")}
+                            placeholder={t("attack.acShort")}
+                            data-testid="cast-target-ac"
+                            inputMode="numeric"
+                            value={acText}
+                            onChange={(e) =>
+                              setTargetAcs({
+                                ...targetAcs,
+                                [slot.index]: e.target.value,
+                              })
+                            }
+                          />
+                        )}
+                        {spendable.length > 1 && !slot.used && (
+                          <select
+                            className="h-7 min-w-0 rounded border bg-background px-1 text-body"
+                            aria-label={t("spellSlots.itemSpent")}
+                            data-testid="cast-item"
+                            value={itemId}
+                            onChange={(e) =>
+                              setItemPicks({
+                                ...itemPicks,
+                                [slot.index]: e.target.value,
+                              })
+                            }
+                          >
+                            {spendable.map((i) => (
+                              <option key={i.id} value={i.id}>
+                                {i.name} ({i.count})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {modes.length > 0 && needs && !slot.used && (
+                          <select
+                            className="h-7 min-w-0 rounded border bg-background px-1 text-body"
+                            aria-label={t("spellSlots.modeChoice")}
+                            data-testid="slot-mode"
+                            value={mode?.key}
+                            onChange={(e) =>
+                              setModePicks({
+                                ...modePicks,
+                                [slot.index]: e.target.value,
+                              })
+                            }
+                          >
+                            {modes.map((m) => (
+                              <option key={m.key} value={m.key}>
+                                {modeName(t, needs.id, m.key)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {slotSplits.length > 0 && !slot.used && (
+                          <select
+                            className="h-7 max-w-full min-w-0 rounded border bg-background px-1 text-body"
+                            aria-label={t("spellSlots.splitChoice")}
+                            data-testid="slot-split"
+                            value={split}
+                            onChange={(e) =>
+                              setSplits({
+                                ...splits,
+                                [slot.index]: e.target.value,
+                              })
+                            }
+                          >
+                            {slotSplits.map((levels) => (
+                              <option
+                                key={levels.join(",")}
+                                value={levels.join(",")}
+                              >
+                                {splitText(t, levels)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <Button
+                          size="xs"
+                          variant={slot.used ? "ghost" : "secondary"}
+                          disabled={busy || plan.blocked}
+                          aria-label={t("spellSlots.castLabel", {
+                            name: baseName,
+                          })}
+                          onClick={() =>
+                            void run(() =>
+                              castSpell(slot.index, {
+                                onSelf: onAlly ? false : undefined,
+                                ...plan.options,
+                              }),
+                            )
+                          }
+                        >
+                          {slot.used
+                            ? t("spellSlots.used")
+                            : t("spellSlots.cast")}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

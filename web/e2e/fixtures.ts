@@ -287,6 +287,6 @@ export async function snap(page: Page, name: string): Promise<string> {
   const dir = path.join(screensDir, spec);
   await mkdir(dir, { recursive: true });
   const file = path.join(dir, `${name}.png`);
-  await page.screenshot({ path: file });
+  await page.screenshot({ path: file, animations: "disabled" });
   return file;
 }

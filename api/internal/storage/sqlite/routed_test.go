@@ -56,3 +56,15 @@ func TestRouted_RunsOnTheContextTransactionElseThePool(t *testing.T) {
 		"tx exec", "tx prepare", "tx query", "tx queryrow",
 	}, ran)
 }
+
+// A context carrying a nil transaction carries none: statements go to the pool.
+func TestRouted_NilTransactionMeansThePool(t *testing.T) {
+	var ran []string
+	d := Routed(conn{name: "pool", ran: &ran})
+
+	runAll(withTx(context.Background(), (*sql.Tx)(nil)), d)
+
+	assert.Equal(t, []string{"pool exec", "pool prepare", "pool query", "pool queryrow"}, ran)
+	_, ok := txFrom(withTx(context.Background(), (*sql.Tx)(nil)))
+	assert.False(t, ok)
+}

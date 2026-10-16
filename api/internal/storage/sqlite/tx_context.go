@@ -34,9 +34,17 @@ func withTx(ctx context.Context, tx DBTX) context.Context {
 	return context.WithValue(ctx, txKey{}, tx)
 }
 
+// txFrom returns the transaction ctx carries. A nil *sql.Tx stored as a DBTX is
+// a non-nil interface, so it is checked for explicitly: it means none.
 func txFrom(ctx context.Context) (DBTX, bool) {
 	tx, ok := ctx.Value(txKey{}).(DBTX)
-	return tx, ok && tx != nil
+	if !ok || tx == nil {
+		return nil, false
+	}
+	if t, isTx := tx.(*sql.Tx); isTx && t == nil {
+		return nil, false
+	}
+	return tx, true
 }
 
 // Conn returns the transaction carried by ctx (see InTx), or fallback when ctx

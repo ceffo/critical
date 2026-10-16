@@ -35,7 +35,7 @@ const header = () => `<header class="vitals">
 const character = () =>
   `<aside class="moi stack"><div><div class="title">${ui.esc(d.character.name)}</div><div class="muted">${d.character.klass} · Level ${d.character.level}</div></div>${ui.abilities()}${ui.hpBlock("headline")}<div><div class="label" style="margin-bottom:.375rem">HP change</div>${ui.hpChange()}</div>${ui.chargeCard()}<div><div class="label" style="margin-bottom:.375rem">Saving throws · click to roll</div>${ui.savesButtons()}</div></aside>`;
 
-const shell = (active, stage, cls = "") => `<div class="app">
+const shell = (active, stage, cls = "", look = "") => `<div class="app ${look}">
 ${header()}
 <div class="below">
   ${character()}
@@ -48,7 +48,7 @@ ${header()}
 const journalHead = () =>
   `<div class="hstack"><span class="title">Journal</span><span class="seg" style="height:1.5rem"><span class="on">All</span><span>Rolls</span></span><span class="muted">${d.journal.length} entries</span><span class="right btn xs">Undo</span><span class="btn xs ghost">Redo</span></div>`;
 
-const act = (tab, { collapsed = false } = {}) =>
+const act = (tab, { collapsed = false, look = "" } = {}) =>
   shell(
     "act",
     `<div class="now-band">
@@ -58,6 +58,7 @@ const act = (tab, { collapsed = false } = {}) =>
 ${ui.splitHandle({ collapsed })}
 ${collapsed ? ui.journalBar() : `<section class="panel history stack" style="gap:.5rem">${journalHead()}<div class="scroll-y grow">${ui.journalTable()}</div></section>`}`,
     collapsed ? "collapsed" : "",
+    look,
   );
 
 const lookup = () =>
@@ -76,6 +77,8 @@ const xp = () =>
 
 export const pages = {
   "act-weapons": () => act("weapons"),
+  "act-weapons-cards": () => act("weapons", { look: "look-cards" }),
+  "act-weapons-flat": () => act("weapons", { look: "look-flat" }),
   "act-spells": () => act("spells"),
   "act-spells-collapsed": () => act("spells", { collapsed: true }),
   lookup,
@@ -161,4 +164,19 @@ export const stylesheet = `/* Direction B: zones set apart by their surface, no 
 .xp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 2rem; }
 .xp-grid > div { min-width: 0; }
 .list-row.fresh { background: color-mix(in oklab, var(--tint) 8%, transparent); }
+/* Round 4 looks, to pick from. Cards: every zone is a card on the ground with one gutter; the rail is bare icons. */
+.look-cards { padding: .75rem; gap: .75rem; background: var(--ground); }
+.look-cards .vitals, .look-cards .moi, .look-cards .dice-foot { border: 1px solid var(--border); border-radius: .625rem; }
+.look-cards .below { gap: .75rem; }
+.look-cards .rail { background: none; width: 4.25rem; padding: 0; }
+.look-cards .rail-item { border-left: 0; border-radius: .5rem; margin: 0 .25rem; }
+.look-cards .rail-item.on { background: var(--amb-900); }
+.look-cards .stage { padding: 0; }
+.look-cards .vitals > div:first-child { padding-left: 1rem; }
+/* Flat: zones and cards are tones only, no outline anywhere; the result card keeps a tint wash instead of its border. */
+.look-flat .panel { border-color: transparent; }
+.look-flat .result-panel { background: color-mix(in oklab, var(--tint) 7%, var(--surface)); }
+.look-flat .rail { background: var(--ground); }
+.look-flat .rail-item { border-left: 0; border-radius: .5rem; margin: 0 .25rem; }
+.look-flat .moi { border-radius: 0 .625rem .625rem 0; }
 `;

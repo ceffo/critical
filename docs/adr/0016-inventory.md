@@ -1,7 +1,10 @@
 # ADR 0016: Inventory and editors
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.13,
-critical-qki.31 and critical-qki.32, until then in `docs/backend.md`)
+critical-qki.31 and critical-qki.32, until then in `docs/backend.md`); steps 9 to 16 (an item's own
+powers) added 2026-10-16 (critical-qki.45), amending [ADR 0002](0002-attack-resolution.md) step 6,
+[ADR 0003](0003-damage.md) steps 4, 5 and 11 and [ADR 0004](0004-buffs.md) steps 10 and 11 and its
+Consequences
 
 ## Context
 
@@ -9,6 +12,16 @@ The Bard carries arrows, flasks, a wand and a Power Gem. User, 2026-10-13: *"the
 consumables... it's just their type"*. One item model has to cover them all, and the player must be
 able to fix the lists (a new quiver, a weapon enchanted by the DM) without a deploy. Every change
 goes through the action log, which is a stack ([ADR 0007](0007-hp-ledger.md) step 8).
+
+Some items do something by themselves. The Power Gem is set in Kelsen's forehead: it is not going
+anywhere without him dying. It is a warrior's gem, but with Strength magic the bard reaches its
+requirement and its powers wake up. User, 2026-10-15: *"the power gem is supposed to activate its
+powers when its user has STR >= 18"*; *"its powers on the weapon. the dispel magic once a day is
+available regardless"*. Until now the gem's "+5" and "×2" were a hand-made buff with a `min_str`
+gate ([ADR 0004](0004-buffs.md) step 10): something the player had to put on the list, keep and
+never dismiss by mistake, for an effect that belongs to the item. Steps 9 to 16 give items their own
+powers: effects that apply while a trigger is met, like a buff that is never on the list. Decided
+in triage with the user, 2026-10-15/16.
 
 ## Decision
 
@@ -76,9 +89,110 @@ unless named otherwise.
    Tests: `TestCreate_ValidationNamesTheField` (weaponsvc), `TestUpdate_RejectsBadValuesAndNoOps`,
    `TestWeapons_InvalidEditsLogNothing`, `TestWeapons_EditedDamageDiceAreRolled`.
 
+### An item's own powers (steps 9 to 16)
+
+Planned tests are named without their `Test` prefix until they exist: `just check-adr-tests`
+refuses a cited `Test…` name with no test behind it. The item that adds a test writes its full
+name here. Paths are under `api/internal/` unless they start with `web/`.
+
+9. **Powers are part of the item.** An item may carry a list of powers. A power has an id (a slug,
+   unique within its item), an optional **trigger** and a set of **effects**. The effects are the
+   buff effect kinds of [ADR 0004](0004-buffs.md) step 11 (`weapon_buff`, `multiplier`,
+   `spells_buff`, `to_hit`, `damage`, `save_bonus`, `ac`) with their conditions (ADR 0004 step 18);
+   a Strength effect (`str_bonus`, `str_max`) is refused, so a power never changes the effective
+   STR that its own trigger reads. A power has no name, rounds or charges: it is named by its item
+   (step 14) and lasts as long as the item is carried. Its count does not matter: the Power Gem's
+   powers work at 0 dispels left, and spending the dispel does not need STR 18 (user: "the dispel
+   magic once a day is available regardless"). Removing the item removes its powers.
+   Planned tests: `domain/service/itemsvc` `ItemPowers_Step9_StrengthEffectsRefused`,
+   `ItemPowers_Step9_CountDoesNotGateThePowers`; `storage/sqlite`
+   `Seed_Step9_RejectsAPowerWithAStrengthEffect`.
+10. **Trigger.** A power's trigger says when it is on. The one trigger kind is `min_str`: the power is
+    on while the effective STR (ADR 0004 steps 7 to 9) is at least that value (1 to 25), the same
+    comparison as a buff's `min_str` gate (ADR 0004 step 10), 18 **or more** (user, 2026-10-13: "not
+    exactly 18 >= 18"). `min_str` is a trigger here, not an effect: it decides whether the power
+    exists for the roll, never what it adds. A power without a trigger is always on. Nothing is
+    logged when a power switches on or off: it follows the STR, which follows the buffs, and those
+    are logged (ADR 0004 step 13); voiding a Strength buff switches the power back by itself.
+    Planned tests: `domain/service/buffsvc` `ItemPowers_Step10_TriggerAtEffectiveStr` (STR 17
+    off; 18, 19 and 23 on; a power without a trigger always on), `composition`
+    `ItemPowers_Step10_StrengthBuffTurnsTheHammerOnAndVoidTurnsItOff`.
+11. **Powers join the buffs' aggregate.** The buffs' aggregate (ADR 0004 step 11), used by the
+    attack, the attack preview, the save and the spell to-hit, reads the carried items' powers
+    through an items port of `buffsvc` (wired in the composition root) and folds every power that is
+    on into the same totals as the buffs that apply, by the same rules: factors multiply, flat
+    bonuses add, `weapon_buff` is the best single +N across buffs and powers. The effective STR is
+    worked out from the buffs alone, then the triggers are read against it. Order: the buffs in
+    list order, then the powers in item list order, then power order; on a `weapon_buff` tie the
+    first one wins (a buff before a power).
+    Planned tests: `domain/service/buffsvc` `ItemPowers_Step11_PowerJoinsTheAggregate` (a power
+    and a buff `multiplier` multiply, `to_hit` adds, the best `weapon_buff` wins across both, a tie
+    goes to the buff), `ItemPowers_Step11_PowerOffContributesNothing`.
+12. **Melee only.** A power's effects may carry the `weapon_kind` condition of ADR 0004 step 18.
+    The thunder hammer's is `melee`: its +5 and ×2 count for an attack (and its preview) with a
+    melee weapon, not with a bow nor a hurled weapon (a hurled weapon is a missile weapon,
+    [ADR 0002](0002-attack-resolution.md) steps 4 and 5), and never for a save or a spell's to-hit,
+    which have no weapon. The power is still on (step 10) and still shown (step 13) while a bow is
+    in hand; it just adds nothing to that roll.
+    Planned tests: `domain/service/combatsvc` `ItemPowers_Step12_HammerOnMeleeOnly` (long sword:
+    +5 and ×2; short bow and darts: the weapon's own magic, ×1), `ItemPowers_Step12_PreviewFollowsTheWeaponInHand`.
+13. **Shown only while it is on.** A power whose trigger is not met appears nowhere: not on the
+    effects timeline, not in any breakdown, not in the preview. While it is on, the effects list
+    (`GET` of the active buffs) serves it in its own list next to the buffs, never mixed into them:
+    the item's id, the power's id and its effects, no counters, nothing to edit, absorb or dismiss.
+    The timeline shows it under the item's name. Hand-made buffs with a `min_str` keep ADR 0004
+    step 10: on the list, shown as not applying ("needs STR N").
+    Planned tests: `domain/service/buffsvc` `ItemPowers_Step13_ListedOnlyWhileOn`; `rest/router`
+    `ItemPowers_Step13_PowersOnTheWire`; `web/src` a timeline test (the power appears at STR 18
+    under the item's name, is absent at 17, offers no dismiss).
+14. **Named by its item.** Every contribution of a power in the aggregate, in the attack and save
+    breakdowns (`Modifiers`, `DamageTerms`) and in the log entries that store them carries the
+    item's id (`itemId`) next to the stored name of the item (the `Detail`, a fallback). The client
+    names it from the item by id, so it shows the item's current name and, with the localization of
+    item names, the player's language; a `Detail` with no `itemId`, or an id no item has any more
+    (removed since), shows as stored. A log entry recorded before keeps its stored name; payloads are
+    never rewritten. The backend sends no wording ([ADR 0023](0023-localized-text.md)).
+    Planned tests: `domain/service/combatsvc` `ItemPowers_Step14_BreakdownCarriesTheItemID` (the
+    `weapon_buff` modifier, the `weapon` and `dice_multiplier` damage terms); `web/src/lib`
+    a breakdown label test (named from the item by id, the stored name without one).
+15. **Stored with the item, logged with it.** Powers are stored on the item row and are part of its
+    `items:<id>` snapshot, so every item entry (use, restock, add, edit, remove) carries them and
+    popping it restores them with the item (steps 2 and 4): a removed Power Gem popped back has its
+    powers again. Powers come from the seed and from data migrations only: the item editor shows no
+    power field and sends none, an edit or create body's `powers` key is ignored like any unknown
+    key, and a created item has none.
+    Planned tests: `domain/service/itemsvc` `ItemPowers_Step15_SnapshotCarriesThePowers`,
+    `ItemPowers_Step15_EditBodyCannotSetPowers`; `composition`
+    `ItemPowers_Step15_RemoveGemAndPopBringsThePowersBack`.
+16. **The Power Gem.** One item, "Power Gem" (type `gem`, `daily`, 1 a day), with two powers: its
+    daily Dispel Magic, which stays the item's daily use (steps 1 to 3: no STR condition, 1/day, the
+    10 m radius in its note, as today; not an entry of its power list), and the **thunder hammer**,
+    its one listed power: trigger `min_str` 18, effects `weapon_kind`
+    `melee`, `weapon_buff` 5 ("the weapon becomes +5", to hit and damage) and `multiplier` 2 (the
+    weapon's raw damage dice doubled; the weapon keeps its own dice). The damage is ADR 0003 step 2
+    unchanged: `(((dice × enlarge × 2) + weapon) × crit) + strength + buff damage`, and the +5
+    against the weapon's own magic is ADR 0002 step 6 unchanged: the higher one, never both. The
+    seed (`seeds/items.json`) carries it for a new database; a data migration gives it to an
+    existing one: on the row `power_gem_dispel` (the id stays: log entries and snapshots refer to
+    it), it sets the powers and renames "Power Gem: Dispel Magic" to "Power Gem" when the name is
+    still that one exactly (a name the player changed is kept). The gem's other forms (the trident of
+    submission, the undead-destroying mace) and the hammer's stun are not modelled.
+    Planned tests: `storage/sqlite` `Migrate_Step16_GivesTheGemItsPowersAndKeepsItsID` (powers set,
+    name renamed, a renamed gem keeps its name, a database without the row is untouched),
+    `Seed_Step16_PowerGemHasTheHammer`; `composition` `ItemPowers_Step16_HammerAt18WithTheLongSword`
+    (STR 17: the sword's own +2, ×1; STR 18 from Strength buffs: +5 to hit and damage and the dice
+    doubled, named by the gem; a dispel used leaves it on).
+
 ## Consequences
 
 - A `charges` item cannot sit at 0, so "empty wand" is not a state; a stock item can, and so can a
   `daily` one until the long rest.
 - Because the log is a stack, fixing an old item edit means popping what came after it.
-- Not covered: weight and encumbrance, item costs, magic item identification.
+- An item power is not a buff: it cannot be dismissed, edited or renewed, it has no counters and
+  Next Round never touches it. A hand-made "Power Gem" buff from before step 16 is left as it is; the
+  player dismisses it once (with the item's power on, its ×2 would multiply with the power's into
+  ×4).
+- Powers have no editor fields; changing one is a data migration.
+- Not covered: weight and encumbrance, item costs, magic item identification, an item that raises
+  Strength (a power has no Strength effect, step 9), triggers other than `min_str`, the Power Gem's
+  other forms and the thunder hammer's stun.

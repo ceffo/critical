@@ -6,133 +6,126 @@ Bard Kelsen Balstriel at level 15, his real weapons, items and spellbook, a turn
 three effects, a journal of sixteen entries and long spell names. Plus the brand-mark options.
 Nothing here is app code: the next item writes ADR 0022 from the pick, then the shell item builds it.
 
-Round 2 (2026-10-15): the user kept **A** (vitals bar + stages) and dropped B and C. A is the
-**baseline** here; **A1, A2 and A3** keep A's foundations (an always-visible vitals bar with turn,
-initiative, effects, HP and the last result; explicit activity switching; each activity owning the
-width) and each pushes further from today's app in a different way. Every page keeps the last
-result, HP and the turn with its effects visible, and no important text is cut: `just design-shots`
-fails when any element clips its text (wide or tall) or a page overflows; `just design-shots
---self-test` proves the audit catches those.
+**Round 3 (2026-10-15): direction B** combines the user's picks from round 2 (below). A2 and A3 stay
+for comparison; A (baseline) and A1 (rejected: "cramped, too dense, no harmony") are deleted (git
+history has them). The die silhouettes of round 2 are gone everywhere ("not looking good, abort");
+die values are plain again. Every page keeps the last result, HP and the turn with its effects
+visible, and no important text is cut: `just design-shots` fails when any element clips its text
+(wide or tall) or a page overflows; `just design-shots --self-test` proves the audit catches those.
 
 Rebuild and screenshot: `just design-shots` (pages from `build.mjs` + `lib/`, screenshots at
 1707x1300 and 1440x900 in dark Arcane into `<direction>/shots/`). Open any `<direction>/*.html`
 in a browser to see it live (after `cd web && npm ci`, for the fonts).
 
-## How each direction differs from today's app and from A
+## B · Character left, history below
 
-**Today's app**: a header band (brand, turn, initiative, Next turn, effects timeline) spread thin;
-a rail; in Act three columns (act panel | result + journal + dice | character); the spell lookup
-and XP squeezed into the left column while the result, journal and character stay.
+What the user kept from round 2, and where it went:
 
-**A (baseline)** moved HP and the last result into a dense vitals bar and gave each activity the
-whole width, but the Act stage is still the same three columns as today, and the lookup and XP
-stages are the old panels made wider.
+| Pick (user, round 2)                                                      | In B                                                                                                                                                  |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A2: "I like having the character on the left … on the border with the selector right to it" | The character is a column on the left screen edge (name, abilities, HP change, Stoneskin, saves as click-to-roll buttons), the activity rail right of it, in **every** activity, so the rail never moves |
+| A2: "the settings cogs could then move top right"                        | The cog is the last cell of the header row; the rail has none                                                                                         |
+| A3: "not the header though, we lose too much information"               | A2's header: brand, `TURN 3`, initiative + Next turn, HP with its bar and last hit, the last result line, over the effects timeline at full width (12 turn columns) |
+| A3: "the journal on the bottom and the dice roller as a footer"          | In Act the journal is the lower band, a full-width table (turn \| entry \| time \| value); the dice composer is a footer across the whole window, in every activity |
+| A3: "provided we can drag the separator … or even collapse it"           | A grip between the "now" band and the journal (`split-handle`, cursor row-resize) with a Collapse button; the collapsed state is a one-line bar with the last entry, the count and Undo/Redo (`act-spells-collapsed`) |
+| A2: "the weapon in hand section is still ridiculously wasting space … the attack button looks small" | The weapon in hand is one row: name, then its stats as a line of text (`Melee · 1d8 S/M · 1d12 L · +2 / +2 · THAC0 11`); the Attack button is the only control in the row, taller (44 px, two lines: "Attack" / "needs 6 vs AC 5") and primary; the other weapons are chips under it (one click to switch), no dropdown |
+| A2: "spell lookup pane is better than A1"                                | A2's lookup: filter + list on the left, the detail as stat tiles, a cast box and the description in two text columns                                 |
+| XP (no pick)                                                              | A2's workspace: progress and the form across the top, the ledger below                                                                                |
 
-**A1 · Character strip.** The vitals bar gains a second row that *is* the character: abilities,
-HP change (amount, Damage, Healing, source), the five saves as click-to-roll buttons; the Stoneskin
-Absorb button moves onto its effect row in the timeline. The character column is gone, so the Act
-stage is two wide columns: the act panel (the Spells tab in three columns of levels) and the result
-with its calculation open, the journal and the dice. The lookup is a faceted browser: class, level
-and school as vertical lists with counts, the results as wide rows with school, range and duration,
-the detail with stats, a cast box and the description. XP: progress and the form stacked on the
-left, the ledger as the big panel. From v3: the effects track, the HP bar with the ghost of the
-last hit, the saves as buttons, the result card's d20 and headline. Differs from today and from A
-by removing a column, not adding one: the character becomes chrome, the activity gets the width.
+Where two picks fought, the choice and why:
 
-**A2 · Timeline + centre stage.** The vitals bar is a thin command row (brand, `TURN 3`,
-initiative, Next turn, HP with its bar, the last result line) over the effects timeline at full
-width with twelve turn columns: the v3 mockup's "clock", where turns and effects are one concept.
-In Act the action and its result share the centre column, cause over effect (the result card sits
-right under the weapon that produced it and stays visible when the Spells tab scrolls); the
-character is a narrow left column (abilities, HP change, Stoneskin, saves as buttons) and the
-journal a full-height right column with the dice composer at its foot. The lookup detail is the
-hero: the stats as a row of tiles like the weapon card's, a cast box, the description in two text
-columns. XP is the mockup's workspace: progress and the form across the top, the ledger below.
-From v3: the `TOUR` hero and the 12-column track, the result's hex d20 and `Touche CA` headline,
-the saves as rows that roll, the level chips. Differs from today and from A by re-grouping: the
-result leaves the journal column and joins the action; the timeline leaves the header's corner and
-takes the width it needs.
+- **Result beside the action, not under it.** A2 put the result under the act panel (cause over
+  effect); A3 put the journal below. Both stacked would leave the journal ~9 rows at 900 px tall,
+  so the "now" band is act panel | result side by side, and the band takes only its content's
+  height (capped at 60 % of the stage, the act panel scrolls past that: Spells tab); the journal
+  gets the rest, at least 14rem. With the Weapons tab at 1707x1300 the whole journal shows.
+- **The character column is permanent chrome**, not an Act panel as in A2: with the rail right of
+  it, the rail would jump between activities otherwise, and HP change and saves are needed from the
+  lookup too. It costs the lookup and XP stages 280 px of width; the lookup detail still fits five
+  stat tiles and two text columns at 1440.
+- **A taller Attack button** despite triage's "no bigger buttons": the user's complaint was the
+  ratio of button to section. The section shrank to its content first (no stat tiles, no empty
+  gradient); the button grew once, to 44 px, because it carries a second line (what it needs to
+  hit) and is the one action of the tab. Every other control keeps the 28 / 32 px heights.
+- **The dice footer is app-wide**, not Act-only as in A3: a footer that comes and goes is not a
+  footer, and a free roll is wanted from the lookup too (a spell's damage). It costs 44 px in
+  every activity.
+- **At 1440 the Weapons target row wraps** (Situational on a second line) and the last weapon chip
+  wraps under the others; nothing is cut. The act panel has ~80 px to spare under the chips at
+  1707; that is the result card's height with its calculation open, not the weapon section's.
 
-**A3 · Now and history.** The vitals bar is one 44 px strip with the activities as tabs instead of
-a rail (brand, Act · Spells · Experience · Inventory, turn + initiative + Next turn, effect pills,
-HP with a mini bar, the last result). The Act stage is two bands: **now**, with the act panel, the
-result with its calculation and the character side by side, and **history**, the journal as a
-full-width table (turn | entry | time | value) with the dice composer as one line under it. The
-lookup is a table with the stats as columns (level, school, range, duration, casting, save) so
-spells compare at a glance, beside the detail. XP is the ledger as the hero with the total, the
-form and the thresholds in a side column. From v3: the calmer journal rows and the composer folded
-under them, the ledger table, dense section labels. Differs from today and from A by density and
-grouping: no rail, no column for the journal; time runs down the screen and the whole width is a
-ledger.
+Pages: `act-weapons`, `act-spells`, `act-spells-collapsed` (journal collapsed, the band takes the
+height), `lookup`, `xp`.
 
-Every direction also shows the **die silhouettes** the user asked for during round 2: a rolled
-value sits inside the shape of its die (d4 triangle, d6 square, d8 rhombus, d10 kite, d12 pentagon,
-d20 hexagon; d% is a d10), so "Initiative 4" needs no "(d10)". They appear in the result card (the
-d20 and the damage die), the initiative, the journal values and the dice composer's buttons.
+## A2 and A3, kept for comparison
+
+**A2 · Timeline + centre stage.** A thin command row over the effects timeline at full width. In
+Act the action and its result share the centre column, the character is a narrow left column and
+the journal a full-height right column with the dice composer at its foot. Lookup detail as stat
+tiles, a cast box and the description in two columns; XP as progress + form over the ledger.
+
+**A3 · Now and history.** One 44 px strip with the activities as tabs. Act is two bands: "now" (act
+panel, result with its calculation, character) and the journal as a full-width table with the dice
+composer as one line under it. Lookup as a table with stat columns; XP as the ledger with the total,
+form and thresholds in a side column.
 
 ## Comparison
 
-|                        | A · Vitals bar + stages (baseline)                                            | A1 · Character strip                                                                            | A2 · Timeline + centre stage                                                                    | A3 · Now and history                                                                             |
-| ---------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Vitals bar             | One row, ~105 px: turn, effects track (8 cols), HP, last result               | Two rows, ~130 px: the same, plus abilities, HP change, saves (click to roll)                    | A thin command row + the effects track at full width (12 cols), ~150 px                         | One 44 px strip: tabs, turn, effect pills, HP mini bar, last result                              |
-| How you switch         | Rail                                                                          | Rail                                                                                            | Rail                                                                                            | Tabs in the strip                                                                                |
-| Act                    | act panel \| result + journal + dice \| character                             | act panel (Spells in 3 columns) \| result (calculation open) + journal + dice                    | character \| act panel, result under it \| journal + dice                                       | now: act \| result \| character; history: journal table at full width, dice as one line          |
-| Spell lookup           | list \| stats and description side by side                                    | facets \| wide rows (school, range, duration) \| stats, cast box, description                   | list \| stat tiles, cast box, description in two columns                                        | table with stat columns \| stats, cast box, description                                          |
-| Experience             | progress on top, ledger \| form                                               | progress + form \| ledger                                                                       | progress + form on top, ledger below                                                            | ledger \| total, form, thresholds                                                                |
-| Where the character is | A column in Act only                                                          | In the bar, always                                                                              | A narrow column in Act                                                                          | A column in the "now" band                                                                       |
-| Where the journal is   | Under the result, in Act                                                      | Under the result, in Act (wider)                                                                | Its own column in Act                                                                           | The whole lower band in Act, as a table                                                          |
-| What it costs          | Act is still three columns                                                    | A taller bar; saves and HP change are small controls in chrome                                  | The tallest bar; the journal column is narrow at 1440                                           | At 900 px tall the "now" panels scroll; the journal shows ~9 rows                                |
-| Best at                | Deep work in lookup and XP                                                    | The act and the journal at full width; hits and saves without leaving the bar                   | Reading the fight as time; seeing the roll you just made under the thing you rolled             | The 1707x1300 table screen: everything about the turn in one band, the whole history below       |
-| Brand mark shown       | Facet · Crit                                                                  | Facet · Spine                                                                                   | Facet · Solid                                                                                   | Facet · V                                                                                        |
+|                        | A2 · Timeline + centre stage                                                 | A3 · Now and history                                                              | B · Character left, history below                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Header                 | Command row + effects track (12 cols), ~195 px                               | One 44 px strip: tabs, turn, effect pills, HP mini bar, last result               | A2's command row + track, cog at the right, ~195 px                                                  |
+| How you switch         | Rail                                                                         | Tabs in the strip                                                                 | Rail, right of the character column                                                                  |
+| Act                    | character \| act panel, result under it \| journal + dice                    | now: act \| result \| character; history: journal table, dice as one line         | now: act \| result; journal table below with a drag handle (collapsible); dice footer                 |
+| Spell lookup           | list \| stat tiles, cast box, description in two columns                     | table with stat columns \| stats, cast box, description                           | A2's                                                                                                 |
+| Experience             | progress + form on top, ledger below                                         | ledger \| total, form, thresholds                                                 | A2's                                                                                                 |
+| Where the character is | A narrow column in Act                                                       | A column in the "now" band                                                        | A column on the left edge, in every activity                                                         |
+| Where the journal is   | Its own column in Act                                                        | The whole lower band in Act, as a table                                           | The lower band in Act, resizable, collapsible to one line                                            |
+| Weapon in hand         | Card with four stat tiles, Attack top right                                  | Same card                                                                         | One row: stats as text, a 44 px Attack with "needs 6 vs AC 5", other weapons as chips                |
+| What it costs          | The journal column is narrow at 1440                                         | At 900 px tall the "now" panels scroll; the journal shows ~9 rows                 | 280 px of width in every activity; at 900 px tall the journal shows ~6 rows unless collapsed/dragged |
+| Brand mark shown       | Facet · Spine                                                                | Facet · Bare, heavy                                                               | Facet · Bare                                                                                         |
 
-All four keep from the v3 mockup and the triage: uppercase section labels, panels with a visible
+All three keep from the v3 mockup and the triage: uppercase section labels, panels with a visible
 outline on a surface, the HP bar with the hatched dying zone, threshold colours and the last-damage
 ghost, one line per journal entry with Reroll on hover (shown on the free-roll row), 14–16 px panel
-padding, the 28 / 32 px control heights, no bigger buttons. Large numbers only where the block is
-about that number (turn, HP, the damage total, the XP total): a `hero` size (40 px) beyond ADR
-0017's five roles; ADR 0022 decides whether that becomes a sixth role or stays `headline`.
+padding, the 28 / 32 px control heights. Large numbers only where the block is about that number
+(turn, HP, the damage total, the XP total): a `hero` size (40 px) beyond ADR 0017's five roles;
+ADR 0022 decides whether that becomes a sixth role or stays `headline`.
 
 ## Screenshots
 
-| Direction                   | 1707x1300                                                                                                                                                                                                                                                                                                                         | 1440x900                                                                                                                                                                                                                                                                                                                    |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A · Vitals bar + stages     | [act-weapons](a-vitals-bar/shots/act-weapons-1707x1300.png) · [act-spells](a-vitals-bar/shots/act-spells-1707x1300.png) · [lookup](a-vitals-bar/shots/lookup-1707x1300.png) · [xp](a-vitals-bar/shots/xp-1707x1300.png)                                                                                                         | [act-weapons](a-vitals-bar/shots/act-weapons-1440x900.png) · [act-spells](a-vitals-bar/shots/act-spells-1440x900.png) · [lookup](a-vitals-bar/shots/lookup-1440x900.png) · [xp](a-vitals-bar/shots/xp-1440x900.png)                                                                                                         |
-| A1 · Character strip        | [act-weapons](a1-character-strip/shots/act-weapons-1707x1300.png) · [act-spells](a1-character-strip/shots/act-spells-1707x1300.png) · [lookup](a1-character-strip/shots/lookup-1707x1300.png) · [xp](a1-character-strip/shots/xp-1707x1300.png)                                                                                 | [act-weapons](a1-character-strip/shots/act-weapons-1440x900.png) · [act-spells](a1-character-strip/shots/act-spells-1440x900.png) · [lookup](a1-character-strip/shots/lookup-1440x900.png) · [xp](a1-character-strip/shots/xp-1440x900.png)                                                                                 |
-| A2 · Timeline + centre stage | [act-weapons](a2-centre-stage/shots/act-weapons-1707x1300.png) · [act-spells](a2-centre-stage/shots/act-spells-1707x1300.png) · [lookup](a2-centre-stage/shots/lookup-1707x1300.png) · [xp](a2-centre-stage/shots/xp-1707x1300.png)                                                                                             | [act-weapons](a2-centre-stage/shots/act-weapons-1440x900.png) · [act-spells](a2-centre-stage/shots/act-spells-1440x900.png) · [lookup](a2-centre-stage/shots/lookup-1440x900.png) · [xp](a2-centre-stage/shots/xp-1440x900.png)                                                                                             |
-| A3 · Now and history        | [act-weapons](a3-now-history/shots/act-weapons-1707x1300.png) · [act-spells](a3-now-history/shots/act-spells-1707x1300.png) · [lookup](a3-now-history/shots/lookup-1707x1300.png) · [xp](a3-now-history/shots/xp-1707x1300.png)                                                                                                 | [act-weapons](a3-now-history/shots/act-weapons-1440x900.png) · [act-spells](a3-now-history/shots/act-spells-1440x900.png) · [lookup](a3-now-history/shots/lookup-1440x900.png) · [xp](a3-now-history/shots/xp-1440x900.png)                                                                                                 |
+| Direction                          | 1707x1300                                                                                                                                                                                                                                                                                                                                                                                                | 1440x900                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B · Character left, history below  | [act-weapons](b-character-left/shots/act-weapons-1707x1300.png) · [act-spells](b-character-left/shots/act-spells-1707x1300.png) · [act-spells-collapsed](b-character-left/shots/act-spells-collapsed-1707x1300.png) · [lookup](b-character-left/shots/lookup-1707x1300.png) · [xp](b-character-left/shots/xp-1707x1300.png)                                                                            | [act-weapons](b-character-left/shots/act-weapons-1440x900.png) · [act-spells](b-character-left/shots/act-spells-1440x900.png) · [act-spells-collapsed](b-character-left/shots/act-spells-collapsed-1440x900.png) · [lookup](b-character-left/shots/lookup-1440x900.png) · [xp](b-character-left/shots/xp-1440x900.png)                                                                        |
+| A2 · Timeline + centre stage       | [act-weapons](a2-centre-stage/shots/act-weapons-1707x1300.png) · [act-spells](a2-centre-stage/shots/act-spells-1707x1300.png) · [lookup](a2-centre-stage/shots/lookup-1707x1300.png) · [xp](a2-centre-stage/shots/xp-1707x1300.png)                                                                                                                                                                      | [act-weapons](a2-centre-stage/shots/act-weapons-1440x900.png) · [act-spells](a2-centre-stage/shots/act-spells-1440x900.png) · [lookup](a2-centre-stage/shots/lookup-1440x900.png) · [xp](a2-centre-stage/shots/xp-1440x900.png)                                                                                                                                                              |
+| A3 · Now and history               | [act-weapons](a3-now-history/shots/act-weapons-1707x1300.png) · [act-spells](a3-now-history/shots/act-spells-1707x1300.png) · [lookup](a3-now-history/shots/lookup-1707x1300.png) · [xp](a3-now-history/shots/xp-1707x1300.png)                                                                                                                                                                          | [act-weapons](a3-now-history/shots/act-weapons-1440x900.png) · [act-spells](a3-now-history/shots/act-spells-1440x900.png) · [lookup](a3-now-history/shots/lookup-1440x900.png) · [xp](a3-now-history/shots/xp-1440x900.png)                                                                                                                                                                  |
 
-## Brand mark: four developments of Facet
+## Brand mark: Facet · Bare
 
 Page: [logo/index.html](logo/index.html) · screenshot
 [logo/shots/index-1707x1300.png](logo/shots/index-1707x1300.png) (and
 [1440x900](logo/shots/index-1440x900.png)). Each option at 64 px, at header size with the Cinzel
-wordmark, at 32 and 16 px, in a browser tab, in dark and light Arcane; the current mark first for
-reference. The SVGs use `--tint` / `--highlight` with static Arcane fallbacks, so one file serves
-the header and the favicon.
+wordmark, at 32 and 16 px, in a browser tab, in dark and light Arcane. The SVGs use `--tint` /
+`--highlight` with static Arcane fallbacks, so one file serves the header and the favicon.
 
-Round 1's Facet was "interesting but undecipherable", and the current mark's triangle "has zero
-harmony with the exclamation mark". All four variants share one geometry: a hexagon of radius 13.5
-(the d20 seen from a vertex) and its front face, the triangle on the alternate vertices with the
-apex down. The "!" sits on the die's vertical axis, inside the face, and its dot lands on the apex
-vertex, so the die's edges, the stem and the dot are one construction; the inner spokes that
-muddied round 1 are gone. Stroke weight is 2 for every die edge and 3 for the stem.
+Round 2's pick: "the first one but drop the triangle". The page order was Current, Spine, V,
+Solid, Crit, so "the first one" is read as **Facet · Spine**, the first option after the current
+mark (Current itself has the triangle the user called out in round 1). Spine without its front face
+is a hexagon outline with the gold "!" on its axis; V, Solid and Crit are dropped. Two takes:
 
-| Option         | File                                           | Idea                                                                                                   |
-| -------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Facet · Spine  | [logo/facet-spine.svg](logo/facet-spine.svg)   | Outline hexagon and front face at one stroke; the gold "!" down the face's axis, dot on the apex       |
-| Facet · V      | [logo/facet-v.svg](logo/facet-v.svg)           | The face open at the top: a V that frames a tapered gold wedge "!" with a small facet for its dot      |
-| Facet · Solid  | [logo/facet-solid.svg](logo/facet-solid.svg)   | The die filled, the face cut as dark edges, the gold "!" inside: the heaviest at 16 px                 |
-| Facet · Crit   | [logo/facet-crit.svg](logo/facet-crit.svg)     | The face lit in gold (round 1's crit face) with the "!" cut out of it in the dark                      |
+| Option              | File                                                     | Idea                                                                                                    |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Facet · Bare        | [logo/facet-bare.svg](logo/facet-bare.svg)               | Spine's strokes exactly (edge 2, stem 3), the "!" centred on the hexagon's axis                         |
+| Facet · Bare, heavy | [logo/facet-bare-heavy.svg](logo/facet-bare-heavy.svg)   | Edge 2.6, stem 3.8: for the 16 px favicon, where Bare's edge thins                                      |
 
-The name stays `Critical!` with its "!" in every language; the choice is independent of the
-direction.
+Shown next to Current and Spine for reference. B's header carries Bare, A3's Bare heavy, A2's Spine.
+The name stays `Critical!` with its "!" in every language; the choice is independent of the direction.
 
 ## Files
 
 - `build.mjs` writes the pages, `shared/tokens.css` and `logo/*.svg`; `shots.mjs` builds, then
   screenshots and audits them (`--self-test` checks the audit on a page with known clipping).
   `lib/data.mjs` is the sample data, `lib/ui.mjs` the shared fragments, `lib/logos.mjs` the marks,
-  `lib/direction-{a,a1,a2,a3}.mjs` one module per direction (its layout CSS included),
+  `lib/direction-{a2,a3,b}.mjs` one module per direction (its layout CSS included),
   `lib/logo-page.mjs` the logo page.
 - The generated `*.html`, `direction.css`, `shared/tokens.css`, `logo/*.svg` and `*/shots/*.png` are
   committed so the PR shows them; re-run `just design-shots` after a change to `lib/`.

@@ -9,7 +9,7 @@ import * as ui from "./ui.mjs";
 
 export const id = "a2-centre-stage";
 export const name = "A2 · Timeline + centre stage";
-export const logo = "facet-solid";
+export const logo = "facet-spine";
 export const css = "direction.css";
 
 const RAIL = [
@@ -23,7 +23,7 @@ const vitals = () => `<header class="vitals">
   <div class="cmd">
     <div class="v-brand">${ui.brand(logo)}</div>
     <div class="v-turn"><span class="label">Turn</span><span class="hero">${d.turn.number}</span></div>
-    <div class="v-init"><span class="hstack"><span class="muted">Initiative</span>${ui.die(d.turn.initiative, 10, { size: "1.5rem" })}<span class="btn ghost xs icon">${ui.icon("reroll")}</span></span><span class="hstack"><span class="btn primary">Next turn ${ui.icon("arrow")}</span><span class="btn icon">${ui.icon("dots")}</span></span></div>
+    <div class="v-init"><span class="hstack"><span class="muted">Initiative</span><span class="tag">${d.turn.initiative}</span><span class="btn ghost xs icon">${ui.icon("reroll")}</span></span><span class="hstack"><span class="btn primary">Next turn ${ui.icon("arrow")}</span><span class="btn icon">${ui.icon("dots")}</span></span></div>
     <div class="v-hp">${ui.hpBlock("headline")}</div>
     <div class="v-result"><span class="label">Last result · ${d.lastResult.when}</span>${ui.resultLine()}</div>
   </div>

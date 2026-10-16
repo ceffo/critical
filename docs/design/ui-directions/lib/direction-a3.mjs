@@ -9,7 +9,7 @@ import * as ui from "./ui.mjs";
 
 export const id = "a3-now-history";
 export const name = "A3 · Now and history";
-export const logo = "facet-v";
+export const logo = "facet-bare-heavy";
 export const css = "direction.css";
 
 const TABS = [

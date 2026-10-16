@@ -35,6 +35,8 @@ const paths = {
   dots: "M4 8h.01M8 8h.01M12 8h.01",
   pencil: "M3 13l1-4 7-7 3 3-7 7z",
   star: "M8 2l1.8 3.8 4.2.6-3 2.9.7 4.2L8 11.5l-3.7 2 .7-4.2-3-2.9 4.2-.6z",
+  chevDown: "M4 6l4 4 4-4",
+  chevUp: "M4 10l4-4 4 4",
   reroll: "M3 8a5 5 0 0 1 9-3M13 8a5 5 0 0 1-9 3M12 2v3H9M4 14v-3h3",
 };
 export const icon = (name, cls = "ico") =>
@@ -42,12 +44,6 @@ export const icon = (name, cls = "ico") =>
 
 export const brand = (logo) =>
   `<span class="brand">${logoSvg(logo)}<span class="wordmark">Critical<em>!</em></span></span>`;
-
-/** A die value inside its die's silhouette (d4 triangle, d6 square, d8 rhombus, d10 kite, d12
- * pentagon, d20 hexagon; d% is a d10): the shape says which die rolled, so no "(1d10)" label.
- * `size` is a CSS length for the box; "gold" marks a max roll. */
-export const die = (value, sides, { size = "1.75rem", cls = "" } = {}) =>
-  `<span class="die die-${sides} ${cls}" style="--die:${size}"><b>${esc(value)}</b></span>`;
 
 export const hpTone = (cur, max) => (cur / max > 0.5 ? "" : cur / max > 0.25 ? "warn" : "low");
 
@@ -92,16 +88,8 @@ export const hpChange = () =>
 export const chargeCard = () =>
   `<div class="step hstack" style="padding:.5rem .75rem;border:1px solid var(--amb-700)"><span class="grow"><span class="title">Stoneskin</span><span class="sub muted" style="display:block;font-size:.6875rem;line-height:1rem">6 layers · a hit taken is absorbed</span></span><span class="btn outline-tint">Absorb</span></div>`;
 
-/** Turn number, initiative and the Next turn button, laid out by the caller's CSS. */
-export const turnBlock = (numberRole = "headline") =>
-  `<div class="turn-block">
-  <div class="turn-num"><span class="label">Turn</span><span class="${numberRole}">${d.turn.number}</span></div>
-  <div class="turn-init hstack"><span class="muted">Initiative</span>${die(d.turn.initiative, 10, { size: "1.5rem" })}<span class="btn ghost xs icon">${icon("reroll")}</span></div>
-  <div class="turn-actions hstack"><span class="btn primary">Next turn ${icon("arrow")}</span><span class="btn icon">${icon("dots")}</span></div>
-</div>`;
-
 /** The effects timeline: a label column and N turn columns from turn-2. */
-export function effectsTrack(n = 8, { absorb = false } = {}) {
+export function effectsTrack(n = 8) {
   const start = Math.max(1, d.turn.number - 2);
   const cols = Array.from({ length: n }, (_, i) => start + i);
   const head = cols
@@ -117,7 +105,7 @@ export function effectsTrack(n = 8, { absorb = false } = {}) {
         track = `<div class="tline" style="grid-column:1 / ${from}"></div><div class="pill ${fade}" style="grid-column:${from} / ${to + 1}">${e.label}</div>`;
       } else if (e.kind === "charges") {
         const from = cols.indexOf(d.turn.number) + 1;
-        track = `<div class="hstack" style="grid-column:${from} / -1;gap:.5rem"><span class="pips">${"<i></i>".repeat(e.charges)}${'<i class="spent"></i>'.repeat(3)}</span><span class="muted body nowrap">${absorb ? `${e.charges} charges` : e.label}</span>${absorb ? `<span class="btn xs outline-tint">Absorb</span>` : ""}</div>`;
+        track = `<div class="hstack" style="grid-column:${from} / -1;gap:.5rem"><span class="pips">${"<i></i>".repeat(e.charges)}${'<i class="spent"></i>'.repeat(3)}</span><span class="muted body nowrap">${e.label}</span></div>`;
       } else {
         const from = cols.indexOf(d.turn.number) + 1;
         track = `<div class="pill dashed" style="grid-column:${from} / span 4">🔒 ${e.label}</div>`;
@@ -130,20 +118,6 @@ export function effectsTrack(n = 8, { absorb = false } = {}) {
   ${rows}
 </div>`;
 }
-
-/** The effects as a vertical list (name, then its pill / pips / lock). */
-export const effectsList = () =>
-  `<div class="effects-list">${d.effects
-    .map((e) => {
-      const state =
-        e.kind === "timed"
-          ? `<span class="pill">${e.label}</span>`
-          : e.kind === "charges"
-            ? `<span class="hstack" style="gap:.375rem"><span class="pips">${"<i></i>".repeat(e.charges)}</span><span class="muted label" style="text-transform:none;letter-spacing:0">until spent</span></span>`
-            : `<span class="pill dashed">🔒 ${e.label}</span>`;
-      return `<div class="row28" style="grid-template-columns:1fr auto"><span>${esc(e.name)}</span>${state}</div>`;
-    })
-    .join("")}</div>`;
 
 /** The effects as inline pills, for a one-row status strip. */
 export const effectsInline = ({ compact = false } = {}) =>
@@ -165,10 +139,10 @@ export function resultCard({ compact = false, details = false } = {}) {
     .join("");
   return `<div class="result">
   <div class="hstack" style="gap:.5rem"><span class="tag">${r.kind}</span><span class="title">${esc(r.subject)}</span><span class="right muted label" style="text-transform:none;letter-spacing:0">${r.when}</span></div>
-  <div class="hstack" style="gap:.75rem;margin-top:.625rem;align-items:flex-start">${die(r.d20, 20, { size: "3.25rem", cls: "big" })}
+  <div class="hstack" style="gap:.75rem;margin-top:.625rem;align-items:flex-start"><div class="hex"><b>${r.d20}</b></div>
     <div class="grow"><div class="headline">Hits AC ${r.hitsAc}</div><div class="muted">${esc(r.subject)} vs AC ${r.targetAc} · S/M target</div></div>
     <div class="key highlight" style="padding-top:.25rem">${r.verdict.toUpperCase()}</div></div>
-  <div class="hstack" style="margin-top:.75rem;gap:.5rem;align-items:flex-end"><span class="label" style="align-self:center">Damage</span>${die(r.damageRoll, 8)}<span class="muted">+${r.damageBonus}</span><span class="right hero highlight" style="font-size:2rem;line-height:2rem">${r.damageTotal}</span></div>
+  <div class="hstack" style="margin-top:.75rem;gap:.5rem;align-items:flex-end"><span class="label" style="align-self:center">Damage · ${r.damageDie}</span><span class="die-chip">${r.damageRoll}</span><span class="muted">+${r.damageBonus}</span><span class="right hero highlight" style="font-size:2rem;line-height:2rem">${r.damageTotal}</span></div>
   ${
     compact
       ? ""
@@ -181,7 +155,7 @@ export function resultCard({ compact = false, details = false } = {}) {
 /** The latest result as a one-line summary (status strip / dock). */
 export const resultLine = () => {
   const r = d.lastResult;
-  return `<span class="hstack" style="gap:.5rem">${die(r.d20, 20)}<span><span class="key">Hits AC ${r.hitsAc}</span> <span class="highlight key">${r.verdict.toUpperCase()}</span></span><span class="muted">·</span><span class="key highlight">${r.damageTotal}</span><span class="muted">dmg</span></span>`;
+  return `<span class="hstack" style="gap:.5rem"><span class="hex" style="width:1.75rem;height:2rem"><b style="font-size:.8125rem;line-height:1rem">${r.d20}</b></span><span><span class="key">Hits AC ${r.hitsAc}</span> <span class="highlight key">${r.verdict.toUpperCase()}</span></span><span class="muted">·</span><span class="key highlight">${r.damageTotal}</span><span class="muted">dmg</span></span>`;
 };
 
 export const journalIcon = (name) => icon(name);
@@ -201,7 +175,7 @@ export function journalList({ limit = Infinity } = {}) {
         g.rows
           .map(
             (e) =>
-              `<div class="journal-row ${e.current ? "current" : ""} ${e.reroll ? "show-hover" : ""}">${icon(e.icon)}<span class="txt">${esc(e.text)}<span class="time">${e.time}</span>${e.reroll ? `<span class="reroll">${icon("reroll", "")} Reroll</span>` : ""}</span><span class="val ${e.tone ?? ""}">${e.die ? die(e.value, e.die, { size: "1.5rem" }) : (e.value ?? "")}</span></div>`,
+              `<div class="journal-row ${e.current ? "current" : ""} ${e.reroll ? "show-hover" : ""}">${icon(e.icon)}<span class="txt">${esc(e.text)}<span class="time">${e.time}</span>${e.reroll ? `<span class="reroll">${icon("reroll", "")} Reroll</span>` : ""}</span><span class="val ${e.tone ?? ""}">${e.value ?? ""}</span></div>`,
           )
           .join(""),
     )
@@ -211,10 +185,12 @@ export function journalList({ limit = Infinity } = {}) {
 export const journalHead = () =>
   `<div class="hstack"><span class="title">Journal</span><span class="seg" style="height:1.5rem"><span class="on">All</span><span>Rolls</span></span><span class="right btn xs">Undo</span><span class="btn xs ghost">Redo</span></div>`;
 
+const DICE = ["d4", "d6", "d8", "d10", "d12", "d20", "d%"];
+
 /** The dice composer: dice, formula, favourites. */
 export const diceComposer = ({ favourites = true } = {}) =>
   `<div class="dice">
-  <div class="dice-row">${[4, 6, 8, 10, 12, 20, "%"].map((x) => `<span class="dchip ${x === 6 ? "on" : ""}">${die(x === "%" ? "%" : x, x === "%" ? 10 : x, { size: "1.75rem" })}${x === 6 ? '<span class="n">×3</span>' : ""}</span>`).join("")}</div>
+  <div class="dice-row">${DICE.map((x) => `<span class="chip ${x === "d6" ? "on" : ""}">${x}${x === "d6" ? '<span class="n">×3</span>' : ""}</span>`).join("")}</div>
   <div class="hstack" style="margin-top:.5rem;gap:.375rem"><span class="field grow" style="display:flex">${icon("dice")}&nbsp;${d.dice.formula}</span><span class="btn xs">−1</span><span class="btn xs">+1</span><span class="btn xs ghost icon">${icon("x")}</span><span class="btn outline-tint">Roll</span></div>
   ${favourites ? `<div class="favs" style="margin-top:.5rem">${d.dice.favourites.map(([n, f]) => `<span class="chip">${icon("star")} ${n} <span class="muted">${f}</span></span>`).join("")}<span class="btn ghost xs icon">${icon("star")}</span></div>` : ""}
 </div>`;
@@ -304,18 +280,6 @@ export const lookupList = () =>
     )
     .join("");
 
-/** The lookup detail: name, meta, stat rows, dice rows and the description. */
-export function lookupDetail({ split = false } = {}) {
-  const s = d.lookup.selected;
-  const stats = `<div class="stat-rows">${s.rows.map(([k, v, raw]) => `<div class="muted">${k}</div><div><span class="key" style="font-weight:500;font-size:.875rem">${esc(v)}</span>${raw !== v ? `<span class="raw">${esc(raw)}</span>` : ""}</div>`).join("")}</div>
-  <div class="muted" style="margin-top:.625rem">At level ${d.character.level} · no dice to roll</div>`;
-  const prose = `<div class="label" style="margin-bottom:.375rem">Description</div><div class="prose">${s.description.map((p) => `<p>${esc(p)}</p>`).join("")}</div>`;
-  const head = `<div class="title" style="font-size:1.125rem;line-height:1.5rem">${esc(s.name)}</div><div class="muted" style="margin-bottom:.75rem">${s.meta}</div>`;
-  return split
-    ? `${head}<div class="detail-split"><div>${stats}</div><div class="scroll-y">${prose}</div></div>`
-    : `${head}${stats}<div style="margin-top:1rem">${prose}</div>`;
-}
-
 export function xpProgress({ hero = true } = {}) {
   const x = d.xp;
   return `<div class="hstack" style="align-items:baseline;gap:.5rem"><span class="${hero ? "hero" : "headline"}">${x.total}</span><span class="muted">XP</span><span class="right highlight">Before level ${x.nextLevel} · ${x.toGo} XP</span></div>
@@ -336,8 +300,9 @@ export const xpLedger = () =>
     )
     .join("");
 
-export const rail = (active, items) =>
-  `<nav class="rail">${items.map(([id, name, ic]) => `<span class="rail-item ${id === active ? "on" : ""}">${icon(ic)}<span>${name}</span></span>`).join("")}<span class="rail-item" style="margin-top:auto">${icon("gear")}</span></nav>`;
+/** The activity rail; `gear` puts the settings cog at its foot (B has it in the header). */
+export const rail = (active, items, { gear = true } = {}) =>
+  `<nav class="rail">${items.map(([id, name, ic]) => `<span class="rail-item ${id === active ? "on" : ""}">${icon(ic)}<span>${name}</span></span>`).join("")}${gear ? `<span class="rail-item" style="margin-top:auto">${icon("gear")}</span>` : ""}</nav>`;
 
 /** A whole page: the shared head, a direction stylesheet and the body. */
 export const page = ({ title, css, body, theme = "theme-dark" }) =>
@@ -358,16 +323,6 @@ ${body}
 
 /* Fragments added in round 2 for the A-family directions. */
 
-/** The abilities as one inline strip (label over value, tight), for a bar. */
-export const abilitiesInline = () =>
-  `<div class="abil-inline">${d.character.abilities
-    .map(([k, v]) => `<span><span class="label">${k}</span><span class="key">${v}</span></span>`)
-    .join("")}<span class="thac0"><span class="label">THAC0</span><span class="key">${d.character.thac0}</span></span></div>`;
-
-/** HP change as one row: amount, Damage, Healing, source. */
-export const hpChangeInline = () =>
-  `<div class="hstack" style="gap:.5rem;flex-wrap:nowrap"><span class="field placeholder" style="width:4rem">HP</span><span class="btn danger">${icon("sword")} Damage</span><span class="btn success">${icon("heart")} Healing</span><span class="field placeholder grow" style="display:flex;min-width:8rem">Source (optional)</span></div>`;
-
 /** The saving throws as five button rows (v3): one click rolls. */
 export const savesButtons = ({ inline = false, short = false } = {}) =>
   `<div class="saves-btns ${inline ? "inline" : ""}">${d.character.saves
@@ -377,36 +332,9 @@ export const savesButtons = ({ inline = false, short = false } = {}) =>
     )
     .join("")}</div>`;
 
-/** The Stoneskin charge card as one compact row. */
-export const chargeRow = () =>
-  `<span class="hstack charge-row" style="gap:.5rem"><span class="pips">${"<i></i>".repeat(6)}</span><span><b>Stoneskin</b> <span class="muted">6 layers</span></span><span class="btn xs outline-tint">Absorb</span></span>`;
-
 /** A d20-style cast box under the lookup stats: the spell at the Bard's level. */
 export const castBox = () =>
   `<div class="cast-box step hstack" style="padding:.625rem .75rem;gap:.75rem"><span class="grow"><span class="label">At level ${d.character.level}</span><span style="display:block">No dice to roll · duration 1 turn</span></span><span class="btn">${icon("plus")} Add as effect</span></div>`;
-
-/** The lookup as a faceted browser: class, level and school as vertical lists with counts. */
-export function lookupFacets() {
-  const f = d.lookup.facets;
-  const list = (title, rows, isOn) =>
-    `<div class="facet"><div class="label" style="margin:.25rem 0">${title}</div>${rows
-      .map(([n, c]) => `<span class="facet-row ${isOn(n) ? "on" : ""}"><span class="grow">${esc(n)}</span><span class="muted">${c}</span></span>`)
-      .join("")}</div>`;
-  return `<span class="field" style="display:flex">${icon("search")}&nbsp;${d.lookup.query}<span class="right muted">✕</span></span>
-${list("Class", f.klass, (n) => n === d.lookup.klass)}
-${list("Level", f.levels.map(([l, c]) => [`Level ${l}`, c]), () => false)}
-${list("School", f.schools, (n) => n === "Any school")}
-<span class="muted" style="margin-top:.5rem">${d.lookup.count} spells · <span class="tint">Reset</span></span>`;
-}
-
-/** The lookup results as wide rows: level, name with its school under it. */
-export const lookupRows = () =>
-  d.lookup.results
-    .map(
-      (r) =>
-        `<div class="list-row ${r.selected ? "sel" : ""}" style="grid-template-columns:1.5rem 1fr auto;min-height:2.5rem"><span class="magic key">${r.level}</span><span>${esc(r.name)}<span class="sub">${r.school}</span></span><span class="muted nowrap">${esc(r.range)} · ${esc(r.duration)}</span></div>`,
-    )
-    .join("");
 
 /** The lookup results as a table with the stats as columns, for comparing at a glance. */
 export const lookupTable = () =>
@@ -444,14 +372,14 @@ export function journalTable() {
       const turn = first
         ? `<span class="label">${e.turn === 0 ? "Out of combat" : `Turn ${e.turn}`}${e.turn === d.turn.number ? ' <span class="tag">current</span>' : ""}</span>`
         : "";
-      return `<div class="jt-row ${e.current ? "current" : ""} ${e.reroll ? "show-hover" : ""} ${first ? "first" : ""}"><span class="jt-turn">${turn}</span>${icon(e.icon)}<span class="txt">${esc(e.text)}${e.reroll ? `<span class="reroll">${icon("reroll", "")} Reroll</span>` : ""}</span><span class="time muted">${e.time}</span><span class="val ${e.tone ?? ""}">${e.die ? die(e.value, e.die, { size: "1.5rem" }) : (e.value ?? "")}</span></div>`;
+      return `<div class="jt-row ${e.current ? "current" : ""} ${e.reroll ? "show-hover" : ""} ${first ? "first" : ""}"><span class="jt-turn">${turn}</span>${icon(e.icon)}<span class="txt">${esc(e.text)}${e.reroll ? `<span class="reroll">${icon("reroll", "")} Reroll</span>` : ""}</span><span class="time muted">${e.time}</span><span class="val ${e.tone ?? ""}">${e.value ?? ""}</span></div>`;
     })
     .join("")}</div>`;
 }
 
 /** The dice composer as one line: dice, formula, Roll, favourites. */
 export const diceLine = () =>
-  `<div class="dice-line hstack" style="gap:.375rem;flex-wrap:nowrap"><span class="label" style="margin-right:.25rem">Dice</span>${[4, 6, 8, 10, 12, 20, "%"].map((x) => `<span class="dchip ${x === 6 ? "on" : ""}">${die(x === "%" ? "%" : x, x === "%" ? 10 : x, { size: "1.75rem" })}${x === 6 ? '<span class="n tint" style="font-size:.6875rem;margin-left:.25rem">×3</span>' : ""}</span>`).join("")}<span class="field" style="display:flex;width:9rem">${icon("dice")}&nbsp;${d.dice.formula}</span><span class="btn xs">−1</span><span class="btn xs">+1</span><span class="btn outline-tint">Roll</span><span class="hair" style="height:1.25rem;border-left:1px solid var(--border)"></span>${d.dice.favourites.map(([n, f]) => `<span class="chip">${icon("star")} ${n} <span class="muted">${f}</span></span>`).join("")}</div>`;
+  `<div class="dice-line hstack" style="gap:.375rem;flex-wrap:nowrap"><span class="label" style="margin-right:.25rem">Dice</span><span class="dice-row" style="flex-wrap:nowrap">${DICE.map((x) => `<span class="chip ${x === "d6" ? "on" : ""}">${x}${x === "d6" ? '<span class="n">×3</span>' : ""}</span>`).join("")}</span><span class="field" style="display:flex;width:9rem">${icon("dice")}&nbsp;${d.dice.formula}</span><span class="btn xs">−1</span><span class="btn xs">+1</span><span class="btn outline-tint">Roll</span><span class="hair" style="height:1.25rem;border-left:1px solid var(--border)"></span>${d.dice.favourites.map(([n, f]) => `<span class="chip">${icon("star")} ${n} <span class="muted">${f}</span></span>`).join("")}</div>`;
 
 /** The XP level thresholds as a vertical list. */
 export const xpLevelsList = () =>
@@ -462,3 +390,43 @@ export const xpLevelsList = () =>
 /** Activities as tabs in a bar (instead of the rail). */
 export const activityTabs = (active, items) =>
   `<nav class="act-tabs">${items.map(([id, name, ic]) => `<span class="tab ${id === active ? "on" : ""}">${icon(ic)} ${name}</span>`).join("")}</nav>`;
+
+/* Fragments added in round 3 for direction B. */
+
+/** The Weapons tab, B: the target row, then the weapon in hand as one row whose stats are a line
+ * of text and whose Attack button carries the weight, then the other weapons as chips. The card
+ * is as tall as its content; nothing in it is a tile. */
+export function weaponsTabCompact() {
+  const w = d.weapons.inHand;
+  const t = d.weapons.target;
+  return `<div class="target step" style="padding:.625rem .75rem">
+  <div class="hstack" style="gap:1rem;flex-wrap:wrap">
+    <span class="label">Target</span>
+    <span class="hstack"><span class="muted">AC</span><span class="stepper"><span class="btn xs icon">−</span><span class="field">${t.ac}</span><span class="btn xs icon">+</span></span><span class="btn ghost xs">Unknown</span></span>
+    <span class="hstack"><span class="muted">Size</span><span class="seg"><span class="on">S / M</span><span>L</span></span></span>
+    <span class="hstack"><span class="muted">Situational</span><span class="stepper"><span class="btn xs icon">−</span><span class="field">${t.situational}</span><span class="btn xs icon">+</span></span></span>
+  </div>
+</div>
+<div class="weapon-row">
+  <div class="w-main">
+    <div class="label">Weapon in hand</div>
+    <div class="key" style="font-size:1.25rem;line-height:1.5rem">${esc(w.name)}</div>
+    <div class="w-stats muted">${w.kind} · <b>${w.damageSm}</b> S/M · <span class="dim">${w.damageL} L</span> · <b>${w.bonus}</b> to hit / dmg · THAC0 <b>${w.effectiveThac0}</b></div>
+  </div>
+  <span class="btn primary attack">${icon("sword")}<span><span class="attack-verb">Attack</span><span class="attack-needs">${w.needs}</span></span></span>
+</div>
+<div class="hstack others" style="gap:.375rem;flex-wrap:wrap;margin-top:.625rem"><span class="label" style="margin-right:.25rem">Switch to</span><span class="chip">${icon("swap")} ${esc(d.weapons.previous.name)} <span class="muted">${d.weapons.previous.dice}</span></span>${d.weapons.others.map((n) => `<span class="chip">${esc(n)}</span>`).join("")}<span class="right muted body nowrap">▸ Crit table (house rule)</span></div>`;
+}
+
+/** The act body with B's Weapons tab. */
+export const actBodyB = (tab, opts = {}) => (tab === "weapons" ? weaponsTabCompact() : actBody(tab, opts));
+
+/** The handle between the "now" band and the journal: drag to resize, the button collapses. */
+export const splitHandle = ({ collapsed = false } = {}) =>
+  `<div class="split-handle" role="separator" aria-orientation="horizontal" title="Drag to resize the journal"><span class="grip"></span><span class="btn ghost xs collapse-btn">${icon(collapsed ? "chevUp" : "chevDown")} ${collapsed ? "Expand journal" : "Collapse"}</span></div>`;
+
+/** The journal collapsed to one bar: its last entry and the count, the band above keeps the room. */
+export function journalBar() {
+  const e = d.journal[0];
+  return `<section class="panel history collapsed hstack" style="gap:.75rem"><span class="title">Journal</span><span class="tag">Turn ${e.turn}</span>${icon(e.icon)}<span class="txt grow">${esc(e.text)}<span class="time muted" style="margin-left:.5rem;font-size:.6875rem">${e.time}</span></span><span class="val ${e.tone ?? ""}">${e.value ?? ""}</span><span class="hair" style="height:1.25rem;border-left:1px solid var(--border)"></span><span class="muted nowrap">${d.journal.length} entries</span><span class="btn xs">Undo</span><span class="btn xs ghost">Redo</span></section>`;
+}

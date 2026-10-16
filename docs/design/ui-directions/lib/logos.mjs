@@ -1,25 +1,22 @@
-// The Critical! mark options: the current mark (ADR 0020 step 5) for reference and four
-// developments of "Facet" (round 1), where the die and the "!" are one mark. Every variant shares
-// one geometry: a hexagon of radius 13.5 (the d20 seen from a vertex) and its front face, the
-// triangle on the alternate vertices with the apex down. The "!" sits on the die's vertical axis,
-// inside the face, and its dot lands on the apex vertex, so the die's edges, the stem and the dot
-// line up. The die is `--tint`, the "!" `--highlight`, with static Arcane dark-mode fallbacks, so
-// the same SVG works inline on a themed page and as a standalone favicon.
+// The Critical! mark options: the current mark (ADR 0020 step 5) for reference, Facet · Spine
+// (round 2) and the user's pick from round 2, "the first one but drop the triangle": Spine without
+// its front face, in two takes. Every mark shares one geometry: a hexagon of radius 13.5 (the d20
+// seen from a vertex) with the "!" on the die's vertical axis. The die is `--tint`, the "!"
+// `--highlight`, with static Arcane dark-mode fallbacks, so the same SVG works inline on a themed
+// page and as a standalone favicon.
 const T = "var(--tint, #a99bf5)";
 const H = "var(--highlight, #f0c437)";
 const ON = "var(--on-accent, #1a1630)";
-const OH = "var(--on-highlight, #1a1630)";
 
-// Hexagon of radius 13.5 centred on (16,16); the front face joins the two upper-side vertices
-// and the bottom one; the two remaining faces are the sides.
+// Hexagon of radius 13.5 centred on (16,16); the front face (Spine only) joins the two upper-side
+// vertices and the bottom one.
 const HEX = "16,2.5 27.7,9.25 27.7,22.75 16,29.5 4.3,22.75 4.3,9.25";
 const FACE = "4.3,9.25 27.7,9.25 16,29.5";
-const SIDES = "M4.3 9.25L16 2.5L27.7 9.25";
 
-// The "!" as a stem (a rounded bar) and a dot on the apex side; `w` is the stem width.
-const bang = (fill, w = 3) =>
-  `<rect x="${(16 - w / 2).toFixed(2)}" y="11.5" width="${w}" height="9" rx="${(w / 2).toFixed(2)}" fill="${fill}"/>
-<circle cx="16" cy="24.3" r="${(w * 0.58).toFixed(2)}" fill="${fill}"/>`;
+// The "!" as a stem (a rounded bar) from `y` and a dot under it; `w` is the stem width.
+const bang = (fill, { w = 3, y = 11.5, h = 9, dot = 24.3 } = {}) =>
+  `<rect x="${(16 - w / 2).toFixed(2)}" y="${y}" width="${w}" height="${h}" rx="${(w / 2).toFixed(2)}" fill="${fill}"/>
+<circle cx="16" cy="${dot}" r="${(w * 0.6).toFixed(2)}" fill="${fill}"/>`;
 
 export const logos = {
   current: {
@@ -31,37 +28,26 @@ export const logos = {
 <circle cx="16" cy="22.6" r="2" fill="${H}"/>`,
   },
   "facet-spine": {
-    name: "Facet · Spine",
+    name: "Facet · Spine (round 2)",
     concept:
-      "Outline d20: the hexagon and its front face at one stroke weight; the gold \"!\" runs down the face's axis and its dot sits on the apex. Two shapes and a mark, nothing to decipher at 16 px.",
+      "Outline d20: the hexagon and its front face at one stroke weight; the gold \"!\" runs down the face's axis and its dot sits on the apex. The user's pick, minus the triangle.",
     body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
 <polygon points="${FACE}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
-${bang(H, 3)}`,
+${bang(H)}`,
   },
-  "facet-v": {
-    name: "Facet · V",
+  "facet-bare": {
+    name: "Facet · Bare",
     concept:
-      "The front face is open at the top: only its two slanted edges are drawn, a V that frames the \"!\". The stem is a tapered wedge, parallel to the V, and the dot is a small facet: the \"!\" is cut from the die's own geometry.",
+      "Spine without the front face: the hexagon outline alone, the gold \"!\" centred on its axis, the same stroke and stem weights as Spine. Two shapes, one axis.",
     body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
-<path d="M4.3 9.25L16 29.5L27.7 9.25" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M13.4 9.5h5.2L16.9 20.2h-1.8z" fill="${H}" stroke="${H}" stroke-width="1" stroke-linejoin="round"/>
-<path d="M14.1 22.6h3.8L16 25.9z" fill="${H}" stroke="${H}" stroke-width="1" stroke-linejoin="round"/>`,
+${bang(H, { w: 3, y: 8.5, h: 9.5, dot: 21.9 })}`,
   },
-  "facet-solid": {
-    name: "Facet · Solid",
+  "facet-bare-heavy": {
+    name: "Facet · Bare, heavy",
     concept:
-      "The die filled in the primary, its front face cut out as two dark edges, and the gold \"!\" inside that face, stem on the axis, dot on the apex. The solid shape carries the mark at 16 px; the face and the \"!\" share one centre line.",
-    body: `<polygon points="${HEX}" fill="${T}"/>
-<path d="M4.3 9.25L16 29.5L27.7 9.25M4.3 9.25h23.4" fill="none" stroke="${ON}" stroke-opacity=".55" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-${bang(H, 3)}`,
-  },
-  "facet-crit": {
-    name: "Facet · Crit",
-    concept:
-      "The front face lit in gold (the crit face, from round 1) with the \"!\" cut out of it in the dark: the mark is the lit face itself, the die outline around it. One gold triangle with a notch reads from across the table.",
-    body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2" stroke-linejoin="round"/>
-<polygon points="${FACE}" fill="${H}" stroke="${H}" stroke-width="1.5" stroke-linejoin="round"/>
-${bang(OH, 3)}`,
+      "The same mark with a heavier edge (2.6) and a wider stem (3.8), tuned for the favicon: at 16 px the hexagon stays a closed shape and the \"!\" keeps its dot.",
+    body: `<polygon points="${HEX}" fill="none" stroke="${T}" stroke-width="2.6" stroke-linejoin="round"/>
+${bang(H, { w: 3.8, y: 8, h: 10, dot: 22.3 })}`,
   },
 };
 

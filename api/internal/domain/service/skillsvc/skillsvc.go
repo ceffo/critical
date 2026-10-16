@@ -1,6 +1,7 @@
 // Package skillsvc owns skill checks (ADR 0014): the non-weapon proficiencies
 // of the sheet (a d20 at or under an ability score plus a modifier, a natural
-// 20 always fails) and the bard skills (a d100 at or under a percentage). A
+// 20 always fails) and the bard skills (a d100 at or under a percentage). The
+// DM may move the target before the roll or on the latest check after it. A
 // check changes no state: it is one skill_check entry of the action log, so
 // popping it only removes it. The last check of each skill is read back from
 // the log.
@@ -21,9 +22,18 @@ type SVC interface {
 	// List returns every proficiency and bard skill with its target and the
 	// last check rolled for it.
 	List(ctx context.Context, characterID int64) (*Skills, error)
-	// Roll checks the skill id on the server and records it in the action
-	// log, in one transaction. An unknown id wraps domain.ErrNotFound.
-	Roll(ctx context.Context, characterID int64, id string) (*CheckResult, error)
+	// Roll checks the skill id on the server against its target moved by
+	// adj (the zero Adjustment: none) and records it in the action log, in
+	// one transaction. An unknown id wraps domain.ErrNotFound, an adjustment
+	// out of range or a too long reason domain.ErrInvalidInput; nothing is
+	// rolled then.
+	Roll(ctx context.Context, characterID int64, id string, adj Adjustment) (*CheckResult, error)
+	// Adjust sets the adjustment of the latest roll, which must be the skill
+	// check entryID, replacing the one in effect (0 removes it), and
+	// recomputes the verdict from the stored roll. It is an audited amend,
+	// its own undoable step; refusals are AmendLatest's
+	// (actionlog.LatestAmender) and domain.ErrInvalidInput.
+	Adjust(ctx context.Context, characterID, entryID int64, adj Adjustment) (*CheckResult, error)
 }
 
 // DAL is the driven port over the skill catalog. Both lists come back in
@@ -43,9 +53,11 @@ type Dice interface {
 	RollDie(sides int) int
 }
 
-// Log records a check and reads the latest ones back.
+// Log records a check, reads the latest ones back and amends the latest
+// roll (post-roll adjustment).
 type Log interface {
 	actionlog.Recorder
+	actionlog.LatestAmender
 	// ActiveEntries returns the newest non-voided entries of kind.
 	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 }

@@ -306,7 +306,17 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
     await expect
       .poll(async () => Number(await track.getAttribute("data-columns")))
       .toBeGreaterThanOrEqual(columns);
-    columns = Number(await track.getAttribute("data-columns"));
+    // Wait for the resize to settle: the count stops moving before it is recorded.
+    let last = -1;
+    await expect
+      .poll(async () => {
+        const now = Number(await track.getAttribute("data-columns"));
+        const settled = now === last;
+        last = now;
+        return settled;
+      })
+      .toBe(true);
+    columns = last;
     await snap(page, `turn-header-${vp.width}x${vp.height}`);
   }
   expect(columns, "16 turns at 2560").toBe(16);

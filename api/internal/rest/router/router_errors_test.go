@@ -112,7 +112,10 @@ var endpoints = []endpoint{
 		m.skills.On("List", anyArgs(2)...).Return(nil, err)
 	}},
 	{"POST roll/skill", "POST", "/api/roll/skill/tumbling", "", func(m *mocksSet, err error) {
-		m.skills.On("Roll", anyArgs(3)...).Return(nil, err)
+		m.skills.On("Roll", anyArgs(4)...).Return(nil, err)
+	}},
+	{"POST roll/skill/{id}/adjust", "POST", "/api/roll/skill/7/adjust", `{"adjustment":2}`, func(m *mocksSet, err error) {
+		m.skills.On("Adjust", anyArgs(4)...).Return(nil, err)
 	}},
 	{"POST roll/dice", "POST", "/api/roll/dice", `{"formula":"d6"}`, func(m *mocksSet, err error) {
 		m.dice.On("Roll", anyArgs(3)...).Return(nil, err)
@@ -310,6 +313,10 @@ func TestSpecialSentinels(t *testing.T) {
 		{"adjust not latest", "POST roll/save/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, undo this save and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, undo this save and roll again"}`},
 		{"adjust voided", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},
 		{"adjust not a save", "POST roll/save/{id}/adjust", fmt.Errorf("%w: #7 is attack, not save", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is attack, not save"}`},
+		{"skill adjust not latest", "POST roll/skill/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, undo this skill_check and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, undo this skill_check and roll again"}`},
+		{"skill adjust voided", "POST roll/skill/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},
+		{"skill adjust not a skill check", "POST roll/skill/{id}/adjust", fmt.Errorf("%w: #7 is save, not skill_check", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is save, not skill_check"}`},
+		{"skill adjust out of range", "POST roll/skill/{id}/adjust", fmt.Errorf("%w: adjustment must be between -20 and +20", domain.ErrInvalidInput), 400, `{"code":"invalid_input","error":"invalid input: adjustment must be between -20 and +20"}`},
 		{"attack AC not latest", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, undo this attack and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, undo this attack and roll again"}`},
 		{"attack AC voided", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},
 		{"attack AC not an attack", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7 is save, not attack", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is save, not attack"}`},

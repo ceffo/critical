@@ -1,11 +1,17 @@
 // Package skillhdl exposes the skill checks (ADR 0014): GET /api/skills
-// (the proficiencies and bard skills with their targets and last checks) and
-// POST /api/roll/skill/{id} (one check, rolled and logged on the server).
+// (the proficiencies and bard skills with their targets and last checks),
+// POST /api/roll/skill/{id} (one check, rolled and logged on the server, with
+// an optional DM adjustment) and POST /api/roll/skill/{id}/adjust (the
+// adjustment of the latest check, after the roll).
 package skillhdl
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
@@ -26,21 +32,37 @@ type CharacterIDFunc func(r *http.Request) int64
 
 type skillSvc interface {
 	List(ctx context.Context, characterID int64) (*skillsvc.Skills, error)
-	Roll(ctx context.Context, characterID int64, id string) (*skillsvc.CheckResult, error)
+	Roll(ctx context.Context, characterID int64, id string, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
+	Adjust(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
 }
 
 // RegisterRoutes wires the skill endpoints onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc skillsvc.SVC) {
 	r.Get("/api/skills", render.Handle(List(charID, svc)))
 	r.Post("/api/roll/skill/{id}", render.Handle(Roll(charID, svc)))
+	r.Post("/api/roll/skill/{id}/adjust", render.Handle(Adjust(charID, svc)))
 }
 
-// LastDTO is the newest non-voided check of a skill.
+// AdjustmentDTO is the body of POST /api/roll/skill/{id} (optional, every
+// field too: no body is no adjustment) and of POST
+// /api/roll/skill/{id}/adjust (adjustment required, 0 removes it). The
+// adjustment moves the target, + easier, - harder.
+type AdjustmentDTO struct {
+	Adjustment *int   `json:"adjustment"`
+	Reason     string `json:"reason,omitempty"`
+}
+
+// LastDTO is the newest non-voided check of a skill: target is unadjusted,
+// adjustment (with its reason, when set), adjustedTarget and success are the
+// ones in effect.
 type LastDTO struct {
-	EntryID int64 `json:"entryId"`
-	Roll    int   `json:"roll"`
-	Target  int   `json:"target"`
-	Success bool  `json:"success"`
+	EntryID          int64  `json:"entryId"`
+	Roll             int    `json:"roll"`
+	Target           int    `json:"target"`
+	Adjustment       int    `json:"adjustment"`
+	AdjustmentReason string `json:"adjustmentReason,omitempty"`
+	AdjustedTarget   int    `json:"adjustedTarget"`
+	Success          bool   `json:"success"`
 }
 
 // ProficiencyDTO is one proficiency; target = abilityScore + modifier,
@@ -67,26 +89,36 @@ type SkillsDTO struct {
 	BardSkills    []BardSkillDTO   `json:"bardSkills"`
 }
 
-// CheckDTO is one check. ability, abilityScore and modifier are set for a
-// proficiency only.
+// CheckDTO is one check: target is unadjusted, adjustedTarget = target +
+// adjustment the one the roll is judged against, success the verdict in
+// effect and rolledSuccess the verdict as rolled. ability, abilityScore and
+// modifier are set for a proficiency only.
 type CheckDTO struct {
-	ID           string `json:"id"`
-	Kind         string `json:"kind"`
-	Die          int    `json:"die"`
-	Roll         int    `json:"roll"`
-	Target       int    `json:"target"`
-	Success      bool   `json:"success"`
-	Ability      string `json:"ability,omitempty"`
-	AbilityScore *int   `json:"abilityScore,omitempty"`
-	Modifier     *int   `json:"modifier,omitempty"`
-	LogEntryID   int64  `json:"logEntryId"`
+	ID               string `json:"id"`
+	Kind             string `json:"kind"`
+	Die              int    `json:"die"`
+	Roll             int    `json:"roll"`
+	Target           int    `json:"target"`
+	Adjustment       int    `json:"adjustment"`
+	AdjustmentReason string `json:"adjustmentReason,omitempty"`
+	AdjustedTarget   int    `json:"adjustedTarget"`
+	Success          bool   `json:"success"`
+	RolledSuccess    bool   `json:"rolledSuccess"`
+	Ability          string `json:"ability,omitempty"`
+	AbilityScore     *int   `json:"abilityScore,omitempty"`
+	Modifier         *int   `json:"modifier,omitempty"`
+	LogEntryID       int64  `json:"logEntryId"`
 }
 
 func lastDTO(l *skillsvc.LastCheck) *LastDTO {
 	if l == nil {
 		return nil
 	}
-	return &LastDTO{EntryID: l.EntryID, Roll: l.Roll, Target: l.Target, Success: l.Success}
+	return &LastDTO{
+		EntryID: l.EntryID, Roll: l.Roll, Target: l.Target,
+		Adjustment: l.Adjustment, AdjustmentReason: l.AdjustmentReason, AdjustedTarget: l.AdjustedTarget,
+		Success: l.Success,
+	}
 }
 
 // ToDTO maps the skills to their wire shape.
@@ -110,8 +142,9 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 // CheckToDTO maps a check to its wire shape.
 func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 	out := CheckDTO{
-		ID: c.ID, Kind: string(c.Kind), Die: c.Die, Roll: c.Roll, Target: c.Target, Success: c.Success,
-		LogEntryID: c.LogEntryID,
+		ID: c.ID, Kind: string(c.Kind), Die: c.Die, Roll: c.Roll, Target: c.Target,
+		Adjustment: c.Adjustment, AdjustmentReason: c.AdjustmentReason, AdjustedTarget: c.AdjustedTarget,
+		Success: c.Success, RolledSuccess: c.RolledSuccess, LogEntryID: c.LogEntryID,
 	}
 	if c.Kind == skillsvc.KindProficiency {
 		score, mod := c.AbilityScore, c.Modifier
@@ -132,10 +165,45 @@ func List(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 	}
 }
 
-// Roll checks one skill; an unknown id is a 404.
+// Roll checks one skill, its target moved by the optional adjustment; an
+// unknown id is a 404, an adjustment out of range or a too long reason a 400.
 func Roll(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		c, err := svc.Roll(r.Context(), charID(r), chi.URLParam(r, "id"))
+		var req AdjustmentDTO
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+			return render.BadRequestError("invalid request body")
+		}
+		adj := skillsvc.Adjustment{Reason: req.Reason}
+		if req.Adjustment != nil {
+			adj.Value = *req.Adjustment
+		}
+		c, err := svc.Roll(r.Context(), charID(r), chi.URLParam(r, "id"), adj)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, CheckToDTO(c))
+		return nil
+	}
+}
+
+// Adjust sets the adjustment of the latest check (log entry {id}); the server
+// judges the same roll against the moved target and returns the updated
+// check. 409 when the entry is voided or not the latest roll, 400 when it is
+// not a skill check or the adjustment is invalid, 404 when it does not exist.
+func Adjust(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil || id <= 0 {
+			return render.BadRequestError("invalid log entry id")
+		}
+		var req AdjustmentDTO
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		if req.Adjustment == nil {
+			return render.BadRequestError("adjustment is required")
+		}
+		c, err := svc.Adjust(r.Context(), charID(r), id, skillsvc.Adjustment{Value: *req.Adjustment, Reason: req.Reason})
 		if err != nil {
 			return err
 		}

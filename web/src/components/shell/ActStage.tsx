@@ -7,12 +7,10 @@ import {
   type PointerEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import { ActionArea } from "@/components/actions/ActionArea";
 import { CombatLog } from "@/components/dashboard/CombatLog";
 import { JournalBar } from "@/components/dashboard/JournalBar";
 import { ResultCard } from "@/components/dashboard/ResultCard";
-import { Button } from "@/components/ui/button";
 import {
   clampJournalHeight,
   JOURNAL_MIN_PX,
@@ -22,6 +20,8 @@ import { useSettingsStore } from "@/stores/settings";
 
 /** The handle's row: 24 px (h-6). */
 const HANDLE_PX = 24;
+/** A press that moves less than this (px) is a click, which toggles; more is a drag. */
+const CLICK_SLOP_PX = 4;
 
 /** The stage's height, following resizes. */
 function useHeight(ref: React.RefObject<HTMLDivElement | null>): number {
@@ -42,8 +42,8 @@ function useHeight(ref: React.RefObject<HTMLDivElement | null>): number {
  * The Act activity's stage (ADR 0022 step 2.5): the "now" band (the act panel beside the result
  * panel, act : result = minmax(28rem, 1.35fr) | minmax(24rem, 1fr)), then the split handle, then the
  * journal. By default the band takes its content's height up to 60 % of the stage and the journal
- * (at least 14rem) the rest. Dragging the handle sets the journal's height; Collapse folds the
- * journal into a one-line bar (step 5.4). Height and collapsed state are this device's display
+ * (at least 14rem) the rest. Dragging the handle sets the journal's height, a click on it
+ * folds the journal into a one-line bar and back (step 5.4). Height and collapsed state are this device's display
  * preferences (stores/settings.ts), never sent to the API.
  */
 export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
@@ -75,7 +75,10 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
     const startY = ev.clientY;
     const start = collapsed ? JOURNAL_MIN_PX : shownHeight();
     let last = start;
+    let dragged = false;
     const move = (e: globalThis.PointerEvent) => {
+      if (!dragged && Math.abs(e.clientY - startY) < CLICK_SLOP_PX) return;
+      dragged = true;
       last = clampJournalHeight(start - (e.clientY - startY), stage, HANDLE_PX);
       setDragging(last);
     };
@@ -84,7 +87,8 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
       handle.removeEventListener("pointerup", up);
       handle.removeEventListener("pointercancel", up);
       setDragging(null);
-      update({ journalHeight: last, journalCollapsed: false });
+      if (dragged) update({ journalHeight: last, journalCollapsed: false });
+      else update({ journalCollapsed: !collapsed });
     };
     handle.addEventListener("pointermove", move);
     handle.addEventListener("pointerup", up);
@@ -92,6 +96,11 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
   };
 
   const onKeyDown = (ev: KeyboardEvent<HTMLDivElement>) => {
+    if (ev.key === "Enter" || ev.key === " ") {
+      ev.preventDefault();
+      update({ journalCollapsed: !collapsed });
+      return;
+    }
     const step =
       ev.key === "ArrowUp"
         ? SPLIT_STEP_PX
@@ -133,7 +142,7 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
         <ActionArea onOpenInventory={onOpenInventory} />
         <ResultCard />
       </div>
-      <div className="relative flex h-6 shrink-0 items-center justify-center">
+      <div className="flex h-6 shrink-0 items-center justify-center">
         <div
           role="separator"
           aria-orientation="horizontal"
@@ -141,8 +150,13 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
           aria-valuemin={JOURNAL_MIN_PX}
           aria-valuemax={Math.max(JOURNAL_MIN_PX, stage - HANDLE_PX)}
           aria-valuenow={collapsed || height === null ? undefined : height}
+          aria-valuetext={t(
+            collapsed
+              ? "shell.journal.stateCollapsed"
+              : "shell.journal.stateExpanded",
+          )}
           tabIndex={0}
-          title={t("shell.journal.resize")}
+          title={t("shell.journal.handleHint")}
           className="group flex h-full w-24 cursor-row-resize touch-none items-center justify-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           data-testid="journal-handle"
           onPointerDown={onPointerDown}
@@ -150,17 +164,6 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
         >
           <span className="h-1 w-16 rounded-full bg-neu-700 transition-colors group-hover:bg-tint" />
         </div>
-        <Button
-          size="xs"
-          variant="ghost"
-          className="absolute right-0 text-muted-foreground"
-          aria-expanded={!collapsed}
-          data-testid="journal-toggle"
-          onClick={() => update({ journalCollapsed: !collapsed })}
-        >
-          {collapsed ? <CaretUp aria-hidden /> : <CaretDown aria-hidden />}
-          {collapsed ? t("shell.journal.expand") : t("shell.journal.collapse")}
-        </Button>
       </div>
       <div
         ref={journalRef}

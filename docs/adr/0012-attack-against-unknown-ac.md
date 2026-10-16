@@ -28,7 +28,7 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
    `"targetAc": null`); its preview then has no roll needed (`rollNeeded: null`).
    Tests: `TestUnknownAC_Step1_AttackWithoutAC`, `TestUnknownAC_Step1_ResultNotSettled`;
    `TestUpdateAttackForm_UnknownTargetAC`; `router` `TestResolveAttack_TargetACOptional`,
-   `TestAttackForm_PatchUnknownTargetAC`; `composition` `TestAttackForm_UnknownTargetACPersists`;
+   `TestAttackForm_PatchUnknownTargetAC`;
    `sqlite` `TestMigrate019_ExistingFormsKeepTheirTargetAC`.
 2. **Hits AC.** Every attack carries `hitsAc = effective THAC0 − d20`, the lowest target AC it
    hits: ADR 0002 step 2 (`d20 ≥ effective THAC0 − AC`) solved for the AC. The AC it names is hit,
@@ -45,7 +45,8 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
    no ammunition spent. Refused (400) on an attack whose AC is known.
    Tests: `TestUnknownAC_Step4_VerdictSettlesWithoutCrit`,
    `TestUnknownAC_Step4_VerdictRefusedWhenACKnown`; `router` `TestAttackVerdict_WireShape`,
-   `TestAttackVerdict_BadRequests`; `composition` `TestUnknownAC_VerdictOnlyOnTheLatestAttack`.
+   `TestAttackVerdict_BadRequests`; `actionlogsvc` `TestAmendLatest` ("a later attack exists": a verdict
+   goes to the latest attack only).
 5. **Giving the AC.** The GM's AC goes through the target AC correction
    (`POST /api/roll/attack/{id}/adjust`): ADR 0001 step 6 with the stored d20, both d100s, the
    crit row of the roll and the damage dice; nothing is rolled. It replaces any verdict, the
@@ -56,8 +57,8 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
 6. **Same dice.** An attack against an unknown AC rolls exactly what one against a known AC rolls,
    in the same order (ADR 0002 step 1): the d20, the crit-check d100, the multiplier d100, then
    the damage dice. A verdict or the AC given later rolls nothing; the ammunition is spent once,
-   with the attack. Tests: `TestUnknownAC_Step6_SameDiceAsKnownAC`; `composition`
-   `TestUnknownAC_AmmoSpentOnceAndUndoPopsTheAttack`.
+   with the attack. Tests: `TestUnknownAC_Step6_SameDiceAsKnownAC`, `TestResolveAttack_RecordsAttackWithAmmoSnapshot` (the
+   ammunition is spent with the attack).
 7. **Crit hint bound.** The line to tell the GM mentions the crit only when some real AC can
    crit. The server sends `critPossible: true` when `critsFromAc` is at most 10, the highest
    armor class the rules allow (`combatsvc.MaxRealAC`), and false when the roll crits no real
@@ -72,8 +73,8 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
    again: no hit, no crit, no verdict, damage "if it hits"; the AC as rolled stays for the "was"
    line. The ledger stays append-only and undo pops the step.
    Tests: `TestUnknownAC_Step8_BackToUnknownAfterTheACWasGiven`,
-   `TestUnknownAC_Step8_KnownAtRollGoesUnknown`; `composition`
-   `TestUnknownAC_BackToUnknownOnlyOnTheLatestAttackAndUndoable`.
+   `TestUnknownAC_Step8_KnownAtRollGoesUnknown`; `actionlogsvc` `TestAmendLatest`, `TestEntry_PoppedStepAmendIsOutOfEffect`
+   (only the latest attack; the step is popped by undo).
 
 ## Consequences
 

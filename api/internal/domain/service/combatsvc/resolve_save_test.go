@@ -345,3 +345,28 @@ func TestSavePayloadView_Step8_OldEntryServedInTheNewShape(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// ADR 0006 steps 5 and 8: a save logged before the adjustment moved the
+// target (no rollTotal, no adjustedTarget stored) can still be adjusted; the
+// amend carries both, computed from the stored numbers.
+func TestAdjustSave_Step8_SaveLoggedBeforeTheTargetMovedStoresBothFieldsInTheAmend(t *testing.T) {
+	f := newFixture(t)
+	old := `{"category":"spell","d20Roll":13,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
+		`"rolledPassed":true,"adjustment":0,"total":14,"passed":true,"margin":0}`
+	e := &actionlog.Entry{ID: 42, CharacterID: charID, Kind: actionlog.KindSave, Payload: json.RawMessage(old)}
+	amends(f, e)
+
+	res, err := f.svc.AdjustSave(context.Background(), charID, 42, combatsvc.SaveAdjustment{Value: -2})
+	require.NoError(t, err)
+	assert.Equal(t, 14, res.SaveRollTotal)
+	assert.Equal(t, 16, res.SaveAdjustedTarget)
+	assert.False(t, res.Hit)
+	assert.Equal(t, -2, res.HitMargin)
+
+	require.Len(t, e.Corrections, 1)
+	p := payloadOf(t, e.EffectivePayload())
+	assert.Equal(t, 14.0, p["rollTotal"], "stored in the amend")
+	assert.Equal(t, 16.0, p["adjustedTarget"], "stored in the amend")
+	assert.Equal(t, true, p["rolledPassed"])
+	assert.Equal(t, true, p["previousPassed"])
+}

@@ -61,18 +61,18 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
    effective STR is the sheet's STR plus the **sum** of every Strength bonus, capped at 18 (PHB:
    Strength "cannot confer a Strength of 19 or more"). A buff's own `str_max` of 18 or less is
    not used. The sheet's STR above 18 is kept (step 9).
-   Tests: `TestStrength_Step7_StrengthStacksUpTo18`; on the real stack
-   `TestEffectiveStr_StrengthStacksThenImprovedReplacesIt`, `TestEffectiveStr_VoidSecondStrength`,
-   `TestEffectiveStr_DismissOneStrength`, `TestEffectiveStr_StrengthsExpireIndependently`,
-   `TestEffectiveStr_HandMadeUncappedStacksWithReceived` (`api/internal/composition/`).
+   Tests: `TestStrength_Step7_StrengthStacksUpTo18` (several casts, the 18 cap, a hand-made uncapped bonus
+   stacking with a received one); the effective STR is computed from the active list, so a dismissed,
+   expired or voided Strength drops out of it (`TestDismiss`, `TestAdvanceRound`,
+   `TestRestorers_WriteTheSnapshotBack`).
 8. **Improved Strength replaces them.** A `str_bonus` whose `str_max` is above 18 is Improved
    Strength (seeded 1d6+4, cap 23, for a bard). While one is active, every Strength bonus
    contributes nothing (the buff list shows it as not applying) and the best single Improved wins:
    the sheet's STR plus its bonus, capped at its `str_max`, whether that is more or less than
    what the Strength bonuses would have given.
    Tests: `TestStrength_Step8_ImprovedReplacesStrength`, `TestListStatus` ("Improved active: the
-   Strength bonuses show as not applying"), `TestEffectiveStr_LowImprovedTurnsTheGemOff`,
-   `TestEffectiveStr_ImprovedExpiresStrengthsCountAgain` (`composition`).
+   Strength bonuses show as not applying"), `TestStrength_Step10_PowerGemFrom18Up` (a low Improved
+   turns the gem off).
 9. **Never gated, never lowered.** A Strength effect counts whatever its `min_str` says, and no
    rule brings the effective STR below the sheet's, even above 18. There is no "set STR to X"
    effect (user, 2026-10-13: "remove that buff type"): a `str_set` key in a stored buff is ignored
@@ -88,7 +88,7 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     16); the gate stays for hand-made buffs.
     Tests: `TestStrength_Step10_PowerGemFrom18Up`, `TestAggregate` ("MinStr gates the buff when
     STR is too low", "MinStr met exactly applies", "to-hit and damage are gated…", the Power Gem
-    cases), `TestListStatus`, `TestEffectiveStr_StrengthStacksThenImprovedReplacesIt`.
+    cases), `TestListStatus`, `TestStrength_Step8_ImprovedReplacesStrength`.
 11. **Combining effects.** Of the buffs that apply: `spells_buff` and `multiplier` factors
     multiply (1 without any); `to_hit`, `damage`, `save_bonus` and `ac` add; a `weapon_buff`
     ("the weapon becomes +N") does not add up, the highest N wins. Each contribution is listed
@@ -119,8 +119,8 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     Tests: `TestSaveBuff`, `TestDeleteSaved` ("removes and logs, active buffs not read": the
     mock fails on any read of the active buffs), `TestSavedRestorer_WritesTheSnapshotBack`,
     `TestSavedRestorer_KeepsCreatedAtAndReadsOldSnapshots`,
-    `TestSavedBuffs_ReplaceStampsARowRestoredWithoutCreatedAt`,
-    `TestRedo_UndoThenRedoGivesEveryMutationBack` (saved buff save and delete).
+    `TestSavedBuffs_ReplaceStampsARowRestoredWithoutCreatedAt`, `TestRedo_ReplaysTheNewestPoppedTransaction`
+    (`actionlogsvc`: the "after" snapshots are written back through the restorers).
 15. **Start round.** A buff carries the round it was put on the list in (`StartRound`): the round
     counter when it is activated, cast or received, stamped by the server (a value sent by the
     client is ignored). A renewed buff (step 6) starts again. Nothing else changes it: editing,
@@ -207,7 +207,7 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     `TestBuffs_Step19_AddAsEffectRefusals` (nothing rolled, written or logged, not offered),
     `TestBuffs_Step19_FlagMatchesTheAction` (every seed entry: offered exactly when a buff goes on);
     `spelleffectsvc` `TestEntry_AddsBuff`; `TestSearch_EffectFlag` (`spellhdl`), `TestAddEffect_Handler`
-    (`casthdl`); `TestAddAsEffect_OneEntryAndVoidRestoresTheList` (`composition`).
+    (`casthdl`).
 
 ## Consequences
 

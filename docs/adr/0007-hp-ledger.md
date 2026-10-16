@@ -33,8 +33,7 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    [ADR 0019](0019-redo.md) step 1:* "voided" means popped: the entry's newest void or redo is a
    void, so a redone entry counts again.)
    Tests: `TestHPTotal` (actionlogdal: plain sum, "latest amend wins", "void counts zero", "void
-   after amend counts zero", "summary-only amend keeps delta"), `TestGetState`,
-   `TestExposureOnTheBard_VoidGivesTheHPBack` (composition).
+   after amend counts zero", "summary-only amend keeps delta"), `TestGetState`.
 3. **Damage taken is entered as final.** The app never works the damage out: the player types the
    number after the DM's rulings (armour, resistance, saves), and it is logged as typed, never
    capped (HP may go below 0) down to the floor of -10, where it is clamped
@@ -52,13 +51,11 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    kept. The cap is applied when writing; the ledger is never rewritten.
    Tests: `TestCapHeal` (actionlog), `TestRecord_CapsHeal` (actionlogsvc: "heal at max-1", "heal
    exactly to max", "heal bigger than the gap", "payload kept", "total fails", "payload not an
-   object"), `TestHPCap_HealAtMaxMinusOne`, `TestHPCap_HealExactlyToMax`,
-   `TestHPCap_HealBiggerThanGap` (composition).
+   object").
 5. **A heal at full HP is logged as 0.** The event is kept with delta 0, so the log shows what was
    tried. Every capped heal carries `hpRequested` and `hpApplied` in its payload; the Combat Log
    shows both. Damage that follows is not absorbed by any hidden surplus.
-   Tests: `TestRecord_CapsHeal` ("heal at full HP logs 0"), `TestWithHPBreakdown` (actionlog),
-   `TestHPCap_HealAtFullHPLogsZero`.
+   Tests: `TestRecord_CapsHeal` ("heal at full HP logs 0"), `TestWithHPBreakdown` (actionlog).
 6. **Display guard.** The HP shown is `min(hp_max, hp_max + total)`, so rows logged before the cap
    existed never show HP above max.
    Tests: `TestGetState_NeverAboveMax`.
@@ -67,7 +64,7 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    the entry stays `active`. Amending a voided entry is refused (409). Value amends written
    before this rule still count, in step 2 (the latest one that set a delta wins).
    Tests: `TestAmend` (actionlogsvc: the cases and "too long"), `TestAmendNoteAndPop_HPTotal`
-   (actionlogdal), `TestLogStack_AmendNoteOnly` (composition), `TestEntryStatusAndEffectiveValues`
+   (actionlogdal), `TestEntryStatusAndEffectiveValues`
    ("note only stays active"), `TestLegacyValueAmend_ReadsAfterMigration014`.
 8. **Void pops the newest entry only.** Only the newest non-voided entry, of any kind, can be
    voided; an older one is refused (409, naming the entry on top). Popping restores the state
@@ -77,15 +74,15 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    [ADR 0018](0018-transactions-and-undo.md) steps 2 and 3:* the unit popped is the newest transaction, whole, and the row's
    Void is the global undo.)
    Tests: `TestUndo_RestoresThroughRestorers` (actionlogsvc: "hp change, no snapshots"), `TestUndo`
-   ("stale expected top is refused and nothing changes"), `TestAmendNoteAndPop_HPTotal`, `TestHPCap_PopHealThenDamage`,
-   `TestLogStack_PopInOrderRestoresEachStep`, `TestLogStack_VoidOlderEntryIsRefused`.
+   ("stale expected top is refused and nothing changes"), `TestAmendNoteAndPop_HPTotal`, `TestUndo_PopsTheWholeTransaction` (newest first; an older entry is
+   not poppable).
 9. **Undo.** `POST /api/hp/undo` pops the newest entry when it is an HP change; when another kind
    is on top it is refused (409, naming it) and nothing changes; on an empty log it does nothing.
    A heal that was logged as 0 at full HP is undone like any other. (*Amended by
    [ADR 0018](0018-transactions-and-undo.md) step 3:* `POST /api/hp/undo` is retired; the journal's Undo is the one undo
    and pops whatever transaction is on top.)
-   Tests: `TestOneUndo_JournalPopsWhateverIsOnTop` (composition),
-   `TestRetiredUndoEndpointsAreGone` (rest/router), `TestHPCap_UndoHealLoggedAtFullHP`.
+   Tests: `TestUndo` (actionlogsvc: pops whatever is on top, any kind),
+   `TestRetiredUndoEndpointsAreGone` (rest/router).
 
 ## Consequences
 

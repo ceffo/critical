@@ -126,8 +126,7 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     `TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages` (itemsvc, weaponsvc),
     `TestWith_EditsOnlyTheLanguagesSent`, `TestSnap_ReadsAMapOrAPlainString`,
     `TestUILanguages_AreTheWebLocales` (domain/localized),
-    `TestInventory_EditAllFieldsAndPopRestoresThem`, `TestWeapons_EditAllFieldsAndPopRestoresThem`,
-    `TestUndo_OneUndoWalksEveryMutationFullyBack` (composition); `web/src/lib/itemForm.test.ts`,
+    `web/src/lib/itemForm.test.ts`,
     `web/src/lib/weaponForm.test.ts`.
 12. **Recorded names, named again by id.** Results and log payloads (use, restock, attack, its ammo,
     a cast's spent item, change records, a breakdown's detail) keep one recorded string, as the

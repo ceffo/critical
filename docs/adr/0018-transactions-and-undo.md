@@ -50,10 +50,9 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    Tests: `domain/service/actionlogsvc` `TestUndo_PopsTheWholeTransaction` ("newest first",
    "restorer fails mid-transaction: no void, no partial state", "stale expected top changes
    nothing"); `adapters/actionlogdal` `TestUndo_RestorerFailsMidTransaction_RollsBackEverything`
-   (the rollback on SQLite); `composition` `TestNextRound_OneUndoRestoresRoundBuffsAndInitiative`,
-   `TestUndo_PopsEveryKindInOrder` (existing, updated: Next Round pops in one step),
-   `TestUndo_OneUndoWalksEveryMutationFullyBack` (a table test over every table-state mutation,
-   ADR 0010 Context, asserting one undo walks the state fully back);
+   (the rollback on SQLite); `composition` `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (every snapshot key has its
+   restorer); `domain/service/buffsvc` `TestInitiative_Step2_OwnEntryAfterTheAdvance` (Next Round and
+   its initiative are one transaction);
    `web/src/lib/undoButton.test.ts` (the tooltip names the transaction, en/fr).
 3. **One undo system, on the journal.** There is one way to pop: `POST /api/log/undo` with
    `expectedTopId`. `POST /api/hp/undo` and `POST /api/log/{id}/void` are retired. The one undo
@@ -62,8 +61,8 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    on top, an exposure or a cast as well as an HP change. It sends the top it last read as
    `expectedTopId`; a stale top is refused (409) and nothing changes. Users see "Undo" /
    "Annuler" and "Undone" / "Annulé", never "void"; void stays the storage word (step 6).
-   Tests: `composition` `TestOneUndo_JournalPopsWhateverIsOnTop` (an exposure on top: HP comes
-   back; a cast on top: the slot comes back); `rest/router` `TestRetiredUndoEndpointsAreGone` (the
+   Tests: `domain/service/actionlogsvc` `TestUndo` (whatever kind is on top is popped, with a
+   stale top refused); `rest/router` `TestRetiredUndoEndpointsAreGone` (the
    two retired endpoints answer 404 or 405); `web/src/stores/undo.test.ts` ("journal Undo with
    exposure on top", "journal Undo with cast on top", "journal Undo with a stale top");
    `web/e2e/cast.spec.ts` "cast, heal, cast: the journal Undo pops the cast on top, then the heal".
@@ -76,8 +75,7 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    takes, [ADR 0008](0008-spell-slots-and-long-rest.md) step 16) is logged as rolled. Popping the
    transaction gives the HP back.
    Tests: `domain/service/actionlogsvc` `TestRecord_CapsHeal`, `TestRecord_FloorsDamage`,
-   `composition` `TestExposureOnTheBard_VoidGivesTheHPBack`,
-   `domain/service/actionlogsvc` `TestRecord_HPDeltaOnAnyKind` (a heal capped and a damage
+   `TestRecord_HPDeltaOnAnyKind` (a heal capped and a damage
    floored on an entry that is not an `hp_change`), `adapters/actionlogdal` `TestHPTotal` ("every
    kind counts").
 5. **Initiative reroll is its own transaction.** A reroll ([ADR 0013](0013-initiative.md) step 4)
@@ -90,8 +88,8 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    is the newest non-voided entry. Undo right after a reroll gives back the roll it replaced; undo again pops the
    Next Round (the previous round and its initiative come back).
    Tests: `domain/service/buffsvc` `TestInitiative_Step4_RerollReplacesTheNewestInitiative`
-   (existing, updated: no void, the "before"); `composition`
-   `TestInitiative_RerollThenUndoThenUndo`.
+   (existing, updated: no void, the "before"), `TestInitiativeRestorer` (undo writes the replaced
+   roll back).
 6. **Redo stays possible.** A popped transaction stays on the log, voided: its entries, payloads
    and snapshots ("before" and "after") are kept unchanged, and a void is a correction row, never
    a delete or a rewrite. No undo path may drop what a later replay of the transaction needs.
@@ -114,10 +112,10 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
      the saved attack form (the composer's last choices), note amends on log entries (ADR 0010
      step 2) and the crit table (a rules setting, [ADR 0001](0001-critical-hits.md)).
    A new state-changing request joins the stack unless it is listed as outside here.
-   Tests: `composition` `TestUndo_OneUndoWalksEveryMutationFullyBack` (every mutation that
-   joins, the XP verbs included, `xp_entries` compared), `TestXPUndo_EachVerbGivesTheLedgerBack`
-   (add, edit and delete: the ledger, its total and progress come back);
-   `domain/service/xpsvc` `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
+   Tests: each state-changing service records its snapshot in the one transaction (the
+   `Test*_Records*`/`Test*_Inserts*` tests of its package) and its restorer writes it back
+   (`TestRestorers_*`), and `composition` `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage`
+   registers every restorer; `domain/service/xpsvc` `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
    `TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction` (before and after),
    `TestDelete_RecordsTheRemovedAwardOrReportsNotFound`, `TestRestorer_WritesTheSnapshotBack`;
    `adapters/xpdal` `TestReinsert_KeepsIDAndDate`.

@@ -37,7 +37,7 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    recorded inside its outermost `InTx` joins the transaction its first entry started
    (`action_log.transaction_id`).
    Tests: `domain/service/actionlogsvc` `TestRecord_EntriesOfOneRequestShareATransaction`;
-   `storage/sqlite` `TestMigrate025_EachExistingEntryIsItsOwnTransaction` (on existing rows);
+   SQLite migration 025 made each existing entry its own transaction (a past migration; the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3);
    `rest/router` `TestLogEndpoints_WireShape` (the transaction id).
 2. **Undo pops the newest transaction whole.** `topId` (ADR 0010 step 1) still names the newest
    non-voided entry. The undo pops every non-voided entry of that entry's transaction, newest
@@ -49,7 +49,7 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    (the Next Round, not its initiative).
    Tests: `domain/service/actionlogsvc` `TestUndo_PopsTheWholeTransaction` ("newest first",
    "restorer fails mid-transaction: no void, no partial state", "stale expected top changes
-   nothing"); `composition` `TestSQLiteStorage_EveryAdapterRunsOnTheCallersTransaction` (every adapter
+   nothing"); `composition` `TestPostgresStorage_EveryAdapterRunsOnTheCallersTransaction` (every adapter
    writes in the transaction the undo runs in; the rollback itself is the database's,
    [ADR 0025](0025-postgresql-storage.md) step 7); `composition` `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (every snapshot key has its
    restorer); `domain/service/buffsvc` `TestInitiative_Step2_OwnEntryAfterTheAdvance` (Next Round and

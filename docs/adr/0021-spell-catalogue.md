@@ -500,8 +500,7 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   texts as `{en, fr}` and served them as `*_fr` fields. It broke the rule of step 8 (data holds typed
   values; conversion and translation happen at render) and was undone: the catalogue is format 1
   again, the reader never knew format 2, and migration 030 drops the six `*_fr` columns on a
-  database that has 029 (`TestMigrate030_DropsFrenchStatColumnsKeepingTheRows`,
-  `TestMigrate030_FreshDatabaseHasNoFrenchStatColumns`).
+  database that has 029 (a past migration: the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3).
 - **Re-typing.** Migration 030 also forgets the recorded artifact (`catalogue_meta`), so the next
   startup imports it again and re-parses every spell's stats with the current parser (step 5.6).
   _Since 2026-10-15 no migration is needed for that:_ a start on the recorded version (step 5.3)

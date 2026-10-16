@@ -56,8 +56,7 @@ columns of #147, then `name_fr` / `description_fr`).
   and migration tests (`assertTextIntegrity`). Migration 031 moves every existing text (`en`, and `fr`
   from `name_fr` / `description_fr`), rebuilds `spells` with integer text columns keeping every id,
   key and the id sequence, and forgets `catalogue_meta` so the next startup imports again
-  (`TestMigrate031_MovesEveryTextToLocalizedTextsKeepingEveryKey`,
-  `TestMigrate031_ThenImportKeepsRowsAndTextKeys`, `TestMigrate031_FreshDatabaseHasLocalizedTexts`;
+  (a past migration: the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3; the PostgreSQL baseline holds the schema it built;
   the live-database check of the time was retired with the Go tests that open a database, [ADR 0025](0025-postgresql-storage.md) step 6).
 - **Import** (step 3, no empty row): one row per language present, none for an absent one; a
   language or a whole text the artifact drops loses its row(s), a removed spell its texts
@@ -91,8 +90,8 @@ Tests live under `api/internal/` unless their path starts with `web/`.
    language map on items, weapons, the attack form's ammo choices and the items a spell can spend;
    the client picks with `localized`. A key's rows are written with the row (a new key on insert,
    replaced under the same key on update) and deleted with it.
-   Tests: `TestMigrate033_Step9_MovesItemAndWeaponNamesKeepingEveryRow`,
-   `TestMigrate033_FreshDatabaseKeysEveryName` (storage/sqlite), `TestName_Step9_WrittenAsLocalizedTextRows`
+   Tests: SQLite migration 033 moved the existing names (a past migration, the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3),
+   `TestSeed_Step10_FreshDatabaseGetsEveryLanguage` (storage/postgres), `TestName_Step9_WrittenAsLocalizedTextRows`
    (itemdal), `TestItems_Step9_NameIsALanguageMap`, `TestWeapons_Step9_NameIsALanguageMap` (rest/router);
    the live-database check of the time was retired, [ADR 0025](0025-postgresql-storage.md) step 6.
 10. **The seeds hold every language; a restart adds what a name lacks.** In `seeds/items.json` and
@@ -110,7 +109,7 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     Tests: `TestSeed_Step10_FreshDatabaseGetsEveryLanguage`,
     `TestSeed_Step10_ReconcileAddsLanguagesKeepingPlayerNamesAndRows`,
     `TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved`,
-    `TestSeed_Step10_RejectsANameWithoutLanguage` (storage/sqlite).
+    `TestSeed_Step10_RejectsANameWithoutLanguage` (storage/postgres).
 11. **The editors write the player's language.** The item and weapon bodies take `name` as a language
     map. The web form shows the name in the UI language (with the client fallback) and sends that one
     language (`editLang`: the UI language without its region), only when the player changed what it

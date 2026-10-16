@@ -89,8 +89,8 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
 
    Tests: `actionlogsvc` `TestAmendLatest_RecordsTheCorrectionStep` (step then amend, one
    transaction, nothing written when a write fails), `TestEntry_PoppedStepAmendIsOutOfEffect`;
-   `actionlogdal` `TestCorrectionStep_PoppedStepPutsItsAmendOutOfEffect`; `sqlite`
-   `TestMigrate023_KeepsCorrectionsWithoutStep`; `combatsvc` `TestAdjustAttackAC_Recompute`,
+   `actionlogdal` `TestCorrectionStep_PoppedStepPutsItsAmendOutOfEffect`; SQLite migration 023 kept the
+   corrections without a step (a past migration; the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3); `combatsvc` `TestAdjustAttackAC_Recompute`,
    `TestAdjustAttackAC_PreChangeEntryResettles`, `TestAdjustSave_Recompute`,
    `TestUnknownAC_Step4_VerdictSettlesWithoutCrit`, `TestUnknownAC_Step6_SameDiceAsKnownAC`; `router`
    `TestLogEndpoints_CorrectionStepShape`; `web/src/lib/undoButton.test.ts` (the correction

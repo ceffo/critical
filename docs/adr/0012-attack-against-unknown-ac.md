@@ -29,7 +29,7 @@ call and expect an exact number of calls (d20 once, d100 twice, the damage dice 
    Tests: `TestUnknownAC_Step1_AttackWithoutAC`, `TestUnknownAC_Step1_ResultNotSettled`;
    `TestUpdateAttackForm_UnknownTargetAC`; `router` `TestResolveAttack_TargetACOptional`,
    `TestAttackForm_PatchUnknownTargetAC`;
-   `sqlite` `TestMigrate019_ExistingFormsKeepTheirTargetAC`.
+   SQLite migration 019 kept the target AC of the existing forms (a past migration; the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3).
 2. **Hits AC.** Every attack carries `hitsAc = effective THAC0 − d20`, the lowest target AC it
    hits: ADR 0002 step 2 (`d20 ≥ effective THAC0 − AC`) solved for the AC. The AC it names is hit,
    one lower is missed. It is the number `targetACNeeded` already held, kept for older entries.

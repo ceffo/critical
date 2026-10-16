@@ -393,3 +393,19 @@ func TestActiveBuffs_SpellIDRoundTripsAndOldRowsReadEmpty(t *testing.T) {
 	assert.Contains(t, blob, `"spell_id":"haste"`)
 	assert.Equal(t, 1, strings.Count(blob, "spell_id"), "omitted for a buff not from a spell")
 }
+
+// A template restored from a snapshot taken before created_at was recorded has
+// no creation time: it is stamped now, never stored as the zero time.
+func TestSavedBuffs_ReplaceStampsARowRestoredWithoutCreatedAt(t *testing.T) {
+	db := openDB(t)
+	charID := seedCharacter(t, db)
+	dal := buffdal.New(db)
+	ctx := context.Background()
+
+	before := time.Now().UTC().Add(-time.Minute)
+	require.NoError(t, dal.ReplaceSavedBuffs(ctx, charID, []buffsvc.SavedBuff{{ID: 5, Name: "Legacy"}}))
+	list, err := dal.ListSavedBuffs(ctx, charID)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.True(t, list[0].CreatedAt.After(before), "stamped now, got %s", list[0].CreatedAt)
+}

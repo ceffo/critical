@@ -112,9 +112,14 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
 14. **Saved templates.** A saved buff template (name, rounds, charges, effects, note) is a
     shortcut for filling the buff form; it is not a buff. Saving (a same name replaces) and
     deleting a template are logged and voidable, and they never read or change the active buffs;
-    activating from a template is a normal activation (step 13).
+    activating from a template is a normal activation (step 13). The snapshot carries each
+    template's creation time (`createdAt`) and a restore (undo or redo) writes it back unchanged;
+    a snapshot from before the field has none, and the restored row is stamped then.
     Tests: `TestSaveBuff`, `TestDeleteSaved` ("removes and logs, active buffs not read": the
-    mock fails on any read of the active buffs), `TestSavedRestorer_WritesTheSnapshotBack`.
+    mock fails on any read of the active buffs), `TestSavedRestorer_WritesTheSnapshotBack`,
+    `TestSavedRestorer_KeepsCreatedAtAndReadsOldSnapshots`,
+    `TestSavedBuffs_ReplaceStampsARowRestoredWithoutCreatedAt`,
+    `TestRedo_UndoThenRedoGivesEveryMutationBack` (saved buff save and delete).
 15. **Start round.** A buff carries the round it was put on the list in (`StartRound`): the round
     counter when it is activated, cast or received, stamped by the server (a value sent by the
     client is ignored). A renewed buff (step 6) starts again. Nothing else changes it: editing,

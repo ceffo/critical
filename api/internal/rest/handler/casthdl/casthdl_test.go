@@ -112,6 +112,7 @@ type fakeCast struct {
 	cast    *castsvc.CastRequest
 	receive *castsvc.ReceiveRequest
 	expose  *castsvc.ExposureRequest
+	effect  *castsvc.AddEffectRequest
 }
 
 func (f fakeCast) Expose(_ context.Context, _ int64, req castsvc.ExposureRequest) (castsvc.ExposureResult, error) {
@@ -129,6 +130,11 @@ func (f fakeCast) Expose(_ context.Context, _ int64, req castsvc.ExposureRequest
 func (f fakeCast) Cast(_ context.Context, _ int64, _ int, req castsvc.CastRequest) (castsvc.CastResult, error) {
 	*f.cast = req
 	return castsvc.CastResult{Source: castsvc.SourceCast, Mode: req.Mode}, nil
+}
+
+func (f fakeCast) AddEffect(_ context.Context, _ int64, req castsvc.AddEffectRequest) (castsvc.CastResult, error) {
+	*f.effect = req
+	return castsvc.CastResult{EntryID: 3, Source: castsvc.SourceEffect, SpellID: req.SpellID, CasterLevel: 15}, nil
 }
 
 func (f fakeCast) Receive(_ context.Context, _ int64, req castsvc.ReceiveRequest) (castsvc.CastResult, error) {
@@ -201,4 +207,23 @@ func TestExpose_Handler(t *testing.T) {
 	raw, err = json.Marshal(casthdl.ToDTO(castsvc.CastResult{}))
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), `"exposure"`)
+}
+
+// ADR 0004 step 19: POST /api/spells/effect carries only the spell to the
+// service (the level is the Bard's, read server-side) and answers with the
+// cast result, source "effect".
+func TestAddEffect_Handler(t *testing.T) {
+	svc := fakeCast{effect: &castsvc.AddEffectRequest{}}
+	r := chi.NewRouter()
+	r.Post("/api/spells/effect", render.Handle(casthdl.AddEffect(func(*http.Request) int64 { return 1 }, svc)))
+
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/spells/effect", strings.NewReader(`{"spellId":"strength","casterLevel":3}`)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, castsvc.AddEffectRequest{SpellID: "strength"}, *svc.effect, "a caster level sent is ignored")
+	assert.JSONEq(t, `{"entryId":3,"source":"effect","spellId":"strength","name":"","level":0,"casterLevel":15,"untracked":[]}`, rec.Body.String())
+
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/spells/effect", strings.NewReader(`{`)))
+	assert.Equal(t, http.StatusBadRequest, rec.Code, "a malformed body")
 }

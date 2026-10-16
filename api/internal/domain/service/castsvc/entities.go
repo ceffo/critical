@@ -46,6 +46,12 @@ type ReceiveRequest struct {
 	Mode string
 }
 
+// AddEffectRequest is a spell the player adds as an effect on the Bard from
+// the spell lookup, at the Bard's level (ADR 0004 step 19).
+type AddEffectRequest struct {
+	SpellID string
+}
+
 // Source says how the spell reached the Bard.
 type Source string
 
@@ -53,6 +59,9 @@ type Source string
 const (
 	SourceCast     Source = "cast"
 	SourceReceived Source = "received"
+	// SourceEffect is a spell added as an effect from the lookup: no slot,
+	// no cast mechanics, no damage (ADR 0004 step 19).
+	SourceEffect Source = "effect"
 )
 
 // TextOnly says why a result carries no tracked effect (empty when it does).

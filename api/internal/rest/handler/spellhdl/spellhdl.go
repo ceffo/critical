@@ -38,9 +38,10 @@ type characterGetter interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
-// damageReader serves the damage a cast rolls at a caster level (castsvc
-// satisfies it).
+// damageReader serves the damage a cast rolls at a caster level and whether
+// a spell can be added as an effect (castsvc satisfies it).
 type damageReader interface {
+	AddsEffect(ctx context.Context, spellID string) bool
 	DamageAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.DamageAt, error)
 	ModesAt(ctx context.Context, spellID string, casterLevel int) ([]spelleffectsvc.ModeAt, error)
 	ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error)
@@ -143,6 +144,9 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 			return err
 		}
 		items := spellsToDTO(page.Items, level)
+		for i := range items {
+			items[i].Effect = damage.AddsEffect(r.Context(), items[i].ID)
+		}
 		// An explicit caster_level is bounded above; the character's level
 		// is not, and a level the formulas are not checked at gets no damage
 		// rather than failing the page.
@@ -341,6 +345,9 @@ type SpellDTO struct {
 	// Exposure is the damage of one round of exposure to the spell's area
 	// at CasterLevel (absent: none, or no caster level; ADR 0008 step 16).
 	Exposure *SpellExposureDTO `json:"exposure,omitempty"`
+	// Effect: POST /api/spells/effect takes the spell, it adds a buff
+	// (absent: it adds none; ADR 0004 step 19).
+	Effect bool `json:"effect,omitempty"`
 }
 
 // SpellExposureDTO is a spell's exposure damage at a caster level: one

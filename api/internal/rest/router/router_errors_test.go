@@ -220,6 +220,9 @@ var endpoints = []endpoint{
 	{"POST spells/receive", "POST", "/api/spells/receive", `{"spellId":"strength","casterLevel":9}`, func(m *mocksSet, err error) {
 		m.cast.On("Receive", anyArgs(3)...).Return(castsvc.CastResult{}, err)
 	}},
+	{"POST spells/effect", "POST", "/api/spells/effect", `{"spellId":"strength"}`, func(m *mocksSet, err error) {
+		m.cast.On("AddEffect", anyArgs(3)...).Return(castsvc.CastResult{}, err)
+	}},
 	{"POST spells/exposure", "POST", "/api/spells/exposure", `{"spellId":"cloudkill","casterLevel":9}`, func(m *mocksSet, err error) {
 		m.cast.On("Expose", anyArgs(3)...).Return(castsvc.ExposureResult{}, err)
 	}},
@@ -304,6 +307,7 @@ func TestSpecialSentinels(t *testing.T) {
 		{"slot already used", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed), 409, `{"code":"slot_already_used","error":"slot already used: 2"}`},
 		{"unknown spell mode", "POST spells/{id}/cast", fmt.Errorf("%w: Ice Storm has no mode \"fog\"", spelleffectsvc.ErrUnknownMode), 400, `{"code":"unknown_spell_mode","error":"unknown spell mode: Ice Storm has no mode \"fog\""}`},
 		{"no exposure", "POST spells/exposure", fmt.Errorf("%w: fireball", spelleffectsvc.ErrNoExposure), 400, `{"code":"no_exposure","error":"spell has no exposure damage: fireball"}`},
+		{"not an effect", "POST spells/effect", fmt.Errorf("%w: fireball", spelleffectsvc.ErrNotAnEffect), 400, `{"code":"spell_not_an_effect","error":"spell is not an effect: fireball"}`},
 		{"invalid slot index", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrInvalidSlotIndex), 400, `{"code":"invalid_slot_index","error":"invalid slot index: 2"}`},
 		{"undo stale top", "POST log/undo", fmt.Errorf("%w: the newest entry is #5 (attack, round 2), not #4", actionlogsvc.ErrTopChanged), 409, `{"code":"log_top_changed","error":"the newest entry changed: the newest entry is #5 (attack, round 2), not #4"}`},
 		{"undo empty log", "POST log/undo", fmt.Errorf("%w: expected #4 on top", actionlogsvc.ErrNothingToUndo), 409, `{"code":"nothing_to_undo","error":"nothing to undo: expected #4 on top"}`},

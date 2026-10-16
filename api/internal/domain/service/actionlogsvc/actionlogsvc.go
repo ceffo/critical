@@ -99,22 +99,28 @@ type service struct {
 	tx     domain.TxRunner
 	rounds Rounds
 	maxHP  MaxHP
+	// views fill, on every read the service hands out, the payload fields an
+	// entry's kind gained after it was logged. Internal reads (amend, undo,
+	// redo logic) use the stored payload.
+	views actionlog.PayloadViews
 
 	mu        sync.RWMutex
 	restorers map[string]actionlog.Restorer
 }
 
-// New constructs the service from environment-driven config.
-func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
+// New constructs the service from environment-driven config. views (nil: none)
+// are applied to every entry the service returns, so no reader serves an entry
+// in the shape it was logged in.
+func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP, views actionlog.PayloadViews) (SVC, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: parse env: %w", err)
 	}
-	return NewWithConfig(cfg, dal, tx, rounds, maxHP)
+	return NewWithConfig(cfg, dal, tx, rounds, maxHP, views)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP, views actionlog.PayloadViews) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil config")
@@ -130,7 +136,7 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxH
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: invalid config: %w", err)
 	}
-	return &service{cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxHP: maxHP, restorers: map[string]actionlog.Restorer{}}, nil
+	return &service{cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxHP: maxHP, views: views, restorers: map[string]actionlog.Restorer{}}, nil
 }
 
 func (s *service) RegisterRestorer(stateKey string, r actionlog.Restorer) {

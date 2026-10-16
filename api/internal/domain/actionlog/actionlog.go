@@ -11,6 +11,7 @@ package actionlog
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"time"
 )
@@ -85,6 +86,39 @@ func (v PayloadViews) View(k Kind, payload json.RawMessage) json.RawMessage {
 		return payload
 	}
 	return out
+}
+
+// Entry returns e as served: the payload and every amend's payload viewed
+// for e's kind (so the effective payload is viewed too). e is not modified,
+// its corrections are copied.
+func (v PayloadViews) Entry(e Entry) Entry {
+	if _, ok := v[e.Kind]; !ok {
+		return e
+	}
+	e.Payload = v.View(e.Kind, e.Payload)
+	e.Corrections = slices.Clone(e.Corrections)
+	for i := range e.Corrections {
+		e.Corrections[i].Payload = v.View(e.Kind, e.Corrections[i].Payload)
+	}
+	return e
+}
+
+// Entries is Entry for each of entries, in order.
+func (v PayloadViews) Entries(entries []Entry) []Entry {
+	out := make([]Entry, len(entries))
+	for i, e := range entries {
+		out[i] = v.Entry(e)
+	}
+	return out
+}
+
+// EntryPtr is Entry for a possibly nil entry.
+func (v PayloadViews) EntryPtr(e *Entry) *Entry {
+	if e == nil {
+		return nil
+	}
+	out := v.Entry(*e)
+	return &out
 }
 
 // KindTimePassed is a fast-forward of game time in hours (buffsvc PassTime):

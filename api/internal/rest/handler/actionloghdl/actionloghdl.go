@@ -41,18 +41,17 @@ type redoer interface {
 	Redo(ctx context.Context, characterID, expectedRedoID int64) (*actionlog.Entry, error)
 }
 
-// RegisterRoutes wires the action log endpoints onto r. views fill, on read,
-// the payload fields an entry gained after it was logged.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc actionlogsvc.SVC, views actionlog.PayloadViews) {
-	r.Get("/api/log", render.Handle(List(charID, svc, views)))
-	r.Post("/api/log/undo", render.Handle(Undo(charID, svc, views)))
-	r.Post("/api/log/redo", render.Handle(Redo(charID, svc, views)))
-	r.Post("/api/log/{id}/amend", render.Handle(Amend(charID, svc, views)))
+// RegisterRoutes wires the action log endpoints onto r.
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc actionlogsvc.SVC) {
+	r.Get("/api/log", render.Handle(List(charID, svc)))
+	r.Post("/api/log/undo", render.Handle(Undo(charID, svc)))
+	r.Post("/api/log/redo", render.Handle(Redo(charID, svc)))
+	r.Post("/api/log/{id}/amend", render.Handle(Amend(charID, svc)))
 }
 
 // List returns entries newest first. Optional ?limit=N (default and maximum
 // set by the service).
-func List(charID CharacterIDFunc, svc lister, views actionlog.PayloadViews) render.HandlerFunc {
+func List(charID CharacterIDFunc, svc lister) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		limit := 0
 		if raw := r.URL.Query().Get("limit"); raw != "" {
@@ -79,11 +78,11 @@ func List(charID CharacterIDFunc, svc lister, views actionlog.PayloadViews) rend
 			out.TopID = &top
 		}
 		if redo != nil {
-			dto := toDTO(*redo, views)
+			dto := toDTO(*redo)
 			out.Redo = &dto
 		}
 		for _, e := range entries {
-			out.Entries = append(out.Entries, toDTO(e, views))
+			out.Entries = append(out.Entries, toDTO(e))
 		}
 		render.OK(r.Context(), w, out)
 		return nil
@@ -93,7 +92,7 @@ func List(charID CharacterIDFunc, svc lister, views actionlog.PayloadViews) rend
 // Amend sets the note of an entry, any kind. Body: {"note": "the DM's ruling"}
 // ("" clears it). The note is the only amendable field: a
 // body with any other field (delta, source, ...) is a 400.
-func Amend(charID CharacterIDFunc, svc amender, views actionlog.PayloadViews) render.HandlerFunc {
+func Amend(charID CharacterIDFunc, svc amender) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		id, err := entryID(r)
 		if err != nil {
@@ -117,7 +116,7 @@ func Amend(charID CharacterIDFunc, svc amender, views actionlog.PayloadViews) re
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(*e, views))
+		render.OK(r.Context(), w, toDTO(*e))
 		return nil
 	}
 }
@@ -126,7 +125,7 @@ func Amend(charID CharacterIDFunc, svc amender, views actionlog.PayloadViews) re
 // (ADR 0010, ADR 0018 step 2) and answers with its first entry. Body:
 // {"expectedTopId": 12}, the topId the client read from GET /api/log. 409 when
 // another entry is on top or there is nothing to pop; nothing changes then.
-func Undo(charID CharacterIDFunc, svc undoer, views actionlog.PayloadViews) render.HandlerFunc {
+func Undo(charID CharacterIDFunc, svc undoer) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		var body struct {
 			ExpectedTopID *int64 `json:"expectedTopId"`
@@ -141,7 +140,7 @@ func Undo(charID CharacterIDFunc, svc undoer, views actionlog.PayloadViews) rend
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(*e, views))
+		render.OK(r.Context(), w, toDTO(*e))
 		return nil
 	}
 }
@@ -151,7 +150,7 @@ func Undo(charID CharacterIDFunc, svc undoer, views actionlog.PayloadViews) rend
 // the redo entry the client read from GET /api/log. 409 when another
 // transaction is the one to redo or there is nothing to redo; nothing changes
 // then.
-func Redo(charID CharacterIDFunc, svc redoer, views actionlog.PayloadViews) render.HandlerFunc {
+func Redo(charID CharacterIDFunc, svc redoer) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		var body struct {
 			ExpectedRedoID *int64 `json:"expectedRedoId"`
@@ -166,7 +165,7 @@ func Redo(charID CharacterIDFunc, svc redoer, views actionlog.PayloadViews) rend
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(*e, views))
+		render.OK(r.Context(), w, toDTO(*e))
 		return nil
 	}
 }
@@ -242,14 +241,14 @@ type CorrectionDTO struct {
 	CreatedAt time.Time       `json:"createdAt"`
 }
 
-// toDTO shapes e for the wire; views fill the payload fields its kind gained
-// after e was logged (in the payload, the effective payload and every amend's).
-func toDTO(e actionlog.Entry, views actionlog.PayloadViews) EntryDTO {
-	payload := views.View(e.Kind, e.Payload)
+// toDTO shapes e for the wire. The service already serves e with the payload
+// fields its kind gained after it was logged.
+func toDTO(e actionlog.Entry) EntryDTO {
+	payload := e.Payload
 	if len(payload) == 0 {
 		payload = json.RawMessage(`{}`)
 	}
-	effective := views.View(e.Kind, e.EffectivePayload())
+	effective := e.EffectivePayload()
 	if len(effective) == 0 {
 		effective = payload
 	}
@@ -266,7 +265,7 @@ func toDTO(e actionlog.Entry, views actionlog.PayloadViews) EntryDTO {
 	}
 	for _, c := range e.Corrections {
 		out.Corrections = append(out.Corrections, CorrectionDTO{
-			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, Payload: views.View(e.Kind, c.Payload), Note: c.Note,
+			ID: c.ID, Kind: string(c.Kind), HPDelta: c.HPDelta, Source: c.Summary, Payload: c.Payload, Note: c.Note,
 			StepID: c.StepID, Undone: c.StepUndone, CreatedAt: c.CreatedAt,
 		})
 	}

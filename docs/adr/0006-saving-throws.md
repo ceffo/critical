@@ -82,10 +82,12 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    step 5 moved the target has no `rollTotal` and no `adjustedTarget`. The log is not migrated:
    the API (`GET /api/log`, and the entries undo, redo and amend return) serves both, computed on
    read in Go from the stored d20, modifiers, target and adjustment (`combatsvc.SavePayloadView`,
-   registered per kind in the composition root). Every stored field, the verdict and the margin
-   included, is served as stored.
+   registered per kind in the composition root and applied by `actionlogsvc` to every entry it
+   returns, so no reader can skip it). Every stored field, the verdict and the margin included,
+   is served as stored.
    Tests: `TestSavePayloadView_Step8_OldEntryServedInTheNewShape`; `router`
-   `TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape`; `composition`
+   `TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape` and
+   `...ByEveryEndpoint`; `actionlogsvc` `TestListReads_ServeEntriesThroughThePayloadViews`; `composition`
    `TestCorrectionStep_AdjustASaveLoggedBeforeTheTargetMoved` (adjusting such a save stores both
    fields in the amend; undo goes back to the save as logged).
 

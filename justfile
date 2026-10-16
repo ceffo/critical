@@ -194,8 +194,8 @@ fmt-web:
 e2e-install:
     cd web && npx playwright install chromium
 
-# Run the Playwright suite against a throwaway stack per test (own API + Vite on free ports,
-# fresh temp DB, api/testdata/seeds fixture). Extra args go to `playwright test`, e.g. `just e2e smoke.spec.ts -g "a|b"` (args are passed quoted, not through sh).
+# Run the Playwright suite against a throwaway stack per test (own API on a free port in its
+# in-memory storage mode, no database; api/testdata/seeds fixture). Extra args go to `playwright test`, e.g. `just e2e smoke.spec.ts -g "a|b"` (args are passed quoted, not through sh).
 # Artifacts: web/e2e-results/ (screens/, report/, artifacts/ with traces on failure).
 [positional-arguments]
 e2e *args: build-api

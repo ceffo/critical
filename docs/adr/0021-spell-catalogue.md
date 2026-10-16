@@ -174,6 +174,24 @@ is only ever appended to by play.
      integer digit ("156 cm³", "540 litres"), so a small volume is not rounded away. A word agrees
      with the converted number ("27 litres"). Dice are never converted (a length with dice keeps its
      unit); times are never converted.
+   - **No rounding beyond the convention; under a metre in centimetres.** The converted number is
+     the convention's product, never rounded further: 930 ft is **279 m**, not 280 m. The French
+     books do the same, level-scaled values included ("75 feet" at level 15 is "22,5 mètres", 13 ×
+     20 feet "78 mètres", 13 × 2 feet "7,8 m"), and no French book prints a figure rounded off a
+     converted one. A length shown in metres that is **under 1 m is written in centimetres**
+     (1 ft is "30 cm", 3 ft "90 cm", "1 ft/niveau" is "30 cm/niveau"): the French Tome of Magic
+     writes 30, 60 and 90 cm over 30 times and never "0,x m", while 5 ft stays "1,5 m". A range
+     ("1-5 ft") takes the unit of its larger number; areas and volumes keep their units.
+     Evidence (2026-10-15), checked by `statTextBook.test.ts` when the rulebooks clone is present:
+     of the French stat lines (range, area) that give metric lengths, **159** are the convention's
+     numbers exactly, 4 cannot be read number for number (a number in words, a side given once,
+     dice), and 7 differ, all slips of the book: two yards read as feet (3 m for 10 yd, 9 m for 30
+     yd), one wrong number (18 m for a 30 ft radius), the two square-foot lines that disagree with
+     each other (10 m² for 100 sq ft, 28 m² for 1000 sq ft; the convention keeps 0.09), and a cube
+     of feet and a cubic foot read as the other (27 litres, a 30 cm side). The French PHB keeps feet
+     and paces; its one mile is 1,5 km. In the descriptions a minority of translators use 1 ft ≈ ⅓ m
+     (25 ft as 8 m, 12 ft as 4 m) or 1 mi ≈ 1.6 km (5 mi as 8 km); the stat lines never do, and they
+     are what the conversion follows.
    - **The book's text is the fallback, only for what is not typed**: a field the parser left
      special (other than the book's own "Special", which is a label), a word the language has no
      key for (an unlisted noun, unit or condition, a non-level divisor such as "/recipient"), and
@@ -292,7 +310,9 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   condition key, the conversion and each fallback in `statText.test.ts`); the lookup's grid and meta
   line use it, and the French lookup e2e checks one spell's stats ("210 m", "60 m + 10 m/niveau").
   The conversion and the volume digits are in `statText.test.ts` ("converts lengths to metres in
-  French as the French books do", "keeps a volume's significant digits").
+  French as the French books do", "does not round a converted length, as the French books do not",
+  "writes a length under a metre in centimetres, as the French books do", "keeps a volume's
+  significant digits"); the pairing with the French books' stat lines is `statTextBook.test.ts`.
 - **Coverage** over a catalogue: `just stat-coverage [path]` prints, per field, how many stats the
   French UI words from the typed value, shows as a label, or shows as the English text, with the
   most common English texts left (`api/cmd/spellstats` prints the typed stats it reads).

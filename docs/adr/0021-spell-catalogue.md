@@ -243,6 +243,26 @@ is only ever appended to by play.
          entry for the spell) are worded (French `has a French noun for pebbles and eyes`), and the
          area texts that name no extent (hearing range, line of sight, the caster's hand, staff,
          shadow or weapon, "Variable") are common values labelled in `lookup.values.area`.
+     13. A note the book adds to an area is kept beside it: "+ special", "or special" and
+         "(special)" are `special` (plus, or, note), "(usually caster)" is `usually`; worded
+         "rayon de 1,5 m + spéciale", "… ou spéciale", "… (spéciale)", "1 individu (généralement le
+         lanceur)". Only after a whole area or targets reading
+         (`TestAreaOfEffect_Annotated`; French `words several areas, a sum of readings and the
+         notes the book adds`).
+     14. A number word before an extent and a plural figure counts the figures ("Two 10-ft.
+         cubes/level": `count` 2, one 10-ft./level cube), worded "2 cubes de 3 m/niveau"
+         (`TestAreaOfEffect_SeveralAreas`, same French test).
+     15. "A + B" is a sum of whole readings (kind `together`, `parts`), worded part by part
+         ("cube de 12 m + cube de 3 m/niveau", "Le lanceur + 1 personne/8 niveaux"); it has no
+         value at a caster level. A part that holds an extent and a count stays the book's text,
+         the extent may bound the other parts too (`TestAreaOfEffect_Sum`, same French test).
+     16. "Wide at base" / "at the end" says where an extent is measured (`site`, base or end), and
+         "and" separates the extents of one text: "cône de 60 m de long et de 30 m de large à la
+         base" (`TestAreaOfEffect_WhereOnTheFigure`; French `words where on the figure an extent
+         is measured, and a bounded line of sight`). This replaces the book's text kept by item 11
+         for a cone "wide at base".
+     17. "Line of sight" is a shape and a leading "max." bounds the extent after it: "ligne de vue
+         de 18 m maximum" (`TestAreaOfEffect_BoundedLineOfSight`, same French test).
 
 ## Consequences
 

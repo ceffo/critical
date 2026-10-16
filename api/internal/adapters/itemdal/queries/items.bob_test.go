@@ -97,8 +97,8 @@ func TestListItems(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 12 {
-			t.Fatalf("expected %d columns, got %d", 12, len(columns))
+		if len(columns) != 13 {
+			t.Fatalf("expected %d columns, got %d", 13, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -147,6 +147,10 @@ func TestListItems(t *testing.T) {
 
 		if columns[11] != "notes" {
 			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
+		}
+
+		if columns[12] != "powers" {
+			t.Fatalf("expected column %d to be %s, got %s", 12, "powers", columns[12])
 		}
 	})
 }
@@ -233,8 +237,8 @@ func TestGetItem(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 12 {
-			t.Fatalf("expected %d columns, got %d", 12, len(columns))
+		if len(columns) != 13 {
+			t.Fatalf("expected %d columns, got %d", 13, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -283,6 +287,10 @@ func TestGetItem(t *testing.T) {
 
 		if columns[11] != "notes" {
 			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
+		}
+
+		if columns[12] != "powers" {
+			t.Fatalf("expected column %d to be %s, got %s", 12, "powers", columns[12])
 		}
 	})
 }
@@ -369,8 +377,8 @@ func TestDecrementItem(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 12 {
-			t.Fatalf("expected %d columns, got %d", 12, len(columns))
+		if len(columns) != 13 {
+			t.Fatalf("expected %d columns, got %d", 13, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -419,6 +427,10 @@ func TestDecrementItem(t *testing.T) {
 
 		if columns[11] != "notes" {
 			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
+		}
+
+		if columns[12] != "powers" {
+			t.Fatalf("expected column %d to be %s, got %s", 12, "powers", columns[12])
 		}
 	})
 }
@@ -505,8 +517,8 @@ func TestIncrementItem(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if len(columns) != 12 {
-			t.Fatalf("expected %d columns, got %d", 12, len(columns))
+		if len(columns) != 13 {
+			t.Fatalf("expected %d columns, got %d", 13, len(columns))
 		}
 
 		if columns[0] != "id" {
@@ -555,6 +567,10 @@ func TestIncrementItem(t *testing.T) {
 
 		if columns[11] != "notes" {
 			t.Fatalf("expected column %d to be %s, got %s", 11, "notes", columns[11])
+		}
+
+		if columns[12] != "powers" {
+			t.Fatalf("expected column %d to be %s, got %s", 12, "powers", columns[12])
 		}
 	})
 }
@@ -826,6 +842,7 @@ var beforeTestingInsertItem = func(context.Context, bob.Tx) ([]InsertItem_Items,
 		EffectDice string
 		EffectSave string
 		Notes      string
+		Powers     string
 	}{{
 		ID:         random_string(nil),
 		Position:   random_int64(nil),
@@ -839,6 +856,7 @@ var beforeTestingInsertItem = func(context.Context, bob.Tx) ([]InsertItem_Items,
 		EffectDice: random_string(nil),
 		EffectSave: random_string(nil),
 		Notes:      random_string(nil),
+		Powers:     random_string(nil),
 	}}, nil
 }
 
@@ -859,6 +877,7 @@ func TestInsertItem(t *testing.T) {
 			EffectDice string
 			EffectSave string
 			Notes      string
+			Powers     string
 		}{{
 			ID:         random_string(nil),
 			Position:   random_int64(nil),
@@ -872,6 +891,7 @@ func TestInsertItem(t *testing.T) {
 			EffectDice: random_string(nil),
 			EffectSave: random_string(nil),
 			Notes:      random_string(nil),
+			Powers:     random_string(nil),
 		}})
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -899,6 +919,7 @@ func TestInsertItem(t *testing.T) {
 			EffectDice string
 			EffectSave string
 			Notes      string
+			Powers     string
 		}{{
 			ID:         random_string(nil),
 			Position:   random_int64(nil),
@@ -912,6 +933,7 @@ func TestInsertItem(t *testing.T) {
 			EffectDice: random_string(nil),
 			EffectSave: random_string(nil),
 			Notes:      random_string(nil),
+			Powers:     random_string(nil),
 		}})
 
 		if _, err := sqlite.Insert(query).WriteQuery(t.Context(), &sb, 1); err != nil {
@@ -959,15 +981,15 @@ func TestInsertItem(t *testing.T) {
 	})
 }
 
-var beforeTestingUpdateItem = func(context.Context, bob.Tx) (int64, string, string, string, int64, string, int64, int64, string, string, string, string, error) {
-	return random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), nil
+var beforeTestingUpdateItem = func(context.Context, bob.Tx) (int64, string, string, string, int64, string, int64, int64, string, string, string, string, string, error) {
+	return random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), nil
 }
 
 func TestUpdateItem(t *testing.T) {
 	t.Run("Base", func(t *testing.T) {
 		var sb strings.Builder
 
-		query := UpdateItem(random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil))
+		query := UpdateItem(random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil))
 
 		if _, err := query.WriteQuery(t.Context(), &sb, 1); err != nil {
 			t.Fatal(err)
@@ -981,7 +1003,7 @@ func TestUpdateItem(t *testing.T) {
 	t.Run("Mod", func(t *testing.T) {
 		var sb strings.Builder
 
-		query := UpdateItem(random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil))
+		query := UpdateItem(random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_int64(nil), random_string(nil), random_int64(nil), random_int64(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil), random_string(nil))
 
 		if _, err := sqlite.Update(query).WriteQuery(t.Context(), &sb, 1); err != nil {
 			t.Fatal(err)
@@ -1016,12 +1038,12 @@ func TestUpdateItem(t *testing.T) {
 			}
 		}()
 
-		arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, beforeHookErr := beforeTestingUpdateItem(ctxTx, tx)
+		arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, beforeHookErr := beforeTestingUpdateItem(ctxTx, tx)
 		if beforeHookErr != nil {
 			t.Fatalf("Error in beforeTesting: %v", beforeHookErr)
 		}
 
-		query, args, err := bob.Build(ctxTx, sqlite.Update(UpdateItem(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)))
+		query, args, err := bob.Build(ctxTx, sqlite.Update(UpdateItem(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12)))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -372,7 +372,12 @@ export interface CastConsumedItem {
 export interface CastAttack {
   d20Roll: number;
   baseThac0: number;
-  modifiers: { kind: string; detail?: string; value: number }[];
+  modifiers: {
+    kind: string;
+    detail?: string;
+    itemId?: string;
+    value: number;
+  }[];
   effectiveThac0: number;
   targetAc: number;
   targetACNeeded: number;

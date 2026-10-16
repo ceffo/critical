@@ -124,7 +124,7 @@ var wand = itemsvc.Item{
 }
 
 const wandBefore = `[{"id":"wand_lightning","count":1,"item":{"position":4,"name":"Wand of lightning","type":"wand",
-	"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`
+	"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`
 
 func TestUseSnapshot_BeforeIsOneMore(t *testing.T) {
 	for _, b := range []itemsvc.Behaviour{itemsvc.BehaviourStock, itemsvc.BehaviourDaily} {

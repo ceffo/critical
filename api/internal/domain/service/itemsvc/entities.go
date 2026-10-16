@@ -48,6 +48,9 @@ type Item struct {
 	EffectDice string // damage dice, e.g. "6d6"
 	EffectSave string // save category for the effect, e.g. "rod_staff_wand"
 	Notes      string
+	// Powers are the item's own powers (ADR 0016 steps 9 to 16), never set
+	// by the editor; nil or empty: none.
+	Powers []Power
 }
 
 // Spendable tells whether a spell that consumes an item of itemType can spend

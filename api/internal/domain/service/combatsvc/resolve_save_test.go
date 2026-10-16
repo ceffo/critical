@@ -30,7 +30,7 @@ func rollSave(t *testing.T, f *fixture, d20, saveBonus int) *actionlog.Entry {
 		mods.SaveBonus = saveBonus
 		mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Luck", Value: saveBonus}}
 	}
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, buffsvc.WeaponNone).Return(mods, nil)
 	f.records()
 	_, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 	require.NoError(t, err)
@@ -212,7 +212,7 @@ func TestResolveSavingThrow_OneModifierPerBuff(t *testing.T) {
 	mods := strMods(12)
 	mods.SaveBonus = 3
 	mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Gaia", Value: 4}, {Buff: "Curse", Value: -1}}
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, buffsvc.WeaponNone).Return(mods, nil)
 	f.records()
 	res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 	require.NoError(t, err)

@@ -48,23 +48,52 @@ type snapItem struct {
 	EffectDice string `json:"effectDice"`
 	EffectSave string `json:"effectSave"`
 	Notes      string `json:"notes"`
+	// Powers are the item's own powers (ADR 0016 step 15), always written
+	// ([] for none); nil in a snapshot taken before they existed, which then
+	// leaves the stored powers as they are (see keepPowers).
+	Powers *[]jsonPower `json:"powers,omitempty"`
 }
 
 func toSnapItem(i Item) *snapItem {
+	powers := toJSONPowers(i.Powers)
 	return &snapItem{
 		Position: i.Position, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour),
 		MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind, MaxCount: i.MaxCount,
-		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes,
+		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: &powers,
 	}
 }
 
 func (c snapCount) item() Item {
 	it := c.Item
-	return Item{
+	out := Item{
 		ID: c.ID, Position: it.Position, Name: it.Name, Type: it.Type, Behaviour: Behaviour(it.Behaviour),
 		MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind, Count: c.Count, MaxCount: it.MaxCount,
 		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes,
 	}
+	if it.Powers != nil {
+		out.Powers = fromJSONPowers(*it.Powers)
+	}
+	return out
+}
+
+// keepPowers is the item a Replace snapshot writes back: when the snapshot
+// predates powers (no "powers" key), the item keeps the powers it has now,
+// so popping an old edit never strips the ones a migration gave it. An item
+// that is gone has none to keep (ADR 0016 Consequences).
+func (s *service) keepPowers(ctx context.Context, c snapCount) (Item, error) {
+	item := c.item()
+	if c.Item.Powers != nil {
+		return item, nil
+	}
+	cur, err := s.dal.Get(ctx, c.ID)
+	switch {
+	case errors.Is(err, ErrItemNotFound):
+		return item, nil
+	case err != nil:
+		return Item{}, err
+	}
+	item.Powers = cur.Powers
+	return item, nil
 }
 
 // UseSnapshot is the snapshot of one Use: after is the item Use returned,
@@ -146,11 +175,19 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 					// charge (written back by a redo, ADR 0019 step 1).
 					err = s.dal.Delete(ctx, c.ID)
 				case c.Replace && c.Item != nil:
-					err = s.dal.Update(ctx, c.item())
+					var item Item
+					if item, err = s.keepPowers(ctx, c); err != nil {
+						break
+					}
+					err = s.dal.Update(ctx, item)
 					if errors.Is(err, ErrItemNotFound) {
-						err = s.dal.Insert(ctx, c.item())
+						err = s.dal.Insert(ctx, item)
 					}
 				default:
+					// The item is inserted only when it is gone, so there
+					// are no stored powers to keep: a snapshot from before
+					// powers brings it back without them (ADR 0016
+					// Consequences).
 					err = s.dal.SetCount(ctx, c.ID, c.Count)
 					if errors.Is(err, ErrItemNotFound) && c.Item != nil {
 						err = s.dal.Insert(ctx, c.item())

@@ -215,10 +215,12 @@ type SpellAttackDTO struct {
 }
 
 // SpellAttackModDTO is one to-hit modifier of a spell's attack; the UI
-// labels it by kind and detail.
+// labels it by kind and detail, an item power's from its item (itemId, ADR
+// 0016 step 14).
 type SpellAttackModDTO struct {
 	Kind   string `json:"kind"`
 	Detail string `json:"detail,omitempty"`
+	ItemID string `json:"itemId,omitempty"`
 	Value  int    `json:"value"`
 }
 
@@ -332,7 +334,7 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 			TargetAC: a.TargetAC, TargetACNeeded: a.TargetACNeeded, Hit: a.Hit, HitMargin: a.HitMargin,
 		}
 		for _, m := range a.Modifiers {
-			out.Attack.Modifiers = append(out.Attack.Modifiers, SpellAttackModDTO{Kind: string(m.Kind), Detail: m.Detail, Value: m.Value})
+			out.Attack.Modifiers = append(out.Attack.Modifiers, SpellAttackModDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
 		}
 	}
 	if res.Slots != nil {

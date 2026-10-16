@@ -2,20 +2,20 @@
 -- This file is meant to be re-generated in place and/or deleted at any time.
 
 -- ListItems
-SELECT "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes"
+SELECT "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes", "powers"
 FROM "items" ORDER BY "position";
 
 -- GetItem
-SELECT "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes"
+SELECT "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes", "powers"
 FROM "items" WHERE "id" = ?1;
 
 -- DecrementItem
 UPDATE "items" SET "count" = "count" - 1 WHERE "id" = ?1 AND "count" > 0
-RETURNING "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes";
+RETURNING "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes", "powers";
 
 -- IncrementItem
 UPDATE "items" SET "count" = "count" + ?1 WHERE "id" = ?2
-RETURNING "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes";
+RETURNING "id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes", "powers";
 
 -- ResetDailyItems
 UPDATE "items" SET "count" = "max_count" WHERE "behaviour" = 'daily';
@@ -29,10 +29,10 @@ DELETE FROM "items" WHERE "id" = ?1
 RETURNING "id";
 
 -- InsertItem
-INSERT INTO "items" ("id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes")
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12);
+INSERT INTO "items" ("id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes", "powers")
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13);
 
 -- UpdateItem
-UPDATE "items" SET "position" = ?1, "name" = ?2, "type" = ?3, "behaviour" = ?4, "magic_bonus" = ?5, "ammo_kind" = ?6, "count" = ?7, "max_count" = ?8, "effect_dice" = ?9, "effect_save" = ?10, "notes" = ?11
-WHERE "id" = ?12
+UPDATE "items" SET "position" = ?1, "name" = ?2, "type" = ?3, "behaviour" = ?4, "magic_bonus" = ?5, "ammo_kind" = ?6, "count" = ?7, "max_count" = ?8, "effect_dice" = ?9, "effect_save" = ?10, "notes" = ?11, "powers" = ?12
+WHERE "id" = ?13
 RETURNING "id";

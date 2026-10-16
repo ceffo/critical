@@ -56,8 +56,9 @@ func (d *scriptedDice) RollDie(sides int) int { return d.next(fmt.Sprintf("d%d",
 func (d *scriptedDice) RollD20() int          { return d.next("d20") }
 func (d *scriptedDice) RollD100() int         { return d.next("d100") }
 
-// strStack is the real stack on STR 12 with scripted dice and a Power Gem
-// (min_str 18) active.
+// strStack is the real stack on STR 12 with scripted dice and the seeded
+// Power Gem, whose thunder hammer (an item power, min_str 18, melee) is on
+// from effective STR 18 (ADR 0016 steps 10 and 16).
 type strStack struct {
 	t    *testing.T
 	ctx  context.Context
@@ -80,11 +81,6 @@ func newStrStack(t *testing.T) *strStack {
 	t.Cleanup(func() { _ = bs.Close(ctx) })
 	id := bs.CharacterID
 	_, err = bs.DB.ExecContext(ctx, `UPDATE characters SET str = 12 WHERE id = ?`, id)
-	require.NoError(t, err)
-	_, err = bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{
-		Name:    "Power Gem",
-		Effects: buffsvc.BuffEffects{MinStr: intPtr(18), WeaponBuff: intPtr(5), Multiplier: floatPtr(2)},
-	})
 	require.NoError(t, err)
 	return &strStack{t: t, ctx: ctx, bs: bs, id: id, dice: dice}
 }
@@ -122,13 +118,13 @@ func (s *strStack) status() (names []string, applies map[string]bool) {
 
 func (s *strStack) gemOn() bool {
 	s.t.Helper()
-	mods, err := s.bs.Buffs.Aggregate(s.ctx, s.id, 12)
+	mods, err := s.bs.Buffs.Aggregate(s.ctx, s.id, 12, buffsvc.WeaponMelee)
 	require.NoError(s.t, err)
 	return mods.WeaponBuff == 5 && mods.Multipliers == 2
 }
 
 // ADR 0004 steps 7, 8 and 10 on the real stack, from received spells to the attack: two Strength casts
-// add up to 18 and the Power Gem (min_str 18) gives +5 and x2; Improved
+// add up to 18 and the Power Gem's hammer (min_str 18) gives +5 and x2; Improved
 // Strength then replaces them (19, not 18 + 7) and the gem still applies
 // (STR >= 18).
 func TestEffectiveStr_StrengthStacksThenImprovedReplacesIt(t *testing.T) {
@@ -174,14 +170,14 @@ func TestEffectiveStr_VoidSecondStrength(t *testing.T) {
 	s.receive("strength", 9, 1)
 	second := s.receive("strength", 9, 5)
 	names, _ := s.status()
-	assert.Equal(t, []string{"Power Gem", "Strength", "Strength"}, names)
+	assert.Equal(t, []string{"Strength", "Strength"}, names)
 	assert.Equal(t, 18, s.effective())
 	assert.True(t, s.gemOn())
 
 	_, err := s.bs.Log.Undo(s.ctx, s.id, second.EntryID)
 	require.NoError(t, err)
 	names, _ = s.status()
-	assert.Equal(t, []string{"Power Gem", "Strength"}, names)
+	assert.Equal(t, []string{"Strength"}, names)
 	assert.Equal(t, 13, s.effective(), "12 + the first cast's 1")
 	assert.False(t, s.gemOn())
 }
@@ -233,8 +229,8 @@ func TestEffectiveStr_DismissOneStrength(t *testing.T) {
 
 	left, err := s.bs.Buffs.Dismiss(s.ctx, s.id, a.Buff.Buff.ID)
 	require.NoError(t, err)
-	require.Len(t, left, 2)
-	assert.Equal(t, b.Buff.Buff.ID, left[1].ID)
+	require.Len(t, left, 1)
+	assert.Equal(t, b.Buff.Buff.ID, left[0].ID)
 	assert.Equal(t, 16, s.effective())
 
 	entries, err := s.bs.Log.List(s.ctx, s.id, 1)
@@ -258,7 +254,7 @@ func TestEffectiveStr_StrengthsExpireIndependently(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, expired, 1)
 	assert.Equal(t, a.Buff.Buff.ID, expired[0].ID)
-	assert.Equal(t, []string{"Power Gem", "Strength"}, names(active))
+	assert.Equal(t, []string{"Strength"}, names(active))
 	assert.Equal(t, 16, s.effective())
 
 	_, expired, _, _, err = s.bs.Buffs.AdvanceRound(s.ctx, s.id)

@@ -175,11 +175,12 @@ side (what Next Round, End combat and passing time do) is [ADR 0005](0005-rounds
     Without one they count for every roll, as before. The aggregate is asked for the weapon kind
     of the roll it serves (none for a save or a spell's to-hit). It is generic: no buff or item is
     special-cased. It does not change whether a buff applies on the list (step 10) nor whether a
-    power is on (ADR 0016 step 10). A buff takes it in the API and in saved templates; the buff form
-    has no field for it yet. Planned tests (named without their `Test` prefix until they exist):
-    `Buffs_Step18_WeaponKindFiltersTheEffects` (melee-only effects count for a melee attack,
+    power is on (ADR 0016 step 10), and it never conditions a Strength effect (`str_bonus`,
+    `str_max`) or `min_str`: those make the one effective STR. A buff takes it in the API and in
+    saved templates; the buff form has no field for it yet. Tests (`buffsvc`):
+    `TestBuffs_Step18_WeaponKindFiltersTheEffects` (melee-only effects count for a melee attack,
     not for a missile one, a save or a spell to-hit; without the condition: everywhere),
-    `Buffs_Step18_RejectsAnUnknownWeaponKind`.
+    `TestBuffs_Step18_RejectsAnUnknownWeaponKind`.
 
 ## Consequences
 

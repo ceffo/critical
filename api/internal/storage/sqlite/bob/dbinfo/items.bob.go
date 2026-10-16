@@ -123,6 +123,15 @@ var Items = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		Powers: column{
+			Name:      "powers",
+			DBType:    "TEXT",
+			Default:   "'[]'",
+			Comment:   "",
+			Nullable:  false,
+			Generated: false,
+			AutoIncr:  false,
+		},
 	},
 	Indexes: itemIndexes{
 		SqliteAutoindexItems1: index{
@@ -162,11 +171,12 @@ type itemColumns struct {
 	EffectDice column
 	EffectSave column
 	Notes      column
+	Powers     column
 }
 
 func (c itemColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.Position, c.Name, c.Type, c.Behaviour, c.MagicBonus, c.AmmoKind, c.Count, c.MaxCount, c.EffectDice, c.EffectSave, c.Notes,
+		c.ID, c.Position, c.Name, c.Type, c.Behaviour, c.MagicBonus, c.AmmoKind, c.Count, c.MaxCount, c.EffectDice, c.EffectSave, c.Notes, c.Powers,
 	}
 }
 

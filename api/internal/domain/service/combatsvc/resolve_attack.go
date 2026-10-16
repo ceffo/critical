@@ -50,7 +50,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
 		}
-		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str)
+		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponKind(weapon.Kind))
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}
@@ -187,15 +187,15 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		Terms: []DamageTerm{},
 	}
 	for _, f := range mods.SpellsBuffFrom {
-		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermSpells, Kind: ModBuff, Detail: f.Buff, Value: f.Value})
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermSpells, Kind: ModBuff, Detail: f.Buff, ItemID: f.ItemID, Value: f.Value})
 	}
 	for _, f := range mods.MultipliersFrom {
-		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBuff, Detail: f.Buff, Value: f.Value})
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermDiceMult, Kind: ModBuff, Detail: f.Buff, ItemID: f.ItemID, Value: f.Value})
 	}
 	rolled.Terms = append(rolled.Terms, weaponTerms...)
 	rolled.Terms = append(rolled.Terms, strTerms...)
 	for _, c := range mods.DamageFrom {
-		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermBonus, Kind: ModBuff, Detail: c.Buff, Value: float64(c.Value)})
+		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermBonus, Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: float64(c.Value)})
 	}
 	res.Rolled = rolled
 
@@ -305,13 +305,16 @@ func settle(res *RollResult) {
 	res.TotalDamage = max(int(math.Floor(res.UnroundedDamage+floorEpsilon)), 0)
 }
 
-// weaponMagic is the better of the weapon's own bonus and a buff's "weapon
-// becomes +N"; ok is false when neither gives anything.
+// weaponMagic is the better of the weapon's own bonus and the best "weapon
+// becomes +N" of the buffs and item powers (ADR 0002 step 6), named by its
+// buff or, for a power, by its item (ADR 0016 step 14); ok is false when
+// neither gives anything.
 func weaponMagic(weaponName string, own int, mods buffsvc.BuffModifiers) (Modifier, bool) {
 	if mods.WeaponBuff > 0 && mods.WeaponBuff >= own {
 		return Modifier{
 			Kind:   ModWeaponBuff,
 			Detail: mods.WeaponBuffFrom,
+			ItemID: mods.WeaponBuffItemID,
 			Value:  mods.WeaponBuff,
 		}, true
 	}

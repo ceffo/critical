@@ -84,7 +84,7 @@ func TestLongRest_RefillsSlotsAndDailyItemsOnly(t *testing.T) {
 	assert.Equal(t, 3, wand, "charges stay spent")
 	assert.Equal(t, 17, itemCount(t, bs, "arrows_plus1"), "stock is not refilled")
 	assert.Equal(t, 4, itemCount(t, bs, "fire_flask"), "stock is not refilled")
-	assert.Equal(t, []string{"Power Gem: Dispel Magic"}, refilled(t, bs, res.EntryID))
+	assert.Equal(t, []string{"Power Gem"}, refilled(t, bs, res.EntryID))
 
 	// The rest is logged and voidable: the gem is spent again, the slot used.
 	_, err = bs.Log.Undo(context.Background(), bs.CharacterID, res.EntryID)

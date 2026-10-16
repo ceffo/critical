@@ -1,5 +1,5 @@
-// Mirrors api/internal/rest/handler/buffhdl (BuffEffectDTO, StrengthDTO, RoundAdvanceDTO,
-// PassTimePreviewDTO).
+// Mirrors api/internal/rest/handler/buffhdl (BuffEffectDTO, BuffListDTO, ItemPowerDTO, StrengthDTO,
+// RoundAdvanceDTO, PassTimePreviewDTO).
 
 /** Effect keys a buff can carry (snake_case, as on the wire). */
 export const BUFF_EFFECT_KEYS = [
@@ -17,7 +17,16 @@ export const BUFF_EFFECT_KEYS = [
 
 export type BuffEffectKey = (typeof BUFF_EFFECT_KEYS)[number];
 
-export type BuffEffects = Partial<Record<BuffEffectKey, number>>;
+/** The kind of weapon a roll is made with (docs/adr/0016-inventory.md step 8). */
+export type WeaponKind = "melee" | "missile";
+
+/**
+ * A buff's (or an item power's) effects. `weapon_kind` is a condition, not an effect (ADR 0004
+ * step 18): with one, the other effects count only for an attack with a weapon of that kind.
+ */
+export type BuffEffects = Partial<Record<BuffEffectKey, number>> & {
+  weapon_kind?: WeaponKind;
+};
 
 export interface BuffEffect {
   id: string;
@@ -50,6 +59,23 @@ export interface BuffEffect {
    * while an Improved Strength replaces it.
    */
   applies?: boolean;
+}
+
+/**
+ * A carried item's power that is on (ADR 0016 step 13): served next to the buffs, never mixed into
+ * them. No name (the UI names it from the item by id), no counters, nothing to edit or dismiss.
+ */
+export interface ItemPower {
+  itemId: string;
+  /** The power's id within its item ("thunder_hammer"). */
+  powerId: string;
+  effects: BuffEffects;
+}
+
+/** GET /api/buffs, also the answer of every buff change: the buffs and the item powers that are on. */
+export interface BuffList {
+  buffs: BuffEffect[];
+  powers: ItemPower[];
 }
 
 /** PATCH /api/buffs/{id}: omitted fields are unchanged; 0 on a counter the buff uses ends it. */

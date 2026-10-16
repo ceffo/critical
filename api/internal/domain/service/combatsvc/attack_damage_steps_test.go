@@ -75,7 +75,7 @@ func TestAttack_Step1_DiceInOrderOnEveryAttack(t *testing.T) {
 			require.NoError(t, err)
 			f.weapons.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardSword, nil).Once()
 			f.withChar(bard())
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil).Once()
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
 			f.records()
 
 			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{
@@ -99,7 +99,7 @@ func TestAttack_Step8_OneToHitModifierPerBuff(t *testing.T) {
 	f := newFixture(t)
 	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil).Once()
 	f.withChar(bard())
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(buffsvc.BuffModifiers{
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(buffsvc.BuffModifiers{
 		SpellsBuff: 1, Multipliers: 1, EffectiveStr: 12, ToHit: -2,
 		ToHitFrom: []buffsvc.Contribution{{Buff: "Bless", Value: 1}, {Buff: "Prayer", Value: 1}, {Buff: "Chill", Value: -4}},
 	}, nil).Once()
@@ -144,7 +144,7 @@ func TestDamage_Step1_DiceByTargetSize(t *testing.T) {
 			f := newFixture(t)
 			f.weapons.EXPECT().Get(mock.Anything, c.weapon.ID).Return(c.weapon, nil).Once()
 			f.withChar(bard())
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil).Once()
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
 			f.dice.EXPECT().RollD20().Return(17).Once()
 			f.d100s(t, 92, 38)
 			for _, d := range c.dmg {
@@ -186,7 +186,7 @@ func TestAttack_LogPayloadHoldsTheDamageDice(t *testing.T) {
 			require.NoError(t, err)
 			f.weapons.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardSword, nil).Once()
 			f.withChar(bard())
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil).Once()
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
 			f.records()
 
 			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{

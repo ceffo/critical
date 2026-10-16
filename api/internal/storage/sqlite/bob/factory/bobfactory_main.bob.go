@@ -597,6 +597,7 @@ func (f *Factory) fromExistingItem(ctx context.Context, m *models.Item) *ItemTem
 	o.EffectDice = func() string { return m.EffectDice }
 	o.EffectSave = func() string { return m.EffectSave }
 	o.Notes = func() string { return m.Notes }
+	o.Powers = func() string { return m.Powers }
 
 	return o
 }

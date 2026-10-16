@@ -47,9 +47,8 @@ return a distinct value for each call and expect an exact number of calls.
    gives `6 × 2 + 5 + STR`, not `(6 + 5) × 2 + STR`.
    Tests: `TestResolveAttack_PowerGem` ("x2 on the raw dice only, not on the +5"),
    `TestResolveAttack_DecimalCritMultiplier` ("x1.5 crit on a x2 dice buff doubles only the
-   dice"), `buffsvc` `TestAggregate`. Planned (named without their `Test` prefix until they
-   exist): `ItemPowers_Step12_HammerOnMeleeOnly` (×1 with a bow or darts),
-   `composition` `ItemPowers_Step16_HammerAt18WithTheLongSword`.
+   dice"), `buffsvc` `TestAggregate`, `TestItemPowers_Step12_HammerOnMeleeOnly` (×1 with a bow
+   or darts), `composition` `TestItemPowers_Step16_HammerAt18WithTheLongSword`.
 5. **WeaponBuff.** The weapon's damage magic, or the "+N" of a buff or of an item power that is on
    when that wins (ADR 0002 step 6, the higher one, never both), plus the ammunition's magic
    (ADR 0002 step 7). Added after the dice factors, before the crit.
@@ -84,8 +83,8 @@ return a distinct value for each call and expect an exact number of calls.
     (ADR 0016 step 14); an item power that is off lists no term.
     Tests: `TestResolveAttack_DamageTermsListEveryModifier`,
     `TestAdjustAttackAC_DamageTermsInFormulaOrder`, `TestResolveAttack_DecimalCritMultiplier`.
-    Planned (named without their `Test` prefix until they exist):
-    `ItemPowers_Step14_BreakdownCarriesTheItemID`, `buffsvc` `ItemPowers_Step11_PowerOffContributesNothing`.
+    `TestItemPowers_Step14_BreakdownCarriesTheItemID`, `buffsvc`
+    `TestItemPowers_Step11_PowerOffContributesNothing`.
 
 ## Consequences
 

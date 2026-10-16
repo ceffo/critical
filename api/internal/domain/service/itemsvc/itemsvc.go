@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // SVC is the driver port.
@@ -45,6 +46,10 @@ type SVC interface {
 	// Delete removes an item (sold, broken) and logs it; popping the entry
 	// brings it back with its id, place and count. ErrItemNotFound.
 	Delete(ctx context.Context, characterID int64, itemID string) (*ChangeResult, error)
+
+	// ItemPowers is every carried item's powers, whatever its count (ADR
+	// 0016 steps 9 and 11): buffsvc's Items port.
+	ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error)
 
 	// Restorers maps the items state key to the Restorer that writes the
 	// counts of a "before" snapshot back when an action-log entry is voided.

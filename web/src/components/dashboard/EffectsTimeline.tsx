@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { buffName, useSpellName } from "@/i18n/spellName";
+import { powerEffectsText, powerRows, type PowerRow } from "@/lib/itemPowers";
 import { formatTurnsLeft } from "@/lib/passTime";
 import {
   effectSpan,
@@ -20,6 +21,7 @@ import {
 } from "@/lib/timeline";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
+import { useItemsStore } from "@/stores/items";
 import { useTableStore } from "@/stores/table";
 import type { BuffEffect } from "@/types/buffs";
 import { AddEffect } from "./AddEffect";
@@ -31,8 +33,14 @@ const LABEL_COLUMN = "clamp(10rem, 13vw, 15rem)";
 /** Effect rows shown at rest; more than this and an expander shows the rest (ADR 0017 step 6). */
 const REST_ROWS = 3;
 
+/** A row of the track: an active buff, or a carried item's power that is on (ADR 0016 step 13). */
+type TrackRow =
+  | { kind: "buff"; key: string; buff: BuffEffect }
+  | { kind: "power"; key: string; power: PowerRow };
+
 /**
- * The effects track: one row per active buff over a window of turns that follows the current one.
+ * The effects track: one row per active buff over a window of turns that follows the current one,
+ * then one per item power that is on (named by its item, nothing to edit or dismiss).
  * A timed buff is a thin line for the turns it has run and a pill for what is left (from the
  * server's `duration`), in the warning colour on its last turn; a charge buff shows its charges as
  * pips; a buff that does not apply is dashed with a lock and the reason. Edit and remove per row,
@@ -44,14 +52,24 @@ const REST_ROWS = 3;
 export function EffectsTimeline() {
   const { t } = useTranslation();
   const buffs = useBuffsStore((s) => s.buffs);
+  const powers = useBuffsStore((s) => s.powers);
+  const items = useItemsStore((s) => s.items);
   const turn = useBuffsStore((s) => s.round);
   const [editing, setEditing] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const edited = buffs.find((b) => b.id === editing);
   const trackRef = useRef<HTMLDivElement>(null);
   const size = useTrackSize(trackRef);
-  const hidden = Math.max(buffs.length - REST_ROWS, 0);
-  const shown = expanded ? buffs : buffs.slice(0, REST_ROWS);
+  const rows: TrackRow[] = [
+    ...buffs.map((b): TrackRow => ({ kind: "buff", key: b.id, buff: b })),
+    ...powerRows(powers, items).map((p): TrackRow => ({
+      kind: "power",
+      key: `power:${p.key}`,
+      power: p,
+    })),
+  ];
+  const hidden = Math.max(rows.length - REST_ROWS, 0);
+  const shown = expanded ? rows : rows.slice(0, REST_ROWS);
   const start = windowStart(turn);
   const current = turn - start;
   const columns = Array.from({ length: size }, (_, i) => start + i);
@@ -133,20 +151,31 @@ export function EffectsTimeline() {
               {t("effects.column", { n })}
             </span>
           ))}
-          {shown.map((b, row) => (
-            <EffectRow
-              key={b.id}
-              buff={b}
-              row={row + 2}
-              turn={turn}
-              start={start}
-              size={size}
-              onEdit={() => {
-                setEditing(b.id);
-              }}
-            />
-          ))}
-          {buffs.length === 0 && (
+          {shown.map((r, row) =>
+            r.kind === "buff" ? (
+              <EffectRow
+                key={r.key}
+                buff={r.buff}
+                row={row + 2}
+                turn={turn}
+                start={start}
+                size={size}
+                onEdit={() => {
+                  setEditing(r.buff.id);
+                }}
+              />
+            ) : (
+              <ItemPowerRow
+                key={r.key}
+                power={r.power}
+                row={row + 2}
+                turn={turn}
+                start={start}
+                size={size}
+              />
+            ),
+          )}
+          {rows.length === 0 && (
             <span
               className="text-body text-muted-foreground italic"
               style={{ gridColumn: "1 / -1", gridRow: 2 }}
@@ -365,6 +394,68 @@ function EffectRow({
             <span>{t("effects.untilDismissed")}</span>
           )}
           {inactive && <span className="italic">{reason}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * An item power that is on: the item's name and the power's effects, a bar from the current turn to
+ * the edge (it lasts while its trigger holds). No counters, no edit or dismiss (ADR 0016 step 13).
+ */
+function ItemPowerRow({
+  power: p,
+  row,
+  turn,
+  start,
+  size,
+}: {
+  power: PowerRow;
+  row: number;
+  turn: number;
+  start: number;
+  size: number;
+}) {
+  const { t } = useTranslation();
+  const effectsText = powerEffectsText(t, p.effects);
+  const span = effectSpan({ turn, start, size, duration: 0, startRound: turn });
+  const lasts =
+    p.minStr !== undefined
+      ? t("effects.powerOnFrom", { min: p.minStr })
+      : t("effects.powerOn");
+  return (
+    <div className="contents" data-testid="item-power" data-item={p.itemId}>
+      <div
+        className="flex min-w-0 items-center gap-1 pr-2"
+        style={{ gridColumn: 1, gridRow: row }}
+      >
+        <span
+          className="min-w-0 flex-1 break-words"
+          title={[t("effects.power", { name: p.name }), effectsText]
+            .filter(Boolean)
+            .join(" · ")}
+        >
+          <span className="text-body font-medium">{p.name}</span>
+          {effectsText && (
+            <span className="text-label text-muted-foreground">
+              {" · "}
+              <span data-testid="power-effects">{effectsText}</span>
+            </span>
+          )}
+        </span>
+      </div>
+      {span.remaining && (
+        <div
+          className={cn(
+            "flex h-5 min-w-0 items-center gap-1 overflow-hidden rounded-full px-2 text-label whitespace-nowrap text-amb-200",
+            span.overflows &&
+              "[mask-image:linear-gradient(to_right,black_75%,transparent)]",
+          )}
+          style={place(span.remaining, row)}
+          data-testid="effect-bar"
+        >
+          <span>{lasts}</span>
         </div>
       )}
     </div>

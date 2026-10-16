@@ -145,24 +145,17 @@ test("Stoneskin layers absorb hits from the Moi card, the buff ends at 0, and th
 test.describe("with the sheet's STR 12", () => {
   test.use({ character: { str: 12 } });
 
-  test("a Strength buff reaching 18 turns the Power Gem on, and it drops on expiry", async ({
+  test("a Strength buff reaching 18 turns the Power Gem's hammer on, and it drops on expiry", async ({
     page,
   }) => {
     await openDashboard(page);
     await markNoReload(page);
     await expect.poll(() => effectiveStr(page)).toBe(12);
-
-    await addBuff(page, {
-      name: "e2e Power Gem",
-      effects: [
-        ["min_str", 18],
-        ["weapon_buff", 5],
-        ["multiplier", 2],
-      ],
-    });
-    const gem = buffBadge(page, "e2e Power Gem");
-    await expect(gem).toHaveAttribute("data-applies", "false");
-    await expect(gem).toContainText("needs STR 18");
+    // The gem's thunder hammer is an item power: below its STR 18 trigger it shows nowhere.
+    const hammer = page.locator(
+      '[data-testid="item-power"][data-item="power_gem_dispel"]',
+    );
+    await expect(hammer).toHaveCount(0);
 
     await addBuff(page, {
       name: "e2e Strength",
@@ -173,17 +166,19 @@ test.describe("with the sheet's STR 12", () => {
       ],
     });
     await expect.poll(() => effectiveStr(page)).toBe(18);
-    await expect(gem).toHaveAttribute("data-applies", "true");
-    await expect(gem).not.toContainText("needs STR");
-    await expect(gem.getByTestId("buff-effects")).toHaveText(
-      "weapon +5 · dice ×2",
+    // On by itself, under the item's name, with nothing to edit or dismiss.
+    await expect(hammer).toContainText("Power Gem");
+    await expect(hammer.getByTestId("power-effects")).toHaveText(
+      "weapon +5 · dice ×2 · melee only",
     );
+    await expect(hammer.getByTestId("effect-bar")).toHaveText("while STR ≥ 18");
+    await expect(hammer.getByRole("button")).toHaveCount(0);
     await snap(page, "strength-18-gem-on");
 
     await nextTurn(page);
     await expect(buffBadge(page, "e2e Strength")).toHaveCount(0);
     await expect.poll(() => effectiveStr(page)).toBe(12);
-    await expect(gem).toHaveAttribute("data-applies", "false");
+    await expect(hammer).toHaveCount(0);
 
     await expectNoReload(page);
     await snap(page, "strength-expired-gem-off");

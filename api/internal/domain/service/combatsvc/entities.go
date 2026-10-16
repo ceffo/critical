@@ -9,18 +9,21 @@ const (
 	ModStrength    ModifierKind = "strength"     // PHB Table 1, Detail = effective STR
 	ModDexterity   ModifierKind = "dexterity"    // PHB Table 2 missile adj., Detail = DEX
 	ModWeaponMagic ModifierKind = "weapon_magic" // the weapon's own +N, Detail = weapon name
-	ModWeaponBuff  ModifierKind = "weapon_buff"  // a buff making the weapon +N, Detail = buff name
+	ModWeaponBuff  ModifierKind = "weapon_buff"  // a buff or item power making the weapon +N, Detail = buff (or item) name
 	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name
-	ModBuff        ModifierKind = "buff"         // a buff's to-hit/damage/save bonus, Detail = buff name
+	ModBuff        ModifierKind = "buff"         // a buff's or item power's to-hit/damage/save bonus, Detail = buff (or item) name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
 	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
 	ModAdjustment  ModifierKind = "adjustment"   // save adjustment set after the roll, Detail = reason
 )
 
-// Modifier is a labeled bonus or penalty applied to a roll.
+// Modifier is a labeled bonus or penalty applied to a roll. ItemID is set
+// on a contribution of an item power (ADR 0016 step 14): Detail is then the
+// item's stored name, a fallback, and the client names it from the item.
 type Modifier struct {
 	Kind   ModifierKind
 	Detail string
+	ItemID string
 	Value  int
 }
 
@@ -39,11 +42,13 @@ const (
 	TermBonus      DamageTermKind = "bonus"           // + after the multipliers (buff damage)
 )
 
-// DamageTerm is one contribution to the damage formula.
+// DamageTerm is one contribution to the damage formula; ItemID as on
+// Modifier.
 type DamageTerm struct {
 	Term   DamageTermKind
 	Kind   ModifierKind
 	Detail string
+	ItemID string
 	Value  float64
 }
 

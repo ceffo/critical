@@ -3,9 +3,10 @@
 package mocks
 
 import (
-	context "context"
-
 	actionlog "github.com/ceffo/critical/api/internal/domain/actionlog"
+	buffsvc "github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+
+	context "context"
 
 	itemsvc "github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 
@@ -233,6 +234,64 @@ func (_c *MockSVC_Health_Call) Return(_a0 error) *MockSVC_Health_Call {
 }
 
 func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *MockSVC_Health_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ItemPowers provides a mock function with given fields: ctx
+func (_m *MockSVC) ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ItemPowers")
+	}
+
+	var r0 []buffsvc.ItemPower
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]buffsvc.ItemPower, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []buffsvc.ItemPower); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.ItemPower)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ItemPowers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ItemPowers'
+type MockSVC_ItemPowers_Call struct {
+	*mock.Call
+}
+
+// ItemPowers is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) ItemPowers(ctx interface{}) *MockSVC_ItemPowers_Call {
+	return &MockSVC_ItemPowers_Call{Call: _e.mock.On("ItemPowers", ctx)}
+}
+
+func (_c *MockSVC_ItemPowers_Call) Run(run func(ctx context.Context)) *MockSVC_ItemPowers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ItemPowers_Call) Return(_a0 []buffsvc.ItemPower, _a1 error) *MockSVC_ItemPowers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ItemPowers_Call) RunAndReturn(run func(context.Context) ([]buffsvc.ItemPower, error)) *MockSVC_ItemPowers_Call {
 	_c.Call.Return(run)
 	return _c
 }

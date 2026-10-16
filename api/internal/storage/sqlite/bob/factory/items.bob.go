@@ -46,6 +46,7 @@ type ItemTemplate struct {
 	EffectDice func() string
 	EffectSave func() string
 	Notes      func() string
+	Powers     func() string
 
 	f *Factory
 
@@ -116,6 +117,10 @@ func (o ItemTemplate) BuildSetter() *models.ItemSetter {
 		val := o.Notes()
 		m.Notes = omit.From(val)
 	}
+	if o.Powers != nil {
+		val := o.Powers()
+		m.Powers = omit.From(val)
+	}
 
 	return m
 }
@@ -173,6 +178,9 @@ func (o ItemTemplate) Build() *models.Item {
 	}
 	if o.Notes != nil {
 		m.Notes = o.Notes()
+	}
+	if o.Powers != nil {
+		m.Powers = o.Powers()
 	}
 
 	o.setModelRels(m)
@@ -346,6 +354,7 @@ func (m itemMods) RandomizeAllColumns(f *faker.Faker) ItemMod {
 		ItemMods.RandomEffectDice(f),
 		ItemMods.RandomEffectSave(f),
 		ItemMods.RandomNotes(f),
+		ItemMods.RandomPowers(f),
 	}
 }
 
@@ -716,6 +725,37 @@ func (m itemMods) UnsetNotes() ItemMod {
 func (m itemMods) RandomNotes(f *faker.Faker) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
 		o.Notes = func() string {
+			return random_string(f)
+		}
+	})
+}
+
+// Set the model columns to this value
+func (m itemMods) Powers(val string) ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Powers = func() string { return val }
+	})
+}
+
+// Set the Column from the function
+func (m itemMods) PowersFunc(f func() string) ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Powers = f
+	})
+}
+
+// Clear any values for the column
+func (m itemMods) UnsetPowers() ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Powers = nil
+	})
+}
+
+// Generates a random value for the column using the given faker
+// if faker is nil, a default faker is used
+func (m itemMods) RandomPowers(f *faker.Faker) ItemMod {
+	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
+		o.Powers = func() string {
 			return random_string(f)
 		}
 	})

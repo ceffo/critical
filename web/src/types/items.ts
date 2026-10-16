@@ -1,4 +1,7 @@
-// Mirrors api/internal/rest/handler/itemhdl (ItemDTO, UseResultDTO, RestockResultDTO, ChangeDTO, ItemBody).
+// Mirrors api/internal/rest/handler/itemhdl (ItemDTO, PowerDTO, UseResultDTO, RestockResultDTO, ChangeDTO,
+// ItemBody).
+
+import type { BuffEffects } from "./buffs";
 
 /**
  * How an item's count behaves: stock is used and restocked (stays at 0),
@@ -22,6 +25,18 @@ export interface Item {
   effectDice: string;
   effectSave: string;
   notes: string;
+  /**
+   * The item's own powers (ADR 0016 steps 9 to 16), read only: never sent by the editor. Whether one
+   * is on is served with the effects list (GET /api/buffs).
+   */
+  powers: ItemPowerDef[];
+}
+
+/** One of an item's powers: its trigger (minStr; absent: always on) and its effects. */
+export interface ItemPowerDef {
+  id: string;
+  minStr?: number;
+  effects: BuffEffects;
 }
 
 /** POST /api/items/{id}/use (itemhdl UseResultDTO); the item_use log payload has the same shape. */

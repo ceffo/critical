@@ -21,6 +21,7 @@ const wand: Item = {
   effectDice: "6d6",
   effectSave: "rod_staff_wand",
   notes: "",
+  powers: [],
 };
 
 describe("parseInteger", () => {

@@ -55,7 +55,8 @@ func TestMigrate015_ItemsKeepEveryRowWithBehaviourAndType(t *testing.T) {
 		{"arrows_plus1", "Arrows +1", "arrow", "stock", "arrow", "", "", "", 0, 1, 11, 18},
 		{"fire_flask", "Fire flasks", "flask", "stock", "", "5d6", "", "", 1, 0, 3, 5},
 		{"wand_lightning", "Wand of lightning", "wand", "charges", "", "6d6", "rod_staff_wand", "", 2, 0, 2, 4},
-		{"power_gem_dispel", "Power Gem: Dispel Magic", "gem", "daily", "", "", "", "1/day", 3, 0, 0, 1},
+		// Renamed since by 032 (ADR 0016 step 16); its note is not the seed's, so it stays.
+		{"power_gem_dispel", "Power Gem", "gem", "daily", "", "", "", "1/day", 3, 0, 0, 1},
 		{"rod_empty", "Rod of nothing", "charged", "charges", "", "", "", "", 4, 0, 0, 3},
 		{"salve", "Healing salve", "consumable", "stock", "", "1d8", "", "apply", 5, 0, 2, 2},
 	}, got)

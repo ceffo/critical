@@ -29,15 +29,43 @@ func (s *service) GetRound(ctx context.Context, characterID int64) (int, error) 
 	return s.dal.GetRoundNumber(ctx, characterID)
 }
 
-// Aggregate evaluates all active buffs against the character's base STR and
-// returns the stacked modifiers. Used by combatsvc as a port
-// (clean_architecture.md §4.5).
-func (s *service) Aggregate(ctx context.Context, characterID int64, str int) (BuffModifiers, error) {
+// ListPowers returns the carried items' powers that are on at the
+// character's effective STR (ADR 0016 step 13).
+func (s *service) ListPowers(ctx context.Context, characterID int64) ([]ItemPower, error) {
+	base, err := s.baseStr(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	buffs, powers, err := s.effectSources(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	return powersOn(buffs, powers, base), nil
+}
+
+// Aggregate evaluates all active buffs and the carried items' powers against
+// the character's base STR for a roll with a weapon of kind, and returns the
+// stacked modifiers. Used by combatsvc as a port (clean_architecture.md
+// §4.5).
+func (s *service) Aggregate(ctx context.Context, characterID int64, str int, kind WeaponKind) (BuffModifiers, error) {
+	buffs, powers, err := s.effectSources(ctx, characterID)
+	if err != nil {
+		return BuffModifiers{}, err
+	}
+	return aggregate(buffs, powers, str, kind), nil
+}
+
+// effectSources reads the active buffs and the carried items' powers.
+func (s *service) effectSources(ctx context.Context, characterID int64) ([]BuffEffect, []ItemPower, error) {
 	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
 	if err != nil {
-		return BuffModifiers{}, fmt.Errorf("get active buffs: %w", err)
+		return nil, nil, fmt.Errorf("get active buffs: %w", err)
 	}
-	return aggregate(buffs, str), nil
+	powers, err := s.items.ItemPowers(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get item powers: %w", err)
+	}
+	return buffs, powers, nil
 }
 
 // GetEffectiveStr returns the sheet's STR and the STR with active buffs.

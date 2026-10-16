@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // Adjustment limits: an adjustment is a bonus learnt after the roll (+4 vs
@@ -55,14 +56,14 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 
 		rec := saveRecord{Category: string(category), Target: target, Modifiers: []modifierRecord{}}
 		rec.D20Roll = s.dice.RollD20()
-		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str)
+		mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponNone)
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}
 		// One modifier per buff, named like attack buff modifiers (Detail =
 		// buff name), so the card labels each one.
 		for _, c := range mods.SaveBonusFrom {
-			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModBuff), Detail: c.Buff, Value: c.Value})
+			rec.Modifiers = append(rec.Modifiers, modifierRecord{Kind: string(ModBuff), Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
 		}
 		rec.settle()
 		rec.RolledPassed = rec.Passed
@@ -175,7 +176,7 @@ func (r *saveRecord) modTotal() int {
 func (r *saveRecord) result(entryID int64) *RollResult {
 	mods := make([]Modifier, 0, len(r.Modifiers)+1)
 	for _, m := range r.Modifiers {
-		mods = append(mods, Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, Value: m.Value})
+		mods = append(mods, Modifier{Kind: ModifierKind(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
 	}
 	if r.Adjustment != 0 {
 		mods = append(mods, Modifier{Kind: ModAdjustment, Detail: r.AdjustmentReason, Value: r.Adjustment})

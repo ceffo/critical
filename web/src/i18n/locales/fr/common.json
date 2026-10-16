@@ -127,7 +127,10 @@
     "lastTurn": "Dernier tour",
     "showMore_one": "Afficher {{count}} effet de plus",
     "showMore_other": "Afficher {{count}} effets de plus",
-    "showLess": "Afficher moins d'effets"
+    "showLess": "Afficher moins d'effets",
+    "powerOnFrom": "tant que FOR ≥ {{min}}",
+    "powerOn": "tant qu’il est porté",
+    "power": "{{name}} : pouvoir d’objet"
   },
   "buffs": {
     "charges": "{{count}} ch.",
@@ -140,6 +143,8 @@
     "inactive": "FOR {{min}} requise",
     "effWeapon": "arme +{{n}}",
     "effDice": "dés ×{{n}}",
+    "effMelee": "corps à corps seulement",
+    "effMissile": "à distance seulement",
     "inactiveHint": "Sans effet tant que la FOR n'atteint pas {{min}}",
     "replaced": "remplacée par Improved Strength",
     "replacedHint": "Improved Strength remplace les autres bonus de Force tant qu'elle dure",

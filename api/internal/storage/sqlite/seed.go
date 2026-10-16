@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
@@ -58,6 +59,9 @@ type itemSeed struct {
 	EffectDice string `json:"effect_dice"`
 	EffectSave string `json:"effect_save"`
 	Notes      string `json:"notes"`
+	// Powers are the item's own powers (ADR 0016 steps 9 to 16), in
+	// itemsvc's power encoding; absent: none.
+	Powers json.RawMessage `json:"powers"`
 }
 
 // Seed loads character.json, weapons.json, items.json and skills.json from
@@ -210,6 +214,7 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 		return fmt.Errorf("parse items.json: %w", err)
 	}
 	seen := make(map[string]bool, len(items))
+	powers := make([]string, len(items))
 	for i, it := range items {
 		if it.ID == "" || it.Name == "" {
 			return fmt.Errorf("items.json entry %d: id and name are required", i)
@@ -229,6 +234,11 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 		if it.MaxCount != nil && it.Count > *it.MaxCount {
 			return fmt.Errorf("items.json entry %d (%q): count %d exceeds max_count %d", i, it.ID, it.Count, *it.MaxCount)
 		}
+		p, err := seedPowers(it.Powers)
+		if err != nil {
+			return fmt.Errorf("items.json entry %d (%q): %w", i, it.ID, err)
+		}
+		powers[i] = p
 	}
 	return d.WrapTx(ctx, func(q Querier) error {
 		for i, it := range items {
@@ -237,15 +247,32 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 				maxCount = *it.MaxCount
 			}
 			if _, err := q.ExecContext(ctx, `
-				INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				it.ID, i, it.Name, it.Type, it.Behaviour, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.EffectDice, it.EffectSave, it.Notes,
+				INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				it.ID, i, it.Name, it.Type, it.Behaviour, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.EffectDice, it.EffectSave, it.Notes, powers[i],
 			); err != nil {
 				return fmt.Errorf("insert item %q: %w", it.ID, err)
 			}
 		}
 		return nil
 	})
+}
+
+// seedPowers checks a seed item's powers (ADR 0016 steps 9 and 10, the
+// rules of itemsvc.ValidatePowers) and returns their stored encoding ("[]"
+// for none).
+func seedPowers(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return "[]", nil
+	}
+	powers, err := itemsvc.DecodePowers(string(raw))
+	if err != nil {
+		return "", err
+	}
+	if err := itemsvc.ValidatePowers(powers); err != nil {
+		return "", err
+	}
+	return itemsvc.EncodePowers(powers)
 }
 
 // skillsSeed is seeds/skills.json: the non-weapon proficiencies (ability key

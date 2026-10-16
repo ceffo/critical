@@ -292,7 +292,7 @@ describe("entryText", () => {
     };
     expect(
       entryText(entry("attack", shot, "server"), t, undefined, names),
-    ).toBe("Arc court +2 (Flèches +1) contre CA 5 : raté");
+    ).toBe("Arc court +2 (Flèches +1) contre CA 5 : attaque ratée");
     const use = {
       itemId: "power_gem_dispel",
       name: "Power Gem",
@@ -301,7 +301,7 @@ describe("entryText", () => {
       total: 0,
     };
     expect(entryText(entry("item_use", use), t, undefined, names)).toBe(
-      "Gemme de pouvoir utilisé (0 restant)",
+      "Objet utilisé : Gemme de pouvoir (0 restant)",
     );
     expect(
       entryText(
@@ -310,7 +310,7 @@ describe("entryText", () => {
         undefined,
         names,
       ),
-    ).toBe("Power Gem utilisé (0 restant)");
+    ).toBe("Objet utilisé : Power Gem (0 restant)");
   });
 
   it.each([

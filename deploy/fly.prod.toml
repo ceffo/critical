@@ -4,7 +4,8 @@
 app = "critical-prod"
 primary_region = "cdg"
 
-# Same values as the image's ENV (Dockerfile); `just check-fly` fails when they differ.
+# Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ; CRITICAL_DSN aside:
+# the image names no database, this SQLite one goes with the volume when the fly PostgreSQL config lands.
 [env]
   CRITICAL_ADDR = ":8080"
   CRITICAL_DSN = "/data/critical.db"

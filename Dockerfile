@@ -35,20 +35,19 @@ RUN CGO_ENABLED=0 go build -trimpath \
       -o /out/critical-srv ./cmd/api
 
 FROM alpine:3.24
-RUN addgroup -S critical && adduser -S -G critical -H -h /app critical \
-    && mkdir -p /data && chown critical:critical /data
+RUN addgroup -S critical && adduser -S -G critical -H -h /app critical
 WORKDIR /app
 COPY --from=api /out/critical-srv /app/critical-srv
 COPY --from=web /src/web/dist /app/web
 COPY seeds/ /app/seeds/
 COPY --from=catalogue catalogue.json /app/catalogue.json
+# No CRITICAL_DSN: the database is PostgreSQL (ADR 0025 step 1), its DSN given at run time (on fly a
+# secret). The image holds no data and has no volume.
 ENV CRITICAL_ADDR=:8080 \
-    CRITICAL_DSN=/data/critical.db \
     CRITICAL_SEEDS_DIR=/app/seeds \
     CRITICAL_CATALOGUE=/app/catalogue.json \
     CRITICAL_WEB_DIR=/app/web
 USER critical
-VOLUME /data
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
     CMD wget -qO /dev/null http://127.0.0.1:8080/api/health || exit 1

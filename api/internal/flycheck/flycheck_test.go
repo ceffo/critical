@@ -74,6 +74,17 @@ func dockerfileEnv(t *testing.T) map[string]string {
 	return env
 }
 
+// withoutDSN returns env without CRITICAL_DSN.
+func withoutDSN(env map[string]string) map[string]string {
+	out := map[string]string{}
+	for k, v := range env {
+		if k != "CRITICAL_DSN" {
+			out[k] = v
+		}
+	}
+	return out
+}
+
 var files = map[string]string{"fly.staging.toml": "staging", "fly.prod.toml": "prod"}
 
 func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
@@ -85,7 +96,11 @@ func TestFly_Step2_RequiredKeysAndImageLayout(t *testing.T) {
 			assert.Equal(t, "critical-"+env, c.App)
 			assert.Equal(t, "cdg", c.PrimaryRegion)
 			assert.Empty(t, c.Build, "the image is passed by the workflow (--image), never named here")
-			assert.Equal(t, image, c.Env, "[env] must equal the image's ENV (Dockerfile)")
+			// The image names no database (ADR 0025 step 1): the DSN is given at run time. The fly
+			// configuration still sets the SQLite one of its volume until the fly PostgreSQL
+			// configuration replaces both; every other value equals the image's.
+			assert.NotContains(t, image, "CRITICAL_DSN", "the production image names no database")
+			assert.Equal(t, image, withoutDSN(c.Env), "[env] must equal the image's ENV (Dockerfile), CRITICAL_DSN aside")
 			assert.Equal(t, "immediate", c.Deploy.Strategy, "a volume-bound single machine has no blue-green")
 			require.Len(t, c.Mounts, 1)
 			assert.Equal(t, "data", c.Mounts[0].Source)

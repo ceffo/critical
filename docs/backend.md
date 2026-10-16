@@ -246,7 +246,8 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   startup; an id it does not hold refuses the start.
 - **Import** (`catalogueadpt` reads and validates against the embedded copy of
   `schemas/catalogue.schema.json`, kept identical by a test; `sqlite.ImportCatalogue` imports): same
-  version as recorded in `catalogue_meta` → no writes; otherwise one transaction keys old rows (first
+  version as recorded in `catalogue_meta` → only the typed `stats` of rows whose stored English stat texts
+  the current parser reads differently are rewritten (none when the parser is unchanged); otherwise one transaction keys old rows (first
   import on a database seeded before the catalogue: `spellsvc.Keys`, verified against the artifact),
   upserts every spell by `spells.key`, deletes the spells the artifact dropped unless the seeds or the game
   state (slots, undo snapshots, log payloads) refer to them, and records the version. Each step and its test

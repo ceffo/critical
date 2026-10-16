@@ -314,12 +314,35 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   `TestMigrate030_FreshDatabaseHasNoFrenchStatColumns`).
 - **Re-typing.** Migration 030 also forgets the recorded artifact (`catalogue_meta`), so the next
   startup imports it again and re-parses every spell's stats with the current parser (step 5.6).
+  _Since 2026-10-15 no migration is needed for that:_ a start on the recorded version (step 5.3)
+  parses every spell's stored English stat texts again and rewrites the `stats` of the rows the
+  current parser reads differently, in one transaction, and writes nothing when the parser is
+  unchanged (`TestImportCatalogue_Step6_AStartReTypesStatsAParserChangeMadeStale`,
+  `TestImportCatalogue_Step3_SameVersionWritesNothing`, on the real catalogue
+  `TestRealCatalogue_ARestartReTypesStaleStats`). Re-parsing on every start was chosen over a parser
+  version recorded in `catalogue_meta`: a version has to be bumped by hand and a forgotten bump is the
+  silent staleness this replaces; the `catalogue_meta` contract is unchanged, and a whole start on the
+  real catalogue stays around 0.1 s. The step 5.4.3 refusal names the catalogue the database was built
+  from as read before the import keys anything: without a recorded version, keyed spells are "an
+  earlier spell catalogue" (the state 030 leaves), not the seeds that predate the artifact
+  (`TestImportCatalogue_RefusalWithoutARecordedVersionNamesAnEarlierCatalogue`).
 - **Partial area readings** are marked by the parser: the text's numbers and dice must all be the
   typed form's, and its words a length unit, a shape, a word of the noun or a connector ("x", "in
   a", "level") (`spellstats.AreaOfEffect.Partial`,
   `TestAreaOfEffect_PartialWhenTheTextSaysMore`), and serve no value at a caster level
   (`TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel`; the client's `spellValues.test.ts`
   "a partial area reading").
+- **Alternatives** ("1 creature or object", "One doorway, portal, or small object", "10-ft. cube or
+  one item", "20 or 40 ft. radius") are an area kind of their own, `alternatives`, whose
+  `alternatives` are each a whole area or targets reading; a bare noun takes the count of the
+  reading before it unless that one's noun is qualified ("1 dead human or demihuman" stays partial),
+  a bare number the unit and shape of the reading after it. The client words each reading and joins
+  them with `lookup.stat.or`, or shows the book's text when one cannot be worded; like a partial
+  reading, alternatives have no value at a caster level, since the book does not say which one the
+  caster picks (`TestAreaOfEffect_Alternatives`, `statText.test.ts` "words a choice between
+  readings"). "Up to" bounds the extent or count it precedes (`Quantity.UpTo`), "circle" is a shape,
+  and extents read per-level steps ("/2 levels", "/lvl", "/two levels"). Over the real catalogue
+  `TestRealCatalogue_AreaReadingsAndPerLevelDurations` pins the alternatives and partial readings.
 - **The wording** is `web/src/lib/statText.ts` (unit tests for every unit, noun, shape and
   condition key, the conversion and each fallback in `statText.test.ts`); the lookup's grid and meta
   line use it, and the French lookup e2e checks one spell's stats ("210 m", "60 m + 10 m/niveau").

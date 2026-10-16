@@ -1,26 +1,17 @@
 package router_test
 
 import (
-	"context"
 	"encoding/json"
-	"io"
-	"log/slog"
 	"net/http"
-	"net/http/httptest"
-	"path/filepath"
-	"slices"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
-	"github.com/ceffo/critical/api/internal/rest/router"
 )
 
 // POST /api/roll/save/{id}/adjust passes the entry id, adjustment and reason
@@ -57,7 +48,7 @@ func TestRollSave_SendsZeroAdjustment(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), `"logEntryId":7`)
 }
 
-// savedEntryJSON is the part of a GET /api/log entry the save tests read.
+// savedEntryJSON is the part of a log entry the save tests read.
 type savedEntryJSON struct {
 	ID               int64          `json:"id"`
 	Payload          map[string]any `json:"payload"`
@@ -67,56 +58,50 @@ type savedEntryJSON struct {
 	} `json:"corrections"`
 }
 
-// realStack is the composed backend (fixture seeds) behind a test server.
-func realStack(t *testing.T) (*composition.BackingServices, *httptest.Server) {
-	t.Helper()
-	ctx := context.Background()
-	bs, err := composition.New(ctx, composition.Config{
-		DSN:       filepath.Join(t.TempDir(), "critical.db"),
-		SeedsDir:  filepath.Join("..", "..", "..", "testdata", "seeds"),
-		Catalogue: filepath.Join("..", "..", "..", "testdata", "catalogue.json"),
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = bs.Close(ctx) })
-	srv := httptest.NewServer(router.New(slog.New(slog.NewTextHandler(io.Discard, nil)), bs, router.Options{}))
-	t.Cleanup(srv.Close)
-	return bs, srv
+// newShapeSave is a save entry as the log service hands it to the router
+// (ADR 0006 step 8: the service's payload view has already filled rollTotal
+// and adjustedTarget): d20 13 + Luck 1 vs 14, amended by -2.
+func newShapeSave() actionlog.Entry {
+	rolled := `{"category":"spell","d20Roll":13,"target":14,"rolledPassed":true,"adjustment":0,"total":14,"passed":true,"margin":0,` +
+		`"rollTotal":14,"adjustedTarget":14}`
+	amended := `{"category":"spell","d20Roll":13,"target":14,"rolledPassed":true,"adjustment":-2,"total":12,"passed":false,"margin":-2,` +
+		`"rollTotal":14,"adjustedTarget":16}`
+	return actionlog.Entry{
+		ID: 7, TransactionID: 7, CharacterID: 1, Kind: actionlog.KindSave, CreatedAt: at,
+		Payload: json.RawMessage(rolled),
+		Corrections: []actionlog.Correction{
+			{ID: 1, ActionID: 7, Kind: actionlog.CorrectionAmend, Payload: json.RawMessage(amended), CreatedAt: at},
+		},
+	}
 }
 
-// ADR 0006 step 8, through the real stack: a save logged before the
-// adjustment moved the target, and its adjustment amend, have neither
-// rollTotal nor adjustedTarget in the database; GET /api/log serves both,
-// computed from the stored numbers, with the stored verdict and margin.
-func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape(t *testing.T) {
-	ctx := context.Background()
-	bs, srv := realStack(t)
+func decodeEntry(t *testing.T, body []byte) savedEntryJSON {
+	t.Helper()
+	var e savedEntryJSON
+	require.NoError(t, json.Unmarshal(body, &e))
+	return e
+}
 
-	// The payloads the code wrote before: d20 13 + Luck 1 vs 14, then -2.
-	rolled := `{"category":"spell","d20Roll":13,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
-		`"rolledPassed":true,"adjustment":0,"total":14,"passed":true,"margin":0}`
-	amended := `{"category":"spell","d20Roll":13,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
-		`"rolledPassed":true,"adjustment":-2,"adjustmentReason":"cursed","total":12,"passed":false,"margin":-2,` +
-		`"previousPassed":true,"previousAdjustment":0}`
-	id, err := bs.Log.Record(ctx, actionlog.NewEntry{CharacterID: bs.CharacterID, Kind: actionlog.KindSave, Payload: json.RawMessage(rolled)})
-	require.NoError(t, err)
-	_, err = bs.Log.AmendLatest(ctx, bs.CharacterID, id, actionlog.KindSave, func(actionlog.Entry) (actionlog.PayloadAmendment, error) {
-		return actionlog.PayloadAmendment{Payload: json.RawMessage(amended), Change: actionlog.Change{
-			Field: combatsvc.ChangeSaveAdjustment, From: 0, To: -2,
-		}}, nil
-	})
-	require.NoError(t, err)
+// ADR 0006 step 8, at the wire: the router serves the payload of a save the
+// service returns, both the stored one and the effective one, with rollTotal
+// and adjustedTarget, and its amend's payload too. (Computing the two fields
+// for a save logged before they were stored is the service's view, tested in
+// combatsvc and actionlogsvc.)
+func TestLog_ASaveIsServedWithRollTotalAndAdjustedTarget(t *testing.T) {
+	h, m := newRouter(t)
+	save := newShapeSave()
+	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return([]actionlog.Entry{save}, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(7, true, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(nil, nil)
 
-	res, err := http.Get(srv.URL + "/api/log") //nolint:noctx // test server
-	require.NoError(t, err)
-	defer func() { _ = res.Body.Close() }()
-	require.Equal(t, http.StatusOK, res.StatusCode)
+	rec := do(h, "GET", "/api/log", "")
+	require.Equal(t, http.StatusOK, rec.Code)
 	var log struct {
 		Entries []savedEntryJSON `json:"entries"`
 	}
-	require.NoError(t, json.NewDecoder(res.Body).Decode(&log))
-	i := slices.IndexFunc(log.Entries, func(e savedEntryJSON) bool { return e.ID == id })
-	require.GreaterOrEqual(t, i, 0, "the save is listed (after its correction step)")
-	e := log.Entries[i]
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &log))
+	require.Len(t, log.Entries, 1)
+	e := log.Entries[0]
 
 	assert.Equal(t, 14.0, e.Payload["rollTotal"])
 	assert.Equal(t, 14.0, e.Payload["adjustedTarget"])
@@ -125,7 +110,6 @@ func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape(t *testing.T) {
 	p := e.EffectivePayload
 	assert.Equal(t, 14.0, p["rollTotal"], "d20 + buff, the adjustment left out")
 	assert.Equal(t, 16.0, p["adjustedTarget"], "a -2 raises the target by 2")
-	assert.Equal(t, 14.0, p["target"])
 	assert.Equal(t, -2.0, p["adjustment"])
 	assert.Equal(t, false, p["passed"], "the stored verdict")
 	assert.Equal(t, -2.0, p["margin"], "the stored margin")
@@ -135,48 +119,48 @@ func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape(t *testing.T) {
 	assert.Equal(t, 16.0, e.Corrections[0].Payload["adjustedTarget"], "an amend's payload is served in the new shape too")
 }
 
-// ADR 0006 step 8: the log service serves old saves in the new shape, so every
-// endpoint that returns an entry does, not only the list: the amend, the undo,
-// the redo and the redo target of the list.
-func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShapeByEveryEndpoint(t *testing.T) {
-	ctx := context.Background()
-	bs, srv := realStack(t)
-	rolled := `{"category":"spell","d20Roll":13,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
-		`"rolledPassed":true,"adjustment":0,"total":14,"passed":true,"margin":0}`
-	id, err := bs.Log.Record(ctx, actionlog.NewEntry{CharacterID: bs.CharacterID, Kind: actionlog.KindSave, Payload: json.RawMessage(rolled)})
-	require.NoError(t, err)
-
-	post := func(path, body string) savedEntryJSON {
+// Every endpoint that returns an entry serves a save's two fields, not only
+// the list: the amend, the undo, the redo and the redo target of the list.
+func TestLog_ASaveIsServedWithItsFieldsByEveryEndpoint(t *testing.T) {
+	save := newShapeSave()
+	save.Corrections = nil
+	assertShape := func(what string, e savedEntryJSON) {
 		t.Helper()
-		res, err := http.Post(srv.URL+path, "application/json", strings.NewReader(body)) //nolint:noctx // test server
-		require.NoError(t, err)
-		defer func() { _ = res.Body.Close() }()
-		require.Equal(t, http.StatusOK, res.StatusCode, path)
-		var e savedEntryJSON
-		require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
-		return e
-	}
-	assertNewShape := func(what string, e savedEntryJSON) {
-		t.Helper()
-		assert.Equal(t, float64(id), float64(e.ID), what)
+		assert.Equal(t, int64(7), e.ID, what)
 		for field, p := range map[string]map[string]any{"payload": e.Payload, "effectivePayload": e.EffectivePayload} {
 			assert.Equal(t, 14.0, p["rollTotal"], what+" "+field)
 			assert.Equal(t, 14.0, p["adjustedTarget"], what+" "+field)
 		}
 	}
 
-	assertNewShape("amend", post("/api/log/"+strconv.FormatInt(id, 10)+"/amend", `{"note":"ruling"}`))
-	assertNewShape("undo", post("/api/log/undo", `{"expectedTopId":`+strconv.FormatInt(id, 10)+`}`))
+	h, m := newRouter(t)
+	m.log.EXPECT().Amend(mock.Anything, int64(1), int64(7), actionlogsvc.Amendment{Note: "ruling"}).Return(&save, nil).Once()
+	rec := do(h, "POST", "/api/log/7/amend", `{"note":"ruling"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assertShape("amend", decodeEntry(t, rec.Body.Bytes()))
 
-	res, err := http.Get(srv.URL + "/api/log") //nolint:noctx // test server
-	require.NoError(t, err)
-	defer func() { _ = res.Body.Close() }()
+	h, m = newRouter(t)
+	m.log.EXPECT().Undo(mock.Anything, int64(1), int64(7)).Return(&save, nil).Once()
+	rec = do(h, "POST", "/api/log/undo", `{"expectedTopId":7}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assertShape("undo", decodeEntry(t, rec.Body.Bytes()))
+
+	h, m = newRouter(t)
+	m.log.EXPECT().List(mock.Anything, int64(1), 0).Return(nil, nil)
+	m.log.EXPECT().TopID(mock.Anything, int64(1)).Return(0, false, nil)
+	m.log.EXPECT().RedoTarget(mock.Anything, int64(1)).Return(&save, nil)
+	rec = do(h, "GET", "/api/log", "")
+	require.Equal(t, http.StatusOK, rec.Code)
 	var log struct {
 		Redo *savedEntryJSON `json:"redo"`
 	}
-	require.NoError(t, json.NewDecoder(res.Body).Decode(&log))
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &log))
 	require.NotNil(t, log.Redo)
-	assertNewShape("redo target", *log.Redo)
+	assertShape("redo target", *log.Redo)
 
-	assertNewShape("redo", post("/api/log/redo", `{"expectedRedoId":`+strconv.FormatInt(id, 10)+`}`))
+	h, m = newRouter(t)
+	m.log.EXPECT().Redo(mock.Anything, int64(1), int64(7)).Return(&save, nil).Once()
+	rec = do(h, "POST", "/api/log/redo", `{"expectedRedoId":7}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assertShape("redo", decodeEntry(t, rec.Body.Bytes()))
 }

@@ -26,12 +26,11 @@ named otherwise.
    prepared five times counts five times.
    Tests: `TestBardSpellsPerDay` (adapters/ruletablesadpt: the table against the PHB, levels 1 to
    20, "level 0 and 21 are errors"), `TestInfo`, `TestPrepare_Refused` ("4 level-1 spells at level
-   15", "5 copies of one level-1 spell"), `TestPrepare_ThreeLevelOneSpellsAccepted`,
-   `TestPrepare_RealStack_LimitsAreEnforcedAtLevel15` (composition).
+   15", "5 copies of one level-1 spell"), `TestPrepare_ThreeLevelOneSpellsAccepted`.
 3. **Only from the spellbook.** A spell that is not in the Bard's spellbook cannot be prepared
    (the whole request is refused, nothing written).
-   Tests: `TestPrepare_Refused` ("spell outside the spellbook", "valid and invalid mixed"),
-   `TestPrepare_RealStack_LimitsAreEnforcedAtLevel15` ("a refused call changes nothing").
+   Tests: `TestPrepare_Refused` ("spell outside the spellbook", "valid and invalid mixed"; the slots mock has no write expectation, so a refused call changes
+   nothing).
 4. **Preparing again keeps the casts.** A new preparation replaces the list, but a spell that was
    already prepared keeps its used flag, one for one (three Mirror Images with one cast used and
    one in the new list as well: still one used). Editing the preparation never refills a slot.
@@ -40,8 +39,7 @@ named otherwise.
    the slot-list snapshot is recorded in one transaction (if the log fails, the slots are not
    changed), and voiding it brings the previous list back.
    Tests: `TestPrepare_AcceptsTheLimit_KeepsOrderAndDuplicates` (entry, snapshot before and
-   after), `TestPrepare_RecordFailureFailsTheCall`, `TestRestore_WritesTheSnapshotBack`,
-   `TestPrepare_RealStack_VoidRestoresThePreviousPreparation`.
+   after), `TestPrepare_RecordFailureFailsTheCall`, `TestRestore_WritesTheSnapshotBack`.
 6. **A cast consumes one slot.** Casting marks the chosen slot used and no other (not another slot
    of the same spell), writes the list once and refuses a used slot (409) or an index outside the
    list (400) with nothing written or logged.
@@ -50,8 +48,8 @@ named otherwise.
    adds one, replacing a same-name buff) are one `cast` entry with the slot-list and buffs
    snapshots, so voiding it (newest first, [ADR 0007](0007-hp-ledger.md) step 8) frees the slot
    and removes the buff. A spell cast on the Bard by someone else is logged too but uses no slot.
-   Tests: `TestCast_PerSeedEntry` (the entry and its snapshots), `TestReceive` (no slot call),
-   `TestCastIsOneEntryAndVoidRestoresSlotAndBuff`, `TestCastVoidsGoNewestFirst` (composition).
+   Tests: `TestCast_PerSeedEntry` (the entry and its snapshots), `TestReceive` (no slot call), `TestCast_ConsumesExactlyTheChosenSlot`,
+   `TestUndo_PopsTheWholeTransaction` (actionlogsvc: newest first).
 8. **Effects come from the data.** A spell's effect is read from `seeds/spell_effects.json` at the
    caster's level: the Bard's for a cast, the caster's for a spell received (by-group dice use the
    Bard's group, rogue). A spell that is low-confidence, a utility or not in the catalogue is
@@ -74,9 +72,7 @@ named otherwise.
    duration is not tracked). The mechanic is data, never a branch on a spell id.
    Tests: `TestGrantSlots_SlotSplits`, `TestCast_GrantSlots_AddsTheChosenSlots`,
    `TestCast_GrantSlots_RejectsAWrongSplit`, `TestCast_ExtraSlot_PicksTheSpell`,
-   `TestPrepare_KeepsExtraSlots`, `TestResetSlots_DropsExtraSlots`,
-   `TestGrantedSlots_VoidRemovesExtrasAndRestoresTheBaseSlot`,
-   `TestGrantedSlots_PrepareKeepsExtrasLongRestRemovesThem` (composition).
+   `TestPrepare_KeepsExtraSlots`, `TestResetSlots_DropsExtraSlots`.
 10. **A spell can spend an item and roll a to-hit.** A spell whose effect data has
     `consume_item` spends one inventory item of that type when cast (never a daily item such as
     the Power Gem; the item is named when several are left, refused when none); one with
@@ -91,22 +87,19 @@ named otherwise.
     Tests: `TestCast_ConsumeItemAttackRoll_HitShowsTheItemSpent`,
     `TestCast_ConsumeItemAttackRoll_MissSpendsTheItemNoEffect`, `TestCast_ConsumeItemAttackRoll_Refusals`,
     `TestCast_ConsumeItem_PicksTheChosenItem`, `TestReceive_CastMechanicsAreTheCasters`,
-    `TestInfo_CastInputsFromTheCatalog`, `TestConsumedItem_VoidRestoresTheItem` (composition).
+    `TestInfo_CastInputsFromTheCatalog`.
 11. **Long rest.** One transaction marks every slot unused (the preparation stays) and refills the
     per-day items ([ADR 0016](0016-inventory.md) step 3), and nothing else: stock and charges are
     not refilled. If either part fails nothing changes.
     Tests: `TestResetSlots`, `TestLongRest_ResetsBothInOneLoggedTransaction`,
-    `TestLongRest_ItemFailureFailsTheRest`, `TestLongRest_SlotFailureSkipsItems`,
-    `TestLongRest_RefillsSlotsAndDailyItemsOnly`, `TestLongRest_FailureInItemsRollsBackSlots`,
-    `TestLongRest_FailureInSlotsLeavesGemSpent`, `TestPrepare_RealStack_LongRestKeepsPreparationAndResetsUsed`
-    (composition).
+    `TestLongRest_ItemFailureFailsTheRest`, `TestLongRest_SlotFailureSkipsItems`.
 12. **A long rest is logged and voidable.** It is one `long_rest` entry that always snapshots the
     slot list (even when no slot was used) and every item whose count changed. Because of that
     snapshot, an older cast cannot be voided past the rest (refused, the rest is on top); voiding
     the rest itself spends the slots and items again.
     Tests: `TestLongRest_ResetsBothInOneLoggedTransaction` (snapshots, payload),
-    `TestLongRestBlocksVoidingAnEarlierCast`, `TestLongRest_RefillsSlotsAndDailyItemsOnly` (void),
-    `TestGemDispelOncePerDayUntilLongRest` (composition).
+    `TestUndo` (actionlogsvc: only the newest transaction is popped, so an older cast is not
+    voidable past the rest).
 13. **Damage parts with their own save.** A spell whose save negates only part of its damage
     (Mordenkainen's Force Missiles: per missile 2d4 that no save stops, plus a burst of 1 per
     level that a save vs. spell negates) writes one instance as `parts` instead of `dice` /
@@ -227,9 +220,8 @@ named otherwise.
     `TestExposureAt_IsWhatAnExposureRolls`, `TestExpose_OnTheBardTakesHP`, `TestExpose_Refused`,
     `TestCast_Exposure_ServedOnTheResult` (castsvc), `TestInfo_ServesTheExposure` (prepsvc),
     `TestSearch_ServesExposureAtTheCasterLevel` (rest/handler/spellhdl),
-    `TestExpose_Handler` (rest/handler/casthdl), `TestExposureOnTheBard_VoidGivesTheHPBack`,
-    `TestExposureOnTheBard_FloorCutsTheAppliedHP`, `TestExposureRecord_MatchesTheLookupsWireShape`,
-    `TestSpecialSentinels` (rest/router).
+    `TestExpose_Handler` (rest/handler/casthdl), `TestRecord_FloorsDamage` (actionlogsvc: the floor
+    cuts the applied HP), `TestSpecialSentinels` (rest/router).
 
 ## Consequences
 

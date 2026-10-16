@@ -66,8 +66,8 @@ return a distinct value for each call and expect an exact number of calls.
     rolled or spent, when no ammunition is chosen, when none is left, when the item is not of the
     weapon's kind, or when a weapon without an ammo kind is given some. Voiding the attack gives
     the ammunition back. Tests: `TestResolveAttack_Rejections` (the ammunition cases),
-    `TestResolveAttack_RecordsAttackWithAmmoSnapshot`, and in `api/internal/composition`
-    `TestMissileAttackSpendsAmmoAndVoidRestoresIt`.
+    `TestResolveAttack_RecordsAttackWithAmmoSnapshot`, and `itemsvc`
+    `TestRestorers_WriteTheBeforeCountsBack` (the snapshot a void writes back).
 11. **Target AC correction.** The target AC of the **latest roll**, when it is an attack that is
     not voided, can be corrected after the roll (within ±20). Hit, margin, crit and damage are
     worked out again from the stored dice (ADR 0001 step 6): no die is rolled, no ammunition is
@@ -82,8 +82,7 @@ return a distinct value for each call and expect an exact number of calls.
     counts even when spent. The preview also sums the flat damage terms (weapon or buff "+N",
     ammunition, Strength and buff damage, [ADR 0003](0003-damage.md)) as the damage bonus shown
     beside the dice. Tests: `TestPreviewAttack_Step12_SameModifiersAsAttack` (every case of
-    `TestResolveAttack`, no die rolled), `TestPreviewAttack_Step12_DamageBonus`, and in
-    `api/internal/composition` `TestAttackForm_PersistsAcrossRestartAndMatchesTheAttack`.
+    `TestResolveAttack`, no die rolled), `TestPreviewAttack_Step12_DamageBonus`, `TestGetAttackForm_Ammunition`.
 
 ## Consequences
 

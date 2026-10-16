@@ -39,20 +39,18 @@ unless named otherwise.
    | `daily` | yes | refused (409) | stays listed | refilled to its daily number |
 
    Tests: `TestBehaviour_Rules`, `TestUse_RemovesChargesItemAtZeroOnly`, `TestRestock_AddsToStockAndLogs`,
-   `TestRestock_RejectsChargesAndDaily`, `TestInventory_SeededBehaviours`,
-   `TestInventory_ArrowsAtZeroStayAndRestock`, `TestInventory_RestockRefusedForChargesAndDaily`.
+   `TestRestock_RejectsChargesAndDaily`, `TestUseItem_SpendsStockAmmo`.
 2. **Use and restock are logged.** Spending one of any item (the attack's arrow, the inventory's
    minus) is one count change with an `items:<id>` snapshot; the use that takes a `charges` item to 0
    deletes it in the same entry, and popping that entry puts it back in its list position with one
    charge. Using an item with effect dice rolls them. A restock adds 1 to 999 to a `stock` item as
    one `item_restock` entry.
    Tests: `TestUseItem_RollsEffectDiceAndLogsWithSnapshot`, `TestUseItem_LastChargeRemovesTheItem`,
-   `TestRestock_RejectsOutOfRangeCounts`, `TestInventory_WandAtZeroIsRemovedAndPopBringsItBack`,
-   `TestUsingTheWandRollsLogsAndVoidRestoresTheCharge`.
+   `TestRestock_RejectsOutOfRangeCounts`, `TestRestorers_PutBackARemovedItem`,
+   `TestUseSnapshot_MarksARemovedItem`.
 3. **Long rest refills daily items only.** Each `daily` item goes back to its daily number; stock and
    charges are untouched. Passing time refills nothing ([ADR 0005](0005-rounds-and-time.md) step 7).
-   Tests: `TestResetDaily_ResetsThenLists`, `TestLongRest_RefillsSlotsAndDailyItemsOnly`,
-   `TestGemDispelOncePerDayUntilLongRest` (composition).
+   Tests: `TestResetDaily_ResetsThenLists`, `TestLongRest_ResetsBothInOneLoggedTransaction`.
 4. **Item editor.** Items are added, edited (only the fields sent) and removed through the editor;
    each is one entry (`item_add`, `item_edit`, `item_remove`) with the `items:<id>` snapshot.
    Popping the newest entry deletes a created item, writes back every "before" field of an edited
@@ -60,9 +58,7 @@ unless named otherwise.
    its name (suffix `_2`, `_3` when taken) and it goes last in the list. Names are language maps,
    written in the player's language ([ADR 0023](0023-localized-text.md) steps 9 to 12).
    Tests: `TestCreate_InsertsLogsAndSnapshots`, `TestUpdate_ChangesOneFieldAndLogsBeforeAfter`,
-   `TestDelete_RemovesAndLogsWholeItem`, `TestRestorers_UndoCreateEditDelete` (itemsvc),
-   `TestInventory_AddThenPopDeletesTheItem`, `TestInventory_EditAllFieldsAndPopRestoresThem`,
-   `TestInventory_RemoveItemAndPopBringsItBackWithItsCount`.
+   `TestDelete_RemovesAndLogsWholeItem`, `TestRestorers_UndoCreateEditDelete` (itemsvc).
 5. **Item validation.** An invalid item is refused with a message naming the field (400
    `{error, field}`) before anything is stored or logged: a name is required; the behaviour is
    one of the three; the count is 0 to the maximum, and a `charges` item has at least 1 charge
@@ -71,24 +67,23 @@ unless named otherwise.
    one of the five save categories ([ADR 0006](0006-saving-throws.md)). An edit that changes nothing
    is refused.
    Tests: `TestCreate_ValidationNamesTheField` (itemsvc), `TestUpdate_RejectsBadValuesAndNoOps`,
-   `TestParseDice`, `TestInventory_InvalidEditsLogNothing`, `TestInventory_ChargesAtZeroRefused`.
+   `TestParseDice`.
 6. **Ammunition.** Ammo is any item whose ammo kind matches the weapon's; the attack offers those
    with a count above 0 ([ADR 0002](0002-attack-resolution.md) step 10).
-   Tests: `TestWeapons_AddLongBowFiresArrowItems`, `TestWeapons_AmmoKindEditedToBoltRefusesArrows`.
+   Tests: `TestResolveAttack_Rejections` (the ammunition cases), `TestGetAttackForm_Ammunition` (`combatsvc`).
 7. **Weapon editor.** Weapons are added, edited and removed the same way (`weapon_add`,
    `weapon_edit`, `weapon_remove`, snapshot `weapons:<id>`, pop-only). A remove is a hard delete:
    old attack entries keep the weapon's name and id in their payload, and popping the remove
    re-inserts the same id, position and fields. The next attack reads the table, so an edit applies
    at once.
    Tests: `TestCreate_InsertsLogsAndSnapshots`, `TestDelete_RemovesAndLogsWholeWeapon`,
-   `TestRestorers_UndoCreateEditDelete` (weaponsvc), `TestWeapons_EditBastardSwordIsUsedByNextAttackAndPopRestores`,
-   `TestWeapons_RemoveDartsKeepsOldLogLinesAndPopRestores`, `TestWeapons_AddThenPopDeletesIt`.
+   `TestRestorers_UndoCreateEditDelete` (weaponsvc), `TestResolveAttack` (`combatsvc`: the weapon is read
+   from the table at each attack).
 8. **Weapon validation.** Damage dice are `NdM` only (the attack rolls NdM; the weapon's magic is
    its own field), for the small/medium and the large column alike; to-hit and damage magic are
    separate, each -10 to 10; the kind is melee or missile and a melee weapon has no ammo kind. Field
    names in the error are snake_case (`damage_sm`, `magic_to_hit`...).
-   Tests: `TestCreate_ValidationNamesTheField` (weaponsvc), `TestUpdate_RejectsBadValuesAndNoOps`,
-   `TestWeapons_InvalidEditsLogNothing`, `TestWeapons_EditedDamageDiceAreRolled`.
+   Tests: `TestCreate_ValidationNamesTheField` (weaponsvc), `TestUpdate_RejectsBadValuesAndNoOps`.
 
 ### An item's own powers (steps 9 to 16)
 
@@ -114,8 +109,8 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     logged when a power switches on or off: it follows the STR, which follows the buffs, and those
     are logged (ADR 0004 step 13); voiding a Strength buff switches the power back by itself.
     Tests: `domain/service/buffsvc` `TestItemPowers_Step10_TriggerAtEffectiveStr` (STR 17
-    off; 18, 19 and 23 on; a power without a trigger always on), `composition`
-    `TestItemPowers_Step10_StrengthBuffTurnsTheHammerOnAndVoidTurnsItOff`.
+    off; 18, 19 and 23 on; a power without a trigger always on), `TestStrength_Step10_PowerGemFrom18Up`
+    (the gem follows the effective STR).
 11. **Powers join the buffs' aggregate.** The buffs' aggregate (ADR 0004 step 11), used by the
     attack, the attack preview, the save and the spell to-hit, reads the carried items' powers
     through an items port of `buffsvc` (wired in the composition root) and folds every power that is
@@ -170,8 +165,7 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     it puts back while it is gone comes back without powers (see Consequences).
     Tests: `domain/service/itemsvc` `TestItemPowers_Step15_SnapshotCarriesThePowers`,
     `TestItemPowers_Step15_EditBodyCannotSetPowers`, `TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers`;
-    `rest/router` `TestItems_PowersInABodyAreIgnored`; `composition`
-    `TestItemPowers_Step15_RemoveGemAndPopBringsThePowersBack`.
+    `rest/router` `TestItems_PowersInABodyAreIgnored`.
 16. **The Power Gem.** One item, "Power Gem" (type `gem`, `daily`, 1 a day), with two powers: its
     daily Dispel Magic, which stays the item's daily use (steps 1 to 3: no STR condition, 1/day, the
     10 m radius in its note, as today; not an entry of its power list), and the **thunder hammer**,
@@ -190,10 +184,9 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     Tests: `storage/sqlite` `TestMigrate_Step16_GivesTheGemItsPowersAndKeepsItsID` (powers set,
     name renamed, a renamed gem keeps its name, a database without the row is untouched, the result
     equals the seeded item, a rerun changes nothing), `TestSeed_Step16_PowerGemHasTheHammer`;
-    `composition` `TestItemPowers_Step16_HammerAt18WithTheLongSword` (STR 17: the sword's own +2,
-    ×1; STR 18 from Strength buffs: +5 to hit and damage and the dice doubled, named by the gem; a
-    dispel used, at 17, leaves it on; Enlarge and Improved Strength to 23; a Short Bow +2 gets
-    neither).
+    `buffsvc` `TestItemPowers_Step10_TriggerAtEffectiveStr`, `TestItemPowers_Step11_PowerJoinsTheAggregate`;
+    `combatsvc` `TestItemPowers_Step12_HammerOnMeleeOnly` (the hammer's bonus and doubled dice on a
+    melee weapon, nothing on a bow).
 
 ## Consequences
 

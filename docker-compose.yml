@@ -1,7 +1,29 @@
-# Runs the production image locally (ADR 0024 step 1): one container, the API serving the web app.
-# Needs the real catalogue in .catalogue/ (`just catalogue`): `docker compose up --build`, then
-# http://localhost:8888. The database lives in the `critical-data` volume.
+# Two services:
+# - postgres: the development database (ADR 0025 step 1): `just dev` starts it and runs the API on
+#   it. Its data lives in the `critical-pg` volume; `just dev-reset` deletes it. It listens on
+#   127.0.0.1:${CRITICAL_PG_PORT:-5432} only.
+# - critical: runs the production image locally (ADR 0024 step 1), one container, the API serving
+#   the web app, on the same database. Needs the real catalogue in .catalogue/ (`just catalogue`):
+#   `docker compose up --build`, then http://localhost:8888.
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: critical
+      POSTGRES_PASSWORD: critical
+      POSTGRES_DB: critical
+    ports:
+      - "127.0.0.1:${CRITICAL_PG_PORT:-5432}:5432"
+    volumes:
+      - critical-pg:/var/lib/postgresql/data
+      - ./deploy/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U critical -d critical"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
   critical:
     build:
       context: .
@@ -10,11 +32,14 @@ services:
         catalogue: ./.catalogue
       args:
         COMMIT: ${COMMIT:-unknown}
+    environment:
+      CRITICAL_DSN: postgres://critical:critical@postgres:5432/critical?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8888:8080"
-    volumes:
-      - critical-data:/data
     restart: unless-stopped
 
 volumes:
-  critical-data:
+  critical-pg:

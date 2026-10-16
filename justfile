@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-language-fields check-adr-tests check-api check-web
+validate: check-no-tracker-ids check-no-language-fields check-adr-tests check-no-sqlite check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -27,6 +27,17 @@ check-adr-tests:
         echo "docs/adr cites $name: no such test in the code"; missing=1
     done
     exit $missing
+
+# Fail when the server binary depends on a SQLite driver (ADR 0025 step 1.2: PostgreSQL only; the
+# sqlc tool's own SQLite dependency is not linked into the server).
+check-no-sqlite:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd api
+    if go list -deps ./cmd/api | grep -i sqlite; then
+        echo "error: the server depends on the SQLite packages above (ADR 0025 step 1.2)"; exit 1
+    fi
+    echo "--- No SQLite in the server ---"
 
 # Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
 # says what it does and why; the link to the work item lives in commits and PRs only
@@ -62,7 +73,8 @@ fmt: fmt-api fmt-web
 # --- Local Development ---
 
 # Run the whole stack locally with live reload: API (air) on :8080 and the Vite dev server
-# on :5173 (proxies /api). Local state lives in .dev/ (gitignored). Ctrl-C stops both.
+# on :5173 (proxies /api), on the compose PostgreSQL (`just dev-db`). Ctrl-C stops both; the
+# database keeps running.
 dev:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -71,27 +83,33 @@ dev:
     just dev-web &
     wait
 
-# API with live reload (rebuilds on .go changes). Spells come from the catalogue artifact
-# (`just catalogue`), with the campaign seeds and the SQLite database .dev/critical.db. Without the
-# artifact it runs on the fixture catalogue and seeds (api/testdata) and a database of their own,
-# .dev/fixture.db: .dev/critical.db is only ever opened with the real catalogue.
-dev-api:
+# API with live reload (rebuilds on .go changes), on the compose PostgreSQL (`just dev-db`). Spells
+# come from the catalogue artifact (`just catalogue`), with the campaign seeds and the database
+# `critical`. Without the artifact it runs on the fixture catalogue and seeds (api/testdata) and a
+# database of their own, `critical_fixture`: `critical` is only ever opened with the real catalogue.
+# CRITICAL_PG_PORT moves the database's host port (default 5432).
+dev-api: dev-db
     #!/usr/bin/env bash
     set -euo pipefail
-    mkdir -p .dev
     root="$(pwd)"
     if [ -f .catalogue/catalogue.json ]; then
-        catalogue="$root/.catalogue/catalogue.json"; seeds="$root/seeds"; db="../.dev/critical.db"
-        echo "dev-api: real catalogue .catalogue/catalogue.json, campaign seeds, database .dev/critical.db" >&2
+        catalogue="$root/.catalogue/catalogue.json"; seeds="$root/seeds"; db=critical
+        echo "dev-api: real catalogue .catalogue/catalogue.json, campaign seeds, database critical" >&2
     else
-        catalogue="$root/api/testdata/catalogue.json"; seeds="$root/api/testdata/seeds"; db="../.dev/fixture.db"
+        catalogue="$root/api/testdata/catalogue.json"; seeds="$root/api/testdata/seeds"; db=critical_fixture
         echo "dev-api: ==================================================================================" >&2
         echo "dev-api: NO .catalogue/catalogue.json: running on the FIXTURE catalogue and api/testdata/seeds," >&2
-        echo "dev-api: database .dev/fixture.db (.dev/critical.db is left untouched)." >&2
+        echo "dev-api: database critical_fixture (the database critical is left untouched)." >&2
         echo "dev-api: run \`just catalogue\` to fetch the real catalogue and use the campaign database." >&2
         echo "dev-api: ==================================================================================" >&2
     fi
-    cd api && CRITICAL_DSN="$db" CRITICAL_SEEDS_DIR="$seeds" CRITICAL_CATALOGUE="$catalogue" go tool air -c .air.toml
+    dsn="postgres://critical:critical@localhost:${CRITICAL_PG_PORT:-5432}/$db?sslmode=disable"
+    cd api && CRITICAL_DSN="$dsn" CRITICAL_SEEDS_DIR="$seeds" CRITICAL_CATALOGUE="$catalogue" go tool air -c .air.toml
+
+# Start the development PostgreSQL (docker compose service `postgres`) unless it runs, and wait
+# until it accepts connections.
+dev-db:
+    docker compose up --detach --wait postgres
 
 # Frontend dev server with HMR (needs the API from dev-api). Reinstalls web deps first when
 # web/package-lock.json is newer than the last install (e.g. after pulling a new dependency).
@@ -106,9 +124,11 @@ dev-web:
     fi
     npm run dev
 
-# Delete the local dev databases (real and fixture); the next dev-api start re-seeds and imports the catalogue
+# Delete the development databases (real and fixture): stops this checkout's compose services and
+# deletes their volume `critical-pg`; the next dev-api start migrates, re-seeds and imports the
+# catalogue. Files in .dev/ are not touched.
 dev-reset:
-    rm -f .dev/critical.db .dev/critical.db-wal .dev/critical.db-shm .dev/fixture.db .dev/fixture.db-wal .dev/fixture.db-shm
+    docker compose down --volumes
 
 # --- Code Generation ---
 

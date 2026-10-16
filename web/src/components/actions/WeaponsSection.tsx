@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { useState } from "react";
 import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ const WEAPON_COLS =
  * "Add weapon" opens a form. Every change is a log entry the Combat Log can pop (the newest only).
  */
 export function WeaponsSection() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const weapons = useItemsStore((s) => s.weapons);
   const items = useItemsStore((s) => s.items);
   const run = useTableStore((s) => s.run);
@@ -87,7 +88,7 @@ export function WeaponsSection() {
           form === w.id ? (
             <li key={w.id}>
               <WeaponForm
-                initial={draftFromWeapon(w)}
+                initial={draftFromWeapon(w, i18n.language)}
                 editing={w}
                 ammoKinds={ammoKinds}
                 busy={busy}
@@ -125,7 +126,7 @@ function WeaponRow({
   onEdit: () => void;
   onRemove: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <li
       className={cn(
@@ -135,7 +136,9 @@ function WeaponRow({
       data-testid={`weapon-${w.id}`}
     >
       <div className="flex min-w-0 flex-col">
-        <span className="min-w-0 break-words font-medium">{w.name}</span>
+        <span className="min-w-0 break-words font-medium">
+          {localized(i18n.language, w.name)}
+        </span>
         <span className="min-w-0 break-words text-label text-muted-foreground">
           <span data-testid="weapon-kind">{t(`weapons.kind.${w.kind}`)}</span>
           {w.two_handed ? ` · ${t("weapons.twoHanded")}` : ""}
@@ -164,7 +167,9 @@ function WeaponRow({
           className="text-muted-foreground"
           disabled={busy}
           onClick={onEdit}
-          aria-label={t("weapons.form.edit", { name: w.name })}
+          aria-label={t("weapons.form.edit", {
+            name: localized(i18n.language, w.name),
+          })}
         >
           <PencilSimple />
         </Button>
@@ -174,7 +179,9 @@ function WeaponRow({
           className="text-muted-foreground"
           disabled={busy}
           onClick={onRemove}
-          aria-label={t("weapons.form.remove", { name: w.name })}
+          aria-label={t("weapons.form.remove", {
+            name: localized(i18n.language, w.name),
+          })}
         >
           <Trash />
         </Button>

@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useInventoryName } from "@/i18n/inventoryName";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
 import type {
@@ -119,6 +120,7 @@ function fxLabel(t: TFunction, key: string, value: number): string {
 /** What a cast or a received spell did: buff with its rolls, damage rolls, or the text only. */
 export function CastResultView({ result: r }: { result: CastResult }) {
   const { t, i18n } = useTranslation();
+  const names = useInventoryName();
   const spellName = useSpellName();
   const name = spellName(r.spellId, r.name);
   const description = r.spell
@@ -246,7 +248,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
       {r.consumedItem && (
         <p className="text-body" data-testid="cast-item">
           {t("result.cast.itemSpent", {
-            name: r.consumedItem.name,
+            name: names.item(r.consumedItem.itemId, r.consumedItem.name),
             left: r.consumedItem.remaining,
           })}
         </p>

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -22,23 +23,23 @@ import (
 // Weapons built by hand for these tests (independent of seeds/weapons.json).
 var (
 	longsword = combatsvc.Weapon{
-		ID: "longsword", Name: "Long Sword +2", BaseDamage: "1d8", DamageLarge: "1d12",
+		ID: "longsword", Name: localized.Of("Long Sword +2"), BaseDamage: "1d8", DamageLarge: "1d12",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMelee,
 	}
 	bastardSword = combatsvc.Weapon{
-		ID: "bastard_sword", Name: "Bastard Sword +2", BaseDamage: "2d4", DamageLarge: "2d8",
+		ID: "bastard_sword", Name: localized.Of("Bastard Sword +2"), BaseDamage: "2d4", DamageLarge: "2d8",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMelee, TwoHanded: true,
 	}
 	shortbow = combatsvc.Weapon{
-		ID: "shortbow", Name: "Short Bow +2", BaseDamage: "1d6", DamageLarge: "1d6",
+		ID: "shortbow", Name: localized.Of("Short Bow +2"), BaseDamage: "1d6", DamageLarge: "1d6",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
 	}
 	darts = combatsvc.Weapon{
-		ID: "darts", Name: "Darts", BaseDamage: "1d3", DamageLarge: "1d2", Kind: combatsvc.WeaponMissile,
+		ID: "darts", Name: localized.Of("Darts"), BaseDamage: "1d3", DamageLarge: "1d2", Kind: combatsvc.WeaponMissile,
 	}
 	// arrows3Left1 is what itemsvc.Use returns after firing one of two +3 arrows.
 	arrows3Left1 = itemsvc.Item{
-		ID: "arrows_plus3", Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, MagicBonus: 3, AmmoKind: "arrow", Count: 1,
+		ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, MagicBonus: 3, AmmoKind: "arrow", Count: 1,
 	}
 )
 
@@ -53,11 +54,11 @@ func modDex(dex, v int) combatsvc.Modifier {
 }
 
 func modWeapon(w combatsvc.Weapon) combatsvc.Modifier {
-	return combatsvc.Modifier{Kind: combatsvc.ModWeaponMagic, Detail: w.Name, Value: w.MagicToHit}
+	return combatsvc.Modifier{Kind: combatsvc.ModWeaponMagic, Detail: w.Name.Any(), Value: w.MagicToHit}
 }
 
 func modAmmo(i itemsvc.Item) combatsvc.Modifier {
-	return combatsvc.Modifier{Kind: combatsvc.ModAmmoMagic, Detail: i.Name, Value: i.MagicBonus}
+	return combatsvc.Modifier{Kind: combatsvc.ModAmmoMagic, Detail: i.Name.Any(), ItemID: i.ID, Value: i.MagicBonus}
 }
 
 func modBuff(name string, v int) combatsvc.Modifier {
@@ -302,7 +303,7 @@ func TestResolveAttack(t *testing.T) {
 			assert.Equal(t, tt.wantTotal, res.TotalDamage)
 			assert.InDelta(t, tt.wantBreakdown, res.UnroundedDamage, 1e-9)
 			assert.Equal(t, tt.wantDice, res.DamageDice)
-			assert.Equal(t, tt.weapon.Name, res.WeaponName)
+			assert.Equal(t, tt.weapon.Name.Any(), res.WeaponName)
 			assert.Equal(t, *tt.req.TargetAC, res.TargetAC)
 			assert.True(t, res.ACKnown)
 			assert.Equal(t, int64(42), res.LogEntryID)
@@ -455,7 +456,7 @@ func TestResolveAttack_PowerGem(t *testing.T) {
 // if the buff always replaced the weapon (it would show +2 from the buff).
 func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 	dagger := combatsvc.Weapon{
-		ID: "dagger3", Name: "Dagger +3", BaseDamage: "1d4", DamageLarge: "1d3",
+		ID: "dagger3", Name: localized.Of("Dagger +3"), BaseDamage: "1d4", DamageLarge: "1d3",
 		MagicToHit: 3, MagicDamage: 3, Kind: combatsvc.WeaponMelee,
 	}
 	f := newFixture(t)
@@ -490,7 +491,7 @@ func TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff(t *testing.T) {
 // separate entries. Fails if the buff replaced the ammo bonus (+5 only).
 func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 	bow := combatsvc.Weapon{
-		ID: "plainbow", Name: "Short Bow", BaseDamage: "1d6", DamageLarge: "1d6",
+		ID: "plainbow", Name: localized.Of("Short Bow"), BaseDamage: "1d6", DamageLarge: "1d6",
 		Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
 	}
 	f := newFixture(t)
@@ -518,7 +519,7 @@ func TestResolveAttack_WeaponBuffPlusMagicAmmo(t *testing.T) {
 	assert.Equal(t, 12, res.TotalDamage)
 	assert.Equal(t, []combatsvc.DamageTerm{
 		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModWeaponBuff, Detail: "Magic Weapon", Value: 5},
-		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModAmmoMagic, Detail: "Arrows +3", Value: 3},
+		{Term: combatsvc.TermWeapon, Kind: combatsvc.ModAmmoMagic, Detail: "Arrows +3", ItemID: "arrows_plus3", Value: 3},
 	}, res.DamageTerms)
 }
 
@@ -631,11 +632,11 @@ func TestResolveAttack_Rejections(t *testing.T) {
 		},
 		{
 			name: "not ammunition", weapon: shortbow, ammoID: "wand",
-			use: &itemsvc.Item{ID: "wand", Name: "Wand", Behaviour: itemsvc.BehaviourCharges, Count: 3}, wantErr: domain.ErrInvalidInput,
+			use: &itemsvc.Item{ID: "wand", Name: localized.Of("Wand"), Behaviour: itemsvc.BehaviourCharges, Count: 3}, wantErr: domain.ErrInvalidInput,
 		},
 		{
 			name: "ammunition of another kind", weapon: shortbow, ammoID: "bolts",
-			use: &itemsvc.Item{ID: "bolts", Name: "Bolts", Behaviour: itemsvc.BehaviourStock, AmmoKind: "bolt"}, wantErr: domain.ErrInvalidInput,
+			use: &itemsvc.Item{ID: "bolts", Name: localized.Of("Bolts"), Behaviour: itemsvc.BehaviourStock, AmmoKind: "bolt"}, wantErr: domain.ErrInvalidInput,
 		},
 	}
 	for _, tt := range ammoCases {

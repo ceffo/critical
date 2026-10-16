@@ -36,7 +36,7 @@ func (mods ItemModSlice) Apply(ctx context.Context, n *ItemTemplate) {
 type ItemTemplate struct {
 	ID         func() string
 	Position   func() int64
-	Name       func() string
+	Name       func() int64
 	Type       func() string
 	Behaviour  func() string
 	MagicBonus func() int64
@@ -211,7 +211,7 @@ func ensureCreatableItem(m *models.ItemSetter) {
 		m.Position = omit.From(val)
 	}
 	if m.Name.IsUnset() {
-		val := random_string(nil)
+		val := random_int64(nil)
 		m.Name = omit.From(val)
 	}
 	if m.Behaviour.IsUnset() {
@@ -421,14 +421,14 @@ func (m itemMods) RandomPosition(f *faker.Faker) ItemMod {
 }
 
 // Set the model columns to this value
-func (m itemMods) Name(val string) ItemMod {
+func (m itemMods) Name(val int64) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.Name = func() string { return val }
+		o.Name = func() int64 { return val }
 	})
 }
 
 // Set the Column from the function
-func (m itemMods) NameFunc(f func() string) ItemMod {
+func (m itemMods) NameFunc(f func() int64) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
 		o.Name = f
 	})
@@ -445,8 +445,8 @@ func (m itemMods) UnsetName() ItemMod {
 // if faker is nil, a default faker is used
 func (m itemMods) RandomName(f *faker.Faker) ItemMod {
 	return ItemModFunc(func(_ context.Context, o *ItemTemplate) {
-		o.Name = func() string {
-			return random_string(f)
+		o.Name = func() int64 {
+			return random_int64(f)
 		}
 	})
 }

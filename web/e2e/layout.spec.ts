@@ -666,8 +666,12 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
-  await api("PATCH", "/api/weapons/darts", { name: LONG_WEAPON });
-  await api("PATCH", "/api/items/power_gem_dispel", { name: LONG_ITEM });
+  await api("PATCH", "/api/weapons/darts", {
+    name: { en: LONG_WEAPON, fr: LONG_WEAPON },
+  });
+  await api("PATCH", "/api/items/power_gem_dispel", {
+    name: { en: LONG_ITEM, fr: LONG_ITEM },
+  });
   await api("PUT", "/api/spells/prepared", {
     spells: [
       "magic_missile",
@@ -764,8 +768,12 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
-  await api("PATCH", "/api/weapons/darts", { name: LONG_WEAPON });
-  await api("PATCH", "/api/items/power_gem_dispel", { name: LONG_ITEM });
+  await api("PATCH", "/api/weapons/darts", {
+    name: { en: LONG_WEAPON, fr: LONG_WEAPON },
+  });
+  await api("PATCH", "/api/items/power_gem_dispel", {
+    name: { en: LONG_ITEM, fr: LONG_ITEM },
+  });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const character = page.getByTestId("character");

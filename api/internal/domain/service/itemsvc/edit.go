@@ -4,17 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // ItemInput is a new item. MaxCount is the daily number (daily items only;
 // for the others it is stored as the starting count, informational).
 type ItemInput struct {
-	Name       string
+	// Name holds the languages the player typed (ADR 0023 step 11).
+	Name       localized.Text
 	Type       string
 	Behaviour  Behaviour
 	Count      int
@@ -28,7 +31,10 @@ type ItemInput struct {
 
 // ItemPatch is an edit: only the set (non-nil) fields change.
 type ItemPatch struct {
-	Name       *string
+	// Name replaces the bodies of the languages it holds and keeps the
+	// others; a blank body removes its language; nil: unchanged (ADR 0023
+	// step 11).
+	Name       localized.Text
 	Type       *string
 	Behaviour  *Behaviour
 	Count      *int
@@ -73,7 +79,7 @@ type changeRecord struct {
 
 func record(i Item, changes []FieldChange) changeRecord {
 	return changeRecord{
-		ItemID: i.ID, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour), Count: i.Count,
+		ItemID: i.ID, Name: i.Name.Any(), Type: i.Type, Behaviour: string(i.Behaviour), Count: i.Count,
 		MaxCount: i.MaxCount, MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind,
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Changes: changes,
 	}
@@ -121,8 +127,11 @@ func (s *service) logChange(ctx context.Context, characterID int64, kind actionl
 }
 
 func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (*ChangeResult, error) {
+	if err := nameLanguages(in.Name); err != nil {
+		return nil, err
+	}
 	item := Item{
-		Name: strings.TrimSpace(in.Name), Type: strings.TrimSpace(in.Type), Behaviour: in.Behaviour,
+		Name: in.Name.Trimmed(), Type: strings.TrimSpace(in.Type), Behaviour: in.Behaviour,
 		Count: in.Count, MaxCount: in.MaxCount, MagicBonus: in.MagicBonus,
 		AmmoKind: strings.TrimSpace(in.AmmoKind), EffectDice: strings.TrimSpace(in.EffectDice),
 		EffectSave: in.EffectSave, Notes: strings.TrimSpace(in.Notes),
@@ -146,7 +155,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 				pos = o.Position + 1
 			}
 		}
-		base := slug(item.Name)
+		base := slug(item.Name.Any())
 		item.ID = base
 		for n := 2; taken[item.ID]; n++ {
 			item.ID = base + "_" + strconv.Itoa(n)
@@ -169,6 +178,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 }
 
 func (s *service) Update(ctx context.Context, characterID int64, itemID string, p ItemPatch) (*ChangeResult, error) {
+	if err := nameLanguages(p.Name); err != nil {
+		return nil, err
+	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		old, err := s.dal.Get(ctx, itemID)
@@ -181,7 +193,9 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 				*dst = strings.TrimSpace(*v)
 			}
 		}
-		setStr(&item.Name, p.Name)
+		if p.Name != nil {
+			item.Name = old.Name.With(p.Name)
+		}
 		setStr(&item.Type, p.Type)
 		setStr(&item.AmmoKind, p.AmmoKind)
 		setStr(&item.EffectDice, p.EffectDice)
@@ -264,7 +278,15 @@ func diff(a, b Item) []FieldChange {
 			out = append(out, FieldChange{Field: field, Before: x, After: y})
 		}
 	}
-	add("name", a.Name, b.Name)
+	// One change per language whose name body differs, in code order.
+	langs := maps.Clone(a.Name)
+	if langs == nil {
+		langs = localized.Text{}
+	}
+	maps.Copy(langs, b.Name)
+	for _, lang := range langs.Languages() {
+		add("name", a.Name[lang], b.Name[lang])
+	}
 	add("type", a.Type, b.Type)
 	add("behaviour", string(a.Behaviour), string(b.Behaviour))
 	add("count", strconv.Itoa(a.Count), strconv.Itoa(b.Count))

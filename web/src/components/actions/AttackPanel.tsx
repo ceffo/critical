@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { ArrowsLeftRight, Minus, Plus, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useAttackStore } from "@/stores/attack";
@@ -31,7 +32,7 @@ const LOW_AMMO = 3;
  * number shown comes from it; switching never attacks.
  */
 export function AttackPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { view, load, update, attack } = useAttackStore();
   const rolling = useRollStore((s) => s.rolling);
   const weapons = useItemsStore((s) => s.weapons);
@@ -95,7 +96,7 @@ export function AttackPanel() {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="section-label">{t("attack.inHand")}</span>
               <h3 className="text-key break-words" data-testid="weapon-in-hand">
-                {weapon.name}
+                {localized(i18n.language, weapon.name)}
               </h3>
               {preview && <StatsLine weapon={weapon} view={view} />}
             </div>
@@ -137,7 +138,9 @@ export function AttackPanel() {
         )}
         {ammoSpent && (
           <p className="text-body text-danger" data-testid="ammo-spent">
-            {t("attack.ammoSpent", { name: ammo.name })}
+            {t("attack.ammoSpent", {
+              name: localized(i18n.language, ammo.name),
+            })}
           </p>
         )}
         {others.length > 0 && (
@@ -156,14 +159,18 @@ export function AttackPanel() {
                 type="button"
                 variant="outline"
                 className="h-auto min-h-7 py-1 whitespace-normal"
-                aria-label={t("attack.switchTo", { name: w.name })}
-                data-weapon={w.name}
+                aria-label={t("attack.switchTo", {
+                  name: localized(i18n.language, w.name),
+                })}
+                data-weapon={localized(i18n.language, w.name)}
                 onClick={() => void update({ weaponId: w.id })}
               >
                 {w.id === form.previousWeaponId && (
                   <ArrowsLeftRight aria-hidden />
                 )}
-                <span className="break-words">{w.name}</span>
+                <span className="break-words">
+                  {localized(i18n.language, w.name)}
+                </span>
                 <span className="text-muted-foreground tabular-nums">
                   {w.damage_sm}
                 </span>
@@ -438,7 +445,7 @@ function AmmoChips({
   choices: AmmoChoice[];
   chosen: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const update = useAttackStore((s) => s.update);
   if (choices.length === 0) {
     return <p className="text-body text-danger">{t("attack.noAmmo")}</p>;
@@ -455,7 +462,10 @@ function AmmoChips({
           type="button"
           role="radio"
           aria-checked={a.itemId === chosen}
-          aria-label={t("attack.ammoOption", { name: a.name, count: a.count })}
+          aria-label={t("attack.ammoOption", {
+            name: localized(i18n.language, a.name),
+            count: a.count,
+          })}
           data-item={a.itemId}
           className={cn(
             "flex min-h-7 items-center gap-2 rounded-full bg-neu-900 px-3 py-0.5 text-left text-body",
@@ -463,7 +473,9 @@ function AmmoChips({
           )}
           onClick={() => void update({ ammoItemId: a.itemId })}
         >
-          <span className="break-words">{a.name}</span>
+          <span className="break-words">
+            {localized(i18n.language, a.name)}
+          </span>
           <span
             data-testid="ammo-count"
             className={cn(

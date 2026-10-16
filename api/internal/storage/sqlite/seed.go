@@ -2,11 +2,14 @@ package sqlite
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
@@ -32,33 +35,35 @@ type characterSeed struct {
 	Languages        []string `json:"languages"`
 }
 
+// weaponSeed is one seeds/weapons.json entry; name is a language map (ADR
+// 0023 step 10).
 type weaponSeed struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	DamageSM    string `json:"damage_sm"`
-	DamageL     string `json:"damage_l"`
-	MagicToHit  int    `json:"magic_to_hit"`
-	MagicDamage int    `json:"magic_damage"`
-	Kind        string `json:"kind"`
-	TwoHanded   bool   `json:"two_handed"`
-	AmmoKind    string `json:"ammo_kind"`
+	ID          string         `json:"id"`
+	Name        localized.Text `json:"name"`
+	DamageSM    string         `json:"damage_sm"`
+	DamageL     string         `json:"damage_l"`
+	MagicToHit  int            `json:"magic_to_hit"`
+	MagicDamage int            `json:"magic_damage"`
+	Kind        string         `json:"kind"`
+	TwoHanded   bool           `json:"two_handed"`
+	AmmoKind    string         `json:"ammo_kind"`
 }
 
-// itemSeed is one seeds/items.json entry: behaviour is
-// stock, charges or daily, type a free-text label, max_count defaults to
-// count (a daily item's refill value).
+// itemSeed is one seeds/items.json entry: name is a language map (ADR 0023
+// step 10), behaviour is stock, charges or daily, type a free-text label,
+// max_count defaults to count (a daily item's refill value).
 type itemSeed struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Behaviour  string `json:"behaviour"`
-	MagicBonus int    `json:"magic_bonus"`
-	AmmoKind   string `json:"ammo_kind"`
-	Count      int    `json:"count"`
-	MaxCount   *int   `json:"max_count"`
-	EffectDice string `json:"effect_dice"`
-	EffectSave string `json:"effect_save"`
-	Notes      string `json:"notes"`
+	ID         string         `json:"id"`
+	Name       localized.Text `json:"name"`
+	Type       string         `json:"type"`
+	Behaviour  string         `json:"behaviour"`
+	MagicBonus int            `json:"magic_bonus"`
+	AmmoKind   string         `json:"ammo_kind"`
+	Count      int            `json:"count"`
+	MaxCount   *int           `json:"max_count"`
+	EffectDice string         `json:"effect_dice"`
+	EffectSave string         `json:"effect_save"`
+	Notes      string         `json:"notes"`
 	// Powers are the item's own powers (ADR 0016 steps 9 to 16), in
 	// itemsvc's power encoding; absent: none.
 	Powers json.RawMessage `json:"powers"`
@@ -66,9 +71,10 @@ type itemSeed struct {
 
 // Seed loads character.json, weapons.json, items.json and skills.json from
 // seedsDir into their tables: character, weapons and items only if their
-// table is empty, skills reconciled by id. A missing character file is
-// ignored. A missing weapons, items or skills file while its table is empty
-// is an error: the catalog would be empty. Spells are not seeds: they come
+// table is empty (once filled, only the names of weapons and items are
+// reconciled, reconcileName), skills reconciled by id. A missing character
+// file is ignored. A missing weapons, items or skills file while its table
+// is empty is an error: the catalog would be empty. Spells are not seeds: they come
 // from the catalogue artifact (ImportCatalogue).
 func (d *DB) Seed(ctx context.Context, seedsDir string) error {
 	if err := d.seedCharacter(ctx, filepath.Join(filepath.Clean(seedsDir), "character.json")); err != nil {
@@ -162,11 +168,11 @@ func (d *DB) seedWeapons(ctx context.Context, seedPath string) error {
 	if err := d.QueryRowContext(ctx, "SELECT COUNT(*) FROM weapons").Scan(&count); err != nil {
 		return fmt.Errorf("count weapons: %w", err)
 	}
-	if count > 0 {
-		return nil
-	}
 	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
+		if count > 0 {
+			return nil
+		}
 		return fmt.Errorf("weapons table is empty and its seed file is unreadable (the catalog would be empty): %w", err)
 	}
 	var weapons []weaponSeed
@@ -179,16 +185,31 @@ func (d *DB) seedWeapons(ctx context.Context, seedPath string) error {
 			return fmt.Errorf("weapons.json entry %d: duplicate id %q", i, w.ID)
 		}
 		seen[w.ID] = true
-		if w.ID == "" || w.Name == "" || w.DamageSM == "" || w.DamageL == "" {
+		if w.ID == "" || len(w.Name.Trimmed()) == 0 || w.DamageSM == "" || w.DamageL == "" {
 			return fmt.Errorf("weapons.json entry %d: id, name, damage_sm and damage_l are required", i)
 		}
 	}
 	return d.WrapTx(ctx, func(q Querier) error {
+		if count > 0 {
+			for _, w := range weapons {
+				if err := reconcileName(ctx, q, weaponName, w.ID, w.Name.Trimmed()); err != nil {
+					return fmt.Errorf("weapon %q: %w", w.ID, err)
+				}
+			}
+			return nil
+		}
 		for i, w := range weapons {
+			key, err := addSeedText(ctx, q, w.Name.Trimmed())
+			if err != nil {
+				return fmt.Errorf("weapon %q: %w", w.ID, err)
+			}
+			if err := recordOffers(ctx, q, weaponName, w.ID, w.Name.Trimmed().Languages()); err != nil {
+				return fmt.Errorf("weapon %q: %w", w.ID, err)
+			}
 			if _, err := q.ExecContext(ctx, `
 				INSERT INTO weapons (id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				w.ID, i, w.Name, w.DamageSM, w.DamageL, w.MagicToHit, w.MagicDamage, w.Kind, w.TwoHanded, w.AmmoKind,
+				w.ID, i, key, w.DamageSM, w.DamageL, w.MagicToHit, w.MagicDamage, w.Kind, w.TwoHanded, w.AmmoKind,
 			); err != nil {
 				return fmt.Errorf("insert weapon %q: %w", w.ID, err)
 			}
@@ -202,11 +223,11 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 	if err := d.QueryRowContext(ctx, "SELECT COUNT(*) FROM items").Scan(&count); err != nil {
 		return fmt.Errorf("count items: %w", err)
 	}
-	if count > 0 {
-		return nil
-	}
 	data, err := os.ReadFile(filepath.Clean(seedPath))
 	if err != nil {
+		if count > 0 {
+			return nil
+		}
 		return fmt.Errorf("items table is empty and its seed file is unreadable (the catalog would be empty): %w", err)
 	}
 	var items []itemSeed
@@ -216,7 +237,7 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 	seen := make(map[string]bool, len(items))
 	powers := make([]string, len(items))
 	for i, it := range items {
-		if it.ID == "" || it.Name == "" {
+		if it.ID == "" || len(it.Name.Trimmed()) == 0 {
 			return fmt.Errorf("items.json entry %d: id and name are required", i)
 		}
 		if seen[it.ID] {
@@ -241,7 +262,22 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 		powers[i] = p
 	}
 	return d.WrapTx(ctx, func(q Querier) error {
+		if count > 0 {
+			for _, it := range items {
+				if err := reconcileName(ctx, q, itemName, it.ID, it.Name.Trimmed()); err != nil {
+					return fmt.Errorf("item %q: %w", it.ID, err)
+				}
+			}
+			return nil
+		}
 		for i, it := range items {
+			key, err := addSeedText(ctx, q, it.Name.Trimmed())
+			if err != nil {
+				return fmt.Errorf("item %q: %w", it.ID, err)
+			}
+			if err := recordOffers(ctx, q, itemName, it.ID, it.Name.Trimmed().Languages()); err != nil {
+				return fmt.Errorf("item %q: %w", it.ID, err)
+			}
 			maxCount := it.Count
 			if it.MaxCount != nil {
 				maxCount = *it.MaxCount
@@ -249,13 +285,132 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 			if _, err := q.ExecContext(ctx, `
 				INSERT INTO items (id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				it.ID, i, it.Name, it.Type, it.Behaviour, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.EffectDice, it.EffectSave, it.Notes, powers[i],
+				it.ID, i, key, it.Type, it.Behaviour, it.MagicBonus, it.AmmoKind, it.Count, maxCount, it.EffectDice, it.EffectSave, it.Notes, powers[i],
 			); err != nil {
 				return fmt.Errorf("insert item %q: %w", it.ID, err)
 			}
 		}
 		return nil
 	})
+}
+
+// seededName says where a weapon's or an item's name key is read and the
+// kind its seed offers are recorded under (seeded_name_languages).
+type seededName struct {
+	kind     string
+	keyQuery string
+}
+
+var (
+	weaponName = seededName{kind: "weapon", keyQuery: `SELECT name FROM weapons WHERE id = ?`}
+	itemName   = seededName{kind: "item", keyQuery: `SELECT name FROM items WHERE id = ?`}
+)
+
+// addSeedText stores t under a new key, one more than the highest stored (as
+// every writer of localized_texts), one row per language.
+func addSeedText(ctx context.Context, q Querier, t localized.Text) (int64, error) {
+	var key int64
+	if err := q.QueryRowContext(ctx, `SELECT COALESCE(MAX(text_id), 0) + 1 FROM localized_texts`).Scan(&key); err != nil {
+		return 0, fmt.Errorf("next text key: %w", err)
+	}
+	for _, lang := range t.Languages() {
+		if err := insertText(ctx, q, key, lang, t[lang]); err != nil {
+			return 0, err
+		}
+	}
+	return key, nil
+}
+
+func insertText(ctx context.Context, q Querier, key int64, lang, body string) error {
+	if _, err := q.ExecContext(ctx, `INSERT INTO localized_texts (text_id, lang, body) VALUES (?, ?, ?)`, key, lang, body); err != nil {
+		return fmt.Errorf("insert text %d %s: %w", key, lang, err)
+	}
+	return nil
+}
+
+// reconcileName is the seed reconcile of an existing weapon's or item's name
+// (ADR 0023 step 10). The seed gives each of its languages to a name once:
+// while every language the name has still reads as the seed's, it gains the
+// seed languages it lacks that were never given, and those it has or gains
+// are recorded as given. A name the player changed in any language is kept as
+// is (and recorded nothing, so it is offered again once it reads as the
+// seed's), a language the player removed after it was given is not put back,
+// a row the seed does not list is untouched, an id the table no longer has is
+// not added back (the player removed it), and no other field changes. A
+// second run writes nothing.
+func reconcileName(ctx context.Context, q Querier, n seededName, id string, seed localized.Text) error {
+	var key int64
+	err := q.QueryRowContext(ctx, n.keyQuery, id).Scan(&key)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read name key: %w", err)
+	}
+	offered, err := langSet(ctx, q, `SELECT lang, '' FROM seeded_name_languages WHERE kind = ? AND id = ?`, n.kind, id)
+	if err != nil {
+		return fmt.Errorf("read seed offers: %w", err)
+	}
+	var fresh []string
+	for _, lang := range seed.Languages() {
+		if _, ok := offered[lang]; !ok {
+			fresh = append(fresh, lang)
+		}
+	}
+	if len(fresh) == 0 {
+		return nil
+	}
+	stored, err := langSet(ctx, q, `SELECT lang, body FROM localized_texts WHERE text_id = ?`, key)
+	if err != nil {
+		return fmt.Errorf("read name %d: %w", key, err)
+	}
+	for lang, body := range stored {
+		if seed[lang] != body {
+			return nil
+		}
+	}
+	if err := recordOffers(ctx, q, n, id, fresh); err != nil {
+		return err
+	}
+	for _, lang := range fresh {
+		if _, ok := stored[lang]; ok {
+			continue
+		}
+		if err := insertText(ctx, q, key, lang, seed[lang]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// langSet reads (lang, body) rows into a text.
+func langSet(ctx context.Context, q Querier, query string, args ...any) (localized.Text, error) {
+	rows, err := q.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	out := localized.Text{}
+	for rows.Next() {
+		var lang, body string
+		if err := rows.Scan(&lang, &body); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		out[lang] = body
+	}
+	return out, errors.Join(rows.Err(), rows.Close())
+}
+
+// recordOffers records that the seed has given a name these languages.
+func recordOffers(ctx context.Context, q Querier, n seededName, id string, langs []string) error {
+	for _, lang := range langs {
+		if _, err := q.ExecContext(ctx,
+			`INSERT OR IGNORE INTO seeded_name_languages (kind, id, lang) VALUES (?, ?, ?)`, n.kind, id, lang,
+		); err != nil {
+			return fmt.Errorf("record seed offer %s %q %s: %w", n.kind, id, lang, err)
+		}
+	}
+	return nil
 }
 
 // seedPowers checks a seed item's powers (ADR 0016 steps 9 and 10, the

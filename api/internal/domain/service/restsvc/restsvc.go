@@ -148,7 +148,7 @@ func snapshots(slotsBefore, slots []spellsvc.SpellSlot, itemsBefore, items []ite
 			return nil, rec, err
 		}
 		snaps = append(snaps, snap)
-		rec.ItemsRefilled = append(rec.ItemsRefilled, it.Name)
+		rec.ItemsRefilled = append(rec.ItemsRefilled, it.Name.Any())
 	}
 	return snaps, rec, nil
 }

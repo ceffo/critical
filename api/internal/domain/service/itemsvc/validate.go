@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // Limits on what the item editor accepts.
@@ -43,10 +44,19 @@ func ParseDice(dice string) (n, sides, mod int, err error) {
 
 func fieldErr(field, msg string) error { return &domain.FieldError{Field: field, Message: msg} }
 
+// nameLanguages refuses a name typed in a code that is not a UI language
+// (ADR 0023 step 11), blank bodies included.
+func nameLanguages(name localized.Text) error {
+	if lang, ok := name.UnknownLanguage(); ok {
+		return domain.FieldErrorf("name", "Unknown language %q", lang)
+	}
+	return nil
+}
+
 // Validate checks a whole item as it would be stored, returning a
 // *domain.FieldError naming the first bad field (wire names).
 func (i Item) Validate() error {
-	if strings.TrimSpace(i.Name) == "" {
+	if len(i.Name.Trimmed()) == 0 {
 		return fieldErr("name", "Name is required")
 	}
 	if !i.Behaviour.Valid() {

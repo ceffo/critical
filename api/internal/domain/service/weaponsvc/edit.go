@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // FieldChange is one edited field in a weapon_edit payload (values as text).
@@ -36,7 +38,7 @@ type changeRecord struct {
 
 func record(w Weapon, changes []FieldChange) changeRecord {
 	return changeRecord{
-		WeaponID: w.ID, Name: w.Name, DamageSM: w.DamageSM, DamageL: w.DamageL,
+		WeaponID: w.ID, Name: w.Name.Any(), DamageSM: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind,
 		TwoHanded: w.TwoHanded, AmmoKind: w.AmmoKind, Changes: changes,
 	}
@@ -83,7 +85,7 @@ func (s *service) logChange(ctx context.Context, characterID int64, kind actionl
 }
 
 func clean(w Weapon) Weapon {
-	w.Name = strings.TrimSpace(w.Name)
+	w.Name = w.Name.Trimmed()
 	w.DamageSM = strings.ToLower(strings.TrimSpace(w.DamageSM))
 	w.DamageL = strings.ToLower(strings.TrimSpace(w.DamageL))
 	w.Kind = strings.TrimSpace(w.Kind)
@@ -92,6 +94,9 @@ func clean(w Weapon) Weapon {
 }
 
 func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput) (*ChangeResult, error) {
+	if err := nameLanguages(in.Name); err != nil {
+		return nil, err
+	}
 	w := clean(Weapon{
 		Name: in.Name, DamageSM: in.DamageSM, DamageL: in.DamageL, MagicToHit: in.MagicToHit,
 		MagicDamage: in.MagicDamage, Kind: in.Kind, TwoHanded: in.TwoHanded, AmmoKind: in.AmmoKind,
@@ -112,7 +117,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 				pos = o.Position + 1
 			}
 		}
-		base := slug(w.Name)
+		base := slug(w.Name.Any())
 		w.ID = base
 		for n := 2; taken[w.ID]; n++ {
 			w.ID = base + "_" + strconv.Itoa(n)
@@ -135,6 +140,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 }
 
 func (s *service) Update(ctx context.Context, characterID int64, id string, p WeaponPatch) (*ChangeResult, error) {
+	if err := nameLanguages(p.Name); err != nil {
+		return nil, err
+	}
 	var res *ChangeResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		old, err := s.dal.Get(ctx, id)
@@ -143,7 +151,7 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 		}
 		w := old
 		if p.Name != nil {
-			w.Name = *p.Name
+			w.Name = old.Name.With(p.Name)
 		}
 		if p.DamageSM != nil {
 			w.DamageSM = *p.DamageSM
@@ -226,7 +234,15 @@ func diff(a, b Weapon) []FieldChange {
 			out = append(out, FieldChange{Field: field, Before: x, After: y})
 		}
 	}
-	add("name", a.Name, b.Name)
+	// One change per language whose name body differs, in code order.
+	langs := maps.Clone(a.Name)
+	if langs == nil {
+		langs = localized.Text{}
+	}
+	maps.Copy(langs, b.Name)
+	for _, lang := range langs.Languages() {
+		add("name", a.Name[lang], b.Name[lang])
+	}
 	add("damage_sm", a.DamageSM, b.DamageSM)
 	add("damage_l", a.DamageL, b.DamageL)
 	add("magic_to_hit", strconv.Itoa(a.MagicToHit), strconv.Itoa(b.MagicToHit))

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
@@ -31,15 +32,16 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc weaponsvc.SVC) {
 
 // WeaponDTO is the wire shape of a weapon, the same as GET /api/weapons.
 type WeaponDTO struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	DamageSM    string `json:"damage_sm"`
-	DamageL     string `json:"damage_l"`
-	MagicToHit  int    `json:"magic_to_hit"`
-	MagicDamage int    `json:"magic_damage"`
-	Kind        string `json:"kind"`
-	TwoHanded   bool   `json:"two_handed"`
-	AmmoKind    string `json:"ammo_kind"`
+	ID string `json:"id"`
+	// Name is a language map (ADR 0023 step 9).
+	Name        localized.Text `json:"name"`
+	DamageSM    string         `json:"damage_sm"`
+	DamageL     string         `json:"damage_l"`
+	MagicToHit  int            `json:"magic_to_hit"`
+	MagicDamage int            `json:"magic_damage"`
+	Kind        string         `json:"kind"`
+	TwoHanded   bool           `json:"two_handed"`
+	AmmoKind    string         `json:"ammo_kind"`
 }
 
 // ChangeDTO is the wire shape of POST/PATCH/DELETE /api/weapons: the weapon
@@ -52,14 +54,15 @@ type ChangeDTO struct {
 // WeaponBody is the body of POST and PATCH. On a PATCH only the present
 // fields change.
 type WeaponBody struct {
-	Name        *string `json:"name"`
-	DamageSM    *string `json:"damage_sm"`
-	DamageL     *string `json:"damage_l"`
-	MagicToHit  *int    `json:"magic_to_hit"`
-	MagicDamage *int    `json:"magic_damage"`
-	Kind        *string `json:"kind"`
-	TwoHanded   *bool   `json:"two_handed"`
-	AmmoKind    *string `json:"ammo_kind"`
+	// Name is a language map: the languages typed (ADR 0023 step 11).
+	Name        localized.Text `json:"name"`
+	DamageSM    *string        `json:"damage_sm"`
+	DamageL     *string        `json:"damage_l"`
+	MagicToHit  *int           `json:"magic_to_hit"`
+	MagicDamage *int           `json:"magic_damage"`
+	Kind        *string        `json:"kind"`
+	TwoHanded   *bool          `json:"two_handed"`
+	AmmoKind    *string        `json:"ammo_kind"`
 }
 
 func decodeBody(r *http.Request) (WeaponBody, error) {
@@ -99,7 +102,7 @@ func Create(charID CharacterIDFunc, svc weaponsvc.SVC) render.HandlerFunc {
 			return err
 		}
 		res, err := svc.Create(r.Context(), charID(r), weaponsvc.WeaponInput{
-			Name: deref(b.Name), DamageSM: deref(b.DamageSM), DamageL: deref(b.DamageL),
+			Name: b.Name, DamageSM: deref(b.DamageSM), DamageL: deref(b.DamageL),
 			MagicToHit: deref(b.MagicToHit), MagicDamage: deref(b.MagicDamage), Kind: deref(b.Kind),
 			TwoHanded: deref(b.TwoHanded), AmmoKind: deref(b.AmmoKind),
 		})

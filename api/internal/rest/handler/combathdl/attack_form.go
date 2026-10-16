@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
@@ -22,9 +23,10 @@ type AttackFormDTO struct {
 // AmmoChoiceDTO is one ammunition the weapon in hand can fire.
 type AmmoChoiceDTO struct {
 	ItemID string `json:"itemId"`
-	Name   string `json:"name"`
-	Magic  int    `json:"magic"`
-	Count  int    `json:"count"`
+	// Name is a language map (ADR 0023 step 9).
+	Name  localized.Text `json:"name"`
+	Magic int            `json:"magic"`
+	Count int            `json:"count"`
 }
 
 // AttackPreviewDTO is the effective THAC0 of the current choices, before

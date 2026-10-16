@@ -68,7 +68,7 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 			return err
 		}
 		r := &UseResult{
-			ItemID: item.ID, Name: item.Name, Type: item.Type, Behaviour: item.Behaviour,
+			ItemID: item.ID, Name: item.Name.Any(), Type: item.Type, Behaviour: item.Behaviour,
 			Remaining: item.Count, MaxCount: item.MaxCount, Removed: item.Removed(),
 			Save: item.EffectSave, Notes: item.Notes, Rolls: []int{},
 		}

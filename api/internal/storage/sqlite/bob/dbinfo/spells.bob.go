@@ -24,12 +24,21 @@ var Spells = Table[
 			Generated: false,
 			AutoIncr:  false,
 		},
+		Key: column{
+			Name:      "key",
+			DBType:    "TEXT",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
 		Name: column{
 			Name:      "name",
-			DBType:    "TEXT",
-			Default:   "",
+			DBType:    "INTEGER",
+			Default:   "NULL",
 			Comment:   "",
-			Nullable:  false,
+			Nullable:  true,
 			Generated: false,
 			AutoIncr:  false,
 		},
@@ -53,7 +62,7 @@ var Spells = Table[
 		},
 		School: column{
 			Name:      "school",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -62,7 +71,7 @@ var Spells = Table[
 		},
 		Sphere: column{
 			Name:      "sphere",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -71,7 +80,7 @@ var Spells = Table[
 		},
 		CastingTime: column{
 			Name:      "casting_time",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -80,7 +89,7 @@ var Spells = Table[
 		},
 		Range: column{
 			Name:      "range",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -89,7 +98,7 @@ var Spells = Table[
 		},
 		Duration: column{
 			Name:      "duration",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -98,7 +107,7 @@ var Spells = Table[
 		},
 		AreaOfEffect: column{
 			Name:      "area_of_effect",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -107,7 +116,7 @@ var Spells = Table[
 		},
 		Components: column{
 			Name:      "components",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -116,7 +125,7 @@ var Spells = Table[
 		},
 		SavingThrow: column{
 			Name:      "saving_throw",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "NULL",
 			Comment:   "",
 			Nullable:  true,
@@ -125,6 +134,15 @@ var Spells = Table[
 		},
 		Description: column{
 			Name:      "description",
+			DBType:    "INTEGER",
+			Default:   "NULL",
+			Comment:   "",
+			Nullable:  true,
+			Generated: false,
+			AutoIncr:  false,
+		},
+		Source: column{
+			Name:      "source",
 			DBType:    "TEXT",
 			Default:   "NULL",
 			Comment:   "",
@@ -134,42 +152,6 @@ var Spells = Table[
 		},
 		Stats: column{
 			Name:      "stats",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		Key: column{
-			Name:      "key",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		NameFR: column{
-			Name:      "name_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		DescriptionFR: column{
-			Name:      "description_fr",
-			DBType:    "TEXT",
-			Default:   "NULL",
-			Comment:   "",
-			Nullable:  true,
-			Generated: false,
-			AutoIncr:  false,
-		},
-		Source: column{
-			Name:      "source",
 			DBType:    "TEXT",
 			Default:   "NULL",
 			Comment:   "",
@@ -207,20 +189,6 @@ var Spells = Table[
 			Comment: "",
 			Partial: false,
 		},
-		IdxSpellsName: index{
-			Type: "c",
-			Name: "idx_spells_name",
-			Columns: []indexColumn{
-				{
-					Name:         "name",
-					Desc:         null.FromCond(false, true),
-					IsExpression: false,
-				},
-			},
-			Unique:  false,
-			Comment: "",
-			Partial: false,
-		},
 	},
 	PrimaryKey: &constraint{
 		Name:    "pk_main_spells",
@@ -232,41 +200,38 @@ var Spells = Table[
 }
 
 type spellColumns struct {
-	ID            column
-	Name          column
-	Class         column
-	Level         column
-	School        column
-	Sphere        column
-	CastingTime   column
-	Range         column
-	Duration      column
-	AreaOfEffect  column
-	Components    column
-	SavingThrow   column
-	Description   column
-	Stats         column
-	Key           column
-	NameFR        column
-	DescriptionFR column
-	Source        column
+	ID           column
+	Key          column
+	Name         column
+	Class        column
+	Level        column
+	School       column
+	Sphere       column
+	CastingTime  column
+	Range        column
+	Duration     column
+	AreaOfEffect column
+	Components   column
+	SavingThrow  column
+	Description  column
+	Source       column
+	Stats        column
 }
 
 func (c spellColumns) AsSlice() []column {
 	return []column{
-		c.ID, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description, c.Stats, c.Key, c.NameFR, c.DescriptionFR, c.Source,
+		c.ID, c.Key, c.Name, c.Class, c.Level, c.School, c.Sphere, c.CastingTime, c.Range, c.Duration, c.AreaOfEffect, c.Components, c.SavingThrow, c.Description, c.Source, c.Stats,
 	}
 }
 
 type spellIndexes struct {
-	PKMainSpells  index
-	IdxSpellsKey  index
-	IdxSpellsName index
+	PKMainSpells index
+	IdxSpellsKey index
 }
 
 func (i spellIndexes) AsSlice() []index {
 	return []index{
-		i.PKMainSpells, i.IdxSpellsKey, i.IdxSpellsName,
+		i.PKMainSpells, i.IdxSpellsKey,
 	}
 }
 

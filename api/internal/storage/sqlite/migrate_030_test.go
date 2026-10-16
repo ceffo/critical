@@ -53,7 +53,9 @@ func TestMigrate030_DropsFrenchStatColumnsKeepingTheRows(t *testing.T) {
 	_, err = db.ExecContext(ctx, `INSERT INTO catalogue_meta (id, format, version) VALUES (1, 2, '2026-10-15.4')`)
 	require.NoError(t, err)
 
-	require.NoError(t, db.Migrate(ctx))
+	content, err := migrationFiles.ReadFile("migrations/030_drop_spell_stats_fr.sql")
+	require.NoError(t, err)
+	require.NoError(t, db.applyMigration(ctx, "030_drop_spell_stats_fr.sql", string(content)))
 
 	cols := spellColumns(t, db)
 	for _, c := range frStatColumns {

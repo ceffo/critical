@@ -180,8 +180,10 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 	}
 	seen := map[key]bool{}
 	for _, s := range spells {
-		id := s.Class + " " + s.Name
-		k := key{strings.ToLower(s.Name), s.Class, s.Level}
+		// The English books' texts (the fallback language) are what the scrape produced.
+		name, desc := s.Name.Default(), s.Description.Default()
+		id := s.Class + " " + name
+		k := key{strings.ToLower(name), s.Class, s.Level}
 		assert.False(t, seen[k], "duplicate spell %s (same name, class and level)", id)
 		seen[k] = true
 
@@ -193,9 +195,9 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 		}
 
 		stats := map[string]string{
-			"name": s.Name, "school": s.School, "casting_time": s.CastingTime,
-			"range": s.Range, "duration": s.Duration, "area_of_effect": s.AreaOfEffect,
-			"components": s.Components, "saving_throw": s.SavingThrow,
+			"name": name, "school": s.School.Default(), "casting_time": s.CastingTime.Default(),
+			"range": s.Range.Default(), "duration": s.Duration.Default(), "area_of_effect": s.AreaOfEffect.Default(),
+			"components": s.Components.Default(), "saving_throw": s.SavingThrow.Default(),
 		}
 		for field, v := range stats {
 			assert.NotEmpty(t, strings.TrimSpace(v), "%s: %s is empty", id, field)
@@ -203,12 +205,12 @@ func TestRepoSeeds_SpellCatalogInvariants(t *testing.T) {
 			assert.NotRegexp(t, leak, v, "%s: %s leaks a field label or a bad character", id, field)
 			assert.LessOrEqual(t, len(v), 100, "%s: %s looks like leaked prose", id, field)
 		}
-		assert.NotRegexp(t, leak, s.Sphere, "%s: sphere", id)
-		assert.NotEmpty(t, strings.TrimSpace(s.Description), "%s: description is empty", id)
-		head := s.Description[:min(len(s.Description), 120)]
+		assert.NotRegexp(t, leak, s.Sphere.Default(), "%s: sphere", id)
+		assert.NotEmpty(t, strings.TrimSpace(desc), "%s: description is empty", id)
+		head := desc[:min(len(desc), 120)]
 		assert.NotRegexp(t, `(Saving Throw|Area of Effect|Casting Time|Components?|Range|Duration|Reversible)\s*:`, head,
 			"%s: description starts with a leaked stat line", id)
-		first, _ := utf8.DecodeRuneInString(s.Description)
+		first, _ := utf8.DecodeRuneInString(desc)
 		assert.False(t, unicode.IsLower(first), "%s: description starts mid-sentence (a stat swallowed its first words)", id)
 	}
 }
@@ -252,12 +254,12 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 	allowedSeen := 0
 	for _, sp := range spells {
 		raws := map[string]string{
-			"casting_time": sp.CastingTime, "range": sp.Range, "duration": sp.Duration,
-			"area_of_effect": sp.AreaOfEffect, "components": sp.Components, "saving_throw": sp.SavingThrow,
+			"casting_time": sp.CastingTime.Default(), "range": sp.Range.Default(), "duration": sp.Duration.Default(),
+			"area_of_effect": sp.AreaOfEffect.Default(), "components": sp.Components.Default(), "saving_throw": sp.SavingThrow.Default(),
 		}
 		stats := spellstats.Parse(spellstats.Raw{
-			CastingTime: sp.CastingTime, Range: sp.Range, Duration: sp.Duration,
-			AreaOfEffect: sp.AreaOfEffect, Components: sp.Components, SavingThrow: sp.SavingThrow,
+			CastingTime: sp.CastingTime.Default(), Range: sp.Range.Default(), Duration: sp.Duration.Default(),
+			AreaOfEffect: sp.AreaOfEffect.Default(), Components: sp.Components.Default(), SavingThrow: sp.SavingThrow.Default(),
 		})
 		for _, field := range stats.Special() {
 			raw := raws[field]
@@ -268,10 +270,10 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 				allowedSeen++
 				continue
 			}
-			t.Errorf("%s: %s %q falls back to special (add a parser, or allow-list it)", sp.Name, field, raw)
+			t.Errorf("%s: %s %q falls back to special (add a parser, or allow-list it)", sp.Name.Default(), field, raw)
 		}
-		assert.NotEmpty(t, stats.Components.Raw, sp.Name)
-		assert.True(t, stats.Components.V || stats.Components.S || stats.Components.M, "%s: components %q", sp.Name, sp.Components)
+		assert.NotEmpty(t, stats.Components.Raw, sp.Name.Default())
+		assert.True(t, stats.Components.V || stats.Components.S || stats.Components.M, "%s: components %q", sp.Name.Default(), sp.Components.Default())
 	}
 	assert.Equal(t, specialAllowedCount, allowedSeen, "allow-listed special fields in the catalogue")
 }

@@ -613,12 +613,12 @@ describe("saveText", () => {
 
 describe("statText", () => {
   const spell = {
-    casting_time: "1",
-    range: "60 yds. + 10 yds./level",
-    duration: "Instantaneous",
-    area_of_effect: "Creature touched",
-    components: "V, S",
-    saving_throw: "None",
+    casting_time: { en: "1" },
+    range: { en: "60 yds. + 10 yds./level" },
+    duration: { en: "Instantaneous" },
+    area_of_effect: { en: "Creature touched" },
+    components: { en: "V, S" },
+    saving_throw: { en: "None" },
     stats: {
       casting_time: { raw: "1", kind: "timed", time: qty(1, "segment") },
       range: {

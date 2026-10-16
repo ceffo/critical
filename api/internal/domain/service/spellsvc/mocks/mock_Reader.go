@@ -22,6 +22,65 @@ func (_m *MockReader) EXPECT() *MockReader_Expecter {
 	return &MockReader_Expecter{mock: &_m.Mock}
 }
 
+// Details provides a mock function with given fields: ctx, ids
+func (_m *MockReader) Details(ctx context.Context, ids []string) ([]spellsvc.Spell, error) {
+	ret := _m.Called(ctx, ids)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Details")
+	}
+
+	var r0 []spellsvc.Spell
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []string) ([]spellsvc.Spell, error)); ok {
+		return rf(ctx, ids)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []string) []spellsvc.Spell); ok {
+		r0 = rf(ctx, ids)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spellsvc.Spell)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = rf(ctx, ids)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockReader_Details_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Details'
+type MockReader_Details_Call struct {
+	*mock.Call
+}
+
+// Details is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ids []string
+func (_e *MockReader_Expecter) Details(ctx interface{}, ids interface{}) *MockReader_Details_Call {
+	return &MockReader_Details_Call{Call: _e.mock.On("Details", ctx, ids)}
+}
+
+func (_c *MockReader_Details_Call) Run(run func(ctx context.Context, ids []string)) *MockReader_Details_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]string))
+	})
+	return _c
+}
+
+func (_c *MockReader_Details_Call) Return(_a0 []spellsvc.Spell, _a1 error) *MockReader_Details_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockReader_Details_Call) RunAndReturn(run func(context.Context, []string) ([]spellsvc.Spell, error)) *MockReader_Details_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Search provides a mock function with given fields: ctx, f
 func (_m *MockReader) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, error) {
 	ret := _m.Called(ctx, f)

@@ -11,6 +11,7 @@ import {
   type StatField,
   type StatSource,
 } from "./statText";
+import { FALLBACK_LANG } from "@/i18n/localized";
 import type { Spell } from "@/types/spells";
 
 const FIELDS: StatField[] = [
@@ -21,13 +22,30 @@ const FIELDS: StatField[] = [
   "components",
   "saving_throw",
 ];
+/** One spell of `api/cmd/spellstats`: the books' (English) stat texts and their typed form. */
+type CoverageSpell = Pick<Spell, "stats"> & Record<StatField, string>;
+
+/** The spell as the API serves it: each stat text a language map in the books' language. */
+function asSpell(s: CoverageSpell): Pick<Spell, StatField | "stats"> {
+  const text = (body: string) => ({ [FALLBACK_LANG]: body });
+  return {
+    stats: s.stats,
+    casting_time: text(s.casting_time),
+    range: text(s.range),
+    duration: text(s.duration),
+    area_of_effect: text(s.area_of_effect),
+    components: text(s.components),
+    saving_throw: text(s.saving_throw),
+  };
+}
+
 const file = process.env.STAT_COVERAGE_JSON;
 /** STAT_COVERAGE_LIST=<field>: also print every distinct English text of that field and its wording. */
 const list = process.env.STAT_COVERAGE_LIST as StatField | undefined;
 
 describe.skipIf(!file)("stat coverage", () => {
   it("reports, per field, the typed, labelled and English texts of the French UI", async () => {
-    const spells = JSON.parse(readFileSync(file!, "utf8")) as Spell[];
+    const spells = JSON.parse(readFileSync(file!, "utf8")) as CoverageSpell[];
     const i = i18next.createInstance();
     await i.init({
       lng: "fr",
@@ -41,7 +59,7 @@ describe.skipIf(!file)("stat coverage", () => {
       const n: Record<StatSource, number> = { typed: 0, label: 0, book: 0 };
       const left = new Map<string, number>();
       for (const s of spells) {
-        const { source } = statText(loc, s, f);
+        const { source } = statText(loc, asSpell(s), f);
         n[source]++;
         if (source === "book") left.set(s[f], (left.get(s[f]) ?? 0) + 1);
       }
@@ -57,7 +75,8 @@ describe.skipIf(!file)("stat coverage", () => {
     }
     if (list && FIELDS.includes(list)) {
       const seen = new Map<string, string>();
-      for (const s of spells) seen.set(s[list], statText(loc, s, list).text);
+      for (const s of spells)
+        seen.set(s[list], statText(loc, asSpell(s), list).text);
       for (const [raw, text] of [...seen].sort())
         lines.push(`${JSON.stringify(raw)} -> ${JSON.stringify(text)}`);
     }

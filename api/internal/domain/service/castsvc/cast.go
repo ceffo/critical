@@ -161,7 +161,7 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 	}
 	res := CastResult{
 		Source: r.source, SpellID: r.spellID, CasterLevel: r.casterLevel,
-		Name: firstNonEmpty(entry.Name, spell.Name, r.name), Level: r.level, Spell: spell,
+		Name: firstNonEmpty(entry.Name, spell.Name.Default(), r.name), Level: r.level, Spell: spell,
 	}
 	if res.Level == 0 {
 		res.Level = max(entry.Level, spell.Level)

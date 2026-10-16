@@ -307,8 +307,7 @@ describe("exposure entries", () => {
     const frNames = spellNamer("fr", {
       wall_of_fire: {
         id: "wall_of_fire",
-        name: "Wall of Fire",
-        name_fr: "Mur de feu",
+        name: { en: "Wall of Fire", fr: "Mur de feu" },
       },
     });
     expect(entryText(wall, await makeT("fr"), frNames)).toBe(

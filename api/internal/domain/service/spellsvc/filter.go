@@ -35,12 +35,12 @@ type Filter struct {
 	CastingTime string
 }
 
-// matchGroups applies School and Sphere.
+// matchGroups applies School and Sphere, read from the books' (fallback) text.
 func (f Filter) matchGroups(sp Spell) bool {
-	if f.School != "" && !slices.Contains(SpellSchoolGroups(sp.School), f.School) {
+	if f.School != "" && !slices.Contains(SpellSchoolGroups(sp.School.Default()), f.School) {
 		return false
 	}
-	if f.Sphere != "" && !slices.Contains(SpellSpheres(sp.Sphere), f.Sphere) {
+	if f.Sphere != "" && !slices.Contains(SpellSpheres(sp.Sphere.Default()), f.Sphere) {
 		return false
 	}
 	return true

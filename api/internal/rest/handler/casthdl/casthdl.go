@@ -303,7 +303,7 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 		Kind: string(res.Kind), Confidence: string(res.Confidence), Target: string(res.Target),
 		Note: res.Note, TextOnly: string(res.TextOnly), Untracked: []UntrackedDTO{},
 	}
-	if res.Spell.Name != "" {
+	if len(res.Spell.Name) > 0 {
 		s := spellhdl.SpellToDTO(res.Spell, res.CasterLevel)
 		out.Spell = &s
 	}

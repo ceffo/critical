@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
@@ -92,7 +93,9 @@ func (r spellRef) triple() string {
 // existing rows are not the set the ids were published from, and the import
 // refuses rather than overwrite a different spell.
 func backfillKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) error {
-	rows, err := q.QueryContext(ctx, `SELECT id, key, name, class, level FROM spells ORDER BY id`)
+	// The ids were published from the English names: the fallback-language row.
+	rows, err := q.QueryContext(ctx, `SELECT s.id, s.key, COALESCE(t.body, ''), s.class, s.level FROM spells s
+		LEFT JOIN localized_texts t ON t.text_id = s.name AND t.lang = ? ORDER BY s.id`, localized.Fallback)
 	if err != nil {
 		return fmt.Errorf("read spells: %w", err)
 	}
@@ -138,9 +141,9 @@ func backfillKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) error
 			continue // keyed already, or a younger row of a duplicated triple
 		}
 		taken[k] = true
-		if s, ok := artifact[k]; ok && (s.Name != r.name || s.Class != r.class || s.Level != r.level) {
+		if s, ok := artifact[k]; ok && (s.Name.Default() != r.name || s.Class != r.class || s.Level != r.level) {
 			mismatches = append(mismatches, fmt.Sprintf("%s: database row %d is %s, the artifact has %s",
-				k, r.id, r.triple(), spellRef{name: s.Name, class: s.Class, level: s.Level}.triple()))
+				k, r.id, r.triple(), spellRef{name: s.Name.Default(), class: s.Class, level: s.Level}.triple()))
 			continue
 		}
 		assign = append(assign, assignment{r.id, k})
@@ -157,30 +160,65 @@ func backfillKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) error
 	return nil
 }
 
+// spellTextColumns are the spells columns that key a localized text (ADR
+// 0023 step 4), in the order of spellTexts.
+const spellTextColumns = `name, description, school, sphere, casting_time, range, duration, area_of_effect,
+	components, saving_throw`
+
+// spellTexts are s's texts in the order of spellTextColumns.
+func spellTexts(s catalogue.Spell) []localized.Text {
+	return []localized.Text{
+		s.Name, s.Description, s.School, s.Sphere, s.CastingTime, s.Range, s.Duration, s.AreaOfEffect,
+		s.Components, s.SavingThrow,
+	}
+}
+
 // upsertSpells is step 5.4.2 (with the typed stats of 5.6): insert a new key,
-// overwrite every catalogue field of an existing one. An absent French text
-// is stored as NULL.
+// overwrite every catalogue field of an existing one. Texts go to
+// localized_texts (ADR 0023): one row per language present, none for an
+// absent one (a language the artifact dropped loses its row, a text it
+// dropped loses its key); a spell keeps its text keys across imports and only
+// changed rows are written. The typed stats are parsed from the
+// fallback-language stat texts.
 func upsertSpells(ctx context.Context, q Querier, cat catalogue.Catalogue) error {
+	w, err := newTextWriter(ctx, q)
+	if err != nil {
+		return err
+	}
+	keys, err := spellTextKeys(ctx, q)
+	if err != nil {
+		return err
+	}
 	for _, s := range cat.Spells {
-		stats, err := spellStatsJSON(s.CastingTime, s.Range, s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow)
+		stats, err := spellStatsJSON(s.CastingTime.Default(), s.Range.Default(), s.Duration.Default(),
+			s.AreaOfEffect.Default(), s.Components.Default(), s.SavingThrow.Default())
 		if err != nil {
 			return fmt.Errorf("spell %q: %w", s.ID, err)
 		}
+		old := keys[s.ID]
+		ids := make([]any, 0, 10)
+		for i, t := range spellTexts(s) {
+			var prev sql.NullInt64
+			if old != nil {
+				prev = old[i]
+			}
+			id, err := w.write(ctx, q, prev, t)
+			if err != nil {
+				return fmt.Errorf("spell %q: %w", s.ID, err)
+			}
+			ids = append(ids, id)
+		}
+		args := append([]any{s.ID, s.Class, s.Level, s.Source, stats}, ids...)
 		if _, err := q.ExecContext(ctx, `
-			INSERT INTO spells (
-				key, name, name_fr, class, level, school, sphere, casting_time, range, duration,
-				area_of_effect, components, saving_throw, description, description_fr, source, stats
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO spells (key, class, level, source, stats, `+spellTextColumns+`)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (key) DO UPDATE SET
-				name = excluded.name, name_fr = excluded.name_fr, class = excluded.class, level = excluded.level,
-				school = excluded.school, sphere = excluded.sphere, casting_time = excluded.casting_time,
-				range = excluded.range, duration = excluded.duration, area_of_effect = excluded.area_of_effect,
-				components = excluded.components, saving_throw = excluded.saving_throw,
-				description = excluded.description, description_fr = excluded.description_fr,
-				source = excluded.source, stats = excluded.stats`,
-			s.ID, s.Name, nullable(s.NameFR), s.Class, s.Level, s.School, nullable(s.Sphere), s.CastingTime, s.Range,
-			s.Duration, s.AreaOfEffect, s.Components, s.SavingThrow, s.Description, nullable(s.DescriptionFR),
-			s.Source, stats,
+				class = excluded.class, level = excluded.level, source = excluded.source, stats = excluded.stats,
+				name = excluded.name, description = excluded.description, school = excluded.school,
+				sphere = excluded.sphere, casting_time = excluded.casting_time, range = excluded.range,
+				duration = excluded.duration, area_of_effect = excluded.area_of_effect,
+				components = excluded.components, saving_throw = excluded.saving_throw`,
+			args...,
 		); err != nil {
 			return fmt.Errorf("upsert spell %q: %w", s.ID, err)
 		}
@@ -188,7 +226,99 @@ func upsertSpells(ctx context.Context, q Querier, cat catalogue.Catalogue) error
 	return nil
 }
 
-func nullable(s string) sql.NullString { return sql.NullString{String: s, Valid: s != ""} }
+// spellTextKeys are the text keys of every keyed spell, in the order of
+// spellTextColumns.
+func spellTextKeys(ctx context.Context, q Querier) (map[string][]sql.NullInt64, error) {
+	rows, err := q.QueryContext(ctx, `SELECT key, `+spellTextColumns+` FROM spells WHERE key IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("read spell text keys: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	out := map[string][]sql.NullInt64{}
+	for rows.Next() {
+		var key string
+		ids := make([]sql.NullInt64, 10)
+		dest := []any{&key}
+		for i := range ids {
+			dest = append(dest, &ids[i])
+		}
+		if err := rows.Scan(dest...); err != nil {
+			return nil, fmt.Errorf("scan spell text keys: %w", err)
+		}
+		out[key] = ids
+	}
+	return out, rows.Err()
+}
+
+// textWriter writes localized texts (ADR 0023) against what is stored: a
+// text column is NULL or keys at least one row, so a new key is one more
+// than the highest stored.
+type textWriter struct {
+	stored map[int64]localized.Text
+	next   int64
+}
+
+func newTextWriter(ctx context.Context, q Querier) (*textWriter, error) {
+	rows, err := q.QueryContext(ctx, `SELECT text_id, lang, body FROM localized_texts`)
+	if err != nil {
+		return nil, fmt.Errorf("read localized texts: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	w := &textWriter{stored: map[int64]localized.Text{}, next: 1}
+	for rows.Next() {
+		var id int64
+		var lang, body string
+		if err := rows.Scan(&id, &lang, &body); err != nil {
+			return nil, fmt.Errorf("scan localized text: %w", err)
+		}
+		if w.stored[id] == nil {
+			w.stored[id] = localized.Text{}
+		}
+		w.stored[id][lang] = body
+		w.next = max(w.next, id+1)
+	}
+	return w, rows.Err()
+}
+
+// write stores t under prev (a new key when prev is NULL) and returns its
+// key: NULL, with prev's rows deleted, when t holds no language.
+func (w *textWriter) write(ctx context.Context, q Querier, prev sql.NullInt64, t localized.Text) (sql.NullInt64, error) {
+	t = t.Clean()
+	if len(t) == 0 {
+		if prev.Valid {
+			if _, err := q.ExecContext(ctx, `DELETE FROM localized_texts WHERE text_id = ?`, prev.Int64); err != nil {
+				return sql.NullInt64{}, fmt.Errorf("delete text %d: %w", prev.Int64, err)
+			}
+			delete(w.stored, prev.Int64)
+		}
+		return sql.NullInt64{}, nil
+	}
+	id := prev.Int64
+	if !prev.Valid {
+		id = w.next
+		w.next++
+	}
+	old := w.stored[id]
+	for lang := range old {
+		if _, ok := t[lang]; ok {
+			continue
+		}
+		if _, err := q.ExecContext(ctx, `DELETE FROM localized_texts WHERE text_id = ? AND lang = ?`, id, lang); err != nil {
+			return sql.NullInt64{}, fmt.Errorf("delete text %d %s: %w", id, lang, err)
+		}
+	}
+	for lang, body := range t {
+		if b, ok := old[lang]; ok && b == body {
+			continue
+		}
+		if _, err := q.ExecContext(ctx, `INSERT INTO localized_texts (text_id, lang, body) VALUES (?, ?, ?)
+			ON CONFLICT (text_id, lang) DO UPDATE SET body = excluded.body`, id, lang, body); err != nil {
+			return sql.NullInt64{}, fmt.Errorf("write text %d %s: %w", id, lang, err)
+		}
+	}
+	w.stored[id] = t
+	return sql.NullInt64{Int64: id, Valid: true}, nil
+}
 
 // deleteRemoved is step 5.4.3: a keyed spell the artifact no longer holds is
 // deleted when nothing refers to it. Any reference fails the import with
@@ -228,6 +358,12 @@ func deleteRemoved(ctx context.Context, q Querier, cat catalogue.Catalogue, seed
 			cat.Version, strings.Join(list, "; "), recorded)
 	}
 	for k := range removed {
+		if _, err := q.ExecContext(ctx, `DELETE FROM localized_texts WHERE text_id IN (
+			SELECT j.value FROM spells s, json_each(json_array(`+spellTextColumns+`)) j
+			WHERE s.key = ? AND j.value IS NOT NULL)`,
+			k); err != nil {
+			return fmt.Errorf("delete texts of spell %q: %w", k, err)
+		}
 		if _, err := q.ExecContext(ctx, `DELETE FROM spells WHERE key = ?`, k); err != nil {
 			return fmt.Errorf("delete spell %q: %w", k, err)
 		}

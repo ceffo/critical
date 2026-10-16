@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { NO_QUERY, searchSpells } from "@/api/spells_db";
-import { useSpellName } from "@/i18n/spellName";
+import { localized } from "@/i18n/localized";
 import { modeText } from "@/lib/spellMode";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
@@ -85,8 +85,7 @@ export function AddEffect() {
 
 /** A spell cast on the Bard: find it by name (en/fr), enter the caster's level, apply it. No slot is used. */
 function ReceiveSpell({ onDone }: { onDone: () => void }) {
-  const { t } = useTranslation();
-  const spellName = useSpellName();
+  const { t, i18n } = useTranslation();
   const receiveSpell = useSpellStore((s) => s.receiveSpell);
   const { run, busy } = useTableStore();
   const [query, setQuery] = useState("");
@@ -174,7 +173,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
       ) : (
         <ul className="flex max-h-56 flex-col gap-1 overflow-y-auto">
           {found.map((c) => {
-            const name = spellName(c.id, c.name);
+            const name = localized(i18n.language, c.name);
             return (
               <li
                 key={c.id}

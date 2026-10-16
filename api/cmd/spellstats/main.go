@@ -38,13 +38,15 @@ func main() {
 	}
 	out := make([]spellOut, 0, len(cat.Spells))
 	for _, s := range cat.Spells {
+		// The stat texts are the English books' (the fallback language).
+		raw := spellstats.Raw{
+			CastingTime: s.CastingTime.Default(), Range: s.Range.Default(), Duration: s.Duration.Default(),
+			AreaOfEffect: s.AreaOfEffect.Default(), Components: s.Components.Default(), SavingThrow: s.SavingThrow.Default(),
+		}
 		out = append(out, spellOut{
-			ID: s.ID, CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
-			AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
-			Stats: spellstats.Parse(spellstats.Raw{
-				CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
-				AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
-			}),
+			ID: s.ID, CastingTime: raw.CastingTime, Range: raw.Range, Duration: raw.Duration,
+			AreaOfEffect: raw.AreaOfEffect, Components: raw.Components, SavingThrow: raw.SavingThrow,
+			Stats: spellstats.Parse(raw),
 		})
 	}
 	enc := json.NewEncoder(os.Stdout)

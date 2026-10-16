@@ -68,6 +68,9 @@ var (
 	// Relationship Contexts for items
 	itemWithParentsCascadingCtx = newContextual[bool]("itemWithParentsCascading")
 
+	// Relationship Contexts for localized_texts
+	localizedTextWithParentsCascadingCtx = newContextual[bool]("localizedTextWithParentsCascading")
+
 	// Relationship Contexts for proficiencies
 	proficiencyWithParentsCascadingCtx = newContextual[bool]("proficiencyWithParentsCascading")
 

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
@@ -70,8 +71,9 @@ func TestSearch_PassesTheFilterToTheReader(t *testing.T) {
 	svc, _, reader := newSvc(t)
 	lvl := 3
 	f := spellsvc.Filter{Query: "fire", Class: "wizard", Levels: []int{lvl}, School: spellsvc.SchoolEvocation}
-	spells := []spellsvc.Spell{{Name: "Fireball", Class: "wizard", Level: 3, School: "Evocation"}}
+	spells := []spellsvc.Spell{{ID: "fireball", Name: localized.Of("Fireball"), Class: "wizard", Level: 3, School: localized.Of("Evocation")}}
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
+	expectDetails(reader, spells)
 
 	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{})
 	require.NoError(t, err)
@@ -80,18 +82,43 @@ func TestSearch_PassesTheFilterToTheReader(t *testing.T) {
 }
 
 func spell(name string, r spellstats.Raw) spellsvc.Spell {
-	return spellsvc.Spell{Name: name, Stats: spellstats.Parse(r)}
+	return spellsvc.Spell{ID: name, Name: localized.Of(name), Stats: spellstats.Parse(r)}
+}
+
+// named is a spell known by its English name only (its id too).
+func named(name string) spellsvc.Spell {
+	return spellsvc.Spell{ID: name, Name: localized.Of(name)}
+}
+
+// expectDetails answers Details from spells as the DAL does: the spells of
+// ids, in that order.
+func expectDetails(reader *mocks.MockReader, spells []spellsvc.Spell) {
+	reader.EXPECT().Details(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, ids []string) ([]spellsvc.Spell, error) {
+			byID := map[string]spellsvc.Spell{}
+			for _, s := range spells {
+				byID[s.ID] = s
+			}
+			out := make([]spellsvc.Spell, 0, len(ids))
+			for _, id := range ids {
+				if s, ok := byID[id]; ok {
+					out = append(out, s)
+				}
+			}
+			return out, nil
+		}).Maybe()
 }
 
 func searchNames(t *testing.T, f spellsvc.Filter, spells ...spellsvc.Spell) []string {
 	t.Helper()
 	svc, _, reader := newSvc(t)
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
+	expectDetails(reader, spells)
 	got, err := svc.Search(context.Background(), f, spellsvc.PageRequest{PageSize: spellsvc.MaxPageSize})
 	require.NoError(t, err)
 	out := []string{}
 	for _, s := range got.Items {
-		out = append(out, s.Name)
+		out = append(out, s.Name.Default())
 	}
 	return out
 }
@@ -139,6 +166,7 @@ func page(t *testing.T, f spellsvc.Filter, p spellsvc.PageRequest, spells []spel
 	t.Helper()
 	svc, _, reader := newSvc(t)
 	reader.EXPECT().Search(mock.Anything, f).Return(spells, nil)
+	expectDetails(reader, spells)
 	got, err := svc.Search(context.Background(), f, p)
 	require.NoError(t, err)
 	return got
@@ -147,13 +175,13 @@ func page(t *testing.T, f spellsvc.Filter, p spellsvc.PageRequest, spells []spel
 func pageNames(p spellsvc.Page) []string {
 	out := []string{}
 	for _, s := range p.Items {
-		out = append(out, s.Name)
+		out = append(out, s.Name.Default())
 	}
 	return out
 }
 
 func TestSearch_Paging(t *testing.T) {
-	all := numbered(25, func(i int) spellsvc.Spell { return spellsvc.Spell{Name: fmt.Sprintf("S%02d", i)} })
+	all := numbered(25, func(i int) spellsvc.Spell { return named(fmt.Sprintf("S%02d", i)) })
 	tests := []struct {
 		name      string
 		req       spellsvc.PageRequest
@@ -177,15 +205,15 @@ func TestSearch_Paging(t *testing.T) {
 			assert.Equal(t, tt.siz, got.PageSize)
 			require.Len(t, got.Items, tt.count)
 			if tt.count > 0 {
-				assert.Equal(t, tt.first, got.Items[0].Name)
-				assert.Equal(t, tt.last, got.Items[tt.count-1].Name)
+				assert.Equal(t, tt.first, got.Items[0].Name.Default())
+				assert.Equal(t, tt.last, got.Items[tt.count-1].Name.Default())
 			}
 		})
 	}
 }
 
 func TestSearch_PagesCoverEveryMatchOnceInReaderOrder(t *testing.T) {
-	all := numbered(900, func(i int) spellsvc.Spell { return spellsvc.Spell{Name: fmt.Sprintf("S%03d", i)} })
+	all := numbered(900, func(i int) spellsvc.Spell { return named(fmt.Sprintf("S%03d", i)) })
 	var seen []string
 	for p := 1; ; p++ {
 		got := page(t, spellsvc.Filter{}, spellsvc.PageRequest{Page: p, PageSize: spellsvc.MaxPageSize}, all)
@@ -216,6 +244,24 @@ func TestSearch_TotalAndPagesCountOnlyStatMatches(t *testing.T) {
 	last := page(t, f, spellsvc.PageRequest{Page: 3, PageSize: 4}, all)
 	assert.Equal(t, []string{"S24", "S27"}, pageNames(last), "a full last page is not padded with non-matches")
 	assert.Equal(t, 10, last.Total)
+}
+
+// A page's full texts are read by one Details call holding exactly the
+// page's ids, in page order: never the whole match list.
+func TestSearch_ReadsThePageTextsInOneBatch(t *testing.T) {
+	svc, _, reader := newSvc(t)
+	all := numbered(25, func(i int) spellsvc.Spell { return named(fmt.Sprintf("S%02d", i)) })
+	reader.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(all, nil)
+	full := []spellsvc.Spell{
+		{ID: "S10", Name: localized.Of("S10"), Description: localized.Of("Ten.")},
+		{ID: "S11", Name: localized.Of("S11"), Description: localized.Of("Eleven.")},
+	}
+	reader.EXPECT().Details(mock.Anything, []string{"S10", "S11"}).Return(full, nil).Once()
+
+	got, err := svc.Search(context.Background(), spellsvc.Filter{}, spellsvc.PageRequest{Page: 6, PageSize: 2})
+	require.NoError(t, err)
+	assert.Equal(t, full, got.Items, "the page carries the full texts Details read")
+	assert.Equal(t, 25, got.Total)
 }
 
 // ADR 0008 step 9: a long rest ends the extra slots.

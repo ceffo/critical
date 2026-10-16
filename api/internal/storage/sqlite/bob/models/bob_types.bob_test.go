@@ -44,6 +44,9 @@ var _ bob.HookableType = &HPEvent{}
 // Make sure the type Item runs hooks after queries
 var _ bob.HookableType = &Item{}
 
+// Make sure the type LocalizedText runs hooks after queries
+var _ bob.HookableType = &LocalizedText{}
+
 // Make sure the type Proficiency runs hooks after queries
 var _ bob.HookableType = &Proficiency{}
 

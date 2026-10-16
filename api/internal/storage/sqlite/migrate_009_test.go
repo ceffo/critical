@@ -29,9 +29,10 @@ func TestMigrate009_ExistingSpellsAreTypedByTheCatalogueImport(t *testing.T) {
 
 	require.NoError(t, db.ImportCatalogue(ctx, fixtureCatalogue(t), nil))
 	assert.Zero(t, scalar(t, db, "SELECT COUNT(*) FROM spells WHERE stats IS NULL"))
-	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) FROM spells WHERE name = 'Fireball'"), "no duplicate rows")
+	const fireball = `FROM spells s JOIN localized_texts t ON t.text_id = s.name AND t.lang = 'en' WHERE t.body = 'Fireball'`
+	assert.Equal(t, 1, scalar(t, db, "SELECT COUNT(*) "+fireball), "no duplicate rows")
 	var blob string
-	require.NoError(t, db.QueryRow("SELECT stats FROM spells WHERE name = 'Fireball'").Scan(&blob))
+	require.NoError(t, db.QueryRow("SELECT s.stats "+fireball).Scan(&blob))
 	var got struct {
 		Range struct {
 			Raw  string `json:"raw"`

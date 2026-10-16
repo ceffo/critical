@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { useSpellNamesStore } from "@/stores/spellNames";
 import type { Spell, SpellNames } from "@/types/spells";
 
@@ -8,22 +9,14 @@ import type { Spell, SpellNames } from "@/types/spells";
  */
 export type SpellNamer = (id: string, englishName?: string) => string;
 
-/** Whether `lang` shows the catalogue's French texts. */
-function isFrench(lang: string): boolean {
-  return lang.startsWith("fr");
-}
-
 /**
- * The namer for `lang` over the catalogue's names (GET /api/spells/names, ADR 0021): the French
- * name in French when the catalogue has one, else English; the catalogue's English name first,
- * then the supplied one, then the id.
+ * The namer for `lang` over the catalogue's names (GET /api/spells/names, ADR 0021): the
+ * catalogue's name in `lang`, falling back to English (ADR 0023); for an id the catalogue lacks,
+ * the supplied name, then the id.
  */
 export function spellNamer(lang: string, names: SpellNames): SpellNamer {
-  return (id, englishName) => {
-    const n = names[id];
-    if (isFrench(lang) && n?.name_fr) return n.name_fr;
-    return n?.name ?? englishName ?? id;
-  };
+  return (id, englishName) =>
+    localized(lang, names[id]?.name) || englishName || id;
 }
 
 /**
@@ -48,24 +41,20 @@ export function useSpellName(): SpellNamer {
   return spellNamer(i18n.language, names);
 }
 
-/** A spell's name and description in `lang`, French when the catalogue has it, per field. */
+/** A spell's name and description in `lang`, each falling back to English on its own. */
 export function spellTexts(
   lang: string,
-  spell: Pick<Spell, "name" | "name_fr" | "description" | "description_fr">,
+  spell: Pick<Spell, "name" | "description">,
 ): { name: string; description: string } {
-  const fr = isFrench(lang);
   return {
-    name: (fr && spell.name_fr) || spell.name,
-    description: (fr && spell.description_fr) || spell.description,
+    name: localized(lang, spell.name),
+    description: localized(lang, spell.description),
   };
 }
 
-/** The spell's name in the UI language only: French when the UI is French and the catalogue has it, else English. */
-export function spellName(
-  lang: string,
-  spell: Pick<Spell, "name" | "name_fr">,
-): string {
-  return (isFrench(lang) && spell.name_fr) || spell.name;
+/** The spell's name in the UI language, falling back to English. */
+export function spellName(lang: string, spell: Pick<Spell, "name">): string {
+  return localized(lang, spell.name);
 }
 
 /**

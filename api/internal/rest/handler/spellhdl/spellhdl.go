@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -53,13 +54,27 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars ch
 	r.Get("/api/spells/names", render.Handle(Names(svc)))
 }
 
-// SpellNameDTO is one spell's id with its English name and its French one
-// (absent when the catalogue has none, ADR 0021): the client names a spell
-// it knows only by id (spellbook, slots, journal) in the player's language.
+// TextDTO is a text in human languages (ADR 0023 step 6): body by language
+// code, only the languages the catalogue has (`{}` for a text in none, such
+// as an absent sphere). The client picks its language and falls back to
+// "en" per field.
+type TextDTO map[string]string
+
+// textDTO is t as a TextDTO, never null on the wire.
+func textDTO(t localized.Text) TextDTO {
+	out := make(TextDTO, len(t))
+	for lang, body := range t {
+		out[lang] = body
+	}
+	return out
+}
+
+// SpellNameDTO is one spell's id with its name in every language the
+// catalogue has: the client names a spell it knows only by id (spellbook,
+// slots, journal) in the player's language.
 type SpellNameDTO struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	NameFR string `json:"name_fr,omitempty"`
+	ID   string  `json:"id"`
+	Name TextDTO `json:"name"`
 }
 
 // Names returns every catalogue spell's names (GET /api/spells/names).
@@ -71,7 +86,7 @@ func Names(svc spellSvc) render.HandlerFunc {
 		}
 		out := make([]SpellNameDTO, 0, len(names))
 		for _, n := range names {
-			out = append(out, SpellNameDTO{ID: n.ID, Name: n.Name, NameFR: n.NameFR})
+			out = append(out, SpellNameDTO{ID: n.ID, Name: textDTO(n.Name)})
 		}
 		render.OK(r.Context(), w, out)
 		return nil
@@ -288,31 +303,27 @@ type SpellSlotDTO struct {
 	Extra bool `json:"extra,omitempty"`
 }
 
-// SpellDTO is the wire shape of a spell. The six stat fields keep their raw
-// PHB text; Stats is their typed form and Values the computed values at
-// CasterLevel (domain types carry the JSON tags). Name and Description are
-// English; NameFR and DescriptionFR are the catalogue's French texts, absent
-// when it has none (the client falls back to English per field, ADR 0021).
-// Descriptions are in the catalogue's Markdown subset (paragraphs, bullet
-// lists, pipe tables).
+// SpellDTO is the wire shape of a spell. Every human-language text is a
+// language map (TextDTO, ADR 0023): the client picks its language and falls
+// back to English per field. The six stat fields keep their raw PHB text
+// (English only); Stats is their typed form and Values the computed values
+// at CasterLevel (domain types carry the JSON tags). Descriptions are in the
+// catalogue's Markdown subset (paragraphs, bullet lists, pipe tables).
 type SpellDTO struct {
 	// ID is the spell's catalogue key; cast and receive take it.
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	NameFR       string `json:"name_fr,omitempty"`
-	Class        string `json:"class"`
-	Level        int    `json:"level"`
-	School       string `json:"school"`
-	Sphere       string `json:"sphere"`
-	CastingTime  string `json:"casting_time"`
-	Range        string `json:"range"`
-	Duration     string `json:"duration"`
-	AreaOfEffect string `json:"area_of_effect"`
-	Components   string `json:"components"`
-	SavingThrow  string `json:"saving_throw"`
-	Description  string `json:"description"`
-	// DescriptionFR is absent when the catalogue has no French text.
-	DescriptionFR string `json:"description_fr,omitempty"`
+	ID           string  `json:"id"`
+	Name         TextDTO `json:"name"`
+	Class        string  `json:"class"`
+	Level        int     `json:"level"`
+	School       TextDTO `json:"school"`
+	Sphere       TextDTO `json:"sphere"`
+	CastingTime  TextDTO `json:"casting_time"`
+	Range        TextDTO `json:"range"`
+	Duration     TextDTO `json:"duration"`
+	AreaOfEffect TextDTO `json:"area_of_effect"`
+	Components   TextDTO `json:"components"`
+	SavingThrow  TextDTO `json:"saving_throw"`
+	Description  TextDTO `json:"description"`
 	// Source is the book code of the English text (PHB, TOM, ...; WEB when
 	// no book was matched).
 	Source string `json:"source"`
@@ -466,10 +477,11 @@ func spellsToDTO(in []spellsvc.Spell, casterLevel int) []SpellDTO {
 // SpellToDTO maps one spell to its wire shape, with values at casterLevel.
 func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
 	dto := SpellDTO{
-		ID: s.ID, Name: s.Name, NameFR: s.NameFR, Class: s.Class, Level: s.Level, School: s.School, Sphere: s.Sphere,
-		CastingTime: s.CastingTime, Range: s.Range, Duration: s.Duration,
-		AreaOfEffect: s.AreaOfEffect, Components: s.Components, SavingThrow: s.SavingThrow,
-		Description: s.Description, DescriptionFR: s.DescriptionFR, Source: s.Source,
+		ID: s.ID, Name: textDTO(s.Name), Class: s.Class, Level: s.Level,
+		School: textDTO(s.School), Sphere: textDTO(s.Sphere),
+		CastingTime: textDTO(s.CastingTime), Range: textDTO(s.Range), Duration: textDTO(s.Duration),
+		AreaOfEffect: textDTO(s.AreaOfEffect), Components: textDTO(s.Components),
+		SavingThrow: textDTO(s.SavingThrow), Description: textDTO(s.Description), Source: s.Source,
 		Stats: s.Stats, CasterLevel: casterLevel,
 	}
 	if casterLevel > 0 {

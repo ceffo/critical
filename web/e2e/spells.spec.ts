@@ -174,7 +174,7 @@ test("the spell names follow the language: the catalogue's French name, English 
   await expect(buff).toHaveCount(0);
   const dismissed = combatLog(page)
     .getByRole("listitem")
-    .filter({ hasText: "Image miroir retiré" });
+    .filter({ hasText: "Effet retiré : Image miroir" });
   await expect(dismissed).toBeVisible();
 
   // Undo and redo restore the buff with its spell: still named from the catalogue.
@@ -184,7 +184,7 @@ test("the spell names follow the language: the catalogue's French name, English 
   await page.getByTestId("redo").click();
   await expect(buff).toHaveCount(0);
   await expect(dismissed).toHaveAttribute("data-status", "active");
-  await expect(dismissed).toContainText("Image miroir retiré");
+  await expect(dismissed).toContainText("Effet retiré : Image miroir");
   await page.getByTestId("undo").click();
   await expect(buff).toContainText("Image miroir");
 

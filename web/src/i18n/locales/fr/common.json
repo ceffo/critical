@@ -178,7 +178,7 @@
     "notePlaceholder": "Note (p. ex. +4 aux JS contre le feu)",
     "saveForReuse": "Enregistrer pour réutiliser",
     "saved": "Bonus enregistrés",
-    "saveFailedAfterAdd": "{{name}} est activé mais n'a pas été enregistré pour réutilisation",
+    "saveFailedAfterAdd": "Effet activé : {{name}}, mais il n'a pas été enregistré pour réutilisation",
     "addShort": "Ajouter",
     "savedNone": "Aucun effet enregistré. Cochez « Enregistrer pour réutiliser » sur un nouvel effet.",
     "addSaved": "Ajouter l'effet enregistré {{name}}",
@@ -881,9 +881,9 @@
       "adjustment": "Ajustement {{detail}}"
     },
     "cast": {
-      "castHeading": "{{name}} (niveau {{level}}), lancé au niveau {{casterLevel}}",
+      "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
       "mode": "Option : {{mode}}",
-      "receivedHeading": "{{name}} lancé sur vous, niveau du lanceur {{casterLevel}}",
+      "receivedHeading": "Sort reçu : {{name}}, niveau du lanceur {{casterLevel}}",
       "effectHeading": "Effet ajouté : {{name}}, niveau {{casterLevel}}",
       "attackNeeds": "Il faut {{needed}} ou plus contre CA {{ac}} (TAC0 {{thac0}}), pas de critique.",
       "itemSpent": "Dépensé : {{name}} ({{left}} restant(s))",
@@ -963,14 +963,14 @@
         "negates": "annulé par la sauvegarde"
       }
     },
-    "itemHeading": "{{name}} utilisé",
+    "itemHeading": "Objet utilisé : {{name}}",
     "effect": "Effet",
     "dice": "Dés",
     "rolls": "Jets",
     "total": "Total",
     "save": "Sauvegarde : {{name}}",
     "left": "{{name}} : {{count}} restant(s)",
-    "leftRemoved": "{{name}} : dernière charge utilisée, retiré de l'inventaire",
+    "leftRemoved": "{{name}} : dernière charge utilisée, objet retiré de l'inventaire",
     "noRoll": "Rien à lancer : l'effet se résout à la table.",
     "adjust": {
       "title": "Ajuster après le jet",
@@ -1069,12 +1069,12 @@
     "capped": "{{requested}} demandés, plafonnés aux PV max",
     "floored": "{{requested}} demandés, arrêtés au plancher de PV",
     "buff": {
-      "activate": "{{buff}} activé ({{counters}})",
+      "activate": "Effet activé : {{buff}} ({{counters}})",
       "edit": "{{buff}} : {{from}} → {{to}}",
       "editEnded": "{{buff}} : {{from}} → terminé",
       "absorb": "{{buff}} a absorbé un coup (reste {{count}})",
       "absorbEnded": "{{buff}} a absorbé un coup, terminé",
-      "dismiss": "{{buff}} retiré",
+      "dismiss": "Effet retiré : {{buff}}",
       "editNote": "{{buff}} : note « {{note}} »",
       "editNoteCleared": "{{buff}} : note retirée",
       "noteAlso": "(note modifiée)",
@@ -1087,8 +1087,8 @@
       "passTime": "Temps écoulé : {{hours, number}} h ({{rounds}}), tour {{from}} → {{to}}"
     },
     "attack": {
-      "miss": "{{weapon}} contre CA {{ac}} : raté",
-      "hit": "{{weapon}} contre CA {{ac}} : touché, {{damage}} dégâts",
+      "miss": "{{weapon}} contre CA {{ac}} : attaque ratée",
+      "hit": "{{weapon}} contre CA {{ac}} : attaque réussie, {{damage}} dégâts",
       "crit": "{{weapon}} contre CA {{ac}} : critique ×{{mult, number}}, {{damage}} dégâts",
       "critRolls": "{{weapon}} contre CA {{ac}} : critique (test {{check}} · multiplicateur {{roll}} → ×{{mult, number}}), {{damage}} dégâts",
       "withAmmo": "{{weapon}} ({{ammo}})",
@@ -1099,29 +1099,29 @@
         "crit": "CRITIQUE"
       },
       "unknown": "{{weapon}} contre CA inconnue : touche CA {{hits}}",
-      "verdictHit": "{{weapon}} contre CA inconnue : touché (MJ), {{damage}} dégâts",
-      "verdictMiss": "{{weapon}} contre CA inconnue : raté (MJ)"
+      "verdictHit": "{{weapon}} contre CA inconnue : attaque réussie (MJ), {{damage}} dégâts",
+      "verdictMiss": "{{weapon}} contre CA inconnue : attaque ratée (MJ)"
     },
     "cast": {
       "cast": "Lancé : {{spell}}",
-      "received": "{{spell}} lancé sur moi (niveau du lanceur {{level}})",
+      "received": "Sort reçu : {{spell}} (niveau du lanceur {{level}})",
       "effect": "Effet ajouté : {{spell}} (niveau {{level}})",
       "damage": "{{total}} dégâts ({{type}})",
       "strGain": "FOR +{{gain}}",
       "extraSlots": "emplacements supplémentaires {{slots}}",
-      "item": "{{name}} dépensé ({{left}} restant(s))",
-      "attackHit": "touché (d20 {{d20}} contre CA {{ac}})",
-      "attackMiss": "raté (d20 {{d20}} contre CA {{ac}})"
+      "item": "Objet dépensé : {{name}} ({{left}} restant(s))",
+      "attackHit": "attaque réussie (d20 {{d20}} contre CA {{ac}})",
+      "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})"
     },
     "item": {
-      "rolled": "{{name}} utilisé : {{dice}} = {{total}} ({{left}} restant)",
-      "used": "{{name}} utilisé ({{left}} restant)",
-      "rolledRemoved": "{{name}} utilisé : {{dice}} = {{total}} (dernière charge, retiré)",
-      "usedRemoved": "{{name}} utilisé (dernière charge, retiré)",
-      "restocked": "{{name}} réapprovisionné : +{{added}} ({{count}} maintenant)",
-      "added": "{{name}} ajouté ({{count}})",
-      "removedItem": "{{name}} retiré ({{count}})",
-      "edited": "{{name}} modifié : {{changes}}",
+      "rolled": "Objet utilisé : {{name}}, {{dice}} = {{total}} ({{left}} restant)",
+      "used": "Objet utilisé : {{name}} ({{left}} restant)",
+      "rolledRemoved": "Objet utilisé : {{name}}, {{dice}} = {{total}} (dernière charge, retiré)",
+      "usedRemoved": "Objet utilisé : {{name}} (dernière charge, retiré)",
+      "restocked": "Objet réapprovisionné : {{name}}, +{{added}} ({{count}} maintenant)",
+      "added": "Objet ajouté : {{name}} ({{count}})",
+      "removedItem": "Objet retiré : {{name}} ({{count}})",
+      "edited": "Objet modifié : {{name}}, {{changes}}",
       "change": "{{field}} {{before}} → {{after}}",
       "fields": {
         "name": "nom",

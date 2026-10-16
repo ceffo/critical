@@ -317,8 +317,9 @@ is only ever appended to by play.
       Format 2 is **not reused**: it named the retracted `{en, fr}` stat shape (see "Implementation
       notes (typed stats in the UI language)", History). A format number names one shape forever, so
       a stray format-2 file is refused (step 5.2), never misread. A format-1 artifact carries no
-      `rule_tables`. The schema describes both formats: `format` is 1 or 3, `rule_tables` is
-      forbidden in format 1 and required in format 3 (`TestSchema_Step9_Format3RuleTables`).
+      `rule_tables`. _Amended 2026-10-16 (step 9.1 amendment below): the schema describes format 3
+      only, `format` is the constant 3 and `rule_tables` is required
+      (`TestSchema_Step9_Format3RuleTables`); it described both formats until format 1 was retired._
    2. **Four tables, all required, numbers only.** The keys and rows are exactly those of
       `seeds/rule_tables.json` today, so the seed adapter's parser reads them unchanged:
 
@@ -578,8 +579,8 @@ builds them from the published artifact):
   `catalogue.FormatRuleTables`; the tables always come from the artifact, and `ruletablesadpt` has only
   `Parse` (no seed reader). `seeds/rule_tables.json` is deleted; a `rule_tables.json` left in a seeds
   directory is never read.
-- **The schema still describes formats 1 and 3** (step 9.1's wording): it is a shape document shared with
-  the builder, and the API refuses format 1 before checking it.
+- **The schema still described formats 1 and 3** when 9.6.3 landed (step 9.1's original wording); the
+  amendment of 2026-10-16 below narrows it.
 - **Step 9.7 without the seed**: the fixture's numbers were checked against the seed's by 9.6.1; they are
   now checked against the real artifact's, lookup by lookup (every Strength score and percentile, every
   Dexterity score, every bard level), since the builder keeps one row per book line where the fixture
@@ -593,3 +594,15 @@ builds them from the published artifact):
   start even with a valid seed file beside it; a broken seed file is ignored under format 3); 9.7
   `TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables`; the real seeds booting without
   any rule-table seed `TestRepoSeeds_BootTheWholeStack`.
+
+## Amendment (schema narrowed to format 3, 2026-10-16)
+
+Step 9.1 said the schema describes both formats. Since step 9.6.3 the API refuses format 1, and the
+builder publishes format 3 only, so one document describing the artifact is enough and the builder can no
+longer validate a retired shape by mistake:
+
+- `schemas/catalogue.schema.json` accepts format 3 only: `format` is the constant 3, `rule_tables` is
+  required, and the format-conditional rules are gone. A format-1 file, with or without `rule_tables`,
+  fails validation, as does format 2 (`TestSchema_Step9_Format3RuleTables`).
+- The API's embedded copy stays identical to it (the existing test), and the rulebooks builder's copy is
+  refreshed from it by `scripts/fetch-ref`.

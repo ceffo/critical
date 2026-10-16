@@ -1,22 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, formats 1 and 3",
-  "description": "Shape of the catalogue artifact (ADR 0021): format 1 holds the spells, format 3 the spells and the PHB rule tables (step 9). Shape only: the schema carries no book text. Format 2 named a retracted shape and is never valid.",
+  "title": "Critical! catalogue, format 3",
+  "description": "Shape of the catalogue artifact (ADR 0021): format 3 holds the spells and the PHB rule tables (step 9). Shape only: the schema carries no book text. Format 1 (spells only) is retired and format 2 named a retracted shape: neither is valid.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "format",
     "version",
-    "spells"
+    "spells",
+    "rule_tables"
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 1 (spells) or 3 (spells and rule_tables, ADR 0021 step 9). An importer accepts exactly the formats it knows and refuses the rest.",
-      "enum": [
-        1,
-        3
-      ]
+      "description": "Artifact format: 3 (spells and rule_tables, ADR 0021 step 9). An importer accepts exactly the formats it knows and refuses the rest.",
+      "const": 3
     },
     "version": {
       "description": "Content version, UTC build date YYYY-MM-DD with an optional .N suffix for several builds on a day. Compared for equality only, never ordered.",
@@ -319,35 +317,5 @@
         }
       }
     }
-  },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "const": 1
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "rule_tables": false
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "format": {
-            "const": 3
-          }
-        }
-      },
-      "then": {
-        "required": [
-          "rule_tables"
-        ]
-      }
-    }
-  ]
+  }
 }

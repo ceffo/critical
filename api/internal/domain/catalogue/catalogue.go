@@ -3,10 +3,7 @@
 // imported into the database by the storage layer at startup.
 package catalogue
 
-import (
-	"github.com/ceffo/critical/api/internal/domain/localized"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
-)
+import "github.com/ceffo/critical/api/internal/domain/localized"
 
 // The artifact formats this API reads (ADR 0021 steps 1 and 9.1). Format 2
 // named a retracted shape and is never read.
@@ -21,17 +18,14 @@ const (
 // Formats lists the formats this API reads, in order.
 var Formats = []int{FormatSpells, FormatRuleTables}
 
-// Catalogue is one artifact: a version compared for equality only, its
-// spells and, from format 3, the PHB rule tables.
+// Catalogue is one artifact's spells: a version compared for equality only,
+// and the spells. A format-3 artifact's PHB rule tables are not part of it:
+// they are read beside it at every start and never imported (ADR 0021 step
+// 9.4).
 type Catalogue struct {
 	Format  int
 	Version string
 	Spells  []Spell
-	// RuleTables are the artifact's PHB rule tables (format 3), validated;
-	// nil in format 1, whose tables are the seeds' (ADR 0021 step 9.6.1).
-	// They are read into memory at every start and never imported into
-	// the database (step 9.4).
-	RuleTables *ruletablesvc.Tables
 }
 
 // Spell is one catalogue spell. ID is the stable key game state refers to

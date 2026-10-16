@@ -547,17 +547,19 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 Step 9.6.1, the API side of the rollout (formats 1 and 3 read; format 1 still takes its tables from
 `seeds/rule_tables.json`):
 
-- **Where the tables are parsed**: `catalogueadpt.Parse` hands a format-3 artifact's `rule_tables` to the
-  seed adapter's parser (`ruletablesadpt.Parse`, step 9.2: same keys and rows), so `ruletablesvc.New`'s
-  rules apply and a refusal is `rule_tables: <table> table: …` (step 9.3). The validated tables ride on
-  `catalogue.Catalogue.RuleTables` (nil in format 1); the composition root takes them, or the seed's for
-  format 1 (`loadRuleTables`), at every start, before serving.
+- **Where the tables are parsed**: `catalogueadpt.LoadArtifact` checks the artifact against the schema and
+  returns an `Artifact`: the spells (`catalogue.Catalogue`, which stays spells-only: a domain primitive
+  depends on no service) and, in format 3, the `rule_tables` object as written. The composition root
+  (`loadRuleTables`), at every start and before serving, parses it with the seed adapter's parser
+  (`ruletablesadpt.Parse`, step 9.2: same keys and rows), or reads the seed for format 1, so
+  `ruletablesvc.New`'s rules apply and a refusal is `spell catalogue <path>: rule_tables: <table> table: …`
+  (step 9.3). `ruletablesadpt` stays the one reader of rule-table JSON; no adapter imports another.
 - **The fixture** kept its version `1970-01-01` when it moved to format 3. The recorded catalogue is
   compared on format and version (step 5.3), so a database last started on the format-1 fixture imports
   it once more (the same spells; nothing removed) and then writes nothing.
 - **Tests per step**: 9.1 `TestParse_Step9_1_ReadsFormats1And3` and the schema's
   `TestSchema_Step9_Format3RuleTables`; 9.2 `TestParse_Step9_2_TablesBelongToFormat3Only`; 9.3
-  `TestParse_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable` and
+  `TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable` and
   `TestParse_Step9_3_RejectsBrokenTables`; 9.4 and 9.5 `TestStartup_Step9_5_TheTablesAreReadAtEveryStart`
   (a corrected table on the same version applies, a broken one refuses the start); 9.6.1
   `TestStartup_Step9_6_1_TheRuleTablesSourceFollowsTheFormat` and `TestNew_Step9_6_1_Format1ReadsTheSeedFile`;

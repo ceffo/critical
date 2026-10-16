@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
+	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -44,10 +45,11 @@ func strMods(str int) buffsvc.BuffModifiers {
 // against the printed tables.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	cat, err := catalogueadpt.Load(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
+	artifact, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "..", "..", "testdata", "catalogue.json"))
 	require.NoError(t, err)
-	require.NotNil(t, cat.RuleTables)
-	return cat.RuleTables
+	tables, err := ruletablesadpt.Parse(artifact.RuleTables)
+	require.NoError(t, err)
+	return tables
 }
 
 type fixture struct {

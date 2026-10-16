@@ -132,15 +132,16 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 
 	// The spell catalogue (ADR 0021 step 5): a missing or invalid artifact,
 	// or one that removes a spell still referenced, is a startup error.
-	cat, err := catalogueadpt.Load(cfg.Catalogue)
+	artifact, err := catalogueadpt.LoadArtifact(cfg.Catalogue)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
 	}
+	cat := artifact.Catalogue
 	// The PHB rule tables: spell preparation takes Table 32, attacks look
 	// STR/DEX adjustments up in Tables 1-2, the XP ledger Table 25. A gap in a table is a startup
 	// error.
-	ruleTables, err := loadRuleTables(cat, cfg.SeedsDir)
+	ruleTables, err := loadRuleTables(artifact, cfg)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -334,15 +335,20 @@ func registerRestorers(log actionlogsvc.SVC, restorers map[string]actionlog.Rest
 }
 
 // loadRuleTables picks the PHB rule tables' source by the artifact's format
-// (ADR 0021 step 9.6.1): a format-3 artifact carries them, already validated,
-// and the seeds' rule_tables.json is not read; a format-1 artifact has none,
-// so they come from the seeds as before. Either way they are read at every
-// start, whatever catalogue version the database recorded (step 9.5).
-func loadRuleTables(cat catalogue.Catalogue, seedsDir string) (*ruletablesvc.Tables, error) {
-	if cat.Format == catalogue.FormatRuleTables {
-		return cat.RuleTables, nil
+// (ADR 0021 step 9.6.1): a format-3 artifact carries them and the seeds'
+// rule_tables.json is not read; a format-1 artifact has none, so they come
+// from the seeds as before. Either way ruletablesadpt parses them with the
+// table rules of step 9.3 (a refusal names the table), at every start,
+// whatever catalogue version the database recorded (step 9.5).
+func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.Tables, error) {
+	if artifact.Catalogue.Format == catalogue.FormatRuleTables {
+		t, err := ruletablesadpt.Parse(artifact.RuleTables)
+		if err != nil {
+			return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
+		}
+		return t, nil
 	}
-	return ruletablesadpt.New(seedsDir)
+	return ruletablesadpt.New(cfg.SeedsDir)
 }
 
 // seedSpellRefs are the spell ids the seeds refer to: a catalogue import may

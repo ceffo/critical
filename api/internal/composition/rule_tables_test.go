@@ -140,3 +140,38 @@ func TestStartup_Step9_5_TheTablesAreReadAtEveryStart(t *testing.T) {
 	_, err := composition.New(context.Background(), cfg)
 	require.ErrorContains(t, err, "rule_tables: experience table")
 }
+
+// ADR 0021 step 9.3: what the schema cannot check in a format-3 artifact's
+// tables (scores covered in order, no gap, no overlap, levels once, XP
+// increasing) refuses the start, naming the artifact and the table.
+func TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable(t *testing.T) {
+	rows := func(d map[string]any, table string) []any {
+		return d["rule_tables"].(map[string]any)[table].([]any)
+	}
+	row := func(d map[string]any, table string, i int) map[string]any {
+		return rows(d, table)[i].(map[string]any)
+	}
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"a gap in strength", func(d map[string]any) {
+			r := rows(d, "strength")
+			d["rule_tables"].(map[string]any)["strength"] = append(r[:1:1], r[2:]...)
+		}, "rule_tables: strength table: row 1: score 2 expected, got 3"},
+		{"an overlap in dexterity", func(d map[string]any) { row(d, "dexterity", 1)["dex_min"] = 1 }, "rule_tables: dexterity table"},
+		{"a bard level twice", func(d map[string]any) { row(d, "bard_spells", 1)["level"] = 1 }, "rule_tables: bard table"},
+		{"XP not increasing", func(d map[string]any) { row(d, "bard_experience", 2)["xp"] = 1250 }, "rule_tables: experience table"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			artifact := writeArtifact(t, tc.mutate)
+			_, err := composition.New(context.Background(), composition.Config{
+				DSN: filepath.Join(t.TempDir(), "critical.db"), SeedsDir: fixtureSeeds, Catalogue: artifact,
+			})
+			require.ErrorContains(t, err, tc.want)
+			require.ErrorContains(t, err, "spell catalogue "+artifact)
+		})
+	}
+}

@@ -104,12 +104,14 @@ func TestRealCatalogue_Step9_6_2_TheRealArtifactInFormat3BootsWithoutTheSeedTabl
 	file := filepath.Join(t.TempDir(), "catalogue.json")
 	require.NoError(t, os.WriteFile(file, raw, 0o600))
 
-	cat, err := catalogueadpt.Load(file)
+	artifact, err := catalogueadpt.LoadArtifact(file)
 	require.NoError(t, err)
-	require.Equal(t, catalogue.FormatRuleTables, cat.Format)
+	require.Equal(t, catalogue.FormatRuleTables, artifact.Catalogue.Format)
+	fromArtifact, err := ruletablesadpt.Parse(artifact.RuleTables)
+	require.NoError(t, err)
 	fromSeed, err := ruletablesadpt.New(seedsDir)
 	require.NoError(t, err)
-	assert.Equal(t, fromSeed, cat.RuleTables, "the artifact's tables are the seed's")
+	assert.Equal(t, fromSeed, fromArtifact, "the artifact's tables are the seed's")
 
 	seeds := t.TempDir()
 	require.NoError(t, os.CopyFS(seeds, os.DirFS(seedsDir)))

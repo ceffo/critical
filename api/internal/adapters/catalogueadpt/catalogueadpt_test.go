@@ -24,11 +24,12 @@ func TestEmbeddedSchemaIsTheCommittedOne(t *testing.T) {
 }
 
 func TestLoad_Fixture(t *testing.T) {
-	c, err := Load(fixture)
+	a, err := LoadArtifact(fixture)
 	require.NoError(t, err)
+	c := a.Catalogue
 	assert.Equal(t, catalogue.FormatRuleTables, c.Format)
 	assert.Equal(t, "1970-01-01", c.Version)
-	require.NotNil(t, c.RuleTables, "the fixture carries the rule tables")
+	assert.NotEmpty(t, a.RuleTables, "the fixture carries the rule tables")
 	mm, ok := c.ByID()["magic_missile"]
 	require.True(t, ok)
 	assert.Equal(t, localized.Text{"en": "Magic Missile", "fr": "Projectile magique"}, mm.Name)
@@ -109,23 +110,23 @@ func format1(d map[string]any) {
 	delete(d, "rule_tables")
 }
 
-// ADR 0021 step 9.1: this API reads formats 1 and 3. Format 3 brings its
-// rule tables; format 1 has none (its tables are the seeds', step 9.6.1);
-// format 2, the retracted stat shape, is refused naming it.
+// ADR 0021 step 9.1: this API reads formats 1 and 3. Format 3 hands on its
+// rule tables as written (ruletablesadpt parses them); format 1 has none (its
+// tables are the seeds', step 9.6.1); format 2, the retracted stat shape, is
+// refused naming it.
 func TestParse_Step9_1_ReadsFormats1And3(t *testing.T) {
-	three, err := Parse(artifact(t, func(map[string]any) {}))
+	three, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
-	assert.Equal(t, catalogue.FormatRuleTables, three.Format)
-	require.NotNil(t, three.RuleTables)
-	hit, dmg, err := three.RuleTables.StrengthMods(18, 100)
-	require.NoError(t, err)
-	assert.Equal(t, [2]int{3, 6}, [2]int{hit, dmg}, "PHB Table 1, 18/00")
+	assert.Equal(t, catalogue.FormatRuleTables, three.Catalogue.Format)
+	var tables map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(three.RuleTables, &tables))
+	assert.ElementsMatch(t, []string{"strength", "dexterity", "bard_spells", "bard_experience"}, keys(tables))
 
-	one, err := Parse(artifact(t, format1))
+	one, err := ParseArtifact(artifact(t, format1))
 	require.NoError(t, err)
-	assert.Equal(t, catalogue.FormatSpells, one.Format)
+	assert.Equal(t, catalogue.FormatSpells, one.Catalogue.Format)
 	assert.Nil(t, one.RuleTables)
-	assert.Len(t, one.Spells, len(three.Spells), "the same spells in either format")
+	assert.Len(t, one.Catalogue.Spells, len(three.Catalogue.Spells), "the same spells in either format")
 
 	_, err = Parse(artifact(t, func(d map[string]any) { d["format"] = 2 }))
 	require.ErrorContains(t, err, "unknown format 2: this API reads formats 1 and 3")
@@ -159,33 +160,10 @@ func TestParse_Step9_2_TablesBelongToFormat3Only(t *testing.T) {
 	}
 }
 
-// ADR 0021 step 9.3: what the schema cannot check (scores covered in order,
-// no gap, no overlap, levels once, XP increasing) refuses the artifact,
-// naming the table.
-func TestParse_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable(t *testing.T) {
-	rows := func(d map[string]any, table string) []any {
-		return d["rule_tables"].(map[string]any)[table].([]any)
+func keys(m map[string]json.RawMessage) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
 	}
-	row := func(d map[string]any, table string, i int) map[string]any {
-		return rows(d, table)[i].(map[string]any)
-	}
-	tests := []struct {
-		name   string
-		mutate func(map[string]any)
-		want   string
-	}{
-		{"a gap in strength", func(d map[string]any) {
-			r := rows(d, "strength")
-			d["rule_tables"].(map[string]any)["strength"] = append(r[:1:1], r[2:]...)
-		}, "rule_tables: strength table: row 1: score 2 expected, got 3"},
-		{"an overlap in dexterity", func(d map[string]any) { row(d, "dexterity", 1)["dex_min"] = 1 }, "rule_tables: dexterity table"},
-		{"a bard level twice", func(d map[string]any) { row(d, "bard_spells", 1)["level"] = 1 }, "rule_tables: bard table"},
-		{"XP not increasing", func(d map[string]any) { row(d, "bard_experience", 2)["xp"] = 1250 }, "rule_tables: experience table"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := Parse(artifact(t, tc.mutate))
-			require.ErrorContains(t, err, tc.want)
-		})
-	}
+	return out
 }

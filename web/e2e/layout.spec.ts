@@ -237,6 +237,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       await expectNoClippedText(rail, `rail, ${where}`);
       // The character card (ADR 0022 step 2.3), with the long source as the newest HP change.
       await expectNoClippedText(character, `character card, ${where}`);
+      await expectWholeWords(character, `character card, ${where}`);
       await expectNoClippedText(
         page.getByTestId("dice-footer"),
         `dice footer, ${where}`,
@@ -692,6 +693,50 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
       .getByRole("navigation", { name: "Activities" })
       .getByRole("button", { name: "Inventory" }),
   ).toHaveAttribute("aria-current", "page");
+});
+
+// ADR 0022 step 1 in French (the longest texts: "Bâton/Sceptre/Baguette", "Métamorphose") and with
+// long inventory names: at every layout viewport the character card, the act panel, the lookup (the
+// long spell selected, no automatic hyphenation) and the Inventory stage show no cut text and no
+// word broken mid-word. Only a browser lays text out, so no Go or unit test can hold this.
+test("no cut text in French and with long inventory names, 1280 to 2560", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(90_000);
+  const api = (method: string, url: string, data: unknown) =>
+    fetch(`${stack.apiUrl}${url}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
+  await api("PATCH", "/api/weapons/darts", { name: LONG_WEAPON });
+  await api("PATCH", "/api/items/power_gem_dispel", { name: LONG_ITEM });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const character = page.getByTestId("character");
+  const stage = page.getByTestId("stage");
+  // The rail's buttons in order (the names are French here): Act, Spells, XP, Inventory.
+  const rail = page.getByTestId("rail").getByRole("button");
+  const FR_SPELL =
+    "Nom de sortilège invraisemblablement long des anciens archimages";
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    const where = `fr, ${vp.width}x${vp.height}`;
+    await expectNoClippedText(character, `character card, ${where}`);
+    await expectWholeWords(character, `character card, ${where}`);
+    await rail.nth(0).click();
+    await expectNoClippedText(stage, `act, ${where}`);
+    await rail.nth(1).click();
+    await page.getByRole("option", { name: FR_SPELL }).click();
+    await expectNoClippedText(stage, `lookup, ${where}`);
+    await expectWholeWords(stage, `lookup, ${where}`);
+    await rail.nth(3).click();
+    await expectNoClippedText(stage, `inventory, ${where}`);
+    await expectWholeWords(stage, `inventory, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
+  }
 });
 
 // What only a browser proves: the Inventaire dice chip and the Sorts "To the dice" fill the composer

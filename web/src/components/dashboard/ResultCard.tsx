@@ -92,7 +92,7 @@ export function ResultCard() {
           {h.tag}
         </span>
         <span
-          className="min-w-0 flex-1 basis-24 truncate text-body font-medium"
+          className="min-w-0 flex-1 basis-24 break-words text-body font-medium"
           title={h.subtitle}
         >
           {h.subtitle}
@@ -471,7 +471,9 @@ function AttackResult({
               >
                 {r.modifiers.map((m, i) => (
                   <li key={i} className="flex justify-between gap-2">
-                    <span className="min-w-0 truncate">{modLabel(t, m)}</span>
+                    <span className="min-w-0 break-words">
+                      {modLabel(t, m)}
+                    </span>
                     <span className="tabular-nums">
                       {formatSigned(m.value)}
                     </span>
@@ -489,7 +491,7 @@ function AttackResult({
               >
                 {r.damageTerms.map((d, i) => (
                   <li key={i} className="flex justify-between gap-2">
-                    <span className="min-w-0 truncate">
+                    <span className="min-w-0 break-words">
                       {modLabel(t, d, r)}
                     </span>
                     <span className="tabular-nums">
@@ -727,7 +729,7 @@ function SaveResult({
         >
           {mods.map((m, i) => (
             <li key={i} className="flex justify-between gap-2">
-              <span className="min-w-0 truncate">{modLabel(t, m)}</span>
+              <span className="min-w-0 break-words">{modLabel(t, m)}</span>
               <span className="tabular-nums">{formatSigned(m.value)}</span>
             </li>
           ))}

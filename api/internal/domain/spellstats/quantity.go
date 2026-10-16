@@ -43,6 +43,9 @@ type Quantity struct {
 	// Axis is the way an area's extent runs ("2 ft. wide"): wide, long, high,
 	// thick or deep; "" when the text names none.
 	Axis string `json:"axis,omitempty"`
+	// Site is where on its figure the extent is measured ("10 ft. wide at
+	// base"): base or end; "" when the text names none.
+	Site string `json:"site,omitempty"`
 }
 
 // Value is a Quantity computed for a caster level, expressed in Unit.

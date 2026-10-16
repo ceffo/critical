@@ -68,6 +68,7 @@ const BOOK_UNITS = [
 const METRIC_UNITS = [...new Set(Object.values(METRIC).map(([, u]) => u))];
 // The shapes spellstats' area parser reads (shapeRe in area.go).
 const SHAPES = [
+  "line of sight",
   "radius",
   "diameter",
   "cone",
@@ -720,6 +721,109 @@ describe("areaText", () => {
       expect(areaText(fr, a("targets", "", { targets: qty(3), noun }))).toBe(
         text,
       );
+  });
+
+  it("words several areas, a sum of readings and the notes the book adds", () => {
+    const cubes = a("area", "Two 10-ft. cubes/level", {
+      shape: "cube",
+      count: 2,
+      dims: [qty(10, "foot", { per_level: true, step: 1 })],
+    });
+    expect(areaText(fr, cubes)).toBe("2 cubes de 3 m/niveau");
+    const sum = a("together", "One 40-ft. cube + one 10-ft. cube/level", {
+      parts: [
+        a("area", "One 40-ft. cube", {
+          shape: "cube",
+          dims: [qty(40, "foot")],
+        }),
+        a("area", "one 10-ft. cube/level", {
+          shape: "cube",
+          dims: [qty(10, "foot", { per_level: true, step: 1 })],
+        }),
+      ],
+    });
+    expect(areaText(fr, sum)).toBe("cube de 12 m + cube de 3 m/niveau");
+    expect(
+      areaText(
+        fr,
+        a("together", "Caster + 1 person/8 levels", {
+          parts: [
+            a("self", "Caster"),
+            a("targets", "1 person/8 levels", {
+              targets: qty(1, undefined, { per_level: true, step: 8 }),
+              noun: "person",
+            }),
+          ],
+        }),
+      ),
+    ).toBe("Le lanceur + 1 personne/8 niveaux");
+    // A part the language cannot word leaves the book's text.
+    expect(
+      areaText(
+        fr,
+        a("together", "", {
+          parts: [
+            a("self", "Caster"),
+            a("targets", "", { targets: qty(1), noun: "zzz" }),
+          ],
+        }),
+      ),
+    ).toBeNull();
+    const radius = a("area", "5 ft. radius + special", {
+      shape: "radius",
+      dims: [qty(5, "foot")],
+    });
+    expect(areaText(fr, { ...radius, special: "plus" })).toBe(
+      "rayon de 1,5 m + spéciale",
+    );
+    expect(areaText(fr, { ...radius, special: "or" })).toBe(
+      "rayon de 1,5 m ou spéciale",
+    );
+    expect(areaText(fr, { ...radius, special: "note" })).toBe(
+      "rayon de 1,5 m (spéciale)",
+    );
+    expect(
+      areaText(
+        fr,
+        a("targets", "One individual (usually caster)", {
+          targets: qty(1),
+          noun: "individual",
+          usually: "caster",
+        }),
+      ),
+    ).toBe("1 individu (généralement le lanceur)");
+  });
+
+  it("words where on the figure an extent is measured, and a bounded line of sight", () => {
+    const cone = a("area", "Cone 60 yards long and 30 yards wide at the base", {
+      shape: "cone",
+      dims: [
+        { ...qty(60, "yard"), axis: "long" },
+        { ...qty(30, "yard"), axis: "wide", site: "base" },
+      ],
+    });
+    expect(areaText(fr, cone)).toBe(
+      "cône de 60 m de long et de 30 m de large à la base",
+    );
+    // A site with no axis to say it of keeps the book's text.
+    expect(
+      areaText(
+        fr,
+        a("area", "", {
+          shape: "cone",
+          dims: [{ ...qty(5, "foot"), site: "base" }],
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      areaText(
+        fr,
+        a("area", "Line of sight, max. 60 ft.", {
+          shape: "line of sight",
+          dims: [{ ...qty(60, "foot"), up_to: true }],
+        }),
+      ),
+    ).toBe("ligne de vue de 18 m maximum");
   });
 
   it('words "1 or more" after the noun', () => {

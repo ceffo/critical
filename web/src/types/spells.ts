@@ -29,16 +29,27 @@ export interface SpellQuantity {
   max_unit?: string;
   /** The way an area's extent runs ("2 ft. wide"). */
   axis?: "wide" | "long" | "high" | "thick" | "deep";
+  /** Where on its figure the extent is measured ("wide at base"). */
+  site?: "base" | "end";
 }
 
 /** Mirrors spellstats.AreaOfEffect: one reading of an area of effect, or a choice between readings. */
 export interface SpellArea {
   raw: string;
-  kind: "area" | "targets" | "self" | "touch" | "alternatives" | "special";
+  kind:
+    | "area"
+    | "targets"
+    | "self"
+    | "touch"
+    | "alternatives"
+    | "together"
+    | "special";
   shape?: string;
   /** What a radius or diameter measures ("sphere" in "10-ft. radius sphere"). */
   figure?: string;
   dims?: SpellQuantity[];
+  /** The number of such areas when more than one ("Two 10-ft. cubes/level"). */
+  count?: number;
   targets?: SpellQuantity;
   noun?: string;
   /** The size of the group `noun` names ("unit of up to 200 individuals"), counted in `members_noun`. */
@@ -52,6 +63,12 @@ export interface SpellArea {
   partial?: boolean;
   /** The readings of an "alternatives" kind ("1 creature or object"), each an area or targets. */
   alternatives?: SpellArea[];
+  /** The readings of a "together" kind ("Caster + 1 person/8 levels"), summed. */
+  parts?: SpellArea[];
+  /** The book adds "special": "+ special", "or special" or "(special)". */
+  special?: "plus" | "or" | "note";
+  /** Who it usually is ("One individual (usually caster)"). */
+  usually?: string;
 }
 
 /** A quantity computed at a caster level; `dice` is still to be rolled on top of `amount`. */

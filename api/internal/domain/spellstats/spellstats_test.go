@@ -365,11 +365,11 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 		{"Up to 6 creatures", false},
 		{"20-foot-radius circle", false},
 		{"One 10-ft. cube/level", false},                        // "One" is the article of an extent
-		{"Two 10-ft. cubes/level", true},                        // "Two" counts cubes
+		{"Two 10-ft. cubes/level", false},                       // "Two" counts cubes (areas 14)
 		{"1 creature or 1 cu. ft. of substance/2 levels", true}, // an alternative it does not read whole
 		{"4d4 sq. mi.", false},                                  // dice in the extent
 		{"5 yds./level (90 yds. maximum)", false},               // a cap on the extent
-		{"Line of sight, max. 60 ft.", true},                    // words it does not read
+		{"Line of sight, max. 60 ft.", false},                   // a bounded line of sight (areas 17)
 		{"1 object up to 10 ft. long", true},                    // "long"
 		{"1 or more creatures in a 10-ft. radius", false},
 		{"10-yard square/priest", false},
@@ -390,7 +390,7 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 // lossy reading would give "10 creatures" for "One creature/two levels" at
 // level 10, and 0 for "1,000 square feet/level"); a whole reading has one.
 func TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel(t *testing.T) {
-	for _, raw := range []string{"Line of sight, max. 60 ft.", "1 object up to 10 ft. long", "1 creature or 1 cu. ft. of substance/2 levels"} {
+	for _, raw := range []string{"3-ft. long blade", "1 object up to 10 ft. long", "1 creature or 1 cu. ft. of substance/2 levels"} {
 		t.Run(raw, func(t *testing.T) {
 			a := spellstats.ParseArea(raw)
 			require.True(t, a.Partial)
@@ -639,5 +639,93 @@ func TestAreaOfEffect_AxisOfAnExtent(t *testing.T) {
 	assert.Equal(t, "wide", a.Dims[2].Axis)
 
 	// An axis word with no extent for it keeps the book's text.
-	assert.True(t, spellstats.ParseArea("Cone 10 ft. wide at base and 30 ft. tall").Partial)
+	assert.True(t, spellstats.ParseArea("Cone 10 ft. wide and").Partial)
+}
+
+// ADR 0021 step 8 (areas, 13): "+ special", "or special", "(special)" and "(usually caster)"
+// are kept beside the area they follow.
+func TestAreaOfEffect_Annotated(t *testing.T) {
+	for raw, special := range map[string]string{
+		"5 ft. radius + special":      "plus",
+		"15 sq. ft./level or special": "or",
+		"5-ft. radius (special)":      "note",
+		"5-ft. radius":                "",
+	} {
+		a := spellstats.ParseArea(raw)
+		assert.False(t, a.Partial, raw)
+		assert.Equal(t, raw, a.Raw)
+		assert.Equal(t, special, a.Special, raw)
+		assert.Equal(t, spellstats.AreaArea, a.Kind, raw)
+	}
+	a := spellstats.ParseArea("1 creature (special)")
+	assert.Equal(t, "creature", a.Noun)
+	assert.Equal(t, "note", a.Special)
+
+	a = spellstats.ParseArea("One individual (usually caster)")
+	assert.False(t, a.Partial)
+	assert.Equal(t, "individual", a.Noun)
+	assert.Equal(t, "caster", a.Usually)
+	// Plain "Special" is no annotation.
+	assert.Equal(t, "", spellstats.ParseArea("Special").Special)
+	assert.Equal(t, spellstats.KindSpecial, spellstats.ParseArea("Special").Kind)
+}
+
+// ADR 0021 step 8 (areas, 14): a number word before an extent and a plural figure counts the figures.
+func TestAreaOfEffect_SeveralAreas(t *testing.T) {
+	a := spellstats.ParseArea("Two 10-ft. cubes/level")
+	assert.False(t, a.Partial)
+	assert.Equal(t, 2, a.Count)
+	assert.Equal(t, "cube", a.Shape)
+	assert.Equal(t, 50.0, a.At(5).Dims[0].Amount) // each cube's side, not both
+	assert.Equal(t, 0, spellstats.ParseArea("One 10-ft. cube/level").Count)
+	a = spellstats.ParseArea("two 10-ft. cubes/level")
+	assert.Equal(t, 2, a.Count)
+}
+
+// ADR 0021 step 8 (areas, 15): "A + B" is a sum of whole readings.
+func TestAreaOfEffect_Sum(t *testing.T) {
+	a := spellstats.ParseArea("One 40-ft. cube + one 10-ft. cube/level")
+	assert.Equal(t, spellstats.AreaTogether, a.Kind)
+	assert.Len(t, a.Parts, 2)
+	assert.False(t, a.Parts[0].Dims[0].Terms[0].PerLevel)
+	assert.True(t, a.Parts[1].Dims[0].Terms[0].PerLevel)
+	assert.Equal(t, spellstats.AreaValue{}, a.At(5)) // the sum of two parts is not one value
+
+	a = spellstats.ParseArea("Caster + 1 person/8 levels")
+	assert.Equal(t, spellstats.AreaTogether, a.Kind)
+	assert.Equal(t, spellstats.AreaSelf, a.Parts[0].Kind)
+	assert.Equal(t, 8, a.Parts[1].Targets.Terms[0].Step)
+
+	a = spellstats.ParseArea("One creature + 1creature/2 levels") // a count glued to its noun
+	assert.Equal(t, spellstats.AreaTogether, a.Kind)
+
+	// One extent summed from terms is no sum of readings.
+	assert.Equal(t, spellstats.AreaArea, spellstats.ParseArea("50 ft. + 5 ft./level").Kind)
+	// A part that bounds the others too stays the book's text.
+	assert.Equal(t, spellstats.AreaArea, spellstats.ParseArea("1d4 sticks + 1 stick/level in a 10-ft. cube").Kind)
+	assert.True(t, spellstats.ParseArea("1d4 sticks + 1 stick/level in a 10-ft. cube").Partial)
+}
+
+// ADR 0021 step 8 (areas, 16): "at base" / "at end" says where an extent is measured.
+func TestAreaOfEffect_WhereOnTheFigure(t *testing.T) {
+	a := spellstats.ParseArea("Cone 60 yards long and 30 yards wide at the base")
+	assert.False(t, a.Partial)
+	assert.Equal(t, "cone", a.Shape)
+	assert.Equal(t, []string{"long", "wide"}, []string{a.Dims[0].Axis, a.Dims[1].Axis})
+	assert.Equal(t, []string{"", "base"}, []string{a.Dims[0].Site, a.Dims[1].Site})
+
+	a = spellstats.ParseArea("Cone 10 ft. wide at base and 30 ft. tall")
+	assert.False(t, a.Partial)
+	assert.Equal(t, []string{"wide", "high"}, []string{a.Dims[0].Axis, a.Dims[1].Axis})
+	assert.Equal(t, "base", a.Dims[0].Site)
+}
+
+// ADR 0021 step 8 (areas, 17): "Line of sight, max. 60 ft." is a line of sight up to 60 ft.
+func TestAreaOfEffect_BoundedLineOfSight(t *testing.T) {
+	a := spellstats.ParseArea("Line of sight, max. 60 ft.")
+	assert.False(t, a.Partial)
+	assert.Equal(t, "line of sight", a.Shape)
+	assert.True(t, a.Dims[0].UpTo)
+	assert.Equal(t, 60.0, a.Dims[0].Terms[0].Count)
+	assert.Equal(t, spellstats.KindSpecial, spellstats.ParseArea("Line of sight").Kind)
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // StateKeyItems is the action-log state-key family for item counts. Each
@@ -38,26 +39,28 @@ type snapCount struct {
 
 // snapItem is the whole item inside a snapshot (add fields, never rename).
 type snapItem struct {
-	Position   int    `json:"position"`
-	Name       string `json:"name"`
-	Type       string `json:"type"`
-	Behaviour  string `json:"behaviour"`
-	MagicBonus int    `json:"magicalBonus"`
-	AmmoKind   string `json:"ammoKind"`
-	MaxCount   int    `json:"maxCount"`
-	EffectDice string `json:"effectDice"`
-	EffectSave string `json:"effectSave"`
-	Notes      string `json:"notes"`
+	Position int `json:"position"`
+	// Name is the item's name by language (ADR 0023 step 11); a snapshot
+	// taken before names were localized holds a plain string.
+	Name       localized.Snap `json:"name"`
+	Type       string         `json:"type"`
+	Behaviour  string         `json:"behaviour"`
+	MagicBonus int            `json:"magicalBonus"`
+	AmmoKind   string         `json:"ammoKind"`
+	MaxCount   int            `json:"maxCount"`
+	EffectDice string         `json:"effectDice"`
+	EffectSave string         `json:"effectSave"`
+	Notes      string         `json:"notes"`
 	// Powers are the item's own powers (ADR 0016 step 15), always written
 	// ([] for none); nil in a snapshot taken before they existed, which then
-	// leaves the stored powers as they are (see keepPowers).
+	// leaves the stored powers as they are (see keepCurrent).
 	Powers *[]jsonPower `json:"powers,omitempty"`
 }
 
 func toSnapItem(i Item) *snapItem {
 	powers := toJSONPowers(i.Powers)
 	return &snapItem{
-		Position: i.Position, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour),
+		Position: i.Position, Name: localized.Snap{Text: i.Name}, Type: i.Type, Behaviour: string(i.Behaviour),
 		MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind, MaxCount: i.MaxCount,
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: &powers,
 	}
@@ -66,7 +69,7 @@ func toSnapItem(i Item) *snapItem {
 func (c snapCount) item() Item {
 	it := c.Item
 	out := Item{
-		ID: c.ID, Position: it.Position, Name: it.Name, Type: it.Type, Behaviour: Behaviour(it.Behaviour),
+		ID: c.ID, Position: it.Position, Name: it.Name.Text, Type: it.Type, Behaviour: Behaviour(it.Behaviour),
 		MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind, Count: c.Count, MaxCount: it.MaxCount,
 		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes,
 	}
@@ -76,13 +79,15 @@ func (c snapCount) item() Item {
 	return out
 }
 
-// keepPowers is the item a Replace snapshot writes back: when the snapshot
+// keepCurrent is the item a Replace snapshot writes back: when the snapshot
 // predates powers (no "powers" key), the item keeps the powers it has now,
-// so popping an old edit never strips the ones a migration gave it. An item
-// that is gone has none to keep (ADR 0016 Consequences).
-func (s *service) keepPowers(ctx context.Context, c snapCount) (Item, error) {
+// so popping an old edit never strips the ones a migration gave it; when it
+// predates localized names (a plain string), that string is the fallback
+// body and the other languages the item has now are kept (ADR 0023 step
+// 11). An item that is gone has nothing to keep (ADR 0016 Consequences).
+func (s *service) keepCurrent(ctx context.Context, c snapCount) (Item, error) {
 	item := c.item()
-	if c.Item.Powers != nil {
+	if c.Item.Powers != nil && !c.Item.Name.Plain {
 		return item, nil
 	}
 	cur, err := s.dal.Get(ctx, c.ID)
@@ -92,7 +97,12 @@ func (s *service) keepPowers(ctx context.Context, c snapCount) (Item, error) {
 	case err != nil:
 		return Item{}, err
 	}
-	item.Powers = cur.Powers
+	if c.Item.Powers == nil {
+		item.Powers = cur.Powers
+	}
+	if c.Item.Name.Plain {
+		item.Name = c.Item.Name.Restored(cur.Name)
+	}
 	return item, nil
 }
 
@@ -176,7 +186,7 @@ func (s *service) Restorers() map[string]actionlog.Restorer {
 					err = s.dal.Delete(ctx, c.ID)
 				case c.Replace && c.Item != nil:
 					var item Item
-					if item, err = s.keepPowers(ctx, c); err != nil {
+					if item, err = s.keepCurrent(ctx, c); err != nil {
 						break
 					}
 					err = s.dal.Update(ctx, item)

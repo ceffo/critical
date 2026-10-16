@@ -3,7 +3,6 @@ package weaponsvc
 import (
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 )
@@ -35,7 +34,7 @@ func fieldErr(field, msg string) error { return &domain.FieldError{Field: field,
 // Validate checks a whole weapon as it would be stored, returning a
 // *domain.FieldError naming the first bad field (wire names).
 func (w Weapon) Validate() error {
-	if strings.TrimSpace(w.Name) == "" {
+	if len(w.Name.Trimmed()) == 0 {
 		return fieldErr("name", "Name is required")
 	}
 	if !validDice(w.DamageSM) {

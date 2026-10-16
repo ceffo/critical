@@ -1,5 +1,7 @@
 package combatsvc
 
+import "github.com/ceffo/critical/api/internal/domain/localized"
+
 // ModifierKind says where a modifier comes from, so the UI can label it in
 // the player's language from the kind and the detail.
 type ModifierKind string
@@ -10,7 +12,7 @@ const (
 	ModDexterity   ModifierKind = "dexterity"    // PHB Table 2 missile adj., Detail = DEX
 	ModWeaponMagic ModifierKind = "weapon_magic" // the weapon's own +N, Detail = weapon name
 	ModWeaponBuff  ModifierKind = "weapon_buff"  // a buff or item power making the weapon +N, Detail = buff (or item) name
-	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name
+	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name, ItemID = the ammo item
 	ModBuff        ModifierKind = "buff"         // a buff's or item power's to-hit/damage/save bonus, Detail = buff (or item) name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
 	ModCrit        ModifierKind = "crit"         // house crit multiplier; the range is the roll's CritFrom..CritTo
@@ -247,8 +249,10 @@ const (
 
 // Weapon is the catalog entry consumed by ResolveAttack.
 type Weapon struct {
-	ID          string
-	Name        string
+	ID string
+	// Name is a localized text (ADR 0023 step 9); results and payloads
+	// record Name.Any().
+	Name        localized.Text
 	BaseDamage  string // damage dice vs small/medium targets, e.g. "1d8"
 	DamageLarge string // damage dice vs large targets, e.g. "1d12"
 	MagicToHit  int

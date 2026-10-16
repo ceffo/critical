@@ -587,7 +587,7 @@ func (f *Factory) fromExistingItem(ctx context.Context, m *models.Item) *ItemTem
 
 	o.ID = func() string { return m.ID }
 	o.Position = func() int64 { return m.Position }
-	o.Name = func() string { return m.Name }
+	o.Name = func() int64 { return m.Name }
 	o.Type = func() string { return m.Type }
 	o.Behaviour = func() string { return m.Behaviour }
 	o.MagicBonus = func() int64 { return m.MagicBonus }
@@ -867,7 +867,7 @@ func (f *Factory) fromExistingWeapon(ctx context.Context, m *models.Weapon) *Wea
 
 	o.ID = func() string { return m.ID }
 	o.Position = func() int64 { return m.Position }
-	o.Name = func() string { return m.Name }
+	o.Name = func() int64 { return m.Name }
 	o.DamageSM = func() string { return m.DamageSM }
 	o.DamageL = func() string { return m.DamageL }
 	o.MagicToHit = func() int64 { return m.MagicToHit }

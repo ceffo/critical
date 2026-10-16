@@ -413,8 +413,26 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 	if hasSpells(t, db) {
 		writes = countStatsWrites(t, db)
 	}
+	inventory := inventoryRows(t, db)
 	bs, err := composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
 	require.NoError(t, err, "the live database upgrades")
+	if inventory != nil {
+		// ADR 0023 steps 9 and 10: every item and weapon keeps its id,
+		// position and counts, and has a name.
+		assert.Equal(t, inventory, inventoryRows(t, db), "items and weapons keep their ids, positions and counts")
+		items, err := bs.Items.List(ctx)
+		require.NoError(t, err)
+		for _, it := range items {
+			assert.NotEmpty(t, it.Name.Any(), "item %s has a name", it.ID)
+			t.Logf("item %s: %v", it.ID, it.Name)
+		}
+		weapons, err := bs.Combat.ListWeapons(ctx)
+		require.NoError(t, err)
+		for _, w := range weapons {
+			assert.NotEmpty(t, w.Name.Any(), "weapon %s has a name", w.ID)
+			t.Logf("weapon %s: %v", w.ID, w.Name)
+		}
+	}
 	page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
 	require.NoError(t, err)
 	assert.Equal(t, len(cat.Spells), page.Total, "every catalogue spell is served")
@@ -445,6 +463,31 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 		assert.True(t, n == 1 && inArtifact, "%s (%s) resolves", r.ID, r.Where)
 	}
 	t.Logf("%d spell references in the seeds and the game state, all resolved", len(refs))
+}
+
+// inventoryRows are the items' and weapons' ids, positions and counts (nil
+// for a database older than those tables).
+func inventoryRows(t *testing.T, db *sqlite.DB) []string {
+	t.Helper()
+	var n int
+	require.NoError(t, db.QueryRowContext(context.Background(),
+		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('items', 'weapons')`).Scan(&n))
+	if n < 2 {
+		return nil
+	}
+	rows, err := db.QueryContext(context.Background(), `
+		SELECT 'item ' || id || ' ' || position || ' ' || count || '/' || max_count FROM items
+		UNION ALL SELECT 'weapon ' || id || ' ' || position FROM weapons ORDER BY 1`)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	out := []string{}
+	for rows.Next() {
+		var r string
+		require.NoError(t, rows.Scan(&r))
+		out = append(out, r)
+	}
+	require.NoError(t, rows.Err())
+	return out
 }
 
 // hasSpells reports whether db already has the spells table (a database

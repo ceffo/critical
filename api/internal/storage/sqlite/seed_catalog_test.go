@@ -56,14 +56,14 @@ func TestSeed_WeaponsAndItemsMatchSheetAndAreIdempotent(t *testing.T) {
 
 func TestSeed_InvalidCatalogsFailWithoutPartialRows(t *testing.T) {
 	tests := map[string]struct{ file, content, table string }{
-		"weapon missing damage": {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"},{"id":"b","name":"B"}]`, "weapons"},
-		"weapon bad kind":       {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"magic"}]`, "weapons"},
-		"item bad behaviour":    {"items.json", `[{"id":"a","name":"A","behaviour":"relic","count":1}]`, "items"},
-		"item old kind":         {"items.json", `[{"id":"a","name":"A","kind":"ammo","count":1}]`, "items"},
-		"item negative count":   {"items.json", `[{"id":"a","name":"A","behaviour":"stock","count":-1}]`, "items"},
-		"weapon duplicate id":   {"weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"},{"id":"a","name":"B","damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`, "weapons"},
-		"item duplicate id":     {"items.json", `[{"id":"a","name":"A","behaviour":"stock","count":1},{"id":"a","name":"B","behaviour":"stock","count":1}]`, "items"},
-		"item count over max":   {"items.json", `[{"id":"a","name":"A","behaviour":"daily","count":5,"max_count":3}]`, "items"},
+		"weapon missing damage": {"weapons.json", `[{"id":"a","name":{"en":"A"},"damage_sm":"1d4","damage_l":"1d4","kind":"melee"},{"id":"b","name":{"en":"B"}}]`, "weapons"},
+		"weapon bad kind":       {"weapons.json", `[{"id":"a","name":{"en":"A"},"damage_sm":"1d4","damage_l":"1d4","kind":"magic"}]`, "weapons"},
+		"item bad behaviour":    {"items.json", `[{"id":"a","name":{"en":"A"},"behaviour":"relic","count":1}]`, "items"},
+		"item old kind":         {"items.json", `[{"id":"a","name":{"en":"A"},"kind":"ammo","count":1}]`, "items"},
+		"item negative count":   {"items.json", `[{"id":"a","name":{"en":"A"},"behaviour":"stock","count":-1}]`, "items"},
+		"weapon duplicate id":   {"weapons.json", `[{"id":"a","name":{"en":"A"},"damage_sm":"1d4","damage_l":"1d4","kind":"melee"},{"id":"a","name":{"en":"B"},"damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`, "weapons"},
+		"item duplicate id":     {"items.json", `[{"id":"a","name":{"en":"A"},"behaviour":"stock","count":1},{"id":"a","name":{"en":"B"},"behaviour":"stock","count":1}]`, "items"},
+		"item count over max":   {"items.json", `[{"id":"a","name":{"en":"A"},"behaviour":"daily","count":5,"max_count":3}]`, "items"},
 		"invalid json":          {"items.json", `{nope`, "items"},
 	}
 	for name, tt := range tests {
@@ -81,9 +81,9 @@ func TestSeed_MissingCatalogFileIsAStartupError(t *testing.T) {
 	for _, missing := range []string{"weapons.json", "items.json"} {
 		t.Run(missing, func(t *testing.T) {
 			dir := t.TempDir()
-			present, content := "items.json", `[{"id":"a","name":"A","behaviour":"stock","count":1}]`
+			present, content := "items.json", `[{"id":"a","name":{"en":"A"},"behaviour":"stock","count":1}]`
 			if missing == "items.json" {
-				present, content = "weapons.json", `[{"id":"a","name":"A","damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`
+				present, content = "weapons.json", `[{"id":"a","name":{"en":"A"},"damage_sm":"1d4","damage_l":"1d4","kind":"melee"}]`
 			}
 			require.NoError(t, os.WriteFile(filepath.Join(dir, present), []byte(content), 0o600))
 			err := openMigrated(t).Seed(context.Background(), dir)

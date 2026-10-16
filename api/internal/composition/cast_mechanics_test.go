@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -88,7 +89,7 @@ func TestGrantedSlots_PrepareKeepsExtrasLongRestRemovesThem(t *testing.T) {
 func TestConsumedItem_VoidRestoresTheItem(t *testing.T) {
 	bs := bootMaxDice(t)
 	ctx := context.Background()
-	item, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Diamond", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 3})
+	item, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: localized.Of("Diamond"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 3})
 	require.NoError(t, err)
 	_, err = bs.Prep.Prepare(ctx, bs.CharacterID, []string{"chromatic_orb"})
 	require.NoError(t, err)

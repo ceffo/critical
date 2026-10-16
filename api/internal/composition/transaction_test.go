@@ -17,6 +17,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -79,6 +80,12 @@ func dumpRows(t *testing.T, db *sql.DB, table string) []string {
 			if b, ok := v.([]byte); ok {
 				vals[i] = string(b)
 			}
+			// An item's or weapon's name is a localized_texts key that a
+			// restore may renew (a removed item comes back under a new key,
+			// ADR 0023 step 11): the state holds the name's rows, not the key.
+			if cols[i] == "name" && (table == "items" || table == "weapons") {
+				vals[i] = textRows(t, db, v)
+			}
 		}
 		raw, err := json.Marshal(vals)
 		require.NoError(t, err)
@@ -88,6 +95,23 @@ func dumpRows(t *testing.T, db *sql.DB, table string) []string {
 	// A restored row (a deleted item put back) may land at another rowid:
 	// compare contents, not physical order.
 	slices.Sort(out)
+	return out
+}
+
+// textRows are the localized_texts rows under key, as "lang=body" in
+// language order; none for a key without a row.
+func textRows(t *testing.T, db *sql.DB, key any) []string {
+	t.Helper()
+	rows, err := db.Query(`SELECT lang || '=' || body FROM localized_texts WHERE text_id = ? ORDER BY lang`, key)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	out := []string{}
+	for rows.Next() {
+		var s string
+		require.NoError(t, rows.Scan(&s))
+		out = append(out, s)
+	}
+	require.NoError(t, rows.Err())
 	return out
 }
 
@@ -285,7 +309,7 @@ func stackMutations() []mutation {
 			return err
 		}},
 		{name: "item create", run: func(ctx context.Context, bs *composition.BackingServices) error {
-			_, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Rope", Behaviour: itemsvc.BehaviourStock, Count: 1})
+			_, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: localized.Of("Rope"), Behaviour: itemsvc.BehaviourStock, Count: 1})
 			return err
 		}},
 		{name: "item edit", run: func(ctx context.Context, bs *composition.BackingServices) error {
@@ -297,7 +321,7 @@ func stackMutations() []mutation {
 			return err
 		}},
 		{name: "weapon create", run: func(ctx context.Context, bs *composition.BackingServices) error {
-			_, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8", Kind: "missile", TwoHanded: true, AmmoKind: "arrow"})
+			_, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", Kind: "missile", TwoHanded: true, AmmoKind: "arrow"})
 			return err
 		}},
 		{name: "weapon edit", run: func(ctx context.Context, bs *composition.BackingServices) error {

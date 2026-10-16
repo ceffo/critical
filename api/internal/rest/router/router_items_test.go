@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
@@ -17,12 +18,12 @@ import (
 func TestItems_ListWireShape(t *testing.T) {
 	h, m := newRouter(t)
 	m.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{
-		ID: "arrows_plus1", Position: 0, Name: "Arrows +1", Type: "arrow", Behaviour: itemsvc.BehaviourStock,
+		ID: "arrows_plus1", Position: 0, Name: localized.Of("Arrows +1"), Type: "arrow", Behaviour: itemsvc.BehaviourStock,
 		MagicBonus: 1, AmmoKind: "arrow", Count: 18, MaxCount: 18,
 	}}, nil)
 	rec := do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `[{"id":"arrows_plus1","name":"Arrows +1","type":"arrow","behaviour":"stock","magicalBonus":1,
+	assert.JSONEq(t, `[{"id":"arrows_plus1","name":{"en":"Arrows +1"},"type":"arrow","behaviour":"stock","magicalBonus":1,
 		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":"","powers":[]}]`, rec.Body.String())
 }
 
@@ -76,17 +77,17 @@ func TestItems_Restock(t *testing.T) {
 	}
 }
 
-const wandJSON = `{"id":"w","name":"Wand","type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
+const wandJSON = `{"id":"w","name":{"en":"Wand"},"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
 	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[]}`
 
-var wandItem = itemsvc.Item{ID: "w", Name: "Wand", Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4}
+var wandItem = itemsvc.Item{ID: "w", Name: localized.Of("Wand"), Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4}
 
 func TestItems_Create(t *testing.T) {
 	h, m := newRouter(t)
 	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{
-		Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
+		Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
 	}).Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 12}, nil)
-	rec := do(h, "POST", "/api/items", `{"name":"Arrows +3","type":"arrow","behaviour":"stock","count":6,"magicalBonus":3,"ammoKind":"arrow"}`)
+	rec := do(h, "POST", "/api/items", `{"name":{"en":"Arrows +3"},"type":"arrow","behaviour":"stock","count":6,"magicalBonus":3,"ammoKind":"arrow"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"item":`+wandJSON+`,"logEntryId":12}`, rec.Body.String())
 }
@@ -96,7 +97,7 @@ func TestItems_CreateInvalidNamesTheField(t *testing.T) {
 	h, m := newRouter(t)
 	m.items.EXPECT().Create(mock.Anything, int64(1), mock.Anything).
 		Return(nil, fmt.Errorf("wrapped: %w", &domain.FieldError{Field: "effectDice", Message: "Effect dice must look like 2d6 or 1d8+2"}))
-	rec := do(h, "POST", "/api/items", `{"name":"X","behaviour":"stock","effectDice":"2x6"}`)
+	rec := do(h, "POST", "/api/items", `{"name":{"en":"X"},"behaviour":"stock","effectDice":"2x6"}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.JSONEq(t, `{"error":"Effect dice must look like 2d6 or 1d8+2","field":"effectDice","code":"invalid_input"}`, rec.Body.String())
 }
@@ -123,20 +124,20 @@ func TestItems_PowersInABodyAreIgnored(t *testing.T) {
 	rec := do(h, "PATCH", "/api/items/w", `{"count":3,"powers":[{"id":"x","effects":{"weapon_buff":9}}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{Name: "Gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1}).
+	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1}).
 		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 14}, nil)
-	rec = do(h, "POST", "/api/items", `{"name":"Gem","behaviour":"daily","count":1,"maxCount":1,"powers":[{"id":"x"}]}`)
+	rec = do(h, "POST", "/api/items", `{"name":{"en":"Gem"},"behaviour":"daily","count":1,"maxCount":1,"powers":[{"id":"x"}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	m.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{
-		ID: "power_gem_dispel", Name: "Power Gem", Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1,
+		ID: "power_gem_dispel", Name: localized.Of("Power Gem"), Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1,
 		Powers: []itemsvc.Power{{ID: "thunder_hammer", MinStr: new(18), Effects: buffsvc.BuffEffects{
 			WeaponBuff: new(5), Multiplier: new(2.0), WeaponKind: buffsvc.WeaponMelee,
 		}}},
 	}}, nil)
 	rec = do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":"Power Gem","type":"gem","behaviour":"daily","magicalBonus":0,
+	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"type":"gem","behaviour":"daily","magicalBonus":0,
 		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}]}]`,
 		rec.Body.String())
@@ -161,4 +162,21 @@ func TestItems_EditErrors(t *testing.T) {
 	m.items.EXPECT().Delete(mock.Anything, int64(1), "x").Return(nil, fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
 	assert.Equal(t, http.StatusNotFound, do(h, "PATCH", "/api/items/x", `{"count":1}`).Code)
 	assert.Equal(t, http.StatusNotFound, do(h, "DELETE", "/api/items/x", "").Code)
+}
+
+// ADR 0023 steps 9 and 11: an item's name is served as a language map, and
+// the editor's name is a language map passed on as sent (the service keeps
+// the languages it does not hold); a plain string is refused.
+func TestItems_Step9_NameIsALanguageMap(t *testing.T) {
+	h, m := newRouter(t)
+	both := wandItem
+	both.Name = localized.Text{"en": "Wand", "fr": "Baguette"}
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Name: localized.Text{"fr": "Baguette"}}).
+		Return(&itemsvc.ChangeResult{Item: both, LogEntryID: 13}, nil)
+	rec := do(h, "PATCH", "/api/items/w", `{"name":{"fr":"Baguette"}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"name":{"en":"Wand","fr":"Baguette"}`)
+
+	rec = do(h, "PATCH", "/api/items/w", `{"name":"Baguette"}`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }

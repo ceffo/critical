@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
@@ -59,15 +60,16 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 
 // WeaponDTO is the wire shape of a weapon catalog entry.
 type WeaponDTO struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	DamageSM    string `json:"damage_sm"`
-	DamageL     string `json:"damage_l"`
-	MagicToHit  int    `json:"magic_to_hit"`
-	MagicDamage int    `json:"magic_damage"`
-	Kind        string `json:"kind"`
-	TwoHanded   bool   `json:"two_handed"`
-	AmmoKind    string `json:"ammo_kind"`
+	ID string `json:"id"`
+	// Name is a language map (ADR 0023 step 9).
+	Name        localized.Text `json:"name"`
+	DamageSM    string         `json:"damage_sm"`
+	DamageL     string         `json:"damage_l"`
+	MagicToHit  int            `json:"magic_to_hit"`
+	MagicDamage int            `json:"magic_damage"`
+	Kind        string         `json:"kind"`
+	TwoHanded   bool           `json:"two_handed"`
+	AmmoKind    string         `json:"ammo_kind"`
 }
 
 // ListWeapons returns the weapons catalog.

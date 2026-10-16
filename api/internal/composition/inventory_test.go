@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
@@ -172,7 +173,7 @@ func TestInventory_AddItemAppearsAndPopRemovesIt(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
 	res, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{
-		Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
+		Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "arrows_3", res.Item.ID, "a second Arrows +3: the seeded id is arrows_plus3")
@@ -194,7 +195,7 @@ func TestInventory_AddItemAppearsAndPopRemovesIt(t *testing.T) {
 func TestInventory_AddThenPopDeletesTheItem(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
-	res, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Rope", Behaviour: itemsvc.BehaviourStock, Count: 1})
+	res, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: localized.Of("Rope"), Behaviour: itemsvc.BehaviourStock, Count: 1})
 	require.NoError(t, err)
 	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
@@ -221,11 +222,11 @@ func TestInventory_EditAllFieldsAndPopRestoresThem(t *testing.T) {
 	ctx := context.Background()
 	orig := listed(t, bs)["wand_lightning"]
 	res, err := bs.Items.Update(ctx, bs.CharacterID, "wand_lightning", itemsvc.ItemPatch{
-		Name: ptr("Staff"), Type: ptr("staff"), Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(2), Count: ptr(2),
+		Name: localized.Text{"en": "Staff"}, Type: ptr("staff"), Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(2), Count: ptr(2),
 		MagicBonus: ptr(1), AmmoKind: ptr("bolt"), EffectDice: ptr("1d4+1"), EffectSave: ptr("spell"), Notes: ptr("hum"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "Staff", listed(t, bs)["wand_lightning"].Name)
+	assert.Equal(t, localized.Text{"en": "Staff", "fr": "Baguette de foudre"}, listed(t, bs)["wand_lightning"].Name, "the French name is kept")
 	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, listed(t, bs)["wand_lightning"])
@@ -253,7 +254,7 @@ func TestInventory_InvalidEditsLogNothing(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
 	before := logCount(t, bs)
-	_, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "", Behaviour: itemsvc.BehaviourStock})
+	_, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: localized.Of(""), Behaviour: itemsvc.BehaviourStock})
 	require.Error(t, err)
 	_, err = bs.Items.Update(ctx, bs.CharacterID, "wand_lightning", itemsvc.ItemPatch{Count: ptr(-2)})
 	require.Error(t, err)
@@ -279,7 +280,7 @@ func TestInventory_PopAddAfterItsUseWasPopped(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
 	add, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{
-		Name: "Arrows +4", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 3, MagicBonus: 4, AmmoKind: "arrow",
+		Name: localized.Of("Arrows +4"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 3, MagicBonus: 4, AmmoKind: "arrow",
 	})
 	require.NoError(t, err)
 	use, err := bs.Items.UseItem(ctx, bs.CharacterID, add.Item.ID)
@@ -339,7 +340,7 @@ func TestInventory_ChargesAtZeroRefused(t *testing.T) {
 	bs := newBacking(t)
 	ctx := context.Background()
 	before := logCount(t, bs)
-	_, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Rod", Behaviour: itemsvc.BehaviourCharges, Count: 0})
+	_, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: localized.Of("Rod"), Behaviour: itemsvc.BehaviourCharges, Count: 0})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "count", fe.Field)
@@ -358,7 +359,7 @@ func TestInventory_RemoveAddSameNamePopBoth(t *testing.T) {
 	order := itemIDs(t, bs)
 	rm, err := bs.Items.Delete(ctx, bs.CharacterID, "fire_flask")
 	require.NoError(t, err)
-	add, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: "Fire flasks", Type: "other", Behaviour: itemsvc.BehaviourStock, Count: 1})
+	add, err := bs.Items.Create(ctx, bs.CharacterID, itemsvc.ItemInput{Name: localized.Of("Fire flasks"), Type: "other", Behaviour: itemsvc.BehaviourStock, Count: 1})
 	require.NoError(t, err)
 	assert.Equal(t, "fire_flasks", add.Item.ID)
 	_, err = bs.Log.Undo(ctx, bs.CharacterID, add.LogEntryID)

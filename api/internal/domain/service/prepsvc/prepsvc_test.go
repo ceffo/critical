@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -169,11 +170,11 @@ func TestInfo_DamageAtTheCharacterLevel(t *testing.T) {
 func TestInfo_ServesTheItemsTheSpellCanSpend(t *testing.T) {
 	f := newFixture(t)
 	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{
-		{ID: "ruby", Name: "Ruby", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
-		{ID: "opal", Name: "Opal", Type: "Gem", Behaviour: itemsvc.BehaviourCharges, Count: 1},
-		{ID: "spent", Name: "Spent", Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 0},
-		{ID: "daily", Name: "Daily", Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 3},
-		{ID: "arrow", Name: "Arrow", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 20},
+		{ID: "ruby", Name: localized.Of("Ruby"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
+		{ID: "opal", Name: localized.Of("Opal"), Type: "Gem", Behaviour: itemsvc.BehaviourCharges, Count: 1},
+		{ID: "spent", Name: localized.Of("Spent"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 0},
+		{ID: "daily", Name: localized.Of("Daily"), Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 3},
+		{ID: "arrow", Name: localized.Of("Arrow"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 20},
 	}, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)

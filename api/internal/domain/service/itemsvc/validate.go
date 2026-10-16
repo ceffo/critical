@@ -46,7 +46,7 @@ func fieldErr(field, msg string) error { return &domain.FieldError{Field: field,
 // Validate checks a whole item as it would be stored, returning a
 // *domain.FieldError naming the first bad field (wire names).
 func (i Item) Validate() error {
-	if strings.TrimSpace(i.Name) == "" {
+	if len(i.Name.Trimmed()) == 0 {
 		return fieldErr("name", "Name is required")
 	}
 	if !i.Behaviour.Valid() {

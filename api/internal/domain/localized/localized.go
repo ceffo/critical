@@ -4,6 +4,14 @@
 // client picks its language, falling back to Fallback per field.
 package localized
 
+import (
+	"encoding/json"
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+)
+
 // Fallback is the language every text falls back to (ADR 0023 step 3): the
 // books' language, which every catalogue text has.
 const Fallback = "en"
@@ -37,4 +45,98 @@ func (t Text) Clean() Text {
 		out[lang] = body
 	}
 	return out
+}
+
+// Languages are the text's language codes in code order.
+func (t Text) Languages() []string {
+	out := make([]string, 0, len(t))
+	for lang, body := range t {
+		if body != "" {
+			out = append(out, lang)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// Any is the body to record when a text must be one string (a log payload, an
+// error message, an id slug): the fallback body, else the body of the first
+// language in code order (a name the player typed in another language), ""
+// for a text in none (ADR 0023 step 12).
+func (t Text) Any() string {
+	if b := t[Fallback]; b != "" {
+		return b
+	}
+	if langs := t.Languages(); len(langs) > 0 {
+		return t[langs[0]]
+	}
+	return ""
+}
+
+// Trimmed is the text with every body trimmed and the empty ones dropped.
+func (t Text) Trimmed() Text {
+	out := make(Text, len(t))
+	for lang, body := range t {
+		out[lang] = strings.TrimSpace(body)
+	}
+	return out.Clean()
+}
+
+// With is t edited by patch (ADR 0023 step 11): each language patch sends
+// takes its trimmed body, a blank body removes the language, and every other
+// language keeps its body.
+func (t Text) With(patch Text) Text {
+	out := make(Text, len(t)+len(patch))
+	for lang, body := range t {
+		out[lang] = body
+	}
+	for lang, body := range patch {
+		out[lang] = strings.TrimSpace(body)
+	}
+	return out.Clean()
+}
+
+// Equal reports whether both texts have the same body in every language.
+func (t Text) Equal(o Text) bool {
+	return maps.Equal(t.Clean(), o.Clean())
+}
+
+// Snap is a text inside a stored snapshot (an action-log state): the
+// language map, or the plain string of a snapshot written before the text
+// was localized (Plain), read as its fallback-language body. Restoring a
+// Plain one replaces that body only (ADR 0023 step 11).
+type Snap struct {
+	Text  Text
+	Plain bool
+}
+
+// MarshalJSON writes the language map.
+func (n Snap) MarshalJSON() ([]byte, error) { return json.Marshal(n.Text) }
+
+// UnmarshalJSON reads a language map or a plain string.
+func (n *Snap) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		*n = Snap{}
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		*n = Snap{Text: Of(s), Plain: true}
+		return nil
+	}
+	var t Text
+	if err := json.Unmarshal(b, &t); err != nil {
+		return fmt.Errorf("decode localized text: %w", err)
+	}
+	*n = Snap{Text: t}
+	return nil
+}
+
+// Restored is the text a snapshot puts back over cur: the whole snapshot
+// text, or for a Plain one cur with its fallback body replaced.
+func (n Snap) Restored(cur Text) Text {
+	if n.Plain {
+		return cur.With(n.Text)
+	}
+	return n.Text
 }

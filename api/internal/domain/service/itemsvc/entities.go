@@ -1,6 +1,10 @@
 package itemsvc
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/ceffo/critical/api/internal/domain/localized"
+)
 
 // Behaviour is how an item's count behaves at the table.
 // It is the only real difference between items: arrows, flasks, wands and
@@ -34,9 +38,10 @@ func (b Behaviour) RemovedAtZero() bool { return b == BehaviourCharges }
 // Item is a counted possession. Ammo is any item with an AmmoKind: a weapon
 // firing that kind spends it, and its MagicBonus adds to hit and damage.
 type Item struct {
-	ID        string
-	Position  int // list order, kept when a removed item is restored
-	Name      string
+	ID       string
+	Position int // list order, kept when a removed item is restored
+	// Name is a localized text (ADR 0023 step 9): a body per language.
+	Name      localized.Text
 	Type      string // free-text label: arrow, flask, wand, gem...
 	Behaviour Behaviour
 	// MagicBonus is the item's magical bonus (+N), to hit and damage when

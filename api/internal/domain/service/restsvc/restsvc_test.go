@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
@@ -63,8 +64,8 @@ func TestLongRest_ResetsBothInOneLoggedTransaction(t *testing.T) {
 	after := []spellsvc.SpellSlot{{Level: 1, SpellID: "sleep"}, {Level: 3, SpellID: "haste"}}
 	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(before, nil)
 	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(after, nil)
-	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: "Gem", Count: 0}, {ID: "arrows", Count: 9}}, nil)
-	f.items.EXPECT().ResetDaily(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: "Gem", Count: 1}, {ID: "arrows", Count: 9}}, nil)
+	f.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 0}, {ID: "arrows", Count: 9}}, nil)
+	f.items.EXPECT().ResetDaily(mock.Anything).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 1}, {ID: "arrows", Count: 9}}, nil)
 
 	got, err := f.svc.LongRest(context.Background(), 1)
 	require.NoError(t, err)

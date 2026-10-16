@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
@@ -24,7 +25,7 @@ var hammer = itemsvc.Power{
 
 // gem is the Power Gem as seeded: daily, 1 a day, with its hammer.
 var gem = itemsvc.Item{
-	ID: "power_gem_dispel", Position: 5, Name: "Power Gem", Type: "gem", Behaviour: itemsvc.BehaviourDaily,
+	ID: "power_gem_dispel", Position: 5, Name: localized.Of("Power Gem"), Type: "gem", Behaviour: itemsvc.BehaviourDaily,
 	Count: 1, MaxCount: 1, Notes: "Dispel Magic once a day", Powers: []itemsvc.Power{hammer},
 }
 
@@ -66,10 +67,10 @@ func TestItemPowers_Step9_CountDoesNotGateThePowers(t *testing.T) {
 	spent := gem
 	spent.Count = 0
 	ring := itemsvc.Item{
-		ID: "ring", Name: "Ring", Behaviour: itemsvc.BehaviourStock, Count: 1,
+		ID: "ring", Name: localized.Of("Ring"), Behaviour: itemsvc.BehaviourStock, Count: 1,
 		Powers: []itemsvc.Power{{ID: "luck", Effects: buffsvc.BuffEffects{ToHit: ptr(1)}}},
 	}
-	arrows := itemsvc.Item{ID: "arrows", Name: "Arrows", Behaviour: itemsvc.BehaviourStock, Count: 0}
+	arrows := itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, Count: 0}
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
 	dal.EXPECT().List(mock.Anything).Return([]itemsvc.Item{arrows, ring, spent}, nil)
@@ -119,18 +120,18 @@ func TestItemPowers_Step15_EditBodyCannotSetPowers(t *testing.T) {
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Get(mock.Anything, "power_gem_dispel").Return(gem, nil).Once()
 	renamed := gem
-	renamed.Name = "Gemme de puissance"
+	renamed.Name = localized.Text{"en": gem.Name["en"], "fr": "Gemme de puissance"}
 	dal.EXPECT().Update(mock.Anything, renamed).Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(4), nil).Once()
 
-	res, err := svc.Update(context.Background(), 1, "power_gem_dispel", itemsvc.ItemPatch{Name: ptr("Gemme de puissance")})
+	res, err := svc.Update(context.Background(), 1, "power_gem_dispel", itemsvc.ItemPatch{Name: localized.Text{"fr": "Gemme de puissance"}})
 	require.NoError(t, err)
 	assert.Equal(t, []itemsvc.Power{hammer}, res.Item.Powers)
 
 	dal.EXPECT().List(mock.Anything).Return(nil, nil).Once()
 	dal.EXPECT().Insert(mock.Anything, mock.MatchedBy(func(it itemsvc.Item) bool { return it.Powers == nil })).Return(nil).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(5), nil).Once()
-	created, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{Name: "Gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1})
+	created, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1})
 	require.NoError(t, err)
 	assert.Nil(t, created.Item.Powers)
 }
@@ -144,7 +145,7 @@ func TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers(t *testing.T) {
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
 	dal.EXPECT().Get(mock.Anything, "power_gem_dispel").Return(gem, nil).Once()
 	want := gem
-	want.Name, want.Notes = "Power Gem: Dispel Magic", "old"
+	want.Name, want.Notes = localized.Of("Power Gem: Dispel Magic"), "old"
 	dal.EXPECT().Update(mock.Anything, want).Return(nil).Once()
 	require.NoError(t, svc.Restorers()[itemsvc.StateKeyItems].Restore(context.Background(), 1, old))
 }

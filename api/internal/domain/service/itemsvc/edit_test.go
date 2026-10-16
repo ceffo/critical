@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 )
@@ -20,12 +21,12 @@ func ptr[T any](v T) *T { return &v }
 // Validation: every bad field is rejected with a *domain.FieldError naming
 // the wire field, before anything is stored or logged.
 func TestCreate_ValidationNamesTheField(t *testing.T) {
-	good := itemsvc.ItemInput{Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6}
+	good := itemsvc.ItemInput{Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6}
 	cases := map[string]struct {
 		mut   func(*itemsvc.ItemInput)
 		field string
 	}{
-		"empty name":          {func(i *itemsvc.ItemInput) { i.Name = "  " }, "name"},
+		"empty name":          {func(i *itemsvc.ItemInput) { i.Name = localized.Of("  ") }, "name"},
 		"unknown behaviour":   {func(i *itemsvc.ItemInput) { i.Behaviour = "x" }, "behaviour"},
 		"negative count":      {func(i *itemsvc.ItemInput) { i.Count = -1 }, "count"},
 		"huge count":          {func(i *itemsvc.ItemInput) { i.Count = itemsvc.MaxItemCount + 1 }, "count"},
@@ -76,7 +77,7 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 		{ID: "arrows_3", Position: 4}, {ID: "arrows_3_2", Position: 7},
 	}, nil)
 	want := itemsvc.Item{
-		ID: "arrows_3_3", Position: 8, Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock,
+		ID: "arrows_3_3", Position: 8, Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock,
 		MagicBonus: 3, AmmoKind: "arrow", Count: 6, MaxCount: 6,
 	}
 	dal.EXPECT().Insert(mock.Anything, want).Return(nil).Once()
@@ -85,7 +86,7 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 
 	// The id slug of "Arrows +3" is arrows_3; two of those exist already.
 	res, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{
-		Name: " Arrows +3 ", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
+		Name: localized.Of(" Arrows +3 "), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 6, MagicBonus: 3, AmmoKind: "arrow",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, &itemsvc.ChangeResult{Item: want, LogEntryID: 5}, res)
@@ -94,7 +95,7 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "items:arrows_3_3", got.Snapshots[0].Key)
 	assert.JSONEq(t, `[{"id":"arrows_3_3","count":0,"removed":true,"absent":true}]`, string(got.Snapshots[0].Before))
-	assert.JSONEq(t, `[{"id":"arrows_3_3","count":6,"replace":true,"item":{"position":8,"name":"Arrows +3","type":"arrow",
+	assert.JSONEq(t, `[{"id":"arrows_3_3","count":6,"replace":true,"item":{"position":8,"name":{"en":"Arrows +3"},"type":"arrow",
 		"behaviour":"stock","magicalBonus":3,"ammoKind":"arrow","maxCount":6,"effectDice":"","effectSave":"","notes":"","powers":[]}}]`, string(got.Snapshots[0].After))
 	var p map[string]any
 	require.NoError(t, json.Unmarshal(got.Payload, &p))
@@ -103,7 +104,7 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 }
 
 var wand4 = itemsvc.Item{
-	ID: "wand_lightning", Position: 4, Name: "Wand of lightning", Type: "wand", Behaviour: itemsvc.BehaviourCharges,
+	ID: "wand_lightning", Position: 4, Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges,
 	Count: 4, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand",
 }
 
@@ -126,7 +127,7 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 	assert.Equal(t, actionlog.KindItemEdit, got.Kind)
 	assert.Empty(t, got.Summary, "the UI words the change from its payload")
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
-	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Wand of lightning","type":"wand",
+	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
 		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`,
 		string(got.Snapshots[0].Before))
 	assert.Contains(t, string(got.Snapshots[0].After), `"count":3`)
@@ -135,7 +136,7 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 
 // A stock item turned daily keeps its count and takes the daily number sent with the change.
 func TestUpdate_StockToDailyKeepsCountAndTakesDailyNumber(t *testing.T) {
-	flask := itemsvc.Item{ID: "fire_flask", Position: 1, Name: "Fire flasks", Type: "flask", Behaviour: itemsvc.BehaviourStock, Count: 5, MaxCount: 1, EffectDice: "5d6"}
+	flask := itemsvc.Item{ID: "fire_flask", Position: 1, Name: localized.Of("Fire flasks"), Type: "flask", Behaviour: itemsvc.BehaviourStock, Count: 5, MaxCount: 1, EffectDice: "5d6"}
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
@@ -158,7 +159,7 @@ func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 		patch itemsvc.ItemPatch
 		field string
 	}{
-		"empty name":         {itemsvc.ItemPatch{Name: ptr("")}, "name"},
+		"empty name":         {itemsvc.ItemPatch{Name: localized.Text{"en": " "}}, "name"},
 		"negative count":     {itemsvc.ItemPatch{Count: ptr(-1)}, "count"},
 		"bad dice":           {itemsvc.ItemPatch{EffectDice: ptr("2x6")}, "effectDice"},
 		"daily 0":            {itemsvc.ItemPatch{Behaviour: ptr(itemsvc.BehaviourDaily), MaxCount: ptr(0)}, "maxCount"},
@@ -242,7 +243,7 @@ func TestUseItem_DiceWithModifier(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "x").Return(itemsvc.Item{ID: "x", Name: "X", Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil)
+	dal.EXPECT().Decrement(mock.Anything, "x").Return(itemsvc.Item{ID: "x", Name: localized.Of("X"), Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil)
 	f.dice.EXPECT().RollDie(8).Return(5).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 	res, err := svc.UseItem(context.Background(), 1, "x")

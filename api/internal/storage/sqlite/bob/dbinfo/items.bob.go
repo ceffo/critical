@@ -35,7 +35,7 @@ var Items = Table[
 		},
 		Name: column{
 			Name:      "name",
-			DBType:    "TEXT",
+			DBType:    "INTEGER",
 			Default:   "",
 			Comment:   "",
 			Nullable:  false,

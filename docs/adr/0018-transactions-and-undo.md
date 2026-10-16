@@ -49,8 +49,9 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    (the Next Round, not its initiative).
    Tests: `domain/service/actionlogsvc` `TestUndo_PopsTheWholeTransaction` ("newest first",
    "restorer fails mid-transaction: no void, no partial state", "stale expected top changes
-   nothing"); `adapters/actionlogdal` `TestUndo_RestorerFailsMidTransaction_RollsBackEverything`
-   (the rollback on SQLite); `composition` `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (every snapshot key has its
+   nothing"); `composition` `TestStorageOn_EveryAdapterRunsOnTheRoutedConnection` (every adapter
+   writes in the transaction the undo runs in; the rollback itself is the database's,
+   [ADR 0025](0025-postgresql-storage.md) step 7); `composition` `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (every snapshot key has its
    restorer); `domain/service/buffsvc` `TestInitiative_Step2_OwnEntryAfterTheAdvance` (Next Round and
    its initiative are one transaction);
    `web/src/lib/undoButton.test.ts` (the tooltip names the transaction, en/fr).
@@ -76,8 +77,8 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    transaction gives the HP back.
    Tests: `domain/service/actionlogsvc` `TestRecord_CapsHeal`, `TestRecord_FloorsDamage`,
    `TestRecord_HPDeltaOnAnyKind` (a heal capped and a damage
-   floored on an entry that is not an `hp_change`), `adapters/actionlogdal` `TestHPTotal` ("every
-   kind counts").
+   floored on an entry that is not an `hp_change`), `adapters/actionlogdal` `TestHPTotal` (the
+   sum over every kind is the `HPTotal` query's, [ADR 0025](0025-postgresql-storage.md) step 7).
 5. **Initiative reroll is its own transaction.** A reroll ([ADR 0013](0013-initiative.md) step 4)
    no longer voids the initiative it replaces: it records a new `initiative` entry, in its own
    transaction, whose `initiative` snapshot has the replaced roll as "before". It is allowed when
@@ -96,8 +97,9 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    Redo itself (replaying the newest popped transaction) is a later ADR. (*Amended by
    [ADR 0019](0019-redo.md):* redo replays it; a popped entry can be redone and popped again, each
    time with a new correction row.)
-   Tests: `adapters/actionlogdal` `TestPop_KeepsEntriesAndSnapshots` (after a pop the
-   transaction's entries, payloads and both snapshots read back unchanged, each voided).
+   Tests: `adapters/actionlogdal` `TestPop_KeepsEntriesAndSnapshots` (a pop inserts one void
+   correction and writes nothing else; the entry reads back with its payload and snapshots
+   unchanged, voided).
 7. **What joins the stack: gameplay state, not metadata.** Every mutation of state that affects
    gameplay is a transaction (step 1) and is popped by the journal's Undo (step 3); player
    metadata and preferences are not. User, 2026-10-15: *"editing player metadata is not in the

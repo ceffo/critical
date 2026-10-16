@@ -333,6 +333,12 @@ export function areaText(
       }
       return parts.length ? parts.join(", ") : null;
     }
+    case "alternatives": {
+      // "1 créature ou 1 objet": every reading worded, or the book's text.
+      const alts = (s.alternatives ?? []).map((a) => areaText(loc, a));
+      if (alts.length < 2 || alts.some((x) => x === null)) return null;
+      return alts.join(loc.t("lookup.stat.or"));
+    }
     default:
       // The caster, a creature touched...: the kind drops what the book says ("the caster's
       // hand"), so only a text the language lists is worded; the rest is the book's.

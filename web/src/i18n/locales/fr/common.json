@@ -489,6 +489,8 @@
       "day_other": "jours",
       "week_one": "semaine",
       "week_other": "semaines",
+      "usage_one": "utilisation",
+      "usage_other": "utilisations",
       "year_one": "an",
       "year_other": "ans",
       "inch_one": "pouce",
@@ -596,7 +598,23 @@
       "victim_one": "victime",
       "victim_other": "victimes",
       "missile_one": "projectile",
-      "missile_other": "projectiles"
+      "missile_other": "projectiles",
+      "doorway_one": "embrasure",
+      "doorway_other": "embrasures",
+      "body_one": "corps",
+      "body_other": "corps",
+      "skeleton_one": "squelette",
+      "skeleton_other": "squelettes",
+      "log_one": "rondin",
+      "log_other": "rondins",
+      "plank_one": "planche",
+      "plank_other": "planches",
+      "human_one": "humain",
+      "human_other": "humains",
+      "demihuman_one": "demi-humain",
+      "demihuman_other": "demi-humains",
+      "mammal_one": "mammifère",
+      "mammal_other": "mammifères"
     },
     "shapes": {
       "radius": "rayon",
@@ -611,7 +629,8 @@
       "spray": "gerbe",
       "hemisphere": "hémisphère",
       "volume": "volume",
-      "wall": "mur"
+      "wall": "mur",
+      "circle": "cercle"
     },
     "conditions": {
       "dispelled": "dissipation",

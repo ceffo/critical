@@ -35,3 +35,34 @@ export async function expectNoClippedText(region: Locator, what: string) {
   const clipped = await region.evaluate(clippedText);
   expect(clipped, `cut text in ${what}`).toEqual([]);
 }
+
+/**
+ * Words split across two lines (ADR 0022 step 1: a word broken mid-word is cut too, e.g. by
+ * `overflow-wrap: anywhere` or `word-break: break-all` in a box too narrow for it). Every word of
+ * every visible text node under `root` must lie on one line.
+ */
+export function brokenWords(root: Element): string[] {
+  const broken: string[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const text = n.textContent ?? "";
+    for (const m of text.matchAll(/\S+/g)) {
+      const range = document.createRange();
+      range.setStart(n, m.index);
+      range.setEnd(n, m.index + m[0].length);
+      const tops = new Set(
+        [...range.getClientRects()]
+          .filter((r) => r.width > 0)
+          .map((r) => Math.round(r.top)),
+      );
+      if (tops.size > 1) broken.push(m[0]);
+    }
+  }
+  return broken;
+}
+
+/** Fails, listing them, when a word inside `region` is split across lines. */
+export async function expectWholeWords(region: Locator, what: string) {
+  const broken = await region.evaluate(brokenWords);
+  expect(broken, `words broken mid-word in ${what}`).toEqual([]);
+}

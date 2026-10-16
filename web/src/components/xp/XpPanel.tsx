@@ -41,9 +41,12 @@ function useFormats() {
 }
 
 /**
- * Expérience workspace (ADR 0015): the total and the progress towards the next level, a form to
- * add XP with the +10% bonus (default from the server's eligibility, total previewed by the
- * server) and the ledger with in-row edit and delete. Every number is the server's.
+ * Experience activity (ADR 0015; layout ADR 0022 step 2.5): one card with the progress (the total,
+ * the bar towards the next level, the level cells) beside the Add XP form (24rem, 24 px between the
+ * two text columns, step 3.2), the +10% bonus defaulting to the server's eligibility and the total
+ * previewed by the server; the ledger card below takes the rest of the height and scrolls on its
+ * own, with in-row edit and delete. Every number is the server's. No text is cut (step 1): reasons
+ * wrap.
  */
 export function XpPanel() {
   const { t } = useTranslation();
@@ -59,14 +62,19 @@ export function XpPanel() {
     );
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <ProgressCard ledger={ledger} />
-      <AddForm bonusDefault={ledger.bonusEligible} />
+      <div
+        className="zone-card grid shrink-0 grid-cols-[minmax(0,1fr)_24rem] gap-6 px-4 py-3.5"
+        data-testid="xp-top"
+      >
+        <Progress ledger={ledger} />
+        <AddForm bonusDefault={ledger.bonusEligible} />
+      </div>
       <Ledger ledger={ledger} />
     </div>
   );
 }
 
-function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
+function Progress({ ledger: l }: { ledger: XpLedger }) {
   const { t } = useTranslation();
   const f = useFormats();
   const headline =
@@ -78,28 +86,27 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
   return (
     <section
       aria-label={t("xp.progressTitle")}
-      className="flex shrink-0 flex-col gap-3 rounded-xl bg-card p-3"
+      className="flex min-w-0 flex-col gap-3"
     >
-      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-body text-muted-foreground">
-            {t("xp.heading", { level: l.level })}
-          </span>
+      <div className="flex flex-col gap-1">
+        <h2 className="section-label">{t("xp.heading", { level: l.level })}</h2>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span className="flex items-baseline gap-2 tabular-nums">
-            <span className="text-headline" data-testid="xp-total">
+            {/* The number the zone is about: the one hero size (ADR 0022 step 3.4). */}
+            <span className="text-hero" data-testid="xp-total">
               {f.n(l.total)}
             </span>
             <span className="text-body text-muted-foreground">
               {t("xp.unit")}
             </span>
           </span>
+          <span
+            className="text-body font-medium text-highlight tabular-nums"
+            data-testid="xp-to-next"
+          >
+            {headline}
+          </span>
         </div>
-        <span
-          className="text-body font-medium text-highlight tabular-nums"
-          data-testid="xp-to-next"
-        >
-          {headline}
-        </span>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -135,10 +142,7 @@ function ProgressCard({ ledger: l }: { ledger: XpLedger }) {
 
       <ol
         aria-label={t("xp.levels")}
-        className="grid gap-2"
-        style={{
-          gridTemplateColumns: `repeat(${Math.max(1, l.levels.length)}, minmax(0, 1fr))`,
-        }}
+        className="grid grid-cols-[repeat(auto-fit,minmax(3.5rem,1fr))] gap-2"
       >
         {l.levels.map((c) => (
           <LevelCell key={c.level} cell={c} />
@@ -156,7 +160,7 @@ function LevelCell({ cell: c }: { cell: XpLevel }) {
       title={t("xp.levelTitle", { level: c.level, xp: f.n(c.threshold) })}
       data-status={c.status}
       className={cn(
-        "flex min-w-0 flex-col items-center rounded-md py-1.5 leading-tight tabular-nums",
+        "flex flex-col items-center rounded-md px-1 py-1.5 leading-tight tabular-nums",
         c.status === "current" && "bg-amb-900 ring-1 ring-amb-600 ring-inset",
         c.status === "next" && "bg-neu-900 ring-1 ring-neu-600 ring-inset",
         c.status === "past" && "bg-neu-900/60 text-muted-foreground",
@@ -164,7 +168,7 @@ function LevelCell({ cell: c }: { cell: XpLevel }) {
       )}
     >
       <span className="text-body font-semibold">{c.level}</span>
-      <span className="max-w-full truncate text-label text-muted-foreground">
+      <span className="text-label whitespace-nowrap text-muted-foreground">
         {f.compact(c.threshold)}
       </span>
     </li>
@@ -219,11 +223,13 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
   return (
     <section
       aria-label={t("xp.add.title")}
-      className="flex shrink-0 flex-col gap-2 rounded-xl bg-card p-3"
+      className="flex min-w-0 flex-col gap-2"
     >
-      <h2 className="text-title">{t("xp.add.title")}</h2>
-      <div className="flex flex-wrap items-start gap-2">
-        <label className="flex w-28 min-w-0 flex-col gap-1">
+      <h2 className="section-label">{t("xp.add.title")}</h2>
+      {/* Amount and reason on one line, the reason taking the rest so its placeholder shows in
+          full; session, the bonus and Add on the next. */}
+      <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-2">
+        <label className="flex min-w-0 flex-col gap-1">
           <input
             className={cn(fieldClass, "h-7 tabular-nums")}
             inputMode="numeric"
@@ -236,7 +242,7 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           />
           <FieldMessage error={error} field="base" />
         </label>
-        <label className="flex min-w-48 flex-1 flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <input
             className={cn(fieldClass, "h-7")}
             aria-label={t("xp.add.reason")}
@@ -247,7 +253,9 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           />
           <FieldMessage error={error} field="reason" />
         </label>
-        <label className="flex w-28 min-w-0 flex-col gap-1">
+      </div>
+      <div className="flex flex-wrap items-start gap-2">
+        <label className="flex w-24 min-w-0 flex-col gap-1">
           <input
             className={cn(fieldClass, "h-7")}
             aria-label={t("xp.add.session")}
@@ -259,7 +267,7 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           <FieldMessage error={error} field="session" />
         </label>
         <label
-          className="flex h-7 cursor-pointer items-center gap-2 text-body whitespace-nowrap"
+          className="flex h-7 cursor-pointer items-center gap-2 text-body"
           title={t("xp.bonusHint")}
         >
           <input
@@ -284,6 +292,8 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           </span>
         </Button>
       </div>
+      {/* The bonus rule in full, without a hover (ADR 0022 step 1.2). */}
+      <p className="text-body text-muted-foreground">{t("xp.bonusHint")}</p>
     </section>
   );
 }
@@ -292,31 +302,27 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState<number | null>(null);
   const cols =
-    "grid grid-cols-[minmax(0,1fr)_5.5rem_4rem_6rem_4.5rem] items-center gap-2";
+    "grid grid-cols-[minmax(0,1fr)_5.5rem_4.5rem_6rem_4.5rem] items-center gap-2";
   return (
     <section
       aria-label={t("xp.ledger.title")}
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card"
+      className="zone-card flex min-h-0 flex-1 flex-col gap-2 py-3.5"
     >
-      <div className="flex shrink-0 items-center justify-between bg-neu-900/50 px-3 py-2.5">
-        <h2 className="text-title">{t("xp.ledger.title")}</h2>
-        <span className="text-label text-muted-foreground tabular-nums">
+      <div className="flex shrink-0 items-baseline justify-between gap-3 px-4">
+        <h2 className="section-label">{t("xp.ledger.title")}</h2>
+        <span className="text-body text-muted-foreground tabular-nums">
           {t("xp.ledger.count", { count: ledger.entries.length })}
         </span>
       </div>
-      <div
-        className={cn(
-          cols,
-          "shrink-0 px-3 pt-2 pb-1 text-label text-muted-foreground",
-        )}
-      >
+      {/* Column headers are section labels (ADR 0022 step 4.2). */}
+      <div className={cn(cols, "section-label shrink-0 px-4")}>
         <span>{t("xp.ledger.reason")}</span>
         <span className="text-right">{t("xp.ledger.base")}</span>
         <span className="text-right">{t("xp.ledger.bonus")}</span>
         <span className="text-right">{t("xp.ledger.total")}</span>
         <span />
       </div>
-      <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+      <ul className="min-h-0 flex-1 overflow-y-auto px-2">
         {ledger.entries.length === 0 && (
           <li className="px-2 py-2 text-body text-muted-foreground">
             {t("xp.ledger.none")}
@@ -371,15 +377,14 @@ function Row({
       data-testid="xp-row"
       className={cn(
         cols,
-        "rounded-md px-2 py-1.5 text-body tabular-nums",
+        "min-h-9 rounded-md px-2 py-1.5 text-body tabular-nums",
         fresh && "bg-amb-900/50",
       )}
     >
-      <span className="flex min-w-0 flex-col">
-        <span className="truncate">{reason}</span>
-        <span className="truncate text-label text-muted-foreground">
-          {meta}
-        </span>
+      {/* The reason wraps between words, never cut (ADR 0022 step 1). */}
+      <span className="flex min-w-0 flex-col break-words">
+        <span>{reason}</span>
+        <span className="text-label text-muted-foreground">{meta}</span>
       </span>
       <span className="text-right">{f.n(e.base)}</span>
       <span
@@ -566,7 +571,7 @@ function OpeningRow({ opening, cols }: { opening: number; cols: string }) {
       )}
       data-testid="xp-opening"
     >
-      <span className="col-span-3 truncate">{t("xp.ledger.opening")}</span>
+      <span className="col-span-3">{t("xp.ledger.opening")}</span>
       <span className="text-right">{f.n(opening)}</span>
       <span />
     </li>

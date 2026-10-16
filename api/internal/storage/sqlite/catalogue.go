@@ -29,14 +29,23 @@ import (
 //     longer holds are deleted, unless something refers to them, which rolls
 //     the import back.
 //   - 5.5: format and version are recorded in the same transaction.
-//   - 5.6: the typed stats are parsed from the six raw texts on upsert.
+//   - 5.6: the typed stats are parsed from the six raw texts on upsert, and
+//     on every start (retypeStats): a parser change re-types the stored
+//     stats without a new artifact version or a migration.
 func (d *DB) ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error {
 	same, err := sameVersion(ctx, d, cat)
-	if err != nil || same {
+	if err != nil {
 		return err
+	}
+	if same {
+		return d.retypeStats(ctx)
 	}
 	return d.WrapTx(ctx, func(q Querier) error {
 		if same, err := sameVersion(ctx, q, cat); err != nil || same {
+			return err
+		}
+		recorded, err := recordedCatalogue(ctx, q)
+		if err != nil {
 			return err
 		}
 		if err := backfillKeys(ctx, q, cat); err != nil {
@@ -45,7 +54,7 @@ func (d *DB) ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedR
 		if err := upsertSpells(ctx, q, cat); err != nil {
 			return err
 		}
-		if err := deleteRemoved(ctx, q, cat, seedRefs); err != nil {
+		if err := deleteRemoved(ctx, q, cat, seedRefs, recorded); err != nil {
 			return err
 		}
 		if _, err := q.ExecContext(ctx, `
@@ -323,7 +332,9 @@ func (w *textWriter) write(ctx context.Context, q Querier, prev sql.NullInt64, t
 // deleteRemoved is step 5.4.3: a keyed spell the artifact no longer holds is
 // deleted when nothing refers to it. Any reference fails the import with
 // every such key and where it is used.
-func deleteRemoved(ctx context.Context, q Querier, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error {
+// recorded names the catalogue the database was built from (recordedCatalogue,
+// read before this import keyed anything).
+func deleteRemoved(ctx context.Context, q Querier, cat catalogue.Catalogue, seedRefs []catalogue.Ref, recorded string) error {
 	removed, err := removedKeys(ctx, q, cat)
 	if err != nil || len(removed) == 0 {
 		return err
@@ -348,10 +359,6 @@ func deleteRemoved(ctx context.Context, q Querier, cat catalogue.Catalogue, seed
 		for i, k := range keys {
 			list[i] = k + " (" + strings.Join(uses[k], ", ") + ")"
 		}
-		recorded, err := recordedCatalogue(ctx, q)
-		if err != nil {
-			return err
-		}
 		return fmt.Errorf("spell catalogue: the artifact (version %s) removes spells that are still referenced, refusing to import: %s. "+
 			"This database was built from %s: start it with that catalogue (the real one is fetched by `just catalogue` "+
 			"to .catalogue/catalogue.json, the default CRITICAL_CATALOGUE), or start this catalogue on a database of its own",
@@ -373,17 +380,88 @@ func deleteRemoved(ctx context.Context, q Querier, cat catalogue.Catalogue, seed
 
 // recordedCatalogue names the catalogue the database was last imported from,
 // for the refusal message of deleteRemoved: a database used with the real
-// catalogue started on the fixture (or the reverse) is refused there.
+// catalogue started on the fixture (or the reverse) is refused there. It is
+// read before the import keys anything. Without a recorded version, keyed
+// spells mean an earlier import whose record was forgotten (migration 030
+// forgot it to re-type the stats); no keyed spell means the spell seeds
+// that predate the catalogue artifact.
 func recordedCatalogue(ctx context.Context, q Querier) (string, error) {
 	var version string
 	err := q.QueryRowContext(ctx, `SELECT version FROM catalogue_meta WHERE id = 1`).Scan(&version)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "the spell seeds that predate the catalogue artifact (the real catalogue's spells)", nil
+	if err == nil {
+		return "catalogue version " + version, nil
 	}
-	if err != nil {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("read catalogue version: %w", err)
 	}
-	return "catalogue version " + version, nil
+	var keyed int
+	if err := q.QueryRowContext(ctx, `SELECT COUNT(*) FROM spells WHERE key IS NOT NULL`).Scan(&keyed); err != nil {
+		return "", fmt.Errorf("count keyed spells: %w", err)
+	}
+	if keyed > 0 {
+		return "an earlier spell catalogue, which holds the spells listed, whose version is not recorded " +
+			"(migration 030 forgot it)", nil
+	}
+	return "the spell seeds that predate the catalogue artifact (the real catalogue's spells)", nil
+}
+
+// retypeStats is step 5.6 on a start that imports nothing (5.3): every
+// spell's typed stats are parsed again from its stored fallback-language
+// stat texts, and a row is written only when they differ from the stored
+// ones, so a parser change re-types the database at its next start and an
+// unchanged parser writes nothing.
+func (d *DB) retypeStats(ctx context.Context) error {
+	cols := []string{"casting_time", "range", "duration", "area_of_effect", "components", "saving_throw"}
+	sel := make([]string, len(cols))
+	args := make([]any, len(cols))
+	for i, c := range cols {
+		sel[i] = `COALESCE((SELECT body FROM localized_texts WHERE text_id = s.` + c + ` AND lang = ?), '')`
+		args[i] = localized.Fallback
+	}
+	rows, err := d.QueryContext(ctx, `SELECT s.id, COALESCE(s.stats, ''), `+strings.Join(sel, ", ")+` FROM spells s`, args...)
+	if err != nil {
+		return fmt.Errorf("read spell stats: %w", err)
+	}
+	type retyped struct {
+		id    int64
+		stats string
+	}
+	var changed []retyped
+	for rows.Next() {
+		var id int64
+		var stored string
+		var r [6]string
+		if err := rows.Scan(&id, &stored, &r[0], &r[1], &r[2], &r[3], &r[4], &r[5]); err != nil {
+			_ = rows.Close()
+			return fmt.Errorf("scan spell stats: %w", err)
+		}
+		stats, err := spellStatsJSON(r[0], r[1], r[2], r[3], r[4], r[5])
+		if err != nil {
+			_ = rows.Close()
+			return fmt.Errorf("spell %d: %w", id, err)
+		}
+		if stats != stored {
+			changed = append(changed, retyped{id, stats})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if len(changed) == 0 {
+		return nil
+	}
+	return d.WrapTx(ctx, func(q Querier) error {
+		for _, c := range changed {
+			if _, err := q.ExecContext(ctx, `UPDATE spells SET stats = ? WHERE id = ?`, c.stats, c.id); err != nil {
+				return fmt.Errorf("re-type spell %d: %w", c.id, err)
+			}
+		}
+		return nil
+	})
 }
 
 func removedKeys(ctx context.Context, q Querier, cat catalogue.Catalogue) (map[string]bool, error) {

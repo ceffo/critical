@@ -126,6 +126,30 @@ $fly volumes destroy <old volume id> -a critical-prod  # only after checking the
 
 Keep the snapshot's data private: it holds catalogue rows (ADR 0024 step 7).
 
+## Seed production with the SQLite data (once, user)
+
+Production starts with the data of the developer's SQLite `.dev/critical.db`, copied by the SQLite copy
+tool ([ADR 0025](adr/0025-postgresql-storage.md) step 9, `docs/backend.md` "Moving a SQLite database
+into PostgreSQL"). Do it before the first deploy of `critical-prod`: the server seeds an empty database
+at its first boot, and the tool refuses a database that holds any row. Staging is never seeded; it
+starts empty.
+
+```bash
+# On the operator's machine, in a checkout of the release being deployed. Stop every server still
+# writing the SQLite file first: what it writes after the copy is not in production.
+$fly proxy 15432:5432 -a critical-db                  # the private cluster; leave it running
+read -rs PROD_DSN                                      # postgres://<prod user>:<password>@localhost:15432/critical_prod?sslmode=disable
+just db-import-sqlite .dev/critical.db "$PROD_DSN"     # prints the rows of each table; counts equal or nothing is kept
+```
+
+The tool reads the SQLite file read-only, works on a copy in a private temporary directory, which it
+deletes at the end, and writes only to the target. The data never goes anywhere but the operator's
+machine and the cluster (ADR 0024 step 7). If it stops with an error, nothing was written: fix the cause
+and run it again. Then deploy `critical-prod`; its first boot finds the baseline applied and the seeds
+and catalogue already there, and writes nothing.
+
+The tool is deleted from the repository once production is seeded (ADR 0025 step 9.5).
+
 ## A new catalogue version reaches production
 
 The catalogue is in the image, fetched at build time, and applied at boot by the importer. So:

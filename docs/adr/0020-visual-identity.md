@@ -1,7 +1,7 @@
 # ADR 0020: Visual identity: Critical! palettes, roles and brand mark
 
 **Status**: accepted, 2026-10-15 (critical-a02; extends [ADR 0009](0009-dashboard-layout-and-theme-system.md)
-step 4 and amends its step 5; builds on [ADR 0017](0017-type-scale-and-density.md))
+step 4 and amends its step 5; builds on [ADR 0017](0017-type-scale-and-density.md)); step 5's drawing amended by [ADR 0022](0022-activity-focus-layout.md)
 
 ## Context
 
@@ -55,11 +55,12 @@ by a lightness flip; the result was a low-contrast lavender with no brand.
    can't carry its peak chroma at a given lightness loses saturation, not contrast. The light-mode
    `highlight-fill` is exempt from the 3:1 fill rule: it is identified by its dark text.
 5. **Brand.** The app is `Critical!`, exclamation mark included, in every language. The mark
-   (`web/src/components/shell/BrandMark.tsx`) is a d20 face in `tint` with the "!" in `highlight`,
+   (`web/src/components/shell/BrandMark.tsx`) is a d20 face in `tint` with the "!" in `highlight` (*amended by [ADR 0022](0022-activity-focus-layout.md) step 7:* the
+   Facet · Bare hexagon outline),
    the same drawing as `web/public/favicon.svg` (static Arcane colours there); the wordmark is set
    in Cinzel (`font-display`, `@fontsource-variable/cinzel`), `text-key`, with the "!" in
    `highlight`. It sits at the left of the header region, before the turn block, in the 112 px
-   header budget of ADR 0017 step 6; the page title is `Critical!`. The display face is for the
+   header budget of ADR 0017 step 6 (120 px, [ADR 0022](0022-activity-focus-layout.md) step 3.1); the page title is `Critical!`. The display face is for the
    wordmark only: all other text stays Inter (ADR 0009 step 5) at the ADR 0017 roles.
 6. **Defaults before the app runs.** `web/src/index.css` holds the Arcane light (`:root`) and dark
    (`.dark`) blocks exactly as `themeVars` computes them (the "index.css defaults" unit test);

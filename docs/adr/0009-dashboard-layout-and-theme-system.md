@@ -1,7 +1,8 @@
 # ADR 0009: Dashboard layout and theme system
 
 **Status**: accepted, 2026-10-15; steps 3 and 5 amended by [ADR 0017](0017-type-scale-and-density.md);
-step 4 replaced and step 5 amended by [ADR 0020](0020-visual-identity.md)
+step 4 replaced and step 5 amended by [ADR 0020](0020-visual-identity.md); steps 1 and 2 replaced and
+steps 5 and 6 amended by [ADR 0022](0022-activity-focus-layout.md)
 
 ## Context
 
@@ -15,12 +16,14 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
 
 ## Decision
 
-1. **Regions.** One screen, no page scroll. A full-width header region (round, buffs, later the
+1. **Regions.** *Replaced by [ADR 0022](0022-activity-focus-layout.md) step 2 (cards: header, character card, rail,
+   stage, dice footer; no Fil or Moi column).* One screen, no page scroll. A full-width header region (round, buffs, later the
    turn timeline) sits above a grid of four columns:
    `rail | workspace | Fil | Moi` =
    `clamp(68px, 5vw, 96px) | minmax(0, 1fr) | clamp(340px, 26vw, 520px) | clamp(300px, 22vw, 440px)`.
    Each column scrolls on its own (`min-h-0` and its own `overflow-y-auto`, or an inner scroller).
-2. **Workspaces.** The rail switches the workspace column only: Agir (act: attack, spells, saves
+2. **Workspaces.** *Replaced by [ADR 0022](0022-activity-focus-layout.md) step 2.4-2.5 (activities Act, Spells,
+   Experience, Inventory; the mount-once-and-keep rule stands).* The rail switches the workspace column only: Agir (act: attack, spells, saves
    tabs), Inventaire (items and weapons), Sorts (spell lookup); Expérience comes later. Fil (last
    result, journal) and Moi (identity, HP) stay beside every workspace. A workspace mounts on its
    first visit and stays mounted while hidden, so its state (tab, forms, scroll) survives switching.
@@ -49,15 +52,18 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
    component follows. `index.css` holds the Arcane values as the first-paint default (a unit test
    keeps them equal to `themeVars`).
 5. **House rules (design-taste-frontend, adapted to Nocturne).** No gradients (a flat accent tint
-   instead). No tiny uppercase letter-spaced labels: sentence case (*amended by
+   instead). No tiny uppercase letter-spaced labels: sentence case (*replaced by [ADR 0022](0022-activity-focus-layout.md) step 4.2:* section labels
+   are uppercase and letter-spaced; *amended by
    [ADR 0017](0017-type-scale-and-density.md) step 2:* labels are 11 px, the 12 px minimum is gone;
    sizes come from its five role tokens). Surfaces are
-   separated by a tone step (ground → surface → `neu-900`), not hairlines. Shadows only on what
+   separated by a tone step (ground → surface → `neu-900`), not hairlines (*amended by [ADR 0022](0022-activity-focus-layout.md)
+   step 4.1:* every zone is an outlined card on the ground, 12 px apart, with no rule anywhere). Shadows only on what
    floats (popovers, menus: `shadow-float`). Tabular figures on every number (set on `<html>`). At
    most 3-4 type sizes per panel. One family (Inter) and one icon set (Phosphor). Existing panels
    adopt these when they are restyled; the shell follows them now.
 6. **Preferences.** Language, appearance and ambiance are per-device display preferences, chosen
-   in the settings popover (gear at the bottom of the rail), applied live and stored in
+   in the settings popover (gear at the bottom of the rail; *amended by [ADR 0022](0022-activity-focus-layout.md) step 2.6:*
+   the cog is first in the dice footer), applied live and stored in
    `localStorage['critical.settings.v1'] = {lang, mode, amb}` (`web/src/lib/settings.ts`). Without
    it, the older `critical.theme` / `critical.language` keys give the initial value once and are
    removed. "System" follows `prefers-color-scheme` live. They are never sent to the API. Anything

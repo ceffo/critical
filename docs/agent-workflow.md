@@ -192,6 +192,12 @@ Reviewer checklist, in priority order:
    cases, and no presentation text in the backend: the API carries structured data only; display
    text is never built by the backend, and a text in a human language is never a per-language column
    or field (one `localized_texts` row per language, [ADR 0023](adr/0023-localized-text.md)). Challenge the item's or brief's own design against these rules. Each violation is at least medium; design is not style.
+10. **No cut text** ([ADR 0022](adr/0022-activity-focus-layout.md) step 1): at the layout viewports
+   (1280x800 to 2560x1440), important text (names, values, journal text, labels, captions) is never
+   cut or ellipsed: no `truncate`, `text-ellipsis` or `line-clamp` on it, no `whitespace-nowrap` in a
+   box that hides its overflow; it wraps or gets room. Only the exceptions listed in ADR 0022 step 1.2.
+   A UI change's region is covered by `expectNoClippedText` in `layout.spec`, and its screenshots
+   show no cut text. A cut name is at least medium.
 
 Severity examples: critical = wrong game math in a main flow, ledger/state corruption, broken
 migration on existing data; high = game logic in the frontend; medium = architecture-layer

@@ -35,8 +35,17 @@ clamps, tokens and house rules are decided in
 [ADR 0009](adr/0009-dashboard-layout-and-theme-system.md); type sizes, spacing, control heights,
 the header (112px at rest) and the content target in [ADR 0017](adr/0017-type-scale-and-density.md): text
 uses only `text-label` / `text-body` / `text-title` / `text-key` / `text-headline`. `App.tsx`
-composes it. Whole-screen design directions under review (static pages, screenshots and the
-brand-mark options) live in [docs/design/ui-directions/README.md](design/ui-directions/README.md).
+composes it.
+
+**Target layout: [ADR 0022](adr/0022-activity-focus-layout.md)**, which replaces ADR 0009's four
+columns and amends ADR 0017 (header 120 px, card padding, the 44 px Attack, `text-hero`): the
+screen around the focused activity, every zone a card on the ground with no rule anywhere (header
+with the last result, character card on the left edge with HP, rail, stage, dice footer with the
+settings cog), the journal under the act panel with a draggable, collapsible split, the Facet · Bare
+mark, and **no cut text** (no `truncate` / `text-ellipsis` / `line-clamp` on important text; checked
+by `expectNoClippedText` in `layout.spec`). Its drawing is direction B in
+[docs/design/ui-directions/](design/ui-directions/README.md). The diagram and notes below describe
+the code as it stands; the area items move each region to ADR 0022 and update them.
 
 ```mermaid
 flowchart TD

@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -278,6 +279,109 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 	assert.Equal(t, specialAllowedCount, allowedSeen, "allow-listed special fields in the catalogue")
 }
 
+// areaReadingCounts pins, over the real catalogue, how many area texts the
+// parser reads as a choice between whole readings and how many it holds only
+// in part (ADR 0021 step 8; 111 partial before alternatives, "up to",
+// "circle", per-level steps and thousands separators were read). Like
+// specialAllowedCount, a new artifact or a parser change that moves them
+// fails here until it is looked at.
+var areaReadingCounts = map[string]int{"alternatives": 25, "partial": 55}
+
+// TestRealCatalogue_AreaReadingsAndPerLevelDurations checks how the parser
+// reads the real catalogue's areas (the pinned counts above) and that no
+// duration keeps a level abbreviation ("1 turn/lvl") as a divisor it does
+// not apply.
+func TestRealCatalogue_AreaReadingsAndPerLevelDurations(t *testing.T) {
+	spells := realCatalogue(t).Spells
+	got := map[string]int{}
+	for _, sp := range spells {
+		a := spellstats.ParseArea(sp.AreaOfEffect.Default())
+		switch {
+		case a.Kind == spellstats.AreaAlternatives:
+			got["alternatives"]++
+		case a.Partial:
+			got["partial"]++
+		}
+		for _, term := range spellstats.ParseDuration(sp.Duration.Default()).Time.Terms {
+			assert.NotRegexp(t, `(?i)^(lvl|level)`, term.Per, "%s: duration %q", sp.ID, sp.Duration.Default())
+		}
+	}
+	t.Logf("area readings over %d spells: %v", len(spells), got)
+	assert.Equal(t, areaReadingCounts, got)
+}
+
+// countStatsWrites installs, in db, a trigger counting the
+// rows whose stats an UPDATE writes, and returns the count so far.
+func countStatsWrites(t *testing.T, db *sqlite.DB) func() int {
+	t.Helper()
+	ctx := context.Background()
+	for _, q := range []string{
+		`CREATE TABLE IF NOT EXISTS test_stats_writes (n INTEGER)`,
+		`CREATE TRIGGER IF NOT EXISTS test_count_stats_writes AFTER UPDATE OF stats ON spells
+			BEGIN INSERT INTO test_stats_writes VALUES (1); END`,
+	} {
+		_, err := db.ExecContext(ctx, q)
+		require.NoError(t, err)
+	}
+	return func() int {
+		var n int
+		require.NoError(t, db.QueryRowContext(ctx, `SELECT COUNT(*) FROM test_stats_writes`).Scan(&n))
+		return n
+	}
+}
+
+// A restart on the same artifact version re-types stats an older parser
+// stored (ADR 0021 step 5.6): every spell's stats are its stored texts
+// parsed by the current parser, and a restart with nothing stale writes no
+// row (counted by a trigger). The re-parse runs on every start; its time is
+// logged.
+func TestRealCatalogue_ARestartReTypesStaleStats(t *testing.T) {
+	cat := realCatalogue(t)
+	ctx := context.Background()
+	dsn := filepath.Join(t.TempDir(), "retype.db")
+	start := func() {
+		t.Helper()
+		bs, err := composition.New(ctx, composition.Config{DSN: dsn, SeedsDir: seedsDir, Catalogue: catalogueFile})
+		require.NoError(t, err)
+		require.NoError(t, bs.Close(ctx))
+	}
+	start()
+	db, err := sqlite.Open(dsn)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	_, err = db.ExecContext(ctx, `UPDATE spells SET stats = '{}'`)
+	require.NoError(t, err)
+	writes := countStatsWrites(t, db)
+
+	began := time.Now()
+	start()
+	assert.Equal(t, len(cat.Spells), writes(), "every stale row rewritten")
+	t.Logf("restart re-typing %d spells: %s", len(cat.Spells), time.Since(began))
+	stats := map[string]string{}
+	rows, err := db.QueryContext(ctx, `SELECT key, stats FROM spells WHERE key IS NOT NULL`)
+	require.NoError(t, err)
+	for rows.Next() {
+		var k, v string
+		require.NoError(t, rows.Scan(&k, &v))
+		stats[k] = v
+	}
+	require.NoError(t, rows.Err())
+	require.NoError(t, rows.Close())
+	for _, sp := range cat.Spells {
+		want, err := json.Marshal(spellstats.Parse(spellstats.Raw{
+			CastingTime: sp.CastingTime.Default(), Range: sp.Range.Default(), Duration: sp.Duration.Default(),
+			AreaOfEffect: sp.AreaOfEffect.Default(), Components: sp.Components.Default(), SavingThrow: sp.SavingThrow.Default(),
+		}))
+		require.NoError(t, err)
+		assert.JSONEq(t, string(want), stats[sp.ID], sp.ID)
+	}
+
+	began = time.Now()
+	start()
+	t.Logf("restart with nothing stale: %s", time.Since(began))
+	assert.Equal(t, len(cat.Spells), writes(), "a restart with nothing stale writes no row")
+}
+
 // TestRealCatalogue_UpgradesACopyOfALiveDatabase imports the real catalogue
 // into a copy of the database named by CRITICAL_UPGRADE_CHECK_DB (e.g. the
 // dev database, .dev/critical.db), the way a restart of that database would:
@@ -302,16 +406,30 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	db, err := sqlite.Open(dst)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	var writes func() int
+	if hasSpells(t, db) {
+		writes = countStatsWrites(t, db)
+	}
 	bs, err := composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
 	require.NoError(t, err, "the live database upgrades")
 	page, err := bs.Spells.Search(ctx, spellsvc.Filter{}, spellsvc.PageRequest{PageSize: 1})
 	require.NoError(t, err)
 	assert.Equal(t, len(cat.Spells), page.Total, "every catalogue spell is served")
 	require.NoError(t, bs.Close(ctx))
-
-	db, err := sqlite.Open(dst)
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
+	first := 0
+	if writes != nil {
+		first = writes()
+	}
+	writes = countStatsWrites(t, db) // again: a migration that rebuilt spells dropped the trigger
+	first = max(first, writes())
+	t.Logf("first start wrote the stats of %d spells", first)
+	bs, err = composition.New(ctx, composition.Config{DSN: dst, SeedsDir: seedsDir, Catalogue: catalogueFile})
+	require.NoError(t, err, "the second start")
+	require.NoError(t, bs.Close(ctx))
+	assert.Equal(t, first, writes(), "the second start writes no stats")
 	refs, err := sqlite.StateSpellRefs(ctx, db)
 	require.NoError(t, err)
 	book, err := spellbookadpt.New(seedsDir, cat)
@@ -327,6 +445,16 @@ func TestRealCatalogue_UpgradesACopyOfALiveDatabase(t *testing.T) {
 		assert.True(t, n == 1 && inArtifact, "%s (%s) resolves", r.ID, r.Where)
 	}
 	t.Logf("%d spell references in the seeds and the game state, all resolved", len(refs))
+}
+
+// hasSpells reports whether db already has the spells table (a database
+// older than every migration does not).
+func hasSpells(t *testing.T, db *sqlite.DB) bool {
+	t.Helper()
+	var n int
+	require.NoError(t, db.QueryRowContext(context.Background(),
+		`SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'spells'`).Scan(&n))
+	return n > 0
 }
 
 // One database switched between the fixture catalogue (with the fixture

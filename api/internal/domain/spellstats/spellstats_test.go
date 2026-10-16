@@ -129,6 +129,10 @@ func TestDuration(t *testing.T) {
 		{"1 week + 1 day/level", 3, "timed", "", spellstats.Value{Amount: 10, Unit: "day"}},
 		{"up to 4 hrs.", 15, "timed", "", spellstats.Value{Amount: 4, Unit: "hour"}},
 		{"Up to 2 rds./level", 5, "timed", "", spellstats.Value{Amount: 10, Unit: "round"}},
+		{"1 hour/lvl", 6, "timed", "", spellstats.Value{Amount: 6, Unit: "hour"}},
+		{"1 turn/lvl", 6, "timed", "", spellstats.Value{Amount: 6, Unit: "turn"}},
+		{"1rd/lvl", 6, "timed", "", spellstats.Value{Amount: 6, Unit: "round"}},
+		{"1 turn + 2 rds/lvl", 6, "timed", "", spellstats.Value{Amount: 22, Unit: "round"}},
 		{"Instantaneous", 15, "instantaneous", "", spellstats.Value{}},
 		{"Permanent", 15, "permanent", "", spellstats.Value{}},
 		{"Permanent until dispelled", 15, "permanent", "dispelled", spellstats.Value{}},
@@ -252,6 +256,17 @@ func TestAreaOfEffect(t *testing.T) {
 		{"Creates a sphere", 15, "special", "", nil, nil, ""},
 		{"Two or more creatures", 15, "special", "", nil, nil, ""},
 		{"1d4 sticks + 1 stick/level in a 10-ft. cube", 5, "area", "cube", []spellstats.Value{dim("foot", 10)}, nil, ""},
+		{"10-foot circle", 15, "area", "circle", []spellstats.Value{dim("foot", 10)}, nil, ""},
+		{"20-foot-radius circle", 15, "area", "radius", []spellstats.Value{dim("foot", 20)}, nil, ""},
+		{"40-foot-diameter circle", 15, "area", "diameter", []spellstats.Value{dim("foot", 40)}, nil, ""},
+		{"One 10'-radius circle", 15, "area", "radius", []spellstats.Value{dim("foot", 10)}, nil, ""},
+		{"10-ft. cube/2 levels", 5, "area", "cube", []spellstats.Value{dim("foot", 20)}, nil, ""},
+		{"One 10-ft. cube/lvl.", 5, "area", "cube", []spellstats.Value{dim("foot", 50)}, nil, ""},
+		{"1,000 square feet/level", 3, "area", "square", []spellstats.Value{dim("sq foot", 3000)}, nil, ""},
+		{"One creature/two levels", 10, "targets", "", nil, &spellstats.Value{Amount: 5}, "creature"},
+		{"One unit/five levels", 10, "targets", "", nil, &spellstats.Value{Amount: 2}, "unit"},
+		{"Up to 6 creatures", 15, "targets", "", nil, &spellstats.Value{Amount: 6}, "creatures"},
+		{"Up to 8 animals in a 20-ft. sq.", 15, "area", "square", []spellstats.Value{dim("foot", 20)}, &spellstats.Value{Amount: 8}, "animals"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.raw, func(t *testing.T) {
@@ -332,6 +347,8 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 		partial bool
 	}{
 		{"20-ft. radius", false},
+		{"20-ft. radius sphere", false}, // the figure is read
+		{"20-ft. cube sphere", true},    // a second shape it does not carry
 		{"10 x 60 ft.", false},
 		{"40-ft. cube, 1 creature/level", false},
 		{"2-8 creatures in a 10-ft. cube", false},
@@ -342,16 +359,18 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 		{"1 to 6 insects", false},
 		{"(level x 10)-ft.-sq.", false},
 		{"10 sq. ft./level", false},
-		{"1 creature or item", true},             // an alternative
-		{"20 or 40 ft. radius", true},            // an alternative extent
-		{"One creature/two levels", true},        // a number it dropped
-		{"10 ft. cube/2 levels", true},           // a step it dropped
-		{"1,000 square feet/level", true},        // a number split on its comma
-		{"4d4 sq. mi.", true},                    // dice it dropped
-		{"5 yds./level (90 yds. maximum)", true}, // a cap it dropped
-		{"Line of sight, max. 60 ft.", true},     // words it does not read
-		{"Up to 6 creatures", true},              // "up to"
-		{"20-foot-radius circle", true},          // a shape word it does not read
+		{"One creature/two levels", false},
+		{"10 ft. cube/2 levels", false},
+		{"1,000 square feet/level", false},
+		{"Up to 6 creatures", false},
+		{"20-foot-radius circle", false},
+		{"One 10-ft. cube/level", false},                        // "One" is the article of an extent
+		{"Two 10-ft. cubes/level", true},                        // "Two" counts cubes
+		{"1 creature or 1 cu. ft. of substance/2 levels", true}, // an alternative it does not read whole
+		{"4d4 sq. mi.", true},                                   // dice it dropped
+		{"5 yds./level (90 yds. maximum)", true},                // a cap it dropped
+		{"Line of sight, max. 60 ft.", true},                    // words it does not read
+		{"1 object up to 10 ft. long", true},                    // "long"
 		{"1 or more creatures in a 10-ft. radius", true},
 	}
 	for _, tt := range tests {
@@ -368,7 +387,7 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 // lossy reading would give "10 creatures" for "One creature/two levels" at
 // level 10, and 0 for "1,000 square feet/level"); a whole reading has one.
 func TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel(t *testing.T) {
-	for _, raw := range []string{"One creature/two levels", "1,000 square feet/level", "1 creature or item"} {
+	for _, raw := range []string{"4d4 sq. mi.", "5 yds./level (90 yds. maximum)", "1 creature or 1 cu. ft. of substance/2 levels"} {
 		t.Run(raw, func(t *testing.T) {
 			a := spellstats.ParseArea(raw)
 			require.True(t, a.Partial)
@@ -379,4 +398,98 @@ func TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel(t *testing.T) {
 	require.False(t, whole.Partial)
 	require.NotNil(t, whole.At(9).Targets)
 	assert.Equal(t, 3.0, whole.At(9).Targets.Amount)
+}
+
+// "Up to" is kept on the quantity it bounds (the extent or the count), so
+// the reading is whole and a reader words it.
+func TestAreaOfEffect_UpToBoundsItsQuantity(t *testing.T) {
+	cube := spellstats.ParseArea("Up to 20-ft. cube")
+	require.Len(t, cube.Dims, 1)
+	assert.True(t, cube.Dims[0].UpTo)
+	assert.False(t, cube.Partial)
+
+	animals := spellstats.ParseArea("Up to 8 animals in a 20-ft cube")
+	require.NotNil(t, animals.Targets)
+	assert.True(t, animals.Targets.UpTo)
+	assert.False(t, animals.Dims[0].UpTo, "the cube is not bounded")
+	assert.False(t, animals.Partial)
+
+	assert.False(t, spellstats.ParseArea("20-ft. cube").Dims[0].UpTo)
+}
+
+// ADR 0021 step 8: a choice ("1 creature or object", "A, B, or C") is read
+// as one whole reading per alternative; a bare noun counts as many as the
+// alternative before it and a bare number takes the unit and shape of the
+// one after it. A choice with an alternative the parser does not read whole
+// stays a partial single reading. Alternatives have no value at a caster
+// level: the book does not say which one the caster picks.
+func TestAreaOfEffect_Alternatives(t *testing.T) {
+	one := &spellstats.Quantity{Terms: []spellstats.Term{{Count: 1}}}
+	foot := func(n float64) spellstats.Quantity {
+		return spellstats.Quantity{Terms: []spellstats.Term{{Count: n, Unit: "foot"}}}
+	}
+	tests := []struct {
+		raw  string
+		want []spellstats.AreaOfEffect
+	}{
+		{"1 creature or object", []spellstats.AreaOfEffect{
+			{Raw: "1 creature", Kind: "targets", Targets: one, Noun: "creature"},
+			{Raw: "object", Kind: "targets", Targets: one, Noun: "object"},
+		}},
+		{"One doorway, portal, or small object", []spellstats.AreaOfEffect{
+			{Raw: "One doorway", Kind: "targets", Targets: one, Noun: "doorway"},
+			{Raw: "portal", Kind: "targets", Targets: one, Noun: "portal"},
+			{Raw: "small object", Kind: "targets", Targets: one, Noun: "small object"},
+		}},
+		{"1 scroll or 2 pages", []spellstats.AreaOfEffect{
+			{Raw: "1 scroll", Kind: "targets", Targets: one, Noun: "scroll"},
+			{Raw: "2 pages", Kind: "targets", Targets: &spellstats.Quantity{Terms: []spellstats.Term{{Count: 2}}}, Noun: "pages"},
+		}},
+		{"10-ft. cube or one item", []spellstats.AreaOfEffect{
+			{Raw: "10-ft. cube", Kind: "area", Shape: "cube", Dims: []spellstats.Quantity{foot(10)}},
+			{Raw: "one item", Kind: "targets", Targets: one, Noun: "item"},
+		}},
+		{"10-ft. radius sphere or 15-ft. radius hemisphere", []spellstats.AreaOfEffect{
+			{Raw: "10-ft. radius sphere", Kind: "area", Shape: "radius", Figure: "sphere", Dims: []spellstats.Quantity{foot(10)}},
+			{Raw: "15-ft. radius hemisphere", Kind: "area", Shape: "radius", Figure: "hemisphere", Dims: []spellstats.Quantity{foot(15)}},
+		}},
+		{"20 or 40 ft. radius", []spellstats.AreaOfEffect{
+			{Raw: "20 ft. radius", Kind: "area", Shape: "radius", Dims: []spellstats.Quantity{foot(20)}},
+			{Raw: "40 ft. radius", Kind: "area", Shape: "radius", Dims: []spellstats.Quantity{foot(40)}},
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			got := spellstats.ParseArea(tt.raw)
+			assert.Equal(t, spellstats.AreaOfEffect{Raw: tt.raw, Kind: "alternatives", Alternatives: tt.want}, got)
+			assert.Equal(t, spellstats.AreaValue{}, got.At(10))
+		})
+	}
+	for _, raw := range []string{
+		"1 creature or 1 cu. ft. of substance/2 levels", "1 or more creatures in a 10-ft. radius",
+		"Two or more creatures", "1 dead human or demihuman",
+	} {
+		assert.NotEqual(t, "alternatives", spellstats.ParseArea(raw).Kind, raw)
+	}
+}
+
+// A radius or diameter carries the figure it measures, so a reading never
+// drops it ("10-ft. radius sphere" is not "10-ft. radius hemisphere").
+func TestAreaOfEffect_RadiusCarriesItsFigure(t *testing.T) {
+	tests := []struct{ raw, shape, figure string }{
+		{"20-foot-radius circle", "radius", "circle"},
+		{"15-ft.-diameter sphere", "diameter", "sphere"},
+		{"20-ft.-radius globe", "radius", "globe"},
+		{"20-ft. radius", "radius", ""},
+		{"10-ft. cube", "cube", ""},
+		{"10-foot circle", "circle", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			a := spellstats.ParseArea(tt.raw)
+			assert.Equal(t, tt.shape, a.Shape)
+			assert.Equal(t, tt.figure, a.Figure)
+			assert.False(t, a.Partial)
+		})
+	}
 }

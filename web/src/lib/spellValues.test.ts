@@ -110,6 +110,14 @@ describe("a partial area reading", () => {
     expect(statDice(s, unit)).toEqual([]);
   });
 
+  it("a choice between readings has none either", () => {
+    for (const v of [values, { ...values, area: {} }]) {
+      const s = spell(v, { kind: "alternatives", alternatives: [] });
+      expect(statValue(s, "area", unit)).toBeNull();
+      expect(statDice(s, unit)).toEqual([]);
+    }
+  });
+
   it("a whole reading keeps its value", () => {
     expect(statValue(spell(values), "area", unit)).toBe("1d4 persons");
   });

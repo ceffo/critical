@@ -207,6 +207,30 @@ func TestImportCatalogue_Step6_TypedStatsParsedAtImport(t *testing.T) {
 	}), stats)
 }
 
+// Step 5.6 on a start that imports nothing: the stored typed stats are what
+// an older parser made of the stored texts. The start re-types them from
+// those texts, writes no other column and keeps the recorded version, so a
+// parser change needs no migration and no new artifact version.
+func TestImportCatalogue_Step6_AStartReTypesStatsAParserChangeMadeStale(t *testing.T) {
+	ctx := context.Background()
+	db := openMigrated(t)
+	cat := fixtureCatalogue(t)
+	require.NoError(t, db.ImportCatalogue(ctx, cat, nil))
+	fresh := byKey(catalogueRows(t, db))
+	_, err := db.Exec(`UPDATE spells SET stats = '{"area":{"raw":"older parser","kind":"special"}}' WHERE key IN ('fireball', 'magic_missile')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`UPDATE spells SET stats = NULL WHERE key = 'sleep'`)
+	require.NoError(t, err)
+
+	require.NoError(t, db.ImportCatalogue(ctx, cat, nil))
+	after := byKey(catalogueRows(t, db))
+	assert.Equal(t, fresh, after, "every stale row re-typed, nothing else written")
+	var stats spellstats.Stats
+	require.NoError(t, json.Unmarshal([]byte(after["magic_missile"].Stats), &stats))
+	assert.Equal(t, "targets", stats.Area.Kind, "parsed again from the stored area text")
+	assert.Equal(t, cat.Version, recordedVersion(t, db))
+}
+
 // Step 5.3: the recorded version equals the artifact's: nothing is written,
 // so a row edited behind the importer's back stays edited.
 func TestImportCatalogue_Step3_SameVersionWritesNothing(t *testing.T) {
@@ -518,6 +542,49 @@ func TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells(t *testing.T) {
 	assert.Contains(t, err.Error(), "`just catalogue`")
 	assert.Equal(t, before, catalogueRows(t, db), "rolled back: no spell updated or deleted")
 	assert.Equal(t, cat.Version, recordedVersion(t, db), "the old version stays recorded")
+}
+
+// Step 5.4.3's refusal on a database whose recorded version migration 030
+// forgot: the database was built from a catalogue (its spells are keyed),
+// so the refusal says so instead of blaming the seeds that predate the
+// catalogue artifact.
+func TestImportCatalogue_RefusalWithoutARecordedVersionNamesAnEarlierCatalogue(t *testing.T) {
+	ctx := context.Background()
+	db := openMigrated(t)
+	cat := fixtureCatalogue(t)
+	require.NoError(t, db.ImportCatalogue(ctx, cat, nil))
+	plantState(t, db)
+	_, err := db.Exec(`DELETE FROM catalogue_meta`)
+	require.NoError(t, err)
+
+	err = db.ImportCatalogue(ctx, withVersion(cat, "1970-01-02", without("magic_missile")), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "magic_missile (action_log 1)")
+	assert.Contains(t, err.Error(), "This database was built from an earlier spell catalogue, which holds the spells listed, "+
+		"whose version is not recorded")
+	assert.NotContains(t, err.Error(), "migration")
+	assert.NotContains(t, err.Error(), "predate")
+}
+
+// Without a recorded version or a keyed spell, the database holds the spell
+// seeds that predate the catalogue artifact.
+func TestRecordedCatalogue_NamesWhatTheDatabaseWasBuiltFrom(t *testing.T) {
+	ctx := context.Background()
+	db := openMigrated(t)
+	got, err := recordedCatalogue(ctx, db)
+	require.NoError(t, err)
+	assert.Equal(t, "the spell seeds that predate the catalogue artifact (the real catalogue's spells)", got)
+
+	require.NoError(t, db.ImportCatalogue(ctx, fixtureCatalogue(t), nil))
+	got, err = recordedCatalogue(ctx, db)
+	require.NoError(t, err)
+	assert.Equal(t, "catalogue version 1970-01-01", got)
+
+	_, err = db.Exec(`DELETE FROM catalogue_meta`)
+	require.NoError(t, err)
+	got, err = recordedCatalogue(ctx, db)
+	require.NoError(t, err)
+	assert.Contains(t, got, "an earlier spell catalogue")
 }
 
 // The upgrade of a database built by the retired seed loader (migrations up

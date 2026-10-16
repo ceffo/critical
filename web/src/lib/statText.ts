@@ -291,13 +291,15 @@ export function durationText(
 
 /**
  * Extents with their shape, in the language's order ("rayon de 6 m"). A "square" of square units
- * ("10 sq ft square") is said once, by the unit.
+ * ("10 sq ft square") is said once, by the unit. The figure a radius or diameter measures is said
+ * with it ("sphère de 3 m de rayon"); with several extents it is not worded (null).
  */
 export function shapedText(
   loc: StatLocale,
   dims: string,
   shape: string | undefined,
   units: (string | undefined)[],
+  figure?: string,
 ): string | null {
   if (
     !shape ||
@@ -305,7 +307,11 @@ export function shapedText(
   )
     return dims;
   const word = loc.t(`lookup.shapes.${shape}`, { defaultValue: "" });
-  return word ? loc.t("lookup.stat.shaped", { dims, shape: word }) : null;
+  if (!word) return null;
+  if (!figure) return loc.t("lookup.stat.shaped", { dims, shape: word });
+  const fig = loc.t(`lookup.shapes.${figure}`, { defaultValue: "" });
+  if (!fig || units.length > 1) return null;
+  return loc.t("lookup.stat.shapedFigure", { dims, shape: word, figure: fig });
 }
 
 export function areaText(
@@ -321,7 +327,13 @@ export function areaText(
         const dims = s.dims.map((d) => quantityText(loc, d));
         if (dims.some((x) => x === null)) return null;
         const units = s.dims.map((d) => d.terms[0]?.unit);
-        const shaped = shapedText(loc, dims.join(" × "), s.shape, units);
+        const shaped = shapedText(
+          loc,
+          dims.join(" × "),
+          s.shape,
+          units,
+          s.figure,
+        );
         if (!shaped) return null;
         parts.push(shaped);
       }
@@ -332,6 +344,12 @@ export function areaText(
         parts.push(n);
       }
       return parts.length ? parts.join(", ") : null;
+    }
+    case "alternatives": {
+      // "1 créature ou 1 objet": every reading worded, or the book's text.
+      const alts = (s.alternatives ?? []).map((a) => areaText(loc, a));
+      if (alts.length < 2 || alts.some((x) => x === null)) return null;
+      return alts.join(loc.t("lookup.stat.or"));
     }
     default:
       // The caster, a creature touched...: the kind drops what the book says ("the caster's

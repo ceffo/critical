@@ -28,6 +28,22 @@ export interface SpellQuantity {
   max_unit?: string;
 }
 
+/** Mirrors spellstats.AreaOfEffect: one reading of an area of effect, or a choice between readings. */
+export interface SpellArea {
+  raw: string;
+  kind: "area" | "targets" | "self" | "touch" | "alternatives" | "special";
+  shape?: string;
+  /** What a radius or diameter measures ("sphere" in "10-ft. radius sphere"). */
+  figure?: string;
+  dims?: SpellQuantity[];
+  targets?: SpellQuantity;
+  noun?: string;
+  /** The text says more than this typed form holds: a reader shows the raw text. */
+  partial?: boolean;
+  /** The readings of an "alternatives" kind ("1 creature or object"), each an area or targets. */
+  alternatives?: SpellArea[];
+}
+
 /** A quantity computed at a caster level; `dice` is still to be rolled on top of `amount`. */
 export interface SpellValue {
   amount: number;
@@ -56,16 +72,7 @@ export interface SpellStats {
     time: SpellQuantity;
     condition?: string;
   };
-  area: {
-    raw: string;
-    kind: "area" | "targets" | "self" | "touch" | "special";
-    shape?: string;
-    dims?: SpellQuantity[];
-    targets?: SpellQuantity;
-    noun?: string;
-    /** The text says more than this typed form holds: a reader shows the raw text. */
-    partial?: boolean;
-  };
+  area: SpellArea;
   components: {
     raw: string;
     v: boolean;

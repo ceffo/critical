@@ -489,6 +489,8 @@
       "day_other": "day",
       "week_one": "wk",
       "week_other": "wk",
+      "usage_one": "usage",
+      "usage_other": "usages",
       "year_one": "yr",
       "year_other": "yr",
       "inch_one": "in",
@@ -596,7 +598,25 @@
       "victim_one": "victim",
       "victim_other": "victims",
       "missile_one": "missile",
-      "missile_other": "missiles"
+      "missile_other": "missiles",
+      "doorway_one": "doorway",
+      "doorway_other": "doorways",
+      "body_one": "body",
+      "body_other": "bodies",
+      "skeleton_one": "skeleton",
+      "skeleton_other": "skeletons",
+      "log_one": "log",
+      "log_other": "logs",
+      "plank_one": "plank",
+      "plank_other": "planks",
+      "human_one": "human",
+      "human_other": "humans",
+      "demihuman_one": "demihuman",
+      "demihuman_other": "demihumans",
+      "mammal_one": "mammal",
+      "mammal_other": "mammals",
+      "small_object_one": "small object",
+      "small_object_other": "small objects"
     },
     "shapes": {
       "radius": "radius",
@@ -611,7 +631,8 @@
       "spray": "spray",
       "hemisphere": "hemisphere",
       "volume": "volume",
-      "wall": "wall"
+      "wall": "wall",
+      "circle": "circle"
     },
     "conditions": {
       "dispelled": "dispelled",
@@ -630,6 +651,7 @@
       "max": "{{value}}, max. {{max}}",
       "specialDetail": "{{special}} ({{detail}})",
       "shaped": "{{dims}} {{shape}}",
+      "shapedFigure": "{{dims}} {{shape}} {{figure}}",
       "or": " or ",
       "range": {
         "self": "0",

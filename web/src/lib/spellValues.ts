@@ -28,8 +28,9 @@ export function statValue(
         ? formatValue(loc, v.casting_time)
         : null;
     case "area": {
-      // A partial reading has no value (the server sends none; ADR 0021 step 8).
-      if (st.area.partial) return null;
+      // A partial reading or a choice between readings has no value (the server sends none;
+      // ADR 0021 step 8).
+      if (st.area.partial || st.area.kind === "alternatives") return null;
       const parts: string[] = [];
       if (v.area.targets) {
         parts.push(formatValue(loc, v.area.targets, st.area.noun || undefined));
@@ -37,7 +38,9 @@ export function statValue(
       if (v.area.dims?.length) {
         const dims = v.area.dims.map((d) => formatValue(loc, d)).join(" × ");
         const units = v.area.dims.map((d) => d.unit);
-        parts.push(shapedText(loc, dims, st.area.shape, units) ?? dims);
+        parts.push(
+          shapedText(loc, dims, st.area.shape, units, st.area.figure) ?? dims,
+        );
       }
       return parts.length ? parts.join(" · ") : null;
     }

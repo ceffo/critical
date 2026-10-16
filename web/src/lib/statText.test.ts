@@ -81,6 +81,7 @@ const SHAPES = [
   "hemisphere",
   "volume",
   "wall",
+  "circle",
 ];
 
 describe("statLocale", () => {
@@ -109,7 +110,12 @@ describe("unitText", () => {
   });
 
   it("is null for a word that is no unit", () => {
-    expect(unitText(fr, "usage", 1)).toBeNull();
+    expect(unitText(fr, "rum", 1)).toBeNull();
+  });
+
+  it('words a count of uses as a unit ("1 usage/2 levels")', () => {
+    expect(unitText(fr, "usage", 1)).toBe("utilisation");
+    expect(unitText(fr, "usage", 2)).toBe("utilisations");
   });
 });
 
@@ -535,6 +541,66 @@ describe("areaText", () => {
         }),
       ),
     ).toBeNull();
+  });
+
+  it("words the figure a radius or diameter measures", () => {
+    const sphere = a("area", "10-ft. radius sphere", {
+      shape: "radius",
+      figure: "sphere",
+      dims: [qty(10, "foot")],
+    });
+    expect(areaText(fr, sphere)).toBe("sphère de 3 m de rayon");
+    expect(areaText(en, sphere)).toBe("10 ft radius sphere");
+    expect(
+      areaText(
+        fr,
+        a("alternatives", "", {
+          alternatives: [
+            sphere,
+            a("area", "", {
+              shape: "radius",
+              figure: "hemisphere",
+              dims: [qty(15, "foot")],
+            }),
+          ],
+        }),
+      ),
+    ).toBe("sphère de 3 m de rayon ou hémisphère de 4,5 m de rayon");
+    // Several extents with a figure ("5 ft. radius x 30 ft. column"): the book's text.
+    expect(
+      areaText(
+        fr,
+        a("area", "", {
+          shape: "radius",
+          figure: "column",
+          dims: [qty(5, "foot"), qty(30, "foot")],
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("words a choice between readings, each in turn", () => {
+    const alts = (...alternatives: SpellStats["area"][]) =>
+      a("alternatives", "", { alternatives });
+    const one = (noun: string) => a("targets", "", { targets: qty(1), noun });
+    expect(areaText(fr, alts(one("creature"), one("object")))).toBe(
+      "1 créature ou 1 objet",
+    );
+    expect(
+      areaText(
+        fr,
+        alts(
+          one("creature"),
+          one("object"),
+          a("area", "", { shape: "square", dims: [qty(10, "foot")] }),
+        ),
+      ),
+    ).toBe("1 créature ou 1 objet ou carré de 3 m");
+    expect(areaText(en, alts(one("creature"), one("object")))).toBe(
+      "1 creature or 1 object",
+    );
+    // One reading the language cannot word: the book's text for the whole choice.
+    expect(areaText(fr, alts(one("creature"), one("wyvern")))).toBeNull();
   });
 
   it("is null where the typed value drops what the book says", () => {

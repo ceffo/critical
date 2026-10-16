@@ -88,6 +88,8 @@ var unitAliases = map[string]string{
 	"ft": "foot", "foot": "foot", "feet": "foot",
 	"mi": "mile", "mile": "mile", "miles": "mile",
 	"in": "inch", "inch": "inch", "inches": "inch",
+	// Not units: the per-level divisor ("1 rd./level", "1 hour/lvl").
+	"level": "level", "levels": "level", "lvl": "level", "lvls": "level",
 }
 
 // normUnit canonicalizes a unit word; unknown words are kept lowercased.
@@ -258,7 +260,7 @@ func parseQuantity(s, defUnit string) (Quantity, error) {
 		}
 		if m[5] != "" {
 			per := normUnit(m[5])
-			if per == "level" || per == "levels" {
+			if per == "level" {
 				t.PerLevel, t.Step = true, 1
 				if m[4] != "" {
 					t.Step, _ = strconv.Atoi(m[4])

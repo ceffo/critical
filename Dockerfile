@@ -14,7 +14,7 @@ FROM alpine:3.24 AS catalogue
 RUN echo "error: no spell catalogue given. Pass --build-context catalogue=<dir holding catalogue.json>" \
          "(api/testdata for the fixture, .catalogue for the real one)." >&2 && exit 1
 
-FROM node:24-alpine AS web
+FROM node:25-alpine AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci

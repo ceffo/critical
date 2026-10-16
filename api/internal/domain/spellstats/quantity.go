@@ -40,6 +40,9 @@ type Quantity struct {
 	OrMore  bool    `json:"or_more,omitempty"`
 	Max     float64 `json:"max,omitempty"`
 	MaxUnit string  `json:"max_unit,omitempty"`
+	// Axis is the way an area's extent runs ("2 ft. wide"): wide, long, high,
+	// thick or deep; "" when the text names none.
+	Axis string `json:"axis,omitempty"`
 }
 
 // Value is a Quantity computed for a caster level, expressed in Unit.

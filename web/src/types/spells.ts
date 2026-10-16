@@ -27,6 +27,8 @@ export interface SpellQuantity {
   or_more?: boolean;
   max?: number;
   max_unit?: string;
+  /** The way an area's extent runs ("2 ft. wide"). */
+  axis?: "wide" | "long" | "high" | "thick" | "deep";
 }
 
 /** Mirrors spellstats.AreaOfEffect: one reading of an area of effect, or a choice between readings. */
@@ -39,6 +41,13 @@ export interface SpellArea {
   dims?: SpellQuantity[];
   targets?: SpellQuantity;
   noun?: string;
+  /** The size of the group `noun` names ("unit of up to 200 individuals"), counted in `members_noun`. */
+  members?: SpellQuantity;
+  members_noun?: string;
+  /** The extents bound where the targets are ("1 animal within 30 ft."). */
+  within?: boolean;
+  /** The area is centred on the creature or object touched. */
+  around_touched?: boolean;
   /** The text says more than this typed form holds: a reader shows the raw text. */
   partial?: boolean;
   /** The readings of an "alternatives" kind ("1 creature or object"), each an area or targets. */

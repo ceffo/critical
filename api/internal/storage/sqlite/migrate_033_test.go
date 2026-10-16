@@ -224,3 +224,58 @@ func TestSeed_Step10_RejectsANameWithoutLanguage(t *testing.T) {
 		})
 	}
 }
+
+// The seed offers each language to a name once: a language added to the
+// seed later reaches a filled table on the next start, but a language the
+// player removed from a name (a blank body, step 11) is not put back, even
+// once the row was removed and put back under a new key (an undo).
+func TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	others, err := os.ReadDir(repoSeeds())
+	require.NoError(t, err)
+	for _, f := range others {
+		b, err := os.ReadFile(filepath.Join(repoSeeds(), f.Name()))
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(dir, f.Name()), b, 0o600))
+	}
+	writeSeeds := func(item, weapon string) {
+		t.Helper()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "items.json"), []byte(
+			`[{"id":"gem","name":`+item+`,"behaviour":"daily","count":1}]`), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "weapons.json"), []byte(
+			`[{"id":"axe","name":`+weapon+`,"damage_sm":"1d6","damage_l":"1d4","kind":"melee"}]`), 0o600))
+	}
+	db := openMigrated(t)
+	writeSeeds(`{"en":"Gem"}`, `{"en":"Axe"}`)
+	require.NoError(t, db.Seed(ctx, dir))
+
+	writeSeeds(`{"en":"Gem","fr":"Gemme"}`, `{"en":"Axe","fr":"Hache"}`)
+	require.NoError(t, db.Seed(ctx, dir))
+	require.Equal(t, map[string]localized.Text{"gem": {"en": "Gem", "fr": "Gemme"}}, names(t, db, "items"),
+		"a language added to the seed later is offered")
+	require.Equal(t, map[string]localized.Text{"axe": {"en": "Axe", "fr": "Hache"}}, names(t, db, "weapons"))
+
+	// The player blanks the French names (the DAL deletes the language's row).
+	for _, table := range []string{"items", "weapons"} {
+		_, err := db.ExecContext(ctx, `DELETE FROM localized_texts WHERE lang = 'fr' AND text_id = (SELECT name FROM `+table+`)`) //nolint:gosec // a fixed table name
+		require.NoError(t, err)
+	}
+	require.NoError(t, db.Seed(ctx, dir))
+	assert.Equal(t, map[string]localized.Text{"gem": {"en": "Gem"}}, names(t, db, "items"), "a removed language stays removed")
+	assert.Equal(t, map[string]localized.Text{"axe": {"en": "Axe"}}, names(t, db, "weapons"))
+
+	// The gem is removed, then put back under a new key (an undo).
+	for _, q := range []string{
+		`DELETE FROM localized_texts WHERE text_id = (SELECT name FROM items)`,
+		`INSERT INTO localized_texts (text_id, lang, body) SELECT MAX(text_id) + 1, 'en', 'Gem' FROM localized_texts`,
+		`UPDATE items SET name = (SELECT MAX(text_id) FROM localized_texts)`,
+	} {
+		_, err := db.ExecContext(ctx, q)
+		require.NoError(t, err)
+	}
+	texts := storedTexts(t, db)
+	require.NoError(t, db.Seed(ctx, dir))
+	assert.Equal(t, texts, storedTexts(t, db), "the record follows the id, not the key")
+	assertTextIntegrity(t, db)
+}

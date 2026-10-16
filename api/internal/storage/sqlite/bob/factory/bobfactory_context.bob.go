@@ -82,6 +82,9 @@ var (
 	savedBuffWithParentsCascadingCtx = newContextual[bool]("savedBuffWithParentsCascading")
 	savedBuffRelCharacterCtx         = newContextual[bool]("characters.saved_buffs.fk_saved_buffs_0")
 
+	// Relationship Contexts for seeded_name_languages
+	seededNameLanguageWithParentsCascadingCtx = newContextual[bool]("seededNameLanguageWithParentsCascading")
+
 	// Relationship Contexts for spell_slots
 	spellSlotWithParentsCascadingCtx = newContextual[bool]("spellSlotWithParentsCascading")
 	spellSlotRelCharacterCtx         = newContextual[bool]("characters.spell_slots.fk_spell_slots_0")

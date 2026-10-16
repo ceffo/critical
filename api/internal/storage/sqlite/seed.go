@@ -192,7 +192,7 @@ func (d *DB) seedWeapons(ctx context.Context, seedPath string) error {
 	return d.WrapTx(ctx, func(q Querier) error {
 		if count > 0 {
 			for _, w := range weapons {
-				if err := reconcileName(ctx, q, weaponNameKey, w.ID, w.Name.Trimmed()); err != nil {
+				if err := reconcileName(ctx, q, weaponName, w.ID, w.Name.Trimmed()); err != nil {
 					return fmt.Errorf("weapon %q: %w", w.ID, err)
 				}
 			}
@@ -201,6 +201,9 @@ func (d *DB) seedWeapons(ctx context.Context, seedPath string) error {
 		for i, w := range weapons {
 			key, err := addSeedText(ctx, q, w.Name.Trimmed())
 			if err != nil {
+				return fmt.Errorf("weapon %q: %w", w.ID, err)
+			}
+			if err := recordOffers(ctx, q, weaponName, w.ID, w.Name.Trimmed().Languages()); err != nil {
 				return fmt.Errorf("weapon %q: %w", w.ID, err)
 			}
 			if _, err := q.ExecContext(ctx, `
@@ -261,7 +264,7 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 	return d.WrapTx(ctx, func(q Querier) error {
 		if count > 0 {
 			for _, it := range items {
-				if err := reconcileName(ctx, q, itemNameKey, it.ID, it.Name.Trimmed()); err != nil {
+				if err := reconcileName(ctx, q, itemName, it.ID, it.Name.Trimmed()); err != nil {
 					return fmt.Errorf("item %q: %w", it.ID, err)
 				}
 			}
@@ -270,6 +273,9 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 		for i, it := range items {
 			key, err := addSeedText(ctx, q, it.Name.Trimmed())
 			if err != nil {
+				return fmt.Errorf("item %q: %w", it.ID, err)
+			}
+			if err := recordOffers(ctx, q, itemName, it.ID, it.Name.Trimmed().Languages()); err != nil {
 				return fmt.Errorf("item %q: %w", it.ID, err)
 			}
 			maxCount := it.Count
@@ -288,10 +294,16 @@ func (d *DB) seedItems(ctx context.Context, seedPath string) error {
 	})
 }
 
-// The name key of a weapon or an item by id (no row: none).
-const (
-	weaponNameKey = `SELECT name FROM weapons WHERE id = ?`
-	itemNameKey   = `SELECT name FROM items WHERE id = ?`
+// seededName says where a weapon's or an item's name key is read and the
+// kind its seed offers are recorded under (seeded_name_languages).
+type seededName struct {
+	kind     string
+	keyQuery string
+}
+
+var (
+	weaponName = seededName{kind: "weapon", keyQuery: `SELECT name FROM weapons WHERE id = ?`}
+	itemName   = seededName{kind: "item", keyQuery: `SELECT name FROM items WHERE id = ?`}
 )
 
 // addSeedText stores t under a new key, one more than the highest stored (as
@@ -317,47 +329,83 @@ func insertText(ctx context.Context, q Querier, key int64, lang, body string) er
 }
 
 // reconcileName is the seed reconcile of an existing weapon's or item's name
-// (ADR 0023 step 10): while every language the stored name has still reads
-// as the seed's, the name gains the seed's languages it lacks. A name the
-// player changed in any language is kept as is, a row the seed does not list
-// is untouched, an id the table no longer has is not added back (the player
-// removed it), and no other field changes. A second run writes nothing.
-func reconcileName(ctx context.Context, q Querier, keyQuery, id string, seed localized.Text) error {
+// (ADR 0023 step 10). The seed offers each of its languages to a name once:
+// a language not offered yet is recorded, and the name gains it when it lacks
+// it while every language it has still reads as the seed's. A name the player
+// changed in any language is kept as is, a language the player removed after
+// its offer is not put back, a row the seed does not list is untouched, an id
+// the table no longer has is not added back (the player removed it), and no
+// other field changes. A second run writes nothing.
+func reconcileName(ctx context.Context, q Querier, n seededName, id string, seed localized.Text) error {
 	var key int64
-	err := q.QueryRowContext(ctx, keyQuery, id).Scan(&key)
+	err := q.QueryRowContext(ctx, n.keyQuery, id).Scan(&key)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("read name key: %w", err)
 	}
-	rows, err := q.QueryContext(ctx, `SELECT lang, body FROM localized_texts WHERE text_id = ?`, key)
+	offered, err := langSet(ctx, q, `SELECT lang, '' FROM seeded_name_languages WHERE kind = ? AND id = ?`, n.kind, id)
+	if err != nil {
+		return fmt.Errorf("read seed offers: %w", err)
+	}
+	var fresh []string
+	for _, lang := range seed.Languages() {
+		if _, ok := offered[lang]; !ok {
+			fresh = append(fresh, lang)
+		}
+	}
+	if len(fresh) == 0 {
+		return nil
+	}
+	stored, err := langSet(ctx, q, `SELECT lang, body FROM localized_texts WHERE text_id = ?`, key)
 	if err != nil {
 		return fmt.Errorf("read name %d: %w", key, err)
 	}
-	stored := localized.Text{}
-	for rows.Next() {
-		var lang, body string
-		if err := rows.Scan(&lang, &body); err != nil {
-			_ = rows.Close()
-			return fmt.Errorf("scan name %d: %w", key, err)
-		}
-		stored[lang] = body
-	}
-	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
-		return fmt.Errorf("read name %d: %w", key, err)
+	if err := recordOffers(ctx, q, n, id, fresh); err != nil {
+		return err
 	}
 	for lang, body := range stored {
 		if seed[lang] != body {
 			return nil
 		}
 	}
-	for _, lang := range seed.Languages() {
+	for _, lang := range fresh {
 		if _, ok := stored[lang]; ok {
 			continue
 		}
 		if err := insertText(ctx, q, key, lang, seed[lang]); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// langSet reads (lang, body) rows into a text.
+func langSet(ctx context.Context, q Querier, query string, args ...any) (localized.Text, error) {
+	rows, err := q.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	out := localized.Text{}
+	for rows.Next() {
+		var lang, body string
+		if err := rows.Scan(&lang, &body); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		out[lang] = body
+	}
+	return out, errors.Join(rows.Err(), rows.Close())
+}
+
+// recordOffers records that the seed has offered a name these languages.
+func recordOffers(ctx context.Context, q Querier, n seededName, id string, langs []string) error {
+	for _, lang := range langs {
+		if _, err := q.ExecContext(ctx,
+			`INSERT OR IGNORE INTO seeded_name_languages (kind, id, lang) VALUES (?, ?, ?)`, n.kind, id, lang,
+		); err != nil {
+			return fmt.Errorf("record seed offer %s %q %s: %w", n.kind, id, lang, err)
 		}
 	}
 	return nil

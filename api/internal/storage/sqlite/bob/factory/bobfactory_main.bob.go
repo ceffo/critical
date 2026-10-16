@@ -13,26 +13,27 @@ import (
 )
 
 type Factory struct {
-	baseActionCorrectionMods ActionCorrectionModSlice
-	baseActionLogMods        ActionLogModSlice
-	baseActionSnapshotMods   ActionSnapshotModSlice
-	baseActiveBuffMods       ActiveBuffModSlice
-	baseAttackFormMods       AttackFormModSlice
-	baseBardSkillMods        BardSkillModSlice
-	baseCatalogueMetumMods   CatalogueMetumModSlice
-	baseCharacterMods        CharacterModSlice
-	baseCritTableRowMods     CritTableRowModSlice
-	baseDiceFavouriteMods    DiceFavouriteModSlice
-	baseHPEventMods          HPEventModSlice
-	baseItemMods             ItemModSlice
-	baseLocalizedTextMods    LocalizedTextModSlice
-	baseProficiencyMods      ProficiencyModSlice
-	baseRoundStateMods       RoundStateModSlice
-	baseSavedBuffMods        SavedBuffModSlice
-	baseSpellSlotMods        SpellSlotModSlice
-	baseSpellMods            SpellModSlice
-	baseWeaponMods           WeaponModSlice
-	baseXPEntryMods          XPEntryModSlice
+	baseActionCorrectionMods   ActionCorrectionModSlice
+	baseActionLogMods          ActionLogModSlice
+	baseActionSnapshotMods     ActionSnapshotModSlice
+	baseActiveBuffMods         ActiveBuffModSlice
+	baseAttackFormMods         AttackFormModSlice
+	baseBardSkillMods          BardSkillModSlice
+	baseCatalogueMetumMods     CatalogueMetumModSlice
+	baseCharacterMods          CharacterModSlice
+	baseCritTableRowMods       CritTableRowModSlice
+	baseDiceFavouriteMods      DiceFavouriteModSlice
+	baseHPEventMods            HPEventModSlice
+	baseItemMods               ItemModSlice
+	baseLocalizedTextMods      LocalizedTextModSlice
+	baseProficiencyMods        ProficiencyModSlice
+	baseRoundStateMods         RoundStateModSlice
+	baseSavedBuffMods          SavedBuffModSlice
+	baseSeededNameLanguageMods SeededNameLanguageModSlice
+	baseSpellSlotMods          SpellSlotModSlice
+	baseSpellMods              SpellModSlice
+	baseWeaponMods             WeaponModSlice
+	baseXPEntryMods            XPEntryModSlice
 }
 
 func New() *Factory {
@@ -756,6 +757,36 @@ func (f *Factory) fromExistingSavedBuff(ctx context.Context, m *models.SavedBuff
 	return o
 }
 
+func (f *Factory) NewSeededNameLanguage(mods ...SeededNameLanguageMod) *SeededNameLanguageTemplate {
+	return f.NewSeededNameLanguageWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewSeededNameLanguageWithContext(ctx context.Context, mods ...SeededNameLanguageMod) *SeededNameLanguageTemplate {
+	o := &SeededNameLanguageTemplate{f: f}
+
+	if f != nil {
+		f.baseSeededNameLanguageMods.Apply(ctx, o)
+	}
+
+	SeededNameLanguageModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingSeededNameLanguage(ctx context.Context, m *models.SeededNameLanguage) *SeededNameLanguageTemplate {
+	return f.fromExistingSeededNameLanguage(ctx, m)
+}
+
+func (f *Factory) fromExistingSeededNameLanguage(ctx context.Context, m *models.SeededNameLanguage) *SeededNameLanguageTemplate {
+	o := &SeededNameLanguageTemplate{f: f, alreadyPersisted: true}
+
+	o.Kind = func() string { return m.Kind }
+	o.ID = func() string { return m.ID }
+	o.Lang = func() string { return m.Lang }
+
+	return o
+}
+
 func (f *Factory) NewSpellSlot(mods ...SpellSlotMod) *SpellSlotTemplate {
 	return f.NewSpellSlotWithContext(context.Background(), mods...)
 }
@@ -1052,6 +1083,14 @@ func (f *Factory) ClearBaseSavedBuffMods() {
 
 func (f *Factory) AddBaseSavedBuffMod(mods ...SavedBuffMod) {
 	f.baseSavedBuffMods = append(f.baseSavedBuffMods, mods...)
+}
+
+func (f *Factory) ClearBaseSeededNameLanguageMods() {
+	f.baseSeededNameLanguageMods = nil
+}
+
+func (f *Factory) AddBaseSeededNameLanguageMod(mods ...SeededNameLanguageMod) {
+	f.baseSeededNameLanguageMods = append(f.baseSeededNameLanguageMods, mods...)
 }
 
 func (f *Factory) ClearBaseSpellSlotMods() {

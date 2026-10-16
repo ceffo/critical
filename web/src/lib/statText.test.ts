@@ -631,6 +631,97 @@ describe("areaText", () => {
     ).toBe("jusqu'à 6 créatures");
   });
 
+  it("words the axis of each extent", () => {
+    const path = a("area", "One 10'-wide path, 60 feet long", {
+      shape: "path",
+      dims: [
+        { ...qty(10, "foot"), axis: "wide" },
+        { ...qty(60, "foot"), axis: "long" },
+      ],
+    });
+    expect(areaText(fr, path)).toBe(
+      "chemin de 3 m de large et de 18 m de long",
+    );
+    const slab = a("area", "4 ft./level wide x 2 ft./level high", {
+      dims: [
+        { ...qty(4, "foot", { per_level: true, step: 1 }), axis: "wide" },
+        { ...qty(2, "foot", { per_level: true, step: 1 }), axis: "high" },
+      ],
+    });
+    expect(areaText(fr, slab)).toBe(
+      "1,2 m/niveau de large et de 60 cm/niveau de haut",
+    );
+    const wall = a("area", "wall, 10 x 5 ft./level, 2 ft. wide", {
+      shape: "wall",
+      dims: [
+        qty(10, "foot"),
+        qty(5, "foot", { per_level: true, step: 1 }),
+        { ...qty(2, "foot"), axis: "wide" },
+      ],
+    });
+    expect(areaText(fr, wall)).toBe(
+      "mur de 3 m × 1,5 m/niveau et de 60 cm de large",
+    );
+    expect(areaText(en, path)).toBe("10 ft wide and 60 ft long path");
+  });
+
+  it("words the size of a group after its noun", () => {
+    const unit = a("targets", "One unit of up to 200 individuals", {
+      targets: qty(1),
+      noun: "unit",
+      members: { ...qty(200), up_to: true },
+      members_noun: "individuals",
+    });
+    expect(areaText(fr, unit)).toBe("1 unité de 200 individus maximum");
+  });
+
+  it("words targets within a distance, and an area around what is touched", () => {
+    expect(
+      areaText(
+        fr,
+        a("area", "1 animal within 30 ft.", {
+          dims: [qty(30, "foot")],
+          targets: qty(1),
+          noun: "animal",
+          within: true,
+        }),
+      ),
+    ).toBe("1 animal dans un rayon de 9 m");
+    expect(
+      areaText(
+        fr,
+        a("area", "10-ft. radius around creature touched", {
+          shape: "radius",
+          dims: [qty(10, "foot")],
+          around_touched: true,
+        }),
+      ),
+    ).toBe("rayon de 3 m autour de la créature touchée");
+    // Within a shape ("within a 20-foot cube"): the book's text.
+    expect(
+      areaText(
+        fr,
+        a("area", "", {
+          shape: "cube",
+          dims: [qty(20, "foot")],
+          targets: qty(1),
+          noun: "creature",
+          within: true,
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("has a French noun for pebbles and eyes", () => {
+    for (const [noun, text] of [
+      ["pebbles", "3 galets"],
+      ["eyes", "3 yeux"],
+    ])
+      expect(areaText(fr, a("targets", "", { targets: qty(3), noun }))).toBe(
+        text,
+      );
+  });
+
   it('words "1 or more" after the noun', () => {
     expect(
       areaText(

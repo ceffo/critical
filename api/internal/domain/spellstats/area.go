@@ -34,6 +34,16 @@ type AreaOfEffect struct {
 	// Targets is the creature/object count; Noun is what is counted.
 	Targets *Quantity `json:"targets,omitempty"`
 	Noun    string    `json:"noun,omitempty"`
+	// Members is the size of a group Noun names ("One unit of up to 200
+	// individuals": Noun unit, Members 200 up to, MembersNoun individuals).
+	Members     *Quantity `json:"members,omitempty"`
+	MembersNoun string    `json:"members_noun,omitempty"`
+	// Within is set when the extents bound where the targets are ("1 animal
+	// within 30 ft."), rather than describe an area of their own.
+	Within bool `json:"within,omitempty"`
+	// AroundTouched is set when the area is centred on the creature or object
+	// touched ("10-ft. radius around creature touched").
+	AroundTouched bool `json:"around_touched,omitempty"`
 	// Partial is set on an area or targets kind whose text says more than
 	// the typed form holds: an alternative ("1 creature or item"), a number
 	// it dropped ("One creature/two levels") or a word it does not read
@@ -62,6 +72,17 @@ var (
 	orMoreRe = regexp.MustCompile(`(?i)\b(\d+(?:d\d+)?|one|two)\s+or more\b`)
 	// perWordRe is a non-level divisor after an extent: "square/priest".
 	perWordRe = regexp.MustCompile(`(?i)^[a-z.\s-]*?/\s*([a-z]+)\b`)
+	// perLevelWordRe is "per level" spelled out: "1 creature per level".
+	perLevelWordRe = regexp.MustCompile(`(?i)\s+per\s+(?:(\d+|two|three|four|five|six|seven|eight|nine|ten)\s+)?levels?\b`)
+	// diameterOfRe is "sphere with diameter of 1 ft./level", read as "1
+	// ft./level diameter sphere".
+	diameterOfRe = regexp.MustCompile(`(?i)\b(sphere|globe|hemisphere|circle|cylinder)\s+with\s+(?:a\s+)?diameter\s+of\s+(.+)$`)
+	// aroundTouchedRe is an area centred on what is touched.
+	aroundTouchedRe = regexp.MustCompile(`(?i)^(.+?)\s+around\s+(?:a\s+|the\s+)?(?:creature|person|object)s?\s+touched$`)
+	// membersRe is the size of a group: "unit of up to 200 individuals".
+	membersRe = regexp.MustCompile(`(?i)^(.+?)\s+(?:of\s+)?up to\s+(\d+)\s+([a-z]+)$`)
+	// axisRe is the word that says which way an extent runs.
+	axisRe    = regexp.MustCompile(`(?i)\b(wide|long|high|tall|thick|deep)\b`)
 	createsRe = regexp.MustCompile(`(?i)^creates?\s+`)
 	bareCount = regexp.MustCompile(`^\d+(?:d\d+)?(?:\+\d+(?:d\d+)?)*$`)
 	lengthRe  = regexp.MustCompile(`(?i)\b(ft|feet|foot|yds?|yards?|mi|miles?|sq|cu)\b|-ft\b`)
@@ -170,6 +191,16 @@ func parseAreaReading(raw string) AreaOfEffect {
 		}
 		return n + "+"
 	})
+	s = perLevelWordRe.ReplaceAllStringFunc(s, func(m string) string {
+		if n := strings.ToLower(perLevelWordRe.FindStringSubmatch(m)[1]); n != "" {
+			return "/" + n + " levels"
+		}
+		return "/level"
+	})
+	s = diameterOfRe.ReplaceAllString(s, "$2 diameter $1")
+	if m := aroundTouchedRe.FindStringSubmatch(s); m != nil {
+		s, a.AroundTouched = m[1], true
+	}
 	low := strings.ToLower(s)
 	switch {
 	case low == "special" || low == "":
@@ -232,6 +263,7 @@ func parseAreaReading(raw string) AreaOfEffect {
 			switch {
 			case a.Dims == nil:
 				a.Dims = parseDims(part)
+				a.Within = prevSep == "within" && a.Targets != nil
 				if a.Shape == "" {
 					a.Shape = shapeOf(part)
 				}
@@ -248,6 +280,11 @@ func parseAreaReading(raw string) AreaOfEffect {
 			if q, noun, ok := parseTargets(part); ok {
 				q.UpTo = upTo
 				a.Targets, a.Noun = &q, noun
+				if m := membersRe.FindStringSubmatch(noun); m != nil {
+					n, _ := strconv.ParseFloat(m[2], 64)
+					a.Noun, a.MembersNoun = m[1], m[3]
+					a.Members = &Quantity{Terms: []Term{{Count: n}}, UpTo: true}
+				}
 			}
 		}
 	}
@@ -257,11 +294,20 @@ func parseAreaReading(raw string) AreaOfEffect {
 	case a.Targets != nil:
 		a.Kind = AreaTargets
 	}
+	if a.Kind == AreaArea && a.Shape == "" { // "wall, 10 x 5 ft./level": the shape is a part of its own
+		a.Shape = shapeOf(s)
+	}
 	if a.Kind == AreaArea && (a.Shape == "radius" || a.Shape == "diameter") {
 		a.Figure = figureOf(s, a.Shape)
 	}
 	if a.Kind != KindSpecial {
 		a.Partial = !a.covers(s)
+	}
+	if a.Kind != AreaArea && a.Kind != AreaTargets {
+		a.AroundTouched = false
+	}
+	if a.Dims == nil || a.Targets == nil {
+		a.Within = false
 	}
 	return a
 }
@@ -345,6 +391,18 @@ func (a AreaOfEffect) covers(s string) bool {
 	}
 	for _, d := range a.Dims {
 		addQ(d)
+		for _, w := range axisWords[d.Axis] {
+			words[w] = true
+		}
+	}
+	if a.Within {
+		words["within"] = true
+	}
+	if a.Members != nil { // "unit of up to 200 individuals"
+		addQ(*a.Members)
+		for _, w := range []string{"of", "up", "to", a.MembersNoun} {
+			words[strings.ToLower(w)] = true
+		}
 	}
 	if a.Targets != nil {
 		addQ(*a.Targets)
@@ -414,6 +472,25 @@ func parseDims(part string) []Quantity {
 	return dims
 }
 
+// axisWords are the words that name each axis of an extent.
+var axisWords = map[string][]string{
+	"wide": {"wide"}, "long": {"long"}, "high": {"high", "tall"}, "thick": {"thick"}, "deep": {"deep"},
+}
+
+// axisOf is the axis a chunk of text names ("2 ft. wide"), "" when none or
+// when it names several.
+func axisOf(ch string) string {
+	ms := axisRe.FindAllString(ch, -1)
+	if len(ms) != 1 {
+		return ""
+	}
+	w := strings.ToLower(ms[0])
+	if w == "tall" {
+		return "high"
+	}
+	return w
+}
+
 func parseDimChunk(ch string) Quantity {
 	locs := dimTok.FindAllStringSubmatchIndex(ch, -1)
 	var q Quantity
@@ -442,6 +519,9 @@ func parseDimChunk(ch string) Quantity {
 			}
 		}
 		q.Terms = append(q.Terms, t)
+	}
+	if len(q.Terms) > 0 {
+		q.Axis = axisOf(ch)
 	}
 	return q
 }

@@ -220,6 +220,29 @@ is only ever appended to by play.
      5. "Up to" on an extent bounds the figure, not the length inside it: "cube de 6 m maximum",
         not "cube de jusqu'à 6 m"; on a count it stays "jusqu'à 6 créatures" (French `words "up to"
         on the figure, not on the length inside it`).
+     6. "Per level" spelled out ("1 creature per level", "per 2 levels") is the per-level term
+        (`TestAreaOfEffect_PerLevelSpelledOut`).
+     7. "Sphere with diameter of 1 ft./level" is a diameter of a sphere
+        (`TestAreaOfEffect_DiameterOfAFigure`; French sphere "de 30 cm/niveau de diamètre", the
+        shapes test of `areaText`).
+     8. A group's size is typed beside its noun: "One unit of up to 200 individuals" is one unit
+        (`members`, up to 200, `members_noun`), worded "1 unité de 200 individus maximum"
+        (`TestAreaOfEffect_GroupSize`; French `words the size of a group after its noun`).
+     9. An extent after "within" bounds the targets ("1 animal within 30 ft.", `within`): worded
+        "1 animal dans un rayon de 9 m"; within a shape the book's text stays
+        (`TestAreaOfEffect_WithinBoundsTargets`; French `words targets within a distance, and an
+        area around what is touched`).
+     10. An area "around creature touched" keeps its extent and says what it is centred on
+         (`around_touched`; `TestAreaOfEffect_AroundWhatIsTouched`, same French test).
+     11. Wide, long, high (tall), thick and deep name the axis of an extent (`axis`), worded
+         "de large", "de long", "de haut", "d'épaisseur", "de profondeur" after the figure, which
+         is gender-free: "chemin de 3 m de large et de 18 m de long". An axis word with no extent
+         for it (a cone "wide at base") keeps the book's text
+         (`TestAreaOfEffect_AxisOfAnExtent`; French `words the axis of each extent`).
+     12. The unlisted nouns pebble ("galet", PHB *Pierre magique*) and eye ("œil", no French book
+         entry for the spell) are worded (French `has a French noun for pebbles and eyes`), and the
+         area texts that name no extent (hearing range, line of sight, the caster's hand, staff,
+         shadow or weapon, "Variable") are common values labelled in `lookup.values.area`.
 
 ## Consequences
 

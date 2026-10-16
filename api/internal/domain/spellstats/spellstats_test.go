@@ -564,3 +564,80 @@ func TestAreaOfEffect_PathAndLineAreShapes(t *testing.T) {
 	assert.Equal(t, "line", spellstats.ParseArea("30-yard line").Shape)
 	assert.False(t, spellstats.ParseArea("30-yard line").Partial)
 }
+
+// ADR 0021 step 8 (areas, 6): "per level" spelled out is the per-level term.
+func TestAreaOfEffect_PerLevelSpelledOut(t *testing.T) {
+	a := spellstats.ParseArea("1 creature per level")
+	assert.False(t, a.Partial)
+	assert.Equal(t, spellstats.Term{Count: 1, PerLevel: true, Step: 1}, a.Targets.Terms[0])
+	assert.Equal(t, 5.0, a.At(5).Targets.Amount)
+
+	a = spellstats.ParseArea("1 creature per 2 levels")
+	assert.False(t, a.Partial)
+	assert.Equal(t, 2, a.Targets.Terms[0].Step)
+}
+
+// ADR 0021 step 8 (areas, 7): "sphere with diameter of 1 ft./level" is a diameter of a sphere.
+func TestAreaOfEffect_DiameterOfAFigure(t *testing.T) {
+	a := spellstats.ParseArea("sphere with diameter of 1 ft./level")
+	assert.False(t, a.Partial)
+	assert.Equal(t, "diameter", a.Shape)
+	assert.Equal(t, "sphere", a.Figure)
+	assert.True(t, a.Dims[0].Terms[0].PerLevel)
+}
+
+// ADR 0021 step 8 (areas, 8): a group's size is typed, not part of its noun.
+func TestAreaOfEffect_GroupSize(t *testing.T) {
+	for _, raw := range []string{"One unit of up to 200 individuals", "One unit up to 200 individuals"} {
+		a := spellstats.ParseArea(raw)
+		assert.False(t, a.Partial, raw)
+		assert.Equal(t, "unit", a.Noun, raw)
+		assert.Equal(t, "individuals", a.MembersNoun, raw)
+		assert.Equal(t, 200.0, a.Members.Terms[0].Count, raw)
+		assert.True(t, a.Members.UpTo, raw)
+	}
+	assert.True(t, spellstats.ParseArea("One unit of up to 200 individuals and a horse").Partial)
+}
+
+// ADR 0021 step 8 (areas, 9): an extent after "within" bounds the targets.
+func TestAreaOfEffect_WithinBoundsTargets(t *testing.T) {
+	a := spellstats.ParseArea("1 animal within 30 ft.")
+	assert.False(t, a.Partial)
+	assert.True(t, a.Within)
+	assert.Equal(t, 30.0, a.Dims[0].Terms[0].Count)
+	assert.Equal(t, "animal", a.Noun)
+	assert.False(t, spellstats.ParseArea("30 ft. radius").Within)
+}
+
+// ADR 0021 step 8 (areas, 10): an area around what is touched keeps its extent.
+func TestAreaOfEffect_AroundWhatIsTouched(t *testing.T) {
+	a := spellstats.ParseArea("10-foot radius sphere around creature touched")
+	assert.Equal(t, spellstats.AreaArea, a.Kind)
+	assert.False(t, a.Partial)
+	assert.True(t, a.AroundTouched)
+	assert.Equal(t, "radius", a.Shape)
+	assert.Equal(t, "sphere", a.Figure)
+	assert.Equal(t, spellstats.AreaTouch, spellstats.ParseArea("Creature touched").Kind)
+	assert.False(t, spellstats.ParseArea("Creature touched").AroundTouched)
+}
+
+// ADR 0021 step 8 (areas, 11): wide, long, high, thick and deep name the axis of an extent.
+func TestAreaOfEffect_AxisOfAnExtent(t *testing.T) {
+	a := spellstats.ParseArea("4 ft./level wide x 2 ft./level high")
+	assert.False(t, a.Partial)
+	assert.Equal(t, "wide", a.Dims[0].Axis)
+	assert.Equal(t, "high", a.Dims[1].Axis)
+
+	a = spellstats.ParseArea("One 10'-wide path, 60 feet long")
+	assert.False(t, a.Partial)
+	assert.Equal(t, "path", a.Shape)
+	assert.Equal(t, []string{"wide", "long"}, []string{a.Dims[0].Axis, a.Dims[1].Axis})
+
+	a = spellstats.ParseArea("wall, 10 x 5 ft./level, 2 ft. wide")
+	assert.False(t, a.Partial)
+	assert.Equal(t, "wall", a.Shape)
+	assert.Equal(t, "wide", a.Dims[2].Axis)
+
+	// An axis word with no extent for it keeps the book's text.
+	assert.True(t, spellstats.ParseArea("Cone 10 ft. wide at base and 30 ft. tall").Partial)
+}

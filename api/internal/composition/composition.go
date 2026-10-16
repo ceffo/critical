@@ -9,9 +9,11 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/actionlogdal"
 	"github.com/ceffo/critical/api/internal/adapters/attackformdal"
+	formq "github.com/ceffo/critical/api/internal/adapters/attackformdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
+	charq "github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
 	critq "github.com/ceffo/critical/api/internal/adapters/critdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
@@ -20,13 +22,17 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	hpq "github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
+	itemq "github.com/ceffo/critical/api/internal/adapters/itemdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/skilldal"
 	skillq "github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
+	"github.com/ceffo/critical/api/internal/adapters/textdal"
+	textq "github.com/ceffo/critical/api/internal/adapters/textdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
+	weaponq "github.com/ceffo/critical/api/internal/adapters/weapondal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/xpdal"
 	xpq "github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
@@ -116,7 +122,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// The sqlc-generated queries run on the transaction the context carries,
 	// else on the pool (ADR 0025 step 5.2).
 	routed := sqlite.Routed(db)
-	characterDAL := characterdal.New(db)
+	characterDAL := characterdal.New(charq.New(routed))
 	hpDAL := hpdal.New(hpq.New(routed))
 	logDAL := actionlogdal.New(db)
 	buffDAL := buffdal.New(db)
@@ -125,10 +131,12 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	if cfg.Dice != nil {
 		dice = cfg.Dice
 	}
-	weaponDAL := weapondal.New(db)
-	weaponEditor := weapondal.NewEditor(db)
+	// Item and weapon names are localized texts (ADR 0023 step 9).
+	texts := textdal.New(textq.New(routed))
+	weaponDAL := weapondal.New(weaponq.New(routed), texts)
+	weaponEditor := weapondal.NewEditor(weaponq.New(routed), texts)
 	critDAL := critdal.New(critq.New(routed))
-	itemDAL := itemdal.New(db)
+	itemDAL := itemdal.New(itemq.New(routed), texts)
 
 	// The spell effects casting applies; a malformed formula is a startup
 	// error.
@@ -238,7 +246,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	registerRestorers(logSvc, weaponSvc.Restorers())
 	combatSvc, err := combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: buffSvc, Dice: dice, Weapons: weaponDAL, Crit: critDAL,
-		Items: itemSvc, Forms: attackformdal.New(db), Rules: ruleTables, Log: logSvc, Tx: tx,
+		Items: itemSvc, Forms: attackformdal.New(formq.New(routed)), Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err != nil {
 		_ = db.Close()

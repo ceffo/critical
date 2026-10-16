@@ -1,100 +1,207 @@
+// The adapter runs on mocked Queriers (its own and the localized texts'): the
+// tests assert the operations called, their arguments and how rows map to
+// weapons; no database, no SQL text (ADR 0025 step 6.2).
 package weapondal_test
 
 import (
 	"context"
-	"path/filepath"
+	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/textdal"
+	textq "github.com/ceffo/critical/api/internal/adapters/textdal/queries"
+	textmocks "github.com/ceffo/critical/api/internal/adapters/textdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
+	"github.com/ceffo/critical/api/internal/adapters/weapondal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/weapondal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-func seeded(t *testing.T) *weapondal.DAL {
+func mocked(t *testing.T) (*mocks.MockQuerier, *textmocks.MockQuerier, textdal.Store) {
 	t.Helper()
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	ctx := context.Background()
-	require.NoError(t, db.Migrate(ctx))
-	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
-	return weapondal.New(db)
+	q, tq := mocks.NewMockQuerier(t), textmocks.NewMockQuerier(t)
+	return q, tq, textdal.New(tq)
 }
 
-func TestGet_SheetWeapon(t *testing.T) {
-	w, err := seeded(t).Get(context.Background(), "shortbow")
+var bowRow = queries.Weapon{
+	ID: "shortbow", Position: 2, Name: 12, DamageSm: "1d6", DamageL: "1d6",
+	MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: 1, AmmoKind: "arrow",
+}
+
+var bowName = localized.Text{"en": "Short Bow +2", "fr": "Arc court +2"}
+
+func bowNameRows() []textq.GetTextRow {
+	return []textq.GetTextRow{{Lang: "en", Body: "Short Bow +2"}, {Lang: "fr", Body: "Arc court +2"}}
+}
+
+// A row maps to combat's weapon, its name read under the row's key.
+func TestGet_MapsTheRowAndItsName(t *testing.T) {
+	ctx := context.Background()
+	q, tq, texts := mocked(t)
+
+	q.EXPECT().GetWeapon(ctx, "shortbow").Return(bowRow, nil).Once()
+	tq.EXPECT().GetText(ctx, int64(12)).Return(bowNameRows(), nil).Once()
+	w, err := weapondal.New(q, texts).Get(ctx, "shortbow")
 	require.NoError(t, err)
 	assert.Equal(t, combatsvc.Weapon{
-		ID: "shortbow", Name: localized.Text{"en": "Short Bow +2", "fr": "Arc court +2"}, BaseDamage: "1d6", DamageLarge: "1d6",
+		ID: "shortbow", Name: bowName, BaseDamage: "1d6", DamageLarge: "1d6",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
 	}, w)
 }
 
-func TestGet_OriginalWeaponsKeepTheirDamageDice(t *testing.T) {
-	dal := seeded(t)
-	ls, err := dal.Get(context.Background(), "longsword")
+// The rows map in the query's order (sheet order), each with the name under
+// its key; a one-handed weapon has two_handed 0.
+func TestList_MapsRowsInOrderWithTheirNames(t *testing.T) {
+	ctx := context.Background()
+	q, _, texts := mocked(t)
+	sword := queries.Weapon{ID: "longsword", Position: 1, Name: 11, DamageSm: "1d8", DamageL: "1d12", Kind: "melee"}
+
+	q.EXPECT().ListWeapons(ctx).Return([]queries.Weapon{sword, bowRow}, nil).Times(2)
+	q.EXPECT().WeaponNames(ctx).Return([]queries.LocalizedText{
+		{TextID: 12, Lang: "en", Body: "Short Bow +2"},
+		{TextID: 11, Lang: "en", Body: "Long Sword"},
+		{TextID: 12, Lang: "fr", Body: "Arc court +2"},
+	}, nil).Times(2)
+
+	got, err := weapondal.New(q, texts).List(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, "1d8", ls.BaseDamage)
-	assert.Equal(t, "1d12", ls.DamageLarge)
+	assert.Equal(t, []combatsvc.Weapon{
+		{ID: "longsword", Name: localized.Text{"en": "Long Sword"}, BaseDamage: "1d8", DamageLarge: "1d12", Kind: combatsvc.WeaponMelee},
+		{
+			ID: "shortbow", Name: bowName, BaseDamage: "1d6", DamageLarge: "1d6",
+			MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
+		},
+	}, got)
+
+	edited, err := weapondal.NewEditor(q, texts).List(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []weaponsvc.Weapon{
+		{ID: "longsword", Position: 1, Name: localized.Text{"en": "Long Sword"}, DamageSM: "1d8", DamageL: "1d12", Kind: "melee"},
+		{
+			ID: "shortbow", Position: 2, Name: bowName, DamageSM: "1d6", DamageL: "1d6",
+			MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+		},
+	}, edited)
 }
 
-func TestGet_Unknown(t *testing.T) {
-	_, err := seeded(t).Get(context.Background(), "nope")
+// No row is the not-found error of the caller's port, and no name is read.
+func TestGet_UnknownIsNotFound(t *testing.T) {
+	ctx := context.Background()
+	q, _, texts := mocked(t)
+
+	q.EXPECT().GetWeapon(ctx, "nope").Return(queries.Weapon{}, sql.ErrNoRows).Times(2)
+	_, err := weapondal.New(q, texts).Get(ctx, "nope")
 	require.ErrorIs(t, err, combatsvc.ErrWeaponNotFound)
-}
-
-func TestList_SheetOrder(t *testing.T) {
-	got, err := seeded(t).List(context.Background())
-	require.NoError(t, err)
-	ids := make([]string, 0, len(got))
-	for _, w := range got {
-		ids = append(ids, w.ID)
-	}
-	assert.Equal(t, []string{"bastard_sword", "longsword", "shortbow", "dagger", "mace", "darts"}, ids)
-}
-
-func seededEditor(t *testing.T) *weapondal.Editor {
-	t.Helper()
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	ctx := context.Background()
-	require.NoError(t, db.Migrate(ctx))
-	require.NoError(t, db.Seed(ctx, filepath.Join("..", "..", "..", "testdata", "seeds")))
-	return weapondal.NewEditor(db)
-}
-
-func TestEditor_ListGetInsertUpdateDelete(t *testing.T) {
-	ctx := context.Background()
-	e := seededEditor(t)
-	all, err := e.List(ctx)
-	require.NoError(t, err)
-	require.NotEmpty(t, all)
-	assert.Equal(t, 0, all[0].Position)
-
-	w := weaponsvc.Weapon{
-		ID: "long_bow", Position: 99, Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8",
-		MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
-	}
-	require.NoError(t, e.Insert(ctx, w))
-	got, err := e.Get(ctx, "long_bow")
-	require.NoError(t, err)
-	assert.Equal(t, w, got)
-
-	w.MagicToHit, w.TwoHanded, w.AmmoKind = 3, false, "bolt"
-	require.NoError(t, e.Update(ctx, w))
-	got, err = e.Get(ctx, "long_bow")
-	require.NoError(t, err)
-	assert.Equal(t, w, got)
-
-	require.NoError(t, e.Delete(ctx, "long_bow"))
-	_, err = e.Get(ctx, "long_bow")
+	_, err = weapondal.NewEditor(q, texts).Get(ctx, "nope")
 	require.ErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
+}
+
+func TestEditor_GetMapsPosition(t *testing.T) {
+	ctx := context.Background()
+	q, tq, texts := mocked(t)
+
+	q.EXPECT().GetWeapon(ctx, "shortbow").Return(bowRow, nil).Once()
+	tq.EXPECT().GetText(ctx, int64(12)).Return(bowNameRows(), nil).Once()
+	got, err := weapondal.NewEditor(q, texts).Get(ctx, "shortbow")
+	require.NoError(t, err)
+	assert.Equal(t, weaponsvc.Weapon{
+		ID: "shortbow", Position: 2, Name: bowName, DamageSM: "1d6", DamageL: "1d6",
+		MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+	}, got)
+}
+
+var longBow = weaponsvc.Weapon{
+	ID: "long_bow", Position: 9, Name: localized.Text{"en": "Long Bow", "fr": "Arc long"}, DamageSM: "1d8", DamageL: "1d8",
+	MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+}
+
+// ADR 0023 step 9: Insert writes the name under a new key, then the weapon
+// row holding that key.
+func TestEditor_InsertWritesTheNameUnderANewKeyThenTheRow(t *testing.T) {
+	ctx := context.Background()
+	q, tq, texts := mocked(t)
+
+	mock.InOrder(
+		tq.EXPECT().NextTextKey(ctx).Return(30, nil).Once(),
+		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "en", Body: "Long Bow"}).Return(nil).Once(),
+		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "fr", Body: "Arc long"}).Return(nil).Once(),
+		q.EXPECT().InsertWeapon(ctx, queries.InsertWeaponParams{
+			ID: "long_bow", Position: 9, Name: 30, DamageSm: "1d8", DamageL: "1d8",
+			MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: 1, AmmoKind: "arrow",
+		}).Return(nil).Once(),
+	)
+	require.NoError(t, weapondal.NewEditor(q, texts).Insert(ctx, longBow))
+}
+
+// ADR 0023 step 9: Update writes every field, then replaces the name's rows
+// under the key the row holds; Delete removes the row, then its name's rows.
+func TestEditor_UpdateAndDeleteKeepTheNameWithTheRow(t *testing.T) {
+	ctx := context.Background()
+	q, tq, texts := mocked(t)
+	e := weapondal.NewEditor(q, texts)
+	w := longBow
+	w.TwoHanded, w.Name = false, localized.Text{"en": "Bow"}
+
+	mock.InOrder(
+		q.EXPECT().UpdateWeapon(ctx, queries.UpdateWeaponParams{
+			Position: 9, DamageSm: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
+			Kind: "missile", TwoHanded: 0, AmmoKind: "arrow", ID: "long_bow",
+		}).Return(30, nil).Once(),
+		tq.EXPECT().DeleteText(ctx, int64(30)).Return(nil).Once(),
+		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "en", Body: "Bow"}).Return(nil).Once(),
+	)
+	require.NoError(t, e.Update(ctx, w))
+
+	mock.InOrder(
+		q.EXPECT().DeleteWeapon(ctx, "long_bow").Return(30, nil).Once(),
+		tq.EXPECT().DeleteText(ctx, int64(30)).Return(nil).Once(),
+	)
+	require.NoError(t, e.Delete(ctx, "long_bow"))
+}
+
+// No row updated or deleted is ErrWeaponNotFound, and no name is touched.
+func TestEditor_UnknownIsNotFound(t *testing.T) {
+	ctx := context.Background()
+	q, _, texts := mocked(t)
+	e := weapondal.NewEditor(q, texts)
+
+	q.EXPECT().UpdateWeapon(ctx, mock.Anything).Return(0, sql.ErrNoRows).Once()
+	require.ErrorIs(t, e.Update(ctx, longBow), weaponsvc.ErrWeaponNotFound)
+	q.EXPECT().DeleteWeapon(ctx, "long_bow").Return(0, sql.ErrNoRows).Once()
 	require.ErrorIs(t, e.Delete(ctx, "long_bow"), weaponsvc.ErrWeaponNotFound)
-	require.ErrorIs(t, e.Update(ctx, w), weaponsvc.ErrWeaponNotFound)
+}
+
+// Storage errors are returned, never taken for not found, and stop the
+// write: no row without its name, no name written after a failed update.
+func TestStorageErrors_AreReturnedAndStopTheWrite(t *testing.T) {
+	ctx := context.Background()
+	q, tq, texts := mocked(t)
+	e := weapondal.NewEditor(q, texts)
+
+	q.EXPECT().GetWeapon(ctx, "x").Return(queries.Weapon{}, assert.AnError).Once()
+	_, err := weapondal.New(q, texts).Get(ctx, "x")
+	require.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, combatsvc.ErrWeaponNotFound)
+
+	q.EXPECT().ListWeapons(ctx).Return([]queries.Weapon{bowRow}, nil).Once()
+	q.EXPECT().WeaponNames(ctx).Return(nil, assert.AnError).Once()
+	_, err = e.List(ctx)
+	require.ErrorIs(t, err, assert.AnError)
+
+	tq.EXPECT().NextTextKey(ctx).Return(0, assert.AnError).Once()
+	require.ErrorIs(t, e.Insert(ctx, longBow), assert.AnError)
+
+	q.EXPECT().UpdateWeapon(ctx, mock.Anything).Return(0, assert.AnError).Once()
+	err = e.Update(ctx, longBow)
+	require.ErrorIs(t, err, assert.AnError)
+	assert.NotErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
+
+	q.EXPECT().DeleteWeapon(ctx, "long_bow").Return(0, assert.AnError).Once()
+	require.ErrorIs(t, e.Delete(ctx, "long_bow"), assert.AnError)
 }

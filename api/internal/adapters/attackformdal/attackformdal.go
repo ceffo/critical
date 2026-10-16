@@ -1,5 +1,5 @@
 // Package attackformdal is the storage adapter for the attack form's last
-// choices (combatsvc.FormStore). It delegates to bob-generated typed queries.
+// choices (combatsvc.FormStore). It delegates to sqlc-generated queries.
 package attackformdal
 
 import (
@@ -10,24 +10,23 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/attackformdal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// DAL is the SQLite-backed implementation of combatsvc.FormStore.
+// DAL is the implementation of combatsvc.FormStore over the sqlc-generated
+// queries.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
-// New returns a DAL bound to q.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
+var _ combatsvc.FormStore = (*DAL)(nil)
 
-func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
+// New returns a DAL running its queries on q. The composition root builds q
+// over the pool, routed to the caller's transaction (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 // Get returns the character's stored form; ok is false when none was saved.
 func (d *DAL) Get(ctx context.Context, characterID int64) (combatsvc.AttackForm, bool, error) {
-	row, err := queries.GetAttackForm(characterID).One(ctx, d.exec(ctx))
+	row, err := d.q.GetAttackForm(ctx, characterID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return combatsvc.AttackForm{}, false, nil
 	}
@@ -55,7 +54,7 @@ func (d *DAL) Put(ctx context.Context, characterID int64, f combatsvc.AttackForm
 	if f.TargetAC != nil {
 		ac, known = int64(*f.TargetAC), 1
 	}
-	_, err := queries.UpsertAttackForm([]queries.UpsertAttackForm_AttackForms{{
+	err := d.q.UpsertAttackForm(ctx, queries.UpsertAttackFormParams{
 		CharacterID:      characterID,
 		WeaponID:         f.WeaponID,
 		PreviousWeaponID: f.PreviousWeaponID,
@@ -65,7 +64,7 @@ func (d *DAL) Put(ctx context.Context, characterID int64, f combatsvc.AttackForm
 		TargetSize:       string(f.TargetSize),
 		SituationalValue: int64(f.Situational.Value),
 		SituationalLabel: f.Situational.Label,
-	}}).Exec(ctx, d.exec(ctx))
+	})
 	if err != nil {
 		return fmt.Errorf("upsert attack_forms: %w", err)
 	}

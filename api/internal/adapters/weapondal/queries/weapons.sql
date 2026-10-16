@@ -1,39 +1,23 @@
--- ListWeapons
-SELECT id, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind
-FROM weapons ORDER BY position
-;
-
--- GetWeapon
-SELECT id, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind
-FROM weapons WHERE id = ?
-;
-
--- ListWeaponsFull
+-- name: ListWeapons :many
 SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind
-FROM weapons ORDER BY position
-;
+FROM weapons ORDER BY position;
 
--- GetWeaponFull
+-- name: GetWeapon :one
 SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind
-FROM weapons WHERE id = ?
-;
+FROM weapons WHERE id = ?;
 
--- InsertWeapon
+-- name: InsertWeapon :exec
 INSERT INTO weapons (id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-;
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
--- UpdateWeapon
+-- name: UpdateWeapon :one
 UPDATE weapons SET position = ?, damage_sm = ?, damage_l = ?, magic_to_hit = ?, magic_damage = ?, kind = ?, two_handed = ?, ammo_kind = ?
 WHERE id = ?
-RETURNING id, name
-;
+RETURNING name;
 
--- DeleteWeapon
+-- name: DeleteWeapon :one
 DELETE FROM weapons WHERE id = ?
-RETURNING id, name
-;
+RETURNING name;
 
--- WeaponNames
-SELECT text_id, lang, body FROM localized_texts WHERE text_id IN (SELECT name FROM weapons)
-;
+-- name: WeaponNames :many
+SELECT text_id, lang, body FROM localized_texts WHERE text_id IN (SELECT name FROM weapons);

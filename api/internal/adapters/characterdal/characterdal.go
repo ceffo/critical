@@ -1,5 +1,6 @@
-// Package characterdal is the storage adapter for charactersvc. It delegates
-// to bob-generated typed queries in the queries/ subpackage.
+// Package characterdal is the storage adapter for charactersvc and
+// detailssvc. It delegates to sqlc-generated queries in the queries/
+// subpackage.
 package characterdal
 
 import (
@@ -12,23 +13,28 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
+	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 )
 
-// DAL is the SQLite-backed implementation of charactersvc.Reader.
+// DAL is the implementation of charactersvc.Reader and detailssvc.DAL over
+// the sqlc-generated queries.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
-// New returns a DAL bound to the Querier.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
+var (
+	_ charactersvc.Reader = (*DAL)(nil)
+	_ detailssvc.DAL      = (*DAL)(nil)
+)
 
-func (d *DAL) exec() sqlite.BobExec { return sqlite.BobExec{Querier: d.q} }
+// New returns a DAL running its queries on q. The composition root builds q
+// over the pool, routed to the caller's transaction (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 // GetCharacter reads the row by id and maps it to a domain Character.
 // Returns domain.ErrCharacterNotFound when the row is missing.
 func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error) {
-	row, err := queries.GetCharacter(id).One(ctx, d.exec())
+	row, err := d.q.GetCharacter(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.ErrCharacterNotFound
 	}
@@ -41,10 +47,10 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	}
 	return &charactersvc.Character{
 		ID: row.ID, Name: row.Name,
-		Str: int(row.STR), Dex: int(row.Dex), Con: int(row.Con),
+		Str: int(row.Str), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HPMax), Thac0Base: int(row.Thac0Base),
-		Level: int(row.Level), XPTotal: int(row.XPTotal),
+		HPMax: int(row.HpMax), Thac0Base: int(row.Thac0Base),
+		Level: int(row.Level), XPTotal: int(row.XpTotal),
 		SaveParaPoison:   int(row.SaveParaPoison),
 		SaveRodStaffWand: int(row.SaveRodStaffWand),
 		SavePetriPoly:    int(row.SavePetriPoly),
@@ -61,7 +67,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 // FirstID returns the id of the first row in characters; used at startup when
 // the app runs in single-character mode. Returns ErrCharacterNotFound when empty.
 func (d *DAL) FirstID(ctx context.Context) (int64, error) {
-	id, err := queries.GetFirstCharacterID().One(ctx, d.exec())
+	id, err := d.q.GetFirstCharacterID(ctx)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, domain.ErrCharacterNotFound
 	}
@@ -79,14 +85,9 @@ func decodeLanguages(raw string) ([]string, error) {
 	return langs, nil
 }
 
-func (d *DAL) execCtx(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
-
-// GetDetails reads the editable details, joining the transaction carried by
-// ctx. Returns domain.ErrCharacterNotFound when the row is missing.
+// GetDetails reads the editable details. Returns domain.ErrCharacterNotFound when the row is missing.
 func (d *DAL) GetDetails(ctx context.Context, id int64) (charactersvc.Details, error) {
-	r, err := queries.GetCharacterDetails(id).One(ctx, d.execCtx(ctx))
+	r, err := d.q.GetCharacterDetails(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return charactersvc.Details{}, domain.ErrCharacterNotFound
 	}
@@ -109,12 +110,14 @@ func (d *DAL) UpdateDetails(ctx context.Context, id int64, v charactersvc.Detail
 	if err != nil {
 		return fmt.Errorf("encode languages: %w", err)
 	}
-	ids, err := queries.UpdateCharacterDetails(v.Race, v.Alignment, int64(v.Age), v.Sex, v.Height,
-		v.Weight, v.Hair, v.Eyes, string(langs), id).All(ctx, d.execCtx(ctx))
+	n, err := d.q.UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
+		Race: v.Race, Alignment: v.Alignment, Age: int64(v.Age), Sex: v.Sex, Height: v.Height,
+		Weight: v.Weight, Hair: v.Hair, Eyes: v.Eyes, Languages: string(langs), ID: id,
+	})
 	if err != nil {
 		return fmt.Errorf("update character details: %w", err)
 	}
-	if len(ids) == 0 {
+	if n == 0 {
 		return domain.ErrCharacterNotFound
 	}
 	return nil

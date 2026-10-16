@@ -1,7 +1,8 @@
 // Package textdal stores the localized texts of the editable reference data
 // (item and weapon names) in localized_texts (ADR 0023): a text is a key with
 // one row per language. The owning row holds the key. It is a helper of the
-// DALs that own such a column, used inside their transactions.
+// DALs that own such a column, used inside their transactions. It delegates
+// to sqlc-generated queries.
 package textdal
 
 import (
@@ -10,25 +11,20 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/textdal/queries"
 	"github.com/ceffo/critical/api/internal/domain/localized"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// Store reads and writes texts through q (joining the transaction ctx
-// carries, sqlite.InTx).
+// Store reads and writes texts through q.
 type Store struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
-// New returns a Store bound to q.
-func New(q sqlite.Querier) Store { return Store{q: q} }
-
-func (s Store) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, s.q)}
-}
+// New returns a Store running its queries on q. The composition root builds
+// q over the pool, routed to the caller's transaction (ADR 0025 step 5.2).
+func New(q queries.Querier) Store { return Store{q: q} }
 
 // Get is the text under key (empty when it has no row).
 func (s Store) Get(ctx context.Context, key int64) (localized.Text, error) {
-	rows, err := queries.GetText(key).All(ctx, s.exec(ctx))
+	rows, err := s.q.GetText(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("get text %d: %w", key, err)
 	}
@@ -43,10 +39,8 @@ func (s Store) Get(ctx context.Context, key int64) (localized.Text, error) {
 // of every writer of localized_texts), and returns the key. The caller
 // checked that t holds a language.
 func (s Store) Add(ctx context.Context, t localized.Text) (int64, error) {
-	var key int64
-	// An aggregate: bob's static parser has none (docs/backend.md).
-	if err := sqlite.Conn(ctx, s.q).QueryRowContext(ctx,
-		`SELECT COALESCE(MAX(text_id), 0) + 1 FROM localized_texts`).Scan(&key); err != nil {
+	key, err := s.q.NextTextKey(ctx)
+	if err != nil {
 		return 0, fmt.Errorf("next text key: %w", err)
 	}
 	if err := s.insert(ctx, key, t); err != nil {
@@ -66,7 +60,7 @@ func (s Store) Put(ctx context.Context, key int64, t localized.Text) error {
 
 // Delete removes every row under key.
 func (s Store) Delete(ctx context.Context, key int64) error {
-	if _, err := queries.DeleteText(key).Exec(ctx, s.exec(ctx)); err != nil {
+	if err := s.q.DeleteText(ctx, key); err != nil {
 		return fmt.Errorf("delete text %d: %w", key, err)
 	}
 	return nil
@@ -74,8 +68,7 @@ func (s Store) Delete(ctx context.Context, key int64) error {
 
 func (s Store) insert(ctx context.Context, key int64, t localized.Text) error {
 	for _, lang := range t.Languages() {
-		if _, err := queries.InsertText([]queries.InsertText_LocalizedTexts{{TextID: key, Lang: lang, Body: t[lang]}}).
-			Exec(ctx, s.exec(ctx)); err != nil {
+		if err := s.q.InsertText(ctx, queries.InsertTextParams{TextID: key, Lang: lang, Body: t[lang]}); err != nil {
 			return fmt.Errorf("insert text %d %s: %w", key, lang, err)
 		}
 	}

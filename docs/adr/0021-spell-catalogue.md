@@ -263,6 +263,33 @@ is only ever appended to by play.
          for a cone "wide at base".
      17. "Line of sight" is a shape and a leading "max." bounds the extent after it: "ligne de vue
          de 18 m maximum" (`TestAreaOfEffect_BoundedLineOfSight`, same French test).
+     18. A count of something and its size ("1 object up to 10 ft. long", "1 page, up to 2 ft.
+         square") is targets with `size`: the extents are each target's, not an area of their own
+         ("1 objet, 3 m de long maximum"). Without `size` they would read as an area beside the
+         count (`TestAreaOfEffect_SizeOfATarget`; French `words the size of a target, a level times
+         an area, a wave and a radius with a column`).
+     19. "Caster's level x 100 sq. ft." is 100 square feet per level (the self reading of "caster"
+         no longer takes it), worded "9 m²/niveau"; "wave" is a shape ("vague de 60 cm de haut et
+         de 3 m/niveau de long"); a radius with a second extent and a figure is that figure's other
+         extent ("colonne de 1,5 m de rayon sur 9 m"; with more extents the book's text stays)
+         (`TestAreaOfEffect_LevelTimesAndWave`, same French test).
+     20. In a choice, a bare alternative of several words ("1 speaking creature or written text")
+         has a qualifier of its own and takes the count before it; one word may share the
+         qualifier ("1 dead human or demihuman") and is not read
+         (`TestAreaOfEffect_QualifiedAlternatives`, same French test).
+     21. Lines left in the book's English text (no generic rule; 18 of 886 spells by
+         `just stat-coverage`, 2026-10-16 catalogue): a cap or divisor on a whole choice or list
+         ("1 creature or object, max. 1 cu. ft./level", "1 creature or 1 cu. ft. of
+         substance/2 levels", "One plant, seed, or tree/level", "1 small creature or 1 cubic foot
+         per level (up to 10 …)"), a qualifier that may be shared ("1 dead human or demihuman"),
+         an area within an area ("10 sq. ft/level within a 40-ft. radius", "One creature/5 levels
+         of the caster within a 20-foot cube"), a figure with several measures ("60-ft. cone,
+         30-ft. diameter at end, 5-ft. at base", "10 ft. sq./level, 1 spike/sq. ft.", "1d4 sticks +
+         1 stick/level in a 10-ft. cube", "10-foot square/level;96-inch thickness/level"), a size
+         before the noun or an approximate one ("3-ft. long blade", "One chest, about 2 x 2 x 3
+         ft."), what is created unnamed ("Creates 1d4+1", "Creates a sphere"), "10 or 100 (TS)
+         fire", and "5 x 20 x" (truncated in the book text: fixed in the rulebooks repo).
+
 
 ## Consequences
 

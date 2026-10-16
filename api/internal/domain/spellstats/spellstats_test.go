@@ -370,7 +370,8 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 		{"4d4 sq. mi.", false},                                  // dice in the extent
 		{"5 yds./level (90 yds. maximum)", false},               // a cap on the extent
 		{"Line of sight, max. 60 ft.", false},                   // a bounded line of sight (areas 17)
-		{"1 object up to 10 ft. long", true},                    // "long"
+		{"1 object up to 10 ft. long", false},                   // a size (areas 18)
+		{"3-ft. long blade", true},                              // a size before the noun
 		{"1 or more creatures in a 10-ft. radius", false},
 		{"10-yard square/priest", false},
 		{"1 creature/rd.", false},
@@ -390,7 +391,7 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 // lossy reading would give "10 creatures" for "One creature/two levels" at
 // level 10, and 0 for "1,000 square feet/level"); a whole reading has one.
 func TestAreaOfEffect_PartialReadingHasNoValueAtACasterLevel(t *testing.T) {
-	for _, raw := range []string{"3-ft. long blade", "1 object up to 10 ft. long", "1 creature or 1 cu. ft. of substance/2 levels"} {
+	for _, raw := range []string{"3-ft. long blade", "10 sq. ft/level within a 40-ft. radius", "1 creature or 1 cu. ft. of substance/2 levels"} {
 		t.Run(raw, func(t *testing.T) {
 			a := spellstats.ParseArea(raw)
 			require.True(t, a.Partial)
@@ -728,4 +729,62 @@ func TestAreaOfEffect_BoundedLineOfSight(t *testing.T) {
 	assert.True(t, a.Dims[0].UpTo)
 	assert.Equal(t, 60.0, a.Dims[0].Terms[0].Count)
 	assert.Equal(t, spellstats.KindSpecial, spellstats.ParseArea("Line of sight").Kind)
+}
+
+// ADR 0021 step 8 (areas, 18): "1 object up to 10 ft. long" is a target with a size, not an area.
+func TestAreaOfEffect_SizeOfATarget(t *testing.T) {
+	a := spellstats.ParseArea("1 object up to 10 ft. long")
+	assert.False(t, a.Partial)
+	assert.Equal(t, spellstats.AreaTargets, a.Kind)
+	assert.True(t, a.Size)
+	assert.Equal(t, "object", a.Noun)
+	assert.Equal(t, 1.0, a.Targets.Terms[0].Count)
+	assert.Equal(t, 10.0, a.Dims[0].Terms[0].Count)
+	assert.Equal(t, "foot", a.Dims[0].Terms[0].Unit)
+	assert.Equal(t, "long", a.Dims[0].Axis)
+	assert.True(t, a.Dims[0].UpTo)
+
+	sq := spellstats.ParseArea("1 page, up to 2 ft. square")
+	assert.False(t, sq.Partial)
+	assert.True(t, sq.Size)
+	assert.Equal(t, "square", sq.Shape)
+
+	two := spellstats.ParseArea("One extradimensional space up to 20 feet x 20 feet")
+	assert.False(t, two.Partial)
+	assert.True(t, two.Size)
+	assert.Len(t, two.Dims, 2)
+
+	// A group's size is a count of members, not an extent.
+	unit := spellstats.ParseArea("One unit of up to 200 individuals")
+	assert.False(t, unit.Size)
+	assert.Equal(t, "unit", unit.Noun)
+}
+
+// ADR 0021 step 8 (areas, 19): "caster's level x 100 sq. ft." is 100 sq. ft. per level, not the
+// caster; a wave is a shape; a radius with a column is two extents.
+func TestAreaOfEffect_LevelTimesAndWave(t *testing.T) {
+	lv := spellstats.ParseArea("caster's level x 100 sq. ft.")
+	assert.Equal(t, spellstats.AreaArea, lv.Kind)
+	assert.Equal(t, 100.0, lv.Dims[0].Terms[0].Count)
+	assert.True(t, lv.Dims[0].Terms[0].PerLevel)
+	assert.Equal(t, "sq foot", lv.Dims[0].Terms[0].Unit)
+	assert.Equal(t, spellstats.AreaSelf, spellstats.ParseArea("Caster").Kind)
+
+	w := spellstats.ParseArea("Wave 2 ft. high and 10 ft. long per level")
+	assert.False(t, w.Partial)
+	assert.Equal(t, "wave", w.Shape)
+	assert.Equal(t, "high", w.Dims[0].Axis)
+	assert.True(t, w.Dims[1].Terms[0].PerLevel)
+}
+
+// ADR 0021 step 8 (areas, 20): in a choice, a bare alternative of several words ("written text")
+// has its own qualifier and takes the count of the one before it; one word may share the
+// qualifier ("dead human or demihuman") and is not read.
+func TestAreaOfEffect_QualifiedAlternatives(t *testing.T) {
+	a := spellstats.ParseArea("1 speaking creature or written text")
+	assert.Equal(t, spellstats.AreaAlternatives, a.Kind)
+	assert.Equal(t, "speaking creature", a.Alternatives[0].Noun)
+	assert.Equal(t, "written text", a.Alternatives[1].Noun)
+	assert.Equal(t, 1.0, a.Alternatives[1].Targets.Terms[0].Count)
+	assert.NotEqual(t, spellstats.AreaAlternatives, spellstats.ParseArea("1 dead human or demihuman").Kind)
 }

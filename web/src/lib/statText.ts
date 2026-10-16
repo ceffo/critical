@@ -371,14 +371,25 @@ function dimsText(loc: StatLocale, s: SpellStats["area"]): string | null {
     }
   } else {
     if (dims.some((d) => d.site)) return null; // "at base" with no axis to say it of
-    shaped = shapedText(
-      loc,
-      texts.join(" × "),
-      s.shape,
-      dims.map((d) => d.terms[0]?.unit),
-      s.figure,
-      many,
-    );
+    const fig = s.figure
+      ? loc.t(`lookup.shapes.${labelKey(s.figure)}`, { defaultValue: "" })
+      : "";
+    // "5 ft. radius x 30 ft. column": the second extent is the figure's other one.
+    shaped =
+      s.shape === "radius" && fig && dims.length === 2 && !many
+        ? loc.t("lookup.stat.radiusBy", {
+            figure: fig,
+            radius: texts[0],
+            length: texts[1],
+          })
+        : shapedText(
+            loc,
+            texts.join(" × "),
+            s.shape,
+            dims.map((d) => d.terms[0]?.unit),
+            s.figure,
+            many,
+          );
     if (shaped && many)
       shaped = loc.t("lookup.stat.areaCount", {
         count: s.count,
@@ -416,12 +427,15 @@ export function areaText(
       if (s.partial) return null;
       const parts: string[] = [];
       let within: string | null = null;
+      let sized: string | null = null;
       if (s.dims?.length) {
         const shaped = dimsText(loc, s);
         if (!shaped) return null;
         // Extents that bound where the targets are ("1 animal within 30 ft.") follow the count.
         if (s.within && s.targets && !s.shape) within = shaped;
         else if (s.within) return null;
+        // The size of each target ("1 objet, 3 m de long maximum"), worded after the count.
+        else if (s.size && s.targets) sized = shaped;
         else parts.push(shaped);
       }
       if (s.targets) {
@@ -445,6 +459,7 @@ export function areaText(
         }
         if (within)
           n = loc.t("lookup.stat.within", { targets: n, value: within });
+        if (sized) n = loc.t("lookup.stat.sized", { targets: n, value: sized });
         parts.push(n);
       }
       let text = parts.length ? parts.join(", ") : null;

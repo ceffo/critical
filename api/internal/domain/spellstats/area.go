@@ -48,6 +48,9 @@ type AreaOfEffect struct {
 	// Within is set when the extents bound where the targets are ("1 animal
 	// within 30 ft."), rather than describe an area of their own.
 	Within bool `json:"within,omitempty"`
+	// Size is set when the extents are the size of each target ("1 object up
+	// to 10 ft. long"), rather than an area of their own.
+	Size bool `json:"size,omitempty"`
 	// AroundTouched is set when the area is centred on the creature or object
 	// touched ("10-ft. radius around creature touched").
 	AroundTouched bool `json:"around_touched,omitempty"`
@@ -81,7 +84,7 @@ var (
 	areaSplit = regexp.MustCompile(`(?i),\s*| in (?:an? )?| within | around |\s+or\s+| with `)
 	dimTok    = regexp.MustCompile(`(?i)(\d+d\d+|\d[\d,]*)(?:\s*(?:-|to)\s*(\d+))?(?:\s*-?\s*((?:sq\.?|cu\.?|cubic|square)\s*)?(ft|feet|foot|yds?|yards?|mi|miles?|in)\b\.?)?`)
 	levelXRe  = regexp.MustCompile(`(?i)(?:\(|caster'?s )level\s*x\s*(\d+)\)?[\s-]*(sq\.?|cu\.?)?\s*(ft|yds?)?`)
-	shapeRe   = regexp.MustCompile(`(?i)(?:\b(radius|diameter|cone|cube|square|sphere|globe|cloud|column|spray|hemisphere|volume|wall|circle|path|line of sight|line)\b|(\bsq\b))`)
+	shapeRe   = regexp.MustCompile(`(?i)(?:\b(radius|diameter|cone|cube|square|sphere|globe|cloud|column|spray|hemisphere|volume|wall|wave|circle|path|line of sight|line)\b|(\bsq\b))`)
 	targetRe  = regexp.MustCompile(`(?i)^(?:up to\s+|one\s+|two\s+)?(\d+(?:d\d+)?)(?:\s*(?:-|to)\s*(\d+)|(\+))?\s+(.*?)\s*$`)
 	// orMoreRe is "1 or more", "two or more": an open-ended count, read as
 	// "1+" so that areaSplit does not take the "or" for a choice.
@@ -135,6 +138,9 @@ var (
 	maxLeadRe = regexp.MustCompile(`(?i)^max(?:imum|\.)?\s*`)
 	// siteRe is where on a figure an extent is measured ("wide at base").
 	siteRe = regexp.MustCompile(`(?i)\bat (?:the )?(base|end)\b`)
+	// sizeRe is a count of something and its size: "1 object up to 10 ft.
+	// long", "1 page, up to 2 ft. square".
+	sizeRe = regexp.MustCompile(`(?i)^(\d+|one|two)\s+([a-z][a-z -]*?),?\s+up to\s+(\d.*)$`)
 )
 
 var wordCounts = map[string]string{"one": "1", "two": "2"}
@@ -256,7 +262,8 @@ func parseAlternatives(raw string) ([]AreaOfEffect, bool) {
 			prev := alts[len(alts)-1]
 			// After a qualified noun ("1 dead human or demihuman") the
 			// qualifier may be the bare noun's too: not read.
-			if prev.Kind != AreaTargets || strings.Contains(prev.Noun, " ") {
+			// A bare noun of several words ("written text") has a qualifier of its own.
+			if prev.Kind != AreaTargets || (strings.Contains(prev.Noun, " ") && !strings.Contains(p, " ")) {
 				return nil, false
 			}
 			alts = append(alts, AreaOfEffect{Raw: p, Kind: AreaTargets, Targets: prev.Targets, Noun: p})
@@ -301,11 +308,15 @@ func parseAreaReading(raw string) AreaOfEffect {
 	if m := aroundTouchedRe.FindStringSubmatch(s); m != nil {
 		s, a.AroundTouched = m[1], true
 	}
+	sized := false
+	if m := sizeRe.FindStringSubmatch(s); m != nil && lengthRe.MatchString(m[3]) {
+		s, sized = m[1]+" "+m[2]+", up to "+m[3], true
+	}
 	low := strings.ToLower(s)
 	switch {
 	case low == "special" || low == "":
 		return a
-	case strings.HasPrefix(low, "the caster") || strings.HasPrefix(low, "caster"):
+	case (strings.HasPrefix(low, "the caster") || strings.HasPrefix(low, "caster")) && !levelXRe.MatchString(s):
 		a.Kind = AreaSelf
 		return a
 	case strings.Contains(low, "touched"):
@@ -320,10 +331,11 @@ func parseAreaReading(raw string) AreaOfEffect {
 	}
 	if m := levelXRe.FindStringSubmatch(s); m != nil {
 		n, _ := strconv.ParseFloat(m[1], 64)
-		unit := normUnit(m[3])
+		unit, pre := m[3], m[2]
 		if unit == "" {
-			unit = "foot"
+			unit = "ft"
 		}
+		unit = areaUnit(pre, unit) // "sq. ft.": a square foot
 		a.Kind = AreaArea
 		a.Dims = []Quantity{{Terms: []Term{{Count: n, Unit: unit, PerLevel: true, Step: 1}}}}
 		a.Shape = shapeOf(s)
@@ -397,6 +409,9 @@ func parseAreaReading(raw string) AreaOfEffect {
 		a.Kind = AreaArea
 	case a.Targets != nil:
 		a.Kind = AreaTargets
+	}
+	if sized && a.Targets != nil && len(a.Dims) > 0 {
+		a.Kind, a.Size = AreaTargets, true
 	}
 	if a.Kind == AreaArea && a.Shape == "" { // "wall, 10 x 5 ft./level": the shape is a part of its own
 		a.Shape = shapeOf(s)
@@ -520,6 +535,9 @@ func (a AreaOfEffect) covers(s string) bool {
 	}
 	if a.Within {
 		words["within"] = true
+	}
+	if a.Size { // "1 object up to 10 ft. long": the "up to" is said by the extent's UpTo
+		words["up"], words["to"] = true, true
 	}
 	if a.Members != nil { // "unit of up to 200 individuals"
 		addQ(*a.Members)

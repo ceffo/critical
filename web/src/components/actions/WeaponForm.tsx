@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,7 @@ export function WeaponForm({
   onSave,
   onCancel,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const id = useId();
   const [draft, setDraft] = useState<WeaponDraft>(initial);
   const [errors, setErrors] = useState<Partial<Record<WeaponField, string>>>(
@@ -50,7 +51,10 @@ export function WeaponForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const { body, errors: parseErrors } = weaponDraftToBody(draft);
+    const { body, errors: parseErrors } = weaponDraftToBody(
+      draft,
+      i18n.language,
+    );
     const local = Object.fromEntries(
       Object.entries(parseErrors).map(([k, v]) => [k, t(`items.form.${v}`)]),
     );
@@ -58,7 +62,9 @@ export function WeaponForm({
       setErrors(local);
       return;
     }
-    const toSend = editing ? changedWeaponFields(editing, body) : body;
+    const toSend = editing
+      ? changedWeaponFields(editing, body, i18n.language)
+      : body;
     if (editing && Object.keys(toSend).length === 0) {
       onCancel();
       return;
@@ -123,7 +129,9 @@ export function WeaponForm({
       className="flex flex-col gap-2 rounded-lg bg-neu-900/50 p-3"
       aria-label={
         editing
-          ? t("weapons.form.editTitle", { name: editing.name })
+          ? t("weapons.form.editTitle", {
+              name: localized(i18n.language, editing.name),
+            })
           : t("weapons.form.addTitle")
       }
       data-testid="weapon-form"

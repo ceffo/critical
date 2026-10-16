@@ -4,6 +4,7 @@ import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
+import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { buffName, englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { checkAdjustedTarget } from "./skillAdjust";
 import { formatSigned } from "@/lib/format";
@@ -133,6 +134,7 @@ function castText(
   p: CastLogPayload,
   t: TFunction,
   spellName: SpellNamer,
+  names: InventoryNamer,
 ): string {
   const spell = spellName(p.spellId, p.spell);
   const head = t(`log.cast.${p.action}`, { spell, level: p.casterLevel });
@@ -153,7 +155,10 @@ function castText(
     );
   if (p.item)
     details.push(
-      t("log.cast.item", { name: p.item.name, left: p.item.remaining }),
+      t("log.cast.item", {
+        name: names.item(p.item.itemId, p.item.name),
+        left: p.item.remaining,
+      }),
     );
   if (p.attack)
     details.push(
@@ -290,9 +295,14 @@ export interface SaveLogPayload {
   previousPassed?: boolean;
   /** The modifiers applied when rolling (buffs), not the adjustment. */
   modifiers?: Modifier[];
-  /** d20 + modifiers + adjustment, and its margin over the target (as computed by the server). */
+  /** rollTotal + adjustment (kept by the server; not displayed). */
   total?: number;
-  margin?: number;
+  /** d20 + modifiers, the adjustment left out (ADR 0006 step 5). */
+  rollTotal: number;
+  /** target − adjustment: the adjustment moves the target, + easier, − harder. */
+  adjustedTarget: number;
+  /** rollTotal − adjustedTarget, as computed by the server. */
+  margin: number;
 }
 
 export function savePayload(e: LogEntry): SaveLogPayload | null {
@@ -301,9 +311,19 @@ export function savePayload(e: LogEntry): SaveLogPayload | null {
   return p &&
     typeof p.passed === "boolean" &&
     typeof p.d20Roll === "number" &&
+    typeof p.rollTotal === "number" &&
+    typeof p.adjustedTarget === "number" &&
+    typeof p.margin === "number" &&
     typeof p.category === "string"
     ? (p as SaveLogPayload)
     : null;
+}
+
+/** The roll side of a save as the journal words it: "d20 12", or "d20 12 +2 = 14" with buffs. */
+function saveRollText(p: SaveLogPayload): string {
+  return p.rollTotal === p.d20Roll
+    ? `d20 ${p.d20Roll}`
+    : `d20 ${p.d20Roll} ${formatSigned(p.rollTotal - p.d20Roll)} = ${p.rollTotal}`;
 }
 
 function saveText(p: SaveLogPayload, t: TFunction): string {
@@ -311,7 +331,7 @@ function saveText(p: SaveLogPayload, t: TFunction): string {
     t(passed ? "result.passed" : "result.failed").toUpperCase();
   const args = {
     name: t(`saves.categories.${p.category}`, { defaultValue: p.category }),
-    d20: p.d20Roll,
+    roll: saveRollText(p),
     target: p.target,
   };
   if (p.previousPassed === undefined)
@@ -324,6 +344,7 @@ function saveText(p: SaveLogPayload, t: TFunction): string {
   if (p.adjustment === 0) return t("log.saveThrow.removed", change);
   return t("log.saveThrow.adjusted", {
     ...change,
+    adjustedTarget: p.adjustedTarget,
     adjustment: formatSigned(p.adjustment),
     reason: p.adjustmentReason ? ` ${p.adjustmentReason}` : "",
   });
@@ -338,9 +359,9 @@ export function itemPayload(e: LogEntry): UseResult | null {
     : null;
 }
 
-function itemText(p: UseResult, t: TFunction): string {
+function itemText(p: UseResult, t: TFunction, names: InventoryNamer): string {
   const args = {
-    name: p.name,
+    name: names.item(p.itemId, p.name),
     dice: p.dice,
     total: p.total,
     left: p.remaining,
@@ -351,7 +372,11 @@ function itemText(p: UseResult, t: TFunction): string {
 }
 
 /** Payload of item_restock entries (itemsvc restockRecord, same shape as RestockResult). */
-function restockText(e: LogEntry, t: TFunction): string | null {
+function restockText(
+  e: LogEntry,
+  t: TFunction,
+  names: InventoryNamer,
+): string | null {
   if (e.kind !== "item_restock") return null;
   const p = e.payload as Partial<RestockResult> | null;
   if (
@@ -362,14 +387,18 @@ function restockText(e: LogEntry, t: TFunction): string | null {
   )
     return null;
   return t("log.item.restocked", {
-    name: p.name,
+    name: names.item(p.itemId, p.name),
     added: p.added,
     count: p.count,
   });
 }
 
 /** Payload of item_add, item_edit and item_remove entries (itemsvc changeRecord). */
-function itemChangeText(e: LogEntry, t: TFunction): string | null {
+function itemChangeText(
+  e: LogEntry,
+  t: TFunction,
+  names: InventoryNamer,
+): string | null {
   if (
     e.kind !== "item_add" &&
     e.kind !== "item_edit" &&
@@ -379,10 +408,11 @@ function itemChangeText(e: LogEntry, t: TFunction): string | null {
   const p = e.payload as Partial<ItemChangeRecord> | null;
   if (!p || typeof p.name !== "string" || typeof p.count !== "number")
     return null;
+  const name = names.item(p.itemId, p.name);
   if (e.kind === "item_add")
-    return t("log.item.added", { name: p.name, count: p.count });
+    return t("log.item.added", { name, count: p.count });
   if (e.kind === "item_remove")
-    return t("log.item.removedItem", { name: p.name, count: p.count });
+    return t("log.item.removedItem", { name, count: p.count });
   const changes = (p.changes ?? [])
     .map((c) =>
       t("log.item.change", {
@@ -391,11 +421,15 @@ function itemChangeText(e: LogEntry, t: TFunction): string | null {
       }),
     )
     .join(", ");
-  return t("log.item.edited", { name: p.name, changes });
+  return t("log.item.edited", { name, changes });
 }
 
 /** Payload of weapon_add, weapon_edit and weapon_remove entries (weaponsvc changeRecord). */
-function weaponChangeText(e: LogEntry, t: TFunction): string | null {
+function weaponChangeText(
+  e: LogEntry,
+  t: TFunction,
+  names: InventoryNamer,
+): string | null {
   if (
     e.kind !== "weapon_add" &&
     e.kind !== "weapon_edit" &&
@@ -404,9 +438,9 @@ function weaponChangeText(e: LogEntry, t: TFunction): string | null {
     return null;
   const p = e.payload as Partial<WeaponChangeRecord> | null;
   if (!p || typeof p.name !== "string") return null;
-  if (e.kind === "weapon_add") return t("log.weapon.added", { name: p.name });
-  if (e.kind === "weapon_remove")
-    return t("log.weapon.removed", { name: p.name });
+  const name = names.weapon(p.weapon_id, p.name);
+  if (e.kind === "weapon_add") return t("log.weapon.added", { name });
+  if (e.kind === "weapon_remove") return t("log.weapon.removed", { name });
   const changes = (p.changes ?? [])
     .map((c) =>
       t("log.weapon.change", {
@@ -415,7 +449,7 @@ function weaponChangeText(e: LogEntry, t: TFunction): string | null {
       }),
     )
     .join(", ");
-  return t("log.weapon.edited", { name: p.name, changes });
+  return t("log.weapon.edited", { name, changes });
 }
 
 /** Payload of xp_add, xp_edit and xp_remove entries (xpsvc changeRecord, ADR 0015 step 4). */
@@ -436,10 +470,12 @@ function xpChangeText(e: LogEntry, t: TFunction): string | null {
   return t("log.xp.edited", { from: was.total, to: now.total, reason });
 }
 
-function attackText(p: RollResult, t: TFunction): string {
-  const weapon = p.ammo
-    ? t("log.attack.withAmmo", { weapon: p.weaponName, ammo: p.ammo.name })
-    : (p.weaponName ?? "");
+function attackText(
+  p: RollResult,
+  t: TFunction,
+  names: InventoryNamer,
+): string {
+  const weapon = attackWeapon(p, t, names);
   // Against an unknown AC (docs/adr/0012): the AC it hits until the GM settles it, then the GM's
   // verdict (no crit).
   if (p.targetAc === null) {
@@ -608,17 +644,37 @@ function hpChangeText(e: LogEntry, t: TFunction): string | null {
 }
 
 /**
+ * An attack's weapon, with its ammunition when it fired one: "Short Bow +2 with Arrows +1". Both are
+ * named by id in the player's language while the inventory has them (ADR 0023 step 12).
+ */
+export function attackWeapon(
+  p: Pick<RollResult, "weaponId" | "weaponName" | "ammo">,
+  t: TFunction,
+  names: InventoryNamer = recordedNames,
+): string {
+  const weapon = names.weapon(p.weaponId, p.weaponName ?? "");
+  return p.ammo
+    ? t("log.attack.withAmmo", {
+        weapon,
+        ammo: names.item(p.ammo.itemId, p.ammo.name),
+      })
+    : weapon;
+}
+
+/**
  * The entry's text in the player's language, worded from its structured payload. The server's summary
  * is only the player's own text (an HP change's source) or, on entries logged before the payloads
- * existed, an older English line. Spell names come from `spellName` (useSpellName in a component).
+ * existed, an older English line. Spell names come from `spellName` (useSpellName in a component),
+ * item and weapon names from `names` (useInventoryName).
  */
 export function entryText(
   e: LogEntry,
   t: TFunction,
   spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
 ): string {
   const attack = attackPayload(e);
-  if (attack) return attackText(attack, t);
+  if (attack) return attackText(attack, t, names);
   const skill = skillCheckPayload(e);
   if (skill) return skillText(skill, t);
   const dice = dicePayload(e);
@@ -628,7 +684,7 @@ export function entryText(
   const correction = correctionPayload(e);
   if (correction) return correctionText(correction, t);
   const cast = castPayload(e);
-  if (cast) return castText(cast, t, spellName);
+  if (cast) return castText(cast, t, spellName, names);
   const exposure = exposurePayload(e);
   if (exposure) return exposureText(exposure, t, spellName);
   const rest = restText(e, t);
@@ -638,12 +694,12 @@ export function entryText(
   const initiative = initiativeText(e, t);
   if (initiative) return initiative;
   const item = itemPayload(e);
-  if (item) return itemText(item, t);
-  const restock = restockText(e, t);
+  if (item) return itemText(item, t, names);
+  const restock = restockText(e, t, names);
   if (restock) return restock;
-  const itemChange = itemChangeText(e, t);
+  const itemChange = itemChangeText(e, t, names);
   if (itemChange) return itemChange;
-  const weaponChange = weaponChangeText(e, t);
+  const weaponChange = weaponChangeText(e, t, names);
   if (weaponChange) return weaponChange;
   const xpChange = xpChangeText(e, t);
   if (xpChange) return xpChange;

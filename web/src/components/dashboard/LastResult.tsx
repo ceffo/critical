@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useSpellName } from "@/i18n/spellName";
+import { useInventoryName } from "@/i18n/inventoryName";
 import { lastResultChip, lastResultEntry, type RowValue } from "@/lib/filCard";
 import { formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
@@ -23,6 +24,7 @@ const TONES: Record<RowValue["tone"], string> = {
 export function LastResult() {
   const { t, i18n } = useTranslation();
   const spellName = useSpellName();
+  const names = useInventoryName();
   const entries = useLogStore((s) => s.entries);
   const entry = lastResultEntry(entries);
   const chip = entry ? lastResultChip(entry) : null;
@@ -66,7 +68,7 @@ export function LastResult() {
             </span>
           )}
           <span className="min-w-0 break-words" data-testid="last-result-text">
-            {entryText(entry, t, spellName)}
+            {entryText(entry, t, spellName, names)}
           </span>
         </p>
       ) : (

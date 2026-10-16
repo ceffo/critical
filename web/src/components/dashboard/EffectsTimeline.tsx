@@ -50,7 +50,7 @@ type TrackRow =
  * height where it scrolls (ADR 0017 step 6).
  */
 export function EffectsTimeline() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const buffs = useBuffsStore((s) => s.buffs);
   const powers = useBuffsStore((s) => s.powers);
   const items = useItemsStore((s) => s.items);
@@ -62,7 +62,7 @@ export function EffectsTimeline() {
   const size = useTrackSize(trackRef);
   const rows: TrackRow[] = [
     ...buffs.map((b): TrackRow => ({ kind: "buff", key: b.id, buff: b })),
-    ...powerRows(powers, items).map((p): TrackRow => ({
+    ...powerRows(powers, items, i18n.language).map((p): TrackRow => ({
       kind: "power",
       key: `power:${p.key}`,
       power: p,
@@ -402,7 +402,7 @@ function EffectRow({
 
 /**
  * An item power that is on: the item's name and the power's effects, a bar from the current turn to
- * the edge (it lasts while its trigger holds). No counters, no edit or dismiss (ADR 0016 step 13).
+ * the edge, filled like a buff's pill and fading out (it lasts while its trigger holds). No counters, no edit or dismiss (ADR 0016 step 13).
  */
 function ItemPowerRow({
   power: p,
@@ -448,7 +448,10 @@ function ItemPowerRow({
       {span.remaining && (
         <div
           className={cn(
-            "flex h-5 min-w-0 items-center gap-1 overflow-hidden rounded-full px-2 text-label whitespace-nowrap text-amb-200",
+            "flex h-5 min-w-0 items-center gap-1 overflow-hidden rounded-full px-2 text-label whitespace-nowrap",
+            // A filled pill like a timed buff's, but a softer fill and no counter: it lasts while
+            // its trigger holds, so the pill runs to the edge and fades out there.
+            "bg-amb-800/60 text-amb-200 ring-1 ring-amb-600/60 ring-inset",
             span.overflows &&
               "[mask-image:linear-gradient(to_right,black_75%,transparent)]",
           )}

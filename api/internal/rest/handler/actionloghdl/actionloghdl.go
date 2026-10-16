@@ -241,6 +241,8 @@ type CorrectionDTO struct {
 	CreatedAt time.Time       `json:"createdAt"`
 }
 
+// toDTO shapes e for the wire. The service already serves e with the payload
+// fields its kind gained after it was logged.
 func toDTO(e actionlog.Entry) EntryDTO {
 	payload := e.Payload
 	if len(payload) == 0 {

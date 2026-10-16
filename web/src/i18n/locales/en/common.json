@@ -668,7 +668,13 @@
       "eye_one": "eye",
       "eye_other": "eyes",
       "unit_one": "unit",
-      "unit_other": "units"
+      "unit_other": "units",
+      "speaking_creature_one": "speaking creature",
+      "speaking_creature_other": "speaking creatures",
+      "written_text_one": "written text",
+      "written_text_other": "written texts",
+      "extradimensional_space_one": "extradimensional space",
+      "extradimensional_space_other": "extradimensional spaces"
     },
     "perWords": {
       "priest": "priest",
@@ -705,6 +711,7 @@
       "wall": "walls",
       "circle": "circles",
       "path": "paths",
+      "wave": "waves",
       "line": "lines",
       "line_of_sight": "lines of sight"
     },
@@ -725,6 +732,7 @@
       "wall": "wall",
       "circle": "circle",
       "path": "path",
+      "wave": "wave",
       "line": "line"
     },
     "conditions": {
@@ -750,6 +758,7 @@
       "shapedFigure": "{{dims}} {{shape}} {{figure}}",
       "axis": "{{value}} {{axis}}",
       "site": "{{value}} {{site}}",
+      "radiusBy": "{{radius}} radius x {{length}} {{figure}}",
       "areaCount": "{{count}} {{value}}",
       "areaSelf": "The caster",
       "plus": " + ",
@@ -762,6 +771,7 @@
       "axisJoin": " and ",
       "ofMembers": "{{targets}} of {{members}}",
       "within": "{{targets}} within {{value}}",
+      "sized": "{{targets}}, {{value}}",
       "aroundTouched": "{{value}} around the creature touched",
       "or": " or ",
       "range": {
@@ -914,8 +924,7 @@
       "situational": "{{detail}}",
       "situationalUnnamed": "Situational",
       "critRange": "Critical hit ({{from}}–{{to}})",
-      "critPlaceholder": "Critical hit (placeholder)",
-      "adjustment": "Adjustment {{detail}}"
+      "critPlaceholder": "Critical hit (placeholder)"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1016,7 +1025,8 @@
       "increase": "Increase adjustment",
       "value": "Adjustment",
       "reason": "Reason (optional)",
-      "apply": "Apply"
+      "apply": "Apply",
+      "adjustedTarget": "Adjusted target"
     },
     "adjustAc": {
       "title": "Target AC",
@@ -1181,9 +1191,9 @@
     "prep": "Prepared: {{spells}}",
     "prepNone": "Prepared no spells",
     "saveThrow": {
-      "rolled": "Save vs {{name}}: d20 {{d20}} vs {{target}}, {{verdict}}",
-      "adjusted": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjusted {{adjustment}}{{reason}}: {{from}} → {{to}}",
-      "removed": "Save vs {{name}}: d20 {{d20}} vs {{target}}, adjustment removed: {{from}} → {{to}}"
+      "rolled": "Save vs {{name}}: {{roll}} vs {{target}}, {{verdict}}",
+      "adjusted": "Save vs {{name}}: {{roll}} vs {{adjustedTarget}} (target {{target}}, adjusted {{adjustment}}{{reason}}): {{from}} → {{to}}",
+      "removed": "Save vs {{name}}: {{roll}} vs {{target}}, adjustment removed: {{from}} → {{to}}"
     },
     "weapon": {
       "added": "Added weapon {{name}}",

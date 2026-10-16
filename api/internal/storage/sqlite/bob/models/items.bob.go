@@ -22,7 +22,7 @@ import (
 type Item struct {
 	ID         string `db:"id,pk" `
 	Position   int64  `db:"position" `
-	Name       string `db:"name" `
+	Name       int64  `db:"name" `
 	Type       string `db:"type" `
 	Behaviour  string `db:"behaviour" `
 	MagicBonus int64  `db:"magic_bonus" `
@@ -136,7 +136,7 @@ func (c itemColumn) ShouldOmitParens() bool {
 type ItemSetter struct {
 	ID         omit.Val[string] `db:"id,pk" `
 	Position   omit.Val[int64]  `db:"position" `
-	Name       omit.Val[string] `db:"name" `
+	Name       omit.Val[int64]  `db:"name" `
 	Type       omit.Val[string] `db:"type" `
 	Behaviour  omit.Val[string] `db:"behaviour" `
 	MagicBonus omit.Val[int64]  `db:"magic_bonus" `
@@ -733,7 +733,7 @@ type itemWhere[Q sqlite.Filterable] struct {
 	cols       itemColumns
 	ID         sqlite.WhereMod[Q, string]
 	Position   sqlite.WhereMod[Q, int64]
-	Name       sqlite.WhereMod[Q, string]
+	Name       sqlite.WhereMod[Q, int64]
 	Type       sqlite.WhereMod[Q, string]
 	Behaviour  sqlite.WhereMod[Q, string]
 	MagicBonus sqlite.WhereMod[Q, int64]
@@ -755,7 +755,7 @@ func buildItemWhere[Q sqlite.Filterable](cols itemColumns) itemWhere[Q] {
 		cols:       cols,
 		ID:         sqlite.Where[Q, string](cols.ID.Expression),
 		Position:   sqlite.Where[Q, int64](cols.Position.Expression),
-		Name:       sqlite.Where[Q, string](cols.Name.Expression),
+		Name:       sqlite.Where[Q, int64](cols.Name.Expression),
 		Type:       sqlite.Where[Q, string](cols.Type.Expression),
 		Behaviour:  sqlite.Where[Q, string](cols.Behaviour.Expression),
 		MagicBonus: sqlite.Where[Q, int64](cols.MagicBonus.Expression),

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
@@ -55,9 +56,10 @@ type SpellbookEntryDTO struct {
 
 // SpendableItemDTO is an inventory item a spell can spend.
 type SpendableItemDTO struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Count int    `json:"count"`
+	ID string `json:"id"`
+	// Name is a language map (ADR 0023 step 9).
+	Name  localized.Text `json:"name"`
+	Count int            `json:"count"`
 }
 
 // LevelLimitDTO is the preparation limit of one spell level.

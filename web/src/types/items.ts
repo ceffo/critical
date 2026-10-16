@@ -2,6 +2,7 @@
 // ItemBody).
 
 import type { BuffEffects } from "./buffs";
+import type { LocalizedText } from "./localized";
 
 /**
  * How an item's count behaves: stock is used and restocked (stays at 0),
@@ -11,7 +12,8 @@ export type ItemBehaviour = "stock" | "charges" | "daily";
 
 export interface Item {
   id: string;
-  name: string;
+  /** A language map (ADR 0023 step 9): pick with `localized`. */
+  name: LocalizedText;
   /** Free-text label: arrow, flask, wand, gem… */
   type: string;
   behaviour: ItemBehaviour;
@@ -74,7 +76,8 @@ export interface RestockResult {
 
 /** Body of POST /api/items and PATCH /api/items/{id} (itemhdl ItemBody); a PATCH changes only the fields present. */
 export interface ItemBody {
-  name?: string;
+  /** The languages typed (ADR 0023 step 11): the others are kept. */
+  name?: LocalizedText;
   type?: string;
   behaviour?: ItemBehaviour;
   count?: number;

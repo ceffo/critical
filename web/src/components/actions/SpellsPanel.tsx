@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { Button } from "@/components/ui/button";
 import { useSpellStore } from "@/stores/spells";
 import { useLogStore } from "@/stores/log";
@@ -69,7 +70,7 @@ function groupSlots(
  * editor, and spells cast on the Bard by the party.
  */
 export function SpellsPanel() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const spellName = useSpellName();
   const {
     slots,
@@ -369,7 +370,7 @@ export function SpellsPanel() {
                           >
                             {spendable.map((i) => (
                               <option key={i.id} value={i.id}>
-                                {i.name} ({i.count})
+                                {localized(i18n.language, i.name)} ({i.count})
                               </option>
                             ))}
                           </select>

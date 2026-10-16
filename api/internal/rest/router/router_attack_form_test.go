@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
@@ -19,7 +20,7 @@ var bowForm = &combatsvc.AttackFormView{
 		TargetSize: combatsvc.SizeLarge, Situational: combatsvc.Situational{Value: 2, Label: "rear"},
 	},
 	AmmoFromDefault: true,
-	AmmoChoices:     []combatsvc.AmmoChoice{{ItemID: "a3", Name: "Arrows +3", Magic: 3, Count: 2}},
+	AmmoChoices:     []combatsvc.AmmoChoice{{ItemID: "a3", Name: localized.Of("Arrows +3"), Magic: 3, Count: 2}},
 	Preview: &combatsvc.AttackPreview{
 		BaseThac0: 13, Modifiers: []combatsvc.Modifier{{Kind: combatsvc.ModDexterity, Detail: "17", Value: 2}},
 		EffectiveThac0: 11, ToHit: 2, RollNeeded: new(7), DamageBonus: 5,
@@ -28,7 +29,7 @@ var bowForm = &combatsvc.AttackFormView{
 
 const bowFormJSON = `{"form":{"weaponId":"shortbow","previousWeaponId":"longsword","ammoItemId":"a3","targetAc":4,
 	"targetSize":"l","situational":{"value":2,"label":"rear"}},"ammoFromDefault":true,
-	"ammoChoices":[{"itemId":"a3","name":"Arrows +3","magic":3,"count":2}],
+	"ammoChoices":[{"itemId":"a3","name":{"en":"Arrows +3"},"magic":3,"count":2}],
 	"preview":{"baseThac0":13,"modifiers":[{"kind":"dexterity","detail":"17","value":2}],"effectiveThac0":11,
 	"toHit":2,"rollNeeded":7,"damageBonus":5},"maxRealAc":10}`
 

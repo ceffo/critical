@@ -48,7 +48,7 @@ func newSvcMaxHP(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRou
 	rounds := mocks.NewMockRounds(t)
 	maxHP := mocks.NewMockMaxHP(t)
 	tx := &passTx{}
-	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, rounds, maxHP)
+	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, rounds, maxHP, nil)
 	require.NoError(t, err)
 	return svc, dal, rounds, tx, maxHP
 }
@@ -77,7 +77,7 @@ func TestNewWithConfig_Validation(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := actionlogsvc.NewWithConfig(c.cfg, c.dal, c.tx, c.rounds, c.maxHP)
+			_, err := actionlogsvc.NewWithConfig(c.cfg, c.dal, c.tx, c.rounds, c.maxHP, nil)
 			require.Error(t, err)
 		})
 	}

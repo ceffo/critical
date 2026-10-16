@@ -156,7 +156,7 @@ func (s *service) ItemPowers(ctx context.Context) ([]buffsvc.ItemPower, error) {
 	for _, it := range items {
 		for _, p := range it.Powers {
 			out = append(out, buffsvc.ItemPower{
-				ItemID: it.ID, ItemName: it.Name, PowerID: p.ID, MinStr: p.MinStr, Effects: p.Effects,
+				ItemID: it.ID, ItemName: it.Name.Any(), PowerID: p.ID, MinStr: p.MinStr, Effects: p.Effects,
 			})
 		}
 	}

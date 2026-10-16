@@ -29,7 +29,7 @@ RETURNING id
 
 -- DeleteItem
 DELETE FROM items WHERE id = ?
-RETURNING id
+RETURNING id, name
 ;
 
 -- InsertItem
@@ -38,7 +38,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ;
 
 -- UpdateItem
-UPDATE items SET position = ?, name = ?, type = ?, behaviour = ?, magic_bonus = ?, ammo_kind = ?, count = ?, max_count = ?, effect_dice = ?, effect_save = ?, notes = ?, powers = ?
+UPDATE items SET position = ?, type = ?, behaviour = ?, magic_bonus = ?, ammo_kind = ?, count = ?, max_count = ?, effect_dice = ?, effect_save = ?, notes = ?, powers = ?
 WHERE id = ?
-RETURNING id
+RETURNING id, name
+;
+
+-- ItemNames
+SELECT text_id, lang, body FROM localized_texts WHERE text_id IN (SELECT name FROM items)
 ;

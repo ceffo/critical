@@ -57,7 +57,8 @@ unless named otherwise.
    each is one entry (`item_add`, `item_edit`, `item_remove`) with the `items:<id>` snapshot.
    Popping the newest entry deletes a created item, writes back every "before" field of an edited
    one, or re-inserts a removed one with its id, position and count. A new item's id is the slug of
-   its name (suffix `_2`, `_3` when taken) and it goes last in the list.
+   its name (suffix `_2`, `_3` when taken) and it goes last in the list. Names are language maps,
+   written in the player's language ([ADR 0023](0023-localized-text.md) steps 9 to 12).
    Tests: `TestCreate_InsertsLogsAndSnapshots`, `TestUpdate_ChangesOneFieldAndLogsBeforeAfter`,
    `TestDelete_RemovesAndLogsWholeItem`, `TestRestorers_UndoCreateEditDelete` (itemsvc),
    `TestInventory_AddThenPopDeletesTheItem`, `TestInventory_EditAllFieldsAndPopRestoresThem`,

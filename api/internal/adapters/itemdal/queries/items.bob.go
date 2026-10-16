@@ -70,7 +70,7 @@ func ListItems() *ListItemsQuery {
 type ListItemsRow = struct {
 	ID         string `db:"id"`
 	Position   int64  `db:"position"`
-	Name       string `db:"name"`
+	Name       int64  `db:"name"`
 	Type       string `db:"type"`
 	Behaviour  string `db:"behaviour"`
 	MagicBonus int64  `db:"magic_bonus"`
@@ -156,7 +156,7 @@ func GetItem(ID string) *GetItemQuery {
 type GetItemRow = struct {
 	ID         string `db:"id"`
 	Position   int64  `db:"position"`
-	Name       string `db:"name"`
+	Name       int64  `db:"name"`
 	Type       string `db:"type"`
 	Behaviour  string `db:"behaviour"`
 	MagicBonus int64  `db:"magic_bonus"`
@@ -253,7 +253,7 @@ func DecrementItem(ID string) *DecrementItemQuery {
 type DecrementItemRow = struct {
 	ID         string `db:"id"`
 	Position   int64  `db:"position"`
-	Name       string `db:"name"`
+	Name       int64  `db:"name"`
 	Type       string `db:"type"`
 	Behaviour  string `db:"behaviour"`
 	MagicBonus int64  `db:"magic_bonus"`
@@ -351,7 +351,7 @@ func IncrementItem(Arg int64, ID string) *IncrementItemQuery {
 type IncrementItemRow = struct {
 	ID         string `db:"id"`
 	Position   int64  `db:"position"`
-	Name       string `db:"name"`
+	Name       int64  `db:"name"`
 	Type       string `db:"type"`
 	Behaviour  string `db:"behaviour"`
 	MagicBonus int64  `db:"magic_bonus"`
@@ -524,9 +524,9 @@ func (o setItemCount) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dia
 	return o.subExpr(0, len(setItemCountSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var deleteItemSQL = formattedQueries_items[1194:1244]
+var deleteItemSQL = formattedQueries_items[1194:1252]
 
-type DeleteItemQuery = orm.ModQuery[*dialect.DeleteQuery, deleteItem, string, []string, deleteItemTransformer]
+type DeleteItemQuery = orm.ModQuery[*dialect.DeleteQuery, deleteItem, DeleteItemRow, []DeleteItemRow, deleteItemTransformer]
 
 func DeleteItem(ID string) *DeleteItemQuery {
 	var expressionTypArgs deleteItem
@@ -534,7 +534,7 @@ func DeleteItem(ID string) *DeleteItemQuery {
 	expressionTypArgs.ID = sqlite.Arg(ID)
 
 	return &DeleteItemQuery{
-		Query: orm.Query[deleteItem, string, []string, deleteItemTransformer]{
+		Query: orm.Query[deleteItem, DeleteItemRow, []DeleteItemRow, deleteItemTransformer]{
 			ExecQuery: orm.ExecQuery[deleteItem]{
 				BaseQuery: bob.BaseQuery[deleteItem]{
 					Expression: expressionTypArgs,
@@ -542,22 +542,32 @@ func DeleteItem(ID string) *DeleteItemQuery {
 					QueryType:  bob.QueryTypeDelete,
 				},
 			},
-			Scanner: scan.ColumnMapper[string]("id"),
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (DeleteItemRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t DeleteItemRow
+						row.ScheduleScanByIndex(0, &t.ID)
+						row.ScheduleScanByIndex(1, &t.Name)
+						return &t, nil
+					}, func(v any) (DeleteItemRow, error) {
+						return *v.(*DeleteItemRow), nil
+					}
+			},
 		},
 		Mod: bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
 			q.TableRef.Expression = expressionTypArgs.raw(12, 19)
 			q.AppendWhere(expressionTypArgs.subExpr(25, 35))
-			q.AppendReturning(expressionTypArgs.subExpr(45, 50))
+			q.AppendReturning(expressionTypArgs.subExpr(45, 58))
 		}),
 		Build: sqlite.Delete,
 	}
 }
 
 type DeleteItemRow = struct {
-	ID string `db:"id"`
+	ID   string `db:"id"`
+	Name int64  `db:"name"`
 }
 
-type deleteItemTransformer = bob.SliceTransformer[string, []string]
+type deleteItemTransformer = bob.SliceTransformer[DeleteItemRow, []DeleteItemRow]
 
 type deleteItem struct {
 	ID bob.Expression
@@ -588,12 +598,12 @@ func (o deleteItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Diale
 	return o.subExpr(0, len(deleteItemSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var insertItemSQL = formattedQueries_items[1261:1491]
+var insertItemSQL = formattedQueries_items[1269:1499]
 
 type InsertItem_Items = struct {
 	ID         string
 	Position   int64
-	Name       string
+	Name       int64
 	Type       string
 	Behaviour  string
 	MagicBonus int64
@@ -764,15 +774,14 @@ func (o insertItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Diale
 	return o.subExpr(0, len(insertItemSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var updateItemSQL = formattedQueries_items[1508:1760]
+var updateItemSQL = formattedQueries_items[1516:1762]
 
-type UpdateItemQuery = orm.ModQuery[*dialect.UpdateQuery, updateItem, string, []string, updateItemTransformer]
+type UpdateItemQuery = orm.ModQuery[*dialect.UpdateQuery, updateItem, UpdateItemRow, []UpdateItemRow, updateItemTransformer]
 
-func UpdateItem(Position int64, Name string, Type string, Behaviour string, MagicBonus int64, AmmoKind string, Count int64, MaxCount int64, EffectDice string, EffectSave string, Notes string, Powers string, ID string) *UpdateItemQuery {
+func UpdateItem(Position int64, Type string, Behaviour string, MagicBonus int64, AmmoKind string, Count int64, MaxCount int64, EffectDice string, EffectSave string, Notes string, Powers string, ID string) *UpdateItemQuery {
 	var expressionTypArgs updateItem
 
 	expressionTypArgs.Position = sqlite.Arg(Position)
-	expressionTypArgs.Name = sqlite.Arg(Name)
 	expressionTypArgs.Type = sqlite.Arg(Type)
 	expressionTypArgs.Behaviour = sqlite.Arg(Behaviour)
 	expressionTypArgs.MagicBonus = sqlite.Arg(MagicBonus)
@@ -786,7 +795,7 @@ func UpdateItem(Position int64, Name string, Type string, Behaviour string, Magi
 	expressionTypArgs.ID = sqlite.Arg(ID)
 
 	return &UpdateItemQuery{
-		Query: orm.Query[updateItem, string, []string, updateItemTransformer]{
+		Query: orm.Query[updateItem, UpdateItemRow, []UpdateItemRow, updateItemTransformer]{
 			ExecQuery: orm.ExecQuery[updateItem]{
 				BaseQuery: bob.BaseQuery[updateItem]{
 					Expression: expressionTypArgs,
@@ -794,27 +803,36 @@ func UpdateItem(Position int64, Name string, Type string, Behaviour string, Magi
 					QueryType:  bob.QueryTypeUpdate,
 				},
 			},
-			Scanner: scan.ColumnMapper[string]("id"),
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (UpdateItemRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t UpdateItemRow
+						row.ScheduleScanByIndex(0, &t.ID)
+						row.ScheduleScanByIndex(1, &t.Name)
+						return &t, nil
+					}, func(v any) (UpdateItemRow, error) {
+						return *v.(*UpdateItemRow), nil
+					}
+			},
 		},
 		Mod: bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
 			q.Table.Expression = expressionTypArgs.raw(7, 14)
-			q.AppendSet(expressionTypArgs.subExpr(19, 220))
-			q.AppendWhere(expressionTypArgs.subExpr(226, 237))
-			q.AppendReturning(expressionTypArgs.subExpr(247, 252))
+			q.AppendSet(expressionTypArgs.subExpr(19, 206))
+			q.AppendWhere(expressionTypArgs.subExpr(212, 223))
+			q.AppendReturning(expressionTypArgs.subExpr(233, 246))
 		}),
 		Build: sqlite.Update,
 	}
 }
 
 type UpdateItemRow = struct {
-	ID string `db:"id"`
+	ID   string `db:"id"`
+	Name int64  `db:"name"`
 }
 
-type updateItemTransformer = bob.SliceTransformer[string, []string]
+type updateItemTransformer = bob.SliceTransformer[UpdateItemRow, []UpdateItemRow]
 
 type updateItem struct {
 	Position   bob.Expression
-	Name       bob.Expression
 	Type       bob.Expression
 	Behaviour  bob.Expression
 	MagicBonus bob.Expression
@@ -840,18 +858,9 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 		}
 
 		if !yield(orm.ArgWithPosition{
-			Name:       "name",
+			Name:       "type",
 			Start:      45,
 			Stop:       47,
-			Expression: o.Name,
-		}) {
-			return
-		}
-
-		if !yield(orm.ArgWithPosition{
-			Name:       "type",
-			Start:      58,
-			Stop:       60,
 			Expression: o.Type,
 		}) {
 			return
@@ -859,8 +868,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "behaviour",
-			Start:      76,
-			Stop:       78,
+			Start:      63,
+			Stop:       65,
 			Expression: o.Behaviour,
 		}) {
 			return
@@ -868,8 +877,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "magicBonus",
-			Start:      96,
-			Stop:       98,
+			Start:      83,
+			Stop:       85,
 			Expression: o.MagicBonus,
 		}) {
 			return
@@ -877,8 +886,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "ammoKind",
-			Start:      114,
-			Stop:       116,
+			Start:      101,
+			Stop:       103,
 			Expression: o.AmmoKind,
 		}) {
 			return
@@ -886,8 +895,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "count",
-			Start:      128,
-			Stop:       130,
+			Start:      115,
+			Stop:       117,
 			Expression: o.Count,
 		}) {
 			return
@@ -895,8 +904,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "maxCount",
-			Start:      146,
-			Stop:       148,
+			Start:      133,
+			Stop:       135,
 			Expression: o.MaxCount,
 		}) {
 			return
@@ -904,8 +913,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "effectDice",
-			Start:      166,
-			Stop:       168,
+			Start:      153,
+			Stop:       155,
 			Expression: o.EffectDice,
 		}) {
 			return
@@ -913,8 +922,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "effectSave",
-			Start:      186,
-			Stop:       189,
+			Start:      173,
+			Stop:       175,
 			Expression: o.EffectSave,
 		}) {
 			return
@@ -922,8 +931,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "notes",
-			Start:      201,
-			Stop:       204,
+			Start:      187,
+			Stop:       190,
 			Expression: o.Notes,
 		}) {
 			return
@@ -931,8 +940,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "powers",
-			Start:      217,
-			Stop:       220,
+			Start:      203,
+			Stop:       206,
 			Expression: o.Powers,
 		}) {
 			return
@@ -940,8 +949,8 @@ func (o updateItem) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "id",
-			Start:      234,
-			Stop:       237,
+			Start:      220,
+			Stop:       223,
 			Expression: o.ID,
 		}) {
 			return
@@ -959,4 +968,68 @@ func (o updateItem) subExpr(from, to int) bob.Expression {
 
 func (o updateItem) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(updateItemSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var itemNamesSQL = formattedQueries_items[1778:1881]
+
+type ItemNamesQuery = orm.ModQuery[*dialect.SelectQuery, itemNames, ItemNamesRow, []ItemNamesRow, itemNamesTransformer]
+
+func ItemNames() *ItemNamesQuery {
+	var expressionTypArgs itemNames
+
+	return &ItemNamesQuery{
+		Query: orm.Query[itemNames, ItemNamesRow, []ItemNamesRow, itemNamesTransformer]{
+			ExecQuery: orm.ExecQuery[itemNames]{
+				BaseQuery: bob.BaseQuery[itemNames]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeSelect,
+				},
+			},
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (ItemNamesRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t ItemNamesRow
+						row.ScheduleScanByIndex(0, &t.TextID)
+						row.ScheduleScanByIndex(1, &t.Lang)
+						row.ScheduleScanByIndex(2, &t.Body)
+						return &t, nil
+					}, func(v any) (ItemNamesRow, error) {
+						return *v.(*ItemNamesRow), nil
+					}
+			},
+		},
+		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
+			q.AppendSelect(expressionTypArgs.subExpr(7, 32))
+			q.SetTable(expressionTypArgs.subExpr(38, 55))
+			q.AppendWhere(expressionTypArgs.subExpr(61, 103))
+		}),
+		Build: sqlite.Select,
+	}
+}
+
+type ItemNamesRow = struct {
+	TextID int64  `db:"text_id"`
+	Lang   string `db:"lang"`
+	Body   string `db:"body"`
+}
+
+type itemNamesTransformer = bob.SliceTransformer[ItemNamesRow, []ItemNamesRow]
+
+type itemNames struct{}
+
+func (o itemNames) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+	}
+}
+
+func (o itemNames) raw(from, to int) string {
+	return itemNamesSQL[from:to]
+}
+
+func (o itemNames) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(itemNamesSQL, from, to, o.args())
+}
+
+func (o itemNames) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(itemNamesSQL)).WriteSQL(ctx, w, d, start)
 }

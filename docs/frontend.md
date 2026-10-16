@@ -108,7 +108,7 @@ flowchart TD
   new roll returns to the latest too. Only the latest result offers corrections (target AC, save
   adjustment), by entry id. One layout per kind, from the payload (`cardModel`): attack (hexagon
   d20, "Hits AC X", verdict, damage dice and total, "Calculation details" closed by default),
-  save (d20, "total vs target+", verdict, modifiers, adjustment), cast, item (dice chips, the
+  save (d20, "roll total vs adjusted target+", verdict, the buff modifiers, the adjustment line on the target side), cast, item (dice chips, the
   maximum in the accent, a 1 dimmed), initiative, and info for every other kind (text, HP value
   red / green). Header: kind tag, subtitle, "T3 · 21:31". The journal: All / Rolls filter (attacks,
   saves, item uses, initiative, casts that rolled damage or a to-hit d20), the entry count, Undo and
@@ -303,7 +303,7 @@ flowchart TD
   `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
   − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
-  the recomputed save (same d20). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
+  the recomputed save (same d20 and roll total, the target moved: ADR 0006 step 5). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
 - The attack card (`ResultCard` `AttackResult`) has a "Correct the target AC" form: − / + around
   the AC (starts at the attack's, ±20), Apply → `POST /api/roll/attack/{logEntryId}/adjust`
   (`stores/roll.ts` `adjustLastAttack`); the server returns the recomputed attack (same dice, no ammo

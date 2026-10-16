@@ -668,7 +668,13 @@
       "eye_one": "œil",
       "eye_other": "yeux",
       "unit_one": "unité",
-      "unit_other": "unités"
+      "unit_other": "unités",
+      "speaking_creature_one": "créature parlante",
+      "speaking_creature_other": "créatures parlantes",
+      "written_text_one": "objet écrit",
+      "written_text_other": "objets écrits",
+      "extradimensional_space_one": "espace extradimensionnel",
+      "extradimensional_space_other": "espaces extradimensionnels"
     },
     "perWords": {
       "priest": "prêtre",
@@ -705,6 +711,7 @@
       "wall": "murs",
       "circle": "cercles",
       "path": "chemins",
+      "wave": "vagues",
       "line": "lignes",
       "line_of_sight": "lignes de vue"
     },
@@ -725,6 +732,7 @@
       "wall": "mur",
       "circle": "cercle",
       "path": "chemin",
+      "wave": "vague",
       "line": "ligne"
     },
     "conditions": {
@@ -750,6 +758,7 @@
       "shapedFigure": "{{figure}} de {{dims}} de {{shape}}",
       "axis": "{{value}} {{axis}}",
       "site": "{{value}} {{site}}",
+      "radiusBy": "{{figure}} de {{radius}} de rayon sur {{length}}",
       "areaCount": "{{count}} {{value}}",
       "areaSelf": "Le lanceur",
       "plus": " + ",
@@ -762,6 +771,7 @@
       "axisJoin": " et de ",
       "ofMembers": "{{targets}} de {{members}}",
       "within": "{{targets}} dans un rayon de {{value}}",
+      "sized": "{{targets}}, {{value}}",
       "aroundTouched": "{{value}} autour de la créature touchée",
       "or": " ou ",
       "range": {
@@ -914,8 +924,7 @@
       "situational": "{{detail}}",
       "situationalUnnamed": "Situationnel",
       "critRange": "Coup critique ({{from}}–{{to}})",
-      "critPlaceholder": "Coup critique (provisoire)",
-      "adjustment": "Ajustement {{detail}}"
+      "critPlaceholder": "Coup critique (provisoire)"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
@@ -1016,7 +1025,8 @@
       "increase": "Augmenter l'ajustement",
       "value": "Ajustement",
       "reason": "Raison (facultatif)",
-      "apply": "Appliquer"
+      "apply": "Appliquer",
+      "adjustedTarget": "Seuil ajusté"
     },
     "adjustAc": {
       "title": "CA de la cible",
@@ -1181,9 +1191,9 @@
     "prep": "Préparé : {{spells}}",
     "prepNone": "Aucun sort préparé",
     "saveThrow": {
-      "rolled": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, {{verdict}}",
-      "adjusted": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustée {{adjustment}}{{reason}} : {{from}} → {{to}}",
-      "removed": "Sauvegarde contre {{name}} : d20 {{d20}} contre {{target}}, ajustement retiré : {{from}} → {{to}}"
+      "rolled": "Sauvegarde contre {{name}} : {{roll}} contre {{target}}, {{verdict}}",
+      "adjusted": "Sauvegarde contre {{name}} : {{roll}} contre {{adjustedTarget}} (seuil {{target}}, ajusté {{adjustment}}{{reason}}) : {{from}} → {{to}}",
+      "removed": "Sauvegarde contre {{name}} : {{roll}} contre {{target}}, ajustement retiré : {{from}} → {{to}}"
     },
     "weapon": {
       "added": "Arme {{name}} ajoutée",

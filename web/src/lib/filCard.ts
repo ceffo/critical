@@ -9,10 +9,12 @@ import type { CastResult, ExposureResult } from "@/types/spells";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
+import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { formatSigned, formatTime } from "./format";
 import { attackSettled } from "./attackAdjust";
 import {
   attackPayload,
+  attackWeapon,
   castPayload,
   dicePayload,
   entryText,
@@ -147,29 +149,35 @@ export function cardEntryId(source: CardSource): number | null {
 export interface SaveView {
   category: string;
   d20: number;
+  /** The sheet's target. */
   target: number;
-  /** The modifiers applied when rolling (buffs), without the adjustment. */
+  /** The modifiers applied when rolling (buffs). */
   modifiers: Modifier[];
+  /** Moves the target, + easier, − harder (ADR 0006 step 5); 0: none. */
   adjustment: number;
   adjustmentReason?: string;
-  /** d20 + modifiers + adjustment; absent on saves logged before it was recorded. */
-  total?: number;
+  /** d20 + modifiers, the adjustment left out. */
+  rollTotal: number;
+  /** The target the save was judged against: target − adjustment (the server's). */
+  adjustedTarget: number;
   passed: boolean;
-  /** total − target; absent on saves logged before it was recorded. */
-  margin?: number;
+  /** rollTotal − adjustedTarget, as computed by the server. */
+  margin: number;
   logEntryId?: number;
 }
 
-/** The save endpoint lists the adjustment among the modifiers; the card shows it on its own. */
+/** A save as the save endpoint returns it (baseThac0 is the sheet's target). */
 export function saveFromRoll(category: string, r: RollResult): SaveView {
   return {
     category,
     d20: r.d20Roll,
-    target: r.effectiveThac0,
-    modifiers: r.modifiers.filter((m) => m.kind !== "adjustment"),
+    target: r.baseThac0,
+    modifiers: r.modifiers,
     adjustment: r.adjustment ?? 0,
     adjustmentReason: r.adjustmentReason,
-    total: r.saveTotal,
+    // Always sent on saves (ADR 0006 step 5).
+    rollTotal: r.rollTotal ?? r.d20Roll,
+    adjustedTarget: r.adjustedTarget ?? r.effectiveThac0,
     passed: r.hit,
     margin: r.hitMargin,
     logEntryId: r.logEntryId,
@@ -226,6 +234,7 @@ export function cardModel(
   e: LogEntry,
   t: TFunction,
   spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
 ): CardModel {
   const attack = attackPayload(e);
   if (attack)
@@ -241,7 +250,8 @@ export function cardModel(
         modifiers: save.modifiers ?? [],
         adjustment: save.adjustment ?? 0,
         adjustmentReason: save.adjustmentReason,
-        total: save.total,
+        rollTotal: save.rollTotal,
+        adjustedTarget: save.adjustedTarget,
         passed: save.passed,
         margin: save.margin,
         logEntryId: e.id,
@@ -264,7 +274,7 @@ export function cardModel(
   return {
     layout: "info",
     info: {
-      text: entryText(e, t, spellName),
+      text: entryText(e, t, spellName, names),
       value: hpValue(e),
       capped: cappedHeal(e),
     },
@@ -355,17 +365,13 @@ export function cardHeader(
   t: TFunction,
   lang: string,
   spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
 ): CardHeader {
   const tag = t(`log.kinds.${kind}`, { defaultValue: kind });
   let subtitle = "";
   switch (model.layout) {
     case "attack":
-      subtitle = model.roll.ammo
-        ? t("log.attack.withAmmo", {
-            weapon: model.roll.weaponName,
-            ammo: model.roll.ammo.name,
-          })
-        : (model.roll.weaponName ?? "");
+      subtitle = attackWeapon(model.roll, t, names);
       break;
     case "save":
       subtitle = t(`saves.categories.${model.save.category}`, {
@@ -382,7 +388,7 @@ export function cardHeader(
       subtitle = spellName(model.exposure.spellId, model.exposure.name);
       break;
     case "item":
-      subtitle = model.item.name;
+      subtitle = names.item(model.item.itemId, model.item.name);
       break;
     case "initiative":
       subtitle = turnLabel(t, model.round);

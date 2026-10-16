@@ -24,12 +24,16 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ;
 
 -- UpdateWeapon
-UPDATE weapons SET position = ?, name = ?, damage_sm = ?, damage_l = ?, magic_to_hit = ?, magic_damage = ?, kind = ?, two_handed = ?, ammo_kind = ?
+UPDATE weapons SET position = ?, damage_sm = ?, damage_l = ?, magic_to_hit = ?, magic_damage = ?, kind = ?, two_handed = ?, ammo_kind = ?
 WHERE id = ?
-RETURNING id
+RETURNING id, name
 ;
 
 -- DeleteWeapon
 DELETE FROM weapons WHERE id = ?
-RETURNING id
+RETURNING id, name
+;
+
+-- WeaponNames
+SELECT text_id, lang, body FROM localized_texts WHERE text_id IN (SELECT name FROM weapons)
 ;

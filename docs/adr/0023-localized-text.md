@@ -75,3 +75,72 @@ columns of #147, then `name_fr` / `description_fr`).
   candidates; a page's full texts are one batched read (`TestSearch_ReadsThePageTextsInOneBatch`).
 - **Client**: `LocalizedText` and `localized(lang, text)` (per-field English fallback;
   `localized.test.ts`, `spellName.test.ts`, `statText.test.ts`; the French and English lookup e2e).
+
+## Items and weapons (steps 9 to 12, migration 033)
+
+Added 2026-10-16 (critical-a1wm). User, in triage: French item and weapon names live in the item and
+weapon seeds; first need, the Power Gem shows as "Gemme de pouvoir" in French. Unlike the spells,
+items and weapons are also edited at the table, so steps 10 to 12 say whose language a name is in.
+Tests live under `api/internal/` unless their path starts with `web/`.
+
+9. **Item and weapon names are localized texts** (step 5). `items.name` and `weapons.name` hold a
+   key into `localized_texts`; every key has at least one row. Migration 033 moves each existing
+   name as the `en` row of a new key (after the highest stored, in list order; a blank name takes
+   the row's id), keeping every id, position, count and other field. The API serves `name` as a
+   language map on items, weapons, the attack form's ammo choices and the items a spell can spend;
+   the client picks with `localized`. A key's rows are written with the row (a new key on insert,
+   replaced under the same key on update) and deleted with it.
+   Tests: `TestMigrate033_Step9_MovesItemAndWeaponNamesKeepingEveryRow`,
+   `TestMigrate033_FreshDatabaseKeysEveryName` (storage/sqlite), `TestName_Step9_WrittenAsLocalizedTextRows`
+   (itemdal), `TestItems_Step9_NameIsALanguageMap`, `TestWeapons_Step9_NameIsALanguageMap` (rest/router);
+   a live database: `TestRealCatalogue_UpgradesACopyOfALiveDatabase`.
+10. **The seeds hold every language; a restart adds what a name lacks.** In `seeds/items.json` and
+    `seeds/weapons.json`, `name` is a language map (`en` and `fr`). An empty table is filled from the
+    seed. Once filled, the seed only reconciles names, and gives each of its languages to a name
+    once: while every language an item's or weapon's name has still reads as the seed's, the name
+    gains the seed languages it lacks that were never given, and the languages it has or gains are
+    recorded as given by id and language (`seeded_name_languages`). A name the player changed in
+    any language is kept as is and records nothing (it is offered again once it reads as the
+    seed's, e.g. after an undo). A language the player removes after it was given (a blank body,
+    step 11) is not put back on the next start, even once the row was removed and put back under a
+    new key; a language added to the seed later is given once too. An id the table
+    no longer has is not added back (the player removed it); no count, position or other field
+    moves; a second start writes nothing. A seed name without a language is refused.
+    Tests: `TestSeed_Step10_FreshDatabaseGetsEveryLanguage`,
+    `TestSeed_Step10_ReconcileAddsLanguagesKeepingPlayerNamesAndRows`,
+    `TestSeed_Step10_ALanguageThePlayerRemovedStaysRemoved`,
+    `TestSeed_Step10_RejectsANameWithoutLanguage` (storage/sqlite).
+11. **The editors write the player's language.** The item and weapon bodies take `name` as a language
+    map. The web form shows the name in the UI language (with the client fallback) and sends that one
+    language (`editLang`: the UI language without its region), only when the player changed what it
+    showed, so an untouched form never copies a fallback name into another language. A create stores
+    the languages sent; an edit replaces the bodies of the languages sent and keeps the others; a
+    blank body removes its language, for good (step 10 does not offer it again); a name left with no
+    language, or a language code that is not a UI language (`localized.UILanguages`, the
+    `web/src/i18n/locales` folders), is refused (`name` field error).
+    The `item_edit` / `weapon_edit` changes list one `name` change per language whose body differs.
+    A pop restores the snapshot's whole name; a snapshot written before 033 holds a plain string,
+    which restores the English body only and keeps the other languages the row has now.
+    Tests: `TestUpdate_Step11_NameEditKeepsTheOtherLanguages`, `TestCreate_Step11_NameInThePlayersLanguage`,
+    `TestCreate_Step11_RefusesAnUnknownLanguage`, `TestUpdate_Step11_RefusesAnUnknownLanguage`,
+    `TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages` (itemsvc, weaponsvc),
+    `TestWith_EditsOnlyTheLanguagesSent`, `TestSnap_ReadsAMapOrAPlainString`,
+    `TestUILanguages_AreTheWebLocales` (domain/localized),
+    `TestInventory_EditAllFieldsAndPopRestoresThem`, `TestWeapons_EditAllFieldsAndPopRestoresThem`,
+    `TestUndo_OneUndoWalksEveryMutationFullyBack` (composition); `web/src/lib/itemForm.test.ts`,
+    `web/src/lib/weaponForm.test.ts`.
+12. **Recorded names, named again by id.** Results and log payloads (use, restock, attack, its ammo,
+    a cast's spent item, change records, a breakdown's detail) keep one recorded string, as the
+    Consequences allow: the English body, else the first language in code order (`Text.Any`). The
+    ammunition's modifier carries its item id. The client names an item or a weapon by id from the
+    current lists in the UI language while they hold it, else shows the recorded string
+    (`inventoryNamer`, `itemNamer`; an item power's contribution and timeline row as in
+    [ADR 0016](0016-inventory.md) step 14). A text with neither the UI language nor English shows
+    its first language (a name typed in French only).
+    Tests: `TestAny_FallbackElseFirstLanguage` (domain/localized), `TestResolveAttack_WeaponBuffPlusMagicAmmo`
+    (combatsvc); `web/src/i18n/inventoryName.test.ts`, `web/src/i18n/localized.test.ts`,
+    `web/src/lib/itemPowers.test.ts`, `web/src/lib/logSummary.test.ts`.
+
+Known limits: an item's `type` label and `notes` stay plain text (labels and notes the player types);
+a name typed before 033 in another language than English (the live "Diamant") is stored as `en` and
+shows as typed in every language.

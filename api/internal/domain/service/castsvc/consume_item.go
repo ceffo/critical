@@ -80,5 +80,5 @@ func (s *service) consume(ctx context.Context, entry spelleffectsvc.Entry, itemI
 	if err != nil {
 		return nil, actionlog.Snapshot{}, err
 	}
-	return &ConsumedItem{ItemID: item.ID, Name: item.Name, Remaining: used.Count}, snap, nil
+	return &ConsumedItem{ItemID: item.ID, Name: item.Name.Any(), Remaining: used.Count}, snap, nil
 }

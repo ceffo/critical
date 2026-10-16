@@ -84,7 +84,7 @@ func round(t *testing.T, db *sqlite.DB, charID int64) int {
 
 func newLog(t *testing.T, db *sqlite.DB, dal actionlogsvc.DAL) actionlogsvc.SVC {
 	t.Helper()
-	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, db, fixedRound(4), fixedMaxHP(40))
+	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, db, fixedRound(4), fixedMaxHP(40), nil)
 	require.NoError(t, err)
 	return svc
 }

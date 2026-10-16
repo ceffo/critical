@@ -178,7 +178,12 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// action-log transaction, so whatever a request records is popped by one
 	// undo (ADR 0018 steps 1 and 2).
 	tx := actionlogsvc.Transactions(db)
-	logSvc, err := actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL)
+	// The log serves every entry through these views (payload fields a kind
+	// gained after the entry was logged).
+	logPayloadViews := actionlog.PayloadViews{
+		actionlog.KindSave: combatsvc.SavePayloadView,
+	}
+	logSvc, err := actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL, logPayloadViews)
 	if err != nil {
 		_ = db.Close()
 		return nil, err

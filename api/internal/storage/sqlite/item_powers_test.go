@@ -36,6 +36,10 @@ func migratedTo031(t *testing.T) *DB {
 	return db
 }
 
+// enName reads a weapon's or an item's English name in a query on its table
+// (the name column holds a localized_texts key since 033).
+const enName = `(SELECT body FROM localized_texts WHERE text_id = name AND lang = 'en')`
+
 // gemRow is the Power Gem's row: what 032 and the seed set, and what they
 // keep.
 type gemRow struct {
@@ -46,7 +50,7 @@ type gemRow struct {
 func readGem(t *testing.T, db *DB) gemRow {
 	t.Helper()
 	var g gemRow
-	require.NoError(t, db.QueryRow(`SELECT name, notes, powers, position, count FROM items WHERE id = 'power_gem_dispel'`).
+	require.NoError(t, db.QueryRow(`SELECT `+enName+`, notes, powers, position, count FROM items WHERE id = 'power_gem_dispel'`).
 		Scan(&g.name, &g.notes, &g.powers, &g.position, &g.count))
 	return g
 }
@@ -135,7 +139,7 @@ func TestMigrate_Step16_GivesTheGemItsPowersAndKeepsItsID(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, db.Migrate(ctx))
 		assert.Equal(t, 1, scalar(t, db, `SELECT COUNT(*) FROM items`))
-		assert.Equal(t, 1, scalar(t, db, `SELECT COUNT(*) FROM items WHERE id = 'wand' AND name = 'Power Gem: Dispel Magic' AND powers = '[]'`),
+		assert.Equal(t, 1, scalar(t, db, `SELECT COUNT(*) FROM items WHERE id = 'wand' AND `+enName+` = 'Power Gem: Dispel Magic' AND powers = '[]'`),
 			"only the row power_gem_dispel is the gem")
 	})
 }
@@ -170,8 +174,8 @@ func TestSeed_Step9_RejectsAPowerWithAStrengthEffect(t *testing.T) {
 	for name, power := range tests {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
-			content := `[{"id":"a","name":"A","behaviour":"stock","count":1},
-				{"id":"belt","name":"Belt","behaviour":"stock","count":1,"powers":[` + power + `]}]`
+			content := `[{"id":"a","name":{"en":"A"},"behaviour":"stock","count":1},
+				{"id":"belt","name":{"en":"Belt"},"behaviour":"stock","count":1,"powers":[` + power + `]}]`
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "items.json"), []byte(content), 0o600))
 			weapons, err := os.ReadFile(filepath.Join(repoSeeds(), "weapons.json"))
 			require.NoError(t, err)

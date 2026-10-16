@@ -36,7 +36,7 @@ func (mods WeaponModSlice) Apply(ctx context.Context, n *WeaponTemplate) {
 type WeaponTemplate struct {
 	ID          func() string
 	Position    func() int64
-	Name        func() string
+	Name        func() int64
 	DamageSM    func() string
 	DamageL     func() string
 	MagicToHit  func() int64
@@ -187,7 +187,7 @@ func ensureCreatableWeapon(m *models.WeaponSetter) {
 		m.Position = omit.From(val)
 	}
 	if m.Name.IsUnset() {
-		val := random_string(nil)
+		val := random_int64(nil)
 		m.Name = omit.From(val)
 	}
 	if m.DamageSM.IsUnset() {
@@ -394,14 +394,14 @@ func (m weaponMods) RandomPosition(f *faker.Faker) WeaponMod {
 }
 
 // Set the model columns to this value
-func (m weaponMods) Name(val string) WeaponMod {
+func (m weaponMods) Name(val int64) WeaponMod {
 	return WeaponModFunc(func(_ context.Context, o *WeaponTemplate) {
-		o.Name = func() string { return val }
+		o.Name = func() int64 { return val }
 	})
 }
 
 // Set the Column from the function
-func (m weaponMods) NameFunc(f func() string) WeaponMod {
+func (m weaponMods) NameFunc(f func() int64) WeaponMod {
 	return WeaponModFunc(func(_ context.Context, o *WeaponTemplate) {
 		o.Name = f
 	})
@@ -418,8 +418,8 @@ func (m weaponMods) UnsetName() WeaponMod {
 // if faker is nil, a default faker is used
 func (m weaponMods) RandomName(f *faker.Faker) WeaponMod {
 	return WeaponModFunc(func(_ context.Context, o *WeaponTemplate) {
-		o.Name = func() string {
-			return random_string(f)
+		o.Name = func() int64 {
+			return random_int64(f)
 		}
 	})
 }

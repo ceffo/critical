@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
@@ -53,7 +54,7 @@ type AttackFormPatch struct {
 // AmmoChoice is one ammunition the weapon in hand can fire.
 type AmmoChoice struct {
 	ItemID string
-	Name   string
+	Name   localized.Text
 	Magic  int
 	Count  int
 }
@@ -197,7 +198,7 @@ func (s *service) checkAmmo(ctx context.Context, weapon *Weapon, itemID string) 
 	case weapon == nil || !weapon.FiresAmmo():
 		return domain.FieldErrorf("ammoItemId", "the weapon in hand fires no ammunition")
 	case item.AmmoKind != weapon.AmmoKind:
-		return domain.FieldErrorf("ammoItemId", "%s cannot fire %s", weapon.Name, item.Name)
+		return domain.FieldErrorf("ammoItemId", "%s cannot fire %s", weapon.Name.Any(), item.Name.Any())
 	}
 	return nil
 }

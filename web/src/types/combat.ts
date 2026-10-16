@@ -1,6 +1,8 @@
 // Mirrors api/internal/rest/handler/combathdl (RollResultDTO, ModifierDTO, DamageTermDTO, AmmoDTO,
 // AttackRequestDTO, WeaponDTO). The attack fields also match the attack entries' log payload.
 
+import type { LocalizedText } from "./localized";
+
 /** Where a modifier comes from; the UI labels it with `result.mods.<kind>`. */
 export type ModifierKind =
   | "strength"
@@ -10,9 +12,7 @@ export type ModifierKind =
   | "ammo_magic"
   | "buff"
   | "situational"
-  | "crit"
-  /** A save adjustment set after the roll; detail = its reason. */
-  | "adjustment";
+  | "crit";
 
 export interface Modifier {
   kind: ModifierKind;
@@ -119,12 +119,17 @@ export interface RollResult {
   rolledCrit?: boolean;
   // Saving-throw context (absent on attacks).
   saveCategory?: SaveCategory;
-  /** Adjustment set after the roll (0: none); always present on saves. */
+  /** Adjustment set after the roll (0: none); always present on saves. It moves the target (+ easier, − harder). */
   adjustment?: number;
   adjustmentReason?: string;
-  /** A save's modifiers summed (not the adjustment), and d20 + modifiers + adjustment. */
+  /** A save's modifiers summed (the buffs, not the adjustment). */
   saveBonus?: number;
+  /** rollTotal + adjustment, kept for older clients; the card reads rollTotal and adjustedTarget. */
   saveTotal?: number;
+  /** A save's d20 + saveBonus, the adjustment left out (ADR 0006 step 5). */
+  rollTotal?: number;
+  /** A save's target moved by the adjustment: target − adjustment (baseThac0 is the sheet's target). */
+  adjustedTarget?: number;
   /** The action-log entry recording the attack or save. */
   logEntryId?: number;
 }
@@ -157,7 +162,8 @@ export interface AttackForm {
 /** One ammunition the weapon in hand can fire (combathdl AmmoChoiceDTO). */
 export interface AmmoChoice {
   itemId: string;
-  name: string;
+  /** A language map (ADR 0023 step 9): pick with `localized`. */
+  name: LocalizedText;
   magic: number;
   count: number;
 }
@@ -199,7 +205,8 @@ export interface AttackFormPatch {
 /** GET /api/weapons */
 export interface Weapon {
   id: string;
-  name: string;
+  /** A language map (ADR 0023 step 9): pick with `localized`. */
+  name: LocalizedText;
   damage_sm: string;
   damage_l: string;
   magic_to_hit: number;
@@ -236,7 +243,8 @@ export interface CritTable {
 
 /** Body of POST /api/weapons and PATCH /api/weapons/{id} (weaponhdl WeaponBody); a PATCH changes only the fields present. */
 export interface WeaponBody {
-  name?: string;
+  /** The languages typed (ADR 0023 step 11): the others are kept. */
+  name?: LocalizedText;
   damage_sm?: string;
   damage_l?: string;
   magic_to_hit?: number;
@@ -260,8 +268,10 @@ export interface WeaponFieldChange {
 }
 
 /** Payload of weapon_add, weapon_edit and weapon_remove log entries (weaponsvc changeRecord). */
-export interface WeaponChangeRecord extends Weapon {
+export interface WeaponChangeRecord extends Omit<Weapon, "name"> {
   weapon_id: string;
+  /** The name recorded at write time (ADR 0023 step 12): one string, not a language map. */
+  name: string;
   /** Only in weapon_edit. */
   changes?: WeaponFieldChange[];
 }

@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { localized } from "@/i18n/localized";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
@@ -48,7 +49,7 @@ export function ItemForm({
   onSave,
   onCancel,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const id = useId();
   const [draft, setDraft] = useState<ItemDraft>(initial);
   const [errors, setErrors] = useState<Partial<Record<ItemField, string>>>({});
@@ -59,7 +60,7 @@ export function ItemForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const { body, errors: parseErrors } = draftToBody(draft);
+    const { body, errors: parseErrors } = draftToBody(draft, i18n.language);
     const local = Object.fromEntries(
       Object.entries(parseErrors as DraftErrors).map(([k, v]) => [
         k,
@@ -70,7 +71,7 @@ export function ItemForm({
       setErrors(local);
       return;
     }
-    const toSend = editing ? changedFields(editing, body) : body;
+    const toSend = editing ? changedFields(editing, body, i18n.language) : body;
     if (editing && Object.keys(toSend).length === 0) {
       onCancel();
       return;
@@ -132,7 +133,9 @@ export function ItemForm({
       className="flex flex-col gap-2 rounded-lg bg-neu-900/50 p-3"
       aria-label={
         editing
-          ? t("items.form.editTitle", { name: editing.name })
+          ? t("items.form.editTitle", {
+              name: localized(i18n.language, editing.name),
+            })
           : t("items.form.addTitle")
       }
       data-testid="item-form"

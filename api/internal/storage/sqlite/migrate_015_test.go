@@ -41,7 +41,7 @@ func TestMigrate015_ItemsKeepEveryRowWithBehaviourAndType(t *testing.T) {
 		id, name, typ, behaviour, ammo, dice, save, notes string
 		pos, bonus, count, max                            int
 	}
-	rows, err := db.QueryContext(ctx, `SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes FROM items ORDER BY position`)
+	rows, err := db.QueryContext(ctx, `SELECT id, position, `+enName+`, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes FROM items ORDER BY position`)
 	require.NoError(t, err)
 	defer func() { _ = rows.Close() }()
 	var got []row

@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
@@ -59,15 +60,16 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 
 // WeaponDTO is the wire shape of a weapon catalog entry.
 type WeaponDTO struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	DamageSM    string `json:"damage_sm"`
-	DamageL     string `json:"damage_l"`
-	MagicToHit  int    `json:"magic_to_hit"`
-	MagicDamage int    `json:"magic_damage"`
-	Kind        string `json:"kind"`
-	TwoHanded   bool   `json:"two_handed"`
-	AmmoKind    string `json:"ammo_kind"`
+	ID string `json:"id"`
+	// Name is a language map (ADR 0023 step 9).
+	Name        localized.Text `json:"name"`
+	DamageSM    string         `json:"damage_sm"`
+	DamageL     string         `json:"damage_l"`
+	MagicToHit  int            `json:"magic_to_hit"`
+	MagicDamage int            `json:"magic_damage"`
+	Kind        string         `json:"kind"`
+	TwoHanded   bool           `json:"two_handed"`
+	AmmoKind    string         `json:"ammo_kind"`
 }
 
 // ListWeapons returns the weapons catalog.
@@ -341,10 +343,15 @@ type RollResultDTO struct {
 	SaveCategory     string `json:"saveCategory,omitempty"`
 	Adjustment       *int   `json:"adjustment,omitempty"`
 	AdjustmentReason string `json:"adjustmentReason,omitempty"`
-	// SaveBonus is the sum of the save's modifiers (not the adjustment),
-	// SaveTotal d20 + bonus + adjustment; sent on saves only.
-	SaveBonus *int `json:"saveBonus,omitempty"`
-	SaveTotal *int `json:"saveTotal,omitempty"`
+	// Sent on saves only. The adjustment moves the target (ADR 0006 step 5):
+	// rollTotal (d20 + saveBonus, the buffs) is compared with adjustedTarget
+	// (target - adjustment; baseThac0 is the target, effectiveThac0 the
+	// adjusted one). saveTotal is rollTotal + adjustment, kept for the
+	// clients that read it.
+	SaveBonus      *int `json:"saveBonus,omitempty"`
+	SaveTotal      *int `json:"saveTotal,omitempty"`
+	RollTotal      *int `json:"rollTotal,omitempty"`
+	AdjustedTarget *int `json:"adjustedTarget,omitempty"`
 
 	LogEntryID int64 `json:"logEntryId,omitempty"`
 }
@@ -416,8 +423,8 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 		out.TargetAC = &ac
 	}
 	if r.SaveCategory != "" {
-		adj, bonus, total := r.Adjustment, r.SaveBonus, r.SaveTotal
-		out.Adjustment, out.SaveBonus, out.SaveTotal = &adj, &bonus, &total
+		adj, bonus, total, roll, target := r.Adjustment, r.SaveBonus, r.SaveTotal, r.SaveRollTotal, r.SaveAdjustedTarget
+		out.Adjustment, out.SaveBonus, out.SaveTotal, out.RollTotal, out.AdjustedTarget = &adj, &bonus, &total, &roll, &target
 	}
 	if a := r.Ammo; a != nil {
 		out.Ammo = &AmmoDTO{ItemID: a.ItemID, Name: a.Name, Magic: a.Magic, Remaining: a.Remaining}

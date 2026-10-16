@@ -22,10 +22,13 @@ INSERT INTO "weapons" ("id", "position", "name", "damage_sm", "damage_l", "magic
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10);
 
 -- UpdateWeapon
-UPDATE "weapons" SET "position" = ?1, "name" = ?2, "damage_sm" = ?3, "damage_l" = ?4, "magic_to_hit" = ?5, "magic_damage" = ?6, "kind" = ?7, "two_handed" = ?8, "ammo_kind" = ?9
-WHERE "id" = ?10
-RETURNING "id";
+UPDATE "weapons" SET "position" = ?1, "damage_sm" = ?2, "damage_l" = ?3, "magic_to_hit" = ?4, "magic_damage" = ?5, "kind" = ?6, "two_handed" = ?7, "ammo_kind" = ?8
+WHERE "id" = ?9
+RETURNING "id", "name";
 
 -- DeleteWeapon
 DELETE FROM "weapons" WHERE "id" = ?1
-RETURNING "id";
+RETURNING "id", "name";
+
+-- WeaponNames
+SELECT "text_id", "lang", "body" FROM "localized_texts" WHERE "text_id" IN (SELECT "name" FROM "weapons");

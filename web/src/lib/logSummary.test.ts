@@ -4,6 +4,7 @@ import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
 import { abilityText, entryText } from "./logSummary";
 import { spellNamer } from "@/i18n/spellName";
+import { inventoryNamer } from "@/i18n/inventoryName";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -261,6 +262,57 @@ describe("entryText", () => {
     expect(entryText(entry("attack", payload, "server"), t)).toBe(want);
   });
 
+  // ADR 0023 step 12: the weapon, its ammunition and a used item are named by id in the player's
+  // language while the inventory has them; a removed one keeps its recorded name.
+  it("names the weapon, the ammunition and the item from the inventory", async () => {
+    const t = await makeT("fr");
+    const names = inventoryNamer(
+      [
+        { id: "arrows_plus1", name: { en: "Arrows +1", fr: "Flèches +1" } },
+        {
+          id: "power_gem_dispel",
+          name: { en: "Power Gem", fr: "Gemme de pouvoir" },
+        },
+      ],
+      [{ id: "shortbow", name: { en: "Short Bow +2", fr: "Arc court +2" } }],
+      "fr",
+    );
+    const shot = {
+      hit: false,
+      totalDamage: 0,
+      weaponId: "shortbow",
+      weaponName: "Short Bow +2",
+      targetAc: 5,
+      ammo: {
+        itemId: "arrows_plus1",
+        name: "Arrows +1",
+        magic: 1,
+        remaining: 3,
+      },
+    };
+    expect(
+      entryText(entry("attack", shot, "server"), t, undefined, names),
+    ).toBe("Arc court +2 (Flèches +1) contre CA 5 : attaque ratée");
+    const use = {
+      itemId: "power_gem_dispel",
+      name: "Power Gem",
+      remaining: 0,
+      rolls: [],
+      total: 0,
+    };
+    expect(entryText(entry("item_use", use), t, undefined, names)).toBe(
+      "Objet utilisé : Gemme de pouvoir (0 restant)",
+    );
+    expect(
+      entryText(
+        entry("item_use", { ...use, itemId: "gone" }),
+        t,
+        undefined,
+        names,
+      ),
+    ).toBe("Objet utilisé : Power Gem (0 restant)");
+  });
+
   it.each([
     [
       "en",
@@ -378,33 +430,49 @@ describe("entryText for saves", () => {
     passed: false,
     rolledPassed: false,
     adjustment: 0,
+    rollTotal: 12,
+    adjustedTarget: 14,
     margin: -2,
   };
 
+  // The adjustment moves the target (ADR 0006 step 5): the roll side is the d20 and the buffs.
   it.each([
     ["rolled", rolled, "Save vs Spells: d20 12 vs 14, FAILED"],
+    [
+      "rolled with a buff",
+      {
+        ...rolled,
+        modifiers: [{ kind: "buff", detail: "Luck", value: 1 }],
+        rollTotal: 13,
+        margin: -1,
+      },
+      "Save vs Spells: d20 12 +1 = 13 vs 14, FAILED",
+    ],
     [
       "adjusted with a reason",
       {
         ...rolled,
         adjustment: 4,
         adjustmentReason: "Gaia fire",
+        adjustedTarget: 10,
         passed: true,
         margin: 2,
         previousPassed: false,
       },
-      "Save vs Spells: d20 12 vs 14, adjusted +4 Gaia fire: FAILED → PASSED",
+      "Save vs Spells: d20 12 vs 10 (target 14, adjusted +4 Gaia fire): FAILED → PASSED",
     ],
     [
-      "adjusted without a reason",
+      "adjusted without a reason: a −2 raises the target",
       {
         ...rolled,
         d20Roll: 15,
+        rollTotal: 15,
         adjustment: -2,
+        adjustedTarget: 16,
         passed: false,
         previousPassed: true,
       },
-      "Save vs Spells: d20 15 vs 14, adjusted −2: PASSED → FAILED",
+      "Save vs Spells: d20 15 vs 16 (target 14, adjusted −2): PASSED → FAILED",
     ],
     [
       "adjustment removed",
@@ -423,12 +491,13 @@ describe("entryText for saves", () => {
       effectivePayload: {
         ...rolled,
         adjustment: 4,
+        adjustedTarget: 10,
         passed: true,
         previousPassed: false,
       },
     };
     expect(entryText(e, t)).toBe(
-      "Save vs Spells: d20 12 vs 14, adjusted +4: FAILED → PASSED",
+      "Save vs Spells: d20 12 vs 10 (target 14, adjusted +4): FAILED → PASSED",
     );
   });
 
@@ -440,13 +509,23 @@ describe("entryText for saves", () => {
           ...rolled,
           adjustment: 4,
           adjustmentReason: "Gaia feu",
+          adjustedTarget: 10,
           passed: true,
           previousPassed: false,
         }),
         t,
       ),
     ).toBe(
-      "Sauvegarde contre Sorts : d20 12 contre 14, ajustée +4 Gaia feu : ÉCHOUÉE → RÉUSSIE",
+      "Sauvegarde contre Sorts : d20 12 contre 10 (seuil 14, ajusté +4 Gaia feu) : ÉCHOUÉE → RÉUSSIE",
+    );
+  });
+
+  it("renders a removed adjustment in French", async () => {
+    const t = await makeT("fr");
+    expect(
+      entryText(entry("save", { ...rolled, previousPassed: true }), t),
+    ).toBe(
+      "Sauvegarde contre Sorts : d20 12 contre 14, ajustement retiré : RÉUSSIE → ÉCHOUÉE",
     );
   });
 
@@ -938,10 +1017,15 @@ describe("entries logged before the change", () => {
         rolledPassed: false,
         adjustment: 0,
         modifiers: [{ kind: "buff", source: "Luck", detail: "Luck", value: 1 }],
+        // Filled by the server on read (ADR 0006 step 8).
+        rollTotal: 13,
+        adjustedTarget: 14,
       },
       "Save vs Spells: d20 12 vs 14, FAILED",
     );
-    expect(entryText(save, t)).toBe("Save vs Spells: d20 12 vs 14, FAILED");
+    expect(entryText(save, t)).toBe(
+      "Save vs Spells: d20 12 +1 = 13 vs 14, FAILED",
+    );
     const attack = entry(
       "attack",
       {

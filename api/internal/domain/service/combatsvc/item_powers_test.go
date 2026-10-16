@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -58,7 +59,7 @@ var gemMod = combatsvc.Modifier{Kind: combatsvc.ModWeaponBuff, Detail: "Power Ge
 // with a bow or hurled darts the power is still on but adds nothing: the
 // weapon's own magic, dice x1.
 func TestItemPowers_Step12_HammerOnMeleeOnly(t *testing.T) {
-	arrows := itemsvc.Item{ID: "arrows_plus3", Name: "Arrows +3", AmmoKind: "arrow", MagicBonus: 3, Count: 5}
+	arrows := itemsvc.Item{ID: "arrows_plus3", Name: localized.Of("Arrows +3"), AmmoKind: "arrow", MagicBonus: 3, Count: 5}
 	tests := []struct {
 		name      string
 		weapon    combatsvc.Weapon
@@ -116,7 +117,7 @@ func TestItemPowers_Step12_HammerOnMeleeOnly(t *testing.T) {
 // ADR 0016 step 12 (ADR 0002 step 12): the preview follows the weapon in
 // hand: the sword's lists the hammer's +5, the bow's its own +2.
 func TestItemPowers_Step12_PreviewFollowsTheWeaponInHand(t *testing.T) {
-	arrows := itemsvc.Item{ID: "arrows_plus1", Name: "Arrows +1", AmmoKind: "arrow", MagicBonus: 1, Count: 9}
+	arrows := itemsvc.Item{ID: "arrows_plus1", Name: localized.Of("Arrows +1"), AmmoKind: "arrow", MagicBonus: 1, Count: 9}
 	tests := []struct {
 		name     string
 		form     combatsvc.AttackForm

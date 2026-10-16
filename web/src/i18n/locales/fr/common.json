@@ -973,7 +973,10 @@
       "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
       "success": "Réussi",
       "failure": "Échec",
-      "die": "d{{die}}"
+      "die": "d{{die}}",
+      "adjustment": "Ajustement",
+      "adjustedTarget": "Seuil ajusté",
+      "adjustLabel": "Ajuster ce jet"
     },
     "attackHeadingUnknown": "{{weapon}} contre CA inconnue",
     "attackHeadingAmmoUnknown": "{{weapon}} avec {{ammo}} contre CA inconnue",
@@ -1141,12 +1144,15 @@
     },
     "skill": {
       "success": "{{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
-      "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec"
+      "failure": "{{name}} : d{{die}} {{roll}} contre {{target}}, échec",
+      "successAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), réussi",
+      "failureAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec"
     },
     "dice": "Dés {{formula}} = {{total}}",
     "correction": {
       "targetAc": "Correction CA {{from}} → {{to}}",
       "saveAdjustment": "Correction ajustement de sauvegarde {{from}} → {{to}}",
+      "skillAdjustment": "Correction ajustement de jet de compétence {{from}} → {{to}}",
       "verdict": "Correction verdict du MJ {{from}} → {{to}}",
       "other": "Correction de #{{id}}",
       "unknown": "?",
@@ -1327,6 +1333,12 @@
       "last": "Dernier"
     },
     "percent": "{{value}} %",
+    "adjust": {
+      "label": "Ajustement du prochain jet de {{section}}",
+      "decrease": "Rendre le prochain jet de {{section}} plus difficile",
+      "increase": "Rendre le prochain jet de {{section}} plus facile",
+      "value": "Ajustement du prochain jet de {{section}}"
+    },
     "rollLabel": "Lancer {{name}}",
     "lastSuccess": "Dernier jet : {{roll}}, réussi",
     "lastFailure": "Dernier jet : {{roll}}, échec",

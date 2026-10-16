@@ -973,7 +973,10 @@
       "bardSkill": "Bard skill · d{{die}} under {{percent}}%",
       "success": "Success",
       "failure": "Failure",
-      "die": "d{{die}}"
+      "die": "d{{die}}",
+      "adjustment": "Adjustment",
+      "adjustedTarget": "Adjusted target",
+      "adjustLabel": "Adjust this check"
     },
     "attackHeadingUnknown": "{{weapon}} vs unknown AC",
     "attackHeadingAmmoUnknown": "{{weapon}} with {{ammo}} vs unknown AC",
@@ -1141,13 +1144,16 @@
     },
     "skill": {
       "success": "{{name}}: d{{die}} {{roll}} vs {{target}}, success",
-      "failure": "{{name}}: d{{die}} {{roll}} vs {{target}}, failure"
+      "failure": "{{name}}: d{{die}} {{roll}} vs {{target}}, failure",
+      "successAdjusted": "{{name}}: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), success",
+      "failureAdjusted": "{{name}}: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), failure"
     },
     "dice": "Dice {{formula}} = {{total}}",
     "correction": {
       "targetAc": "Correction AC {{from}} → {{to}}",
       "saveAdjustment": "Correction save adjustment {{from}} → {{to}}",
       "verdict": "Correction GM verdict {{from}} → {{to}}",
+      "skillAdjustment": "Correction skill check adjustment {{from}} → {{to}}",
       "other": "Correction of #{{id}}",
       "unknown": "?",
       "none": "none"
@@ -1327,6 +1333,12 @@
       "last": "Last"
     },
     "percent": "{{value}}%",
+    "adjust": {
+      "label": "Adjustment of the next {{section}} check",
+      "decrease": "Make the next {{section}} check harder",
+      "increase": "Make the next {{section}} check easier",
+      "value": "Adjustment of the next {{section}} check"
+    },
     "rollLabel": "Roll {{name}}",
     "lastSuccess": "Last check: {{roll}}, success",
     "lastFailure": "Last check: {{roll}}, failure",

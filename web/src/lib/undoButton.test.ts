@@ -136,6 +136,18 @@ describe("undoButtonState", () => {
     expect(await label("en", save)).toBe(
       "Undo: Correction save adjustment 0 → −3 (Ctrl+Z / ⌘Z)",
     );
+    const skill = {
+      entryKind: "skill_check",
+      field: "skillAdjustment",
+      from: 0,
+      to: -5,
+    };
+    expect(await label("fr", skill)).toBe(
+      "Annuler : Correction ajustement de jet de compétence 0 → −5 (Ctrl+Z / ⌘Z)",
+    );
+    expect(await label("en", skill)).toBe(
+      "Undo: Correction skill check adjustment 0 → −5 (Ctrl+Z / ⌘Z)",
+    );
     const verdict = { field: "verdict", from: null, to: "hit" };
     expect(await label("fr", verdict)).toBe(
       "Annuler : Correction verdict du MJ aucun → Touché (Ctrl+Z / ⌘Z)",

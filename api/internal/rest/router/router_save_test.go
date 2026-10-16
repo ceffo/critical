@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"slices"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,11 +67,9 @@ type savedEntryJSON struct {
 	} `json:"corrections"`
 }
 
-// ADR 0006 step 8, through the real stack: a save logged before the
-// adjustment moved the target, and its adjustment amend, have neither
-// rollTotal nor adjustedTarget in the database; GET /api/log serves both,
-// computed from the stored numbers, with the stored verdict and margin.
-func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape(t *testing.T) {
+// realStack is the composed backend (fixture seeds) behind a test server.
+func realStack(t *testing.T) (*composition.BackingServices, *httptest.Server) {
+	t.Helper()
 	ctx := context.Background()
 	bs, err := composition.New(ctx, composition.Config{
 		DSN:       filepath.Join(t.TempDir(), "critical.db"),
@@ -80,6 +80,16 @@ func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape(t *testing.T) {
 	t.Cleanup(func() { _ = bs.Close(ctx) })
 	srv := httptest.NewServer(router.New(slog.New(slog.NewTextHandler(io.Discard, nil)), bs))
 	t.Cleanup(srv.Close)
+	return bs, srv
+}
+
+// ADR 0006 step 8, through the real stack: a save logged before the
+// adjustment moved the target, and its adjustment amend, have neither
+// rollTotal nor adjustedTarget in the database; GET /api/log serves both,
+// computed from the stored numbers, with the stored verdict and margin.
+func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape(t *testing.T) {
+	ctx := context.Background()
+	bs, srv := realStack(t)
 
 	// The payloads the code wrote before: d20 13 + Luck 1 vs 14, then -2.
 	rolled := `{"category":"spell","d20Roll":13,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
@@ -123,4 +133,50 @@ func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape(t *testing.T) {
 
 	require.Len(t, e.Corrections, 1)
 	assert.Equal(t, 16.0, e.Corrections[0].Payload["adjustedTarget"], "an amend's payload is served in the new shape too")
+}
+
+// ADR 0006 step 8: the log service serves old saves in the new shape, so every
+// endpoint that returns an entry does, not only the list: the amend, the undo,
+// the redo and the redo target of the list.
+func TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShapeByEveryEndpoint(t *testing.T) {
+	ctx := context.Background()
+	bs, srv := realStack(t)
+	rolled := `{"category":"spell","d20Roll":13,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
+		`"rolledPassed":true,"adjustment":0,"total":14,"passed":true,"margin":0}`
+	id, err := bs.Log.Record(ctx, actionlog.NewEntry{CharacterID: bs.CharacterID, Kind: actionlog.KindSave, Payload: json.RawMessage(rolled)})
+	require.NoError(t, err)
+
+	post := func(path, body string) savedEntryJSON {
+		t.Helper()
+		res, err := http.Post(srv.URL+path, "application/json", strings.NewReader(body)) //nolint:noctx // test server
+		require.NoError(t, err)
+		defer func() { _ = res.Body.Close() }()
+		require.Equal(t, http.StatusOK, res.StatusCode, path)
+		var e savedEntryJSON
+		require.NoError(t, json.NewDecoder(res.Body).Decode(&e))
+		return e
+	}
+	assertNewShape := func(what string, e savedEntryJSON) {
+		t.Helper()
+		assert.Equal(t, float64(id), float64(e.ID), what)
+		for field, p := range map[string]map[string]any{"payload": e.Payload, "effectivePayload": e.EffectivePayload} {
+			assert.Equal(t, 14.0, p["rollTotal"], what+" "+field)
+			assert.Equal(t, 14.0, p["adjustedTarget"], what+" "+field)
+		}
+	}
+
+	assertNewShape("amend", post("/api/log/"+strconv.FormatInt(id, 10)+"/amend", `{"note":"ruling"}`))
+	assertNewShape("undo", post("/api/log/undo", `{"expectedTopId":`+strconv.FormatInt(id, 10)+`}`))
+
+	res, err := http.Get(srv.URL + "/api/log") //nolint:noctx // test server
+	require.NoError(t, err)
+	defer func() { _ = res.Body.Close() }()
+	var log struct {
+		Redo *savedEntryJSON `json:"redo"`
+	}
+	require.NoError(t, json.NewDecoder(res.Body).Decode(&log))
+	require.NotNil(t, log.Redo)
+	assertNewShape("redo target", *log.Redo)
+
+	assertNewShape("redo", post("/api/log/redo", `{"expectedRedoId":`+strconv.FormatInt(id, 10)+`}`))
 }

@@ -13,7 +13,7 @@ func (s *service) List(ctx context.Context, characterID int64, limit int) ([]act
 	if err != nil {
 		return nil, fmt.Errorf("list entries: %w", err)
 	}
-	return entries, nil
+	return s.views.Entries(entries), nil
 }
 
 // ActiveEntries returns the newest non-voided entries of kind.
@@ -22,7 +22,7 @@ func (s *service) ActiveEntries(ctx context.Context, characterID int64, kind act
 	if err != nil {
 		return nil, fmt.Errorf("list active entries: %w", err)
 	}
-	return entries, nil
+	return s.views.Entries(entries), nil
 }
 
 // HPTotal is the SUM of effective HP deltas (computed in storage).

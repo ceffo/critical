@@ -68,10 +68,6 @@ type BackingServices struct {
 	Skills    skillsvc.SVC
 	Dice      dicesvc.SVC
 
-	// LogPayloadViews fill, when the log is served, the payload fields an
-	// entry's kind gained after the entry was logged.
-	LogPayloadViews actionlog.PayloadViews
-
 	services []domain.Service
 }
 
@@ -182,7 +178,12 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	// action-log transaction, so whatever a request records is popped by one
 	// undo (ADR 0018 steps 1 and 2).
 	tx := actionlogsvc.Transactions(db)
-	logSvc, err := actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL)
+	// The log serves every entry through these views (payload fields a kind
+	// gained after the entry was logged).
+	logPayloadViews := actionlog.PayloadViews{
+		actionlog.KindSave: combatsvc.SavePayloadView,
+	}
+	logSvc, err := actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL, logPayloadViews)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -293,9 +294,6 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		Details:     detailsSvc,
 		Skills:      skillSvc,
 		Dice:        diceSvc,
-		LogPayloadViews: actionlog.PayloadViews{
-			actionlog.KindSave: combatsvc.SavePayloadView,
-		},
 		services: []domain.Service{
 			charSvc, buffSvc, logSvc, hpSvc, spellSvc, prepSvc, castSvc, combatSvc, itemSvc, weaponSvc, restSvc, xpSvc, skillSvc, detailsSvc, diceSvc,
 		},

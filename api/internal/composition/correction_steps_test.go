@@ -8,6 +8,7 @@ package composition_test
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -332,6 +333,7 @@ func TestCorrectionStep_AdjustASaveLoggedBeforeTheTargetMoved(t *testing.T) {
 
 	undoCorrection(t, bs, saveID)
 	e := entryByID(t, bs, saveID)
-	assert.JSONEq(t, old, string(e.EffectivePayload()), "back to the save as logged")
+	// The log serves the save as logged, with the two fields its view fills.
+	assert.JSONEq(t, strings.TrimSuffix(old, "}")+`,"rollTotal":14,"adjustedTarget":14}`, string(e.EffectivePayload()), "back to the save as logged")
 	assert.Equal(t, saveID, topID(t, bs))
 }

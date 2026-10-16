@@ -39,7 +39,7 @@ type SVC interface {
 	// TopID is the newest non-voided entry, the one Undo pops; ok is false
 	// when there is none.
 	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
-	// HPTotal is the SUM of effective HP deltas, computed in storage.
+	// HPTotal is the SUM of effective HP deltas (actionlog.HPTotal over the log).
 	HPTotal(ctx context.Context, characterID int64) (int, error)
 	// ActiveEntries returns the newest non-voided entries of kind.
 	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
@@ -72,6 +72,8 @@ type DAL interface {
 	LatestPopped(ctx context.Context, characterID int64) (id, transactionID int64, ok bool, err error)
 	// LatestID returns the newest entry of kind, voided or not.
 	LatestID(ctx context.Context, characterID int64, kind actionlog.Kind) (id int64, ok bool, err error)
+	// HPTotal returns the sum of the effective HP deltas of every entry, by
+	// the domain rule actionlog.HPTotal over the entries and their corrections.
 	HPTotal(ctx context.Context, characterID int64) (int, error)
 }
 

@@ -116,9 +116,8 @@ func (e *errTx) InTx(ctx context.Context, fn func(context.Context) error) error 
 
 // ADR 0018 step 2: undo pops every non-voided entry of the top entry's
 // transaction, newest first, restoring each snapshot then voiding the entry,
-// all inside the one DB transaction of the expected-top check. The rollback
-// itself is checked on SQLite in actionlogdal
-// (TestUndo_RestorerFailsMidTransaction_RollsBackEverything).
+// all inside the one DB transaction of the expected-top check. A failure
+// leaves the transaction body, for the database to roll back.
 func TestUndo_PopsTheWholeTransaction(t *testing.T) {
 	// Next Round: the advance (#10) starts the transaction, its initiative
 	// (#11) joins it; #12 of the same transaction was popped already (as an

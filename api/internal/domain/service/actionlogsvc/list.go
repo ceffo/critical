@@ -25,7 +25,7 @@ func (s *service) ActiveEntries(ctx context.Context, characterID int64, kind act
 	return s.views.Entries(entries), nil
 }
 
-// HPTotal is the SUM of effective HP deltas (computed in storage).
+// HPTotal is the SUM of effective HP deltas (actionlog.HPTotal over the log, ADR 0007 step 2).
 func (s *service) HPTotal(ctx context.Context, characterID int64) (int, error) {
 	total, err := s.dal.HPTotal(ctx, characterID)
 	if err != nil {

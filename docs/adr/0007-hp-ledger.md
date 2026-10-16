@@ -23,8 +23,11 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    (negative for damage, positive for healing) and a source text, which is required (blank is
    refused, 400). Entries are never edited or deleted: a correction is a separate row.
    Tests: `TestAppendEvent` ("source required", "blank source", "damage", "heal").
-2. **Current HP.** `hp_max` plus the SUM of the effective `hp_delta` of the log, computed in SQL
-   (`HPTotal`) and never summed in application code. The effective delta of an entry is its
+2. **Current HP.** `hp_max` plus the SUM of the effective `hp_delta` of the log, summed in Go by
+   the one domain rule, `actionlog.HPTotal`: the sum of `Entry.EffectiveHPDelta` over every entry of
+   the character with its corrections, which the storage adapter only reads (user ruling
+   2026-10-16, replacing "computed in SQL and never summed in application code": a second copy of
+   the rule in SQL had no test of its cases, [ADR 0025](0025-postgresql-storage.md) step 6). The effective delta of an entry is its
    original delta, replaced by the latest correction that set one, and 0 once voided. Other
    characters' entries do not count; entries of other kinds have delta 0, except an `exposure`
    the Bard takes himself ([ADR 0008](0008-spell-slots-and-long-rest.md) step 16, user ruling
@@ -32,8 +35,12 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    kind may carry a delta, and every entry's effective delta counts. *Amended by
    [ADR 0019](0019-redo.md) step 1:* "voided" means popped: the entry's newest void or redo is a
    void, so a redone entry counts again.)
-   Tests: `TestHPTotal` (actionlogdal: plain sum, "latest amend wins", "void counts zero", "void
-   after amend counts zero", "summary-only amend keeps delta"), `TestGetState`.
+   Tests: `domain/actionlog` `TestHPTotal` (plain sum, "amend replaces delta", "latest amend wins",
+   "void counts zero", "void after amend counts zero", "summary-only amend keeps delta", "every
+   kind counts", "redone entry counts again"), `TestHPTotal_CapAndFloorSeeTheAmend`;
+   `adapters/actionlogdal` `TestHPTotal` (the character's deltas and corrections read and summed by
+   the rule, as the log grows: amend, pop, redo, pop again, a correction step popped and redone);
+   `TestEntryStatusAndEffectiveValues` (the same rules on one entry), `TestGetState`.
 3. **Damage taken is entered as final.** The app never works the damage out: the player types the
    number after the DM's rulings (armour, resistance, saves), and it is logged as typed, never
    capped (HP may go below 0) down to the floor of -10, where it is clamped
@@ -63,8 +70,9 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    at most 500 characters, an empty note clears it). It changes no HP, summary or payload, and
    the entry stays `active`. Amending a voided entry is refused (409). Value amends written
    before this rule still count, in step 2 (the latest one that set a delta wins).
-   Tests: `TestAmend` (actionlogsvc: the cases and "too long"), `TestAmendNoteAndPop_HPTotal`
-   (actionlogdal), `TestEntryStatusAndEffectiveValues`
+   Tests: `TestAmend` (actionlogsvc: the cases and "too long"),
+   `TestInsertCorrection_StoresTheFieldsItSetsAndNullForTheRest` (actionlogdal: "note amend"),
+   `TestEntryStatusAndEffectiveValues`
    ("note only stays active"), `TestLegacyValueAmend_ReadsAfterMigration014`.
 8. **Void pops the newest entry only.** Only the newest non-voided entry, of any kind, can be
    voided; an older one is refused (409, naming the entry on top). Popping restores the state
@@ -74,7 +82,7 @@ Tests live in `api/internal/domain/service/hpsvc/` unless named otherwise.
    [ADR 0018](0018-transactions-and-undo.md) steps 2 and 3:* the unit popped is the newest transaction, whole, and the row's
    Void is the global undo.)
    Tests: `TestUndo_RestoresThroughRestorers` (actionlogsvc: "hp change, no snapshots"), `TestUndo`
-   ("stale expected top is refused and nothing changes"), `TestAmendNoteAndPop_HPTotal`, `TestUndo_PopsTheWholeTransaction` (newest first; an older entry is
+   ("stale expected top is refused and nothing changes"), `TestUndo_PopsTheWholeTransaction` (newest first; an older entry is
    not poppable).
 9. **Undo.** `POST /api/hp/undo` pops the newest entry when it is an HP change; when another kind
    is on top it is refused (409, naming it) and nothing changes; on an empty log it does nothing.

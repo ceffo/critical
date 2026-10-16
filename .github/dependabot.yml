@@ -7,10 +7,9 @@ updates:
     groups:
       go-minor-patch:
         update-types: [minor, patch]
-        # bob (v0) and sqlc bumps change the generated DAL: each gets its own PR,
+        # sqlc bumps change the generated DAL: each gets its own PR,
         # never grouped, never auto-merged (docs/backend.md, "Dependency bumps").
         exclude-patterns:
-          - github.com/stephenafamo/bob*
           - github.com/sqlc-dev/sqlc*
 
   - package-ecosystem: npm

@@ -1,6 +1,7 @@
 // Package buffdal is the storage adapter for buffsvc. The active buff list is
 // persisted as JSON in active_buffs.buffs for simplicity; the round counter
-// lives in round_state.round_number, the round's initiative next to it. Delegates to bob-generated typed queries.
+// lives in round_state.round_number, the round's initiative next to it. It
+// delegates to the sqlc-generated queries in the queries/ subpackage.
 package buffdal
 
 import (
@@ -11,26 +12,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aarondl/opt/null"
-
 	"github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// DAL is the SQLite-backed implementation of buffsvc.DAL. Every call runs on
-// the transaction carried by ctx when there is one (sqlite.Conn), so buff
-// writes commit together with their action-log entry.
+// DAL is the implementation of buffsvc.DAL over the sqlc-generated queries.
+// The composition root routes them to the transaction the context carries
+// (sqlite.Routed), so buff writes commit together with their action-log entry.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
-// New returns a DAL on the pool; calls join the ctx transaction if any.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
+var _ buffsvc.DAL = (*DAL)(nil)
 
-func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
+// New returns a DAL running its queries on q (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 // jsonBuff mirrors buffsvc.BuffEffect with JSON tags so we can preserve the
 // existing on-disk format. Older rows also carry a "type"
@@ -88,7 +84,7 @@ func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 
 // GetActiveBuffs returns the persisted list (empty when none).
 func (d *DAL) GetActiveBuffs(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error) {
-	blob, err := queries.GetActiveBuffs(characterID).One(ctx, d.exec(ctx))
+	blob, err := d.q.GetActiveBuffs(ctx, characterID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return []buffsvc.BuffEffect{}, nil
 	}
@@ -119,10 +115,7 @@ func (d *DAL) SaveActiveBuffs(ctx context.Context, characterID int64, buffs []bu
 	if err != nil {
 		return fmt.Errorf("marshal active_buffs: %w", err)
 	}
-	_, err = queries.UpsertActiveBuffs([]queries.UpsertActiveBuffs_ActiveBuffs{
-		{CharacterID: characterID, Buffs: string(blob)},
-	}).Exec(ctx, d.exec(ctx))
-	if err != nil {
+	if err := d.q.UpsertActiveBuffs(ctx, queries.UpsertActiveBuffsParams{CharacterID: characterID, Buffs: string(blob)}); err != nil {
 		return fmt.Errorf("upsert active_buffs: %w", err)
 	}
 	return nil
@@ -130,7 +123,7 @@ func (d *DAL) SaveActiveBuffs(ctx context.Context, characterID int64, buffs []bu
 
 // GetRoundNumber returns the persisted round; 0 when no row exists.
 func (d *DAL) GetRoundNumber(ctx context.Context, characterID int64) (int, error) {
-	round, err := queries.GetRoundNumber(characterID).One(ctx, d.exec(ctx))
+	round, err := d.q.GetRoundNumber(ctx, characterID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
@@ -142,10 +135,7 @@ func (d *DAL) GetRoundNumber(ctx context.Context, characterID int64) (int, error
 
 // SaveRoundNumber upserts the counter.
 func (d *DAL) SaveRoundNumber(ctx context.Context, characterID int64, round int) error {
-	_, err := queries.UpsertRoundNumber([]queries.UpsertRoundNumber_RoundState{
-		{CharacterID: characterID, RoundNumber: int64(round)},
-	}).Exec(ctx, d.exec(ctx))
-	if err != nil {
+	if err := d.q.UpsertRoundNumber(ctx, queries.UpsertRoundNumberParams{CharacterID: characterID, RoundNumber: int64(round)}); err != nil {
 		return fmt.Errorf("upsert round_state: %w", err)
 	}
 	return nil
@@ -154,29 +144,27 @@ func (d *DAL) SaveRoundNumber(ctx context.Context, characterID int64, round int)
 // GetInitiative returns the stored initiative; nil when there is none or no
 // row exists.
 func (d *DAL) GetInitiative(ctx context.Context, characterID int64) (*buffsvc.Initiative, error) {
-	row, err := queries.GetInitiative(characterID).One(ctx, d.exec(ctx))
+	row, err := d.q.GetInitiative(ctx, characterID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("query initiative: %w", err)
 	}
-	d10, ok := row.InitiativeD10.Get()
-	if !ok {
+	if !row.InitiativeD10.Valid {
 		return nil, nil
 	}
-	entryID, _ := row.InitiativeEntryID.Get()
-	return &buffsvc.Initiative{D10: int(d10), LogEntryID: entryID}, nil
+	return &buffsvc.Initiative{D10: int(row.InitiativeD10.Int64), LogEntryID: row.InitiativeEntryID.Int64}, nil
 }
 
 // SaveInitiative upserts the initiative; nil writes NULL (none).
 func (d *DAL) SaveInitiative(ctx context.Context, characterID int64, initiative *buffsvc.Initiative) error {
-	row := queries.UpsertInitiative_RoundState{CharacterID: characterID}
+	row := queries.UpsertInitiativeParams{CharacterID: characterID}
 	if initiative != nil {
-		row.InitiativeD10 = null.From(int64(initiative.D10))
-		row.InitiativeEntryID = null.From(initiative.LogEntryID)
+		row.InitiativeD10 = sql.NullInt64{Int64: int64(initiative.D10), Valid: true}
+		row.InitiativeEntryID = sql.NullInt64{Int64: initiative.LogEntryID, Valid: true}
 	}
-	if _, err := queries.UpsertInitiative([]queries.UpsertInitiative_RoundState{row}).Exec(ctx, d.exec(ctx)); err != nil {
+	if err := d.q.UpsertInitiative(ctx, row); err != nil {
 		return fmt.Errorf("upsert initiative: %w", err)
 	}
 	return nil
@@ -184,7 +172,7 @@ func (d *DAL) SaveInitiative(ctx context.Context, characterID int64, initiative 
 
 // ListSavedBuffs returns the character's templates, oldest first.
 func (d *DAL) ListSavedBuffs(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error) {
-	rows, err := queries.ListSavedBuffs(characterID).All(ctx, d.exec(ctx))
+	rows, err := d.q.ListSavedBuffs(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("query saved_buffs: %w", err)
 	}
@@ -208,7 +196,7 @@ const sqliteDatetime = "2006-01-02 15:04:05"
 
 // ReplaceSavedBuffs makes the stored list equal to saved.
 func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []buffsvc.SavedBuff) error {
-	if _, err := queries.DeleteSavedBuffs(characterID).Exec(ctx, d.exec(ctx)); err != nil {
+	if err := d.q.DeleteSavedBuffs(ctx, characterID); err != nil {
 		return fmt.Errorf("delete saved_buffs: %w", err)
 	}
 	for _, s := range saved {
@@ -221,18 +209,18 @@ func (d *DAL) ReplaceSavedBuffs(ctx context.Context, characterID int64, saved []
 			// it was recorded has none, so the row is stamped now.
 			createdAt := s.CreatedAt
 			if createdAt.IsZero() {
-				createdAt = time.Now().UTC()
+				createdAt = time.Now()
 			}
-			_, err = queries.InsertSavedBuffWithID([]queries.InsertSavedBuffWithID_SavedBuffs{{
+			err = d.q.InsertSavedBuffWithID(ctx, queries.InsertSavedBuffWithIDParams{
 				ID: s.ID, CharacterID: characterID, Name: s.Name, Duration: int64(s.Duration),
 				Charges: int64(s.Charges), Effects: string(eff), Note: s.Note,
 				CreatedAt: createdAt.UTC().Format(sqliteDatetime),
-			}}).Exec(ctx, d.exec(ctx))
+			})
 		} else {
-			_, err = queries.InsertSavedBuff([]queries.InsertSavedBuff_SavedBuffs{{
+			err = d.q.InsertSavedBuff(ctx, queries.InsertSavedBuffParams{
 				CharacterID: characterID, Name: s.Name, Duration: int64(s.Duration),
 				Charges: int64(s.Charges), Effects: string(eff), Note: s.Note,
-			}}).One(ctx, d.exec(ctx))
+			})
 		}
 		if err != nil {
 			return fmt.Errorf("insert saved_buffs: %w", err)

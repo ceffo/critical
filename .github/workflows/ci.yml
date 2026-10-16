@@ -104,7 +104,7 @@ jobs:
           go-version-file: api/go.mod
           cache-dependency-path: api/go.sum
       - uses: extractions/setup-just@v4
-      - name: Regenerate the DAL (sqlc, bob) and mockery mocks
+      - name: Regenerate the DAL (sqlc) and mockery mocks
         run: |
           just generate
           just mocks

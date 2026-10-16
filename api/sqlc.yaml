@@ -1,7 +1,6 @@
-# sqlc generates the DAL query code of the adapters listed below (ADR 0025 step 5):
+# sqlc generates the DAL query code of every adapter listed below (ADR 0025 step 5):
 # one Go package per adapter, with a Querier interface its adapter depends on.
 # Regenerate with `just generate`; the generated files are committed, never edited.
-# The remaining adapters still use bob (bobgen.yaml) until they are ported.
 version: "2"
 sql:
   - &adapter
@@ -69,3 +68,21 @@ sql:
       go:
         <<: *go
         out: internal/adapters/weapondal/queries
+  - <<: *adapter
+    queries: internal/adapters/actionlogdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/actionlogdal/queries
+  - <<: *adapter
+    queries: internal/adapters/buffdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/buffdal/queries
+  - <<: *adapter
+    queries: internal/adapters/spelldal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/spelldal/queries

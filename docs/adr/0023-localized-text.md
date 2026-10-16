@@ -70,9 +70,10 @@ columns of #147, then `name_fr` / `description_fr`).
   (`TestSearch_ServesTextFieldsAsLanguageMaps`, `TestNames_ServesIDsWithNameLanguageMaps`,
   `TestSpells_TextsAreLanguageMaps`, `TestSpellNames_AreIDAndLanguageMap`).
 - **Search** (step 7 and the cost note): the name tiers run over every language's name
-  (`TestSearch_RankingTiers`); the text lookup goes through the primary key, never a scan
-  (`TestTextsQuery_SearchesThePrimaryKey`), and only name, school and sphere are read for the
-  candidates; a page's full texts are one batched read (`TestSearch_ReadsThePageTextsInOneBatch`).
+  (`TestSearch_RankingTiers`); the text lookup is the `TextsByID` query, through the
+  primary key, never a scan (checked by running the app, [ADR 0025](0025-postgresql-storage.md)
+  step 7), and only name, school and sphere are read for the candidates
+  (`TestSearchAndDetails_MapFields`); a page's full texts are one batched read (`TestSearch_ReadsThePageTextsInOneBatch`).
 - **Client**: `LocalizedText` and `localized(lang, text)` (per-field English fallback;
   `localized.test.ts`, `spellName.test.ts`, `statText.test.ts`; the French and English lookup e2e).
 

@@ -26,11 +26,13 @@ func (d *DB) InTx(ctx context.Context, fn func(ctx context.Context) error) error
 	}
 	return d.WrapTx(ctx, func(q Querier) error {
 		tx, _ := q.(*sql.Tx)
-		return fn(withTx(ctx, tx))
+		return fn(WithTx(ctx, tx))
 	})
 }
 
-func withTx(ctx context.Context, tx DBTX) context.Context {
+// WithTx returns ctx carrying tx as its transaction, as InTx passes it to fn:
+// Conn and Routed run on tx under that context.
+func WithTx(ctx context.Context, tx DBTX) context.Context {
 	return context.WithValue(ctx, txKey{}, tx)
 }
 

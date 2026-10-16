@@ -17,8 +17,9 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
 )
 
-// passTx runs the body directly and counts calls; transactional behaviour is
-// covered against real SQLite in actionlogdal's atomicity tests.
+// passTx runs the body directly and counts calls. The rollback of a failing
+// body is the database's (ADR 0025 step 7); the composition root's wiring
+// test checks every adapter writes in the transaction.
 type passTx struct{ calls int }
 
 func (p *passTx) InTx(ctx context.Context, fn func(context.Context) error) error {

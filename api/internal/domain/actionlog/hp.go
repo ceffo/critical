@@ -19,6 +19,20 @@ import (
 // An amend sets only the note and a void pops the newest entry (step 8), so
 // neither can push HP over max.
 
+// HPTotal is the ledger total of ADR 0007 step 2: the sum of the effective
+// HP deltas of every entry of the character, each with its corrections
+// (Entry.EffectiveHPDelta: a popped entry counts 0, an amended one its latest
+// amend in effect). Current HP is hp_max plus it. Every kind counts (ADR 0018
+// step 4). This is the rule's one implementation; storage only reads the
+// rows.
+func HPTotal(entries []Entry) int {
+	total := 0
+	for _, e := range entries {
+		total += e.EffectiveHPDelta()
+	}
+	return total
+}
+
 // CapHeal returns the HP delta to log for a requested delta when the ledger
 // total is total (ADR 0007 steps 4 and 5). Damage (delta <= 0) is unchanged; a heal is
 // clipped to the gap to max, and to 0 when HP is at or above max.

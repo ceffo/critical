@@ -48,7 +48,8 @@ return a distinct value for each call and expect an exact number of calls.
    Tests: `TestResolveAttack_PowerGem` ("x2 on the raw dice only, not on the +5"),
    `TestResolveAttack_DecimalCritMultiplier` ("x1.5 crit on a x2 dice buff doubles only the
    dice"), `buffsvc` `TestAggregate`, `TestItemPowers_Step12_HammerOnMeleeOnly` (×1 with a bow
-   or darts), `composition` `TestItemPowers_Step16_HammerAt18WithTheLongSword`.
+   or darts), `TestItemPowers_Step10_TriggerAtEffectiveStr` (`buffsvc`: the hammer's power follows
+   the effective STR).
 5. **WeaponBuff.** The weapon's damage magic, or the "+N" of a buff or of an item power that is on
    when that wins (ADR 0002 step 6, the higher one, never both), plus the ammunition's magic
    (ADR 0002 step 7). Added after the dice factors, before the crit.

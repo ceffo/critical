@@ -49,8 +49,8 @@ Tests live in `api/internal/domain/service/buffsvc/` unless named otherwise.
 7. **Buffs and the round only.** Passing time is one `time_passed` entry, with buffs and round
    snapshots, stamped with the round it leaves; voiding it brings back the buffs and the round.
    It changes no other state: daily items and spell slots are refilled by a long rest only.
-   Tests: `TestPassTime` (the entry, its snapshots, payload), `composition`
-   `TestPassTimeIsLoggedAndVoidRestoresBuffsAndRound`, `TestPassTimeDoesNotRefillDailyItemsOrSlots`.
+   Tests: `TestPassTime` (the entry, its snapshots, payload; the service holds no slot or item port, so it
+   cannot refill either).
 8. **Preview.** Before confirming, the player sees what passing a time would do: the server applies
    steps 5 and 6 to the current buffs and returns the rounds and the buffs that would expire,
    writing and logging nothing (`GET /api/round/pass-time/preview?hours=`). Invalid hours are

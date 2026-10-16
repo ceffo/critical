@@ -40,16 +40,15 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    fails the undo. (*Amended by [ADR 0018](0018-transactions-and-undo.md) step 2:* every non-voided entry of the top
    transaction is popped this way, newest first, in the one transaction of step 4.)
    Tests: `TestUndo` ("matching expected top pops it and restores its snapshots", "restorer fails:
-   no void written"); `composition` `TestUndo_PopsEveryKindInOrder` (preparation, cast, buff, bow
-   shot, damage, wand charge, round advance, initiative, each popped back to the state before it,
-   then nothing to undo).
+   no void written"); `composition` `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (each state key a service
+   snapshots has its restorer registered and writes its "before" through the service's storage
+   port: buffs, round, saved buffs, initiative, spell slots, items, weapons, XP).
 3. **Expected top.** The request carries `expectedTopId`, the `topId` the client read. When the
    top is another entry (an action landed since, or the expected one was already popped) the undo
    is refused (409) and nothing changes: no restore, no correction. A missing or non-positive
    `expectedTopId` is a 400. With nothing to pop the undo is refused (409).
    Tests: `TestUndo` ("stale expected top is refused and nothing changes", "expected top already
-   popped is refused", "empty log"); `composition` `TestUndo_StaleExpectedTopChangesNothing` (two
-   clients undoing the same top: the second is refused); `router` `TestSpecialSentinels` ("undo
+   popped is refused", "empty log"); `router` `TestSpecialSentinels` ("undo
    stale top", "undo empty log"), `TestRequestParsingErrors` ("undo …").
 4. **One transaction per pop.** Reading the top, the expected-top check, every restore and the
    void correction run in one transaction: a failing restore leaves no void and no partial state,
@@ -91,11 +90,9 @@ Tests live in `api/internal/domain/service/actionlogsvc/undo_test.go` unless nam
    Tests: `actionlogsvc` `TestAmendLatest_RecordsTheCorrectionStep` (step then amend, one
    transaction, nothing written when a write fails), `TestEntry_PoppedStepAmendIsOutOfEffect`;
    `actionlogdal` `TestCorrectionStep_PoppedStepPutsItsAmendOutOfEffect`; `sqlite`
-   `TestMigrate023_KeepsCorrectionsWithoutStep`; `composition`
-   `TestCorrectionStep_TargetACTwiceUndoneTwice`, `TestCorrectionStep_SaveAdjustmentTwiceUndoneTwice`,
-   `TestCorrectionStep_VerdictTwiceUndoneTwice`, `TestCorrectionStep_IsTheExpectedTop`,
-   `TestCorrectionStep_PreStepAmendsPopWithTheirRoll`, `TestCorrectionStep_SaveThenAttackCorrection`,
-   `TestUnknownAC_AmmoSpentOnceAndUndoPopsTheAttack`; `router`
+   `TestMigrate023_KeepsCorrectionsWithoutStep`; `combatsvc` `TestAdjustAttackAC_Recompute`,
+   `TestAdjustAttackAC_PreChangeEntryResettles`, `TestAdjustSave_Recompute`,
+   `TestUnknownAC_Step4_VerdictSettlesWithoutCrit`, `TestUnknownAC_Step6_SameDiceAsKnownAC`; `router`
    `TestLogEndpoints_CorrectionStepShape`; `web/src/lib/undoButton.test.ts` (the correction
    tooltip, en/fr); `web/src/stores/undo.test.ts` ("a pop drops this session's live roll");
    `web/src/lib/filCard.test.ts` ("a popped correction under the Rolls filter");

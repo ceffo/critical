@@ -450,6 +450,10 @@ and start `just dev` again. This discards all dev state (HP ledger, buffs, actio
 - Go tests never open a database: ports and sqlc `Querier`s are mocked, and tests assert the
   operations called and their arguments, never SQL text ([ADR 0025](adr/0025-postgresql-storage.md)
   steps 6 and 7). Tests that still build a temporary SQLite database are being rewritten.
+- The composition root is tested through `composition.Build` over a `composition.Storage` of mocks
+  (`api/internal/composition/harness_test.go`); `composition.New` is the production path that opens
+  SQLite and builds the real adapters. Rule and flow tests belong in the service packages, on mocks of
+  their DAL ports.
 - Use table-driven tests
 - Dice engine accepts a seeded `rand.Source` for deterministic tests
 - Test the domain/engine layer directly — do not test HTTP handlers for game logic

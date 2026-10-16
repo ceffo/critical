@@ -154,7 +154,8 @@ flowchart LR
       running on a schema it does not know. Tests:
       `TestMigrate_Step6_2_RefusesMigrationsTheBinaryDoesNotEmbed`,
       `TestMigrate_Step6_2_AcceptsADatabaseItsBinaryMigrated`,
-      `TestStartup_Step6_2_RefusesADatabaseWithAnUnknownMigration`.
+      `TestBuild_AFailingStepRefusesTheStartAndClosesTheStore` (composition: the migrate step's refusal
+      stops the start and closes the store).
 
 7. **Private book data stays private.** The catalogue, and any database copy (it holds catalogue
    rows), never enters the public repo, a PR build, a workflow artifact, a shared build cache or a

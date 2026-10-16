@@ -26,8 +26,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    per entry, never on the sum. The server returns each entry's `bonusAmount` and `total`, the
    ledger's `total`, and previews an entry before it is added (`GET /api/xp/preview`).
    Tests: `TestEntryAmount_TenPercentBonusRoundedHalfUp`, `TestLedgerTotal_OpeningPlusEveryEntry`,
-   `TestPreview_IsStep1AndValidatesTheBase`, `TestXPLedger_AddEditDeleteOnTheRealStack`
-   (composition).
+   `TestPreview_IsStep1AndValidatesTheBase`, `TestGet_TotalsEntriesOverTheSheetAndReportsEligibility`.
 2. **Bonus eligibility from Dexterity and Charisma both at least 16.** Read from the sheet's
    scores (not the effective ones under buffs) and returned as `bonusEligible`; the client uses it
    only as the default of the add form's +10% checkbox. The flag stored on each entry is what
@@ -58,9 +57,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    is dated by the server (its local day) when it is added. Every write answers with the whole
    ledger. The payload is the entry as stored with its `bonusAmount` and `total` (and `before` for
    an edit); the web words it.
-   Tests: `TestXPLedger_AddEditDeleteOnTheRealStack`, `TestXPUndo_EachVerbGivesTheLedgerBack`,
-   `TestXPUndo_SequencesOnOneAward`
-   (composition), `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
+   Tests: `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
    `TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction`, `TestUpdate_NothingChangedRecordsNothing`,
    `TestDelete_RecordsTheRemovedAwardOrReportsNotFound`, `TestRestorer_WritesTheSnapshotBack`,
    `TestCRUD_ScopesToTheCharacterAndMapsEntries`, `TestReinsert_KeepsIDAndDate` (xpdal, on a mocked

@@ -451,7 +451,7 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 - **Spell effects seed**: every `spell_effects.json` id is checked against the catalogue at startup, as
   the spellbook is (an id the catalogue does not hold would never apply); unknown ids refuse the start,
   all listed (`TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold`,
-  `TestRealCatalogue_AnUnknownSpellEffectIDRefusesTheStartup`).
+  `TestRealCatalogue_AnUnknownSpellEffectIDIsRefused`, on the real seeds and artifact).
 - _Amended by [ADR 0023](0023-localized-text.md): the Storage, REST and UI notes below name
   `name_fr` / `description_fr` and `/api/spells/names` with `name_fr`. Since migration 031 the ten
   text columns key `localized_texts` rows, every text field of a spell payload is a language map
@@ -461,7 +461,7 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 - **Storage**: `spells.key` (unique, NULL allowed), `name_fr`, `description_fr`, `source` (migration 027)
   and the one-row `catalogue_meta (format, version)`. The fixture's version is `1970-01-01`, so switching
   between the fixture and a real artifact always imports
-  (`TestRealCatalogue_SwitchingADatabaseBetweenTheFixtureAndTheRealCatalogue`).
+  (the Go test of the switch was retired with the tests that open a database, [ADR 0025](0025-postgresql-storage.md) step 6; the import tests above cover the refusal).
 - **REST**: spell payloads keep `name` and `description` (English) and add `name_fr` and
   `description_fr`, omitted when the catalogue has no French text, and `source`. The client picks the
   language (fallback per field); no `lang` query parameter.
@@ -474,8 +474,7 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   `TestImportCatalogue_Step4_3_RefusesRemovingReferencedSpells` and `TestStateSpellRefs_ScansEveryPlace`;
   5.5 the two refusal tests (nothing changes, the old version stays recorded); 5.6
   `TestImportCatalogue_Step6_TypedStatsParsedAtImport`; the upgrade of a database seeded before the
-  catalogue `TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue`, and of a live one
-  `TestRealCatalogue_UpgradesACopyOfALiveDatabase`.
+  catalogue `TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue`, and, retired by [ADR 0025](0025-postgresql-storage.md) step 6, the check of a live one.
 
 ## Implementation notes (the UI, 2026-10-15)
 
@@ -509,9 +508,7 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   parses every spell's stored English stat texts again and rewrites the `stats` of the rows the
   current parser reads differently, in one transaction, and writes nothing when the parser is
   unchanged (`TestImportCatalogue_Step6_AStartReTypesStatsAParserChangeMadeStale`,
-  `TestImportCatalogue_Step3_SameVersionWritesNothing`, on the real catalogue
-  `TestRealCatalogue_ARestartReTypesStaleStats`, which counts the rows written with a trigger: all
-  of them after the stats were made stale, none on the next start). Re-parsing on every start was chosen over a parser
+  `TestImportCatalogue_Step3_SameVersionWritesNothing`, and `TestRepoSeeds_EverySpellStatParses` on the real catalogue; the real-catalogue restart test that counted rows with a trigger was retired by [ADR 0025](0025-postgresql-storage.md) step 6). Re-parsing on every start was chosen over a parser
   version recorded in `catalogue_meta`: a version has to be bumped by hand and a forgotten bump is the
   silent staleness this replaces; the `catalogue_meta` contract is unchanged, and a whole start on the
   real catalogue stays around 0.1 s. The step 5.4.3 refusal names the catalogue the database was built
@@ -599,7 +596,7 @@ builds them from the published artifact):
   `TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused` (a format-1 artifact refuses the
   start even with a valid seed file beside it; a broken seed file is ignored under format 3); 9.7
   `TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables`; the real seeds booting without
-  any rule-table seed `TestRepoSeeds_BootTheWholeStack`.
+  any rule-table seed `TestRepoSeeds_LoadThroughTheServersAdapters`.
 
 ## Amendment (schema narrowed to format 3, 2026-10-16)
 

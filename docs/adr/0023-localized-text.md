@@ -58,7 +58,7 @@ columns of #147, then `name_fr` / `description_fr`).
   key and the id sequence, and forgets `catalogue_meta` so the next startup imports again
   (`TestMigrate031_MovesEveryTextToLocalizedTextsKeepingEveryKey`,
   `TestMigrate031_ThenImportKeepsRowsAndTextKeys`, `TestMigrate031_FreshDatabaseHasLocalizedTexts`;
-  a live database: `TestRealCatalogue_UpgradesACopyOfALiveDatabase`).
+  the live-database check of the time was retired with the Go tests that open a database, [ADR 0025](0025-postgresql-storage.md) step 6).
 - **Import** (step 3, no empty row): one row per language present, none for an absent one; a
   language or a whole text the artifact drops loses its row(s), a removed spell its texts
   (`TestImportCatalogue_FreshDatabase`, `TestImportCatalogue_Step4_NewVersionUpserts`,
@@ -68,7 +68,7 @@ columns of #147, then `name_fr` / `description_fr`).
   body; `localized.Fallback` is `en` (step 3). No `*FR` field remains.
 - **API** (step 6): every text field is a language map, `{}` for a text in none
   (`TestSearch_ServesTextFieldsAsLanguageMaps`, `TestNames_ServesIDsWithNameLanguageMaps`,
-  `TestSpells_TextsAreLanguageMapsFromTheCatalogue`).
+  `TestSpells_TextsAreLanguageMaps`, `TestSpellNames_AreIDAndLanguageMap`).
 - **Search** (step 7 and the cost note): the name tiers run over every language's name
   (`TestSearch_RankingTiers`); the text lookup goes through the primary key, never a scan
   (`TestTextsQuery_SearchesThePrimaryKey`), and only name, school and sphere are read for the
@@ -93,7 +93,7 @@ Tests live under `api/internal/` unless their path starts with `web/`.
    Tests: `TestMigrate033_Step9_MovesItemAndWeaponNamesKeepingEveryRow`,
    `TestMigrate033_FreshDatabaseKeysEveryName` (storage/sqlite), `TestName_Step9_WrittenAsLocalizedTextRows`
    (itemdal), `TestItems_Step9_NameIsALanguageMap`, `TestWeapons_Step9_NameIsALanguageMap` (rest/router);
-   a live database: `TestRealCatalogue_UpgradesACopyOfALiveDatabase`.
+   the live-database check of the time was retired, [ADR 0025](0025-postgresql-storage.md) step 6.
 10. **The seeds hold every language; a restart adds what a name lacks.** In `seeds/items.json` and
     `seeds/weapons.json`, `name` is a language map (`en` and `fr`). An empty table is filled from the
     seed. Once filled, the seed only reconciles names, and gives each of its languages to a name

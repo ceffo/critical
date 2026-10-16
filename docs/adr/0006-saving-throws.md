@@ -86,8 +86,9 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    returns, so no reader can skip it). Every stored field, the verdict and the margin included,
    is served as stored.
    Tests: `TestSavePayloadView_Step8_OldEntryServedInTheNewShape`; `router`
-   `TestLog_SaveLoggedBeforeTheTargetMovedIsServedInTheNewShape` and
-   `...ByEveryEndpoint`; `actionlogsvc` `TestListReads_ServeEntriesThroughThePayloadViews`; `combatsvc`
+   `TestLog_ASaveIsServedWithRollTotalAndAdjustedTarget` and
+   `TestLog_ASaveIsServedWithItsFieldsByEveryEndpoint` (the wire, on a mocked log service); `actionlogsvc`
+   `TestListReads_ServeEntriesThroughThePayloadViews`; `combatsvc`
    `TestAdjustSave_Step8_SaveLoggedBeforeTheTargetMovedStoresBothFieldsInTheAmend`.
 
 ## Consequences

@@ -150,7 +150,8 @@ newer one.
 
 The DAL adapters in `api/internal/adapters/*dal/` run hand-written SQL through generated Go code.
 Two generators coexist while the adapters move to sqlc ([ADR 0025](adr/0025-postgresql-storage.md)
-step 5): **sqlc** for `critdal`, `dicedal`, `hpdal`, `skilldal` and `xpdal`, **bob** for the others
+step 5): **sqlc** for `attackformdal`, `characterdal`, `critdal`, `dicedal`, `hpdal`, `itemdal`,
+`skilldal`, `textdal`, `weapondal` and `xpdal`, **bob** for the others
 until their port. `just generate` runs both. Generated files are committed and never edited by hand;
 the CI `generated` job reruns `just generate` and `just mocks` and fails on any difference.
 
@@ -174,7 +175,8 @@ flowchart LR
 - **Tests.** An adapter test builds the adapter on `mocks.NewMockQuerier(t)` and asserts which
   `Querier` methods are called, with which params, in which order where it matters (`mock.InOrder`),
   and how rows and errors map to domain values (`sql.ErrNoRows` -> the domain's not-found error, zero
-  rows affected -> not found). No database, no SQL text ([ADR 0025](adr/0025-postgresql-storage.md)
+  rows affected -> not found). An adapter that writes localized texts (`itemdal`, `weapondal`) also
+  takes a `textdal.Store`, built on its own mocked `Querier` in the tests. No database, no SQL text ([ADR 0025](adr/0025-postgresql-storage.md)
   step 6). What only the SQL decides (an `ORDER BY`, a `CHECK` or `UNIQUE` constraint) is checked by
   sqlc at generate time and by running the app (step 7), not by these tests.
 - **Config.** `api/sqlc.yaml`: one `sql` entry per adapter (`queries:` and `out:` both its
@@ -200,7 +202,9 @@ updated in that ADR (`just check-adr-tests`).
 
 **Constraints and conventions.**
 - `:execrows` returns the rows affected: use it for an update or delete whose caller needs to know
-  whether the row existed, instead of `RETURNING id`.
+  whether the row existed, instead of `RETURNING id`. When the caller needs a column of the changed
+  row (the name key an item or weapon update or delete passes on to `textdal`), use `:one` with
+  `RETURNING` that column: no row is `sql.ErrNoRows`, mapped to not found.
 - A `:one` query with no row returns `sql.ErrNoRows`; the adapter maps it to its domain error (or to a
   default, as `dicedal` does for the first position).
 - Aggregates (`SUM`, `COUNT`) are named queries like the others.

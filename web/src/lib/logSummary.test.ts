@@ -1039,6 +1039,52 @@ describe("entryText for skill checks", () => {
     );
   });
 
+  it("words an adjusted check: adjusted target, original target, adjustment and reason (en, fr)", async () => {
+    const en = await makeT("en");
+    const fr = await makeT("fr");
+    const adjusted = {
+      ...prof,
+      roll: 12,
+      target: 11,
+      adjustment: -2,
+      adjustmentReason: "in the dark",
+      adjustedTarget: 9,
+      success: false,
+      rolledSuccess: false,
+    };
+    expect(entryText(entry("skill_check", adjusted, ""), en)).toBe(
+      "Riding, land-based: d20 12 vs 9 (11 −2 in the dark), failure",
+    );
+    expect(
+      entryText(
+        entry(
+          "skill_check",
+          {
+            ...adjusted,
+            reason: undefined,
+            adjustmentReason: undefined,
+            adjustment: 5,
+            adjustedTarget: 16,
+            success: true,
+          },
+          "",
+        ),
+        fr,
+      ),
+    ).toBe("Équitation (terrestre) : d20 12 contre 16 (11 +5), réussi");
+    // Adjustment removed after the roll: worded as a plain check again.
+    expect(
+      entryText(
+        entry(
+          "skill_check",
+          { ...prof, adjustment: 0, adjustedTarget: 11 },
+          "",
+        ),
+        en,
+      ),
+    ).toBe("Riding, land-based: d20 11 vs 11, success");
+  });
+
   it("falls back to the summary on an unknown payload", async () => {
     expect(
       entryText(entry("skill_check", { id: "x" }), await makeT("en")),

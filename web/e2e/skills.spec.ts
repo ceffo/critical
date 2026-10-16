@@ -115,3 +115,73 @@ test("skills: roll a proficiency and a bard skill, the card and journal show the
   );
   await snap(page, "skills-fr-dark-1440x900");
 });
+
+// What only a browser proves: the section steppers in the block headers preview the adjusted
+// target on the rows, the pending adjustment goes with the next roll and resets, the result card
+// shows the adjustment and changes it on the latest check, and the journal words it. The
+// arithmetic, ranges and verdicts are Go tests (skillsvc) and unit tests (skillAdjust, logSummary).
+test("skills: adjust before the roll from the section header, then after it on the card", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await page.getByRole("tab", { name: "Skills" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Skills" });
+  const card = page.getByRole("region", { name: "Detail", exact: true });
+  const instrument = panel.getByTestId("skill-musical_instrument");
+  const climb = panel.getByTestId("skill-climb_walls");
+  const harder = panel.getByRole("button", {
+    name: "Make the next Proficiencies check harder",
+  });
+  const bardEasier = panel.getByRole("button", {
+    name: "Make the next Bard skills check easier",
+  });
+
+  // Two clicks make the proficiencies -2: every proficiency row previews 14 (16 - 2); the bard
+  // section is untouched, and its own stepper moves by 5 points.
+  await harder.click();
+  await harder.click();
+  await expect(panel.getByTestId("skills-adjust-proficiency-value")).toHaveText(
+    "−2",
+  );
+  await expect(instrument.getByTestId("skill-adjusted")).toHaveText("14−2");
+  await expect(climb).toContainText("85%");
+  await expect(climb.getByTestId("skill-adjusted")).toHaveCount(0);
+  await bardEasier.click();
+  await expect(climb.getByTestId("skill-adjusted")).toHaveText("90%+5");
+  await snap(page, "skills-adjust-pending");
+
+  // The roll sends the proficiency adjustment and resets it; the bard one waits for its section.
+  await instrument.click();
+  const result = card.getByTestId("skill-result");
+  await expect(result.getByTestId("skill-vs")).toHaveText(/^\d+ vs 14$/);
+  await expect(result.getByTestId("skill-adjusted-target")).toHaveText("14");
+  await expect(result.getByTestId("skill-adjustment-line")).toContainText("−2");
+  await expect(panel.getByTestId("skills-adjust-proficiency-value")).toHaveText(
+    "0",
+  );
+  await expect(instrument.getByTestId("skill-adjusted")).toHaveCount(0);
+  await expect(climb.getByTestId("skill-adjusted")).toHaveText("90%+5");
+
+  // After the roll, on the latest check: -2 → +3 with a reason; the target moves, the roll stays.
+  const d20 = (await result.getByTestId("hex-die").textContent()) ?? "";
+  const form = card.getByRole("form", { name: "Adjust this check" });
+  for (let i = 0; i < 5; i++)
+    await form.getByRole("button", { name: "Increase adjustment" }).click();
+  await form.getByLabel("Reason (optional)").fill("lit by torches");
+  await form.getByRole("button", { name: "Apply" }).click();
+  await expect(result.getByTestId("skill-vs")).toHaveText(
+    new RegExp(`^${d20} vs 19$`),
+  );
+  await expect(result.getByTestId("skill-adjustment-line")).toContainText(
+    "lit by torches",
+  );
+  await expect(combatLog(page)).toContainText(
+    `Musical instrument: d20 ${d20} vs 19 (16 +3 lit by torches)`,
+  );
+  await snap(page, "skills-adjust-card");
+
+  // A new check replaces the card: the latest one offers the control, the bard pending applies.
+  await climb.click();
+  await expect(result.getByTestId("skill-vs")).toHaveText(/^\d+ vs 90%$/);
+  await expect(climb.getByTestId("skill-adjusted")).toHaveCount(0);
+});

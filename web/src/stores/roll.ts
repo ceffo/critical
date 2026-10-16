@@ -17,7 +17,7 @@ import {
 import { postUseItem } from "@/api/items";
 import type { UseResult } from "@/types/items";
 import type { SkillCheck } from "@/types/skills";
-import { rollSkill } from "@/api/skills";
+import { adjustSkill, rollSkill } from "@/api/skills";
 import { useTableStore } from "./table";
 
 /** The last roll and what was asked for, so the result card can show its context. */
@@ -53,8 +53,14 @@ interface RollStore {
   clearLastAttackAc: (entryId: number) => Promise<boolean>;
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
-  /** Rolls a proficiency or bard skill check (the server rolls and logs it). */
-  rollSkill: (id: string) => Promise<boolean>;
+  /** Rolls a proficiency or bard skill check (the server rolls and logs it); a non-zero adjustment moves its target. */
+  rollSkill: (id: string, adjustment?: number) => Promise<boolean>;
+  /** Sets the adjustment of the latest skill check (log entry id; the server refuses any other). */
+  adjustLastSkill: (
+    entryId: number,
+    adjustment: number,
+    reason: string,
+  ) => Promise<boolean>;
   /** Rolls one round of exposure to a spell's area (logged; on the Bard, off his HP). */
   rollExposure: (req: ExposureRequest) => Promise<boolean>;
 }
@@ -92,8 +98,22 @@ export const useRollStore = create<RollStore>((set) => {
       ),
     spendItem: (id) =>
       roll(async () => ({ kind: "item", result: await postUseItem(id) }), true),
-    rollSkill: (id) =>
-      roll(async () => ({ kind: "skill", result: await rollSkill(id) }), true),
+    rollSkill: (id, adjustment) =>
+      roll(
+        async () => ({
+          kind: "skill",
+          result: await rollSkill(id, adjustment ? { adjustment } : undefined),
+        }),
+        true,
+      ),
+    adjustLastSkill: (id, adjustment, reason) =>
+      roll(
+        async () => ({
+          kind: "skill",
+          result: await adjustSkill(id, adjustment, reason),
+        }),
+        true,
+      ),
     rollExposure: (req) =>
       roll(
         async () => ({ kind: "exposure", result: await postExposure(req) }),

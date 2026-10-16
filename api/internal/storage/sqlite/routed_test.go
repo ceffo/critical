@@ -49,7 +49,7 @@ func TestRouted_RunsOnTheContextTransactionElseThePool(t *testing.T) {
 	d := Routed(conn{name: "pool", ran: &ran})
 
 	runAll(context.Background(), d)
-	runAll(withTx(context.Background(), conn{name: "tx", ran: &ran}), d)
+	runAll(WithTx(context.Background(), conn{name: "tx", ran: &ran}), d)
 
 	assert.Equal(t, []string{
 		"pool exec", "pool prepare", "pool query", "pool queryrow",
@@ -62,9 +62,9 @@ func TestRouted_NilTransactionMeansThePool(t *testing.T) {
 	var ran []string
 	d := Routed(conn{name: "pool", ran: &ran})
 
-	runAll(withTx(context.Background(), (*sql.Tx)(nil)), d)
+	runAll(WithTx(context.Background(), (*sql.Tx)(nil)), d)
 
 	assert.Equal(t, []string{"pool exec", "pool prepare", "pool query", "pool queryrow"}, ran)
-	_, ok := txFrom(withTx(context.Background(), (*sql.Tx)(nil)))
+	_, ok := txFrom(WithTx(context.Background(), (*sql.Tx)(nil)))
 	assert.False(t, ok)
 }

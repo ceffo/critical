@@ -170,9 +170,10 @@ flowchart LR
 - **Wiring.** The adapter's constructor takes its package's `queries.Querier`. The composition root
   passes `queries.New(sqlite.Routed(db))`: `Routed` runs each statement on the transaction the
   statement's context carries (`InTx`), else on the pool, the same routing as `sqlite.Conn`. The root
-  builds every adapter over that one routed connection (`storageOn`); a test calls each storage port
-  over a connection that records being reached, so an adapter wired over the pool itself, which would
-  escape the caller's transaction, fails it.
+  builds every adapter over that one routed connection (`sqliteStorage`, through `storageOn`); a
+  test builds `sqliteStorage` over an unopened DB and calls each storage port under a context whose
+  transaction (`sqlite.WithTx`) records being reached, so an adapter wired over the pool itself,
+  which would escape the caller's transaction, fails it.
 - **Tests.** An adapter test builds the adapter on `mocks.NewMockQuerier(t)` and asserts which
   `Querier` methods are called, with which params, in which order where it matters (`mock.InOrder`),
   and how rows and errors map to domain values (`sql.ErrNoRows` -> the domain's not-found error, zero
@@ -218,6 +219,9 @@ updated in that ADR (`just check-adr-tests`).
   a string: `CAST(sqlc.arg(created_at) AS TEXT)` (`buffdal`'s `InsertSavedBuffWithID`).
 - sqlc may refuse an unqualified column in a query with a correlated subquery over another table
   ("column reference is ambiguous"): qualify it (`action_log.kind`).
+- Case-insensitive text matching is `lower(column) = ?` with the adapter lowering the parameter
+  (`spelldal`'s class filter), never `LIKE`: SQLite's `LIKE` ignores ASCII case and PostgreSQL's does
+  not, so the query would change meaning at the engine switch.
 - On the SQLite engine, `INTEGER` is `int64`, `REAL` `float64`, `TEXT` `string`; a 0/1 flag column
   stays `int64` and the adapter converts it.
 - sqlc is a `tool` in `api/go.mod` (`go tool sqlc`); it builds with cgo (its PostgreSQL parser), so

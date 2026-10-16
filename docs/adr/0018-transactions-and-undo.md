@@ -49,7 +49,7 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    (the Next Round, not its initiative).
    Tests: `domain/service/actionlogsvc` `TestUndo_PopsTheWholeTransaction` ("newest first",
    "restorer fails mid-transaction: no void, no partial state", "stale expected top changes
-   nothing"); `composition` `TestStorageOn_EveryAdapterRunsOnTheRoutedConnection` (every adapter
+   nothing"); `composition` `TestSQLiteStorage_EveryAdapterRunsOnTheCallersTransaction` (every adapter
    writes in the transaction the undo runs in; the rollback itself is the database's,
    [ADR 0025](0025-postgresql-storage.md) step 7); `composition` `TestUndo_EveryStateKeyIsRestoredThroughItsServicesStorage` (every snapshot key has its
    restorer); `domain/service/buffsvc` `TestInitiative_Step2_OwnEntryAfterTheAdvance` (Next Round and

@@ -36,6 +36,11 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   or unit tests; add the lower-level test first, then drop the e2e one it makes redundant. Tests
   that only call the API belong in Go. A new spec justifies itself in the report: what only a
   browser proves there, and why no Go or unit test can. Layout screenshots stay in `layout.spec`.
+- **Local dev gate (hard rule):** a change to the justfile, `docker-compose.yml`, `api/.air.toml`,
+  `scripts/dev*`, the storage engine, the migrations or the server's start-up/config runs
+  `just dev-smoke` green (start, answer, graceful restart, Ctrl-C and `just stop` leave nothing
+  running) and says so in the report. "It starts" is not enough: the user's daily loop (start, stop,
+  Ctrl-C, restart, reset, their existing local data) must still work after the merge.
 - Use `just` recipes rather than bare `go` / `golangci-lint` / `npm` (except the single-test case).
 
 ## Worktree setup
@@ -206,6 +211,11 @@ Reviewer checklist, in priority order:
    A UI change's region is covered by `expectNoClippedText` in `layout.spec`, and its screenshots
    show no cut text. A cut name is at least medium.
 
+11. **Local dev loop**: a change listed under the local dev gate (Validation) shows `just dev-smoke`
+   green in the developer's report, and anything it changes for the user locally (commands, ports,
+   required tools, where their data lives, a one-off step such as an import) is written in the
+   report. A broken or silently changed daily loop is at least high.
+
 Severity examples: critical = wrong game math in a main flow, ledger/state corruption, broken
 migration on existing data; high = game logic in the frontend; medium = architecture-layer
 violation.
@@ -227,7 +237,7 @@ contract or domain struct.
 
 ## CI and PRs
 
-CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date). PR body ends with
+CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date). PR body has a **What changes for you locally** line (dev commands, ports, tools, local data, one-off steps; or "nothing") and ends with
 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Only the user merges PRs. Agents and the supervisor never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more.
 
 ## Commits

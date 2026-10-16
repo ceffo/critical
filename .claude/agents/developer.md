@@ -107,6 +107,7 @@ FULL VERIFICATION: gate pass|fail on <sha> | not yet (review: yes) — acceptanc
 UI: no | what you observed and what you couldn't
 GENERATED: none | what you regenerated
 MERGED DEFAULT BRANCH: no | yes, at <sha>
+LOCAL DEV: untouched | `just dev-smoke` pass/fail, and what changes for the user locally (commands, ports, tools, data, one-off steps)
 NOT VERIFIED: what you couldn't check yourself
 BLOCKERS / QUESTIONS / SUGGESTED ITEMS: …
 ```

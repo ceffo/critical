@@ -259,6 +259,13 @@ When the developer reports the full verification passed on HEAD:
 - A PR that changes a design decision (an ADR, an API or data contract, a schema) is the user's
   call: before it merges, tell them in a few plain lines what changes and why, even when CI is green
   and merges are otherwise allowed.
+- A PR that changes the user's daily local workflow (dev commands, ports, required tools, where their
+  local data lives, a one-off step) is also the user's call: before it merges, tell them "what
+  changes for you locally" in plain lines, including the exact steps for the switch-over, and wait
+  for their OK. Never merge a change that leaves their local dev broken until a later PR lands.
+- **"Not verified" blocks the merge** when it covers something the user uses daily (local dev,
+  their data, a flow they run): get it verified (a fresh developer round, `just dev-smoke`) or put
+  it to the user before merging. A "not verified" line is never a footnote.
 
 ## The tracker: yours alone
 

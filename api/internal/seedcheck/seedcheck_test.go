@@ -281,11 +281,11 @@ func TestRepoSeeds_EverySpellStatParses(t *testing.T) {
 
 // areaReadingCounts pins, over the real catalogue, how many area texts the
 // parser reads as a choice between whole readings and how many it holds only
-// in part (ADR 0021 step 8; 111 partial before alternatives, "up to",
+// in part (ADR 0021 step 8; 111 partial before the notes, counts, sums, sites and bounded line of sight (40), 111 before alternatives, "up to",
 // "circle", per-level steps and thousands separators were read). Like
 // specialAllowedCount, a new artifact or a parser change that moves them
 // fails here until it is looked at.
-var areaReadingCounts = map[string]int{"alternatives": 25, "partial": 40}
+var areaReadingCounts = map[string]int{"alternatives": 25, "partial": 19}
 
 // TestRealCatalogue_AreaReadingsAndPerLevelDurations checks how the parser
 // reads the real catalogue's areas (the pinned counts above) and that no

@@ -185,8 +185,8 @@ flowchart LR
    snapshots of both app volumes (proposed retention 30 days production, 7 days staging), the
    pre-promotion volume snapshot, restore by attaching a volume made from a snapshot, a SQLite copy
    for download, Litestream rejected for now._
-   1. The cluster's volume has fly's daily snapshots, with a set retention (proposed, awaiting the
-      user: 30 days, the production figure proposed before; the runbook records the value set).
+   1. The cluster's volume has fly's daily snapshots, with a set retention (30 days, answered
+      2026-10-16; the runbook records the value set).
       A snapshot holds both databases.
    2. Every promotion adds the pre-promotion `pg_dump` of `critical_prod` of step 4.2. Where that
       dump is kept is open (see "Proposed defaults awaiting the user"); it must obey step 7, so
@@ -220,8 +220,8 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 | Production approval | none: pushing the tag is the act | a required reviewer on the `production` environment |
 | Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the cluster `critical-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
 | Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | on the cluster's own volume (shares its 1 GB); a private store the user provides; taken by the operator with `just db-backup prod` before tagging, the promotion checking that it exists |
-| Snapshot retention of the cluster volume (step 9.1) | 30 days | any value fly allows on the free allowance |
-| A migration during a rolling production deploy (step 5.2) | a release's migrations are additive, so the previous release keeps working on the new schema while its machines are replaced | promote a release with a breaking migration with fly's `immediate` strategy (both machines at once, a few seconds of downtime) |
+| Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
+| A migration during a rolling production deploy (step 5.2) | a release's migrations are additive, so the previous release keeps working on the new schema while its machines are replaced | **Answered 2026-10-16: additive migrations** (the default); the `immediate` strategy is not used |
 | Custom domain | none | a domain, only once public access is chosen |
 
 ## Consequences

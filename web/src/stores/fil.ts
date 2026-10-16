@@ -3,7 +3,7 @@ import type { LogFilter } from "@/lib/filCard";
 import { useRollStore } from "./roll";
 
 /**
- * UI state of the Fil column (no game state): the journal entry shown in the detail card (null:
+ * UI state of the result panel and journal (no game state): the journal entry shown in the detail card (null:
  * the latest result), the journal filter and whether the attack's calculation details are open.
  */
 interface FilStore {

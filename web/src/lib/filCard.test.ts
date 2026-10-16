@@ -15,6 +15,8 @@ import {
   dieTone,
   filterEntries,
   isRollEntry,
+  lastResultChip,
+  lastResultEntry,
   latestResult,
   liveModel,
   rowValue,
@@ -933,5 +935,26 @@ describe("die chips from the payload", () => {
     if (m.layout !== "cast") throw new Error("not a cast card");
     expect(castInstances(m.cast)).toBeNull();
     expect(m.cast.damage?.total).toBe(24);
+  });
+});
+
+describe("header: last result", () => {
+  const hp = entry("hp_change", null, { id: 5 });
+  const dice = entry("dice", diceRoll, { id: 4 });
+  const save = entry("save", savePayload, { id: 3 });
+  const attack = entry("attack", attackPayload, { id: 2 });
+
+  it("is the newest result or free dice roll still in force", () => {
+    expect(lastResultEntry([hp, dice, save, attack])?.id).toBe(4);
+    expect(
+      lastResultEntry([hp, { ...dice, status: "voided" }, save, attack])?.id,
+    ).toBe(3);
+    expect(lastResultEntry([hp])).toBeNull();
+  });
+
+  it("an attack shows its d20 in the chip, any other result its row value", () => {
+    expect(lastResultChip(attack)).toEqual({ text: "14", tone: "muted" });
+    expect(lastResultChip(save)).toEqual({ text: "12", tone: "pass" });
+    expect(lastResultChip(dice)).toEqual({ text: "7", tone: "accent" });
   });
 });

@@ -2,48 +2,57 @@ import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 /**
- * The Critical! mark (ADR 0020 step 5): a d20 face in the primary accent with the "!" in the
- * secondary highlight; the same drawing as `public/favicon.svg`, in the current theme's colours.
+ * The Critical! mark, Facet · Bare (ADR 0022 step 7): a hexagon outline in the primary accent with
+ * the "!" in the secondary highlight centred on its axis, no front face. The same drawing as
+ * `public/favicon.svg` (docs/design/ui-directions/logo/facet-bare.svg), in the current theme's
+ * colours.
  */
 export function BrandIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 32 32"
       aria-hidden
-      className={cn("size-6 shrink-0", className)}
+      className={cn("size-7 shrink-0", className)}
+      data-testid="brand-icon"
     >
       <polygon
-        points="16,1.5 28.6,8.75 28.6,23.25 16,30.5 3.4,23.25 3.4,8.75"
-        className="fill-tint"
-      />
-      <polygon
-        points="16,7 23.8,20.5 8.2,20.5"
-        className="fill-none stroke-on-accent/60"
-        strokeWidth="1.6"
+        points="16,2.5 27.7,9.25 27.7,22.75 16,29.5 4.3,22.75 4.3,9.25"
+        className="fill-none stroke-tint"
+        strokeWidth="2"
         strokeLinejoin="round"
       />
       <rect
-        x="14.3"
-        y="9.5"
-        width="3.4"
-        height="9"
-        rx="1.7"
+        x="14.5"
+        y="8.5"
+        width="3"
+        height="9.5"
+        rx="1.5"
         className="fill-highlight"
       />
-      <circle cx="16" cy="22.6" r="2" className="fill-highlight" />
+      <circle cx="16" cy="21.9" r="1.8" className="fill-highlight" />
     </svg>
   );
 }
 
-/** The mark and the wordmark, in the brand face; the app name is the same in every language. */
+/**
+ * The mark and the Cinzel wordmark (ADR 0020 step 5); the app name is the same in every language.
+ * Below 1500 px wide the header shows the mark alone (ADR 0022 step 7); the name stays readable to
+ * assistive technology and in the page title.
+ */
 export function BrandMark({ className }: { className?: string }) {
   return (
     <div
       className={cn("flex shrink-0 items-center gap-2", className)}
       data-testid="brand"
+      aria-label={APP_NAME}
+      role="img"
     >
       <BrandIcon />
-      <span className="font-display text-key leading-none font-bold tracking-wide select-none">
+      <span
+        aria-hidden
+        className="hidden font-display text-key leading-none font-bold tracking-wide select-none min-[1500px]:inline"
+        data-testid="wordmark"
+      >
         {APP_NAME.slice(0, -1)}
         <span className="text-highlight">{APP_NAME.slice(-1)}</span>
       </span>

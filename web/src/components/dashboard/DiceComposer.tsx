@@ -15,9 +15,11 @@ import { cn } from "@/lib/utils";
 import { fieldClass } from "./fieldStyles";
 
 /**
- * The dice composer under the journal: dice buttons and the text field build a formula, the server
- * parses, rolls and logs it (Roll, Enter), favourites live on the server. Nothing is rolled or
- * evaluated here.
+ * The dice composer, one line in the dice footer card (ADR 0022 step 2.6): the dice, the formula,
+ * −1 / +1, Roll, then the favourites strip, which scrolls sideways when it outgrows the line (each
+ * chip stays whole, step 1.2). Dice buttons and the text field build a formula; the server parses,
+ * rolls and logs it (Roll, Enter); favourites live on the server. Nothing is rolled or evaluated
+ * here.
  */
 export function DiceComposer() {
   const { t } = useTranslation();
@@ -30,86 +32,26 @@ export function DiceComposer() {
   const empty = s.formula.trim() === "";
   return (
     <form
-      className="flex min-w-0 shrink-0 flex-col gap-2 bg-neu-900/40 px-3 py-3"
+      className="flex min-w-0 flex-1 items-center gap-2"
       aria-label={t("dice.title")}
       onSubmit={(ev) => {
         ev.preventDefault();
         void s.roll();
       }}
     >
-      <ul
-        className="flex min-h-7 items-center gap-2 overflow-x-auto"
-        aria-label={t("dice.favourites")}
-        data-testid="dice-favourites"
-      >
-        {s.favourites.length === 0 && (
-          <li className="text-body text-muted-foreground">
-            {t("dice.noFavourites")}
-          </li>
-        )}
-        {s.favourites.map((f, i) => (
-          <li
-            key={f.id}
-            className="flex shrink-0 items-center rounded-md bg-card"
-            data-testid="dice-favourite"
-          >
-            {s.favourites.length > 1 && (
-              <button
-                type="button"
-                className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
-                aria-label={t("dice.moveFavouriteEarlier", {
-                  formula: f.formula,
-                })}
-                disabled={i === 0}
-                onClick={() => void s.moveFavourite(f.id, -1)}
-              >
-                <CaretLeft aria-hidden className="size-3" />
-              </button>
-            )}
-            <button
-              type="button"
-              className="h-7 px-2 text-body tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
-              title={t("dice.rollFavourite", { formula: f.formula })}
-              aria-label={t("dice.rollFavourite", { formula: f.formula })}
-              disabled={s.rolling}
-              onClick={() => void s.roll(f.formula)}
-            >
-              {f.formula}
-            </button>
-            {s.favourites.length > 1 && (
-              <button
-                type="button"
-                className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
-                aria-label={t("dice.moveFavouriteLater", {
-                  formula: f.formula,
-                })}
-                disabled={i === s.favourites.length - 1}
-                onClick={() => void s.moveFavourite(f.id, 1)}
-              >
-                <CaretRight aria-hidden className="size-3" />
-              </button>
-            )}
-            <button
-              type="button"
-              className="rounded-r-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-              aria-label={t("dice.removeFavourite", { formula: f.formula })}
-              onClick={() => void s.removeFavourite(f.id)}
-            >
-              <X aria-hidden className="size-3" />
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div className="grid min-w-0 grid-cols-7 gap-2">
+      <span className="section-label shrink-0">{t("dice.title")}</span>
+      <div className="flex shrink-0 gap-1">
         {DICE_SIDES.map((sides) => {
           const count = dieCount(s.formula, sides);
           const name = dieName(sides);
           return (
-            <div key={sides} className="relative min-w-0">
+            <div key={sides} className="relative">
               <button
                 type="button"
-                className="h-7 w-full rounded-lg bg-card text-body font-medium tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+                className={cn(
+                  "h-7 min-w-10 rounded-lg border px-2 text-body font-medium tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50",
+                  count > 0 ? "border-tint" : "border-border",
+                )}
                 aria-label={t("dice.add", { die: name })}
                 data-testid={`die-${sides}`}
                 onClick={() => s.add(sides)}
@@ -136,11 +78,11 @@ export function DiceComposer() {
         })}
       </div>
 
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1">
         <input
           className={cn(
             fieldClass,
-            "min-w-0 flex-1 tabular-nums",
+            "!w-40 tabular-nums",
             s.error && "border-danger text-danger",
           )}
           type="text"
@@ -196,9 +138,73 @@ export function DiceComposer() {
           {t("dice.roll")}
         </Button>
       </div>
+      <ul
+        className="flex min-h-7 min-w-0 flex-1 items-center gap-2 overflow-x-auto"
+        data-scroll-x
+        aria-label={t("dice.favourites")}
+        data-testid="dice-favourites"
+      >
+        {s.favourites.length === 0 && (
+          <li className="text-body text-muted-foreground">
+            {t("dice.noFavourites")}
+          </li>
+        )}
+        {s.favourites.map((f, i) => (
+          <li
+            key={f.id}
+            className="flex shrink-0 items-center rounded-md border border-border"
+            data-testid="dice-favourite"
+          >
+            {s.favourites.length > 1 && (
+              <button
+                type="button"
+                className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+                aria-label={t("dice.moveFavouriteEarlier", {
+                  formula: f.formula,
+                })}
+                disabled={i === 0}
+                onClick={() => void s.moveFavourite(f.id, -1)}
+              >
+                <CaretLeft aria-hidden className="size-3" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="h-7 px-2 text-body tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+              title={t("dice.rollFavourite", { formula: f.formula })}
+              aria-label={t("dice.rollFavourite", { formula: f.formula })}
+              disabled={s.rolling}
+              onClick={() => void s.roll(f.formula)}
+            >
+              {f.formula}
+            </button>
+            {s.favourites.length > 1 && (
+              <button
+                type="button"
+                className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+                aria-label={t("dice.moveFavouriteLater", {
+                  formula: f.formula,
+                })}
+                disabled={i === s.favourites.length - 1}
+                onClick={() => void s.moveFavourite(f.id, 1)}
+              >
+                <CaretRight aria-hidden className="size-3" />
+              </button>
+            )}
+            <button
+              type="button"
+              className="rounded-r-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+              aria-label={t("dice.removeFavourite", { formula: f.formula })}
+              onClick={() => void s.removeFavourite(f.id)}
+            >
+              <X aria-hidden className="size-3" />
+            </button>
+          </li>
+        ))}
+      </ul>
       {s.error && (
         <p
-          className="text-body text-danger"
+          className="shrink-0 text-body text-danger"
           role="alert"
           data-testid="dice-error"
         >

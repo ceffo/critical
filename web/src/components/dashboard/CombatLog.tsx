@@ -1,25 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  BookOpen,
-  Clock,
-  CloudFog,
-  DiceFive,
-  MusicNotes,
-  Flask,
-  Heart,
-  Hourglass,
-  Lightning,
-  MagicWand,
-  Moon,
-  Package,
-  PencilSimple,
-  Shield,
-  Sparkle,
-  Sword,
-  TrendUp,
-  type Icon,
-} from "@phosphor-icons/react";
+import { Sparkle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { useFilStore } from "@/stores/fil";
@@ -38,55 +19,15 @@ import {
   rowValue,
   turnLabel,
   type LogFilter,
-  type RowValue,
 } from "@/lib/filCard";
 import { cn } from "@/lib/utils";
-import type { LogEntry, LogKind } from "@/types/log";
+import type { LogEntry } from "@/types/log";
 import { fieldClass } from "./fieldStyles";
 import { RedoButton } from "./RedoButton";
 import { UndoButton } from "./UndoButton";
-import { DiceComposer } from "./DiceComposer";
+import { KIND_ICONS, VALUE_TONES } from "./journalStyle";
 import { useDiceStore } from "@/stores/dice";
 import { dicePayload } from "@/lib/logSummary";
-
-const KIND_ICONS: Record<LogKind, Icon> = {
-  hp_change: Heart,
-  cast: MagicWand,
-  exposure: CloudFog,
-  buff_change: Sparkle,
-  round_advance: Hourglass,
-  round_reset: Hourglass,
-  round_set: Hourglass,
-  time_passed: Clock,
-  initiative: Lightning,
-  attack: Sword,
-  item_use: Flask,
-  item_restock: Package,
-  item_add: Package,
-  item_edit: Package,
-  item_remove: Package,
-  weapon_add: Sword,
-  weapon_edit: Sword,
-  weapon_remove: Sword,
-  xp_add: TrendUp,
-  xp_edit: TrendUp,
-  xp_remove: TrendUp,
-  spell_prep: BookOpen,
-  long_rest: Moon,
-  save: Shield,
-  skill_check: MusicNotes,
-  dice: DiceFive,
-  correction: PencilSimple,
-};
-
-const VALUE_TONES: Record<RowValue["tone"], string> = {
-  damage: "text-danger",
-  heal: "text-success",
-  pass: "text-success",
-  fail: "text-danger",
-  accent: "text-highlight",
-  muted: "text-muted-foreground",
-};
 
 const FILTERS: LogFilter[] = ["all", "rolls"];
 
@@ -106,7 +47,7 @@ export function CombatLog() {
 
   return (
     <section
-      className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl bg-card"
+      className="zone-card flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label={t("log.title")}
     >
       <div className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2">
@@ -209,7 +150,6 @@ export function CombatLog() {
           </section>
         ))}
       </div>
-      <DiceComposer />
     </section>
   );
 }

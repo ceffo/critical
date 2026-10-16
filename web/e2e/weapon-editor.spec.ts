@@ -78,12 +78,12 @@ test("edit Bastard Sword +2 to +3 to hit and damage: the next attack uses +3; po
   const r = row(page, "bastard_sword");
   await expect(r.getByTestId("weapon-to-hit")).toHaveText("+3");
   await expect(r.getByTestId("weapon-damage")).toHaveText("+3");
-  await expect(logEntry(page, "Edited weapon Bastard Sword +2")).toContainText(
-    "to-hit bonus 2 → 3, damage bonus 2 → 3",
-  );
   await snap(page, "weapon-edited");
 
   const card = await rollAttack(page, "Bastard Sword +2");
+  await expect(logEntry(page, "Edited weapon Bastard Sword +2")).toContainText(
+    "to-hit bonus 2 → 3, damage bonus 2 → 3",
+  );
   await expect(card.getByTestId("to-hit-modifiers")).toContainText(
     /Bastard Sword \+2\s*\+3/,
   );
@@ -91,8 +91,8 @@ test("edit Bastard Sword +2 to +3 to hit and damage: the next attack uses +3; po
 
   // The attack is newer than the edit: pop the attack, then the edit.
   await undoEntry(page, "Bastard Sword +2 vs AC");
-  await openWorkspace(page, "Inventory");
   await undoEntry(page, "Edited weapon Bastard Sword +2");
+  await openWorkspace(page, "Inventory");
   await expect(r.getByTestId("weapon-to-hit")).toHaveText("+2");
   await expect(r.getByTestId("weapon-damage")).toHaveText("+2");
   await snap(page, "edit-popped");
@@ -118,10 +118,10 @@ test("add a Long Bow (missile, arrow): it is in the attack picker and offered ar
   await expect(row(page, "long_bow").getByTestId("weapon-kind")).toHaveText(
     "Missile",
   );
-  await expect(logEntry(page, "Added weapon Long Bow")).toBeVisible();
   await snap(page, "weapon-added");
 
   await openWorkspace(page, "Act");
+  await expect(logEntry(page, "Added weapon Long Bow")).toBeVisible();
   await openWeapons(page);
   await chooseWeapon(page, "Long Bow");
   await expect(
@@ -131,8 +131,8 @@ test("add a Long Bow (missile, arrow): it is in the attack picker and offered ar
   ).toHaveCount(1);
   await snap(page, "bow-offered-arrows");
 
-  await openWorkspace(page, "Inventory");
   await undoEntry(page, "Added weapon Long Bow");
+  await openWorkspace(page, "Inventory");
   await expect(row(page, "long_bow")).toHaveCount(0);
   // The bow was in hand: the Weapons tab falls back to the first weapon.
   expect(await pickableWeapons(page)).not.toContain("Long Bow");
@@ -150,14 +150,14 @@ test("remove the darts: gone from the picker, an earlier attack line still reads
     .getByRole("button", { name: "Remove Darts" })
     .click();
   await expect(row(page, "darts")).toHaveCount(0);
-  await expect(logEntry(page, "Removed weapon Darts")).toBeVisible();
-  await expect(logEntry(page, "Darts vs AC -10")).toBeVisible();
   await snap(page, "darts-removed");
 
   expect(await pickableWeapons(page)).not.toContain("Darts");
+  await expect(logEntry(page, "Removed weapon Darts")).toBeVisible();
+  await expect(logEntry(page, "Darts vs AC -10")).toBeVisible();
 
-  await openWorkspace(page, "Inventory");
   await undoEntry(page, "Removed weapon Darts");
+  await openWorkspace(page, "Inventory");
   await expect(row(page, "darts")).toBeVisible();
   expect(await pickableWeapons(page)).toContain("Darts");
   await snap(page, "darts-restored");

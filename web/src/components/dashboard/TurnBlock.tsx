@@ -21,9 +21,10 @@ import { fieldClass } from "./fieldStyles";
 type Mode = "menu" | "passing" | "setting" | "confirmEnd";
 
 /**
- * The turn block of the header: the turn number, the initiative row (the server's d10 for the
- * turn, with a reroll), Next turn, and a menu with Time passes, Set turn number and End combat.
- * Every action goes through the round endpoints and is logged server-side.
+ * The turn cells of the header card (ADR 0022 step 2.2): the turn (label and number in
+ * `text-hero`), then initiative (the server's d10 for the turn, with a reroll) over Next turn and a
+ * menu with Time passes, Set turn number and End combat. Every action goes through the round
+ * endpoints and is logged server-side.
  */
 export function TurnBlock() {
   const { t } = useTranslation();
@@ -35,94 +36,94 @@ export function TurnBlock() {
 
   return (
     <div
-      className="flex shrink-0 items-center gap-3 pr-3"
+      className="flex shrink-0 items-center gap-6"
       role="group"
       aria-label={t("turn.title")}
     >
       <div className="flex items-baseline gap-2">
-        <span className="text-body text-muted-foreground">
-          {t("turn.title")}
-        </span>
+        <span className="section-label">{t("turn.title")}</span>
         <span
-          className="min-w-[2ch] text-headline tabular-nums"
+          className="min-w-[2ch] text-hero tabular-nums"
           data-testid="round-value"
         >
           {turn}
         </span>
       </div>
-      <div
-        className="line-clamp-2 w-44 text-body text-muted-foreground"
-        data-testid="initiative-row"
-      >
-        {turn === 0 ? (
-          t("turn.outOfCombatInitiative")
-        ) : (
-          <span
-            className="flex items-center gap-2"
-            title={t("turn.initiativeHint")}
-          >
-            {t("turn.initiative")}
-            {initiative ? (
-              <>
-                <span
-                  className="rounded-md bg-neu-900 px-2 font-medium text-foreground tabular-nums"
-                  data-testid="initiative-value"
-                  data-entry-id={initiative.logEntryId}
-                >
-                  {initiative.value}
-                </span>
-                <span>{t("turn.initiativeDie")}</span>
-                <button
-                  type="button"
-                  aria-label={t("turn.initiativeReroll")}
-                  title={t("turn.initiativeReroll")}
-                  disabled={busy}
-                  onClick={() => void rerollInitiative()}
-                  className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 [&_svg]:size-4"
-                >
-                  <ArrowsClockwise />
-                </button>
-              </>
-            ) : (
-              <span className="rounded-md bg-neu-900 px-2">
-                {t("turn.initiativeNone")}
-              </span>
-            )}
-          </span>
-        )}
-      </div>
-      <div className="flex gap-1">
-        <Button size="lg" disabled={busy} onClick={() => void nextRound()}>
-          {t("turn.next")}
-          <ArrowRight />
-        </Button>
-        <Popover
-          open={open}
-          onOpenChange={(next) => {
-            setOpen(next);
-            if (next) setMode("menu");
-          }}
+      <div className="flex flex-col items-start gap-1">
+        <div
+          className="flex min-h-6 max-w-48 items-center text-body text-muted-foreground"
+          data-testid="initiative-row"
         >
-          <PopoverTrigger
-            aria-label={t("turn.menu")}
-            title={t("turn.menu")}
-            className="flex size-8 items-center justify-center rounded-lg bg-neu-900 text-foreground transition-colors outline-none hover:bg-neu-800 focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
+          {turn === 0 ? (
+            t("turn.outOfCombatInitiative")
+          ) : (
+            <span
+              className="flex items-center gap-2"
+              title={t("turn.initiativeHint")}
+            >
+              {t("turn.initiative")}
+              {initiative ? (
+                <>
+                  <span
+                    className="rounded-md bg-amb-900 px-2 font-semibold text-tint tabular-nums"
+                    data-testid="initiative-value"
+                    data-entry-id={initiative.logEntryId}
+                  >
+                    {initiative.value}
+                  </span>
+                  <span>{t("turn.initiativeDie")}</span>
+                  <button
+                    type="button"
+                    aria-label={t("turn.initiativeReroll")}
+                    title={t("turn.initiativeReroll")}
+                    disabled={busy}
+                    onClick={() => void rerollInitiative()}
+                    className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 [&_svg]:size-4"
+                  >
+                    <ArrowsClockwise />
+                  </button>
+                </>
+              ) : (
+                <span className="rounded-md bg-neu-900 px-2">
+                  {t("turn.initiativeNone")}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1">
+          <Button disabled={busy} onClick={() => void nextRound()}>
+            {t("turn.next")}
+            <ArrowRight />
+          </Button>
+          <Popover
+            open={open}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (next) setMode("menu");
+            }}
           >
-            <DotsThree weight="bold" />
-          </PopoverTrigger>
-          <PopoverContent side="bottom" align="start" className="w-80 p-2">
-            {mode === "menu" && <TurnMenu onPick={setMode} />}
-            {mode === "passing" && (
-              <PassTimeForm onDone={() => setOpen(false)} />
-            )}
-            {mode === "setting" && (
-              <SetTurnForm onDone={() => setOpen(false)} />
-            )}
-            {mode === "confirmEnd" && (
-              <EndCombatConfirm onDone={() => setOpen(false)} />
-            )}
-          </PopoverContent>
-        </Popover>
+            <PopoverTrigger
+              aria-label={t("turn.menu")}
+              title={t("turn.menu")}
+              className="flex size-7 items-center justify-center rounded-lg border border-border text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
+            >
+              <DotsThree weight="bold" />
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="start" className="w-80 p-2">
+              {mode === "menu" && <TurnMenu onPick={setMode} />}
+              {mode === "passing" && (
+                <PassTimeForm onDone={() => setOpen(false)} />
+              )}
+              {mode === "setting" && (
+                <SetTurnForm onDone={() => setOpen(false)} />
+              )}
+              {mode === "confirmEnd" && (
+                <EndCombatConfirm onDone={() => setOpen(false)} />
+              )}
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
     </div>
   );

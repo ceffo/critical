@@ -157,18 +157,18 @@ export async function effectiveStr(page: Page): Promise<number> {
   return Number((await page.getByTestId("str-value").textContent()) ?? "NaN");
 }
 
-/** Switch the workspace from the rail (English labels). */
+/** Focus an activity from the rail (English labels). */
 export async function openWorkspace(
   page: Page,
   name: "Act" | "Inventory" | "Spells" | "Experience",
 ) {
   await page
-    .getByRole("navigation", { name: "Workspaces" })
+    .getByRole("navigation", { name: "Activities" })
     .getByRole("button", { name, exact: true })
     .click();
 }
 
-/** Open the settings popover from the rail's gear; returns the popover. */
+/** Open the settings popover from the dice footer's cog; returns the popover. */
 export async function openSettings(page: Page): Promise<Locator> {
   await page.getByTestId("settings-trigger").click();
   const popover = page.getByTestId("settings-popover");

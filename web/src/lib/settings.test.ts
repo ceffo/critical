@@ -24,23 +24,24 @@ describe("settings", () => {
       lang: "en",
       mode: "system",
       amb: "arcane",
+      journalHeight: null,
+      journalCollapsed: false,
     });
     expect(loadSettings(null)).toEqual(DEFAULT_SETTINGS);
   });
 
-  it("round-trips through storage", () => {
+  it("round-trips through storage, the journal split included", () => {
     const store = memory();
-    saveSettings({ lang: "fr", mode: "light", amb: "sang" }, store);
-    expect(JSON.parse(store.data.get(SETTINGS_KEY)!)).toEqual({
+    const saved = {
       lang: "fr",
       mode: "light",
       amb: "sang",
-    });
-    expect(loadSettings(store)).toEqual({
-      lang: "fr",
-      mode: "light",
-      amb: "sang",
-    });
+      journalHeight: 320,
+      journalCollapsed: true,
+    } as const;
+    saveSettings(saved, store);
+    expect(JSON.parse(store.data.get(SETTINGS_KEY)!)).toEqual(saved);
+    expect(loadSettings(store)).toEqual(saved);
   });
 
   it("migrates the legacy theme and language keys once", () => {
@@ -52,6 +53,8 @@ describe("settings", () => {
       lang: "fr",
       mode: "dark",
       amb: "arcane",
+      journalHeight: null,
+      journalCollapsed: false,
     });
     expect(store.data.has(LEGACY_THEME_KEY)).toBe(false);
     expect(store.data.has(LEGACY_LANGUAGE_KEY)).toBe(false);
@@ -59,6 +62,8 @@ describe("settings", () => {
       lang: "fr",
       mode: "dark",
       amb: "arcane",
+      journalHeight: null,
+      journalCollapsed: false,
     });
   });
 
@@ -76,6 +81,8 @@ describe("settings", () => {
       lang: "en",
       mode: "light",
       amb: "ocean",
+      journalHeight: null,
+      journalCollapsed: false,
     });
   });
 
@@ -83,10 +90,22 @@ describe("settings", () => {
     expect(
       loadSettings(
         memory({
-          [SETTINGS_KEY]: JSON.stringify({ lang: "de", mode: "dark", amb: 3 }),
+          [SETTINGS_KEY]: JSON.stringify({
+            lang: "de",
+            mode: "dark",
+            amb: 3,
+            journalHeight: -5,
+            journalCollapsed: "yes",
+          }),
         }),
       ),
-    ).toEqual({ lang: "en", mode: "dark", amb: "arcane" });
+    ).toEqual({
+      lang: "en",
+      mode: "dark",
+      amb: "arcane",
+      journalHeight: null,
+      journalCollapsed: false,
+    });
     expect(loadSettings(memory({ [SETTINGS_KEY]: "{not json" }))).toEqual(
       DEFAULT_SETTINGS,
     );

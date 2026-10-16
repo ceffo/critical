@@ -46,7 +46,7 @@ const segment =
 
 /**
  * Display preferences of this device (ADR 0009): language, appearance and ambiance. Each choice
- * applies live and is saved; opened from the gear at the bottom of the rail.
+ * applies live and is saved; opened from the cog at the left of the dice footer (ADR 0022 step 2.6).
  */
 export function SettingsPopover() {
   const { t } = useTranslation();
@@ -65,8 +65,8 @@ export function SettingsPopover() {
         <GearSix />
       </PopoverTrigger>
       <PopoverContent
-        side="right"
-        align="end"
+        side="top"
+        align="start"
         className="flex w-80 flex-col gap-3"
         aria-label={t("settings.title")}
         data-testid="settings-popover"

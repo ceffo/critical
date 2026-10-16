@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { openDashboard, undoEntry } from "./helpers";
+import { logEntry, openDashboard, openWorkspace } from "./helpers";
 import type { Page } from "@playwright/test";
 
 const VIEWPORTS = [
@@ -17,9 +17,10 @@ async function xpTotal(page: Page): Promise<number> {
   return Number(digits);
 }
 
-// What only a browser proves: the Moi level link opens the workspace, the add form's preview,
-// Enter submits, in-row edit (Enter saves) and delete re-render the server's totals, and the
-// journal's Undo pops each write and the ledger re-renders. The rules (rounding, eligibility,
+// What only a browser proves: the character card's level link focuses the activity, the add form's
+// preview, Enter submits, in-row edit (Enter saves) and delete re-render the server's totals, and
+// the global undo (Ctrl+Z, from the Experience activity) pops each write and the ledger re-renders;
+// the journal (Act activity) shows them undone. The rules (rounding, eligibility,
 // Table 25, what each undo restores) and CRUD edge cases are Go tests (xpsvc, xpdal, composition).
 test("experience: add with the bonus, edit, delete, then undo each", async ({
   page,
@@ -31,7 +32,7 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
   await expect(ws).toBeVisible();
   await expect(
     page
-      .getByRole("navigation", { name: "Workspaces" })
+      .getByRole("navigation", { name: "Activities" })
       .getByRole("button", { name: "Experience" }),
   ).toHaveAttribute("aria-current", "page");
   await expect(ws.getByTestId("xp-total")).toHaveText(/\d/);
@@ -90,15 +91,27 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
   await expect.poll(() => xpTotal(page)).toBe(before);
   await expect(row).toHaveCount(0);
 
-  // Each write is a transaction (ADR 0015 step 4): the journal's Undo pops the delete, the edit,
-  // then the add, and the ledger follows.
-  await snap(page, "experience-journal");
-  await undoEntry(page, "XP removed: Troll bridge (1,000 XP)");
+  // Each write is a transaction (ADR 0015 step 4): the global undo pops the delete, the edit, then
+  // the add, and the ledger follows.
+  const undo = async () => {
+    await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+    await page.keyboard.press("ControlOrMeta+z");
+  };
+  await undo();
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,000");
-  expect(await xpTotal(page)).toBe(before + 1000);
-  await undoEntry(page, "XP edited: Troll bridge, 1,326 → 1,000 XP");
+  await expect.poll(() => xpTotal(page)).toBe(before + 1000);
+  await undo();
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,326");
-  await undoEntry(page, "XP +1,326: Troll bridge");
+  await undo();
   await expect.poll(() => xpTotal(page)).toBe(before);
   await expect(row).toHaveCount(0);
+
+  await openWorkspace(page, "Act");
+  for (const text of [
+    "XP removed: Troll bridge (1,000 XP)",
+    "XP edited: Troll bridge, 1,326 → 1,000 XP",
+    "XP +1,326: Troll bridge",
+  ])
+    await expect(logEntry(page, text)).toHaveAttribute("data-status", "voided");
+  await snap(page, "experience-journal");
 });

@@ -161,8 +161,10 @@
 }
 
 /*
- * Type scale by role (ADR 0017 step 2): text uses only these five sizes. 1rem = 16px (fixed root).
- * Tailwind's default text-xs..text-9xl are dropped, so an old size builds to nothing.
+ * Type scale by role (ADR 0017 step 2, ADR 0022 step 3.4): text uses only these six sizes. 1rem =
+ * 16px (fixed root). Tailwind's default text-xs..text-9xl are dropped, so an old size builds to
+ * nothing. `text-hero` is the number a whole zone is about (the turn, a result total, the XP
+ * total), at most one per card.
  */
 @theme {
   --text-*: initial;
@@ -179,6 +181,32 @@
   --text-headline: 1.5rem;
   --text-headline--line-height: 1.75rem;
   --text-headline--font-weight: 600;
+  --text-hero: 2rem;
+  --text-hero--line-height: 2.25rem;
+  --text-hero--font-weight: 600;
+}
+
+/*
+ * Section label (ADR 0022 step 4.2): "TARGET", "HIT POINTS", "LAST RESULT"... 11 px, uppercase,
+ * letter-spaced, muted. Field labels next to a control stay sentence case and don't use it.
+ */
+@utility section-label {
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+}
+
+/*
+ * A zone of the screen (ADR 0022 step 4.1): a card on the ground, outlined, never a rule between
+ * zones. Padding is the card's own (14 / 16 px by default, step 3.2).
+ */
+@utility zone-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.625rem;
 }
 
 @theme inline {

@@ -35,15 +35,24 @@
     }
   },
   "shell": {
-    "workspaces": "Espaces de travail",
-    "workspace": {
+    "activities": "Activités",
+    "activity": {
       "act": "Agir",
-      "inventory": "Inventaire",
       "spells": "Sorts",
-      "xp": "Expérience"
+      "xp": "Expérience",
+      "inventory": "Inventaire"
     },
-    "fil": "Résultats et journal",
-    "moi": "Personnage"
+    "character": "Personnage",
+    "lastResult": "Dernier résultat",
+    "noResult": "Aucun jet pour l’instant.",
+    "footer": "Dés et réglages",
+    "journal": {
+      "collapse": "Replier",
+      "expand": "Déplier le journal",
+      "resize": "Redimensionner le journal",
+      "count_one": "{{count}} entrée",
+      "count_other": "{{count}} entrées"
+    }
   },
   "attr": {
     "str": "FOR",

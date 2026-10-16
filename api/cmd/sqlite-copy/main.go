@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/ceffo/critical/api/internal/sqlitecopy"
@@ -24,7 +25,9 @@ table: it gets the server's migrations) or on the server's baseline without any 
 file is read, never written.`
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	// Interrupt or termination cancels the run, so the deferred cleanup still deletes the private
+	// temporary copy of the SQLite file.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, "sqlite-copy:", err)

@@ -41,13 +41,15 @@ func (t Target) Applied(ctx context.Context) ([]string, error) {
 	return t.strings(ctx, `SELECT name FROM schema_migrations ORDER BY name`)
 }
 
-// Schema reads the app tables, their columns in order with the identity column, and the foreign
+// Schema reads the app tables (base tables only, never a view), their columns in order with the identity column, and the foreign
 // keys between them, from the catalog of the current schema.
 func (t Target) Schema(ctx context.Context) (_ []sqlitecopy.Table, _ []sqlitecopy.ForeignKey, err error) {
-	rows, err := t.conn(ctx).QueryContext(ctx, `SELECT table_name, column_name, is_identity = 'YES'
-		FROM information_schema.columns
-		WHERE table_schema = current_schema() AND table_name <> 'schema_migrations'
-		ORDER BY table_name, ordinal_position`)
+	rows, err := t.conn(ctx).QueryContext(ctx, `SELECT c.table_name, c.column_name, c.is_identity = 'YES'
+		FROM information_schema.columns c
+		JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+		WHERE c.table_schema = current_schema() AND t.table_type = 'BASE TABLE'
+		  AND c.table_name <> 'schema_migrations'
+		ORDER BY c.table_name, c.ordinal_position`)
 	if err != nil {
 		return nil, nil, err
 	}

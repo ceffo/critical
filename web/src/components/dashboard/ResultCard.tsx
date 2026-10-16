@@ -683,7 +683,10 @@ function AdjustAttackAc({
   );
 }
 
-/** Save: d20, "total vs target+", the verdict, its modifiers and (latest only) the adjustment row. */
+/**
+ * Save: d20, "roll total vs adjusted target+", the verdict, the buff modifiers, the adjustment on
+ * the target side (ADR 0006 step 5) and (latest only) the adjustment row.
+ */
 function SaveResult({
   save: s,
   interactive,
@@ -696,23 +699,13 @@ function SaveResult({
   const name = t(`saves.categories.${s.category}`, {
     defaultValue: s.category,
   });
-  const mods = s.adjustment
-    ? [
-        ...s.modifiers,
-        {
-          kind: "adjustment" as const,
-          detail: s.adjustmentReason,
-          value: s.adjustment,
-        },
-      ]
-    : s.modifiers;
   return (
     <div className="flex flex-col gap-3" data-testid="save-result">
       <div className="flex items-center gap-3">
         <HexDie value={s.d20} label={t("fil.d20", { value: s.d20 })} />
         <div className="min-w-0 flex-1">
           <div className="text-key tabular-nums" data-testid="save-vs">
-            {t("fil.saveVs", { total: s.total ?? s.d20, target: s.target })}
+            {t("fil.saveVs", { total: s.rollTotal, target: s.adjustedTarget })}
           </div>
           <div className="text-body text-muted-foreground">
             {t("result.saveHeading", { name })}
@@ -727,16 +720,32 @@ function SaveResult({
       <dl className="grid grid-cols-3 gap-2">
         <Fact label={t("result.d20")}>{s.d20}</Fact>
         <Fact label={t("result.target")}>{s.target}</Fact>
+        {s.adjustment !== 0 && (
+          <Fact label={t("result.adjust.adjustedTarget")}>
+            <span data-testid="save-adjusted-target">{s.adjustedTarget}</span>
+          </Fact>
+        )}
         <Fact label={t("result.margin")}>
           {s.margin === undefined ? "–" : formatSigned(s.margin)}
         </Fact>
       </dl>
-      {mods.length > 0 && (
+      {s.adjustment !== 0 && (
+        <div
+          className="flex justify-between gap-2 text-body"
+          data-testid="save-adjustment-line"
+        >
+          <span className="min-w-0 break-words">
+            {s.adjustmentReason ?? t("result.adjust.value")}
+          </span>
+          <span className="tabular-nums">{formatSigned(s.adjustment)}</span>
+        </div>
+      )}
+      {s.modifiers.length > 0 && (
         <ul
           className="flex flex-col gap-1 text-body"
           data-testid="save-modifiers"
         >
-          {mods.map((m, i) => (
+          {s.modifiers.map((m, i) => (
             <li key={i} className="flex justify-between gap-2">
               <span className="min-w-0 break-words">
                 {modLabel(t, m, undefined, itemName)}

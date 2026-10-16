@@ -63,6 +63,30 @@ func IsRoll(k Kind) bool {
 	return false
 }
 
+// PayloadView fills, on read, the fields an entry's payload gained after the
+// entry was logged, so the API serves every entry of a kind in one shape. It
+// computes them from the stored numbers, never changes the stored payload and
+// never changes a recorded outcome. The service that owns the payload
+// provides it; the composition root registers it per kind.
+type PayloadView func(json.RawMessage) (json.RawMessage, error)
+
+// PayloadViews are the payload views by entry kind.
+type PayloadViews map[Kind]PayloadView
+
+// View returns payload as served for an entry of kind k: unchanged when the
+// kind has no view, the payload is empty or the view cannot read it.
+func (v PayloadViews) View(k Kind, payload json.RawMessage) json.RawMessage {
+	view, ok := v[k]
+	if !ok || len(payload) == 0 {
+		return payload
+	}
+	out, err := view(payload)
+	if err != nil {
+		return payload
+	}
+	return out
+}
+
 // KindTimePassed is a fast-forward of game time in hours (buffsvc PassTime):
 // timed buffs count down, the round counter goes to 0.
 const KindTimePassed Kind = "time_passed"

@@ -69,7 +69,8 @@ func TestResolveSavingThrow_LogPayload(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"category": "spell", "d20Roll": 12.0, "target": 14.0,
 		"modifiers":    []any{map[string]any{"kind": "buff", "detail": "Luck", "value": 1.0}},
-		"rolledPassed": false, "adjustment": 0.0, "total": 13.0, "passed": false, "margin": -1.0,
+		"rolledPassed": false, "adjustment": 0.0, "rollTotal": 13.0, "adjustedTarget": 14.0,
+		"total": 13.0, "passed": false, "margin": -1.0,
 	}, payloadOf(t, e.Payload))
 }
 
@@ -83,6 +84,8 @@ func TestAdjustSave_Recompute(t *testing.T) {
 		wantMods   []combatsvc.Modifier
 		wantBonus  int
 		wantTotal  int
+		// wantTarget is the adjusted target: 14 - the adjustment in effect.
+		wantTarget int
 		// wantPrevPassed is the verdict before the last adjustment.
 		wantPrevPassed bool
 	}{
@@ -90,19 +93,16 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			name: "fail to pass", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: " Gaia fire "}},
 			wantPassed: true, wantMargin: 2,
-			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Detail: "Gaia fire", Value: 4}},
-			wantBonus: 0, wantTotal: 16,
+			wantMods:  []combatsvc.Modifier{},
+			wantBonus: 0, wantTotal: 16, wantTarget: 10,
 			wantPrevPassed: false,
 		},
 		{
 			name: "pass to fail, buff kept", d20: 13, bonus: 1,
 			steps:      []combatsvc.SaveAdjustment{{Value: -2}},
 			wantPassed: false, wantMargin: -2,
-			wantMods: []combatsvc.Modifier{
-				{Kind: combatsvc.ModBuff, Detail: "Luck", Value: 1},
-				{Kind: combatsvc.ModAdjustment, Value: -2},
-			},
-			wantBonus: 1, wantTotal: 12,
+			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModBuff, Detail: "Luck", Value: 1}},
+			wantBonus: 1, wantTotal: 12, wantTarget: 16,
 			wantPrevPassed: true,
 		},
 		{
@@ -110,23 +110,23 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: "Gaia fire"}, {Value: 0, Reason: "oops"}},
 			wantPassed: false, wantMargin: -2,
 			wantMods:  []combatsvc.Modifier{},
-			wantBonus: 0, wantTotal: 12,
+			wantBonus: 0, wantTotal: 12, wantTarget: 14,
 			wantPrevPassed: true,
 		},
 		{
 			name: "a new adjustment replaces the previous one", d20: 12,
 			steps:      []combatsvc.SaveAdjustment{{Value: 4, Reason: "Gaia fire"}, {Value: 1, Reason: "luck"}},
 			wantPassed: false, wantMargin: -1,
-			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Detail: "luck", Value: 1}},
-			wantBonus: 0, wantTotal: 13,
+			wantMods:  []combatsvc.Modifier{},
+			wantBonus: 0, wantTotal: 13, wantTarget: 13,
 			wantPrevPassed: true,
 		},
 		{
 			name: "natural 1 is plain arithmetic", d20: 1,
 			steps:      []combatsvc.SaveAdjustment{{Value: 13}},
 			wantPassed: true, wantMargin: 0,
-			wantMods:  []combatsvc.Modifier{{Kind: combatsvc.ModAdjustment, Value: 13}},
-			wantBonus: 0, wantTotal: 14,
+			wantMods:  []combatsvc.Modifier{},
+			wantBonus: 0, wantTotal: 14, wantTarget: 1,
 			wantPrevPassed: false,
 		},
 	}
@@ -143,7 +143,10 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			}
 			last := c.steps[len(c.steps)-1]
 			assert.Equal(t, c.d20, res.D20Roll, "the d20 never changes")
-			assert.Equal(t, 14, res.EffectiveThac0)
+			assert.Equal(t, 14, res.BaseThac0, "the sheet's target")
+			assert.Equal(t, c.wantTarget, res.EffectiveThac0)
+			assert.Equal(t, c.wantTarget, res.SaveAdjustedTarget)
+			assert.Equal(t, c.d20+c.wantBonus, res.SaveRollTotal, "the roll never includes the adjustment")
 			assert.Equal(t, c.wantPassed, res.Hit)
 			assert.Equal(t, c.wantMargin, res.HitMargin)
 			assert.Equal(t, last.Value, res.Adjustment)
@@ -159,6 +162,9 @@ func TestAdjustSave_Recompute(t *testing.T) {
 			assert.Equal(t, c.wantPassed, p["passed"])
 			assert.Equal(t, float64(c.wantMargin), p["margin"])
 			assert.Equal(t, float64(last.Value), p["adjustment"])
+			assert.Equal(t, float64(c.wantTarget), p["adjustedTarget"])
+			assert.Equal(t, float64(c.d20+c.wantBonus), p["rollTotal"])
+			assert.Equal(t, 14.0, p["target"], "the sheet's target is kept")
 			assert.Equal(t, c.wantPrevPassed, p["previousPassed"])
 			assert.Equal(t, payloadOf(t, e.Payload)["passed"], p["rolledPassed"], "rolled verdict kept")
 		})
@@ -221,4 +227,121 @@ func TestResolveSavingThrow_OneModifierPerBuff(t *testing.T) {
 		{Kind: combatsvc.ModBuff, Detail: "Curse", Value: -1},
 	}, res.Modifiers)
 	assert.Equal(t, 13, res.HitMargin+14)
+}
+
+// ADR 0006 step 5: the adjustment moves the target, + easier, - harder. The
+// roll total is d20 + buffs without it, the adjusted target is target -
+// adjustment, and the verdict and margin are the ones of d20 + buffs +
+// adjustment against the target (the numbers before the target moved), a
+// natural 1 or 20 included. The save target is 14.
+func TestAdjustSave_Step5_MovesTheTarget(t *testing.T) {
+	cases := []struct {
+		name            string
+		d20, bonus, adj int
+		wantRollTotal   int
+		wantTarget      int
+		wantPassed      bool
+		wantMargin      int
+	}{
+		{"harder: -2 raises the target", 15, 0, -2, 15, 16, false, -1},
+		{"harder, exactly at the adjusted target", 15, 1, -2, 16, 16, true, 0},
+		{"easier: +4 lowers the target", 11, 0, 4, 11, 10, true, 1},
+		{"easier, one below the adjusted target", 9, 0, 4, 9, 10, false, -1},
+		{"buff and adjustment", 10, 3, 1, 13, 13, true, 0},
+		{"natural 1 is plain arithmetic", 1, 2, 11, 3, 3, true, 0},
+		{"natural 20 is plain arithmetic", 20, 0, -7, 20, 21, false, -1},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			e := rollSave(t, f, c.d20, c.bonus)
+			amends(f, e)
+			res, err := f.svc.AdjustSave(context.Background(), charID, 42, combatsvc.SaveAdjustment{Value: c.adj})
+			require.NoError(t, err)
+
+			// Before the target moved the roll side was d20 + buffs + adjustment.
+			oldTotal := c.d20 + c.bonus + c.adj
+			assert.Equal(t, oldTotal >= 14, c.wantPassed, "verdict unchanged for the same numbers")
+			assert.Equal(t, oldTotal-14, c.wantMargin, "margin unchanged for the same numbers")
+
+			assert.Equal(t, c.wantRollTotal, res.SaveRollTotal)
+			assert.Equal(t, c.wantTarget, res.SaveAdjustedTarget)
+			assert.Equal(t, c.wantTarget, res.EffectiveThac0)
+			assert.Equal(t, 14, res.BaseThac0)
+			assert.Equal(t, c.wantPassed, res.Hit)
+			assert.Equal(t, c.wantMargin, res.HitMargin)
+			assert.Equal(t, oldTotal, res.SaveTotal, "saveTotal keeps its meaning")
+			for _, m := range res.Modifiers {
+				assert.Equal(t, combatsvc.ModBuff, m.Kind, "the adjustment is not a roll modifier")
+			}
+
+			p := payloadOf(t, e.EffectivePayload())
+			assert.Equal(t, float64(c.d20), p["d20Roll"], "the d20 never changes")
+			assert.Equal(t, 14.0, p["target"])
+			assert.Equal(t, float64(c.adj), p["adjustment"], "the stored adjustment keeps its sign")
+			assert.Equal(t, float64(c.wantRollTotal), p["rollTotal"])
+			assert.Equal(t, float64(c.wantTarget), p["adjustedTarget"])
+			assert.Equal(t, c.wantPassed, p["passed"])
+			assert.Equal(t, float64(c.wantMargin), p["margin"])
+			assert.Equal(t, float64(oldTotal), p["total"])
+		})
+	}
+}
+
+// ADR 0006 step 8: a save logged before the adjustment moved the target (no
+// rollTotal, no adjustedTarget) is served with both computed from its stored
+// numbers; every stored field, the verdict and margin included, is served as
+// stored. A save that has them is served as is.
+func TestSavePayloadView_Step8_OldEntryServedInTheNewShape(t *testing.T) {
+	cases := []struct {
+		name      string
+		stored    string
+		wantRoll  float64
+		wantAdjTo float64
+	}{
+		{
+			name: "rolled, buff",
+			stored: `{"category":"spell","d20Roll":12,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
+				`"rolledPassed":false,"adjustment":0,"total":13,"passed":false,"margin":-1}`,
+			wantRoll: 13, wantAdjTo: 14,
+		},
+		{
+			name: "adjusted amend, legacy label",
+			stored: `{"category":"spell","label":"Spells","d20Roll":12,"modifiers":[{"kind":"buff","detail":"Luck","value":1}],"target":14,` +
+				`"rolledPassed":false,"adjustment":-2,"adjustmentReason":"cursed","total":11,"passed":false,"margin":-3,` +
+				`"previousPassed":false,"previousAdjustment":0}`,
+			wantRoll: 13, wantAdjTo: 16,
+		},
+		{
+			name: "adjusted to a pass",
+			stored: `{"category":"breath","d20Roll":9,"modifiers":[],"target":13,` +
+				`"rolledPassed":false,"adjustment":4,"total":13,"passed":true,"margin":0,"previousPassed":false,"previousAdjustment":0}`,
+			wantRoll: 9, wantAdjTo: 9,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			out, err := combatsvc.SavePayloadView(json.RawMessage(c.stored))
+			require.NoError(t, err)
+			got := payloadOf(t, out)
+			want := payloadOf(t, json.RawMessage(c.stored))
+			want["rollTotal"], want["adjustedTarget"] = c.wantRoll, c.wantAdjTo
+			assert.Equal(t, want, got, "stored fields served as stored, the two new ones filled")
+			assert.Equal(t, got["passed"], got["rollTotal"].(float64) >= got["adjustedTarget"].(float64),
+				"the stored verdict reads the same against the adjusted target")
+		})
+	}
+
+	t.Run("a new save is served as is", func(t *testing.T) {
+		f := newFixture(t)
+		e := rollSave(t, f, 12, 1)
+		out, err := combatsvc.SavePayloadView(e.Payload)
+		require.NoError(t, err)
+		assert.JSONEq(t, string(e.Payload), string(out))
+	})
+
+	t.Run("undecodable", func(t *testing.T) {
+		_, err := combatsvc.SavePayloadView(json.RawMessage(`[]`))
+		assert.Error(t, err)
+	})
 }

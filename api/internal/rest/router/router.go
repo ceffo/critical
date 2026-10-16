@@ -44,7 +44,7 @@ func New(log *slog.Logger, bs *composition.BackingServices) http.Handler {
 
 	characterhdl.RegisterRoutes(r, charID, bs.Character)
 	hphdl.RegisterRoutes(r, charID, bs.HP)
-	actionloghdl.RegisterRoutes(r, charID, bs.Log)
+	actionloghdl.RegisterRoutes(r, charID, bs.Log, bs.LogPayloadViews)
 	buffhdl.RegisterRoutes(r, charID, bs.Buffs)
 	spellhdl.RegisterRoutes(r, charID, bs.Spells, bs.Character, bs.Cast)
 	spellprephdl.RegisterRoutes(r, charID, bs.Prep)

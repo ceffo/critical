@@ -23,7 +23,7 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0003 | [Damage](0003-damage.md) | accepted, steps 4, 5 and 11 amended by 0016 |
 | 0004 | [Buffs](0004-buffs.md) | accepted, steps 10 and 11 and Consequences amended and step 18 added by 0016; step 19 (add as effect) added |
 | 0005 | [Rounds and time](0005-rounds-and-time.md) | accepted |
-| 0006 | [Saving throws](0006-saving-throws.md) | accepted |
+| 0006 | [Saving throws](0006-saving-throws.md) | accepted, steps 2, 4 and 5 amended and step 8 added 2026-10-16 (the adjustment moves the target) |
 | 0007 | [HP ledger](0007-hp-ledger.md) | accepted, steps 2, 3, 8 and 9 amended by 0018, step 2 by 0019 |
 | 0008 | [Spell slots and long rest](0008-spell-slots-and-long-rest.md) | accepted |
 | 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted, steps 3 and 5 amended by 0017, step 4 replaced and step 5 amended by 0020, steps 1 and 2 replaced and steps 5 and 6 amended by 0022 |

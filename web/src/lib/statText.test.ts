@@ -159,6 +159,44 @@ describe("formatValue (the value at the caster level)", () => {
     );
   });
 
+  it("does not round a converted length, as the French books do not", () => {
+    // Level-scaled values the French Tome of Magic prints: 15 x 5 ft is "22,5 mètres", 13 x 20 ft
+    // "78 mètres", 13 x 2 ft "7,8 m".
+    expect(formatValue(fr, { amount: 75, unit: "foot" })).toBe("22,5 m");
+    expect(formatValue(fr, { amount: 260, unit: "foot" })).toBe("78 m");
+    expect(formatValue(fr, { amount: 26, unit: "foot" })).toBe("7,8 m");
+    expect(formatValue(fr, { amount: 930, unit: "foot" })).toBe("279 m");
+    expect(formatValue(fr, { amount: 7, unit: "mile" })).toBe("10,5 km");
+  });
+
+  it("writes a length under a metre in centimetres, as the French books do", () => {
+    expect(formatValue(fr, { amount: 1, unit: "foot" })).toBe("30 cm");
+    expect(formatValue(fr, { amount: 3, unit: "foot" })).toBe("90 cm");
+    expect(formatValue(fr, { amount: 5, unit: "foot" })).toBe("1,5 m");
+    expect(formatValue(fr, { amount: 1, upper: 3, unit: "foot" })).toBe(
+      "30-90 cm",
+    );
+    // A range is in one unit: the larger number's.
+    expect(formatValue(fr, { amount: 2, upper: 5, unit: "foot" })).toBe(
+      "0,6-1,5 m",
+    );
+    expect(quantityText(fr, qty(1, "foot", { per_level: true, step: 1 }))).toBe(
+      "30 cm/niveau",
+    );
+    expect(
+      quantityText(fr, {
+        terms: [{ count: 1, unit: "foot", per_level: true, step: 1 }],
+        max: 2,
+        max_unit: "foot",
+      }),
+    ).toBe("30 cm/niveau, max. 60 cm");
+    // Areas, volumes and imperial units are left as they are.
+    expect(formatValue(fr, { amount: 1, unit: "sq foot" })).toBe("0,09 m²");
+    expect(formatValue(fr, { amount: 0.5, unit: "yard" })).toBe("50 cm");
+    expect(formatValue(fr, { amount: 0, unit: "foot" })).toBe("0 m");
+    expect(formatValue(en, { amount: 1, unit: "foot" })).toBe("1 ft");
+  });
+
   it("keeps a volume's significant digits, not a fixed number of decimals", () => {
     // "1 cu. ft./level" at level 20: 20 cu ft is 566 litres; the books' 27 litres a foot gives 540.
     const at20 = formatValue(fr, { amount: 20, unit: "cu foot" });

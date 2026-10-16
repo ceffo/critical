@@ -63,7 +63,7 @@ flowchart TD
     subgraph S["Stage: the focused activity (one shown, each mounted on first visit, then kept)"]
       subgraph ACT["Act (components/shell/ActStage.tsx)"]
         NOW["Now band, content height up to 60 %: ActionArea (tabs with icons) | ResultCard (accent outline)"]
-        SPLIT["Split handle: drag or arrows resize the journal, Collapse / Expand journal"]
+        SPLIT["Split handle: drag or arrows resize the journal, click or Enter toggles it"]
         J["CombatLog (at least 14rem) or, collapsed, JournalBar (one line)"]
       end
       SP["Spells: LookupPanel"]
@@ -95,7 +95,7 @@ flowchart TD
   `minmax(28rem, 1.35fr) | minmax(24rem, 1fr)`) takes its content's height up to 60 % of the
   stage, the journal the rest (at least 14rem). The handle between them (`role="separator"`) is
   dragged, or moved by ArrowUp / ArrowDown, to set the journal's height (`lib/journalSplit.ts`
-  bounds it); Collapse folds the journal into `JournalBar.tsx` (turn, value, icon, newest entry,
+  bounds it); a click (under 4 px of movement) or Enter / Space folds the journal into `JournalBar.tsx` (turn, value, icon, newest entry,
   time, the entry count, Undo / Redo). The height and the collapsed state are per-device display
   preferences in `critical.settings.v1` (`lib/settings.ts`), never sent to the API.
 - Header card budget (ADR 0022 step 3.1): at most 120 px tall at rest, outline included, with 3

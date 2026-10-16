@@ -94,6 +94,8 @@ B's choice and is marked "(design)".
       ghost); **HP change on one line**: the amount, Damage (Phosphor `Drop`), Healing (Phosphor
       `Heart`), then the source under it; the charge cards (Stoneskin, Absorb); the five saving
       throws as click-to-roll rows.
+      The card reads as three groups, Identity / hit points (bar, HP change, charge cards) / saving
+      throws: 24 px between groups, 12 px inside one.
    4. **Rail**, 68 px (design), between the character card and the stage, on the ground (not a card):
       bare Phosphor icons with their caption under them, the active one on a tint pill
       (`bg-amb-900 text-tint`). Activities: **Act**, **Spells** (lookup), **Experience**,
@@ -108,6 +110,8 @@ B's choice and is marked "(design)".
         (design). The band takes its content's height, at most 60 % of the stage (design); the act
         panel scrolls past that. Under it the split handle (step 5.4), then the journal (step 5),
         at least 14rem tall, with the rest of the height.
+      - **Skills tab**: the proficiencies and the bard skills are two raised blocks (`bg-neu-900`,
+        rounded), 24 px apart; a row's hover is the next tone step (`bg-neu-800`).
       - **Weapons tab**: the weapon in hand is one row: its name, its stats as one line of text
         (`Melee · 1d8 S/M · 1d12 L · +2 / +2 to hit / dmg · THAC0 11`, the size not in use dimmed)
         and the **Attack** button, the only control in the row (step 3.3). The other weapons are
@@ -163,7 +167,7 @@ B's choice and is marked "(design)".
       by spacing, a section label or a raised tone step (`bg-neu-900`, ADR 0020 step 2). The result
       panel's outline is the accent (`border-amb-700`, design), to mark the latest result.
    2. **Section labels** are back: 11 px (`text-label`), **uppercase, letter-spaced (0.08em)**,
-      `text-ink-muted` (design: "TARGET", "HIT POINTS", "SAVING THROWS · CLICK TO ROLL", "LEVEL 1",
+      `text-ink` (the full ink, one step above `text-ink-muted`, for contrast; design: "TARGET", "HIT POINTS", "SAVING THROWS · CLICK TO ROLL", "LEVEL 1",
       column headers). This replaces ADR 0009 step 5's "no tiny uppercase letter-spaced labels".
       Field labels next to a control ("Initiative", "Situational") stay sentence case.
    3. The rest of ADR 0009 step 5 stands: no gradients (a flat tint), shadows only on what floats,
@@ -178,10 +182,13 @@ B's choice and is marked "(design)".
    3. Row actions show **on hover**, in the line: **Reroll** on an entry that rolled dice. Undo and
       Redo are in the journal's head (with the All / Rolls filter and the entry count). The current
       turn's group is tinted; the entry shown in the result panel is highlighted.
-   4. **Split**: a handle (a grip, `cursor: row-resize`) between the now band and the journal is
-      dragged to resize the journal, and has a **Collapse** button. Collapsed, the journal is a
+   4. **Split**: a handle (a grip, `cursor: row-resize`) between the now band and the journal is the
+      only control: a **click** (pointer moved under 4 px) collapses or expands the journal, a
+      **drag** resizes it (dragging a collapsed journal opens it at the dragged height). Keyboard:
+      arrows resize, Enter / Space toggle. The separator states Collapsed / Expanded
+      (`aria-valuetext`). There is no Collapse / Expand button. Collapsed, the journal is a
       one-line bar in the same column order (turn tag, value, icon, the last entry, time), with the
-      count, Undo / Redo and "Expand journal". The split's height and collapsed state are per-device
+      count and Undo / Redo. The split's height and collapsed state are per-device
       display state, stored with the preferences of ADR 0009 step 6 (never sent to the API).
 6. **Spell names.** A spell's name is shown in the UI language only, everywhere (lookup, spellbook,
    journal, result, timeline, dice favourites), through the language map of

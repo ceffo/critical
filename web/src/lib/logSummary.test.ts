@@ -338,7 +338,11 @@ describe("entryText", () => {
       { verdict: "hit", hit: true, totalDamage: 7 },
       "Long Sword +2 vs unknown AC: hit (GM), 7 damage",
     ],
-    ["fr", { verdict: "miss" }, "Long Sword +2 contre CA inconnue : raté (MJ)"],
+    [
+      "fr",
+      { verdict: "miss" },
+      "Long Sword +2 contre CA inconnue : attaque ratée (MJ)",
+    ],
   ])(
     "renders an attack against an unknown AC in %s (%j)",
     async (lng, extra, want) => {
@@ -540,7 +544,7 @@ describe("inventory entries", () => {
       "Restocked Arrows +3: +1 (1 now)",
     );
     expect(entryText(entry("item_restock", p), await makeT("fr"))).toBe(
-      "Arrows +3 réapprovisionné : +1 (1 maintenant)",
+      "Objet réapprovisionné : Arrows +3, +1 (1 maintenant)",
     );
   });
 
@@ -560,7 +564,7 @@ describe("inventory entries", () => {
       "Edited Wand of lightning: count 4 → 3",
     );
     expect(entryText(edit, await makeT("fr"))).toBe(
-      "Wand of lightning modifié : quantité 4 → 3",
+      "Objet modifié : Wand of lightning, quantité 4 → 3",
     );
     expect(entryText(entry("item_add", base), await makeT("en"))).toBe(
       "Added Wand of lightning (3)",
@@ -571,6 +575,23 @@ describe("inventory entries", () => {
     expect(
       entryText(entry("item_remove", { name: "x" }, "srv"), await makeT("en")),
     ).toBe("srv");
+  });
+
+  it("words a feminine or masculine item name without a past participle on it", async () => {
+    const fr = await makeT("fr");
+    const base = { itemId: "p", name: "Potion de soins", count: 2 };
+    expect(entryText(entry("item_add", base), fr)).toBe(
+      "Objet ajouté : Potion de soins (2)",
+    );
+    expect(entryText(entry("item_remove", base), fr)).toBe(
+      "Objet retiré : Potion de soins (2)",
+    );
+    expect(
+      entryText(
+        entry("item_use", { name: "Potion de soins", remaining: 1 }),
+        fr,
+      ),
+    ).toBe("Objet utilisé : Potion de soins (1 restant)");
   });
 
   it("renders weapon add, edit and remove entries in both languages", async () => {
@@ -653,6 +674,47 @@ describe("cast entries", () => {
       ...extra,
     });
 
+  it("words a received spell with a gender-neutral label in French", async () => {
+    const fr = await makeT("fr");
+    expect(
+      entryText(
+        entry("cast", {
+          action: "received",
+          spellId: "mirror_image",
+          spell: "Image miroir",
+          casterLevel: 9,
+        }),
+        fr,
+      ),
+    ).toMatch(/^Sort reçu : Image miroir \(niveau du lanceur 9\)/);
+    expect(
+      fr("result.cast.receivedHeading", {
+        name: "Image miroir",
+        casterLevel: 9,
+      }),
+    ).toBe("Sort reçu : Image miroir, niveau du lanceur 9");
+    expect(
+      fr("result.cast.castHeading", {
+        name: "Image miroir",
+        level: 2,
+        casterLevel: 9,
+      }),
+    ).toBe("Image miroir (niveau 2), niveau du lanceur 9");
+  });
+
+  it("words a French weapon attack and a dismissed effect without a participle on the name", async () => {
+    const fr = await makeT("fr");
+    expect(
+      entryText(
+        entry("buff_change", { action: "dismiss", buff: "Image miroir" }),
+        fr,
+      ),
+    ).toBe("Effet retiré : Image miroir");
+    expect(fr("log.attack.miss", { weapon: "Dague", ac: 4 })).toBe(
+      "Dague contre CA 4 : attaque ratée",
+    );
+  });
+
   it("names the mode of a received Meteor Swarm and of a default Wall of Ice", async () => {
     const t = await makeT("en");
     const swarm = entry("cast", {
@@ -733,7 +795,7 @@ describe("cast entries", () => {
         cast({ attack: { d20: 3, targetAc: 4, hit: false } }),
         await makeT("fr"),
       ),
-    ).toBe("Lancé : X Spell: raté (d20 3 contre CA 4)");
+    ).toBe("Lancé : X Spell: attaque ratée (d20 3 contre CA 4)");
   });
 });
 

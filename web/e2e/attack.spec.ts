@@ -282,7 +282,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
     .getByRole("listitem")
     .filter({ hasText: "Short Bow +2 (Arrows +2)" });
   await expect(frEntry).toContainText(
-    /contre CA 10 : (touché|critique).*\(CA -20 → 10 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
+    /contre CA 10 : (attaque réussie|critique).*\(CA -20 → 10 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
   );
   await snap(page, "attack-ac-corrected-fr");
   await chooseLanguage(page, "en");

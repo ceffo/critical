@@ -1,32 +1,36 @@
+// The adapter runs on a mocked Querier: the tests assert the operations called,
+// their arguments and how results map to domain values; no database, no SQL
+// text (ADR 0025 step 6.2).
 package skilldal_test
 
 import (
 	"context"
-	"path/filepath"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/skilldal"
+	"github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/skilldal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-func TestList_InPositionOrder(t *testing.T) {
+// The rows come back in the query's order (the sheet's position order) and
+// map to the skill definitions one for one.
+func TestList_MapsRowsInTheirOrder(t *testing.T) {
 	ctx := context.Background()
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-	require.NoError(t, db.Migrate(ctx))
-	for _, q := range []string{
-		`INSERT INTO proficiencies (id, position, ability, modifier) VALUES ('b', 1, 'int', -2), ('a', 0, 'dex', 3)`,
-		`INSERT INTO bard_skills (id, position, percent) VALUES ('y', 1, 50), ('x', 0, 85)`,
-	} {
-		_, err := db.ExecContext(ctx, q)
-		require.NoError(t, err)
-	}
-	dal := skilldal.New(db)
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().ListProficiencies(ctx).Return([]queries.ListProficienciesRow{
+		{ID: "a", Ability: "dex", Modifier: 3},
+		{ID: "b", Ability: "int", Modifier: -2},
+	}, nil).Once()
+	q.EXPECT().ListBardSkills(ctx).Return([]queries.ListBardSkillsRow{
+		{ID: "x", Percent: 85},
+		{ID: "y", Percent: 50},
+	}, nil).Once()
+	dal := skilldal.New(q)
 
 	profs, err := dal.ListProficiencies(ctx)
 	require.NoError(t, err)
@@ -37,4 +41,18 @@ func TestList_InPositionOrder(t *testing.T) {
 	skills, err := dal.ListBardSkills(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, []skillsvc.BardSkillDef{{ID: "x", Percent: 85}, {ID: "y", Percent: 50}}, skills)
+}
+
+func TestList_StorageErrorsAreReturned(t *testing.T) {
+	ctx := context.Background()
+	boom := errors.New("boom")
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().ListProficiencies(ctx).Return(nil, boom).Once()
+	q.EXPECT().ListBardSkills(ctx).Return(nil, boom).Once()
+	dal := skilldal.New(q)
+
+	_, err := dal.ListProficiencies(ctx)
+	require.ErrorIs(t, err, boom)
+	_, err = dal.ListBardSkills(ctx)
+	require.ErrorIs(t, err, boom)
 }

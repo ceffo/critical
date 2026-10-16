@@ -60,7 +60,8 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    Tests: `TestAdd_RecordsOneTransactionWithTheAwardsSnapshot`,
    `TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction`, `TestUpdate_NothingChangedRecordsNothing`,
    `TestDelete_RecordsTheRemovedAwardOrReportsNotFound`, `TestRestorer_WritesTheSnapshotBack`,
-   `TestCRUD_RoundTripsNewestFirstPerCharacter`, `TestReinsert_KeepsIDAndDate` (xpdal).
+   `TestCRUD_ScopesToTheCharacterAndMapsEntries`, `TestReinsert_KeepsIDAndDate` (xpdal, on a mocked
+   `Querier`; the newest-first order is the query's `ORDER BY`).
 
 ## Consequences
 

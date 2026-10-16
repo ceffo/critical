@@ -8,13 +8,18 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/adapters/critdal"
+	critq "github.com/ceffo/critical/api/internal/adapters/critdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/dicedal"
+	diceq "github.com/ceffo/critical/api/internal/adapters/dicedal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
+	hpq "github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	"github.com/ceffo/critical/api/internal/adapters/skilldal"
+	skillq "github.com/ceffo/critical/api/internal/adapters/skilldal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
 	"github.com/ceffo/critical/api/internal/adapters/xpdal"
+	xpq "github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
@@ -88,22 +93,25 @@ type Storage struct {
 	Dice         dicesvc.DAL
 }
 
-// sqliteStorage wires the SQLite adapters over db.
+// sqliteStorage wires the SQLite adapters over db. The sqlc-generated queries
+// run on the transaction the context carries, else on the pool (ADR 0025
+// step 5.2).
 func sqliteStorage(db *sqlite.DB) Storage {
+	routed := sqlite.Routed(db)
 	return Storage{
 		Store:        db,
 		Character:    characterdal.New(db),
-		HP:           hpdal.New(db),
+		HP:           hpdal.New(hpq.New(routed)),
 		Log:          actionlogdal.New(db),
 		Buff:         buffdal.New(db),
 		Spell:        spelldal.New(db),
 		Weapons:      weapondal.New(db),
 		WeaponEditor: weapondal.NewEditor(db),
-		Crit:         critdal.New(db),
+		Crit:         critdal.New(critq.New(routed)),
 		Items:        itemdal.New(db),
 		Forms:        attackformdal.New(db),
-		XP:           xpdal.New(db),
-		Skill:        skilldal.New(db),
-		Dice:         dicedal.New(db),
+		XP:           xpdal.New(xpq.New(routed)),
+		Skill:        skilldal.New(skillq.New(routed)),
+		Dice:         dicedal.New(diceq.New(routed)),
 	}
 }

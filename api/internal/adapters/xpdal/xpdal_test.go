@@ -1,102 +1,123 @@
+// The adapter runs on a mocked Querier: the tests assert the operations called,
+// their arguments and how results map to domain values; no database, no SQL
+// text (ADR 0025 step 6.2).
 package xpdal_test
 
 import (
 	"context"
-	"path/filepath"
+	"database/sql"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/xpdal"
+	"github.com/ceffo/critical/api/internal/adapters/xpdal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/xpdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-func open(t *testing.T) (*xpdal.DAL, *sqlite.DB) {
-	t.Helper()
-	db, err := sqlite.Open(filepath.Join(t.TempDir(), "t.db"))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
+// Every operation is scoped to the character it is given, the bonus is stored
+// as 0 or 1, and rows map back to entries in the query's order (newest first).
+func TestCRUD_ScopesToTheCharacterAndMapsEntries(t *testing.T) {
 	ctx := context.Background()
-	require.NoError(t, db.Migrate(ctx))
-	for _, name := range []string{"A", "B"} {
-		_, err := db.ExecContext(ctx,
-			`INSERT INTO characters (name, str, dex, con, int, wis, cha, hp_max, thac0_base) VALUES (?, 10, 10, 10, 10, 10, 10, 10, 20)`,
-			name)
-		require.NoError(t, err)
-	}
-	return xpdal.New(db), db
-}
+	q := mocks.NewMockQuerier(t)
+	dal := xpdal.New(q)
 
-func TestCRUD_RoundTripsNewestFirstPerCharacter(t *testing.T) {
-	dal, _ := open(t)
-	ctx := context.Background()
+	q.EXPECT().InsertXPEntry(ctx, queries.InsertXPEntryParams{
+		CharacterID: 1, EntryDate: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: 1,
+	}).Return(11, nil).Once()
+	id, err := dal.Insert(ctx, 1, xpsvc.Entry{Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: true})
+	require.NoError(t, err)
+	assert.Equal(t, int64(11), id)
 
-	first := xpsvc.Entry{Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: true}
-	id1, err := dal.Insert(ctx, 1, first)
-	require.NoError(t, err)
-	id2, err := dal.Insert(ctx, 1, xpsvc.Entry{Date: "2026-10-17", Reason: "quest", Base: 500})
-	require.NoError(t, err)
-	_, err = dal.Insert(ctx, 2, xpsvc.Entry{Date: "2026-10-17", Base: 7})
-	require.NoError(t, err)
-
+	q.EXPECT().ListXPEntries(ctx, int64(1)).Return([]queries.ListXPEntriesRow{
+		{ID: 12, EntryDate: "2026-10-17", Reason: "quest", Base: 500, Bonus: 0},
+		{ID: 11, EntryDate: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: 1},
+	}, nil).Once()
 	got, err := dal.List(ctx, 1)
 	require.NoError(t, err)
-	first.ID = id1
 	assert.Equal(t, []xpsvc.Entry{
-		{ID: id2, Date: "2026-10-17", Reason: "quest", Base: 500},
-		first,
+		{ID: 12, Date: "2026-10-17", Reason: "quest", Base: 500},
+		{ID: 11, Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: true},
 	}, got)
 
-	edited := first
-	edited.Base, edited.Bonus, edited.Reason, edited.Session = 1300, false, "ogre chief", "S42"
-	require.NoError(t, dal.Update(ctx, 1, edited))
-	one, err := dal.Get(ctx, 1, id1)
-	require.NoError(t, err)
-	assert.Equal(t, edited, one)
+	q.EXPECT().UpdateXPEntry(ctx, queries.UpdateXPEntryParams{
+		Session: "S42", Reason: "ogre chief", Base: 1300, Bonus: 0, CharacterID: 1, ID: 11,
+	}).Return(1, nil).Once()
+	require.NoError(t, dal.Update(ctx, 1, xpsvc.Entry{ID: 11, Date: "2026-10-10", Session: "S42", Reason: "ogre chief", Base: 1300}))
 
-	require.NoError(t, dal.Delete(ctx, 1, id2))
-	got, err = dal.List(ctx, 1)
+	q.EXPECT().GetXPEntry(ctx, queries.GetXPEntryParams{CharacterID: 1, ID: 11}).Return(queries.GetXPEntryRow{
+		ID: 11, EntryDate: "2026-10-10", Session: "S42", Reason: "ogre chief", Base: 1300, Bonus: 0,
+	}, nil).Once()
+	one, err := dal.Get(ctx, 1, 11)
 	require.NoError(t, err)
-	assert.Equal(t, []xpsvc.Entry{edited}, got)
+	assert.Equal(t, xpsvc.Entry{ID: 11, Date: "2026-10-10", Session: "S42", Reason: "ogre chief", Base: 1300}, one)
+
+	q.EXPECT().DeleteXPEntry(ctx, queries.DeleteXPEntryParams{CharacterID: 1, ID: 12}).Return(1, nil).Once()
+	require.NoError(t, dal.Delete(ctx, 1, 12))
 }
 
+// No row (an unknown id, or another character's entry) is ErrEntryNotFound.
 func TestNotFound_UnknownIDOrOtherCharacter(t *testing.T) {
-	dal, _ := open(t)
 	ctx := context.Background()
-	id, err := dal.Insert(ctx, 1, xpsvc.Entry{Date: "2026-10-17", Base: 10})
-	require.NoError(t, err)
+	q := mocks.NewMockQuerier(t)
+	dal := xpdal.New(q)
 
-	_, err = dal.Get(ctx, 2, id)
+	q.EXPECT().GetXPEntry(ctx, queries.GetXPEntryParams{CharacterID: 2, ID: 11}).Return(queries.GetXPEntryRow{}, sql.ErrNoRows).Once()
+	_, err := dal.Get(ctx, 2, 11)
 	require.ErrorIs(t, err, xpsvc.ErrEntryNotFound)
-	require.ErrorIs(t, dal.Update(ctx, 2, xpsvc.Entry{ID: id, Base: 10}), xpsvc.ErrEntryNotFound)
-	require.ErrorIs(t, dal.Delete(ctx, 1, id+100), xpsvc.ErrEntryNotFound)
-	require.ErrorIs(t, dal.Delete(ctx, 2, id), xpsvc.ErrEntryNotFound)
+
+	q.EXPECT().UpdateXPEntry(ctx, queries.UpdateXPEntryParams{Base: 10, CharacterID: 2, ID: 11}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.Update(ctx, 2, xpsvc.Entry{ID: 11, Base: 10}), xpsvc.ErrEntryNotFound)
+
+	q.EXPECT().DeleteXPEntry(ctx, queries.DeleteXPEntryParams{CharacterID: 2, ID: 11}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.Delete(ctx, 2, 11), xpsvc.ErrEntryNotFound)
 }
 
-func TestSchema_RejectsNonPositiveBase(t *testing.T) {
-	dal, _ := open(t)
-	_, err := dal.Insert(context.Background(), 1, xpsvc.Entry{Date: "2026-10-17", Base: 0})
-	require.Error(t, err)
+func TestStorageErrors_AreReturnedNotTakenForNotFound(t *testing.T) {
+	ctx := context.Background()
+	boom := errors.New("boom")
+	q := mocks.NewMockQuerier(t)
+	dal := xpdal.New(q)
+
+	q.EXPECT().ListXPEntries(ctx, int64(1)).Return(nil, boom).Once()
+	q.EXPECT().GetXPEntry(ctx, queries.GetXPEntryParams{CharacterID: 1, ID: 11}).Return(queries.GetXPEntryRow{}, boom).Once()
+	q.EXPECT().InsertXPEntry(ctx, queries.InsertXPEntryParams{CharacterID: 1, Base: 5}).Return(0, boom).Once()
+	q.EXPECT().UpdateXPEntry(ctx, queries.UpdateXPEntryParams{Base: 5, CharacterID: 1, ID: 11}).Return(0, boom).Once()
+	q.EXPECT().DeleteXPEntry(ctx, queries.DeleteXPEntryParams{CharacterID: 1, ID: 11}).Return(0, boom).Once()
+
+	_, err := dal.List(ctx, 1)
+	require.ErrorIs(t, err, boom)
+	_, err = dal.Get(ctx, 1, 11)
+	require.ErrorIs(t, err, boom)
+	require.NotErrorIs(t, err, xpsvc.ErrEntryNotFound)
+	_, err = dal.Insert(ctx, 1, xpsvc.Entry{Base: 5})
+	require.ErrorIs(t, err, boom)
+	err = dal.Update(ctx, 1, xpsvc.Entry{ID: 11, Base: 5})
+	require.ErrorIs(t, err, boom)
+	require.NotErrorIs(t, err, xpsvc.ErrEntryNotFound)
+	err = dal.Delete(ctx, 1, 11)
+	require.ErrorIs(t, err, boom)
+	require.NotErrorIs(t, err, xpsvc.ErrEntryNotFound)
 }
 
 // Undoing a delete writes the entry back with its own id and date, so a later
-// undo of the add before it finds it again.
+// undo of the add before it finds it again. An id still present is refused by
+// the store and the error is returned.
 func TestReinsert_KeepsIDAndDate(t *testing.T) {
-	dal, _ := open(t)
 	ctx := context.Background()
-	e := xpsvc.Entry{Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: true}
-	id, err := dal.Insert(ctx, 1, e)
-	require.NoError(t, err)
-	_, err = dal.Insert(ctx, 1, xpsvc.Entry{Date: "2026-10-17", Base: 5})
-	require.NoError(t, err)
-	e.ID = id
-	require.NoError(t, dal.Delete(ctx, 1, id))
-
+	q := mocks.NewMockQuerier(t)
+	dal := xpdal.New(q)
+	e := xpsvc.Entry{ID: 11, Date: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: true}
+	params := queries.RestoreXPEntryParams{
+		ID: 11, CharacterID: 1, EntryDate: "2026-10-10", Session: "S41", Reason: "ogre", Base: 1200, Bonus: 1,
+	}
+	q.EXPECT().RestoreXPEntry(ctx, params).Return(nil).Once()
 	require.NoError(t, dal.Reinsert(ctx, 1, e))
-	got, err := dal.Get(ctx, 1, id)
-	require.NoError(t, err)
-	assert.Equal(t, e, got)
-	require.Error(t, dal.Reinsert(ctx, 1, e), "an id still present is refused")
+
+	taken := errors.New("UNIQUE constraint failed: xp_entries.id")
+	q.EXPECT().RestoreXPEntry(ctx, params).Return(taken).Once()
+	require.ErrorIs(t, dal.Reinsert(ctx, 1, e), taken, "an id still present is refused")
 }

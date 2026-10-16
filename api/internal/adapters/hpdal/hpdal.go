@@ -10,25 +10,21 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// DAL is the SQLite-backed implementation of hpsvc.DAL.
+// DAL is the implementation of hpsvc.DAL over the sqlc-generated queries.
 type DAL struct {
-	q sqlite.Querier
+	q queries.Querier
 }
 
-// New constructs a DAL bound to the given Querier (pool or transaction).
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
-
-func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
-	return sqlite.BobExec{Querier: sqlite.Conn(ctx, d.q)}
-}
+// New returns a DAL running its queries on q. The composition root builds q
+// over the pool, routed to the caller's transaction (ADR 0025 step 5.2).
+func New(q queries.Querier) *DAL { return &DAL{q: q} }
 
 // GetMaxHP fetches hp_max from the character row. Maps sql.ErrNoRows to
 // domain.ErrCharacterNotFound.
 func (d *DAL) GetMaxHP(ctx context.Context, characterID int64) (int, error) {
-	maxHP, err := queries.GetCharacterMaxHp(characterID).One(ctx, d.exec(ctx))
+	maxHP, err := d.q.GetCharacterMaxHP(ctx, characterID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, domain.ErrCharacterNotFound
 	}

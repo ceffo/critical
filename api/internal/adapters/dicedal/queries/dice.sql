@@ -1,23 +1,16 @@
--- ListDiceFavourites
-SELECT id, formula FROM dice_favourites WHERE character_id = ? ORDER BY position, id
-;
+-- name: ListDiceFavourites :many
+SELECT id, formula FROM dice_favourites WHERE character_id = ? ORDER BY position, id;
 
--- InsertDiceFavourite
+-- name: LastDiceFavouritePosition :one
+SELECT position FROM dice_favourites WHERE character_id = ? ORDER BY position DESC LIMIT 1;
+
+-- name: InsertDiceFavourite :one
 INSERT INTO dice_favourites (character_id, formula, position)
 VALUES (?, ?, ?)
-RETURNING id
-;
+RETURNING id;
 
--- LastDiceFavouritePosition
-SELECT position FROM dice_favourites WHERE character_id = ? ORDER BY position DESC LIMIT 1
-;
+-- name: DeleteDiceFavourite :execrows
+DELETE FROM dice_favourites WHERE character_id = ? AND id = ?;
 
--- DeleteDiceFavourite
-DELETE FROM dice_favourites WHERE character_id = ? AND id = ?
-RETURNING id
-;
-
--- SetDiceFavouritePosition
-UPDATE dice_favourites SET position = ? WHERE character_id = ? AND id = ?
-RETURNING id
-;
+-- name: SetDiceFavouritePosition :execrows
+UPDATE dice_favourites SET position = ? WHERE character_id = ? AND id = ?;

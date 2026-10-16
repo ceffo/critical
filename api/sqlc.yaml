@@ -1,0 +1,41 @@
+# sqlc generates the DAL query code of the adapters listed below (ADR 0025 step 5):
+# one Go package per adapter, with a Querier interface its adapter depends on.
+# Regenerate with `just generate`; the generated files are committed, never edited.
+# The remaining adapters still use bob (bobgen.yaml) until they are ported.
+version: "2"
+sql:
+  - &adapter
+    engine: sqlite
+    schema: tmp_schema.sql # the migrated schema, built (then deleted) by `just generate`
+    queries: internal/adapters/critdal/queries
+    gen:
+      go: &go
+        package: queries
+        out: internal/adapters/critdal/queries
+        emit_interface: true
+        emit_empty_slices: true
+        omit_unused_structs: true
+  - <<: *adapter
+    queries: internal/adapters/dicedal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/dicedal/queries
+  - <<: *adapter
+    queries: internal/adapters/hpdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/hpdal/queries
+  - <<: *adapter
+    queries: internal/adapters/skilldal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/skilldal/queries
+  - <<: *adapter
+    queries: internal/adapters/xpdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/xpdal/queries

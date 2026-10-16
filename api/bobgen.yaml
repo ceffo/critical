@@ -1,18 +1,13 @@
 sqlite:
   dsn: .tmp_schema.db
   queries:
-    - internal/adapters/hpdal/queries
     - internal/adapters/characterdal/queries
     - internal/adapters/buffdal/queries
     - internal/adapters/spelldal/queries
     - internal/adapters/actionlogdal/queries
     - internal/adapters/weapondal/queries
     - internal/adapters/itemdal/queries
-    - internal/adapters/critdal/queries
     - internal/adapters/attackformdal/queries
-    - internal/adapters/xpdal/queries
-    - internal/adapters/skilldal/queries
-    - internal/adapters/dicedal/queries
     - internal/adapters/textdal/queries
 
 plugins:

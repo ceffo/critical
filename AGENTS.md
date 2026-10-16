@@ -38,9 +38,9 @@ into this public repo.
 
 ## Generated code
 
-DAL wrappers (bob) and mocks (mockery) are generated and committed: regenerate with `just generate`
-/ `just mocks`, never edit them by hand. When and how, plus bob's SQL constraints: "DAL code
-generation (bob)" in [docs/backend.md](docs/backend.md).
+DAL code (sqlc, and bob for the adapters not yet ported) and mocks (mockery) are generated and
+committed: regenerate with `just generate` / `just mocks`, never edit them by hand. When and how, plus
+the generators' SQL constraints: "DAL code generation" in [docs/backend.md](docs/backend.md).
 
 ## Tracker
 

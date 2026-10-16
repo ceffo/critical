@@ -4,8 +4,8 @@
 version: "2"
 sql:
   - &adapter
-    engine: sqlite
-    schema: tmp_schema.sql # the migrated schema, built (then deleted) by `just generate`
+    engine: postgresql
+    schema: internal/storage/postgres/migrations # read offline: no database server
     queries: internal/adapters/critdal/queries
     gen:
       go: &go
@@ -86,3 +86,9 @@ sql:
       go:
         <<: *go
         out: internal/adapters/spelldal/queries
+  - <<: *adapter
+    queries: internal/storage/postgres/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/storage/postgres/queries

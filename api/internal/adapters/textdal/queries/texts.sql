@@ -1,11 +1,11 @@
 -- name: GetText :many
-SELECT lang, body FROM localized_texts WHERE text_id = ?;
+SELECT lang, body FROM localized_texts WHERE text_id = $1;
 
 -- name: NextTextKey :one
-SELECT CAST(COALESCE(MAX(text_id), 0) + 1 AS INTEGER) AS next_key FROM localized_texts;
+SELECT (COALESCE(MAX(text_id), 0) + 1)::bigint AS next_key FROM localized_texts;
 
 -- name: DeleteText :exec
-DELETE FROM localized_texts WHERE text_id = ?;
+DELETE FROM localized_texts WHERE text_id = $1;
 
 -- name: InsertText :exec
-INSERT INTO localized_texts (text_id, lang, body) VALUES (?, ?, ?);
+INSERT INTO localized_texts (text_id, lang, body) VALUES ($1, $2, $3);

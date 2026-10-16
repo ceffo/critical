@@ -10,7 +10,7 @@ import (
 )
 
 const deleteXPEntry = `-- name: DeleteXPEntry :execrows
-DELETE FROM xp_entries WHERE character_id = ? AND id = ?
+DELETE FROM xp_entries WHERE character_id = $1 AND id = $2
 `
 
 type DeleteXPEntryParams struct {
@@ -28,7 +28,7 @@ func (q *Queries) DeleteXPEntry(ctx context.Context, arg DeleteXPEntryParams) (i
 
 const getXPEntry = `-- name: GetXPEntry :one
 SELECT id, entry_date, session, reason, base, bonus
-FROM xp_entries WHERE character_id = ? AND id = ?
+FROM xp_entries WHERE character_id = $1 AND id = $2
 `
 
 type GetXPEntryParams struct {
@@ -61,7 +61,7 @@ func (q *Queries) GetXPEntry(ctx context.Context, arg GetXPEntryParams) (GetXPEn
 
 const insertXPEntry = `-- name: InsertXPEntry :one
 INSERT INTO xp_entries (character_id, entry_date, session, reason, base, bonus)
-VALUES (?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
 `
 
@@ -90,7 +90,7 @@ func (q *Queries) InsertXPEntry(ctx context.Context, arg InsertXPEntryParams) (i
 
 const listXPEntries = `-- name: ListXPEntries :many
 SELECT id, entry_date, session, reason, base, bonus
-FROM xp_entries WHERE character_id = ? ORDER BY id DESC
+FROM xp_entries WHERE character_id = $1 ORDER BY id DESC
 `
 
 type ListXPEntriesRow struct {
@@ -134,7 +134,7 @@ func (q *Queries) ListXPEntries(ctx context.Context, characterID int64) ([]ListX
 
 const restoreXPEntry = `-- name: RestoreXPEntry :exec
 INSERT INTO xp_entries (id, character_id, entry_date, session, reason, base, bonus)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type RestoreXPEntryParams struct {
@@ -161,8 +161,8 @@ func (q *Queries) RestoreXPEntry(ctx context.Context, arg RestoreXPEntryParams) 
 }
 
 const updateXPEntry = `-- name: UpdateXPEntry :execrows
-UPDATE xp_entries SET session = ?, reason = ?, base = ?, bonus = ?
-WHERE character_id = ? AND id = ?
+UPDATE xp_entries SET session = $1, reason = $2, base = $3, bonus = $4
+WHERE character_id = $5 AND id = $6
 `
 
 type UpdateXPEntryParams struct {

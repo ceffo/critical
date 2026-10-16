@@ -46,20 +46,23 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 - After creating a worktree: `cd web && npm ci` (`web/node_modules` is gitignored). Go needs nothing.
 - After pulling `main` in the main checkout: `just dev` reinstalls web deps (`npm install`) when
   `web/package-lock.json` changed since the last install. Restart `just dev` after a dependency change.
-- Shared resources: none locked. The e2e suite runs on the API's in-memory storage; per
-  [ADR 0025](adr/0025-postgresql-storage.md) the Go tests that still use temporary SQLite databases
-  move to mocks, with no database at all.
+- Shared resources: none locked. The e2e suite runs on the API's in-memory storage and no Go test
+  opens a database ([ADR 0025](adr/0025-postgresql-storage.md)). `just dev` uses the checkout's own
+  docker compose PostgreSQL (each worktree is its own compose project, with its own volume).
 
 ## Running the app for acceptance checks
 
 - Full stack with live reload: `just dev` (API via air on :8080, Vite on :5173 proxying `/api`, listening on all interfaces, `*.ts.net` hosts allowed).
-  State is in the gitignored `.dev/` (`critical.db` with the real catalogue, `fixture.db` without it); `just dev-reset` deletes both. Use it only
+  It starts the docker compose PostgreSQL (`just dev-db`, host port 5432, `CRITICAL_PG_PORT` moves it): database `critical` with the real
+  catalogue, `critical_fixture` without it; `just dev-reset` deletes both (the compose volume). Use it only
   from the main checkout or a worktree you own; it binds fixed ports, so run one at a time.
-- Backend alone, throwaway data: `just build-api`, then run `bin/critical-srv` with
-  `CRITICAL_DSN`, `CRITICAL_SEEDS_DIR`, `CRITICAL_CATALOGUE` (the real `.catalogue/catalogue.json` with
-  `seeds/`, or the fixture `api/testdata/catalogue.json` with `api/testdata/seeds`) and `CRITICAL_ADDR`
-  pointing at the scratchpad and a free
-  port (never the user's data). Exercise endpoints with `curl`.
+- Backend alone, throwaway data: `CRITICAL_PG_PORT=<free port> just dev-db` in your worktree (its own
+  compose project and volume), `just build-api`, then run `bin/critical-srv` with `CRITICAL_DSN`
+  (`postgres://critical:critical@localhost:<port>/critical_fixture?sslmode=disable`, or a database you
+  create with `docker compose exec postgres createdb -U critical <name>`), `CRITICAL_SEEDS_DIR`,
+  `CRITICAL_CATALOGUE` (the fixture `api/testdata/catalogue.json` with `api/testdata/seeds`, or the real
+  `.catalogue/catalogue.json` with `seeds/`) and `CRITICAL_ADDR` on a free port (never the user's data).
+  `just dev-reset` in the worktree removes its database afterwards. Exercise endpoints with `curl`.
 - UI: `just e2e [spec args]` builds the API and runs the Playwright suite headlessly (Chromium,
   1440x900). Every test gets its own API (in-memory storage, no database) + Vite on free ports with the
   `api/testdata` fixture (seeds and spell catalogue), so parallel worktrees don't collide. Artifacts, gitignored, in `web/e2e-results/`:
@@ -73,10 +76,10 @@ Generated files are committed and never hand-edited.
 
 | Trigger | Command |
 |---|---|
-| Migration added or changed under `api/internal/storage/sqlite/migrations/`; `.sql` changed under `api/internal/adapters/*/queries/`; sqlc version bumped, `api/sqlc.yaml` changed | `just generate` |
+| Migration added under `api/internal/storage/postgres/migrations/`; `.sql` changed under `api/internal/adapters/*/queries/` or `api/internal/storage/postgres/queries/`; sqlc version bumped, `api/sqlc.yaml` changed | `just generate` |
 | New or changed service port, or a sqlc `Querier` changed (mockery) | `just mocks` |
 
-Generated paths: sqlc output (`api/internal/adapters/*/queries/{db,models,querier}.go`, `*.sql.go`), mockery output.
+Generated paths: sqlc output (`api/internal/adapters/*/queries/` and `api/internal/storage/postgres/queries/`: `{db,models,querier}.go`, `*.sql.go`), mockery output.
 The generators' constraints are in `docs/backend.md` ("DAL code generation"). Migrations are new
 files only, never an edited applied one. When two branches both regenerate, regenerate after the
 merge instead of hand-merging.
@@ -155,9 +158,8 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
 - **No per-language columns or fields.** A text in a human language is a key into the generic
   `localized_texts` table (one row per language); never a `name_fr`-style column, DTO field, TS property
   or catalogue key. The API serves a language map. [ADR 0023](adr/0023-localized-text.md); enforced by
-  `just check-no-language-fields` (part of `just validate`; scans tracked files but docs and the applied
-  migrations 027/029/030/031 with their tests; `scripts/test-check-no-language-fields.sh` holds the
-  rejected fixtures).
+  `just check-no-language-fields` (part of `just validate`; scans tracked files but docs;
+  `scripts/test-check-no-language-fields.sh` holds the rejected fixtures).
 - **No presentation text from the backend.** The API returns structured data; wording, formatting and
   formulas for display are built in the frontend (i18n). No `fmt.Sprintf`/`Fprintf` to compose
   user-facing text in Go (error messages excepted). Enforced by golangci `forbidigo` on

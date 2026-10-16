@@ -236,7 +236,7 @@ func TestSearchAndDetails_MapFields(t *testing.T) {
 		Description: localized.Text{"en": "desc", "fr": "texte"}, Source: "PHB",
 	}
 	dal, q = mocked(t)
-	q.EXPECT().SpellsByKey(ctx, []sql.NullString{str("nope"), str("fireball")}).Return([]queries.Spell{row}, nil).Once()
+	q.EXPECT().SpellsByKey(ctx, []string{"nope", "fireball"}).Return([]queries.Spell{row}, nil).Once()
 	x = &texts{stored: stored}
 	x.expect(q)
 	details, err := dal.Details(ctx, []string{"nope", "fireball"})
@@ -245,7 +245,7 @@ func TestSearchAndDetails_MapFields(t *testing.T) {
 	assert.ElementsMatch(t, []int64{1, 2, 3, 4, 5}, x.all())
 	assert.Len(t, x.asked, 1, "one batched lookup")
 
-	q.EXPECT().SpellsByKey(ctx, []sql.NullString{str("fireball")}).Return([]queries.Spell{row}, nil).Once()
+	q.EXPECT().SpellsByKey(ctx, []string{"fireball"}).Return([]queries.Spell{row}, nil).Once()
 	fb, ok, err := dal.Describe(ctx, "fireball")
 	require.NoError(t, err)
 	require.True(t, ok)
@@ -277,13 +277,13 @@ func TestDetails_KeepsTheOrderOfIDs(t *testing.T) {
 func TestDescribe(t *testing.T) {
 	ctx := context.Background()
 	dal, q := mocked(t)
-	q.EXPECT().SpellsByKey(ctx, []sql.NullString{str("a_new_name")}).Return([]queries.Spell{}, nil).Once()
+	q.EXPECT().SpellsByKey(ctx, []string{"a_new_name"}).Return([]queries.Spell{}, nil).Once()
 	q.EXPECT().TextsByID(ctx, []int64{}).Return(nil, nil).Maybe()
 	_, ok, err := dal.Describe(ctx, "a_new_name")
 	require.NoError(t, err)
 	assert.False(t, ok)
 
-	q.EXPECT().SpellsByKey(ctx, []sql.NullString{str("light")}).Return(nil, errBoom).Once()
+	q.EXPECT().SpellsByKey(ctx, []string{"light"}).Return(nil, errBoom).Once()
 	_, _, err = dal.Describe(ctx, "light")
 	require.ErrorIs(t, err, errBoom)
 }
@@ -311,7 +311,7 @@ func TestSearch_RowWithoutStatsIsParsedFromRawText(t *testing.T) {
 	assert.Equal(t, []string{"negates"}, got[1].Stats.Save.Kinds)
 	assert.ElementsMatch(t, []int64{1, 2, 3, 4, 5, 6}, x.all())
 
-	q.EXPECT().SpellsByKey(ctx, []sql.NullString{str("a")}).Return([]queries.Spell{a}, nil).Once()
+	q.EXPECT().SpellsByKey(ctx, []string{"a"}).Return([]queries.Spell{a}, nil).Once()
 	details, err := dal.Details(ctx, []string{"a"})
 	require.NoError(t, err)
 	assert.Equal(t, got[0].Stats, details[0].Stats)

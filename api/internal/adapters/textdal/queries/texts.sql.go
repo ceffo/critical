@@ -10,7 +10,7 @@ import (
 )
 
 const deleteText = `-- name: DeleteText :exec
-DELETE FROM localized_texts WHERE text_id = ?
+DELETE FROM localized_texts WHERE text_id = $1
 `
 
 func (q *Queries) DeleteText(ctx context.Context, textID int64) error {
@@ -19,7 +19,7 @@ func (q *Queries) DeleteText(ctx context.Context, textID int64) error {
 }
 
 const getText = `-- name: GetText :many
-SELECT lang, body FROM localized_texts WHERE text_id = ?
+SELECT lang, body FROM localized_texts WHERE text_id = $1
 `
 
 type GetTextRow struct {
@@ -51,7 +51,7 @@ func (q *Queries) GetText(ctx context.Context, textID int64) ([]GetTextRow, erro
 }
 
 const insertText = `-- name: InsertText :exec
-INSERT INTO localized_texts (text_id, lang, body) VALUES (?, ?, ?)
+INSERT INTO localized_texts (text_id, lang, body) VALUES ($1, $2, $3)
 `
 
 type InsertTextParams struct {
@@ -66,7 +66,7 @@ func (q *Queries) InsertText(ctx context.Context, arg InsertTextParams) error {
 }
 
 const nextTextKey = `-- name: NextTextKey :one
-SELECT CAST(COALESCE(MAX(text_id), 0) + 1 AS INTEGER) AS next_key FROM localized_texts
+SELECT (COALESCE(MAX(text_id), 0) + 1)::bigint AS next_key FROM localized_texts
 `
 
 func (q *Queries) NextTextKey(ctx context.Context) (int64, error) {

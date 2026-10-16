@@ -32,16 +32,16 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
+	"github.com/ceffo/critical/api/internal/storage/postgres"
 )
 
 // BackingServices holds every business service plus the storage handle and the
 // resolved character id (single-character mode). Routers select which slices
 // to mount.
 type BackingServices struct {
-	// DB is the SQLite handle, set by New on a database only (nil when built
-	// over mocks or in memory).
-	DB          *sqlite.DB
+	// DB is the PostgreSQL handle, set by New on a database only (nil when
+	// built over mocks or in memory).
+	DB          *postgres.DB
 	CharacterID int64
 
 	Character charactersvc.SVC
@@ -89,7 +89,7 @@ type Dice interface {
 	RollD100() int
 }
 
-// New opens the SQLite database and wires the real adapters over it (or, with
+// New opens the PostgreSQL database (cfg.DSN) and wires the real adapters over it (or, with
 // cfg.InMemory, wires the in-memory storage and opens nothing), then builds
 // the services (Build). Returns an initialized BackingServices ready to be
 // mounted on a router.
@@ -97,11 +97,11 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	if cfg.InMemory {
 		return Build(ctx, memoryStorage(memory.New()), cfg)
 	}
-	db, err := sqlite.Open(cfg.DSN)
+	db, err := postgres.Open(cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
-	bs, err := Build(ctx, sqliteStorage(db), cfg)
+	bs, err := Build(ctx, postgresStorage(db), cfg)
 	if err != nil {
 		return nil, err
 	}

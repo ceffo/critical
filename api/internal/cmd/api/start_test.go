@@ -15,20 +15,23 @@ func clearEnv(t *testing.T) {
 	}
 }
 
+// devDSN is the default database: the compose PostgreSQL of `just dev`.
+const devDSN = "postgres://critical:critical@localhost:5432/critical?sslmode=disable"
+
 func TestLoadConfig_Defaults(t *testing.T) {
 	clearEnv(t)
 	cfg, err := loadConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg != (Config{DSN: "critical.db", SeedsDir: "seeds", Addr: ":8080", Catalogue: ".catalogue/catalogue.json"}) {
+	if cfg != (Config{DSN: devDSN, SeedsDir: "seeds", Addr: ":8080", Catalogue: ".catalogue/catalogue.json"}) {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 }
 
 func TestLoadConfig_Overrides(t *testing.T) {
 	clearEnv(t)
-	t.Setenv("CRITICAL_DSN", "/tmp/x.db")
+	t.Setenv("CRITICAL_DSN", "postgres://u:p@db:5432/x")
 	t.Setenv("CRITICAL_SEEDS_DIR", "/tmp/seeds")
 	t.Setenv("CRITICAL_ADDR", ":9999")
 	t.Setenv("CRITICAL_CATALOGUE", "/srv/catalogue.json")
@@ -37,7 +40,7 @@ func TestLoadConfig_Overrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Config{DSN: "/tmp/x.db", SeedsDir: "/tmp/seeds", Addr: ":9999", Catalogue: "/srv/catalogue.json", WebDir: "/app/web"}
+	want := Config{DSN: "postgres://u:p@db:5432/x", SeedsDir: "/tmp/seeds", Addr: ":9999", Catalogue: "/srv/catalogue.json", WebDir: "/app/web"}
 	if cfg != want {
 		t.Fatalf("overrides not applied: %+v", cfg)
 	}
@@ -48,7 +51,7 @@ func TestLoadConfig_EmptyUsesDefault(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("CRITICAL_DSN", "")
 	cfg, err := loadConfig()
-	if err != nil || cfg.DSN != "critical.db" {
+	if err != nil || cfg.DSN != devDSN {
 		t.Fatalf("got %+v, %v", cfg, err)
 	}
 }

@@ -10,7 +10,7 @@ import (
 )
 
 const deleteWeapon = `-- name: DeleteWeapon :one
-DELETE FROM weapons WHERE id = ?
+DELETE FROM weapons WHERE id = $1
 RETURNING name
 `
 
@@ -23,7 +23,7 @@ func (q *Queries) DeleteWeapon(ctx context.Context, id string) (int64, error) {
 
 const getWeapon = `-- name: GetWeapon :one
 SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind
-FROM weapons WHERE id = ?
+FROM weapons WHERE id = $1
 `
 
 func (q *Queries) GetWeapon(ctx context.Context, id string) (Weapon, error) {
@@ -46,7 +46,7 @@ func (q *Queries) GetWeapon(ctx context.Context, id string) (Weapon, error) {
 
 const insertWeapon = `-- name: InsertWeapon :exec
 INSERT INTO weapons (id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type InsertWeaponParams struct {
@@ -118,8 +118,8 @@ func (q *Queries) ListWeapons(ctx context.Context) ([]Weapon, error) {
 }
 
 const updateWeapon = `-- name: UpdateWeapon :one
-UPDATE weapons SET position = ?, damage_sm = ?, damage_l = ?, magic_to_hit = ?, magic_damage = ?, kind = ?, two_handed = ?, ammo_kind = ?
-WHERE id = ?
+UPDATE weapons SET position = $1, damage_sm = $2, damage_l = $3, magic_to_hit = $4, magic_damage = $5, kind = $6, two_handed = $7, ammo_kind = $8
+WHERE id = $9
 RETURNING name
 `
 

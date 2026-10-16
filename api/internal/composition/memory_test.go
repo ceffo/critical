@@ -24,7 +24,7 @@ func TestNew_Step8_1_InMemoryOpensNoDatabase(t *testing.T) {
 	bs, err := composition.New(ctx, cfg)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
-	assert.Nil(t, bs.DB, "no SQLite handle in memory")
+	assert.Nil(t, bs.DB, "no database handle in memory")
 	_, err = os.Stat(dsn)
 	assert.ErrorIs(t, err, os.ErrNotExist, "nothing is created at the DSN")
 

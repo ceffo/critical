@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/storage/memory"
-	"github.com/ceffo/critical/api/internal/storage/sqlite"
+	"github.com/ceffo/critical/api/internal/storage/postgres"
 )
 
 // errReached is what conn panics with: the statement reached the connection
@@ -38,16 +38,16 @@ func reaches(call func()) (reached bool) {
 	return false
 }
 
-// ADR 0025 step 5.2: every adapter sqliteStorage builds runs its queries on
-// the transaction the caller's context carries (sqlite.Routed over the pool).
+// ADR 0025 step 5.2: every adapter postgresStorage builds runs its queries on
+// the transaction the caller's context carries (postgres.Routed over the pool).
 // The context carries conn as its transaction and the pool is an unopened
 // DB, so an adapter built over the pool itself (or any connection but the
 // routed one) escapes the transaction: its call does not reach conn. Every
 // storage port but the store is listed, so a new one fails until it is
 // checked here.
-func TestSQLiteStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
-	ctx := sqlite.WithTx(context.Background(), conn{})
-	s := sqliteStorage(&sqlite.DB{})
+func TestPostgresStorage_EveryAdapterRunsOnTheCallersTransaction(t *testing.T) {
+	ctx := postgres.WithTx(context.Background(), conn{})
+	s := postgresStorage(&postgres.DB{})
 	calls := map[string]func(){
 		"Character":    func() { _, _ = s.Character.FirstID(ctx) },
 		"HP":           func() { _, _ = s.HP.GetMaxHP(ctx, 1) },

@@ -25,7 +25,9 @@ import (
 // Config is the binary-level config — derived from environment variables in
 // Start. Each value has a sensible default so the app boots out of the box.
 type Config struct {
-	DSN      string `env:"CRITICAL_DSN" envDefault:"critical.db"`
+	// DSN is the PostgreSQL database (ADR 0025 step 1.1); the default is the
+	// compose database of `just dev`.
+	DSN      string `env:"CRITICAL_DSN" envDefault:"postgres://critical:critical@localhost:5432/critical?sslmode=disable"`
 	SeedsDir string `env:"CRITICAL_SEEDS_DIR" envDefault:"seeds"`
 	Addr     string `env:"CRITICAL_ADDR" envDefault:":8080"`
 	// Catalogue is the spell catalogue artifact (ADR 0021 step 4): `just

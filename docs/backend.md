@@ -4,7 +4,8 @@
 
 - **Language**: Go (latest stable)
 - **HTTP**: standard `net/http` or `chi` router
-- **Database**: SQLite via `modernc.org/sqlite` (pure Go, no CGO). `sqlite.Open` sets `busy_timeout=5000` on every pooled connection and `journal_mode=WAL` for file-backed DBs (WAL adds `-wal`/`-shm` files beside the DB). It also sets `_txlock=immediate`: every transaction (`WrapTx`/`InTx`) begins with `BEGIN IMMEDIATE` and takes the write lock up front. A deferred read-then-write transaction (the action stack's expected-top check, then its pop) would otherwise fail at once with `SQLITE_BUSY_SNAPSHOT` (a 500) when another writer commits in between; with the lock taken first the second writer waits, then sees the first one's result and is refused as a normal 409. Write paths must go through a transaction, never read-then-write on the bare pool.
+- **Database**: PostgreSQL ([ADR 0025](adr/0025-postgresql-storage.md)) through `database/sql` and the `github.com/lib/pq` driver (sqlc's `database/sql` output binds arrays with `pq.Array`). `storage/postgres.Open` opens the pool from `CRITICAL_DSN` (a PostgreSQL URL or connection string); in development it is the docker compose service `postgres` ("Development database" below), on fly the cluster of [ADR 0024](adr/0024-deployment.md) step 2. The server module has no SQLite dependency (`just check-no-sqlite`, part of `just validate`).
+- **Writer lock**: every write transaction (`InTx`) runs at READ COMMITTED and takes one transaction-level advisory lock (`pg_advisory_xact_lock`, one fixed key; the sqlc query `LockWriters`) as its first statement ([ADR 0025](adr/0025-postgresql-storage.md) step 4). A second writer waits until the first commits or rolls back, then reads its result, so the action stack's stale expected top is refused as a normal 409, never a 500. The commit or the rollback releases the lock; nothing else does. A stricter isolation level would break this (the snapshot would predate the lock). Write paths must go through a transaction, never read-then-write on the bare pool; reads outside a transaction take no lock.
 - **Migrations**: simple sequential SQL files, applied at startup and recorded in `schema_migrations`
   ("Migrations at startup" below)
 - **Seed loader**: reads `seeds/*.json` at startup if corresponding table is empty; spells come from the
@@ -17,7 +18,7 @@ api/
   main.go               ← HTTP server, router, startup
   internal/
     db/
-      db.go             ← SQLite open, migrate, seed
+      db.go             ← PostgreSQL open, migrate, seed
       migrations/       ← 001_init.sql, 002_hp_ledger.sql, etc.
     domain/
       character.go      ← Character struct, attributes
@@ -37,7 +38,7 @@ api/
       buffs.go          ← Buff application, expiry detection
 ```
 
-## SQLite Data Model
+## Data Model
 
 **Hybrid model:** core scalars as columns, complex variable-length state as JSON columns.
 
@@ -126,25 +127,48 @@ What each service records, and the rules it follows, are in the ADRs ([index](ad
 
 ## Migrations at startup
 
-`sqlite.Migrate` (run by the composition root before the server listens) applies every embedded
-`api/internal/storage/sqlite/migrations/*.sql` file not yet recorded in `schema_migrations`, each in
-its own transaction. Migrations are new files only: never rename, edit or delete an applied one.
+`postgres.Migrate` (run by the composition root before the server listens) applies every embedded
+`api/internal/storage/postgres/migrations/*.sql` file not yet recorded in `schema_migrations`, in
+lexical order, all in one transaction that holds the writer lock from its first statement
+([ADR 0025](adr/0025-postgresql-storage.md) step 3.1): of two machines starting together, the second
+waits, then finds everything applied. A failing migration rolls the whole run back. A file runs as
+one statement list (no parameters), so it may hold several statements; DDL is transactional.
+
+`001_baseline.sql` is the schema the 33 SQLite migrations built, squashed (step 2): identity ids,
+`BIGINT` integers, `TIMESTAMPTZ` timestamps; 0/1 flags and JSON stay checked `BIGINT` and `TEXT`
+(the file says why). Migrations are schema only (no `INSERT`, `UPDATE` or `DELETE`,
+`TestMigrations_Step2_1_SchemaOnly`) and new files only: never rename, edit or delete an applied one.
 
 Before applying anything it refuses a database that records a migration the binary does not embed
 ([ADR 0024](adr/0024-deployment.md) step 6.2): the server exits with
 `migrate: database records migrations this binary does not embed: <names>; …`. An older binary
 does not undo a newer schema, so it must not run on one. In production this is a rollback across a
-migration without the snapshot restore (ADR 0024 steps 6.1 and 9.3).
+migration without the backup restore (ADR 0024 steps 6.1 and 9.3).
 
-In development it happens when `.dev/critical.db` was migrated by a branch that added a migration
+In development it happens when the compose database was migrated by a branch that added a migration
 and you then run a branch that does not have it (e.g. `main` before that PR merged). To get past it:
 - go back to (or merge `main` into) a branch that embeds the named migrations; or
-- in a worktree, or for fixture data only, `just dev-reset` and restart `just dev` (deletes
-  `.dev/*.db`). Never in the main checkout: its `.dev/critical.db` is the user's real campaign data; or
-- keep a copy of the database before trying a migration branch and restore it afterwards.
+- in a worktree, or for fixture data only, `just dev-reset` and restart `just dev` (deletes the
+  compose database). Never in the main checkout once it holds the user's campaign data; or
+- keep a `pg_dump` of the database before trying a migration branch and restore it afterwards.
 
 Never delete the rows from `schema_migrations` to get past the check: the schema would still be the
 newer one.
+
+## Development database
+
+`just dev` (through `just dev-db`) starts the docker compose service `postgres` (`docker compose up
+--detach --wait postgres`; it keeps running after `just dev` stops) and runs the API on it:
+
+- database `critical` with the real catalogue (`.catalogue/catalogue.json`) and the campaign seeds;
+  `critical_fixture` with the fixture catalogue and seeds of `api/testdata` when there is no real
+  catalogue (the init script `deploy/postgres-init/` creates it with the volume);
+- DSN `postgres://critical:critical@localhost:5432/<database>?sslmode=disable`, also the default
+  `CRITICAL_DSN`; `CRITICAL_PG_PORT` moves the host port (the service listens on 127.0.0.1 only);
+- the data lives in the compose volume `critical-pg` of the checkout's compose project (a worktree
+  has its own); `just dev-reset` deletes it (`docker compose down --volumes`), and the next start
+  migrates, seeds and imports the catalogue again. Files in `.dev/` are never touched: the copy of a
+  SQLite `.dev/critical.db` into PostgreSQL is the copy tool's ([ADR 0025](adr/0025-postgresql-storage.md) step 9).
 
 ## DAL code generation
 
@@ -162,17 +186,17 @@ Every adapter has a `queries` package generated by sqlc (`emit_interface: true`)
 flowchart LR
     SQL["queries/*.sql (hand-written)"] -->|"sqlc (just generate)"| GEN["queries: Querier, Queries, params, rows"]
     GEN -->|"mockery (just mocks)"| MOCK["queries/mocks: MockQuerier"]
-    CR["composition root"] -->|"queries.New(sqlite.Routed(db))"| DAL["adapter: New(queries.Querier)"]
+    CR["composition root"] -->|"queries.New(postgres.Routed(pool))"| DAL["adapter: New(queries.Querier)"]
     GEN --> DAL
     MOCK -->|"adapter tests"| DAL
 ```
 
 - **Wiring.** The adapter's constructor takes its package's `queries.Querier`. The composition root
-  passes `queries.New(sqlite.Routed(db))`: `Routed` runs each statement on the transaction the
-  statement's context carries (`InTx`), else on the pool, the same routing as `sqlite.Conn`. The root
-  builds every adapter over that one routed connection (`sqliteStorage`, through `storageOn`); a
-  test builds `sqliteStorage` over an unopened DB and calls each storage port under a context whose
-  transaction (`sqlite.WithTx`) records being reached, so an adapter wired over the pool itself,
+  passes `queries.New(postgres.Routed(db.Pool()))`: `Routed` runs each statement on the transaction
+  the statement's context carries (`InTx`), else on the pool, the same routing as `postgres.Conn`. The
+  root builds every adapter over that one routed connection (`postgresStorage`, through `storageOn`);
+  a test builds `postgresStorage` over an unopened DB and calls each storage port under a context
+  whose transaction (`postgres.WithTx`) records being reached, so an adapter wired over the pool itself,
   which would escape the caller's transaction, fails it.
 - **Tests.** An adapter test builds the adapter on `mocks.NewMockQuerier(t)` and asserts which
   `Querier` methods are called, with which params, in which order where it matters (`mock.InOrder`),
@@ -183,16 +207,22 @@ flowchart LR
   the app (step 7), not by these tests; the rollback of a transaction is the engine's, and the
   services' tests check that a failure leaves the transaction body.
 - **Config.** `api/sqlc.yaml`: one `sql` entry per adapter (`queries:` and `out:` both its
-  `queries` directory, package `queries`), engine `sqlite` until the engine switch.
+  `queries` directory, package `queries`), engine `postgresql`, plus one for the storage's own
+  statements (`storage/postgres/queries`: the writer lock, the seeds, the catalogue import).
   `omit_unused_structs` keeps each package to the tables its queries use.
-- **Schema.** sqlc reads `api/tmp_schema.sql`, which `just generate` dumps (`sqlite3 .schema`) from a
-  temp database built by applying every migration, then deletes. sqlc's SQLite parser rejects some
-  data-copy statements of the old migrations, so it never reads the migration files directly. The
-  file is not a dotfile on purpose: sqlc skips hidden schema files.
+- **Schema.** sqlc reads the migration files (`api/internal/storage/postgres/migrations`) itself:
+  `just generate` needs no database server. `schema_migrations` is not in them (the guard reads it
+  before any migration ran), so its few statements are plain SQL in `storage/postgres/migrations.go`.
+- **Storage tests.** The seed and the catalogue import run on the storage's `queries.Querier`; their
+  tests (`storage/postgres`) drive the real code over `fakeStore`, an in-test implementation of
+  that `Querier` holding the tables and refusing what the schema refuses (duplicate keys, the
+  foreign keys to `characters`, the `CHECK`s of weapons and items, empty text bodies), with
+  all-or-nothing transactions. They assert the stored result of multi-step reconciles (the seed's
+  name languages, the import's keys and texts), not SQL.
 
 **Adding a query** to an adapter:
 1. Add it to the adapter's `queries/*.sql` with a sqlc header, `-- name: <GoName> :one|:many|:exec|:execrows`,
-   and `?` placeholders (sqlc names the params after their columns).
+   and `$1`, `$2`… placeholders (sqlc names the params after their columns).
 2. `just generate`, then `just mocks` (the `Querier` interface changed).
 3. Call it from the adapter through `d.q`, and test the call on the mock.
 
@@ -209,30 +239,32 @@ updated in that ADR (`just check-adr-tests`).
   `RETURNING` that column: no row is `sql.ErrNoRows`, mapped to not found.
 - A `:one` query with no row returns `sql.ErrNoRows`; the adapter maps it to its domain error (or to a
   default, as `dicedal` does for the first position).
-- Aggregates (`SUM`, `COUNT`) are named queries like the others; wrap one in `CAST(... AS INTEGER)`
-  so sqlc types it `int64`. A sum that applies a rule is not an aggregate: the query reads the rows
+- Aggregates (`SUM`, `COUNT`) are named queries like the others; `COUNT(*)` is `int64`, cast
+  anything else (`(... )::bigint`) so sqlc types it `int64`. A sum that applies a rule is not an aggregate: the query reads the rows
   and the domain sums them (the action log's HP total, `actionlog.HPTotal`, ADR 0007 step 2), so
   the rule has one tested implementation.
-- `sqlc.slice(name)` binds a list (`IN (sqlc.slice(ids))`); an empty list matches nothing, so an
-  optional list filter takes a flag too (`spelldal`'s `SearchSpells`: `any_level`). A parameter used
-  twice is named with `sqlc.arg(name)`.
-- A `DATETIME` column reads as `time.Time`; to write one in the column default's text layout, bind
-  a string: `CAST(sqlc.arg(created_at) AS TEXT)` (`buffdal`'s `InsertSavedBuffWithID`).
+- A list binds as an array: `= ANY(sqlc.arg(ids)::bigint[])` (sqlc wraps it in `pq.Array`); an
+  empty list matches nothing, so an optional list filter takes a flag too (`spelldal`'s
+  `SearchSpells`: `any_level`). A parameter used twice is named with `sqlc.arg(name)`.
+- A `LIMIT` parameter is typed `int32` unless named and cast: `LIMIT sqlc.arg('limit')::bigint`.
+- A `TIMESTAMPTZ` column reads and writes as `time.Time`, with microseconds and in the session's time
+  zone. The API's `createdAt` keeps its format, UTC in whole seconds (`2026-10-16T12:00:00Z`): the
+  adapter reading a `created_at` passes it through its `storedTime` (the in-memory store stamps the same).
 - sqlc may refuse an unqualified column in a query with a correlated subquery over another table
   ("column reference is ambiguous"): qualify it (`action_log.kind`).
 - Case-insensitive text matching is `lower(column) = ?` with the adapter lowering the parameter
-  (`spelldal`'s class filter), never `LIKE`: SQLite's `LIKE` ignores ASCII case and PostgreSQL's does
-  not, so the query would change meaning at the engine switch.
-- On the SQLite engine, `INTEGER` is `int64`, `REAL` `float64`, `TEXT` `string`; a 0/1 flag column
-  stays `int64` and the adapter converts it.
+  (`spelldal`'s class filter), never `LIKE`: PostgreSQL's `LIKE` is case-sensitive.
+- `BIGINT` is `int64`, `DOUBLE PRECISION` `float64`, `TEXT` `string`, a nullable column a `sql.Null*`;
+  a 0/1 flag column stays `int64` and the adapter converts it.
 - sqlc is a `tool` in `api/go.mod` (`go tool sqlc`); it builds with cgo (its PostgreSQL parser), so
-  `just generate` needs a C compiler, as well as the `sqlite3` CLI.
+  `just generate` needs a C compiler. The tool depends on a SQLite driver of its own; the server
+  binary does not link it.
 
 ### When to regenerate
 
 Regenerate whenever:
 - A migration is added or changed (new table/column)
-- A `.sql` query file under `api/internal/adapters/*/queries/` is added or changed
+- A `.sql` query file under `api/internal/adapters/*/queries/` or `api/internal/storage/postgres/queries/` is added or changed
 - The sqlc version in `api/go.mod` is bumped
 
 ### How to regenerate
@@ -241,11 +273,8 @@ Regenerate whenever:
 just generate
 ```
 
-This recipe (defined in `justfile`):
-1. Applies all migrations in `api/internal/storage/sqlite/migrations/` to a temp SQLite DB (`.tmp_schema.db`)
-2. Dumps its schema to `tmp_schema.sql` and runs `sqlc generate` (section above)
-3. Deletes the temp DB and schema dump
-4. Runs `go mod tidy`
+This recipe (defined in `justfile`) runs `sqlc generate` (it reads the migrations of
+`api/internal/storage/postgres/migrations/` and the query files, offline), then `go mod tidy`.
 
 ### Dependency bumps
 
@@ -342,12 +371,12 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
 - **Without access**: `api/testdata/catalogue.json` is a small fixture, format 3, with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
   table) and the PHB's real rule-table numbers (ADR 0021 step 9.7). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
-  own database `.dev/fixture.db`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
-  spells only the real artifact holds). `.dev/critical.db` is only ever opened with the real catalogue.
+  own database `critical_fixture`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
+  spells only the real artifact holds). The database `critical` is only ever opened with the real catalogue.
 - **Seed checks**: the spellbook and every `spell_effects.json` id are checked against the catalogue at
   startup; an id it does not hold refuses the start.
 - **Import** (`catalogueadpt` reads and validates against the embedded copy of
-  `schemas/catalogue.schema.json`, kept identical by a test; `sqlite.ImportCatalogue` imports): same
+  `schemas/catalogue.schema.json`, kept identical by a test; `postgres.ImportCatalogue` imports): same
   version as recorded in `catalogue_meta` → only the typed `stats` of rows whose stored English stat texts
   the current parser reads differently are rewritten (none when the parser is unchanged); otherwise one transaction keys old rows (first
   import on a database seeded before the catalogue: `spellsvc.Keys`, verified against the artifact),
@@ -397,8 +426,11 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   build and the local `docker compose` pass the real catalogue, and it never enters the public repo, a PR
   build or a shared cache (step 7). `just image` also smoke-checks the result.
 - **In the image**: `/app/critical-srv`, the web build in `/app/web`, the campaign `seeds/` in `/app/seeds`,
-  the catalogue at `/app/catalogue.json`, and the database at `/data/critical.db` (a volume). The `CRITICAL_*`
-  variables point at those paths; any of them can be overridden at `docker run`.
+  and the catalogue at `/app/catalogue.json`. The `CRITICAL_*` variables point at those paths; any of them
+  can be overridden at `docker run`. The image holds no data, has no volume and names no database: the
+  database is PostgreSQL at `CRITICAL_DSN`, given at run time (on fly a secret). `deploy/fly.*.toml` still
+  set the SQLite DSN and the `/data` volume until the fly PostgreSQL configuration replaces them
+  (`internal/flycheck` compares every other `[env]` value with the image's).
 - **`CRITICAL_WEB_DIR`** (optional): the web build to serve. Set, every path outside `/api` is the file of
   that path, or `index.html` when there is none (SPA fallback, so a deep link reloads into the app); files
   under `assets/` (content-hashed by Vite) are sent with `Cache-Control: public, max-age=31536000,
@@ -410,13 +442,15 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   `-ldflags -X …/internal/cmd/api.commit=$COMMIT`; any other build reports `unknown`. The release name is not
   in the image (ADR 0024, consequences): the GitHub Release maps a tag to its commit.
 - **Smoke check**: `scripts/image-smoke.sh <image> <commit>` runs the image on the fixture seeds (the fixture
-  catalogue knows only their spells) and checks health with the commit, `/` and a deep link returning
+  catalogue knows only their spells) and a throwaway PostgreSQL container of its own (`postgres:17-alpine` on a
+  private network, no volume; the image refuses the in-memory storage), so the boot migrates, seeds and imports
+  into an empty database. It checks health with the commit, `/` and a deep link returning
   `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. The CI `image` job builds
   the image with the fixture and runs it on every PR and on main; nothing is pushed.
 - **On fly.io**: configuration in `deploy/fly.*.toml`, operator commands in [deploy.md](deploy.md).
 - **Locally**: `docker compose up --build` builds the image with the real `.catalogue/` (fetch it with
-  `just catalogue` first) and serves the app on http://localhost:8888, the database in the `critical-data`
-  volume.
+  `just catalogue` first) and serves the app on http://localhost:8888, on the compose PostgreSQL (database
+  `critical`, the one `just dev` uses with the real catalogue).
 
 ## Rule tables
 
@@ -428,7 +462,7 @@ Thief/Bard column). They come from the catalogue artifact's `rule_tables`
 `seeds/rule_tables.json`, is retired, step 9.6.3). The fixture `api/testdata/catalogue.json` carries the
 same numbers.
 
-They are not loaded into SQLite: at every start (whatever catalogue version the database recorded) the
+They are not loaded into the database: at every start (whatever catalogue version the database recorded) the
 `ruletablesadpt` parser reads them (a gap or overlap in a table is a startup error naming the table) into
 `ruletablesvc.Tables`, which implements `ruletablesvc.Lookup`:
 `StrengthMods(str, exceptional) (hit, dmg)`, `DexMods(dex) (missile, ac)` and
@@ -470,17 +504,18 @@ or server.
 ## Seeding the character
 
 `seeds/character.json` (the campaign Bard) only loads into an empty `characters` table. To pick up
-an edited seed in the dev database: stop `just dev`, run `just dev-reset` (deletes `.dev/critical.db` and `.dev/fixture.db`),
-and start `just dev` again. This discards all dev state (HP ledger, buffs, action log).
+an edited seed in the dev database: stop `just dev`, run `just dev-reset` (deletes the compose
+databases `critical` and `critical_fixture`), and start `just dev` again. This discards all dev state (HP ledger, buffs, action log).
 
 ## Testing Conventions
 
 - Go tests never open a database: ports and sqlc `Querier`s are mocked, and tests assert the
   operations called and their arguments, never SQL text ([ADR 0025](adr/0025-postgresql-storage.md)
-  steps 6 and 7). Tests that still build a temporary SQLite database are being rewritten.
+  steps 6 and 7). The storage's own seed and import logic is tested over `fakeStore` ("DAL code
+  generation" above), its transactions and migration run on recording fakes of the connection.
 - The composition root is tested through `composition.Build` over a `composition.Storage` of mocks
   (`api/internal/composition/harness_test.go`); `composition.New` is the production path that opens
-  SQLite and builds the real adapters (or wires the in-memory storage, see above). Rule and flow tests belong in the service packages, on mocks of
+  PostgreSQL and builds the real adapters (or wires the in-memory storage, see above). Rule and flow tests belong in the service packages, on mocks of
   their DAL ports.
 - Use table-driven tests
 - Dice engine accepts a seeded `rand.Source` for deterministic tests

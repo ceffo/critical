@@ -99,7 +99,7 @@ Tests live under `api/internal/` unless their path starts with `web/`.
    powers work at 0 dispels left, and spending the dispel does not need STR 18 (user: "the dispel
    magic once a day is available regardless"). Removing the item removes its powers.
    Tests: `domain/service/itemsvc` `TestItemPowers_Step9_StrengthEffectsRefused`,
-   `TestItemPowers_Step9_CountDoesNotGateThePowers`; `storage/sqlite`
+   `TestItemPowers_Step9_CountDoesNotGateThePowers`; `storage/postgres`
    `TestSeed_Step9_RejectsAPowerWithAStrengthEffect`.
 10. **Trigger.** A power's trigger says when it is on. The one trigger kind is `min_str`: the power is
     on while the effective STR (ADR 0004 steps 7 to 9) is at least that value (1 to 25), the same
@@ -181,9 +181,8 @@ Tests live under `api/internal/` unless their path starts with `web/`.
     submission, the undead-destroying mace) and the hammer's stun are not modelled.
     The migration (032) also replaces the seed's old note ("handled by buffs") when it is still
     that one word for word.
-    Tests: `storage/sqlite` `TestMigrate_Step16_GivesTheGemItsPowersAndKeepsItsID` (powers set,
-    name renamed, a renamed gem keeps its name, a database without the row is untouched, the result
-    equals the seeded item, a rerun changes nothing), `TestSeed_Step16_PowerGemHasTheHammer`;
+    Tests: `storage/postgres` `TestSeed_Step16_PowerGemHasTheHammer` (SQLite migration 032 gave the
+    played gem its powers; a past migration, the per-migration test was deleted with the squash into the PostgreSQL baseline, [ADR 0025](0025-postgresql-storage.md) step 2.3);
     `buffsvc` `TestItemPowers_Step10_TriggerAtEffectiveStr`, `TestItemPowers_Step11_PowerJoinsTheAggregate`;
     `combatsvc` `TestItemPowers_Step12_HammerOnMeleeOnly` (the hammer's bonus and doubled dice on a
     melee weapon, nothing on a bow).

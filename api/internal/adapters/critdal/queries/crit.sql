@@ -7,4 +7,4 @@ DELETE FROM crit_table_rows;
 
 -- name: InsertCritRow :exec
 INSERT INTO crit_table_rows (roll_from, roll_to, multiplier)
-VALUES (?, ?, ?);
+VALUES ($1, $2, $3);

@@ -136,11 +136,7 @@ func (d *DAL) Details(ctx context.Context, ids []string) ([]spellsvc.Spell, erro
 	if len(ids) == 0 {
 		return []spellsvc.Spell{}, nil
 	}
-	keys := make([]sql.NullString, len(ids))
-	for i, id := range ids {
-		keys[i] = sql.NullString{String: id, Valid: true}
-	}
-	rows, err := d.q.SpellsByKey(ctx, keys)
+	rows, err := d.q.SpellsByKey(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("query spells: %w", err)
 	}
@@ -175,8 +171,8 @@ func (d *DAL) Describe(ctx context.Context, spellID string) (spellsvc.Spell, boo
 	return found[0], true, nil
 }
 
-// textBatch bounds the keys of one lookup, below SQLite's limit on bound
-// parameters.
+// textBatch bounds the keys of one lookup: they travel as one array
+// parameter, and a batch keeps that array and its result set moderate.
 const textBatch = 5000
 
 // textsByID are localized texts by key.

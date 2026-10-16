@@ -127,7 +127,7 @@ func toFormViewDTO(v *combatsvc.AttackFormView) AttackFormViewDTO {
 	if p := v.Preview; p != nil {
 		mods := make([]ModifierDTO, 0, len(p.Modifiers))
 		for _, m := range p.Modifiers {
-			mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, Value: m.Value})
+			mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
 		}
 		out.Preview = &AttackPreviewDTO{
 			BaseThac0: p.BaseThac0, Modifiers: mods, EffectiveThac0: p.EffectiveThac0,

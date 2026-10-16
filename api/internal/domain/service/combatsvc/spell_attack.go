@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // ToHitRoll is a to-hit roll with no weapon and no damage: a spell attack
@@ -30,7 +32,7 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 	if err != nil {
 		return nil, fmt.Errorf("get character: %w", err)
 	}
-	mods, err := s.buffs.Aggregate(ctx, characterID, char.Str)
+	mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponNone)
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}
@@ -52,7 +54,7 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 	add(Modifier{Kind: ModStrength, Detail: strconv.Itoa(str), Value: strHit})
 	add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: dexMissile})
 	for _, c := range mods.ToHitFrom {
-		add(Modifier{Kind: ModBuff, Detail: c.Buff, Value: c.Value})
+		add(Modifier{Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
 	}
 	res.EffectiveThac0 = res.BaseThac0 - sum
 	res.D20Roll = s.dice.RollD20()

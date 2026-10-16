@@ -66,20 +66,50 @@ func improvedActive(buffs []BuffEffect) bool {
 	return false
 }
 
-// aggregate is the pure effect-stacking core: given a list of buffs and the
-// character's base STR, return the combined modifier set. Buffs whose
-// requirements (MinStr, checked against the effective STR) aren't met are
-// skipped.
-func aggregate(buffs []BuffEffect, baseStr int) BuffModifiers {
+// aggregate is the pure effect-stacking core: given a list of buffs, the
+// carried items' powers and the character's base STR, return the combined
+// modifier set for a roll made with a weapon of kind (WeaponNone: a save or
+// a spell's to-hit). The effective STR comes from the buffs alone (a power
+// has no Strength effect, ADR 0016 step 9); buffs whose requirements
+// (MinStr) aren't met are skipped, so are powers whose trigger isn't (ADR
+// 0016 step 10). Buffs fold first, in list order, then the powers in item
+// and power order (step 11), so a weapon +N tie goes to the buff.
+func aggregate(buffs []BuffEffect, powers []ItemPower, baseStr int, kind WeaponKind) BuffModifiers {
 	str := effectiveStr(buffs, baseStr)
 	mods := BuffModifiers{SpellsBuff: 1.0, Multipliers: 1.0, EffectiveStr: str}
 	for _, b := range buffs {
 		if !meetsRequirements(b.Effects, str) {
 			continue
 		}
-		applyEffects(&mods, b.Name, b.Effects)
+		applyEffects(&mods, source{name: b.Name}, b.Effects, kind)
+	}
+	for _, p := range powers {
+		if !p.On(str) {
+			continue
+		}
+		applyEffects(&mods, source{name: p.ItemName, itemID: p.ItemID}, p.Effects, kind)
 	}
 	return mods
+}
+
+// powersOn is the powers whose trigger the effective STR of buffs meets
+// (ADR 0016 step 13: a power that is off is shown nowhere).
+func powersOn(buffs []BuffEffect, powers []ItemPower, baseStr int) []ItemPower {
+	str := effectiveStr(buffs, baseStr)
+	out := []ItemPower{}
+	for _, p := range powers {
+		if p.On(str) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// source names a contribution: a buff's name, or an item power's item (id
+// and stored name, ADR 0016 step 14).
+type source struct {
+	name   string
+	itemID string
 }
 
 // statuses marks each buff with whether its effects apply at baseStr. A
@@ -103,40 +133,46 @@ func meetsRequirements(e BuffEffects, str int) bool {
 	return true
 }
 
-// applyEffects folds one applying buff into m. Multipliers multiply, flat
-// bonuses add, and "weapon becomes +N" effects do not stack: the best wins.
-func applyEffects(m *BuffModifiers, name string, e BuffEffects) {
+// applyEffects folds one applying buff or power into m. Multipliers
+// multiply, flat bonuses add, and "weapon becomes +N" effects do not stack:
+// the best wins (the first on a tie). Effects with a weapon-kind condition
+// count only for a roll made with a weapon of that kind (ADR 0004 step 18).
+func applyEffects(m *BuffModifiers, src source, e BuffEffects, kind WeaponKind) {
+	if e.WeaponKind != WeaponNone && e.WeaponKind != kind {
+		return
+	}
 	if e.SpellsBuff != nil {
 		m.SpellsBuff *= *e.SpellsBuff
-		m.SpellsBuffFrom = append(m.SpellsBuffFrom, Factor{Buff: name, Value: *e.SpellsBuff})
+		m.SpellsBuffFrom = append(m.SpellsBuffFrom, Factor{Buff: src.name, ItemID: src.itemID, Value: *e.SpellsBuff})
 	}
 	if e.WeaponBuff != nil && *e.WeaponBuff > m.WeaponBuff {
 		m.WeaponBuff = *e.WeaponBuff
-		m.WeaponBuffFrom = name
+		m.WeaponBuffFrom = src.name
+		m.WeaponBuffItemID = src.itemID
 	}
 	if e.Multiplier != nil {
 		m.Multipliers *= *e.Multiplier
-		m.MultipliersFrom = append(m.MultipliersFrom, Factor{Buff: name, Value: *e.Multiplier})
+		m.MultipliersFrom = append(m.MultipliersFrom, Factor{Buff: src.name, ItemID: src.itemID, Value: *e.Multiplier})
 	}
 	if e.ToHit != nil && *e.ToHit != 0 {
 		m.ToHit += *e.ToHit
-		m.ToHitFrom = append(m.ToHitFrom, Contribution{Buff: name, Value: *e.ToHit})
+		m.ToHitFrom = append(m.ToHitFrom, Contribution{Buff: src.name, ItemID: src.itemID, Value: *e.ToHit})
 	}
 	if e.Damage != nil && *e.Damage != 0 {
 		m.Damage += *e.Damage
-		m.DamageFrom = append(m.DamageFrom, Contribution{Buff: name, Value: *e.Damage})
+		m.DamageFrom = append(m.DamageFrom, Contribution{Buff: src.name, ItemID: src.itemID, Value: *e.Damage})
 	}
 	if e.SaveBonus != nil && *e.SaveBonus != 0 {
 		m.SaveBonus += *e.SaveBonus
-		m.SaveBonusFrom = append(m.SaveBonusFrom, Contribution{Buff: name, Value: *e.SaveBonus})
+		m.SaveBonusFrom = append(m.SaveBonusFrom, Contribution{Buff: src.name, ItemID: src.itemID, Value: *e.SaveBonus})
 	}
 	if e.AC != nil {
 		m.AC += *e.AC
 	}
 }
 
-// validateBuff checks a new buff. Counters are never negative; STR effects
-// name a score in 1..25 and a bonus is positive.
+// validateBuff checks a new buff. Counters are never negative; its effects
+// pass ValidateEffects.
 func validateBuff(b BuffEffect) error {
 	if strings.TrimSpace(b.Name) == "" {
 		return fmt.Errorf("%w: name is required", domain.ErrInvalidInput)
@@ -144,7 +180,14 @@ func validateBuff(b BuffEffect) error {
 	if b.Duration < 0 || b.Charges < 0 {
 		return fmt.Errorf("%w: rounds and charges cannot be negative", domain.ErrInvalidInput)
 	}
-	e := b.Effects
+	return ValidateEffects(b.Effects)
+}
+
+// ValidateEffects checks an effect set, a buff's or an item power's (ADR
+// 0016 step 9): STR effects name a score in 1..25 and a bonus is positive, a
+// weapon +N is positive, a weapon-kind condition is melee or missile (ADR
+// 0004 step 18). ErrInvalidInput names the bad key.
+func ValidateEffects(e BuffEffects) error {
 	for _, s := range []struct {
 		name string
 		v    *int
@@ -158,6 +201,9 @@ func validateBuff(b BuffEffect) error {
 	}
 	if e.WeaponBuff != nil && *e.WeaponBuff < 1 {
 		return fmt.Errorf("%w: weapon_buff must be positive (the weapon becomes +N)", domain.ErrInvalidInput)
+	}
+	if !e.WeaponKind.Valid() {
+		return fmt.Errorf("%w: weapon_kind must be %q or %q", domain.ErrInvalidInput, WeaponMelee, WeaponMissile)
 	}
 	return nil
 }

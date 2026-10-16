@@ -53,6 +53,48 @@ type BuffEffects struct {
 	// Damage is added to damage rolls after the multipliers, like the
 	// Strength bonus.
 	Damage *int
+
+	// WeaponKind is a condition on the effects above, not an effect (ADR
+	// 0004 step 18): with one (melee or missile) they count only for an
+	// attack, or its preview, made with a weapon of that kind, never for a
+	// save or a spell's to-hit. Empty: every roll. The Strength effects
+	// (StrBonus, StrMax) and MinStr are not conditioned by it: they make the
+	// one effective STR of the character.
+	WeaponKind WeaponKind
+}
+
+// WeaponKind is the kind of weapon a roll is made with (ADR 0016 step 8),
+// the condition of ADR 0004 step 18. A hurled weapon is missile.
+type WeaponKind string
+
+// Weapon kinds as stored and sent on the wire. WeaponNone is a roll with no
+// weapon (a save, a spell's to-hit) or an effect without the condition.
+const (
+	WeaponNone    WeaponKind = ""
+	WeaponMelee   WeaponKind = "melee"
+	WeaponMissile WeaponKind = "missile"
+)
+
+// Valid reports whether k is a known kind or none.
+func (k WeaponKind) Valid() bool { return k == WeaponNone || k == WeaponMelee || k == WeaponMissile }
+
+// ItemPower is one power of a carried item as the aggregate reads it (ADR
+// 0016 steps 9 and 10): the item's id and stored name (the breakdowns'
+// fallback label), the power's id, its trigger (MinStr, nil: always on) and
+// its effects. It has no name of its own, no counters and is never on the
+// buff list.
+type ItemPower struct {
+	ItemID   string
+	ItemName string
+	PowerID  string
+	MinStr   *int
+	Effects  BuffEffects
+}
+
+// On reports whether the power's trigger is met at the effective STR (ADR
+// 0016 step 10): the same comparison as a buff's MinStr gate.
+func (p ItemPower) On(effectiveStr int) bool {
+	return p.MinStr == nil || effectiveStr >= *p.MinStr
 }
 
 // BuffEffect is a single active buff or debuff on a character.
@@ -132,22 +174,29 @@ type Strength struct {
 	Effective int
 }
 
-// Contribution is one applying buff's share of an additive effect, so a
-// roll breakdown can name every buff.
+// Contribution is one applying buff's, or item power's, share of an
+// additive effect, so a roll breakdown can name every source. Buff is the
+// buff's name, or the item's stored name for a power, whose ItemID is set
+// (ADR 0016 step 14); the client names a power from its item.
 type Contribution struct {
-	Buff  string
-	Value int
+	Buff   string
+	ItemID string
+	Value  int
 }
 
-// Factor is one applying buff's share of a multiplicative effect.
+// Factor is one applying buff's, or item power's, share of a multiplicative
+// effect (named as in Contribution).
 type Factor struct {
-	Buff  string
-	Value float64
+	Buff   string
+	ItemID string
+	Value  float64
 }
 
 // BuffModifiers is the aggregated effect set across all currently active buffs
-// (after requirement gating like MinStr). The *From fields name the buffs
-// behind each total, in buff order.
+// (after requirement gating like MinStr) and the carried items' powers that
+// are on (ADR 0016 step 11), for the weapon kind of one roll (ADR 0004 step
+// 18). The *From fields name the sources behind each total: the buffs in
+// list order, then the powers.
 type BuffModifiers struct {
 	SpellsBuff  float64
 	Multipliers float64
@@ -156,9 +205,11 @@ type BuffModifiers struct {
 	ToHit       int
 	Damage      int
 	// WeaponBuff is the best "weapon becomes +N" effect (0: none) and
-	// WeaponBuffFrom the buff that gives it.
-	WeaponBuff     int
-	WeaponBuffFrom string
+	// WeaponBuffFrom the buff that gives it, or the stored name of the item
+	// whose power gives it (WeaponBuffItemID set).
+	WeaponBuff       int
+	WeaponBuffFrom   string
+	WeaponBuffItemID string
 	// EffectiveStr is the STR score the gating used (base plus STR buffs).
 	EffectiveStr int
 

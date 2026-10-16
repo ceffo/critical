@@ -183,7 +183,14 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	buffSvc, err := buffsvc.New(buffDAL, tx, logSvc, charSvc, dice)
+	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: tx})
+	if err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	registerRestorers(logSvc, itemSvc.Restorers())
+	// The carried items' powers join the buffs' aggregate (ADR 0016 step 11).
+	buffSvc, err := buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, itemSvc)
 	if err != nil {
 		_ = db.Close()
 		return nil, err
@@ -199,12 +206,6 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 		_ = db.Close()
 		return nil, err
 	}
-	itemSvc, err := itemsvc.New(itemDAL, itemsvc.Deps{Dice: dice, Log: logSvc, Tx: tx})
-	if err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	registerRestorers(logSvc, itemSvc.Restorers())
 	prepSvc, err := prepsvc.New(prepsvc.Deps{
 		Slots: spellDAL, Spellbook: spellbook, Effects: effects, Limits: ruleTables, Items: itemSvc,
 		Characters: charSvc, Log: logSvc, Tx: tx,

@@ -40,6 +40,9 @@ type snapEffects struct {
 	AC         *int     `json:"ac,omitempty"`
 	ToHit      *int     `json:"to_hit,omitempty"`
 	Damage     *int     `json:"damage,omitempty"`
+	// WeaponKind is the weapon-kind condition (ADR 0004 step 18), absent
+	// from buffs stored before it existed and from buffs without one.
+	WeaponKind WeaponKind `json:"weapon_kind,omitempty"`
 }
 
 func encodeBuffs(buffs []BuffEffect) (json.RawMessage, error) {

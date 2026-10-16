@@ -64,10 +64,17 @@ type SVC interface {
 	// Unknown id: ErrNotFound. Voidable.
 	DeleteSaved(ctx context.Context, characterID, id int64) ([]SavedBuff, error)
 
+	// ListPowers is the carried items' powers that are on at the current
+	// effective STR (ADR 0016 step 13), in item and power order; a power that
+	// is off is not in it.
+	ListPowers(ctx context.Context, characterID int64) ([]ItemPower, error)
+
 	// Aggregate is consumed by combatsvc (see clean_architecture.md §4.5).
 	// str is the base STR from the sheet; STR buffs raise it before MinStr
-	// gating, and the result carries the effective STR used.
-	Aggregate(ctx context.Context, characterID int64, str int) (BuffModifiers, error)
+	// gating and power triggers, and the result carries the effective STR
+	// used. kind is the weapon kind of the roll it serves (WeaponNone for a
+	// save or a spell's to-hit, ADR 0004 step 18).
+	Aggregate(ctx context.Context, characterID int64, str int, kind WeaponKind) (BuffModifiers, error)
 	// GetEffectiveStr is the character's base STR and its STR with buffs.
 	GetEffectiveStr(ctx context.Context, characterID int64) (Strength, error)
 
@@ -116,6 +123,12 @@ type Dice interface {
 	RollDie(sides int) int
 }
 
+// Items supplies the carried items' powers (itemsvc), whatever their count
+// (ADR 0016 steps 9 and 11). Wired in the composition root.
+type Items interface {
+	ItemPowers(ctx context.Context) ([]ItemPower, error)
+}
+
 // Characters supplies the base STR from the sheet (charactersvc).
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
@@ -127,15 +140,16 @@ type service struct {
 	log   Log
 	chars Characters
 	dice  Dice
+	items Items
 }
 
 // New constructs the service.
-func New(dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice) (SVC, error) {
-	return NewWithConfig(DefaultConfig(), dal, tx, log, chars, dice)
+func New(dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items) (SVC, error) {
+	return NewWithConfig(DefaultConfig(), dal, tx, log, chars, dice, items)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Characters, dice Dice, items Items) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("buffsvc: nil config")
@@ -149,11 +163,13 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Char
 		return nil, fmt.Errorf("buffsvc: nil characters")
 	case dice == nil:
 		return nil, fmt.Errorf("buffsvc: nil dice")
+	case items == nil:
+		return nil, fmt.Errorf("buffsvc: nil items")
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("buffsvc: invalid config: %w", err)
 	}
-	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice}, nil
+	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice, items: items}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

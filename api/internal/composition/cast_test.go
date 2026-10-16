@@ -41,17 +41,12 @@ func bootMaxDice(t *testing.T) *composition.BackingServices {
 }
 
 // Strength received from a party wizard (rogue 1d6 = 6) takes STR 12 to 18:
-// the Power Gem's "weapon becomes +5" applies on the next attack. Voiding the
-// receive takes it away again.
+// the seeded Power Gem's thunder hammer ("weapon becomes +5", an item power)
+// applies on the next melee attack. Voiding the receive takes it away again.
 func TestReceivedStrengthActivatesThePowerGem(t *testing.T) {
 	bs := bootMaxDice(t)
 	ctx := context.Background()
 	id := bs.CharacterID
-	_, err := bs.Buffs.Activate(ctx, id, buffsvc.BuffEffect{
-		Name:    "Power Gem",
-		Effects: buffsvc.BuffEffects{MinStr: intPtr(18), WeaponBuff: intPtr(5), Multiplier: floatPtr(2)},
-	})
-	require.NoError(t, err)
 	attack := combatsvc.AttackRequest{WeaponID: "mace", TargetAC: new(5)}
 
 	before, err := bs.Combat.ResolveAttack(ctx, id, attack)

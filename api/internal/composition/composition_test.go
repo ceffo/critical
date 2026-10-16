@@ -70,7 +70,7 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 	require.NoError(t, err)
 	strID, stoneID := gem[0].ID, stone[2].ID
 
-	mods, err := bs.Buffs.Aggregate(ctx, id, 12)
+	mods, err := bs.Buffs.Aggregate(ctx, id, 12, buffsvc.WeaponNone)
 	require.NoError(t, err)
 	assert.Equal(t, 18, mods.EffectiveStr)
 	assert.Equal(t, 5, mods.WeaponBuff, "Power Gem applies at effective STR 18")
@@ -92,7 +92,7 @@ func TestBuffChangesAreLoggedAndVoidable(t *testing.T) {
 	str, err := bs.Buffs.GetEffectiveStr(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, buffsvc.Strength{Base: 12, Effective: 12}, str, "STR drops when Strength expires")
-	mods, err = bs.Buffs.Aggregate(ctx, id, 12)
+	mods, err = bs.Buffs.Aggregate(ctx, id, 12, buffsvc.WeaponNone)
 	require.NoError(t, err)
 	assert.Zero(t, mods.WeaponBuff, "Power Gem no longer applies")
 

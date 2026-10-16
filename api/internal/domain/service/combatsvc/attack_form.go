@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
@@ -283,7 +284,7 @@ func (s *service) preview(ctx context.Context, characterID int64, weapon Weapon,
 	if err != nil {
 		return nil, fmt.Errorf("get character: %w", err)
 	}
-	mods, err := s.buffs.Aggregate(ctx, characterID, char.Str)
+	mods, err := s.buffs.Aggregate(ctx, characterID, char.Str, buffsvc.WeaponKind(weapon.Kind))
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
 	}

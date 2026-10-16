@@ -27,6 +27,7 @@ type CharacterIDFunc func(r *http.Request) int64
 
 type buffSvc interface {
 	ListStatus(ctx context.Context, characterID int64) ([]buffsvc.BuffStatus, error)
+	ListPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error)
 	Activate(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) ([]buffsvc.BuffEffect, error)
 	Edit(ctx context.Context, characterID int64, buffID string, e buffsvc.BuffEdit) ([]buffsvc.BuffEffect, error)
 	Dismiss(ctx context.Context, characterID int64, buffID string) ([]buffsvc.BuffEffect, error)
@@ -65,13 +66,18 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Get("/api/stats/str", render.Handle(GetEffectiveStr(charID, svc)))
 }
 
-// renderList writes the active list with each buff's applies flag.
+// renderList writes the effects list: the active buffs with each one's
+// applies flag, and the item powers that are on.
 func renderList(w http.ResponseWriter, r *http.Request, charID CharacterIDFunc, svc buffSvc) error {
 	buffs, err := svc.ListStatus(r.Context(), charID(r))
 	if err != nil {
 		return err
 	}
-	render.OK(r.Context(), w, toStatusDTOs(buffs))
+	powers, err := svc.ListPowers(r.Context(), charID(r))
+	if err != nil {
+		return err
+	}
+	render.OK(r.Context(), w, BuffListDTO{Buffs: toStatusDTOs(buffs), Powers: toPowerDTOs(powers)})
 	return nil
 }
 
@@ -349,6 +355,35 @@ type BuffEffectsDTO struct {
 	AC         *int     `json:"ac,omitempty"`
 	ToHit      *int     `json:"to_hit,omitempty"`
 	Damage     *int     `json:"damage,omitempty"`
+	// WeaponKind is the weapon-kind condition of the other effects, melee or
+	// missile (ADR 0004 step 18); omitted: every roll.
+	WeaponKind buffsvc.WeaponKind `json:"weapon_kind,omitempty"`
+}
+
+// BuffListDTO is the effects list of GET /api/buffs, also answered by every
+// buff change: the active buffs, each with its applies flag, and in a list
+// of their own the carried items' powers that are on (ADR 0016 step 13),
+// never mixed into the buffs.
+type BuffListDTO struct {
+	Buffs  []BuffEffectDTO `json:"buffs"`
+	Powers []ItemPowerDTO  `json:"powers"`
+}
+
+// ItemPowerDTO is an item power that is on: its item's id (the client
+// names it from the item), its id within the item and its effects. No
+// counters, nothing to edit or dismiss.
+type ItemPowerDTO struct {
+	ItemID  string         `json:"itemId"`
+	PowerID string         `json:"powerId"`
+	Effects BuffEffectsDTO `json:"effects"`
+}
+
+func toPowerDTOs(ps []buffsvc.ItemPower) []ItemPowerDTO {
+	out := make([]ItemPowerDTO, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, ItemPowerDTO{ItemID: p.ItemID, PowerID: p.PowerID, Effects: BuffEffectsDTO(p.Effects)})
+	}
+	return out
 }
 
 // RoundAdvanceDTO mirrors the previous response shape from RoundHandler.Advance.

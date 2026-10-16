@@ -350,18 +350,23 @@ type RollResultDTO struct {
 }
 
 // ModifierDTO is one to-hit (or save) modifier. The UI labels it in the
-// player's language from Kind and Detail.
+// player's language from Kind and Detail; an item power's carries its item's
+// id (ADR 0016 step 14), which the UI names it from (Detail, the stored
+// name, is the fallback).
 type ModifierDTO struct {
 	Kind   string `json:"kind"`
 	Detail string `json:"detail,omitempty"`
+	ItemID string `json:"itemId,omitempty"`
 	Value  int    `json:"value"`
 }
 
-// DamageTermDTO is one contribution to the damage formula.
+// DamageTermDTO is one contribution to the damage formula (ItemID as on
+// ModifierDTO).
 type DamageTermDTO struct {
 	Term   string  `json:"term"`
 	Kind   string  `json:"kind"`
 	Detail string  `json:"detail,omitempty"`
+	ItemID string  `json:"itemId,omitempty"`
 	Value  float64 `json:"value"`
 }
 
@@ -379,11 +384,11 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 	}
 	mods := make([]ModifierDTO, 0, len(r.Modifiers))
 	for _, m := range r.Modifiers {
-		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, Value: m.Value})
+		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
 	}
 	terms := make([]DamageTermDTO, 0, len(r.DamageTerms))
 	for _, t := range r.DamageTerms {
-		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, Value: t.Value})
+		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value})
 	}
 	out := RollResultDTO{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,

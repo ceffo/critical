@@ -22,7 +22,7 @@ func TestItems_ListWireShape(t *testing.T) {
 	rec := do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"arrows_plus1","name":"Arrows +1","type":"arrow","behaviour":"stock","magicalBonus":1,
-		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":""}]`, rec.Body.String())
+		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":"","powers":[]}]`, rec.Body.String())
 }
 
 func TestItems_UseWireShape(t *testing.T) {
@@ -76,7 +76,7 @@ func TestItems_Restock(t *testing.T) {
 }
 
 const wandJSON = `{"id":"w","name":"Wand","type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
-	"maxCount":4,"effectDice":"","effectSave":"","notes":""}`
+	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[]}`
 
 var wandItem = itemsvc.Item{ID: "w", Name: "Wand", Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4}
 

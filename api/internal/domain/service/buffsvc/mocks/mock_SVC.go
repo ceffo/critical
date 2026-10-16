@@ -231,9 +231,9 @@ func (_c *MockSVC_AdvanceRound_Call) RunAndReturn(run func(context.Context, int6
 	return _c
 }
 
-// Aggregate provides a mock function with given fields: ctx, characterID, str
-func (_m *MockSVC) Aggregate(ctx context.Context, characterID int64, str int) (buffsvc.BuffModifiers, error) {
-	ret := _m.Called(ctx, characterID, str)
+// Aggregate provides a mock function with given fields: ctx, characterID, str, kind
+func (_m *MockSVC) Aggregate(ctx context.Context, characterID int64, str int, kind buffsvc.WeaponKind) (buffsvc.BuffModifiers, error) {
+	ret := _m.Called(ctx, characterID, str, kind)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Aggregate")
@@ -241,17 +241,17 @@ func (_m *MockSVC) Aggregate(ctx context.Context, characterID int64, str int) (b
 
 	var r0 buffsvc.BuffModifiers
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int) (buffsvc.BuffModifiers, error)); ok {
-		return rf(ctx, characterID, str)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)); ok {
+		return rf(ctx, characterID, str, kind)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, int) buffsvc.BuffModifiers); ok {
-		r0 = rf(ctx, characterID, str)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, buffsvc.WeaponKind) buffsvc.BuffModifiers); ok {
+		r0 = rf(ctx, characterID, str, kind)
 	} else {
 		r0 = ret.Get(0).(buffsvc.BuffModifiers)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, int) error); ok {
-		r1 = rf(ctx, characterID, str)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int, buffsvc.WeaponKind) error); ok {
+		r1 = rf(ctx, characterID, str, kind)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -268,13 +268,14 @@ type MockSVC_Aggregate_Call struct {
 //   - ctx context.Context
 //   - characterID int64
 //   - str int
-func (_e *MockSVC_Expecter) Aggregate(ctx interface{}, characterID interface{}, str interface{}) *MockSVC_Aggregate_Call {
-	return &MockSVC_Aggregate_Call{Call: _e.mock.On("Aggregate", ctx, characterID, str)}
+//   - kind buffsvc.WeaponKind
+func (_e *MockSVC_Expecter) Aggregate(ctx interface{}, characterID interface{}, str interface{}, kind interface{}) *MockSVC_Aggregate_Call {
+	return &MockSVC_Aggregate_Call{Call: _e.mock.On("Aggregate", ctx, characterID, str, kind)}
 }
 
-func (_c *MockSVC_Aggregate_Call) Run(run func(ctx context.Context, characterID int64, str int)) *MockSVC_Aggregate_Call {
+func (_c *MockSVC_Aggregate_Call) Run(run func(ctx context.Context, characterID int64, str int, kind buffsvc.WeaponKind)) *MockSVC_Aggregate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(int))
+		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(buffsvc.WeaponKind))
 	})
 	return _c
 }
@@ -284,7 +285,7 @@ func (_c *MockSVC_Aggregate_Call) Return(_a0 buffsvc.BuffModifiers, _a1 error) *
 	return _c
 }
 
-func (_c *MockSVC_Aggregate_Call) RunAndReturn(run func(context.Context, int64, int) (buffsvc.BuffModifiers, error)) *MockSVC_Aggregate_Call {
+func (_c *MockSVC_Aggregate_Call) RunAndReturn(run func(context.Context, int64, int, buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)) *MockSVC_Aggregate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -790,6 +791,65 @@ func (_c *MockSVC_ListActive_Call) Return(_a0 []buffsvc.BuffEffect, _a1 error) *
 }
 
 func (_c *MockSVC_ListActive_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, error)) *MockSVC_ListActive_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPowers provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) ListPowers(ctx context.Context, characterID int64) ([]buffsvc.ItemPower, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPowers")
+	}
+
+	var r0 []buffsvc.ItemPower
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.ItemPower, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.ItemPower); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.ItemPower)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ListPowers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPowers'
+type MockSVC_ListPowers_Call struct {
+	*mock.Call
+}
+
+// ListPowers is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) ListPowers(ctx interface{}, characterID interface{}) *MockSVC_ListPowers_Call {
+	return &MockSVC_ListPowers_Call{Call: _e.mock.On("ListPowers", ctx, characterID)}
+}
+
+func (_c *MockSVC_ListPowers_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_ListPowers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ListPowers_Call) Return(_a0 []buffsvc.ItemPower, _a1 error) *MockSVC_ListPowers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ListPowers_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.ItemPower, error)) *MockSVC_ListPowers_Call {
 	_c.Call.Return(run)
 	return _c
 }

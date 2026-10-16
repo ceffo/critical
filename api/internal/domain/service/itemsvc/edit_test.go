@@ -95,7 +95,7 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	assert.Equal(t, "items:arrows_3_3", got.Snapshots[0].Key)
 	assert.JSONEq(t, `[{"id":"arrows_3_3","count":0,"removed":true,"absent":true}]`, string(got.Snapshots[0].Before))
 	assert.JSONEq(t, `[{"id":"arrows_3_3","count":6,"replace":true,"item":{"position":8,"name":"Arrows +3","type":"arrow",
-		"behaviour":"stock","magicalBonus":3,"ammoKind":"arrow","maxCount":6,"effectDice":"","effectSave":"","notes":""}}]`, string(got.Snapshots[0].After))
+		"behaviour":"stock","magicalBonus":3,"ammoKind":"arrow","maxCount":6,"effectDice":"","effectSave":"","notes":"","powers":[]}}]`, string(got.Snapshots[0].After))
 	var p map[string]any
 	require.NoError(t, json.Unmarshal(got.Payload, &p))
 	assert.Equal(t, "Arrows +3", p["name"])
@@ -127,7 +127,7 @@ func TestUpdate_ChangesOneFieldAndLogsBeforeAfter(t *testing.T) {
 	assert.Empty(t, got.Summary, "the UI words the change from its payload")
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
 	assert.JSONEq(t, `[{"id":"wand_lightning","count":4,"replace":true,"item":{"position":4,"name":"Wand of lightning","type":"wand",
-		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`,
+		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`,
 		string(got.Snapshots[0].Before))
 	assert.Contains(t, string(got.Snapshots[0].After), `"count":3`)
 	assert.Contains(t, string(got.Payload), `"changes":[{"field":"count","before":"4","after":"3"}]`)
@@ -208,7 +208,8 @@ func TestDelete_RemovesAndLogsWholeItem(t *testing.T) {
 }
 
 // Restoring: an item added by hand is deleted, an edited one overwritten
-// whole, a deleted one inserted back whole.
+// whole, a deleted one inserted back whole. These snapshots predate powers
+// (no "powers" key): the item keeps the powers it has now.
 func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 	restore := func(dal *mocks.MockDAL, before json.RawMessage) error {
 		svc, _ := itemsvc.New(dal, deps(t).Deps)
@@ -223,11 +224,13 @@ func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}]`)
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
+		dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(wand4, nil).Once()
 		dal.EXPECT().Update(mock.Anything, wand4).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 	t.Run("delete", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
+		dal.EXPECT().Get(mock.Anything, "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
 		dal.EXPECT().Update(mock.Anything, wand4).Return(itemsvc.ErrItemNotFound).Once()
 		dal.EXPECT().Insert(mock.Anything, wand4).Return(nil).Once()
 		require.NoError(t, restore(dal, before))

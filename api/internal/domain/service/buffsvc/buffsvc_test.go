@@ -37,6 +37,7 @@ type fixture struct {
 	log   *mocks.MockLog
 	chars *mocks.MockCharacters
 	dice  *mocks.MockDice
+	items *mocks.MockItems
 	tx    *fakeTx
 	// entries recorded through the log mock, in order.
 	entries []actionlog.NewEntry
@@ -53,9 +54,10 @@ func newFixture(t *testing.T) *fixture {
 		log:   mocks.NewMockLog(t),
 		chars: mocks.NewMockCharacters(t),
 		dice:  mocks.NewMockDice(t),
+		items: mocks.NewMockItems(t),
 		tx:    &fakeTx{},
 	}
-	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars, f.dice)
+	svc, err := buffsvc.NewWithConfig(buffsvc.DefaultConfig(), f.dal, f.tx, f.log, f.chars, f.dice, f.items)
 	require.NoError(t, err)
 	f.svc = svc
 	return f
@@ -110,6 +112,11 @@ func (f *fixture) rollsInitiative(d10 int) {
 	f.savesInitiative()
 }
 
+// powers answers the items port's reads with the carried items' powers.
+func (f *fixture) powers(ps ...buffsvc.ItemPower) {
+	f.items.EXPECT().ItemPowers(mock.Anything).Return(ps, nil)
+}
+
 func (f *fixture) base(str int) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: str}, nil)
 }
@@ -137,15 +144,16 @@ func payload(t *testing.T, e actionlog.NewEntry) map[string]any {
 }
 
 func TestNew_NilDependencies(t *testing.T) {
-	dal, log, chars, dice := mocks.NewMockDAL(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t), mocks.NewMockDice(t)
+	dal, log, chars, dice, items := mocks.NewMockDAL(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t), mocks.NewMockDice(t), mocks.NewMockItems(t)
 	tx := &fakeTx{}
 	for name, build := range map[string]func() (buffsvc.SVC, error){
-		"config": func() (buffsvc.SVC, error) { return buffsvc.NewWithConfig(nil, dal, tx, log, chars, dice) },
-		"dal":    func() (buffsvc.SVC, error) { return buffsvc.New(nil, tx, log, chars, dice) },
-		"tx":     func() (buffsvc.SVC, error) { return buffsvc.New(dal, nil, log, chars, dice) },
-		"log":    func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, nil, chars, dice) },
-		"chars":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil, dice) },
-		"dice":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, nil) },
+		"config": func() (buffsvc.SVC, error) { return buffsvc.NewWithConfig(nil, dal, tx, log, chars, dice, items) },
+		"dal":    func() (buffsvc.SVC, error) { return buffsvc.New(nil, tx, log, chars, dice, items) },
+		"tx":     func() (buffsvc.SVC, error) { return buffsvc.New(dal, nil, log, chars, dice, items) },
+		"log":    func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, nil, chars, dice, items) },
+		"chars":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, nil, dice, items) },
+		"dice":   func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, nil, items) },
+		"items":  func() (buffsvc.SVC, error) { return buffsvc.New(dal, tx, log, chars, dice, nil) },
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := build()
@@ -688,8 +696,9 @@ func TestStrength_Step10_PowerGemFrom18Up(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil).Once()
+			f.powers()
 
-			got, err := f.svc.Aggregate(context.Background(), charID, tt.base)
+			got, err := f.svc.Aggregate(context.Background(), charID, tt.base, buffsvc.WeaponNone)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -817,8 +826,9 @@ func TestAggregate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tt.buffs, nil)
+			f.powers()
 
-			got, err := f.svc.Aggregate(context.Background(), charID, tt.str)
+			got, err := f.svc.Aggregate(context.Background(), charID, tt.str, buffsvc.WeaponNone)
 			require.NoError(t, err)
 			assert.InDelta(t, tt.want.SpellsBuff, got.SpellsBuff, 1e-9)
 			assert.InDelta(t, tt.want.Multipliers, got.Multipliers, 1e-9)
@@ -847,7 +857,7 @@ func TestAggregate_DALError(t *testing.T) {
 	boom := errors.New("boom")
 	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(nil, boom)
 
-	_, err := f.svc.Aggregate(context.Background(), charID, 10)
+	_, err := f.svc.Aggregate(context.Background(), charID, 10, buffsvc.WeaponNone)
 	assert.ErrorIs(t, err, boom)
 }
 

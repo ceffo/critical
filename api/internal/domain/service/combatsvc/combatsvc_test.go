@@ -148,7 +148,7 @@ func TestResolveSavingThrow(t *testing.T) {
 				mods.SaveBonus = tt.saveBonus
 				mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Prayer", Value: tt.saveBonus}}
 			}
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
 			f.records()
 
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, tt.category)
@@ -199,7 +199,7 @@ func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
 			mods := strMods(12)
 			mods.SaveBonus = tt.saveBonus
 			mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Luck", Value: tt.saveBonus}}
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(mods, nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(mods, nil)
 			f.records()
 
 			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
@@ -226,7 +226,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(bard())
 		f.dice.EXPECT().RollD20().Return(10)
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(buffsvc.BuffModifiers{}, boom)
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(buffsvc.BuffModifiers{}, boom)
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
 		assert.Nil(t, res)
@@ -244,7 +244,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(bard())
 		f.dice.EXPECT().RollD20().Return(10)
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)

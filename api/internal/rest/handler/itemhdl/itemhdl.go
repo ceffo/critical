@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/render"
+	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
 )
 
 // Router is the chi subset we need.
@@ -146,16 +147,31 @@ type ItemDTO struct {
 	EffectDice   string `json:"effectDice"`
 	EffectSave   string `json:"effectSave"`
 	Notes        string `json:"notes"`
+	// Powers are the item's own powers (ADR 0016 steps 9 to 16), read only:
+	// whether one is on is served with the effects list (GET /api/buffs).
+	Powers []PowerDTO `json:"powers"`
+}
+
+// PowerDTO is one of an item's powers: its id, its trigger (minStr, omitted:
+// always on) and its effects, in the buffs' effect keys.
+type PowerDTO struct {
+	ID      string                 `json:"id"`
+	MinStr  *int                   `json:"minStr,omitempty"`
+	Effects buffhdl.BuffEffectsDTO `json:"effects"`
 }
 
 // ToDTOs maps items to their wire shape.
 func ToDTOs(items []itemsvc.Item) []ItemDTO {
 	out := make([]ItemDTO, 0, len(items))
 	for _, i := range items {
+		powers := make([]PowerDTO, 0, len(i.Powers))
+		for _, p := range i.Powers {
+			powers = append(powers, PowerDTO{ID: p.ID, MinStr: p.MinStr, Effects: buffhdl.BuffEffectsDTO(p.Effects)})
+		}
 		out = append(out, ItemDTO{
 			ID: i.ID, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour),
 			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
-			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes,
+			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers,
 		})
 	}
 	return out
@@ -181,6 +197,10 @@ type ItemBody struct {
 	EffectDice   *string `json:"effectDice"`
 	EffectSave   *string `json:"effectSave"`
 	Notes        *string `json:"notes"`
+	// Powers is accepted and ignored (ADR 0016 step 15): powers come from
+	// the seed and data migrations only, so an item served back as is still
+	// decodes, but no body sets them.
+	Powers json.RawMessage `json:"powers"`
 }
 
 func decodeBody(r *http.Request) (ItemBody, error) {

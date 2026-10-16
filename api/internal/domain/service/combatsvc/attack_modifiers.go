@@ -63,15 +63,17 @@ func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, a
 		add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: missile})
 	}
 
-	// ADR 0002 step 6: weapon magic, the weapon's own +N, or a buff that
-	// makes it +N (Power Gem: "the weapon becomes +5") when that is better.
-	// They do not add up.
+	// ADR 0002 step 6: weapon magic, the weapon's own +N, or a buff or an
+	// item power that makes it +N (the Power Gem's thunder hammer: "the
+	// weapon becomes +5") when that is better. They do not add up. A +N with
+	// a weapon-kind condition is already left out of mods for another kind
+	// (ADR 0004 step 18, ADR 0016 step 12).
 	if m, ok := weaponMagic(weapon.Name, weapon.MagicToHit, mods); ok {
 		add(m)
 	}
 	if m, ok := weaponMagic(weapon.Name, weapon.MagicDamage, mods); ok {
 		out.weaponDmg = m.Value
-		out.weaponTerms = append(out.weaponTerms, DamageTerm{Term: TermWeapon, Kind: m.Kind, Detail: m.Detail, Value: float64(m.Value)})
+		out.weaponTerms = append(out.weaponTerms, DamageTerm{Term: TermWeapon, Kind: m.Kind, Detail: m.Detail, ItemID: m.ItemID, Value: float64(m.Value)})
 	}
 	// ADR 0002 step 7: magic ammunition adds to hit and damage, on top of
 	// the weapon's (DMG 2e, "Bow +1").
@@ -83,7 +85,7 @@ func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, a
 
 	// ADR 0002 step 8: one modifier per buff; step 9: the situational one.
 	for _, c := range mods.ToHitFrom {
-		add(Modifier{Kind: ModBuff, Detail: c.Buff, Value: c.Value})
+		add(Modifier{Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
 	}
 	if sit != nil && sit.Value != 0 {
 		add(Modifier{Kind: ModSituational, Detail: sit.Label, Value: sit.Value})

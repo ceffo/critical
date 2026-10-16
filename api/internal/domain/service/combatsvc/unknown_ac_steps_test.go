@@ -56,7 +56,7 @@ func TestUnknownAC_Step1_ResultNotSettled(t *testing.T) {
 		f := newFixture(t)
 		f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil).Once()
 		f.withChar(bard())
-		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil).Once()
+		f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
 		f.dice.EXPECT().RollD20().Return(15).Once()
 		f.d100s(t, 3, 64)
 		f.dice.EXPECT().RollDie(8).Return(5).Once()
@@ -246,7 +246,7 @@ func TestUnknownAC_Step6_SameDiceAsKnownAC(t *testing.T) {
 			require.NoError(t, err)
 			f.weapons.EXPECT().Get(mock.Anything, "bastard_sword").Return(bastardSword, nil).Once()
 			f.withChar(bard())
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil).Once()
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(strMods(12), nil).Once()
 			f.records()
 
 			res, err := svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "bastard_sword", TargetAC: c.ac})

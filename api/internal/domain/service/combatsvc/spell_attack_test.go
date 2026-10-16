@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
@@ -29,7 +30,7 @@ func TestRollSpellToHit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.withChar(bard()) // THAC0 13, STR 12 (no adjustment), DEX 17 (+2 missile)
-			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(strMods(12), nil)
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, buffsvc.WeaponNone).Return(strMods(12), nil)
 			f.dice.EXPECT().RollD20().Return(tt.d20).Once() // the only roll: no d100, no damage dice
 
 			res, err := f.svc.RollSpellToHit(context.Background(), charID, tt.ac)

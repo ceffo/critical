@@ -58,9 +58,11 @@ type Characters interface {
 }
 
 // Buffs is the narrow inter-service port. Aggregate takes the sheet's STR
-// and returns the buff totals with the effective STR.
+// and the weapon kind of the roll (none for a save or a spell's to-hit) and
+// returns the totals of the buffs and the item powers that are on, with the
+// effective STR.
 type Buffs interface {
-	Aggregate(ctx context.Context, characterID int64, str int) (buffsvc.BuffModifiers, error)
+	Aggregate(ctx context.Context, characterID int64, str int, kind buffsvc.WeaponKind) (buffsvc.BuffModifiers, error)
 }
 
 // Dice is the dice adapter port.

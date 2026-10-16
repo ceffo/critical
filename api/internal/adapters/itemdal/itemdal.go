@@ -28,14 +28,19 @@ func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
 
 type row = queries.ListItemsRow
 
-func toItem(r row) itemsvc.Item {
+func toItem(r row) (itemsvc.Item, error) {
+	powers, err := itemsvc.DecodePowers(r.Powers)
+	if err != nil {
+		return itemsvc.Item{}, fmt.Errorf("item %s: %w", r.ID, err)
+	}
 	return itemsvc.Item{
 		ID: r.ID, Position: int(r.Position), Name: r.Name, Type: r.Type,
 		Behaviour:  itemsvc.Behaviour(r.Behaviour),
 		MagicBonus: int(r.MagicBonus), AmmoKind: r.AmmoKind,
 		Count: int(r.Count), MaxCount: int(r.MaxCount),
 		EffectDice: r.EffectDice, EffectSave: r.EffectSave, Notes: r.Notes,
-	}
+		Powers: powers,
+	}, nil
 }
 
 // List returns every item in sheet order.
@@ -46,7 +51,11 @@ func (d *DAL) List(ctx context.Context) ([]itemsvc.Item, error) {
 	}
 	out := make([]itemsvc.Item, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, toItem(r))
+		it, err := toItem(r)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, it)
 	}
 	return out, nil
 }
@@ -61,7 +70,7 @@ func (d *DAL) Decrement(ctx context.Context, itemID string) (itemsvc.Item, error
 		return itemsvc.Item{}, fmt.Errorf("decrement item %s: %w", itemID, err)
 	}
 	if len(rows) == 1 {
-		return toItem(rows[0]), nil
+		return toItem(rows[0])
 	}
 	_, err = queries.GetItem(itemID).One(ctx, d.exec(ctx))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -83,7 +92,7 @@ func (d *DAL) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item
 	if len(rows) == 0 {
 		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
-	return toItem(rows[0]), nil
+	return toItem(rows[0])
 }
 
 // ResetDaily refills every daily item to its max count.
@@ -107,13 +116,18 @@ func (d *DAL) Delete(ctx context.Context, itemID string) error {
 	return nil
 }
 
-// Insert writes a whole item (a void restoring a removed item).
+// Insert writes a whole item (a void restoring a removed item), powers
+// included.
 func (d *DAL) Insert(ctx context.Context, it itemsvc.Item) error {
-	_, err := queries.InsertItem([]queries.InsertItem_Items{{
+	powers, err := itemsvc.EncodePowers(it.Powers)
+	if err != nil {
+		return err
+	}
+	_, err = queries.InsertItem([]queries.InsertItem_Items{{
 		ID: it.ID, Position: int64(it.Position), Name: it.Name, Type: it.Type,
 		Behaviour: string(it.Behaviour), MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind,
 		Count: int64(it.Count), MaxCount: int64(it.MaxCount),
-		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes,
+		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: powers,
 	}}).Exec(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("insert item %s: %w", it.ID, err)
@@ -143,15 +157,19 @@ func (d *DAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
 	if err != nil {
 		return itemsvc.Item{}, fmt.Errorf("get item %s: %w", itemID, err)
 	}
-	return toItem(r), nil
+	return toItem(r)
 }
 
-// Update overwrites every field of an existing item. ErrItemNotFound when
-// the id is unknown.
+// Update overwrites every field of an existing item, powers included.
+// ErrItemNotFound when the id is unknown.
 func (d *DAL) Update(ctx context.Context, it itemsvc.Item) error {
+	powers, err := itemsvc.EncodePowers(it.Powers)
+	if err != nil {
+		return err
+	}
 	ids, err := queries.UpdateItem(int64(it.Position), it.Name, it.Type, string(it.Behaviour),
 		int64(it.MagicBonus), it.AmmoKind, int64(it.Count), int64(it.MaxCount),
-		it.EffectDice, it.EffectSave, it.Notes, it.ID).All(ctx, d.exec(ctx))
+		it.EffectDice, it.EffectSave, it.Notes, powers, it.ID).All(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("update item %s: %w", it.ID, err)
 	}

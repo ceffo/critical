@@ -141,6 +141,10 @@ func TestSavedBuffs_PowerGemFormDoublesDiceThenCrit(t *testing.T) {
 	id := bs.CharacterID
 	_, err := bs.DB.ExecContext(ctx, `UPDATE characters SET str = 18 WHERE id = ?`, id)
 	require.NoError(t, err)
+	// Only the template's effects: the seeded gem's own hammer (an item power,
+	// on at STR 18) would double the dice once more.
+	_, err = bs.DB.ExecContext(ctx, `UPDATE items SET powers = '[]' WHERE id = 'power_gem_dispel'`)
+	require.NoError(t, err)
 	_, err = bs.Combat.SetCritTable(ctx, []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 1.5}})
 	require.NoError(t, err)
 

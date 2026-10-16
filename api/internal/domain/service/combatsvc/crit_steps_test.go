@@ -27,7 +27,7 @@ func stepAttack(t *testing.T, f *fixture, ac, d20, check, mult int, mods *buffsv
 	}
 	f.weapons.EXPECT().Get(mock.Anything, "longsword").Return(longsword, nil).Once()
 	f.withChar(bard())
-	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12).Return(m, nil).Once()
+	f.buffs.EXPECT().Aggregate(mock.Anything, charID, 12, mock.Anything).Return(m, nil).Once()
 	f.dice.EXPECT().RollD20().Return(d20).Once()
 	f.d100s(t, check, mult)
 	f.dice.EXPECT().RollDie(8).Return(5).Once()

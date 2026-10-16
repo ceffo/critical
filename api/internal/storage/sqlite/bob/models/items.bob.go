@@ -32,6 +32,7 @@ type Item struct {
 	EffectDice string `db:"effect_dice" `
 	EffectSave string `db:"effect_save" `
 	Notes      string `db:"notes" `
+	Powers     string `db:"powers" `
 }
 
 // ItemSlice is an alias for a slice of pointers to Item.
@@ -46,7 +47,7 @@ type ItemsQuery = *sqlite.ViewQuery[*Item, ItemSlice]
 
 func buildItemColumns(tableName string) itemColumns {
 	columnsExpr := expr.NewColumnsExpr(
-		"id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes",
+		"id", "position", "name", "type", "behaviour", "magic_bonus", "ammo_kind", "count", "max_count", "effect_dice", "effect_save", "notes", "powers",
 	)
 
 	if tableName != "" {
@@ -68,6 +69,7 @@ func buildItemColumns(tableName string) itemColumns {
 		EffectDice:  buildItemColumn(tableName, "effect_dice"),
 		EffectSave:  buildItemColumn(tableName, "effect_save"),
 		Notes:       buildItemColumn(tableName, "notes"),
+		Powers:      buildItemColumn(tableName, "powers"),
 	}
 }
 
@@ -86,6 +88,7 @@ type itemColumns struct {
 	EffectDice itemColumn
 	EffectSave itemColumn
 	Notes      itemColumn
+	Powers     itemColumn
 }
 
 // Alias returns the current table alias for the columns set.
@@ -143,10 +146,11 @@ type ItemSetter struct {
 	EffectDice omit.Val[string] `db:"effect_dice" `
 	EffectSave omit.Val[string] `db:"effect_save" `
 	Notes      omit.Val[string] `db:"notes" `
+	Powers     omit.Val[string] `db:"powers" `
 }
 
 func (s ItemSetter) SetColumns() []string {
-	vals := make([]string, 0, 12)
+	vals := make([]string, 0, 13)
 	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
@@ -182,6 +186,9 @@ func (s ItemSetter) SetColumns() []string {
 	}
 	if s.Notes.IsValue() {
 		vals = append(vals, "notes")
+	}
+	if s.Powers.IsValue() {
+		vals = append(vals, "powers")
 	}
 	return vals
 }
@@ -222,6 +229,9 @@ func (s ItemSetter) Overwrite(t *Item) {
 	}
 	if s.Notes.IsValue() {
 		t.Notes = s.Notes.MustGet()
+	}
+	if s.Powers.IsValue() {
+		t.Powers = s.Powers.MustGet()
 	}
 }
 
@@ -325,6 +335,13 @@ func (s *ItemSetter) Apply(q *dialect.InsertQuery) {
 				}
 				return sqlite.Arg(s.Notes.MustGet()).WriteSQL(ctx, w, d, start)
 			}))
+		case "powers":
+			vals = append(vals, bob.ExpressionFunc(func(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+				if s.Powers.IsUnset() {
+					return sqlite.Arg(nil).WriteSQL(ctx, w, d, start)
+				}
+				return sqlite.Arg(s.Powers.MustGet()).WriteSQL(ctx, w, d, start)
+			}))
 		}
 	}
 
@@ -336,7 +353,7 @@ func (s ItemSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 }
 
 func (s ItemSetter) Expressions(prefix ...string) []bob.Expression {
-	exprs := make([]bob.Expression, 0, 12)
+	exprs := make([]bob.Expression, 0, 13)
 
 	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
@@ -422,6 +439,13 @@ func (s ItemSetter) Expressions(prefix ...string) []bob.Expression {
 		}})
 	}
 
+	if s.Powers.IsValue() {
+		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
+			sqlite.Quote(append(prefix, "powers")...),
+			sqlite.Arg(s.Powers),
+		}})
+	}
+
 	return exprs
 }
 
@@ -432,7 +456,7 @@ func itemScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(a
 		idx int
 		dst func(o *Item) any
 	}
-	targets := make([]target, 0, 12)
+	targets := make([]target, 0, 13)
 	for i, col := range cols {
 		switch col {
 		case "id":
@@ -459,6 +483,8 @@ func itemScanMapper(ctx context.Context, cols []string) (scan.BeforeFunc, func(a
 			targets = append(targets, target{i, func(o *Item) any { return &o.EffectSave }})
 		case "notes":
 			targets = append(targets, target{i, func(o *Item) any { return &o.Notes }})
+		case "powers":
+			targets = append(targets, target{i, func(o *Item) any { return &o.Powers }})
 		}
 	}
 
@@ -717,6 +743,7 @@ type itemWhere[Q sqlite.Filterable] struct {
 	EffectDice sqlite.WhereMod[Q, string]
 	EffectSave sqlite.WhereMod[Q, string]
 	Notes      sqlite.WhereMod[Q, string]
+	Powers     sqlite.WhereMod[Q, string]
 }
 
 func (itemWhere[Q]) AliasedAs(alias string) itemWhere[Q] {
@@ -738,5 +765,6 @@ func buildItemWhere[Q sqlite.Filterable](cols itemColumns) itemWhere[Q] {
 		EffectDice: sqlite.Where[Q, string](cols.EffectDice.Expression),
 		EffectSave: sqlite.Where[Q, string](cols.EffectSave.Expression),
 		Notes:      sqlite.Where[Q, string](cols.Notes.Expression),
+		Powers:     sqlite.Where[Q, string](cols.Powers.Expression),
 	}
 }

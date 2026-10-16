@@ -91,9 +91,7 @@ unless named otherwise.
 
 ### An item's own powers (steps 9 to 16)
 
-Planned tests are named without their `Test` prefix until they exist: `just check-adr-tests`
-refuses a cited `Test…` name with no test behind it. The item that adds a test writes its full
-name here. Paths are under `api/internal/` unless they start with `web/`.
+Tests live under `api/internal/` unless their path starts with `web/`.
 
 9. **Powers are part of the item.** An item may carry a list of powers. A power has an id (a slug,
    unique within its item), an optional **trigger** and a set of **effects**. The effects are the
@@ -104,9 +102,9 @@ name here. Paths are under `api/internal/` unless they start with `web/`.
    (step 14) and lasts as long as the item is carried. Its count does not matter: the Power Gem's
    powers work at 0 dispels left, and spending the dispel does not need STR 18 (user: "the dispel
    magic once a day is available regardless"). Removing the item removes its powers.
-   Planned tests: `domain/service/itemsvc` `ItemPowers_Step9_StrengthEffectsRefused`,
-   `ItemPowers_Step9_CountDoesNotGateThePowers`; `storage/sqlite`
-   `Seed_Step9_RejectsAPowerWithAStrengthEffect`.
+   Tests: `domain/service/itemsvc` `TestItemPowers_Step9_StrengthEffectsRefused`,
+   `TestItemPowers_Step9_CountDoesNotGateThePowers`; `storage/sqlite`
+   `TestSeed_Step9_RejectsAPowerWithAStrengthEffect`.
 10. **Trigger.** A power's trigger says when it is on. The one trigger kind is `min_str`: the power is
     on while the effective STR (ADR 0004 steps 7 to 9) is at least that value (1 to 25), the same
     comparison as a buff's `min_str` gate (ADR 0004 step 10), 18 **or more** (user, 2026-10-13: "not
@@ -114,9 +112,9 @@ name here. Paths are under `api/internal/` unless they start with `web/`.
     exists for the roll, never what it adds. A power without a trigger is always on. Nothing is
     logged when a power switches on or off: it follows the STR, which follows the buffs, and those
     are logged (ADR 0004 step 13); voiding a Strength buff switches the power back by itself.
-    Planned tests: `domain/service/buffsvc` `ItemPowers_Step10_TriggerAtEffectiveStr` (STR 17
+    Tests: `domain/service/buffsvc` `TestItemPowers_Step10_TriggerAtEffectiveStr` (STR 17
     off; 18, 19 and 23 on; a power without a trigger always on), `composition`
-    `ItemPowers_Step10_StrengthBuffTurnsTheHammerOnAndVoidTurnsItOff`.
+    `TestItemPowers_Step10_StrengthBuffTurnsTheHammerOnAndVoidTurnsItOff`.
 11. **Powers join the buffs' aggregate.** The buffs' aggregate (ADR 0004 step 11), used by the
     attack, the attack preview, the save and the spell to-hit, reads the carried items' powers
     through an items port of `buffsvc` (wired in the composition root) and folds every power that is
@@ -125,26 +123,30 @@ name here. Paths are under `api/internal/` unless they start with `web/`.
     worked out from the buffs alone, then the triggers are read against it. Order: the buffs in
     list order, then the powers in item list order, then power order; on a `weapon_buff` tie the
     first one wins (a buff before a power).
-    Planned tests: `domain/service/buffsvc` `ItemPowers_Step11_PowerJoinsTheAggregate` (a power
+    Tests: `domain/service/buffsvc` `TestItemPowers_Step11_PowerJoinsTheAggregate` (a power
     and a buff `multiplier` multiply, `to_hit` adds, the best `weapon_buff` wins across both, a tie
-    goes to the buff), `ItemPowers_Step11_PowerOffContributesNothing`.
+    goes to the buff), `TestItemPowers_Step11_PowerOffContributesNothing`.
 12. **Melee only.** A power's effects may carry the `weapon_kind` condition of ADR 0004 step 18.
     The thunder hammer's is `melee`: its +5 and ×2 count for an attack (and its preview) with a
     melee weapon, not with a bow nor a hurled weapon (a hurled weapon is a missile weapon,
     [ADR 0002](0002-attack-resolution.md) steps 4 and 5), and never for a save or a spell's to-hit,
     which have no weapon. The power is still on (step 10) and still shown (step 13) while a bow is
     in hand; it just adds nothing to that roll.
-    Planned tests: `domain/service/combatsvc` `ItemPowers_Step12_HammerOnMeleeOnly` (long sword:
-    +5 and ×2; short bow and darts: the weapon's own magic, ×1), `ItemPowers_Step12_PreviewFollowsTheWeaponInHand`.
+    Tests: `domain/service/combatsvc` `TestItemPowers_Step12_HammerOnMeleeOnly` (long sword:
+    +5 and ×2; short bow and darts: the weapon's own magic, ×1), `TestItemPowers_Step12_PreviewFollowsTheWeaponInHand`.
 13. **Shown only while it is on.** A power whose trigger is not met appears nowhere: not on the
     effects timeline, not in any breakdown, not in the preview. While it is on, the effects list
     (`GET` of the active buffs) serves it in its own list next to the buffs, never mixed into them:
     the item's id, the power's id and its effects, no counters, nothing to edit, absorb or dismiss.
     The timeline shows it under the item's name. Hand-made buffs with a `min_str` keep ADR 0004
     step 10: on the list, shown as not applying ("needs STR N").
-    Planned tests: `domain/service/buffsvc` `ItemPowers_Step13_ListedOnlyWhileOn`; `rest/router`
-    `ItemPowers_Step13_PowersOnTheWire`; `web/src` a timeline test (the power appears at STR 18
-    under the item's name, is absent at 17, offers no dismiss).
+    The list answers every buff change too (`{buffs, powers}`), so a Strength buff added or
+    dismissed brings the power with it. The timeline shows how long it lasts from the item's
+    trigger ("while STR ≥ 18").
+    Tests: `domain/service/buffsvc` `TestItemPowers_Step13_ListedOnlyWhileOn`; `rest/router`
+    `TestItemPowers_Step13_PowersOnTheWire`; `web/src/lib/itemPowers.test.ts` "powerRows" (the
+    power at STR 18 under the item's name, none at 17, nothing to edit or dismiss); e2e
+    `buffs.spec` "a Strength buff reaching 18 turns the Power Gem's hammer on".
 14. **Named by its item.** Every contribution of a power in the aggregate, in the attack and save
     breakdowns (`Modifiers`, `DamageTerms`) and in the log entries that store them carries the
     item's id (`itemId`) next to the stored name of the item (the `Detail`, a fallback). The client
@@ -152,18 +154,22 @@ name here. Paths are under `api/internal/` unless they start with `web/`.
     item names, the player's language; a `Detail` with no `itemId`, or an id no item has any more
     (removed since), shows as stored. A log entry recorded before keeps its stored name; payloads are
     never rewritten. The backend sends no wording ([ADR 0023](0023-localized-text.md)).
-    Planned tests: `domain/service/combatsvc` `ItemPowers_Step14_BreakdownCarriesTheItemID` (the
-    `weapon_buff` modifier, the `weapon` and `dice_multiplier` damage terms); `web/src/lib`
-    a breakdown label test (named from the item by id, the stored name without one).
+    Tests: `domain/service/combatsvc` `TestItemPowers_Step14_BreakdownCarriesTheItemID` (the
+    `weapon_buff` modifier, the `weapon` and `dice_multiplier` damage terms, the log payload);
+    `web/src/lib/rollText.test.ts` "names an item power's term from the item, the stored name
+    otherwise".
 15. **Stored with the item, logged with it.** Powers are stored on the item row and are part of its
     `items:<id>` snapshot, so every item entry (use, restock, add, edit, remove) carries them and
     popping it restores them with the item (steps 2 and 4): a removed Power Gem popped back has its
     powers again. Powers come from the seed and from data migrations only: the item editor shows no
-    power field and sends none, an edit or create body's `powers` key is ignored like any unknown
-    key, and a created item has none.
-    Planned tests: `domain/service/itemsvc` `ItemPowers_Step15_SnapshotCarriesThePowers`,
-    `ItemPowers_Step15_EditBodyCannotSetPowers`; `composition`
-    `ItemPowers_Step15_RemoveGemAndPopBringsThePowersBack`.
+    power field and sends none, an edit or create body's `powers` key is accepted and ignored (an
+    item served back as is still decodes; any other unknown key stays refused), and a created item
+    has none. An item is served with its powers, read only. A snapshot recorded before powers
+    existed has no `powers` key: popping it leaves the item's stored powers as they are.
+    Tests: `domain/service/itemsvc` `TestItemPowers_Step15_SnapshotCarriesThePowers`,
+    `TestItemPowers_Step15_EditBodyCannotSetPowers`, `TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers`;
+    `rest/router` `TestItems_PowersInABodyAreIgnored`; `composition`
+    `TestItemPowers_Step15_RemoveGemAndPopBringsThePowersBack`.
 16. **The Power Gem.** One item, "Power Gem" (type `gem`, `daily`, 1 a day), with two powers: its
     daily Dispel Magic, which stays the item's daily use (steps 1 to 3: no STR condition, 1/day, the
     10 m radius in its note, as today; not an entry of its power list), and the **thunder hammer**,
@@ -177,11 +183,15 @@ name here. Paths are under `api/internal/` unless they start with `web/`.
     it), it sets the powers and renames "Power Gem: Dispel Magic" to "Power Gem" when the name is
     still that one exactly (a name the player changed is kept). The gem's other forms (the trident of
     submission, the undead-destroying mace) and the hammer's stun are not modelled.
-    Planned tests: `storage/sqlite` `Migrate_Step16_GivesTheGemItsPowersAndKeepsItsID` (powers set,
-    name renamed, a renamed gem keeps its name, a database without the row is untouched),
-    `Seed_Step16_PowerGemHasTheHammer`; `composition` `ItemPowers_Step16_HammerAt18WithTheLongSword`
-    (STR 17: the sword's own +2, ×1; STR 18 from Strength buffs: +5 to hit and damage and the dice
-    doubled, named by the gem; a dispel used leaves it on).
+    The migration (032) also replaces the seed's old note ("handled by buffs") when it is still
+    that one word for word.
+    Tests: `storage/sqlite` `TestMigrate_Step16_GivesTheGemItsPowersAndKeepsItsID` (powers set,
+    name renamed, a renamed gem keeps its name, a database without the row is untouched, the result
+    equals the seeded item, a rerun changes nothing), `TestSeed_Step16_PowerGemHasTheHammer`;
+    `composition` `TestItemPowers_Step16_HammerAt18WithTheLongSword` (STR 17: the sword's own +2,
+    ×1; STR 18 from Strength buffs: +5 to hit and damage and the dice doubled, named by the gem; a
+    dispel used, at 17, leaves it on; Enlarge and Improved Strength to 23; a Short Bow +2 gets
+    neither).
 
 ## Consequences
 

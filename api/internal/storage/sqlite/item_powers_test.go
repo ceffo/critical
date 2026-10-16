@@ -23,14 +23,16 @@ func migratedTo031(t *testing.T) *DB {
 	db, err := Open(filepath.Join(t.TempDir(), "t.db"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
-	applyUpTo(t, db, "001_init.sql", "002_ledgers.sql", "003_state.sql", "004_saves.sql", "005_spells.sql",
-		"006_state_unique.sql", "007_action_log.sql", "008_weapons_items.sql", "009_spell_stats.sql",
-		"010_crit_table.sql", "011_crit_decimal.sql", "012_correction_payload.sql", "013_saved_buffs.sql",
-		"014_correction_note.sql", "015_item_behaviour.sql", "016_initiative.sql", "017_attack_form.sql",
-		"018_xp_ledger.sql", "019_attack_form_unknown_ac.sql", "020_skills.sql", "021_character_details.sql",
-		"022_dice_favourites.sql", "023_correction_step.sql", "024_dice_favourites_position.sql",
-		"025_action_transaction.sql", "026_redo_correction.sql", "027_spell_catalogue.sql", "028_buff_spell_id.sql",
-		"029_spell_stats_fr.sql", "030_drop_spell_stats_fr.sql", "031_localized_texts.sql")
+	entries, err := migrationFiles.ReadDir("migrations")
+	require.NoError(t, err)
+	var before []string
+	for _, e := range entries {
+		if e.Name() < "032" {
+			before = append(before, e.Name())
+		}
+	}
+	require.Len(t, before, 31)
+	applyUpTo(t, db, before...)
 	return db
 }
 

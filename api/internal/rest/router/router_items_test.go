@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
@@ -108,6 +109,37 @@ func TestItems_UpdatePatchesOnlyTheFieldsSent(t *testing.T) {
 	rec := do(h, "PATCH", "/api/items/w", `{"count":3}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"item":`+wandJSON+`,"logEntryId":13}`, rec.Body.String())
+}
+
+// ADR 0016 step 15: an edit or create body's powers key is accepted and
+// ignored (an item served back as is still decodes, any other unknown key
+// stays refused); the patch and the input carry no powers. An item is
+// served with its powers, read only.
+func TestItems_PowersInABodyAreIgnored(t *testing.T) {
+	h, m := newRouter(t)
+	three := 3
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Count: &three}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil)
+	rec := do(h, "PATCH", "/api/items/w", `{"count":3,"powers":[{"id":"x","effects":{"weapon_buff":9}}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	m.items.EXPECT().Create(mock.Anything, int64(1), itemsvc.ItemInput{Name: "Gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 14}, nil)
+	rec = do(h, "POST", "/api/items", `{"name":"Gem","behaviour":"daily","count":1,"maxCount":1,"powers":[{"id":"x"}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	m.items.EXPECT().List(mock.Anything).Return([]itemsvc.Item{{
+		ID: "power_gem_dispel", Name: "Power Gem", Type: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1,
+		Powers: []itemsvc.Power{{ID: "thunder_hammer", MinStr: new(18), Effects: buffsvc.BuffEffects{
+			WeaponBuff: new(5), Multiplier: new(2.0), WeaponKind: buffsvc.WeaponMelee,
+		}}},
+	}}, nil)
+	rec = do(h, "GET", "/api/items", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":"Power Gem","type":"gem","behaviour":"daily","magicalBonus":0,
+		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
+		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}]}]`,
+		rec.Body.String())
 }
 
 func TestItems_Delete(t *testing.T) {

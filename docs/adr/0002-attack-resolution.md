@@ -47,9 +47,9 @@ return a distinct value for each call and expect an exact number of calls.
    (ADR 0016 step 14).
    Tests: `TestResolveAttack_OwnWeaponMagicBeatsLowerWeaponBuff`, `TestResolveAttack_PowerGem`
    ("active at effective STR 18": the gem's +5 replaces the sword's +2), and in `buffsvc`
-   `TestAggregate` ("… weapon +N: best wins"). Planned (named without their `Test` prefix until
-   they exist): `ItemPowers_Step12_HammerOnMeleeOnly`, `ItemPowers_Step14_BreakdownCarriesTheItemID`
-   (`combatsvc`), `ItemPowers_Step11_PowerJoinsTheAggregate` (`buffsvc`).
+   `TestAggregate` ("… weapon +N: best wins"), `TestItemPowers_Step12_HammerOnMeleeOnly`,
+   `TestItemPowers_Step14_BreakdownCarriesTheItemID` (`combatsvc`),
+   `TestItemPowers_Step11_PowerJoinsTheAggregate` (`buffsvc`).
 7. **Ammunition magic.** A magic arrow's bonus is added to hit and to damage, on top of step 6
    (DMG "Bow +1": with magic arrows, total the bonuses of bow and arrow).
    Tests: `TestResolveAttack` ("short bow +2 with a +3 arrow at DEX 17 hits on 4"),
@@ -94,8 +94,8 @@ return a distinct value for each call and expect an exact number of calls.
   a melee weapon only ([ADR 0016](0016-inventory.md) steps 10, 12 and 16). A hand-made buff with
   the same effects and a `min_str` gate still works as before ([ADR 0004](0004-buffs.md) step 10).
   Tests: `buffsvc` `TestStrength_Step10_PowerGemFrom18Up` (the gate: STR 17 off; 18, 19, 23 on),
-  `TestResolveAttack_PowerGem` ("ignored at effective STR 17"); planned: `buffsvc`
-  `ItemPowers_Step10_TriggerAtEffectiveStr`.
+  `TestResolveAttack_PowerGem` ("ignored at effective STR 17"), `buffsvc`
+  `TestItemPowers_Step10_TriggerAtEffectiveStr`.
 - A tie between the weapon's own magic and a buff "+N" shows the buff in the breakdown; the value
   is the same.
 - Exceptional Strength (18/xx) is not used: Kelsen is a Bard (warriors only, PHB).

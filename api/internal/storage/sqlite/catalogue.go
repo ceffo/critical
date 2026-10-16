@@ -400,7 +400,7 @@ func recordedCatalogue(ctx context.Context, q Querier) (string, error) {
 	}
 	if keyed > 0 {
 		return "an earlier spell catalogue, which holds the spells listed, whose version is not recorded " +
-			"(migration 030 forgot it)", nil
+			"(an upgrade of the database cleared it)", nil
 	}
 	return "the spell seeds that predate the catalogue artifact (the real catalogue's spells)", nil
 }

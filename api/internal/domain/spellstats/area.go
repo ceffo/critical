@@ -25,6 +25,10 @@ type AreaOfEffect struct {
 	Kind string `json:"kind"` // area | targets | self | touch | alternatives | special
 	// Shape is radius, cube, square, cone, sphere, ... ("" when only extents).
 	Shape string `json:"shape,omitempty"`
+	// Figure is the solid or figure a radius or diameter measures
+	// ("10-ft. radius sphere": Shape radius, Figure sphere); "" when the text
+	// names none.
+	Figure string `json:"figure,omitempty"`
 	// Dims are the extents: one for a radius/cube, several for "10 x 60 ft.".
 	Dims []Quantity `json:"dims,omitempty"`
 	// Targets is the creature/object count; Noun is what is counted.
@@ -227,10 +231,24 @@ func parseAreaReading(raw string) AreaOfEffect {
 	case a.Targets != nil:
 		a.Kind = AreaTargets
 	}
+	if a.Kind == AreaArea && (a.Shape == "radius" || a.Shape == "diameter") {
+		a.Figure = figureOf(s, a.Shape)
+	}
 	if a.Kind != KindSpecial {
 		a.Partial = !a.covers(s)
 	}
 	return a
+}
+
+// figureOf is the first shape word of s other than shape and the square
+// ("sq.", "square" are also units): what a radius or diameter measures.
+func figureOf(s, shape string) string {
+	for _, m := range shapeRe.FindAllStringSubmatch(s, -1) {
+		if w := strings.ToLower(m[1]); w != "" && w != shape && w != "square" {
+			return w
+		}
+	}
+	return ""
 }
 
 var (
@@ -239,8 +257,10 @@ var (
 	leadCountRe  = regexp.MustCompile(`\b(one|two)\b`)
 	articleOneRe = regexp.MustCompile(`^one\s+(\d)`)
 	stepWordRe   = regexp.MustCompile(`/\s*(one|two|three|four|five|six|seven|eight|nine|ten)\s+level`)
-	// coverWords are the words an area's typed form accounts for: the
-	// length units, the "sq"/"cu" prefixes, the shapes and the connectors.
+	// coverWords are the words any area's typed form accounts for: the
+	// length units, the "sq"/"cu" prefixes (and "square", a unit as much as
+	// a shape) and the connectors. Another shape word is covered only by
+	// the reading's Shape or Figure.
 	coverWords = func() map[string]bool {
 		out := map[string]bool{}
 		for w, u := range unitAliases {
@@ -249,9 +269,7 @@ var (
 			}
 		}
 		for _, w := range []string{
-			"sq", "square", "cu", "cubic", "radius", "diameter", "cone", "cube", "sphere",
-			"globe", "cloud", "column", "spray", "hemisphere", "volume", "wall", "circle", "x", "in", "a", "an",
-			"level", "levels", "lvl", "lvls", "area",
+			"sq", "square", "cu", "cubic", "x", "in", "a", "an", "level", "levels", "lvl", "lvls", "area",
 		} {
 			out[w] = true
 		}
@@ -286,7 +304,7 @@ func (a AreaOfEffect) covers(s string) bool {
 	for _, d := range a.Dims {
 		addQ(d)
 	}
-	words := map[string]bool{}
+	words := map[string]bool{a.Shape: a.Shape != "", a.Figure: a.Figure != ""}
 	if a.Targets != nil {
 		addQ(*a.Targets)
 		for _, w := range coverTokRe.FindAllString(strings.ToLower(a.Noun), -1) {

@@ -614,7 +614,9 @@
       "demihuman_one": "demi-humain",
       "demihuman_other": "demi-humains",
       "mammal_one": "mammifère",
-      "mammal_other": "mammifères"
+      "mammal_other": "mammifères",
+      "small_object_one": "petit objet",
+      "small_object_other": "petits objets"
     },
     "shapes": {
       "radius": "rayon",
@@ -649,6 +651,7 @@
       "max": "{{value}}, max. {{max}}",
       "specialDetail": "{{special}} ({{detail}})",
       "shaped": "{{shape}} de {{dims}}",
+      "shapedFigure": "{{figure}} de {{dims}} de {{shape}}",
       "or": " ou ",
       "range": {
         "self": "0",

@@ -562,6 +562,7 @@ func TestImportCatalogue_RefusalWithoutARecordedVersionNamesAnEarlierCatalogue(t
 	assert.Contains(t, err.Error(), "magic_missile (action_log 1)")
 	assert.Contains(t, err.Error(), "This database was built from an earlier spell catalogue, which holds the spells listed, "+
 		"whose version is not recorded")
+	assert.NotContains(t, err.Error(), "migration")
 	assert.NotContains(t, err.Error(), "predate")
 }
 

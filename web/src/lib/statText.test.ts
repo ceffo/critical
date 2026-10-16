@@ -543,6 +543,42 @@ describe("areaText", () => {
     ).toBeNull();
   });
 
+  it("words the figure a radius or diameter measures", () => {
+    const sphere = a("area", "10-ft. radius sphere", {
+      shape: "radius",
+      figure: "sphere",
+      dims: [qty(10, "foot")],
+    });
+    expect(areaText(fr, sphere)).toBe("sphère de 3 m de rayon");
+    expect(areaText(en, sphere)).toBe("10 ft radius sphere");
+    expect(
+      areaText(
+        fr,
+        a("alternatives", "", {
+          alternatives: [
+            sphere,
+            a("area", "", {
+              shape: "radius",
+              figure: "hemisphere",
+              dims: [qty(15, "foot")],
+            }),
+          ],
+        }),
+      ),
+    ).toBe("sphère de 3 m de rayon ou hémisphère de 4,5 m de rayon");
+    // Several extents with a figure ("5 ft. radius x 30 ft. column"): the book's text.
+    expect(
+      areaText(
+        fr,
+        a("area", "", {
+          shape: "radius",
+          figure: "column",
+          dims: [qty(5, "foot"), qty(30, "foot")],
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it("words a choice between readings, each in turn", () => {
     const alts = (...alternatives: SpellStats["area"][]) =>
       a("alternatives", "", { alternatives });

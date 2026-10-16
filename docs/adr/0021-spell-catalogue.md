@@ -319,7 +319,8 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   current parser reads differently, in one transaction, and writes nothing when the parser is
   unchanged (`TestImportCatalogue_Step6_AStartReTypesStatsAParserChangeMadeStale`,
   `TestImportCatalogue_Step3_SameVersionWritesNothing`, on the real catalogue
-  `TestRealCatalogue_ARestartReTypesStaleStats`). Re-parsing on every start was chosen over a parser
+  `TestRealCatalogue_ARestartReTypesStaleStats`, which counts the rows written with a trigger: all
+  of them after the stats were made stale, none on the next start). Re-parsing on every start was chosen over a parser
   version recorded in `catalogue_meta`: a version has to be bumped by hand and a forgotten bump is the
   silent staleness this replaces; the `catalogue_meta` contract is unchanged, and a whole start on the
   real catalogue stays around 0.1 s. The step 5.4.3 refusal names the catalogue the database was built
@@ -341,7 +342,11 @@ Where the importer had to settle a detail the decision above leaves open, or rea
   reading, alternatives have no value at a caster level, since the book does not say which one the
   caster picks (`TestAreaOfEffect_Alternatives`, `statText.test.ts` "words a choice between
   readings"). "Up to" bounds the extent or count it precedes (`Quantity.UpTo`), "circle" is a shape,
-  and extents read per-level steps ("/2 levels", "/lvl", "/two levels"). Over the real catalogue
+  and extents read per-level steps ("/2 levels", "/lvl", "/two levels"). A radius or diameter carries
+  the figure it measures (`AreaOfEffect.Figure`: "10-ft. radius sphere" is "sphère de 3 m de rayon",
+  never just a radius), and a shape word a reading carries neither as its shape nor as its figure
+  makes it partial (`TestAreaOfEffect_RadiusCarriesItsFigure`); with several extents a figure is not
+  worded (the book's text). Over the real catalogue
   `TestRealCatalogue_AreaReadingsAndPerLevelDurations` pins the alternatives and partial readings.
 - **The wording** is `web/src/lib/statText.ts` (unit tests for every unit, noun, shape and
   condition key, the conversion and each fallback in `statText.test.ts`); the lookup's grid and meta

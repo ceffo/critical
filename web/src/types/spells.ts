@@ -33,6 +33,8 @@ export interface SpellArea {
   raw: string;
   kind: "area" | "targets" | "self" | "touch" | "alternatives" | "special";
   shape?: string;
+  /** What a radius or diameter measures ("sphere" in "10-ft. radius sphere"). */
+  figure?: string;
   dims?: SpellQuantity[];
   targets?: SpellQuantity;
   noun?: string;

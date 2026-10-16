@@ -347,6 +347,8 @@ func TestAreaOfEffect_PartialWhenTheTextSaysMore(t *testing.T) {
 		partial bool
 	}{
 		{"20-ft. radius", false},
+		{"20-ft. radius sphere", false}, // the figure is read
+		{"20-ft. cube sphere", true},    // a second shape it does not carry
 		{"10 x 60 ft.", false},
 		{"40-ft. cube, 1 creature/level", false},
 		{"2-8 creatures in a 10-ft. cube", false},
@@ -447,6 +449,10 @@ func TestAreaOfEffect_Alternatives(t *testing.T) {
 			{Raw: "10-ft. cube", Kind: "area", Shape: "cube", Dims: []spellstats.Quantity{foot(10)}},
 			{Raw: "one item", Kind: "targets", Targets: one, Noun: "item"},
 		}},
+		{"10-ft. radius sphere or 15-ft. radius hemisphere", []spellstats.AreaOfEffect{
+			{Raw: "10-ft. radius sphere", Kind: "area", Shape: "radius", Figure: "sphere", Dims: []spellstats.Quantity{foot(10)}},
+			{Raw: "15-ft. radius hemisphere", Kind: "area", Shape: "radius", Figure: "hemisphere", Dims: []spellstats.Quantity{foot(15)}},
+		}},
 		{"20 or 40 ft. radius", []spellstats.AreaOfEffect{
 			{Raw: "20 ft. radius", Kind: "area", Shape: "radius", Dims: []spellstats.Quantity{foot(20)}},
 			{Raw: "40 ft. radius", Kind: "area", Shape: "radius", Dims: []spellstats.Quantity{foot(40)}},
@@ -464,5 +470,26 @@ func TestAreaOfEffect_Alternatives(t *testing.T) {
 		"Two or more creatures", "1 dead human or demihuman",
 	} {
 		assert.NotEqual(t, "alternatives", spellstats.ParseArea(raw).Kind, raw)
+	}
+}
+
+// A radius or diameter carries the figure it measures, so a reading never
+// drops it ("10-ft. radius sphere" is not "10-ft. radius hemisphere").
+func TestAreaOfEffect_RadiusCarriesItsFigure(t *testing.T) {
+	tests := []struct{ raw, shape, figure string }{
+		{"20-foot-radius circle", "radius", "circle"},
+		{"15-ft.-diameter sphere", "diameter", "sphere"},
+		{"20-ft.-radius globe", "radius", "globe"},
+		{"20-ft. radius", "radius", ""},
+		{"10-ft. cube", "cube", ""},
+		{"10-foot circle", "circle", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.raw, func(t *testing.T) {
+			a := spellstats.ParseArea(tt.raw)
+			assert.Equal(t, tt.shape, a.Shape)
+			assert.Equal(t, tt.figure, a.Figure)
+			assert.False(t, a.Partial)
+		})
 	}
 }

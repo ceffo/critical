@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buffName,
   englishSpellName,
-  otherSpellName,
+  spellName,
   spellId,
   spellNamer,
   spellTexts,
@@ -76,18 +76,19 @@ describe("spellTexts", () => {
   });
 });
 
-describe("otherSpellName", () => {
+describe("spellName", () => {
   const mm = { name: "Magic Missile", name_fr: "Projectile magique" };
 
-  it("gives the French name in the English UI and the English one in the French UI", () => {
-    expect(otherSpellName("en", mm)).toBe("Projectile magique");
-    expect(otherSpellName("fr", mm)).toBe("Magic Missile");
+  it("gives the name in the UI language only", () => {
+    expect(spellName("en", mm)).toBe("Magic Missile");
+    expect(spellName("fr", mm)).toBe("Projectile magique");
+    expect(spellName("fr-CA", mm)).toBe("Projectile magique");
   });
 
-  it("is null when there is no other name or it is the same", () => {
-    expect(otherSpellName("en", { name: "Armor" })).toBeNull();
-    expect(otherSpellName("fr", { name: "Armor" })).toBeNull();
-    expect(otherSpellName("fr", { name: "ESP", name_fr: "ESP" })).toBeNull();
+  it("falls back to English when the catalogue has no French name", () => {
+    expect(spellName("fr", { name: "Armor" })).toBe("Armor");
+    expect(spellName("fr", { name: "Armor", name_fr: "" })).toBe("Armor");
+    expect(spellName("en", { name: "Armor" })).toBe("Armor");
   });
 });
 

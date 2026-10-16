@@ -67,6 +67,17 @@ const named = [
     area_of_effect: "The caster",
     saving_throw: "None",
   }),
+  row(
+    "Comprehensively Unreasonably Long Spell Name Of The Ancient Archmages",
+    "Wizard",
+    9,
+    "Divination",
+    "",
+    {
+      nameFr:
+        "Nom de sortilège invraisemblablement long des anciens archimages",
+    },
+  ),
   row("Quixotic Oddity", "Wizard", 3, "Divination", "", {
     range: "Sight line",
     duration: "Instantaneous",
@@ -140,9 +151,10 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await searchFr.fill("orbe chrom");
   const first = rows(page).first();
   await expect(first).toHaveAttribute("data-id", "chromatic_orb");
-  await expect(first).toContainText("Orbe chromatique · Chromatic Orb");
+  await expect(first).toContainText("Orbe chromatique");
+  await expect(first).not.toContainText("Chromatic Orb");
   await expect(detail(page).getByRole("heading")).toHaveText(
-    "Orbe chromatique · Chromatic Orb",
+    "Orbe chromatique",
   );
   const text = detail(page).getByTestId("spell-description-text");
   await expect(text).toContainText("Texte de test pour Orbe chromatique");
@@ -200,6 +212,66 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await expect(stat("range")).toContainText("Contact");
   await snap(page, "french-english-fallback");
 });
+
+const LONG =
+  "Comprehensively Unreasonably Long Spell Name Of The Ancient Archmages";
+const LONG_FR =
+  "Nom de sortilège invraisemblablement long des anciens archimages";
+
+for (const size of [
+  { width: 1440, height: 900 },
+  { width: 1707, height: 1300 },
+]) {
+  test(`lookup: a long spell name is shown whole, in the UI language only, at ${size.width}x${size.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    await openLookup(page);
+    await classButton(page, "All").click();
+    await search(page).fill("unreasonably");
+    await expect(rows(page)).toHaveCount(1);
+    await expect(detail(page).getByRole("heading")).toHaveText(LONG);
+
+    // Every visible name (list rows and detail title) is whole: not wider than its box, full text.
+    const whole = async (expected: string, lang: string) => {
+      const els = page.getByTestId("spell-name");
+      await expect(els.first()).toBeVisible();
+      for (const el of await els.all()) {
+        const [scroll, client] = await el.evaluate((e) => [
+          e.scrollWidth,
+          e.clientWidth,
+        ]);
+        expect(scroll).toBeLessThanOrEqual(client);
+        await expect(el).toHaveText(expected);
+        // A word is only ever broken by hyphenation at a syllable, never chopped: the name is
+        // hyphenated in its own language, and with hyphenation off and no emergency break every
+        // word still fits the box (so break-words is never what splits one).
+        await expect(el).toHaveAttribute("lang", lang);
+        await expect(el).toHaveCSS("hyphens", "auto");
+        const overflows = await el.evaluate((e) => {
+          const box = e as HTMLElement;
+          const [h, w] = [box.style.hyphens, box.style.overflowWrap];
+          box.style.hyphens = "manual";
+          box.style.overflowWrap = "normal";
+          const over = box.scrollWidth > box.clientWidth;
+          box.style.hyphens = h;
+          box.style.overflowWrap = w;
+          return over;
+        });
+        expect(overflows).toBe(false);
+      }
+      await expect(page.getByTestId("spell-other-name")).toHaveCount(0);
+    };
+    await whole(LONG, "en");
+    await snap(page, `long-name-en-${size.width}`);
+
+    await chooseLanguage(page, "fr");
+    await expect(detail(page).getByRole("heading")).toHaveText(LONG_FR);
+    await snap(page, `long-name-fr-${size.width}`);
+    await whole(LONG_FR, "fr");
+    await snap(page, `long-name-fr-${size.width}`);
+  });
+}
 
 test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and All work; class chip only on All", async ({
   page,

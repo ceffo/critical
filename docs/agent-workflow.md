@@ -183,7 +183,9 @@ Reviewer checklist, in priority order:
    **e2e budget**: a new or extended Playwright spec is one happy path per flow, justified in the
    report; rules, edge cases and API-only checks are in Go/unit tests, not e2e (suite < 5 min on CI).
 9. **Hard rules for implementers** above, incl. no tracker ids in code, no per-entity special
-   cases, no presentation text built in Go. Each violation is at least medium; design is not style.
+   cases, and no presentation text in the backend: the API carries structured data only; display
+   text is never built, stored or served by the backend (stored book text in a language is still
+   presentation text). Challenge the item's or brief's own design against these rules. Each violation is at least medium; design is not style.
 
 Severity examples: critical = wrong game math in a main flow, ledger/state corruption, broken
 migration on existing data; high = game logic in the frontend; medium = architecture-layer

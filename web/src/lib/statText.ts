@@ -73,9 +73,20 @@ export function formatNumber(
   ).format(n);
 }
 
-/** Factor and unit a value in `unit` is shown in: converted to metric where the language is. */
-function shownUnit(loc: StatLocale, unit: string): [number, string] {
-  return (loc.metric && METRIC[unit]) || [1, unit];
+/**
+ * Factor and unit a value in `unit` is shown in: converted to metric where the language is. The
+ * French books do not round the converted number ("75 feet" is "22,5 mètres", "260 feet" "78
+ * mètres"), but write a length under a metre in centimetres ("1 foot" is "30 cm", never "0,3 m";
+ * ADR 0021 step 8). `largest` is the largest number shown in that unit (a range's upper bound).
+ */
+export function shownUnit(
+  loc: StatLocale,
+  unit: string,
+  largest: number,
+): [number, string] {
+  const [f, shown] = (loc.metric && METRIC[unit]) || [1, unit];
+  if (shown === "m" && largest > 0 && largest * f < 1) return [f * 100, "cm"];
+  return [f, shown];
 }
 
 /**
@@ -119,7 +130,9 @@ export function formatValue(
   v: SpellValue,
   noun?: string,
 ): string {
-  const [f, unit] = v.dice ? [1, v.unit ?? ""] : shownUnit(loc, v.unit ?? "");
+  const [f, unit] = v.dice
+    ? [1, v.unit ?? ""]
+    : shownUnit(loc, v.unit ?? "", Math.max(v.amount, v.upper ?? 0));
   const parts: string[] = [];
   if (v.amount !== 0 || !v.dice) {
     const a = formatNumber(loc, v.amount * f, unit);
@@ -147,7 +160,9 @@ function termText(
 ): string | null {
   if (term.per) return null; // "/recipient": a divisor the language has no word for
   const unit = term.unit ?? "";
-  const [f, shown] = term.dice ? [1, unit] : shownUnit(loc, unit);
+  const [f, shown] = term.dice
+    ? [1, unit]
+    : shownUnit(loc, unit, Math.max(term.count, term.upper ?? 0));
   const n = (x: number) => formatNumber(loc, x * f, shown);
   let value: string;
   if (term.dice)
@@ -181,7 +196,7 @@ export function quantityText(
   let text = terms.join(" + ");
   if (q.up_to) text = loc.t("lookup.stat.upTo", { value: text });
   if (q.max) {
-    const [f, shown] = shownUnit(loc, q.max_unit ?? "");
+    const [f, shown] = shownUnit(loc, q.max_unit ?? "", q.max);
     const word = shown ? unitText(loc, shown, q.max * f) : null;
     if (shown && !word) return null;
     const max = withUnit(loc, formatNumber(loc, q.max * f, shown), word);

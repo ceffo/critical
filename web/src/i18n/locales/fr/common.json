@@ -757,6 +757,7 @@
     "diceRow": "Dés au niveau du lanceur",
     "toDice": "Aux dés",
     "rollDice": "Lancer",
+    "noDice": "Aucun dé à lancer",
     "exposure": "Exposition",
     "exposureMode": "Exposition ({{mode}})"
   },

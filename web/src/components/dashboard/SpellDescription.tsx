@@ -5,18 +5,32 @@ import { parseSpellText } from "@/lib/spellMarkdown";
  * A spell description in the catalogue's subset (ADR 0021): paragraphs, bullet lists and pipe
  * tables, rendered as React text only (no HTML). Table cells wrap; a table still too wide for the
  * block (many columns) scrolls sideways inside its own box.
+ *
+ * `columns`: the text flows in two columns when the block is wide enough for two of at least
+ * 16rem, 24 px apart (the lookup's description, ADR 0022 steps 2.5 and 3.2); a block never
+ * splits across them and a table spans both, so it keeps the whole width.
  */
 export function SpellDescription({
   text,
   className,
   testId,
+  columns = false,
 }: {
   text: string;
   className?: string;
   testId?: string;
+  columns?: boolean;
 }) {
   return (
-    <div className={cn("flex flex-col gap-2", className)} data-testid={testId}>
+    <div
+      className={cn(
+        columns
+          ? "gap-x-6 [columns:2_16rem] *:mb-2 *:break-inside-avoid"
+          : "flex flex-col gap-2",
+        className,
+      )}
+      data-testid={testId}
+    >
       {parseSpellText(text).map((b, i) => {
         switch (b.kind) {
           case "paragraph":
@@ -37,7 +51,10 @@ export function SpellDescription({
             return (
               <div
                 key={i}
-                className="max-w-full overflow-x-auto rounded-md border border-border"
+                className={cn(
+                  "max-w-full overflow-x-auto rounded-md border border-border",
+                  columns && "[column-span:all]",
+                )}
                 data-testid="spell-table"
               >
                 <table className="w-full border-collapse text-left">

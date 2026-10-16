@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"sort"
 	"strings"
@@ -13,10 +15,16 @@ import (
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
-// Migrate runs every embedded migration in lexical order. It is idempotent only
-// to the extent the SQL is — see CREATE TABLE IF NOT EXISTS in the migration
-// files. ALTER TABLE statements (004) will fail on second run; that is the same
-// behavior as the previous implementation.
+// ErrUnknownMigrations is returned by Migrate when the database records a
+// migration this binary does not embed: the schema is newer than the code.
+var ErrUnknownMigrations = errors.New("database records migrations this binary does not embed")
+
+// Migrate runs every embedded migration in lexical order and records each one
+// in schema_migrations, so a recorded migration is never run again.
+//
+// Before applying anything it refuses a database that records a migration the
+// binary does not embed (ADR 0024 step 6.2): an older binary does not undo a
+// newer schema, so it must not run on one. Nothing is applied in that case.
 func (d *DB) Migrate(ctx context.Context) error {
 	entries, err := migrationFiles.ReadDir("migrations")
 	if err != nil {
@@ -28,6 +36,9 @@ func (d *DB) Migrate(ctx context.Context) error {
 	// statements (which are not idempotent) can be skipped on subsequent boots.
 	if _, err := d.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at DATETIME NOT NULL DEFAULT (datetime('now')))`); err != nil {
 		return fmt.Errorf("create schema_migrations: %w", err)
+	}
+	if err := d.refuseUnknownMigrations(ctx, entries); err != nil {
+		return err
 	}
 
 	for _, e := range entries {
@@ -49,6 +60,39 @@ func (d *DB) Migrate(ctx context.Context) error {
 		if err := d.applyMigration(ctx, name, string(content)); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// refuseUnknownMigrations fails with ErrUnknownMigrations, naming every
+// recorded migration missing from embedded, in lexical order (ADR 0024 step 6.2).
+func (d *DB) refuseUnknownMigrations(ctx context.Context, embedded []fs.DirEntry) error {
+	known := make(map[string]bool, len(embedded))
+	for _, e := range embedded {
+		known[e.Name()] = true
+	}
+	rows, err := d.QueryContext(ctx, "SELECT name FROM schema_migrations ORDER BY name")
+	if err != nil {
+		return fmt.Errorf("list applied migrations: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var unknown []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return fmt.Errorf("list applied migrations: %w", err)
+		}
+		if !known[name] {
+			unknown = append(unknown, name)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("list applied migrations: %w", err)
+	}
+	if len(unknown) > 0 {
+		return fmt.Errorf("%w: %s; run a build that embeds them, or restore the database from the "+
+			"snapshot taken before they were applied (docs/adr/0024-deployment.md steps 6.1 and 9.3)",
+			ErrUnknownMigrations, strings.Join(unknown, ", "))
 	}
 	return nil
 }

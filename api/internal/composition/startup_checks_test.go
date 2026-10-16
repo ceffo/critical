@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
 // A spell effect whose id the catalogue does not hold refuses the startup,
@@ -40,4 +41,26 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 	assert.ErrorContains(t, err, "spell effects: ids not in the spell catalogue: ")
 	assert.ErrorContains(t, err, "no_such_spell")
 	assert.ErrorContains(t, err, "magic_rocket")
+}
+
+// ADR 0024 step 6.2: the server does not start on a database that records a
+// migration its binary does not embed, so a rollback across a migration without
+// the snapshot restore fails its smoke check instead of running.
+func TestStartup_Step6_2_RefusesADatabaseWithAnUnknownMigration(t *testing.T) {
+	ctx := context.Background()
+	dsn := filepath.Join(t.TempDir(), "critical.db")
+	cfg := composition.Config{
+		DSN:       dsn,
+		SeedsDir:  filepath.Join("..", "..", "testdata", "seeds"),
+		Catalogue: filepath.Join("..", "..", "testdata", "catalogue.json"),
+	}
+	svc, err := composition.New(ctx, cfg)
+	require.NoError(t, err)
+	_, err = svc.DB.ExecContext(ctx, `INSERT INTO schema_migrations (name) VALUES ('999_from_a_newer_build.sql')`)
+	require.NoError(t, err)
+	require.NoError(t, svc.Close(ctx))
+
+	_, err = composition.New(ctx, cfg)
+	require.ErrorIs(t, err, sqlite.ErrUnknownMigrations)
+	assert.ErrorContains(t, err, "999_from_a_newer_build.sql")
 }

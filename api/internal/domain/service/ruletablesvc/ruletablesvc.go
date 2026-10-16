@@ -2,9 +2,11 @@
 // engine looks values up in: Table 1 (Strength), Table 2 (Dexterity) and
 // Table 32 (Bard spell progression) and Table 25 (the Thief/Bard experience
 // levels), plus the validation that makes a table
-// usable (contiguous, no overlap). The seed adapter builds a Tables from
-// seeds/rule_tables.json; consumers (attack resolution, spell preparation)
-// depend on Lookup only.
+// usable (contiguous, no overlap). The ruletablesadpt adapter builds a Tables
+// from the catalogue artifact's rule_tables (format 3) or, with a format-1
+// artifact, from seeds/rule_tables.json (ADR 0021 step 9.6.1); consumers
+// (attack resolution, spell preparation, the XP ledger) depend on Lookup and
+// BardXPThreshold only.
 package ruletablesvc
 
 import (

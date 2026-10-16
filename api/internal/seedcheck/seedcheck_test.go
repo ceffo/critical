@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
+	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/composition"
@@ -78,6 +79,49 @@ func TestRepoSeeds_BootTheWholeStack(t *testing.T) {
 	weapons, err := bs.Combat.ListWeapons(ctx)
 	require.NoError(t, err)
 	assert.NotEmpty(t, weapons)
+}
+
+// ADR 0021 step 9.6.2: the real artifact in format 3 (as the builder will
+// publish it: the same spells plus the seeds' rule tables, without the
+// seed's _source comment) parses, carries the same tables as the seed, and
+// boots the whole stack on the real seeds without their rule_tables.json.
+// A real artifact already in format 3 is checked as it is.
+func TestRealCatalogue_Step9_6_2_TheRealArtifactInFormat3BootsWithoutTheSeedTables(t *testing.T) {
+	realCatalogue(t)
+	raw, err := os.ReadFile(catalogueFile)
+	require.NoError(t, err)
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(raw, &doc))
+	if doc["format"] == float64(catalogue.FormatSpells) {
+		var tables map[string]any
+		readJSON(t, ruletablesadpt.FileName, &tables)
+		delete(tables, "_source")
+		doc["format"] = catalogue.FormatRuleTables
+		doc["rule_tables"] = tables
+	}
+	raw, err = json.Marshal(doc)
+	require.NoError(t, err)
+	file := filepath.Join(t.TempDir(), "catalogue.json")
+	require.NoError(t, os.WriteFile(file, raw, 0o600))
+
+	artifact, err := catalogueadpt.LoadArtifact(file)
+	require.NoError(t, err)
+	require.Equal(t, catalogue.FormatRuleTables, artifact.Catalogue.Format)
+	fromArtifact, err := ruletablesadpt.Parse(artifact.RuleTables)
+	require.NoError(t, err)
+	fromSeed, err := ruletablesadpt.New(seedsDir)
+	require.NoError(t, err)
+	assert.Equal(t, fromSeed, fromArtifact, "the artifact's tables are the seed's")
+
+	seeds := t.TempDir()
+	require.NoError(t, os.CopyFS(seeds, os.DirFS(seedsDir)))
+	require.NoError(t, os.Remove(filepath.Join(seeds, ruletablesadpt.FileName)))
+	ctx := context.Background()
+	bs, err := composition.New(ctx, composition.Config{
+		DSN: filepath.Join(t.TempDir(), "critical.db"), SeedsDir: seeds, Catalogue: file,
+	})
+	require.NoError(t, err, "format 3 starts without the seeds' rule tables")
+	require.NoError(t, bs.Close(ctx))
 }
 
 func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {

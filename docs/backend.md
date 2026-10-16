@@ -266,9 +266,11 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   the repo root (the nearest directory above the working directory with a `.git` entry; outside a checkout,
   against the working directory). A missing file stops the API with a message naming the path and
   `just catalogue`.
-- **Without access**: `api/testdata/catalogue.json` is a small fixture in the same format with invented text
+- **Formats**: the API reads format 1 (spells) and format 3 (spells and the PHB rule tables, ADR 0021
+  step 9); any other is refused, naming it. See "Rule tables" below.
+- **Without access**: `api/testdata/catalogue.json` is a small fixture, format 3, with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
-  table). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
+  table) and the PHB's real rule-table numbers (ADR 0021 step 9.7). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
   own database `.dev/fixture.db`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
   spells only the real artifact holds). `.dev/critical.db` is only ever opened with the real catalogue.
 - **Seed checks**: the spellbook and every `spell_effects.json` id are checked against the catalogue at
@@ -345,25 +347,25 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   `just catalogue` first) and serves the app on http://localhost:8888, the database in the `critical-data`
   volume.
 
-## Rule-table seeds
+## Rule tables
 
-`seeds/rule_tables.json` holds the AD&D 2e Player's Handbook lookup tables: Table 1 (Strength: hit and
-damage adjustments, including 18/01-18/00), Table 2 (Dexterity: reaction, missile attack and defensive
-adjustments), Table 32 (Bard spells per day by level 1-20) and Table 25 (`bard_experience`: the XP
-that reaches each level 1-20, Thief/Bard column). It is not loaded into SQLite: the
-`ruletablesadpt` adapter parses it at startup (a gap or overlap in a table is a startup error) into
+The AD&D 2e Player's Handbook lookup tables: Table 1 (Strength: hit and damage adjustments, including
+18/01-18/00), Table 2 (Dexterity: reaction, missile attack and defensive adjustments), Table 32 (Bard
+spells per day by level 1-20) and Table 25 (`bard_experience`: the XP that reaches each level 1-20,
+Thief/Bard column). They come from the catalogue artifact ([ADR 0021](adr/0021-spell-catalogue.md)
+step 9): a format-3 artifact carries them as `rule_tables`, and `seeds/rule_tables.json` is not read; a
+format-1 artifact has none, so they come from `seeds/rule_tables.json` (same keys and rows, plus a
+`_source` comment) until format 1 is retired (step 9.6). The fixture `api/testdata/catalogue.json` is
+format 3; `api/testdata/seeds` has no `rule_tables.json`.
+
+They are not loaded into SQLite: at every start (whatever catalogue version the database recorded) the
+`ruletablesadpt` parser reads them (a gap or overlap in a table is a startup error naming the table) into
 `ruletablesvc.Tables`, which implements `ruletablesvc.Lookup`:
 `StrengthMods(str, exceptional) (hit, dmg)`, `DexMods(dex) (missile, ac)` and
 `BardSpellsPerDay(level) map[spellLevel]count`; `Tables` also has `BardXPThreshold(level)` (the
 XP ledger's port). `exceptional` is the 18/xx percentile (1-99, 100 for
 18/00). Values are returned as printed in the tables. The tests check
-values against the PHB pages, not against the seed.
-
-The plan (proposed, [ADR 0021](adr/0021-spell-catalogue.md) step 9) moves these tables into the
-catalogue artifact, format 3, as `rule_tables` with the same keys and rows, read into memory at every
-start like today and never imported into SQLite; consumers keep `ruletablesvc.Lookup`. Until the
-importer reads format 3, this section is the current behaviour; during the rollout (step 9.6) a
-format-1 artifact still takes the tables from this seed.
+values against the PHB pages, not against the data; a test keeps the fixture's numbers equal to the seed's.
 
 ## Seeding the character
 

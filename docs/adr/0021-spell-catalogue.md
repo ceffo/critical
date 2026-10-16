@@ -379,7 +379,7 @@ is only ever appended to by play.
       keeps names, descriptions, notes and headers out of this repo, and 9.2 ships none); they are
       public in `seeds/` already; and the service tests and the e2e suite assert values derived from
       them (attack adjustments, spells per day, XP thresholds), checked against the PHB pages
-      (`docs/backend.md`, "Rule-table seeds"). Invented numbers would make those tests check nothing.
+      (`docs/backend.md`, "Rule tables"). Invented numbers would make those tests check nothing.
    8. **`seeds/` then holds only campaign bootstrap.** After 9.6.3 it holds the character, its
       inventory (items, weapons), its skills, its spellbook and the spell effects, pending the
       question on items, weapons and skills; the unread crit-table seed is deleted separately.
@@ -541,3 +541,30 @@ Where the importer had to settle a detail the decision above leaves open, or rea
 - **Coverage** over a catalogue: `just stat-coverage [path]` prints, per field, how many stats the
   French UI words from the typed value, shows as a label, or shows as the English text, with the
   most common English texts left (`api/cmd/spellstats` prints the typed stats it reads).
+
+## Implementation notes (the PHB rule tables, 2026-10-16)
+
+Step 9.6.1, the API side of the rollout (formats 1 and 3 read; format 1 still takes its tables from
+`seeds/rule_tables.json`):
+
+- **Where the tables are parsed**: `catalogueadpt.LoadArtifact` checks the artifact against the schema and
+  returns an `Artifact`: the spells (`catalogue.Catalogue`, which stays spells-only: a domain primitive
+  depends on no service) and, in format 3, the `rule_tables` object as written. The composition root
+  (`loadRuleTables`), at every start and before serving, parses it with the seed adapter's parser
+  (`ruletablesadpt.Parse`, step 9.2: same keys and rows), or reads the seed for format 1, so
+  `ruletablesvc.New`'s rules apply and a refusal is `spell catalogue <path>: rule_tables: <table> table: …`
+  (step 9.3). `ruletablesadpt` stays the one reader of rule-table JSON; no adapter imports another.
+- **The fixture** kept its version `1970-01-01` when it moved to format 3. The recorded catalogue is
+  compared on format and version (step 5.3), so a database last started on the format-1 fixture imports
+  it once more (the same spells; nothing removed) and then writes nothing.
+- **Tests per step**: 9.1 `TestParse_Step9_1_ReadsFormats1And3` and the schema's
+  `TestSchema_Step9_Format3RuleTables`; 9.2 `TestParse_Step9_2_TablesBelongToFormat3Only`; 9.3
+  `TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable` and
+  `TestParse_Step9_3_RejectsBrokenTables`; 9.4 and 9.5 `TestStartup_Step9_5_TheTablesAreReadAtEveryStart`
+  (a corrected table on the same version applies, a broken one refuses the start); 9.6.1
+  `TestStartup_Step9_6_1_TheRuleTablesSourceFollowsTheFormat` and `TestNew_Step9_6_1_Format1ReadsTheSeedFile`;
+  9.6.2, readiness on the real artifact recast as format 3 (skipped without it)
+  `TestRealCatalogue_Step9_6_2_TheRealArtifactInFormat3BootsWithoutTheSeedTables`; 9.7
+  `TestRuleTables_Step9_7_TheFixtureCarriesTheSeedsNumbers` (the fixture's tables equal the seed's, and
+  every lookup gives the same result from either). The PHB-page value tests (Strength, Dexterity, bard
+  spells per day, XP thresholds, attack resolution) run on the fixture's tables.

@@ -1,8 +1,11 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
-// file must exist, carry a format this API knows, match the committed JSON
-// Schema and hold no duplicate id. It only maps the JSON to
-// catalogue.Catalogue; the import into the database is the storage layer's.
+// file must exist, carry a format this API knows (1 or 3, step 9.1), match
+// the committed JSON Schema and hold no duplicate id. It maps the spells to
+// catalogue.Catalogue and hands a format-3 artifact's PHB rule tables on as
+// the schema-checked JSON (Artifact.RuleTables): their table rules (step 9.3)
+// are ruletablesadpt's, the one reader of rule-table JSON. The import into
+// the database is the storage layer's.
 package catalogueadpt
 
 import (
@@ -56,22 +59,37 @@ func compiled() (*jsonschema.Schema, error) {
 	return schema, errSchema
 }
 
-// Load reads and validates the artifact at path. A missing file is an error
-// naming the path and `just catalogue` (step 5.1).
+// Artifact is one parsed artifact: its spells and, in format 3, its
+// rule_tables object as written (shape checked by the schema, step 9.2; nil
+// in format 1). The caller parses the tables with ruletablesadpt.Parse, which
+// applies the rules of step 9.3.
+type Artifact struct {
+	Catalogue  catalogue.Catalogue
+	RuleTables json.RawMessage
+}
+
+// Load reads and validates the artifact at path and returns its spells.
 func Load(path string) (catalogue.Catalogue, error) {
+	a, err := LoadArtifact(path)
+	return a.Catalogue, err
+}
+
+// LoadArtifact reads and validates the artifact at path. A missing file is
+// an error naming the path and `just catalogue` (step 5.1).
+func LoadArtifact(path string) (Artifact, error) {
 	raw, err := os.ReadFile(filepath.Clean(path))
 	if errors.Is(err, fs.ErrNotExist) {
-		return catalogue.Catalogue{}, fmt.Errorf(
+		return Artifact{}, fmt.Errorf(
 			"spell catalogue: no file at %s: run `just catalogue` to fetch it, or set CRITICAL_CATALOGUE (the fixture api/testdata/catalogue.json works without access to the rulebooks repo)", path)
 	}
 	if err != nil {
-		return catalogue.Catalogue{}, fmt.Errorf("spell catalogue: read %s: %w", path, err)
+		return Artifact{}, fmt.Errorf("spell catalogue: read %s: %w", path, err)
 	}
-	c, err := Parse(raw)
+	a, err := ParseArtifact(raw)
 	if err != nil {
-		return catalogue.Catalogue{}, fmt.Errorf("spell catalogue %s: %w", path, err)
+		return Artifact{}, fmt.Errorf("spell catalogue %s: %w", path, err)
 	}
-	return c, nil
+	return a, nil
 }
 
 type spellDTO struct {
@@ -95,40 +113,48 @@ type artifactDTO struct {
 	Format  int        `json:"format"`
 	Version string     `json:"version"`
 	Spells  []spellDTO `json:"spells"`
+	// RuleTables (format 3 only, step 9.2) has exactly the keys and rows of
+	// the seeds' rule_tables.json, so the seed adapter's parser reads it.
+	RuleTables json.RawMessage `json:"rule_tables"`
 }
 
-// Parse validates artifact bytes (step 5.2): an unknown format is refused
-// naming it, then the schema is checked (the first offences are listed),
-// then ids must be unique.
+// Parse validates artifact bytes and returns the spells (see ParseArtifact).
 func Parse(raw []byte) (catalogue.Catalogue, error) {
+	a, err := ParseArtifact(raw)
+	return a.Catalogue, err
+}
+
+// ParseArtifact validates artifact bytes (step 5.2): an unknown format is
+// refused naming it, then the schema of formats 1 and 3 is checked (the
+// first offences are listed, a format-3 artifact's tables included), then
+// ids must be unique.
+func ParseArtifact(raw []byte) (Artifact, error) {
 	var head struct {
 		Format json.RawMessage `json:"format"`
 	}
 	if err := json.Unmarshal(raw, &head); err != nil {
-		return catalogue.Catalogue{}, fmt.Errorf("not a JSON object: %w", err)
+		return Artifact{}, fmt.Errorf("not a JSON object: %w", err)
 	}
-	if f := strings.TrimSpace(string(head.Format)); f != strconv.Itoa(catalogue.Format) {
-		if f == "" {
-			f = "none"
-		}
-		return catalogue.Catalogue{}, fmt.Errorf("unknown format %s: this API reads format %d", f, catalogue.Format)
+	format, known := knownFormat(strings.TrimSpace(string(head.Format)))
+	if !known {
+		return Artifact{}, fmt.Errorf("unknown format %s: this API reads formats %s", format, formatList())
 	}
 
 	sch, err := compiled()
 	if err != nil {
-		return catalogue.Catalogue{}, err
+		return Artifact{}, err
 	}
 	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(raw))
 	if err != nil {
-		return catalogue.Catalogue{}, fmt.Errorf("parse: %w", err)
+		return Artifact{}, fmt.Errorf("parse: %w", err)
 	}
 	if err := sch.Validate(doc); err != nil {
-		return catalogue.Catalogue{}, schemaError(err)
+		return Artifact{}, schemaError(format, err)
 	}
 
 	var a artifactDTO
 	if err := json.Unmarshal(raw, &a); err != nil {
-		return catalogue.Catalogue{}, fmt.Errorf("parse: %w", err)
+		return Artifact{}, fmt.Errorf("parse: %w", err)
 	}
 	out := catalogue.Catalogue{Format: a.Format, Version: a.Version, Spells: make([]catalogue.Spell, 0, len(a.Spells))}
 	seen := make(map[string]bool, len(a.Spells))
@@ -151,13 +177,43 @@ func Parse(raw []byte) (catalogue.Catalogue, error) {
 		})
 	}
 	if len(dups) > 0 {
-		return catalogue.Catalogue{}, fmt.Errorf("duplicate spell ids: %s", strings.Join(first(dups), ", "))
+		return Artifact{}, fmt.Errorf("duplicate spell ids: %s", strings.Join(first(dups), ", "))
 	}
-	return out, nil
+	art := Artifact{Catalogue: out}
+	if a.Format == catalogue.FormatRuleTables {
+		art.RuleTables = a.RuleTables
+	}
+	return art, nil
+}
+
+// knownFormat reports whether the raw format value is one this API reads,
+// and the value as named in a refusal ("none" when absent).
+func knownFormat(raw string) (string, bool) {
+	if raw == "" {
+		return "none", false
+	}
+	for _, f := range catalogue.Formats {
+		if raw == strconv.Itoa(f) {
+			return raw, true
+		}
+	}
+	return raw, false
+}
+
+// formatList names the formats this API reads: "1 and 3".
+func formatList() string {
+	names := make([]string, len(catalogue.Formats))
+	for i, f := range catalogue.Formats {
+		names[i] = strconv.Itoa(f)
+	}
+	if len(names) == 1 {
+		return names[0]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
 }
 
 // schemaError lists the first leaf violations of a schema validation error.
-func schemaError(err error) error {
+func schemaError(format string, err error) error {
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return fmt.Errorf("schema: %w", err)
@@ -174,7 +230,7 @@ func schemaError(err error) error {
 		}
 	}
 	walk(ve)
-	return fmt.Errorf("does not match the format %d schema: %s", catalogue.Format, strings.Join(first(leaves), "; "))
+	return fmt.Errorf("does not match the format %s schema: %s", format, strings.Join(first(leaves), "; "))
 }
 
 func first(list []string) []string {

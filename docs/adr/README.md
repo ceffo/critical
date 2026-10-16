@@ -38,4 +38,5 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0018 | [Every mutation is a transaction; undo pops the last one](0018-transactions-and-undo.md) | accepted, step 6 and Consequences amended by 0019 |
 | 0019 | [Redo replays the newest popped transaction](0019-redo.md) | accepted |
 | 0020 | [Visual identity: Critical! palettes, roles and brand mark](0020-visual-identity.md) | accepted |
-| 0021 | [Reference data: the spell catalogue artifact, storage and deployment](0021-spell-catalogue.md) | accepted |
+| 0021 | [Reference data: the spell catalogue artifact, storage and deployment](0021-spell-catalogue.md) | accepted, per-language fields amended by 0023 |
+| 0023 | [Localized text: one row per language, no per-language field](0023-localized-text.md) | accepted |

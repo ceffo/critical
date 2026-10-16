@@ -55,20 +55,36 @@ just fly-db-provision tournesol-db staging prod      # scripts/fly-db-provision.
 ```
 
 For each environment it creates (or keeps) the login user `critical_<env>`, owner of the database
-`critical_<env>`, and gives it a new generated password, sent to the server only as a SCRAM-SHA-256
-verifier. CONNECT on that database belongs to its user only; every other database of the cluster keeps
-CONNECT for its current login users and loses it for PUBLIC, so a critical user reaches only its own
-database and the other app's access is unchanged. Through `fly proxy` to `tournesol-db.flycast` it then
-checks that each user connects to its own database and may create in its schema, and that every other
-connection is refused (`permission denied for database`). Only then does it pipe
-`CRITICAL_DSN=postgres://critical_<env>:…@tournesol-db.flycast:5432/critical_<env>?sslmode=prefer`
-into `fly secrets import --stage` on `critical-<env>` (no restart, never printed), and set the volume's
-snapshot retention. `fly secrets list -a critical-<env>` shows the name and a digest, never the value;
-its status stays `Staged` until the app's next `fly deploy`, which applies it (an app with machines can
-also take it with `fly secrets deploy`).
+`critical_<env>`. CONNECT on that database belongs to its user only. Every other database of the
+cluster that accepts connections (`template1` included) keeps CONNECT for the login users it has at
+run time and loses it for PUBLIC, so a critical user reaches only its own database and the other app's
+current users keep their access.
 
-Rerunnable: a rerun rotates the named environments' passwords (`just fly-db-provision tournesol-db
-staging` rotates staging only); restart or redeploy that app afterwards, its old DSN stops working.
+**A user the other app gets later** (a `CREATE ROLE`, a `fly postgres attach` of a new app) has no
+CONNECT on the locked databases, and a rerun does not add it (the databases are already locked). Grant
+it by hand: `$fly postgres connect -a tournesol-db`, then `GRANT CONNECT ON DATABASE <db> TO <user>;`.
+A database created later keeps PUBLIC CONNECT until the next run of the provisioning locks it.
+
+**Passwords.** A user gets a generated password when it is created, sent to the server only as a
+SCRAM-SHA-256 verifier, and its app's secret
+`CRITICAL_DSN=postgres://critical_<env>:…@tournesol-db.flycast:5432/critical_<env>?sslmode=prefer` is
+piped into `fly secrets import` right after (never printed): staged while the app has no machine (the
+first `fly deploy` applies it), applied at once otherwise. An existing user's password and secret are
+never touched by a rerun, so a rerun on a running app changes nothing it uses. `fly secrets list -a
+critical-<env>` shows the name and a digest, never the value.
+
+**Checks**, every run: each critical user holds CONNECT on its own database and on no other (privileges
+read as the cluster's operator). When the run set a password it also connects through `fly proxy` to
+`tournesol-db.flycast`: own database usable (may create in its schema), every other connection refused
+(`permission denied for database`). Then it sets the volume's snapshot retention.
+
+**Rotation** (a leaked password, or the one-off seed below): `just fly-db-provision --rotate
+tournesol-db <env>`. It sets a new password, then applies the new secret, so **the app is briefly out**:
+from the password change until fly has restarted each of its machines with the new secret, new
+database connections fail (connections already open keep working). Before the app's first deploy it has
+no machine and the rotation costs nothing. `--password-dir ~/.config/critical` also writes the new
+password to `~/.config/critical/critical_<env>.password` (mode 600) for the operator; delete it after
+use. If a run stops between the password change and the secret, rerun it with `--rotate`.
 
 ### Reaching a database
 
@@ -77,8 +93,9 @@ $fly postgres connect -a tournesol-db -d critical_prod     # psql as the cluster
 $fly proxy 15432:5432 tournesol-db.flycast -a tournesol-db # then psql "host=127.0.0.1 port=15432 user=critical_prod dbname=critical_prod"
 ```
 
-The second form needs the user's password, which is only in the app's secret: rotate it with the
-provisioning when a human must log in as that user, or use `fly postgres connect`. Production data is
+The second form needs the user's password, which is only in the app's secret. To look at the data,
+use `fly postgres connect` (`SET ROLE critical_prod;` to act as that user); never rotate a running
+app's password just to log in: the rotation is an outage. Production data is
 private (ADR 0024 step 7): never paste query output into an issue, a PR or a log.
 
 ### Snapshots
@@ -223,8 +240,9 @@ starts empty.
 ```bash
 # On the operator's machine, in a checkout of the release being deployed. Stop every server still
 # writing the SQLite file first: what it writes after the copy is not in production.
-$fly proxy 15432:5432 -a critical-db                  # the private cluster; leave it running
-read -rs PROD_DSN                                      # postgres://<prod user>:<password>@localhost:15432/critical_prod?sslmode=disable
+just fly-db-provision --rotate --password-dir ~/.config/critical tournesol-db prod   # before the first deploy: no machine, no outage
+$fly proxy 15432:5432 tournesol-db.flycast -a tournesol-db   # the private cluster; leave it running
+PROD_DSN="postgres://critical_prod:$(cat ~/.config/critical/critical_prod.password)@localhost:15432/critical_prod?sslmode=disable"
 just db-import-sqlite .dev/critical.db "$PROD_DSN"     # prints the rows of each table; counts equal or nothing is kept
 ```
 
@@ -234,7 +252,7 @@ machine and the cluster (ADR 0024 step 7). If it stops with an error, nothing wa
 and run it again. Then deploy `critical-prod`; its first boot finds the baseline applied and the seeds
 and catalogue already there, and writes nothing.
 
-The tool is deleted from the repository once production is seeded (ADR 0025 step 9.5).
+Then `shred -u ~/.config/critical/critical_prod.password`. The tool is deleted from the repository once production is seeded (ADR 0025 step 9.5).
 
 ## A new catalogue version reaches production
 

@@ -4,9 +4,9 @@
 app = "critical-prod"
 primary_region = "yyz"
 
-# Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ. No CRITICAL_DSN: the
-# app has no volume, its data lives in the fly PostgreSQL cluster critical-db, and its DSN is the fly secret
-# CRITICAL_DSN (ADR 0024 steps 2.3, 2.4 and 5.1; docs/deploy.md).
+# Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ. No CRITICAL_DSN:
+# the app has no volume, its data lives in the fly PostgreSQL cluster (tournesol-db, shared), and its
+# DSN is the fly secret CRITICAL_DSN (ADR 0024 steps 2.3, 2.4 and 5.1; docs/deploy.md).
 [env]
   CRITICAL_ADDR = ":8080"
   CRITICAL_SEEDS_DIR = "/app/seeds"

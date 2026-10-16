@@ -100,8 +100,8 @@ flowchart LR
    3. The cluster: one node, the smallest shared VM, one 1 GB volume, region `yyz`, no public IP.
       It holds two databases for this app, `critical_staging` and `critical_prod`, each owned by its
       own login user; a critical user can connect to its own database only, neither to the other's
-      nor to any other database of the cluster. The other databases keep CONNECT for their own
-      users and lose it for PUBLIC.
+      nor to any other database of the cluster. The other databases keep CONNECT for the login users
+      they have when the provisioning runs and lose it for PUBLIC.
    4. Each app's DSN (its own user, its own database, the cluster's private address) is the fly
       secret `CRITICAL_DSN`; it is never in the fly config, the repo or a log.
    5. Nothing is paid without the user: if fly refuses a legacy cluster, or asks for payment or a
@@ -306,9 +306,11 @@ then, after the options were laid out (share it, or free its volume for a cluste
 _"1 for now"_.
 
 - **Step 2 and 2.3**: the cluster is `tournesol-db` (postgres-flex 17, one node, shared-cpu-1x
-  256 MB, 1 GB volume, `yyz`, private), shared with the user's other app. Its other databases keep
-  CONNECT for their current login users and lose it for PUBLIC, so a critical user reaches only its
-  own database; that app's access is unchanged.
+  256 MB, 1 GB volume, `yyz`, private), shared with the user's other app. Its other databases
+  (`template1` included) keep CONNECT for the login users they have when the provisioning runs and
+  lose it for PUBLIC, so a critical user reaches only its own database; the other app's users of that
+  day keep their access. A user the other app gets later needs an explicit `GRANT CONNECT` (the
+  runbook says how): the price of sharing the cluster.
 - **Step 9.1**: the daily snapshots of the cluster volume, retention 30 days, also hold the other
   app's databases; restoring a snapshot rolls them back too, one more reason step 9.3 restores from a
   dump first.

@@ -59,10 +59,11 @@ func Open(dsn string) (*DB, error) {
 }
 
 // maxOpenConns caps each server's pool. Every writer waiting on the writer lock holds a connection,
-// so without a cap a burst of writes would open one connection each. The fly cluster serves three
-// servers (two production machines, one staging, ADR 0024 step 5) on PostgreSQL's default
-// max_connections of 100, a few of them reserved for superusers: 3 x 10 = 30 leaves room for the
-// operator's tools (pg_dump, psql, the copy tool) and the cluster's own. Ten is plenty for one
+// so without a cap a burst of writes would open one connection each. The fly cluster is shared with
+// another app (ADR 0024 step 2) and is a small node (256 MB); this app's three servers (two
+// production machines, one staging, step 5) take at most 3 x 10 = 30 of PostgreSQL's default
+// max_connections of 100, a few of them reserved for superusers, which leaves room for the other
+// app, the operator's tools (pg_dump, psql, the copy tool) and the cluster's own. Ten is plenty for one
 // server: one writer runs at a time, reads are short, and a request over the cap waits in the pool.
 const maxOpenConns = 10
 

@@ -239,11 +239,12 @@ fly-private app:
 fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
 
-# Operator only (fly credentials). Create or rotate critical's database users on the fly PostgreSQL
-# cluster and set each app's CRITICAL_DSN secret (ADR 0024 steps 2.3, 2.4, 9.1; docs/deploy.md), e.g.
-# `just fly-db-provision tournesol-db staging prod`. Each named env gets a new password: restart its app.
-fly-db-provision cluster +envs:
-    scripts/fly-db-provision.sh {{cluster}} {{envs}}
+# Operator only (fly credentials), ADR 0024 steps 2.3, 2.4, 9.1 and docs/deploy.md. A rerun changes no
+# existing password; `--rotate` does and applies the secret at once (a short outage of the app's new
+# connections). E.g. `just fly-db-provision tournesol-db staging prod`.
+# Create critical's database users on the fly PostgreSQL cluster and set each new user's CRITICAL_DSN secret
+fly-db-provision +args:
+    scripts/fly-db-provision.sh {{args}}
 
 # --- Production image (ADR 0024 step 1) ---
 

@@ -1,36 +1,59 @@
 #!/usr/bin/env bash
 # Provisions critical's databases on the fly PostgreSQL cluster (ADR 0024 steps 2.3, 2.4 and 9.1):
 #
-#   scripts/fly-db-provision.sh <cluster app> <env>...      e.g.  tournesol-db staging prod
+#   scripts/fly-db-provision.sh [--rotate] [--password-dir DIR] <cluster app> <env>...
+#   e.g.  scripts/fly-db-provision.sh tournesol-db staging prod
 #
-# For each <env> (staging | prod): a login user critical_<env> owning the database critical_<env>,
-# CONNECT on it for that user only, then the fly secret CRITICAL_DSN on the app critical-<env>
-# (private .flycast address, staged: no machine restarts). Every other database of the cluster keeps
-# CONNECT for its current login users and loses it for PUBLIC, so a critical user reaches only its own
-# database. The cluster's volumes get the snapshot retention of step 9.1.
+# For each <env> (staging | prod): a login user critical_<env> owning the database critical_<env>, with
+# CONNECT on it for that user only. Every other database of the cluster that accepts connections
+# (template1 included) keeps CONNECT for the login users it has at run time and loses it for PUBLIC, so
+# a critical user reaches only its own database. A user the other app gets LATER needs an explicit
+# `GRANT CONNECT ON DATABASE <db> TO <user>` (docs/deploy.md). The cluster's volumes get the snapshot
+# retention of step 9.1.
 #
-# Checks, through `fly proxy` to the cluster's .flycast address (the same route the apps use): each
-# user connects to its own database and may create in its public schema, and every connection to any
-# other database of the cluster is refused. The secret is set only after the checks pass.
+# Passwords: a user gets one when it is created, or with --rotate; an existing user's password and its
+# app's secret are left alone otherwise, so a rerun changes nothing that runs. When a password is set,
+# the app's fly secret CRITICAL_DSN (private .flycast address) is set right after it: staged when the
+# app has no machine (applied by its first deploy), applied at once otherwise (fly restarts the
+# machines; until each has restarted its new connections fail: a short outage, docs/deploy.md). If the
+# run stops between the two, rerun with --rotate. --password-dir DIR also writes each new password to
+# DIR/critical_<env>.password (mode 600), for the operator's one-off use (the SQLite copy, docs/deploy.md).
 #
-# Rerunnable: a run creates what is missing and gives each named <env> a new password (the old one
-# stops working at once, so redeploy or restart that app after a rerun). Passwords are generated here,
-# reach the server only as a SCRAM-SHA-256 verifier, and reach fly only through stdin; nothing secret
-# is printed. Operator only: needs fly credentials (`fly ssh`) on the cluster.
+# Checks: every run checks, as the cluster's operator, that each critical user holds CONNECT on its own
+# database and on no other. When this run set a user's password it also connects through `fly proxy` to
+# the cluster's .flycast address (the apps' route): own database usable, every other one refused.
+#
+# Passwords are generated here, reach the server only as a SCRAM-SHA-256 verifier, and reach fly only
+# through stdin; nothing secret is printed. Operator only: needs fly credentials (`fly ssh`) on the cluster.
 set -euo pipefail
 
-usage="usage: fly-db-provision.sh <cluster app> <staging|prod>..."
+usage="usage: fly-db-provision.sh [--rotate] [--password-dir DIR] <cluster app> <staging|prod>..."
+rotate=""
+password_dir=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --rotate) rotate=1; shift ;;
+        --password-dir) password_dir="${2:?$usage}"; shift 2 ;;
+        -*) echo "$usage" >&2; exit 2 ;;
+        *) break ;;
+    esac
+done
 cluster="${1:?$usage}"
 shift
 [ "$#" -ge 1 ] || { echo "$usage" >&2; exit 2; }
 for env in "$@"; do
     case "$env" in staging | prod) ;; *) echo "fly-db-provision: unknown env '$env'; $usage" >&2; exit 2 ;; esac
 done
+if [ -n "$password_dir" ]; then
+    mkdir -p "$password_dir"
+    chmod 700 "$password_dir"
+fi
 fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 retention_days=30
 for tool in jq psql python3 openssl; do
     command -v "$tool" >/dev/null || { echo "fly-db-provision: $tool is required" >&2; exit 1; }
 done
+fail() { echo "fly-db-provision: FAIL: $*" >&2; exit 1; }
 
 # admin_sql runs the SQL on stdin as the cluster's operator user, inside the cluster's machine (the
 # operator password never leaves it).
@@ -71,22 +94,58 @@ for _ in $(seq 1 30); do
     sleep 2
 done
 
+existing="$(admin_sql <<'SQL'
+SELECT rolname FROM pg_roles WHERE rolname ~ '^critical_' \g (format=unaligned tuples_only)
+SQL
+)"
+
+# set_secret sets the app's CRITICAL_DSN from stdin: staged when the app has no machine, applied at once
+# (machines restarted) otherwise.
+set_secret() {
+    local app="$1" machines
+    machines="$("$fly" machine list -a "$app" --json | jq length)"
+    if [ "$machines" = 0 ]; then
+        "$fly" secrets import -a "$app" --stage >/dev/null
+        echo "$app: CRITICAL_DSN staged (no machine; the first deploy applies it)"
+    else
+        "$fly" secrets import -a "$app" >/dev/null
+        echo "$app: CRITICAL_DSN applied ($machines machine(s) restarted)"
+    fi
+}
+
 declare -A password
 for env in "$@"; do
     role="critical_$env"
-    password[$env]="$(openssl rand -hex 32)"
-    verifier="$(printf '%s' "${password[$env]}" | scram_verifier)"
-    echo "== $role: user and database"
+    app="critical-$env"
+    verifier=""
+    if grep -qx "$role" <<<"$existing" && [ -z "$rotate" ]; then
+        echo "== $role: exists, password and $app's secret unchanged (--rotate to change them)"
+    else
+        password[$env]="$(openssl rand -hex 32)"
+        verifier="$(printf '%s' "${password[$env]}" | scram_verifier)"
+        echo "== $role: user and database, new password"
+    fi
     admin_sql <<SQL
 \set role '$role'
 \set verifier '$verifier'
 SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
-ALTER ROLE :"role" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION PASSWORD :'verifier';
+ALTER ROLE :"role" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'verifier') WHERE :'verifier' <> '' \gexec
 SELECT format('CREATE DATABASE %I OWNER %I', :'role', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'role') \gexec
 ALTER DATABASE :"role" OWNER TO :"role";
 REVOKE ALL ON DATABASE :"role" FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE :"role" TO :"role";
 SQL
+    if [ -n "${password[$env]:-}" ]; then
+        printf 'CRITICAL_DSN=postgres://%s:%s@%s.flycast:5432/%s?sslmode=prefer\n' \
+            "$role" "${password[$env]}" "$cluster" "$role" | set_secret "$app" \
+            || fail "$role has a new password but $app's secret was not set: rerun with --rotate $env"
+        if [ -n "$password_dir" ]; then
+            (umask 077; printf '%s\n' "${password[$env]}" >"$password_dir/$role.password")
+            echo "$role: password written to $password_dir/$role.password (mode 600; delete it after use)"
+        fi
+    fi
+    "$fly" secrets list -a "$app"
 done
 
 echo "== other databases: CONNECT kept for their current login users, revoked from PUBLIC"
@@ -95,7 +154,7 @@ DO $$
 DECLARE d record; r record;
 BEGIN
   FOR d IN SELECT datname FROM pg_database
-           WHERE NOT datistemplate AND datname !~ '^critical_' AND has_database_privilege('public', datname, 'CONNECT') LOOP
+           WHERE datallowconn AND datname !~ '^critical_' AND has_database_privilege('public', datname, 'CONNECT') LOOP
     FOR r IN SELECT rolname FROM pg_roles WHERE rolcanlogin AND rolname !~ '^critical_' LOOP
       EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', d.datname, r.rolname);
     END LOOP;
@@ -104,51 +163,59 @@ BEGIN
   END LOOP;
 END $$;
 SELECT 'database ' || datname || ': ' || coalesce(array_to_string(datacl, ' '), '(default: PUBLIC may connect)')
-FROM pg_database WHERE NOT datistemplate ORDER BY datname \g (format=unaligned tuples_only)
+FROM pg_database WHERE datallowconn ORDER BY datname \g (format=unaligned tuples_only)
 SQL
 
-echo "== checks through fly proxy to $cluster.flycast"
-port="$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
-log="$(mktemp)"
-"$fly" proxy "$port:5432" "$cluster.flycast" -a "$cluster" -q >"$log" 2>&1 &
-proxy=$!
-trap 'kill "$proxy" 2>/dev/null || true; rm -f "$log"' EXIT
-fail() { echo "fly-db-provision: FAIL: $*" >&2; exit 1; }
-conn() { printf 'host=127.0.0.1 port=%s user=%s dbname=%s sslmode=prefer connect_timeout=10' "$port" "$1" "$2"; }
-
+echo "== check: CONNECT privileges of the critical users"
+grants="$(admin_sql <<'SQL'
+SELECT CASE WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT') = (d.datname = r.rolname) THEN 'ok' ELSE 'BAD' END
+       || ': ' || r.rolname || ' -> ' || d.datname || ' '
+       || CASE WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT') THEN 'may connect' ELSE 'no CONNECT' END
+FROM pg_roles r CROSS JOIN pg_database d
+WHERE r.rolname ~ '^critical_' AND d.datallowconn ORDER BY 1 DESC, r.rolname, d.datname \g (format=unaligned tuples_only)
+SQL
+)"
+echo "$grants"
 for env in "$@"; do
-    role="critical_$env"
-    ok=""
-    for _ in $(seq 1 30); do
-        kill -0 "$proxy" 2>/dev/null || { cat "$log" >&2; fail "fly proxy exited"; }
-        ok="$(PGPASSWORD="${password[$env]}" psql -w -X -A -t -c \
-            "SELECT current_user || ' ' || current_database() || ' ' || has_schema_privilege('public', 'CREATE')" \
-            "$(conn "$role" "$role")" 2>/dev/null || true)"
-        [ -n "$ok" ] && break
-        sleep 2
-    done
-    [ "$ok" = "$role $role true" ] || fail "$role cannot use its own database (got '$ok')"
-    echo "ok: $role connects to $role and may create in its public schema"
-    others="$(PGPASSWORD="${password[$env]}" psql -w -X -A -t -c \
-        "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname <> current_database() ORDER BY 1" \
-        "$(conn "$role" "$role")")"
-    for db in $others; do
-        if err="$(PGPASSWORD="${password[$env]}" psql -w -X -A -t -c 'SELECT 1' "$(conn "$role" "$db")" 2>&1)"; then
-            fail "$role can connect to $db"
-        fi
-        case "$err" in *"permission denied for database"*) echo "ok: $role -> $db refused (permission denied)" ;;
-            *) fail "$role -> $db failed for another reason: $err" ;; esac
-    done
+    grep -q ": critical_$env -> critical_$env may connect" <<<"$grants" || fail "critical_$env cannot connect to its own database"
 done
+! grep -q '^BAD' <<<"$grants" || fail "a critical user holds CONNECT on a database not its own"
 
-for env in "$@"; do
-    app="critical-$env"
-    role="critical_$env"
-    echo "== $app: secret CRITICAL_DSN (staged)"
-    printf 'CRITICAL_DSN=postgres://%s:%s@%s.flycast:5432/%s?sslmode=prefer\n' \
-        "$role" "${password[$env]}" "$cluster" "$role" | "$fly" secrets import -a "$app" --stage >/dev/null
-    "$fly" secrets list -a "$app"
-done
+if [ "${#password[@]}" -eq 0 ]; then
+    echo "== connection checks skipped: no password set by this run (--rotate gives one)"
+else
+    echo "== checks through fly proxy to $cluster.flycast"
+    port="$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
+    log="$(mktemp)"
+    "$fly" proxy "$port:5432" "$cluster.flycast" -a "$cluster" -q >"$log" 2>&1 &
+    proxy=$!
+    trap 'kill "$proxy" 2>/dev/null || true; rm -f "$log"' EXIT
+    conn() { printf 'host=127.0.0.1 port=%s user=%s dbname=%s sslmode=prefer connect_timeout=10' "$port" "$1" "$2"; }
+    for env in "${!password[@]}"; do
+        role="critical_$env"
+        ok=""
+        for _ in $(seq 1 30); do
+            kill -0 "$proxy" 2>/dev/null || { cat "$log" >&2; fail "fly proxy exited"; }
+            ok="$(PGPASSWORD="${password[$env]}" psql -w -X -A -t -c \
+                "SELECT current_user || ' ' || current_database() || ' ' || has_schema_privilege('public', 'CREATE')" \
+                "$(conn "$role" "$role")" 2>/dev/null || true)"
+            [ -n "$ok" ] && break
+            sleep 2
+        done
+        [ "$ok" = "$role $role true" ] || fail "$role cannot use its own database (got '$ok')"
+        echo "ok: $role connects to $role and may create in its public schema"
+        others="$(PGPASSWORD="${password[$env]}" psql -w -X -A -t -c \
+            "SELECT datname FROM pg_database WHERE datallowconn AND datname <> current_database() ORDER BY 1" \
+            "$(conn "$role" "$role")")"
+        for db in $others; do
+            if err="$(PGPASSWORD="${password[$env]}" psql -w -X -A -t -c 'SELECT 1' "$(conn "$role" "$db")" 2>&1)"; then
+                fail "$role can connect to $db"
+            fi
+            case "$err" in *"permission denied for database"*) echo "ok: $role -> $db refused (permission denied)" ;;
+                *) fail "$role -> $db failed for another reason: $err" ;; esac
+        done
+    done
+fi
 
 echo "== $cluster: volume snapshot retention $retention_days days"
 for vol in $("$fly" volumes list -a "$cluster" --json | jq -r '.[].id'); do

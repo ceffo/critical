@@ -313,8 +313,9 @@ type RollResult struct {
 
 ## Seed Loader Pattern
 
-At startup, for each seed file (character, weapons, items: only into an empty table; skills: reconciled
-by id):
+The seed files are read and checked by `api/internal/storage/seedfile`, shared by every storage engine
+(the database and the in-memory storage). At startup, for each seed file (character, weapons, items:
+only into an empty table; skills: reconciled by id):
 ```go
 // Check if table is empty, if so load from seeds/
 var count int
@@ -437,6 +438,35 @@ XP ledger's port). `exceptional` is the 18/xx percentile (1-99, 100 for
 values against the PHB pages, not against the data; a test keeps the fixture's numbers equal to the real
 artifact's (by lookup; skipped without `.catalogue/catalogue.json`).
 
+## In-memory storage (e2e mode)
+
+[ADR 0025](adr/0025-postgresql-storage.md) step 8: the e2e suite runs the API with no database, file
+or server.
+
+- **Config**: `CRITICAL_STORAGE=memory` selects it (unset: the database at `CRITICAL_DSN`, which is
+  then never opened). Any other value is refused at boot. `web/e2e/fixtures.ts` starts every API this
+  way; nothing else should.
+- **Never in staging or production** (step 8.3), by two guards: the boot refuses the mode when
+  `FLY_APP_NAME` is set (fly.io sets it on every machine, so a stray `fly secrets set` cannot enable
+  it) or when `CRITICAL_WEB_DIR` is set (only the production image serves the built web app); and
+  `internal/flycheck` fails when `deploy/fly.*.toml` or the `Dockerfile` names `CRITICAL_STORAGE`.
+  A build tag was not used: e2e would then test another binary than the one deployed.
+- **What it is**: `api/internal/storage/memory`, one `Store` implementing every domain storage port
+  (the ports of `composition.Storage`, not the sqlc `Querier`s), wired by `composition.New` when
+  `Config.InMemory` is set. It starts empty and is seeded like a new database: the seed files through
+  `api/internal/storage/seedfile` (the same parsing and checks as the database seed), the catalogue by
+  `ImportCatalogue` (one import per process: another version is refused). Data dies with the process.
+- **Contracts kept** (step 8.2), tested in `memory_test.go`: `InTx` holds one write lock for the whole
+  transaction (writers serialised; a read outside a transaction waits for the writer and never sees an
+  uncommitted write) and puts every table back when `fn` fails or panics; a nested `InTx` joins the
+  outer one; a write outside a transaction is atomic on its own. The action log only appends, and the
+  popped entries, the redo target and the HP total come from the domain rules
+  (`actionlog.StandingVoids`, `LatestPopped`, `HPTotal`), never re-implemented. Ids come from a
+  sequence per table (AUTOINCREMENT-like, rolled back with the transaction); an id a table holds is
+  refused on insert. Every value stored or returned is a deep copy.
+- **A new storage port** gets its in-memory implementation in `storage/memory` and its line in
+  `composition.memoryStorage` (`TestMemoryStorage_EveryPortOnTheOneStore` fails on a port left out).
+
 ## Seeding the character
 
 `seeds/character.json` (the campaign Bard) only loads into an empty `characters` table. To pick up
@@ -450,7 +480,7 @@ and start `just dev` again. This discards all dev state (HP ledger, buffs, actio
   steps 6 and 7). Tests that still build a temporary SQLite database are being rewritten.
 - The composition root is tested through `composition.Build` over a `composition.Storage` of mocks
   (`api/internal/composition/harness_test.go`); `composition.New` is the production path that opens
-  SQLite and builds the real adapters. Rule and flow tests belong in the service packages, on mocks of
+  SQLite and builds the real adapters (or wires the in-memory storage, see above). Rule and flow tests belong in the service packages, on mocks of
   their DAL ports.
 - Use table-driven tests
 - Dice engine accepts a seeded `rand.Source` for deterministic tests

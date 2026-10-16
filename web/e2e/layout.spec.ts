@@ -843,7 +843,7 @@ test.describe("workspaces to the dice composer", () => {
     for (const vp of VIEWPORTS) {
       await page.setViewportSize(vp);
       await expectNoPageScroll(page);
-      await snap(page, `spells-${vp.width}x${vp.height}`);
+      await snap(page, `spells-lookup-${vp.width}x${vp.height}`);
     }
   });
 });

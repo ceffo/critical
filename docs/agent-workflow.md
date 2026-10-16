@@ -52,10 +52,10 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 
 ## Running the app for acceptance checks
 
-- Full stack with live reload: `just dev` (API via air on :8080, Vite on :5173 proxying `/api`, listening on all interfaces, `*.ts.net` hosts allowed).
+- Full stack with live reload: `just dev` (API via air on :8080, Vite on :5173 proxying `/api`, listening on all interfaces, `*.ts.net` hosts allowed; `CRITICAL_API_PORT` / `CRITICAL_WEB_PORT` move them). `just stop` stops it (database included), `just status` shows it; `just dev-smoke` proves the lifecycle on free ports (run it for any change to the justfile, compose, air or storage start-up).
   It starts the docker compose PostgreSQL (`just dev-db`, host port 5432, `CRITICAL_PG_PORT` moves it): database `critical` with the real
   catalogue, `critical_fixture` without it; `just dev-reset` deletes both (the compose volume). Use it only
-  from the main checkout or a worktree you own; it binds fixed ports, so run one at a time.
+  from the main checkout or a worktree you own; never stop a stack that is not yours (`just stop` only touches its own checkout).
 - Backend alone, throwaway data: `CRITICAL_PG_PORT=<free port> just dev-db` in your worktree (its own
   compose project and volume), `just build-api`, then run `bin/critical-srv` with `CRITICAL_DSN`
   (`postgres://critical:critical@localhost:<port>/critical_fixture?sslmode=disable`, or a database you

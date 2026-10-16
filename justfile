@@ -72,57 +72,36 @@ fmt: fmt-api fmt-web
 
 # --- Local Development ---
 
-# Run the whole stack locally with live reload: API (air) on :8080 and the Vite dev server
-# on :5173 (proxies /api), on the compose PostgreSQL (`just dev-db`). Ctrl-C stops both; the
-# database keeps running.
+# Run the whole stack locally with live reload: the compose PostgreSQL, the API (air) on :8080 and
+# the Vite dev server on :5173 (proxies /api). Spells come from the catalogue artifact (`just
+# catalogue`) with the campaign seeds and the database `critical`; without it the API runs on the
+# fixture catalogue and seeds (api/testdata) and its own database `critical_fixture`. Ctrl-C stops
+# the API (gracefully), Vite and the database when this run started it. `just stop` stops it from
+# another terminal. CRITICAL_API_PORT, CRITICAL_WEB_PORT and CRITICAL_PG_PORT move the ports.
+[no-exit-message]
 dev:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    trap 'kill 0' EXIT
-    just dev-api &
-    just dev-web &
-    wait
+    scripts/dev.sh start
 
-# API with live reload (rebuilds on .go changes), on the compose PostgreSQL (`just dev-db`). Spells
-# come from the catalogue artifact (`just catalogue`), with the campaign seeds and the database
-# `critical`. Without the artifact it runs on the fixture catalogue and seeds (api/testdata) and a
-# database of their own, `critical_fixture`: `critical` is only ever opened with the real catalogue.
-# CRITICAL_PG_PORT moves the database's host port (default 5432).
-dev-api: dev-db
-    #!/usr/bin/env bash
-    set -euo pipefail
-    root="$(pwd)"
-    if [ -f .catalogue/catalogue.json ]; then
-        catalogue="$root/.catalogue/catalogue.json"; seeds="$root/seeds"; db=critical
-        echo "dev-api: real catalogue .catalogue/catalogue.json, campaign seeds, database critical" >&2
-    else
-        catalogue="$root/api/testdata/catalogue.json"; seeds="$root/api/testdata/seeds"; db=critical_fixture
-        echo "dev-api: ==================================================================================" >&2
-        echo "dev-api: NO .catalogue/catalogue.json: running on the FIXTURE catalogue and api/testdata/seeds," >&2
-        echo "dev-api: database critical_fixture (the database critical is left untouched)." >&2
-        echo "dev-api: run \`just catalogue\` to fetch the real catalogue and use the campaign database." >&2
-        echo "dev-api: ==================================================================================" >&2
-    fi
-    dsn="postgres://critical:critical@localhost:${CRITICAL_PG_PORT:-5432}/$db?sslmode=disable"
-    cd api && CRITICAL_DSN="$dsn" CRITICAL_SEEDS_DIR="$seeds" CRITICAL_CATALOGUE="$catalogue" go tool air -c .air.toml
+# Stop everything `just dev` started for this checkout, the compose database included (its data
+# is kept). Safe to run when nothing runs.
+stop:
+    @scripts/dev.sh stop
+
+# What runs for this checkout: API, web dev server, database.
+status:
+    @scripts/dev.sh status
 
 # Start the development PostgreSQL (docker compose service `postgres`) unless it runs, and wait
-# until it accepts connections.
+# until it accepts connections. `just stop` stops it.
 dev-db:
-    docker compose up --detach --wait postgres
+    scripts/dev.sh db
 
-# Frontend dev server with HMR (needs the API from dev-api). Reinstalls web deps first when
-# web/package-lock.json is newer than the last install (e.g. after pulling a new dependency).
-dev-web:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd web
-    if [ ! -f node_modules/.package-lock.json ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
-        echo "web/package-lock.json changed since the last install: running npm install"
-        npm install
-        touch node_modules/.package-lock.json
-    fi
-    npm run dev
+# Proof of the local dev lifecycle, on free ports and a throwaway compose project (never touches a
+# running `just dev`): starts the real stack, checks API, web and database answer, then Ctrl-C and
+# `just stop` leave no process and no open port. Needs docker. Run it after changing the justfile,
+# docker-compose.yml, api/.air.toml, scripts/dev.sh or the storage start-up.
+dev-smoke:
+    scripts/test-dev-lifecycle.sh
 
 # Copy a SQLite database of the app (e.g. the old .dev/critical.db) into an empty PostgreSQL database
 # (ADR 0025 step 9): `just db-import-sqlite .dev/critical.db postgres://…/critical?sslmode=disable`.
@@ -136,9 +115,9 @@ db-import-sqlite file dsn:
     cd api && go run ./cmd/sqlite-copy "$file" "{{dsn}}"
 
 # Delete the development databases (real and fixture): stops this checkout's compose services and
-# deletes their volume `critical-pg`; the next dev-api start migrates, re-seeds and imports the
+# deletes their volume `critical-pg`; the next `just dev` start migrates, re-seeds and imports the
 # catalogue. Files in .dev/ are not touched.
-dev-reset:
+dev-reset: stop
     docker compose down --volumes
 
 # --- Code Generation ---
@@ -267,7 +246,7 @@ rulebooks:
 # Fetch the spell catalogue artifact (ADR 0021) into the gitignored .catalogue/catalogue.json: the
 # rulebooks repo is cloned or fast-forwarded (`just rulebooks`), then its dist/catalogue.json is taken
 # at CATALOGUE_REF (default: the checked-out branch). Needs access to the private repo; never part of
-# validate. Without it, dev-api runs on the fixture api/testdata/catalogue.json.
+# validate. Without it, `just dev` runs on the fixture api/testdata/catalogue.json.
 catalogue: rulebooks
     #!/usr/bin/env bash
     set -euo pipefail

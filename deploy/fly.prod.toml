@@ -1,0 +1,39 @@
+# Production app (ADR 0024 steps 2, 5, 8, 9.1). Used as `fly deploy -c deploy/fly.prod.toml --image <ref>`:
+# the image is never named here, the release workflow passes it. No public IP is allocated (step 8.2):
+# the first deploy uses --no-public-ips. Runbook: docs/deploy.md. Checked by `just check-fly`.
+app = "critical-prod"
+primary_region = "cdg"
+
+# Same values as the image's ENV (Dockerfile); `just check-fly` fails when they differ.
+[env]
+  CRITICAL_ADDR = ":8080"
+  CRITICAL_DSN = "/data/critical.db"
+  CRITICAL_SEEDS_DIR = "/app/seeds"
+  CRITICAL_CATALOGUE = "/app/catalogue.json"
+  CRITICAL_WEB_DIR = "/app/web"
+
+# One machine owns the volume, and so the SQLite database (ADR 0024 step 5): no blue-green.
+[deploy]
+  strategy = "immediate"
+
+[[mounts]]
+  source = "data"
+  destination = "/data"
+  snapshot_retention = 30
+
+[http_service]
+  internal_port = 8080
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/health"
+    grace_period = "20s"
+    interval = "30s"
+    timeout = "3s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

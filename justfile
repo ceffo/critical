@@ -199,6 +199,18 @@ e2e *args: build-api
     cd web && node e2e/check-browser.mjs
     cd web && npx playwright test "$@"
 
+# --- Fly.io configuration (ADR 0024 steps 2, 5, 8, 9.1) ---
+
+# Check deploy/fly.*.toml: the Go test (part of `just test-api`, so of `just validate`) parses them and
+# compares them with the Dockerfile; when flyctl is installed, it also validates them offline.
+check-fly:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd api && go test -count=1 ./internal/flycheck/)
+    fly=$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)
+    if [ ! -x "$fly" ]; then echo "flyctl not installed: skipping 'fly config validate'"; exit 0; fi
+    for f in deploy/fly.*.toml; do "$fly" config validate -c "$f"; done
+
 # --- Production image (ADR 0024 step 1) ---
 
 # Build the production image with the FIXTURE catalogue (api/testdata), tagged critical:local, and

@@ -8,56 +8,55 @@ import {
   type IconProps,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { WORKSPACES, type Workspace } from "@/lib/workspaces";
-import { SettingsPopover } from "./SettingsPopover";
+import { ACTIVITIES, type Activity } from "@/lib/activities";
 
-const ICONS: Record<Workspace, ComponentType<IconProps>> = {
+const ICONS: Record<Activity, ComponentType<IconProps>> = {
   act: HandFist,
-  inventory: Backpack,
   spells: BookOpenText,
   xp: TrendUp,
+  inventory: Backpack,
 };
 
-/** Left rail: switches the workspace; the gear at the bottom opens the settings. */
+/**
+ * The rail (ADR 0022 step 2.4), on the ground between the character card and the stage: bare icons
+ * with their caption under them, the focused activity on a tint pill. A click focuses that
+ * activity. Captions wrap rather than being cut.
+ */
 export function Rail({
   active,
   onSelect,
 }: {
-  active: Workspace;
-  onSelect: (w: Workspace) => void;
+  active: Activity;
+  onSelect: (a: Activity) => void;
 }) {
   const { t } = useTranslation();
   return (
     <nav
-      aria-label={t("shell.workspaces")}
-      className="flex min-h-0 flex-col items-stretch gap-1 py-1"
+      aria-label={t("shell.activities")}
+      className="flex w-[4.25rem] shrink-0 flex-col items-stretch gap-1"
+      data-testid="rail"
     >
-      {WORKSPACES.map((w) => {
-        const Icon = ICONS[w];
-        const on = active === w;
+      {ACTIVITIES.map((a) => {
+        const Icon = ICONS[a];
+        const on = active === a;
         return (
           <button
-            key={w}
+            key={a}
             type="button"
             aria-current={on ? "page" : undefined}
             className={cn(
-              "relative flex flex-col items-center gap-1 rounded-md px-0.5 py-2 text-label transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5",
+              "flex flex-col items-center gap-1 rounded-lg px-0.5 py-2.5 text-center text-label break-words transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5",
               on
-                ? "bg-amb-900 text-amb-200 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-tint"
-                : "text-muted-foreground hover:bg-neu-900 hover:text-foreground",
+                ? "bg-amb-900 font-medium text-tint"
+                : "text-muted-foreground hover:bg-neu-900/60 hover:text-foreground",
             )}
-            onClick={() => onSelect(w)}
+            onClick={() => onSelect(a)}
           >
             <Icon weight={on ? "fill" : "regular"} aria-hidden />
-            <span className="max-w-full truncate">
-              {t(`shell.workspace.${w}`)}
-            </span>
+            <span className="max-w-full">{t(`shell.activity.${a}`)}</span>
           </button>
         );
       })}
-      <div className="mt-auto flex justify-center pb-1">
-        <SettingsPopover />
-      </div>
     </nav>
   );
 }

@@ -53,7 +53,7 @@ import { ExposureControls } from "./ExposureControls";
 const labelClass = "text-label text-muted-foreground";
 
 /**
- * The Fil column's detail card: the latest result by default, or the journal entry the player
+ * The result panel of the Act activity (ADR 0022 step 2.5): the latest result by default, or the journal entry the player
  * selected (read-only, accent ring, "Latest" returns). Every kind renders from structured data, the
  * entry's payload or this session's roll response; corrections only on the latest result.
  */
@@ -141,16 +141,17 @@ export function ResultCard() {
   return (
     <section
       className={cn(
-        "flex min-h-0 min-w-0 flex-col rounded-xl",
-        readOnly ? "bg-card ring-1 ring-amb-700" : "bg-card",
+        // The result panel's outline is the accent, marking the latest result (ADR 0022 step 4.1).
+        "zone-card flex min-h-0 min-w-0 flex-col border-amb-700",
+        readOnly && "ring-1 ring-amb-700",
       )}
       aria-label={t("fil.card")}
       data-readonly={readOnly}
     >
-      <div className="flex shrink-0 items-center gap-2 px-3 pt-3 pb-2">
+      <div className="flex shrink-0 items-center gap-2 px-4 pt-3.5 pb-2">
         {header ?? <h2 className="text-title">{t("fil.card")}</h2>}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">{body}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3.5">{body}</div>
     </section>
   );
 }

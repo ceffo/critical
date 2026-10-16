@@ -1,4 +1,4 @@
-// Display helpers for the Moi column: what the log already says, picked out for a glance. No game
+// Display helpers for the character card: what the log already says, picked out for a glance. No game
 // rules here (docs/all.md, "Core Architectural Rule"): HP and save verdicts come from the server.
 import type { LogEntry } from "@/types/log";
 import type { SaveCategory } from "@/types/combat";

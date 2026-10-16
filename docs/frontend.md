@@ -19,72 +19,89 @@ web/
     api/              ← typed fetch wrappers (hp.ts, combat.ts, buffs.ts, spells.ts)
     components/
       ui/             ← shadcn/ui primitives (Button, Card, Badge, etc.)
-      dashboard/      ← Header (TurnBlock, EffectsTimeline, BuffForms), HpBar, ResultCard, QuickHp, CombatLog, Notices
+      dashboard/      ← Header (TurnBlock, EffectsTimeline, LastResult, BuffForms), HpBar, ResultCard, QuickHp, CombatLog, JournalBar, DiceComposer, Notices
       actions/        ← ActionArea tabs and one panel per tab
+      shell/          ← Rail, ActStage (now band, journal split), BrandMark, SettingsPopover
     stores/           ← Zustand stores (hp.ts, combat.ts, buffs.ts, spells.ts)
     types/            ← TypeScript types mirroring Go response structs
-    App.tsx           ← root layout (header + round screen grid)
+    App.tsx           ← the shell (header card, character card | rail | stage, dice footer)
 ```
 
 ## Dashboard Layout
 
-One screen, no page scroll, organised around a combat round: see state, act, see the result, fix
-mistakes, advance the round. Responsive from 1280 to 2560 CSS px at full width, no horizontal
-scroll down to 1024; columns are clamped, the root font size is a fixed 16px. The grid,
-clamps, tokens and house rules are decided in
-[ADR 0009](adr/0009-dashboard-layout-and-theme-system.md); type sizes, spacing, control heights,
-the header (112px at rest) and the content target in [ADR 0017](adr/0017-type-scale-and-density.md): text
-uses only `text-label` / `text-body` / `text-title` / `text-key` / `text-headline`. `App.tsx`
-composes it.
-
-**Target layout: [ADR 0022](adr/0022-activity-focus-layout.md)**, which replaces ADR 0009's four
-columns and amends ADR 0017 (header 120 px, card padding, the 44 px Attack, `text-hero`): the
-screen around the focused activity, every zone a card on the ground with no rule anywhere (header
-with the last result, character card on the left edge with HP, rail, stage, dice footer with the
-settings cog), the journal under the act panel with a draggable, collapsible split, the Facet · Bare
-mark, and **no cut text** (no `truncate` / `text-ellipsis` / `line-clamp` on important text; checked
-by `expectNoClippedText` in `layout.spec`). Its drawing is direction B in
-[docs/design/ui-directions/](design/ui-directions/README.md). The diagram and notes below describe
-the code as it stands; the area items move each region to ADR 0022 and update them.
+One screen, no page scroll, organised around the focused activity
+([ADR 0022](adr/0022-activity-focus-layout.md), which replaced ADR 0009's four columns): the last
+result, HP and the turn with its effects are always visible; the rest reshapes around what the
+player is doing. Responsive from 1280 to 2560 CSS px at full width, no horizontal scroll down to
+1024 (ADR 0009 step 3), fixed 16px root. On the ground, padded 12 px, every zone is a card
+(`zone-card`: `bg-surface`, 1 px outline, 10 px radius) 12 px from the next; **no rule or separator
+line** anywhere, inside a card grouping is by spacing, a `section-label` (11 px, uppercase,
+letter-spaced, muted) or a `bg-neu-900` tone step. Type uses only `text-label` / `text-body` /
+`text-title` / `text-key` / `text-headline` / `text-hero` (ADR 0017 step 2, `text-hero` from ADR
+0022 step 3.4: the turn number, a result total, the XP total). **No cut text** (ADR 0022 step 1):
+no `truncate` / `text-ellipsis` / `line-clamp` on important text; `layout.spec` checks the shell's
+zones with `expectNoClippedText` (`e2e/noClip.ts`) at every layout viewport; the area items add
+their regions as they drop their remaining `truncate`s. `App.tsx` composes it.
 
 ```mermaid
 flowchart TD
-  subgraph H["Header region, full width (components/dashboard/Header.tsx)"]
-    RC["TurnBlock: turn number, initiative row, Next turn, ⋯ menu (time passes, set turn, end combat)"]
-    BS["EffectsTimeline: one row per buff over a window of 8 / 12 / 16 turns, add / edit forms"]
+  subgraph H["Header card, full width, at most 120 px at rest (components/dashboard/Header.tsx)"]
+    BM["BrandMark: Facet · Bare mark, Cinzel wordmark from 1500 px"]
+    TB["TurnBlock: TURN + number (text-hero); initiative with reroll over Next turn and the ⋯ menu"]
+    ET["EffectsTimeline: one row per buff over 8 / 12 / 16 turns, add / edit forms"]
+    LR["LastResult: 'Last result · T3 · 21:31', die chip and the journal's wording"]
   end
-  subgraph G["Columns: rail | workspace 1fr | Fil minmax(340px, 50vw - Moi - 1.5rem) (starts about mid-screen, border-l separator) | Moi clamp(300px, 22vw, 440px)"]
-    RAIL["Rail clamp(68px, 5vw, 96px) (components/shell/Rail.tsx): Agir, Inventaire, Sorts, Expérience; gear opens SettingsPopover"]
-    subgraph WS["Workspace (one shown, each mounted on first visit, then kept)"]
-      ACT["Agir: ActionArea tabs Weapons, Spells, Items"]
-      INV["Inventaire: InventoryPanel + WeaponsSection"]
-      SP["Sorts: LookupPanel"]
-      XP["Expérience: XpPanel"]
+  subgraph B["Below the header: character card 280 px | rail 68 px | stage 1fr"]
+    subgraph C["Character card (aside 'Character'), scrolls on its own"]
+      ID["Identity, abilities, THAC0"]
+      HP["HpBar"]
+      CC["ChargeCards"]
+      QH["QuickHp"]
+      SV["Saves"]
     end
-    subgraph FIL["Fil (aside 'Results and journal')"]
-      RCARD["ResultCard: detail card, the latest result or a selected journal entry"]
-      CL["CombatLog: journal, All / Rolls filter, grouped by turn, Note / Void, Undo in its header"]
-    end
-    subgraph MOI["Moi (aside 'Character')"]
-      ID["Identity: name, level, abilities, THAC0"]
-      HP["HpBar: last change, current / max, threshold bar, last-damage ghost"]
-      CC["ChargeCards: one per absorbing buff, Absorb"]
-      QH["QuickHp: amount, Damage / Healing, source, Undo last"]
-      SV["Saves: five rows, name, target, last roll"]
+    RAIL["Rail (components/shell/Rail.tsx), on the ground: Act, Spells, Experience, Inventory"]
+    subgraph S["Stage: the focused activity (one shown, each mounted on first visit, then kept)"]
+      subgraph ACT["Act (components/shell/ActStage.tsx)"]
+        NOW["Now band, content height up to 60 %: ActionArea (tabs with icons) | ResultCard (accent outline)"]
+        SPLIT["Split handle: drag or arrows resize the journal, Collapse / Expand journal"]
+        J["CombatLog (at least 14rem) or, collapsed, JournalBar (one line)"]
+      end
+      SP["Spells: LookupPanel"]
+      XP["Experience: XpPanel"]
+      INV["Inventory: InventoryPanel + WeaponsSection"]
     end
   end
-  RAIL -->|selects| WS
-  ACT -->|roll| RCARD
-  QH -->|POST /api/hp/event| CL
-  SV -->|POST /api/roll/save| RCARD
-  CC -->|POST /api/buffs/id/trigger| CL
-  RC -->|POST /api/round/advance| CL
+  subgraph F["Dice footer card, full width, one line"]
+    COG["SettingsPopover cog"]
+    DC["DiceComposer: dice, formula, −1 / +1, Roll, favourites strip (scrolls sideways)"]
+  end
+  RAIL -->|focuses| S
+  NOW -->|roll| LR
+  QH -->|POST /api/hp/event| J
+  SV -->|POST /api/roll/save| LR
+  TB -->|POST /api/round/advance| J
+  DC -->|POST /api/roll/dice| LR
 ```
 
-- Each column scrolls on its own; the detail card takes at most 60% of the Fil column, the
-  journal the rest.
-- Fil column (`ResultCard.tsx`, `CombatLog.tsx`, logic in `lib/filCard.ts`, UI state in
-  `stores/fil.ts`): the detail card shows the latest result by default: this session's last roll
+- Always visible (ADR 0022 step 2.1): the header card, the character card on the left edge and the
+  dice footer. The last result (`LastResult.tsx`, `lib/filCard.ts` `lastResultEntry` /
+  `lastResultChip`) is the newest result entry (attack, save, cast, item use, skill check,
+  exposure) or free dice roll not undone, worded as its journal row: a roll made from any activity
+  shows there at once. The result panel and the journal are the Act activity's.
+- Activities (`lib/activities.ts`, rail order Act, Spells, Experience, Inventory): a click on the
+  rail focuses one; the always-visible zones do not move. Each mounts on its first visit and stays
+  mounted while hidden (ADR 0009 step 2, kept).
+- Act stage (`components/shell/ActStage.tsx`): the now band (act panel | result panel,
+  `minmax(28rem, 1.35fr) | minmax(24rem, 1fr)`) takes its content's height up to 60 % of the
+  stage, the journal the rest (at least 14rem). The handle between them (`role="separator"`) is
+  dragged, or moved by ArrowUp / ArrowDown, to set the journal's height (`lib/journalSplit.ts`
+  bounds it); Collapse folds the journal into `JournalBar.tsx` (turn, value, icon, newest entry,
+  time, the entry count, Undo / Redo). The height and the collapsed state are per-device display
+  preferences in `critical.settings.v1` (`lib/settings.ts`), never sent to the API.
+- Header card budget (ADR 0022 step 3.1): at most 120 px tall at rest, outline included, with 3
+  effect rows; below 1500 px wide the mark shows without the wordmark.
+- Result panel and journal (`ResultCard.tsx`, `CombatLog.tsx`, logic in `lib/filCard.ts`, UI state in
+  `stores/fil.ts`), in the Act activity: the result panel shows the latest result by default: this session's last roll
   response while it is the newest attack / save / cast / item use entry (the server's
   `actionlog.RollKinds`), else that entry rendered from its payload (after a reload). A click on a
   journal row shows that entry instead, read-only, with an accent ring and "Latest" to return; a
@@ -98,7 +115,8 @@ flowchart TD
   with a sticky "Turn 3" / "Out of combat" header and a "current" tag, rows icon | text | value with
   the time, Note and Void under it; the row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
-- Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`): language
+- Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
+  left of the dice footer (ADR 0022 step 2.6): language
   (English / Français), appearance (Dark / Light / System, System follows the OS live), six
   ambiance swatches. Applied live, stored per device in `localStorage['critical.settings.v1']`
   (`lib/settings.ts`, which migrates the older `critical.theme` / `critical.language` keys once).
@@ -109,12 +127,15 @@ flowchart TD
   any fill, `bg-surface`, `bg-neu-900`, `text-ink-muted`, `shadow-float` for popovers only) or the
   shadcn names mapped onto them, never raw colours and never a ramp step for meaningful text. The
   contrast unit test (`lib/theme.test.ts`) keeps every ambiance at WCAG AA in both modes.
-- Brand: `components/shell/BrandMark.tsx` (mark + Cinzel wordmark, `font-display`) at the left of
-  the header; `public/favicon.svg` is the same drawing in static Arcane colours.
-- Plug-in slots: each Agir tab is one panel component in `components/actions/ActionArea.tsx`
-  (`TABS`, the tab label shows a count where it has one: spells left, combat items); each workspace is one `Pane` in `App.tsx` (`lib/workspaces.ts`).
+- Brand (ADR 0022 step 7): `components/shell/BrandMark.tsx`, the Facet · Bare mark (hexagon outline
+  in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the left of the header
+  card; `public/favicon.svg` is the same drawing in static Arcane colours.
+- Plug-in slots: each Act tab is one panel component in `components/actions/ActionArea.tsx`
+  (`TABS` with its Phosphor icon, the tab label shows a count where it has one: spells left, combat
+  items); each activity is one `Pane` in `App.tsx` (`lib/activities.ts`); the Act stage's two
+  panels and journal are slots in `ActStage.tsx`.
 - Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): turn row
-  plus up to 3 effect rows, at most 112px at rest (ADR 0017 step 6); with more effects an expander
+  plus up to 3 effect rows, the card at most 120px at rest (ADR 0022 step 3.1); with more effects an expander
   next to "Effects" ("+N", `aria-expanded`) grows the track in place. The turn
   block shows the turn (the round counter), the initiative row ("Out of combat" at turn 0, a
   placeholder otherwise), Next turn and a ⋯ popover menu (Time passes…, Set turn number…, End combat,
@@ -136,7 +157,7 @@ flowchart TD
   and Ctrl/Cmd+Shift+Z replay the `redo` target of `GET /api/log` with `POST /api/log/redo`
   ([ADR 0019](adr/0019-redo.md)); every entry has Note
   (the only amend, shown in italics under the line); values are never edited in the log. Buff/round entries are rendered from their
-  payload in the player's language (`lib/logSummary.ts`). The Moi column's STR is the effective STR
+  payload in the player's language (`lib/logSummary.ts`). The character card's STR is the effective STR
   (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect under its name ("weapon +5 · dice ×2"); a Strength
   bonus that an active Improved Strength replaces (`applies: false`, no `min_str`) shows dashed
@@ -231,10 +252,10 @@ flowchart TD
   sheet's starting XP as the last, read-only row). Each write is a transaction on the action
   stack (ADR 0015 step 4): it answers with the whole ledger, then refreshes the table state so the
   journal shows the entry; the table refresh re-reads the ledger, so the journal's Undo shows the
-  total back. The Moi column's level line opens
+  total back. The character card's level line opens
   it and is underlined with the server's `progress`.
-- Moi column (`Identity`, `HpBar`, `ChargeCards`, `QuickHp`, `Saves` in `components/dashboard/`),
-  beside every workspace: identity (name, level, abilities in seven cells, effective STR, THAC0);
+- Character card (`Identity`, `HpBar`, `ChargeCards`, `QuickHp`, `Saves` in `components/dashboard/`),
+  beside every activity: identity (name, level, abilities in seven cells, effective STR, THAC0);
   HP (the newest HP change still in force on the right, current over max, the bar coloured by
   threshold with the last damage taken as a faint segment after the fill when the newest change is
   damage, `lib/moiLog.ts`; the scale runs from the server's `floor` (-10) to max, with a flat-tinted
@@ -244,7 +265,7 @@ flowchart TD
   Healing, source, which the server requires): Enter in either field applies damage, Shift+Enter
   healing; the five saving throws, one button row each: name, target (the sheet's), the newest
   logged roll in that category (server verdict ✓ / ✗ and the d20), a click rolls it.
-- Saves (`Saves.tsx`, Moi column): a save is logged (kind `save`, rendered from `effectivePayload` in
+- Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` in
   `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
   − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
@@ -399,11 +420,14 @@ outside `ui/`).
   (e.g. `hp-value`).
 - **Relative assertions:** never hard-code seeded character values (reseeds change them). Read the value
   before, act, assert the delta (HP drops by exactly the damage entered).
-- **Shell:** switch workspaces with `openWorkspace(page, "Act" | "Inventory" | "Spells" | "Experience")` and settings
-  with `chooseSetting` / `chooseLanguage` (`e2e/helpers.ts`). A visited workspace stays in the DOM
+- **Shell:** focus an activity with `openWorkspace(page, "Act" | "Inventory" | "Spells" | "Experience")` and settings
+  with `chooseSetting` / `chooseLanguage` (`e2e/helpers.ts`). A visited activity stays in the DOM
   while hidden, so scope `getByLabel` / `getByText` to the visible region (role locators skip
-  hidden elements). `layout.spec.ts` covers 1024, 1280x800, 1440x900, 1920x1080 and 2560x1440;
-  its "theme" test screenshots the main screens in dark and light, then every ambiance.
+  hidden elements). The journal and the result panel are the Act activity's: focus Act before
+  reading them (the header's `last-result` shows the newest roll from anywhere). `layout.spec.ts`
+  covers 1024, 1280x800, 1440x900, 1707x1300, 1920x1080 and 2560x1440 and runs
+  `expectNoClippedText` (`e2e/noClip.ts`) on the shell's zones; its "theme" test screenshots the
+  main screens in dark and light, then every ambiance.
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
   are visible. Don't add per-flow fr specs.
 - **Add a spec:** create `web/e2e/<name>.spec.ts`, `import { test, expect, snap } from "./fixtures"`, one

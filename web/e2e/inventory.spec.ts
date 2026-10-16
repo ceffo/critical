@@ -12,6 +12,8 @@ import {
 
 // Inventory tab: one item model, the count behaves as stock (− and +, stays
 // at 0), charges (− only, gone at 0) or daily (− only, refilled by a long rest).
+// The journal and the result panel are the Act activity's (ADR 0022 step 2.5): the tests focus Act
+// to read them, then come back.
 
 async function openInventory(page: Page) {
   await openDashboard(page);
@@ -40,6 +42,9 @@ function resultCard(page: Page) {
     .getByRole("region", { name: "Detail", exact: true })
     .getByTestId("item-result");
 }
+
+const act = (page: Page) => openWorkspace(page, "Act");
+const inventory = (page: Page) => openWorkspace(page, "Inventory");
 
 async function longRest(page: Page) {
   await openWorkspace(page, "Act");
@@ -89,11 +94,18 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   await openInventory(page);
   await minus(page, "Fire flasks").click();
   await expect(count(page, "fire_flask")).toHaveText("4");
+  // The use shows at once in the header's last result, from the Inventory.
+  await expect(page.getByTestId("last-result")).toContainText(
+    "Used Fire flasks",
+  );
+  await act(page);
   await expect(resultCard(page)).toContainText("5d6");
   await expect(logEntry(page, "Used Fire flasks")).toContainText("(4 left)");
 
+  await inventory(page);
   await plus(page, "Fire flasks").click();
   await expect(count(page, "fire_flask")).toHaveText("5");
+  await act(page);
   await expect(
     logEntry(page, "Restocked Fire flasks: +1 (5 now)"),
   ).toContainText("Item");
@@ -103,8 +115,8 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   await snap(page, "flask-used-and-restocked");
 
   await undoEntry(page, "Restocked Fire flasks");
-  await expect(count(page, "fire_flask")).toHaveText("4");
   await undoEntry(page, "Used Fire flasks");
+  await inventory(page);
   await expect(count(page, "fire_flask")).toHaveText("5");
 });
 
@@ -113,7 +125,9 @@ test("the wand rolls 6d6 with a breakdown and the save it allows", async ({
 }) => {
   await openInventory(page);
   await minus(page, "Wand of lightning").click();
+  await expect(count(page, "wand_lightning")).toHaveText("3");
 
+  await act(page);
   const card = resultCard(page);
   await expect(card).toContainText("Used Wand of lightning");
   await expect(
@@ -130,7 +144,6 @@ test("the wand rolls 6d6 with a breakdown and the save it allows", async ({
   ).map(Number);
   const total = Number(await card.getByTestId("item-total").textContent());
   expect(total).toBe(rolls.reduce((a, b) => a + b, 0));
-  await expect(count(page, "wand_lightning")).toHaveText("3");
   await expect(logEntry(page, "Used Wand of lightning")).toContainText(
     `6d6 = ${total} (3 left)`,
   );
@@ -147,6 +160,7 @@ test("a wand used down to 0 disappears; popping that use brings it back with 1 c
   }
   await minus(page, "Wand of lightning").click();
   await expect(row(page, "wand_lightning")).toHaveCount(0);
+  await act(page);
   await expect(resultCard(page).getByTestId("item-left")).toHaveText(
     "Wand of lightning: last charge used, removed from the inventory",
   );
@@ -155,6 +169,7 @@ test("a wand used down to 0 disappears; popping that use brings it back with 1 c
   await snap(page, "wand-removed");
 
   await undoEntry(page, "(last charge, removed)");
+  await inventory(page);
   await expect(count(page, "wand_lightning")).toHaveText("1");
   await expect(row(page, "power_gem_dispel")).toBeVisible();
   // Back in its place, between the flasks and the gem.
@@ -198,9 +213,9 @@ test("arrows at 0 stay listed and can be restocked; the attack picker offers onl
   await openWorkspace(page, "Inventory");
   await plus(page, "Arrows +3").click();
   await expect(count(page, "arrows_plus3")).toHaveText("1");
-  await expect(logEntry(page, "Restocked Arrows +3: +1 (1 now)")).toBeVisible();
 
-  await openWorkspace(page, "Act");
+  await act(page);
+  await expect(logEntry(page, "Restocked Arrows +3: +1 (1 now)")).toBeVisible();
   await expect(
     ammo.getByRole("radio", { name: "Arrows +3, 1 left" }),
   ).toBeVisible();
@@ -230,8 +245,9 @@ test("a long rest refills the gem (daily) and nothing else", async ({
   await expect(count(page, "wand_lightning")).toHaveText("3");
   await expect(count(page, "fire_flask")).toHaveText("4");
   await expect(count(page, "arrows_plus1")).toHaveText("17");
-  await expect(logEntry(page, "Long rest")).toContainText("1 items refilled");
   await snap(page, "after-long-rest");
+  await act(page);
+  await expect(logEntry(page, "Long rest")).toContainText("1 items refilled");
 });
 
 // --- API-level rules: restock refusals and empty items ---

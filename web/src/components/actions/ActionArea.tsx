@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  Backpack,
+  ListChecks,
+  Sparkle,
+  Sword,
+  type Icon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useItemsStore } from "@/stores/items";
 import { useSpellStore } from "@/stores/spells";
@@ -11,12 +18,20 @@ import { SkillsTab } from "./SkillsTab";
 import { combatItems } from "@/lib/combatItems";
 
 /**
- * Tabs of the Agir (act) workspace: Weapons, Spells (with the spells left), Items (with how many
- * there are), Skills (proficiency and bard skill checks). Inventory and spell lookup are workspaces of their own in the rail (App.tsx); saving
- * throws live in the Moi column.
+ * The act panel of the Act activity (ADR 0022 step 2.5): tabs with icons and no panel title (the
+ * rail names the activity): Weapons, Spells (with the spells left), Items (with how many there
+ * are), Skills (proficiency and bard skill checks). Inventory and spell lookup are activities of
+ * their own in the rail (App.tsx); saving throws live in the character card.
  */
 const TABS = ["weapons", "spells", "items", "skills"] as const;
 type TabId = (typeof TABS)[number];
+
+const TAB_ICONS: Record<TabId, Icon> = {
+  weapons: Sword,
+  spells: Sparkle,
+  items: Backpack,
+  skills: ListChecks,
+};
 
 export function ActionArea({
   onOpenInventory,
@@ -43,48 +58,53 @@ export function ActionArea({
 
   return (
     <section
-      className="flex min-h-0 min-w-0 flex-col rounded-xl bg-card"
+      className="zone-card flex min-h-0 min-w-0 flex-col"
       aria-label={t("actions.label")}
     >
       <div
         role="tablist"
         aria-label={t("actions.label")}
-        className="flex shrink-0 items-center gap-1 bg-neu-900/50 px-3 pt-2"
+        className="flex shrink-0 flex-wrap items-center gap-1 px-4 pt-2"
       >
-        <span className="mr-3 text-body font-semibold">
-          {t("shell.workspace.act")}
-        </span>
-        {TABS.map((id) => (
-          <button
-            key={id}
-            role="tab"
-            id={`tab-${id}`}
-            aria-selected={active === id}
-            aria-controls={`panel-${id}`}
-            className={cn(
-              "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
-              active === id && "border-tint text-foreground",
-            )}
-            onClick={() => setActive(id)}
-          >
-            {t(`actions.tabs.${id}`)}
-            {counts[id] !== undefined && (
-              <span
+        {TABS.map((id) => {
+          const TabIcon = TAB_ICONS[id];
+          return (
+            <button
+              key={id}
+              role="tab"
+              id={`tab-${id}`}
+              aria-selected={active === id}
+              aria-controls={`panel-${id}`}
+              className={cn(
+                "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
+                active === id && "border-tint text-foreground",
+              )}
+              onClick={() => setActive(id)}
+            >
+              <TabIcon
                 aria-hidden
-                className="text-label text-muted-foreground"
-                data-testid={`tab-count-${id}`}
-              >
-                {counts[id]}
-              </span>
-            )}
-          </button>
-        ))}
+                weight={active === id ? "fill" : "regular"}
+                className="size-4"
+              />
+              {t(`actions.tabs.${id}`)}
+              {counts[id] !== undefined && (
+                <span
+                  aria-hidden
+                  className="text-label text-muted-foreground"
+                  data-testid={`tab-count-${id}`}
+                >
+                  {counts[id]}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
       <div
         role="tabpanel"
         id={`panel-${active}`}
         aria-labelledby={`tab-${active}`}
-        className="min-h-0 flex-1 overflow-y-auto p-3"
+        className="min-h-0 flex-1 overflow-y-auto px-4 py-3"
       >
         {active === "weapons" && <AttackPanel />}
         {active === "spells" && <SpellsPanel />}

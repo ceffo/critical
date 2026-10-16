@@ -35,15 +35,24 @@
     }
   },
   "shell": {
-    "workspaces": "Workspaces",
-    "workspace": {
+    "activities": "Activities",
+    "activity": {
       "act": "Act",
-      "inventory": "Inventory",
       "spells": "Spells",
-      "xp": "Experience"
+      "xp": "Experience",
+      "inventory": "Inventory"
     },
-    "fil": "Results and journal",
-    "moi": "Character"
+    "character": "Character",
+    "lastResult": "Last result",
+    "noResult": "No roll yet.",
+    "footer": "Dice and settings",
+    "journal": {
+      "collapse": "Collapse",
+      "expand": "Expand journal",
+      "resize": "Resize the journal",
+      "count_one": "{{count}} entry",
+      "count_other": "{{count}} entries"
+    }
   },
   "attr": {
     "str": "STR",

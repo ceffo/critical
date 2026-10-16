@@ -8,7 +8,7 @@ interface SettingsStore extends Settings {
   update: (patch: Partial<Settings>) => void;
 }
 
-function apply(s: Settings) {
+function apply(s: Pick<Settings, "lang" | "mode" | "amb">) {
   applyTheme(s.mode, s.amb);
   document.documentElement.lang = s.lang;
   if (i18n.language !== s.lang) void i18n.changeLanguage(s.lang);
@@ -19,8 +19,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   ...loadSettings(),
   update: (patch) => {
     set(patch);
-    const { lang, mode, amb } = get();
-    saveSettings({ lang, mode, amb });
+    const { lang, mode, amb, journalHeight, journalCollapsed } = get();
+    saveSettings({ lang, mode, amb, journalHeight, journalCollapsed });
     apply({ lang, mode, amb });
   },
 }));

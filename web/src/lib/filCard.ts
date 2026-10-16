@@ -1,4 +1,4 @@
-// The Fil column: which journal entry the detail card shows, what each entry kind renders from its
+// The result panel and the journal (Act activity, ADR 0022): which journal entry the panel shows, what each entry kind renders from its
 // payload, and the journal's filter. Display only: verdicts, totals and dice are the server's, read
 // from the payloads as recorded (docs/all.md, "Core Architectural Rule").
 import type { TFunction } from "i18next";
@@ -450,6 +450,31 @@ export function rowValue(e: LogEntry): RowValue | null {
       tone: cast.attack.hit ? "pass" : "fail",
     };
   return null;
+}
+
+/**
+ * The header's last result (ADR 0022 step 2.2): the newest result entry (RESULT_KINDS) or free dice
+ * roll still in force, so a roll made from any activity shows there. Undone entries give way to the
+ * one before them.
+ */
+export function lastResultEntry(entries: readonly LogEntry[]): LogEntry | null {
+  return (
+    entries.find(
+      (e) =>
+        e.status !== "voided" &&
+        (RESULT_KINDS.includes(e.kind) || e.kind === "dice"),
+    ) ?? null
+  );
+}
+
+/**
+ * The chip of the header's last result: an attack's d20 (its wording already carries the verdict
+ * and the damage), else the journal row's value.
+ */
+export function lastResultChip(e: LogEntry): RowValue | null {
+  const attack = attackPayload(e);
+  if (attack) return { text: String(attack.d20Roll), tone: "muted" };
+  return rowValue(e);
 }
 
 /**

@@ -1,3 +1,6 @@
-/** Workspaces of the rail; the Fil and Moi columns stay beside every one of them. */
-export const WORKSPACES = ["act", "inventory", "spells", "xp"] as const;
-export type Workspace = (typeof WORKSPACES)[number];
+/**
+ * The activities of the rail, in its order (ADR 0022 step 2.4). One is focused at a time and fills
+ * the stage; the header card, the character card and the dice footer stay put beside every one.
+ */
+export const ACTIVITIES = ["act", "spells", "xp", "inventory"] as const;
+export type Activity = (typeof ACTIVITIES)[number];

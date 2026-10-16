@@ -11,7 +11,7 @@ import {
 } from "./helpers";
 
 // Inventory editor: add, edit and remove items; each is one log entry and the
-// newest can be popped.
+// newest can be popped. The journal is the Act activity's (ADR 0022 step 2.5).
 
 async function openInventory(page: Page) {
   await openDashboard(page);
@@ -52,10 +52,10 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   await expect(added).toContainText("Arrows +3 (blessed)");
   await expect(added.getByTestId("item-count")).toHaveText("6");
   await expect(added.getByTestId("item-bonus")).toHaveText("+3");
-  await expect(logEntry(page, "Added Arrows +3 (blessed) (6)")).toBeVisible();
   await snap(page, "item-added");
 
   await openWorkspace(page, "Act");
+  await expect(logEntry(page, "Added Arrows +3 (blessed) (6)")).toBeVisible();
   await openWeapons(page);
   await chooseWeapon(page, "Short Bow +2");
   await expect(
@@ -63,13 +63,12 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   ).toHaveCount(1);
   await snap(page, "ammo-picker-with-new-arrows");
 
-  await openWorkspace(page, "Inventory");
   await undoEntry(page, "Added Arrows +3 (blessed)");
-  await expect(added).toHaveCount(0);
-  await openWorkspace(page, "Act");
   await expect(
     ammoChips(page).getByRole("radio", { name: /blessed/ }),
   ).toHaveCount(0);
+  await openWorkspace(page, "Inventory");
+  await expect(added).toHaveCount(0);
 });
 
 test("edit the wand's charges 4 to 3: logged; pop restores 4", async ({
@@ -86,12 +85,14 @@ test("edit the wand's charges 4 to 3: logged; pop restores 4", async ({
   await expect(
     row(page, "wand_lightning").getByTestId("item-count"),
   ).toHaveText("3");
+  await snap(page, "item-edited");
+  await openWorkspace(page, "Act");
   await expect(logEntry(page, "Edited Wand of lightning")).toContainText(
     "count 4 → 3",
   );
-  await snap(page, "item-edited");
 
   await undoEntry(page, "Edited Wand of lightning");
+  await openWorkspace(page, "Inventory");
   await expect(
     row(page, "wand_lightning").getByTestId("item-count"),
   ).toHaveText("4");
@@ -105,10 +106,10 @@ test("remove an item: gone from the Inventory and the ammo picker; pop brings it
     .getByRole("button", { name: "Remove Arrows +2" })
     .click();
   await expect(row(page, "arrows_plus2")).toHaveCount(0);
-  await expect(logEntry(page, "Removed Arrows +2 (16)")).toBeVisible();
   await snap(page, "item-removed");
 
   await openWorkspace(page, "Act");
+  await expect(logEntry(page, "Removed Arrows +2 (16)")).toBeVisible();
   await openWeapons(page);
   await chooseWeapon(page, "Short Bow +2");
   await expect(
@@ -118,8 +119,8 @@ test("remove an item: gone from the Inventory and the ammo picker; pop brings it
     ammoChips(page).getByRole("radio", { name: /^Arrows \+2,/ }),
   ).toHaveCount(0);
 
-  await openWorkspace(page, "Inventory");
   await undoEntry(page, "Removed Arrows +2");
+  await openWorkspace(page, "Inventory");
   await expect(row(page, "arrows_plus2").getByTestId("item-count")).toHaveText(
     "16",
   );

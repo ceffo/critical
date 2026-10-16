@@ -13,7 +13,8 @@ import {
   openWorkspace,
   recordHp,
 } from "./helpers";
-import type { Locator, Page } from "@playwright/test";
+import { test as base, type Locator, type Page } from "@playwright/test";
+import { clippedText, expectNoClippedText } from "./noClip";
 
 /** The page itself never scrolls: each column scrolls on its own. */
 async function expectNoPageScroll(page: Page) {
@@ -30,24 +31,17 @@ async function expectNoPageScroll(page: Page) {
   expect(m.sh, "vertical page scroll").toBeLessThanOrEqual(m.ch);
 }
 
-async function expectRegions(page: Page) {
+/** The always-visible zones (ADR 0022 step 2.1) and the focused activity's stage. */
+async function expectZones(page: Page) {
+  await expect(page.locator("[data-screen=turn-header]")).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "Workspaces" }),
-  ).toBeVisible();
-  await expect(page.getByRole("group", { name: "Turn" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Effects" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Actions" })).toBeVisible();
-  const fil = page.getByRole("complementary", { name: "Results and journal" });
-  await expect(
-    fil.getByRole("region", { name: "Detail", exact: true }),
+    page.getByRole("complementary", { name: "Character" }),
   ).toBeVisible();
   await expect(
-    fil.getByRole("region", { name: "Journal", exact: true }),
+    page.getByRole("navigation", { name: "Activities" }),
   ).toBeVisible();
-  const moi = page.getByRole("complementary", { name: "Character" });
-  await expect(moi.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(moi.getByTestId("hp-value")).toBeVisible();
-  await expect(moi.getByRole("group", { name: "HP change" })).toBeVisible();
+  await expect(page.getByTestId("stage")).toBeVisible();
+  await expect(page.getByTestId("dice-footer")).toBeVisible();
 }
 
 /** `inner` lies entirely within `outer` (bounding boxes, 1px tolerance for subpixel rounding). */
@@ -58,6 +52,21 @@ async function expectInside(inner: Locator, outer: Locator, what: string) {
   expect(i.y + i.height, `${what}: bottom`).toBeLessThanOrEqual(
     o.y + o.height + 1,
   );
+  expect(i.x, `${what}: left`).toBeGreaterThanOrEqual(o.x - 1);
+  expect(i.x + i.width, `${what}: right`).toBeLessThanOrEqual(
+    o.x + o.width + 1,
+  );
+}
+
+/** `el` is shown in full inside the viewport. */
+async function expectOnScreen(page: Page, el: Locator, what: string) {
+  await expect(el, what).toBeVisible();
+  const b = (await el.boundingBox())!;
+  const vp = page.viewportSize()!;
+  expect(b.y, `${what}: top`).toBeGreaterThanOrEqual(0);
+  expect(b.x, `${what}: left`).toBeGreaterThanOrEqual(0);
+  expect(b.y + b.height, `${what}: bottom`).toBeLessThanOrEqual(vp.height);
+  expect(b.x + b.width, `${what}: right`).toBeLessThanOrEqual(vp.width);
 }
 
 /** The column scrolls no content out of view. */
@@ -69,7 +78,7 @@ async function expectNoScroll(column: Locator, what: string) {
   expect(m.sh, `${what} scrolls`).toBeLessThanOrEqual(m.ch);
 }
 
-// ADR 0017 step 7 (content target). 1707x1300 is a third of the user's 5120x1440 table screen.
+// ADR 0022 step 1 (layout viewports). 1707x1300 is a third of the user's 5120x1440 table screen.
 const VIEWPORTS = [
   { width: 1280, height: 800 },
   { width: 1440, height: 900 },
@@ -77,94 +86,218 @@ const VIEWPORTS = [
   { width: 1920, height: 1080 },
   { width: 2560, height: 1440 },
 ];
+const ACTIVITIES = ["Act", "Spells", "Experience", "Inventory"] as const;
+/** Activities whose screenshots are kept, at the two viewports of the design (ADR 0022). */
+const SHOTS = new Set(["1440x900", "1707x1300"]);
+/** A long effect name: it wraps in the expanded header, never cut. */
+const LONG_EFFECT = "Protection From Evil, 10' Radius (from the temple priest)";
 
-test("layout: four regions, full width, no page scroll from 1024 to 2560", async ({
+// ADR 0022 steps 2.1, 2.2, 2.8 and 3.1: in every activity at every layout viewport, the header card
+// (at most 120 px at rest with 3 effect rows), the character card and the dice footer stay put and
+// show the last result, HP and the turn with its effects; the page never scrolls and no text in the
+// shell's zones is cut (step 1). Screenshots of every activity at 1440x900 and 1707x1300.
+test("shell: always-visible zones in every activity, header budget, no cut text", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1024, height: 768 });
   await openDashboard(page);
-  await expectRegions(page);
+  await expectZones(page);
   await expectNoPageScroll(page);
 
-  // ADR 0017 step 6: the header is as tall as its effects need, up to the turn row + 3 effect rows
-  // (24 + 3 * 24 px + 16 px padding = 112 px); the rest sits behind the expander.
+  // The header is as tall as its effects need, up to the turn row + 3 effect rows; the rest sits
+  // behind the expander.
   const header = page.locator("[data-screen=turn-header]");
   const heightOf = async () => (await header.boundingBox())!.height;
   const empty = await heightOf();
   await addBuff(page, { name: "Aid", rounds: 6 });
-  const one = await heightOf();
-  // The turn block sets a floor (64px); a single effect row fits inside it.
-  expect(one, "one effect").toBe(empty);
+  expect(await heightOf(), "one effect fits the turn cells' height").toBe(
+    empty,
+  );
   for (const name of ["Bless", "Shield"])
     await addBuff(page, { name, rounds: 6 });
   const three = await heightOf();
-  expect(three, "three effects").toBeLessThanOrEqual(112);
-  expect(three, "three effects grow the header").toBeGreaterThan(one);
   await expect(page.getByTestId("effects-expander")).toHaveCount(0);
-  for (const name of ["Haste", "Prayer"])
+  // Past three rows the header keeps its height; the long name shows (wrapped) once expanded.
+  for (const name of ["Haste", LONG_EFFECT])
     await addBuff(page, { name, rounds: 6 });
   const expander = page.getByTestId("effects-expander");
   await expander.click(); // addBuff left it open
-  const buffs = page.getByTestId("buff");
   await expect(expander).toHaveAttribute("aria-expanded", "false");
-  await expect(buffs).toHaveCount(3);
+  await expect(page.getByTestId("buff")).toHaveCount(3);
   expect(await heightOf(), "five effects at rest").toBe(three);
 
+  // A last result to show: an attack.
+  await openWeapons(page);
+  await chooseWeapon(page, "Long Sword +2");
+  await attackForm(page).getByLabel("Target AC").fill("5");
+  await attackForm(page)
+    .getByRole("button", { name: "Attack", exact: true })
+    .click();
+  const last = page.getByTestId("last-result");
+  await expect(last.getByTestId("last-result-text")).toContainText(
+    "Long Sword +2 vs AC 5",
+  );
+
+  const rail = page.getByRole("navigation", { name: "Activities" });
+  const character = page.getByRole("complementary", { name: "Character" });
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
-    await expectRegions(page);
-    await expectNoPageScroll(page);
-    // Full width: the Moi column ends at the right edge (minus the layout padding), no centring.
-    const moi = await page
-      .getByRole("complementary", { name: "Character" })
-      .boundingBox();
-    expect(vp.width - (moi!.x + moi!.width)).toBeLessThan(32);
-    // The workspace keeps a usable width.
-    const ws = await page.getByTestId("workspace").boundingBox();
-    expect(ws!.width).toBeGreaterThan(vp.width * 0.3);
-    // The header at rest: turn row + 3 effect rows, no scrollbar on the track.
-    expect(await heightOf(), "header height").toBeLessThanOrEqual(112);
+    const size = `${vp.width}x${vp.height}`;
+    expect(await heightOf(), `header at rest, ${size}`).toBeLessThanOrEqual(
+      120,
+    );
+    // Below 1500 px the mark shows without the wordmark (ADR 0022 step 7).
+    await expect(page.getByTestId("wordmark")).toBeVisible({
+      visible: vp.width >= 1500,
+    });
+    for (const activity of ACTIVITIES) {
+      await openWorkspace(page, activity);
+      await expect(
+        rail.getByRole("button", { name: activity }),
+      ).toHaveAttribute("aria-current", "page");
+      await expectZones(page);
+      await expectNoPageScroll(page);
+      const where = `${activity}, ${size}`;
+      await expectOnScreen(page, last, `last result, ${where}`);
+      await expectOnScreen(page, page.getByTestId("hp-value"), `HP, ${where}`);
+      await expectOnScreen(
+        page,
+        page.getByTestId("round-value"),
+        `turn, ${where}`,
+      );
+      await expectOnScreen(
+        page,
+        page.getByRole("group", { name: "Effects" }),
+        `effects, ${where}`,
+      );
+      await expectInside(page.getByTestId("hp-value"), character, where);
+      await expectNoClippedText(header, `header, ${where}`);
+      await expectNoClippedText(rail, `rail, ${where}`);
+      await expectNoClippedText(
+        page.getByTestId("dice-footer"),
+        `dice footer, ${where}`,
+      );
+      if (SHOTS.has(size))
+        await snap(page, `${activity.toLowerCase()}-${size}`);
+    }
     await expectNoScroll(
       page.getByTestId("effects-track").locator(".."),
       "track",
     );
-    if (vp.width === 1280) {
-      // Moi shows identity, abilities, HP, HP change and the five saves without scrolling, and the
-      // weapon in hand is fully inside the workspace.
-      const moi = page.getByTestId("moi");
-      await expectNoScroll(moi, "Moi");
+    if (vp.width === 1440) {
+      // ADR 0022 step 2.8: the character card shows everything from the name to the fifth saving
+      // throw without scrolling, and the weapon in hand is fully inside the act panel.
+      await expectNoScroll(character, "character card");
+      await expect(character.getByTestId("save-row")).toHaveCount(5);
       for (const [what, el] of [
-        ["identity", moi.getByRole("heading", { level: 1 })],
-        ["abilities", moi.locator("dl")],
-        ["HP", moi.getByTestId("hp-value")],
-        ["HP change", moi.getByRole("group", { name: "HP change" })],
-        ["last save", moi.getByTestId("save-row").last()],
+        ["name", character.getByRole("heading", { level: 1 })],
+        ["HP change", character.getByRole("group", { name: "HP change" })],
+        ["fifth save", character.getByTestId("save-row").last()],
       ] as const)
-        await expectInside(el, moi, what);
-      await expect(moi.getByTestId("save-row")).toHaveCount(5);
+        await expectInside(el, character, what);
+      await openWorkspace(page, "Act");
       await expectInside(
         page.getByRole("region", { name: "Weapon in hand" }),
-        page.getByTestId("workspace"),
-        "weapon card",
+        page.getByRole("region", { name: "Actions" }),
+        "weapon in hand",
       );
     }
-    await snap(page, `dashboard-${vp.width}x${vp.height}`);
     if (vp.width === 1280 || vp.width === 1707) {
+      await openWorkspace(page, "Act");
       await expander.click();
       await expect(expander).toHaveAttribute("aria-expanded", "true");
-      await expect(buffs).toHaveCount(5);
+      await expect(page.getByTestId("buff")).toHaveCount(5);
       expect(await heightOf(), "expanded header").toBeGreaterThan(three);
       await expectNoPageScroll(page);
-      await snap(page, `dashboard-${vp.width}x${vp.height}-effects-expanded`);
+      await expectNoClippedText(header, `expanded header, ${size}`);
+      await snap(page, `act-${size}-effects-expanded`);
       await expander.click();
-      await expect(buffs).toHaveCount(3);
+      await expect(page.getByTestId("buff")).toHaveCount(3);
     }
   }
 });
 
-test("rail: switches workspaces and each keeps its state", async ({ page }) => {
+// ADR 0022 step 5.4: the handle between the now band and the journal resizes the journal by drag
+// (mouse) and arrows (keyboard); Collapse folds it into a one-line bar; both are kept per device
+// across a reload. What only a browser proves: pointer drag, layout heights and localStorage.
+test("journal split: drag, collapse and expand, kept across reload", async ({
+  page,
+}) => {
   await openDashboard(page);
-  const rail = page.getByRole("navigation", { name: "Workspaces" });
+  await recordHp(page, "damage", 3, "Split goblin");
+  const slot = page.getByTestId("journal-slot");
+  const band = page.getByTestId("now-band");
+  const handle = page.getByTestId("journal-handle");
+  const heightOf = async (l: Locator) => (await l.boundingBox())!.height;
+  // Default: the band takes at most 60 % of the stage, the journal at least 14rem.
+  const stage = await heightOf(page.getByTestId("act-stage"));
+  expect(await heightOf(band)).toBeLessThanOrEqual(stage * 0.6 + 1);
+  const before = await heightOf(slot);
+  expect(before).toBeGreaterThanOrEqual(224);
+
+  // Drag the handle up by 120 px: the journal grows by as much, the band shrinks.
+  const h = (await handle.boundingBox())!;
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 - 60, {
+    steps: 4,
+  });
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 - 120, {
+    steps: 4,
+  });
+  await page.mouse.up();
+  const dragged = await heightOf(slot);
+  expect(Math.abs(dragged - (before + 120))).toBeLessThanOrEqual(2);
+  // Keyboard: ArrowDown shrinks it by one step.
+  await handle.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
+  await snap(page, "act-journal-dragged");
+
+  // Collapse: one line with the newest entry, the count, Undo / Redo.
+  await page.getByRole("button", { name: "Collapse" }).click();
+  const bar = page.getByTestId("journal-bar");
+  await expect(bar).toContainText("Split goblin");
+  await expect(bar.getByTestId("undo")).toBeVisible();
+  await expectNoClippedText(bar, "collapsed journal");
+  expect(await heightOf(slot)).toBeLessThan(80);
+  await snap(page, "act-journal-collapsed");
+
+  // Kept across a reload; Expand brings back the dragged height.
+  await page.reload();
+  await expect(page.getByTestId("journal-bar")).toContainText("Split goblin");
+  await page.getByRole("button", { name: "Expand journal" }).click();
+  await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
+  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
+});
+
+// The audit itself: it reports a cut line and a box hiding tall text, and passes text that wraps or
+// scrolls. A plain page, no stack.
+base(
+  "expectNoClippedText reports cut text and passes wrapped or scrolling text",
+  async ({ page }) => {
+    await page.setContent(
+      `<div id="cut" style="width:50px;overflow:hidden;white-space:nowrap">a very long line of text</div>
+<div id="tall" style="height:20px;overflow:hidden"><p style="margin:0">one</p><p style="margin:0">two</p></div>
+<div id="ok" style="width:50px">a very long line of text that wraps</div>
+<div id="scrolls" style="height:20px;overflow-y:auto"><p>one</p><p>two</p></div>
+<span id="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;white-space:nowrap">screen reader text</span>`,
+    );
+    const cut = await page.locator("body").evaluate(clippedText);
+    expect(cut).toHaveLength(2);
+    expect(cut[0]).toContain("wide");
+    expect(cut[1]).toContain("tall");
+    for (const id of ["ok", "scrolls", "sr"])
+      await expectNoClippedText(page.locator(`#${id}`), id);
+  },
+);
+
+// ADR 0022 step 2.4: a click focuses an activity; each mounts on its first visit and keeps its state
+// while hidden.
+test("rail: focuses activities and each keeps its state", async ({ page }) => {
+  await openDashboard(page);
+  const rail = page.getByRole("navigation", { name: "Activities" });
   await expect(rail.getByRole("button", { name: "Act" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -190,16 +323,14 @@ test("rail: switches workspaces and each keeps its state", async ({ page }) => {
   ).toBeVisible();
   await inventory.getByRole("button", { name: "Add item" }).click();
   await expect(inventory.getByTestId("item-form")).toBeVisible();
-  await snap(page, "workspace-inventory");
 
   // Spells: the spell lookup; type a search.
   await openWorkspace(page, "Spells");
   const search = page.getByRole("combobox", { name: "Search spells..." });
   await search.fill("fire");
   await expect(page.getByTestId("spell-row").first()).toBeVisible();
-  await snap(page, "workspace-spells");
 
-  // Back: every workspace is as it was left. The Fil and Moi columns never moved.
+  // Back: every activity is as it was left; the journal is the Act activity's.
   await openWorkspace(page, "Act");
   await expect(page.getByRole("tab", { name: "Spells" })).toHaveAttribute(
     "aria-selected",
@@ -211,7 +342,7 @@ test("rail: switches workspaces and each keeps its state", async ({ page }) => {
   await expect(search).toHaveValue("fire");
   await expect(
     page.getByRole("region", { name: "Journal", exact: true }),
-  ).toBeVisible();
+  ).toBeHidden();
   await expect(page.getByTestId("hp-value")).toBeVisible();
 });
 
@@ -355,7 +486,7 @@ test("agir: weapons, spells and items tabs from 1280 to 2560", async ({
   await page.getByRole("button", { name: "Manage the inventory" }).click();
   await expect(
     page
-      .getByRole("navigation", { name: "Workspaces" })
+      .getByRole("navigation", { name: "Activities" })
       .getByRole("button", { name: "Inventory" }),
   ).toHaveAttribute("aria-current", "page");
   await openWorkspace(page, "Act");
@@ -420,18 +551,29 @@ test.describe("workspaces to the dice composer", () => {
 
     await formula.fill("");
     await dice.getByRole("button", { name: "Roll 1d8+8" }).click();
+    // The roll shows at once in the header's last result, from any activity (ADR 0022 step 2.2).
+    const last = page.getByTestId("last-result");
+    await expect(last.getByTestId("last-result-text")).toContainText("d8+8");
+    const total = Number(
+      await last.getByTestId("last-result-chip").textContent(),
+    );
+    expect(total).toBeGreaterThanOrEqual(9);
+    expect(total).toBeLessThanOrEqual(16);
+    await expect(formula).toHaveValue("d8+8");
+    // In the Act activity the journal has the entry and the result panel shows it.
+    await openWorkspace(page, "Act");
+    await combatLog(page)
+      .getByRole("listitem")
+      .filter({ hasText: `Dice d8+8 = ${total}` })
+      .getByTestId("log-select")
+      .click();
     const result = page
       .getByRole("region", { name: "Detail", exact: true })
       .getByTestId("dice-result");
     // The server answers with its normal form (a single die has no count).
     await expect(result.getByTestId("dice-formula")).toHaveText("d8+8");
-    const total = Number(await result.getByTestId("dice-total").textContent());
-    expect(total).toBeGreaterThanOrEqual(9);
-    expect(total).toBeLessThanOrEqual(16);
-    await expect(combatLog(page).locator("[data-selected=true]")).toContainText(
-      `Dice d8+8 = ${total}`,
-    );
-    await expect(formula).toHaveValue("d8+8");
+    await expect(result.getByTestId("dice-total")).toHaveText(String(total));
+    await openWorkspace(page, "Spells");
 
     // The damage row: Fireball at the Bard's level, to the composer and rolled on the server.
     await page
@@ -445,8 +587,10 @@ test.describe("workspaces to the dice composer", () => {
     await damage.getByRole("button", { name: "Send 10d6 to the dice" }).click();
     await expect(formula).toHaveValue("10d6");
     await damage.getByRole("button", { name: "Roll 10d6" }).click();
-    await expect(result.getByTestId("dice-formula")).toHaveText("10d6");
-    const fire = Number(await result.getByTestId("dice-total").textContent());
+    await expect(last.getByTestId("last-result-text")).toContainText("10d6");
+    const fire = Number(
+      await last.getByTestId("last-result-chip").textContent(),
+    );
     expect(fire).toBeGreaterThanOrEqual(10);
     expect(fire).toBeLessThanOrEqual(60);
 

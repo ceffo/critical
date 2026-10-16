@@ -1,6 +1,7 @@
 /**
- * Per-device display preferences (ADR 0009): language, appearance and ambiance, kept in
- * localStorage under one versioned key. Presentation only; never sent to the API.
+ * Per-device display preferences (ADR 0009 step 6): language, appearance and ambiance, plus the
+ * journal split of the Act activity (ADR 0022 step 5.4: its height and whether it is collapsed),
+ * kept in localStorage under one versioned key. Presentation only; never sent to the API.
  */
 import {
   DEFAULT_AMBIANCE,
@@ -17,6 +18,9 @@ export interface Settings {
   lang: Language;
   mode: Mode;
   amb: AmbianceId;
+  /** The journal's height in CSS px once dragged; null = the default split. */
+  journalHeight: number | null;
+  journalCollapsed: boolean;
 }
 
 export const SETTINGS_KEY = "critical.settings.v1";
@@ -28,7 +32,13 @@ export const DEFAULT_SETTINGS: Settings = {
   lang: "en",
   mode: "system",
   amb: DEFAULT_AMBIANCE,
+  journalHeight: null,
+  journalCollapsed: false,
 };
+
+function isHeight(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v) && v > 0;
+}
 
 export function isLanguage(v: unknown): v is Language {
   return LANGUAGES.includes(v as Language);
@@ -69,15 +79,19 @@ export function loadSettings(store: Store | null = storage()): Settings {
       lang: isLanguage(saved.lang) ? saved.lang : DEFAULT_SETTINGS.lang,
       mode: isMode(saved.mode) ? saved.mode : DEFAULT_SETTINGS.mode,
       amb: isAmbiance(saved.amb) ? saved.amb : DEFAULT_SETTINGS.amb,
+      journalHeight: isHeight(saved.journalHeight)
+        ? Math.round(saved.journalHeight)
+        : DEFAULT_SETTINGS.journalHeight,
+      journalCollapsed: saved.journalCollapsed === true,
     };
   }
 
   const theme = store.getItem(LEGACY_THEME_KEY);
   const lang = store.getItem(LEGACY_LANGUAGE_KEY);
   const migrated: Settings = {
+    ...DEFAULT_SETTINGS,
     lang: isLanguage(lang) ? lang : DEFAULT_SETTINGS.lang,
     mode: isMode(theme) ? theme : DEFAULT_SETTINGS.mode,
-    amb: DEFAULT_SETTINGS.amb,
   };
   if (theme !== null || lang !== null) {
     saveSettings(migrated, store);
@@ -91,7 +105,13 @@ export function saveSettings(s: Settings, store: Store | null = storage()) {
   try {
     store?.setItem(
       SETTINGS_KEY,
-      JSON.stringify({ lang: s.lang, mode: s.mode, amb: s.amb }),
+      JSON.stringify({
+        lang: s.lang,
+        mode: s.mode,
+        amb: s.amb,
+        journalHeight: s.journalHeight,
+        journalCollapsed: s.journalCollapsed,
+      }),
     );
   } catch {
     // ignore (quota, privacy mode)

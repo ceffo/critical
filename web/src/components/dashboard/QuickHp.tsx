@@ -41,7 +41,7 @@ export function QuickHp() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-title">{t("hp.change")}</h2>
       </div>
-      <div className="grid grid-cols-[minmax(3.5rem,5rem)_minmax(0,1fr)_minmax(0,1fr)] gap-1">
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] gap-1">
         <input
           className={`${fieldClass} tabular-nums`}
           type="number"

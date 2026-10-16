@@ -2,13 +2,23 @@
 package main
 
 import (
-	"log"
+	"log/slog"
+	"os"
 
 	api "github.com/ceffo/critical/api/internal/cmd/api"
 )
 
 func main() {
-	if err := api.Start(); err != nil {
-		log.Fatalf("api: %v", err)
+	os.Exit(run(api.Start))
+}
+
+// run executes start and, when it fails, logs the error at ERROR on the
+// default logger (installed by start, or the stock one if start failed before
+// that) and returns the non-zero exit code.
+func run(start func() error) int {
+	if err := start(); err != nil {
+		slog.Error("api: fatal", "error", err)
+		return 1
 	}
+	return 0
 }

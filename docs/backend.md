@@ -292,13 +292,14 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
 - **Build**: the root `Dockerfile`, from the repo root, in stages: the web build (`npm ci`, `npm run build`),
   the Go build (`CGO_ENABLED=0`, on the `golang` tag of the Go version in `api/go.mod`: the build fails when
   they differ), and an Alpine runtime running as the non-root user `critical`, with a `HEALTHCHECK` on
-  `/api/health`. `.dockerignore` keeps `.catalogue/`, `.dev/`, databases, `.git`, `.beads`, `docs/`,
-  `node_modules`, test results and `api/testdata` out of the default build context.
+  `/api/health`. `.dockerignore` keeps `.catalogue/`, `.dev/`, databases and any `catalogue.json` (at any
+  depth), `.git`, `.beads`, `docs/`, `node_modules`, test results and `api/testdata` out of the default
+  build context.
 - **Build inputs**: the named build context `catalogue` (a directory holding `catalogue.json`) and the build
-  argument `COMMIT`. Without the `catalogue` context the build stops with a message naming the flag. PR, CI
-  and local builds pass the fixture (`--build-context catalogue=api/testdata`); only the release build
-  passes the real catalogue, and it never enters the public repo, a PR build or a shared cache (step 7).
-  `just image` builds with the fixture and smoke-checks the result.
+  argument `COMMIT`. Without the `catalogue` context the build stops with a message naming the flag. PR and CI
+  builds and `just image` pass the fixture (`--build-context catalogue=api/testdata`); only the release
+  build and the local `docker compose` pass the real catalogue, and it never enters the public repo, a PR
+  build or a shared cache (step 7). `just image` also smoke-checks the result.
 - **In the image**: `/app/critical-srv`, the web build in `/app/web`, the campaign `seeds/` in `/app/seeds`,
   the catalogue at `/app/catalogue.json`, and the database at `/data/critical.db` (a volume). The `CRITICAL_*`
   variables point at those paths; any of them can be overridden at `docker run`.

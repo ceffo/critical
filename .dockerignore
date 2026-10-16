@@ -3,9 +3,8 @@
 # (ADR 0024 step 7).
 .catalogue/
 .dev/
-*.db
-*.db-wal
-*.db-shm
+**/*.db*
+**/catalogue.json
 
 .git/
 .beads/

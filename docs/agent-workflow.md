@@ -150,8 +150,10 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   per-entity constants in services. If a mechanic is missing, add it as a general effect kind.
 - **No per-language columns or fields.** A text in a human language is a key into the generic
   `localized_texts` table (one row per language); never a `name_fr`-style column, DTO field, TS property
-  or catalogue key. The API serves a language map. [ADR 0023](adr/0023-localized-text.md); the check
-  recipe is to come (a critical item filed alongside), and runs in `just validate`.
+  or catalogue key. The API serves a language map. [ADR 0023](adr/0023-localized-text.md); enforced by
+  `just check-no-language-fields` (part of `just validate`; scans tracked files but docs and the applied
+  migrations 027/029/030/031 with their tests; `scripts/test-check-no-language-fields.sh` holds the
+  rejected fixtures).
 - **No presentation text from the backend.** The API returns structured data; wording, formatting and
   formulas for display are built in the frontend (i18n). No `fmt.Sprintf`/`Fprintf` to compose
   user-facing text in Go (error messages excepted). Enforced by golangci `forbidigo` on

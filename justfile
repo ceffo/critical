@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-adr-tests check-api check-web
+validate: check-no-tracker-ids check-no-language-fields check-adr-tests check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -43,6 +43,13 @@ check-no-tracker-ids:
         exit 1
     fi
     echo "--- No tracker ids ---"
+
+# Fail on a per-language identifier (a French or English twin of a column, field or JSON tag): texts in a
+# human language are localized_texts rows (ADR 0023). The test runs the check on rejected fixtures.
+check-no-language-fields:
+    scripts/test-check-no-language-fields.sh
+    scripts/check-no-language-fields.sh
+    @echo "--- No per-language fields ---"
 
 # Install all dependencies
 install:

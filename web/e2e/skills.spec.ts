@@ -103,13 +103,13 @@ test("skills: roll a proficiency and a bard skill, the card and journal show the
   await page.emulateMedia({ colorScheme: "dark" });
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Compétences" }).click();
-  const instrumentFr = page.getByTestId("skill-musical_instrument");
-  await expect(instrumentFr).toContainText("Instrument de musique");
-  await expect(instrumentFr).toContainText("DEX 17 −1");
-  const resultFr = page.getByTestId("skill-result");
-  await expect(resultFr.getByTestId("skill-vs")).toHaveText(
+  const instrumentFrench = page.getByTestId("skill-musical_instrument");
+  await expect(instrumentFrench).toContainText("Instrument de musique");
+  await expect(instrumentFrench).toContainText("DEX 17 −1");
+  const resultFrench = page.getByTestId("skill-result");
+  await expect(resultFrench.getByTestId("skill-vs")).toHaveText(
     /^\d+ contre 90\u00a0%$/,
   );
-  await expect(resultFr.getByTestId("verdict")).toHaveText(/^(Réussi|Échec)$/);
+  await expect(resultFrench.getByTestId("verdict")).toHaveText(/^(Réussi|Échec)$/);
   await snap(page, "skills-fr-dark-1440x900");
 });

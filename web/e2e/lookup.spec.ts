@@ -152,10 +152,10 @@ test("lookup in French: a French name finds the spell, its French text shows wit
 }) => {
   await openLookup(page);
   await chooseLanguage(page, "fr");
-  const searchFr = page.getByRole("combobox", {
+  const searchFrench = page.getByRole("combobox", {
     name: "Rechercher des sorts...",
   });
-  await searchFr.fill("orbe chrom");
+  await searchFrench.fill("orbe chrom");
   const first = rows(page).first();
   await expect(first).toHaveAttribute("data-id", "chromatic_orb");
   await expect(first).toContainText("Orbe chromatique");
@@ -178,7 +178,7 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await snap(page, "french-table-dark");
 
   // The stats are worded in French from their typed values, lengths in metres (ADR 0021 step 8).
-  await searchFr.fill("projectile magique");
+  await searchFrench.fill("projectile magique");
   await expect(detail(page).getByRole("heading")).toContainText(
     "Projectile magique",
   );
@@ -196,7 +196,7 @@ test("lookup in French: a French name finds the spell, its French text shows wit
 
   // A long French area wraps in the detail grid at the narrowest width, never cut.
   await page.setViewportSize({ width: 1280, height: 900 });
-  await searchFr.fill("rapidit");
+  await searchFrench.fill("rapidit");
   await expect(detail(page).getByRole("heading")).toContainText("Rapidité");
   const area = stat("area");
   await expect(area.getByTestId("stat-raw")).toHaveText(
@@ -212,7 +212,7 @@ test("lookup in French: a French name finds the spell, its French text shows wit
   await snap(page, "french-long-area");
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  await searchFr.fill("armor");
+  await searchFrench.fill("armor");
   await expect(detail(page).getByRole("heading")).toHaveText("Armor");
   await expect(text).toContainText("Fixture text for Armor");
   await expect(stat("castingTime")).toContainText("1 round");

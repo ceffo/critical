@@ -174,7 +174,7 @@ test("Time passes fast-forwards hours: timed buffs count down, round to 0, voida
 });
 
 /** The log entry containing `text` in the French UI. */
-function logEntryFr(page: Page, text: string) {
+function logEntryFrench(page: Page, text: string) {
   return page
     .getByRole("region", { name: "Journal", exact: true })
     .getByRole("listitem")
@@ -182,8 +182,8 @@ function logEntryFr(page: Page, text: string) {
 }
 
 /** Undo the newest entry (the journal's one button, "Annuler" in the French UI). */
-async function voidFr(page: Page, text: string) {
-  const entry = logEntryFr(page, text).first();
+async function voidFrench(page: Page, text: string) {
+  const entry = logEntryFrench(page, text).first();
   await page.getByTestId("undo").click();
   await expect(entry).toHaveAttribute("data-status", "voided");
 }
@@ -232,7 +232,7 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   await form.getByRole("button", { name: "Confirmer" }).click();
   await expect.poll(() => currentRound(page)).toBe(0);
   const text = "Temps écoulé : 1,5 h (90 rd.), tour 1 → 0";
-  await expect(logEntryFr(page, text)).toBeVisible();
+  await expect(logEntryFrench(page, text)).toBeVisible();
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),
   ).toHaveText("9 tours");
@@ -241,7 +241,7 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
   await page.getByRole("button", { name: "Tour suivant" }).click();
   await expect.poll(() => currentRound(page)).toBe(1);
   await expect(
-    logEntryFr(page, text).getByRole("button", {
+    logEntryFrench(page, text).getByRole("button", {
       name: "Annuler",
       exact: true,
     }),
@@ -250,10 +250,10 @@ test("Time passes in French: '1,5' previews 90 turns; a later Next Round must be
 
   // Undo Next Round first (one Undo: the advance and its initiative), then the fast-forward: the
   // buff and round 1 come back.
-  await undoNextTurn(page, logEntryFr(page, "Tour 0 → 1").first());
+  await undoNextTurn(page, logEntryFrench(page, "Tour 0 → 1").first());
   await expect.poll(() => currentRound(page)).toBe(0);
-  await voidFr(page, text);
-  await expect(logEntryFr(page, text)).toHaveAttribute("data-status", "voided");
+  await voidFrench(page, text);
+  await expect(logEntryFrench(page, text)).toHaveAttribute("data-status", "voided");
   await expect.poll(() => currentRound(page)).toBe(1);
   await expect(
     buffBadge(page, "e2e Long").getByTestId("buff-rounds"),

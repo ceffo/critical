@@ -39,7 +39,7 @@ flowchart TD
         CR["composition root"]
         CR -->|"CRITICAL_DSN (dev, staging, prod)"| PG["PostgreSQL adapters: sqlc Querier over pool / transaction"]
         CR -->|"in-memory mode (e2e only)"| MEM["in-memory fakes of every storage port"]
-        PG --> DB[("PostgreSQL: compose in dev, critical-db on fly")]
+        PG --> DB[("PostgreSQL: compose in dev, the fly cluster tournesol-db (ADR 0024)")]
     end
     subgraph tests["Go tests (no database)"]
         SVC["services, composition, router: mocked storage ports"]

@@ -6,7 +6,9 @@ picks another option, and the answer is recorded here with its date. Amended 202
 [ADR 0025](0025-postgresql-storage.md) (see "Amendment (PostgreSQL on one fly cluster, 2026-10-16)"):
 step 5 is answered (option (b), PostgreSQL first), steps 2, 4.2, 5, 6.1, 7 and 9 are rewritten for
 volume-less apps on one fly PostgreSQL cluster, and the region, production data and PostgreSQL
-defaults are answered.
+defaults are answered. Amended again 2026-10-16 (see "Amendment (shared cluster tournesol-db,
+2026-10-16)"): the cluster is the user's existing `tournesol-db`, shared, instead of a new
+`critical-db`.
 
 ## Context
 
@@ -50,7 +52,7 @@ flowchart LR
         IMG[("image tagged with the commit sha")]
         STG["staging app: 1 machine, no volume, auto-stops"]
         PROD["production app: 2 machines, no volume, rolling deploy"]
-        subgraph pgc["PostgreSQL cluster critical-db (1 node, 1 GB volume, private)"]
+        subgraph pgc["PostgreSQL cluster tournesol-db, shared (1 node, 1 GB volume, private)"]
             SDB[("critical_staging")]
             PDB[("critical_prod")]
         end
@@ -89,14 +91,17 @@ flowchart LR
 2. **Environments.** _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: each app
    has its own volume holding its own SQLite database, and production keeps one machine._ Two fly
    apps in one fly org: **staging** and **production**. Neither app has a volume: their data lives in
-   one fly legacy PostgreSQL cluster, `critical-db`, created for this app alone (no other app uses
-   it). They share the image and the cluster, nothing else.
+   one fly legacy PostgreSQL cluster, the user's existing `tournesol-db`, which also holds the
+   databases of the user's other app. _Amended 2026-10-16 (shared cluster); was: a new cluster
+   `critical-db`, created for this app alone._ They share the image and the cluster, nothing else.
    1. Staging is disposable: its data may be wiped at any time. It runs one machine, which stops
       when idle and starts on the next request.
    2. Production runs two machines, always running (no auto-stop), updated by a rolling deploy.
    3. The cluster: one node, the smallest shared VM, one 1 GB volume, region `yyz`, no public IP.
-      It holds two databases, `critical_staging` and `critical_prod`, each owned by its own login
-      user; neither user can connect to the other's database.
+      It holds two databases for this app, `critical_staging` and `critical_prod`, each owned by its
+      own login user; a critical user can connect to its own database only, neither to the other's
+      nor to any other database of the cluster. The other databases keep CONNECT for their own
+      users and lose it for PUBLIC.
    4. Each app's DSN (its own user, its own database, the cluster's private address) is the fly
       secret `CRITICAL_DSN`; it is never in the fly config, the repo or a log.
    5. Nothing is paid without the user: if fly refuses a legacy cluster, or asks for payment or a
@@ -219,7 +224,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 | PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | **Answered 2026-10-16: PostgreSQL first**, no deploy until then; two production machines from the first deploy ([ADR 0025](0025-postgresql-storage.md)) |
 | Production data | fresh database | **Answered 2026-10-16: seeded once with the user's data**: the local `.dev/critical.db` copied into `critical_prod` through the runbook by the copy tool ([ADR 0025](0025-postgresql-storage.md) step 9; the copy stays private). Staging starts empty |
 | Production approval | none: pushing the tag is the act | a required reviewer on the `production` environment |
-| Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the cluster `critical-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
+| Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
 | Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | on the cluster's own volume (shares its 1 GB); a private store the user provides; taken by the operator with `just db-backup prod` before tagging, the promotion checking that it exists |
 | Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
 | A migration during a rolling production deploy (step 5.2) | a release's migrations are additive, so the previous release keeps working on the new schema while its machines are replaced | **Answered 2026-10-16: additive migrations** (the default); the `immediate` strategy is not used |
@@ -289,3 +294,26 @@ What changed in this ADR, each change marked in place with its date and the text
   (`yyz`) answered; three new open questions (where the pre-promotion dump is kept, the cluster
   snapshot retention, a migration during a rolling deploy).
 - **Context and Consequences**: the SQLite and one-machine statements are marked as superseded.
+
+## Amendment (shared cluster tournesol-db, 2026-10-16)
+
+`fly postgres create --name critical-db` (one node, 256 MB, 1 GB volume, `yyz`) was refused on
+2026-10-16 with _"To create more than 1GB in volumes please add a payment method"_: the org's free
+allowance holds one 1 GB volume, and the user's existing cluster `tournesol-db` already has it (an
+earlier try failed on fly's Consul step, then passed). A new machine running PostgreSQL by hand
+needs the same volume. User, 2026-10-16: _"ok so we reuse the existing db running. tournesol-db"_,
+then, after the options were laid out (share it, or free its volume for a cluster of our own),
+_"1 for now"_.
+
+- **Step 2 and 2.3**: the cluster is `tournesol-db` (postgres-flex 17, one node, shared-cpu-1x
+  256 MB, 1 GB volume, `yyz`, private), shared with the user's other app. Its other databases keep
+  CONNECT for their current login users and lose it for PUBLIC, so a critical user reaches only its
+  own database; that app's access is unchanged.
+- **Step 9.1**: the daily snapshots of the cluster volume, retention 30 days, also hold the other
+  app's databases; restoring a snapshot rolls them back too, one more reason step 9.3 restores from a
+  dump first.
+- **Consequences**: the cluster stops when idle (scale to zero, as configured before this app used
+  it) and starts on the next connection through its `.flycast` address, so the first request after an
+  idle period waits for PostgreSQL to start.
+- **Reversible**: if the other app's data is no longer needed, its volume can be freed and a cluster
+  of this app's own created as first planned; the DSN secrets are the only thing to change.

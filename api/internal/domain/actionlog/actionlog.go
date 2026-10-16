@@ -415,8 +415,7 @@ func (e Entry) EffectivePayload() json.RawMessage {
 }
 
 // EffectiveHPDelta is 0 for a voided entry, the latest amend's delta for an
-// amended one, the original delta otherwise. It mirrors the SQL that computes
-// current HP and is used for display only.
+// amended one, the original delta otherwise. HPTotal sums it over the log.
 func (e Entry) EffectiveHPDelta() int {
 	if e.Status() == StatusVoided {
 		return 0

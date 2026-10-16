@@ -237,14 +237,26 @@ func (d *DAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Ki
 	return id, true, nil
 }
 
-// HPTotal returns the SUM of effective HP deltas (the HPTotal query); 0 when
-// the log is empty.
+// HPTotal returns the sum of the effective HP deltas of every entry of the
+// character, worked out by the domain rule (actionlog.HPTotal, ADR 0007
+// step 2) over the entries' own deltas and their corrections; 0 when the log
+// is empty.
 func (d *DAL) HPTotal(ctx context.Context, characterID int64) (int, error) {
-	total, err := d.q.HPTotal(ctx, characterID)
+	rows, err := d.q.ListHPDeltas(ctx, characterID)
 	if err != nil {
-		return 0, fmt.Errorf("sum action_log hp: %w", err)
+		return 0, fmt.Errorf("list action_log hp: %w", err)
 	}
-	return int(total), nil
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	entries := make([]actionlog.Entry, len(rows))
+	for i, r := range rows {
+		entries[i] = actionlog.Entry{ID: r.ID, CharacterID: characterID, HPDelta: int(r.HpDelta)}
+	}
+	if err := d.attachCorrections(ctx, characterID, entries, entries[0].ID); err != nil {
+		return 0, err
+	}
+	return actionlog.HPTotal(entries), nil
 }
 
 // attach loads snapshots and corrections for entries (any order) in two
@@ -272,6 +284,16 @@ func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog
 		}
 	}
 
+	return d.attachCorrections(ctx, characterID, entries, minID)
+}
+
+// attachCorrections loads the corrections of entries from minID, the
+// smallest of their ids, in id order.
+func (d *DAL) attachCorrections(ctx context.Context, characterID int64, entries []actionlog.Entry, minID int64) error {
+	byID := make(map[int64]*actionlog.Entry, len(entries))
+	for i := range entries {
+		byID[entries[i].ID] = &entries[i]
+	}
 	corrs, err := d.q.ListCorrectionsFrom(ctx, queries.ListCorrectionsFromParams{CharacterID: characterID, ActionID: minID})
 	if err != nil {
 		return fmt.Errorf("list action_corrections: %w", err)

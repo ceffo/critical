@@ -10,11 +10,6 @@ import (
 
 type Querier interface {
 	GetAction(ctx context.Context, arg GetActionParams) (GetActionRow, error)
-	// HPTotal sums the effective HP deltas (ADR 0007): a popped entry counts 0,
-	// an amended one counts its latest amend's delta, leaving out an amend whose
-	// correction step is popped (actionlog.Correction.InEffect, ADR 0010 step 6).
-	// It mirrors actionlog.Entry.EffectiveHPDelta; 0 when the log is empty.
-	HPTotal(ctx context.Context, characterID int64) (int64, error)
 	// InsertAction appends an entry. The log is append-only (ADR 0007, 0010): an
 	// entry is never updated but by StartActionTransaction on the row just
 	// inserted; an amend, a void (pop) or a redo is a new action_corrections row.
@@ -29,6 +24,10 @@ type Querier interface {
 	// rows, as many as the adapter needs to skip the popped ones.
 	ListActionsByKind(ctx context.Context, arg ListActionsByKindParams) ([]ListActionsByKindRow, error)
 	ListCorrectionsFrom(ctx context.Context, arg ListCorrectionsFromParams) ([]ListCorrectionsFromRow, error)
+	// ListHPDeltas reads every entry's own HP delta; the adapter adds the
+	// corrections and sums the effective deltas in Go (actionlog.HPTotal, ADR
+	// 0007 step 2).
+	ListHPDeltas(ctx context.Context, characterID int64) ([]ListHPDeltasRow, error)
 	ListPopCorrections(ctx context.Context, characterID int64) ([]ListPopCorrectionsRow, error)
 	ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ActionSnapshot, error)
 	ListTransactionActions(ctx context.Context, arg ListTransactionActionsParams) ([]ListTransactionActionsRow, error)

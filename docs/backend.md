@@ -179,8 +179,7 @@ flowchart LR
   and how rows and errors map to domain values (`sql.ErrNoRows` -> the domain's not-found error, zero
   rows affected -> not found). An adapter that writes localized texts (`itemdal`, `weapondal`) also
   takes a `textdal.Store`, built on its own mocked `Querier` in the tests. No database, no SQL text ([ADR 0025](adr/0025-postgresql-storage.md)
-  step 6). What only the SQL decides (an `ORDER BY`, a `CHECK` or `UNIQUE` constraint, an aggregate
-  such as the action log's `HPTotal`, a query plan) is checked by sqlc at generate time and by running
+  step 6). What only the SQL decides (an `ORDER BY`, a `CHECK` or `UNIQUE` constraint, a query plan) is checked by sqlc at generate time and by running
   the app (step 7), not by these tests; the rollback of a transaction is the engine's, and the
   services' tests check that a failure leaves the transaction body.
 - **Config.** `api/sqlc.yaml`: one `sql` entry per adapter (`queries:` and `out:` both its
@@ -211,7 +210,9 @@ updated in that ADR (`just check-adr-tests`).
 - A `:one` query with no row returns `sql.ErrNoRows`; the adapter maps it to its domain error (or to a
   default, as `dicedal` does for the first position).
 - Aggregates (`SUM`, `COUNT`) are named queries like the others; wrap one in `CAST(... AS INTEGER)`
-  so sqlc types it `int64`.
+  so sqlc types it `int64`. A sum that applies a rule is not an aggregate: the query reads the rows
+  and the domain sums them (the action log's HP total, `actionlog.HPTotal`, ADR 0007 step 2), so
+  the rule has one tested implementation.
 - `sqlc.slice(name)` binds a list (`IN (sqlc.slice(ids))`); an empty list matches nothing, so an
   optional list filter takes a flag too (`spelldal`'s `SearchSpells`: `any_level`). A parameter used
   twice is named with `sqlc.arg(name)`.

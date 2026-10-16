@@ -3,10 +3,10 @@
 // no database, no SQL text (ADR 0025 step 6.2). The mock fails on any call a
 // test does not expect, so a write test also proves the log is append-only:
 // no other statement than the inserts it names. What only the SQL decides
-// (the HP sum over the corrections, the newest-first order, the rollback of
-// a transaction) is checked by sqlc at generate time and by running the app
-// (step 7); the services' flows on mocked DALs. Which entries are popped is
-// the domain's rule (actionlog.StandingVoids), applied here.
+// (the newest-first order, the rollback of a transaction) is checked by sqlc
+// at generate time and by running the app (step 7); the services' flows on
+// mocked DALs. Which entries are popped and the HP sum are the domain's rules
+// (actionlog.StandingVoids, actionlog.HPTotal), applied here.
 package actionlogdal_test
 
 import (
@@ -516,20 +516,67 @@ func TestLatestID(t *testing.T) {
 	require.ErrorIs(t, err, errBoom)
 }
 
-// ADR 0007 step 2: current HP is summed in SQL, never in application code:
-// HPTotal is the character's HPTotal query, as is (the sum's cases are the
-// query's, ADR 0025 step 7), and its error.
+// ADR 0007 step 2: HPTotal reads every entry's own delta and the
+// corrections from the oldest entry on, and sums the effective deltas by the
+// domain rule (actionlog.HPTotal, whose cases are tested in the domain). The
+// flows here follow the log as it grows: damage, amend the delta, pop, redo,
+// pop again; a note amend; an amend whose correction step is popped then
+// redone. An empty log reads no corrections.
 func TestHPTotal(t *testing.T) {
 	ctx := context.Background()
-	dal, q := mocked(t)
-	q.EXPECT().HPTotal(ctx, charID).Return(int64(-7), nil).Once()
-	total, err := dal.HPTotal(ctx, charID)
-	require.NoError(t, err)
-	assert.Equal(t, -7, total)
+	deltas := []queries.ListHPDeltasRow{{ID: 2, HpDelta: -8}, {ID: 4, HpDelta: 3}, {ID: 5, HpDelta: 0}}
+	amend := func(id, actionID, d int64) queries.ListCorrectionsFromRow {
+		return queries.ListCorrectionsFromRow{ID: id, ActionID: actionID, Kind: "amend", HpDelta: some(d), CreatedAt: at}
+	}
+	stepAmend := func(id, actionID, d, step int64) queries.ListCorrectionsFromRow {
+		c := amend(id, actionID, d)
+		c.StepID = some(step)
+		return c
+	}
+	noteAmend := queries.ListCorrectionsFromRow{ID: 10, ActionID: 2, Kind: "amend", Note: text("DM ruling"), CreatedAt: at}
+	cases := []struct {
+		name  string
+		corrs []queries.ListCorrectionsFromRow
+		want  int
+	}{
+		{"damage and heal", nil, -5},
+		{"delta amended", []queries.ListCorrectionsFromRow{amend(10, 2, -12)}, -9},
+		{"amended entry popped", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2)}, 3},
+		{"popped entry redone, with its amend", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2), redo(12, 2)}, -9},
+		{"popped again", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2), redo(12, 2), void(13, 2)}, 3},
+		{"note amend keeps the delta", []queries.ListCorrectionsFromRow{noteAmend}, -5},
+		{"amend of a live correction step", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5)}, 2},
+		{"its correction step popped", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5), void(11, 5)}, -5},
+		{"its correction step redone", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5), void(11, 5), redo(12, 5)}, 2},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dal, q := mocked(t)
+			q.EXPECT().ListHPDeltas(ctx, charID).Return(deltas, nil).Once()
+			q.EXPECT().ListCorrectionsFrom(ctx, queries.ListCorrectionsFromParams{CharacterID: charID, ActionID: 2}).Return(c.corrs, nil).Once()
+			total, err := dal.HPTotal(ctx, charID)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, total)
+		})
+	}
+	t.Run("empty log reads no corrections", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListHPDeltas(ctx, charID).Return(nil, nil).Once()
+		total, err := dal.HPTotal(ctx, charID)
+		require.NoError(t, err)
+		assert.Zero(t, total)
+	})
+	t.Run("errors", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListHPDeltas(ctx, charID).Return(nil, errBoom).Once()
+		_, err := dal.HPTotal(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
 
-	q.EXPECT().HPTotal(ctx, charID).Return(0, errBoom).Once()
-	_, err = dal.HPTotal(ctx, charID)
-	require.ErrorIs(t, err, errBoom)
+		q.EXPECT().ListHPDeltas(ctx, charID).Return(deltas, nil).Once()
+		q.EXPECT().ListCorrectionsFrom(ctx, mock.Anything).Return(nil, errBoom).Once()
+		_, err = dal.HPTotal(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+	})
 }
 
 // ADR 0007 step 7: a value amend stored before migration 014 (no note) still

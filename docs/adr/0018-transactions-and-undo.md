@@ -77,8 +77,8 @@ exist (named "existing"). Paths are under `api/internal/` unless they start with
    transaction gives the HP back.
    Tests: `domain/service/actionlogsvc` `TestRecord_CapsHeal`, `TestRecord_FloorsDamage`,
    `TestRecord_HPDeltaOnAnyKind` (a heal capped and a damage
-   floored on an entry that is not an `hp_change`), `adapters/actionlogdal` `TestHPTotal` (the
-   sum over every kind is the `HPTotal` query's, [ADR 0025](0025-postgresql-storage.md) step 7).
+   floored on an entry that is not an `hp_change`), `domain/actionlog` `TestHPTotal` ("every
+   kind counts").
 5. **Initiative reroll is its own transaction.** A reroll ([ADR 0013](0013-initiative.md) step 4)
    no longer voids the initiative it replaces: it records a new `initiative` entry, in its own
    transaction, whose `initiative` snapshot has the replaced roll as "before". It is allowed when

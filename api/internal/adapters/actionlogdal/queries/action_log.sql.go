@@ -51,36 +51,6 @@ func (q *Queries) GetAction(ctx context.Context, arg GetActionParams) (GetAction
 	return i, err
 }
 
-const hPTotal = `-- name: HPTotal :one
-
-SELECT CAST(COALESCE(SUM(
-  CASE
-    WHEN EXISTS (SELECT 1 FROM action_corrections v WHERE v.action_id = a.id AND v.kind = 'void'
-      AND NOT EXISTS (SELECT 1 FROM action_corrections vr WHERE vr.action_id = v.action_id AND vr.kind = 'redo' AND vr.id > v.id)) THEN 0
-    ELSE COALESCE(
-      (SELECT m.hp_delta FROM action_corrections m
-        WHERE m.action_id = a.id AND m.kind = 'amend' AND m.hp_delta IS NOT NULL
-          AND (m.step_id IS NULL OR NOT EXISTS (
-            SELECT 1 FROM action_corrections sv WHERE sv.action_id = m.step_id AND sv.kind = 'void'
-              AND NOT EXISTS (SELECT 1 FROM action_corrections svr WHERE svr.action_id = sv.action_id AND svr.kind = 'redo' AND svr.id > sv.id)))
-        ORDER BY m.id DESC LIMIT 1),
-      a.hp_delta)
-  END), 0) AS INTEGER) AS total
-FROM action_log a
-WHERE a.character_id = ?
-`
-
-// HPTotal sums the effective HP deltas (ADR 0007): a popped entry counts 0,
-// an amended one counts its latest amend's delta, leaving out an amend whose
-// correction step is popped (actionlog.Correction.InEffect, ADR 0010 step 6).
-// It mirrors actionlog.Entry.EffectiveHPDelta; 0 when the log is empty.
-func (q *Queries) HPTotal(ctx context.Context, characterID int64) (int64, error) {
-	row := q.db.QueryRowContext(ctx, hPTotal, characterID)
-	var total int64
-	err := row.Scan(&total)
-	return total, err
-}
-
 const insertAction = `-- name: InsertAction :one
 
 INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
@@ -390,6 +360,45 @@ func (q *Queries) ListCorrectionsFrom(ctx context.Context, arg ListCorrectionsFr
 			&i.StepID,
 			&i.CreatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listHPDeltas = `-- name: ListHPDeltas :many
+
+SELECT id, hp_delta
+FROM action_log
+WHERE character_id = ?
+ORDER BY id
+`
+
+type ListHPDeltasRow struct {
+	ID      int64
+	HpDelta int64
+}
+
+// ListHPDeltas reads every entry's own HP delta; the adapter adds the
+// corrections and sums the effective deltas in Go (actionlog.HPTotal, ADR
+// 0007 step 2).
+func (q *Queries) ListHPDeltas(ctx context.Context, characterID int64) ([]ListHPDeltasRow, error) {
+	rows, err := q.db.QueryContext(ctx, listHPDeltas, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListHPDeltasRow{}
+	for rows.Next() {
+		var i ListHPDeltasRow
+		if err := rows.Scan(&i.ID, &i.HpDelta); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

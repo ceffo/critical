@@ -2,13 +2,6 @@ import { test, expect, snap } from "./fixtures";
 import { logEntry, openDashboard, openWorkspace } from "./helpers";
 import type { Page } from "@playwright/test";
 
-const VIEWPORTS = [
-  { width: 1280, height: 800 },
-  { width: 1440, height: 900 },
-  { width: 1920, height: 1080 },
-  { width: 2560, height: 1440 },
-];
-
 /** The XP total shown in the progress card, as a number (en formatting: "1,293,418"). */
 async function xpTotal(page: Page): Promise<number> {
   const text = (await page.getByTestId("xp-total").textContent()) ?? "";
@@ -17,6 +10,7 @@ async function xpTotal(page: Page): Promise<number> {
   return Number(digits);
 }
 
+// Layout and screenshots per viewport are in layout.spec (ADR 0022 step 2.5).
 // What only a browser proves: the character card's level link focuses the activity, the add form's
 // preview, Enter submits, in-row edit (Enter saves) and delete re-render the server's totals, and
 // the global undo (Ctrl+Z, from the Experience activity) pops each write and the ledger re-renders;
@@ -50,21 +44,6 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
   const row = ledger.getByRole("listitem", { name: "Troll bridge" });
   await expect(row.getByTestId("xp-row-total")).toHaveText("1,326");
   await expect(add.getByLabel("Amount")).toHaveValue("");
-
-  for (const vp of VIEWPORTS) {
-    await page.setViewportSize(vp);
-    await expect(row).toBeVisible();
-    const scroll = await page.evaluate(() => {
-      const el = document.scrollingElement ?? document.documentElement;
-      return {
-        x: el.scrollWidth - el.clientWidth,
-        y: el.scrollHeight - el.clientHeight,
-      };
-    });
-    expect(scroll, "no page scroll").toEqual({ x: 0, y: 0 });
-    await snap(page, `experience-${vp.width}x${vp.height}`);
-  }
-  await page.setViewportSize({ width: 1440, height: 900 });
 
   // Edit in the row: 1,000 without the bonus, Enter saves.
   await row.getByRole("button", { name: "Edit Troll bridge" }).click();

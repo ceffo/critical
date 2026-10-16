@@ -268,13 +268,18 @@ flowchart TD
   borders and a muted header, a wide table scrolling sideways in its own box) in the lookup and the
   cast result. No Markdown library: the subset is fixed by the format, and plain React text cannot
   carry HTML.
-- Expérience workspace (`components/xp/XpPanel.tsx`, `stores/xp.ts`, ADR 0015): a progress card
-  (total, "Before level N · X XP", a bar with 10% ticks between the server's floor and ceiling, the
-  server's 8 level cells with their thresholds, current and next ringed), "Add XP" (amount, reason,
-  session, +10% defaulting to the server's `bonusEligible`; the button shows the server's preview,
-  `GET /api/xp/preview`; Enter submits) and the ledger (reason with date · session, base, bonus,
-  total; in-row edit, Enter saves, Escape cancels; delete; entries added this session tinted; the
-  sheet's starting XP as the last, read-only row). Each write is a transaction on the action
+- Experience activity (`components/xp/XpPanel.tsx`, `stores/xp.ts`, ADR 0015; layout
+  [ADR 0022](adr/0022-activity-focus-layout.md) step 2.5): one card with the progress beside "Add
+  XP" (`minmax(0, 1fr) | 24rem`, 24 px apart, step 3.2), the ledger card below with the rest of the
+  stage's height, its list scrolling on its own. Progress: section label "Experience · level N", the
+  total in `text-hero` (step 3.4), "Before level N · X XP", a bar with 10% ticks between the
+  server's floor and ceiling, the server's 8 level cells with their thresholds (current and next
+  ringed; at least 3.5rem each, wrapping to a second row rather than cutting). "Add XP": amount and
+  reason on one line, then session, +10% (defaulting to the server's `bonusEligible`) and the
+  button with the server's preview (`GET /api/xp/preview`); Enter submits; the bonus rule shown
+  under it in full. The ledger (section-label head and column headers): reason wrapping between
+  words with date · session under it, base, bonus, total; in-row edit, Enter saves, Escape cancels;
+  delete; entries added this session tinted; the sheet's starting XP as the last, read-only row. Each write is a transaction on the action
   stack (ADR 0015 step 4): it answers with the whole ledger, then refreshes the table state so the
   journal shows the entry; the table refresh re-reads the ledger, so the journal's Undo shows the
   total back. The character card's level line opens
@@ -458,7 +463,9 @@ outside `ui/`).
   reading them (the header's `last-result` shows the newest roll from anywhere). `layout.spec.ts`
   covers 1024, 1280x800, 1440x900, 1707x1300, 1920x1080 and 2560x1440 and runs
   `expectNoClippedText` (`e2e/noClip.ts`) on the shell's zones and, in its "act panel" test, on each
-  Act tab with long weapon, item and spell names (`act-<tab>-<size>.png`); its "theme" test screenshots the
+  Act tab with long weapon, item and spell names (`act-<tab>-<size>.png`), and on the Experience
+  activity with a long ledger reason, where `expectWholeWords` (same file) also fails on a word
+  broken mid-word; its "theme" test screenshots the
   main screens in dark and light, then every ambiance.
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
   are visible. Don't add per-flow fr specs.

@@ -15,7 +15,12 @@ import {
   recordHp,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
-import { clippedText, expectNoClippedText } from "./noClip";
+import {
+  brokenWords,
+  clippedText,
+  expectNoClippedText,
+  expectWholeWords,
+} from "./noClip";
 
 /** The page itself never scrolls: each column scrolls on its own. */
 async function expectNoPageScroll(page: Page) {
@@ -95,6 +100,10 @@ const LONG_EFFECT = "Protection From Evil, 10' Radius (from the temple priest)";
 /** A long journal entry: it wraps inside its row, never cut (ADR 0022 step 5.1). */
 const LONG_SOURCE =
   "Fire breath of the young red dragon perched on the ruined bell tower, half damage behind the shield wall";
+
+/** A long XP ledger reason: it wraps between words in its row, never cut (ADR 0022 step 1). */
+const LONG_REASON =
+  "Drove the hobgoblin warband out of the flooded silver mine below Thornwood and freed the captured dwarven miners";
 
 /** A long spell name and stat text: the lookup's list and detail wrap them, never cut (step 1). */
 const LONG_SPELL =
@@ -179,6 +188,18 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
   await lookupList.getByRole("option", { name: LONG_SPELL }).click();
   await expect(spellDetail.getByRole("heading").first()).toHaveText(LONG_SPELL);
 
+  // The XP ledger with a long reason and a session.
+  await openWorkspace(page, "Experience");
+  const xp = page.getByRole("region", { name: "Experience", exact: true });
+  const addXp = xp.getByRole("region", { name: "Add XP" });
+  await addXp.getByLabel("Amount").fill("2500");
+  await addXp.getByLabel("Reason").fill(LONG_REASON);
+  await addXp.getByLabel("Session").fill("S41");
+  await addXp.getByLabel("Reason").press("Enter");
+  const xpLedger = xp.getByRole("region", { name: "Ledger" });
+  const longXpRow = xpLedger.getByRole("listitem", { name: LONG_REASON });
+  await expect(longXpRow).toBeVisible();
+
   const rail = page.getByRole("navigation", { name: "Activities" });
   const character = page.getByRole("complementary", { name: "Character" });
   for (const vp of VIEWPORTS) {
@@ -226,6 +247,34 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
         // The spell lookup (ADR 0022 step 2.5): the list and the detail, the long name selected.
         await expectNoClippedText(lookupList, `spell list, ${where}`);
         await expectNoClippedText(spellDetail, `spell detail, ${where}`);
+      }
+      if (activity === "Experience") {
+        // ADR 0022 step 2.5: progress beside the Add XP form in one card, the ledger card below
+        // with the rest of the stage's height; the long reason wraps between words (step 1).
+        await expectNoClippedText(xp, `experience, ${where}`);
+        await expectWholeWords(xpLedger, `XP ledger, ${where}`);
+        const top = (await xp.getByTestId("xp-top").boundingBox())!;
+        const progress = (await xp
+          .getByRole("region", { name: "Progress" })
+          .boundingBox())!;
+        const form = (await addXp.boundingBox())!;
+        expect(Math.round(form.width), `Add XP is 24rem, ${where}`).toBe(384);
+        expect(form.x, `form beside progress, ${where}`).toBeGreaterThan(
+          progress.x + progress.width,
+        );
+        const ledgerBox = (await xpLedger.boundingBox())!;
+        expect(ledgerBox.y, `ledger below, ${where}`).toBeGreaterThan(
+          top.y + top.height,
+        );
+        const stage = (await page.getByTestId("stage").boundingBox())!;
+        expect(
+          Math.abs(ledgerBox.y + ledgerBox.height - (stage.y + stage.height)),
+          `ledger takes the rest of the height, ${where}`,
+        ).toBeLessThanOrEqual(1);
+        expect(
+          (await longXpRow.boundingBox())!.height,
+          `long reason wraps, ${where}`,
+        ).toBeGreaterThan(40);
       }
       if (SHOTS.has(size))
         await snap(page, `${activity.toLowerCase()}-${size}`);
@@ -350,6 +399,18 @@ base(
       await expectNoClippedText(page.locator(`#${id}`), id);
   },
 );
+
+// A word split across two lines counts as cut too; words wrapped whole pass.
+base("expectWholeWords reports a word broken mid-word", async ({ page }) => {
+  await page.setContent(
+    `<div id="split" style="width:40px;overflow-wrap:anywhere">Thornwoodsilvermine</div>
+<div id="whole" style="width:60px">a few short words wrap</div>`,
+  );
+  expect(await page.locator("#split").evaluate(brokenWords)).toEqual([
+    "Thornwoodsilvermine",
+  ]);
+  await expectWholeWords(page.locator("#whole"), "whole");
+});
 
 // ADR 0022 step 2.4: a click focuses an activity; each mounts on its first visit and keeps its state
 // while hidden.

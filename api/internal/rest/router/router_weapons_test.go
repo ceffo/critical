@@ -10,23 +10,24 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 )
 
-const bowJSON = `{"id":"long_bow","name":"Long Bow","damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,
+const bowJSON = `{"id":"long_bow","name":{"en":"Long Bow"},"damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,
 	"kind":"missile","two_handed":true,"ammo_kind":"arrow"}`
 
 var longBow = weaponsvc.Weapon{
-	ID: "long_bow", Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
+	ID: "long_bow", Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
 	Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
 }
 
 func TestWeapons_Create(t *testing.T) {
 	h, m := newRouter(t)
 	m.weapons.EXPECT().Create(mock.Anything, int64(1), weaponsvc.WeaponInput{
-		Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+		Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
 	}).Return(&weaponsvc.ChangeResult{Weapon: longBow, LogEntryID: 12}, nil)
-	rec := do(h, "POST", "/api/weapons", `{"name":"Long Bow","damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,"kind":"missile","two_handed":true,"ammo_kind":"arrow"}`)
+	rec := do(h, "POST", "/api/weapons", `{"name":{"en":"Long Bow"},"damage_sm":"1d8","damage_l":"1d8","magic_to_hit":1,"magic_damage":2,"kind":"missile","two_handed":true,"ammo_kind":"arrow"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"weapon":`+bowJSON+`,"logEntryId":12}`, rec.Body.String())
 }
@@ -36,7 +37,7 @@ func TestWeapons_CreateInvalidNamesTheField(t *testing.T) {
 	h, m := newRouter(t)
 	m.weapons.EXPECT().Create(mock.Anything, int64(1), mock.Anything).
 		Return(nil, fmt.Errorf("wrapped: %w", &domain.FieldError{Field: "damage_sm", Message: "Damage must look like 1d8 or 2d4"}))
-	rec := do(h, "POST", "/api/weapons", `{"name":"X","damage_sm":"2x6","kind":"melee"}`)
+	rec := do(h, "POST", "/api/weapons", `{"name":{"en":"X"},"damage_sm":"2x6","kind":"melee"}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.JSONEq(t, `{"error":"Damage must look like 1d8 or 2d4","field":"damage_sm","code":"invalid_input"}`, rec.Body.String())
 }
@@ -68,8 +69,21 @@ func TestWeapons_EditErrors(t *testing.T) {
 	h, m := newRouter(t)
 	m.weapons.EXPECT().Update(mock.Anything, int64(1), "x", mock.Anything).Return(nil, fmt.Errorf("%w: x", weaponsvc.ErrWeaponNotFound))
 	m.weapons.EXPECT().Delete(mock.Anything, int64(1), "x").Return(nil, fmt.Errorf("%w: x", weaponsvc.ErrWeaponNotFound))
-	rec := do(h, "PATCH", "/api/weapons/x", `{"name":"y"}`)
+	rec := do(h, "PATCH", "/api/weapons/x", `{"name":{"en":"y"}}`)
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	assert.JSONEq(t, `{"error":"weapon not found","code":"weapon_not_found"}`, rec.Body.String())
 	assert.Equal(t, http.StatusNotFound, do(h, "DELETE", "/api/weapons/x", "").Code)
+}
+
+// ADR 0023 steps 9 and 11: a weapon's name is served as a language map, and
+// the editor's name is a language map passed on as sent.
+func TestWeapons_Step9_NameIsALanguageMap(t *testing.T) {
+	h, m := newRouter(t)
+	m.weapons.EXPECT().Update(mock.Anything, int64(1), "long_bow", weaponsvc.WeaponPatch{Name: localized.Text{"fr": "Arc long"}}).
+		Return(&weaponsvc.ChangeResult{Weapon: weaponsvc.Weapon{
+			ID: "long_bow", Name: localized.Text{"en": "Long Bow", "fr": "Arc long"}, DamageSM: "1d8", DamageL: "1d8", Kind: "missile",
+		}, LogEntryID: 3}, nil)
+	rec := do(h, "PATCH", "/api/weapons/long_bow", `{"name":{"fr":"Arc long"}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"name":{"en":"Long Bow","fr":"Arc long"}`)
 }

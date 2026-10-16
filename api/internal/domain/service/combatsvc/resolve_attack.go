@@ -105,12 +105,12 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (*itemsvc.Item, error) {
 	if !weapon.FiresAmmo() {
 		if ammoID != "" {
-			return nil, fmt.Errorf("%w: %s does not fire ammunition", domain.ErrInvalidInput, weapon.Name)
+			return nil, fmt.Errorf("%w: %s does not fire ammunition", domain.ErrInvalidInput, weapon.Name.Any())
 		}
 		return nil, nil
 	}
 	if ammoID == "" {
-		return nil, fmt.Errorf("%w: %s needs ammunition (%s)", domain.ErrInvalidInput, weapon.Name, weapon.AmmoKind)
+		return nil, fmt.Errorf("%w: %s needs ammunition (%s)", domain.ErrInvalidInput, weapon.Name.Any(), weapon.AmmoKind)
 	}
 	item, err := s.items.Use(ctx, ammoID)
 	if err != nil {
@@ -119,7 +119,7 @@ func (s *service) spendAmmo(ctx context.Context, weapon Weapon, ammoID string) (
 	// Ammo is any item of the weapon's ammo kind, whatever its behaviour
 	// (ADR 0002 step 10). The weapon fires ammo, so its kind is never empty.
 	if item.AmmoKind != weapon.AmmoKind {
-		return nil, fmt.Errorf("%w: %s cannot fire %s", domain.ErrInvalidInput, weapon.Name, item.Name)
+		return nil, fmt.Errorf("%w: %s cannot fire %s", domain.ErrInvalidInput, weapon.Name.Any(), item.Name.Any())
 	}
 	return &item, nil
 }
@@ -135,7 +135,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		DamageTerms:    []DamageTerm{},
 		CritMultiplier: 1,
 		WeaponID:       weapon.ID,
-		WeaponName:     weapon.Name,
+		WeaponName:     weapon.Name.Any(),
 		TargetSize:     req.TargetSize,
 	}
 	// ADR 0012 step 1: an attack may omit the target AC. The dice are the
@@ -146,7 +146,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 		res.RolledACUnknown = true
 	}
 	if ammo != nil {
-		res.Ammo = &AmmoUse{ItemID: ammo.ID, Name: ammo.Name, Magic: ammo.MagicBonus, Remaining: ammo.Count}
+		res.Ammo = &AmmoUse{ItemID: ammo.ID, Name: ammo.Name.Any(), Magic: ammo.MagicBonus, Remaining: ammo.Count}
 	}
 	am, err := s.attackModifiers(char, weapon, ammo, mods, req.Situational)
 	if err != nil {

@@ -126,6 +126,11 @@ func assertTextIntegrity(t *testing.T, db *DB) {
 			assert.NotEmpty(t, r.Texts[c], "row %d %s: key %d has no row", r.ID, c, k)
 		}
 	}
+	for _, q := range []string{`SELECT name FROM items`, `SELECT name FROM weapons`} {
+		for _, k := range nameKeys(t, db, q) {
+			used[k] = true
+		}
+	}
 	for id := range storedTexts(t, db) {
 		assert.True(t, used[id], "text %d is keyed by no column", id)
 	}

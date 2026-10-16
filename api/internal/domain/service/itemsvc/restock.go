@@ -48,13 +48,13 @@ func (s *service) Restock(ctx context.Context, characterID int64, itemID string,
 			return err
 		}
 		if !item.Behaviour.Restockable() {
-			return fmt.Errorf("%w: %s (%s) is only used, never restocked", ErrNotRestockable, item.Name, item.Behaviour)
+			return fmt.Errorf("%w: %s (%s) is only used, never restocked", ErrNotRestockable, item.Name.Any(), item.Behaviour)
 		}
 		snap, err := CountSnapshot(item.ID, item.Count-n, item.Count)
 		if err != nil {
 			return err
 		}
-		r := &RestockResult{ItemID: item.ID, Name: item.Name, Type: item.Type, Added: n, Count: item.Count}
+		r := &RestockResult{ItemID: item.ID, Name: item.Name.Any(), Type: item.Type, Added: n, Count: item.Count}
 		payload, err := json.Marshal(restockRecord{ItemID: r.ItemID, Name: r.Name, Type: r.Type, Added: r.Added, Count: r.Count})
 		if err != nil {
 			return fmt.Errorf("encode restock payload: %w", err)

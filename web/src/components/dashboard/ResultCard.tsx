@@ -45,6 +45,7 @@ import {
   type SaveView,
 } from "@/lib/filCard";
 import { useSpellName } from "@/i18n/spellName";
+import { type InventoryNamer, useInventoryName } from "@/i18n/inventoryName";
 import { modeName } from "@/lib/spellMode";
 import { rollLabel } from "@/lib/spellDice";
 import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
@@ -67,6 +68,7 @@ const labelClass = "text-label text-muted-foreground";
 export function ResultCard() {
   const { t, i18n } = useTranslation();
   const spellName = useSpellName();
+  const names = useInventoryName();
   const last = useRollStore((s) => s.last);
   const entries = useLogStore((s) => s.entries);
   const selectedId = useFilStore((s) => s.selectedId);
@@ -85,11 +87,19 @@ export function ResultCard() {
     const model =
       source.kind === "live"
         ? liveModel(source.last)
-        : cardModel(source.entry, t, spellName);
+        : cardModel(source.entry, t, spellName, names);
     const kind =
       entry?.kind ??
       (source.kind === "live" ? liveKind(source.last) : "attack");
-    const h = cardHeader(kind, model, entry, t, i18n.language, spellName);
+    const h = cardHeader(
+      kind,
+      model,
+      entry,
+      t,
+      i18n.language,
+      spellName,
+      names,
+    );
     header = (
       <div
         className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1"
@@ -268,24 +278,26 @@ function critText(t: TFunction, r: RollResult): string {
     : t("result.crit", { ...args, from: r.critFrom, to: r.critTo });
 }
 
-/** "Long Sword +2 vs AC 5", "… vs unknown AC". */
-function attackHeading(t: TFunction, r: RollResult): string {
+/**
+ * "Long Sword +2 vs AC 5", "… vs unknown AC". The weapon and the ammunition are named by id in the
+ * player's language (ADR 0023 step 12).
+ */
+function attackHeading(
+  t: TFunction,
+  r: RollResult,
+  names: InventoryNamer,
+): string {
   const unknown = r.targetAc === null;
+  const weapon = names.weapon(r.weaponId, r.weaponName ?? "");
   if (r.ammo) {
+    const ammo = names.item(r.ammo.itemId, r.ammo.name);
     return unknown
-      ? t("result.attackHeadingAmmoUnknown", {
-          weapon: r.weaponName,
-          ammo: r.ammo.name,
-        })
-      : t("result.attackHeadingAmmo", {
-          weapon: r.weaponName,
-          ammo: r.ammo.name,
-          ac: r.targetAc,
-        });
+      ? t("result.attackHeadingAmmoUnknown", { weapon, ammo })
+      : t("result.attackHeadingAmmo", { weapon, ammo, ac: r.targetAc });
   }
   return unknown
-    ? t("result.attackHeadingUnknown", { weapon: r.weaponName })
-    : t("result.attackHeading", { weapon: r.weaponName, ac: r.targetAc });
+    ? t("result.attackHeadingUnknown", { weapon })
+    : t("result.attackHeading", { weapon, ac: r.targetAc });
 }
 
 /**
@@ -301,7 +313,16 @@ function AttackResult({
   interactive: boolean;
 }) {
   const { t, i18n } = useTranslation();
-  const itemName = itemNamer(useItemsStore((st) => st.items));
+  const itemName = itemNamer(
+    useItemsStore((st) => st.items),
+    i18n.language,
+  );
+  const names = useInventoryName();
+  // The weapon's own +N is detailed by the weapon's name: named by id in the player's language.
+  const weaponNamed = <M extends { kind: string; detail?: string }>(m: M): M =>
+    m.kind === "weapon_magic"
+      ? { ...m, detail: names.weapon(r.weaponId, m.detail ?? "") }
+      : m;
   const detailOpen = useFilStore((s) => s.detailOpen);
   const setDetailOpen = useFilStore((s) => s.setDetailOpen);
   const settled = attackSettled(r);
@@ -319,7 +340,7 @@ function AttackResult({
             {t("fil.hitsAc", { ac: hitsAc(r) })}
           </div>
           <div className="text-body text-muted-foreground">
-            {attackHeading(t, r)}
+            {attackHeading(t, r, names)}
             {r.targetSize && <> · {t(`result.sizes.${r.targetSize}`)}</>}
           </div>
         </div>
@@ -437,7 +458,10 @@ function AttackResult({
 
       {r.ammo && (
         <p className="text-body text-muted-foreground" data-testid="ammo-left">
-          {t("result.ammoLeft", { name: r.ammo.name, count: r.ammo.remaining })}
+          {t("result.ammoLeft", {
+            name: names.item(r.ammo.itemId, r.ammo.name),
+            count: r.ammo.remaining,
+          })}
         </p>
       )}
 
@@ -480,7 +504,7 @@ function AttackResult({
                 {r.modifiers.map((m, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="min-w-0 break-words">
-                      {modLabel(t, m, undefined, itemName)}
+                      {modLabel(t, weaponNamed(m), undefined, itemName)}
                     </span>
                     <span className="tabular-nums">
                       {formatSigned(m.value)}
@@ -500,7 +524,7 @@ function AttackResult({
                 {r.damageTerms.map((d, i) => (
                   <li key={i} className="flex justify-between gap-2">
                     <span className="min-w-0 break-words">
-                      {modLabel(t, d, r, itemName)}
+                      {modLabel(t, weaponNamed(d), r, itemName)}
                     </span>
                     <span className="tabular-nums">
                       {d.term === "spells" ||
@@ -694,8 +718,11 @@ function SaveResult({
   save: SaveView;
   interactive: boolean;
 }) {
-  const { t } = useTranslation();
-  const itemName = itemNamer(useItemsStore((st) => st.items));
+  const { t, i18n } = useTranslation();
+  const itemName = itemNamer(
+    useItemsStore((st) => st.items),
+    i18n.language,
+  );
   const name = t(`saves.categories.${s.category}`, {
     defaultValue: s.category,
   });
@@ -956,11 +983,12 @@ function DieChip({
 
 function ItemResult({ r }: { r: UseResult }) {
   const { t } = useTranslation();
+  const name = useInventoryName().item(r.itemId, r.name);
   const faces = r.dice ? dieFaces(r.dice) : null;
   return (
     <div className="flex flex-col gap-3" data-testid="item-result">
       <div className="text-body text-muted-foreground">
-        {t("result.itemHeading", { name: r.name })}
+        {t("result.itemHeading", { name })}
       </div>
       {r.dice ? (
         <>
@@ -996,8 +1024,8 @@ function ItemResult({ r }: { r: UseResult }) {
       {r.notes && <p className="text-body text-muted-foreground">{r.notes}</p>}
       <p className="text-body text-muted-foreground" data-testid="item-left">
         {r.removed
-          ? t("result.leftRemoved", { name: r.name })
-          : t("result.left", { name: r.name, count: r.remaining })}
+          ? t("result.leftRemoved", { name })
+          : t("result.left", { name, count: r.remaining })}
       </p>
     </div>
   );
@@ -1013,6 +1041,7 @@ function CastEntry({
 }) {
   const { t } = useTranslation();
   const spellName = useSpellName();
+  const names = useInventoryName();
   const spell = spellName(c.spellId, c.spell);
   const instances = castInstances(c);
   return (
@@ -1167,7 +1196,7 @@ function CastEntry({
       {c.item && (
         <p className="text-body">
           {t("result.cast.itemSpent", {
-            name: c.item.name,
+            name: names.item(c.item.itemId, c.item.name),
             left: c.item.remaining,
           })}
         </p>

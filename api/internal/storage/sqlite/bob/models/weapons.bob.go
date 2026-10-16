@@ -22,7 +22,7 @@ import (
 type Weapon struct {
 	ID          string `db:"id,pk" `
 	Position    int64  `db:"position" `
-	Name        string `db:"name" `
+	Name        int64  `db:"name" `
 	DamageSM    string `db:"damage_sm" `
 	DamageL     string `db:"damage_l" `
 	MagicToHit  int64  `db:"magic_to_hit" `
@@ -127,7 +127,7 @@ func (c weaponColumn) ShouldOmitParens() bool {
 type WeaponSetter struct {
 	ID          omit.Val[string] `db:"id,pk" `
 	Position    omit.Val[int64]  `db:"position" `
-	Name        omit.Val[string] `db:"name" `
+	Name        omit.Val[int64]  `db:"name" `
 	DamageSM    omit.Val[string] `db:"damage_sm" `
 	DamageL     omit.Val[string] `db:"damage_l" `
 	MagicToHit  omit.Val[int64]  `db:"magic_to_hit" `
@@ -655,7 +655,7 @@ type weaponWhere[Q sqlite.Filterable] struct {
 	cols        weaponColumns
 	ID          sqlite.WhereMod[Q, string]
 	Position    sqlite.WhereMod[Q, int64]
-	Name        sqlite.WhereMod[Q, string]
+	Name        sqlite.WhereMod[Q, int64]
 	DamageSM    sqlite.WhereMod[Q, string]
 	DamageL     sqlite.WhereMod[Q, string]
 	MagicToHit  sqlite.WhereMod[Q, int64]
@@ -674,7 +674,7 @@ func buildWeaponWhere[Q sqlite.Filterable](cols weaponColumns) weaponWhere[Q] {
 		cols:        cols,
 		ID:          sqlite.Where[Q, string](cols.ID.Expression),
 		Position:    sqlite.Where[Q, int64](cols.Position.Expression),
-		Name:        sqlite.Where[Q, string](cols.Name.Expression),
+		Name:        sqlite.Where[Q, int64](cols.Name.Expression),
 		DamageSM:    sqlite.Where[Q, string](cols.DamageSM.Expression),
 		DamageL:     sqlite.Where[Q, string](cols.DamageL.Expression),
 		MagicToHit:  sqlite.Where[Q, int64](cols.MagicToHit.Expression),

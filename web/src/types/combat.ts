@@ -1,6 +1,8 @@
 // Mirrors api/internal/rest/handler/combathdl (RollResultDTO, ModifierDTO, DamageTermDTO, AmmoDTO,
 // AttackRequestDTO, WeaponDTO). The attack fields also match the attack entries' log payload.
 
+import type { LocalizedText } from "./localized";
+
 /** Where a modifier comes from; the UI labels it with `result.mods.<kind>`. */
 export type ModifierKind =
   | "strength"
@@ -160,7 +162,8 @@ export interface AttackForm {
 /** One ammunition the weapon in hand can fire (combathdl AmmoChoiceDTO). */
 export interface AmmoChoice {
   itemId: string;
-  name: string;
+  /** A language map (ADR 0023 step 9): pick with `localized`. */
+  name: LocalizedText;
   magic: number;
   count: number;
 }
@@ -202,7 +205,8 @@ export interface AttackFormPatch {
 /** GET /api/weapons */
 export interface Weapon {
   id: string;
-  name: string;
+  /** A language map (ADR 0023 step 9): pick with `localized`. */
+  name: LocalizedText;
   damage_sm: string;
   damage_l: string;
   magic_to_hit: number;
@@ -239,7 +243,8 @@ export interface CritTable {
 
 /** Body of POST /api/weapons and PATCH /api/weapons/{id} (weaponhdl WeaponBody); a PATCH changes only the fields present. */
 export interface WeaponBody {
-  name?: string;
+  /** The languages typed (ADR 0023 step 11): the others are kept. */
+  name?: LocalizedText;
   damage_sm?: string;
   damage_l?: string;
   magic_to_hit?: number;
@@ -263,8 +268,10 @@ export interface WeaponFieldChange {
 }
 
 /** Payload of weapon_add, weapon_edit and weapon_remove log entries (weaponsvc changeRecord). */
-export interface WeaponChangeRecord extends Weapon {
+export interface WeaponChangeRecord extends Omit<Weapon, "name"> {
   weapon_id: string;
+  /** The name recorded at write time (ADR 0023 step 12): one string, not a language map. */
+  name: string;
   /** Only in weapon_edit. */
   changes?: WeaponFieldChange[];
 }

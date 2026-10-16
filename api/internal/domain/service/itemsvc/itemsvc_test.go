@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 )
@@ -119,16 +120,16 @@ func TestUse_RemoveErrorFails(t *testing.T) {
 }
 
 var wand = itemsvc.Item{
-	ID: "wand_lightning", Position: 4, Name: "Wand of lightning", Type: "wand", Behaviour: itemsvc.BehaviourCharges,
+	ID: "wand_lightning", Position: 4, Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges,
 	Count: 0, MaxCount: 4, EffectDice: "6d6", EffectSave: "rod_staff_wand",
 }
 
-const wandBefore = `[{"id":"wand_lightning","count":1,"item":{"position":4,"name":"Wand of lightning","type":"wand",
+const wandBefore = `[{"id":"wand_lightning","count":1,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand",
 	"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}]`
 
 func TestUseSnapshot_BeforeIsOneMore(t *testing.T) {
 	for _, b := range []itemsvc.Behaviour{itemsvc.BehaviourStock, itemsvc.BehaviourDaily} {
-		snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Name: "Arrows +3", Behaviour: b, Count: 0})
+		snap, err := itemsvc.UseSnapshot(itemsvc.Item{ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Behaviour: b, Count: 0})
 		require.NoError(t, err)
 		assert.Equal(t, "items:arrows_plus3", snap.Key)
 		assert.JSONEq(t, `[{"id":"arrows_plus3","count":1}]`, string(snap.Before), "kept at 0: no item data")
@@ -210,7 +211,7 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	svc, err := itemsvc.New(dal, f.Deps)
 	require.NoError(t, err)
 	dal.EXPECT().Decrement(mock.Anything, "wand_lightning").Return(itemsvc.Item{
-		ID: "wand_lightning", Name: "Wand of lightning", Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4,
+		ID: "wand_lightning", Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4,
 		EffectDice: "6d6", EffectSave: "rod_staff_wand",
 	}, nil)
 	for _, v := range []int{1, 2, 3, 4, 5, 6} {
@@ -241,7 +242,7 @@ func TestUseItem_NoDiceRollsNothing(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t) // the dice mock fails the test on any call
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "gem").Return(itemsvc.Item{ID: "gem", Name: "Gem", Behaviour: itemsvc.BehaviourDaily, Count: 0, MaxCount: 1}, nil)
+	dal.EXPECT().Decrement(mock.Anything, "gem").Return(itemsvc.Item{ID: "gem", Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 0, MaxCount: 1}, nil)
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 
 	res, err := svc.UseItem(context.Background(), 1, "gem")
@@ -266,7 +267,7 @@ func TestUseItem_SpendsStockAmmo(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, "arrows").Return(itemsvc.Item{ID: "arrows", Name: "Arrows", Behaviour: itemsvc.BehaviourStock, AmmoKind: "arrow", Count: 0}, nil)
+	dal.EXPECT().Decrement(mock.Anything, "arrows").Return(itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, AmmoKind: "arrow", Count: 0}, nil)
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(3), nil)
 	res, err := svc.UseItem(context.Background(), 1, "arrows")
 	require.NoError(t, err)
@@ -304,7 +305,7 @@ func TestRestock_AddsToStockAndLogs(t *testing.T) {
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Increment(mock.Anything, "arrows_plus3", 1).Return(itemsvc.Item{
-		ID: "arrows_plus3", Name: "Arrows +3", Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 1,
+		ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 1,
 	}, nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(7), nil)

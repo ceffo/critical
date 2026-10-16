@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
@@ -123,7 +124,7 @@ func TestWeapons_AddLongBowFiresArrowItems(t *testing.T) {
 	bs, dice := newWeaponStack(t)
 	ctx := context.Background()
 	add, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{
-		Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+		Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "long_bow", add.Weapon.ID)
@@ -156,7 +157,7 @@ func TestWeapons_AddThenPopDeletesIt(t *testing.T) {
 	bs, _ := newWeaponStack(t)
 	ctx := context.Background()
 	orig := weaponIDs(t, bs)
-	add, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{Name: "Spear", DamageSM: "1d6", DamageL: "1d8", Kind: "melee"})
+	add, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{Name: localized.Of("Spear"), DamageSM: "1d6", DamageL: "1d8", Kind: "melee"})
 	require.NoError(t, err)
 	assert.Equal(t, append(append([]string{}, orig...), "spear"), weaponIDs(t, bs), "last in the list")
 	_, err = bs.Log.Undo(ctx, bs.CharacterID, add.LogEntryID)
@@ -208,11 +209,11 @@ func TestWeapons_EditAllFieldsAndPopRestoresThem(t *testing.T) {
 	ctx := context.Background()
 	orig := weaponList(t, bs)["longsword"]
 	res, err := bs.Weapons.Update(ctx, bs.CharacterID, "longsword", weaponsvc.WeaponPatch{
-		Name: ptr("Axe"), DamageSM: ptr("1d10"), DamageL: ptr("2d6"), MagicToHit: ptr(-1), MagicDamage: ptr(5),
+		Name: localized.Text{"en": "Axe"}, DamageSM: ptr("1d10"), DamageL: ptr("2d6"), MagicToHit: ptr(-1), MagicDamage: ptr(5),
 		Kind: ptr("missile"), TwoHanded: ptr(true), AmmoKind: ptr("bolt"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "Axe", weaponList(t, bs)["longsword"].Name)
+	assert.Equal(t, localized.Text{"en": "Axe", "fr": "Épée longue +2"}, weaponList(t, bs)["longsword"].Name, "the French name is kept")
 	_, err = bs.Log.Undo(ctx, bs.CharacterID, res.LogEntryID)
 	require.NoError(t, err)
 	assert.Equal(t, orig, weaponList(t, bs)["longsword"])
@@ -222,7 +223,7 @@ func TestWeapons_InvalidEditsLogNothing(t *testing.T) {
 	bs, _ := newWeaponStack(t)
 	ctx := context.Background()
 	before := logCount(t, bs)
-	_, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{Name: "X", DamageSM: "2x6", DamageL: "1d6", Kind: "melee"})
+	_, err := bs.Weapons.Create(ctx, bs.CharacterID, weaponsvc.WeaponInput{Name: localized.Of("X"), DamageSM: "2x6", DamageL: "1d6", Kind: "melee"})
 	require.Error(t, err)
 	_, err = bs.Weapons.Update(ctx, bs.CharacterID, "mace", weaponsvc.WeaponPatch{MagicToHit: ptr(50)})
 	require.Error(t, err)

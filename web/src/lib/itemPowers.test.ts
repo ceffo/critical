@@ -30,7 +30,7 @@ const hammerEffects = {
 
 const gem: Item = {
   id: "power_gem_dispel",
-  name: "Power Gem",
+  name: { en: "Power Gem", fr: "Gemme de pouvoir" },
   type: "gem",
   behaviour: "daily",
   magicalBonus: 0,
@@ -54,7 +54,7 @@ const hammer: ItemPower = {
 // the timeline has no row.
 describe("powerRows", () => {
   it("lists the hammer at STR 18 under the item's name, with its trigger", () => {
-    expect(powerRows([hammer], [gem])).toEqual([
+    expect(powerRows([hammer], [gem], "en")).toEqual([
       {
         key: "power_gem_dispel/thunder_hammer",
         itemId: "power_gem_dispel",
@@ -65,17 +65,23 @@ describe("powerRows", () => {
     ]);
   });
 
-  it("follows the item's name", () => {
-    const renamed = { ...gem, name: "Gemme de puissance" };
-    expect(powerRows([hammer], [renamed])[0].name).toBe("Gemme de puissance");
+  it("follows the item's name, in the player's language (ADR 0023 step 12)", () => {
+    expect(powerRows([hammer], [gem], "fr")[0].name).toBe("Gemme de pouvoir");
+    const renamed = {
+      ...gem,
+      name: { en: "Power Gem", fr: "Gemme de puissance" },
+    };
+    expect(powerRows([hammer], [renamed], "fr")[0].name).toBe(
+      "Gemme de puissance",
+    );
   });
 
   it("has no row at STR 17 (the server lists no power)", () => {
-    expect(powerRows([], [gem])).toEqual([]);
+    expect(powerRows([], [gem], "en")).toEqual([]);
   });
 
   it("offers nothing to edit or dismiss: no buff id, no counters", () => {
-    const [row] = powerRows([hammer], [gem]);
+    const [row] = powerRows([hammer], [gem], "en");
     for (const key of ["id", "duration", "charges", "applies"])
       expect(row).not.toHaveProperty(key);
   });
@@ -104,7 +110,7 @@ describe("powerEffectsText", () => {
 
 describe("namedDetail", () => {
   it("names from the item by id, else the stored detail", () => {
-    const name = itemNamer([gem]);
+    const name = itemNamer([gem], "en");
     expect(
       namedDetail({ detail: "Old", itemId: "power_gem_dispel" }, name),
     ).toBe("Power Gem");

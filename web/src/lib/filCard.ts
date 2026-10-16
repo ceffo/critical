@@ -9,10 +9,12 @@ import type { CastResult, ExposureResult } from "@/types/spells";
 import type { SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
+import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { formatSigned, formatTime } from "./format";
 import { attackSettled } from "./attackAdjust";
 import {
   attackPayload,
+  attackWeapon,
   castPayload,
   dicePayload,
   entryText,
@@ -232,6 +234,7 @@ export function cardModel(
   e: LogEntry,
   t: TFunction,
   spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
 ): CardModel {
   const attack = attackPayload(e);
   if (attack)
@@ -271,7 +274,7 @@ export function cardModel(
   return {
     layout: "info",
     info: {
-      text: entryText(e, t, spellName),
+      text: entryText(e, t, spellName, names),
       value: hpValue(e),
       capped: cappedHeal(e),
     },
@@ -362,17 +365,13 @@ export function cardHeader(
   t: TFunction,
   lang: string,
   spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
 ): CardHeader {
   const tag = t(`log.kinds.${kind}`, { defaultValue: kind });
   let subtitle = "";
   switch (model.layout) {
     case "attack":
-      subtitle = model.roll.ammo
-        ? t("log.attack.withAmmo", {
-            weapon: model.roll.weaponName,
-            ammo: model.roll.ammo.name,
-          })
-        : (model.roll.weaponName ?? "");
+      subtitle = attackWeapon(model.roll, t, names);
       break;
     case "save":
       subtitle = t(`saves.categories.${model.save.category}`, {
@@ -389,7 +388,7 @@ export function cardHeader(
       subtitle = spellName(model.exposure.spellId, model.exposure.name);
       break;
     case "item":
-      subtitle = model.item.name;
+      subtitle = names.item(model.item.itemId, model.item.name);
       break;
     case "initiative":
       subtitle = turnLabel(t, model.round);

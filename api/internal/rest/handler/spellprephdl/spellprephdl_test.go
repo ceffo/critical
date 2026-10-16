@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc/mocks"
@@ -28,7 +29,7 @@ func TestGetInfo_ServesTheSpendableItems(t *testing.T) {
 		{
 			ID: "chromatic_orb", Name: "Chromatic Orb", Level: 1,
 			Cast:  prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true},
-			Items: []itemsvc.Item{{ID: "ruby", Name: "Ruby", Type: "gem", Count: 2}},
+			Items: []itemsvc.Item{{ID: "ruby", Name: localized.Of("Ruby"), Type: "gem", Count: 2}},
 		},
 	}}, nil)
 
@@ -42,7 +43,7 @@ func TestGetInfo_ServesTheSpendableItems(t *testing.T) {
 	spellbook := got.Spellbook
 	require.Len(t, spellbook, 2)
 	assert.Empty(t, spellbook[0].Items)
-	assert.Equal(t, []spellprephdl.SpendableItemDTO{{ID: "ruby", Name: "Ruby", Count: 2}}, spellbook[1].Items)
+	assert.Equal(t, []spellprephdl.SpendableItemDTO{{ID: "ruby", Name: localized.Of("Ruby"), Count: 2}}, spellbook[1].Items)
 }
 
 // ADR 0008 step 14: the spellbook entry serves the cast-time modes, each with

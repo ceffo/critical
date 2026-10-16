@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
@@ -30,8 +31,11 @@ func openDSN(t *testing.T, dsn string) *sqlite.DB {
 
 func insert(t *testing.T, db *sqlite.DB, id string, pos, count, maxCount int, b itemsvc.Behaviour) {
 	t.Helper()
-	_, err := db.Exec(`INSERT INTO items (id, position, name, type, behaviour, count, max_count, effect_dice)
-		VALUES (?, ?, ?, 'wand', ?, ?, ?, '6d6')`, id, pos, "Name "+id, string(b), count, maxCount)
+	// The name is a localized_texts key (ADR 0023 step 9): one per position.
+	_, err := db.Exec(`INSERT INTO localized_texts (text_id, lang, body) VALUES (?, 'en', ?)`, 100+pos, "Name "+id)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO items (id, position, name, type, behaviour, count, max_count, effect_dice)
+		VALUES (?, ?, ?, 'wand', ?, ?, ?, '6d6')`, id, pos, 100+pos, string(b), count, maxCount)
 	require.NoError(t, err)
 }
 
@@ -52,7 +56,7 @@ func TestListAndMapping(t *testing.T) {
 	require.Len(t, got, 2)
 	assert.Equal(t, "a", got[0].ID, "ordered by position, not id")
 	assert.Equal(t, itemsvc.Item{
-		ID: "a", Name: "Name a", Type: "wand", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1, EffectDice: "6d6",
+		ID: "a", Name: localized.Of("Name a"), Type: "wand", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1, EffectDice: "6d6",
 	}, got[0])
 }
 
@@ -196,7 +200,7 @@ func TestGetAndUpdate_WholeItem(t *testing.T) {
 
 	got, err := dal.Get(ctx, "w")
 	require.NoError(t, err)
-	got.Name, got.Count, got.Behaviour, got.MaxCount, got.MagicBonus, got.AmmoKind = "Staff", 2, itemsvc.BehaviourDaily, 3, 1, "bolt"
+	got.Name, got.Count, got.Behaviour, got.MaxCount, got.MagicBonus, got.AmmoKind = localized.Of("Staff"), 2, itemsvc.BehaviourDaily, 3, 1, "bolt"
 	got.EffectDice, got.EffectSave, got.Notes, got.Type, got.Position = "1d4+1", "spell", "hum", "staff", 9
 	require.NoError(t, dal.Update(ctx, got))
 	back, err := dal.Get(ctx, "w")
@@ -207,4 +211,49 @@ func TestGetAndUpdate_WholeItem(t *testing.T) {
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 	got.ID = "nope"
 	assert.ErrorIs(t, dal.Update(ctx, got), itemsvc.ErrItemNotFound)
+}
+
+// ADR 0023 step 9: an item's name is its localized_texts rows, one per
+// language. Update replaces them under the same key, Insert stores them
+// under a new key after the highest stored, Delete removes them with the
+// item: no row is left without its item.
+func TestName_Step9_WrittenAsLocalizedTextRows(t *testing.T) {
+	db := openDB(t)
+	insert(t, db, "w", 0, 4, 4, itemsvc.BehaviourCharges)
+	dal := itemdal.New(db)
+	ctx := context.Background()
+	rows := func() map[int64]localized.Text {
+		t.Helper()
+		r, err := db.Query(`SELECT text_id, lang, body FROM localized_texts`)
+		require.NoError(t, err)
+		defer func() { _ = r.Close() }()
+		out := map[int64]localized.Text{}
+		for r.Next() {
+			var id int64
+			var lang, body string
+			require.NoError(t, r.Scan(&id, &lang, &body))
+			if out[id] == nil {
+				out[id] = localized.Text{}
+			}
+			out[id][lang] = body
+		}
+		require.NoError(t, r.Err())
+		return out
+	}
+
+	it, err := dal.Get(ctx, "w")
+	require.NoError(t, err)
+	it.Name = localized.Text{"fr": "Baguette", "de": "Stab"}
+	require.NoError(t, dal.Update(ctx, it))
+	assert.Equal(t, map[int64]localized.Text{100: {"fr": "Baguette", "de": "Stab"}}, rows(), "same key, the English row gone")
+
+	it.ID, it.Name = "x", localized.Text{"en": "Rope"}
+	require.NoError(t, dal.Insert(ctx, it))
+	assert.Equal(t, localized.Text{"en": "Rope"}, rows()[101], "a new key after the highest")
+	got, err := dal.Get(ctx, "x")
+	require.NoError(t, err)
+	assert.Equal(t, localized.Text{"en": "Rope"}, got.Name)
+
+	require.NoError(t, dal.Delete(ctx, "w"))
+	assert.Equal(t, map[int64]localized.Text{101: {"en": "Rope"}}, rows(), "the removed item's rows go with it")
 }

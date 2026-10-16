@@ -4,6 +4,7 @@ import { resources } from "@/i18n";
 import type { LogEntry } from "@/types/log";
 import { abilityText, entryText } from "./logSummary";
 import { spellNamer } from "@/i18n/spellName";
+import { inventoryNamer } from "@/i18n/inventoryName";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -259,6 +260,57 @@ describe("entryText", () => {
   ])("renders attack %j in %s", async (payload, lng, want) => {
     const t = await makeT(lng);
     expect(entryText(entry("attack", payload, "server"), t)).toBe(want);
+  });
+
+  // ADR 0023 step 12: the weapon, its ammunition and a used item are named by id in the player's
+  // language while the inventory has them; a removed one keeps its recorded name.
+  it("names the weapon, the ammunition and the item from the inventory", async () => {
+    const t = await makeT("fr");
+    const names = inventoryNamer(
+      [
+        { id: "arrows_plus1", name: { en: "Arrows +1", fr: "Flèches +1" } },
+        {
+          id: "power_gem_dispel",
+          name: { en: "Power Gem", fr: "Gemme de pouvoir" },
+        },
+      ],
+      [{ id: "shortbow", name: { en: "Short Bow +2", fr: "Arc court +2" } }],
+      "fr",
+    );
+    const shot = {
+      hit: false,
+      totalDamage: 0,
+      weaponId: "shortbow",
+      weaponName: "Short Bow +2",
+      targetAc: 5,
+      ammo: {
+        itemId: "arrows_plus1",
+        name: "Arrows +1",
+        magic: 1,
+        remaining: 3,
+      },
+    };
+    expect(
+      entryText(entry("attack", shot, "server"), t, undefined, names),
+    ).toBe("Arc court +2 (Flèches +1) contre CA 5 : attaque ratée");
+    const use = {
+      itemId: "power_gem_dispel",
+      name: "Power Gem",
+      remaining: 0,
+      rolls: [],
+      total: 0,
+    };
+    expect(entryText(entry("item_use", use), t, undefined, names)).toBe(
+      "Objet utilisé : Gemme de pouvoir (0 restant)",
+    );
+    expect(
+      entryText(
+        entry("item_use", { ...use, itemId: "gone" }),
+        t,
+        undefined,
+        names,
+      ),
+    ).toBe("Objet utilisé : Power Gem (0 restant)");
   });
 
   it.each([

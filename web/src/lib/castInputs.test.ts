@@ -18,8 +18,12 @@ const book: SpellbookEntry[] = [
     slot_splits: [[1, 1, 1], [1, 2], [3]],
   },
 ];
-const diamonds: SpendableItem = { id: "diamond", name: "Diamond", count: 3 };
-const rubies: SpendableItem = { id: "ruby", name: "Ruby", count: 2 };
+const diamonds: SpendableItem = {
+  id: "diamond",
+  name: { en: "Diamond" },
+  count: 3,
+};
+const rubies: SpendableItem = { id: "ruby", name: { en: "Ruby" }, count: 2 };
 const withItems = (...items: SpendableItem[]): SpellbookEntry[] =>
   book.map((e) => (e.id === "chromatic_orb" ? { ...e, items } : e));
 const slot = (id: string, level = 1): SpellSlot => ({

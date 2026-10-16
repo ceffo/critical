@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
@@ -136,17 +137,18 @@ func List(svc itemSvc) render.HandlerFunc {
 // ItemDTO is the wire shape of an item: behaviour is
 // stock, charges or daily, type the free-text label.
 type ItemDTO struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	Type         string `json:"type"`
-	Behaviour    string `json:"behaviour"`
-	MagicalBonus int    `json:"magicalBonus"`
-	AmmoKind     string `json:"ammoKind"`
-	Count        int    `json:"count"`
-	MaxCount     int    `json:"maxCount"`
-	EffectDice   string `json:"effectDice"`
-	EffectSave   string `json:"effectSave"`
-	Notes        string `json:"notes"`
+	ID string `json:"id"`
+	// Name is a language map (ADR 0023 step 9).
+	Name         localized.Text `json:"name"`
+	Type         string         `json:"type"`
+	Behaviour    string         `json:"behaviour"`
+	MagicalBonus int            `json:"magicalBonus"`
+	AmmoKind     string         `json:"ammoKind"`
+	Count        int            `json:"count"`
+	MaxCount     int            `json:"maxCount"`
+	EffectDice   string         `json:"effectDice"`
+	EffectSave   string         `json:"effectSave"`
+	Notes        string         `json:"notes"`
 	// Powers are the item's own powers (ADR 0016 steps 9 to 16), read only:
 	// whether one is on is served with the effects list (GET /api/buffs).
 	Powers []PowerDTO `json:"powers"`
@@ -187,16 +189,17 @@ type ChangeDTO struct {
 // ItemBody is the body of POST and PATCH /api/items. On a PATCH only the
 // fields present change. maxCount is the daily number (daily items only).
 type ItemBody struct {
-	Name         *string `json:"name"`
-	Type         *string `json:"type"`
-	Behaviour    *string `json:"behaviour"`
-	Count        *int    `json:"count"`
-	MaxCount     *int    `json:"maxCount"`
-	MagicalBonus *int    `json:"magicalBonus"`
-	AmmoKind     *string `json:"ammoKind"`
-	EffectDice   *string `json:"effectDice"`
-	EffectSave   *string `json:"effectSave"`
-	Notes        *string `json:"notes"`
+	// Name is a language map: the languages typed (ADR 0023 step 11).
+	Name         localized.Text `json:"name"`
+	Type         *string        `json:"type"`
+	Behaviour    *string        `json:"behaviour"`
+	Count        *int           `json:"count"`
+	MaxCount     *int           `json:"maxCount"`
+	MagicalBonus *int           `json:"magicalBonus"`
+	AmmoKind     *string        `json:"ammoKind"`
+	EffectDice   *string        `json:"effectDice"`
+	EffectSave   *string        `json:"effectSave"`
+	Notes        *string        `json:"notes"`
 	// Powers is accepted and ignored (ADR 0016 step 15): powers come from
 	// the seed and data migrations only, so an item served back as is still
 	// decodes, but no body sets them.
@@ -233,7 +236,7 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			return err
 		}
 		res, err := svc.Create(r.Context(), charID(r), itemsvc.ItemInput{
-			Name: deref(b.Name), Type: deref(b.Type), Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
+			Name: b.Name, Type: deref(b.Type), Behaviour: itemsvc.Behaviour(deref(b.Behaviour)),
 			Count: deref(b.Count), MaxCount: deref(b.MaxCount), MagicBonus: deref(b.MagicalBonus),
 			AmmoKind: deref(b.AmmoKind), EffectDice: deref(b.EffectDice), EffectSave: deref(b.EffectSave),
 			Notes: deref(b.Notes),

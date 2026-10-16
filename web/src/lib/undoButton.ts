@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { LogEntry } from "@/types/log";
 import { entryText } from "@/lib/logSummary";
 import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
+import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 
 /** What the global Undo button shows (ADR 0010 step 5): disabled with "Nothing to undo" when the
  * server has nothing to pop, else a tooltip naming the transaction on top, worded from the payload
@@ -12,6 +13,7 @@ export function undoButtonState(
   busy: boolean,
   t: TFunction,
   spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
 ): { disabled: boolean; label: string } {
   if (topId === null) return { disabled: true, label: t("log.undo.nothing") };
   const top = entries.find((e) => e.id === topId);
@@ -20,7 +22,7 @@ export function undoButtonState(
   return {
     disabled: busy,
     label: t("log.undo.tooltip", {
-      action: named ? entryText(named, t, spellName) : `#${topId}`,
+      action: named ? entryText(named, t, spellName, names) : `#${topId}`,
     }),
   };
 }
@@ -33,10 +35,13 @@ export function redoButtonState(
   busy: boolean,
   t: TFunction,
   spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
 ): { disabled: boolean; label: string } {
   if (redo === null) return { disabled: true, label: t("log.redo.nothing") };
   return {
     disabled: busy,
-    label: t("log.redo.tooltip", { action: entryText(redo, t, spellName) }),
+    label: t("log.redo.tooltip", {
+      action: entryText(redo, t, spellName, names),
+    }),
   };
 }

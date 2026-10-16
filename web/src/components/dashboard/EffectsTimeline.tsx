@@ -50,7 +50,7 @@ type TrackRow =
  * height where it scrolls (ADR 0017 step 6).
  */
 export function EffectsTimeline() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const buffs = useBuffsStore((s) => s.buffs);
   const powers = useBuffsStore((s) => s.powers);
   const items = useItemsStore((s) => s.items);
@@ -62,7 +62,7 @@ export function EffectsTimeline() {
   const size = useTrackSize(trackRef);
   const rows: TrackRow[] = [
     ...buffs.map((b): TrackRow => ({ kind: "buff", key: b.id, buff: b })),
-    ...powerRows(powers, items).map((p): TrackRow => ({
+    ...powerRows(powers, items, i18n.language).map((p): TrackRow => ({
       kind: "power",
       key: `power:${p.key}`,
       power: p,

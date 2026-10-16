@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/weapondal"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
@@ -29,7 +30,7 @@ func TestGet_SheetWeapon(t *testing.T) {
 	w, err := seeded(t).Get(context.Background(), "shortbow")
 	require.NoError(t, err)
 	assert.Equal(t, combatsvc.Weapon{
-		ID: "shortbow", Name: "Short Bow +2", BaseDamage: "1d6", DamageLarge: "1d6",
+		ID: "shortbow", Name: localized.Text{"en": "Short Bow +2", "fr": "Arc court +2"}, BaseDamage: "1d6", DamageLarge: "1d6",
 		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
 	}, w)
 }
@@ -77,7 +78,7 @@ func TestEditor_ListGetInsertUpdateDelete(t *testing.T) {
 	assert.Equal(t, 0, all[0].Position)
 
 	w := weaponsvc.Weapon{
-		ID: "long_bow", Position: 99, Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8",
+		ID: "long_bow", Position: 99, Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8",
 		MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
 	}
 	require.NoError(t, e.Insert(ctx, w))

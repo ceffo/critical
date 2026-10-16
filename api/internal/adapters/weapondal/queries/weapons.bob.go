@@ -65,7 +65,7 @@ func ListWeapons() *ListWeaponsQuery {
 
 type ListWeaponsRow = struct {
 	ID          string `db:"id"`
-	Name        string `db:"name"`
+	Name        int64  `db:"name"`
 	DamageSM    string `db:"damage_sm"`
 	DamageL     string `db:"damage_l"`
 	MagicToHit  int64  `db:"magic_to_hit"`
@@ -143,7 +143,7 @@ func GetWeapon(ID string) *GetWeaponQuery {
 
 type GetWeaponRow = struct {
 	ID          string `db:"id"`
-	Name        string `db:"name"`
+	Name        int64  `db:"name"`
 	DamageSM    string `db:"damage_sm"`
 	DamageL     string `db:"damage_l"`
 	MagicToHit  int64  `db:"magic_to_hit"`
@@ -231,7 +231,7 @@ func ListWeaponsFull() *ListWeaponsFullQuery {
 type ListWeaponsFullRow = struct {
 	ID          string `db:"id"`
 	Position    int64  `db:"position"`
-	Name        string `db:"name"`
+	Name        int64  `db:"name"`
 	DamageSM    string `db:"damage_sm"`
 	DamageL     string `db:"damage_l"`
 	MagicToHit  int64  `db:"magic_to_hit"`
@@ -311,7 +311,7 @@ func GetWeaponFull(ID string) *GetWeaponFullQuery {
 type GetWeaponFullRow = struct {
 	ID          string `db:"id"`
 	Position    int64  `db:"position"`
-	Name        string `db:"name"`
+	Name        int64  `db:"name"`
 	DamageSM    string `db:"damage_sm"`
 	DamageL     string `db:"damage_l"`
 	MagicToHit  int64  `db:"magic_to_hit"`
@@ -357,7 +357,7 @@ var insertWeaponSQL = formattedQueries_weapons[828:1017]
 type InsertWeapon_Weapons = struct {
 	ID          string
 	Position    int64
-	Name        string
+	Name        int64
 	DamageSM    string
 	DamageL     string
 	MagicToHit  int64
@@ -504,15 +504,14 @@ func (o insertWeapon) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dia
 	return o.subExpr(0, len(insertWeaponSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var updateWeaponSQL = formattedQueries_weapons[1036:1244]
+var updateWeaponSQL = formattedQueries_weapons[1036:1238]
 
-type UpdateWeaponQuery = orm.ModQuery[*dialect.UpdateQuery, updateWeapon, string, []string, updateWeaponTransformer]
+type UpdateWeaponQuery = orm.ModQuery[*dialect.UpdateQuery, updateWeapon, UpdateWeaponRow, []UpdateWeaponRow, updateWeaponTransformer]
 
-func UpdateWeapon(Position int64, Name string, DamageSM string, DamageL string, MagicToHit int64, MagicDamage int64, Kind string, TwoHanded int64, AmmoKind string, ID string) *UpdateWeaponQuery {
+func UpdateWeapon(Position int64, DamageSM string, DamageL string, MagicToHit int64, MagicDamage int64, Kind string, TwoHanded int64, AmmoKind string, ID string) *UpdateWeaponQuery {
 	var expressionTypArgs updateWeapon
 
 	expressionTypArgs.Position = sqlite.Arg(Position)
-	expressionTypArgs.Name = sqlite.Arg(Name)
 	expressionTypArgs.DamageSM = sqlite.Arg(DamageSM)
 	expressionTypArgs.DamageL = sqlite.Arg(DamageL)
 	expressionTypArgs.MagicToHit = sqlite.Arg(MagicToHit)
@@ -523,7 +522,7 @@ func UpdateWeapon(Position int64, Name string, DamageSM string, DamageL string, 
 	expressionTypArgs.ID = sqlite.Arg(ID)
 
 	return &UpdateWeaponQuery{
-		Query: orm.Query[updateWeapon, string, []string, updateWeaponTransformer]{
+		Query: orm.Query[updateWeapon, UpdateWeaponRow, []UpdateWeaponRow, updateWeaponTransformer]{
 			ExecQuery: orm.ExecQuery[updateWeapon]{
 				BaseQuery: bob.BaseQuery[updateWeapon]{
 					Expression: expressionTypArgs,
@@ -531,27 +530,36 @@ func UpdateWeapon(Position int64, Name string, DamageSM string, DamageL string, 
 					QueryType:  bob.QueryTypeUpdate,
 				},
 			},
-			Scanner: scan.ColumnMapper[string]("id"),
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (UpdateWeaponRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t UpdateWeaponRow
+						row.ScheduleScanByIndex(0, &t.ID)
+						row.ScheduleScanByIndex(1, &t.Name)
+						return &t, nil
+					}, func(v any) (UpdateWeaponRow, error) {
+						return *v.(*UpdateWeaponRow), nil
+					}
+			},
 		},
 		Mod: bob.ModFunc[*dialect.UpdateQuery](func(q *dialect.UpdateQuery) {
 			q.Table.Expression = expressionTypArgs.raw(7, 16)
-			q.AppendSet(expressionTypArgs.subExpr(21, 176))
-			q.AppendWhere(expressionTypArgs.subExpr(182, 193))
-			q.AppendReturning(expressionTypArgs.subExpr(203, 208))
+			q.AppendSet(expressionTypArgs.subExpr(21, 163))
+			q.AppendWhere(expressionTypArgs.subExpr(169, 179))
+			q.AppendReturning(expressionTypArgs.subExpr(189, 202))
 		}),
 		Build: sqlite.Update,
 	}
 }
 
 type UpdateWeaponRow = struct {
-	ID string `db:"id"`
+	ID   string `db:"id"`
+	Name int64  `db:"name"`
 }
 
-type updateWeaponTransformer = bob.SliceTransformer[string, []string]
+type updateWeaponTransformer = bob.SliceTransformer[UpdateWeaponRow, []UpdateWeaponRow]
 
 type updateWeapon struct {
 	Position    bob.Expression
-	Name        bob.Expression
 	DamageSM    bob.Expression
 	DamageL     bob.Expression
 	MagicToHit  bob.Expression
@@ -574,18 +582,9 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 		}
 
 		if !yield(orm.ArgWithPosition{
-			Name:       "name",
-			Start:      47,
-			Stop:       49,
-			Expression: o.Name,
-		}) {
-			return
-		}
-
-		if !yield(orm.ArgWithPosition{
 			Name:       "damageSM",
-			Start:      65,
-			Stop:       67,
+			Start:      52,
+			Stop:       54,
 			Expression: o.DamageSM,
 		}) {
 			return
@@ -593,8 +592,8 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "damageL",
-			Start:      82,
-			Stop:       84,
+			Start:      69,
+			Stop:       71,
 			Expression: o.DamageL,
 		}) {
 			return
@@ -602,8 +601,8 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "magicToHit",
-			Start:      103,
-			Stop:       105,
+			Start:      90,
+			Stop:       92,
 			Expression: o.MagicToHit,
 		}) {
 			return
@@ -611,8 +610,8 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "magicDamage",
-			Start:      124,
-			Stop:       126,
+			Start:      111,
+			Stop:       113,
 			Expression: o.MagicDamage,
 		}) {
 			return
@@ -620,8 +619,8 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "kind",
-			Start:      137,
-			Stop:       139,
+			Start:      124,
+			Stop:       126,
 			Expression: o.Kind,
 		}) {
 			return
@@ -629,8 +628,8 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "twoHanded",
-			Start:      156,
-			Stop:       158,
+			Start:      143,
+			Stop:       145,
 			Expression: o.TwoHanded,
 		}) {
 			return
@@ -638,8 +637,8 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "ammoKind",
-			Start:      174,
-			Stop:       176,
+			Start:      161,
+			Stop:       163,
 			Expression: o.AmmoKind,
 		}) {
 			return
@@ -647,8 +646,8 @@ func (o updateWeapon) args() iter.Seq[orm.ArgWithPosition] {
 
 		if !yield(orm.ArgWithPosition{
 			Name:       "id",
-			Start:      190,
-			Stop:       193,
+			Start:      177,
+			Stop:       179,
 			Expression: o.ID,
 		}) {
 			return
@@ -668,9 +667,9 @@ func (o updateWeapon) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dia
 	return o.subExpr(0, len(updateWeaponSQL)).WriteSQL(ctx, w, d, start)
 }
 
-var deleteWeaponSQL = formattedQueries_weapons[1263:1315]
+var deleteWeaponSQL = formattedQueries_weapons[1257:1317]
 
-type DeleteWeaponQuery = orm.ModQuery[*dialect.DeleteQuery, deleteWeapon, string, []string, deleteWeaponTransformer]
+type DeleteWeaponQuery = orm.ModQuery[*dialect.DeleteQuery, deleteWeapon, DeleteWeaponRow, []DeleteWeaponRow, deleteWeaponTransformer]
 
 func DeleteWeapon(ID string) *DeleteWeaponQuery {
 	var expressionTypArgs deleteWeapon
@@ -678,7 +677,7 @@ func DeleteWeapon(ID string) *DeleteWeaponQuery {
 	expressionTypArgs.ID = sqlite.Arg(ID)
 
 	return &DeleteWeaponQuery{
-		Query: orm.Query[deleteWeapon, string, []string, deleteWeaponTransformer]{
+		Query: orm.Query[deleteWeapon, DeleteWeaponRow, []DeleteWeaponRow, deleteWeaponTransformer]{
 			ExecQuery: orm.ExecQuery[deleteWeapon]{
 				BaseQuery: bob.BaseQuery[deleteWeapon]{
 					Expression: expressionTypArgs,
@@ -686,22 +685,32 @@ func DeleteWeapon(ID string) *DeleteWeaponQuery {
 					QueryType:  bob.QueryTypeDelete,
 				},
 			},
-			Scanner: scan.ColumnMapper[string]("id"),
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (DeleteWeaponRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t DeleteWeaponRow
+						row.ScheduleScanByIndex(0, &t.ID)
+						row.ScheduleScanByIndex(1, &t.Name)
+						return &t, nil
+					}, func(v any) (DeleteWeaponRow, error) {
+						return *v.(*DeleteWeaponRow), nil
+					}
+			},
 		},
 		Mod: bob.ModFunc[*dialect.DeleteQuery](func(q *dialect.DeleteQuery) {
 			q.TableRef.Expression = expressionTypArgs.raw(12, 21)
 			q.AppendWhere(expressionTypArgs.subExpr(27, 37))
-			q.AppendReturning(expressionTypArgs.subExpr(47, 52))
+			q.AppendReturning(expressionTypArgs.subExpr(47, 60))
 		}),
 		Build: sqlite.Delete,
 	}
 }
 
 type DeleteWeaponRow = struct {
-	ID string `db:"id"`
+	ID   string `db:"id"`
+	Name int64  `db:"name"`
 }
 
-type deleteWeaponTransformer = bob.SliceTransformer[string, []string]
+type deleteWeaponTransformer = bob.SliceTransformer[DeleteWeaponRow, []DeleteWeaponRow]
 
 type deleteWeapon struct {
 	ID bob.Expression
@@ -730,4 +739,68 @@ func (o deleteWeapon) subExpr(from, to int) bob.Expression {
 
 func (o deleteWeapon) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
 	return o.subExpr(0, len(deleteWeaponSQL)).WriteSQL(ctx, w, d, start)
+}
+
+var weaponNamesSQL = formattedQueries_weapons[1335:1440]
+
+type WeaponNamesQuery = orm.ModQuery[*dialect.SelectQuery, weaponNames, WeaponNamesRow, []WeaponNamesRow, weaponNamesTransformer]
+
+func WeaponNames() *WeaponNamesQuery {
+	var expressionTypArgs weaponNames
+
+	return &WeaponNamesQuery{
+		Query: orm.Query[weaponNames, WeaponNamesRow, []WeaponNamesRow, weaponNamesTransformer]{
+			ExecQuery: orm.ExecQuery[weaponNames]{
+				BaseQuery: bob.BaseQuery[weaponNames]{
+					Expression: expressionTypArgs,
+					Dialect:    dialect.Dialect,
+					QueryType:  bob.QueryTypeSelect,
+				},
+			},
+			Scanner: func(context.Context, []string) (func(*scan.Row) (any, error), func(any) (WeaponNamesRow, error)) {
+				return func(row *scan.Row) (any, error) {
+						var t WeaponNamesRow
+						row.ScheduleScanByIndex(0, &t.TextID)
+						row.ScheduleScanByIndex(1, &t.Lang)
+						row.ScheduleScanByIndex(2, &t.Body)
+						return &t, nil
+					}, func(v any) (WeaponNamesRow, error) {
+						return *v.(*WeaponNamesRow), nil
+					}
+			},
+		},
+		Mod: bob.ModFunc[*dialect.SelectQuery](func(q *dialect.SelectQuery) {
+			q.AppendSelect(expressionTypArgs.subExpr(7, 32))
+			q.SetTable(expressionTypArgs.subExpr(38, 55))
+			q.AppendWhere(expressionTypArgs.subExpr(61, 105))
+		}),
+		Build: sqlite.Select,
+	}
+}
+
+type WeaponNamesRow = struct {
+	TextID int64  `db:"text_id"`
+	Lang   string `db:"lang"`
+	Body   string `db:"body"`
+}
+
+type weaponNamesTransformer = bob.SliceTransformer[WeaponNamesRow, []WeaponNamesRow]
+
+type weaponNames struct{}
+
+func (o weaponNames) args() iter.Seq[orm.ArgWithPosition] {
+	return func(yield func(arg orm.ArgWithPosition) bool) {
+	}
+}
+
+func (o weaponNames) raw(from, to int) string {
+	return weaponNamesSQL[from:to]
+}
+
+func (o weaponNames) subExpr(from, to int) bob.Expression {
+	return orm.ArgsToExpression(weaponNamesSQL, from, to, o.args())
+}
+
+func (o weaponNames) WriteSQL(ctx context.Context, w io.StringWriter, d bob.Dialect, start int) ([]any, error) {
+	return o.subExpr(0, len(weaponNamesSQL)).WriteSQL(ctx, w, d, start)
 }

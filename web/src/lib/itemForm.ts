@@ -1,8 +1,12 @@
 // Input parsing for the item editor form. The server validates every value (and names the field);
 // this only turns what was typed into the request body and flags text that is not a number.
+import { editLang, localized } from "@/i18n/localized";
 import type { Item, ItemBehaviour, ItemBody } from "@/types/items";
 
-/** What the form holds: numbers stay text until submit. */
+/**
+ * What the form holds: numbers stay text until submit; the name in the UI language (ADR 0023 step
+ * 11).
+ */
 export interface ItemDraft {
   name: string;
   type: string;
@@ -32,9 +36,10 @@ export const emptyDraft: ItemDraft = {
   notes: "",
 };
 
-export function draftFromItem(i: Item): ItemDraft {
+/** The form for an item, its name as shown in the UI language `lang`. */
+export function draftFromItem(i: Item, lang: string): ItemDraft {
   return {
-    name: i.name,
+    name: localized(lang, i.name),
     type: i.type,
     behaviour: i.behaviour,
     count: String(i.count),
@@ -57,10 +62,14 @@ export function parseInteger(s: string): number {
 export type DraftErrors = Partial<Record<ItemField, "notANumber">>;
 
 /**
- * The request body for a draft, and the number fields that are not numbers. The daily number is
- * sent for daily items only.
+ * The request body for a draft, and the number fields that are not numbers. The name is sent in the
+ * UI language `lang` only (ADR 0023 step 11: the server keeps the other languages). The daily number
+ * is sent for daily items only.
  */
-export function draftToBody(d: ItemDraft): {
+export function draftToBody(
+  d: ItemDraft,
+  lang: string,
+): {
   body: ItemBody;
   errors: DraftErrors;
 } {
@@ -72,7 +81,7 @@ export function draftToBody(d: ItemDraft): {
     return n;
   };
   const body: ItemBody = {
-    name: d.name,
+    name: { [editLang(lang)]: d.name },
     type: d.type,
     behaviour: d.behaviour,
     count: num("count", d.count),
@@ -86,11 +95,22 @@ export function draftToBody(d: ItemDraft): {
   return { body, errors };
 }
 
-/** The part of `body` that differs from the item (what a PATCH sends). Empty = nothing to save. */
-export function changedFields(item: Item, body: ItemBody): ItemBody {
+/**
+ * The part of `body` that differs from the item (what a PATCH sends). Empty = nothing to save. The
+ * name differs when it is not the one the form showed in the UI language `lang`, so an untouched
+ * form never writes a fallback name into another language.
+ */
+export function changedFields(
+  item: Item,
+  body: ItemBody,
+  lang: string,
+): ItemBody {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(body)) {
-    if ((item as unknown as Record<string, unknown>)[k] !== v) out[k] = v;
+    if (k === "name") {
+      if (sentName(body) !== localized(lang, item.name)) out[k] = v;
+    } else if ((item as unknown as Record<string, unknown>)[k] !== v)
+      out[k] = v;
   }
   // Becoming daily always sends the daily number (the old max of a stock item is not one).
   if (out.behaviour === "daily" && body.maxCount !== undefined)
@@ -103,4 +123,11 @@ export function typeSuggestions(items: Item[]): string[] {
   return [
     ...new Set(items.map((i) => i.type.trim()).filter((t) => t !== "")),
   ].sort();
+}
+
+/** The one body a form's name holds. */
+export function sentName(body: {
+  name?: Readonly<Record<string, string>>;
+}): string {
+  return Object.values(body.name ?? {})[0] ?? "";
 }

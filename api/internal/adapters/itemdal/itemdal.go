@@ -9,17 +9,21 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/itemdal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/textdal"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/storage/sqlite"
 )
 
-// DAL is the SQLite-backed implementation of itemsvc.DAL.
+// DAL is the SQLite-backed implementation of itemsvc.DAL. An item's name is
+// a key into localized_texts (ADR 0023 step 9), written with the item.
 type DAL struct {
-	q sqlite.Querier
+	q     sqlite.Querier
+	texts textdal.Store
 }
 
 // New returns a DAL bound to q.
-func New(q sqlite.Querier) *DAL { return &DAL{q: q} }
+func New(q sqlite.Querier) *DAL { return &DAL{q: q, texts: textdal.New(q)} }
 
 // exec joins the transaction carried by ctx (sqlite.InTx), if any.
 func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
@@ -28,13 +32,13 @@ func (d *DAL) exec(ctx context.Context) sqlite.BobExec {
 
 type row = queries.ListItemsRow
 
-func toItem(r row) (itemsvc.Item, error) {
+func toItem(r row, name localized.Text) (itemsvc.Item, error) {
 	powers, err := itemsvc.DecodePowers(r.Powers)
 	if err != nil {
 		return itemsvc.Item{}, fmt.Errorf("item %s: %w", r.ID, err)
 	}
 	return itemsvc.Item{
-		ID: r.ID, Position: int(r.Position), Name: r.Name, Type: r.Type,
+		ID: r.ID, Position: int(r.Position), Name: name, Type: r.Type,
 		Behaviour:  itemsvc.Behaviour(r.Behaviour),
 		MagicBonus: int(r.MagicBonus), AmmoKind: r.AmmoKind,
 		Count: int(r.Count), MaxCount: int(r.MaxCount),
@@ -49,9 +53,20 @@ func (d *DAL) List(ctx context.Context) ([]itemsvc.Item, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list items: %w", err)
 	}
+	texts, err := queries.ItemNames().All(ctx, d.exec(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("list item names: %w", err)
+	}
+	names := map[int64]localized.Text{}
+	for _, t := range texts {
+		if names[t.TextID] == nil {
+			names[t.TextID] = localized.Text{}
+		}
+		names[t.TextID][t.Lang] = t.Body
+	}
 	out := make([]itemsvc.Item, 0, len(rows))
 	for _, r := range rows {
-		it, err := toItem(r)
+		it, err := toItem(r, names[r.Name])
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +85,7 @@ func (d *DAL) Decrement(ctx context.Context, itemID string) (itemsvc.Item, error
 		return itemsvc.Item{}, fmt.Errorf("decrement item %s: %w", itemID, err)
 	}
 	if len(rows) == 1 {
-		return toItem(rows[0])
+		return d.named(ctx, rows[0])
 	}
 	_, err = queries.GetItem(itemID).One(ctx, d.exec(ctx))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -92,7 +107,16 @@ func (d *DAL) Increment(ctx context.Context, itemID string, n int) (itemsvc.Item
 	if len(rows) == 0 {
 		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
-	return toItem(rows[0])
+	return d.named(ctx, rows[0])
+}
+
+// named is the item of r with its name read.
+func (d *DAL) named(ctx context.Context, r row) (itemsvc.Item, error) {
+	name, err := d.texts.Get(ctx, r.Name)
+	if err != nil {
+		return itemsvc.Item{}, fmt.Errorf("item %s: %w", r.ID, err)
+	}
+	return toItem(r, name)
 }
 
 // ResetDaily refills every daily item to its max count.
@@ -103,28 +127,32 @@ func (d *DAL) ResetDaily(ctx context.Context) error {
 	return nil
 }
 
-// Delete removes an item (a charges item spent to 0). ErrItemNotFound when
-// the id is unknown.
+// Delete removes an item (a charges item spent to 0) and its name's rows.
+// ErrItemNotFound when the id is unknown.
 func (d *DAL) Delete(ctx context.Context, itemID string) error {
-	ids, err := queries.DeleteItem(itemID).All(ctx, d.exec(ctx))
+	rows, err := queries.DeleteItem(itemID).All(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("delete item %s: %w", itemID, err)
 	}
-	if len(ids) == 0 {
+	if len(rows) == 0 {
 		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
-	return nil
+	return d.texts.Delete(ctx, rows[0].Name)
 }
 
 // Insert writes a whole item (a void restoring a removed item), powers
-// included.
+// included, its name under a new key.
 func (d *DAL) Insert(ctx context.Context, it itemsvc.Item) error {
 	powers, err := itemsvc.EncodePowers(it.Powers)
 	if err != nil {
 		return err
 	}
+	key, err := d.texts.Add(ctx, it.Name)
+	if err != nil {
+		return fmt.Errorf("insert item %s: %w", it.ID, err)
+	}
 	_, err = queries.InsertItem([]queries.InsertItem_Items{{
-		ID: it.ID, Position: int64(it.Position), Name: it.Name, Type: it.Type,
+		ID: it.ID, Position: int64(it.Position), Name: key, Type: it.Type,
 		Behaviour: string(it.Behaviour), MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind,
 		Count: int64(it.Count), MaxCount: int64(it.MaxCount),
 		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: powers,
@@ -157,24 +185,24 @@ func (d *DAL) Get(ctx context.Context, itemID string) (itemsvc.Item, error) {
 	if err != nil {
 		return itemsvc.Item{}, fmt.Errorf("get item %s: %w", itemID, err)
 	}
-	return toItem(r)
+	return d.named(ctx, r)
 }
 
-// Update overwrites every field of an existing item, powers included.
-// ErrItemNotFound when the id is unknown.
+// Update overwrites every field of an existing item, powers included, and
+// its name's rows (the key stays). ErrItemNotFound when the id is unknown.
 func (d *DAL) Update(ctx context.Context, it itemsvc.Item) error {
 	powers, err := itemsvc.EncodePowers(it.Powers)
 	if err != nil {
 		return err
 	}
-	ids, err := queries.UpdateItem(int64(it.Position), it.Name, it.Type, string(it.Behaviour),
+	rows, err := queries.UpdateItem(int64(it.Position), it.Type, string(it.Behaviour),
 		int64(it.MagicBonus), it.AmmoKind, int64(it.Count), int64(it.MaxCount),
 		it.EffectDice, it.EffectSave, it.Notes, powers, it.ID).All(ctx, d.exec(ctx))
 	if err != nil {
 		return fmt.Errorf("update item %s: %w", it.ID, err)
 	}
-	if len(ids) == 0 {
+	if len(rows) == 0 {
 		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, it.ID)
 	}
-	return nil
+	return d.texts.Put(ctx, rows[0].Name, it.Name)
 }

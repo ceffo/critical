@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { undoButtonState } from "@/lib/undoButton";
 import { useSpellName } from "@/i18n/spellName";
+import { useInventoryName } from "@/i18n/inventoryName";
 import {
   hasOpenOverlay,
   isTypingTarget,
@@ -20,6 +21,7 @@ import { useTableStore } from "@/stores/table";
 export function UndoButton() {
   const { t } = useTranslation();
   const spellName = useSpellName();
+  const names = useInventoryName();
   const topId = useLogStore((s) => s.topId);
   const entries = useLogStore((s) => s.entries);
   const busy = useTableStore((s) => s.busy);
@@ -30,6 +32,7 @@ export function UndoButton() {
     busy,
     t,
     spellName,
+    names,
   );
 
   useEffect(() => {

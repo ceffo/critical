@@ -68,19 +68,19 @@ func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, a
 	// weapon becomes +5") when that is better. They do not add up. A +N with
 	// a weapon-kind condition is already left out of mods for another kind
 	// (ADR 0004 step 18, ADR 0016 step 12).
-	if m, ok := weaponMagic(weapon.Name, weapon.MagicToHit, mods); ok {
+	if m, ok := weaponMagic(weapon.Name.Any(), weapon.MagicToHit, mods); ok {
 		add(m)
 	}
-	if m, ok := weaponMagic(weapon.Name, weapon.MagicDamage, mods); ok {
+	if m, ok := weaponMagic(weapon.Name.Any(), weapon.MagicDamage, mods); ok {
 		out.weaponDmg = m.Value
 		out.weaponTerms = append(out.weaponTerms, DamageTerm{Term: TermWeapon, Kind: m.Kind, Detail: m.Detail, ItemID: m.ItemID, Value: float64(m.Value)})
 	}
 	// ADR 0002 step 7: magic ammunition adds to hit and damage, on top of
 	// the weapon's (DMG 2e, "Bow +1").
 	if ammo != nil && ammo.MagicBonus != 0 {
-		add(Modifier{Kind: ModAmmoMagic, Detail: ammo.Name, Value: ammo.MagicBonus})
+		add(Modifier{Kind: ModAmmoMagic, Detail: ammo.Name.Any(), ItemID: ammo.ID, Value: ammo.MagicBonus})
 		out.ammoDmg = ammo.MagicBonus
-		out.weaponTerms = append(out.weaponTerms, DamageTerm{Term: TermWeapon, Kind: ModAmmoMagic, Detail: ammo.Name, Value: float64(ammo.MagicBonus)})
+		out.weaponTerms = append(out.weaponTerms, DamageTerm{Term: TermWeapon, Kind: ModAmmoMagic, Detail: ammo.Name.Any(), ItemID: ammo.ID, Value: float64(ammo.MagicBonus)})
 	}
 
 	// ADR 0002 step 8: one modifier per buff; step 9: the situational one.

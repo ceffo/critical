@@ -1,5 +1,7 @@
 package weaponsvc
 
+import "github.com/ceffo/critical/api/internal/domain/localized"
+
 // Weapon kinds as stored and sent on the wire.
 const (
 	KindMelee   = "melee"
@@ -10,9 +12,10 @@ const (
 // weapons differ. AmmoKind is the ammo item kind a missile weapon fires
 // (arrow, bolt); empty for a melee or hurled weapon.
 type Weapon struct {
-	ID          string
-	Position    int // list order, kept when a removed weapon is restored
-	Name        string
+	ID       string
+	Position int // list order, kept when a removed weapon is restored
+	// Name is a localized text (ADR 0023 step 9): a body per language.
+	Name        localized.Text
 	DamageSM    string // dice vs small / medium targets, e.g. "1d8"
 	DamageL     string // dice vs large targets
 	MagicToHit  int
@@ -24,7 +27,8 @@ type Weapon struct {
 
 // WeaponInput is a new weapon.
 type WeaponInput struct {
-	Name        string
+	// Name holds the languages the player typed (ADR 0023 step 11).
+	Name        localized.Text
 	DamageSM    string
 	DamageL     string
 	MagicToHit  int
@@ -36,7 +40,10 @@ type WeaponInput struct {
 
 // WeaponPatch is an edit: only the set (non-nil) fields change.
 type WeaponPatch struct {
-	Name        *string
+	// Name replaces the bodies of the languages it holds and keeps the
+	// others; a blank body removes its language; nil: unchanged (ADR 0023
+	// step 11).
+	Name        localized.Text
 	DamageSM    *string
 	DamageL     *string
 	MagicToHit  *int

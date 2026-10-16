@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc/mocks"
 )
@@ -37,19 +38,19 @@ func TestNew_NilDependency(t *testing.T) {
 }
 
 var bastard = weaponsvc.Weapon{
-	ID: "bastard_sword", Position: 0, Name: "Bastard Sword +2", DamageSM: "2d4", DamageL: "2d8",
+	ID: "bastard_sword", Position: 0, Name: localized.Of("Bastard Sword +2"), DamageSM: "2d4", DamageL: "2d8",
 	MagicToHit: 2, MagicDamage: 2, Kind: "melee", TwoHanded: true,
 }
 
 // Every bad field is rejected with a *domain.FieldError naming the wire
 // field, before anything is stored or logged.
 func TestCreate_ValidationNamesTheField(t *testing.T) {
-	good := weaponsvc.WeaponInput{Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8", Kind: "missile", AmmoKind: "arrow"}
+	good := weaponsvc.WeaponInput{Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", Kind: "missile", AmmoKind: "arrow"}
 	cases := map[string]struct {
 		mut   func(*weaponsvc.WeaponInput)
 		field string
 	}{
-		"empty name":       {func(i *weaponsvc.WeaponInput) { i.Name = " " }, "name"},
+		"empty name":       {func(i *weaponsvc.WeaponInput) { i.Name = localized.Of(" ") }, "name"},
 		"bad damage 2x6":   {func(i *weaponsvc.WeaponInput) { i.DamageSM = "2x6" }, "damage_sm"},
 		"empty damage":     {func(i *weaponsvc.WeaponInput) { i.DamageSM = "" }, "damage_sm"},
 		"modifier dice":    {func(i *weaponsvc.WeaponInput) { i.DamageSM = "1d8+2" }, "damage_sm"},
@@ -84,7 +85,7 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	svc, _ := weaponsvc.New(dal, f.Deps)
 	dal.EXPECT().List(mock.Anything).Return([]weaponsvc.Weapon{{ID: "long_bow", Position: 5}, {ID: "x", Position: 3}}, nil)
 	want := weaponsvc.Weapon{
-		ID: "long_bow_2", Position: 6, Name: "Long Bow", DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
+		ID: "long_bow_2", Position: 6, Name: localized.Of("Long Bow"), DamageSM: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
 		Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
 	}
 	dal.EXPECT().Insert(mock.Anything, want).Return(nil).Once()
@@ -92,7 +93,7 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(5), nil)
 
 	res, err := svc.Create(context.Background(), 1, weaponsvc.WeaponInput{
-		Name: " Long Bow ", DamageSM: "1D8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: " Arrow ",
+		Name: localized.Of(" Long Bow "), DamageSM: "1D8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: " Arrow ",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, &weaponsvc.ChangeResult{Weapon: want, LogEntryID: 5}, res)
@@ -100,9 +101,9 @@ func TestCreate_InsertsLogsAndSnapshots(t *testing.T) {
 	assert.False(t, actionlog.IsRoll(got.Kind), "a pop-only entry that is not a roll card")
 	require.Len(t, got.Snapshots, 1)
 	assert.Equal(t, "weapons:long_bow_2", got.Snapshots[0].Key)
-	assert.JSONEq(t, `{"id":"long_bow_2","absent":true,"position":0,"name":"","damageSm":"","damageL":"","magicToHit":0,"magicDamage":0,"kind":"","twoHanded":false,"ammoKind":""}`,
+	assert.JSONEq(t, `{"id":"long_bow_2","absent":true,"position":0,"name":null,"damageSm":"","damageL":"","magicToHit":0,"magicDamage":0,"kind":"","twoHanded":false,"ammoKind":""}`,
 		string(got.Snapshots[0].Before))
-	assert.Contains(t, string(got.Snapshots[0].After), `"name":"Long Bow"`)
+	assert.Contains(t, string(got.Snapshots[0].After), `"name":{"en":"Long Bow"}`)
 	assert.Contains(t, string(got.Payload), `"ammo_kind":"arrow"`)
 }
 
@@ -132,7 +133,7 @@ func TestUpdate_ChangesFieldsAndLogsBeforeAfter(t *testing.T) {
 // Switching a bow to melee drops its ammo kind; a melee weapon cannot be
 // given one.
 func TestUpdate_KindAndAmmo(t *testing.T) {
-	bow := weaponsvc.Weapon{ID: "bow", Name: "Bow", DamageSM: "1d6", DamageL: "1d6", Kind: "missile", AmmoKind: "arrow"}
+	bow := weaponsvc.Weapon{ID: "bow", Name: localized.Of("Bow"), DamageSM: "1d6", DamageL: "1d6", Kind: "missile", AmmoKind: "arrow"}
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := weaponsvc.New(dal, f.Deps)
@@ -158,7 +159,7 @@ func TestUpdate_RejectsBadValuesAndNoOps(t *testing.T) {
 		patch weaponsvc.WeaponPatch
 		field string
 	}{
-		"empty name": {weaponsvc.WeaponPatch{Name: ptr("")}, "name"},
+		"empty name": {weaponsvc.WeaponPatch{Name: localized.Text{"en": " "}}, "name"},
 		"bad dice":   {weaponsvc.WeaponPatch{DamageL: ptr("big")}, "damage_l"},
 		"bonus":      {weaponsvc.WeaponPatch{MagicToHit: ptr(99)}, "magic_to_hit"},
 		"nothing":    {weaponsvc.WeaponPatch{MagicToHit: ptr(2)}, ""},
@@ -182,7 +183,7 @@ func TestUpdateAndDelete_UnknownWeapon(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := weaponsvc.New(dal, deps(t).Deps)
 	dal.EXPECT().Get(mock.Anything, "x").Return(weaponsvc.Weapon{}, weaponsvc.ErrWeaponNotFound)
-	_, err := svc.Update(context.Background(), 1, "x", weaponsvc.WeaponPatch{Name: ptr("y")})
+	_, err := svc.Update(context.Background(), 1, "x", weaponsvc.WeaponPatch{Name: localized.Text{"en": "y"}})
 	assert.ErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
 	_, err = svc.Delete(context.Background(), 1, "x")
 	assert.ErrorIs(t, err, weaponsvc.ErrWeaponNotFound)
@@ -202,7 +203,7 @@ func TestDelete_RemovesAndLogsWholeWeapon(t *testing.T) {
 	assert.Equal(t, bastard, res.Weapon)
 	assert.Equal(t, actionlog.KindWeaponRemove, got.Kind)
 	assert.Contains(t, string(got.Payload), `"name":"Bastard Sword +2"`)
-	assert.Contains(t, string(got.Snapshots[0].Before), `"name":"Bastard Sword +2"`)
+	assert.Contains(t, string(got.Snapshots[0].Before), `"name":{"en":"Bastard Sword +2"}`)
 	assert.Contains(t, string(got.Snapshots[0].After), `"absent":true`)
 }
 
@@ -218,7 +219,7 @@ func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 		dal.EXPECT().Delete(mock.Anything, "new").Return(nil).Once()
 		require.NoError(t, restore(dal, json.RawMessage(`{"id":"new","absent":true}`)))
 	})
-	before := json.RawMessage(`{"id":"bastard_sword","position":0,"name":"Bastard Sword +2","damageSm":"2d4","damageL":"2d8",
+	before := json.RawMessage(`{"id":"bastard_sword","position":0,"name":{"en":"Bastard Sword +2"},"damageSm":"2d4","damageL":"2d8",
 		"magicToHit":2,"magicDamage":2,"kind":"melee","twoHanded":true,"ammoKind":""}`)
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)

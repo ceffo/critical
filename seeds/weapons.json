@@ -1,8 +1,8 @@
 [
-  { "id": "bastard_sword", "name": "Bastard Sword +2", "damage_sm": "2d4", "damage_l": "2d8", "magic_to_hit": 2, "magic_damage": 2, "kind": "melee", "two_handed": true },
-  { "id": "longsword", "name": "Long Sword +2", "damage_sm": "1d8", "damage_l": "1d12", "magic_to_hit": 2, "magic_damage": 2, "kind": "melee" },
-  { "id": "shortbow", "name": "Short Bow +2", "damage_sm": "1d6", "damage_l": "1d6", "magic_to_hit": 2, "magic_damage": 2, "kind": "missile", "two_handed": true, "ammo_kind": "arrow" },
-  { "id": "dagger", "name": "Dagger +3", "damage_sm": "1d4", "damage_l": "1d3", "magic_to_hit": 3, "magic_damage": 3, "kind": "melee" },
-  { "id": "mace", "name": "Mace +1", "damage_sm": "1d6", "damage_l": "1d6", "magic_to_hit": 1, "magic_damage": 1, "kind": "melee" },
-  { "id": "darts", "name": "Darts", "damage_sm": "1d3", "damage_l": "1d2", "kind": "missile" }
+  { "id": "bastard_sword", "name": { "en": "Bastard Sword +2", "fr": "Épée bâtarde +2" }, "damage_sm": "2d4", "damage_l": "2d8", "magic_to_hit": 2, "magic_damage": 2, "kind": "melee", "two_handed": true },
+  { "id": "longsword", "name": { "en": "Long Sword +2", "fr": "Épée longue +2" }, "damage_sm": "1d8", "damage_l": "1d12", "magic_to_hit": 2, "magic_damage": 2, "kind": "melee" },
+  { "id": "shortbow", "name": { "en": "Short Bow +2", "fr": "Arc court +2" }, "damage_sm": "1d6", "damage_l": "1d6", "magic_to_hit": 2, "magic_damage": 2, "kind": "missile", "two_handed": true, "ammo_kind": "arrow" },
+  { "id": "dagger", "name": { "en": "Dagger +3", "fr": "Dague +3" }, "damage_sm": "1d4", "damage_l": "1d3", "magic_to_hit": 3, "magic_damage": 3, "kind": "melee" },
+  { "id": "mace", "name": { "en": "Mace +1", "fr": "Masse d'armes +1" }, "damage_sm": "1d6", "damage_l": "1d6", "magic_to_hit": 1, "magic_damage": 1, "kind": "melee" },
+  { "id": "darts", "name": { "en": "Darts", "fr": "Fléchettes" }, "damage_sm": "1d3", "damage_l": "1d2", "kind": "missile" }
 ]

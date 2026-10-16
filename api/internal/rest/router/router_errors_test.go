@@ -84,7 +84,7 @@ func newRouter(t *testing.T) (http.Handler, *mocksSet) {
 		XP: m.xp, Details: m.details, Skills: m.skills, Dice: m.dice,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, bs), m
+	return router.New(log, bs, router.Options{Commit: "abc123"}), m
 }
 
 func anyArgs(n int) []any {

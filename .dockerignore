@@ -1,0 +1,30 @@
+# The image build reads only web/, api/ and seeds/ (Dockerfile). Private book data never enters the
+# default build context: the catalogue comes only through the named context `catalogue`
+# (ADR 0024 step 7).
+.catalogue/
+.dev/
+*.db
+*.db-wal
+*.db-shm
+
+.git/
+.beads/
+.bv/
+.claude/
+.agents/
+.ralph-tui/
+docs/
+bin/
+.env
+.env.*
+
+web/node_modules/
+web/dist/
+web/e2e/
+web/e2e-results/
+web/playwright-report/
+web/test-results/
+web/blob-report/
+
+api/testdata/
+api/critical-api

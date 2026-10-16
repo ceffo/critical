@@ -78,6 +78,22 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+  # Builds the production image with the fixture catalogue and smoke-checks it (ADR 0024 steps 1
+  # and 7.1). Nothing is pushed and no build cache is exported.
+  image:
+    name: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image (fixture catalogue)
+        run: >-
+          docker build -t critical:ci
+          --build-context catalogue=api/testdata
+          --build-arg COMMIT="$GITHUB_SHA" .
+      - name: Smoke-check the image
+        run: scripts/image-smoke.sh critical:ci "$GITHUB_SHA"
+
   generated:
     name: generated code is up to date
     runs-on: ubuntu-latest

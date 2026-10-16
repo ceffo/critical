@@ -17,6 +17,7 @@ import (
 	"github.com/caarlos0/env/v11"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/rest/handler/webhdl"
 	"github.com/ceffo/critical/api/internal/rest/router"
 	"github.com/ceffo/critical/api/internal/rest/server"
 )
@@ -31,7 +32,16 @@ type Config struct {
 	// catalogue` fetches it to .catalogue/catalogue.json. A relative path is
 	// resolved against the repo root (resolveFromRepoRoot).
 	Catalogue string `env:"CRITICAL_CATALOGUE" envDefault:".catalogue/catalogue.json"`
+	// WebDir is the built web app the server serves outside /api (ADR 0024
+	// step 1). Unset, as in `just dev` where Vite serves it, it serves
+	// nothing there.
+	WebDir string `env:"CRITICAL_WEB_DIR"`
 }
+
+// commit is the commit the binary was built from, reported by /api/health
+// (ADR 0024 step 1.4). The image build sets it with
+// -ldflags "-X github.com/ceffo/critical/api/internal/cmd/api.commit=<sha>".
+var commit = "unknown"
 
 // Validate rejects empty required fields (e.g. CRITICAL_DSN set to "").
 func (c Config) Validate() error {
@@ -85,6 +95,15 @@ func Start() error {
 	if err != nil {
 		return err
 	}
+	// A bad web dir stops the server before it touches the database.
+	opts := router.Options{Commit: commit}
+	if cfg.WebDir != "" {
+		web, werr := webhdl.New(cfg.WebDir)
+		if werr != nil {
+			return werr
+		}
+		opts.Web = web
+	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
 
@@ -111,7 +130,7 @@ func Start() error {
 
 	srvCfg := server.DefaultConfig()
 	srvCfg.Addr = cfg.Addr
-	srv := server.New(srvCfg, router.New(log, bs))
+	srv := server.New(srvCfg, router.New(log, bs, opts))
 
 	errCh := make(chan error, 1)
 	go func() {

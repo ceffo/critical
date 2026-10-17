@@ -47,3 +47,6 @@ skills-lock.json
 # Spell catalogue artifact fetched by just catalogue (ADR 0021); private book text, never committed
 .catalogue/
 api/tmp_schema.sql
+
+# local
+.local/

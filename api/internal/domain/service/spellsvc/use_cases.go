@@ -105,6 +105,19 @@ func (s *service) Search(ctx context.Context, f Filter, p PageRequest) (Page, er
 	return Page{Items: items, Total: len(matches), Page: p.Page, PageSize: p.PageSize}, nil
 }
 
+// Get reads one catalogue spell by its id with all its texts (one Details call);
+// an id the catalogue does not hold is ErrSpellNotFound.
+func (s *service) Get(ctx context.Context, id string) (Spell, error) {
+	items, err := s.reader.Details(ctx, []string{id})
+	if err != nil {
+		return Spell{}, err
+	}
+	if len(items) == 0 {
+		return Spell{}, fmt.Errorf("%w: %s", ErrSpellNotFound, id)
+	}
+	return items[0], nil
+}
+
 // Names lists every catalogue spell's id and names in every language: the client
 // names a spell it knows only by id (spellbook, slots, journal) from it.
 func (s *service) Names(ctx context.Context) ([]SpellName, error) {

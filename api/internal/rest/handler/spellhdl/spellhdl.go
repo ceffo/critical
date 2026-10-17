@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
@@ -31,6 +33,7 @@ type spellSvc interface {
 	GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	Search(ctx context.Context, f spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error)
+	Get(ctx context.Context, id string) (spellsvc.Spell, error)
 	Names(ctx context.Context) ([]spellsvc.SpellName, error)
 	Levels(ctx context.Context) ([]int, error)
 }
@@ -54,6 +57,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars ch
 	r.Get("/api/spells", render.Handle(Search(charID, svc, chars, damage)))
 	r.Get("/api/spells/filters", render.Handle(FilterOptions(svc)))
 	r.Get("/api/spells/names", render.Handle(Names(svc)))
+	r.Get("/api/spells/{id}", render.Handle(Get(charID, svc, chars, damage)))
 }
 
 // TextDTO is a text in human languages (ADR 0023 step 6): body by language
@@ -150,34 +154,66 @@ func Search(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage 
 			return err
 		}
 		items := spellsToDTO(page.Items, level)
-		for i := range items {
-			items[i].Effect = damage.AddsEffect(r.Context(), items[i].ID)
-		}
-		// An explicit caster_level is bounded above; the character's level
-		// is not, and a level the formulas are not checked at gets no damage
-		// rather than failing the page.
-		if level > 0 && level <= spelleffectsvc.MaxCasterLevel {
-			for i := range items {
-				d, err := damage.DamageAt(r.Context(), items[i].ID, level)
-				if err != nil {
-					return err
-				}
-				items[i].Damage = DamageToDTO(d)
-				modes, err := damage.ModesAt(r.Context(), items[i].ID, level)
-				if err != nil {
-					return err
-				}
-				items[i].Modes = ModesToDTO(modes)
-				x, err := damage.ExposureAt(r.Context(), items[i].ID, level)
-				if err != nil {
-					return err
-				}
-				items[i].Exposure = ExposureToDTO(x)
-			}
+		if err := enrich(r.Context(), items, level, damage); err != nil {
+			return err
 		}
 		render.OK(r.Context(), w, SpellPageDTO{
 			Items: items, Total: page.Total, Page: page.Page, PageSize: page.PageSize,
 		})
+		return nil
+	}
+}
+
+// enrich adds what the catalogue rows do not carry to items: whether a cast
+// adds an effect, and, at a caster level the formulas are checked at, the
+// damage, modes and exposure at that level. An explicit caster_level is
+// bounded above; the character's level is not, and a level the formulas are
+// not checked at gets no damage rather than failing the request.
+func enrich(ctx context.Context, items []SpellDTO, level int, damage damageReader) error {
+	for i := range items {
+		items[i].Effect = damage.AddsEffect(ctx, items[i].ID)
+	}
+	if level < 1 || level > spelleffectsvc.MaxCasterLevel {
+		return nil
+	}
+	for i := range items {
+		d, err := damage.DamageAt(ctx, items[i].ID, level)
+		if err != nil {
+			return err
+		}
+		items[i].Damage = DamageToDTO(d)
+		modes, err := damage.ModesAt(ctx, items[i].ID, level)
+		if err != nil {
+			return err
+		}
+		items[i].Modes = ModesToDTO(modes)
+		x, err := damage.ExposureAt(ctx, items[i].ID, level)
+		if err != nil {
+			return err
+		}
+		items[i].Exposure = ExposureToDTO(x)
+	}
+	return nil
+}
+
+// Get returns one spell by its id (GET /api/spells/{id}), the same SpellDTO
+// as a search item, at the optional caster_level (default: the character's).
+// An id the catalogue does not hold is a 404 (code spell_not_found).
+func Get(charID CharacterIDFunc, svc spellSvc, chars characterGetter, damage damageReader) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		sp, err := svc.Get(r.Context(), chi.URLParam(r, "id"))
+		if err != nil {
+			return err
+		}
+		level, err := casterLevel(r, charID, chars)
+		if err != nil {
+			return err
+		}
+		items := []SpellDTO{SpellToDTO(sp, level)}
+		if err := enrich(r.Context(), items, level, damage); err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, items[0])
 		return nil
 	}
 }

@@ -1518,6 +1518,7 @@
     "initiative_not_on_top": "L'initiative n'est plus la dernière action : annulez ce qui a suivi, ou relancez au prochain tour.",
     "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord.",
     "no_exposure": "Ce sort n'inflige aucun dégât d'exposition.",
-    "spell_not_an_effect": "Ce sort n'ajoute aucun effet à suivre."
+    "spell_not_an_effect": "Ce sort n'ajoute aucun effet à suivre.",
+    "spell_not_found": "Ce sort n'est pas dans le catalogue."
   }
 }

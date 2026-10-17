@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const request = vi.fn();
 vi.mock("./http", () => ({ request: (...a: unknown[]) => request(...a) }));
 
-import { NO_QUERY, searchSpells } from "./spells_db";
+import { NO_QUERY, getSpell, searchSpells } from "./spells_db";
 
 const params = () => new URL(request.mock.calls[0][0] as string).searchParams;
 
@@ -52,5 +52,13 @@ describe("searchSpells", () => {
     request.mockClear();
     await searchSpells({ ...NO_QUERY, q: "meteor" }, 1, 20);
     expect(params().has("caster_level")).toBe(false);
+  });
+});
+
+describe("getSpell", () => {
+  it("loads one spell by its id, not by a name search", async () => {
+    request.mockResolvedValue({ id: "fire_shield" });
+    expect(await getSpell("fire_shield")).toEqual({ id: "fire_shield" });
+    expect(request).toHaveBeenCalledExactlyOnceWith("/api/spells/fire_shield");
   });
 });

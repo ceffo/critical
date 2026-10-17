@@ -67,19 +67,7 @@ export function getSpellNames(): Promise<SpellName[]> {
   return request<SpellName[]>("/api/spells/names");
 }
 
-/**
- * The catalogue spell `id`, served at the character's level: the name search narrowed to the spell's
- * level, then the row with that id (null when the catalogue has none).
- */
-export async function findSpell(
-  id: string,
-  name: string,
-  level: number,
-): Promise<Spell | null> {
-  const page = await searchSpells({
-    ...NO_QUERY,
-    q: name,
-    levels: [level],
-  });
-  return page.items.find((s) => s.id === id) ?? null;
+/** The catalogue spell `id`, served at the character's level (GET /api/spells/{id}); a 404 when the catalogue has none. */
+export function getSpell(id: string): Promise<Spell> {
+  return request<Spell>(`/api/spells/${encodeURIComponent(id)}`);
 }

@@ -127,6 +127,7 @@ var mappings = []mapping{
 	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound, code: "item_not_found"},
 	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict, code: "item_empty"},
 	{target: itemsvc.ErrNotRestockable, status: http.StatusConflict, code: "item_not_restockable"},
+	{target: spellsvc.ErrSpellNotFound, status: http.StatusNotFound, code: "spell_not_found"},
 	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict, code: "slot_already_used"},
 	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest, code: "invalid_slot_index"},
 	{target: prepsvc.ErrNotInSpellbook, status: http.StatusBadRequest, code: "not_in_spellbook"},

@@ -1518,6 +1518,7 @@
     "initiative_not_on_top": "The initiative is no longer the newest action: undo what came after it, or roll again at the next round.",
     "too_many_favourites": "Too many favourite rolls: remove one first.",
     "no_exposure": "That spell deals no exposure damage.",
-    "spell_not_an_effect": "That spell adds no effect to track."
+    "spell_not_an_effect": "That spell adds no effect to track.",
+    "spell_not_found": "That spell is not in the catalogue."
   }
 }

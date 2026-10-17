@@ -214,6 +214,9 @@ var endpoints = []endpoint{
 	{"GET spells", "GET", "/api/spells?q=a", "", func(m *mocksSet, err error) {
 		m.spell.On("Search", anyArgs(3)...).Return(spellsvc.Page{}, err)
 	}},
+	{"GET spells/{id}", "GET", "/api/spells/fireball", "", func(m *mocksSet, err error) {
+		m.spell.On("Get", anyArgs(2)...).Return(spellsvc.Spell{}, err)
+	}},
 	{"POST spells/{id}/cast", "POST", "/api/spells/2/cast", "", func(m *mocksSet, err error) {
 		m.cast.On("Cast", anyArgs(4)...).Return(castsvc.CastResult{}, err)
 	}},
@@ -304,6 +307,7 @@ func TestSpecialSentinels(t *testing.T) {
 		{"weapon not found", "POST roll/attack", fmt.Errorf("%w: sword", combatsvc.ErrWeaponNotFound), 404, `{"code":"weapon_not_found","error":"weapon not found"}`},
 		{"item not found", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemNotFound), 404, `{"code":"item_not_found","error":"item not found: wand"}`},
 		{"item empty", "GET items", fmt.Errorf("%w: wand", itemsvc.ErrItemEmpty), 409, `{"code":"item_empty","error":"item is empty: wand"}`},
+		{"spell not found", "GET spells/{id}", fmt.Errorf("%w: nope", spellsvc.ErrSpellNotFound), 404, `{"code":"spell_not_found","error":"spell not found: nope"}`},
 		{"slot already used", "POST spells/{id}/cast", fmt.Errorf("%w: 2", spellsvc.ErrSlotAlreadyUsed), 409, `{"code":"slot_already_used","error":"slot already used: 2"}`},
 		{"unknown spell mode", "POST spells/{id}/cast", fmt.Errorf("%w: Ice Storm has no mode \"fog\"", spelleffectsvc.ErrUnknownMode), 400, `{"code":"unknown_spell_mode","error":"unknown spell mode: Ice Storm has no mode \"fog\""}`},
 		{"no exposure", "POST spells/exposure", fmt.Errorf("%w: fireball", spelleffectsvc.ErrNoExposure), 400, `{"code":"no_exposure","error":"spell has no exposure damage: fireball"}`},

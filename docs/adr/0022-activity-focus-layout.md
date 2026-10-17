@@ -5,7 +5,12 @@
 amends [ADR 0017](0017-type-scale-and-density.md) steps 2, 4, 5, 6 and 7; amends
 [ADR 0020](0020-visual-identity.md) step 5. Steps 2.4, 3.2, 4.1 and 4.2 amended, step 2.8 rechecked (unchanged), by
 [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) (2026-10-17, proposed: one selection mark, the "latest" outline, card
-titles as section labels, the raised stage and its header bands).
+titles as section labels, the raised stage and its header bands). Steps 2.2, 2.3, 2.5, 2.6, 2.7, 3.4,
+5.1, 5.3 and 7 and step 4.2's example label amended by [ADR 0027](0027-space-follows-frequency-of-use.md)
+(2026-10-17, proposed: space follows frequency of use; the header's stacked turn, initiative and full
+brand, a wider character card, the now band fitting its tab instead of the 60 % cap, the previous
+weapon and a drop-down instead of weapon chips, the result card, the compact journal, the Skills tab,
+the lookup filters, Inventory and Experience, the dice footer).
 
 ## Context
 

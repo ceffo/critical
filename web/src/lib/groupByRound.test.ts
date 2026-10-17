@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LogEntry } from "@/types/log";
-import { groupByRound, isUndone } from "./groupByRound";
+import { groupByRound, isUndone, opensTurn } from "./groupByRound";
 
 const entry = (id: number, round: number): LogEntry => ({
   id,
@@ -80,6 +80,25 @@ describe("groupByRound", () => {
     expect(groups[1].transactions.map((t) => t.map((e) => e.id))).toEqual([
       [9],
     ]);
+  });
+
+  it("opens a turn only with Next Round's advance in the transaction", () => {
+    const init = {
+      ...entry(11, 3),
+      transactionId: 10,
+      kind: "initiative" as const,
+    };
+    const advance = {
+      ...entry(10, 2),
+      transactionId: 10,
+      kind: "round_advance" as const,
+    };
+    expect(opensTurn([init, advance])).toBe(true);
+    // A reroll of the initiative alone, or any other multi-entry transaction, does not.
+    expect(opensTurn([init])).toBe(false);
+    expect(
+      opensTurn([entry(13, 3), { ...entry(12, 3), transactionId: 13 }]),
+    ).toBe(false);
   });
 
   it("is undone only when every entry of the transaction is voided", () => {

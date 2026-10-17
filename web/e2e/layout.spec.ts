@@ -88,8 +88,9 @@ async function expectNoScroll(column: Locator, what: string) {
 
 /**
  * ADR 0027 step 9 on the journal: a one-line entry is a 22 px row (at most 24), turn blocks touch
- * (no vertical gap), the turn marker is at most 3rem wide and the entry text starts close to the
- * left. `long` holds the texts whose entries may wrap.
+ * (no vertical gap), the turn marker is at most 3rem wide, the entry text starts close to the left,
+ * every time ends at the same right edge (9.4) and a turn's opening rows are not framed (9.6).
+ * `long` holds the texts whose entries may wrap.
  */
 async function expectCompactJournal(
   page: Page,
@@ -135,6 +136,23 @@ async function expectCompactJournal(
     entryText.x - logBox.x,
     `entry text near the left, ${where}`,
   ).toBeLessThan(150);
+  const rightEdges = await log
+    .getByTestId("log-time")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().right));
+  expect(rightEdges.length, `times, ${where}`).toBeGreaterThanOrEqual(2);
+  for (const r of rightEdges)
+    expect(
+      Math.abs(r - rightEdges[0]),
+      `time right-aligned, ${where}`,
+    ).toBeLessThanOrEqual(1);
+  await expect(
+    log.locator('[data-kind="round_advance"]'),
+    `a turn's opening rows, ${where}`,
+  ).not.toHaveCount(0);
+  await expect(
+    log.getByTestId("log-transaction").locator('[data-kind="round_advance"]'),
+    `a turn's opening rows unframed, ${where}`,
+  ).toHaveCount(0);
 }
 
 /**

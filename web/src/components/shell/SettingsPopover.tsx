@@ -9,10 +9,9 @@ import {
 } from "@/components/ui/popover";
 import { LANGUAGES } from "@/lib/settings";
 import {
-  AMBIANCES,
+  DARK_THEMES,
+  LIGHT_THEMES,
   MODES,
-  isLight,
-  systemPrefersDark,
   themeVars,
   type Mode,
 } from "@/lib/theme";
@@ -26,9 +25,17 @@ const MODE_ICONS: Record<Mode, ReactNode> = {
 };
 
 /** One row of the popover: a caption and a set of choices (radio semantics). */
-function Choice({ label, children }: { label: string; children: ReactNode }) {
+function Choice({
+  label,
+  testId,
+  children,
+}: {
+  label: string;
+  testId?: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" data-testid={testId}>
       <span className="text-label text-muted-foreground">{label}</span>
       <div
         role="radiogroup"
@@ -42,17 +49,36 @@ function Choice({ label, children }: { label: string; children: ReactNode }) {
 }
 
 const segment =
-  "flex h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-2 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
+  "flex min-h-7 min-w-0 flex-1 items-center justify-center gap-1 rounded-md px-2 py-1 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
+
+/** A theme's swatch in its own colours for that mode: its tint on its card, ringed by its page. */
+function Swatch({ id, light }: { id: string; light: boolean }) {
+  const v = themeVars(id, light);
+  return (
+    <span
+      aria-hidden
+      className="size-4 shrink-0 rounded-full"
+      style={{
+        background: `radial-gradient(circle, ${v["--tint"]} 0 45%, ${v["--surface"]} 50%)`,
+        boxShadow: `0 0 0 1.5px ${v["--ground"]}`,
+      }}
+    />
+  );
+}
 
 /**
- * Display preferences of this device (ADR 0009): language, appearance and ambiance. Each choice
- * applies live and is saved; opened from the cog at the left of the dice footer (ADR 0022 step 2.6).
+ * Display preferences of this device (ADR 0009, ADR 0026 step 4): language, appearance mode, the
+ * dark theme and the light theme. Each choice applies live and is saved; opened from the cog at the
+ * left of the dice footer (ADR 0022 step 2.6).
  */
 export function SettingsPopover() {
   const { t } = useTranslation();
-  const { lang, mode, amb, update } = useSettingsStore();
-  // Each swatch shows its ambiance's own tint in the current appearance.
-  const light = isLight(mode, systemPrefersDark());
+  const { lang, mode, darkTheme, lightTheme, update } = useSettingsStore();
+  // The chosen option is the selected tone with a tint outline (ADR 0026 step 5.3).
+  const chosen = (on: boolean) =>
+    on
+      ? "bg-amb-800 text-foreground ring-1 ring-tint ring-inset"
+      : "bg-neu-900 hover:bg-neu-800";
 
   return (
     <Popover>
@@ -82,12 +108,7 @@ export function SettingsPopover() {
               type="button"
               role="radio"
               aria-checked={lang === l}
-              className={cn(
-                segment,
-                lang === l
-                  ? "bg-amb-900 text-amb-200"
-                  : "bg-neu-900/60 hover:bg-neu-900",
-              )}
+              className={cn(segment, chosen(lang === l))}
               onClick={() => update({ lang: l })}
             >
               {t(`language.${l}`)}
@@ -102,12 +123,7 @@ export function SettingsPopover() {
               type="button"
               role="radio"
               aria-checked={mode === m}
-              className={cn(
-                segment,
-                mode === m
-                  ? "bg-amb-900 text-amb-200"
-                  : "bg-neu-900/60 hover:bg-neu-900",
-              )}
+              className={cn(segment, chosen(mode === m))}
               onClick={() => update({ mode: m })}
             >
               {MODE_ICONS[m]}
@@ -116,33 +132,36 @@ export function SettingsPopover() {
           ))}
         </Choice>
 
-        <Choice label={t("settings.ambiance")}>
-          <div className="grid w-full grid-cols-2 gap-1">
-            {AMBIANCES.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                role="radio"
-                aria-checked={amb === a.id}
-                className={cn(
-                  "flex h-7 items-center gap-2 rounded-md px-2 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                  amb === a.id
-                    ? "bg-amb-900 text-amb-200"
-                    : "bg-neu-900/60 hover:bg-neu-900",
-                )}
-                onClick={() => update({ amb: a.id })}
-              >
-                <span
-                  aria-hidden
-                  className="size-4 shrink-0 rounded-full"
-                  style={{ background: themeVars(a.id, light)["--tint"] }}
-                />
-                <span className="break-words">
-                  {t(`settings.ambiances.${a.id}`)}
-                </span>
-              </button>
-            ))}
-          </div>
+        <Choice label={t("settings.darkTheme")} testId="settings-dark-theme">
+          {DARK_THEMES.map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={darkTheme === id}
+              className={cn(segment, chosen(darkTheme === id))}
+              onClick={() => update({ darkTheme: id })}
+            >
+              <Swatch id={id} light={false} />
+              <span className="break-words">{t(`settings.themes.${id}`)}</span>
+            </button>
+          ))}
+        </Choice>
+
+        <Choice label={t("settings.lightTheme")} testId="settings-light-theme">
+          {LIGHT_THEMES.map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={lightTheme === id}
+              className={cn(segment, chosen(lightTheme === id))}
+              onClick={() => update({ lightTheme: id })}
+            >
+              <Swatch id={id} light />
+              <span className="break-words">{t(`settings.themes.${id}`)}</span>
+            </button>
+          ))}
         </Choice>
       </PopoverContent>
     </Popover>

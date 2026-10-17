@@ -20,11 +20,11 @@ tables below.
 
 ## How these were made (and why they are trustworthy)
 
-- **The real app, not a drawing.** `just ui-mockups` starts the app on the e2e stack (the
+- **The real app, not a drawing.** `just ui-mockups` (removed since, see "Regenerating") started the app on the e2e stack (the
   `api/testdata` fixture, in-memory API, never `.dev/` or the dev ports), seeds one table (turn 1,
   three effects, damage taken and healed, an undone "Dragon breath", an attack as the latest result),
   then paints each option over the running app. The overlay has two parts: the option's **tokens**
-  ([`web/ui-review/mockup-tokens.ts`](../../../../web/ui-review/mockup-tokens.ts)) and its
+  (`web/ui-review/mockup-tokens.ts`, removed since) and its
   **component rules** ([`css/`](css/)). "Today" is the same run without the overlay, so every pair of
   shots shows identical data, down to the dice. Roll values differ from the review's shots because
   this is a new run.
@@ -203,13 +203,14 @@ Whatever you pick, 1 comes with it: its tokens and its component fixes are in ev
   roll total is ink in the mock-ups. The real change would keep gold on crit and max rows.
 - **The ambiance picker** in the settings popover is unchanged in every option.
 
-## Regenerating
+## Regenerating (closed 2026-10-17)
 
-```sh
-just ui-mockups   # captures every option (~1.5 min), audits EN + FR for cut text, writes themes.md,
-                  # theme sheets and shots/ (lossless WebP; needs ImageMagick's `magick`)
-```
-
-Change an option in `web/ui-review/mockup-tokens.ts` (tokens, theme sets) or in `css/<name>.css`
-(component rules), then rerun. The full capture, including the French shots of every option, stays in
-the gitignored `web/e2e-results/ui-mockups/`.
+The round is closed: the user picked "A3" + "B2" and [ADR 0026](../../../adr/0026-contrast-ladder-raised-stage-four-themes.md)
+records it. Its capture code (`web/ui-review/mockups.spec.ts`, `web/ui-review/mockup-tokens.ts`,
+`web/ui-review/to-webp.mjs` and the `just ui-mockups` recipe) was removed when the four themes
+shipped: it painted the six old ambiances from their three-hue generator, which no longer exists.
+The shots, the theme sheets, `themes.md` and `css/` above stay as the round's record. The values
+now live in `web/src/lib/theme.ts` (`THEMES`, one role table per theme and mode); `just ui-shots`
+captures the app in the new set. To rerun the round's code, check out the commit before its
+removal (the parent of the commit that deleted `web/ui-review/mockups.spec.ts`:
+`git log --diff-filter=D -- web/ui-review/mockups.spec.ts`).

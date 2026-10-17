@@ -19,19 +19,18 @@
     "title": "Settings",
     "language": "Language",
     "appearance": "Appearance",
-    "ambiance": "Ambiance",
+    "darkTheme": "Dark",
+    "lightTheme": "Light",
     "mode": {
       "dark": "Dark",
       "light": "Light",
       "system": "System"
     },
-    "ambiances": {
+    "themes": {
       "arcane": "Arcane",
-      "sylve": "Grove",
-      "sang": "Blood",
-      "ocean": "Ocean",
-      "ambre": "Amber",
-      "obsidienne": "Obsidian"
+      "deep": "Deep",
+      "parchment": "Parchment",
+      "plain": "Plain"
     }
   },
   "shell": {

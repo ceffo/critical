@@ -5,6 +5,7 @@ import {
   attackForm,
   chooseLanguage,
   chooseSetting,
+  chooseTheme,
   chooseWeapon,
   combatLog,
   nextTurn,
@@ -529,46 +530,72 @@ const rootVar = (page: Page, name: string) =>
     name,
   );
 
-test("settings: language, appearance and ambiance apply live and persist across reload", async ({
+// ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
+// switches live with the OS; both choices survive a reload and the inline script paints the
+// effective one before the app runs.
+test("settings: language, appearance and both themes apply live and persist across reload", async ({
   page,
 }) => {
+  const DEEP = / 232\)$/; // Deep's tint hue
+  const PARCHMENT = / 262\)$/; // Parchment's lapis
   await page.emulateMedia({ colorScheme: "light" });
   await openDashboard(page);
   expect(await isDark(page)).toBe(false); // System by default, the OS is light
 
+  await chooseTheme(page, "light", "Parchment");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await chooseSetting(page, "Dark");
   expect(await isDark(page)).toBe(true);
-  await chooseSetting(page, "Blood");
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(/ 15\)$/); // Blood's hue
+  await chooseTheme(page, "dark", "Deep");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
   await chooseLanguage(page, "fr");
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
 
+  // First paint, the app's script blocked: index.html alone paints Deep in dark.
+  const appScript = /\/assets\/.*\.js$/;
+  await page.route(appScript, (route) => route.abort());
   await page.reload();
-  expect(await isDark(page)).toBe(true); // painted before the app mounts
+  expect(await isDark(page)).toBe(true);
+  expect(await rootVar(page, "--tint")).toMatch(DEEP);
+  await page.unroute(appScript);
+
+  await page.reload();
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
-  expect(await rootVar(page, "--tint")).toMatch(/ 15\)$/);
+  expect(await rootVar(page, "--tint")).toMatch(DEEP);
   const popover = await openSettings(page);
-  for (const name of ["Français", "Sombre", "Sang"])
+  for (const name of ["Français", "Sombre"])
     await expect(
       popover.getByRole("radio", { name, exact: true }),
     ).toHaveAttribute("aria-checked", "true");
+  for (const [group, name] of [
+    ["settings-dark-theme", "Abysses"],
+    ["settings-light-theme", "Parchemin"],
+  ])
+    await expect(
+      popover.getByTestId(group).getByRole("radio", { name, exact: true }),
+    ).toHaveAttribute("aria-checked", "true");
+  await expectNoClippedText(popover, "settings popover, fr");
+  await expectWholeWords(popover, "settings popover, fr");
   await snap(page, "settings-popover-fr");
 
-  // Système follows the OS live.
+  // Système follows the OS live, between the two chosen themes.
   await popover.getByRole("radio", { name: "Système", exact: true }).click();
   expect(await isDark(page)).toBe(false);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await page.emulateMedia({ colorScheme: "dark" });
   await expect.poll(() => isDark(page)).toBe(true);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
 });
 
-// The visual identity (ADR 0020): the main screens in dark and light with content in the result
-// card and the journal (Act/Weapons after an attack, Spells, Inventory, Experience), then every
-// ambiance on the dashboard. Screenshots only: the colours themselves are unit-tested (theme.test).
-test("theme: the main screens and every ambiance in dark and light", async ({
+// The visual identity (ADR 0020, ADR 0026): the main screens in dark and light with content in the
+// result card and the journal (Act/Weapons after an attack, Spells, Inventory, Experience), then
+// every theme in each mode it exists in, in French (the layout reference), with the no-cut audit.
+// Screenshots: the colours themselves are unit-tested (theme.test).
+test("theme: the main screens in dark and light, every theme in each of its modes", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -628,20 +655,20 @@ test("theme: the main screens and every ambiance in dark and light", async ({
     await openWorkspace(page, "Experience");
     await expect(page.getByTestId("xp-total")).toHaveText(/\d/);
     await snap(page, `${m}-experience`);
-    await openWorkspace(page, "Act");
-    for (const amb of [
-      "Arcane",
-      "Grove",
-      "Blood",
-      "Ocean",
-      "Amber",
-      "Obsidian",
-    ]) {
-      await chooseSetting(page, amb);
+  }
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  for (const [mode, which, themes] of [
+    ["Sombre", "dark", ["Arcane", "Abysses", "Sobre"]],
+    ["Clair", "light", ["Arcane", "Parchemin", "Sobre"]],
+  ] as const) {
+    await chooseSetting(page, mode);
+    for (const name of themes) {
+      await chooseTheme(page, which, name);
       await page.waitForTimeout(150); // let colour transitions settle
-      await snap(page, `${m}-${amb.toLowerCase()}`);
+      await expectNoClippedText(page.locator("body"), `${which} ${name}, fr`);
+      await snap(page, `fr-${which}-${name.toLowerCase()}`);
     }
-    await chooseSetting(page, "Arcane");
   }
 });
 

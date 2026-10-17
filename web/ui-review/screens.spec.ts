@@ -4,8 +4,7 @@ import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "../e2e/fixtures";
 import { chooseLanguage, openSettings } from "../e2e/helpers";
 import {
-  AMBIANCES,
-  MODES,
+  THEME_MODES,
   VIEWPORTS,
   focus,
   journal,
@@ -21,7 +20,7 @@ import {
  * The UI review capture (docs/design/ui-review/README.md): screenshots of the real app, every screen,
  * panel, popover and state that matters, in every colour theme, at the two layout viewports of ADR
  * 0022 (1707x1300, the user's table screen; 1440x900), in English and, for the full set, in French.
- * Output: web/e2e-results/ui-review/<mode>-<ambiance>[-fr]/<screen>-<WxH>.png (gitignored); the
+ * Output: web/e2e-results/ui-review/<mode>-<theme>[-fr]/<screen>-<WxH>.png (gitignored); the
  * curated set listed in docs/design/ui-review/curated.txt is then copied into
  * docs/design/ui-review/shots/ by ui-review/curate.mjs (`just ui-shots`).
  */
@@ -232,7 +231,7 @@ test("full set EN: every screen and state, Arcane dark and light", async ({
   await seedTable(page, stack.apiUrl);
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
-    for (const mode of MODES) {
+    for (const mode of ["Dark", "Light"] as const) {
       await pickTheme(page, mode, "Arcane");
       await fullSet(page, `${mode.toLowerCase()}-arcane`, "en");
     }
@@ -253,7 +252,7 @@ test("full set FR: every screen and state, Arcane dark (longer text)", async ({
   }
 });
 
-test("theme matrix: the core screens in every ambiance, dark and light", async ({
+test("theme matrix: the core screens in every theme, in each of its modes", async ({
   page,
   stack,
 }) => {
@@ -262,15 +261,14 @@ test("theme matrix: the core screens in every ambiance, dark and light", async (
   await seedTable(page, stack.apiUrl);
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
-    for (const mode of MODES)
-      for (const amb of AMBIANCES) {
-        if (amb === "Arcane") continue; // the full set has it
-        await pickTheme(page, mode, amb);
-        await coreScreens(
-          page,
-          t,
-          `${mode.toLowerCase()}-${amb.toLowerCase()}`,
-        );
-      }
+    for (const { mode, theme } of THEME_MODES) {
+      if (theme === "Arcane") continue; // the full set has it
+      await pickTheme(page, mode, theme);
+      await coreScreens(
+        page,
+        t,
+        `${mode.toLowerCase()}-${theme.toLowerCase()}`,
+      );
+    }
   }
 });

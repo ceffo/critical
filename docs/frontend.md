@@ -3,7 +3,7 @@
 ## Stack
 
 - **Framework**: React 18 + Vite + TypeScript (strict mode)
-- **Styling**: Tailwind CSS v4; Nocturne tokens and ambiances (ADR 0009, `lib/theme.ts`, `index.css`)
+- **Styling**: Tailwind CSS v4; Nocturne tokens and the four themes (ADR 0009, ADR 0026, `lib/theme.ts`, `index.css`)
 - **Type and icons**: Inter (`@fontsource-variable/inter`), Phosphor (`@phosphor-icons/react`); no other family or icon set
 - **Components**: shadcn/ui (components live in `web/src/components/ui/`)
 - **i18n**: i18next + react-i18next (see "Internationalisation")
@@ -124,18 +124,30 @@ flowchart TD
   show as "1d8 → 6": the attack payload has no per-die values.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
   left of the dice footer (ADR 0022 step 2.6): language
-  (English / Français), appearance (Dark / Light / System, System follows the OS live), six
-  ambiance swatches (to become a dark-theme and a light-theme choice, ADR 0026 step 4). Applied live, stored per device in `localStorage['critical.settings.v1']`
-  (`lib/settings.ts`, which migrates the older `critical.theme` / `critical.language` keys once).
+  (English / Français), appearance (Dark / Light / System), a dark theme (Arcane, Deep, Plain) and
+  a light theme (Arcane, Parchment, Plain), each swatch in its theme's own colours (ADR 0026 step 4).
+  The mode picks which theme applies; System switches between the two live with the OS. Applied
+  live, stored per device in `localStorage['critical.settings.v1']` as `darkTheme` / `lightTheme`
+  (`lib/settings.ts`, which maps a saved single `amb` of the six old ambiances once, step 4.3, and
+  migrates the older `critical.theme` / `critical.language` keys once). `index.html`'s inline script
+  paints the mode and the effective theme before the app runs, from `critical.paint.v1` (the
+  chosen themes' variables, saved by `savePaint` whenever the settings apply).
 - Theme (ADR 0020, amended by ADR 0026: the contrast ladder, the raised stage and four themes,
-  Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts` `themeVars(ambiance, light)` computes the three palette ramps
-  (`amb-*` primary, `sec-*`, `ter-*`), the neutrals and the role colours set on `<html>`; use the
+  Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts`
+  `THEMES` holds one hand-tuned role table per theme and mode (Deep is dark only, Parchment light
+  only); `themeVars(theme, light)` turns it into the three palette ramps (`amb-*` primary, `sec-*`,
+  `ter-*`), the neutrals (`neu-900` the raised step, `neu-800` its hover, `amb-800` the selected
+  tone), the role colours and the translucent mixes (`--ink-muted`, `--border`, `--input`) set on
+  `<html>`. A new theme is a role table, its modes, an en and a fr name (`settings.themes.<id>`)
+  and the rules below. Use the
   roles (`tint` for primary accents, `text-highlight` / `bg-highlight-fill text-on-highlight` for
   the secondary, `text-magic` for spells, `danger` / `success` / `warning`, `on-accent` as text on
   any fill, `bg-surface`, `bg-neu-900`, `text-ink-muted`, `shadow-float` for popovers only) or the
   shadcn names mapped onto them, never raw colours and never a ramp step for meaningful text. The
-  contrast unit test (`lib/theme.test.ts`) keeps every ambiance at WCAG AA in both modes (ADR 0026
-  step 2 adds the tone steps and the 3:1 field edge and ring).
+  unit test (`lib/theme.test.ts`, arithmetic in `lib/wcag.ts`) holds every theme in each of its
+  modes to ADR 0026 steps 1-3: WCAG AA text on page, card and raised, card on page ΔL ≥ .10, raised
+  on card ΔL ≥ .07, field edge and ring 3:1, the dark accent ladder, the hue distance and the
+  near-neutral rule.
 - Brand (ADR 0022 step 7): `components/shell/BrandMark.tsx`, the Facet · Bare mark (hexagon outline
   in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the left of the header
   card; `public/favicon.svg` is the same drawing in static Arcane colours.
@@ -470,7 +482,8 @@ outside `ui/`).
   Act tab with long weapon, item and spell names (`act-<tab>-<size>.png`), and on the Experience
   activity with a long ledger reason, where `expectWholeWords` (same file) also fails on a word
   broken mid-word; its "theme" test screenshots the
-  main screens in dark and light, then every ambiance.
+  main screens in dark and light, then every theme in each of its modes in French
+  (`fr-<mode>-<theme>.png`, no-cut audit on the whole page).
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
   are visible. Don't add per-flow fr specs.
 - **Add a spec:** create `web/e2e/<name>.spec.ts`, `import { test, expect, snap } from "./fixtures"`, one

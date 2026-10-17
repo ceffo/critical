@@ -1,10 +1,10 @@
-import { oklchToLinearRgb } from "../src/lib/theme";
+import { oklchToLinearRgb } from "./theme";
 
 /**
- * WCAG 2 contrast arithmetic for the UI-review tools (contrast.spec.ts, the review's report;
- * mockup-tokens.ts, the mock-up round's theme sets): oklch literals to linear sRGB, alpha
- * compositing in gamma sRGB (as a browser paints `color-mix(… transparent)`), relative luminance
- * and the contrast ratio.
+ * WCAG 2 contrast arithmetic for the theme tests (`theme.test.ts`) and the UI-review report
+ * (`ui-review/contrast.spec.ts`): oklch literals to linear sRGB, alpha compositing in gamma sRGB
+ * (as a browser paints `color-mix(… transparent)` over a backdrop), relative luminance and the
+ * contrast ratio. Not imported by the app.
  */
 
 export type Rgb = [number, number, number];

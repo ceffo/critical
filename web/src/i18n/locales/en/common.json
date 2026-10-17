@@ -1446,22 +1446,8 @@
   "skills": {
     "proficiencies": "Proficiencies",
     "bardSkills": "Bard skills",
-    "columns": {
-      "ability": "Ability",
-      "target": "Target",
-      "percent": "Chance",
-      "last": "Last"
-    },
     "percent": "{{value}}%",
-    "adjust": {
-      "label": "Adjustment of the next {{section}} check",
-      "decrease": "Make the next {{section}} check harder",
-      "increase": "Make the next {{section}} check easier",
-      "value": "Adjustment of the next {{section}} check"
-    },
     "rollLabel": "Roll {{name}}",
-    "lastSuccess": "Last check: {{roll}}, success",
-    "lastFailure": "Last check: {{roll}}, failure",
     "names": {
       "musical_instrument": "Musical instrument",
       "tumbling": "Tumbling",

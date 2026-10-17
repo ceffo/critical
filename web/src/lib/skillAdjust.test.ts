@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   checkAdjustedTarget,
   maxSkillAdjustment,
-  previewTarget,
   stepSkillAdjustment,
 } from "./skillAdjust";
 
@@ -27,11 +26,6 @@ describe("stepSkillAdjustment", () => {
 });
 
 describe("targets", () => {
-  it("previews the target with the pending adjustment", () => {
-    expect(previewTarget(16, -2)).toBe(14);
-    expect(previewTarget(85, 10)).toBe(95);
-  });
-
   it("reads the adjusted target, or derives it on an entry logged before adjustments", () => {
     expect(
       checkAdjustedTarget({ target: 16, adjustment: -2, adjustedTarget: 14 }),

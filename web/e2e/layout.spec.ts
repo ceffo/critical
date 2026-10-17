@@ -1186,6 +1186,31 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `act-prepare-fr-${vp.width}x${vp.height}`);
     await editor.getByRole("button", { name: "Annuler" }).click();
+    // ADR 0027 step 12: the Skills tab in French; at 1440x900 both blocks side by side in the
+    // panel, which does not scroll.
+    await actions.getByRole("tab", { name: "Compétences" }).click();
+    const skills = actions.getByRole("tabpanel");
+    await expect(skills).toHaveAttribute("id", "panel-skills");
+    await expect(skills.getByTestId("skill-modifier").first()).toBeVisible();
+    await expectNoClippedText(actions, `skills tab, ${where}`);
+    await expectWholeWords(actions, `skills tab, ${where}`);
+    if (vp.width === 1440) {
+      await expectNoScroll(skills, `Skills tab, ${where}`);
+      const [proficiencies, bard] = await skills
+        .getByTestId("skills-blocks")
+        .locator(":scope > section")
+        .all();
+      for (const [block, what] of [
+        [proficiencies, "proficiencies"],
+        [bard, "bard skills"],
+      ] as const)
+        await expectInside(block, skills, `${what}, ${where}`);
+      const a = (await proficiencies.boundingBox())!;
+      const b = (await bard.boundingBox())!;
+      expect(b.y, `skills blocks side by side, ${where}`).toBe(a.y);
+    }
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `act-skills-fr-${vp.width}x${vp.height}`);
     await actions.getByRole("tab", { name: "Armes" }).click();
     await rail.nth(1).click();
     await page.getByRole("option", { name: FR_SPELL }).click();

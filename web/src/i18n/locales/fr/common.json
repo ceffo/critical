@@ -1446,22 +1446,8 @@
   "skills": {
     "proficiencies": "Compétences diverses",
     "bardSkills": "Talents de barde",
-    "columns": {
-      "ability": "Carac.",
-      "target": "Seuil",
-      "percent": "Chance",
-      "last": "Dernier"
-    },
     "percent": "{{value}} %",
-    "adjust": {
-      "label": "Ajustement du prochain jet de {{section}}",
-      "decrease": "Rendre le prochain jet de {{section}} plus difficile",
-      "increase": "Rendre le prochain jet de {{section}} plus facile",
-      "value": "Ajustement du prochain jet de {{section}}"
-    },
     "rollLabel": "Lancer {{name}}",
-    "lastSuccess": "Dernier jet : {{roll}}, réussi",
-    "lastFailure": "Dernier jet : {{roll}}, échec",
     "names": {
       "musical_instrument": "Instrument de musique",
       "tumbling": "Acrobaties",

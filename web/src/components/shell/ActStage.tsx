@@ -162,7 +162,7 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
           onPointerDown={onPointerDown}
           onKeyDown={onKeyDown}
         >
-          <span className="h-1 w-16 rounded-full bg-neu-700 transition-colors group-hover:bg-tint" />
+          <span className="h-1 w-16 rounded-full bg-input transition-colors group-hover:bg-tint" />
         </div>
       </div>
       <div

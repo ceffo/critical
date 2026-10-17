@@ -52,11 +52,11 @@ export function CombatLog() {
       aria-label={t("log.title")}
     >
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3.5 pb-2">
-        <h2 className="text-title">{t("log.title")}</h2>
+        <h2 className="section-label">{t("log.title")}</h2>
         <div
           role="radiogroup"
           aria-label={t("fil.filter.label")}
-          className="flex rounded-lg bg-neu-900 p-0.5"
+          className="flex rounded-lg bg-raised p-0.5"
         >
           {FILTERS.map((f) => (
             <button
@@ -68,7 +68,7 @@ export function CombatLog() {
               className={cn(
                 "h-6 rounded-md px-3 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 filter === f
-                  ? "bg-card font-medium"
+                  ? "chip-chosen font-medium"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -93,9 +93,8 @@ export function CombatLog() {
             key={g.key}
             className={cn(
               // The turn column, then the turn's entries. A group is marked by its label and, for
-              // the current turn, a tint; never a rule between groups (ADR 0022 step 4.1).
+              // the current turn, a chip; never a rule between groups (ADR 0022 step 4.1).
               "grid grid-cols-[8.5rem_minmax(0,1fr)] items-start gap-x-3 rounded-lg px-2 py-0.5",
-              g.current && "bg-amb-900/40",
             )}
             aria-label={turnLabel(t, g.round)}
             data-current={g.current}
@@ -105,9 +104,7 @@ export function CombatLog() {
                 {turnLabel(t, g.round)}
               </span>
               {g.current && (
-                <span className="rounded-md bg-amb-900 px-1.5 text-tint">
-                  {t("log.current")}
-                </span>
+                <span className="chip px-1.5">{t("log.current")}</span>
               )}
             </h3>
             {g.entries.length === 0 ? (
@@ -143,8 +140,8 @@ export function CombatLog() {
                     <div
                       key={tx[0].id}
                       className={cn(
-                        "my-0.5 rounded-lg border-l-2 bg-neu-900/30",
-                        undone ? "border-neu-700" : "border-amb-500",
+                        "my-0.5 rounded-lg border-l-2 bg-raised",
+                        undone ? "border-input" : "border-tint",
                       )}
                       data-testid="log-transaction"
                       data-undone={undone}
@@ -207,9 +204,7 @@ function LogRow({
         // One line: value · icon · entry (the select button, on the row's subgrid), then the row
         // action and the time. A long entry wraps inside its cell; nothing is drawn under it.
         "group/row relative grid cursor-pointer grid-cols-[3.5rem_1.125rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-md px-2 py-1",
-        selected
-          ? "bg-amb-900 before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-amb-500"
-          : "hover:bg-neu-900/60",
+        selected ? "selected" : "hover:bg-raised-hover",
       )}
       data-status={e.status}
       data-entry-id={e.id}
@@ -243,7 +238,7 @@ function LogRow({
             {text}
           </span>
           {amended && (
-            <span className="ml-2 rounded-md bg-neu-900 px-1.5 text-label text-muted-foreground">
+            <span className="chip ml-2 px-1.5 text-label text-muted-foreground">
               {t("log.status.amended")}
               {isHp && ` · ${t("log.was", { delta: formatSigned(e.hpDelta) })}`}
             </span>

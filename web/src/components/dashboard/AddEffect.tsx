@@ -55,7 +55,7 @@ export function AddEffect() {
         <div
           role="tablist"
           aria-label={t("buffs.add")}
-          className="flex gap-1 rounded-lg bg-neu-900 p-1"
+          className="flex gap-1 rounded-lg bg-raised p-1"
         >
           {TABS.map((id) => (
             <button
@@ -66,7 +66,7 @@ export function AddEffect() {
               className={cn(
                 "flex-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 tab === id
-                  ? "bg-tint/15 font-medium text-amb-200"
+                  ? "chip-chosen font-medium"
                   : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => setTab(id)}
@@ -177,7 +177,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
             return (
               <li
                 key={c.id}
-                className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
+                className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-raised-hover"
               >
                 <span className="min-w-0 break-words text-body">
                   {name}
@@ -188,7 +188,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
                 </span>
                 {c.modes && c.modes.length > 0 && (
                   <select
-                    className="h-7 min-w-0 rounded border bg-background px-1 text-body"
+                    className={cn(fieldClass, "w-auto px-1")}
                     aria-label={t("spellSlots.modeChoiceFor", { name })}
                     data-testid="receive-mode"
                     value={modes[c.id] ?? c.modes[0].key}
@@ -205,7 +205,6 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
                 )}
                 <Button
                   size="xs"
-                  variant="secondary"
                   disabled={busy || !levelOk}
                   aria-label={t("spellSlots.receiveLabel", { name })}
                   onClick={() => void apply(c.id)}
@@ -249,7 +248,7 @@ function SavedEffects({ onDone }: { onDone: () => void }) {
         <li
           key={s.id}
           data-testid="saved-buff"
-          className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-muted/60"
+          className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-raised-hover"
         >
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="break-words text-body">{s.name}</span>
@@ -262,7 +261,6 @@ function SavedEffects({ onDone }: { onDone: () => void }) {
           <span className="flex shrink-0 items-center gap-1">
             <Button
               size="xs"
-              variant="secondary"
               disabled={busy}
               aria-label={t("buffs.addSaved", { name: s.name })}
               onClick={() =>

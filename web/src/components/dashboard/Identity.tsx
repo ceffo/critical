@@ -44,7 +44,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             {xp && (
               <span
                 aria-hidden
-                className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-neu-800"
+                className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-input"
               >
                 <span
                   className="absolute inset-y-0 left-0 rounded-full bg-tint"
@@ -66,7 +66,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
             return (
               <div
                 key={k}
-                className="flex min-w-0 flex-col items-center rounded-md bg-neu-900/60 py-1"
+                className="flex min-w-0 flex-col items-center rounded-md bg-raised py-1"
                 title={isStr ? t("app.strTitle", { ...strength }) : undefined}
               >
                 <dt className="text-label text-muted-foreground">
@@ -92,7 +92,7 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
               </div>
             );
           })}
-          <div className="flex min-w-0 flex-col items-center rounded-md bg-neu-800 py-1">
+          <div className="flex min-w-0 flex-col items-center rounded-md bg-raised py-1">
             <dt className="text-label text-muted-foreground">
               {t("app.thac0")}
             </dt>

@@ -49,7 +49,7 @@ const inventory = (page: Page) => openWorkspace(page, "Inventory");
 async function longRest(page: Page) {
   await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Spells" }).click();
-  await page.getByRole("button", { name: "Long Rest (Reset)" }).click();
+  await page.getByRole("button", { name: "Long rest" }).click();
   await expect(logEntry(page, "Long rest")).toBeVisible();
   await openWorkspace(page, "Inventory");
 }

@@ -812,6 +812,8 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
+    // The whole screen (header, rail, journal, dice footer and the shared pieces in every zone).
+    await expectNoClippedText(page.locator("body"), `screen, ${where}`);
     await expectNoClippedText(character, `character card, ${where}`);
     await expectWholeWords(character, `character card, ${where}`);
     await rail.nth(0).click();

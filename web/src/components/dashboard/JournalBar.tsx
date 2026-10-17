@@ -32,13 +32,13 @@ export function JournalBar() {
       aria-label={t("log.title")}
       data-testid="journal-bar"
     >
-      <h2 className="shrink-0 text-title">{t("log.title")}</h2>
+      <h2 className="shrink-0 section-label">{t("log.title")}</h2>
       {last && KindIcon ? (
         <p
           className="flex min-w-0 flex-1 items-center gap-3 text-body"
           data-entry-id={last.id}
         >
-          <span className="shrink-0 rounded-md bg-amb-900 px-1.5 text-label font-medium text-tint">
+          <span className="shrink-0 chip px-1.5 text-label font-medium">
             {turnLabel(t, last.round)}
           </span>
           {value && (

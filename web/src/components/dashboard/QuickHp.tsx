@@ -53,8 +53,7 @@ export function QuickHp() {
           onKeyDown={onKeyDown}
         />
         <Button
-          variant="outline"
-          className="min-w-0 gap-1 px-2 border-danger/70 text-danger hover:bg-danger/10 hover:text-danger dark:border-danger/70 dark:hover:bg-danger/15"
+          className="min-w-0 gap-1 px-2 text-danger"
           disabled={!valid || busy}
           title={t("hp.damageHint")}
           onClick={() => void apply(-1)}
@@ -63,8 +62,7 @@ export function QuickHp() {
           {t("hp.applyDamage")}
         </Button>
         <Button
-          variant="outline"
-          className="min-w-0 gap-1 px-2 border-success/70 text-success hover:bg-success/10 hover:text-success dark:border-success/70 dark:hover:bg-success/15"
+          className="min-w-0 gap-1 px-2 text-success"
           disabled={!valid || busy}
           title={t("hp.healHint")}
           onClick={() => void apply(1)}

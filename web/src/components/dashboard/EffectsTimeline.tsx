@@ -27,8 +27,11 @@ import type { BuffEffect } from "@/types/buffs";
 import { AddEffect } from "./AddEffect";
 import { EditBuffForm } from "./BuffForms";
 
-/** The label column, then one column per turn of the window. */
-const LABEL_COLUMN = "clamp(10rem, 13vw, 15rem)";
+/**
+ * The label column, then one column per turn of the window. At 1280 it holds the uppercase section
+ * label, the add button and the "+N" expander in French ("EFFETS", "Ajouter").
+ */
+const LABEL_COLUMN = "clamp(12rem, 15vw, 16rem)";
 
 /** Effect rows shown at rest; more than this and an expander shows the rest (ADR 0017 step 6). */
 const REST_ROWS = 3;
@@ -105,7 +108,7 @@ export function EffectsTimeline() {
             className="sticky top-0 z-10 flex h-full items-center gap-2 bg-card"
             style={{ gridColumn: 1, gridRow: 1 }}
           >
-            <span className="text-title">{t("effects.title")}</span>
+            <span className="section-label">{t("effects.title")}</span>
             <AddEffect />
             {hidden > 0 && (
               <Button
@@ -346,7 +349,7 @@ function EffectRow({
       {span.past && (
         <div
           aria-hidden
-          className="h-0.5 self-center rounded-full bg-neu-700"
+          className="h-0.5 self-center rounded-full bg-input"
           style={place(span.past, row)}
         />
       )}
@@ -359,7 +362,7 @@ function EffectRow({
               : lastTurn
                 ? "bg-warning/20 text-warning ring-1 ring-warning ring-inset"
                 : b.duration > 0
-                  ? "bg-amb-800 text-amb-200 ring-1 ring-amb-600 ring-inset"
+                  ? "bg-selected text-amb-200 ring-1 ring-tint/70 ring-inset"
                   : "text-amb-200",
             span.overflows &&
               "[mask-image:linear-gradient(to_right,black_75%,transparent)]",
@@ -451,7 +454,7 @@ function ItemPowerRow({
             "flex h-5 min-w-0 items-center gap-1 overflow-hidden rounded-full px-2 text-label whitespace-nowrap",
             // A filled pill like a timed buff's, but a softer fill and no counter: it lasts while
             // its trigger holds, so the pill runs to the edge and fades out there.
-            "bg-amb-800/60 text-amb-200 ring-1 ring-amb-600/60 ring-inset",
+            "bg-selected/60 text-amb-200 ring-1 ring-tint/40 ring-inset",
             span.overflows &&
               "[mask-image:linear-gradient(to_right,black_75%,transparent)]",
           )}
@@ -479,7 +482,7 @@ function Pips({ left, total }: { left: number; total: number }) {
           data-testid={i < left ? "pip-left" : "pip-used"}
           className={cn(
             "size-2 rotate-45 rounded-[1px]",
-            i < left ? "bg-amb-400" : "border border-amb-600",
+            i < left ? "bg-tint" : "border border-tint",
           )}
         />
       ))}

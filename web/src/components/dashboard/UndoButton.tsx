@@ -53,7 +53,6 @@ export function UndoButton() {
 
   return (
     <Button
-      variant="outline"
       size="sm"
       disabled={disabled}
       title={label}

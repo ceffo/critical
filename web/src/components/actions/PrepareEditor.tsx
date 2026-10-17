@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSpellName } from "@/i18n/spellName";
 import { splitPrepared } from "@/lib/prepareDraft";
+import { cn } from "@/lib/utils";
 import type { LevelLimit, SpellbookEntry } from "@/types/spells";
 
 interface Props {
@@ -71,7 +72,7 @@ export function PrepareEditor({
       aria-label={t("spellSlots.prepareTitle")}
     >
       <section
-        className="flex min-w-0 flex-col gap-2 rounded-lg bg-neu-900 p-3"
+        className="flex min-w-0 flex-col gap-2 rounded-lg bg-raised p-3"
         aria-label={t("spellSlots.spellbook")}
       >
         <h3 className="section-label">{t("spellSlots.spellbook")}</h3>
@@ -85,7 +86,7 @@ export function PrepareEditor({
           {matches.map((s) => (
             <li
               key={s.id}
-              className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-background"
+              className="flex items-center justify-between gap-2 rounded px-2 py-1 hover:bg-raised-hover"
             >
               <span className="min-w-0 text-body break-words">
                 <span className="mr-2 text-label text-muted-foreground">
@@ -95,7 +96,6 @@ export function PrepareEditor({
               </span>
               <Button
                 size="xs"
-                variant="secondary"
                 aria-label={t("spellSlots.add", { name: label(s) })}
                 onClick={() => setDraft((d) => [...d, s.id])}
               >
@@ -112,7 +112,7 @@ export function PrepareEditor({
       </section>
 
       <section
-        className="flex min-w-0 flex-col gap-2 rounded-lg bg-neu-900 p-3"
+        className="flex min-w-0 flex-col gap-2 rounded-lg bg-raised p-3"
         aria-label={t("spellSlots.draft")}
       >
         <h3 className="section-label">{t("spellSlots.draft")}</h3>
@@ -147,9 +147,7 @@ export function PrepareEditor({
                   {t("spellSlots.level", { level })}
                 </h4>
                 <Badge
-                  variant={
-                    items.length > maxOf(level) ? "destructive" : "secondary"
-                  }
+                  className={cn(items.length > maxOf(level) && "text-danger")}
                 >
                   {t("spellSlots.preparedCount", {
                     count: items.length,
@@ -161,7 +159,7 @@ export function PrepareEditor({
                 {items.map(({ entry, index }) => (
                   <li
                     key={index}
-                    className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-background"
+                    className="flex items-center justify-between gap-2 rounded px-2 py-0.5 hover:bg-raised-hover"
                   >
                     <span className="min-w-0 text-body break-words">
                       {label(entry)}
@@ -185,16 +183,17 @@ export function PrepareEditor({
           );
         })}
         <div className="mt-auto flex justify-end gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onCancel}
-            disabled={busy}
-          >
+          <Button size="sm" onClick={onCancel} disabled={busy}>
             {t("spellSlots.cancel")}
           </Button>
-          <Button size="sm" onClick={() => onSave(draft)} disabled={busy}>
-            {t("spellSlots.save")}
+          <Button
+            size="sm"
+            title={t("spellSlots.save")}
+            aria-label={t("spellSlots.save")}
+            onClick={() => onSave(draft)}
+            disabled={busy}
+          >
+            {t("spellSlots.saveShort")}
           </Button>
         </div>
       </section>

@@ -36,7 +36,7 @@ player is doing. Responsive from 1280 to 2560 CSS px at full width, no horizonta
 1024 (ADR 0009 step 3), fixed 16px root. On the ground, padded 12 px, every zone is a card
 (`zone-card`: `bg-surface`, 1 px outline, 10 px radius) 12 px from the next; **no rule or separator
 line** anywhere, inside a card grouping is by spacing, a `section-label` (11 px, uppercase,
-letter-spaced, muted) or a `bg-neu-900` tone step. Type uses only `text-label` / `text-body` /
+letter-spaced, full ink) or the raised tone step (`bg-raised`). Type uses only `text-label` / `text-body` /
 `text-title` / `text-key` / `text-headline` / `text-hero` (ADR 0017 step 2, `text-hero` from ADR
 0022 step 3.4: the turn number, a result total, the XP total). **No cut text** (ADR 0022 step 1):
 no `truncate` / `text-ellipsis` / `line-clamp` on important text; `layout.spec` checks the shell's
@@ -142,7 +142,7 @@ flowchart TD
   and the rules below. Use the
   roles (`tint` for primary accents, `text-highlight` / `bg-highlight-fill text-on-highlight` for
   the secondary, `text-magic` for spells, `danger` / `success` / `warning`, `on-accent` as text on
-  any fill, `bg-surface`, `bg-neu-900`, `text-ink-muted`, `shadow-float` for popovers only) or the
+  any fill, `bg-surface`, `bg-raised`, `text-ink-muted`, `shadow-float` for popovers only) or the
   shadcn names mapped onto them, never raw colours and never a ramp step for meaningful text. The
   unit test (`lib/theme.test.ts`, arithmetic in `lib/wcag.ts`) holds every theme in each of its
   modes to ADR 0026 steps 1-3: WCAG AA text on page, card and raised, card on page ΔL ≥ .10, raised
@@ -207,7 +207,7 @@ flowchart TD
   item counts), so voiding it shows the arrow back.
 - Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a grid row: the
   name (wrapping, never cut), behaviour and count, dice, Roll (it has dice) or Use, through
-  `stores/roll.ts` `spendItem`; "Manage the inventory" focuses the Inventory activity.
+  `stores/roll.ts` `spendItem`; "Manage" (tooltip "Manage the inventory") focuses the Inventory activity.
 - Skills tab (`SkillsTab.tsx`): PROFICIENCIES and BARD SKILLS with their column headers as section
   labels (ADR 0022 step 4.2); one row-button per skill, the name wrapping, never cut.
 - Inventaire workspace (`InventoryPanel.tsx`): the Objets card, one grid row per item: name with
@@ -250,7 +250,7 @@ flowchart TD
   All, the school as a tooltip; infinite scroll by 200-row pages; the selected row tinted with a
   tint bar on its left). The right card is the detail, scrolling on its own when too short: the name
   (`text-headline`, wrapping, never cut) and meta line; the stats as tiles on the raised tone
-  (`bg-neu-900`, as many per row as fit at 7.5rem: section label, value at the Bard's level, the raw
+  (`bg-raised`, as many per row as fit at 7.5rem: section label, value at the Bard's level, the raw
   text dimmed under it); the cast box ("AT LEVEL 15", then one row per dice: the damage a cast rolls
   when the spell DTO serves one (`damage`, "Damage 5 × 1d4+1 force", one instance goes to the
   composer), its exposure (`exposure`, one row per exposure mode: "Exposure (Within 10 ft) 2d4
@@ -335,7 +335,7 @@ flowchart TD
   player's language (`apiError.*`), else the server text verbatim.
 - The journal groups entries by the turn the server stamped (`lib/groupByRound.ts`); the current
   turn always has a group. Display helpers live in `lib/format.ts` (no game rules).
-- Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`) and sit in
+- Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`, on the card with the field edge) and sit in
   `min-w-0` grid cells so they never overflow their card.
 
 ## API Consumption Pattern
@@ -409,8 +409,48 @@ export const useHpStore = create<HpStore>((set) => ({
 ## shadcn/ui Usage
 
 - Use `Card`, `CardContent`, `CardHeader` for panel sections
-- Use `Badge` for buff tags and spell slot indicators
-- Use `Button` with `variant="outline"` for secondary actions, default for primary
+- Use `Badge` for buff tags and spell slot indicators (it is the chip family below)
+- `Button` has two looks (ADR 0027 step 3.4): `variant="main"`, filled with the tint, for the one
+  every-turn action of a zone (Attack, Next turn), and **quiet** (the default): no fill, the field
+  edge (`--input`, 3:1 on the card, so it reads on the card, the raised step and the selected tone
+  alike), the hover tone on hover; a pressed toggle (`aria-pressed`) is the chosen chip. `ghost` is
+  for icon-only buttons in a row or toolbar, `destructive` a quiet button in danger ink. A button
+  with nothing to submit is disabled and looks it, the same in every look: no fill, muted ink, a
+  dashed edge (none on `ghost`); never a faded main button.
+- **One action word per caption** (ADR 0027 step 3): the detail goes in `title` and `aria-label`
+  (`spellSlots.prepare` "Prepare spells" there, `spellSlots.prepareShort` "Prepare" on the button).
+  "Next turn" and "Long rest" are the fixed terms of step 3.2. Enforced by
+  `components/sharedPieces.test.ts` (both languages, buttons without a `role`).
+- Run `npx shadcn@latest add <component>` to install new components into `src/components/ui/`
+
+## Shared pieces
+
+One of each, used everywhere ([ADR 0026](adr/0026-contrast-ladder-raised-stage-four-themes.md)
+step 5); the utilities live in `index.css`, the colour tokens in its `@theme inline` block:
+
+- **Raised step**: `bg-raised` (`neu-900`) for tiles, blocks, row stripes, forms and tracks;
+  `bg-raised-hover` (`neu-800`) only as the hover of a row or chip. No opacity variants.
+- **Small marks** that must be seen on a card (an empty slot dot, the timeline's past line, the
+  journal's drag handle, a level progress underline): `bg-input`, the field edge (3:1).
+- **Chip** (step 5.3): `chip` (raised fill, no outline; one tone further, `neu-800`, when it sits
+  on a raised tile or row), `chip-chosen` (a segmented thumb, the chosen die, a chosen option: the
+  selected tone with a tint outline) and `chip-max` (gold fill, only for a crit or a maximum).
+  Bonus and dice chips are neutral.
+- **Selection mark** (step 5.1): `selected`, the selected tone, ink text and a 3 px tint bar on
+  the left: the rail's current activity, the journal's selected entry, the lookup's selected spell.
+  `bg-selected` is the bare tone (the weapon in hand, with a 2 px tint border; a just-added row).
+- **Latest mark** (step 5.2): `latest`, a 2 px tint outline on the result card while it shows the
+  latest result (not on an older entry picked in the journal).
+- **Fields** (step 5.7): on the card (`bg-surface`) with the field edge (`border-input`): `ui/input`,
+  `ui/select` and `fieldClass` for native inputs and selects.
+- **Headings** (step 5.6): card and section titles are `section-label`; `text-title` is for names
+  (the character, a spell, a buff).
+- The pieces set their own fill, radius and (but `chip`) ink: never add a `bg-*`, `rounded-*` or
+  text colour class to one, pick one piece per state (`on ? "chip-chosen" : "chip"`).
+  `components/sharedPieces.test.ts` fails when a component brings back a retired variant
+  (`bg-neu-*`, `bg-amb-800/900`, `bg-muted`, `bg-background`, `ring-amb-*`, `border-amb-*`,
+  `disabled:opacity-*`, the `outline` / `secondary` / `default` button variants) or a heading in
+  `text-title`.
 - Run `npx shadcn@latest add <component>` to install new components into `src/components/ui/`
 
 ## Display Conventions

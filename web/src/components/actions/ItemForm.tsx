@@ -130,7 +130,7 @@ export function ItemForm({
     <form
       onSubmit={(e) => void submit(e)}
       noValidate
-      className="flex flex-col gap-2 rounded-lg bg-neu-900/50 p-3"
+      className="flex flex-col gap-2 rounded-lg bg-raised p-3"
       aria-label={
         editing
           ? t("items.form.editTitle", {
@@ -229,7 +229,7 @@ export function ItemForm({
         <Button type="submit" size="sm" disabled={busy}>
           {editing ? t("items.form.save") : t("items.form.add")}
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onCancel}>
+        <Button type="button" size="sm" onClick={onCancel}>
           {t("items.form.cancel")}
         </Button>
       </div>

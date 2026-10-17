@@ -50,7 +50,6 @@ export function RedoButton() {
 
   return (
     <Button
-      variant="outline"
       size="sm"
       disabled={disabled}
       title={label}

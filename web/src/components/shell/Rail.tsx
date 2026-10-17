@@ -47,8 +47,8 @@ export function Rail({
             className={cn(
               "flex flex-col items-center gap-1 rounded-lg px-0.5 py-2.5 text-center text-label break-words transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5",
               on
-                ? "bg-amb-900 font-medium text-tint"
-                : "text-muted-foreground hover:bg-neu-900/60 hover:text-foreground",
+                ? "selected font-medium"
+                : "text-muted-foreground hover:bg-raised-hover hover:text-foreground",
             )}
             onClick={() => onSelect(a)}
           >

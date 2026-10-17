@@ -26,7 +26,7 @@ export function ChargeCards() {
         return (
           <div
             key={b.id}
-            className="flex min-w-0 items-center gap-3 rounded-lg border border-amb-700 bg-amb-900 px-3 py-2"
+            className="flex min-w-0 items-center gap-3 rounded-lg bg-raised px-3 py-2"
             role="group"
             aria-label={name}
             data-testid="charge-card"
@@ -56,7 +56,6 @@ export function ChargeCards() {
             </div>
             <Button
               size="sm"
-              variant="secondary"
               disabled={busy}
               aria-label={t("moi.absorbLabel", { name })}
               onClick={() => void run(() => triggerBuff(b.id))}

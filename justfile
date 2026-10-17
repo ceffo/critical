@@ -421,3 +421,11 @@ sync-main:
     PY
     rm -f "$before"
     git log --oneline -1
+
+# Brand placement design round (docs/design/brand-placement/): the decided header drawn in each
+# placement over the real app (French, picked colours), on the same e2e stack and seeded table as
+# `ui-mockups`. Fails on cut text, a page scroll, a header over 120 px or a hidden wordmark.
+# Not part of `just validate` nor `just e2e`. Needs `just e2e-install` once.
+ui-brand: build-api
+    cd web && node e2e/check-browser.mjs
+    cd web && npx playwright test -c playwright.ui-review.config.ts brand.spec.ts

@@ -1,30 +1,20 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Page } from "@playwright/test";
 import { test, expect } from "../e2e/fixtures";
-import { attackForm, chooseSetting, logEntry } from "../e2e/helpers";
-import { clippedText } from "../e2e/noClip";
+import { chooseSetting } from "../e2e/helpers";
 import {
   OPTIONS,
   hex,
   measured,
   pairs,
-  themeCss,
   wcagRatio,
   type Option,
   type Theme,
 } from "./mockup-tokens";
-import {
-  VIEWPORTS,
-  focus,
-  journal,
-  recordHpT,
-  seedTable,
-  translator,
-  webDir,
-  type T,
-} from "./table";
+import { annotate, audit, paint, seedMockTable } from "./paint";
+import { VIEWPORTS, focus, translator, webDir, type T } from "./table";
 import { linear } from "./wcag";
 
 /**
@@ -45,7 +35,6 @@ import { linear } from "./wcag";
 
 const repo = path.resolve(webDir, "..");
 const docs = path.join(repo, "docs", "design", "ui-review", "mockups");
-const cssDir = path.join(docs, "css");
 /** The PNGs to commit; `ui-review/to-webp.mjs` turns them into lossless WebP in docs/…/mockups/shots/. */
 const committed = path.join(webDir, "e2e-results", "ui-mockups", "commit");
 const scratch = path.join(webDir, "e2e-results", "ui-mockups");
@@ -54,47 +43,6 @@ const SCREENS = ["act-weapons", "lookup", "inventory"] as const;
 type Screen = (typeof SCREENS)[number];
 /** Options whose French Act screen is committed too: they move geometry (bands), so FR length matters. */
 const FR_COMMITTED = new Set(["o13-raised-stage"]);
-
-async function optionCss(o: Option): Promise<string> {
-  const parts = await Promise.all(
-    o.css.map((name) => readFile(path.join(cssDir, `${name}.css`), "utf8")),
-  );
-  return parts.join("\n");
-}
-
-/** Select the theme's base ambiance and mode in the app, then paint the option over it. */
-async function paint(page: Page, t: T, o: Option, theme: Theme) {
-  await chooseSetting(page, t(`settings.mode.${theme.mode}`));
-  await chooseSetting(page, t(`settings.ambiances.${theme.base}`));
-  const css = o.id === "today" ? "" : themeCss(theme) + (await optionCss(o));
-  await page.evaluate(
-    ({ css, id }) => {
-      let el = document.getElementById("mock-overlay");
-      if (!el) {
-        el = document.createElement("style");
-        el.id = "mock-overlay";
-      }
-      document.head.appendChild(el); // last, after the app's styles
-      el.textContent = css;
-      if (css) document.documentElement.dataset.mockTheme = id;
-      else delete document.documentElement.dataset.mockTheme;
-    },
-    { css, id: theme.id },
-  );
-}
-
-/** Mark the header's last-result chip with the verdict the result card shows (CSS can't read text). */
-async function annotate(page: Page) {
-  await page.evaluate(() => {
-    const chip = document.querySelector("[data-testid=last-result-chip]");
-    const verdict = document.querySelector("[data-testid=verdict]");
-    if (!chip || !verdict) return;
-    const good = verdict.classList.contains("text-success");
-    const bad = verdict.classList.contains("text-danger");
-    if (good || bad)
-      (chip as HTMLElement).dataset.mockVerdict = good ? "good" : "bad";
-  });
-}
 
 async function show(page: Page, t: T, screen: Screen) {
   if (screen === "act-weapons") {
@@ -109,35 +57,6 @@ async function show(page: Page, t: T, screen: Screen) {
   }
   await annotate(page);
   await page.waitForTimeout(150); // colour transitions
-}
-
-/** The no-cut audit of the whole page, plus "the page scrolls". */
-async function audit(page: Page): Promise<string[]> {
-  const cut = await page.locator("body").evaluate(clippedText);
-  const scrolls = await page.evaluate(
-    () =>
-      document.documentElement.scrollHeight >
-      document.documentElement.clientHeight + 1,
-  );
-  return scrolls ? [...cut, "the page scrolls"] : cut;
-}
-
-/** Damage, undone, then a fresh attack: the journal shows an undone row, the card the attack. */
-async function seedMockTable(page: Page, apiUrl: string, t: T) {
-  await seedTable(page, apiUrl);
-  await recordHpT(page, t, "damage", 60, "Dragon breath");
-  await expect(logEntry(page, "Dragon breath")).toBeVisible();
-  await page.getByTestId("undo").click();
-  await expect(journal(page, t).getByRole("listitem").first()).toHaveAttribute(
-    "data-status",
-    "voided",
-  );
-  await attackForm(page)
-    .getByRole("button", { name: "Attack", exact: true })
-    .click();
-  await expect(
-    journal(page, t).getByRole("listitem").first(),
-  ).not.toHaveAttribute("data-status", "voided");
 }
 
 const fmt = (x: number) => x.toFixed(2);

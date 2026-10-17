@@ -1,0 +1,41 @@
+# Brand placement round: where "Critical!" sits in the header (2026-10-17)
+
+Where the mark and the "Critical!" wordmark go in the header card. The header already has the
+changes you decided (ADR 0027 step 4): "TOUR" over its number, the initiative under "Tour suivant"
+as the big number, 5 turn columns, the last result on one line. Only the brand moves between
+the options. Everything is in French, in the picked colours (contrast ladder + raised stage,
+ADR 0026), on the real app and data.
+
+**Picked:** _not yet_.
+
+## The three placements
+
+- **A · Left, first in the band.** The brand opens the header, as today, now with its wordmark.
+- **B · Left, aligned on the character card.** The brand and the turn fill a cell exactly as wide
+  as the character card under it, so "Tour suivant" starts on the rail's edge. Header and body share
+  one grid.
+- **C · Right, last in the band.** The header opens on the turn; the brand closes it at the far
+  right, in the spare space after the last result.
+
+| | 1440x900 | 1707x1300 |
+|---|---|---|
+| A | ![](shots/a-left--arcane-dark-1440x900.png) | ![](shots/a-left--arcane-dark-1707x1300.png) |
+| B | ![](shots/b-column--arcane-dark-1440x900.png) | ![](shots/b-column--arcane-dark-1707x1300.png) |
+| C | ![](shots/c-right--arcane-dark-1440x900.png) | ![](shots/c-right--arcane-dark-1707x1300.png) |
+
+Light (Arcane light, 1440x900): [A](shots/a-left--arcane-light-1440x900.png),
+[B](shots/b-column--arcane-light-1440x900.png), [C](shots/c-right--arcane-light-1440x900.png).
+
+## How these were made
+
+- `just ui-brand` (`web/ui-review/brand.spec.ts`) starts the app on the e2e stack with the mock-up
+  round's seeded table, switches to French, paints the raised-stage colours, and opens Act · Weapons.
+  It then draws the header (from [`header.css`](header.css) and the values of the real header: turn,
+  initiative, effects, last result) in front of the real one, which it hides. Dice values change
+  from run to run.
+- The character card has ADR 0027 step 5.1's width (`clamp(280px, 21vw, 384px)`), so B aligns on
+  the width it will have. Its saves heading and the wrapped save name at 1440 are that item's work,
+  not this round's.
+- Every shot is checked: no cut text (ADR 0022 step 1), no page scroll, the header at most 120 px
+  (ADR 0022 step 3.1), the wordmark shown in full. The run fails otherwise.
+- App code is untouched.

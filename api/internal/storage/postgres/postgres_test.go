@@ -5,8 +5,11 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"net"
 	"testing"
+	"time"
 
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -211,4 +214,74 @@ func TestNewDB_CapsThePool(t *testing.T) {
 	t.Cleanup(func() { _ = pool.Close() })
 	newDB(pool)
 	assert.Equal(t, maxOpenConns, pool.Stats().MaxOpenConnections)
+}
+
+// poolRecorder records what configurePool sets.
+type poolRecorder struct {
+	maxOpen int
+	maxIdle time.Duration
+}
+
+func (p *poolRecorder) SetMaxOpenConns(n int)              { p.maxOpen = n }
+func (p *poolRecorder) SetConnMaxIdleTime(d time.Duration) { p.maxIdle = d }
+
+// Idle connections are closed well before the fly cluster's one-hour idle stop: held forever they
+// would keep the shared cluster running, and one held across a stop would be dead when reused.
+func TestConfigurePool_ClosesIdleConnectionsBeforeTheClusterStops(t *testing.T) {
+	var p poolRecorder
+	configurePool(&p)
+	assert.Equal(t, maxOpenConns, p.maxOpen)
+	assert.Positive(t, p.maxIdle)
+	assert.Less(t, p.maxIdle, time.Hour)
+}
+
+// pings answers each call with the next error of errs (nil once they run out) and counts the calls.
+type pings struct {
+	errs  []error
+	calls int
+}
+
+func (p *pings) ping(context.Context) error {
+	p.calls++
+	if len(p.errs) == 0 {
+		return nil
+	}
+	err := p.errs[0]
+	p.errs = p.errs[1:]
+	return err
+}
+
+// A database that is still starting (connection refused, then "the database system is starting
+// up") is waited for: the server does not exit on its first failed connection.
+func TestWaitForDatabase_RetriesWhileTheDatabaseStarts(t *testing.T) {
+	refused := &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
+	starting := &pq.Error{Code: cannotConnectNow, Message: "the database system is starting up"}
+	p := &pings{errs: []error{refused, starting}}
+	require.NoError(t, waitForDatabase(context.Background(), p.ping, time.Millisecond))
+	assert.Equal(t, 3, p.calls)
+}
+
+// An error waiting cannot fix (a wrong password) is returned at once.
+func TestWaitForDatabase_FailsFastOnAnotherPostgresError(t *testing.T) {
+	auth := &pq.Error{Code: "28P01", Message: "password authentication failed"}
+	p := &pings{errs: []error{auth}}
+	err := waitForDatabase(context.Background(), p.ping, time.Millisecond)
+	require.ErrorIs(t, err, auth)
+	assert.Equal(t, 1, p.calls)
+}
+
+// The wait is bounded: when the context ends, the last error is returned.
+func TestWaitForDatabase_GivesUpWhenTheContextEnds(t *testing.T) {
+	refused := &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
+	ctx, cancel := context.WithCancel(context.Background())
+	p := &pings{errs: []error{refused, refused, refused, refused}}
+	ping := func(c context.Context) error {
+		if p.calls == 2 {
+			cancel()
+		}
+		return p.ping(c)
+	}
+	err := waitForDatabase(ctx, ping, time.Millisecond)
+	require.ErrorIs(t, err, refused)
+	assert.Equal(t, 3, p.calls)
 }

@@ -9,8 +9,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	"github.com/lib/pq" // PostgreSQL driver
 
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
@@ -44,19 +46,62 @@ type DB struct {
 }
 
 // Open connects to the PostgreSQL database at dsn (CRITICAL_DSN, a PostgreSQL connection
-// string or URL) and checks the connection. It runs no migration and writes nothing: those are
-// the startup steps the composition root drives.
+// string or URL) and checks the connection, waiting up to connectWait for a database that is still
+// starting. It runs no migration and writes nothing: those are the startup steps the composition
+// root drives.
 func Open(dsn string) (*DB, error) {
 	pool, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)
 	}
-	if err := pool.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), connectWait)
+	defer cancel()
+	if err := waitForDatabase(ctx, pool.PingContext, connectRetryEvery); err != nil {
 		_ = pool.Close()
 		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
 	return newDB(pool), nil
 }
+
+// connectWait is how long Open waits for the database to accept a connection, retrying every
+// connectRetryEvery. The fly cluster stops when idle (ADR 0024 step 2) and the first connection to
+// its Flycast address starts it: until PostgreSQL is up, connections are refused or answered
+// "the database system is starting up". A server booting meanwhile waits instead of exiting; its
+// HTTP listener (and so its health check) comes up once the database answers, and fly keeps waiting
+// for the check during a deploy.
+const (
+	connectWait       = 90 * time.Second
+	connectRetryEvery = 2 * time.Second
+)
+
+// waitForDatabase calls ping until it succeeds, retrying every retryEvery while the error is one
+// a starting database gives (a network error, SQLSTATE 57P03 cannot_connect_now). Any other
+// PostgreSQL error (a wrong password, a missing database) is returned at once: waiting cannot fix
+// it. When ctx ends first, it returns the last ping error.
+func waitForDatabase(ctx context.Context, ping func(context.Context) error, retryEvery time.Duration) error {
+	for attempt := 1; ; attempt++ {
+		err := ping(ctx)
+		if err == nil {
+			return nil
+		}
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code != cannotConnectNow {
+			return err
+		}
+		if ctx.Err() != nil {
+			return fmt.Errorf("gave up after %d attempts: %w", attempt, err)
+		}
+		slog.Warn("postgres: database not reachable yet, retrying", "attempt", attempt, "error", err)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("gave up after %d attempts: %w", attempt, err)
+		case <-time.After(retryEvery):
+		}
+	}
+}
+
+// cannotConnectNow is the SQLSTATE of "the database system is starting up".
+const cannotConnectNow = "57P03"
 
 // maxOpenConns caps each server's pool. Every writer waiting on the writer lock holds a connection,
 // so without a cap a burst of writes would open one connection each. The fly cluster is shared with
@@ -67,8 +112,26 @@ func Open(dsn string) (*DB, error) {
 // server: one writer runs at a time, reads are short, and a request over the cap waits in the pool.
 const maxOpenConns = 10
 
+// maxIdleTime closes a pooled connection left unused that long. The fly cluster stops after an
+// hour with no open connection (ADR 0024 step 2): idle connections held forever would keep it, and
+// the other app's database, running for good. It also means a connection is never reused across a
+// stop of the cluster for lack of traffic, so the first request after one opens a new connection
+// instead of failing on a dead one.
+const maxIdleTime = 5 * time.Minute
+
+// poolSettings is the part of *sql.DB newDB configures.
+type poolSettings interface {
+	SetMaxOpenConns(n int)
+	SetConnMaxIdleTime(d time.Duration)
+}
+
+func configurePool(p poolSettings) {
+	p.SetMaxOpenConns(maxOpenConns)
+	p.SetConnMaxIdleTime(maxIdleTime)
+}
+
 func newDB(pool *sql.DB) *DB {
-	pool.SetMaxOpenConns(maxOpenConns)
+	configurePool(pool)
 	d := &DB{
 		pool: pool,
 		begin: func(ctx context.Context, opts *sql.TxOptions) (Tx, error) {

@@ -50,3 +50,6 @@ api/tmp_schema.sql
 
 # local
 .local/
+
+# Database dumps (just db-backup): private book data, never committed (ADR 0024 step 7)
+.backups/

@@ -44,14 +44,16 @@ check-ci-skip:
     scripts/test-ci-skip-slow.sh
 
 # The release version's, the release build's, the staging deploy's and the promotion's scripts (ADR 0024
-# steps 3, 4, 7, 8.3 and 10.4), offline: docker, fly and gh stubbed, a local rulebooks repo and a generated
-# key, fixture git repos (scripts/test-release-version.sh, scripts/test-release-scripts.sh,
-# scripts/test-staging-deploy.sh, scripts/test-promotion.sh).
+# steps 3, 4, 7, 8.3 and 10.4), and the backup and restore drill's (step 9), offline: docker, fly, gh and the
+# PostgreSQL tools stubbed, a local rulebooks repo and a generated key, fixture git repos
+# (scripts/test-release-version.sh, scripts/test-release-scripts.sh, scripts/test-staging-deploy.sh,
+# scripts/test-promotion.sh, scripts/test-db-backup.sh).
 check-release-scripts:
     scripts/test-release-version.sh
     scripts/test-release-scripts.sh
     scripts/test-staging-deploy.sh
     scripts/test-promotion.sh
+    scripts/test-db-backup.sh
 
 # Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
 # says what it does and why; the link to the work item lives in commits and PRs only
@@ -281,6 +283,21 @@ fly-db-proxy cluster port="":
 # Print the row count of every table of one database of a fly PostgreSQL cluster, e.g. `just fly-db-counts tournesol-db critical_prod`
 fly-db-counts cluster db:
     scripts/fly-db-counts.sh {{cluster}} {{db}}
+
+# ADR 0024 step 9, docs/deploy.md "Backups". Operator only: fly credentials, and the database user's password
+# in PGPASSWORD or ~/.config/critical/critical_<env>.password. pg_dump (custom format, PostgreSQL 17 or newer)
+# through `fly proxy` into .backups/<env>-<UTC time>/ (gitignored, mode 600) with the table counts at dump
+# time beside it. Prints the folder and sizes, never the password or any data. E.g. `just db-backup prod`.
+# Dump one environment's database (staging or prod) into the gitignored .backups/
+db-backup env:
+    scripts/db-backup.sh {{env}}
+
+# Local only, never touches fly: restores a dump (default: the newest prod one) into a scratch database of a
+# throwaway compose PostgreSQL (own project and port, never `just dev`'s), compares every table's row count with
+# the dump-time counts, drops the scratch database and the compose project. Fails unless every table matches.
+# Prove a dump restores
+db-restore-drill dump="":
+    scripts/db-restore-drill.sh {{dump}}
 
 # `mark` writes one action-log entry (a 1d20 roll) and prints its id, `check <id>` fails unless it is
 # still there; run one before and one after a restart or redeploy. Refuses non-staging apps.

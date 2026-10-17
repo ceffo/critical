@@ -134,6 +134,12 @@
   --float-shadow:
     0 0 0 1px var(--neu-600), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
 
+  /*
+   * The sub-band tone (ADR 0026 step 6.3): a group inside a card, ink at 4 % over the card in
+   * light, 5.5 % in dark (below). A tone, never a line (step 6.4).
+   */
+  --sub-band: color-mix(in oklab, var(--ink) 4%, transparent);
+
   /* shadcn variables, derived from the palette tokens. */
   --background: var(--ground);
   --foreground: var(--ink);
@@ -162,6 +168,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode's sub-band, over the darker card (ADR 0026 step 6.3). */
+:root.dark {
+  --sub-band: color-mix(in oklab, var(--ink) 5.5%, transparent);
 }
 
 /*
@@ -289,6 +300,7 @@
   --color-raised-hover: var(--neu-800);
   /* The selected tone (step 1.1): under the selection mark, a chosen chip, the weapon in hand. */
   --color-selected: var(--amb-800);
+  --color-sub-band: var(--sub-band);
   --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
   /* The brand face (ADR 0020 step 5): the wordmark only. */
   --font-display: "Cinzel Variable", "Cinzel", "Inter Variable", serif;

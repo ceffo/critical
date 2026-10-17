@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkle } from "@phosphor-icons/react";
+import { Campfire, Sparkle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { useFilStore } from "@/stores/fil";
@@ -18,6 +18,7 @@ import {
   filterEntries,
   rowValue,
   turnLabel,
+  turnMarker,
   type LogFilter,
 } from "@/lib/filCard";
 import { cn } from "@/lib/utils";
@@ -32,10 +33,12 @@ const FILTERS: LogFilter[] = ["all", "rolls"];
 
 /**
  * The journal (GET /api/log, ADR 0022 step 5): a head with the All / Rolls filter, the entry count,
- * Undo and Redo, then the entries grouped by turn, newest first, one line each in the columns
- * turn · value · icon · entry · time. The turn label sits beside the first entry of its turn; the
- * current turn is tinted. A click on an entry shows it in the result panel. The log is a stack:
- * Undo pops the newest entry, values are never edited (and there is no note to add).
+ * Undo and Redo, then the entries grouped by turn, newest first, one 22 px line each: value · icon
+ * · entry with the time right after it (ADR 0027 step 9). A narrow marker ("T3", an icon out of
+ * combat) sits beside a turn's first entry, the current turn's in the tint; turn blocks touch and
+ * alternate between the card's tone and the sub-band. A click on an entry shows it in the result
+ * panel. The log is a stack: Undo pops the newest entry, values are never edited (and there is no
+ * note to add).
  */
 export function CombatLog() {
   const { t } = useTranslation();
@@ -87,80 +90,106 @@ export function CombatLog() {
           <RedoButton />
         </span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 pb-3">
-        {groups.map((g) => (
-          <section
-            key={g.key}
-            className={cn(
-              // The turn column, then the turn's entries. A group is marked by its label and, for
-              // the current turn, a chip; never a rule between groups (ADR 0022 step 4.1).
-              "grid grid-cols-[8.5rem_minmax(0,1fr)] items-start gap-x-3 rounded-lg px-2 py-0.5",
-            )}
-            aria-label={turnLabel(t, g.round)}
-            data-current={g.current}
-          >
-            <h3 className="section-label flex min-h-7 flex-wrap items-center gap-x-1.5">
-              <span className={cn(g.current && "text-tint")}>
-                {turnLabel(t, g.round)}
-              </span>
-              {g.current && (
-                <span className="chip px-1.5">{t("log.current")}</span>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
+        {groups.map((g, i) => {
+          const marker = turnMarker(t, g.round, g.current);
+          return (
+            <section
+              key={g.key}
+              className={cn(
+                // The narrow turn marker, then the turn's entries. Turn blocks touch; every other
+                // one is on the sub-band tone, never a rule between them (ADR 0027 step 9.1).
+                "grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-1 px-2",
+                i % 2 === 1 && "bg-sub-band",
               )}
-            </h3>
-            {g.entries.length === 0 ? (
-              <p className="flex min-h-7 items-center text-body text-muted-foreground">
-                {entries.length === 0
-                  ? t("log.empty")
-                  : filter === "rolls"
-                    ? t("fil.noRollsThisTurn")
-                    : t("log.nothingThisRound")}
-              </p>
-            ) : (
-              <div className="flex min-w-0 flex-col">
-                {g.transactions.map((tx) => {
-                  const rows = (
-                    <ul className="flex flex-col">
-                      {tx.map((e) => (
-                        <LogRow
-                          key={e.id}
-                          entry={e}
-                          selected={e.id === shownId}
-                          onSelect={() => select(e.id)}
-                          grouped={tx.length > 1}
-                          undoneGroup={isUndone(tx)}
-                        />
-                      ))}
-                    </ul>
-                  );
-                  if (tx.length === 1) return <div key={tx[0].id}>{rows}</div>;
-                  // One request recorded several entries (ADR 0018): framed as one unit, and
-                  // undone as one.
-                  const undone = isUndone(tx);
-                  return (
-                    <div
-                      key={tx[0].id}
-                      className={cn(
-                        "my-0.5 rounded-lg border-l-2 bg-raised",
-                        undone ? "border-input" : "border-tint",
-                      )}
-                      data-testid="log-transaction"
-                      data-undone={undone}
-                    >
-                      {undone && (
-                        <p className="px-2 pt-0.5 text-label text-danger">
-                          {t("log.status.voided")}
-                        </p>
-                      )}
-                      {rows}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        ))}
+              aria-label={turnLabel(t, g.round)}
+              data-current={g.current}
+              data-testid="journal-turn"
+            >
+              <h3
+                className={cn(
+                  "flex h-[1.375rem] items-center justify-center text-label font-semibold tabular-nums",
+                  // The current turn's one mark: its marker in the tint (ADR 0027 step 9.1).
+                  g.current ? "text-tint" : "text-muted-foreground",
+                )}
+                title={marker.full}
+                data-testid="journal-turn-marker"
+              >
+                {marker.short ? (
+                  <span aria-hidden>{marker.short}</span>
+                ) : (
+                  <Campfire aria-hidden className="size-4" />
+                )}
+                <span className="sr-only">{marker.full}</span>
+              </h3>
+              {g.entries.length === 0 ? (
+                <p className="flex min-h-[1.375rem] items-center px-2 text-body text-muted-foreground">
+                  {entries.length === 0
+                    ? t("log.empty")
+                    : filter === "rolls"
+                      ? t("fil.noRollsThisTurn")
+                      : t("log.nothingThisRound")}
+                </p>
+              ) : (
+                <div className="flex min-w-0 flex-col">
+                  {g.transactions.map((tx) => {
+                    const rows = (
+                      <ul className="flex flex-col">
+                        {tx.map((e) => (
+                          <LogRow
+                            key={e.id}
+                            entry={e}
+                            selected={e.id === shownId}
+                            onSelect={() => select(e.id)}
+                            grouped={tx.length > 1}
+                            undoneGroup={isUndone(tx)}
+                          />
+                        ))}
+                      </ul>
+                    );
+                    if (tx.length === 1)
+                      return <div key={tx[0].id}>{rows}</div>;
+                    // One request recorded several entries (ADR 0018): framed as one unit, and
+                    // undone as one.
+                    const undone = isUndone(tx);
+                    return (
+                      <div
+                        key={tx[0].id}
+                        className={cn(
+                          "rounded-md border-l-2 bg-raised",
+                          undone ? "border-input" : "border-tint",
+                        )}
+                        data-testid="log-transaction"
+                        data-undone={undone}
+                      >
+                        {undone && (
+                          <p className="px-2 pt-0.5">
+                            <VoidedTag />
+                          </p>
+                        )}
+                        {rows}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
     </section>
+  );
+}
+
+/** "Undone" as a muted tag, never red (ADR 0026 step 5.8, ADR 0027 step 9.5). */
+function VoidedTag({ className }: { className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <span
+      className={cn("chip px-1.5 text-label text-muted-foreground", className)}
+    >
+      {t("log.status.voided")}
+    </span>
   );
 }
 
@@ -201,9 +230,10 @@ function LogRow({
   return (
     <li
       className={cn(
-        // One line: value · icon · entry (the select button, on the row's subgrid), then the row
-        // action and the time. A long entry wraps inside its cell; nothing is drawn under it.
-        "group/row relative grid cursor-pointer grid-cols-[3.5rem_1.125rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-md px-2 py-1",
+        // One 22 px line (ADR 0027 step 9.2): value · icon · entry with the time right after it (the
+        // select button), then the row action at the row's end. A long entry wraps inside its row;
+        // nothing is drawn under it.
+        "group/row relative flex cursor-pointer items-start gap-x-2 rounded-md px-2 py-0.5",
         selected ? "selected" : "hover:bg-raised-hover",
       )}
       data-status={e.status}
@@ -213,23 +243,27 @@ function LogRow({
     >
       <button
         type="button"
-        className="col-span-3 grid grid-cols-subgrid items-center rounded-sm text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex min-w-0 flex-1 items-start gap-x-2 rounded-sm text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         aria-pressed={selected}
         data-testid="log-select"
         onClick={onSelect}
       >
         <span
           className={cn(
-            "text-right text-body font-semibold tabular-nums",
+            "w-10 shrink-0 text-right text-body font-semibold tabular-nums",
             voided
               ? "text-muted-foreground line-through"
               : value && VALUE_TONES[value.tone],
           )}
           data-testid={value ? (isHp ? "log-delta" : "log-value") : undefined}
+          data-tone={value && !voided ? value.tone : undefined}
         >
           {value?.text}
         </span>
-        <span className="flex text-muted-foreground" title={kindLabel}>
+        <span
+          className="flex h-[1.125rem] shrink-0 items-center text-muted-foreground"
+          title={kindLabel}
+        >
           <KindIcon aria-hidden className="size-[1.125rem]" />
           <span className="sr-only">{kindLabel}</span>
         </span>
@@ -254,34 +288,32 @@ function LogRow({
             </span>
           )}
           {voided && !(grouped && undoneGroup) && (
-            <span className="ml-2 text-label text-danger">
-              {t("log.status.voided")}
-            </span>
+            <VoidedTag className="ml-2" />
           )}
         </span>
-      </button>
-      <span className="flex items-center justify-end gap-2">
-        {!voided && diceFormula !== undefined && (
-          // On hover, on keyboard focus in the row, and on the selected row (ADR 0022 step 5.3).
-          <Button
-            size="xs"
-            variant="ghost"
-            className={cn(
-              "invisible group-hover/row:visible group-focus-within/row:visible",
-              selected && "visible",
-            )}
-            disabled={rolling}
-            title={t("dice.rerollTitle", { formula: diceFormula })}
-            data-testid="log-reroll"
-            onClick={() => void reroll(diceFormula)}
-          >
-            {t("dice.reroll")}
-          </Button>
-        )}
-        <span className="text-label text-muted-foreground tabular-nums">
+        {/* The time right after the entry text (ADR 0027 step 9.4). */}
+        <span className="shrink-0 text-label leading-[1.125rem] text-muted-foreground tabular-nums">
           {formatTime(e.createdAt, i18n.language)}
         </span>
-      </span>
+      </button>
+      {!voided && diceFormula !== undefined && (
+        // On hover, on keyboard focus in the row, and on the selected row (ADR 0022 step 5.3).
+        <Button
+          size="xs"
+          variant="ghost"
+          className={cn(
+            "h-[1.125rem] shrink-0",
+            "invisible group-hover/row:visible group-focus-within/row:visible",
+            selected && "visible",
+          )}
+          disabled={rolling}
+          title={t("dice.rerollTitle", { formula: diceFormula })}
+          data-testid="log-reroll"
+          onClick={() => void reroll(diceFormula)}
+        >
+          {t("dice.reroll")}
+        </Button>
+      )}
     </li>
   );
 }

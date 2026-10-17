@@ -15,7 +15,15 @@ timeline** was added, with a shot of the effects expanded.
 
 **Round 4 (2026-10-17):** the user said _"I feel the last result section would benifit more being
 docked to the right stacking vertically under the brand"_, so **E · brand over the last result,
-docked right** was added. Not approved yet.
+docked right** was added.
+
+**Picked (2026-10-17, user: _"yes i do"_): E.** The brand and the last result stacked in one
+column docked at the header's right edge (brand on top, both right-aligned); the timeline takes all
+the width from the initiative to that column, its 5 turn columns sharing it. Also accepted: the
+effect-name column as wide as the longest name, hidden effects included (no jump when expanding,
+names never cut), and 6 px between the brand and the last result. The developer records it in the
+header's ADR step (ADR 0027 step 4.6; it also changes step 4.5's "spare width to the right of the
+last result").
 
 ## The placements
 

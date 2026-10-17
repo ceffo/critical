@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // maxAbility is the highest ability score a buff may name (AD&D 2.5 tops
@@ -54,6 +55,18 @@ func effectiveStr(buffs []BuffEffect, base int) int {
 		return improved
 	}
 	return max(base, min(base+sum, strengthCap))
+}
+
+// effectiveScore is the score in ability a with buffs, from the sheet's
+// base. Strength is the only ability a buff raises today (ADR 0004 steps 7
+// to 9); every other ability's score in effect is the sheet's (ADR 0028
+// step 2). An effect on another ability is a new BuffEffects field read
+// here.
+func effectiveScore(buffs []BuffEffect, a charactersvc.Ability, base int) int {
+	if a == charactersvc.AbilityStr {
+		return effectiveStr(buffs, base)
+	}
+	return base
 }
 
 // improvedActive reports whether an Improved Strength is among buffs.

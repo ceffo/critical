@@ -48,3 +48,18 @@ func TestGetCharacter(t *testing.T) {
 		})
 	}
 }
+
+// Score reads each ability's own field of the sheet (distinct values, so a
+// crossed field fails) and refuses an unknown key.
+func TestCharacter_Score(t *testing.T) {
+	c := &charactersvc.Character{Str: 11, Dex: 12, Con: 13, Int: 14, Wis: 15, Cha: 16}
+	want := map[charactersvc.Ability]int{"str": 11, "dex": 12, "con": 13, "int": 14, "wis": 15, "cha": 16}
+	require.Len(t, charactersvc.Abilities, len(want))
+	for _, a := range charactersvc.Abilities {
+		got, ok := c.Score(a)
+		assert.True(t, ok, a)
+		assert.Equal(t, want[a], got, a)
+	}
+	_, ok := c.Score("luck")
+	assert.False(t, ok)
+}

@@ -14,7 +14,7 @@ import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
 import { useItemsStore } from "@/stores/items";
 import { spellId, useSpellName } from "@/i18n/spellName";
-import type { SpellSlot } from "@/types/spells";
+import type { CastTarget, SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
@@ -97,16 +97,18 @@ function SlotDots({
 
 /**
  * "Lancer" as a split button (ADR 0027 step 10.1): the main part casts with the server's default
- * target (no `onSelf`); the arrow offers both targets explicitly, since the server picks the default
- * per spell and the spellbook does not say which one it is.
+ * target (no `onSelf`); the arrow offers the other target the server serves for the spell
+ * (`cast_target.alternate`), and shows only when the server serves one.
  */
 function CastButton({
   name,
   disabled,
+  target,
   onCast,
 }: {
   name: string;
   disabled: boolean;
+  target?: CastTarget;
   onCast: (onSelf?: boolean) => void;
 }) {
   const { t } = useTranslation();
@@ -115,7 +117,7 @@ function CastButton({
       <Button
         size="lg"
         variant="main"
-        className="rounded-r-none"
+        className={cn(target && "rounded-r-none")}
         disabled={disabled}
         aria-label={t("spellSlots.castLabel", { name })}
         title={t("spellSlots.castLabel", { name })}
@@ -123,30 +125,33 @@ function CastButton({
       >
         {t("spellSlots.cast")}
       </Button>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          disabled={disabled}
-          render={
-            <Button
-              size="icon-lg"
-              variant="main"
-              className="w-6 rounded-l-none border-l-on-accent/40"
-              aria-label={t("spellSlots.castTarget", { name })}
-              title={t("spellSlots.castTarget", { name })}
-            />
-          }
-        >
-          <CaretDown aria-hidden />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => onCast(true)}>
-            {t("spellSlots.castOnSelf")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onCast(false)}>
-            {t("spellSlots.castOnAlly")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {target && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            disabled={disabled}
+            render={
+              <Button
+                size="icon-lg"
+                variant="main"
+                className="w-6 rounded-l-none border-l-on-accent/40"
+                aria-label={t("spellSlots.castTarget", { name })}
+                title={t("spellSlots.castTarget", { name })}
+              />
+            }
+          >
+            <CaretDown aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              onClick={() => onCast(target.alternate === "self")}
+            >
+              {target.alternate === "self"
+                ? t("spellSlots.castOnSelf")
+                : t("spellSlots.castOnAlly")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </span>
   );
 }
@@ -480,6 +485,7 @@ export function SpellsPanel() {
                             <CastButton
                               name={baseName}
                               disabled={busy || plan.blocked}
+                              target={plan.target}
                               onCast={cast}
                             />
                           )}

@@ -295,9 +295,15 @@ func (s *service) resolve(ctx context.Context, characterID int64, r effectReq) (
 		}
 		// A spell someone casts on the Bard, or one added as an effect, is on
 		// him by definition.
-		if r.source == SourceCast && !appliesToSelf(entry.Target, r.onSelf, hostile(buff, untracked)) {
-			res.TextOnly = TextOnlyNotOnSelf
-			return res, snaps, nil
+		if r.source == SourceCast {
+			onSelf, err := appliesToSelf(entry, r.onSelf, r.casterLevel)
+			if err != nil {
+				return CastResult{}, nil, err
+			}
+			if !onSelf {
+				res.TextOnly = TextOnlyNotOnSelf
+				return res, snaps, nil
+			}
 		}
 		added, snap, err := s.Buffs.Add(ctx, characterID, buff.Buff)
 		if err != nil {

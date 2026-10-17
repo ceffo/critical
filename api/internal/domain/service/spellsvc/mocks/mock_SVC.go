@@ -68,6 +68,63 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// Get provides a mock function with given fields: ctx, id
+func (_m *MockSVC) Get(ctx context.Context, id string) (spellsvc.Spell, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Get")
+	}
+
+	var r0 spellsvc.Spell
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (spellsvc.Spell, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) spellsvc.Spell); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(spellsvc.Spell)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Get'
+type MockSVC_Get_Call struct {
+	*mock.Call
+}
+
+// Get is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+func (_e *MockSVC_Expecter) Get(ctx interface{}, id interface{}) *MockSVC_Get_Call {
+	return &MockSVC_Get_Call{Call: _e.mock.On("Get", ctx, id)}
+}
+
+func (_c *MockSVC_Get_Call) Run(run func(ctx context.Context, id string)) *MockSVC_Get_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Get_Call) Return(_a0 spellsvc.Spell, _a1 error) *MockSVC_Get_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Get_Call) RunAndReturn(run func(context.Context, string) (spellsvc.Spell, error)) *MockSVC_Get_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetSlots provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) GetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error) {
 	ret := _m.Called(ctx, characterID)

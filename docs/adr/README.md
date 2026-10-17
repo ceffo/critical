@@ -45,4 +45,4 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0025 | [PostgreSQL storage and tests without a database](0025-postgresql-storage.md) | accepted; step 9 (SQLite copy tool) retired 2026-10-16 |
 | 0026 | [Colour and depth: the contrast ladder, the raised stage and four themes](0026-contrast-ladder-raised-stage-four-themes.md) | accepted (user OK 2026-10-17, proposals as written); step 5.9's initiative size amended by 0027 |
 | 0027 | [Space follows frequency of use: French as the layout reference, one-word buttons and the per-screen layout pass](0027-space-follows-frequency-of-use.md) | accepted (user OK 2026-10-17, proposals as written); journal step 9.4 amended (time right-aligned) and 9.6 added (a turn's opening rows unframed) on the user's feedback |
-| 0028 | [Ability checks](0028-ability-checks.md) | accepted (user OK 2026-10-17) |
+| 0028 | [Ability checks](0028-ability-checks.md) | accepted (user OK 2026-10-17), implemented |

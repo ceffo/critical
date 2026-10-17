@@ -1,6 +1,7 @@
 // How the journal marks an entry: its kind's icon and the tone of its value. Shared by the journal
 // and its collapsed bar.
 import {
+  Barbell,
   BookOpen,
   Clock,
   CloudFog,
@@ -49,6 +50,7 @@ export const KIND_ICONS: Record<LogKind, Icon> = {
   long_rest: Moon,
   save: Shield,
   skill_check: MusicNotes,
+  ability_check: Barbell,
   dice: DiceFive,
   correction: PencilSimple,
 };

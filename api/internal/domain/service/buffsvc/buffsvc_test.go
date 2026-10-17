@@ -1036,3 +1036,39 @@ func TestRoundMoves(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+// ADR 0028 step 2: the score in effect of an ability is the sheet's score
+// raised by the effects on that ability: Strength by the STR buffs (the same
+// effective STR as GetEffectiveStr), every other ability the sheet's, other
+// buffs active. An unknown key is refused.
+func TestGetAbilityScore(t *testing.T) {
+	sheet := &charactersvc.Character{ID: charID, Str: 12, Dex: 15, Con: 13, Int: 14, Wis: 9, Cha: 16}
+	cases := []struct {
+		name    string
+		ability charactersvc.Ability
+		buffs   []buffsvc.BuffEffect
+		want    buffsvc.AbilityScore
+	}{
+		{"STR raised by a Strength buff", charactersvc.AbilityStr, []buffsvc.BuffEffect{strength(4)}, buffsvc.AbilityScore{Base: 12, Effective: 16}},
+		{"STR with no buff", charactersvc.AbilityStr, nil, buffsvc.AbilityScore{Base: 12, Effective: 12}},
+		{"DEX untouched by a Strength buff", charactersvc.AbilityDex, []buffsvc.BuffEffect{strength(4), powerGem}, buffsvc.AbilityScore{Base: 15, Effective: 15}},
+		{"CHA is the sheet's", charactersvc.AbilityCha, nil, buffsvc.AbilityScore{Base: 16, Effective: 16}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(sheet, nil)
+			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(c.buffs, nil).Once()
+			got, err := f.svc.GetAbilityScore(context.Background(), charID, c.ability)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, got)
+		})
+	}
+
+	t.Run("unknown ability", func(t *testing.T) {
+		f := newFixture(t)
+		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(sheet, nil)
+		_, err := f.svc.GetAbilityScore(context.Background(), charID, "luck")
+		assert.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
+}

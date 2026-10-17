@@ -18,6 +18,7 @@ import {
   lastResultChip,
   lastResultEntry,
   latestResult,
+  liveKind,
   liveModel,
   rowValue,
   saveFromRoll,
@@ -138,6 +139,17 @@ const profCheck = {
   abilityScore: 17,
   modifier: -1,
 };
+const strCheck = {
+  ability: "str",
+  die: 20,
+  roll: 15,
+  abilityScore: 12,
+  target: 16,
+  adjustment: 0,
+  adjustedTarget: 16,
+  success: true,
+  rolledSuccess: true,
+};
 const bardCheck = {
   id: "climb_walls",
   kind: "bardSkill",
@@ -161,6 +173,7 @@ const diceRoll = {
 const KINDS: [LogKind, unknown, CardModel["layout"], Partial<LogEntry>?][] = [
   ["attack", attackPayload, "attack"],
   ["skill_check", profCheck, "skill"],
+  ["ability_check", strCheck, "ability"],
   ["dice", diceRoll, "dice"],
   ["save", savePayload, "save"],
   ["cast", castPayload, "cast"],
@@ -230,7 +243,7 @@ describe("cardModel: every log kind renders from its payload", () => {
     const kinds = new Set(KINDS.map(([k]) => k));
     expect(kinds.size).toBe(KINDS.length);
     // LogKind has 23 members (types/log.ts); a new kind must be added here.
-    expect(kinds.size).toBe(23);
+    expect(kinds.size).toBe(24);
   });
 
   it.each(KINDS)("%s → %s", async (kind, payload, layout, over) => {
@@ -258,6 +271,25 @@ describe("cardModel: every log kind renders from its payload", () => {
     expect(fr.subtitle).toBe("Instrument de musique");
     expect(
       cardModel(entry("skill_check", { id: "x" }), await makeT("en")).layout,
+    ).toBe("info");
+  });
+
+  it("ability check: the payload as recorded, header names the ability (en, fr)", async () => {
+    const e = entry("ability_check", strCheck, { id: 9 });
+    const m = cardModel(e, await makeT("en"));
+    expect(m).toEqual({
+      layout: "ability",
+      check: { ...strCheck, logEntryId: 9 },
+    });
+    const en = cardHeader("ability_check", m, e, await makeT("en"), "en");
+    expect(en.tag).toBe("Ability");
+    expect(en.subtitle).toBe("Strength");
+    const fr = cardHeader("ability_check", m, e, await makeT("fr"), "fr");
+    expect(fr.tag).toBe("Caractéristique");
+    expect(fr.subtitle).toBe("Force");
+    expect(
+      cardModel(entry("ability_check", { ability: "str" }), await makeT("en"))
+        .layout,
     ).toBe("info");
   });
 
@@ -511,6 +543,9 @@ describe("cardSource: latest result by default, a selected entry read-only", () 
     expect(latestResult(entries)?.id).toBe(3);
     expect(latestResult([{ ...save, status: "voided" }, attack])?.id).toBe(3);
     expect(latestResult([hp])).toBeNull();
+    // An ability check is a roll kind (ADR 0028 step 5): it takes the card.
+    const check = entry("ability_check", strCheck, { id: 5 });
+    expect(latestResult([hp, check, save])?.id).toBe(5);
   });
 
   it("without a selection: this session's roll while it is the latest", () => {
@@ -623,6 +658,13 @@ describe("liveModel", () => {
       layout: "skill",
       check: bardCheck,
     });
+    expect(liveModel({ kind: "ability", result: strCheck as never })).toEqual({
+      layout: "ability",
+      check: strCheck,
+    });
+    expect(liveKind({ kind: "ability", result: strCheck as never })).toBe(
+      "ability_check",
+    );
   });
 });
 
@@ -633,6 +675,7 @@ describe("journal: rolls filter and row values", () => {
     expect(isRollEntry(entry("item_use", usePayload))).toBe(true);
     expect(isRollEntry(entry("initiative", { round: 1, d10: 3 }))).toBe(true);
     expect(isRollEntry(entry("skill_check", bardCheck))).toBe(true);
+    expect(isRollEntry(entry("ability_check", strCheck))).toBe(true);
     expect(isRollEntry(entry("dice", diceRoll))).toBe(true);
     expect(isRollEntry(entry("cast", castPayload))).toBe(true);
     expect(
@@ -713,6 +756,11 @@ describe("journal: rolls filter and row values", () => {
     [entry("initiative", { round: 3, d10: 7 }), { text: "7", tone: "ink" }],
     [entry("skill_check", profCheck), { text: "17", tone: "fail" }],
     [entry("skill_check", bardCheck), { text: "42", tone: "pass" }],
+    [entry("ability_check", strCheck), { text: "15", tone: "pass" }],
+    [
+      entry("ability_check", { ...strCheck, success: false }),
+      { text: "15", tone: "fail" },
+    ],
     [entry("dice", diceRoll), { text: "7", tone: "ink" }],
     [entry("cast", castPayload), { text: "17", tone: "ink" }],
     [entry("buff_change", { action: "dismiss", buff: "Haste" }), null],
@@ -975,6 +1023,13 @@ describe("header: last result", () => {
       lastResultEntry([hp, { ...dice, status: "voided" }, save, attack])?.id,
     ).toBe(3);
     expect(lastResultEntry([hp])).toBeNull();
+    // ADR 0028 step 5: an ability check takes it; once popped, the roll before it is back.
+    const check = entry("ability_check", strCheck, { id: 7 });
+    const skill = entry("skill_check", profCheck, { id: 6 });
+    expect(lastResultEntry([check, skill, save])?.id).toBe(7);
+    expect(
+      lastResultEntry([{ ...check, status: "voided" }, skill, save])?.id,
+    ).toBe(6);
   });
 
   it("an attack shows its d20 in the chip, any other result its row value", () => {

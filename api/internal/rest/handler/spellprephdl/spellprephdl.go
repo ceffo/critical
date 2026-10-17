@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
 )
@@ -49,9 +50,28 @@ type SpellbookEntryDTO struct {
 	// Exposure is the damage of one round of exposure to the spell's area
 	// at the character's level (absent: none; ADR 0008 step 16).
 	Exposure *spellhdl.SpellExposureDTO `json:"exposure,omitempty"`
+	// CastTarget is the choice of target a buff's cast offers (absent: none,
+	// the cast lands where the spell does): where a cast that names no target
+	// lands, and the one other target the caster may name (onSelf on the
+	// cast). Values: "self", "other".
+	CastTarget *CastTargetDTO `json:"cast_target,omitempty"`
 	// Items are the inventory items the spell can spend now (consuming
 	// spells only); the cast takes the one chosen, or the only one.
 	Items []SpendableItemDTO `json:"items,omitempty"`
+}
+
+// CastTargetDTO is the target choice of a cast: the default and its alternate.
+type CastTargetDTO struct {
+	Default   string `json:"default"`
+	Alternate string `json:"alternate"`
+}
+
+// castTargetToDTO maps the target choice to the wire (nil: none).
+func castTargetToDTO(c *spelleffectsvc.TargetChoice) *CastTargetDTO {
+	if c == nil {
+		return nil
+	}
+	return &CastTargetDTO{Default: string(c.Default), Alternate: string(c.Alternate)}
 }
 
 // SpendableItemDTO is an inventory item a spell can spend.
@@ -92,7 +112,7 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 				ID: e.ID, Name: e.Name, Level: e.Level,
 				SlotSplits: e.Cast.SlotSplits, ConsumeItemType: e.Cast.ConsumeItemType, AttackRoll: e.Cast.AttackRoll,
 				Damage: spellhdl.DamageToDTO(e.Damage), Modes: spellhdl.ModesToDTO(e.Cast.Modes),
-				Exposure: spellhdl.ExposureToDTO(e.Exposure),
+				Exposure: spellhdl.ExposureToDTO(e.Exposure), CastTarget: castTargetToDTO(e.Cast.Target),
 			}
 			for _, it := range e.Items {
 				dto.Items = append(dto.Items, SpendableItemDTO{ID: it.ID, Name: it.Name, Count: it.Count})

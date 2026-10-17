@@ -44,8 +44,8 @@ function useFormats() {
  * Experience activity (ADR 0015; layout ADR 0022 step 2.5): one card with the progress (the total,
  * the bar towards the next level, the level cells) beside the Add XP form (24rem, 24 px between the
  * two text columns, step 3.2), the +10% bonus defaulting to the server's eligibility and the total
- * previewed by the server; the ledger card below takes the rest of the height and scrolls on its
- * own, with in-row edit and delete. Every number is the server's. No text is cut (step 1): reasons
+ * previewed by the server; the ledger card below is as tall as its rows, bounded by the rest of the
+ * height, its list scrolling on its own past that (ADR 0027 step 14.4), with in-row edit and delete. Every number is the server's. No text is cut (step 1): reasons
  * wrap.
  */
 export function XpPanel() {
@@ -307,7 +307,8 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
   return (
     <section
       aria-label={t("xp.ledger.title")}
-      className="zone-card flex min-h-0 flex-1 flex-col gap-2 py-3.5"
+      className="zone-card flex min-h-0 flex-col gap-2 py-3.5"
+      data-testid="xp-ledger"
     >
       <div className="flex shrink-0 items-baseline justify-between gap-3 px-4">
         <h2 className="section-label">{t("xp.ledger.title")}</h2>
@@ -323,7 +324,7 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
         <span className="text-right">{t("xp.ledger.total")}</span>
         <span />
       </div>
-      <ul className="min-h-0 flex-1 overflow-y-auto px-2">
+      <ul className="min-h-0 overflow-y-auto px-2">
         {ledger.entries.length === 0 && (
           <li className="px-2 py-2 text-body text-muted-foreground">
             {t("xp.ledger.none")}

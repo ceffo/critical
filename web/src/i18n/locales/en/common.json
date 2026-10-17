@@ -61,6 +61,26 @@
     "wis": "WIS",
     "cha": "CHA"
   },
+  "abilityCheck": {
+    "roll": "{{name}} check ({{score}})",
+    "names": {
+      "str": "Strength",
+      "dex": "Dexterity",
+      "con": "Constitution",
+      "int": "Intelligence",
+      "wis": "Wisdom",
+      "cha": "Charisma"
+    },
+    "heading": "Ability · d{{die}} under {{name}} {{score}}",
+    "headingEffect": "Ability · d{{die}} under {{name}} {{score}} (sheet {{sheet}})",
+    "adjustLabel": "Adjust this check",
+    "log": {
+      "success": "{{name}} check: d{{die}} {{roll}} vs {{target}}, success",
+      "failure": "{{name}} check: d{{die}} {{roll}} vs {{target}}, failure",
+      "successAdjusted": "{{name}} check: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), success",
+      "failureAdjusted": "{{name}} check: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), failure"
+    }
+  },
   "hp": {
     "title": "Hit Points",
     "change": "HP change",
@@ -90,7 +110,6 @@
     "initiative": "Initiative",
     "initiativeNone": "Not rolled",
     "outOfCombatInitiative": "Out of combat · initiative will be rolled",
-    "initiativeDie": "d10",
     "initiativeHint": "1d10, the lowest acts first",
     "initiativeReroll": "Reroll initiative",
     "passTime": "Time passes…",
@@ -601,8 +620,6 @@
       "fire_source_other": "fire sources",
       "source_of_fire_one": "source of fire",
       "source_of_fire_other": "sources of fire",
-      "speaking_creature_one": "speaking creature",
-      "speaking_creature_other": "speaking creatures",
       "small_creature_one": "small creature",
       "small_creature_other": "small creatures",
       "spell_casting_creature_one": "spell-casting creature",
@@ -1122,6 +1139,7 @@
       "item_edit": "Item",
       "item_remove": "Item",
       "skill_check": "Skill",
+      "ability_check": "Ability",
       "dice": "Dice",
       "correction": "Correction",
       "exposure": "Exposure",
@@ -1252,6 +1270,7 @@
       "saveAdjustment": "Correction save adjustment {{from}} → {{to}}",
       "verdict": "Correction GM verdict {{from}} → {{to}}",
       "skillAdjustment": "Correction skill check adjustment {{from}} → {{to}}",
+      "abilityAdjustment": "Correction ability check adjustment {{from}} → {{to}}",
       "other": "Correction of #{{id}}",
       "unknown": "?",
       "none": "none"
@@ -1470,7 +1489,7 @@
     "minus": "Subtract 1",
     "add": "Add a {{die}}",
     "remove": "Remove a {{die}}",
-    "count": "{{count}} × {{die}}, remove one",
+    "count": "{{count}} × {{die}}, right-click to remove one",
     "invalid": "Invalid formula",
     "saveFavourite": "Save as a favourite",
     "favourites": "Favourites",
@@ -1518,6 +1537,7 @@
     "initiative_not_on_top": "The initiative is no longer the newest action: undo what came after it, or roll again at the next round.",
     "too_many_favourites": "Too many favourite rolls: remove one first.",
     "no_exposure": "That spell deals no exposure damage.",
-    "spell_not_an_effect": "That spell adds no effect to track."
+    "spell_not_an_effect": "That spell adds no effect to track.",
+    "spell_not_found": "That spell is not in the catalogue."
   }
 }

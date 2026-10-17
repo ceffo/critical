@@ -61,6 +61,26 @@
     "wis": "SAG",
     "cha": "CHA"
   },
+  "abilityCheck": {
+    "roll": "Test de {{name}} ({{score}})",
+    "names": {
+      "str": "Force",
+      "dex": "Dextérité",
+      "con": "Constitution",
+      "int": "Intelligence",
+      "wis": "Sagesse",
+      "cha": "Charisme"
+    },
+    "heading": "Caractéristique · d{{die}} sous {{name}} {{score}}",
+    "headingEffect": "Caractéristique · d{{die}} sous {{name}} {{score}} (fiche {{sheet}})",
+    "adjustLabel": "Ajuster ce test",
+    "log": {
+      "success": "Test de {{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
+      "failure": "Test de {{name}} : d{{die}} {{roll}} contre {{target}}, échec",
+      "successAdjusted": "Test de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), réussi",
+      "failureAdjusted": "Test de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec"
+    }
+  },
   "hp": {
     "title": "Points de vie",
     "change": "Modifier les PV",
@@ -90,7 +110,6 @@
     "initiative": "Initiative",
     "initiativeNone": "Pas lancée",
     "outOfCombatInitiative": "Hors combat · l’initiative sera lancée",
-    "initiativeDie": "d10",
     "initiativeHint": "1d10, le plus bas agit en premier",
     "initiativeReroll": "Relancer l’initiative",
     "passTime": "Le temps passe…",
@@ -601,8 +620,6 @@
       "fire_source_other": "sources de feu",
       "source_of_fire_one": "source de feu",
       "source_of_fire_other": "sources de feu",
-      "speaking_creature_one": "créature douée de parole",
-      "speaking_creature_other": "créatures douées de parole",
       "small_creature_one": "petite créature",
       "small_creature_other": "petites créatures",
       "spell_casting_creature_one": "créature lanceuse de sorts",
@@ -1122,6 +1139,7 @@
       "item_edit": "Objet",
       "item_remove": "Objet",
       "skill_check": "Compétence",
+      "ability_check": "Caractéristique",
       "dice": "Dés",
       "correction": "Correction",
       "exposure": "Exposition",
@@ -1251,6 +1269,7 @@
       "targetAc": "Correction CA {{from}} → {{to}}",
       "saveAdjustment": "Correction ajustement de sauvegarde {{from}} → {{to}}",
       "skillAdjustment": "Correction ajustement de jet de compétence {{from}} → {{to}}",
+      "abilityAdjustment": "Correction ajustement de test de caractéristique {{from}} → {{to}}",
       "verdict": "Correction verdict du MJ {{from}} → {{to}}",
       "other": "Correction de #{{id}}",
       "unknown": "?",
@@ -1470,7 +1489,7 @@
     "minus": "Retirer 1",
     "add": "Ajouter un {{die}}",
     "remove": "Retirer un {{die}}",
-    "count": "{{count}} × {{die}}, en retirer un",
+    "count": "{{count}} × {{die}}, clic droit pour en retirer un",
     "invalid": "Formule invalide",
     "saveFavourite": "Enregistrer en favori",
     "favourites": "Favoris",
@@ -1518,6 +1537,7 @@
     "initiative_not_on_top": "L'initiative n'est plus la dernière action : annulez ce qui a suivi, ou relancez au prochain tour.",
     "too_many_favourites": "Trop de jets favoris : supprimez-en un d'abord.",
     "no_exposure": "Ce sort n'inflige aucun dégât d'exposition.",
-    "spell_not_an_effect": "Ce sort n'ajoute aucun effet à suivre."
+    "spell_not_an_effect": "Ce sort n'ajoute aucun effet à suivre.",
+    "spell_not_found": "Ce sort n'est pas dans le catalogue."
   }
 }

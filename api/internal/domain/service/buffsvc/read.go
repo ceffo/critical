@@ -3,6 +3,9 @@ package buffsvc
 import (
 	"context"
 	"fmt"
+
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // ListActive returns the persisted set of active buffs.
@@ -79,6 +82,25 @@ func (s *service) GetEffectiveStr(ctx context.Context, characterID int64) (Stren
 		return Strength{}, fmt.Errorf("get active buffs: %w", err)
 	}
 	return Strength{Base: base, Effective: effectiveStr(buffs, base)}, nil
+}
+
+// GetAbilityScore returns the sheet's score in ability a and its score in
+// effect (ADR 0028 step 2): the effects on that ability raise it the way
+// effectiveScore says, with no case per caller.
+func (s *service) GetAbilityScore(ctx context.Context, characterID int64, a charactersvc.Ability) (AbilityScore, error) {
+	c, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return AbilityScore{}, fmt.Errorf("get character: %w", err)
+	}
+	base, ok := c.Score(a)
+	if !ok {
+		return AbilityScore{}, fmt.Errorf("%w: unknown ability %q", domain.ErrInvalidInput, a)
+	}
+	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
+	if err != nil {
+		return AbilityScore{}, fmt.Errorf("get active buffs: %w", err)
+	}
+	return AbilityScore{Base: base, Effective: effectiveScore(buffs, a, base)}, nil
 }
 
 func (s *service) baseStr(ctx context.Context, characterID int64) (int, error) {

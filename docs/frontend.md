@@ -46,10 +46,12 @@ their regions as they drop their remaining `truncate`s. `App.tsx` composes it.
 ```mermaid
 flowchart TD
   subgraph H["Header card, full width, at most 120 px at rest (components/dashboard/Header.tsx)"]
-    BM["BrandMark: Facet · Bare mark, Cinzel wordmark from 1500 px"]
-    TB["TurnBlock: TURN + number (text-hero); initiative with reroll over Next turn and the ⋯ menu"]
-    ET["EffectsTimeline: one row per buff over 8 / 12 / 16 turns, add / edit forms"]
-    LR["LastResult: 'Last result · T3 · 21:31', die chip and the journal's wording"]
+    TB["TurnBlock: TURN over its number (text-headline); Next turn and the ⋯ menu over the initiative (text-hero) with reroll"]
+    ET["EffectsTimeline: one row per buff over 5 turns, all the width up to the right column; add / edit forms"]
+    subgraph DK["Right column, docked at the right edge, right-aligned"]
+      BM["BrandMark: Facet · Bare mark and Cinzel wordmark"]
+      LR["LastResult: 'Last result · T3 · 21:31', die chip and the journal's wording, one line"]
+    end
   end
   subgraph B["Below the header: character card clamp(280px, 21vw, 384px) | rail 68 px | stage 1fr"]
     subgraph C["Character card (aside 'Character'), scrolls on its own"]
@@ -100,7 +102,8 @@ flowchart TD
   time, the entry count, Undo / Redo). The height and the collapsed state are per-device display
   preferences in `critical.settings.v1` (`lib/settings.ts`), never sent to the API.
 - Header card budget (ADR 0022 step 3.1): at most 120 px tall at rest, outline included, with 3
-  effect rows; below 1500 px wide the mark shows without the wordmark.
+  effect rows. Layout per ADR 0027 step 4: turn | Next turn over the initiative | timeline (all the
+  spare width) | brand over the last result, docked right, 6 px apart.
 - Result panel and journal (`ResultCard.tsx`, `CombatLog.tsx`, logic in `lib/filCard.ts`, UI state in
   `stores/fil.ts`), in the Act activity: the result panel shows the latest result by default: this session's last roll
   response while it is the newest attack / save / cast / item use entry (the server's
@@ -165,8 +168,8 @@ flowchart TD
   on card ΔL ≥ .07, field edge and ring 3:1, the dark accent ladder, the hue distance and the
   near-neutral rule.
 - Brand (ADR 0022 step 7): `components/shell/BrandMark.tsx`, the Facet · Bare mark (hexagon outline
-  in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the left of the header
-  card; `public/favicon.svg` is the same drawing in static Arcane colours.
+  in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the top right of the
+  header card, over the last result (ADR 0027 step 4.6); `public/favicon.svg` is the same drawing in static Arcane colours.
 - Plug-in slots: each Act tab is one panel component in `components/actions/ActionArea.tsx`
   (`TABS` with its Phosphor icon, the tab label shows a count where it has one: spells left, combat
   items); each activity is one `Pane` in `App.tsx` (`lib/activities.ts`); the Act stage's two
@@ -174,10 +177,12 @@ flowchart TD
 - Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): turn row
   plus up to 3 effect rows, the card at most 120px at rest (ADR 0022 step 3.1); with more effects an expander
   next to "Effects" ("+N", `aria-expanded`) grows the track in place. The turn
-  block shows the turn (the round counter), the initiative row ("Out of combat" at turn 0, a
-  placeholder otherwise), Next turn and a ⋯ popover menu (Time passes…, Set turn number…, End combat,
-  each a small form or confirm inside the popover). The effects track has a label column and N turn
-  columns, N = 8 / 12 / 16, the most that stay at least 60 CSS px wide; the window starts at
+  block shows the turn (the round counter, its label stacked over it), Next turn and a ⋯ popover
+  menu over the initiative row ("Out of combat" at turn 0, the d10 in `text-hero` with its die in
+  the tooltip and a reroll otherwise); the menu holds Time passes…, Set turn number… and End combat
+  (each a small form or confirm inside the popover). The effects track has a name column (as wide as
+  the longest effect name, hidden rows included, through zero-high hidden copies of the labels;
+  capped, past it a name wraps) and 5 turn columns sharing the rest (`TRACK_COLUMNS`); the window starts at
   `max(1, turn − 2)` (at turn 0 it starts at 0). The current column is highlighted across every row,
   past column headers are dimmed. Per buff: a thin line from its `startRound` (server-stamped, ADR
   0004 step 15) to the previous turn, then a pill over the current turn and the `duration − 1` after
@@ -185,7 +190,8 @@ flowchart TD
   warning colour on its last turn (`duration` 1); a charge-only buff shows pips and "6 charges · until
   spent" (the server keeps no starting count, so no "6 / 9"); an untimed one "until dismissed"; a buff
   with `applies: false` is dashed with a lock and the reason. Each row has absorb (charge buffs),
-  edit and remove; "Add effect" opens the add form under the track.
+  edit and remove, shown on the row's hover and on keyboard focus only, over the end of the name
+  cell (ADR 0027 step 4.4); "Add effect" opens the add form under the track.
 - Buffs: every change (add, edit rounds/charges, absorb for charge buffs, dismiss, Next
   turn) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
   stack: only the newest non-voided entry (`topId` from `GET /api/log`) shows Void; the CombatLog
@@ -230,21 +236,27 @@ flowchart TD
   `stores/roll.ts` `spendItem`; "Manage" (tooltip "Manage the inventory") focuses the Inventory activity.
 - Skills tab (`SkillsTab.tsx`): PROFICIENCIES and BARD SKILLS with their column headers as section
   labels (ADR 0022 step 4.2); one row-button per skill, the name wrapping, never cut.
-- Inventaire workspace (`InventoryPanel.tsx`): the Objets card, one grid row per item: name with
-  its magical bonus ("+2") and "type · behaviour" (Stock / Charges / Daily) under it | the effect
-  dice as a chip that puts the formula in the dice composer (`stores/dice.ts` `setFormula`, nothing
-  rolled) | the quantity stepper: − (uses one through `stores/roll.ts` `spendItem`, result card
-  shows the roll), the count ("1 / 1" for daily) and + on stock items only
-  (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`) | ✎ / 🗑. Columns are rem
-  widths beside a `1fr` name, rows are separated by a tone step. A charges item spent to 0 is gone
-  from the list until its use is popped. ✎ edits a row in place and
-  "Add item" opens the same form (`ItemForm.tsx`); 🗑 removes. The form only parses
+- Inventaire workspace (`InventoryPanel.tsx`, ADR 0027 step 14): the Objets and Armes cards
+  (`InventoryCard.tsx`: section-label title, the quiet one-word "Add" with "Add item" / "Add weapon"
+  in its tooltip and `aria-label`, a body that scrolls inside the card), side by side once the stage
+  (a container query) is 1200 px wide, stacked below that; each card is as tall as its rows and the
+  page never scrolls. Objets: one grid row per item (the header and the rows share the columns
+  through `subgrid`): name with its magical bonus ("+2") and the behaviour under it (Stock / Charges
+  / Daily, in the UI language; the free-text type is only in the edit form) | the effect dice right
+  after the name column, as a chip that puts the formula in the dice composer (`stores/dice.ts`
+  `setFormula`, nothing rolled) | the quantity stepper: − (uses one through `stores/roll.ts`
+  `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and + on stock items only
+  (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`) | spare width | ✎ / 🗑, shown on
+  the row's hover and keyboard focus (`ROW_ACTIONS`, always shown without hover). The name column is
+  as wide as the longest name and wraps past the room it has; rows are separated by a tone step. A
+  charges item spent to 0 is gone from the list until its use is popped. ✎ edits a row in place and
+  "Add" opens the same form (`ItemForm.tsx`); 🗑 removes. The form only parses
   numbers (`lib/itemForm.ts`); the server validates and the message it returns for a field is shown
   under that field (`stores/table.ts` `submit`, `ApiError.field`). Edits send only the changed fields.
-- The Inventaire workspace also has the Armes card (`WeaponsSection.tsx`), the same grid: name
-  with "melee / missile · two-handed · ammo" | damage "1d8 · L 1d12" | to-hit / damage bonus | ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
-  `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
-  refreshes the weapons store, so the Weapons tab follows.
+- The Armes card (`WeaponsSection.tsx`) is the same grid: name with "melee / missile · two-handed ·
+  ammo" | damage "1d8 · L 1d12" | to-hit / damage bonus | spare width | ✎ / 🗑 on hover and focus,
+  and an "Add" form (`WeaponForm.tsx`, `lib/weaponForm.ts`), built like the item form (server
+  validation under the field). A change refreshes the weapons store, so the Weapons tab follows.
 - Spells tab (`SpellsPanel.tsx`, ADR 0027 step 10): Prepare and Long rest (crescent-moon icon) on
   top, right; one group per level that has a slot (no group for an empty level), the LEVEL N
   section label and the level's slot dots (`lib/slotDots.ts`, from the server's slots and limits:
@@ -256,9 +268,11 @@ flowchart TD
   button, or "Used"; a blank extra slot's spell picker stands in for its name; the cast inputs a
   spell needs (target AC, item spent, cast-time mode, split of the extra slots) sit with the Cast
   button and wrap under the name together when narrow. Cast (`variant="main"`, `lg`) casts with the
-  server's default target (no `onSelf`); its arrow (`ui/dropdown-menu`) offers "On me" and "On an
-  ally" (`onSelf: true` / `false`): the spellbook does not say which target the server defaults to
-  for a spell, so both are offered. The name opens the details popup (`SpellDetailsDialog.tsx`,
+  server's default target (no `onSelf`); its arrow (`ui/dropdown-menu`) offers only the other target
+  the spellbook entry's `cast_target` serves (`alternate`: "On me" sends `onSelf: true`, "On an
+  ally" `onSelf: false`) and shows only when the server serves one (a defensive buff it can put on
+  the Bard that is not self-only; the server decides, `spelleffectsvc.Entry.TargetChoiceAt`, ADR
+  0027 step 10.1). The name opens the details popup (`SpellDetailsDialog.tsx`,
   `ui/dialog`, Escape closes it): the lookup's detail view (`components/dashboard/SpellDetail.tsx`,
   shared with the lookup), the spell fetched by its name at its level and picked by id
   (`api/spells_db.ts` `findSpell`). Cast puts the `CastResult` in the result card (`CastResultView`:
@@ -325,13 +339,15 @@ flowchart TD
   carry HTML.
 - Experience activity (`components/xp/XpPanel.tsx`, `stores/xp.ts`, ADR 0015; layout
   [ADR 0022](adr/0022-activity-focus-layout.md) step 2.5): one card with the progress beside "Add
-  XP" (`minmax(0, 1fr) | 24rem`, 24 px apart, step 3.2), the ledger card below with the rest of the
-  stage's height, its list scrolling on its own. Progress: section label "Experience · level N", the
+  XP" (`minmax(0, 1fr) | 24rem`, 24 px apart, step 3.2), the ledger card below as tall as its rows,
+  bounded by the rest of the stage's height, its list scrolling on its own past that (ADR 0027 step
+  14.4). Progress: section label "Experience · level N", the
   total in `text-hero` (step 3.4), "Before level N · X XP", a bar with 10% ticks between the
   server's floor and ceiling, the server's 8 level cells with their thresholds (current and next
   ringed; at least 3.5rem each, wrapping to a second row rather than cutting). "Add XP": amount and
   reason on one line, then session, +10% (defaulting to the server's `bonusEligible`) and the
-  button with the server's preview (`GET /api/xp/preview`); Enter submits; the bonus rule shown
+  quiet "Add" button carrying the server's preview ("Add 2,750", `GET /api/xp/preview`; disabled,
+  and looking it, only while there is no amount); Enter submits; the bonus rule shown
   under it in full. The ledger (section-label head and column headers): reason wrapping between
   words with date · session under it, base, bonus, total; in-row edit, Enter saves, Escape cancels;
   delete; entries added this session tinted; the sheet's starting XP as the last, read-only row. Each write is a transaction on the action
@@ -573,7 +589,8 @@ outside `ui/`).
   `expectNoClippedText` (`e2e/noClip.ts`) on the shell's zones and, in its "act panel" test, on each
   Act tab with long weapon, item and spell names (`act-<tab>-<size>.png`), and on the Experience
   activity with a long ledger reason, where `expectWholeWords` (same file) also fails on a word
-  broken mid-word; its "theme" test screenshots the
+  broken mid-word (in French too, in the "no cut text in French" test, with the ledger card's
+  height following its rows and, at 1707x1300, the inventory cards side by side); its "theme" test screenshots the
   main screens in dark and light, then every theme in each of its modes in French
   (`fr-<mode>-<theme>.png`, no-cut audit on the whole page).
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys

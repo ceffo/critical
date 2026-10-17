@@ -432,6 +432,10 @@ func skillCheckEntry(id int64) *actionlog.Entry {
 	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindSkillCheck, Payload: json.RawMessage(`{"success":false}`)}
 }
 
+func abilityCheckEntry(id int64) *actionlog.Entry {
+	return &actionlog.Entry{ID: id, CharacterID: 1, Kind: actionlog.KindAbilityCheck, Payload: json.RawMessage(`{"success":true}`)}
+}
+
 func TestAmendLatest(t *testing.T) {
 	voided := actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionVoid}
 	good := actionlog.PayloadAmendment{Payload: json.RawMessage(`{"passed":true}`), Change: actionlog.Change{Field: "saveAdjustment", From: 0, To: 2}}
@@ -459,6 +463,10 @@ func TestAmendLatest(t *testing.T) {
 		{name: "a later skill check exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindSkillCheck: 7}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "not a skill check", entry: saveEntry(5), kind: actionlog.KindSkillCheck, wantErr: actionlogsvc.ErrNotAmendable},
 		{name: "skill check, a later save exists", entry: skillCheckEntry(5), kind: actionlog.KindSkillCheck, latest: map[actionlog.Kind]int64{actionlog.KindSkillCheck: 5, actionlog.KindSave: 6}, wantErr: actionlogsvc.ErrNotLatest},
+		// ADR 0028 steps 5 and 6.
+		{name: "save, a later ability check exists", entry: saveEntry(5), latest: map[actionlog.Kind]int64{actionlog.KindSave: 5, actionlog.KindAbilityCheck: 6}, wantErr: actionlogsvc.ErrNotLatest},
+		{name: "not an ability check", entry: skillCheckEntry(5), kind: actionlog.KindAbilityCheck, wantErr: actionlogsvc.ErrNotAmendable},
+		{name: "ability check, a later save exists", entry: abilityCheckEntry(5), kind: actionlog.KindAbilityCheck, latest: map[actionlog.Kind]int64{actionlog.KindAbilityCheck: 5, actionlog.KindSave: 6}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "no roll at all", entry: saveEntry(5), latest: map[actionlog.Kind]int64{}, wantErr: actionlogsvc.ErrNotLatest},
 		{name: "fn fails", entry: saveEntry(5), latest: onlySave, fnErr: errBoom, wantErr: errBoom},
 		{name: "empty payload", entry: saveEntry(5), latest: onlySave, fnOut: actionlog.PayloadAmendment{Change: good.Change}, wantErr: domain.ErrInvalidInput},
@@ -471,6 +479,11 @@ func TestAmendLatest(t *testing.T) {
 		{
 			name: "latest skill check amended", entry: skillCheckEntry(5), kind: actionlog.KindSkillCheck,
 			latest: map[actionlog.Kind]int64{actionlog.KindSkillCheck: 5, actionlog.KindSave: 4}, fnOut: good,
+			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload, StepID: &step},
+		},
+		{
+			name: "latest ability check amended", entry: abilityCheckEntry(5), kind: actionlog.KindAbilityCheck,
+			latest: map[actionlog.Kind]int64{actionlog.KindAbilityCheck: 5, actionlog.KindSkillCheck: 4}, fnOut: good,
 			want: &actionlog.Correction{ActionID: 5, Kind: actionlog.CorrectionAmend, Payload: good.Payload, StepID: &step},
 		},
 		{

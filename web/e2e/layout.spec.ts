@@ -205,6 +205,93 @@ async function expectCharacterCardLines(page: Page, where: string) {
   ).toBeLessThanOrEqual(placeholder.room);
 }
 
+/**
+ * ADR 0027 step 4 on the header, in French: the turn label over its number, the initiative under
+ * "Tour suivant" and larger than the turn, five turn columns, the brand (mark and wordmark) over the
+ * last result in one right-aligned column 6 px apart whose right edge lines up with the result card,
+ * at most 120 px at rest. At the design's two viewports every effect name and the last result are
+ * one line.
+ */
+async function expectHeaderLayout(page: Page, where: string) {
+  const header = page.locator("[data-screen=turn-header]");
+  const box = async (l: Locator) => (await l.boundingBox())!;
+  const h = await box(header);
+  expect(h.height, `header at rest, ${where}`).toBeLessThanOrEqual(120);
+  const label = await box(
+    header.getByTestId("turn").getByText("Tour", { exact: true }),
+  );
+  const turn = await box(page.getByTestId("round-value"));
+  expect(
+    label.y + label.height,
+    `turn label over its number, ${where}`,
+  ).toBeLessThanOrEqual(turn.y + 1);
+  const next = await box(page.getByRole("button", { name: "Tour suivant" }));
+  const init = page.getByTestId("initiative-value");
+  expect(
+    (await box(init)).y,
+    `initiative under Tour suivant, ${where}`,
+  ).toBeGreaterThan(next.y + next.height - 1);
+  const fontSize = (l: Locator) =>
+    l.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  expect(
+    await fontSize(init),
+    `initiative larger than the turn, ${where}`,
+  ).toBeGreaterThan(await fontSize(page.getByTestId("round-value")));
+  await expect(page.getByTestId("effects-track")).toHaveAttribute(
+    "data-columns",
+    "5",
+  );
+  await expect(page.getByTestId("wordmark")).toBeVisible();
+  const brand = await box(page.getByTestId("brand"));
+  const last = await box(page.getByTestId("last-result"));
+  const right = (b: { x: number; width: number }) => b.x + b.width;
+  expect(
+    Math.abs(right(brand) - right(last)),
+    `brand and last result right-aligned, ${where}`,
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(last.y - (brand.y + brand.height) - 6),
+    `6 px under the brand, ${where}`,
+  ).toBeLessThanOrEqual(1);
+  // The column sits at the header's right edge (its padding and outline in), as the result card.
+  const card = await box(page.getByTestId("now-band"));
+  expect(
+    Math.abs(right(h) - right(card)),
+    `header and result card share their right edge, ${where}`,
+  ).toBeLessThanOrEqual(1);
+  expect(
+    right(h) - right(last),
+    `right column docked, ${where}`,
+  ).toBeLessThanOrEqual(18);
+  if (SHOTS.has(where.replace(/^.*?(\d+x\d+)$/, "$1"))) {
+    for (const name of await page.getByTestId("effect-name").all())
+      expect(
+        await name.evaluate(lineCount),
+        `effect name on one line, ${where}: ${await name.textContent()}`,
+      ).toBe(1);
+    expect(
+      await page.getByTestId("last-result").locator("p").evaluate(lineCount),
+      `last result on one line, ${where}`,
+    ).toBe(1);
+  }
+}
+
+/** The lines `el`'s text lays out on: its text boxes grouped by vertical overlap. */
+function lineCount(el: Element): number {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const rects = [...range.getClientRects()]
+    .filter((r) => r.width > 0)
+    .sort((a, b) => a.top - b.top);
+  let lines = 0;
+  let bottom = -Infinity;
+  for (const r of rects) {
+    if (r.top >= bottom - 1) lines++;
+    bottom = r.top >= bottom - 1 ? r.bottom : Math.max(bottom, r.bottom);
+  }
+  return lines;
+}
+
 // ADR 0022 step 1 (layout viewports). 1707x1300 is a third of the user's 5120x1440 table screen.
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -329,10 +416,8 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
     expect(await heightOf(), `header at rest, ${size}`).toBeLessThanOrEqual(
       120,
     );
-    // Below 1500 px the mark shows without the wordmark (ADR 0022 step 7).
-    await expect(page.getByTestId("wordmark")).toBeVisible({
-      visible: vp.width >= 1500,
-    });
+    // The full brand at every width (ADR 0027 step 4.6).
+    await expect(page.getByTestId("wordmark")).toBeVisible();
     for (const activity of ACTIVITIES) {
       await openWorkspace(page, activity);
       await expect(
@@ -388,11 +473,12 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
         expect(ledgerBox.y, `ledger below, ${where}`).toBeGreaterThan(
           top.y + top.height,
         );
-        const stage = (await page.getByTestId("stage").boundingBox())!;
-        expect(
-          Math.abs(ledgerBox.y + ledgerBox.height - (stage.y + stage.height)),
-          `ledger takes the rest of the height, ${where}`,
-        ).toBeLessThanOrEqual(1);
+        // As tall as its rows, bounded by the stage (ADR 0027 step 14.4).
+        await expectInside(
+          xpLedger,
+          page.getByTestId("stage"),
+          `ledger, ${where}`,
+        );
         expect(
           (await longXpRow.boundingBox())!.height,
           `long reason wraps, ${where}`,
@@ -943,6 +1029,16 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     targetSize: "l",
     situational: { value: -2, label: "couvert" },
   });
+  // The header's effects (ADR 0027 step 4): the brand round's table, Protection From Evil the
+  // longest name, two of them behind the expander (the name column is sized on them too).
+  for (const buff of [
+    { name: "Bless", duration: 6 },
+    { name: "Haste", duration: 3 },
+    { name: "Stoneskin", charges: 7 },
+    { name: "Protection From Evil", duration: 10 },
+    { name: "Mirror Image", duration: 4 },
+  ])
+    await api("POST", "/api/buffs", { effects: {}, ...buff });
   // The journal with two turns, a transaction, a dice total and an undone row (ADR 0027 step 9).
   await api("POST", "/api/hp/event", { delta: -3, source: LONG_SOURCE });
   await api("POST", "/api/round/advance", {});
@@ -952,6 +1048,14 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     topId: number;
   };
   await api("POST", "/api/log/undo", { expectedTopId: log.topId });
+  // Two XP entries, one with a long reason and a session (ADR 0027 step 14.4).
+  await api("POST", "/api/xp", {
+    base: 2500,
+    bonus: true,
+    reason: LONG_REASON,
+    session: "S41",
+  });
+  await api("POST", "/api/xp", { base: 300, bonus: false, reason: "Troll" });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const character = page.getByTestId("character");
@@ -960,11 +1064,28 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   const rail = page.getByTestId("rail").getByRole("button");
   const FR_SPELL =
     "Nom de sortilège invraisemblablement long des anciens archimages";
+  // The last result: an attack, in French.
+  await page.getByRole("button", { name: /^Attaquer/ }).click();
+  await expect(page.getByTestId("last-result-text")).toContainText("contre CA");
+  // An effect's actions show on the row's hover and on keyboard focus only (ADR 0027 step 4.4).
+  const firstBuff = page.getByTestId("buff").first();
+  const buffActions = firstBuff.getByTestId("buff-actions");
+  await page.mouse.move(0, 0);
+  await expect(buffActions).toHaveCSS("opacity", "0");
+  await firstBuff.getByTestId("effect-bar").hover();
+  await expect(buffActions).toHaveCSS("opacity", "1");
+  await page.mouse.move(0, 0);
+  await expect(buffActions).toHaveCSS("opacity", "0");
+  await buffActions.getByRole("button").first().focus();
+  await expect(buffActions).toHaveCSS("opacity", "1");
+  await buffActions.getByRole("button").first().blur();
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     // The whole screen (header, rail, journal, dice footer and the shared pieces in every zone).
     await expectNoClippedText(page.locator("body"), `screen, ${where}`);
+    await rail.nth(0).click();
+    await expectHeaderLayout(page, where);
     await expectNoClippedText(character, `character card, ${where}`);
     await expectWholeWords(character, `character card, ${where}`);
     if (SHOTS.has(`${vp.width}x${vp.height}`))
@@ -1012,7 +1133,13 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     // The preparation's entry lists every prepared spell: it wraps.
     await expectCompactJournal(
       page,
-      [LONG_SOURCE, LONG_WEAPON, LONG_ITEM, "Tasha's Uncontrollable"],
+      [
+        LONG_SOURCE,
+        LONG_WEAPON,
+        LONG_ITEM,
+        "Tasha's Uncontrollable",
+        LONG_REASON,
+      ],
       where,
     );
     await expect(
@@ -1100,9 +1227,47 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
         .click();
       await expect(stage.getByTestId("lookup-group-tag")).toHaveCount(0);
     }
+    // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
+    // not the rest of the stage.
+    await rail.nth(2).click();
+    const ledger = stage.getByTestId("xp-ledger");
+    await expect(ledger.getByTestId("xp-row")).toHaveCount(2);
+    await expectNoClippedText(stage, `experience, ${where}`);
+    await expectWholeWords(stage, `experience, ${where}`);
+    const ledgerBox = (await ledger.boundingBox())!;
+    const opening = (await ledger.getByTestId("xp-opening").boundingBox())!;
+    expect(
+      ledgerBox.y + ledgerBox.height - (opening.y + opening.height),
+      `ledger card ends under its last row, ${where}`,
+    ).toBeLessThanOrEqual(24);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `experience-fr-${vp.width}x${vp.height}`);
     await rail.nth(3).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);
+    if (vp.width === 1707) {
+      // ADR 0027 step 14.3: from a 1200 px stage, items and weapons side by side, both whole.
+      const [items, weapons] = await stage
+        .getByTestId("inventory-cards")
+        .locator(":scope > section")
+        .all();
+      for (const [card, what] of [
+        [items, "items"],
+        [weapons, "weapons"],
+      ] as const) {
+        await expectInside(card, stage, `${what} card, ${where}`);
+        await expectNoScroll(
+          card.locator(":scope > div").last(),
+          `${what} card, ${where}`,
+        );
+      }
+      const a = (await items.boundingBox())!;
+      const b = (await weapons.boundingBox())!;
+      expect(b.y, `cards side by side, ${where}`).toBe(a.y);
+      expect(b.x, `weapons right of items, ${where}`).toBeGreaterThan(
+        a.x + a.width,
+      );
+    }
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
   }
@@ -1262,6 +1427,52 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
       .getByRole("listitem")
       .filter({ hasText: "Sauvegarde contre Sorts" }),
   ).toContainText("(seuil ");
+});
+
+// ADR 0028 on the result card, French first: an ability check rolled from the character card's
+// DEX tile, adjusted after the roll with a long reason; the card and the stat tiles are never cut,
+// fr and en, 1280x800 to 2560x1440.
+test("ability check card: adjusted with a long reason, uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.getByRole("button", { name: "Test de Dextérité (17)" }).click();
+  const card = page.getByTestId("ability-result");
+  await expect(card).toBeVisible();
+  const form = await openFold(card, "Ajuster après le jet", "Ajuster ce test");
+  const harder = form.getByRole("button", { name: "Diminuer l'ajustement" });
+  await harder.click();
+  await harder.click();
+  await form
+    .getByLabel("Raison (facultatif)")
+    .fill("Corniche glissante sous la pluie battante");
+  await form.getByRole("button", { name: "Appliquer" }).click();
+  await expect(card.getByTestId("skill-adjustment-line")).toContainText("−2");
+
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await expect(card).toContainText(
+      lang === "fr" ? "Seuil ajusté" : "Adjusted target",
+    );
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(card, `ability check card, ${where}`);
+      await expectWholeWords(card, `ability check card, ${where}`);
+      await expectNoClippedText(
+        page.getByRole("group", {
+          name: lang === "fr" ? "Caractéristiques" : "Ability scores",
+        }),
+        `ability tiles, ${where}`,
+      );
+      await snap(page, `ability-check-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
 });
 
 // ADR 0027 step 8 on the attack card, French first: the verdict pill right after the result it

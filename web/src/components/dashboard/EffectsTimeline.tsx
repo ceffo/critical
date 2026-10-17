@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   CaretDown,
   CaretUp,
@@ -13,11 +14,10 @@ import { buffName, useSpellName } from "@/i18n/spellName";
 import { powerEffectsText, powerRows, type PowerRow } from "@/lib/itemPowers";
 import { formatTurnsLeft } from "@/lib/passTime";
 import {
+  TRACK_COLUMNS,
   effectSpan,
-  trackSize,
   windowStart,
   type ColumnRun,
-  type TrackSize,
 } from "@/lib/timeline";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
@@ -28,10 +28,12 @@ import { AddEffect } from "./AddEffect";
 import { EditBuffForm } from "./BuffForms";
 
 /**
- * The label column, then one column per turn of the window. At 1280 it holds the uppercase section
- * label, the add button and the "+N" expander in French ("EFFETS", "Ajouter").
+ * The name column, then one column per turn of the window (ADR 0027 step 4.6): the name column is as
+ * wide as the longest effect name, the hidden ones included, so it does not jump when the expander
+ * opens; past the cap (a player's very long custom name) the name wraps, never cut. The turn columns
+ * share the rest of the width.
  */
-const LABEL_COLUMN = "clamp(12rem, 15vw, 16rem)";
+const NAME_COLUMN = "fit-content(clamp(14rem, 22vw, 26rem))";
 
 /** Effect rows shown at rest; more than this and an expander shows the rest (ADR 0017 step 6). */
 const REST_ROWS = 3;
@@ -46,9 +48,9 @@ type TrackRow =
  * then one per item power that is on (named by its item, nothing to edit or dismiss).
  * A timed buff is a thin line for the turns it has run and a pill for what is left (from the
  * server's `duration`), in the warning colour on its last turn; a charge buff shows its charges as
- * pips; a buff that does not apply is dashed with a lock and the reason. Edit and remove per row,
- * Add next to the label. The number of turn columns follows the width available (8, 12 or 16). At
- * rest the track shows its turn row and up to 3 effect rows, no scrollbar; with more effects an
+ * pips; a buff that does not apply is dashed with a lock and the reason. Absorb, edit and remove
+ * show on the row's hover and keyboard focus (ADR 0027 step 4.4); Add stays next to the label. Five
+ * turn columns at every width (step 4.3), sharing the width the header leaves. At rest the track shows its turn row and up to 3 effect rows, no scrollbar; with more effects an
  * expander (aria-expanded) grows the track in place to show them all, capped at 40% of the viewport
  * height where it scrolls (ADR 0017 step 6).
  */
@@ -61,8 +63,7 @@ export function EffectsTimeline() {
   const [editing, setEditing] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const edited = buffs.find((b) => b.id === editing);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const size = useTrackSize(trackRef);
+  const size = TRACK_COLUMNS;
   const rows: TrackRow[] = [
     ...buffs.map((b): TrackRow => ({ kind: "buff", key: b.id, buff: b })),
     ...powerRows(powers, items, i18n.language).map((p): TrackRow => ({
@@ -77,21 +78,18 @@ export function EffectsTimeline() {
   const current = turn - start;
   const columns = Array.from({ length: size }, (_, i) => start + i);
   const grid: CSSProperties = {
-    gridTemplateColumns: `${LABEL_COLUMN} repeat(${size}, minmax(0, 1fr))`,
+    gridTemplateColumns: `${NAME_COLUMN} repeat(${size}, minmax(3rem, 1fr))`,
     // An effect row grows when its name wraps (names are never truncated).
     gridTemplateRows: `1.5rem repeat(${Math.max(shown.length, 1)}, minmax(1.5rem, auto))`,
   };
 
   return (
     <div
-      className="flex min-w-0 flex-1 flex-col gap-2"
+      className="flex flex-1 basis-0 flex-col gap-2"
       role="group"
       aria-label={t("effects.title")}
     >
-      <div
-        ref={trackRef}
-        className={cn("min-w-0", expanded && "max-h-[40vh] overflow-y-auto")}
-      >
+      <div className={cn(expanded && "max-h-[40vh] overflow-y-auto")}>
         <div
           className="relative grid items-center"
           style={grid}
@@ -178,6 +176,22 @@ export function EffectsTimeline() {
               />
             ),
           )}
+          {/* Every row's label, hidden and zero-high, sizes the name column (shown or not). */}
+          {rows.map((r) => (
+            <span
+              key={`ghost:${r.key}`}
+              aria-hidden
+              className="invisible h-0 pr-2"
+              style={{ gridColumn: 1, gridRow: 1 }}
+              data-testid="effect-name-ghost"
+            >
+              {r.kind === "buff" ? (
+                <BuffLabel buff={r.buff} ghost />
+              ) : (
+                <PowerLabel power={r.power} ghost />
+              )}
+            </span>
+          ))}
           {rows.length === 0 && (
             <span
               className="text-body text-muted-foreground italic"
@@ -197,26 +211,6 @@ export function EffectsTimeline() {
       )}
     </div>
   );
-}
-
-/** Columns that fit the track's width, following resizes. */
-function useTrackSize(ref: React.RefObject<HTMLDivElement | null>): TrackSize {
-  const [size, setSize] = useState<TrackSize>(12);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = () => {
-      const label = el.querySelector<HTMLElement>(
-        "[data-testid=effects-track] > :nth-child(2)",
-      );
-      setSize(trackSize(el.clientWidth - (label?.offsetWidth ?? 0)));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [ref]);
-  return size;
 }
 
 function place(run: ColumnRun, row: number): CSSProperties {
@@ -259,92 +253,59 @@ function EffectRow({
     b.effects.min_str !== undefined
       ? t("buffs.inactiveHint", { min: b.effects.min_str })
       : t("buffs.replacedHint");
-  const effectsText =
-    !inactive &&
-    (b.effects.weapon_buff !== undefined || b.effects.multiplier !== undefined)
-      ? [
-          b.effects.weapon_buff !== undefined &&
-            t("buffs.effWeapon", { n: b.effects.weapon_buff }),
-          b.effects.multiplier !== undefined &&
-            t("buffs.effDice", { n: b.effects.multiplier }),
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : null;
-
   return (
     // display: contents keeps the row's cells on the parent grid while the row stays one element
     // (data-testid="buff") to scope its buttons.
     <div
-      className="contents"
+      className="group/row contents"
       data-testid="buff"
       data-buff={b.name}
       data-applies={String(!inactive)}
       data-last-turn={String(lastTurn)}
     >
       <div
-        className="flex min-w-0 items-center gap-1 pr-2"
+        className="relative flex min-w-0 items-center pr-2"
         style={{ gridColumn: 1, gridRow: row }}
       >
-        <span
-          className="min-w-0 flex-1 break-words"
-          title={[name, effectsText, b.note].filter(Boolean).join(" · ")}
+        <BuffLabel buff={b} />
+        {/* Every-fight actions, out of the way at rest (ADR 0027 steps 1.4 and 4.4): they show on
+            the row's hover and on keyboard focus, over the end of the name cell. */}
+        <div
+          className="absolute inset-y-0 right-0 flex items-center gap-0.5 bg-card pl-1 opacity-0 transition-opacity group-focus-within/row:opacity-100 group-hover/row:opacity-100"
+          data-testid="buff-actions"
         >
-          <span
-            className={cn(
-              "text-body font-medium",
-              lastTurn && "text-warning",
-              inactive && "text-muted-foreground",
-            )}
-          >
-            {name}
-          </span>
-          {(b.note || effectsText) && (
-            <span className="text-label text-muted-foreground">
-              {" · "}
-              {effectsText && (
-                <span data-testid="buff-effects">{effectsText}</span>
-              )}
-              {effectsText && b.note && " · "}
-              {b.note && (
-                <span className="italic" data-testid="buff-note">
-                  {b.note}
-                </span>
-              )}
-            </span>
+          {b.charges > 0 && (
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              disabled={busy}
+              aria-label={t("buffs.absorb", { name })}
+              title={t("buffs.absorb", { name })}
+              onClick={() => void run(() => triggerBuff(b.id))}
+            >
+              <Shield />
+            </Button>
           )}
-        </span>
-        {b.charges > 0 && (
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={t("buffs.edit", { name })}
+            title={t("buffs.edit", { name })}
+            onClick={onEdit}
+          >
+            <PencilSimple />
+          </Button>
           <Button
             size="icon-xs"
             variant="ghost"
             disabled={busy}
-            aria-label={t("buffs.absorb", { name })}
-            title={t("buffs.absorb", { name })}
-            onClick={() => void run(() => triggerBuff(b.id))}
+            aria-label={t("buffs.dismiss", { name })}
+            title={t("buffs.dismiss", { name })}
+            onClick={() => void run(() => dismissBuff(b.id))}
           >
-            <Shield />
+            <X />
           </Button>
-        )}
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          aria-label={t("buffs.edit", { name })}
-          title={t("buffs.edit", { name })}
-          onClick={onEdit}
-        >
-          <PencilSimple />
-        </Button>
-        <Button
-          size="icon-xs"
-          variant="ghost"
-          disabled={busy}
-          aria-label={t("buffs.dismiss", { name })}
-          title={t("buffs.dismiss", { name })}
-          onClick={() => void run(() => dismissBuff(b.id))}
-        >
-          <X />
-        </Button>
+        </div>
       </div>
       {span.past && (
         <div
@@ -403,6 +364,97 @@ function EffectRow({
   );
 }
 
+/** What a buff changes, beside its name ("weapon +2 · dice ×2"); none when it does not apply. */
+function buffEffectsText(t: TFunction, b: BuffEffect): string | null {
+  if (b.applies === false) return null;
+  const parts = [
+    b.effects.weapon_buff !== undefined &&
+      t("buffs.effWeapon", { n: b.effects.weapon_buff }),
+    b.effects.multiplier !== undefined &&
+      t("buffs.effDice", { n: b.effects.multiplier }),
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/**
+ * A buff's name cell text: the name (warning on its last turn, muted when it does not apply), then
+ * what it changes and the player's note. Also drawn, hidden, to size the name column.
+ */
+function BuffLabel({ buff: b, ghost }: { buff: BuffEffect; ghost?: boolean }) {
+  const { t } = useTranslation();
+  const name = buffName(useSpellName(), b);
+  const effectsText = buffEffectsText(t, b);
+  return (
+    <span
+      className="min-w-0 flex-1 break-words"
+      data-testid={ghost ? undefined : "effect-name"}
+      title={
+        ghost
+          ? undefined
+          : [name, effectsText, b.note].filter(Boolean).join(" · ")
+      }
+    >
+      <span
+        className={cn(
+          "text-body font-medium",
+          b.duration === 1 && "text-warning",
+          b.applies === false && "text-muted-foreground",
+        )}
+      >
+        {name}
+      </span>
+      {(b.note || effectsText) && (
+        <span className="text-label text-muted-foreground">
+          {" · "}
+          {effectsText && (
+            <span data-testid={ghost ? undefined : "buff-effects"}>
+              {effectsText}
+            </span>
+          )}
+          {effectsText && b.note && " · "}
+          {b.note && (
+            <span
+              className="italic"
+              data-testid={ghost ? undefined : "buff-note"}
+            >
+              {b.note}
+            </span>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** An item power's name cell text: the item's name and the power's effects. */
+function PowerLabel({ power: p, ghost }: { power: PowerRow; ghost?: boolean }) {
+  const { t } = useTranslation();
+  const effectsText = powerEffectsText(t, p.effects);
+  return (
+    <span
+      className="min-w-0 flex-1 break-words"
+      data-testid={ghost ? undefined : "effect-name"}
+      title={
+        ghost
+          ? undefined
+          : [t("effects.power", { name: p.name }), effectsText]
+              .filter(Boolean)
+              .join(" · ")
+      }
+    >
+      <span className="text-body font-medium">{p.name}</span>
+      {effectsText && (
+        <span className="text-label text-muted-foreground">
+          {" · "}
+          <span data-testid={ghost ? undefined : "power-effects"}>
+            {effectsText}
+          </span>
+        </span>
+      )}
+    </span>
+  );
+}
+
 /**
  * An item power that is on: the item's name and the power's effects, a bar from the current turn to
  * the edge, filled like a buff's pill and fading out (it lasts while its trigger holds). No counters, no edit or dismiss (ADR 0016 step 13).
@@ -421,7 +473,6 @@ function ItemPowerRow({
   size: number;
 }) {
   const { t } = useTranslation();
-  const effectsText = powerEffectsText(t, p.effects);
   const span = effectSpan({ turn, start, size, duration: 0, startRound: turn });
   const lasts =
     p.minStr !== undefined
@@ -430,23 +481,10 @@ function ItemPowerRow({
   return (
     <div className="contents" data-testid="item-power" data-item={p.itemId}>
       <div
-        className="flex min-w-0 items-center gap-1 pr-2"
+        className="flex min-w-0 items-center pr-2"
         style={{ gridColumn: 1, gridRow: row }}
       >
-        <span
-          className="min-w-0 flex-1 break-words"
-          title={[t("effects.power", { name: p.name }), effectsText]
-            .filter(Boolean)
-            .join(" · ")}
-        >
-          <span className="text-body font-medium">{p.name}</span>
-          {effectsText && (
-            <span className="text-label text-muted-foreground">
-              {" · "}
-              <span data-testid="power-effects">{effectsText}</span>
-            </span>
-          )}
-        </span>
+        <PowerLabel power={p} />
       </div>
       {span.remaining && (
         <div

@@ -12,6 +12,7 @@ import { useRollStore } from "@/stores/roll";
 import { formatFactor, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
+  MAX_ADJUSTMENT,
   adjustmentChanged,
   adjustmentInEffect,
   stepAdjustment,
@@ -56,7 +57,7 @@ import { rollLabel } from "@/lib/spellDice";
 import { abilityText, counters, type CastLogPayload } from "@/lib/logSummary";
 import type { RollResult, SaveCategory } from "@/types/combat";
 import type { UseResult } from "@/types/items";
-import type { SkillCheck } from "@/types/skills";
+import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import { dieName } from "@/lib/diceFormula";
 import { fieldClass } from "./fieldStyles";
@@ -188,6 +189,8 @@ function CardBody({
       return <InitiativeResult d10={model.d10} />;
     case "skill":
       return <SkillResult check={model.check} interactive={interactive} />;
+    case "ability":
+      return <AbilityResult check={model.check} interactive={interactive} />;
     case "dice":
       return <DiceResult roll={model.roll} />;
     case "info":
@@ -1360,67 +1363,76 @@ function InitiativeResult({ d10 }: { d10: number }) {
 }
 
 /**
- * Skill check: the die, "roll vs adjusted target", the verdict, what the target is made of, the
- * DM's adjustment (with its reason) and, on the latest check only, the control to change it.
+ * A d20/d100-under check (skill or ability): the die, "roll vs adjusted target", the verdict, what
+ * the target is made of, the DM's adjustment (with its reason) and, on the latest check only, the
+ * control to change it. Every number is the server's.
  */
-function SkillResult({
-  check: c,
-  interactive,
+function CheckView({
+  die,
+  roll,
+  target,
+  adjustment,
+  adjustmentReason,
+  adjustedTarget,
+  success,
+  heading,
+  percent,
+  adjust,
+  testId,
 }: {
-  check: SkillCheck;
-  interactive: boolean;
+  testId: string;
+  die: number;
+  roll: number;
+  target: number;
+  adjustment: number;
+  adjustmentReason?: string;
+  adjustedTarget: number;
+  success: boolean;
+  heading: string;
+  /** A bard skill's targets are percentages. */
+  percent?: boolean;
+  /** The adjustment control, on the latest check only. */
+  adjust: ReactNode;
 }) {
   const { t } = useTranslation();
-  const proficiency = c.kind === "proficiency";
-  const adjustment = c.adjustment ?? 0;
-  const adjusted = checkAdjustedTarget(c);
-  const show = (n: number) =>
-    proficiency ? n : t("skills.percent", { value: n });
+  const show = (n: number) => (percent ? t("skills.percent", { value: n }) : n);
   return (
-    <div className="flex flex-col gap-3" data-testid="skill-result">
+    <div className="flex flex-col gap-3" data-testid={testId}>
       <div className="flex items-center gap-3">
         <HexDie
-          value={c.roll}
-          label={t("fil.die", { faces: c.die, value: c.roll })}
+          value={roll}
+          label={t("fil.die", { faces: die, value: roll })}
         />
         <div className="min-w-0 flex-1">
           <ResultLine
             verdict={
               <Verdict
-                ok={c.success}
+                ok={success}
                 yes={t("result.skill.success")}
                 no={t("result.skill.failure")}
               />
             }
           >
             <span className="text-key tabular-nums" data-testid="skill-vs">
-              {t(proficiency ? "fil.skillVs" : "fil.skillVsPercent", {
-                roll: c.roll,
-                target: adjusted,
+              {t(percent ? "fil.skillVsPercent" : "fil.skillVs", {
+                roll,
+                target: adjustedTarget,
               })}
             </span>
           </ResultLine>
           <div className="text-body text-muted-foreground tabular-nums">
-            {proficiency
-              ? t("result.skill.proficiency", {
-                  die: c.die,
-                  stat: abilityText(
-                    t,
-                    c.ability ?? "",
-                    c.abilityScore ?? 0,
-                    c.modifier ?? 0,
-                  ),
-                })
-              : t("result.skill.bardSkill", { die: c.die, percent: c.target })}
+            {heading}
           </div>
         </div>
       </div>
       <dl className="grid grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-2">
-        <Fact label={t("result.skill.die", { die: c.die })}>{c.roll}</Fact>
-        <Fact label={t("result.target")}>{show(c.target)}</Fact>
+        <Fact label={t("result.skill.die", { die })}>{roll}</Fact>
+        <Fact label={t("result.target")}>{show(target)}</Fact>
         {adjustment !== 0 && (
           <Fact label={t("result.skill.adjustedTarget")}>
-            <span data-testid="skill-adjusted-target">{show(adjusted)}</span>
+            <span data-testid="skill-adjusted-target">
+              {show(adjustedTarget)}
+            </span>
           </Fact>
         )}
       </dl>
@@ -1430,16 +1442,125 @@ function SkillResult({
           data-testid="skill-adjustment-line"
         >
           <span className="min-w-0 break-words">
-            {c.adjustmentReason ?? t("result.skill.adjustment")}
+            {adjustmentReason ?? t("result.skill.adjustment")}
           </span>
           <span className="tabular-nums">{formatSigned(adjustment)}</span>
         </div>
       )}
-      {interactive && c.logEntryId !== undefined && (
-        // Keyed by entry: a new check starts its fold afresh (AdjustCheck).
-        <AdjustSkill key={c.logEntryId} check={c} entryId={c.logEntryId} />
-      )}
+      {adjust}
     </div>
+  );
+}
+
+/** Skill check (ADR 0014): a proficiency against its ability and modifier, a bard skill against its percentage. */
+function SkillResult({
+  check: c,
+  interactive,
+}: {
+  check: SkillCheck;
+  interactive: boolean;
+}) {
+  const { t } = useTranslation();
+  const proficiency = c.kind === "proficiency";
+  return (
+    <CheckView
+      testId="skill-result"
+      die={c.die}
+      roll={c.roll}
+      target={c.target}
+      adjustment={c.adjustment ?? 0}
+      adjustmentReason={c.adjustmentReason}
+      adjustedTarget={checkAdjustedTarget(c)}
+      success={c.success}
+      percent={!proficiency}
+      heading={
+        proficiency
+          ? t("result.skill.proficiency", {
+              die: c.die,
+              stat: abilityText(
+                t,
+                c.ability ?? "",
+                c.abilityScore ?? 0,
+                c.modifier ?? 0,
+              ),
+            })
+          : t("result.skill.bardSkill", { die: c.die, percent: c.target })
+      }
+      adjust={
+        interactive &&
+        c.logEntryId !== undefined && (
+          // Keyed by entry: a new check starts its fold afresh (AdjustCheck).
+          <AdjustSkill key={c.logEntryId} check={c} entryId={c.logEntryId} />
+        )
+      }
+    />
+  );
+}
+
+/**
+ * Ability check (ADR 0028): a d20 under the score in effect; the sheet's score beside it when an
+ * effect changed it. The DM's adjustment is set here, after the roll (step 6).
+ */
+function AbilityResult({
+  check: c,
+  interactive,
+}: {
+  check: AbilityCheck;
+  interactive: boolean;
+}) {
+  const { t } = useTranslation();
+  const name = t(`attr.${c.ability}`, { defaultValue: c.ability });
+  return (
+    <CheckView
+      testId="ability-result"
+      die={c.die}
+      roll={c.roll}
+      target={c.target}
+      adjustment={c.adjustment}
+      adjustmentReason={c.adjustmentReason}
+      adjustedTarget={c.adjustedTarget}
+      success={c.success}
+      heading={t(
+        c.target === c.abilityScore
+          ? "abilityCheck.heading"
+          : "abilityCheck.headingEffect",
+        { die: c.die, name, score: c.target, sheet: c.abilityScore },
+      )}
+      adjust={
+        interactive &&
+        c.logEntryId !== undefined && (
+          // Keyed by entry: a new check starts its fold afresh (AdjustCheck).
+          <AdjustAbility key={c.logEntryId} check={c} entryId={c.logEntryId} />
+        )
+      }
+    />
+  );
+}
+
+/**
+ * The adjustment of the latest ability check (ADR 0028 steps 6 and 8): the shared check
+ * adjustment, ±20 by 1. The server recomputes the verdict; the roll never changes.
+ */
+function AdjustAbility({
+  check: c,
+  entryId,
+}: {
+  check: AbilityCheck;
+  entryId: number;
+}) {
+  const { t } = useTranslation();
+  const adjustLastAbility = useRollStore((s) => s.adjustLastAbility);
+  return (
+    <AdjustCheck
+      current={c}
+      label={t("abilityCheck.adjustLabel")}
+      entryId={entryId}
+      valueTestId="ability-adjustment"
+      min={-MAX_ADJUSTMENT}
+      max={MAX_ADJUSTMENT}
+      step={stepAdjustment}
+      onApply={(value, reason) => adjustLastAbility(entryId, value, reason)}
+    />
   );
 }
 

@@ -8,21 +8,11 @@ import (
 
 // abilityScore is the sheet's score for an ability key.
 func abilityScore(c *charactersvc.Character, a Ability) (int, error) {
-	switch a {
-	case AbilityStr:
-		return c.Str, nil
-	case AbilityDex:
-		return c.Dex, nil
-	case AbilityCon:
-		return c.Con, nil
-	case AbilityInt:
-		return c.Int, nil
-	case AbilityWis:
-		return c.Wis, nil
-	case AbilityCha:
-		return c.Cha, nil
+	score, ok := c.Score(a)
+	if !ok {
+		return 0, fmt.Errorf("unknown ability %q", a)
 	}
-	return 0, fmt.Errorf("unknown ability %q", a)
+	return score, nil
 }
 
 // ProficiencyTarget is the ability score plus the proficiency's modifier

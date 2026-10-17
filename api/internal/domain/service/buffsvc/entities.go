@@ -180,6 +180,13 @@ type Strength struct {
 	Effective int
 }
 
+// AbilityScore is the sheet's score in one ability and the score in effect
+// with the effects the app applies to it (ADR 0028 step 2).
+type AbilityScore struct {
+	Base      int
+	Effective int
+}
+
 // Contribution is one applying buff's, or item power's, share of an
 // additive effect, so a roll breakdown can name every source. Buff is the
 // buff's name, or the item's stored name for a power, whose ItemID is set

@@ -272,40 +272,18 @@ func applyModifier(fx *buffsvc.BuffEffects, key string, v int) bool {
 	return true
 }
 
-// hostile reports a buff whose effects hurt the bearer (Slow, Malison): an
-// area spell the Bard casts does not land on him by default.
-func hostile(b *AppliedBuff, untracked []Untracked) bool {
-	fx := b.Buff.Effects
-	neg := func(p *int) bool { return p != nil && *p < 0 }
-	if neg(fx.ToHit) || neg(fx.Damage) || neg(fx.SaveBonus) || (fx.AC != nil && *fx.AC > 0) {
-		return true
-	}
-	for _, u := range untracked {
-		if (u.Key == "move_pct" || u.Key == "attacks_pct") && u.Value < 100 {
-			return true
-		}
-	}
-	return false
-}
-
 // appliesToSelf decides whether a buff the Bard casts lands on him: always
-// for self-only spells; else the player's choice, defaulting to yes for
-// "self or other", yes for an area unless it is hostile, no for "other".
-func appliesToSelf(target spelleffectsvc.Target, onSelf *bool, isHostile bool) bool {
-	if target == spelleffectsvc.TargetSelf {
-		return true
+// for self-only spells; else the player's choice, defaulting to the spell's
+// (spelleffectsvc.Entry.DefaultOnSelf: self or other and friendly areas on
+// him, hostile areas and others' spells not).
+func appliesToSelf(e spelleffectsvc.Entry, onSelf *bool, level int) (bool, error) {
+	if e.Target == spelleffectsvc.TargetSelf {
+		return true, nil
 	}
 	if onSelf != nil {
-		return *onSelf
+		return *onSelf, nil
 	}
-	switch target {
-	case spelleffectsvc.TargetSelfOrOther:
-		return true
-	case spelleffectsvc.TargetArea:
-		return !isHostile
-	default:
-		return false
-	}
+	return e.DefaultOnSelf(level)
 }
 
 func sortedKeys[V any](m map[string]V) []string {

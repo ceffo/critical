@@ -36,8 +36,8 @@ export function BrandIcon({ className }: { className?: string }) {
 
 /**
  * The mark and the Cinzel wordmark (ADR 0020 step 5); the app name is the same in every language.
- * Below 1500 px wide the header shows the mark alone (ADR 0022 step 7); the name stays readable to
- * assistive technology and in the page title.
+ * Both show at every layout width (ADR 0027 step 4.6): the brand has its own line at the top of the
+ * header's right column, over the last result.
  */
 export function BrandMark({ className }: { className?: string }) {
   return (
@@ -50,7 +50,7 @@ export function BrandMark({ className }: { className?: string }) {
       <BrandIcon />
       <span
         aria-hidden
-        className="hidden font-display text-key leading-none font-bold tracking-wide select-none min-[1500px]:inline"
+        className="font-display text-key leading-none font-bold tracking-wide select-none"
         data-testid="wordmark"
       >
         {APP_NAME.slice(0, -1)}

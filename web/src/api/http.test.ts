@@ -36,6 +36,20 @@ describe("request errors", () => {
   });
 
   it.each([
+    ["en", "That spell is not in the catalogue."],
+    ["fr", "Ce sort n'est pas dans le catalogue."],
+  ])(
+    "words a stale spell id's 404 in %s, which the details popup shows",
+    async (lng, want) => {
+      await i18n.changeLanguage(lng);
+      respond(404, { code: "spell_not_found", error: "spell not found: gone" });
+      const err = await request("/api/spells/gone").catch((e: unknown) => e);
+      expect((err as ApiError).message).toBe(want);
+      expect((err as ApiError).status).toBe(404);
+    },
+  );
+
+  it.each([
     ["an unknown code", { code: "brand_new", error: "server words" }],
     ["a generic code", { code: "invalid_input", error: "server words" }],
     ["the internal code", { code: "internal", error: "server words" }],

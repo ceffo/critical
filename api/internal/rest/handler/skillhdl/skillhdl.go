@@ -2,7 +2,9 @@
 // (the proficiencies and bard skills with their targets and last checks),
 // POST /api/roll/skill/{id} (one check, rolled and logged on the server, with
 // an optional DM adjustment) and POST /api/roll/skill/{id}/adjust (the
-// adjustment of the latest check, after the roll).
+// adjustment of the latest check, after the roll); and the plain ability
+// checks (ADR 0028): POST /api/roll/ability/{ability} and POST
+// /api/roll/ability/{entryId}/adjust.
 package skillhdl
 
 import (
@@ -34,6 +36,8 @@ type skillSvc interface {
 	List(ctx context.Context, characterID int64) (*skillsvc.Skills, error)
 	Roll(ctx context.Context, characterID int64, id string, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
 	Adjust(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
+	RollAbility(ctx context.Context, characterID int64, ability string) (*skillsvc.AbilityCheckResult, error)
+	AdjustAbility(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.AbilityCheckResult, error)
 }
 
 // RegisterRoutes wires the skill endpoints onto r.
@@ -41,6 +45,10 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc skillsvc.SVC) {
 	r.Get("/api/skills", render.Handle(List(charID, svc)))
 	r.Post("/api/roll/skill/{id}", render.Handle(Roll(charID, svc)))
 	r.Post("/api/roll/skill/{id}/adjust", render.Handle(Adjust(charID, svc)))
+	// {id} is the ability key on the roll, the log entry on the adjustment
+	// (ADR 0028 steps 1 and 6), as on the skill routes.
+	r.Post("/api/roll/ability/{id}", render.Handle(RollAbility(charID, svc)))
+	r.Post("/api/roll/ability/{id}/adjust", render.Handle(AdjustAbility(charID, svc)))
 }
 
 // AdjustmentDTO is the body of POST /api/roll/skill/{id} (optional, every

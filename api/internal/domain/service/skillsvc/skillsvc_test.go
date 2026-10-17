@@ -30,6 +30,7 @@ type fixture struct {
 	svc     skillsvc.SVC
 	dal     *mocks.MockDAL
 	chars   *mocks.MockCharacters
+	abils   *mocks.MockAbilities
 	dice    *mocks.MockDice
 	log     *mocks.MockLog
 	tx      *countingTx
@@ -52,10 +53,10 @@ var bardSkills = []skillsvc.BardSkillDef{{ID: "climb_walls", Percent: 85}, {ID: 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
-		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), dice: mocks.NewMockDice(t),
+		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), tx: &countingTx{},
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Dice: f.dice, Log: f.log, Tx: f.tx})
+	svc, err := skillsvc.New(skillsvc.Deps{DAL: f.dal, Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.dal.EXPECT().ListProficiencies(mock.Anything).Return(catalog, nil).Maybe()

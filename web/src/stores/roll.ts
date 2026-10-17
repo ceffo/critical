@@ -16,8 +16,13 @@ import {
 } from "@/api/roll";
 import { postUseItem } from "@/api/items";
 import type { UseResult } from "@/types/items";
-import type { SkillCheck } from "@/types/skills";
-import { adjustSkill, rollSkill } from "@/api/skills";
+import type { Ability, AbilityCheck, SkillCheck } from "@/types/skills";
+import {
+  adjustAbility,
+  adjustSkill,
+  rollAbility,
+  rollSkill,
+} from "@/api/skills";
 import { useTableStore } from "./table";
 
 /** The last roll and what was asked for, so the result card can show its context. */
@@ -27,6 +32,7 @@ export type LastRoll =
   | { kind: "cast"; result: CastResult }
   | { kind: "item"; result: UseResult }
   | { kind: "skill"; result: SkillCheck }
+  | { kind: "ability"; result: AbilityCheck }
   | { kind: "exposure"; result: ExposureResult };
 
 interface RollStore {
@@ -57,6 +63,14 @@ interface RollStore {
   rollSkill: (id: string, adjustment?: number) => Promise<boolean>;
   /** Sets the adjustment of the latest skill check (log entry id; the server refuses any other). */
   adjustLastSkill: (
+    entryId: number,
+    adjustment: number,
+    reason: string,
+  ) => Promise<boolean>;
+  /** Rolls a check of the ability (the server rolls it against the score in effect and logs it). */
+  rollAbility: (ability: Ability) => Promise<boolean>;
+  /** Sets the adjustment of the latest ability check (log entry id; the server refuses any other). */
+  adjustLastAbility: (
     entryId: number,
     adjustment: number,
     reason: string,
@@ -111,6 +125,19 @@ export const useRollStore = create<RollStore>((set) => {
         async () => ({
           kind: "skill",
           result: await adjustSkill(id, adjustment, reason),
+        }),
+        true,
+      ),
+    rollAbility: (ability) =>
+      roll(
+        async () => ({ kind: "ability", result: await rollAbility(ability) }),
+        true,
+      ),
+    adjustLastAbility: (id, adjustment, reason) =>
+      roll(
+        async () => ({
+          kind: "ability",
+          result: await adjustAbility(id, adjustment, reason),
         }),
         true,
       ),

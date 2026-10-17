@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SpellDetail } from "@/components/dashboard/SpellDetail";
-import { findSpell } from "@/api/spells_db";
+import { getSpell } from "@/api/spells_db";
 import type { Spell } from "@/types/spells";
 
 interface Props {
@@ -19,24 +19,22 @@ interface Props {
 }
 
 /** What the catalogue answered for one spell id. */
-type Load = { id: string; spell: Spell | null } | { id: string; error: string };
+type Load = { id: string; spell: Spell } | { id: string; error: string };
 
 /**
  * The Spells tab's details popup (ADR 0027 step 10.4): the lookup's detail view of a prepared spell,
- * fetched from the catalogue at the character's level; Escape, the close button or a click outside
+ * fetched by id from the catalogue (GET /api/spells/{id}) at the character's level; Escape, the close button or a click outside
  * closes it.
  */
 export function SpellDetailsDialog({ spell, onClose }: Props) {
   const { t } = useTranslation();
   const [load, setLoad] = useState<Load | null>(null);
   const id = spell?.id;
-  const name = spell?.name;
-  const level = spell?.level;
 
   useEffect(() => {
-    if (id === undefined || name === undefined || level === undefined) return;
+    if (id === undefined) return;
     let live = true;
-    findSpell(id, name, level).then(
+    getSpell(id).then(
       (found) => live && setLoad({ id, spell: found }),
       (err: unknown) =>
         live &&
@@ -48,7 +46,7 @@ export function SpellDetailsDialog({ spell, onClose }: Props) {
     return () => {
       live = false;
     };
-  }, [id, name, level]);
+  }, [id]);
   // An answer for another spell is still loading this one's.
   const shown = load && load.id === id ? load : null;
 
@@ -84,15 +82,9 @@ export function SpellDetailsDialog({ spell, onClose }: Props) {
             {shown.error}
           </p>
         )}
-        {shown &&
-          "spell" in shown &&
-          (shown.spell ? (
-            <SpellDetail key={shown.spell.id} spell={shown.spell} />
-          ) : (
-            <p className="text-body text-muted-foreground">
-              {t("lookup.noMatch")}
-            </p>
-          ))}
+        {shown && "spell" in shown && (
+          <SpellDetail key={shown.spell.id} spell={shown.spell} />
+        )}
       </DialogContent>
     </Dialog>
   );

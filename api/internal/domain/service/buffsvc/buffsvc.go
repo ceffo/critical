@@ -77,6 +77,10 @@ type SVC interface {
 	Aggregate(ctx context.Context, characterID int64, str int, kind WeaponKind) (BuffModifiers, error)
 	// GetEffectiveStr is the character's base STR and its STR with buffs.
 	GetEffectiveStr(ctx context.Context, characterID int64) (Strength, error)
+	// GetAbilityScore is the sheet's score in ability a and the score in
+	// effect with the effects that apply to it (ADR 0028 step 2). An unknown
+	// key wraps domain.ErrInvalidInput.
+	GetAbilityScore(ctx context.Context, characterID int64, a charactersvc.Ability) (AbilityScore, error)
 
 	// GetInitiative is the round's initiative, nil when there is none (ADR
 	// 0013 step 5).

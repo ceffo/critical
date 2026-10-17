@@ -61,6 +61,26 @@
     "wis": "WIS",
     "cha": "CHA"
   },
+  "abilityCheck": {
+    "roll": "{{name}} check ({{score}})",
+    "names": {
+      "str": "Strength",
+      "dex": "Dexterity",
+      "con": "Constitution",
+      "int": "Intelligence",
+      "wis": "Wisdom",
+      "cha": "Charisma"
+    },
+    "heading": "Ability · d{{die}} under {{name}} {{score}}",
+    "headingEffect": "Ability · d{{die}} under {{name}} {{score}} (sheet {{sheet}})",
+    "adjustLabel": "Adjust this check",
+    "log": {
+      "success": "{{name}} check: d{{die}} {{roll}} vs {{target}}, success",
+      "failure": "{{name}} check: d{{die}} {{roll}} vs {{target}}, failure",
+      "successAdjusted": "{{name}} check: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), success",
+      "failureAdjusted": "{{name}} check: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), failure"
+    }
+  },
   "hp": {
     "title": "Hit Points",
     "change": "HP change",
@@ -1121,6 +1141,7 @@
       "item_edit": "Item",
       "item_remove": "Item",
       "skill_check": "Skill",
+      "ability_check": "Ability",
       "dice": "Dice",
       "correction": "Correction",
       "exposure": "Exposure",
@@ -1251,6 +1272,7 @@
       "saveAdjustment": "Correction save adjustment {{from}} → {{to}}",
       "verdict": "Correction GM verdict {{from}} → {{to}}",
       "skillAdjustment": "Correction skill check adjustment {{from}} → {{to}}",
+      "abilityAdjustment": "Correction ability check adjustment {{from}} → {{to}}",
       "other": "Correction of #{{id}}",
       "unknown": "?",
       "none": "none"

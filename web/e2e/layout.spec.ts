@@ -1411,6 +1411,52 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
   ).toContainText("(seuil ");
 });
 
+// ADR 0028 on the result card, French first: an ability check rolled from the character card's
+// DEX tile, adjusted after the roll with a long reason; the card and the stat tiles are never cut,
+// fr and en, 1280x800 to 2560x1440.
+test("ability check card: adjusted with a long reason, uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.getByRole("button", { name: "Test de Dextérité (17)" }).click();
+  const card = page.getByTestId("ability-result");
+  await expect(card).toBeVisible();
+  const form = await openFold(card, "Ajuster après le jet", "Ajuster ce test");
+  const harder = form.getByRole("button", { name: "Diminuer l'ajustement" });
+  await harder.click();
+  await harder.click();
+  await form
+    .getByLabel("Raison (facultatif)")
+    .fill("Corniche glissante sous la pluie battante");
+  await form.getByRole("button", { name: "Appliquer" }).click();
+  await expect(card.getByTestId("skill-adjustment-line")).toContainText("−2");
+
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await expect(card).toContainText(
+      lang === "fr" ? "Seuil ajusté" : "Adjusted target",
+    );
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(card, `ability check card, ${where}`);
+      await expectWholeWords(card, `ability check card, ${where}`);
+      await expectNoClippedText(
+        page.getByRole("group", {
+          name: lang === "fr" ? "Caractéristiques" : "Ability scores",
+        }),
+        `ability tiles, ${where}`,
+      );
+      await snap(page, `ability-check-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+});
+
 // ADR 0027 step 8 on the attack card, French first: the verdict pill right after the result it
 // judges, the stat tiles (d20, target AC, margin) and the AC correction opened from its one line;
 // nothing is cut at any layout viewport, in French and English.

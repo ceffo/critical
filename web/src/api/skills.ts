@@ -1,4 +1,10 @@
-import type { SkillAdjustment, SkillCheck, Skills } from "@/types/skills";
+import type {
+  Ability,
+  AbilityCheck,
+  SkillAdjustment,
+  SkillCheck,
+  Skills,
+} from "@/types/skills";
 import { post, request } from "./http";
 
 export function fetchSkills(): Promise<Skills> {
@@ -23,6 +29,23 @@ export function adjustSkill(
   reason: string,
 ): Promise<SkillCheck> {
   return post<SkillCheck>(`/api/roll/skill/${entryId}/adjust`, {
+    adjustment,
+    reason,
+  });
+}
+
+/** Rolls a check of the ability on the server against its score in effect; it is logged (ability_check). */
+export function rollAbility(ability: Ability): Promise<AbilityCheck> {
+  return post<AbilityCheck>(`/api/roll/ability/${ability}`);
+}
+
+/** Sets the adjustment of the latest ability check (log entry id); the server recomputes the verdict. */
+export function adjustAbility(
+  entryId: number,
+  adjustment: number,
+  reason: string,
+): Promise<AbilityCheck> {
+  return post<AbilityCheck>(`/api/roll/ability/${entryId}/adjust`, {
     adjustment,
     reason,
   });

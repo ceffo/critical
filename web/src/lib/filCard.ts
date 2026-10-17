@@ -6,13 +6,14 @@ import type { HpBreakdown, LogEntry, LogKind } from "@/types/log";
 import type { Modifier, RollResult } from "@/types/combat";
 import type { UseResult } from "@/types/items";
 import type { CastResult, ExposureResult } from "@/types/spells";
-import type { SkillCheck } from "@/types/skills";
+import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import { formatSigned, formatTime } from "./format";
 import { attackSettled } from "./attackAdjust";
 import {
+  abilityCheckPayload,
   attackPayload,
   attackWeapon,
   castPayload,
@@ -34,6 +35,7 @@ export type LiveResult =
   | { kind: "cast"; result: CastResult }
   | { kind: "item"; result: UseResult }
   | { kind: "skill"; result: SkillCheck }
+  | { kind: "ability"; result: AbilityCheck }
   | { kind: "exposure"; result: ExposureResult };
 
 /** The journal filter: everything, or rolls only. */
@@ -51,6 +53,7 @@ export const RESULT_KINDS: readonly LogKind[] = [
   "cast",
   "item_use",
   "skill_check",
+  "ability_check",
   "exposure",
 ];
 
@@ -61,13 +64,14 @@ export function latestResult(entries: readonly LogEntry[]): LogEntry | null {
 
 /**
  * The "rolls" filter: entries that carry dice the server rolled (attacks, saves, item uses,
- * initiative, skill checks, free dice rolls, and casts with a damage roll or a to-hit d20).
+ * initiative, skill and ability checks, free dice rolls, and casts with a damage roll or a to-hit d20).
  */
 export function isRollEntry(e: LogEntry): boolean {
   switch (e.kind) {
     case "attack":
     case "save":
     case "skill_check":
+    case "ability_check":
     case "dice":
     case "item_use":
     case "initiative":
@@ -202,6 +206,7 @@ export type CardModel =
   | { layout: "item"; item: UseResult }
   | { layout: "initiative"; round: number; d10: number }
   | { layout: "skill"; check: SkillCheck }
+  | { layout: "ability"; check: AbilityCheck }
   | { layout: "dice"; roll: DiceRoll }
   | { layout: "info"; info: InfoView };
 
@@ -269,6 +274,9 @@ export function cardModel(
   if (initiative) return { layout: "initiative", ...initiative };
   const skill = skillCheckPayload(e);
   if (skill) return { layout: "skill", check: { ...skill, logEntryId: e.id } };
+  const ability = abilityCheckPayload(e);
+  if (ability)
+    return { layout: "ability", check: { ...ability, logEntryId: e.id } };
   const dice = dicePayload(e);
   if (dice) return { layout: "dice", roll: { ...dice, logEntryId: e.id } };
   return {
@@ -328,6 +336,8 @@ export function liveModel(last: LiveResult): CardModel {
       return { layout: "item", item: last.result };
     case "skill":
       return { layout: "skill", check: last.result };
+    case "ability":
+      return { layout: "ability", check: last.result };
     case "exposure":
       return { layout: "exposure", exposure: last.result };
   }
@@ -340,6 +350,8 @@ export function liveKind(last: LiveResult): LogKind {
       return "item_use";
     case "skill":
       return "skill_check";
+    case "ability":
+      return "ability_check";
     default:
       return last.kind;
   }
@@ -413,6 +425,11 @@ export function cardHeader(
     case "skill":
       subtitle = skillName(t, model.check.id);
       break;
+    case "ability":
+      subtitle = t(`abilityCheck.names.${model.check.ability}`, {
+        defaultValue: model.check.ability,
+      });
+      break;
     case "dice":
       subtitle = model.roll.formula;
       break;
@@ -461,6 +478,12 @@ export function rowValue(e: LogEntry): RowValue | null {
   const skill = skillCheckPayload(e);
   if (skill)
     return { text: String(skill.roll), tone: skill.success ? "pass" : "fail" };
+  const ability = abilityCheckPayload(e);
+  if (ability)
+    return {
+      text: String(ability.roll),
+      tone: ability.success ? "pass" : "fail",
+    };
   const dice = dicePayload(e);
   if (dice) return { text: String(dice.total), tone: "ink" };
   const exposure = exposurePayload(e);

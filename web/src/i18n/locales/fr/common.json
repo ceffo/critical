@@ -61,6 +61,26 @@
     "wis": "SAG",
     "cha": "CHA"
   },
+  "abilityCheck": {
+    "roll": "Test de {{name}} ({{score}})",
+    "names": {
+      "str": "Force",
+      "dex": "Dextérité",
+      "con": "Constitution",
+      "int": "Intelligence",
+      "wis": "Sagesse",
+      "cha": "Charisme"
+    },
+    "heading": "Caractéristique · d{{die}} sous {{name}} {{score}}",
+    "headingEffect": "Caractéristique · d{{die}} sous {{name}} {{score}} (fiche {{sheet}})",
+    "adjustLabel": "Ajuster ce test",
+    "log": {
+      "success": "Test de {{name}} : d{{die}} {{roll}} contre {{target}}, réussi",
+      "failure": "Test de {{name}} : d{{die}} {{roll}} contre {{target}}, échec",
+      "successAdjusted": "Test de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), réussi",
+      "failureAdjusted": "Test de {{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec"
+    }
+  },
   "hp": {
     "title": "Points de vie",
     "change": "Modifier les PV",
@@ -1121,6 +1141,7 @@
       "item_edit": "Objet",
       "item_remove": "Objet",
       "skill_check": "Compétence",
+      "ability_check": "Caractéristique",
       "dice": "Dés",
       "correction": "Correction",
       "exposure": "Exposition",
@@ -1250,6 +1271,7 @@
       "targetAc": "Correction CA {{from}} → {{to}}",
       "saveAdjustment": "Correction ajustement de sauvegarde {{from}} → {{to}}",
       "skillAdjustment": "Correction ajustement de jet de compétence {{from}} → {{to}}",
+      "abilityAdjustment": "Correction ajustement de test de caractéristique {{from}} → {{to}}",
       "verdict": "Correction verdict du MJ {{from}} → {{to}}",
       "other": "Correction de #{{id}}",
       "unknown": "?",

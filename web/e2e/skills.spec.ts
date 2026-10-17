@@ -189,3 +189,65 @@ test("skills: adjust before the roll from the section header, then after it on t
   await expect(result.getByTestId("skill-vs")).toHaveText(/^\d+ vs 90%$/);
   await expect(climb.getByTestId("skill-adjusted")).toHaveCount(0);
 });
+
+// What only a browser proves (ADR 0028): the character card's DEX tile is the check's roll button
+// (click, Enter and Space), the result card shows the check, its adjustment after the roll re-judges
+// the same roll, the journal words it and Undo pops the adjustment. The d20 is random: the tile is
+// rolled until the die lands where −2 decides against DEX 17 (16 or 17). The rules (target in
+// effect, natural 20, ranges) are Go tests (skillsvc), the wording unit tests (logSummary).
+test("ability check: click DEX, adjust −2 on the card, the verdict changes, undo restores it", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const dex = page.getByRole("button", { name: "Dexterity check (17)" });
+  const card = page.getByRole("region", { name: "Detail", exact: true });
+  const result = card.getByTestId("ability-result");
+  // One roll per input: each must send its own POST (the keyboard is not left to the dice).
+  const roll = async (input: () => Promise<void>) => {
+    const rolled = page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/roll/ability/dex") &&
+        r.request().method() === "POST",
+    );
+    await input();
+    const res = await rolled;
+    expect(res.ok()).toBe(true);
+    const n = ((await res.json()) as { roll: number }).roll;
+    await expect(result.getByTestId("hex-die")).toHaveText(String(n));
+    return n;
+  };
+  for (const key of ["Enter", "Space"])
+    await roll(async () => {
+      await dex.focus();
+      await page.keyboard.press(key);
+    });
+  let d20 = 0;
+  for (let i = 0; i < 200 && d20 !== 16 && d20 !== 17; i++)
+    d20 = await roll(() => dex.click());
+  expect([16, 17]).toContain(d20);
+  await expect(card.getByTestId("card-header")).toContainText("Dexterity");
+  await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 17`);
+  await expect(result.getByTestId("verdict")).toHaveText("Success");
+
+  const form = await openFold(
+    card,
+    "Adjust after the roll",
+    "Adjust this check",
+  );
+  const harder = form.getByRole("button", { name: "Decrease adjustment" });
+  await harder.click();
+  await harder.click();
+  await form.getByRole("button", { name: "Apply" }).click();
+  await expect(result.getByTestId("verdict")).toHaveText("Failure");
+  await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 15`);
+  await expect(result.getByTestId("hex-die")).toHaveText(String(d20));
+  await expect(combatLog(page)).toContainText(
+    `DEX check: d20 ${d20} vs 15 (17 −2), failure`,
+  );
+  await snap(page, "ability-check-adjusted");
+
+  // Undo pops the adjustment, its own step: the check reads as rolled.
+  await page.getByTestId("undo").click();
+  await expect(result.getByTestId("verdict")).toHaveText("Success");
+  await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 17`);
+});

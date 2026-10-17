@@ -1,6 +1,6 @@
 # ADR 0028: Ability checks
 
-**Status**: accepted 2026-10-17 (user OK, proposals as written); written
+**Status**: accepted 2026-10-17 (user OK, proposals as written); implemented 2026-10-17
 
 ## Context
 
@@ -38,36 +38,34 @@ Where the project differs from the book:
 
 Tests live in `api/internal/domain/service/skillsvc/ability_test.go` unless named otherwise (the
 ability check shares the proficiency check's d20 mechanic and adjustment, so it lives beside it).
-The tests this ADR plans are written without their `Test` prefix until they exist, because
-`just check-adr-tests` refuses a cited `Test…` name that is not in the code: step 1's
-`AbilityCheck_Step1_OneD20PerCheck` gains the prefix in the implementation, and
-the change that adds a test writes its full name here. Names with the prefix (`TestAmendLatest`,
-`TestSpecialSentinels`) exist today and gain the quoted cases.
+Every test cited here exists (`just check-adr-tests`); `TestAmendLatest` and
+`TestSpecialSentinels` hold the quoted cases.
 
 1. **The roll.** `POST /api/roll/ability/{ability}` (`str`, `dex`, `con`, `int`, `wis`, `cha`; no
    body) rolls one d20 through the dice port. Any other ability is refused (400, `invalid_input`)
    before a die is rolled or anything is logged.
-   Tests: `AbilityCheck_Step1_OneD20PerCheck` (one case per ability; exactly one d20, no other
-   die), `AbilityCheck_Step1_UnknownAbilityRefusedBeforeTheRoll` (no die, no log entry);
-   `router` `AbilityCheck_RollWireShape`.
+   Tests: `TestAbilityCheck_Step1_OneD20PerCheck` (one case per ability; exactly one d20, no other
+   die), `TestAbilityCheck_Step1_UnknownAbilityRefusedBeforeTheRoll` (no die, no log entry);
+   `router` `TestAbilityCheck_RollWireShape`.
 2. **The target is the score in effect.** The target is the character's score in that ability with
    the effects the app applies to it, computed on the server through one port that returns the
    sheet's score and the score in effect for an ability. Today the only such effect is Strength
    magic ([ADR 0004](0004-buffs.md) steps 7 to 9, `buffsvc` effective STR); every other ability's
    score in effect is the sheet's. An effect on another ability later feeds the same port: the check
-   has no case per ability or per buff.
-   Tests: `AbilityCheck_Step2_TargetIsTheScoreInEffect` (STR raised by a Strength buff: the
+   has no case per ability or per buff. The port is `buffsvc` `GetAbilityScore` (sheet and score in
+   effect for one ability key, `buffsvc` `TestGetAbilityScore`).
+   Tests: `TestAbilityCheck_Step2_TargetIsTheScoreInEffect` (STR raised by a Strength buff: the
    target is the effective STR, the sheet's STR kept beside it; DEX with no effect: the sheet's
    score; the sheet and the effective score distinct values).
 3. **Verdict.** The check succeeds when the roll is at or under the adjusted target (step 5);
    without an adjustment the adjusted target is the target. Plain arithmetic, no clamp: an adjusted
    target at or under 0 always fails, a natural 1 succeeds whenever the adjusted target is 1 or
    more.
-   Test: `AbilityCheck_Step3_AtOrUnderTheTarget` (at the target, one over, one under, natural 1
+   Test: `TestAbilityCheck_Step3_AtOrUnderTheTarget` (at the target, one over, one under, natural 1
    against 1 and against 0).
 4. **A natural 20 always fails**, whatever the adjusted target (an effective STR of 20 or more, or
    an easier adjustment), as for a proficiency check ([ADR 0014](0014-skill-checks.md) step 2).
-   Test: `AbilityCheck_Step4_NaturalTwentyAlwaysFails` (adjusted target 22: 20 fails, 19
+   Test: `TestAbilityCheck_Step4_NaturalTwentyAlwaysFails` (adjusted target 22: 20 fails, 19
    succeeds).
 5. **Logged and poppable.** Each check is one `ability_check` entry recorded in the check's
    transaction ([ADR 0018](0018-transactions-and-undo.md)), with no snapshots (it changes no state)
@@ -80,9 +78,9 @@ the change that adds a test writes its full name here. Names with the prefix (`T
    of the roll kinds (`actionlog.RollKinds`): it replaces the result card, and it ends the
    correction window of the roll before it ([ADR 0006](0006-saving-throws.md) step 6). Undo pops
    it like any top entry ([ADR 0010](0010-action-stack-and-undo.md)); popping restores nothing.
-   Tests: `AbilityCheck_Step5_OneLoggedEntryPerCheck` (kind, no snapshots, no summary, the
-   payload's fields), `actionlog` `IsRoll` ("ability check"); `actionlogsvc` `TestAmendLatest`
-   ("save, a later ability check exists"); `router` `AbilityCheck_RollWireShape`.
+   Tests: `TestAbilityCheck_Step5_OneLoggedEntryPerCheck` (kind, no snapshots, no summary, the
+   payload's fields), `actionlog` `TestIsRoll` ("ability check"); `actionlogsvc` `TestAmendLatest`
+   ("save, a later ability check exists"); `router` `TestAbilityCheck_RollWireShape`.
 6. **Adjustment after the roll, on the latest check.** `POST /api/roll/ability/{entryId}/adjust`
    `{adjustment, reason?}` sets the adjustment of the check. It **moves the target, + easier,
    - harder**: the adjusted target is `target + adjustment` (DEX 15 "at -2" is judged against 13).
@@ -94,12 +92,12 @@ the change that adds a test writes its full name here. Names with the prefix (`T
    voided check or one that is not the latest roll (409, `entry_already_voided` /
    `entry_not_latest`). No new refusal code is needed; a new sentinel would get its
    `internal/render` row and `apiError.<code>` keys.
-   Tests: `AbilityCheck_Step6_AdjustmentMovesTheTarget` (fail to success, success to fail, at
+   Tests: `TestAbilityCheck_Step6_AdjustmentMovesTheTarget` (fail to success, success to fail, at
    the adjusted target, a new adjustment replaces the previous one, 0 removes it and drops the
    reason, natural 20 with an easier adjustment; one d20 at the roll, no die at the adjustment),
-   `AbilityCheck_Step6_LatestCheckOnly` (not the latest, voided, not an ability check);
+   `TestAbilityCheck_Step6_LatestCheckOnly` (not the latest, voided, not an ability check);
    `actionlogsvc` `TestAmendLatest` ("not an ability check", "ability check, a later save exists",
-   "latest ability check amended"); `router` `AbilityCheck_AdjustWireShape`,
+   "latest ability check amended"); `router` `TestAbilityCheck_AdjustWireShape`,
    `TestSpecialSentinels` ("ability adjust not latest", "ability adjust voided", "ability adjust
    not an ability check").
 7. **Audited and undoable.** Each adjustment is an `amend` correction on the entry carrying the
@@ -108,12 +106,12 @@ the change that adds a test writes its full name here. Names with the prefix (`T
    `abilityAdjustment`, from and to the adjustment): undo pops the newest adjustment and the check
    reads the one before it, down to the check as rolled; redo replays it
    ([ADR 0019](0019-redo.md)).
-   Tests: `AbilityCheck_Step7_AdjustmentIsAnAmendCorrection` (the correction's field, from and
+   Tests: `TestAbilityCheck_Step7_AdjustmentIsAnAmendCorrection` (the correction's field, from and
    to; the amend's `previousSuccess` and `previousAdjustment`; two adjustments then one pop leave
    the first in effect).
 8. **Ranges.** The adjustment is -20 to +20; the reason is optional, trimmed, at most 80
    characters. Anything else is refused (400, `invalid_input`) before the log is amended.
-   Tests: `AbilityCheck_Step8_AdjustmentRanges` (-20, +20, -21, +21; reason of 80 and 81
+   Tests: `TestAbilityCheck_Step8_AdjustmentRanges` (-20, +20, -21, +21; reason of 80 and 81
    characters, a reason of spaces only reads as none); `router` `TestSpecialSentinels` ("ability
    adjust out of range").
 

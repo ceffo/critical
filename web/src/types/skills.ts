@@ -72,3 +72,25 @@ export interface SkillAdjustment {
   adjustment: number;
   reason?: string;
 }
+
+/** One ability check as POST /api/roll/ability/{ability} and POST /api/roll/ability/{id}/adjust
+ * return it (skillhdl AbilityCheckDTO), and the payload in effect of an ability_check entry
+ * (without logEntryId; ADR 0028 step 5). abilityScore is the sheet's score, target the score in
+ * effect when it was rolled, adjustedTarget = target + adjustment the one the roll was judged
+ * against; success is the verdict in effect, rolledSuccess the verdict as rolled. previousSuccess
+ * and previousAdjustment are set in the payload of an adjustment only. */
+export interface AbilityCheck {
+  ability: Ability;
+  die: number;
+  roll: number;
+  abilityScore: number;
+  target: number;
+  adjustment: number;
+  adjustmentReason?: string;
+  adjustedTarget: number;
+  success: boolean;
+  rolledSuccess: boolean;
+  previousSuccess?: boolean;
+  previousAdjustment?: number;
+  logEntryId?: number;
+}

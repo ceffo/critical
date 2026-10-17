@@ -53,12 +53,11 @@ User steps left:
    9.2, "Promotion" below; agreed by the user 2026-10-17, not run yet): `just fly-db-provision tournesol-db prod` (a
    rerun: no password or secret changes; its checks accept the user's own restore points). Until then every
    promotion stops at the restore point and deploys nothing.
-5. **The tag rulesets for CI-made versions** (ADR 0024 step 10.2, "GitHub" below): rerun
-   `scripts/github-tag-ruleset.sh` (admin) **before the first release run of the versioning change**, so the
-   release job may create `v*` tags. Until then the run deploys staging and then fails at "Tag the version"
-   (the version is not tagged; the next release computes it again). The same rerun creates the ruleset of the
-   `next-major` marker (`just major`, "A major version"); until it runs, anyone with write access can push that
-   marker.
+5. **The tag ruleset** (ADR 0024 step 10.2, "GitHub" below): `scripts/github-tag-ruleset.sh` (admin) was run
+   2026-10-17: `release tags` (update, deletion, admin bypass) is in place. GitHub refused the other two
+   rulesets, so run it once more after this change is on main: it deletes `release tag creation` and
+   `next-major marker` if they still exist (it never created them here). CI's release job needs no ruleset to
+   create a `v*` tag (v0.2.0 was tagged that way).
 6. **Production deployable from main** (ADR 0024 step 10.2, "GitHub" below): once the promotion on demand is
    on main, `scripts/github-environments.sh --no-tokens` (admin) moves `production`'s rule from the tags `v*`
    to the branch `main`. Until then every Promote run fails at the `promote to production` job, nothing done.
@@ -323,31 +322,38 @@ environment accepts main only.
 
 **Who may create a `v*` tag.** The tags name the versions Promote resolves, so a tag on a commit that is not
 on main, or that staging never ran, must not appear as a version: Promote's guards (main's scripts) refuse
-both, and two tag rulesets keep the tags themselves trustworthy (a bypass actor bypasses every rule of its
-ruleset, hence two); a third covers the marker tag of "A major version":
+both, and one tag ruleset keeps the versions from being moved or deleted:
 
 | Ruleset | Rules on `refs/tags/v*` | Bypass |
 |---|---|---|
 | `release tags` | update, deletion | Repository admin |
-| `release tag creation` | creation | Repository admin, the GitHub Actions app (`Integration` 15368: the workflow token of the release job) |
-| `next-major marker` | creation, update, deletion on `refs/tags/next-major` (not a `v*` tag) | Repository admin, the GitHub Actions app (the Major workflow's token) |
+
+Creating a `v*` tag, and writing the `next-major` marker of "A major version", are not restricted by a ruleset.
+_Changed 2026-10-17; was: `release tag creation` (creation on `v*`) and `next-major marker` (creation, update,
+deletion on `next-major`), both with the GitHub Actions app (`Integration` 15368, the workflow token) as a
+bypass actor next to the admin role._ GitHub answers HTTP 422 to that bypass on a repository owned by a
+personal account, so those two rulesets cannot exist here. They are not needed: the promotion runs main's
+scripts with the version as an input, so a `v*` tag no longer selects the code that reaches production, and the
+repository's only collaborator is its owner. Were the repository moved to an organization, the two rulesets
+(ADR 0024 step 10.2, was) could come back.
 
 CI is the only maker of version tags (the release job, after a passed staging deploy, "Release version"); a
-human never makes one (`just release` is gone). The workflow may create a `v*` tag, never move or delete one.
+human never makes one (`just release` is gone). The workflow may create a `v*` tag, never move or delete one
+(only an admin may).
 
 ```bash
-scripts/github-tag-ruleset.sh --dry-run   # prints the rulesets
-scripts/github-tag-ruleset.sh             # creates them, or replaces them (found by name); admin rights
+scripts/github-tag-ruleset.sh --dry-run   # prints the ruleset and the names it would remove
+scripts/github-tag-ruleset.sh             # creates or replaces it (found by name), deletes the obsolete ones; admin rights
 ```
 
 `release tags` was applied 2026-10-17 (ruleset 25291040) with creation in it and the admin bypass only; the
-rerun of user step 5 moves creation into `release tag creation` and adds `next-major marker`. Check:
-Settings > Rules > Rulesets shows the three, active, target tags (`refs/tags/v*`, `refs/tags/next-major`), with
-the rules and bypasses above; a collaborator with write access
-pushing a `v*` tag gets "push declined due to repository rule violations".
+rerun of user step 5 replaces it with update and deletion only and removes the two obsolete rulesets if they
+exist. Check: Settings > Rules > Rulesets shows one ruleset, active, target tags (`refs/tags/v*`), with the
+rules and bypass above; a collaborator with write access moving or deleting a `v*` tag gets "push declined due
+to repository rule violations".
 
-What the GitHub Actions bypass also allows: any workflow of this repository whose token has `contents:
-write` can create a `v*` tag, so a write collaborator could, through a workflow on a branch, tag a commit
+What the absence of a creation rule allows: any writer, or any workflow of this repository whose token has
+`contents: write`, can create a `v*` tag, so a write collaborator could tag a commit
 that is not on main. Such a tag starts nothing (a tag made with a workflow token starts no workflow, and
 Promote is run by hand only), and Promote never resolves it: it is off main, or staging has no deployment
 recorded as its version. If it is the highest `v*` tag, the release job refuses every release until an admin
@@ -485,18 +491,14 @@ is `1.0.0`. Repository admins only.
   release just moves the marker to the new head.
 - **Refused.** `mark` fails when main's head is the last version's own commit (nothing has landed: the marker
   would be ignored; run it again after a commit) or when a newer release exists.
-- **Who may write the marker.** `next-major` is not a `v*` tag, so the `v*` rulesets do not cover it; the
-  ruleset `next-major marker` (above) lets only an admin and the Actions app create, move or delete it, so a
-  collaborator cannot make a major by pushing the tag. The Actions bypass has the same limit as for `v*`: a
-  workflow with `contents: write` can write it. The effect is bounded: it only changes the number of the next
-  release, which still needs a passing staging deploy. Nothing widens the `v*` rulesets.
+- **Who may write the marker.** `next-major` is not a `v*` tag and has no ruleset (_changed 2026-10-17; was:
+  a `next-major marker` ruleset for the admin and the Actions app, which GitHub refuses on a personal
+  repository_): a writer can push it. The effect is bounded: it only changes the number of the next release,
+  which still needs a passing staging deploy; and the repository's only collaborator is its owner.
 - **Offline test.** `scripts/test-major.sh` (part of `just validate`): `mark`'s API calls and refusals on a
   fixture repository, the preview, the admin refusal, `just major`, the workflow parsed (admin check first, no
-  secret, main only, marker last), the marker ruleset; and the pending/ignored/waiting cases in
+  secret, main only, marker last), the ruleset script (only `release tags`, the obsolete ones removed by name); and the pending/ignored/waiting cases in
   `scripts/test-release-version.sh`.
-
-User step (once, after this is on main): `scripts/github-tag-ruleset.sh` (user step 5) to create the marker's
-ruleset. Without it `just major` still works (the token may create tags), but the marker is open to writers.
 
 ### Release build
 

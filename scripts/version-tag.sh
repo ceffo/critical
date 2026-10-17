@@ -8,8 +8,9 @@
 #
 # A tag created with the workflow's token starts no workflow (GitHub: "events triggered by the
 # GITHUB_TOKEN ... will not create a new workflow run"), so this tag does not start the Promote workflow;
-# promoting is `just promote [version]`, a run of Promote from main (docs/deploy.md, "Promotion"). The tag ruleset lets the
-# GitHub Actions app create v* tags, never move or delete them (scripts/github-tag-ruleset.sh). An
+# promoting is `just promote [version]`, a run of Promote from main (docs/deploy.md, "Promotion"). Creating a v* tag is
+# not restricted by a ruleset (GitHub refuses the Actions-app bypass on a personal repository); the ruleset keeps
+# only moving and deleting them admin-only (scripts/github-tag-ruleset.sh). An
 # existing tag is never moved: GitHub refuses to create the ref, and so does this script.
 set -euo pipefail
 
@@ -31,5 +32,5 @@ object="$(jq -n --arg tag "$tag" --arg sha "$sha" --arg digest "$digest" --arg d
 [[ "$object" =~ ^[0-9a-f]{40}$ ]] || { echo "version-tag: no tag object from GitHub" >&2; exit 1; }
 jq -n --arg ref "refs/tags/$tag" --arg sha "$object" '{ref: $ref, sha: $sha}' \
     | gh api -X POST "repos/$repo/git/refs" --input - >/dev/null \
-    || { echo "version-tag: GitHub refused to create $tag (it exists already, or the tag ruleset does not let the workflow create it)" >&2; exit 1; }
+    || { echo "version-tag: GitHub refused to create $tag (it exists already, or the workflow token may not write the repository)" >&2; exit 1; }
 echo "::notice title=Version::$tag tagged on $sha (staging digest $digest)"

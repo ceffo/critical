@@ -9,8 +9,8 @@
 #
 # mark refuses when the commit is not after the highest vX.Y.Z tag (nothing has landed since the last version,
 # or a newer release exists): the marker would be ignored. It needs the history and the tags (fetch-depth 0).
-# The tag `next-major` is not a `v*` tag, so the tag rulesets of scripts/github-tag-ruleset.sh on `v*` do not
-# cover it; its own ruleset there lets only an admin and the GitHub Actions app write it.
+# The tag `next-major` is not a `v*` tag and has no ruleset (GitHub refuses the Actions-app bypass on a personal
+# repository, scripts/github-tag-ruleset.sh): the repository's only collaborator is its owner.
 # preview reads the tag names (one per line, `git ls-remote --tags --refs origin 'v*'` cut to the name) and
 # prints the next major after the highest vX.Y.Z. Prints no secret.
 set -euo pipefail
@@ -38,11 +38,11 @@ case "${1:-}" in
         if gh api "repos/$repo/git/ref/tags/next-major" >/dev/null 2>&1; then
             jq -n --arg sha "$sha" '{sha: $sha, force: true}' \
                 | gh api -X PATCH "repos/$repo/git/refs/tags/next-major" --input - >/dev/null \
-                || die "GitHub refused to move next-major (the tag ruleset does not let the workflow write it?)"
+                || die "GitHub refused to move next-major (does the workflow token have contents: write?)"
         else
             jq -n --arg sha "$sha" '{ref: "refs/tags/next-major", sha: $sha}' \
                 | gh api -X POST "repos/$repo/git/refs" --input - >/dev/null \
-                || die "GitHub refused to create next-major (the tag ruleset does not let the workflow write it?)"
+                || die "GitHub refused to create next-major (does the workflow token have contents: write?)"
         fi
         echo "::notice title=Major version::next-major is on $sha: the next release that happens is $((major + 1)).0.0 (after $highest). A range that makes no release (docs/test/chore only, no-release) waits; the marker needs no deleting."
         ;;

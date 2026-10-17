@@ -10,14 +10,16 @@ defaults are answered. Amended again 2026-10-16 (see "Amendment (shared cluster 
 2026-10-16)"): the cluster is the user's existing `tournesol-db`, shared, instead of a new
 `critical-db`. Amended again 2026-10-16 (see "Amendment (restore point: a copy database,
 2026-10-16)"): the pre-promotion restore point is a copy database on the same cluster, and production's
-no-public-IP check has no bypass. Amended again 2026-10-17, **proposed, awaiting the user's OK** (see
+no-public-IP check has no bypass. Amended again 2026-10-17, **accepted, user OK 2026-10-17** (see
 "Amendment (staging versions from the conventional commits, 2026-10-17)"): every staging release gets a
 version computed from the commits, baked into the image and tagged by CI once staging passed (steps 1.4, 3,
-4, 10.2 and the "release name" consequence). Amended again 2026-10-17, **proposed, awaiting the user's OK**
+4, 10.2 and the "release name" consequence). Amended again 2026-10-17, **accepted, user OK 2026-10-17**
 (see "Amendment (promotion on demand, 2026-10-17)"): the promotion runs from main on demand, promotes the
 newest version that passed staging or the one asked, and only a repository admin may run it (steps 4 and
-10.2). Amended again 2026-10-17, **proposed, awaiting the user's OK** (see "Amendment (a manual major,
+10.2). Amended again 2026-10-17, **accepted, user OK 2026-10-17** (see "Amendment (a manual major,
 2026-10-17)"): `just major` makes the next staging release the next major version (step 3).
+Amended again 2026-10-17 (see "Amendment (one tag ruleset, 2026-10-17)"): GitHub refuses the Actions-app
+bypass on a personal repository, so only the `release tags` ruleset (step 10.2) remains.
 
 ## Context
 
@@ -278,8 +280,9 @@ flowchart LR
        demand); was: from `v*` tags only, a tag running the promotion workflow of its own commit._ The tags
        name the versions the promotion resolves, so only a repository admin may move or delete a `v*` tag,
        and only an admin and the release job (the GitHub Actions app, through the workflow token) may
-       create one (two tag rulesets, _added 2026-10-16; amended 2026-10-17 (staging versions), was: only an
-       admin may create one_). CI is the only maker of version tags.
+       create one (_amended 2026-10-17 (one tag ruleset), was: two tag rulesets, added 2026-10-16 and amended
+       2026-10-17 (staging versions); now one, "release tags", moving and deleting only; creating a tag is not
+       restricted_). CI is the only maker of version tags.
     3. The rulebooks deploy key is a read-only key on `critical-rulebooks`, held only by the job that
        builds the release image.
     4. When a staging secret is missing, the main-branch build and deploy jobs skip with a notice and
@@ -446,7 +449,7 @@ private until access control is decided, so production's no-public-IP check is m
 
 ## Amendment (staging versions from the conventional commits, 2026-10-17)
 
-**Proposed, awaiting the user's OK before merge.** User, 2026-10-17: _"have staging releases infer the
+**Accepted, user OK 2026-10-17** (was: proposed, awaiting the user's OK before merge). User, 2026-10-17: _"have staging releases infer the
 version number automatically from conventional commit to bump minor or patch version (major is manual).
 then promotion to prod just promote latest staging version. this way we have no risk of generating a bad
 tag and we know easily the different version on each environment. useful if we decide not to promote for a
@@ -481,7 +484,7 @@ a version redeploys it; `just release` goes away and CI is the only maker of ver
 
 ## Amendment (promotion on demand, 2026-10-17)
 
-**Proposed, awaiting the user's OK before merge.** User, 2026-10-17: _"then promotion to prod just promote
+**Accepted, user OK 2026-10-17** (was: proposed, awaiting the user's OK before merge). User, 2026-10-17: _"then promotion to prod just promote
 latest staging version ... useful if we decide not to promote for a while"_. Decided in the same triage: the
 trigger is a manual run with an optional `version` input; with none, the newest `v*` version whose staging
 deployment passed; the run is main's workflow and scripts, not the tag's; the guards stay (a passed staging
@@ -535,3 +538,24 @@ minor with a notice).
 - **Tests**: `scripts/test-release-version.sh` (marker after the last version -> major, before or on it ->
   ignored, on a later commit -> left for later, docs-only -> no release and still pending, used once) and
   `scripts/test-major.sh` (the marker's API calls, the admin refusal, `just major`, the workflow, the ruleset).
+
+## Amendment (one tag ruleset, 2026-10-17)
+
+User, 2026-10-17, running `scripts/github-tag-ruleset.sh`: `release tags` was applied; `release tag creation`
+failed with HTTP 422. On a repository owned by a personal account GitHub does not accept the GitHub Actions app
+(`Integration` 15368, the release job's workflow token) as a ruleset bypass actor, and the `next-major marker`
+ruleset has the same bypass and the same fate. Decided by the supervisor (grooming delegated by the user): keep
+`release tags`, drop the other two. Since the promotion runs main's scripts with the version as an input
+(amendment "promotion on demand"), a `v*` tag no longer selects the code that reaches production, and the
+repository's only collaborator is its owner. The first automatic release, v0.2.0, was tagged by CI with no
+creation rule.
+
+- **Step 10.2**: one ruleset on `v*`, `release tags`: update and deletion, admin bypass. Was: three (the
+  other two: creation on `v*`, admin and the Actions app; creation, update and deletion on `next-major`, admin
+  and the Actions app). Creating a `v*` tag and writing `next-major` are not restricted; the effects are
+  bounded as before (a stray tag is never resolved as a version unless staging recorded it; the marker only
+  changes the next number). The old reasoning about the Actions bypass (a workflow with `contents: write` can
+  create a `v*` tag) now holds for any writer. The script removes the two obsolete rulesets by name if they
+  exist. Were the repository moved to an organization, they could come back.
+- **Tests**: `scripts/test-major.sh` (the dry-run is `release tags` alone; a run with `gh` stubbed deletes the
+  two obsolete rulesets by name, replaces `release tags` and writes nothing else).

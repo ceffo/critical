@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-language-fields check-adr-tests check-no-sqlite check-release-scripts check-api check-web
+validate: check-no-tracker-ids check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -69,6 +69,12 @@ check-no-language-fields:
     scripts/test-check-no-language-fields.sh
     scripts/check-no-language-fields.sh
     @echo "--- No per-language fields ---"
+
+# PR titles are conventional-commit lines (the release reads the version bump from them). The test
+# runs the checker on valid and rejected titles.
+check-pr-title:
+    scripts/test-check-pr-title.sh
+    @echo "--- PR title check ---"
 
 # Install all dependencies
 install:

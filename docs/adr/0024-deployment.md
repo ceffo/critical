@@ -522,7 +522,7 @@ the job checks the actor is a repository admin and refuses otherwise, no require
 
 ## Amendment (a manual major, 2026-10-17)
 
-**Proposed, awaiting the user's OK before merge.** User, 2026-10-17: _"major is manual"_. Decided in the same
+**Accepted, user OK 2026-10-17** (was: proposed, awaiting the user's OK before merge). User, 2026-10-17: _"major is manual"_. Decided in the same
 triage: a manual workflow, admin only, records a marker that the version computation reads; it affects only
 the next release; on `0.x` the first major is `1.0.0`; a major is never automatic (a breaking change stays a
 minor with a notice).

@@ -1,0 +1,76 @@
+name: Release
+
+# The release build of ADR 0024 step 3.1: once CI is green on a push to main, build the image of that
+# commit with the real catalogue and push it to the private fly registry. Runbook: docs/deploy.md
+# ("Release build").
+#
+# workflow_run, not a job of ci.yml: CI cancels a running main build when a newer commit lands
+# (cancel-in-progress), while a release run must finish once started; here a newer commit only
+# replaces a queued one (the job's concurrency below). workflow_run always runs this file as it is
+# on main, so a pull request cannot change what runs with the secrets.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: release image
+    # Green CI only, and only for a push to main of this repository: a red or cancelled CI run, a pull
+    # request (even from a fork's branch named main) and a fork never get here.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    # On the job, not the workflow: every CI completion on a branch named main starts a run of this
+    # workflow, and a workflow-level group would let a skipped one (red CI, a fork's main) cancel a
+    # pending green release. A job skipped by its `if` never joins the group.
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
+    env:
+      COMMIT: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      # Missing secrets (before the user provisions them): a notice, and the run stays green (step 10.4).
+      - name: Check the release secrets
+        id: secrets
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          RULEBOOKS_DEPLOY_KEY: ${{ secrets.RULEBOOKS_DEPLOY_KEY }}
+        run: scripts/release-secrets.sh FLY_API_TOKEN RULEBOOKS_DEPLOY_KEY
+
+      - name: Set up flyctl
+        if: steps.secrets.outputs.ready == 'true'
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+
+      # One step, so the catalogue exists only while it runs: fetched into the runner's temp dir (outside
+      # the checkout, never an artifact or a cache), built into the image, then deleted. The image goes
+      # to the staging app's repository, the one the staging deploy token may push to; production gets
+      # the same digest by the promotion (docs/deploy.md, "Release build").
+      - name: Build and push the release image
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          RULEBOOKS_DEPLOY_KEY: ${{ secrets.RULEBOOKS_DEPLOY_KEY }}
+        run: |
+          [ "$(git rev-parse HEAD)" = "$COMMIT" ]
+          dir="$RUNNER_TEMP/catalogue"
+          trap 'rm -rf "$dir"' EXIT
+          rulebooks="$(scripts/release-catalogue.sh "$dir")"
+          unset RULEBOOKS_DEPLOY_KEY
+          app="$(sed -n 's/^app = "\(.*\)"$/\1/p' deploy/fly.staging.toml)"
+          scripts/release-image.sh "$dir" "$rulebooks" "$app"
+          echo "::notice title=Release image::registry.fly.io/$app:$COMMIT (rulebooks $rulebooks)"

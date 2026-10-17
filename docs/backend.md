@@ -459,9 +459,9 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
 - **In the image**: `/app/critical-srv`, the web build in `/app/web`, the campaign `seeds/` in `/app/seeds`,
   and the catalogue at `/app/catalogue.json`. The `CRITICAL_*` variables point at those paths; any of them
   can be overridden at `docker run`. The image holds no data, has no volume and names no database: the
-  database is PostgreSQL at `CRITICAL_DSN`, given at run time (on fly a secret). `deploy/fly.*.toml` still
-  set the SQLite DSN and the `/data` volume until the fly PostgreSQL configuration replaces them
-  (`internal/flycheck` compares every other `[env]` value with the image's).
+  database is PostgreSQL at `CRITICAL_DSN`, given at run time (on fly the app's secret, pointing at its
+  database in the shared cluster). `deploy/fly.*.toml` have no `[[mounts]]` and no DSN, and their `[env]`
+  equals the image's `ENV` (`internal/flycheck`, ADR 0024 steps 2.4 and 5.1).
 - **`CRITICAL_WEB_DIR`** (optional): the web build to serve. Set, every path outside `/api` is the file of
   that path, or `index.html` when there is none (SPA fallback, so a deep link reloads into the app); files
   under `assets/` (content-hashed by Vite) are sent with `Cache-Control: public, max-age=31536000,
@@ -478,6 +478,10 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   into an empty database. It checks health with the commit, `/` and a deep link returning
   `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. The CI `image` job builds
   the image with the fixture and runs it on every PR and on main; nothing is pushed.
+- **Release build**: on green CI on `main`, `.github/workflows/release.yml` fetches the real catalogue with the
+  read-only deploy key and runs `scripts/release-image.sh` (also behind `just release-image`): the image is
+  labelled with the commit and the rulebooks commit and pushed to the private fly registry tagged with the
+  full commit sha (docs/deploy.md, "Release build").
 - **On fly.io**: configuration in `deploy/fly.*.toml`, operator commands in [deploy.md](deploy.md).
 - **Locally**: `docker compose up --build` builds the image with the real `.catalogue/` (fetch it with
   `just catalogue` first) and serves the app on http://localhost:8888, on the compose PostgreSQL (database

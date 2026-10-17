@@ -18,7 +18,7 @@ fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
 body="$(mktemp)"
 log="$(mktemp)"
-"$fly" proxy "$port:8080" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
+"$fly" proxy "$port:80" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
 proxy=$!
 trap 'kill "$proxy" 2>/dev/null || true; rm -f "$body" "$log"' EXIT
 fail() { echo "fly-persistence-check: FAIL ($app): $*" >&2; exit 1; }

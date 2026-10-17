@@ -19,7 +19,7 @@ fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
 body="$(mktemp)"
 log="$(mktemp)"
-"$fly" proxy "$port:8080" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
+"$fly" proxy "$port:80" "$app.flycast" -a "$app" -q >"$log" 2>&1 &
 proxy=$!
 trap 'kill "$proxy" 2>/dev/null || true; rm -f "$body" "$log"' EXIT
 fail() { echo "fly-smoke: FAIL ($app): $*" >&2; exit 1; }
@@ -33,6 +33,12 @@ get() { curl -sS -m 70 -o "$body" -w '%{http_code}' -H "fly-force-instance-id: $
 
 for m in $machines; do
     start=$SECONDS
+    if [ "$m" = "$(echo "$machines" | head -n1)" ]; then
+        # The pin must be honoured, or "every machine serves" proves nothing: wait until the app
+        # answers at all, then a machine id that does not exist must not get a 200.
+        while [ $((SECONDS - start)) -lt 90 ] && [ "$(curl -sS -m 70 -o /dev/null -w '%{http_code}' "$base/api/health" 2>/dev/null || true)" != 200 ]; do sleep 1; done
+        [ "$(get 0000000000dead /api/health)" != 200 ] || fail "fly-force-instance-id is ignored: cannot pin a machine"
+    fi
     code=000
     while [ $((SECONDS - start)) -lt 90 ]; do
         kill -0 "$proxy" 2>/dev/null || { cat "$log" >&2; fail "fly proxy exited"; }

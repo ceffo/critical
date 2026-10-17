@@ -228,6 +228,18 @@ fly-private app:
 fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
 
+# Through `fly proxy` on a free local port (never just dev's 8080/5173), until Ctrl-C; read-only.
+# Optional fixed port, refused when taken. E.g. `just fly-open critical-staging`, `just fly-open critical-prod`.
+# Open a private fly app in the browser: waits until it answers, then prints the URL
+fly-open app port="":
+    scripts/fly-open.sh {{app}} {{port}}
+
+# Through `fly proxy` on a free local port (never the compose 5432), until Ctrl-C. Prints no password.
+# E.g. `just fly-db-proxy tournesol-db`, then psql with the printed connection string.
+# Reach a fly PostgreSQL cluster from this machine
+fly-db-proxy cluster port="":
+    scripts/fly-open.sh --db {{cluster}} {{port}}
+
 # Read-only, through fly ssh as the cluster's operator; the cluster machine must be started. Names and counts only.
 # Print the row count of every table of one database of a fly PostgreSQL cluster, e.g. `just fly-db-counts tournesol-db critical_prod`
 fly-db-counts cluster db:

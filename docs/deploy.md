@@ -29,8 +29,8 @@ First private deploy, 2026-10-16, image of commit `1648083` (one digest, both ap
 
 User steps left:
 
-1. **Re-enter the character-sheet edits** the seeds do not hold, in the production app (through `fly
-   proxy`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
+1. **Re-enter the character-sheet edits** the seeds do not hold, in the production app (`just fly-open
+   critical-prod`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
    ("Production data").
 2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below). The environments and both
    `FLY_API_TOKEN` secrets are set (2026-10-16).
@@ -130,10 +130,11 @@ use. If a run stops between the password change and the secret, rerun it with `-
 
 ```bash
 $fly postgres connect -a tournesol-db -d critical_prod     # psql as the cluster's operator (superuser)
-$fly proxy 15432:5432 tournesol-db.flycast -a tournesol-db # then psql "host=127.0.0.1 port=15432 user=critical_prod dbname=critical_prod"
+just fly-db-proxy tournesol-db                             # prints the psql connection string (free local port), Ctrl-C stops it
 ```
 
-The second form needs the user's password, which is only in the app's secret. To look at the data,
+The second form (`scripts/fly-open.sh --db`: `fly proxy` to `tournesol-db.flycast:5432` on a free local
+port, never the compose PostgreSQL's 5432) needs the user's password, which is only in the app's secret. To look at the data,
 use `fly postgres connect` (`SET ROLE critical_prod;` to act as that user); never rotate a running
 app's password just to log in: the rotation is an outage. Production data is
 private (ADR 0024 step 7): never paste query output into an issue, a PR or a log.
@@ -214,16 +215,23 @@ Never commit a token or key; the repository holds none.
 ## Reaching a private app
 
 ```bash
-$fly proxy 8080:80 critical-<env>.flycast -a critical-<env>   # then http://localhost:8080 (leave it running)
-curl -s localhost:8080/api/health           # {"status":"ok","commit":"<sha>"}
+just fly-open critical-staging              # or critical-prod: prints the URL to open, Ctrl-C stops it
+curl -s http://127.0.0.1:<port>/api/health  # {"status":"ok","commit":"<sha>"}, <port> from the line above
 $fly ssh console -a critical-<env>          # a shell on the machine
 $fly logs -a critical-<env>
 ```
 
+`just fly-open <app> [port]` (`scripts/fly-open.sh`) runs `fly proxy` from a free local port to the
+app's `.flycast` address on port 80, bound to 127.0.0.1, waits until `/api/health` answers (a stopped
+machine or database takes a few seconds), prints `http://127.0.0.1:<port>/` and the commit, and keeps
+the proxy until Ctrl-C. Never use a fixed 8080 (or 5173, 5432): `just dev` holds those, so the proxy
+fails to bind or the browser reaches the local stack instead of fly. A port given explicitly is
+refused when taken. Rerun it any time; each run gets its own port.
+
 Through the `.flycast` address, fly's proxy starts a stopped machine (staging stops when idle) and
 balances between machines; the address answers on the service ports (80, and 443 with TLS), not on 8080.
-`$fly proxy 8080:8080 -a critical-<env>` without the address goes straight to one running machine's
-port 8080 and starts nothing. A request can be pinned to one machine with the header
+`$fly proxy <free port>:8080 -a critical-<env>` without the address goes straight to one running
+machine's port 8080 and starts nothing. A request can be pinned to one machine with the header
 `fly-force-instance-id: <machine id>` (what `just fly-smoke` does for each machine).
 
 For a device that must reach the app without `fly proxy`, join the org's WireGuard network
@@ -288,7 +296,7 @@ Production starts like staging: its first boot imports the catalogue and the cam
 character, proficiencies, bard skills, weapons, items, spells). Nothing of the operator's local play is
 copied ([ADR 0024](adr/0024-deployment.md), "Amendment (production starts from the seeds,
 2026-10-16)"). Character-sheet edits made in the app that the seeds do not hold are re-entered by hand
-in the production app, through `fly proxy` (user steps left, below).
+in the production app, opened with `just fly-open critical-prod` (user steps left, below).
 
 To see what a local database holds beyond what a fresh boot seeds, without printing any of it, compare
 it with a freshly seeded throwaway database (names and counts only):

@@ -29,7 +29,10 @@ export const PLACEMENTS = [
   { id: "a-left", cls: "bp-left" },
   { id: "c-right", cls: "bp-right" },
   { id: "c-right-top", cls: "bp-right-top" },
+  { id: "d-wide", cls: "bp-right-top bp-wide" },
 ] as const;
+/** Placements also captured with the effects expanded, to show every name in full. */
+const EXPANDED = new Set<string>(["d-wide"]);
 type Placement = (typeof PLACEMENTS)[number];
 
 /** Dark Arcane at both layout viewports; light Arcane at 1440x900 only (one light shot each). */
@@ -58,6 +61,34 @@ type HeaderData = {
 };
 
 async function readHeader(page: Page): Promise<HeaderData> {
+  // The count of effects past the 3 rows at rest, then every effect: the real expander is clicked
+  // (the real header is hidden, so through the DOM) and closed again after reading. The expander's
+  // icon is read while expanded (a caret up); the drawing turns it down at rest.
+  const toggle = () =>
+    page.evaluate(() =>
+      (
+        document.querySelector(
+          "[data-screen=turn-header]:not(.bp-header) [data-testid=effects-expander]",
+        ) as HTMLElement
+      ).click(),
+    );
+  const hidden = await page.evaluate(
+    () =>
+      document
+        .querySelector(
+          "[data-screen=turn-header]:not(.bp-header) [data-testid=effects-expander]",
+        )
+        ?.textContent?.trim() ?? "",
+  );
+  await toggle();
+  await page.waitForTimeout(100);
+  const data = await read(page);
+  await toggle();
+  await page.waitForTimeout(100);
+  return { ...data, hidden };
+}
+
+async function read(page: Page): Promise<HeaderData> {
   return page.evaluate(() => {
     const h = document.querySelector(
       "[data-screen=turn-header]:not(.bp-header)",
@@ -108,7 +139,12 @@ const MARK = `<svg viewBox="0 0 32 32" aria-hidden="true"><polygon points="16,2.
 
 const COLUMNS = 5;
 
-function headerHtml(p: Placement, d: HeaderData, t: T): string {
+function headerHtml(
+  p: Placement,
+  d: HeaderData,
+  t: T,
+  expanded = false,
+): string {
   const brand = `<div class="bp-brand" data-testid="bp-brand">${MARK}<span class="bp-wordmark" data-testid="bp-wordmark">Critical<b>!</b></span></div>`;
   const turn = `<div class="bp-turn"><span class="bp-label">${t("turn.title")}</span><span class="num">${d.turn}</span></div>`;
   const next = `<div class="bp-next">
@@ -120,8 +156,16 @@ function headerHtml(p: Placement, d: HeaderData, t: T): string {
     const n = turnNo + i;
     return `<span class="col${i === 0 ? " cur" : ""}" style="grid-column:${i + 2}">${t("effects.column", { n })}</span>`;
   }).join("");
-  const rows = d.effects
-    .slice(0, 3)
+  const shown = expanded ? d.effects : d.effects.slice(0, 3);
+  // The wide header sizes the name column on every effect, the hidden ones too, so it does not
+  // jump when the effects are expanded.
+  const ghosts = p.cls.includes("bp-wide")
+    ? d.effects
+        .slice(shown.length)
+        .map((e) => `<span class="ghost" aria-hidden="true">${e.name}</span>`)
+        .join("")
+    : "";
+  const rows = shown
     .map((e, i) => {
       const row = i + 2;
       const span = e.turns > 0 ? Math.min(e.turns, COLUMNS) : COLUMNS;
@@ -133,9 +177,12 @@ function headerHtml(p: Placement, d: HeaderData, t: T): string {
       return `<span class="name" style="grid-row:${row}">${e.name}</span><div style="grid-column:2 / span ${span};grid-row:${row};min-width:0">${body}</div>`;
     })
     .join("");
-  const effects = `<div class="bp-effects"><div class="now"></div>
-    <div class="head"><span class="title">${t("effects.title")}</span><span class="quiet">${d.icons.add}${t("buffs.addShort")}</span><span class="quiet">${d.icons.more}${d.hidden}</span></div>
-    ${cols}${rows}</div>`;
+  const more = expanded
+    ? `<span class="quiet">${d.icons.more}</span>`
+    : `<span class="quiet up">${d.icons.more}${d.hidden}</span>`;
+  const effects = `<div class="bp-effects" style="grid-template-rows:1.5rem repeat(${shown.length}, 1.5rem)"><div class="now"></div>
+    <div class="head"><span class="title">${t("effects.title")}</span><span class="quiet">${d.icons.add}${t("buffs.addShort")}</span>${more}</div>
+    ${cols}${rows}${ghosts}</div>`;
   const last = `<div class="bp-last" data-testid="bp-last"><span class="bp-label">${t("shell.lastResult")} <span class="when">· ${d.when}</span></span>
     <p class="line" style="margin:0"><span class="chip${d.verdict === "bad" ? " bad" : ""}">${d.chip}</span><span>${d.text}</span></p></div>`;
 
@@ -169,12 +216,14 @@ async function draw(page: Page, css: string, html: string) {
 }
 
 /** The round's own checks on the drawn header: height budget, wordmark shown in full. */
-async function headerChecks(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
+async function headerChecks(page: Page, expanded: boolean): Promise<string[]> {
+  return page.evaluate((expanded) => {
     const out: string[] = [];
     const h = document.querySelector(".bp-header") as HTMLElement;
     const height = h.getBoundingClientRect().height;
-    if (height > 120) out.push(`header ${height}px tall (max 120)`);
+    // At rest 120 px (ADR 0022 step 3.1); expanded, 40 % of the viewport (ADR 0017 step 6).
+    const max = expanded ? 0.4 * window.innerHeight : 120;
+    if (height > max) out.push(`header ${height}px tall (max ${max})`);
     const w = document.querySelector(
       "[data-testid=bp-wordmark]",
     ) as HTMLElement;
@@ -183,7 +232,7 @@ async function headerChecks(page: Page): Promise<string[]> {
     if (r.width < 40 || r.right > hr.right || r.left < hr.left)
       out.push(`wordmark not shown in full (${r.left}-${r.right})`);
     return out;
-  });
+  }, expanded);
 }
 
 test("brand placement: each placement in French, Arcane dark at both viewports, light at 1440", async ({
@@ -212,15 +261,26 @@ test("brand placement: each placement in French, Arcane dark at both viewports, 
       await page.setViewportSize({ width, height });
       await page.waitForTimeout(100);
       const data = await readHeader(page);
-      expect(data.effects.length, "the seeded table shows 3 effects").toBe(3);
-      for (const p of PLACEMENTS) {
-        await draw(page, css, headerHtml(p, data, fr));
-        const name = `${p.id}--${theme.id}-${width}x${height}.png`;
+      expect(data.effects.length, "the seeded table has 5 effects").toBe(5);
+      const shots_ = PLACEMENTS.flatMap((p) =>
+        EXPANDED.has(p.id)
+          ? [
+              { p, expanded: false },
+              { p, expanded: true },
+            ]
+          : [{ p, expanded: false }],
+      );
+      for (const { p, expanded } of shots_) {
+        await draw(page, css, headerHtml(p, data, fr, expanded));
+        const name = `${p.id}${expanded ? "-expanded" : ""}--${theme.id}-${width}x${height}.png`;
         await page.screenshot({
           path: path.join(shots, name),
           animations: "disabled",
         });
-        for (const c of [...(await audit(page)), ...(await headerChecks(page))])
+        for (const c of [
+          ...(await audit(page)),
+          ...(await headerChecks(page, expanded)),
+        ])
           problems.push(`${name}: ${c}`);
       }
     }

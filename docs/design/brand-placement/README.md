@@ -7,7 +7,11 @@ the options. Everything is in French, in the picked colours (contrast ladder + r
 ADR 0026), on the real app and data.
 
 **Round 2 (2026-10-17):** the user said _"C and align it top right"_, so **C' · top right** was
-added (below). Not approved yet.
+added (below).
+
+**Round 3 (2026-10-17):** the user said _"all the space left should be put to good use. make sure
+the effects names are not cropped and/or have a wider timeline"_, so **D · top right, wide
+timeline** was added, with a shot of the effects expanded. Not approved yet.
 
 ## The placements
 
@@ -19,15 +23,23 @@ added (below). Not approved yet.
   right, in the spare space after the last result.
 - **C' · Top right** (round 2). As C, with the brand pinned to the header's top-right corner, on
   the top row's line ("Effets", the turn columns, the last result's label).
+- **D · Top right, wide timeline** (round 3). As C', and the timeline takes the header's spare
+  width: no empty gap between the last result and the brand. The 5 turn columns share the extra
+  (about 88 px each at 1440, 140 px at 1707). The name column is as wide as the longest effect
+  name, hidden ones included (_proposed_), so it doesn't jump when "+2" expands the list and names
+  are never cut.
 
 | | 1440x900 | 1707x1300 |
 |---|---|---|
 | A | ![](shots/a-left--arcane-dark-1440x900.png) | ![](shots/a-left--arcane-dark-1707x1300.png) |
 | C | ![](shots/c-right--arcane-dark-1440x900.png) | ![](shots/c-right--arcane-dark-1707x1300.png) |
 | C' | ![](shots/c-right-top--arcane-dark-1440x900.png) | ![](shots/c-right-top--arcane-dark-1707x1300.png) |
+| D | ![](shots/d-wide--arcane-dark-1440x900.png) | ![](shots/d-wide--arcane-dark-1707x1300.png) |
+| D, effects expanded | ![](shots/d-wide-expanded--arcane-dark-1440x900.png) | ![](shots/d-wide-expanded--arcane-dark-1707x1300.png) |
 
 Light (Arcane light, 1440x900): [A](shots/a-left--arcane-light-1440x900.png),
-[C](shots/c-right--arcane-light-1440x900.png), [C'](shots/c-right-top--arcane-light-1440x900.png).
+[C](shots/c-right--arcane-light-1440x900.png), [C'](shots/c-right-top--arcane-light-1440x900.png), [D](shots/d-wide--arcane-light-1440x900.png),
+[D expanded](shots/d-wide-expanded--arcane-light-1440x900.png).
 
 **B was dropped in round 2** (not picked). Its shots are in the round 1 commit (`7473753`). Rerun,
 it also failed the no-cut check at 1440x900 when the dice gave two-digit values: its wide brand cell
@@ -44,5 +56,5 @@ leaves the timeline too narrow for Stoneskin's charge line.
   will have. Its saves heading and the wrapped save name at 1440 are that item's work,
   not this round's.
 - Every shot is checked: no cut text (ADR 0022 step 1), no page scroll, the header at most 120 px
-  (ADR 0022 step 3.1), the wordmark shown in full. The run fails otherwise.
+  (ADR 0022 step 3.1; expanded, 40 % of the viewport, ADR 0017 step 6), the wordmark shown in full. The run fails otherwise.
 - App code is untouched.

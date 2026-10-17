@@ -7,7 +7,8 @@
  * The decided header (ADR 0027 step 4): the turn label stacked over its number (text-headline),
  * the initiative under "Tour suivant" as the header's text-hero number, 5 turn columns, effect
  * actions on hover (so none at rest), the last result on one line right after the timeline.
- * The placement is a class on the header: .bp-left, .bp-right, .bp-right-top.
+ * The placement is a class on the header: .bp-left, .bp-right, .bp-right-top, and .bp-wide on top
+ * of .bp-right-top.
  */
 
 /* The real header stays mounted (React owns it) but out of the way. */
@@ -309,4 +310,27 @@
 .bp-right-top .bp-brand {
   margin-left: auto;
   align-self: flex-start;
+}
+
+/* D · wide (round 3): C', and the timeline takes the header's spare width instead of leaving it
+ * empty between the last result and the brand. The 5 turn columns share it; the name column is as
+ * wide as the longest effect name (the hidden ones included), never cut. */
+.bp-wide .bp-effects {
+  flex: 1 1 auto;
+  grid-template-columns: max-content repeat(5, minmax(3rem, 1fr));
+}
+.bp-wide .bp-brand {
+  margin-left: 0;
+}
+.bp-effects .ghost {
+  grid-column: 1;
+  grid-row: 1;
+  height: 0;
+  padding-right: 0.5rem;
+  visibility: hidden;
+  white-space: nowrap;
+  font-size: var(--text-body);
+}
+.bp-effects .quiet.up svg {
+  transform: rotate(180deg);
 }

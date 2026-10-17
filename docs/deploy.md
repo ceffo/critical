@@ -51,7 +51,9 @@ User steps left:
    9.2, "Promotion" below), once the user has agreed to it: `just fly-db-provision tournesol-db prod` (a
    rerun: no password or secret changes; its checks accept the user's own restore points). Until then every
    promotion stops at the restore point and deploys nothing.
-5. **The first promotion** (`just release <version>`, "Promotion"), whose post-run checks only a real run
+5. **The tag ruleset** `release tags` (`scripts/github-tag-ruleset.sh`, "GitHub" below), once the user
+   has agreed to it.
+6. **The first promotion** (`just release <version>`, "Promotion"), whose post-run checks only a real run
    can make: listed at the end of "Promotion".
 
 ## The PostgreSQL cluster (user)
@@ -221,6 +223,21 @@ new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a use
 
 Restrict the `production` environment to deployment branches and tags matching `v*` (ADR 0024 step
 10.2). Optionally add a required reviewer (default: none, pushing the tag is the act).
+
+**Who may create a `v*` tag.** The environment's tag rule accepts **any** `v*` tag, and a tag runs
+`promote.yml` as it is in the tagged commit, with the production token: the on-main guard lives in that
+commit's scripts, so a tag on a commit that edited it out would deploy that commit. The tag ruleset
+`release tags` closes this: only a repository admin may create, move or delete a `v*` tag.
+
+```bash
+scripts/github-tag-ruleset.sh --dry-run   # prints the ruleset
+scripts/github-tag-ruleset.sh             # creates it, or replaces it (found by name); admin rights
+```
+
+Check: Settings > Rules > Rulesets shows `release tags`, active, target tags `refs/tags/v*`, rules
+creation, update and deletion, bypass "Repository admin". The repository owner is admin, so `just release`
+keeps working; a collaborator with write access gets "push declined due to repository rule violations".
+The promotion creates no tag (it creates the Release of an existing one), so the workflow needs no bypass.
 
 The rulebooks deploy key is read-only and belongs to the private `critical-rulebooks` repo:
 
@@ -431,8 +448,12 @@ read an empty token), and a calling job cannot have an environment. The job pass
      the data as it was before that release), owned by `critical_prod`, CONNECT revoked from PUBLIC. It is
      verified (the same tables and recorded migrations as `critical_prod`, rows in it, PUBLIC locked out),
      then the copies beyond the **newest 3** are dropped. It refuses first: a name that exists, the user
-     without `CREATEDB` (user step 4 above), and a projected use of `critical_prod` plus its kept copies plus
-     the new one over **300 MB** (the 1 GB volume is shared with the other app). A copy that fails its
+     without `CREATEDB` (user step 4 above), a projected use of `critical_prod` plus its kept copies plus
+     the new one over **300 MB** (the 1 GB volume is shared with the other app; "Disk" below), and a
+     production database that records a migration the tag's commit does not hold: the image is older than
+     the schema, its server would not start, and the rolling deploy would leave production on one machine
+     (a rollback across a migration, refused with a pointer to "Rollback", "Across a migration"). The
+     promotion reads that list from the tag's git tree, whatever is checked out. A copy that fails its
      verification is dropped. The log shows names, counts and sizes only; `pg_restore`'s own error text
      (which can quote rows) stays in the ephemeral machine, only the object it names is printed. The step
      passes only on the script's last line `restore-point: OK <name>`.
@@ -446,6 +467,13 @@ read an empty token), and a calling job cannot have an environment. The job pass
 - **Why a copy database** (user, 2026-10-16, "1a"): it stays inside fly and the cluster, private like
   production itself (ADR 0024 step 7): never a GitHub artifact, a cache or a bucket. fly's daily snapshots of
   the cluster volume cover the loss of the machine (step 9.1).
+- **Disk.** The 300 MB budget counts critical's databases only: `critical_prod` cannot size the other
+  app's databases (their CONNECT is locked) nor see the volume's free space, and PostgreSQL enforces no
+  quota. A full volume stops both apps' databases, so before a promotion when the data has grown, and
+  whenever a restore point is refused for its size, the operator looks at the volume:
+  `$fly ssh console -a tournesol-db -C "df -h /data"` (the cluster's volume is mounted at `/data`). Under
+  about 400 MB free, drop the oldest restore point by hand (`DROP DATABASE "critical_prod_pre_<…>";` as
+  the operator) or ask the user before growing the volume (it costs).
 - **Registry.** The production deploy pulls the image from the staging app's repository by digest (ADR
   0024, "Promotion and registry layout"). Whether the production deploy token may read it is only proven by
   the first real run: if not, guard 1 fails on the image with a clear message, nothing is written, and the
@@ -463,8 +491,8 @@ read an empty token), and a calling job cannot have an environment. The job pass
      no `=c/` (PUBLIC) in its access privileges.
   3. `$fly machine list -a critical-prod` shows the two app machines only (the console machine is gone).
   4. The GitHub Release exists, with the digest.
-  5. Actions > Promote > Run workflow from `main` is refused (the job is skipped, the environment refuses
-     the branch).
+  5. Actions > Promote > Run workflow from `main` fails at once in `refuse a run from a branch` ("not a
+     v* tag"), and the `promote to production` job is skipped (the environment refuses the branch too).
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine
@@ -482,7 +510,9 @@ git fetch origin --tags && git switch --detach v1.2.2
 fly auth docker && scripts/promote.sh v1.2.2
 ```
 
-**Across a migration** the older binary refuses to start on the newer schema (ADR 0024 step 6.2): restore
+**Across a migration** the older binary refuses to start on the newer schema (ADR 0024 step 6.2), so the
+promotion of the older tag refuses it before writing anything ("production database records migrations this
+release does not embed"). Restore
 `critical_prod` from the restore point taken **before the release being undone** (`critical_prod_pre_<that
 tag>_<time>`), then promote the older tag (step 9.3). Everything written since that restore point is lost:
 say so to the user first, and get their yes.
@@ -505,7 +535,9 @@ say so to the user first, and get their yes.
 3. Promote the older tag (above). Its deploy recreates the two machines from `deploy/fly.prod.toml`; if it
    reports no machine, `$fly scale count 2 -a critical-prod --yes` and run it again.
 4. Once production checks out, `DROP DATABASE critical_prod_failed_<yyyymmdd>;` (it takes room on the shared
-   volume; it accepts no connection meanwhile).
+   volume). Until then it accepts no connection (`ALLOW_CONNECTIONS false`, kept by the rename), so the
+   provisioning's checks, which look only at databases that accept connections, do not count it; the
+   promotion's retention and budget do not see it either (it is not a `critical_prod_pre_*` name).
 
 A restore point is also the way back from bad data without a rollback (same steps, without changing the
 release: promote the current tag again in step 3).

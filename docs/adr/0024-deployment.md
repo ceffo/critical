@@ -130,7 +130,10 @@ flowchart LR
    5. it creates a GitHub Release for the tag.
 
    Rollback is running the promotion again for an older tag (step 6 says when that is not enough).
-   Production deployments never run concurrently and are never cancelled midway.
+   A promotion whose image is older than the production schema (`critical_prod` records a migration
+   the tag's commit does not hold) is refused before the restore point is written: that rollback is
+   the runbook's restore of step 9.3, then the promotion of the older tag. Production deployments never
+   run concurrently and are never cancelled midway.
 
 5. **Storage: PostgreSQL first, two production machines** (_accepted 2026-10-16, option (b); was
    the proposed default (a), SQLite on a volume with one machine per environment_). User,
@@ -208,7 +211,9 @@ flowchart LR
       the cluster machine.
       1. The newest **3** restore points are kept; older ones are dropped by the promotion that adds one.
       2. The promotion refuses to take one when `critical_prod`, the copies it keeps and the new one
-         would use more than 300 MB (the 1 GB volume is shared with the other app).
+         would use more than 300 MB (the 1 GB volume is shared with the other app). The budget counts
+         critical's databases only: `critical_prod` cannot size the other app's databases nor see the
+         volume's free space, so the operator watches the volume's use (the runbook's "Promotion").
       3. A copy is locked like every database of the cluster: owned by `critical_prod`, CONNECT revoked
          from PUBLIC. `critical_prod` has the `CREATEDB` attribute for this, and only this (it creates,
          owns and drops its copies); `critical_staging` has not.
@@ -226,7 +231,9 @@ flowchart LR
 10. **Secrets and permissions.**
     1. Each app has its own app-scoped fly deploy token, stored in the GitHub environment of the same
        name: `staging` and `production`.
-    2. The `production` environment only accepts deployments from `v*` tags.
+    2. The `production` environment only accepts deployments from `v*` tags. A tag runs the promotion
+       workflow of its own commit, whose guards it could have edited out, so only a repository admin
+       may create, move or delete a `v*` tag (a tag ruleset, _added 2026-10-16_).
     3. The rulebooks deploy key is a read-only key on `critical-rulebooks`, held only by the job that
        builds the release image.
     4. When a staging secret is missing, the main-branch build and deploy jobs skip with a notice and

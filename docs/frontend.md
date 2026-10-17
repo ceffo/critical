@@ -243,21 +243,28 @@ flowchart TD
   with "melee / missile · two-handed · ammo" | damage "1d8 · L 1d12" | to-hit / damage bonus | ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
   `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
   refreshes the weapons store, so the Weapons tab follows.
-- Spells tab (`SpellsPanel.tsx`): "Buff spells go on an ally", Prepare spells and Long rest on
-  top; one group per level (the LEVEL N section label, a pip per slot, filled while unused, and
-  "left / total"), the groups flowing in two text columns 24 px apart once the panel is 32rem wide
-  (a group never splits; no card or rule around a group, ADR 0022 steps 3.2 and 4.1); rows with the
-  name (wrapping, never cut; a row's pickers wrap under it when narrow), under it the damage a cast rolls at the Bard's level when the spellbook entry serves one
-  (`lib/spellDice.ts` `damageText`: "10d6 fire", "5 × 1d4+1 force", "2d4 acid per round, 6
-  rounds", type words in `spellDice.types`) and, for a spell that leaves a damaging area, its
-  exposure dice (`lib/spellMode.ts` `exposureText`: "1d10 poison per round of exposure", ADR 0008
-  step 16), and Cast or Used. Cast puts the `CastResult` in the result card (`CastResultView`:
+- Spells tab (`SpellsPanel.tsx`, ADR 0027 step 10): Prepare and Long rest (crescent-moon icon) on
+  top, right; one group per level that has a slot (no group for an empty level), the LEVEL N
+  section label and the level's slot dots (`lib/slotDots.ts`, from the server's slots and limits:
+  available in `magic`, used in muted ink, an outline for each slot the level allows with nothing
+  prepared in it; the extra slots Rary's Mnemonic Enhancer grants are dots of their own; the count
+  in the dots' `aria-label` and tooltip). The groups flow in two text columns 24 px apart once the
+  panel is 32rem wide (a group never splits; no card or rule around a group, ADR 0022 steps 3.2 and
+  4.1). A row is the spell's name (wrapping, never cut; "×N" for copies left) and its split Cast
+  button, or "Used"; a blank extra slot's spell picker stands in for its name; the cast inputs a
+  spell needs (target AC, item spent, cast-time mode, split of the extra slots) sit with the Cast
+  button and wrap under the name together when narrow. Cast (`variant="main"`, `lg`) casts with the
+  server's default target (no `onSelf`); its arrow (`ui/dropdown-menu`) offers "On me" and "On an
+  ally" (`onSelf: true` / `false`): the spellbook does not say which target the server defaults to
+  for a spell, so both are offered. The name opens the details popup (`SpellDetailsDialog.tsx`,
+  `ui/dialog`, Escape closes it): the lookup's detail view (`components/dashboard/SpellDetail.tsx`,
+  shared with the lookup), the spell fetched by its name at its level and picked by id
+  (`api/spells_db.ts` `findSpell`). Cast puts the `CastResult` in the result card (`CastResultView`:
   buff rolls, damage rolls, save note for the DM, effects to apply by hand, spell text; for a spell
   with an exposure, the exposure block `ExposureControls.tsx`: its dice, the mode, the round of
   exposure, "I am exposed" and Roll exposure, which posts `/api/spells/exposure` through
   `stores/roll.ts` `rollExposure`; the result is an exposure card, `ExposureResultView`, with the
-  dice, the total, "Taken off your HP" or "For the DM", and the same block set to the next round); "Buff spells
-  go on an ally" sends `onSelf: false`. `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
+  dice, the total, "Taken off your HP" or "For the DM", and the same block set to the next round). `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
   the shared name search (below) and posts `/api/spells/receive`.
 - Spells activity, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives
   switching activities), A2's pane per [ADR 0022](adr/0022-activity-focus-layout.md) step 2.5: two
@@ -468,6 +475,10 @@ step 5); the utilities live in `index.css`, the colour tokens in its `@theme inl
   `ui/select` and `fieldClass` for native inputs and selects.
 - **Tooltip** (`ui/tooltip`, Base UI): a short hint on hover and keyboard focus, for what a
   native `title` cannot show to the keyboard (a stat's sheet value under its effect).
+- **Menu and modal**: `ui/dropdown-menu` (a button's drop-down: the Spells tab's cast targets) and
+  `ui/dialog` (a modal: the spell details popup), on Base UI with the popover surface
+  (`bg-popover`, `shadow-float`); written by hand, as `npx shadcn add` brings a bogus `cn` package
+  and the retired `text-xs` / `shadow-md`.
 - **Headings** (step 5.6): card and section titles are `section-label`; `text-title` is for names
   (the character, a spell, a buff).
 - The pieces set their own fill, radius and (but `chip`) ink: never add a `bg-*`, `rounded-*` or

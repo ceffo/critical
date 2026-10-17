@@ -774,6 +774,19 @@ test("theme: the main screens in dark and light, every theme in each of its mode
 const LONG_WEAPON = "Two-Handed Flamberge of the Seventh Drowned Kingdom +3";
 const LONG_ITEM = "Potion of Extra-Healing brewed by the Hermit of Grey Hollow";
 const ACT_TABS = ["Weapons", "Spells", "Items", "Skills"] as const;
+/** The Spells tab's preparation in the layout audits; Rary's is cast in French (blank extra slots). */
+const PREPARED = [
+  "rarys_mnemonic_enhancer",
+  "magic_missile",
+  "burning_hands",
+  "chromatic_orb",
+  "tashas_uncontrollable_hideous_laughter",
+  "mirror_image",
+  "fireball",
+  "haste",
+  "stoneskin",
+  "cloudkill",
+];
 
 // ADR 0022 steps 1, 2.5, 3.3 and 4: each tab of the act panel at every layout viewport, with long
 // weapon, item and spell names and a bow's ammunition, shows no cut text and no page scroll; the
@@ -797,19 +810,7 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
   await api("PATCH", "/api/items/power_gem_dispel", {
     name: { en: LONG_ITEM, fr: LONG_ITEM },
   });
-  await api("PUT", "/api/spells/prepared", {
-    spells: [
-      "magic_missile",
-      "burning_hands",
-      "chromatic_orb",
-      "tashas_uncontrollable_hideous_laughter",
-      "mirror_image",
-      "fireball",
-      "haste",
-      "stoneskin",
-      "cloudkill",
-    ],
-  });
+  await api("PUT", "/api/spells/prepared", { spells: PREPARED });
   await openDashboard(page);
   await openWeapons(page);
   await chooseWeapon(page, "Long Sword +2");
@@ -899,6 +900,15 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   await api("PATCH", "/api/items/power_gem_dispel", {
     name: { en: LONG_ITEM, fr: LONG_ITEM },
   });
+  // The Spells tab with the long Tasha's name, a used slot and blank extra slots (ADR 0027 step 10).
+  await api("PUT", "/api/spells/prepared", { spells: PREPARED });
+  const slots = (await (
+    await fetch(`${stack.apiUrl}/api/spells/slots`)
+  ).json()) as { prepared_spell_id: string }[];
+  const rary = slots.findIndex(
+    (sl) => sl.prepared_spell_id === "rarys_mnemonic_enhancer",
+  );
+  await api("POST", `/api/spells/${rary}/cast`, {});
   // A known AC and both rare modifiers set: the target bar at its widest (ADR 0027 step 7.2).
   await api("PATCH", "/api/attack/form", {
     targetAc: -10,
@@ -971,9 +981,10 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
         `journal height, ${where}`,
       ).toBeGreaterThanOrEqual(224);
     }
+    // The preparation's entry lists every prepared spell: it wraps.
     await expectCompactJournal(
       page,
-      [LONG_SOURCE, LONG_WEAPON, LONG_ITEM],
+      [LONG_SOURCE, LONG_WEAPON, LONG_ITEM, "Tasha's Uncontrollable"],
       where,
     );
     await expect(
@@ -981,6 +992,29 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     ).toContainText("Annulé");
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `act-weapons-fr-${vp.width}x${vp.height}`);
+    // ADR 0027 step 10: the Spells tab's rows, dots and split buttons, and the details popup.
+    const actions = page.getByRole("region", { name: "Actions" });
+    await actions.getByRole("tab", { name: "Sorts" }).click();
+    await expect(actions).toContainText("Hideous Laughter");
+    await expectNoClippedText(actions, `spells tab, ${where}`);
+    await expectWholeWords(actions, `spells tab, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`)) {
+      await snap(page, `act-spells-fr-${vp.width}x${vp.height}`);
+      await actions
+        .getByRole("button", {
+          name: "Tasha's Uncontrollable Hideous Laughter",
+          exact: true,
+        })
+        .click();
+      const details = page.getByRole("dialog");
+      await expect(details.getByTestId("spell-meta")).toBeVisible();
+      await expectNoClippedText(details, `spell details, ${where}`);
+      await expectWholeWords(details, `spell details, ${where}`);
+      await snap(page, `spell-details-fr-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(details).toHaveCount(0);
+    }
+    await actions.getByRole("tab", { name: "Armes" }).click();
     await rail.nth(1).click();
     await page.getByRole("option", { name: FR_SPELL }).click();
     await expectNoClippedText(stage, `lookup, ${where}`);

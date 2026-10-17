@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { combatLog, logEntry, openDashboard } from "./helpers";
+import { combatLog, expectSlotDots, logEntry, openDashboard } from "./helpers";
 import type { Page } from "@playwright/test";
 
 async function openSpells(page: Page) {
@@ -55,8 +55,11 @@ test("4 level-1 spells are refused with the server's message, 3 are accepted", a
   await editor.getByRole("button", { name: "Save preparation" }).click();
   await expect(editor).toHaveCount(0);
   const level1 = page.getByRole("region", { name: "Level 1" });
-  await expect(level1.getByTestId("remaining-1")).toHaveText("3 / 3");
-  await expect(level1).toContainText("3 / 3 prepared");
+  await expectSlotDots(level1, 1, 3, 3);
+  await expect(level1.getByTestId("dots-1")).toHaveAttribute(
+    "data-state",
+    "aaa",
+  ); // 3 of 3 prepared: no empty dot
   await expect(level1).toContainText("Chromatic Orb");
   await snap(page, "three-level-1-accepted");
 });
@@ -78,16 +81,16 @@ test("duplicates are prepared and a long rest keeps the preparation but resets u
   await openSpells(page);
 
   const level2 = page.getByRole("region", { name: "Level 2" });
-  await expect(level2.getByTestId("remaining-2")).toHaveText("2 / 2");
+  await expectSlotDots(level2, 2, 2, 2);
   await level2
     .getByRole("button", { name: "Cast Mirror Image" })
     .first()
     .click();
-  await expect(level2.getByTestId("remaining-2")).toHaveText("1 / 2");
+  await expectSlotDots(level2, 2, 1, 2);
   await snap(page, "after-cast");
 
   await page.getByRole("button", { name: "Long rest" }).click();
-  await expect(level2.getByTestId("remaining-2")).toHaveText("2 / 2");
+  await expectSlotDots(level2, 2, 2, 2);
   await expect(level2.getByRole("listitem")).toHaveCount(1); // grouped: one row, with a count
   await expect(level2).toContainText("Mirror Image ×2");
   await expect(page.getByRole("region", { name: "Level 3" })).toContainText(
@@ -144,19 +147,15 @@ test("the spell names follow the language: the catalogue's French name, English 
   await page.getByRole("tab", { name: "Sorts", exact: true }).click();
   await expect(page.getByText("Image miroir", { exact: true })).toBeVisible();
   await expect(page.getByText("Boule de feu", { exact: true })).toBeVisible();
-  // The longest dice text in a narrow two-column row: name and dice shown whole, no overflow,
-  // Cast still visible.
+  // The longest name in a narrow two-column row: shown whole, no overflow, Cast still visible.
   const acid = page
+    .getByRole("region", { name: "Niveau 2" })
     .getByRole("listitem")
-    .filter({ hasText: "2d4 acide par round, 6 rounds" });
+    .filter({ hasText: "Melf's Acid Arrow" });
   await expect(acid.getByRole("button", { name: "Lancer" })).toBeInViewport({
     ratio: 1,
   });
-  for (const el of [
-    acid,
-    acid.getByTestId("slot-dice"),
-    acid.getByText("Melf's Acid Arrow"),
-  ]) {
+  for (const el of [acid, acid.getByText("Melf's Acid Arrow")]) {
     expect(await el.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
   }
   await snap(page, "french");
@@ -311,15 +310,12 @@ test("a repeated spell shows once with a count that drops as copies are cast; ro
   await expect(level1.getByRole("listitem").nth(1)).toContainText(
     "Magic Missile ×2",
   );
-  await expect(
-    level1.getByRole("listitem").nth(1).getByTestId("slot-dice"),
-  ).toHaveText("5 × 1d4+1 force");
   await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
   await expect(level1.getByRole("listitem").nth(1)).not.toContainText(
     "Magic Missile ×",
   );
-  await expect(level1.getByTestId("remaining-1")).toHaveText("2 / 3");
+  await expectSlotDots(level1, 1, 2, 3);
   await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
-  await expect(level1.getByTestId("remaining-1")).toHaveText("1 / 3");
+  await expectSlotDots(level1, 1, 1, 3);
   await snap(page, "grouped-spells");
 });

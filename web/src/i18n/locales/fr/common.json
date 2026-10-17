@@ -437,6 +437,10 @@
     "anySchool": "Toutes écoles",
     "sphere": "Sphère",
     "anySphere": "Toutes sphères",
+    "filtersShort": "Filtres",
+    "schoolFilter": "Filtrer par école",
+    "sphereFilter": "Filtrer par sphère",
+    "clearFilter": "Retirer le filtre {{name}}",
     "schoolNames": {
       "abjuration": "Abjuration",
       "alteration": "Altération",
@@ -493,7 +497,7 @@
     "atLevel": "Au niveau {{level}}",
     "damage": "Dégâts",
     "damageMode": "Dégâts ({{mode}})",
-    "castingTime": "Temps d'incantation",
+    "castingTime": "Incantation",
     "range": "Portée",
     "duration": "Durée",
     "area": "Zone",
@@ -892,7 +896,6 @@
     "diceRow": "Dés au niveau du lanceur",
     "toDice": "Envoyer",
     "rollDice": "Lancer",
-    "noDice": "Aucun dé à lancer",
     "addEffectLabel": "Ajouter {{name}} comme effet au niveau {{level}}",
     "exposure": "Exposition",
     "exposureMode": "Exposition ({{mode}})"

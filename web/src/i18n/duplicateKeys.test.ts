@@ -39,8 +39,14 @@ function duplicateKeys(text: string): string[] {
 
 describe("duplicateKeys", () => {
   it("finds a key repeated in one object, not the same key in two objects", () => {
-    expect(duplicateKeys('{"a": {"x": 1, "y": 2, "x": 3}, "b": {"x": 1}}')).toEqual(["a.x"]);
-    expect(duplicateKeys('{"a": {"x": 1}, "b": {"x": 2}, "c": [{"x": 1}, {"x": 2}]}')).toEqual([]);
+    expect(
+      duplicateKeys('{"a": {"x": 1, "y": 2, "x": 3}, "b": {"x": 1}}'),
+    ).toEqual(["a.x"]);
+    expect(
+      duplicateKeys(
+        '{"a": {"x": 1}, "b": {"x": 2}, "c": [{"x": 1}, {"x": 2}]}',
+      ),
+    ).toEqual([]);
   });
 });
 

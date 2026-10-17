@@ -8,7 +8,7 @@
  * the initiative under "Tour suivant" as the header's text-hero number, 5 turn columns, effect
  * actions on hover (so none at rest), the last result on one line right after the timeline.
  * The placement is a class on the header: .bp-left, .bp-right, .bp-right-top, and .bp-wide on top
- * of .bp-right-top.
+ * of .bp-right-top or .bp-dock.
  */
 
 /* The real header stays mounted (React owns it) but out of the way. */
@@ -333,4 +333,15 @@
 }
 .bp-effects .quiet.up svg {
   transform: rotate(180deg);
+}
+
+/* E · dock (round 4): the brand and the last result stacked in one column docked at the right,
+ * both right-aligned, the brand on top; the timeline (wide, as D) takes everything up to it. */
+.bp-dockcol {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.375rem;
+  margin-left: auto;
 }

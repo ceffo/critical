@@ -11,7 +11,11 @@ added (below).
 
 **Round 3 (2026-10-17):** the user said _"all the space left should be put to good use. make sure
 the effects names are not cropped and/or have a wider timeline"_, so **D · top right, wide
-timeline** was added, with a shot of the effects expanded. Not approved yet.
+timeline** was added, with a shot of the effects expanded.
+
+**Round 4 (2026-10-17):** the user said _"I feel the last result section would benifit more being
+docked to the right stacking vertically under the brand"_, so **E · brand over the last result,
+docked right** was added. Not approved yet.
 
 ## The placements
 
@@ -28,6 +32,10 @@ timeline** was added, with a shot of the effects expanded. Not approved yet.
   (about 88 px each at 1440, 140 px at 1707). The name column is as wide as the longest effect
   name, hidden ones included (_proposed_), so it doesn't jump when "+2" expands the list and names
   are never cut.
+- **E · Brand over the last result, docked right** (round 4). One column at the header's right
+  edge: the brand on top, the last result under it, both right-aligned. The timeline (wide, as D)
+  takes everything from the initiative to that column. The column's right edge lines up with the
+  result card below.
 
 | | 1440x900 | 1707x1300 |
 |---|---|---|
@@ -36,10 +44,13 @@ timeline** was added, with a shot of the effects expanded. Not approved yet.
 | C' | ![](shots/c-right-top--arcane-dark-1440x900.png) | ![](shots/c-right-top--arcane-dark-1707x1300.png) |
 | D | ![](shots/d-wide--arcane-dark-1440x900.png) | ![](shots/d-wide--arcane-dark-1707x1300.png) |
 | D, effects expanded | ![](shots/d-wide-expanded--arcane-dark-1440x900.png) | ![](shots/d-wide-expanded--arcane-dark-1707x1300.png) |
+| E | ![](shots/e-dock--arcane-dark-1440x900.png) | ![](shots/e-dock--arcane-dark-1707x1300.png) |
+| E, effects expanded | ![](shots/e-dock-expanded--arcane-dark-1440x900.png) | ![](shots/e-dock-expanded--arcane-dark-1707x1300.png) |
 
 Light (Arcane light, 1440x900): [A](shots/a-left--arcane-light-1440x900.png),
 [C](shots/c-right--arcane-light-1440x900.png), [C'](shots/c-right-top--arcane-light-1440x900.png), [D](shots/d-wide--arcane-light-1440x900.png),
-[D expanded](shots/d-wide-expanded--arcane-light-1440x900.png).
+[D expanded](shots/d-wide-expanded--arcane-light-1440x900.png), [E](shots/e-dock--arcane-light-1440x900.png),
+[E expanded](shots/e-dock-expanded--arcane-light-1440x900.png).
 
 **B was dropped in round 2** (not picked). Its shots are in the round 1 commit (`7473753`). Rerun,
 it also failed the no-cut check at 1440x900 when the dice gave two-digit values: its wide brand cell

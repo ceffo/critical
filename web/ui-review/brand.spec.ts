@@ -30,9 +30,10 @@ export const PLACEMENTS = [
   { id: "c-right", cls: "bp-right" },
   { id: "c-right-top", cls: "bp-right-top" },
   { id: "d-wide", cls: "bp-right-top bp-wide" },
+  { id: "e-dock", cls: "bp-dock bp-wide" },
 ] as const;
 /** Placements also captured with the effects expanded, to show every name in full. */
-const EXPANDED = new Set<string>(["d-wide"]);
+const EXPANDED = new Set<string>(["d-wide", "e-dock"]);
 type Placement = (typeof PLACEMENTS)[number];
 
 /** Dark Arcane at both layout viewports; light Arcane at 1440x900 only (one light shot each). */
@@ -189,7 +190,9 @@ function headerHtml(
   const inner =
     p.id === "a-left"
       ? `${brand}${turn}${next}${effects}${last}<span class="bp-spacer"></span>`
-      : `${turn}${next}${effects}${last}${brand}`; // c-right, c-right-top
+      : p.id === "e-dock"
+        ? `${turn}${next}${effects}<div class="bp-dockcol">${brand}${last}</div>`
+        : `${turn}${next}${effects}${last}${brand}`; // c-right, c-right-top, d-wide
   return `<header class="bp-header ${p.cls}" data-screen="turn-header">${inner}</header>`;
 }
 

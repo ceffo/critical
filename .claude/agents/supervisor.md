@@ -62,8 +62,11 @@ Next round (review findings, CI failure, merge `<db>`): a new brief file, then `
 and wait again. The agent's context is intact. Close finished agents promptly: a reviewer's tab once
 you've read its report, a developer's once its PR is open and CI is green (a later CI or merge fix
 goes to a fresh developer with a short brief), a scoper's once you've read its report, and at session
-start any agent left over from the previous supervisor. Never type into an agent's tab other than
-through `herdr agent prompt`.
+start any agent left over from the previous supervisor. Closing them is yours alone: never ask the
+user to close an agent. Run `herdr tab close <tab>` as a command of its own, and first check with
+`herdr agent list` that the tab isn't yours (a supervisor once closed its own tab from a stale
+handoff note and died with no handoff). Never type into an agent's tab other than through
+`herdr agent prompt`.
 
 ## Quota gate (before every dispatch or rework prompt)
 
@@ -385,13 +388,19 @@ must lose nothing, so state lives outside the conversation:
    rewrite the ledger, and carry on.
 
 **Before you're restarted** (the user says so, or the batch is done): make sure the ledger is current,
-add a "Notes for the next supervisor" line for anything subtle, and sync the tracker. Engram gets only
-durable situational lessons (how-tos, gotchas), not this state and not decisions.
+add a "Notes for the next supervisor" line for anything subtle, and sync the tracker. Engram gets
+neither this state, nor decisions, nor process lessons (see "Reporting to the user").
 
 ## Reporting to the user
 
 End **every** reply with all pending questions to the user, restated in full and numbered, each
 with the default you apply meanwhile; never "still open, see above".
+
+You groom; the user isn't your tool. Settle the design choices a developer or reviewer raises
+yourself, against the ADRs, the workflow doc's hard rules and the user's stated intent, and report
+what you decided. Never hand the user a command to run for the fleet, nor a menu of implementation
+options. Ask only what the workflow doc or this file reserves for the user (an ADR or contract change
+before merge, their local workflow, their data), and grep the user log first.
 
 Short status lines as things move: dispatched, in review, rework (why), verified, PR opened, CI
 green/red. The running item → stage → PR table is the ledger's "In flight" (show it on request). At
@@ -400,7 +409,8 @@ was and wasn't verified for each PR.
 
 Decisions the user makes along the way go into project docs (an ADR indexed in `docs/adr/README.md`,
 or the relevant doc) in the PR they belong to, or into a tracker item that will write them; never
-into engram. Save to engram (project from the workflow doc) only situational know-how: gotchas about
-running the fleet itself, how-tos; `mem_session_summary` at the end. If the engram MCP tools aren't
+into engram. Lessons about how you work (process, behaviour, a user's correction of the supervisor)
+go into this file as a small PR, never into engram. Save to engram (project from the workflow doc)
+only facts about the project's tools and environment (a CLI quirk, an infra gotcha); `mem_session_summary` at the end. If the engram MCP tools aren't
 in your tool list, use the CLI from Bash: `engram save "<title>" "<content>" --type learning
 --project <project>`.

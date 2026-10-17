@@ -51,13 +51,13 @@ flowchart TD
     ET["EffectsTimeline: one row per buff over 8 / 12 / 16 turns, add / edit forms"]
     LR["LastResult: 'Last result · T3 · 21:31', die chip and the journal's wording"]
   end
-  subgraph B["Below the header: character card 280 px | rail 68 px | stage 1fr"]
+  subgraph B["Below the header: character card clamp(280px, 21vw, 384px) | rail 68 px | stage 1fr"]
     subgraph C["Character card (aside 'Character'), scrolls on its own"]
       ID["Identity, abilities, THAC0"]
       HP["HpBar: HIT POINTS"]
-      QH["QuickHp: HP CHANGE on one line"]
+      QH["QuickHp: HP CHANGE, labelled amount, Damage / Healing on one line"]
       CC["ChargeCards"]
-      SV["Saves: SAVING THROWS · CLICK TO ROLL"]
+      SV["Saves: SAVING THROWS, click to roll"]
     end
     RAIL["Rail (components/shell/Rail.tsx), on the ground: Act, Spells, Experience, Inventory"]
     subgraph S["Stage: the focused activity (one shown, each mounted on first visit, then kept)"]
@@ -178,7 +178,8 @@ flowchart TD
   and Ctrl/Cmd+Shift+Z replay the `redo` target of `GET /api/log` with `POST /api/log/redo`
   ([ADR 0019](adr/0019-redo.md)); values are never edited in the log. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The character card's STR is the effective STR
-  (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
+  (`GET /api/stats/str`; when buffed only that value, in the success colour, the sheet value in a
+  tooltip on hover and keyboard focus); a buff whose `min_str` is not met
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect under its name ("weapon +5 · dice ×2"); a Strength
   bonus that an active Improved Strength replaces (`applies: false`, no `min_str`) shows dashed
   with "replaced by Improved Strength".
@@ -299,18 +300,21 @@ flowchart TD
   total back. The character card's level line opens
   it and is underlined with the server's `progress`.
 - Character card (`Identity`, `HpBar`, `QuickHp`, `ChargeCards`, `Saves` in `components/dashboard/`,
-  ADR 0022 step 2.3), beside every activity, in this order, grouped by spacing and section labels
-  (no rules): identity (name, level, abilities in seven cells, effective STR, THAC0); "HIT POINTS"
+  ADR 0022 step 2.3, ADR 0027 step 5), `clamp(280px, 21vw, 384px)` wide, beside every activity, in this order, grouped by spacing and section labels
+  (no rules): identity (name, level, abilities in seven cells, effective STR with the sheet value
+  in a tooltip when buffed, THAC0); "HIT POINTS"
   with the newest HP change still in force on the right (a long one drops under the label and
   wraps, never cut), current over max, and the bar (`lib/hpBar.ts` `hpBarModel`): the scale runs
   from the server's `floor` (-10) to max, a hatched dying zone (`hatch-danger`) below 0 filled from
   0 down to current HP, the fill from 0 coloured by threshold band, the last damage taken as a
   faint segment after the fill when the newest change is damage (`lib/moiLog.ts`), and the server's
-  `condition` labelled next to the value when not ok (ADR 0011); "HP CHANGE" on one line: amount,
-  Damage (`Drop`), Healing (`Heart`), the source under it (Enter in either field applies damage,
+  `condition` labelled next to the value when not ok (ADR 0011); "HP CHANGE": the amount labelled
+  "Amount" above its field, Damage (`Drop`), Healing (`Heart`) on its line, the source under it,
+  smaller (`text-label`), its placeholder never cut (Enter in either field applies damage,
   Shift+Enter healing); one card per applying buff with charges left (Stoneskin layers…), outlined
-  in the accent, Absorb = the buff trigger endpoint; "SAVING THROWS · CLICK TO ROLL", one outlined
-  button row each: name (wraps), target (the sheet's), the newest logged roll in that category
+  in the accent, Absorb = the buff trigger endpoint; "SAVING THROWS" ("click to roll" is the rows'
+  tooltip), one button row each, on one line from 1440 px in French: name (wraps after a slash
+  at 1280), target (the sheet's), the newest logged roll in that category
   (server verdict ✓ / ✗ and the d20), a click rolls it. The card has the full height (ADR 0022
   step 2.3), so on a tall screen the space under the saves stays empty.
 - Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` in
@@ -443,6 +447,8 @@ step 5); the utilities live in `index.css`, the colour tokens in its `@theme inl
   latest result (not on an older entry picked in the journal).
 - **Fields** (step 5.7): on the card (`bg-surface`) with the field edge (`border-input`): `ui/input`,
   `ui/select` and `fieldClass` for native inputs and selects.
+- **Tooltip** (`ui/tooltip`, Base UI): a short hint on hover and keyboard focus, for what a
+  native `title` cannot show to the keyboard (a stat's sheet value under its effect).
 - **Headings** (step 5.6): card and section titles are `section-label`; `text-title` is for names
   (the character, a spell, a buff).
 - The pieces set their own fill, radius and (but `chip`) ink: never add a `bg-*`, `rounded-*` or

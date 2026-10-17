@@ -1,4 +1,9 @@
 import { useTranslation } from "react-i18next";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
@@ -6,11 +11,14 @@ import { useXpStore } from "@/stores/xp";
 import { CharacterDetails } from "./CharacterDetails";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
+const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
 
 /**
  * Who: name with the level right-aligned on the same line (a button opening the Expérience workspace, underlined with the server's
- * progress to the next level, ADR 0015), then the abilities in one row of seven cells, STR as the server's effective
- * value (sheet value in brackets when buffed) and THAC0 last, set apart by a tone step.
+ * progress to the next level, ADR 0015), then the abilities in one row of seven cells and THAC0 last.
+ * STR is the server's effective value; changed by an effect, it shows only that value, in the
+ * success colour, and the sheet value is in a tooltip on hover and keyboard focus, never under it
+ * (ADR 0027 step 5.4: a click on a stat is kept for the ability check).
  */
 export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
   const { t, i18n } = useTranslation();
@@ -63,12 +71,8 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
         >
           {ABILITIES.map((k) => {
             const isStr = k === "str" && strength !== null;
-            return (
-              <div
-                key={k}
-                className="flex min-w-0 flex-col items-center rounded-md bg-raised py-1"
-                title={isStr ? t("app.strTitle", { ...strength }) : undefined}
-              >
+            const cell = (
+              <>
                 <dt className="text-label text-muted-foreground">
                   {t(`attr.${k}`)}
                 </dt>
@@ -84,15 +88,38 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
                     character[k]
                   )}
                 </dd>
-                {isStr && strBuffed && (
-                  <dd className="text-label text-muted-foreground tabular-nums">
-                    {t("app.strBase", { base: strength.base })}
-                  </dd>
-                )}
-              </div>
+              </>
+            );
+            if (!(isStr && strBuffed))
+              return (
+                <div key={k} className={CELL}>
+                  {cell}
+                </div>
+              );
+            return (
+              <Tooltip key={k}>
+                <TooltipTrigger
+                  delay={200}
+                  render={
+                    <div
+                      tabIndex={0}
+                      data-testid="str-cell"
+                      className={cn(
+                        CELL,
+                        "outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      )}
+                    />
+                  }
+                >
+                  {cell}
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("app.strTitle", { ...strength })}
+                </TooltipContent>
+              </Tooltip>
             );
           })}
-          <div className="flex min-w-0 flex-col items-center rounded-md bg-raised py-1">
+          <div className={CELL}>
             <dt className="text-label text-muted-foreground">
               {t("app.thac0")}
             </dt>

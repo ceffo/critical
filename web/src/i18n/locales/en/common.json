@@ -7,8 +7,7 @@
     "abilities": "Ability scores",
     "error": "Error",
     "dismiss": "Dismiss",
-    "strTitle": "STR {{effective}} (sheet {{base}})",
-    "strBase": "({{base}})"
+    "strTitle": "STR {{effective}} (sheet {{base}})"
   },
   "language": {
     "en": "English",
@@ -262,8 +261,9 @@
   },
   "saves": {
     "title": "Saving Throws",
-    "sectionLabel": "Saving throws · click to roll",
+    "sectionLabel": "Saving throws",
     "rollLabel": "Roll save vs {{name}}",
+    "rowHint": "Click to roll save vs {{name}}",
     "categories": {
       "para_poison": "Paralyze/Poison",
       "rod_staff_wand": "Rod/Staff/Wand",

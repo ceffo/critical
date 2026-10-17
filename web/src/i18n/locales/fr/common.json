@@ -7,8 +7,7 @@
     "abilities": "Caractéristiques",
     "error": "Erreur",
     "dismiss": "Fermer",
-    "strTitle": "FOR {{effective}} (fiche {{base}})",
-    "strBase": "({{base}})"
+    "strTitle": "FOR {{effective}} (fiche {{base}})"
   },
   "language": {
     "en": "English",
@@ -262,8 +261,9 @@
   },
   "saves": {
     "title": "Jets de sauvegarde",
-    "sectionLabel": "Jets de sauvegarde · cliquer pour lancer",
+    "sectionLabel": "Jets de sauvegarde",
     "rollLabel": "Jet de sauvegarde contre {{name}}",
+    "rowHint": "Cliquer pour lancer le jet de sauvegarde contre {{name}}",
     "categories": {
       "para_poison": "Paralysie/Poison",
       "rod_staff_wand": "Bâton/Sceptre/Baguette",

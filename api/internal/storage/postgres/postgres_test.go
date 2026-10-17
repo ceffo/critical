@@ -415,6 +415,19 @@ func TestWaitingConnector_ADeadPooledConnectionIsReplacedNotAnError(t *testing.T
 	assert.Equal(t, 4, inner.calls, "one first connection, then refused, starting, connected")
 }
 
+// A server stopped (SIGINT/SIGTERM) while its first connection waits for the database stops
+// waiting at once instead of after the whole wait.
+func TestOpenPool_StopsWaitingWhenTheContextEnds(t *testing.T) {
+	inner := &fakeConnector{errs: []error{refused, refused, refused, refused, refused, refused}}
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(20*time.Millisecond, cancel)
+	started := time.Now()
+	_, err := openPool(ctx, waitingConnector{Connector: inner, wait: time.Minute, retryEvery: time.Second})
+	require.Error(t, err)
+	assert.Less(t, time.Since(started), 500*time.Millisecond)
+	assert.Equal(t, 1, inner.calls)
+}
+
 // Waiting is bounded by the connector's wait even when the caller's context has no deadline.
 func TestWaitingConnector_GivesUpAfterItsWait(t *testing.T) {
 	inner := &fakeConnector{errs: []error{refused, refused, refused, refused, refused, refused}}

@@ -50,19 +50,29 @@ type DB struct {
 
 // Open connects to the PostgreSQL database at dsn (CRITICAL_DSN, a PostgreSQL connection
 // string or URL) and checks the connection. Every new connection of the pool, this first one
-// included, waits up to connectWait for a database that is still starting. It runs no migration and
-// writes nothing: those are the startup steps the composition root drives.
-func Open(dsn string) (*DB, error) {
+// included, waits up to connectWait for a database that is still starting; ending ctx (the server's
+// SIGINT/SIGTERM) stops the first one's wait at once. It runs no migration and writes nothing: those
+// are the startup steps the composition root drives.
+func Open(ctx context.Context, dsn string) (*DB, error) {
 	connector, err := pq.NewConnector(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)
 	}
-	pool := sql.OpenDB(waitingConnector{Connector: connector, wait: connectWait, retryEvery: connectRetryEvery})
-	if err := pool.PingContext(context.Background()); err != nil {
+	pool, err := openPool(ctx, waitingConnector{Connector: connector, wait: connectWait, retryEvery: connectRetryEvery})
+	if err != nil {
+		return nil, err
+	}
+	return newDB(pool), nil
+}
+
+// openPool opens the pool over connector and checks its first connection under ctx.
+func openPool(ctx context.Context, connector driver.Connector) (*sql.DB, error) {
+	pool := sql.OpenDB(connector)
+	if err := pool.PingContext(ctx); err != nil {
 		_ = pool.Close()
 		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
-	return newDB(pool), nil
+	return pool, nil
 }
 
 // connectWait is how long a new connection waits for the database to accept it, retrying every

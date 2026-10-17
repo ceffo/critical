@@ -97,7 +97,7 @@ func New(ctx context.Context, cfg Config) (*BackingServices, error) {
 	if cfg.InMemory {
 		return Build(ctx, memoryStorage(memory.New()), cfg)
 	}
-	db, err := postgres.Open(cfg.DSN)
+	db, err := postgres.Open(ctx, cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}

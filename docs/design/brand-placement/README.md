@@ -6,9 +6,10 @@ as the big number, 5 turn columns, the last result on one line. Only the brand m
 the options. Everything is in French, in the picked colours (contrast ladder + raised stage,
 ADR 0026), on the real app and data.
 
-**Picked:** _not yet_.
+**Round 2 (2026-10-17):** the user said _"C and align it top right"_, so **C' · top right** was
+added (below). Not approved yet.
 
-## The three placements
+## The placements
 
 - **A · Left, first in the band.** The brand opens the header, as today, now with its wordmark.
 - **B · Left, aligned on the character card.** The brand and the turn fill a cell exactly as wide
@@ -16,15 +17,21 @@ ADR 0026), on the real app and data.
   one grid.
 - **C · Right, last in the band.** The header opens on the turn; the brand closes it at the far
   right, in the spare space after the last result.
+- **C' · Top right** (round 2). As C, with the brand pinned to the header's top-right corner, on
+  the top row's line ("Effets", the turn columns, the last result's label).
 
 | | 1440x900 | 1707x1300 |
 |---|---|---|
 | A | ![](shots/a-left--arcane-dark-1440x900.png) | ![](shots/a-left--arcane-dark-1707x1300.png) |
-| B | ![](shots/b-column--arcane-dark-1440x900.png) | ![](shots/b-column--arcane-dark-1707x1300.png) |
 | C | ![](shots/c-right--arcane-dark-1440x900.png) | ![](shots/c-right--arcane-dark-1707x1300.png) |
+| C' | ![](shots/c-right-top--arcane-dark-1440x900.png) | ![](shots/c-right-top--arcane-dark-1707x1300.png) |
 
 Light (Arcane light, 1440x900): [A](shots/a-left--arcane-light-1440x900.png),
-[B](shots/b-column--arcane-light-1440x900.png), [C](shots/c-right--arcane-light-1440x900.png).
+[C](shots/c-right--arcane-light-1440x900.png), [C'](shots/c-right-top--arcane-light-1440x900.png).
+
+**B was dropped in round 2** (not picked). Its shots are in the round 1 commit (`7473753`). Rerun,
+it also failed the no-cut check at 1440x900 when the dice gave two-digit values: its wide brand cell
+leaves the timeline too narrow for Stoneskin's charge line.
 
 ## How these were made
 
@@ -33,8 +40,8 @@ Light (Arcane light, 1440x900): [A](shots/a-left--arcane-light-1440x900.png),
   It then draws the header (from [`header.css`](header.css) and the values of the real header: turn,
   initiative, effects, last result) in front of the real one, which it hides. Dice values change
   from run to run.
-- The character card has ADR 0027 step 5.1's width (`clamp(280px, 21vw, 384px)`), so B aligns on
-  the width it will have. Its saves heading and the wrapped save name at 1440 are that item's work,
+- The character card has ADR 0027 step 5.1's width (`clamp(280px, 21vw, 384px)`), the width it
+  will have. Its saves heading and the wrapped save name at 1440 are that item's work,
   not this round's.
 - Every shot is checked: no cut text (ADR 0022 step 1), no page scroll, the header at most 120 px
   (ADR 0022 step 3.1), the wordmark shown in full. The run fails otherwise.

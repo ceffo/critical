@@ -7,7 +7,7 @@
  * The decided header (ADR 0027 step 4): the turn label stacked over its number (text-headline),
  * the initiative under "Tour suivant" as the header's text-hero number, 5 turn columns, effect
  * actions on hover (so none at rest), the last result on one line right after the timeline.
- * The placement is a class on the header: .bp-left, .bp-column, .bp-right.
+ * The placement is a class on the header: .bp-left, .bp-right, .bp-right-top.
  */
 
 /* The real header stays mounted (React owns it) but out of the way. */
@@ -15,7 +15,7 @@
   display: none !important;
 }
 
-/* Character card width of ADR 0027 step 5.1, so the header can align on it. */
+/* Character card width of ADR 0027 step 5.1, as it will be. */
 [data-testid="character"] {
   width: clamp(280px, 21vw, 384px) !important;
 }
@@ -299,31 +299,14 @@
 
 /* A · left: the brand opens the band, as today, now with its wordmark. */
 
-/* B · column: the brand and the turn share a cell exactly as wide as the character card under it;
- * the rest of the header starts on the rail's edge, so the header and the body share one grid. */
-.bp-column {
-  padding-left: 0;
-  gap: 0;
-}
-.bp-column .bp-cell {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-  /* The character card (clamp) minus the header's 1 px border, plus the 12 px gutter: the cell
-   * ends where the rail starts. */
-  width: calc(clamp(280px, 21vw, 384px) + 0.75rem - 1px);
-  padding: 0 1.5rem 0 1rem;
-}
-.bp-column .bp-rest {
-  display: flex;
-  flex: 1 1 0;
-  align-items: center;
-  gap: 1.5rem;
-  min-width: 0;
-}
-
 /* C · right: the band opens on the turn, the brand closes it at the far right. */
 .bp-right .bp-brand {
   margin-left: auto;
+}
+
+/* C' · right, top: as C, the brand pinned to the header's top-right corner, on the top row's line
+ * (the "Effets" / turn-column row, the last result's label). */
+.bp-right-top .bp-brand {
+  margin-left: auto;
+  align-self: flex-start;
 }

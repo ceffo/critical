@@ -27,8 +27,8 @@ const shots = path.join(docs, "shots");
 
 export const PLACEMENTS = [
   { id: "a-left", cls: "bp-left" },
-  { id: "b-column", cls: "bp-column" },
   { id: "c-right", cls: "bp-right" },
+  { id: "c-right-top", cls: "bp-right-top" },
 ] as const;
 type Placement = (typeof PLACEMENTS)[number];
 
@@ -142,9 +142,7 @@ function headerHtml(p: Placement, d: HeaderData, t: T): string {
   const inner =
     p.id === "a-left"
       ? `${brand}${turn}${next}${effects}${last}<span class="bp-spacer"></span>`
-      : p.id === "b-column"
-        ? `<div class="bp-cell">${brand}${turn}</div><div class="bp-rest">${next}${effects}${last}<span class="bp-spacer"></span></div>`
-        : `${turn}${next}${effects}${last}${brand}`;
+      : `${turn}${next}${effects}${last}${brand}`; // c-right, c-right-top
   return `<header class="bp-header ${p.cls}" data-screen="turn-header">${inner}</header>`;
 }
 

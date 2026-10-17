@@ -1,0 +1,107 @@
+/*
+ * Direction 3 · Raised stage (on top of ladder.css): three elevation levels instead of one (the
+ * page, the cards, and the card the player acts in, one step up with a 2 px outline), and every
+ * card and group headed by a band: a tone, not a line, so ADR 0022 step 4.1's "no rules" holds.
+ * The band tones are ink over the card (`--band` 9 %, `--band-sub` 5.5 % in dark mode), the same in
+ * every theme. A band that runs to the card's edges past its padding is drawn with side shadows,
+ * not negative margins, so the layout (and the no-cut audit) sees the same boxes as today.
+ */
+:root {
+  --band: color-mix(in oklab, var(--ink) 9%, transparent);
+  --band-sub: color-mix(in oklab, var(--ink) 5.5%, transparent);
+  --elevated: color-mix(in oklab, var(--ink) 5%, var(--surface));
+}
+:root:not(.dark) {
+  --band: color-mix(in oklab, var(--ink) 7%, transparent);
+  --band-sub: color-mix(in oklab, var(--ink) 4%, transparent);
+  --elevated: var(--surface);
+}
+
+/* The focused card: the act panel (Act), the list (Spells), Items (Inventory). */
+[data-testid="now-band"] > section:first-child,
+section[aria-label] > div > section.zone-card:first-child,
+main section.rounded-xl.bg-card:first-child {
+  background-color: var(--elevated);
+  border: 2px solid color-mix(in oklab, var(--ink) 40%, transparent);
+}
+
+/* Card header bands: tabs, the result's kind / name / time, the journal's head, inventory titles. */
+[data-testid="now-band"] > section:first-child > [role="tablist"],
+[data-testid="now-band"] > section:last-child > div:first-child,
+[data-testid="journal-slot"] section.zone-card > div:first-child,
+main section.rounded-xl.bg-card > div:first-child {
+  background-color: var(--band);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+[data-testid="now-band"] > section:first-child > [role="tablist"] {
+  padding-top: 0;
+}
+[data-testid="now-band"] > section:last-child > div:first-child,
+[data-testid="journal-slot"] section.zone-card > div:first-child {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+main section.rounded-xl.bg-card {
+  padding-top: 0;
+  overflow: clip;
+}
+main section.rounded-xl.bg-card > div:first-child {
+  margin-bottom: 0.25rem;
+  padding: 0.375rem 0;
+  border-radius: 0;
+  box-shadow:
+    -0.75rem 0 0 var(--band),
+    0.75rem 0 0 var(--band);
+}
+
+/* Spells: the filters sit in the list card's band, the spell's name in the detail's. */
+section[aria-label] > div > section.zone-card:first-child {
+  padding-top: 0;
+}
+section[aria-label] > div > section.zone-card:first-child > [role="group"]:first-child {
+  background-color: var(--band);
+  border-radius: 0.5rem 0.5rem 0 0;
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+[data-testid="spell-detail"] {
+  padding-top: 0;
+}
+[data-testid="spell-detail"] > div > div:first-child {
+  padding: 0.625rem 0;
+  background-color: var(--band);
+  box-shadow:
+    -1rem 0 0 var(--band),
+    1rem 0 0 var(--band);
+}
+
+/* Character card: identity, hit points, HP change and saves each under a sub-band. */
+aside[data-testid="character"] {
+  padding-top: 0;
+}
+aside[data-testid="character"] > div:first-child > div:first-child,
+aside[data-testid="character"] div:has(> h2.section-label),
+aside[data-testid="character"] section > h2.section-label {
+  padding: 0.3125rem 0;
+  background-color: var(--band-sub);
+  box-shadow:
+    -1rem 0 0 var(--band-sub),
+    1rem 0 0 var(--band-sub);
+}
+aside[data-testid="character"] > div:first-child > div:first-child {
+  padding-top: 0.625rem;
+  padding-bottom: 0.5rem;
+  background-color: var(--band);
+  box-shadow:
+    -1rem 0 0 var(--band),
+    1rem 0 0 var(--band);
+}
+
+/* Header: the turn and the last result as banded cells. */
+header [role="group"]:first-of-type,
+[data-testid="last-result"] {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  background-color: var(--band-sub);
+}

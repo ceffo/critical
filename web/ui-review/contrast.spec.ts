@@ -2,7 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test as base } from "@playwright/test";
-import { AMBIANCES, oklchToLinearRgb, themeVars } from "../src/lib/theme";
+import { AMBIANCES, themeVars } from "../src/lib/theme";
+import { linear, over, ratio } from "./wcag";
 
 /**
  * The theme audit's numbers (docs/design/ui-review/README.md): the WCAG 2 contrast ratio of every
@@ -13,35 +14,9 @@ import { AMBIANCES, oklchToLinearRgb, themeVars } from "../src/lib/theme";
  * composited over their backdrop in gamma sRGB, as a browser paints them.
  */
 
-type Rgb = [number, number, number];
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../..");
 const outFile = path.join(root, "docs", "design", "ui-review", "contrast.md");
-
-function parse(css: string): [number, number, number] {
-  const m = /^oklch\(([\d.]+) ([\d.]+) ([\d.]+)\)$/.exec(css);
-  if (!m) throw new Error(`not an oklch literal: ${css}`);
-  return [Number(m[1]), Number(m[2]), Number(m[3])];
-}
-const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
-const linear = (css: string): Rgb =>
-  oklchToLinearRgb(...parse(css)).map(clamp01) as Rgb;
-const toGamma = (x: number) =>
-  x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
-const toLinear = (x: number) =>
-  x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
-/** `fg` at `alpha` over `bg`, composited in gamma sRGB. */
-function over(fg: Rgb, alpha: number, bg: Rgb): Rgb {
-  return fg.map((c, i) => {
-    const g = toGamma(c) * alpha + toGamma(bg[i]) * (1 - alpha);
-    return toLinear(g);
-  }) as Rgb;
-}
-const luminance = ([r, g, b]: Rgb) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
-const ratio = (a: Rgb, b: Rgb) => {
-  const [la, lb] = [luminance(a), luminance(b)];
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-};
 
 interface Row {
   pair: string;

@@ -209,8 +209,20 @@ e2e *args: build-api
 # docs/design/ui-review/shots/. Not part of `just validate` nor `just e2e`. Needs `just e2e-install` once.
 ui-shots: build-api
     cd web && node e2e/check-browser.mjs
-    cd web && npx playwright test -c playwright.ui-review.config.ts
+    cd web && npx playwright test -c playwright.ui-review.config.ts screens.spec.ts contrast.spec.ts
     node web/ui-review/curate.mjs
+
+# UI review mock-up round (docs/design/ui-review/mockups/): each option of the review painted over the
+# real app (proposed tokens from web/ui-review/mockup-tokens.ts, component rules from
+# docs/design/ui-review/mockups/css/), on the same e2e stack and seeded table as `ui-shots`; Act, the
+# lookup and the inventory at 1707x1300 and 1440x900, dark and light, plus each option's theme sheet
+# and themes.md. Fails on cut text in English or French. Committed shots are lossless WebP (needs
+# ImageMagick's `magick`). Not part of `just validate` nor `just e2e`. Needs `just e2e-install` once.
+ui-mockups: build-api
+    @command -v magick >/dev/null || { echo "ui-mockups needs ImageMagick (magick) for lossless WebP"; exit 1; }
+    cd web && node e2e/check-browser.mjs
+    cd web && npx playwright test -c playwright.ui-review.config.ts mockups.spec.ts
+    node web/ui-review/to-webp.mjs
 
 # --- Fly.io configuration (ADR 0024 steps 2, 5, 8, 9.1) ---
 

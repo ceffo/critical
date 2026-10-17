@@ -1,0 +1,103 @@
+/*
+ * Direction 2 · Neutral chrome, colour means something (on top of ladder.css). The tokens paint the
+ * primary ramp (`amb-*`) as the neutral one, so every selected row, pill, rail item, track and
+ * tinted card becomes a grey step by itself (web/ui-review/mockup-tokens.ts, `neutralChrome`).
+ * `tint` keeps the ambiance hue for four things only: the brand mark, the focus ring and the
+ * primary actions Attack, Cast, Roll and Next turn. These rules route the other uses of `tint` to
+ * ink, and give colour only to what carries meaning: verdicts, health, damage / healing, magic,
+ * crits and maxima.
+ */
+
+/*
+ * Every filled primary button turns neutral, then the primary actions in view get their colour back
+ * (Cast, on the Spells tab, is not on the captured screens).
+ */
+.bg-primary {
+  background-color: var(--neu-800);
+  color: var(--ink);
+}
+header .bg-primary,
+section:has(> div > [data-testid="weapon-in-hand"]) .bg-primary,
+[data-testid="dice-footer"] .bg-primary {
+  background-color: var(--tint);
+  color: var(--on-accent);
+}
+
+/* Selection: the neutral step with an ink bar (no colour for "selected"). */
+nav[data-testid="rail"] button.bg-amb-900,
+[data-testid="spell-row"].bg-amb-900,
+li.bg-amb-900 {
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+nav[data-testid="rail"] button.bg-amb-900 {
+  color: var(--ink);
+}
+.bg-amb-900.ring-amb-700,
+[role="radio"].bg-amb-800 {
+  box-shadow: inset 0 0 0 1.5px var(--neu-500);
+}
+/* Tabs: the active one underlined in ink. */
+[role="tab"].border-tint {
+  border-color: var(--ink);
+}
+/* The current turn: label and chip in ink on the neutral tint. */
+[data-testid="journal-slot"] .text-tint {
+  color: var(--ink);
+}
+
+/* The weapon in hand: a neutral raised card, outlined in the ink; Attack is the only colour in it. */
+section:has(> div > [data-testid="weapon-in-hand"]) {
+  border: 2px solid color-mix(in oklab, var(--ink) 45%, transparent);
+  background-color: var(--neu-800);
+}
+/* The result card: "latest" marked in ink, the d20 in ink (its verdict pill carries the colour). */
+[data-testid="now-band"] > section:last-child {
+  border: 2px solid color-mix(in oklab, var(--ink) 55%, transparent);
+}
+[data-testid="hex-die"] {
+  background-color: var(--ink);
+  color: var(--surface);
+}
+
+/* Level progress and the timeline's current column: neutral. */
+[data-testid="level-progress"] {
+  background-color: var(--neu-500);
+}
+[data-testid="effects-track"] .bg-tint\/10 {
+  background-color: color-mix(in oklab, var(--ink) 7%, transparent);
+  --tw-ring-color: color-mix(in oklab, var(--ink) 20%, transparent);
+}
+[data-testid="effects-track"] span.text-tint {
+  color: var(--ink);
+}
+/* Effects are spells here: their pills in the magic hue (a mundane effect would stay grey). */
+[data-testid="effect-bar"].bg-amb-800 {
+  background-color: color-mix(in oklab, var(--magic) 22%, var(--surface));
+  color: var(--ink);
+  --tw-ring-color: color-mix(in oklab, var(--magic) 60%, transparent);
+}
+[data-testid="pip-left"] {
+  background-color: var(--magic);
+}
+
+/* The dice footer: the chosen die outlined in ink, its count in ink. */
+[data-testid="dice-footer"] .border-tint {
+  border-color: var(--ink);
+}
+[data-testid^="die-badge-"] {
+  background-color: var(--ink);
+  color: var(--surface);
+}
+
+/* Inventory: the bonus is gold text (a reward, the secondary's job), no chip. */
+[data-testid="item-bonus"] {
+  background: none;
+  padding: 0;
+}
+
+/* Scrollbars: grey, not a tint-to-magic gradient. */
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:horizontal {
+  background-image: none;
+  background-color: color-mix(in oklab, var(--ink) 30%, transparent);
+}

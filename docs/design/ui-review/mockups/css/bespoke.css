@@ -1,0 +1,22 @@
+/*
+ * Direction 4 · Three bespoke themes (on top of ladder.css): each theme is designed, not generated
+ * (web/ui-review/mockup-tokens.ts: `parchment`, `deep`). Parchment adds its own touches, scoped to
+ * it: section labels in the display face (Cinzel's capitals; ADR 0020 step 5 would have to allow
+ * it; not on the stat tiles' labels, where the wider capitals cut "Temps d'incantation" in French),
+ * a gilt outline on the latest result, and a visible brown outline on every card, because paper has
+ * no tone depth.
+ */
+:root[data-mock-theme="parchment-light"] .section-label:not(dt),
+:root[data-mock-theme="parchment-light"] [data-testid="journal-slot"] h2.text-title,
+:root[data-mock-theme="parchment-light"] main section.rounded-xl > div:first-child > h2.text-title {
+  font-family: "Cinzel Variable", "Cinzel", serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+:root[data-mock-theme="parchment-light"] [data-testid="now-band"] > section:last-child {
+  border-color: var(--highlight);
+}
+:root[data-mock-theme="parchment-light"] .zone-card,
+:root[data-mock-theme="parchment-light"] main section.rounded-xl.bg-card {
+  border-color: color-mix(in oklab, var(--ink) 34%, transparent);
+}

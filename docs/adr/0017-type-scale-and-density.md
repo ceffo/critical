@@ -2,7 +2,9 @@
 
 **Status**: accepted, 2026-10-15 (critical-kiv.21; amends [ADR 0009](0009-dashboard-layout-and-theme-system.md)
 steps 3 and 5); steps 2, 4, 5, 6 and 7 amended by [ADR 0022](0022-activity-focus-layout.md); step 6's budget rechecked,
-unchanged, by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.6 (2026-10-17)
+unchanged, by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.6 (2026-10-17); step 6
+amended by [ADR 0027](0027-space-follows-frequency-of-use.md) step 4 (2026-10-17, proposed: 5 turn
+columns, effect edit / remove on hover and focus)
 
 ## Context
 

@@ -6,7 +6,9 @@
 3.2, 4.1 and 4.2. Rechecks, without changing them, ADR 0022 step 2.8 and
 [ADR 0017](0017-type-scale-and-density.md) step 6. Three points are **proposed, user OK on the PR**:
 the themes' French and English names and ids (step 3.2), the default pair (step 3.3) and the mapping
-of a saved theme that no longer exists (step 4.3).
+of a saved theme that no longer exists (step 4.3). Step 5.9's initiative size amended by
+[ADR 0027](0027-space-follows-frequency-of-use.md) step 4.2 (2026-10-17, proposed: still plain ink,
+no chip, at `text-hero`, larger than the turn number).
 
 ## Context
 

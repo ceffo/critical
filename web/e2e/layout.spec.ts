@@ -870,6 +870,31 @@ test("theme: the main screens in dark and light, every theme in each of its mode
       await chooseTheme(page, which, name);
       await page.waitForTimeout(150); // let colour transitions settle
       await expectNoClippedText(page.locator("body"), `${which} ${name}, fr`);
+      // Parchment's own touches (ADR 0026 step 7): Cinzel section labels, a gilt latest outline;
+      // every other theme keeps the body face and its tint outline.
+      const touches = await page.evaluate(() => {
+        const colour = (v: string) => {
+          const probe = document.createElement("div");
+          probe.style.outlineColor = `var(${v})`;
+          probe.style.outlineStyle = "solid";
+          document.body.append(probe);
+          const c = getComputedStyle(probe).outlineColor;
+          probe.remove();
+          return c;
+        };
+        const label = document.querySelector(".section-label:not(dt)");
+        const latest = document.querySelector(".latest");
+        return {
+          face: label ? getComputedStyle(label).fontFamily : "",
+          outline: latest ? getComputedStyle(latest).outlineColor : "",
+          gilt: colour("--highlight"),
+          tint: colour("--tint"),
+        };
+      });
+      expect(touches.face.includes("Cinzel")).toBe(name === "Parchemin");
+      expect(touches.outline).toBe(
+        name === "Parchemin" ? touches.gilt : touches.tint,
+      );
       await snap(page, `fr-${which}-${name.toLowerCase()}`);
     }
   }

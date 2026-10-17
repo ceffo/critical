@@ -345,6 +345,21 @@
   outline-offset: -1px;
 }
 
+/*
+ * Parchment's own touches (ADR 0026 step 7), scoped by the theme attribute the theme code sets on
+ * the root, never per component: section and band labels in the display face's capitals (not the
+ * stat tiles' `dt` labels, where the wider capitals cut "Temps d'incantation" in French), and the
+ * latest result's outline in gilt. The card outline is the theme's own `--border` mix.
+ */
+:root[data-theme="parchment"] .section-label:not(dt) {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+:root[data-theme="parchment"] .latest {
+  outline-color: var(--highlight);
+}
+
 @theme inline {
   /* The raised step (ADR 0026 step 1.1): tiles, blocks, row stripes, chips; one token. */
   --color-raised: var(--neu-900);

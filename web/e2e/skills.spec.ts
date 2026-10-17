@@ -202,24 +202,28 @@ test("ability check: click DEX, adjust −2 on the card, the verdict changes, un
   const dex = page.getByRole("button", { name: "Dexterity check (17)" });
   const card = page.getByRole("region", { name: "Detail", exact: true });
   const result = card.getByTestId("ability-result");
-  const keys = ["Enter", "Space"];
-  let d20 = 0;
-  for (let i = 0; i < 200 && d20 !== 16 && d20 !== 17; i++) {
+  // One roll per input: each must send its own POST (the keyboard is not left to the dice).
+  const roll = async (input: () => Promise<void>) => {
     const rolled = page.waitForResponse(
       (r) =>
         r.url().endsWith("/api/roll/ability/dex") &&
         r.request().method() === "POST",
     );
-    if (i < 1) await dex.click();
-    else {
-      await dex.focus();
-      await page.keyboard.press(keys[i % 2]);
-    }
+    await input();
     const res = await rolled;
     expect(res.ok()).toBe(true);
-    d20 = ((await res.json()) as { roll: number }).roll;
-    await expect(result.getByTestId("hex-die")).toHaveText(String(d20));
-  }
+    const n = ((await res.json()) as { roll: number }).roll;
+    await expect(result.getByTestId("hex-die")).toHaveText(String(n));
+    return n;
+  };
+  for (const key of ["Enter", "Space"])
+    await roll(async () => {
+      await dex.focus();
+      await page.keyboard.press(key);
+    });
+  let d20 = 0;
+  for (let i = 0; i < 200 && d20 !== 16 && d20 !== 17; i++)
+    d20 = await roll(() => dex.click());
   expect([16, 17]).toContain(d20);
   await expect(card.getByTestId("card-header")).toContainText("Dexterity");
   await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 17`);

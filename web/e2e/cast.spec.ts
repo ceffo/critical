@@ -356,6 +356,13 @@ test("Strength cast on me by a party wizard, found by its French name; a saved e
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await snap(page, "strength-received");
+
+  // ADR 0028 step 2: the STR tile rolls against the score in effect, the sheet's beside it.
+  const str = await effectiveStr(page);
+  await page.getByRole("button", { name: `Strength check (${str})` }).click();
+  await expect(resultCard(page).getByTestId("ability-result")).toContainText(
+    new RegExp(`under \\S+ ${str} \\(sheet ${before}\\)`),
+  );
 });
 
 test("after Next turn the journal Undo is not on the cast until Next turn is popped", async ({

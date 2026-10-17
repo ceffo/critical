@@ -1023,6 +1023,13 @@ describe("header: last result", () => {
       lastResultEntry([hp, { ...dice, status: "voided" }, save, attack])?.id,
     ).toBe(3);
     expect(lastResultEntry([hp])).toBeNull();
+    // ADR 0028 step 5: an ability check takes it; once popped, the roll before it is back.
+    const check = entry("ability_check", strCheck, { id: 7 });
+    const skill = entry("skill_check", profCheck, { id: 6 });
+    expect(lastResultEntry([check, skill, save])?.id).toBe(7);
+    expect(
+      lastResultEntry([{ ...check, status: "voided" }, skill, save])?.id,
+    ).toBe(6);
   });
 
   it("an attack shows its d20 in the chip, any other result its row value", () => {

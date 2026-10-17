@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CaretDown, Moon } from "@phosphor-icons/react";
 import { localized } from "@/i18n/localized";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useSpellStore } from "@/stores/spells";
 import { useLogStore } from "@/stores/log";
 import { useTableStore } from "@/stores/table";
@@ -12,9 +19,10 @@ import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
 import { planCast } from "@/lib/castInputs";
-import { damageText } from "@/lib/spellDice";
-import { exposureText } from "@/lib/spellMode";
+import { slotDots, type DotState } from "@/lib/slotDots";
+import type { CastOptions } from "@/api/spells";
 import { PrepareEditor } from "./PrepareEditor";
+import { SpellDetailsDialog } from "./SpellDetailsDialog";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 
 interface SlotRow {
@@ -65,10 +73,101 @@ function groupSlots(
   );
 }
 
+/** The fill of a slot dot (ADR 0027 step 10.3): magic while castable, solid muted ink once used, an outline when nothing is prepared in it. */
+const DOT_CLASS: Record<DotState, string> = {
+  available: "bg-magic",
+  used: "bg-ink-muted",
+  empty: "border border-input",
+};
+
+/** The level's slot dots; `data-state` spells them out (a: available, u: used, e: empty). */
+function SlotDots({
+  level,
+  slots,
+  max,
+}: {
+  level: number;
+  slots: SpellSlot[];
+  max?: number;
+}) {
+  const { t } = useTranslation();
+  const { dots, available, used, empty } = slotDots(slots, max);
+  return (
+    <span
+      role="img"
+      className="flex flex-wrap items-center gap-1"
+      aria-label={t("spellSlots.dots", { available, used, empty })}
+      title={t("spellSlots.dots", { available, used, empty })}
+      data-testid={`dots-${level}`}
+      data-state={dots.map((d) => d[0]).join("")}
+    >
+      {dots.map((d, i) => (
+        <span key={i} className={cn("size-2.5 rounded-full", DOT_CLASS[d])} />
+      ))}
+    </span>
+  );
+}
+
 /**
- * Spells tab of the Act panel (ADR 0022 step 2.5). Today's prepared spells per level, the levels in
- * two text columns when the panel is wide enough: cast (result in the result card), long rest, the preparation
- * editor, and spells cast on the Bard by the party.
+ * "Lancer" as a split button (ADR 0027 step 10.1): the main part casts with the server's default
+ * target (no `onSelf`); the arrow offers both targets explicitly, since the server picks the default
+ * per spell and the spellbook does not say which one it is.
+ */
+function CastButton({
+  name,
+  disabled,
+  onCast,
+}: {
+  name: string;
+  disabled: boolean;
+  onCast: (onSelf?: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <span className="flex shrink-0">
+      <Button
+        size="lg"
+        variant="main"
+        className="rounded-r-none"
+        disabled={disabled}
+        aria-label={t("spellSlots.castLabel", { name })}
+        title={t("spellSlots.castLabel", { name })}
+        onClick={() => onCast()}
+      >
+        {t("spellSlots.cast")}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          disabled={disabled}
+          render={
+            <Button
+              size="icon-lg"
+              variant="main"
+              className="w-6 rounded-l-none border-l-on-accent/40"
+              aria-label={t("spellSlots.castTarget", { name })}
+              title={t("spellSlots.castTarget", { name })}
+            />
+          }
+        >
+          <CaretDown aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onClick={() => onCast(true)}>
+            {t("spellSlots.castOnSelf")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onCast(false)}>
+            {t("spellSlots.castOnAlly")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </span>
+  );
+}
+
+/**
+ * Spells tab of the Act panel (ADR 0027 step 10). Today's prepared spells per level, each level's
+ * slots as dots, the levels in two text columns when the panel is wide enough; a row is the spell's
+ * name (opening its details) and its cast button. Prepare and Long rest on top.
  */
 export function SpellsPanel() {
   const { t, i18n } = useTranslation();
@@ -84,8 +183,12 @@ export function SpellsPanel() {
     loading,
   } = useSpellStore();
   const [editing, setEditing] = useState(false);
-  // Buff spells that can go on someone else land on the Bard unless this is checked.
-  const [onAlly, setOnAlly] = useState(false);
+  // The spell whose details popup is open.
+  const [details, setDetails] = useState<{
+    id: string;
+    name: string;
+    level: number;
+  } | null>(null);
   // What a cast asks of the player comes from the spellbook data (slot_splits, consume_item_type,
   // attack_roll), per slot index: the split of the extra slots granted, the target AC, the item spent.
   const [splits, setSplits] = useState<Record<number, string>>({});
@@ -116,7 +219,8 @@ export function SpellsPanel() {
     void fetchInfo().catch(() => undefined);
   }, [items, logEntries, fetchInfo]);
 
-  // Group by level for display, keeping each slot's index (the cast endpoint's id).
+  // Group by level for display, keeping each slot's index (the cast endpoint's id). Only the levels
+  // with a slot show (ADR 0027 step 10.5).
   const byLevel = new Map<number, (SpellSlot & { index: number })[]>();
   slots.forEach((slot, index) => {
     byLevel.set(slot.level, [
@@ -126,41 +230,30 @@ export function SpellsPanel() {
   });
   const maxOf = (level: number) =>
     info.limits.find((l) => l.level === level)?.max;
-  const levels = [
-    ...new Set([...byLevel.keys(), ...info.limits.map((l) => l.level)]),
-  ].sort((a, b) => a - b);
+  const levels = [...byLevel.keys()].sort((a, b) => a - b);
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-body">
-          <input
-            type="checkbox"
-            checked={onAlly}
-            onChange={(e) => setOnAlly(e.target.checked)}
-          />
-          {t("spellSlots.onAlly")}
-        </label>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            title={t("spellSlots.prepare")}
-            aria-label={t("spellSlots.prepare")}
-            onClick={() => setEditing(true)}
-            disabled={busy || editing}
-          >
-            {t("spellSlots.prepareShort")}
-          </Button>
-          <Button
-            size="sm"
-            title={t("spellSlots.longRestLabel")}
-            aria-label={t("spellSlots.longRestLabel")}
-            onClick={() => void run(resetSlots)}
-            disabled={busy}
-          >
-            {t("spellSlots.longRest")}
-          </Button>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          size="sm"
+          title={t("spellSlots.prepare")}
+          aria-label={t("spellSlots.prepare")}
+          onClick={() => setEditing(true)}
+          disabled={busy || editing}
+        >
+          {t("spellSlots.prepareShort")}
+        </Button>
+        <Button
+          size="sm"
+          title={t("spellSlots.longRestLabel")}
+          aria-label={t("spellSlots.longRestLabel")}
+          onClick={() => void run(resetSlots)}
+          disabled={busy}
+        >
+          <Moon aria-hidden />
+          {t("spellSlots.longRest")}
+        </Button>
       </div>
       {editing && (
         <PrepareEditor
@@ -189,7 +282,6 @@ export function SpellsPanel() {
         <div className="gap-x-6 @lg:columns-2">
           {levels.map((level) => {
             const list = byLevel.get(level) ?? [];
-            const left = list.filter((s) => !s.used).length;
             return (
               <section
                 key={level}
@@ -200,38 +292,9 @@ export function SpellsPanel() {
                   <h3 className="section-label">
                     {t("spellSlots.level", { level })}
                   </h3>
-                  <div className="ml-auto flex flex-wrap items-center justify-end gap-x-2">
-                    {maxOf(level) !== undefined && (
-                      <span className="text-label text-muted-foreground">
-                        {t("spellSlots.preparedCount", {
-                          count: list.filter((s) => !s.extra).length,
-                          max: maxOf(level),
-                        })}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1" aria-hidden>
-                      {list.map((_, i) => (
-                        <span
-                          key={i}
-                          className={cn(
-                            "size-2 rounded-full",
-                            i < left ? "bg-magic" : "bg-input",
-                          )}
-                        />
-                      ))}
-                    </span>
-                    <span
-                      data-testid={`remaining-${level}`}
-                      className={cn(
-                        "text-label",
-                        list.length > 0 && left === 0
-                          ? "text-danger"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {t("spellSlots.remaining", { left, total: list.length })}
-                    </span>
-                  </div>
+                  <span className="ml-auto">
+                    <SlotDots level={level} slots={list} max={maxOf(level)} />
+                  </span>
                 </div>
                 <ul className="flex flex-col gap-0.5">
                   {groupSlots(
@@ -267,61 +330,54 @@ export function SpellsPanel() {
                       mode,
                     } = plan;
                     const acText = targetAcs[slot.index] ?? "";
-                    // The damage a cast rolls at the Bard's level, as the server serves it: the picked
-                    // mode's for a spell with modes.
-                    const entry = blank
-                      ? undefined
-                      : info.spellbook.find(
-                          (s) =>
-                            s.id ===
-                            (slot.prepared_spell_id ||
-                              spellId(slot.prepared_spell_name)),
-                        );
-                    const damage = blank
-                      ? undefined
-                      : mode
-                        ? mode.damage
-                        : entry?.damage;
-                    // A lasting area's damage per round of exposure (ADR 0008 step 16), rolled from
-                    // the cast card.
-                    const exposure = entry?.exposure;
+                    const cast = (onSelf?: boolean) =>
+                      void run(() =>
+                        castSpell(slot.index, {
+                          ...plan.options,
+                          onSelf,
+                        } satisfies CastOptions),
+                      );
                     return (
                       <li
                         key={slot.index}
                         className={cn(
-                          "flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1",
-                          slot.used ? "opacity-60" : "hover:bg-raised",
+                          "flex min-h-9 flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-0.5",
+                          !slot.used && "hover:bg-raised",
                         )}
                       >
-                        <span className="flex min-w-32 flex-1 flex-col">
-                          <span
-                            className={cn(
-                              "text-body break-words",
-                              slot.used && "text-muted-foreground line-through",
-                            )}
-                          >
+                        {/* A blank extra slot's picker stands for its name (below). */}
+                        {blank && !slot.used ? null : blank ? (
+                          <span className="min-w-32 flex-1 text-body break-words text-muted-foreground">
                             {name}
                           </span>
-                          {damage && (
-                            <span
-                              className="text-label break-words text-muted-foreground tabular-nums"
-                              data-testid="slot-dice"
-                            >
-                              {damageText(t, damage)}
-                            </span>
-                          )}
-                          {exposure && entry && (
-                            <span
-                              className="text-label break-words text-muted-foreground tabular-nums"
-                              data-testid="slot-exposure"
-                            >
-                              {exposureText(t, entry.id, exposure)}
-                            </span>
-                          )}
-                        </span>
+                        ) : (
+                          // The name opens the spell's details (ADR 0027 step 10.4).
+                          <button
+                            type="button"
+                            className={cn(
+                              "min-w-32 flex-1 cursor-pointer rounded-sm text-left text-body break-words outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+                              slot.used && "text-muted-foreground line-through",
+                            )}
+                            title={t("spellSlots.details", { name: baseName })}
+                            onClick={() =>
+                              setDetails({
+                                id:
+                                  slot.prepared_spell_id ||
+                                  spellId(slot.prepared_spell_name),
+                                name: baseName,
+                                level: slot.level,
+                              })
+                            }
+                          >
+                            {name}
+                          </button>
+                        )}
                         {blank && !slot.used && (
                           <select
-                            className={cn(fieldClass, "w-auto flex-1 px-1")}
+                            className={cn(
+                              fieldClass,
+                              "w-auto min-w-32 flex-1 px-1",
+                            )}
                             aria-label={t("spellSlots.extraPick")}
                             data-testid="extra-pick"
                             value={picks[slot.index] ?? ""}
@@ -342,105 +398,102 @@ export function SpellsPanel() {
                             ))}
                           </select>
                         )}
-                        {needs?.attack_roll && !slot.used && (
-                          <input
-                            className={cn(fieldClass, "w-16 px-1")}
-                            aria-label={t("spellSlots.targetAc")}
-                            placeholder={t("attack.acShort")}
-                            data-testid="cast-target-ac"
-                            inputMode="numeric"
-                            value={acText}
-                            onChange={(e) =>
-                              setTargetAcs({
-                                ...targetAcs,
-                                [slot.index]: e.target.value,
-                              })
-                            }
-                          />
-                        )}
-                        {spendable.length > 1 && !slot.used && (
-                          <select
-                            className={cn(fieldClass, "w-auto px-1")}
-                            aria-label={t("spellSlots.itemSpent")}
-                            data-testid="cast-item"
-                            value={itemId}
-                            onChange={(e) =>
-                              setItemPicks({
-                                ...itemPicks,
-                                [slot.index]: e.target.value,
-                              })
-                            }
-                          >
-                            {spendable.map((i) => (
-                              <option key={i.id} value={i.id}>
-                                {localized(i18n.language, i.name)} ({i.count})
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        {modes.length > 0 && needs && !slot.used && (
-                          <select
-                            className={cn(fieldClass, "w-auto px-1")}
-                            aria-label={t("spellSlots.modeChoice")}
-                            data-testid="slot-mode"
-                            value={mode?.key}
-                            onChange={(e) =>
-                              setModePicks({
-                                ...modePicks,
-                                [slot.index]: e.target.value,
-                              })
-                            }
-                          >
-                            {modes.map((m) => (
-                              <option key={m.key} value={m.key}>
-                                {modeName(t, needs.id, m.key)}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        {slotSplits.length > 0 && !slot.used && (
-                          <select
-                            className={cn(fieldClass, "w-auto max-w-full px-1")}
-                            aria-label={t("spellSlots.splitChoice")}
-                            data-testid="slot-split"
-                            value={split}
-                            onChange={(e) =>
-                              setSplits({
-                                ...splits,
-                                [slot.index]: e.target.value,
-                              })
-                            }
-                          >
-                            {slotSplits.map((levels) => (
-                              <option
-                                key={levels.join(",")}
-                                value={levels.join(",")}
-                              >
-                                {splitText(t, levels)}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <Button
-                          size="xs"
-                          variant={slot.used ? "ghost" : "quiet"}
-                          disabled={busy || plan.blocked}
-                          aria-label={t("spellSlots.castLabel", {
-                            name: baseName,
-                          })}
-                          onClick={() =>
-                            void run(() =>
-                              castSpell(slot.index, {
-                                onSelf: onAlly ? false : undefined,
-                                ...plan.options,
-                              }),
-                            )
-                          }
-                        >
-                          {slot.used
-                            ? t("spellSlots.used")
-                            : t("spellSlots.cast")}
-                        </Button>
+                        {/* The cast inputs stay with the cast button: they wrap under the name together. */}
+                        <span className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                          {needs?.attack_roll && !slot.used && (
+                            <input
+                              className={cn(fieldClass, "w-16 px-1")}
+                              aria-label={t("spellSlots.targetAc")}
+                              placeholder={t("attack.acShort")}
+                              data-testid="cast-target-ac"
+                              inputMode="numeric"
+                              value={acText}
+                              onChange={(e) =>
+                                setTargetAcs({
+                                  ...targetAcs,
+                                  [slot.index]: e.target.value,
+                                })
+                              }
+                            />
+                          )}
+                          {spendable.length > 1 && !slot.used && (
+                            <select
+                              className={cn(fieldClass, "w-auto px-1")}
+                              aria-label={t("spellSlots.itemSpent")}
+                              data-testid="cast-item"
+                              value={itemId}
+                              onChange={(e) =>
+                                setItemPicks({
+                                  ...itemPicks,
+                                  [slot.index]: e.target.value,
+                                })
+                              }
+                            >
+                              {spendable.map((i) => (
+                                <option key={i.id} value={i.id}>
+                                  {localized(i18n.language, i.name)} ({i.count})
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {modes.length > 0 && needs && !slot.used && (
+                            <select
+                              className={cn(fieldClass, "w-auto px-1")}
+                              aria-label={t("spellSlots.modeChoice")}
+                              data-testid="slot-mode"
+                              value={mode?.key}
+                              onChange={(e) =>
+                                setModePicks({
+                                  ...modePicks,
+                                  [slot.index]: e.target.value,
+                                })
+                              }
+                            >
+                              {modes.map((m) => (
+                                <option key={m.key} value={m.key}>
+                                  {modeName(t, needs.id, m.key)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {slotSplits.length > 0 && !slot.used && (
+                            <select
+                              className={cn(
+                                fieldClass,
+                                "w-auto max-w-full px-1",
+                              )}
+                              aria-label={t("spellSlots.splitChoice")}
+                              data-testid="slot-split"
+                              value={split}
+                              onChange={(e) =>
+                                setSplits({
+                                  ...splits,
+                                  [slot.index]: e.target.value,
+                                })
+                              }
+                            >
+                              {slotSplits.map((levels) => (
+                                <option
+                                  key={levels.join(",")}
+                                  value={levels.join(",")}
+                                >
+                                  {splitText(t, levels)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {slot.used ? (
+                            <span className="px-2 text-label text-muted-foreground">
+                              {t("spellSlots.used")}
+                            </span>
+                          ) : (
+                            <CastButton
+                              name={baseName}
+                              disabled={busy || plan.blocked}
+                              onCast={cast}
+                            />
+                          )}
+                        </span>
                       </li>
                     );
                   })}
@@ -450,6 +503,7 @@ export function SpellsPanel() {
           })}
         </div>
       </div>
+      <SpellDetailsDialog spell={details} onClose={() => setDetails(null)} />
     </div>
   );
 }

@@ -85,6 +85,11 @@
   "level": 4
  },
  {
+  "id": "rarys_mnemonic_enhancer",
+  "name": "Rary's Mnemonic Enhancer",
+  "level": 4
+ },
+ {
   "id": "detect_magic",
   "name": "Detect Magic",
   "level": 1

@@ -334,3 +334,19 @@ export async function openFold(
   await expect(found).toBeVisible();
   return found;
 }
+
+/**
+ * A spell level's slot dots on the Spells tab: `left` available then `total - left` used, then any
+ * number of empty (unprepared) dots.
+ */
+export async function expectSlotDots(
+  region: Locator,
+  level: number,
+  left: number,
+  total: number,
+) {
+  await expect(region.getByTestId(`dots-${level}`)).toHaveAttribute(
+    "data-state",
+    new RegExp(`^a{${left}}u{${total - left}}e*$`),
+  );
+}

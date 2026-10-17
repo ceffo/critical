@@ -33,14 +33,15 @@ else
     fail "secret missing: exited non-zero (main would go red)"
 fi
 
-# --- release.yml: the steps after the secrets check are gated on its output ---
+# --- release.yml, image job (the deploy job is checked by test-staging-deploy.sh): the steps after the
+# secrets check are gated on its output ---
 ungated="$(awk '
     /^      - / { if (block != "" && after && block !~ /if: steps\.secrets\.outputs\.ready == .true./) print head
                   block = ""; head = $0; if (seen) after = 1 }
     /name: Check the release secrets/ { seen = 1 }
     { block = block "\n" $0 }
     END { if (block != "" && after && block !~ /if: steps\.secrets\.outputs\.ready == .true./) print head }
-' "$root/.github/workflows/release.yml")"
+' <(sed '/^  deploy:/,$d' "$root/.github/workflows/release.yml"))"
 grep -q 'name: Check the release secrets' "$root/.github/workflows/release.yml" || fail "release.yml: no secrets check step"
 [ "$(grep -c "if: steps.secrets.outputs.ready == 'true'" "$root/.github/workflows/release.yml")" -ge 2 ] \
     || fail "release.yml: the flyctl and build steps are not gated"

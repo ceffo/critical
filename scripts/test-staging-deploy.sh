@@ -7,8 +7,10 @@
 #     the IP check only; machines on different digests fail; the digest is written to $GITHUB_OUTPUT.
 #   - record-deployment.sh, with gh stubbed: one deployment (task deploy-staging, ref the sha, digest in
 #     the payload) and one status; a success without a digest, a short sha and an unknown state call nothing.
-#   - the workflows, parsed: deploy-staging.yml only on main, its token only in the secret check and the
-#     deploy step, every later step gated; release.yml calls it only when the image was pushed.
+#   - the workflows, parsed: the deploy jobs (release.yml after a push, deploy-staging.yml by hand) have
+#     the staging environment and pass its token to the composite action, never call a reusable workflow
+#     (it cannot read the environment's secrets); the action reads the token only in its secret check and
+#     deploy step, and its secret check fails (runs, not skips) on an empty token.
 #   - STAGING_CONFIG: the deploy uses the config it names (the image's own commit).
 set -euo pipefail
 
@@ -141,8 +143,8 @@ grep -qx "fly deploy -c $tmp/image.toml -a other-app --image registry.fly.io/oth
     || fail "STAGING_CONFIG: not deployed with that config: $(cat "$calls")"
 
 # --- the workflows, parsed (not grepped) ---
-python3 -I - "$root/.github/workflows" <<'PY' || fails=$((fails + 1))
-import sys, yaml
+python3 -I - "$root/.github" <<'PY' || fails=$((fails + 1))
+import subprocess, sys, yaml
 
 d = sys.argv[1]
 load = lambda n: yaml.safe_load(open(f"{d}/{n}"))
@@ -151,33 +153,54 @@ def check(ok, msg):
     if not ok:
         errs.append(msg)
 
-dep = load("deploy-staging.yml")
-triggers = dep.get(True) or dep.get("on")  # PyYAML reads the key `on` as True
-check({"workflow_call", "workflow_dispatch"} <= set(triggers), "deploy-staging: needs workflow_call and workflow_dispatch")
-job = dep["jobs"]["deploy"]
-check("github.ref == 'refs/heads/main'" in str(job.get("if", "")), "deploy-staging: job not limited to main")
-check(job.get("environment") == "staging", "deploy-staging: job not in the staging environment")
-check(job["concurrency"]["group"] == "deploy-staging" and job["concurrency"]["cancel-in-progress"] is False,
-      "deploy-staging: not serialized without cancelling")
-check(job["permissions"] == {"contents": "read", "deployments": "write"}, "deploy-staging: permissions are not minimal")
-check("FLY_API_TOKEN" not in str(dep.get("env", "")) + str(job.get("env", "")), "deploy-staging: token in a workflow or job env")
-token_steps = [st.get("id") for st in job["steps"] if "secrets.FLY_API_TOKEN" in str(st)]
-check(token_steps == ["secrets", "deploy"], f"deploy-staging: the token is read by {token_steps}, not only the check and the deploy")
-ids = [st.get("id") for st in job["steps"]]
-after = job["steps"][ids.index("secrets") + 1:]
-for st in after:
-    cond = st.get("if", "")
-    check("steps.secrets.outputs.ready == 'true'" in cond or "steps.deploy.outcome" in cond,
-          f"deploy-staging: step '{st.get('name')}' runs without the token")
-rec = next(st for st in job["steps"] if "record-deployment.sh" in st.get("run", ""))
-check(rec["if"].startswith("always()"), "deploy-staging: the record is skipped when the deploy fails")
+act = load("actions/staging-deploy/action.yml")
+steps = act["runs"]["steps"]
+byid = {st.get("id") or st["name"]: st for st in steps}
+# The token reaches the action only as an input, and only the secret check and the deploy step read it.
+readers = [st.get("id") or st["name"] for st in steps if "inputs.fly-api-token" in str(st)]
+check(readers == ["Check the deploy secret", "deploy"], f"action: the token is read by {readers}, not only the check and the deploy")
+check(all("if" not in st for st in steps[:-1]), "action: a step before the record is conditional, so a missing token could skip the deploy")
+check(steps[0]["name"] == "Check the deploy secret", "action: the secret check is not the first step")
+check(act["runs"]["using"] == "composite", "action: not a composite action")
+rec = byid["Record the deployment"]
+check(rec["if"].startswith("always()"), "action: the record is skipped when the deploy fails")
 
-rel = load("release.yml")
+# The secret check fails on an empty token (the post-push skip of the first real run) and passes on a set one.
+run = steps[0]["run"]
+for token, want_ok in (("", False), ("s3cret-value", True)):
+    r = subprocess.run(["bash", "-e", "-c", run], env={"FLY_API_TOKEN": token, "PATH": "/usr/bin:/bin"}, capture_output=True, text=True)
+    check((r.returncode == 0) == want_ok, f"action: secret check with token {token!r} exited {r.returncode}")
+    check(token == "" or token not in r.stdout + r.stderr, "action: secret check printed the token")
+
+def uses_action(job):
+    return [st for st in job["steps"] if st.get("uses") == "./.github/actions/staging-deploy"]
+
+dep = load("workflows/deploy-staging.yml")
+triggers = dep.get(True) or dep.get("on")  # PyYAML reads the key `on` as True
+check(set(triggers) == {"workflow_dispatch"}, "deploy-staging: should be the manual entry only")
+rel = load("workflows/release.yml")
 jobs = rel["jobs"]
+
+for name, job in (("deploy-staging", dep["jobs"]["deploy"]), ("release", jobs["deploy"])):
+    check(job.get("environment") == "staging", f"{name}: deploy job not in the staging environment")
+    check("uses" not in job, f"{name}: deploy job calls a reusable workflow, which cannot read the environment's secrets")
+    check(job["concurrency"]["group"] == "deploy-staging" and job["concurrency"]["cancel-in-progress"] is False,
+          f"{name}: not serialized without cancelling")
+    check(job["permissions"] == {"contents": "read", "deployments": "write"}, f"{name}: permissions are not minimal")
+    calls = uses_action(job)
+    check(len(calls) == 1, f"{name}: does not call the staging deploy action exactly once")
+    if calls:
+        w = calls[0]["with"]
+        check(w.get("fly-api-token") == "${{ secrets.FLY_API_TOKEN }}", f"{name}: the action does not get the environment's token")
+        check("if" not in calls[0], f"{name}: the action step is conditional")
+    check("FLY_API_TOKEN" not in str(job.get("env", "")), f"{name}: token in the job env")
+    check(job["steps"][0].get("uses", "").startswith("actions/checkout@"), f"{name}: no checkout before the local action")
+
+check("github.ref == 'refs/heads/main'" in str(dep["jobs"]["deploy"].get("if", "")), "deploy-staging: job not limited to main")
 check(jobs["deploy"]["needs"] == "image", "release: deploy does not need the image job")
 check(jobs["deploy"]["if"] == "needs.image.outputs.pushed == 'true'", "release: deploy not gated on a pushed image")
-check(jobs["deploy"]["uses"] == "./.github/workflows/deploy-staging.yml", "release: does not call the staging deploy")
 check("steps.build.outputs.pushed" in jobs["image"]["outputs"]["pushed"], "release: image job has no pushed output")
+check("FLY_API_TOKEN" not in str(dep.get("env", "")) + str(rel.get("env", "")), "a workflow-level env holds the token")
 
 if errs:
     print("\n".join("test-staging-deploy: FAIL: " + e for e in errs), file=sys.stderr)

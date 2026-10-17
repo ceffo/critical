@@ -277,7 +277,7 @@ gets those steps then.
 
 ## How a release flows
 
-ADR 0024 steps 3 and 4, driven by GitHub Actions:
+ADR 0024 steps 3 and 4, driven by GitHub Actions (the PR title, a conventional-commit line, becomes the commit on `main` and drives the version):
 
 1. A merge to `main` with green CI builds the image with the real catalogue and pushes it tagged with
    the commit sha ("Release build" below, `.github/workflows/release.yml`); the same run then deploys that

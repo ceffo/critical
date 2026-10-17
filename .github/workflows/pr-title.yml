@@ -1,0 +1,23 @@
+name: PR title
+
+# The squash commit on main takes the PR title and the release reads the version bump from it, so the
+# title must be a conventional-commit line. Editing the title re-runs the check. Not wired as a required
+# check: that is a branch-protection choice.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    name: conventional-commit title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: scripts/check-pr-title.sh "$PR_TITLE"

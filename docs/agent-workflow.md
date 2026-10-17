@@ -242,8 +242,10 @@ CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays t
 
 ## Commits
 
-`<type>: <short description>` (`feat`, `fix`, `test`, `docs`, `chore`), optionally with a scope and
-the bead id, e.g. `feat(dal): … (critical-518.1)`. Never commit broken tests or a failing build.
+`<type>(<scope>)?!?: <short description>` (`feat`, `fix`, `test`, `docs`, `chore`, `refactor`, `perf`),
+optionally with a scope and the bead id, e.g. `feat(dal): … (critical-518.1)`. The PR title follows the
+same format (checked in CI by `.github/workflows/pr-title.yml`): it becomes the squash commit on main,
+and the release version bump is read from it. Never commit broken tests or a failing build.
 Run `br sync --flush-only` before committing tracker changes. Trailer: `Co-Authored-By:` naming the
 model actually running.
 

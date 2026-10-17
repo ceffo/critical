@@ -7,6 +7,9 @@
 #   - release-version.sh next on a fixture repository with gh stubbed: the range after the last v* tag
 #     reachable from the commit (first parent), each commit's PR labels, a BREAKING CHANGE footer, a
 #     version whose tag exists elsewhere refused, no tag at all refused;
+#   - the next-major marker (bump --major, and next on the fixture): after the last version and reachable -> the next
+#     major (1.0.0 on 0.x); at or before the last version, or on a later commit -> ignored; docs-only -> no
+#     release, still pending; used once;
 #   - release-version.sh resolve: a version tag's commit, an unknown version refused with its name;
 #   - version-tag.sh with gh stubbed: one annotated tag object on the commit, then its ref; refused inputs
 #     call nothing; a ref GitHub refuses fails.
@@ -93,6 +96,25 @@ c 'fix: a' | bump_case "first fix after v0.1.0" v0.1.0 true 0.1.1 patch
 c 'fix: a' | bump_case "patch 9 to 10" v1.9.9 true 1.9.10 patch
 c 'feat: a' | bump_case "minor 9 to 10, patch reset" v1.9.9 true 1.10.0 minor
 c 'feat: a' | bump_case "major kept" v3.0.7 true 3.1.0 minor
+
+# --- bump --major: the marker is pending, so the release that happens is the next major ---
+c 'fix: a bug' | bump_case "major over a patch" v1.4.2 true 2.0.0 major "major asked by hand" --major
+c 'feat: a panel' | bump_case "major over a minor" v1.4.2 true 2.0.0 major "" --major
+c 'fix!: breaking' | bump_case "major over a breaking change" v1.4.2 true 2.0.0 major "" --major
+c 'fix: a bug' | bump_case "on 0.x the first major is 1.0.0" v0.7.3 true 1.0.0 major "" --major
+c 'fix: a bug' | bump_case "major resets minor and patch" v3.9.9 true 4.0.0 major "" --major
+c 'fix: a bug' | bump_case "major with --force" v1.4.2 true 2.0.0 major "" "--major --force"
+c 'fix: a bug' | bump_case "major with --force, any order" v1.4.2 true 2.0.0 major "" "--force --major"
+# A range that makes no release makes no major: the marker waits.
+c 'docs: a page' | bump_case "major + docs only: no release, still pending" v1.4.2 false - none "next major (2.0.0) is still pending" --major
+{ c 'docs: a'; c 'chore: b'; } | bump_case "major + docs/chore: no release" v1.4.2 false - none "still pending" --major
+c 'feat: x' 'no-release' 0 82 | bump_case "major + no-release label: no release" v1.4.2 false - none "no-release label on PR #82" --major
+bump_case "major + empty range: no release" v1.4.2 false - none "still pending" --major </dev/null
+c 'docs: a page' | bump_case "major + docs only + force: a major release" v1.4.2 true 2.0.0 major "Forced release" "--major --force"
+# Without the marker nothing is a major, and a plain run says nothing of one.
+c 'docs: a page' | bump_case "docs only, no marker: no pending notice" v1.4.2 false - none "docs/test/chore only"
+out="$(c 'docs: a page' | GITHUB_OUTPUT=/dev/null "$script" bump v1.4.2)"
+[[ "$out" != *"still pending"* ]] || fail "a pending notice without the marker"
 
 # --- bump: refused input ---
 for last in 1.2.3 v1.2 v01.2.3 v1.2.3-rc1 ''; do
@@ -191,6 +213,52 @@ next "$m" --force
 next "$n"
 [ "$status" = 0 ] && [[ "$out" == *"no commit since v0.3.0"* ]] || fail "next on the newest tagged commit: $out"
 git tag -d v0.3.0 >/dev/null
+
+# --- next: the next-major marker (a lightweight tag on a commit; the last version is v0.2.0 on c4) ---
+# Pending: after the last version and reachable from the released commit. Whatever the range's level.
+git tag next-major "$n"
+next "$n"
+[ "$(cat "$tmp/out")" = "$(printf 'release=true\nbump=major\nlast=v0.2.0\nversion=1.0.0')" ] || fail "next: marker on the released commit: $(cat "$tmp/out")"
+git tag -f next-major "$m" >/dev/null
+next "$n"
+grep -qx 'version=1.0.0' "$tmp/out" || fail "next: marker earlier in the range (after the last version): $(cat "$tmp/out")"
+next "$m"
+[ "$(cat "$tmp/out")" = "$(printf 'release=true\nbump=major\nlast=v0.2.0\nversion=1.0.0')" ] || fail "next: marker on the released commit, a fix: $(cat "$tmp/out")"
+git tag -d next-major >/dev/null
+git tag -a next-major -m marker "$m"          # annotated: the commit it names counts
+next "$n"
+grep -qx 'version=1.0.0' "$tmp/out" || fail "next: an annotated marker is not read: $(cat "$tmp/out")"
+git tag -d next-major >/dev/null
+# Ignored: on the last version's commit (not newer), before it, or on a commit the released one does not contain.
+for at in "$c4" "$c1" "$c2"; do
+    git tag next-major "$at"
+    next "$n"
+    grep -qx 'bump=minor' "$tmp/out" && grep -qx 'version=0.3.0' "$tmp/out" || fail "next: a marker at/before the last version ($at) is not ignored: $(cat "$tmp/out")"
+    git tag -d next-major >/dev/null
+done
+git tag next-major "$n"
+next "$m"
+grep -qx 'bump=patch' "$tmp/out" && grep -qx 'version=0.2.1' "$tmp/out" || fail "next: a marker on a later commit than the released one is not left for later: $(cat "$tmp/out")"
+git tag -d next-major >/dev/null
+next "$n"
+grep -qx 'bump=minor' "$tmp/out" || fail "next: a deleted marker still counts: $(cat "$tmp/out")"
+# Docs only: no release and the marker still pending; the next releasing commit takes it; one release only.
+git tag -a v0.3.0 -m r "$n"
+d="$(commit 'docs: a page (#17)')"
+git tag next-major "$d"
+next "$d"
+[ "$(cat "$tmp/out")" = "$(printf 'release=false\nbump=none\nlast=v0.3.0')" ] && [[ "$out" == *"still pending"* ]] || fail "next: marker + docs only: $(cat "$tmp/out") / $out"
+[ "$(git rev-parse next-major)" = "$d" ] || fail "next moved the marker"
+e="$(commit 'fix: a bug (#18)')"
+next "$e"
+[ "$(cat "$tmp/out")" = "$(printf 'release=true\nbump=major\nlast=v0.3.0\nversion=1.0.0')" ] || fail "next: the pending marker is not taken by the next release: $(cat "$tmp/out")"
+next "$e" --force
+grep -qx 'version=1.0.0' "$tmp/out" || fail "next --force: marker: $(cat "$tmp/out")"
+git tag -a v1.0.0 -m r "$e"                   # the major is released: the marker is now at or before the last version
+f="$(commit 'feat: after the major (#19)')"
+next "$f"
+[ "$(cat "$tmp/out")" = "$(printf 'release=true\nbump=minor\nlast=v1.0.0\nversion=1.1.0')" ] || fail "next: a used marker makes a second major: $(cat "$tmp/out")"
+git tag -d v1.0.0 v0.3.0 next-major >/dev/null
 
 touch "$tmp/gh-fails"
 next "$m"

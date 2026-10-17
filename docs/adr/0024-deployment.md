@@ -16,7 +16,8 @@ version computed from the commits, baked into the image and tagged by CI once st
 4, 10.2 and the "release name" consequence). Amended again 2026-10-17, **proposed, awaiting the user's OK**
 (see "Amendment (promotion on demand, 2026-10-17)"): the promotion runs from main on demand, promotes the
 newest version that passed staging or the one asked, and only a repository admin may run it (steps 4 and
-10.2).
+10.2). Amended again 2026-10-17, **proposed, awaiting the user's OK** (see "Amendment (a manual major,
+2026-10-17)"): `just major` makes the next staging release the next major version (step 3).
 
 ## Context
 
@@ -515,3 +516,22 @@ the job checks the actor is a repository admin and refuses otherwise, no require
 - **Tests**: `scripts/test-promotion.sh` (the resolution and its refusals on a fixture repository, the
   admin check, the environment's rule, `just promote`, the workflow parsed: the admin check before any
   secret, the version resolved in a job without the environment).
+
+## Amendment (a manual major, 2026-10-17)
+
+**Proposed, awaiting the user's OK before merge.** User, 2026-10-17: _"major is manual"_. Decided in the same
+triage: a manual workflow, admin only, records a marker that the version computation reads; it affects only
+the next release; on `0.x` the first major is `1.0.0`; a major is never automatic (a breaking change stays a
+minor with a notice).
+
+- **Step 3 (the version)**: `just major` runs the Major workflow from main, which moves the marker tag
+  `next-major` to main's head (the job checks the actor and the re-runner are repository admins, before
+  anything else). The release computes `(N+1).0.0` instead of the bump when the marker names a commit after
+  the last version tag and reachable from the commit released; a range that makes no release makes none (the
+  marker waits). An older marker is ignored, so it is never deleted.
+- **Step 10.2**: the marker is not a `v*` tag, so the two `v*` rulesets are unchanged; a third ruleset lets
+  only an admin and the GitHub Actions app create, move or delete `next-major`. The workflow has
+  `contents: write` and no secret or environment.
+- **Tests**: `scripts/test-release-version.sh` (marker after the last version -> major, before or on it ->
+  ignored, on a later commit -> left for later, docs-only -> no release and still pending, used once) and
+  `scripts/test-major.sh` (the marker's API calls, the admin refusal, `just major`, the workflow, the ruleset).

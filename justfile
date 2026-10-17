@@ -47,13 +47,14 @@ check-ci-skip:
 # steps 3, 4, 7, 8.3 and 10.4), and the backup and restore drill's (step 9), offline: docker, fly, gh and the
 # PostgreSQL tools stubbed, a local rulebooks repo and a generated key, fixture git repos
 # (scripts/test-release-version.sh, scripts/test-release-scripts.sh, scripts/test-staging-deploy.sh,
-# scripts/test-promotion.sh, scripts/test-db-backup.sh).
+# scripts/test-promotion.sh, scripts/test-db-backup.sh, scripts/test-major.sh).
 check-release-scripts:
     scripts/test-release-version.sh
     scripts/test-release-scripts.sh
     scripts/test-staging-deploy.sh
     scripts/test-promotion.sh
     scripts/test-db-backup.sh
+    scripts/test-major.sh
 
 # Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
 # says what it does and why; the link to the work item lives in commits and PRs only
@@ -262,6 +263,14 @@ release-image +apps: catalogue
 # admins only (the workflow checks it); the workflow's log says what it resolved and what production ran.
 promote $version="":
     gh workflow run promote.yml --ref main ${version:+-f "version=$version"}
+
+# Make the next staging release the next major version (ADR 0024 step 3): runs the Major workflow from main, which
+# moves the `next-major` marker to main's head. Repository admins only (the workflow checks it). Only the next
+# release that happens is a major (a docs-only range makes none and the marker waits); on 0.x the first major is
+# 1.0.0. Prints what the next release will be.
+major:
+    gh workflow run major.yml --ref main
+    git ls-remote --tags --refs origin 'v*' | sed 's|.*refs/tags/||' | scripts/next-major.sh preview
 
 # Check that a fly app has no public IP and has a private Flycast address (ADR 0024 step 8). Read-only.
 fly-private app:

@@ -7,18 +7,23 @@
 #
 #   scripts/require-admin.sh <user>...
 #
+# ADMIN_ACTION (default "promote", with ADMIN_NOTHING "promoted") words the refusal for another admin-only
+# workflow (the Major workflow sets "make the next release a major" and "marked").
+#
 # Needs `gh` and GITHUB_REPOSITORY (default: the repository gh sees). A user who is not a collaborator, or a
 # failed API call, is refused like a non-admin.
 set -euo pipefail
 
 [ "$#" -gt 0 ] || { echo "usage: require-admin.sh <user>..." >&2; exit 2; }
+action="${ADMIN_ACTION:-promote}"
+nothing="${ADMIN_NOTHING:-promoted}"
 repo="${GITHUB_REPOSITORY:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 for user in "$@"; do
     [[ "$user" =~ ^[A-Za-z0-9][A-Za-z0-9-]*(\[bot\])?$ ]] \
-        || { echo "require-admin: FAIL: '$user' is not a GitHub user name: nothing is promoted" >&2; exit 1; }
+        || { echo "require-admin: FAIL: '$user' is not a GitHub user name: nothing is $nothing" >&2; exit 1; }
     permission="$(gh api "repos/$repo/collaborators/$user/permission" --jq .permission 2>/dev/null)" || permission=""
     if [ "$permission" != admin ]; then
-        echo "::error title=Promotion::$user is not an admin of $repo (permission: ${permission:-unknown}): only a repository admin may promote (docs/deploy.md, \"Promotion\"). Nothing was promoted."
+        echo "::error title=Admin only::$user is not an admin of $repo (permission: ${permission:-unknown}): only a repository admin may $action (docs/deploy.md). Nothing was $nothing."
         echo "require-admin: FAIL: $user is not an admin of $repo" >&2
         exit 1
     fi

@@ -125,15 +125,17 @@ flowchart TD
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
   left of the dice footer (ADR 0022 step 2.6): language
   (English / Français), appearance (Dark / Light / System, System follows the OS live), six
-  ambiance swatches. Applied live, stored per device in `localStorage['critical.settings.v1']`
+  ambiance swatches (to become a dark-theme and a light-theme choice, ADR 0026 step 4). Applied live, stored per device in `localStorage['critical.settings.v1']`
   (`lib/settings.ts`, which migrates the older `critical.theme` / `critical.language` keys once).
-- Theme (ADR 0020): `lib/theme.ts` `themeVars(ambiance, light)` computes the three palette ramps
+- Theme (ADR 0020, amended by ADR 0026: the contrast ladder, the raised stage and four themes,
+  Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts` `themeVars(ambiance, light)` computes the three palette ramps
   (`amb-*` primary, `sec-*`, `ter-*`), the neutrals and the role colours set on `<html>`; use the
   roles (`tint` for primary accents, `text-highlight` / `bg-highlight-fill text-on-highlight` for
   the secondary, `text-magic` for spells, `danger` / `success` / `warning`, `on-accent` as text on
   any fill, `bg-surface`, `bg-neu-900`, `text-ink-muted`, `shadow-float` for popovers only) or the
   shadcn names mapped onto them, never raw colours and never a ramp step for meaningful text. The
-  contrast unit test (`lib/theme.test.ts`) keeps every ambiance at WCAG AA in both modes.
+  contrast unit test (`lib/theme.test.ts`) keeps every ambiance at WCAG AA in both modes (ADR 0026
+  step 2 adds the tone steps and the 3:1 field edge and ring).
 - Brand (ADR 0022 step 7): `components/shell/BrandMark.tsx`, the Facet · Bare mark (hexagon outline
   in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the left of the header
   card; `public/favicon.svg` is the same drawing in static Arcane colours.

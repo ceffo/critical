@@ -7,6 +7,13 @@ where section separation shows best: two cards, row stripes, and the card-title 
 clash). Each screen is at 1707x1300 and 1440x900, in dark and light mode. **Pick one** (or a
 combination, see "My ranking"); a developer then writes the ADR amendment and builds it.
 
+**Picked (2026-10-17): A3 + B2.** Option 1 + 3 (contrast ladder and raised stage) with option 4's
+theme set: Arcane (dark + light, retuned), Deep (dark only), Parchment (light only) and Plain (dark +
+light, from Obsidian); Grove, Blood, Amber dark and Ocean light go. The user picks a dark and a light
+theme, the appearance mode chooses which applies. The decision and its rules are
+[ADR 0026](../../../adr/0026-contrast-ladder-raised-stage-four-themes.md); this page stays the record
+of the round.
+
 **Where to look first:** open [`index.html`](index.html) in a browser. It shows any option beside
 today on the same screen, theme and viewport, and keys ← → switch options. On GitHub, use the
 tables below.

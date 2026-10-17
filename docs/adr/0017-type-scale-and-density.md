@@ -1,7 +1,8 @@
 # ADR 0017: Type scale and density
 
 **Status**: accepted, 2026-10-15 (critical-kiv.21; amends [ADR 0009](0009-dashboard-layout-and-theme-system.md)
-steps 3 and 5); steps 2, 4, 5, 6 and 7 amended by [ADR 0022](0022-activity-focus-layout.md)
+steps 3 and 5); steps 2, 4, 5, 6 and 7 amended by [ADR 0022](0022-activity-focus-layout.md); step 6's budget rechecked,
+unchanged, by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.6 (2026-10-17)
 
 ## Context
 
@@ -71,7 +72,8 @@ letters.
    No `h-9`, `h-10` or larger on a control, and no per-use height overrides above 32 px
    (*amended by [ADR 0022](0022-activity-focus-layout.md) step 3.3:* the Attack button, 44 px, is the one exception).
 
-6. **Header.** *Amended by [ADR 0022](0022-activity-focus-layout.md) step 3.1:* the header is a card holding the brand, turn,
+6. **Header.** *Rechecked by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.6 (2026-10-17):* the header's banded
+   cells keep it within the 120 px budget; nothing changes. *Amended by [ADR 0022](0022-activity-focus-layout.md) step 3.1:* the header is a card holding the brand, turn,
    initiative, timeline and last result, at most 120 px at rest. The header region holds the turn block (turn number as the headline, status
    line, Next turn, ⋯ menu) and the effects timeline side by side. The timeline is its turn row
    (24 px) plus one 24 px row per effect, and it shows at most 3 effect rows at rest, with no

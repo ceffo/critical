@@ -3,7 +3,9 @@
 **Status**: accepted, 2026-10-15 (critical-uwtx.3, from the design approved in critical-uwtx.2). Replaces
 [ADR 0009](0009-dashboard-layout-and-theme-system.md) steps 1 and 2 and amends its steps 5 and 6;
 amends [ADR 0017](0017-type-scale-and-density.md) steps 2, 4, 5, 6 and 7; amends
-[ADR 0020](0020-visual-identity.md) step 5.
+[ADR 0020](0020-visual-identity.md) step 5. Steps 2.4, 3.2, 4.1 and 4.2 amended, step 2.8 rechecked (unchanged), by
+[ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) (2026-10-17, proposed: one selection mark, the "latest" outline, card
+titles as section labels, the raised stage and its header bands).
 
 ## Context
 
@@ -98,7 +100,8 @@ B's choice and is marked "(design)".
       throws: 24 px between groups, 12 px inside one.
    4. **Rail**, 68 px (design), between the character card and the stage, on the ground (not a card):
       bare Phosphor icons with their caption under them, the active one on a tint pill
-      (`bg-amb-900 text-tint`). Activities: **Act**, **Spells** (lookup), **Experience**,
+      (`bg-amb-900 text-tint`; *amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 5.1, 2026-10-17:* the
+      selected tone with a 3 px tint bar, the one selection mark). Activities: **Act**, **Spells** (lookup), **Experience**,
       **Inventory**. A click focuses that activity; the stage reshapes, the always-visible zones do
       not move. Each activity mounts on its first visit and stays mounted while hidden (ADR 0009
       step 2, kept). No settings item in the rail.
@@ -136,7 +139,8 @@ B's choice and is marked "(design)".
       Extra width goes to the stage (ADR 0017's principle). At 1440x900 the journal shows about 8
       rows with the Weapons tab unless it is dragged or collapsed; at 1707x1300 all 16 rows of the
       sample show.
-   8. **Content target** (replaces ADR 0017 step 7's per-column checks; checked in `layout.spec` with
+   8. **Content target** (*rechecked, unchanged, by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.6,
+      2026-10-17*; replaces ADR 0017 step 7's per-column checks; checked in `layout.spec` with
       bounding boxes): at every layout viewport the header card at rest (3 effect rows) is at most
       120 px tall, the page does not scroll and `expectNoClippedText` passes in each activity; at
       1440x900 the character card shows everything from the name to the fifth saving throw without
@@ -147,7 +151,8 @@ B's choice and is marked "(design)".
       and last result besides the timeline. The rest of step 6 (3 effect rows at rest, the expander,
       the 40 % cap when expanded) stands.
    2. **Padding** (amends ADR 0017 step 4): a card's padding is 14 px vertical, 16 px horizontal
-      (`py-3.5 px-4`; was `p-3`). The ground's padding and the gutter between cards are 12 px. Gaps
+      (`py-3.5 px-4`; was `p-3`; *amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.5, 2026-10-17:* a
+      card's header band replaces its top padding). The ground's padding and the gutter between cards are 12 px. Gaps
       inside a card stay 4 / 8 / 12 px, except the gutter between two text columns in one card (the
       two-column spell list, the lookup description, XP progress | form): 24 px (design).
    3. **The one tall control** (amends ADR 0017 step 5): the Weapons tab's **Attack** button is
@@ -166,10 +171,15 @@ B's choice and is marked "(design)".
       between zones, not between sections or header cells inside a card. Inside a card, grouping is
       by spacing, a section label or a raised tone step (`bg-neu-900`, ADR 0020 step 2). The result
       panel's outline is the accent (`border-amb-700`, design), to mark the latest result.
+      *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) steps 5.2 and 6 (2026-10-17):* "latest" is a 2 px tint
+      outline; the focused card of the activity rises one tone with a 2 px outline; cards and
+      groups get header bands (tones, not lines: "no rules" stands).
    2. **Section labels** are back: 11 px (`text-label`), **uppercase, letter-spaced (0.08em)**,
       `text-ink` (the full ink, one step above `text-ink-muted`, for contrast; design: "TARGET", "HIT POINTS", "SAVING THROWS · CLICK TO ROLL", "LEVEL 1",
       column headers). This replaces ADR 0009 step 5's "no tiny uppercase letter-spaced labels".
       Field labels next to a control ("Initiative", "Situational") stay sentence case.
+      *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) steps 5.6 and 6.2 (2026-10-17):* card titles (Journal,
+      Items, Weapons, Effects) are section labels too, and labels sit in the card's header band.
    3. The rest of ADR 0009 step 5 stands: no gradients (a flat tint), shadows only on what floats,
       tabular figures, at most 3-4 sizes per card, Inter and Phosphor (the Cinzel wordmark excepted,
       ADR 0020).

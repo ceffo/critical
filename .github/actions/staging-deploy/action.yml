@@ -1,0 +1,74 @@
+name: Deploy staging
+description: >-
+  Deploys the release image of a main commit to the private staging app, smoke-checks it and records the
+  deployment (ADR 0024 steps 3.2-3.3). Runbook: docs/deploy.md ("Staging deploy").
+
+# A composite action, not a reusable workflow: a called workflow's job does not see the secrets of its own
+# `environment:` (the first real run read an empty FLY_API_TOKEN), and a calling job cannot have an
+# environment. So the job that has `environment: staging` (release.yml, deploy-staging.yml) checks out the
+# repository and passes the token here as an input; nothing else can read it.
+inputs:
+  sha:
+    description: Full commit sha of the release image to deploy
+    required: true
+  fly-api-token:
+    description: The staging environment's FLY_API_TOKEN
+    required: true
+  public-access-option:
+    description: The PUBLIC_ACCESS_OPTION variable (empty while the apps stay private)
+    required: false
+    default: ""
+  github-token:
+    description: Token that records the deployment (deployments write)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The caller has already pushed the image or been asked to deploy one: a token it cannot read is a
+    # misconfiguration, so this fails (the first real run skipped silently and left staging on the old image).
+    - name: Check the deploy secret
+      shell: bash
+      env:
+        FLY_API_TOKEN: ${{ inputs.fly-api-token }}
+      run: |
+        if [ -z "$FLY_API_TOKEN" ]; then
+          echo "::error title=Staging deploy::FLY_API_TOKEN is empty in the staging environment, so the image was not deployed. Set it as in docs/deploy.md (GitHub)."
+          exit 1
+        fi
+
+    # The fly config of the image's own commit (its env must match that image's Dockerfile), next to the
+    # scripts of main: an older image is not deployed with a newer config. Only that file is checked out.
+    - name: Check out the image's fly config
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        ref: ${{ inputs.sha }}
+        path: image-src
+        sparse-checkout: deploy/fly.staging.toml
+        sparse-checkout-cone-mode: false
+        persist-credentials: false
+
+    - name: Set up flyctl
+      uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+
+    # The no-public-IP check, the deploy and the smoke check through fly proxy (the app is private).
+    - name: Deploy and smoke-check
+      id: deploy
+      shell: bash
+      env:
+        FLY_API_TOKEN: ${{ inputs.fly-api-token }}
+        PUBLIC_ACCESS_OPTION: ${{ inputs.public-access-option }}
+        SHA: ${{ inputs.sha }}
+        STAGING_CONFIG: ${{ github.workspace }}/image-src/deploy/fly.staging.toml
+      run: scripts/staging-deploy.sh "$SHA"
+
+    # What staging ran, for the promotion: after the deploy step passed or failed, not when it never ran.
+    - name: Record the deployment
+      if: always() && (steps.deploy.outcome == 'success' || steps.deploy.outcome == 'failure')
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        SHA: ${{ inputs.sha }}
+        OUTCOME: ${{ steps.deploy.outcome }}
+        DIGEST: ${{ steps.deploy.outputs.digest }}
+      run: scripts/record-deployment.sh "$SHA" "$OUTCOME" "$DIGEST"

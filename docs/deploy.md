@@ -311,16 +311,22 @@ git tag v1.2.3 <sha that passed staging> && git push origin v1.2.3    # user: th
 
 ### Staging deploy
 
-`.github/workflows/deploy-staging.yml` (ADR 0024 steps 3.2-3.3, 8.3, 10.1 and 10.5), job `deploy staging`,
-runs `scripts/staging-deploy.sh <sha>` and records the result:
+The composite action `.github/actions/staging-deploy` (ADR 0024 steps 3.2-3.3, 8.3, 10.1 and 10.5) runs
+`scripts/staging-deploy.sh <sha>` and records the result. Two jobs `deploy staging` use it, both with
+`environment: staging`: one in `release.yml`, one in `deploy-staging.yml` (manual). It is not a reusable
+workflow: a called workflow's job does not see the secrets of its own environment (the first real run
+read an empty token), and a calling job cannot have an environment. The job passes
+`secrets.FLY_API_TOKEN` to the action as an input.
 
-- **When.** `release.yml` calls it (job `deploy staging`, `needs` the image job) only when the image was
+- **When.** `release.yml`'s job `deploy staging` (`needs` the image job) runs only when the image was
   pushed: with a secret missing the image job builds nothing and the deploy job is skipped, so main stays
   green. A manual run redeploys an image that is already in the registry (below). Either way the job runs
   on `main` only, is serialized by `concurrency: deploy-staging` and is never cancelled once started (a
   newer commit replaces only a queued one).
-- **Secret.** `FLY_API_TOKEN` of the `staging` environment, read only by the secret check and the deploy
-  step of this job. When it is missing the run ends green with a `Release skipped` notice.
+- **Secret.** `FLY_API_TOKEN` of the `staging` environment, read only by the action's secret check and
+  deploy step. Once the image is pushed, an empty token **fails** the run (`Staging deploy` error): it is a
+  misconfiguration, and a green skip would leave staging on the old image. A manual run fails the same way
+  (someone asked for a deploy that cannot happen); only the release build keeps main green on missing secrets.
 - **Steps** (`scripts/staging-deploy.sh`, reusing `scripts/fly-private-check.sh` and `scripts/fly-smoke.sh`):
   1. **No public IP**: the job fails before deploying if the app has an address other than a Flycast one.
      The check is skipped, with a notice, only when the repository (or environment) variable

@@ -79,15 +79,34 @@ jobs:
           echo "::notice title=Release image::registry.fly.io/$app:$COMMIT (rulebooks $rulebooks)"
           echo "pushed=true" >> "$GITHUB_OUTPUT"
 
-  # The staging deploy of that image (.github/workflows/deploy-staging.yml), only when it was pushed:
-  # with a secret missing the image job ends green having built nothing, and so does this one.
+  # The staging deploy of that image, only when it was pushed (with a secret missing the image job ends
+  # green having built nothing, and this one is skipped). Once the image is pushed, a token this job
+  # cannot read fails the run. An inline job with its own environment, not a call of a reusable
+  # workflow: a called workflow's job does not see the environment's secrets (deploy-staging.yml is the
+  # manual entry to the same composite action).
   deploy:
     name: deploy staging
     needs: image
     if: needs.image.outputs.pushed == 'true'
-    uses: ./.github/workflows/deploy-staging.yml
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
     permissions:
       contents: read
       deployments: write
-    with:
-      sha: ${{ github.event.workflow_run.head_sha }}
+    # Serialized with the manual deploy, never cancelled once started.
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    steps:
+      # main's scripts and action (the default ref of a workflow_run), not the release commit's.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/staging-deploy
+        with:
+          sha: ${{ github.event.workflow_run.head_sha }}
+          fly-api-token: ${{ secrets.FLY_API_TOKEN }}
+          public-access-option: ${{ vars.PUBLIC_ACCESS_OPTION }}
+          github-token: ${{ github.token }}

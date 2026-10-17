@@ -1310,6 +1310,7 @@
     "card": "Detail",
     "latest": "Latest",
     "turn": "Turn {{round}}",
+    "turnShort": "T{{round}}",
     "outOfCombat": "Out of combat",
     "when": "T{{round}} · {{time}}",
     "whenOutOfCombat": "Out of combat · {{time}}",

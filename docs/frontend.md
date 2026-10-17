@@ -122,14 +122,18 @@ flowchart TD
   (`lib/saveAdjust.ts` `adjustmentInEffect`, `lib/attackAdjust.ts` `acCorrectionInEffect`); the
   fold is keyed by entry, so it stays as the player left it while that entry is corrected. The journal: All / Rolls filter (attacks,
   saves, item uses, initiative, casts that rolled damage or a to-hit d20), the entry count, Undo and
-  Redo in its head; turn groups newest first, each **one line per entry** in the columns
-  turn · value · icon · entry · time ([ADR 0022](adr/0022-activity-focus-layout.md) step 5.1): the
-  section label "TURN 3" / "OUT OF COMBAT" beside the group's first entry, a "current" tag and a
-  tint on the current turn, the value right-aligned before the kind icon, the entry text (with
-  Amended / capped / Undone inline after it) wrapping inside its row when long, never cut, and the
-  time last. Nothing is drawn under an entry and there is **no Note** (step 5.2; the amend endpoint
+  Redo in its head; turn groups newest first, touching, every other one on the sub-band tone
+  (`bg-sub-band`), each **one 22 px line per entry** ([ADR 0022](adr/0022-activity-focus-layout.md)
+  step 5.1, [ADR 0027](adr/0027-space-follows-frequency-of-use.md) step 9): a narrow turn marker
+  ("T3", a campfire icon out of combat; the full "Turn 3 · current" in its tooltip and for screen
+  readers, `turnMarker` in `lib/filCard.ts`) beside the group's first entry, the current turn's in
+  the tint (its one mark); then the value right-aligned before the kind icon (a roll total in ink,
+  gold only when the payload says crit, `rowValue`; ADR 0026 step 5.8), the entry text (with
+  Amended / capped and a muted Undone tag inline after it; an undone row is muted and struck)
+  wrapping inside its row when long, never cut, and the time right after the text. Nothing is
+  drawn under an entry and there is **no Note** (step 5.2; the amend endpoint
   stays in the API, the UI neither calls it nor shows notes). Reroll, on an entry that rolled free
-  dice, shows in the line on hover, on keyboard focus in the row and on the selected row (step
+  dice, shows at the end of the line on hover, on keyboard focus in the row and on the selected row (step
   5.3). The row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
@@ -447,6 +451,8 @@ step 5); the utilities live in `index.css`, the colour tokens in its `@theme inl
 
 - **Raised step**: `bg-raised` (`neu-900`) for tiles, blocks, row stripes, forms and tracks;
   `bg-raised-hover` (`neu-800`) only as the hover of a row or chip. No opacity variants.
+- **Sub-band** (step 6.3): `bg-sub-band`, ink at 4 % (light) / 5.5 % (dark) over the card, for a
+  group inside a card (the journal's every other turn).
 - **Small marks** that must be seen on a card (an empty slot dot, the timeline's past line, the
   journal's drag handle, a level progress underline): `bg-input`, the field edge (3:1).
 - **Chip** (step 5.3): `chip` (raised fill, no outline; one tone further, `neu-800`, when it sits

@@ -21,6 +21,7 @@ import {
   liveModel,
   rowValue,
   saveFromRoll,
+  turnMarker,
   type CardModel,
   type LiveResult,
 } from "./filCard";
@@ -677,7 +678,12 @@ describe("journal: rolls filter and row values", () => {
       entry("hp_change", null, { hpDelta: 4, effectiveHpDelta: 4 }),
       { text: "+4", tone: "heal" },
     ],
-    [entry("attack", attackPayload), { text: "8", tone: "accent" }],
+    [entry("attack", attackPayload), { text: "8", tone: "ink" }],
+    // Gold only where the payload says crit (ADR 0026 step 5.8).
+    [
+      entry("attack", { ...attackPayload, isCrit: true }),
+      { text: "8", tone: "crit" },
+    ],
     [
       entry("attack", { ...attackPayload, hit: false }),
       { text: "–", tone: "muted" },
@@ -699,16 +705,16 @@ describe("journal: rolls filter and row values", () => {
         acKnown: false,
         verdict: "hit",
       }),
-      { text: "8", tone: "accent" },
+      { text: "8", tone: "ink" },
     ],
     [entry("save", savePayload), { text: "12", tone: "pass" }],
-    [entry("item_use", usePayload), { text: "21", tone: "accent" }],
+    [entry("item_use", usePayload), { text: "21", tone: "ink" }],
     [entry("item_use", { ...usePayload, dice: "", rolls: [], total: 0 }), null],
-    [entry("initiative", { round: 3, d10: 7 }), { text: "7", tone: "accent" }],
+    [entry("initiative", { round: 3, d10: 7 }), { text: "7", tone: "ink" }],
     [entry("skill_check", profCheck), { text: "17", tone: "fail" }],
     [entry("skill_check", bardCheck), { text: "42", tone: "pass" }],
-    [entry("dice", diceRoll), { text: "7", tone: "accent" }],
-    [entry("cast", castPayload), { text: "17", tone: "accent" }],
+    [entry("dice", diceRoll), { text: "7", tone: "ink" }],
+    [entry("cast", castPayload), { text: "17", tone: "ink" }],
     [entry("buff_change", { action: "dismiss", buff: "Haste" }), null],
   ])("row value %#", (e, want) => {
     expect(rowValue(e)).toEqual(want);
@@ -974,6 +980,26 @@ describe("header: last result", () => {
   it("an attack shows its d20 in the chip, any other result its row value", () => {
     expect(lastResultChip(attack)).toEqual({ text: "14", tone: "muted" });
     expect(lastResultChip(save)).toEqual({ text: "12", tone: "pass" });
-    expect(lastResultChip(dice)).toEqual({ text: "7", tone: "accent" });
+    expect(lastResultChip(dice)).toEqual({ text: "7", tone: "ink" });
+  });
+});
+
+describe("turnMarker (ADR 0027 step 9.3)", () => {
+  it("is T3 in a turn, an icon out of combat, the full label in the tooltip", async () => {
+    const fr = await makeT("fr");
+    expect(turnMarker(fr, 3, true)).toEqual({
+      short: "T3",
+      full: "Tour 3 · en cours",
+    });
+    expect(turnMarker(fr, 2, false)).toEqual({ short: "T2", full: "Tour 2" });
+    expect(turnMarker(fr, 0, true)).toEqual({
+      short: null,
+      full: "Hors combat · en cours",
+    });
+    const en = await makeT("en");
+    expect(turnMarker(en, 0, false)).toEqual({
+      short: null,
+      full: "Out of combat",
+    });
   });
 });

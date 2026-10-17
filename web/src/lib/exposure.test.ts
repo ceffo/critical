@@ -194,7 +194,7 @@ describe("exposure entries", () => {
     });
     expect(rowValue(entry({ ...payload, onSelf: false }))).toEqual({
       text: "7",
-      tone: "accent",
+      tone: "ink",
     });
   });
 

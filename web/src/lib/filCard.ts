@@ -350,6 +350,23 @@ export function turnLabel(t: TFunction, round: number): string {
   return round > 0 ? t("fil.turn", { round }) : t("fil.outOfCombat");
 }
 
+/**
+ * The journal's narrow turn marker (ADR 0027 step 9.3): "T3" on a turn's first row (null out of
+ * combat, which shows an icon), and the full label for its tooltip and `aria-label`, "Turn 3 ·
+ * current" on the current turn.
+ */
+export function turnMarker(
+  t: TFunction,
+  round: number,
+  current: boolean,
+): { short: string | null; full: string } {
+  const label = turnLabel(t, round);
+  return {
+    short: round > 0 ? t("fil.turnShort", { round }) : null,
+    full: current ? `${label} · ${t("log.current")}` : label,
+  };
+}
+
 /** The card header: kind tag, subtitle (weapon, save, spell, item…), and "T3 · 21:31". */
 export interface CardHeader {
   tag: string;
@@ -411,10 +428,14 @@ export function cardHeader(
   return { tag, subtitle, when };
 }
 
-/** The value column of a journal row: the number that sums the entry up. */
+/**
+ * The value column of a journal row: the number that sums the entry up. A roll total is in ink;
+ * `crit` (gold) only when the entry's payload says the roll was a crit (ADR 0026 step 5.8). No
+ * payload flags a maximum today, so none is inferred here.
+ */
 export interface RowValue {
   text: string;
-  tone: "damage" | "heal" | "pass" | "fail" | "accent" | "muted";
+  tone: "damage" | "heal" | "pass" | "fail" | "ink" | "crit" | "muted";
 }
 
 export function rowValue(e: LogEntry): RowValue | null {
@@ -424,32 +445,34 @@ export function rowValue(e: LogEntry): RowValue | null {
   if (attack) {
     if (!attackSettled(attack)) return { text: "?", tone: "muted" };
     return attack.hit
-      ? { text: String(attack.totalDamage), tone: "accent" }
+      ? {
+          text: String(attack.totalDamage),
+          tone: attack.isCrit ? "crit" : "ink",
+        }
       : { text: "–", tone: "muted" };
   }
   const save = savePayload(e);
   if (save)
     return { text: String(save.d20Roll), tone: save.passed ? "pass" : "fail" };
   const item = itemPayload(e);
-  if (item)
-    return item.dice ? { text: String(item.total), tone: "accent" } : null;
+  if (item) return item.dice ? { text: String(item.total), tone: "ink" } : null;
   const initiative = initiativePayload(e);
-  if (initiative) return { text: String(initiative.d10), tone: "accent" };
+  if (initiative) return { text: String(initiative.d10), tone: "ink" };
   const skill = skillCheckPayload(e);
   if (skill)
     return { text: String(skill.roll), tone: skill.success ? "pass" : "fail" };
   const dice = dicePayload(e);
-  if (dice) return { text: String(dice.total), tone: "accent" };
+  if (dice) return { text: String(dice.total), tone: "ink" };
   const exposure = exposurePayload(e);
   if (exposure) {
     if (!exposure.onSelf)
-      return { text: String(exposure.damage.total), tone: "accent" };
+      return { text: String(exposure.damage.total), tone: "ink" };
     // On the Bard: the HP the server applied (the floor may cut it), as an HP change shows it.
     const amount = e.status === "voided" ? e.hpDelta : e.effectiveHpDelta;
     return { text: formatSigned(amount), tone: "damage" };
   }
   const cast = castPayload(e);
-  if (cast?.damage) return { text: String(cast.damage.total), tone: "accent" };
+  if (cast?.damage) return { text: String(cast.damage.total), tone: "ink" };
   if (cast?.attack)
     return {
       text: String(cast.attack.d20),

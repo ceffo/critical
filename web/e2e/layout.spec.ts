@@ -87,6 +87,57 @@ async function expectNoScroll(column: Locator, what: string) {
 }
 
 /**
+ * ADR 0027 step 9 on the journal: a one-line entry is a 22 px row (at most 24), turn blocks touch
+ * (no vertical gap), the turn marker is at most 3rem wide and the entry text starts close to the
+ * left. `long` holds the texts whose entries may wrap.
+ */
+async function expectCompactJournal(
+  page: Page,
+  long: readonly string[],
+  where: string,
+) {
+  const log = combatLog(page);
+  for (const row of await log.getByRole("listitem").all()) {
+    const text = (await row.textContent()) ?? "";
+    if (long.some((l) => text.includes(l))) continue;
+    expect(
+      (await row.boundingBox())!.height,
+      `one-line row, ${where}: ${text}`,
+    ).toBeLessThanOrEqual(24);
+  }
+  const turns = await log.getByTestId("journal-turn").all();
+  expect(turns.length, `turn blocks, ${where}`).toBeGreaterThanOrEqual(2);
+  for (let i = 1; i < turns.length; i++) {
+    const [a, b] = [
+      (await turns[i - 1].boundingBox())!,
+      (await turns[i].boundingBox())!,
+    ];
+    expect(
+      Math.abs(b.y - (a.y + a.height)),
+      `no gap between turn blocks, ${where}`,
+    ).toBeLessThanOrEqual(1);
+  }
+  const marker = (await log
+    .getByTestId("journal-turn-marker")
+    .first()
+    .boundingBox())!;
+  expect(
+    marker.width,
+    `turn marker at most 3rem, ${where}`,
+  ).toBeLessThanOrEqual(48);
+  const logBox = (await log.boundingBox())!;
+  const entryText = (await log
+    .getByTestId("log-select")
+    .first()
+    .locator("span.break-words")
+    .boundingBox())!;
+  expect(
+    entryText.x - logBox.x,
+    `entry text near the left, ${where}`,
+  ).toBeLessThan(150);
+}
+
+/**
  * ADR 0027 step 5 on the character card, in French at 1440x900 and 1707x1300: the card is
  * `clamp(280px, 21vw, 384px)` wide, the saves heading and every save row are one line, the HP
  * change's amount and buttons share one line and the source's placeholder fits its field.
@@ -348,14 +399,10 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       ] as const)
         await expectInside(el, character, what);
       await openWorkspace(page, "Act");
-      // ADR 0022 step 5.1: an entry is one line (a 28 px row); only a long one wraps.
+      // ADR 0022 step 5.1, ADR 0027 step 9: an entry is one 22 px line; only a long one wraps.
       const row = (text: string) =>
         combatLog(page).getByRole("listitem").filter({ hasText: text });
-      for (const text of ["Long Sword +2 vs AC 5", "Initiative"])
-        expect(
-          (await row(text).first().boundingBox())!.height,
-          `one line: ${text}`,
-        ).toBeLessThanOrEqual(32);
+      await expectCompactJournal(page, [LONG_SOURCE], size);
       await expectNoClippedText(row(LONG_SOURCE), "long journal entry");
       await expectInside(
         page.getByRole("region", { name: "Weapon in hand" }),
@@ -858,6 +905,15 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     targetSize: "l",
     situational: { value: -2, label: "couvert" },
   });
+  // The journal with two turns, a transaction, a dice total and an undone row (ADR 0027 step 9).
+  await api("POST", "/api/hp/event", { delta: -3, source: LONG_SOURCE });
+  await api("POST", "/api/round/advance", {});
+  await api("POST", "/api/roll/dice", { formula: "2d6+1" });
+  await api("POST", "/api/hp/event", { delta: 2, source: "Potion de soins" });
+  const log = (await (await fetch(`${stack.apiUrl}/api/log`)).json()) as {
+    topId: number;
+  };
+  await api("POST", "/api/log/undo", { expectedTopId: log.topId });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const character = page.getByTestId("character");
@@ -915,6 +971,14 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
         `journal height, ${where}`,
       ).toBeGreaterThanOrEqual(224);
     }
+    await expectCompactJournal(
+      page,
+      [LONG_SOURCE, LONG_WEAPON, LONG_ITEM],
+      where,
+    );
+    await expect(
+      combatLog(page).locator('[data-status="voided"]'),
+    ).toContainText("Annulé");
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `act-weapons-fr-${vp.width}x${vp.height}`);
     await rail.nth(1).click();

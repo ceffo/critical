@@ -6,26 +6,42 @@
 # machine of the production app started from the release image (which ships the PostgreSQL 17 client), so
 # it has the app's CRITICAL_DSN and the cluster's private network, and the running app is not touched.
 #
-#   sh restore-point.sh <base>_pre_v<major>_<minor>_<patch>_<UTC yyyymmddhhmmss>
-#   e.g. critical_prod_pre_v1_2_3_20261017153000
+#   sh restore-point.sh <base>_pre_v<major>_<minor>_<patch>_<UTC yyyymmddhhmmss> <migration>...
+#   e.g. critical_prod_pre_v1_2_3_20261017153000 001_baseline.sql 002_spells.sql
+#
+# The <migration>s are the migration files the release image embeds (its commit's
+# api/internal/storage/postgres/migrations/*.sql, listed by scripts/promote.sh). When the database records
+# one that is not among them, the release is older than the schema (a rollback across a migration): its
+# server would refuse to start (ADR 0024 step 6.2) and the rolling deploy would leave production on one
+# machine, so that is refused too, pointing at the runbook (docs/deploy.md, "Rollback", "Across a
+# migration").
 #
 # <base> is the database CRITICAL_DSN connects to. The copy is owned by the connecting user (it needs the
 # CREATEDB attribute: docs/deploy.md, "Databases, users and the apps' secrets"), and CONNECT on it is
 # revoked from PUBLIC at once, like every database of the cluster. Refused before anything is written:
-# a malformed name, a name that exists, the server running in this machine (its boot would migrate the
-# database before the copy), a missing CREATEDB, and a projected size of the database and its copies over
-# RESTORE_POINT_BUDGET_MB (default 300; the cluster's 1 GB volume is shared). RESTORE_POINT_KEEP copies
+# a malformed name, a name that exists, a database newer than the release's migrations (above), the server
+# running in this machine (its boot would migrate the database before the copy), a missing CREATEDB, and a
+# projected size of the database and its copies over RESTORE_POINT_BUDGET_MB (default 300; the cluster's
+# 1 GB volume is shared). The budget counts critical's databases only: this user cannot size the other
+# app's databases nor see the volume's free space, which the operator watches (docs/deploy.md,
+# "Promotion"). RESTORE_POINT_KEEP copies
 # are kept (default 3). A copy that fails its verification is dropped. Prints names, counts and sizes,
 # never data or the DSN; the last line is `restore-point: OK <name>` on success.
 #
 # POSIX sh (the image's shell is busybox). Also run by scripts/image-smoke.sh against a throwaway database.
 set -eu
 
-name="${1:?usage: restore-point.sh <base>_pre_v<major>_<minor>_<patch>_<yyyymmddhhmmss>}"
+usage="usage: restore-point.sh <base>_pre_v<major>_<minor>_<patch>_<yyyymmddhhmmss> <migration>..."
+fail() { echo "restore-point: FAIL: $*" >&2; exit 1; }
+name="${1:?$usage}"
+shift
+[ "$#" -gt 0 ] || fail "no embedded migration given; $usage"
 keep="${RESTORE_POINT_KEEP:-3}"
 budget_mb="${RESTORE_POINT_BUDGET_MB:-300}"
 dsn="${CRITICAL_DSN:?restore-point: CRITICAL_DSN is not set}"
-fail() { echo "restore-point: FAIL: $*" >&2; exit 1; }
+for m in "$@"; do
+    echo "$m" | grep -Eqx '[0-9a-z_]+\.sql' || fail "malformed migration name '$m'"
+done
 
 case "$keep" in '' | *[!0-9]* | 0) fail "RESTORE_POINT_KEEP must be a positive number" ;; esac
 case "$budget_mb" in '' | *[!0-9]*) fail "RESTORE_POINT_BUDGET_MB must be a number" ;; esac
@@ -52,6 +68,12 @@ q() { psql -X -w -q -A -t -v ON_ERROR_STOP=1 -d "$1" -c "$2"; }
 [ "$(q "$dsn" 'SELECT rolcreatedb FROM pg_roles WHERE rolname = current_user')" = t ] \
     || fail "the database user lacks CREATEDB (docs/deploy.md: rerun the provisioning for prod)"
 [ "$(q "$dsn" "SELECT count(*) FROM pg_database WHERE datname = '$name'")" = 0 ] || fail "'$name' exists already"
+# The names are checked above ([0-9a-z_]+.sql), so they are safe inside the SQL literal.
+embedded="$(printf "'%s'," "$@")"
+unknown="$(q "$dsn" "SELECT coalesce(string_agg(name, ' ' ORDER BY name), '') FROM schema_migrations
+                     WHERE name NOT IN (${embedded%,})")"
+[ -z "$unknown" ] || fail "$base records migrations this release does not embed ($unknown): it is older than \
+the schema and would not start on it. Roll back across a migration as docs/deploy.md says (\"Rollback\", \"Across a migration\")"
 
 # Projected use: the database, the copies kept after this run (the newest keep-1), and the new copy.
 projected="$(q "$dsn" "

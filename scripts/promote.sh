@@ -12,7 +12,9 @@
 #      until a public-access option with access control exists (ADR 0024 step 8);
 #   3. the restore point: scripts/restore-point.sh in an ephemeral `fly console` machine of the
 #      production app started from that image, a verified copy database <db>_pre_<tag>_<UTC time> of the
-#      production database on its cluster (steps 4.2, 9.2). No restore point, no deploy;
+#      production database on its cluster (steps 4.2, 9.2). No restore point, no deploy. It also refuses
+#      a production database that records a migration the tag's commit (the image's source) does not
+#      embed: a rollback across a migration goes through the runbook instead;
 #   4. `fly deploy` of registry.fly.io/<staging app>@<digest> to the production app (rolling);
 #   5. the smoke check of every machine (scripts/fly-smoke.sh: health with the commit, a database read,
 #      the web app), then every machine runs exactly that digest;
@@ -47,13 +49,17 @@ echo "promote: $tag is $sha, staging ran $image"
 FLY="$fly" "$here/fly-private-check.sh" "$app"
 
 point="${db}_pre_${tag//./_}_$(date -u +%Y%m%d%H%M%S)"
+# The migrations the image embeds: those in the tree of its commit (read from git, whatever is checked out).
+migrations="$(git -C "$root" ls-tree --name-only "$sha" api/internal/storage/postgres/migrations/ | sed -n 's|.*/||p' \
+    | grep -Ex '[0-9a-z_]+\.sql' | tr '\n' ' ')" || true
+[ -n "$migrations" ] || fail "no migrations in the tree of $sha"
 echo "promote: restore point $point (fly console on $app, image $digest)"
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 # fly console may not pass the remote exit status through: the script's last line is the proof.
 "$fly" console -a "$app" --image "$image" \
     --file-local "/tmp/restore-point.sh=$here/restore-point.sh" \
-    -C "sh /tmp/restore-point.sh $point" </dev/null 2>&1 | tee "$log" || true
+    -C "sh /tmp/restore-point.sh $point ${migrations% }" </dev/null 2>&1 | tee "$log" || true
 tr -d '\r' <"$log" | grep -qx "restore-point: OK $point" \
     || fail "no restore point of $db, nothing deployed (the output above says why; docs/deploy.md, \"Promotion\")"
 

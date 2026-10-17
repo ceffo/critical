@@ -10,7 +10,7 @@
 #   - release-tag.sh (`just release`): every refusal (version, branch, dirty tree, behind origin, staging
 #     not passed) pushes nothing; the happy path pushes one annotated tag;
 #   - restore-point.sh: what it refuses without a database (its SQL runs for real in scripts/image-smoke.sh);
-#   - promote.yml, parsed: tags only, the production environment, serialized and never cancelled, the
+#   - promote.yml, parsed: a run from a branch fails saying "use a tag"; the promotion runs for tags only, the production environment, serialized and never cancelled, the
 #     token read only by the secret check (which fails on an empty token) and the promotion step.
 set -euo pipefail
 
@@ -82,6 +82,8 @@ git config user.name test
 mkdir -p scripts deploy
 cp "$root"/scripts/{release-guards,release-tag,promote,restore-point,fly-private-check}.sh scripts/
 cp "$root"/deploy/fly.{staging,prod}.toml deploy/
+mkdir -p api/internal/storage/postgres/migrations
+touch api/internal/storage/postgres/migrations/{001_baseline,002_more}.sql
 git add -A && git commit -q -m one && git push -q origin main
 git commit -q --allow-empty -m two && git push -q origin main
 main_sha="$(git rev-parse HEAD)"
@@ -160,7 +162,7 @@ reset; promote v1.2.3
 [ "$status" = 0 ] || fail "promote: exit $status: $out"
 point="$(sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p' "$calls" | head -n1)"
 [[ "$point" =~ ^critical_prod_pre_v1_2_3_[0-9]{14}$ ]] || fail "promote: restore point name '$point'"
-grep -qx "fly console -a critical-prod --image $image --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point" "$calls" \
+grep -qx "fly console -a critical-prod --image $image --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point 001_baseline.sql 002_more.sql" "$calls" \
     || fail "promote: wrong console call: $(grep console "$calls")"
 grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-prod --image $image --no-public-ips --yes" "$calls" \
     || fail "promote: wrong deploy call: $(grep deploy "$calls")"
@@ -169,6 +171,15 @@ grep -q "^gh release create v1.2.3 --verify-tag --title v1.2.3 --generate-notes 
 [ "$(line '^docker manifest')" -lt "$(line '^fly ips')" ] && [ "$(line '^fly ips')" -lt "$(line '^fly console')" ] \
     && [ "$(line '^fly console')" -lt "$(line '^fly deploy')" ] && [ "$(line '^fly deploy')" -lt "$(line '^smoke')" ] \
     && [ "$(line '^smoke')" -lt "$(line '^gh release create')" ] || fail "promote: steps out of order: $(cat "$calls")"
+
+# The embedded migrations are the tag's, not the checkout's: one added on a later main commit is not listed.
+git switch -q --detach "$main_sha"
+touch api/internal/storage/postgres/migrations/003_later.sql
+git add -A && git commit -q -m later
+reset; promote v1.2.3
+grep -Eq "restore-point.sh critical_prod_pre_v1_2_3_[0-9]{14} 001_baseline.sql 002_more.sql\$" "$calls" \
+    || fail "promote: the migrations are not read from the tag's tree: $(grep console "$calls")"
+git switch -q main
 
 reset; promote v9.9.9
 [ "$status" != 0 ] || fail "promote: a tag off main is promoted"
@@ -247,14 +258,22 @@ release 1.9.0
 cd "$root"
 
 # --- restore-point.sh: refusals before any database call ---
-rp() { status=0; out="$(env PATH="$stubs:/usr/bin:/bin" "$@" sh "$root/scripts/restore-point.sh" "${point_arg:-}" 2>&1)" || status=$?; }
+# shellcheck disable=SC2086 # point_arg is the name and the migrations, split on purpose
+rp() { status=0; out="$(env PATH="$stubs:/usr/bin:/bin" "$@" sh "$root/scripts/restore-point.sh" ${point_arg:-} 2>&1)" || status=$?; }
 for point_arg in critical_prod_pre_v1_2_3 critical_prod_pre_v1_2_3_2026 'critical_prod_pre_v1_2_3_20261017000000;drop' Critical_pre_v1_2_3_20261017000000; do
-    rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod; [ "$status" != 0 ] && [[ "$out" == *"malformed"* ]] || fail "restore-point accepted '$point_arg': $out"
+    point_arg="$point_arg 001_x.sql"
+    rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod; [ "$status" != 0 ] && [[ "$out" == *"malformed restore point"* ]] || fail "restore-point accepted '$point_arg': $out"
 done
 point_arg=critical_prod_pre_v1_2_3_20261017000000
+rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod; [ "$status" != 0 ] && [[ "$out" == *"no embedded migration"* ]] || fail "restore-point without the embedded migrations: $out"
+point_arg="critical_prod_pre_v1_2_3_20261017000000 001_x.sql"
 rp A=1; [ "$status" != 0 ] && [[ "$out" == *"CRITICAL_DSN is not set"* ]] || fail "restore-point without a DSN: $out"
 rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod RESTORE_POINT_KEEP=0; [ "$status" != 0 ] || fail "restore-point accepted a retention of 0"
 [[ "$out" != *u:p@* ]] || fail "restore-point printed the DSN"
+for m in "001_x.sql;drop" "001_x" "'001_x.sql'" "../001.sql"; do
+    point_arg="critical_prod_pre_v1_2_3_20261017000000 $m"
+    rp CRITICAL_DSN=postgres://u:p@h:5432/critical_prod; [ "$status" != 0 ] && [[ "$out" == *"malformed migration"* ]] || fail "restore-point accepted the migration '$m': $out"
+done
 
 # --- the workflow, parsed ---
 python3 -I - "$root/.github/workflows/promote.yml" <<'PY' || fails=$((fails + 1))
@@ -269,7 +288,12 @@ def check(ok, msg):
 on = wf.get(True) or wf.get("on")  # PyYAML reads the key `on` as True
 check(on["push"] == {"tags": ["v*"]} and set(on) == {"push", "workflow_dispatch"}, "promote: not tags v* + dispatch")
 check(wf["permissions"] == {"contents": "read"}, "promote: workflow permissions are not read-only")
-check(list(wf["jobs"]) == ["promote"], "promote: one job expected")
+check(sorted(wf["jobs"]) == ["not-a-tag", "promote"], "promote: the jobs are promote and not-a-tag")
+refuse = wf["jobs"]["not-a-tag"]
+check(refuse.get("if") == "${{ !startsWith(github.ref, 'refs/tags/v') }}", "not-a-tag: not the complement of the promote job's condition")
+check("environment" not in refuse and "secrets." not in str(refuse), "not-a-tag: reads an environment or a secret")
+r = subprocess.run(["bash", "-e", "-c", refuse["steps"][-1]["run"]], env={"REF": "refs/heads/main", "PATH": "/usr/bin:/bin"}, capture_output=True, text=True)
+check(r.returncode != 0 and "not a v* tag" in r.stdout, "not-a-tag: a run from main does not fail saying so")
 job = wf["jobs"]["promote"]
 check("uses" not in job, "promote: calls a reusable workflow, which cannot read the environment's secrets")
 check(job.get("environment") == "production", "promote: not in the production environment")

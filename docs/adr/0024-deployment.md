@@ -263,7 +263,10 @@ flowchart LR
       Restoring a cluster volume snapshot rolls back every database of the cluster; it is the fallback
       when no usable restore point exists.
    4. `just db-backup <env>` downloads a `pg_dump` of that environment's database into a gitignored
-      folder on the operator's machine. It is private data (step 7).
+      folder on the operator's machine, with the table counts at dump time beside it. It is private data
+      (step 7). `just db-restore-drill` restores a dump into a scratch database of a throwaway local
+      PostgreSQL, compares the counts, and drops everything; it never touches fly (the runbook's
+      "Backups").
 
 10. **Secrets and permissions.**
     1. Each app has its own app-scoped fly deploy token, stored in the GitHub environment of the same

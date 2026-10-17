@@ -176,9 +176,79 @@ them all back, so `critical_prod` is restored from a promotion's restore point f
 "Rollback").
 
 ```bash
-$fly volumes list -a tournesol-db                    # retention, and the volume id
+$fly volumes list -a tournesol-db                    # the volume id
+$fly volumes show <volume id> -a tournesol-db        # snapshot retention: a fact to check, not a setting made here
 $fly volumes snapshots list <volume id>
 ```
+
+The retention is whatever the volume carries now: the 30 days above is what the provisioning set, and the
+cluster is shared with another app, so the backups item changed nothing and nobody should lower or raise it
+without the user. Read it with `volumes show` before relying on a snapshot.
+
+### Backups
+
+Two safety nets besides the promotion's restore points ("Promotion"): a **dump** the operator keeps on their
+own machine, and the volume snapshots above as the last resort. A dump is a `pg_dump` custom-format file of
+one database (`--no-owner --no-acl`, so it restores under any user). It holds the catalogue's book text:
+it lives in `.backups/` (gitignored, folder mode 700, file mode 600), never in the repository, a workflow
+artifact, an issue or a log (ADR 0024 step 7). No workflow takes or uploads one.
+
+```bash
+just db-backup staging                       # or prod: .backups/<env>-<UTC time>/critical_<env>.dump + counts.txt
+just db-restore-drill                        # newest .backups/prod-*/ dump; or: just db-restore-drill .backups/staging-.../critical_staging.dump
+```
+
+`db-backup` needs the operator's fly login, `pg_dump`/`pg_restore` 17 or newer, and the database user's
+password in `PGPASSWORD` or in `~/.config/critical/critical_<env>.password` (what `just fly-db-provision
+--password-dir ~/.config/critical` writes; a rerun does not rewrite an existing user's file, and rotating a
+running app's password only to take a backup is an outage: use the app's secret value you already hold). The
+password reaches `pg_dump` through the environment only. It starts `fly proxy` to `tournesol-db.flycast` on a
+free local port (`CRITICAL_DB_ENDPOINT=<host>:<port>` uses an already open `just fly-db-proxy` instead), reads
+the dump back with `pg_restore --list`, and writes `counts.txt` (one `<table> <rows>` line per table, taken
+right after the dump) beside it; a failed run keeps no folder. The first connection starts the cluster if it
+is stopped (a few seconds). Counts are taken after, not inside, the dump's snapshot: on a live database a
+write in between makes the drill report a difference for that table; take the backup again.
+
+**The drill** proves a dump restores, with no fly access: it starts the compose PostgreSQL under its own
+project (`criticaldrill<pid>`, free port, own volume; never `just dev`'s database), restores the dump into a
+scratch database, compares every table's row count with `counts.txt`, then drops the scratch database and
+removes the project with its volume, whether it passed or not. Exit 0 only when every table matches. It
+prints table names and counts only. Run it after a backup and before a promotion you could not undo; the
+logic of the comparison and of the cleanup is tested offline by `scripts/test-db-backup.sh` (part of `just
+validate`).
+
+**Restore `critical_prod` from a dump** (operator; the same steps as the restore point in "Rollback", with
+the dump instead of the copy). Everything written since the dump is lost: say so to the user first, and get
+their yes. Run `just db-restore-drill <dump>` first.
+
+1. Remove the app's machines: `$fly scale count 0 -a critical-prod --yes`.
+2. As the cluster's operator (`$fly postgres connect -a tournesol-db`, connected to `postgres`), set the
+   current database aside and create an empty one in its place:
+
+   ```sql
+   ALTER DATABASE critical_prod ALLOW_CONNECTIONS false;
+   SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'critical_prod';
+   ALTER DATABASE critical_prod RENAME TO critical_prod_failed_<yyyymmdd>;
+   CREATE DATABASE critical_prod OWNER critical_prod;
+   REVOKE ALL ON DATABASE critical_prod FROM PUBLIC;
+   GRANT CONNECT, TEMPORARY ON DATABASE critical_prod TO critical_prod;
+   ```
+
+3. Restore as the database's user, through a proxy (`just fly-db-proxy tournesol-db` prints the port; the
+   password as in `db-backup`), then check the counts against the dump's:
+
+   ```bash
+   export PGPASSWORD="$(<~/.config/critical/critical_prod.password)"
+   pg_restore --no-owner --no-acl --exit-on-error -h 127.0.0.1 -p <port> -U critical_prod -d critical_prod .backups/prod-<time>/critical_prod.dump
+   scripts/db-table-counts.sh "host=127.0.0.1 port=<port> user=critical_prod dbname=critical_prod sslmode=disable" > /tmp/restored.txt
+   scripts/db-counts-compare.sh .backups/prod-<time>/counts.txt /tmp/restored.txt   # exit 0, then delete /tmp/restored.txt
+   ```
+
+4. Promote the release that matches the dump's schema (the tag whose migrations the dump holds; "Rollback"),
+   which recreates the machines. Once production checks out, `DROP DATABASE critical_prod_failed_<yyyymmdd>;`.
+
+**Last resort: a volume snapshot** ("Restore from a cluster snapshot") only when no usable dump or restore
+point exists. It rolls back **both** critical databases and the other app's to the snapshot's day.
 
 ## One-time setup per app (user)
 

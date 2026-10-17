@@ -158,8 +158,9 @@ export function SpellDetail({ spell }: { spell: Spell }) {
           );
         })}
       </dl>
-      {/* The cast box: what the spell rolls at the Bard's level, each to the composer or rolled. */}
-      {spell.caster_level ? (
+      {/* The cast box: what the spell rolls at the Bard's level, each to the composer or rolled, and
+          its add-as-effect button; only when it has one of them (ADR 0027 step 13.3). */}
+      {spell.caster_level && (dice.length > 0 || spell.effect) ? (
         <section
           aria-label={t("lookup.diceRow")}
           className="flex shrink-0 flex-col gap-1.5 rounded-md bg-raised px-3 py-2.5"
@@ -168,7 +169,7 @@ export function SpellDetail({ spell }: { spell: Spell }) {
           <p className="section-label">
             {t("lookup.atLevel", { level: spell.caster_level })}
           </p>
-          {dice.length > 0 ? (
+          {dice.length > 0 && (
             <ul className="flex flex-col gap-1.5">
               {dice.map((d) => (
                 <li
@@ -206,8 +207,6 @@ export function SpellDetail({ spell }: { spell: Spell }) {
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="text-body">{t("lookup.noDice")}</p>
           )}
           {/* A spell that adds a buff goes on the Bard at his level, no slot, no damage (ADR 0004
               step 19); the server says which spells do. */}

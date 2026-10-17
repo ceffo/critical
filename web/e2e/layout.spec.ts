@@ -1051,6 +1051,37 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expect(stage.getByTestId("spell-add-effect")).toBeVisible();
     await expectNoClippedText(stage, `lookup, effect, ${where}`);
     await expectWholeWords(stage, `lookup, effect, ${where}`);
+    // ADR 0027 step 13.4: every stat tile's label on one line in French ("Incantation").
+    if (SHOTS.has(`${vp.width}x${vp.height}`)) {
+      for (const label of await stage
+        .getByTestId("spell-detail")
+        .locator("dt")
+        .all()) {
+        const lines = await label.evaluate((el) => {
+          const lh = parseFloat(getComputedStyle(el).lineHeight);
+          return Math.round(el.getBoundingClientRect().height / lh);
+        });
+        expect(
+          lines,
+          `stat label "${await label.textContent()}", ${where}`,
+        ).toBe(1);
+      }
+      // ADR 0027 steps 13.1 and 1.5: the school behind "Filtres", a tag on the count line when set.
+      await stage.getByRole("button", { name: "Filtrer par école" }).click();
+      await page
+        .getByRole("menuitemradio", { name: "Illusion/Fantasme", exact: true })
+        .click();
+      await expect(stage.getByTestId("lookup-group-tag")).toBeVisible();
+      // The filtered rows are in (the count drops to the Illusion/Phantasm wizard spells).
+      await expect(stage.getByRole("option", { name: "Armor" })).toHaveCount(0);
+      await page.getByRole("option", { name: "Image miroir" }).click();
+      await expectNoClippedText(stage, `lookup, school set, ${where}`);
+      await snap(page, `lookup-fr-${vp.width}x${vp.height}`);
+      await stage
+        .getByRole("button", { name: "Retirer le filtre Illusion/Fantasme" })
+        .click();
+      await expect(stage.getByTestId("lookup-group-tag")).toHaveCount(0);
+    }
     await rail.nth(3).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);

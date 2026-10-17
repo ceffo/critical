@@ -441,6 +441,10 @@
     "anySchool": "Any school",
     "sphere": "Sphere",
     "anySphere": "Any sphere",
+    "filtersShort": "Filters",
+    "schoolFilter": "Filter by school",
+    "sphereFilter": "Filter by sphere",
+    "clearFilter": "Remove the {{name}} filter",
     "schoolNames": {
       "abjuration": "Abjuration",
       "alteration": "Alteration",
@@ -896,7 +900,6 @@
     "diceRow": "Dice at the caster level",
     "toDice": "Send",
     "rollDice": "Roll",
-    "noDice": "No dice to roll",
     "addEffectLabel": "Add {{name}} as an effect at level {{level}}",
     "exposure": "Exposure",
     "exposureMode": "Exposure ({{mode}})"

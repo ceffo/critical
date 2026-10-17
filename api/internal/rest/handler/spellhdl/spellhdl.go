@@ -32,6 +32,7 @@ type spellSvc interface {
 	ResetSlots(ctx context.Context, characterID int64) ([]spellsvc.SpellSlot, error)
 	Search(ctx context.Context, f spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error)
 	Names(ctx context.Context) ([]spellsvc.SpellName, error)
+	Levels(ctx context.Context) ([]int, error)
 }
 
 type characterGetter interface {
@@ -51,7 +52,7 @@ type damageReader interface {
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc spellsvc.SVC, chars characterGetter, damage damageReader) {
 	r.Get("/api/spells/slots", render.Handle(GetSlots(charID, svc)))
 	r.Get("/api/spells", render.Handle(Search(charID, svc, chars, damage)))
-	r.Get("/api/spells/filters", render.Handle(FilterOptions()))
+	r.Get("/api/spells/filters", render.Handle(FilterOptions(svc)))
 	r.Get("/api/spells/names", render.Handle(Names(svc)))
 }
 
@@ -94,18 +95,23 @@ func Names(svc spellSvc) render.HandlerFunc {
 	}
 }
 
-// FilterOptionsDTO lists the choices of the lookup's school / sphere
-// dropdown: the school group keys (the client labels them) and the Priest
-// sphere names.
+// FilterOptionsDTO lists the choices of the lookup's filters: the school
+// group keys (the client labels them), the Priest sphere names and the spell
+// levels the catalogue holds (ascending).
 type FilterOptionsDTO struct {
 	Schools []string `json:"schools"`
 	Spheres []string `json:"spheres"`
+	Levels  []int    `json:"levels"`
 }
 
-// FilterOptions returns the school groups and spheres GET /api/spells takes.
-func FilterOptions() render.HandlerFunc {
+// FilterOptions returns the school groups, spheres and levels GET /api/spells takes.
+func FilterOptions(svc spellSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		render.OK(r.Context(), w, FilterOptionsDTO{Schools: spellsvc.SchoolGroups(), Spheres: spellsvc.Spheres()})
+		levels, err := svc.Levels(r.Context())
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, FilterOptionsDTO{Schools: spellsvc.SchoolGroups(), Spheres: spellsvc.Spheres(), Levels: levels})
 		return nil
 	}
 }

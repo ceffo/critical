@@ -279,10 +279,13 @@ flowchart TD
   level N", while a level holds more than the server's count; the server still refuses such a save.
 - Spells activity, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives
   switching activities), A2's pane per [ADR 0022](adr/0022-activity-focus-layout.md) step 2.5: two
-  cards, `minmax(18rem, 22rem) | 1fr`. The left card holds the filters (search box; school-group
-  dropdown, spheres in Priest mode; `Mine | Wizard | Priest | All` segmented control, default
-  Wizard, Mine = the Bard's spellbook; level chips 0-9, multi-select, wrapping when narrow; the true
-  "N spells" total and Reset) over the list, which scrolls on its own (level and name, the class on
+  cards, `minmax(18rem, 22rem) | 1fr`. The left card holds the filters, always in view but the
+  school ([ADR 0027](adr/0027-space-follows-frequency-of-use.md) step 13): search box;
+  `Mine | Wizard | Priest | All` segmented control, default Wizard, Mine = the Bard's spellbook;
+  level chips, multi-select, wrapping when narrow, one per level the catalogue holds
+  (`GET /api/spells/filters` `levels`, no level 0); then a line with the quiet "Filters" button (a
+  menu of the school groups, spheres in Priest mode), the set school or sphere as a tag with its ×,
+  the true "N spells" total and Reset) over the list, which scrolls on its own (level and name, the class on
   All, the school as a tooltip; infinite scroll by 200-row pages; the selected row tinted with a
   tint bar on its left). The right card is the detail, scrolling on its own when too short: the name
   (`text-headline`, wrapping, never cut) and meta line; the stats as tiles on the raised tone
@@ -293,8 +296,8 @@ flowchart TD
   fire"; rolled as an exposure from a cast or received spell's card, here only to the composer),
   then one per value the server computed with dice still to roll (`lib/spellValues.ts` `statDice`:
   "Duration 1d8+8", the served dice then the served flat amount), each with "To the dice" (fills the
-  composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`); "No dice to roll"
-  when none); then the description, which takes the rest of the height, scrolls inside its own box
+  composer) and Roll (`POST /api/roll/dice` through `stores/dice.ts` `roll`), and "Add" for a spell
+  that adds an effect; no cast box when the spell has neither); then the description, which takes the rest of the height, scrolls inside its own box
   and flows in two text columns (24 px apart) once the card is wide enough for two of 16rem
   (`SpellDescription` `columns`; a table spans both). Inside the cards grouping is by spacing,
   section labels and the raised tone, never a rule (step 4.1). `layout.spec` runs

@@ -118,3 +118,18 @@ func (s *service) Names(ctx context.Context) ([]SpellName, error) {
 	}
 	return out, nil
 }
+
+// Levels lists the spell levels present in the catalogue, ascending, each once:
+// the lookup's level filter offers only these (ADR 0027 step 13.2).
+func (s *service) Levels(ctx context.Context) ([]int, error) {
+	rows, err := s.reader.Search(ctx, Filter{})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]int, 0, len(rows))
+	for _, sp := range rows {
+		out = append(out, sp.Level)
+	}
+	slices.Sort(out)
+	return slices.Compact(out), nil
+}

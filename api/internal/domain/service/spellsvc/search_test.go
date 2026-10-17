@@ -2,6 +2,7 @@ package spellsvc_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -258,4 +259,29 @@ func TestNames_ListsEveryCatalogueSpellWithItsNames(t *testing.T) {
 		{ID: "detect_magic_priest", Name: localized.Text{"en": "Detect Magic", "fr": "Détection de la magie"}},
 		{ID: "detect_magic", Name: localized.Text{"en": "Detect Magic", "fr": "Détection de la magie"}},
 	}, got)
+}
+
+// The level filter's choices come from the catalogue (ADR 0027 step 13.2):
+// each level once, ascending, whatever the reader's order; a level no spell
+// has (0, 5 here) is absent.
+func TestLevels_AreTheCatalogueLevelsAscendingOnce(t *testing.T) {
+	reader := mocks.NewMockReader(t)
+	svc, err := spellsvc.New(mocks.NewMockDAL(t), reader, mocks.NewMockSpellbook(t))
+	require.NoError(t, err)
+	reader.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return([]spellsvc.Spell{
+		{ID: "d", Level: 4}, {ID: "a", Level: 2}, {ID: "b", Level: 1}, {ID: "c", Level: 2}, {ID: "e", Level: 9},
+	}, nil)
+	got, err := svc.Levels(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []int{1, 2, 4, 9}, got)
+}
+
+func TestLevels_PassesTheReaderError(t *testing.T) {
+	reader := mocks.NewMockReader(t)
+	svc, err := spellsvc.New(mocks.NewMockDAL(t), reader, mocks.NewMockSpellbook(t))
+	require.NoError(t, err)
+	boom := errors.New("boom")
+	reader.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, boom)
+	_, err = svc.Levels(context.Background())
+	assert.ErrorIs(t, err, boom)
 }

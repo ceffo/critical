@@ -94,7 +94,7 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    read it with `herdr agent read <your-name> --source recent-unwrapped --lines 8` and grep
    `[0-9.]+k \([0-9]+%\)` (or the ledger's helper script). Check it at every transition, for
    yourself and for every agent you prompt again. **The limit is about 200k tokens, for every agent
-   type, supervisor included**: past it, hand yourself off via the ledger at the next quiet point, and
+   type, supervisor included**: past it, hand yourself off (see "the handoff to the next supervisor") at the next quiet point, and
    don't prompt another round into an agent: close it and brief a fresh one. Below it, PR count and
    hours elapsed are not reasons to hand off: a fresh session costs a full cold start. Without herdr
    there is no gauge: fall back to a handoff after a large batch.
@@ -388,9 +388,18 @@ must lose nothing, so state lives outside the conversation:
 3. Tell the user in a few lines what you picked up (in flight, waiting on whom, pending decisions),
    rewrite the ledger, and carry on.
 
-**Before you're restarted** (the user says so, or the batch is done): make sure the ledger is current,
-add a "Notes for the next supervisor" line for anything subtle, and sync the tracker. Engram gets
-neither this state, nor decisions, nor process lessons (see "Reporting to the user").
+**Hand yourself off; never wait for the user to restart you.** At 180k context (a PostToolUse hook,
+`.claude/hooks/supervisor-context-gauge.sh`, reminds you on every tool call past it), or when the
+user says so, at the next quiet point (no agent mid-commit, no rework half sent):
+1. Rewrite the ledger, with a "Notes for the next supervisor (sup-N handoff" section for anything
+   subtle and a "Retro"; sync the tracker. Engram gets neither this state, nor decisions, nor process
+   lessons (see "Reporting to the user").
+2. Run `.claude/scripts/supervisor-handoff.sh` with `run_in_background`. It refuses a ledger older
+   than 15 minutes or without that section, starts `sup-N+1` (Opus) in a new tab on `<main>`,
+   prompts it to take over, and waits for its `handoff-ack-N+1` file.
+3. On `ACK`, stop: send nothing more and start nothing. The successor closes your tab. On `NO ACK`,
+   read its tab (`herdr agent read`) and tell the user.
+Without herdr there is no successor to start: update the ledger and tell the user to start one.
 
 ## Reporting to the user
 

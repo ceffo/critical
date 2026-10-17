@@ -2,10 +2,14 @@ package postgres
 
 import (
 	"context"
+	"crypto/x509"
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
+	"io"
 	"net"
+	"syscall"
 	"testing"
 	"time"
 
@@ -267,6 +271,63 @@ func TestWaitForDatabase_FailsFastOnAnotherPostgresError(t *testing.T) {
 	require.ErrorIs(t, err, auth)
 	assert.Equal(t, 1, p.calls)
 }
+
+// Exactly what a stopped or starting cluster answers is retried; everything waiting cannot fix
+// fails at once, so a wrong DSN stops the server at boot instead of after the whole wait.
+func TestRetryable_OnlyWhatAStartingDatabaseGives(t *testing.T) {
+	dns := func(notFound, temporary bool) error {
+		return &net.OpError{Op: "dial", Net: "tcp", Err: &net.DNSError{
+			Err: "lookup failed", Name: "db.flycast", IsNotFound: notFound, IsTemporary: temporary,
+		}}
+	}
+	cases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"starting up 57P03", starting, true},
+		{"EOF (Flycast closes while the cluster starts)", io.EOF, true},
+		{"unexpected EOF, wrapped", fmt.Errorf("read: %w", io.ErrUnexpectedEOF), true},
+		{"connection refused", refused, true},
+		{"connection reset", &net.OpError{Op: "read", Net: "tcp", Err: syscall.ECONNRESET}, true},
+		{"dial timeout", &net.OpError{Op: "dial", Net: "tcp", Err: timeoutErr{}}, true},
+		{"DNS temporary failure", dns(false, true), true},
+		{"DNS no such host", dns(true, false), false},
+		{"wrong password 28P01", &pq.Error{Code: "28P01"}, false},
+		{"missing database 3D000", &pq.Error{Code: "3D000"}, false},
+		{"too many connections 53300", &pq.Error{Code: "53300"}, false},
+		{"sslmode=require without TLS", pq.ErrSSLNotSupported, false},
+		{"certificate error", x509.UnknownAuthorityError{}, false},
+		{"other driver error", errors.New("pq: unknown authentication response: 10"), false},
+		{"context canceled", context.Canceled, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, retryable(c.err))
+		})
+	}
+}
+
+// A DSN that cannot work (sslmode=require against a server without TLS, a host name that does not
+// exist) fails on the first attempt.
+func TestWaitForDatabase_FailsFastOnAWrongDSN(t *testing.T) {
+	for _, wrong := range []error{
+		pq.ErrSSLNotSupported,
+		&net.OpError{Op: "dial", Net: "tcp", Err: &net.DNSError{Err: "no such host", Name: "typo.flycast", IsNotFound: true}},
+	} {
+		p := &pings{errs: []error{wrong}}
+		err := waitForDatabase(context.Background(), p.ping, time.Millisecond)
+		require.ErrorIs(t, err, wrong)
+		assert.Equal(t, 1, p.calls)
+	}
+}
+
+// timeoutErr is a net.Error that timed out, as a dial timeout reports.
+type timeoutErr struct{}
+
+func (timeoutErr) Error() string   { return "i/o timeout" }
+func (timeoutErr) Timeout() bool   { return true }
+func (timeoutErr) Temporary() bool { return true }
 
 // The wait is bounded: when the context ends, the last error is returned.
 func TestWaitForDatabase_GivesUpWhenTheContextEnds(t *testing.T) {

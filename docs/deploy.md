@@ -58,14 +58,24 @@ quiet apps let it stop, and a server booting or a request arriving while it star
 to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). Checked on staging, 2026-10-16: with the cluster
 stopped, a booting server got `EOF` twice, the connection started the cluster (event source `proxy` in
 `fly machine status`) and the server listened 5 s after its start; with the cluster stopped under a
-running server holding pooled connections, the next database read answered 200 in 2.6 s. `fly ssh`
-does not start it:
+running server holding pooled connections, the next database read answered 200 in 2.6 s. A DSN that
+cannot work (wrong password, unknown host, `sslmode=require`) fails at once instead of waiting.
+`fly ssh` does not start it:
 
 ```bash
 $fly status -a tournesol-db                          # machine state; role "error" only means stopped
 $fly machine start <machine id> -a tournesol-db      # before fly ssh / fly postgres connect
 $fly ips list -a tournesol-db                        # private ingress (Flycast) only, no public v4/v6
 ```
+
+Residual risk, accepted: **one 500 is possible when a connection is reset abruptly under load** (the
+cluster killed, not stopped, while a statement runs on a pooled connection). A clean stop (FATAL
+57P01/57P02) or an EOF reaches the pool as a bad connection, and the pool retries on a new one; an
+abrupt reset (TCP RST) reaches it as a network error on the statement, which lib/pq returns as it is
+and the request fails once. It is not converted into `driver.ErrBadConn` on purpose: database/sql then
+re-runs the statement on a new connection, and an autocommit statement the server may already have
+executed would run twice. The 5-minute idle close keeps connections from being reused across the
+cluster's idle stop, so this needs the cluster to die during traffic.
 
 To create a cluster of this app's own instead (once its volume is freed, or with a payment method):
 `$fly postgres create --name critical-db --org personal --region yyz --initial-cluster-size 1

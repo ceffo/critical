@@ -10,7 +10,9 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net"
 	"time"
 
 	"github.com/lib/pq" // PostgreSQL driver
@@ -65,8 +67,8 @@ func Open(dsn string) (*DB, error) {
 
 // connectWait is how long a new connection waits for the database to accept it, retrying every
 // connectRetryEvery. The fly cluster stops when idle (ADR 0024 step 2) and the first connection to
-// its Flycast address starts it: until PostgreSQL is up, connections are refused or answered
-// "the database system is starting up". A server booting meanwhile waits instead of exiting (its
+// its Flycast address starts it: until PostgreSQL is up, connections are closed (EOF), refused or
+// answered "the database system is starting up" (what is retried: retryable). A server booting meanwhile waits instead of exiting (its
 // HTTP listener, and so its health check, comes up once the database answers; fly keeps waiting for
 // the check during a deploy), and the first request after the cluster's idle stop waits a few
 // seconds instead of failing.
@@ -98,17 +100,15 @@ func (c waitingConnector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 // waitForDatabase calls connect until it succeeds, retrying every retryEvery while the error is
-// one a starting database gives (a network error, SQLSTATE 57P03 cannot_connect_now). Any other
-// PostgreSQL error (a wrong password, a missing database) is returned at once: waiting cannot fix
-// it. When ctx ends first, it returns the last error.
+// one a stopped or starting database gives (retryable). Any other error is returned at once, since
+// waiting cannot fix it. When ctx ends first, it returns the last error.
 func waitForDatabase(ctx context.Context, connect func(context.Context) error, retryEvery time.Duration) error {
 	for attempt := 1; ; attempt++ {
 		err := connect(ctx)
 		if err == nil {
 			return nil
 		}
-		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code != cannotConnectNow {
+		if !retryable(err) {
 			return err
 		}
 		if ctx.Err() != nil {
@@ -121,6 +121,34 @@ func waitForDatabase(ctx context.Context, connect func(context.Context) error, r
 		case <-time.After(retryEvery):
 		}
 	}
+}
+
+// retryable tells whether a failed connection attempt may succeed later, against a cluster that is
+// stopped or starting. Exactly these are retried:
+//   - SQLSTATE 57P03 cannot_connect_now ("the database system is starting up");
+//   - io.EOF and io.ErrUnexpectedEOF: the connection closed during the handshake, which is what the
+//     Flycast proxy of a stopped cluster answers while it starts it;
+//   - a network error (net.Error: refused, reset, unreachable, a dial or read timeout), except a DNS
+//     lookup that found no such host.
+//
+// Everything else fails at once: any other PostgreSQL error (a wrong password 28P01, a missing
+// database 3D000), a DNS name that does not exist (a typo in the DSN), pq.ErrSSLNotSupported
+// (sslmode=require against a server without TLS), a TLS or certificate error, an authentication
+// method lib/pq does not support, and any other driver or configuration error.
+func retryable(err error) bool {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		return pqErr.Code == cannotConnectNow
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) {
+		return !dnsErr.IsNotFound
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr)
 }
 
 // cannotConnectNow is the SQLSTATE of "the database system is starting up".

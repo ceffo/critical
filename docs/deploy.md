@@ -32,9 +32,9 @@ User steps left:
 1. **Re-enter the character-sheet edits** the seeds do not hold, in the production app (through `fly
    proxy`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
    ("Production data").
-2. **GitHub environments and `FLY_API_TOKEN`** ("GitHub" below), if not done yet.
-3. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below).
-4. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
+2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below). The environments and both
+   `FLY_API_TOKEN` secrets are set (2026-10-16).
+3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
 
 ## The PostgreSQL cluster (user)
 
@@ -176,7 +176,10 @@ step 8.4).
 
 ### GitHub (user)
 
-In the repository settings, create the environments `staging` and `production`:
+`scripts/github-environments.sh` (admin rights on the repository, fly credentials) creates the
+environments `staging` and `production`, restricts `production` to tags `v*`, and sets each
+`FLY_API_TOKEN` from a new deploy token of its app, piped, never printed (done 2026-10-16; a rerun makes
+new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a user step:
 
 | Environment | Secret | Content |
 |---|---|---|

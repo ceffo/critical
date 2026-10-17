@@ -47,6 +47,12 @@ User steps left:
    4. the `deploy staging` job that follows is green (no public IP, smoke on the machine) and Deployments
       shows a `deploy-staging` deployment of the sha with the digest; the other post-merge checks are in "Staging deploy".
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
+4. **CREATEDB for `critical_prod`**, the one privilege the promotion's restore point needs (ADR 0024 step
+   9.2, "Promotion" below), once the user has agreed to it: `just fly-db-provision tournesol-db prod` (a
+   rerun: no password or secret changes; its checks accept the user's own restore points). Until then every
+   promotion stops at the restore point and deploys nothing.
+5. **The first promotion** (`just release <version>`, "Promotion"), whose post-run checks only a real run
+   can make: listed at the end of "Promotion".
 
 ## The PostgreSQL cluster (user)
 
@@ -105,7 +111,9 @@ For each environment it creates (or keeps) the login user `critical_<env>`, owne
 `critical_<env>`. CONNECT on that database belongs to its user only. Every other database of the
 cluster that accepts connections (`template1` included) keeps CONNECT for the login users it has at
 run time and loses it for PUBLIC, so a critical user reaches only its own database and the other app's
-current users keep their access.
+current users keep their access. `critical_prod` also has the `CREATEDB` attribute (`critical_staging`
+has not): the promotion's restore points are copy databases it creates ("Promotion"); the checks below
+accept CONNECT on its own `critical_prod_pre_*` copies.
 
 **A user the other app gets later** (a `CREATE ROLE`, a `fly postgres attach` of a new app) has no
 CONNECT on the locked databases, and a rerun does not add it (the databases are already locked). Grant
@@ -155,7 +163,8 @@ private (ADR 0024 step 7): never paste query output into an issue, a PR or a log
 
 fly takes a daily snapshot of the cluster volume, kept 30 days (ADR 0024 step 9.1, set by the
 provisioning). A snapshot holds every database of the cluster, the other app's too: restoring one rolls
-them all back, so a restore of `critical_prod` uses a `pg_dump` first (step 9.3).
+them all back, so `critical_prod` is restored from a promotion's restore point first (step 9.3,
+"Rollback").
 
 ```bash
 $fly volumes list -a tournesol-db                    # retention, and the volume id
@@ -258,13 +267,13 @@ ADR 0024 steps 3 and 4, driven by GitHub Actions:
 1. A merge to `main` with green CI builds the image with the real catalogue and pushes it tagged with
    the commit sha ("Release build" below, `.github/workflows/release.yml`); the same run then deploys that
    image to staging and smoke-checks it ("Staging deploy" below, `.github/workflows/deploy-staging.yml`).
-2. A tag `vMAJOR.MINOR.PATCH` on a `main` commit that passed staging takes a `pg_dump` of
-   `critical_prod` (no dump, no deploy), deploys the **same image** to production, smoke-checks it and
-   creates the GitHub Release (the promotion workflow, not written yet).
+2. A tag `vMAJOR.MINOR.PATCH` on a `main` commit that passed staging takes a restore point of
+   `critical_prod` (no restore point, no deploy), deploys the **same image** to production, smoke-checks
+   it and creates the GitHub Release ("Promotion" below, `.github/workflows/promote.yml`).
 
 ```bash
 git switch main && git pull
-git tag v1.2.3 <sha that passed staging> && git push origin v1.2.3    # user: the deliberate act
+just release 1.2.3        # user: the deliberate act; tags main's head v1.2.3 and pushes the tag
 ```
 
 ### Release build
@@ -386,6 +395,77 @@ read an empty token), and a calling job cannot have an environment. The job pass
   5. Two quick merges: the older queued deploy is replaced by the newer, and a deploy already running is
      never cancelled.
 
+### Promotion
+
+`.github/workflows/promote.yml` (ADR 0024 steps 4, 8.3, 9.2 and 10), job `promote to production`, runs
+`scripts/promote.sh <tag>`.
+
+- **When.** On the push of a tag `v*`, and by hand (Actions > Promote > Run workflow, "Use workflow from" a
+  **tag**: the rollback). The job runs only for a tag ref, in the environment `production`, which accepts
+  deployments from `v*` tags only, so a run from a branch gets neither the environment nor its token. It
+  runs the tag's own scripts and fly config (the ones of its image). Serialized by `concurrency:
+  deploy-production`, never cancelled once started.
+- **Starting it.** `just release <version>` (`scripts/release-tag.sh`) tags the head of `main` and pushes
+  the tag. It refuses, before tagging: a version that is not `MAJOR.MINOR.PATCH` (`1.2.3` or `v1.2.3`), one
+  not greater than the highest `v*` tag (version order: `1.10.0` > `1.9.0`), a branch other than `main`, a
+  dirty tree, a `main` other than `origin/main`'s head after a fetch, and a commit staging has not passed
+  (it reads the staging record with `gh`, so it waits for the staging deploy of the merge). Pushing a tag
+  by hand (`git tag -a v1.2.3 -m ... <sha> && git push origin v1.2.3`) starts the same workflow; its guards
+  refuse the same commits.
+- **Secret.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-prod`). An empty one **fails**
+  the run before anything else (`Promotion` error): a tag push is a deliberate act (step 10.4).
+- **Steps**, each stopping the promotion when it fails:
+  1. **Guards** (`scripts/release-guards.sh all <tag>`): the tag is `vMAJOR.MINOR.PATCH`; its commit is
+     on `origin/main`; staging ran and passed that commit, read as "Record" above says, which gives the
+     **digest**; and `registry.fly.io/critical-staging@<digest>` is in the registry (`docker manifest
+     inspect` after `fly auth docker` with the production token). Nothing is written before they pass.
+  2. **No public IP** on `critical-prod` (`scripts/fly-private-check.sh`). Mandatory: unlike staging, no
+     variable skips it; the apps stay private until a public-access option with access control is built
+     (ADR 0024 step 8).
+  3. **Restore point** (`scripts/restore-point.sh`, steps 4.2 and 9.2): `fly console -a critical-prod
+     --image <that image>` starts an ephemeral machine of the production app from the release image (which
+     ships the PostgreSQL 17 client; the machine has the app's `CRITICAL_DSN` and does not start the
+     server), uploads the script and runs it; the machine is destroyed after. The script `pg_dump`s
+     `critical_prod` and `pg_restore`s it into a new database on the same cluster,
+     **`critical_prod_pre_<tag with _>_<UTC yyyymmddhhmmss>`** (e.g. `critical_prod_pre_v1_2_3_20261017153000`:
+     the data as it was before that release), owned by `critical_prod`, CONNECT revoked from PUBLIC. It is
+     verified (the same tables and recorded migrations as `critical_prod`, rows in it, PUBLIC locked out),
+     then the copies beyond the **newest 3** are dropped. It refuses first: a name that exists, the user
+     without `CREATEDB` (user step 4 above), and a projected use of `critical_prod` plus its kept copies plus
+     the new one over **300 MB** (the 1 GB volume is shared with the other app). A copy that fails its
+     verification is dropped. The log shows names, counts and sizes only; `pg_restore`'s own error text
+     (which can quote rows) stays in the ephemeral machine, only the object it names is printed. The step
+     passes only on the script's last line `restore-point: OK <name>`.
+  4. `fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-staging@<digest>
+     --no-public-ips`: rolling, one machine at a time.
+  5. **Smoke** (`scripts/fly-smoke.sh critical-prod <commit>`, every machine: health with the commit, a
+     database read, the web app), then every machine runs exactly that digest.
+  6. **GitHub Release** of the tag with generated notes, naming the image digest and the restore point.
+     It exists already on a rerun or a rollback (an older tag): kept.
+  After a failure past the restore point it prints the app's recent releases: roll back as in "Rollback".
+- **Why a copy database** (user, 2026-10-16, "1a"): it stays inside fly and the cluster, private like
+  production itself (ADR 0024 step 7): never a GitHub artifact, a cache or a bucket. fly's daily snapshots of
+  the cluster volume cover the loss of the machine (step 9.1).
+- **Registry.** The production deploy pulls the image from the staging app's repository by digest (ADR
+  0024, "Promotion and registry layout"). Whether the production deploy token may read it is only proven by
+  the first real run: if not, guard 1 fails on the image with a clear message, nothing is written, and the
+  copy of the image into `critical-prod`'s repository is the follow-up.
+- **Offline test.** `scripts/test-promotion.sh` (part of `just validate`): each guard on fixture
+  repositories and a stubbed GitHub API (the history-not-latest reading, the newest success, a string
+  payload), the order of the promotion's steps and what each failure prevents (fly stubbed), every refusal
+  of `just release`, and the workflow parsed. The restore point's SQL runs for real in the CI `image` job
+  (`scripts/image-smoke.sh`: copies, retention, the refusals) against a throwaway PostgreSQL 17.
+- **Post-run checks (user, the first real promotion; none can be faked offline).**
+  1. The run is green; its log shows the guards' commit and digest, `fly-private-check: OK`, the restore
+     point lines (`fly console` created and destroyed its machine; no server log line in between), the
+     rolling deploy, `fly-smoke: OK` with both machines, and the release.
+  2. `$fly postgres connect -a tournesol-db`, `\l critical_prod*` lists the copy, owned by `critical_prod`,
+     no `=c/` (PUBLIC) in its access privileges.
+  3. `$fly machine list -a critical-prod` shows the two app machines only (the console machine is gone).
+  4. The GitHub Release exists, with the digest.
+  5. Actions > Promote > Run workflow from `main` is refused (the job is skipped, the environment refuses
+     the branch).
+
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine
 at a time, so production keeps serving from the other (ADR 0024 step 5.2). A release's migrations are
@@ -393,17 +473,42 @@ additive, so the previous release keeps working on the new schema while its mach
 
 ## Rollback
 
-Run the promotion again for the previous tag (re-run its workflow in GitHub Actions, user, or by hand):
+Run the promotion again for the previous tag: Actions > Promote > Run workflow, "Use workflow from" that
+tag (or "Re-run all jobs" on its run). It redeploys that tag's image by its staging digest, never rebuilt,
+after a restore point of the current data. By hand (operator, production token):
 
 ```bash
-$fly deploy -c deploy/fly.prod.toml -a critical-prod --image <image ref of the previous tag>
-just fly-smoke critical-prod <commit of the previous tag>
+git fetch origin --tags && git switch --detach v1.2.2
+fly auth docker && scripts/promote.sh v1.2.2
 ```
 
-**Across a migration** the older binary refuses to start on the newer schema (ADR 0024 step 6.2).
-Redeploy the older tag **and** restore `critical_prod` from the pre-promotion dump (step 9.3). Data
-written since that dump is lost: say so to the user before restoring. The dump and restore commands
-come with the backup tooling (`just db-backup`, ADR 0024 step 9.4).
+**Across a migration** the older binary refuses to start on the newer schema (ADR 0024 step 6.2): restore
+`critical_prod` from the restore point taken **before the release being undone** (`critical_prod_pre_<that
+tag>_<time>`), then promote the older tag (step 9.3). Everything written since that restore point is lost:
+say so to the user first, and get their yes.
+
+1. Remove the app's machines, so no server boots on the restored database before the older release (a
+   newer one would migrate it again): `$fly scale count 0 -a critical-prod --yes`.
+2. As the cluster's operator (`$fly postgres connect -a tournesol-db`, connected to `postgres`), set the
+   current database aside and copy the restore point into its place (the restore point stays):
+
+   ```sql
+   \l critical_prod_pre_*
+   ALTER DATABASE critical_prod ALLOW_CONNECTIONS false;
+   SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'critical_prod';
+   ALTER DATABASE critical_prod RENAME TO critical_prod_failed_<yyyymmdd>;
+   CREATE DATABASE critical_prod TEMPLATE "critical_prod_pre_<tag>_<time>" OWNER critical_prod;
+   REVOKE ALL ON DATABASE critical_prod FROM PUBLIC;
+   GRANT CONNECT, TEMPORARY ON DATABASE critical_prod TO critical_prod;
+   ```
+
+3. Promote the older tag (above). Its deploy recreates the two machines from `deploy/fly.prod.toml`; if it
+   reports no machine, `$fly scale count 2 -a critical-prod --yes` and run it again.
+4. Once production checks out, `DROP DATABASE critical_prod_failed_<yyyymmdd>;` (it takes room on the shared
+   volume; it accepts no connection meanwhile).
+
+A restore point is also the way back from bad data without a rollback (same steps, without changing the
+release: promote the current tag again in step 3).
 
 ## Restore from a cluster snapshot (user, last resort)
 

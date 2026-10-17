@@ -23,5 +23,5 @@ if [ ${#missing[@]} -eq 0 ]; then
     exit 0
 fi
 list="$(printf '%s, ' "${missing[@]}")"
-echo "::notice title=Release skipped::${list%, } not set in this job's GitHub environment, so nothing was built or pushed. Set it as in docs/deploy.md (GitHub); main stays green meanwhile."
+echo "::notice title=Release skipped::${list%, } not set in this job's GitHub environment, so nothing was built, pushed or deployed. Set it as in docs/deploy.md (GitHub); main stays green meanwhile."
 echo "ready=false" >> "$out"

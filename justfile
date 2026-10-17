@@ -39,10 +39,12 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# The release build's scripts (ADR 0024 steps 3.1, 7 and 10.4), offline: docker and fly stubbed, a local
-# rulebooks repo and a generated key (scripts/test-release-scripts.sh).
+# The release build's and the staging deploy's scripts (ADR 0024 steps 3, 7, 8.3 and 10.4), offline: docker,
+# fly and gh stubbed, a local rulebooks repo and a generated key (scripts/test-release-scripts.sh,
+# scripts/test-staging-deploy.sh).
 check-release-scripts:
     scripts/test-release-scripts.sh
+    scripts/test-staging-deploy.sh
 
 # Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
 # says what it does and why; the link to the work item lives in commits and PRs only

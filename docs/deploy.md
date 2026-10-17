@@ -33,8 +33,8 @@ User steps left:
    critical-prod`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
    ("Production data").
 2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below; until it is set, every main run
-   of the release workflow ends green with a "Release skipped" notice naming it and runs no flyctl
-   step). The environments and both `FLY_API_TOKEN` secrets are set (2026-10-16). Then check the first
+   of the release workflow ends green with a "Release skipped" notice naming it, runs no flyctl
+   step and deploys nothing). The environments and both `FLY_API_TOKEN` secrets are set (2026-10-16). Then check the first
    real release run ("Release build"), none of which an agent can see:
    1. it is green, and its notice names `registry.fly.io/critical-staging:<sha>` and the rulebooks commit:
       the deploy key reached GitHub over ssh with the pinned host key, and the staging deploy token could
@@ -43,7 +43,10 @@ User steps left:
       '{{json .Config.Labels}}' registry.fly.io/critical-staging:<sha>` shows
       `org.opencontainers.image.revision` and `critical.rulebooks.revision`;
    3. its log holds no catalogue JSON and no key material: only the clone, the build, the push lines and
-      the notice with the reference and the rulebooks sha.
+      the notice with the reference and the rulebooks sha;
+   4. the `deploy staging` job that follows is green (no public IP, smoke on the machine) and Deployments
+      shows a `deploy-staging` deployment of the sha with the digest ("Staging deploy"); restrict the
+      `staging` environment to `main` (same section).
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
 
 ## The PostgreSQL cluster (user)
@@ -254,8 +257,8 @@ gets those steps then.
 ADR 0024 steps 3 and 4, driven by GitHub Actions:
 
 1. A merge to `main` with green CI builds the image with the real catalogue and pushes it tagged with
-   the commit sha ("Release build" below, `.github/workflows/release.yml`); the staging deploy and its
-   `/api/health` smoke check for that commit are the next workflow item.
+   the commit sha ("Release build" below, `.github/workflows/release.yml`); the same run then deploys that
+   image to staging and smoke-checks it ("Staging deploy" below, `.github/workflows/deploy-staging.yml`).
 2. A tag `vMAJOR.MINOR.PATCH` on a `main` commit that passed staging takes a `pg_dump` of
    `critical_prod` (no dump, no deploy), deploys the **same image** to production, smoke-checks it and
    creates the GitHub Release (the promotion workflow, not written yet).
@@ -306,6 +309,53 @@ git tag v1.2.3 <sha that passed staging> && git push origin v1.2.3    # user: th
   fetch being only the sha, the labels and the full-sha tag, a dirty tree refused. Its rulebooks remote is
   a `file://` repository, so ssh itself (the agent's key reaching GitHub, the pinned host key) is only
   proven by the first real run (user steps left).
+
+### Staging deploy
+
+`.github/workflows/deploy-staging.yml` (ADR 0024 steps 3.2-3.3, 8.3, 10.1 and 10.5), job `deploy staging`,
+runs `scripts/staging-deploy.sh <sha>` and records the result:
+
+- **When.** `release.yml` calls it (job `deploy staging`, `needs` the image job) only when the image was
+  pushed: with a secret missing the image job builds nothing and the deploy job is skipped, so main stays
+  green. A manual run redeploys an image that is already in the registry (below). Either way the job runs
+  on `main` only, is serialized by `concurrency: deploy-staging` and is never cancelled once started (a
+  newer commit replaces only a queued one).
+- **Secret.** `FLY_API_TOKEN` of the `staging` environment, read only by the secret check and the deploy
+  step of this job. When it is missing the run ends green with a `Release skipped` notice.
+- **Steps** (`scripts/staging-deploy.sh`, reusing `scripts/fly-private-check.sh` and `scripts/fly-smoke.sh`):
+  1. **No public IP**: the job fails before deploying if the app has an address other than a Flycast one.
+     The check is skipped, with a notice, only when the repository (or environment) variable
+     `PUBLIC_ACCESS_OPTION` is set, which the user does when picking an option (ADR 0024 step 8.4). Until
+     then the apps stay private.
+  2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-staging:<sha>`; the machine is
+     started if it was stopped.
+  3. The smoke check through `fly proxy` (the app is private): on every machine, `/api/health` is 200 with
+     `status` ok and `commit == <sha>`, `/api/character` is 200 (a read through the database) and `/` is
+     the web app. A cold start of the machine or of the shared database is waited for (up to 90 s per
+     machine).
+  4. The machines must run exactly one image **digest**; it is printed and recorded.
+- **Record.** The job creates a GitHub deployment of the environment `staging` with
+  `scripts/record-deployment.sh`: task `deploy-staging`, ref the full sha, payload `{"commit", "digest"}`,
+  and a status `success` (description: the digest) or `failure`. The promotion reads the latest `success`
+  of task `deploy-staging` for the sha and compares its digest (GitHub also creates deployments of its
+  own for every job in the environment, with the workflow's ref: ignore the ones of another task).
+- **A failed run.** The log of `Deploy and smoke-check` says which check failed: `fly-private-check` (a
+  public address, nothing deployed), `fly-smoke: FAIL (...)` with the machine and the status or body
+  (`HTTP 000` is a machine or proxy that never answered; a wrong `commit` is the old image still serving or
+  a wrong tag), or a digest mismatch. After a failed deploy or smoke it prints the app's recent releases
+  (`fly releases --image`): redeploy the previous one's image with the command in "Rollback", or fix and
+  rerun. The deployment is recorded as `failure`, so the promotion refuses that sha.
+- **Redeploy a given sha.** Actions > Deploy staging > Run workflow on `main`, with the full commit sha
+  of an image already pushed to `registry.fly.io/critical-staging:<sha>` (the release build's notice names
+  it). By hand: `$fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-staging:<sha>`
+  then `just fly-smoke critical-staging <sha>`.
+- **Offline test.** `scripts/test-staging-deploy.sh` (part of `just validate`) runs both scripts against
+  stubs of fly and gh: a public IP deploys nothing, the deploy and smoke arguments, the rollback listing,
+  the digest output, the recorded deployment, and the workflows' gating. The real proxy, deploy and
+  GitHub API calls are proven only by the first real run.
+- **User step.** Restrict the `staging` environment to the `main` branch (Settings > Environments >
+  staging > Deployment branches): the `github.ref` check in the workflow cannot protect the token from a
+  branch that edits the workflow file, the environment rule can.
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine

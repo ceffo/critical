@@ -2,7 +2,7 @@ name: Release
 
 # The release build of ADR 0024 step 3.1: once CI is green on a push to main, build the image of that
 # commit with the real catalogue and push it to the private fly registry. Runbook: docs/deploy.md
-# ("Release build").
+# ("Release build"); the staging deploy of the pushed image follows (deploy-staging.yml).
 #
 # workflow_run, not a job of ci.yml: CI cancels a running main build when a newer commit lands
 # (cancel-in-progress), while a release run must finish once started; here a newer commit only
@@ -38,6 +38,8 @@ jobs:
       cancel-in-progress: false
     env:
       COMMIT: ${{ github.event.workflow_run.head_sha }}
+    outputs:
+      pushed: ${{ steps.build.outputs.pushed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -61,6 +63,7 @@ jobs:
       # to the staging app's repository, the one the staging deploy token may push to; production gets
       # the same digest by the promotion (docs/deploy.md, "Release build").
       - name: Build and push the release image
+        id: build
         if: steps.secrets.outputs.ready == 'true'
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
@@ -74,3 +77,17 @@ jobs:
           app="$(sed -n 's/^app = "\(.*\)"$/\1/p' deploy/fly.staging.toml)"
           scripts/release-image.sh "$dir" "$rulebooks" "$app"
           echo "::notice title=Release image::registry.fly.io/$app:$COMMIT (rulebooks $rulebooks)"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+  # The staging deploy of that image (.github/workflows/deploy-staging.yml), only when it was pushed:
+  # with a secret missing the image job ends green having built nothing, and so does this one.
+  deploy:
+    name: deploy staging
+    needs: image
+    if: needs.image.outputs.pushed == 'true'
+    uses: ./.github/workflows/deploy-staging.yml
+    permissions:
+      contents: read
+      deployments: write
+    with:
+      sha: ${{ github.event.workflow_run.head_sha }}

@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, combatLog, openDashboard } from "./helpers";
+import { chooseLanguage, combatLog, openDashboard, openFold } from "./helpers";
 
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -164,7 +164,11 @@ test("skills: adjust before the roll from the section header, then after it on t
 
   // After the roll, on the latest check: -2 → +3 with a reason; the target moves, the roll stays.
   const d20 = (await result.getByTestId("hex-die").textContent()) ?? "";
-  const form = card.getByRole("form", { name: "Adjust this check" });
+  const form = await openFold(
+    card,
+    "Adjust after the roll",
+    "Adjust this check",
+  );
   for (let i = 0; i < 5; i++)
     await form.getByRole("button", { name: "Increase adjustment" }).click();
   await form.getByLabel("Reason (optional)").fill("lit by torches");

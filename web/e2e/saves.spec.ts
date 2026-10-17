@@ -7,6 +7,7 @@ import {
   logEntry,
   openDashboard,
   recordHp,
+  openFold,
 } from "./helpers";
 
 /** "+2", "−2" (U+2212) or "0" as a number. */
@@ -43,7 +44,11 @@ async function rollSpellSave(page: Page) {
 }
 
 async function adjust(page: Page, steps: number, reason?: string) {
-  const form = saveCard(page).getByRole("form", { name: "Adjust this save" });
+  const form = await openFold(
+    saveCard(page),
+    "Adjust after the roll",
+    "Adjust this save",
+  );
   const button = form.getByRole("button", {
     name: steps > 0 ? "Increase adjustment" : "Decrease adjustment",
   });
@@ -141,8 +146,11 @@ test("a voided save can no longer be adjusted; older saves and other entries are
 
   // Void the latest save (the one on the card) from the log, newest first: the card loses its
   // adjust control and the API refuses it.
-  const form = saveCard(page).getByRole("form", { name: "Adjust this save" });
-  await expect(form).toBeVisible();
+  const form = await openFold(
+    saveCard(page),
+    "Adjust after the roll",
+    "Adjust this save",
+  );
   const newest = logEntry(page, "Save vs Spells").first();
   await page.getByTestId("undo").click();
   await expect(newest).toHaveAttribute("data-status", "voided");

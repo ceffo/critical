@@ -30,8 +30,8 @@ test("a journal entry opens read-only in the card, Latest returns, Rolls filters
   const saves = logEntry(page, "Save vs Spells");
   await expect(saves).toHaveCount(2);
 
-  // By default the card is the latest result, the newest save, with its adjustment.
-  const adjust = card(page).getByRole("form", { name: "Adjust this save" });
+  // By default the card is the latest result, the newest save, with its adjustment line.
+  const adjust = card(page).getByTestId("adjust-check");
   await expect(adjust).toBeVisible();
   await expect(saves.first()).toHaveAttribute("data-selected", "true");
   const latest = card(page).getByRole("button", { name: "Latest" });

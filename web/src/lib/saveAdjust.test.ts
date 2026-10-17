@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RollResult } from "@/types/combat";
 import {
   adjustmentChanged,
+  adjustmentInEffect,
   MAX_ADJUSTMENT,
   stepAdjustment,
 } from "./saveAdjust";
@@ -37,5 +38,18 @@ describe("adjustmentChanged", () => {
     ["back to 0", save(4, "Gaia fire"), 0, "Gaia fire", true],
   ])("%s", (_name, r, value, reason, want) => {
     expect(adjustmentChanged(r, value, reason)).toBe(want);
+  });
+});
+
+// ADR 0027 step 8.2: the "adjust after the roll" line is closed by default and open while the check
+// carries an adjustment (a save, or a skill check whose adjustment is absent when none was made).
+describe("adjustmentInEffect", () => {
+  it.each([
+    [{ adjustment: 0 }, false],
+    [{}, false],
+    [{ adjustment: 4 }, true],
+    [{ adjustment: -5 }, true],
+  ])("%o → %s", (check, want) => {
+    expect(adjustmentInEffect(check)).toBe(want);
   });
 });

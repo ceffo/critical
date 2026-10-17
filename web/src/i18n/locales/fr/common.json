@@ -910,6 +910,7 @@
     "hitsAc": "Touche la CA",
     "margin": "Marge",
     "target": "Cible",
+    "targetAc": "CA cible",
     "modifiers": "Modificateurs",
     "noModifiers": "Aucun modificateur",
     "damage": "Dégâts",

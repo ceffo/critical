@@ -910,6 +910,7 @@
     "hitsAc": "Hits AC",
     "margin": "Margin",
     "target": "Target",
+    "targetAc": "Target AC",
     "modifiers": "Modifiers",
     "noModifiers": "No modifiers",
     "damage": "Damage",

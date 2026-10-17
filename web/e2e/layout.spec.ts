@@ -14,6 +14,7 @@ import {
   openWeapons,
   openWorkspace,
   recordHp,
+  openFold,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
 import {
@@ -1052,7 +1053,11 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
   await page.getByRole("button", { name: "Roll save vs Spells" }).click();
   const card = page.getByTestId("save-result");
   await expect(card).toBeVisible();
-  const form = card.getByRole("form", { name: "Adjust this save" });
+  const form = await openFold(
+    card,
+    "Adjust after the roll",
+    "Adjust this save",
+  );
   const harder = form.getByRole("button", { name: "Decrease adjustment" });
   await harder.click();
   await harder.click();
@@ -1083,4 +1088,52 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
       .getByRole("listitem")
       .filter({ hasText: "Sauvegarde contre Sorts" }),
   ).toContainText("(seuil ");
+});
+
+// ADR 0027 step 8 on the attack card, French first: the verdict pill right after the result it
+// judges, the stat tiles (d20, target AC, margin) and the AC correction opened from its one line;
+// nothing is cut at any layout viewport, in French and English.
+test("attack card: verdict beside the result, tiles and the open AC correction uncut, fr and en, 1280 to 2560", async ({
+  page,
+  stack,
+}) => {
+  const res = await fetch(`${stack.apiUrl}/api/attack/form`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetAc: 5 }),
+  });
+  expect(res.ok).toBe(true);
+  await openDashboard(page);
+  await attackForm(page)
+    .getByRole("button", { name: "Attack", exact: true })
+    .click();
+  const card = page.getByTestId("attack-result");
+  await expect(card.getByTestId("attack-tiles")).toBeVisible();
+  await openFold(card, "Correct the target AC");
+
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await expect(card.getByTestId("attack-tiles")).toContainText(
+      lang === "fr" ? "CA cible" : "Target AC",
+    );
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      // Step 8.1: the pill follows the result on its line, not at the card's far edge.
+      const result = (await card.getByTestId("hits-ac").boundingBox())!;
+      const pill = (await card.getByTestId("verdict").boundingBox())!;
+      expect(
+        pill.x - (result.x + result.width),
+        `pill gap, ${where}`,
+      ).toBeLessThan(16);
+      expect(
+        Math.abs(pill.y + pill.height / 2 - (result.y + result.height / 2)),
+        `pill on the result's line, ${where}`,
+      ).toBeLessThan(4);
+      await expectNoClippedText(card, `attack card, ${where}`);
+      await expectWholeWords(card, `attack card, ${where}`);
+      if (SHOTS.has(`${vp.width}x${vp.height}`))
+        await snap(page, `attack-card-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
 });

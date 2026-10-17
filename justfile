@@ -234,10 +234,16 @@ release-image +apps: catalogue
 fly-private app:
     scripts/fly-private-check.sh {{app}}
 
-# Smoke-check a deployed fly app through `fly proxy`: /api/health 200 with the commit, and the web app
-# (ADR 0024 steps 3.3, 10.5). Read-only. Default commit: HEAD.
+# ADR 0024 steps 3.3, 10.5. Read-only. Default commit: HEAD.
+# Smoke-check each machine of a fly app through fly proxy: health with the commit, a database read, the web app
 fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
+
+# `mark` writes one action-log entry (a 1d20 roll) and prints its id, `check <id>` fails unless it is
+# still there; run one before and one after a restart or redeploy. Refuses non-staging apps.
+# Show that a staging app keeps its data across a restart and a redeploy
+fly-persistence app +args:
+    scripts/fly-persistence-check.sh {{app}} {{args}}
 
 # Operator only (fly credentials), ADR 0024 steps 2.3, 2.4, 9.1 and docs/deploy.md. A rerun changes no
 # existing password; `--rotate` does and applies the secret at once (a short outage of the app's new

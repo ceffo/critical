@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { slotDots } from "./slotDots";
+import { preparedDots, slotDots } from "./slotDots";
 import type { SpellSlot } from "@/types/spells";
 
 const slot = (over: Partial<SpellSlot> = {}): SpellSlot => ({
@@ -54,5 +54,24 @@ describe("slotDots", () => {
       "available",
       "available",
     ]);
+  });
+});
+
+describe("preparedDots", () => {
+  it("fills one dot per prepared spell and outlines the slots left", () => {
+    expect(preparedDots(2, 3)).toEqual(["available", "available", "empty"]);
+  });
+  it("is all outlines with nothing prepared and all filled at the limit", () => {
+    expect(preparedDots(0, 2)).toEqual(["empty", "empty"]);
+    expect(preparedDots(2, 2)).toEqual(["available", "available"]);
+  });
+  it("marks each spell beyond the limit as over", () => {
+    expect(preparedDots(4, 3)).toEqual([
+      "available",
+      "available",
+      "available",
+      "over",
+    ]);
+    expect(preparedDots(1, 0)).toEqual(["over"]);
   });
 });

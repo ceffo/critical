@@ -266,6 +266,17 @@ flowchart TD
   `stores/roll.ts` `rollExposure`; the result is an exposure card, `ExposureResultView`, with the
   dice, the total, "Taken off your HP" or "For the DM", and the same block set to the next round). `ReceivePanel.tsx` ("Spell cast on me") finds a spell with
   the shared name search (below) and posts `/api/spells/receive`.
+- Spell preparation (`PrepareEditor.tsx`, ADR 0027 step 11): Prepare turns the Spells tab into the
+  editor in the same space (no popup; the daily list and its buttons are hidden). Top row: the level
+  filter (one chip per level the server gives a limit above 0, multi-select, none = all; it filters
+  both columns), then Cancel and Save (`main`). Two columns from 32rem: TODAY'S PREPARATION, starting
+  from today's slots (ids no longer in the spellbook listed as removed, never sent), one group per
+  level with the dots of `lib/slotDots.ts` `preparedDots` (prepared in `magic`, an outline per slot
+  left, a `danger` dot per spell beyond the limit) and per spell its name (opening the details popup)
+  and − count + (the last − removes it); the GRIMOIRE, search box and spells grouped by level with a
+  quiet Add, as tall as the preparation with its list scrolling inside. The draft's counts and the gate
+  are `lib/prepareDraft.ts` (`levelBudgets`, `overBudget`): Save is disabled, with "Too many spells at
+  level N", while a level holds more than the server's count; the server still refuses such a save.
 - Spells activity, spell lookup (`LookupPanel.tsx`, state in `stores/lookup.ts` so it survives
   switching activities), A2's pane per [ADR 0022](adr/0022-activity-focus-layout.md) step 2.5: two
   cards, `minmax(18rem, 22rem) | 1fr`. The left card holds the filters (search box; school-group

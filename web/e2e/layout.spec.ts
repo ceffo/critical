@@ -830,6 +830,16 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
       await expectNoPageScroll(page);
       await expectNoClippedText(actions, `${tab} tab, ${size}`);
       if (SHOTS.has(size)) await snap(page, `act-${tab.toLowerCase()}-${size}`);
+      if (tab === "Spells") {
+        // ADR 0027 step 11: the preparation editor in the tab's place, in English.
+        await actions.getByRole("button", { name: "Prepare spells" }).click();
+        await expect(
+          actions.getByRole("form", { name: "Prepare today's spells" }),
+        ).toContainText("Hideous Laughter");
+        await expectNoPageScroll(page);
+        await expectNoClippedText(actions, `preparation, ${size}`);
+        await actions.getByRole("button", { name: "Cancel" }).click();
+      }
     }
     await actions.getByRole("tab", { name: "Weapons" }).click();
     // The weapon row: Attack is 44 px tall, its sword centred in its own 44 x 44 cell (step 3.3).
@@ -1014,6 +1024,23 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       await page.keyboard.press("Escape");
       await expect(details).toHaveCount(0);
     }
+    // ADR 0027 step 11: the preparation editor in place, a level over budget (its warning shown).
+    await actions.getByRole("button", { name: "Préparer les sorts" }).click();
+    const editor = actions.getByRole("form", {
+      name: "Préparer les sorts du jour",
+    });
+    await editor
+      .getByTestId("draft-level-1")
+      .getByRole("button", { name: /^Une copie de plus/ })
+      .first()
+      .click();
+    await expect(editor.getByTestId("over-budget")).toBeVisible();
+    await expectNoPageScroll(page);
+    await expectNoClippedText(actions, `preparation, ${where}`);
+    await expectWholeWords(actions, `preparation, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `act-prepare-fr-${vp.width}x${vp.height}`);
+    await editor.getByRole("button", { name: "Annuler" }).click();
     await actions.getByRole("tab", { name: "Armes" }).click();
     await rail.nth(1).click();
     await page.getByRole("option", { name: FR_SPELL }).click();

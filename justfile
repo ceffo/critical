@@ -39,12 +39,13 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# The release build's and the staging deploy's scripts (ADR 0024 steps 3, 7, 8.3 and 10.4), offline: docker,
-# fly and gh stubbed, a local rulebooks repo and a generated key (scripts/test-release-scripts.sh,
-# scripts/test-staging-deploy.sh).
+# The release build's, the staging deploy's and the promotion's scripts (ADR 0024 steps 3, 4, 7, 8.3 and
+# 10.4), offline: docker, fly and gh stubbed, a local rulebooks repo and a generated key, fixture git repos
+# (scripts/test-release-scripts.sh, scripts/test-staging-deploy.sh, scripts/test-promotion.sh).
 check-release-scripts:
     scripts/test-release-scripts.sh
     scripts/test-staging-deploy.sh
+    scripts/test-promotion.sh
 
 # Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
 # says what it does and why; the link to the work item lives in commits and PRs only
@@ -214,6 +215,14 @@ check-fly:
 # script on main (docs/deploy.md, "Release build"). Deploy with `fly deploy -c deploy/fly.<env>.toml --image <ref>`.
 release-image +apps: catalogue
     scripts/release-image.sh .catalogue "$(git -C "${RULEBOOKS_DIR:-$HOME/code/critical-rulebooks}" rev-parse "${CATALOGUE_REF:-HEAD}^{commit}")" {{apps}}
+
+# Refuses a non-semver or non-increasing version, a branch other than main, a dirty tree, a main behind
+# origin/main and a commit staging has not passed (needs gh). Pushing the tag is the release: the Promote
+# workflow takes the restore point, deploys staging's image to production and creates the GitHub Release
+# (ADR 0024 step 4, docs/deploy.md "Promotion"). E.g. `just release 1.2.3`.
+# Tag the head of main as a release (vMAJOR.MINOR.PATCH) and push the tag: promotes it to production
+release version:
+    scripts/release-tag.sh {{version}}
 
 # Check that a fly app has no public IP and has a private Flycast address (ADR 0024 step 8). Read-only.
 fly-private app:

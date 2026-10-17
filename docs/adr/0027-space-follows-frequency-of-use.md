@@ -289,8 +289,16 @@ Per screen, the user's words (the work items of the layout pass carry the full t
        blocks are visible without scrolling the tab.
     4. Rows look clickable (the shared row affordance).
 
-    *Checked by* `layout.spec`'s act panel test at 1440x900 in French (both blocks inside the panel,
-    no scroll) and the skills spec's roll-then-adjust flow.
+    *Implementation note (2026-10-17):* the rows are the saves' clickable row (a raised stripe, hover
+    and focus ring) and the section labels head each block; the column headers go with the columns
+    they named. A proficiency without a modifier shows no pill ("CHA 16"), as the journal words it.
+    A bard skill's row keeps its percentage (the skill's own value, not a target column). The two
+    columns are a grid of `minmax(16rem, 1fr)` tracks: side by side at 1440x900 and up, stacked at
+    1280x800, where the act panel scrolls inside (step 6.1) and the page does not.
+
+    *Checked by* `layout.spec`'s French no-cut test (the Skills tab at every layout viewport; at
+    1440x900 both blocks side by side inside the panel, no scroll) and the skills spec's
+    roll-then-adjust flow.
 13. **Spell lookup** (amends ADR 0022 step 2.5 "Spells (lookup)").
     1. **Search, the class control and the level chips always in view**; the school behind a small
        "Filtres" button, shown as a tag when set (step 1.5).

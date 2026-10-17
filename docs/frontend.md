@@ -232,8 +232,11 @@ flowchart TD
 - Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a grid row: the
   name (wrapping, never cut), behaviour and count, dice, Roll (it has dice) or Use, through
   `stores/roll.ts` `spendItem`; "Manage" (tooltip "Manage the inventory") focuses the Inventory activity.
-- Skills tab (`SkillsTab.tsx`): PROFICIENCIES and BARD SKILLS with their column headers as section
-  labels (ADR 0022 step 4.2); one row-button per skill, the name wrapping, never cut.
+- Skills tab (`SkillsTab.tsx`, ADR 0027 step 12): PROFICIENCIES and BARD SKILLS, side by side when
+  the panel holds two 16rem columns, stacked otherwise; one row-button per skill (the saves' clickable
+  row), the name wrapping, never cut, then the ability with its modifier as a chip ("DEX 17 [−1]") or
+  the bard skill's percentage. No target or last-check column and no pre-roll stepper: the target,
+  verdict and DM adjustment are on the result card (`AdjustCheck`, after the roll).
 - Inventaire workspace (`InventoryPanel.tsx`, ADR 0027 step 14): the Objets and Armes cards
   (`InventoryCard.tsx`: section-label title, the quiet one-word "Add" with "Add item" / "Add weapon"
   in its tooltip and `aria-label`, a body that scrolls inside the card), side by side once the stage

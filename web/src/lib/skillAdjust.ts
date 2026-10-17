@@ -1,6 +1,6 @@
-// Input helpers for the DM adjustment of skill checks (before the roll: the section steppers of
-// the Skills tab; after it: the result card). No game rules: the server validates the range,
-// moves the target and judges the roll (ADR 0014 steps 5 to 8). + is easier, - is harder.
+// Input helpers for the DM adjustment of skill checks, made on the result card after the roll
+// (ADR 0027 step 8.3). No game rules: the server validates the range, moves the target and judges
+// the roll (ADR 0014 steps 6 to 8). + is easier, - is harder.
 import type { SkillCheck, SkillKind } from "@/types/skills";
 
 /** The −/+ buttons stop at the server's limit: ±20 for a proficiency, ±100 points for a bard skill. */
@@ -24,11 +24,6 @@ export function stepSkillAdjustment(
     -max,
     Math.min(max, value + direction * skillAdjustmentStep(kind)),
   );
-}
-
-/** A row's target with the pending adjustment, as a preview: the roll's verdict is the server's. */
-export function previewTarget(target: number, adjustment: number): number {
-  return target + adjustment;
 }
 
 /** The target a check was judged against; a payload logged before adjustments has none. */

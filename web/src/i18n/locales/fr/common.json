@@ -1470,7 +1470,7 @@
     "minus": "Retirer 1",
     "add": "Ajouter un {{die}}",
     "remove": "Retirer un {{die}}",
-    "count": "{{count}} × {{die}}, en retirer un",
+    "count": "{{count}} × {{die}}, clic droit pour en retirer un",
     "invalid": "Formule invalide",
     "saveFavourite": "Enregistrer en favori",
     "favourites": "Favoris",

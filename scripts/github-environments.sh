@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Creates the GitHub environments of the release flow and their FLY_API_TOKEN secrets (ADR 0024 step
-# 10, docs/deploy.md "GitHub"): `staging` deployable from the branch `main` only, and `production` from tags `v*` only. Each
+# 10, docs/deploy.md "GitHub"): `staging` and `production` each deployable from the branch `main` only (the
+# promotion runs main's workflow, the version is its input; any other rule, such as the former `v*` tags of
+# `production`, is removed). Each
 # FLY_API_TOKEN is a new deploy token scoped to its one fly app, piped from `fly tokens create` into
 # `gh secret set`: it is never printed nor written to a file.
 #
@@ -46,16 +48,20 @@ custom='{"deployment_branch_policy": {"protected_branches": false, "custom_branc
 environment staging critical-staging "$custom"
 environment production critical-prod "$custom"
 
-# policy <environment> <branch|tag> <name>: the one rule that environment accepts deployments from.
+# policy <environment> <branch|tag> <name>: the one rule that environment accepts deployments from. It is
+# added first, then every other rule of the environment is deleted, so no moment accepts nothing.
 policy() {
-    local url="repos/$repo/environments/$1/deployment-branch-policies"
+    local url="repos/$repo/environments/$1/deployment-branch-policies" id
     if ! gh api "$url" --jq ".branch_policies[] | select(.type == \"$2\" and .name == \"$3\") | .id" | grep -q .; then
         gh api -X POST "$url" -f name="$3" -f type="$2" >/dev/null
     fi
+    for id in $(gh api "$url" --jq ".branch_policies[] | select(.type != \"$2\" or .name != \"$3\") | .id"); do
+        gh api -X DELETE "$url/$id" >/dev/null
+    done
     echo "github-environments: $1 deployable from: $(gh api "$url" --jq '[.branch_policies[] | "\(.type) \(.name)"] | join(", ")')"
 }
 policy staging branch main
-policy production tag 'v*'
+policy production branch main
 for env in staging production; do
     echo "github-environments: $env secrets: $(gh secret list --env "$env" --repo "$repo" --json name --jq '[.[].name] | join(", ")')"
 done

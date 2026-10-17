@@ -8,7 +8,7 @@
 #
 # A tag created with the workflow's token starts no workflow (GitHub: "events triggered by the
 # GITHUB_TOKEN ... will not create a new workflow run"), so this tag does not start the Promote workflow;
-# promoting is running Promote from the tag (docs/deploy.md, "Promotion"). The tag ruleset lets the
+# promoting is `just promote [version]`, a run of Promote from main (docs/deploy.md, "Promotion"). The tag ruleset lets the
 # GitHub Actions app create v* tags, never move or delete them (scripts/github-tag-ruleset.sh). An
 # existing tag is never moved: GitHub refuses to create the ref, and so does this script.
 set -euo pipefail

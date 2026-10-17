@@ -249,8 +249,13 @@ release-image +apps: catalogue
 
 # There is no recipe that makes a version: CI is the only maker of `v*` tags. Each main commit that makes a
 # release gets the next version from the conventional commits since the last one, baked into its image, and
-# the tag once staging passed; promoting a version is running the Promote workflow from its tag
-# (docs/deploy.md, "How a release flows").
+# the tag once staging passed (docs/deploy.md, "How a release flows").
+
+# Promote to production (ADR 0024 step 4): runs the Promote workflow from main. No version: the newest that
+# passed staging; a version (1.2.3 or v1.2.3): that one, also the rollback. Prints the run's URL. Repository
+# admins only (the workflow checks it); the workflow's log says what it resolved and what production ran.
+promote $version="":
+    gh workflow run promote.yml --ref main ${version:+-f "version=$version"}
 
 # Check that a fly app has no public IP and has a private Flycast address (ADR 0024 step 8). Read-only.
 fly-private app:

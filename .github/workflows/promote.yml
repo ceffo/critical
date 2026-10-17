@@ -1,43 +1,90 @@
 name: Promote
+run-name: Promote ${{ inputs.version || 'the newest staging version' }}
 
-# The promotion of ADR 0024 step 4: run by hand from a tag vMAJOR.MINOR.PATCH on a main commit that staging
-# ran and passed, it deploys that same image (by digest, no rebuild) to production, after a restore point of
-# the production database, then smoke-checks it and creates the GitHub Release. Runbook: docs/deploy.md
-# ("Promotion").
+# The promotion of ADR 0024 step 4, on demand: run by hand from main (Actions > Promote > Run workflow, or
+# `just promote [version]`). With no version it promotes the newest vMAJOR.MINOR.PATCH version that passed
+# staging; with one (X.Y.Z or vX.Y.Z) that version, which is also the rollback. It deploys that version's
+# image (by digest, the one staging ran, no rebuild) to production after a restore point of the production
+# database, then smoke-checks it and creates the GitHub Release. Runbook: docs/deploy.md ("Promotion").
 #
-# Only by hand (Actions > Promote > Run workflow, "Use workflow from" the tag): no tag push starts it, the
-# release job's tags included (the user, 2026-10-17: promotion promotes a staging version on demand).
-#
-# Rollback: Actions > Promote > Run workflow, "Use workflow from" the OLDER tag (or re-run that tag's
-# run). The ref must be the tag itself: the environment `production` accepts deployments from `v*` tags
-# only, so a run from main gets neither the environment nor its token. Running from a tag also runs that
-# tag's own scripts and fly config, the ones that match its image.
+# Only by hand: no tag push starts it. It runs main's workflow, scripts and fly config; the image and the
+# migrations it embeds are the version's. Only a repository admin may run it (scripts/require-admin.sh,
+# before any secret); the environment `production` accepts deployments from the branch main only.
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to promote (X.Y.Z or vX.Y.Z; empty: the newest that passed staging; an older one rolls back)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  # A dispatch from a branch is a mistake (a rollback is run from the older TAG): it fails and says so,
-  # instead of a green run that did nothing. No environment, no secret.
-  not-a-tag:
-    name: refuse a run from a branch
-    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+  # A dispatch from another branch or a tag is a mistake (the version is the input, the run is main's): it
+  # fails and says so, instead of a green run that did nothing. No environment, no secret.
+  not-main:
+    name: refuse a run from another ref than main
+    if: ${{ github.ref != 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
-      - name: Use a tag
+      - name: Use main
         env:
           REF: ${{ github.ref }}
         run: |
-          echo "::error title=Promotion::$REF is not a v* tag: nothing was promoted. Run the workflow from a tag (Use workflow from: Tags > vX.Y.Z), docs/deploy.md (Rollback)."
+          echo "::error title=Promotion::$REF is not main: nothing was promoted. Run the workflow from main (Use workflow from: main) with the version as its input, docs/deploy.md (Promotion)."
           exit 1
+
+  # Who and what, before the production environment and its secret: the admin check, then the version.
+  resolve:
+    name: resolve the version
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      deployments: read # the staging deployment records
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # every tag, and main's history (the on-main guard)
+          persist-credentials: false
+
+      - name: Check the actor is an admin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+        run: scripts/require-admin.sh "$ACTOR" "$TRIGGERING_ACTOR"
+
+      # The version asked must exist, be on main and have passed staging; none asked: the newest that did.
+      - name: Resolve the version
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          out="$(scripts/release-guards.sh resolve "$VERSION")"
+          echo "$out"
+          tag="$(sed -n 's/^tag=//p' <<<"$out")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Promoting $tag"
+            echo
+            echo "$out" | sed 's/^/- /'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   promote:
     name: promote to production
-    # Tags only (the environment's tag rule is the enforced half, docs/deploy.md "GitHub").
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: resolve
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The environment scopes FLY_API_TOKEN (the production app's deploy token): no other job can read it.
@@ -50,6 +97,20 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # the guards check that the tag's commit is on origin/main
+          persist-credentials: false
+
+      # Again here, before the secret: "Re-run failed jobs" re-runs this job alone, by whoever clicks it.
+      - name: Check the actor is an admin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+        run: scripts/require-admin.sh "$ACTOR" "$TRIGGERING_ACTOR"
+
       # A promotion is a deliberate act: a token this job cannot read fails it (step 10.4).
       - name: Check the deploy secret
         env:
@@ -60,12 +121,6 @@ jobs:
             exit 1
           fi
 
-      # The whole history: the guard checks that the tag's commit is on origin/main.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
 
@@ -75,7 +130,7 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.resolve.outputs.tag }}
         run: |
           flyctl auth docker
           scripts/promote.sh "$TAG"

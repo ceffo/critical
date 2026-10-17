@@ -26,42 +26,79 @@ async function put(apiUrl: string, spells: string[]) {
   });
 }
 
-test("4 level-1 spells are refused with the server's message, 3 are accepted", async ({
+// ADR 0027 step 11: what only a browser proves is the wiring (the editor in place of the list, the
+// filter, the steppers, the gate on the button, the save reaching the server and the list coming
+// back). The draft's counts and the over-budget gate are unit tests (prepareDraft, slotDots); the
+// server's refusal of an over-budget save is a Go test (prepsvc).
+test("Prepare edits today's preparation in place: level filter, − count +, Save gated over budget", async ({
   page,
   stack,
 }) => {
+  expect((await put(stack.apiUrl, ["alarm", "mirror_image"])).ok).toBe(true);
   await openSpells(page);
   await page.getByRole("button", { name: "Prepare spells" }).click();
   const editor = page.getByRole("form", { name: "Prepare today's spells" });
-
-  await page.getByLabel("Search the spellbook").fill("a");
-  await add(page, "Alarm", "Burning Hands", "Chromatic Orb", "Detect Magic");
-  await expect(editor.getByTestId("draft-level-1")).toContainText(
-    "4 / 3 prepared",
-  );
-  await snap(page, "four-level-1-draft");
-
-  await editor.getByRole("button", { name: "Save preparation" }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "too many spells for this level",
-  );
-  await expect(page.getByRole("alert")).toContainText("limit is 3");
-  await snap(page, "four-level-1-refused");
-  await expect(editor).toBeVisible(); // the editor stays open for a fix
-  const none = await (await fetch(`${stack.apiUrl}/api/spells/slots`)).json();
-  expect(none).toEqual([]); // nothing was saved
-
-  await editor.getByRole("button", { name: "Remove Detect Magic" }).click();
-  await editor.getByRole("button", { name: "Save preparation" }).click();
-  await expect(editor).toHaveCount(0);
-  const level1 = page.getByRole("region", { name: "Level 1" });
-  await expectSlotDots(level1, 1, 3, 3);
-  await expect(level1.getByTestId("dots-1")).toHaveAttribute(
+  // In the same space: the daily list and its buttons are gone while editing.
+  await expect(page.getByRole("region", { name: "Level 1" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Long rest" })).toHaveCount(0);
+  // Pre-filled with today's preparation, the dots against the server's counts (3 at level 1).
+  const level1 = editor.getByTestId("draft-level-1");
+  await expect(level1).toContainText("Alarm");
+  await expect(editor.getByTestId("prepared-dots-1")).toHaveAttribute(
     "data-state",
-    "aaa",
-  ); // 3 of 3 prepared: no empty dot
-  await expect(level1).toContainText("Chromatic Orb");
-  await snap(page, "three-level-1-accepted");
+    "aee",
+  );
+  await expect(editor.getByTestId("draft-level-2")).toContainText(
+    "Mirror Image",
+  );
+
+  // The level filter narrows the preparation and the grimoire; picking it again clears it.
+  const level2Chip = editor
+    .getByRole("group", { name: "Filter by level" })
+    .getByRole("button", { name: "Level 2" });
+  await level2Chip.click();
+  await expect(level1).toHaveCount(0);
+  await expect(editor.getByTestId("grimoire-level-1")).toHaveCount(0);
+  await expect(editor.getByTestId("grimoire-level-2")).toBeVisible();
+  await level2Chip.click();
+  await expect(level1).toBeVisible();
+
+  // Add from the grimoire, + a copy: 4 of 3 is shown and allowed, Save is disabled.
+  await add(page, "Burning Hands", "Chromatic Orb");
+  await editor.getByRole("button", { name: "One more copy of Alarm" }).click();
+  await expect(level1.getByTestId("prepared-count").first()).toHaveText("2");
+  await expect(editor.getByTestId("prepared-dots-1")).toHaveAttribute(
+    "data-state",
+    "aaao",
+  );
+  const save = editor.getByRole("button", { name: "Save preparation" });
+  await expect(save).toBeDisabled();
+  await expect(editor.getByTestId("over-budget")).toContainText("level 1");
+  await snap(page, "prepare-over-budget");
+
+  // − takes a copy off, the last − removes the spell; Save is enabled again.
+  await editor.getByRole("button", { name: "Remove Alarm" }).click();
+  await expect(save).toBeEnabled();
+  await editor.getByRole("button", { name: "Remove Mirror Image" }).click();
+  await expect(editor.getByTestId("draft-level-2")).not.toContainText(
+    "Mirror Image",
+  );
+  // A name opens the details popup, as on the Spells tab.
+  await level1
+    .getByRole("button", { name: "Chromatic Orb", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await snap(page, "prepare-editing");
+
+  await save.click();
+  await expect(editor).toHaveCount(0);
+  const day1 = page.getByRole("region", { name: "Level 1" });
+  await expectSlotDots(day1, 1, 3, 3);
+  await expect(day1).toContainText("Chromatic Orb");
+  await expect(page.getByRole("region", { name: "Level 2" })).toHaveCount(0);
+  await snap(page, "prepare-saved");
 });
 
 test("duplicates are prepared and a long rest keeps the preparation but resets used", async ({

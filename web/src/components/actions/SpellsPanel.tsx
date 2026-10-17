@@ -19,7 +19,8 @@ import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
 import { planCast } from "@/lib/castInputs";
-import { slotDots, type DotState } from "@/lib/slotDots";
+import { slotDots } from "@/lib/slotDots";
+import { Dots } from "./Dots";
 import type { CastOptions } from "@/api/spells";
 import { PrepareEditor } from "./PrepareEditor";
 import { SpellDetailsDialog } from "./SpellDetailsDialog";
@@ -73,14 +74,7 @@ function groupSlots(
   );
 }
 
-/** The fill of a slot dot (ADR 0027 step 10.3): magic while castable, solid muted ink once used, an outline when nothing is prepared in it. */
-const DOT_CLASS: Record<DotState, string> = {
-  available: "bg-magic",
-  used: "bg-ink-muted",
-  empty: "border border-input",
-};
-
-/** The level's slot dots; `data-state` spells them out (a: available, u: used, e: empty). */
+/** The level's slot dots (ADR 0027 step 10.3). */
 function SlotDots({
   level,
   slots,
@@ -93,18 +87,11 @@ function SlotDots({
   const { t } = useTranslation();
   const { dots, available, used, empty } = slotDots(slots, max);
   return (
-    <span
-      role="img"
-      className="flex flex-wrap items-center gap-1"
-      aria-label={t("spellSlots.dots", { available, used, empty })}
-      title={t("spellSlots.dots", { available, used, empty })}
-      data-testid={`dots-${level}`}
-      data-state={dots.map((d) => d[0]).join("")}
-    >
-      {dots.map((d, i) => (
-        <span key={i} className={cn("size-2.5 rounded-full", DOT_CLASS[d])} />
-      ))}
-    </span>
+    <Dots
+      dots={dots}
+      label={t("spellSlots.dots", { available, used, empty })}
+      testId={`dots-${level}`}
+    />
   );
 }
 
@@ -232,6 +219,25 @@ export function SpellsPanel() {
     info.limits.find((l) => l.level === level)?.max;
   const levels = [...byLevel.keys()].sort((a, b) => a - b);
 
+  // "Préparer" turns the tab into the editor, in the same space (ADR 0027 step 11.1).
+  if (editing)
+    return (
+      <PrepareEditor
+        spellbook={info.spellbook}
+        limits={info.limits}
+        initial={slots
+          .filter((s) => !s.extra)
+          .map((s) => s.prepared_spell_id || spellId(s.prepared_spell_name))}
+        busy={busy}
+        onCancel={() => setEditing(false)}
+        onSave={(ids) =>
+          void run(() => prepare(ids)).then((ok) => {
+            if (ok) setEditing(false);
+          })
+        }
+      />
+    );
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -240,7 +246,7 @@ export function SpellsPanel() {
           title={t("spellSlots.prepare")}
           aria-label={t("spellSlots.prepare")}
           onClick={() => setEditing(true)}
-          disabled={busy || editing}
+          disabled={busy}
         >
           {t("spellSlots.prepareShort")}
         </Button>
@@ -255,22 +261,6 @@ export function SpellsPanel() {
           {t("spellSlots.longRest")}
         </Button>
       </div>
-      {editing && (
-        <PrepareEditor
-          spellbook={info.spellbook}
-          limits={info.limits}
-          initial={slots
-            .filter((s) => !s.extra)
-            .map((s) => s.prepared_spell_id || spellId(s.prepared_spell_name))}
-          busy={busy}
-          onCancel={() => setEditing(false)}
-          onSave={(ids) =>
-            void run(() => prepare(ids)).then((ok) => {
-              if (ok) setEditing(false);
-            })
-          }
-        />
-      )}
       {levels.length === 0 && !loading && (
         <p className="text-body text-muted-foreground">
           {t("spellSlots.none")}

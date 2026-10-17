@@ -253,6 +253,20 @@ export interface SpellbookEntry {
   exposure?: SpellExposure;
   /** Inventory items the spell can spend now, as the server decides; absent when none. */
   items?: SpendableItem[];
+  /** The choice of target a buff's cast offers, as the server decides; absent when none. */
+  cast_target?: CastTarget;
+}
+
+/** Who a cast lands on. */
+export type CastOn = "self" | "other";
+
+/**
+ * Mirrors spellprephdl.CastTargetDTO: where a cast naming no target lands (`default`) and the
+ * one other target the caster may name (`alternate`, sent as `onSelf`).
+ */
+export interface CastTarget {
+  default: CastOn;
+  alternate: CastOn;
 }
 
 /** Mirrors spellprephdl.SpendableItemDTO. */

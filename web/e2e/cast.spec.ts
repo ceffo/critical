@@ -73,7 +73,8 @@ test("casting Stoneskin shows the result card, adds the buff; undoing gives the 
 });
 
 // ADR 0027 step 10: only the levels with a slot; Rary's Mnemonic Enhancer adds dots; the split
-// button's arrow casts on an ally; a spell's name opens its details, Escape closes them.
+// button's arrow, only on a spell whose target the server lets the player pick, offers the one
+// other target and casts on an ally; a spell's name opens its details, Escape closes them.
 test("Spells tab: Rary's adds slot dots, the arrow casts on an ally, a name opens the details", async ({
   page,
   stack,
@@ -86,6 +87,12 @@ test("Spells tab: Rary's adds slot dots, the arrow casts on an ally, a name open
   await expect(level1).toHaveCount(0); // nothing prepared at level 1
   await expectSlotDots(level4, 4, 1, 1);
 
+  // Rary's adds no buff: no target to pick, no arrow.
+  await expect(
+    level4.getByRole("button", {
+      name: "Choose the target of Rary's Mnemonic Enhancer",
+    }),
+  ).toHaveCount(0);
   // The main part: the server's default (all level 1 slots).
   await level4
     .getByRole("button", { name: "Cast Rary's Mnemonic Enhancer" })
@@ -99,6 +106,8 @@ test("Spells tab: Rary's adds slot dots, the arrow casts on an ally, a name open
     .click();
   const onAlly = page.getByRole("menuitem", { name: "On an ally" });
   await expect(onAlly).toBeVisible();
+  // Strength lands on the Bard by default: the arrow offers only the other target.
+  await expect(page.getByRole("menuitem")).toHaveCount(1);
   await snap(page, "cast-target-menu");
   await onAlly.click();
   await expect(resultCard(page).getByTestId("cast-text-only")).toContainText(

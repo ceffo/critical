@@ -1,8 +1,9 @@
 // What casting one slot asks of the player, from the spellbook's cast fields (the spell effects
-// data: slot_splits, consume_item_type, attack_roll, modes). No game rule is decided here: the server
+// data: slot_splits, consume_item_type, attack_roll, modes, cast_target). No game rule is decided here: the server
 // validates every cast; this only picks which inputs to show and what to send.
 import type { CastOptions } from "@/api/spells";
 import type {
+  CastTarget,
   SpellbookEntry,
   SpellMode,
   SpellSlot,
@@ -33,6 +34,8 @@ export interface CastPlan {
   /** Cast-time modes to pick from (the first is the default) and the one picked. */
   modes: SpellMode[];
   mode?: SpellMode;
+  /** The target choice the server offers for the spell; absent: the cast button has no arrow. */
+  target?: CastTarget;
   /** Cast is disabled: slot used, no spell picked for a blank slot, or no target AC when needed. */
   blocked: boolean;
   options: Omit<CastOptions, "onSelf">;
@@ -67,6 +70,7 @@ export function planCast(
     itemId,
     modes,
     mode,
+    target: needs?.cast_target,
     blocked,
     options: {
       spellId: blank ? form.pick : undefined,

@@ -370,11 +370,12 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
         expect(ledgerBox.y, `ledger below, ${where}`).toBeGreaterThan(
           top.y + top.height,
         );
-        const stage = (await page.getByTestId("stage").boundingBox())!;
-        expect(
-          Math.abs(ledgerBox.y + ledgerBox.height - (stage.y + stage.height)),
-          `ledger takes the rest of the height, ${where}`,
-        ).toBeLessThanOrEqual(1);
+        // As tall as its rows, bounded by the stage (ADR 0027 step 14.4).
+        await expectInside(
+          xpLedger,
+          page.getByTestId("stage"),
+          `ledger, ${where}`,
+        );
         expect(
           (await longXpRow.boundingBox())!.height,
           `long reason wraps, ${where}`,
@@ -924,6 +925,14 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     topId: number;
   };
   await api("POST", "/api/log/undo", { expectedTopId: log.topId });
+  // Two XP entries, one with a long reason and a session (ADR 0027 step 14.4).
+  await api("POST", "/api/xp", {
+    base: 2500,
+    bonus: true,
+    reason: LONG_REASON,
+    session: "S41",
+  });
+  await api("POST", "/api/xp", { base: 300, bonus: false, reason: "Troll" });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const character = page.getByTestId("character");
@@ -984,7 +993,13 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     // The preparation's entry lists every prepared spell: it wraps.
     await expectCompactJournal(
       page,
-      [LONG_SOURCE, LONG_WEAPON, LONG_ITEM, "Tasha's Uncontrollable"],
+      [
+        LONG_SOURCE,
+        LONG_WEAPON,
+        LONG_ITEM,
+        "Tasha's Uncontrollable",
+        LONG_REASON,
+      ],
       where,
     );
     await expect(
@@ -1024,9 +1039,47 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expect(stage.getByTestId("spell-add-effect")).toBeVisible();
     await expectNoClippedText(stage, `lookup, effect, ${where}`);
     await expectWholeWords(stage, `lookup, effect, ${where}`);
+    // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
+    // not the rest of the stage.
+    await rail.nth(2).click();
+    const ledger = stage.getByTestId("xp-ledger");
+    await expect(ledger.getByTestId("xp-row")).toHaveCount(2);
+    await expectNoClippedText(stage, `experience, ${where}`);
+    await expectWholeWords(stage, `experience, ${where}`);
+    const ledgerBox = (await ledger.boundingBox())!;
+    const opening = (await ledger.getByTestId("xp-opening").boundingBox())!;
+    expect(
+      ledgerBox.y + ledgerBox.height - (opening.y + opening.height),
+      `ledger card ends under its last row, ${where}`,
+    ).toBeLessThanOrEqual(24);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `experience-fr-${vp.width}x${vp.height}`);
     await rail.nth(3).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);
+    if (vp.width === 1707) {
+      // ADR 0027 step 14.3: from a 1200 px stage, items and weapons side by side, both whole.
+      const [items, weapons] = await stage
+        .getByTestId("inventory-cards")
+        .locator(":scope > section")
+        .all();
+      for (const [card, what] of [
+        [items, "items"],
+        [weapons, "weapons"],
+      ] as const) {
+        await expectInside(card, stage, `${what} card, ${where}`);
+        await expectNoScroll(
+          card.locator(":scope > div").last(),
+          `${what} card, ${where}`,
+        );
+      }
+      const a = (await items.boundingBox())!;
+      const b = (await weapons.boundingBox())!;
+      expect(b.y, `cards side by side, ${where}`).toBe(a.y);
+      expect(b.x, `weapons right of items, ${where}`).toBeGreaterThan(
+        a.x + a.width,
+      );
+    }
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
   }

@@ -54,21 +54,22 @@ async function longRest(page: Page) {
   await openWorkspace(page, "Inventory");
 }
 
-test("the Inventory tab lists every item with its type, behaviour and count; + only on stock", async ({
+test("the Inventory tab lists every item with its behaviour and count; + only on stock", async ({
   page,
 }) => {
   await openInventory(page);
-  const rows: [string, string, string, string, string][] = [
-    ["arrows_plus1", "Arrows +1", "arrow", "Stock", "18"],
-    ["arrows_plus2", "Arrows +2", "arrow", "Stock", "16"],
-    ["arrows_plus3", "Arrows +3", "arrow", "Stock", "2"],
-    ["fire_flask", "Fire flasks", "flask", "Stock", "5"],
-    ["wand_lightning", "Wand of lightning", "wand", "Charges", "4"],
-    ["power_gem_dispel", "Power Gem", "gem", "Daily", "1 / 1"],
+  const rows: [string, string, string, string][] = [
+    ["arrows_plus1", "Arrows +1", "Stock", "18"],
+    ["arrows_plus2", "Arrows +2", "Stock", "16"],
+    ["arrows_plus3", "Arrows +3", "Stock", "2"],
+    ["fire_flask", "Fire flasks", "Stock", "5"],
+    ["wand_lightning", "Wand of lightning", "Charges", "4"],
+    ["power_gem_dispel", "Power Gem", "Daily", "1 / 1"],
   ];
-  for (const [id, name, type, behaviour, n] of rows) {
+  for (const [id, name, behaviour, n] of rows) {
     await expect(row(page, id)).toContainText(name);
-    await expect(row(page, id).getByTestId("item-type")).toHaveText(type);
+    // The meta line is the behaviour in the UI language; the free-text type stays in the form.
+    await expect(row(page, id).getByTestId("item-type")).toHaveCount(0);
     await expect(row(page, id).getByTestId("item-behaviour")).toHaveText(
       behaviour,
     );

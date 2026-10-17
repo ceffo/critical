@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
 import { useState } from "react";
-import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import { PencilSimple, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useItemsStore } from "@/stores/items";
 import { useTableStore } from "@/stores/table";
@@ -14,15 +14,21 @@ import {
 import { formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { WeaponForm } from "./WeaponForm";
+import { InventoryCard, ROW_ACTIONS } from "./InventoryCard";
 import type { Weapon } from "@/types/combat";
 
-/** Armes grid: name (kind · two-handed · ammo) | damage S-M · L | to-hit / damage | edit / delete. */
+/**
+ * Armes grid, built like the Objets one (ADR 0027 step 14.1): name (kind · two-handed · ammo) |
+ * damage S-M · L | to-hit / damage | spare width | edit / delete on hover; the header and the rows
+ * share the columns through `subgrid`.
+ */
 const WEAPON_COLS =
-  "grid grid-cols-[minmax(0,1fr)_minmax(8.5rem,auto)_5.5rem_4rem] items-center gap-x-3";
+  "grid grid-cols-[minmax(8rem,max-content)_auto_auto_minmax(0,1fr)_auto] items-center gap-x-3";
+const WEAPON_ROW = "col-span-full grid grid-cols-subgrid items-center";
 
 /**
  * Armes card of the Inventaire workspace: ✎ edits a weapon in place, 🗑 removes it,
- * "Add weapon" opens a form. Every change is a log entry the Combat Log can pop (the newest only).
+ * "Add" opens a form. Every change is a log entry the Combat Log can pop (the newest only).
  */
 export function WeaponsSection() {
   const { t, i18n } = useTranslation();
@@ -40,24 +46,14 @@ export function WeaponsSection() {
   const close = () => setForm(null);
 
   return (
-    <section
-      className="flex flex-col gap-1 rounded-xl bg-card px-3 py-3"
-      aria-label={t("weapons.title")}
+    <InventoryCard
+      title={t("weapons.title")}
+      label={t("weapons.title")}
+      addLabel={t("weapons.form.openAdd")}
+      showAdd={form !== "add"}
+      busy={busy}
+      onAdd={() => setForm("add")}
     >
-      <div className="mb-1.5 flex items-center justify-between gap-3">
-        <h2 className="section-label">{t("weapons.title")}</h2>
-        {form !== "add" && (
-          <Button
-            size="sm"
-            disabled={busy}
-            title={t("weapons.form.openAdd")}
-            aria-label={t("weapons.form.openAdd")}
-            onClick={() => setForm("add")}
-          >
-            <Plus /> {t("items.form.add")}
-          </Button>
-        )}
-      </div>
       {form === "add" && (
         <div className="mb-2">
           <WeaponForm
@@ -76,48 +72,54 @@ export function WeaponsSection() {
       {weapons.length === 0 ? (
         <p className="text-body text-muted-foreground">{t("weapons.none")}</p>
       ) : (
-        <div
-          className={cn(
-            WEAPON_COLS,
-            "px-2 pb-1 text-label text-muted-foreground",
-          )}
-          aria-hidden
-        >
-          <span>{t("weapons.columns.name")}</span>
-          <span>{t("weapons.columns.damage")}</span>
-          <span>{t("weapons.columns.bonus")}</span>
-          <span />
+        <div className={WEAPON_COLS}>
+          <div
+            className={cn(
+              WEAPON_ROW,
+              "px-2 pb-1 text-label text-muted-foreground",
+            )}
+            aria-hidden
+          >
+            <span>{t("weapons.columns.name")}</span>
+            <span>{t("weapons.columns.damage")}</span>
+            <span>{t("weapons.columns.bonus")}</span>
+          </div>
+          <ul
+            className={cn(WEAPON_ROW, "gap-y-1")}
+            aria-label={t("weapons.list")}
+          >
+            {weapons.map((w) =>
+              form === w.id ? (
+                <li key={w.id} className="col-span-full">
+                  <WeaponForm
+                    initial={draftFromWeapon(w, i18n.language)}
+                    editing={w}
+                    ammoKinds={ammoKinds}
+                    busy={busy}
+                    onCancel={close}
+                    onSave={async (body) => {
+                      const rejected = await submit(() =>
+                        patchWeapon(w.id, body),
+                      );
+                      if (!rejected) close();
+                      return rejected;
+                    }}
+                  />
+                </li>
+              ) : (
+                <WeaponRow
+                  key={w.id}
+                  weapon={w}
+                  busy={busy}
+                  onEdit={() => setForm(w.id)}
+                  onRemove={() => void run(() => deleteWeapon(w.id))}
+                />
+              ),
+            )}
+          </ul>
         </div>
       )}
-      <ul className="flex flex-col gap-1" aria-label={t("weapons.list")}>
-        {weapons.map((w) =>
-          form === w.id ? (
-            <li key={w.id}>
-              <WeaponForm
-                initial={draftFromWeapon(w, i18n.language)}
-                editing={w}
-                ammoKinds={ammoKinds}
-                busy={busy}
-                onCancel={close}
-                onSave={async (body) => {
-                  const rejected = await submit(() => patchWeapon(w.id, body));
-                  if (!rejected) close();
-                  return rejected;
-                }}
-              />
-            </li>
-          ) : (
-            <WeaponRow
-              key={w.id}
-              weapon={w}
-              busy={busy}
-              onEdit={() => setForm(w.id)}
-              onRemove={() => void run(() => deleteWeapon(w.id))}
-            />
-          ),
-        )}
-      </ul>
-    </section>
+    </InventoryCard>
   );
 }
 
@@ -136,8 +138,8 @@ function WeaponRow({
   return (
     <li
       className={cn(
-        WEAPON_COLS,
-        "min-h-7 rounded-lg bg-raised px-2 py-1.5 text-body",
+        WEAPON_ROW,
+        "group/row min-h-7 rounded-lg bg-raised px-2 py-1.5 text-body",
       )}
       data-testid={`weapon-${w.id}`}
     >
@@ -166,7 +168,8 @@ function WeaponRow({
           {formatSigned(w.magic_damage)}
         </span>
       </span>
-      <div className="flex justify-end">
+      <span aria-hidden />
+      <div className={ROW_ACTIONS}>
         <Button
           size="icon-sm"
           variant="ghost"

@@ -1088,6 +1088,70 @@ describe("initiative entries", () => {
   });
 });
 
+describe("entryText for ability checks", () => {
+  const dex = {
+    ability: "dex",
+    die: 20,
+    roll: 14,
+    abilityScore: 15,
+    target: 15,
+    adjustment: 0,
+    adjustedTarget: 15,
+    success: true,
+    rolledSuccess: true,
+  };
+
+  it("words the check from its payload (en, fr)", async () => {
+    expect(entryText(entry("ability_check", dex, ""), await makeT("en"))).toBe(
+      "DEX check: d20 14 vs 15, success",
+    );
+    expect(entryText(entry("ability_check", dex, ""), await makeT("fr"))).toBe(
+      "Test de DEX : d20 14 contre 15, réussi",
+    );
+  });
+
+  it("words an adjusted check with its reason; the verdict is the payload's (en, fr)", async () => {
+    const harder = {
+      ...dex,
+      adjustment: -2,
+      adjustmentReason: "ledge",
+      adjustedTarget: 13,
+      success: false,
+    };
+    expect(
+      entryText(entry("ability_check", harder, ""), await makeT("en")),
+    ).toBe("DEX check: d20 14 vs 13 (15 −2 ledge), failure");
+    expect(
+      entryText(
+        entry("ability_check", { ...harder, adjustmentReason: undefined }, ""),
+        await makeT("fr"),
+      ),
+    ).toBe("Test de DEX : d20 14 contre 13 (15 −2), échec");
+  });
+
+  it("words the adjustment's correction step (en, fr)", async () => {
+    const step = {
+      entryId: 7,
+      entryKind: "ability_check",
+      field: "abilityAdjustment",
+      from: 0,
+      to: -2,
+    };
+    expect(entryText(entry("correction", step, ""), await makeT("en"))).toBe(
+      "Correction ability check adjustment 0 → −2",
+    );
+    expect(entryText(entry("correction", step, ""), await makeT("fr"))).toBe(
+      "Correction ajustement de test de caractéristique 0 → −2",
+    );
+  });
+
+  it("falls back to the summary on an unknown payload", async () => {
+    expect(
+      entryText(entry("ability_check", { ability: "dex" }), await makeT("en")),
+    ).toBe("server summary");
+  });
+});
+
 describe("entryText for skill checks", () => {
   const prof = {
     id: "riding_land",

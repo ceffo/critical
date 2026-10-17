@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { LogEntry, LogKind } from "@/types/log";
 import type { Modifier, RollResult, WeaponChangeRecord } from "@/types/combat";
-import type { SkillCheck } from "@/types/skills";
+import type { AbilityCheck, SkillCheck } from "@/types/skills";
 import type { DiceRoll } from "@/types/dice";
 import type { XpChangeRecord } from "@/types/xp";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
@@ -528,6 +528,20 @@ export function skillCheckPayload(e: LogEntry): SkillCheck | null {
     : null;
 }
 
+/** Payload in effect of ability_check entries (skillsvc abilityRecord, ADR 0028 step 5). */
+export function abilityCheckPayload(e: LogEntry): AbilityCheck | null {
+  if (e.kind !== "ability_check") return null;
+  const p = (e.effectivePayload ?? e.payload) as Partial<AbilityCheck> | null;
+  return p &&
+    typeof p.ability === "string" &&
+    typeof p.roll === "number" &&
+    typeof p.target === "number" &&
+    typeof p.adjustedTarget === "number" &&
+    typeof p.success === "boolean"
+    ? (p as AbilityCheck)
+    : null;
+}
+
 /** Payload of dice entries (dicesvc rollRecord): the free roll as recorded. */
 export function dicePayload(e: LogEntry): DiceRoll | null {
   if (e.kind !== "dice") return null;
@@ -547,7 +561,13 @@ export function dicePayload(e: LogEntry): DiceRoll | null {
 export interface CorrectionLogPayload {
   entryId: number;
   entryKind: LogKind;
-  field: "targetAc" | "saveAdjustment" | "skillAdjustment" | "verdict" | string;
+  field:
+    | "targetAc"
+    | "saveAdjustment"
+    | "skillAdjustment"
+    | "abilityAdjustment"
+    | "verdict"
+    | string;
   from: number | string | null;
   to: number | string | null;
 }
@@ -570,6 +590,7 @@ function correctionValue(
       return typeof v === "number" ? String(v) : t("log.correction.unknown");
     case "saveAdjustment":
     case "skillAdjustment":
+    case "abilityAdjustment":
       return typeof v === "number" ? formatSigned(v) : t("log.correction.none");
     case "verdict":
       return v === "hit" || v === "miss"
@@ -585,6 +606,7 @@ function correctionText(p: CorrectionLogPayload, t: TFunction): string {
     p.field !== "targetAc" &&
     p.field !== "saveAdjustment" &&
     p.field !== "skillAdjustment" &&
+    p.field !== "abilityAdjustment" &&
     p.field !== "verdict"
   )
     return t("log.correction.other", { id: p.entryId });
@@ -635,6 +657,34 @@ function skillText(c: SkillCheck, t: TFunction): string {
   });
 }
 
+/**
+ * "DEX: d20 14 vs 13 (15 −2 ledge), failure": the ability check as the journal words it (ADR 0028
+ * step 5), its adjustment and reason when set. The verdict is the payload's.
+ */
+function abilityCheckText(c: AbilityCheck, t: TFunction): string {
+  const name = t(`attr.${c.ability}`, { defaultValue: c.ability });
+  if (c.adjustment) {
+    return t(
+      c.success
+        ? "abilityCheck.log.successAdjusted"
+        : "abilityCheck.log.failureAdjusted",
+      {
+        name,
+        die: c.die,
+        roll: c.roll,
+        target: c.target,
+        adjustedTarget: c.adjustedTarget,
+        adjustment: formatSigned(c.adjustment),
+        reason: c.adjustmentReason ? ` ${c.adjustmentReason}` : "",
+      },
+    );
+  }
+  return t(
+    c.success ? "abilityCheck.log.success" : "abilityCheck.log.failure",
+    { name, die: c.die, roll: c.roll, target: c.target },
+  );
+}
+
 /** An HP change logged without a source has no player text: word the kind from its delta. */
 function hpChangeText(e: LogEntry, t: TFunction): string | null {
   if (e.kind !== "hp_change" || e.effectiveSummary) return null;
@@ -677,6 +727,8 @@ export function entryText(
   if (attack) return attackText(attack, t, names);
   const skill = skillCheckPayload(e);
   if (skill) return skillText(skill, t);
+  const ability = abilityCheckPayload(e);
+  if (ability) return abilityCheckText(ability, t);
   const dice = dicePayload(e);
   if (dice) return t("log.dice", { formula: dice.formula, total: dice.total });
   const save = savePayload(e);

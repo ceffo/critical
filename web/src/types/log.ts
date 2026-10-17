@@ -26,6 +26,8 @@ export type LogKind =
   | "long_rest"
   | "save"
   | "skill_check"
+  /** A plain ability check (ADR 0028), adjusted after the roll like a skill check. */
+  | "ability_check"
   | "dice"
   /** One round of exposure to a spell's area (ADR 0008 step 16); on the Bard it carries an HP delta. */
   | "exposure"

@@ -41,8 +41,10 @@ function useHeight(ref: React.RefObject<HTMLDivElement | null>): number {
 /**
  * The Act activity's stage (ADR 0022 step 2.5): the "now" band (the act panel beside the result
  * panel, act : result = minmax(28rem, 1.35fr) | minmax(24rem, 1fr)), then the split handle, then the
- * journal. By default the band takes its content's height up to 60 % of the stage and the journal
- * (at least 14rem) the rest. Dragging the handle sets the journal's height, a click on it
+ * journal. By default the band is as tall as its content, the active tab's or the result panel's
+ * when that one is taller (ADR 0027 step 6.1, no 60 % cap; a result's every-turn controls, such as
+ * the GM's Hit / Miss, stay in view), and the journal (at least 14rem) takes the rest; when the
+ * content is taller than that leaves, the panels scroll inside. Dragging the handle sets the journal's height, a click on it
  * folds the journal into a one-line bar and back (step 5.4). Height and collapsed state are this device's display
  * preferences (stores/settings.ts), never sent to the API.
  */
@@ -116,12 +118,10 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
     });
   };
 
-  // Default: the band at its content's height up to 60 %, the journal the rest (at least 14rem).
+  // Default: the band at its content's height, the journal the rest (at least 14rem).
   // Dragged or collapsed: the journal (or its bar) has its height, the band the rest.
   const band: CSSProperties =
-    collapsed || height !== null
-      ? { flex: "1 1 0" }
-      : { flex: "0 1 auto", maxHeight: "60%" };
+    collapsed || height !== null ? { flex: "1 1 0" } : { flex: "0 1 auto" };
   const journal: CSSProperties = collapsed
     ? { flex: "0 0 auto" }
     : height !== null

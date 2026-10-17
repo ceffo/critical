@@ -250,8 +250,14 @@
     "needsUnknown": "AC unknown",
     "acShort": "AC",
     "sizeShort": "Size",
-    "switchLabel": "Switch to",
     "otherWeapons": "Other weapons",
+    "otherWeapon": "Other weapon",
+    "otherWeaponPlaceholder": "Other weapon…",
+    "modifiers": "Size and situational modifier",
+    "tags": {
+      "large": "Size L",
+      "situational": "Situational {{value}}"
+    },
     "line": {
       "sm": "S/M",
       "l": "L",

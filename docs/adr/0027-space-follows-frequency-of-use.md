@@ -180,6 +180,9 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       active tab's content**, and the journal takes the rest of the stage, at least 14rem (step 2.5).
       Changing tab resizes the band. When the tab's content is taller than the stage minus the
       journal's minimum and the handle, the act panel scrolls inside.
+      *Implementation note (2026-10-17):* a result taller than the tab (an attack against an unknown
+      AC with the GM's Hit / Miss) also sets the band's height, so that every-turn control does not
+      hide under a scroll (step 1.7); the band is the taller of the two, with no cap.
    2. **Weapons does not scroll** at 1440x900 in French with the header at rest.
    3. The split handle is unchanged (ADR 0022 step 5.4): a drag sets the journal's height (and the
       band takes the rest), a click collapses it; both stay per-device preferences.

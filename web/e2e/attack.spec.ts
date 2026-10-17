@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
   attackForm,
@@ -12,6 +12,7 @@ import {
   openWeapons,
   undoEntry,
   expectUndoOn,
+  openTargetModifiers,
 } from "./helpers";
 
 function resultCard(page: Page) {
@@ -35,6 +36,7 @@ test("a melee attack lists every modifier in the result card and the log", async
   await chooseWeapon(page, "Long Sword +2");
   await expect(ammoChips(page)).toHaveCount(0);
   await form.getByLabel("Target AC").fill("5");
+  await openTargetModifiers(page);
   await form.getByRole("radio", { name: "Large" }).click();
   await form.getByLabel("Situational", { exact: true }).fill("2");
   // Typed key by key: every keystroke is saved on the server, spaces included.
@@ -512,6 +514,7 @@ test("the attack form is kept on the server across a reload; switching weapons n
   ).toBeVisible();
   await chooseAmmo(page, "Arrows +2");
   await form.getByLabel("Target AC").fill("-3");
+  await openTargetModifiers(page);
   await form.getByRole("radio", { name: "Large" }).click();
   await form.getByRole("button", { name: "Raise the modifier" }).click();
   await form.getByRole("button", { name: "Raise the modifier" }).click();
@@ -541,6 +544,23 @@ test("the attack form is kept on the server across a reload; switching weapons n
     ammoChips(page).locator('[aria-checked="true"]'),
   ).toHaveAttribute("data-item", "arrows_plus2");
   await expect(form.getByLabel("Target AC")).toHaveValue("-3");
+  // ADR 0027 step 7.2: the set modifiers show as tags on the target bar, the toggle closed.
+  const tags = form.getByTestId("modifier-tag");
+  await expect(tags).toHaveText(["Size L", "Situational +2"]);
+  await expect(tags.last()).toHaveAttribute("title", "cover");
+  // One line: the tags sit beside the AC (same vertical centre).
+  const middle = async (l: Locator) => {
+    const b = (await l.boundingBox())!;
+    return b.y + b.height / 2;
+  };
+  expect(
+    Math.abs(
+      (await middle(tags.first())) -
+        (await middle(form.getByLabel("Target AC"))),
+    ),
+  ).toBeLessThanOrEqual(2);
+  await snap(page, "target-tags");
+  await openTargetModifiers(page);
   await expect(form.getByRole("radio", { name: "Large" })).toHaveAttribute(
     "aria-checked",
     "true",

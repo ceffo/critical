@@ -27,12 +27,16 @@ function form(page: Page) {
   return page.getByTestId("weapon-form");
 }
 
-/** The other weapons' chips (every weapon not in hand). */
+/** Every weapon not in hand: the previous weapon's button and the drop-down's options. */
 async function otherWeapons(page: Page) {
-  return attackForm(page)
-    .getByRole("group", { name: "Other weapons" })
+  const group = attackForm(page).getByRole("group", { name: "Other weapons" });
+  const previous = await group
     .getByRole("button")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-weapon") ?? ""));
+  const listed = await group
+    .locator("option:not([disabled])")
+    .evaluateAll((els) => els.map((e) => e.textContent ?? ""));
+  return [...previous, ...listed];
 }
 
 /** Every weapon the Weapons tab can put in hand: the one held and the others. */

@@ -7,6 +7,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -46,41 +47,63 @@ type DB struct {
 }
 
 // Open connects to the PostgreSQL database at dsn (CRITICAL_DSN, a PostgreSQL connection
-// string or URL) and checks the connection, waiting up to connectWait for a database that is still
-// starting. It runs no migration and writes nothing: those are the startup steps the composition
-// root drives.
+// string or URL) and checks the connection. Every new connection of the pool, this first one
+// included, waits up to connectWait for a database that is still starting. It runs no migration and
+// writes nothing: those are the startup steps the composition root drives.
 func Open(dsn string) (*DB, error) {
-	pool, err := sql.Open("postgres", dsn)
+	connector, err := pq.NewConnector(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open postgres: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), connectWait)
-	defer cancel()
-	if err := waitForDatabase(ctx, pool.PingContext, connectRetryEvery); err != nil {
+	pool := sql.OpenDB(waitingConnector{Connector: connector, wait: connectWait, retryEvery: connectRetryEvery})
+	if err := pool.PingContext(context.Background()); err != nil {
 		_ = pool.Close()
 		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
 	return newDB(pool), nil
 }
 
-// connectWait is how long Open waits for the database to accept a connection, retrying every
+// connectWait is how long a new connection waits for the database to accept it, retrying every
 // connectRetryEvery. The fly cluster stops when idle (ADR 0024 step 2) and the first connection to
 // its Flycast address starts it: until PostgreSQL is up, connections are refused or answered
-// "the database system is starting up". A server booting meanwhile waits instead of exiting; its
-// HTTP listener (and so its health check) comes up once the database answers, and fly keeps waiting
-// for the check during a deploy.
+// "the database system is starting up". A server booting meanwhile waits instead of exiting (its
+// HTTP listener, and so its health check, comes up once the database answers; fly keeps waiting for
+// the check during a deploy), and the first request after the cluster's idle stop waits a few
+// seconds instead of failing.
 const (
-	connectWait       = 90 * time.Second
-	connectRetryEvery = 2 * time.Second
+	connectWait       = 60 * time.Second
+	connectRetryEvery = time.Second
 )
 
-// waitForDatabase calls ping until it succeeds, retrying every retryEvery while the error is one
-// a starting database gives (a network error, SQLSTATE 57P03 cannot_connect_now). Any other
+// waitingConnector is a driver.Connector whose Connect waits for a starting database
+// (waitForDatabase), for at most wait and never beyond the caller's context.
+type waitingConnector struct {
+	driver.Connector
+	wait, retryEvery time.Duration
+}
+
+func (c waitingConnector) Connect(ctx context.Context) (driver.Conn, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.wait)
+	defer cancel()
+	var conn driver.Conn
+	err := waitForDatabase(ctx, func(ctx context.Context) error {
+		var err error
+		conn, err = c.Connector.Connect(ctx)
+		return err
+	}, c.retryEvery)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+// waitForDatabase calls connect until it succeeds, retrying every retryEvery while the error is
+// one a starting database gives (a network error, SQLSTATE 57P03 cannot_connect_now). Any other
 // PostgreSQL error (a wrong password, a missing database) is returned at once: waiting cannot fix
-// it. When ctx ends first, it returns the last ping error.
-func waitForDatabase(ctx context.Context, ping func(context.Context) error, retryEvery time.Duration) error {
+// it. When ctx ends first, it returns the last error.
+func waitForDatabase(ctx context.Context, connect func(context.Context) error, retryEvery time.Duration) error {
 	for attempt := 1; ; attempt++ {
-		err := ping(ctx)
+		err := connect(ctx)
 		if err == nil {
 			return nil
 		}
@@ -91,7 +114,7 @@ func waitForDatabase(ctx context.Context, ping func(context.Context) error, retr
 		if ctx.Err() != nil {
 			return fmt.Errorf("gave up after %d attempts: %w", attempt, err)
 		}
-		slog.Warn("postgres: database not reachable yet, retrying", "attempt", attempt, "error", err)
+		slog.Warn("postgres: database not accepting connections yet, retrying", "attempt", attempt, "error", err)
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("gave up after %d attempts: %w", attempt, err)

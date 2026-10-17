@@ -36,8 +36,8 @@ payment method is the user's decision only.
 stops with no connection and starts on the next one through `tournesol-db.flycast`, so the first
 request after an idle period waits a few seconds for PostgreSQL. Idle means no open connection for an
 hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 5 minutes, so
-quiet apps let it stop, and a server booting while it starts waits for it (up to 90 s) instead of
-exiting (`docs/backend.md`, "Database"). `fly ssh` does not start it:
+quiet apps let it stop, and a server booting or a request arriving while it starts waits for it (up
+to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). `fly ssh` does not start it:
 
 ```bash
 $fly status -a tournesol-db                          # machine state; role "error" only means stopped

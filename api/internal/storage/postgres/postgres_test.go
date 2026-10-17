@@ -254,8 +254,6 @@ func (p *pings) ping(context.Context) error {
 // A database that is still starting (connection refused, then "the database system is starting
 // up") is waited for: the server does not exit on its first failed connection.
 func TestWaitForDatabase_RetriesWhileTheDatabaseStarts(t *testing.T) {
-	refused := &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
-	starting := &pq.Error{Code: cannotConnectNow, Message: "the database system is starting up"}
 	p := &pings{errs: []error{refused, starting}}
 	require.NoError(t, waitForDatabase(context.Background(), p.ping, time.Millisecond))
 	assert.Equal(t, 3, p.calls)
@@ -272,7 +270,6 @@ func TestWaitForDatabase_FailsFastOnAnotherPostgresError(t *testing.T) {
 
 // The wait is bounded: when the context ends, the last error is returned.
 func TestWaitForDatabase_GivesUpWhenTheContextEnds(t *testing.T) {
-	refused := &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &pings{errs: []error{refused, refused, refused, refused}}
 	ping := func(c context.Context) error {
@@ -284,4 +281,84 @@ func TestWaitForDatabase_GivesUpWhenTheContextEnds(t *testing.T) {
 	err := waitForDatabase(ctx, ping, time.Millisecond)
 	require.ErrorIs(t, err, refused)
 	assert.Equal(t, 3, p.calls)
+}
+
+// fakeConn is a driver connection whose Exec succeeds until it is dead, then reports
+// driver.ErrBadConn, as lib/pq does once PostgreSQL has shut the connection (FATAL 57P01, EOF).
+type fakeConn struct{ dead *bool }
+
+func (c fakeConn) Prepare(string) (driver.Stmt, error) { return nil, errors.New("not used") }
+func (c fakeConn) Close() error                        { return nil }
+func (c fakeConn) Begin() (driver.Tx, error)           { return nil, errors.New("not used") }
+
+func (c fakeConn) ExecContext(context.Context, string, []driver.NamedValue) (driver.Result, error) {
+	if *c.dead {
+		return nil, driver.ErrBadConn
+	}
+	return driver.RowsAffected(0), nil
+}
+
+// fakeConnector answers each Connect with the next error of errs (a fresh live connection once
+// they run out) and counts the calls.
+type fakeConnector struct {
+	errs  []error
+	calls int
+}
+
+func (f *fakeConnector) Connect(context.Context) (driver.Conn, error) {
+	f.calls++
+	if len(f.errs) > 0 {
+		err := f.errs[0]
+		f.errs = f.errs[1:]
+		if err != nil {
+			return nil, err
+		}
+	}
+	return fakeConn{dead: new(bool)}, nil
+}
+
+func (f *fakeConnector) Driver() driver.Driver { return nil }
+
+var (
+	refused  = &net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connection refused")}
+	starting = &pq.Error{Code: cannotConnectNow, Message: "the database system is starting up"}
+)
+
+// A server booting while the cluster starts waits for it: its first connection is retried
+// through "connection refused" and "the database system is starting up".
+func TestWaitingConnector_WaitsForAStartingDatabase(t *testing.T) {
+	inner := &fakeConnector{errs: []error{refused, starting}}
+	pool := sql.OpenDB(waitingConnector{Connector: inner, wait: time.Minute, retryEvery: time.Millisecond})
+	t.Cleanup(func() { _ = pool.Close() })
+	require.NoError(t, pool.PingContext(context.Background()))
+	assert.Equal(t, 3, inner.calls)
+}
+
+// The cluster stopped while the pool held a connection: the next statement finds it dead, and the
+// pool opens a new one, which waits for the restarting cluster, instead of failing the request.
+func TestWaitingConnector_ADeadPooledConnectionIsReplacedNotAnError(t *testing.T) {
+	inner := &fakeConnector{}
+	pool := sql.OpenDB(waitingConnector{Connector: inner, wait: time.Minute, retryEvery: time.Millisecond})
+	t.Cleanup(func() { _ = pool.Close() })
+	pool.SetMaxOpenConns(1)
+	conn, err := pool.Conn(context.Background())
+	require.NoError(t, err)
+	var dead *bool
+	require.NoError(t, conn.Raw(func(c any) error { dead = c.(fakeConn).dead; return nil }))
+	require.NoError(t, conn.Close())
+
+	*dead = true
+	inner.errs = []error{refused, starting}
+	_, err = pool.ExecContext(context.Background(), "SELECT 1")
+	require.NoError(t, err)
+	assert.Equal(t, 4, inner.calls, "one first connection, then refused, starting, connected")
+}
+
+// Waiting is bounded by the connector's wait even when the caller's context has no deadline.
+func TestWaitingConnector_GivesUpAfterItsWait(t *testing.T) {
+	inner := &fakeConnector{errs: []error{refused, refused, refused, refused, refused, refused}}
+	c := waitingConnector{Connector: inner, wait: 20 * time.Millisecond, retryEvery: 5 * time.Millisecond}
+	_, err := c.Connect(context.Background())
+	require.ErrorIs(t, err, refused)
+	assert.Less(t, inner.calls, 7)
 }

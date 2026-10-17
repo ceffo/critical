@@ -85,6 +85,56 @@ async function expectNoScroll(column: Locator, what: string) {
   expect(m.sh, `${what} scrolls`).toBeLessThanOrEqual(m.ch);
 }
 
+/**
+ * ADR 0027 step 5 on the character card, in French at 1440x900 and 1707x1300: the card is
+ * `clamp(280px, 21vw, 384px)` wide, the saves heading and every save row are one line, the HP
+ * change's amount and buttons share one line and the source's placeholder fits its field.
+ */
+async function expectCharacterCardLines(page: Page, where: string) {
+  const character = page.getByTestId("character");
+  const vw = page.viewportSize()!.width;
+  expect(
+    Math.round((await character.boundingBox())!.width),
+    `card width, ${where}`,
+  ).toBe(Math.round(Math.min(384, Math.max(280, vw * 0.21))));
+  const heading = character.getByRole("heading", {
+    name: "Jets de sauvegarde",
+  });
+  expect(
+    (await heading.boundingBox())!.height,
+    `saves heading on one line, ${where}`,
+  ).toBeLessThanOrEqual(17);
+  for (const row of await character.getByTestId("save-row").all())
+    expect(
+      (await row.boundingBox())!.height,
+      `${await row.getAttribute("data-save")} on one line, ${where}`,
+    ).toBeLessThanOrEqual(29);
+  const hp = character.getByRole("group", { name: "Modifier les PV" });
+  const amount = (await hp.getByLabel("Montant").boundingBox())!;
+  for (const name of ["Dégâts", "Soins"]) {
+    const b = (await hp.getByRole("button", { name }).boundingBox())!;
+    expect(
+      Math.abs(b.y - amount.y),
+      `${name} beside the amount, ${where}`,
+    ).toBeLessThanOrEqual(1);
+  }
+  const placeholder = await hp.getByLabel("Source").evaluate((el) => {
+    const input = el as HTMLInputElement;
+    const style = getComputedStyle(input);
+    const ctx = document.createElement("canvas").getContext("2d")!;
+    ctx.font = style.font;
+    const room =
+      input.clientWidth -
+      parseFloat(style.paddingLeft) -
+      parseFloat(style.paddingRight);
+    return { text: ctx.measureText(input.placeholder).width, room };
+  });
+  expect(
+    placeholder.text,
+    `source placeholder fits, ${where}`,
+  ).toBeLessThanOrEqual(placeholder.room);
+}
+
 // ADR 0022 step 1 (layout viewports). 1707x1300 is a third of the user's 5120x1440 table screen.
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -816,6 +866,17 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expectNoClippedText(page.locator("body"), `screen, ${where}`);
     await expectNoClippedText(character, `character card, ${where}`);
     await expectWholeWords(character, `character card, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await expectCharacterCardLines(page, where);
+    if (vp.width === 1440) {
+      // ADR 0022 step 2.8 in French (ADR 0027 step 5.5): the name to the fifth save, no scroll.
+      await expectNoScroll(character, `character card, ${where}`);
+      await expectInside(
+        character.getByTestId("save-row").last(),
+        character,
+        `fifth save, ${where}`,
+      );
+    }
     await rail.nth(0).click();
     await expectNoClippedText(stage, `act, ${where}`);
     await rail.nth(1).click();

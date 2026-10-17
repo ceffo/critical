@@ -1,0 +1,97 @@
+<!doctype html>
+<!--
+  Side-by-side viewer for the mock-up round (README.md): any option beside today on the same screen,
+  mode and viewport, or one at a time (Space flips). Reads shots/ only; no build, no dependencies.
+  Open it from the file system or any static server.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Critical! · mock-up round</title>
+    <style>
+      body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #1d1d22; color: #eee; }
+      header { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px 20px;
+        align-items: center; padding: 10px 16px; background: #2a2a31; }
+      fieldset { border: 0; margin: 0; padding: 0; display: flex; gap: 4px; align-items: center; }
+      legend { float: left; margin-right: 6px; color: #aaa; }
+      button { font: inherit; color: inherit; background: #3a3a44; border: 1px solid #555; border-radius: 6px;
+        padding: 3px 10px; cursor: pointer; }
+      button[aria-pressed="true"] { background: #e8e8ee; color: #111; border-color: #e8e8ee; }
+      main { display: grid; gap: 12px; padding: 12px 16px; }
+      main.pair { grid-template-columns: 1fr 1fr; }
+      figure { margin: 0; }
+      figcaption { margin-bottom: 4px; color: #bbb; }
+      img { width: 100%; display: block; border-radius: 6px; }
+      .hint { color: #999; margin-left: auto; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <fieldset id="option"><legend>Option</legend></fieldset>
+      <fieldset id="screen"><legend>Screen</legend></fieldset>
+      <fieldset id="mode"><legend>Mode</legend></fieldset>
+      <fieldset id="size"><legend>Viewport</legend></fieldset>
+      <fieldset id="view"><legend>View</legend></fieldset>
+      <span class="hint">← → option · Space flips (single view)</span>
+    </header>
+    <main id="out"></main>
+    <script>
+      const OPTIONS = [
+        { id: "o1-ladder", name: "1 · Contrast ladder", dark: "arcane-dark", light: "arcane-light" },
+        { id: "o12-neutral-chrome", name: "1 + 2 · Neutral chrome", dark: "arcane-dark", light: "arcane-light" },
+        { id: "o13-raised-stage", name: "1 + 3 · Raised stage", dark: "arcane-dark", light: "arcane-light" },
+        { id: "o4-bespoke", name: "4 · Deep / Parchment", dark: "deep-dark", light: "parchment-light" },
+      ];
+      const SCREENS = [["act-weapons", "Act · Weapons"], ["lookup", "Lookup"], ["inventory", "Inventory"], ["themes", "Theme set"]];
+      const MODES = [["dark", "Dark"], ["light", "Light"]];
+      const SIZES = [["1707x1300", "1707x1300"], ["1440x900", "1440x900"]];
+      const VIEWS = [["pair", "Beside today"], ["single", "One at a time"]];
+      const state = { option: 0, screen: "act-weapons", mode: "dark", size: "1440x900", view: "pair", flipped: false };
+
+      const shot = (id, theme) =>
+        state.screen === "themes"
+          ? `shots/${id}--themes.webp`
+          : `shots/${id}--${state.screen}--${theme}-${state.size}.webp`;
+
+      function group(el, items, key) {
+        for (const [value, label] of items) {
+          const b = document.createElement("button");
+          b.textContent = label;
+          b.onclick = () => { state[key] = value; state.flipped = false; render(); };
+          b.dataset.value = value;
+          el.append(b);
+        }
+      }
+      group(document.getElementById("option"), OPTIONS.map((o, i) => [i, o.name]), "option");
+      group(document.getElementById("screen"), SCREENS, "screen");
+      group(document.getElementById("mode"), MODES, "mode");
+      group(document.getElementById("size"), SIZES, "size");
+      group(document.getElementById("view"), VIEWS, "view");
+
+      function figure(caption, src) {
+        return `<figure><figcaption>${caption}</figcaption><img src="${src}" alt="${caption}"></figure>`;
+      }
+
+      function render() {
+        for (const fs of document.querySelectorAll("fieldset"))
+          for (const b of fs.querySelectorAll("button"))
+            b.setAttribute("aria-pressed", String(b.dataset.value === String(state[fs.id])));
+        const o = OPTIONS[state.option];
+        const today = figure(`Today · Arcane ${state.mode}`, shot("today", `arcane-${state.mode}`));
+        const option = figure(`${o.name} · ${o[state.mode]}`, shot(o.id, o[state.mode]));
+        const out = document.getElementById("out");
+        out.className = state.view;
+        out.innerHTML = state.view === "pair" ? today + option : state.flipped ? today : option;
+      }
+
+      addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") state.option = (state.option + 1) % OPTIONS.length;
+        else if (e.key === "ArrowLeft") state.option = (state.option + OPTIONS.length - 1) % OPTIONS.length;
+        else if (e.key === " ") { state.flipped = !state.flipped; e.preventDefault(); }
+        else return;
+        render();
+      });
+      render();
+    </script>
+  </body>
+</html>

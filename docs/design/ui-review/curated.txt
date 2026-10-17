@@ -1,0 +1,49 @@
+# Curated UI-review screenshots (copied by `just ui-shots` into docs/design/ui-review/shots/ as
+# <theme>--<screen>-<WxH>.png). One path per line, relative to web/e2e-results/ui-review/.
+# The full capture (about 230 files) stays in that gitignored directory; rerun `just ui-shots`.
+
+# Arcane dark, the default: the Act stage at both viewports, then every panel and state at 1440x900
+dark-arcane/act-weapons-1707x1300.png
+dark-arcane/act-weapons-1440x900.png
+dark-arcane/act-weapons-bow-1440x900.png
+dark-arcane/act-weapons-crit-table-1440x900.png
+dark-arcane/act-spells-1440x900.png
+dark-arcane/act-spells-cast-1440x900.png
+dark-arcane/act-items-1440x900.png
+dark-arcane/act-skills-1440x900.png
+dark-arcane/act-save-result-1440x900.png
+dark-arcane/act-journal-selected-1440x900.png
+dark-arcane/act-journal-collapsed-1440x900.png
+dark-arcane/act-hp-low-1440x900.png
+dark-arcane/header-effects-expanded-1440x900.png
+dark-arcane/header-add-effect-1440x900.png
+dark-arcane/header-turn-menu-1440x900.png
+dark-arcane/character-details-1440x900.png
+dark-arcane/lookup-1707x1300.png
+dark-arcane/lookup-long-1440x900.png
+dark-arcane/inventory-1707x1300.png
+dark-arcane/inventory-item-form-1440x900.png
+dark-arcane/experience-1707x1300.png
+dark-arcane/settings-1440x900.png
+
+# Arcane light
+light-arcane/act-weapons-1440x900.png
+light-arcane/act-spells-cast-1440x900.png
+light-arcane/lookup-long-1440x900.png
+light-arcane/experience-1440x900.png
+
+# French (longer text)
+dark-arcane-fr/act-weapons-1440x900.png
+dark-arcane-fr/lookup-1707x1300.png
+
+# Every other ambiance, the Act stage after an attack, dark and light
+dark-grove/act-weapons-1440x900.png
+dark-blood/act-weapons-1440x900.png
+dark-ocean/act-weapons-1440x900.png
+dark-amber/act-weapons-1440x900.png
+dark-obsidian/act-weapons-1440x900.png
+light-grove/act-weapons-1440x900.png
+light-blood/act-weapons-1440x900.png
+light-ocean/act-weapons-1440x900.png
+light-amber/act-weapons-1440x900.png
+light-obsidian/act-weapons-1440x900.png

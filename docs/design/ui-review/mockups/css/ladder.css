@@ -1,0 +1,158 @@
+/*
+ * Direction 1 · Contrast ladder: the component rules (the tokens are in web/ui-review/mockup-tokens.ts).
+ * Painted over the running app by web/ui-review/mockups.spec.ts, after the app's own styles; the
+ * app's utilities sit in Tailwind's cascade layers, so these unlayered rules win without !important.
+ * Selectors use test ids, roles and structure, never translated text, so the French pass sees the
+ * same design. Each block names the review finding it answers (docs/design/ui-review/README.md).
+ */
+
+/* One raised step, not ten opacities ("Consistency inventory": raised step). */
+.bg-neu-900\/60,
+.bg-neu-900\/50,
+.bg-neu-900\/40 {
+  background-color: var(--neu-900);
+}
+
+/* Fields sit on the card, with a visible edge: inputs stop being holes (theme audit). */
+input.bg-background,
+select.bg-background,
+textarea.bg-background,
+[role="radiogroup"].bg-background {
+  background-color: var(--surface);
+}
+
+/* Headings: one system, the section label (Journal, Items, Weapons, Effects were `text-title`). */
+[data-testid="journal-slot"] h2.text-title,
+main section.rounded-xl > div:first-child > h2.text-title,
+[data-testid="effects-track"] span.text-title {
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+/* The inventory cards are cards like every other zone (they had no outline). */
+main section.rounded-xl.bg-card {
+  border: 1px solid var(--border);
+}
+
+/* --- Header ------------------------------------------------------------------------------------ */
+/* The brand mark at a 2 px-on-28 stroke reads as a mark, not a hairline. */
+[data-testid="brand-icon"] .stroke-tint {
+  stroke-width: 2.6;
+}
+/* Initiative is a number, not a chip (the chip meant three things). */
+[data-testid="initiative-value"] {
+  background: none;
+  padding: 0;
+  color: var(--ink);
+  font-size: var(--text-key);
+  line-height: var(--text-key--line-height);
+}
+/* The last result: its value chip in the verdict colour, the line in full ink. */
+[data-testid="last-result-chip"][data-mock-verdict="good"] {
+  background-color: var(--success);
+  color: var(--on-accent);
+}
+[data-testid="last-result-chip"][data-mock-verdict="bad"] {
+  background-color: var(--danger);
+  color: var(--on-accent);
+}
+
+/* --- Character card ---------------------------------------------------------------------------- */
+/* Health colours mean health in every theme: green above half, the app's own warning/danger below. */
+[data-testid="hp-fill"].bg-tint {
+  background-color: var(--success);
+}
+/* Saving throws are buttons: filled rows, the target number in key weight. */
+[data-testid="save-row"] {
+  border-color: transparent;
+  background-color: var(--neu-900);
+}
+[data-testid="save-row"]:hover {
+  background-color: var(--neu-800);
+}
+[data-testid="save-row"] > span > .text-muted-foreground:not([data-testid="save-last"] *) {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* --- Selection: one mark, a 3 px tint bar on the selected tone ---------------------------------- */
+nav[data-testid="rail"] button.bg-amb-900,
+[data-testid="spell-row"].bg-amb-900,
+li.bg-amb-900 {
+  background-color: var(--amb-800);
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--tint);
+}
+li.bg-amb-900::before {
+  display: none;
+}
+/* A chosen chip (segmented thumbs, the chosen die) is tint-outlined on the selected tone. */
+.bg-amb-900.ring-amb-700,
+[role="radio"].bg-amb-800 {
+  background-color: var(--amb-800);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--tint);
+}
+
+/* --- Act · Weapons ----------------------------------------------------------------------------- */
+/* The weapon in hand: the selected tone and a 2 px tint outline (it was a 1.1:1 tint). */
+section:has(> div > [data-testid="weapon-in-hand"]) {
+  border: 2px solid var(--tint);
+  background-color: var(--amb-800);
+}
+/* "needs 6 vs AC 5": the most useful number in the tab, at full strength. */
+[data-testid="attack-needs"] {
+  opacity: 1;
+}
+/* Neutral chips are filled: one chip family. */
+[data-testid="other-weapons"] button,
+[data-testid="dice-footer"] [data-testid^="die-"].border-border {
+  border-color: transparent;
+  background-color: var(--neu-900);
+}
+[data-testid="other-weapons"] button .text-muted-foreground {
+  color: var(--ink);
+  opacity: 0.8;
+}
+
+/* --- Result card ------------------------------------------------------------------------------- */
+/* "Latest" is marked, not hinted: a 2 px tint outline. */
+[data-testid="now-band"] > section:last-child {
+  border: 2px solid var(--tint);
+}
+/* The verdict is a filled pill. */
+[data-testid="verdict"] {
+  border-radius: 9999px;
+  padding: 0.125rem 0.75rem;
+  color: var(--on-accent);
+}
+[data-testid="verdict"].text-success {
+  background-color: var(--success);
+}
+[data-testid="verdict"].text-danger {
+  background-color: var(--danger);
+}
+
+/* --- Journal ----------------------------------------------------------------------------------- */
+/* Roll totals in ink; gold is for crits and maxima (the result card's code), not every roll. */
+[data-testid="log-value"].text-highlight {
+  color: var(--ink);
+}
+/* Undone is history, not an alarm: muted tag, no red. */
+[data-testid="log-select"] .text-label.text-danger {
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+/* --- Inventory --------------------------------------------------------------------------------- */
+/* The bonus badge and the dice chip join the neutral chip family. */
+[data-testid="item-bonus"] {
+  background-color: var(--neu-800);
+}
+[data-testid="item-dice"] {
+  color: var(--ink);
+  background-color: var(--neu-800);
+  --tw-ring-color: transparent;
+}

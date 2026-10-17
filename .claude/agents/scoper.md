@@ -27,7 +27,8 @@ never reword their intent), the **mode**, and optional context (related items or
 - `mode: interactive` (the user asked to file work): you may ask the user questions.
 - `mode: autonomous` (the supervisor found work while running): don't hold the pipeline hostage.
   File what is clear. Anything that genuinely needs a human decision becomes an item carrying the
-  tracker's "needs-info" label with the questions listed; say so in the report.
+  tracker's "needs-info" label and a "## Questions" section listing each question with the default
+  applied meanwhile (the supervisor's `pending-questions.sh` reads that section); say so in the report.
 Whatever the mode, first decide whether the input is **sufficient**: a clear outcome and how success
 is checked. If not, ask (interactive) or file `needs-info` (autonomous). Don't invent requirements.
 

@@ -404,7 +404,17 @@ Without herdr there is no successor to start: update the ledger and tell the use
 ## Reporting to the user
 
 End **every** reply with all pending questions to the user, restated in full and numbered, each
-with the default you apply meanwhile; never "still open, see above".
+with the default you apply meanwhile; never "still open, see above". **The list comes from
+`.claude/scripts/pending-questions.sh`, never from memory**: it prints every open tracker item
+labelled `needs-info` or of type question (with its "Questions" section) and the ledger's own
+pending questions. Run it before each reply that ends a turn; restate every line it prints in plain
+words (no item ids). Write "No questions pending" only when it prints nothing. An item waiting on
+the user is a question, whatever you call it ("held", "later", "parked", "needs-info"): when the
+user defers something ("later", "until we figure out X"), label it `needs-info` and give it a
+"## Questions" note (`br update <id> --append-notes`) with the default applied meanwhile, so it
+keeps being asked. (2026-10-17: a status report listed four items waiting on the user, then said
+"No questions pending"; the user: "there can't be issues waiting for information and you reporting
+that there are no questions for me".)
 
 You groom; the user isn't your tool. Settle the design choices a developer or reviewer raises
 yourself, against the ADRs, the workflow doc's hard rules and the user's stated intent, and report

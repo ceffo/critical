@@ -210,6 +210,42 @@ check-fly:
     if [ ! -x "$fly" ]; then echo "flyctl not installed: skipping 'fly config validate'"; exit 0; fi
     for f in deploy/fly.*.toml; do "$fly" config validate -c "$f"; done
 
+# Operator only (needs fly credentials and the rulebooks clone; never part of validate or CI). Build the
+# production image of the clean HEAD with the REAL catalogue (`just catalogue`) and push that one build
+# to each app's repository in the private fly registry, as registry.fly.io/<app>:<commit sha>. Every
+# app gets the same digest (ADR 0024 step 1.5). The catalogue only enters the image and the private
+# registry (step 7). Deploy with `fly deploy -c deploy/fly.<env>.toml --image <ref>` (docs/deploy.md).
+release-image +apps: catalogue
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -z "$(git status --porcelain)" ] || { echo "release-image: the work tree is not clean; commit first" >&2; exit 1; }
+    fly=$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)
+    commit="$(git rev-parse HEAD)"
+    local="critical:release-$commit"
+    docker build -t "$local" --build-context catalogue=.catalogue --build-arg COMMIT="$commit" .
+    "$fly" auth docker
+    for app in {{apps}}; do
+        ref="registry.fly.io/$app:$commit"
+        docker tag "$local" "$ref"
+        docker push "$ref" | tail -n1
+    done
+
+# Check that a fly app has no public IP and has a private Flycast address (ADR 0024 step 8). Read-only.
+fly-private app:
+    scripts/fly-private-check.sh {{app}}
+
+# Smoke-check a deployed fly app through `fly proxy`: /api/health 200 with the commit, and the web app
+# (ADR 0024 steps 3.3, 10.5). Read-only. Default commit: HEAD.
+fly-smoke app commit=`git rev-parse HEAD`:
+    scripts/fly-smoke.sh {{app}} {{commit}}
+
+# Operator only (fly credentials), ADR 0024 steps 2.3, 2.4, 9.1 and docs/deploy.md. A rerun changes no
+# existing password; `--rotate` does and applies the secret at once (a short outage of the app's new
+# connections). E.g. `just fly-db-provision tournesol-db staging prod`.
+# Create critical's database users on the fly PostgreSQL cluster and set each new user's CRITICAL_DSN secret
+fly-db-provision +args:
+    scripts/fly-db-provision.sh {{args}}
+
 # --- Production image (ADR 0024 step 1) ---
 
 # Build the production image with the FIXTURE catalogue (api/testdata), tagged critical:local, and

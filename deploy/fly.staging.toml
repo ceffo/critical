@@ -1,26 +1,22 @@
-# Staging app (ADR 0024 steps 2, 3, 8, 9.1). Used as `fly deploy -c deploy/fly.staging.toml --image <ref>`:
+# Staging app (ADR 0024 steps 2, 3, 5, 8). Used as `fly deploy -c deploy/fly.staging.toml --image <ref>`:
 # the image is never named here, the release workflow passes it. No public IP is allocated (step 8.2):
 # the first deploy uses --no-public-ips. Runbook: docs/deploy.md. Checked by `just check-fly`.
 app = "critical-staging"
-primary_region = "cdg"
+primary_region = "yyz"
 
-# Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ; CRITICAL_DSN aside:
-# the image names no database, this SQLite one goes with the volume when the fly PostgreSQL config lands.
+# Same values as the image's ENV (Dockerfile), `just check-fly` fails when they differ. No CRITICAL_DSN:
+# the app has no volume, its data lives in the fly PostgreSQL cluster (tournesol-db, shared), and its
+# DSN is the fly secret CRITICAL_DSN (ADR 0024 steps 2.3, 2.4 and 5.1; docs/deploy.md).
 [env]
   CRITICAL_ADDR = ":8080"
-  CRITICAL_DSN = "/data/critical.db"
   CRITICAL_SEEDS_DIR = "/app/seeds"
   CRITICAL_CATALOGUE = "/app/catalogue.json"
   CRITICAL_WEB_DIR = "/app/web"
 
-# One machine owns the volume, and so the SQLite database (ADR 0024 step 5): no blue-green.
+# One machine (ADR 0024 steps 2.1, 5.3), replaced in place on deploy; it stops when idle (below). The
+# first deploy passes --ha=false so fly creates one machine, not two (docs/deploy.md).
 [deploy]
-  strategy = "immediate"
-
-[[mounts]]
-  source = "data"
-  destination = "/data"
-  snapshot_retention = 7
+  strategy = "rolling"
 
 [http_service]
   internal_port = 8080

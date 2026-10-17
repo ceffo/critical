@@ -2,7 +2,7 @@
 # The version of a staging release (ADR 0024 step 3, docs/deploy.md "Release version"): computed from the
 # conventional-commit titles of ALL main commits since the last version, before the image is built.
 #
-#   scripts/release-version.sh bump <last tag vX.Y.Z> [--force]   < commits
+#   scripts/release-version.sh bump <last tag vX.Y.Z> [--force] [--major]   < commits
 #   scripts/release-version.sh next <commit> [--force]
 #   scripts/release-version.sh resolve <X.Y.Z or vX.Y.Z>
 #
@@ -17,6 +17,14 @@
 # level and its PR does not carry the label `no-release`; otherwise none, with the reason. --force (the
 # manual run) releases anyway, at least a patch.
 #
+# A major is made by hand (`just major`, docs/deploy.md "A major version"): it moves the marker tag
+# `next-major` to main's head. bump --major (next passes it when the marker is pending) turns the version of a
+# release that happens into the next major, vN+1.0.0, whatever the level of the range. It never makes a
+# release by itself: a range that makes none (docs/test/chore only, no-release) stays without one, and the
+# marker waits for the next release. The marker is pending when it names a commit that is after the last
+# version tag (a descendant of it, not the same commit) and that is reachable from the commit being released;
+# one at or before the last version, or on a later commit, is ignored, so it never needs deleting.
+#
 # next gathers that input for the first-parent commits after the highest vX.Y.Z tag reachable from
 # <commit> (labels of each commit's merged PR from the GitHub API, `gh` with GH_TOKEN and
 # GITHUB_REPOSITORY), then runs bump. It needs the history and the tags (fetch-depth 0). It refuses when
@@ -27,11 +35,11 @@
 # version (an unknown version).
 #
 # Outputs (bump and next) go to $GITHUB_OUTPUT (default stdout), one key=value per line: release=true|false,
-# bump=minor|patch|none, last=vX.Y.Z and, for a release, version=X.Y.Z. Notices are printed as GitHub
+# bump=major|minor|patch|none, last=vX.Y.Z and, for a release, version=X.Y.Z. Notices are printed as GitHub
 # workflow commands. Prints no secret.
 set -euo pipefail
 
-usage="usage: release-version.sh bump <vX.Y.Z> [--force] < commits | next <commit> [--force] | resolve <version>"
+usage="usage: release-version.sh bump <vX.Y.Z> [--force] [--major] < commits | next <commit> [--force] | resolve <version>"
 semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 out="${GITHUB_OUTPUT:-/dev/stdout}"
 die() { echo "release-version: $*" >&2; exit 1; }
@@ -46,9 +54,9 @@ level() {
     esac
 }
 
-# bump <last tag> <force 0|1> < commits: prints the notices and the key=value outputs.
+# bump <last tag> <force 0|1> <major pending 0|1> < commits: prints the notices and the key=value outputs.
 bump() {
-    local last="$1" force="$2"
+    local last="$1" force="$2" pending="${3:-0}"
     [[ "$last" =~ $semver ]] || die "the last version '$last' is not vMAJOR.MINOR.PATCH"
     local major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}"
     local top=0 releasing=0 count=0 labelled=()
@@ -93,6 +101,9 @@ bump() {
         fi
         if [ "$force" != 1 ]; then
             echo "::notice title=No release::no release: $reason. Nothing is built, deployed or tagged."
+            if [ "$pending" = 1 ]; then
+                echo "::notice title=Major version::the next major ($((major + 1)).0.0) is still pending: it waits for the next release"
+            fi
             printf 'release=false\nbump=none\nlast=%s\n' "$last"
             return
         fi
@@ -101,7 +112,10 @@ bump() {
     fi
 
     local kind version
-    if [ "$top" = 2 ]; then
+    if [ "$pending" = 1 ]; then
+        kind=major version="$((major + 1)).0.0"
+        echo "::notice title=Major version::$version is the major asked by hand (next-major), not the computed bump"
+    elif [ "$top" = 2 ]; then
         kind=minor version="$major.$((minor + 1)).0"
     else
         kind=patch version="$major.$minor.$((patch + 1))"
@@ -136,17 +150,36 @@ commits() {
     done
 }
 
-force_flag() { [ "${1:-}" = --force ] && echo 1 || echo 0; }
+# has_flag <flag> <args...>: 1 when the flag is among the args, else 0.
+has_flag() { local f="$1"; shift; local a; for a in "$@"; do [ "$a" = "$f" ] && { echo 1; return; }; done; echo 0; }
+# only_flags <allowed flags, space-separated> <args...>: fails on any other arg.
+only_flags() { local ok=" $1 "; shift; local a; for a in "$@"; do [[ "$ok" == *" $a "* ]] || return 1; done; }
+
+# marker_pending <last tag> <commit>: 1 when the next-major marker is after the last version and reachable
+# from the commit (see the header), else 0.
+marker_pending() {
+    local last="$1" commit="$2" marker lastc
+    marker="$(git rev-parse -q --verify "refs/tags/next-major^{commit}")" || { echo 0; return; }
+    lastc="$(git rev-parse "$last^{commit}")"
+    if [ "$marker" != "$lastc" ] && git merge-base --is-ancestor "$lastc" "$marker" \
+        && git merge-base --is-ancestor "$marker" "$commit"; then
+        echo 1
+    else
+        echo 0
+    fi
+}
 
 cmd="${1:-}"
 case "$cmd" in
     bump)
-        [ $# -ge 2 ] && [ $# -le 3 ] && { [ $# = 2 ] || [ "$3" = --force ]; } || die "$usage"
-        result="$(bump "$2" "$(force_flag "${3:-}")")"
+        [ $# -ge 2 ] || die "$usage"
+        only_flags "--force --major" "${@:3}" || die "$usage"
+        result="$(bump "$2" "$(has_flag --force "${@:3}")" "$(has_flag --major "${@:3}")")"
         emit "$result"
         ;;
     next)
         [ $# -ge 2 ] && [ $# -le 3 ] && { [ $# = 2 ] || [ "$3" = --force ]; } || die "$usage"
+        force="$(has_flag --force "${@:3}")"
         commit="$(git rev-parse -q --verify "$2^{commit}")" || die "unknown commit '$2'"
         last="$(git tag --merged "$commit" -l 'v*' | grep -E "$semver" | sort -V | tail -n 1 || true)"
         [ -n "$last" ] || die "no vMAJOR.MINOR.PATCH tag before $commit: the first version is tagged by hand"
@@ -154,7 +187,8 @@ case "$cmd" in
         git merge-base --is-ancestor "$highest^{commit}" "$commit" \
             || die "a newer release exists: $highest, on $(git rev-parse "$highest^{commit}"), is not before $commit, so nothing is released from it (an older run re-run? run the release on main's head instead)"
         input="$(commits "$last" "$commit")"
-        result="$(bump "$last" "$(force_flag "${3:-}")" <<<"$input")"
+        pending="$(marker_pending "$last" "$commit")"
+        result="$(bump "$last" "$force" "$pending" <<<"$input")"
         # The highest tag is reachable, so it is $last and the version (above it) is not a tag yet.
         emit "$result"
         ;;

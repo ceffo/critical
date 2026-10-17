@@ -56,7 +56,9 @@ User steps left:
 5. **The tag rulesets for CI-made versions** (ADR 0024 step 10.2, "GitHub" below): rerun
    `scripts/github-tag-ruleset.sh` (admin) **before the first release run of the versioning change**, so the
    release job may create `v*` tags. Until then the run deploys staging and then fails at "Tag the version"
-   (the version is not tagged; the next release computes it again).
+   (the version is not tagged; the next release computes it again). The same rerun creates the ruleset of the
+   `next-major` marker (`just major`, "A major version"); until it runs, anyone with write access can push that
+   marker.
 6. **Production deployable from main** (ADR 0024 step 10.2, "GitHub" below): once the promotion on demand is
    on main, `scripts/github-environments.sh --no-tokens` (admin) moves `production`'s rule from the tags `v*`
    to the branch `main`. Until then every Promote run fails at the `promote to production` job, nothing done.
@@ -322,24 +324,26 @@ environment accepts main only.
 **Who may create a `v*` tag.** The tags name the versions Promote resolves, so a tag on a commit that is not
 on main, or that staging never ran, must not appear as a version: Promote's guards (main's scripts) refuse
 both, and two tag rulesets keep the tags themselves trustworthy (a bypass actor bypasses every rule of its
-ruleset, hence two):
+ruleset, hence two); a third covers the marker tag of "A major version":
 
 | Ruleset | Rules on `refs/tags/v*` | Bypass |
 |---|---|---|
 | `release tags` | update, deletion | Repository admin |
 | `release tag creation` | creation | Repository admin, the GitHub Actions app (`Integration` 15368: the workflow token of the release job) |
+| `next-major marker` | creation, update, deletion on `refs/tags/next-major` (not a `v*` tag) | Repository admin, the GitHub Actions app (the Major workflow's token) |
 
 CI is the only maker of version tags (the release job, after a passed staging deploy, "Release version"); a
 human never makes one (`just release` is gone). The workflow may create a `v*` tag, never move or delete one.
 
 ```bash
-scripts/github-tag-ruleset.sh --dry-run   # prints both rulesets
+scripts/github-tag-ruleset.sh --dry-run   # prints the rulesets
 scripts/github-tag-ruleset.sh             # creates them, or replaces them (found by name); admin rights
 ```
 
 `release tags` was applied 2026-10-17 (ruleset 25291040) with creation in it and the admin bypass only; the
-rerun of user step 5 moves creation into `release tag creation`. Check: Settings > Rules > Rulesets shows
-both, active, target tags `refs/tags/v*`, with the rules and bypasses above; a collaborator with write access
+rerun of user step 5 moves creation into `release tag creation` and adds `next-major marker`. Check:
+Settings > Rules > Rulesets shows the three, active, target tags (`refs/tags/v*`, `refs/tags/next-major`), with
+the rules and bypasses above; a collaborator with write access
 pushing a `v*` tag gets "push declined due to repository rule violations".
 
 What the GitHub Actions bypass also allows: any workflow of this repository whose token has `contents:
@@ -430,8 +434,10 @@ the conventional commits, 2026-10-17)"), run first by the release job:
 - **Level of a commit**, from its title `type(scope)!: description`: `feat` minor; `docs`, `test`, `chore`
   none; any other type (`fix`, `refactor`, `perf`, `ci`, `build`, …) and a title not in that format patch.
   A breaking change (`!` after the type, or `BREAKING CHANGE` in the title or as a footer in the body) is a
-  **minor**, never a major, and the run prints a notice "Major version?": majors are made by hand.
-- **Next version**: the highest level of the range (minor: `X.(Y+1).0`; patch: `X.Y.(Z+1)`).
+  **minor**, never a major, and the run prints a notice "Major version?": majors are made by hand (`just
+  major`, "A major version" below), never automatically.
+- **Next version**: the highest level of the range (minor: `X.(Y+1).0`; patch: `X.Y.(Z+1)`), or `(X+1).0.0`
+  when the `next-major` marker is pending ("A major version").
 - **No release** when no commit of the range has a level outside the PRs labelled **`no-release`** (the
   label of the merged PR whose merge commit it is, read from the GitHub API): the notice says why ("docs/test/
   chore only since vX.Y.Z", "no-release label on PR #n", "no commit since vX.Y.Z"). A labelled `feat` still
@@ -455,6 +461,42 @@ the conventional commits, 2026-10-17)"), run first by the release job:
   type, breaking, docs/test/chore only, the label, a mixed range, a skipped `feat` earlier in the range,
   `--force`, the first run after `v0.1.0`), the range and the labels on a fixture repository with `gh`
   stubbed, and the tag's API calls.
+
+### A major version
+
+`just major` (user decision 2026-10-17: _"major is manual"_; ADR 0024 step 3, "Amendment (a manual major,
+2026-10-17)") makes the next staging release `vN+1.0.0` instead of the computed bump. On `0.x` the first major
+is `1.0.0`. Repository admins only.
+
+- **How.** `just major` runs `.github/workflows/major.yml` from `main` (`gh workflow run`) and prints what the
+  next release will be. The workflow checks first that the user who started it and the one who re-ran it are
+  admins (`scripts/require-admin.sh`, the same check as Promote), then `scripts/next-major.sh mark` moves the
+  marker tag **`next-major`** to main's head through the GitHub API with the workflow's own token. It builds,
+  deploys and tags nothing, and uses no secret or environment. A dispatch from another ref fails saying so.
+- **When it applies.** The release job (checkout with every tag) reads the marker while computing the version
+  (`scripts/release-version.sh next`): the marker is **pending** when it names a commit that is after the last
+  `vX.Y.Z` tag (a descendant of it, not the same commit) and reachable from the commit being released. Then
+  the release that happens is `(X+1).0.0`, whatever the level of the range. A range that makes no release
+  (docs/test/chore only, `no-release`) still makes none: the notice says the major is pending, and the marker
+  waits for the next release. A manual Release run with no input (it releases anyway) takes it too.
+- **Only the next release.** Once the major is tagged, the marker is at or before the last version tag, so it
+  is ignored: it never needs deleting. A marker on a later commit than the one being released (set while an
+  older run was queued) is left for the release of that later commit. Running `just major` again before the
+  release just moves the marker to the new head.
+- **Refused.** `mark` fails when main's head is the last version's own commit (nothing has landed: the marker
+  would be ignored; run it again after a commit) or when a newer release exists.
+- **Who may write the marker.** `next-major` is not a `v*` tag, so the `v*` rulesets do not cover it; the
+  ruleset `next-major marker` (above) lets only an admin and the Actions app create, move or delete it, so a
+  collaborator cannot make a major by pushing the tag. The Actions bypass has the same limit as for `v*`: a
+  workflow with `contents: write` can write it. The effect is bounded: it only changes the number of the next
+  release, which still needs a passing staging deploy. Nothing widens the `v*` rulesets.
+- **Offline test.** `scripts/test-major.sh` (part of `just validate`): `mark`'s API calls and refusals on a
+  fixture repository, the preview, the admin refusal, `just major`, the workflow parsed (admin check first, no
+  secret, main only, marker last), the marker ruleset; and the pending/ignored/waiting cases in
+  `scripts/test-release-version.sh`.
+
+User step (once, after this is on main): `scripts/github-tag-ruleset.sh` (user step 5) to create the marker's
+ruleset. Without it `just major` still works (the token may create tags), but the marker is open to writers.
 
 ### Release build
 

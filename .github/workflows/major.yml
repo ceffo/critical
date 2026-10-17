@@ -1,0 +1,65 @@
+name: Major
+
+# The manual major version of ADR 0024 step 3: moves the marker tag `next-major` to main's head, so the next
+# staging release that happens is vN+1.0.0 instead of the computed bump (scripts/release-version.sh; on 0.x
+# the first major is 1.0.0). Run by hand from main (Actions > Major > Run workflow, or `just major`); it only
+# records the marker: nothing is built, deployed or tagged here, and a range that makes no release (docs/test/
+# chore only, `no-release`) leaves the marker waiting. Only a repository admin may run it
+# (scripts/require-admin.sh). Runbook: docs/deploy.md ("A major version").
+#
+# No environment and no secret: the workflow's own token (contents: write) writes the marker, which is not a
+# `v*` tag; its ruleset (scripts/github-tag-ruleset.sh) lets only an admin and this token write it.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A dispatch from another branch is a mistake (the marker names main's head): it fails and says so.
+  not-main:
+    name: refuse a run from another ref than main
+    if: ${{ github.ref != 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Use main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error title=Major version::$REF is not main: nothing was marked. Run the workflow from main (Use workflow from: main), docs/deploy.md (A major version)."
+          exit 1
+
+  mark:
+    name: mark the next release as a major
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write # the marker tag next-major
+    # No concurrency group: sharing the release's would replace a queued release run. A release reads the marker
+    # once, when it computes its version; a marker set meanwhile applies to the next release.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # every tag and main's history
+          persist-credentials: false
+
+      - name: Check the actor is an admin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          ADMIN_ACTION: make the next release a major version
+          ADMIN_NOTHING: marked
+        run: scripts/require-admin.sh "$ACTOR" "$TRIGGERING_ACTOR"
+
+      - name: Move the next-major marker to main's head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          scripts/next-major.sh mark "$SHA" | tee marker.txt
+          sed -n 's/^::notice title=Major version::/- /p' marker.txt >> "$GITHUB_STEP_SUMMARY"

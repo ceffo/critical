@@ -16,5 +16,10 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["e2e", "playwright.config.ts"]
+  "include": [
+    "e2e",
+    "ui-review",
+    "playwright.config.ts",
+    "playwright.ui-review.config.ts"
+  ]
 }

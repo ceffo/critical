@@ -201,6 +201,17 @@ e2e *args: build-api
     cd web && node e2e/check-browser.mjs
     cd web && npx playwright test "$@"
 
+# UI review capture (docs/design/ui-review/): screenshots of the real app, every screen and state in
+# every colour theme at 1707x1300 and 1440x900 (EN, plus FR for the full set), on the e2e stack
+# (in-memory API on free ports, the api/testdata fixture; never ports 8080/5173/5432 or .dev/), and
+# the theme contrast report (docs/design/ui-review/contrast.md). Everything lands in the gitignored
+# web/e2e-results/ui-review/; the curated set (docs/design/ui-review/curated.txt) is then copied into
+# docs/design/ui-review/shots/. Not part of `just validate` nor `just e2e`. Needs `just e2e-install` once.
+ui-shots: build-api
+    cd web && node e2e/check-browser.mjs
+    cd web && npx playwright test -c playwright.ui-review.config.ts
+    node web/ui-review/curate.mjs
+
 # --- Fly.io configuration (ADR 0024 steps 2, 5, 8, 9.1) ---
 
 # Check deploy/fly.*.toml: the Go test (part of `just test-api`, so of `just validate`) parses them and

@@ -110,7 +110,10 @@ main checkout, pull with `just sync-main`, never `br sync --merge`.
   export` PR per batch of work (end of a session or a night, or when an export is needed on `main`,
   e.g. for `check-no-tracker-ids` to know a new id). If a PR is closed unmerged, reopen its item.
 - Priorities are numbers 0-4. Types: task, bug, feature, epic, chore, docs, question.
-- Labels in use: `needs-info` (cannot start, questions listed), `risky` (needs review).
+- Labels in use: `needs-info` (cannot start: waiting on the user; the item holds a "## Questions"
+  section, each question with the default applied meanwhile), `risky` (needs review). Every open
+  `needs-info` item is a pending question the supervisor restates to the user in every reply
+  (`.claude/scripts/pending-questions.sh`).
 - Queue: `bv --robot-triage`, `br ready --json`.
 - Hierarchy: epic + children via `br create --parent`; blocking via `br dep add`.
 - Work items are written in the vertical-slice convention: one bead = schema + Go engine + REST

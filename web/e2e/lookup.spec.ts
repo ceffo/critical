@@ -118,6 +118,18 @@ const classButton = (page: Page, name: string) =>
     .getByRole("button", { name, exact: true });
 const levelChip = (page: Page, n: number) =>
   page.getByRole("button", { name: `Level ${n}`, exact: true });
+/** The school (sphere in Priest mode) filter: behind the Filters button, a menu of choices. */
+async function chooseGroup(page: Page, button: string, choice: string) {
+  await page.getByRole("button", { name: button, exact: true }).click();
+  await page.getByRole("menuitemradio", { name: choice, exact: true }).click();
+}
+const groupTag = (page: Page) => page.getByTestId("lookup-group-tag");
+/** The levels the catalogue under test holds (fixture and the rows above), ascending. */
+const catalogueLevels = [
+  ...new Set(
+    [...(fixtureSpells as { level: number }[]), ...named].map((s) => s.level),
+  ),
+].sort((a, b) => a - b);
 
 async function attr(list: Locator, name: string): Promise<string[]> {
   return list.evaluateAll(
@@ -418,9 +430,8 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
   await search(page).fill("fire");
   await classButton(page, "All").click();
   await levelChip(page, 4).click();
-  await page
-    .getByRole("combobox", { name: "School" })
-    .selectOption({ label: "Abjuration" });
+  await chooseGroup(page, "Filter by school", "Abjuration");
+  await expect(groupTag(page)).toHaveText("Abjuration");
   await expect(rows(page)).toHaveCount(1);
   await expect(selected(page)).toHaveAttribute("data-id", "fire_trap");
   await expect(reset).toBeVisible();
@@ -434,9 +445,7 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
     "true",
   );
   await expect(levelChip(page, 4)).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("combobox", { name: "School" })).toHaveValue(
-    "abjuration",
-  );
+  await expect(groupTag(page)).toHaveText("Abjuration");
   await expect(selected(page)).toHaveAttribute("data-id", "fire_trap");
 
   await reset.click();
@@ -446,7 +455,7 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
     "true",
   );
   await expect(levelChip(page, 4)).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByRole("combobox", { name: "School" })).toHaveValue("");
+  await expect(groupTag(page)).toHaveCount(0);
   await expect(reset).toHaveCount(0);
 
   await search(page).fill("magic");
@@ -623,23 +632,28 @@ test("lookup: a slow response overtaken by a newer query is not written", async 
   await expect(count(page)).toHaveText("1 spell");
 });
 
-test("lookup: level chips and rows show the bare number; French labels classes, spheres and common values", async ({
+test("lookup: level chips are the catalogue's levels and show the bare number; French labels classes, spheres and common values", async ({
   page,
 }) => {
   await openLookup(page);
-  // The bare level number everywhere, in the chips and in the rows.
-  for (let n = 0; n <= 9; n++)
-    await expect(levelChip(page, n)).toHaveText(`${n}`);
+  // The chips are the catalogue's levels (no level 0), the bare number in the chips and the rows.
+  const chips = page
+    .getByRole("group", { name: "Spell levels" })
+    .getByRole("button");
+  await expect(chips).toHaveText(catalogueLevels.map(String));
+  expect(catalogueLevels).not.toContain(0);
   await search(page).fill("quixotic");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first().locator("span").first()).toHaveText("3");
   await expect(detail(page).getByTestId("spell-meta")).toContainText(
     "Wizard · Level 3",
   );
+  // Nothing to roll and no effect to add: no cast box.
+  await expect(detail(page).getByTestId("spell-cast-box")).toHaveCount(0);
   await snap(page, "bare-levels-en");
 
   await chooseLanguage(page, "fr");
-  for (let n = 0; n <= 9; n++) {
+  for (const n of catalogueLevels) {
     await expect(
       page.getByRole("button", { name: `Niveau ${n}`, exact: true }),
     ).toHaveText(`${n}`);
@@ -662,17 +676,21 @@ test("lookup: level chips and rows show the bare number; French labels classes, 
   await expect(detail(page).getByTestId("stat-range")).toContainText("Contact");
   await snap(page, "french-values");
 
-  // The sphere dropdown: French labels, still filtering on the English API value.
+  // The sphere menu behind "Filtres": French labels, still filtering on the English API value.
   await classButton(page, "Prêtre").click();
-  const sphere = page.getByRole("combobox", { name: "Sphère" });
+  await page
+    .getByRole("button", { name: "Filtrer par sphère", exact: true })
+    .click();
   await expect(
-    sphere.locator("option", { hasText: "Élémentaire (Feu)" }),
+    page.getByRole("menuitemradio", { name: "Élémentaire (Feu)" }),
   ).toHaveCount(1);
   await expect(
-    sphere.locator("option", { hasText: "Elemental Fire" }),
+    page.getByRole("menuitemradio", { name: "Elemental Fire" }),
   ).toHaveCount(0);
-  await sphere.selectOption({ label: "Soleil" });
-  await expect(sphere).toHaveValue("Sun");
+  await page
+    .getByRole("menuitemradio", { name: "Soleil", exact: true })
+    .click();
+  await expect(groupTag(page)).toHaveText("Soleil");
   await expect(rows(page)).toHaveCount(1);
   expect(await names(rows(page))).toEqual(["Quixotic Probe"]);
   await snap(page, "french-spheres");

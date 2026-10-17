@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,6 +36,17 @@ func (f fakeSvc) Names(context.Context) ([]spellsvc.SpellName, error) {
 	for _, s := range f.spells {
 		out = append(out, spellsvc.SpellName{ID: s.ID, Name: s.Name})
 	}
+	return out, nil
+}
+
+func (f fakeSvc) Levels(context.Context) ([]int, error) {
+	out := []int{}
+	for _, s := range f.spells {
+		if !slices.Contains(out, s.Level) {
+			out = append(out, s.Level)
+		}
+	}
+	slices.Sort(out)
 	return out, nil
 }
 
@@ -280,9 +292,10 @@ func TestSearch_BadPagingIs400(t *testing.T) {
 	}
 }
 
-func TestFilterOptions_ListsSchoolGroupsAndSpheres(t *testing.T) {
+func TestFilterOptions_ListsSchoolGroupsSpheresAndCatalogueLevels(t *testing.T) {
+	svc := fakeSvc{spells: []spellsvc.Spell{{ID: "b", Level: 3}, {ID: "a", Level: 1}, {ID: "c", Level: 3}}}
 	rec := httptest.NewRecorder()
-	render.Handle(spellhdl.FilterOptions())(rec, httptest.NewRequest(http.MethodGet, "/api/spells/filters", nil))
+	render.Handle(spellhdl.FilterOptions(svc))(rec, httptest.NewRequest(http.MethodGet, "/api/spells/filters", nil))
 	require.Equal(t, http.StatusOK, rec.Code)
 	var out spellhdl.FilterOptionsDTO
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
@@ -292,6 +305,7 @@ func TestFilterOptions_ListsSchoolGroupsAndSpheres(t *testing.T) {
 	}, out.Schools)
 	assert.Contains(t, out.Spheres, "Elemental Fire")
 	assert.Contains(t, out.Spheres, "Charm")
+	assert.Equal(t, []int{1, 3}, out.Levels)
 }
 
 // Every spell's id and its name as a language map (ADR 0023 step 6): only

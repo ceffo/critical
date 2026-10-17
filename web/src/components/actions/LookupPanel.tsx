@@ -1,8 +1,16 @@
 import { useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleNotch, MagnifyingGlass } from "@phosphor-icons/react";
+import { CircleNotch, Funnel, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SpellDetail, SpellName } from "@/components/dashboard/SpellDetail";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
@@ -15,7 +23,6 @@ const CLASSES: { value: SpellClass; key: string }[] = [
   { value: "priest", key: "classPriest" },
   { value: "all", key: "classAll" },
 ];
-const LEVELS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 /** Load the next page when the list is this close (px) to its bottom. */
 const LOAD_MORE_MARGIN = 400;
 
@@ -91,13 +98,75 @@ export function LookupPanel() {
         : [...query.levels, n].sort((a, b) => a - b),
     });
 
+  // The school (sphere in Priest mode) is a rare filter (ADR 0027 steps 1.4, 13.1): behind the
+  // Filters button, and a tag on the count line while it is set (step 1.5).
+  const group = priest ? query.sphere : query.school;
+  const groupLabel = (v: string) =>
+    priest ? sphereLabel(t, v) : t(`lookup.schools.${v}`, { defaultValue: v });
+  const setGroup = (v: string) =>
+    setQuery(priest ? { sphere: v } : { school: v });
+  const groupFilter = (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              size="sm"
+              aria-label={
+                priest ? t("lookup.sphereFilter") : t("lookup.schoolFilter")
+              }
+              title={
+                priest ? t("lookup.sphereFilter") : t("lookup.schoolFilter")
+              }
+            />
+          }
+        >
+          <Funnel aria-hidden /> {t("lookup.filtersShort")}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuRadioGroup
+            aria-label={priest ? t("lookup.sphere") : t("lookup.school")}
+            value={group}
+            onValueChange={(v: string) => setGroup(v)}
+          >
+            <DropdownMenuRadioItem value="">
+              {priest ? t("lookup.anySphere") : t("lookup.anySchool")}
+            </DropdownMenuRadioItem>
+            {(priest ? options?.spheres : options?.schools)?.map((v) => (
+              <DropdownMenuRadioItem key={v} value={v}>
+                {groupLabel(v)}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {group && (
+        <span
+          className="chip inline-flex items-center gap-1 py-0.5 pr-0.5 pl-2 text-body"
+          data-testid="lookup-group-tag"
+        >
+          {groupLabel(group)}
+          <button
+            type="button"
+            className="inline-flex size-5 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+            aria-label={t("lookup.clearFilter", { name: groupLabel(group) })}
+            title={t("lookup.clearFilter", { name: groupLabel(group) })}
+            onClick={() => setGroup("")}
+          >
+            <X aria-hidden className="size-3.5" />
+          </button>
+        </span>
+      )}
+    </>
+  );
+
   const levelChips = (
     <div
       role="group"
       aria-label={t("lookup.levelsLabel")}
       className="flex flex-wrap gap-1"
     >
-      {LEVELS.map((n) => {
+      {(options?.levels ?? []).map((n) => {
         const on = query.levels.includes(n);
         return (
           <button
@@ -149,33 +218,6 @@ export function LookupPanel() {
               onKeyDown={onKeyDown}
             />
           </div>
-          <select
-            className={fieldClass}
-            aria-label={priest ? t("lookup.sphere") : t("lookup.school")}
-            value={priest ? query.sphere : query.school}
-            onChange={(e) =>
-              setQuery(
-                priest
-                  ? { sphere: e.target.value }
-                  : { school: e.target.value },
-              )
-            }
-          >
-            <option value="">
-              {priest ? t("lookup.anySphere") : t("lookup.anySchool")}
-            </option>
-            {priest
-              ? options?.spheres.map((s) => (
-                  <option key={s} value={s}>
-                    {sphereLabel(t, s)}
-                  </option>
-                ))
-              : options?.schools.map((s) => (
-                  <option key={s} value={s}>
-                    {t(`lookup.schools.${s}`, { defaultValue: s })}
-                  </option>
-                ))}
-          </select>
           <div
             role="group"
             aria-label={t("lookup.classLabel")}
@@ -199,7 +241,9 @@ export function LookupPanel() {
             ))}
           </div>
           {levelChips}
-          <div className="flex flex-wrap items-center justify-end gap-x-2 text-body text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-body text-muted-foreground">
+            {groupFilter}
+            <span className="flex-1" />
             {loading && (
               <CircleNotch className="h-3 w-3 animate-spin" aria-hidden />
             )}

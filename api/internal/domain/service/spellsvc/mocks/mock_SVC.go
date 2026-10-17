@@ -173,6 +173,64 @@ func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *Mo
 	return _c
 }
 
+// Levels provides a mock function with given fields: ctx
+func (_m *MockSVC) Levels(ctx context.Context) ([]int, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Levels")
+	}
+
+	var r0 []int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]int, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []int); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Levels_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Levels'
+type MockSVC_Levels_Call struct {
+	*mock.Call
+}
+
+// Levels is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) Levels(ctx interface{}) *MockSVC_Levels_Call {
+	return &MockSVC_Levels_Call{Call: _e.mock.On("Levels", ctx)}
+}
+
+func (_c *MockSVC_Levels_Call) Run(run func(ctx context.Context)) *MockSVC_Levels_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Levels_Call) Return(_a0 []int, _a1 error) *MockSVC_Levels_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Levels_Call) RunAndReturn(run func(context.Context) ([]int, error)) *MockSVC_Levels_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Names provides a mock function with given fields: ctx
 func (_m *MockSVC) Names(ctx context.Context) ([]spellsvc.SpellName, error) {
 	ret := _m.Called(ctx)

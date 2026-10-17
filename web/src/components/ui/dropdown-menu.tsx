@@ -1,4 +1,5 @@
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
+import { Check } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/utils";
 
@@ -54,8 +55,38 @@ function DropdownMenuItem({ className, ...props }: MenuPrimitive.Item.Props) {
   );
 }
 
+/** A set of entries of which one is chosen (a filter's value). */
+const DropdownMenuRadioGroup = MenuPrimitive.RadioGroup;
+
+/** One choice of a radio group: the entry's look, a check on the chosen one; closes the menu. */
+function DropdownMenuRadioItem({
+  className,
+  children,
+  closeOnClick = true,
+  ...props
+}: MenuPrimitive.RadioItem.Props) {
+  return (
+    <MenuPrimitive.RadioItem
+      data-slot="dropdown-menu-radio-item"
+      closeOnClick={closeOnClick}
+      className={cn(
+        "flex cursor-default items-center gap-2 rounded-md py-1 pr-2 pl-7 text-body outline-none select-none relative data-disabled:pointer-events-none data-disabled:text-ink-muted data-highlighted:bg-raised-hover",
+        className,
+      )}
+      {...props}
+    >
+      <MenuPrimitive.RadioItemIndicator className="absolute left-2 flex size-4 items-center justify-center">
+        <Check aria-hidden className="size-4" />
+      </MenuPrimitive.RadioItemIndicator>
+      {children}
+    </MenuPrimitive.RadioItem>
+  );
+}
+
 export {
   DropdownMenu,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,

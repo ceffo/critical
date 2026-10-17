@@ -4,10 +4,10 @@
 import type { SpellSlot } from "@/types/spells";
 
 /**
- * One dot: a slot that can still be cast, a slot spent today, or a slot the level allows with no
- * spell prepared in it.
+ * One dot: a slot that can still be cast, a slot spent today, a slot the level allows with no
+ * spell prepared in it, or (in the preparation editor) a spell prepared beyond what the level allows.
  */
-export type DotState = "available" | "used" | "empty";
+export type DotState = "available" | "used" | "empty" | "over";
 
 export interface SlotDots {
   dots: DotState[];
@@ -40,4 +40,18 @@ export function slotDots(
     used,
     empty,
   };
+}
+
+/**
+ * The preparation editor's dots of a level (ADR 0027 step 11.5), in the Spells tab's language: one
+ * filled dot per spell prepared within `max` (the server's count), an outline per slot left, then
+ * one "over" dot per spell beyond it.
+ */
+export function preparedDots(count: number, max: number): DotState[] {
+  const within = Math.min(count, max);
+  return [
+    ...Array<DotState>(within).fill("available"),
+    ...Array<DotState>(Math.max(0, max - count)).fill("empty"),
+    ...Array<DotState>(Math.max(0, count - max)).fill("over"),
+  ];
 }

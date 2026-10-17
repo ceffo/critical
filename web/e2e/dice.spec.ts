@@ -27,7 +27,7 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
   await composer.getByTestId("die-4").click();
   await composer.getByRole("button", { name: "Add 1" }).click();
   await expect(formula).toHaveValue("2d6+d4+1");
-  await expect(composer.getByTestId("die-badge-6")).toHaveText("2 −");
+  await expect(composer.getByTestId("die-badge-6")).toHaveText("×2");
   await composer.getByTestId("die-4").click({ button: "right" });
   await expect(formula).toHaveValue("2d6+1");
   await expect(composer.getByTestId("die-badge-4")).toHaveCount(0);

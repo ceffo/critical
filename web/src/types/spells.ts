@@ -431,4 +431,6 @@ export interface SpellFilterOptions {
   schools: string[];
   /** Priest sphere names. */
   spheres: string[];
+  /** The spell levels the catalogue holds, ascending: the lookup's level chips. */
+  levels: number[];
 }

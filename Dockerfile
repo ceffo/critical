@@ -35,6 +35,9 @@ RUN CGO_ENABLED=0 go build -trimpath \
       -o /out/critical-srv ./cmd/api
 
 FROM alpine:3.24
+# The PostgreSQL client of the cluster's major version (17): the promotion's restore point runs pg_dump and
+# pg_restore from this image in a console machine (scripts/restore-point.sh, ADR 0024 step 4.2).
+RUN apk add --no-cache postgresql17-client
 RUN addgroup -S critical && adduser -S -G critical -H -h /app critical
 WORKDIR /app
 COPY --from=api /out/critical-srv /app/critical-srv

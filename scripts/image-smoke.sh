@@ -6,7 +6,9 @@
 #
 # The image holds no database (ADR 0025 step 1) and refuses the in-memory storage (step 8.3), so the
 # smoke starts its own empty PostgreSQL next to it, on a private network: the boot migrates, seeds and
-# imports the fixture catalogue into it. The containers and the network get unique names and are
+# imports the fixture catalogue into it. Then it takes restore points of that database with the image's
+# own PostgreSQL client (scripts/restore-point.sh, as the promotion does in a `fly console` machine of the
+# release image, ADR 0024 step 4.2): copies made and verified, the retention, and the refusals. The containers and the network get unique names and are
 # removed on exit (the database has no volume); nothing else is touched.
 set -euo pipefail
 
@@ -76,5 +78,49 @@ uid="$(docker exec "$name" id -u)"
 [ "$uid" != 0 ] || fail "the server runs as root"
 docker inspect -f '{{json .Config.Healthcheck.Test}}' "$name" | grep -q '/api/health' ||
     fail "the image HEALTHCHECK does not call /api/health"
+
+# restore_point <container> <name> [env...]: runs scripts/restore-point.sh in the container, as the
+# promotion runs it in its console machine; output in $rp_out.
+dsn="postgres://critical:critical@$db:5432/critical?sslmode=disable"
+# The migrations the image embeds, as scripts/promote.sh lists them (RP_MIGRATIONS overrides them).
+migrations="$(cd "$root/api/internal/storage/postgres/migrations" && ls -- *.sql | tr '\n' ' ')"
+restore_point() {
+    local c="$1" n="$2"
+    shift 2
+    rp_status=0
+    # shellcheck disable=SC2086 # one argument per migration
+    rp_out="$(docker exec -i -e CRITICAL_DSN="$dsn" "$@" "$c" sh -s "$n" ${RP_MIGRATIONS:-$migrations} \
+        <"$root/scripts/restore-point.sh" 2>&1)" || rp_status=$?
+}
+sql() { docker exec "$db" psql -X -q -A -t -U critical -d critical -c "$1"; }
+# A machine started from the image without its entrypoint, like the console machine.
+docker run -d --name "$name-console" --network "$name" --entrypoint sleep "$image" infinity >/dev/null
+trap 'cleanup; docker rm -f "$name-console" >/dev/null 2>&1 || true' EXIT
+for n in 1 2 3; do
+    restore_point "$name-console" "critical_pre_v0_0_${n}_2026010100000$n" -e RESTORE_POINT_KEEP=2
+    [ "$rp_status" = 0 ] && [[ "$rp_out" == *"restore-point: OK critical_pre_v0_0_${n}_2026010100000$n"* ]] ||
+        fail "restore point $n: exit $rp_status: $rp_out"
+done
+echo "$rp_out"
+copies="$(sql "SELECT string_agg(datname, ' ' ORDER BY datname) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")"
+[ "$copies" = "critical_pre_v0_0_2_20260101000002 critical_pre_v0_0_3_20260101000003" ] ||
+    fail "restore points kept: '$copies', want the newest two"
+[ "$(sql "SELECT has_database_privilege('public', 'critical_pre_v0_0_3_20260101000003', 'CONNECT')")" = f ] ||
+    fail "PUBLIC may connect to a restore point"
+[ "$(docker exec "$db" psql -X -q -A -t -U critical -d critical_pre_v0_0_3_20260101000003 -c 'SELECT count(*) FROM schema_migrations')" = \
+  "$(sql 'SELECT count(*) FROM schema_migrations')" ] || fail "the restore point does not hold the migrations"
+restore_point "$name-console" critical_pre_v0_0_3_20260101000003
+[ "$rp_status" != 0 ] && [[ "$rp_out" == *"exists already"* ]] || fail "an existing restore point was not refused: $rp_out"
+restore_point "$name" critical_pre_v0_0_4_20260101000004
+[ "$rp_status" != 0 ] && [[ "$rp_out" == *"the server runs in this machine"* ]] || fail "a copy beside the running server was not refused: $rp_out"
+restore_point "$name-console" critical_pre_v0_0_5_20260101000005 -e RESTORE_POINT_BUDGET_MB=1
+[ "$rp_status" != 0 ] && [[ "$rp_out" == *"over the 1 MB budget"* ]] || fail "the size budget was not enforced: $rp_out"
+# An older release (a rollback across a migration): the database records a migration it does not embed.
+RP_MIGRATIONS=000_older.sql restore_point "$name-console" critical_pre_v0_0_6_20260101000006
+[ "$rp_status" != 0 ] && [[ "$rp_out" == *"records migrations this release does not embed (001_baseline.sql"* ]] &&
+    [[ "$rp_out" == *"Across a migration"* ]] || fail "a release older than the schema was not refused: $rp_out"
+[ "$(sql "SELECT count(*) FROM pg_database WHERE datname LIKE 'critical\_pre\_%'")" = 2 ] || fail "a refused restore point left a database"
+[[ "$rp_out" != *critical:critical* ]] || fail "restore-point printed the DSN"
+echo "image-smoke: restore points OK (copies, retention, refusals, a release older than the schema)"
 
 echo "image-smoke: OK ($image, commit $commit, uid $uid, port $port)"

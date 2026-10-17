@@ -8,7 +8,9 @@ step 5 is answered (option (b), PostgreSQL first), steps 2, 4.2, 5, 6.1, 7 and 9
 volume-less apps on one fly PostgreSQL cluster, and the region, production data and PostgreSQL
 defaults are answered. Amended again 2026-10-16 (see "Amendment (shared cluster tournesol-db,
 2026-10-16)"): the cluster is the user's existing `tournesol-db`, shared, instead of a new
-`critical-db`.
+`critical-db`. Amended again 2026-10-16 (see "Amendment (restore point: a copy database,
+2026-10-16)"): the pre-promotion restore point is a copy database on the same cluster, and production's
+no-public-IP check has no bypass.
 
 ## Context
 
@@ -57,13 +59,13 @@ flowchart LR
             PDB[("critical_prod")]
         end
     end
-    DUMP[("pre-promotion pg_dump of critical_prod")]
+    DUMP[("restore point: copy database critical_prod_pre_tag_time")]
     BUILD -->|push| IMG
     IMG -->|deploy + smoke check| STG
     STG --> SDB
     PROD --> PDB
     STG -.->|"same commit passed staging"| TAG
-    TAG -->|"first: dump"| DUMP
+    TAG -->|"first: restore point"| DUMP
     TAG -->|"then: promote the same image, no rebuild"| PROD
     PROD -->|"smoke check, then GitHub Release"| REL["release vX.Y.Z"]
 ```
@@ -119,15 +121,19 @@ flowchart LR
 4. **Production on a tag.** Pushing a tag `vMAJOR.MINOR.PATCH` promotes a commit to production:
    1. the promotion refuses a tag whose commit is not on main, or whose image did not pass the
       staging smoke check of step 3;
-   2. it takes a `pg_dump` of `critical_prod` and waits for it to complete; no dump, no deploy.
-      _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md)); was: an on-demand snapshot of
-      the production volume._ The dump is private data (step 7) and is kept where step 9.2 says;
+   2. it takes the restore point of step 9.2, a verified copy of `critical_prod`, and waits for it
+      to complete; no restore point, no deploy. _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md));
+      was: an on-demand snapshot of the production volume. Amended again 2026-10-16 (restore point); was:
+      a `pg_dump` kept where step 9.2 would say._ It is private data (step 7);
    3. it deploys **the same image** (same digest as staging, no rebuild) to production;
    4. it runs the smoke check of step 3.3 against production;
    5. it creates a GitHub Release for the tag.
 
    Rollback is running the promotion again for an older tag (step 6 says when that is not enough).
-   Production deployments never run concurrently and are never cancelled midway.
+   A promotion whose image is older than the production schema (`critical_prod` records a migration
+   the tag's commit does not hold) is refused before the restore point is written: that rollback is
+   the runbook's restore of step 9.3, then the promotion of the older tag. Production deployments never
+   run concurrently and are never cancelled midway.
 
 5. **Storage: PostgreSQL first, two production machines** (_accepted 2026-10-16, option (b); was
    the proposed default (a), SQLite on a volume with one machine per environment_). User,
@@ -179,7 +185,9 @@ flowchart LR
       deploy uses `--no-public-ips` and allocates a private Flycast IPv6 only. Operators reach an app
       with `fly proxy` or fly WireGuard.
    3. Every deploy job (staging and production) checks the app's IPs before deploying and fails if
-      the app has a public IP while no public-access option is configured.
+      the app has a public IP while no public-access option is configured. _Amended 2026-10-16 (user):
+      for production the check is mandatory, with no bypass, until a public-access option with access
+      control is built; only staging's honours the `PUBLIC_ACCESS_OPTION` variable._
    4. Options for public access, the choice awaiting the user:
       - **(a) Shared-secret HTTP basic auth** in the Go server, then public IPs. Recommended for use at
         the table from any phone.
@@ -194,19 +202,38 @@ flowchart LR
    1. The cluster's volume has fly's daily snapshots, with a set retention (30 days, answered
       2026-10-16; the runbook records the value set).
       A snapshot holds both databases.
-   2. Every promotion adds the pre-promotion `pg_dump` of `critical_prod` of step 4.2. Where that
-      dump is kept is open (see "Proposed defaults awaiting the user"); it must obey step 7, so
-      never a workflow artifact or a build cache.
-   3. Restore: `critical_prod` is restored from a `pg_dump` (the pre-promotion one, or one taken by
-      step 9.4) without touching `critical_staging`. Restoring a cluster volume snapshot rolls back
-      both databases; it is the fallback when no usable dump exists.
+   2. _Answered 2026-10-16 (user, "1a"); was: open, where a pre-promotion `pg_dump` is kept._ Every
+      promotion first takes a **restore point**: a copy database of `critical_prod` on the same cluster,
+      named after the release being promoted and the time, `critical_prod_pre_<tag>_<UTC time>` (e.g.
+      `critical_prod_pre_v1_2_3_20261017153000`), made by `pg_dump` and `pg_restore` and verified (the
+      same tables and recorded migrations as `critical_prod`, rows in it). It never leaves fly: not a
+      GitHub artifact, a cache or a bucket (step 7). fly's daily snapshots of step 9.1 cover the loss of
+      the cluster machine.
+      1. The newest **3** restore points are kept; older ones are dropped by the promotion that adds one.
+      2. The promotion refuses to take one when `critical_prod`, the copies it keeps and the new one
+         would use more than 300 MB (the 1 GB volume is shared with the other app). The budget counts
+         critical's databases only: `critical_prod` cannot size the other app's databases nor see the
+         volume's free space, so the operator watches the volume's use (the runbook's "Promotion").
+      3. A copy is locked like every database of the cluster: owned by `critical_prod`, CONNECT revoked
+         from PUBLIC. `critical_prod` has the `CREATEDB` attribute for this, and only this (it creates,
+         owns and drops its copies); `critical_staging` has not.
+      4. It is made in an ephemeral `fly console` machine of the production app, started from the release
+         image (which ships the PostgreSQL client of the cluster's major version) without starting the
+         server, so the app's own secret is the only credential used and the running app is untouched.
+   3. Restore: `critical_prod` is restored from a restore point (or a `pg_dump` taken by step 9.4)
+      without touching `critical_staging`: the current database is set aside and the restore point is
+      copied into its place, with no server running on it meanwhile (the runbook's "Rollback").
+      Restoring a cluster volume snapshot rolls back every database of the cluster; it is the fallback
+      when no usable restore point exists.
    4. `just db-backup <env>` downloads a `pg_dump` of that environment's database into a gitignored
       folder on the operator's machine. It is private data (step 7).
 
 10. **Secrets and permissions.**
     1. Each app has its own app-scoped fly deploy token, stored in the GitHub environment of the same
        name: `staging` and `production`.
-    2. The `production` environment only accepts deployments from `v*` tags.
+    2. The `production` environment only accepts deployments from `v*` tags. A tag runs the promotion
+       workflow of its own commit, whose guards it could have edited out, so only a repository admin
+       may create, move or delete a `v*` tag (a tag ruleset, _added 2026-10-16_).
     3. The rulebooks deploy key is a read-only key on `critical-rulebooks`, held only by the job that
        builds the release image.
     4. When a staging secret is missing, the main-branch build and deploy jobs skip with a notice and
@@ -225,7 +252,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 | Production data | fresh database | **Answered 2026-10-16: fresh database** (_amended 2026-10-16; was: seeded once with the user's data, the local `.dev/critical.db` copied into `critical_prod` by the copy tool_): production's first boot seeds it from `seeds/` and the catalogue, like staging; the user re-enters the few character-sheet edits made in the app. See "Amendment (production starts from the seeds, 2026-10-16)" |
 | Production approval | none: pushing the tag is the act | a required reviewer on the `production` environment |
 | Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
-| Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | on the cluster's own volume (shares its 1 GB); a private store the user provides; taken by the operator with `just db-backup prod` before tagging, the promotion checking that it exists |
+| Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | **Answered 2026-10-16 ("1a"): a copy database on the same cluster** (a restore point, newest 3 kept), not a dump file; see "Amendment (restore point: a copy database, 2026-10-16)" |
 | Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
 | A migration during a rolling production deploy (step 5.2) | a release's migrations are additive, so the previous release keeps working on the new schema while its machines are replaced | **Answered 2026-10-16: additive migrations** (the default); the `immediate` strategy is not used |
 | Custom domain | none | a domain, only once public access is chosen |
@@ -236,7 +263,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
   handler, migration runner). Steps 1.3 and 7.1 are checked by the CI image job, which builds the
   image with the fixture and smoke-checks it. Steps 3, 4, 8.3 and 10 are workflow behaviour: their
   check is a failing run on the broken case (a smoke check against the wrong commit, a missing
-  dump, a public IP, a missing secret), exercised once by hand and noted in the PR that adds
+  restore point, a public IP, a missing secret), exercised once by hand and noted in the PR that adds
   the workflow. Steps 2.1, 2.2 and 5 are fly configuration, checked by a parse and required-keys
   test of the fly config files. _Amended 2026-10-16: steps 2.3 to 2.5 and 9.1 are the cluster's
   configuration, made with flyctl and not in the repo; their evidence (`fly status`, `fly ips list`,
@@ -249,9 +276,13 @@ part of this ADR to accepted. Answered rows keep their original default and say 
   the catalogue at build time, so it takes a main build (any merge, or re-running the build for the
   current main commit) and then a tag. The importer ([ADR 0021](0021-spell-catalogue.md) step 5)
   applies it at boot.
-- **Promotion and registry layout.** If fly's registry keeps images per app and the production
-  token cannot read staging's repository, the promotion copies the image by digest into the
-  production app's repository; it never rebuilds. The digest check of step 1.5 holds either way.
+- **Promotion and registry layout.** _Settled 2026-10-17 by a test with a production deploy token;
+  was: "if the production token cannot read staging's repository, the promotion copies the image"._
+  fly's API lets an app's deploy token use only that app's images (the registry lets it read the
+  staging repository, but `fly console` and `fly deploy` refuse another app's image), so the promotion
+  copies the image by digest into the production app's repository, with the production token, before
+  the restore point; it never rebuilds. The digest check of step 1.5 holds: the copy has the digest
+  staging smoke-checked.
 - **The release name is not in the image.** The image is built before the tag exists; `/api/health`
   reports the commit, and the GitHub Release maps the tag to it.
 - **Downtime and machine count.** _Amended 2026-10-16; was: one production machine, no redundancy,
@@ -339,3 +370,26 @@ _"we go with A"_.
 - So production gets no copy: the copy tool of [ADR 0025](0025-postgresql-storage.md) step 9 is no
   longer needed for it (ADR 0025 step 9.3), and it is retired with the first production deploy
   (step 9.5).
+
+## Amendment (restore point: a copy database, 2026-10-16)
+
+The promotion needed a place for its pre-promotion `pg_dump` (step 9.2, open). Offered: the cluster's own
+volume, a private store, or a dump taken by the operator before tagging. User, 2026-10-16: _"1a"_, a copy
+database on the same fly cluster, named after the release, keeping the last few; not a GitHub artifact,
+not a bucket; fly's daily snapshots of the cluster cover the loss of the machine. Same day: the apps stay
+private until access control is decided, so production's no-public-IP check is mandatory.
+
+- **Step 4.2**: the promotion takes a restore point, a verified copy database (step 9.2); no restore
+  point, no deploy.
+- **Step 8.3**: production's check has no bypass; staging's still honours `PUBLIC_ACCESS_OPTION`.
+- **Step 9.2**: answered, the restore point `critical_prod_pre_<tag>_<UTC time>`, newest 3 kept, a 300 MB
+  budget for `critical_prod` and its copies, made from an ephemeral console machine of the release image.
+- **Step 9.3**: restore by copying the restore point into the place of `critical_prod`.
+- **Privilege**: `critical_prod` gets `CREATEDB` (one attribute, prod only). It lets that user create
+  databases on the shared cluster, never read or change the other app's (CONNECT stays locked, and a
+  database it creates gets PUBLIC's CONNECT revoked at once); the size budget and the retention bound how
+  much of the shared volume it takes. A separate role it can `SET ROLE` to would hold the same power for
+  anyone with the app's secret, and a separate credential would have to be a second fly app's secret; both
+  were judged not worth it for one user.
+- **Tests**: `scripts/test-promotion.sh` (guards, step order, refusals, offline) and the restore point run
+  for real against a throwaway PostgreSQL 17 by `scripts/image-smoke.sh` (the CI `image` job).

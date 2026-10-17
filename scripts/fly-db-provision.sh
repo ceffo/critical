@@ -7,7 +7,10 @@
 # For each <env> (staging | prod): a login user critical_<env> owning the database critical_<env>, with
 # CONNECT on it for that user only. Every other database of the cluster that accepts connections
 # (template1 included) keeps CONNECT for the login users it has at run time and loses it for PUBLIC, so
-# a critical user reaches only its own database. A user the other app gets LATER needs an explicit
+# a critical user reaches only its own database (and, for prod, its restore points). The prod user has
+# the CREATEDB attribute, for the promotion's restore points: copy databases critical_prod_pre_<release>
+# that it creates, owns and locks itself (scripts/restore-point.sh, ADR 0024 step 9.2); the staging user
+# has not. A user the other app gets LATER needs an explicit
 # `GRANT CONNECT ON DATABASE <db> TO <user>` (docs/deploy.md). The cluster's volumes get the snapshot
 # retention of step 9.1.
 #
@@ -21,7 +24,7 @@
 # `fly proxy`, docs/deploy.md).
 #
 # Checks: every run checks, as the cluster's operator, that each critical user holds CONNECT on its own
-# database and on no other. When this run set a user's password it also connects through `fly proxy` to
+# database and its own restore points (critical_<env>_pre_*) and on no other. When this run set a user's password it also connects through `fly proxy` to
 # the cluster's .flycast address (the apps' route): own database usable, every other one refused.
 #
 # Passwords are generated here, reach the server only as a SCRAM-SHA-256 verifier, and reach fly only
@@ -119,6 +122,8 @@ for env in "$@"; do
     role="critical_$env"
     app="critical-$env"
     verifier=""
+    createdb=NOCREATEDB
+    [ "$env" != prod ] || createdb=CREATEDB # the promotion's restore points (ADR 0024 step 9.2)
     if grep -qx "$role" <<<"$existing" && [ -z "$rotate" ]; then
         echo "== $role: exists, password and $app's secret unchanged (--rotate to change them)"
     else
@@ -130,7 +135,7 @@ for env in "$@"; do
 \set role '$role'
 \set verifier '$verifier'
 SELECT format('CREATE ROLE %I LOGIN', :'role') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'role') \gexec
-ALTER ROLE :"role" WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+ALTER ROLE :"role" WITH LOGIN NOSUPERUSER $createdb NOCREATEROLE NOREPLICATION;
 SELECT format('ALTER ROLE %I PASSWORD %L', :'role', :'verifier') WHERE :'verifier' <> '' \gexec
 SELECT format('CREATE DATABASE %I OWNER %I', :'role', :'role') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'role') \gexec
 ALTER DATABASE :"role" OWNER TO :"role";
@@ -173,7 +178,8 @@ SQL
 
 echo "== check: CONNECT privileges of the critical users"
 grants="$(admin_sql <<'SQL'
-SELECT CASE WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT') = (d.datname = r.rolname) THEN 'ok' ELSE 'BAD' END
+SELECT CASE WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT')
+                 = (d.datname = r.rolname OR starts_with(d.datname, r.rolname || '_pre_')) THEN 'ok' ELSE 'BAD' END
        || ': ' || r.rolname || ' -> ' || d.datname || ' '
        || CASE WHEN has_database_privilege(r.rolname, d.datname, 'CONNECT') THEN 'may connect' ELSE 'no CONNECT' END
 FROM pg_roles r CROSS JOIN pg_database d
@@ -184,7 +190,7 @@ echo "$grants"
 for env in "$@"; do
     grep -q ": critical_$env -> critical_$env may connect" <<<"$grants" || fail "critical_$env cannot connect to its own database"
 done
-! grep -q '^BAD' <<<"$grants" || fail "a critical user holds CONNECT on a database not its own"
+! grep -q '^BAD' <<<"$grants" || fail "a critical user holds CONNECT on a database not its own (nor its restore point)"
 
 if [ "${#password[@]}" -eq 0 ]; then
     echo "== connection checks skipped: no password set by this run (--rotate gives one)"
@@ -214,6 +220,7 @@ else
             "SELECT datname FROM pg_database WHERE datallowconn AND datname <> current_database() ORDER BY 1" \
             "$(conn "$role" "$role")")"
         for db in $others; do
+            case "$db" in "${role}_pre_"*) continue ;; esac # its own restore points
             if err="$(PGPASSWORD="${password[$env]}" psql -w -X -A -t -c 'SELECT 1' "$(conn "$role" "$db")" 2>&1)"; then
                 fail "$role can connect to $db"
             fi

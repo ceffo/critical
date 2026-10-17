@@ -1,0 +1,79 @@
+name: Promote
+
+# The promotion of ADR 0024 step 4: a tag vMAJOR.MINOR.PATCH on a main commit that staging ran and passed
+# deploys that same image (by digest, no rebuild) to production, after a restore point of the production
+# database, then smoke-checks it and creates the GitHub Release. Runbook: docs/deploy.md ("Promotion").
+#
+# Rollback: Actions > Promote > Run workflow, "Use workflow from" the OLDER tag (or re-run that tag's
+# run). The ref must be the tag itself: the environment `production` accepts deployments from `v*` tags
+# only, so a run from main gets neither the environment nor its token. Running from a tag also runs that
+# tag's own scripts and fly config, the ones that match its image.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A dispatch from a branch is a mistake (a rollback is run from the older TAG): it fails and says so,
+  # instead of a green run that did nothing. No environment, no secret.
+  not-a-tag:
+    name: refuse a run from a branch
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Use a tag
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error title=Promotion::$REF is not a v* tag: nothing was promoted. Run the workflow from a tag (Use workflow from: Tags > vX.Y.Z), docs/deploy.md (Rollback)."
+          exit 1
+
+  promote:
+    name: promote to production
+    # Tags only (the environment's tag rule is the enforced half, docs/deploy.md "GitHub").
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The environment scopes FLY_API_TOKEN (the production app's deploy token): no other job can read it.
+    environment: production
+    permissions:
+      contents: write # the GitHub Release
+      deployments: read # the staging deployment record
+    # Production deployments never run concurrently and are never cancelled midway (step 4).
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      # A tag push is a deliberate act: a token this job cannot read fails it (step 10.4).
+      - name: Check the deploy secret
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "::error title=Promotion::FLY_API_TOKEN is empty in the production environment, so nothing was promoted. Set it as in docs/deploy.md (GitHub)."
+            exit 1
+          fi
+
+      # The whole history: the guard checks that the tag's commit is on origin/main.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # v1.6
+
+      # Guards, no public IP, restore point, deploy, smoke check, digest, GitHub Release (scripts/promote.sh).
+      - name: Promote
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          flyctl auth docker
+          scripts/promote.sh "$TAG"

@@ -203,9 +203,9 @@ What `scripts/dev.sh` guarantees:
 ### Moving a SQLite database into PostgreSQL
 
 The SQLite copy tool ([ADR 0025](adr/0025-postgresql-storage.md) step 9) copies a SQLite database of
-the app into an empty PostgreSQL database: `just db-import-sqlite <file> <dsn>`. It is used twice, for
-the developer's `.dev/critical.db` and to seed production (`docs/deploy.md`), then deleted from the
-repository (step 9.5).
+the app into an empty PostgreSQL database: `just db-import-sqlite <file> <dsn>`. It is used once, for
+the developer's `.dev/critical.db` (production starts from the seeds, `docs/deploy.md` "Production
+data"), then deleted from the repository once production is deployed (step 9.5).
 
 To move the development data, from the main checkout:
 

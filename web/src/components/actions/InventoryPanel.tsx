@@ -57,12 +57,18 @@ export function InventoryPanel() {
         className="flex flex-col gap-1 rounded-xl bg-card px-3 py-3"
       >
         <div className="mb-1.5 flex items-center justify-between gap-3">
-          <h2 id="inventory-items-title" className="text-title">
+          <h2 id="inventory-items-title" className="section-label">
             {t("items.heading")}
           </h2>
           {form !== "add" && (
-            <Button size="sm" disabled={busy} onClick={() => setForm("add")}>
-              <Plus /> {t("items.form.openAdd")}
+            <Button
+              size="sm"
+              disabled={busy}
+              title={t("items.form.openAdd")}
+              aria-label={t("items.form.openAdd")}
+              onClick={() => setForm("add")}
+            >
+              <Plus /> {t("items.form.add")}
             </Button>
           )}
         </div>
@@ -156,7 +162,7 @@ function ItemRow({
     <li
       className={cn(
         ITEM_COLS,
-        "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body",
+        "min-h-7 rounded-lg bg-raised px-2 py-1.5 text-body",
       )}
       data-testid={`item-${i.id}`}
     >
@@ -167,7 +173,7 @@ function ItemRow({
           </span>
           {i.magicalBonus !== 0 && (
             <span
-              className="shrink-0 rounded-md bg-amb-900 px-1.5 text-label font-medium text-highlight tabular-nums"
+              className="chip shrink-0 px-1.5 text-label font-medium tabular-nums"
               title={t("items.magicalBonus")}
               aria-label={`${t("items.magicalBonus")} ${formatSigned(i.magicalBonus)}`}
               data-testid="item-bonus"
@@ -195,7 +201,7 @@ function ItemRow({
         {i.effectDice ? (
           <button
             type="button"
-            className="inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5 text-body font-medium text-amb-300 tabular-nums outline-none ring-1 ring-amb-700 ring-inset hover:bg-amb-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="chip inline-flex max-w-full items-center gap-1 px-2 py-0.5 text-body font-medium tabular-nums outline-none hover:text-tint focus-visible:ring-3 focus-visible:ring-ring/50"
             title={t("dice.send", { formula: i.effectDice })}
             aria-label={t("dice.send", { formula: i.effectDice })}
             data-testid="item-dice"
@@ -213,7 +219,6 @@ function ItemRow({
       <div className="flex items-center justify-center gap-1">
         <Button
           size="icon-sm"
-          variant="secondary"
           disabled={busy || i.count === 0}
           onClick={onUse}
           aria-label={t("items.useOne", {
@@ -233,7 +238,6 @@ function ItemRow({
         {i.behaviour === "stock" ? (
           <Button
             size="icon-sm"
-            variant="secondary"
             disabled={busy}
             onClick={onRestock}
             aria-label={t("items.addOne", {

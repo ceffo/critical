@@ -18,3 +18,11 @@ export function adjustmentChanged(
   if (value !== (r.adjustment ?? 0)) return true;
   return value !== 0 && reason.trim() !== (r.adjustmentReason ?? "");
 }
+
+/**
+ * Whether a check (save, skill check) carries the DM's adjustment: its "adjust after the roll" line
+ * opens on it (ADR 0027 step 8.2), closed otherwise.
+ */
+export function adjustmentInEffect(r: { adjustment?: number }): boolean {
+  return (r.adjustment ?? 0) !== 0;
+}

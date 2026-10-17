@@ -109,7 +109,7 @@ export function HpBar() {
       </div>
       <div className="flex flex-col gap-1">
         <div
-          className="flex h-3 w-full overflow-hidden rounded bg-neu-900"
+          className="flex h-3 w-full overflow-hidden rounded bg-raised"
           role="meter"
           aria-label={t("hp.title")}
           aria-valuemin={floor}

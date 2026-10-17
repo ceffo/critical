@@ -3,7 +3,7 @@
 ## Stack
 
 - **Framework**: React 18 + Vite + TypeScript (strict mode)
-- **Styling**: Tailwind CSS v4; Nocturne tokens and ambiances (ADR 0009, `lib/theme.ts`, `index.css`)
+- **Styling**: Tailwind CSS v4; Nocturne tokens and the four themes (ADR 0009, ADR 0026, `lib/theme.ts`, `index.css`)
 - **Type and icons**: Inter (`@fontsource-variable/inter`), Phosphor (`@phosphor-icons/react`); no other family or icon set
 - **Components**: shadcn/ui (components live in `web/src/components/ui/`)
 - **i18n**: i18next + react-i18next (see "Internationalisation")
@@ -36,7 +36,7 @@ player is doing. Responsive from 1280 to 2560 CSS px at full width, no horizonta
 1024 (ADR 0009 step 3), fixed 16px root. On the ground, padded 12 px, every zone is a card
 (`zone-card`: `bg-surface`, 1 px outline, 10 px radius) 12 px from the next; **no rule or separator
 line** anywhere, inside a card grouping is by spacing, a `section-label` (11 px, uppercase,
-letter-spaced, muted) or a `bg-neu-900` tone step. Type uses only `text-label` / `text-body` /
+letter-spaced, full ink) or the raised tone step (`bg-raised`). Type uses only `text-label` / `text-body` /
 `text-title` / `text-key` / `text-headline` / `text-hero` (ADR 0017 step 2, `text-hero` from ADR
 0022 step 3.4: the turn number, a result total, the XP total). **No cut text** (ADR 0022 step 1):
 no `truncate` / `text-ellipsis` / `line-clamp` on important text; `layout.spec` checks the shell's
@@ -51,18 +51,18 @@ flowchart TD
     ET["EffectsTimeline: one row per buff over 8 / 12 / 16 turns, add / edit forms"]
     LR["LastResult: 'Last result · T3 · 21:31', die chip and the journal's wording"]
   end
-  subgraph B["Below the header: character card 280 px | rail 68 px | stage 1fr"]
+  subgraph B["Below the header: character card clamp(280px, 21vw, 384px) | rail 68 px | stage 1fr"]
     subgraph C["Character card (aside 'Character'), scrolls on its own"]
       ID["Identity, abilities, THAC0"]
       HP["HpBar: HIT POINTS"]
-      QH["QuickHp: HP CHANGE on one line"]
+      QH["QuickHp: HP CHANGE, labelled amount, Damage / Healing on one line"]
       CC["ChargeCards"]
-      SV["Saves: SAVING THROWS · CLICK TO ROLL"]
+      SV["Saves: SAVING THROWS, click to roll"]
     end
     RAIL["Rail (components/shell/Rail.tsx), on the ground: Act, Spells, Experience, Inventory"]
     subgraph S["Stage: the focused activity (one shown, each mounted on first visit, then kept)"]
       subgraph ACT["Act (components/shell/ActStage.tsx)"]
-        NOW["Now band, content height up to 60 %: ActionArea (tabs with icons) | ResultCard (accent outline)"]
+        NOW["Now band, its content height: ActionArea (tabs with icons) | ResultCard (accent outline)"]
         SPLIT["Split handle: drag or arrows resize the journal, click or Enter toggles it"]
         J["CombatLog (at least 14rem) or, collapsed, JournalBar (one line)"]
       end
@@ -92,8 +92,9 @@ flowchart TD
   rail focuses one; the always-visible zones do not move. Each mounts on its first visit and stays
   mounted while hidden (ADR 0009 step 2, kept).
 - Act stage (`components/shell/ActStage.tsx`): the now band (act panel | result panel,
-  `minmax(28rem, 1.35fr) | minmax(24rem, 1fr)`) takes its content's height up to 60 % of the
-  stage, the journal the rest (at least 14rem). The handle between them (`role="separator"`) is
+  `minmax(28rem, 1.35fr) | minmax(24rem, 1fr)`) takes its content's height, the active tab's or
+  the result panel's when that is taller (ADR 0027 step 6.1, no 60 % cap), the journal the rest (at
+  least 14rem); past that the panels scroll inside. The handle between them (`role="separator"`) is
   dragged, or moved by ArrowUp / ArrowDown, to set the journal's height (`lib/journalSplit.ts`
   bounds it); a click (under 4 px of movement) or Enter / Space folds the journal into `JournalBar.tsx` (turn, value, icon, newest entry,
   time, the entry count, Undo / Redo). The height and the collapsed state are per-device display
@@ -107,35 +108,60 @@ flowchart TD
   journal row shows that entry instead, read-only, with an accent ring and "Latest" to return; a
   new roll returns to the latest too. Only the latest result offers corrections (target AC, save
   adjustment), by entry id. One layout per kind, from the payload (`cardModel`): attack (hexagon
-  d20, "Hits AC X", verdict, damage dice and total, "Calculation details" closed by default),
-  save (d20, "roll total vs adjusted target+", verdict, the buff modifiers, the adjustment line on the target side), cast, item (dice chips, the
+  d20, "Hits AC X" with the verdict pill beside it, the stat tiles d20 / target AC / margin, damage
+  dice and total, the AC correction folded to one line, "Calculation details" closed by default),
+  save (d20, "roll total vs adjusted target+" with the verdict pill, the stat tiles, the buff
+  modifiers, the adjustment line on the target side), skill check (the same, its die), cast, item (dice chips, the
   maximum in the accent, a 1 dimmed), initiative, and info for every other kind (text, HP value
-  red / green). Header: kind tag, subtitle, "T3 · 21:31". The journal: All / Rolls filter (attacks,
+  red / green). Header: kind tag, subtitle, "T3 · 21:31". [ADR 0027](adr/0027-space-follows-frequency-of-use.md)
+  step 8: the **verdict** is a filled pill (success / danger, `on-accent` text; "?" as a chip while
+  an unknown AC is unsettled) right after the result it judges; the **stat tiles** are one grid
+  of as many 5rem columns as fit (wrap, never cut); a total is in ink, gold only on a crit
+  (`Total` `gold`); every **correction after the roll** (save and skill adjustment, target AC) is
+  one line (`AdjustFold`, a `<details>`), closed by default and open when one is in effect
+  (`lib/saveAdjust.ts` `adjustmentInEffect`, `lib/attackAdjust.ts` `acCorrectionInEffect`); the
+  fold is keyed by entry, so it stays as the player left it while that entry is corrected. The journal: All / Rolls filter (attacks,
   saves, item uses, initiative, casts that rolled damage or a to-hit d20), the entry count, Undo and
-  Redo in its head; turn groups newest first, each **one line per entry** in the columns
-  turn · value · icon · entry · time ([ADR 0022](adr/0022-activity-focus-layout.md) step 5.1): the
-  section label "TURN 3" / "OUT OF COMBAT" beside the group's first entry, a "current" tag and a
-  tint on the current turn, the value right-aligned before the kind icon, the entry text (with
-  Amended / capped / Undone inline after it) wrapping inside its row when long, never cut, and the
-  time last. Nothing is drawn under an entry and there is **no Note** (step 5.2; the amend endpoint
+  Redo in its head; turn groups newest first, touching, every other one on the sub-band tone
+  (`bg-sub-band`), each **one 22 px line per entry** ([ADR 0022](adr/0022-activity-focus-layout.md)
+  step 5.1, [ADR 0027](adr/0027-space-follows-frequency-of-use.md) step 9): a narrow turn marker
+  ("T3", a campfire icon out of combat; the full "Turn 3 · current" in its tooltip and for screen
+  readers, `turnMarker` in `lib/filCard.ts`) beside the group's first entry, the current turn's in
+  the tint (its one mark); then the value right-aligned before the kind icon (a roll total in ink,
+  gold only when the payload says crit, `rowValue`; ADR 0026 step 5.8), the entry text (with
+  Amended / capped and a muted Undone tag inline after it; an undone row is muted and struck)
+  wrapping inside its row when long, never cut, and the time right after the text. Nothing is
+  drawn under an entry and there is **no Note** (step 5.2; the amend endpoint
   stays in the API, the UI neither calls it nor shows notes). Reroll, on an entry that rolled free
-  dice, shows in the line on hover, on keyboard focus in the row and on the selected row (step
+  dice, shows at the end of the line on hover, on keyboard focus in the row and on the selected row (step
   5.3). The row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
   left of the dice footer (ADR 0022 step 2.6): language
-  (English / Français), appearance (Dark / Light / System, System follows the OS live), six
-  ambiance swatches (to become a dark-theme and a light-theme choice, ADR 0026 step 4). Applied live, stored per device in `localStorage['critical.settings.v1']`
-  (`lib/settings.ts`, which migrates the older `critical.theme` / `critical.language` keys once).
+  (English / Français), appearance (Dark / Light / System), a dark theme (Arcane, Deep, Plain) and
+  a light theme (Arcane, Parchment, Plain), each swatch in its theme's own colours (ADR 0026 step 4).
+  The mode picks which theme applies; System switches between the two live with the OS. Applied
+  live, stored per device in `localStorage['critical.settings.v1']` as `darkTheme` / `lightTheme`
+  (`lib/settings.ts`, which maps a saved single `amb` of the six old ambiances once, step 4.3, and
+  migrates the older `critical.theme` / `critical.language` keys once). `index.html`'s inline script
+  paints the mode and the effective theme before the app runs, from `critical.paint.v1` (the
+  chosen themes' variables, saved by `savePaint` whenever the settings apply).
 - Theme (ADR 0020, amended by ADR 0026: the contrast ladder, the raised stage and four themes,
-  Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts` `themeVars(ambiance, light)` computes the three palette ramps
-  (`amb-*` primary, `sec-*`, `ter-*`), the neutrals and the role colours set on `<html>`; use the
+  Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts`
+  `THEMES` holds one hand-tuned role table per theme and mode (Deep is dark only, Parchment light
+  only); `themeVars(theme, light)` turns it into the three palette ramps (`amb-*` primary, `sec-*`,
+  `ter-*`), the neutrals (`neu-900` the raised step, `neu-800` its hover, `amb-800` the selected
+  tone), the role colours and the translucent mixes (`--ink-muted`, `--border`, `--input`) set on
+  `<html>`. A new theme is a role table, its modes, an en and a fr name (`settings.themes.<id>`)
+  and the rules below. Use the
   roles (`tint` for primary accents, `text-highlight` / `bg-highlight-fill text-on-highlight` for
   the secondary, `text-magic` for spells, `danger` / `success` / `warning`, `on-accent` as text on
-  any fill, `bg-surface`, `bg-neu-900`, `text-ink-muted`, `shadow-float` for popovers only) or the
+  any fill, `bg-surface`, `bg-raised`, `text-ink-muted`, `shadow-float` for popovers only) or the
   shadcn names mapped onto them, never raw colours and never a ramp step for meaningful text. The
-  contrast unit test (`lib/theme.test.ts`) keeps every ambiance at WCAG AA in both modes (ADR 0026
-  step 2 adds the tone steps and the 3:1 field edge and ring).
+  unit test (`lib/theme.test.ts`, arithmetic in `lib/wcag.ts`) holds every theme in each of its
+  modes to ADR 0026 steps 1-3: WCAG AA text on page, card and raised, card on page ΔL ≥ .10, raised
+  on card ΔL ≥ .07, field edge and ring 3:1, the dark accent ladder, the hue distance and the
+  near-neutral rule.
 - Brand (ADR 0022 step 7): `components/shell/BrandMark.tsx`, the Facet · Bare mark (hexagon outline
   in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the left of the header
   card; `public/favicon.svg` is the same drawing in static Arcane colours.
@@ -166,16 +192,19 @@ flowchart TD
   and Ctrl/Cmd+Shift+Z replay the `redo` target of `GET /api/log` with `POST /api/log/redo`
   ([ADR 0019](adr/0019-redo.md)); values are never edited in the log. Buff/round entries are rendered from their
   payload in the player's language (`lib/logSummary.ts`). The character card's STR is the effective STR
-  (`GET /api/stats/str`, sheet value in brackets when buffed); a buff whose `min_str` is not met
+  (`GET /api/stats/str`; when buffed only that value, in the success colour, the sheet value in a
+  tooltip on hover and keyboard focus); a buff whose `min_str` is not met
   (`applies: false`, e.g. the Power Gem below STR 18) shows dashed with "needs STR N"; an applying buff with `weapon_buff` / `multiplier` shows its effect under its name ("weapon +5 · dice ×2"); a Strength
   bonus that an active Improved Strength replaces (`applies: false`, no `min_str`) shows dashed
   with "replaced by Improved Strength".
 - Weapons tab (`components/actions/AttackPanel.tsx`, `stores/attack.ts`): the attack form's
   choices are server state (`GET` / `PATCH /api/attack/form`, ADR 0009 step 6), restored on load and
-  in every tab or device. The target bar is one line on the raised tone (it wraps when narrow): the
-  TARGET section label, AC (the stepper's accessible name stays "Target AC") with Unknown, the size
-  (S / M | L) and the situational stepper with its reason (shown when not 0), both bounded to ±20
-  like the server. The weapon in hand is **one row** ([ADR 0022](adr/0022-activity-focus-layout.md)
+  in every tab or device. The target bar is one line on the raised tone ([ADR 0027](adr/0027-space-follows-frequency-of-use.md)
+  step 7.2): the TARGET section label, AC (the stepper's accessible name stays "Target AC") with
+  Unknown, the set modifiers as chips ("Size L", "Situational +2" with the reason as its tooltip;
+  `lib/weaponSwitch.ts` `setModifiers`) and a small toggle ("Size and situational modifier",
+  `SlidersHorizontal`, this screen's state only) that shows under it the size (S / M | L) and the
+  situational stepper with its reason (shown when not 0), both bounded to ±20 like the server. The weapon in hand is **one row** ([ADR 0022](adr/0022-activity-focus-layout.md)
   step 2.5), on a tint with the accent outline: the WEAPON IN HAND label, the name (wrapping, never
   cut), its stats as one line of text from the server's preview (ADR 0002 step 12, `StatsLine`:
   "Missile · two-handed · 1d6 S/M · 1d6 L · +5 / +3 to hit / dmg · THAC0 8", the size not in use
@@ -183,9 +212,10 @@ flowchart TD
   lines ("Attack" / "needs 6 vs AC 5" or "AC unknown"), the Phosphor `Sword` centred in its own
   44 x 44 cell (step 3.3; the accessible name stays "Attack", the second line describes it). Under
   the row: a bow's AMMUNITION chips (`ammoChoices`, counts amber at 3 or less; the chosen one stays
-  chosen when spent and the panel says so), then SWITCH TO, every other weapon as a chip with its
-  S/M dice, the previous weapon first with the swap icon ("Switch to {name}"); one click puts it in
-  hand and never attacks. Then the crit table (house rule), a closed `details` line. Changes are
+  chosen when spent and the panel says so), then (step 7.1, `lib/weaponSwitch.ts` `weaponSwitch`) one quiet
+  button with the swap icon and the previous weapon's name ("Switch to {name}" its tooltip and
+  accessible name) and a native drop-down "Other weapon…" listing every other weapon in full; either
+  puts the weapon in hand and never attacks. The "needs 6 vs AC 5" line is in full ink. Then the crit table (house rule), a closed `details` line. Changes are
   sent one after the other and
   only the newest answer is shown; target and situational changes show at once. The preview is
   reloaded when buffs, effective STR, items or weapons change. An attack sends the saved choices
@@ -195,7 +225,7 @@ flowchart TD
   item counts), so voiding it shows the arrow back.
 - Items tab (`ItemsTab.tsx`): every item but ammunition (`lib/combatItems.ts`) on a grid row: the
   name (wrapping, never cut), behaviour and count, dice, Roll (it has dice) or Use, through
-  `stores/roll.ts` `spendItem`; "Manage the inventory" focuses the Inventory activity.
+  `stores/roll.ts` `spendItem`; "Manage" (tooltip "Manage the inventory") focuses the Inventory activity.
 - Skills tab (`SkillsTab.tsx`): PROFICIENCIES and BARD SKILLS with their column headers as section
   labels (ADR 0022 step 4.2); one row-button per skill, the name wrapping, never cut.
 - Inventaire workspace (`InventoryPanel.tsx`): the Objets card, one grid row per item: name with
@@ -238,7 +268,7 @@ flowchart TD
   All, the school as a tooltip; infinite scroll by 200-row pages; the selected row tinted with a
   tint bar on its left). The right card is the detail, scrolling on its own when too short: the name
   (`text-headline`, wrapping, never cut) and meta line; the stats as tiles on the raised tone
-  (`bg-neu-900`, as many per row as fit at 7.5rem: section label, value at the Bard's level, the raw
+  (`bg-raised`, as many per row as fit at 7.5rem: section label, value at the Bard's level, the raw
   text dimmed under it); the cast box ("AT LEVEL 15", then one row per dice: the damage a cast rolls
   when the spell DTO serves one (`damage`, "Damage 5 × 1d4+1 force", one instance goes to the
   composer), its exposure (`exposure`, one row per exposure mode: "Exposure (Within 10 ft) 2d4
@@ -287,26 +317,29 @@ flowchart TD
   total back. The character card's level line opens
   it and is underlined with the server's `progress`.
 - Character card (`Identity`, `HpBar`, `QuickHp`, `ChargeCards`, `Saves` in `components/dashboard/`,
-  ADR 0022 step 2.3), beside every activity, in this order, grouped by spacing and section labels
-  (no rules): identity (name, level, abilities in seven cells, effective STR, THAC0); "HIT POINTS"
+  ADR 0022 step 2.3, ADR 0027 step 5), `clamp(280px, 21vw, 384px)` wide, beside every activity, in this order, grouped by spacing and section labels
+  (no rules): identity (name, level, abilities in seven cells, effective STR with the sheet value
+  in a tooltip when buffed, THAC0); "HIT POINTS"
   with the newest HP change still in force on the right (a long one drops under the label and
   wraps, never cut), current over max, and the bar (`lib/hpBar.ts` `hpBarModel`): the scale runs
   from the server's `floor` (-10) to max, a hatched dying zone (`hatch-danger`) below 0 filled from
   0 down to current HP, the fill from 0 coloured by threshold band, the last damage taken as a
   faint segment after the fill when the newest change is damage (`lib/moiLog.ts`), and the server's
-  `condition` labelled next to the value when not ok (ADR 0011); "HP CHANGE" on one line: amount,
-  Damage (`Drop`), Healing (`Heart`), the source under it (Enter in either field applies damage,
+  `condition` labelled next to the value when not ok (ADR 0011); "HP CHANGE": the amount labelled
+  "Amount" above its field, Damage (`Drop`), Healing (`Heart`) on its line, the source under it,
+  smaller (`text-label`), its placeholder never cut (Enter in either field applies damage,
   Shift+Enter healing); one card per applying buff with charges left (Stoneskin layers…), outlined
-  in the accent, Absorb = the buff trigger endpoint; "SAVING THROWS · CLICK TO ROLL", one outlined
-  button row each: name (wraps), target (the sheet's), the newest logged roll in that category
+  in the accent, Absorb = the buff trigger endpoint; "SAVING THROWS" ("click to roll" is the rows'
+  tooltip), one button row each, on one line from 1440 px in French: name (wraps after a slash
+  at 1280), target (the sheet's), the newest logged roll in that category
   (server verdict ✓ / ✗ and the d20), a click rolls it. The card has the full height (ADR 0022
   step 2.3), so on a tall screen the space under the saves stays empty.
 - Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` in
-  `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
-  − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
+  `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" fold
+  (shared with the skill check, `AdjustCheck`): − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
   the recomputed save (same d20 and roll total, the target moved: ADR 0006 step 5). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
-- The attack card (`ResultCard` `AttackResult`) has a "Correct the target AC" form: − / + around
+- The attack card (`ResultCard` `AttackResult`) has a "Correct the target AC" fold: − / + around
   the AC (starts at the attack's, ±20), Apply → `POST /api/roll/attack/{logEntryId}/adjust`
   (`stores/roll.ts` `adjustLastAttack`); the server returns the recomputed attack (same dice, no ammo
   spent). Hidden once the entry is voided. Attack log lines render `effectivePayload`, with
@@ -323,7 +356,7 @@ flowchart TD
   player's language (`apiError.*`), else the server text verbatim.
 - The journal groups entries by the turn the server stamped (`lib/groupByRound.ts`); the current
   turn always has a group. Display helpers live in `lib/format.ts` (no game rules).
-- Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`) and sit in
+- Native `<input>`/`<select>` use `fieldClass` (`components/dashboard/fieldStyles.ts`, on the card with the field edge) and sit in
   `min-w-0` grid cells so they never overflow their card.
 
 ## API Consumption Pattern
@@ -397,8 +430,52 @@ export const useHpStore = create<HpStore>((set) => ({
 ## shadcn/ui Usage
 
 - Use `Card`, `CardContent`, `CardHeader` for panel sections
-- Use `Badge` for buff tags and spell slot indicators
-- Use `Button` with `variant="outline"` for secondary actions, default for primary
+- Use `Badge` for buff tags and spell slot indicators (it is the chip family below)
+- `Button` has two looks (ADR 0027 step 3.4): `variant="main"`, filled with the tint, for the one
+  every-turn action of a zone (Attack, Next turn), and **quiet** (the default): no fill, the field
+  edge (`--input`, 3:1 on the card, so it reads on the card, the raised step and the selected tone
+  alike), the hover tone on hover; a pressed toggle (`aria-pressed`) is the chosen chip. `ghost` is
+  for icon-only buttons in a row or toolbar, `destructive` a quiet button in danger ink. A button
+  with nothing to submit is disabled and looks it, the same in every look: no fill, muted ink, a
+  dashed edge (none on `ghost`); never a faded main button.
+- **One action word per caption** (ADR 0027 step 3): the detail goes in `title` and `aria-label`
+  (`spellSlots.prepare` "Prepare spells" there, `spellSlots.prepareShort` "Prepare" on the button).
+  "Next turn" and "Long rest" are the fixed terms of step 3.2. Enforced by
+  `components/sharedPieces.test.ts` (both languages, buttons without a `role`).
+- Run `npx shadcn@latest add <component>` to install new components into `src/components/ui/`
+
+## Shared pieces
+
+One of each, used everywhere ([ADR 0026](adr/0026-contrast-ladder-raised-stage-four-themes.md)
+step 5); the utilities live in `index.css`, the colour tokens in its `@theme inline` block:
+
+- **Raised step**: `bg-raised` (`neu-900`) for tiles, blocks, row stripes, forms and tracks;
+  `bg-raised-hover` (`neu-800`) only as the hover of a row or chip. No opacity variants.
+- **Sub-band** (step 6.3): `bg-sub-band`, ink at 4 % (light) / 5.5 % (dark) over the card, for a
+  group inside a card (the journal's every other turn).
+- **Small marks** that must be seen on a card (an empty slot dot, the timeline's past line, the
+  journal's drag handle, a level progress underline): `bg-input`, the field edge (3:1).
+- **Chip** (step 5.3): `chip` (raised fill, no outline; one tone further, `neu-800`, when it sits
+  on a raised tile or row), `chip-chosen` (a segmented thumb, the chosen die, a chosen option: the
+  selected tone with a tint outline) and `chip-max` (gold fill, only for a crit or a maximum).
+  Bonus and dice chips are neutral.
+- **Selection mark** (step 5.1): `selected`, the selected tone, ink text and a 3 px tint bar on
+  the left: the rail's current activity, the journal's selected entry, the lookup's selected spell.
+  `bg-selected` is the bare tone (the weapon in hand, with a 2 px tint border; a just-added row).
+- **Latest mark** (step 5.2): `latest`, a 2 px tint outline on the result card while it shows the
+  latest result (not on an older entry picked in the journal).
+- **Fields** (step 5.7): on the card (`bg-surface`) with the field edge (`border-input`): `ui/input`,
+  `ui/select` and `fieldClass` for native inputs and selects.
+- **Tooltip** (`ui/tooltip`, Base UI): a short hint on hover and keyboard focus, for what a
+  native `title` cannot show to the keyboard (a stat's sheet value under its effect).
+- **Headings** (step 5.6): card and section titles are `section-label`; `text-title` is for names
+  (the character, a spell, a buff).
+- The pieces set their own fill, radius and (but `chip`) ink: never add a `bg-*`, `rounded-*` or
+  text colour class to one, pick one piece per state (`on ? "chip-chosen" : "chip"`).
+  `components/sharedPieces.test.ts` fails when a component brings back a retired variant
+  (`bg-neu-*`, `bg-amb-800/900`, `bg-muted`, `bg-background`, `ring-amb-*`, `border-amb-*`,
+  `disabled:opacity-*`, the `outline` / `secondary` / `default` button variants) or a heading in
+  `text-title`.
 - Run `npx shadcn@latest add <component>` to install new components into `src/components/ui/`
 
 ## Display Conventions
@@ -470,7 +547,8 @@ outside `ui/`).
   Act tab with long weapon, item and spell names (`act-<tab>-<size>.png`), and on the Experience
   activity with a long ledger reason, where `expectWholeWords` (same file) also fails on a word
   broken mid-word; its "theme" test screenshots the
-  main screens in dark and light, then every ambiance.
+  main screens in dark and light, then every theme in each of its modes in French
+  (`fr-<mode>-<theme>.png`, no-cut audit on the whole page).
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys
   are visible. Don't add per-flow fr specs.
 - **Add a spec:** create `web/e2e/<name>.spec.ts`, `import { test, expect, snap } from "./fixtures"`, one

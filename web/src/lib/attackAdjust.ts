@@ -66,3 +66,19 @@ export function tellGmWithCrit(r: { critPossible?: boolean }): boolean {
 export function hitsAc(r: { hitsAc?: number; targetACNeeded: number }): number {
   return r.hitsAc ?? r.targetACNeeded;
 }
+
+/**
+ * Whether the attack carries an AC correction, from the server's fields: the AC was corrected after
+ * the roll (rolledTargetAc), or given by the GM after an unknown-AC roll. The correction line opens
+ * on it (ADR 0027 step 8.2), closed otherwise.
+ */
+export function acCorrectionInEffect(r: {
+  rolledTargetAc?: number;
+  rolledAcUnknown?: boolean;
+  targetAc: number | null;
+}): boolean {
+  return (
+    r.rolledTargetAc !== undefined ||
+    (r.rolledAcUnknown === true && r.targetAc !== null)
+  );
+}

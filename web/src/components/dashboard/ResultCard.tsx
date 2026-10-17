@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { ArrowUp } from "@phosphor-icons/react";
+import { ArrowUp, CaretRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useDiceStore } from "@/stores/dice";
 import { useAttackStore } from "@/stores/attack";
@@ -11,7 +11,11 @@ import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
 import { formatFactor, formatSigned } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { adjustmentChanged, stepAdjustment } from "@/lib/saveAdjust";
+import {
+  adjustmentChanged,
+  adjustmentInEffect,
+  stepAdjustment,
+} from "@/lib/saveAdjust";
 import {
   checkAdjustedTarget,
   maxSkillAdjustment,
@@ -20,6 +24,7 @@ import {
 import {
   MAX_TARGET_AC,
   UNKNOWN_AC_STEP_BASE,
+  acCorrectionInEffect,
   adjustFormKey,
   attackSettled,
   hitsAc,
@@ -105,7 +110,7 @@ export function ResultCard() {
         className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1"
         data-testid="card-header"
       >
-        <span className="shrink-0 rounded-md bg-neu-900 px-1.5 py-0.5 text-label font-medium">
+        <span className="chip shrink-0 px-1.5 py-0.5 text-label font-medium">
           {h.tag}
         </span>
         <span
@@ -128,12 +133,7 @@ export function ResultCard() {
           </span>
         )}
         {readOnly && (
-          <Button
-            size="xs"
-            variant="outline"
-            className="ml-auto shrink-0"
-            onClick={showLatest}
-          >
+          <Button size="xs" className="ml-auto shrink-0" onClick={showLatest}>
             {t("fil.latest")}
             <ArrowUp aria-hidden />
           </Button>
@@ -146,15 +146,16 @@ export function ResultCard() {
   return (
     <section
       className={cn(
-        // The result panel's outline is the accent, marking the latest result (ADR 0022 step 4.1).
-        "zone-card flex min-h-0 min-w-0 flex-col border-amb-700",
-        readOnly && "ring-1 ring-amb-700",
+        // The "latest" mark (ADR 0026 step 5.2) while the card shows the latest result; an older
+        // entry picked in the journal shows on the plain card.
+        "zone-card flex min-h-0 min-w-0 flex-col",
+        !readOnly && "latest",
       )}
       aria-label={t("fil.card")}
       data-readonly={readOnly}
     >
       <div className="flex shrink-0 items-center gap-2 px-4 pt-3.5 pb-2">
-        {header ?? <h2 className="text-title">{t("fil.card")}</h2>}
+        {header ?? <h2 className="section-label">{t("fil.card")}</h2>}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3.5">{body}</div>
     </section>
@@ -208,37 +209,105 @@ function HexDie({ value, label }: { value: number; label: string }) {
   );
 }
 
+/**
+ * A stat tile (a label over its value). A row of them is the tile grid: as many columns as fit at
+ * 5rem each, so the save's four facts sit on one row on a wide card and wrap, never cut, on a
+ * narrow one.
+ */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-neu-900/60 px-3 py-2">
+    <div className="rounded-lg bg-raised px-3 py-2">
       <dt className={labelClass}>{label}</dt>
       <dd className="text-body font-semibold tabular-nums">{children}</dd>
     </div>
   );
 }
 
+/**
+ * The verdict as a filled pill (ADR 0026 step 5.5): success or danger fill, on-accent text. It sits
+ * right after the result it judges (ADR 0027 step 8.1), never at the card's far edge.
+ */
 function Verdict({ ok, yes, no }: { ok: boolean; yes: string; no: string }) {
   return (
     <span
       data-testid="verdict"
-      className={cn("shrink-0 text-key", ok ? "text-success" : "text-danger")}
+      data-ok={ok}
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-body font-semibold text-on-accent",
+        ok ? "bg-success" : "bg-danger",
+      )}
     >
       {ok ? yes : no}
     </span>
   );
 }
 
-/** A big total on the right of a row. */
+/** The key line of a check: its result (the save's total, the check's roll, the attack's AC) and the verdict beside it. */
+function ResultLine({
+  children,
+  verdict,
+}: {
+  children: ReactNode;
+  verdict: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+      {children}
+      {verdict}
+    </div>
+  );
+}
+
+/**
+ * A correction after the roll folded to one line (ADR 0027 step 8.2): closed by default, open when a
+ * correction is in effect. The line is a real disclosure (keyboard and screen reader), the form
+ * opens under it.
+ */
+function AdjustFold({
+  title,
+  open: initiallyOpen,
+  testId,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  testId: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <details
+      open={open}
+      onToggle={(ev) => setOpen(ev.currentTarget.open)}
+      className="group/fold rounded-lg bg-raised px-3 py-1.5"
+      data-testid={testId}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-body font-medium [&::-webkit-details-marker]:hidden">
+        <CaretRight
+          aria-hidden
+          className="size-3.5 shrink-0 transition-transform group-open/fold:rotate-90"
+        />
+        {title}
+      </summary>
+      <div className="pt-1.5 pb-1">{children}</div>
+    </details>
+  );
+}
+
+/** A big total on the right of a row, in ink (gold only when the roll says crit or max). */
 function Total({
   label,
   value,
   testId,
   dim,
+  gold,
 }: {
   label: string;
   value: ReactNode;
   testId: string;
   dim?: boolean;
+  /** Gold only for a crit or a maximum (ADR 0026 steps 5.3 and 5.8); a total is in ink. */
+  gold?: boolean;
 }) {
   return (
     <div className="shrink-0 text-right">
@@ -246,7 +315,11 @@ function Total({
       <div
         className={cn(
           "text-headline tabular-nums",
-          dim ? "text-muted-foreground" : "text-highlight",
+          dim
+            ? "text-muted-foreground"
+            : gold
+              ? "text-highlight"
+              : "text-foreground",
         )}
         data-testid={testId}
       >
@@ -336,36 +409,61 @@ function AttackResult({
       <div className="flex items-center gap-3">
         <HexDie value={r.d20Roll} label={t("fil.d20", { value: r.d20Roll })} />
         <div className="min-w-0 flex-1">
-          <div className="text-key tabular-nums" data-testid="hits-ac">
-            {t("fil.hitsAc", { ac: hitsAc(r) })}
-          </div>
+          <ResultLine
+            verdict={
+              settled ? (
+                <>
+                  <Verdict
+                    ok={r.hit}
+                    yes={t("result.hit")}
+                    no={t("result.miss")}
+                  />
+                  {r.verdict && (
+                    <span
+                      className="text-label text-muted-foreground"
+                      data-testid="verdict-by-gm"
+                    >
+                      {t("result.unknownAc.byGm")}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span
+                  data-testid="verdict"
+                  className="chip shrink-0 px-2.5 py-0.5 text-body font-semibold text-muted-foreground"
+                  title={t("result.unknownAc.unsettled")}
+                  aria-label={t("result.unknownAc.unsettled")}
+                >
+                  ?
+                </span>
+              )
+            }
+          >
+            <span className="text-key tabular-nums" data-testid="hits-ac">
+              {t("fil.hitsAc", { ac: hitsAc(r) })}
+            </span>
+          </ResultLine>
           <div className="text-body text-muted-foreground">
             {attackHeading(t, r, names)}
             {r.targetSize && <> · {t(`result.sizes.${r.targetSize}`)}</>}
           </div>
         </div>
-        {settled ? (
-          <span className="flex shrink-0 flex-col items-end">
-            <Verdict ok={r.hit} yes={t("result.hit")} no={t("result.miss")} />
-            {r.verdict && (
-              <span
-                className="text-label text-muted-foreground"
-                data-testid="verdict-by-gm"
-              >
-                {t("result.unknownAc.byGm")}
-              </span>
-            )}
-          </span>
-        ) : (
-          <span
-            data-testid="verdict"
-            className="shrink-0 text-key text-muted-foreground"
-            title={t("result.unknownAc.unsettled")}
-          >
-            ?
-          </span>
-        )}
       </div>
+      {/* The stat tiles of the save (ADR 0027 step 8.4): the d20, the target's AC, the margin. */}
+      <dl
+        className="grid grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-2"
+        data-testid="attack-tiles"
+      >
+        <Fact label={t("result.d20")}>{r.d20Roll}</Fact>
+        <Fact label={t("result.targetAc")}>
+          <span data-testid="attack-target-ac">
+            {r.targetAc === null ? "?" : r.targetAc}
+          </span>
+        </Fact>
+        <Fact label={t("result.margin")}>
+          {r.acKnown === false ? "–" : formatSigned(r.hitMargin)}
+        </Fact>
+      </dl>
       {r.isCrit && (
         <p
           className="rounded-md bg-highlight-fill px-3 py-1 text-body font-semibold text-on-highlight"
@@ -376,7 +474,7 @@ function AttackResult({
       )}
       {r.acKnown === false && r.critsFromAc !== undefined && (
         <p
-          className="rounded-md bg-neu-900/60 px-3 py-2 text-body tabular-nums"
+          className="rounded-md bg-raised px-3 py-2 text-body tabular-nums"
           data-testid="tell-gm"
         >
           {r.verdict
@@ -417,7 +515,7 @@ function AttackResult({
             </div>
           ) : (
             <span
-              className="w-fit rounded-md bg-neu-900 px-2 py-0.5 text-body font-semibold tabular-nums"
+              className="chip w-fit px-2 py-0.5 text-body font-semibold tabular-nums"
               data-testid="damage-dice"
             >
               {t("fil.diceRolled", { dice: r.damageDice, total: r.baseDamage })}
@@ -441,6 +539,7 @@ function AttackResult({
           value={r.hit || !settled ? r.totalDamage : "–"}
           testId="total-damage"
           dim={!r.hit}
+          gold={r.hit && r.isCrit}
         />
       </div>
 
@@ -448,12 +547,25 @@ function AttackResult({
         <GmVerdict result={r} entryId={r.logEntryId as number} />
       )}
       {correctable && (
-        // Keyed by entry and AC so a new attack, or a popped correction, starts from the AC shown.
-        <AdjustAttackAc
-          key={adjustFormKey(r)}
-          result={r}
-          entryId={r.logEntryId as number}
-        />
+        // The fold is keyed by entry: a new attack starts it closed (or open on a correction), and
+        // it stays as the player left it while the same attack is corrected. The form is keyed by
+        // entry and AC so a new attack, or a popped correction, starts from the AC shown.
+        <AdjustFold
+          key={r.logEntryId}
+          title={
+            r.targetAc === null
+              ? t("result.adjustAc.giveLabel")
+              : t("result.adjustAc.label")
+          }
+          open={acCorrectionInEffect(r)}
+          testId="adjust-ac"
+        >
+          <AdjustAttackAc
+            key={adjustFormKey(r)}
+            result={r}
+            entryId={r.logEntryId as number}
+          />
+        </AdjustFold>
       )}
 
       {r.ammo && (
@@ -468,14 +580,14 @@ function AttackResult({
       <details
         open={detailOpen}
         onToggle={(ev) => setDetailOpen(ev.currentTarget.open)}
-        className="rounded-lg bg-neu-900/40 px-3 py-2"
+        className="rounded-lg bg-raised px-3 py-2"
       >
         <summary className="cursor-pointer text-body font-medium">
           {t("fil.details")}
         </summary>
         <div className="mt-2 flex flex-col gap-3">
+          {/* The d20 and the margin are the tiles above; the rest of the to-hit math is here. */}
           <dl className="grid grid-cols-3 gap-2">
-            <Fact label={t("result.d20")}>{r.d20Roll}</Fact>
             <Fact label={t("result.critRoll")}>{r.d100CritRoll}</Fact>
             {r.d100MultiplierRoll !== undefined && (
               <Fact label={t("result.multRoll")}>{r.d100MultiplierRoll}</Fact>
@@ -486,9 +598,6 @@ function AttackResult({
             {r.critsFromAc !== undefined && (
               <Fact label={t("result.critsFromAc")}>{r.critsFromAc}</Fact>
             )}
-            <Fact label={t("result.margin")}>
-              {r.acKnown === false ? "–" : formatSigned(r.hitMargin)}
-            </Fact>
           </dl>
           <div>
             <div className={labelClass}>{t("result.modifiers")}</div>
@@ -559,7 +668,7 @@ function GmVerdict({
     <div
       role="group"
       aria-label={t("result.unknownAc.verdictLabel")}
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-3"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-raised px-3 py-1.5"
     >
       <span className="text-body font-medium">
         {t("result.unknownAc.verdictTitle")}
@@ -567,7 +676,6 @@ function GmVerdict({
       <Button
         type="button"
         size="sm"
-        variant={r.verdict === "hit" ? "default" : "outline"}
         aria-pressed={r.verdict === "hit"}
         disabled={rolling}
         onClick={() => void verdictLastAttack(entryId, true)}
@@ -577,7 +685,6 @@ function GmVerdict({
       <Button
         type="button"
         size="sm"
-        variant={r.verdict === "miss" ? "default" : "outline"}
         aria-pressed={r.verdict === "miss"}
         disabled={rolling}
         onClick={() => void verdictLastAttack(entryId, false)}
@@ -589,7 +696,7 @@ function GmVerdict({
 }
 
 /**
- * The target AC of the latest attack: − / + around the AC field, Apply. The server recomputes hit,
+ * The target AC of the latest attack (inside its one-line fold): − / + around the AC field, Apply. The server recomputes hit,
  * crit and damage with the dice of the attack. Against an unknown AC the field starts empty and
  * Apply gives the GM's AC (it replaces a verdict).
  */
@@ -622,25 +729,22 @@ function AdjustAttackAc({
       ),
     );
 
+  const label = unknown
+    ? t("result.adjustAc.giveLabel")
+    : t("result.adjustAc.label");
   return (
     <form
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-3"
-      aria-label={
-        unknown ? t("result.adjustAc.giveLabel") : t("result.adjustAc.label")
-      }
+      className="flex flex-wrap items-center gap-2"
+      aria-label={label}
       onSubmit={(ev) => {
         ev.preventDefault();
         if (changed) void adjustLastAttack(entryId, ac);
       }}
     >
-      <span className="text-body font-medium">
-        {unknown ? t("result.adjustAc.realTitle") : t("result.adjustAc.title")}
-      </span>
       <div className="flex items-center gap-1">
         <Button
           type="button"
           size="sm"
-          variant="outline"
           aria-label={t("result.adjustAc.decrease")}
           onClick={() => step(-1)}
         >
@@ -665,7 +769,6 @@ function AdjustAttackAc({
         <Button
           type="button"
           size="sm"
-          variant="outline"
           aria-label={t("result.adjustAc.increase")}
           onClick={() => step(1)}
         >
@@ -679,12 +782,13 @@ function AdjustAttackAc({
         <Button
           type="button"
           size="sm"
-          variant="outline"
           disabled={rolling}
           data-testid="ac-unknown"
+          title={t("result.adjustAc.backToUnknown")}
+          aria-label={t("result.adjustAc.backToUnknown")}
           onClick={() => void clearLastAttackAc(entryId)}
         >
-          {t("result.adjustAc.backToUnknown")}
+          {t("attack.unknownAc")}
         </Button>
       )}
       {r.rolledTargetAc !== undefined && (
@@ -731,20 +835,28 @@ function SaveResult({
       <div className="flex items-center gap-3">
         <HexDie value={s.d20} label={t("fil.d20", { value: s.d20 })} />
         <div className="min-w-0 flex-1">
-          <div className="text-key tabular-nums" data-testid="save-vs">
-            {t("fil.saveVs", { total: s.rollTotal, target: s.adjustedTarget })}
-          </div>
+          <ResultLine
+            verdict={
+              <Verdict
+                ok={s.passed}
+                yes={t("result.passed")}
+                no={t("result.failed")}
+              />
+            }
+          >
+            <span className="text-key tabular-nums" data-testid="save-vs">
+              {t("fil.saveVs", {
+                total: s.rollTotal,
+                target: s.adjustedTarget,
+              })}
+            </span>
+          </ResultLine>
           <div className="text-body text-muted-foreground">
             {t("result.saveHeading", { name })}
           </div>
         </div>
-        <Verdict
-          ok={s.passed}
-          yes={t("result.passed")}
-          no={t("result.failed")}
-        />
       </div>
-      <dl className="grid grid-cols-3 gap-2">
+      <dl className="grid grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-2">
         <Fact label={t("result.d20")}>{s.d20}</Fact>
         <Fact label={t("result.target")}>{s.target}</Fact>
         {s.adjustment !== 0 && (
@@ -781,99 +893,37 @@ function SaveResult({
         </ul>
       )}
       {interactive && s.logEntryId !== undefined && (
-        // Keyed by entry and adjustment so a new save, or a popped correction, starts from the
-        // adjustment shown.
-        <AdjustSave
-          key={`${s.logEntryId}:${s.adjustment}:${s.adjustmentReason ?? ""}`}
-          save={s}
-          entryId={s.logEntryId}
-        />
+        // Keyed by entry: a new save starts its fold afresh (AdjustCheck).
+        <AdjustSave key={s.logEntryId} save={s} entryId={s.logEntryId} />
       )}
     </div>
   );
 }
 
 /**
- * The adjustment of the latest save: − / + around a signed value starting at the current
- * adjustment, an optional reason, Apply. The server recomputes verdict and margin.
+ * The adjustment of the latest save (ADR 0006 steps 5-7): the shared check adjustment, ±20 by 1.
+ * The server recomputes verdict and margin.
  */
 function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
   const { t } = useTranslation();
-  const adjustLastSave = useRollStore((s) => s.adjustLastSave);
-  const rolling = useRollStore((s) => s.rolling);
-  const voided = useLogStore((st) =>
-    st.entries.some((e) => e.id === entryId && e.status === "voided"),
-  );
-  const [value, setValue] = useState(s.adjustment);
-  const [reason, setReason] = useState(s.adjustmentReason ?? "");
-  if (voided) return null;
-  const changed = adjustmentChanged(s, value, reason);
-
+  const adjustLastSave = useRollStore((st) => st.adjustLastSave);
   return (
-    <form
-      className="flex flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
-      aria-label={t("result.adjust.label")}
-      onSubmit={(ev) => {
-        ev.preventDefault();
-        if (changed)
-          void adjustLastSave(
-            entryId,
-            s.category as SaveCategory,
-            value,
-            value === 0 ? "" : reason.trim(),
-          );
-      }}
-    >
-      <div className="text-body font-medium">{t("result.adjust.title")}</div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            aria-label={t("result.adjust.decrease")}
-            onClick={() => setValue((v) => stepAdjustment(v, -1))}
-          >
-            −
-          </Button>
-          <output
-            className="w-10 text-center text-key tabular-nums"
-            aria-label={t("result.adjust.value")}
-            data-testid="save-adjustment"
-          >
-            {formatSigned(value)}
-          </output>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            aria-label={t("result.adjust.increase")}
-            onClick={() => setValue((v) => stepAdjustment(v, 1))}
-          >
-            +
-          </Button>
-        </div>
-        <input
-          className={fieldClass}
-          type="text"
-          maxLength={80}
-          value={reason}
-          aria-label={t("result.adjust.reason")}
-          placeholder={t("result.adjust.reason")}
-          onChange={(ev) => setReason(ev.target.value)}
-        />
-        <Button type="submit" size="sm" disabled={rolling || !changed}>
-          {t("result.adjust.apply")}
-        </Button>
-      </div>
-    </form>
+    <AdjustCheck
+      current={s}
+      label={t("result.adjust.label")}
+      entryId={entryId}
+      valueTestId="save-adjustment"
+      step={stepAdjustment}
+      onApply={(value, reason) =>
+        adjustLastSave(entryId, s.category as SaveCategory, value, reason)
+      }
+    />
   );
 }
 
 /**
- * The adjustment of the latest skill check: − / + around a signed value starting at the current
- * adjustment (1 on a proficiency, 5 points on a bard skill), an optional reason, Apply. The
- * server recomputes the verdict; the roll never changes.
+ * The adjustment of the latest skill check (ADR 0014 step 6): the shared check adjustment, by 1 on
+ * a proficiency, 5 points on a bard skill. The server recomputes the verdict; the roll never changes.
  */
 function AdjustSkill({
   check: c,
@@ -884,74 +934,142 @@ function AdjustSkill({
 }) {
   const { t } = useTranslation();
   const adjustLastSkill = useRollStore((s) => s.adjustLastSkill);
-  const rolling = useRollStore((s) => s.rolling);
+  const max = maxSkillAdjustment(c.kind);
+  return (
+    <AdjustCheck
+      current={{
+        adjustment: c.adjustment ?? 0,
+        adjustmentReason: c.adjustmentReason,
+      }}
+      label={t("result.skill.adjustLabel")}
+      entryId={entryId}
+      valueTestId="skill-adjustment"
+      min={-max}
+      max={max}
+      step={(v, by) => stepSkillAdjustment(c.kind, v, by)}
+      onApply={(value, reason) => adjustLastSkill(entryId, value, reason)}
+    />
+  );
+}
+
+/**
+ * "Ajuster après le jet" on the latest check, folded to one line (ADR 0027 steps 8.2 and 8.3):
+ * closed by default, open while an adjustment is in effect. Open, one row: − / + around a signed
+ * value starting at the current adjustment, an optional reason, Appliquer (disabled only while
+ * nothing changed). The value's steps and bounds come from the caller; the server recomputes.
+ * Hidden once the entry is voided.
+ */
+function AdjustCheck({
+  current,
+  label,
+  entryId,
+  valueTestId,
+  min,
+  max,
+  step,
+  onApply,
+}: AdjustCheckProps) {
+  const { t } = useTranslation();
   const voided = useLogStore((st) =>
     st.entries.some((e) => e.id === entryId && e.status === "voided"),
   );
-  const [value, setValue] = useState(c.adjustment ?? 0);
-  const [reason, setReason] = useState(c.adjustmentReason ?? "");
   if (voided) return null;
-  const max = maxSkillAdjustment(c.kind);
-  const changed = adjustmentChanged(c, value, reason);
+  return (
+    <AdjustFold
+      title={t("result.adjust.title")}
+      open={adjustmentInEffect(current)}
+      testId="adjust-check"
+    >
+      {/* Keyed by the adjustment so an applied or popped one restarts the form from what is shown. */}
+      <AdjustCheckForm
+        key={`${current.adjustment}:${current.adjustmentReason ?? ""}`}
+        current={current}
+        label={label}
+        valueTestId={valueTestId}
+        min={min}
+        max={max}
+        step={step}
+        onApply={onApply}
+      />
+    </AdjustFold>
+  );
+}
+
+type AdjustCheckProps = {
+  current: { adjustment: number; adjustmentReason?: string };
+  label: string;
+  entryId: number;
+  valueTestId: string;
+  min?: number;
+  max?: number;
+  step: (value: number, by: 1 | -1) => number;
+  onApply: (value: number, reason: string) => Promise<unknown>;
+};
+
+/** The open fold's one row: − value +, the reason, Appliquer. */
+function AdjustCheckForm({
+  current,
+  label,
+  valueTestId,
+  min,
+  max,
+  step,
+  onApply,
+}: Omit<AdjustCheckProps, "entryId">) {
+  const { t } = useTranslation();
+  const rolling = useRollStore((s) => s.rolling);
+  const [value, setValue] = useState(current.adjustment);
+  const [reason, setReason] = useState(current.adjustmentReason ?? "");
+  const changed = adjustmentChanged(current, value, reason);
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
-      aria-label={t("result.skill.adjustLabel")}
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2"
+      aria-label={label}
       onSubmit={(ev) => {
         ev.preventDefault();
-        if (changed)
-          void adjustLastSkill(
-            entryId,
-            value,
-            value === 0 ? "" : reason.trim(),
-          );
+        if (changed) void onApply(value, value === 0 ? "" : reason.trim());
       }}
     >
-      <div className="text-body font-medium">{t("result.adjust.title")}</div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            aria-label={t("result.adjust.decrease")}
-            disabled={value <= -max}
-            onClick={() => setValue((v) => stepSkillAdjustment(c.kind, v, -1))}
-          >
-            −
-          </Button>
-          <output
-            className="w-12 text-center text-key tabular-nums"
-            aria-label={t("result.adjust.value")}
-            data-testid="skill-adjustment"
-          >
-            {formatSigned(value)}
-          </output>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            aria-label={t("result.adjust.increase")}
-            disabled={value >= max}
-            onClick={() => setValue((v) => stepSkillAdjustment(c.kind, v, 1))}
-          >
-            +
-          </Button>
-        </div>
-        <input
-          className={fieldClass}
-          type="text"
-          maxLength={80}
-          value={reason}
-          aria-label={t("result.adjust.reason")}
-          placeholder={t("result.adjust.reason")}
-          onChange={(ev) => setReason(ev.target.value)}
-        />
-        <Button type="submit" size="sm" disabled={rolling || !changed}>
-          {t("result.adjust.apply")}
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          size="sm"
+          aria-label={t("result.adjust.decrease")}
+          disabled={min !== undefined && value <= min}
+          onClick={() => setValue((v) => step(v, -1))}
+        >
+          −
+        </Button>
+        <output
+          className="w-12 text-center text-key tabular-nums"
+          aria-label={t("result.adjust.value")}
+          data-testid={valueTestId}
+        >
+          {formatSigned(value)}
+        </output>
+        <Button
+          type="button"
+          size="sm"
+          aria-label={t("result.adjust.increase")}
+          disabled={max !== undefined && value >= max}
+          onClick={() => setValue((v) => step(v, 1))}
+        >
+          +
         </Button>
       </div>
+      <input
+        className={fieldClass}
+        type="text"
+        maxLength={80}
+        value={reason}
+        aria-label={t("result.adjust.reason")}
+        placeholder={t("result.adjust.reason")}
+        onChange={(ev) => setReason(ev.target.value)}
+      />
+      <Button type="submit" size="sm" disabled={rolling || !changed}>
+        {t("result.adjust.apply")}
+      </Button>
     </form>
   );
 }
@@ -971,7 +1089,7 @@ function DieChip({
     <li
       className={cn(
         "min-w-7 rounded-md px-2 py-0.5 text-center text-body font-semibold tabular-nums",
-        tone === "max" ? "bg-highlight-fill text-on-highlight" : "bg-neu-900",
+        tone === "max" ? "chip-max" : "chip",
         tone === "min" && "text-muted-foreground",
       )}
       data-tone={tone}
@@ -1062,14 +1180,21 @@ function CastEntry({
             value={c.attack.d20}
             label={t("fil.d20", { value: c.attack.d20 })}
           />
-          <span className="min-w-0 flex-1 text-body">
-            {t("fil.castVsAc", { ac: c.attack.targetAc })}
-          </span>
-          <Verdict
-            ok={c.attack.hit}
-            yes={t("result.cast.attackHit")}
-            no={t("result.cast.attackMiss")}
-          />
+          <div className="min-w-0 flex-1">
+            <ResultLine
+              verdict={
+                <Verdict
+                  ok={c.attack.hit}
+                  yes={t("result.cast.attackHit")}
+                  no={t("result.cast.attackMiss")}
+                />
+              }
+            >
+              <span className="text-body">
+                {t("fil.castVsAc", { ac: c.attack.targetAc })}
+              </span>
+            </ResultLine>
+          </div>
         </div>
       )}
       {c.buff?.applied && (
@@ -1259,12 +1384,22 @@ function SkillResult({
           label={t("fil.die", { faces: c.die, value: c.roll })}
         />
         <div className="min-w-0 flex-1">
-          <div className="text-key tabular-nums" data-testid="skill-vs">
-            {t(proficiency ? "fil.skillVs" : "fil.skillVsPercent", {
-              roll: c.roll,
-              target: adjusted,
-            })}
-          </div>
+          <ResultLine
+            verdict={
+              <Verdict
+                ok={c.success}
+                yes={t("result.skill.success")}
+                no={t("result.skill.failure")}
+              />
+            }
+          >
+            <span className="text-key tabular-nums" data-testid="skill-vs">
+              {t(proficiency ? "fil.skillVs" : "fil.skillVsPercent", {
+                roll: c.roll,
+                target: adjusted,
+              })}
+            </span>
+          </ResultLine>
           <div className="text-body text-muted-foreground tabular-nums">
             {proficiency
               ? t("result.skill.proficiency", {
@@ -1279,13 +1414,8 @@ function SkillResult({
               : t("result.skill.bardSkill", { die: c.die, percent: c.target })}
           </div>
         </div>
-        <Verdict
-          ok={c.success}
-          yes={t("result.skill.success")}
-          no={t("result.skill.failure")}
-        />
       </div>
-      <dl className="grid grid-cols-3 gap-2">
+      <dl className="grid grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-2">
         <Fact label={t("result.skill.die", { die: c.die })}>{c.roll}</Fact>
         <Fact label={t("result.target")}>{show(c.target)}</Fact>
         {adjustment !== 0 && (
@@ -1306,13 +1436,8 @@ function SkillResult({
         </div>
       )}
       {interactive && c.logEntryId !== undefined && (
-        // Keyed by entry and adjustment so a new check, or a popped correction, starts from the
-        // adjustment shown.
-        <AdjustSkill
-          key={`${c.logEntryId}:${adjustment}:${c.adjustmentReason ?? ""}`}
-          check={c}
-          entryId={c.logEntryId}
-        />
+        // Keyed by entry: a new check starts its fold afresh (AdjustCheck).
+        <AdjustSkill key={c.logEntryId} check={c} entryId={c.logEntryId} />
       )}
     </div>
   );

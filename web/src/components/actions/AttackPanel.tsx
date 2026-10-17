@@ -1,7 +1,13 @@
 import { Fragment, useEffect, useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
-import { ArrowsLeftRight, Minus, Plus, Sword } from "@phosphor-icons/react";
+import {
+  ArrowsLeftRight,
+  Minus,
+  Plus,
+  SlidersHorizontal,
+  Sword,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useAttackStore } from "@/stores/attack";
 import { useBuffsStore } from "@/stores/buffs";
@@ -11,6 +17,7 @@ import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { CritTableEditor } from "@/components/actions/CritTableEditor";
 import { formatSigned } from "@/lib/format";
 import { UNKNOWN_AC_STEP_BASE } from "@/lib/attackAdjust";
+import { setModifiers, weaponSwitch } from "@/lib/weaponSwitch";
 import { cn } from "@/lib/utils";
 import type {
   AmmoChoice,
@@ -26,10 +33,11 @@ const BOUND = 20;
 const LOW_AMMO = 3;
 
 /**
- * Weapons tab of the Act panel (ADR 0022 step 2.5): the target bar (AC, size, situational modifier),
- * the weapon in hand as one row (name, stats line, the 44 px Attack of step 3.3), its ammunition, and
- * the other weapons as chips. Every choice is saved on the server (`/api/attack/form`) and every
- * number shown comes from it; switching never attacks.
+ * Weapons tab of the Act panel (ADR 0022 step 2.5, ADR 0027 step 7): the target bar on one line (AC,
+ * Unknown, the set modifiers as tags, the toggle for size and situational), the weapon in hand as
+ * one row (name, stats line, the 44 px Attack of step 3.3), its ammunition, then one button back to
+ * the previous weapon and a drop-down with every other one. Every choice is saved on the server
+ * (`/api/attack/form`) and every number shown comes from it; switching never attacks.
  */
 export function AttackPanel() {
   const { t, i18n } = useTranslation();
@@ -66,14 +74,8 @@ export function AttackPanel() {
       : preview.rollNeeded === null || form.targetAc === null
         ? t("attack.needsUnknown")
         : t("attack.needs", { ac: form.targetAc, n: preview.rollNeeded });
-  // The other weapons as chips, the previous one first (one click switches back).
-  const others = weapons
-    .filter((w) => w.id !== form.weaponId)
-    .sort(
-      (a, b) =>
-        Number(b.id === form.previousWeaponId) -
-        Number(a.id === form.previousWeaponId),
-    );
+  const { previous, others } = weaponSwitch(weapons, form);
+  const nameOf = (w: Weapon) => localized(i18n.language, w.name);
 
   return (
     <div className="flex flex-col gap-3">
@@ -91,7 +93,7 @@ export function AttackPanel() {
           // the only control in the row (step 3.3).
           <section
             aria-label={t("attack.inHand")}
-            className="flex items-center gap-4 rounded-lg border border-amb-700 bg-amb-900/40 px-4 py-3"
+            className="flex items-center gap-4 rounded-lg border-2 border-tint bg-selected px-4 py-3"
           >
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="section-label">{t("attack.inHand")}</span>
@@ -102,9 +104,11 @@ export function AttackPanel() {
             </div>
             <Button
               type="submit"
+              variant="main"
               className="h-11 shrink-0 gap-0 py-0 pr-4 pl-0 whitespace-normal"
               disabled={rolling || !ready}
-              aria-label={rolling ? t("attack.rolling") : t("attack.roll")}
+              aria-label={t("attack.roll")}
+              aria-busy={rolling}
               aria-describedby={needs ? needsId : undefined}
             >
               <span
@@ -114,13 +118,11 @@ export function AttackPanel() {
                 <Sword className="size-5" />
               </span>
               <span className="flex flex-col items-start text-left">
-                <span className="text-title leading-4">
-                  {rolling ? t("attack.rolling") : t("attack.roll")}
-                </span>
+                <span className="text-title leading-4">{t("attack.roll")}</span>
                 {needs && (
                   <span
                     id={needsId}
-                    className="text-label leading-4 opacity-80"
+                    className="text-label leading-4"
                     data-testid="attack-needs"
                   >
                     {needs}
@@ -143,39 +145,45 @@ export function AttackPanel() {
             })}
           </p>
         )}
-        {others.length > 0 && (
+        {(previous || others.length > 0) && (
+          // ADR 0027 step 7.1: one click back to the previous weapon, the others in a drop-down.
           <div
             role="group"
             aria-label={t("attack.otherWeapons")}
-            className="flex flex-wrap items-center gap-1.5"
+            className="flex flex-wrap items-center gap-2"
             data-testid="other-weapons"
           >
-            <span className="mr-1 section-label">
-              {t("attack.switchLabel")}
-            </span>
-            {others.map((w) => (
+            {previous && (
               <Button
-                key={w.id}
                 type="button"
-                variant="outline"
                 className="h-auto min-h-7 py-1 whitespace-normal"
-                aria-label={t("attack.switchTo", {
-                  name: localized(i18n.language, w.name),
-                })}
-                data-weapon={localized(i18n.language, w.name)}
-                onClick={() => void update({ weaponId: w.id })}
+                aria-label={t("attack.switchTo", { name: nameOf(previous) })}
+                title={t("attack.switchTo", { name: nameOf(previous) })}
+                data-weapon={nameOf(previous)}
+                onClick={() => void update({ weaponId: previous.id })}
               >
-                {w.id === form.previousWeaponId && (
-                  <ArrowsLeftRight aria-hidden />
-                )}
-                <span className="break-words">
-                  {localized(i18n.language, w.name)}
-                </span>
-                <span className="text-muted-foreground tabular-nums">
-                  {w.damage_sm}
-                </span>
+                <ArrowsLeftRight aria-hidden />
+                <span className="break-words">{nameOf(previous)}</span>
               </Button>
-            ))}
+            )}
+            {others.length > 0 && (
+              <select
+                aria-label={t("attack.otherWeapon")}
+                title={t("attack.otherWeapon")}
+                className={cn(fieldClass, "w-auto max-w-56")}
+                value=""
+                onChange={(e) => void update({ weaponId: e.target.value })}
+              >
+                <option value="" disabled>
+                  {t("attack.otherWeaponPlaceholder")}
+                </option>
+                {others.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {nameOf(w)}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         )}
       </form>
@@ -185,99 +193,146 @@ export function AttackPanel() {
 }
 
 /**
- * The target bar on one line (it wraps when narrow): the TARGET label, AC, size and the situational
- * modifier with its reason (shown when not 0). Field labels sit beside their control.
+ * The target bar (ADR 0027 step 7.2) on one line: the TARGET label, the AC stepper and Unknown (every
+ * turn), the set modifiers as tags (step 1.5: a large target, a situational modifier other than 0),
+ * and a small toggle that shows size and situational under it (rare). The toggle is this screen's
+ * state only; the choices themselves are the server's.
  */
 function TargetBar({ view }: { view: AttackFormView }) {
   const { t } = useTranslation();
   const update = useAttackStore((s) => s.update);
+  const [open, setOpen] = useState(false);
+  const modifiersId = useId();
   const { targetAc, targetSize, situational } = view.form;
+  const set = setModifiers(view.form);
   return (
     <div
       role="group"
       aria-label={t("attack.target")}
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-neu-900 px-3 py-2.5"
+      className="flex flex-col gap-2 rounded-lg bg-raised px-3 py-1.5"
     >
-      <span className="section-label">{t("attack.target")}</span>
-      <div className="flex items-center gap-1">
-        <Stepper
-          label={t("attack.targetAc")}
-          shortLabel={t("attack.acShort")}
-          lower={t("attack.lowerAc")}
-          raise={t("attack.raiseAc")}
-          value={targetAc}
-          placeholder={t("attack.unknownAcPlaceholder")}
-          emptyBase={UNKNOWN_AC_STEP_BASE}
-          max={view.maxRealAc}
-          onChange={(v) => void update({ targetAc: v })}
-          onClear={() => void update({ targetAc: null })}
-        />
-        {targetAc !== null && (
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="section-label">{t("attack.target")}</span>
+        <div className="flex items-center gap-1">
+          <Stepper
+            label={t("attack.targetAc")}
+            shortLabel={t("attack.acShort")}
+            lower={t("attack.lowerAc")}
+            raise={t("attack.raiseAc")}
+            value={targetAc}
+            placeholder={t("attack.unknownAcPlaceholder")}
+            emptyBase={UNKNOWN_AC_STEP_BASE}
+            max={view.maxRealAc}
+            onChange={(v) => void update({ targetAc: v })}
+            onClear={() => void update({ targetAc: null })}
+          />
+          {targetAc !== null && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              title={t("attack.unknownAcHint")}
+              onClick={() => void update({ targetAc: null })}
+            >
+              {t("attack.unknownAc")}
+            </Button>
+          )}
+        </div>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+          {set.large && (
+            <span
+              className="chip px-2 py-0.5 text-body whitespace-nowrap"
+              data-testid="modifier-tag"
+            >
+              {t("attack.tags.large")}
+            </span>
+          )}
+          {set.situational && (
+            <span
+              className="chip px-2 py-0.5 text-body whitespace-nowrap"
+              title={set.situational.label.trim() || undefined}
+              data-testid="modifier-tag"
+            >
+              {t("attack.tags.situational", {
+                value: formatSigned(set.situational.value),
+              })}
+            </span>
+          )}
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            title={t("attack.unknownAcHint")}
-            onClick={() => void update({ targetAc: null })}
+            size="icon-sm"
+            aria-expanded={open}
+            aria-controls={modifiersId}
+            aria-label={t("attack.modifiers")}
+            title={t("attack.modifiers")}
+            onClick={() => setOpen(!open)}
           >
-            {t("attack.unknownAc")}
+            <SlidersHorizontal />
           </Button>
-        )}
-      </div>
-      <div className="flex items-center gap-2">
-        <span aria-hidden className="text-body text-muted-foreground">
-          {t("attack.sizeShort")}
-        </span>
-        <div
-          role="radiogroup"
-          aria-label={t("attack.targetSize")}
-          className="flex rounded-lg bg-background p-0.5"
-        >
-          {SIZES.map((s) => (
-            <button
-              key={s}
-              type="button"
-              role="radio"
-              aria-checked={targetSize === s}
-              aria-label={t(`attack.sizes.${s}`)}
-              className={cn(
-                "h-6 rounded-md px-3 text-body whitespace-nowrap text-muted-foreground",
-                targetSize === s && "bg-amb-800 text-foreground",
-              )}
-              onClick={() => void update({ targetSize: s })}
-            >
-              {t(`attack.sizesShort.${s}`)}
-            </button>
-          ))}
         </div>
       </div>
-      <Stepper
-        label={t("attack.situational")}
-        lower={t("attack.lowerSituational")}
-        raise={t("attack.raiseSituational")}
-        value={situational.value}
-        signed
-        onChange={(v) =>
-          void update({ situational: { ...situational, value: v } })
-        }
-      />
-      {situational.value !== 0 && (
-        <label className="flex min-w-48 flex-1 items-center gap-2">
-          <span className="text-body text-muted-foreground">
-            {t("attack.situationalLabel")}
-          </span>
-          <input
-            className={fieldClass}
-            type="text"
-            placeholder={t("attack.situationalPlaceholder")}
-            value={situational.label}
-            onChange={(e) =>
-              void update({
-                situational: { ...situational, label: e.target.value },
-              })
+      {open && (
+        <div
+          id={modifiersId}
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 pb-1"
+        >
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="text-body text-muted-foreground">
+              {t("attack.sizeShort")}
+            </span>
+            <div
+              role="radiogroup"
+              aria-label={t("attack.targetSize")}
+              className="flex rounded-lg bg-surface p-0.5"
+            >
+              {SIZES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={targetSize === s}
+                  aria-label={t(`attack.sizes.${s}`)}
+                  className={cn(
+                    "h-6 rounded-md px-3 text-body whitespace-nowrap text-muted-foreground",
+                    targetSize === s && "chip-chosen",
+                  )}
+                  onClick={() => void update({ targetSize: s })}
+                >
+                  {t(`attack.sizesShort.${s}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Stepper
+            label={t("attack.situational")}
+            lower={t("attack.lowerSituational")}
+            raise={t("attack.raiseSituational")}
+            value={situational.value}
+            signed
+            onChange={(v) =>
+              void update({ situational: { ...situational, value: v } })
             }
           />
-        </label>
+          {situational.value !== 0 && (
+            <label className="flex min-w-48 flex-1 items-center gap-2">
+              <span className="text-body text-muted-foreground">
+                {t("attack.situationalLabel")}
+              </span>
+              <input
+                className={fieldClass}
+                type="text"
+                placeholder={t("attack.situationalPlaceholder")}
+                value={situational.label}
+                onChange={(e) =>
+                  void update({
+                    situational: { ...situational, label: e.target.value },
+                  })
+                }
+              />
+            </label>
+          )}
+        </div>
       )}
     </div>
   );
@@ -468,8 +523,8 @@ function AmmoChips({
           })}
           data-item={a.itemId}
           className={cn(
-            "flex min-h-7 items-center gap-2 rounded-full bg-neu-900 px-3 py-0.5 text-left text-body",
-            a.itemId === chosen && "bg-amb-800 ring-1 ring-amb-500",
+            "flex min-h-7 items-center gap-2 px-3 py-0.5 text-left text-body",
+            a.itemId === chosen ? "chip-chosen" : "chip",
           )}
           onClick={() => void update({ ammoItemId: a.itemId })}
         >

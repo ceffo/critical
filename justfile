@@ -221,18 +221,6 @@ ui-shots: build-api
     cd web && npx playwright test -c playwright.ui-review.config.ts screens.spec.ts contrast.spec.ts
     node web/ui-review/curate.mjs
 
-# UI review mock-up round (docs/design/ui-review/mockups/): each option of the review painted over the
-# real app (proposed tokens from web/ui-review/mockup-tokens.ts, component rules from
-# docs/design/ui-review/mockups/css/), on the same e2e stack and seeded table as `ui-shots`; Act, the
-# lookup and the inventory at 1707x1300 and 1440x900, dark and light, plus each option's theme sheet
-# and themes.md. Fails on cut text in English or French. Committed shots are lossless WebP (needs
-# ImageMagick's `magick`). Not part of `just validate` nor `just e2e`. Needs `just e2e-install` once.
-ui-mockups: build-api
-    @command -v magick >/dev/null || { echo "ui-mockups needs ImageMagick (magick) for lossless WebP"; exit 1; }
-    cd web && node e2e/check-browser.mjs
-    cd web && npx playwright test -c playwright.ui-review.config.ts mockups.spec.ts
-    node web/ui-review/to-webp.mjs
-
 # --- Fly.io configuration (ADR 0024 steps 2, 5, 8, 9.1) ---
 
 # Check deploy/fly.*.toml: the Go test (part of `just test-api`, so of `just validate`) parses them and
@@ -423,8 +411,8 @@ sync-main:
     git log --oneline -1
 
 # Brand placement design round (docs/design/brand-placement/): the decided header drawn in each
-# placement over the real app (French, picked colours), on the same e2e stack and seeded table as
-# `ui-mockups`. Fails on cut text, a page scroll, a header over 120 px or a hidden wordmark.
+# placement over the real app (French, the Arcane theme), on the e2e stack with the seeded table of
+# web/ui-review/paint.ts. Fails on cut text, a page scroll, a header over 120 px or a hidden wordmark.
 # Not part of `just validate` nor `just e2e`. Needs `just e2e-install` once.
 ui-brand: build-api
     cd web && node e2e/check-browser.mjs

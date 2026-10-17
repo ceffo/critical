@@ -36,14 +36,8 @@ light-arcane/experience-1440x900.png
 dark-arcane-fr/act-weapons-1440x900.png
 dark-arcane-fr/lookup-1707x1300.png
 
-# Every other ambiance, the Act stage after an attack, dark and light
-dark-grove/act-weapons-1440x900.png
-dark-blood/act-weapons-1440x900.png
-dark-ocean/act-weapons-1440x900.png
-dark-amber/act-weapons-1440x900.png
-dark-obsidian/act-weapons-1440x900.png
-light-grove/act-weapons-1440x900.png
-light-blood/act-weapons-1440x900.png
-light-ocean/act-weapons-1440x900.png
-light-amber/act-weapons-1440x900.png
-light-obsidian/act-weapons-1440x900.png
+# Every other theme in each of its modes (ADR 0026 step 3.1), the Act stage after an attack
+dark-deep/act-weapons-1440x900.png
+dark-plain/act-weapons-1440x900.png
+light-parchment/act-weapons-1440x900.png
+light-plain/act-weapons-1440x900.png

@@ -1,8 +1,9 @@
 /*
  * The header of the brand placement round (README.md), drawn over the real app by
- * web/ui-review/brand.spec.ts. Only the app's tokens: the roles (--surface, --ink, --tint,
- * --highlight, --band-sub…) painted by the raised-stage option of the mock-up round, the type
- * scale (--text-*), Inter and the Cinzel wordmark. Everything else on screen is the real app.
+ * web/ui-review/brand.spec.ts. Only the app's tokens: the theme roles (--surface, --ink, --tint,
+ * --highlight, --amb-*…) of ADR 0026, the type scale (--text-*), Inter and the Cinzel wordmark,
+ * plus the raised stage's sub-band tone (below) until the app has it. Everything else on screen is
+ * the real app.
  *
  * The decided header (ADR 0027 step 4): the turn label stacked over its number (text-headline),
  * the initiative under "Tour suivant" as the header's text-hero number, 5 turn columns, effect
@@ -19,6 +20,15 @@
 /* Character card width of ADR 0027 step 5.1, as it will be. */
 [data-testid="character"] {
   width: clamp(280px, 21vw, 384px) !important;
+}
+
+:root {
+  /* The raised stage's sub-band (ADR 0026 step 6; docs/design/ui-review/mockups/css/raised-stage.css):
+   * ink over the card, 5.5 % dark, 4 % light. The app's own value wins once it defines one. */
+  --bp-band-sub: var(--band-sub, color-mix(in oklab, var(--ink) 5.5%, transparent));
+}
+:root:not(.dark) {
+  --bp-band-sub: var(--band-sub, color-mix(in oklab, var(--ink) 4%, transparent));
 }
 
 .bp-header {
@@ -81,7 +91,7 @@
   align-items: center;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
-  background-color: var(--band-sub);
+  background-color: var(--bp-band-sub);
 }
 .bp-label {
   font-size: var(--text-label);
@@ -264,7 +274,7 @@
   gap: 0.25rem;
   padding: 0.375rem 0.75rem;
   border-radius: 0.5rem;
-  background-color: var(--band-sub);
+  background-color: var(--bp-band-sub);
 }
 .bp-last .when {
   letter-spacing: normal;

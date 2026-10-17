@@ -5,6 +5,7 @@ import {
   attackForm,
   chooseLanguage,
   chooseSetting,
+  chooseTheme,
   chooseWeapon,
   combatLog,
   nextTurn,
@@ -13,6 +14,7 @@ import {
   openWeapons,
   openWorkspace,
   recordHp,
+  openFold,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
 import {
@@ -82,6 +84,107 @@ async function expectNoScroll(column: Locator, what: string) {
     ch: el.clientHeight,
   }));
   expect(m.sh, `${what} scrolls`).toBeLessThanOrEqual(m.ch);
+}
+
+/**
+ * ADR 0027 step 9 on the journal: a one-line entry is a 22 px row (at most 24), turn blocks touch
+ * (no vertical gap), the turn marker is at most 3rem wide and the entry text starts close to the
+ * left. `long` holds the texts whose entries may wrap.
+ */
+async function expectCompactJournal(
+  page: Page,
+  long: readonly string[],
+  where: string,
+) {
+  const log = combatLog(page);
+  for (const row of await log.getByRole("listitem").all()) {
+    const text = (await row.textContent()) ?? "";
+    if (long.some((l) => text.includes(l))) continue;
+    expect(
+      (await row.boundingBox())!.height,
+      `one-line row, ${where}: ${text}`,
+    ).toBeLessThanOrEqual(24);
+  }
+  const turns = await log.getByTestId("journal-turn").all();
+  expect(turns.length, `turn blocks, ${where}`).toBeGreaterThanOrEqual(2);
+  for (let i = 1; i < turns.length; i++) {
+    const [a, b] = [
+      (await turns[i - 1].boundingBox())!,
+      (await turns[i].boundingBox())!,
+    ];
+    expect(
+      Math.abs(b.y - (a.y + a.height)),
+      `no gap between turn blocks, ${where}`,
+    ).toBeLessThanOrEqual(1);
+  }
+  const marker = (await log
+    .getByTestId("journal-turn-marker")
+    .first()
+    .boundingBox())!;
+  expect(
+    marker.width,
+    `turn marker at most 3rem, ${where}`,
+  ).toBeLessThanOrEqual(48);
+  const logBox = (await log.boundingBox())!;
+  const entryText = (await log
+    .getByTestId("log-select")
+    .first()
+    .locator("span.break-words")
+    .boundingBox())!;
+  expect(
+    entryText.x - logBox.x,
+    `entry text near the left, ${where}`,
+  ).toBeLessThan(150);
+}
+
+/**
+ * ADR 0027 step 5 on the character card, in French at 1440x900 and 1707x1300: the card is
+ * `clamp(280px, 21vw, 384px)` wide, the saves heading and every save row are one line, the HP
+ * change's amount and buttons share one line and the source's placeholder fits its field.
+ */
+async function expectCharacterCardLines(page: Page, where: string) {
+  const character = page.getByTestId("character");
+  const vw = page.viewportSize()!.width;
+  expect(
+    Math.round((await character.boundingBox())!.width),
+    `card width, ${where}`,
+  ).toBe(Math.round(Math.min(384, Math.max(280, vw * 0.21))));
+  const heading = character.getByRole("heading", {
+    name: "Jets de sauvegarde",
+  });
+  expect(
+    (await heading.boundingBox())!.height,
+    `saves heading on one line, ${where}`,
+  ).toBeLessThanOrEqual(17);
+  for (const row of await character.getByTestId("save-row").all())
+    expect(
+      (await row.boundingBox())!.height,
+      `${await row.getAttribute("data-save")} on one line, ${where}`,
+    ).toBeLessThanOrEqual(29);
+  const hp = character.getByRole("group", { name: "Modifier les PV" });
+  const amount = (await hp.getByLabel("Montant").boundingBox())!;
+  for (const name of ["Dégâts", "Soins"]) {
+    const b = (await hp.getByRole("button", { name }).boundingBox())!;
+    expect(
+      Math.abs(b.y - amount.y),
+      `${name} beside the amount, ${where}`,
+    ).toBeLessThanOrEqual(1);
+  }
+  const placeholder = await hp.getByLabel("Source").evaluate((el) => {
+    const input = el as HTMLInputElement;
+    const style = getComputedStyle(input);
+    const ctx = document.createElement("canvas").getContext("2d")!;
+    ctx.font = style.font;
+    const room =
+      input.clientWidth -
+      parseFloat(style.paddingLeft) -
+      parseFloat(style.paddingRight);
+    return { text: ctx.measureText(input.placeholder).width, room };
+  });
+  expect(
+    placeholder.text,
+    `source placeholder fits, ${where}`,
+  ).toBeLessThanOrEqual(placeholder.room);
 }
 
 // ADR 0022 step 1 (layout viewports). 1707x1300 is a third of the user's 5120x1440 table screen.
@@ -296,14 +399,10 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       ] as const)
         await expectInside(el, character, what);
       await openWorkspace(page, "Act");
-      // ADR 0022 step 5.1: an entry is one line (a 28 px row); only a long one wraps.
+      // ADR 0022 step 5.1, ADR 0027 step 9: an entry is one 22 px line; only a long one wraps.
       const row = (text: string) =>
         combatLog(page).getByRole("listitem").filter({ hasText: text });
-      for (const text of ["Long Sword +2 vs AC 5", "Initiative"])
-        expect(
-          (await row(text).first().boundingBox())!.height,
-          `one line: ${text}`,
-        ).toBeLessThanOrEqual(32);
+      await expectCompactJournal(page, [LONG_SOURCE], size);
       await expectNoClippedText(row(LONG_SOURCE), "long journal entry");
       await expectInside(
         page.getByRole("region", { name: "Weapon in hand" }),
@@ -529,46 +628,72 @@ const rootVar = (page: Page, name: string) =>
     name,
   );
 
-test("settings: language, appearance and ambiance apply live and persist across reload", async ({
+// ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
+// switches live with the OS; both choices survive a reload and the inline script paints the
+// effective one before the app runs.
+test("settings: language, appearance and both themes apply live and persist across reload", async ({
   page,
 }) => {
+  const DEEP = / 232\)$/; // Deep's tint hue
+  const PARCHMENT = / 262\)$/; // Parchment's lapis
   await page.emulateMedia({ colorScheme: "light" });
   await openDashboard(page);
   expect(await isDark(page)).toBe(false); // System by default, the OS is light
 
+  await chooseTheme(page, "light", "Parchment");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await chooseSetting(page, "Dark");
   expect(await isDark(page)).toBe(true);
-  await chooseSetting(page, "Blood");
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(/ 15\)$/); // Blood's hue
+  await chooseTheme(page, "dark", "Deep");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
   await chooseLanguage(page, "fr");
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
 
+  // First paint, the app's script blocked: index.html alone paints Deep in dark.
+  const appScript = /\/assets\/.*\.js$/;
+  await page.route(appScript, (route) => route.abort());
   await page.reload();
-  expect(await isDark(page)).toBe(true); // painted before the app mounts
+  expect(await isDark(page)).toBe(true);
+  expect(await rootVar(page, "--tint")).toMatch(DEEP);
+  await page.unroute(appScript);
+
+  await page.reload();
   await expect(
     page.getByRole("button", { name: "Tour suivant" }),
   ).toBeVisible();
-  expect(await rootVar(page, "--tint")).toMatch(/ 15\)$/);
+  expect(await rootVar(page, "--tint")).toMatch(DEEP);
   const popover = await openSettings(page);
-  for (const name of ["Français", "Sombre", "Sang"])
+  for (const name of ["Français", "Sombre"])
     await expect(
       popover.getByRole("radio", { name, exact: true }),
     ).toHaveAttribute("aria-checked", "true");
+  for (const [group, name] of [
+    ["settings-dark-theme", "Abysses"],
+    ["settings-light-theme", "Parchemin"],
+  ])
+    await expect(
+      popover.getByTestId(group).getByRole("radio", { name, exact: true }),
+    ).toHaveAttribute("aria-checked", "true");
+  await expectNoClippedText(popover, "settings popover, fr");
+  await expectWholeWords(popover, "settings popover, fr");
   await snap(page, "settings-popover-fr");
 
-  // Système follows the OS live.
+  // Système follows the OS live, between the two chosen themes.
   await popover.getByRole("radio", { name: "Système", exact: true }).click();
   expect(await isDark(page)).toBe(false);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await page.emulateMedia({ colorScheme: "dark" });
   await expect.poll(() => isDark(page)).toBe(true);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
 });
 
-// The visual identity (ADR 0020): the main screens in dark and light with content in the result
-// card and the journal (Act/Weapons after an attack, Spells, Inventory, Experience), then every
-// ambiance on the dashboard. Screenshots only: the colours themselves are unit-tested (theme.test).
-test("theme: the main screens and every ambiance in dark and light", async ({
+// The visual identity (ADR 0020, ADR 0026): the main screens in dark and light with content in the
+// result card and the journal (Act/Weapons after an attack, Spells, Inventory, Experience), then
+// every theme in each mode it exists in, in French (the layout reference), with the no-cut audit.
+// Screenshots: the colours themselves are unit-tested (theme.test).
+test("theme: the main screens in dark and light, every theme in each of its modes", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -628,20 +753,20 @@ test("theme: the main screens and every ambiance in dark and light", async ({
     await openWorkspace(page, "Experience");
     await expect(page.getByTestId("xp-total")).toHaveText(/\d/);
     await snap(page, `${m}-experience`);
-    await openWorkspace(page, "Act");
-    for (const amb of [
-      "Arcane",
-      "Grove",
-      "Blood",
-      "Ocean",
-      "Amber",
-      "Obsidian",
-    ]) {
-      await chooseSetting(page, amb);
+  }
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  for (const [mode, which, themes] of [
+    ["Sombre", "dark", ["Arcane", "Abysses", "Sobre"]],
+    ["Clair", "light", ["Arcane", "Parchemin", "Sobre"]],
+  ] as const) {
+    await chooseSetting(page, mode);
+    for (const name of themes) {
+      await chooseTheme(page, which, name);
       await page.waitForTimeout(150); // let colour transitions settle
-      await snap(page, `${m}-${amb.toLowerCase()}`);
+      await expectNoClippedText(page.locator("body"), `${which} ${name}, fr`);
+      await snap(page, `fr-${which}-${name.toLowerCase()}`);
     }
-    await chooseSetting(page, "Arcane");
   }
 });
 
@@ -774,6 +899,21 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   await api("PATCH", "/api/items/power_gem_dispel", {
     name: { en: LONG_ITEM, fr: LONG_ITEM },
   });
+  // A known AC and both rare modifiers set: the target bar at its widest (ADR 0027 step 7.2).
+  await api("PATCH", "/api/attack/form", {
+    targetAc: -10,
+    targetSize: "l",
+    situational: { value: -2, label: "couvert" },
+  });
+  // The journal with two turns, a transaction, a dice total and an undone row (ADR 0027 step 9).
+  await api("POST", "/api/hp/event", { delta: -3, source: LONG_SOURCE });
+  await api("POST", "/api/round/advance", {});
+  await api("POST", "/api/roll/dice", { formula: "2d6+1" });
+  await api("POST", "/api/hp/event", { delta: 2, source: "Potion de soins" });
+  const log = (await (await fetch(`${stack.apiUrl}/api/log`)).json()) as {
+    topId: number;
+  };
+  await api("POST", "/api/log/undo", { expectedTopId: log.topId });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const character = page.getByTestId("character");
@@ -785,10 +925,62 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
+    // The whole screen (header, rail, journal, dice footer and the shared pieces in every zone).
+    await expectNoClippedText(page.locator("body"), `screen, ${where}`);
     await expectNoClippedText(character, `character card, ${where}`);
     await expectWholeWords(character, `character card, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await expectCharacterCardLines(page, where);
+    if (vp.width === 1440) {
+      // ADR 0022 step 2.8 in French (ADR 0027 step 5.5): the name to the fifth save, no scroll.
+      await expectNoScroll(character, `character card, ${where}`);
+      await expectInside(
+        character.getByTestId("save-row").last(),
+        character,
+        `fifth save, ${where}`,
+      );
+    }
     await rail.nth(0).click();
     await expectNoClippedText(stage, `act, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`)) {
+      // ADR 0027 step 7.2: AC, Inconnue and the two tags on one line.
+      const bar = page.getByRole("group", { name: "Cible" });
+      const middle = async (l: Locator) => {
+        const b = (await l.boundingBox())!;
+        return b.y + b.height / 2;
+      };
+      const ac = await middle(bar.getByLabel("CA de la cible"));
+      for (const el of [
+        bar.getByRole("button", { name: "Inconnue" }),
+        ...(await bar.getByTestId("modifier-tag").all()),
+      ])
+        expect(
+          Math.abs((await middle(el)) - ac),
+          `target bar on one line, ${where}`,
+        ).toBeLessThanOrEqual(2);
+      await expect(bar.getByTestId("modifier-tag")).toHaveCount(2);
+    }
+    if (vp.width === 1440) {
+      // ADR 0027 step 6: the now band is as tall as the Weapons tab, which does not scroll, and the
+      // journal (at least 14rem) takes the rest.
+      const weapons = page.getByRole("tabpanel");
+      await expect(weapons).toHaveAttribute("id", "panel-weapons");
+      await expectNoScroll(weapons, `Weapons tab, ${where}`);
+      expect(
+        (await page.getByTestId("journal-slot").boundingBox())!.height,
+        `journal height, ${where}`,
+      ).toBeGreaterThanOrEqual(224);
+    }
+    await expectCompactJournal(
+      page,
+      [LONG_SOURCE, LONG_WEAPON, LONG_ITEM],
+      where,
+    );
+    await expect(
+      combatLog(page).locator('[data-status="voided"]'),
+    ).toContainText("Annulé");
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `act-weapons-fr-${vp.width}x${vp.height}`);
     await rail.nth(1).click();
     await page.getByRole("option", { name: FR_SPELL }).click();
     await expectNoClippedText(stage, `lookup, ${where}`);
@@ -925,7 +1117,11 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
   await page.getByRole("button", { name: "Roll save vs Spells" }).click();
   const card = page.getByTestId("save-result");
   await expect(card).toBeVisible();
-  const form = card.getByRole("form", { name: "Adjust this save" });
+  const form = await openFold(
+    card,
+    "Adjust after the roll",
+    "Adjust this save",
+  );
   const harder = form.getByRole("button", { name: "Decrease adjustment" });
   await harder.click();
   await harder.click();
@@ -956,4 +1152,52 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
       .getByRole("listitem")
       .filter({ hasText: "Sauvegarde contre Sorts" }),
   ).toContainText("(seuil ");
+});
+
+// ADR 0027 step 8 on the attack card, French first: the verdict pill right after the result it
+// judges, the stat tiles (d20, target AC, margin) and the AC correction opened from its one line;
+// nothing is cut at any layout viewport, in French and English.
+test("attack card: verdict beside the result, tiles and the open AC correction uncut, fr and en, 1280 to 2560", async ({
+  page,
+  stack,
+}) => {
+  const res = await fetch(`${stack.apiUrl}/api/attack/form`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetAc: 5 }),
+  });
+  expect(res.ok).toBe(true);
+  await openDashboard(page);
+  await attackForm(page)
+    .getByRole("button", { name: "Attack", exact: true })
+    .click();
+  const card = page.getByTestId("attack-result");
+  await expect(card.getByTestId("attack-tiles")).toBeVisible();
+  await openFold(card, "Correct the target AC");
+
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await expect(card.getByTestId("attack-tiles")).toContainText(
+      lang === "fr" ? "CA cible" : "Target AC",
+    );
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      // Step 8.1: the pill follows the result on its line, not at the card's far edge.
+      const result = (await card.getByTestId("hits-ac").boundingBox())!;
+      const pill = (await card.getByTestId("verdict").boundingBox())!;
+      expect(
+        pill.x - (result.x + result.width),
+        `pill gap, ${where}`,
+      ).toBeLessThan(16);
+      expect(
+        Math.abs(pill.y + pill.height / 2 - (result.y + result.height / 2)),
+        `pill on the result's line, ${where}`,
+      ).toBeLessThan(4);
+      await expectNoClippedText(card, `attack card, ${where}`);
+      await expectWholeWords(card, `attack card, ${where}`);
+      if (SHOTS.has(`${vp.width}x${vp.height}`))
+        await snap(page, `attack-card-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
 });

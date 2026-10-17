@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
   attackForm,
@@ -12,6 +12,8 @@ import {
   openWeapons,
   undoEntry,
   expectUndoOn,
+  openTargetModifiers,
+  openFold,
 } from "./helpers";
 
 function resultCard(page: Page) {
@@ -35,6 +37,7 @@ test("a melee attack lists every modifier in the result card and the log", async
   await chooseWeapon(page, "Long Sword +2");
   await expect(ammoChips(page)).toHaveCount(0);
   await form.getByLabel("Target AC").fill("5");
+  await openTargetModifiers(page);
   await form.getByRole("radio", { name: "Large" }).click();
   await form.getByLabel("Situational", { exact: true }).fill("2");
   // Typed key by key: every keystroke is saved on the server, spaces included.
@@ -191,7 +194,9 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await form.getByRole("button", { name: "Attack", exact: true }).click();
 
   const card = resultCard(page);
-  const fix = card.getByRole("form", { name: "Correct the target AC" });
+  await expect(card).toContainText("vs AC -20");
+  // The correction is folded to one line until opened (ADR 0027 step 8.2).
+  const fix = await openFold(card, "Correct the target AC");
   const acField = fix.getByLabel("Corrected target AC");
   const apply = fix.getByRole("button", { name: "Apply" });
   const entry = logEntry(page, "Short Bow +2 (Arrows +2)");
@@ -459,7 +464,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
   const mult = await fact("Multiplier d100");
 
-  const fix = card.getByRole("form", { name: "Correct the target AC" });
+  const fix = await openFold(card, "Correct the target AC");
   await fix.getByLabel("Corrected target AC").fill("10");
   await fix.getByRole("button", { name: "Apply" }).click();
   await expect(card).toContainText("vs AC 10");
@@ -512,6 +517,7 @@ test("the attack form is kept on the server across a reload; switching weapons n
   ).toBeVisible();
   await chooseAmmo(page, "Arrows +2");
   await form.getByLabel("Target AC").fill("-3");
+  await openTargetModifiers(page);
   await form.getByRole("radio", { name: "Large" }).click();
   await form.getByRole("button", { name: "Raise the modifier" }).click();
   await form.getByRole("button", { name: "Raise the modifier" }).click();
@@ -541,6 +547,23 @@ test("the attack form is kept on the server across a reload; switching weapons n
     ammoChips(page).locator('[aria-checked="true"]'),
   ).toHaveAttribute("data-item", "arrows_plus2");
   await expect(form.getByLabel("Target AC")).toHaveValue("-3");
+  // ADR 0027 step 7.2: the set modifiers show as tags on the target bar, the toggle closed.
+  const tags = form.getByTestId("modifier-tag");
+  await expect(tags).toHaveText(["Size L", "Situational +2"]);
+  await expect(tags.last()).toHaveAttribute("title", "cover");
+  // One line: the tags sit beside the AC (same vertical centre).
+  const middle = async (l: Locator) => {
+    const b = (await l.boundingBox())!;
+    return b.y + b.height / 2;
+  };
+  expect(
+    Math.abs(
+      (await middle(tags.first())) -
+        (await middle(form.getByLabel("Target AC"))),
+    ),
+  ).toBeLessThanOrEqual(2);
+  await snap(page, "target-tags");
+  await openTargetModifiers(page);
   await expect(form.getByRole("radio", { name: "Large" })).toHaveAttribute(
     "aria-checked",
     "true",
@@ -659,7 +682,7 @@ test.describe("with a THAC0 low enough that AC 10 always crits", () => {
 
     const card = resultCard(page);
     await expect(card.getByTestId("verdict")).toHaveText("?");
-    const give = card.getByRole("form", { name: "Give the real AC" });
+    const give = await openFold(card, "Give the real AC");
     await give.getByLabel("Real target AC").fill("10");
     await give.getByRole("button", { name: "Correct" }).click();
     await expect(card).toContainText("Long Sword +2 vs AC 10");

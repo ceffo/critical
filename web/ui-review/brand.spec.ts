@@ -2,15 +2,14 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import type { Page } from "@playwright/test";
 import { test, expect } from "../e2e/fixtures";
-import { chooseSetting } from "../e2e/helpers";
-import { OPTIONS } from "./mockup-tokens";
-import { annotate, audit, paint, seedMockTable } from "./paint";
+import { chooseSetting, chooseTheme } from "../e2e/helpers";
+import { annotate, audit, seedMockTable } from "./paint";
 import { focus, translator, webDir, type T } from "./table";
 
 /**
  * The brand placement round (docs/design/brand-placement/README.md): where the mark and the
  * "Critical!" wordmark sit in the header. The real app on the mock-up round's seeded table, in
- * French, painted with the picked colours (contrast ladder + raised stage, ADR 0026), on Act ·
+ * French, in the app's Arcane theme (ADR 0026), on Act ·
  * Weapons. Only the header is drawn: the decided header of ADR 0027 step 4 (turn stacked,
  * initiative under "Tour suivant", 5 turn columns, last result on one line) in each placement,
  * filled with the real header's values read from the page, styled by
@@ -40,12 +39,13 @@ type Placement = (typeof PLACEMENTS)[number];
 const RUNS = [
   {
     theme: "arcane-dark",
+    mode: "dark",
     viewports: [
       [1440, 900],
       [1707, 1300],
     ],
   },
-  { theme: "arcane-light", viewports: [[1440, 900]] },
+  { theme: "arcane-light", mode: "light", viewports: [[1440, 900]] },
 ] as const;
 
 /** The real header's values, read from the page so the drawing shows the seeded table. */
@@ -249,13 +249,13 @@ test("brand placement: each placement in French, Arcane dark at both viewports, 
   await seedMockTable(page, stack.apiUrl, en);
   await chooseSetting(page, "Français");
   const fr = await translator("fr");
-  const option = OPTIONS.find((o) => o.id === "o13-raised-stage")!;
   const css = await readFile(path.join(docs, "header.css"), "utf8");
   const problems: string[] = [];
 
   for (const run of RUNS) {
-    const theme = option.themes().find((th) => th.id === run.theme)!;
-    await paint(page, fr, option, theme);
+    // The app's own Arcane theme (ADR 0026); the raised stage's band tone is in header.css.
+    await chooseTheme(page, run.mode, fr("settings.themes.arcane"));
+    await chooseSetting(page, fr(`settings.mode.${run.mode}`));
     await focus(page, fr, "act");
     await page.getByRole("tab", { name: fr("actions.tabs.weapons") }).click();
     await annotate(page);
@@ -275,7 +275,7 @@ test("brand placement: each placement in French, Arcane dark at both viewports, 
       );
       for (const { p, expanded } of shots_) {
         await draw(page, css, headerHtml(p, data, fr, expanded));
-        const name = `${p.id}${expanded ? "-expanded" : ""}--${theme.id}-${width}x${height}.png`;
+        const name = `${p.id}${expanded ? "-expanded" : ""}--${run.theme}-${width}x${height}.png`;
         await page.screenshot({
           path: path.join(shots, name),
           animations: "disabled",

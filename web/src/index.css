@@ -7,11 +7,13 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Palette tokens (ADR 0009, ADR 0020). The ramps (primary amb-*, secondary sec-*, tertiary ter-*,
- * neutral neu-*), the surfaces and the role colours below are the Arcane defaults, painted before
- * the app starts; stores/settings.ts then sets the values of the chosen ambiance and mode inline
- * on <html> (lib/theme.ts `themeVars`, which a unit test keeps in sync with these two blocks).
- * Everything else derives from them.
+ * Palette tokens (ADR 0009, ADR 0020, ADR 0026). The ramps (primary amb-*, secondary sec-*,
+ * tertiary ter-*, neutral neu-*), the surfaces, the role colours and the translucent mixes (muted
+ * text is the ink at reduced strength, never a separate grey) below are the default themes (Arcane
+ * light and dark), painted before the app starts; index.html's inline script then paints the
+ * device's own theme from its saved copy, and stores/settings.ts sets the values of the effective
+ * theme inline on <html> (lib/theme.ts `themeVars`, which a unit test keeps in sync with these two
+ * blocks). Everything else derives from them.
  */
 :root {
   --amb-100: oklch(0.26 0.094 285);
@@ -21,7 +23,7 @@
   --amb-500: oklch(0.68 0.17 285);
   --amb-600: oklch(0.76 0.128 285);
   --amb-700: oklch(0.84 0.082 285);
-  --amb-800: oklch(0.91 0.045 285);
+  --amb-800: oklch(0.88 0.06 285);
   --amb-900: oklch(0.96 0.019 285);
   --sec-100: oklch(0.26 0.053 88);
   --sec-200: oklch(0.36 0.073 88);
@@ -48,20 +50,23 @@
   --neu-500: oklch(0.66 0.022 285);
   --neu-600: oklch(0.76 0.022 285);
   --neu-700: oklch(0.85 0.022 285);
-  --neu-800: oklch(0.91 0.022 285);
-  --neu-900: oklch(0.96 0.019 285);
-  --tint: oklch(0.46 0.17 285);
-  --highlight: oklch(0.53 0.108 88);
-  --highlight-fill: oklch(0.8 0.15 88);
-  --magic: oklch(0.48 0.081 200);
-  --danger: oklch(0.52 0.19 25);
-  --success: oklch(0.5 0.13 150);
-  --warning: oklch(0.54 0.133 55);
+  --neu-800: oklch(0.885 0.029 285);
+  --neu-900: oklch(0.915 0.029 285);
+  --ground: oklch(0.89 0.044 285);
+  --surface: oklch(0.995 0.002 285);
+  --ink: oklch(0.18 0.036 285);
+  --tint: oklch(0.4 0.17 285);
+  --highlight: oklch(0.5 0.102 88);
+  --highlight-fill: oklch(0.82 0.15 88);
+  --magic: oklch(0.47 0.079 200);
+  --danger: oklch(0.5 0.2 25);
+  --success: oklch(0.485 0.133 150);
+  --warning: oklch(0.51 0.117 62);
   --on-accent: oklch(0.985 0.005 285);
   --on-highlight: oklch(0.15 0.03 285);
-  --ground: oklch(0.93 0.034 285);
-  --surface: oklch(0.985 0.005 285);
-  --ink: oklch(0.2 0.036 285);
+  --ink-muted: color-mix(in oklab, var(--ink) 74%, transparent);
+  --border: color-mix(in oklab, var(--ink) 34%, transparent);
+  --input: color-mix(in oklab, var(--ink) 48%, transparent);
   --shadow-alpha: 0.18;
 
   color-scheme: light;
@@ -75,7 +80,7 @@
   --amb-500: oklch(0.68 0.17 285);
   --amb-600: oklch(0.58 0.17 285);
   --amb-700: oklch(0.47 0.153 285);
-  --amb-800: oklch(0.36 0.128 285);
+  --amb-800: oklch(0.39 0.102 285);
   --amb-900: oklch(0.26 0.094 285);
   --sec-100: oklch(0.96 0.03 88);
   --sec-200: oklch(0.91 0.06 88);
@@ -102,31 +107,38 @@
   --neu-500: oklch(0.66 0.022 285);
   --neu-600: oklch(0.56 0.022 285);
   --neu-700: oklch(0.46 0.022 285);
-  --neu-800: oklch(0.36 0.022 285);
-  --neu-900: oklch(0.27 0.022 285);
-  --tint: oklch(0.72 0.14 285);
-  --highlight: oklch(0.82 0.15 88);
-  --highlight-fill: oklch(0.82 0.15 88);
+  --neu-800: oklch(0.405 0.029 285);
+  --neu-900: oklch(0.335 0.029 285);
+  --ground: oklch(0.1 0.048 285);
+  --surface: oklch(0.25 0.046 285);
+  --ink: oklch(0.95 0.008 285);
+  --tint: oklch(0.71 0.14 285);
+  --highlight: oklch(0.9 0.119 88);
+  --highlight-fill: oklch(0.9 0.119 88);
   --magic: oklch(0.78 0.12 200);
-  --danger: oklch(0.72 0.15 25);
-  --success: oklch(0.78 0.15 150);
-  --warning: oklch(0.78 0.14 55);
+  --danger: oklch(0.74 0.158 25);
+  --success: oklch(0.82 0.16 150);
+  --warning: oklch(0.86 0.1 65);
   --on-accent: oklch(0.15 0.03 285);
   --on-highlight: oklch(0.15 0.03 285);
-  --ground: oklch(0.15 0.048 285);
-  --surface: oklch(0.205 0.044 285);
-  --ink: oklch(0.95 0.008 285);
+  --ink-muted: color-mix(in oklab, var(--ink) 76%, transparent);
+  --border: color-mix(in oklab, var(--ink) 32%, transparent);
+  --input: color-mix(in oklab, var(--ink) 42%, transparent);
   --shadow-alpha: 0.65;
 
   color-scheme: dark;
 }
 
 :root {
-  /* Muted text is the ink at reduced strength, never a separate grey. */
-  --ink-muted: color-mix(in oklab, var(--ink) 70%, transparent);
   /* Only floating things (popovers, menus) cast a shadow. */
   --float-shadow:
     0 0 0 1px var(--neu-600), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
+
+  /*
+   * The sub-band tone (ADR 0026 step 6.3): a group inside a card, ink at 4 % over the card in
+   * light, 5.5 % in dark (below). A tone, never a line (step 6.4).
+   */
+  --sub-band: color-mix(in oklab, var(--ink) 4%, transparent);
 
   /* shadcn variables, derived from the palette tokens. */
   --background: var(--ground);
@@ -141,11 +153,9 @@
   --secondary-foreground: var(--ink);
   --muted: var(--neu-900);
   --muted-foreground: var(--ink-muted);
-  --accent: var(--amb-900);
+  --accent: var(--neu-800);
   --accent-foreground: var(--ink);
   --destructive: var(--danger);
-  --border: color-mix(in oklab, var(--ink) 18%, transparent);
-  --input: color-mix(in oklab, var(--ink) 22%, transparent);
   --ring: var(--tint);
   --radius: 0.5rem;
 
@@ -158,6 +168,11 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode's sub-band, over the darker card (ADR 0026 step 6.3). */
+:root.dark {
+  --sub-band: color-mix(in oklab, var(--ink) 5.5%, transparent);
 }
 
 /*
@@ -221,7 +236,71 @@
   border-radius: 0.625rem;
 }
 
+/*
+ * The shared pieces (ADR 0026 step 5, one of each, used everywhere). The raised step itself is the
+ * `raised` colour (`bg-raised`, its hover `bg-raised-hover`); a small mark on a card that must be
+ * seen (an empty dot, a track's axis, a drag handle) takes the field edge (`bg-input`, 3:1).
+ */
+
+/*
+ * A chip (step 5.3): filled with the raised tone, no outline. Sizing (padding, type) and the text
+ * colour are the caller's; the family is the fill and the radius. These pieces set their own fill,
+ * radius and (but `chip`) text colour: never combine one with a `bg-*`, `rounded-*` or text-colour
+ * class, the cascade order between them is not defined; pick one piece per state instead.
+ */
+@utility chip {
+  border-radius: 0.375rem;
+  background-color: var(--neu-900);
+  /* On a raised tile or row, the chip steps one tone further so it still reads. */
+  .bg-raised & {
+    background-color: var(--neu-800);
+  }
+}
+
+/*
+ * A chosen chip (step 5.3): a segmented thumb, the chosen die or option. The selected tone with a
+ * tint outline (drawn inside, so it never shifts the layout).
+ */
+@utility chip-chosen {
+  border-radius: 0.375rem;
+  background-color: var(--amb-800);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--tint);
+}
+
+/* The highlight chip (step 5.3): the gold fill, only for a crit or a maximum. */
+@utility chip-max {
+  border-radius: 0.375rem;
+  background-color: var(--highlight-fill);
+  color: var(--on-highlight);
+}
+
+/*
+ * The selection mark (step 5.1): a selected row, list item, rail entry; the selected tone, ink
+ * text and a 3 px tint bar on the left edge.
+ */
+@utility selected {
+  background-color: var(--amb-800);
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--tint);
+}
+
+/*
+ * The "latest" mark (step 5.2): the result card showing the latest result, a 2 px tint outline drawn
+ * over the card's own edge (an outline, so it never fights the card's border).
+ */
+@utility latest {
+  outline: 2px solid var(--tint);
+  outline-offset: -1px;
+}
+
 @theme inline {
+  /* The raised step (ADR 0026 step 1.1): tiles, blocks, row stripes, chips; one token. */
+  --color-raised: var(--neu-900);
+  --color-raised-hover: var(--neu-800);
+  /* The selected tone (step 1.1): under the selection mark, a chosen chip, the weapon in hand. */
+  --color-selected: var(--amb-800);
+  --color-sub-band: var(--sub-band);
   --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
   /* The brand face (ADR 0020 step 5): the wordmark only. */
   --font-display: "Cinzel Variable", "Cinzel", "Inter Variable", serif;

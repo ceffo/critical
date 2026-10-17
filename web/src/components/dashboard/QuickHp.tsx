@@ -1,13 +1,14 @@
-import { useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Drop, Heart } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useTableStore } from "@/stores/table";
-import { fieldClass } from "./fieldStyles";
+import { cn } from "@/lib/utils";
+import { fieldClass, labelClass } from "./fieldStyles";
 
 /**
- * HP change (ADR 0022 step 2.3), on one line: the amount, Damage (`Drop`) and Healing (`Heart`),
- * then the source under it. Enter in either field
+ * HP change (ADR 0022 step 2.3, ADR 0027 step 5.3), on one line: the labelled amount, Damage
+ * (`Drop`) and Healing (`Heart`), then the source under it, smaller. Enter in either field
  * applies damage, Shift+Enter healing. The source is optional; the server records the change in
  * the action log.
  */
@@ -16,6 +17,7 @@ export function QuickHp() {
   const { recordHp, busy } = useTableStore();
   const [amount, setAmount] = useState("");
   const [source, setSource] = useState("");
+  const amountId = useId();
   const n = Number.parseInt(amount, 10);
   const valid = n > 0;
 
@@ -40,21 +42,23 @@ export function QuickHp() {
       aria-label={t("hp.change")}
     >
       <h2 className="section-label">{t("hp.change")}</h2>
-      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5">
+        <label htmlFor={amountId} className={cn(labelClass, "col-span-3")}>
+          {t("hp.amount")}
+        </label>
         <input
+          id={amountId}
           className={`${fieldClass} tabular-nums`}
           type="number"
           min={1}
           inputMode="numeric"
-          aria-label={t("hp.amount")}
           placeholder={t("hp.amountPlaceholder")}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           onKeyDown={onKeyDown}
         />
         <Button
-          variant="outline"
-          className="min-w-0 gap-1 px-2 border-danger/70 text-danger hover:bg-danger/10 hover:text-danger dark:border-danger/70 dark:hover:bg-danger/15"
+          className="min-w-0 gap-1 px-2 text-danger"
           disabled={!valid || busy}
           title={t("hp.damageHint")}
           onClick={() => void apply(-1)}
@@ -63,8 +67,7 @@ export function QuickHp() {
           {t("hp.applyDamage")}
         </Button>
         <Button
-          variant="outline"
-          className="min-w-0 gap-1 px-2 border-success/70 text-success hover:bg-success/10 hover:text-success dark:border-success/70 dark:hover:bg-success/15"
+          className="min-w-0 gap-1 px-2 text-success"
           disabled={!valid || busy}
           title={t("hp.healHint")}
           onClick={() => void apply(1)}
@@ -74,7 +77,7 @@ export function QuickHp() {
         </Button>
       </div>
       <input
-        className={fieldClass}
+        className={cn(fieldClass, "h-6 text-label")}
         type="text"
         aria-label={t("hp.source")}
         title={t("hp.keysHint")}

@@ -67,7 +67,10 @@ leaves the timeline too narrow for Stoneskin's charge line.
 ## How these were made
 
 - `just ui-brand` (`web/ui-review/brand.spec.ts`) starts the app on the e2e stack with the mock-up
-  round's seeded table, switches to French, paints the raised-stage colours, and opens Act · Weapons.
+  round's seeded table, switches to French, picks the Arcane theme, and opens Act · Weapons. The
+  committed shots were taken before the four themes and the screen items shipped, with the mock-up
+  round's raised-stage overlay painted over the app; that overlay's code is gone, so a rerun now shows
+  today's app around the same header (the header's band tone stays, from `header.css`).
   It then draws the header (from [`header.css`](header.css) and the values of the real header: turn,
   initiative, effects, last result) in front of the real one, which it hides. Dice values change
   from run to run.

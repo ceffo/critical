@@ -5,11 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Paint in the saved appearance before the app starts (keep in sync with src/lib/settings.ts
-      // and src/lib/theme.ts): critical.settings.v1, else the older critical.theme key.
+      // Paint the saved appearance before the app starts (keep in sync with src/lib/settings.ts
+      // and src/lib/theme.ts): the mode from critical.settings.v1 (else the older critical.theme
+      // key), then the effective theme's variables from critical.paint.v1, the copy the app saves
+      // of its dark and light themes. Without that copy, index.css paints the default theme.
       (function () {
         var mode = null,
-          lang = null;
+          lang = null,
+          paint = null,
+          root = document.documentElement;
         try {
           var s = JSON.parse(
             localStorage.getItem("critical.settings.v1") || "null",
@@ -21,14 +25,22 @@
             mode = localStorage.getItem("critical.theme");
             lang = localStorage.getItem("critical.language");
           }
+          paint = JSON.parse(
+            localStorage.getItem("critical.paint.v1") || "null",
+          );
         } catch (e) {}
         var light =
           mode === "light" ||
           (mode !== "dark" &&
             !matchMedia("(prefers-color-scheme: dark)").matches);
-        if (!light) document.documentElement.classList.add("dark");
-        if (lang === "fr" || lang === "en")
-          document.documentElement.lang = lang;
+        if (!light) root.classList.add("dark");
+        root.style.colorScheme = light ? "light" : "dark";
+        var vars = paint && paint[light ? "light" : "dark"];
+        if (vars && typeof vars === "object")
+          for (var k in vars)
+            if (k.indexOf("--") === 0 && typeof vars[k] === "string")
+              root.style.setProperty(k, vars[k]);
+        if (lang === "fr" || lang === "en") root.lang = lang;
       })();
     </script>
     <title>Critical!</title>

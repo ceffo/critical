@@ -45,10 +45,16 @@ export function WeaponsSection() {
       aria-label={t("weapons.title")}
     >
       <div className="mb-1.5 flex items-center justify-between gap-3">
-        <h2 className="text-title">{t("weapons.title")}</h2>
+        <h2 className="section-label">{t("weapons.title")}</h2>
         {form !== "add" && (
-          <Button size="sm" disabled={busy} onClick={() => setForm("add")}>
-            <Plus /> {t("weapons.form.openAdd")}
+          <Button
+            size="sm"
+            disabled={busy}
+            title={t("weapons.form.openAdd")}
+            aria-label={t("weapons.form.openAdd")}
+            onClick={() => setForm("add")}
+          >
+            <Plus /> {t("items.form.add")}
           </Button>
         )}
       </div>
@@ -131,7 +137,7 @@ function WeaponRow({
     <li
       className={cn(
         WEAPON_COLS,
-        "min-h-7 rounded-lg bg-neu-900/40 px-2 py-1.5 text-body",
+        "min-h-7 rounded-lg bg-raised px-2 py-1.5 text-body",
       )}
       data-testid={`weapon-${w.id}`}
     >

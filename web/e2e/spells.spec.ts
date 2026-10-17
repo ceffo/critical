@@ -86,7 +86,7 @@ test("duplicates are prepared and a long rest keeps the preparation but resets u
   await expect(level2.getByTestId("remaining-2")).toHaveText("1 / 2");
   await snap(page, "after-cast");
 
-  await page.getByRole("button", { name: "Long Rest (Reset)" }).click();
+  await page.getByRole("button", { name: "Long rest" }).click();
   await expect(level2.getByTestId("remaining-2")).toHaveText("2 / 2");
   await expect(level2.getByRole("listitem")).toHaveCount(1); // grouped: one row, with a count
   await expect(level2).toContainText("Mirror Image ×2");

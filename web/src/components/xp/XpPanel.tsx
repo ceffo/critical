@@ -116,7 +116,7 @@ function Progress({ ledger: l }: { ledger: XpLedger }) {
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={l.progressPercent}
-          className="relative h-3 overflow-hidden rounded-md bg-neu-800"
+          className="relative h-3 overflow-hidden rounded-md bg-raised"
         >
           <div
             className="absolute inset-y-0 left-0 rounded-md bg-tint transition-[width] duration-300"
@@ -126,7 +126,7 @@ function Progress({ ledger: l }: { ledger: XpLedger }) {
             <span
               key={i}
               aria-hidden
-              className="absolute inset-y-0 w-px bg-background/60"
+              className="absolute inset-y-0 w-px bg-surface/60"
               style={{ left: `${(i + 1) * 10}%` }}
             />
           ))}
@@ -161,10 +161,11 @@ function LevelCell({ cell: c }: { cell: XpLevel }) {
       data-status={c.status}
       className={cn(
         "flex flex-col items-center rounded-md px-1 py-1.5 leading-tight tabular-nums",
-        c.status === "current" && "bg-amb-900 ring-1 ring-amb-600 ring-inset",
-        c.status === "next" && "bg-neu-900 ring-1 ring-neu-600 ring-inset",
-        c.status === "past" && "bg-neu-900/60 text-muted-foreground",
-        c.status === "ahead" && "bg-neu-900/60",
+        // The current level is the chosen chip; the next one has the field edge (ADR 0026 step 5.3).
+        c.status === "current" && "chip-chosen",
+        c.status === "next" && "bg-raised ring-1 ring-input ring-inset",
+        c.status === "past" && "bg-raised text-muted-foreground",
+        c.status === "ahead" && "bg-raised",
       )}
     >
       <span className="text-body font-semibold">{c.level}</span>
@@ -378,7 +379,7 @@ function Row({
       className={cn(
         cols,
         "min-h-9 rounded-md px-2 py-1.5 text-body tabular-nums",
-        fresh && "bg-amb-900/50",
+        fresh && "bg-selected",
       )}
     >
       {/* The reason wraps between words, never cut (ADR 0022 step 1). */}
@@ -495,7 +496,7 @@ function EditRow({
       aria-label={t("xp.ledger.editing")}
       className={cn(
         cols,
-        "rounded-md bg-neu-900 px-2 py-1.5 text-body tabular-nums",
+        "rounded-md bg-raised px-2 py-1.5 text-body tabular-nums",
       )}
     >
       <span className="flex min-w-0 flex-col gap-1">

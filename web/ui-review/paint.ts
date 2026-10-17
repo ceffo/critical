@@ -1,55 +1,14 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import type { Page } from "@playwright/test";
 import { expect } from "../e2e/fixtures";
-import { attackForm, chooseSetting, logEntry } from "../e2e/helpers";
+import { attackForm, logEntry } from "../e2e/helpers";
 import { clippedText } from "../e2e/noClip";
-import { themeCss, type Option, type Theme } from "./mockup-tokens";
-import { journal, recordHpT, seedTable, webDir, type T } from "./table";
+import { journal, recordHpT, seedTable, type T } from "./table";
 
 /**
- * Painting a mock-up option over the running app, shared by the mock-up round (mockups.spec.ts)
- * and the brand placement round (brand.spec.ts): the option's tokens and component rules as a
- * last stylesheet, the verdict annotation CSS can't compute, the no-cut audit, and the seeded table.
+ * Capture helpers of the brand placement round (brand.spec.ts): the verdict annotation CSS can't
+ * compute, the no-cut audit, and the seeded table (the mock-up round's, whose capture code was
+ * removed with the four themes; see docs/design/ui-review/mockups/README.md, "Regenerating").
  */
-
-const cssDir = path.join(
-  webDir,
-  "..",
-  "docs",
-  "design",
-  "ui-review",
-  "mockups",
-  "css",
-);
-
-export async function optionCss(o: Option): Promise<string> {
-  const parts = await Promise.all(
-    o.css.map((name) => readFile(path.join(cssDir, `${name}.css`), "utf8")),
-  );
-  return parts.join("\n");
-}
-
-/** Select the theme's base ambiance and mode in the app, then paint the option over it. */
-export async function paint(page: Page, t: T, o: Option, theme: Theme) {
-  await chooseSetting(page, t(`settings.mode.${theme.mode}`));
-  await chooseSetting(page, t(`settings.ambiances.${theme.base}`));
-  const css = o.id === "today" ? "" : themeCss(theme) + (await optionCss(o));
-  await page.evaluate(
-    ({ css, id }) => {
-      let el = document.getElementById("mock-overlay");
-      if (!el) {
-        el = document.createElement("style");
-        el.id = "mock-overlay";
-      }
-      document.head.appendChild(el); // last, after the app's styles
-      el.textContent = css;
-      if (css) document.documentElement.dataset.mockTheme = id;
-      else delete document.documentElement.dataset.mockTheme;
-    },
-    { css, id: theme.id },
-  );
-}
 
 /** Mark the header's last-result chip with the verdict the result card shows (CSS can't read text). */
 export async function annotate(page: Page) {

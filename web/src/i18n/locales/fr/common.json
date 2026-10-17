@@ -7,8 +7,7 @@
     "abilities": "Caractéristiques",
     "error": "Erreur",
     "dismiss": "Fermer",
-    "strTitle": "FOR {{effective}} (fiche {{base}})",
-    "strBase": "({{base}})"
+    "strTitle": "FOR {{effective}} (fiche {{base}})"
   },
   "language": {
     "en": "English",
@@ -19,19 +18,18 @@
     "title": "Réglages",
     "language": "Langue",
     "appearance": "Apparence",
-    "ambiance": "Ambiance",
+    "darkTheme": "Sombre",
+    "lightTheme": "Clair",
     "mode": {
       "dark": "Sombre",
       "light": "Clair",
       "system": "Système"
     },
-    "ambiances": {
+    "themes": {
       "arcane": "Arcane",
-      "sylve": "Sylve",
-      "sang": "Sang",
-      "ocean": "Océan",
-      "ambre": "Ambre",
-      "obsidienne": "Obsidienne"
+      "deep": "Abysses",
+      "parchment": "Parchemin",
+      "plain": "Sobre"
     }
   },
   "shell": {
@@ -208,7 +206,8 @@
       "use": "Utiliser",
       "rollLabel": "Lancer {{name}}",
       "useLabel": "Utiliser {{name}}",
-      "manage": "Gérer l'inventaire"
+      "manage": "Gérer",
+      "manageLabel": "Gérer l'inventaire"
     }
   },
   "attack": {
@@ -227,7 +226,6 @@
     "situationalPlaceholder": "ex. attaque de dos",
     "loading": "Chargement des armes…",
     "roll": "Attaquer",
-    "rolling": "Lancer en cours...",
     "form": "Attaque",
     "target": "Cible",
     "inHand": "Arme en main",
@@ -252,8 +250,14 @@
     "needsUnknown": "CA inconnue",
     "acShort": "CA",
     "sizeShort": "Taille",
-    "switchLabel": "Passer à",
     "otherWeapons": "Autres armes",
+    "otherWeapon": "Autre arme",
+    "otherWeaponPlaceholder": "Autre arme…",
+    "modifiers": "Taille et modificateur situationnel",
+    "tags": {
+      "large": "Taille G",
+      "situational": "Situationnel {{value}}"
+    },
     "line": {
       "sm": "P/M",
       "l": "G",
@@ -263,8 +267,9 @@
   },
   "saves": {
     "title": "Jets de sauvegarde",
-    "sectionLabel": "Jets de sauvegarde · cliquer pour lancer",
+    "sectionLabel": "Jets de sauvegarde",
     "rollLabel": "Jet de sauvegarde contre {{name}}",
+    "rowHint": "Cliquer pour lancer le jet de sauvegarde contre {{name}}",
     "categories": {
       "para_poison": "Paralysie/Poison",
       "rod_staff_wand": "Bâton/Sceptre/Baguette",
@@ -320,7 +325,8 @@
     }
   },
   "spellSlots": {
-    "longRest": "Repos long (réinitialiser)",
+    "longRest": "Repos long",
+    "longRestLabel": "Repos long : réinitialiser les emplacements de sorts",
     "none": "Aucun emplacement de sort disponible.",
     "level": "Niveau {{level}}",
     "remaining": "{{left}} / {{total}}",
@@ -337,9 +343,11 @@
     "itemSpent": "Objet dépensé",
     "castLabel": "Lancer {{name}}",
     "prepare": "Préparer les sorts",
+    "prepareShort": "Préparer",
     "prepareTitle": "Préparer les sorts du jour",
     "preparedCount": "{{count}} / {{max}} préparés",
     "save": "Enregistrer la préparation",
+    "saveShort": "Enregistrer",
     "cancel": "Annuler",
     "search": "Chercher dans le grimoire...",
     "searchLabel": "Chercher dans le grimoire",
@@ -878,10 +886,9 @@
     },
     "filters": "Filtres de sorts",
     "diceRow": "Dés au niveau du lanceur",
-    "toDice": "Aux dés",
+    "toDice": "Envoyer",
     "rollDice": "Lancer",
     "noDice": "Aucun dé à lancer",
-    "addEffect": "Ajouter comme effet",
     "addEffectLabel": "Ajouter {{name}} comme effet au niveau {{level}}",
     "exposure": "Exposition",
     "exposureMode": "Exposition ({{mode}})"
@@ -903,6 +910,7 @@
     "hitsAc": "Touche la CA",
     "margin": "Marge",
     "target": "Cible",
+    "targetAc": "CA cible",
     "modifiers": "Modificateurs",
     "noModifiers": "Aucun modificateur",
     "damage": "Dégâts",
@@ -1254,7 +1262,9 @@
     "row": "Plage {{n}}",
     "remove": "Supprimer la plage {{n}}",
     "add": "Ajouter une plage",
+    "addShort": "Ajouter",
     "save": "Enregistrer la table",
+    "saveShort": "Enregistrer",
     "saved": "Enregistré. Le prochain critique l'utilise."
   },
   "weapons": {
@@ -1300,6 +1310,7 @@
     "card": "Détail",
     "latest": "Dernier",
     "turn": "Tour {{round}}",
+    "turnShort": "T{{round}}",
     "outOfCombat": "Hors combat",
     "when": "T{{round}} · {{time}}",
     "whenOutOfCombat": "Hors combat · {{time}}",
@@ -1471,6 +1482,7 @@
     "round": "Round d'exposition",
     "onMe": "Je suis exposé",
     "roll": "Jeter l'exposition",
+    "rollShort": "Jeter",
     "heading": "{{name}}, exposition au round {{round}} (niveau de lanceur {{casterLevel}})",
     "onYou": "Retiré de vos PV : {{delta}}",
     "forDm": "Pour le MD : vos PV ne changent pas"

@@ -58,6 +58,7 @@ export const VALUE_TONES: Record<RowValue["tone"], string> = {
   heal: "text-success",
   pass: "text-success",
   fail: "text-danger",
-  accent: "text-highlight",
+  ink: "text-foreground",
+  crit: "text-highlight",
   muted: "text-muted-foreground",
 };

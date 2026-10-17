@@ -37,7 +37,7 @@ export function SkillsTab() {
 
   if (!skills) return null;
   const rowClass =
-    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-1.5 text-left text-body hover:bg-neu-800 disabled:opacity-60";
+    "grid w-full grid-cols-[minmax(0,1fr)_7rem_4rem_4.5rem] items-center gap-3 rounded-lg px-3 py-1.5 text-left text-body hover:bg-raised-hover disabled:text-ink-muted";
   // Column headers are section labels (ADR 0022 step 4.2).
   const headClass = cn(rowClass, "py-1 hover:bg-transparent");
   const roll = async (kind: SkillKind, id: string) => {
@@ -48,7 +48,7 @@ export function SkillsTab() {
     <div className="flex flex-col gap-6">
       <section
         aria-labelledby="skills-proficiencies"
-        className="rounded-lg bg-neu-900 p-2"
+        className="rounded-lg bg-raised p-2"
       >
         <div className="flex items-center justify-between gap-3 px-3 py-1">
           <h3 id="skills-proficiencies" className="section-label">
@@ -96,7 +96,7 @@ export function SkillsTab() {
       </section>
       <section
         aria-labelledby="skills-bard"
-        className="rounded-lg bg-neu-900 p-2"
+        className="rounded-lg bg-raised p-2"
       >
         <div className="flex items-center justify-between gap-3 px-3 py-1">
           <h3 id="skills-bard" className="section-label">
@@ -166,7 +166,6 @@ function AdjustStepper({ kind }: { kind: SkillKind }) {
       <Button
         type="button"
         size="xs"
-        variant="outline"
         aria-label={t("skills.adjust.decrease", { section })}
         disabled={value <= -maxSkillAdjustment(kind)}
         onClick={() => setPending(kind, stepSkillAdjustment(kind, value, -1))}
@@ -186,7 +185,6 @@ function AdjustStepper({ kind }: { kind: SkillKind }) {
       <Button
         type="button"
         size="xs"
-        variant="outline"
         aria-label={t("skills.adjust.increase", { section })}
         disabled={value >= maxSkillAdjustment(kind)}
         onClick={() => setPending(kind, stepSkillAdjustment(kind, value, 1))}

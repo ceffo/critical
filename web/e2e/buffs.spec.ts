@@ -166,6 +166,20 @@ test.describe("with the sheet's STR 12", () => {
       ],
     });
     await expect.poll(() => effectiveStr(page)).toBe(18);
+    // ADR 0027 step 5.4: only the changed value shows; the sheet's is in a tooltip on keyboard
+    // focus (and hover), not under it.
+    const str = page.getByTestId("str-cell");
+    await expect(str).not.toContainText("12");
+    // Keyboard focus (a programmatic focus is not focus-visible): from the cell, back and forth.
+    await str.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(str).toBeFocused();
+    await expect(page.locator("[data-slot=tooltip-content]")).toHaveText(
+      "STR 18 (sheet 12)",
+    );
+    await snap(page, "strength-18-tooltip");
+    await str.blur();
     // On by itself, under the item's name, with nothing to edit or dismiss.
     await expect(hammer).toContainText("Power Gem");
     await expect(hammer.getByTestId("power-effects")).toHaveText(

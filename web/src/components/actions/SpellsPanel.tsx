@@ -15,6 +15,7 @@ import { planCast } from "@/lib/castInputs";
 import { damageText } from "@/lib/spellDice";
 import { exposureText } from "@/lib/spellMode";
 import { PrepareEditor } from "./PrepareEditor";
+import { fieldClass } from "@/components/dashboard/fieldStyles";
 
 interface SlotRow {
   /** The copy a cast uses: the first unused one (the first when all are used). */
@@ -142,16 +143,18 @@ export function SpellsPanel() {
         </label>
         <div className="flex gap-2">
           <Button
-            variant="secondary"
             size="sm"
+            title={t("spellSlots.prepare")}
+            aria-label={t("spellSlots.prepare")}
             onClick={() => setEditing(true)}
             disabled={busy || editing}
           >
-            {t("spellSlots.prepare")}
+            {t("spellSlots.prepareShort")}
           </Button>
           <Button
-            variant="outline"
             size="sm"
+            title={t("spellSlots.longRestLabel")}
+            aria-label={t("spellSlots.longRestLabel")}
             onClick={() => void run(resetSlots)}
             disabled={busy}
           >
@@ -212,7 +215,7 @@ export function SpellsPanel() {
                           key={i}
                           className={cn(
                             "size-2 rounded-full",
-                            i < left ? "bg-magic" : "bg-neu-700",
+                            i < left ? "bg-magic" : "bg-input",
                           )}
                         />
                       ))}
@@ -287,7 +290,7 @@ export function SpellsPanel() {
                         key={slot.index}
                         className={cn(
                           "flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1 rounded-md px-2 py-1",
-                          slot.used ? "opacity-60" : "hover:bg-neu-900",
+                          slot.used ? "opacity-60" : "hover:bg-raised",
                         )}
                       >
                         <span className="flex min-w-32 flex-1 flex-col">
@@ -318,7 +321,7 @@ export function SpellsPanel() {
                         </span>
                         {blank && !slot.used && (
                           <select
-                            className="h-7 min-w-0 flex-1 rounded border bg-background px-1 text-body"
+                            className={cn(fieldClass, "w-auto flex-1 px-1")}
                             aria-label={t("spellSlots.extraPick")}
                             data-testid="extra-pick"
                             value={picks[slot.index] ?? ""}
@@ -341,7 +344,7 @@ export function SpellsPanel() {
                         )}
                         {needs?.attack_roll && !slot.used && (
                           <input
-                            className="h-7 w-16 rounded border bg-background px-1 text-body"
+                            className={cn(fieldClass, "w-16 px-1")}
                             aria-label={t("spellSlots.targetAc")}
                             placeholder={t("attack.acShort")}
                             data-testid="cast-target-ac"
@@ -357,7 +360,7 @@ export function SpellsPanel() {
                         )}
                         {spendable.length > 1 && !slot.used && (
                           <select
-                            className="h-7 min-w-0 rounded border bg-background px-1 text-body"
+                            className={cn(fieldClass, "w-auto px-1")}
                             aria-label={t("spellSlots.itemSpent")}
                             data-testid="cast-item"
                             value={itemId}
@@ -377,7 +380,7 @@ export function SpellsPanel() {
                         )}
                         {modes.length > 0 && needs && !slot.used && (
                           <select
-                            className="h-7 min-w-0 rounded border bg-background px-1 text-body"
+                            className={cn(fieldClass, "w-auto px-1")}
                             aria-label={t("spellSlots.modeChoice")}
                             data-testid="slot-mode"
                             value={mode?.key}
@@ -397,7 +400,7 @@ export function SpellsPanel() {
                         )}
                         {slotSplits.length > 0 && !slot.used && (
                           <select
-                            className="h-7 max-w-full min-w-0 rounded border bg-background px-1 text-body"
+                            className={cn(fieldClass, "w-auto max-w-full px-1")}
                             aria-label={t("spellSlots.splitChoice")}
                             data-testid="slot-split"
                             value={split}
@@ -420,7 +423,7 @@ export function SpellsPanel() {
                         )}
                         <Button
                           size="xs"
-                          variant={slot.used ? "ghost" : "secondary"}
+                          variant={slot.used ? "ghost" : "quiet"}
                           disabled={busy || plan.blocked}
                           aria-label={t("spellSlots.castLabel", {
                             name: baseName,

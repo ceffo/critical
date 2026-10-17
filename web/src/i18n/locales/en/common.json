@@ -7,8 +7,7 @@
     "abilities": "Ability scores",
     "error": "Error",
     "dismiss": "Dismiss",
-    "strTitle": "STR {{effective}} (sheet {{base}})",
-    "strBase": "({{base}})"
+    "strTitle": "STR {{effective}} (sheet {{base}})"
   },
   "language": {
     "en": "English",
@@ -19,19 +18,18 @@
     "title": "Settings",
     "language": "Language",
     "appearance": "Appearance",
-    "ambiance": "Ambiance",
+    "darkTheme": "Dark",
+    "lightTheme": "Light",
     "mode": {
       "dark": "Dark",
       "light": "Light",
       "system": "System"
     },
-    "ambiances": {
+    "themes": {
       "arcane": "Arcane",
-      "sylve": "Grove",
-      "sang": "Blood",
-      "ocean": "Ocean",
-      "ambre": "Amber",
-      "obsidienne": "Obsidian"
+      "deep": "Deep",
+      "parchment": "Parchment",
+      "plain": "Plain"
     }
   },
   "shell": {
@@ -208,7 +206,8 @@
       "use": "Use",
       "rollLabel": "Roll {{name}}",
       "useLabel": "Use {{name}}",
-      "manage": "Manage the inventory"
+      "manage": "Manage",
+      "manageLabel": "Manage the inventory"
     }
   },
   "attack": {
@@ -227,7 +226,6 @@
     "situationalPlaceholder": "e.g. rear attack",
     "loading": "Loading weapons…",
     "roll": "Attack",
-    "rolling": "Rolling...",
     "form": "Attack",
     "target": "Target",
     "inHand": "Weapon in hand",
@@ -252,8 +250,14 @@
     "needsUnknown": "AC unknown",
     "acShort": "AC",
     "sizeShort": "Size",
-    "switchLabel": "Switch to",
     "otherWeapons": "Other weapons",
+    "otherWeapon": "Other weapon",
+    "otherWeaponPlaceholder": "Other weapon…",
+    "modifiers": "Size and situational modifier",
+    "tags": {
+      "large": "Size L",
+      "situational": "Situational {{value}}"
+    },
     "line": {
       "sm": "S/M",
       "l": "L",
@@ -263,8 +267,9 @@
   },
   "saves": {
     "title": "Saving Throws",
-    "sectionLabel": "Saving throws · click to roll",
+    "sectionLabel": "Saving throws",
     "rollLabel": "Roll save vs {{name}}",
+    "rowHint": "Click to roll save vs {{name}}",
     "categories": {
       "para_poison": "Paralyze/Poison",
       "rod_staff_wand": "Rod/Staff/Wand",
@@ -320,7 +325,8 @@
     }
   },
   "spellSlots": {
-    "longRest": "Long Rest (Reset)",
+    "longRest": "Long rest",
+    "longRestLabel": "Long rest: reset the spell slots",
     "none": "No spell slots available.",
     "level": "Level {{level}}",
     "remaining": "{{left}} / {{total}}",
@@ -337,9 +343,11 @@
     "itemSpent": "Item spent",
     "castLabel": "Cast {{name}}",
     "prepare": "Prepare spells",
+    "prepareShort": "Prepare",
     "prepareTitle": "Prepare today's spells",
     "preparedCount": "{{count}} / {{max}} prepared",
     "save": "Save preparation",
+    "saveShort": "Save",
     "cancel": "Cancel",
     "search": "Search the spellbook...",
     "searchLabel": "Search the spellbook",
@@ -878,10 +886,9 @@
     },
     "filters": "Spell filters",
     "diceRow": "Dice at the caster level",
-    "toDice": "To the dice",
+    "toDice": "Send",
     "rollDice": "Roll",
     "noDice": "No dice to roll",
-    "addEffect": "Add as effect",
     "addEffectLabel": "Add {{name}} as an effect at level {{level}}",
     "exposure": "Exposure",
     "exposureMode": "Exposure ({{mode}})"
@@ -903,6 +910,7 @@
     "hitsAc": "Hits AC",
     "margin": "Margin",
     "target": "Target",
+    "targetAc": "Target AC",
     "modifiers": "Modifiers",
     "noModifiers": "No modifiers",
     "damage": "Damage",
@@ -1254,7 +1262,9 @@
     "row": "Range {{n}}",
     "remove": "Remove range {{n}}",
     "add": "Add range",
+    "addShort": "Add",
     "save": "Save table",
+    "saveShort": "Save",
     "saved": "Saved. The next crit uses it."
   },
   "weapons": {
@@ -1300,6 +1310,7 @@
     "card": "Detail",
     "latest": "Latest",
     "turn": "Turn {{round}}",
+    "turnShort": "T{{round}}",
     "outOfCombat": "Out of combat",
     "when": "T{{round}} · {{time}}",
     "whenOutOfCombat": "Out of combat · {{time}}",
@@ -1471,6 +1482,7 @@
     "round": "Round of exposure",
     "onMe": "I am exposed",
     "roll": "Roll exposure",
+    "rollShort": "Roll",
     "heading": "{{name}} exposure, round {{round}} (caster level {{casterLevel}})",
     "onYou": "Taken off your HP: {{delta}}",
     "forDm": "For the DM: your HP is unchanged"

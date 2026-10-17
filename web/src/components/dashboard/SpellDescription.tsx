@@ -58,7 +58,7 @@ export function SpellDescription({
                 data-testid="spell-table"
               >
                 <table className="w-full border-collapse text-left">
-                  <thead className="bg-muted text-foreground">
+                  <thead className="bg-raised text-foreground">
                     <tr>
                       {b.head.map((h, j) => (
                         <th

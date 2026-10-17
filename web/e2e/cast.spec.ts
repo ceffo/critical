@@ -343,7 +343,7 @@ test("a long rest is logged; popping it, then the cast, walks the slots back", a
   const level3 = page.getByRole("region", { name: "Level 3" });
   await page.getByRole("button", { name: "Cast Haste" }).click();
   await expect(level3.getByTestId("remaining-3")).toHaveText("0 / 1");
-  await page.getByRole("button", { name: "Long Rest (Reset)" }).click();
+  await page.getByRole("button", { name: "Long rest" }).click();
   await expect(level3.getByTestId("remaining-3")).toHaveText("1 / 1");
   await expect(logEntry(page, "Long rest: 1 spell slots")).toBeVisible();
 

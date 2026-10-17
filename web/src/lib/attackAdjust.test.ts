@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_TARGET_AC,
+  acCorrectionInEffect,
   adjustFormKey,
   attackSettled,
   hitsAc,
@@ -105,5 +106,29 @@ describe("tellGmWithCrit", () => {
     [undefined, true],
   ])("critPossible %s shows the crit part: %s", (critPossible, want) => {
     expect(tellGmWithCrit({ critPossible })).toBe(want);
+  });
+});
+
+// ADR 0027 step 8.2: the AC correction line opens only while a correction is in effect.
+describe("acCorrectionInEffect", () => {
+  it.each([
+    ["rolled against a known AC, untouched", { targetAc: 5 }, false],
+    [
+      "rolled against an unknown AC, still unknown",
+      { targetAc: null, rolledAcUnknown: true },
+      false,
+    ],
+    [
+      "the AC corrected after the roll",
+      { targetAc: 7, rolledTargetAc: 5 },
+      true,
+    ],
+    [
+      "the real AC given by the GM",
+      { targetAc: 4, rolledAcUnknown: true },
+      true,
+    ],
+  ])("%s → %s", (_, r, want) => {
+    expect(acCorrectionInEffect(r)).toBe(want);
   });
 });

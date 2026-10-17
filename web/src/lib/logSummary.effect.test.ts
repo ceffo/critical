@@ -69,7 +69,9 @@ describe("cast entry actions", () => {
     );
     // The keys the cast box, the result heading and the refusal use (LookupPanel,
     // CastResultView, the API error).
-    expect(t("lookup.addEffect")).toBe("Ajouter comme effet");
+    expect(
+      t("lookup.addEffectLabel", { name: "Image miroir", level: 15 }),
+    ).toBe("Ajouter Image miroir comme effet au niveau 15");
     expect(
       t("result.cast.effectHeading", { name: "Image miroir", casterLevel: 15 }),
     ).toBe("Effet ajouté : Image miroir, niveau 15");

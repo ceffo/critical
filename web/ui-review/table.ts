@@ -7,6 +7,7 @@ import {
   addBuff,
   attackForm,
   chooseSetting,
+  chooseTheme,
   chooseWeapon,
   logEntry,
   nextTurn,
@@ -16,8 +17,8 @@ import {
 } from "../e2e/helpers";
 
 /**
- * The table both UI-review captures start from (screens.spec.ts, the review; mockups.spec.ts, the
- * mock-up round): the seeded game state, the UI-language translator and small navigation helpers.
+ * The table the UI-review capture starts from (screens.spec.ts): the seeded game state, the
+ * UI-language translator and small navigation helpers.
  */
 
 export const webDir = path.resolve(
@@ -42,16 +43,18 @@ export const VIEWPORTS = [
   { width: 1707, height: 1300 },
   { width: 1440, height: 900 },
 ];
-/** The ambiances by their English display name, in the settings popover's order. */
-export const AMBIANCES = [
-  "Arcane",
-  "Grove",
-  "Blood",
-  "Ocean",
-  "Amber",
-  "Obsidian",
-];
-export const MODES = ["Dark", "Light"];
+/**
+ * Every theme in each mode it exists in (ADR 0026 step 3.1), by its English display name, in the
+ * settings popover's order.
+ */
+export const THEME_MODES = [
+  { mode: "Dark", theme: "Arcane" },
+  { mode: "Dark", theme: "Deep" },
+  { mode: "Dark", theme: "Plain" },
+  { mode: "Light", theme: "Arcane" },
+  { mode: "Light", theme: "Parchment" },
+  { mode: "Light", theme: "Plain" },
+] as const;
 
 export const resultCard = (page: Page) =>
   page.getByRole("region", { name: "Detail", exact: true });
@@ -165,8 +168,13 @@ export async function recordHpT(
 export const journal = (page: Page, t: T) =>
   page.getByRole("region", { name: t("log.title"), exact: true });
 
-export async function pickTheme(page: Page, mode: string, ambiance: string) {
+/** Apply a mode ("Dark" | "Light") and that mode's theme, by their English names. */
+export async function pickTheme(
+  page: Page,
+  mode: "Dark" | "Light",
+  theme: string,
+) {
   await chooseSetting(page, mode);
-  await chooseSetting(page, ambiance);
+  await chooseTheme(page, mode === "Dark" ? "dark" : "light", theme);
   await page.waitForTimeout(150);
 }

@@ -186,6 +186,25 @@ export async function chooseSetting(page: Page, option: string) {
   await expect(popover).toBeHidden();
 }
 
+/**
+ * Pick the dark or the light theme in the settings popover (by its visible name, in either
+ * language), then close it. The two choices share names (Arcane, Plain), hence the group.
+ */
+export async function chooseTheme(
+  page: Page,
+  which: "dark" | "light",
+  name: string,
+) {
+  const popover = await openSettings(page);
+  const radio = popover
+    .getByTestId(`settings-${which}-theme`)
+    .getByRole("radio", { name, exact: true });
+  await radio.click();
+  await expect(radio).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+}
+
 /** Switch the UI language through the settings popover. */
 export async function chooseLanguage(page: Page, lang: "en" | "fr") {
   await chooseSetting(page, lang === "fr" ? "Français" : "English");
@@ -230,16 +249,35 @@ export async function openWeapons(page: Page) {
   await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
 }
 
-/** Put a weapon in hand with its chip under the weapon in hand unless it already is; never attacks. */
+/**
+ * Put a weapon in hand unless it already is: the previous weapon's button when it is that one, else
+ * the drop-down of the other weapons; never attacks.
+ */
 export async function chooseWeapon(page: Page, name: string) {
   const held = attackForm(page).getByTestId("weapon-in-hand");
   await expect(held).not.toBeEmpty();
   if ((await held.textContent()) === name) return;
-  await attackForm(page)
-    .getByRole("group", { name: "Other weapons" })
-    .getByRole("button", { name: `Switch to ${name}`, exact: true })
-    .click();
+  const group = attackForm(page).getByRole("group", { name: "Other weapons" });
+  const previous = group.getByRole("button", {
+    name: `Switch to ${name}`,
+    exact: true,
+  });
+  if (await previous.count()) await previous.click();
+  else
+    await group
+      .getByRole("combobox", { name: "Other weapon" })
+      .selectOption({ label: name });
   await expect(held).toHaveText(name);
+}
+
+/** Show the target bar's size and situational controls (ADR 0027 step 7.2) unless shown. */
+export async function openTargetModifiers(page: Page) {
+  const toggle = attackForm(page).getByRole("button", {
+    name: "Size and situational modifier",
+  });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true")
+    await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
 }
 
 /** The ammunition chips of the weapon in hand. */
@@ -276,4 +314,23 @@ export async function forceAttackAc(page: Page, ac: number) {
       postData: JSON.stringify({ ...body, target_ac: ac }),
     });
   });
+}
+
+/**
+ * Opens the result card's one-line correction fold whose line reads `line` ("Adjust after the
+ * roll", "Correct the target AC", "Give the real AC") if it is closed, and returns its form.
+ */
+export async function openFold(
+  scope: Locator,
+  line: string,
+  form: string = line,
+): Promise<Locator> {
+  const fold = scope
+    .locator("details")
+    .filter({ has: scope.page().locator("summary", { hasText: line }) });
+  if (!(await fold.evaluate((d) => (d as HTMLDetailsElement).open)))
+    await fold.locator("summary").click();
+  const found = scope.getByRole("form", { name: form });
+  await expect(found).toBeVisible();
+  return found;
 }

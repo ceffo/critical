@@ -216,6 +216,12 @@ Reviewer checklist, in priority order:
    required tools, where their data lives, a one-off step such as an import) is written in the
    report. A broken or silently changed daily loop is at least high.
 
+12. **Layout pass rules** ([ADR 0027](adr/0027-space-follows-frequency-of-use.md)): space follows
+   frequency of use (step 1: every-turn controls get the room, rare ones one click away, a set rare
+   control shows as a tag); the layout is judged **in French first** (step 2: screenshots and the
+   content targets in French, the no-cut audit in French and English); **one action word per button
+   caption** (step 3: the detail in the tooltip / `aria-label`, never a sentence or a parenthesis).
+
 Severity examples: critical = wrong game math in a main flow, ledger/state corruption, broken
 migration on existing data; high = game logic in the frontend; medium = architecture-layer
 violation.

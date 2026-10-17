@@ -45,35 +45,34 @@ export function DiceComposer() {
           const count = dieCount(s.formula, sides);
           const name = dieName(sides);
           return (
-            <div key={sides} className="relative">
-              <button
-                type="button"
-                className={cn(
-                  "h-7 min-w-10 px-2 text-body font-medium tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                  count > 0 ? "chip-chosen" : "chip hover:bg-raised-hover",
-                )}
-                aria-label={t("dice.add", { die: name })}
-                data-testid={`die-${sides}`}
-                onClick={() => s.add(sides)}
-                onContextMenu={(ev: MouseEvent) => {
-                  ev.preventDefault();
-                  s.remove(sides);
-                }}
-              >
-                {name}
-              </button>
-              {count > 0 && (
-                <button
-                  type="button"
-                  className="chip-chosen absolute -top-1.5 right-0 px-1 text-label font-semibold tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                  aria-label={t("dice.count", { count, die: name })}
-                  data-testid={`die-badge-${sides}`}
-                  onClick={() => s.remove(sides)}
-                >
-                  {count} −
-                </button>
+            <button
+              key={sides}
+              type="button"
+              className={cn(
+                "flex h-7 min-w-10 items-center justify-center gap-1 px-2 text-body font-medium tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                count > 0 ? "chip-chosen" : "chip hover:bg-raised-hover",
               )}
-            </div>
+              aria-label={t("dice.add", { die: name })}
+              title={
+                count > 0 ? t("dice.count", { count, die: name }) : undefined
+              }
+              data-testid={`die-${sides}`}
+              onClick={() => s.add(sides)}
+              onContextMenu={(ev: MouseEvent) => {
+                ev.preventDefault();
+                s.remove(sides);
+              }}
+            >
+              {name}
+              {count > 0 && (
+                <span
+                  className="font-semibold"
+                  data-testid={`die-badge-${sides}`}
+                >
+                  ×{count}
+                </span>
+              )}
+            </button>
           );
         })}
       </div>
@@ -114,13 +113,7 @@ export function DiceComposer() {
         >
           <Plus aria-hidden />
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          disabled={empty}
-          onClick={s.clear}
-        >
+        <Button type="button" size="sm" disabled={empty} onClick={s.clear}>
           {t("dice.clear")}
         </Button>
         <Button
@@ -145,7 +138,7 @@ export function DiceComposer() {
         data-testid="dice-favourites"
       >
         {s.favourites.length === 0 && (
-          <li className="text-body text-muted-foreground">
+          <li className="text-label text-muted-foreground">
             {t("dice.noFavourites")}
           </li>
         )}

@@ -1463,7 +1463,7 @@
     "minus": "Subtract 1",
     "add": "Add a {{die}}",
     "remove": "Remove a {{die}}",
-    "count": "{{count}} × {{die}}, remove one",
+    "count": "{{count}} × {{die}}, right-click to remove one",
     "invalid": "Invalid formula",
     "saveFavourite": "Save as a favourite",
     "favourites": "Favourites",

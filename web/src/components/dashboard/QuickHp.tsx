@@ -4,7 +4,7 @@ import { Drop, Heart } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useTableStore } from "@/stores/table";
 import { cn } from "@/lib/utils";
-import { fieldClass, labelClass } from "./fieldStyles";
+import { fieldClass, groupHeadClass, labelClass } from "./fieldStyles";
 
 /**
  * HP change (ADR 0022 step 2.3, ADR 0027 step 5.3), on one line: the labelled amount, Damage
@@ -41,7 +41,7 @@ export function QuickHp() {
       role="group"
       aria-label={t("hp.change")}
     >
-      <h2 className="section-label">{t("hp.change")}</h2>
+      <h2 className={cn(groupHeadClass, "section-label")}>{t("hp.change")}</h2>
       <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5">
         <label htmlFor={amountId} className={cn(labelClass, "col-span-3")}>
           {t("hp.amount")}

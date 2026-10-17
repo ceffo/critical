@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Check, X } from "@phosphor-icons/react";
 import { lastSaves } from "@/lib/moiLog";
 import { cn } from "@/lib/utils";
+import { groupHeadClass } from "./fieldStyles";
 import { useCharacterStore } from "@/stores/character";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
@@ -35,7 +36,9 @@ export function Saves() {
       className="flex min-w-0 flex-col gap-2"
       aria-label={t("saves.title")}
     >
-      <h2 className="section-label">{t("saves.sectionLabel")}</h2>
+      <h2 className={cn(groupHeadClass, "section-label")}>
+        {t("saves.sectionLabel")}
+      </h2>
       <ul className="flex flex-col gap-1">
         {SAVE_CATEGORIES.map((cat) => {
           const name = t(`saves.categories.${cat}`);

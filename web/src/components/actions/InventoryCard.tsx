@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * A row's edit / delete buttons (ADR 0027 step 14.1): shown on the row's hover and keyboard focus
@@ -15,7 +16,9 @@ export const ROW_ACTIONS =
  * A card of the Inventaire stage: its section-label title, the quiet one-word Add (ADR 0027 steps
  * 3.4 and 14.2, the detail in its tooltip and `aria-label`), then its body, which scrolls inside the
  * card when the stage is shorter than it (step 14.3: the page never scrolls). Side by side (the
- * Inventaire stage's container from 1200 px), the two cards share the width.
+ * Inventaire stage's container from 1200 px), the two cards share the width. The title and Add sit
+ * in the card's header band (ADR 0026 step 6.2); `focused`: the activity's focused card (step 6.1),
+ * one tone up with the 2 px outline.
  */
 export function InventoryCard({
   titleId,
@@ -25,6 +28,7 @@ export function InventoryCard({
   showAdd,
   busy,
   onAdd,
+  focused = false,
   children,
 }: {
   titleId?: string;
@@ -36,6 +40,7 @@ export function InventoryCard({
   showAdd: boolean;
   busy: boolean;
   onAdd: () => void;
+  focused?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -43,9 +48,12 @@ export function InventoryCard({
     <section
       aria-labelledby={label ? undefined : titleId}
       aria-label={label}
-      className="flex min-h-0 min-w-0 flex-col rounded-xl bg-card py-3 @min-[75rem]:max-h-full @min-[75rem]:flex-1"
+      className={cn(
+        focused ? "stage-card" : "zone-card",
+        "flex min-h-0 min-w-0 flex-col pb-3 @min-[75rem]:max-h-full @min-[75rem]:flex-1",
+      )}
     >
-      <div className="mb-1.5 flex shrink-0 items-center justify-between gap-3 px-3">
+      <div className="card-band mb-1.5 flex min-h-10 shrink-0 items-center justify-between gap-3 px-3 py-1">
         <h2 id={titleId} className="section-label">
           {title}
         </h2>

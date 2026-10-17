@@ -170,10 +170,11 @@ async function expectCharacterCardLines(page: Page, where: string) {
   const heading = character.getByRole("heading", {
     name: "Jets de sauvegarde",
   });
+  // One 16 px line plus the sub-band's 4 px padding above and below (ADR 0026 step 6.3).
   expect(
     (await heading.boundingBox())!.height,
     `saves heading on one line, ${where}`,
-  ).toBeLessThanOrEqual(17);
+  ).toBeLessThanOrEqual(25);
   for (const row of await character.getByTestId("save-row").all())
     expect(
       (await row.boundingBox())!.height,
@@ -1208,6 +1209,19 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       const a = (await proficiencies.boundingBox())!;
       const b = (await bard.boundingBox())!;
       expect(b.y, `skills blocks side by side, ${where}`).toBe(a.y);
+      // A hovered row's modifier chip stays one tone off the row (the chip piece, ADR 0026 step
+      // 5.3): the row lights to the hover tone, the chip steps back to the raised one.
+      const chip = skills.getByTestId("skill-modifier").first();
+      const row = chip.locator("xpath=ancestor::button[1]");
+      await row.hover();
+      await row.evaluate((el) =>
+        Promise.all(el.getAnimations().map((a) => a.finished)),
+      );
+      const bg = (l: Locator) =>
+        l.evaluate((el) => getComputedStyle(el).backgroundColor);
+      expect(await bg(chip), `hovered row's chip, ${where}`).not.toBe(
+        await bg(row),
+      );
     }
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `act-skills-fr-${vp.width}x${vp.height}`);

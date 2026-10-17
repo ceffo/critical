@@ -193,11 +193,12 @@ export function LookupPanel() {
   // right; the cards follow step 4 (outlined, 14 / 16 px padding, no rules).
   return (
     <div className="grid min-h-0 flex-1 grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] gap-3">
-      <section className="zone-card flex min-h-0 min-w-0 flex-col gap-3 py-3.5">
+      {/* The focused card of the Spells activity (ADR 0026 step 6.1), the filters in its band (6.2). */}
+      <section className="stage-card flex min-h-0 min-w-0 flex-col gap-3 pb-3.5">
         <div
           role="group"
           aria-label={t("lookup.filters")}
-          className="flex shrink-0 flex-col gap-2 px-4"
+          className="card-band flex shrink-0 flex-col gap-2 px-4 py-2.5"
         >
           <div className="relative min-w-0">
             <MagnifyingGlass className="pointer-events-none absolute top-1.5 left-2.5 h-4 w-4 text-muted-foreground" />
@@ -325,12 +326,12 @@ export function LookupPanel() {
       <section
         aria-label={t("lookup.detail")}
         data-testid="spell-detail"
-        className="zone-card flex min-h-0 min-w-0 flex-col overflow-y-auto px-4 py-3.5"
+        className="zone-card flex min-h-0 min-w-0 flex-col overflow-y-auto px-4 pb-3.5"
       >
         {selected ? (
-          <SpellDetail key={selected.id} spell={selected} />
+          <SpellDetail key={selected.id} spell={selected} banded />
         ) : (
-          <p className="text-body text-muted-foreground">
+          <p className="pt-3.5 text-body text-muted-foreground">
             {t("lookup.noSelection")}
           </p>
         )}

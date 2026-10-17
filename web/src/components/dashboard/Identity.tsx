@@ -5,6 +5,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { groupHeadClass } from "./fieldStyles";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
@@ -32,7 +33,13 @@ export function Identity({ onOpenXp }: { onOpenXp: () => void }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex min-w-0 items-baseline justify-between gap-2">
+      {/* The identity's sub-band at the card's top, in place of its top padding (ADR 0026 6.3, 6.5). */}
+      <div
+        className={cn(
+          groupHeadClass,
+          "flex min-w-0 items-baseline justify-between gap-2 py-2",
+        )}
+      >
         <h1 className="min-w-0 flex-1">
           <CharacterDetails character={character} />
         </h1>

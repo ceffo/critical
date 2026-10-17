@@ -155,10 +155,13 @@ export function ResultCard() {
       aria-label={t("fil.card")}
       data-readonly={readOnly}
     >
-      <div className="flex shrink-0 items-center gap-2 px-4 pt-3.5 pb-2">
+      {/* The header band (ADR 0026 step 6.2): kind, name and time; it replaces the top padding. */}
+      <div className="card-band flex min-h-10 shrink-0 items-center gap-2 px-4 py-2">
         {header ?? <h2 className="section-label">{t("fil.card")}</h2>}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3.5">{body}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-3.5">
+        {body}
+      </div>
     </section>
   );
 }

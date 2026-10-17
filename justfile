@@ -103,17 +103,6 @@ dev-db:
 dev-smoke:
     scripts/test-dev-lifecycle.sh
 
-# Copy a SQLite database of the app (e.g. the old .dev/critical.db) into an empty PostgreSQL database
-# (ADR 0025 step 9): `just db-import-sqlite .dev/critical.db postgres://…/critical?sslmode=disable`.
-# The SQLite file is only read. The target must be new (it gets the server's migrations) or on the
-# baseline without a row; the copy is one transaction and fails on any row-count difference. Run it
-# before the first `just dev` on that database: the server's seeds would make it non-empty.
-db-import-sqlite file dsn:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    file="$(realpath "{{file}}")"
-    cd api && go run ./cmd/sqlite-copy "$file" "{{dsn}}"
-
 # Delete the development databases (real and fixture): stops this checkout's compose services and
 # deletes their volume `critical-pg`; the next `just dev` start migrates, re-seeds and imports the
 # catalogue. Files in .dev/ are not touched.

@@ -17,7 +17,8 @@
 # app has no machine (applied by its first deploy), applied at once otherwise (fly restarts the
 # machines; until each has restarted its new connections fail: a short outage, docs/deploy.md). If the
 # run stops between the two, rerun with --rotate. --password-dir DIR also writes each new password to
-# DIR/critical_<env>.password (mode 600), for the operator's one-off use (the SQLite copy, docs/deploy.md).
+# DIR/critical_<env>.password (mode 600), for the operator's one-off use (psql or pg_dump through
+# `fly proxy`, docs/deploy.md).
 #
 # Checks: every run checks, as the cluster's operator, that each critical user holds CONNECT on its own
 # database and on no other. When this run set a user's password it also connects through `fly proxy` to

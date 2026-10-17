@@ -42,4 +42,4 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0022 | [The screen around the focused activity: cards, no cut text and the Facet mark](0022-activity-focus-layout.md) | accepted |
 | 0023 | [Localized text: one row per language, no per-language field](0023-localized-text.md) | accepted; steps 9 to 12 (item and weapon names) added 2026-10-16 |
 | 0024 | [Deployment on fly.io: environments, release flow, image and data](0024-deployment.md) | proposed (step 8 and open defaults); step 5 accepted and steps 2, 4.2, 5, 6.1, 7 and 9 amended by 0025, 2026-10-16; production starts from the seeds (amendment 2026-10-16) |
-| 0025 | [PostgreSQL storage and tests without a database](0025-postgresql-storage.md) | accepted |
+| 0025 | [PostgreSQL storage and tests without a database](0025-postgresql-storage.md) | accepted; step 9 (SQLite copy tool) retired 2026-10-16 |

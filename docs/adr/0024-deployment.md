@@ -337,4 +337,5 @@ _"we go with A"_.
   user re-enters them in the production app after its first deploy (docs/deploy.md, "user steps
   left").
 - So production gets no copy: the copy tool of [ADR 0025](0025-postgresql-storage.md) step 9 is no
-  longer needed for it (ADR 0025 step 9.3, 9.5).
+  longer needed for it (ADR 0025 step 9.3), and it is retired with the first production deploy
+  (step 9.5).

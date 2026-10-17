@@ -542,7 +542,7 @@ func TestRecordedCatalogue_NamesWhatTheDatabaseWasBuiltFrom(t *testing.T) {
 }
 
 // A database built before the catalogue artifact (spells without keys, as the SQLite schema held
-// them and the copy tool brings them over) holding a spellbook's worth of game state: after the
+// them) holding a spellbook's worth of game state: after the
 // seed and the import, nothing is lost and every reference (seeds and game state) resolves to a
 // served spell; a restart changes nothing.
 func TestImportCatalogue_UpgradesADatabaseSeededBeforeTheCatalogue(t *testing.T) {

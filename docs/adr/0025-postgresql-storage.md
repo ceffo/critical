@@ -58,7 +58,7 @@ flowchart TD
    staging and production (the fly cluster of [ADR 0024](0024-deployment.md) step 2).
    1. The server opens the database from the `CRITICAL_DSN` configuration value, a PostgreSQL DSN.
    2. One dialect, one set of migrations: the server module has no SQLite dependency. The only
-      SQLite code left is the copy tool of step 9, in its own binary.
+      SQLite code left was the copy tool of step 9, in its own binary, now retired (step 9.5).
    3. The development database lives in the compose service's volume, not in `.dev/`.
 
    Check: the server module's dependencies hold no SQLite driver; `just dev` from a clean checkout
@@ -197,17 +197,13 @@ flowchart TD
    4. A copy is private data ([ADR 0024](0024-deployment.md) step 7): it never leaves the
       operator's machine and fly.
    5. Retired (deleted) once production is deployed (_amended 2026-10-16; was: once production is
-      seeded_).
+      seeded_). **Retired 2026-10-16**, with the first production deploy: its binary, its package,
+      its tests and its `just` recipe are deleted; git history keeps them.
 
-   Tests: the tool's logic without a database (table order, sequence values, count comparison,
-   refusals) on mocked ports. Implemented as `api/internal/sqlitecopy` (binary `api/cmd/sqlite-copy`, `just
-   db-import-sqlite`): `TestDependencyOrder_Step9_1_ReferencedTablesFirst`,
-   `TestNextID_Step9_1_PastTheHighestCopiedAndHandedOutID`, `TestResetIdentities_Step9_1_SetsEveryIdentityColumn`,
-   `TestCompareCounts_Step9_1_FailsOnAnyDifference`, `TestUpgradeSource_Step9_1_AppliesThePendingInOrder`,
-   `TestRun_Step9_1_CopiesEveryTableInOrderInOneTransaction`, `TestRun_Step9_1_ACountDifferenceFailsTheTransaction`,
-   `TestRefuseNonEmpty_Step9_2_RefusesARowInAnyTable`, `TestPrepareTarget_Step9_2_OnlyANewOrBaselineDatabase`,
-   `TestRun_Step9_2_ANonEmptyTargetCopiesNothing`. The sequence goes past SQLite's `sqlite_sequence` too,
-   not only past the highest id copied: an undo restores a deleted row under its old id.
+   Tests: none left. While it existed, its logic (table order, sequence values, count comparison,
+   refusals) was tested without a database on mocked ports. The sequence went past SQLite's
+   `sqlite_sequence` too, not only past the highest id copied: an undo restores a deleted row under
+   its old id.
 
 ## Consequences
 
@@ -221,7 +217,7 @@ flowchart TD
   true of the baseline schema; the citation then names the check that covers it, or says the step
   describes a past migration.
 - **Isolation level is part of the design** (step 4.2): raising it breaks the 409 contract silently.
-- **Lost with SQLite**: the WAL files, `.dev/critical.db` as the dev store (the copy tool reads it once)
+- **Lost with SQLite**: the WAL files, `.dev/critical.db` as the dev store (the copy tool read it once, then was retired)
   and the `CRITICAL_UPGRADE_CHECK_DB` check on a copy of a live SQLite file; `just dev-reset` no longer
   deletes database files (what it resets instead is the engine switch's to define). The docs describing
   them are rewritten by the items that change them.

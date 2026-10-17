@@ -478,6 +478,10 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   into an empty database. It checks health with the commit, `/` and a deep link returning
   `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. The CI `image` job builds
   the image with the fixture and runs it on every PR and on main; nothing is pushed.
+- **Release build**: on green CI on `main`, `.github/workflows/release.yml` fetches the real catalogue with the
+  read-only deploy key and runs `scripts/release-image.sh` (also behind `just release-image`): the image is
+  labelled with the commit and the rulebooks commit and pushed to the private fly registry tagged with the
+  full commit sha (docs/deploy.md, "Release build").
 - **On fly.io**: configuration in `deploy/fly.*.toml`, operator commands in [deploy.md](deploy.md).
 - **Locally**: `docker compose up --build` builds the image with the real `.catalogue/` (fetch it with
   `just catalogue` first) and serves the app on http://localhost:8888, on the compose PostgreSQL (database

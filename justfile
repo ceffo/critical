@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-language-fields check-adr-tests check-no-sqlite check-api check-web
+validate: check-no-tracker-ids check-no-language-fields check-adr-tests check-no-sqlite check-release-scripts check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -38,6 +38,11 @@ check-no-sqlite:
         echo "error: the server depends on the SQLite packages above (ADR 0025 step 1.2)"; exit 1
     fi
     echo "--- No SQLite in the server ---"
+
+# The release build's scripts (ADR 0024 steps 3.1, 7 and 10.4), offline: docker and fly stubbed, a local
+# rulebooks repo and a generated key (scripts/test-release-scripts.sh).
+check-release-scripts:
+    scripts/test-release-scripts.sh
 
 # Fail on any work-item id (a bead: critical-<id>, <id>.N) in code, tests, seeds or config. Code
 # says what it does and why; the link to the work item lives in commits and PRs only
@@ -200,24 +205,13 @@ check-fly:
     for f in deploy/fly.*.toml; do "$fly" config validate -c "$f"; done
 
 # Operator only (needs fly credentials and the rulebooks clone; never part of validate or CI). Build the
-# production image of the clean HEAD with the REAL catalogue (`just catalogue`) and push that one build
-# to each app's repository in the private fly registry, as registry.fly.io/<app>:<commit sha>. Every
-# app gets the same digest (ADR 0024 step 1.5). The catalogue only enters the image and the private
-# registry (step 7). Deploy with `fly deploy -c deploy/fly.<env>.toml --image <ref>` (docs/deploy.md).
+# production image of the clean HEAD with the REAL catalogue (`just catalogue`, at CATALOGUE_REF) and push
+# that one build to each app's repository in the private fly registry, as registry.fly.io/<app>:<commit
+# sha>, labelled with the rulebooks commit. Every app gets the same digest (ADR 0024 step 1.5). The
+# catalogue only enters the image and the private registry (step 7). The release workflow runs the same
+# script on main (docs/deploy.md, "Release build"). Deploy with `fly deploy -c deploy/fly.<env>.toml --image <ref>`.
 release-image +apps: catalogue
-    #!/usr/bin/env bash
-    set -euo pipefail
-    [ -z "$(git status --porcelain)" ] || { echo "release-image: the work tree is not clean; commit first" >&2; exit 1; }
-    fly=$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)
-    commit="$(git rev-parse HEAD)"
-    local="critical:release-$commit"
-    docker build -t "$local" --build-context catalogue=.catalogue --build-arg COMMIT="$commit" .
-    "$fly" auth docker
-    for app in {{apps}}; do
-        ref="registry.fly.io/$app:$commit"
-        docker tag "$local" "$ref"
-        docker push "$ref" | tail -n1
-    done
+    scripts/release-image.sh .catalogue "$(git -C "${RULEBOOKS_DIR:-$HOME/code/critical-rulebooks}" rev-parse "${CATALOGUE_REF:-HEAD}^{commit}")" {{apps}}
 
 # Check that a fly app has no public IP and has a private Flycast address (ADR 0024 step 8). Read-only.
 fly-private app:

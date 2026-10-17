@@ -32,7 +32,8 @@ User steps left:
 1. **Re-enter the character-sheet edits** the seeds do not hold, in the production app (`just fly-open
    critical-prod`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
    ("Production data").
-2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below). The environments and both
+2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below; until it is set, every main run
+   of the release workflow ends green with a "Release skipped" notice). The environments and both
    `FLY_API_TOKEN` secrets are set (2026-10-16).
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
 
@@ -241,18 +242,56 @@ gets those steps then.
 
 ## How a release flows
 
-ADR 0024 steps 3 and 4, driven by GitHub Actions (the workflows are separate items):
+ADR 0024 steps 3 and 4, driven by GitHub Actions:
 
-1. A merge to `main` with green CI builds the image with the real catalogue, tags it with the commit
-   sha, deploys it to staging and smoke-checks `/api/health` for that commit.
+1. A merge to `main` with green CI builds the image with the real catalogue and pushes it tagged with
+   the commit sha ("Release build" below, `.github/workflows/release.yml`); the staging deploy and its
+   `/api/health` smoke check for that commit are the next workflow item.
 2. A tag `vMAJOR.MINOR.PATCH` on a `main` commit that passed staging takes a `pg_dump` of
    `critical_prod` (no dump, no deploy), deploys the **same image** to production, smoke-checks it and
-   creates the GitHub Release.
+   creates the GitHub Release (the promotion workflow, not written yet).
 
 ```bash
 git switch main && git pull
 git tag v1.2.3 <sha that passed staging> && git push origin v1.2.3    # user: the deliberate act
 ```
+
+### Release build
+
+`.github/workflows/release.yml` (ADR 0024 steps 3.1, 7 and 10.3-10.4), job `release image`:
+
+- **When.** It runs on `workflow_run` of the `CI` workflow, and its job only when that run concluded
+  `success` for a `push` to `main` of this repository: a red or cancelled CI run, a pull request (a fork's
+  branch named `main` included) and a fork never build. It is not a job of `ci.yml` because CI cancels a
+  running `main` build when a newer commit lands; release runs are serialized instead (`concurrency:
+  release-main`, never cancelled once started: a newer commit replaces only a queued one). GitHub runs a
+  `workflow_run` workflow as it is on `main`, so a pull request cannot change what runs with the secrets,
+  and the workflow only starts once this file is on `main`.
+- **Secrets**, from the GitHub environment `staging`: `FLY_API_TOKEN` and `RULEBOOKS_DEPLOY_KEY`. When one
+  is missing (`scripts/release-secrets.sh`) the run ends green with a `Release skipped` notice naming it,
+  and nothing is built: that is what every main run shows until the user sets the key ("GitHub" below).
+- **Catalogue** (`scripts/release-catalogue.sh`): an ssh-agent gets the deploy key on stdin, then one
+  shallow, blob-less clone of `critical-rulebooks` at its default branch, with github.com's host key
+  pinned; only `dist/catalogue.json` is read, into the runner's temp directory, outside the checkout. The
+  agent and the clone are removed when the script ends, the catalogue when the build step ends. It is
+  never printed, never an artifact, never in an actions cache (the workflow has none) or an exported build
+  cache.
+- **Image** (`scripts/release-image.sh`, the script `just release-image` runs too): one plain `docker
+  build` of the clean checkout with the catalogue as the `catalogue` build context and `COMMIT`, labelled
+  `org.opencontainers.image.revision=<commit>` and `critical.rulebooks.revision=<rulebooks commit>`, then
+  `fly auth docker` and a push to **`registry.fly.io/critical-staging:<full commit sha>`** (the app name is
+  read from `deploy/fly.staging.toml`). The staging app's repository is the one image repository of the
+  release flow: the staging deploy token can push only there. Production gets the same digest from it at
+  promotion (ADR 0024, consequences, "Promotion and registry layout"), never by a rebuild. The run's
+  notice names the pushed reference and the rulebooks commit; the push line in the log gives the digest.
+- **No shell tracing** anywhere (`set -x` is absent), and none of the scripts prints a secret.
+  `just validate` runs `scripts/test-release-scripts.sh`, which exercises the three scripts offline (docker
+  and fly stubbed, a local rulebooks repo and a generated key): the missing-secret no-op, stdout of the
+  fetch being only the sha, the labels and the full-sha tag, a dirty tree refused.
+
+First real run (user, once `RULEBOOKS_DEPLOY_KEY` is set): the next main run's notice names the pushed
+reference; `$fly auth docker`, then `docker pull registry.fly.io/critical-staging:<sha>` and `docker
+inspect -f '{{json .Config.Labels}}' registry.fly.io/critical-staging:<sha>` show both labels.
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine
@@ -309,5 +348,6 @@ scripts/db-compare.sh "<local dsn>" "<fresh dsn>"   # per table: row counts, "sa
 
 The catalogue is in the image, fetched at build time, and applied at boot by the importer. So:
 update `critical-rulebooks`, then run the main build again (merge anything, or re-run the release
-workflow for the current `main` commit in GitHub Actions), wait for the staging smoke check, then tag
-a version as above.
+workflow's last run in GitHub Actions: it rebuilds that `main` commit with the rulebooks' current default
+branch and pushes the same tag again, now a new digest with the new `critical.rulebooks.revision`), wait
+for the staging smoke check, then tag a version as above.

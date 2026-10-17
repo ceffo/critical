@@ -57,8 +57,11 @@ User steps left:
    `scripts/github-tag-ruleset.sh` (admin) **before the first release run of the versioning change**, so the
    release job may create `v*` tags. Until then the run deploys staging and then fails at "Tag the version"
    (the version is not tagged; the next release computes it again).
-6. **The first promotion** (Actions > Promote > Run workflow from a version tag, "Promotion"), whose post-run
-   checks only a real run can make: listed at the end of "Promotion".
+6. **Production deployable from main** (ADR 0024 step 10.2, "GitHub" below): once the promotion on demand is
+   on main, `scripts/github-environments.sh --no-tokens` (admin) moves `production`'s rule from the tags `v*`
+   to the branch `main`. Until then every Promote run fails at the `promote to production` job, nothing done.
+7. **The first promotion** (`just promote`, "Promotion"), whose post-run checks only a real run can make:
+   listed at the end of "Promotion".
 
 ## The PostgreSQL cluster (user)
 
@@ -215,7 +218,7 @@ step 8.4).
 ### GitHub (user)
 
 `scripts/github-environments.sh` (admin rights on the repository, fly credentials) creates the
-environments `staging` and `production`, restricts `production` to tags `v*`, and sets each
+environments `staging` and `production`, restricts each to the branch `main` (deleting any other rule), and sets each
 `FLY_API_TOKEN` from a new deploy token of its app, piped, never printed (done 2026-10-16; `staging` is also restricted to the branch `main`; a rerun makes
 new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a user step:
 
@@ -225,13 +228,31 @@ new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a use
 | `staging` | `RULEBOOKS_DEPLOY_KEY` | private half of the read-only deploy key (below), used by the release build |
 | `production` | `FLY_API_TOKEN` | deploy token of `critical-prod` |
 
-Restrict the `production` environment to deployment branches and tags matching `v*` (ADR 0024 step
-10.2). Optionally add a required reviewer (default: none, running the promotion from the tag is the act).
+The `production` environment accepts deployments from the branch `main` only (ADR 0024 step 10.2): Promote
+runs from main, and the version is its input. _Changed 2026-10-17 (promotion on demand); was: tags `v*` only,
+when Promote ran from the tag._ The rule set before that change is the tag rule `v*`: **user step**, once,
+after this change is on main:
 
-**Who may create a `v*` tag.** The environment's tag rule accepts **any** `v*` tag, and Promote run from a
-tag runs `promote.yml` as it is in the tagged commit, with the production token: the on-main guard lives in
-that commit's scripts, so a tag on a commit that edited it out would deploy that commit. Two tag rulesets
-close this (a bypass actor bypasses every rule of its ruleset, hence two):
+```bash
+scripts/github-environments.sh --no-tokens   # production: adds the branch rule main, deletes the tag rule v*
+```
+
+It prints `production deployable from: branch main`. Check: Settings > Environments > production >
+Deployment branches and tags lists `main` only. Until it is run, Promote's `promote to production` job fails
+at once (the environment refuses the branch `main`), with
+nothing done.
+
+**Who may promote**: a repository admin. Both Promote jobs start with `scripts/require-admin.sh` on the user
+who started the run and the one who (re-)ran it (`github.actor`, `github.triggering_actor`), before any secret
+(user, 2026-10-17, option (a)). No required reviewer: running it is the act. A collaborator with write access
+can start the workflow (GitHub lets any writer dispatch) but its run fails in `Check the actor is an admin`,
+before the production environment. A writer's own workflow on a branch gets no production token: the
+environment accepts main only.
+
+**Who may create a `v*` tag.** The tags name the versions Promote resolves, so a tag on a commit that is not
+on main, or that staging never ran, must not appear as a version: Promote's guards (main's scripts) refuse
+both, and two tag rulesets keep the tags themselves trustworthy (a bypass actor bypasses every rule of its
+ruleset, hence two):
 
 | Ruleset | Rules on `refs/tags/v*` | Bypass |
 |---|---|---|
@@ -254,9 +275,9 @@ pushing a `v*` tag gets "push declined due to repository rule violations".
 What the GitHub Actions bypass also allows: any workflow of this repository whose token has `contents:
 write` can create a `v*` tag, so a write collaborator could, through a workflow on a branch, tag a commit
 that is not on main. Such a tag starts nothing (a tag made with a workflow token starts no workflow, and
-Promote is run by hand only). If it is the highest `v*` tag, the release job refuses every release until an
-admin deletes it ("a newer release exists", "Release version"); promote only the versions the release runs
-made (their notices, the staging deployments' payloads).
+Promote is run by hand only), and Promote never resolves it: it is off main, or staging has no deployment
+recorded as its version. If it is the highest `v*` tag, the release job refuses every release until an admin
+deletes it ("a newer release exists", "Release version").
 
 The rulebooks deploy key is read-only and belongs to the private `critical-rulebooks` repo:
 
@@ -307,10 +328,12 @@ ADR 0024 steps 3 and 4, driven by GitHub Actions (the PR title, a conventional-c
    it tagged with the commit sha and `v<version>` ("Release build"), deploys it to staging and smoke-checks it
    (health reports the commit and the version, "Staging deploy"), and **then** tags the commit `vX.Y.Z`. A
    failed staging deploy takes no version: the next release computes the same number again.
-2. Promoting a version is a deliberate act: Actions > Promote > Run workflow, "Use workflow from" **the
-   version's tag** (Tags > `vX.Y.Z`). It takes a restore point of `critical_prod` (no restore point, no
+2. Promoting is a deliberate act, on demand: `just promote` (or Actions > Promote > Run workflow, from
+   `main`, version empty) promotes the **newest version that passed staging**; `just promote 1.2.3` promotes
+   that version (also the rollback). It takes a restore point of `critical_prod` (no restore point, no
    deploy), deploys the **same image** to production, smoke-checks it and creates the GitHub Release
-   ("Promotion" below, `.github/workflows/promote.yml`). The tag CI creates does not start it.
+   ("Promotion" below, `.github/workflows/promote.yml`). No tag starts it: staging can run ahead of production
+   for as long as wanted.
 
 ```mermaid
 flowchart LR
@@ -320,7 +343,7 @@ flowchart LR
     B --> S["staging deploy + smoke (commit and version)"]
     S -->|passed| T["tag vX.Y.Z (workflow token)"]
     S -->|failed| F["no tag; the next release recomputes X.Y.Z"]
-    T -.->|"by hand: Promote from the tag"| P["production"]
+    T -.->|"on demand: just promote [version]"| P["production"]
 ```
 
 To know what each environment runs: `curl …/api/health` through `just fly-open` (commit and version), or the
@@ -356,8 +379,8 @@ the conventional commits, 2026-10-17)"), run first by the release job:
   events triggered by the `GITHUB_TOKEN`, with the exception of `workflow_dispatch` and
   `repository_dispatch`, will not create a new workflow run"
   ([Triggering a workflow from a workflow](https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow)).
-  And `promote.yml` has no tag-push trigger at all: it runs only by hand, so no tag starts a promotion.
-  Until promotion on demand exists, promoting is running Promote from the tag.
+  And `promote.yml` has no tag-push trigger at all: it runs only by hand (`just promote [version]`), so no
+  tag starts a promotion.
 - **Offline test.** `scripts/test-release-version.sh` (part of `just validate`): the rules as a table (each
   type, breaking, docs/test/chore only, the label, a mixed range, a skipped `feat` earlier in the range,
   `--force`, the first run after `v0.1.0`), the range and the labels on a fixture repository with `gh`
@@ -515,28 +538,46 @@ read an empty token), and a calling job cannot have an environment. The job pass
 
 ### Promotion
 
-`.github/workflows/promote.yml` (ADR 0024 steps 4, 8.3, 9.2 and 10), job `promote to production`, runs
-`scripts/promote.sh <tag>`.
+`.github/workflows/promote.yml` (ADR 0024 steps 4, 8.3, 9.2 and 10): job `resolve the version`, then job
+`promote to production`, which runs `scripts/promote.sh <tag>`.
 
-- **When.** By hand: Actions > Promote > Run workflow, "Use workflow from" a **version tag** (the promotion,
-  and the rollback with an older tag). Only by hand: it has no tag-push trigger, so no tag starts it (CI
-  makes the tags, "Release version"). The job runs only for a tag ref, in the environment `production`, which accepts
-  deployments from `v*` tags only, so a run from a branch gets neither the environment nor its token. It
-  runs the tag's own scripts and fly config (the ones of its image). Serialized by `concurrency:
-  deploy-production`, never cancelled once started.
-- **Starting it.** Pick the version (the release runs' notices, Settings > Tags, or the staging deployments'
-  payloads), then Actions > Promote > Run workflow > Use workflow from: Tags > `vX.Y.Z`. Every version tag
-  marks a commit staging passed, so the guards below pass for it. (`just release`, the human-made tag, is
-  gone: CI is the only maker of version tags. Promoting the newest staging version on demand is a later
-  change.)
+- **When.** On demand, by an admin (user, 2026-10-17: staging may run ahead of production for a while):
+
+  ```bash
+  just promote          # the newest version that passed staging
+  just promote 1.2.3    # that version (or v1.2.3): a rollback when it is older than production's
+  ```
+
+  `just promote` is `gh workflow run promote.yml --ref main [-f version=…]` and prints the run's URL; the
+  same from the UI: Actions > Promote > Run workflow, Use workflow from: `main`, the version or empty. No
+  tag-push trigger: no tag starts it, CI's or anyone's. The run is **main's** workflow, scripts and fly
+  config; the image and the migrations it embeds are the version's. A run from another ref fails at once
+  (`refuse a run from another ref than main`), and the environment `production` accepts deployments from
+  `main` only ("GitHub"). Serialized by `concurrency: deploy-production`, never cancelled once started.
+- **Who.** A repository admin ("GitHub", "Who may promote"): each job's first step after the checkout is
+  `scripts/require-admin.sh` on `github.actor` and `github.triggering_actor`, with the workflow's own token,
+  before any secret. Anyone else's run fails there, saying who is not an admin.
+- **Which version** (job `resolve the version`, no environment, no secret, `scripts/release-guards.sh
+  resolve [version]`). Empty: the highest `vMAJOR.MINOR.PATCH` tag, by number (`v1.10.0` after `v1.9.0`;
+  another tag such as `v2.0` or `v3.0.0-rc1` is never a version), whose commit is on main and which staging
+  passed **as that version** (its deployment record, "Record"); each higher tag that is not is skipped in the
+  log with the reason. Given: `X.Y.Z` or `vX.Y.Z`, else refused ("is not X.Y.Z or vX.Y.Z"); its tag must exist
+  ("there is no version"), be on main ("not on main") and have passed staging as that version ("staging has
+  no successful deploy of <sha> as X.Y.Z"). A refusal fails the run before the production environment, so
+  before any restore point. The job prints, and writes to the run's summary, the version, its commit and the
+  digest staging ran; the promotion job promotes exactly that tag (a "Re-run failed jobs" of it too).
+  `promote.sh` then prints what production runs before it changes anything: its machines' image (version
+  label, commit, digest), e.g. `promote: production (critical-prod) runs 1.4.0 (commit <sha>, sha256:…);
+  promoting v1.5.0`.
 - **Secret.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-prod`). An empty one **fails**
   the run before anything else (`Promotion` error): a promotion is a deliberate act (step 10.4).
 - **Steps**, each stopping the promotion when it fails:
-  1. **Guards** (`scripts/release-guards.sh all <tag>`): the tag is `vMAJOR.MINOR.PATCH`; its commit is
-     on `origin/main`; staging ran and passed that commit, read as "Record" above says, which gives the
-     **digest**; and `registry.fly.io/critical-staging@<digest>` is in the registry (`docker manifest
-     inspect` after `fly auth docker` with the production token, which the registry lets read the staging
-     repository). Nothing is written before they pass.
+  1. **Guards** (`scripts/release-guards.sh all <tag>`, again, now with the registry login): the tag is
+     `vMAJOR.MINOR.PATCH`; its commit is on `origin/main`; staging ran and passed that commit as that version,
+     read as "Record" above says, which gives the **digest**; and `registry.fly.io/critical-staging@<digest>`
+     is in the registry (`docker manifest inspect` after `fly auth docker` with the production token, which
+     the registry lets read the staging repository). Nothing is written before they pass. Then what
+     production runs now is printed (read-only).
   2. **No public IP** on `critical-prod` (`scripts/fly-private-check.sh`). Mandatory: unlike staging, no
      variable skips it; the apps stay private until a public-access option with access control is built
      (ADR 0024 step 8).
@@ -594,8 +635,9 @@ read an empty token), and a calling job cannot have an environment. The job pass
   server, passed its exit status back and was destroyed (only the two app machines remained).
 - **Offline test.** `scripts/test-promotion.sh` (part of `just validate`): each guard on fixture
   repositories and a stubbed GitHub API (the history-not-latest reading, the newest success, a string
-  payload), the order of the promotion's steps and what each failure prevents (fly stubbed), and the
-  workflow parsed. The restore point's SQL runs for real in the CI `image` job
+  payload), the version resolution and its refusals, the admin check, the environments script's rules,
+  `just promote`'s dispatch, the order of the promotion's steps and what each failure prevents (fly stubbed),
+  and the workflow parsed (the admin check before any secret, the version resolved without one). The restore point's SQL runs for real in the CI `image` job
   (`scripts/image-smoke.sh`: copies, retention, the refusals) against a throwaway PostgreSQL 17.
 - **Post-run checks (user, the first real promotion; none can be faked offline).**
   1. The run is green; its log shows the guards' commit and digest, `fly-private-check: OK`, the copy to
@@ -607,8 +649,11 @@ read an empty token), and a calling job cannot have an environment. The job pass
      no `=c/` (PUBLIC) in its access privileges.
   3. `$fly machine list -a critical-prod` shows the two app machines only (the console machine is gone).
   4. The GitHub Release exists, with the digest.
-  5. Actions > Promote > Run workflow from `main` fails at once in `refuse a run from a branch` ("not a
-     v* tag"), and the `promote to production` job is skipped (the environment refuses the branch too).
+  5. Actions > Promote > Run workflow from a tag (Tags > `vX.Y.Z`) fails at once in `refuse a run from another
+     ref than main` ("is not main"), and the other two jobs are skipped.
+  6. `just promote 99.0.0` fails in `resolve the version` ("there is no version v99.0.0"); the `promote to
+     production` job is skipped and production's deployments list no new entry.
+  7. A run by a collaborator who is not an admin (if there is one) fails in `Check the actor is an admin`.
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine
@@ -617,20 +662,22 @@ additive, so the previous release keeps working on the new schema while its mach
 
 ## Rollback
 
-Run the promotion again for the previous tag: Actions > Promote > Run workflow, "Use workflow from" that
-tag (or "Re-run all jobs" on its run). It redeploys that tag's image by its staging digest, never rebuilt,
-after a restore point of the current data. By hand (operator, production token):
+Promote the previous version: `just promote 1.2.2` (or Actions > Promote > Run workflow from `main`, version
+`1.2.2`). It redeploys that version's image by its staging digest, never rebuilt, after a restore point of the
+current data; the run is main's scripts, the migrations checked are the version's. Note that `just promote`
+with no version would promote the newest staging version again, not roll back. By hand (operator, production
+token, from an up-to-date main checkout):
 
 ```bash
-git fetch origin --tags && git switch --detach v1.2.2
+git fetch origin --tags && git switch --detach origin/main
 fly auth docker && scripts/promote.sh v1.2.2
 ```
 
 **Across a migration** the older binary refuses to start on the newer schema (ADR 0024 step 6.2), so the
-promotion of the older tag refuses it before writing anything ("production database records migrations this
+promotion of the older version refuses it before writing anything ("production database records migrations this
 release does not embed"). Restore
 `critical_prod` from the restore point taken **before the release being undone** (`critical_prod_pre_<that
-tag>_<time>`), then promote the older tag (step 9.3). Everything written since that restore point is lost:
+tag>_<time>`), then promote the older version (step 9.3). Everything written since that restore point is lost:
 say so to the user first, and get their yes.
 
 1. Remove the app's machines, so no server boots on the restored database before the older release (a
@@ -648,7 +695,7 @@ say so to the user first, and get their yes.
    GRANT CONNECT, TEMPORARY ON DATABASE critical_prod TO critical_prod;
    ```
 
-3. Promote the older tag (above). Its deploy recreates the two machines from `deploy/fly.prod.toml`; if it
+3. Promote the older version (above). Its deploy recreates the two machines from `deploy/fly.prod.toml`; if it
    reports no machine, `$fly scale count 2 -a critical-prod --yes` and run it again.
 4. Once production checks out, `DROP DATABASE critical_prod_failed_<yyyymmdd>;` (it takes room on the shared
    volume). Until then it accepts no connection (`ALLOW_CONNECTIONS false`, kept by the rename), so the
@@ -656,7 +703,7 @@ say so to the user first, and get their yes.
    promotion's retention and budget do not see it either (it is not a `critical_prod_pre_*` name).
 
 A restore point is also the way back from bad data without a rollback (same steps, without changing the
-release: promote the current tag again in step 3).
+release: promote the current version again in step 3).
 
 ## Restore from a cluster snapshot (user, last resort)
 

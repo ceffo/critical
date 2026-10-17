@@ -8,7 +8,7 @@ name: Major
 # (scripts/require-admin.sh). Runbook: docs/deploy.md ("A major version").
 #
 # No environment and no secret: the workflow's own token (contents: write) writes the marker, which is not a
-# `v*` tag; its ruleset (scripts/github-tag-ruleset.sh) lets only an admin and this token write it.
+# `v*` tag and has no ruleset (scripts/github-tag-ruleset.sh).
 on:
   workflow_dispatch:
 

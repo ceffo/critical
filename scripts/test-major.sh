@@ -9,8 +9,9 @@
 #   - `just major`: dispatches major.yml from main, then prints what the next release will be;
 #   - major.yml parsed: dispatch only, no secret, no environment, main only, the admin check before anything
 #     else, the marker written last with the workflow's token only;
-#   - github-tag-ruleset.sh --dry-run: the marker ruleset is on next-major only, admin and the Actions app
-#     bypass, and no ruleset widens `v*`.
+#   - github-tag-ruleset.sh: only "release tags" (update, deletion, admin bypass) on `v*`; no ruleset for
+#     creation or for the marker (GitHub refuses the Actions-app bypass on a personal repository); a real run
+#     (gh stubbed) removes the two obsolete rulesets by name and writes only "release tags".
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -83,7 +84,7 @@ for bad in "${sha2:0:7}" 'main' "$(printf 'g%.0s' {1..40})" "$(printf 'a%.0s' {1
 done
 status=0; "$script" mark >/dev/null 2>&1 || status=$?; [ "$status" != 0 ] || fail "mark without a commit"
 status=0; "$script" mark "$sha2" extra >/dev/null 2>&1 || status=$?; [ "$status" != 0 ] || fail "mark with an extra argument"
-# GitHub refuses (the ruleset does not let the workflow write the marker): a failure, not a green run.
+# GitHub refuses (the token may not write the marker): a failure, not a green run.
 touch "$tmp/gh-refuses"
 mark "$sha2"
 [ "$status" != 0 ] && [[ "$out" == *"GitHub refused to create next-major"* ]] || fail "mark: a refused write is not a failure: $out"
@@ -172,19 +173,42 @@ if errs:
     sys.exit(1)
 PY
 
-# --- the tag rulesets: the marker's own, `v*` untouched ---
-rs="$("$root/scripts/github-tag-ruleset.sh" --dry-run)"
+# --- the tag ruleset: only "release tags"; the creation and marker rulesets are gone ---
+rs="$("$root/scripts/github-tag-ruleset.sh" --dry-run 2>"$tmp/rs.err")"
 jq -s -e '
-    (map(select(.name == "next-major marker")) | length == 1)
-    and (map(select(.name == "next-major marker"))[0] as $m
-         | $m.conditions.ref_name.include == ["refs/tags/next-major"] and $m.enforcement == "active" and $m.target == "tag"
-         | . and ($m.rules | map(.type) | sort) == ["creation", "deletion", "update"]
-         | . and ($m.bypass_actors | map(.actor_type + (.actor_id | tostring)) | sort) == ["Integration15368", "RepositoryRole5"])
-    and (map(select(.name == "release tags"))[0] | .conditions.ref_name.include == ["refs/tags/v*"] and (.rules | map(.type) | sort) == ["deletion", "update"]
-         and (.bypass_actors | map(.actor_id) == [5]))
-    and (map(select(.name == "release tag creation"))[0] | .conditions.ref_name.include == ["refs/tags/v*"] and (.rules | map(.type)) == ["creation"])
-    and (map(select(.conditions.ref_name.include | any(. == "refs/tags/v*" or . == "refs/tags/*"))) | length == 2)' <<<"$rs" >/dev/null \
-    || fail "github-tag-ruleset: the marker ruleset (or the v* ones) is wrong: $rs"
+    length == 1
+    and (.[0] | .name == "release tags" and .target == "tag" and .enforcement == "active"
+         and .conditions.ref_name.include == ["refs/tags/v*"]
+         and (.rules | map(.type) | sort) == ["deletion", "update"]
+         and (.bypass_actors | map(.actor_type + (.actor_id | tostring)) == ["RepositoryRole5"]))' <<<"$rs" >/dev/null \
+    || fail "github-tag-ruleset: the ruleset is not 'release tags' alone (update, deletion, admin bypass): $rs"
+for n in "release tag creation" "next-major marker"; do
+    grep -q "would remove ruleset '$n'" "$tmp/rs.err" || fail "github-tag-ruleset --dry-run: does not announce removing '$n'"
+done
+
+# A real run against a stubbed gh: the obsolete rulesets are deleted by name, 'release tags' is replaced, nothing else is written.
+mkdir -p "$tmp/rsbin"
+cat >"$tmp/rsbin/gh" <<'STUB'
+#!/usr/bin/env bash
+echo "gh $*" >>"$RS_LOG"
+case "$*" in
+    "repo view"*) echo o/r ;;
+    "api repos/o/r/rulesets?includes_parents=false"*)
+        case "$*" in
+            *'"release tags"'*) echo 11 ;;
+            *'"release tag creation"'*) echo 22 ;;
+            *'"next-major marker"'*) echo 33 ;;
+        esac ;;
+    "api -X "*) cat >/dev/null 2>&1 </dev/null || true ;;
+esac
+STUB
+chmod +x "$tmp/rsbin/gh"
+: >"$tmp/rs.log"
+RS_LOG="$tmp/rs.log" PATH="$tmp/rsbin:$PATH" "$root/scripts/github-tag-ruleset.sh" >/dev/null </dev/null \
+    || fail "github-tag-ruleset: the real run (gh stubbed) failed"
+writes="$(grep -E '^gh api -X ' "$tmp/rs.log" | sort)"
+want="$(printf '%s\n' 'gh api -X DELETE repos/o/r/rulesets/22' 'gh api -X DELETE repos/o/r/rulesets/33' 'gh api -X PUT repos/o/r/rulesets/11 --input -' | sort)"
+[ "$writes" = "$want" ] || fail "github-tag-ruleset: unexpected writes: $writes"
 
 [ "$fails" = 0 ] || exit 1
 echo "--- Major version scripts ---"

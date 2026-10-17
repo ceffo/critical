@@ -156,4 +156,21 @@ describe("planCast", () => {
       planCast(slot("alarm"), false, withModes, {}).options.mode,
     ).toBeUndefined();
   });
+
+  it("carries the target choice the server serves for the spell, none when it serves none", () => {
+    const slow = { default: "other", alternate: "self" } as const;
+    const withTarget: SpellbookEntry[] = [
+      ...book,
+      { id: "slow", name: "Slow", level: 1, cast_target: slow },
+    ];
+    expect(planCast(slot("slow"), false, withTarget, {}).target).toEqual(slow);
+    expect(
+      planCast(slot("alarm"), false, withTarget, {}).target,
+    ).toBeUndefined();
+    // A blank extra slot takes the picked spell's choice; none before a pick.
+    expect(planCast(blank, true, withTarget, { pick: "slow" }).target).toEqual(
+      slow,
+    );
+    expect(planCast(blank, true, withTarget, {}).target).toBeUndefined();
+  });
 });

@@ -53,6 +53,7 @@ var book = map[string]prepsvc.SpellbookEntry{
 	"rarys_mnemonic_enhancer": {ID: "rarys_mnemonic_enhancer", Name: "Rary's Mnemonic Enhancer", Level: 4},
 	"wall_of_ice":             {ID: "wall_of_ice", Name: "Wall of Ice", Level: 4},
 	"cloudkill":               {ID: "cloudkill", Name: "Cloudkill", Level: 5},
+	"slow":                    {ID: "slow", Name: "Slow", Level: 3},
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -65,7 +66,7 @@ func newFixture(t *testing.T) *fixture {
 		return e, ok
 	}).Maybe()
 	b.EXPECT().All().RunAndReturn(func() []prepsvc.SpellbookEntry {
-		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"], book["cloudkill"]}
+		return []prepsvc.SpellbookEntry{book["alarm"], book["fireball"], book["chromatic_orb"], book["rarys_mnemonic_enhancer"], book["wall_of_ice"], book["cloudkill"], book["enlarge"], book["slow"], book["mirror_image"]}
 	}).Maybe()
 
 	limits := mocks.NewMockLimits(t)
@@ -93,7 +94,7 @@ func TestInfo(t *testing.T) {
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 2}}, info.Limits)
-	require.Len(t, info.Spellbook, 6)
+	require.Len(t, info.Spellbook, 9)
 	assert.Equal(t, prepsvc.CastInputs{}, info.Spellbook[0].Cast, "alarm asks nothing")
 }
 
@@ -146,6 +147,26 @@ func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true}, info.Spellbook[2].Cast)
 	assert.Equal(t, prepsvc.CastInputs{SlotSplits: [][]int{{1, 1, 1}, {1, 2}, {3}}}, info.Spellbook[3].Cast)
+}
+
+// ADR 0027 step 10.1: a spellbook entry carries the choice of target its cast
+// offers, from the spell effects data: Enlarge (self or other) lands on the
+// Bard, else on an ally. A hostile buff (Slow), a self-only buff (Mirror
+// Image) and a spell that adds no buff (Fireball, Alarm) offer none.
+func TestInfo_ServesTheTargetChoice(t *testing.T) {
+	f := newFixture(t)
+	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
+	info, err := f.svc.Info(context.Background(), 1)
+	require.NoError(t, err)
+	byID := map[string]*spelleffectsvc.TargetChoice{}
+	for _, e := range info.Spellbook {
+		byID[e.ID] = e.Cast.Target
+	}
+	assert.Equal(t, &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnSelf, Alternate: spelleffectsvc.CastOnOther}, byID["enlarge"])
+	assert.Nil(t, byID["slow"], "hostile")
+	assert.Nil(t, byID["mirror_image"], "self-only")
+	assert.Nil(t, byID["fireball"], "a damage spell")
+	assert.Nil(t, byID["alarm"], "a utility spell")
 }
 
 // A spellbook entry carries the damage a cast rolls at the character's level

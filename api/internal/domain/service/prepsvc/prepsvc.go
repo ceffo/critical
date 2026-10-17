@@ -57,12 +57,15 @@ type SpellbookEntry struct {
 // the first is the default), the type of the inventory item it spends, and
 // whether it rolls a to-hit (a target AC is then required), and the
 // cast-time modes to pick from, each with the damage a cast in it rolls at the
-// character's level (the first is the default; ADR 0008 step 14).
+// character's level (the first is the default; ADR 0008 step 14), and the
+// choice of target a buff's cast offers (nil: none; the cast lands where the
+// spell does by default).
 type CastInputs struct {
 	SlotSplits      [][]int
 	ConsumeItemType string
 	AttackRoll      bool
 	Modes           []spelleffectsvc.ModeAt
+	Target          *spelleffectsvc.TargetChoice
 }
 
 // LevelLimit is the number of spells of one level that may be prepared.
@@ -191,6 +194,9 @@ func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {
 				return Info{}, err
 			}
 			if out.Spellbook[i].Exposure, err = fx.ExposureAt(level); err != nil {
+				return Info{}, err
+			}
+			if out.Spellbook[i].Cast.Target, err = fx.TargetChoiceAt(level); err != nil {
 				return Info{}, err
 			}
 		}

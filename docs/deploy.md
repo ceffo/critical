@@ -18,6 +18,24 @@ files; the Go test checks the app names against the file names.
 fly=~/.fly/bin/fly   # flyctl on the operator's machine
 ```
 
+## State and user steps left
+
+First private deploy, 2026-10-16, image of commit `1648083` (one digest, both apps):
+
+| App | Machines | Addresses | Checked |
+|---|---|---|---|
+| `critical-staging` | 1 (stops when idle) | `private_v6` only | `just fly-private`, `just fly-smoke` (health with the commit, database read); an action-log entry survived `fly machine restart` and a redeploy (`just fly-persistence`); both cold-cluster cases above |
+| `critical-prod` | 2 (always on) | `private_v6` only | `just fly-private`, `just fly-smoke` on each machine; `just fly-db-counts tournesol-db critical_prod`: the 22 tables a fresh boot seeds, no play |
+
+User steps left:
+
+1. **Re-enter the character-sheet edits** the seeds do not hold, in the production app (through `fly
+   proxy`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
+   ("Production data").
+2. **GitHub environments and `FLY_API_TOKEN`** ("GitHub" below), if not done yet.
+3. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below).
+4. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
+
 ## The PostgreSQL cluster (user)
 
 `tournesol-db`: postgres-flex 17, one node (`shared-cpu-1x`, 256 MB), one encrypted 1 GB volume
@@ -37,7 +55,11 @@ stops with no connection and starts on the next one through `tournesol-db.flycas
 request after an idle period waits a few seconds for PostgreSQL. Idle means no open connection for an
 hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 5 minutes, so
 quiet apps let it stop, and a server booting or a request arriving while it starts waits for it (up
-to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). `fly ssh` does not start it:
+to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). Checked on staging, 2026-10-16: with the cluster
+stopped, a booting server got `EOF` twice, the connection started the cluster (event source `proxy` in
+`fly machine status`) and the server listened 5 s after its start; with the cluster stopped under a
+running server holding pooled connections, the next database read answered 200 in 2.6 s. `fly ssh`
+does not start it:
 
 ```bash
 $fly status -a tournesol-db                          # machine state; role "error" only means stopped
@@ -137,14 +159,18 @@ First deploy of an app, with a private Flycast address only (no public IP). fly 
 for an app without volumes; staging wants one:
 
 ```bash
-$fly deploy -c deploy/fly.prod.toml -a critical-prod --image <registry image ref> --no-public-ips          # two machines
-$fly deploy -c deploy/fly.staging.toml -a critical-staging --image <registry image ref> --no-public-ips --ha=false   # one machine
+just release-image critical-staging critical-prod  # the clean HEAD, real catalogue, pushed to both apps' registries
+$fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-prod:<sha> --no-public-ips          # two machines
+$fly deploy -c deploy/fly.staging.toml -a critical-staging --image registry.fly.io/critical-staging:<sha> --no-public-ips --ha=false   # one machine
 $fly ips allocate-v6 --private -a critical-<env>
 just fly-private critical-<env>                    # fails on any public address
-$fly machine list -a critical-<env>                # prod: 2 machines, staging: 1
+just fly-smoke critical-<env> <sha>                # every machine: health with the commit, a database read, the web app
 ```
 
-Later deploys come from the workflows. If `fly ips list` shows a public IP, release it with
+A first deploy reports a health-check timeout until the app has its private address and can reach the
+database; the machine keeps running. Later deploys come from the workflows; fly allocates no public IP
+on a redeploy of an app that already has an address (seen on staging's redeploy, 2026-10-16), and the
+workflows pass `--no-public-ips` anyway. If `fly ips list` shows a public IP, release it with
 `$fly ips release <address> -a critical-<env>` unless a public-access option has been chosen (ADR 0024
 step 8.4).
 
@@ -175,11 +201,17 @@ Never commit a token or key; the repository holds none.
 ## Reaching a private app
 
 ```bash
-$fly proxy 8080:8080 -a critical-<env>      # then http://localhost:8080 (leave it running)
+$fly proxy 8080:80 critical-<env>.flycast -a critical-<env>   # then http://localhost:8080 (leave it running)
 curl -s localhost:8080/api/health           # {"status":"ok","commit":"<sha>"}
 $fly ssh console -a critical-<env>          # a shell on the machine
 $fly logs -a critical-<env>
 ```
+
+Through the `.flycast` address, fly's proxy starts a stopped machine (staging stops when idle) and
+balances between machines; the address answers on the service ports (80, and 443 with TLS), not on 8080.
+`$fly proxy 8080:8080 -a critical-<env>` without the address goes straight to one running machine's
+port 8080 and starts nothing. A request can be pinned to one machine with the header
+`fly-force-instance-id: <machine id>` (what `just fly-smoke` does for each machine).
 
 For a device that must reach the app without `fly proxy`, join the org's WireGuard network
 (`$fly wireguard create`, user) and use the app's `.flycast` address. A public IP, basic auth and a

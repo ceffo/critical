@@ -21,9 +21,10 @@ import { fieldClass } from "./fieldStyles";
 type Mode = "menu" | "passing" | "setting" | "confirmEnd";
 
 /**
- * The turn cells of the header card (ADR 0022 step 2.2): the turn (label and number in
- * `text-hero`), then initiative (the server's d10 for the turn, with a reroll) over Next turn and a
- * menu with Time passes, Set turn number and End combat. Every action goes through the round
+ * The turn cells of the header card (ADR 0027 steps 4.1 and 4.2): the turn, its label stacked over
+ * its number (`text-headline`), then Next turn (the header's main button) and a menu with Time passes,
+ * Set turn number and End combat, over the initiative the server rolled for the turn: the header's
+ * `text-hero` number, its die in the tooltip, with a reroll. Every action goes through the round
  * endpoints and is logged server-side.
  */
 export function TurnBlock() {
@@ -40,55 +41,16 @@ export function TurnBlock() {
       role="group"
       aria-label={t("turn.title")}
     >
-      <div className="flex items-baseline gap-2">
+      <div className="flex flex-col items-center" data-testid="turn">
         <span className="section-label">{t("turn.title")}</span>
         <span
-          className="min-w-[2ch] text-hero tabular-nums"
+          className="min-w-[2ch] text-center text-headline tabular-nums"
           data-testid="round-value"
         >
           {turn}
         </span>
       </div>
       <div className="flex flex-col items-start gap-1">
-        <div
-          className="flex min-h-6 max-w-48 items-center text-body text-muted-foreground"
-          data-testid="initiative-row"
-        >
-          {turn === 0 ? (
-            t("turn.outOfCombatInitiative")
-          ) : (
-            <span
-              className="flex items-center gap-2"
-              title={t("turn.initiativeHint")}
-            >
-              {t("turn.initiative")}
-              {initiative ? (
-                <>
-                  <span
-                    className="font-semibold tabular-nums"
-                    data-testid="initiative-value"
-                    data-entry-id={initiative.logEntryId}
-                  >
-                    {initiative.value}
-                  </span>
-                  <span>{t("turn.initiativeDie")}</span>
-                  <button
-                    type="button"
-                    aria-label={t("turn.initiativeReroll")}
-                    title={t("turn.initiativeReroll")}
-                    disabled={busy}
-                    onClick={() => void rerollInitiative()}
-                    className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted [&_svg]:size-4"
-                  >
-                    <ArrowsClockwise />
-                  </button>
-                </>
-              ) : (
-                <span className="chip px-2">{t("turn.initiativeNone")}</span>
-              )}
-            </span>
-          )}
-        </div>
         <div className="flex gap-1">
           <Button
             variant="main"
@@ -125,6 +87,44 @@ export function TurnBlock() {
               )}
             </PopoverContent>
           </Popover>
+        </div>
+        <div
+          className="flex min-h-9 max-w-48 items-center text-body text-muted-foreground"
+          data-testid="initiative-row"
+        >
+          {turn === 0 ? (
+            t("turn.outOfCombatInitiative")
+          ) : (
+            <span
+              className="flex items-center gap-2"
+              title={t("turn.initiativeHint")}
+            >
+              {t("turn.initiative")}
+              {initiative ? (
+                <>
+                  <span
+                    className="text-hero text-foreground tabular-nums"
+                    data-testid="initiative-value"
+                    data-entry-id={initiative.logEntryId}
+                  >
+                    {initiative.value}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={t("turn.initiativeReroll")}
+                    title={t("turn.initiativeReroll")}
+                    disabled={busy}
+                    onClick={() => void rerollInitiative()}
+                    className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted [&_svg]:size-4"
+                  >
+                    <ArrowsClockwise />
+                  </button>
+                </>
+              ) : (
+                <span className="chip px-2">{t("turn.initiativeNone")}</span>
+              )}
+            </span>
+          )}
         </div>
       </div>
     </div>

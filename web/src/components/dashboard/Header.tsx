@@ -5,10 +5,12 @@ import { TurnBlock } from "./TurnBlock";
 
 /**
  * The header card, full width above the character card, rail and stage (ADR 0022 step 2.2), one
- * band left to right: the brand, the turn and initiative with Next turn, the effects timeline beside
- * them (turns and effects are one concept: time), and the last result docked at the right. Hit
- * points are not here. At rest it is at most 120 px tall, its outline included (step 3.1): the turn
- * row plus up to 3 effect rows. Cells are separated by space, never a rule (step 4.1).
+ * band left to right: the turn and initiative with Next turn, the effects timeline taking all the
+ * width up to the right column (turns and effects are one concept: time), and that column docked at
+ * the right edge: the brand over the last result, both right-aligned, 6 px apart (ADR 0027 step
+ * 4.6, the brand round's pick E). Hit points are not here. At rest it is at most 120 px tall, its
+ * outline included (ADR 0022 step 3.1): the turn row plus up to 3 effect rows. Cells are separated
+ * by space, never a rule (step 4.1).
  */
 export function Header() {
   return (
@@ -16,10 +18,15 @@ export function Header() {
       className="zone-card flex min-w-0 shrink-0 items-center gap-6 px-4 py-2"
       data-screen="turn-header"
     >
-      <BrandMark />
       <TurnBlock />
       <EffectsTimeline />
-      <LastResult />
+      <div
+        className="flex min-w-0 flex-col items-end gap-1.5 self-start"
+        data-testid="header-dock"
+      >
+        <BrandMark />
+        <LastResult />
+      </div>
     </header>
   );
 }

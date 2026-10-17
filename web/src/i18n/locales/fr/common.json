@@ -90,7 +90,6 @@
     "initiative": "Initiative",
     "initiativeNone": "Pas lancée",
     "outOfCombatInitiative": "Hors combat · l’initiative sera lancée",
-    "initiativeDie": "d10",
     "initiativeHint": "1d10, le plus bas agit en premier",
     "initiativeReroll": "Relancer l’initiative",
     "passTime": "Le temps passe…",

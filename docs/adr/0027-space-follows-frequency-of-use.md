@@ -140,21 +140,34 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    3. **Effects timeline: 5 turn columns** at every width (*proposed, user OK on the PR*; was 8, 12
       or 16 by width). The freed width goes to the effect-name column, so names do not wrap at
       1440x900 in French with the fixture's long names. A pill running past the window fades out
-      (ADR 0022 step 1.2 stands).
+      (ADR 0022 step 1.2 stands). The **name column is as wide as the longest effect name, the
+      hidden ones included** (user pick, brand round 2026-10-17), so it does not jump when "+N"
+      expands the list; a name longer than the column's cap (`clamp(14rem, 22vw, 26rem)`, a
+      player's very long custom name) wraps, never cut. The 5 turn columns share all the width
+      the timeline gets (step 4.6).
    4. **Effect rows show their edit and remove buttons on hover and keyboard focus** only (step 1.4),
       not at rest. Add stays visible in the "Effets" label cell.
    5. **The last result is one line**, larger than today (its value in `text-key`, the words in
-      `text-body`), on one line in French at 1440x900 and 1707x1300. It follows the timeline
-      directly, with no flexible gap between them; the header's spare width goes to the right of
-      it (*proposed, user OK on the PR*: "closer to the turn block").
-   6. **The brand shows in full** (mark and wordmark) from 1440 px wide (replaces step 7's 1500 px
-      breakpoint); at 1280 px the mark alone may show (*proposed, user OK on the PR*). Its place in
-      the header is the user's pick from the brand design round, recorded in that round's README
-      under `docs/design/`; this step does not fix it.
+      `text-body`), on one line in French at 1440x900 and 1707x1300. It sits under the brand in the
+      header's right column (step 4.6; was "follows the timeline directly, the spare width to its
+      right", changed 2026-10-17 by the brand round's pick). Only a wording too long for the room
+      the timeline leaves wraps, never cut.
+   6. **The brand shows in full** (mark and wordmark) at every layout width (replaces step 7's
+      1500 px breakpoint). **Its place is design E** of the brand round
+      ([README](../design/brand-placement/README.md), user pick 2026-10-17): the brand (mark +
+      wordmark) at the top right, the last result under it, **6 px** apart, both right-aligned in
+      one column docked at the header's right edge; that column's right edge lines up with the
+      result card below (the header and the now band share their right edge). The **timeline
+      takes all the width** between the initiative and that column, its 5 turn columns sharing
+      it; effect names are never cut. The header opens on the turn.
    7. The header stays at most **120 px** at rest (ADR 0022 step 3.1, ADR 0026 step 6.6).
 
-   *Checked by* `layout.spec`'s "shell" test: the header budget, the wordmark visible at 1440, the
-   last result's height equal to one line, and the no-cut audit in French and English.
+   *Checked by* `layout.spec`: the "shell" test (the header budget and the no-cut audit in English,
+   the wordmark at every width) and the French no-cut test (`expectHeaderLayout` at every layout
+   viewport: the turn stacked, the initiative under "Tour suivant" and larger than the turn, 5
+   columns, the brand over the last result right-aligned 6 px apart and docked at the right edge,
+   at most 120 px; at 1440x900 and 1707x1300 every effect name and the last result on one line;
+   an effect's actions hidden at rest, shown on hover and on keyboard focus).
 5. **Character card** (amends ADR 0022 steps 2.3, 2.7 and 4.2's example).
    1. **Width grows with the viewport**: `clamp(280px, 21vw, 384px)` (*proposed, user OK on the
       PR*): about 302 px at 1440, 358 px at 1707, 384 px from 1920 (was 280 px everywhere). The

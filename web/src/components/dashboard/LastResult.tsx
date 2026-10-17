@@ -18,9 +18,11 @@ const TONES: Record<RowValue["tone"], string> = {
 };
 
 /**
- * The last result, docked at the right of the header card (ADR 0022 step 2.2): its label with the
- * turn and time, then one line (the die, then the journal's wording: verdict, damage). Visible in every
- * activity, so a roll made anywhere shows here. The text wraps; it is never cut.
+ * The last result, under the brand in the header's right column (ADR 0022 step 2.2, ADR 0027 steps
+ * 4.5 and 4.6): its label with the turn and time, then one line, the die in `text-key` and the
+ * journal's wording (verdict, damage) in `text-body`. Visible in every activity, so a roll made
+ * anywhere shows here. It takes the width its line needs; only when the header has no room left
+ * (a very long wording) does the text wrap, never cut.
  */
 export function LastResult() {
   const { t, i18n } = useTranslation();
@@ -40,7 +42,7 @@ export function LastResult() {
     <div
       role="group"
       aria-label={t("shell.lastResult")}
-      className="flex w-[clamp(13rem,18vw,22rem)] shrink-0 flex-col justify-center gap-1"
+      className="flex min-w-0 flex-col items-end gap-0.5"
       data-testid="last-result"
     >
       <span className="section-label">
@@ -54,13 +56,13 @@ export function LastResult() {
       </span>
       {entry ? (
         <p
-          className="flex items-baseline gap-2 text-body"
+          className="flex min-w-0 items-baseline gap-2 text-body"
           data-entry-id={entry.id}
         >
           {chip && (
             <span
               className={cn(
-                "chip shrink-0 px-1.5 font-semibold tabular-nums",
+                "chip shrink-0 px-1.5 text-key tabular-nums",
                 TONES[chip.tone],
               )}
               data-testid="last-result-chip"

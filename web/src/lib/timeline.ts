@@ -2,20 +2,11 @@
 // elapsed and remaining parts fall. Display only: the rounds left (`duration`) and the round the
 // buff started in (`startRound`) come from the server; nothing here decides when a buff ends.
 
-/** Turn columns the track can show; more on wider screens instead of stretching the pills. */
-export const TRACK_SIZES = [8, 12, 16] as const;
-export type TrackSize = (typeof TRACK_SIZES)[number];
-
-/** Narrowest a turn column may get before the track drops to fewer columns (CSS px). */
-export const MIN_COLUMN_PX = 60;
-
-/** The most columns that each stay at least MIN_COLUMN_PX wide in `width` px (8 at the least). */
-export function trackSize(width: number): TrackSize {
-  for (const n of [...TRACK_SIZES].reverse()) {
-    if (width / n >= MIN_COLUMN_PX) return n;
-  }
-  return TRACK_SIZES[0];
-}
+/**
+ * Turn columns the track shows, at every width (ADR 0027 step 4.3): the current turn, two of history
+ * and two ahead. Extra width widens the columns and the effect-name column instead.
+ */
+export const TRACK_COLUMNS = 5;
 
 /**
  * First turn shown: two turns of history before the current one, never before turn 1. Out of

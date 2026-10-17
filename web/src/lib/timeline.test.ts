@@ -1,19 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effectSpan, trackSize, windowStart } from "./timeline";
-
-describe("trackSize", () => {
-  it.each([
-    [400, 8],
-    [500, 8],
-    [719, 8],
-    [720, 12],
-    [959, 12],
-    [960, 16],
-    [2000, 16],
-  ])("%d px gives %d columns", (width, n) => {
-    expect(trackSize(width)).toBe(n);
-  });
-});
+import { TRACK_COLUMNS, effectSpan, windowStart } from "./timeline";
 
 describe("windowStart", () => {
   it.each([
@@ -46,6 +32,23 @@ describe("effectSpan", () => {
     ).toEqual({
       past: null,
       remaining: { from: 1, to: 1 },
+      overflows: false,
+    });
+  });
+
+  it("in the 5-column window a 3-turn buff at turn 4 fills the current column and the two ahead", () => {
+    // Turn 4, window 2..6: two turns of history, the current one, two ahead.
+    expect(
+      effectSpan({
+        turn: 4,
+        start: windowStart(4),
+        size: TRACK_COLUMNS,
+        duration: 3,
+        startRound: 3,
+      }),
+    ).toEqual({
+      past: { from: 1, to: 1 },
+      remaining: { from: 2, to: 4 },
       overflows: false,
     });
   });

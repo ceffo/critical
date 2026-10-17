@@ -299,27 +299,12 @@ test("Next turn moves the timeline window; a 1-turn effect shows the warning, th
   await expect(blink).toHaveAttribute("data-last-turn", "true");
   await expect(blink.getByTestId("buff-rounds")).toHaveText("1 turn");
 
-  // The header at every desktop size: more turn columns on wider screens, never fewer.
-  let columns = 0;
+  // The header at every desktop size: five turn columns (ADR 0027 step 4.3).
   for (const vp of HEADER_VIEWPORTS) {
     await page.setViewportSize(vp);
-    await expect
-      .poll(async () => Number(await track.getAttribute("data-columns")))
-      .toBeGreaterThanOrEqual(columns);
-    // Wait for the resize to settle: the count stops moving before it is recorded.
-    let last = -1;
-    await expect
-      .poll(async () => {
-        const now = Number(await track.getAttribute("data-columns"));
-        const settled = now === last;
-        last = now;
-        return settled;
-      })
-      .toBe(true);
-    columns = last;
+    await expect(track).toHaveAttribute("data-columns", "5");
     await snap(page, `turn-header-${vp.width}x${vp.height}`);
   }
-  expect(columns, "16 turns at 2560").toBe(16);
   await page.setViewportSize({ width: 1440, height: 900 });
   await chooseSetting(page, "Dark");
   await snap(page, "turn-header-dark-1440x900");

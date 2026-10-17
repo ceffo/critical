@@ -187,6 +187,93 @@ async function expectCharacterCardLines(page: Page, where: string) {
   ).toBeLessThanOrEqual(placeholder.room);
 }
 
+/**
+ * ADR 0027 step 4 on the header, in French: the turn label over its number, the initiative under
+ * "Tour suivant" and larger than the turn, five turn columns, the brand (mark and wordmark) over the
+ * last result in one right-aligned column 6 px apart whose right edge lines up with the result card,
+ * at most 120 px at rest. At the design's two viewports every effect name and the last result are
+ * one line.
+ */
+async function expectHeaderLayout(page: Page, where: string) {
+  const header = page.locator("[data-screen=turn-header]");
+  const box = async (l: Locator) => (await l.boundingBox())!;
+  const h = await box(header);
+  expect(h.height, `header at rest, ${where}`).toBeLessThanOrEqual(120);
+  const label = await box(
+    header.getByTestId("turn").getByText("Tour", { exact: true }),
+  );
+  const turn = await box(page.getByTestId("round-value"));
+  expect(
+    label.y + label.height,
+    `turn label over its number, ${where}`,
+  ).toBeLessThanOrEqual(turn.y + 1);
+  const next = await box(page.getByRole("button", { name: "Tour suivant" }));
+  const init = page.getByTestId("initiative-value");
+  expect(
+    (await box(init)).y,
+    `initiative under Tour suivant, ${where}`,
+  ).toBeGreaterThan(next.y + next.height - 1);
+  const fontSize = (l: Locator) =>
+    l.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  expect(
+    await fontSize(init),
+    `initiative larger than the turn, ${where}`,
+  ).toBeGreaterThan(await fontSize(page.getByTestId("round-value")));
+  await expect(page.getByTestId("effects-track")).toHaveAttribute(
+    "data-columns",
+    "5",
+  );
+  await expect(page.getByTestId("wordmark")).toBeVisible();
+  const brand = await box(page.getByTestId("brand"));
+  const last = await box(page.getByTestId("last-result"));
+  const right = (b: { x: number; width: number }) => b.x + b.width;
+  expect(
+    Math.abs(right(brand) - right(last)),
+    `brand and last result right-aligned, ${where}`,
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(last.y - (brand.y + brand.height) - 6),
+    `6 px under the brand, ${where}`,
+  ).toBeLessThanOrEqual(1);
+  // The column sits at the header's right edge (its padding and outline in), as the result card.
+  const card = await box(page.getByTestId("now-band"));
+  expect(
+    Math.abs(right(h) - right(card)),
+    `header and result card share their right edge, ${where}`,
+  ).toBeLessThanOrEqual(1);
+  expect(
+    right(h) - right(last),
+    `right column docked, ${where}`,
+  ).toBeLessThanOrEqual(18);
+  if (SHOTS.has(where.replace(/^.*?(\d+x\d+)$/, "$1"))) {
+    for (const name of await page.getByTestId("effect-name").all())
+      expect(
+        await name.evaluate(lineCount),
+        `effect name on one line, ${where}: ${await name.textContent()}`,
+      ).toBe(1);
+    expect(
+      await page.getByTestId("last-result").locator("p").evaluate(lineCount),
+      `last result on one line, ${where}`,
+    ).toBe(1);
+  }
+}
+
+/** The lines `el`'s text lays out on: its text boxes grouped by vertical overlap. */
+function lineCount(el: Element): number {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const rects = [...range.getClientRects()]
+    .filter((r) => r.width > 0)
+    .sort((a, b) => a.top - b.top);
+  let lines = 0;
+  let bottom = -Infinity;
+  for (const r of rects) {
+    if (r.top >= bottom - 1) lines++;
+    bottom = r.top >= bottom - 1 ? r.bottom : Math.max(bottom, r.bottom);
+  }
+  return lines;
+}
+
 // ADR 0022 step 1 (layout viewports). 1707x1300 is a third of the user's 5120x1440 table screen.
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -311,10 +398,8 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
     expect(await heightOf(), `header at rest, ${size}`).toBeLessThanOrEqual(
       120,
     );
-    // Below 1500 px the mark shows without the wordmark (ADR 0022 step 7).
-    await expect(page.getByTestId("wordmark")).toBeVisible({
-      visible: vp.width >= 1500,
-    });
+    // The full brand at every width (ADR 0027 step 4.6).
+    await expect(page.getByTestId("wordmark")).toBeVisible();
     for (const activity of ACTIVITIES) {
       await openWorkspace(page, activity);
       await expect(
@@ -915,6 +1000,16 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     targetSize: "l",
     situational: { value: -2, label: "couvert" },
   });
+  // The header's effects (ADR 0027 step 4): the brand round's table, Protection From Evil the
+  // longest name, two of them behind the expander (the name column is sized on them too).
+  for (const buff of [
+    { name: "Bless", duration: 6 },
+    { name: "Haste", duration: 3 },
+    { name: "Stoneskin", charges: 7 },
+    { name: "Protection From Evil", duration: 10 },
+    { name: "Mirror Image", duration: 4 },
+  ])
+    await api("POST", "/api/buffs", { effects: {}, ...buff });
   // The journal with two turns, a transaction, a dice total and an undone row (ADR 0027 step 9).
   await api("POST", "/api/hp/event", { delta: -3, source: LONG_SOURCE });
   await api("POST", "/api/round/advance", {});
@@ -932,11 +1027,28 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   const rail = page.getByTestId("rail").getByRole("button");
   const FR_SPELL =
     "Nom de sortilège invraisemblablement long des anciens archimages";
+  // The last result: an attack, in French.
+  await page.getByRole("button", { name: /^Attaquer/ }).click();
+  await expect(page.getByTestId("last-result-text")).toContainText("contre CA");
+  // An effect's actions show on the row's hover and on keyboard focus only (ADR 0027 step 4.4).
+  const firstBuff = page.getByTestId("buff").first();
+  const buffActions = firstBuff.getByTestId("buff-actions");
+  await page.mouse.move(0, 0);
+  await expect(buffActions).toHaveCSS("opacity", "0");
+  await firstBuff.getByTestId("effect-bar").hover();
+  await expect(buffActions).toHaveCSS("opacity", "1");
+  await page.mouse.move(0, 0);
+  await expect(buffActions).toHaveCSS("opacity", "0");
+  await buffActions.getByRole("button").first().focus();
+  await expect(buffActions).toHaveCSS("opacity", "1");
+  await buffActions.getByRole("button").first().blur();
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     // The whole screen (header, rail, journal, dice footer and the shared pieces in every zone).
     await expectNoClippedText(page.locator("body"), `screen, ${where}`);
+    await rail.nth(0).click();
+    await expectHeaderLayout(page, where);
     await expectNoClippedText(character, `character card, ${where}`);
     await expectWholeWords(character, `character card, ${where}`);
     if (SHOTS.has(`${vp.width}x${vp.height}`))

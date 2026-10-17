@@ -46,10 +46,12 @@ their regions as they drop their remaining `truncate`s. `App.tsx` composes it.
 ```mermaid
 flowchart TD
   subgraph H["Header card, full width, at most 120 px at rest (components/dashboard/Header.tsx)"]
-    BM["BrandMark: Facet · Bare mark, Cinzel wordmark from 1500 px"]
-    TB["TurnBlock: TURN + number (text-hero); initiative with reroll over Next turn and the ⋯ menu"]
-    ET["EffectsTimeline: one row per buff over 8 / 12 / 16 turns, add / edit forms"]
-    LR["LastResult: 'Last result · T3 · 21:31', die chip and the journal's wording"]
+    TB["TurnBlock: TURN over its number (text-headline); Next turn and the ⋯ menu over the initiative (text-hero) with reroll"]
+    ET["EffectsTimeline: one row per buff over 5 turns, all the width up to the right column; add / edit forms"]
+    subgraph DK["Right column, docked at the right edge, right-aligned"]
+      BM["BrandMark: Facet · Bare mark and Cinzel wordmark"]
+      LR["LastResult: 'Last result · T3 · 21:31', die chip and the journal's wording, one line"]
+    end
   end
   subgraph B["Below the header: character card clamp(280px, 21vw, 384px) | rail 68 px | stage 1fr"]
     subgraph C["Character card (aside 'Character'), scrolls on its own"]
@@ -100,7 +102,8 @@ flowchart TD
   time, the entry count, Undo / Redo). The height and the collapsed state are per-device display
   preferences in `critical.settings.v1` (`lib/settings.ts`), never sent to the API.
 - Header card budget (ADR 0022 step 3.1): at most 120 px tall at rest, outline included, with 3
-  effect rows; below 1500 px wide the mark shows without the wordmark.
+  effect rows. Layout per ADR 0027 step 4: turn | Next turn over the initiative | timeline (all the
+  spare width) | brand over the last result, docked right, 6 px apart.
 - Result panel and journal (`ResultCard.tsx`, `CombatLog.tsx`, logic in `lib/filCard.ts`, UI state in
   `stores/fil.ts`), in the Act activity: the result panel shows the latest result by default: this session's last roll
   response while it is the newest attack / save / cast / item use entry (the server's
@@ -163,8 +166,8 @@ flowchart TD
   on card ΔL ≥ .07, field edge and ring 3:1, the dark accent ladder, the hue distance and the
   near-neutral rule.
 - Brand (ADR 0022 step 7): `components/shell/BrandMark.tsx`, the Facet · Bare mark (hexagon outline
-  in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the left of the header
-  card; `public/favicon.svg` is the same drawing in static Arcane colours.
+  in `tint`, the "!" in `highlight`) + the Cinzel wordmark (`font-display`) at the top right of the
+  header card, over the last result (ADR 0027 step 4.6); `public/favicon.svg` is the same drawing in static Arcane colours.
 - Plug-in slots: each Act tab is one panel component in `components/actions/ActionArea.tsx`
   (`TABS` with its Phosphor icon, the tab label shows a count where it has one: spells left, combat
   items); each activity is one `Pane` in `App.tsx` (`lib/activities.ts`); the Act stage's two
@@ -172,10 +175,12 @@ flowchart TD
 - Turn header (`TurnBlock.tsx`, `EffectsTimeline.tsx`, layout maths in `lib/timeline.ts`): turn row
   plus up to 3 effect rows, the card at most 120px at rest (ADR 0022 step 3.1); with more effects an expander
   next to "Effects" ("+N", `aria-expanded`) grows the track in place. The turn
-  block shows the turn (the round counter), the initiative row ("Out of combat" at turn 0, a
-  placeholder otherwise), Next turn and a ⋯ popover menu (Time passes…, Set turn number…, End combat,
-  each a small form or confirm inside the popover). The effects track has a label column and N turn
-  columns, N = 8 / 12 / 16, the most that stay at least 60 CSS px wide; the window starts at
+  block shows the turn (the round counter, its label stacked over it), Next turn and a ⋯ popover
+  menu over the initiative row ("Out of combat" at turn 0, the d10 in `text-hero` with its die in
+  the tooltip and a reroll otherwise); the menu holds Time passes…, Set turn number… and End combat
+  (each a small form or confirm inside the popover). The effects track has a name column (as wide as
+  the longest effect name, hidden rows included, through zero-high hidden copies of the labels;
+  capped, past it a name wraps) and 5 turn columns sharing the rest (`TRACK_COLUMNS`); the window starts at
   `max(1, turn − 2)` (at turn 0 it starts at 0). The current column is highlighted across every row,
   past column headers are dimmed. Per buff: a thin line from its `startRound` (server-stamped, ADR
   0004 step 15) to the previous turn, then a pill over the current turn and the `duration − 1` after
@@ -183,7 +188,8 @@ flowchart TD
   warning colour on its last turn (`duration` 1); a charge-only buff shows pips and "6 charges · until
   spent" (the server keeps no starting count, so no "6 / 9"); an untimed one "until dismissed"; a buff
   with `applies: false` is dashed with a lock and the reason. Each row has absorb (charge buffs),
-  edit and remove; "Add effect" opens the add form under the track.
+  edit and remove, shown on the row's hover and on keyboard focus only, over the end of the name
+  cell (ADR 0027 step 4.4); "Add effect" opens the add form under the track.
 - Buffs: every change (add, edit rounds/charges, absorb for charge buffs, dismiss, Next
   turn) is a log entry, voidable from the CombatLog while it is the newest entry. The log is a
   stack: only the newest non-voided entry (`topId` from `GET /api/log`) shows Void; the CombatLog

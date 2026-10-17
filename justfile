@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-api check-web
+validate: check-no-tracker-ids check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -38,6 +38,10 @@ check-no-sqlite:
         echo "error: the server depends on the SQLite packages above (ADR 0025 step 1.2)"; exit 1
     fi
     echo "--- No SQLite in the server ---"
+
+# The CI slow-job skip rule (scripts/test-ci-skip-slow.sh): docs-only paths and the ci-skip label.
+check-ci-skip:
+    scripts/test-ci-skip-slow.sh
 
 # The release version's, the release build's, the staging deploy's and the promotion's scripts (ADR 0024
 # steps 3, 4, 7, 8.3 and 10.4), offline: docker, fly and gh stubbed, a local rulebooks repo and a generated

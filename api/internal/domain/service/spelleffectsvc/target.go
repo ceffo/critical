@@ -19,9 +19,11 @@ type TargetChoice struct {
 }
 
 // TargetChoiceAt returns the target choice a cast of the spell offers at the
-// caster level, nil when there is none to make: a spell that adds no buff
-// (where it lands changes nothing the engine tracks), a self-only spell and a
-// spell with no target.
+// caster level (ADR 0027 step 10.1), nil when there is none to make: a spell
+// that adds no buff (where it lands changes nothing the engine tracks), a
+// self-only spell, a spell with no target, and a hostile buff (Blindness,
+// Slow, the Malisons: only a defensive spell offers the other target; the
+// cast still takes an explicit onSelf).
 func (e Entry) TargetChoiceAt(level int) (*TargetChoice, error) {
 	if !e.AddsBuff() {
 		return nil, nil
@@ -30,6 +32,9 @@ func (e Entry) TargetChoiceAt(level int) (*TargetChoice, error) {
 	case TargetOther, TargetSelfOrOther, TargetArea:
 	default:
 		return nil, nil
+	}
+	if hostile, err := e.Hostile(level); err != nil || hostile {
+		return nil, err
 	}
 	onSelf, err := e.DefaultOnSelf(level)
 	if err != nil {

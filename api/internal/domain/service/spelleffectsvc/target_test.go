@@ -22,9 +22,10 @@ func buffEntry(target spelleffectsvc.Target, modifiers map[string]string) spelle
 	return e
 }
 
-// A cast offers a choice of target only for a buff it can put on the Bard
-// that is not self-only: its default is where a cast naming no target lands,
-// its alternate the other one.
+// ADR 0027 step 10.1: a cast offers a choice of target only for a defensive
+// buff it can put on the Bard that is not self-only: its default is where a
+// cast naming no target lands, its alternate the other one. A hostile buff
+// offers none.
 func TestEntry_TargetChoiceAt(t *testing.T) {
 	self := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnSelf, Alternate: spelleffectsvc.CastOnOther}
 	other := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf}
@@ -40,7 +41,9 @@ func TestEntry_TargetChoiceAt(t *testing.T) {
 		{"self or other: on the Bard, else an ally", buffEntry(spelleffectsvc.TargetSelfOrOther, nil), self},
 		{"other: on an ally, else the Bard", buffEntry(spelleffectsvc.TargetOther, map[string]string{"weapon_buff": "1"}), other},
 		{"a friendly area: on the Bard, else not", buffEntry(spelleffectsvc.TargetArea, map[string]string{"move_pct": "200"}), self},
-		{"a hostile area: not on the Bard, else on him", buffEntry(spelleffectsvc.TargetArea, map[string]string{"save": "-1"}), other},
+		{"other with a hostile buff (Blindness): no choice", buffEntry(spelleffectsvc.TargetOther, map[string]string{"to_hit": "-4", "attackers_to_hit": "4"}), nil},
+		{"a hostile area (Malison): no choice", buffEntry(spelleffectsvc.TargetArea, map[string]string{"save": "-1"}), nil},
+		{"self or other with a hostile buff: no choice", buffEntry(spelleffectsvc.TargetSelfOrOther, map[string]string{"ac": "2"}), nil},
 		{"self-only: no choice", buffEntry(spelleffectsvc.TargetSelf, nil), nil},
 		{"no target: no choice", buffEntry(spelleffectsvc.TargetNone, nil), nil},
 		{"a low-confidence buff adds none: no choice", lowConfidence, nil},

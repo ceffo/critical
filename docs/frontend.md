@@ -256,8 +256,9 @@ flowchart TD
   button and wrap under the name together when narrow. Cast (`variant="main"`, `lg`) casts with the
   server's default target (no `onSelf`); its arrow (`ui/dropdown-menu`) offers only the other target
   the spellbook entry's `cast_target` serves (`alternate`: "On me" sends `onSelf: true`, "On an
-  ally" `onSelf: false`) and shows only when the server serves one (a buff it can put on the Bard
-  that is not self-only; the server decides, `spelleffectsvc.Entry.TargetChoiceAt`). The name opens the details popup (`SpellDetailsDialog.tsx`,
+  ally" `onSelf: false`) and shows only when the server serves one (a defensive buff it can put on
+  the Bard that is not self-only; the server decides, `spelleffectsvc.Entry.TargetChoiceAt`, ADR
+  0027 step 10.1). The name opens the details popup (`SpellDetailsDialog.tsx`,
   `ui/dialog`, Escape closes it): the lookup's detail view (`components/dashboard/SpellDetail.tsx`,
   shared with the lookup), the spell fetched by its name at its level and picked by id
   (`api/spells_db.ts` `findSpell`). Cast puts the `CastResult` in the result card (`CastResultView`:

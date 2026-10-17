@@ -239,6 +239,29 @@ Per screen, the user's words (the work items of the layout pass carry the full t
     1. **"Lancer" is a split button**: the main part casts with the server's default target (today's
        call, no `onSelf`); the arrow opens the other target (`onSelf: false`, or what the server
        offers). The global "on an ally" checkbox goes.
+       1. **The arrow is for a defensive spell only** (ruling from the user's words: _"cast on self
+          for a defensive spell, and the drop down gets the alternate target choice"_): it shows
+          only for a buff the cast can put on the Bard (ADR 0004 step 19's "adds a buff") whose
+          target is "other", "self or other" or an area, and which is not hostile. A self-only
+          spell, a damage or utility spell and a hostile buff (Blindness, Pain Touch, Slow, the
+          Malisons) get a plain button. The cast endpoint still takes an explicit `onSelf` on any
+          of them.
+       2. **The menu holds one entry, the alternate** of the default: "Sur un allié" when the
+          default is the Bard, "Sur moi" otherwise.
+       3. **The default target**: always the Bard for a self-only or "self or other" spell; for an
+          area, the Bard unless the buff is hostile; never for "other". **Hostile** means a
+          modifier that hurts the bearer at the caster level, dice at their largest: to-hit,
+          damage or save below 0, AC above 0, movement or attacks below 100 %. A penalty to
+          attackers (`attackers_to_hit`) or a better initiative is not hostile.
+       4. **The server decides it** and serves it on the spellbook entry as `cast_target`
+          (`default` and `alternate`, `self` or `other`; absent: no choice); the browser only
+          picks the menu's label.
+
+       *Checked by* `TestEntry_TargetChoiceAt`, `TestEntry_DefaultOnSelf`, `TestEntry_Hostile`,
+       `TestRepoSeeds_EveryBuffDefaultTargetAndChoice` (every buff of the seeds),
+       `TestInfo_ServesTheTargetChoice`, `TestGetInfo_ServesTheCastTarget`, castsvc's
+       `TestCast_PerSeedEntry` (Slow off the Bard by default and on him when asked, Stoneskin on an
+       ally) and the cast spec (no arrow on Rary's, one entry on Strength).
     2. **"Repos long"** always visible (promoted, step 1.6), no parenthesis, a crescent-moon icon;
        **"Préparer"** beside it.
     3. **Slots as dots in three states** per level: empty (a slot not used, no spell prepared in it),

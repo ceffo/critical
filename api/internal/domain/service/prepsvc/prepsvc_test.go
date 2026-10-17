@@ -149,10 +149,10 @@ func TestInfo_CastInputsFromTheCatalog(t *testing.T) {
 	assert.Equal(t, prepsvc.CastInputs{SlotSplits: [][]int{{1, 1, 1}, {1, 2}, {3}}}, info.Spellbook[3].Cast)
 }
 
-// A spellbook entry carries the choice of target its cast offers, from the
-// spell effects data: Enlarge (self or other) lands on the Bard, else on an
-// ally; Slow (a hostile area) not on him, else on him. A self-only buff
-// (Mirror Image) and a spell that adds no buff (Fireball, Alarm) offer none.
+// ADR 0027 step 10.1: a spellbook entry carries the choice of target its cast
+// offers, from the spell effects data: Enlarge (self or other) lands on the
+// Bard, else on an ally. A hostile buff (Slow), a self-only buff (Mirror
+// Image) and a spell that adds no buff (Fireball, Alarm) offer none.
 func TestInfo_ServesTheTargetChoice(t *testing.T) {
 	f := newFixture(t)
 	f.items.EXPECT().List(mock.Anything).Return(nil, nil)
@@ -163,7 +163,7 @@ func TestInfo_ServesTheTargetChoice(t *testing.T) {
 		byID[e.ID] = e.Cast.Target
 	}
 	assert.Equal(t, &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnSelf, Alternate: spelleffectsvc.CastOnOther}, byID["enlarge"])
-	assert.Equal(t, &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf}, byID["slow"])
+	assert.Nil(t, byID["slow"], "hostile")
 	assert.Nil(t, byID["mirror_image"], "self-only")
 	assert.Nil(t, byID["fireball"], "a damage spell")
 	assert.Nil(t, byID["alarm"], "a utility spell")

@@ -63,8 +63,9 @@ and wait again. The agent's context is intact. Close finished agents promptly: a
 you've read its report, a developer's once its PR is open and CI is green (a later CI or merge fix
 goes to a fresh developer with a short brief), a scoper's once you've read its report, and at session
 start any agent left over from the previous supervisor. Closing them is yours alone: never ask the
-user to close an agent. Run `herdr tab close <tab>` as a command of its own, and first check with
-`herdr agent list` that the tab isn't yours (a supervisor once closed its own tab from a stale
+user to close an agent. Close by agent name, never by a remembered or guessed tab id:
+`herdr tab close "$(herdr agent list | jq -r '.result.agents[]|select(.name=="dev-<id>").tab_id')"`,
+as a command of its own, after checking the tab isn't yours (a supervisor once closed its own tab from a stale
 handoff note and died with no handoff). Never type into an agent's tab other than through
 `herdr agent prompt`.
 

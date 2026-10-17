@@ -42,6 +42,19 @@ type Options struct {
 	// Commit is the commit the binary was built from, reported by
 	// /api/health (ADR 0024 step 1.4).
 	Commit string
+	// Version is the release version (X.Y.Z) baked into the image, reported
+	// by /api/health (ADR 0024 step 1.4); empty is reported as "unknown".
+	Version string
+}
+
+// unknown is what /api/health reports for a build identity that was not set.
+const unknown = "unknown"
+
+func orUnknown(s string) string {
+	if s == "" {
+		return unknown
+	}
+	return s
 }
 
 // apiPrefix is the path every endpoint lives under.
@@ -54,7 +67,9 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r.Use(mw.Recoverer)
 
 	r.Get("/api/health", func(w http.ResponseWriter, req *http.Request) {
-		render.OK(req.Context(), w, map[string]string{"status": "ok", "commit": opts.Commit})
+		render.OK(req.Context(), w, map[string]string{
+			"status": "ok", "commit": orUnknown(opts.Commit), "version": orUnknown(opts.Version),
+		})
 	})
 	r.NotFound(notFound(opts.Web))
 

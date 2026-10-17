@@ -7,10 +7,13 @@
 #     the IP check only; machines on different digests fail; the digest is written to $GITHUB_OUTPUT.
 #   - record-deployment.sh, with gh stubbed: one deployment (task deploy-staging, ref the sha, digest in
 #     the payload) and one status; a success without a digest, a short sha and an unknown state call nothing.
-#   - the workflows, parsed: the deploy jobs (release.yml after a push, deploy-staging.yml by hand) have
-#     the staging environment and pass its token to the composite action, never call a reusable workflow
-#     (it cannot read the environment's secrets); the action reads the token only in its secret check and
-#     deploy step, and its secret check fails (runs, not skips) on an empty token.
+#   - with a version: the image registry.fly.io/<app>:v<version> is deployed and the smoke check gets the
+#     version; a bad version deploys nothing; the record carries the version;
+#   - the workflows, parsed: release.yml's job (automatic and by hand; deploy-staging.yml is gone) has the
+#     staging environment and passes its token, the commit and the version to the composite action, never
+#     calls a reusable workflow (it cannot read the environment's secrets); the action reads the token only
+#     in its secret check and deploy step, its secret check fails (runs, not skips) on an empty token, and it
+#     outputs the digest.
 #   - STAGING_CONFIG: the deploy uses the config it names (the image's own commit).
 set -euo pipefail
 
@@ -78,6 +81,23 @@ ips_line="$(grep -n '^fly ips' "$calls" | head -n1 | cut -d: -f1)"
 deploy_line="$(grep -n '^fly deploy' "$calls" | head -n1 | cut -d: -f1)"
 [ "${ips_line:-99}" -lt "${deploy_line:-0}" ] || fail "private app: the IP check did not come before the deploy"
 
+# --- with a version: the version's image, and the smoke check wants that version ---
+run_version() {
+    : > "$calls"; : > "$tmp/gh_out"; status=0
+    out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GITHUB_OUTPUT="$tmp/gh_out" "$root/scripts/staging-deploy.sh" "$sha" "$@" 2>&1)" || status=$?
+}
+run_version 1.4.0
+[ "$status" = 0 ] || fail "version: exit $status: $out"
+grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-staging --image registry.fly.io/critical-staging:v1.4.0 --yes" "$calls" \
+    || fail "version: not the version's image: $(cat "$calls")"
+grep -qx "smoke critical-staging $sha 1.4.0" "$calls" || fail "version: smoke check not called with the version"
+run_version ""
+grep -qx "smoke critical-staging $sha" "$calls" && grep -q "critical-staging:$sha --yes" "$calls" || fail "empty version: not the sha's image: $(cat "$calls")"
+for v in v1.4.0 1.4 'x'; do
+    run_version "$v"
+    [ "$status" != 0 ] && [ ! -s "$calls" ] || fail "version '$v': accepted, or called fly"
+done
+
 # --- a failed smoke check fails the run and prints the releases to roll back to ---
 touch "$tmp/smoke-fails"
 run_deploy A=1
@@ -125,11 +145,20 @@ jq -e --arg sha "$sha" --arg d "$digest" 'select(.ref == $sha and .environment =
     || fail "record: deployment body wrong: $body"
 jq -e --arg d "$digest" 'select(.state == "success" and .description == $d)' <<<"$body" >/dev/null || fail "record: status body wrong: $body"
 
+run_record "$sha" success "$digest" 1.4.0
+jq -e 'select(.task == "deploy-staging") | .payload.version == "1.4.0"' <<<"$(cat "$tmp/gh_stdin")" >/dev/null \
+    || fail "record: the version is not in the payload: $(cat "$tmp/gh_stdin")"
+run_record "$sha" success "$digest"
+jq -e 'select(.task == "deploy-staging") | .payload.version == ""' <<<"$(cat "$tmp/gh_stdin")" >/dev/null \
+    || fail "record: no version is not an empty one"
+run_record "$sha" failure "" 1.4.0
+[ "$status" = 0 ] || fail "record failure with a version: exit $status"
+
 run_record "$sha" failure
 [ "$status" = 0 ] || fail "record failure: exit $status"
 jq -e 'select(.state == "failure")' <<<"$(cat "$tmp/gh_stdin")" >/dev/null || fail "record: no failure status"
 
-for args in "$sha success" "${sha:0:7} success $digest" "$sha pending $digest"; do
+for args in "$sha success" "${sha:0:7} success $digest" "$sha pending $digest" "$sha success $digest v1.4.0"; do
     # shellcheck disable=SC2086
     run_record $args
     [ "$status" != 0 ] || fail "record accepted: $args"
@@ -175,32 +204,26 @@ for token, want_ok in (("", False), ("s3cret-value", True)):
 def uses_action(job):
     return [st for st in job["steps"] if st.get("uses") == "./.github/actions/staging-deploy"]
 
-dep = load("workflows/deploy-staging.yml")
-triggers = dep.get(True) or dep.get("on")  # PyYAML reads the key `on` as True
-check(set(triggers) == {"workflow_dispatch"}, "deploy-staging: should be the manual entry only")
+import os
+check(not os.path.exists(f"{d}/workflows/deploy-staging.yml"), "deploy-staging.yml is back: the manual run is release.yml's dispatch")
 rel = load("workflows/release.yml")
-jobs = rel["jobs"]
-
-for name, job in (("deploy-staging", dep["jobs"]["deploy"]), ("release", jobs["deploy"])):
-    check(job.get("environment") == "staging", f"{name}: deploy job not in the staging environment")
-    check("uses" not in job, f"{name}: deploy job calls a reusable workflow, which cannot read the environment's secrets")
-    check(job["concurrency"]["group"] == "deploy-staging" and job["concurrency"]["cancel-in-progress"] is False,
-          f"{name}: not serialized without cancelling")
-    check(job["permissions"] == {"contents": "read", "deployments": "write"}, f"{name}: permissions are not minimal")
-    calls = uses_action(job)
-    check(len(calls) == 1, f"{name}: does not call the staging deploy action exactly once")
-    if calls:
-        w = calls[0]["with"]
-        check(w.get("fly-api-token") == "${{ secrets.FLY_API_TOKEN }}", f"{name}: the action does not get the environment's token")
-        check("if" not in calls[0], f"{name}: the action step is conditional")
-    check("FLY_API_TOKEN" not in str(job.get("env", "")), f"{name}: token in the job env")
-    check(job["steps"][0].get("uses", "").startswith("actions/checkout@"), f"{name}: no checkout before the local action")
-
-check("github.ref == 'refs/heads/main'" in str(dep["jobs"]["deploy"].get("if", "")), "deploy-staging: job not limited to main")
-check(jobs["deploy"]["needs"] == "image", "release: deploy does not need the image job")
-check(jobs["deploy"]["if"] == "needs.image.outputs.pushed == 'true'", "release: deploy not gated on a pushed image")
-check("steps.build.outputs.pushed" in jobs["image"]["outputs"]["pushed"], "release: image job has no pushed output")
-check("FLY_API_TOKEN" not in str(dep.get("env", "")) + str(rel.get("env", "")), "a workflow-level env holds the token")
+job = rel["jobs"]["release"]
+check(job.get("environment") == "staging", "release: the job is not in the staging environment")
+check("uses" not in job, "release: the job calls a reusable workflow, which cannot read the environment's secrets")
+calls = uses_action(job)
+check(len(calls) == 1, "release: does not call the staging deploy action exactly once")
+if calls:
+    w = calls[0]["with"]
+    check(w.get("fly-api-token") == "${{ secrets.FLY_API_TOKEN }}", "release: the action does not get the environment's token")
+    check(w.get("sha") == "${{ steps.version.outputs.sha }}" and w.get("version") == "${{ steps.version.outputs.version }}",
+          "release: the action does not get the commit and the version of the version step")
+    check(calls[0].get("id") == "deploy", "release: the deploy step has no id for its digest")
+check("FLY_API_TOKEN" not in str(job.get("env", "")) + str(rel.get("env", "")), "a job- or workflow-level env holds the token")
+check(job["steps"][0].get("uses", "").startswith("actions/checkout@"), "release: no checkout before the local action")
+check(act["outputs"]["digest"]["value"] == "${{ steps.deploy.outputs.digest }}", "action: no digest output")
+check('"$SHA" "$VERSION"' in byid["deploy"]["run"] and "inputs.version" in str(byid["deploy"]["env"]),
+      "action: the deploy does not get the version")
+check('"$DIGEST" "$VERSION"' in rec["run"], "action: the record does not get the version")
 
 if errs:
     print("\n".join("test-staging-deploy: FAIL: " + e for e in errs), file=sys.stderr)

@@ -7,8 +7,6 @@
 #     production repository (and its digest checked), then the restore point in a console machine of it, then the deploy by digest, the smoke check, the digest check and the GitHub Release;
 #     each failure stops everything after it (a refused guard calls fly not at all; no restore point, no
 #     deploy; a failed smoke or a digest mismatch, no release);
-#   - release-tag.sh (`just release`): every refusal (version, branch, dirty tree, behind origin, staging
-#     not passed) pushes nothing; the happy path pushes one annotated tag;
 #   - restore-point.sh: what it refuses without a database (its SQL runs for real in scripts/image-smoke.sh);
 #   - promote.yml, parsed: a run from a branch fails saying "use a tag"; the promotion runs for tags only, the production environment, serialized and never cancelled, the
 #     token read only by the secret check (which fails on an empty token) and the promotion step.
@@ -84,7 +82,7 @@ cd "$tmp/repo"
 git config user.email t@example.com
 git config user.name test
 mkdir -p scripts deploy
-cp "$root"/scripts/{release-guards,release-tag,promote,restore-point,fly-private-check}.sh scripts/
+cp "$root"/scripts/{release-guards,promote,restore-point,fly-private-check}.sh scripts/
 cp "$root"/deploy/fly.{staging,prod}.toml deploy/
 mkdir -p api/internal/storage/postgres/migrations
 touch api/internal/storage/postgres/migrations/{001_baseline,002_more}.sql
@@ -231,46 +229,6 @@ reset; touch "$tmp/release-exists"; promote v1.2.3
 [ "$status" = 0 ] && grep -q '^fly deploy' "$calls" && ! grep -q '^gh release create' "$calls" \
     || fail "promote: a re-run (existing release) did not redeploy, or created the release again"
 
-# --- release-tag.sh (`just release`) ---
-put "$(deployments "$main_sha")" "[{\"id\":12,\"created_at\":\"2026-10-17T03:00:00Z\",\"payload\":{\"digest\":\"$newer\"}}]"
-release() { status=0; out="$(scripts/release-tag.sh "$1" 2>&1)" || status=$?; }
-pushed() { git ls-remote --tags "$tmp/origin.git" | grep -c 'refs/tags/v[0-9.]*$' || true; }
-git push -q origin v1.2.3
-git tag -d v9.9.9 >/dev/null # a local tag off main, never pushed
-before="$(pushed)"
-for v in 1.2 v1.2.3.4 1.2.3-rc1 01.2.3 abc; do
-    release "$v"; [ "$status" != 0 ] && [[ "$out" == *"not MAJOR.MINOR.PATCH"* ]] || fail "release $v: not refused as non-semver: $out"
-done
-for v in 1.2.3 1.2.2 0.9.9 v1.2.3; do
-    release "$v"; [ "$status" != 0 ] && [[ "$out" == *"not greater than the last release v1.2.3"* ]] || fail "release $v: not refused as non-increasing: $out"
-done
-git switch -q side; release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not main"* ]] || fail "release on a side branch: $out"
-git switch -q main
-echo dirty > scripts/dirty; release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not clean"* ]] || fail "release with a dirty tree: $out"
-rm scripts/dirty
-git commit -q --allow-empty -m local; release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not origin/main's head"* ]] || fail "release ahead of origin: $out"
-git reset -q --hard origin/main
-git push -q origin "$(git commit-tree -p "$main_sha" -m remote "$(git rev-parse HEAD^{tree})"):refs/heads/main"
-release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not origin/main's head"* ]] || fail "release behind origin: $out"
-git reset -q --hard origin/main
-release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"staging has not passed"* ]] || fail "release of a commit staging did not pass: $out"
-[ "$(pushed)" = "$before" ] || fail "a refused release pushed a tag"
-put "$(deployments "$(git rev-parse HEAD)")" "[{\"id\":15,\"created_at\":\"2026-10-17T06:00:00Z\",\"payload\":{\"digest\":\"$newer\"}}]"
-put "$(statuses 15)" '[{"state":"success"}]'
-release 1.3.0
-[ "$status" = 0 ] || fail "release 1.3.0: exit $status: $out"
-[ "$(git -C "$tmp/origin.git" cat-file -t refs/tags/v1.3.0 2>/dev/null)" = tag ] || fail "release: no annotated tag v1.3.0 on origin"
-[ "$(git -C "$tmp/origin.git" rev-parse 'v1.3.0^{commit}')" = "$(git rev-parse HEAD)" ] || fail "release: v1.3.0 is not main's head"
-release 1.10.0
-[ "$status" = 0 ] && [ "$(git -C "$tmp/origin.git" rev-parse 'v1.10.0^{commit}' 2>/dev/null)" = "$(git rev-parse HEAD)" ] \
-    || fail "release 1.10.0 after 1.3.0 (version order, not text order): $out"
-release 1.9.0
-[ "$status" != 0 ] || fail "release 1.9.0 after 1.10.0 is accepted"
 cd "$root"
 
 # --- restore-point.sh: refusals before any database call ---

@@ -55,6 +55,13 @@ const StorageMemory = "memory"
 // -ldflags "-X github.com/ceffo/critical/api/internal/cmd/api.commit=<sha>".
 var commit = "unknown"
 
+// version is the release version (X.Y.Z) the image was built as, reported by
+// /api/health (ADR 0024 step 1.4). The release build computes it from the
+// commits since the last version and sets it with
+// -ldflags "-X github.com/ceffo/critical/api/internal/cmd/api.version=<X.Y.Z>";
+// `just dev` and other builds leave it unknown.
+var version = "unknown"
+
 // Validate rejects empty required fields (e.g. CRITICAL_DSN set to "").
 func (c Config) Validate() error {
 	switch {
@@ -130,7 +137,7 @@ func Start() error {
 		return err
 	}
 	// A bad web dir stops the server before it touches the database.
-	opts := router.Options{Commit: commit}
+	opts := router.Options{Commit: commit, Version: version}
 	if cfg.WebDir != "" {
 		web, werr := webhdl.New(cfg.WebDir)
 		if werr != nil {

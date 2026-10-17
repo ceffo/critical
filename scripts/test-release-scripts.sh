@@ -5,10 +5,12 @@
 #   - release-catalogue.sh: from a local rulebooks repo through an ssh-agent holding a generated key,
 #     stdout is the rulebooks sha only (never the catalogue nor the key), catalogue.json is copied;
 #     no key or no dist/catalogue.json fails and leaves no file.
-#   - release.yml: every step after the secrets check runs only on ready == 'true' (no flyctl, no fetch,
-#     no build when a secret is missing).
+#   - release.yml, parsed: one job; the version computed first; every step after the secrets check runs
+#     only on ready == 'true' (no flyctl, no fetch, no build when a secret is missing); build and tag only
+#     for a release, the tag last, after the deploy; a manual run without its secrets fails.
 #   - release-image.sh: with docker and fly stubbed, one build labelled with both commits and one push
-#     per app tagged with the full commit sha; a dirty tree or a short rulebooks sha builds nothing.
+#     per app tagged with the full commit sha; with VERSION, the version baked in, labelled and pushed as a
+#     v<version> tag too; a dirty tree, a short rulebooks sha or a bad VERSION builds nothing.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,19 +35,66 @@ else
     fail "secret missing: exited non-zero (main would go red)"
 fi
 
-# --- release.yml, image job (the deploy job is checked by test-staging-deploy.sh): the steps after the
-# secrets check are gated on its output ---
-ungated="$(awk '
-    /^      - / { if (block != "" && after && block !~ /if: steps\.secrets\.outputs\.ready == .true./) print head
-                  block = ""; head = $0; if (seen) after = 1 }
-    /name: Check the release secrets/ { seen = 1 }
-    { block = block "\n" $0 }
-    END { if (block != "" && after && block !~ /if: steps\.secrets\.outputs\.ready == .true./) print head }
-' <(sed '/^  deploy:/,$d' "$root/.github/workflows/release.yml"))"
-grep -q 'name: Check the release secrets' "$root/.github/workflows/release.yml" || fail "release.yml: no secrets check step"
-[ "$(grep -c "if: steps.secrets.outputs.ready == 'true'" "$root/.github/workflows/release.yml")" -ge 2 ] \
-    || fail "release.yml: the flyctl and build steps are not gated"
-[ -z "$ungated" ] || fail "release.yml: steps after the secrets check run without a secret: $ungated"
+# --- release.yml, parsed: the version first, then every step that builds, deploys or tags only once the
+# secrets are there (no flyctl, no fetch, no build when a secret is missing), the tag only for a release and
+# after the deploy (the deploy job's own checks are in test-staging-deploy.sh) ---
+python3 -I - "$root/.github/workflows/release.yml" <<'PY' || fails=$((fails + 1))
+import subprocess, sys, yaml
+
+wf = yaml.safe_load(open(sys.argv[1]))
+errs = []
+def check(ok, msg):
+    if not ok:
+        errs.append("release.yml: " + msg)
+
+job = wf["jobs"]["release"]
+steps = job["steps"]
+names = [st.get("id") or st.get("name") or st.get("uses") for st in steps]
+idx = {n: i for i, n in enumerate(names)}
+check(list(wf["jobs"]) == ["release"], "not one job from the version to the tag")
+for need in ("version", "secrets", "Refuse a manual run without its secrets", "Set up flyctl",
+             "Check out the release commit", "Build and push the release image", "deploy", "Tag the version"):
+    check(need in idx, f"no step {need}")
+if not errs:
+    check(idx["version"] < idx["secrets"], "the version is not computed first")
+    check(steps[0].get("uses", "").startswith("actions/checkout@") and steps[0]["with"].get("fetch-depth") == 0,
+          "the first checkout has no history (the version needs the tags)")
+    for i, st in enumerate(steps[idx["secrets"] + 1:], idx["secrets"] + 1):
+        if names[i] == "Refuse a manual run without its secrets":
+            continue
+        check("steps.secrets.outputs.ready == 'true'" in st.get("if", ""), f"step {names[i]} runs without the secrets")
+    for n in ("Check out the release commit", "Build and push the release image", "Tag the version"):
+        check("steps.version.outputs.release == 'true'" in steps[idx[n]]["if"], f"step {n} runs without a release")
+    check("release == 'true' || steps.version.outputs.redeploy == 'true'" in steps[idx["secrets"]]["if"],
+          "the secrets check runs when nothing is released")
+    check(idx["deploy"] < idx["Tag the version"] and names[-1] == "Tag the version", "the tag is not the last step, after the deploy")
+    check("steps.deploy.outputs.digest" in str(steps[idx["Tag the version"]]["env"]), "the tag does not name the staging digest")
+    readers = [names[i] for i, st in enumerate(steps) if "{{ secrets." in str(st)]
+    check(readers == ["secrets", "Build and push the release image", "deploy"], f"the secrets are read by {readers}")
+    check("RULEBOOKS_DEPLOY_KEY" not in str(steps[idx["deploy"]]), "the deploy step gets the rulebooks key")
+    refuse = steps[idx["Refuse a manual run without its secrets"]]
+    check("github.event_name == 'workflow_dispatch'" in refuse["if"], "an automatic run without secrets would fail main")
+    r = subprocess.run(["bash", "-e", "-c", refuse["run"]], capture_output=True, text=True)
+    check(r.returncode != 0, "the manual refusal does not fail")
+check(job["concurrency"] == {"group": "release-staging", "cancel-in-progress": False}, "not serialized without cancelling")
+check(job["permissions"] == {"contents": "write", "deployments": "write", "pull-requests": "read"}, f"permissions {job['permissions']}")
+check(wf["permissions"] == {"contents": "read"}, "workflow permissions are not read-only")
+on = wf.get(True) or wf.get("on")
+check(set(on) == {"workflow_run", "workflow_dispatch"}, "triggers are not CI completion + dispatch")
+check(on["workflow_run"] == {"workflows": ["CI"], "types": ["completed"], "branches": ["main"]}, "not after CI on main")
+check(list(on["workflow_dispatch"]["inputs"]) == ["version"] and on["workflow_dispatch"]["inputs"]["version"]["required"] is False,
+      "the manual run's only input is an optional version")
+cond = job["if"]
+for part in ("github.event.workflow_run.conclusion == 'success'", "github.event.workflow_run.event == 'push'",
+             "github.event.workflow_run.head_branch == 'main'", "head_repository.full_name == github.repository",
+             "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'"):
+    check(part in cond, f"job condition lacks {part}")
+check("inputs.version" in job["env"]["REDEPLOY"] and "${{" not in steps[idx["version"]]["run"],
+      "the version input reaches the script other than through the environment")
+if errs:
+    print("\n".join("test-release-scripts: FAIL: " + e for e in errs), file=sys.stderr)
+    sys.exit(1)
+PY
 
 # --- release-catalogue.sh ---
 books="$tmp/rulebooks"
@@ -113,6 +162,24 @@ echo y > "$src/file"
 (cd "$src" && PATH="$stubs:$PATH" FLY="$stubs/fly" "$root/scripts/release-image.sh" "$tmp/cat" "$sha" app-a >/dev/null 2>&1) \
     && fail "image: built a dirty work tree"
 [ ! -s "$tmp/calls" ] || fail "image: called docker or fly on a refused input: $(cat "$tmp/calls")"
+echo x > "$src/file"
+! grep -q 'VERSION\|image.version\|:v' <<<"$calls" || fail "image: without VERSION, a version was baked or pushed: $calls"
+
+# With VERSION: baked in, labelled, and pushed under the version tag too (the same build).
+(cd "$src" && PATH="$stubs:$PATH" FLY="$stubs/fly" VERSION=1.2.3 "$root/scripts/release-image.sh" "$tmp/cat" "$sha" app-a >/dev/null) \
+    || fail "image with VERSION: exited non-zero"
+calls="$(cat "$tmp/calls")"
+[ "$(grep -c '^docker build ' <<<"$calls")" = 1 ] || fail "image with VERSION: not exactly one build"
+grep -q -- "--build-arg VERSION=1.2.3 " <<<"$calls" || fail "image: VERSION build arg not passed: $calls"
+grep -q -- "--label org.opencontainers.image.version=1.2.3 " <<<"$calls" || fail "image: no version label"
+grep -qx "docker push registry.fly.io/app-a:$commit" <<<"$calls" || fail "image with VERSION: no push of the sha tag"
+grep -qx "docker push registry.fly.io/app-a:v1.2.3" <<<"$calls" || fail "image with VERSION: no push of the version tag"
+: > "$tmp/calls"
+for v in v1.2.3 1.2 01.2.3 'x y'; do
+    (cd "$src" && PATH="$stubs:$PATH" FLY="$stubs/fly" VERSION="$v" "$root/scripts/release-image.sh" "$tmp/cat" "$sha" app-a >/dev/null 2>&1) \
+        && fail "image: accepted VERSION '$v'"
+done
+[ ! -s "$tmp/calls" ] || fail "image: called docker or fly on a refused VERSION"
 
 [ "$fails" = 0 ] || exit 1
 echo "--- Release scripts ---"

@@ -1,16 +1,22 @@
 name: Deploy staging
 description: >-
   Deploys the release image of a main commit to the private staging app, smoke-checks it and records the
-  deployment (ADR 0024 steps 3.2-3.3). Runbook: docs/deploy.md ("Staging deploy").
+  deployment (ADR 0024 steps 3.2-3.3). Its output `digest` is the image digest staging runs. Runbook: docs/deploy.md ("Staging deploy").
 
 # A composite action, not a reusable workflow: a called workflow's job does not see the secrets of its own
 # `environment:` (the first real run read an empty FLY_API_TOKEN), and a calling job cannot have an
-# environment. So the job that has `environment: staging` (release.yml, deploy-staging.yml) checks out the
+# environment. So the job that has `environment: staging` (release.yml) checks out the
 # repository and passes the token here as an input; nothing else can read it.
 inputs:
   sha:
     description: Full commit sha of the release image to deploy
     required: true
+  version:
+    description: >-
+      Release version X.Y.Z of the image: deploys registry.fly.io/<app>:v<version> and the smoke check wants
+      /api/health to report it. Empty: registry.fly.io/<app>:<sha>, commit checked only.
+    required: false
+    default: ""
   fly-api-token:
     description: The staging environment's FLY_API_TOKEN
     required: true
@@ -21,6 +27,11 @@ inputs:
   github-token:
     description: Token that records the deployment (deployments write)
     required: true
+
+outputs:
+  digest:
+    description: The image digest the staging machines run after a passed deploy (sha256:...)
+    value: ${{ steps.deploy.outputs.digest }}
 
 runs:
   using: composite
@@ -59,8 +70,9 @@ runs:
         FLY_API_TOKEN: ${{ inputs.fly-api-token }}
         PUBLIC_ACCESS_OPTION: ${{ inputs.public-access-option }}
         SHA: ${{ inputs.sha }}
+        VERSION: ${{ inputs.version }}
         STAGING_CONFIG: ${{ github.workspace }}/image-src/deploy/fly.staging.toml
-      run: scripts/staging-deploy.sh "$SHA"
+      run: scripts/staging-deploy.sh "$SHA" "$VERSION"
 
     # What staging ran, for the promotion: after the deploy step passed or failed, not when it never ran.
     - name: Record the deployment
@@ -71,4 +83,5 @@ runs:
         SHA: ${{ inputs.sha }}
         OUTCOME: ${{ steps.deploy.outcome }}
         DIGEST: ${{ steps.deploy.outputs.digest }}
-      run: scripts/record-deployment.sh "$SHA" "$OUTCOME" "$DIGEST"
+        VERSION: ${{ inputs.version }}
+      run: scripts/record-deployment.sh "$SHA" "$OUTCOME" "$DIGEST" "$VERSION"

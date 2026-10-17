@@ -4,7 +4,11 @@
 # web app. Build from the repo root, passing the spell catalogue as the named build context
 # `catalogue` (a directory holding catalogue.json):
 #
-#   docker build --build-context catalogue=api/testdata --build-arg COMMIT="$(git rev-parse HEAD)" .
+#   docker build --build-context catalogue=api/testdata --build-arg COMMIT="$(git rev-parse HEAD)" \
+#       --build-arg VERSION=1.2.3 .
+#
+# COMMIT and VERSION are the build identity /api/health reports (ADR 0024 step 1.4); each is `unknown` when
+# not given. The release build computes VERSION from the commits since the last version (docs/deploy.md).
 #
 # PR and CI builds pass the fixture (api/testdata); only the release build passes the real catalogue
 # (ADR 0024 step 7). Without the `catalogue` context the build stops at the stage below.
@@ -30,8 +34,9 @@ RUN want="go$(sed -n 's/^go //p' go.mod)"; have="$(go env GOVERSION)"; \
 RUN go mod download
 COPY api/ ./
 ARG COMMIT=unknown
+ARG VERSION=unknown
 RUN CGO_ENABLED=0 go build -trimpath \
-      -ldflags "-s -w -X github.com/ceffo/critical/api/internal/cmd/api.commit=${COMMIT}" \
+      -ldflags "-s -w -X github.com/ceffo/critical/api/internal/cmd/api.commit=${COMMIT} -X github.com/ceffo/critical/api/internal/cmd/api.version=${VERSION}" \
       -o /out/critical-srv ./cmd/api
 
 FROM alpine:3.24

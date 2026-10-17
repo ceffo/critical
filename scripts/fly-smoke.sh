@@ -6,14 +6,18 @@
 # database: the health check does not touch it) and that / serves the web app. A machine whose
 # server is still waiting for a cold database is waited for (up to 90 s).
 #
-#   scripts/fly-smoke.sh <app> <commit>
+#   scripts/fly-smoke.sh <app> <commit> [version]
+#
+# With a version, /api/health must also report it (a staging release); without one only the commit is
+# checked (the promotion, and images built before versions were baked in).
 #
 # Read-only on the app and its data; prints status codes and the health body only, never data. The
 # proxy runs on a free local port and is stopped on exit.
 set -euo pipefail
 
-app="${1:?usage: fly-smoke.sh <app> <commit>}"
-commit="${2:?usage: fly-smoke.sh <app> <commit>}"
+app="${1:?usage: fly-smoke.sh <app> <commit> [version]}"
+commit="${2:?usage: fly-smoke.sh <app> <commit> [version]}"
+version="${3:-}"
 fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 
 port="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
@@ -49,6 +53,8 @@ for m in $machines; do
     [ "$code" = 200 ] || fail "machine $m /api/health: HTTP $code"
     grep -q '"status":"ok"' "$body" || fail "machine $m /api/health status: $(cat "$body")"
     grep -q "\"commit\":\"$commit\"" "$body" || fail "machine $m /api/health does not report commit $commit: $(cat "$body")"
+    [ -z "$version" ] || grep -q "\"version\":\"$version\"" "$body" \
+        || fail "machine $m /api/health does not report version $version: $(cat "$body")"
     echo "fly-smoke: machine $m /api/health 200 $(cat "$body") after $((SECONDS - start)) s"
 
     start=$SECONDS
@@ -60,4 +66,4 @@ for m in $machines; do
     [ "$code" = 200 ] || fail "machine $m /: HTTP $code"
     grep -q '<div id="root">' "$body" || fail "machine $m / is not the web app"
 done
-echo "fly-smoke: OK ($app, commit $commit, machines: $(echo $machines | tr '\n' ' '))"
+echo "fly-smoke: OK ($app, commit $commit${version:+, version $version}, machines: $(echo $machines | tr '\n' ' '))"

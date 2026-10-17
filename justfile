@@ -39,10 +39,12 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# The release build's, the staging deploy's and the promotion's scripts (ADR 0024 steps 3, 4, 7, 8.3 and
-# 10.4), offline: docker, fly and gh stubbed, a local rulebooks repo and a generated key, fixture git repos
-# (scripts/test-release-scripts.sh, scripts/test-staging-deploy.sh, scripts/test-promotion.sh).
+# The release version's, the release build's, the staging deploy's and the promotion's scripts (ADR 0024
+# steps 3, 4, 7, 8.3 and 10.4), offline: docker, fly and gh stubbed, a local rulebooks repo and a generated
+# key, fixture git repos (scripts/test-release-version.sh, scripts/test-release-scripts.sh,
+# scripts/test-staging-deploy.sh, scripts/test-promotion.sh).
 check-release-scripts:
+    scripts/test-release-version.sh
     scripts/test-release-scripts.sh
     scripts/test-staging-deploy.sh
     scripts/test-promotion.sh
@@ -216,13 +218,10 @@ check-fly:
 release-image +apps: catalogue
     scripts/release-image.sh .catalogue "$(git -C "${RULEBOOKS_DIR:-$HOME/code/critical-rulebooks}" rev-parse "${CATALOGUE_REF:-HEAD}^{commit}")" {{apps}}
 
-# Refuses a non-semver or non-increasing version, a branch other than main, a dirty tree, a main behind
-# origin/main and a commit staging has not passed (needs gh). Pushing the tag is the release: the Promote
-# workflow takes the restore point, deploys staging's image to production and creates the GitHub Release
-# (ADR 0024 step 4, docs/deploy.md "Promotion"). E.g. `just release 1.2.3`.
-# Tag the head of main as a release (vMAJOR.MINOR.PATCH) and push the tag: promotes it to production
-release version:
-    scripts/release-tag.sh {{version}}
+# There is no recipe that makes a version: CI is the only maker of `v*` tags. Each main commit that makes a
+# release gets the next version from the conventional commits since the last one, baked into its image, and
+# the tag once staging passed; promoting a version is running the Promote workflow from its tag
+# (docs/deploy.md, "How a release flows").
 
 # Check that a fly app has no public IP and has a private Flycast address (ADR 0024 step 8). Read-only.
 fly-private app:
@@ -266,13 +265,14 @@ fly-db-provision +args:
 # --- Production image (ADR 0024 step 1) ---
 
 # Build the production image with the FIXTURE catalogue (api/testdata), tagged critical:local, and
-# smoke-check it (scripts/image-smoke.sh). The real catalogue only enters the release build.
+# smoke-check it (scripts/image-smoke.sh). The real catalogue only enters the release build, and only the
+# release build computes a real version: this one is built as 0.0.0, which the smoke expects back.
 image tag="critical:local":
     #!/usr/bin/env bash
     set -euo pipefail
     commit="$(git rev-parse HEAD)"
-    docker build -t "{{tag}}" --build-context catalogue=api/testdata --build-arg COMMIT="$commit" .
-    scripts/image-smoke.sh "{{tag}}" "$commit"
+    docker build -t "{{tag}}" --build-context catalogue=api/testdata --build-arg COMMIT="$commit" --build-arg VERSION=0.0.0 .
+    scripts/image-smoke.sh "{{tag}}" "$commit" 0.0.0
 
 # Build the design-direction pages (docs/design/ui-directions, static HTML on the real theme tokens)
 # and screenshot every one at 1707x1300 and 1440x900 into <direction>/shots/ with Playwright's

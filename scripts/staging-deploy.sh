@@ -3,10 +3,14 @@
 # 3.2, 3.3, 8.3 and 10.5): asserts the app has no public IP, `fly deploy`s registry.fly.io/<app>:<sha>,
 # smoke-checks every machine through `fly proxy` (scripts/fly-smoke.sh: health with the commit, a
 # database read, the web app; it waits out a cold machine and a cold shared database), then reads the
-# digest the machines run. Used by .github/workflows/deploy-staging.yml; runnable by hand with fly
+# digest the machines run. Used by .github/actions/staging-deploy (release.yml); runnable by hand with fly
 # credentials.
 #
-#   scripts/staging-deploy.sh <full commit sha>
+#   scripts/staging-deploy.sh <full commit sha> [version X.Y.Z]
+#
+# With a version (every release since versions are computed, and a redeploy of a version), the image is
+# registry.fly.io/<app>:v<version>, the build of that version, and the smoke check also wants /api/health to
+# report that version; without one, registry.fly.io/<app>:<sha>.
 #
 # The digest, not the tag, is the image's identity (a rerun for a new catalogue pushes a new digest under
 # the same tag): it is printed and written as `digest=sha256:...` to $GITHUB_OUTPUT. When the deploy or
@@ -17,8 +21,11 @@
 # checkout's deploy/fly.staging.toml). Prints no secret.
 set -euo pipefail
 
-sha="${1:?usage: staging-deploy.sh <full commit sha>}"
+sha="${1:?usage: staging-deploy.sh <full commit sha> [version]}"
+version="${2:-}"
 [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "staging-deploy: the commit must be a full sha, got '$sha'" >&2; exit 2; }
+[ -z "$version" ] || [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] \
+    || { echo "staging-deploy: the version must be MAJOR.MINOR.PATCH, got '$version'" >&2; exit 2; }
 
 here="$(cd "$(dirname "$0")" && pwd)"
 config="${STAGING_CONFIG:-$(cd "$here/.." && pwd)/deploy/fly.staging.toml}"
@@ -27,7 +34,7 @@ smoke="${FLY_SMOKE:-$here/fly-smoke.sh}"
 out="${GITHUB_OUTPUT:-/dev/stdout}"
 app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "$config")"
 [ -n "$app" ] || { echo "staging-deploy: no app in $config" >&2; exit 1; }
-image="registry.fly.io/$app:$sha"
+if [ -n "$version" ]; then image="registry.fly.io/$app:v$version"; else image="registry.fly.io/$app:$sha"; fi
 
 if [ -n "${PUBLIC_ACCESS_OPTION:-}" ]; then
     echo "::notice title=Staging access::public-access option '$PUBLIC_ACCESS_OPTION' is configured: the no-public-IP check is skipped"
@@ -45,9 +52,9 @@ rollback_hint() {
 trap rollback_hint EXIT
 
 "$fly" deploy -c "$config" -a "$app" --image "$image" --yes
-FLY="$fly" "$smoke" "$app" "$sha"
+FLY="$fly" "$smoke" "$app" "$sha" ${version:+"$version"}
 
 digests="$("$fly" machine list -a "$app" --json | jq -r '[.[].image_ref.digest // empty] | unique | .[]')"
 [ "$(wc -w <<<"$digests")" = 1 ] || { echo "staging-deploy: the machines do not run exactly one image digest: $digests" >&2; exit 1; }
-echo "staging-deploy: OK ($app runs $sha, digest $digests)"
+echo "staging-deploy: OK ($app runs $sha${version:+ as $version}, digest $digests)"
 echo "digest=$digests" >> "$out"

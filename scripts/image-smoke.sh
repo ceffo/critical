@@ -2,7 +2,7 @@
 # Smoke-checks a production image (ADR 0024 step 1) built with the fixture catalogue: runs it on the
 # fixture seeds and checks the build identity, the web app, the SPA fallback and the JSON 404.
 #
-#   scripts/image-smoke.sh <image> <commit the image was built from>
+#   scripts/image-smoke.sh <image> <commit the image was built from> <version it was built as>
 #
 # The image holds no database (ADR 0025 step 1) and refuses the in-memory storage (step 8.3), so the
 # smoke starts its own empty PostgreSQL next to it, on a private network: the boot migrates, seeds and
@@ -12,8 +12,10 @@
 # removed on exit (the database has no volume); nothing else is touched.
 set -euo pipefail
 
-image="${1:?usage: image-smoke.sh <image> <commit>}"
-commit="${2:?usage: image-smoke.sh <image> <commit>}"
+usage="usage: image-smoke.sh <image> <commit> <version>"
+image="${1:?$usage}"
+commit="${2:?$usage}"
+version="${3:?$usage}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 name="critical-smoke-$$-$RANDOM"
 db="$name-db"
@@ -62,6 +64,7 @@ get() { curl -sS -o "$body_file" -w '%{http_code} %{content_type}' "$base$1"; }
 out="$(get /api/health)"
 [ "${out%% *}" = 200 ] || fail "/api/health: $out"
 grep -q "\"commit\":\"$commit\"" "$body_file" || fail "/api/health does not report commit $commit: $(cat "$body_file")"
+grep -q "\"version\":\"$version\"" "$body_file" || fail "/api/health does not report version $version: $(cat "$body_file")"
 grep -q '"status":"ok"' "$body_file" || fail "/api/health status: $(cat "$body_file")"
 
 for path in / /spells/deep/link; do

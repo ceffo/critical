@@ -3,8 +3,8 @@
 # steps 4, 8.3 and 10.4), on fixture git repositories with fly, gh, docker and the smoke check stubbed:
 #   - release-guards.sh: each guard (tag format, on main, the staging record read as docs/deploy.md says,
 #     the image in the registry) and `all`, which prints the tag's commit and the digest staging ran;
-#   - promote.sh: guards, then the no-public-IP check, then the restore point in a console machine of the
-#     staged image, then the deploy by digest, the smoke check, the digest check and the GitHub Release;
+#   - promote.sh: guards, then the no-public-IP check, then the copy of the staged image by digest into the
+#     production repository (and its digest checked), then the restore point in a console machine of it, then the deploy by digest, the smoke check, the digest check and the GitHub Release;
 #     each failure stops everything after it (a refused guard calls fly not at all; no restore point, no
 #     deploy; a failed smoke or a digest mismatch, no release);
 #   - release-tag.sh (`just release`): every refusal (version, branch, dirty tree, behind origin, staging
@@ -48,7 +48,11 @@ echo '[]' > "$fx/empty"
 cat > "$stubs/docker" <<STUB
 #!/bin/sh
 echo "docker \$*" >> "$calls"
-[ ! -f "$tmp/image-missing" ]
+case "\$*" in
+    "buildx imagetools create"*) [ ! -f "$tmp/copy-fails" ] ;;
+    *critical-prod@*) [ ! -f "$tmp/copy-missing" ] ;;
+    *) [ ! -f "$tmp/image-missing" ] ;;
+esac
 STUB
 cat > "$stubs/fly" <<STUB
 #!/bin/sh
@@ -152,23 +156,28 @@ machines="[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\"}},{\"id\":\"m2\",
 ok_console="$(printf 'Created an ephemeral machine\nrestore-point: dumping critical_prod\nrestore-point: OK @POINT@\r\n')"
 reset() {
     echo "$private" > "$tmp/ips"; echo "$machines" > "$tmp/machines"; echo "$ok_console" > "$tmp/console-out"
-    rm -f "$tmp/smoke-fails" "$tmp/release-exists" "$tmp/image-missing"
+    rm -f "$tmp/smoke-fails" "$tmp/release-exists" "$tmp/image-missing" "$tmp/copy-fails" "$tmp/copy-missing"
 }
 promote() { : > "$calls"; status=0; out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" "$tmp/repo/scripts/promote.sh" "$1" 2>&1)" || status=$?; }
 line() { grep -n "$1" "$calls" | head -n1 | cut -d: -f1; }
-image="registry.fly.io/critical-staging@$newer"
+staged="registry.fly.io/critical-staging@$newer"
+image="registry.fly.io/critical-prod@$newer"
 
 reset; promote v1.2.3
 [ "$status" = 0 ] || fail "promote: exit $status: $out"
 point="$(sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p' "$calls" | head -n1)"
 [[ "$point" =~ ^critical_prod_pre_v1_2_3_[0-9]{14}$ ]] || fail "promote: restore point name '$point'"
-grep -qx "fly console -a critical-prod --image $image --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point 001_baseline.sql 002_more.sql" "$calls" \
+grep -qx "docker buildx imagetools create --prefer-index=false --progress none -t registry.fly.io/critical-prod:$main_sha $staged" "$calls" \
+    || fail "promote: wrong copy call: $(grep buildx "$calls")"
+grep -qx "docker manifest inspect $image" "$calls" || fail "promote: the copy's digest is not checked"
+grep -qx "fly console -a critical-prod --image $image --vm-size shared-cpu-1x --vm-memory 512 --file-local /tmp/restore-point.sh=$tmp/repo/scripts/restore-point.sh -C sh /tmp/restore-point.sh $point 001_baseline.sql 002_more.sql" "$calls" \
     || fail "promote: wrong console call: $(grep console "$calls")"
 grep -qx "fly deploy -c $tmp/repo/deploy/fly.prod.toml -a critical-prod --image $image --no-public-ips --yes" "$calls" \
     || fail "promote: wrong deploy call: $(grep deploy "$calls")"
 grep -qx "smoke critical-prod $main_sha" "$calls" || fail "promote: smoke not called with the app and the tag's commit"
 grep -q "^gh release create v1.2.3 --verify-tag --title v1.2.3 --generate-notes --notes .*$newer" "$calls" || fail "promote: no GitHub Release with the digest"
-[ "$(line '^docker manifest')" -lt "$(line '^fly ips')" ] && [ "$(line '^fly ips')" -lt "$(line '^fly console')" ] \
+[ "$(line '^docker manifest')" -lt "$(line '^fly ips')" ] && [ "$(line '^fly ips')" -lt "$(line '^docker buildx')" ] \
+    && [ "$(line "^docker manifest inspect $image")" -lt "$(line '^fly console')" ] \
     && [ "$(line '^fly console')" -lt "$(line '^fly deploy')" ] && [ "$(line '^fly deploy')" -lt "$(line '^smoke')" ] \
     && [ "$(line '^smoke')" -lt "$(line '^gh release create')" ] || fail "promote: steps out of order: $(cat "$calls")"
 
@@ -191,9 +200,16 @@ reset; promote v1.2
 reset; touch "$tmp/image-missing"; promote v1.2.3
 [ "$status" != 0 ] && ! grep -q '^fly' "$calls" || fail "promote: a missing image called fly"
 
+reset; touch "$tmp/copy-fails"; promote v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"could not copy"* ]] || fail "promote: a failed copy is not refused: $out"
+grep -qE '^fly (console|deploy)' "$calls" && fail "promote: a failed copy still took a restore point or deployed"
+reset; touch "$tmp/copy-missing"; promote v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"is not $newer"* ]] || fail "promote: a copy under another digest is not refused: $out"
+grep -qE '^fly (console|deploy)' "$calls" && fail "promote: a copy under another digest still took a restore point or deployed"
+
 reset; echo "$public" > "$tmp/ips"; promote v1.2.3
 [ "$status" != 0 ] || fail "promote: a public IP is promoted"
-grep -qE '^fly (console|deploy)' "$calls" && fail "promote: a public IP still took a restore point or deployed"
+grep -qE '^(fly (console|deploy)|docker buildx)' "$calls" && fail "promote: a public IP still copied, took a restore point or deployed"
 PUBLIC_ACCESS_OPTION=basic-auth promote v1.2.3
 [ "$status" != 0 ] || fail "promote: PUBLIC_ACCESS_OPTION bypassed the mandatory no-public-IP check"
 

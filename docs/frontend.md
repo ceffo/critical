@@ -234,21 +234,27 @@ flowchart TD
   `stores/roll.ts` `spendItem`; "Manage" (tooltip "Manage the inventory") focuses the Inventory activity.
 - Skills tab (`SkillsTab.tsx`): PROFICIENCIES and BARD SKILLS with their column headers as section
   labels (ADR 0022 step 4.2); one row-button per skill, the name wrapping, never cut.
-- Inventaire workspace (`InventoryPanel.tsx`): the Objets card, one grid row per item: name with
-  its magical bonus ("+2") and "type · behaviour" (Stock / Charges / Daily) under it | the effect
-  dice as a chip that puts the formula in the dice composer (`stores/dice.ts` `setFormula`, nothing
-  rolled) | the quantity stepper: − (uses one through `stores/roll.ts` `spendItem`, result card
-  shows the roll), the count ("1 / 1" for daily) and + on stock items only
-  (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`) | ✎ / 🗑. Columns are rem
-  widths beside a `1fr` name, rows are separated by a tone step. A charges item spent to 0 is gone
-  from the list until its use is popped. ✎ edits a row in place and
-  "Add item" opens the same form (`ItemForm.tsx`); 🗑 removes. The form only parses
+- Inventaire workspace (`InventoryPanel.tsx`, ADR 0027 step 14): the Objets and Armes cards
+  (`InventoryCard.tsx`: section-label title, the quiet one-word "Add" with "Add item" / "Add weapon"
+  in its tooltip and `aria-label`, a body that scrolls inside the card), side by side once the stage
+  (a container query) is 1200 px wide, stacked below that; each card is as tall as its rows and the
+  page never scrolls. Objets: one grid row per item (the header and the rows share the columns
+  through `subgrid`): name with its magical bonus ("+2") and the behaviour under it (Stock / Charges
+  / Daily, in the UI language; the free-text type is only in the edit form) | the effect dice right
+  after the name column, as a chip that puts the formula in the dice composer (`stores/dice.ts`
+  `setFormula`, nothing rolled) | the quantity stepper: − (uses one through `stores/roll.ts`
+  `spendItem`, result card shows the roll), the count ("1 / 1" for daily) and + on stock items only
+  (`POST /api/items/{id}/restock`, through `stores/table.ts` `run`) | spare width | ✎ / 🗑, shown on
+  the row's hover and keyboard focus (`ROW_ACTIONS`, always shown without hover). The name column is
+  as wide as the longest name and wraps past the room it has; rows are separated by a tone step. A
+  charges item spent to 0 is gone from the list until its use is popped. ✎ edits a row in place and
+  "Add" opens the same form (`ItemForm.tsx`); 🗑 removes. The form only parses
   numbers (`lib/itemForm.ts`); the server validates and the message it returns for a field is shown
   under that field (`stores/table.ts` `submit`, `ApiError.field`). Edits send only the changed fields.
-- The Inventaire workspace also has the Armes card (`WeaponsSection.tsx`), the same grid: name
-  with "melee / missile · two-handed · ammo" | damage "1d8 · L 1d12" | to-hit / damage bonus | ✎ / 🗑 per row and an "Add weapon" form (`WeaponForm.tsx`,
-  `lib/weaponForm.ts`), built like the item form (server validation under the field). A change
-  refreshes the weapons store, so the Weapons tab follows.
+- The Armes card (`WeaponsSection.tsx`) is the same grid: name with "melee / missile · two-handed ·
+  ammo" | damage "1d8 · L 1d12" | to-hit / damage bonus | spare width | ✎ / 🗑 on hover and focus,
+  and an "Add" form (`WeaponForm.tsx`, `lib/weaponForm.ts`), built like the item form (server
+  validation under the field). A change refreshes the weapons store, so the Weapons tab follows.
 - Spells tab (`SpellsPanel.tsx`, ADR 0027 step 10): Prepare and Long rest (crescent-moon icon) on
   top, right; one group per level that has a slot (no group for an empty level), the LEVEL N
   section label and the level's slot dots (`lib/slotDots.ts`, from the server's slots and limits:
@@ -329,13 +335,15 @@ flowchart TD
   carry HTML.
 - Experience activity (`components/xp/XpPanel.tsx`, `stores/xp.ts`, ADR 0015; layout
   [ADR 0022](adr/0022-activity-focus-layout.md) step 2.5): one card with the progress beside "Add
-  XP" (`minmax(0, 1fr) | 24rem`, 24 px apart, step 3.2), the ledger card below with the rest of the
-  stage's height, its list scrolling on its own. Progress: section label "Experience · level N", the
+  XP" (`minmax(0, 1fr) | 24rem`, 24 px apart, step 3.2), the ledger card below as tall as its rows,
+  bounded by the rest of the stage's height, its list scrolling on its own past that (ADR 0027 step
+  14.4). Progress: section label "Experience · level N", the
   total in `text-hero` (step 3.4), "Before level N · X XP", a bar with 10% ticks between the
   server's floor and ceiling, the server's 8 level cells with their thresholds (current and next
   ringed; at least 3.5rem each, wrapping to a second row rather than cutting). "Add XP": amount and
   reason on one line, then session, +10% (defaulting to the server's `bonusEligible`) and the
-  button with the server's preview (`GET /api/xp/preview`); Enter submits; the bonus rule shown
+  quiet "Add" button carrying the server's preview ("Add 2,750", `GET /api/xp/preview`; disabled,
+  and looking it, only while there is no amount); Enter submits; the bonus rule shown
   under it in full. The ledger (section-label head and column headers): reason wrapping between
   words with date · session under it, base, bonus, total; in-row edit, Enter saves, Escape cancels;
   delete; entries added this session tinted; the sheet's starting XP as the last, read-only row. Each write is a transaction on the action
@@ -577,7 +585,8 @@ outside `ui/`).
   `expectNoClippedText` (`e2e/noClip.ts`) on the shell's zones and, in its "act panel" test, on each
   Act tab with long weapon, item and spell names (`act-<tab>-<size>.png`), and on the Experience
   activity with a long ledger reason, where `expectWholeWords` (same file) also fails on a word
-  broken mid-word; its "theme" test screenshots the
+  broken mid-word (in French too, in the "no cut text in French" test, with the ledger card's
+  height following its rows and, at 1707x1300, the inventory cards side by side); its "theme" test screenshots the
   main screens in dark and light, then every theme in each of its modes in French
   (`fr-<mode>-<theme>.png`, no-cut audit on the whole page).
 - **Languages:** flow specs run in `en`; one fr smoke spec toggles to French and asserts no raw i18n keys

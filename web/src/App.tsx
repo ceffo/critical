@@ -141,7 +141,6 @@ function App() {
             active={activity}
             visited={visited}
             label={t("shell.activity.inventory")}
-            className="overflow-y-auto"
           >
             <InventoryPanel />
           </Pane>

@@ -239,6 +239,11 @@ fly-private app:
 fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
 
+# Read-only, through fly ssh as the cluster's operator; the cluster machine must be started. Names and counts only.
+# Print the row count of every table of one database of a fly PostgreSQL cluster, e.g. `just fly-db-counts tournesol-db critical_prod`
+fly-db-counts cluster db:
+    scripts/fly-db-counts.sh {{cluster}} {{db}}
+
 # `mark` writes one action-log entry (a 1d20 roll) and prints its id, `check <id>` fails unless it is
 # still there; run one before and one after a restart or redeploy. Refuses non-staging apps.
 # Show that a staging app keeps its data across a restart and a redeploy

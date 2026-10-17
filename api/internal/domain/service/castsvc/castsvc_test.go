@@ -211,6 +211,14 @@ func TestCast_PerSeedEntry(t *testing.T) {
 			slot: slot("slow", "Slow", 3), textOnly: castsvc.TextOnlyNotOnSelf,
 		},
 		{
+			name: "slow cast on the Bard (its alternate target) lands on him",
+			slot: slot("slow", "Slow", 3), onSelf: boolPtr(true),
+			wantBuff: &buffsvc.BuffEffect{
+				ID: buffsAdded, Name: "Slow", SpellID: "slow", Duration: 18,
+				Effects: buffsvc.BuffEffects{ToHit: intPtr(-4), AC: intPtr(4)},
+			},
+		},
+		{
 			name: "stoneskin cast on an ally: rolled but not on the Bard",
 			slot: slot("stoneskin", "Stoneskin", 4), onSelf: boolPtr(false), dice: []int{1},
 			textOnly: castsvc.TextOnlyNotOnSelf,

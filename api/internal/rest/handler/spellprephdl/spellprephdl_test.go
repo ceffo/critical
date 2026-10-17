@@ -77,3 +77,28 @@ func TestGetInfo_ServesTheModes(t *testing.T) {
 			"instances":{"groups":[],"modifier":1},"rounds":{"groups":[],"modifier":1}}},
 		{"key":"sleet"}]`, string(got.Spellbook[0].Modes))
 }
+
+// The spellbook entry serves the target choice of a buff's cast as the
+// default and the alternate ("self", "other"); none when the service gives
+// none.
+func TestGetInfo_ServesTheCastTarget(t *testing.T) {
+	svc := mocks.NewMockSVC(t)
+	svc.EXPECT().Info(mock.Anything, int64(1)).Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
+		{ID: "alarm", Name: "Alarm", Level: 1},
+		{ID: "slow", Name: "Slow", Level: 3, Cast: prepsvc.CastInputs{Target: &spelleffectsvc.TargetChoice{
+			Default: spelleffectsvc.CastOnOther, Alternate: spelleffectsvc.CastOnSelf,
+		}}},
+	}}, nil)
+
+	h := spellprephdl.GetInfo(func(*http.Request) int64 { return 1 }, svc)
+	rec := httptest.NewRecorder()
+	require.NoError(t, h(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/spells/preparation", nil)))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got struct {
+		Spellbook []map[string]json.RawMessage `json:"spellbook"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Len(t, got.Spellbook, 2)
+	assert.NotContains(t, got.Spellbook[0], "cast_target", "no choice: the field is absent")
+	assert.JSONEq(t, `{"default":"other","alternate":"self"}`, string(got.Spellbook[1]["cast_target"]))
+}

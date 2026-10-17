@@ -237,7 +237,16 @@ contract or domain struct.
 
 ## CI and PRs
 
-CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date). PR body has a **What changes for you locally** line (dev commands, ports, tools, local data, one-off steps; or "nothing") and ends with
+CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
+**Slow-job skip:** a first job, `changes` (`scripts/ci-skip-slow.sh`, tested by
+`scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` when every
+changed file is documentation (`*.md`, `docs/**`, `.beads/**`; on a PR against its base, on a push
+against the previous head), or when the PR carries the label `ci-skip` (PR runs only: the push that
+merges it runs everything). `validate` and `generated` always run (required checks). A skipped job
+counts as a success, so the CI run is green and the Release workflow still starts and decides by its
+own rules; `ci-skip` does not imply `no-release`. Adding or removing a label re-runs CI. Don't use
+`ci-skip` on a change to the justfile, compose, air, scripts or storage: the local dev gate still
+applies to it. PR body has a **What changes for you locally** line (dev commands, ports, tools, local data, one-off steps; or "nothing") and ends with
 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Only the user merges PRs. Agents and the supervisor never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more.
 
 ## Commits

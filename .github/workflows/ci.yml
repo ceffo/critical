@@ -1,7 +1,9 @@
 name: CI
 
 on:
+  # labeled/unlabeled: adding or removing ci-skip re-runs CI with the new decision.
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 
@@ -13,6 +15,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Decides whether the slow jobs (dev-smoke, e2e, image) run: skipped for a documentation-only change or a
+  # pull request labelled ci-skip (scripts/ci-skip-slow.sh). validate and generated never wait for it, and a
+  # skipped job counts as a success, so the CI run stays green and the Release workflow still starts.
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    outputs:
+      skip_slow: ${{ steps.decide.outputs.skip_slow }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Decide whether the slow jobs run
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: scripts/ci-skip-slow.sh
+
   validate:
     name: validate
     runs-on: ubuntu-latest
@@ -34,6 +56,8 @@ jobs:
 
   dev-smoke:
     name: dev-smoke
+    needs: changes
+    if: needs.changes.outputs.skip_slow != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -54,6 +78,8 @@ jobs:
 
   e2e:
     name: e2e
+    needs: changes
+    if: needs.changes.outputs.skip_slow != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -102,6 +128,8 @@ jobs:
   # and 7.1). Nothing is pushed and no build cache is exported.
   image:
     name: image
+    needs: changes
+    if: needs.changes.outputs.skip_slow != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

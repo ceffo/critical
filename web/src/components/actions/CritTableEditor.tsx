@@ -89,7 +89,7 @@ export function CritTableEditor() {
 
   return (
     <details
-      className="max-w-xl rounded-lg px-3 py-2 open:bg-neu-900"
+      className="max-w-xl rounded-lg px-3 py-2 open:bg-raised"
       data-testid="crit-table"
     >
       <summary className="cursor-pointer text-body text-muted-foreground hover:text-foreground">
@@ -152,16 +152,23 @@ export function CritTableEditor() {
           </p>
         )}
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={addRow}>
+          <Button
+            type="button"
+            title={t("critTable.add")}
+            aria-label={t("critTable.add")}
+            onClick={addRow}
+          >
             <Plus />
-            {t("critTable.add")}
+            {t("critTable.addShort")}
           </Button>
           <Button
             type="button"
             disabled={saving || table === null}
+            title={t("critTable.save")}
+            aria-label={t("critTable.save")}
             onClick={() => void save()}
           >
-            {t("critTable.save")}
+            {t("critTable.saveShort")}
           </Button>
         </div>
       </div>

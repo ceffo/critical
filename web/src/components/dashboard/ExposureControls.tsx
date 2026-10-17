@@ -36,7 +36,7 @@ export function ExposureControls({
 
   return (
     <div
-      className="flex flex-col gap-2 rounded-lg border p-3"
+      className="flex flex-col gap-2 rounded-lg bg-raised p-3"
       data-testid="cast-exposure"
     >
       <div className={labelClass}>{t("exposure.title")}</div>
@@ -90,8 +90,10 @@ export function ExposureControls({
               onSelf,
             })
           }
+          title={t("exposure.roll")}
+          aria-label={t("exposure.roll")}
         >
-          {t("exposure.roll")}
+          {t("exposure.rollShort")}
         </Button>
       </div>
     </div>

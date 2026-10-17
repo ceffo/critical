@@ -52,7 +52,7 @@ export function EditBuffForm({
 
   return (
     <form
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900 p-2"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-raised p-2"
       aria-label={t("buffs.editLabel", { name })}
       onSubmit={(e) => {
         e.preventDefault();
@@ -225,7 +225,6 @@ export function AddBuffForm({ onDone }: { onDone: () => void }) {
       <Button
         size="sm"
         type="button"
-        variant="outline"
         onClick={() => setRows([...rows, { key: "weapon_buff", value: "1" }])}
       >
         <Plus />

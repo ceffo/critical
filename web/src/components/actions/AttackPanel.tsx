@@ -91,7 +91,7 @@ export function AttackPanel() {
           // the only control in the row (step 3.3).
           <section
             aria-label={t("attack.inHand")}
-            className="flex items-center gap-4 rounded-lg border border-amb-700 bg-amb-900/40 px-4 py-3"
+            className="flex items-center gap-4 rounded-lg border-2 border-tint bg-selected px-4 py-3"
           >
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="section-label">{t("attack.inHand")}</span>
@@ -102,9 +102,11 @@ export function AttackPanel() {
             </div>
             <Button
               type="submit"
+              variant="main"
               className="h-11 shrink-0 gap-0 py-0 pr-4 pl-0 whitespace-normal"
               disabled={rolling || !ready}
-              aria-label={rolling ? t("attack.rolling") : t("attack.roll")}
+              aria-label={t("attack.roll")}
+              aria-busy={rolling}
               aria-describedby={needs ? needsId : undefined}
             >
               <span
@@ -114,9 +116,7 @@ export function AttackPanel() {
                 <Sword className="size-5" />
               </span>
               <span className="flex flex-col items-start text-left">
-                <span className="text-title leading-4">
-                  {rolling ? t("attack.rolling") : t("attack.roll")}
-                </span>
+                <span className="text-title leading-4">{t("attack.roll")}</span>
                 {needs && (
                   <span
                     id={needsId}
@@ -157,7 +157,6 @@ export function AttackPanel() {
               <Button
                 key={w.id}
                 type="button"
-                variant="outline"
                 className="h-auto min-h-7 py-1 whitespace-normal"
                 aria-label={t("attack.switchTo", {
                   name: localized(i18n.language, w.name),
@@ -196,7 +195,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
     <div
       role="group"
       aria-label={t("attack.target")}
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-neu-900 px-3 py-2.5"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-raised px-3 py-2.5"
     >
       <span className="section-label">{t("attack.target")}</span>
       <div className="flex items-center gap-1">
@@ -231,7 +230,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
         <div
           role="radiogroup"
           aria-label={t("attack.targetSize")}
-          className="flex rounded-lg bg-background p-0.5"
+          className="flex rounded-lg bg-surface p-0.5"
         >
           {SIZES.map((s) => (
             <button
@@ -242,7 +241,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
               aria-label={t(`attack.sizes.${s}`)}
               className={cn(
                 "h-6 rounded-md px-3 text-body whitespace-nowrap text-muted-foreground",
-                targetSize === s && "bg-amb-800 text-foreground",
+                targetSize === s && "chip-chosen",
               )}
               onClick={() => void update({ targetSize: s })}
             >
@@ -468,8 +467,8 @@ function AmmoChips({
           })}
           data-item={a.itemId}
           className={cn(
-            "flex min-h-7 items-center gap-2 rounded-full bg-neu-900 px-3 py-0.5 text-left text-body",
-            a.itemId === chosen && "bg-amb-800 ring-1 ring-amb-500",
+            "flex min-h-7 items-center gap-2 px-3 py-0.5 text-left text-body",
+            a.itemId === chosen ? "chip-chosen" : "chip",
           )}
           onClick={() => void update({ ammoItemId: a.itemId })}
         >

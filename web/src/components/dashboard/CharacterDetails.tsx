@@ -51,7 +51,7 @@ export function CharacterDetails({
           aria-label={t("details.title")}
           data-testid="details-popover"
         >
-          <PopoverTitle className="text-title">
+          <PopoverTitle className="section-label">
             {t("details.title")}
           </PopoverTitle>
           {editing ? (
@@ -129,12 +129,7 @@ function DetailsView({
             : c.languages.map(languageName).join(", ")}
         </Row>
       </dl>
-      <Button
-        type="button"
-        variant="secondary"
-        className="self-end"
-        onClick={onEdit}
-      >
+      <Button type="button" className="self-end" onClick={onEdit}>
         {t("details.edit")}
       </Button>
     </>

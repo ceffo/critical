@@ -76,9 +76,7 @@ export function SettingsPopover() {
   const { lang, mode, darkTheme, lightTheme, update } = useSettingsStore();
   // The chosen option is the selected tone with a tint outline (ADR 0026 step 5.3).
   const chosen = (on: boolean) =>
-    on
-      ? "bg-amb-800 text-foreground ring-1 ring-tint ring-inset"
-      : "bg-neu-900 hover:bg-neu-800";
+    on ? "chip-chosen" : "chip hover:bg-raised-hover";
 
   return (
     <Popover>
@@ -86,7 +84,7 @@ export function SettingsPopover() {
         data-testid="settings-trigger"
         aria-label={t("settings.open")}
         title={t("settings.open")}
-        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-neu-900 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-neu-900 data-popup-open:text-foreground [&_svg]:size-5"
+        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-raised-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-raised-hover data-popup-open:text-foreground [&_svg]:size-5"
       >
         <GearSix />
       </PopoverTrigger>
@@ -97,7 +95,7 @@ export function SettingsPopover() {
         aria-label={t("settings.title")}
         data-testid="settings-popover"
       >
-        <PopoverTitle className="text-title">
+        <PopoverTitle className="section-label">
           {t("settings.title")}
         </PopoverTitle>
 

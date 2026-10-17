@@ -23,7 +23,7 @@ function Die({ sides, value }: { sides: number; value: number }) {
   return (
     <span
       title={`d${sides}`}
-      className="inline-flex min-w-7 items-center justify-center rounded-md border bg-muted/60 px-1.5 py-0.5 text-body font-semibold tabular-nums"
+      className="chip inline-flex min-w-7 items-center justify-center px-1.5 py-0.5 text-body font-semibold tabular-nums"
     >
       {value}
     </span>
@@ -162,13 +162,13 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               {/* The buff a cast puts on is the spell's: named from the catalogue. */}
               {spellName(r.spellId, b.name)}
             </span>
-            <Badge variant={b.applied ? "default" : "secondary"}>
+            <Badge variant={b.applied ? "chosen" : "default"}>
               {b.applied ? t("result.cast.onYou") : t("result.cast.notOnYou")}
             </Badge>
           </div>
           <dl className="grid grid-cols-2 gap-2 text-body">
             {b.durationRoll && (
-              <div className="rounded-lg bg-muted/60 px-3 py-2">
+              <div className="rounded-lg bg-raised px-3 py-2">
                 <dt className={labelClass}>{t("result.cast.rounds")}</dt>
                 <dd data-testid="cast-rounds">
                   <RollView roll={b.durationRoll} />
@@ -176,7 +176,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               </div>
             )}
             {b.chargesRoll && (
-              <div className="rounded-lg bg-muted/60 px-3 py-2">
+              <div className="rounded-lg bg-raised px-3 py-2">
                 <dt className={labelClass}>
                   {b.chargeUnit
                     ? t(`result.cast.units.${b.chargeUnit}`, {
@@ -190,7 +190,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               </div>
             )}
             {b.strGainRoll && (
-              <div className="rounded-lg bg-muted/60 px-3 py-2">
+              <div className="rounded-lg bg-raised px-3 py-2">
                 <dt className={labelClass}>{t("result.cast.strGain")}</dt>
                 <dd data-testid="cast-str-gain">
                   <RollView roll={b.strGainRoll} />
@@ -204,7 +204,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               <ul className="mt-1 flex flex-wrap gap-1">
                 {Object.entries(b.effects).map(([k, v]) => (
                   <li key={k}>
-                    <Badge variant="outline">{fxLabel(t, k, v)}</Badge>
+                    <Badge>{fxLabel(t, k, v)}</Badge>
                   </li>
                 ))}
               </ul>
@@ -215,7 +215,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
 
       {r.attack && (
         <div
-          className="flex flex-col gap-2 rounded-lg border p-3"
+          className="flex flex-col gap-2 rounded-lg bg-raised p-3"
           data-testid="cast-attack"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">

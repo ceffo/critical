@@ -207,7 +207,8 @@
       "use": "Use",
       "rollLabel": "Roll {{name}}",
       "useLabel": "Use {{name}}",
-      "manage": "Manage the inventory"
+      "manage": "Manage",
+      "manageLabel": "Manage the inventory"
     }
   },
   "attack": {
@@ -226,7 +227,6 @@
     "situationalPlaceholder": "e.g. rear attack",
     "loading": "Loading weapons…",
     "roll": "Attack",
-    "rolling": "Rolling...",
     "form": "Attack",
     "target": "Target",
     "inHand": "Weapon in hand",
@@ -319,7 +319,8 @@
     }
   },
   "spellSlots": {
-    "longRest": "Long Rest (Reset)",
+    "longRest": "Long rest",
+    "longRestLabel": "Long rest: reset the spell slots",
     "none": "No spell slots available.",
     "level": "Level {{level}}",
     "remaining": "{{left}} / {{total}}",
@@ -336,9 +337,11 @@
     "itemSpent": "Item spent",
     "castLabel": "Cast {{name}}",
     "prepare": "Prepare spells",
+    "prepareShort": "Prepare",
     "prepareTitle": "Prepare today's spells",
     "preparedCount": "{{count}} / {{max}} prepared",
     "save": "Save preparation",
+    "saveShort": "Save",
     "cancel": "Cancel",
     "search": "Search the spellbook...",
     "searchLabel": "Search the spellbook",
@@ -877,10 +880,9 @@
     },
     "filters": "Spell filters",
     "diceRow": "Dice at the caster level",
-    "toDice": "To the dice",
+    "toDice": "Send",
     "rollDice": "Roll",
     "noDice": "No dice to roll",
-    "addEffect": "Add as effect",
     "addEffectLabel": "Add {{name}} as an effect at level {{level}}",
     "exposure": "Exposure",
     "exposureMode": "Exposure ({{mode}})"
@@ -1253,7 +1255,9 @@
     "row": "Range {{n}}",
     "remove": "Remove range {{n}}",
     "add": "Add range",
+    "addShort": "Add",
     "save": "Save table",
+    "saveShort": "Save",
     "saved": "Saved. The next crit uses it."
   },
   "weapons": {
@@ -1470,6 +1474,7 @@
     "round": "Round of exposure",
     "onMe": "I am exposed",
     "roll": "Roll exposure",
+    "rollShort": "Roll",
     "heading": "{{name}} exposure, round {{round}} (caster level {{casterLevel}})",
     "onYou": "Taken off your HP: {{delta}}",
     "forDm": "For the DM: your HP is unchanged"

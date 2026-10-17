@@ -59,7 +59,7 @@ export function LastResult() {
           {chip && (
             <span
               className={cn(
-                "shrink-0 rounded-md bg-neu-900 px-1.5 font-semibold tabular-nums",
+                "chip shrink-0 px-1.5 font-semibold tabular-nums",
                 TONES[chip.tone],
               )}
               data-testid="last-result-chip"

@@ -105,7 +105,7 @@ export function ResultCard() {
         className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1"
         data-testid="card-header"
       >
-        <span className="shrink-0 rounded-md bg-neu-900 px-1.5 py-0.5 text-label font-medium">
+        <span className="chip shrink-0 px-1.5 py-0.5 text-label font-medium">
           {h.tag}
         </span>
         <span
@@ -128,12 +128,7 @@ export function ResultCard() {
           </span>
         )}
         {readOnly && (
-          <Button
-            size="xs"
-            variant="outline"
-            className="ml-auto shrink-0"
-            onClick={showLatest}
-          >
+          <Button size="xs" className="ml-auto shrink-0" onClick={showLatest}>
             {t("fil.latest")}
             <ArrowUp aria-hidden />
           </Button>
@@ -146,15 +141,16 @@ export function ResultCard() {
   return (
     <section
       className={cn(
-        // The result panel's outline is the accent, marking the latest result (ADR 0022 step 4.1).
-        "zone-card flex min-h-0 min-w-0 flex-col border-amb-700",
-        readOnly && "ring-1 ring-amb-700",
+        // The "latest" mark (ADR 0026 step 5.2) while the card shows the latest result; an older
+        // entry picked in the journal shows on the plain card.
+        "zone-card flex min-h-0 min-w-0 flex-col",
+        !readOnly && "latest",
       )}
       aria-label={t("fil.card")}
       data-readonly={readOnly}
     >
       <div className="flex shrink-0 items-center gap-2 px-4 pt-3.5 pb-2">
-        {header ?? <h2 className="text-title">{t("fil.card")}</h2>}
+        {header ?? <h2 className="section-label">{t("fil.card")}</h2>}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3.5">{body}</div>
     </section>
@@ -210,7 +206,7 @@ function HexDie({ value, label }: { value: number; label: string }) {
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg bg-neu-900/60 px-3 py-2">
+    <div className="rounded-lg bg-raised px-3 py-2">
       <dt className={labelClass}>{label}</dt>
       <dd className="text-body font-semibold tabular-nums">{children}</dd>
     </div>
@@ -376,7 +372,7 @@ function AttackResult({
       )}
       {r.acKnown === false && r.critsFromAc !== undefined && (
         <p
-          className="rounded-md bg-neu-900/60 px-3 py-2 text-body tabular-nums"
+          className="rounded-md bg-raised px-3 py-2 text-body tabular-nums"
           data-testid="tell-gm"
         >
           {r.verdict
@@ -417,7 +413,7 @@ function AttackResult({
             </div>
           ) : (
             <span
-              className="w-fit rounded-md bg-neu-900 px-2 py-0.5 text-body font-semibold tabular-nums"
+              className="chip w-fit px-2 py-0.5 text-body font-semibold tabular-nums"
               data-testid="damage-dice"
             >
               {t("fil.diceRolled", { dice: r.damageDice, total: r.baseDamage })}
@@ -468,7 +464,7 @@ function AttackResult({
       <details
         open={detailOpen}
         onToggle={(ev) => setDetailOpen(ev.currentTarget.open)}
-        className="rounded-lg bg-neu-900/40 px-3 py-2"
+        className="rounded-lg bg-raised px-3 py-2"
       >
         <summary className="cursor-pointer text-body font-medium">
           {t("fil.details")}
@@ -559,7 +555,7 @@ function GmVerdict({
     <div
       role="group"
       aria-label={t("result.unknownAc.verdictLabel")}
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-3"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-raised p-3"
     >
       <span className="text-body font-medium">
         {t("result.unknownAc.verdictTitle")}
@@ -567,7 +563,6 @@ function GmVerdict({
       <Button
         type="button"
         size="sm"
-        variant={r.verdict === "hit" ? "default" : "outline"}
         aria-pressed={r.verdict === "hit"}
         disabled={rolling}
         onClick={() => void verdictLastAttack(entryId, true)}
@@ -577,7 +572,6 @@ function GmVerdict({
       <Button
         type="button"
         size="sm"
-        variant={r.verdict === "miss" ? "default" : "outline"}
         aria-pressed={r.verdict === "miss"}
         disabled={rolling}
         onClick={() => void verdictLastAttack(entryId, false)}
@@ -624,7 +618,7 @@ function AdjustAttackAc({
 
   return (
     <form
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-neu-900/60 p-3"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-raised p-3"
       aria-label={
         unknown ? t("result.adjustAc.giveLabel") : t("result.adjustAc.label")
       }
@@ -640,7 +634,6 @@ function AdjustAttackAc({
         <Button
           type="button"
           size="sm"
-          variant="outline"
           aria-label={t("result.adjustAc.decrease")}
           onClick={() => step(-1)}
         >
@@ -665,7 +658,6 @@ function AdjustAttackAc({
         <Button
           type="button"
           size="sm"
-          variant="outline"
           aria-label={t("result.adjustAc.increase")}
           onClick={() => step(1)}
         >
@@ -679,12 +671,13 @@ function AdjustAttackAc({
         <Button
           type="button"
           size="sm"
-          variant="outline"
           disabled={rolling}
           data-testid="ac-unknown"
+          title={t("result.adjustAc.backToUnknown")}
+          aria-label={t("result.adjustAc.backToUnknown")}
           onClick={() => void clearLastAttackAc(entryId)}
         >
-          {t("result.adjustAc.backToUnknown")}
+          {t("attack.unknownAc")}
         </Button>
       )}
       {r.rolledTargetAc !== undefined && (
@@ -811,7 +804,7 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
+      className="flex flex-col gap-2 rounded-lg bg-raised p-3"
       aria-label={t("result.adjust.label")}
       onSubmit={(ev) => {
         ev.preventDefault();
@@ -830,7 +823,6 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
           <Button
             type="button"
             size="sm"
-            variant="outline"
             aria-label={t("result.adjust.decrease")}
             onClick={() => setValue((v) => stepAdjustment(v, -1))}
           >
@@ -846,7 +838,6 @@ function AdjustSave({ save: s, entryId }: { save: SaveView; entryId: number }) {
           <Button
             type="button"
             size="sm"
-            variant="outline"
             aria-label={t("result.adjust.increase")}
             onClick={() => setValue((v) => stepAdjustment(v, 1))}
           >
@@ -896,7 +887,7 @@ function AdjustSkill({
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-lg bg-neu-900/60 p-3"
+      className="flex flex-col gap-2 rounded-lg bg-raised p-3"
       aria-label={t("result.skill.adjustLabel")}
       onSubmit={(ev) => {
         ev.preventDefault();
@@ -914,7 +905,6 @@ function AdjustSkill({
           <Button
             type="button"
             size="sm"
-            variant="outline"
             aria-label={t("result.adjust.decrease")}
             disabled={value <= -max}
             onClick={() => setValue((v) => stepSkillAdjustment(c.kind, v, -1))}
@@ -931,7 +921,6 @@ function AdjustSkill({
           <Button
             type="button"
             size="sm"
-            variant="outline"
             aria-label={t("result.adjust.increase")}
             disabled={value >= max}
             onClick={() => setValue((v) => stepSkillAdjustment(c.kind, v, 1))}
@@ -971,7 +960,7 @@ function DieChip({
     <li
       className={cn(
         "min-w-7 rounded-md px-2 py-0.5 text-center text-body font-semibold tabular-nums",
-        tone === "max" ? "bg-highlight-fill text-on-highlight" : "bg-neu-900",
+        tone === "max" ? "chip-max" : "chip",
         tone === "min" && "text-muted-foreground",
       )}
       data-tone={tone}

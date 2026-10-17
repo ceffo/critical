@@ -142,7 +142,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
           return (
             <div
               key={key}
-              className="flex min-w-0 flex-col gap-0.5 rounded-md bg-neu-900 px-2.5 py-2"
+              className="flex min-w-0 flex-col gap-0.5 rounded-md bg-raised px-2.5 py-2"
               data-testid={`stat-${key}`}
             >
               <dt className="section-label">{t(`lookup.${key}`)}</dt>
@@ -178,7 +178,7 @@ function SpellDetail({ spell }: { spell: Spell }) {
       {spell.caster_level ? (
         <section
           aria-label={t("lookup.diceRow")}
-          className="flex shrink-0 flex-col gap-1.5 rounded-md bg-neu-900 px-3 py-2.5"
+          className="flex shrink-0 flex-col gap-1.5 rounded-md bg-raised px-3 py-2.5"
           data-testid="spell-cast-box"
         >
           <p className="section-label">
@@ -204,8 +204,8 @@ function SpellDetail({ spell }: { spell: Spell }) {
                   <span className="flex shrink-0 gap-2">
                     <Button
                       size="sm"
-                      variant="secondary"
                       aria-label={t("dice.send", { formula: d.formula })}
+                      title={t("dice.send", { formula: d.formula })}
                       onClick={() => toComposer(d.formula)}
                     >
                       <ArrowRight aria-hidden /> {t("lookup.toDice")}
@@ -230,17 +230,20 @@ function SpellDetail({ spell }: { spell: Spell }) {
           {spell.effect && (
             <Button
               size="sm"
-              variant="secondary"
               className="self-start"
               disabled={busy}
               aria-label={t("lookup.addEffectLabel", {
                 name: spellName(i18n.language, spell),
                 level: spell.caster_level,
               })}
+              title={t("lookup.addEffectLabel", {
+                name: spellName(i18n.language, spell),
+                level: spell.caster_level,
+              })}
               data-testid="spell-add-effect"
               onClick={() => void run(() => addSpellEffect(spell.id))}
             >
-              <Plus aria-hidden /> {t("lookup.addEffect")}
+              <Plus aria-hidden /> {t("buffs.addShort")}
             </Button>
           )}
         </section>
@@ -354,8 +357,10 @@ export function LookupPanel() {
             aria-pressed={on}
             aria-label={t("lookup.levelLabel", { level: n })}
             className={cn(
-              "h-7 w-7 rounded-md bg-neu-900 text-body font-medium text-muted-foreground tabular-nums transition-colors hover:text-foreground",
-              on && "bg-amb-800 text-amb-100 hover:text-amb-100",
+              "h-7 w-7 text-body font-medium tabular-nums transition-colors",
+              on
+                ? "chip-chosen"
+                : "chip text-muted-foreground hover:text-foreground",
             )}
             onClick={() => toggleLevel(n)}
           >
@@ -425,7 +430,7 @@ export function LookupPanel() {
           <div
             role="group"
             aria-label={t("lookup.classLabel")}
-            className="flex flex-wrap self-start rounded-lg bg-neu-900 p-0.5"
+            className="flex flex-wrap self-start rounded-lg bg-raised p-0.5"
           >
             {CLASSES.map(({ value, key }) => (
               <button
@@ -433,9 +438,10 @@ export function LookupPanel() {
                 type="button"
                 aria-pressed={query.cls === value}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
-                  query.cls === value &&
-                    "bg-amb-900 text-foreground ring-1 ring-amb-700 ring-inset",
+                  "rounded-md px-2.5 py-1 text-body font-medium transition-colors",
+                  query.cls === value
+                    ? "chip-chosen"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => setQuery({ cls: value })}
               >
@@ -495,9 +501,8 @@ export function LookupPanel() {
                 data-class={s.class}
                 data-level={s.level}
                 className={cn(
-                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-x-2 rounded-md px-2 py-1.5 text-body hover:bg-neu-900",
-                  s.id === selectedId &&
-                    "bg-amb-900 shadow-[inset_2px_0_0_var(--tint)] hover:bg-amb-900",
+                  "grid shrink-0 cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-baseline gap-x-2 rounded-md px-2 py-1.5 text-body",
+                  s.id === selectedId ? "selected" : "hover:bg-raised",
                 )}
                 onClick={() => select(s.id)}
               >

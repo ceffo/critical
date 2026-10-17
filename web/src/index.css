@@ -147,7 +147,7 @@
   --secondary-foreground: var(--ink);
   --muted: var(--neu-900);
   --muted-foreground: var(--ink-muted);
-  --accent: var(--amb-900);
+  --accent: var(--neu-800);
   --accent-foreground: var(--ink);
   --destructive: var(--danger);
   --ring: var(--tint);
@@ -225,7 +225,70 @@
   border-radius: 0.625rem;
 }
 
+/*
+ * The shared pieces (ADR 0026 step 5, one of each, used everywhere). The raised step itself is the
+ * `raised` colour (`bg-raised`, its hover `bg-raised-hover`); a small mark on a card that must be
+ * seen (an empty dot, a track's axis, a drag handle) takes the field edge (`bg-input`, 3:1).
+ */
+
+/*
+ * A chip (step 5.3): filled with the raised tone, no outline. Sizing (padding, type) and the text
+ * colour are the caller's; the family is the fill and the radius. These pieces set their own fill,
+ * radius and (but `chip`) text colour: never combine one with a `bg-*`, `rounded-*` or text-colour
+ * class, the cascade order between them is not defined; pick one piece per state instead.
+ */
+@utility chip {
+  border-radius: 0.375rem;
+  background-color: var(--neu-900);
+  /* On a raised tile or row, the chip steps one tone further so it still reads. */
+  .bg-raised & {
+    background-color: var(--neu-800);
+  }
+}
+
+/*
+ * A chosen chip (step 5.3): a segmented thumb, the chosen die or option. The selected tone with a
+ * tint outline (drawn inside, so it never shifts the layout).
+ */
+@utility chip-chosen {
+  border-radius: 0.375rem;
+  background-color: var(--amb-800);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--tint);
+}
+
+/* The highlight chip (step 5.3): the gold fill, only for a crit or a maximum. */
+@utility chip-max {
+  border-radius: 0.375rem;
+  background-color: var(--highlight-fill);
+  color: var(--on-highlight);
+}
+
+/*
+ * The selection mark (step 5.1): a selected row, list item, rail entry; the selected tone, ink
+ * text and a 3 px tint bar on the left edge.
+ */
+@utility selected {
+  background-color: var(--amb-800);
+  color: var(--ink);
+  box-shadow: inset 3px 0 0 var(--tint);
+}
+
+/*
+ * The "latest" mark (step 5.2): the result card showing the latest result, a 2 px tint outline drawn
+ * over the card's own edge (an outline, so it never fights the card's border).
+ */
+@utility latest {
+  outline: 2px solid var(--tint);
+  outline-offset: -1px;
+}
+
 @theme inline {
+  /* The raised step (ADR 0026 step 1.1): tiles, blocks, row stripes, chips; one token. */
+  --color-raised: var(--neu-900);
+  --color-raised-hover: var(--neu-800);
+  /* The selected tone (step 1.1): under the selection mark, a chosen chip, the weapon in hand. */
+  --color-selected: var(--amb-800);
   --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
   /* The brand face (ADR 0020 step 5): the wordmark only. */
   --font-display: "Cinzel Variable", "Cinzel", "Inter Variable", serif;

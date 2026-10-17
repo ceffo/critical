@@ -49,8 +49,8 @@ export function DiceComposer() {
               <button
                 type="button"
                 className={cn(
-                  "h-7 min-w-10 rounded-lg border px-2 text-body font-medium tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50",
-                  count > 0 ? "border-tint" : "border-border",
+                  "h-7 min-w-10 px-2 text-body font-medium tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  count > 0 ? "chip-chosen" : "chip hover:bg-raised-hover",
                 )}
                 aria-label={t("dice.add", { die: name })}
                 data-testid={`die-${sides}`}
@@ -65,7 +65,7 @@ export function DiceComposer() {
               {count > 0 && (
                 <button
                   type="button"
-                  className="absolute -top-1.5 right-0 rounded-md bg-tint px-1 text-label font-semibold tabular-nums text-on-accent outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="chip-chosen absolute -top-1.5 right-0 px-1 text-label font-semibold tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                   aria-label={t("dice.count", { count, die: name })}
                   data-testid={`die-badge-${sides}`}
                   onClick={() => s.remove(sides)}
@@ -152,13 +152,13 @@ export function DiceComposer() {
         {s.favourites.map((f, i) => (
           <li
             key={f.id}
-            className="flex shrink-0 items-center rounded-md border border-border"
+            className="chip flex shrink-0 items-center"
             data-testid="dice-favourite"
           >
             {s.favourites.length > 1 && (
               <button
                 type="button"
-                className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+                className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:invisible"
                 aria-label={t("dice.moveFavouriteEarlier", {
                   formula: f.formula,
                 })}
@@ -170,7 +170,7 @@ export function DiceComposer() {
             )}
             <button
               type="button"
-              className="h-7 px-2 text-body tabular-nums outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-7 px-2 text-body tabular-nums outline-none hover:text-tint focus-visible:ring-3 focus-visible:ring-ring/50"
               title={t("dice.rollFavourite", { formula: f.formula })}
               aria-label={t("dice.rollFavourite", { formula: f.formula })}
               disabled={s.rolling}
@@ -181,7 +181,7 @@ export function DiceComposer() {
             {s.favourites.length > 1 && (
               <button
                 type="button"
-                className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-30"
+                className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:invisible"
                 aria-label={t("dice.moveFavouriteLater", {
                   formula: f.formula,
                 })}

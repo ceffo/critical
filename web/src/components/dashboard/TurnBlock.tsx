@@ -65,7 +65,7 @@ export function TurnBlock() {
               {initiative ? (
                 <>
                   <span
-                    className="rounded-md bg-amb-900 px-2 font-semibold text-tint tabular-nums"
+                    className="font-semibold tabular-nums"
                     data-testid="initiative-value"
                     data-entry-id={initiative.logEntryId}
                   >
@@ -78,21 +78,23 @@ export function TurnBlock() {
                     title={t("turn.initiativeReroll")}
                     disabled={busy}
                     onClick={() => void rerollInitiative()}
-                    className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 [&_svg]:size-4"
+                    className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted [&_svg]:size-4"
                   >
                     <ArrowsClockwise />
                   </button>
                 </>
               ) : (
-                <span className="rounded-md bg-neu-900 px-2">
-                  {t("turn.initiativeNone")}
-                </span>
+                <span className="chip px-2">{t("turn.initiativeNone")}</span>
               )}
             </span>
           )}
         </div>
         <div className="flex gap-1">
-          <Button disabled={busy} onClick={() => void nextRound()}>
+          <Button
+            variant="main"
+            disabled={busy}
+            onClick={() => void nextRound()}
+          >
             {t("turn.next")}
             <ArrowRight />
           </Button>
@@ -106,7 +108,7 @@ export function TurnBlock() {
             <PopoverTrigger
               aria-label={t("turn.menu")}
               title={t("turn.menu")}
-              className="flex size-7 items-center justify-center rounded-lg border border-border text-foreground transition-colors outline-none hover:bg-neu-900 focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
+              className="flex size-7 items-center justify-center rounded-lg border border-input text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
             >
               <DotsThree weight="bold" />
             </PopoverTrigger>
@@ -130,7 +132,7 @@ export function TurnBlock() {
 }
 
 const menuItem =
-  "flex h-7 w-full items-center rounded-md px-2 text-left text-body outline-none hover:bg-neu-900 focus-visible:bg-neu-900";
+  "flex h-7 w-full items-center rounded-md px-2 text-left text-body outline-none hover:bg-raised-hover focus-visible:bg-raised-hover";
 
 function TurnMenu({ onPick }: { onPick: (m: Mode) => void }) {
   const { t } = useTranslation();
@@ -211,7 +213,7 @@ function PassTimeForm({ onDone }: { onDone: () => void }) {
         if (await passTime(value)) onDone();
       }}
     >
-      <span className="text-title">{t("turn.passTime")}</span>
+      <span className="section-label">{t("turn.passTime")}</span>
       <div className="flex items-center gap-2 text-body">
         <input
           className={`${fieldClass} !w-20 tabular-nums`}

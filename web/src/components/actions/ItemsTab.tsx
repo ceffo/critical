@@ -28,7 +28,7 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
           {items.map((i) => (
             <li
               key={i.id}
-              className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto_4rem_5rem] items-center gap-3 rounded-lg px-3 py-1 hover:bg-neu-900"
+              className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto_4rem_5rem] items-center gap-3 rounded-lg px-3 py-1 hover:bg-raised"
             >
               <span className="text-body break-words">
                 {localized(i18n.language, i.name)}
@@ -53,7 +53,6 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
               </span>
               <Button
                 size="sm"
-                variant="secondary"
                 className="w-full"
                 disabled={rolling || i.count === 0}
                 aria-label={t(
@@ -72,7 +71,13 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
           ))}
         </ul>
       )}
-      <Button variant="ghost" className="self-start" onClick={onManage}>
+      <Button
+        variant="ghost"
+        className="self-start"
+        title={t("actions.items.manageLabel")}
+        aria-label={t("actions.items.manageLabel")}
+        onClick={onManage}
+      >
         {t("actions.items.manage")}
         <ArrowRight />
       </Button>

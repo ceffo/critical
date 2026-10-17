@@ -190,11 +190,14 @@ flowchart TD
       dependency order in one transaction, sets each identity sequence past the highest copied id,
       then compares the row count of every table and fails on any difference.
    2. It refuses a target that holds rows in any app table, or that is not on the current baseline.
-   3. Used twice: the user's `.dev/critical.db` into the compose PostgreSQL, and once, through the
-      runbook, to seed production with the same data. Staging starts empty and stays disposable.
+   3. Used once: the user's `.dev/critical.db` into the compose PostgreSQL. _Amended 2026-10-16; was:
+      used a second time, through the runbook, to seed production with the same data._ Production
+      starts from the seeds like staging ([ADR 0024](0024-deployment.md), "Amendment (production
+      starts from the seeds, 2026-10-16)").
    4. A copy is private data ([ADR 0024](0024-deployment.md) step 7): it never leaves the
       operator's machine and fly.
-   5. Retired (deleted) once production is seeded.
+   5. Retired (deleted) once production is deployed (_amended 2026-10-16; was: once production is
+      seeded_).
 
    Tests: the tool's logic without a database (table order, sequence values, count comparison,
    refusals) on mocked ports. Implemented as `api/internal/sqlitecopy` (binary `api/cmd/sqlite-copy`, `just

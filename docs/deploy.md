@@ -81,7 +81,7 @@ read as the cluster's operator). When the run set a password it also connects th
 `tournesol-db.flycast`: own database usable (may create in its schema), every other connection refused
 (`permission denied for database`). Then it sets the volume's snapshot retention.
 
-**Rotation** (a leaked password, or the one-off seed below): `just fly-db-provision --rotate
+**Rotation** (a leaked password): `just fly-db-provision --rotate
 tournesol-db <env>`. It sets a new password, then applies the new secret, so **the app is briefly out**:
 from the password change until fly has restarted each of its machines with the new secret, new
 database connections fail (connections already open keep working). Before the app's first deploy it has
@@ -232,30 +232,20 @@ Point the apps at the new cluster by rerunning the provisioning with its name, c
 (`just fly-smoke`), and destroy the old cluster only after checking, with the other app's owner.
 Keep a snapshot's data private: it holds catalogue rows (ADR 0024 step 7).
 
-## Seed production with the SQLite data (once, user)
+## Production data
 
-Production starts with the data of the developer's SQLite `.dev/critical.db`, copied by the SQLite copy
-tool ([ADR 0025](adr/0025-postgresql-storage.md) step 9, `docs/backend.md` "Moving a SQLite database
-into PostgreSQL"). Do it before the first deploy of `critical-prod`: the server seeds an empty database
-at its first boot, and the tool refuses a database that holds any row. Staging is never seeded; it
-starts empty.
+Production starts like staging: its first boot imports the catalogue and the campaign `seeds/` (the
+character, proficiencies, bard skills, weapons, items, spells). Nothing of the operator's local play is
+copied ([ADR 0024](adr/0024-deployment.md), "Amendment (production starts from the seeds,
+2026-10-16)"). Character-sheet edits made in the app that the seeds do not hold are re-entered by hand
+in the production app, through `fly proxy` (user steps left, below).
+
+To see what a local database holds beyond what a fresh boot seeds, without printing any of it, compare
+it with a freshly seeded throwaway database (names and counts only):
 
 ```bash
-# On the operator's machine, in a checkout of the release being deployed. Stop every server still
-# writing the SQLite file first: what it writes after the copy is not in production.
-just fly-db-provision --rotate --password-dir ~/.config/critical tournesol-db prod   # before the first deploy: no machine, no outage
-$fly proxy 15432:5432 tournesol-db.flycast -a tournesol-db   # the private cluster; leave it running
-PROD_DSN="postgres://critical_prod:$(cat ~/.config/critical/critical_prod.password)@localhost:15432/critical_prod?sslmode=disable"
-just db-import-sqlite .dev/critical.db "$PROD_DSN"     # prints the rows of each table; counts equal or nothing is kept
+scripts/db-compare.sh "<local dsn>" "<fresh dsn>"   # per table: row counts, "same" or the differing columns
 ```
-
-The tool reads the SQLite file read-only, works on a copy in a private temporary directory, which it
-deletes at the end, and writes only to the target. The data never goes anywhere but the operator's
-machine and the cluster (ADR 0024 step 7). If it stops with an error, nothing was written: fix the cause
-and run it again. Then deploy `critical-prod`; its first boot finds the baseline applied and the seeds
-and catalogue already there, and writes nothing.
-
-Then `shred -u ~/.config/critical/critical_prod.password`. The tool is deleted from the repository once production is seeded (ADR 0025 step 9.5).
 
 ## A new catalogue version reaches production
 

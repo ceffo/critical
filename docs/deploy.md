@@ -33,8 +33,17 @@ User steps left:
    critical-prod`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
    ("Production data").
 2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below; until it is set, every main run
-   of the release workflow ends green with a "Release skipped" notice). The environments and both
-   `FLY_API_TOKEN` secrets are set (2026-10-16).
+   of the release workflow ends green with a "Release skipped" notice naming it and runs no flyctl
+   step). The environments and both `FLY_API_TOKEN` secrets are set (2026-10-16). Then check the first
+   real release run ("Release build"), none of which an agent can see:
+   1. it is green, and its notice names `registry.fly.io/critical-staging:<sha>` and the rulebooks commit:
+      the deploy key reached GitHub over ssh with the pinned host key, and the staging deploy token could
+      `fly auth docker` and push;
+   2. `$fly auth docker`, `docker pull registry.fly.io/critical-staging:<sha>`, then `docker inspect -f
+      '{{json .Config.Labels}}' registry.fly.io/critical-staging:<sha>` shows
+      `org.opencontainers.image.revision` and `critical.rulebooks.revision`;
+   3. its log holds no catalogue JSON and no key material: only the clone, the build, the push lines and
+      the notice with the reference and the rulebooks sha.
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
 
 ## The PostgreSQL cluster (user)
@@ -263,8 +272,11 @@ git tag v1.2.3 <sha that passed staging> && git push origin v1.2.3    # user: th
 - **When.** It runs on `workflow_run` of the `CI` workflow, and its job only when that run concluded
   `success` for a `push` to `main` of this repository: a red or cancelled CI run, a pull request (a fork's
   branch named `main` included) and a fork never build. It is not a job of `ci.yml` because CI cancels a
-  running `main` build when a newer commit lands; release runs are serialized instead (`concurrency:
-  release-main`, never cancelled once started: a newer commit replaces only a queued one). GitHub runs a
+  running `main` build when a newer commit lands; release jobs are serialized instead (the job's
+  `concurrency: release-main`, never cancelled once started: a newer green commit replaces only a queued
+  one). The group is on the job, not the workflow: every CI completion on a branch named `main` (a red
+  one, a fork's) starts a run of this workflow, and only a job that passes the `if` joins the group, so a
+  skipped run never cancels a pending green release. GitHub runs a
   `workflow_run` workflow as it is on `main`, so a pull request cannot change what runs with the secrets,
   and the workflow only starts once this file is on `main`.
 - **Secrets**, from the GitHub environment `staging`: `FLY_API_TOKEN` and `RULEBOOKS_DEPLOY_KEY`. When one
@@ -284,14 +296,16 @@ git tag v1.2.3 <sha that passed staging> && git push origin v1.2.3    # user: th
   release flow: the staging deploy token can push only there. Production gets the same digest from it at
   promotion (ADR 0024, consequences, "Promotion and registry layout"), never by a rebuild. The run's
   notice names the pushed reference and the rulebooks commit; the push line in the log gives the digest.
+  **The digest is the image's identity, not the tag**: a re-run for a new catalogue pushes a new digest
+  under the same `<sha>` tag, so the staging deploy records the digest it smoke-checked and the promotion
+  deploys and compares that digest (`registry.fly.io/critical-staging@sha256:…`), never the tag (ADR 0024
+  step 1.5).
 - **No shell tracing** anywhere (`set -x` is absent), and none of the scripts prints a secret.
   `just validate` runs `scripts/test-release-scripts.sh`, which exercises the three scripts offline (docker
   and fly stubbed, a local rulebooks repo and a generated key): the missing-secret no-op, stdout of the
-  fetch being only the sha, the labels and the full-sha tag, a dirty tree refused.
-
-First real run (user, once `RULEBOOKS_DEPLOY_KEY` is set): the next main run's notice names the pushed
-reference; `$fly auth docker`, then `docker pull registry.fly.io/critical-staging:<sha>` and `docker
-inspect -f '{{json .Config.Labels}}' registry.fly.io/critical-staging:<sha>` show both labels.
+  fetch being only the sha, the labels and the full-sha tag, a dirty tree refused. Its rulebooks remote is
+  a `file://` repository, so ssh itself (the agent's key reaching GitHub, the pinned host key) is only
+  proven by the first real run (user steps left).
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine

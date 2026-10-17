@@ -5,6 +5,8 @@
 #   - release-catalogue.sh: from a local rulebooks repo through an ssh-agent holding a generated key,
 #     stdout is the rulebooks sha only (never the catalogue nor the key), catalogue.json is copied;
 #     no key or no dist/catalogue.json fails and leaves no file.
+#   - release.yml: every step after the secrets check runs only on ready == 'true' (no flyctl, no fetch,
+#     no build when a secret is missing).
 #   - release-image.sh: with docker and fly stubbed, one build labelled with both commits and one push
 #     per app tagged with the full commit sha; a dirty tree or a short rulebooks sha builds nothing.
 set -euo pipefail
@@ -30,6 +32,19 @@ if log="$(A=secret-a B= GITHUB_OUTPUT="$out" "$root/scripts/release-secrets.sh" 
 else
     fail "secret missing: exited non-zero (main would go red)"
 fi
+
+# --- release.yml: the steps after the secrets check are gated on its output ---
+ungated="$(awk '
+    /^      - / { if (block != "" && after && block !~ /if: steps\.secrets\.outputs\.ready == .true./) print head
+                  block = ""; head = $0; if (seen) after = 1 }
+    /name: Check the release secrets/ { seen = 1 }
+    { block = block "\n" $0 }
+    END { if (block != "" && after && block !~ /if: steps\.secrets\.outputs\.ready == .true./) print head }
+' "$root/.github/workflows/release.yml")"
+grep -q 'name: Check the release secrets' "$root/.github/workflows/release.yml" || fail "release.yml: no secrets check step"
+[ "$(grep -c "if: steps.secrets.outputs.ready == 'true'" "$root/.github/workflows/release.yml")" -ge 2 ] \
+    || fail "release.yml: the flyctl and build steps are not gated"
+[ -z "$ungated" ] || fail "release.yml: steps after the secrets check run without a secret: $ungated"
 
 # --- release-catalogue.sh ---
 books="$tmp/rulebooks"

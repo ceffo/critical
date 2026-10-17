@@ -6,8 +6,8 @@ name: Release
 #
 # workflow_run, not a job of ci.yml: CI cancels a running main build when a newer commit lands
 # (cancel-in-progress), while a release run must finish once started; here a newer commit only
-# replaces a queued one (concurrency below). workflow_run always runs this file as it is on main, so a
-# pull request cannot change what runs with the secrets.
+# replaces a queued one (the job's concurrency below). workflow_run always runs this file as it is
+# on main, so a pull request cannot change what runs with the secrets.
 on:
   workflow_run:
     workflows: [CI]
@@ -16,10 +16,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: release-main
-  cancel-in-progress: false
 
 jobs:
   image:
@@ -34,10 +30,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
+    # On the job, not the workflow: every CI completion on a branch named main starts a run of this
+    # workflow, and a workflow-level group would let a skipped one (red CI, a fork's main) cancel a
+    # pending green release. A job skipped by its `if` never joins the group.
+    concurrency:
+      group: release-main
+      cancel-in-progress: false
     env:
       COMMIT: ${{ github.event.workflow_run.head_sha }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false

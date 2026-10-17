@@ -243,10 +243,3 @@ packages:
       outpkg: "mocks"
     interfaces:
       Querier:
-  github.com/ceffo/critical/api/internal/sqlitecopy:
-    config:
-      dir: "internal/sqlitecopy/mocks"
-      outpkg: "mocks"
-    interfaces:
-      Source:
-      Target:

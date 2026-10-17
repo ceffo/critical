@@ -18,6 +18,24 @@ files; the Go test checks the app names against the file names.
 fly=~/.fly/bin/fly   # flyctl on the operator's machine
 ```
 
+## State and user steps left
+
+First private deploy, 2026-10-16, image of commit `1648083` (one digest, both apps):
+
+| App | Machines | Addresses | Checked |
+|---|---|---|---|
+| `critical-staging` | 1 (stops when idle) | `private_v6` only | `just fly-private`, `just fly-smoke` (health with the commit, database read); an action-log entry survived `fly machine restart` and a redeploy (`just fly-persistence`); both cold-cluster cases above |
+| `critical-prod` | 2 (always on) | `private_v6` only | `just fly-private`, `just fly-smoke` on each machine; `just fly-db-counts tournesol-db critical_prod`: the 22 tables a fresh boot seeds, no play |
+
+User steps left:
+
+1. **Re-enter the character-sheet edits** the seeds do not hold, in the production app (`just fly-open
+   critical-prod`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
+   ("Production data").
+2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below). The environments and both
+   `FLY_API_TOKEN` secrets are set (2026-10-16).
+3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
+
 ## The PostgreSQL cluster (user)
 
 `tournesol-db`: postgres-flex 17, one node (`shared-cpu-1x`, 256 MB), one encrypted 1 GB volume
@@ -34,13 +52,30 @@ payment method is the user's decision only.
 
 **It stops when idle.** The cluster scales to zero (configured before this app used it): its machine
 stops with no connection and starts on the next one through `tournesol-db.flycast`, so the first
-request after an idle period waits a few seconds for PostgreSQL. `fly ssh` does not start it:
+request after an idle period waits a few seconds for PostgreSQL. Idle means no open connection for an
+hour (`FLY_SCALE_TO_ZERO=1h` on its machine): the app's pool closes connections unused for 5 minutes, so
+quiet apps let it stop, and a server booting or a request arriving while it starts waits for it (up
+to 60 s per new connection) instead of failing (`docs/backend.md`, "Database"). Checked on staging, 2026-10-16: with the cluster
+stopped, a booting server got `EOF` twice, the connection started the cluster (event source `proxy` in
+`fly machine status`) and the server listened 5 s after its start; with the cluster stopped under a
+running server holding pooled connections, the next database read answered 200 in 2.6 s. A DSN that
+cannot work (wrong password, unknown host, `sslmode=require`) fails at once instead of waiting.
+`fly ssh` does not start it:
 
 ```bash
 $fly status -a tournesol-db                          # machine state; role "error" only means stopped
 $fly machine start <machine id> -a tournesol-db      # before fly ssh / fly postgres connect
 $fly ips list -a tournesol-db                        # private ingress (Flycast) only, no public v4/v6
 ```
+
+Residual risk, accepted: **one 500 is possible when a connection is reset abruptly under load** (the
+cluster killed, not stopped, while a statement runs on a pooled connection). A clean stop (FATAL
+57P01/57P02) or an EOF reaches the pool as a bad connection, and the pool retries on a new one; an
+abrupt reset (TCP RST) reaches it as a network error on the statement, which lib/pq returns as it is
+and the request fails once. It is not converted into `driver.ErrBadConn` on purpose: database/sql then
+re-runs the statement on a new connection, and an autocommit statement the server may already have
+executed would run twice. The 5-minute idle close keeps connections from being reused across the
+cluster's idle stop, so this needs the cluster to die during traffic.
 
 To create a cluster of this app's own instead (once its volume is freed, or with a payment method):
 `$fly postgres create --name critical-db --org personal --region yyz --initial-cluster-size 1
@@ -67,18 +102,23 @@ A database created later keeps PUBLIC CONNECT until the next run of the provisio
 
 **Passwords.** A user gets a generated password when it is created, sent to the server only as a
 SCRAM-SHA-256 verifier, and its app's secret
-`CRITICAL_DSN=postgres://critical_<env>:…@tournesol-db.flycast:5432/critical_<env>?sslmode=prefer` is
+`CRITICAL_DSN=postgres://critical_<env>:…@tournesol-db.flycast:5432/critical_<env>?sslmode=disable` is
 piped into `fly secrets import` right after (never printed): staged while the app has no machine (the
 first `fly deploy` applies it), applied at once otherwise. An existing user's password and secret are
 never touched by a rerun, so a rerun on a running app changes nothing it uses. `fly secrets list -a
-critical-<env>` shows the name and a digest, never the value.
+critical-<env>` shows the name and a digest, never the value. `sslmode=disable` (user, 2026-10-16): the
+cluster has no TLS (PostgreSQL answers `N` to a TLS request; the Flycast `pg_tls` handler answers `S`,
+then closes), and the app's driver, unlike `psql` with `prefer`, does not fall back to plain, so every
+connection of the first staging deploy ended in `EOF`. The traffic stays inside fly's WireGuard
+private network, which encrypts it; `fly postgres attach` writes `sslmode=disable` too. A secret set
+with `sslmode=prefer` is replaced with `--rotate`.
 
 **Checks**, every run: each critical user holds CONNECT on its own database and on no other (privileges
 read as the cluster's operator). When the run set a password it also connects through `fly proxy` to
 `tournesol-db.flycast`: own database usable (may create in its schema), every other connection refused
 (`permission denied for database`). Then it sets the volume's snapshot retention.
 
-**Rotation** (a leaked password, or the one-off seed below): `just fly-db-provision --rotate
+**Rotation** (a leaked password): `just fly-db-provision --rotate
 tournesol-db <env>`. It sets a new password, then applies the new secret, so **the app is briefly out**:
 from the password change until fly has restarted each of its machines with the new secret, new
 database connections fail (connections already open keep working). Before the app's first deploy it has
@@ -90,10 +130,11 @@ use. If a run stops between the password change and the secret, rerun it with `-
 
 ```bash
 $fly postgres connect -a tournesol-db -d critical_prod     # psql as the cluster's operator (superuser)
-$fly proxy 15432:5432 tournesol-db.flycast -a tournesol-db # then psql "host=127.0.0.1 port=15432 user=critical_prod dbname=critical_prod"
+just fly-db-proxy tournesol-db                             # prints the psql connection string (free local port), Ctrl-C stops it
 ```
 
-The second form needs the user's password, which is only in the app's secret. To look at the data,
+The second form (`scripts/fly-open.sh --db`: `fly proxy` to `tournesol-db.flycast:5432` on a free local
+port, never the compose PostgreSQL's 5432) needs the user's password, which is only in the app's secret. To look at the data,
 use `fly postgres connect` (`SET ROLE critical_prod;` to act as that user); never rotate a running
 app's password just to log in: the rotation is an outage. Production data is
 private (ADR 0024 step 7): never paste query output into an issue, a PR or a log.
@@ -129,20 +170,27 @@ First deploy of an app, with a private Flycast address only (no public IP). fly 
 for an app without volumes; staging wants one:
 
 ```bash
-$fly deploy -c deploy/fly.prod.toml -a critical-prod --image <registry image ref> --no-public-ips          # two machines
-$fly deploy -c deploy/fly.staging.toml -a critical-staging --image <registry image ref> --no-public-ips --ha=false   # one machine
+just release-image critical-staging critical-prod  # the clean HEAD, real catalogue, pushed to both apps' registries
+$fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-prod:<sha> --no-public-ips          # two machines
+$fly deploy -c deploy/fly.staging.toml -a critical-staging --image registry.fly.io/critical-staging:<sha> --no-public-ips --ha=false   # one machine
 $fly ips allocate-v6 --private -a critical-<env>
 just fly-private critical-<env>                    # fails on any public address
-$fly machine list -a critical-<env>                # prod: 2 machines, staging: 1
+just fly-smoke critical-<env> <sha>                # every machine: health with the commit, a database read, the web app
 ```
 
-Later deploys come from the workflows. If `fly ips list` shows a public IP, release it with
+A first deploy reports a health-check timeout until the app has its private address and can reach the
+database; the machine keeps running. Later deploys come from the workflows; fly allocates no public IP
+on a redeploy of an app that already has an address (seen on staging's redeploy, 2026-10-16), and the
+workflows pass `--no-public-ips` anyway. If `fly ips list` shows a public IP, release it with
 `$fly ips release <address> -a critical-<env>` unless a public-access option has been chosen (ADR 0024
 step 8.4).
 
 ### GitHub (user)
 
-In the repository settings, create the environments `staging` and `production`:
+`scripts/github-environments.sh` (admin rights on the repository, fly credentials) creates the
+environments `staging` and `production`, restricts `production` to tags `v*`, and sets each
+`FLY_API_TOKEN` from a new deploy token of its app, piped, never printed (done 2026-10-16; a rerun makes
+new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a user step:
 
 | Environment | Secret | Content |
 |---|---|---|
@@ -167,11 +215,24 @@ Never commit a token or key; the repository holds none.
 ## Reaching a private app
 
 ```bash
-$fly proxy 8080:8080 -a critical-<env>      # then http://localhost:8080 (leave it running)
-curl -s localhost:8080/api/health           # {"status":"ok","commit":"<sha>"}
+just fly-open critical-staging              # or critical-prod: prints the URL to open, Ctrl-C stops it
+curl -s http://127.0.0.1:<port>/api/health  # {"status":"ok","commit":"<sha>"}, <port> from the line above
 $fly ssh console -a critical-<env>          # a shell on the machine
 $fly logs -a critical-<env>
 ```
+
+`just fly-open <app> [port]` (`scripts/fly-open.sh`) runs `fly proxy` from a free local port to the
+app's `.flycast` address on port 80, bound to 127.0.0.1, waits until `/api/health` answers (a stopped
+machine or database takes a few seconds), prints `http://127.0.0.1:<port>/` and the commit, and keeps
+the proxy until Ctrl-C. Never use a fixed 8080 (or 5173, 5432): `just dev` holds those, so the proxy
+fails to bind or the browser reaches the local stack instead of fly. A port given explicitly is
+refused when taken. Rerun it any time; each run gets its own port.
+
+Through the `.flycast` address, fly's proxy starts a stopped machine (staging stops when idle) and
+balances between machines; the address answers on the service ports (80, and 443 with TLS), not on 8080.
+`$fly proxy <free port>:8080 -a critical-<env>` without the address goes straight to one running
+machine's port 8080 and starts nothing. A request can be pinned to one machine with the header
+`fly-force-instance-id: <machine id>` (what `just fly-smoke` does for each machine).
 
 For a device that must reach the app without `fly proxy`, join the org's WireGuard network
 (`$fly wireguard create`, user) and use the app's `.flycast` address. A public IP, basic auth and a
@@ -229,30 +290,20 @@ Point the apps at the new cluster by rerunning the provisioning with its name, c
 (`just fly-smoke`), and destroy the old cluster only after checking, with the other app's owner.
 Keep a snapshot's data private: it holds catalogue rows (ADR 0024 step 7).
 
-## Seed production with the SQLite data (once, user)
+## Production data
 
-Production starts with the data of the developer's SQLite `.dev/critical.db`, copied by the SQLite copy
-tool ([ADR 0025](adr/0025-postgresql-storage.md) step 9, `docs/backend.md` "Moving a SQLite database
-into PostgreSQL"). Do it before the first deploy of `critical-prod`: the server seeds an empty database
-at its first boot, and the tool refuses a database that holds any row. Staging is never seeded; it
-starts empty.
+Production starts like staging: its first boot imports the catalogue and the campaign `seeds/` (the
+character, proficiencies, bard skills, weapons, items, spells). Nothing of the operator's local play is
+copied ([ADR 0024](adr/0024-deployment.md), "Amendment (production starts from the seeds,
+2026-10-16)"). Character-sheet edits made in the app that the seeds do not hold are re-entered by hand
+in the production app, opened with `just fly-open critical-prod` (user steps left, below).
+
+To see what a local database holds beyond what a fresh boot seeds, without printing any of it, compare
+it with a freshly seeded throwaway database (names and counts only):
 
 ```bash
-# On the operator's machine, in a checkout of the release being deployed. Stop every server still
-# writing the SQLite file first: what it writes after the copy is not in production.
-just fly-db-provision --rotate --password-dir ~/.config/critical tournesol-db prod   # before the first deploy: no machine, no outage
-$fly proxy 15432:5432 tournesol-db.flycast -a tournesol-db   # the private cluster; leave it running
-PROD_DSN="postgres://critical_prod:$(cat ~/.config/critical/critical_prod.password)@localhost:15432/critical_prod?sslmode=disable"
-just db-import-sqlite .dev/critical.db "$PROD_DSN"     # prints the rows of each table; counts equal or nothing is kept
+scripts/db-compare.sh "<local dsn>" "<fresh dsn>"   # per table: row counts, "same" or the differing columns
 ```
-
-The tool reads the SQLite file read-only, works on a copy in a private temporary directory, which it
-deletes at the end, and writes only to the target. The data never goes anywhere but the operator's
-machine and the cluster (ADR 0024 step 7). If it stops with an error, nothing was written: fix the cause
-and run it again. Then deploy `critical-prod`; its first boot finds the baseline applied and the seeds
-and catalogue already there, and writes nothing.
-
-Then `shred -u ~/.config/critical/critical_prod.password`. The tool is deleted from the repository once production is seeded (ADR 0025 step 9.5).
 
 ## A new catalogue version reaches production
 

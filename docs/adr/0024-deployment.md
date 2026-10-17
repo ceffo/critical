@@ -222,7 +222,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 |---|---|---|
 | Access for a public URL (step 8) | private, no public IP | (a) basic auth + public IPs, (b) stay private, devices join WireGuard / Tailscale, (c) real login |
 | PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | **Answered 2026-10-16: PostgreSQL first**, no deploy until then; two production machines from the first deploy ([ADR 0025](0025-postgresql-storage.md)) |
-| Production data | fresh database | **Answered 2026-10-16: seeded once with the user's data**: the local `.dev/critical.db` copied into `critical_prod` through the runbook by the copy tool ([ADR 0025](0025-postgresql-storage.md) step 9; the copy stays private). Staging starts empty |
+| Production data | fresh database | **Answered 2026-10-16: fresh database** (_amended 2026-10-16; was: seeded once with the user's data, the local `.dev/critical.db` copied into `critical_prod` by the copy tool_): production's first boot seeds it from `seeds/` and the catalogue, like staging; the user re-enters the few character-sheet edits made in the app. See "Amendment (production starts from the seeds, 2026-10-16)" |
 | Production approval | none: pushing the tag is the act | a required reviewer on the `production` environment |
 | Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
 | Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | on the cluster's own volume (shares its 1 GB); a private store the user provides; taken by the operator with `just db-backup prod` before tagging, the promotion checking that it exists |
@@ -260,10 +260,11 @@ part of this ADR to accepted. Answered rows keep their original default and say 
   node, or a restore (step 9.3). Accepted for a single-user tool on a free allowance.
 - **Staging auto-stop.** A stopped staging machine starts on the next request through fly's proxy;
   the deploy starts it anyway, so the smoke check right after a deploy reaches it.
-- **Production is seeded once with the user's data** (_amended 2026-10-16; was: production starts
-  empty by default_): the copy tool of [ADR 0025](0025-postgresql-storage.md) step 9 copies the
-  user's `.dev/critical.db` into `critical_prod` through the runbook, before the first production
-  boot imports the catalogue and the seeds. Staging starts empty: its first boot imports them.
+- **Production starts from the seeds** (_amended 2026-10-16, twice; was: production is seeded once
+  with the user's data by the copy tool of [ADR 0025](0025-postgresql-storage.md) step 9_): like
+  staging, its first boot imports the catalogue and the seeds. Nothing of the local play is carried
+  over; the user re-enters by hand, in the production app, the character-sheet edits made in the app
+  (see the amendment below).
 - **Not covered**: the multi-user model and login, a custom domain, preview environments
   per PR (a PR build never sees the catalogue, so a preview would only show the fixture), and
   dependency update automation.
@@ -319,3 +320,22 @@ _"1 for now"_.
   idle period waits for PostgreSQL to start.
 - **Reversible**: if the other app's data is no longer needed, its volume can be freed and a cluster
   of this app's own created as first planned; the DSN secrets are the only thing to change.
+
+## Amendment (production starts from the seeds, 2026-10-16)
+
+User, 2026-10-16, before the first production deploy: _"we'll need to seed only non gameplay data
+(data not affected by playing). the runs i've been doing is for testing"_, then, offered (A) a fresh
+boot and re-entering the sheet edits by hand, (B) adding them to `seeds/`, (C) a partial copy tool:
+_"we go with A"_.
+
+- The local play (action log, its snapshots and corrections, buffs, round, spell slots, attack form)
+  was testing and is not production data.
+- The data play does not change is what the first boot seeds from `seeds/` and the catalogue: the
+  character, proficiencies, bard skills, weapons, items, spells. A comparison of the user's local
+  database with a fresh boot (`scripts/db-compare.sh`, names and counts only) found three edits made
+  in the app that the seeds do not hold: the crit table, one added item and one dice favourite. The
+  user re-enters them in the production app after its first deploy (docs/deploy.md, "user steps
+  left").
+- So production gets no copy: the copy tool of [ADR 0025](0025-postgresql-storage.md) step 9 is no
+  longer needed for it (ADR 0025 step 9.3), and it is retired with the first production deploy
+  (step 9.5).

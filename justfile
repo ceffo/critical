@@ -103,17 +103,6 @@ dev-db:
 dev-smoke:
     scripts/test-dev-lifecycle.sh
 
-# Copy a SQLite database of the app (e.g. the old .dev/critical.db) into an empty PostgreSQL database
-# (ADR 0025 step 9): `just db-import-sqlite .dev/critical.db postgres://…/critical?sslmode=disable`.
-# The SQLite file is only read. The target must be new (it gets the server's migrations) or on the
-# baseline without a row; the copy is one transaction and fails on any row-count difference. Run it
-# before the first `just dev` on that database: the server's seeds would make it non-empty.
-db-import-sqlite file dsn:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    file="$(realpath "{{file}}")"
-    cd api && go run ./cmd/sqlite-copy "$file" "{{dsn}}"
-
 # Delete the development databases (real and fixture): stops this checkout's compose services and
 # deletes their volume `critical-pg`; the next `just dev` start migrates, re-seeds and imports the
 # catalogue. Files in .dev/ are not touched.
@@ -234,10 +223,33 @@ release-image +apps: catalogue
 fly-private app:
     scripts/fly-private-check.sh {{app}}
 
-# Smoke-check a deployed fly app through `fly proxy`: /api/health 200 with the commit, and the web app
-# (ADR 0024 steps 3.3, 10.5). Read-only. Default commit: HEAD.
+# ADR 0024 steps 3.3, 10.5. Read-only. Default commit: HEAD.
+# Smoke-check each machine of a fly app through fly proxy: health with the commit, a database read, the web app
 fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
+
+# Through `fly proxy` on a free local port (never just dev's 8080/5173), until Ctrl-C; read-only.
+# Optional fixed port, refused when taken. E.g. `just fly-open critical-staging`, `just fly-open critical-prod`.
+# Open a private fly app in the browser: waits until it answers, then prints the URL
+fly-open app port="":
+    scripts/fly-open.sh {{app}} {{port}}
+
+# Through `fly proxy` on a free local port (never the compose 5432), until Ctrl-C. Prints no password.
+# E.g. `just fly-db-proxy tournesol-db`, then psql with the printed connection string.
+# Reach a fly PostgreSQL cluster from this machine
+fly-db-proxy cluster port="":
+    scripts/fly-open.sh --db {{cluster}} {{port}}
+
+# Read-only, through fly ssh as the cluster's operator; the cluster machine must be started. Names and counts only.
+# Print the row count of every table of one database of a fly PostgreSQL cluster, e.g. `just fly-db-counts tournesol-db critical_prod`
+fly-db-counts cluster db:
+    scripts/fly-db-counts.sh {{cluster}} {{db}}
+
+# `mark` writes one action-log entry (a 1d20 roll) and prints its id, `check <id>` fails unless it is
+# still there; run one before and one after a restart or redeploy. Refuses non-staging apps.
+# Show that a staging app keeps its data across a restart and a redeploy
+fly-persistence app +args:
+    scripts/fly-persistence-check.sh {{app}} {{args}}
 
 # Operator only (fly credentials), ADR 0024 steps 2.3, 2.4, 9.1 and docs/deploy.md. A rerun changes no
 # existing password; `--rotate` does and applies the secret at once (a short outage of the app's new

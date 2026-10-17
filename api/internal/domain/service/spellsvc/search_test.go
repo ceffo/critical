@@ -285,3 +285,22 @@ func TestLevels_PassesTheReaderError(t *testing.T) {
 	_, err = svc.Levels(context.Background())
 	assert.ErrorIs(t, err, boom)
 }
+
+func TestGet_ReadsTheSpellByIDWithAllItsTexts(t *testing.T) {
+	reader := mocks.NewMockReader(t)
+	svc, err := spellsvc.New(mocks.NewMockDAL(t), reader, mocks.NewMockSpellbook(t))
+	require.NoError(t, err)
+	reader.EXPECT().Details(mock.Anything, []string{"fireball"}).Return(catalogue()[7:8], nil)
+	got, err := svc.Get(context.Background(), "fireball")
+	require.NoError(t, err)
+	assert.Equal(t, "fireball", got.ID)
+}
+
+func TestGet_UnknownIDIsErrSpellNotFound(t *testing.T) {
+	reader := mocks.NewMockReader(t)
+	svc, err := spellsvc.New(mocks.NewMockDAL(t), reader, mocks.NewMockSpellbook(t))
+	require.NoError(t, err)
+	reader.EXPECT().Details(mock.Anything, []string{"nope"}).Return(nil, nil)
+	_, err = svc.Get(context.Background(), "nope")
+	assert.ErrorIs(t, err, spellsvc.ErrSpellNotFound)
+}

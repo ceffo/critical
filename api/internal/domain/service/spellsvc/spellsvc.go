@@ -16,6 +16,9 @@ type SVC interface {
 	GetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	ResetSlots(ctx context.Context, characterID int64) ([]SpellSlot, error)
 	Search(ctx context.Context, f Filter, p PageRequest) (Page, error)
+	// Get returns the catalogue spell with unique key id, every text included,
+	// or ErrSpellNotFound.
+	Get(ctx context.Context, id string) (Spell, error)
 	// Names lists every catalogue spell's id and names, in the Reader's order.
 	Names(ctx context.Context) ([]SpellName, error)
 	// Levels lists the spell levels the catalogue holds, ascending, each once.

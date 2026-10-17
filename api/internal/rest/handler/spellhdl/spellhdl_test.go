@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -48,6 +50,15 @@ func (f fakeSvc) Levels(context.Context) ([]int, error) {
 	}
 	slices.Sort(out)
 	return out, nil
+}
+
+func (f fakeSvc) Get(_ context.Context, id string) (spellsvc.Spell, error) {
+	for _, s := range f.spells {
+		if s.ID == id {
+			return s, nil
+		}
+	}
+	return spellsvc.Spell{}, fmt.Errorf("%w: %s", spellsvc.ErrSpellNotFound, id)
 }
 
 func (f fakeSvc) Search(_ context.Context, flt spellsvc.Filter, p spellsvc.PageRequest) (spellsvc.Page, error) {
@@ -508,4 +519,61 @@ func TestSearch_EffectFlag(t *testing.T) {
 		assert.Equal(t, true, page.Items[0]["effect"], url)
 		assert.NotContains(t, page.Items[1], "effect", url)
 	}
+}
+
+// getSpell serves GET /api/spells/{id} through a chi router, as the real route does.
+func getSpell(t *testing.T, url string, chars fakeChars) *httptest.ResponseRecorder {
+	t.Helper()
+	svc := fakeSvc{spells: []spellsvc.Spell{
+		{ID: "fireball", Name: localized.Text{"en": "Fireball", "fr": "Boule de feu"}, Class: "Wizard", Level: 3, Description: localized.Of("Boom."), Stats: spellstats.Parse(spellstats.Raw{})},
+		{ID: "magic_missile", Name: localized.Of("Magic Missile"), Class: "Wizard", Level: 1},
+	}}
+	r := chi.NewRouter()
+	r.Get("/api/spells/{id}", render.Handle(spellhdl.Get(func(*http.Request) int64 { return 1 }, svc, chars, fakeDamage{})))
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+	return rec
+}
+
+func TestGet_ServesOneSpellByIDWithItsTextsAndDamageAtTheCharacterLevel(t *testing.T) {
+	rec := getSpell(t, "/api/spells/fireball", fakeChars{level: 9})
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got spellhdl.SpellDTO
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.Equal(t, "fireball", got.ID)
+	assert.Equal(t, spellhdl.TextDTO{"en": "Fireball", "fr": "Boule de feu"}, got.Name)
+	assert.Equal(t, spellhdl.TextDTO{"en": "Boom."}, got.Description)
+	assert.Equal(t, 9, got.CasterLevel)
+	require.NotNil(t, got.Damage)
+	assert.Equal(t, 9, got.Damage.CasterLevel)
+	assert.Equal(t, []spellhdl.DiceGroupDTO{{Count: 10, Sides: 6}}, got.Damage.Dice.Groups)
+}
+
+func TestGet_CasterLevelQueryOverridesTheCharacter(t *testing.T) {
+	rec := getSpell(t, "/api/spells/fireball?caster_level=5", fakeChars{level: 9})
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got spellhdl.SpellDTO
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.Equal(t, 5, got.CasterLevel)
+	require.NotNil(t, got.Damage)
+	assert.Equal(t, 5, got.Damage.CasterLevel)
+}
+
+func TestGet_BadCasterLevelIs400(t *testing.T) {
+	assert.Equal(t, http.StatusBadRequest, getSpell(t, "/api/spells/fireball?caster_level=0", fakeChars{level: 9}).Code)
+}
+
+func TestGet_CharacterLevelAboveTheMaxServesTheSpellWithoutDamage(t *testing.T) {
+	rec := getSpell(t, "/api/spells/fireball", fakeChars{level: spelleffectsvc.MaxCasterLevel + 1})
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got spellhdl.SpellDTO
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.Equal(t, "fireball", got.ID)
+	assert.Nil(t, got.Damage)
+}
+
+func TestGet_UnknownIDIsSpellNotFound(t *testing.T) {
+	rec := getSpell(t, "/api/spells/nope", fakeChars{level: 9})
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.JSONEq(t, `{"code":"spell_not_found","error":"spell not found: nope"}`, rec.Body.String())
 }

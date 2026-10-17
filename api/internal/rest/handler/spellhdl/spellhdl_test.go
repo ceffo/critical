@@ -563,6 +563,15 @@ func TestGet_BadCasterLevelIs400(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, getSpell(t, "/api/spells/fireball?caster_level=0", fakeChars{level: 9}).Code)
 }
 
+func TestGet_CharacterLevelAboveTheMaxServesTheSpellWithoutDamage(t *testing.T) {
+	rec := getSpell(t, "/api/spells/fireball", fakeChars{level: spelleffectsvc.MaxCasterLevel + 1})
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got spellhdl.SpellDTO
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.Equal(t, "fireball", got.ID)
+	assert.Nil(t, got.Damage)
+}
+
 func TestGet_UnknownIDIsSpellNotFound(t *testing.T) {
 	rec := getSpell(t, "/api/spells/nope", fakeChars{level: 9})
 	assert.Equal(t, http.StatusNotFound, rec.Code)

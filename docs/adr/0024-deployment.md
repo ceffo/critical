@@ -276,9 +276,13 @@ part of this ADR to accepted. Answered rows keep their original default and say 
   the catalogue at build time, so it takes a main build (any merge, or re-running the build for the
   current main commit) and then a tag. The importer ([ADR 0021](0021-spell-catalogue.md) step 5)
   applies it at boot.
-- **Promotion and registry layout.** If fly's registry keeps images per app and the production
-  token cannot read staging's repository, the promotion copies the image by digest into the
-  production app's repository; it never rebuilds. The digest check of step 1.5 holds either way.
+- **Promotion and registry layout.** _Settled 2026-10-17 by a test with a production deploy token;
+  was: "if the production token cannot read staging's repository, the promotion copies the image"._
+  fly's API lets an app's deploy token use only that app's images (the registry lets it read the
+  staging repository, but `fly console` and `fly deploy` refuse another app's image), so the promotion
+  copies the image by digest into the production app's repository, with the production token, before
+  the restore point; it never rebuilds. The digest check of step 1.5 holds: the copy has the digest
+  staging smoke-checked.
 - **The release name is not in the image.** The image is built before the tag exists; `/api/health`
   reports the commit, and the GitHub Release maps the tag to it.
 - **Downtime and machine count.** _Amended 2026-10-16; was: one production machine, no redundancy,

@@ -48,12 +48,10 @@ User steps left:
       shows a `deploy-staging` deployment of the sha with the digest; the other post-merge checks are in "Staging deploy".
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
 4. **CREATEDB for `critical_prod`**, the one privilege the promotion's restore point needs (ADR 0024 step
-   9.2, "Promotion" below), once the user has agreed to it: `just fly-db-provision tournesol-db prod` (a
+   9.2, "Promotion" below; agreed by the user 2026-10-17, not run yet): `just fly-db-provision tournesol-db prod` (a
    rerun: no password or secret changes; its checks accept the user's own restore points). Until then every
    promotion stops at the restore point and deploys nothing.
-5. **The tag ruleset** `release tags` (`scripts/github-tag-ruleset.sh`, "GitHub" below), once the user
-   has agreed to it.
-6. **The first promotion** (`just release <version>`, "Promotion"), whose post-run checks only a real run
+5. **The first promotion** (`just release <version>`, "Promotion"), whose post-run checks only a real run
    can make: listed at the end of "Promotion".
 
 ## The PostgreSQL cluster (user)
@@ -234,7 +232,7 @@ scripts/github-tag-ruleset.sh --dry-run   # prints the ruleset
 scripts/github-tag-ruleset.sh             # creates it, or replaces it (found by name); admin rights
 ```
 
-Check: Settings > Rules > Rulesets shows `release tags`, active, target tags `refs/tags/v*`, rules
+Applied 2026-10-17 (ruleset 25291040). Check: Settings > Rules > Rulesets shows `release tags`, active, target tags `refs/tags/v*`, rules
 creation, update and deletion, bypass "Repository admin". The repository owner is admin, so `just release`
 keeps working; a collaborator with write access gets "push declined due to repository rule violations".
 The promotion creates no tag (it creates the Release of an existing one), so the workflow needs no bypass.
@@ -322,12 +320,13 @@ just release 1.2.3        # user: the deliberate act; tags main's head v1.2.3 an
   `fly auth docker` and a push to **`registry.fly.io/critical-staging:<full commit sha>`** (the app name is
   read from `deploy/fly.staging.toml`). The staging app's repository is the one image repository of the
   release flow: the staging deploy token can push only there. Production gets the same digest from it at
-  promotion (ADR 0024, consequences, "Promotion and registry layout"), never by a rebuild. The run's
+  promotion, copied by digest into `critical-prod`'s repository (ADR 0024, consequences, "Promotion and
+  registry layout"; "Promotion" below), never by a rebuild. The run's
   notice names the pushed reference and the rulebooks commit; the push line in the log gives the digest.
   **The digest is the image's identity, not the tag**: a re-run for a new catalogue pushes a new digest
   under the same `<sha>` tag, so the staging deploy records the digest it smoke-checked and the promotion
-  deploys and compares that digest (`registry.fly.io/critical-staging@sha256:…`), never the tag (ADR 0024
-  step 1.5).
+  copies, deploys and compares that digest (`registry.fly.io/critical-prod@sha256:…`, the same manifest as
+  `registry.fly.io/critical-staging@sha256:…`), never the tag (ADR 0024 step 1.5).
 - **No shell tracing** anywhere (`set -x` is absent), and none of the scripts prints a secret.
   `just validate` runs `scripts/test-release-scripts.sh`, which exercises the three scripts offline (docker
   and fly stubbed, a local rulebooks repo and a generated key): the missing-secret no-op, stdout of the
@@ -379,7 +378,8 @@ read an empty token), and a calling job cannot have an environment. The job pass
      `success`);
   3. take the newest of those by `created_at` (a rerun for a new catalogue records a new digest under the
      same sha) and its `payload.digest`; none means staging did not run and pass that sha: refuse.
-  The promotion compares that digest with the one it deploys (`registry.fly.io/critical-staging@sha256:…`).
+  The promotion compares that digest with the one it deploys (`registry.fly.io/critical-prod@sha256:…`, its
+  copy of the staging image).
 - **Config of the image's commit.** The fly config (`deploy/fly.staging.toml`) is checked out at the
   image's own sha (that file only), the scripts and the workflow come from `main`: a dispatched older image
   is deployed with the config that matches its Dockerfile, and a sha that predates the file fails at once.
@@ -435,12 +435,20 @@ read an empty token), and a calling job cannot have an environment. The job pass
   1. **Guards** (`scripts/release-guards.sh all <tag>`): the tag is `vMAJOR.MINOR.PATCH`; its commit is
      on `origin/main`; staging ran and passed that commit, read as "Record" above says, which gives the
      **digest**; and `registry.fly.io/critical-staging@<digest>` is in the registry (`docker manifest
-     inspect` after `fly auth docker` with the production token). Nothing is written before they pass.
+     inspect` after `fly auth docker` with the production token, which the registry lets read the staging
+     repository). Nothing is written before they pass.
   2. **No public IP** on `critical-prod` (`scripts/fly-private-check.sh`). Mandatory: unlike staging, no
      variable skips it; the apps stay private until a public-access option with access control is built
      (ADR 0024 step 8).
-  3. **Restore point** (`scripts/restore-point.sh`, steps 4.2 and 9.2): `fly console -a critical-prod
-     --image <that image>` starts an ephemeral machine of the production app from the release image (which
+  3. **Copy** of that image into `critical-prod`'s repository, by digest: `docker buildx imagetools create
+     --prefer-index=false -t registry.fly.io/critical-prod:<sha> registry.fly.io/critical-staging@<digest>`
+     (a carbon copy of the manifest, so the same digest; the layers are copied inside the registry; nothing
+     is rebuilt), then `registry.fly.io/critical-prod@<digest>` must be in the registry. A failure stops the
+     promotion with nothing deployed. Why ("Registry" below): fly's API lets an app's deploy token use that
+     app's images only.
+  4. **Restore point** (`scripts/restore-point.sh`, steps 4.2 and 9.2): `fly console -a critical-prod
+     --image registry.fly.io/critical-prod@<digest> --vm-size <size> --vm-memory <mb>` (the `[[vm]]` of
+     `deploy/fly.prod.toml`: without a fly config, `fly console` fails with "invalid CPU kind ''") starts an ephemeral machine of the production app from the release image (which
      ships the PostgreSQL 17 client; the machine has the app's `CRITICAL_DSN` and does not start the
      server), uploads the script and runs it; the machine is destroyed after. The script `pg_dump`s
      `critical_prod` and `pg_restore`s it into a new database on the same cluster,
@@ -457,11 +465,11 @@ read an empty token), and a calling job cannot have an environment. The job pass
      verification is dropped. The log shows names, counts and sizes only; `pg_restore`'s own error text
      (which can quote rows) stays in the ephemeral machine, only the object it names is printed. The step
      passes only on the script's last line `restore-point: OK <name>`.
-  4. `fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-staging@<digest>
+  5. `fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-prod@<digest>
      --no-public-ips`: rolling, one machine at a time.
-  5. **Smoke** (`scripts/fly-smoke.sh critical-prod <commit>`, every machine: health with the commit, a
+  6. **Smoke** (`scripts/fly-smoke.sh critical-prod <commit>`, every machine: health with the commit, a
      database read, the web app), then every machine runs exactly that digest.
-  6. **GitHub Release** of the tag with generated notes, naming the image digest and the restore point.
+  7. **GitHub Release** of the tag with generated notes, naming the image digest and the restore point.
      It exists already on a rerun or a rollback (an older tag): kept.
   After a failure past the restore point it prints the app's recent releases: roll back as in "Rollback".
 - **Why a copy database** (user, 2026-10-16, "1a"): it stays inside fly and the cluster, private like
@@ -474,17 +482,25 @@ read an empty token), and a calling job cannot have an environment. The job pass
   `$fly ssh console -a tournesol-db -C "df -h /data"` (the cluster's volume is mounted at `/data`). Under
   about 400 MB free, drop the oldest restore point by hand (`DROP DATABASE "critical_prod_pre_<…>";` as
   the operator) or ask the user before growing the volume (it costs).
-- **Registry.** The production deploy pulls the image from the staging app's repository by digest (ADR
-  0024, "Promotion and registry layout"). Whether the production deploy token may read it is only proven by
-  the first real run: if not, guard 1 fails on the image with a clear message, nothing is written, and the
-  copy of the image into `critical-prod`'s repository is the follow-up.
+- **Registry** (tested 2026-10-17 with temporary deploy tokens of `critical-prod`, revoked after). The
+  registry lets the production deploy token **read** `registry.fly.io/critical-staging@<digest>` (`docker
+  manifest inspect` works; without credentials it is refused). fly's API does **not** let it **use** that
+  image: `fly console -a critical-prod --image registry.fly.io/critical-staging@<digest>` fails with "Not
+  authorized to access this imageref" (`fly deploy --image` looks the image up the same way), while the
+  same token finds `registry.fly.io/critical-prod@<digest>`. So the promotion copies the image by digest
+  into `critical-prod`'s repository first (step 3), with the production token alone: no other token, no
+  token of one app in the other's environment, and the digest staging smoke-checked is the one deployed. A
+  `fly console` machine of `critical-prod` started from its own image ran a command without starting the
+  server, passed its exit status back and was destroyed (only the two app machines remained).
 - **Offline test.** `scripts/test-promotion.sh` (part of `just validate`): each guard on fixture
   repositories and a stubbed GitHub API (the history-not-latest reading, the newest success, a string
   payload), the order of the promotion's steps and what each failure prevents (fly stubbed), every refusal
   of `just release`, and the workflow parsed. The restore point's SQL runs for real in the CI `image` job
   (`scripts/image-smoke.sh`: copies, retention, the refusals) against a throwaway PostgreSQL 17.
 - **Post-run checks (user, the first real promotion; none can be faked offline).**
-  1. The run is green; its log shows the guards' commit and digest, `fly-private-check: OK`, the restore
+  1. The run is green; its log shows the guards' commit and digest, `fly-private-check: OK`, the copy to
+     `registry.fly.io/critical-prod:<sha>` (the first real copy across the two repositories: the agents
+     could not run it), the restore
      point lines (`fly console` created and destroyed its machine; no server log line in between), the
      rolling deploy, `fly-smoke: OK` with both machines, and the release.
   2. `$fly postgres connect -a tournesol-db`, `\l critical_prod*` lists the copy, owned by `critical_prod`,

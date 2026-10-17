@@ -6,6 +6,8 @@ import (
 	actionlog "github.com/ceffo/critical/api/internal/domain/actionlog"
 	buffsvc "github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 
+	charactersvc "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+
 	context "context"
 
 	mock "github.com/stretchr/testify/mock"
@@ -513,6 +515,64 @@ func (_c *MockSVC_Edit_Call) Return(_a0 []buffsvc.BuffEffect, _a1 error) *MockSV
 }
 
 func (_c *MockSVC_Edit_Call) RunAndReturn(run func(context.Context, int64, string, buffsvc.BuffEdit) ([]buffsvc.BuffEffect, error)) *MockSVC_Edit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAbilityScore provides a mock function with given fields: ctx, characterID, a
+func (_m *MockSVC) GetAbilityScore(ctx context.Context, characterID int64, a charactersvc.Ability) (buffsvc.AbilityScore, error) {
+	ret := _m.Called(ctx, characterID, a)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAbilityScore")
+	}
+
+	var r0 buffsvc.AbilityScore
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Ability) (buffsvc.AbilityScore, error)); ok {
+		return rf(ctx, characterID, a)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, charactersvc.Ability) buffsvc.AbilityScore); ok {
+		r0 = rf(ctx, characterID, a)
+	} else {
+		r0 = ret.Get(0).(buffsvc.AbilityScore)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, charactersvc.Ability) error); ok {
+		r1 = rf(ctx, characterID, a)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_GetAbilityScore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAbilityScore'
+type MockSVC_GetAbilityScore_Call struct {
+	*mock.Call
+}
+
+// GetAbilityScore is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - a charactersvc.Ability
+func (_e *MockSVC_Expecter) GetAbilityScore(ctx interface{}, characterID interface{}, a interface{}) *MockSVC_GetAbilityScore_Call {
+	return &MockSVC_GetAbilityScore_Call{Call: _e.mock.On("GetAbilityScore", ctx, characterID, a)}
+}
+
+func (_c *MockSVC_GetAbilityScore_Call) Run(run func(ctx context.Context, characterID int64, a charactersvc.Ability)) *MockSVC_GetAbilityScore_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(charactersvc.Ability))
+	})
+	return _c
+}
+
+func (_c *MockSVC_GetAbilityScore_Call) Return(_a0 buffsvc.AbilityScore, _a1 error) *MockSVC_GetAbilityScore_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_GetAbilityScore_Call) RunAndReturn(run func(context.Context, int64, charactersvc.Ability) (buffsvc.AbilityScore, error)) *MockSVC_GetAbilityScore_Call {
 	_c.Call.Return(run)
 	return _c
 }

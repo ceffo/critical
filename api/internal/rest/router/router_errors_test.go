@@ -117,6 +117,12 @@ var endpoints = []endpoint{
 	{"POST roll/skill/{id}/adjust", "POST", "/api/roll/skill/7/adjust", `{"adjustment":2}`, func(m *mocksSet, err error) {
 		m.skills.On("Adjust", anyArgs(4)...).Return(nil, err)
 	}},
+	{"POST roll/ability", "POST", "/api/roll/ability/dex", "", func(m *mocksSet, err error) {
+		m.skills.On("RollAbility", anyArgs(3)...).Return(nil, err)
+	}},
+	{"POST roll/ability/{id}/adjust", "POST", "/api/roll/ability/7/adjust", `{"adjustment":-2}`, func(m *mocksSet, err error) {
+		m.skills.On("AdjustAbility", anyArgs(4)...).Return(nil, err)
+	}},
 	{"POST roll/dice", "POST", "/api/roll/dice", `{"formula":"d6"}`, func(m *mocksSet, err error) {
 		m.dice.On("Roll", anyArgs(3)...).Return(nil, err)
 	}},
@@ -321,6 +327,12 @@ func TestSpecialSentinels(t *testing.T) {
 		{"skill adjust voided", "POST roll/skill/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},
 		{"skill adjust not a skill check", "POST roll/skill/{id}/adjust", fmt.Errorf("%w: #7 is save, not skill_check", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is save, not skill_check"}`},
 		{"skill adjust out of range", "POST roll/skill/{id}/adjust", fmt.Errorf("%w: adjustment must be between -20 and +20", domain.ErrInvalidInput), 400, `{"code":"invalid_input","error":"invalid input: adjustment must be between -20 and +20"}`},
+		// ADR 0028 steps 6 and 8.
+		{"ability adjust not latest", "POST roll/ability/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, undo this ability_check and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, undo this ability_check and roll again"}`},
+		{"ability adjust voided", "POST roll/ability/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},
+		{"ability adjust not an ability check", "POST roll/ability/{id}/adjust", fmt.Errorf("%w: #7 is skill_check, not ability_check", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is skill_check, not ability_check"}`},
+		{"ability adjust out of range", "POST roll/ability/{id}/adjust", fmt.Errorf("%w: adjustment must be between -20 and +20", domain.ErrInvalidInput), 400, `{"code":"invalid_input","error":"invalid input: adjustment must be between -20 and +20"}`},
+		{"ability unknown", "POST roll/ability", fmt.Errorf("%w: unknown ability \"luck\"", domain.ErrInvalidInput), 400, `{"code":"invalid_input","error":"invalid input: unknown ability \"luck\""}`},
 		{"attack AC not latest", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: only the latest roll can be adjusted, undo this attack and roll again", actionlogsvc.ErrNotLatest), 409, `{"code":"entry_not_latest","error":"not the latest entry: only the latest roll can be adjusted, undo this attack and roll again"}`},
 		{"attack AC voided", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7", actionlogsvc.ErrAlreadyVoided), 409, `{"code":"entry_already_voided","error":"entry already undone: #7"}`},
 		{"attack AC not an attack", "POST roll/attack/{id}/adjust", fmt.Errorf("%w: #7 is save, not attack", actionlogsvc.ErrNotAmendable), 400, `{"code":"entry_not_amendable","error":"entry cannot be amended: #7 is save, not attack"}`},

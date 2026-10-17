@@ -41,3 +41,38 @@ type Details struct {
 	Eyes      string
 	Languages []string
 }
+
+// Ability is the key of an ability score on the sheet.
+type Ability string
+
+// Ability keys, as the API and the stored proficiencies name them.
+const (
+	AbilityStr Ability = "str"
+	AbilityDex Ability = "dex"
+	AbilityCon Ability = "con"
+	AbilityInt Ability = "int"
+	AbilityWis Ability = "wis"
+	AbilityCha Ability = "cha"
+)
+
+// Abilities are the six ability keys, in the sheet's order.
+var Abilities = []Ability{AbilityStr, AbilityDex, AbilityCon, AbilityInt, AbilityWis, AbilityCha}
+
+// Score is the sheet's score in ability a; ok is false for an unknown key.
+func (c *Character) Score(a Ability) (score int, ok bool) {
+	switch a {
+	case AbilityStr:
+		return c.Str, true
+	case AbilityDex:
+		return c.Dex, true
+	case AbilityCon:
+		return c.Con, true
+	case AbilityInt:
+		return c.Int, true
+	case AbilityWis:
+		return c.Wis, true
+	case AbilityCha:
+		return c.Cha, true
+	}
+	return 0, false
+}

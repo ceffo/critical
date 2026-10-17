@@ -1,16 +1,18 @@
 package skillsvc
 
+import "github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+
 // Ability is the key of an ability score on the sheet.
-type Ability string
+type Ability = charactersvc.Ability
 
 // Ability keys, as stored in the proficiencies table.
 const (
-	AbilityStr Ability = "str"
-	AbilityDex Ability = "dex"
-	AbilityCon Ability = "con"
-	AbilityInt Ability = "int"
-	AbilityWis Ability = "wis"
-	AbilityCha Ability = "cha"
+	AbilityStr = charactersvc.AbilityStr
+	AbilityDex = charactersvc.AbilityDex
+	AbilityCon = charactersvc.AbilityCon
+	AbilityInt = charactersvc.AbilityInt
+	AbilityWis = charactersvc.AbilityWis
+	AbilityCha = charactersvc.AbilityCha
 )
 
 // Kind tells a proficiency check from a bard skill check.

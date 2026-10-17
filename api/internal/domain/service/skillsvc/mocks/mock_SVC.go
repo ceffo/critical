@@ -83,6 +83,67 @@ func (_c *MockSVC_Adjust_Call) RunAndReturn(run func(context.Context, int64, int
 	return _c
 }
 
+// AdjustAbility provides a mock function with given fields: ctx, characterID, entryID, adj
+func (_m *MockSVC) AdjustAbility(ctx context.Context, characterID int64, entryID int64, adj skillsvc.Adjustment) (*skillsvc.AbilityCheckResult, error) {
+	ret := _m.Called(ctx, characterID, entryID, adj)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustAbility")
+	}
+
+	var r0 *skillsvc.AbilityCheckResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, skillsvc.Adjustment) (*skillsvc.AbilityCheckResult, error)); ok {
+		return rf(ctx, characterID, entryID, adj)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64, skillsvc.Adjustment) *skillsvc.AbilityCheckResult); ok {
+		r0 = rf(ctx, characterID, entryID, adj)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*skillsvc.AbilityCheckResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int64, skillsvc.Adjustment) error); ok {
+		r1 = rf(ctx, characterID, entryID, adj)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AdjustAbility_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AdjustAbility'
+type MockSVC_AdjustAbility_Call struct {
+	*mock.Call
+}
+
+// AdjustAbility is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - entryID int64
+//   - adj skillsvc.Adjustment
+func (_e *MockSVC_Expecter) AdjustAbility(ctx interface{}, characterID interface{}, entryID interface{}, adj interface{}) *MockSVC_AdjustAbility_Call {
+	return &MockSVC_AdjustAbility_Call{Call: _e.mock.On("AdjustAbility", ctx, characterID, entryID, adj)}
+}
+
+func (_c *MockSVC_AdjustAbility_Call) Run(run func(ctx context.Context, characterID int64, entryID int64, adj skillsvc.Adjustment)) *MockSVC_AdjustAbility_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int64), args[3].(skillsvc.Adjustment))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AdjustAbility_Call) Return(_a0 *skillsvc.AbilityCheckResult, _a1 error) *MockSVC_AdjustAbility_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AdjustAbility_Call) RunAndReturn(run func(context.Context, int64, int64, skillsvc.Adjustment) (*skillsvc.AbilityCheckResult, error)) *MockSVC_AdjustAbility_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -291,6 +352,66 @@ func (_c *MockSVC_Roll_Call) Return(_a0 *skillsvc.CheckResult, _a1 error) *MockS
 }
 
 func (_c *MockSVC_Roll_Call) RunAndReturn(run func(context.Context, int64, string, skillsvc.Adjustment) (*skillsvc.CheckResult, error)) *MockSVC_Roll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RollAbility provides a mock function with given fields: ctx, characterID, ability
+func (_m *MockSVC) RollAbility(ctx context.Context, characterID int64, ability string) (*skillsvc.AbilityCheckResult, error) {
+	ret := _m.Called(ctx, characterID, ability)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RollAbility")
+	}
+
+	var r0 *skillsvc.AbilityCheckResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (*skillsvc.AbilityCheckResult, error)); ok {
+		return rf(ctx, characterID, ability)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) *skillsvc.AbilityCheckResult); ok {
+		r0 = rf(ctx, characterID, ability)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*skillsvc.AbilityCheckResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, ability)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_RollAbility_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RollAbility'
+type MockSVC_RollAbility_Call struct {
+	*mock.Call
+}
+
+// RollAbility is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - ability string
+func (_e *MockSVC_Expecter) RollAbility(ctx interface{}, characterID interface{}, ability interface{}) *MockSVC_RollAbility_Call {
+	return &MockSVC_RollAbility_Call{Call: _e.mock.On("RollAbility", ctx, characterID, ability)}
+}
+
+func (_c *MockSVC_RollAbility_Call) Run(run func(ctx context.Context, characterID int64, ability string)) *MockSVC_RollAbility_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_RollAbility_Call) Return(_a0 *skillsvc.AbilityCheckResult, _a1 error) *MockSVC_RollAbility_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_RollAbility_Call) RunAndReturn(run func(context.Context, int64, string) (*skillsvc.AbilityCheckResult, error)) *MockSVC_RollAbility_Call {
 	_c.Call.Return(run)
 	return _c
 }

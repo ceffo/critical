@@ -100,3 +100,48 @@ func TestSkills_AdjustWireShape(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code, c.name)
 	}
 }
+
+// ADR 0028 steps 1 and 5: POST /api/roll/ability/{ability} takes no body,
+// passes the key to the service and returns the full breakdown with the
+// entry id; an unknown key is the service's 400.
+func TestAbilityCheck_RollWireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.skills.EXPECT().RollAbility(mock.Anything, int64(1), "str").Return(&skillsvc.AbilityCheckResult{
+		Ability: skillsvc.AbilityStr, Die: 20, Roll: 14, AbilityScore: 12, Target: 16,
+		AdjustedTarget: 16, Success: true, RolledSuccess: true, LogEntryID: 21,
+	}, nil)
+	m.skills.EXPECT().RollAbility(mock.Anything, int64(1), "luck").Return(nil, fmt.Errorf("%w: unknown ability", domain.ErrInvalidInput))
+
+	rec := do(h, "POST", "/api/roll/ability/str", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"ability":"str","die":20,"roll":14,"abilityScore":12,"target":16,
+		"adjustment":0,"adjustedTarget":16,"success":true,"rolledSuccess":true,"logEntryId":21}`, rec.Body.String())
+
+	rec = do(h, "POST", "/api/roll/ability/luck", "")
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// ADR 0028 step 6: POST /api/roll/ability/{entryId}/adjust passes the entry
+// id, adjustment and reason to the service and returns the recomputed check.
+func TestAbilityCheck_AdjustWireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.skills.EXPECT().AdjustAbility(mock.Anything, int64(1), int64(21), skillsvc.Adjustment{Value: -2, Reason: "ledge"}).Return(&skillsvc.AbilityCheckResult{
+		Ability: skillsvc.AbilityDex, Die: 20, Roll: 14, AbilityScore: 15, Target: 15,
+		Adjustment: -2, AdjustmentReason: "ledge", AdjustedTarget: 13, Success: false, RolledSuccess: true, LogEntryID: 21,
+	}, nil)
+
+	rec := do(h, "POST", "/api/roll/ability/21/adjust", `{"adjustment":-2,"reason":"ledge"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"ability":"dex","die":20,"roll":14,"abilityScore":15,"target":15,
+		"adjustment":-2,"adjustmentReason":"ledge","adjustedTarget":13,"success":false,"rolledSuccess":true,
+		"logEntryId":21}`, rec.Body.String())
+
+	for _, c := range []struct{ name, path, body string }{
+		{"adjustment required", "/api/roll/ability/21/adjust", `{"reason":"ledge"}`},
+		{"no body", "/api/roll/ability/21/adjust", ""},
+		{"bad entry id", "/api/roll/ability/dex/adjust", `{"adjustment":1}`},
+	} {
+		rec = do(h, "POST", c.path, c.body)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, c.name)
+	}
+}

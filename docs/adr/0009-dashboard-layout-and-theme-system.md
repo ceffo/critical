@@ -2,7 +2,8 @@
 
 **Status**: accepted, 2026-10-15; steps 3 and 5 amended by [ADR 0017](0017-type-scale-and-density.md);
 step 4 replaced and step 5 amended by [ADR 0020](0020-visual-identity.md); steps 1 and 2 replaced and
-steps 5 and 6 amended by [ADR 0022](0022-activity-focus-layout.md)
+steps 5 and 6 amended by [ADR 0022](0022-activity-focus-layout.md); steps 4 and 6 amended by
+[ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) (2026-10-17, proposed: four themes, a dark and a light theme per device)
 
 ## Context
 
@@ -34,7 +35,9 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
    content, not to bigger type.
 4. **Tokens.** *Replaced by [ADR 0020](0020-visual-identity.md) steps 1-4 (three palettes per
    ambiance, role tokens, semantic colours, contrast); the ambiance ids, the light-mode ramp
-   reversal and the near-neutral rule stand.* The theme is an appearance mode (`dark | light | system`) and an ambiance (hue H,
+   reversal and the near-neutral rule stand.* *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 3 (2026-10-17): the
+   ambiance list becomes four themes (Arcane, Deep, Parchment, Plain), some in one mode only; the
+   ramp reversal and the near-neutral rule (Plain) stand.* The theme is an appearance mode (`dark | light | system`) and an ambiance (hue H,
    chroma C): Arcane 289 / 0.125 (default), Sylve 152 / 0.11, Sang 22 / 0.15, Ocean 240 / 0.11,
    Ambre 72 / 0.12, Obsidienne 265 / 0.014. `web/src/lib/theme.ts` `themeVars` computes:
    - accent ramp `--amb-100..900` = `oklch(L C*F H)` with L
@@ -64,7 +67,9 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
 6. **Preferences.** Language, appearance and ambiance are per-device display preferences, chosen
    in the settings popover (gear at the bottom of the rail; *amended by [ADR 0022](0022-activity-focus-layout.md) step 2.6:*
    the cog is first in the dice footer), applied live and stored in
-   `localStorage['critical.settings.v1'] = {lang, mode, amb}` (`web/src/lib/settings.ts`). Without
+   `localStorage['critical.settings.v1'] = {lang, mode, amb}` (`web/src/lib/settings.ts`; *amended by
+   [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 4 (2026-10-17):* a dark theme and a light theme instead of
+   `amb`, the mode choosing which applies; a saved ambiance that no longer exists is mapped once). Without
    it, the older `critical.theme` / `critical.language` keys give the initial value once and are
    removed. "System" follows `prefers-color-scheme` live. They are never sent to the API. Anything
    that is game state (dice favourites, the attack form's last choices) lives on the server.

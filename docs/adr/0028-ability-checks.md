@@ -1,6 +1,6 @@
 # ADR 0028: Ability checks
 
-**Status**: proposed, 2026-10-17
+**Status**: accepted 2026-10-17 (user OK, proposals as written); written
 
 ## Context
 

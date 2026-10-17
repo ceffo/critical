@@ -1,7 +1,9 @@
 # ADR 0020: Visual identity: Critical! palettes, roles and brand mark
 
 **Status**: accepted, 2026-10-15 (critical-a02; extends [ADR 0009](0009-dashboard-layout-and-theme-system.md)
-step 4 and amends its step 5; builds on [ADR 0017](0017-type-scale-and-density.md)); step 5's drawing amended by [ADR 0022](0022-activity-focus-layout.md)
+step 4 and amends its step 5; builds on [ADR 0017](0017-type-scale-and-density.md)); step 5's drawing amended by [ADR 0022](0022-activity-focus-layout.md); steps 1 to 6 amended by
+[ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) (2026-10-17, proposed: contrast ladder, non-text contrast, four themes with
+their own semantic hues, Cinzel section labels in Parchment)
 
 ## Context
 
@@ -14,7 +16,9 @@ by a lightness flip; the result was a low-contrast lavender with no brand.
 
 ## Decision
 
-1. **Three palettes per ambiance.** An ambiance (`web/src/lib/theme.ts` `AMBIANCES`) names three
+1. **Three palettes per ambiance.** *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 3 (2026-10-17): four
+   themes, each a hand-tuned role table per mode (Arcane, Deep, Parchment, Plain); the list below is
+   historical.* An ambiance (`web/src/lib/theme.ts` `AMBIANCES`) names three
    hues with a peak chroma: **primary** (chrome, selection, actions: buttons, rings, tabs, the rail,
    bars), **secondary** (highlights: the brand "!", the number a roll is about, a maximum die, a
    crit, XP and bonuses) and **tertiary** (magic: spell levels, slots, spell dice). Each gives a
@@ -24,7 +28,9 @@ by a lightness flip; the result was a low-contrast lavender with no brand.
    tint of the primary. Arcane, the default and the brand: primary 285 / 0.17 (violet-indigo),
    secondary 88 / 0.15 (gold), tertiary 200 / 0.12 (teal). Sylve 152 / 70 / 300, Sang 15 / 85 /
    250, Ocean 240 / 75 / 330, Ambre 72 / 300 / 200, Obsidienne 265 (0.014) / 88 / 200 (0.07).
-2. **Roles, not ramps, in components.** Components use the role tokens and the shadcn names mapped
+2. **Roles, not ramps, in components.** *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 1 (2026-10-17):
+   the table's values become the contrast ladder (page / card / raised / hover / selected per mode,
+   accents on a lightness ladder); the role names and the rule stand.* Components use the role tokens and the shadcn names mapped
    onto them; a ramp step is for surfaces and soft fills (`bg-amb-900` a selected row, `bg-neu-900`
    a raised step), never for text that carries meaning.
 
@@ -40,13 +46,17 @@ by a lightness flip; the result was a low-contrast lavender with no brand.
 
    A fill is an accent with `on-accent` text (`bg-primary text-primary-foreground`,
    `bg-success text-on-accent`); a soft fill is the accent at an opacity (`bg-danger/15`).
-3. **Semantic colours, the same hues in every ambiance.** `danger` 25, `success` 150 (was `heal`;
+3. **Semantic colours, the same hues in every ambiance.** *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 3.4
+   and 3.5 (2026-10-17): semantic hues are per theme (Parchment's oxblood, Deep's coral and jade);
+   Sang's exception goes with Blood, replaced by "no primary within 25° of a status hue".* `danger` 25, `success` 150 (was `heal`;
    the token is renamed), `warning` 55, each with a lightness per mode (dark .72 / .78 / .78, light
    .52 / .50 / .54) and a chroma above the ramps', so red and green stand out from any primary.
    Secondary gold sits at hue 88 and warning at 55 so a crit is never read as a warning. Sang's
    crimson primary is the accepted exception: red next to red; its danger still differs by chroma
    and lightness.
-4. **Contrast, enforced by a unit test** (`web/src/lib/theme.test.ts`, "contrast"), for every
+4. **Contrast, enforced by a unit test** (*amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 2, 2026-10-17:*
+   plus card on page ΔL ≥ .10, raised on card ΔL ≥ .07, field edge and focus ring 3:1 on the card;
+   the text rules below stand) (`web/src/lib/theme.test.ts`, "contrast"), for every
    ambiance in both modes: `ink` and `ink-muted` reach WCAG AA (4.5:1) on `ground`, `surface` and
    `neu-900`; every accent (`tint`, `highlight`, `magic`, `danger`, `success`, `warning`) reaches
    4.5:1 as text on `surface` and `neu-900`; `on-accent` reaches 4.5:1 on every accent and
@@ -61,8 +71,11 @@ by a lightness flip; the result was a low-contrast lavender with no brand.
    in Cinzel (`font-display`, `@fontsource-variable/cinzel`), `text-key`, with the "!" in
    `highlight`. It sits at the left of the header region, before the turn block, in the 112 px
    header budget of ADR 0017 step 6 (120 px, [ADR 0022](0022-activity-focus-layout.md) step 3.1); the page title is `Critical!`. The display face is for the
-   wordmark only: all other text stays Inter (ADR 0009 step 5) at the ADR 0017 roles.
-6. **Defaults before the app runs.** `web/src/index.css` holds the Arcane light (`:root`) and dark
+   wordmark only (*amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 7, 2026-10-17:* and Parchment's section
+   labels): all other text stays Inter (ADR 0009 step 5) at the ADR 0017 roles.
+6. **Defaults before the app runs.** *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 1.2 and 1.6
+   (2026-10-17): the Arcane values of the ladder; mixes 76 / 32 / 42 % dark, 74 / 34 / 48 % light.*
+   `web/src/index.css` holds the Arcane light (`:root`) and dark
    (`.dark`) blocks exactly as `themeVars` computes them (the "index.css defaults" unit test);
    `--border` is ink at 18%, `--input` at 22%, `--ink-muted` at 70%.
 

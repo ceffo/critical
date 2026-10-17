@@ -13,6 +13,7 @@ import {
   undoEntry,
   expectUndoOn,
   openTargetModifiers,
+  openFold,
 } from "./helpers";
 
 function resultCard(page: Page) {
@@ -193,7 +194,9 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await form.getByRole("button", { name: "Attack", exact: true }).click();
 
   const card = resultCard(page);
-  const fix = card.getByRole("form", { name: "Correct the target AC" });
+  await expect(card).toContainText("vs AC -20");
+  // The correction is folded to one line until opened (ADR 0027 step 8.2).
+  const fix = await openFold(card, "Correct the target AC");
   const acField = fix.getByLabel("Corrected target AC");
   const apply = fix.getByRole("button", { name: "Apply" });
   const entry = logEntry(page, "Short Bow +2 (Arrows +2)");
@@ -461,7 +464,7 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
   const mult = await fact("Multiplier d100");
 
-  const fix = card.getByRole("form", { name: "Correct the target AC" });
+  const fix = await openFold(card, "Correct the target AC");
   await fix.getByLabel("Corrected target AC").fill("10");
   await fix.getByRole("button", { name: "Apply" }).click();
   await expect(card).toContainText("vs AC 10");
@@ -679,7 +682,7 @@ test.describe("with a THAC0 low enough that AC 10 always crits", () => {
 
     const card = resultCard(page);
     await expect(card.getByTestId("verdict")).toHaveText("?");
-    const give = card.getByRole("form", { name: "Give the real AC" });
+    const give = await openFold(card, "Give the real AC");
     await give.getByLabel("Real target AC").fill("10");
     await give.getByRole("button", { name: "Correct" }).click();
     await expect(card).toContainText("Long Sword +2 vs AC 10");

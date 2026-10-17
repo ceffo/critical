@@ -108,10 +108,19 @@ flowchart TD
   journal row shows that entry instead, read-only, with an accent ring and "Latest" to return; a
   new roll returns to the latest too. Only the latest result offers corrections (target AC, save
   adjustment), by entry id. One layout per kind, from the payload (`cardModel`): attack (hexagon
-  d20, "Hits AC X", verdict, damage dice and total, "Calculation details" closed by default),
-  save (d20, "roll total vs adjusted target+", verdict, the buff modifiers, the adjustment line on the target side), cast, item (dice chips, the
+  d20, "Hits AC X" with the verdict pill beside it, the stat tiles d20 / target AC / margin, damage
+  dice and total, the AC correction folded to one line, "Calculation details" closed by default),
+  save (d20, "roll total vs adjusted target+" with the verdict pill, the stat tiles, the buff
+  modifiers, the adjustment line on the target side), skill check (the same, its die), cast, item (dice chips, the
   maximum in the accent, a 1 dimmed), initiative, and info for every other kind (text, HP value
-  red / green). Header: kind tag, subtitle, "T3 · 21:31". The journal: All / Rolls filter (attacks,
+  red / green). Header: kind tag, subtitle, "T3 · 21:31". [ADR 0027](adr/0027-space-follows-frequency-of-use.md)
+  step 8: the **verdict** is a filled pill (success / danger, `on-accent` text; "?" as a chip while
+  an unknown AC is unsettled) right after the result it judges; the **stat tiles** are one grid
+  of as many 5rem columns as fit (wrap, never cut); a total is in ink, gold only on a crit
+  (`Total` `gold`); every **correction after the roll** (save and skill adjustment, target AC) is
+  one line (`AdjustFold`, a `<details>`), closed by default and open when one is in effect
+  (`lib/saveAdjust.ts` `adjustmentInEffect`, `lib/attackAdjust.ts` `acCorrectionInEffect`); the
+  fold is keyed by entry, so it stays as the player left it while that entry is corrected. The journal: All / Rolls filter (attacks,
   saves, item uses, initiative, casts that rolled damage or a to-hit d20), the entry count, Undo and
   Redo in its head; turn groups newest first, each **one line per entry** in the columns
   turn · value · icon · entry · time ([ADR 0022](adr/0022-activity-focus-layout.md) step 5.1): the
@@ -322,11 +331,11 @@ flowchart TD
   (server verdict ✓ / ✗ and the d20), a click rolls it. The card has the full height (ADR 0022
   step 2.3), so on a tall screen the space under the saves stays empty.
 - Saves (`Saves.tsx`, character card): a save is logged (kind `save`, rendered from `effectivePayload` in
-  `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" form:
-  − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
+  `lib/logSummary.ts`). The save card (`ResultCard` `SaveResult`) has an "Adjust after the roll" fold
+  (shared with the skill check, `AdjustCheck`): − / + around a signed value (starts at the save's adjustment, ±20), optional reason, Apply →
   `POST /api/roll/save/{logEntryId}/adjust` (`stores/roll.ts` `adjustLastSave`); the server returns
   the recomputed save (same d20 and roll total, the target moved: ADR 0006 step 5). Hidden once the entry is voided; a save that is no longer the latest roll is fixed by void + reroll.
-- The attack card (`ResultCard` `AttackResult`) has a "Correct the target AC" form: − / + around
+- The attack card (`ResultCard` `AttackResult`) has a "Correct the target AC" fold: − / + around
   the AC (starts at the attack's, ±20), Apply → `POST /api/roll/attack/{logEntryId}/adjust`
   (`stores/roll.ts` `adjustLastAttack`); the server returns the recomputed attack (same dice, no ammo
   spent). Hidden once the entry is voided. Attack log lines render `effectivePayload`, with

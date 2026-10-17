@@ -315,3 +315,22 @@ export async function forceAttackAc(page: Page, ac: number) {
     });
   });
 }
+
+/**
+ * Opens the result card's one-line correction fold whose line reads `line` ("Adjust after the
+ * roll", "Correct the target AC", "Give the real AC") if it is closed, and returns its form.
+ */
+export async function openFold(
+  scope: Locator,
+  line: string,
+  form: string = line,
+): Promise<Locator> {
+  const fold = scope
+    .locator("details")
+    .filter({ has: scope.page().locator("summary", { hasText: line }) });
+  if (!(await fold.evaluate((d) => (d as HTMLDetailsElement).open)))
+    await fold.locator("summary").click();
+  const found = scope.getByRole("form", { name: form });
+  await expect(found).toBeVisible();
+  return found;
+}

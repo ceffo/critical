@@ -40,6 +40,9 @@ function useFormats() {
   }, [i18n.language]);
 }
 
+/** The top card's two columns: progress, then the 24rem Add XP form. */
+const XP_COLS = "grid grid-cols-[minmax(0,1fr)_24rem] gap-x-6";
+
 /**
  * Experience activity (ADR 0015; layout ADR 0022 step 2.5): one card with the progress (the total,
  * the bar towards the next level, the level cells) beside the Add XP form (24rem, 24 px between the
@@ -62,10 +65,21 @@ export function XpPanel() {
     );
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {/* The focused card of the Experience activity (ADR 0026 step 6.1): progress beside Add XP,
+          their two headings in one header band across the card (step 6.2), over their columns. */}
       <div
-        className="zone-card grid shrink-0 grid-cols-[minmax(0,1fr)_24rem] gap-6 px-4 py-3.5"
+        className={cn(
+          XP_COLS,
+          "stage-card shrink-0 gap-y-3 overflow-hidden px-4 pb-3.5",
+        )}
         data-testid="xp-top"
       >
+        <div className={cn(XP_COLS, "card-band bleed-x-4 col-span-2 py-2")}>
+          <h2 className="section-label">
+            {t("xp.heading", { level: ledger.level })}
+          </h2>
+          <h2 className="section-label">{t("xp.add.title")}</h2>
+        </div>
         <Progress ledger={ledger} />
         <AddForm bonusDefault={ledger.bonusEligible} />
       </div>
@@ -89,7 +103,6 @@ function Progress({ ledger: l }: { ledger: XpLedger }) {
       className="flex min-w-0 flex-col gap-3"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="section-label">{t("xp.heading", { level: l.level })}</h2>
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span className="flex items-baseline gap-2 tabular-nums">
             {/* The number the zone is about: the one hero size (ADR 0022 step 3.4). */}
@@ -226,7 +239,6 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
       aria-label={t("xp.add.title")}
       className="flex min-w-0 flex-col gap-2"
     >
-      <h2 className="section-label">{t("xp.add.title")}</h2>
       {/* Amount and reason on one line, the reason taking the rest so its placeholder shows in
           full; session, the bonus and Add on the next. */}
       <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-start gap-2">
@@ -307,10 +319,10 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
   return (
     <section
       aria-label={t("xp.ledger.title")}
-      className="zone-card flex min-h-0 flex-col gap-2 py-3.5"
+      className="zone-card flex min-h-0 flex-col gap-2 pb-3.5"
       data-testid="xp-ledger"
     >
-      <div className="flex shrink-0 items-baseline justify-between gap-3 px-4">
+      <div className="card-band flex shrink-0 items-baseline justify-between gap-3 px-4 py-2">
         <h2 className="section-label">{t("xp.ledger.title")}</h2>
         <span className="text-body text-muted-foreground tabular-nums">
           {t("xp.ledger.count", { count: ledger.entries.length })}

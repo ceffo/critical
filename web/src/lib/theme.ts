@@ -26,6 +26,14 @@ export interface Mix {
   border: number;
   /** `--input`: the field edge (3:1 on the card, step 2.2). */
   input: number;
+  /** `--band`: a card's header band, ink over the card (step 6.2). */
+  band: number;
+  /** `--sub-band`: a group's band inside a card (step 6.3). */
+  subBand: number;
+  /** `--elevated`: the focused card, ink over the card; 0 = the card itself (step 6.1). */
+  elevated: number;
+  /** `--stage-outline`: the focused card's 2 px outline (step 6.1). */
+  stageOutline: number;
 }
 
 /** One theme in one mode: its ramps, its surfaces and its roles (ADR 0026 step 1). */
@@ -75,10 +83,17 @@ const RAMP_CF = [0.2, 0.4, 0.65, 0.9, 1, 1, 0.9, 0.75, 0.55];
 const NEUTRAL_L = [0.96, 0.91, 0.85, 0.76, 0.66, 0.56, 0.46, 0.36, 0.27];
 const NEUTRAL_L_LIGHT = [...NEUTRAL_L].reverse();
 
-/** The translucent mixes of ADR 0026 step 1.2. */
-const MIX_DARK: Mix = { muted: 76, border: 32, input: 42 };
-const MIX_LIGHT: Mix = { muted: 74, border: 34, input: 48 };
-const MIX_PARCHMENT: Mix = { muted: 76, border: 34, input: 50 };
+/** The translucent mixes of ADR 0026 step 1.2, and the raised stage's tones of step 6. */
+const STAGE_DARK = { band: 9, subBand: 5.5, elevated: 5, stageOutline: 40 };
+const STAGE_LIGHT = { band: 7, subBand: 4, elevated: 0, stageOutline: 40 };
+const MIX_DARK: Mix = { muted: 76, border: 32, input: 42, ...STAGE_DARK };
+const MIX_LIGHT: Mix = { muted: 74, border: 34, input: 48, ...STAGE_LIGHT };
+const MIX_PARCHMENT: Mix = {
+  muted: 76,
+  border: 34,
+  input: 50,
+  ...STAGE_LIGHT,
+};
 
 /**
  * The four themes of ADR 0026 step 3, a hand-tuned role table per mode. Values are the mock-up
@@ -393,6 +408,12 @@ export function themeVars(id: string, light: boolean): Record<string, string> {
   v["--ink-muted"] = inkMix(p.mix.muted);
   v["--border"] = inkMix(p.mix.border);
   v["--input"] = inkMix(p.mix.input);
+  v["--band"] = inkMix(p.mix.band);
+  v["--sub-band"] = inkMix(p.mix.subBand);
+  v["--elevated"] = p.mix.elevated
+    ? `color-mix(in oklab, var(--ink) ${p.mix.elevated}%, var(--surface))`
+    : "var(--surface)";
+  v["--stage-outline"] = inkMix(p.mix.stageOutline);
   v["--shadow-alpha"] = p.shadowAlpha;
   return v;
 }

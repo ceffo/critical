@@ -34,9 +34,11 @@ One screen, no page scroll, organised around the focused activity
 result, HP and the turn with its effects are always visible; the rest reshapes around what the
 player is doing. Responsive from 1280 to 2560 CSS px at full width, no horizontal scroll down to
 1024 (ADR 0009 step 3), fixed 16px root. On the ground, padded 12 px, every zone is a card
-(`zone-card`: `bg-surface`, 1 px outline, 10 px radius) 12 px from the next; **no rule or separator
-line** anywhere, inside a card grouping is by spacing, a `section-label` (11 px, uppercase,
-letter-spaced, full ink) or the raised tone step (`bg-raised`). Type uses only `text-label` / `text-body` /
+(`zone-card`: `bg-surface`, 1 px outline, 10 px radius) 12 px from the next, the activity's focused
+card one tone up with a 2 px outline (`stage-card`), every card headed by a band (`card-band`) in
+place of its top padding (the raised stage, ADR 0026 step 6, "Shared pieces" below); **no rule or
+separator line** anywhere, inside a card grouping is by spacing, a sub-band, a `section-label` (11
+px, uppercase, letter-spaced, full ink) or the raised tone step (`bg-raised`). Type uses only `text-label` / `text-body` /
 `text-title` / `text-key` / `text-headline` / `text-hero` (ADR 0017 step 2, `text-hero` from ADR
 0022 step 3.4: the turn number, a result total, the XP total). **No cut text** (ADR 0022 step 1):
 no `truncate` / `text-ellipsis` / `line-clamp` on important text; `layout.spec` checks the shell's
@@ -493,8 +495,24 @@ step 5); the utilities live in `index.css`, the colour tokens in its `@theme inl
 
 - **Raised step**: `bg-raised` (`neu-900`) for tiles, blocks, row stripes, forms and tracks;
   `bg-raised-hover` (`neu-800`) only as the hover of a row or chip. No opacity variants.
-- **Sub-band** (step 6.3): `bg-sub-band`, ink at 4 % (light) / 5.5 % (dark) over the card, for a
-  group inside a card (the journal's every other turn).
+- **Raised stage** (step 6), tokens per theme and mode from `themeVars` (`--band`, `--sub-band`,
+  `--elevated`, `--stage-outline`):
+  - `stage-card` instead of `zone-card` for the activity's focused card: the act panel, the lookup
+    list, the Items card (`InventoryCard focused`), the XP top card (progress beside Add XP).
+    `--elevated` is ink at 5 % over the card in dark, the card itself in light; 2 px outline, ink at 40 %.
+  - `card-band`: a card's header band (ink at 9 % dark / 7 % light over the card), its first child,
+    rounded with it, label left and controls right, side padding and height the caller's. It
+    replaces the card's top padding: the act panel's tabs, the result card's kind / name / time,
+    the journal's head, the inventory titles, the lookup filters, the spell's name, the XP headings
+    and the ledger's.
+  - `group-band` (and the colour `bg-sub-band`): ink at 4 % (light) / 5.5 % (dark) over the card, for a
+    group inside a card: the character card's identity, hit points, HP change and saves heads
+    (`groupHeadClass`), the header's turn and last result cells, the journal's every other turn.
+  - `bleed-x-4`: a band nested in a card with 16 px side padding runs to the card's edges by side
+    shadows in its own tone, never negative margins (the boxes and the no-cut audit stay put); the
+    card clips the corners when the band is at its top.
+  - A chip in a band steps to `neu-800` like on a raised row; on a raised row lit by its hover it
+    steps back to `neu-900`, always one tone off what it sits on.
 - **Small marks** that must be seen on a card (an empty slot dot, the timeline's past line, the
   journal's drag handle, a level progress underline): `bg-input`, the field edge (3:1).
 - **Chip** (step 5.3): `chip` (raised fill, no outline; one tone further, `neu-800`, when it sits

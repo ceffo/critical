@@ -71,6 +71,7 @@ export function InventoryPanel() {
           showAdd={form !== "add"}
           busy={busy}
           onAdd={() => setForm("add")}
+          focused
         >
           {form === "add" && (
             <div className="mb-2">

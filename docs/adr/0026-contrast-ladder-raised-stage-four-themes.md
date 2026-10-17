@@ -221,7 +221,14 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
 
    *Enforced by* `layout.spec`'s "shell" and "act panel" tests (step 6.6: the header budget, the
    content target and the no-cut audit, in French included) and the e2e "theme" screenshots for the
-   bands and the focused card.
+   bands and the focused card; and by the "raised stage" block of `theme.test.ts`, for every theme
+   and mode: the tokens of steps 6.1-6.3 in `themeVars` and the `index.css` defaults, card ≤
+   elevated (strictly in dark), card < sub-band < band towards the ink, and step 2.3's text rule on
+   them: ink and muted ink AA on the elevated tone, the band (on the card and on the elevated tone)
+   and the sub-band; every accent AA as text on the elevated tone, the band on the card and the
+   sub-band. The act panel's band (the band on the elevated tone) holds only ink text and the chosen
+   tab's tint mark, held to 3:1 (step 2.2); the dark tint reaches 4.1-4.2:1 there. _Added
+   2026-10-17 (the raised stage shipped)._
 7. **Parchment's touches** (amends ADR 0020 step 5), in Parchment only:
    1. **Section labels in Cinzel capitals** (`font-display`, bold, 0.06em), the card titles of step
       5.6 included. **Not on stat-tile labels** (the lookup's tiles): Cinzel's wider capitals cut

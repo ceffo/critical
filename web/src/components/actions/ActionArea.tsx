@@ -57,14 +57,15 @@ export function ActionArea({
   };
 
   return (
+    // The focused card of the Act activity (ADR 0026 step 6.1), its tabs in the header band (6.2).
     <section
-      className="zone-card flex min-h-0 min-w-0 flex-col"
+      className="stage-card flex min-h-0 min-w-0 flex-col"
       aria-label={t("actions.label")}
     >
       <div
         role="tablist"
         aria-label={t("actions.label")}
-        className="flex shrink-0 flex-wrap items-center gap-1 px-4 pt-2"
+        className="card-band flex shrink-0 flex-wrap items-center gap-1 px-4"
       >
         {TABS.map((id) => {
           const TabIcon = TAB_ICONS[id];

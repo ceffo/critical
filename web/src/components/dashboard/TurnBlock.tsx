@@ -36,8 +36,9 @@ export function TurnBlock() {
   const [mode, setMode] = useState<Mode>("menu");
 
   return (
+    // A banded cell of the header card (ADR 0026 step 6.3): the sub-band tone, never a line.
     <div
-      className="flex shrink-0 items-center gap-6"
+      className="group-band flex shrink-0 items-center gap-6 rounded-lg px-3 py-1"
       role="group"
       aria-label={t("turn.title")}
     >

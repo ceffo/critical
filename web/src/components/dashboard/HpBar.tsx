@@ -5,6 +5,7 @@ import { formatSigned } from "@/lib/format";
 import { hpBarModel } from "@/lib/hpBar";
 import { lastDamage, lastHpChange } from "@/lib/moiLog";
 import { cn } from "@/lib/utils";
+import { groupHeadClass } from "./fieldStyles";
 import { useSpellName } from "@/i18n/spellName";
 import type { HpCondition } from "@/types/hp";
 
@@ -63,7 +64,12 @@ export function HpBar() {
       aria-label={t("hp.title")}
     >
       {/* The last change sits beside the label; a long one drops under it and wraps (never cut). */}
-      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2">
+      <div
+        className={cn(
+          groupHeadClass,
+          "flex min-w-0 flex-wrap items-baseline justify-between gap-x-2",
+        )}
+      >
         <h2 className="shrink-0 section-label">{t("hp.title")}</h2>
         {last && (
           <span

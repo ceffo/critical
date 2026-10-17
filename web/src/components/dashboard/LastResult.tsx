@@ -42,7 +42,8 @@ export function LastResult() {
     <div
       role="group"
       aria-label={t("shell.lastResult")}
-      className="flex min-w-0 flex-col items-end gap-0.5"
+      // A banded cell of the header card (ADR 0026 step 6.3), like the turn block.
+      className="group-band flex min-w-0 flex-col items-end gap-0.5 rounded-lg px-3 py-1"
       data-testid="last-result"
     >
       <span className="section-label">

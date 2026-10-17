@@ -8,3 +8,9 @@ export const fieldClass =
 
 /** Sentence-case label for fields and stat names (ADR 0017 `text-label`, 11px). */
 export const labelClass = "text-label font-medium text-muted-foreground";
+
+/**
+ * A group's head inside the character card (ADR 0026 step 6.3): its section label (and what sits
+ * beside it) on the sub-band tone, run to the card's edges over its 16 px side padding.
+ */
+export const groupHeadClass = "group-band bleed-x-4 py-1";

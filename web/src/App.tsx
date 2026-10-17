@@ -94,7 +94,7 @@ function App() {
       <div className="flex min-h-0 flex-1 gap-3">
         <aside
           aria-label={t("shell.character")}
-          className="zone-card flex w-[clamp(280px,21vw,384px)] shrink-0 flex-col gap-6 overflow-y-auto px-4 py-3.5"
+          className="zone-card flex w-[clamp(280px,21vw,384px)] shrink-0 flex-col gap-6 overflow-y-auto px-4 pb-3.5"
           data-testid="character"
         >
           <Identity onOpenXp={() => focus("xp")} />

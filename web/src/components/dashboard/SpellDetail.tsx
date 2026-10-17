@@ -55,8 +55,18 @@ export function SpellName({
   );
 }
 
-/** Name, meta line, stat tiles, cast box and description of `spell`. */
-export function SpellDetail({ spell }: { spell: Spell }) {
+/**
+ * Name, meta line, stat tiles, cast box and description of `spell`. `banded`: the name and meta sit
+ * in the card's header band (ADR 0026 step 6.2), when the detail is a card of its own whose side
+ * padding is 16 px and whose top padding the band replaces.
+ */
+export function SpellDetail({
+  spell,
+  banded = false,
+}: {
+  spell: Spell;
+  banded?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const { description } = spellTexts(i18n.language, spell);
   const toComposer = useDiceStore((s) => s.setFormula);
@@ -109,7 +119,12 @@ export function SpellDetail({ spell }: { spell: Spell }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-col gap-1">
+      <div
+        className={cn(
+          "flex flex-col gap-1",
+          banded && "card-band bleed-x-4 shrink-0 py-2.5",
+        )}
+      >
         <h3 className="text-headline">
           <SpellName spell={spell} />
         </h3>

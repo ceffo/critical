@@ -67,6 +67,10 @@
   --ink-muted: color-mix(in oklab, var(--ink) 74%, transparent);
   --border: color-mix(in oklab, var(--ink) 34%, transparent);
   --input: color-mix(in oklab, var(--ink) 48%, transparent);
+  --band: color-mix(in oklab, var(--ink) 7%, transparent);
+  --sub-band: color-mix(in oklab, var(--ink) 4%, transparent);
+  --elevated: var(--surface);
+  --stage-outline: color-mix(in oklab, var(--ink) 40%, transparent);
   --shadow-alpha: 0.18;
 
   color-scheme: light;
@@ -124,6 +128,10 @@
   --ink-muted: color-mix(in oklab, var(--ink) 76%, transparent);
   --border: color-mix(in oklab, var(--ink) 32%, transparent);
   --input: color-mix(in oklab, var(--ink) 42%, transparent);
+  --band: color-mix(in oklab, var(--ink) 9%, transparent);
+  --sub-band: color-mix(in oklab, var(--ink) 5.5%, transparent);
+  --elevated: color-mix(in oklab, var(--ink) 5%, var(--surface));
+  --stage-outline: color-mix(in oklab, var(--ink) 40%, transparent);
   --shadow-alpha: 0.65;
 
   color-scheme: dark;
@@ -133,12 +141,6 @@
   /* Only floating things (popovers, menus) cast a shadow. */
   --float-shadow:
     0 0 0 1px var(--neu-600), 0 16px 40px rgb(0 0 0 / var(--shadow-alpha));
-
-  /*
-   * The sub-band tone (ADR 0026 step 6.3): a group inside a card, ink at 4 % over the card in
-   * light, 5.5 % in dark (below). A tone, never a line (step 6.4).
-   */
-  --sub-band: color-mix(in oklab, var(--ink) 4%, transparent);
 
   /* shadcn variables, derived from the palette tokens. */
   --background: var(--ground);
@@ -168,11 +170,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* Dark mode's sub-band, over the darker card (ADR 0026 step 6.3). */
-:root.dark {
-  --sub-band: color-mix(in oklab, var(--ink) 5.5%, transparent);
 }
 
 /*
@@ -237,6 +234,55 @@
 }
 
 /*
+ * The focused card of the activity (ADR 0026 step 6.1): one tone up from the cards (`--elevated`)
+ * with a 2 px outline. One per activity: the act panel, the lookup list, Items, the XP progress.
+ * Used instead of `zone-card`, never with it.
+ */
+@utility stage-card {
+  background-color: var(--elevated);
+  border: 2px solid var(--stage-outline);
+  border-radius: 0.625rem;
+}
+
+/*
+ * A card's header band (step 6.2): the card's label on the left, its controls on the right, on a
+ * tone, never a line (step 6.4). It runs to the card's edges and takes the place of the card's top
+ * padding (step 6.5): as the card's first child it is rounded with the card; nested in a padded
+ * card it bleeds over the padding with `bleed-x-4`.
+ */
+@utility card-band {
+  background-color: var(--band);
+  --bleed-tone: var(--band);
+  .zone-card > &:first-child:not(.bleed-x-4) {
+    border-radius: calc(0.625rem - 1px) calc(0.625rem - 1px) 0 0;
+  }
+  .stage-card > &:first-child:not(.bleed-x-4) {
+    border-radius: calc(0.625rem - 2px) calc(0.625rem - 2px) 0 0;
+  }
+}
+
+/*
+ * A group's band inside a card (step 6.3): the character card's identity, hit points, HP change
+ * and saves, the header's turn and last result cells. The tone only; the caller places it.
+ */
+@utility group-band {
+  background-color: var(--sub-band);
+  --bleed-tone: var(--sub-band);
+}
+
+/*
+ * A band over its card's 16 px side padding, to the card's edges (step 6.5), drawn with side
+ * shadows in the band's own tone rather than negative margins: the boxes (and the no-cut audit,
+ * ADR 0022 step 1.3) stay as they are. The card clips the corners (its overflow) or the band is
+ * not at its top.
+ */
+@utility bleed-x-4 {
+  box-shadow:
+    -1rem 0 0 var(--bleed-tone),
+    1rem 0 0 var(--bleed-tone);
+}
+
+/*
  * The shared pieces (ADR 0026 step 5, one of each, used everywhere). The raised step itself is the
  * `raised` colour (`bg-raised`, its hover `bg-raised-hover`); a small mark on a card that must be
  * seen (an empty dot, a track's axis, a drag handle) takes the field edge (`bg-input`, 3:1).
@@ -251,9 +297,14 @@
 @utility chip {
   border-radius: 0.375rem;
   background-color: var(--neu-900);
-  /* On a raised tile or row, the chip steps one tone further so it still reads. */
-  .bg-raised & {
+  /* On a raised tile or row, or in a band, the chip steps one tone further so it still reads. */
+  .bg-raised &,
+  .card-band & {
     background-color: var(--neu-800);
+  }
+  /* On a raised row lit by its hover, it steps back to the raised tone: always one step off its row. */
+  .hover\:bg-raised-hover:hover & {
+    background-color: var(--neu-900);
   }
 }
 
@@ -301,6 +352,9 @@
   /* The selected tone (step 1.1): under the selection mark, a chosen chip, the weapon in hand. */
   --color-selected: var(--amb-800);
   --color-sub-band: var(--sub-band);
+  /* The raised stage's tones (ADR 0026 step 6). */
+  --color-band: var(--band);
+  --color-elevated: var(--elevated);
   --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
   /* The brand face (ADR 0020 step 5): the wordmark only. */
   --font-display: "Cinzel Variable", "Cinzel", "Inter Variable", serif;

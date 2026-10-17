@@ -15,7 +15,7 @@ import {
   palette,
   themeVars,
 } from "./theme";
-import { linear, over, parseOklch, ratio } from "./wcag";
+import { linear, luminance, over, parseOklch, ratio, type Rgb } from "./wcag";
 import { resources } from "@/i18n";
 
 /** Every theme in every mode it exists in (ADR 0026 step 3.1). */
@@ -303,6 +303,80 @@ describe("contrast (ADR 0026 step 2, ADR 0020 step 4)", () => {
       "plain light",
     ]);
   });
+});
+
+// --- The raised stage's tones (ADR 0026 step 6) ---------------------------------------------------
+
+describe("raised stage (ADR 0026 step 6)", () => {
+  it("paints the band, sub-band, elevated tone and stage outline from the ink", () => {
+    const dark = themeVars("arcane", false);
+    expect(dark["--band"]).toBe(
+      "color-mix(in oklab, var(--ink) 9%, transparent)",
+    );
+    expect(dark["--sub-band"]).toBe(
+      "color-mix(in oklab, var(--ink) 5.5%, transparent)",
+    );
+    expect(dark["--elevated"]).toBe(
+      "color-mix(in oklab, var(--ink) 5%, var(--surface))",
+    );
+    expect(dark["--stage-outline"]).toBe(
+      "color-mix(in oklab, var(--ink) 40%, transparent)",
+    );
+    const light = themeVars("arcane", true);
+    expect(light["--band"]).toBe(
+      "color-mix(in oklab, var(--ink) 7%, transparent)",
+    );
+    expect(light["--sub-band"]).toBe(
+      "color-mix(in oklab, var(--ink) 4%, transparent)",
+    );
+    // Light mode's focused card is the card itself (step 6.1).
+    expect(light["--elevated"]).toBe("var(--surface)");
+  });
+
+  for (const { name, v, p, light } of CASES) {
+    const card = T(v, "--surface");
+    /** The tones a band's or a focused card's text sits on (step 6). */
+    const elevated = over(T(v, "--ink"), p.mix.elevated / 100, card);
+    const tones: [string, Rgb][] = [
+      ["elevated", elevated],
+      ["band on card", over(T(v, "--ink"), p.mix.band / 100, card)],
+      ["band on elevated", over(T(v, "--ink"), p.mix.band / 100, elevated)],
+      ["sub-band on card", over(T(v, "--ink"), p.mix.subBand / 100, card)],
+    ];
+
+    it(`${name}: card ≤ elevated, card < sub-band < band, each a step towards the ink (steps 6.1-6.3)`, () => {
+      const lum = (c: Rgb) => luminance(c);
+      const sign = light ? -1 : 1; // towards the ink: lighter in dark, darker in light
+      const [el, band, sub] = [tones[0][1], tones[1][1], tones[3][1]].map(
+        (c) => sign * (lum(c) - lum(card)),
+      );
+      expect(el, "elevated").toBeGreaterThanOrEqual(-1e-9);
+      if (!light) expect(el, "elevated, dark").toBeGreaterThan(0);
+      expect(sub, "sub-band").toBeGreaterThan(0);
+      expect(band, "band past sub-band").toBeGreaterThan(sub);
+    });
+
+    it(`${name}: ink and muted ink read on every band and the focused card, accents where they are text`, () => {
+      for (const [tone, bg] of tones) {
+        expect(
+          ratio(T(v, "--ink"), bg),
+          `ink on ${tone}`,
+        ).toBeGreaterThanOrEqual(AA_TEXT);
+        expect(
+          ratio(over(T(v, "--ink"), p.mix.muted / 100, bg), bg),
+          `muted on ${tone}`,
+        ).toBeGreaterThanOrEqual(AA_TEXT);
+        // The act panel's band (on the focused card) holds the tabs: ink text and the chosen tab's
+        // tint mark, a non-text mark at 3:1. Every other band can hold accent text.
+        const onTabs = tone === "band on elevated";
+        for (const role of onTabs ? ["--tint"] : ACCENTS)
+          expect(
+            ratio(T(v, role), bg),
+            `${role} on ${tone}`,
+          ).toBeGreaterThanOrEqual(onTabs ? UI : AA_TEXT);
+      }
+    });
+  }
 });
 
 /** The `--name: value;` declarations of the first CSS block opened by `selector {`. */

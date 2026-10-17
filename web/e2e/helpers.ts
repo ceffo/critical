@@ -186,6 +186,25 @@ export async function chooseSetting(page: Page, option: string) {
   await expect(popover).toBeHidden();
 }
 
+/**
+ * Pick the dark or the light theme in the settings popover (by its visible name, in either
+ * language), then close it. The two choices share names (Arcane, Plain), hence the group.
+ */
+export async function chooseTheme(
+  page: Page,
+  which: "dark" | "light",
+  name: string,
+) {
+  const popover = await openSettings(page);
+  const radio = popover
+    .getByTestId(`settings-${which}-theme`)
+    .getByRole("radio", { name, exact: true });
+  await radio.click();
+  await expect(radio).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+}
+
 /** Switch the UI language through the settings popover. */
 export async function chooseLanguage(page: Page, lang: "en" | "fr") {
   await chooseSetting(page, lang === "fr" ? "Français" : "English");

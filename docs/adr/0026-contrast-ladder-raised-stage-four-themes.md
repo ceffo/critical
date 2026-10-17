@@ -19,7 +19,7 @@ the six ambiances (Grove, Blood, Amber) whose primary hue sits on a status hue. 
 ([`docs/design/ui-review/mockups/`](../design/ui-review/mockups/README.md)) painted four options over
 the running app, in English and French, and measured every theme
 ([`themes.md`](../design/ui-review/mockups/themes.md), from
-[`web/ui-review/mockup-tokens.ts`](../../web/ui-review/mockup-tokens.ts)).
+`web/ui-review/mockup-tokens.ts`, removed since the themes shipped).
 
 The user's pick, 2026-10-17:
 
@@ -65,15 +65,23 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    3. **Muted ink is for meta only**: timestamps, units, hints, a dimmed size. A value the player
       acts on (the "needs 6 vs AC 5" line, a save's target number, a roll total) is in full ink.
    4. **Accent ladder in dark mode**: every accent sits at its own lightness, in this order:
-      **tint < danger < magic < success < warning < highlight** (< ink). Round values: tint .65,
-      danger .74, magic .78, success .82, warning .86, highlight .90. In light mode the accents are
-      dark on light (tint .40, magic .47, danger .50, success .52, highlight .555, warning .565 in
-      Arcane and Plain); no order is required there. `highlight-fill` stays the gold fill with dark
-      text (L .82 light, = `highlight` dark).
-   5. The full role table per theme and mode (ground, surface, `neu-900`, ink, tint, highlight,
-      highlight-fill, magic, danger, success, warning, `amb-800`, mixes) is the "4 · Bespoke themes"
-      table of [`themes.md`](../design/ui-review/mockups/themes.md); `neu-800` and the Deep and
-      Parchment ramps are in `mockup-tokens.ts` (`ladder`, `deep`, `parchment`).
+      **tint < danger < magic < success < warning < highlight** (< ink). Values: tint .71 (Arcane;
+      Deep .70), danger .74, magic .78, success .82, warning .86, highlight .90. A near-neutral
+      theme's grey tint (step 3.6, Plain .86) is not an accent and stays out of the order. In light
+      mode the accents are dark on light (tint .40, magic .47, danger .50, success .485, highlight
+      .50, warning .51 in Arcane and Plain; Parchment highlight .485, success .47, warning .49); no
+      order is required there. `highlight-fill` stays the gold fill with dark text (L .82 light, =
+      `highlight` dark). _Amended 2026-10-17 (the four themes shipped; the contrast test of step 2.3
+      decided, hues and chromas unchanged); was: dark tint .65 (Deep too), light success .52,
+      highlight .555, warning .565 in Arcane and Plain, Parchment highlight .53, success .50,
+      warning .545, all under 4.5:1 as text on the raised step (Consequences); and no word on the
+      near-neutral tint, which step 3.6 puts at .86, above every accent._
+   5. The full role table per theme and mode (ground, surface, `neu-900`, `neu-800`, ink, tint,
+      highlight, highlight-fill, magic, danger, success, warning, `amb-800`, mixes, ramps) is
+      `THEMES` in `web/src/lib/theme.ts`. _Amended 2026-10-17; was: the "4 · Bespoke themes" table
+      of [`themes.md`](../design/ui-review/mockups/themes.md) (the round's values, before step 1.4's
+      retune), with `neu-800` and the Deep and Parchment ramps in `web/ui-review/mockup-tokens.ts`
+      (`ladder`, `deep`, `parchment`), removed with the round's capture code._
    6. **Defaults before the app runs** (ADR 0020 step 6): `web/src/index.css` holds the Arcane light
       and dark blocks exactly as the theme code computes them, with the new mixes.
 
@@ -153,7 +161,10 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       default. The older `critical.theme` / `critical.language` keys keep their one-time migration.
    4. They stay per-device display preferences, never sent to the API.
    5. **First paint** applies the effective theme's mode before the app runs (the inline script of
-      ADR 0009's Consequences), so a Deep or Parchment user sees no flash of the other mode.
+      ADR 0009's Consequences), so a Deep or Parchment user sees no flash of the other mode. It
+      also paints the effective theme's variables, from a copy of the chosen dark and light themes'
+      tokens the app saves on the device (`critical.paint.v1`), so the first frame is not the default
+      theme either. _Amended 2026-10-17 (the copy added); was: the mode only._
 
    *Enforced by* `web/src/lib/settings.test.ts`: one case per row of the table (mapped, then saved
    back without `amb`), a wrong-mode choice falling back, and the mode switch keeping both choices;
@@ -234,9 +245,10 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
   warning. The round moves warning to 65 / 62; the two now differ also by role (gold only for crit
   and max, step 5.8; warning on the HP bar) and, in dark, by lightness (.86 vs .90).
 - ADR 0020 step 1's generator (three hues and a peak chroma per ambiance) gives way to a role table
-  per theme. Arcane and Plain can still be generated by the ladder (`ladder` in
-  `mockup-tokens.ts`); Deep and Parchment are hand-made (`deep`, `parchment`). A new theme is a role
-  table, its modes, two i18n names per language and the tests of steps 2 and 3.
+  per theme (`THEMES` in `web/src/lib/theme.ts`); the nine-step ramps are still drawn from each
+  table's three hues. A new theme is a role table, its modes, two i18n names per language and the
+  tests of steps 2 and 3. _Amended 2026-10-17; was: Arcane and Plain can still be generated by the
+  ladder (`ladder` in `mockup-tokens.ts`), Deep and Parchment hand-made (`deep`, `parchment`)._
 - The settings popover changes: an appearance mode plus a dark-theme and a light-theme choice
   instead of six swatches. Its layout follows the layout ADR.
 - Users of Grove, Blood or Ocean light lose their theme; the mapping of step 4.3 gives them the

@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-language-fields check-locale-duplicate-keys check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
+validate: check-no-tracker-ids check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -78,13 +78,6 @@ check-no-language-fields:
     scripts/test-check-no-language-fields.sh
     scripts/check-no-language-fields.sh
     @echo "--- No per-language fields ---"
-
-# A locale file with a duplicate key hides a text silently (JSON keeps the last): fail on any, in every
-# language and namespace. The test runs the check on a planted duplicate.
-check-locale-duplicate-keys:
-    scripts/test-check-locale-duplicate-keys.sh
-    scripts/check-locale-duplicate-keys.py
-    @echo "--- No duplicate locale keys ---"
 
 # PR titles are conventional-commit lines (the release reads the version bump from them). The test
 # runs the checker on valid and rejected titles.

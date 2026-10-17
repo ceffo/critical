@@ -13,7 +13,10 @@ defaults are answered. Amended again 2026-10-16 (see "Amendment (shared cluster 
 no-public-IP check has no bypass. Amended again 2026-10-17, **proposed, awaiting the user's OK** (see
 "Amendment (staging versions from the conventional commits, 2026-10-17)"): every staging release gets a
 version computed from the commits, baked into the image and tagged by CI once staging passed (steps 1.4, 3,
-4, 10.2 and the "release name" consequence).
+4, 10.2 and the "release name" consequence). Amended again 2026-10-17, **proposed, awaiting the user's OK**
+(see "Amendment (promotion on demand, 2026-10-17)"): the promotion runs from main on demand, promotes the
+newest version that passed staging or the one asked, and only a repository admin may run it (steps 4 and
+10.2).
 
 ## Context
 
@@ -54,7 +57,7 @@ flowchart LR
         VER -->|"X.Y.Z"| BUILD["release build: catalogue fetched with the deploy key, version baked in"]
         VER -->|"docs/test/chore only, no-release label"| NONE["no release"]
         TAG["tag vX.Y.Z, made by CI"]
-        RUN["Promote run by hand from the tag"]
+        RUN["Promote run by an admin from main: the newest staging version, or the one asked"]
     end
     subgraph fly["fly.io (org personal, private registry)"]
         IMG[("image tagged with the commit sha")]
@@ -143,12 +146,18 @@ flowchart LR
    two runs never compute a version at once. A manual run with no version releases main's head even when
    the rules make no release (at least a patch); with a version, it redeploys that version's image.
 
-4. **Production from a version tag.** Running the promotion from a version tag `vMAJOR.MINOR.PATCH`
-   promotes that commit to production. _Amended 2026-10-17 (staging versions); was: pushing the tag
-   promotes. CI makes the tags (step 3.5) and the promotion runs only by hand, from the tag: no tag push
-   starts it, until promotion on demand exists._
-   1. the promotion refuses a tag whose commit is not on main, or whose image did not pass the
-      staging smoke check of step 3;
+4. **Production on demand, from a version.** The promotion is run by hand by a repository admin, from main:
+   with no version it promotes the **newest** version `vMAJOR.MINOR.PATCH` (by number) whose commit is on
+   main and passed staging as that version; with a version (`X.Y.Z` or `vX.Y.Z`) it promotes that one. It
+   runs main's workflow and scripts; the image and the migrations it embeds are the version's. No tag push
+   starts it. _Amended 2026-10-17 (staging versions); was: pushing the tag promotes. Amended again
+   2026-10-17 (promotion on demand); was: the promotion runs by hand from the version's tag, with that tag's
+   workflow and scripts._
+   1. the promotion refuses, before anything else is written, a version that is malformed, has no tag, whose
+      commit is not on main, or whose image did not pass the staging smoke check of step 3 as that version;
+      it says which version it promotes, its commit and digest, and what production runs. With no version,
+      a failed read stops it (never a fallback to an older version), and a newest version older than
+      production's is refused (a rollback names its version);
    2. it takes the restore point of step 9.2, a verified copy of `critical_prod`, and waits for it
       to complete; no restore point, no deploy. _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md));
       was: an on-demand snapshot of the production volume. Amended again 2026-10-16 (restore point); was:
@@ -157,7 +166,7 @@ flowchart LR
    4. it runs the smoke check of step 3.3 against production;
    5. it creates a GitHub Release for the tag.
 
-   Rollback is running the promotion again for an older tag (step 6 says when that is not enough).
+   Rollback is running the promotion for an older version (step 6 says when that is not enough).
    A promotion whose image is older than the production schema (`critical_prod` records a migration
    the tag's commit does not hold) is refused before the restore point is written: that rollback is
    the runbook's restore of step 9.3, then the promotion of the older tag. Production deployments never
@@ -259,12 +268,14 @@ flowchart LR
 10. **Secrets and permissions.**
     1. Each app has its own app-scoped fly deploy token, stored in the GitHub environment of the same
        name: `staging` and `production`.
-    2. The `production` environment only accepts deployments from `v*` tags. A tag runs the promotion
-       workflow of its own commit, whose guards it could have edited out, so only a repository admin
-       may move or delete a `v*` tag, and only an admin and the release job (the GitHub Actions app,
-       through the workflow token) may create one (two tag rulesets, _added 2026-10-16; amended
-       2026-10-17 (staging versions), was: only an admin may create one_). CI is the only maker of
-       version tags.
+    2. The `production` environment only accepts deployments from the branch `main`, and the promotion
+       refuses any actor who is not a repository admin, before any secret is read (the user who started
+       the run and the one who re-ran it). No required reviewer. _Amended 2026-10-17 (promotion on
+       demand); was: from `v*` tags only, a tag running the promotion workflow of its own commit._ The tags
+       name the versions the promotion resolves, so only a repository admin may move or delete a `v*` tag,
+       and only an admin and the release job (the GitHub Actions app, through the workflow token) may
+       create one (two tag rulesets, _added 2026-10-16; amended 2026-10-17 (staging versions), was: only an
+       admin may create one_). CI is the only maker of version tags.
     3. The rulebooks deploy key is a read-only key on `critical-rulebooks`, held only by the job that
        builds the release image.
     4. When a staging secret is missing, the main-branch build and deploy jobs skip with a notice and
@@ -282,7 +293,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 | Access for a public URL (step 8) | private, no public IP | (a) basic auth + public IPs, (b) stay private, devices join WireGuard / Tailscale, (c) real login |
 | PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | **Answered 2026-10-16: PostgreSQL first**, no deploy until then; two production machines from the first deploy ([ADR 0025](0025-postgresql-storage.md)) |
 | Production data | fresh database | **Answered 2026-10-16: fresh database** (_amended 2026-10-16; was: seeded once with the user's data, the local `.dev/critical.db` copied into `critical_prod` by the copy tool_): production's first boot seeds it from `seeds/` and the catalogue, like staging; the user re-enters the few character-sheet edits made in the app. See "Amendment (production starts from the seeds, 2026-10-16)" |
-| Production approval | none: running the promotion from the tag is the act (_amended 2026-10-17; was: pushing the tag is the act_) | a required reviewer on the `production` environment |
+| Production approval | none: running the promotion is the act (_amended 2026-10-17; was: pushing the tag is the act_) | a required reviewer on the `production` environment. **Answered 2026-10-17 (proposed with the promotion on demand): none**, the promotion checks that the actor is a repository admin (option (a)) |
 | Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
 | Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | **Answered 2026-10-16 ("1a"): a copy database on the same cluster** (a restore point, newest 3 kept), not a dump file; see "Amendment (restore point: a copy database, 2026-10-16)" |
 | Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
@@ -463,3 +474,41 @@ a version redeploys it; `just release` goes away and CI is the only maker of ver
   repository, the tag's API calls), `scripts/test-release-scripts.sh` and `scripts/test-staging-deploy.sh`
   (the version through the build, the deploy, the smoke and the record; the job's steps), the health tests of
   step 1.4, and the CI `image` job (`scripts/image-smoke.sh` checks the baked version).
+
+## Amendment (promotion on demand, 2026-10-17)
+
+**Proposed, awaiting the user's OK before merge.** User, 2026-10-17: _"then promotion to prod just promote
+latest staging version ... useful if we decide not to promote for a while"_. Decided in the same triage: the
+trigger is a manual run with an optional `version` input; with none, the newest `v*` version whose staging
+deployment passed; the run is main's workflow and scripts, not the tag's; the guards stay (a passed staging
+record for the version's commit gives the digest, the restore point first, the refusal of a production schema
+newer than the image, the same digest, the smoke check, the GitHub Release); who may promote is option (a),
+the job checks the actor is a repository admin and refuses otherwise, no required reviewer.
+
+- **Step 4**: run by hand from main (`just promote [version]`); no version, the newest version (by number)
+  on main that passed staging as that version, higher tags that did not being skipped with the reason; a
+  version, that one (the rollback); a malformed, missing, off-main or not-staged version is refused before
+  the production environment, so before the restore point. The run prints the version, its commit, its
+  digest and what production's machines run. The rest of step 4 (the restore point, the schema refusal, the
+  same image, the smoke check, the release) is unchanged.
+- **Step 10.2**: `production` accepts deployments from the branch `main` instead of the `v*` tags; the
+  promotion's jobs check, first and before any secret, that the user who started the run and the one who
+  re-ran it are repository admins. A writer can still dispatch the workflow (GitHub allows it) but the run
+  stops there; a writer's own workflow on a branch gets no production token. The tag rulesets stay: the tags
+  are the versions.
+- **No silent fallback**: with no version, a higher tag is skipped only on a definite no (off main, or its
+  staging records read and none passed as that version); a failed API read stops the promotion. And the
+  newest version is never older than the highest version production's machines run (unreadable: refused;
+  no version label: no floor): going down is a rollback, asked by naming the version.
+- **Why main's scripts**: the guards a promotion runs are the reviewed ones on main, whatever commit the
+  version is; a tag can no longer bring its own workflow. The migration check still reads the version's
+  tree, and the fly configuration is main's (it is the app's, not the image's). **The limit**: a rollback
+  runs main's fly configuration, smoke check and restore point against an old image. Once main moves past
+  what that image does (a new `[env]` value, a smoke check of a newer endpoint), the rollback fails, at the
+  restore point (nothing deployed) or at the smoke check (after the deploy). The runbook ("Rollback", "An old
+  image under main's scripts") tells the operator how to tell the two apart, and how to finish the rollback
+  with the version's own scripts (`scripts/promote.sh` from the version's tree, operator token). Main's
+  scripts are expected to accept the versions it may roll back to; a case that does not is a bug.
+- **Tests**: `scripts/test-promotion.sh` (the resolution and its refusals on a fixture repository, the
+  admin check, the environment's rule, `just promote`, the workflow parsed: the admin check before any
+  secret, the version resolved in a job without the environment).

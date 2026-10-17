@@ -131,6 +131,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.resolve.outputs.tag }}
+          # No version asked: promote.sh refuses a tag older than what production runs (not a rollback).
+          PROMOTE_NEWEST: ${{ inputs.version == '' }}
         run: |
           flyctl auth docker
           scripts/promote.sh "$TAG"

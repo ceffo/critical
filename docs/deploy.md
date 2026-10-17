@@ -561,7 +561,14 @@ read an empty token), and a calling job cannot have an environment. The job pass
   resolve [version]`). Empty: the highest `vMAJOR.MINOR.PATCH` tag, by number (`v1.10.0` after `v1.9.0`;
   another tag such as `v2.0` or `v3.0.0-rc1` is never a version), whose commit is on main and which staging
   passed **as that version** (its deployment record, "Record"); each higher tag that is not is skipped in the
-  log with the reason. Given: `X.Y.Z` or `vX.Y.Z`, else refused ("is not X.Y.Z or vX.Y.Z"); its tag must exist
+  log with the reason. Only a definite no skips a tag (off main, or its records read and none passed as that
+  version): a failed or rate-limited API read, an unreadable answer or a passed record without a digest stops
+  the run ("cannot tell whether vX.Y.Z … passed staging"), never falling back to an older version; run it
+  again. With no version, `promote.sh` also refuses a version **older than the highest one production's
+  machines run** ("the newest staging version … is older than production's …"): going down is a rollback,
+  asked by naming the version. When what production runs cannot be read, the run with no version is refused
+  too (name the version, or run it again); machines whose image has no version label (built before
+  versions) or no machine at all set no floor, so the newest version is promoted. Given: `X.Y.Z` or `vX.Y.Z`, else refused ("is not X.Y.Z or vX.Y.Z"); its tag must exist
   ("there is no version"), be on main ("not on main") and have passed staging as that version ("staging has
   no successful deploy of <sha> as X.Y.Z"). A refusal fails the run before the production environment, so
   before any restore point. The job prints, and writes to the run's summary, the version, its commit and the
@@ -664,14 +671,36 @@ additive, so the previous release keeps working on the new schema while its mach
 
 Promote the previous version: `just promote 1.2.2` (or Actions > Promote > Run workflow from `main`, version
 `1.2.2`). It redeploys that version's image by its staging digest, never rebuilt, after a restore point of the
-current data; the run is main's scripts, the migrations checked are the version's. Note that `just promote`
-with no version would promote the newest staging version again, not roll back. By hand (operator, production
-token, from an up-to-date main checkout):
+current data; the run is main's scripts, the migrations checked are the version's. `just promote` with no
+version never rolls back: it refuses a version older than production's.
+
+By hand (operator, production token, from an up-to-date main checkout):
 
 ```bash
 git fetch origin --tags && git switch --detach origin/main
 fly auth docker && scripts/promote.sh v1.2.2
 ```
+
+**An old image under main's scripts.** The rollback deploys the old image with main's `deploy/fly.prod.toml`,
+`scripts/fly-smoke.sh` and `scripts/restore-point.sh`. When main has moved past what the old image does (a
+new `[env]` value or a new required variable, a smoke check of an endpoint the old image lacks, a restore
+point step needing a client the image lacks), the promotion fails: at the restore point, before anything is
+deployed; or at the smoke check, after the deploy, and it prints the releases. Then:
+
+1. Read the failure: if it is the old image itself (it does not start, a real error in the logs), promote
+   the version production ran before (`just promote <that version>`) and treat it as a failed rollback.
+2. If it is only main's script or config expecting more than the old image has: failed at the restore point,
+   nothing changed; failed at the smoke check, the old image runs (check it with `just fly-open
+   critical-prod`) but the run made no GitHub Release. Either way, run the promotion by hand from the
+   version's own tree, whose scripts and config match its image (operator, production token):
+
+   ```bash
+   git fetch origin --tags && git switch --detach v1.2.2
+   fly auth docker && scripts/promote.sh v1.2.2
+   ```
+
+   It takes another restore point and redeploys the same digest (nothing changes for the data). File the
+   case as a bug: main's scripts should accept the versions it may roll back to.
 
 **Across a migration** the older binary refuses to start on the newer schema (ADR 0024 step 6.2), so the
 promotion of the older version refuses it before writing anything ("production database records migrations this

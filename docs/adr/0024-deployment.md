@@ -155,7 +155,9 @@ flowchart LR
    workflow and scripts._
    1. the promotion refuses, before anything else is written, a version that is malformed, has no tag, whose
       commit is not on main, or whose image did not pass the staging smoke check of step 3 as that version;
-      it says which version it promotes, its commit and digest, and what production runs;
+      it says which version it promotes, its commit and digest, and what production runs. With no version,
+      a failed read stops it (never a fallback to an older version), and a newest version older than
+      production's is refused (a rollback names its version);
    2. it takes the restore point of step 9.2, a verified copy of `critical_prod`, and waits for it
       to complete; no restore point, no deploy. _Amended 2026-10-16 ([ADR 0025](0025-postgresql-storage.md));
       was: an on-demand snapshot of the production volume. Amended again 2026-10-16 (restore point); was:
@@ -494,9 +496,19 @@ the job checks the actor is a repository admin and refuses otherwise, no require
   re-ran it are repository admins. A writer can still dispatch the workflow (GitHub allows it) but the run
   stops there; a writer's own workflow on a branch gets no production token. The tag rulesets stay: the tags
   are the versions.
+- **No silent fallback**: with no version, a higher tag is skipped only on a definite no (off main, or its
+  staging records read and none passed as that version); a failed API read stops the promotion. And the
+  newest version is never older than the highest version production's machines run (unreadable: refused;
+  no version label: no floor): going down is a rollback, asked by naming the version.
 - **Why main's scripts**: the guards a promotion runs are the reviewed ones on main, whatever commit the
   version is; a tag can no longer bring its own workflow. The migration check still reads the version's
-  tree, and the fly configuration is main's (it is the app's, not the image's).
+  tree, and the fly configuration is main's (it is the app's, not the image's). **The limit**: a rollback
+  runs main's fly configuration, smoke check and restore point against an old image. Once main moves past
+  what that image does (a new `[env]` value, a smoke check of a newer endpoint), the rollback fails, at the
+  restore point (nothing deployed) or at the smoke check (after the deploy). The runbook ("Rollback", "An old
+  image under main's scripts") tells the operator how to tell the two apart, and how to finish the rollback
+  with the version's own scripts (`scripts/promote.sh` from the version's tree, operator token). Main's
+  scripts are expected to accept the versions it may roll back to; a case that does not is a bug.
 - **Tests**: `scripts/test-promotion.sh` (the resolution and its refusals on a fixture repository, the
   admin check, the environment's rule, `just promote`, the workflow parsed: the admin check before any
   secret, the version resolved in a job without the environment).

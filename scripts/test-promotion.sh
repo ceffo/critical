@@ -47,6 +47,7 @@ case "\$1 \${2:-}" in
         url="\$2"; shift 2; expr=""
         while [ "\$#" -gt 0 ]; do case "\$1" in --jq) expr="\$2"; shift 2 ;; *) shift ;; esac; done
         f="$fx/\$(printf '%s' "\$url" | tr -c 'a-zA-Z0-9' '_')"
+        [ ! -f "\$f.fail" ] || { echo "gh: HTTP 502" >&2; exit 1; }
         [ -f "\$f" ] || f="$fx/empty"
         if [ -n "\$expr" ]; then jq -r "\$expr" "\$f"; else cat "\$f"; fi ;;
     *) exit 1 ;;
@@ -67,7 +68,7 @@ cat > "$stubs/fly" <<STUB
 echo "fly \$*" >> "$calls"
 case "\$1 \$2" in
     "ips list") cat "$tmp/ips" ;;
-    "machine list") cat "$tmp/machines" ;;
+    "machine list") [ ! -f "$tmp/machines-fail" ] || exit 1; cat "$tmp/machines" ;;
     "releases --image") echo "v3 complete registry.fly.io/critical-staging@previous" ;;
     "console -a") cat "$tmp/console-out" | sed "s/@POINT@/\$(echo "\$*" | sed -n 's/.*restore-point.sh \([a-z0-9_]*\).*/\1/p')/" ;;
 esac
@@ -229,6 +230,31 @@ for v in 1.2 v1.2 2.0 3.0.0-rc1 v3.0.0-rc1 vv1.9.0 V1.9.0 01.9.0 1.9.0.0 " 1.9.0
     resolve "$v"
     [ "$status" != 0 ] && [ -z "$out" ] && [[ "$err" == *"is not X.Y.Z or vX.Y.Z"* ]] || fail "resolve: the malformed version '$v' is accepted or not said: $out $err"
 done
+# A failed API read on the newest version stops: it is no answer, and skipping it would promote v1.9.0.
+fails_with() { f="$fx/$(printf '%s' "$1" | tr -c 'a-zA-Z0-9' '_').fail"; touch "$f"; resolve; rm -f "$f"; }
+for url in "$(deployments "$sha_four")" "$(statuses 32)"; do
+    fails_with "$url"
+    [ "$status" = 3 ] && [ -z "$out" ] && [[ "$err" == *"cannot read the"* && "$err" == *"cannot tell whether v1.10.0"* ]] \
+        || fail "resolve: a failed read of $url fell back or was not said: exit $status, $out $err"
+done
+f="$fx/$(printf '%s' "$(statuses 31)" | tr -c 'a-zA-Z0-9' '_').fail"; touch "$f"; resolve 1.9.0; rm -f "$f"
+[ "$status" != 0 ] && [ -z "$out" ] && [[ "$err" == *"cannot read the statuses"* ]] || fail "resolve 1.9.0: a failed statuses read is not refused: $out $err"
+# A broken record of a version below the one resolved changes nothing.
+put "$(statuses 31)" 'not json'
+resolve
+[ "$status" = 0 ] && [ "$out" = "$(resolved v1.10.0 "$sha_four" "$d10")" ] || fail "resolve: a broken record of a lower version mattered: $out $err"
+put "$(statuses 31)" '[{"state":"inactive"},{"state":"success"}]'
+for answer in '[{"state":"inactive"},{"state":"success"}],' ''; do
+    put "$(statuses 32)" "$answer"
+    resolve
+    [ "$status" = 3 ] && [ -z "$out" ] || fail "resolve: the statuses answer '$answer' on the newest version fell back: exit $status, $out $err"
+done
+put "$(statuses 32)" '[{"state":"inactive"},{"state":"success"}]'
+put "$(deployments "$sha_four")" "[{\"id\":32,\"created_at\":\"2026-10-17T07:00:00Z\",\"payload\":{\"version\":\"1.10.0\"}}]"
+resolve
+[ "$status" = 3 ] && [ -z "$out" ] && [[ "$err" == *"records no image digest"* ]] || fail "resolve: a passed record without a digest on the newest version fell back: exit $status, $out $err"
+put "$(deployments "$sha_four")" "[{\"id\":32,\"created_at\":\"2026-10-17T07:00:00Z\",\"payload\":{\"digest\":\"$d10\",\"version\":\"1.10.0\"}}]"
+
 for id in 12 31 32 34; do put "$(statuses "$id")" '[{"state":"failure"}]'; done
 resolve
 [ "$status" != 0 ] && [ -z "$out" ] && [[ "$err" == *"no v* version is on main with a passed staging deploy"* ]] \
@@ -244,7 +270,7 @@ machines="[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\",\"tag\":\"$main_s
 ok_console="$(printf 'Created an ephemeral machine\nrestore-point: dumping critical_prod\nrestore-point: OK @POINT@\r\n')"
 reset() {
     echo "$private" > "$tmp/ips"; echo "$machines" > "$tmp/machines"; echo "$ok_console" > "$tmp/console-out"
-    rm -f "$tmp/smoke-fails" "$tmp/release-exists" "$tmp/image-missing" "$tmp/copy-fails" "$tmp/copy-missing"
+    rm -f "$tmp/smoke-fails" "$tmp/release-exists" "$tmp/machines-fail" "$tmp/image-missing" "$tmp/copy-fails" "$tmp/copy-missing"
 }
 promote() { : > "$calls"; status=0; out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" "$tmp/repo/scripts/promote.sh" "$1" 2>&1)" || status=$?; }
 line() { grep -n "$1" "$calls" | head -n1 | cut -d: -f1; }
@@ -269,6 +295,30 @@ grep -q "^gh release create v1.2.3 --verify-tag --title v1.2.3 --generate-notes 
 [ "$(line '^fly machine list')" -lt "$(line '^fly ips')" ] || fail "promote: production's current version is not printed before the promotion starts"
 reset; echo "[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\",\"tag\":\"$main_sha\"}}]" > "$tmp/machines"; promote v1.2.3
 [[ "$out" == *"runs no version (commit $main_sha, $newer)"* ]] || fail "promote: an image without a version label is not printed as such: $out"
+
+# The newest version (none asked) never goes below production; a version asked (a rollback) may.
+runs() { printf '[{"id":"m1","image_ref":{"digest":"%s","tag":"%s","labels":{"org.opencontainers.image.version":"%s"}}},{"id":"m2","image_ref":{"digest":"%s","tag":"%s","labels":{"org.opencontainers.image.version":"%s"}}}]' \
+    "$newer" "$main_sha" "$1" "$newer" "$main_sha" "$2" > "$tmp/machines"; }
+newest() { PROMOTE_NEWEST=true promote "$@"; }
+for pair in "1.10.0 1.10.0" "1.2.3 1.2.4" "2.0.0 1.0.0" "1.2.10 1.2.3"; do
+    reset; runs $pair; newest v1.2.3
+    [ "$status" != 0 ] && [[ "$out" == *"the newest staging version v1.2.3 is older than production's"* ]] \
+        || fail "promote: the newest version below production ($pair) is not refused: $out"
+    grep -qE '^(fly (ips|console|deploy)|docker buildx)' "$calls" && fail "promote: the newest version below production ($pair) went on: $(cat "$calls")"
+done
+for pair in "1.2.3 1.2.3" "1.0.9 1.2.2" "0.9.10 1.1.0"; do
+    reset; runs $pair; newest v1.2.3
+    [[ "$out" != *"is older than production"* ]] && grep -q '^fly console' "$calls" || fail "promote: the newest version at or above production ($pair) is refused: $out"
+done
+reset; runs 1.10.0 1.10.0; promote v1.2.3
+grep -q '^fly console' "$calls" || fail "promote: a version asked below production (a rollback) is refused: $out"
+reset; touch "$tmp/machines-fail"; newest v1.2.3
+[ "$status" != 0 ] && [[ "$out" == *"what production runs could not be read"* ]] && ! grep -q '^fly ips' "$calls" \
+    || fail "promote: the newest version with production unreadable is not refused before anything: $out"
+reset; echo '[]' > "$tmp/machines"; newest v1.2.3
+grep -q '^fly console' "$calls" && [[ "$out" == *"runs nothing (no machine)"* ]] || fail "promote: the newest version on an app without machines is refused: $out"
+reset; echo "[{\"id\":\"m1\",\"image_ref\":{\"digest\":\"$newer\",\"tag\":\"$main_sha\"}}]" > "$tmp/machines"; newest v1.2.3
+grep -q '^fly console' "$calls" || fail "promote: the newest version over an image without a version label is refused: $out"
 [ "$(line '^docker manifest')" -lt "$(line '^fly ips')" ] && [ "$(line '^fly ips')" -lt "$(line '^docker buildx')" ] \
     && [ "$(line "^docker manifest inspect $image")" -lt "$(line '^fly console')" ] \
     && [ "$(line '^fly console')" -lt "$(line '^fly deploy')" ] && [ "$(line '^fly deploy')" -lt "$(line '^smoke')" ] \
@@ -471,6 +521,8 @@ for name, j in (("resolve", res), ("promote", job)):
     check(len(co) == 1 and co[0]["with"].get("fetch-depth") == 0 and co[0]["with"].get("persist-credentials") is False,
           f"{name}: checkout must fetch the whole history and the tags, without persisted credentials")
     check(bool(co) and "ref" not in co[0]["with"], f"{name}: the checkout must be main's (its scripts, its fly config)")
+check(steps[-1]["env"].get("PROMOTE_NEWEST") == "${{ inputs.version == '' }}",
+      "promote: promote.sh is not told when no version was asked (the newest never goes below production)")
 check("scripts/promote.sh \"$TAG\"" in steps[-1]["run"] and steps[-1]["env"].get("TAG") == "${{ needs.resolve.outputs.tag }}",
       "promote: the last step does not promote the resolved tag")
 secret = [st for st in steps if st.get("name") == "Check the deploy secret"]

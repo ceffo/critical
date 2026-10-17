@@ -9,7 +9,9 @@
 # In order, each step stopping the promotion when it fails:
 #   1. the guards (scripts/release-guards.sh all): vMAJOR.MINOR.PATCH, on main, a successful staging
 #      deploy of the commit and its digest, that image in the registry; then it prints what production
-#      runs now (its machines' image: version label, commit tag and digest; read-only);
+#      runs now (its machines' image: version label, commit tag and digest; read-only); with
+#      PROMOTE_NEWEST=true (the workflow, no version asked) a tag older than the highest version production
+#      runs, or production unreadable, is refused here;
 #   2. the production app has no public IP (scripts/fly-private-check.sh). Mandatory: there is no bypass
 #      until a public-access option with access control exists (ADR 0024 step 8);
 #   3. the copy of that image, by digest, into the production app's repository,
@@ -58,11 +60,28 @@ digest="$(sed -n 's/^digest=//p' <<<"$guards")"
 staged="registry.fly.io/$staging_app@$digest"
 image="registry.fly.io/$app@$digest"
 echo "promote: $tag is $sha, staging ran $staged"
-# What production runs now, for the log (read-only; an app without machines, or a failed read, says so).
-current="$("$fly" machine list -a "$app" --json 2>/dev/null | jq -r '[.[].image_ref
+# What production runs now, for the log (read-only; an app without machines says so).
+machines_now="" current=""
+if machines_now="$("$fly" machine list -a "$app" --json 2>/dev/null)" && current="$(jq -r '[.[].image_ref
     | "\(.labels["org.opencontainers.image.version"] // "no version") (commit \(.tag // "?"), \(.digest // "?"))"]
-    | unique | if length == 0 then "nothing (no machine)" else join(", ") end' 2>/dev/null)" || current=""
-echo "promote: production ($app) runs ${current:-unknown (its machines could not be read)}; promoting $tag"
+    | unique | if length == 0 then "nothing (no machine)" else join(", ") end' <<<"$machines_now" 2>/dev/null)"; then
+    echo "promote: production ($app) runs $current; promoting $tag"
+else
+    current=""
+    echo "promote: production ($app) runs unknown (its machines could not be read); promoting $tag"
+fi
+# The newest version (none was asked, PROMOTE_NEWEST=true) never goes below what production runs: that is a
+# rollback, asked by naming the version. Unknown is refused too; machines without a version label (images
+# from before versions) or no machine at all set no floor.
+if [ "${PROMOTE_NEWEST:-false}" = true ]; then
+    [ -n "$current" ] || fail "promoting the newest staging version, but what production runs could not be read: nothing promoted (run it again, or name the version: just promote X.Y.Z)"
+    floor="$(jq -r '.[].image_ref.labels["org.opencontainers.image.version"] // empty' <<<"$machines_now" \
+        | grep -Ex '(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)" || floor=""
+    if [ -n "$floor" ]; then
+        top="$(printf '%s\n%s\n' "$floor" "${tag#v}" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)"
+        [ "$top" = "${tag#v}" ] || fail "the newest staging version $tag is older than production's $floor: nothing promoted. A rollback names its version (just promote ${tag#v}; docs/deploy.md, \"Rollback\")"
+    fi
+fi
 
 FLY="$fly" "$here/fly-private-check.sh" "$app"
 

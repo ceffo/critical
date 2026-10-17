@@ -62,7 +62,7 @@ flowchart TD
     RAIL["Rail (components/shell/Rail.tsx), on the ground: Act, Spells, Experience, Inventory"]
     subgraph S["Stage: the focused activity (one shown, each mounted on first visit, then kept)"]
       subgraph ACT["Act (components/shell/ActStage.tsx)"]
-        NOW["Now band, content height up to 60 %: ActionArea (tabs with icons) | ResultCard (accent outline)"]
+        NOW["Now band, its content height: ActionArea (tabs with icons) | ResultCard (accent outline)"]
         SPLIT["Split handle: drag or arrows resize the journal, click or Enter toggles it"]
         J["CombatLog (at least 14rem) or, collapsed, JournalBar (one line)"]
       end
@@ -92,8 +92,9 @@ flowchart TD
   rail focuses one; the always-visible zones do not move. Each mounts on its first visit and stays
   mounted while hidden (ADR 0009 step 2, kept).
 - Act stage (`components/shell/ActStage.tsx`): the now band (act panel | result panel,
-  `minmax(28rem, 1.35fr) | minmax(24rem, 1fr)`) takes its content's height up to 60 % of the
-  stage, the journal the rest (at least 14rem). The handle between them (`role="separator"`) is
+  `minmax(28rem, 1.35fr) | minmax(24rem, 1fr)`) takes its content's height, the active tab's or
+  the result panel's when that is taller (ADR 0027 step 6.1, no 60 % cap), the journal the rest (at
+  least 14rem); past that the panels scroll inside. The handle between them (`role="separator"`) is
   dragged, or moved by ArrowUp / ArrowDown, to set the journal's height (`lib/journalSplit.ts`
   bounds it); a click (under 4 px of movement) or Enter / Space folds the journal into `JournalBar.tsx` (turn, value, icon, newest entry,
   time, the entry count, Undo / Redo). The height and the collapsed state are per-device display
@@ -185,10 +186,12 @@ flowchart TD
   with "replaced by Improved Strength".
 - Weapons tab (`components/actions/AttackPanel.tsx`, `stores/attack.ts`): the attack form's
   choices are server state (`GET` / `PATCH /api/attack/form`, ADR 0009 step 6), restored on load and
-  in every tab or device. The target bar is one line on the raised tone (it wraps when narrow): the
-  TARGET section label, AC (the stepper's accessible name stays "Target AC") with Unknown, the size
-  (S / M | L) and the situational stepper with its reason (shown when not 0), both bounded to ±20
-  like the server. The weapon in hand is **one row** ([ADR 0022](adr/0022-activity-focus-layout.md)
+  in every tab or device. The target bar is one line on the raised tone ([ADR 0027](adr/0027-space-follows-frequency-of-use.md)
+  step 7.2): the TARGET section label, AC (the stepper's accessible name stays "Target AC") with
+  Unknown, the set modifiers as chips ("Size L", "Situational +2" with the reason as its tooltip;
+  `lib/weaponSwitch.ts` `setModifiers`) and a small toggle ("Size and situational modifier",
+  `SlidersHorizontal`, this screen's state only) that shows under it the size (S / M | L) and the
+  situational stepper with its reason (shown when not 0), both bounded to ±20 like the server. The weapon in hand is **one row** ([ADR 0022](adr/0022-activity-focus-layout.md)
   step 2.5), on a tint with the accent outline: the WEAPON IN HAND label, the name (wrapping, never
   cut), its stats as one line of text from the server's preview (ADR 0002 step 12, `StatsLine`:
   "Missile · two-handed · 1d6 S/M · 1d6 L · +5 / +3 to hit / dmg · THAC0 8", the size not in use
@@ -196,9 +199,10 @@ flowchart TD
   lines ("Attack" / "needs 6 vs AC 5" or "AC unknown"), the Phosphor `Sword` centred in its own
   44 x 44 cell (step 3.3; the accessible name stays "Attack", the second line describes it). Under
   the row: a bow's AMMUNITION chips (`ammoChoices`, counts amber at 3 or less; the chosen one stays
-  chosen when spent and the panel says so), then SWITCH TO, every other weapon as a chip with its
-  S/M dice, the previous weapon first with the swap icon ("Switch to {name}"); one click puts it in
-  hand and never attacks. Then the crit table (house rule), a closed `details` line. Changes are
+  chosen when spent and the panel says so), then (step 7.1, `lib/weaponSwitch.ts` `weaponSwitch`) one quiet
+  button with the swap icon and the previous weapon's name ("Switch to {name}" its tooltip and
+  accessible name) and a native drop-down "Other weapon…" listing every other weapon in full; either
+  puts the weapon in hand and never attacks. The "needs 6 vs AC 5" line is in full ink. Then the crit table (house rule), a closed `details` line. Changes are
   sent one after the other and
   only the newest answer is shown; target and situational changes show at once. The preview is
   reloaded when buffs, effective STR, items or weapons change. An attack sends the saved choices

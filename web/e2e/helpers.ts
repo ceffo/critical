@@ -249,16 +249,35 @@ export async function openWeapons(page: Page) {
   await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
 }
 
-/** Put a weapon in hand with its chip under the weapon in hand unless it already is; never attacks. */
+/**
+ * Put a weapon in hand unless it already is: the previous weapon's button when it is that one, else
+ * the drop-down of the other weapons; never attacks.
+ */
 export async function chooseWeapon(page: Page, name: string) {
   const held = attackForm(page).getByTestId("weapon-in-hand");
   await expect(held).not.toBeEmpty();
   if ((await held.textContent()) === name) return;
-  await attackForm(page)
-    .getByRole("group", { name: "Other weapons" })
-    .getByRole("button", { name: `Switch to ${name}`, exact: true })
-    .click();
+  const group = attackForm(page).getByRole("group", { name: "Other weapons" });
+  const previous = group.getByRole("button", {
+    name: `Switch to ${name}`,
+    exact: true,
+  });
+  if (await previous.count()) await previous.click();
+  else
+    await group
+      .getByRole("combobox", { name: "Other weapon" })
+      .selectOption({ label: name });
   await expect(held).toHaveText(name);
+}
+
+/** Show the target bar's size and situational controls (ADR 0027 step 7.2) unless shown. */
+export async function openTargetModifiers(page: Page) {
+  const toggle = attackForm(page).getByRole("button", {
+    name: "Size and situational modifier",
+  });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true")
+    await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
 }
 
 /** The ammunition chips of the weapon in hand. */

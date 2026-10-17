@@ -851,6 +851,12 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   await api("PATCH", "/api/items/power_gem_dispel", {
     name: { en: LONG_ITEM, fr: LONG_ITEM },
   });
+  // A known AC and both rare modifiers set: the target bar at its widest (ADR 0027 step 7.2).
+  await api("PATCH", "/api/attack/form", {
+    targetAc: -10,
+    targetSize: "l",
+    situational: { value: -2, label: "couvert" },
+  });
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const character = page.getByTestId("character");
@@ -879,6 +885,37 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     }
     await rail.nth(0).click();
     await expectNoClippedText(stage, `act, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`)) {
+      // ADR 0027 step 7.2: AC, Inconnue and the two tags on one line.
+      const bar = page.getByRole("group", { name: "Cible" });
+      const middle = async (l: Locator) => {
+        const b = (await l.boundingBox())!;
+        return b.y + b.height / 2;
+      };
+      const ac = await middle(bar.getByLabel("CA de la cible"));
+      for (const el of [
+        bar.getByRole("button", { name: "Inconnue" }),
+        ...(await bar.getByTestId("modifier-tag").all()),
+      ])
+        expect(
+          Math.abs((await middle(el)) - ac),
+          `target bar on one line, ${where}`,
+        ).toBeLessThanOrEqual(2);
+      await expect(bar.getByTestId("modifier-tag")).toHaveCount(2);
+    }
+    if (vp.width === 1440) {
+      // ADR 0027 step 6: the now band is as tall as the Weapons tab, which does not scroll, and the
+      // journal (at least 14rem) takes the rest.
+      const weapons = page.getByRole("tabpanel");
+      await expect(weapons).toHaveAttribute("id", "panel-weapons");
+      await expectNoScroll(weapons, `Weapons tab, ${where}`);
+      expect(
+        (await page.getByTestId("journal-slot").boundingBox())!.height,
+        `journal height, ${where}`,
+      ).toBeGreaterThanOrEqual(224);
+    }
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `act-weapons-fr-${vp.width}x${vp.height}`);
     await rail.nth(1).click();
     await page.getByRole("option", { name: FR_SPELL }).click();
     await expectNoClippedText(stage, `lookup, ${where}`);

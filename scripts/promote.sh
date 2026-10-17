@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Promotes a release tag to production (ADR 0024 steps 4, 8.3 and 10.4): the image staging ran for the
-# tag's commit, by digest, never rebuilt. Used by .github/workflows/promote.yml (on the tag push, and to
-# roll back by re-running an older tag); runnable by hand with the production deploy token.
+# tag's commit, by digest, never rebuilt. Used by .github/workflows/promote.yml (run by hand from the
+# tag, and to roll back from an older tag); runnable by hand with the production deploy token.
 #
 #   scripts/promote.sh <tag>
 #

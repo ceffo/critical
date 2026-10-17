@@ -2,15 +2,14 @@
 # Tests the promotion's scripts without the network, fly or GitHub (part of `just validate`, ADR 0024
 # steps 4, 8.3 and 10.4), on fixture git repositories with fly, gh, docker and the smoke check stubbed:
 #   - release-guards.sh: each guard (tag format, on main, the staging record read as docs/deploy.md says,
-#     the image in the registry) and `all`, which prints the tag's commit and the digest staging ran;
+#     the image in the registry) and `all`, which prints the tag's commit and the digest staging ran (as
+#     that tag's version when one commit carries two);
 #   - promote.sh: guards, then the no-public-IP check, then the copy of the staged image by digest into the
 #     production repository (and its digest checked), then the restore point in a console machine of it, then the deploy by digest, the smoke check, the digest check and the GitHub Release;
 #     each failure stops everything after it (a refused guard calls fly not at all; no restore point, no
 #     deploy; a failed smoke or a digest mismatch, no release);
-#   - release-tag.sh (`just release`): every refusal (version, branch, dirty tree, behind origin, staging
-#     not passed) pushes nothing; the happy path pushes one annotated tag;
 #   - restore-point.sh: what it refuses without a database (its SQL runs for real in scripts/image-smoke.sh);
-#   - promote.yml, parsed: a run from a branch fails saying "use a tag"; the promotion runs for tags only, the production environment, serialized and never cancelled, the
+#   - promote.yml, parsed: a run from a branch fails saying "use a tag"; the promotion runs by hand only (no trigger on a tag push), for tags only, the production environment, serialized and never cancelled, the
 #     token read only by the secret check (which fails on an empty token) and the promotion step.
 set -euo pipefail
 
@@ -84,7 +83,7 @@ cd "$tmp/repo"
 git config user.email t@example.com
 git config user.name test
 mkdir -p scripts deploy
-cp "$root"/scripts/{release-guards,release-tag,promote,restore-point,fly-private-check}.sh scripts/
+cp "$root"/scripts/{release-guards,promote,restore-point,fly-private-check}.sh scripts/
 cp "$root"/deploy/fly.{staging,prod}.toml deploy/
 mkdir -p api/internal/storage/postgres/migrations
 touch api/internal/storage/postgres/migrations/{001_baseline,002_more}.sql
@@ -110,7 +109,7 @@ out="$("$guards" on-main "$side_sha" 2>&1)" && fail "a commit off main is accept
 [[ "$out" == *"not on main"* ]] || fail "off-main message: $out"
 
 # --- guard: the staging record (docs/deploy.md "Record") ---
-staging() { status=0; out="$("$guards" staging "$1" 2>&1)" || status=$?; }
+staging() { status=0; out="$("$guards" staging "$@" 2>&1)" || status=$?; }
 staging "$main_sha"
 [ "$status" != 0 ] && [[ "$out" == *"no successful deploy"* ]] || fail "no deployment: accepted or wrong message: $out"
 put "$(deployments "$main_sha")" "[{\"id\":11,\"created_at\":\"2026-10-17T01:00:00Z\",\"payload\":{\"digest\":\"$digest\"}}]"
@@ -148,6 +147,32 @@ out="$("$guards" all v1.2.3 2>&1)" || fail "all v1.2.3: $out"
 [ "$out" = "$(printf 'sha=%s\ndigest=%s' "$main_sha" "$newer")" ] || fail "all v1.2.3 printed: $out"
 "$guards" all v9.9.9 >/dev/null 2>&1 && fail "all: a tag off main is accepted"
 "$guards" all v1.2.4 >/dev/null 2>&1 && fail "all: a missing tag is accepted"
+
+# --- guard: two versions on one commit (a forced release of a tagged head): each tag gets its own image ---
+older="sha256:$(printf '1%.0s' {1..64})"
+forced="sha256:$(printf '2%.0s' {1..64})"
+bare="sha256:$(printf '3%.0s' {1..64})"
+git tag -a v1.3.0 -m r "$main_sha"
+put "$(deployments "$main_sha")" "[{\"id\":21,\"created_at\":\"2026-10-17T01:00:00Z\",\"payload\":{\"digest\":\"$older\",\"version\":\"1.2.3\"}},
+  {\"id\":22,\"created_at\":\"2026-10-17T02:00:00Z\",\"payload\":\"{\\\"digest\\\":\\\"$forced\\\",\\\"version\\\":\\\"1.3.0\\\"}\"},
+  {\"id\":23,\"created_at\":\"2026-10-17T00:30:00Z\",\"payload\":{\"digest\":\"$bare\",\"version\":\"\"}},
+  {\"id\":24,\"created_at\":\"2026-10-17T03:00:00Z\",\"payload\":{\"digest\":\"$digest\",\"version\":\"1.2.3\"}}]"
+for id in 21 22 23; do put "$(statuses "$id")" '[{"state":"inactive"},{"state":"success"}]'; done
+put "$(statuses 24)" '[{"state":"failure"}]'
+out="$("$guards" all v1.2.3 2>&1)" || fail "all v1.2.3 (two versions): $out"
+[ "$out" = "$(printf 'sha=%s\ndigest=%s' "$main_sha" "$older")" ] || fail "all from the OLDER tag of a commit got: $out (the newest digest of the sha, not its own; a failed deploy of it ignored)"
+out="$("$guards" all v1.3.0 2>&1)" || fail "all v1.3.0 (two versions): $out"
+[ "$out" = "$(printf 'sha=%s\ndigest=%s' "$main_sha" "$forced")" ] || fail "all from the newer tag of a commit got: $out"
+staging "$main_sha" 1.4.0
+[ "$status" = 0 ] && [ "$out" = "$bare" ] || fail "a version no deploy records: not the deploy without a version: '$out'"
+staging "$main_sha"
+[ "$status" = 0 ] && [ "$out" = "$forced" ] || fail "no version asked: not the newest successful deploy: '$out'"
+put "$(statuses 23)" '[{"state":"failure"}]'
+staging "$main_sha" 1.4.0
+[ "$status" != 0 ] && [[ "$out" == *"no successful deploy of $main_sha as 1.4.0"* ]] \
+    || fail "a version no deploy records, the others recorded as other versions: accepted or wrong message: $out"
+git tag -d v1.3.0 >/dev/null
+put "$(deployments "$main_sha")" "[{\"id\":12,\"created_at\":\"2026-10-17T03:00:00Z\",\"payload\":{\"digest\":\"$newer\"}}]"
 
 # --- promote.sh ---
 private='[{"Type":"private_v6","Address":"fdaa::1","Region":"global"}]'
@@ -231,46 +256,6 @@ reset; touch "$tmp/release-exists"; promote v1.2.3
 [ "$status" = 0 ] && grep -q '^fly deploy' "$calls" && ! grep -q '^gh release create' "$calls" \
     || fail "promote: a re-run (existing release) did not redeploy, or created the release again"
 
-# --- release-tag.sh (`just release`) ---
-put "$(deployments "$main_sha")" "[{\"id\":12,\"created_at\":\"2026-10-17T03:00:00Z\",\"payload\":{\"digest\":\"$newer\"}}]"
-release() { status=0; out="$(scripts/release-tag.sh "$1" 2>&1)" || status=$?; }
-pushed() { git ls-remote --tags "$tmp/origin.git" | grep -c 'refs/tags/v[0-9.]*$' || true; }
-git push -q origin v1.2.3
-git tag -d v9.9.9 >/dev/null # a local tag off main, never pushed
-before="$(pushed)"
-for v in 1.2 v1.2.3.4 1.2.3-rc1 01.2.3 abc; do
-    release "$v"; [ "$status" != 0 ] && [[ "$out" == *"not MAJOR.MINOR.PATCH"* ]] || fail "release $v: not refused as non-semver: $out"
-done
-for v in 1.2.3 1.2.2 0.9.9 v1.2.3; do
-    release "$v"; [ "$status" != 0 ] && [[ "$out" == *"not greater than the last release v1.2.3"* ]] || fail "release $v: not refused as non-increasing: $out"
-done
-git switch -q side; release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not main"* ]] || fail "release on a side branch: $out"
-git switch -q main
-echo dirty > scripts/dirty; release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not clean"* ]] || fail "release with a dirty tree: $out"
-rm scripts/dirty
-git commit -q --allow-empty -m local; release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not origin/main's head"* ]] || fail "release ahead of origin: $out"
-git reset -q --hard origin/main
-git push -q origin "$(git commit-tree -p "$main_sha" -m remote "$(git rev-parse HEAD^{tree})"):refs/heads/main"
-release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"not origin/main's head"* ]] || fail "release behind origin: $out"
-git reset -q --hard origin/main
-release 1.3.0
-[ "$status" != 0 ] && [[ "$out" == *"staging has not passed"* ]] || fail "release of a commit staging did not pass: $out"
-[ "$(pushed)" = "$before" ] || fail "a refused release pushed a tag"
-put "$(deployments "$(git rev-parse HEAD)")" "[{\"id\":15,\"created_at\":\"2026-10-17T06:00:00Z\",\"payload\":{\"digest\":\"$newer\"}}]"
-put "$(statuses 15)" '[{"state":"success"}]'
-release 1.3.0
-[ "$status" = 0 ] || fail "release 1.3.0: exit $status: $out"
-[ "$(git -C "$tmp/origin.git" cat-file -t refs/tags/v1.3.0 2>/dev/null)" = tag ] || fail "release: no annotated tag v1.3.0 on origin"
-[ "$(git -C "$tmp/origin.git" rev-parse 'v1.3.0^{commit}')" = "$(git rev-parse HEAD)" ] || fail "release: v1.3.0 is not main's head"
-release 1.10.0
-[ "$status" = 0 ] && [ "$(git -C "$tmp/origin.git" rev-parse 'v1.10.0^{commit}' 2>/dev/null)" = "$(git rev-parse HEAD)" ] \
-    || fail "release 1.10.0 after 1.3.0 (version order, not text order): $out"
-release 1.9.0
-[ "$status" != 0 ] || fail "release 1.9.0 after 1.10.0 is accepted"
 cd "$root"
 
 # --- restore-point.sh: refusals before any database call ---
@@ -302,7 +287,7 @@ def check(ok, msg):
         errs.append(msg)
 
 on = wf.get(True) or wf.get("on")  # PyYAML reads the key `on` as True
-check(on["push"] == {"tags": ["v*"]} and set(on) == {"push", "workflow_dispatch"}, "promote: not tags v* + dispatch")
+check(set(on) == {"workflow_dispatch"}, "promote: not run by hand only (no tag push may start it)")
 check(wf["permissions"] == {"contents": "read"}, "promote: workflow permissions are not read-only")
 check(sorted(wf["jobs"]) == ["not-a-tag", "promote"], "promote: the jobs are promote and not-a-tag")
 refuse = wf["jobs"]["not-a-tag"]

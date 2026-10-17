@@ -471,22 +471,25 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   `index.html` stops the server at boot. Unset (as in `just dev`, where Vite serves the app), nothing is
   served outside `/api`. Either way an unknown path that is not served is the JSON 404
   (`{"error": "not found: /api/nope", "code": "not_found"}`).
-- **`/api/health`**: `{"status": "ok", "commit": "<sha>"}`. The image build sets the commit with
-  `-ldflags -X …/internal/cmd/api.commit=$COMMIT`; any other build reports `unknown`. The release name is not
-  in the image (ADR 0024, consequences): the GitHub Release maps a tag to its commit.
-- **Smoke check**: `scripts/image-smoke.sh <image> <commit>` runs the image on the fixture seeds (the fixture
+- **`/api/health`**: `{"status": "ok", "commit": "<sha>", "version": "<X.Y.Z>"}`. The image build sets them
+  with `-ldflags -X …/internal/cmd/api.commit=$COMMIT -X …/internal/cmd/api.version=$VERSION` (build args
+  `COMMIT` and `VERSION`); one not given, and any other build (`just dev`), reports `unknown`. The release
+  build computes the version from the conventional commits since the last one (ADR 0024 step 3,
+  docs/deploy.md "Release version"); CI's image check and `just image` build `0.0.0`.
+- **Smoke check**: `scripts/image-smoke.sh <image> <commit> <version>` runs the image on the fixture seeds (the fixture
   catalogue knows only their spells) and a throwaway PostgreSQL container of its own (`postgres:17-alpine` on a
   private network, no volume; the image refuses the in-memory storage), so the boot migrates, seeds and imports
-  into an empty database. It checks health with the commit, `/` and a deep link returning
+  into an empty database. It checks health with the commit and the version, `/` and a deep link returning
   `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. Then it runs
   `scripts/restore-point.sh` in a second container of the image started without its entrypoint (as the
   promotion's console machine is): three restore points of that database with a retention of two, an
   existing name, the server running beside it and an exceeded size budget refused. The CI `image` job builds
   the image with the fixture and runs it on every PR and on main; nothing is pushed.
-- **Release build**: on green CI on `main`, `.github/workflows/release.yml` fetches the real catalogue with the
-  read-only deploy key and runs `scripts/release-image.sh` (also behind `just release-image`): the image is
-  labelled with the commit and the rulebooks commit and pushed to the private fly registry tagged with the
-  full commit sha (docs/deploy.md, "Release build").
+- **Release build**: on green CI on `main`, `.github/workflows/release.yml` computes the release version (or
+  none), fetches the real catalogue with the read-only deploy key and runs `scripts/release-image.sh` (also
+  behind `just release-image`): the image is built with the version, labelled with the commit, the version
+  and the rulebooks commit and pushed to the private fly registry tagged with the full commit sha and
+  `v<version>` (docs/deploy.md, "Release build").
 - **On fly.io**: configuration in `deploy/fly.*.toml`, operator commands in [deploy.md](deploy.md).
 - **Locally**: `docker compose up --build` builds the image with the real `.catalogue/` (fetch it with
   `just catalogue` first) and serves the app on http://localhost:8888, on the compose PostgreSQL (database

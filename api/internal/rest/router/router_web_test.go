@@ -37,7 +37,7 @@ func webBuild(t *testing.T) string {
 func webRouter(t *testing.T, web http.Handler) http.Handler {
 	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, &composition.BackingServices{CharacterID: 1}, router.Options{Web: web, Commit: "abc123"})
+	return router.New(log, &composition.BackingServices{CharacterID: 1}, router.Options{Web: web, Commit: "abc123", Version: "1.2.3"})
 }
 
 const notFoundBody = `{"code":"not_found","error":"not found: /api/nope"}`
@@ -120,5 +120,23 @@ func TestWeb_Step1_2_NoWebDirServesNothingOutsideAPI(t *testing.T) {
 func TestHealth_Step1_4_ReportsTheBuildCommit(t *testing.T) {
 	rec := do(webRouter(t, nil), "GET", "/api/health", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"status":"ok","commit":"abc123"}`, rec.Body.String())
+	assert.JSONEq(t, `{"status":"ok","commit":"abc123","version":"1.2.3"}`, rec.Body.String())
+}
+
+// Step 1.4: /api/health reports the release version baked into the image next
+// to the commit.
+func TestHealth_Step1_4_ReportsTheBuildVersion(t *testing.T) {
+	rec := do(webRouter(t, nil), "GET", "/api/health", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"version":"1.2.3"`)
+}
+
+// Step 1.4: a build without a version or a commit (as in `just dev`) reports
+// them as unknown.
+func TestHealth_Step1_4_UnknownWithoutABuildIdentity(t *testing.T) {
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	h := router.New(log, &composition.BackingServices{CharacterID: 1}, router.Options{})
+	rec := do(h, "GET", "/api/health", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"status":"ok","commit":"unknown","version":"unknown"}`, rec.Body.String())
 }

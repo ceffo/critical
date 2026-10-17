@@ -10,7 +10,10 @@ defaults are answered. Amended again 2026-10-16 (see "Amendment (shared cluster 
 2026-10-16)"): the cluster is the user's existing `tournesol-db`, shared, instead of a new
 `critical-db`. Amended again 2026-10-16 (see "Amendment (restore point: a copy database,
 2026-10-16)"): the pre-promotion restore point is a copy database on the same cluster, and production's
-no-public-IP check has no bypass.
+no-public-IP check has no bypass. Amended again 2026-10-17, **proposed, awaiting the user's OK** (see
+"Amendment (staging versions from the conventional commits, 2026-10-17)"): every staging release gets a
+version computed from the commits, baked into the image and tagged by CI once staging passed (steps 1.4, 3,
+4, 10.2 and the "release name" consequence).
 
 ## Context
 
@@ -47,8 +50,11 @@ flowchart LR
     subgraph gh["GitHub (public repo)"]
         PR["Pull request"] -->|"validate, generated, e2e, image check (fixture catalogue)"| CI["CI green"]
         CI -->|merge| MAIN["push to main"]
-        MAIN -->|"CI green on the main commit"| BUILD["release build: catalogue fetched with the deploy key"]
-        TAG["tag vMAJOR.MINOR.PATCH on a main commit"]
+        MAIN -->|"CI green on the main commit"| VER{"version from the commits since the last v* tag"}
+        VER -->|"X.Y.Z"| BUILD["release build: catalogue fetched with the deploy key, version baked in"]
+        VER -->|"docs/test/chore only, no-release label"| NONE["no release"]
+        TAG["tag vX.Y.Z, made by CI"]
+        RUN["Promote run by hand from the tag"]
     end
     subgraph fly["fly.io (org personal, private registry)"]
         IMG[("image tagged with the commit sha")]
@@ -64,9 +70,10 @@ flowchart LR
     IMG -->|deploy + smoke check| STG
     STG --> SDB
     PROD --> PDB
-    STG -.->|"same commit passed staging"| TAG
-    TAG -->|"first: restore point"| DUMP
-    TAG -->|"then: promote the same image, no rebuild"| PROD
+    STG -->|"smoke check passed"| TAG
+    TAG -.-> RUN
+    RUN -->|"first: restore point"| DUMP
+    RUN -->|"then: promote the same image, no rebuild"| PROD
     PROD -->|"smoke check, then GitHub Release"| REL["release vX.Y.Z"]
 ```
 
@@ -79,14 +86,17 @@ flowchart LR
    3. The image carries the campaign `seeds/` and the catalogue artifact, at the paths the server's
       configuration points to. The build takes the catalogue only as an explicit input and fails
       with a clear message when it is missing.
-   4. `/api/health` reports the build identity: the commit the image was built from (baked in at
-      build time, `unknown` when not set), next to `status`.
+   4. `/api/health` reports the build identity: the commit the image was built from and the release
+      version it was built as (`X.Y.Z`, step 3.1), both baked in at build time, each `unknown` when not
+      set (as in `just dev`), next to `status`. _Amended 2026-10-17 (staging versions); was: the commit
+      only._
    5. A main commit is built once; every later deployment of that commit (staging, production,
       rollback) runs that image, identified by its digest.
 
    Tests: `TestWeb_Step1_1_` (router: files, SPA fallback, JSON 404 under `/api`, no escape from the
    web dir, a dir without `index.html` refused), `TestWeb_Step1_2_NoWebDirServesNothingOutsideAPI`,
-   `TestHealth_Step1_4_ReportsTheBuildCommit`. Step 1.3 is checked by the CI `image` job
+   `TestHealth_Step1_4_ReportsTheBuildCommit`, `TestHealth_Step1_4_ReportsTheBuildVersion`,
+   `TestHealth_Step1_4_UnknownWithoutABuildIdentity`. Step 1.3 is checked by the CI `image` job
    (`scripts/image-smoke.sh`); the image and its inputs are described in `docs/backend.md`,
    "Production image".
 
@@ -110,15 +120,33 @@ flowchart LR
       card, the provisioning stops and reports.
 
 3. **Staging on main.** On a push to main, once the CI jobs for that commit are green:
-   1. the release build fetches the catalogue with the read-only deploy key, builds the image of
-      step 1 and pushes it to the fly registry, tagged with the commit sha;
-   2. that image is deployed to staging;
-   3. a smoke check verifies that `/api/health` answers 200 and reports that commit. A failed smoke
-      check fails the run.
+   1. the release computes the **version** of the commit first, from the conventional-commit titles of
+      all main commits since the last `v*` version (one whose run was replaced in the queue, or that made
+      no release, included); the highest level wins: `feat` a minor; `fix`, `refactor`, `perf`, any other
+      type and a title not in the conventional format a patch; `docs`, `test`, `chore` nothing. A breaking
+      change (`!`, `BREAKING CHANGE`) is a minor, with a notice that a major may be due: a major is made by
+      hand. When no commit of the range has a level outside the PRs labelled `no-release`, there is **no
+      release**: nothing is built, deployed or tagged, and the run stays green with a notice saying why;
+   2. otherwise the release build fetches the catalogue with the read-only deploy key, builds the image
+      of step 1 with that version baked in (step 1.4) and pushes it to the fly registry, tagged with the
+      commit sha and the version;
+   3. that image is deployed to staging;
+   4. a smoke check verifies that `/api/health` answers 200 and reports that commit and that version. A
+      failed smoke check fails the run;
+   5. only then CI creates the annotated tag `vX.Y.Z` on the commit, and the staging deployment record
+      carries the version. A failed staging run takes no version: the next release computes it again,
+      so that number may go to a different image, which, unlike the failed one, gets the tag.
 
-   Staging deployments are serialized: a newer main commit replaces a queued older one.
+   _Amended 2026-10-17 (staging versions); was: the image is pushed tagged with the commit sha only, and
+   a version exists only when a human pushes a tag._ The release, from the version to the tag, is one
+   serialized run: a newer main commit replaces a queued older one, a started one is never cancelled, and
+   two runs never compute a version at once. A manual run with no version releases main's head even when
+   the rules make no release (at least a patch); with a version, it redeploys that version's image.
 
-4. **Production on a tag.** Pushing a tag `vMAJOR.MINOR.PATCH` promotes a commit to production:
+4. **Production from a version tag.** Running the promotion from a version tag `vMAJOR.MINOR.PATCH`
+   promotes that commit to production. _Amended 2026-10-17 (staging versions); was: pushing the tag
+   promotes. CI makes the tags (step 3.5) and the promotion runs only by hand, from the tag: no tag push
+   starts it, until promotion on demand exists._
    1. the promotion refuses a tag whose commit is not on main, or whose image did not pass the
       staging smoke check of step 3;
    2. it takes the restore point of step 9.2, a verified copy of `critical_prod`, and waits for it
@@ -233,11 +261,15 @@ flowchart LR
        name: `staging` and `production`.
     2. The `production` environment only accepts deployments from `v*` tags. A tag runs the promotion
        workflow of its own commit, whose guards it could have edited out, so only a repository admin
-       may create, move or delete a `v*` tag (a tag ruleset, _added 2026-10-16_).
+       may move or delete a `v*` tag, and only an admin and the release job (the GitHub Actions app,
+       through the workflow token) may create one (two tag rulesets, _added 2026-10-16; amended
+       2026-10-17 (staging versions), was: only an admin may create one_). CI is the only maker of
+       version tags.
     3. The rulebooks deploy key is a read-only key on `critical-rulebooks`, held only by the job that
        builds the release image.
     4. When a staging secret is missing, the main-branch build and deploy jobs skip with a notice and
-       never fail main. A promotion with a missing secret fails: pushing a tag is a deliberate act.
+       never fail main. A promotion with a missing secret fails: running it is a deliberate act
+       (_amended 2026-10-17 (staging versions); was: pushing a tag is a deliberate act_).
     5. Smoke checks reach the app through `fly proxy`, so they work while the app is private.
 
 ## Proposed defaults awaiting the user
@@ -250,7 +282,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 | Access for a public URL (step 8) | private, no public IP | (a) basic auth + public IPs, (b) stay private, devices join WireGuard / Tailscale, (c) real login |
 | PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | **Answered 2026-10-16: PostgreSQL first**, no deploy until then; two production machines from the first deploy ([ADR 0025](0025-postgresql-storage.md)) |
 | Production data | fresh database | **Answered 2026-10-16: fresh database** (_amended 2026-10-16; was: seeded once with the user's data, the local `.dev/critical.db` copied into `critical_prod` by the copy tool_): production's first boot seeds it from `seeds/` and the catalogue, like staging; the user re-enters the few character-sheet edits made in the app. See "Amendment (production starts from the seeds, 2026-10-16)" |
-| Production approval | none: pushing the tag is the act | a required reviewer on the `production` environment |
+| Production approval | none: running the promotion from the tag is the act (_amended 2026-10-17; was: pushing the tag is the act_) | a required reviewer on the `production` environment |
 | Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
 | Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | **Answered 2026-10-16 ("1a"): a copy database on the same cluster** (a restore point, newest 3 kept), not a dump file; see "Amendment (restore point: a copy database, 2026-10-16)" |
 | Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
@@ -283,8 +315,11 @@ part of this ADR to accepted. Answered rows keep their original default and say 
   copies the image by digest into the production app's repository, with the production token, before
   the restore point; it never rebuilds. The digest check of step 1.5 holds: the copy has the digest
   staging smoke-checked.
-- **The release name is not in the image.** The image is built before the tag exists; `/api/health`
-  reports the commit, and the GitHub Release maps the tag to it.
+- **The release name is in the image.** _Amended 2026-10-17 (staging versions); was: "the release name
+  is not in the image: the image is built before the tag exists; `/api/health` reports the commit, and the
+  GitHub Release maps the tag to it"._ The version is computed before the build and baked in, so each
+  environment reports its version in `/api/health`; the tag follows once staging passed. A failed staging
+  run's image reports a version that never becomes a tag.
 - **Downtime and machine count.** _Amended 2026-10-16; was: one production machine, no redundancy,
   until the storage move._ Production runs two machines on a one-node cluster: a machine failure
   leaves the other serving, a cluster failure stops staging and production until fly restarts the
@@ -393,3 +428,38 @@ private until access control is decided, so production's no-public-IP check is m
   were judged not worth it for one user.
 - **Tests**: `scripts/test-promotion.sh` (guards, step order, refusals, offline) and the restore point run
   for real against a throwaway PostgreSQL 17 by `scripts/image-smoke.sh` (the CI `image` job).
+
+## Amendment (staging versions from the conventional commits, 2026-10-17)
+
+**Proposed, awaiting the user's OK before merge.** User, 2026-10-17: _"have staging releases infer the
+version number automatically from conventional commit to bump minor or patch version (major is manual).
+then promotion to prod just promote latest staging version. this way we have no risk of generating a bad
+tag and we know easily the different version on each environment. useful if we decide not to promote for a
+while"_. Decided in the same triage: the range is all main commits since the last version, highest bump
+wins; `feat` minor; `fix`, `refactor`, `perf` and non-conventional titles patch; a breaking change a minor
+plus a notice; `docs`, `test`, `chore` and the `no-release` PR label make no release (no build, no deploy,
+no tag), with no "force release" label; the version is baked in and reported by `/api/health`; the tag is
+created only after the staging smoke check; the manual staging run with no input releases main's head, with
+a version redeploys it; `just release` goes away and CI is the only maker of version tags.
+
+- **Step 1.4**: `/api/health` reports `version` next to `commit`, `unknown` when not set.
+- **Step 3**: the version first (3.1), the build with it (3.2), the deploy and smoke check with the version
+  (3.3, 3.4), the tag last (3.5); one serialized run from the version to the tag; the manual run.
+- **Step 4**: the promotion runs only by hand (`workflow_dispatch`) from a version tag; it has no tag-push
+  trigger, so no tag starts it, CI's or an admin's (a tag CI creates would start no workflow anyway: GitHub
+  starts none for events made with a workflow's `GITHUB_TOKEN`, except `workflow_dispatch` and
+  `repository_dispatch`). One commit can carry two versions (a manual release of a tagged head, a new
+  catalogue): the guard of step 4.1 takes the staging deployment recorded as the tag's version, so each
+  version promotes its own image. Promoting the newest staging version on demand and making a major are
+  later changes.
+- **Step 10.2**: the tag rules split in two rulesets: moving and deleting `v*` tags stays admin-only;
+  creating one is open to admins and the GitHub Actions app. Any workflow token of the repository with
+  `contents: write` can therefore create a `v*` tag; such a tag starts no workflow, the release refuses to
+  release while the highest `v*` tag is not before its commit ("a newer release exists", also what stops an
+  older run re-run after a newer release), and the operator promotes only versions the release made
+  (runbook, "GitHub").
+- **Consequences**: the release name is in the image.
+- **Tests**: `scripts/test-release-version.sh` (the rules as a table, the range and labels on a fixture
+  repository, the tag's API calls), `scripts/test-release-scripts.sh` and `scripts/test-staging-deploy.sh`
+  (the version through the build, the deploy, the smoke and the record; the job's steps), the health tests of
+  step 1.4, and the CI `image` job (`scripts/image-smoke.sh` checks the baked version).

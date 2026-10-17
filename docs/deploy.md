@@ -33,26 +33,32 @@ User steps left:
    critical-prod`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
    ("Production data").
 2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below; until it is set, every main run
-   of the release workflow ends green with a "Release skipped" notice naming it, runs no flyctl
-   step and deploys nothing). The environments and both `FLY_API_TOKEN` secrets are set (2026-10-16). Then check the first
+   of the release workflow that makes a release ends green with a "Release skipped" notice naming it,
+   runs no flyctl step, deploys and tags nothing). The environments and both `FLY_API_TOKEN` secrets are set (2026-10-16). Then check the first
    real release run ("Release build"), none of which an agent can see:
-   1. it is green, and its notice names `registry.fly.io/critical-staging:<sha>` and the rulebooks commit:
+   1. it is green, and its notice names `registry.fly.io/critical-staging:v<version>` and `:<sha>` and the
+      rulebooks commit:
       the deploy key reached GitHub over ssh with the pinned host key, and the staging deploy token could
       `fly auth docker` and push;
    2. `$fly auth docker`, `docker pull registry.fly.io/critical-staging:<sha>`, then `docker inspect -f
       '{{json .Config.Labels}}' registry.fly.io/critical-staging:<sha>` shows
-      `org.opencontainers.image.revision` and `critical.rulebooks.revision`;
+      `org.opencontainers.image.revision`, `org.opencontainers.image.version` and `critical.rulebooks.revision`;
    3. its log holds no catalogue JSON and no key material: only the clone, the build, the push lines and
       the notice with the reference and the rulebooks sha;
-   4. the `deploy staging` job that follows is green (no public IP, smoke on the machine) and Deployments
-      shows a `deploy-staging` deployment of the sha with the digest; the other post-merge checks are in "Staging deploy".
+   4. its "Deploy to staging" step is green (no public IP, smoke on the machine) and Deployments
+      shows a `deploy-staging` deployment of the sha with the digest and the version, then "Tag the version"
+      created `v<version>`; the other post-merge checks are in "Staging deploy".
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
 4. **CREATEDB for `critical_prod`**, the one privilege the promotion's restore point needs (ADR 0024 step
    9.2, "Promotion" below; agreed by the user 2026-10-17, not run yet): `just fly-db-provision tournesol-db prod` (a
    rerun: no password or secret changes; its checks accept the user's own restore points). Until then every
    promotion stops at the restore point and deploys nothing.
-5. **The first promotion** (`just release <version>`, "Promotion"), whose post-run checks only a real run
-   can make: listed at the end of "Promotion".
+5. **The tag rulesets for CI-made versions** (ADR 0024 step 10.2, "GitHub" below): rerun
+   `scripts/github-tag-ruleset.sh` (admin) **before the first release run of the versioning change**, so the
+   release job may create `v*` tags. Until then the run deploys staging and then fails at "Tag the version"
+   (the version is not tagged; the next release computes it again).
+6. **The first promotion** (Actions > Promote > Run workflow from a version tag, "Promotion"), whose post-run
+   checks only a real run can make: listed at the end of "Promotion".
 
 ## The PostgreSQL cluster (user)
 
@@ -220,22 +226,37 @@ new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a use
 | `production` | `FLY_API_TOKEN` | deploy token of `critical-prod` |
 
 Restrict the `production` environment to deployment branches and tags matching `v*` (ADR 0024 step
-10.2). Optionally add a required reviewer (default: none, pushing the tag is the act).
+10.2). Optionally add a required reviewer (default: none, running the promotion from the tag is the act).
 
-**Who may create a `v*` tag.** The environment's tag rule accepts **any** `v*` tag, and a tag runs
-`promote.yml` as it is in the tagged commit, with the production token: the on-main guard lives in that
-commit's scripts, so a tag on a commit that edited it out would deploy that commit. The tag ruleset
-`release tags` closes this: only a repository admin may create, move or delete a `v*` tag.
+**Who may create a `v*` tag.** The environment's tag rule accepts **any** `v*` tag, and Promote run from a
+tag runs `promote.yml` as it is in the tagged commit, with the production token: the on-main guard lives in
+that commit's scripts, so a tag on a commit that edited it out would deploy that commit. Two tag rulesets
+close this (a bypass actor bypasses every rule of its ruleset, hence two):
+
+| Ruleset | Rules on `refs/tags/v*` | Bypass |
+|---|---|---|
+| `release tags` | update, deletion | Repository admin |
+| `release tag creation` | creation | Repository admin, the GitHub Actions app (`Integration` 15368: the workflow token of the release job) |
+
+CI is the only maker of version tags (the release job, after a passed staging deploy, "Release version"); a
+human never makes one (`just release` is gone). The workflow may create a `v*` tag, never move or delete one.
 
 ```bash
-scripts/github-tag-ruleset.sh --dry-run   # prints the ruleset
-scripts/github-tag-ruleset.sh             # creates it, or replaces it (found by name); admin rights
+scripts/github-tag-ruleset.sh --dry-run   # prints both rulesets
+scripts/github-tag-ruleset.sh             # creates them, or replaces them (found by name); admin rights
 ```
 
-Applied 2026-10-17 (ruleset 25291040). Check: Settings > Rules > Rulesets shows `release tags`, active, target tags `refs/tags/v*`, rules
-creation, update and deletion, bypass "Repository admin". The repository owner is admin, so `just release`
-keeps working; a collaborator with write access gets "push declined due to repository rule violations".
-The promotion creates no tag (it creates the Release of an existing one), so the workflow needs no bypass.
+`release tags` was applied 2026-10-17 (ruleset 25291040) with creation in it and the admin bypass only; the
+rerun of user step 5 moves creation into `release tag creation`. Check: Settings > Rules > Rulesets shows
+both, active, target tags `refs/tags/v*`, with the rules and bypasses above; a collaborator with write access
+pushing a `v*` tag gets "push declined due to repository rule violations".
+
+What the GitHub Actions bypass also allows: any workflow of this repository whose token has `contents:
+write` can create a `v*` tag, so a write collaborator could, through a workflow on a branch, tag a commit
+that is not on main. Such a tag starts nothing (a tag made with a workflow token starts no workflow, and
+Promote is run by hand only). If it is the highest `v*` tag, the release job refuses every release until an
+admin deletes it ("a newer release exists", "Release version"); promote only the versions the release runs
+made (their notices, the staging deployments' payloads).
 
 The rulebooks deploy key is read-only and belongs to the private `critical-rulebooks` repo:
 
@@ -252,7 +273,7 @@ Never commit a token or key; the repository holds none.
 
 ```bash
 just fly-open critical-staging              # or critical-prod: prints the URL to open, Ctrl-C stops it
-curl -s http://127.0.0.1:<port>/api/health  # {"status":"ok","commit":"<sha>"}, <port> from the line above
+curl -s http://127.0.0.1:<port>/api/health  # {"commit":"<sha>","status":"ok","version":"<X.Y.Z>"}, <port> from the line above
 $fly ssh console -a critical-<env>          # a shell on the machine
 $fly logs -a critical-<env>
 ```
@@ -279,35 +300,96 @@ gets those steps then.
 
 ADR 0024 steps 3 and 4, driven by GitHub Actions (the PR title, a conventional-commit line, becomes the commit on `main` and drives the version):
 
-1. A merge to `main` with green CI builds the image with the real catalogue and pushes it tagged with
-   the commit sha ("Release build" below, `.github/workflows/release.yml`); the same run then deploys that
-   image to staging and smoke-checks it ("Staging deploy" below, `.github/workflows/deploy-staging.yml`).
-2. A tag `vMAJOR.MINOR.PATCH` on a `main` commit that passed staging takes a restore point of
-   `critical_prod` (no restore point, no deploy), deploys the **same image** to production, smoke-checks
-   it and creates the GitHub Release ("Promotion" below, `.github/workflows/promote.yml`).
+1. A merge to `main` with green CI starts the release job (`.github/workflows/release.yml`). It first computes
+   the **version** from the conventional-commit titles since the last `v*` tag ("Release version" below). No
+   release (docs/test/chore only, or the `no-release` label): a notice, the run is green, nothing is built,
+   deployed or tagged. Otherwise it builds the image with the real catalogue and the version baked in, pushes
+   it tagged with the commit sha and `v<version>` ("Release build"), deploys it to staging and smoke-checks it
+   (health reports the commit and the version, "Staging deploy"), and **then** tags the commit `vX.Y.Z`. A
+   failed staging deploy takes no version: the next release computes the same number again.
+2. Promoting a version is a deliberate act: Actions > Promote > Run workflow, "Use workflow from" **the
+   version's tag** (Tags > `vX.Y.Z`). It takes a restore point of `critical_prod` (no restore point, no
+   deploy), deploys the **same image** to production, smoke-checks it and creates the GitHub Release
+   ("Promotion" below, `.github/workflows/promote.yml`). The tag CI creates does not start it.
 
-```bash
-git switch main && git pull
-just release 1.2.3        # user: the deliberate act; tags main's head v1.2.3 and pushes the tag
+```mermaid
+flowchart LR
+    M["merge to main, CI green"] --> V{"version from the commits since the last v* tag"}
+    V -->|"docs/test/chore only, or no-release label"| N["notice; nothing built"]
+    V -->|"X.Y.Z"| B["build with VERSION, push :sha and :vX.Y.Z"]
+    B --> S["staging deploy + smoke (commit and version)"]
+    S -->|passed| T["tag vX.Y.Z (workflow token)"]
+    S -->|failed| F["no tag; the next release recomputes X.Y.Z"]
+    T -.->|"by hand: Promote from the tag"| P["production"]
 ```
+
+To know what each environment runs: `curl …/api/health` through `just fly-open` (commit and version), or the
+deployments of the `staging` environment (payload `version`) and the GitHub Releases (production).
+
+### Release version
+
+`scripts/release-version.sh` (user decisions of 2026-10-17, ADR 0024 step 3, "Amendment (staging versions from
+the conventional commits, 2026-10-17)"), run first by the release job:
+
+- **Range.** Every first-parent commit after the highest `vMAJOR.MINOR.PATCH` tag reachable from the commit
+  being released, up to it: **all** of them, including a commit whose own release run was replaced in the
+  queue, or that made no release.
+- **Level of a commit**, from its title `type(scope)!: description`: `feat` minor; `docs`, `test`, `chore`
+  none; any other type (`fix`, `refactor`, `perf`, `ci`, `build`, …) and a title not in that format patch.
+  A breaking change (`!` after the type, or `BREAKING CHANGE` in the title or as a footer in the body) is a
+  **minor**, never a major, and the run prints a notice "Major version?": majors are made by hand.
+- **Next version**: the highest level of the range (minor: `X.(Y+1).0`; patch: `X.Y.(Z+1)`).
+- **No release** when no commit of the range has a level outside the PRs labelled **`no-release`** (the
+  label of the merged PR whose merge commit it is, read from the GitHub API): the notice says why ("docs/test/
+  chore only since vX.Y.Z", "no-release label on PR #n", "no commit since vX.Y.Z"). A labelled `feat` still
+  counts for the level of the next release that happens. There is no "force release" label.
+- **By hand** (Actions > Release > Run workflow on `main`, version empty): releases main's head even when the
+  rules make none, at least a patch (a new catalogue, "A new catalogue version").
+- Refused, failing the run: no `v*` tag before the commit (the first version is tagged by hand); **a newer
+  release exists**, i.e. the highest `v*` tag of the repository is not before the commit (an older run
+  re-run after a newer one was tagged: it would stage the old image and tag a lower version after a higher
+  one; or a tag made off main, which an admin deletes); a GitHub API failure reading the labels.
+- **Tag**: `scripts/version-tag.sh` creates the annotated tag `vX.Y.Z` on the commit through the GitHub API
+  with the workflow's token (tagger `github-actions[bot]`, message naming the staging digest), only after the
+  staging deploy and smoke check passed (the job stops at a failed one). An existing tag is never moved.
+- **The tag starts no workflow.** GitHub: "When you use the repository's `GITHUB_TOKEN` to perform tasks,
+  events triggered by the `GITHUB_TOKEN`, with the exception of `workflow_dispatch` and
+  `repository_dispatch`, will not create a new workflow run"
+  ([Triggering a workflow from a workflow](https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow)).
+  And `promote.yml` has no tag-push trigger at all: it runs only by hand, so no tag starts a promotion.
+  Until promotion on demand exists, promoting is running Promote from the tag.
+- **Offline test.** `scripts/test-release-version.sh` (part of `just validate`): the rules as a table (each
+  type, breaking, docs/test/chore only, the label, a mixed range, a skipped `feat` earlier in the range,
+  `--force`, the first run after `v0.1.0`), the range and the labels on a fixture repository with `gh`
+  stubbed, and the tag's API calls.
 
 ### Release build
 
-`.github/workflows/release.yml` (ADR 0024 steps 3.1, 7 and 10.3-10.4), job `release image`:
+`.github/workflows/release.yml` (ADR 0024 steps 3.1, 7 and 10.3-10.4), job `release`: the version, the
+image, the staging deploy and the tag in one job, so two runs never compute a version at once (each would
+take the same number).
 
 - **When.** It runs on `workflow_run` of the `CI` workflow, and its job only when that run concluded
   `success` for a `push` to `main` of this repository: a red or cancelled CI run, a pull request (a fork's
-  branch named `main` included) and a fork never build. It is not a job of `ci.yml` because CI cancels a
-  running `main` build when a newer commit lands; release jobs are serialized instead (the job's
-  `concurrency: release-main`, never cancelled once started: a newer green commit replaces only a queued
-  one). The group is on the job, not the workflow: every CI completion on a branch named `main` (a red
+  branch named `main` included) and a fork never build. By hand: Actions > Release > Run workflow on `main`
+  (input `version`: empty releases main's head, `X.Y.Z` redeploys that version, "Staging deploy"). It is not
+  a job of `ci.yml` because CI cancels a running `main` build when a newer commit lands; release jobs are
+  serialized instead (the job's `concurrency: release-staging`, never cancelled once started: a newer run
+  replaces only a queued one). Manual and automatic runs share that group: a run queued behind a
+  running one replaces the one already pending, whatever their kind, so a manual redeploy can drop a
+  pending automatic release and the other way round. Nothing is lost: the next release counts every
+  commit since the last version, and a dropped redeploy is run again. The group is on the job, not the workflow: every CI completion on a branch named `main` (a red
   one, a fork's) starts a run of this workflow, and only a job that passes the `if` joins the group, so a
   skipped run never cancels a pending green release. GitHub runs a
   `workflow_run` workflow as it is on `main`, so a pull request cannot change what runs with the secrets,
   and the workflow only starts once this file is on `main`.
-- **Secrets**, from the GitHub environment `staging`: `FLY_API_TOKEN` and `RULEBOOKS_DEPLOY_KEY`. When one
-  is missing (`scripts/release-secrets.sh`) the run ends green with a `Release skipped` notice naming it,
-  and nothing is built: that is what every main run shows until the user sets the key ("GitHub" below).
+- **Checkouts.** `main`'s head with its history and tags (the scripts, the action, the version), and the
+  release commit's tree alone in `release-src/` for the build.
+- **Secrets**, from the GitHub environment `staging`: `FLY_API_TOKEN` and `RULEBOOKS_DEPLOY_KEY`, checked only
+  when there is something to release. When one is missing (`scripts/release-secrets.sh`) an automatic run
+  ends green with a `Release skipped` notice naming it, and nothing is built: that is what every main run
+  shows until the user sets the key ("GitHub" below). A manual run fails instead (someone asked for a deploy
+  that cannot happen).
 - **Catalogue** (`scripts/release-catalogue.sh`): an ssh-agent gets the deploy key on stdin, then one
   shallow, blob-less clone of `critical-rulebooks` at its default branch, with github.com's host key
   pinned; only `dist/catalogue.json` is read, into the runner's temp directory, outside the checkout. The
@@ -315,57 +397,62 @@ just release 1.2.3        # user: the deliberate act; tags main's head v1.2.3 an
   never printed, never an artifact, never in an actions cache (the workflow has none) or an exported build
   cache.
 - **Image** (`scripts/release-image.sh`, the script `just release-image` runs too): one plain `docker
-  build` of the clean checkout with the catalogue as the `catalogue` build context and `COMMIT`, labelled
-  `org.opencontainers.image.revision=<commit>` and `critical.rulebooks.revision=<rulebooks commit>`, then
-  `fly auth docker` and a push to **`registry.fly.io/critical-staging:<full commit sha>`** (the app name is
-  read from `deploy/fly.staging.toml`). The staging app's repository is the one image repository of the
+  build` of the clean checkout with the catalogue as the `catalogue` build context, `COMMIT` and `VERSION`
+  (reported by `/api/health`), labelled `org.opencontainers.image.revision=<commit>`,
+  `org.opencontainers.image.version=<version>` and `critical.rulebooks.revision=<rulebooks commit>`, then
+  `fly auth docker` and a push to **`registry.fly.io/critical-staging:<full commit sha>`** and
+  **`registry.fly.io/critical-staging:v<version>`**, the same build (the app name is read from
+  `deploy/fly.staging.toml`). `just release-image` sets no version (its image reports `unknown`). The staging app's repository is the one image repository of the
   release flow: the staging deploy token can push only there. Production gets the same digest from it at
   promotion, copied by digest into `critical-prod`'s repository (ADR 0024, consequences, "Promotion and
   registry layout"; "Promotion" below), never by a rebuild. The run's
-  notice names the pushed reference and the rulebooks commit; the push line in the log gives the digest.
-  **The digest is the image's identity, not the tag**: a re-run for a new catalogue pushes a new digest
-  under the same `<sha>` tag, so the staging deploy records the digest it smoke-checked and the promotion
+  notice names the pushed references and the rulebooks commit; the push lines in the log give the digest.
+  **The digest is the image's identity, not the tag**: a forced release for a new catalogue pushes a new
+  digest under the same `<sha>` tag (and a new version tag), so the staging deploy records the digest it smoke-checked and the promotion
   copies, deploys and compares that digest (`registry.fly.io/critical-prod@sha256:…`, the same manifest as
   `registry.fly.io/critical-staging@sha256:…`), never the tag (ADR 0024 step 1.5).
 - **No shell tracing** anywhere (`set -x` is absent), and none of the scripts prints a secret.
   `just validate` runs `scripts/test-release-scripts.sh`, which exercises the three scripts offline (docker
   and fly stubbed, a local rulebooks repo and a generated key): the missing-secret no-op, stdout of the
-  fetch being only the sha, the labels and the full-sha tag, a dirty tree refused. Its rulebooks remote is
+  fetch being only the sha, the labels, the full-sha and version tags, a dirty tree refused, and the job's
+  steps parsed (the version first, every build, deploy and tag step gated on the secrets, the tag last). Its rulebooks remote is
   a `file://` repository, so ssh itself (the agent's key reaching GitHub, the pinned host key) is only
   proven by the first real run (user steps left).
 
 ### Staging deploy
 
 The composite action `.github/actions/staging-deploy` (ADR 0024 steps 3.2-3.3, 8.3, 10.1 and 10.5) runs
-`scripts/staging-deploy.sh <sha>` and records the result. Two jobs `deploy staging` use it, both with
-`environment: staging`: one in `release.yml`, one in `deploy-staging.yml` (manual). It is not a reusable
+`scripts/staging-deploy.sh <sha> <version>` and records the result; its output `digest` is what the tag
+step names. The `release` job of `release.yml` uses it, with `environment: staging`. It is not a reusable
 workflow: a called workflow's job does not see the secrets of its own environment (the first real run
 read an empty token), and a calling job cannot have an environment. The job passes
 `secrets.FLY_API_TOKEN` to the action as an input.
 
-- **When.** `release.yml`'s job `deploy staging` (`needs` the image job) runs only when the image was
-  pushed: with a secret missing the image job builds nothing and the deploy job is skipped, so main stays
-  green. A manual run redeploys an image that is already in the registry (below). Either way the job runs
-  on `main` only, is serialized by `concurrency: deploy-staging` and is never cancelled once started (a
-  newer commit replaces only a queued one).
+- **When.** In the `release` job, once the image was pushed (a release), or for a manual redeploy of a
+  version (below). With a secret missing an automatic run builds nothing and deploys nothing, so main stays
+  green. The job runs on `main` only, is serialized by `concurrency: release-staging` and is never cancelled
+  once started (a newer run replaces only a queued one).
 - **Secret.** `FLY_API_TOKEN` of the `staging` environment, read only by the action's secret check and
-  deploy step. Once the image is pushed, an empty token **fails** the run (`Staging deploy` error): it is a
-  misconfiguration, and a green skip would leave staging on the old image. A manual run fails the same way
-  (someone asked for a deploy that cannot happen); only the release build keeps main green on missing secrets.
+  deploy step. If it is empty there, the action **fails** the run (`Staging deploy` error): it is a
+  misconfiguration, and a green skip would leave staging on the old image. A manual run fails earlier, at
+  the job's own secret check (someone asked for a deploy that cannot happen); only an automatic run keeps
+  main green on missing secrets.
 - **Steps** (`scripts/staging-deploy.sh`, reusing `scripts/fly-private-check.sh` and `scripts/fly-smoke.sh`):
   1. **No public IP**: the job fails before deploying if the app has an address other than a Flycast one.
      The check is skipped, with a notice, only when the repository (or environment) variable
      `PUBLIC_ACCESS_OPTION` is set, which the user does when picking an option (ADR 0024 step 8.4). Until
      then the apps stay private.
-  2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-staging:<sha>`; the machine is
-     started if it was stopped.
+  2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-staging:v<version>` (the build
+     of that version; `:<sha>` when the script is given no version); the machine is started if it was
+     stopped.
   3. The smoke check through `fly proxy` (the app is private): on every machine, `/api/health` is 200 with
-     `status` ok and `commit == <sha>`, `/api/character` is 200 (a read through the database) and `/` is
+     `status` ok, `commit == <sha>` and `version == <version>`, `/api/character` is 200 (a read through the database) and `/` is
      the web app. A cold start of the machine or of the shared database is waited for (up to 90 s per
      machine).
   4. The machines must run exactly one image **digest**; it is printed and recorded.
 - **Record.** The job creates a GitHub deployment of the environment `staging` with
-  `scripts/record-deployment.sh`: task `deploy-staging`, ref the full sha, payload `{"commit", "digest"}`,
+  `scripts/record-deployment.sh`: task `deploy-staging`, ref the full sha, payload `{"commit", "digest",
+  "version"}`,
   and one status, `success` (description: the digest) or `failure`. GitHub also creates a deployment of
   its own for every job in the environment (task `deploy`, ref `main`'s head) and marks earlier
   deployments of the environment `inactive` when a newer one succeeds, so **the latest status of a
@@ -376,8 +463,12 @@ read an empty token), and a calling job cannot have an environment. The job pass
   2. for each, list `GET /repos/{repo}/deployments/{id}/statuses` and keep the ones whose **status
      history contains `success`** (`inactive` only means superseded; a `failure` deployment has no
      `success`);
-  3. take the newest of those by `created_at` (a rerun for a new catalogue records a new digest under the
-     same sha) and its `payload.digest`; none means staging did not run and pass that sha: refuse.
+  3. keep the ones whose `payload.version` is the tag's version and take the newest by `created_at`: two
+     versions can share a commit (a forced release of a tagged head, for a new catalogue, records a new
+     digest under the same sha), and each promotes its own image. When none has that version, take the
+     newest of those that record **no** version (deployed before versions were baked in: `v0.1.0`), never
+     one recorded as another version. Its `payload.digest` is the image; none means staging did not run
+     and pass that sha as that version: refuse.
   The promotion compares that digest with the one it deploys (`registry.fly.io/critical-prod@sha256:…`, its
   copy of the staging image).
 - **Config of the image's commit.** The fly config (`deploy/fly.staging.toml`) is checked out at the
@@ -385,52 +476,61 @@ read an empty token), and a calling job cannot have an environment. The job pass
   is deployed with the config that matches its Dockerfile, and a sha that predates the file fails at once.
 - **A failed run.** The log of `Deploy and smoke-check` says which check failed: `fly-private-check` (a
   public address, nothing deployed), `fly-smoke: FAIL (...)` with the machine and the status or body
-  (`HTTP 000` is a machine or proxy that never answered; a wrong `commit` is the old image still serving or
-  a wrong tag), or a digest mismatch. After a failed deploy or smoke it prints the app's recent releases
+  (`HTTP 000` is a machine or proxy that never answered; a wrong `commit` or `version` is the old image
+  still serving or a wrong tag), or a digest mismatch. After a failed deploy or smoke it prints the app's recent releases
   (`fly releases --image`): redeploy the previous one's image with the command in "Rollback", or fix and
-  rerun. The deployment is recorded as `failure`, so the promotion refuses that sha.
-- **Redeploy a given sha.** Actions > Deploy staging > Run workflow on `main`, with the full commit sha
-  of an image already pushed to `registry.fly.io/critical-staging:<sha>` (the release build's notice names
-  it). By hand: `$fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-staging:<sha>`
-  then `just fly-smoke critical-staging <sha>`.
+  rerun. The deployment is recorded as `failure`, so the promotion refuses that sha, and the version gets
+  no tag.
+- **Redeploy a version.** Actions > Release > Run workflow on `main`, input `version` = `X.Y.Z` (or
+  `vX.Y.Z`): the commit of the tag `vX.Y.Z` and its image `registry.fly.io/critical-staging:vX.Y.Z` are
+  deployed and smoke-checked again, and recorded; nothing is built or tagged. A version with no tag fails at
+  once ("unknown version vX.Y.Z: no such tag"). `v0.1.0`, made before versions were baked in, has no
+  `:v0.1.0` image: redeploy it by hand, `$fly deploy -c deploy/fly.staging.toml --image
+  registry.fly.io/critical-staging:<its sha>` then `just fly-smoke critical-staging <its sha>`.
 - **Offline test.** `scripts/test-staging-deploy.sh` (part of `just validate`) runs both scripts against
-  stubs of fly and gh: a public IP deploys nothing, the deploy and smoke arguments, the rollback listing,
-  the digest output, the recorded deployment, and the workflows' gating. The real proxy, deploy and
+  stubs of fly and gh: a public IP deploys nothing, the deploy and smoke arguments (with and without a
+  version), the rollback listing, the digest output, the recorded deployment and its version, and the
+  workflow's wiring of the action. The real proxy, deploy and
   GitHub API calls are proven only by the first real run.
 - **Environment rule.** `scripts/github-environments.sh` restricts `staging` to deployments from the
   branch `main` (and `production` to tags `v*`), so a job from another branch, even one that edits this
   workflow, gets neither the environment nor its `FLY_API_TOKEN`; the `github.ref` check in the workflow is
   only the readable half. Set 2026-10-17 (`--no-tokens`).
 - **Post-merge checks (user, the first real runs; none can be faked offline).**
-  1. The release run is green; the deploy job proxies to a stopped staging machine and the cold
-     `tournesol-db` within 90 s, and prints the digest.
-  2. Deployments shows a `deploy-staging` entry with ref = the sha and the digest in its payload; after the
-     job its latest status is probably `inactive` while the history keeps `success` (the reading rule above).
-  3. Actions > Deploy staging > Run workflow on `main` with an existing sha redeploys it and the smoke is
-     green.
-  4. A dispatch from a branch other than `main` is refused by the environment rule (and the job is skipped).
-  5. Two quick merges: the older queued deploy is replaced by the newer, and a deploy already running is
-     never cancelled.
+  1. The release run of the versioning change's merge is green: its notice computes `0.2.0` after `v0.1.0`
+     (a `feat`), the deploy proxies to a stopped staging machine and the cold `tournesol-db` within 90 s,
+     `fly-smoke` reports the version, and "Tag the version" creates `v0.2.0` (after user step 5).
+  2. Deployments shows a `deploy-staging` entry with ref = the sha and the digest and version in its
+     payload; after the job its latest status is probably `inactive` while the history keeps `success` (the
+     reading rule above).
+  3. **No Promote run** appears in Actions for the tag `v0.2.0` (Promote has no tag-push trigger).
+  4. A `docs:` merge: the run is green with the notice "no release: docs/test/chore only since v0.2.0", no
+     image is pushed, staging is untouched, no tag.
+  5. Actions > Release > Run workflow on `main` with version `0.2.0` redeploys it and the smoke is green;
+     with `9.9.9` it fails with "unknown version v9.9.9"; with no version it releases main's head (a patch
+     after the `docs:` merge).
+  6. A dispatch from a branch other than `main` is refused by the environment rule (and the job is skipped).
+  7. Two quick merges: the older queued run is replaced by the newer, whose version counts both commits,
+     and a run already going is never cancelled.
 
 ### Promotion
 
 `.github/workflows/promote.yml` (ADR 0024 steps 4, 8.3, 9.2 and 10), job `promote to production`, runs
 `scripts/promote.sh <tag>`.
 
-- **When.** On the push of a tag `v*`, and by hand (Actions > Promote > Run workflow, "Use workflow from" a
-  **tag**: the rollback). The job runs only for a tag ref, in the environment `production`, which accepts
+- **When.** By hand: Actions > Promote > Run workflow, "Use workflow from" a **version tag** (the promotion,
+  and the rollback with an older tag). Only by hand: it has no tag-push trigger, so no tag starts it (CI
+  makes the tags, "Release version"). The job runs only for a tag ref, in the environment `production`, which accepts
   deployments from `v*` tags only, so a run from a branch gets neither the environment nor its token. It
   runs the tag's own scripts and fly config (the ones of its image). Serialized by `concurrency:
   deploy-production`, never cancelled once started.
-- **Starting it.** `just release <version>` (`scripts/release-tag.sh`) tags the head of `main` and pushes
-  the tag. It refuses, before tagging: a version that is not `MAJOR.MINOR.PATCH` (`1.2.3` or `v1.2.3`), one
-  not greater than the highest `v*` tag (version order: `1.10.0` > `1.9.0`), a branch other than `main`, a
-  dirty tree, a `main` other than `origin/main`'s head after a fetch, and a commit staging has not passed
-  (it reads the staging record with `gh`, so it waits for the staging deploy of the merge). Pushing a tag
-  by hand (`git tag -a v1.2.3 -m ... <sha> && git push origin v1.2.3`) starts the same workflow; its guards
-  refuse the same commits.
+- **Starting it.** Pick the version (the release runs' notices, Settings > Tags, or the staging deployments'
+  payloads), then Actions > Promote > Run workflow > Use workflow from: Tags > `vX.Y.Z`. Every version tag
+  marks a commit staging passed, so the guards below pass for it. (`just release`, the human-made tag, is
+  gone: CI is the only maker of version tags. Promoting the newest staging version on demand is a later
+  change.)
 - **Secret.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-prod`). An empty one **fails**
-  the run before anything else (`Promotion` error): a tag push is a deliberate act (step 10.4).
+  the run before anything else (`Promotion` error): a promotion is a deliberate act (step 10.4).
 - **Steps**, each stopping the promotion when it fails:
   1. **Guards** (`scripts/release-guards.sh all <tag>`): the tag is `vMAJOR.MINOR.PATCH`; its commit is
      on `origin/main`; staging ran and passed that commit, read as "Record" above says, which gives the
@@ -494,8 +594,8 @@ read an empty token), and a calling job cannot have an environment. The job pass
   server, passed its exit status back and was destroyed (only the two app machines remained).
 - **Offline test.** `scripts/test-promotion.sh` (part of `just validate`): each guard on fixture
   repositories and a stubbed GitHub API (the history-not-latest reading, the newest success, a string
-  payload), the order of the promotion's steps and what each failure prevents (fly stubbed), every refusal
-  of `just release`, and the workflow parsed. The restore point's SQL runs for real in the CI `image` job
+  payload), the order of the promotion's steps and what each failure prevents (fly stubbed), and the
+  workflow parsed. The restore point's SQL runs for real in the CI `image` job
   (`scripts/image-smoke.sh`: copies, retention, the refusals) against a throwaway PostgreSQL 17.
 - **Post-run checks (user, the first real promotion; none can be faked offline).**
   1. The run is green; its log shows the guards' commit and digest, `fly-private-check: OK`, the copy to
@@ -593,7 +693,9 @@ scripts/db-compare.sh "<local dsn>" "<fresh dsn>"   # per table: row counts, "sa
 ## A new catalogue version reaches production
 
 The catalogue is in the image, fetched at build time, and applied at boot by the importer. So:
-update `critical-rulebooks`, then run the main build again (merge anything, or re-run the release
-workflow's last run in GitHub Actions: it rebuilds that `main` commit with the rulebooks' current default
-branch and pushes the same tag again, now a new digest with the new `critical.rulebooks.revision`), wait
-for the staging smoke check, then tag a version as above.
+update `critical-rulebooks`, then release again: Actions > Release > Run workflow on `main` with no version
+(a forced release of main's head: it rebuilds that commit with the rulebooks' current default branch, a new
+digest with the new `critical.rulebooks.revision`, under the next version, at least a patch), or merge
+anything that makes a release. Re-running an earlier release run does not do it: a run that passed has its
+range end at its own tag (no release), and any older run is refused once a newer version exists ("a newer
+release exists", "Release version"). Once staging passed and tagged the version, promote it as above.

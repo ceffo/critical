@@ -17,6 +17,16 @@ export function isUndone(tx: LogEntry[]): boolean {
 }
 
 /**
+ * True when the transaction opens a turn: Next Round's advance and the new turn's initiative (ADR
+ * 0013, one transaction per ADR 0018). The journal shows those rows as the turn's own first rows,
+ * not framed as a multi-entry transaction: the turn block and its marker already say what they are
+ * (ADR 0027 step 9.6).
+ */
+export function opensTurn(tx: LogEntry[]): boolean {
+  return tx.some((e) => e.kind === "round_advance");
+}
+
+/**
  * Display grouping of the action log: entries arrive newest first (server order) and are cut
  * into consecutive runs of the same round stamp. Rounds restart (End combat, Set round, reset),
  * so a round number can head several groups; order is never re-sorted by number. When the

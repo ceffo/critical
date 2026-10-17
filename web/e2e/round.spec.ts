@@ -33,16 +33,15 @@ test("Next turn advances the counter and starts a new log group", async ({
   await expect.poll(() => currentRound(page)).toBe(r0 + 1);
 
   // Next Round is one transaction (ADR 0018): the advance and the initiative it rolls sit together
-  // in the round they open, framed as one unit; the old entries stay in their round.
+  // in the round they open, as that turn's own rows, not framed (ADR 0027 step 9.6); the old entries
+  // stay in their round.
   const newGroup = turnGroup(page, r0 + 1);
   await expect(newGroup).toContainText("current");
   await expect(newGroup.getByRole("listitem")).toHaveText([
     /Initiative \d+ \(d10\) for turn/,
     new RegExp(`Turn ${r0} → ${r0 + 1}`),
   ]);
-  const transaction = newGroup.getByTestId("log-transaction");
-  await expect(transaction).toHaveCount(1);
-  await expect(transaction.getByRole("listitem")).toHaveCount(2);
+  await expect(newGroup.getByTestId("log-transaction")).toHaveCount(0);
   const oldGroup = turnGroup(page, r0);
   await expect(
     oldGroup.getByRole("listitem").filter({ hasText: "e2e first round hit" }),
@@ -343,11 +342,13 @@ test("Next turn rolls the initiative; one Undo pops a turn with its initiative; 
   await snap(page, "undo-names-next-turn");
   await undoNextTurn(page, logEntry(page, "Turn 1 → 2"));
   await expect.poll(() => currentRound(page)).toBe(1);
-  // The popped transaction reads as undone once, on its frame.
-  await expect(
-    combatLog(page).getByTestId("log-transaction").first(),
-  ).toHaveAttribute("data-undone", "true");
-  await snap(page, "next-round-undone-group");
+  // The popped turn opening: each of its rows reads as undone.
+  for (const text of ["Turn 1 → 2", "for turn 2"]) {
+    const popped = logEntry(page, text);
+    await expect(popped).toHaveAttribute("data-status", "voided");
+    await expect(popped).toContainText("Undone");
+  }
+  await snap(page, "next-round-undone");
   await expect(value).toHaveAttribute("data-entry-id", firstId ?? "");
   await expect(value).toHaveText(firstValue ?? "");
 

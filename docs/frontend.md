@@ -133,10 +133,12 @@ flowchart TD
   the tint (its one mark); then the value right-aligned before the kind icon (a roll total in ink,
   gold only when the payload says crit, `rowValue`; ADR 0026 step 5.8), the entry text (with
   Amended / capped and a muted Undone tag inline after it; an undone row is muted and struck)
-  wrapping inside its row when long, never cut, and the time right after the text. Nothing is
+  wrapping inside its row when long, never cut, and the time right-aligned in its own last column
+  (step 9.4). A turn's opening rows (Next Round's advance and initiative, one transaction) are plain
+  rows of that turn; any other multi-entry transaction is framed as one unit (step 9.6). Nothing is
   drawn under an entry and there is **no Note** (step 5.2; the amend endpoint
   stays in the API, the UI neither calls it nor shows notes). Reroll, on an entry that rolled free
-  dice, shows at the end of the line on hover, on keyboard focus in the row and on the selected row (step
+  dice, shows before the time on hover, on keyboard focus in the row and on the selected row (step
   5.3). The row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the

@@ -6,7 +6,7 @@ import { useBuffsStore } from "@/stores/buffs";
 import { useFilStore } from "@/stores/fil";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
-import { groupByRound, isUndone } from "@/lib/groupByRound";
+import { groupByRound, isUndone, opensTurn } from "@/lib/groupByRound";
 import { formatSigned, formatTime } from "@/lib/format";
 import { entryText } from "@/lib/logSummary";
 import { useSpellName } from "@/i18n/spellName";
@@ -34,10 +34,10 @@ const FILTERS: LogFilter[] = ["all", "rolls"];
 /**
  * The journal (GET /api/log, ADR 0022 step 5): a head with the All / Rolls filter, the entry count,
  * Undo and Redo, then the entries grouped by turn, newest first, one 22 px line each: value · icon
- * · entry with the time right after it (ADR 0027 step 9). A narrow marker ("T3", an icon out of
+ * · entry, the time right-aligned last (ADR 0027 step 9). A narrow marker ("T3", an icon out of
  * combat) sits beside a turn's first entry, the current turn's in the tint; turn blocks touch and
- * alternate between the card's tone and the sub-band. A click on an entry shows it in the result
- * panel. The log is a stack: Undo pops the newest entry, values are never edited (and there is no
+ * alternate between the card's tone and the sub-band. A turn's opening rows (the advance and the
+ * initiative) are plain rows of its block. A click on an entry shows it in the result panel. The log is a stack: Undo pops the newest entry, values are never edited (and there is no
  * note to add).
  */
 export function CombatLog() {
@@ -133,6 +133,9 @@ export function CombatLog() {
               ) : (
                 <div className="flex min-w-0 flex-col">
                   {g.transactions.map((tx) => {
+                    // A turn's opening rows read as the turn's own (ADR 0027 step 9.6), each with
+                    // its own Undone tag; any other multi-entry transaction is framed.
+                    const framed = tx.length > 1 && !opensTurn(tx);
                     const rows = (
                       <ul className="flex flex-col">
                         {tx.map((e) => (
@@ -141,14 +144,13 @@ export function CombatLog() {
                             entry={e}
                             selected={e.id === shownId}
                             onSelect={() => select(e.id)}
-                            grouped={tx.length > 1}
+                            grouped={framed}
                             undoneGroup={isUndone(tx)}
                           />
                         ))}
                       </ul>
                     );
-                    if (tx.length === 1)
-                      return <div key={tx[0].id}>{rows}</div>;
+                    if (!framed) return <div key={tx[0].id}>{rows}</div>;
                     // One request recorded several entries (ADR 0018): framed as one unit, and
                     // undone as one.
                     const undone = isUndone(tx);
@@ -230,13 +232,14 @@ function LogRow({
   return (
     <li
       className={cn(
-        // One 22 px line (ADR 0027 step 9.2): value · icon · entry with the time right after it (the
-        // select button), then the row action at the row's end. A long entry wraps inside its row;
-        // nothing is drawn under it.
+        // One 22 px line (ADR 0027 step 9.2): value · icon · entry (the select button), the row
+        // action, then the time right-aligned in the last column (step 9.4). A long entry wraps
+        // inside its row; nothing is drawn under it.
         "group/row relative flex cursor-pointer items-start gap-x-2 rounded-md px-2 py-0.5",
         selected ? "selected" : "hover:bg-raised-hover",
       )}
       data-status={e.status}
+      data-kind={e.kind}
       data-entry-id={e.id}
       data-selected={selected}
       onClick={onRowClick}
@@ -267,7 +270,7 @@ function LogRow({
           <KindIcon aria-hidden className="size-[1.125rem]" />
           <span className="sr-only">{kindLabel}</span>
         </span>
-        <span className="min-w-0 text-body break-words">
+        <span className="min-w-0 flex-1 text-body break-words">
           <span className={cn(voided && "text-muted-foreground line-through")}>
             {text}
           </span>
@@ -291,10 +294,6 @@ function LogRow({
             <VoidedTag className="ml-2" />
           )}
         </span>
-        {/* The time right after the entry text (ADR 0027 step 9.4). */}
-        <span className="shrink-0 text-label leading-[1.125rem] text-muted-foreground tabular-nums">
-          {formatTime(e.createdAt, i18n.language)}
-        </span>
       </button>
       {!voided && diceFormula !== undefined && (
         // On hover, on keyboard focus in the row, and on the selected row (ADR 0022 step 5.3).
@@ -314,6 +313,13 @@ function LogRow({
           {t("dice.reroll")}
         </Button>
       )}
+      {/* The time in its own right-aligned column, last (ADR 0027 step 9.4). */}
+      <span
+        className="shrink-0 text-right text-label leading-[1.125rem] text-muted-foreground tabular-nums"
+        data-testid="log-time"
+      >
+        {formatTime(e.createdAt, i18n.language)}
+      </span>
     </li>
   );
 }

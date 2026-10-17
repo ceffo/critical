@@ -50,7 +50,10 @@ Per screen, the user's words (the work items of the layout pass carry the full t
   one line, the attack as tiles; every check is adjusted there, after the roll.
 - **Journal**: _"don't space out turn blocks in the journal. a bit more compact and maybe some
   alternate background to tell them apart"_. Accepted proposals: a narrow turn marker, cancelled rows
-  muted, the time closer to the text.
+  muted, the time closer to the text. After the journal pass (2026-10-17, brand design round):
+  _"in the journal, i want the timestamps to return to be right aligned. it's too cramped having
+  them. also i don't get the grey background and grouping for the round beginning and initiative
+  roll"_ (steps 9.4 and 9.6).
 - **Spells tab**: _"cast button: should be a button with a drop down: clicking on the button is the
   more common operation: cast on self for a defensive spell, and the drop down gets the alternate
   target choice. no need for a global check box"_; _"long rest merits its button always visible. just
@@ -240,14 +243,25 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    3. **A narrow turn marker** (at most 3rem, *proposed, user OK on the PR*): "T3" on a turn's first
       row, "Hors combat" folded to an icon with its label in the tooltip; the full "Tour 3 · en cours"
       in its tooltip and `aria-label`. It replaces the ~136 px turn column.
-   4. **The time sits right after the entry text**: the entry column is as wide as its text up to the
-      row's width, the time follows it (*proposed, user OK on the PR*; the user kept the time as the
-      last column in ADR 0022, which stands: nothing comes after it).
+   4. **The time is right-aligned in its own last column** (*amended 2026-10-17, user's words in
+      Context; was "the time sits right after the entry text"*): the entry text takes the row's
+      width and wraps inside it, the time ends the row, so the times of all rows line up on the
+      right. ADR 0022's "time as the last column" stands: nothing comes after it, so the row action
+      (Reroll, step 5.3 of ADR 0022) sits before the time.
    5. Cancelled rows are muted with a muted tag (ADR 0026 step 5.8); the selected row is the
       selection mark (ADR 0026 step 5.1). The collapsed bar and the split handle are unchanged.
+   6. **A turn's opening rows are the turn's own** (*2026-10-17, user's words in Context*): Next
+      Round writes the advance ("Tour 2 → 3") and the new turn's initiative as one transaction (ADR
+      0013, ADR 0018 step 1), which the journal framed like any multi-entry transaction (the raised
+      tone and a tinted left edge, close to the selection mark), so the turn's start read as an
+      unexplained grey group inside the turn block. Those rows are now plain rows of the turn they
+      open, under its marker, on the block's tone (ADR 0026 step 6.3); each undone one carries its
+      own Undone tag. Undo still pops them together. Other multi-entry transactions keep their frame.
 
    *Checked by* `layout.spec`'s journal checks: a row's height at most 24 px for a one-line entry,
-   no vertical gap between two turn groups, and the no-cut audit in French and English.
+   no vertical gap between two turn groups, every time ending at the same right edge (9.4), no frame
+   around the turn's opening rows (9.6), and the no-cut audit in French and English; the opening
+   transaction by `groupByRound.test.ts` (`opensTurn`).
 10. **Spells tab** (new; the act panel's Sorts tab, no ADR 0022 step drew it).
     1. **"Lancer" is a split button**: the main part casts with the server's default target (today's
        call, no `onSelf`); the arrow opens the other target (`onSelf: false`, or what the server
@@ -350,7 +364,7 @@ Per screen, the user's words (the work items of the layout pass carry the full t
 - **Proposed points for the user's OK on the PR**: the timeline's 5 turn columns at every width
   (4.3); the last result packed against the timeline (4.5); the mark alone at 1280 (4.6); the
   character card's `clamp(280px, 21vw, 384px)` (5.1); the journal's 22 px rows (9.2), its 3rem turn
-  marker (9.3) and the time right after the text (9.4); the Skills blocks' two-column threshold
+  marker (9.3); the Skills blocks' two-column threshold
   (12.3); items and weapons side by side from a 1200 px stage (14.3).
 - **The initiative changes size, not style**: ADR 0026 step 5.9 called it "a plain `text-key`
   number"; it stays plain (ink, no chip) at `text-hero` (step 4.2), and the turn number drops to

@@ -8,7 +8,10 @@
 #   scripts/record-deployment.sh <full commit sha> success|failure [digest]
 #
 # GitHub also creates a deployment of its own for every job that names the environment, with the
-# workflow's ref; only the ones with task `deploy-staging` are a staging release.
+# workflow's ref; only the ones with task `deploy-staging` are a staging release. Those deployments
+# turn this one `inactive` soon after (a newer deployment of the environment supersedes it), so `success`
+# stays in its status history but is not its latest status: how the promotion reads it is in
+# docs/deploy.md ("Staging deploy", "Record"). This status itself leaves other deployments alone.
 set -euo pipefail
 
 usage="usage: record-deployment.sh <full commit sha> success|failure [digest]"
@@ -32,6 +35,6 @@ id="$(jq -n --arg sha "$sha" --arg digest "$digest" '{
 [[ "$id" =~ ^[0-9]+$ ]] || { echo "record-deployment: no deployment id from GitHub" >&2; exit 1; }
 description="${digest:-smoke or deploy failed}"
 jq -n --arg state "$state" --arg d "$description" --arg url "$log_url" \
-    '{state: $state, environment: "staging", description: $d, log_url: $url}' \
+    '{state: $state, environment: "staging", description: $d, log_url: $url, auto_inactive: false}' \
     | gh api -X POST "repos/$repo/deployments/$id/statuses" --input - >/dev/null
 echo "record-deployment: staging deployment $id of $sha: $state ${digest}"

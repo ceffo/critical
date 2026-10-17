@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Creates the GitHub environments of the release flow and their FLY_API_TOKEN secrets (ADR 0024 step
-# 10, docs/deploy.md "GitHub"): `staging`, and `production` deployable from tags `v*` only. Each
+# 10, docs/deploy.md "GitHub"): `staging` deployable from the branch `main` only, and `production` from tags `v*` only. Each
 # FLY_API_TOKEN is a new deploy token scoped to its one fly app, piped from `fly tokens create` into
 # `gh secret set`: it is never printed nor written to a file.
 #
 #   scripts/github-environments.sh [--no-tokens]
 #
 # Needs admin rights on the repository (gh) and fly credentials. Rerunnable: the environments and the
-# tag rule are kept; every run without --no-tokens creates new deploy tokens and replaces the secrets
+# deployment rules are kept; every run without --no-tokens creates new deploy tokens and replaces the secrets
 # (the old tokens stay valid until revoked: `fly tokens list -a <app>`, `fly tokens revoke <id>`).
 # RULEBOOKS_DEPLOY_KEY is a user step (docs/deploy.md), never set here.
 set -euo pipefail
@@ -42,15 +42,20 @@ environment() {
     fi
 }
 
-environment staging critical-staging
-environment production critical-prod \
-    '{"deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}}'
+custom='{"deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}}'
+environment staging critical-staging "$custom"
+environment production critical-prod "$custom"
 
-policies="repos/$repo/environments/production/deployment-branch-policies"
-if ! gh api "$policies" --jq '.branch_policies[] | select(.type == "tag" and .name == "v*") | .id' | grep -q .; then
-    gh api -X POST "$policies" -f name='v*' -f type=tag >/dev/null
-fi
-echo "github-environments: production deployable from: $(gh api "$policies" --jq '[.branch_policies[] | "\(.type) \(.name)"] | join(", ")')"
+# policy <environment> <branch|tag> <name>: the one rule that environment accepts deployments from.
+policy() {
+    local url="repos/$repo/environments/$1/deployment-branch-policies"
+    if ! gh api "$url" --jq ".branch_policies[] | select(.type == \"$2\" and .name == \"$3\") | .id" | grep -q .; then
+        gh api -X POST "$url" -f name="$3" -f type="$2" >/dev/null
+    fi
+    echo "github-environments: $1 deployable from: $(gh api "$url" --jq '[.branch_policies[] | "\(.type) \(.name)"] | join(", ")')"
+}
+policy staging branch main
+policy production tag 'v*'
 for env in staging production; do
     echo "github-environments: $env secrets: $(gh secret list --env "$env" --repo "$repo" --json name --jq '[.[].name] | join(", ")')"
 done

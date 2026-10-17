@@ -12,14 +12,16 @@
 # the same tag): it is printed and written as `digest=sha256:...` to $GITHUB_OUTPUT. When the deploy or
 # the smoke check fails, the app's releases are printed so the previous one can be redeployed
 # (docs/deploy.md, "Rollback"). The no-public-IP check is skipped only when PUBLIC_ACCESS_OPTION names a
-# chosen public-access option (the repository variable of ADR 0024 step 8.4). Prints no secret.
+# chosen public-access option (the repository variable of ADR 0024 step 8.4). STAGING_CONFIG names the
+# fly config to deploy with (the workflow passes the one of the image's own commit; default: this
+# checkout's deploy/fly.staging.toml). Prints no secret.
 set -euo pipefail
 
 sha="${1:?usage: staging-deploy.sh <full commit sha>}"
 [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "staging-deploy: the commit must be a full sha, got '$sha'" >&2; exit 2; }
 
 here="$(cd "$(dirname "$0")" && pwd)"
-config="$(cd "$here/.." && pwd)/deploy/fly.staging.toml"
+config="${STAGING_CONFIG:-$(cd "$here/.." && pwd)/deploy/fly.staging.toml}"
 fly="${FLY:-$(command -v fly || command -v flyctl || echo ~/.fly/bin/fly)}"
 smoke="${FLY_SMOKE:-$here/fly-smoke.sh}"
 out="${GITHUB_OUTPUT:-/dev/stdout}"

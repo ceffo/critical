@@ -7,8 +7,9 @@
 #     the IP check only; machines on different digests fail; the digest is written to $GITHUB_OUTPUT.
 #   - record-deployment.sh, with gh stubbed: one deployment (task deploy-staging, ref the sha, digest in
 #     the payload) and one status; a success without a digest, a short sha and an unknown state call nothing.
-#   - the workflows: deploy-staging.yml only on main, its token only in the secrets, deploy and record
-#     steps; release.yml calls it only when the image was pushed.
+#   - the workflows, parsed: deploy-staging.yml only on main, its token only in the secret check and the
+#     deploy step, every later step gated; release.yml calls it only when the image was pushed.
+#   - STAGING_CONFIG: the deploy uses the config it names (the image's own commit).
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -133,24 +134,55 @@ for args in "$sha success" "${sha:0:7} success $digest" "$sha pending $digest"; 
     [ ! -s "$calls" ] || fail "record called gh on a refused input: $args"
 done
 
-# --- the workflows ---
-deploy_wf="$root/.github/workflows/deploy-staging.yml"
-release_wf="$root/.github/workflows/release.yml"
-grep -q "if: github.ref == 'refs/heads/main'" "$deploy_wf" || fail "deploy-staging.yml: not limited to main"
-grep -q 'environment: staging' "$deploy_wf" || fail "deploy-staging.yml: job not in the staging environment"
-grep -q 'workflow_dispatch:' "$deploy_wf" || fail "deploy-staging.yml: no manual redeploy"
-[ "$(grep -c 'secrets.FLY_API_TOKEN' "$deploy_wf")" = 2 ] || fail "deploy-staging.yml: the token is read by other steps than the check and the deploy"
-grep -q 'cancel-in-progress: false' "$deploy_wf" || fail "deploy-staging.yml: a running deploy can be cancelled"
-ungated="$(awk '
-    /^      - / { if (block != "" && after && block !~ /if: (always\(\) && \()?steps\.(secrets\.outputs\.ready == .true.|deploy\.outcome)/) print head
-                  block = ""; head = $0; if (seen) after = 1 }
-    /name: Check the deploy secret/ { seen = 1 }
-    { block = block "\n" $0 }
-    END { if (block != "" && after && block !~ /if: (always\(\) && \()?steps\.(secrets\.outputs\.ready == .true.|deploy\.outcome)/) print head }
-' "$deploy_wf")"
-[ -z "$ungated" ] || fail "deploy-staging.yml: steps after the secret check run without the token: $ungated"
-grep -q "if: needs.image.outputs.pushed == 'true'" "$release_wf" || fail "release.yml: the staging deploy is not gated on a pushed image"
-grep -q 'uses: ./.github/workflows/deploy-staging.yml' "$release_wf" || fail "release.yml: does not call the staging deploy"
+# --- the config of the image's commit is the one deployed ---
+printf 'app = "other-app"\n' > "$tmp/image.toml"
+run_deploy STAGING_CONFIG="$tmp/image.toml"
+grep -qx "fly deploy -c $tmp/image.toml -a other-app --image registry.fly.io/other-app:$sha --yes" "$calls" \
+    || fail "STAGING_CONFIG: not deployed with that config: $(cat "$calls")"
+
+# --- the workflows, parsed (not grepped) ---
+python3 -I - "$root/.github/workflows" <<'PY' || fails=$((fails + 1))
+import sys, yaml
+
+d = sys.argv[1]
+load = lambda n: yaml.safe_load(open(f"{d}/{n}"))
+errs = []
+def check(ok, msg):
+    if not ok:
+        errs.append(msg)
+
+dep = load("deploy-staging.yml")
+triggers = dep.get(True) or dep.get("on")  # PyYAML reads the key `on` as True
+check({"workflow_call", "workflow_dispatch"} <= set(triggers), "deploy-staging: needs workflow_call and workflow_dispatch")
+job = dep["jobs"]["deploy"]
+check("github.ref == 'refs/heads/main'" in str(job.get("if", "")), "deploy-staging: job not limited to main")
+check(job.get("environment") == "staging", "deploy-staging: job not in the staging environment")
+check(job["concurrency"]["group"] == "deploy-staging" and job["concurrency"]["cancel-in-progress"] is False,
+      "deploy-staging: not serialized without cancelling")
+check(job["permissions"] == {"contents": "read", "deployments": "write"}, "deploy-staging: permissions are not minimal")
+check("FLY_API_TOKEN" not in str(dep.get("env", "")) + str(job.get("env", "")), "deploy-staging: token in a workflow or job env")
+token_steps = [st.get("id") for st in job["steps"] if "secrets.FLY_API_TOKEN" in str(st)]
+check(token_steps == ["secrets", "deploy"], f"deploy-staging: the token is read by {token_steps}, not only the check and the deploy")
+ids = [st.get("id") for st in job["steps"]]
+after = job["steps"][ids.index("secrets") + 1:]
+for st in after:
+    cond = st.get("if", "")
+    check("steps.secrets.outputs.ready == 'true'" in cond or "steps.deploy.outcome" in cond,
+          f"deploy-staging: step '{st.get('name')}' runs without the token")
+rec = next(st for st in job["steps"] if "record-deployment.sh" in st.get("run", ""))
+check(rec["if"].startswith("always()"), "deploy-staging: the record is skipped when the deploy fails")
+
+rel = load("release.yml")
+jobs = rel["jobs"]
+check(jobs["deploy"]["needs"] == "image", "release: deploy does not need the image job")
+check(jobs["deploy"]["if"] == "needs.image.outputs.pushed == 'true'", "release: deploy not gated on a pushed image")
+check(jobs["deploy"]["uses"] == "./.github/workflows/deploy-staging.yml", "release: does not call the staging deploy")
+check("steps.build.outputs.pushed" in jobs["image"]["outputs"]["pushed"], "release: image job has no pushed output")
+
+if errs:
+    print("\n".join("test-staging-deploy: FAIL: " + e for e in errs), file=sys.stderr)
+    sys.exit(1)
+PY
 
 [ "$fails" = 0 ] || exit 1
 echo "--- Staging deploy scripts ---"

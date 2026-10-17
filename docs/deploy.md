@@ -45,8 +45,7 @@ User steps left:
    3. its log holds no catalogue JSON and no key material: only the clone, the build, the push lines and
       the notice with the reference and the rulebooks sha;
    4. the `deploy staging` job that follows is green (no public IP, smoke on the machine) and Deployments
-      shows a `deploy-staging` deployment of the sha with the digest ("Staging deploy"); restrict the
-      `staging` environment to `main` (same section).
+      shows a `deploy-staging` deployment of the sha with the digest; the other post-merge checks are in "Staging deploy".
 3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
 
 ## The PostgreSQL cluster (user)
@@ -202,7 +201,7 @@ step 8.4).
 
 `scripts/github-environments.sh` (admin rights on the repository, fly credentials) creates the
 environments `staging` and `production`, restricts `production` to tags `v*`, and sets each
-`FLY_API_TOKEN` from a new deploy token of its app, piped, never printed (done 2026-10-16; a rerun makes
+`FLY_API_TOKEN` from a new deploy token of its app, piped, never printed (done 2026-10-16; `staging` is also restricted to the branch `main`; a rerun makes
 new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a user step:
 
 | Environment | Secret | Content |
@@ -336,9 +335,22 @@ runs `scripts/staging-deploy.sh <sha>` and records the result:
   4. The machines must run exactly one image **digest**; it is printed and recorded.
 - **Record.** The job creates a GitHub deployment of the environment `staging` with
   `scripts/record-deployment.sh`: task `deploy-staging`, ref the full sha, payload `{"commit", "digest"}`,
-  and a status `success` (description: the digest) or `failure`. The promotion reads the latest `success`
-  of task `deploy-staging` for the sha and compares its digest (GitHub also creates deployments of its
-  own for every job in the environment, with the workflow's ref: ignore the ones of another task).
+  and one status, `success` (description: the digest) or `failure`. GitHub also creates a deployment of
+  its own for every job in the environment (task `deploy`, ref `main`'s head) and marks earlier
+  deployments of the environment `inactive` when a newer one succeeds, so **the latest status of a
+  `deploy-staging` deployment becomes `inactive` within minutes: never read "the latest status"**. How the
+  promotion must read it ("staging ran this sha with this digest"):
+  1. list `GET /repos/{repo}/deployments?environment=staging&task=deploy-staging&sha=<sha>` (the task
+     filter drops GitHub's own deployments, the sha is the full commit);
+  2. for each, list `GET /repos/{repo}/deployments/{id}/statuses` and keep the ones whose **status
+     history contains `success`** (`inactive` only means superseded; a `failure` deployment has no
+     `success`);
+  3. take the newest of those by `created_at` (a rerun for a new catalogue records a new digest under the
+     same sha) and its `payload.digest`; none means staging did not run and pass that sha: refuse.
+  The promotion compares that digest with the one it deploys (`registry.fly.io/critical-staging@sha256:…`).
+- **Config of the image's commit.** The fly config (`deploy/fly.staging.toml`) is checked out at the
+  image's own sha (that file only), the scripts and the workflow come from `main`: a dispatched older image
+  is deployed with the config that matches its Dockerfile, and a sha that predates the file fails at once.
 - **A failed run.** The log of `Deploy and smoke-check` says which check failed: `fly-private-check` (a
   public address, nothing deployed), `fly-smoke: FAIL (...)` with the machine and the status or body
   (`HTTP 000` is a machine or proxy that never answered; a wrong `commit` is the old image still serving or
@@ -353,9 +365,20 @@ runs `scripts/staging-deploy.sh <sha>` and records the result:
   stubs of fly and gh: a public IP deploys nothing, the deploy and smoke arguments, the rollback listing,
   the digest output, the recorded deployment, and the workflows' gating. The real proxy, deploy and
   GitHub API calls are proven only by the first real run.
-- **User step.** Restrict the `staging` environment to the `main` branch (Settings > Environments >
-  staging > Deployment branches): the `github.ref` check in the workflow cannot protect the token from a
-  branch that edits the workflow file, the environment rule can.
+- **Environment rule.** `scripts/github-environments.sh` restricts `staging` to deployments from the
+  branch `main` (and `production` to tags `v*`), so a job from another branch, even one that edits this
+  workflow, gets neither the environment nor its `FLY_API_TOKEN`; the `github.ref` check in the workflow is
+  only the readable half. Set 2026-10-17 (`--no-tokens`).
+- **Post-merge checks (user, the first real runs; none can be faked offline).**
+  1. The release run is green; the deploy job proxies to a stopped staging machine and the cold
+     `tournesol-db` within 90 s, and prints the digest.
+  2. Deployments shows a `deploy-staging` entry with ref = the sha and the digest in its payload; after the
+     job its latest status is probably `inactive` while the history keeps `success` (the reading rule above).
+  3. Actions > Deploy staging > Run workflow on `main` with an existing sha redeploys it and the smoke is
+     green.
+  4. A dispatch from a branch other than `main` is refused by the environment rule (and the job is skipped).
+  5. Two quick merges: the older queued deploy is replaced by the newer, and a deploy already running is
+     never cancelled.
 
 By hand, the equivalent of a deploy is
 `$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine

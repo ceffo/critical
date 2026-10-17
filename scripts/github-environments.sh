@@ -27,10 +27,17 @@ environment() {
     fi
     echo "github-environments: $repo environment $env"
     if [ "$tokens" = 1 ]; then
-        # Only a token line goes on (fly's tokens start "FlyV1 "): anything else stops the run unseen.
-        "$fly" tokens create deploy -a "$app" -n "github-$env" \
-            | { read -r t; [[ "$t" == "FlyV1 "* ]] || { echo "github-environments: unexpected fly output, nothing set" >&2; exit 1; }; printf '%s' "$t"; } \
-            | gh secret set FLY_API_TOKEN --env "$env" --repo "$repo"
+        # The token is captured and checked first (its first line, which starts "FlyV1 "), and
+        # only then piped to gh: a failed or unexpected fly run sets nothing and keeps the old secret.
+        # Neither the token nor fly's output is ever printed.
+        local t
+        if ! t="$("$fly" tokens create deploy -a "$app" -n "github-$env" 2>/dev/null)" \
+            || t="${t%%$'\n'*}" && [[ "$t" != "FlyV1 "* ]]; then
+            echo "github-environments: fly tokens create failed or printed no token line, $env FLY_API_TOKEN kept" >&2
+            exit 1
+        fi
+        printf '%s' "$t" | gh secret set FLY_API_TOKEN --env "$env" --repo "$repo"
+        unset t
         echo "github-environments: $env FLY_API_TOKEN set from a new deploy token of $app"
     fi
 }

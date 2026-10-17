@@ -44,9 +44,17 @@ mark)
     ;;
 check)
     id="${3:?$usage}"
-    code="$(curl -sS -m 70 -o "$body" -w '%{http_code}' "$base/api/log")"
+    # The log has no paging: one request with the service's maximum limit (ACTION_LOG_MAX_LIMIT,
+    # default 500) returns the newest entries. Entry <id> is gone only if that list reaches back past
+    # it (an older id, or fewer entries than asked); otherwise too many entries came after it to tell.
+    limit=500
+    code="$(curl -sS -m 70 -o "$body" -w '%{http_code}' "$base/api/log?limit=$limit")"
     [ "$code" = 200 ] || fail "GET /api/log: HTTP $code"
-    jq -e --argjson id "$id" 'any(.entries[]; .id == $id)' "$body" >/dev/null || fail "action-log entry $id is gone"
+    if ! jq -e --argjson id "$id" 'any(.entries[]; .id == $id)' "$body" >/dev/null; then
+        jq -e --argjson id "$id" --argjson limit "$limit" '(.entries | length) < $limit or any(.entries[]; .id < $id)' "$body" >/dev/null \
+            || fail "cannot tell: entry $id is older than the newest $limit entries (mark again, then check)"
+        fail "action-log entry $id is gone"
+    fi
     echo "fly-persistence-check: OK: action-log entry $id is still there"
     ;;
 *) echo "$usage" >&2; exit 2 ;;

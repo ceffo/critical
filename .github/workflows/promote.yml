@@ -1,16 +1,18 @@
 name: Promote
 
-# The promotion of ADR 0024 step 4: a tag vMAJOR.MINOR.PATCH on a main commit that staging ran and passed
-# deploys that same image (by digest, no rebuild) to production, after a restore point of the production
-# database, then smoke-checks it and creates the GitHub Release. Runbook: docs/deploy.md ("Promotion").
+# The promotion of ADR 0024 step 4: run by hand from a tag vMAJOR.MINOR.PATCH on a main commit that staging
+# ran and passed, it deploys that same image (by digest, no rebuild) to production, after a restore point of
+# the production database, then smoke-checks it and creates the GitHub Release. Runbook: docs/deploy.md
+# ("Promotion").
+#
+# Only by hand (Actions > Promote > Run workflow, "Use workflow from" the tag): no tag push starts it, the
+# release job's tags included (the user, 2026-10-17: promotion promotes a staging version on demand).
 #
 # Rollback: Actions > Promote > Run workflow, "Use workflow from" the OLDER tag (or re-run that tag's
 # run). The ref must be the tag itself: the environment `production` accepts deployments from `v*` tags
 # only, so a run from main gets neither the environment nor its token. Running from a tag also runs that
 # tag's own scripts and fly config, the ones that match its image.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -48,7 +50,7 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     steps:
-      # A tag push is a deliberate act: a token this job cannot read fails it (step 10.4).
+      # A promotion is a deliberate act: a token this job cannot read fails it (step 10.4).
       - name: Check the deploy secret
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -176,8 +176,21 @@ commit 'fix: never merged' >/dev/null
 git tag -a v0.2.1 -m r
 git switch -q main
 next "$m"
-[ "$status" != 0 ] && [[ "$out" == *"v0.2.1 exists already"* ]] && [ ! -s "$tmp/out" ] || fail "next: a version tagged elsewhere is accepted: $out"
+[ "$status" != 0 ] && [[ "$out" == *"a newer release exists: v0.2.1"* ]] && [ ! -s "$tmp/out" ] || fail "next: a version tagged elsewhere is accepted: $out"
 git tag -d v0.2.1 >/dev/null
+
+# An older failed run re-run after a newer one passed: m (a fix, 0.2.1) failed, then n (a feat) was tagged
+# v0.3.0. Re-running m's run must not stage m's image nor tag v0.2.1 after v0.3.0: refused, nothing output.
+n="$(commit 'feat: newer (#16)')"
+git tag -a v0.3.0 -m r "$n"
+next "$m"
+[ "$status" != 0 ] && [[ "$out" == *"a newer release exists: v0.3.0, on $n, is not before $m"* ]] && [ ! -s "$tmp/out" ] \
+    || fail "next: an older run re-run after a newer release is accepted: $out"
+next "$m" --force
+[ "$status" != 0 ] && [ ! -s "$tmp/out" ] || fail "next --force: an older run re-run after a newer release is accepted: $out"
+next "$n"
+[ "$status" = 0 ] && [[ "$out" == *"no commit since v0.3.0"* ]] || fail "next on the newest tagged commit: $out"
+git tag -d v0.3.0 >/dev/null
 
 touch "$tmp/gh-fails"
 next "$m"

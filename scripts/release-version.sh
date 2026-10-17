@@ -19,7 +19,9 @@
 #
 # next gathers that input for the first-parent commits after the highest vX.Y.Z tag reachable from
 # <commit> (labels of each commit's merged PR from the GitHub API, `gh` with GH_TOKEN and
-# GITHUB_REPOSITORY), then runs bump. It needs the history and the tags (fetch-depth 0).
+# GITHUB_REPOSITORY), then runs bump. It needs the history and the tags (fetch-depth 0). It refuses when
+# the highest vX.Y.Z tag of the repository is not reachable from <commit>: a newer release exists, so this
+# is an older run re-run (its commit would get a version after a newer one, and staging the old image).
 #
 # resolve prints the full sha of the commit a version tag names, or fails with a message naming the
 # version (an unknown version).
@@ -148,12 +150,12 @@ case "$cmd" in
         commit="$(git rev-parse -q --verify "$2^{commit}")" || die "unknown commit '$2'"
         last="$(git tag --merged "$commit" -l 'v*' | grep -E "$semver" | sort -V | tail -n 1 || true)"
         [ -n "$last" ] || die "no vMAJOR.MINOR.PATCH tag before $commit: the first version is tagged by hand"
+        highest="$(git tag -l 'v*' | grep -E "$semver" | sort -V | tail -n 1)"
+        git merge-base --is-ancestor "$highest^{commit}" "$commit" \
+            || die "a newer release exists: $highest, on $(git rev-parse "$highest^{commit}"), is not before $commit, so nothing is released from it (an older run re-run? run the release on main's head instead)"
         input="$(commits "$last" "$commit")"
         result="$(bump "$last" "$(force_flag "${3:-}")" <<<"$input")"
-        version="$(sed -n 's/^version=//p' <<<"$result")"
-        if [ -n "$version" ] && git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
-            die "v$version exists already, on $(git rev-parse "v$version^{commit}"), which is not before $commit"
-        fi
+        # The highest tag is reachable, so it is $last and the version (above it) is not a tag yet.
         emit "$result"
         ;;
     resolve)

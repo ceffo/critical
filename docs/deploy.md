@@ -226,7 +226,7 @@ new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a use
 | `production` | `FLY_API_TOKEN` | deploy token of `critical-prod` |
 
 Restrict the `production` environment to deployment branches and tags matching `v*` (ADR 0024 step
-10.2). Optionally add a required reviewer (default: none, pushing the tag is the act).
+10.2). Optionally add a required reviewer (default: none, running the promotion from the tag is the act).
 
 **Who may create a `v*` tag.** The environment's tag rule accepts **any** `v*` tag, and Promote run from a
 tag runs `promote.yml` as it is in the tagged commit, with the production token: the on-main guard lives in
@@ -254,8 +254,9 @@ pushing a `v*` tag gets "push declined due to repository rule violations".
 What the GitHub Actions bypass also allows: any workflow of this repository whose token has `contents:
 write` can create a `v*` tag, so a write collaborator could, through a workflow on a branch, tag a commit
 that is not on main. Such a tag starts nothing (a tag made with a workflow token starts no workflow, and
-Promote is run by hand), and the release job then refuses that version ("exists already"); promote only the
-versions the release runs made (their notices, the staging deployments' payloads).
+Promote is run by hand only). If it is the highest `v*` tag, the release job refuses every release until an
+admin deletes it ("a newer release exists", "Release version"); promote only the versions the release runs
+made (their notices, the staging deployments' payloads).
 
 The rulebooks deploy key is read-only and belongs to the private `critical-rulebooks` repo:
 
@@ -344,8 +345,10 @@ the conventional commits, 2026-10-17)"), run first by the release job:
   counts for the level of the next release that happens. There is no "force release" label.
 - **By hand** (Actions > Release > Run workflow on `main`, version empty): releases main's head even when the
   rules make none, at least a patch (a new catalogue, "A new catalogue version").
-- Refused, failing the run: no `v*` tag before the commit (the first version is tagged by hand), a version
-  whose tag exists already on another commit, a GitHub API failure reading the labels.
+- Refused, failing the run: no `v*` tag before the commit (the first version is tagged by hand); **a newer
+  release exists**, i.e. the highest `v*` tag of the repository is not before the commit (an older run
+  re-run after a newer one was tagged: it would stage the old image and tag a lower version after a higher
+  one; or a tag made off main, which an admin deletes); a GitHub API failure reading the labels.
 - **Tag**: `scripts/version-tag.sh` creates the annotated tag `vX.Y.Z` on the commit through the GitHub API
   with the workflow's token (tagger `github-actions[bot]`, message naming the staging digest), only after the
   staging deploy and smoke check passed (the job stops at a failed one). An existing tag is never moved.
@@ -353,7 +356,7 @@ the conventional commits, 2026-10-17)"), run first by the release job:
   events triggered by the `GITHUB_TOKEN`, with the exception of `workflow_dispatch` and
   `repository_dispatch`, will not create a new workflow run"
   ([Triggering a workflow from a workflow](https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow)).
-  So `promote.yml`'s `push: tags` trigger does not fire for it; the post-merge check below confirms it.
+  And `promote.yml` has no tag-push trigger at all: it runs only by hand, so no tag starts a promotion.
   Until promotion on demand exists, promoting is running Promote from the tag.
 - **Offline test.** `scripts/test-release-version.sh` (part of `just validate`): the rules as a table (each
   type, breaking, docs/test/chore only, the label, a mixed range, a skipped `feat` earlier in the range,
@@ -372,7 +375,10 @@ take the same number).
   (input `version`: empty releases main's head, `X.Y.Z` redeploys that version, "Staging deploy"). It is not
   a job of `ci.yml` because CI cancels a running `main` build when a newer commit lands; release jobs are
   serialized instead (the job's `concurrency: release-staging`, never cancelled once started: a newer run
-  replaces only a queued one). The group is on the job, not the workflow: every CI completion on a branch named `main` (a red
+  replaces only a queued one). Manual and automatic runs share that group: a run queued behind a
+  running one replaces the one already pending, whatever their kind, so a manual redeploy can drop a
+  pending automatic release and the other way round. Nothing is lost: the next release counts every
+  commit since the last version, and a dropped redeploy is run again. The group is on the job, not the workflow: every CI completion on a branch named `main` (a red
   one, a fork's) starts a run of this workflow, and only a job that passes the `if` joins the group, so a
   skipped run never cancels a pending green release. GitHub runs a
   `workflow_run` workflow as it is on `main`, so a pull request cannot change what runs with the secrets,
@@ -457,11 +463,12 @@ read an empty token), and a calling job cannot have an environment. The job pass
   2. for each, list `GET /repos/{repo}/deployments/{id}/statuses` and keep the ones whose **status
      history contains `success`** (`inactive` only means superseded; a `failure` deployment has no
      `success`);
-  3. take the newest of those by `created_at` (a forced release for a new catalogue records a new digest
-     under the same sha) and its `payload.digest`; none means staging did not run and pass that sha: refuse.
-  Known limit: when two versions share a commit (a forced release of an already-released head), the
-  promotion of either takes the newest digest of that commit; picking the deployment whose
-  `payload.version` is the tag's is left to the promotion-on-demand change.
+  3. keep the ones whose `payload.version` is the tag's version and take the newest by `created_at`: two
+     versions can share a commit (a forced release of a tagged head, for a new catalogue, records a new
+     digest under the same sha), and each promotes its own image. When none has that version, take the
+     newest of those that record **no** version (deployed before versions were baked in: `v0.1.0`), never
+     one recorded as another version. Its `payload.digest` is the image; none means staging did not run
+     and pass that sha as that version: refuse.
   The promotion compares that digest with the one it deploys (`registry.fly.io/critical-prod@sha256:…`, its
   copy of the staging image).
 - **Config of the image's commit.** The fly config (`deploy/fly.staging.toml`) is checked out at the
@@ -496,8 +503,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
   2. Deployments shows a `deploy-staging` entry with ref = the sha and the digest and version in its
      payload; after the job its latest status is probably `inactive` while the history keeps `success` (the
      reading rule above).
-  3. **No Promote run** appears in Actions for the tag `v0.2.0` (the tag made with the workflow token
-     starts no workflow).
+  3. **No Promote run** appears in Actions for the tag `v0.2.0` (Promote has no tag-push trigger).
   4. A `docs:` merge: the run is green with the notice "no release: docs/test/chore only since v0.2.0", no
      image is pushed, staging is untouched, no tag.
   5. Actions > Release > Run workflow on `main` with version `0.2.0` redeploys it and the smoke is green;
@@ -513,9 +519,8 @@ read an empty token), and a calling job cannot have an environment. The job pass
 `scripts/promote.sh <tag>`.
 
 - **When.** By hand: Actions > Promote > Run workflow, "Use workflow from" a **version tag** (the promotion,
-  and the rollback with an older tag). It also has a `push: tags: v*` trigger, which no tag fires any more:
-  CI makes the tags with the workflow token, which starts no workflow ("Release version"), and humans make
-  none. The job runs only for a tag ref, in the environment `production`, which accepts
+  and the rollback with an older tag). Only by hand: it has no tag-push trigger, so no tag starts it (CI
+  makes the tags, "Release version"). The job runs only for a tag ref, in the environment `production`, which accepts
   deployments from `v*` tags only, so a run from a branch gets neither the environment nor its token. It
   runs the tag's own scripts and fly config (the ones of its image). Serialized by `concurrency:
   deploy-production`, never cancelled once started.
@@ -525,7 +530,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
   gone: CI is the only maker of version tags. Promoting the newest staging version on demand is a later
   change.)
 - **Secret.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-prod`). An empty one **fails**
-  the run before anything else (`Promotion` error): a tag push is a deliberate act (step 10.4).
+  the run before anything else (`Promotion` error): a promotion is a deliberate act (step 10.4).
 - **Steps**, each stopping the promotion when it fails:
   1. **Guards** (`scripts/release-guards.sh all <tag>`): the tag is `vMAJOR.MINOR.PATCH`; its commit is
      on `origin/main`; staging ran and passed that commit, read as "Record" above says, which gives the
@@ -691,5 +696,6 @@ The catalogue is in the image, fetched at build time, and applied at boot by the
 update `critical-rulebooks`, then release again: Actions > Release > Run workflow on `main` with no version
 (a forced release of main's head: it rebuilds that commit with the rulebooks' current default branch, a new
 digest with the new `critical.rulebooks.revision`, under the next version, at least a patch), or merge
-anything that makes a release. Re-running an earlier release run does not do it any more: its range ends at
-a tagged commit, so it makes no release. Once staging passed and tagged the version, promote it as above.
+anything that makes a release. Re-running an earlier release run does not do it: a run that passed has its
+range end at its own tag (no release), and any older run is refused once a newer version exists ("a newer
+release exists", "Release version"). Once staging passed and tagged the version, promote it as above.

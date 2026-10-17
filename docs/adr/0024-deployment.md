@@ -145,8 +145,8 @@ flowchart LR
 
 4. **Production from a version tag.** Running the promotion from a version tag `vMAJOR.MINOR.PATCH`
    promotes that commit to production. _Amended 2026-10-17 (staging versions); was: pushing the tag
-   promotes. CI makes the tags (step 3.5) with the workflow's token, which starts no workflow, so the
-   promotion is run by hand from the tag until promotion on demand exists._
+   promotes. CI makes the tags (step 3.5) and the promotion runs only by hand, from the tag: no tag push
+   starts it, until promotion on demand exists._
    1. the promotion refuses a tag whose commit is not on main, or whose image did not pass the
       staging smoke check of step 3;
    2. it takes the restore point of step 9.2, a verified copy of `critical_prod`, and waits for it
@@ -268,7 +268,8 @@ flowchart LR
     3. The rulebooks deploy key is a read-only key on `critical-rulebooks`, held only by the job that
        builds the release image.
     4. When a staging secret is missing, the main-branch build and deploy jobs skip with a notice and
-       never fail main. A promotion with a missing secret fails: pushing a tag is a deliberate act.
+       never fail main. A promotion with a missing secret fails: running it is a deliberate act
+       (_amended 2026-10-17 (staging versions); was: pushing a tag is a deliberate act_).
     5. Smoke checks reach the app through `fly proxy`, so they work while the app is private.
 
 ## Proposed defaults awaiting the user
@@ -281,7 +282,7 @@ part of this ADR to accepted. Answered rows keep their original default and say 
 | Access for a public URL (step 8) | private, no public IP | (a) basic auth + public IPs, (b) stay private, devices join WireGuard / Tailscale, (c) real login |
 | PostgreSQL and the second production machine (step 5) | SQLite, one machine per environment | **Answered 2026-10-16: PostgreSQL first**, no deploy until then; two production machines from the first deploy ([ADR 0025](0025-postgresql-storage.md)) |
 | Production data | fresh database | **Answered 2026-10-16: fresh database** (_amended 2026-10-16; was: seeded once with the user's data, the local `.dev/critical.db` copied into `critical_prod` by the copy tool_): production's first boot seeds it from `seeds/` and the catalogue, like staging; the user re-enters the few character-sheet edits made in the app. See "Amendment (production starts from the seeds, 2026-10-16)" |
-| Production approval | none: pushing the tag is the act | a required reviewer on the `production` environment |
+| Production approval | none: running the promotion from the tag is the act (_amended 2026-10-17; was: pushing the tag is the act_) | a required reviewer on the `production` environment |
 | Names, region, size | `critical-staging` / `critical-prod`, region `cdg`, shared-cpu-1x 256-512 MB, 1 GB volumes, staging auto-stops | **Region answered 2026-10-16: `yyz`**; no app volume, the shared cluster `tournesol-db` of step 2.3 holds the data. App names and the app VM size stay the defaults; app names are global on fly and set in one place |
 | Where the pre-promotion dump is kept (step 9.2) | open: no promotion runs until it is answered | **Answered 2026-10-16 ("1a"): a copy database on the same cluster** (a restore point, newest 3 kept), not a dump file; see "Amendment (restore point: a copy database, 2026-10-16)" |
 | Snapshot retention of the cluster volume (step 9.1) | 30 days | **Answered 2026-10-16: 30 days** (the default) |
@@ -444,14 +445,19 @@ a version redeploys it; `just release` goes away and CI is the only maker of ver
 - **Step 1.4**: `/api/health` reports `version` next to `commit`, `unknown` when not set.
 - **Step 3**: the version first (3.1), the build with it (3.2), the deploy and smoke check with the version
   (3.3, 3.4), the tag last (3.5); one serialized run from the version to the tag; the manual run.
-- **Step 4**: the promotion runs by hand from a version tag; a tag CI creates starts no workflow (GitHub
-  does not start workflows for events made with a workflow's `GITHUB_TOKEN`, except `workflow_dispatch`
-  and `repository_dispatch`). Promoting the newest staging version on demand and making a major are later
-  changes.
+- **Step 4**: the promotion runs only by hand (`workflow_dispatch`) from a version tag; it has no tag-push
+  trigger, so no tag starts it, CI's or an admin's (a tag CI creates would start no workflow anyway: GitHub
+  starts none for events made with a workflow's `GITHUB_TOKEN`, except `workflow_dispatch` and
+  `repository_dispatch`). One commit can carry two versions (a manual release of a tagged head, a new
+  catalogue): the guard of step 4.1 takes the staging deployment recorded as the tag's version, so each
+  version promotes its own image. Promoting the newest staging version on demand and making a major are
+  later changes.
 - **Step 10.2**: the tag rules split in two rulesets: moving and deleting `v*` tags stays admin-only;
   creating one is open to admins and the GitHub Actions app. Any workflow token of the repository with
-  `contents: write` can therefore create a `v*` tag; such a tag starts no workflow, the release refuses a
-  version whose tag exists, and the operator promotes only versions the release made (runbook, "GitHub").
+  `contents: write` can therefore create a `v*` tag; such a tag starts no workflow, the release refuses to
+  release while the highest `v*` tag is not before its commit ("a newer release exists", also what stops an
+  older run re-run after a newer release), and the operator promotes only versions the release made
+  (runbook, "GitHub").
 - **Consequences**: the release name is in the image.
 - **Tests**: `scripts/test-release-version.sh` (the rules as a table, the range and labels on a fixture
   repository, the tag's API calls), `scripts/test-release-scripts.sh` and `scripts/test-staging-deploy.sh`

@@ -2,13 +2,14 @@
 # Tests the promotion's scripts without the network, fly or GitHub (part of `just validate`, ADR 0024
 # steps 4, 8.3 and 10.4), on fixture git repositories with fly, gh, docker and the smoke check stubbed:
 #   - release-guards.sh: each guard (tag format, on main, the staging record read as docs/deploy.md says,
-#     the image in the registry) and `all`, which prints the tag's commit and the digest staging ran;
+#     the image in the registry) and `all`, which prints the tag's commit and the digest staging ran (as
+#     that tag's version when one commit carries two);
 #   - promote.sh: guards, then the no-public-IP check, then the copy of the staged image by digest into the
 #     production repository (and its digest checked), then the restore point in a console machine of it, then the deploy by digest, the smoke check, the digest check and the GitHub Release;
 #     each failure stops everything after it (a refused guard calls fly not at all; no restore point, no
 #     deploy; a failed smoke or a digest mismatch, no release);
 #   - restore-point.sh: what it refuses without a database (its SQL runs for real in scripts/image-smoke.sh);
-#   - promote.yml, parsed: a run from a branch fails saying "use a tag"; the promotion runs for tags only, the production environment, serialized and never cancelled, the
+#   - promote.yml, parsed: a run from a branch fails saying "use a tag"; the promotion runs by hand only (no trigger on a tag push), for tags only, the production environment, serialized and never cancelled, the
 #     token read only by the secret check (which fails on an empty token) and the promotion step.
 set -euo pipefail
 
@@ -108,7 +109,7 @@ out="$("$guards" on-main "$side_sha" 2>&1)" && fail "a commit off main is accept
 [[ "$out" == *"not on main"* ]] || fail "off-main message: $out"
 
 # --- guard: the staging record (docs/deploy.md "Record") ---
-staging() { status=0; out="$("$guards" staging "$1" 2>&1)" || status=$?; }
+staging() { status=0; out="$("$guards" staging "$@" 2>&1)" || status=$?; }
 staging "$main_sha"
 [ "$status" != 0 ] && [[ "$out" == *"no successful deploy"* ]] || fail "no deployment: accepted or wrong message: $out"
 put "$(deployments "$main_sha")" "[{\"id\":11,\"created_at\":\"2026-10-17T01:00:00Z\",\"payload\":{\"digest\":\"$digest\"}}]"
@@ -146,6 +147,32 @@ out="$("$guards" all v1.2.3 2>&1)" || fail "all v1.2.3: $out"
 [ "$out" = "$(printf 'sha=%s\ndigest=%s' "$main_sha" "$newer")" ] || fail "all v1.2.3 printed: $out"
 "$guards" all v9.9.9 >/dev/null 2>&1 && fail "all: a tag off main is accepted"
 "$guards" all v1.2.4 >/dev/null 2>&1 && fail "all: a missing tag is accepted"
+
+# --- guard: two versions on one commit (a forced release of a tagged head): each tag gets its own image ---
+older="sha256:$(printf '1%.0s' {1..64})"
+forced="sha256:$(printf '2%.0s' {1..64})"
+bare="sha256:$(printf '3%.0s' {1..64})"
+git tag -a v1.3.0 -m r "$main_sha"
+put "$(deployments "$main_sha")" "[{\"id\":21,\"created_at\":\"2026-10-17T01:00:00Z\",\"payload\":{\"digest\":\"$older\",\"version\":\"1.2.3\"}},
+  {\"id\":22,\"created_at\":\"2026-10-17T02:00:00Z\",\"payload\":\"{\\\"digest\\\":\\\"$forced\\\",\\\"version\\\":\\\"1.3.0\\\"}\"},
+  {\"id\":23,\"created_at\":\"2026-10-17T00:30:00Z\",\"payload\":{\"digest\":\"$bare\",\"version\":\"\"}},
+  {\"id\":24,\"created_at\":\"2026-10-17T03:00:00Z\",\"payload\":{\"digest\":\"$digest\",\"version\":\"1.2.3\"}}]"
+for id in 21 22 23; do put "$(statuses "$id")" '[{"state":"inactive"},{"state":"success"}]'; done
+put "$(statuses 24)" '[{"state":"failure"}]'
+out="$("$guards" all v1.2.3 2>&1)" || fail "all v1.2.3 (two versions): $out"
+[ "$out" = "$(printf 'sha=%s\ndigest=%s' "$main_sha" "$older")" ] || fail "all from the OLDER tag of a commit got: $out (the newest digest of the sha, not its own; a failed deploy of it ignored)"
+out="$("$guards" all v1.3.0 2>&1)" || fail "all v1.3.0 (two versions): $out"
+[ "$out" = "$(printf 'sha=%s\ndigest=%s' "$main_sha" "$forced")" ] || fail "all from the newer tag of a commit got: $out"
+staging "$main_sha" 1.4.0
+[ "$status" = 0 ] && [ "$out" = "$bare" ] || fail "a version no deploy records: not the deploy without a version: '$out'"
+staging "$main_sha"
+[ "$status" = 0 ] && [ "$out" = "$forced" ] || fail "no version asked: not the newest successful deploy: '$out'"
+put "$(statuses 23)" '[{"state":"failure"}]'
+staging "$main_sha" 1.4.0
+[ "$status" != 0 ] && [[ "$out" == *"no successful deploy of $main_sha as 1.4.0"* ]] \
+    || fail "a version no deploy records, the others recorded as other versions: accepted or wrong message: $out"
+git tag -d v1.3.0 >/dev/null
+put "$(deployments "$main_sha")" "[{\"id\":12,\"created_at\":\"2026-10-17T03:00:00Z\",\"payload\":{\"digest\":\"$newer\"}}]"
 
 # --- promote.sh ---
 private='[{"Type":"private_v6","Address":"fdaa::1","Region":"global"}]'
@@ -260,7 +287,7 @@ def check(ok, msg):
         errs.append(msg)
 
 on = wf.get(True) or wf.get("on")  # PyYAML reads the key `on` as True
-check(on["push"] == {"tags": ["v*"]} and set(on) == {"push", "workflow_dispatch"}, "promote: not tags v* + dispatch")
+check(set(on) == {"workflow_dispatch"}, "promote: not run by hand only (no tag push may start it)")
 check(wf["permissions"] == {"contents": "read"}, "promote: workflow permissions are not read-only")
 check(sorted(wf["jobs"]) == ["not-a-tag", "promote"], "promote: the jobs are promote and not-a-tag")
 refuse = wf["jobs"]["not-a-tag"]

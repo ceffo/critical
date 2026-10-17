@@ -29,15 +29,15 @@ func TestRepoSeeds_EveryBuffDefaultTargetAndChoice(t *testing.T) {
 	}
 	wants := map[string]want{
 		// Self or other, defensive: on the Bard, the arrow offers an ally.
-		"armor":                  {true, onMe},
-		"enlarge":                {true, onMe},
-		"protection_from_evil":   {true, onMe},
-		"cats_grace":             {true, onMe},
-		"strength":               {true, onMe},
-		"improved_invisibility":  {true, onMe},
-		"improved_strength":      {true, onMe},
-		"stoneskin":              {true, onMe},
-		"dragon_scales":          {true, onMe},
+		"armor":                 {true, onMe},
+		"enlarge":               {true, onMe},
+		"protection_from_evil":  {true, onMe},
+		"cats_grace":            {true, onMe},
+		"strength":              {true, onMe},
+		"improved_invisibility": {true, onMe},
+		"improved_strength":     {true, onMe},
+		"stoneskin":             {true, onMe},
+		"dragon_scales":         {true, onMe},
 		// Friendly areas: on the Bard, the arrow offers not on him.
 		"haste":                          {true, onMe},
 		"protection_from_evil_10_radius": {true, onMe},

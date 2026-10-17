@@ -18,6 +18,8 @@ type SVC interface {
 	Search(ctx context.Context, f Filter, p PageRequest) (Page, error)
 	// Names lists every catalogue spell's id and names, in the Reader's order.
 	Names(ctx context.Context) ([]SpellName, error)
+	// Levels lists the spell levels the catalogue holds, ascending, each once.
+	Levels(ctx context.Context) ([]int, error)
 }
 
 // DAL is the write-side driven port (slot ledger).

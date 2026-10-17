@@ -2,7 +2,7 @@
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.9 and
 critical-qki.14, until then in `docs/backend.md`); amended 2026-10-16 (the adjustment moves the
-target: steps 2, 4 and 5, step 8 added)
+target: steps 2, 4 and 5, step 8 added); step 6 amended by 0028 (ability checks are a roll kind)
 
 ## Context
 
@@ -63,12 +63,13 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    `router` `TestAdjustSave_WireShape`.
 6. **Latest roll only.** Only the newest entry among the roll kinds (`actionlog.RollKinds`:
    attack, save, cast, item use, skill check ([ADR 0014](0014-skill-checks.md)), spell exposure
-   ([ADR 0008](0008-spell-slots-and-long-rest.md) step 16): the ones that
+   ([ADR 0008](0008-spell-slots-and-long-rest.md) step 16), ability check
+   ([ADR 0028](0028-ability-checks.md) step 5): the ones that
    replace the result card) can be adjusted, and that
    entry must be a save. Voided entries count when looking for the newest roll. Another kind is
    refused (400), a voided save or one that is not the latest roll is refused (409).
    Tests: `TestAmendLatest` (actionlogsvc: "not a save", "voided", "a later save exists", "a later
-   attack exists", "a later cast exists", "a later item use exists", "a later skill check exists"), `TestAdjustSave_Rejections`
+   attack exists", "a later cast exists", "a later item use exists", "a later skill check exists", "save, a later ability check exists"), `TestAdjustSave_Rejections`
    ("not the latest", "voided", "not a save"), router `TestSpecialSentinels` ("adjust voided", "adjust not latest",
    "adjust not a save").
 7. **Audited.** The adjustment is an `amend` correction on the entry carrying the new

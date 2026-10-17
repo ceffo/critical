@@ -1,6 +1,6 @@
 # ADR 0026: Colour and depth: the contrast ladder, the raised stage and four themes
 
-**Status**: proposed, 2026-10-17 (critical-jwo3.1; the user OKs it on the PR). Amends
+**Status**: accepted 2026-10-17 (user OK, proposals as written); written (critical-jwo3.1; the user OKs it on the PR). Amends
 [ADR 0009](0009-dashboard-layout-and-theme-system.md) steps 4 and 6;
 [ADR 0020](0020-visual-identity.md) steps 1 to 6; [ADR 0022](0022-activity-focus-layout.md) steps 2.4,
 3.2, 4.1 and 4.2. Rechecks, without changing them, ADR 0022 step 2.8 and

@@ -23,11 +23,11 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0003 | [Damage](0003-damage.md) | accepted, steps 4, 5 and 11 amended by 0016 |
 | 0004 | [Buffs](0004-buffs.md) | accepted, steps 10 and 11 and Consequences amended and step 18 added by 0016; step 19 (add as effect) added |
 | 0005 | [Rounds and time](0005-rounds-and-time.md) | accepted |
-| 0006 | [Saving throws](0006-saving-throws.md) | accepted, steps 2, 4 and 5 amended and step 8 added 2026-10-16 (the adjustment moves the target) |
+| 0006 | [Saving throws](0006-saving-throws.md) | accepted, steps 2, 4 and 5 amended and step 8 added 2026-10-16 (the adjustment moves the target), step 6 amended by 0028 |
 | 0007 | [HP ledger](0007-hp-ledger.md) | accepted, steps 2, 3, 8 and 9 amended by 0018, step 2 by 0019 |
 | 0008 | [Spell slots and long rest](0008-spell-slots-and-long-rest.md) | accepted |
 | 0009 | [Dashboard layout and theme system](0009-dashboard-layout-and-theme-system.md) | accepted, steps 3 and 5 amended by 0017, step 4 replaced and step 5 amended by 0020, steps 1 and 2 replaced and steps 5 and 6 amended by 0022; steps 4 and 6 amended by 0026 (four themes, a dark and a light theme per device) |
-| 0010 | [Action stack and undo](0010-action-stack-and-undo.md) | accepted, steps 1 and 2 and Consequences amended by 0018, Consequences by 0019 |
+| 0010 | [Action stack and undo](0010-action-stack-and-undo.md) | accepted, steps 1 and 2 and Consequences amended by 0018, Consequences by 0019, step 6 amended by 0028 |
 | 0011 | [HP below zero](0011-hp-below-zero.md) | accepted |
 | 0012 | [Attack against an unknown AC](0012-attack-against-unknown-ac.md) | accepted |
 | 0013 | [Initiative](0013-initiative.md) | accepted, steps 2 and 4 amended by 0018 |
@@ -43,5 +43,6 @@ Changing a rule means a new or amended ADR in the same PR as the code. Never cha
 | 0023 | [Localized text: one row per language, no per-language field](0023-localized-text.md) | accepted; steps 9 to 12 (item and weapon names) added 2026-10-16 |
 | 0024 | [Deployment on fly.io: environments, release flow, image and data](0024-deployment.md) | proposed (step 8 and open defaults); step 5 accepted and steps 2, 4.2, 5, 6.1, 7 and 9 amended by 0025, 2026-10-16; production starts from the seeds (amendment 2026-10-16); step 9.2 answered: the restore point is a copy database, production has no public-IP bypass (amendment 2026-10-16); staging versions from the conventional commits, tagged by CI, steps 1.4, 3, 4 and 10.2 (amendment 2026-10-17, accepted, user OK 2026-10-17); promotion on demand from main, newest staging version or the one asked, admins only, steps 4 and 10.2 (amendment 2026-10-17, accepted, user OK 2026-10-17); `just major` for a manual major, step 3 (amendment 2026-10-17, accepted, user OK 2026-10-17); one tag ruleset, `release tags`, step 10.2 (amendment 2026-10-17) |
 | 0025 | [PostgreSQL storage and tests without a database](0025-postgresql-storage.md) | accepted; step 9 (SQLite copy tool) retired 2026-10-16 |
-| 0026 | [Colour and depth: the contrast ladder, the raised stage and four themes](0026-contrast-ladder-raised-stage-four-themes.md) | proposed (user OK on the PR; theme names, default pair and saved-theme mapping proposed); step 5.9's initiative size amended by 0027 |
-| 0027 | [Space follows frequency of use: French as the layout reference, one-word buttons and the per-screen layout pass](0027-space-follows-frequency-of-use.md) | proposed (user OK on the PR; timeline columns, card width, journal rows and marker, two-column thresholds proposed) |
+| 0026 | [Colour and depth: the contrast ladder, the raised stage and four themes](0026-contrast-ladder-raised-stage-four-themes.md) | accepted (user OK 2026-10-17, proposals as written); step 5.9's initiative size amended by 0027 |
+| 0027 | [Space follows frequency of use: French as the layout reference, one-word buttons and the per-screen layout pass](0027-space-follows-frequency-of-use.md) | accepted (user OK 2026-10-17, proposals as written) |
+| 0028 | [Ability checks](0028-ability-checks.md) | accepted (user OK 2026-10-17) |

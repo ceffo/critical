@@ -1,6 +1,6 @@
 # ADR 0027: Space follows frequency of use: French as the layout reference, one-word buttons and the per-screen layout pass
 
-**Status**: proposed, 2026-10-17 (critical-u9hr.1; the user OKs it on the PR). Amends
+**Status**: accepted 2026-10-17 (user OK, proposals as written); written (critical-u9hr.1; the user OKs it on the PR). Amends
 [ADR 0022](0022-activity-focus-layout.md) steps 2.2, 2.3, 2.5, 2.6, 2.7, 3.4, 4.2 (its example label),
 5.1, 5.3 and 7; [ADR 0017](0017-type-scale-and-density.md) step 6 (the timeline's turn columns and
 the effect rows' buttons); [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 5.9 (the

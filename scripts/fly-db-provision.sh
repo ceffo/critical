@@ -137,7 +137,11 @@ REVOKE ALL ON DATABASE :"role" FROM PUBLIC;
 GRANT CONNECT, TEMPORARY ON DATABASE :"role" TO :"role";
 SQL
     if [ -n "${password[$env]:-}" ]; then
-        printf 'CRITICAL_DSN=postgres://%s:%s@%s.flycast:5432/%s?sslmode=prefer\n' \
+        # sslmode=disable: the cluster's Flycast service does not complete a TLS handshake (it answers
+        # the SSL request, then closes), and the app's driver (lib/pq) does not fall back to plain on
+        # sslmode=prefer as libpq does. The traffic stays inside fly's WireGuard private network, which
+        # encrypts it; `fly postgres attach` writes sslmode=disable too.
+        printf 'CRITICAL_DSN=postgres://%s:%s@%s.flycast:5432/%s?sslmode=disable\n' \
             "$role" "${password[$env]}" "$cluster" "$role" | set_secret "$app" \
             || fail "$role has a new password but $app's secret was not set: rerun with --rotate $env"
         if [ -n "$password_dir" ]; then
@@ -190,7 +194,8 @@ else
     "$fly" proxy "$port:5432" "$cluster.flycast" -a "$cluster" -q >"$log" 2>&1 &
     proxy=$!
     trap 'kill "$proxy" 2>/dev/null || true; rm -f "$log"' EXIT
-    conn() { printf 'host=127.0.0.1 port=%s user=%s dbname=%s sslmode=prefer connect_timeout=10' "$port" "$1" "$2"; }
+    # The app's sslmode (above): with prefer, psql would fall back to plain and hide a failing TLS.
+    conn() { printf 'host=127.0.0.1 port=%s user=%s dbname=%s sslmode=disable connect_timeout=10' "$port" "$1" "$2"; }
     for env in "${!password[@]}"; do
         role="critical_$env"
         ok=""

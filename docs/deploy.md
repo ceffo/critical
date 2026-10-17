@@ -70,11 +70,16 @@ A database created later keeps PUBLIC CONNECT until the next run of the provisio
 
 **Passwords.** A user gets a generated password when it is created, sent to the server only as a
 SCRAM-SHA-256 verifier, and its app's secret
-`CRITICAL_DSN=postgres://critical_<env>:…@tournesol-db.flycast:5432/critical_<env>?sslmode=prefer` is
+`CRITICAL_DSN=postgres://critical_<env>:…@tournesol-db.flycast:5432/critical_<env>?sslmode=disable` is
 piped into `fly secrets import` right after (never printed): staged while the app has no machine (the
 first `fly deploy` applies it), applied at once otherwise. An existing user's password and secret are
 never touched by a rerun, so a rerun on a running app changes nothing it uses. `fly secrets list -a
-critical-<env>` shows the name and a digest, never the value.
+critical-<env>` shows the name and a digest, never the value. `sslmode=disable` (user, 2026-10-16): the
+cluster has no TLS (PostgreSQL answers `N` to a TLS request; the Flycast `pg_tls` handler answers `S`,
+then closes), and the app's driver, unlike `psql` with `prefer`, does not fall back to plain, so every
+connection of the first staging deploy ended in `EOF`. The traffic stays inside fly's WireGuard
+private network, which encrypts it; `fly postgres attach` writes `sslmode=disable` too. A secret set
+with `sslmode=prefer` is replaced with `--rotate`.
 
 **Checks**, every run: each critical user holds CONNECT on its own database and on no other (privileges
 read as the cluster's operator). When the run set a password it also connects through `fly proxy` to

@@ -355,6 +355,16 @@ report. The same `Stop` hook blocks your turn while agents are live and no fleet
 (2026-10-18: a go-public developer committed a fix and told the user "the supervisor needs to ship
 it"; the supervisor waited on the report file and the developer sat idle, twice.)
 
+**An agent waiting on the user is never silent.** herdr shows an agent that ends its turn on a question
+as idle or done, not blocked. fleet-watch.sh reads its last message: a question or a request to the user
+puts "❓ " in front of its tab label ("⛔ " when blocked) and raises a herdr notification; a developer,
+reviewer or tester also wakes you with `WAITING-ON-USER <name>`. Then tell the user in your reply which
+tab waits and what it asks, in one line, and list it with the pending questions until it moves.
+If the question is yours to settle (grooming, design within the ADRs), answer it in the agent's tab
+through `herdr agent prompt` instead. (2026-10-18, user: "subagents are sitting idle waiting for an
+answer but they are not marked as blocked. just idle. how am i supposed to know that they are
+blocked. and the supervisor is none the wiser either.")
+
 ## PR watch (never rely on remembering to check)
 
 Keep **exactly one** watcher running with `run_in_background` for all open PRs: a loop that fetches,

@@ -296,11 +296,15 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    adjustments.
    As built: `characters.str_exceptional` (migration 009, 0 = none); refusals on field
    `strExceptional` with code `not_allowed` (wrong class, Strength or race) or `out_of_range`; the
-   halfling exclusion is a constant of `ruletablesvc`, not catalogue data. The UI writes it in the
-   PHB's notation (18/05, 18/50, 18/00), on the sheet and in the Strength modifier's detail.
+   halfling exclusion is a constant of `ruletablesvc`, not catalogue data; the creation options
+   carry each class's `exceptionalStrengthRaces`, so the form offers the field only to those. The
+   UI writes it in the
+   PHB's notation (18/05, 18/50, 18/00), on the sheet and in the Strength modifier's detail; the
+   API sends the score as the detail and the percentile as a number (`strExceptional` on the
+   modifier and the damage term), no notation.
    Tests: `TestCreate_Step9_ExceptionalStrength` (charactersvc), `TestExceptionalStrengthAllowed_Step9`
    (ruletablesadpt), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50` (combatsvc: Table 1 at
-   18/50).
+   18/50), `TestRollSpellToHit_Step9_Reads18xx` (combatsvc: a spell's to-hit at 18/91).
 10. **Strength spells and 18/xx (warriors only).** The book: past 18, a warrior's Strength spell
     adds tenths of a point, 10% a point, and cannot reach 19 (PHB, *Strength*, Wizard 2). The
     project keeps its stacking and gates (ADR 0004 steps 7 to 10) and only adds the warrior's scale
@@ -340,32 +344,39 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `attackRate {attacks, rounds, thisRound}`; the card writes it "3/2 att." with this round's count
     for a half rate. The weapon editor gains the step 23 type select, without which no rate shows.
     Tests: `TestAttackRateFor_Step11`, `TestAttackRateInRound_Step11_4` (ruletablesadpt),
-    `TestGetAttackForm_Step11_AttackRateAndPointBlank` (combatsvc).
+    `TestGetAttackForm_Step11_AttackRateAndPointBlank` (combatsvc; a level the tables cannot read
+    is logged and shows no rate, the form still loads).
 12. **Weapon specialization.** A per-weapon flag, fighters only (refused for another class). A
     specialized weapon adds +1 to hit and +2 to damage, each a named modifier, not magical (it does
     not count as a "+N" of ADR 0002 step 6). _(proposed: a bow or crossbow instead gets +2 to hit at
     point-blank range as an attack option, and no damage bonus, PHB "Effects of Specialization";
-    thrown weapons (dagger, dart, hand axe…) get the melee +1/+2, a ruling, not book text: the book
-    names only melee weapons and bows and crossbows.)_ Proficiency slots and the cost of
+    slings and thrown weapons (dagger, dart, hand axe…) get no bonus: the book names only melee
+    weapons and bows and crossbows (supervisor, 2026-10-18, the PHB literally; was the melee
+    +1/+2).)_ Proficiency slots and the cost of
     specialization are not tracked.
 
     As built (user, 2026-10-18: point-blank is a per-request flag, the bonuses generic by weapon
-    kind, which ones a launcher gets taken from the PHB). PHB p.53, *Effects of Specialization*: a
-    melee specialist gets +1 to hit and +2 damage, not magical; bow and crossbow specialists gain a
-    point-blank range category with +2 to hit and "no additional damage"; their extra attacks are
-    Table 35's, none for bows (step 11). So, by weapon kind: a weapon that fires ammunition (bow,
-    crossbow, and by the same rule a sling) gets only the point-blank +2 (modifier `point_blank`),
-    when the attack request sets `point_blank`, refused (invalid input) for any other weapon; any
-    other weapon, melee or thrown, gets +1 to hit and +2 damage (modifier `specialization`, the
-    damage added after the multipliers with Strength). The flag is never saved; the form's preview
-    carries a `pointBlank` variant so the card shows the option's numbers without computing them.
-    Missile range bands beyond point-blank are out of scope. `weapons.specialized` (migration 009)
-    is refused on field `specialized`, code `not_allowed`, for a class whose `derived.specializes`
-    is false, when the flag is turned on.
+    kind, which ones a launcher gets taken from the PHB; supervisor, 2026-10-18: the PHB text
+    literally). PHB p.53, *Effects of Specialization*: a melee specialist gets +1 to hit and +2
+    damage, not magical; bow and crossbow specialists gain a point-blank range category with +2 to
+    hit and "no additional damage"; their extra attacks are Table 35's, none for bows (step 11).
+    The book grants slings and thrown weapons no to-hit or damage bonus, only Table 35's attacks.
+    So: a specialized melee weapon (kind `melee`) gets +1 to hit and +2 damage (modifier
+    `specialization`, the damage added after the multipliers with Strength). A specialized bow or
+    crossbow, by its weapon type (step 23: long, short, light, heavy or hand crossbow), never by
+    whether an ammunition kind is filled in, gets only the point-blank +2 (modifier `point_blank`)
+    when the attack request sets `point_blank`; the flag is refused (invalid input) for any other
+    weapon. A specialized sling, dart, thrown dagger or other thrown weapon gets neither. The flag
+    is never saved; the form's preview carries a `pointBlank` variant so the card shows the
+    option's numbers without computing them. Missile range bands beyond point-blank are out of
+    scope. `weapons.specialized` (migration 009) is refused on field `specialized`, code
+    `not_allowed`, for a class whose `derived.specializes` is false, on every save that has it
+    set.
     Tests: `TestSpecializes_Step12_FightersOnly` (ruletablesadpt), `TestCreate_Step12_SpecializedFightersOnly`,
     `TestUpdate_Step12_SpecializedFlag` (weaponsvc), `TestResolveAttack_Step12_SpecializedMeleeAnd18_50`,
     `TestResolveAttack_Step12_LauncherPointBlank`, `TestResolveAttack_Step12_PointBlankRefused`
-    (combatsvc).
+    (sling with and without an ammo kind, darts, long sword),
+    `TestResolveAttack_Step12_SpecializedThrownGetsNoBonus` (combatsvc).
 
 ### Cleric
 

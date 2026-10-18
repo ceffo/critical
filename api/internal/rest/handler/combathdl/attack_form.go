@@ -152,7 +152,7 @@ func toPreviewDTO(p *combatsvc.AttackPreview) *AttackPreviewDTO {
 	}
 	mods := make([]ModifierDTO, 0, len(p.Modifiers))
 	for _, m := range p.Modifiers {
-		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
+		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional})
 	}
 	return &AttackPreviewDTO{
 		BaseThac0: p.BaseThac0, Modifiers: mods, EffectiveThac0: p.EffectiveThac0,

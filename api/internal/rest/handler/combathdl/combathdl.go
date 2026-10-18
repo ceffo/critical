@@ -379,20 +379,22 @@ type RollResultDTO struct {
 // id (ADR 0016 step 14), which the UI names it from (Detail, the stored
 // name, is the fallback).
 type ModifierDTO struct {
-	Kind   string `json:"kind"`
-	Detail string `json:"detail,omitempty"`
-	ItemID string `json:"itemId,omitempty"`
-	Value  int    `json:"value"`
+	Kind           string `json:"kind"`
+	Detail         string `json:"detail,omitempty"`
+	ItemID         string `json:"itemId,omitempty"`
+	Value          int    `json:"value"`
+	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 // DamageTermDTO is one contribution to the damage formula (ItemID as on
 // ModifierDTO).
 type DamageTermDTO struct {
-	Term   string  `json:"term"`
-	Kind   string  `json:"kind"`
-	Detail string  `json:"detail,omitempty"`
-	ItemID string  `json:"itemId,omitempty"`
-	Value  float64 `json:"value"`
+	Term           string  `json:"term"`
+	Kind           string  `json:"kind"`
+	Detail         string  `json:"detail,omitempty"`
+	ItemID         string  `json:"itemId,omitempty"`
+	Value          float64 `json:"value"`
+	StrExceptional int     `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 // AmmoDTO is the ammunition an attack spent and what is left.
@@ -409,11 +411,11 @@ func toDTO(r *combatsvc.RollResult) RollResultDTO {
 	}
 	mods := make([]ModifierDTO, 0, len(r.Modifiers))
 	for _, m := range r.Modifiers {
-		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
+		mods = append(mods, ModifierDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional})
 	}
 	terms := make([]DamageTermDTO, 0, len(r.DamageTerms))
 	for _, t := range r.DamageTerms {
-		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value})
+		terms = append(terms, DamageTermDTO{Term: string(t.Term), Kind: string(t.Kind), Detail: t.Detail, ItemID: t.ItemID, Value: t.Value, StrExceptional: t.StrExceptional})
 	}
 	out := RollResultDTO{
 		D20Roll: r.D20Roll, D100CritRoll: r.D100CritRoll, D100MultiplierRoll: r.D100MultiplierRoll, IsCrit: r.IsCrit, CritMultiplier: r.CritMultiplier,

@@ -244,10 +244,11 @@ type SpellAttackDTO struct {
 // labels it by kind and detail, an item power's from its item (itemId, ADR
 // 0016 step 14).
 type SpellAttackModDTO struct {
-	Kind   string `json:"kind"`
-	Detail string `json:"detail,omitempty"`
-	ItemID string `json:"itemId,omitempty"`
-	Value  int    `json:"value"`
+	Kind           string `json:"kind"`
+	Detail         string `json:"detail,omitempty"`
+	ItemID         string `json:"itemId,omitempty"`
+	Value          int    `json:"value"`
+	StrExceptional int    `json:"strExceptional,omitempty"` // a Strength modifier's 18/xx percentile (ADR 0030 step 9)
 }
 
 // SaveDTO is the target's saving throw (the DM's side).
@@ -360,7 +361,7 @@ func ToDTO(res castsvc.CastResult) CastResultDTO {
 			TargetAC: a.TargetAC, TargetACNeeded: a.TargetACNeeded, Hit: a.Hit, HitMargin: a.HitMargin,
 		}
 		for _, m := range a.Modifiers {
-			out.Attack.Modifiers = append(out.Attack.Modifiers, SpellAttackModDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value})
+			out.Attack.Modifiers = append(out.Attack.Modifiers, SpellAttackModDTO{Kind: string(m.Kind), Detail: m.Detail, ItemID: m.ItemID, Value: m.Value, StrExceptional: m.StrExceptional})
 		}
 	}
 	if res.Slots != nil {

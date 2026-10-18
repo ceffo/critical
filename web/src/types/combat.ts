@@ -27,6 +27,8 @@ export interface Modifier {
   /** Set on an item power's contribution: the UI names it from the item (ADR 0016 step 14). */
   itemId?: string;
   value: number;
+  /** A Strength modifier's 18/xx percentile (1 to 100, ADR 0030 step 9); the UI writes "18/50". */
+  strExceptional?: number;
 }
 
 /** Place of a contribution in ((dice × spells) + weapon) × multiplier + strength + bonus. */
@@ -41,6 +43,8 @@ export interface DamageTerm {
   /** As on Modifier. */
   itemId?: string;
   value: number;
+  /** As on Modifier. */
+  strExceptional?: number;
 }
 
 export interface AmmoUse {

@@ -50,7 +50,7 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 		res.Modifiers = append(res.Modifiers, m)
 		sum += m.Value
 	}
-	add(Modifier{Kind: ModStrength, Detail: strDetail(mods), Value: strHit})
+	add(Modifier{Kind: ModStrength, Detail: strconv.Itoa(mods.EffectiveStr), StrExceptional: mods.EffectiveStrExceptional, Value: strHit})
 	add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: dexMissile})
 	for _, c := range mods.ToHitFrom {
 		add(Modifier{Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})

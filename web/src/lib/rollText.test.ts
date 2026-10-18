@@ -154,6 +154,22 @@ describe("modLabel", () => {
       "Strength 18",
     );
     expect(
+      modLabel(en, {
+        kind: "strength",
+        detail: "18",
+        strExceptional: 50,
+        value: 1,
+      }),
+    ).toBe("Strength 18/50");
+    expect(
+      modLabel(en, {
+        kind: "strength",
+        detail: "18",
+        strExceptional: 100,
+        value: 3,
+      }),
+    ).toBe("Strength 18/00");
+    expect(
       modLabel(en, { kind: "weapon_buff", detail: "Power Gem", value: 5 }),
     ).toBe("Power Gem: weapon +5");
     expect(modLabel(en, { kind: "situational", detail: "", value: -4 })).toBe(

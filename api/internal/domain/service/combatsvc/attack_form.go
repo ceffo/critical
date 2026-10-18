@@ -3,6 +3,7 @@ package combatsvc
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -345,15 +346,19 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 
 // attackRate is ADR 0030 step 11 for the held weapon at the character's
 // realized level (step 7), with this round's count (step 11.4) from the
-// round of ADR 0005; nil when the weapon shows no rate.
+// round of ADR 0005; nil when the weapon shows no rate. The rate is
+// display-only: a class or level the tables cannot read is logged and shows
+// no rate rather than failing the form.
 func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, weapon Weapon) (*AttackRateView, error) {
 	group, err := ruletablesvc.ClassGroup(char.Class)
 	if err != nil {
-		return nil, fmt.Errorf("attack rate: %w", err)
+		slog.WarnContext(ctx, "attack rate: no class group", "character", char.ID, "class", char.Class, "err", err)
+		return nil, nil
 	}
 	rate, ok, err := s.rules.AttackRateFor(group, char.Derived.RealizedLevel, string(weapon.Kind), weapon.Type, weapon.Specialized)
 	if err != nil {
-		return nil, fmt.Errorf("attack rate: %w", err)
+		slog.WarnContext(ctx, "attack rate: rule tables", "character", char.ID, "level", char.Derived.RealizedLevel, "weapon", weapon.ID, "err", err)
+		return nil, nil
 	}
 	if !ok {
 		return nil, nil

@@ -33,6 +33,9 @@ type Modifier struct {
 	Detail string
 	ItemID string
 	Value  int
+	// StrExceptional is a Strength modifier's 18/xx percentile (1 to 100,
+	// ADR 0030 step 9), 0 for none; the UI writes the notation.
+	StrExceptional int
 }
 
 // DamageTermKind is the place of a contribution in the damage formula
@@ -58,6 +61,8 @@ type DamageTerm struct {
 	Detail string
 	ItemID string
 	Value  float64
+	// StrExceptional is as on Modifier.
+	StrExceptional int
 }
 
 // TargetSize picks the weapon's damage dice.

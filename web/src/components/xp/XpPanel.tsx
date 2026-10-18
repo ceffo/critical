@@ -328,8 +328,8 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
           {t("xp.ledger.count", { count: ledger.entries.length })}
         </span>
       </div>
-      {/* Column headers are section labels (ADR 0022 step 4.2). */}
-      <div className={cn(cols, "section-label shrink-0 px-4")}>
+      {/* Column headers are section labels (ADR 0022 step 4.2) on the group heading (ADR 0026 6.7). */}
+      <div className={cn(cols, "group-heading section-label shrink-0 px-4")}>
         <span>{t("xp.ledger.reason")}</span>
         <span className="text-right">{t("xp.ledger.base")}</span>
         <span className="text-right">{t("xp.ledger.bonus")}</span>

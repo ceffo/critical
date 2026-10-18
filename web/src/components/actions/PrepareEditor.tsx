@@ -206,7 +206,7 @@ export function PrepareEditor({
               const items = rows.filter((r) => r.entry.level === level);
               return (
                 <div key={level} data-testid={`draft-level-${level}`}>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pb-1">
+                  <div className="group-heading mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 px-2">
                     <h4 className="section-label">
                       {t("spellSlots.level", { level })}
                     </h4>
@@ -288,7 +288,7 @@ export function PrepareEditor({
             <div className="flex max-h-80 min-h-0 flex-col gap-2 overflow-y-auto @lg:max-h-none @lg:flex-1">
               {grimoire.map(({ level, spells }) => (
                 <div key={level} data-testid={`grimoire-level-${level}`}>
-                  <h4 className="section-label px-2 pb-1">
+                  <h4 className="group-heading section-label mb-1 px-2">
                     {t("spellSlots.level", { level })}
                   </h4>
                   <ul className="flex flex-col gap-0.5">

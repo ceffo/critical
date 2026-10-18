@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/pkg/must"
 )
@@ -36,7 +37,7 @@ func fixtureRuleTables(t *testing.T) []byte {
 // artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.Parse(fixtureRuleTables(t)))
+	return must.Do(ruletablesadpt.Parse(catalogue.FormatClassTables, fixtureRuleTables(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -191,10 +192,118 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.Parse([]byte(strings.Replace(string(good), tt.from, tt.to, 1)))
+			_, err := ruletablesadpt.Parse(catalogue.FormatClassTables, []byte(strings.Replace(string(good), tt.from, tt.to, 1)))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.Parse(good)
+	_, err := ruletablesadpt.Parse(catalogue.FormatClassTables, good)
 	require.NoError(t, err)
+}
+
+// classTablesOf parses the fixture's rule tables with mutate applied to the
+// decoded object first.
+func classTablesOf(t *testing.T, format int, mutate func(map[string]any)) (*ruletablesvc.Tables, error) {
+	t.Helper()
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &doc))
+	mutate(doc)
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	return ruletablesadpt.Parse(format, raw)
+}
+
+func classRows(d map[string]any, table string) []any { return d[table].([]any) }
+
+func classRow(d map[string]any, table string, i int) map[string]any {
+	return classRows(d, table)[i].(map[string]any)
+}
+
+// ADR 0021 step 10.1 (ADR 0030 step 23): a format-4 artifact's class and
+// race tables are read. Expected values are read from the PHB pages (p.15-16
+// Tables 3-4, p.26 Table 14, p.33 Table 24, p.91 Table 53, p.101 Table 60,
+// p.103 Table 61), not derived from the artifact.
+func TestParse_Step10_1_ReadsTheClassTables(t *testing.T) {
+	c, ok := phb(t).Classes()
+	require.True(t, ok, "format 4 carries the class tables")
+	assert.Equal(t, 3000000, c.Experience[19].Fighter, "fighter, level 20")
+	assert.Equal(t, 1100000, c.Experience[14].Bard, "bard, level 15")
+	assert.Equal(t, 13, c.THAC0[14].Rogue, "rogue THAC0, level 15")
+	assert.Equal(t, 1, c.THAC0[19].Warrior, "warrior THAC0, level 20")
+	var rogue ruletablesvc.SavingThrowRow
+	for _, r := range c.SavingThrows {
+		if r.Group == "rogue" && r.LevelMin <= 15 && 15 <= r.LevelMax {
+			rogue = r
+		}
+	}
+	assert.Equal(t, [5]int{10, 8, 9, 13, 9},
+		[5]int{rogue.ParaPoison, rogue.RodStaffWand, rogue.PetriPoly, rogue.Breath, rogue.Spell}, "rogue saves, levels 13-16")
+	assert.Equal(t, ruletablesvc.HitDiceRow{Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3}, c.HitDice[0])
+	assert.Equal(t, ruletablesvc.ConstitutionRow{ConMin: 20, ConMax: 20, HP: 2, HPWarrior: 5, LowDieMin: 2}, c.Constitution[19])
+	assert.True(t, c.Intelligence[18].NoMaximum, "INT 19: no maximum of spells per level")
+	assert.Equal(t, 9, c.Intelligence[13].MaxSpells, "INT 14")
+	assert.Equal(t, []int{6, 6, 6, 5, 3, 2, 1}, c.PriestSpells[13].PerSpellLevel, "priest, level 14")
+	assert.Equal(t, []ruletablesvc.PriestSpellWisdomRow{{SpellLevel: 6, WisMin: 17}, {SpellLevel: 7, WisMin: 18}}, c.PriestSpellWisdom)
+	skeleton := c.TurningUndead[0]
+	assert.Equal(t, "skeleton", skeleton.Undead)
+	assert.Equal(t, ruletablesvc.TurningCell{Roll: 10}, skeleton.ByLevel[0], "level 1")
+	assert.Equal(t, ruletablesvc.TurningCell{Outcome: "destroy_more"}, skeleton.ByLevel[19], "level 20")
+}
+
+// ADR 0021 step 10.3: a missing class or race table, or one that breaks the
+// rules the schema cannot express, refuses the tables, naming the table.
+func TestParse_Step10_3_RejectsAMissingOrBrokenClassTable(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"a missing table", func(d map[string]any) { delete(d, "saving_throws") }, "missing: saving_throws"},
+		{"XP not increasing", func(d map[string]any) { classRow(d, "experience", 3)["cleric"] = 1 }, "experience table: cleric level 4"},
+		{"a level twice", func(d map[string]any) { classRow(d, "thac0", 4)["level"] = 4 }, "thac0 table: row 4: level 5 expected, got 4"},
+		{"a gap in a level band", func(d map[string]any) { classRow(d, "saving_throws", 1)["level_min"] = 5 }, "saving_throws table: priest: row 1: level 4 expected, got 5"},
+		{"a gap in the scores", func(d map[string]any) {
+			r := classRows(d, "wisdom")
+			d["wisdom"] = append(r[:3:3], r[4:]...)
+		}, "wisdom table: row 3: score 4 expected, got 5"},
+		{"a race skill twice", func(d map[string]any) { classRow(d, "thief_skill_race", 5)["skill"] = "pick_pockets" }, "thief_skill_race table: \"dwarf pick_pockets\" twice"},
+		{"an unknown group", func(d map[string]any) { classRow(d, "hit_dice", 0)["group"] = "paladin" }, "hit_dice table: unknown \"paladin\""},
+		{"a turning cell with a roll and an outcome", func(d map[string]any) {
+			classRow(d, "turning_undead", 0)["by_level"].([]any)[0].(map[string]any)["outcome"] = "turn"
+		}, "turning_undead table: skeleton level 1"},
+		{"19 turning levels", func(d map[string]any) {
+			r := classRow(d, "turning_undead", 0)
+			r["by_level"] = r["by_level"].([]any)[1:]
+		}, "turning_undead table: skeleton: 19 levels"},
+		{"an unknown field", func(d map[string]any) { classRow(d, "backstab", 0)["note"] = 1 }, "note"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := classTablesOf(t, catalogue.FormatClassTables, tc.mutate)
+			require.ErrorContains(t, err, tc.want)
+		})
+	}
+}
+
+// ADR 0021 step 10.4: during the rollout a format-3 artifact still starts,
+// without class tables; one that carries them is refused.
+func TestParse_Step10_4_Format3HasNoClassTables(t *testing.T) {
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &doc))
+	var classKeys []string
+	for k := range doc {
+		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" {
+			classKeys = append(classKeys, k)
+		}
+	}
+	require.Len(t, classKeys, 24)
+	three, err := classTablesOf(t, catalogue.FormatRuleTables, func(d map[string]any) {
+		for _, k := range classKeys {
+			delete(d, k)
+		}
+	})
+	require.NoError(t, err)
+	_, ok := three.Classes()
+	assert.False(t, ok)
+	_, err = classTablesOf(t, catalogue.FormatRuleTables, func(map[string]any) {})
+	require.ErrorContains(t, err, "format 3 carries no class or race table")
 }

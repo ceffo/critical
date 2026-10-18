@@ -158,9 +158,22 @@ func TestSchema_Shape(t *testing.T) {
 	assert.Error(t, sch.Validate(artifact(t, extra)), "unknown property")
 }
 
-// ruleTables reads the fixture's rule_tables (format 3, the shape
-// ruletablesadpt reads, ADR 0021 step 9.7).
+// ruleTables is the fixture's four PHB rule tables, the format-3 shape (ADR
+// 0021 step 9.7).
 func ruleTables(t *testing.T) map[string]any {
+	t.Helper()
+	tables := allTables(t)
+	for k := range tables {
+		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" {
+			delete(tables, k)
+		}
+	}
+	return tables
+}
+
+// allTables reads the fixture's rule_tables (format 4: the four PHB rule
+// tables and the class and race tables, ADR 0021 step 10).
+func allTables(t *testing.T) map[string]any {
 	t.Helper()
 	f, err := os.Open("../../testdata/catalogue.json")
 	require.NoError(t, err)
@@ -170,7 +183,7 @@ func ruleTables(t *testing.T) map[string]any {
 	artifact, ok := doc.(map[string]any)
 	require.True(t, ok)
 	tables, ok := artifact["rule_tables"].(map[string]any)
-	require.True(t, ok, "the fixture is format 3: it carries rule_tables")
+	require.True(t, ok, "the fixture carries rule_tables")
 	return tables
 }
 
@@ -253,5 +266,60 @@ func TestSchema_Step9_Format3RuleTables(t *testing.T) {
 	}
 	for name, change := range refused {
 		assert.Error(t, sch.Validate(format3(t, mutate(t, change))), name)
+	}
+}
+
+// TestSchema_Step10_Format4ClassTables (ADR 0021 steps 10.1 to 10.3): format
+// 4 is format 3 plus every class and race table, numbers and language-neutral
+// codes only; format 3 may not carry them.
+func TestSchema_Step10_Format4ClassTables(t *testing.T) {
+	sch := compile(t)
+	format4 := func(tables any) map[string]any {
+		a := format3(t, tables)
+		a["format"] = 4
+		return a
+	}
+	assert.NoError(t, sch.Validate(format4(allTables(t))), "format 4 with every table")
+	assert.Error(t, sch.Validate(format4(ruleTables(t))), "format 4 without the class tables")
+	assert.Error(t, sch.Validate(format3(t, allTables(t))), "format 3 with the class tables")
+
+	edit := func(change func(map[string]any)) map[string]any {
+		tables := allTables(t)
+		raw, err := json.Marshal(tables)
+		require.NoError(t, err)
+		doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(raw)))
+		require.NoError(t, err)
+		out, _ := doc.(map[string]any)
+		change(out)
+		return out
+	}
+	refused := map[string]func(map[string]any){
+		"a missing table":       func(m map[string]any) { delete(m, "thac0") },
+		"an unknown class code": func(m map[string]any) { row(m, "hit_dice", 0)["group"] = "paladin" },
+		"a race name in French": func(m map[string]any) { row(m, "race_requirements", 0)["race"] = "nain" },
+		"an unknown skill":      func(m map[string]any) { row(m, "thief_skill_base", 0)["skill"] = "Pick Pockets" },
+		"a text value":          func(m map[string]any) { row(m, "thac0", 0)["rogue"] = "20" },
+		"a missing row field":   func(m map[string]any) { delete(row(m, "saving_throws", 0), "breath") },
+		"an unknown row field":  func(m map[string]any) { row(m, "backstab", 0)["note"] = "x" },
+		"a level over 20":       func(m map[string]any) { row(m, "backstab", 3)["level_max"] = 21 },
+		"a chance over 100":     func(m map[string]any) { row(m, "wisdom", 0)["spell_failure"] = 101 },
+		"19 THAC0 levels":       func(m map[string]any) { m["thac0"] = m["thac0"].([]any)[:19] },
+		"8 wizard spell levels": func(m map[string]any) { row(m, "wizard_spells", 0)["per_spell_level"] = []any{1, 0, 0, 0, 0, 0, 0, 0} },
+		"a turning roll over 20": func(m map[string]any) {
+			row(m, "turning_undead", 0)["by_level"].([]any)[0] = map[string]any{"roll": 21}
+		},
+		"an unknown turning cell": func(m map[string]any) {
+			row(m, "turning_undead", 0)["by_level"].([]any)[0] = map[string]any{"outcome": "T"}
+		},
+		"a roll and an outcome": func(m map[string]any) {
+			row(m, "turning_undead", 0)["by_level"].([]any)[0] = map[string]any{"roll": 10, "outcome": "turn"}
+		},
+		"19 turning levels": func(m map[string]any) {
+			row(m, "turning_undead", 0)["by_level"] = row(m, "turning_undead", 0)["by_level"].([]any)[1:]
+		},
+		"an unknown weapon type": func(m map[string]any) { row(m, "rate_of_fire", 0)["weapon_type"] = "Longbow" },
+	}
+	for name, change := range refused {
+		assert.Error(t, sch.Validate(format4(edit(change))), name)
 	}
 }

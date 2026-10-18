@@ -189,7 +189,7 @@ func refusedStart(t *testing.T, cfg composition.Config) error {
 // ignored). A format-1 artifact, which has no tables, refuses the start even
 // with a valid seed file beside it, naming the format and `just catalogue`.
 func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testing.T) {
-	t.Run("format 3: the artifact's tables, a seed file ignored", func(t *testing.T) {
+	t.Run("the artifact's tables, a seed file ignored", func(t *testing.T) {
 		broken := t.TempDir()
 		require.NoError(t, os.CopyFS(broken, os.DirFS(fixtureSeeds)))
 		require.NoError(t, os.WriteFile(filepath.Join(broken, "rule_tables.json"), []byte("not json"), 0o600))
@@ -215,7 +215,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 3")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3 and 4")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -270,6 +270,59 @@ func TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable(t *testing
 			require.ErrorContains(t, err, "spell catalogue "+artifact)
 		})
 	}
+}
+
+// ADR 0021 step 10.3: a format-4 artifact missing a class or race table, or
+// with one that breaks the rules the schema cannot check (a gap in a level
+// band or in the scores, XP not increasing, a code twice), refuses the start,
+// naming the artifact and the table. A format-3 artifact still starts (step
+// 10.4), without class tables.
+func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
+	tables := func(d map[string]any) map[string]any { return d["rule_tables"].(map[string]any) }
+	row := func(d map[string]any, table string, i int) map[string]any {
+		return tables(d)[table].([]any)[i].(map[string]any)
+	}
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"a missing table", func(d map[string]any) { delete(tables(d), "turning_undead") }, "turning_undead"},
+		{"a gap in the saving throws", func(d map[string]any) {
+			row(d, "saving_throws", 8)["level_min"] = 6
+		}, "rule_tables: saving_throws table: rogue: row 1: level 5 expected, got 6"},
+		{"a gap in the Constitution scores", func(d map[string]any) {
+			rows := tables(d)["constitution"].([]any)
+			tables(d)["constitution"] = append(rows[:9:9], rows[10:]...)
+		}, "rule_tables: constitution table: row 9: score 10 expected, got 11"},
+		{"XP not increasing", func(d map[string]any) {
+			row(d, "experience", 9)["mage"] = 2500
+		}, "rule_tables: experience table: mage level 10"},
+		{"a specialist band missing", func(d map[string]any) {
+			rows := tables(d)["specialist_attacks"].([]any)
+			tables(d)["specialist_attacks"] = rows[1:]
+		}, "rule_tables: specialist_attacks table: melee: row 0: level 1 expected, got 7"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			artifact := writeArtifact(t, tc.mutate)
+			err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+			require.ErrorContains(t, err, tc.want)
+			require.ErrorContains(t, err, "spell catalogue "+artifact)
+		})
+	}
+
+	t.Run("format 3 still starts", func(t *testing.T) {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			d["format"] = 3
+			for k := range tables(d) {
+				if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" {
+					delete(tables(d), k)
+				}
+			}
+		})
+		assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact}))
+	})
 }
 
 // The spellbook seed is checked against the catalogue before anything is

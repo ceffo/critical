@@ -1,14 +1,17 @@
 // Package ruletablesadpt reads the PHB rule tables into a
 // ruletablesvc.Tables from the catalogue artifact's rule_tables (ADR 0021
-// step 9, through Parse). It only holds the private JSON DTOs and the
+// step 9, through Parse), with the class and race tables of a format-4
+// artifact (step 10). It only holds the private JSON DTOs and the
 // mapping; the entities and their validation live in ruletablesvc.
 package ruletablesadpt
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -17,6 +20,7 @@ type fileDTO struct {
 	Dexterity []dexDTO      `json:"dexterity"`
 	Bard      []bardDTO     `json:"bard_spells"`
 	XP        []xpDTO       `json:"bard_experience"`
+	classDTO
 }
 
 type xpDTO struct {
@@ -46,9 +50,10 @@ type bardDTO struct {
 	PerSpellLevel []int `json:"per_spell_level"`
 }
 
-// Parse maps the artifact's rule_tables JSON to validated Tables. A
-// violation names the table.
-func Parse(raw []byte) (*ruletablesvc.Tables, error) {
+// Parse maps the rule_tables JSON of an artifact of the given format to
+// validated Tables. A violation names the table. Format 4 carries every
+// class and race table (a missing one is named); format 3 carries none.
+func Parse(format int, raw []byte) (*ruletablesvc.Tables, error) {
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -80,5 +85,23 @@ func Parse(raw []byte) (*ruletablesvc.Tables, error) {
 	for i, d := range f.XP {
 		xp[i] = ruletablesvc.XPRow{Level: d.Level, XP: d.XP}
 	}
-	return ruletablesvc.New(str, dex, bard, xp)
+	tables, err := ruletablesvc.New(str, dex, bard, xp)
+	if err != nil {
+		return nil, err
+	}
+	switch format {
+	case catalogue.FormatRuleTables:
+		if f.present() {
+			return nil, errors.New("format 3 carries no class or race table")
+		}
+		return tables, nil
+	case catalogue.FormatClassTables:
+		classes, err := f.classes()
+		if err != nil {
+			return nil, err
+		}
+		return tables.WithClasses(classes), nil
+	default:
+		return nil, fmt.Errorf("unknown format %d", format)
+	}
 }

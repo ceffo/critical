@@ -13,6 +13,10 @@ var (
 	// ErrUnauthenticated: no session, or an unknown, expired or disabled
 	// user's one (steps 4.4, 6.2).
 	ErrUnauthenticated = errors.New("authentication required")
+	// ErrSessionExpired: the request carried a session cookie the server no
+	// longer knows (expired, logged out elsewhere, user disabled): the login
+	// page says the session has ended (step 4.4). It is an ErrUnauthenticated.
+	ErrSessionExpired = fmt.Errorf("session expired: %w", ErrUnauthenticated)
 	// ErrStateMismatch: the login's state does not match the one it started
 	// with, or the login cookie is gone (step 3.1).
 	ErrStateMismatch = errors.New("login state mismatch")

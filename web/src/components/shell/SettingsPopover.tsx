@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Desktop, GearSix, Moon, Sun } from "@phosphor-icons/react";
+import { Desktop, GearSix, Moon, SignOut, Sun } from "@phosphor-icons/react";
+import { logout } from "@/api/auth";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -18,6 +20,7 @@ import {
   type Mode,
 } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/stores/session";
 import { useSettingsStore } from "@/stores/settings";
 
 const MODE_ICONS: Record<Mode, ReactNode> = {
@@ -73,11 +76,14 @@ function Swatch({ id, light }: { id: string; light: boolean }) {
 /**
  * Display preferences of this device (ADR 0009, ADR 0026 step 4): language, appearance mode, the
  * dark theme and the light theme. Each choice applies live and is saved; opened from the cog at the
- * left of the dice footer (ADR 0022 step 2.6).
+ * left of the dice footer (ADR 0022 step 2.6). Under them the account: the logged-in email and Log
+ * out (ADR 0029 step 4.4; account actions live in the cog menu).
  */
 export function SettingsPopover() {
   const { t } = useTranslation();
   const { lang, mode, darkTheme, lightTheme, update } = useSettingsStore();
+  const me = useSessionStore((s) => s.me);
+  const [leaving, setLeaving] = useState(false);
   // The list follows the appearance in effect; "system" follows the OS live (ADR 0026 step 4.6).
   const [osDark, setOsDark] = useState(systemPrefersDark);
   useEffect(() => watchSystemScheme(() => setOsDark(systemPrefersDark())), []);
@@ -158,6 +164,40 @@ export function SettingsPopover() {
             </button>
           ))}
         </Choice>
+
+        <div className="flex flex-col gap-2" data-testid="settings-account">
+          <span className="text-label text-muted-foreground">
+            {t("settings.account")}
+          </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {me && (
+              <span className="min-w-0 text-body [overflow-wrap:anywhere]">
+                {me.email}
+              </span>
+            )}
+            <Button
+              variant="quiet"
+              aria-label={
+                me
+                  ? t("settings.logoutHint", { email: me.email })
+                  : t("settings.logoutHintNoEmail")
+              }
+              title={
+                me
+                  ? t("settings.logoutHint", { email: me.email })
+                  : t("settings.logoutHintNoEmail")
+              }
+              disabled={leaving}
+              onClick={() => {
+                setLeaving(true);
+                void logout();
+              }}
+            >
+              <SignOut aria-hidden />
+              {t("settings.logout")}
+            </Button>
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );

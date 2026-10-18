@@ -1,5 +1,9 @@
 import i18n from "@/i18n";
+import { loginUrl } from "@/lib/session";
 import { useDatabaseStore } from "@/stores/database";
+
+/** The login endpoints: their callers decide where to go, a 401 there never redirects. */
+const AUTH_PREFIX = "/api/auth/";
 
 /**
  * An API error carrying the HTTP status and a message: the player's language when the server sent a
@@ -155,6 +159,10 @@ const isRead = (init?: RequestInit) =>
  * sent again by itself: it fails, and so does every write until the database answers (and, after a
  * write whose outcome is unknown, until the sheet is reloaded), so a second click cannot record the
  * same action twice.
+ *
+ * A 401 from a data route means the session ended while the app ran (it starts only with one): the
+ * login page shows, saying so (ADR 0029 step 4.4). The login endpoints (`/api/auth/*`: dev login, log
+ * out) navigate on their own, so their 401 only throws.
  */
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const read = isRead(init);
@@ -169,6 +177,8 @@ export async function request<T>(url: string, init?: RequestInit): Promise<T> {
     }
     const { message, field, code } = await errorBody(res);
     const err = new ApiError(message, res.status, field, code);
+    if (res.status === 401 && !url.startsWith(AUTH_PREFIX))
+      globalThis.location.assign(loginUrl("session_expired"));
     if (code !== UNAVAILABLE) {
       if (res.status < 500) void markAnswered();
       throw err;

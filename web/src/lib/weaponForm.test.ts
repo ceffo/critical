@@ -18,6 +18,7 @@ const bastard: Weapon = {
   kind: "melee",
   two_handed: true,
   ammo_kind: "",
+  weapon_type: "other_melee",
 };
 
 describe("weaponDraftToBody", () => {

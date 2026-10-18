@@ -70,6 +70,8 @@ type WeaponDTO struct {
 	Kind        string         `json:"kind"`
 	TwoHanded   bool           `json:"two_handed"`
 	AmmoKind    string         `json:"ammo_kind"`
+	// WeaponType is a code of weaponsvc.Types ("" when untyped); the UI words it.
+	WeaponType string `json:"weapon_type"`
 }
 
 // ListWeapons returns the character's weapons.
@@ -84,7 +86,7 @@ func ListWeapons(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 			out = append(out, WeaponDTO{
 				ID: wp.ID, Name: wp.Name, DamageSM: wp.BaseDamage, DamageL: wp.DamageLarge,
 				MagicToHit: wp.MagicToHit, MagicDamage: wp.MagicDamage, Kind: string(wp.Kind),
-				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind,
+				TwoHanded: wp.TwoHanded, AmmoKind: wp.AmmoKind, WeaponType: wp.Type,
 			})
 		}
 		render.OK(r.Context(), w, out)

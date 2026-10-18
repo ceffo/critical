@@ -170,13 +170,13 @@ generate:
 build-api:
     cd api && go build -o ../bin/critical-srv ./cmd/api
 
-# Lint the backend
+# Lint the backend, on the Go version go.mod names (CI's): gofmt output differs between Go versions
 lint-api:
-    cd api && go tool golangci-lint run ./...
+    cd api && GOTOOLCHAIN=go$(awk '$1=="go"{print $2}' go.mod) go tool golangci-lint run ./...
 
 # Format the backend
 fmt-api:
-    cd api && go tool golangci-lint fmt ./...
+    cd api && GOTOOLCHAIN=go$(awk '$1=="go"{print $2}' go.mod) go tool golangci-lint fmt ./...
 
 # Test the backend
 test-api:

@@ -23,6 +23,7 @@ type Weapon struct {
 	Kind        string
 	TwoHanded   bool
 	AmmoKind    string
+	Type        string // weapon type code (Types, ADR 0030 step 23); empty: none
 }
 
 // WeaponInput is a new weapon.
@@ -36,6 +37,7 @@ type WeaponInput struct {
 	Kind        string
 	TwoHanded   bool
 	AmmoKind    string
+	Type        string
 }
 
 // WeaponPatch is an edit: only the set (non-nil) fields change.
@@ -51,6 +53,7 @@ type WeaponPatch struct {
 	Kind        *string
 	TwoHanded   *bool
 	AmmoKind    *string
+	Type        *string
 }
 
 // ChangeResult is one add, edit or remove: the weapon as it is now (as it

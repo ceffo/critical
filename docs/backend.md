@@ -178,9 +178,9 @@ The loop, from the checkout root (each worktree is its own compose project, with
 | `just dev-reset` | `just stop`, then deletes the databases (compose volume `critical-pg`). The next start migrates, seeds and imports the catalogue again. |
 | `just dev-smoke` | Proof of the above on free ports and a throwaway compose project (needs docker, ~1 min). Run it after changing the justfile, `docker-compose.yml`, `api/.air.toml`, `scripts/dev.sh` or the start-up of the storage. CI job `dev-smoke`. |
 
-Login: `just dev` runs without OAuth settings and with `CRITICAL_ENV=dev`, so the server has the dev login and the app logs in
-by itself as the root admin (`dev@localhost`, created on the first start of an empty database, also
-after `just dev-reset`): nothing to set up ("Accounts and login" below).
+Login: `just dev` runs without OAuth settings and with `CRITICAL_ENV=dev`, so the server has the dev login: the login page
+shows "Log in" (the dev login, the code icon), which logs in as the root admin (`dev@localhost`, created on the first start of an empty database, also
+after `just dev-reset`); the session lasts 30 days. Nothing to set up ("Accounts and login" below).
 
 First run after a clone: `cd web && npm ci`, optionally `just catalogue` (real spells, database
 `critical`; without it the fixture catalogue and database `critical_fixture` are used and the start
@@ -241,7 +241,9 @@ gate `middleware.Gate`.
 - **Endpoints**: `GET /api/auth/google/start` (state and PKCE verifier in the 10-minute cookie
   `critical_login_<app>`, redirect to Google), `GET /api/auth/google/callback` (session and redirect to `/`,
   or a refusal to `/login?error=<code>`), `POST /api/auth/logout`, `GET /api/auth/me`
-  (`{id, email, role, root}` or 401), and in dev login mode only `POST /api/auth/dev` (`{"email": …}`
+  (`{id, email, role, root}`, or 401: `session_expired` when the request carried a session the server no
+  longer knows, `unauthenticated` without one), `GET /api/auth/options` (`{"google": bool, "devLogin":
+  bool}`, the login page's buttons), and in dev login mode only `POST /api/auth/dev` (`{"email": …}`
   optional: none is the root admin, created as `dev@localhost` on a database without one; an unknown
   email is created as an admin).
 - **Settings**: `CRITICAL_GOOGLE_CLIENT_ID`, `CRITICAL_GOOGLE_CLIENT_SECRET`, `CRITICAL_PUBLIC_URL`:
@@ -252,11 +254,16 @@ gate `middleware.Gate`.
   hosted apps".
 - **Root admin** (step 5): `just root-admin <email>` (`api/cmd/rootadmin`) on `CRITICAL_DSN`, unset:
   the local database `just dev` uses. The schema allows one root, and a root is an enabled admin.
-- **Error codes**: `unauthenticated`, `cross_origin`, `login_state_mismatch`, `login_failed`,
+- **Error codes**: `unauthenticated`, `session_expired` (an `unauthenticated` refusal, only from
+  `GET /api/auth/me`), `cross_origin`, `login_state_mismatch`, `login_failed`,
   `email_unverified`, `not_invited`, `user_disabled`, `root_admin_protected`, `root_admin_taken`
   (`internal/render`, worded by the web's `apiError.*`).
-- **Web, until the login page exists**: `web/src/api/auth.ts` gets a session before the app's first
-  request: `GET /api/auth/me`, else the dev login, else the browser goes to the Google login.
+- **Public paths** (step 6.1, as amended 2026-10-18), judged on the cleaned path (`/assets/../api/x` is
+  `/api/x`): `/login` (and under it), the static build
+  (`/assets/*`, `/favicon.svg`: the login page is a page of the one bundle), `/api/auth/*`, `/api/health`.
+  Any other page without a session redirects to `/login` (`/login?error=session_expired` when its cookie
+  was stale); any other `/api` route answers 401 `unauthenticated`.
+- **Web**: the login page and Log out, docs/frontend.md "Login page".
 
 ## DAL code generation
 
@@ -579,8 +586,8 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   catalogue knows only their spells) and a throwaway PostgreSQL container of its own (`postgres:17-alpine` on a
   private network, no volume; the image refuses the in-memory storage), so the boot migrates, seeds and imports
   into an empty database. It checks health with the commit and the version, the login gate without a session (`/` and
-  a deep link redirect to `/login`, which is `index.html`; `/api/character`, the catalogue and a bundle
-  asset answer 401), then through the dev login `/` and a deep link returning `index.html`, a data read,
+  a deep link redirect to `/login`, which is `index.html`; every script and stylesheet `/login` names
+  is served; `/api/auth/options` offers the dev login; `/api/character` and the catalogue answer 401), then through the dev login `/` and a deep link returning `index.html`, a data read,
   the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. Then it runs
   `scripts/restore-point.sh` in a second container of the image started without its entrypoint (as the
   promotion's console machine is): a restore point of that database comes back whole (checksum, size, the

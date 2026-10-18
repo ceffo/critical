@@ -111,6 +111,28 @@ func ownRows(ctx context.Context, q storeq.Querier, characterPath string) error 
 	return nil
 }
 
+// typeSeedWeapons gives the weapons stored before weapon types the type the seeds name for their
+// id, for every character holding one: the data step after weaponTypeMigration. A weapon that
+// already has a type keeps it, so a rerun changes nothing and no type the owner set is lost.
+func typeSeedWeapons(ctx context.Context, q storeq.Querier, weaponsPath string) error {
+	weapons, err := seedfile.ReadWeapons(weaponsPath)
+	if err != nil {
+		if errors.Is(err, seedfile.ErrUnreadable) {
+			return nil // no seeds, no seeded weapon to type
+		}
+		return err
+	}
+	for _, w := range weapons {
+		if w.WeaponType == "" {
+			continue
+		}
+		if err := q.TypeWeaponIfUntyped(ctx, storeq.TypeWeaponIfUntypedParams{ID: w.ID, WeaponType: w.WeaponType}); err != nil {
+			return fmt.Errorf("type weapon %q: %w", w.ID, err)
+		}
+	}
+	return nil
+}
+
 // seedCharacter inserts the character, then the rows that refer to it (its spell slots, buffs
 // and round state): the foreign keys need the character first.
 func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error {
@@ -208,7 +230,7 @@ func seedWeapons(ctx context.Context, q storeq.Querier, owner int64, seedPath st
 		if err := q.InsertWeapon(ctx, storeq.InsertWeaponParams{
 			CharacterID: owner, ID: w.ID, Position: int64(i), Name: key, DamageSm: w.DamageSM, DamageL: w.DamageL,
 			MagicToHit: int64(w.MagicToHit), MagicDamage: int64(w.MagicDamage), Kind: w.Kind,
-			TwoHanded: boolInt(w.TwoHanded), AmmoKind: w.AmmoKind,
+			TwoHanded: boolInt(w.TwoHanded), AmmoKind: w.AmmoKind, WeaponType: w.WeaponType,
 		}); err != nil {
 			return fmt.Errorf("insert weapon %q: %w", w.ID, err)
 		}

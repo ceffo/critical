@@ -93,6 +93,7 @@ type Weapon struct {
 	Kind        string         `json:"kind"`
 	TwoHanded   bool           `json:"two_handed"`
 	AmmoKind    string         `json:"ammo_kind"`
+	WeaponType  string         `json:"weapon_type"`
 }
 
 // ErrUnreadable wraps the read error of a seed file that is missing or

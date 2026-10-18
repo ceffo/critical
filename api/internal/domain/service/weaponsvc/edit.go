@@ -33,6 +33,7 @@ type changeRecord struct {
 	Kind        string        `json:"kind"`
 	TwoHanded   bool          `json:"two_handed"`
 	AmmoKind    string        `json:"ammo_kind"`
+	Type        string        `json:"weapon_type"`
 	Changes     []FieldChange `json:"changes,omitempty"`
 }
 
@@ -40,7 +41,7 @@ func record(w Weapon, changes []FieldChange) changeRecord {
 	return changeRecord{
 		WeaponID: w.ID, Name: w.Name.Any(), DamageSM: w.DamageSM, DamageL: w.DamageL,
 		MagicToHit: w.MagicToHit, MagicDamage: w.MagicDamage, Kind: w.Kind,
-		TwoHanded: w.TwoHanded, AmmoKind: w.AmmoKind, Changes: changes,
+		TwoHanded: w.TwoHanded, AmmoKind: w.AmmoKind, Type: w.Type, Changes: changes,
 	}
 }
 
@@ -90,6 +91,7 @@ func clean(w Weapon) Weapon {
 	w.DamageL = strings.ToLower(strings.TrimSpace(w.DamageL))
 	w.Kind = strings.TrimSpace(w.Kind)
 	w.AmmoKind = strings.ToLower(strings.TrimSpace(w.AmmoKind))
+	w.Type = strings.TrimSpace(w.Type)
 	return w
 }
 
@@ -99,7 +101,7 @@ func (s *service) Create(ctx context.Context, characterID int64, in WeaponInput)
 	}
 	w := clean(Weapon{
 		Name: in.Name, DamageSM: in.DamageSM, DamageL: in.DamageL, MagicToHit: in.MagicToHit,
-		MagicDamage: in.MagicDamage, Kind: in.Kind, TwoHanded: in.TwoHanded, AmmoKind: in.AmmoKind,
+		MagicDamage: in.MagicDamage, Kind: in.Kind, TwoHanded: in.TwoHanded, AmmoKind: in.AmmoKind, Type: in.Type,
 	})
 	if err := w.Validate(); err != nil {
 		return nil, err
@@ -173,6 +175,9 @@ func (s *service) Update(ctx context.Context, characterID int64, id string, p We
 		}
 		if p.AmmoKind != nil {
 			w.AmmoKind = *p.AmmoKind
+		}
+		if p.Type != nil {
+			w.Type = *p.Type
 		}
 		w = clean(w)
 		// Switching to melee drops the ammo kind unless the edit sets one
@@ -250,5 +255,6 @@ func diff(a, b Weapon) []FieldChange {
 	add("kind", a.Kind, b.Kind)
 	add("two_handed", strconv.FormatBool(a.TwoHanded), strconv.FormatBool(b.TwoHanded))
 	add("ammo_kind", a.AmmoKind, b.AmmoKind)
+	add("weapon_type", a.Type, b.Type)
 	return out
 }

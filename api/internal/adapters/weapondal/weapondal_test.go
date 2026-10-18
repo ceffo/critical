@@ -35,7 +35,7 @@ func mocked(t *testing.T) (*mocks.MockQuerier, *textmocks.MockQuerier, textdal.S
 
 var bowRow = queries.Weapon{
 	ID: "shortbow", Position: 2, Name: 12, DamageSm: "1d6", DamageL: "1d6",
-	MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: 1, AmmoKind: "arrow",
+	MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: 1, AmmoKind: "arrow", WeaponType: "short_bow",
 }
 
 var bowName = localized.Text{"en": "Short Bow +2", "fr": "Arc court +2"}
@@ -55,7 +55,7 @@ func TestGet_MapsTheRowAndItsName(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, combatsvc.Weapon{
 		ID: "shortbow", Name: bowName, BaseDamage: "1d6", DamageLarge: "1d6",
-		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
+		MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow", Type: "short_bow",
 	}, w)
 }
 
@@ -79,7 +79,7 @@ func TestList_MapsRowsInOrderWithTheirNames(t *testing.T) {
 		{ID: "longsword", Name: localized.Text{"en": "Long Sword"}, BaseDamage: "1d8", DamageLarge: "1d12", Kind: combatsvc.WeaponMelee},
 		{
 			ID: "shortbow", Name: bowName, BaseDamage: "1d6", DamageLarge: "1d6",
-			MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow",
+			MagicToHit: 2, MagicDamage: 2, Kind: combatsvc.WeaponMissile, TwoHanded: true, AmmoKind: "arrow", Type: "short_bow",
 		},
 	}, got)
 
@@ -89,7 +89,7 @@ func TestList_MapsRowsInOrderWithTheirNames(t *testing.T) {
 		{ID: "longsword", Position: 1, Name: localized.Text{"en": "Long Sword"}, DamageSM: "1d8", DamageL: "1d12", Kind: "melee"},
 		{
 			ID: "shortbow", Position: 2, Name: bowName, DamageSM: "1d6", DamageL: "1d6",
-			MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+			MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow", Type: "short_bow",
 		},
 	}, edited)
 }
@@ -116,13 +116,13 @@ func TestEditor_GetMapsPosition(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, weaponsvc.Weapon{
 		ID: "shortbow", Position: 2, Name: bowName, DamageSM: "1d6", DamageL: "1d6",
-		MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+		MagicToHit: 2, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow", Type: "short_bow",
 	}, got)
 }
 
 var longBow = weaponsvc.Weapon{
 	ID: "long_bow", Position: 9, Name: localized.Text{"en": "Long Bow", "fr": "Arc long"}, DamageSM: "1d8", DamageL: "1d8",
-	MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow",
+	MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: true, AmmoKind: "arrow", Type: "long_bow",
 }
 
 // ADR 0023 step 9: Insert writes the name under a new key, then the weapon
@@ -137,7 +137,7 @@ func TestEditor_InsertWritesTheNameUnderANewKeyThenTheRow(t *testing.T) {
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "fr", Body: "Arc long"}).Return(nil).Once(),
 		q.EXPECT().InsertWeapon(ctx, queries.InsertWeaponParams{
 			CharacterID: owner, ID: "long_bow", Position: 9, Name: 30, DamageSm: "1d8", DamageL: "1d8",
-			MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: 1, AmmoKind: "arrow",
+			MagicToHit: 1, MagicDamage: 2, Kind: "missile", TwoHanded: 1, AmmoKind: "arrow", WeaponType: "long_bow",
 		}).Return(nil).Once(),
 	)
 	require.NoError(t, weapondal.NewEditor(q, texts).Insert(ctx, owner, longBow))
@@ -155,7 +155,7 @@ func TestEditor_UpdateAndDeleteKeepTheNameWithTheRow(t *testing.T) {
 	mock.InOrder(
 		q.EXPECT().UpdateWeapon(ctx, queries.UpdateWeaponParams{
 			Position: 9, DamageSm: "1d8", DamageL: "1d8", MagicToHit: 1, MagicDamage: 2,
-			Kind: "missile", TwoHanded: 0, AmmoKind: "arrow", CharacterID: owner, ID: "long_bow",
+			Kind: "missile", TwoHanded: 0, AmmoKind: "arrow", WeaponType: "long_bow", CharacterID: owner, ID: "long_bow",
 		}).Return(30, nil).Once(),
 		tq.EXPECT().DeleteText(ctx, int64(30)).Return(nil).Once(),
 		tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 30, Lang: "en", Body: "Bow"}).Return(nil).Once(),

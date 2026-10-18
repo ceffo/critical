@@ -143,6 +143,21 @@ flowchart TD
   dice, shows before the time on hover, on keyboard focus in the row and on the selected row (step
   5.3). The row shown in the card is highlighted. Attack damage dice
   show as "1d8 → 6": the attack payload has no per-die values.
+- Login page (`components/login/LoginPage.tsx`, [ADR 0029](adr/0029-users-login-and-access.md) steps 3, 6
+  and 8), the one page shown without a session. `main.tsx` reads `GET /api/auth/me` before the first
+  render and `lib/session.ts` `startFor` decides: `/login` shows the page (a logged-in user goes to `/`),
+  any other path shows the app with a session and goes to `/login` without one
+  (`/login?error=session_expired` when `me` answered `session_expired`). A 401 from any API call while the
+  app runs (`api/http.ts` `request`) sends the browser to `/login?error=session_expired`. The page: one
+  `stage-card` on the ground, its band "Log in", the brand mark and Cinzel wordmark, one lead line, the
+  refusal of `?error=<code>` worded by `lib/session.ts` `loginErrorKey` (`login.error.<code>`, en + fr; an
+  unknown code gets a generic message; ADR 0023: the server sends only the code), the server's login
+  methods from `GET /api/auth/options`, each captioned "Log in" with its icon, the method in its tooltip
+  and `aria-label` (the Google logo, a link to `/api/auth/google/start`; the code icon, posting
+  `POST /api/auth/dev`, when the server has no OAuth settings; the server's login is the main button,
+  ADR 0027 step 3.4; "Log in" and "Log out" are fixed terms, step 3.2), the invite-only note and an English /
+  Français switch (the cog menu needs a session). `layout.spec` audits it for cut text in French and
+  English at every layout viewport, with both buttons and the longest refusal.
 - Settings popover (`components/shell/SettingsPopover.tsx`, `stores/settings.ts`), opened from the cog at the
   left of the dice footer (ADR 0022 step 2.6): language
   (English / Français), appearance (Dark / Light / System), a dark theme (Arcane, Deep, Plain) and
@@ -153,6 +168,9 @@ flowchart TD
   migrates the older `critical.theme` / `critical.language` keys once). `index.html`'s inline script
   paints the mode and the effective theme before the app runs, from `critical.paint.v1` (the
   chosen themes' variables, saved by `savePaint` whenever the settings apply).
+  Under the themes, the account (ADR 0029: account actions live in the cog menu): the logged-in email
+  (`stores/session.ts`, from start-up's `GET /api/auth/me`) and "Log out" (the full "Log out of
+  <email>" in its tooltip and `aria-label`), which posts `POST /api/auth/logout` and shows the login page.
 - Theme (ADR 0020, amended by ADR 0026: the contrast ladder, the raised stage and four themes,
   Arcane, Deep, Parchment and Plain, with a dark and a light theme per device): `lib/theme.ts`
   `THEMES` holds one hand-tuned role table per theme and mode (Deep is dark only, Parchment light

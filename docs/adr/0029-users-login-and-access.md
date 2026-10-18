@@ -199,8 +199,10 @@ sequenceDiagram
 6. **What is public.**
    1. Without a session the server serves **only**: the login page and the assets it needs, the
       `/api/auth/*` endpoints, and `/api/health` (no data: it answers that the server is up and the
-      migrations are applied, nothing about users or characters).
-   2. **Everything else needs a session**: the rest of the SPA bundle, the catalogue, and every other
+      migrations are applied, nothing about users or characters). The login page is a page of the one
+      web bundle, so the assets it needs are the **static build**: the content-hashed files under
+      `/assets/` and `/favicon.svg` (amendment 2026-10-18, below).
+   2. **Everything else needs a session**: every page but the login page, the catalogue, and every other
       `/api` route. The server enforces it in one middleware at the router, with an allow-list of the
       public paths; a new route is protected by default and never by a per-handler check. A request
       with no session to `/api` answers 401; to a page, it redirects to the login page.
@@ -245,6 +247,25 @@ sequenceDiagram
     arrive by new migration files only, additive, so the previous release keeps working on the new
     schema during a rolling deploy ([ADR 0024](0024-deployment.md) step 5.2). Existing characters get
     their owner when the root admin exists (step 5.3).
+
+## Amendment 2026-10-18: the static bundle is public
+
+Step 6.1 first listed "the login page and the assets it needs" as public and step 6.2 "the rest of the
+SPA bundle" as gated. The web app is one Vite bundle and the login page is one of its pages, so the
+login page needs the whole bundle: with `/assets/*` behind the session, `/login` loaded blank on the
+Go server (the image, hosted or a local `docker run`). The static build (`/assets/*`, `/favicon.svg`)
+is therefore public. It is the public repository's code and holds no data: the catalogue, the sheets
+and every other datum come from `/api`, which stays gated, and a page other than `/login` still
+redirects to the login page without a session. Splitting the login page into its own bundle was
+weighed and not chosen: it hides nothing that is not already in the repository, at the cost of a
+second Vite entry and a server allow-list kept in sync with it.
+
+A request carrying a session cookie the server no longer knows (expired, logged out, user disabled)
+is told apart from one with none, so the login page can say the session ended (its own message,
+step 4.4): a page goes to `/login?error=session_expired`, and `GET /api/auth/me` answers 401 with the
+code `session_expired` (an `unauthenticated` refusal; the data routes keep `unauthenticated`).
+`GET /api/auth/options` (public, under `/api/auth`) tells the login page which login the server offers:
+`{"google": bool, "devLogin": bool}` (step 8).
 
 ## Amendment to ADR 0024
 

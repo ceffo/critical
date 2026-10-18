@@ -33,11 +33,11 @@ const (
 // SphereAccesses are the access kinds a sphere_access row may carry.
 var SphereAccesses = []string{AccessMajor, AccessMinor}
 
-// ErrCannotTurn: the Table 61 cell is a dash; refused before any die (ADR
+// ErrCannotTurn means the Table 61 cell is a dash; refused before any die (ADR
 // 0030 step 16.3).
 var ErrCannotTurn = errors.New("this cleric cannot turn that undead")
 
-// ErrNoSphereAccess: the artifact carries no sphere access (a format-5
+// ErrNoSphereAccess means the artifact carries no sphere access (a format-5
 // catalogue, ADR 0021 step 12.4).
 var ErrNoSphereAccess = errors.New("the spell catalogue carries no sphere access: run `just catalogue` to fetch a format-6 artifact")
 

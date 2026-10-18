@@ -22,8 +22,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/weaponsvc"
 )
 
@@ -160,6 +162,8 @@ var mappings = []mapping{
 	{target: learnsvc.ErrAboveClass, status: http.StatusBadRequest, code: "spell_level_above_class"},
 	{target: learnsvc.ErrLevelFull, status: http.StatusBadRequest, code: "spellbook_level_full"},
 	{target: learnsvc.ErrFailedAtLevel, status: http.StatusBadRequest, code: "spell_learn_failed_at_level"},
+	{target: ruletablesvc.ErrCannotTurn, status: http.StatusBadRequest, code: "cannot_turn_undead"},
+	{target: turnsvc.ErrClassCannotTurn, status: http.StatusBadRequest, code: "class_cannot_turn"},
 	{target: levelupsvc.ErrNotPending, status: http.StatusConflict, code: "level_up_not_pending"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
 	{target: spelleffectsvc.ErrUnknownMode, status: http.StatusBadRequest, code: "unknown_spell_mode"},

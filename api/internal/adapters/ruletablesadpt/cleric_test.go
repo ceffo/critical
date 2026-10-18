@@ -55,8 +55,13 @@ func TestSpellFailureFor_Step14_LowWisdom(t *testing.T) {
 		class     string
 		wis, want int
 	}{
-		{"cleric", 3, 50}, {"cleric", 9, 20}, {"cleric", 12, 5}, {"cleric", 13, 0}, {"cleric", 18, 0},
-		{"mage", 3, 0}, {"bard", 9, 0},
+		{"cleric", 3, 50},
+		{"cleric", 9, 20},
+		{"cleric", 12, 5},
+		{"cleric", 13, 0},
+		{"cleric", 18, 0},
+		{"mage", 3, 0},
+		{"bard", 9, 0},
 	} {
 		got, err := tbl.SpellFailureFor(tc.class, tc.wis)
 		require.NoError(t, err)

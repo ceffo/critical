@@ -66,6 +66,15 @@ packages:
       Characters:
       Dice:
       Log:
+  github.com/ceffo/critical/api/internal/domain/service/turnsvc:
+    config:
+      dir: "internal/domain/service/turnsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      Characters:
+      Dice:
+      Log:
   github.com/ceffo/critical/api/internal/domain/service/levelupsvc:
     config:
       dir: "internal/domain/service/levelupsvc/mocks"

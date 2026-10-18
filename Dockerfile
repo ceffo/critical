@@ -38,6 +38,8 @@ ARG VERSION=unknown
 RUN CGO_ENABLED=0 go build -trimpath \
       -ldflags "-s -w -X github.com/ceffo/critical/api/internal/cmd/api.commit=${COMMIT} -X github.com/ceffo/critical/api/internal/cmd/api.version=${VERSION}" \
       -o /out/critical-srv ./cmd/api
+# The root-admin script (ADR 0029 step 5.1), run in a machine by `just fly-root-admin` (docs/deploy.md).
+RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/critical-rootadmin ./cmd/rootadmin
 
 FROM alpine:3.24
 # The PostgreSQL client of the cluster's major version (17): the promotion's restore point runs pg_dump
@@ -46,6 +48,7 @@ RUN apk add --no-cache postgresql17-client
 RUN addgroup -S critical && adduser -S -G critical -H -h /app critical
 WORKDIR /app
 COPY --from=api /out/critical-srv /app/critical-srv
+COPY --from=api /out/critical-rootadmin /app/critical-rootadmin
 COPY --from=web /src/web/dist /app/web
 COPY seeds/ /app/seeds/
 COPY --from=catalogue catalogue.json /app/catalogue.json

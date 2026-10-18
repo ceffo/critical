@@ -1,7 +1,7 @@
 import type { Mix, Theme } from "../src/lib/theme";
 
 /**
- * The new-themes design round (critical-4jaw, docs/design/new-themes/README.md): the candidate role
+ * The new-themes design round (docs/design/new-themes/README.md): the candidate role
  * tables, written as the app's `Theme` (web/src/lib/theme.ts) so the implementer copies them into
  * `THEMES`. They are painted over the real app by themes-round.spec.ts and held to the rules of
  * ADR 0026 by the app's own theme.test.ts (vitest.candidates.ts adds them to `THEMES` first).

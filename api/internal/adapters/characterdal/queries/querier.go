@@ -13,10 +13,29 @@ import (
 type Querier interface {
 	// The owner's characters they have not retired, in creation order (the service derives each level).
 	CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) ([]CharactersOfRow, error)
+	CreateActiveBuffs(ctx context.Context, characterID int64) error
+	// A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
+	// sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step
+	// 24: a created character states no sheet, so it shows no difference). Its details start empty.
+	CreateCharacter(ctx context.Context, arg CreateCharacterParams) (int64, error)
+	CreateRoundState(ctx context.Context, characterID int64) error
+	// A new character's state rows: no spell prepared, no buff, round 0 (the seed character's
+	// start, with nothing in it).
+	CreateSpellSlots(ctx context.Context, characterID int64) error
+	// The user's current character, read through the ownership: no row when it is none, retired or
+	// not theirs.
+	CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, error)
 	// level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
 	// step 24): compared with the derived values, never read as inputs.
 	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
+	// Only a character the user owns and has not retired: none updated is an unknown character.
+	RenameCharacter(ctx context.Context, arg RenameCharacterParams) (int64, error)
+	// The user's first character they own and have not retired becomes current, unless the current
+	// one is such a character (a retired current character is replaced; none left is NULL).
+	RepairCurrentCharacter(ctx context.Context, id uuid.UUID) error
+	// Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
+	RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	SetCurrentCharacter(ctx context.Context, arg SetCurrentCharacterParams) (int64, error)
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)

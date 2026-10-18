@@ -415,3 +415,37 @@ func TestParse_Step11_4_Format4HasNoLevelLimits(t *testing.T) {
 	})
 	require.ErrorContains(t, err, "format 3 carries no class or race table")
 }
+
+// ADR 0030 step 21 (as built for character creation): a race may belong to a
+// class unless DMG Table 7 has a dash for it (DMG p.15: a bard is a human or
+// a half-elf); a human to any class. A catalogue without the level limits
+// (format 4) cannot answer and errs.
+func TestRaceAllows_Step21_TheDashOfTable7(t *testing.T) {
+	tables := phb(t)
+	for _, tt := range []struct {
+		race, class string
+		want        bool
+	}{
+		{"human", "bard", true},
+		{"half_elf", "bard", true},
+		{"elf", "bard", false},
+		{"dwarf", "bard", false},
+		{"gnome", "bard", false},
+		{"halfling", "bard", false},
+		{"dwarf", "mage", false},
+		{"elf", "mage", true},
+		{"halfling", "thief", true},
+		{"human", "cleric", true},
+	} {
+		got, err := tables.RaceAllows(tt.race, tt.class)
+		require.NoError(t, err, "%s %s", tt.race, tt.class)
+		assert.Equal(t, tt.want, got, "%s %s", tt.race, tt.class)
+	}
+	_, err := tables.RaceAllows("orc", "bard")
+	require.Error(t, err, "a race the tables do not know")
+
+	noLimits, err := classTablesOf(t, catalogue.FormatClassTables, func(d map[string]any) { delete(d, levelLimits) })
+	require.NoError(t, err)
+	_, err = noLimits.RaceAllows("elf", "bard")
+	require.ErrorContains(t, err, "no racial level limits")
+}

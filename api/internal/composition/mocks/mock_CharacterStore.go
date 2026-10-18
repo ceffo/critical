@@ -84,6 +84,121 @@ func (_c *MockCharacterStore_CharactersOf_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// CreateCharacter provides a mock function with given fields: ctx, owner, c
+func (_m *MockCharacterStore) CreateCharacter(ctx context.Context, owner uuid.UUID, c charactersvc.Character) (int64, error) {
+	ret := _m.Called(ctx, owner, c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, charactersvc.Character) (int64, error)); ok {
+		return rf(ctx, owner, c)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, charactersvc.Character) int64); ok {
+		r0 = rf(ctx, owner, c)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, charactersvc.Character) error); ok {
+		r1 = rf(ctx, owner, c)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCharacterStore_CreateCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCharacter'
+type MockCharacterStore_CreateCharacter_Call struct {
+	*mock.Call
+}
+
+// CreateCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - c charactersvc.Character
+func (_e *MockCharacterStore_Expecter) CreateCharacter(ctx interface{}, owner interface{}, c interface{}) *MockCharacterStore_CreateCharacter_Call {
+	return &MockCharacterStore_CreateCharacter_Call{Call: _e.mock.On("CreateCharacter", ctx, owner, c)}
+}
+
+func (_c *MockCharacterStore_CreateCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID, c charactersvc.Character)) *MockCharacterStore_CreateCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(charactersvc.Character))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_CreateCharacter_Call) Return(_a0 int64, _a1 error) *MockCharacterStore_CreateCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCharacterStore_CreateCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, charactersvc.Character) (int64, error)) *MockCharacterStore_CreateCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CurrentCharacter provides a mock function with given fields: ctx, owner
+func (_m *MockCharacterStore) CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, error) {
+	ret := _m.Called(ctx, owner)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CurrentCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int64, error)); ok {
+		return rf(ctx, owner)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) int64); ok {
+		r0 = rf(ctx, owner)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, owner)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCharacterStore_CurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CurrentCharacter'
+type MockCharacterStore_CurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// CurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+func (_e *MockCharacterStore_Expecter) CurrentCharacter(ctx interface{}, owner interface{}) *MockCharacterStore_CurrentCharacter_Call {
+	return &MockCharacterStore_CurrentCharacter_Call{Call: _e.mock.On("CurrentCharacter", ctx, owner)}
+}
+
+func (_c *MockCharacterStore_CurrentCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID)) *MockCharacterStore_CurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_CurrentCharacter_Call) Return(_a0 int64, _a1 error) *MockCharacterStore_CurrentCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCharacterStore_CurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) (int64, error)) *MockCharacterStore_CurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCharacter provides a mock function with given fields: ctx, id
 func (_m *MockCharacterStore) GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error) {
 	ret := _m.Called(ctx, id)
@@ -196,6 +311,150 @@ func (_c *MockCharacterStore_GetDetails_Call) Return(_a0 charactersvc.Details, _
 }
 
 func (_c *MockCharacterStore_GetDetails_Call) RunAndReturn(run func(context.Context, int64) (charactersvc.Details, error)) *MockCharacterStore_GetDetails_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenameCharacter provides a mock function with given fields: ctx, owner, id, name
+func (_m *MockCharacterStore) RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error {
+	ret := _m.Called(ctx, owner, id, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string) error); ok {
+		r0 = rf(ctx, owner, id, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_RenameCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameCharacter'
+type MockCharacterStore_RenameCharacter_Call struct {
+	*mock.Call
+}
+
+// RenameCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - id int64
+//   - name string
+func (_e *MockCharacterStore_Expecter) RenameCharacter(ctx interface{}, owner interface{}, id interface{}, name interface{}) *MockCharacterStore_RenameCharacter_Call {
+	return &MockCharacterStore_RenameCharacter_Call{Call: _e.mock.On("RenameCharacter", ctx, owner, id, name)}
+}
+
+func (_c *MockCharacterStore_RenameCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID, id int64, name string)) *MockCharacterStore_RenameCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_RenameCharacter_Call) Return(_a0 error) *MockCharacterStore_RenameCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_RenameCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, string) error) *MockCharacterStore_RenameCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RepairCurrentCharacter provides a mock function with given fields: ctx, owner
+func (_m *MockCharacterStore) RepairCurrentCharacter(ctx context.Context, owner uuid.UUID) error {
+	ret := _m.Called(ctx, owner)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RepairCurrentCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, owner)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_RepairCurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RepairCurrentCharacter'
+type MockCharacterStore_RepairCurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// RepairCurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+func (_e *MockCharacterStore_Expecter) RepairCurrentCharacter(ctx interface{}, owner interface{}) *MockCharacterStore_RepairCurrentCharacter_Call {
+	return &MockCharacterStore_RepairCurrentCharacter_Call{Call: _e.mock.On("RepairCurrentCharacter", ctx, owner)}
+}
+
+func (_c *MockCharacterStore_RepairCurrentCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID)) *MockCharacterStore_RepairCurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_RepairCurrentCharacter_Call) Return(_a0 error) *MockCharacterStore_RepairCurrentCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_RepairCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockCharacterStore_RepairCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RetireCharacter provides a mock function with given fields: ctx, owner, id
+func (_m *MockCharacterStore) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
+	ret := _m.Called(ctx, owner, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetireCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64) error); ok {
+		r0 = rf(ctx, owner, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_RetireCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetireCharacter'
+type MockCharacterStore_RetireCharacter_Call struct {
+	*mock.Call
+}
+
+// RetireCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - id int64
+func (_e *MockCharacterStore_Expecter) RetireCharacter(ctx interface{}, owner interface{}, id interface{}) *MockCharacterStore_RetireCharacter_Call {
+	return &MockCharacterStore_RetireCharacter_Call{Call: _e.mock.On("RetireCharacter", ctx, owner, id)}
+}
+
+func (_c *MockCharacterStore_RetireCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID, id int64)) *MockCharacterStore_RetireCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_RetireCharacter_Call) Return(_a0 error) *MockCharacterStore_RetireCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_RetireCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64) error) *MockCharacterStore_RetireCharacter_Call {
 	_c.Call.Return(run)
 	return _c
 }

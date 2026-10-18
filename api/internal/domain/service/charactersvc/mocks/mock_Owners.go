@@ -84,6 +84,265 @@ func (_c *MockOwners_CharactersOf_Call) RunAndReturn(run func(context.Context, u
 	return _c
 }
 
+// CreateCharacter provides a mock function with given fields: ctx, owner, c
+func (_m *MockOwners) CreateCharacter(ctx context.Context, owner uuid.UUID, c charactersvc.Character) (int64, error) {
+	ret := _m.Called(ctx, owner, c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, charactersvc.Character) (int64, error)); ok {
+		return rf(ctx, owner, c)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, charactersvc.Character) int64); ok {
+		r0 = rf(ctx, owner, c)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, charactersvc.Character) error); ok {
+		r1 = rf(ctx, owner, c)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockOwners_CreateCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCharacter'
+type MockOwners_CreateCharacter_Call struct {
+	*mock.Call
+}
+
+// CreateCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - c charactersvc.Character
+func (_e *MockOwners_Expecter) CreateCharacter(ctx interface{}, owner interface{}, c interface{}) *MockOwners_CreateCharacter_Call {
+	return &MockOwners_CreateCharacter_Call{Call: _e.mock.On("CreateCharacter", ctx, owner, c)}
+}
+
+func (_c *MockOwners_CreateCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID, c charactersvc.Character)) *MockOwners_CreateCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(charactersvc.Character))
+	})
+	return _c
+}
+
+func (_c *MockOwners_CreateCharacter_Call) Return(_a0 int64, _a1 error) *MockOwners_CreateCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockOwners_CreateCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, charactersvc.Character) (int64, error)) *MockOwners_CreateCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CurrentCharacter provides a mock function with given fields: ctx, owner
+func (_m *MockOwners) CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, error) {
+	ret := _m.Called(ctx, owner)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CurrentCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (int64, error)); ok {
+		return rf(ctx, owner)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) int64); ok {
+		r0 = rf(ctx, owner)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, owner)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockOwners_CurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CurrentCharacter'
+type MockOwners_CurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// CurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+func (_e *MockOwners_Expecter) CurrentCharacter(ctx interface{}, owner interface{}) *MockOwners_CurrentCharacter_Call {
+	return &MockOwners_CurrentCharacter_Call{Call: _e.mock.On("CurrentCharacter", ctx, owner)}
+}
+
+func (_c *MockOwners_CurrentCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID)) *MockOwners_CurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockOwners_CurrentCharacter_Call) Return(_a0 int64, _a1 error) *MockOwners_CurrentCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockOwners_CurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) (int64, error)) *MockOwners_CurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenameCharacter provides a mock function with given fields: ctx, owner, id, name
+func (_m *MockOwners) RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error {
+	ret := _m.Called(ctx, owner, id, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenameCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string) error); ok {
+		r0 = rf(ctx, owner, id, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockOwners_RenameCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenameCharacter'
+type MockOwners_RenameCharacter_Call struct {
+	*mock.Call
+}
+
+// RenameCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - id int64
+//   - name string
+func (_e *MockOwners_Expecter) RenameCharacter(ctx interface{}, owner interface{}, id interface{}, name interface{}) *MockOwners_RenameCharacter_Call {
+	return &MockOwners_RenameCharacter_Call{Call: _e.mock.On("RenameCharacter", ctx, owner, id, name)}
+}
+
+func (_c *MockOwners_RenameCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID, id int64, name string)) *MockOwners_RenameCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockOwners_RenameCharacter_Call) Return(_a0 error) *MockOwners_RenameCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockOwners_RenameCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, string) error) *MockOwners_RenameCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RepairCurrentCharacter provides a mock function with given fields: ctx, owner
+func (_m *MockOwners) RepairCurrentCharacter(ctx context.Context, owner uuid.UUID) error {
+	ret := _m.Called(ctx, owner)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RepairCurrentCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, owner)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockOwners_RepairCurrentCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RepairCurrentCharacter'
+type MockOwners_RepairCurrentCharacter_Call struct {
+	*mock.Call
+}
+
+// RepairCurrentCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+func (_e *MockOwners_Expecter) RepairCurrentCharacter(ctx interface{}, owner interface{}) *MockOwners_RepairCurrentCharacter_Call {
+	return &MockOwners_RepairCurrentCharacter_Call{Call: _e.mock.On("RepairCurrentCharacter", ctx, owner)}
+}
+
+func (_c *MockOwners_RepairCurrentCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID)) *MockOwners_RepairCurrentCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockOwners_RepairCurrentCharacter_Call) Return(_a0 error) *MockOwners_RepairCurrentCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockOwners_RepairCurrentCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockOwners_RepairCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RetireCharacter provides a mock function with given fields: ctx, owner, id
+func (_m *MockOwners) RetireCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
+	ret := _m.Called(ctx, owner, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RetireCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64) error); ok {
+		r0 = rf(ctx, owner, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockOwners_RetireCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RetireCharacter'
+type MockOwners_RetireCharacter_Call struct {
+	*mock.Call
+}
+
+// RetireCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - id int64
+func (_e *MockOwners_Expecter) RetireCharacter(ctx interface{}, owner interface{}, id interface{}) *MockOwners_RetireCharacter_Call {
+	return &MockOwners_RetireCharacter_Call{Call: _e.mock.On("RetireCharacter", ctx, owner, id)}
+}
+
+func (_c *MockOwners_RetireCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID, id int64)) *MockOwners_RetireCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64))
+	})
+	return _c
+}
+
+func (_c *MockOwners_RetireCharacter_Call) Return(_a0 error) *MockOwners_RetireCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockOwners_RetireCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64) error) *MockOwners_RetireCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetCurrentCharacter provides a mock function with given fields: ctx, owner, id
 func (_m *MockOwners) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64) error {
 	ret := _m.Called(ctx, owner, id)

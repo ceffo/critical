@@ -191,6 +191,63 @@ func (_c *MockRules_LevelFor_Call) RunAndReturn(run func(string, int) (int, erro
 	return _c
 }
 
+// RaceAllows provides a mock function with given fields: race, class
+func (_m *MockRules) RaceAllows(race string, class string) (bool, error) {
+	ret := _m.Called(race, class)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RaceAllows")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, string) (bool, error)); ok {
+		return rf(race, class)
+	}
+	if rf, ok := ret.Get(0).(func(string, string) bool); ok {
+		r0 = rf(race, class)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(race, class)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_RaceAllows_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RaceAllows'
+type MockRules_RaceAllows_Call struct {
+	*mock.Call
+}
+
+// RaceAllows is a helper method to define mock.On call
+//   - race string
+//   - class string
+func (_e *MockRules_Expecter) RaceAllows(race interface{}, class interface{}) *MockRules_RaceAllows_Call {
+	return &MockRules_RaceAllows_Call{Call: _e.mock.On("RaceAllows", race, class)}
+}
+
+func (_c *MockRules_RaceAllows_Call) Run(run func(race string, class string)) *MockRules_RaceAllows_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockRules_RaceAllows_Call) Return(_a0 bool, _a1 error) *MockRules_RaceAllows_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_RaceAllows_Call) RunAndReturn(run func(string, string) (bool, error)) *MockRules_RaceAllows_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SavesFor provides a mock function with given fields: group, level
 func (_m *MockRules) SavesFor(group string, level int) (ruletablesvc.SavingThrowRow, error) {
 	ret := _m.Called(group, level)

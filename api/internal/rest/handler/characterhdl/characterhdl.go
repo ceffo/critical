@@ -23,6 +23,8 @@ import (
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Put(pattern string, h http.HandlerFunc)
+	Post(pattern string, h http.HandlerFunc)
+	Patch(pattern string, h http.HandlerFunc)
 }
 
 // CharacterIDFunc resolves the active character ID per-request.
@@ -42,6 +44,9 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc charactersvc.SVC) {
 func RegisterUserRoutes(r Router, svc charactersvc.SVC) {
 	r.Get("/api/characters", render.Handle(List(svc)))
 	r.Put("/api/characters/current", render.Handle(SetCurrent(svc)))
+	r.Get("/api/characters/options", render.Handle(Options(svc)))
+	r.Post("/api/characters", render.Handle(Create(svc)))
+	r.Patch("/api/characters/{id}", render.Handle(Change(svc)))
 }
 
 type ownedLister interface {
@@ -79,6 +84,10 @@ func user(r *http.Request) (*authsvc.User, error) {
 }
 
 func renderCharacters(w http.ResponseWriter, r *http.Request, svc ownedLister, owner uuid.UUID, current int64) error {
+	return renderCharactersStatus(w, r, svc, owner, current, http.StatusOK)
+}
+
+func renderCharactersStatus(w http.ResponseWriter, r *http.Request, svc ownedLister, owner uuid.UUID, current int64, status int) error {
 	list, err := svc.List(r.Context(), owner)
 	if err != nil {
 		return err
@@ -91,7 +100,7 @@ func renderCharacters(w http.ResponseWriter, r *http.Request, svc ownedLister, o
 			out.CurrentID = &id
 		}
 	}
-	render.OK(r.Context(), w, out)
+	render.JSON(r.Context(), w, status, out)
 	return nil
 }
 

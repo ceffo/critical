@@ -25,6 +25,65 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// Change provides a mock function with given fields: ctx, owner, id, c
+func (_m *MockSVC) Change(ctx context.Context, owner uuid.UUID, id int64, c charactersvc.Change) (int64, error) {
+	ret := _m.Called(ctx, owner, id, c)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Change")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, charactersvc.Change) (int64, error)); ok {
+		return rf(ctx, owner, id, c)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, charactersvc.Change) int64); ok {
+		r0 = rf(ctx, owner, id, c)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int64, charactersvc.Change) error); ok {
+		r1 = rf(ctx, owner, id, c)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Change_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Change'
+type MockSVC_Change_Call struct {
+	*mock.Call
+}
+
+// Change is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - id int64
+//   - c charactersvc.Change
+func (_e *MockSVC_Expecter) Change(ctx interface{}, owner interface{}, id interface{}, c interface{}) *MockSVC_Change_Call {
+	return &MockSVC_Change_Call{Call: _e.mock.On("Change", ctx, owner, id, c)}
+}
+
+func (_c *MockSVC_Change_Call) Run(run func(ctx context.Context, owner uuid.UUID, id int64, c charactersvc.Change)) *MockSVC_Change_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64), args[3].(charactersvc.Change))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Change_Call) Return(current int64, err error) *MockSVC_Change_Call {
+	_c.Call.Return(current, err)
+	return _c
+}
+
+func (_c *MockSVC_Change_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, charactersvc.Change) (int64, error)) *MockSVC_Change_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -67,6 +126,120 @@ func (_c *MockSVC_Close_Call) Return(_a0 error) *MockSVC_Close_Call {
 }
 
 func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *MockSVC_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Create provides a mock function with given fields: ctx, owner, n
+func (_m *MockSVC) Create(ctx context.Context, owner uuid.UUID, n charactersvc.NewCharacter) (int64, error) {
+	ret := _m.Called(ctx, owner, n)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Create")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, charactersvc.NewCharacter) (int64, error)); ok {
+		return rf(ctx, owner, n)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, charactersvc.NewCharacter) int64); ok {
+		r0 = rf(ctx, owner, n)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, charactersvc.NewCharacter) error); ok {
+		r1 = rf(ctx, owner, n)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
+type MockSVC_Create_Call struct {
+	*mock.Call
+}
+
+// Create is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - n charactersvc.NewCharacter
+func (_e *MockSVC_Expecter) Create(ctx interface{}, owner interface{}, n interface{}) *MockSVC_Create_Call {
+	return &MockSVC_Create_Call{Call: _e.mock.On("Create", ctx, owner, n)}
+}
+
+func (_c *MockSVC_Create_Call) Run(run func(ctx context.Context, owner uuid.UUID, n charactersvc.NewCharacter)) *MockSVC_Create_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(charactersvc.NewCharacter))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Create_Call) Return(_a0 int64, _a1 error) *MockSVC_Create_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Create_Call) RunAndReturn(run func(context.Context, uuid.UUID, charactersvc.NewCharacter) (int64, error)) *MockSVC_Create_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreationOptions provides a mock function with given fields: ctx
+func (_m *MockSVC) CreationOptions(ctx context.Context) (charactersvc.CreationOptions, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreationOptions")
+	}
+
+	var r0 charactersvc.CreationOptions
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (charactersvc.CreationOptions, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) charactersvc.CreationOptions); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Get(0).(charactersvc.CreationOptions)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_CreationOptions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreationOptions'
+type MockSVC_CreationOptions_Call struct {
+	*mock.Call
+}
+
+// CreationOptions is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) CreationOptions(ctx interface{}) *MockSVC_CreationOptions_Call {
+	return &MockSVC_CreationOptions_Call{Call: _e.mock.On("CreationOptions", ctx)}
+}
+
+func (_c *MockSVC_CreationOptions_Call) Run(run func(ctx context.Context)) *MockSVC_CreationOptions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_CreationOptions_Call) Return(_a0 charactersvc.CreationOptions, _a1 error) *MockSVC_CreationOptions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_CreationOptions_Call) RunAndReturn(run func(context.Context) (charactersvc.CreationOptions, error)) *MockSVC_CreationOptions_Call {
 	_c.Call.Return(run)
 	return _c
 }

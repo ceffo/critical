@@ -48,6 +48,116 @@ func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) (
 	return items, nil
 }
 
+const createActiveBuffs = `-- name: CreateActiveBuffs :exec
+INSERT INTO active_buffs (character_id, buffs) VALUES ($1, '[]')
+`
+
+func (q *Queries) CreateActiveBuffs(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, createActiveBuffs, characterID)
+	return err
+}
+
+const createCharacter = `-- name: CreateCharacter :one
+INSERT INTO characters (
+    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+    save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
+    class, race_code, owner_user_id
+) VALUES (
+    $1, $2, $3, $4, $5, $6,
+    $7, $8, $9, $10, $11,
+    $12, $13, $14,
+    $15, $16, $17, $18,
+    $19
+) RETURNING id
+`
+
+type CreateCharacterParams struct {
+	Name             string
+	Str              int64
+	Dex              int64
+	Con              int64
+	Int              int64
+	Wis              int64
+	Cha              int64
+	HpMax            int64
+	Thac0Base        int64
+	Level            int64
+	XpTotal          int64
+	SaveParaPoison   int64
+	SaveRodStaffWand int64
+	SavePetriPoly    int64
+	SaveBreath       int64
+	SaveSpell        int64
+	Class            string
+	RaceCode         string
+	OwnerUserID      uuid.NullUUID
+}
+
+// A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
+// sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step
+// 24: a created character states no sheet, so it shows no difference). Its details start empty.
+func (q *Queries) CreateCharacter(ctx context.Context, arg CreateCharacterParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createCharacter,
+		arg.Name,
+		arg.Str,
+		arg.Dex,
+		arg.Con,
+		arg.Int,
+		arg.Wis,
+		arg.Cha,
+		arg.HpMax,
+		arg.Thac0Base,
+		arg.Level,
+		arg.XpTotal,
+		arg.SaveParaPoison,
+		arg.SaveRodStaffWand,
+		arg.SavePetriPoly,
+		arg.SaveBreath,
+		arg.SaveSpell,
+		arg.Class,
+		arg.RaceCode,
+		arg.OwnerUserID,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const createRoundState = `-- name: CreateRoundState :exec
+INSERT INTO round_state (character_id, round_number) VALUES ($1, 0)
+`
+
+func (q *Queries) CreateRoundState(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, createRoundState, characterID)
+	return err
+}
+
+const createSpellSlots = `-- name: CreateSpellSlots :exec
+INSERT INTO spell_slots (character_id, slots) VALUES ($1, '[]')
+`
+
+// A new character's state rows: no spell prepared, no buff, round 0 (the seed character's
+// start, with nothing in it).
+func (q *Queries) CreateSpellSlots(ctx context.Context, characterID int64) error {
+	_, err := q.db.ExecContext(ctx, createSpellSlots, characterID)
+	return err
+}
+
+const currentCharacter = `-- name: CurrentCharacter :one
+SELECT c.id FROM users u
+JOIN characters c ON c.id = u.current_character_id AND c.owner_user_id = u.id AND NOT c.retired
+WHERE u.id = $1
+`
+
+// The user's current character, read through the ownership: no row when it is none, retired or
+// not theirs.
+func (q *Queries) CurrentCharacter(ctx context.Context, id uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, currentCharacter, id)
+	var id_2 int64
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
@@ -156,6 +266,61 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 		&i.Languages,
 	)
 	return i, err
+}
+
+const renameCharacter = `-- name: RenameCharacter :execrows
+UPDATE characters SET name = $1
+WHERE id = $2 AND owner_user_id = $3 AND NOT retired
+`
+
+type RenameCharacterParams struct {
+	Name        string
+	ID          int64
+	OwnerUserID uuid.NullUUID
+}
+
+// Only a character the user owns and has not retired: none updated is an unknown character.
+func (q *Queries) RenameCharacter(ctx context.Context, arg RenameCharacterParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, renameCharacter, arg.Name, arg.ID, arg.OwnerUserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const repairCurrentCharacter = `-- name: RepairCurrentCharacter :exec
+UPDATE users SET current_character_id = (
+    SELECT min(c.id) FROM characters c WHERE c.owner_user_id = users.id AND NOT c.retired
+) WHERE users.id = $1 AND NOT EXISTS (
+    SELECT 1 FROM characters c
+    WHERE c.id = users.current_character_id AND c.owner_user_id = users.id AND NOT c.retired
+)
+`
+
+// The user's first character they own and have not retired becomes current, unless the current
+// one is such a character (a retired current character is replaced; none left is NULL).
+func (q *Queries) RepairCurrentCharacter(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, repairCurrentCharacter, id)
+	return err
+}
+
+const retireCharacter = `-- name: RetireCharacter :execrows
+UPDATE characters SET retired = TRUE
+WHERE id = $1 AND owner_user_id = $2 AND NOT retired
+`
+
+type RetireCharacterParams struct {
+	ID          int64
+	OwnerUserID uuid.NullUUID
+}
+
+// Only a character the user owns and has not retired (ADR 0029 step 7.3): nothing is deleted.
+func (q *Queries) RetireCharacter(ctx context.Context, arg RetireCharacterParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, retireCharacter, arg.ID, arg.OwnerUserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setCurrentCharacter = `-- name: SetCurrentCharacter :execrows

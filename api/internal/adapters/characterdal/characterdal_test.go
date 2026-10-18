@@ -168,3 +168,64 @@ func TestOwners_ListAndSetCurrent(t *testing.T) {
 	}).Return(0, nil).Once()
 	require.ErrorIs(t, dal.SetCurrentCharacter(ctx, owner, 9), domain.ErrCharacterNotFound)
 }
+
+// A created character's row carries every entered value, its owner, and its
+// sheet figures in the level, THAC0 and save columns (ADR 0030 step 24); its
+// spell slots, buffs and round state follow, keyed by the new id.
+func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	owner := uuid.MustParse("0b6a8c7e-5f1d-4a59-9a3e-3c2d1e0f4a11")
+	row := q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
+		Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HpMax: 6, XpTotal: 2500,
+		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
+		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
+		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+	}).Return(int64(7), nil).Once()
+	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
+	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
+	q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
+
+	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
+		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, XPTotal: 2500,
+		Class: "bard", Race: "half_elf",
+		Sheet: charactersvc.Sheet{Level: 3, THAC0: 19, Saves: charactersvc.Saves{
+			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
+		}},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(7), id)
+}
+
+// A rename or a retirement that matches no row (another user's character, a
+// retired one, an unknown id) is ErrCharacterNotFound; the current
+// character read with no row is none.
+func TestRenameRetire_NoRowIsNotFound(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	owner := uuid.MustParse("0b6a8c7e-5f1d-4a59-9a3e-3c2d1e0f4a11")
+	dal := characterdal.New(q)
+	nullOwner := uuid.NullUUID{UUID: owner, Valid: true}
+
+	q.EXPECT().RenameCharacter(ctx, queries.RenameCharacterParams{Name: "B", ID: 4, OwnerUserID: nullOwner}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.RenameCharacter(ctx, owner, 4, "B"), domain.ErrCharacterNotFound)
+	q.EXPECT().RenameCharacter(ctx, queries.RenameCharacterParams{Name: "B", ID: 5, OwnerUserID: nullOwner}).Return(1, nil).Once()
+	require.NoError(t, dal.RenameCharacter(ctx, owner, 5, "B"))
+
+	q.EXPECT().RetireCharacter(ctx, queries.RetireCharacterParams{ID: 4, OwnerUserID: nullOwner}).Return(0, nil).Once()
+	require.ErrorIs(t, dal.RetireCharacter(ctx, owner, 4), domain.ErrCharacterNotFound)
+	q.EXPECT().RetireCharacter(ctx, queries.RetireCharacterParams{ID: 5, OwnerUserID: nullOwner}).Return(1, nil).Once()
+	require.NoError(t, dal.RetireCharacter(ctx, owner, 5))
+
+	q.EXPECT().RepairCurrentCharacter(ctx, owner).Return(nil).Once()
+	require.NoError(t, dal.RepairCurrentCharacter(ctx, owner))
+
+	q.EXPECT().CurrentCharacter(ctx, owner).Return(0, sql.ErrNoRows).Once()
+	current, err := dal.CurrentCharacter(ctx, owner)
+	require.NoError(t, err)
+	assert.Zero(t, current)
+	q.EXPECT().CurrentCharacter(ctx, owner).Return(5, nil).Once()
+	current, err = dal.CurrentCharacter(ctx, owner)
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), current)
+}

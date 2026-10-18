@@ -430,13 +430,15 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   the repo root (the nearest directory above the working directory with a `.git` entry; outside a checkout,
   against the working directory). A missing file stops the API with a message naming the path and
   `just catalogue`.
-- **Formats**: the API reads formats 3 (spells and the PHB rule tables, ADR 0021 step 9) and 4 (format 3
-  plus the class and race tables, step 10); any other, the retired format 1 included, is refused, naming it
-  and `just catalogue`. Format 3 is read until the published artifact and the dev checkouts are format 4
-  (step 10.4). See "Rule tables" below.
-- **Without access**: `api/testdata/catalogue.json` is a small fixture, format 4, with invented text
+- **Formats**: the API reads formats 3 (spells and the PHB rule tables, ADR 0021 step 9), 4 (format 3
+  plus the class and race tables, step 10) and 5 (format 4 plus the racial level limits of DMG Table 7,
+  step 11); any other, the retired format 1 included, is refused, naming it and `just catalogue`. Formats 3
+  and 4 are read until the published artifact and the dev checkouts are format 5 (steps 10.4 and 11.4). See
+  "Rule tables" below.
+- **Without access**: `api/testdata/catalogue.json` is a small fixture, format 5, with invented text
   (every spell the `api/testdata/seeds` spellbook and spell effects use, some with French, one list, one
-  table) and the PHB's real rule-table and class-table numbers (ADR 0021 steps 9.7 and 10.5). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
+  table) and the books' real rule-table, class-table and level-limit numbers (ADR 0021 steps 9.7, 10.5 and
+  11.5). Go tests and the e2e suite always use it; `just dev` uses it, with `api/testdata/seeds` and its
   own database `critical_fixture`, when `.catalogue/catalogue.json` is absent (the campaign seeds refer to
   spells only the real artifact holds). The database `critical` is only ever opened with the real catalogue.
 - **Seed checks**: the spellbook seed and every `spell_effects.json` id are checked against the catalogue at
@@ -561,6 +563,13 @@ parser reads them at every start into `ruletablesvc.ClassTables` (`Tables.Classe
 artifact), validated by `ruletablesvc.NewClassTables`: a missing table, a gap in a level band or in the
 scores, XP not increasing or a code twice is a startup error naming the table. The derivations that use
 them (level, THAC0, saves, slots, skills) are ADR 0030's items.
+
+A format-5 artifact adds the **racial level limits** of DMG Table 7 (ADR 0021 step 11, `race_level_limits`):
+one row per race and class, read into `ruletablesvc.LevelLimits` (`Tables.LevelLimits()`; false for a format-3
+or format-4 artifact) and validated by `ruletablesvc.NewLevelLimits` (each race and class once, a level within
+0 to 20). `LevelLimits.Limit(race, class)` gives the cell: `MaxLevel`, `Unlimited` (the book's U) or neither
+(the book's dash: the race cannot belong to the class); a human has no row. Shown on the race card, never
+enforced (ADR 0030 step 21).
 
 ## In-memory storage (e2e mode)
 

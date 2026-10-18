@@ -4,6 +4,7 @@
 private `critical-rulebooks` repo and the API importer). Amended by [ADR 0023](0023-localized-text.md):
 no per-language column or field; the `name_fr` / `description_fr` wording below is superseded.
 Step 10 (the class and race tables, format 4) is _proposed_ (critical-reul.9).
+Step 11 (the racial level limits of DMG Table 7, format 5) is _proposed_ (critical-reul.20).
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -449,10 +450,41 @@ is only ever appended to by play.
        its class tables the real artifact's row for row (`TestRealCatalogue_Step10_5_…`, skipped without a
        format-4 `.catalogue/catalogue.json`).
     6. **Not in format 4**: DMG Table 7 (racial level limits; the rulebooks copy is an unverified OCR, to be
-       hand-checked from the page image first), the classes each race allows (PHB chapter 2 prose), the race
-       trait texts (localized catalogue text) and the priest spells' sphere codes with the cleric's sphere
-       access (ADR 0030 steps 15 and 23). Each is a later format. The weapon type is not catalogue data
-       (ADR 0030 step 23): it belongs to the character's weapons.
+       hand-checked from the page image first; shipped by format 5, step 11), the classes each race allows
+       (PHB chapter 2 prose), the race trait texts (localized catalogue text) and the priest spells' sphere
+       codes with the cleric's sphere access (ADR 0030 steps 15 and 23). Each is a later format. The weapon
+       type is not catalogue data (ADR 0030 step 23): it belongs to the character's weapons.
+
+11. **The racial level limits, format 5** (_proposed_, critical-reul.20; ADR 0030 steps 21 and 23). Built by
+    `scripts/class_tables.py` in `critical-rulebooks` from its hand-checked
+    `tables/dmg-007-racial-class-and-level-limits.md` (typed cell by cell from the page image, DMG p.15), never
+    transcribed. A new table is a new format (step 9.2), hence format 5 rather than a format-4 addition: a
+    format-4 API refuses an unknown key, and the format number is what tells an importer which tables to require.
+    1. **Format 5 is format 4 plus one key in `rule_tables`, `race_level_limits`**, required; formats 3 and 4 may
+       not carry it (the schema says so). Numbers and the codes of step 10.1 only.
+    2. **Rows**: `race` (`dwarf elf gnome half_elf halfling`), `class` (`fighter mage cleric thief bard`) and
+       `max_level`: the printed number (1 to 20), **0 for the book's dash** (the race cannot belong to the
+       class), **absent for the book's U** (no racial limit), the conventions of step 10.2's `max_spell_level`
+       (0 = none) and `max_spells` (absent = no maximum). Exactly 25 rows, one per race and class. Humans have
+       no row (U in every class; the builder fails if the book's human column is anything else). The book's
+       Druid, Illusionist, Paladin and Ranger rows are not shipped: the app has no such class (ADR 0030, "Not
+       covered"); the gnome's illusionist limit is therefore not the gnome mage's, whose cell is the dash.
+    3. **Validation.** The schema checks the codes, the bounds (0 to 20) and the 25 rows. The builder and the
+       importer (at start, `ruletablesvc.NewLevelLimits`, a refusal naming the table like step 9.3) check that
+       every race x class combination is there exactly once. A format-5 artifact without the table is a
+       startup error.
+    4. **Rollout, as step 10.4.** The API reads formats 3, 4 and 5 first; it lands on `main` before the builder
+       publishes format 5 on the rulebooks default branch, so a dev checkout's format-4 `.catalogue/catalogue.json`
+       and the release build keep starting. Formats 3 and 4 are retired by a later item, before any consumer
+       relies on the level limits.
+    5. **The fixture carries the real numbers** (as step 10.5): `api/testdata/catalogue.json` is format 5, its
+       `race_level_limits` the real artifact's cell for cell (`TestRealCatalogue_Step11_5_…`, skipped without a
+       format-5 `.catalogue/catalogue.json`).
+    6. **Not in format 5**: the † note of Table 7 (a character without exceptional prime requisites cannot pass
+       the limit) and DMG Table 8 (bonus levels for high prime requisites, the optional "Exceeding Level Limits"
+       rule): the limits are shown, not enforced (ADR 0030 step 21). Whether the dash rows replace the PHB
+       chapter 2 prose as the source of "the classes each race allows" (step 10.6) is that item's decision; they
+       agree for the five classes.
 
 
 ## Consequences
@@ -684,3 +716,16 @@ schema's `TestSchema_Step10_Format4ClassTables`; 10.2 the schema test and
 `TestStartup_Step10_3_RefusesAMissingOrGappedClassTable`; 10.4 `TestParse_Step10_4_Format3HasNoClassTables`
 and the startup test's "format 3 still starts"; 10.5
 `TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables`.
+
+## Implementation notes (the racial level limits, format 5, 2026-10-18)
+
+Step 11, critical-reul.20: the builder's `scripts/class_tables.py` (`build_race_level_limits`) and
+`scripts/check` (fresh-build equality, every one of the 25 cells compared with a second reading of the page
+image, Kelsen the half-elf bard unlimited, fault injection on the parser and the schema); in the API,
+`catalogue.FormatLevelLimits`, `ruletablesadpt.Parse`'s format-5 case and `ruletablesvc.NewLevelLimits` /
+`LevelLimits.Limit`. Tests per step: 11.1 `TestParse_Step11_1_ReadsFormat5`,
+`TestParse_Step11_1_ReadsTheLevelLimits` (every cell against DMG p.15) and the schema's
+`TestSchema_Step11_Format5LevelLimits`; 11.2 the schema test and `TestParse_Step9_2_TablesBelongToFormat3Only`'s
+format-5 cases; 11.3 `TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits` and
+`TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits`; 11.4 `TestParse_Step11_4_Format4HasNoLevelLimits` and
+the startup test's "format 4 still starts"; 11.5 `TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits`.

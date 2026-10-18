@@ -215,7 +215,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3 and 4")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads formats 3, 4 and 5")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -272,7 +272,7 @@ func TestStartup_Step9_3_RefusesTablesThatBreakTheRulesNamingTheTable(t *testing
 	}
 }
 
-// ADR 0021 step 10.3: a format-4 artifact missing a class or race table, or
+// ADR 0021 step 10.3: a format-4 or -5 artifact missing a class or race table, or
 // with one that breaks the rules the schema cannot check (a gap in a level
 // band or in the scores, XP not increasing, a code twice), refuses the start,
 // naming the artifact and the table. A format-3 artifact still starts (step
@@ -320,6 +320,40 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 					delete(tables(d), k)
 				}
 			}
+		})
+		assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact}))
+	})
+}
+
+// ADR 0021 steps 11.3 and 11.4: a format-5 artifact without its racial level
+// limits, or with limits that break the rules the schema cannot check (a race
+// and class twice), refuses the start, naming the artifact and the table. A
+// format-4 artifact, without them, still starts.
+func TestStartup_Step11_3_RefusesMissingOrBrokenLevelLimits(t *testing.T) {
+	tables := func(d map[string]any) map[string]any { return d["rule_tables"].(map[string]any) }
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"the table missing", func(d map[string]any) { delete(tables(d), "race_level_limits") }, "race_level_limits"},
+		{"a race and class twice", func(d map[string]any) {
+			tables(d)["race_level_limits"].([]any)[1].(map[string]any)["class"] = "fighter"
+		}, "rule_tables: race_level_limits table: \"dwarf fighter\" twice"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			artifact := writeArtifact(t, tc.mutate)
+			err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+			require.ErrorContains(t, err, tc.want)
+			require.ErrorContains(t, err, "spell catalogue "+artifact)
+		})
+	}
+
+	t.Run("format 4 still starts", func(t *testing.T) {
+		artifact := writeArtifact(t, func(d map[string]any) {
+			d["format"] = 4
+			delete(tables(d), "race_level_limits")
 		})
 		assert.Equal(t, level16XP, nextThreshold(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact}))
 	})

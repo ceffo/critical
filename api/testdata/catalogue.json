@@ -1,5 +1,5 @@
 {
-  "format": 4,
+  "format": 5,
   "version": "1970-01-01",
   "spells": [
     {
@@ -1075,6 +1075,33 @@
       {"undead": "ghost", "hd_min": 10, "hd_max": 10, "by_level": [{"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"roll": 20}, {"roll": 19}, {"roll": 16}, {"roll": 13}, {"roll": 13}, {"roll": 10}, {"roll": 10}, {"roll": 7}, {"roll": 7}, {"roll": 7}, {"roll": 7}, {"roll": 7}, {"roll": 7}, {"roll": 7}]},
       {"undead": "lich", "hd_min": 11, "by_level": [{"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"roll": 20}, {"roll": 19}, {"roll": 16}, {"roll": 16}, {"roll": 13}, {"roll": 13}, {"roll": 10}, {"roll": 10}, {"roll": 10}, {"roll": 10}, {"roll": 10}, {"roll": 10}, {"roll": 10}]},
       {"undead": "special", "by_level": [{"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"outcome": "cannot"}, {"roll": 20}, {"roll": 19}, {"roll": 19}, {"roll": 16}, {"roll": 16}, {"roll": 13}, {"roll": 13}, {"roll": 13}, {"roll": 13}, {"roll": 13}, {"roll": 13}, {"roll": 13}]}
+    ],
+    "race_level_limits": [
+      {"race": "dwarf", "class": "fighter", "max_level": 15},
+      {"race": "dwarf", "class": "mage", "max_level": 0},
+      {"race": "dwarf", "class": "cleric", "max_level": 10},
+      {"race": "dwarf", "class": "thief", "max_level": 12},
+      {"race": "dwarf", "class": "bard", "max_level": 0},
+      {"race": "elf", "class": "fighter", "max_level": 12},
+      {"race": "elf", "class": "mage", "max_level": 15},
+      {"race": "elf", "class": "cleric", "max_level": 12},
+      {"race": "elf", "class": "thief", "max_level": 12},
+      {"race": "elf", "class": "bard", "max_level": 0},
+      {"race": "gnome", "class": "fighter", "max_level": 11},
+      {"race": "gnome", "class": "mage", "max_level": 0},
+      {"race": "gnome", "class": "cleric", "max_level": 9},
+      {"race": "gnome", "class": "thief", "max_level": 13},
+      {"race": "gnome", "class": "bard", "max_level": 0},
+      {"race": "half_elf", "class": "fighter", "max_level": 14},
+      {"race": "half_elf", "class": "mage", "max_level": 12},
+      {"race": "half_elf", "class": "cleric", "max_level": 14},
+      {"race": "half_elf", "class": "thief", "max_level": 12},
+      {"race": "half_elf", "class": "bard"},
+      {"race": "halfling", "class": "fighter", "max_level": 9},
+      {"race": "halfling", "class": "mage", "max_level": 0},
+      {"race": "halfling", "class": "cleric", "max_level": 8},
+      {"race": "halfling", "class": "thief", "max_level": 15},
+      {"race": "halfling", "class": "bard", "max_level": 0}
     ]
   }
 }

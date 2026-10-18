@@ -16,8 +16,13 @@ const FormatRuleTables = 3
 // the published artifact and the dev checkouts are format 4 (step 10.4).
 const FormatClassTables = 4
 
+// FormatLevelLimits is format 5 (ADR 0021 step 11): format 4 plus the racial
+// level limits of DMG Table 7. The API reads it beside formats 3 and 4 until
+// the published artifact and the dev checkouts are format 5 (step 11.4).
+const FormatLevelLimits = 5
+
 // Formats lists the formats this API reads, in order.
-var Formats = []int{FormatRuleTables, FormatClassTables}
+var Formats = []int{FormatRuleTables, FormatClassTables, FormatLevelLimits}
 
 // Catalogue is one artifact's spells: a version compared for equality only,
 // and the spells. A format-3 artifact's PHB rule tables are not part of it:

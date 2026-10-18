@@ -135,7 +135,7 @@ dev-reset: stop
 # Set the one root admin (ADR 0029 step 5.1) by email, on the database at CRITICAL_DSN; unset, the local
 # database `just dev` uses (critical with the real catalogue, else critical_fixture). The server must have run
 # once on it (migrations). Idempotent; another email is refused once the root has logged in. Staging and
-# production through `fly proxy`: docs/deploy.md ("Root admin"). Local dev needs none: the dev login makes one.
+# production: `just fly-root-admin` (docs/deploy.md, "Root admin"). Local dev needs none: the dev login makes one.
 root-admin email:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -146,6 +146,12 @@ root-admin email:
         echo "root-admin: CRITICAL_DSN is not set: using the local database $db (just dev's)"
     fi
     cd api && go run ./cmd/rootadmin "{{email}}"
+
+# Set the root admin of a deployed app in one command, e.g. `just fly-root-admin critical-staging you@gmail.com`:
+# runs the image's script inside the app's machine with its own CRITICAL_DSN (never shown), starting a machine
+# first when none runs. Operator only (fly credentials); docs/deploy.md ("Root admin").
+fly-root-admin app email:
+    scripts/fly-root-admin.sh {{app}} {{email}}
 
 # --- Code Generation ---
 

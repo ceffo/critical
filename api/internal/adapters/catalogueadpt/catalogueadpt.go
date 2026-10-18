@@ -1,11 +1,12 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
-// file must exist, carry a format this API knows (3, step 9.1, or 4, step
-// 10; format 1 is retired, step 9.6.3), match the committed JSON Schema and
-// hold no duplicate id. It maps the spells to catalogue.Catalogue and hands
-// the artifact's rule tables (the PHB rule tables, and in format 4 the class
-// and race tables) on as the schema-checked JSON (Artifact.RuleTables): their
-// table rules (steps 9.3 and 10.3) are ruletablesadpt's, the one reader of
+// file must exist, carry a format this API knows (3, step 9.1, 4, step 10,
+// or 5, step 11; format 1 is retired, step 9.6.3), match the committed JSON
+// Schema and hold no duplicate id. It maps the spells to catalogue.Catalogue
+// and hands the artifact's rule tables (the PHB rule tables, from format 4
+// the class and race tables, in format 5 the racial level limits) on as the
+// schema-checked JSON (Artifact.RuleTables): their table rules (steps 9.3,
+// 10.3 and 11.3) are ruletablesadpt's, the one reader of
 // rule-table JSON. The import into
 // the database is the storage layer's.
 package catalogueadpt

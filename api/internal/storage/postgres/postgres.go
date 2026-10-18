@@ -166,28 +166,35 @@ const cannotConnectNow = "57P03"
 
 // maxOpenConns caps each server's pool. Every writer waiting on the writer lock holds a connection,
 // so without a cap a burst of writes would open one connection each. The fly cluster is shared with
-// another app (ADR 0024 step 2) and is a small node (256 MB); this app's three servers (two
-// production machines, one staging, step 5) take at most 3 x 10 = 30 of PostgreSQL's default
-// max_connections of 100, a few of them reserved for superusers, which leaves room for the other
-// app, the operator's tools (pg_dump, psql) and the cluster's own. Ten is plenty for one
-// server: one writer runs at a time, reads are short, and a request over the cap waits in the pool.
-const maxOpenConns = 10
+// another app (ADR 0024 step 2) and is a 256 MB node: every PostgreSQL backend costs it several MB,
+// and with ten per server (two production machines and one staging) the node ran out of memory and
+// requests stalled for seconds. One writer runs at a time and reads are short, so four per server
+// (at most 12 for this app) serve a player's page load, whose parallel requests wait in the pool
+// instead of failing.
+const maxOpenConns = 4
 
-// maxIdleTime closes a pooled connection left unused that long. The fly cluster stops after an
-// hour with no open connection (ADR 0024 step 2): idle connections held forever would keep it, and
-// the other app's database, running for good. It also means a connection is never reused across a
-// stop of the cluster for lack of traffic, so the first request after one opens a new connection
-// instead of failing on a dead one.
-const maxIdleTime = 5 * time.Minute
+// maxIdleConns is how many unused connections stay open: one, enough for the next request without
+// a handshake. database/sql's default of two would keep a spare backend alive for nothing.
+const maxIdleConns = 1
+
+// maxIdleTime closes a pooled connection left unused that long: a burst of requests opens a few
+// backends and they go away soon after, instead of weighing on the shared node. The fly cluster
+// also stops after an hour with no open connection (ADR 0024 step 2): idle connections held
+// forever would keep it, and the other app's database, running for good. A connection is never
+// reused across a stop of the cluster for lack of traffic, so the first request after one opens a
+// new connection instead of failing on a dead one.
+const maxIdleTime = 30 * time.Second
 
 // poolSettings is the part of *sql.DB newDB configures.
 type poolSettings interface {
 	SetMaxOpenConns(n int)
+	SetMaxIdleConns(n int)
 	SetConnMaxIdleTime(d time.Duration)
 }
 
 func configurePool(p poolSettings) {
 	p.SetMaxOpenConns(maxOpenConns)
+	p.SetMaxIdleConns(maxIdleConns)
 	p.SetConnMaxIdleTime(maxIdleTime)
 }
 

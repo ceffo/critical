@@ -171,8 +171,18 @@ func ruleTables(t *testing.T) map[string]any {
 	return tables
 }
 
-// allTables reads the fixture's rule_tables (format 4: the four PHB rule
-// tables and the class and race tables, ADR 0021 step 10).
+// format4Tables is the fixture's rule_tables without the racial level
+// limits, the format-4 shape (ADR 0021 step 10).
+func format4Tables(t *testing.T) map[string]any {
+	t.Helper()
+	tables := allTables(t)
+	delete(tables, "race_level_limits")
+	return tables
+}
+
+// allTables reads the fixture's rule_tables (format 5: the four PHB rule
+// tables, the class and race tables and the racial level limits, ADR 0021
+// steps 10 and 11).
 func allTables(t *testing.T) map[string]any {
 	t.Helper()
 	f, err := os.Open("../../testdata/catalogue.json")
@@ -279,12 +289,12 @@ func TestSchema_Step10_Format4ClassTables(t *testing.T) {
 		a["format"] = 4
 		return a
 	}
-	assert.NoError(t, sch.Validate(format4(allTables(t))), "format 4 with every table")
+	assert.NoError(t, sch.Validate(format4(format4Tables(t))), "format 4 with every table")
 	assert.Error(t, sch.Validate(format4(ruleTables(t))), "format 4 without the class tables")
-	assert.Error(t, sch.Validate(format3(t, allTables(t))), "format 3 with the class tables")
+	assert.Error(t, sch.Validate(format3(t, format4Tables(t))), "format 3 with the class tables")
 
 	edit := func(change func(map[string]any)) map[string]any {
-		tables := allTables(t)
+		tables := format4Tables(t)
 		raw, err := json.Marshal(tables)
 		require.NoError(t, err)
 		doc, err := jsonschema.UnmarshalJSON(strings.NewReader(string(raw)))
@@ -321,5 +331,53 @@ func TestSchema_Step10_Format4ClassTables(t *testing.T) {
 	}
 	for name, change := range refused {
 		assert.Error(t, sch.Validate(format4(edit(change))), name)
+	}
+}
+
+// TestSchema_Step11_Format5LevelLimits (ADR 0021 steps 11.1 to 11.3): format
+// 5 is format 4 plus the racial level limits, 25 rows of language-neutral
+// codes and a level of 0 to 20 or none; formats 3 and 4 may not carry them.
+func TestSchema_Step11_Format5LevelLimits(t *testing.T) {
+	sch := compile(t)
+	format5 := func(tables any) map[string]any {
+		a := format3(t, tables)
+		a["format"] = 5
+		return a
+	}
+	assert.NoError(t, sch.Validate(format5(allTables(t))), "format 5 with every table")
+	assert.Error(t, sch.Validate(format5(format4Tables(t))), "format 5 without the level limits")
+	assert.Error(t, sch.Validate(format3(t, allTables(t))), "format 3 with the level limits")
+	four := format5(allTables(t))
+	four["format"] = 4
+	assert.Error(t, sch.Validate(four), "format 4 with the level limits")
+	onlyLimits := ruleTables(t)
+	onlyLimits["race_level_limits"] = allTables(t)["race_level_limits"]
+	assert.Error(t, sch.Validate(format5(onlyLimits)), "format 5 without the class tables")
+	assert.Error(t, sch.Validate(format3(t, onlyLimits)), "format 3 with only the level limits")
+
+	edit := func(change func(map[string]any)) map[string]any {
+		tables := allTables(t)
+		change(tables)
+		return tables
+	}
+	unlimited := edit(func(m map[string]any) { delete(row(m, "race_level_limits", 0), "max_level") })
+	assert.NoError(t, sch.Validate(format5(unlimited)), "a level limit may be absent (no limit)")
+	refused := map[string]func(map[string]any){
+		"a human row":           func(m map[string]any) { row(m, "race_level_limits", 0)["race"] = "human" },
+		"a race name in French": func(m map[string]any) { row(m, "race_level_limits", 0)["race"] = "nain" },
+		"a class the app lacks": func(m map[string]any) { row(m, "race_level_limits", 0)["class"] = "paladin" },
+		"a level over 20":       func(m map[string]any) { row(m, "race_level_limits", 0)["max_level"] = 21 },
+		"a negative level":      func(m map[string]any) { row(m, "race_level_limits", 0)["max_level"] = -1 },
+		"the book's U as text":  func(m map[string]any) { row(m, "race_level_limits", 0)["max_level"] = "U" },
+		"a missing class":       func(m map[string]any) { delete(row(m, "race_level_limits", 0), "class") },
+		"an unknown row field":  func(m map[string]any) { row(m, "race_level_limits", 0)["note"] = "x" },
+		"24 rows":               func(m map[string]any) { m["race_level_limits"] = m["race_level_limits"].([]any)[1:] },
+		"26 rows": func(m map[string]any) {
+			rows := m["race_level_limits"].([]any)
+			m["race_level_limits"] = append(rows, rows[0])
+		},
+	}
+	for name, change := range refused {
+		assert.Error(t, sch.Validate(format5(edit(change))), name)
 	}
 }

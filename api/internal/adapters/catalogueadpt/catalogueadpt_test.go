@@ -28,7 +28,7 @@ func TestLoad_Fixture(t *testing.T) {
 	a, err := LoadArtifact(fixture)
 	require.NoError(t, err)
 	c := a.Catalogue
-	assert.Equal(t, catalogue.FormatClassTables, c.Format)
+	assert.Equal(t, catalogue.FormatLevelLimits, c.Format)
 	assert.Equal(t, "1970-01-01", c.Version)
 	assert.NotEmpty(t, a.RuleTables, "the fixture carries the rule tables")
 	mm, ok := c.ByID()["magic_missile"]
@@ -76,9 +76,21 @@ var classTables = []string{
 	"turning_undead",
 }
 
-// asFormat3 turns the format-4 fixture into a format-3 artifact: the same
+// levelLimits is the key format 5 adds to rule_tables (ADR 0021 step 11).
+const levelLimits = "race_level_limits"
+
+// asFormat4 turns the format-5 fixture into a format-4 artifact: the same
+// spells, PHB rule tables and class and race tables, without the racial
+// level limits.
+func asFormat4(d map[string]any) {
+	d["format"] = 4
+	delete(d["rule_tables"].(map[string]any), levelLimits)
+}
+
+// asFormat3 turns the format-5 fixture into a format-3 artifact: the same
 // spells and the four PHB rule tables of step 9.
 func asFormat3(d map[string]any) {
+	asFormat4(d)
 	d["format"] = 3
 	for _, k := range classTables {
 		delete(d["rule_tables"].(map[string]any), k)
@@ -93,7 +105,7 @@ func TestParse_Step2_Refusals(t *testing.T) {
 		mutate func(map[string]any)
 		want   []string
 	}{
-		{"unknown format names it", func(d map[string]any) { d["format"] = 5 }, []string{"unknown format 5", "formats 3 and 4", "just catalogue"}},
+		{"unknown format names it", func(d map[string]any) { d["format"] = 6 }, []string{"unknown format 6", "formats 3, 4 and 5", "just catalogue"}},
 		{"missing format", func(d map[string]any) { delete(d, "format") }, []string{"unknown format none"}},
 		{"schema violation lists the offence", func(d map[string]any) {
 			spells(d)[0].(map[string]any)["level"] = 12
@@ -138,12 +150,25 @@ func TestParse_Step9_1_ReadsFormat3(t *testing.T) {
 // ADR 0021 step 10.1: format 4 hands on the four PHB rule tables and the
 // class and race tables as written (ruletablesadpt parses them).
 func TestParse_Step10_1_ReadsFormat4(t *testing.T) {
-	four, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	four, err := ParseArtifact(artifact(t, asFormat4))
 	require.NoError(t, err)
 	assert.Equal(t, catalogue.FormatClassTables, four.Catalogue.Format)
 	var tables map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(four.RuleTables, &tables))
 	assert.ElementsMatch(t, append([]string{"strength", "dexterity", "bard_spells", "bard_experience"}, classTables...), keys(tables))
+}
+
+// ADR 0021 step 11.1: format 5 hands on the format-4 tables and the racial
+// level limits as written (ruletablesadpt parses them).
+func TestParse_Step11_1_ReadsFormat5(t *testing.T) {
+	five, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	assert.Equal(t, catalogue.FormatLevelLimits, five.Catalogue.Format)
+	var tables map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(five.RuleTables, &tables))
+	assert.ElementsMatch(t,
+		append(append([]string{"strength", "dexterity", "bard_spells", "bard_experience"}, classTables...), levelLimits),
+		keys(tables))
 }
 
 // ADR 0021 step 9.6.3: format 1 is retired. A format-1 artifact (spells
@@ -157,7 +182,7 @@ func TestParse_Step9_6_3_RefusesTheRetiredFormat1(t *testing.T) {
 			delete(d, "rule_tables")
 		}))
 		require.ErrorContains(t, err, fmt.Sprintf(
-			"unknown format %d: this API reads formats 3 and 4; run `just catalogue` to fetch a current artifact", format))
+			"unknown format %d: this API reads formats 3, 4 and 5; run `just catalogue` to fetch a current artifact", format))
 	}
 }
 
@@ -180,17 +205,50 @@ func TestParse_Step9_2_TablesBelongToFormat3Only(t *testing.T) {
 			d["rule_tables"].(map[string]any)["_source"] = "PHB"
 		}, []string{"format 3 schema", "_source"}},
 		{"format 3 with a class table", func(d map[string]any) {
+			asFormat4(d)
 			d["format"] = 3
 			for _, k := range classTables[1:] {
 				delete(d["rule_tables"].(map[string]any), k)
 			}
 		}, []string{"format 3 schema", "/rule_tables/experience"}},
+		{"format 3 with the level limits", func(d map[string]any) {
+			limits := d["rule_tables"].(map[string]any)[levelLimits]
+			asFormat3(d)
+			d["rule_tables"].(map[string]any)[levelLimits] = limits
+		}, []string{"format 3 schema", "/rule_tables/race_level_limits"}},
 		{"format 4 missing a class table", func(d map[string]any) {
+			asFormat4(d)
 			delete(d["rule_tables"].(map[string]any), "turning_undead")
 		}, []string{"format 4 schema", "turning_undead"}},
 		{"format 4 with a class name in a language", func(d map[string]any) {
+			asFormat4(d)
 			d["rule_tables"].(map[string]any)["hit_dice"].([]any)[0].(map[string]any)["group"] = "guerrier"
 		}, []string{"format 4 schema", "hit_dice/0/group"}},
+		// ADR 0021 step 11.2: the level limits belong to format 5 only, and
+		// format 5 requires them and every format-4 table.
+		{
+			"format 4 with the level limits", func(d map[string]any) { d["format"] = 4 },
+			[]string{"format 4 schema", "/rule_tables/race_level_limits"},
+		},
+		{"format 5 missing the level limits", func(d map[string]any) {
+			delete(d["rule_tables"].(map[string]any), levelLimits)
+		}, []string{"format 5 schema", "race_level_limits"}},
+		{"format 5 missing a class table", func(d map[string]any) {
+			delete(d["rule_tables"].(map[string]any), "thac0")
+		}, []string{"format 5 schema", "thac0"}},
+		{"format 5 with a human row", func(d map[string]any) {
+			d["rule_tables"].(map[string]any)[levelLimits].([]any)[0].(map[string]any)["race"] = "human"
+		}, []string{"format 5 schema", "race_level_limits/0/race"}},
+		{"format 5 with a level above 20", func(d map[string]any) {
+			d["rule_tables"].(map[string]any)[levelLimits].([]any)[0].(map[string]any)["max_level"] = 21
+		}, []string{"format 5 schema", "race_level_limits/0/max_level"}},
+		{"format 5 with a class name in a language", func(d map[string]any) {
+			d["rule_tables"].(map[string]any)[levelLimits].([]any)[0].(map[string]any)["class"] = "guerrier"
+		}, []string{"format 5 schema", "race_level_limits/0/class"}},
+		{"format 5 with 24 level limits", func(d map[string]any) {
+			rt := d["rule_tables"].(map[string]any)
+			rt[levelLimits] = rt[levelLimits].([]any)[1:]
+		}, []string{"format 5 schema", "race_level_limits"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

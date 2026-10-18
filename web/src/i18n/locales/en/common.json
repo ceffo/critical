@@ -1525,5 +1525,21 @@
     "no_exposure": "That spell deals no exposure damage.",
     "spell_not_an_effect": "That spell adds no effect to track.",
     "spell_not_found": "That spell is not in the catalogue."
+  },
+  "lastShort": {
+    "attack": "Attack",
+    "save": "{{name}} save",
+    "damage": "Damage",
+    "heal": "Healing",
+    "initiative": "Initiative",
+    "verdict": {
+      "hit": "hit",
+      "miss": "missed",
+      "crit": "critical",
+      "passed": "passed",
+      "failed": "failed",
+      "success": "success",
+      "failure": "failed"
+    }
   }
 }

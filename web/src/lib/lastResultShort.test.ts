@@ -1,0 +1,295 @@
+import { describe, expect, it } from "vitest";
+import i18next from "i18next";
+import { resources } from "@/i18n";
+import type { LogEntry, LogKind } from "@/types/log";
+import { shortResult } from "./lastResultShort";
+import { recordedNames } from "./logSummary";
+
+async function makeT(lng: string) {
+  const inst = i18next.createInstance();
+  await inst.init({
+    lng,
+    fallbackLng: "en",
+    defaultNS: "common",
+    resources,
+    interpolation: { escapeValue: false },
+  });
+  return inst.t;
+}
+
+function entry(
+  kind: LogKind,
+  payload: unknown,
+  over: Partial<LogEntry> = {},
+): LogEntry {
+  return {
+    id: 1,
+    transactionId: 1,
+    characterId: 1,
+    round: 3,
+    kind,
+    summary: "",
+    hpDelta: 0,
+    effectiveHpDelta: 0,
+    note: "",
+    effectiveSummary: "",
+    status: "active",
+    payload,
+    effectivePayload: payload,
+    snapshots: [],
+    corrections: [],
+    createdAt: "2026-10-15T21:31:00Z",
+    ...over,
+  };
+}
+
+const attack = {
+  d20Roll: 17,
+  isCrit: false,
+  hit: true,
+  totalDamage: 8,
+  weaponName: "Long Sword +2",
+  targetAc: 5,
+};
+const damage = { total: 12, type: "fire" };
+const skill = {
+  id: "musical_instrument",
+  kind: "proficiency",
+  die: 20,
+  roll: 17,
+  target: 16,
+  success: false,
+};
+const ability = {
+  ability: "str",
+  die: 20,
+  roll: 15,
+  target: 16,
+  adjustment: 0,
+  adjustedTarget: 16,
+  success: true,
+};
+
+type Want = { value: string | null; en: string; fr: string };
+
+/** One short wording per log kind (every LogKind is a key: a new kind fails to compile here). */
+const CASES: Record<LogKind, { e: LogEntry } & Want> = {
+  attack: {
+    e: entry("attack", attack),
+    value: "17",
+    en: "Attack · hit",
+    fr: "Attaque · touché",
+  },
+  save: {
+    e: entry("save", {
+      category: "spell",
+      d20Roll: 12,
+      passed: true,
+      rollTotal: 12,
+      adjustedTarget: 14,
+      margin: 0,
+      target: 14,
+    }),
+    value: "12",
+    en: "Spells save · passed",
+    fr: "Sauvegarde Sorts · réussie",
+  },
+  skill_check: {
+    e: entry("skill_check", skill),
+    value: "17",
+    en: "Musical Instrument · failed",
+    fr: "Instrument de musique · échec",
+  },
+  ability_check: {
+    e: entry("ability_check", ability),
+    value: "15",
+    en: "STR · success",
+    fr: "FOR · réussi",
+  },
+  dice: {
+    e: entry("dice", { formula: "2d6+1", groups: [], modifier: 1, total: 9 }),
+    value: "9",
+    en: "2d6+1",
+    fr: "2d6+1",
+  },
+  cast: {
+    e: entry("cast", {
+      action: "cast",
+      spellId: "fireball",
+      spell: "Fireball",
+      casterLevel: 5,
+      damage,
+    }),
+    value: "12",
+    en: "Fireball",
+    fr: "Boule de feu",
+  },
+  exposure: {
+    e: entry("exposure", {
+      spellId: "fireball",
+      spell: "Fireball",
+      casterLevel: 5,
+      round: 2,
+      onSelf: false,
+      damage,
+    }),
+    value: "12",
+    en: "Fireball",
+    fr: "Boule de feu",
+  },
+  item_use: {
+    e: entry("item_use", {
+      name: "Wand",
+      itemId: "wand",
+      remaining: 3,
+      dice: "1d6",
+      total: 4,
+    }),
+    value: "4",
+    en: "Wand",
+    fr: "Wand",
+  },
+  hp_change: {
+    e: entry("hp_change", null, { hpDelta: -8, effectiveHpDelta: -8 }),
+    value: "−8",
+    en: "Damage",
+    fr: "Dégâts",
+  },
+  initiative: {
+    e: entry("initiative", { round: 3, d10: 7 }),
+    value: "7",
+    en: "Initiative",
+    fr: "Initiative",
+  },
+  buff_change: {
+    e: entry("buff_change", null),
+    value: null,
+    en: "Buff",
+    fr: "Bonus",
+  },
+  round_advance: {
+    e: entry("round_advance", null),
+    value: null,
+    en: "Round",
+    fr: "Tour",
+  },
+  round_reset: {
+    e: entry("round_reset", null),
+    value: null,
+    en: "Round",
+    fr: "Tour",
+  },
+  round_set: {
+    e: entry("round_set", null),
+    value: null,
+    en: "Round",
+    fr: "Tour",
+  },
+  time_passed: {
+    e: entry("time_passed", null),
+    value: null,
+    en: "Time",
+    fr: "Temps",
+  },
+  item_restock: {
+    e: entry("item_restock", null),
+    value: null,
+    en: "Item",
+    fr: "Objet",
+  },
+  item_add: {
+    e: entry("item_add", null),
+    value: null,
+    en: "Item",
+    fr: "Objet",
+  },
+  item_edit: {
+    e: entry("item_edit", null),
+    value: null,
+    en: "Item",
+    fr: "Objet",
+  },
+  item_remove: {
+    e: entry("item_remove", null),
+    value: null,
+    en: "Item",
+    fr: "Objet",
+  },
+  weapon_add: {
+    e: entry("weapon_add", null),
+    value: null,
+    en: "Weapon",
+    fr: "Arme",
+  },
+  weapon_edit: {
+    e: entry("weapon_edit", null),
+    value: null,
+    en: "Weapon",
+    fr: "Arme",
+  },
+  weapon_remove: {
+    e: entry("weapon_remove", null),
+    value: null,
+    en: "Weapon",
+    fr: "Arme",
+  },
+  xp_add: { e: entry("xp_add", null), value: null, en: "XP", fr: "XP" },
+  xp_edit: { e: entry("xp_edit", null), value: null, en: "XP", fr: "XP" },
+  xp_remove: { e: entry("xp_remove", null), value: null, en: "XP", fr: "XP" },
+  spell_prep: {
+    e: entry("spell_prep", null),
+    value: null,
+    en: "Prepare",
+    fr: "Préparation",
+  },
+  long_rest: {
+    e: entry("long_rest", null),
+    value: null,
+    en: "Rest",
+    fr: "Repos",
+  },
+  correction: {
+    e: entry("correction", null),
+    value: null,
+    en: "Correction",
+    fr: "Correction",
+  },
+};
+
+describe("shortResult", () => {
+  for (const [kind, c] of Object.entries(CASES)) {
+    it(`${kind}: value, what and verdict, en and fr`, async () => {
+      for (const lng of ["en", "fr"] as const) {
+        const t = await makeT(lng);
+        const names = (id: string, name: string) => name;
+        const r = shortResult(
+          c.e,
+          t,
+          (id, name) =>
+            lng === "fr" && id === "fireball" ? "Boule de feu" : name,
+          { ...recordedNames, item: names },
+        );
+        const line = r.verdict ? `${r.what} · ${r.verdict.text}` : r.what;
+        expect(r.value?.text ?? null).toBe(c.value);
+        expect(line.toLowerCase()).toBe(c[lng].toLowerCase());
+        if (r.verdict)
+          expect(r.verdict.text).toBe(r.verdict.text.toLowerCase());
+      }
+    });
+  }
+
+  it("colours the verdict: hit green, miss red, crit highlight; unsettled has none", async () => {
+    const t = await makeT("en");
+    const run = (a: object) =>
+      shortResult(
+        entry("attack", { ...attack, ...a }),
+        t,
+        (_i, n) => n,
+        recordedNames,
+      ).verdict;
+    expect(run({})).toEqual({ text: "hit", tone: "pass" });
+    expect(run({ hit: false })).toEqual({ text: "missed", tone: "fail" });
+    expect(run({ isCrit: true })).toEqual({ text: "critical", tone: "crit" });
+    expect(run({ acKnown: false, targetAc: null })).toBeNull();
+  });
+});

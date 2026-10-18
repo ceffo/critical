@@ -72,6 +72,11 @@ B's choice and is marked "(design)".
       - **An effect pill running past the timeline window** (ADR 0017 step 6) fades out at the
         window's edge. Reason: the pill is a duration drawn on a time axis; its caption (turns left)
         sits inside the visible part, and the effect's name is in its own column.
+      - **The header's last result** (step 2.2) is one short line in a column of at most a sixth of
+        the viewport; a longer line ends with an ellipsis and its full wording is the tooltip
+        (*amended 2026-10-17, user: "way shorter than that", "restricted to like ... the sixth of
+        the screen"*). Reason: it is a glance at the newest roll; the full text (round, time,
+        details) is the same entry's journal row and result card, reachable without a hover.
    3. Checked by a Playwright helper, `expectNoClippedText(region)` in `web/e2e/`, the same audit as
       `docs/design/ui-directions/shots.mjs`: it fails when an element inside the region has
       `scrollWidth > clientWidth + 1`, or hides its vertical overflow and has
@@ -93,7 +98,7 @@ B's choice and is marked "(design)".
    2. **Header card**, one band, left to right: the brand (step 7); the turn (label and the turn
       number in `text-hero`); initiative with its reroll, Next turn and the ⋯ menu; the effects
       timeline (ADR 0017 step 6, beside the initiative); the **last result** docked at the right, as
-      one line under its label ("Last result · T3 · 21:31": d20, verdict, damage). Hit points are not
+      one short line under its label ("17 · Attack · hit", ADR 0027 step 4.5, amended 2026-10-17; was "Last result · T3 · 21:31": d20, verdict, damage). Hit points are not
       in the header.
    3. **Character card**, 280 px wide (design), the full height between header and footer, scrolling
       on its own: name and class · level; the abilities with THAC0; **hit points** (value / max, the

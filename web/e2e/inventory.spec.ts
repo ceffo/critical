@@ -96,9 +96,7 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   await minus(page, "Fire flasks").click();
   await expect(count(page, "fire_flask")).toHaveText("4");
   // The use shows at once in the header's last result, from the Inventory.
-  await expect(page.getByTestId("last-result")).toContainText(
-    "Used Fire flasks",
-  );
+  await expect(page.getByTestId("last-result")).toContainText("Fire flasks");
   await act(page);
   await expect(resultCard(page)).toContainText("5d6");
   await expect(logEntry(page, "Used Fire flasks")).toContainText("(4 left)");

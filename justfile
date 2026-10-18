@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-api check-web
+validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-fly-open check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -72,6 +72,10 @@ check-release-scripts:
 check-no-tracker-ids:
     scripts/test-check-no-tracker-ids.sh
     scripts/check-no-tracker-ids.sh
+
+# The local port `just fly-open` resolves: the apps' login ports by default, an explicit port wins, a taken one is refused.
+test-fly-open:
+    scripts/test-fly-open.sh
 
 # Fail on a per-language identifier (a French or English twin of a column, field or JSON tag): texts in a
 # human language are localized_texts rows (ADR 0023). The test runs the check on rejected fixtures.
@@ -292,7 +296,7 @@ fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
 
 # Through `fly proxy` on a free local port (never just dev's 8080/5173), until Ctrl-C; read-only.
-# Optional fixed port, refused when taken. E.g. `just fly-open critical-staging`, `just fly-open critical-prod`.
+# No port: the app's Google login port (staging 8091, prod 8092), else a free one. A given port wins, refused when taken. E.g. `just fly-open critical-staging`, `just fly-open critical-prod`.
 # Open a private fly app in the browser: waits until it answers, then prints the URL
 fly-open app port="":
     scripts/fly-open.sh {{app}} {{port}}

@@ -232,3 +232,75 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
   await expect(combatLog(page)).toContainText(`Cast ${learned}`);
   await snap(page, "mage-cast");
 });
+
+// The cleric (ADR 0030 steps 13 to 16), what only a browser proves: the class in the creation form,
+// the preparation editor offering a sphere spell, its Cast button, then the Undead tab reaching the
+// server's turning roll and its breakdown on the result card and in the journal. The rules (Table 24
+// with the Wisdom bonus, the sphere filter, the spell failure, Table 61 and its dice) are Go tests
+// (ruletablesvc, charactersvc, castsvc, turnsvc, composition cleric_test.go). Wisdom 15: no spell
+// failure die; the turning d20 is real, so either verdict passes.
+test("create a cleric, prepare and cast a spell, turn undead", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const settings = await openSettings(page);
+  await settings
+    .getByRole("button", { name: "Créer un nouveau personnage" })
+    .click();
+  const form = page
+    .getByTestId("character-dialog")
+    .getByTestId("character-form");
+  await form.getByLabel("Nom").fill("Frère Anselme");
+  await form.getByLabel("Classe").selectOption({ label: "Clerc" });
+  await form.getByLabel("Race").selectOption({ label: "Humain" });
+  for (const [ability, score] of [
+    ["FOR", "12"],
+    ["DEX", "10"],
+    ["CON", "13"],
+    ["INT", "10"],
+    ["SAG", "15"],
+    ["CHA", "11"],
+  ])
+    await form.getByLabel(ability, { exact: true }).fill(score);
+  await form.getByLabel("PV max").fill("8");
+  await form
+    .getByRole("button", { name: "Créer ce personnage et le jouer" })
+    .click();
+  await expect(page.getByTestId("character")).toContainText("Frère Anselme");
+  await expect(page.getByTestId("character")).toContainText("Clerc");
+
+  await chooseLanguage(page, "en");
+  await openWorkspace(page, "Act");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Sorts" }).click();
+  await page.getByRole("button", { name: "Préparer les sorts" }).click();
+  const editor = page.getByRole("form", { name: "Préparer les sorts du jour" });
+  await editor
+    .getByRole("button", { name: "Ajouter Bless", exact: true })
+    .click();
+  await editor
+    .getByRole("button", { name: "Enregistrer la préparation" })
+    .click();
+  await expect(editor).toHaveCount(0);
+  await page.getByRole("button", { name: "Lancer Bless" }).click();
+  await expect(combatLog(page)).toContainText("Lancé : Bless");
+
+  await page.getByRole("tab", { name: "Renvoi" }).click();
+  const turning = page.getByTestId("turn-undead");
+  // Table 61 at level 1, as the server serves it: 10 on the d20 for skeletons, a dash for liches.
+  await expect(turning.getByTestId("turn-cell-skeleton")).toHaveText("10+");
+  await expect(
+    turning.getByRole("button", { name: "Repousser : Liche" }),
+  ).toBeDisabled();
+  await turning.getByRole("button", { name: "Repousser : Squelette" }).click();
+  const card = page.getByTestId("turn-result");
+  await expect(card).toContainText("Clerc de niveau 1");
+  await expect(card).toContainText("10 ou plus au d20");
+  await expect(card.getByTestId("verdict")).toHaveText(/^(Repoussés|Échec)$/);
+  await expect(combatLog(page)).toContainText(
+    "Renvoi des morts-vivants (Squelette)",
+  );
+  await snap(page, "cleric-turn-fr");
+});

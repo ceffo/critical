@@ -23,7 +23,7 @@ import { combatItems } from "@/lib/combatItems";
 /**
  * The act panel of the Act activity (ADR 0022 step 2.5): tabs with icons and no panel title (the
  * rail names the activity): Weapons, Spells (with the spells left), Items (with how many there
- * are), Skills (proficiency and bard skill checks), and Undead for a class that turns them (ADR 0030
+ * are), Skills (proficiency and bard skill checks), and Turning for a class that turns them (ADR 0030
  * step 16). Inventory and spell lookup are activities of
  * their own in the rail (App.tsx); saving throws live in the character card.
  */

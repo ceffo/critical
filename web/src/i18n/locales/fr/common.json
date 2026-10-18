@@ -275,7 +275,7 @@
       "spells": "Sorts",
       "items": "Objets",
       "skills": "Compétences",
-      "turning": "Morts-vivants"
+      "turning": "Renvoi"
     },
     "items": {
       "list": "Objets de combat",
@@ -1188,9 +1188,9 @@
       "turned": "Repoussés",
       "destroyed": "Détruits",
       "failed": "Échec",
-      "affected": "Morts-vivants affectés",
       "affectedDice": "2d6 : {{dice}}",
-      "moreDice": "2d4 de plus : {{dice}}"
+      "moreDice": "2d4 de plus : {{dice}}",
+      "count": "Morts-vivants affectés : {{count}}"
     }
   },
   "log": {

@@ -275,7 +275,7 @@
       "spells": "Spells",
       "items": "Items",
       "skills": "Skills",
-      "turning": "Undead"
+      "turning": "Turning"
     },
     "items": {
       "list": "Combat items",
@@ -1188,9 +1188,9 @@
       "turned": "Turned",
       "destroyed": "Destroyed",
       "failed": "Failed",
-      "affected": "Undead affected",
       "affectedDice": "2d6: {{dice}}",
-      "moreDice": "2d4 more: {{dice}}"
+      "moreDice": "2d4 more: {{dice}}",
+      "count": "Undead affected: {{count}}"
     }
   },
   "log": {

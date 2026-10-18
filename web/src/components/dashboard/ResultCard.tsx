@@ -250,11 +250,9 @@ function TurnResultView({ turn: r }: { turn: TurnResult }) {
         </ResultLine>
       )}
       {r.success && (
-        <dl className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2">
-          <Fact label={t("result.turn.affected")}>
-            <span data-testid="turn-count">{r.count}</span>
-          </Fact>
-        </dl>
+        <p className="text-body font-semibold" data-testid="turn-count">
+          {t("result.turn.count", { count: r.count })}
+        </p>
       )}
       {r.affected && r.affected.length > 0 && (
         <p className="text-body text-muted-foreground" data-testid="turn-dice">

@@ -10,7 +10,7 @@ export const fieldClass =
 export const labelClass = "text-label font-medium text-muted-foreground";
 
 /**
- * A group's head inside the character card (ADR 0026 step 6.3): its section label (and what sits
- * beside it) on the sub-band tone, run to the card's edges over its 16 px side padding.
+ * A group's head inside the character card (ADR 0026 steps 6.3, 6.7): the shared in-card group
+ * heading, run to the card's edges over its 16 px side padding.
  */
-export const groupHeadClass = "group-band bleed-x-4 py-1";
+export const groupHeadClass = "group-heading bleed-x-4";

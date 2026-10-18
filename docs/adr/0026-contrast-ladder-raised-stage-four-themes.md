@@ -228,6 +228,18 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       character card still shows the fifth save and the weapon in hand is inside the act panel) and
       ADR 0017 step 6 / ADR 0022 step 3.1's 120 px header at rest hold with the bands, as the round's
       shots show.
+   7. **One in-card group heading, app-wide** (the user, 2026-10-17: "The level sections, again
+      it's a problem that is across the app. We don't have enough contrast, we don't see those
+      sections. They should stand out more ... Maybe add a background to those headers. Just do
+      something."; scope "One style, app-wide"). Every heading of a group inside a card is the one
+      shared heading band (`group-heading` in `index.css`): the sub-band tone of step 6.3, one
+      step off the card and one under the card's header band, its text in the full ink, rounded
+      like a row, square when run to the card's edges. It holds the group's label and what sits
+      beside it (a level's slot dots). Used by the spell list's levels, the preparation's levels
+      (preparation and grimoire), the skills' groups, the inventory's column heads (Objets,
+      Armes), the XP ledger's column heads and the character card's groups (hit points, HP change,
+      saving throws). Column titles of a block (Préparation du jour, Grimoire), field labels and
+      card titles are not group headings. _Added 2026-10-17._
 
    *Enforced by* `layout.spec`'s "shell" and "act panel" tests (step 6.6: the header budget, the
    content target and the no-cut audit, in French included) and the e2e "theme" screenshots for the
@@ -238,7 +250,10 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    and the sub-band; every accent AA as text on the elevated tone, the band on the card and the
    sub-band. The act panel's band (the band on the elevated tone) holds only ink text and the chosen
    tab's tint mark, held to 3:1 (step 2.2); the dark tint reaches 4.1-4.2:1 there. _Added
-   2026-10-17 (the raised stage shipped)._
+   2026-10-17 (the raised stage shipped)._ Step 6.7 by `layout.spec`'s "group headings" test (in French, Arcane dark
+   and Parchment light: the spell list, the preparation, the skills and the inventory, no-cut audit
+   and screenshots); its tone is the sub-band's, so the "raised stage" block's sub-band checks hold
+   it. _Added 2026-10-17._
 7. **Parchment's touches** (amends ADR 0020 step 5), in Parchment only:
    1. **Section labels in Cinzel capitals** (`font-display`, bold, 0.06em), the card titles of step
       5.6 included. **Not on stat-tile labels** (the lookup's tiles): Cinzel's wider capitals cut

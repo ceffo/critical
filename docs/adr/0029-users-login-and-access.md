@@ -421,6 +421,14 @@ Tests: `charactersvc` `TestCreate_StoresTheEnteredValuesAndTheDerivedSheetAndMak
 `TestCreateCharacter_TheRowThenItsStateRows`, `TestRenameRetire_NoRowIsNotFound`; web `session.test.ts`,
 e2e `characters.spec.ts`, `layout.spec.ts` ("character dialogs and the creation page uncut").
 
+**Amended 2026-10-18 by [ADR 0032](0032-character-identity-and-creation-rolls.md) (steps 7.2 and 7.3).**
+The character actions leave the cog menu: Switch, Create, Rename and Retire move to a character roster
+screen (Rename is also available from the character's details), and the cog menu keeps device settings,
+language, account and admin. Creating a character is a full-screen, stepped route, not a dialog, and
+onboarding is the same route. The creation's `details` object loses `race` and gains the identity fields
+of that ADR. Item 5 above ("The web") is superseded when the roster and creation items land; the
+endpoints and the other items are unchanged.
+
 ## Amendment to ADR 0024
 
 Applied to [ADR 0024](0024-deployment.md) by this PR; the user chose option (c) in the 2026-10-17

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -37,7 +38,7 @@ func fixtureRuleTables(t *testing.T) []byte {
 // artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.Parse(catalogue.FormatClassTables, fixtureRuleTables(t)))
+	return must.Do(ruletablesadpt.Parse(catalogue.FormatLevelLimits, fixtureRuleTables(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -192,11 +193,11 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.Parse(catalogue.FormatClassTables, []byte(strings.Replace(string(good), tt.from, tt.to, 1)))
+			_, err := ruletablesadpt.Parse(catalogue.FormatLevelLimits, []byte(strings.Replace(string(good), tt.from, tt.to, 1)))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.Parse(catalogue.FormatClassTables, good)
+	_, err := ruletablesadpt.Parse(catalogue.FormatLevelLimits, good)
 	require.NoError(t, err)
 }
 
@@ -224,7 +225,7 @@ func classRow(d map[string]any, table string, i int) map[string]any {
 // p.103 Table 61), not derived from the artifact.
 func TestParse_Step10_1_ReadsTheClassTables(t *testing.T) {
 	c, ok := phb(t).Classes()
-	require.True(t, ok, "format 4 carries the class tables")
+	require.True(t, ok, "formats 4 and 5 carry the class tables")
 	assert.Equal(t, 3000000, c.Experience[19].Fighter, "fighter, level 20")
 	assert.Equal(t, 1100000, c.Experience[14].Bard, "bard, level 15")
 	assert.Equal(t, 13, c.THAC0[14].Rogue, "rogue THAC0, level 15")
@@ -278,7 +279,10 @@ func TestParse_Step10_3_RejectsAMissingOrBrokenClassTable(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := classTablesOf(t, catalogue.FormatClassTables, tc.mutate)
+			_, err := classTablesOf(t, catalogue.FormatClassTables, func(d map[string]any) {
+				delete(d, levelLimits)
+				tc.mutate(d)
+			})
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
@@ -291,19 +295,123 @@ func TestParse_Step10_4_Format3HasNoClassTables(t *testing.T) {
 	require.NoError(t, json.Unmarshal(fixtureRuleTables(t), &doc))
 	var classKeys []string
 	for k := range doc {
-		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" {
+		if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits {
 			classKeys = append(classKeys, k)
 		}
 	}
 	require.Len(t, classKeys, 24)
 	three, err := classTablesOf(t, catalogue.FormatRuleTables, func(d map[string]any) {
-		for _, k := range classKeys {
+		for _, k := range append(classKeys, levelLimits) {
 			delete(d, k)
 		}
 	})
 	require.NoError(t, err)
 	_, ok := three.Classes()
 	assert.False(t, ok)
-	_, err = classTablesOf(t, catalogue.FormatRuleTables, func(map[string]any) {})
+	_, err = classTablesOf(t, catalogue.FormatRuleTables, func(d map[string]any) { delete(d, levelLimits) })
+	require.ErrorContains(t, err, "format 3 carries no class or race table")
+}
+
+// levelLimits is the key format 5 adds to rule_tables (ADR 0021 step 11).
+const levelLimits = "race_level_limits"
+
+// ADR 0021 step 11.1 (ADR 0030 step 21): a format-5 artifact's racial level
+// limits are read, one cell per race and class. Expected values are read
+// from DMG Table 7 on the page (DMG p.15), not derived from the artifact:
+// a number is the highest level, "U" no limit, "-" the race cannot belong
+// to the class. Humans have no row.
+func TestParse_Step11_1_ReadsTheLevelLimits(t *testing.T) {
+	l, ok := phb(t).LevelLimits()
+	require.True(t, ok, "format 5 carries the level limits")
+	_, ok = phb(t).Classes()
+	require.True(t, ok, "format 5 carries the class tables too")
+	page := map[string][5]string{ // dwarf, elf, gnome, half-elf, halfling
+		"bard":    {"-", "-", "-", "U", "-"},
+		"cleric":  {"10", "12", "9", "14", "8"},
+		"fighter": {"15", "12", "11", "14", "9"},
+		"mage":    {"-", "15", "-", "12", "-"},
+		"thief":   {"12", "12", "13", "12", "15"},
+	}
+	for class, cells := range page {
+		for i, race := range []string{"dwarf", "elf", "gnome", "half_elf", "halfling"} {
+			got, ok := l.Limit(race, class)
+			require.True(t, ok, "%s %s", race, class)
+			cell := strconv.Itoa(got.MaxLevel)
+			switch {
+			case got.Unlimited:
+				cell = "U"
+			case got.MaxLevel == 0:
+				cell = "-"
+			}
+			assert.Equal(t, cells[i], cell, "%s %s", race, class)
+		}
+	}
+	_, ok = l.Limit("human", "fighter")
+	assert.False(t, ok, "humans have no row")
+}
+
+// ADR 0021 step 11.3: a format-5 artifact without the level limits, or with
+// limits that break the rules the schema cannot express, refuses the
+// tables, naming the table.
+func TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"a missing table", func(d map[string]any) { delete(d, levelLimits) }, "format 5 needs the race_level_limits table"},
+		{"a missing class table", func(d map[string]any) { delete(d, "thac0") }, "missing: thac0"},
+		{
+			"a race and class twice", func(d map[string]any) { classRow(d, levelLimits, 1)["class"] = "fighter" },
+			"race_level_limits table: \"dwarf fighter\" twice",
+		},
+		{
+			"a missing race and class", func(d map[string]any) { d[levelLimits] = classRows(d, levelLimits)[1:] },
+			"race_level_limits table: missing \"dwarf fighter\"",
+		},
+		{
+			"a class the app does not have", func(d map[string]any) { classRow(d, levelLimits, 0)["class"] = "paladin" },
+			"race_level_limits table: unknown \"dwarf paladin\"",
+		},
+		{"a human row", func(d map[string]any) {
+			classRow(d, levelLimits, 0)["race"] = "human"
+		}, "race_level_limits table: unknown \"human fighter\""},
+		{
+			"a level above 20", func(d map[string]any) { classRow(d, levelLimits, 0)["max_level"] = 21 },
+			"race_level_limits table: dwarf fighter: level 21 outside 0..20",
+		},
+		{
+			"a negative level", func(d map[string]any) { classRow(d, levelLimits, 0)["max_level"] = -1 },
+			"race_level_limits table: dwarf fighter: level -1 outside 0..20",
+		},
+		{"an unknown field", func(d map[string]any) { classRow(d, levelLimits, 0)["note"] = 1 }, "note"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := classTablesOf(t, catalogue.FormatLevelLimits, tc.mutate)
+			require.ErrorContains(t, err, tc.want)
+		})
+	}
+}
+
+// ADR 0021 step 11.4: during the rollout a format-4 artifact still starts,
+// with its class tables and without level limits; one that carries them is
+// refused, as is a format-3 one.
+func TestParse_Step11_4_Format4HasNoLevelLimits(t *testing.T) {
+	four, err := classTablesOf(t, catalogue.FormatClassTables, func(d map[string]any) { delete(d, levelLimits) })
+	require.NoError(t, err)
+	_, ok := four.Classes()
+	assert.True(t, ok, "format 4 keeps its class tables")
+	_, ok = four.LevelLimits()
+	assert.False(t, ok, "format 4 has no level limits")
+	_, err = classTablesOf(t, catalogue.FormatClassTables, func(map[string]any) {})
+	require.ErrorContains(t, err, "format 4 carries no race_level_limits table")
+	_, err = classTablesOf(t, catalogue.FormatRuleTables, func(d map[string]any) {
+		for k := range d {
+			if k != "strength" && k != "dexterity" && k != "bard_spells" && k != "bard_experience" && k != levelLimits {
+				delete(d, k)
+			}
+		}
+	})
 	require.ErrorContains(t, err, "format 3 carries no class or race table")
 }

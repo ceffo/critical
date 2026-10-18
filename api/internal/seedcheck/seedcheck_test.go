@@ -156,6 +156,36 @@ func TestRealCatalogue_Step10_5_TheFixtureCarriesTheRealArtifactsClassTables(t *
 	assert.Equal(t, rc, fc)
 }
 
+// ADR 0021 step 11.5: the fixture's racial level limits are the real
+// artifact's, cell for cell, so the DMG-page value tests on the fixture check
+// the table the app uses. Skipped while the real artifact is format 3 or 4.
+func TestRealCatalogue_Step11_5_TheFixtureCarriesTheRealArtifactsLevelLimits(t *testing.T) {
+	realCatalogue(t)
+	real, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	if real.Catalogue.Format < catalogue.FormatLevelLimits {
+		t.Skipf("the real artifact is format %d: run `just catalogue` for format %d", real.Catalogue.Format, catalogue.FormatLevelLimits)
+	}
+	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
+	require.NoError(t, err)
+	fromReal, err := ruletablesadpt.Parse(real.Catalogue.Format, real.RuleTables)
+	require.NoError(t, err)
+	fromFixture, err := ruletablesadpt.Parse(fixture.Catalogue.Format, fixture.RuleTables)
+	require.NoError(t, err)
+	rl, ok := fromReal.LevelLimits()
+	require.True(t, ok)
+	fl, ok := fromFixture.LevelLimits()
+	require.True(t, ok)
+	for _, race := range ruletablesvc.Races {
+		for _, class := range ruletablesvc.Classes {
+			r, rok := rl.Limit(race, class)
+			f, fok := fl.Limit(race, class)
+			require.True(t, rok && fok, "%s %s", race, class)
+			assert.Equal(t, r, f, "%s %s", race, class)
+		}
+	}
+}
+
 func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
 	cat := realCatalogue(t)
 	effects, err := spelleffectsadpt.New(seedsDir)

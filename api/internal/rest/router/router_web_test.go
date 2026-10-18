@@ -37,7 +37,7 @@ func webBuild(t *testing.T) string {
 func webRouter(t *testing.T, web http.Handler) http.Handler {
 	t.Helper()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return router.New(log, &composition.BackingServices{Auth: signedIn(t)}, router.Options{Web: web, Commit: "abc123", Version: "1.2.3"})
+	return router.New(log, &composition.BackingServices{Auth: signedIn(t)}, router.Options{Web: web, Commit: "abc123", Version: "1.2.3", Login: "google"})
 }
 
 const notFoundBody = `{"code":"not_found","error":"not found: /api/nope"}`
@@ -120,7 +120,7 @@ func TestWeb_Step1_2_NoWebDirServesNothingOutsideAPI(t *testing.T) {
 func TestHealth_Step1_4_ReportsTheBuildCommit(t *testing.T) {
 	rec := do(webRouter(t, nil), "GET", "/api/health", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"status":"ok","commit":"abc123","version":"1.2.3"}`, rec.Body.String())
+	assert.JSONEq(t, `{"status":"ok","commit":"abc123","version":"1.2.3","login":"google"}`, rec.Body.String())
 }
 
 // Step 1.4: /api/health reports the release version baked into the image next
@@ -138,5 +138,17 @@ func TestHealth_Step1_4_UnknownWithoutABuildIdentity(t *testing.T) {
 	h := router.New(log, &composition.BackingServices{}, router.Options{})
 	rec := do(h, "GET", "/api/health", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"status":"ok","commit":"unknown","version":"unknown"}`, rec.Body.String())
+	assert.JSONEq(t, `{"status":"ok","commit":"unknown","version":"unknown","login":"unknown"}`, rec.Body.String())
+}
+
+// ADR 0024 step 8.3: /api/health reports the login the server runs, the field
+// the deploy checks read before an app may have a public IP.
+func TestHealth_Step8_3_ReportsTheLoginMode(t *testing.T) {
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	for _, login := range []string{"google", "dev"} {
+		h := router.New(log, &composition.BackingServices{}, router.Options{Login: login})
+		rec := do(h, "GET", "/api/health", "")
+		require.Equal(t, http.StatusOK, rec.Code)
+		assert.Contains(t, rec.Body.String(), `"login":"`+login+`"`)
+	}
 }

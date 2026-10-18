@@ -4,13 +4,16 @@ Operator commands for [ADR 0024](adr/0024-deployment.md). Configuration lives in
 and `deploy/fly.prod.toml` (checked by `just check-fly`, and by `just validate` through the Go test in
 `api/internal/flycheck`). The image is built by the release workflow and passed with `--image`; the
 config never names it. Steps marked **(user)** need fly credentials or GitHub admin rights; an agent
-never runs them. Nothing here is public: the apps and the database have no public IP (ADR 0024 step 8).
+never runs them. The apps are public behind the Google login ("Going public"); the database has no public
+IP. A public IP is allowed only while the login gate is live, checked by every deploy (ADR 0024 step 8.3).
 
-Topology (ADR 0024 step 2, as amended): apps `critical-staging` (one machine, stops when idle) and
-`critical-prod` (two machines, always running, rolling deploys), `shared-cpu-1x` with 512 MB, region
+Topology (ADR 0024 step 2, as amended): apps `critical-hit-staging` (one machine, stops when idle) and
+`critical-hit` (two machines, always running, rolling deploys), named by the user on 2026-10-17 (they
+replace `critical-staging` and `critical-prod`; `critical.fly.dev` belongs to another account). Their URLs
+are `https://critical-hit-staging.fly.dev` and `https://critical-hit.fly.dev`, `shared-cpu-1x` with 512 MB, region
 `yyz` (Toronto: fly has no Montreal region; user, 2026-10-16). The apps have **no volume**: their data
 lives in the fly PostgreSQL cluster `tournesol-db`, shared with the user's other app, in the databases
-`critical_staging` and `critical_prod`. Each app's DSN is its fly secret `CRITICAL_DSN`. App names are
+`critical_staging` and `critical_prod` (the databases keep the environment's name through the rename). Each app's DSN is its fly secret `CRITICAL_DSN`. App names are
 global on fly; to rename an app or change the region, edit `app` / `primary_region` in the two toml
 files; the Go test checks the app names against the file names.
 
@@ -20,7 +23,7 @@ fly=~/.fly/bin/fly   # flyctl on the operator's machine
 
 ## State and user steps left
 
-First private deploy, 2026-10-16, image of commit `1648083` (one digest, both apps):
+First private deploy, 2026-10-16, image of commit `1648083` (one digest, both apps; the apps were then named `critical-staging` and `critical-prod`, renamed by "Going public"):
 
 | App | Machines | Addresses | Checked |
 |---|---|---|---|
@@ -30,25 +33,27 @@ First private deploy, 2026-10-16, image of commit `1648083` (one digest, both ap
 User steps left:
 
 1. **Re-enter the character-sheet edits** the seeds do not hold, in the production app (`just fly-open
-   critical-prod`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
+   critical-hit`, "Reaching a private app"): the crit table, the item added in the app, the dice favourite
    ("Production data").
 2. **`RULEBOOKS_DEPLOY_KEY`** for the release build ("GitHub" below; until it is set, every main run
    of the release workflow that makes a release ends green with a "Release skipped" notice naming it,
    runs no flyctl step, deploys and tags nothing). The environments and both `FLY_API_TOKEN` secrets are set (2026-10-16). Then check the first
    real release run ("Release build"), none of which an agent can see:
-   1. it is green, and its notice names `registry.fly.io/critical-staging:v<version>` and `:<sha>` and the
+   1. it is green, and its notice names `registry.fly.io/critical-hit-staging:v<version>` and `:<sha>` and the
       rulebooks commit:
       the deploy key reached GitHub over ssh with the pinned host key, and the staging deploy token could
       `fly auth docker` and push;
-   2. `$fly auth docker`, `docker pull registry.fly.io/critical-staging:<sha>`, then `docker inspect -f
-      '{{json .Config.Labels}}' registry.fly.io/critical-staging:<sha>` shows
+   2. `$fly auth docker`, `docker pull registry.fly.io/critical-hit-staging:<sha>`, then `docker inspect -f
+      '{{json .Config.Labels}}' registry.fly.io/critical-hit-staging:<sha>` shows
       `org.opencontainers.image.revision`, `org.opencontainers.image.version` and `critical.rulebooks.revision`;
    3. its log holds no catalogue JSON and no key material: only the clone, the build, the push lines and
       the notice with the reference and the rulebooks sha;
    4. its "Deploy to staging" step is green (no public IP, smoke on the machine) and Deployments
       shows a `deploy-staging` deployment of the sha with the digest and the version, then "Tag the version"
       created `v<version>`; the other post-merge checks are in "Staging deploy".
-3. **The public-access option** (ADR 0024 step 8.4): until it is picked the apps stay private.
+3. **Going public** ("Going public" below): the Google OAuth clients and the new apps, with the moves in
+   one command each. Until the new apps pass `just gate-check`, the old private `critical-staging` and
+   `critical-prod` stay; they are retired only after.
 4. **The restore point's passphrase** (ADR 0024 step 9.2, "Promotion" below; user decision 2026-10-17, the
    restore point is a backup file): `just restore-point-key` (admin, once) writes a random passphrase to
    `~/.config/critical/restore-point.passphrase` and sets it as the `production` secret
@@ -145,7 +150,7 @@ SCRAM-SHA-256 verifier, and its app's secret
 piped into `fly secrets import` right after (never printed): staged while the app has no machine (the
 first `fly deploy` applies it), applied at once otherwise. An existing user's password and secret are
 never touched by a rerun, so a rerun on a running app changes nothing it uses. `fly secrets list -a
-critical-<env>` shows the name and a digest, never the value. `sslmode=disable` (user, 2026-10-16): the
+<app>` shows the name and a digest, never the value. `sslmode=disable` (user, 2026-10-16): the
 cluster has no TLS (PostgreSQL answers `N` to a TLS request; the Flycast `pg_tls` handler answers `S`,
 then closes), and the app's driver, unlike `psql` with `prefer`, does not fall back to plain, so every
 connection of the first staging deploy ended in `EOF`. The traffic stays inside fly's WireGuard
@@ -232,7 +237,7 @@ validate`).
 fetched by `just restore-point-fetch`, "Rollback"). Everything written since the dump is lost: say so to the user first, and get
 their yes. Run `just db-restore-drill <dump>` first.
 
-1. Remove the app's machines: `$fly scale count 0 -a critical-prod --yes`.
+1. Remove the app's machines: `$fly scale count 0 -a critical-hit --yes`.
 2. As the cluster's operator (`$fly postgres connect -a tournesol-db`, connected to `postgres`), set the
    current database aside and create an empty one in its place:
 
@@ -263,13 +268,14 @@ point exists. It rolls back **both** critical databases and the other app's to t
 
 ## One-time setup per app (user)
 
-Repeat for `staging` and `prod` (`<env>` = `staging` or `prod`, app = `critical-<env>`). Both apps exist
-(created 2026-10-16).
+Repeat for `staging` and `prod` (`<env>` = `staging` or `prod`; `<app>` = `critical-hit-staging` or
+`critical-hit`, the `app` of `deploy/fly.<env>.toml`). One command creates the app, its private address and
+its database secret ("Going public", step 2); the commands below are what it does and the token step.
 
 ```bash
 $fly auth login
-$fly apps create critical-<env> --org personal
-$fly tokens create deploy -a critical-<env>        # app-scoped token: store it in GitHub, nowhere else
+$fly apps create <app> --org personal
+$fly tokens create deploy -a <app>        # app-scoped token: store it in GitHub, nowhere else
 ```
 
 No volume: never `fly volumes create` on an app (the free allowance has none left, and the apps are
@@ -277,24 +283,24 @@ stateless, ADR 0024 step 5.1). `CRITICAL_DSN` must be set (provisioning above) b
 without it the server falls back to its local development default (`localhost`) and fails its first
 connection.
 
-First deploy of an app, with a private Flycast address only (no public IP). fly creates two machines
+First deploy of an app, with a private Flycast address only (no public IP yet; `just fly-go-public` adds
+them after the first deploy has been checked). fly creates two machines
 for an app without volumes; staging wants one:
 
 ```bash
-just release-image critical-staging critical-prod  # the clean HEAD, real catalogue, pushed to both apps' registries
-$fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-prod:<sha> --no-public-ips          # two machines
-$fly deploy -c deploy/fly.staging.toml -a critical-staging --image registry.fly.io/critical-staging:<sha> --no-public-ips --ha=false   # one machine
-$fly ips allocate-v6 --private -a critical-<env>
-just fly-private critical-<env>                    # fails on any public address
-just fly-smoke critical-<env> <sha>                # every machine: health with the commit, a database read, the web app
+just release-image critical-hit-staging critical-hit  # the clean HEAD, real catalogue, pushed to both apps' registries
+$fly deploy -c deploy/fly.prod.toml -a critical-hit --image registry.fly.io/critical-hit:<sha> --no-public-ips          # two machines
+$fly deploy -c deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:<sha> --no-public-ips --ha=false   # one machine
+$fly ips allocate-v6 --private -a <app>
+just fly-private <app>                    # fails on any public address (before going public)
+just fly-smoke <app> <sha>                # every machine: health with the commit, a database read, the web app
 ```
 
 A first deploy reports a health-check timeout until the app has its private address and can reach the
 database; the machine keeps running. Later deploys come from the workflows; fly allocates no public IP
 on a redeploy of an app that already has an address (seen on staging's redeploy, 2026-10-16), and the
-workflows pass `--no-public-ips` anyway. If `fly ips list` shows a public IP, release it with
-`$fly ips release <address> -a critical-<env>` unless a public-access option has been chosen (ADR 0024
-step 8.4).
+workflows pass `--no-public-ips` anyway. A public IP on an app whose login gate is not live is released with
+`$fly ips release <address> -a <app>`; the deploy checks refuse it ("Going public").
 
 ### GitHub (user)
 
@@ -305,9 +311,9 @@ new tokens, `--no-tokens` keeps the secrets). `RULEBOOKS_DEPLOY_KEY` stays a use
 
 | Environment | Secret | Content |
 |---|---|---|
-| `staging` | `FLY_API_TOKEN` | deploy token of `critical-staging` |
+| `staging` | `FLY_API_TOKEN` | deploy token of `critical-hit-staging` |
 | `staging` | `RULEBOOKS_DEPLOY_KEY` | private half of the read-only deploy key (below), used by the release build |
-| `production` | `FLY_API_TOKEN` | deploy token of `critical-prod` |
+| `production` | `FLY_API_TOKEN` | deploy token of `critical-hit` |
 | `production` | `RESTORE_POINT_PASSPHRASE` | encrypts the promotion's restore point; set by `just restore-point-key` (user step 4 above), not by this script |
 
 The `production` environment accepts deployments from the branch `main` only (ADR 0024 step 10.2): Promote
@@ -381,35 +387,102 @@ shred -u ./rulebooks_deploy_key ./rulebooks_deploy_key.pub
 
 Never commit a token or key; the repository holds none.
 
-## Reaching a private app
+## Reaching an app
+
+The apps are public: open `https://critical-hit-staging.fly.dev` or `https://critical-hit.fly.dev` and log in with
+Google ("Going public"). Staging stops when idle, so the first request after a pause waits a few seconds for the
+machine and for the database. For what the public ingress hides (a machine pinned, a shell, the logs):
 
 ```bash
-just fly-open critical-staging              # or critical-prod: prints the URL to open, Ctrl-C stops it
-curl -s http://127.0.0.1:<port>/api/health  # {"commit":"<sha>","status":"ok","version":"<X.Y.Z>"}, <port> from the line above
-$fly ssh console -a critical-<env>          # a shell on the machine
-$fly logs -a critical-<env>
+just fly-open critical-hit-staging          # or critical-hit: a proxy to the app's Flycast address on a free local port; prints the URL, Ctrl-C stops it
+curl -s http://127.0.0.1:<port>/api/health  # {"commit":"<sha>","login":"google","status":"ok","version":"<X.Y.Z>"}, <port> from the line above
+$fly ssh console -a <app>                   # a shell on the machine
+$fly logs -a <app>
 ```
 
-`just fly-open <app> [port]` (`scripts/fly-open.sh`) runs `fly proxy` from a free local port to the
-app's `.flycast` address on port 80, bound to 127.0.0.1, waits until `/api/health` answers (a stopped
-machine or database takes a few seconds), prints `http://127.0.0.1:<port>/` and the commit, and keeps
-the proxy until Ctrl-C. Never use a fixed 8080 (or 5173, 5432): `just dev` holds those, so the proxy
-fails to bind or the browser reaches the local stack instead of fly. Without a port, `critical-staging`
-gets 8091 and `critical-prod` 8092, the ports their Google login redirects back to ("Google login"
-below); any other target gets a free port. A port given explicitly wins and is refused when taken (a
-second run of the same app finds its port held: stop the first). Short-lived: this goes away when the
-apps get public URLs.
+`just fly-open <app> [port]` (`scripts/fly-open.sh`) runs `fly proxy` from a free local port to the app's
+`.flycast` address on port 80, bound to 127.0.0.1, waits until `/api/health` answers (a stopped machine or
+database takes a few seconds), prints `http://127.0.0.1:<port>/` and the commit, and keeps the proxy until
+Ctrl-C. Never use a fixed 8080 (or 5173, 5432): `just dev` holds those. A port given explicitly is refused when
+taken. **Do not log in through the tunnel**: the login redirects to the public URL (`CRITICAL_PUBLIC_URL`), so
+the session belongs to the public hostname. (Until 2026-10-18 the private apps logged in through fixed
+localhost ports 8091 and 8092; that is gone.)
 
-Through the `.flycast` address, fly's proxy starts a stopped machine (staging stops when idle) and
-balances between machines; the address answers on the service ports (80, and 443 with TLS), not on 8080.
-`$fly proxy <free port>:8080 -a critical-<env>` without the address goes straight to one running
-machine's port 8080 and starts nothing. A request can be pinned to one machine with the header
-`fly-force-instance-id: <machine id>` (what `just fly-smoke` does for each machine).
+Through the `.flycast` address, fly's proxy starts a stopped machine and balances between machines; the address
+answers on the service ports (80, and 443 with TLS), not on 8080. `$fly proxy <free port>:8080 -a <app>` without
+the address goes straight to one running machine's port 8080 and starts nothing. A request can be pinned to one
+machine with the header `fly-force-instance-id: <machine id>` (what `just fly-smoke` does for each machine).
 
-For a device that must reach the app without `fly proxy`, join the org's WireGuard network
-(`$fly wireguard create`, user) and use the app's `.flycast` address. A public IP, basic auth and a
-custom domain come only once the user picks a public-access option (ADR 0024 step 8.4); this runbook
-gets those steps then.
+## Going public (ADR 0024 step 8, ADR 0029)
+
+Both apps are public on their `fly.dev` hostnames, free of charge: a **shared** IPv4 and an IPv6 (a dedicated
+IPv4 costs money and is never allocated; `fly-go-public.sh` warns if one exists), TLS from fly, no custom domain
+yet. Nothing is served without the login: only `/login`, `/api/auth/*`, `/api/health` and the static bundle that
+login page loads (`/assets/*`, `/favicon.svg`, ADR 0029 "the static bundle is public": the repository's own code,
+no data) answer a visitor; every other page redirects to `/login`, every other `/api` route answers 401.
+
+**Two gates keep it so.**
+
+- **The gate check** (`just gate-check <url>`, `scripts/gate-check.sh`; offline test `scripts/test-gate-check.sh`):
+  what a visitor with no session gets. It passes only when `/api/health` reports `"login":"google"` (the Google
+  login is configured, not the dev login of local runs), `/api/auth/options` offers Google and not the dev login,
+  `/api/auth/dev` is not there, `/api/character`, `/api/characters`, `/api/spells/names` and `/api/spells/filters`
+  answer 401 `unauthenticated`, a POST to `/api/characters` is refused, and `/` and a page redirect a browser to
+  `/login`. Read-only, no cookie, prints status codes only.
+- **The access check** (`scripts/fly-access-check.sh`), run by every deploy before and after it (staging:
+  `scripts/staging-deploy.sh`; production: `scripts/promote.sh`, no bypass for either, the former
+  `PUBLIC_ACCESS_OPTION` variable is gone): an app with no public address must have its private one
+  (`fly-private-check.sh`); an app **with** a public address must pass the gate check on its public URL, or the
+  deploy fails. A public IP on a release that does not report the Google login is therefore refused. To recover
+  an app that fails it: `$fly ips release <address> -a <app>` for each public address, deploy, `just fly-go-public`.
+
+The checks read the app as a visitor does; the acceptance criteria that no content is visible without a session
+are those scripts' output, not a manual look.
+
+### The switch from `critical-staging` and `critical-prod` (user, once)
+
+The new apps use the same databases (`critical_staging`, `critical_prod`) and the same database users, so the
+data stays; the old apps keep running, private, until the new ones pass. Each step is one command or a short
+list; `<env>` is `staging` then `prod`. Do staging first, the whole way, before prod.
+
+1. **Google OAuth client** (console.cloud.google.com, one client per environment). The first time: APIs &
+   Services > OAuth consent screen: user type External; scopes are only the basic ones (`openid`, `email`,
+   `profile`); publishing status **In production** (a client left in "Testing" refuses every Google account not
+   listed as a test user, whereas who may log in is decided here by the invites, ADR 0029). Then APIs & Services >
+   Credentials > Create credentials > OAuth client ID > Web application, with **only** this authorised redirect
+   URI: staging `https://critical-hit-staging.fly.dev/api/auth/google/callback`, prod
+   `https://critical-hit.fly.dev/api/auth/google/callback` (no JavaScript origin needed). Download its JSON.
+2. **The app, its private address, its database secret** (copied from the old app, never shown):
+   `just fly-app-create <env> critical-<env>`.
+3. **The three login secrets**: `just fly-google-secrets <app> ~/Downloads/client_secret_….json` (or without the
+   file to type the id and secret). It sets `CRITICAL_GOOGLE_CLIENT_ID`, `CRITICAL_GOOGLE_CLIENT_SECRET` and
+   `CRITICAL_PUBLIC_URL=https://<app>.fly.dev`, and prints the redirect URI to check against the console. Delete
+   the downloaded JSON afterwards.
+4. **GitHub**: `scripts/github-environments.sh --no-tokens` is not enough, the deploy tokens belong to the new
+   apps: `scripts/github-environments.sh` (admin; new tokens for both environments).
+5. **First deploy of the new apps** with the image of the commit that carries this change, private ("One-time
+   setup per app"): `just release-image critical-hit-staging critical-hit`, then the two `fly deploy` commands
+   there (`--ha=false` for staging). Check with `just fly-smoke <app> <sha>`.
+6. **Root admin**: `just fly-root-admin <app> <your Google email>` (idempotent; the database already has it from
+   before, this proves the new app reaches it).
+7. **Public**: `just fly-go-public <app>`. It allocates the free addresses and runs the gate check on the public
+   URL; if that fails it releases them again and the app is private as before.
+8. **Log in** at the URL as the root admin and look at your character; an account that was not invited is turned
+   away at `/login` (the invite check, ADR 0029).
+9. **Release and promotion**: the images of releases made before the switch are in the old apps' registries, so
+   the first promotion needs a new staging release: merge to main (or Actions > Release > Run workflow), which
+   deploys `critical-hit-staging` with its check, then `just promote`.
+10. **Retire the old apps**, only after steps 1 to 9 passed for both environments: `$fly apps destroy
+    critical-staging` and `critical-prod` (their machines and registries go; the databases are untouched, they
+    belong to the new apps now).
+
+### Rotation
+
+- **The Google client secret** (leaked, or on a schedule): in the console, the client > Add secret; then `just
+  fly-google-secrets <app> <the new JSON>`, which restarts the machines with it; then disable the old secret in
+  the console. A secret in a fly app is never readable back (`fly secrets list` shows a digest).
+- **The database password**: "Passwords" above (an outage while the machines restart).
+- **A deploy token**: `scripts/github-environments.sh` makes new ones; revoke the old with `fly tokens revoke`.
 
 ## Login on the hosted apps (ADR 0029)
 
@@ -418,39 +491,26 @@ step 8.2), and on fly.io (`FLY_APP_NAME` set) it refuses `CRITICAL_ENV=dev` too:
 OAuth settings exits before it listens, so a hosted app never has the dev login. Never set
 `CRITICAL_ENV` on a hosted app. **Set these secrets on each app before the first deploy of a release that carries
 the login** (a staging deploy without them fails its start and its smoke, and nothing reaches
-production):
+production); `just fly-google-secrets` sets all three ("Going public", step 3):
 
 | Secret | Value |
 |---|---|
 | `CRITICAL_GOOGLE_CLIENT_ID` | the OAuth client id (Google Cloud console, "Credentials", an OAuth client of type "Web application") |
 | `CRITICAL_GOOGLE_CLIENT_SECRET` | its secret |
-| `CRITICAL_PUBLIC_URL` | the address users open, `https://<host>` (no path): the redirect is `<public URL>/api/auth/google/callback`, the CSRF check compares every mutation's `Origin` with its host, and `https` makes the cookies `Secure` |
+| `CRITICAL_PUBLIC_URL` | the address users open, `https://<app>.fly.dev` (no path): the redirect is `<public URL>/api/auth/google/callback`, the CSRF check compares every mutation's `Origin` with its host, and `https` makes the cookies `Secure` |
 
-All three or none (a partial setting is a start-up error everywhere). In the Google console add
-`<public URL>/api/auth/google/callback` to the client's "Authorised redirect URIs". **(user)**:
-
-```bash
-$fly secrets set -a critical-<env> CRITICAL_GOOGLE_CLIENT_ID=<id> CRITICAL_PUBLIC_URL=<url>
-$fly secrets set -a critical-<env> CRITICAL_GOOGLE_CLIENT_SECRET=-   # reads the value from stdin; never on the command line
-```
-
-While an app is private (no public IP, "Reaching a private app"), its public URL is the local end of
-the proxy: `CRITICAL_PUBLIC_URL=http://localhost:<port>`, the redirect URI
-`http://localhost:<port>/api/auth/google/callback` in the console (Google accepts `http://localhost`
-for testing), and `just fly-open critical-<env>` (its port is the default: 8091 staging, 8092 prod; the table is
-`login_port` in `scripts/fly-open.sh`, keep it equal to the secrets), then open
-`http://localhost:<port>` (not `127.0.0.1`: the host must match). Give each app its own port: the
-session cookie is named after the public URL's host and port (`critical_session_localhost_<port>`), so
-`just dev` and both tunnels can be open in one browser without logging each other out. Until the login page exists, open
-`http://localhost:<port>/api/auth/google/start` to log in; the callback brings the browser back to the app.
+All three or none (a partial setting is a start-up error everywhere). The client's "Authorised redirect URIs"
+holds `<public URL>/api/auth/google/callback` and nothing else. The session cookie is named after the public
+URL's host (`critical_session_<host>`), so `just dev` and the hosted apps can be open in one browser without
+logging each other out.
 
 **Root admin.** Only invited emails and the root admin can log in, and invites come with the admin
 section. Set the root admin once per database with the script (ADR 0029 step 5.1), after the release with the
 login has started once (its migration creates the tables). One command per app:
 
 ```bash
-just fly-root-admin critical-staging <your Google email>
-just fly-root-admin critical-prod <your Google email>
+just fly-root-admin critical-hit-staging <your Google email>
+just fly-root-admin critical-hit <your Google email>
 ```
 
 It runs the image's `/app/critical-rootadmin` inside the app's machine (`fly ssh console`), so it uses the
@@ -608,17 +668,17 @@ take the same number).
   build` of the clean checkout with the catalogue as the `catalogue` build context, `COMMIT` and `VERSION`
   (reported by `/api/health`), labelled `org.opencontainers.image.revision=<commit>`,
   `org.opencontainers.image.version=<version>` and `critical.rulebooks.revision=<rulebooks commit>`, then
-  `fly auth docker` and a push to **`registry.fly.io/critical-staging:<full commit sha>`** and
-  **`registry.fly.io/critical-staging:v<version>`**, the same build (the app name is read from
+  `fly auth docker` and a push to **`registry.fly.io/critical-hit-staging:<full commit sha>`** and
+  **`registry.fly.io/critical-hit-staging:v<version>`**, the same build (the app name is read from
   `deploy/fly.staging.toml`). `just release-image` sets no version (its image reports `unknown`). The staging app's repository is the one image repository of the
   release flow: the staging deploy token can push only there. Production gets the same digest from it at
-  promotion, copied by digest into `critical-prod`'s repository (ADR 0024, consequences, "Promotion and
+  promotion, copied by digest into `critical-hit`'s repository (ADR 0024, consequences, "Promotion and
   registry layout"; "Promotion" below), never by a rebuild. The run's
   notice names the pushed references and the rulebooks commit; the push lines in the log give the digest.
   **The digest is the image's identity, not the tag**: a forced release for a new catalogue pushes a new
   digest under the same `<sha>` tag (and a new version tag), so the staging deploy records the digest it smoke-checked and the promotion
-  copies, deploys and compares that digest (`registry.fly.io/critical-prod@sha256:…`, the same manifest as
-  `registry.fly.io/critical-staging@sha256:…`), never the tag (ADR 0024 step 1.5).
+  copies, deploys and compares that digest (`registry.fly.io/critical-hit@sha256:…`, the same manifest as
+  `registry.fly.io/critical-hit-staging@sha256:…`), never the tag (ADR 0024 step 1.5).
 - **No shell tracing** anywhere (`set -x` is absent), and none of the scripts prints a secret.
   `just validate` runs `scripts/test-release-scripts.sh`, which exercises the three scripts offline (docker
   and fly stubbed, a local rulebooks repo and a generated key): the missing-secret no-op, stdout of the
@@ -646,14 +706,14 @@ read an empty token), and a calling job cannot have an environment. The job pass
   the job's own secret check (someone asked for a deploy that cannot happen); only an automatic run keeps
   main green on missing secrets.
 - **Steps** (`scripts/staging-deploy.sh`, reusing `scripts/fly-private-check.sh` and `scripts/fly-smoke.sh`):
-  1. **No public IP**: the job fails before deploying if the app has an address other than a Flycast one.
-     The check is skipped, with a notice, only when the repository (or environment) variable
-     `PUBLIC_ACCESS_OPTION` is set, which the user does when picking an option (ADR 0024 step 8.4). Until
-     then the apps stay private.
-  2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-staging:v<version>` (the build
+  1. **Access check** (`scripts/fly-access-check.sh`, before and after the deploy, no bypass): an app with no
+     public address must have its Flycast one; an app with a public address must pass the gate check on its
+     public URL ("Going public"), or the job fails before deploying (after it, once the new release runs, the
+     deploy is reported failed). The former `PUBLIC_ACCESS_OPTION` variable is gone.
+  2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-hit-staging:v<version>` (the build
      of that version; `:<sha>` when the script is given no version); the machine is started if it was
      stopped.
-  3. The smoke check through `fly proxy` (the app is private): on every machine, `/api/health` is 200 with
+  3. The smoke check through `fly proxy`: on every machine, `/api/health` is 200 with
      `status` ok, `commit == <sha>` and `version == <version>`, `/api/character` is 200 (a read through the database) and `/` is
      the web app. A cold start of the machine or of the shared database is waited for (up to 90 s per
      machine).
@@ -677,7 +737,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
      newest of those that record **no** version (deployed before versions were baked in: `v0.1.0`), never
      one recorded as another version. Its `payload.digest` is the image; none means staging did not run
      and pass that sha as that version: refuse.
-  The promotion compares that digest with the one it deploys (`registry.fly.io/critical-prod@sha256:…`, its
+  The promotion compares that digest with the one it deploys (`registry.fly.io/critical-hit@sha256:…`, its
   copy of the staging image).
 - **Config of the image's commit.** The fly config (`deploy/fly.staging.toml`) is checked out at the
   image's own sha (that file only), the scripts and the workflow come from `main`: a dispatched older image
@@ -690,11 +750,11 @@ read an empty token), and a calling job cannot have an environment. The job pass
   rerun. The deployment is recorded as `failure`, so the promotion refuses that sha, and the version gets
   no tag.
 - **Redeploy a version.** Actions > Release > Run workflow on `main`, input `version` = `X.Y.Z` (or
-  `vX.Y.Z`): the commit of the tag `vX.Y.Z` and its image `registry.fly.io/critical-staging:vX.Y.Z` are
+  `vX.Y.Z`): the commit of the tag `vX.Y.Z` and its image `registry.fly.io/critical-hit-staging:vX.Y.Z` are
   deployed and smoke-checked again, and recorded; nothing is built or tagged. A version with no tag fails at
   once ("unknown version vX.Y.Z: no such tag"). `v0.1.0`, made before versions were baked in, has no
   `:v0.1.0` image: redeploy it by hand, `$fly deploy -c deploy/fly.staging.toml --image
-  registry.fly.io/critical-staging:<its sha>` then `just fly-smoke critical-staging <its sha>`.
+  registry.fly.io/critical-hit-staging:<its sha>` then `just fly-smoke critical-hit-staging <its sha>`.
 - **Offline test.** `scripts/test-staging-deploy.sh` (part of `just validate`) runs both scripts against
   stubs of fly and gh: a public IP deploys nothing, the deploy and smoke arguments (with and without a
   version), the rollback listing, the digest output, the recorded deployment and its version, and the
@@ -759,9 +819,9 @@ read an empty token), and a calling job cannot have an environment. The job pass
   before any restore point. The job prints, and writes to the run's summary, the version, its commit and the
   digest staging ran; the promotion job promotes exactly that tag (a "Re-run failed jobs" of it too).
   `promote.sh` then prints what production runs before it changes anything: its machines' image (version
-  label, commit, digest), e.g. `promote: production (critical-prod) runs 1.4.0 (commit <sha>, sha256:…);
+  label, commit, digest), e.g. `promote: production (critical-hit) runs 1.4.0 (commit <sha>, sha256:…);
   promoting v1.5.0`.
-- **Secrets.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-prod`) and
+- **Secrets.** `FLY_API_TOKEN` of `production` (the deploy token of `critical-hit`) and
   `RESTORE_POINT_PASSPHRASE` (the restore point's encryption, `just restore-point-key`). An empty one **fails**
   the run before anything else (`Promotion` error, `Check the deploy secrets`): a promotion is a deliberate
   act (step 10.4). The passphrase is read by the restore point step only.
@@ -774,21 +834,21 @@ read an empty token), and a calling job cannot have an environment. The job pass
 - **Steps**, each stopping the promotion when it fails:
   1. **Guards** (`scripts/release-guards.sh all <tag>`, again, now with the registry login): the tag is
      `vMAJOR.MINOR.PATCH`; its commit is on `origin/main`; staging ran and passed that commit as that version,
-     read as "Record" above says, which gives the **digest**; and `registry.fly.io/critical-staging@<digest>`
+     read as "Record" above says, which gives the **digest**; and `registry.fly.io/critical-hit-staging@<digest>`
      is in the registry (`docker manifest inspect` after `fly auth docker` with the production token, which
      the registry lets read the staging repository). Nothing is written before they pass. Then what
      production runs now is printed (read-only).
-  2. **No public IP** on `critical-prod` (`scripts/fly-private-check.sh`). Mandatory: unlike staging, no
-     variable skips it; the apps stay private until a public-access option with access control is built
-     (ADR 0024 step 8).
-  3. **Copy** of that image into `critical-prod`'s repository, by digest: `docker buildx imagetools create
-     --prefer-index=false -t registry.fly.io/critical-prod:<sha> registry.fly.io/critical-staging@<digest>`
+  2. **Access check** on `critical-hit` (`scripts/fly-access-check.sh`; again after the deploy and smoke check):
+     no public address, or the login gate check passes on `https://critical-hit.fly.dev`. Mandatory: no
+     variable skips it (ADR 0024 step 8.3).
+  3. **Copy** of that image into `critical-hit`'s repository, by digest: `docker buildx imagetools create
+     --prefer-index=false -t registry.fly.io/critical-hit:<sha> registry.fly.io/critical-hit-staging@<digest>`
      (a carbon copy of the manifest, so the same digest; the layers are copied inside the registry; nothing
-     is rebuilt), then `registry.fly.io/critical-prod@<digest>` must be in the registry. A failure stops the
+     is rebuilt), then `registry.fly.io/critical-hit@<digest>` must be in the registry. A failure stops the
      promotion with nothing deployed. Why ("Registry" below): fly's API lets an app's deploy token use that
      app's images only.
-  4. **Restore point** (`scripts/restore-point.sh`, steps 4.2 and 9.2): `fly console -a critical-prod
-     --image registry.fly.io/critical-prod@<digest> --region <primary_region> --vm-size <size> --vm-memory <mb>` (`--region` is the app's `yyz`, next to the database: without it fly picked `lax` and a long transfer dropped across regions; the `[[vm]]` of
+  4. **Restore point** (`scripts/restore-point.sh`, steps 4.2 and 9.2): `fly console -a critical-hit
+     --image registry.fly.io/critical-hit@<digest> --region <primary_region> --vm-size <size> --vm-memory <mb>` (`--region` is the app's `yyz`, next to the database: without it fly picked `lax` and a long transfer dropped across regions; the `[[vm]]` of
      `deploy/fly.prod.toml`: without a fly config, `fly console` fails with "invalid CPU kind ''") starts an ephemeral machine of the production app from the release image (which
      ships the PostgreSQL 17 client; the machine has the app's `CRITICAL_DSN` and does not start the
      server), uploads the script and runs it; the machine is destroyed after. The script `pg_dump`s
@@ -812,9 +872,9 @@ read an empty token), and a calling job cannot have an environment. The job pass
      promotion reads that list from the tag's git tree, whatever is checked out. A missing, cut or damaged
      block, or a file that does not decrypt, stops the promotion, nothing deployed. The log shows the console
      machine's lines, names, counts and sizes only.
-  5. `fly deploy -c deploy/fly.prod.toml -a critical-prod --image registry.fly.io/critical-prod@<digest>
+  5. `fly deploy -c deploy/fly.prod.toml -a critical-hit --image registry.fly.io/critical-hit@<digest>
      --no-public-ips`: rolling, one machine at a time.
-  6. **Smoke** (`scripts/fly-smoke.sh critical-prod <commit>`, every machine: health with the commit, a
+  6. **Smoke** (`scripts/fly-smoke.sh critical-hit <commit>`, every machine: health with the commit, a
      database read, the web app), then every machine runs exactly that digest.
   7. **GitHub Release** of the tag with generated notes, naming the image digest and the restore point.
      It exists already on a rerun or a rollback (an older tag): kept.
@@ -840,15 +900,15 @@ read an empty token), and a calling job cannot have an environment. The job pass
   left", step 4): `$fly postgres connect -a tournesol-db`; `SELECT pid, usename, backend_type,
   application_name, backend_start, state FROM pg_stat_activity WHERE datname = '<name>';` shows who holds one;
   `DROP DATABASE "<name>" WITH (FORCE);` ends its sessions, then drops it.
-- **Registry** (tested 2026-10-17 with temporary deploy tokens of `critical-prod`, revoked after). The
-  registry lets the production deploy token **read** `registry.fly.io/critical-staging@<digest>` (`docker
+- **Registry** (tested 2026-10-17 with temporary deploy tokens of `critical-hit`, revoked after). The
+  registry lets the production deploy token **read** `registry.fly.io/critical-hit-staging@<digest>` (`docker
   manifest inspect` works; without credentials it is refused). fly's API does **not** let it **use** that
-  image: `fly console -a critical-prod --image registry.fly.io/critical-staging@<digest>` fails with "Not
+  image: `fly console -a critical-hit --image registry.fly.io/critical-hit-staging@<digest>` fails with "Not
   authorized to access this imageref" (`fly deploy --image` looks the image up the same way), while the
-  same token finds `registry.fly.io/critical-prod@<digest>`. So the promotion copies the image by digest
-  into `critical-prod`'s repository first (step 3), with the production token alone: no other token, no
+  same token finds `registry.fly.io/critical-hit@<digest>`. So the promotion copies the image by digest
+  into `critical-hit`'s repository first (step 3), with the production token alone: no other token, no
   token of one app in the other's environment, and the digest staging smoke-checked is the one deployed. A
-  `fly console` machine of `critical-prod` started from its own image ran a command without starting the
+  `fly console` machine of `critical-hit` started from its own image ran a command without starting the
   server, passed its exit status back and was destroyed (only the two app machines remained).
 - **Offline test.** `scripts/test-promotion.sh` (part of `just validate`): each guard on fixture
   repositories and a stubbed GitHub API (the history-not-latest reading, the newest success, a string
@@ -861,8 +921,8 @@ read an empty token), and a calling job cannot have an environment. The job pass
   back whole, restored into a scratch database with its counts, no database created, a lost connection, the
   refusals) against a throwaway PostgreSQL 17.
 - **Post-run checks (user, the first real promotion; none can be faked offline).**
-  1. The run is green; its log shows the guards' commit and digest, `fly-private-check: OK`, the copy to
-     `registry.fly.io/critical-prod:<sha>` (the first real copy across the two repositories: the agents
+  1. The run is green; its log shows the guards' commit and digest, `fly-access-check: OK`, the copy to
+     `registry.fly.io/critical-hit:<sha>` (the first real copy across the two repositories: the agents
      could not run it), the restore
      point lines (`fly console` created and destroyed its machine; `restore-point: ... taken (N tables ...)`,
      the BEGIN and END lines with **nothing between them**, `restore-point: OK`, `kept encrypted`), the
@@ -870,7 +930,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
   2. The run's page lists the artifact `critical_prod_pre_<tag>_<time>`, and `just restore-point-fetch
      <version>` then `just db-restore-drill .backups/critical_prod_pre_<tag>_<time>/critical_prod.dump` pass
      (the passphrase file works, and the dump restores with its counts). No new database on the cluster.
-  3. `$fly machine list -a critical-prod` shows the two app machines only (the console machine is gone).
+  3. `$fly machine list -a critical-hit` shows the two app machines only (the console machine is gone).
   4. The GitHub Release exists, with the digest.
   5. Actions > Promote > Run workflow from a tag (Tags > `vX.Y.Z`) fails at once in `refuse a run from another
      ref than main` ("is not main"), and the other two jobs are skipped.
@@ -879,7 +939,7 @@ read an empty token), and a calling job cannot have an environment. The job pass
   7. A run by a collaborator who is not an admin (if there is one) fails in `Check the actor is an admin`.
 
 By hand, the equivalent of a deploy is
-`$fly deploy -c deploy/fly.<env>.toml -a critical-<env> --image <ref>`: a rolling deploy, one machine
+`$fly deploy -c deploy/fly.<env>.toml -a <app> --image <ref>`: a rolling deploy, one machine
 at a time, so production keeps serving from the other (ADR 0024 step 5.2). A release's migrations are
 additive, so the previous release keeps working on the new schema while its machines are replaced.
 
@@ -907,7 +967,7 @@ deployed; or at the smoke check, after the deploy, and it prints the releases. T
    the version production ran before (`just promote <that version>`) and treat it as a failed rollback.
 2. If it is only main's script or config expecting more than the old image has: failed at the restore point,
    nothing changed; failed at the smoke check, the old image runs (check it with `just fly-open
-   critical-prod`) but the run made no GitHub Release. Either way, run the promotion by hand from the
+   critical-hit`) but the run made no GitHub Release. Either way, run the promotion by hand from the
    version's own tree, whose scripts and config match its image (operator, production token):
 
    ```bash
@@ -941,7 +1001,7 @@ tag>_<time>`, an artifact of that release's Promote run, kept 90 days), then pro
    remove the app's machines, set the current database aside, `pg_restore` as `critical_prod` through
    `just fly-db-proxy`, compare the counts), with the folder above.
 3. Promote the older version (above). Its deploy recreates the two machines from `deploy/fly.prod.toml`; if it
-   reports no machine, `$fly scale count 2 -a critical-prod --yes` and run it again.
+   reports no machine, `$fly scale count 2 -a critical-hit --yes` and run it again.
 4. Once production checks out, `DROP DATABASE critical_prod_failed_<yyyymmdd>;` (it takes room on the shared
    volume). Until then it accepts no connection (`ALLOW_CONNECTIONS false`, kept by the rename), so the
    provisioning's checks, which look only at databases that accept connections, do not count it.
@@ -972,7 +1032,7 @@ Production starts like staging: its first boot imports the catalogue and the cam
 character, proficiencies, bard skills, weapons, items, spells). Nothing of the operator's local play is
 copied ([ADR 0024](adr/0024-deployment.md), "Amendment (production starts from the seeds,
 2026-10-16)"). Character-sheet edits made in the app that the seeds do not hold are re-entered by hand
-in the production app, opened with `just fly-open critical-prod` (user steps left, below).
+in the production app, opened with `just fly-open critical-hit` (user steps left, below).
 
 To see what a local database holds beyond what a fresh boot seeds, without printing any of it, compare
 it with a freshly seeded throwaway database (names and counts only):

@@ -159,6 +159,14 @@ func (c Config) auth() (authConfig, error) {
 	}, nil
 }
 
+// login is the name /api/health reports for the login mode.
+func (a authConfig) login() string {
+	if a.google != nil {
+		return "google"
+	}
+	return "dev"
+}
+
 // listenPort is the port of a listen address (":8080", "127.0.0.1:8080"),
 // the address itself when it has none.
 func listenPort(addr string) string {
@@ -233,7 +241,7 @@ func Start() error {
 	}
 	// A bad web dir stops the server before it touches the database.
 	opts := router.Options{
-		Commit: commit, Version: version, Host: auth.host, SecureCookies: auth.secure, CookieApp: auth.cookieApp,
+		Commit: commit, Version: version, Login: auth.login(), Host: auth.host, SecureCookies: auth.secure, CookieApp: auth.cookieApp,
 	}
 	if cfg.WebDir != "" {
 		web, werr := webhdl.New(cfg.WebDir)

@@ -58,11 +58,13 @@ check-ci-skip:
 # steps 3, 4, 7, 8.3 and 10.4), and the backup and restore drill's (step 9), offline: docker, fly, gh and the
 # PostgreSQL tools stubbed, a local rulebooks repo and a generated key, fixture git repos
 # (scripts/test-release-version.sh, scripts/test-release-scripts.sh, scripts/test-staging-deploy.sh,
-# scripts/test-promotion.sh, scripts/test-db-backup.sh, scripts/test-major.sh).
+# scripts/test-promotion.sh, scripts/test-gate-check.sh, scripts/test-db-backup.sh, scripts/test-major.sh).
 check-release-scripts:
     scripts/test-release-version.sh
     scripts/test-release-scripts.sh
     scripts/test-staging-deploy.sh
+    scripts/test-gate-check.sh
+    scripts/test-fly-public-setup.sh
     scripts/test-promotion.sh
     scripts/test-db-backup.sh
     scripts/test-major.sh
@@ -153,11 +155,31 @@ root-admin email:
     fi
     cd api && go run ./cmd/rootadmin "{{email}}"
 
-# Set the root admin of a deployed app in one command, e.g. `just fly-root-admin critical-staging you@gmail.com`:
+# Set the root admin of a deployed app in one command, e.g. `just fly-root-admin critical-hit-staging you@gmail.com`:
 # runs the image's script inside the app's machine with its own CRITICAL_DSN (never shown), starting a machine
 # first when none runs. Operator only (fly credentials); docs/deploy.md ("Root admin").
 fly-root-admin app email:
     scripts/fly-root-admin.sh {{app}} {{email}}
+
+# Operator only (fly credentials), ADR 0024 step 8.5. Create the fly app of an environment (name from deploy/fly.<env>.toml),
+# give it its private address, and copy its CRITICAL_DSN from the app it replaces (never shown). E.g. `just fly-app-create staging critical-staging`.
+fly-app-create env old="":
+    scripts/fly-app-create.sh {{env}} {{ if old != "" { "--dsn-from " + old } else { "" } }}
+
+# Operator only. Set CRITICAL_GOOGLE_CLIENT_ID / _SECRET / CRITICAL_PUBLIC_URL on an app from the OAuth client JSON the
+# Google console downloads (or typed when no file is given); prints the redirect URI to authorise. docs/deploy.md ("Google login").
+fly-google-secrets app json="":
+    scripts/fly-google-secrets.sh {{app}} {{json}}
+
+# Operator only. Allocate the (free) public addresses of a deployed app and prove the login gate on its public URL;
+# the addresses are released again when the gate check fails. docs/deploy.md ("Going public").
+fly-go-public app:
+    scripts/fly-go-public.sh {{app}}
+
+# Read-only, no fly: what a visitor with no session gets from a URL (health reports the Google login; the catalogue,
+# the data routes and every page but the login refuse). E.g. `just gate-check https://critical-hit.fly.dev`.
+gate-check url:
+    scripts/gate-check.sh {{url}}
 
 # --- Code Generation ---
 
@@ -297,7 +319,7 @@ fly-smoke app commit=`git rev-parse HEAD`:
     scripts/fly-smoke.sh {{app}} {{commit}}
 
 # Through `fly proxy` on a free local port (never just dev's 8080/5173), until Ctrl-C; read-only.
-# No port: the app's Google login port (staging 8091, prod 8092), else a free one. A given port wins, refused when taken. E.g. `just fly-open critical-staging`, `just fly-open critical-prod`.
+# A free local port unless one is given (refused when taken). The apps are public now: this is for looking behind the public ingress. E.g. `just fly-open critical-hit-staging`.
 # Open a private fly app in the browser: waits until it answers, then prints the URL
 fly-open app port="":
     scripts/fly-open.sh {{app}} {{port}}

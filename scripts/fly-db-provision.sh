@@ -117,10 +117,16 @@ set_secret() {
     fi
 }
 
+# app_of <env>: the fly app of an environment, read from its fly config (the databases keep the
+# environment's name: critical_staging, critical_prod; the apps are named in deploy/fly.<env>.toml).
+app_of() {
+    sed -n 's/^app = "\(.*\)"$/\1/p' "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/deploy/fly.$1.toml"
+}
+
 declare -A password=()
 for env in "$@"; do
     role="critical_$env"
-    app="critical-$env"
+    app="$(app_of "$env")"
     verifier=""
     if grep -qx "$role" <<<"$existing" && [ -z "$rotate" ]; then
         echo "== $role: exists, password and $app's secret unchanged (--rotate to change them)"

@@ -45,8 +45,8 @@ environment() {
 }
 
 custom='{"deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}}'
-environment staging critical-staging "$custom"
-environment production critical-prod "$custom"
+environment staging critical-hit-staging "$custom"
+environment production critical-hit "$custom"
 
 # policy <environment> <branch|tag> <name>: the one rule that environment accepts deployments from. It is
 # added first, then every other rule of the environment is deleted, so no moment accepts nothing.

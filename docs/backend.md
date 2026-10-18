@@ -493,8 +493,8 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   build or a shared cache (step 7). `just image` also smoke-checks the result.
 - **In the image**: `/app/critical-srv`, the web build in `/app/web`, the campaign `seeds/` in `/app/seeds`,
   the catalogue at `/app/catalogue.json`, and the PostgreSQL 17 client (`psql`, `pg_dump`, `pg_restore`;
-  `postgresql17-client`, the cluster's major version), which the server never uses: the promotion runs its
-  restore point from this image in a console machine (`scripts/restore-point.sh`, ADR 0024 step 9.2). The `CRITICAL_*` variables point at those paths; any of them
+  `postgresql17-client`, the cluster's major version), which the server never uses: the promotion takes its
+  restore point, a `pg_dump`, from this image in a console machine (`scripts/restore-point.sh`, ADR 0024 step 9.2). The `CRITICAL_*` variables point at those paths; any of them
   can be overridden at `docker run`. The image holds no data, has no volume and names no database: the
   database is PostgreSQL at `CRITICAL_DSN`, given at run time (on fly the app's secret, pointing at its
   database in the shared cluster). `deploy/fly.*.toml` have no `[[mounts]]` and no DSN, and their `[env]`
@@ -517,8 +517,10 @@ One container serves everything ([ADR 0024](adr/0024-deployment.md) step 1): the
   into an empty database. It checks health with the commit and the version, `/` and a deep link returning
   `index.html`, the JSON 404 on `/api/nope`, a non-root user and the `HEALTHCHECK`. Then it runs
   `scripts/restore-point.sh` in a second container of the image started without its entrypoint (as the
-  promotion's console machine is): three restore points of that database with a retention of two, an
-  existing name, the server running beside it and an exceeded size budget refused. The CI `image` job builds
+  promotion's console machine is): a restore point of that database comes back whole (checksum, size, the
+  dump and its table counts), creates no database, restores into a scratch database with the same counts, and
+  is taken across a few seconds of lost connection; the server running beside it, a release older than the
+  schema and the name of another database are refused. The CI `image` job builds
   the image with the fixture and runs it on every PR and on main; nothing is pushed.
 - **Release build**: on green CI on `main`, `.github/workflows/release.yml` computes the release version (or
   none), fetches the real catalogue with the read-only deploy key and runs `scripts/release-image.sh` (also

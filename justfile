@@ -301,6 +301,20 @@ db-backup env:
 db-restore-drill dump="":
     scripts/db-restore-drill.sh {{dump}}
 
+# ADR 0024 step 9.2, docs/deploy.md "Promotion". Admin, once: a random passphrase in
+# ~/.config/critical/restore-point.passphrase (never overwritten), set as the production secret
+# RESTORE_POINT_PASSPHRASE. Keep a copy in a password manager: GitHub never shows a secret back.
+# Create the passphrase that encrypts the promotion's restore points
+restore-point-key:
+    scripts/restore-point-key.sh
+
+# ADR 0024 step 9.3, docs/deploy.md "Rollback". Downloads the Promote run's artifact (kept 90 days), decrypts it
+# with ~/.config/critical/restore-point.passphrase, unpacks it as a backup (.backups/<restore point>/: the dump
+# and counts.txt, gitignored, mode 600). Then `just db-restore-drill` it. E.g. `just restore-point-fetch 1.2.3`.
+# Fetch the restore point taken before a version was promoted
+restore-point-fetch version:
+    scripts/restore-point-fetch.sh {{version}}
+
 # `mark` writes one action-log entry (a 1d20 roll) and prints its id, `check <id>` fails unless it is
 # still there; run one before and one after a restart or redeploy. Refuses non-staging apps.
 # Show that a staging app keeps its data across a restart and a redeploy

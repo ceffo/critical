@@ -45,7 +45,7 @@ type SVC interface {
 	// weapon, item, proficiency, skill or spellbook). A *domain.FieldError
 	// for invalid input (see NewCharacter).
 	Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (int64, error)
-	// Change renames, retires or re-arms (a thief's skill armour) the
+	// Change renames, retires or re-arms (a thief's or a bard's skill armour) the
 	// owner's character id (step 7.3).
 	// Another user's character, a retired one and an unknown id are all
 	// domain.ErrCharacterNotFound; retiring the current character makes the
@@ -55,7 +55,7 @@ type SVC interface {
 	// CreationOptions are the classes a new character may have, the races
 	// each admits and the entered values' ranges.
 	CreationOptions(ctx context.Context) (CreationOptions, error)
-	// Restorers are the state keys Change snapshots (a thief's skill armour),
+	// Restorers are the state keys Change snapshots (a thief's or bard's armour),
 	// with the writers an undo or a redo calls.
 	Restorers() map[string]actionlog.Restorer
 }
@@ -92,7 +92,7 @@ type Owners interface {
 	// RestoreSkillArmor writes a character's skill armour back for an undo
 	// or a redo (no owner: the log already ties the entry to the character).
 	RestoreSkillArmor(ctx context.Context, id int64, armor string) error
-	// SetSkillArmor sets the armour a thief wears for its skills, with the
+	// SetSkillArmor sets the armour a thief or a bard wears for its skills, with the
 	// same ownership rule as RenameCharacter.
 	SetSkillArmor(ctx context.Context, owner uuid.UUID, id int64, armor string) error
 	// RepairCurrentCharacter makes the owner's first character not retired

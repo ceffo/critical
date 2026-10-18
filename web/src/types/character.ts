@@ -94,13 +94,17 @@ export interface Derived {
   turning: TurningTarget[] | null;
   /** Step 17: each thieving skill with its terms; null for a class without them. */
   thiefSkills: ThiefSkillTerms[] | null;
-  /** Step 17: the entered points against PHB p.39's budget at the realized level (warnings). */
+  /** Step 18: each bard skill with its terms; null for a class without them. */
+  bardSkills: ThiefSkillTerms[] | null;
+  /** Steps 17 and 18: the entered points against the class's budget at the realized level
+   * (warnings; a bard's has no per-skill limit). */
   skillBudget: SkillBudgetWarning[];
   /** Step 19: PHB Table 30's damage multiplier at the realized level; 0 without the backstab. */
   backstab: number;
 }
 
-/** ADR 0030 step 17: percent = base + points + race + dexterity + armor, capped at 95, floored at 0. */
+/** ADR 0030 steps 17 and 18: percent = base + points + race + dexterity + armor, capped at 95,
+ * floored at 0. */
 export interface ThiefSkillTerms {
   skill: string;
   base: number;
@@ -199,7 +203,8 @@ export interface Character {
   class: string;
   /** The PHB race the rules read ("half_elf"…), "" when none is set. */
   raceCode: string;
-  /** The armour a thief wears for its skills (ADR 0030 step 1); "" for another class. */
+  /** The armour a thief or a bard wears for its skills (ADR 0030 step 1); "" for another class or
+   * none entered (the server reads it as leather). */
   skillArmor: string;
   derived: Derived;
 
@@ -263,7 +268,7 @@ export interface CreationOptions {
     class: string;
     races: string[];
     exceptionalStrengthRaces: string[];
-    /** The thieving skills the class enters points in (ADR 0030 step 17); empty for none. */
+    /** The skills the class enters points in (ADR 0030 steps 17 and 18); empty for none. */
     skills: string[];
     /** The armours it picks for its skills (step 1); empty for none. */
     skillArmors: string[];
@@ -271,7 +276,7 @@ export interface CreationOptions {
   ability: ValueRange;
   /** The 18/xx percentile's range (1 = 18/01, 100 = 18/00). */
   strExceptional: ValueRange;
-  /** The range of a thief's points in one skill. */
+  /** The range of a thief's or a bard's points in one skill. */
   skillPoints: ValueRange;
   hpMax: ValueRange;
   xp: ValueRange;
@@ -294,7 +299,8 @@ export type NewCharacter = {
   xp: number | null;
   /** The 18/xx percentile (ADR 0030 step 9), 0 for none. */
   strExceptional: number;
-  /** A thief's points by skill and the armour worn for its skills (ADR 0030 steps 1 and 17);
+  /** A thief's or a bard's points by skill and the armour worn for its skills (ADR 0030 steps 1,
+   * 17 and 18);
    * absent for the other classes. */
   skillPoints?: Record<string, number>;
   skillArmor?: string;

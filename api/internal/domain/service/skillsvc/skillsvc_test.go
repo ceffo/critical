@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 )
@@ -38,9 +39,13 @@ type fixture struct {
 	entries []actionlog.NewEntry
 }
 
-// The sheet's scores (STR 12, DEX 17, CON 16, INT 14, WIS 8, CHA 16).
+// The sheet's scores (STR 12, DEX 17, CON 16, INT 14, WIS 8, CHA 16) and
+// two of the bard skills its character service derives (ADR 0030 step 18).
 func bard() *charactersvc.Character {
-	return &charactersvc.Character{ID: charID, Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16}
+	return &charactersvc.Character{
+		ID: charID, Class: "bard", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16,
+		Derived: charactersvc.Derived{BardSkills: bardSkills},
+	}
 }
 
 var catalog = []skillsvc.ProficiencyDef{
@@ -49,7 +54,10 @@ var catalog = []skillsvc.ProficiencyDef{
 	{ID: "acrobatics", Ability: skillsvc.AbilityDex, Modifier: 5},          // 17 + 5 = 22
 }
 
-var bardSkills = []skillsvc.BardSkillDef{{ID: "climb_walls", Percent: 85}, {ID: "pick_pockets", Percent: 50}}
+var bardSkills = []ruletablesvc.SkillPercent{
+	{Skill: "climb_walls", Base: 50, Points: 35, Percent: 85},
+	{Skill: "pick_pockets", Base: 10, Points: 25, Race: 10, Dexterity: 5, Percent: 50},
+}
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
@@ -61,7 +69,6 @@ func newFixture(t *testing.T) *fixture {
 	require.NoError(t, err)
 	f.svc = svc
 	f.dal.EXPECT().ListProficiencies(mock.Anything, charID).Return(catalog, nil).Maybe()
-	f.dal.EXPECT().ListBardSkills(mock.Anything, charID).Return(bardSkills, nil).Maybe()
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
 	return f
 }
@@ -253,8 +260,8 @@ func TestList_TargetsAndLastCheckPerSkill(t *testing.T) {
 			{ID: "acrobatics", Ability: skillsvc.AbilityDex, AbilityScore: 17, Modifier: 5, Target: 22},
 		},
 		BardSkills: []skillsvc.BardSkill{
-			{ID: "climb_walls", Percent: 85, Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, AdjustedTarget: 85, Success: true}},
-			{ID: "pick_pockets", Percent: 50},
+			{SkillPercent: bardSkills[0], Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, AdjustedTarget: 85, Success: true}},
+			{SkillPercent: bardSkills[1]},
 		},
 		ThiefSkills: []skillsvc.ThiefSkill{},
 	}, got)

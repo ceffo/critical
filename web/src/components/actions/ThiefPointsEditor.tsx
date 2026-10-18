@@ -6,11 +6,11 @@ import { skillName } from "@/lib/logSummary";
 import { parseWhole } from "@/lib/wholeNumber";
 import { cn } from "@/lib/utils";
 import { useSkillsStore } from "@/stores/skills";
-import type { ThiefSkill } from "@/types/skills";
+import type { RogueSkill } from "@/types/skills";
 
 /**
- * A thief spends skill points after creation (ADR 0030 step 17): the total points of each skill,
- * saved in one move the journal's Undo takes back. The server checks each total's range; the
+ * A thief or a bard spends skill points after creation (ADR 0030 steps 17 and 18): the total
+ * points of each skill, saved in one move the journal's Undo takes back. The server checks each total's range; the
  * budget at the realized level stays the warning under the list, never a refusal. A field the
  * server refused shows its error under it.
  */
@@ -18,7 +18,7 @@ export function ThiefPointsEditor({
   skills,
   onDone,
 }: {
-  skills: ThiefSkill[];
+  skills: RogueSkill[];
   onDone: () => void;
 }) {
   const { t } = useTranslation();

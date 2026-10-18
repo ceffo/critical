@@ -45,13 +45,6 @@ type ProficiencyDef struct {
 	Modifier int
 }
 
-// BardSkillDef is a stored bard skill and its percentage (sheet value, all
-// adjustments included).
-type BardSkillDef struct {
-	ID      string
-	Percent int
-}
-
 // LastCheck is the newest non-voided check of a skill, with the adjustment
 // and verdict in effect. Target is the unadjusted target.
 type LastCheck struct {
@@ -74,11 +67,11 @@ type Proficiency struct {
 	Last         *LastCheck
 }
 
-// BardSkill is a bard skill with the last check rolled for it.
+// BardSkill is a bard skill (ADR 0030 step 18): its percentage, derived by
+// the character service with its terms, and the last check rolled for it.
 type BardSkill struct {
-	ID      string
-	Percent int
-	Last    *LastCheck
+	ruletablesvc.SkillPercent
+	Last *LastCheck
 }
 
 // ThiefSkill is a thieving skill (ADR 0030 step 17): its percentage, derived

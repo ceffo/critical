@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
@@ -53,6 +54,10 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		// Kelsen's Intelligence 14 (PHB Table 4, ADR 0030 step 20.1).
 		Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
+		// His seeded points give his sheet's 85 / 90 / 50 / 75 (ADR 0030
+		// step 18), within the budget at any of these levels.
+		BardSkills:  kelsenBardSkills,
+		SkillBudget: []ruletablesvc.BudgetWarning{},
 	}
 	limits15 := []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 3}, {Level: 5, Max: 2}}
 	d, ledgerLevel, limits := derivedOf(t, bs, id)
@@ -82,7 +87,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		Saves:      charactersvc.Saves{ParaPoison: 9, RodStaffWand: 6, PetriPoly: 8, Breath: 12, Spell: 7},
 		SpellSlots: map[int]int{1: 4, 2: 4, 3: 3, 4: 3, 5: 3, 6: 1}, SheetDifferences: []charactersvc.SheetDifference{},
 		LevelUp:   charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
-		Spellbook: at15.Spellbook,
+		Spellbook: at15.Spellbook, BardSkills: kelsenBardSkills, SkillBudget: []ruletablesvc.BudgetWarning{},
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)
 	assert.Equal(t, []prepsvc.LevelLimit{

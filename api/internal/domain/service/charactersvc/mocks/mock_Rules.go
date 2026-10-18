@@ -76,6 +76,67 @@ func (_c *MockRules_BackstabFor_Call) RunAndReturn(run func(int) (int, error)) *
 	return _c
 }
 
+// BardSkills provides a mock function with given fields: race, dex, armor, points
+func (_m *MockRules) BardSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error) {
+	ret := _m.Called(race, dex, armor, points)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BardSkills")
+	}
+
+	var r0 []ruletablesvc.SkillPercent
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)); ok {
+		return rf(race, dex, armor, points)
+	}
+	if rf, ok := ret.Get(0).(func(string, int, string, map[string]int) []ruletablesvc.SkillPercent); ok {
+		r0 = rf(race, dex, armor, points)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]ruletablesvc.SkillPercent)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(string, int, string, map[string]int) error); ok {
+		r1 = rf(race, dex, armor, points)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_BardSkills_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BardSkills'
+type MockRules_BardSkills_Call struct {
+	*mock.Call
+}
+
+// BardSkills is a helper method to define mock.On call
+//   - race string
+//   - dex int
+//   - armor string
+//   - points map[string]int
+func (_e *MockRules_Expecter) BardSkills(race interface{}, dex interface{}, armor interface{}, points interface{}) *MockRules_BardSkills_Call {
+	return &MockRules_BardSkills_Call{Call: _e.mock.On("BardSkills", race, dex, armor, points)}
+}
+
+func (_c *MockRules_BardSkills_Call) Run(run func(race string, dex int, armor string, points map[string]int)) *MockRules_BardSkills_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(int), args[2].(string), args[3].(map[string]int))
+	})
+	return _c
+}
+
+func (_c *MockRules_BardSkills_Call) Return(_a0 []ruletablesvc.SkillPercent, _a1 error) *MockRules_BardSkills_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_BardSkills_Call) RunAndReturn(run func(string, int, string, map[string]int) ([]ruletablesvc.SkillPercent, error)) *MockRules_BardSkills_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // BardSpellsPerDay provides a mock function with given fields: level
 func (_m *MockRules) BardSpellsPerDay(level int) (map[int]int, error) {
 	ret := _m.Called(level)

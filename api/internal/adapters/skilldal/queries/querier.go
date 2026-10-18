@@ -9,7 +9,6 @@ import (
 )
 
 type Querier interface {
-	ListBardSkills(ctx context.Context, characterID int64) ([]ListBardSkillsRow, error)
 	// Proficiencies and bard skills belong to a character (character_id).
 	ListProficiencies(ctx context.Context, characterID int64) ([]ListProficienciesRow, error)
 }

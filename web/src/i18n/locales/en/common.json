@@ -1635,9 +1635,9 @@
       "skill_points_per_skill": "{{name}}: {{points}} points, at most {{limit}} at this level"
     },
     "spendPoints": "Spend",
-    "spendPointsHint": "Spend thieving skill points",
-    "armorHint": "Change the armour worn for the thieving skills",
-    "pointsTitle": "Thieving skill points",
+    "spendPointsHint": "Spend skill points",
+    "armorHint": "Change the armour worn for the skills",
+    "pointsTitle": "Skill points",
     "pointsLead": "The total points in each skill. The budget at your level is a warning, not a limit.",
     "pointsLabel": "Points in {{name}}",
     "savePoints": "Save",
@@ -1870,14 +1870,15 @@
       "race_not_allowed": "This race cannot be a {{className}}.",
       "not_allowed": "No exceptional strength for this character: only a warrior with Strength 18, not a halfling."
     },
-    "skillPoints": "Thief skills",
+    "skillPoints": "Skill points",
     "skillPointsLead": "The points spent in each skill; the server adds the base, race, Dexterity and armour.",
     "skillArmor": "Armour worn",
     "armors": {
       "none": "None",
       "leather": "Leather",
       "padded_studded_leather": "Padded or studded leather",
-      "elven_chain": "Elven chain"
+      "elven_chain": "Elven chain",
+      "metal": "Metal, up to chain mail"
     }
   },
   "turning": {

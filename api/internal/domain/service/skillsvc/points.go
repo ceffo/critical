@@ -10,10 +10,11 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
-// PointsStateKey is the action-log state key of a thief's skill points.
+// PointsStateKey is the action-log state key of a thief's or a bard's skill
+// points.
 const PointsStateKey = "skill_points"
 
-// Points writes a thief's skill points (characters.skill_points). It joins
+// Points writes a thief's or a bard's skill points (characters.skill_points). It joins
 // the ctx transaction.
 type Points interface {
 	SetSkillPoints(ctx context.Context, characterID int64, points map[string]int) error
@@ -40,7 +41,8 @@ func orEmpty(m map[string]int) map[string]int {
 	return m
 }
 
-// SetPoints is ADR 0030 step 17 after creation: the player of a thief sets
+// SetPoints is ADR 0030 steps 17 and 18 after creation: the player of a
+// thief or a bard sets
 // the total points of each skill (those it leaves out are 0), checked as at
 // creation by charactersvc.ValidSkillPoints; the budget at the realized
 // level stays a warning of the derived sheet. It is one skill_points entry
@@ -97,7 +99,7 @@ func (f restoreFunc) Restore(ctx context.Context, characterID int64, state json.
 	return f(ctx, characterID, state)
 }
 
-// Restorers writes a thief's skill points back: undo writes the spend's
+// Restorers writes a thief's or a bard's skill points back: undo writes the spend's
 // "before", redo its "after" (ADR 0019). It runs inside the undo's
 // transaction.
 func (s *service) Restorers() map[string]actionlog.Restorer {

@@ -35,12 +35,13 @@ type Character struct {
 	Class string
 	// Race is the race code (one of Races), "" when none is set.
 	Race string
-	// SkillPoints are a thief's entered skill points (ADR 0030 step 1), by
-	// skill code (ruletablesvc.ThiefSkills); nil or absent skills have 0.
+	// SkillPoints are a thief's or a bard's entered skill points (ADR 0030
+	// steps 1, 17 and 18), by skill code (ruletablesvc.SkillsOf the class);
+	// nil or absent skills have 0.
 	SkillPoints map[string]int
-	// SkillArmor is the armour a thief wears for its skills (step 1, one of
-	// ruletablesvc.ThiefArmors), "" for a character without thieving
-	// skills.
+	// SkillArmor is the armour a thief or a bard wears for its skills (step
+	// 1, one of ruletablesvc.SkillArmorsOf the class), "" for a character
+	// without skill points or none entered (read as leather).
 	SkillArmor string
 
 	// Sheet is what the character sheet stated when the character was
@@ -121,8 +122,12 @@ type Derived struct {
 	// ThiefSkills is step 17: each thieving skill with its terms and
 	// percentage; nil for a class without them.
 	ThiefSkills []ruletablesvc.SkillPercent
-	// SkillBudget is step 17's warnings: the entered points against PHB
-	// p.39's budget at the realized level; empty when none.
+	// BardSkills is step 18: each bard skill with its terms and
+	// percentage; nil for a class without them.
+	BardSkills []ruletablesvc.SkillPercent
+	// SkillBudget is step 17's (a thief's) or step 18's (a bard's)
+	// warnings: the entered points against the class's budget at the
+	// realized level; empty when none.
 	SkillBudget []ruletablesvc.BudgetWarning
 	// Backstab is step 19: PHB Table 30's damage multiplier at the realized
 	// level; 0 for a class without the backstab option.

@@ -42,6 +42,9 @@ type Rules interface {
 	TurningAt(level int) ([]ruletablesvc.TurningTarget, error)
 	// ThiefSkills is PHB Tables 26 to 29 on the entered points (step 17).
 	ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
+	// BardSkills is PHB Tables 27 to 29 and 33 on the entered points
+	// (step 18).
+	BardSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
 	// BackstabFor is PHB Table 30 at a thief's level (step 19).
 	BackstabFor(level int) (int, error)
 }
@@ -106,18 +109,24 @@ func Derive(c *Character, ledgerXP int, rules Rules) (Derived, error) {
 			return Derived{}, fmt.Errorf("derive %s turning: %w", c.Class, err)
 		}
 	}
-	if ruletablesvc.HasThiefSkills(c.Class) {
-		// Step 17: the sheet's Dexterity, the entered points and armour;
-		// the budget at the realized level. No armour stored is leather,
-		// Table 29's baseline (creation always stores one).
+	if ruletablesvc.HasSkillPoints(c.Class) {
+		// Steps 17 and 18: the sheet's Dexterity, the entered points and
+		// armour; the budget at the realized level. No armour stored is
+		// leather, Table 29's baseline (creation always stores one; the
+		// imported bard has none).
 		armor := c.SkillArmor
 		if armor == "" {
 			armor = ruletablesvc.ArmorLeather
 		}
-		if d.ThiefSkills, err = rules.ThiefSkills(c.Race, c.Dex, armor, c.SkillPoints); err != nil {
+		if ruletablesvc.HasThiefSkills(c.Class) {
+			d.ThiefSkills, err = rules.ThiefSkills(c.Race, c.Dex, armor, c.SkillPoints)
+		} else {
+			d.BardSkills, err = rules.BardSkills(c.Race, c.Dex, armor, c.SkillPoints)
+		}
+		if err != nil {
 			return Derived{}, fmt.Errorf("derive %s skills: %w", c.Class, err)
 		}
-		d.SkillBudget = ruletablesvc.SkillPointBudget(realized, c.SkillPoints)
+		d.SkillBudget = ruletablesvc.SkillBudgetOf(c.Class, realized, c.SkillPoints)
 	}
 	if ruletablesvc.Backstabs(c.Class) {
 		if d.Backstab, err = rules.BackstabFor(realized); err != nil {

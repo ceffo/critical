@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 )
 
@@ -22,15 +24,35 @@ func TestSkills_ListWireShape(t *testing.T) {
 				Last: &skillsvc.LastCheck{EntryID: 7, Roll: 18, Target: 16, Adjustment: 3, AdjustmentReason: "rope", AdjustedTarget: 19, Success: true},
 			},
 		},
-		BardSkills: []skillsvc.BardSkill{{ID: "climb_walls", Percent: 85}},
+		BardSkills: []skillsvc.BardSkill{{SkillPercent: ruletablesvc.SkillPercent{
+			Skill: "climb_walls", Base: 50, Points: 35, Race: 0, Dexterity: 0, Armor: -5, Percent: 80,
+		}}},
 	}, nil)
 	rec := do(h, "GET", "/api/skills", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{
 		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"target":16,
 			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
-		"bardSkills":[{"id":"climb_walls","percent":85,"last":null}],
+		"bardSkills":[{"id":"climb_walls","base":50,"points":35,"race":0,"dexterity":0,"armor":-5,"percent":80,
+			"maxPercent":95,"maxPoints":95,"usable":true,"last":null}],
 		"thiefSkills":[]}`, rec.Body.String())
+}
+
+func TestSkills_ListUsableIsTheServersCall(t *testing.T) {
+	h, m := newRouter(t)
+	m.skills.EXPECT().List(mock.Anything, int64(1)).Return(&skillsvc.Skills{
+		ThiefSkills: []skillsvc.ThiefSkill{{SkillPercent: ruletablesvc.SkillPercent{Skill: "climb_walls", Percent: 0}}},
+		BardSkills:  []skillsvc.BardSkill{{SkillPercent: ruletablesvc.SkillPercent{Skill: "climb_walls", Percent: 0}}},
+	}, nil)
+	rec := do(h, "GET", "/api/skills", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got struct {
+		ThiefSkills []struct{ Usable bool } `json:"thiefSkills"`
+		BardSkills  []struct{ Usable bool } `json:"bardSkills"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.False(t, got.ThiefSkills[0].Usable, "a thieving skill under 1% waits for points")
+	assert.True(t, got.BardSkills[0].Usable, "a bard skill has no minimum")
 }
 
 func TestSkills_RollWireShape(t *testing.T) {

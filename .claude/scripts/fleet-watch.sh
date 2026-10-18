@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # fleet-watch.sh: the supervisor's ONE watcher over its live agents (every herdr agent except sup-*).
 # Run it with run_in_background. Polls `herdr agent list` every 30 s and exits when an agent:
-#   - becomes blocked (a permission prompt or question in its tab)              -> "BLOCKED <name>"
+#   - becomes blocked (a permission prompt or question in its tab; not scoper-*/designer-*, whose
+#     questions are for the user)                                                 -> "BLOCKED <name>"
 #   - ends a turn (working -> idle/done) and its last screen speaks to the supervisor
 #     (supervisor / ship / push / PR / merge), or its report file is newer than   -> "NEEDS-SUPERVISOR <name>"
 #     the last prompt it got
@@ -34,7 +35,8 @@ while sleep 30; do
     [ "${seen[$n]:-}" = "$q" ] && continue
     prev=${state[$n]:-working}; seen[$n]=$q; state[$n]=$s
     tail=$(herdr agent read "$n" --source recent-unwrapped --lines 25 2>/dev/null | grep -v '^\s*$' | tail -15)
-    if [ "$s" = blocked ]; then echo "BLOCKED $n"; echo "$tail"; exit 0; fi
+    # scoper-* / designer-* talk to the user by design: their questions (blocked) are for the user.
+    if [ "$s" = blocked ] && [[ "$n" != scoper-* && "$n" != designer-* ]]; then echo "BLOCKED $n"; echo "$tail"; exit 0; fi
     if [ "$prev" = working ] && { [ "$s" = idle ] || [ "$s" = done ]; }; then
       if grep -qiE 'supervisor|ship|push|pull request|\bPR\b|merge' <<<"$tail" || fresh_report "$n"; then
         echo "NEEDS-SUPERVISOR $n"; echo "$tail"; exit 0

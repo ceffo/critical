@@ -40,12 +40,13 @@ export function CreateCharacterPage() {
 
   return (
     <main
-      className="flex min-h-screen items-start justify-center p-3 sm:items-center"
+      className="flex h-dvh items-start justify-center overflow-hidden p-3 sm:items-center"
       data-screen="create-character"
     >
-      <div className="flex w-full max-w-[40rem] flex-col gap-4">
+      {/* The page never scrolls (as the sheet's): in a window shorter than the form, the form's card scrolls on its own. */}
+      <div className="flex max-h-full min-h-0 w-full max-w-[40rem] flex-col gap-4">
         <div
-          className="flex items-center gap-3"
+          className="flex shrink-0 items-center gap-3"
           role="img"
           aria-label={APP_NAME}
         >
@@ -62,7 +63,7 @@ export function CreateCharacterPage() {
         {others && (
           <section
             aria-labelledby="create-yours"
-            className="zone-card flex flex-col"
+            className="zone-card flex max-h-[30dvh] shrink-0 flex-col"
             data-testid="create-yours"
           >
             <div className="card-band px-4 py-2">
@@ -70,7 +71,7 @@ export function CreateCharacterPage() {
                 {t("characters.yours")}
               </h2>
             </div>
-            <div className="px-4 pt-3 pb-4">
+            <div className="min-h-0 overflow-y-auto px-4 pt-3 pb-4">
               <CharacterList />
             </div>
           </section>
@@ -78,15 +79,15 @@ export function CreateCharacterPage() {
 
         <section
           aria-labelledby="create-title"
-          className="stage-card flex flex-col"
+          className="stage-card flex min-h-0 flex-col"
           data-testid="create-card"
         >
-          <div className="card-band px-4 py-2">
+          <div className="card-band shrink-0 px-4 py-2">
             <h1 id="create-title" className="section-label">
               {t("characters.newTitle")}
             </h1>
           </div>
-          <div className="flex flex-col gap-4 px-4 pt-3 pb-4">
+          <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-4 pt-3 pb-4">
             <p className="text-body text-ink-muted">
               {others
                 ? t("characters.noCurrentLead")
@@ -96,7 +97,7 @@ export function CreateCharacterPage() {
           </div>
         </section>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
           <div
             role="radiogroup"
             aria-label={t("settings.language")}

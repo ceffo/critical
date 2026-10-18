@@ -6,10 +6,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
 // clericCaster is a caster with a chance of spell failure (Wisdom 9, PHB
@@ -68,4 +72,36 @@ func TestCast_Step14_SpellFailure(t *testing.T) {
 		assert.Nil(t, res.Failure)
 		assert.NotContains(t, f.dice.sides, 100)
 	})
+}
+
+// ADR 0030 step 14: the request's refusals come before the spell failure
+// d100. An invalid request from a caster who would fail (the d100 at the
+// chance) is a 400 with nothing written and no d100 rolled, whatever the die
+// would show: an attack spell with no target AC, a material item with none
+// left or none chosen, a wrong split of granted slots.
+func TestCast_Step14_RefusalsBeforeTheD100(t *testing.T) {
+	ac := 4
+	tests := []struct {
+		name  string
+		slot  spellsvc.SpellSlot
+		items []itemsvc.Item
+		req   castsvc.CastRequest
+	}{
+		{"an attack spell with no target AC", slot("chromatic_orb", "Chromatic Orb", 1), []itemsvc.Item{diamonds}, castsvc.CastRequest{}},
+		{"a material item with none left", slot("chromatic_orb", "Chromatic Orb", 1), nil, castsvc.CastRequest{TargetAC: &ac}},
+		{"several items, none chosen", slot("chromatic_orb", "Chromatic Orb", 1), []itemsvc.Item{diamonds, rubies}, castsvc.CastRequest{TargetAC: &ac}},
+		{"a wrong split of granted slots", slot(raryID, "Rary's Mnemonic Enhancer", 4), nil, castsvc.CastRequest{ExtraSlots: []int{4}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixtureOf(t, catalog(t), clericCaster(), 1)
+			f.prepared(tt.slot)
+			f.items.EXPECT().List(mock.Anything, charID).Return(tt.items, nil).Maybe()
+			_, err := f.svc.Cast(context.Background(), charID, 0, tt.req)
+			require.ErrorIs(t, err, domain.ErrInvalidInput)
+			assert.Empty(t, f.dice.sides, "no d100")
+			assert.Empty(t, f.saved, "no slot spent")
+			assert.Empty(t, f.entries, "nothing logged")
+		})
+	}
 }

@@ -421,7 +421,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     chance (`Derived.SpellFailure`, step 14) and Table 61 at the realized level (`Derived.Turning`,
     served on the character as `turning`, step 16), so the web offers the types and shows each target
     without computing it. Which class reads what is class data in `ruletablesvc` (`UsesWisdomSpells`,
-    `TurnsUndead`), never a handler branch. Step 14's d100 is rolled after the cast's refusals; a
+    `TurnsUndead`), never a handler branch. Step 14's d100 is rolled after every refusal of the request, its effect's included (a target AC, a
+    material item left or chosen, a granted-slots split), so an invalid request is a 400 whatever the die; a
     failed cast spends the slot and records only the slot snapshot, the spell and `failure` (d100,
     chance, failed); a cast above the chance carries the roll too. Step 15 reads the sphere access and
     each priest spell's sphere codes of catalogue format 6 ([ADR 0021](0021-spell-catalogue.md) step

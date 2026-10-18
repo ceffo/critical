@@ -56,10 +56,14 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			return err
 		}
 		// ADR 0030 step 14: a caster with a chance of spell failure rolls one
-		// d100 (after the refusals above); at or under it the spell fails:
-		// the slot is spent and nothing else happens.
+		// d100, after every refusal of the request (above, and checkCast for
+		// the effect's); at or under it the spell fails: the slot is spent and
+		// nothing else happens.
 		var failure *SpellFailure
 		if chance := c.Derived.SpellFailure; chance > 0 {
+			if err := s.checkCast(ctx, characterID, id, req, c.Derived.RealizedLevel); err != nil {
+				return err
+			}
 			roll := s.Dice.RollDie(100)
 			failure = &SpellFailure{Roll: roll, Chance: chance, Failed: roll <= chance}
 		}

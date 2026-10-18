@@ -15,6 +15,12 @@ sql:
         emit_empty_slices: true
         omit_unused_structs: true
   - <<: *adapter
+    queries: internal/adapters/authdal/queries
+    gen:
+      go:
+        <<: *go
+        out: internal/adapters/authdal/queries
+  - <<: *adapter
     queries: internal/adapters/dicedal/queries
     gen:
       go:

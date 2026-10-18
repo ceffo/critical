@@ -3,7 +3,10 @@ package memory
 import (
 	"fmt"
 
+	"github.com/google/uuid"
+
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -63,6 +66,12 @@ type tables struct {
 
 	dice    map[int64]diceFavourite
 	diceSeq int64
+
+	// users, invites and sessions of the login (ADR 0029); sessions by
+	// their stored id (the token's hash).
+	users    map[uuid.UUID]authsvc.User
+	invites  map[uuid.UUID]storedInvite
+	sessions map[string]authsvc.Session
 }
 
 func newTables() *tables {
@@ -81,6 +90,9 @@ func newTables() *tables {
 		forms:         map[int64]combatsvc.AttackForm{},
 		xp:            map[int64]xpEntry{},
 		dice:          map[int64]diceFavourite{},
+		users:         map[uuid.UUID]authsvc.User{},
+		invites:       map[uuid.UUID]storedInvite{},
+		sessions:      map[string]authsvc.Session{},
 	}
 }
 

@@ -9,7 +9,7 @@ import (
 // clearEnv unsets the vars for the test and restores them afterwards.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR", "CRITICAL_STORAGE", "FLY_APP_NAME"} {
+	for _, k := range []string{"CRITICAL_DSN", "CRITICAL_SEEDS_DIR", "CRITICAL_ADDR", "CRITICAL_CATALOGUE", "CRITICAL_WEB_DIR", "CRITICAL_STORAGE", "FLY_APP_NAME", "CRITICAL_GOOGLE_CLIENT_ID", "CRITICAL_GOOGLE_CLIENT_SECRET", "CRITICAL_PUBLIC_URL"} {
 		t.Setenv(k, "") // registers restore of the original value
 		_ = os.Unsetenv(k)
 	}
@@ -90,7 +90,10 @@ func TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage(t *test
 		{"memory on fly", with(func(c *Config) { c.Storage, c.FlyApp = StorageMemory, "critical-prod" }), false},
 		{"memory in the production image", with(func(c *Config) { c.Storage, c.WebDir = StorageMemory, "/app/web" }), false},
 		{"unknown storage", with(func(c *Config) { c.Storage = "sqlite" }), false},
-		{"database on fly", with(func(c *Config) { c.FlyApp, c.WebDir = "critical-prod", "/app/web" }), true},
+		{"database on fly", with(func(c *Config) {
+			c.FlyApp, c.WebDir = "critical-prod", "/app/web"
+			c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
+		}), true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -141,5 +144,57 @@ func TestResolveFromRepoRoot(t *testing.T) {
 	outside := t.TempDir()
 	if got := resolveFromRepoRoot("c.json", outside); got != "c.json" {
 		t.Errorf("outside a checkout: got %q, want it relative to cwd", got)
+	}
+}
+
+// ADR 0029 step 8.2: on a hosted app (FLY_APP_NAME, set by fly on every
+// machine) a missing or partial OAuth setting stops the start; locally none
+// is the dev login, a partial one is refused too, and all three select the
+// Google login with the redirect, host and Secure cookies of the public URL.
+func TestConfigAuth_Step8_2_HostedAppRefusesToStartWithoutOAuth(t *testing.T) {
+	base := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c"}
+	full := func(c Config) Config {
+		c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
+		return c
+	}
+	onFly := base
+	onFly.FlyApp = "critical-hit"
+
+	if err := onFly.Validate(); err == nil {
+		t.Fatal("fly without OAuth settings must not start")
+	}
+	partial := onFly
+	partial.GoogleClientID = "id"
+	if err := partial.Validate(); err == nil {
+		t.Fatal("fly with a partial OAuth setting must not start")
+	}
+	localPartial := base
+	localPartial.PublicURL = "http://localhost:8080"
+	if err := localPartial.Validate(); err == nil {
+		t.Fatal("a partial OAuth setting must not start locally either")
+	}
+	for _, bad := range []string{"critical-hit.fly.dev", "ftp://x", "https://x/app", "https://"} {
+		c := full(onFly)
+		c.PublicURL = bad
+		if err := c.Validate(); err == nil {
+			t.Fatalf("public URL %q accepted", bad)
+		}
+	}
+
+	dev, err := base.auth()
+	if err != nil || dev.google != nil || dev.secure || dev.host != "" {
+		t.Fatalf("no settings locally must be the dev login, got %+v, %v", dev, err)
+	}
+	g, err := full(onFly).auth()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.google == nil || g.google.RedirectURL != "https://critical-hit.fly.dev/api/auth/google/callback" ||
+		g.google.ClientID != "id" || g.google.ClientSecret != "secret" || g.host != "critical-hit.fly.dev" || !g.secure {
+		t.Fatalf("unexpected Google login config: %+v %+v", g, g.google)
+	}
+	local, err := Config{GoogleClientID: "id", GoogleClientSecret: "s", PublicURL: "http://localhost:8080/"}.auth()
+	if err != nil || local.secure || local.host != "localhost:8080" {
+		t.Fatalf("plain HTTP public URL: %+v, %v", local, err)
 	}
 }

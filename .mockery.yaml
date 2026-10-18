@@ -3,6 +3,14 @@ resolve-type-alias: false
 disable-version-string: true
 issue-845-fix: true
 packages:
+  github.com/ceffo/critical/api/internal/domain/service/authsvc:
+    config:
+      dir: "internal/domain/service/authsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      IdentityProvider:
   github.com/ceffo/critical/api/internal/domain/service/hpsvc:
     config:
       dir: "internal/domain/service/hpsvc/mocks"
@@ -170,6 +178,12 @@ packages:
   github.com/ceffo/critical/api/internal/adapters/critdal/queries:
     config:
       dir: "internal/adapters/critdal/queries/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Querier:
+  github.com/ceffo/critical/api/internal/adapters/authdal/queries:
+    config:
+      dir: "internal/adapters/authdal/queries/mocks"
       outpkg: "mocks"
     interfaces:
       Querier:

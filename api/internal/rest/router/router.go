@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/handler/actionloghdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/authhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/buffhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
@@ -45,6 +46,11 @@ type Options struct {
 	// Version is the release version (X.Y.Z) baked into the image, reported
 	// by /api/health (ADR 0024 step 1.4); empty is reported as "unknown".
 	Version string
+	// Host is the application's own host, from its public URL (the CSRF
+	// check of ADR 0029 step 4.5); empty accepts the request's Host.
+	Host string
+	// SecureCookies marks the session cookies Secure (HTTPS, step 4.2).
+	SecureCookies bool
 }
 
 // unknown is what /api/health reports for a build identity that was not set.
@@ -65,6 +71,13 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	r := chi.NewRouter()
 	r.Use(mw.Logger(log))
 	r.Use(mw.Recoverer)
+	// The one access check (ADR 0029 step 6.2): every route below, and the
+	// web app outside /api, needs a session unless mw.Public lists it.
+	var auth mw.Authenticator
+	if bs.Auth != nil {
+		auth = bs.Auth
+	}
+	r.Use(mw.Gate(auth, mw.GateConfig{Host: opts.Host, Secure: opts.SecureCookies}))
 
 	r.Get("/api/health", func(w http.ResponseWriter, req *http.Request) {
 		render.OK(req.Context(), w, map[string]string{
@@ -72,6 +85,10 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		})
 	})
 	r.NotFound(notFound(opts.Web))
+
+	if bs.Auth != nil {
+		authhdl.RegisterRoutes(r, bs.Auth, authhdl.Options{Secure: opts.SecureCookies})
+	}
 
 	charID := func(_ *http.Request) int64 { return bs.CharacterID }
 

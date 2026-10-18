@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	compmocks "github.com/ceffo/critical/api/internal/composition/mocks"
 	actionlogmocks "github.com/ceffo/critical/api/internal/domain/service/actionlogsvc/mocks"
+	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	combatmocks "github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	dicemocks "github.com/ceffo/critical/api/internal/domain/service/dicesvc/mocks"
 	hpmocks "github.com/ceffo/critical/api/internal/domain/service/hpsvc/mocks"
@@ -50,6 +51,7 @@ type harness struct {
 	Skill        *skillmocks.MockDAL
 	Spellbook    *compmocks.MockSpellbookStore
 	Dice         *dicemocks.MockDAL
+	Auth         *authmocks.MockDAL
 }
 
 func newHarness(t *testing.T) *harness {
@@ -70,11 +72,12 @@ func newHarness(t *testing.T) *harness {
 		Skill:        skillmocks.NewMockDAL(t),
 		Spellbook:    compmocks.NewMockSpellbookStore(t),
 		Dice:         dicemocks.NewMockDAL(t),
+		Auth:         authmocks.NewMockDAL(t),
 	}
 	h.Storage = composition.Storage{
 		Store: h.Store, Character: h.Character, HP: h.HP, Log: h.Log, Buff: h.Buff, Spell: h.Spell,
 		Weapons: h.Weapons, WeaponEditor: h.WeaponEditor, Crit: h.Crit, Items: h.Items, Forms: h.Forms,
-		XP: h.XP, Skill: h.Skill, Spellbook: h.Spellbook, Dice: h.Dice,
+		XP: h.XP, Skill: h.Skill, Spellbook: h.Spellbook, Dice: h.Dice, Auth: h.Auth,
 	}
 	// Every service runs its transactions through the store: the body runs
 	// once, in the caller's context.

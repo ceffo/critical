@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
@@ -112,6 +113,17 @@ func fixed(msg string) func(error) string { return func(error) string { return m
 // is transport-layer code and may depend inward on the service packages, while
 // services never import render, so layering holds without widening domain.
 var mappings = []mapping{
+	// The login and session refusals of ADR 0029 (steps 3.7, 4, 5.2): the
+	// login callback redirects to the login page with the code instead.
+	{target: authsvc.ErrUnauthenticated, status: http.StatusUnauthorized, code: "unauthenticated"},
+	{target: authsvc.ErrCrossOrigin, status: http.StatusForbidden, code: "cross_origin"},
+	{target: authsvc.ErrStateMismatch, status: http.StatusBadRequest, code: "login_state_mismatch"},
+	{target: authsvc.ErrLoginFailed, status: http.StatusUnauthorized, code: "login_failed", message: fixed("login failed")},
+	{target: authsvc.ErrEmailUnverified, status: http.StatusForbidden, code: "email_unverified"},
+	{target: authsvc.ErrNotInvited, status: http.StatusForbidden, code: "not_invited"},
+	{target: authsvc.ErrUserDisabled, status: http.StatusForbidden, code: "user_disabled"},
+	{target: authsvc.ErrRootProtected, status: http.StatusConflict, code: "root_admin_protected"},
+	{target: authsvc.ErrRootTaken, status: http.StatusConflict, code: "root_admin_taken"},
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
 	{target: buffsvc.ErrInitiativeNotOnTop, status: http.StatusConflict, code: "initiative_not_on_top"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
@@ -139,6 +151,13 @@ var mappings = []mapping{
 	{target: actionlogsvc.ErrNothingToUndo, status: http.StatusConflict, code: "nothing_to_undo"},
 	{target: actionlogsvc.ErrRedoChanged, status: http.StatusConflict, code: "log_redo_changed"},
 	{target: actionlogsvc.ErrNothingToRedo, status: http.StatusConflict, code: "nothing_to_redo"},
+}
+
+// Code is the stable error code of err, as Error would render it (the login
+// callback puts it in its redirect to the login page, ADR 0029 step 3.7).
+func Code(err error) string {
+	_, code, _ := mapError(err)
+	return code
 }
 
 func mapError(err error) (int, string, string) {

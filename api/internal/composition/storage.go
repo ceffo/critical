@@ -7,6 +7,8 @@ import (
 	logq "github.com/ceffo/critical/api/internal/adapters/actionlogdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/attackformdal"
 	formq "github.com/ceffo/critical/api/internal/adapters/attackformdal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/authdal"
+	authq "github.com/ceffo/critical/api/internal/adapters/authdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	buffq "github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
@@ -35,6 +37,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -113,6 +116,7 @@ type Storage struct {
 	Skill        skillsvc.DAL
 	Spellbook    SpellbookStore
 	Dice         dicesvc.DAL
+	Auth         authsvc.DAL
 }
 
 // postgresStorage wires the PostgreSQL adapters over db. The sqlc-generated
@@ -142,6 +146,7 @@ func storageOn(store Store, conn postgres.DBTX) Storage {
 		Skill:        skilldal.New(skillq.New(conn)),
 		Spellbook:    spellbookdal.New(spellbookq.New(conn)),
 		Dice:         dicedal.New(diceq.New(conn)),
+		Auth:         authdal.New(authq.New(conn)),
 	}
 }
 
@@ -164,5 +169,6 @@ func memoryStorage(m *memory.Store) Storage {
 		Skill:        m.Skills(),
 		Spellbook:    m.Spellbooks(),
 		Dice:         m.Dice(),
+		Auth:         m.Auth(),
 	}
 }

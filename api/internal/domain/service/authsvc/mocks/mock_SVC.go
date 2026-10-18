@@ -130,6 +130,113 @@ func (_c *MockSVC_Authenticate_Call) RunAndReturn(run func(context.Context, stri
 	return _c
 }
 
+// CancelInvite provides a mock function with given fields: ctx, id
+func (_m *MockSVC) CancelInvite(ctx context.Context, id uuid.UUID) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CancelInvite")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSVC_CancelInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CancelInvite'
+type MockSVC_CancelInvite_Call struct {
+	*mock.Call
+}
+
+// CancelInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+func (_e *MockSVC_Expecter) CancelInvite(ctx interface{}, id interface{}) *MockSVC_CancelInvite_Call {
+	return &MockSVC_CancelInvite_Call{Call: _e.mock.On("CancelInvite", ctx, id)}
+}
+
+func (_c *MockSVC_CancelInvite_Call) Run(run func(ctx context.Context, id uuid.UUID)) *MockSVC_CancelInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockSVC_CancelInvite_Call) Return(_a0 error) *MockSVC_CancelInvite_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_CancelInvite_Call) RunAndReturn(run func(context.Context, uuid.UUID) error) *MockSVC_CancelInvite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ChangeUser provides a mock function with given fields: ctx, id, change
+func (_m *MockSVC) ChangeUser(ctx context.Context, id uuid.UUID, change authsvc.UserChange) (*authsvc.UserSummary, error) {
+	ret := _m.Called(ctx, id, change)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ChangeUser")
+	}
+
+	var r0 *authsvc.UserSummary
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, authsvc.UserChange) (*authsvc.UserSummary, error)); ok {
+		return rf(ctx, id, change)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, authsvc.UserChange) *authsvc.UserSummary); ok {
+		r0 = rf(ctx, id, change)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*authsvc.UserSummary)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, authsvc.UserChange) error); ok {
+		r1 = rf(ctx, id, change)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ChangeUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ChangeUser'
+type MockSVC_ChangeUser_Call struct {
+	*mock.Call
+}
+
+// ChangeUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id uuid.UUID
+//   - change authsvc.UserChange
+func (_e *MockSVC_Expecter) ChangeUser(ctx interface{}, id interface{}, change interface{}) *MockSVC_ChangeUser_Call {
+	return &MockSVC_ChangeUser_Call{Call: _e.mock.On("ChangeUser", ctx, id, change)}
+}
+
+func (_c *MockSVC_ChangeUser_Call) Run(run func(ctx context.Context, id uuid.UUID, change authsvc.UserChange)) *MockSVC_ChangeUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(authsvc.UserChange))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ChangeUser_Call) Return(_a0 *authsvc.UserSummary, _a1 error) *MockSVC_ChangeUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ChangeUser_Call) RunAndReturn(run func(context.Context, uuid.UUID, authsvc.UserChange) (*authsvc.UserSummary, error)) *MockSVC_ChangeUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -172,6 +279,66 @@ func (_c *MockSVC_Close_Call) Return(_a0 error) *MockSVC_Close_Call {
 }
 
 func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *MockSVC_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateInvite provides a mock function with given fields: ctx, by, email
+func (_m *MockSVC) CreateInvite(ctx context.Context, by uuid.UUID, email string) (*authsvc.Invite, error) {
+	ret := _m.Called(ctx, by, email)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateInvite")
+	}
+
+	var r0 *authsvc.Invite
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string) (*authsvc.Invite, error)); ok {
+		return rf(ctx, by, email)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string) *authsvc.Invite); ok {
+		r0 = rf(ctx, by, email)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*authsvc.Invite)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string) error); ok {
+		r1 = rf(ctx, by, email)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_CreateInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateInvite'
+type MockSVC_CreateInvite_Call struct {
+	*mock.Call
+}
+
+// CreateInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - by uuid.UUID
+//   - email string
+func (_e *MockSVC_Expecter) CreateInvite(ctx interface{}, by interface{}, email interface{}) *MockSVC_CreateInvite_Call {
+	return &MockSVC_CreateInvite_Call{Call: _e.mock.On("CreateInvite", ctx, by, email)}
+}
+
+func (_c *MockSVC_CreateInvite_Call) Run(run func(ctx context.Context, by uuid.UUID, email string)) *MockSVC_CreateInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_CreateInvite_Call) Return(_a0 *authsvc.Invite, _a1 error) *MockSVC_CreateInvite_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_CreateInvite_Call) RunAndReturn(run func(context.Context, uuid.UUID, string) (*authsvc.Invite, error)) *MockSVC_CreateInvite_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -471,6 +638,122 @@ func (_c *MockSVC_Health_Call) Return(_a0 error) *MockSVC_Health_Call {
 }
 
 func (_c *MockSVC_Health_Call) RunAndReturn(run func(context.Context) error) *MockSVC_Health_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListInvites provides a mock function with given fields: ctx
+func (_m *MockSVC) ListInvites(ctx context.Context) ([]authsvc.Invite, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListInvites")
+	}
+
+	var r0 []authsvc.Invite
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]authsvc.Invite, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []authsvc.Invite); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]authsvc.Invite)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ListInvites_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListInvites'
+type MockSVC_ListInvites_Call struct {
+	*mock.Call
+}
+
+// ListInvites is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) ListInvites(ctx interface{}) *MockSVC_ListInvites_Call {
+	return &MockSVC_ListInvites_Call{Call: _e.mock.On("ListInvites", ctx)}
+}
+
+func (_c *MockSVC_ListInvites_Call) Run(run func(ctx context.Context)) *MockSVC_ListInvites_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ListInvites_Call) Return(_a0 []authsvc.Invite, _a1 error) *MockSVC_ListInvites_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ListInvites_Call) RunAndReturn(run func(context.Context) ([]authsvc.Invite, error)) *MockSVC_ListInvites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListUsers provides a mock function with given fields: ctx
+func (_m *MockSVC) ListUsers(ctx context.Context) ([]authsvc.UserSummary, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUsers")
+	}
+
+	var r0 []authsvc.UserSummary
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]authsvc.UserSummary, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []authsvc.UserSummary); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]authsvc.UserSummary)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ListUsers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUsers'
+type MockSVC_ListUsers_Call struct {
+	*mock.Call
+}
+
+// ListUsers is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockSVC_Expecter) ListUsers(ctx interface{}) *MockSVC_ListUsers_Call {
+	return &MockSVC_ListUsers_Call{Call: _e.mock.On("ListUsers", ctx)}
+}
+
+func (_c *MockSVC_ListUsers_Call) Run(run func(ctx context.Context)) *MockSVC_ListUsers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ListUsers_Call) Return(_a0 []authsvc.UserSummary, _a1 error) *MockSVC_ListUsers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ListUsers_Call) RunAndReturn(run func(context.Context) ([]authsvc.UserSummary, error)) *MockSVC_ListUsers_Call {
 	_c.Call.Return(run)
 	return _c
 }

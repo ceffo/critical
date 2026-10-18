@@ -40,6 +40,24 @@ func (q *Queries) AdoptUnownedCharacters(ctx context.Context, ownerUserID uuid.N
 	return err
 }
 
+const cancelInvite = `-- name: CancelInvite :execrows
+UPDATE invites SET cancelled = $2 WHERE id = $1 AND cancelled IS NULL AND accepted_by IS NULL
+`
+
+type CancelInviteParams struct {
+	ID        uuid.UUID
+	Cancelled sql.NullTime
+}
+
+// Only a pending invite is cancelled (step 2.3): a used or cancelled one stays as it is.
+func (q *Queries) CancelInvite(ctx context.Context, arg CancelInviteParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, cancelInvite, arg.ID, arg.Cancelled)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const clearCurrentCharacter = `-- name: ClearCurrentCharacter :exec
 UPDATE users SET current_character_id = NULL WHERE id = $1
 `
@@ -79,6 +97,27 @@ type ExtendSessionParams struct {
 
 func (q *Queries) ExtendSession(ctx context.Context, arg ExtendSessionParams) error {
 	_, err := q.db.ExecContext(ctx, extendSession, arg.ID, arg.LastUsed, arg.ExpiresAt)
+	return err
+}
+
+const insertInvite = `-- name: InsertInvite :exec
+INSERT INTO invites (id, email, invited_by, created_at) VALUES ($1, $2, $3, $4)
+`
+
+type InsertInviteParams struct {
+	ID        uuid.UUID
+	Email     string
+	InvitedBy uuid.UUID
+	CreatedAt time.Time
+}
+
+func (q *Queries) InsertInvite(ctx context.Context, arg InsertInviteParams) error {
+	_, err := q.db.ExecContext(ctx, insertInvite,
+		arg.ID,
+		arg.Email,
+		arg.InvitedBy,
+		arg.CreatedAt,
+	)
 	return err
 }
 
@@ -135,6 +174,98 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) error {
 	return err
 }
 
+const listPendingInvites = `-- name: ListPendingInvites :many
+SELECT id, email, invited_by, created_at FROM invites
+WHERE cancelled IS NULL AND accepted_by IS NULL
+ORDER BY created_at, id
+`
+
+type ListPendingInvitesRow struct {
+	ID        uuid.UUID
+	Email     string
+	InvitedBy uuid.UUID
+	CreatedAt time.Time
+}
+
+func (q *Queries) ListPendingInvites(ctx context.Context) ([]ListPendingInvitesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPendingInvites)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPendingInvitesRow{}
+	for rows.Next() {
+		var i ListPendingInvitesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.InvitedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsers = `-- name: ListUsers :many
+
+SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at FROM users
+ORDER BY created_at, id
+`
+
+type ListUsersRow struct {
+	ID            uuid.UUID
+	Email         string
+	GoogleSubject sql.NullString
+	Role          string
+	IsRoot        bool
+	Disabled      bool
+	LastLogin     sql.NullTime
+	CreatedAt     time.Time
+}
+
+// The admin section (ADR 0029 step 1.3): every user, the names of their characters (not the sheets),
+// and the pending invites.
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUsersRow{}
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.GoogleSubject,
+			&i.Role,
+			&i.IsRoot,
+			&i.Disabled,
+			&i.LastLogin,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const moveCharacters = `-- name: MoveCharacters :exec
 UPDATE characters SET owner_user_id = $1 WHERE owner_user_id = $2
 `
@@ -148,6 +279,41 @@ type MoveCharactersParams struct {
 func (q *Queries) MoveCharacters(ctx context.Context, arg MoveCharactersParams) error {
 	_, err := q.db.ExecContext(ctx, moveCharacters, arg.ToUser, arg.FromUser)
 	return err
+}
+
+const ownedCharacterNames = `-- name: OwnedCharacterNames :many
+SELECT owner_user_id, name FROM characters
+WHERE owner_user_id IS NOT NULL AND NOT retired
+ORDER BY id
+`
+
+type OwnedCharacterNamesRow struct {
+	OwnerUserID uuid.NullUUID
+	Name        string
+}
+
+// The names of every owned character not retired, by owner, in creation order.
+func (q *Queries) OwnedCharacterNames(ctx context.Context) ([]OwnedCharacterNamesRow, error) {
+	rows, err := q.db.QueryContext(ctx, ownedCharacterNames)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OwnedCharacterNamesRow{}
+	for rows.Next() {
+		var i OwnedCharacterNamesRow
+		if err := rows.Scan(&i.OwnerUserID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const pendingInvite = `-- name: PendingInvite :one

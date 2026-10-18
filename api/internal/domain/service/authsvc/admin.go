@@ -3,6 +3,7 @@ package authsvc
 import (
 	"context"
 	"errors"
+	"net/mail"
 	"strings"
 
 	"github.com/google/uuid"
@@ -14,47 +15,159 @@ import (
 func (s *service) SetDisabled(ctx context.Context, userID uuid.UUID, disabled bool) error {
 	defer s.sessions.forgetUser(userID)
 	return s.tx.InTx(ctx, func(ctx context.Context) error {
-		u, err := s.dal.UserByID(ctx, userID)
-		if err != nil {
-			return err
-		}
-		if u.Root && disabled {
-			return ErrRootProtected
-		}
-		if u.Disabled == disabled {
-			return nil
-		}
-		u.Disabled = disabled
-		if err := s.dal.UpdateUser(ctx, *u); err != nil {
-			return err
-		}
-		if !disabled {
-			return nil
-		}
-		// Step 4.4: in the same transaction, so the next request is refused.
-		return s.dal.DeleteUserSessions(ctx, userID)
+		return s.changeUser(ctx, userID, UserChange{Disabled: &disabled})
 	})
 }
 
 // SetRole implements SVC (ADR 0029 steps 1.3 and 5.2).
 func (s *service) SetRole(ctx context.Context, userID uuid.UUID, role Role) error {
-	if role != RoleAdmin && role != RolePlayer {
-		return domain.FieldErrorf("role", "role must be %q or %q", RoleAdmin, RolePlayer)
+	if err := checkRole(role); err != nil {
+		return err
 	}
 	defer s.sessions.forgetUser(userID)
 	return s.tx.InTx(ctx, func(ctx context.Context) error {
-		u, err := s.dal.UserByID(ctx, userID)
+		return s.changeUser(ctx, userID, UserChange{Role: &role})
+	})
+}
+
+func checkRole(role Role) error {
+	if role != RoleAdmin && role != RolePlayer {
+		return domain.FieldErrorf("role", "role must be %q or %q", RoleAdmin, RolePlayer)
+	}
+	return nil
+}
+
+// ChangeUser implements SVC (ADR 0029 steps 1.2, 1.3, 4.4 and 5.2). This
+// server forgets the user's sessions once the change committed (step 4.7);
+// the other server refuses them, or sees the new role, within
+// SessionCacheTTL.
+func (s *service) ChangeUser(ctx context.Context, id uuid.UUID, change UserChange) (*UserSummary, error) {
+	if change.Role != nil {
+		if err := checkRole(*change.Role); err != nil {
+			return nil, err
+		}
+	}
+	defer s.sessions.forgetUser(id)
+	var out *UserSummary
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		if err := s.changeUser(ctx, id, change); err != nil {
+			return err
+		}
+		users, err := s.dal.ListUsers(ctx)
 		if err != nil {
 			return err
 		}
-		if u.Root && role != RoleAdmin {
-			return ErrRootProtected
+		for i := range users {
+			if users[i].ID == id {
+				out = &users[i]
+				return nil
+			}
 		}
-		if u.Role == role {
-			return nil
+		return ErrUserNotFound
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// changeUser applies change to the user id in the ctx transaction: both
+// fields are checked before anything is written, so a refused change writes
+// nothing.
+func (s *service) changeUser(ctx context.Context, id uuid.UUID, change UserChange) error {
+	u, err := s.dal.UserByID(ctx, id)
+	if errors.Is(err, domain.ErrNotFound) {
+		return ErrUserNotFound
+	}
+	if err != nil {
+		return err
+	}
+	disable := change.Disabled != nil && *change.Disabled && !u.Disabled
+	// Step 5.2: the root admin stays an enabled admin.
+	if u.Root && ((change.Disabled != nil && *change.Disabled) || (change.Role != nil && *change.Role != RoleAdmin)) {
+		return ErrRootProtected
+	}
+	next := *u
+	if change.Disabled != nil {
+		next.Disabled = *change.Disabled
+	}
+	if change.Role != nil {
+		next.Role = *change.Role
+	}
+	if next.Disabled == u.Disabled && next.Role == u.Role {
+		return nil
+	}
+	if err := s.dal.UpdateUser(ctx, next); err != nil {
+		return err
+	}
+	if !disable {
+		return nil
+	}
+	// Step 4.4: in the same transaction, so the next request is refused.
+	return s.dal.DeleteUserSessions(ctx, id)
+}
+
+// ListUsers implements SVC (ADR 0029 step 1.3).
+func (s *service) ListUsers(ctx context.Context) ([]UserSummary, error) {
+	return s.dal.ListUsers(ctx)
+}
+
+// ListInvites implements SVC (ADR 0029 step 2).
+func (s *service) ListInvites(ctx context.Context) ([]Invite, error) {
+	return s.dal.ListPendingInvites(ctx)
+}
+
+// CreateInvite implements SVC (ADR 0029 step 2.1). The checks and the
+// insert are one transaction (the writer lock serialises them), and the
+// schema allows one pending invite per email besides.
+func (s *service) CreateInvite(ctx context.Context, by uuid.UUID, email string) (*Invite, error) {
+	email, err := checkEmail(email)
+	if err != nil {
+		return nil, err
+	}
+	inv := Invite{ID: s.newID(), Email: email, InvitedBy: by, CreatedAt: s.now()}
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		_, err := s.dal.UserByEmail(ctx, email)
+		switch {
+		case err == nil:
+			return ErrEmailHasUser
+		case !errors.Is(err, domain.ErrNotFound):
+			return err
 		}
-		u.Role = role
-		return s.dal.UpdateUser(ctx, *u)
+		_, err = s.dal.PendingInvite(ctx, email)
+		switch {
+		case err == nil:
+			return ErrAlreadyInvited
+		case !errors.Is(err, domain.ErrNotFound):
+			return err
+		}
+		return s.dal.InsertInvite(ctx, inv)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &inv, nil
+}
+
+// checkEmail is email normalised (step 1.1) when it is a bare address (no
+// display name), else a field error.
+func checkEmail(email string) (string, error) {
+	email = NormalizeEmail(email)
+	a, err := mail.ParseAddress(email)
+	if err != nil || a.Address != email {
+		return "", domain.FieldErrorf("email", "%q is not an email address", email)
+	}
+	return email, nil
+}
+
+// CancelInvite implements SVC (ADR 0029 step 2.3).
+func (s *service) CancelInvite(ctx context.Context, id uuid.UUID) error {
+	return s.tx.InTx(ctx, func(ctx context.Context) error {
+		err := s.dal.CancelInvite(ctx, id, s.now())
+		if errors.Is(err, domain.ErrNotFound) {
+			return ErrInviteNotFound
+		}
+		return err
 	})
 }
 

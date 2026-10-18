@@ -14,14 +14,23 @@ import (
 type Querier interface {
 	AcceptInvite(ctx context.Context, arg AcceptInviteParams) (int64, error)
 	AdoptUnownedCharacters(ctx context.Context, ownerUserID uuid.NullUUID) error
+	// Only a pending invite is cancelled (step 2.3): a used or cancelled one stays as it is.
+	CancelInvite(ctx context.Context, arg CancelInviteParams) (int64, error)
 	ClearCurrentCharacter(ctx context.Context, id uuid.UUID) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteUserSessions(ctx context.Context, userID uuid.UUID) error
 	ExtendSession(ctx context.Context, arg ExtendSessionParams) error
+	InsertInvite(ctx context.Context, arg InsertInviteParams) error
 	InsertSession(ctx context.Context, arg InsertSessionParams) error
 	InsertUser(ctx context.Context, arg InsertUserParams) error
+	ListPendingInvites(ctx context.Context) ([]ListPendingInvitesRow, error)
+	// The admin section (ADR 0029 step 1.3): every user, the names of their characters (not the sheets),
+	// and the pending invites.
+	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	// Every character of one user becomes another's (a root admin that never logged in moves).
 	MoveCharacters(ctx context.Context, arg MoveCharactersParams) error
+	// The names of every owned character not retired, by owner, in creation order.
+	OwnedCharacterNames(ctx context.Context) ([]OwnedCharacterNamesRow, error)
 	PendingInvite(ctx context.Context, email string) (PendingInviteRow, error)
 	RootUser(ctx context.Context) (RootUserRow, error)
 	SessionByID(ctx context.Context, id string) (Session, error)

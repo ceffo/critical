@@ -159,3 +159,44 @@ func TestMoveCharacters_ReownsThenClearsTheOldCurrent(t *testing.T) {
 	q.EXPECT().MoveCharacters(ctx, mock.Anything).Return(assert.AnError).Once()
 	require.ErrorIs(t, authdal.New(q).MoveCharacters(ctx, uid, to), assert.AnError)
 }
+
+// The admin list: each user with the names of the characters they own, in
+// the order the query reads them; a user without any has an empty list.
+func TestListUsers_JoinsTheCharacterNamesByOwner(t *testing.T) {
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().ListUsers(ctx).Return([]queries.ListUsersRow{
+		{ID: uid, Email: "ann@example.com", Role: "admin", IsRoot: true, LastLogin: sql.NullTime{Time: at, Valid: true}, CreatedAt: at},
+		{ID: iid, Email: "bob@example.com", Role: "player", Disabled: true, CreatedAt: at},
+	}, nil).Once()
+	q.EXPECT().OwnedCharacterNames(ctx).Return([]queries.OwnedCharacterNamesRow{
+		{OwnerUserID: uuid.NullUUID{UUID: uid, Valid: true}, Name: "Kelsen"},
+		{OwnerUserID: uuid.NullUUID{UUID: uid, Valid: true}, Name: "Vex"},
+	}, nil).Once()
+
+	got, err := authdal.New(q).ListUsers(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []authsvc.UserSummary{
+		{User: authsvc.User{ID: uid, Email: "ann@example.com", Role: authsvc.RoleAdmin, Root: true, LastLogin: &at, CreatedAt: at}, Characters: []string{"Kelsen", "Vex"}},
+		{User: authsvc.User{ID: iid, Email: "bob@example.com", Role: authsvc.RolePlayer, Disabled: true, CreatedAt: at}, Characters: []string{}},
+	}, got)
+}
+
+// Invites: listed, inserted, and cancelled; a cancel that changes no row (the
+// invite is not pending) is not found.
+func TestInvites_ListInsertCancel(t *testing.T) {
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().ListPendingInvites(ctx).Return([]queries.ListPendingInvitesRow{
+		{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at},
+	}, nil).Once()
+	q.EXPECT().InsertInvite(ctx, queries.InsertInviteParams{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}).Return(nil).Once()
+	q.EXPECT().CancelInvite(ctx, queries.CancelInviteParams{ID: iid, Cancelled: sql.NullTime{Time: at, Valid: true}}).Return(1, nil).Once()
+	q.EXPECT().CancelInvite(ctx, queries.CancelInviteParams{ID: uid, Cancelled: sql.NullTime{Time: at, Valid: true}}).Return(0, nil).Once()
+	d := authdal.New(q)
+
+	got, err := d.ListPendingInvites(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, []authsvc.Invite{{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}}, got)
+	require.NoError(t, d.InsertInvite(ctx, authsvc.Invite{ID: iid, Email: "cid@example.com", InvitedBy: uid, CreatedAt: at}))
+	require.NoError(t, d.CancelInvite(ctx, iid, at))
+	require.ErrorIs(t, d.CancelInvite(ctx, uid, at), domain.ErrNotFound)
+}

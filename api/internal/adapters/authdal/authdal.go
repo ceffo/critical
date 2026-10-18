@@ -213,3 +213,69 @@ func (d *DAL) MoveCharacters(ctx context.Context, from, to uuid.UUID) error {
 	}
 	return nil
 }
+
+// ListUsers implements authsvc.DAL: the users, then the names of the
+// characters they own and have not retired, matched by owner.
+func (d *DAL) ListUsers(ctx context.Context) ([]authsvc.UserSummary, error) {
+	rows, err := d.q.ListUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	names, err := d.q.OwnedCharacterNames(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("owned character names: %w", err)
+	}
+	byOwner := map[uuid.UUID][]string{}
+	for _, n := range names {
+		byOwner[n.OwnerUserID.UUID] = append(byOwner[n.OwnerUserID.UUID], n.Name)
+	}
+	out := make([]authsvc.UserSummary, 0, len(rows))
+	for _, r := range rows {
+		u := user(queries.UserByIDRow{
+			ID: r.ID, Email: r.Email, GoogleSubject: r.GoogleSubject, Role: r.Role, IsRoot: r.IsRoot,
+			Disabled: r.Disabled, LastLogin: r.LastLogin, CreatedAt: r.CreatedAt,
+		})
+		chars := byOwner[r.ID]
+		if chars == nil {
+			chars = []string{}
+		}
+		out = append(out, authsvc.UserSummary{User: *u, Characters: chars})
+	}
+	return out, nil
+}
+
+// ListPendingInvites implements authsvc.DAL.
+func (d *DAL) ListPendingInvites(ctx context.Context) ([]authsvc.Invite, error) {
+	rows, err := d.q.ListPendingInvites(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list pending invites: %w", err)
+	}
+	out := make([]authsvc.Invite, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, authsvc.Invite{ID: r.ID, Email: r.Email, InvitedBy: r.InvitedBy, CreatedAt: r.CreatedAt})
+	}
+	return out, nil
+}
+
+// InsertInvite implements authsvc.DAL.
+func (d *DAL) InsertInvite(ctx context.Context, inv authsvc.Invite) error {
+	if err := d.q.InsertInvite(ctx, queries.InsertInviteParams{
+		ID: inv.ID, Email: inv.Email, InvitedBy: inv.InvitedBy, CreatedAt: inv.CreatedAt,
+	}); err != nil {
+		return fmt.Errorf("insert invite: %w", err)
+	}
+	return nil
+}
+
+// CancelInvite implements authsvc.DAL; an invite that is not pending is
+// domain.ErrNotFound.
+func (d *DAL) CancelInvite(ctx context.Context, id uuid.UUID, at time.Time) error {
+	n, err := d.q.CancelInvite(ctx, queries.CancelInviteParams{ID: id, Cancelled: sql.NullTime{Time: at, Valid: true}})
+	if err != nil {
+		return fmt.Errorf("cancel invite: %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("%w: pending invite %s", domain.ErrNotFound, id)
+	}
+	return nil
+}

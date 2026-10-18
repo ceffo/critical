@@ -152,6 +152,12 @@ as backlog (P4) and never dispatched without the user's say-so.
 ## Hard rules for implementers
 
 From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check hardest:
+- **Never open a visible window on the user's desktop** (browser, viewer, anything): the user works
+  on this machine. Every UI check runs headless, in memory: `just e2e` / Playwright headless
+  Chromium; to see real scrollbars, launch it with `ignoreDefaultArgs: ['--hide-scrollbars']`, or
+  use `xvfb-run` for a virtual display. Never `headless: false`, `--headed`, `xdg-open` or a plain
+  `chromium` (user, 2026-10-18: "any ui check has to be done in memory, not spawning a friggin
+  window").
 - Game logic lives only in Go; the frontend sends intent and renders structured responses.
 - Roll endpoints return a complete breakdown struct. Errors are `{"error": "message", "code": "…"}`; a new refusal gets a row (and code) in `internal/render` and an `apiError.<code>` i18n key (en + fr).
 - HP is an append-only ledger; current HP = `SUM(delta)`.

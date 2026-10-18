@@ -259,9 +259,18 @@ gate `middleware.Gate`.
   hosted apps".
 - **Root admin** (step 5): `just root-admin <email>` (`api/cmd/rootadmin`) on `CRITICAL_DSN`, unset:
   the local database `just dev` uses. The schema allows one root, and a root is an enabled admin.
+- **Admin section** (steps 1.3, 2, 5.2; `adminhdl`, mounted behind `middleware.AdminOnly`, which
+  answers 403 `admin_only` to a player before any service runs; `PUT /api/crit-table` sits behind it
+  too): `GET /api/admin/users` (`{"users": [{id, email, role, root, disabled, lastLogin|null,
+  createdAt, characters: [names]}]}`), `PATCH /api/admin/users/{id}` (`{disabled?, role?}`, one
+  transaction; disabling deletes the user's sessions; the user as changed), `GET /api/admin/invites`
+  (`{"invites": [{id, email, invitedBy, createdAt}]}`, pending only), `POST /api/admin/invites`
+  (`{email}`, 201 with the invite), `DELETE /api/admin/invites/{id}` (cancelled, never deleted; the
+  pending invites left). No migration: the tables are migration 003's.
 - **Error codes**: `unauthenticated`, `session_expired` (an `unauthenticated` refusal, only from
   `GET /api/auth/me`), `cross_origin`, `login_state_mismatch`, `login_failed`,
-  `email_unverified`, `not_invited`, `user_disabled`, `root_admin_protected`, `root_admin_taken`
+  `email_unverified`, `not_invited`, `user_disabled`, `root_admin_protected`, `root_admin_taken`,
+  `admin_only`, `email_has_user`, `already_invited`, `invite_not_found`, `user_not_found`
   (`internal/render`, worded by the web's `apiError.*`).
 - **Public paths** (step 6.1, as amended 2026-10-18), judged on the cleaned path (`/assets/../api/x` is
   `/api/x`): `/login` (and under it), the static build

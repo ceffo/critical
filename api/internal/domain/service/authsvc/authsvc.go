@@ -70,6 +70,26 @@ type SVC interface {
 	// SetRole makes a user an admin or a player (step 1.3). The root admin
 	// cannot be demoted: ErrRootProtected.
 	SetRole(ctx context.Context, userID uuid.UUID, role Role) error
+	// ListUsers is every user with the names of their characters (step 1.3),
+	// in creation order.
+	ListUsers(ctx context.Context) ([]UserSummary, error)
+	// ListInvites is the pending invites (neither cancelled nor used), oldest
+	// first.
+	ListInvites(ctx context.Context) ([]Invite, error)
+	// CreateInvite authorises email to log in through Google (step 2.1),
+	// invited by the user by. An email that is not one is a field error; one
+	// that has a user is ErrEmailHasUser, one with a pending invite
+	// ErrAlreadyInvited.
+	CreateInvite(ctx context.Context, by uuid.UUID, email string) (*Invite, error)
+	// CancelInvite cancels a pending invite (step 2.3); one that is not
+	// pending (cancelled, used, unknown) is ErrInviteNotFound.
+	CancelInvite(ctx context.Context, id uuid.UUID) error
+	// ChangeUser applies an admin's change to a user in one transaction
+	// (steps 1.2, 1.3, 4.4, 5.2): disabling deletes every session of the
+	// user; the root admin can be neither disabled nor demoted
+	// (ErrRootProtected). An unknown user is ErrUserNotFound. It returns the
+	// user as ListUsers shows them.
+	ChangeUser(ctx context.Context, id uuid.UUID, change UserChange) (*UserSummary, error)
 	// SetRootAdmin makes the user of email the root admin (step 5.1),
 	// creating it as an admin without a Google subject when unknown. It is
 	// idempotent; with another email than the current root's it refuses
@@ -111,6 +131,17 @@ type DAL interface {
 	// cancelled nor accepted.
 	PendingInvite(ctx context.Context, email string) (*Invite, error)
 	AcceptInvite(ctx context.Context, inviteID, userID uuid.UUID, at time.Time) error
+	// ListUsers is every user (CurrentCharacterID not read) with the names
+	// of their characters not retired, both in creation order.
+	ListUsers(ctx context.Context) ([]UserSummary, error)
+	// ListPendingInvites is the invites neither cancelled nor accepted, in
+	// creation order.
+	ListPendingInvites(ctx context.Context) ([]Invite, error)
+	// InsertInvite stores a pending invite (a lower-cased email).
+	InsertInvite(ctx context.Context, inv Invite) error
+	// CancelInvite cancels the pending invite id at at; an invite that is not
+	// pending is domain.ErrNotFound.
+	CancelInvite(ctx context.Context, id uuid.UUID, at time.Time) error
 	InsertSession(ctx context.Context, s Session) error
 	SessionByID(ctx context.Context, id string) (*Session, error)
 	ExtendSession(ctx context.Context, id string, lastUsed, expires time.Time) error

@@ -1581,7 +1581,12 @@
     "user_disabled": "This account is disabled. Ask an admin.",
     "root_admin_protected": "The root administrator cannot be disabled or demoted.",
     "root_admin_taken": "Another user is already the root administrator.",
-    "database_unavailable": "The database is not answering. Try again in a moment."
+    "database_unavailable": "The database is not answering. Try again in a moment.",
+    "admin_only": "Only an admin may do this.",
+    "email_has_user": "This email address already has an account.",
+    "already_invited": "This email address already has a pending invite.",
+    "invite_not_found": "This invite is no longer pending.",
+    "user_not_found": "This user does not exist."
   },
   "lastShort": {
     "attack": "Attack",
@@ -1602,5 +1607,59 @@
   "database": {
     "unavailable": "The database is not answering. Retrying…",
     "uncertainWrite": "Your last action may not have been saved. Actions resume once the sheet is reloaded: check the journal before trying again."
+  },
+  "admin": {
+    "open": "Admin",
+    "openHint": "Open the admin section: users and invites",
+    "title": "Administration",
+    "back": "Back",
+    "backHint": "Back to the character sheet",
+    "invites": "Invites",
+    "invitesLead": "An invited email may log in with Google. No email is sent: tell the person, and give them the app's link.",
+    "email": "Email address",
+    "emailPlaceholder": "name@example.com",
+    "emailInvalid": "Enter an email address.",
+    "invite": "Invite",
+    "inviteHint": "Invite {{email}}",
+    "inviteHintEmpty": "Invite this email address",
+    "copy": "Copy",
+    "copyHint": "Copy the app's link ({{url}}) to send it",
+    "copied": "Link copied",
+    "copyFailed": "The link could not be copied: {{url}}",
+    "pending": "Pending invites",
+    "noPending": "No pending invite.",
+    "invitedBy": "Invited by {{email}} on {{date}}",
+    "invitedOn": "Invited on {{date}}",
+    "cancel": "Cancel",
+    "cancelHint": "Cancel the invite of {{email}}",
+    "users": "Users",
+    "col": {
+      "email": "Email",
+      "role": "Role",
+      "lastLogin": "Last login",
+      "characters": "Characters",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "role": {
+      "admin": "Admin",
+      "player": "Player"
+    },
+    "root": "Root admin",
+    "rootHint": "The root admin cannot be disabled or demoted.",
+    "you": "you",
+    "never": "Never",
+    "noCharacters": "None",
+    "active": "Active",
+    "disabled": "Disabled",
+    "promote": "Promote",
+    "promoteHint": "Make {{email}} an admin",
+    "demote": "Demote",
+    "demoteHint": "Make {{email}} a player again",
+    "disable": "Disable",
+    "disableHint": "Disable {{email}}: logged out at once, cannot log in",
+    "enable": "Enable",
+    "enableHint": "Enable {{email}} again",
+    "loadFailed": "The admin section could not be loaded: {{message}}"
   }
 }

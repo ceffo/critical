@@ -35,6 +35,19 @@ var (
 	// ErrRootProtected: the root admin cannot be disabled or demoted (step
 	// 5.2).
 	ErrRootProtected = fmt.Errorf("the root admin cannot be disabled or demoted: %w", domain.ErrConflict)
+	// ErrAdminOnly: a player asked for an admin route (step 1.3).
+	ErrAdminOnly = errors.New("only an admin may do this")
+	// ErrEmailHasUser: an invite for an email that already has a user (step
+	// 2.1).
+	ErrEmailHasUser = fmt.Errorf("this email already has a user: %w", domain.ErrConflict)
+	// ErrAlreadyInvited: an invite for an email with a pending invite (step
+	// 2.1).
+	ErrAlreadyInvited = fmt.Errorf("this email already has a pending invite: %w", domain.ErrConflict)
+	// ErrInviteNotFound: no pending invite has this id (cancelled, used or
+	// unknown).
+	ErrInviteNotFound = fmt.Errorf("pending invite: %w", domain.ErrNotFound)
+	// ErrUserNotFound: no user has this id.
+	ErrUserNotFound = fmt.Errorf("user: %w", domain.ErrNotFound)
 	// ErrRootTaken: another user already is the bound root admin (step 5.1).
 	ErrRootTaken = fmt.Errorf("another user is the root admin and has logged in: %w", domain.ErrConflict)
 	// ErrDevLoginDisabled: the server has OAuth settings, so the dev login

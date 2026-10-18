@@ -71,6 +71,16 @@ describe("startFor", () => {
     expect(startFor("/spells/42", "", me)).toEqual({ show: "app" });
   });
 
+  it("shows the admin section to an admin only", () => {
+    const admin = {
+      kind: "in" as const,
+      me: { ...me.me, role: "admin" as const },
+    };
+    expect(startFor("/admin", "", admin)).toEqual({ show: "admin" });
+    expect(startFor("/admin", "", me)).toEqual({ go: "/" });
+    expect(startFor("/admin", "", { kind: "out" })).toEqual({ go: "/login" });
+  });
+
   it("sends a logged-in user from the login page to the app", () => {
     expect(startFor("/login", "?error=not_invited", me)).toEqual({ go: "/" });
   });

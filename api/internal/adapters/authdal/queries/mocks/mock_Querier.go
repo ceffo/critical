@@ -130,6 +130,63 @@ func (_c *MockQuerier_AdoptUnownedCharacters_Call) RunAndReturn(run func(context
 	return _c
 }
 
+// CancelInvite provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CancelInvite(ctx context.Context, arg queries.CancelInviteParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CancelInvite")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CancelInviteParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CancelInviteParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.CancelInviteParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_CancelInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CancelInvite'
+type MockQuerier_CancelInvite_Call struct {
+	*mock.Call
+}
+
+// CancelInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CancelInviteParams
+func (_e *MockQuerier_Expecter) CancelInvite(ctx interface{}, arg interface{}) *MockQuerier_CancelInvite_Call {
+	return &MockQuerier_CancelInvite_Call{Call: _e.mock.On("CancelInvite", ctx, arg)}
+}
+
+func (_c *MockQuerier_CancelInvite_Call) Run(run func(ctx context.Context, arg queries.CancelInviteParams)) *MockQuerier_CancelInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CancelInviteParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CancelInvite_Call) Return(_a0 int64, _a1 error) *MockQuerier_CancelInvite_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_CancelInvite_Call) RunAndReturn(run func(context.Context, queries.CancelInviteParams) (int64, error)) *MockQuerier_CancelInvite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ClearCurrentCharacter provides a mock function with given fields: ctx, id
 func (_m *MockQuerier) ClearCurrentCharacter(ctx context.Context, id uuid.UUID) error {
 	ret := _m.Called(ctx, id)
@@ -318,6 +375,53 @@ func (_c *MockQuerier_ExtendSession_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// InsertInvite provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) InsertInvite(ctx context.Context, arg queries.InsertInviteParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertInvite")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.InsertInviteParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_InsertInvite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertInvite'
+type MockQuerier_InsertInvite_Call struct {
+	*mock.Call
+}
+
+// InsertInvite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.InsertInviteParams
+func (_e *MockQuerier_Expecter) InsertInvite(ctx interface{}, arg interface{}) *MockQuerier_InsertInvite_Call {
+	return &MockQuerier_InsertInvite_Call{Call: _e.mock.On("InsertInvite", ctx, arg)}
+}
+
+func (_c *MockQuerier_InsertInvite_Call) Run(run func(ctx context.Context, arg queries.InsertInviteParams)) *MockQuerier_InsertInvite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.InsertInviteParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_InsertInvite_Call) Return(_a0 error) *MockQuerier_InsertInvite_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_InsertInvite_Call) RunAndReturn(run func(context.Context, queries.InsertInviteParams) error) *MockQuerier_InsertInvite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InsertSession provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) InsertSession(ctx context.Context, arg queries.InsertSessionParams) error {
 	ret := _m.Called(ctx, arg)
@@ -412,6 +516,122 @@ func (_c *MockQuerier_InsertUser_Call) RunAndReturn(run func(context.Context, qu
 	return _c
 }
 
+// ListPendingInvites provides a mock function with given fields: ctx
+func (_m *MockQuerier) ListPendingInvites(ctx context.Context) ([]queries.ListPendingInvitesRow, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPendingInvites")
+	}
+
+	var r0 []queries.ListPendingInvitesRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.ListPendingInvitesRow, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []queries.ListPendingInvitesRow); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.ListPendingInvitesRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_ListPendingInvites_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPendingInvites'
+type MockQuerier_ListPendingInvites_Call struct {
+	*mock.Call
+}
+
+// ListPendingInvites is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockQuerier_Expecter) ListPendingInvites(ctx interface{}) *MockQuerier_ListPendingInvites_Call {
+	return &MockQuerier_ListPendingInvites_Call{Call: _e.mock.On("ListPendingInvites", ctx)}
+}
+
+func (_c *MockQuerier_ListPendingInvites_Call) Run(run func(ctx context.Context)) *MockQuerier_ListPendingInvites_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ListPendingInvites_Call) Return(_a0 []queries.ListPendingInvitesRow, _a1 error) *MockQuerier_ListPendingInvites_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_ListPendingInvites_Call) RunAndReturn(run func(context.Context) ([]queries.ListPendingInvitesRow, error)) *MockQuerier_ListPendingInvites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListUsers provides a mock function with given fields: ctx
+func (_m *MockQuerier) ListUsers(ctx context.Context) ([]queries.ListUsersRow, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUsers")
+	}
+
+	var r0 []queries.ListUsersRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.ListUsersRow, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []queries.ListUsersRow); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.ListUsersRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_ListUsers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUsers'
+type MockQuerier_ListUsers_Call struct {
+	*mock.Call
+}
+
+// ListUsers is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockQuerier_Expecter) ListUsers(ctx interface{}) *MockQuerier_ListUsers_Call {
+	return &MockQuerier_ListUsers_Call{Call: _e.mock.On("ListUsers", ctx)}
+}
+
+func (_c *MockQuerier_ListUsers_Call) Run(run func(ctx context.Context)) *MockQuerier_ListUsers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ListUsers_Call) Return(_a0 []queries.ListUsersRow, _a1 error) *MockQuerier_ListUsers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_ListUsers_Call) RunAndReturn(run func(context.Context) ([]queries.ListUsersRow, error)) *MockQuerier_ListUsers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // MoveCharacters provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) MoveCharacters(ctx context.Context, arg queries.MoveCharactersParams) error {
 	ret := _m.Called(ctx, arg)
@@ -455,6 +675,64 @@ func (_c *MockQuerier_MoveCharacters_Call) Return(_a0 error) *MockQuerier_MoveCh
 }
 
 func (_c *MockQuerier_MoveCharacters_Call) RunAndReturn(run func(context.Context, queries.MoveCharactersParams) error) *MockQuerier_MoveCharacters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// OwnedCharacterNames provides a mock function with given fields: ctx
+func (_m *MockQuerier) OwnedCharacterNames(ctx context.Context) ([]queries.OwnedCharacterNamesRow, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for OwnedCharacterNames")
+	}
+
+	var r0 []queries.OwnedCharacterNamesRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.OwnedCharacterNamesRow, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []queries.OwnedCharacterNamesRow); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.OwnedCharacterNamesRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_OwnedCharacterNames_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OwnedCharacterNames'
+type MockQuerier_OwnedCharacterNames_Call struct {
+	*mock.Call
+}
+
+// OwnedCharacterNames is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockQuerier_Expecter) OwnedCharacterNames(ctx interface{}) *MockQuerier_OwnedCharacterNames_Call {
+	return &MockQuerier_OwnedCharacterNames_Call{Call: _e.mock.On("OwnedCharacterNames", ctx)}
+}
+
+func (_c *MockQuerier_OwnedCharacterNames_Call) Run(run func(ctx context.Context)) *MockQuerier_OwnedCharacterNames_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_OwnedCharacterNames_Call) Return(_a0 []queries.OwnedCharacterNamesRow, _a1 error) *MockQuerier_OwnedCharacterNames_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_OwnedCharacterNames_Call) RunAndReturn(run func(context.Context) ([]queries.OwnedCharacterNamesRow, error)) *MockQuerier_OwnedCharacterNames_Call {
 	_c.Call.Return(run)
 	return _c
 }

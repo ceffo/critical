@@ -262,3 +262,87 @@ func (p Auth) MoveCharacters(ctx context.Context, from, to uuid.UUID) error {
 		return nil
 	})
 }
+
+// ListUsers implements authsvc.DAL.
+func (p Auth) ListUsers(ctx context.Context) ([]authsvc.UserSummary, error) {
+	var out []authsvc.UserSummary
+	err := p.s.read(ctx, func(t *tables) error {
+		names := map[uuid.UUID][]string{}
+		for _, id := range slices.Sorted(maps.Keys(t.characters)) {
+			if owner, ok := t.owners[id]; ok && !t.retired[id] {
+				names[owner] = append(names[owner], t.characters[id].Name)
+			}
+		}
+		users := slices.Collect(maps.Values(t.users))
+		slices.SortFunc(users, func(a, b authsvc.User) int {
+			if c := a.CreatedAt.Compare(b.CreatedAt); c != 0 {
+				return c
+			}
+			return slices.Compare(a.ID[:], b.ID[:])
+		})
+		out = make([]authsvc.UserSummary, 0, len(users))
+		for _, u := range users {
+			chars := names[u.ID]
+			if chars == nil {
+				chars = []string{}
+			}
+			out = append(out, authsvc.UserSummary{User: *copyUser(u), Characters: chars})
+		}
+		return nil
+	})
+	return out, err
+}
+
+// ListPendingInvites implements authsvc.DAL.
+func (p Auth) ListPendingInvites(ctx context.Context) ([]authsvc.Invite, error) {
+	var out []authsvc.Invite
+	err := p.s.read(ctx, func(t *tables) error {
+		out = []authsvc.Invite{}
+		for _, i := range t.invites {
+			if i.pending() {
+				out = append(out, i.invite)
+			}
+		}
+		slices.SortFunc(out, func(a, b authsvc.Invite) int {
+			if c := a.CreatedAt.Compare(b.CreatedAt); c != 0 {
+				return c
+			}
+			return slices.Compare(a.ID[:], b.ID[:])
+		})
+		return nil
+	})
+	return out, err
+}
+
+// InsertInvite implements authsvc.DAL. Like the schema, it refuses a second
+// pending invite of an email and an inviter that is no user.
+func (p Auth) InsertInvite(ctx context.Context, inv authsvc.Invite) error {
+	return p.s.write(ctx, func(t *tables) error {
+		if _, ok := t.invites[inv.ID]; ok {
+			return fmt.Errorf("%w: invite %s exists", errConstraint, inv.ID)
+		}
+		if _, ok := t.users[inv.InvitedBy]; !ok || inv.Email == "" {
+			return fmt.Errorf("%w: invite %s", errConstraint, inv.ID)
+		}
+		for _, o := range t.invites {
+			if o.pending() && o.invite.Email == inv.Email {
+				return fmt.Errorf("%w: a pending invite of %s exists", errConstraint, inv.Email)
+			}
+		}
+		t.invites[inv.ID] = storedInvite{invite: inv}
+		return nil
+	})
+}
+
+// CancelInvite implements authsvc.DAL.
+func (p Auth) CancelInvite(ctx context.Context, id uuid.UUID, _ time.Time) error {
+	return p.s.write(ctx, func(t *tables) error {
+		i, ok := t.invites[id]
+		if !ok || !i.pending() {
+			return fmt.Errorf("%w: pending invite %s", domain.ErrNotFound, id)
+		}
+		i.cancelled = true
+		t.invites[id] = i
+		return nil
+	})
+}

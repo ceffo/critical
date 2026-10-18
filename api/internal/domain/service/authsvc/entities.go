@@ -45,6 +45,21 @@ type Invite struct {
 	CreatedAt time.Time
 }
 
+// UserSummary is a user as the admin section lists them (step 1.3): the
+// user and the names of their characters not retired, in creation order;
+// never the sheets. CurrentCharacterID is not read (0).
+type UserSummary struct {
+	User
+	Characters []string
+}
+
+// UserChange is an admin's change to a user (step 1.3): nil leaves a field
+// as it is.
+type UserChange struct {
+	Disabled *bool
+	Role     *Role
+}
+
 // Session is a server-side session row (step 4.1). ID is the hash of the
 // cookie's token (SessionID), never the token.
 type Session struct {

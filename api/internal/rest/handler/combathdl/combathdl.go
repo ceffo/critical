@@ -56,10 +56,16 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Patch("/api/attack/form", render.Handle(UpdateAttackForm(charID, svc)))
 }
 
-// RegisterSharedRoutes wires the house crit table, which no character owns,
-// onto r.
+// RegisterSharedRoutes wires the reading of the house crit table, which no
+// character owns, onto r.
 func RegisterSharedRoutes(r Router, svc combatsvc.SVC) {
 	r.Get("/api/crit-table", render.Handle(GetCritTable(svc)))
+}
+
+// RegisterAdminRoutes wires the editing of the house crit table onto r, which
+// the caller guards with mw.AdminOnly: the table is one rule set shared by
+// every user, so only an admin changes it.
+func RegisterAdminRoutes(r Router, svc combatsvc.SVC) {
 	r.Put("/api/crit-table", render.Handle(PutCritTable(svc)))
 }
 

@@ -13,6 +13,7 @@ import { useAttackStore } from "@/stores/attack";
 import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
+import { useSessionStore } from "@/stores/session";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { SizeChips } from "@/components/actions/SizeChips";
 import { CritTableEditor } from "@/components/actions/CritTableEditor";
@@ -38,6 +39,7 @@ export function AttackPanel() {
   const { t, i18n } = useTranslation();
   const { view, load, update, attack } = useAttackStore();
   const rolling = useRollStore((s) => s.rolling);
+  const isAdmin = useSessionStore((s) => s.me?.role === "admin");
   const weapons = useItemsStore((s) => s.weapons);
   const items = useItemsStore((s) => s.items);
   const buffs = useBuffsStore((s) => s.buffs);
@@ -182,7 +184,8 @@ export function AttackPanel() {
           </div>
         )}
       </form>
-      <CritTableEditor />
+      {/* The crit table is one rule set for every user: only an admin edits it (the API refuses a player). */}
+      {isAdmin && <CritTableEditor />}
     </div>
   );
 }

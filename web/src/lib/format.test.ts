@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatFactor, formatSigned, hpPercent, hpTone } from "./format";
+import {
+  formatDateTime,
+  formatFactor,
+  formatSigned,
+  hpPercent,
+  hpTone,
+} from "./format";
 
 describe("formatSigned", () => {
   it.each([
@@ -33,5 +39,16 @@ describe("formatFactor", () => {
   it("uses the decimal comma in French", () => {
     expect(formatFactor(1.5, "fr")).toBe("×1,5");
     expect(formatFactor(2, "fr")).toBe("×2");
+  });
+});
+
+describe("formatDateTime", () => {
+  it("shows the day, the month, the year and the time", () => {
+    const s = formatDateTime("2026-10-17T20:30:00Z", "en");
+    expect(s).toMatch(/2026/);
+    expect(s).toMatch(/Oct/);
+  });
+  it("is empty for a bad date", () => {
+    expect(formatDateTime("nope", "fr")).toBe("");
   });
 });

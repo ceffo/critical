@@ -1907,3 +1907,72 @@ test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
     }
   }
 });
+
+// The admin section (ADR 0029 step 1.3), French first: a player with a long email and two
+// characters' worth of names, a disabled user and a long pending invite; the invites and users cards
+// are never cut, fr and en, 1280x800 to 2560x1440.
+test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
+  page,
+  context,
+  stack,
+}) => {
+  test.setTimeout(60_000);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const api = (method: string, url: string, body: unknown) =>
+    fetch(`${stack.apiUrl}${url}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then(async (r) => {
+      expect(r.ok, `${method} ${url}: ${r.status}`).toBe(true);
+      return (await r.json()) as { id: string };
+    });
+  // The dev login creates admins: one stays an admin, the others become players, one disabled.
+  await api("POST", "/api/auth/dev", {
+    email: "aurelie.de-la-tour-dauvergne@compagnie-des-lames.example.com",
+  });
+  const bob = await api("POST", "/api/auth/dev", { email: "bob@example.com" });
+  const cid = await api("POST", "/api/auth/dev", { email: "cid@example.com" });
+  await api("PATCH", `/api/admin/users/${bob.id}`, { role: "player" });
+  await api("PATCH", `/api/admin/users/${cid.id}`, {
+    role: "player",
+    disabled: true,
+  });
+  await api("POST", "/api/admin/invites", {
+    email:
+      "maximilien.vandenbroucke-lefebvre@guilde-des-arcanistes.example.org",
+  });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.goto("/admin");
+  const invites = page.getByTestId("admin-invites");
+  const users = page.getByTestId("admin-users");
+  await expect(users.getByTestId("admin-user")).toHaveCount(4);
+  await expect(invites.getByRole("listitem")).toHaveCount(1);
+  await invites.getByRole("button", { name: /^Copier le lien/ }).click();
+  await expect(invites.getByRole("status")).toHaveText("Lien copié");
+
+  for (const lang of ["fr", "en"] as const) {
+    if (lang === "en") {
+      await page.goto("/");
+      await chooseLanguage(page, "en");
+      await page.goto("/admin");
+      await expect(users.getByTestId("admin-user")).toHaveCount(4);
+    }
+    await expect(users).toContainText(
+      lang === "fr" ? "Administrateur principal" : "Root admin",
+    );
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(invites, `admin invites, ${where}`);
+      await expectNoClippedText(users, `admin users, ${where}`);
+      await snap(page, `admin-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+});

@@ -36,17 +36,21 @@ test("dev login, dashboard, log out, login page", async ({ page, context }) => {
   // login page once, without the "session ended" message.
   await dev.click();
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
-  await context.clearCookies();
+  // The dashboard's start-up requests are done and the menu is open before the cookie goes: a
+  // request still in flight would rightly answer 401 and show "session ended" first.
+  await page.waitForLoadState("networkidle");
+  await page.getByTestId("settings-trigger").click();
+  const logOut = page
+    .getByTestId("settings-account")
+    .getByRole("button", { name: /^Déconnecter/ });
+  await expect(logOut).toBeVisible();
   const navigations: string[] = [];
   page.on("framenavigated", (f) => {
     if (f === page.mainFrame())
       navigations.push(new URL(f.url()).pathname + new URL(f.url()).search);
   });
-  await page.getByTestId("settings-trigger").click();
-  await page
-    .getByTestId("settings-account")
-    .getByRole("button", { name: /^Déconnecter/ })
-    .click();
+  await context.clearCookies();
+  await logOut.click();
   await expect(page).toHaveURL(/\/login$/);
   await expect(dev).toBeVisible();
   await expect(page.getByTestId("login-error")).toHaveCount(0);

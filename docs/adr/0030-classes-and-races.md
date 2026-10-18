@@ -4,7 +4,7 @@
 user on 2026-10-17, so each stated default is decided). Steps or parts marked _(proposed)_ are
 details this ADR adds beyond the triage and the answers; they await the user's OK in review. Not
 implemented. Amends [ADR 0002](0002-attack-resolution.md) step 2, [ADR 0004](0004-buffs.md) steps 7
-to 9 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR 0008](0008-spell-slots-and-long-rest.md)
+to 10 (warriors only), [ADR 0006](0006-saving-throws.md) step 1, [ADR 0008](0008-spell-slots-and-long-rest.md)
 steps 2 and 3, [ADR 0014](0014-skill-checks.md) step 3 and [ADR 0015](0015-experience.md) steps 2
 and 3, each from its implementation.
 
@@ -87,6 +87,10 @@ flowchart LR
 Every rules table named here is reference data in the catalogue artifact
 ([ADR 0021](0021-spell-catalogue.md) step 9), never code; step 23 lists them. Each step gets one
 named test in the implementing item (game logic in Go only, the web renders the server's values).
+Every prompt and warning below is **structured data**: a code and its numbers (levels, values,
+limits), which the web words in en and fr; the quoted texts are illustrations, never sent by the
+server. Text that comes with the rules (race traits, class names) is localized catalogue text, one
+row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
 ### The character
 
@@ -98,8 +102,11 @@ named test in the implementing item (game logic in Go only, the web renders the 
    targets, spell slot limits and skill percentages are **not entered**: steps 3 to 8 and 17 to 18
    derive them, and the character stores none of them. A thief or bard also has the armour worn
    for skills (step 17) _(proposed: the inventory does not track worn armour, so it is one entered
-   field: none, leather, padded or studded leather, elven chain, chain mail (bard only); Table 29
-   has no other armour, so no other is offered)_.
+   field: none, leather, padded or studded leather, elven chain, or, for a bard, "metal armour up
+   to chain mail" (chain, ring, scale, hide, brigandine: the bard may wear any armour up to and
+   including chain mail, PHB chapter 3, Bard). Table 29 has columns only for the first four; the
+   metal one uses the elven chain column plus the bard's extra -5% (Table 29's note), a ruling,
+   not book text, step 18)_.
 2. **Class groups.** Fighter is a warrior, mage a wizard, cleric a priest, thief and bard rogues.
    The group picks the THAC0 row (step 5), the saving throw rows (step 6), the hit dice (step 7) and
    the Constitution hit point bonus (warriors get the higher one, step 7).
@@ -134,7 +141,8 @@ named test in the implementing item (game logic in Go only, the web renders the 
 
 7. **Level-up roll.** The character keeps the level its max HP was last set for (`hp_level`). When
    the level of step 3 is above it, a level-up is pending and the app prompts for it (the
-   character card shows "level up: roll HP", one per pending level). Each roll is one request:
+   character card shows a prompt, e.g. "level up: roll HP", one per pending level; the server
+   sends the pending levels, the web words it). Each roll is one request:
    1. **Up to the name level** (warriors and priests through level 9, wizards and rogues through
       10; Tables 14, 20, 23 and 25, Hit Dice column): one hit die of the group (warrior d10, priest
       d8, rogue d6, wizard d4) rolled through the dice port, plus the Constitution hit point
@@ -153,7 +161,8 @@ named test in the implementing item (game logic in Go only, the web renders the 
       [ADR 0007](0007-hp-ledger.md), so the damage already taken is kept.)_ Several pending levels
       are rolled one by one, lowest first.
    4. _(proposed)_ An XP correction that brings the level below `hp_level` removes nothing: the
-      card warns "max HP rolled for level N, XP gives level M" until the player undoes the roll or
+      card warns (code plus `hp_level` and the XP level, e.g. "max HP rolled for level N, XP gives
+      level M") until the player undoes the roll or
       the XP comes back. Level drain stays out of scope.
    5. The max HP entered for an imported or new character is the max HP at its current level:
       `hp_level` starts at the level of step 3. Level 1 hit points are entered, never rolled here.
@@ -186,17 +195,27 @@ named test in the implementing item (game logic in Go only, the web renders the 
     3. No rule lowers the Strength in effect below the sheet's (ADR 0004 step 9): a percentile is
        never lost to an effect whose result would be a plain 18.
     4. Gates (ADR 0004 step 10) read 18/xx as 18.
-11. **Attacks per round.** A fighter's attacks per round are PHB Table 15 by level (1 per round at
-    1 to 6, 3 per 2 rounds at 7 to 12, 2 per round from 13), or PHB Table 35 for the weapon in
-    hand when he is specialized in it (step 12). Shown on the attack card as the rate; the app does
-    not limit the attack requests. _(proposed: with a half rate (3/2, 5/2) the card also shows this
+11. **Attacks per round.** Read from the weapon's type (step 23), shown on the attack card as a
+    rate; the app does not limit the attack requests.
+    1. **Melee weapon**: PHB Table 15 by the fighter's level (1 per round at 1 to 6, 3 per 2 rounds
+       at 7 to 12, 2 per round from 13); Table 15 is melee attacks only. Specialized (step 12): Table
+       35's melee column.
+    2. **Missile weapon**: the type's rate of fire, PHB Table 45 (bows 2/1, light crossbow 1, heavy
+       crossbow 1/2, dart 3/1, thrown dagger 2/1, sling 1), whatever the level. Specialized in a
+       light or heavy crossbow, a thrown dagger, a dart or another non-bow missile: Table 35's
+       column for it by level. A bow specialist gains no attacks ("bow specialists do not gain any
+       additional attacks", PHB p.53): he keeps the rate of fire.
+    3. A weapon with no type, or a missile type without a rate of fire, shows no rate.
+    4. Examples at level 13: a heavy crossbow shows 1/2 (specialized: 3/2); a bow shows 2/1,
+       specialized or not; a long sword shows 2/1 (specialized: 5/2). _(proposed: with a half rate (3/2, 5/2) the card also shows this
     round's count, the lower one in odd rounds and the higher in even rounds of
     [ADR 0005](0005-rounds-and-time.md).)_
 12. **Weapon specialization.** A per-weapon flag, fighters only (refused for another class). A
     specialized weapon adds +1 to hit and +2 to damage, each a named modifier, not magical (it does
     not count as a "+N" of ADR 0002 step 6). _(proposed: a bow or crossbow instead gets +2 to hit at
     point-blank range as an attack option, and no damage bonus, PHB "Effects of Specialization";
-    thrown weapons count as melee weapons for the +1/+2.)_ Proficiency slots and the cost of
+    thrown weapons (dagger, dart, hand axe…) get the melee +1/+2, a ruling, not book text: the book
+    names only melee weapons and bows and crossbows.)_ Proficiency slots and the cost of
     specialization are not tracked.
 
 ### Cleric
@@ -210,12 +229,22 @@ named test in the implementing item (game logic in Go only, the web renders the 
     and below) rolls one d100 on the server at each cast; at or under the chance, the spell fails:
     the slot is spent, no effect is applied, and the cast entry ([ADR 0008](0008-spell-slots-and-long-rest.md)
     step 7) records the d100, the chance and the failure. Wisdom 13 and up: no die.
-15. **Spheres.** A cleric prepares from every priest spell in the catalogue that belongs to one of
-    his major spheres at any spell level, or to his minor sphere at spell levels 1 to 3; there is no
-    spellbook. The standard cleric has major access to every sphere but Animal, Plant, Weather and
-    Elemental, and minor access to Elemental (PHB chapter 3, Cleric); the sphere access is class
-    data, not entered (a priest of a specific mythos is out of scope). Amends ADR 0008 step 3 for
-    clerics.
+15. **Spheres.** A cleric prepares from the priest spells of the catalogue his sphere access opens;
+    there is no spellbook. Amends ADR 0008 step 3 for clerics.
+    1. **The closed list** (PHB p.33-34, Cleric): major access to exactly twelve spheres, All,
+       Astral, Charm, Combat, Creation, Divination, Guardian, Healing, Necromantic, Protection,
+       Summoning and Sun; minor access to Elemental, which covers its four subspheres (Elemental
+       Air, Earth, Fire and Water). No other sphere is open: Animal, Plant and Weather are closed,
+       and so is every sphere the catalogue carries from other books (the *Tome of Magic*'s Chaos,
+       Law, Numbers, Thought, Time, Travelers, War, Wards, and any later one). The access is class
+       data, not entered; a priest of a specific mythos is out of scope.
+    2. **A spell is open** when at least one of its spheres is open to it: a major sphere at any
+       spell level, Elemental (any subsphere) at spell levels 1 to 3 only. A spell whose only
+       spheres are closed, or Elemental at level 4 and up, is not preparable (refused, 400).
+    3. Examples: a *Tome of Magic* spell of the Thought sphere alone is not preparable; an
+       Elemental (Fire) spell of level 4 is refused and one of level 3 is allowed; a spell of
+       Elemental (Fire) and Combat is open at any level through Combat.
+    4. The rule reads each spell's sphere **codes** (step 23), never its localized sphere name.
 16. **Turning undead.** `POST` with an undead type (a PHB Table 61 row, by type or Hit Dice) reads
     the cell for the cleric's level (columns 1 to 9, 10-11, 12-13, 14 and up):
     1. A number: one d20 through the dice port; success at or above the number.
@@ -233,13 +262,15 @@ named test in the implementing item (game logic in Go only, the web renders the 
     entered points + race (Table 27) + Dexterity (Table 28, the sheet's Dexterity; skills without a
     column get 0) + armour (Table 29, the armour of step 1; leather is the table's baseline, 0), capped at 95% (PHB p.39: no skill above
     95 with every adjustment) and floored at 0. _(proposed: the points are checked against the
-    book's budget, 60 at level 1 and 30 a level after, at most 30 in one skill at level 1; a
-    breach is a warning on the skills card, not a refusal.)_
+    book's budget (PHB p.39): 60 at level 1 and 30 a level after; at most 30 in one skill at level
+    1 and at most 15 in one skill per level after. The entered points are per skill and per level
+    for this check. A breach is a warning on the skills card (code, skill, points and limit), not
+    a refusal.)_
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
-    28: Pick Pockets only) + armour (Table 29; chain mail is the elven chain column plus the extra -5% of the
-    table's note), capped at 95% and floored at 0. _(proposed: budget warning as step 17, 20 points at level 1 and 15 a level
-    after.)_ The computed percentage replaces the sheet's in [ADR 0014](0014-skill-checks.md) step
+    28: Pick Pockets only) + armour (Table 29; metal armour up to chain mail is the elven chain column plus the extra -5%
+    of the table's note, step 1), capped at 95% and floored at 0. _(proposed: budget warning as step 17, 20 points at level 1 and 15 a level
+    after; the PHB gives the bard no per-skill limit, so none is checked.)_ The computed percentage replaces the sheet's in [ADR 0014](0014-skill-checks.md) step
     3. The other bard abilities stay as they are.
 19. **Backstab.** A thief's attack has a backstab option (not a bard's): +4 to hit (a named
     modifier), and the weapon's damage dice multiplied by PHB Table 30 for the level (×2 at 1-4, ×3
@@ -270,8 +301,10 @@ named test in the implementing item (game logic in Go only, the web renders the 
 21. **The six races.** Human, dwarf, elf, gnome, half-elf, halfling (PHB chapter 2). The race card
     shows, without enforcing them: the ability requirements (PHB Table 7) and adjustments (Table
     8; the entered scores already include them), the classes the race allows and its level limit
-    in the class (DMG Table 7; U for unlimited). _(proposed: a level above the limit, or a class the
-    race does not allow, is a warning on the card.)_
+    in the class (DMG Table 7; U for unlimited). The allowed classes and the level limits are
+    catalogue data (class codes and numbers); the trait texts are localized catalogue text (step
+    23). _(proposed: a level above the limit, or a class the race does not allow, is a warning on
+    the card: code, class, level and limit.)_
 22. **Racial effects applied.** Applied by the server:
     1. Dwarves, gnomes and halflings add their PHB Table 9 bonus (from the sheet's Constitution) to
        saves against Rod/Staff/Wand and Spells. Dwarves and halflings add it against poison too:
@@ -279,10 +312,11 @@ named test in the implementing item (game logic in Go only, the web renders the 
        only with it, since the category also covers paralysis and death magic.)_
     2. Thief and bard skills: step 17 and 18's Table 27.
     3. _(proposed)_ Elves +1 to hit with bows (not crossbows) and short and long swords; halflings
-       +1 to hit with thrown weapons and slings (PHB chapter 2), named modifiers from the weapon's
-       kind. Every other trait (infravision, resistance to sleep and charm, secret doors, +1 against
-       orcs or goblins, the -4 to giants attacking dwarves and gnomes, magic item malfunction,
-       surprise) is shown as text on the race card, not computed.
+       +1 to hit with thrown weapons and slings (PHB chapter 2), named modifiers read from the
+       weapon's type (step 23), never from its name. Every other trait (infravision, resistance to
+       sleep and charm, secret doors, +1 against orcs or goblins, the -4 to giants attacking dwarves
+       and gnomes, magic item malfunction, surprise) is shown on the race card as localized
+       catalogue text (step 23), not computed.
 
 ### Rules data and the sheet
 
@@ -306,14 +340,25 @@ named test in the implementing item (game logic in Go only, the web renders the 
       with the bard note); bard skill base (Table 33);
     - backstab multipliers (Table 30);
     - turning undead (Table 61);
-    - races: ability requirements (Table 7), adjustments (Table 8), classes allowed (PHB chapter 2)
-      and level limits (DMG Table 7; the rulebooks copy of this table is an unverified OCR and must
-      be hand-checked before it is shipped);
-    - each priest spell's spheres, and the cleric's major and minor spheres.
+    - races: ability requirements (Table 7), adjustments (Table 8), classes allowed (PHB chapter 2,
+      as class codes) and level limits (DMG Table 7; the rulebooks copy of this table is an
+      unverified OCR and must be hand-checked before it is shipped); each race's trait texts, one
+      row per language ([ADR 0023](0023-localized-text.md));
+    - each priest spell's spheres as **language-neutral codes** (e.g. `all`, `combat`,
+      `elemental_fire`, `thought`), beside the localized sphere text the catalogue already carries
+      (which the code never parses, ADR 0023); and the cleric's major and minor sphere codes (step
+      15.1), Elemental as its four subsphere codes;
+    - rates of fire by missile weapon type (PHB Table 45, the ROF column);
+    - **weapon type** (not catalogue data: each weapon of a character's possessions,
+      [ADR 0021](0021-spell-catalogue.md) step 9, gains it beside `kind` and `ammo_kind`): a code
+      from a fixed list, at least long bow, short bow (composite ones included), light crossbow,
+      heavy crossbow, hand crossbow, dagger, dart, sling, short sword, long sword, other melee,
+      other thrown, other missile. Steps 11, 12 and 22.3 read it; no rule matches a weapon name.
 24. **The sheet comparison.** For a character imported from a sheet that states them (Kelsen's
     seed), the sheet's level, THAC0, five save targets and bard skill percentages are compared with
     the computed values at import. Every difference is a warning naming the value, the sheet's
-    figure and the computed one, kept and shown to the player; the computed value is used. The
+    figure and the computed one (structured: a code and the
+    two numbers), kept and shown to the player; the computed value is used. The
     sheet's figures are not stored as inputs. _(proposed: Kelsen's bard skill points are derived
     once at import as the sheet's percentage minus the computed base, race, Dexterity and armour
     terms, so his skills come out as on the sheet.)_

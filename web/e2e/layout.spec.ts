@@ -397,9 +397,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
     .getByRole("button", { name: "Attack", exact: true })
     .click();
   const last = page.getByTestId("last-result");
-  await expect(last.getByTestId("last-result-text")).toContainText(
-    "Long Sword +2 vs AC 5",
-  );
+  await expect(last.getByTestId("last-result-text")).toContainText("Attack");
   // The journal: a long entry, and a second turn so a past turn sits under the current one.
   await nextTurn(page);
   await recordHp(page, "damage", 3, LONG_SOURCE);
@@ -1154,7 +1152,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     "Nom de sortilège invraisemblablement long des anciens archimages";
   // The last result: an attack, in French.
   await page.getByRole("button", { name: /^Attaquer/ }).click();
-  await expect(page.getByTestId("last-result-text")).toContainText("contre CA");
+  await expect(page.getByTestId("last-result-text")).toContainText("Attaque");
   // An effect's actions show on the row's hover and on keyboard focus only (ADR 0027 step 4.4).
   const firstBuff = page.getByTestId("buff").first();
   const buffActions = firstBuff.getByTestId("buff-actions");
@@ -1648,6 +1646,52 @@ test("attack card: verdict beside the result, tiles and the open AC correction u
       if (SHOTS.has(`${vp.width}x${vp.height}`))
         await snap(page, `attack-card-${lang}-${vp.width}x${vp.height}`);
     }
+  }
+});
+
+test("the last result is one short line, at most a sixth of the viewport, the full wording in its tooltip (French)", async ({
+  page,
+  stack,
+}) => {
+  const api = (method: string, url: string, data: unknown) =>
+    fetch(`${stack.apiUrl}${url}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
+  await api("PUT", "/api/spells/prepared", { spells: PREPARED });
+  const slots = (await (
+    await fetch(`${stack.apiUrl}/api/spells/slots`)
+  ).json()) as { prepared_spell_id: string }[];
+  const rary = slots.findIndex(
+    (sl) => sl.prepared_spell_id === "rarys_mnemonic_enhancer",
+  );
+  await api("POST", `/api/spells/${rary}/cast`, {});
+  await api("POST", "/api/buffs", {
+    effects: {},
+    name: "Protection From Evil",
+    duration: 10,
+  });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const last = page.getByTestId("last-result");
+  await expect(last.getByTestId("last-result-text")).toContainText("Rary");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+  ]) {
+    await page.setViewportSize(vp);
+    expect(
+      await last.locator("p").evaluate(lineCount),
+      `one line, ${vp.width}`,
+    ).toBe(1);
+    const b = (await last.boundingBox())!;
+    expect(b.width, `at most a sixth, ${vp.width}`).toBeLessThanOrEqual(
+      vp.width / 6 + 1,
+    );
+    // The full wording (journal text, round and time) is the tooltip.
+    await expect(last.locator("p")).toHaveAttribute("title", /Rary/);
+    await snap(page, `last-result-long-spell-fr-${vp.width}x${vp.height}`);
   }
 });
 

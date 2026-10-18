@@ -1522,5 +1522,21 @@
     "no_exposure": "Ce sort n'inflige aucun dégât d'exposition.",
     "spell_not_an_effect": "Ce sort n'ajoute aucun effet à suivre.",
     "spell_not_found": "Ce sort n'est pas dans le catalogue."
+  },
+  "lastShort": {
+    "attack": "Attaque",
+    "save": "Sauvegarde {{name}}",
+    "damage": "Dégâts",
+    "heal": "Soins",
+    "initiative": "Initiative",
+    "verdict": {
+      "hit": "touché",
+      "miss": "raté",
+      "crit": "critique",
+      "passed": "réussie",
+      "failed": "échouée",
+      "success": "réussi",
+      "failure": "échec"
+    }
   }
 }

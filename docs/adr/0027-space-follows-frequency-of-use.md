@@ -157,8 +157,18 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    5. **The last result is one line**, larger than today (its value in `text-key`, the words in
       `text-body`), on one line in French at 1440x900 and 1707x1300. It sits under the brand in the
       header's right column (step 4.6; was "follows the timeline directly, the spare width to its
-      right", changed 2026-10-17 by the brand round's pick). Only a wording too long for the room
-      the timeline leaves wraps, never cut.
+      right", changed 2026-10-17 by the brand round's pick).
+      **Shortened** (*amended 2026-10-17, user: "the text in the last result ... should be way
+      shorter than that. We shouldn't have most of the details of the result", "restricted to like
+      ... the sixth of the screen", picked "value + what + verdict", "some coloring hints for the
+      success vs failure. no caps ... prefer writing failed in red rather than FAILED"*): one short
+      line, "value · what · verdict", built in the frontend from the entry's payload (the d20 or
+      total, a word or name, a verdict for a roll that has one), in a column of at most 1/6 of the
+      viewport that never wraps: a longer line ends with an ellipsis, the full journal wording and
+      its round and time are the tooltip (ADR 0022 step 1.2 exception). The verdict is coloured
+      (success green, failure red, crit highlight), sentence case, never upper case. Every log
+      kind has a short wording (`lib/lastResultShort.ts`, a unit test per kind); the journal's
+      wording is unchanged. The width freed goes to the timeline.
    6. **The brand shows in full** (mark and wordmark) at every layout width (replaces step 7's
       1500 px breakpoint). **Its place is design E** of the brand round
       ([README](../design/brand-placement/README.md), user pick 2026-10-17): the brand (mark +

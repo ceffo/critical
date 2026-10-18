@@ -3,7 +3,7 @@ import i18next from "i18next";
 import { resources } from "@/i18n";
 import type { LogEntry, LogKind } from "@/types/log";
 import { shortResult } from "./lastResultShort";
-import { recordedNames } from "./logSummary";
+import { recordedNames } from "@/i18n/inventoryName";
 
 async function makeT(lng: string) {
   const inst = i18next.createInstance();
@@ -261,12 +261,12 @@ describe("shortResult", () => {
     it(`${kind}: value, what and verdict, en and fr`, async () => {
       for (const lng of ["en", "fr"] as const) {
         const t = await makeT(lng);
-        const names = (id: string, name: string) => name;
+        const names = (_id: string | undefined, name: string) => name;
         const r = shortResult(
           c.e,
           t,
           (id, name) =>
-            lng === "fr" && id === "fireball" ? "Boule de feu" : name,
+            lng === "fr" && id === "fireball" ? "Boule de feu" : (name ?? ""),
           { ...recordedNames, item: names },
         );
         const line = r.verdict ? `${r.what} · ${r.verdict.text}` : r.what;
@@ -284,7 +284,7 @@ describe("shortResult", () => {
       shortResult(
         entry("attack", { ...attack, ...a }),
         t,
-        (_i, n) => n,
+        (_i, n) => n ?? "",
         recordedNames,
       ).verdict;
     expect(run({})).toEqual({ text: "hit", tone: "pass" });

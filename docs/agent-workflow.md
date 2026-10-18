@@ -92,37 +92,45 @@ merge instead of hand-merging.
 
 ## Tracker
 
-Beads, with the `br` CLI (never `bd` here), plus `bv --robot-*` for triage (`bv --robot-triage`,
-`bv --robot-plan`; `bv --robot-help` lists the rest). Bare `bv` launches a TUI: never run it.
-Commands: `br ready --json`, `br list --status=open`, `br show <id>`, `br search "<words>"`,
-`br create --title … -t <type> -p <0-4> [--parent <id>] [-d …]`, `br update <id> --claim`,
-`br close <id> --reason "PR #n"`, `br dep add <issue> <depends-on>`, `br sync --flush-only`. On the
-main checkout, pull with `just sync-main`, never `br sync --merge`.
+Linear: team `CRI`, project "critical-app". The workspace shape (priorities, states, labels) is written once
+in [`scripts/linear-mapping.json`](../scripts/linear-mapping.json) and described in [linear.md](linear.md);
+this file links it, never copies it. The decision is [ADR 0031](adr/0031-linear-tracker.md).
 
-- Work item = bead; id looks like `critical-518.3`. Read: `br show <id>`, `br list`, `br search`,
-  `br ready`. Everything that writes (`update`, `close`, `create`, `dep add`, `sync`) is the
-  supervisor's or scoper's, run from the main checkout; developers, reviewers and testers never
-  write to `.beads/`.
-- Claim: `br update <id> --claim`.
-- Tracker changes do not ride on feature branches (user decision 2026-10-16: parallel PRs kept
-  conflicting on `.beads/issues.jsonl` after every merge). The tracker DB is the truth: the supervisor
-  claims at dispatch and closes at PR time (`br close`, reason "PR #n") in the main checkout only,
-  and commits the export (`br sync --flush-only`, `.beads/issues.jsonl`) in one `chore: tracker
-  export` PR per batch of work (end of a session or a night, or when an export is needed on `main`,
-  e.g. for `check-no-tracker-ids` to know a new id). If a PR is closed unmerged, reopen its item.
-- Priorities are numbers 0-4. Types: task, bug, feature, epic, chore, docs, question.
-- Labels in use: `needs-info` (cannot start: waiting on the user; the item holds a "## Questions"
-  section, each question with the default applied meanwhile), `risky` (needs review). Every open
-  `needs-info` item is a pending question the supervisor restates to the user in every reply
-  (`.claude/scripts/pending-questions.sh`).
-- Queue: `bv --robot-triage`, `br ready --json`.
-- Hierarchy: epic + children via `br create --parent`; blocking via `br dep add`.
-- Work items are written in the vertical-slice convention: one bead = schema + Go engine + REST
-  endpoint + React panel for one feature; split only when too big for one PR (backend bead first,
-  UI bead blocked by it).
+- Work item = Linear issue; id `CRI-<n>` (e.g. `CRI-42`). Old bead ids (`critical-518.3`) are looked up in
+  `docs/beads-id-map.json` (`{"critical-x":"CRI-n"}`); the old text is in the read-only archive
+  `.beads/issues.jsonl` (kept for one release, then deleted and kept as a git tag).
+- Tools. Agents use the Linear MCP tools listed in their `tools:` (`mcp__linear-server__…`): read
+  (`get_issue`, `list_issues` with `query` for search, `list_comments`) for developer, code-reviewer and
+  tester; read plus write (`save_issue`, `save_comment`, `list_issue_labels`, `list_issue_statuses`) for the
+  supervisor and the scoper. Where a shell is the better tool, `scripts/linear.sh '<GraphQL>'` (needs
+  `$LINEAR_API_KEY` or the key file written by `just linear-setup`; never in the repo).
+- Queue: `scripts/linear-ready.sh [--json]` (state Todo, no open blocker, no `needs-info` / `deferred`
+  label, not an `epic`; Urgent first, then oldest). Pending questions:
+  `.claude/scripts/pending-questions.sh` (reads Linear with `CRITICAL_TRACKER=linear`).
+- States: Todo (open) → In Progress (claimed by the supervisor at dispatch:
+  `.claude/scripts/linear-state.sh CRI-n "In Progress"`) → In Review (PR opened, by
+  `.claude/scripts/ship.sh`) → Done (by Linear's GitHub integration when the PR merges; nobody closes by
+  hand). A PR closed unmerged goes back to Todo (`linear-state.sh CRI-n Todo "PR #n closed unmerged"`).
+  Deferred work is Backlog with the label `deferred`. The PR title ends with `(CRI-n)` and its body has a
+  `Closes CRI-n` line, which is what the integration reads.
+- Everything that writes (`save_issue`, `save_comment`, `linear-state.sh`) is the supervisor's or the
+  scoper's; developers, reviewers and testers read only. Tracker state lives in Linear, not in git: there
+  is no export, no tracker PR and nothing tracker-related to merge or commit.
+- Priority: Urgent / High / Medium / Low / None (old P0 / P1 / P2 / P3 / P4). Types are labels: Bug,
+  Feature, `chore`, `docs`, `question`; a task has no type label.
+- Labels in use: `needs-info` (cannot start: waiting on the user; the issue description holds a
+  "## Questions" section, each question with the default applied meanwhile), `risky` (needs review),
+  `epic`, `deferred`, plus the area labels (`backend`, `frontend`, `infra`, `data-prep`, `tooling`,
+  `mvp-saturday`). Every open `needs-info` or `question` issue is a pending question the supervisor
+  restates to the user in every reply (`.claude/scripts/pending-questions.sh`).
+- Hierarchy: an epic is a parent issue labelled `epic` (sub-issues via `parentId`); blocking is a
+  "blocked by" relation (`save_issue` `blockedBy`).
+- Work items are written in the vertical-slice convention: one issue = schema + Go engine + REST
+  endpoint + React panel for one feature; split only when too big for one PR (backend issue first,
+  UI issue blocked by it).
 - Rules items: acceptance criteria name the ADR steps to implement (one criterion per step);
   a missing ADR is filed first.
-- Defaults when filing autonomously: priority 3 (2 for a correctness bug in rules math).
+- Defaults when filing autonomously: priority Low (Medium for a correctness bug in rules math).
 
 ## Rulebooks
 
@@ -238,7 +246,7 @@ of running the app by hand. Reference: `docs/frontend.md` (dashboard layout, dis
 ## Model selection
 
 Opus: core rules-engine math, ledger/state semantics across several packages, wide refactors,
-UI-heavy beads (new panel, redesign). Sonnet: everything else. Reviewer: Sonnet, Opus for core
+UI-heavy items (new panel, redesign). Sonnet: everything else. Reviewer: Sonnet, Opus for core
 rules math.
 
 ## Parallelism
@@ -252,7 +260,7 @@ contract or domain struct.
 CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
 **Slow-job skip:** a first job, `changes` (`scripts/ci-skip-slow.sh`, tested by
 `scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` when every
-changed file is documentation (`*.md`, `docs/**`, `.beads/**`; on a PR against its base, on a push
+changed file is documentation (`*.md`, `docs/**`, the `.beads/**` archive; on a PR against its base, on a push
 against the previous head), or when the PR carries the label `ci-skip` (PR runs only: the push that
 merges it runs everything). `validate` and `generated` always run (required checks). A skipped job
 counts as a success, so the CI run is green and the Release workflow still starts and decides by its
@@ -264,10 +272,10 @@ applies to it. PR body has a **What changes for you locally** line (dev commands
 ## Commits
 
 `<type>(<scope>)?!?: <short description>` (`feat`, `fix`, `test`, `docs`, `chore`, `refactor`, `perf`),
-optionally with a scope and the bead id, e.g. `feat(dal): … (critical-518.1)`. The PR title follows the
+optionally with a scope, and ending with the issue id, e.g. `feat(dal): … (CRI-42)`. The PR title follows the
 same format (checked in CI by `.github/workflows/pr-title.yml`): it becomes the squash commit on main,
 and the release version bump is read from it. Never commit broken tests or a failing build.
-Run `br sync --flush-only` before committing tracker changes. Trailer: `Co-Authored-By:` naming the
+Trailer: `Co-Authored-By:` naming the
 model actually running.
 
 ## Memory

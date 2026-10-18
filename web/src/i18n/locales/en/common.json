@@ -7,7 +7,21 @@
     "abilities": "Ability scores",
     "error": "Error",
     "dismiss": "Dismiss",
-    "strTitle": "STR {{effective}} (sheet {{base}})"
+    "strTitle": "STR {{effective}} (sheet {{base}})",
+    "sheetDiff": {
+      "title": "The sheet differs from the rules",
+      "hint": "The app uses the rules' value.",
+      "item": "{{value}}: sheet {{sheet}}, rules {{computed}}",
+      "values": {
+        "level": "Level",
+        "thac0": "THAC0",
+        "save_para_poison": "Save vs Paralysis/Poison",
+        "save_rod_staff_wand": "Save vs Rod/Staff/Wand",
+        "save_petri_poly": "Save vs Petrification/Polymorph",
+        "save_breath": "Save vs Breath",
+        "save_spell": "Save vs Spells"
+      }
+    }
   },
   "language": {
     "en": "English",
@@ -981,7 +995,8 @@
       "situational": "{{detail}}",
       "situationalUnnamed": "Situational",
       "critRange": "Critical hit ({{from}}–{{to}})",
-      "critPlaceholder": "Critical hit (placeholder)"
+      "critPlaceholder": "Critical hit (placeholder)",
+      "race": "{{race}} (race)"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1391,6 +1406,7 @@
     "none": "Not set",
     "class": "Class",
     "level": "Level",
+    "raceCode": "Race (rules)",
     "fields": {
       "race": "Race",
       "alignment": "Alignment",
@@ -1418,6 +1434,14 @@
       "too_many": "Too many languages.",
       "empty": "A language is blank.",
       "duplicate": "A language is listed twice."
+    },
+    "races": {
+      "human": "Human",
+      "dwarf": "Dwarf",
+      "elf": "Elf",
+      "gnome": "Gnome",
+      "half_elf": "Half-elf",
+      "halfling": "Halfling"
     }
   },
   "xp": {

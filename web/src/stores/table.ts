@@ -5,6 +5,7 @@ import { redoLogEntry, undoLogEntry } from "@/api/log";
 import { useHpStore } from "./hp";
 import { useLogStore } from "./log";
 import { useBuffsStore } from "./buffs";
+import { useCharacterStore } from "./character";
 import { useItemsStore } from "./items";
 import { useRollStore } from "./roll";
 import { useXpStore } from "./xp";
@@ -91,6 +92,9 @@ export const useTableStore = create<TableStore>((set, get) => ({
           useBuffsStore.getState().fetchStrength(),
           useItemsStore.getState().fetchItems(),
           useItemsStore.getState().fetchWeapons(),
+          // The level, THAC0, saves and slots follow the XP (ADR 0030 step 3): an award or the
+          // undo of one changes them, so the character is re-read with the rest.
+          useCharacterStore.getState().loadCharacter(),
           // An undo can pop an XP award (ADR 0015 step 4): re-read the ledger once it is shown.
           useXpStore.getState().ledger && !opts?.skipXp
             ? useXpStore.getState().fetchXp()

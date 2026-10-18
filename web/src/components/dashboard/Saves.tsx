@@ -8,19 +8,19 @@ import { useCharacterStore } from "@/stores/character";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
 import { SAVE_CATEGORIES, type SaveCategory } from "@/types/combat";
-import type { Character } from "@/types/character";
+import type { SaveNumbers } from "@/types/character";
 
-const TARGET_FIELD: Record<SaveCategory, keyof Character> = {
-  para_poison: "saveParaPoison",
-  rod_staff_wand: "saveRodStaffWand",
-  petri_poly: "savePetriPoly",
-  breath: "saveBreath",
-  spell: "saveSpell",
+const TARGET_FIELD: Record<SaveCategory, keyof SaveNumbers> = {
+  para_poison: "paraPoison",
+  rod_staff_wand: "rodStaffWand",
+  petri_poly: "petriPoly",
+  breath: "breath",
+  spell: "spell",
 };
 
 /**
  * The five saving throws under their section label (ADR 0022 steps 2.3 and 4.2, ADR 0027 step 5.2:
- * "click to roll" is the rows' tooltip), always visible: one row each, name | target (the sheet's) |
+ * "click to roll" is the rows' tooltip), always visible: one row each, name | target (the server's, derived from class and level, ADR 0030 step 6) |
  * last roll
  * (the newest logged save in that category, with the server's verdict). A click rolls it through
  * the save endpoint; the result card shows the breakdown.
@@ -70,7 +70,9 @@ export function Saves() {
                 </span>
                 <span className="font-semibold tabular-nums">
                   {character
-                    ? t("saves.target", { value: character[TARGET_FIELD[cat]] })
+                    ? t("saves.target", {
+                        value: character.derived.saves[TARGET_FIELD[cat]],
+                      })
                     : ""}
                 </span>
                 <span

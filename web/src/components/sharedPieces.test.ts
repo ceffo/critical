@@ -66,7 +66,13 @@ function lookup(lang: "en" | "fr", key: string): string | undefined {
 }
 
 /** Short fixed terms ADR 0027 step 3.2 allows where no single word names the action. */
-const FIXED_TERMS = new Set(["turn.next", "spellSlots.longRest"]);
+const FIXED_TERMS = new Set([
+  "turn.next",
+  "spellSlots.longRest",
+  // "Log in" / "Log out" (the user's caption for the cog menu's entry): no single word names them.
+  "login.action",
+  "settings.logout",
+]);
 
 /** The i18n keys a button shows as its caption: `t("…")` calls among its children. */
 function captionKeys(el: ts.JsxElement): string[] {

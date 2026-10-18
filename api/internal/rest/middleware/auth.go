@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	pathpkg "path"
 	"strings"
 	"time"
 
@@ -70,15 +71,32 @@ func (c GateConfig) cookie() string {
 	return c.Cookie
 }
 
+// staticPrefix holds the web build's content-hashed bundle (Vite's assets/).
+const staticPrefix = "/assets/"
+
+// favicon is the one file of the web build outside assets/ the login page
+// loads.
+const favicon = "/favicon.svg"
+
 // Public reports whether path is served without a session (ADR 0029 step
-// 6.1): the login page and what is under it, the /api/auth endpoints and
-// /api/health. Everything else needs one (step 6.2): a new route is protected
-// by default.
-func Public(path string) bool {
+// 6.1): the login page and what is under it, the static files it loads (the
+// web build's bundle under /assets/ and the favicon: the login page is part
+// of the one bundle, which is the public repository's code and carries no
+// data), the /api/auth endpoints and /api/health. Everything else needs one
+// (step 6.2): every /api data route and the catalogue; a new route is
+// protected by default.
+func Public(p string) bool {
+	// Judged on the cleaned path: "/assets/../api/character" is /api/character.
+	path := pathpkg.Clean("/" + p)
 	return path == "/api/health" ||
 		path == "/api/auth" || strings.HasPrefix(path, "/api/auth/") ||
-		path == LoginPath || strings.HasPrefix(path, LoginPath+"/")
+		path == LoginPath || strings.HasPrefix(path, LoginPath+"/") ||
+		strings.HasPrefix(path, staticPrefix) || path == favicon
 }
+
+// ExpiredLoginPath is where a page opened with a session the server no
+// longer knows goes: the login page says the session has ended.
+const ExpiredLoginPath = LoginPath + "?error=session_expired"
 
 func isAPI(path string) bool { return path == "/api" || strings.HasPrefix(path, "/api/") }
 
@@ -92,8 +110,9 @@ func safeMethod(m string) bool {
 // a cross-origin state-changing request (step 4.5), resolves the session
 // cookie to the request's principal (read once, passed on in the context,
 // step 6.3; an extended session gets its cookie again), and without a
-// session redirects a page to the login page and answers 401 to everything
-// else (/api, the bundle's assets), except on the public paths. A nil auth authenticates nobody.
+// session redirects a page to the login page (saying the session has ended
+// when the request carried one the server no longer knows) and answers 401 to
+// every /api route, except on the public paths. A nil auth authenticates nobody.
 func Gate(auth Authenticator, cfg GateConfig) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -104,9 +123,12 @@ func Gate(auth Authenticator, cfg GateConfig) func(http.Handler) http.Handler {
 			}
 			name := cfg.cookie()
 			p, err := principal(r, name, auth)
+			stale := errors.Is(err, authsvc.ErrUnauthenticated)
 			switch {
-			case errors.Is(err, authsvc.ErrUnauthenticated):
+			case stale:
 				ClearSessionCookie(w, name, cfg.Secure)
+				ctx = withStaleSession(ctx)
+				r = r.WithContext(ctx)
 			case err != nil:
 				render.Error(ctx, w, err)
 				return
@@ -117,8 +139,12 @@ func Gate(auth Authenticator, cfg GateConfig) func(http.Handler) http.Handler {
 				r = r.WithContext(WithPrincipal(ctx, p))
 			}
 			if p == nil && !Public(r.URL.Path) {
-				if !isAPI(r.URL.Path) && isNavigation(r) {
-					http.Redirect(w, r, LoginPath, http.StatusFound)
+				if !isAPI(pathpkg.Clean("/"+r.URL.Path)) && isNavigation(r) {
+					to := LoginPath
+					if stale {
+						to = ExpiredLoginPath
+					}
+					http.Redirect(w, r, to, http.StatusFound)
 					return
 				}
 				render.Error(ctx, w, authsvc.ErrUnauthenticated)
@@ -130,8 +156,7 @@ func Gate(auth Authenticator, cfg GateConfig) func(http.Handler) http.Handler {
 }
 
 // isNavigation reports a browser opening a page (a GET asking for HTML),
-// which goes to the login page; anything else, an asset of the bundle
-// included, answers 401.
+// which goes to the login page; anything else answers 401.
 func isNavigation(r *http.Request) bool {
 	return (r.Method == http.MethodGet || r.Method == http.MethodHead) &&
 		strings.Contains(r.Header.Get("Accept"), "text/html")
@@ -182,6 +207,20 @@ func sameOrigin(r *http.Request, host string) bool {
 }
 
 type principalKey struct{}
+
+type staleKey struct{}
+
+func withStaleSession(ctx context.Context) context.Context {
+	return context.WithValue(ctx, staleKey{}, true)
+}
+
+// StaleSession reports a request that carried a session cookie the server no
+// longer knows (expired, logged out, or its user disabled): the gate dropped
+// the cookie and the request has no principal.
+func StaleSession(ctx context.Context) bool {
+	v, _ := ctx.Value(staleKey{}).(bool)
+	return v
+}
 
 // WithPrincipal returns ctx carrying the request's user.
 func WithPrincipal(ctx context.Context, p *authsvc.Principal) context.Context {
